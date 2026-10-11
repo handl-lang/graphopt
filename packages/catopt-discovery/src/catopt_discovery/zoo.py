@@ -426,7 +426,11 @@ class _CapsuleRouting(nn.Module):
         """Route lower capsules to output capsules, then squash."""
         votes = torch.einsum("bti,ioj->btoj", x, self.w)
         logits = torch.zeros(
-            x.shape[0], x.shape[1], self.n_out, dtype=x.dtype
+            x.shape[0],
+            x.shape[1],
+            self.n_out,
+            dtype=x.dtype,
+            device=x.device,
         )
         out = votes.sum(1)
         for _ in range(2):
@@ -463,10 +467,12 @@ class _ChunkedRetention(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Apply decay-masked attention within the chunk."""
         t = x.shape[-2]
-        pos = torch.arange(t, dtype=x.dtype)
+        pos = torch.arange(t, dtype=x.dtype, device=x.device)
         decay = torch.tril(
             torch.pow(
-                torch.tensor(self.gamma, dtype=x.dtype),
+                torch.tensor(
+                    self.gamma, dtype=x.dtype, device=x.device
+                ),
                 (pos.unsqueeze(1) - pos.unsqueeze(0)).clamp_min(0),
             )
         )
@@ -539,9 +545,13 @@ class _TimeCondConv(nn.Module):
     def forward(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
         """Add the sinusoidal time bias into the conv block."""
         freqs = torch.exp(
-            torch.arange(self.temb, dtype=x.dtype)
+            torch.arange(self.temb, dtype=x.dtype, device=x.device)
             * (
-                -torch.log(torch.tensor(10000.0, dtype=x.dtype))
+                -torch.log(
+                    torch.tensor(
+                        10000.0, dtype=x.dtype, device=x.device
+                    )
+                )
                 / self.temb
             )
         )
