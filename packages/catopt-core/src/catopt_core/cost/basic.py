@@ -81,6 +81,9 @@ _OP_FLOPS: dict[str, int] = {
     # roofline model prices it); sdpa ~2*T work per output element.
     "contiguous": 0,
     "sdpa": 2,
+    # decay(γ,t=T) materialises tril(γ^{i−j}) — the spelled subgraph it
+    # replaces: sub + clamp_min + pow(2) + tril ≈ 5 passes over (T,T).
+    "decay": 5,
     # Traced-monoidal ops (catopt_carriers.trace): wire juxtaposition and
     # constant morphisms carry no FLOPs; trace/inv are priced in
     # _flops_of directly (solve cost depends on usize).

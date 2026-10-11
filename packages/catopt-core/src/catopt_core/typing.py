@@ -1286,6 +1286,24 @@ def _om_decayed_shape(op: Op, shapes: list) -> tuple | str | None:
     return _INVALID if out is None else out
 
 
+def _decay_shape(op: Op, shapes: list) -> tuple | str | None:
+    """``decay`` — tril(gamma^{i-j}): ``(*gamma.shape, T, T)``.
+
+    The rate's dims are LEADING (batch) dims — a scalar ``()`` rate
+    gives the plain ``(T,T)`` triangle, a per-head ``(H,)`` rate the
+    ``(H,T,T)`` stack.  ``T`` is the ``t`` attr: a missing or non-int
+    attr reports unknown, a negative one is provably ill-typed
+    (``_INVALID``, mirroring the factory rules' posture).
+    """
+    g = shapes[0]
+    t = op.attrs.get("t")
+    if not isinstance(t, int):
+        return None
+    if t < 0:
+        return _INVALID
+    return (*g, t, t)
+
+
 def _trace_shape(op: Op, shapes: list) -> tuple | str | None:
     """``trace`` — Tr(f).
 
@@ -1408,6 +1426,7 @@ register_shape_rule("applyd", _apply_shape)
 register_shape_rule("om", _om_shape)
 register_shape_rule("om_elem", _om_elem_shape)
 register_shape_rule("om_decayed", _om_decayed_shape)
+register_shape_rule("decay", _decay_shape)
 register_shape_rule("trace", _trace_shape)
 register_shape_rule("bdiag", _bdiag_shape)
 register_shape_rule("parl", _bdiag_shape)

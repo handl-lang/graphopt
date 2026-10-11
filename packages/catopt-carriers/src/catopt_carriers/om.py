@@ -63,6 +63,15 @@ DECAYED ATTENTION
     OM_LIFT declines the spelled term, and lifting it onto any
     existing carrier verifies FALSE).  ``om_decayed(s, d, v)`` is the
     vocabulary element naming it: see the section before the law set.
+
+    The decay matrix itself is a value too — ``decay(γ, t=T)`` makes
+    ``tril(γ^{i−j})`` a generator the block laws can see: the
+    ``om_decayed_chunk_*`` splits decompose a decayed product over
+    concat'd operands along both matmul axes, ``decay_lift`` folds
+    the spelled arange/pow/tril subgraph into the generator, and
+    ``decay_block_diag`` regenerates diagonal blocks in place.  The
+    remaining structure — the strict-upper zero block and the cross
+    block's ξ·ηᵀ factorisation — is documented where the laws live.
 """
 
 from typing import Any, Literal
@@ -992,6 +1001,21 @@ def _om_decayed_torch(
     return (s * d) @ v
 
 
+def _decay_torch(g: torch.Tensor, *a, **kw) -> torch.Tensor:
+    """Lower ``decay`` — tril(γ^{i−j}) on the last two axes.
+
+    γ's dims are LEADING (batch) dims: a scalar rate gives ``(T,T)``,
+    a per-head ``(H,)`` rate ``(H,T,T)``.  ``torch.as_tensor``
+    normalises Python-scalar leaves; their dtype is the ambient
+    default — the term level carries no dtype.
+    """
+    t = int(kw.get("t", 0) or 0)
+    g = torch.as_tensor(g)
+    pos = torch.arange(t, dtype=g.dtype, device=g.device)
+    diff = pos.unsqueeze(-1) - pos.unsqueeze(-2)
+    return torch.tril(g[..., None, None] ** diff.clamp_min(0))
+
+
 #: Torch lowering bindings — an EXPORT, not an import-time mutation
 #: (plan 0001 phase 2c): :class:`catopt_core.ops.OpTable` folds this dict in
 #: via ``register``/``full()``; importing this module registers nothing
@@ -1003,6 +1027,8 @@ TORCH_BINDINGS: dict[str, Any] = {
     # The decayed-attention element — declared with its laws at the
     # bottom of this module.
     "om_decayed": _om_decayed_torch,
+    # The causal-decay matrix generator — same place.
+    "decay": _decay_torch,
 }
 
 #: The masked_fill fill-value in rule RHSs.  _instantiate turns a
@@ -1385,6 +1411,678 @@ OM_DECAYED_UNLIFT = R(
 
 
 # ---------------------------------------------------------------------------
+#  The decay matrix — ``decay(γ, t=T)`` as a first-class value.
+#
+#  RetNet-style code builds the causal decay triangle in-graph:
+#  ``tril(γ^{pos_i − pos_j})`` out of an arange pair (see the zoo's
+#  ``_ChunkedRetention``).  That spelling is five ops the chunk laws
+#  below cannot see through — an opaque ``mul`` operand.  ``decay``
+#  names the matrix itself: γ is the operand (its dims are LEADING
+#  batch dims — a scalar gives ``(T,T)``, a per-head ``(H,)`` rate
+#  ``(H,T,T)``) and the extent rides in the ``t`` attr, the only place
+#  a derived constant can land.
+#
+#  With the structure explicit, the block decomposition is
+#  equational:
+#
+#      decay(γ, T1+T2)  =  [ decay(γ,T1)   0          ]
+#                        [ cross(γ,T1,T2)  decay(γ,T2)]
+#
+#  — the diagonal blocks ARE smaller decays (``decay_block_diag``
+#  regenerates them in place of sliced material), the strict-upper
+#  block is identically zero (kept materialised for now: spelling the
+#  zero needs a dtype-aware ``zeros`` the shape-only IR cannot mint —
+#  see the note under ``decay_block_diag``), and the cross block is
+#  the γ^{(o+r)−c} triangle the inter-chunk recurrence carries.
+#
+#  ``decay_lift`` recognises the spelled subgraph — ``tril(pow(γ,
+#  clamp_min(sub(unsq(pos,1), unsq(pos,0)), 0)))`` — and folds it into
+#  the generator.  The guards are load-bearing: the two aranges must
+#  be the SAME unit-step sequence (``p_i − p_j = i − j`` fails for
+#  step ≠ 1 or different bounds), the unsqueezes must put the column
+#  operand first (swapped gives j−i), and the clamp bound must be 0.
+# ---------------------------------------------------------------------------
+
+op_def(
+    "decay",
+    1,
+    1,
+    law="Causal-decay generator: decay(g, t=T)[...,i,j] = g^(i-j) for "
+    "i >= j, else 0 — the RetNet/GLA decay matrix as a value, so its "
+    "block structure is equational rather than a spelled subgraph.",
+)
+
+
+def _positional_vals(node: Op) -> list:
+    """Collect an op's bound scalars: Const operands or ``argN`` attrs."""
+    vals = [a.value for a in node.args if isinstance(a, Const)]
+    if vals:
+        return vals
+    from catopt_core.attrs import is_positional_attr
+
+    return [
+        node.attrs[k]
+        for k in sorted(
+            (k for k in node.attrs if is_positional_attr(k)),
+            key=lambda k: int(k[3:]),
+        )
+    ]
+
+
+def _arange_params(node: Any) -> tuple | None:
+    """``arange`` bounds as ``(start, end, step)``, or ``None``.
+
+    Covers the Const-operand minting and the exported ``arg0``/
+    ``arg1``/``arg2`` attrs — the same two spellings
+    :func:`catopt_core.typing._arange_shape` reads.  Defaults follow
+    torch: start 0, step 1.
+    """
+    if not (isinstance(node, Op) and node.op == "arange"):
+        return None
+    vals = _positional_vals(node)
+    if not all(isinstance(v, (int, float)) for v in vals):
+        return None
+    if len(vals) == 1:
+        return (0, vals[0], 1)
+    if len(vals) == 2:
+        return (vals[0], vals[1], 1)
+    if len(vals) == 3:
+        return tuple(vals)
+    return None
+
+
+def _check_decay_lift(bound: dict) -> bool:
+    """Require the spelled exponent to be a real position difference.
+
+    The LHS already pins ``sub(unsq(a1), unsq(a2))`` inside
+    ``clamp_min(·, 0)`` inside ``pow`` inside ``tril``; the guard
+    proves a1/a2 are the SAME unit-step arange (equal bounds, step
+    exactly 1 — else ``p_i − p_j ≠ i − j``), that the unsqueezes put
+    the column operand first (a (T,1) minus a (1,T) is i−j; swapped
+    is j−i — a different program), and the clamp bound is 0.
+    ``tril`` then leaves exactly ``γ^{i−j}`` on the lower triangle.
+    """
+    a1, a2 = bound.get("a1"), bound.get("a2")
+    u1, u2 = bound.get("$attr:U1"), bound.get("$attr:U2")
+    cm = bound.get("$attr:CM")
+    if not (isinstance(u1, int) and isinstance(u2, int)):
+        return False
+    if not (isinstance(cm, (int, float)) and cm == 0):
+        return False
+    p1, p2 = _arange_params(a1), _arange_params(a2)
+    if p1 is None or p1 != p2 or p1[2] != 1:
+        return False
+    return u1 % 2 == 1 and u2 % 2 == 0
+
+
+def _derive_decay_lift(bound: dict) -> dict | None:
+    """``T`` := the shared arange's extent."""
+    p = _arange_params(bound.get("a1"))
+    if p is None:
+        return None
+    import math
+
+    t = math.ceil((p[1] - p[0]) / p[2]) if p[2] else 0
+    return {"$attr:T": t} if t > 0 else None
+
+
+def _decay_lift(name: str, diag: bool) -> Rewrite:
+    """Spelled ``tril(γ^{clamp(i−j,0)})`` → ``decay(γ, t=T)``.
+
+    ``diag`` covers the attributed ``tril(·, diagonal=0)`` spelling;
+    a nonzero diagonal is a different mask and matches neither LHS.
+    """
+    diff = Op.make(
+        "clamp_min",
+        Op.make(
+            "sub",
+            Op.make("unsqueeze", "a1", dim="U1"),
+            Op.make("unsqueeze", "a2", dim="U2"),
+        ),
+        min="CM",
+    )
+    powered = Op.make("pow", "g", diff)
+    lhs = (
+        Op.make("tril", powered, diagonal=0)
+        if diag
+        else Op.make("tril", powered)
+    )
+    return R(
+        name,
+        lhs,
+        Op.make("decay", "g", t="T"),
+        check=_check_decay_lift,
+        derive=_derive_decay_lift,
+        law="the spelled causal-decay subgraph is the decay matrix "
+        "itself: tril(g^clamp_min(pos_i-pos_j,0)) = decay(g, T) — "
+        "the structure made a value so the block laws can see it.",
+    )
+
+
+DECAY_LIFT = _decay_lift("decay_lift", False)
+DECAY_LIFT_DIAG = _decay_lift("decay_lift_diag", True)
+
+
+# ---------------------------------------------------------------------------
+#  Chunking the decayed product — the block decomposition.
+#
+#  ``(S ⊙ D) @ V`` over concatenated operands splits along BOTH
+#  matmul axes, and each half is exact — no approximation:
+#
+#  ROWS (the query axis, −2 of S):
+#      om_decayed(cat_T(s1,s2), d, v)
+#        = cat_T( om_decayed(s1, d_hi, v), om_decayed(s2, d_lo, v) )
+#      where d_i is block i's slice of d on the row axis — or d
+#      itself when it broadcasts along that axis (extent 1, a shared
+#      per-chunk decay under equal block sizes, or no such axis).
+#
+#  KEYS (the contraction axis, −1 of S / −2 of V):
+#      om_decayed(s, d, cat_K(v1,v2))
+#        = om_decayed(s_L, d_L, v1) + om_decayed(s_R, d_R, v2)
+#      — the block-column decomposition of the contraction, s/d
+#      sliced on the key axis when they cover it.
+#
+#  Composed on ``om_decayed(cat_T(s1,s2), decay(γ,T), cat_K(v1,v2))``
+#  the two splits produce the four-block chunked form: the diagonal
+#  blocks' ``split(split(decay))`` operands fold back to
+#  ``decay(γ, T_i)`` by ``decay_block_diag`` (the intra terms), the
+#  (1,0) block is the cross-decay term the recurrence carries, and
+#  the (0,1) block multiplies a provably-zero triangle — still
+#  materialised (the zero-elision needs a typed ``zeros``; the IR's
+#  leaves carry no dtype).  Slicing is exact but NOT free — the
+#  chunked form pays extra launches for identical FLOPs, so
+#  extraction keeps the fused element unless a cost model or a
+#  deeper structure law (the ξ·ηᵀ factorisation of the cross block,
+#  which needs the score's OWN q·kᵀ rank — see the module note) makes
+#  it win.
+# ---------------------------------------------------------------------------
+
+
+def _sliced(sh: tuple, axis: int, ext: int) -> tuple:
+    """Shape ``sh`` with ``axis``'s extent replaced by ``ext``."""
+    return (*sh[:axis], ext, *sh[axis + 1 :])
+
+
+def _block_out_ok(si, di, vi):
+    """Output shape of one decayed block, or ``None`` when ill-typed.
+
+    The block must satisfy the same gate the element itself does —
+    the mul must broadcast and the contraction must form.
+    """
+    from catopt_core.typing import INVALID, broadcast, matmul_shape
+
+    m = broadcast(si, di)
+    if m is INVALID:
+        return None
+    return matmul_shape(m, vi)
+
+
+def _outs_cat_ok(o1, o2, axis: int) -> bool:
+    """Two block outputs concat on ``axis``: same rank, equal off-axis."""
+    return len(o1) == len(o2) and all(
+        _dim_eq(o1[i], o2[i]) for i in range(len(o1)) if i != axis
+    )
+
+
+def _check_om_decayed_rows(mode: str):
+    """Check the row-axis split — ``mode`` is "slice" or "reuse".
+
+    The scores concat must be on the ROW axis (−2); ``d`` is the
+    decay operand — sliced on its image of the row axis when it
+    covers the whole concatenated extent (``_cat_axis_plan`` mode
+    "slice"), reused verbatim when it broadcasts along that axis
+    ("reuse").  Every admitted block must be a well-typed decayed
+    contraction and the two outputs must concat on −2.
+    """
+
+    def check(bound: dict) -> bool:
+        D = bound.get("$attr:D")
+        s1, s2 = _vshape(bound.get("s1")), _vshape(bound.get("s2"))
+        vs, ds = _vshape(bound.get("v")), _vshape(bound.get("d"))
+        if not all(isinstance(x, tuple) for x in (s1, s2, vs, ds)):
+            return False
+        if not (isinstance(D, int) and len(s1) == len(s2)):
+            return False
+        r = len(s1)
+        if r < 2 or D % r != r - 2:
+            return False  # the cat axis must be the row axis
+        plan = _cat_axis_plan(bound, "d")
+        if plan is None or plan["mode"] != mode:
+            return False
+        outs = []
+        for i, si in enumerate((s1, s2)):
+            di = (
+                ds
+                if mode == "reuse"
+                else _sliced(ds, plan["md"], plan["sizes"][i])
+            )
+            o = _block_out_ok(si, di, vs)
+            if o is None:
+                return False
+            outs.append(o)
+        return _outs_cat_ok(outs[0], outs[1], len(outs[0]) - 2)
+
+    return check
+
+
+def _derive_om_decayed_rows(bound: dict) -> dict | None:
+    """Split sizes + the row axis in ``d``'s own coords (slice mode)."""
+    plan = _cat_axis_plan(bound, "d")
+    if plan is None or plan["mode"] != "slice":
+        return None
+    return {"$attr:SZ": plan["sizes"], "$attr:MD": plan["md"]}
+
+
+def _om_decayed_chunk_rows(name: str, mode: str) -> Rewrite:
+    """``om_decayed(cat(s1,s2,D), d, v)`` → cat of per-row-block calls."""
+    d1, d2, derive = "d", "d", None
+    if mode == "slice":
+        d1 = Op.make("split", "d", sizes="SZ", dim="MD", index=0)
+        d2 = Op.make("split", "d", sizes="SZ", dim="MD", index=1)
+        derive = _derive_om_decayed_rows
+    return R(
+        name,
+        Op.make(
+            "om_decayed",
+            Op.make("concat", "s1", "s2", dim="D"),
+            "d",
+            "v",
+        ),
+        Op.make(
+            "concat",
+            Op.make("om_decayed", "s1", d1, "v"),
+            Op.make("om_decayed", "s2", d2, "v"),
+            dim=-2,
+        ),
+        check=_check_om_decayed_rows(mode),
+        derive=derive,
+        law="row-block decomposition of the decayed product: "
+        "(cat_T(s1,s2) ⊙ d) @ v = cat_T((s1⊙d1)v, (s2⊙d2)v) — the "
+        "decay slices with the scores on the row axis, or broadcasts "
+        "into both blocks.",
+    )
+
+
+def _check_om_decayed_rows_cat(bound: dict) -> bool:
+    """Both operands concat'd on the row axis — pair the blocks.
+
+    Reuses ``_check_cat_pair`` under renamed metvars: the two cats
+    must land on the SAME axis of the broadcast score plane, and that
+    axis must be the row axis (``ro − 2``); each block must then be a
+    well-typed decayed contraction.
+    """
+    pair = {
+        "a1": bound.get("s1"),
+        "a2": bound.get("s2"),
+        "b1": bound.get("d1"),
+        "b2": bound.get("d2"),
+        "$attr:DA": bound.get("$attr:SD"),
+        "$attr:DB": bound.get("$attr:DD"),
+    }
+    oa = _check_cat_pair(pair)
+    if oa is None:
+        return False
+    s1, s2 = _vshape(bound.get("s1")), _vshape(bound.get("s2"))
+    d1, d2 = _vshape(bound.get("d1")), _vshape(bound.get("d2"))
+    vs = _vshape(bound.get("v"))
+    ro = max(len(s1), len(d1))
+    if oa != ro - 2:
+        return False
+    o1 = _block_out_ok(s1, d1, vs)
+    o2 = _block_out_ok(s2, d2, vs)
+    if o1 is None or o2 is None:
+        return False
+    return _outs_cat_ok(o1, o2, len(o1) - 2)
+
+
+def _v_cat_pair(bound: dict) -> tuple | None:
+    """``concat(v1,v2,VD)`` on the key axis — return ``(K1, K2)``.
+
+    The cat must be on dim −2 of v (keys, pre-contraction), the
+    blocks cat-compatible off it, and the key extents concrete —
+    the split sizes are derived from them.
+    """
+    VD = bound.get("$attr:VD")
+    v1, v2 = _vshape(bound.get("v1")), _vshape(bound.get("v2"))
+    if not (
+        isinstance(v1, tuple)
+        and isinstance(v2, tuple)
+        and isinstance(VD, int)
+        and len(v1) == len(v2)
+        and len(v1) >= 2
+    ):
+        return None
+    nv = len(v1)
+    if VD % nv != nv - 2 or not _off_axis_eq(v1, v2, nv - 2):
+        return None
+    k1, k2 = v1[nv - 2], v2[nv - 2]
+    return (
+        (k1, k2)
+        if isinstance(k1, int) and isinstance(k2, int)
+        else None
+    )
+
+
+def _off_axis_eq(a: tuple, b: tuple, skip: int) -> bool:
+    """All dims equal except axis ``skip`` — cat-compat off the cat axis."""
+    return all(_dim_eq(a[i], b[i]) for i in range(len(a)) if i != skip)
+
+
+def _s_cat_blocks(bound: dict, sizes: tuple):
+    """Score blocks arriving already concat'd on the key axis (−1).
+
+    The cat must sit on s's LAST axis, the blocks be cat-compatible
+    off it, and each block's key extent pair with its value block.
+    """
+    s1, s2 = _vshape(bound.get("s1")), _vshape(bound.get("s2"))
+    SD = bound.get("$attr:SD")
+    if not (
+        isinstance(s1, tuple)
+        and isinstance(s2, tuple)
+        and isinstance(SD, int)
+        and s1
+        and len(s1) == len(s2)
+    ):
+        return None
+    if SD % len(s1) != len(s1) - 1:
+        return None
+    if not _off_axis_eq(s1, s2, len(s1) - 1):
+        return None
+    if not (_dim_eq(s1[-1], sizes[0]) and _dim_eq(s2[-1], sizes[1])):
+        return None
+    return (s1, s2)
+
+
+def _s_key_blocks(bound: dict, s_cat: bool, sizes: tuple):
+    """Per-block score shapes — split or concat'd on the key axis.
+
+    ``s_cat=False``: the whole ``s`` splits at −1, so its last extent
+    must equal K1+K2 concretely.  ``s_cat=True``: the score blocks
+    arrive already concat'd on −1 — s_i pairs with v_i directly.
+    """
+    if s_cat:
+        return _s_cat_blocks(bound, sizes)
+    ss = _vshape(bound.get("s"))
+    if not (
+        isinstance(ss, tuple) and ss and ss[-1] == sizes[0] + sizes[1]
+    ):
+        return None
+    return (
+        _sliced(ss, len(ss) - 1, sizes[0]),
+        _sliced(ss, len(ss) - 1, sizes[1]),
+    )
+
+
+def _d_key_mode(ds: tuple, sizes: tuple) -> str | None:
+    """Classify ``d`` on the key axis: "slice" / "reuse" / veto.
+
+    The key axis is ``d``'s LAST (it right-aligns with the score
+    plane's contracted axis).  Extent K1+K2 slices; extent 1 or a
+    scalar decay broadcasts into both blocks; anything else — an
+    unproven (``None``) extent included — vetoes.
+    """
+    if not ds:
+        return "reuse"
+    if ds[-1] == sizes[0] + sizes[1]:
+        return "slice"
+    if ds[-1] == 1:
+        return "reuse"
+    return None
+
+
+def _key_cat_plan(bound: dict, s_cat: bool) -> dict | None:
+    """Plan the key-axis split of a decayed product.
+
+    Returns ``{"mode", "sizes"}`` — the (K1,K2) split and how ``d``
+    distributes — or ``None`` when the rewrite cannot be proven
+    well-typed: values must cat on −2 with concrete key extents, the
+    score blocks must pair with them, and every emitted block must be
+    a valid decayed contraction.  The ``add`` needs no broadcast
+    check — the key split leaves the row axis and batch dims shared
+    and the value cat already pinned a common ``dv``.
+    """
+    pair = _v_cat_pair(bound)
+    if pair is None:
+        return None
+    sblocks = _s_key_blocks(bound, s_cat, pair)
+    if sblocks is None:
+        return None
+    ds = _vshape(bound.get("d"))
+    if not isinstance(ds, tuple):
+        return None
+    mode = _d_key_mode(ds, pair)
+    if mode is None:
+        return None
+    v1, v2 = _vshape(bound.get("v1")), _vshape(bound.get("v2"))
+    dblocks = (
+        (
+            _sliced(ds, len(ds) - 1, pair[0]),
+            _sliced(ds, len(ds) - 1, pair[1]),
+        )
+        if mode == "slice"
+        else (ds, ds)
+    )
+    outs = [
+        _block_out_ok(si, di, vi)
+        for si, di, vi in zip(sblocks, dblocks, (v1, v2), strict=True)
+    ]
+    if any(o is None for o in outs):
+        return None
+    return {"mode": mode, "sizes": pair}
+
+
+def _check_key_cat(s_cat: bool, mode: str):
+    """Check the key-axis split — gate on the plan's ``d`` mode."""
+
+    def check(bound: dict) -> bool:
+        plan = _key_cat_plan(bound, s_cat)
+        return plan is not None and plan["mode"] == mode
+
+    return check
+
+
+def _derive_key_cat(s_cat: bool):
+    """Derive ``SZ`` = the (K1,K2) key extents from the v blocks."""
+
+    def derive(bound: dict) -> dict | None:
+        plan = _key_cat_plan(bound, s_cat)
+        return None if plan is None else {"$attr:SZ": plan["sizes"]}
+
+    return derive
+
+
+def _om_decayed_chunk_keys(name: str, mode: str) -> Rewrite:
+    """``om_decayed(s, d, cat(v1,v2,-2))`` → add of key-block calls."""
+    s1 = Op.make("split", "s", sizes="SZ", dim=-1, index=0)
+    s2 = Op.make("split", "s", sizes="SZ", dim=-1, index=1)
+    d1, d2 = "d", "d"
+    if mode == "slice":
+        d1 = Op.make("split", "d", sizes="SZ", dim=-1, index=0)
+        d2 = Op.make("split", "d", sizes="SZ", dim=-1, index=1)
+    return R(
+        name,
+        Op.make(
+            "om_decayed",
+            "s",
+            "d",
+            Op.make("concat", "v1", "v2", dim="VD"),
+        ),
+        Op.make(
+            "add",
+            Op.make("om_decayed", s1, d1, "v1"),
+            Op.make("om_decayed", s2, d2, "v2"),
+        ),
+        check=_check_key_cat(False, mode),
+        derive=_derive_key_cat(False),
+        law="key-block decomposition of the decayed product: "
+        "(s ⊙ d) @ cat(v1,v2) = (s_L⊙d_L)v1 + (s_R⊙d_R)v2 — the "
+        "contraction's own concat split; the cross term lands here.",
+    )
+
+
+def _om_decayed_chunk_keys_cat(name: str, mode: str) -> Rewrite:
+    """Scores ALREADY concat'd on −1 — pair s_i with v_i directly."""
+    d1, d2 = "d", "d"
+    derive = None
+    if mode == "slice":
+        d1 = Op.make("split", "d", sizes="SZ", dim=-1, index=0)
+        d2 = Op.make("split", "d", sizes="SZ", dim=-1, index=1)
+        derive = _derive_key_cat(True)
+    return R(
+        name,
+        Op.make(
+            "om_decayed",
+            Op.make("concat", "s1", "s2", dim="SD"),
+            "d",
+            Op.make("concat", "v1", "v2", dim="VD"),
+        ),
+        Op.make(
+            "add",
+            Op.make("om_decayed", "s1", d1, "v1"),
+            Op.make("om_decayed", "s2", d2, "v2"),
+        ),
+        check=_check_key_cat(True, mode),
+        derive=derive,
+        law="both operands arrive key-blocked: (cat_K(s1,s2) ⊙ d) @ "
+        "cat(v1,v2) = (s1⊙d_L)v1 + (s2⊙d_R)v2 — the chunked score "
+        "form exported by blockwise QKᵀ.",
+    )
+
+
+#: Row- and key-axis chunk splits of ``om_decayed``.  The "slice"
+#: variants emit ``split`` projections of ``d``; "reuse" variants
+#: fire when the decay broadcasts along the split axis; the ``_cat``
+#: rows law pairs operands that both arrive concat'd.
+OM_DECAYED_CHUNK_LAWS: list[Rewrite] = [
+    _om_decayed_chunk_rows("om_decayed_chunk_rows_slice", "slice"),
+    _om_decayed_chunk_rows("om_decayed_chunk_rows_reuse", "reuse"),
+    R(
+        "om_decayed_chunk_rows_cat",
+        Op.make(
+            "om_decayed",
+            Op.make("concat", "s1", "s2", dim="SD"),
+            Op.make("concat", "d1", "d2", dim="DD"),
+            "v",
+        ),
+        Op.make(
+            "concat",
+            Op.make("om_decayed", "s1", "d1", "v"),
+            Op.make("om_decayed", "s2", "d2", "v"),
+            dim=-2,
+        ),
+        check=_check_om_decayed_rows_cat,
+        law="score and decay arrive concat'd on the row axis: pair "
+        "the blocks — cat_T((s_i⊙d_i)v).",
+    ),
+    _om_decayed_chunk_keys("om_decayed_chunk_keys_slice", "slice"),
+    _om_decayed_chunk_keys("om_decayed_chunk_keys_reuse", "reuse"),
+    _om_decayed_chunk_keys_cat(
+        "om_decayed_chunk_keys_cat_slice", "slice"
+    ),
+    _om_decayed_chunk_keys_cat(
+        "om_decayed_chunk_keys_cat_reuse", "reuse"
+    ),
+]
+
+
+# ---------------------------------------------------------------------------
+#  The decay's own block structure.
+#
+#  The (i,i) diagonal block of ``decay(γ, T1+T2)`` is literally
+#  ``decay(γ, T_i)``: equal row and column offsets cancel, leaving
+#  ``γ^{r−c}`` on a smaller square.  ``split`` of a ``split`` with the
+#  SAME sizes and index is the diagonal — the law regenerates the
+#  block instead of slicing it out of the materialised matrix (one
+#  small pow against a slice of a big one — and, more importantly,
+#  the regenerated form is what later structure laws see).
+#
+#  What this still cannot spell (documented, not hacked):
+#  * the strict-upper block is identically zero, but eliding it needs
+#    a ``zeros`` whose DTYPE is the output's — the term level is
+#    shape-only, so a minted ``zeros(shape=…)`` would carry the wrong
+#    dtype and fail fp64 equality; the zero block stays a
+#    materialised ``split`` until a dtype-aware factory exists;
+#  * the cross block's ξ·ηᵀ rank-1 factorisation — γ^{(o+i)−j} splits
+#    as a row scale times a column scale, but the vectors need a
+#    decay-VECTOR generator this vocabulary does not yet have (a
+#    ``decay(g, t=…)`` row/column form); until then the cross term is
+#    the materialised slice — correct, just not linearised.
+# ---------------------------------------------------------------------------
+
+
+def _diag_attrs(bound: dict) -> tuple | None:
+    """Read the bound ``(SZ, I)`` of a diagonal double-split.
+
+    The sizes must be a pair of ints summing to the matrix extent
+    ``t`` and the shared index must name one of the two blocks.
+    """
+    sz, i = bound.get("$attr:SZ"), bound.get("$attr:I")
+    t = bound.get("$attr:T")
+    if not (
+        isinstance(sz, (tuple, list))
+        and len(sz) == 2
+        and all(isinstance(x, int) for x in sz)
+        and isinstance(i, int)
+        and 0 <= i < 2
+        and isinstance(t, int)
+        and t == sz[0] + sz[1]
+    ):
+        return None
+    return (sz, i)
+
+
+def _check_decay_block_diag(bound: dict) -> bool:
+    """``split_i(split_i(decay(γ,T), SZ, −2), SZ, −1)`` is the (i,i) block.
+
+    One sizes tuple and one index bind BOTH splits (equal row and
+    column offsets — the diagonal, not an arbitrary block), the inner
+    split must sit on the decay's row axis and the outer on its
+    column axis (mod the decay rank — γ's dims are leading batch
+    dims), and the block extent must be concrete so ``TC`` derives.
+    """
+    if _diag_attrs(bound) is None:
+        return False
+    dr, dc = bound.get("$attr:DR"), bound.get("$attr:DC")
+    if not (isinstance(dr, int) and isinstance(dc, int)):
+        return False
+    gs = _vshape(bound.get("g"))
+    if not isinstance(gs, tuple):
+        return dr == -2 and dc == -1
+    r = len(gs) + 2
+    return dr % r == r - 2 and dc % r == r - 1
+
+
+def _derive_decay_block_diag(bound: dict) -> dict | None:
+    """``TC`` := ``SZ[i]`` — the diagonal block's extent."""
+    attrs = _diag_attrs(bound)
+    return None if attrs is None else {"$attr:TC": attrs[0][attrs[1]]}
+
+
+DECAY_BLOCK_DIAG = R(
+    "decay_block_diag",
+    Op.make(
+        "split",
+        Op.make(
+            "split",
+            Op.make("decay", "g", t="T"),
+            sizes="SZ",
+            dim="DR",
+            index="I",
+        ),
+        sizes="SZ",
+        dim="DC",
+        index="I",
+    ),
+    Op.make("decay", "g", t="TC"),
+    check=_check_decay_block_diag,
+    derive=_derive_decay_block_diag,
+    law="the (i,i) block of the causal decay triangle IS the local "
+    "decay of chunk i — g^((o+r)-(o+c)) = g^(r-c): diagonal blocks "
+    "regenerate instead of slicing materialised decay.",
+)
+
+
+# ---------------------------------------------------------------------------
 #  Law set
 # ---------------------------------------------------------------------------
 
@@ -1406,6 +2104,10 @@ OM_LAWS: list[Rewrite] = [
     *SDPA_CAT_LAWS,
     OM_DECAYED_LIFT,
     OM_DECAYED_UNLIFT,
+    DECAY_LIFT,
+    DECAY_LIFT_DIAG,
+    *OM_DECAYED_CHUNK_LAWS,
+    DECAY_BLOCK_DIAG,
 ]
 
 #: The same set as a composable :class:`~catopt_core.laws.RuleSet` —
