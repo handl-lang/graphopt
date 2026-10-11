@@ -1320,11 +1320,7 @@ class MetaArena:
         (op/handle roles, custom provenance) round-trip intact.
         """
         if self._store is not None:
-            constructed = tuple(
-                self._cells[n]
-                for n in self.declared
-                if n in self._cells
-            )
+            constructed = tuple(self._cells.values())
             if not constructed:
                 return self._store
             return self._store.merge(
@@ -1337,9 +1333,7 @@ class MetaArena:
                 (r for r in self.rules if r.name not in declared),
             )
         ]
-        constructed = tuple(
-            self._cells[n] for n in self.declared if n in self._cells
-        )
+        constructed = tuple(self._cells.values())
         if constructed:
             frags.append(Fragment("constructed", constructed))
         frags.append(
@@ -1551,7 +1545,30 @@ class MetaArena:
                 self._insert(r, cell=self._cell_for(out, i, r))
         for op_name, mvs, spelled in out.defs:
             self.definitions[op_name] = (mvs, spelled)
+            self._mint_op_cell(op_name, mvs, out)
         return out, inserted
+
+    def _mint_op_cell(
+        self, op_name: str, mvs: tuple, out: _Outcome
+    ) -> None:
+        """Record the composite's op cell under a namespaced key.
+
+        The store's ``opdefs()`` view must list minted ops alongside
+        shipped ones — not just the fold law that defines them.  The
+        ``"op:"`` prefix keeps the op name from colliding with its
+        own fold rule's key in ``_cells``.
+        """
+        from catopt_core.cells import op_cell
+        from catopt_core.opdata import OpDef
+
+        self._cells[f"op:{op_name}"] = op_cell(
+            OpDef(name=op_name, arity=len(mvs)),
+            provenance=Provenance(
+                "minted",
+                op="declare",
+                premises=tuple(r.name for r in out.rules[:1]),
+            ),
+        )
 
     def _reward(self, out: _Outcome, spent: int) -> float:
         """Compose the step's reward from the weight table."""

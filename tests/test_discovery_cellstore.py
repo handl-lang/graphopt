@@ -199,6 +199,29 @@ class TestBoardCellStore:
             r.name for r in board.rules
         }
 
+    def test_declare_mints_an_op_cell(self):
+        """A folded composite declares its op, not just its law."""
+        board = ma.MetaArena(_sub_gap())
+        _st, rep = board.step(
+            ma.Action.declare(
+                {
+                    "op": "fold",
+                    "params": {
+                        "name": "myabs",
+                        "spelled": ("add", "X", ("neg", "Y")),
+                        "kernel": ("myabs", "X", "Y"),
+                    },
+                }
+            )
+        )
+        assert rep.applied
+        store = board.cellstore()
+        op = store.get("op", "myabs")
+        assert op is not None and op.body.arity == 2
+        assert op.provenance.origin == "minted"
+        assert op.provenance.premises == ("myabs",)
+        assert "myabs" in {d.name for d in store.opdefs()}
+
     def test_law_kind_declare_lands_as_a_law_cell(self):
         board = ma.MetaArena(_sub_gap())
         _st, rep = board.step(

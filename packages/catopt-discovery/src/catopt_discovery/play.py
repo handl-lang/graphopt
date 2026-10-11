@@ -706,7 +706,7 @@ def gen_probe(case: Any, *, budget: int = 12, reps: int = 200) -> dict:
 
 
 def _first_binding(tag: str, h: dict) -> Any:
-    """The first generated kernel binding any tier accepts — or None."""
+    """Return the first generated kernel binding any tier accepts."""
     from catopt_discovery import genkernel as gk
 
     for tier in gk.TIERS:
