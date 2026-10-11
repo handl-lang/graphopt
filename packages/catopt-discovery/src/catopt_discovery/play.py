@@ -1192,9 +1192,9 @@ def _extras(args: Any, d: Any, ev: list, player: Any) -> None:
         _zoo_rows()
     if args.scan_probe:
         for row in scan_probe():
-            print(
+            print(  # stdout-compat
                 f"scan[{row.get('shape', '-')}]: {row}"
-            )  # stdout-compat
+            )
 
 
 def main(argv: list[str] | None = None) -> int:

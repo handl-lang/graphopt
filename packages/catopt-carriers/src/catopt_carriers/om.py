@@ -54,6 +54,15 @@ MASKED ATTENTION
     is that masking distributes over concat (see the section below):
     each block takes the matching *slice* of the mask, and for causal
     masks the block's positional offset lives inside that slice.
+
+DECAYED ATTENTION
+    RetNet-style chunked retention writes ``(QKᵀ ⊙ D) V`` — a score
+    matrix weighted elementwise by a position/decay matrix, then
+    contracted by the values.  There is no softmax and no normaliser,
+    so the om element cannot express it (``mul`` is not ``softmax`` —
+    OM_LIFT declines the spelled term, and lifting it onto any
+    existing carrier verifies FALSE).  ``om_decayed(s, d, v)`` is the
+    vocabulary element naming it: see the section before the law set.
 """
 
 from typing import Any, Literal
@@ -976,6 +985,13 @@ def _attnbias_torch(m: torch.Tensor, *a, **kw) -> torch.Tensor:
     return m
 
 
+def _om_decayed_torch(
+    s: torch.Tensor, d: torch.Tensor, v: torch.Tensor, *a, **kw
+) -> torch.Tensor:
+    """Lower ``om_decayed`` — the spelled ``(s * d) @ v``, verbatim."""
+    return (s * d) @ v
+
+
 #: Torch lowering bindings — an EXPORT, not an import-time mutation
 #: (plan 0001 phase 2c): :class:`catopt_core.ops.OpTable` folds this dict in
 #: via ``register``/``full()``; importing this module registers nothing
@@ -984,6 +1000,9 @@ TORCH_BINDINGS: dict[str, Any] = {
     "cmask": _cmask_torch,
     "fill": _fill_torch,
     "attnbias": _attnbias_torch,
+    # The decayed-attention element — declared with its laws at the
+    # bottom of this module.
+    "om_decayed": _om_decayed_torch,
 }
 
 #: The masked_fill fill-value in rule RHSs.  _instantiate turns a
@@ -1280,6 +1299,92 @@ SDPA_CAT_LAWS: list[Rewrite] = [
 
 
 # ---------------------------------------------------------------------------
+#  The decayed-attention element — ``matmul(mul(s, d), v)`` as one op.
+#
+#  The RetNet/GLA inner-chunk form ``(QKᵀ ⊙ D) V`` spells
+#  ``matmul(mul(s, d), v)``: the score/prob matrix ``s`` (…,T,K) is
+#  weighted ELEMENTWISE by a position/decay matrix ``d`` (a causal
+#  ``γ^{t−j}`` triangle in RetNet, broadcastable against ``s`` under
+#  torch.mul semantics — a scalar or lower-rank decay is legal), then
+#  contracted on its last axis by the values ``v`` (…,K,dv) under
+#  ordinary ``torch.matmul`` rules (batch dims broadcasting), giving
+#  ``(…,T,dv)``.  Unlike softmax attention there is no normaliser:
+#  ``om_elem``'s (m,l,a) triple has nothing to carry and OM_LIFT's
+#  softmax guard declines the spelled term — which is why the form
+#  verified FALSE against every existing carrier.
+#
+#  ``om_decayed`` is a VALUE-level element: it evaluates directly to
+#  the applied output — no carrier triple, no separate apply op (the
+#  decayed product's composition over key chunks is plain ``add`` —
+#  a monoid already in the vocabulary).  Its executor is the spelled
+#  body itself — a reference lowering, correct by construction; a
+#  fused kernel is codegen's problem (``catopt_discovery.genkernel``),
+#  not this declaration's.
+#
+#  The lift accepts exactly what torch would compute: the mul must
+#  broadcast and the contraction must be well-typed — the same gate
+#  the op's shape rule (:func:`catopt_core.typing._om_decayed_shape`)
+#  and FLOP entry price.  The name marks the motivating reading
+#  (decay-masked scores); the *semantics* is just the fused weighted
+#  contraction, so any well-typed ``mul@matmul`` site lifts soundly.
+# ---------------------------------------------------------------------------
+
+op_def(
+    "om_decayed",
+    3,
+    1,
+    law="Decayed-attention element: om_decayed(s, d, v) = (s ⊙ d) @ v — "
+    "score matrix decay-weighted elementwise, then contracted by the "
+    "values (the RetNet inner-chunk form).  A value-level op: the "
+    "element IS the applied result.",
+)
+
+
+def _check_om_decayed(bound: dict) -> bool:
+    """Require the spelled ``mul(s, d) @ v`` to be well-typed.
+
+    The mul broadcasts under torch semantics (a scalar decay is
+    legal); the matmul contracts the broadcast result's last axis
+    against ``v`` per :func:`catopt_core.typing.matmul_shape`.  An
+    unresolvable operand shape, an unbroadcastable ``d``, or a
+    contraction the shapes do not admit vetoes the lift — the element
+    only ever names a program torch itself would run.
+    """
+    ss, ds, vs = (
+        _vshape(bound.get("s")),
+        _vshape(bound.get("d")),
+        _vshape(bound.get("v")),
+    )
+    if not all(isinstance(x, tuple) for x in (ss, ds, vs)):
+        return False
+    from catopt_core.typing import INVALID, broadcast, matmul_shape
+
+    m = broadcast(ss, ds)
+    if m is INVALID:
+        return False
+    return matmul_shape(m, vs) is not None
+
+
+OM_DECAYED_LIFT = R(
+    "om_decayed_lift",
+    Op.make("matmul", Op.make("mul", "s", "d"), "v"),
+    Op.make("om_decayed", "s", "d", "v"),
+    law="matmul(mul(s,d), v) lifts into the decayed-attention element: "
+    "om_decayed(s,d,v) = (s ⊙ d) @ v — the RetNet inner-chunk form "
+    "no other carrier element expresses (om_elem carries a softmax "
+    "normaliser; the decayed form has none).",
+    check=_check_om_decayed,
+)
+
+OM_DECAYED_UNLIFT = R(
+    "om_decayed_unlift",
+    Op.make("om_decayed", "s", "d", "v"),
+    Op.make("matmul", Op.make("mul", "s", "d"), "v"),
+    law="om_decayed(s,d,v) unfolds back to the spelled mul+matmul.",
+)
+
+
+# ---------------------------------------------------------------------------
 #  Law set
 # ---------------------------------------------------------------------------
 
@@ -1299,6 +1404,8 @@ OM_LAWS: list[Rewrite] = [
     MATMUL_T_CONCAT,
     *OM_MASK_LAWS,
     *SDPA_CAT_LAWS,
+    OM_DECAYED_LIFT,
+    OM_DECAYED_UNLIFT,
 ]
 
 #: The same set as a composable :class:`~catopt_core.laws.RuleSet` —

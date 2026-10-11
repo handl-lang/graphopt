@@ -1267,6 +1267,25 @@ def _om_elem_shape(op: Op, shapes: list) -> tuple | str | None:
     return None
 
 
+def _om_decayed_shape(op: Op, shapes: list) -> tuple | str | None:
+    """``om_decayed`` — (s ⊙ d) @ v, the decayed-attention element.
+
+    The mul broadcasts under torch semantics; the matmul contracts the
+    broadcast result's last axis.  A ``()`` score or value operand is
+    a carrier member read as a tensor — unknown, not scalar.  An
+    unbroadcastable mul or a contraction ``_matmul_shape`` cannot form
+    is *provably* ill-typed — ``_INVALID``, not ``None``.
+    """
+    s, d, v = shapes[0], shapes[1], shapes[2]
+    if not s or not v:
+        return None
+    m = _broadcast(s, d)
+    if m is _INVALID:
+        return _INVALID
+    out = _matmul_shape(m, v)
+    return _INVALID if out is None else out
+
+
 def _trace_shape(op: Op, shapes: list) -> tuple | str | None:
     """``trace`` — Tr(f).
 
@@ -1388,6 +1407,7 @@ register_shape_rule("apply", _apply_shape)
 register_shape_rule("applyd", _apply_shape)
 register_shape_rule("om", _om_shape)
 register_shape_rule("om_elem", _om_elem_shape)
+register_shape_rule("om_decayed", _om_decayed_shape)
 register_shape_rule("trace", _trace_shape)
 register_shape_rule("bdiag", _bdiag_shape)
 register_shape_rule("parl", _bdiag_shape)

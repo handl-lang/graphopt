@@ -51,6 +51,7 @@ Carrier modules that opt in (and the ops they contribute):
   ``om_elem_affd`` ``om_elem_aff`` ``omd`` ``omd_elem`` ``omd_compose``
   ``omd_apply`` ``omd_applym``
 * :mod:`catopt_carriers.om` — ``cmask`` ``fill`` ``attnbias``
+  ``om_decayed``
 
 That set is the built-in ``_CARRIER_MODULES`` tuple, in registration
 order.  A NEW carrier package does not edit core: it calls

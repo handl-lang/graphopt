@@ -18,6 +18,7 @@ from catopt_core.ir import Op
 from catopt_core.opmeta import COST_VIEW_OPS
 from catopt_core.typing import (
     _INVALID,
+    _broadcast,
     _infer_op_shape,
     _numel,
     _shape_of,
@@ -112,6 +113,30 @@ _LAUNCH_PENALTY = 1.0
 #: never win an extraction — the equivalence verifier is the last line
 #: of defence, the cost model is the first.
 _INVALID_COST = 1e15
+
+
+def _om_decayed_flops(term: Op, n_out: int, memo: dict | None) -> float:
+    """FLOPs of ``om_decayed(s, d, v)`` — the spelled work as one node.
+
+    One elementwise pass over the broadcast score plane plus the
+    contraction at ``2·n_out·K`` (K = the broadcast result's last
+    dim): priced exactly like the ``mul`` + ``matmul`` it lifts, so
+    the carrier element wins only the launch, never hidden FLOPs.
+    Unresolvable operand shapes degrade to ``2·n_out``.
+    """
+    s, d = (
+        _shape_of(term.args[0], memo),
+        _shape_of(term.args[1], memo),
+    )
+    m = (
+        _broadcast(s, d)
+        if isinstance(s, tuple) and isinstance(d, tuple)
+        else None
+    )
+    if isinstance(m, tuple) and m:
+        k = m[-1] if isinstance(m[-1], int) else 1
+        return float(_numel(m) + 2 * n_out * k)
+    return float(2 * n_out)
 
 
 def _flops_of(term: Op, memo: dict | None = None) -> float:
@@ -218,6 +243,8 @@ def _flops_of(term: Op, memo: dict | None = None) -> float:
     if term.op == "om_apply":
         # One division per output element.
         return float(n_out)
+    if term.op == "om_decayed":
+        return _om_decayed_flops(term, n_out, memo)
     if term.op == "sdpa":
         # attention: ~2 * (T * d + T * T) per head ≈ 2*T*max(d,T)*B*h
         shapes = [_shape_of(a, memo) for a in term.args]
