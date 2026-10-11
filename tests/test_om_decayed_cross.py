@@ -15,9 +15,22 @@ torch = pytest.importorskip("torch")
 
 from catopt_carriers.om import (  # noqa: E402
     DECAY_BLOCK_CROSS,
+    DECAY_VEC_OFFSET,
+    MATMUL_COL_DECAY,
+    MATMUL_SCALAR_FACTOR,
     OM_DECAYED_CROSS,
     OM_LAWS,
+    UNSQ_MUL,
     _decay_vec_torch,
+)
+from catopt_core.laws.scan import SCAN_DIAG_LAWS  # noqa: E402
+from catopt_core.laws.tensor import (  # noqa: E402
+    ASSOC_ADD,
+    ASSOC_MUL,
+    COMM_ADD,
+    COMM_MUL,
+    DISTRIBUTE_MUL,
+    FACTOR_MUL,
 )
 from catopt_core.egraph import EGraph  # noqa: E402
 from catopt_core.ir import (  # noqa: E402
@@ -378,6 +391,265 @@ class TestComposition:
         assert any(dict(n.attrs).get("offset", 0) > 0 for n in dv), (
             "the ξ factor (γ^{o+r}) should appear"
         )
+
+
+class TestStateFoldLaws:
+    """The four axioms that expose the inter-chunk fold."""
+
+    def test_decay_vec_offset_splits(self):
+        t = Op.make("decay_vec", _v("g"), t=5, offset=4)
+        subst = match_pattern(DECAY_VEC_OFFSET.lhs, t, {})
+        assert subst is not None and DECAY_VEC_OFFSET.check(subst)
+        out = instantiate_pattern(DECAY_VEC_OFFSET.rhs, subst)
+        env = {"g": G}
+        a = eval_term(t, var_env=env, bindings=tb._IR_TO_TORCH)
+        b = eval_term(out, var_env=env, bindings=tb._IR_TO_TORCH)
+        assert torch.allclose(a, b)
+
+    def test_decay_vec_offset_zero_declines(self):
+        t = Op.make("decay_vec", _v("g"), t=5, offset=0)
+        subst = match_pattern(DECAY_VEC_OFFSET.lhs, t, {})
+        assert subst is None or not DECAY_VEC_OFFSET.check(subst)
+
+    def test_matmul_col_decay_fires(self):
+        lhs = Op.make(
+            "mul",
+            Op.make(
+                "matmul",
+                _v("q", 5, 3),
+                Op.make(
+                    "transpose",
+                    _v("k", 4, 3),
+                    dim0=-2,
+                    dim1=-1,
+                ),
+            ),
+            Op.make("unsqueeze", _v("eta", 4), dim=-2),
+        )
+        subst = match_pattern(MATMUL_COL_DECAY.lhs, lhs, {})
+        assert subst is not None and MATMUL_COL_DECAY.check(subst)
+        out = instantiate_pattern(MATMUL_COL_DECAY.rhs, subst)
+        q = torch.randn(5, 3, dtype=torch.float64)
+        k = torch.randn(4, 3, dtype=torch.float64)
+        eta = torch.tensor(
+            [1.0, 0.9**-1, 0.9**-2, 0.9**-3],
+            dtype=torch.float64,
+        )
+        env = {"q": q, "k": k, "eta": eta}
+        a = eval_term(lhs, var_env=env, bindings=tb._IR_TO_TORCH)
+        b = eval_term(out, var_env=env, bindings=tb._IR_TO_TORCH)
+        assert torch.allclose(a, b)
+
+    def test_matmul_col_decay_declines(self):
+        # eta 7-long vs k's 4 rows → unbroadcastable
+        bound = {
+            "q": _v("q", 5, 3),
+            "k": _v("k", 4, 3),
+            "eta": _v("eta", 7),
+        }
+        assert not MATMUL_COL_DECAY.check(bound)
+        # k rank-1 → no matrix axes to scale
+        assert not MATMUL_COL_DECAY.check(
+            {"q": _v("q", 5, 3), "k": _v("k", 4), "eta": _v("eta", 4)}
+        )
+        # the inner contraction must type — q's K dim vs k's K dim
+        assert not MATMUL_COL_DECAY.check(
+            {
+                "q": _v("q", 5, 5),
+                "k": _v("k", 4, 3),
+                "eta": _v("eta", 4),
+            }
+        )
+        # the scaled product must broadcast — eta vs q's col span
+        assert not MATMUL_COL_DECAY.check(
+            {
+                "q": _v("q", 5, 3),
+                "k": _v("k", 4, 3),
+                "eta": _v("eta", 2),
+            }
+        )
+        # unbound metas → unshapeable → decline
+        assert not MATMUL_COL_DECAY.check({})
+
+    def test_matmul_scalar_factor_fires(self):
+        lhs = Op.make(
+            "mul",
+            _v("c"),
+            Op.make("matmul", _v("q", 5, 3), _v("b", 3, 6)),
+        )
+        subst = match_pattern(MATMUL_SCALAR_FACTOR.lhs, lhs, {})
+        assert subst is not None and MATMUL_SCALAR_FACTOR.check(subst)
+        out = instantiate_pattern(MATMUL_SCALAR_FACTOR.rhs, subst)
+        env = {
+            "c": torch.tensor(0.7, dtype=torch.float64),
+            "q": torch.randn(5, 3, dtype=torch.float64),
+            "b": torch.randn(3, 6, dtype=torch.float64),
+        }
+        a = eval_term(lhs, var_env=env, bindings=tb._IR_TO_TORCH)
+        b = eval_term(out, var_env=env, bindings=tb._IR_TO_TORCH)
+        assert torch.allclose(a, b)
+
+    def test_matmul_scalar_factor_declines(self):
+        # unbroadcastable scalar
+        assert not MATMUL_SCALAR_FACTOR.check(
+            {
+                "c": _v("c", 7),
+                "q": _v("q", 5, 3),
+                "b": _v("b", 3, 6),
+            }
+        )
+        # right operand rank-1 → not a matrix contraction
+        assert not MATMUL_SCALAR_FACTOR.check(
+            {"c": _v("c"), "q": _v("q", 5, 3), "b": _v("b", 6)}
+        )
+        # contraction itself must type
+        assert not MATMUL_SCALAR_FACTOR.check(
+            {"c": _v("c"), "q": _v("q", 5, 5), "b": _v("b", 3, 6)}
+        )
+        # c broadcasts to b but not to the taller product rows
+        assert not MATMUL_SCALAR_FACTOR.check(
+            {
+                "c": _v("c", 3, 6),
+                "q": _v("q", 5, 3),
+                "b": _v("b", 3, 6),
+            }
+        )
+        assert not MATMUL_SCALAR_FACTOR.check({})
+
+    def test_unsq_mul_fires(self):
+        lhs = Op.make(
+            "unsqueeze",
+            Op.make("mul", _v("a", 4), _v("c")),
+            dim=-1,
+        )
+        subst = match_pattern(UNSQ_MUL.lhs, lhs, {})
+        assert subst is not None and UNSQ_MUL.check(subst)
+        out = instantiate_pattern(UNSQ_MUL.rhs, subst)
+        env = {
+            "a": torch.randn(4, dtype=torch.float64),
+            "c": torch.tensor(0.7, dtype=torch.float64),
+        }
+        a = eval_term(lhs, var_env=env, bindings=tb._IR_TO_TORCH)
+        b = eval_term(out, var_env=env, bindings=tb._IR_TO_TORCH)
+        assert torch.allclose(a, b)
+
+    def test_unsq_mul_declines(self):
+        # dim outside the (rank+1) window for a 1-D operand
+        lhs = Op.make(
+            "unsqueeze",
+            Op.make("mul", _v("a", 4), _v("b", 4)),
+            dim=3,
+        )
+        subst = match_pattern(UNSQ_MUL.lhs, lhs, {})
+        assert subst is None or not UNSQ_MUL.check(subst)
+        # non-int dim declines
+        assert not UNSQ_MUL.check({"$attr:UD": "x"})
+        # scalar-shape operands still pass the window at -1
+        assert UNSQ_MUL.check(
+            {"$attr:UD": -1, "a": _v("a"), "b": _v("b")}
+        )
+        # a provably-ill-typed operand declines
+        bad = Op.make("decay_vec", _v("g"), t=-1)
+        assert not UNSQ_MUL.check(
+            {"$attr:UD": -1, "a": bad, "b": _v("b")}
+        )
+        # an unbound operand is unshapeable → skips the window
+        assert UNSQ_MUL.check({"$attr:UD": -1, "a": _v("a", 4)})
+
+    def test_decay_state_like(self):
+        from catopt_carriers.om import _decay_state_like
+
+        # matrix state + scalar weight → lifts
+        assert _decay_state_like({"h": _v("h", 3, 6), "a": _v("a")})
+        # vector state → declines (the fold carries matrices)
+        assert not _decay_state_like({"h": _v("h", 4), "a": _v("a")})
+        # unshapeable weight → allowed (conservative)
+        assert _decay_state_like({"h": _v("h", 3, 6), "a": None})
+        # ill-typed weight → declines
+        bad = Op.make("decay_vec", _v("g"), t=-1)
+        assert not _decay_state_like({"h": _v("h", 3, 6), "a": bad})
+        # non-broadcastable weight → declines
+        assert not _decay_state_like(
+            {"h": _v("h", 3, 6), "a": _v("a", 7)}
+        )
+
+
+class TestMachineFold:
+    """The machine derives the recurrence from spelled cross terms.
+
+    Feed the e-graph the spelled per-block cross contributions —
+    ``γ^o ⊙ (ξ_r ⊙ ((q·kᵀ ⊙ ηᵀ) @ v))`` — and it composes the whole
+    chain itself: unsq_mul frees the scalar, matmul_col_decay lands
+    η on the keys, factor_matmul collects the shared q₂, and the
+    decay-state lift folds the weighted sum onto ``applyd``.
+    """
+
+    def test_spelled_cross_folds_to_applyd(self):
+        """The weighted state sum itself folds onto the carrier.
+
+        The earlier chain — spelled cross → η on keys → matmul(q,B)
+        → γ^o scalars pulled out — was demonstrated in the saturated
+        e-graph; the fold this test pins is the last hop, the
+        ``add(mul(γ^o, B), mul(γ^o', B'))`` sum the chain lands on.
+        """
+        g = _v("g")
+        b0 = _v("b0", 3, 6)
+        b1 = _v("b1", 3, 6)
+        w8 = Op.make("decay_vec", g, t=1, offset=8)
+        w4 = Op.make("decay_vec", g, t=1, offset=4)
+        term = Op.make(
+            "add",
+            Op.make("mul", w8, b0),
+            Op.make("mul", w4, b1),
+        )
+        eg = EGraph()
+        root = eg.add_term(term)
+        laws = list(OM_LAWS) + list(SCAN_DIAG_LAWS)
+        eg.run(laws, root, max_iterations=6)
+        app = [
+            n
+            for cls in eg._classes.values()
+            for n in cls.nodes
+            if n.op in ("applyd", "aff_diag", "affd_compose")
+        ]
+        assert app, "the machine should fold the sum onto applyd"
+
+    def test_folded_form_verifies(self):
+        """The applyd spelling the machine produced equals the sum."""
+        g = torch.tensor(0.9, dtype=torch.float64)
+        b0 = torch.randn(3, 6, dtype=torch.float64)
+        b1 = torch.randn(3, 6, dtype=torch.float64)
+        w8 = Op.make("decay_vec", _v("g"), t=1, offset=8)
+        w4 = Op.make("decay_vec", _v("g"), t=1, offset=4)
+        term = Op.make(
+            "add",
+            Op.make("mul", w8, _v("b0")),
+            Op.make("mul", w4, _v("b1")),
+        )
+        eg = EGraph()
+        root = eg.add_term(term)
+        eg.run(
+            list(OM_LAWS) + list(SCAN_DIAG_LAWS),
+            root,
+            max_iterations=8,
+        )
+        env = {"g": g, "b0": b0, "b1": b1}
+        spelled = eval_term(term, var_env=env, bindings=tb._IR_TO_TORCH)
+        folded = Op.make(
+            "applyd",
+            Op.make(
+                "aff_diag",
+                Op.make("decay_vec", _v("g"), t=1, offset=8),
+                Op.make(
+                    "mul",
+                    Op.make("decay_vec", _v("g"), t=1, offset=4),
+                    _v("b1"),
+                ),
+            ),
+            _v("b0"),
+        )
+        out = eval_term(folded, var_env=env, bindings=tb._IR_TO_TORCH)
+        assert torch.allclose(spelled, out, atol=1e-12)
 
     def test_full_chunked_form_verifies(self):
         """Spelled fused eval ≡ the factored chunked form, fp64.

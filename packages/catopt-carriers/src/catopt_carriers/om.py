@@ -2285,6 +2285,215 @@ OM_DECAYED_CROSS = R(
 )
 
 
+def _check_matmul_col_decay(bound: dict) -> bool:
+    """Column-scaling must broadcast and the contraction must type.
+
+    ``eta`` unsqueezed at ``-2`` becomes a row vector broadcasting
+    over the product's columns — its last axis must match ``k``'s
+    row axis so the scale lands where the transpose moves it.  The
+    lhs's mul and the rhs's inner contraction must both type.
+    """
+    qs, ks, es = (
+        _vshape(bound.get("q")),
+        _vshape(bound.get("k")),
+        _vshape(bound.get("eta")),
+    )
+    if not all(isinstance(x, tuple) for x in (qs, ks, es)):
+        return False
+    if len(ks) < 2 or not es:
+        return False
+    from catopt_core.typing import (
+        INVALID,
+        broadcast,
+        matmul_shape,
+    )
+
+    # k ⊙ (…,T_j,1) broadcasts eta over k's rows
+    eta_k = (*((1,) * max(len(es) - 1, 0)), es[-1], 1)
+    k_eta = broadcast(ks, eta_k)
+    if k_eta is INVALID:
+        return False
+    kt = list(k_eta)
+    kt[-2], kt[-1] = kt[-1], kt[-2]
+    m = matmul_shape(qs, tuple(kt))
+    if m is None:
+        return False
+    eta_s = (*((1,) * max(len(es) - 1, 0)), 1, es[-1])
+    return broadcast(m, eta_s) is not INVALID
+
+
+MATMUL_COL_DECAY = R(
+    "matmul_col_decay",
+    Op.make(
+        "mul",
+        Op.make(
+            "matmul",
+            "q",
+            Op.make("transpose", "k", dim0="D0", dim1="D1"),
+        ),
+        Op.make("unsqueeze", "eta", dim="UE"),
+    ),
+    Op.make(
+        "matmul",
+        "q",
+        Op.make(
+            "transpose",
+            Op.make("mul", "k", Op.make("unsqueeze", "eta", dim=-1)),
+            dim0="D0",
+            dim1="D1",
+        ),
+    ),
+    check=_check_matmul_col_decay,
+    law="column-scaling a q·kᵀ product by eta pulls inside the "
+    "contraction as row-scaling the transposed factor: (q·kᵀ) ⊙ etaᵀ "
+    "= q · (k ⊙ eta)ᵀ — the decay's eta column lands on the keys, "
+    "which is what turns the cross term into q @ (carried state).",
+)
+
+
+def _check_decay_vec_offset(bound: dict) -> bool:
+    """Fire only on a non-trivial offset."""
+    o = bound.get("$attr:OD")
+    return isinstance(o, int) and o != 0
+
+
+DECAY_VEC_OFFSET = R(
+    "decay_vec_offset",
+    Op.make("decay_vec", "g", t="T", offset="OD"),
+    Op.make(
+        "mul",
+        Op.make("decay_vec", "g", t=1, offset="OD"),
+        Op.make("decay_vec", "g", t="T"),
+    ),
+    check=_check_decay_vec_offset,
+    law="decay_vec(g, t, offset=o) = g^o ⊙ decay_vec(g, t) — the "
+    "cross-block vector splits into a per-BLOCK scalar (a length-1 "
+    "decay_vec carrying the offset) and the per-position base g^r, "
+    "which is what exposes the per-chunk weights the inter-chunk "
+    "fold carries.  The scalar stays in-generator: no Const minting.",
+)
+
+
+def _check_matmul_scalar(bound: dict) -> bool:
+    """Require the scalar to broadcast to the right operand."""
+    cs, bs = _vshape(bound.get("c")), _vshape(bound.get("b"))
+    qs = _vshape(bound.get("q"))
+    if not all(isinstance(x, tuple) for x in (cs, bs, qs)):
+        return False
+    if len(bs) < 2:
+        return False
+    from catopt_core.typing import (
+        INVALID,
+        broadcast,
+        matmul_shape,
+    )
+
+    m = matmul_shape(qs, bs)
+    if m is None:
+        return False
+    # c must broadcast identically to BOTH m and b — the scalar
+    # (or leading-broadcastable) case only.
+    if broadcast(cs, bs) is INVALID:
+        return False
+    if broadcast(cs, m) is INVALID:
+        return False
+    cb = broadcast(cs, bs)
+    return len(cb) <= len(bs)
+
+
+MATMUL_SCALAR_FACTOR = R(
+    "matmul_scalar_factor",
+    Op.make("mul", "c", Op.make("matmul", "q", "b")),
+    Op.make("matmul", "q", Op.make("mul", "c", "b")),
+    check=_check_matmul_scalar,
+    law="a broadcast scale factors through the right operand of a "
+    "matmul: c ⊙ (q·B) = q · (c ⊙ B) — the per-chunk decay weight "
+    "g^o pulls off the cross contribution and onto the state term, "
+    "which is the spelling the affine-scan lifts fold.",
+)
+
+
+def _check_unsq_mul(bound: dict) -> bool:
+    """``unsq(mul(a,b), d)`` splits when ``d`` is valid for both.
+
+    The inserted axis is a size-1 broadcast pad in every operand —
+    pushing the view inside the mul is exact provided ``d`` indexes
+    each operand's (rank+1) window.  Unshapeable operands get the
+    conservative -1..len window on the concrete side.
+    """
+    d = bound.get("$attr:UD")
+    if not isinstance(d, int):
+        return False
+    a, b = _vshape(bound.get("a")), _vshape(bound.get("b"))
+    for s in (a, b):
+        if isinstance(s, tuple):
+            if not (-len(s) - 1 <= d <= len(s)):
+                return False
+        elif s is not None:
+            return False
+    return True
+
+
+UNSQ_MUL = R(
+    "unsq_mul",
+    Op.make(
+        "unsqueeze",
+        Op.make("mul", "a", "b"),
+        dim="UD",
+    ),
+    Op.make(
+        "mul",
+        Op.make("unsqueeze", "a", dim="UD"),
+        Op.make("unsqueeze", "b", dim="UD"),
+    ),
+    check=_check_unsq_mul,
+    law="unsqueeze distributes over elementwise mul: the inserted "
+    "axis is a size-1 broadcast pad in every operand, so pushing the "
+    "view inside is exact — the per-block scalar (pow g, o) escapes "
+    "its row-vector packaging and reaches the state-weight position.",
+)
+
+
+def _decay_state_like(bound: dict) -> bool:
+    """``h`` must be a matrix state, ``a`` a scalar-ish weight.
+
+    The diagonal ``affd_lift``'s state condition enumerates the
+    *ops* a state may be spelled as (add/sub/apply/applyd/leaf) —
+    right for the SSM alphabet where contributions are vectors.
+    The decay-state alphabet's contributions are ``om_decayed`` /
+    ``matmul`` products — op-enumeration would grow per carrier, so
+    this checks the *shape* instead: ``h`` carries a ≥2-D state and
+    ``a`` broadcasts onto it as a scalar or lower-rank weight.
+    """
+    hs, a_s = _vshape(bound.get("h")), _vshape(bound.get("a"))
+    if not (isinstance(hs, tuple) and len(hs) >= 2):
+        return False
+    if a_s is None:
+        return True
+    if not isinstance(a_s, tuple):
+        return False
+    from catopt_core.typing import INVALID, broadcast
+
+    b = broadcast(a_s, hs)
+    return b is not INVALID and len(a_s) <= len(hs)
+
+
+def _decay_state_lift(name: str, mul_first: bool) -> Rewrite:
+    """Build ``add(mul(a,h), x)``/``add(x, mul(a,h))`` → ``applyd``."""
+    m = Op.make("mul", "a", "h")
+    return R(
+        name,
+        Op.make("add", m, "x") if mul_first else Op.make("add", "x", m),
+        Op.make("applyd", Op.make("aff_diag", "a", "x"), "h"),
+        check=_decay_state_like,
+        law="a weighted state update is a diagonal-affine step: "
+        "a⊙S + x = (aff_diag(a,x))(S) — the inter-chunk fold's "
+        "gamma^o·B + rest spelling, lifted onto the scan carrier.  "
+        "State-ness is judged by SHAPE (≥2-D), not the affd cond's "
+        "op list — om_decayed contributions are states too.",
+    )
+
+
 # ---------------------------------------------------------------------------
 #  Law set
 # ---------------------------------------------------------------------------
@@ -2313,6 +2522,12 @@ OM_LAWS: list[Rewrite] = [
     DECAY_BLOCK_DIAG,
     DECAY_BLOCK_CROSS,
     OM_DECAYED_CROSS,
+    MATMUL_COL_DECAY,
+    DECAY_VEC_OFFSET,
+    MATMUL_SCALAR_FACTOR,
+    UNSQ_MUL,
+    _decay_state_lift("decay_state_lift", True),
+    _decay_state_lift("decay_state_lift_post", False),
 ]
 
 #: The same set as a composable :class:`~catopt_core.laws.RuleSet` —
