@@ -308,20 +308,34 @@ def _site_env(spec: Any, term: Any) -> dict | None:
 
 def _referee_kernel(
     kernel_for: Any, name: str, h: dict, vals: dict, kerneled: Any
-) -> Any:
-    """Resolve the callable the referee times and verifies.
+) -> tuple:
+    """Resolve the callable AND the env the referee times.
 
-    A ``kernel_for``-supplied delivery-path callable wins when it
-    exists; the ``torch.compile``d spelled body is the default —
-    the pointwise tier's own delivery path.
+    A ``kernel_for`` result is a callable — or a ``(callable,
+    env)`` pair when the delivery path needs a different
+    environment (a CUDA-bound kernel must be timed against a
+    CUDA-bound spelled body, or the referee compares CPU BLAS to
+    a GPU kernel — a race no measurement should rig).  Missing or
+    ``None`` results fall back to the ``torch.compile``d spelled
+    body — the pointwise tier's own delivery path — under the
+    original env.
     """
     import torch
 
     if kernel_for is not None:
         k = kernel_for(name, h, vals)
+        if isinstance(k, tuple):
+            return k[0], k[1]
         if k is not None:
-            return k
-    return torch.compile(kerneled)
+            return k, vals
+    return torch.compile(kerneled), vals
+
+
+def _host(x: Any) -> Any:
+    """Move a tensor result host-side for same-device compares."""
+    import torch
+
+    return x.cpu() if isinstance(x, torch.Tensor) else x
 
 
 def _referee_out(kernel: Any, vals: dict, mvs: list) -> Any:
@@ -331,10 +345,7 @@ def _referee_out(kernel: Any, vals: dict, mvs: list) -> Any:
     CUDA tensors; the spelled body evaluates host-side — move the
     result so the referee's ``allclose`` compares same-device.
     """
-    import torch
-
-    out = kernel(*[vals[m] for m in mvs])
-    return out.cpu() if isinstance(out, torch.Tensor) else out
+    return _host(kernel(*[vals[m] for m in mvs]))
 
 
 def profitable(
@@ -393,9 +404,6 @@ def profitable(
         except Exception:
             continue
 
-        def spelled(s=h["pattern"], v=vals) -> Any:
-            return _eval_spec(s, v, bindings)
-
         def kerneled(*a: Any, s=h["pattern"]) -> Any:
             return _eval_spec(
                 s,
@@ -404,7 +412,13 @@ def profitable(
             )
 
         mvs = _spec_metas(h["pattern"])
-        kernel = _referee_kernel(kernel_for, name, h, vals, kerneled)
+        kernel, vals = _referee_kernel(
+            kernel_for, name, h, vals, kerneled
+        )
+
+        def spelled(s=h["pattern"], v=vals) -> Any:
+            return _eval_spec(s, v, bindings)
+
         # the referee verifies before it times: the kernel must
         # reproduce the spelled body on the bound values — an
         # inductor miscompile or dtype drift would otherwise win
@@ -412,7 +426,7 @@ def profitable(
         out = _referee_out(kernel, vals, mvs)
         if not torch.allclose(
             out,
-            spelled(),
+            _host(spelled()),
             rtol=1e-4,
             atol=1e-5,
         ):

@@ -698,14 +698,15 @@ def _triton_kernel_for(tag: str, h: dict, vals: dict) -> Any:
         if fn is None:
             return None
         mvs = gk._spec_metas(h["pattern"])
-        cvals = tuple(vals[m].cuda() for m in mvs)
+        cvals = {m: vals[m].cuda() for m in mvs}
+        ctuple = tuple(cvals[m] for m in mvs)
     except (AttributeError, KeyError, RuntimeError, TypeError):
         return None
 
     def kern(*a: Any) -> Any:
-        return fn(*cvals)
+        return fn(*ctuple)
 
-    return kern
+    return kern, cvals
 
 
 def _probe_delivery(
