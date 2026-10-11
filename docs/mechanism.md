@@ -26,8 +26,14 @@ five domains, `--deliver`/`--probe`/`--zoo`).  In the `gen` domain the
 board mints a handler for any unnamed elementwise subterm
 (`genkernel`), `claim` declares the handler's own pattern mid-search,
 and `deliver` lowers to a verified module calling generated
-`triton.jit` source.  The certificate is the replayable 2-cell; its
-replay is the referee.
+`triton.jit` source.  The codegen grammar covers three tiers —
+pointwise fusion sites, diagonal-scan `applyd` carriers, and the
+fused `om_decayed` contraction (the elementwise decay product folded
+into `tl.dot`'s inner loop, never materializing the `(…,T,K)`
+intermediate) — each declined spec keeps its torch path honestly.
+`profitable`, the measured referee, times every tier on its real
+delivery path (`kernel_for`), same device for both arms.  The
+certificate is the replayable 2-cell; its replay is the referee.
 
 ## The loop, step by step
 
