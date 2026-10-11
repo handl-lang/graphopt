@@ -1,52 +1,47 @@
 """decay_vec + the cross-block factorization — rank-1 decay blocks.
 
-``decay_vec(γ, t=T, offset=o, sign=s)[k] = γ^(s·k + o)`` — the ξ/η
+``decay_vec(g, t=T, offset=o, sign=s)[k] = g^(s·k + o)`` — the xi/eta
 vectors of the RetNet inter-chunk factorization.  ``decay_block_cross``
 rewrites a strict-lower ``split(split(decay))`` block as the outer
-product ``mul(unsq(ξ,-1), unsq(η,-2))``; ``om_decayed_cross`` then
+product ``mul(unsq(xi,-1), unsq(eta,-2))``; ``om_decayed_cross`` then
 distributes a decayed product over a rank-1 decay into row/column
 scalings — the carried-state algebra the chunked recurrence needs.
 """
 
 import pytest
 
-
 torch = pytest.importorskip("torch")
 
+import catopt_torch.torch_bridge as tb  # noqa: E402
 from catopt_carriers.om import (  # noqa: E402
     DECAY_BLOCK_CROSS,
     DECAY_VEC_OFFSET,
     MATMUL_COL_DECAY,
     MATMUL_SCALAR_FACTOR,
+    OM_DECAYED_CHUNKIFY_KEYS,
+    OM_DECAYED_CHUNKIFY_ROWS,
     OM_DECAYED_CROSS,
     OM_LAWS,
+    SPLIT_MATMUL_COLS,
+    SPLIT_MATMUL_ROWS,
+    SPLIT_TRANSPOSE,
     UNSQ_MUL,
     _decay_vec_torch,
 )
-from catopt_core.laws.scan import SCAN_DIAG_LAWS  # noqa: E402
-from catopt_core.laws.tensor import (  # noqa: E402
-    ASSOC_ADD,
-    ASSOC_MUL,
-    COMM_ADD,
-    COMM_MUL,
-    DISTRIBUTE_MUL,
-    FACTOR_MUL,
-)
 from catopt_core.egraph import EGraph  # noqa: E402
 from catopt_core.ir import (  # noqa: E402
-    Const,
     Op,
     TensorType,
     Var,
     op_repr,
 )
+from catopt_core.laws.scan import SCAN_DIAG_LAWS  # noqa: E402
 from catopt_core.meta import (  # noqa: E402
     instantiate_pattern,
     match_pattern,
 )
 from catopt_core.typing import shape_of  # noqa: E402
 from catopt_torch.torch_bridge import eval_term  # noqa: E402
-import catopt_torch.torch_bridge as tb  # noqa: E402
 
 G = torch.tensor(0.9, dtype=torch.float64)
 
@@ -140,7 +135,7 @@ class TestDecayBlockCross:
         D = torch.tril(
             G ** (pos.unsqueeze(1) - pos.unsqueeze(0)).clamp_min(0)
         )
-        block = D[4:9, 0:4]  # rows of chunk 1 × cols of chunk 0
+        block = D[4:9, 0:4]  # rows of chunk 1 x cols of chunk 0
         env = {"g": G}
         rhs_term = instantiate_pattern(
             DECAY_BLOCK_CROSS.rhs,
@@ -327,7 +322,7 @@ class TestOmDecayedCross:
         assert subst is not None and OM_DECAYED_CROSS.check(subst)
 
     def test_exact_distribution(self):
-        """(s ⊙ ξηᵀ) @ v = ξ_row ⊙ ((s ⊙ η_col) @ v) — exact."""
+        """(s ⊙ xietaᵀ) @ v = xi_row ⊙ ((s ⊙ eta_col) @ v) — exact."""
         subst = match_pattern(OM_DECAYED_CROSS.lhs, self._lhs(), {})
         out = instantiate_pattern(OM_DECAYED_CROSS.rhs, subst)
         xi = torch.tensor(
@@ -377,19 +372,27 @@ class TestComposition:
         )
         eg = EGraph()
         root = eg.add_term(site)
-        eg.run(OM_LAWS, root, max_iterations=8)
+        eg.run(
+            OM_LAWS,
+            root,
+            max_iterations=8,
+            rule_budgets={
+                "om_decayed_chunkify_rows": 4,
+                "om_decayed_chunkify_keys": 4,
+            },
+        )
         dv = [
             n
             for cls in eg._classes.values()
             for n in cls.nodes
             if n.op == "decay_vec"
         ]
-        # the cross block's two factors — ξ (offset>0) and η (sign=-1)
+        # the cross block's two factors — xi (offset>0) and eta (sign=-1)
         assert any(dict(n.attrs).get("sign") == -1 for n in dv), (
-            "the η factor (γ^{-c}) should appear"
+            "the eta factor (g^{-c}) should appear"
         )
         assert any(dict(n.attrs).get("offset", 0) > 0 for n in dv), (
-            "the ξ factor (γ^{o+r}) should appear"
+            "the xi factor (g^{o+r}) should appear"
         )
 
 
@@ -574,23 +577,255 @@ class TestStateFoldLaws:
         )
 
 
+class TestScoreSplit:
+    """The score-block decomposition laws — the chain's entry point."""
+
+    def _site(self):
+        s = _v("s", 8, 8)
+        d = _v("d", 8, 8)
+        v = _v("v", 8, 4)
+        return Op.make("om_decayed", s, d, v)
+
+    def test_chunkify_rows_fires(self):
+        subst = match_pattern(
+            OM_DECAYED_CHUNKIFY_ROWS.lhs, self._site(), {}
+        )
+        assert subst is not None
+        assert OM_DECAYED_CHUNKIFY_ROWS.check(subst)
+        der = OM_DECAYED_CHUNKIFY_ROWS.derive(subst)
+        assert der == {"$attr:SZ": (4, 4)}
+        out = instantiate_pattern(
+            OM_DECAYED_CHUNKIFY_ROWS.rhs, {**subst, **der}
+        )
+        assert "split" in op_repr(out) and "concat" in op_repr(out)
+
+    def test_chunkify_rows_verifies(self):
+        """Row-bisected blocks ≡ the fused decayed product."""
+        T, DV = 8, 4
+        s = torch.randn(T, T, dtype=torch.float64)
+        d = torch.tril(
+            torch.randn(T, T, dtype=torch.float64).abs() + 0.1
+        )
+        v = torch.randn(T, DV, dtype=torch.float64)
+        env = {"s": s, "d": d, "v": v}
+        fused = eval_term(
+            Op.make("om_decayed", _v("s"), _v("d"), _v("v")),
+            var_env=env,
+            bindings=tb._IR_TO_TORCH,
+        )
+        subst = match_pattern(
+            OM_DECAYED_CHUNKIFY_ROWS.lhs,
+            Op.make(
+                "om_decayed",
+                _v("s", 8, 8),
+                _v("d", 8, 8),
+                _v("v", 8, 4),
+            ),
+            {},
+        )
+        subst.update(OM_DECAYED_CHUNKIFY_ROWS.derive(subst))
+        rhs = instantiate_pattern(OM_DECAYED_CHUNKIFY_ROWS.rhs, subst)
+        chunked = eval_term(rhs, var_env=env, bindings=tb._IR_TO_TORCH)
+        assert torch.allclose(fused, chunked)
+
+    def test_chunkify_rows_declines(self):
+        # s not ≥2-D / T<2 / mismatched decay extent
+        assert not OM_DECAYED_CHUNKIFY_ROWS.check(
+            {"s": _v("s", 8), "d": _v("d", 8, 8)}
+        )
+        assert not OM_DECAYED_CHUNKIFY_ROWS.check(
+            {"s": _v("s", 1, 8), "d": _v("d", 1, 8)}
+        )
+        # rank-1 decay — no row axis to slice
+        assert not OM_DECAYED_CHUNKIFY_ROWS.check(
+            {"s": _v("s", 8, 8), "d": _v("d", 8)}
+        )
+        assert not OM_DECAYED_CHUNKIFY_ROWS.check(
+            {"s": _v("s", 8, 8), "d": _v("d", 7, 7)}
+        )
+
+    def test_chunkify_keys_fires(self):
+        subst = match_pattern(
+            OM_DECAYED_CHUNKIFY_KEYS.lhs, self._site(), {}
+        )
+        assert subst is not None
+        assert OM_DECAYED_CHUNKIFY_KEYS.check(subst)
+        assert OM_DECAYED_CHUNKIFY_KEYS.derive(subst) == {
+            "$attr:SZ": (4, 4)
+        }
+
+    def test_chunkify_keys_verifies(self):
+        """Key-bisected blocks sum to the fused decayed product."""
+        T, DV = 8, 4
+        s = torch.randn(T, T, dtype=torch.float64)
+        d = torch.tril(
+            torch.randn(T, T, dtype=torch.float64).abs() + 0.1
+        )
+        v = torch.randn(T, DV, dtype=torch.float64)
+        env = {"s": s, "d": d, "v": v}
+        fused = eval_term(
+            Op.make("om_decayed", _v("s"), _v("d"), _v("v")),
+            var_env=env,
+            bindings=tb._IR_TO_TORCH,
+        )
+        subst = match_pattern(
+            OM_DECAYED_CHUNKIFY_KEYS.lhs,
+            Op.make(
+                "om_decayed",
+                _v("s", 8, 8),
+                _v("d", 8, 8),
+                _v("v", 8, 4),
+            ),
+            {},
+        )
+        subst.update(OM_DECAYED_CHUNKIFY_KEYS.derive(subst))
+        rhs = instantiate_pattern(OM_DECAYED_CHUNKIFY_KEYS.rhs, subst)
+        chunked = eval_term(rhs, var_env=env, bindings=tb._IR_TO_TORCH)
+        assert torch.allclose(fused, chunked)
+
+    def test_chunkify_keys_declines(self):
+        # key-extent mismatch — decay or v doesn't cover the axis
+        assert not OM_DECAYED_CHUNKIFY_KEYS.check(
+            {
+                "s": _v("s", 8, 8),
+                "d": _v("d", 8, 7),
+                "v": _v("v", 8, 4),
+            }
+        )
+        assert not OM_DECAYED_CHUNKIFY_KEYS.check(
+            {
+                "s": _v("s", 8, 8),
+                "d": _v("d", 8, 8),
+                "v": _v("v", 7, 4),
+            }
+        )
+        # unshapeable → decline
+        assert not OM_DECAYED_CHUNKIFY_KEYS.check({})
+        # s rank < 2 → no key axis to bisect
+        assert not OM_DECAYED_CHUNKIFY_KEYS.check(
+            {"s": _v("s", 8), "d": _v("d", 8, 8), "v": _v("v", 8, 4)}
+        )
+        # single-key extent — nothing to bisect
+        assert not OM_DECAYED_CHUNKIFY_KEYS.check(
+            {"s": _v("s", 8, 1), "d": _v("d", 8, 1), "v": _v("v", 1, 4)}
+        )
+
+    def test_chunkify_keys_derives(self):
+        subst = match_pattern(
+            OM_DECAYED_CHUNKIFY_KEYS.lhs, self._site(), {}
+        )
+        assert OM_DECAYED_CHUNKIFY_KEYS.derive(subst) == {
+            "$attr:SZ": (4, 4)
+        }
+        # rank-1 score → no key extent → derive declines
+        assert (
+            OM_DECAYED_CHUNKIFY_KEYS.derive({"s": _v("s", 8)}) is None
+        )
+        # single-key extent — nothing to bisect
+        assert (
+            OM_DECAYED_CHUNKIFY_KEYS.derive({"s": _v("s", 8, 1)})
+            is None
+        )
+
+    def test_split_matmul_rows_fires(self):
+        lhs = Op.make(
+            "split",
+            Op.make("matmul", _v("q", 8, 4), _v("k", 4, 8)),
+            sizes=(4, 4),
+            dim=-2,
+            index=1,
+        )
+        subst = match_pattern(SPLIT_MATMUL_ROWS.lhs, lhs, {})
+        assert subst is not None and SPLIT_MATMUL_ROWS.check(subst)
+        out = instantiate_pattern(SPLIT_MATMUL_ROWS.rhs, subst)
+        q = torch.randn(8, 4, dtype=torch.float64)
+        kt = torch.randn(4, 8, dtype=torch.float64)
+        env = {"q": q, "k": kt}
+        a = eval_term(lhs, var_env=env, bindings=tb._IR_TO_TORCH)
+        b = eval_term(out, var_env=env, bindings=tb._IR_TO_TORCH)
+        assert torch.allclose(a, b)
+
+    def test_split_matmul_cols_fires(self):
+        lhs = Op.make(
+            "split",
+            Op.make("matmul", _v("q", 8, 4), _v("k", 4, 8)),
+            sizes=(4, 4),
+            dim=-1,
+            index=1,
+        )
+        subst = match_pattern(SPLIT_MATMUL_COLS.lhs, lhs, {})
+        assert subst is not None and SPLIT_MATMUL_COLS.check(subst)
+        out = instantiate_pattern(SPLIT_MATMUL_COLS.rhs, subst)
+        q = torch.randn(8, 4, dtype=torch.float64)
+        kt = torch.randn(4, 8, dtype=torch.float64)
+        env = {"q": q, "k": kt}
+        a = eval_term(lhs, var_env=env, bindings=tb._IR_TO_TORCH)
+        b = eval_term(out, var_env=env, bindings=tb._IR_TO_TORCH)
+        assert torch.allclose(a, b)
+
+    def test_split_matmul_declines(self):
+        # index out of range for the partition
+        assert not SPLIT_MATMUL_ROWS.check(
+            {"$attr:SZ": (4, 4), "$attr:I": 2}
+        )
+        # non-positive size
+        assert not SPLIT_MATMUL_ROWS.check(
+            {"$attr:SZ": (4, 0), "$attr:I": 0}
+        )
+        assert not SPLIT_MATMUL_ROWS.check({})
+
+    def test_split_transpose_fires(self):
+        # split kᵀ's col axis = split k's row axis, transposed
+        lhs = Op.make(
+            "split",
+            Op.make("transpose", _v("k", 8, 4), dim0=-2, dim1=-1),
+            sizes=(4, 4),
+            dim=-1,
+            index=1,
+        )
+        subst = match_pattern(SPLIT_TRANSPOSE.lhs, lhs, {})
+        assert subst is not None and SPLIT_TRANSPOSE.check(subst)
+        der = SPLIT_TRANSPOSE.derive(subst)
+        # splitting the transposed col (-1) reads k's row axis (-2)
+        assert der == {"$attr:DP": -2}
+        out = instantiate_pattern(SPLIT_TRANSPOSE.rhs, {**subst, **der})
+        k = torch.randn(8, 4, dtype=torch.float64)
+        env = {"k": k}
+        a = eval_term(lhs, var_env=env, bindings=tb._IR_TO_TORCH)
+        b = eval_term(out, var_env=env, bindings=tb._IR_TO_TORCH)
+        assert torch.allclose(a, b)
+
+    def test_split_transpose_declines(self):
+        # non-int split dim → no derived preimage
+        assert not SPLIT_TRANSPOSE.check(
+            {
+                "$attr:SZ": (4, 4),
+                "$attr:I": 0,
+                "$attr:SD": "x",
+                "$attr:D0": -2,
+                "$attr:D1": -1,
+            }
+        )
+        assert not SPLIT_TRANSPOSE.check({})
+
+
 class TestMachineFold:
     """The machine derives the recurrence from spelled cross terms.
 
     Feed the e-graph the spelled per-block cross contributions —
-    ``γ^o ⊙ (ξ_r ⊙ ((q·kᵀ ⊙ ηᵀ) @ v))`` — and it composes the whole
+    ``g^o ⊙ (xi_r ⊙ ((q·kᵀ ⊙ etaᵀ) @ v))`` — and it composes the whole
     chain itself: unsq_mul frees the scalar, matmul_col_decay lands
-    η on the keys, factor_matmul collects the shared q₂, and the
+    eta on the keys, factor_matmul collects the shared q₂, and the
     decay-state lift folds the weighted sum onto ``applyd``.
     """
 
     def test_spelled_cross_folds_to_applyd(self):
         """The weighted state sum itself folds onto the carrier.
 
-        The earlier chain — spelled cross → η on keys → matmul(q,B)
-        → γ^o scalars pulled out — was demonstrated in the saturated
+        The earlier chain — spelled cross → eta on keys → matmul(q,B)
+        → g^o scalars pulled out — was demonstrated in the saturated
         e-graph; the fold this test pins is the last hop, the
-        ``add(mul(γ^o, B), mul(γ^o', B'))`` sum the chain lands on.
+        ``add(mul(g^o, B), mul(g^o', B'))`` sum the chain lands on.
         """
         g = _v("g")
         b0 = _v("b0", 3, 6)

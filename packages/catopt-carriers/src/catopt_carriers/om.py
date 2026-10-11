@@ -2478,6 +2478,220 @@ def _decay_state_like(bound: dict) -> bool:
     return b is not INVALID and len(a_s) <= len(hs)
 
 
+def _derive_chunkify(bound: dict) -> dict | None:
+    """``SZ`` := the row/key bisection ``(T//2, T−T//2)``.
+
+    The split sizes come from the *score's* extent — the fused
+    ``om_decayed`` carries no partition, so the introduction halves
+    the axis; deeper chunking is saturation recursion, not a bigger
+    law.
+    """
+    s = _vshape(bound.get("s"))
+    if not (isinstance(s, tuple) and len(s) >= 2):
+        return None
+    t = s[-2]
+    if not isinstance(t, int) or t < 2:
+        return None
+    return {"$attr:SZ": (t // 2, t - t // 2)}
+
+
+def _check_chunkify_rows(bound: dict) -> bool:
+    """Score and decay must cover the row axis at the same extent."""
+    if _derive_chunkify(bound) is None:
+        return False
+    d = _vshape(bound.get("d"))
+    s = _vshape(bound.get("s"))
+    if not (isinstance(d, tuple) and len(d) >= 2):
+        return False
+    return d[-2] == s[-2]
+
+
+def _derive_chunkify_keys(bound: dict) -> dict | None:
+    """``SZ`` := the key-axis bisection — same halving on ``s[-1]``."""
+    s = _vshape(bound.get("s"))
+    if not (isinstance(s, tuple) and len(s) >= 2):
+        return None
+    t = s[-1]
+    if not isinstance(t, int) or t < 2:
+        return None
+    return {"$attr:SZ": (t // 2, t - t // 2)}
+
+
+def _check_chunkify_keys(bound: dict) -> bool:
+    """Score/decay cols and value rows must share the key extent."""
+    s, d, v = (
+        _vshape(bound.get("s")),
+        _vshape(bound.get("d")),
+        _vshape(bound.get("v")),
+    )
+    if not (
+        isinstance(s, tuple)
+        and isinstance(d, tuple)
+        and isinstance(v, tuple)
+        and len(s) >= 2
+        and len(d) >= 2
+        and len(v) >= 2
+    ):
+        return False
+    kk = s[-1]
+    if not isinstance(kk, int) or kk < 2:
+        return False
+    return d[-1] == kk and v[-2] == kk
+
+
+OM_DECAYED_CHUNKIFY_ROWS = R(
+    "om_decayed_chunkify_rows",
+    Op.make("om_decayed", "s", "d", "v"),
+    Op.make(
+        "concat",
+        Op.make(
+            "om_decayed",
+            Op.make("split", "s", sizes="SZ", dim=-2, index=0),
+            Op.make("split", "d", sizes="SZ", dim=-2, index=0),
+            "v",
+        ),
+        Op.make(
+            "om_decayed",
+            Op.make("split", "s", sizes="SZ", dim=-2, index=1),
+            Op.make("split", "d", sizes="SZ", dim=-2, index=1),
+            "v",
+        ),
+        dim=-2,
+    ),
+    check=_check_chunkify_rows,
+    derive=_derive_chunkify,
+    law="fused decayed product bisects along the row axis: "
+    "om_decayed(s,d,v) = cat(om_decayed(s_hi,d_hi,v), "
+    "om_decayed(s_lo,d_lo,v)) — the introduction direction the "
+    "concat-side chunk laws can't reach (a real export carries no "
+    "concat).  Halving is the data-free split; recursion deepens it.",
+)
+
+
+OM_DECAYED_CHUNKIFY_KEYS = R(
+    "om_decayed_chunkify_keys",
+    Op.make("om_decayed", "s", "d", "v"),
+    Op.make(
+        "add",
+        Op.make(
+            "om_decayed",
+            Op.make("split", "s", sizes="SZ", dim=-1, index=0),
+            Op.make("split", "d", sizes="SZ", dim=-1, index=0),
+            Op.make("split", "v", sizes="SZ", dim=-2, index=0),
+        ),
+        Op.make(
+            "om_decayed",
+            Op.make("split", "s", sizes="SZ", dim=-1, index=1),
+            Op.make("split", "d", sizes="SZ", dim=-1, index=1),
+            Op.make("split", "v", sizes="SZ", dim=-2, index=1),
+        ),
+    ),
+    check=_check_chunkify_keys,
+    derive=_derive_chunkify_keys,
+    law="fused decayed product bisects along the key axis: the "
+    "contraction splits s/d's columns and v's rows into an add of "
+    "two partial blocks — exact (block-column decomposition of a "
+    "matmul), the shape the cross term needs.",
+)
+
+
+def _check_split_matmul(bound: dict) -> bool:
+    """Require a well-typed split: int sizes partitioning the extent."""
+    sz, i = bound.get("$attr:SZ"), bound.get("$attr:I")
+    return (
+        isinstance(sz, (tuple, list))
+        and all(isinstance(x, int) and x > 0 for x in sz)
+        and isinstance(i, int)
+        and 0 <= i < len(sz)
+    )
+
+
+SPLIT_MATMUL_ROWS = R(
+    "split_matmul_rows",
+    Op.make(
+        "split",
+        Op.make("matmul", "a", "b"),
+        sizes="SZ",
+        dim=-2,
+        index="I",
+    ),
+    Op.make(
+        "matmul",
+        Op.make("split", "a", sizes="SZ", dim=-2, index="I"),
+        "b",
+    ),
+    check=_check_split_matmul,
+    law="rows of a matmul are rows of the left operand: "
+    "split_{-2}(a@b, i) = split_{-2}(a, i) @ b — the row-block "
+    "of q·kᵀ is q_i · kᵀ.",
+)
+
+
+SPLIT_MATMUL_COLS = R(
+    "split_matmul_cols",
+    Op.make(
+        "split",
+        Op.make("matmul", "a", "b"),
+        sizes="SZ",
+        dim=-1,
+        index="I",
+    ),
+    Op.make(
+        "matmul",
+        "a",
+        Op.make("split", "b", sizes="SZ", dim=-1, index="I"),
+    ),
+    check=_check_split_matmul,
+    law="columns of a matmul are columns of the right operand: "
+    "split_{-1}(a@b, j) = a @ split_{-1}(b, j) — the key-block "
+    "of q·kᵀ is q · (kᵀ)_j.",
+)
+
+
+def _derive_split_transpose(bound: dict) -> dict | None:
+    """``DP`` := the split's pre-transpose axis — the axis ``D`` names."""
+    d, p1, p2 = (
+        bound.get("$attr:SD"),
+        bound.get("$attr:D0"),
+        bound.get("$attr:D1"),
+    )
+    if not all(isinstance(x, int) for x in (d, p1, p2)):
+        return None
+    return {"$attr:DP": p2 if d == p1 else p1 if d == p2 else d}
+
+
+def _check_split_transpose(bound: dict) -> bool:
+    """Require a well-typed split and int transpose dims."""
+    return (
+        _check_split_matmul(bound)
+        and _derive_split_transpose(bound) is not None
+    )
+
+
+SPLIT_TRANSPOSE = R(
+    "split_transpose",
+    Op.make(
+        "split",
+        Op.make("transpose", "t", dim0="D0", dim1="D1"),
+        sizes="SZ",
+        dim="SD",
+        index="I",
+    ),
+    Op.make(
+        "transpose",
+        Op.make("split", "t", sizes="SZ", dim="DP", index="I"),
+        dim0="D0",
+        dim1="D1",
+    ),
+    check=_check_split_transpose,
+    derive=_derive_split_transpose,
+    law="split commutes through transpose: splitting the transposed "
+    "axis D is splitting the axis D names in the pre-image "
+    "(d1 when D=d0, d0 when D=d1, D otherwise) — kᵀ's key blocks "
+    "are k's row blocks transposed.",
+)
+
+
 def _decay_state_lift(name: str, mul_first: bool) -> Rewrite:
     """Build ``add(mul(a,h), x)``/``add(x, mul(a,h))`` → ``applyd``."""
     m = Op.make("mul", "a", "h")
@@ -2528,6 +2742,11 @@ OM_LAWS: list[Rewrite] = [
     UNSQ_MUL,
     _decay_state_lift("decay_state_lift", True),
     _decay_state_lift("decay_state_lift_post", False),
+    OM_DECAYED_CHUNKIFY_ROWS,
+    OM_DECAYED_CHUNKIFY_KEYS,
+    SPLIT_MATMUL_ROWS,
+    SPLIT_MATMUL_COLS,
+    SPLIT_TRANSPOSE,
 ]
 
 #: The same set as a composable :class:`~catopt_core.laws.RuleSet` —
