@@ -101,10 +101,12 @@ from __future__ import annotations
 
 import keyword
 import math
-from typing import Any
+from typing import Any, NamedTuple
 
 __all__ = [
     "ELEMENTWISE",
+    "TIERS",
+    "Tier",
     "decayed_handlers",
     "decayed_spec",
     "decayed_triton_bindings",
@@ -645,6 +647,23 @@ def _seq_scan_spec(spec: Any) -> bool:
     """Check *spec* is a scan spec in the sequence (fold) form."""
     info = scan_spec(spec)
     return info is not None and info["kind"] == "seq"
+
+
+class Tier(NamedTuple):
+    """One codegen tier — the data engines iterate, not branches.
+
+    A tier declares *what it mints* (``handlers`` — spec list →
+    handler dicts) and *what it lowers to* (``triton`` — handlers →
+    generated bindings, or ``None`` when the tier's delivery is the
+    compiled spelled body).  Site collection is play's own knowledge
+    (the ``_spec_of`` traversal), mapped to tier names there; adding
+    a tier is a registry entry + a site collector, never an engine
+    branch.
+    """
+
+    name: str
+    handlers: Any
+    triton: Any  # handlers → generated bindings; None = compiled
 
 
 def hybrid_sink(handlers: dict, *, compile_kernels: bool = True) -> Any:
@@ -1768,3 +1787,14 @@ def decayed_triton_sink(handlers: dict) -> Any:
     bindings.update(decayed_triton_bindings(handlers))
     table = OpTable.core().register(torch_bindings=bindings)
     return TorchSink(ops=table)
+
+
+#: The codegen tiers, in mint order — the registry the claim/referee
+#: machinery iterates rather than naming a tier.  ``triton=None``
+#: tiers deliver through the compiled spelled body; the referee's
+#: ``kernel_for`` hook consults each non-``None`` binding builder.
+TIERS: tuple[Tier, ...] = (
+    Tier("gen", gen_handlers, None),
+    Tier("scan", scan_handlers, scan_triton_bindings),
+    Tier("decayed", decayed_handlers, decayed_triton_bindings),
+)

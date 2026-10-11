@@ -385,6 +385,34 @@ def _decayed_sites(term: Any) -> list:
     return out
 
 
+#: Site collectors, keyed by codegen-tier name — the term-traversal
+#: knowledge that pairs with ``genkernel.TIERS``.  A tier without a
+#: collector (``scan`` — its sites come from the lift machinery, not
+#: raw IR) simply mints nothing here.
+TIER_SITES: dict[str, Any] = {
+    "gen": _fusion_sites,
+    "decayed": _decayed_sites,
+}
+
+
+def _mint_tiers(root: Any, covered: set) -> dict:
+    """Mint handler entries across every codegen tier.
+
+    The registry walk replacing per-tier call sites: each tier's
+    site collector gathers specs, its ``handlers`` builder mints
+    the ``{tag: {pattern, kernel, args}}`` table — a tier without
+    a collector contributes nothing.
+    """
+    from catopt_discovery import genkernel as gk
+
+    out: dict = {}
+    for tier in gk.TIERS:
+        sites_fn = TIER_SITES.get(tier.name)
+        if sites_fn is not None:
+            out.update(tier.handlers(sites_fn(root), covered=covered))
+    return out
+
+
 def _flat_ops(spec: Any):
     """Yield op names inside a fusion pattern tuple."""
     if isinstance(spec, (tuple, list)) and spec:
@@ -513,8 +541,7 @@ def _gen_cases(seed: int, n: int) -> list:
         gen = torch.Generator().manual_seed(seed * 997 + i)
         x = torch.randn(*shape, generator=gen)
         ir, leaves = src.to_ir(model, x)
-        sites = _fusion_sites(ir.root)
-        genh = gk.gen_handlers(sites, covered=covered)
+        genh = _mint_tiers(ir.root, covered)
         sink = gk.gen_sink(genh, compile_kernels=False)
         handlers = dict(lawdata.HANDLERS) | genh
         out.append(
@@ -678,14 +705,26 @@ def gen_probe(case: Any, *, budget: int = 12, reps: int = 200) -> dict:
     return rows[0]
 
 
-def _triton_kernel_for(tag: str, h: dict, vals: dict) -> Any:
-    """Return the delivery-path callable a decayed claim would run.
+def _first_binding(tag: str, h: dict) -> Any:
+    """The first generated kernel binding any tier accepts — or None."""
+    from catopt_discovery import genkernel as gk
 
-    ``profitable``'s ``kernel_for``: build this handler's generated
-    Triton binding and return the kernel — the callable the
-    ``hybrid_sink`` delivery actually ships — on CUDA-bound values
-    (the probe's device).  Falls back to ``None`` (the compiled-
-    spelled default) when Triton/CUDA or the codegen declines.
+    for tier in gk.TIERS:
+        if tier.triton is not None:
+            fn = tier.triton({tag: h}).get(h["kernel"])
+            if fn is not None:
+                return fn
+    return None
+
+
+def _triton_kernel_for(tag: str, h: dict, vals: dict) -> Any:
+    """Return the delivery-path callable a claim would run.
+
+    ``profitable``'s ``kernel_for``: consult each tier's generated
+    binding builder — the callable the ``hybrid_sink`` delivery
+    actually ships — on CUDA-bound values (the probe's device).
+    Falls back to ``None`` (the compiled-spelled default) when
+    Triton/CUDA or every tier's codegen declines.
     """
     import torch
 
@@ -694,7 +733,7 @@ def _triton_kernel_for(tag: str, h: dict, vals: dict) -> Any:
     if not (torch.cuda.is_available() and _has_triton()):
         return None
     try:
-        fn = gk.decayed_triton_bindings({tag: h}).get(h["kernel"])
+        fn = _first_binding(tag, h)
         if fn is None:
             return None
         mvs = gk._spec_metas(h["pattern"])
@@ -738,12 +777,10 @@ def _zoo_case(wl: Any) -> Any:
     model, feed = wl.build()
     model = model.double()  # the intake convention is fp64 feeds
     ir, leaves = TorchSource().to_ir(model, feed)
-    sites = _fusion_sites(ir.root)
     covered = {
         _canon_concrete(h["pattern"]) for h in lawdata.HANDLERS.values()
     }
-    genh = gk.gen_handlers(sites, covered=covered)
-    genh.update(gk.decayed_handlers(_decayed_sites(ir.root)))
+    genh = _mint_tiers(ir.root, covered)
     # the measured-cost referee: mint only claims whose generated
     # kernel actually beats its spelled site on the real values;
     # the env must bind the input vars too — a param-only env makes
