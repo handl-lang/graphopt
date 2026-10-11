@@ -515,7 +515,7 @@ class TestZooProbe:
 
         monkeypatch.setattr(
             "catopt_discovery.zoo.zoo",
-            lambda: [_W("bad", _boom), _W("ok", _ok)],
+            lambda *a: [_W("bad", _boom), _W("ok", _ok)],
         )
         monkeypatch.setattr(
             play,

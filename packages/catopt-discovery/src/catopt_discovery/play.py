@@ -779,23 +779,27 @@ def _zoo_case(wl: Any) -> Any:
     )
 
 
-def _zoo_rows() -> None:
+def _zoo_rows(args: Any) -> None:
     """Print the zoo probe rows — the ``--zoo`` CLI arm."""
-    for row in zoo_probe():
+    for row in zoo_probe(d=args.zoo_d, t=args.zoo_t, b=args.zoo_b):
         print(f"zoo[{row['case']}]: {row}")  # stdout-compat
 
 
-def zoo_probe(*, reps: int = 100) -> list[dict]:
+def zoo_probe(
+    *, reps: int = 100, d: int = 16, t: int = 8, b: int = 2
+) -> list[dict]:
     """``gen_probe`` over the held-out model zoo — the real corpus.
 
     Untraceable workloads are reported honestly rather than dropped
     silently; each surviving row is the full claim → deliver →
-    verify → time table vs eager *and* ``torch.compile``.
+    verify → time table vs eager *and* ``torch.compile``.  ``d``/``t``
+    /``b`` scale the workloads — generated kernels pay at larger
+    shapes.
     """
     from catopt_discovery import zoo as _zoo
 
     rows: list[dict] = []
-    for wl in _zoo.zoo():
+    for wl in _zoo.zoo(d, t, b):
         try:
             case = _zoo_case(wl)
         except Exception as exc:
@@ -1384,7 +1388,7 @@ def _extras(args: Any, d: Any, ev: list, player: Any) -> None:
                     f"probe[{case[0]}]: {gen_probe(case)}"
                 )
     if args.zoo:
-        _zoo_rows()
+        _zoo_rows(args)
     _kernel_probes(args)
 
 
@@ -1429,6 +1433,24 @@ def main(argv: list[str] | None = None) -> int:
         "--zoo",
         action="store_true",
         help="run the claim→deliver→time probe over the held-out zoo",
+    )
+    ap.add_argument(
+        "--zoo-d",
+        type=int,
+        default=16,
+        help="zoo model width (default 16 — the honest small probe)",
+    )
+    ap.add_argument(
+        "--zoo-t",
+        type=int,
+        default=8,
+        help="zoo sequence length (default 8 — kernels pay ≥64)",
+    )
+    ap.add_argument(
+        "--zoo-b",
+        type=int,
+        default=2,
+        help="zoo batch size (default 2 — the honest small probe)",
     )
     ap.add_argument(
         "--scan-probe",

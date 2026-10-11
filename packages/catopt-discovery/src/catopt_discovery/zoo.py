@@ -657,7 +657,7 @@ def _rand(*shape: int) -> torch.Tensor:
     return torch.rand(tuple(shape), dtype=torch.float64)
 
 
-def zoo(d: int = 16) -> list[Workload]:
+def zoo(d: int = 16, t: int = 8, b: int = 2) -> list[Workload]:
     """Return the held-out registry — thunks like the intake's.
 
     Every workload builds a fresh module plus its example input under
@@ -673,36 +673,36 @@ def zoo(d: int = 16) -> list[Workload]:
         # --- attention variants ----------------------------------
         Workload(
             "GatedAttentionUnit",
-            lambda: (_GatedAttentionUnit(d), _r(2, 8, d)),
+            lambda: (_GatedAttentionUnit(d), _r(b, t, d)),
             kind="zoo",
         ),
         Workload(
             "AdditiveAttention",
             lambda: (
                 _AdditiveAttention(d),
-                (_r(2, 4, d), _r(2, 8, d), _r(2, 8, d)),
+                (_r(b, 4, d), _r(b, t, d), _r(b, t, d)),
             ),
             kind="zoo",
         ),
         Workload(
             "TalkingHeadsAttention",
-            lambda: (_TalkingHeadsAttention(d, 4), _r(2, 8, d)),
+            lambda: (_TalkingHeadsAttention(d, 4), _r(b, t, d)),
             kind="zoo",
         ),
         Workload(
             "CosineAttention",
-            lambda: (_CosineAttention(d, 4), _r(2, 8, d)),
+            lambda: (_CosineAttention(d, 4), _r(b, t, d)),
             kind="zoo",
         ),
         # --- conditioning ----------------------------------------
         Workload(
             "FiLMHead",
-            lambda: (_FiLMHead(d, 8), (_r(2, 8, d), _r(2, 8))),
+            lambda: (_FiLMHead(d, 8), (_r(b, t, d), _r(b, 8))),
             kind="zoo",
         ),
         Workload(
             "AdaLNBlock",
-            lambda: (_AdaLNBlock(d, 8), (_r(2, 8, d), _r(2, 8))),
+            lambda: (_AdaLNBlock(d, 8), (_r(b, t, d), _r(b, 8))),
             kind="zoo",
         ),
         Workload(
@@ -713,7 +713,7 @@ def zoo(d: int = 16) -> list[Workload]:
         # --- token mixers / spectral / graphs --------------------
         Workload(
             "MLPMixerBlock",
-            lambda: (_MLPMixerBlock(d, 8), _r(2, 8, d)),
+            lambda: (_MLPMixerBlock(d, 8), _r(b, t, d)),
             kind="zoo",
         ),
         Workload(
@@ -723,7 +723,7 @@ def zoo(d: int = 16) -> list[Workload]:
         ),
         Workload(
             "GCNLayer",
-            lambda: (_GCNLayer(d), (_r(2, 6, d), _rand(2, 6, 6))),
+            lambda: (_GCNLayer(d), (_r(b, 6, d), _rand(2, 6, 6))),
             kind="zoo",
         ),
         Workload(
@@ -734,23 +734,23 @@ def zoo(d: int = 16) -> list[Workload]:
         # --- routing / gating ------------------------------------
         Workload(
             "SoftSlotMoE",
-            lambda: (_SoftSlotMoE(d, 4), _r(2, 8, d)),
+            lambda: (_SoftSlotMoE(d, 4), _r(b, t, d)),
             kind="zoo",
         ),
         Workload(
             "ExpertChoiceMoE",
-            lambda: (_ExpertChoiceMoE(d, 4, 3), _r(2, 8, d)),
+            lambda: (_ExpertChoiceMoE(d, 4, 3), _r(b, t, d)),
             kind="zoo",
         ),
         Workload(
             "CapsuleRouting",
-            lambda: (_CapsuleRouting(d, 8, 4), _r(2, 8, d)),
+            lambda: (_CapsuleRouting(d, 8, 4), _r(b, t, d)),
             kind="zoo",
         ),
         # --- recurrence / scan / conv ----------------------------
         Workload(
             "ChunkedRetention",
-            lambda: (_ChunkedRetention(d), _r(2, 8, d)),
+            lambda: (_ChunkedRetention(d), _r(b, t, d)),
             kind="zoo",
         ),
         Workload(
