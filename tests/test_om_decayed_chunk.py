@@ -482,7 +482,7 @@ def test_rows_slice_iterates_to_three_blocks():
     assert first is not None and first.op == "concat"
     second = meta.apply_rewrite_at(_ROWS_SLICE, first, (0,))
     assert second is not None
-    blocks = second.args[0].args + (second.args[1],)
+    blocks = (*second.args[0].args, second.args[1])
     assert len(blocks) == 3
     assert all(b.op == "om_decayed" for b in blocks)
     env = {
