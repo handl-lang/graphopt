@@ -22,6 +22,7 @@ from catopt_carriers.om import (  # noqa: E402
     OM_DECAYED_CHUNKIFY_ROWS,
     OM_DECAYED_CROSS,
     OM_LAWS,
+    SPLIT_COMMUTE,
     SPLIT_MATMUL_COLS,
     SPLIT_MATMUL_ROWS,
     SPLIT_TRANSPOSE,
@@ -807,6 +808,158 @@ class TestScoreSplit:
             }
         )
         assert not SPLIT_TRANSPOSE.check({})
+
+    def test_split_scalar_pointwise(self):
+        """split_D(mul(x,c)) = mul(split_D(x),c) — c scalar."""
+        from catopt_core.ir import Const
+        from catopt_core.laws.tensor import SPLIT_SCALAR_RULES
+
+        r = next(
+            r for r in SPLIT_SCALAR_RULES if r.name == "split_scalar_div_r"
+        )
+        lhs = Op.make(
+            "split",
+            Op.make("div", _v("m", 8, 8), Const(2.83)),
+            sizes=(4, 4),
+            dim=-2,
+            index=1,
+        )
+        subst = match_pattern(r.lhs, lhs, {})
+        assert subst is not None and r.check(subst)
+        out = instantiate_pattern(r.rhs, subst)
+        m = torch.randn(8, 8, dtype=torch.float64)
+        a = eval_term(lhs, var_env={"m": m}, bindings=tb._IR_TO_TORCH)
+        b = eval_term(out, var_env={"m": m}, bindings=tb._IR_TO_TORCH)
+        assert torch.allclose(a, b)
+        # left variant — scalar on the left of a non-commutative op
+        rl = next(
+            r for r in SPLIT_SCALAR_RULES if r.name == "split_scalar_sub_l"
+        )
+        lhs2 = Op.make(
+            "split",
+            Op.make("sub", Const(1.5), _v("m", 8, 8)),
+            sizes=(4, 4),
+            dim=-1,
+            index=0,
+        )
+        subst2 = match_pattern(rl.lhs, lhs2, {})
+        assert subst2 is not None and rl.check(subst2)
+        out2 = instantiate_pattern(rl.rhs, subst2)
+        a2 = eval_term(lhs2, var_env={"m": m}, bindings=tb._IR_TO_TORCH)
+        b2 = eval_term(out2, var_env={"m": m}, bindings=tb._IR_TO_TORCH)
+        assert torch.allclose(a2, b2)
+        # non-scalar operand declines — a matrix can't accompany a split
+        lhs3 = Op.make(
+            "split",
+            Op.make("mul", _v("m", 8, 8), _v("c", 8, 8)),
+            sizes=(4, 4),
+            dim=-2,
+            index=0,
+        )
+        rm = next(
+            r for r in SPLIT_SCALAR_RULES if r.name == "split_scalar_mul_r"
+        )
+        subst3 = match_pattern(rm.lhs, lhs3, {})
+        assert subst3 is not None and not rm.check(subst3)
+
+    def test_split_commute_fires(self):
+        # split_{-1}(split_{-2}(t, SA, i), SB, j) ↔ the swapped order
+        lhs = Op.make(
+            "split",
+            Op.make("split", _v("t", 8, 8), sizes=(4, 4), dim=-2, index=1),
+            sizes=(4, 4),
+            dim=-1,
+            index=0,
+        )
+        subst = match_pattern(SPLIT_COMMUTE.lhs, lhs, {})
+        assert subst is not None and SPLIT_COMMUTE.check(subst)
+        out = instantiate_pattern(SPLIT_COMMUTE.rhs, subst)
+        t = torch.randn(8, 8, dtype=torch.float64)
+        env = {"t": t}
+        a = eval_term(lhs, var_env=env, bindings=tb._IR_TO_TORCH)
+        b = eval_term(out, var_env=env, bindings=tb._IR_TO_TORCH)
+        assert torch.allclose(a, b)
+
+    def test_split_commute_declines(self):
+        b = {
+            "$attr:SA": (4, 4),
+            "$attr:SB": (4, 4),
+            "$attr:I": 0,
+            "$attr:J": 0,
+        }
+        # same axis → not a disjoint-axis swap
+        assert not SPLIT_COMMUTE.check(
+            {**b, "$attr:DA": -1, "$attr:DB": -1}
+        )
+        # rank-2 tensor: -2 and 0 are the SAME axis
+        assert not SPLIT_COMMUTE.check(
+            {**b, "t": _v("t", 8, 8), "$attr:DA": -2, "$attr:DB": 0}
+        )
+        # unshapeable t, same raw dims
+        assert not SPLIT_COMMUTE.check(
+            {**b, "$attr:DA": -1, "$attr:DB": -1}
+        )
+        # non-int dims decline
+        assert not SPLIT_COMMUTE.check(
+            {**b, "$attr:DA": "x", "$attr:DB": -1}
+        )
+        # bad split sizes / out-of-range index
+        assert not SPLIT_COMMUTE.check(
+            {**b, "t": _v("t", 8, 8), "$attr:DA": -2, "$attr:DB": -1,
+             "$attr:SA": (4, 0)}
+        )
+        assert not SPLIT_COMMUTE.check(
+            {**b, "t": _v("t", 8, 8), "$attr:DA": -2, "$attr:DB": -1,
+             "$attr:I": 5}
+        )
+
+
+class TestRealExportFold:
+    """The whole chain composes on a REAL torch.export graph.
+
+    ChunkedRetention exports ``matmul(mul(div(q·kᵀ, √d), tril(...)), v)``
+    — the decay spelled out, the score fused.  The machine folds the
+    spelled decay (``decay_lift`` on the ``detach_``/``contiguous``-wra-
+    pped leaf), chunkifies rows and keys, splits the score into per-
+    block ``matmul(q_i, k_jᵀ)``, factors the strict-lower decay block
+    (``decay_vec``), and lifts the weighted state into ``applyd`` —
+    none of it by name, all of it from the law set.
+    """
+
+    def test_real_export_reaches_applyd(self):
+        pytest.importorskip("catopt_torch")
+        from catopt_torch.adapters import TorchSource
+        from catopt_discovery.zoo import _ChunkedRetention
+
+        m = _ChunkedRetention(16)
+        x = torch.randn(2, 8, 16)
+        term = TorchSource().to_ir(m, x)[0].root
+        eg = EGraph()
+        root = eg.add_term(term)
+        from catopt_core.laws.tensor import SPLIT_SCALAR_RULES
+
+        eg.run(
+            list(OM_LAWS) + list(SPLIT_SCALAR_RULES),
+            root,
+            max_iterations=12,
+            max_nodes=100_000,
+            rule_budgets={
+                "om_decayed_chunkify_rows": 30,
+                "om_decayed_chunkify_keys": 30,
+            },
+            patience=6,
+        )
+        ops = [
+            n.op
+            for cls in eg._classes.values()
+            for n in cls.nodes
+        ]
+        # the spelled tril-decay folded into the generator
+        assert "decay" in ops
+        # the rank-1 cross factorisation landed
+        assert "decay_vec" in ops
+        # the weighted state folded into the carrier
+        assert "applyd" in ops
 
 
 class TestMachineFold:

@@ -2668,6 +2668,59 @@ def _check_split_transpose(bound: dict) -> bool:
     )
 
 
+def _split_attrs_ok(bound: dict, size_key: str, index_key: str) -> bool:
+    """Require a well-typed ``sizes`` partition and ``index``."""
+    sz = bound.get(size_key)
+    i = bound.get(index_key)
+    return (
+        isinstance(sz, (tuple, list))
+        and all(isinstance(x, int) and x > 0 for x in sz)
+        and isinstance(i, int)
+        and 0 <= i < len(sz)
+    )
+
+
+def _check_split_commute(bound: dict) -> bool:
+    """Require well-typed, disjoint-axis nested splits."""
+    da, db = bound.get("$attr:DA"), bound.get("$attr:DB")
+    if not (isinstance(da, int) and isinstance(db, int)):
+        return False
+    t = _vshape(bound.get("t"))
+    if isinstance(t, tuple) and t:
+        rank = len(t)
+        if da % rank == db % rank:
+            return False
+    elif da == db:
+        return False
+    return _split_attrs_ok(
+        bound, "$attr:SA", "$attr:I"
+    ) and _split_attrs_ok(bound, "$attr:SB", "$attr:J")
+
+
+SPLIT_COMMUTE = R(
+    "split_commute",
+    Op.make(
+        "split",
+        Op.make("split", "t", sizes="SA", dim="DA", index="I"),
+        sizes="SB",
+        dim="DB",
+        index="J",
+    ),
+    Op.make(
+        "split",
+        Op.make("split", "t", sizes="SB", dim="DB", index="J"),
+        sizes="SA",
+        dim="DA",
+        index="I",
+    ),
+    check=_check_split_commute,
+    law="disjoint-axis splits commute: split_{DB}(split_{DA}(t)) "
+    "= split_{DA}(split_{DB}(t)) — the row/col order of a block "
+    "decomposition is immaterial; puts double splits in the "
+    "canonical (row-then-col) order the block laws consume.",
+)
+
+
 SPLIT_TRANSPOSE = R(
     "split_transpose",
     Op.make(
@@ -2747,6 +2800,7 @@ OM_LAWS: list[Rewrite] = [
     SPLIT_MATMUL_ROWS,
     SPLIT_MATMUL_COLS,
     SPLIT_TRANSPOSE,
+    SPLIT_COMMUTE,
 ]
 
 #: The same set as a composable :class:`~catopt_core.laws.RuleSet` —

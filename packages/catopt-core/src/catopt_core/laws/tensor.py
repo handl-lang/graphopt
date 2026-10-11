@@ -36,6 +36,7 @@ from catopt_core.laws.cond import (
     eval_cond,
 )
 from catopt_core.laws.layout import LAYOUT_RULES
+from catopt_core.opmeta import POINTWISE_BINARY_OPS
 
 #: Tag bundles for the rule definitions below (see
 #: :mod:`catopt_core.laws.tags`): comm/assoc and the scale-hoist
@@ -1961,6 +1962,72 @@ ASSOC_MATMUL_REV = R(
     tags=_CAT,
     derivation=("assoc_matmul",),
 )
+
+# ---------------------------------------------------------------------------
+#  Split naturality:  a split distributes over a pointwise-binary op
+#  when the other operand is scalar — the elementwise action commutes
+#  with the partition.  This is what exposes block structure under a
+#  scale (``split_{-1}(q·kᵀ/√d, i) = split_{-1}(q·kᵀ, i)/√d``) — the
+#  chunked-score decomposition's entry point on a real export, where
+#  the score arrives fused behind the pointwise scale.
+# ---------------------------------------------------------------------------
+
+
+def _split_scalar(op: str, scalar_left: bool) -> Rewrite:
+    """``split_D(f(x,c)) = f(split_D(x), c)`` (or the left variant).
+
+    ``c`` scalar-shaped — a scalar broadcasts to every element, so
+    splitting the fused output at axis ``D`` is exactly the op applied
+    to the split input.  Order preserved, so ``sub``/``div`` are
+    covered on both sides without commutativity.
+    """
+    if scalar_left:
+        lhs = Op.make(
+            "split",
+            Op.make(op, "c", "x"),
+            sizes="SZ",
+            dim="D",
+            index="I",
+        )
+        rhs = Op.make(
+            op,
+            "c",
+            Op.make("split", "x", sizes="SZ", dim="D", index="I"),
+        )
+        suf = "l"
+    else:
+        lhs = Op.make(
+            "split",
+            Op.make(op, "x", "c"),
+            sizes="SZ",
+            dim="D",
+            index="I",
+        )
+        rhs = Op.make(
+            op,
+            Op.make("split", "x", sizes="SZ", dim="D", index="I"),
+            "c",
+        )
+        suf = "r"
+    return R(
+        f"split_scalar_{op}_{suf}",
+        lhs,
+        rhs,
+        law=f"split commutes with pointwise {op} when the other "
+        "operand is scalar: the partition reads the same elementwise "
+        "grid; the scalar accompanies every block unchanged.",
+        cond=("scalar", "c"),
+        tags=_CAT,
+        derivation=("split_scalar_naturality", op, suf),
+    )
+
+
+SPLIT_SCALAR_RULES: list[Rewrite] = [
+    _split_scalar(op, side)
+    for op in sorted(POINTWISE_BINARY_OPS)
+    for side in (False, True)
+]
+
 # ---------------------------------------------------------------------------
 #  Rule collections
 # ---------------------------------------------------------------------------
@@ -2020,6 +2087,7 @@ CATEGORICAL_RULES: list[Rewrite] = [
     NATURALITY_SCALAR_REV,
     ASSOC_MATMUL,
     ASSOC_MATMUL_REV,
+    *SPLIT_SCALAR_RULES,
     # Product structure (fused projections)
     SWIGLU_FUSE,
     PARALLEL_MUL_FUSE,
