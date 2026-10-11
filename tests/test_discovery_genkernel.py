@@ -33,9 +33,7 @@ class TestMinting:
         h = gk.gen_handlers([_p("mul", x, _p("relu", x))])
         assert "gen_0" in h
         assert h["gen_0"]["kernel"] == "gen_0_k"
-        assert h["gen_0"]["pattern"] == (
-            "mul", "X1", ("relu", "X1")
-        )
+        assert h["gen_0"]["pattern"] == ("mul", "X1", ("relu", "X1"))
         assert h["gen_0"]["args"] == ("X1",)
 
     def test_covered_pattern_skipped(self):
@@ -44,20 +42,20 @@ class TestMinting:
         covered = {
             _canon_concrete(h["pattern"]) for h in HANDLERS.values()
         }
-        assert gk.gen_handlers(
-            [_p("mul", x, _p("sigmoid", x))], covered=covered
-        ) == {}
+        assert (
+            gk.gen_handlers(
+                [_p("mul", x, _p("sigmoid", x))], covered=covered
+            )
+            == {}
+        )
 
     def test_non_elementwise_skipped(self):
         x, y = _v("x", 4, 4), _v("y", 4, 4)
-        assert (
-            gk.gen_handlers([_p("matmul", x, y)]) == {}
-        )
+        assert gk.gen_handlers([_p("matmul", x, y)]) == {}
         # and the dedup: same concrete pattern twice → one entry
         z = _v("z", 4, 4)
         h = gk.gen_handlers(
-            [_p("mul", x, _p("relu", x)),
-             _p("mul", z, _p("relu", z))]
+            [_p("mul", x, _p("relu", x)), _p("mul", z, _p("relu", z))]
         )
         assert len(h) == 1
 
@@ -76,18 +74,14 @@ class TestBindings:
         h = gk.gen_handlers([_p("mul", x, _p("relu", x))])
         b = gk.gen_bindings(h, compile_kernels=False)
         t = torch.randn(4, 4)
-        torch.testing.assert_close(
-            b["gen_0_k"](t), t * torch.relu(t)
-        )
+        torch.testing.assert_close(b["gen_0_k"](t), t * torch.relu(t))
 
     def test_binding_two_metavars(self):
         x, y = _v("x", 4, 4), _v("y", 4, 4)
         h = gk.gen_handlers([_p("sub", x, _p("abs", y))])
         b = gk.gen_bindings(h, compile_kernels=False)
         a, c = torch.randn(4, 4), torch.randn(4, 4)
-        torch.testing.assert_close(
-            b["gen_0_k"](a, c), a - c.abs()
-        )
+        torch.testing.assert_close(b["gen_0_k"](a, c), a - c.abs())
 
     def test_gen_sink_supports_and_lowers(self):
         x = _v("x", 4, 4)
@@ -120,9 +114,7 @@ class TestNovelCost:
 
     def test_known_head_unchanged(self):
         x = _v("x", 4, 4)
-        cost = gk.novel_cost(
-            count_cost, lambda op: op == "never", 0.5
-        )
+        cost = gk.novel_cost(count_cost, lambda op: op == "never", 0.5)
         assert cost(_p("mul", x, x)) == 1.0
 
 
@@ -146,8 +138,7 @@ class TestGenDomain:
                 board = play._gen_board(c)
                 st = board.observe()
                 claims = [
-                    a for a in ma.legal_actions(st)
-                    if a.op == "claim"
+                    a for a in ma.legal_actions(st) if a.op == "claim"
                 ]
                 if not claims:
                     continue
@@ -174,7 +165,8 @@ class TestGenDomain:
         import catopt_torch.torch_bridge as tb
 
         out = gk._eval_spec(
-            ("mul", "X1", 2.0), {"X1": torch.ones(2)},
+            ("mul", "X1", 2.0),
+            {"X1": torch.ones(2)},
             dict(tb._IR_TO_TORCH),
         )
         torch.testing.assert_close(out, torch.ones(2) * 2.0)
@@ -186,7 +178,9 @@ class TestProbe:
         pytest.importorskip("torch")
         real = gk.gen_sink
         monkeypatch.setattr(
-            gk, "gen_sink", lambda h, **kw: real(h, compile_kernels=False)
+            gk,
+            "gen_sink",
+            lambda h, **kw: real(h, compile_kernels=False),
         )
         for s in range(8):
             for c in play._gen_cases(s, 4):
@@ -198,16 +192,16 @@ class TestProbe:
         raise AssertionError("no mulrelu case found")
 
     def test_spec_metas_skips_attr_dicts(self):
-        assert gk._spec_metas(
-            ("add", "X1", {"dim": 1})
-        ) == ["X1"]
+        assert gk._spec_metas(("add", "X1", {"dim": 1})) == ["X1"]
 
     def test_probe_empty_claims_and_no_best(self, monkeypatch):
         pytest = __import__("pytest")
         pytest.importorskip("torch")
         real = gk.gen_sink
         monkeypatch.setattr(
-            gk, "gen_sink", lambda h, **kw: real(h, compile_kernels=False)
+            gk,
+            "gen_sink",
+            lambda h, **kw: real(h, compile_kernels=False),
         )
         # an mlp case: no fusion sites → no claims → still probes
         for s in range(12):
@@ -234,9 +228,7 @@ class TestTritonTier:
     def test_triton_expr_binary_and_unary(self):
         e = gk._triton_expr(("mul", "X1", ("relu", "X1")))
         assert e == "((X1) * (tl.maximum(X1, 0.0)))"
-        assert "libdevice.tanh" in gk._triton_expr(
-            ("tanh", "X1")
-        )
+        assert "libdevice.tanh" in gk._triton_expr(("tanh", "X1"))
 
     def test_triton_expr_declines_attr_and_unknown(self):
         assert gk._triton_expr(("sum", "X1", {"dim": 1})) is None
@@ -311,7 +303,9 @@ class TestTritonTier:
         import importlib.util
 
         monkeypatch.setattr(
-            importlib.util, "spec_from_file_location", lambda *a, **k: None
+            importlib.util,
+            "spec_from_file_location",
+            lambda *a, **k: None,
         )
         h = {
             "g": {
@@ -332,9 +326,15 @@ class TestMeasuredReferee:
 
         x = Var("x", TensorType((256, 256)))
         # a big tail — fusion pays; a 1-op site — overhead doesn't
-        big = _p("add", _p("mul", x, _p("relu", x)),
-                 _p("mul", _p("tanh", _p("mul", x, x)),
-                    _p("softplus", _p("mul", x, _p("sigmoid", x)))))
+        big = _p(
+            "add",
+            _p("mul", x, _p("relu", x)),
+            _p(
+                "mul",
+                _p("tanh", _p("mul", x, x)),
+                _p("softplus", _p("mul", x, _p("sigmoid", x))),
+            ),
+        )
         term = _p("add", big, _p("relu", x))
         leaves = {"x": torch.randn(256, 256)}
         handlers = {
@@ -342,8 +342,11 @@ class TestMeasuredReferee:
                 "pattern": (
                     "add",
                     ("mul", "X1", ("relu", "X1")),
-                    ("mul", ("tanh", ("mul", "X1", "X1")),
-                     ("softplus", ("mul", "X1", ("sigmoid", "X1")))),
+                    (
+                        "mul",
+                        ("tanh", ("mul", "X1", "X1")),
+                        ("softplus", ("mul", "X1", ("sigmoid", "X1"))),
+                    ),
                 ),
                 "kernel": "gk_big",
                 "args": ("X1",),
@@ -477,7 +480,15 @@ class TestScanSpec:
             )
         )
         assert info["kind"] == "unrolled"
-        assert info["params"] == ["A2", "B2", "A1", "B1", "A0", "B0", "H"]
+        assert info["params"] == [
+            "A2",
+            "B2",
+            "A1",
+            "B1",
+            "A0",
+            "B0",
+            "H",
+        ]
         # in-order leaves are reverse-chronological — the kernel
         # applies A0 first
         assert info["steps"] == [
@@ -531,7 +542,9 @@ class TestScanSpec:
         assert info is not None and "axis" not in info
         # state must be a metavar
         assert (
-            gk.scan_spec(("applyd", ("aff_diag", "A", "B"), ("mul", "H", "H")))
+            gk.scan_spec(
+                ("applyd", ("aff_diag", "A", "B"), ("mul", "H", "H"))
+            )
             is None
         )
         # a compose tree with a non-aff_diag leaf is impure
@@ -539,7 +552,11 @@ class TestScanSpec:
             gk.scan_spec(
                 (
                     "applyd",
-                    ("affd_compose", ("aff", "A", "B"), ("aff_diag", "C", "D")),
+                    (
+                        "affd_compose",
+                        ("aff", "A", "B"),
+                        ("aff_diag", "C", "D"),
+                    ),
                     "H",
                 )
             )
@@ -554,27 +571,33 @@ class TestScanSpec:
         )
         # operands the elementwise renderer cannot express
         assert (
-            gk.scan_spec(("applyd", ("aff_diag", ("matmul", "A", "B"), "B"), "H"))
+            gk.scan_spec(
+                ("applyd", ("aff_diag", ("matmul", "A", "B"), "B"), "H")
+            )
             is None
         )
         # all-constant leaves carry no sequence operand
         assert (
-            gk.scan_spec(("applyd", ("aff_diag", 1.0, 0.0), "H")) is None
+            gk.scan_spec(("applyd", ("aff_diag", 1.0, 0.0), "H"))
+            is None
         )
         # the state meta rebound as a sequence operand declines
         assert (
-            gk.scan_spec(("applyd", ("aff_diag", "H", "B"), "H")) is None
+            gk.scan_spec(("applyd", ("aff_diag", "H", "B"), "H"))
+            is None
         )
         # kernel-name-colliding metas decline
         assert (
-            gk.scan_spec(("applyd", ("aff_diag", "acc", "B"), "H")) is None
+            gk.scan_spec(("applyd", ("aff_diag", "acc", "B"), "H"))
+            is None
         )
         assert (
             gk.scan_spec(("applyd", ("aff_diag", "x_ptr", "B"), "H"))
             is None
         )
         assert (
-            gk.scan_spec(("applyd", ("aff_diag", "A", "B"), "t")) is None
+            gk.scan_spec(("applyd", ("aff_diag", "A", "B"), "t"))
+            is None
         )
 
 
@@ -642,27 +665,35 @@ class TestScanBindings:
         bb = torch.randn(64, 16, device="cuda", dtype=dt)
         h = torch.randn(16, device="cuda", dtype=dt)
         torch.testing.assert_close(
-            b["sc_t"](a, bb, h), _spelled_scan(a, bb, h),
-            atol=1e-12, rtol=1e-12,
+            b["sc_t"](a, bb, h),
+            _spelled_scan(a, bb, h),
+            atol=1e-12,
+            rtol=1e-12,
         )
         # length-1 sequence is the single map application
         a1, b1 = a[:1], bb[:1]
         torch.testing.assert_close(
-            b["sc_t"](a1, b1, h), a1[0] * h + b1[0],
-            atol=1e-12, rtol=1e-12,
+            b["sc_t"](a1, b1, h),
+            a1[0] * h + b1[0],
+            atol=1e-12,
+            rtol=1e-12,
         )
         # non-contiguous operands fold identically
         an = torch.rand(16, 64, device="cuda", dtype=dt).t()
         bn = torch.randn(16, 64, device="cuda", dtype=dt).t()
         torch.testing.assert_close(
-            b["sc_t"](an, bn, h), _spelled_scan(an, bn, h),
-            atol=1e-12, rtol=1e-12,
+            b["sc_t"](an, bn, h),
+            _spelled_scan(an, bn, h),
+            atol=1e-12,
+            rtol=1e-12,
         )
         # a shared (d,) decay broadcasts over the step axis
         ash = torch.rand(16, device="cuda", dtype=dt) * 0.5 + 0.4
         torch.testing.assert_close(
-            b["sc_t"](ash, bb, h), _spelled_scan(ash, bb, h),
-            atol=1e-12, rtol=1e-12,
+            b["sc_t"](ash, bb, h),
+            _spelled_scan(ash, bb, h),
+            atol=1e-12,
+            rtol=1e-12,
         )
 
     def test_seq_axis_explicit_and_derived(self):
@@ -703,7 +734,10 @@ class TestScanBindings:
         hs = {
             "s": {
                 "pattern": (
-                    "applyd", ("aff_diag", "A", "B"), "H", {"axis": 0}
+                    "applyd",
+                    ("aff_diag", "A", "B"),
+                    "H",
+                    {"axis": 0},
                 ),
                 "kernel": "sc_attr",
                 "args": ("A", "B", "H"),
@@ -744,14 +778,17 @@ class TestScanBindings:
         }
         b = gk.scan_triton_bindings(hs)
         dt = torch.float64
-        a0, b0_ = torch.rand(64, device="cuda", dtype=dt), torch.randn(
-            64, device="cuda", dtype=dt
+        a0, b0_ = (
+            torch.rand(64, device="cuda", dtype=dt),
+            torch.randn(64, device="cuda", dtype=dt),
         )
-        a1, b1_ = torch.rand(64, device="cuda", dtype=dt), torch.randn(
-            64, device="cuda", dtype=dt
+        a1, b1_ = (
+            torch.rand(64, device="cuda", dtype=dt),
+            torch.randn(64, device="cuda", dtype=dt),
         )
-        a2, b2_ = torch.rand(64, device="cuda", dtype=dt), torch.randn(
-            64, device="cuda", dtype=dt
+        a2, b2_ = (
+            torch.rand(64, device="cuda", dtype=dt),
+            torch.randn(64, device="cuda", dtype=dt),
         )
         h = torch.randn(64, device="cuda", dtype=dt)
         got = b["sc_unr"](a2, b2_, a1, b1_, a0, b0_, h)
@@ -808,7 +845,9 @@ class TestScanBindings:
         import importlib.util
 
         monkeypatch.setattr(
-            importlib.util, "spec_from_file_location", lambda *a, **k: None
+            importlib.util,
+            "spec_from_file_location",
+            lambda *a, **k: None,
         )
         assert gk.scan_triton_bindings(self._handlers()) == {}
 
@@ -917,7 +956,9 @@ class TestScanHandlers:
         assert "scan_0" in hs
         assert hs["scan_0"]["kernel"] == "scan_0_k"
         assert hs["scan_0"]["pattern"] == (
-            "applyd", ("aff_diag", "X1", "X2"), "X3"
+            "applyd",
+            ("aff_diag", "X1", "X2"),
+            "X3",
         )
         assert hs["scan_0"]["args"] == ("X1", "X2", "X3")
         assert hs["scan_0"]["axis"] == -2
@@ -947,7 +988,9 @@ class TestScanHandlers:
         t2 = _p("applyd", _p("aff_diag", b, a), h)  # same canon shape
         hs2 = gk.scan_handlers([t1, t2])
         assert len(hs2) == 1
-        covered = {_canon_concrete(("applyd", ("aff_diag", "A", "B"), "H"))}
+        covered = {
+            _canon_concrete(("applyd", ("aff_diag", "A", "B"), "H"))
+        }
         assert gk.scan_handlers([t1], covered=covered) == {}
 
 
@@ -982,8 +1025,10 @@ class TestScanSink:
         bv = torch.randn(16, 8, device="cuda", dtype=dt)
         hv = torch.randn(8, device="cuda", dtype=dt)
         torch.testing.assert_close(
-            mod(av, bv, hv), _spelled_scan(av, bv, hv),
-            atol=1e-12, rtol=1e-12,
+            mod(av, bv, hv),
+            _spelled_scan(av, bv, hv),
+            atol=1e-12,
+            rtol=1e-12,
         )
 
 
@@ -1039,7 +1084,9 @@ class TestHybridSinkScan:
         # module load declines → the seq spec must stay unbound: the
         # spelled eval (a⊙h+b) is a DIFFERENT function, not a fallback
         monkeypatch.setattr(
-            importlib.util, "spec_from_file_location", lambda *a, **k: None
+            importlib.util,
+            "spec_from_file_location",
+            lambda *a, **k: None,
         )
         hs = {
             "s": {
@@ -1058,7 +1105,9 @@ class TestHybridSinkScan:
         # the unrolled spec's spelled eval IS the carrier semantics
         # (tuple-passing) — a declined codegen keeps that torch path
         monkeypatch.setattr(
-            importlib.util, "spec_from_file_location", lambda *a, **k: None
+            importlib.util,
+            "spec_from_file_location",
+            lambda *a, **k: None,
         )
         hs = {
             "s": {
@@ -1133,3 +1182,546 @@ class TestScanProbe:
             importlib.util, "find_spec", lambda *a, **k: None
         )
         assert play._has_triton() is False
+
+
+def _decayed_handlers(kernel: str = "dc_t"):
+    """The canonical ``om_decayed`` handler for decayed-tier tests."""
+    return {
+        "d": {
+            "pattern": ("om_decayed", "S", "D", "V"),
+            "kernel": kernel,
+            "args": ("S", "D", "V"),
+        }
+    }
+
+
+class TestDecayedSpec:
+    """``decayed_spec`` — the decayed-contraction recognizer."""
+
+    def test_element_form_recognised(self):
+        info = gk.decayed_spec(("om_decayed", "S", "D", "V"))
+        assert info["kind"] == "decayed"
+        assert info["params"] == ["S", "D", "V"]
+        assert [o["metas"] for o in info["operands"]] == [
+            ["S"],
+            ["D"],
+            ["V"],
+        ]
+        assert info["operands"][0]["expr"] == "a0_S_t"
+        assert info["operands"][2]["expr"] == "a2_V_t"
+
+    def test_spelled_form_recognised(self):
+        info = gk.decayed_spec(("matmul", ("mul", "S", "D"), "V"))
+        assert info["params"] == ["S", "D", "V"]
+
+    def test_elementwise_operands_fuse(self):
+        info = gk.decayed_spec(
+            ("om_decayed", ("mul", "A", "B"), "D", "V")
+        )
+        assert info["operands"][0]["metas"] == ["A", "B"]
+        assert info["params"] == ["A", "B", "D", "V"]
+        # the same meta in two roles binds once but renders per role
+        info = gk.decayed_spec(("om_decayed", "S", "S", "V"))
+        assert info["params"] == ["S", "V"]
+        assert info["operands"][1]["expr"] == "a1_S_t"
+
+    def test_const_operand_inlines(self):
+        info = gk.decayed_spec(("om_decayed", "S", 0.5, "V"))
+        assert info["operands"][1]["metas"] == []
+        assert info["operands"][1]["expr"] == "(0.5)"
+        assert info["params"] == ["S", "V"]
+
+    def test_declines_foreign_and_malformed_specs(self):
+        assert gk.decayed_spec(("add", "X", "Y")) is None
+        assert gk.decayed_spec("om_decayed") is None
+        assert gk.decayed_spec(("om_decayed",)) is None
+        assert gk.decayed_spec(("om_decayed", "S", "D")) is None
+        assert (
+            gk.decayed_spec(("matmul", ("add", "S", "D"), "V")) is None
+        )
+        assert gk.decayed_spec(("matmul", "mul", "V")) is None
+        # an attr dict on the op node is outside the grammar
+        assert (
+            gk.decayed_spec(("om_decayed", "S", "D", "V", {"x": 1}))
+            is None
+        )
+        assert (
+            gk.decayed_spec(
+                ("matmul", ("mul", "S", "D", {"x": 1}), "V")
+            )
+            is None
+        )
+        # an operand the elementwise renderer cannot express
+        assert (
+            gk.decayed_spec(
+                ("om_decayed", ("matmul", "A", "B"), "D", "V")
+            )
+            is None
+        )
+        # kernel-name-unsafe metas decline
+        assert gk.decayed_spec(("om_decayed", "for", "D", "V")) is None
+        # a constant v carries no contraction operand for tl.dot
+        assert gk.decayed_spec(("om_decayed", "S", "D", 2.0)) is None
+        # and a constant s·d product leaves no mul-space tile
+        assert gk.decayed_spec(("om_decayed", 1.0, 2.0, "V")) is None
+
+
+class TestDecayedSource:
+    """``_decayed_triton_source`` — emitted module text."""
+
+    def test_source_inspectable(self):
+        src = gk._decayed_triton_source(
+            gk.decayed_spec(("om_decayed", "S", "D", "V"))
+        )
+        assert "triton.jit" in src
+        assert "tl.dot(sd, (a2_V_t)" in src
+        assert 'input_precision="ieee"' in src
+        assert "a0_S_FB: tl.constexpr" in src
+        assert "a1_D_base = tl.load(a1_D_bo + b)" in src
+        assert "for k0 in range(0, K, BK)" in src
+        # the s·d product is folded into the contraction's loop
+        assert "sd = (a0_S_t) * (a1_D_t)" in src
+
+
+class TestDecayedBindings:
+    """Generated decayed kernels — fp64-verified vs the spelled body."""
+
+    def test_broadcast_decay_matches_spelled(self):
+        torch = _cuda()
+        b = gk.decayed_triton_bindings(_decayed_handlers())
+        dt = torch.float64
+        B, T, DV = 2, 40, 24
+        s = torch.randn(B, T, T, device="cuda", dtype=dt)
+        d = torch.rand(T, T, device="cuda", dtype=dt)
+        v = torch.randn(B, T, DV, device="cuda", dtype=dt)
+        torch.testing.assert_close(
+            b["dc_t"](s, d, v), (s * d) @ v, atol=1e-12, rtol=1e-12
+        )
+        # a second call on the same signature hits the plan memo
+        torch.testing.assert_close(
+            b["dc_t"](s, d, v), (s * d) @ v, atol=1e-12, rtol=1e-12
+        )
+
+    def test_full_rank_decay_matches_spelled(self):
+        torch = _cuda()
+        b = gk.decayed_triton_bindings(_decayed_handlers("dc_f"))
+        dt = torch.float64
+        B, T, DV = 3, 24, 16
+        s = torch.randn(B, T, T, device="cuda", dtype=dt)
+        d = torch.rand(B, T, T, device="cuda", dtype=dt)
+        v = torch.randn(B, T, DV, device="cuda", dtype=dt)
+        torch.testing.assert_close(
+            b["dc_f"](s, d, v), (s * d) @ v, atol=1e-12, rtol=1e-12
+        )
+
+    def test_scalar_and_lower_rank_decay(self):
+        torch = _cuda()
+        b = gk.decayed_triton_bindings(_decayed_handlers("dc_s"))
+        dt = torch.float64
+        B, T, DV = 2, 32, 16
+        s = torch.randn(B, T, T, device="cuda", dtype=dt)
+        v = torch.randn(B, T, DV, device="cuda", dtype=dt)
+        ds = torch.rand((), device="cuda", dtype=dt)
+        torch.testing.assert_close(
+            b["dc_s"](s, ds, v), (s * ds) @ v, atol=1e-12, rtol=1e-12
+        )
+        # a (T, 1) column decay broadcasts over the K axis
+        dc = torch.rand(T, 1, device="cuda", dtype=dt)
+        torch.testing.assert_close(
+            b["dc_s"](s, dc, v), (s * dc) @ v, atol=1e-12, rtol=1e-12
+        )
+
+    def test_unbatched_and_extra_v_batch(self):
+        torch = _cuda()
+        b = gk.decayed_triton_bindings(_decayed_handlers("dc_b"))
+        dt = torch.float64
+        T, K, DV = 16, 20, 12
+        s2 = torch.randn(T, K, device="cuda", dtype=dt)
+        d2 = torch.rand(T, K, device="cuda", dtype=dt)
+        v2 = torch.randn(K, DV, device="cuda", dtype=dt)
+        torch.testing.assert_close(
+            b["dc_b"](s2, d2, v2),
+            (s2 * d2) @ v2,
+            atol=1e-12,
+            rtol=1e-12,
+        )
+        # v carries a batch dim the mul space lacks — torch
+        # matmul broadcast rules, exercised through the offsets
+        s3 = torch.randn(2, T, K, device="cuda", dtype=dt)
+        d3 = torch.rand(2, T, K, device="cuda", dtype=dt)
+        v3 = torch.randn(3, 2, K, DV, device="cuda", dtype=dt)
+        torch.testing.assert_close(
+            b["dc_b"](s3, d3, v3),
+            (s3 * d3) @ v3,
+            atol=1e-12,
+            rtol=1e-12,
+        )
+
+    def test_fused_operands_and_noncontiguous(self):
+        torch = _cuda()
+        hs = {
+            "d": {
+                "pattern": ("om_decayed", ("mul", "A", "B"), "D", "V"),
+                "kernel": "dc_fu",
+                "args": ("A", "B", "D", "V"),
+            }
+        }
+        b = gk.decayed_triton_bindings(hs)
+        dt = torch.float64
+        B, T, DV = 2, 24, 16
+        a = torch.randn(B, T, T, device="cuda", dtype=dt)
+        bb = torch.rand(T, T, device="cuda", dtype=dt)
+        d = torch.rand(T, T, device="cuda", dtype=dt)
+        v = torch.randn(B, T, DV, device="cuda", dtype=dt)
+        torch.testing.assert_close(
+            b["dc_fu"](a, bb, d, v),
+            ((a * bb) * d) @ v,
+            atol=1e-12,
+            rtol=1e-12,
+        )
+        # an operand meta broadcasting INTO the accumulated shape
+        # (extent-1 dim widened by the other meta) folds identically
+        bb1 = torch.rand(1, T, T, device="cuda", dtype=dt)
+        torch.testing.assert_close(
+            b["dc_fu"](a, bb1, d, v),
+            ((a * bb1) * d) @ v,
+            atol=1e-12,
+            rtol=1e-12,
+        )
+        # non-contiguous operands fold identically (stride math)
+        b2 = gk.decayed_triton_bindings(_decayed_handlers("dc_nc"))
+        sn = torch.randn(B, T, T, device="cuda", dtype=dt).mT
+        dn = torch.rand(T, T, device="cuda", dtype=dt).t()
+        vn = torch.randn(B, DV, T, device="cuda", dtype=dt).mT
+        torch.testing.assert_close(
+            b2["dc_nc"](sn, dn, vn),
+            (sn * dn) @ vn,
+            atol=1e-12,
+            rtol=1e-12,
+        )
+
+    def test_empty_contract_returns_zeros(self):
+        torch = _cuda()
+        b = gk.decayed_triton_bindings(_decayed_handlers("dc_z"))
+        dt = torch.float64
+        # T == 0 → the empty output, no launch
+        s = torch.randn(2, 0, 4, device="cuda", dtype=dt)
+        d = torch.rand(0, 4, device="cuda", dtype=dt)
+        v = torch.randn(2, 4, 8, device="cuda", dtype=dt)
+        got = b["dc_z"](s, d, v)
+        assert got.shape == (2, 0, 8)
+        # K == 0 → the contraction folds to zeros
+        s0 = torch.randn(2, 4, 0, device="cuda", dtype=dt)
+        d0 = torch.rand(4, 0, device="cuda", dtype=dt)
+        v0 = torch.randn(2, 0, 8, device="cuda", dtype=dt)
+        got = b["dc_z"](s0, d0, v0)
+        torch.testing.assert_close(
+            got, torch.zeros(2, 4, 8, device="cuda", dtype=dt)
+        )
+
+    def test_kernel_file_landed_on_disk(self):
+        _cuda()
+        gk.decayed_triton_bindings(_decayed_handlers("dc_d"))
+        f = gk._kernel_cache() / "_gd_dc_d.py"
+        assert f.exists() and "tl.dot" in f.read_text()
+
+    def test_unrecognised_spec_gets_no_binding(self):
+        pytest.importorskip("torch")
+        pytest.importorskip("triton")
+        hs = {
+            "d": {
+                "pattern": ("add", "A", "B"),
+                "kernel": "dc_no",
+                "args": ("A", "B"),
+            }
+        }
+        assert gk.decayed_triton_bindings(hs) == {}
+
+    def test_module_load_decline_keeps_torch_path(self, monkeypatch):
+        pytest.importorskip("torch")
+        pytest.importorskip("triton")
+        import importlib.util
+
+        monkeypatch.setattr(
+            importlib.util,
+            "spec_from_file_location",
+            lambda *a, **k: None,
+        )
+        assert gk.decayed_triton_bindings(_decayed_handlers()) == {}
+
+    def test_mixed_dtypes_promote(self):
+        torch = _cuda()
+        b = gk.decayed_triton_bindings(_decayed_handlers("dc_mx"))
+        s = torch.randn(2, 16, 16, device="cuda", dtype=torch.float32)
+        d = torch.rand(16, 16, device="cuda", dtype=torch.float64)
+        v = torch.randn(2, 16, 8, device="cuda", dtype=torch.float64)
+        got = b["dc_mx"](s, d, v)
+        torch.testing.assert_close(
+            got, (s.double() * d) @ v, atol=1e-12, rtol=1e-12
+        )
+        assert got.dtype == torch.float64
+
+    def test_memo_cap_evicts(self, monkeypatch):
+        torch = _cuda()
+        monkeypatch.setattr(gk, "_DECAY_MEMO_CAP", 1)
+        b = gk.decayed_triton_bindings(_decayed_handlers("dc_ev"))
+        dt = torch.float64
+        for t in (8, 16, 24):
+            s = torch.randn(2, t, t, device="cuda", dtype=dt)
+            d = torch.rand(t, t, device="cuda", dtype=dt)
+            v = torch.randn(2, t, 4, device="cuda", dtype=dt)
+            torch.testing.assert_close(
+                b["dc_ev"](s, d, v),
+                (s * d) @ v,
+                atol=1e-12,
+                rtol=1e-12,
+            )
+
+
+class TestDecayedErrors:
+    """Call-time honesty — contract violations raise, never revert."""
+
+    def test_cpu_tensors_raise(self):
+        torch = pytest.importorskip("torch")
+        pytest.importorskip("triton")
+        b = gk.decayed_triton_bindings(_decayed_handlers("dc_cpu"))
+        t = torch.rand(4, 4)
+        with pytest.raises(RuntimeError, match="CUDA"):
+            b["dc_cpu"](t, t, t)
+
+    def test_contraction_mismatch_raises(self):
+        torch = _cuda()
+        b = gk.decayed_triton_bindings(_decayed_handlers("dc_mm"))
+        dt = torch.float64
+        s = torch.randn(2, 8, 8, device="cuda", dtype=dt)
+        d = torch.rand(8, 8, device="cuda", dtype=dt)
+        v = torch.randn(2, 9, 4, device="cuda", dtype=dt)
+        with pytest.raises(ValueError, match="contract"):
+            b["dc_mm"](s, d, v)
+
+    def test_rank_one_v_raises(self):
+        torch = _cuda()
+        b = gk.decayed_triton_bindings(_decayed_handlers("dc_r1"))
+        dt = torch.float64
+        s = torch.randn(8, 8, device="cuda", dtype=dt)
+        d = torch.rand(8, 8, device="cuda", dtype=dt)
+        v = torch.randn(8, device="cuda", dtype=dt)
+        with pytest.raises(ValueError, match="contract"):
+            b["dc_r1"](s, d, v)
+
+    def test_unbroadcastable_mul_operands_raise(self):
+        torch = _cuda()
+        b = gk.decayed_triton_bindings(_decayed_handlers("dc_ub"))
+        dt = torch.float64
+        s = torch.randn(8, 8, device="cuda", dtype=dt)
+        d = torch.rand(7, 7, device="cuda", dtype=dt)
+        v = torch.randn(8, 4, device="cuda", dtype=dt)
+        with pytest.raises(ValueError, match="broadcast"):
+            b["dc_ub"](s, d, v)
+
+    def test_exp_strides_contract_edges(self):
+        # a rank-too-big source can never broadcast into target
+        with pytest.raises(ValueError, match="broadcast"):
+            gk._exp_strides((2, 2), (2, 1), (2,))
+        # a non-1, non-equal dim is unbroadcastable mid-tensor
+        with pytest.raises(ValueError, match="broadcast"):
+            gk._exp_strides((3, 2), (2, 1), (4, 2))
+        # and the right-aligned broadcast math itself
+        assert gk._exp_strides((2,), (5,), (3, 2)) == (0, 5)
+        assert gk._exp_strides((1, 2), (9, 5), (3, 2)) == (0, 5)
+
+
+class TestDecayedHandlers:
+    """``decayed_handlers`` — minting decayed-op entries."""
+
+    def test_mints_decayed_entries(self):
+        s = _v("s", 8, 8)
+        d = _v("d", 8, 8)
+        v = _v("v", 8, 4)
+        term = _p("om_decayed", s, d, v)
+        hs = gk.decayed_handlers([term])
+        assert "decayed_0" in hs
+        assert hs["decayed_0"]["kernel"] == "decayed_0_k"
+        assert hs["decayed_0"]["pattern"] == (
+            "om_decayed",
+            "X1",
+            "X2",
+            "X3",
+        )
+        assert hs["decayed_0"]["args"] == ("X1", "X2", "X3")
+
+    def test_spelled_term_mints(self):
+        s = _v("s", 8, 8)
+        d = _v("d", 8, 8)
+        v = _v("v", 8, 4)
+        term = _p("matmul", _p("mul", s, d), v)
+        hs = gk.decayed_handlers([term])
+        assert hs["decayed_0"]["pattern"] == (
+            "matmul",
+            ("mul", "X1", "X2"),
+            "X3",
+        )
+
+    def test_non_decayed_dupes_and_covered_skipped(self):
+        x, y = _v("x", 4), _v("y", 4)
+        assert gk.decayed_handlers([_p("mul", x, y)]) == {}
+        s, d, v = _v("s", 4, 4), _v("d", 4, 4), _v("v", 4, 4)
+        t1 = _p("om_decayed", s, d, v)
+        t2 = _p("om_decayed", d, s, v)  # same canon shape
+        assert len(gk.decayed_handlers([t1, t2])) == 1
+        covered = {_canon_concrete(("om_decayed", "S", "D", "V"))}
+        assert gk.decayed_handlers([t1], covered=covered) == {}
+
+
+class TestDecayedSink:
+    """``decayed_triton_sink`` — the minted op is supported+lowerable."""
+
+    def test_sink_supports_and_lowers(self):
+        torch = _cuda()
+        hs = _decayed_handlers("dc_sink")
+        sink = gk.decayed_triton_sink(hs)
+        assert "dc_sink" in sink.supported_ops
+        from catopt_core.ir import IR
+
+        s = _v("s", 8, 8)
+        d = _v("d", 8, 8)
+        v = _v("v", 8, 4)
+        ir = IR(
+            root=_p("dc_sink", s, d, v),
+            inputs=[s, d, v],
+            input_names={"s", "d", "v"},
+            params={},
+        )
+        mod = sink.lower(ir, params={})
+        dt = torch.float64
+        sv = torch.randn(8, 8, device="cuda", dtype=dt)
+        dv = torch.rand(8, 8, device="cuda", dtype=dt)
+        vv = torch.randn(8, 4, device="cuda", dtype=dt)
+        torch.testing.assert_close(
+            mod(sv, dv, vv), (sv * dv) @ vv, atol=1e-12, rtol=1e-12
+        )
+
+
+class TestHybridSinkDecayed:
+    """``hybrid_sink`` — the probe-path sink consults the decayed tier."""
+
+    def test_decayed_term_delivers_fused_kernel(self):
+        torch = _cuda()
+        s = _v("s", 8, 8)
+        d = _v("d", 8, 8)
+        v = _v("v", 8, 4)
+        # mint from a real om_decayed term — the lifted site a
+        # board's decayed claim would bind
+        hs = gk.decayed_handlers([_p("om_decayed", s, d, v)])
+        hs["e"] = {
+            "pattern": ("mul", "X1", ("relu", "X1")),
+            "kernel": "gk_hyb2",
+            "args": ("X1",),
+        }
+        sink = gk.hybrid_sink(hs, compile_kernels=False)
+        kern_op = hs["decayed_0"]["kernel"]
+        assert kern_op in sink.supported_ops
+        assert "gk_hyb2" in sink.supported_ops
+        from catopt_core.ir import IR
+
+        ir = IR(
+            root=_p(kern_op, s, d, v),
+            inputs=[s, d, v],
+            input_names={"s", "d", "v"},
+            params={},
+        )
+        mod = sink.lower(ir, params={})
+        dt = torch.float64
+        sv = torch.randn(2, 8, 8, device="cuda", dtype=dt)
+        dvv = torch.rand(8, 8, device="cuda", dtype=dt)
+        vv = torch.randn(2, 8, 4, device="cuda", dtype=dt)
+        torch.testing.assert_close(
+            mod(sv, dvv, vv), (sv * dvv) @ vv, atol=1e-12, rtol=1e-12
+        )
+
+    def test_declined_codegen_keeps_the_torch_path(self, monkeypatch):
+        torch = _cuda()
+        import importlib.util
+
+        # module load declines → the spelled eval IS the element's
+        # semantics, so the fallback binding delivers it (unlike a
+        # seq scan, whose spelled eval is a different function)
+        monkeypatch.setattr(
+            importlib.util,
+            "spec_from_file_location",
+            lambda *a, **k: None,
+        )
+        hs = {
+            "d": {
+                "pattern": ("om_decayed", "S", "D", "V"),
+                "kernel": "dc_fb",
+                "args": ("S", "D", "V"),
+            }
+        }
+        sink = gk.hybrid_sink(hs, compile_kernels=False)
+        assert "dc_fb" in sink.supported_ops
+        from catopt_core.ir import IR
+
+        s = _v("s", 8, 8)
+        d = _v("d", 8, 8)
+        v = _v("v", 8, 4)
+        ir = IR(
+            root=_p("dc_fb", s, d, v),
+            inputs=[s, d, v],
+            input_names={"s", "d", "v"},
+            params={},
+        )
+        mod = sink.lower(ir, params={})
+        sv = torch.randn(8, 8)
+        dvv = torch.rand(8, 8)
+        vv = torch.randn(8, 4)
+        torch.testing.assert_close(mod(sv, dvv, vv), (sv * dvv) @ vv)
+
+
+class TestDecayProbe:
+    """``play.decay_probe`` — the honest-number arm, end to end."""
+
+    def test_rows_report_all_arms(self):
+        _cuda()
+        rows = play.decay_probe(shapes=[(1, 16, 8)], reps=2)
+        (row,) = rows
+        assert row["delivered"] and row["shape"] == (1, 16, 8)
+        for k in (
+            "spelled_us",
+            "spelled_compiled_us",
+            "executor_us",
+            "triton_decayed_us",
+        ):
+            assert row[k] > 0
+        assert row["vs_spelled"] > 0
+
+    def test_default_shapes(self, monkeypatch):
+        _cuda()
+        monkeypatch.setattr(play, "_DECAY_PROBE_SHAPES", ((1, 16, 8),))
+        (row,) = play.decay_probe(reps=2)
+        assert row["delivered"]
+
+    def test_no_cuda_reports_honestly(self, monkeypatch):
+        torch = pytest.importorskip("torch")
+        monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
+        rows = play.decay_probe(shapes=[(1, 4, 8)])
+        assert rows[0]["delivered"] is False
+
+    def test_main_decay_probe_flag(self, capsys, monkeypatch):
+        pytest.importorskip("torch")
+        monkeypatch.setattr(play, "_DECAY_PROBE_SHAPES", ((1, 8, 8),))
+        rc = play.main(
+            [
+                "--domain",
+                "search",
+                "--train-cases",
+                "1",
+                "--eval-cases",
+                "1",
+                "--budget",
+                "2",
+                "--decay-probe",
+            ]
+        )
+        assert rc == 0
+        assert "decay[" in capsys.readouterr().out

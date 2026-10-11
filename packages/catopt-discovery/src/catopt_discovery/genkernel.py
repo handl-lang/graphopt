@@ -72,15 +72,43 @@ THE SCAN TIER
     ``applyd(aff_diag(a, b), h)`` is one map application
     (``a⊙h+b``), not a fold — so mint it only where the fold
     reading is what the site means.
+
+THE DECAYED TIER
+    The third codegen tier fuses the decayed-attention element —
+    ``om_decayed(s, d, v) = (s ⊙ d) @ v``, the RetNet inner-chunk
+    form — into ONE Triton matmul kernel.  Two spellings are
+    recognised (:func:`decayed_spec`): the element itself and the
+    spelled ``("matmul", ("mul", s, d), v)`` it lifts from.  The
+    generated kernel is a tiled batched matmul whose inner loop
+    folds the elementwise decay product into the contraction —
+    the ``(…,T,K)`` intermediate is never materialised.  Broadcast
+    is stride-driven: every operand meta carries an int64
+    base-offset table plus row/col strides, so both broadcast
+    regimes — a full-rank ``d`` (…,T,K) and a lower-rank/scalar
+    decay read in place — run the same kernel, with per-meta
+    ``FB`` constexprs specialising metas whose batch strides are
+    all zero.  Same delivery seam and decline
+    semantics as the scan tier: ``decayed_handlers`` mints
+    ``decayed_<i>`` entries, :func:`decayed_triton_bindings`
+    generates ``decayed_<i>_k`` kernels, :func:`hybrid_sink`
+    consults the tier after scan, and a declined spec keeps its
+    torch path — whose spelled eval IS the element's reference
+    semantics (the ambient ``om_decayed`` binding evaluates
+    ``(s·d)@v`` verbatim), so the fallback stays honest.
 """
 
 from __future__ import annotations
 
 import keyword
+import math
 from typing import Any
 
 __all__ = [
     "ELEMENTWISE",
+    "decayed_handlers",
+    "decayed_spec",
+    "decayed_triton_bindings",
+    "decayed_triton_sink",
     "elementwise_spec",
     "gen_bindings",
     "gen_handlers",
@@ -568,10 +596,12 @@ def _seq_scan_spec(spec: Any) -> bool:
 def hybrid_sink(handlers: dict, *, compile_kernels: bool = True) -> Any:
     """Build a sink preferring Triton codegen, compile fallback.
 
-    Both codegen tiers are consulted.  Triton-accepted elementwise
-    specs bind to the generated ``.py`` kernel — a kernel no
-    incumbent compiler produces — and ``applyd``-carrier specs the
-    scan codegen accepts bind to their generated fold kernel.
+    All three codegen tiers are consulted.  Triton-accepted
+    elementwise specs bind to the generated ``.py`` kernel — a
+    kernel no incumbent compiler produces — ``applyd``-carrier
+    specs the scan codegen accepts bind to their generated fold
+    kernel, and ``om_decayed``/spelled ``matmul(mul(s,d),v)`` specs
+    bind to the generated fused-contraction kernel.
     Specs the codegen declines fall back to the
     ``torch.compile``-wrapped body — EXCEPT sequence-form scan
     specs: their spelled body evaluates as one map application
@@ -596,6 +626,7 @@ def hybrid_sink(handlers: dict, *, compile_kernels: bool = True) -> Any:
     )
     bindings.update(triton_bindings(plain))
     bindings.update(scan_triton_bindings(handlers))
+    bindings.update(decayed_triton_bindings(handlers))
     table = OpTable.core().register(torch_bindings=bindings)
     return TorchSink(ops=table)
 
@@ -1098,5 +1129,588 @@ def scan_triton_sink(handlers: dict, *, axis: int | None = -2) -> Any:
 
     bindings = dict(tb._IR_TO_TORCH)
     bindings.update(scan_triton_bindings(handlers, axis=axis))
+    table = OpTable.core().register(torch_bindings=bindings)
+    return TorchSink(ops=table)
+
+
+# ---------------------------------------------------------------------------
+#  The decayed tier — a fused ``(s ⊙ d) @ v`` kernel for ``om_decayed``
+# ---------------------------------------------------------------------------
+
+#: Output-tile and contraction-chunk extents for generated decayed
+#: kernels — one Triton program per ``(batch, BM-by-BN)`` tile.
+_DECAY_BM = 32
+_DECAY_BN = 32
+_DECAY_BK = 32
+
+
+def _decayed_operands(spec: Any) -> tuple | None:
+    """Split a decayed spec into its ``(s, d, v)`` operand specs.
+
+    Two spellings name the same site: the element
+    ``("om_decayed", s, d, v)`` and the spelled body
+    ``("matmul", ("mul", s, d), v)`` it lifts from.  ``None`` on
+    anything else — wrong heads, wrong arities, or attr-carrying op
+    nodes (the element is attr-free; a spec carrying attrs this
+    tier cannot model declines honestly).
+    """
+    if not (isinstance(spec, (tuple, list)) and len(spec) >= 2):
+        return None
+    kids = [e for e in spec[1:] if not isinstance(e, dict)]
+    if len(kids) != len(spec) - 1:
+        return None  # an attr dict this tier doesn't model
+    if spec[0] == "om_decayed":
+        return tuple(kids) if len(kids) == 3 else None
+    if spec[0] != "matmul" or len(kids) != 2:
+        return None
+    return _mul_matmul_operands(kids[0], kids[1])
+
+
+def _mul_matmul_operands(lhs: Any, v: Any) -> tuple | None:
+    """Split a spelled ``matmul(mul(s, d), v)`` into ``(s, d, v)``.
+
+    ``None`` when the left operand is not an attr-free two-operand
+    ``mul`` — the spelled form must be exactly the decayed body.
+    """
+    if not (
+        isinstance(lhs, (tuple, list))
+        and len(lhs) == 3
+        and lhs[0] == "mul"
+        and all(not isinstance(e, dict) for e in lhs)
+    ):
+        return None
+    return lhs[1], lhs[2], v
+
+
+def _decayed_meta_ok(m: Any) -> bool:
+    """Check a decayed-operand metavar is kernel-name safe."""
+    return (
+        isinstance(m, str)
+        and m.isidentifier()
+        and not keyword.iskeyword(m)
+    )
+
+
+def _rename_metas(spec: Any, prefix: str) -> Any:
+    """Rename metavar leaves to ``{prefix}{meta}_t`` tile variables."""
+    if isinstance(spec, str):
+        return f"{prefix}{spec}_t"
+    if isinstance(spec, (tuple, list)):
+        return (
+            spec[0],
+            *(
+                e if isinstance(e, dict) else _rename_metas(e, prefix)
+                for e in spec[1:]
+            ),
+        )
+    return spec  # Const leaf — the canonical form carries the value
+
+
+def decayed_spec(spec: Any) -> dict | None:
+    """Recognise a decayed-contraction spec the tier can lower.
+
+    Returns a descriptor dict, or ``None`` when the spec is outside
+    the tier's grammar (decline — the handler keeps its torch
+    path).  Operands may be metavars, constants, or elementwise
+    sub-specs: each is rendered through the same elementwise codegen
+    as the pointwise tier, so ``om_decayed(("mul", "A", "B"), "D",
+    "V")`` generates the fully fused kernel.  The descriptor carries
+    ``"operands"`` — per role ``{"metas", "expr"}``, where *expr* is
+    the rendered Triton expression over ``a{i}_{meta}_t`` tile
+    variables — and ``"params"``, the spec's metavars in order (the
+    generated binding's positional signature).
+    """
+    operands = _decayed_operands(spec)
+    if operands is None:
+        return None
+    params: list = []
+    roles: list[dict] = []
+    for i, o in enumerate(operands):
+        metas = _spec_metas(o)
+        if any(not _decayed_meta_ok(m) for m in metas):
+            return None
+        expr = _triton_expr(_rename_metas(o, f"a{i}_"))
+        if expr is None:
+            return None
+        for m in metas:
+            if m not in params:
+                params.append(m)
+        roles.append({"metas": metas, "expr": expr})
+    # the dot operands must be tiles: a constant v (or a constant
+    # s·d product) renders a scalar where tl.dot needs a tile — a
+    # scalar v fails the rank contract anyway, so decline honestly.
+    if not roles[2]["metas"] or not (
+        roles[0]["metas"] or roles[1]["metas"]
+    ):
+        return None
+    return {"kind": "decayed", "operands": roles, "params": params}
+
+
+def _dvar(i: int, m: str) -> str:
+    """Kernel variable stem for operand *i*'s metavar *m*."""
+    return f"a{i}_{m}"
+
+
+def _decayed_decls(info: dict) -> str:
+    """Kernel parameters — ptr/offsets/strides/FB-flag per meta."""
+    return ", ".join(
+        f"{v}_ptr, {v}_bo, {v}_rs, {v}_cs"
+        for i, o in enumerate(info["operands"])
+        for m in o["metas"]
+        for v in [_dvar(i, m)]
+    )
+
+
+def _decayed_flags(info: dict) -> str:
+    """Emit the per-meta ``FB`` constexprs — broadcast-regime markers."""
+    return "".join(
+        f", {v}_FB: tl.constexpr"
+        for i, o in enumerate(info["operands"])
+        for m in o["metas"]
+        for v in [_dvar(i, m)]
+    )
+
+
+def _decayed_bases(info: dict) -> str:
+    """Per-program batch-base loads, specialised by the FB flags."""
+    return "".join(
+        f"    if {v}_FB:\n"
+        f"        {v}_base = 0\n"
+        f"    else:\n"
+        f"        {v}_base = tl.load({v}_bo + b)\n"
+        for i, o in enumerate(info["operands"])
+        for m in o["metas"]
+        for v in [_dvar(i, m)]
+    )
+
+
+def _decayed_loads(info: dict) -> tuple:
+    """Emit the mul-space ``(rm, rk)`` and v-space ``(rk, rn)`` loads."""
+    mloads = "".join(
+        f"        {v}_t = tl.load(\n"
+        f"            {v}_ptr + {v}_base\n"
+        f"            + rm[:, None] * {v}_rs\n"
+        f"            + rk[None, :] * {v}_cs,\n"
+        f"            mask=mk2, other=0.0)\n"
+        for i in (0, 1)
+        for m in info["operands"][i]["metas"]
+        for v in [_dvar(i, m)]
+    )
+    vloads = "".join(
+        f"        {v}_t = tl.load(\n"
+        f"            {v}_ptr + {v}_base\n"
+        f"            + rk[:, None] * {v}_rs\n"
+        f"            + rn[None, :] * {v}_cs,\n"
+        f"            mask=mkv, other=0.0)\n"
+        for m in info["operands"][2]["metas"]
+        for v in [_dvar(2, m)]
+    )
+    return mloads, vloads
+
+
+def _decayed_triton_source(info: dict) -> str:
+    """Emit the fused ``(s ⊙ d) @ v`` kernel module for a decayed spec.
+
+    One program per ``(batch, BM-by-BN)`` output tile; each walks the
+    K axis in ``BK`` chunks accumulating
+    ``tl.dot((s·d)_tile, v_tile)`` — the elementwise decay product
+    is folded into the contraction's inner loop, so the ``(…,T,K)``
+    intermediate is never materialised.  Batch broadcast is
+    stride-driven: every operand meta carries an int64 base-offset
+    table plus row/col strides, so both broadcast regimes — a
+    full-rank ``d`` and a lower-rank/scalar decay read in place —
+    run the same kernel; the per-meta ``FB`` constexprs
+    specialise metas whose batch strides are all zero (the
+    broadcast regime).  The source is a real module — written to
+    the kernel cache by the caller.
+    """
+    ops = info["operands"]
+    mloads, vloads = _decayed_loads(info)
+    return (
+        "import triton\n"
+        "import triton.language as tl\n"
+        "import triton.language.extra.libdevice as libdevice\n"
+        "\n\n@triton.jit\n"
+        f"def _gd({_decayed_decls(info)}, out_ptr, T, K, DV"
+        f"{_decayed_flags(info)},\n"
+        "        BM: tl.constexpr, BN: tl.constexpr,"
+        " BK: tl.constexpr):\n"
+        "    b = tl.program_id(0).to(tl.int64)\n"
+        "    rm = tl.program_id(1).to(tl.int64) * BM"
+        " + tl.arange(0, BM)\n"
+        "    rn = tl.program_id(2).to(tl.int64) * BN"
+        " + tl.arange(0, BN)\n"
+        "    mm = rm[:, None] < T\n"
+        "    mn = rn[None, :] < DV\n"
+        f"{_decayed_bases(info)}"
+        "    acc = tl.zeros((BM, BN), dtype=out_ptr.dtype.element_ty)\n"
+        "    for k0 in range(0, K, BK):\n"
+        "        rk = (k0 + tl.arange(0, BK)).to(tl.int64)\n"
+        "        mk2 = mm & (rk[None, :] < K)\n"
+        f"{mloads}"
+        f"        sd = ({ops[0]['expr']}) * ({ops[1]['expr']})\n"
+        "        mkv = (rk[:, None] < K) & mn\n"
+        f"{vloads}"
+        f"        acc = tl.dot(sd, ({ops[2]['expr']}), acc=acc,\n"
+        '                     input_precision="ieee")\n'
+        "    tl.store(\n"
+        "        out_ptr + b * (T * DV)\n"
+        "        + rm[:, None] * DV + rn[None, :],\n"
+        "        acc, mask=mm & mn)\n"
+    )
+
+
+def _bcast2(a: tuple, b: tuple) -> tuple:
+    """Right-aligned broadcast of two shape tuples (torch rules).
+
+    Pure-Python — this is host-side launch bookkeeping, so it must
+    not pay a dispatcher round-trip per call.  Raises
+    ``ValueError`` on unbroadcastable pairs, the same contract
+    ``torch.broadcast_shapes`` enforces.
+    """
+    off = abs(len(a) - len(b))
+    lo, hi = (a, b) if len(a) <= len(b) else (b, a)
+    out = list(hi)
+    for i, e in enumerate(lo):
+        j = i + off
+        if e == 1 or e == out[j]:
+            continue
+        if out[j] != 1:
+            raise ValueError(f"unbroadcastable shapes: {a} vs {b}")
+        out[j] = e
+    return tuple(out)
+
+
+def _metas_shape(vals: dict, metas: list) -> tuple:
+    """Broadcast shape over an operand's bound meta values."""
+    sh: tuple = ()
+    for m in metas:
+        sh = _bcast2(sh, tuple(vals[m].shape))
+    return sh
+
+
+def _exp_strides(shape: tuple, strides: tuple, target: tuple) -> tuple:
+    """Strides of a tensor broadcast into *target* (torch rules).
+
+    Right-aligned: leading target dims the source lacks and dims
+    it broadcasts (extent 1) carry stride 0; the rest keep the
+    source stride.  Raises ``ValueError`` when *shape* cannot
+    broadcast into *target* — the contract ``torch.broadcast_to``
+    enforces, checked here in Python so the hot path skips the
+    dispatcher entirely (the kernel reads the tensor in place;
+    no expanded view is ever materialised).
+    """
+    off = len(target) - len(shape)
+    if off < 0:
+        raise ValueError(f"{shape} cannot broadcast into {target}")
+    out = []
+    for i, e in enumerate(target):
+        j = i - off
+        if j < 0 or shape[j] == 1:
+            out.append(0)
+        elif shape[j] == e:
+            out.append(strides[j])
+        else:
+            raise ValueError(f"{shape} cannot broadcast into {target}")
+    return tuple(out)
+
+
+def _decayed_shapes(vals: dict, ops: list) -> tuple:
+    """Shape-check the mul/matmul contract; return launch dims.
+
+    ``(m_sh, v_sh, ob, T, K, DV)`` — the broadcast mul shape, the
+    v-operand shape, the output batch, and the tile extents.  The
+    contraction requires ``v_sh[-2] == K`` and both ranks ≥ 2 — the
+    same bound the op's shape rule declares; violations raise
+    ``ValueError``, they never degrade.
+    """
+    m_sh = _bcast2(
+        _metas_shape(vals, ops[0]["metas"]),
+        _metas_shape(vals, ops[1]["metas"]),
+    )
+    v_sh = _metas_shape(vals, ops[2]["metas"])
+    if len(m_sh) < 2 or len(v_sh) < 2 or v_sh[-2] != m_sh[-1]:
+        raise ValueError(
+            f"decayed operands out of contract:"
+            f" (s·d)→{tuple(m_sh)}, v→{tuple(v_sh)}"
+        )
+    ob = _bcast2(m_sh[:-2], v_sh[:-2])
+    return m_sh, v_sh, ob, m_sh[-2], m_sh[-1], v_sh[-1]
+
+
+def _batch_offsets(strides: tuple, bshape: tuple, device: Any) -> Any:
+    """int64 flat-batch base offsets for a non-uniform operand.
+
+    The broadcast-expanded operand's batch strides index the flat
+    batch axis: entry ``i`` is the element offset of the flat
+    index's row-major digit decomposition over *bshape*.  Call only
+    when some batch stride is nonzero — the caller serves uniform
+    operands a cached dummy (the kernel's ``F`` constexpr makes the
+    load dead code, so the contents are never read).
+    """
+    import torch
+
+    nb = math.prod(bshape)
+    idx = torch.arange(nb, dtype=torch.int64, device=device)
+    offs = torch.zeros(nb, dtype=torch.int64, device=device)
+    div = nb
+    for sz, st in zip(bshape, strides, strict=True):
+        div //= sz
+        offs = offs + (idx // div % sz) * st
+    return offs
+
+
+#: Cap on the per-binding launch-plan memo — a binding sees a
+#: handful of distinct call-shapes in practice; the bound keeps a
+#: pathological shape-varying caller from growing the dict.
+_DECAY_MEMO_CAP = 64
+
+
+def _decayed_plan(
+    vals: dict,
+    ops: list,
+    ob: tuple,
+    m_sh: tuple,
+    v_sh: tuple,
+    dt: Any,
+    zeros: Any,
+) -> tuple:
+    """Broadcast every meta to its role target; emit launch slots.
+
+    Each meta contributes a ``(batch_offsets, row_stride,
+    col_stride)`` slot — the tensor itself is bound per call:
+    s/d metas broadcast into ``ob + (T, K)``, v metas into
+    ``ob + (K, DV)``.  Broadcast dims carry stride 0 — a
+    ``(T, K)`` decay against ``(B, T, K)`` scores is read in
+    place, never materialised.  *flags* maps each meta's ``FB``
+    constexpr — set when its batch strides are all zero (the
+    broadcast regime); those metas bind the cached *zeros* dummy
+    because the flag makes the kernel's offset load dead code.
+    """
+    slots: list = []
+    flags: dict[str, bool] = {}
+    for i, o in enumerate(ops):
+        target = tuple(ob) + (m_sh[-2:] if i < 2 else v_sh[-2:])
+        for m in o["metas"]:
+            t = vals[m]
+            if t.dtype != dt:
+                t = t.to(dt)
+            est = _exp_strides(
+                tuple(t.shape), tuple(t.stride()), target
+            )
+            bst = est[: len(ob)]
+            uni = all(st == 0 for st in bst)
+            bo = (
+                zeros(t.device)
+                if uni
+                else _batch_offsets(bst, tuple(ob), t.device)
+            )
+            flags[f"{_dvar(i, m)}_FB"] = uni
+            slots.append((bo, est[-2], est[-1]))
+    return slots, flags
+
+
+def _decayed_binding(kern: Any, info: dict) -> Any:
+    """Host wrapper for the fused decayed kernel.
+
+    ``fn(*vals)`` binds the spec metavars positionally (the
+    handler's ``args`` order), checks the broadcast/contraction
+    contract, and launches one generated kernel — the spelled
+    ``(s·d)@v`` never materialises its ``(…,T,K)`` intermediate.
+    Shape/dtype-derived launch bookkeeping is memoised per call
+    signature (the tensors are bound fresh); non-CUDA tensors and
+    unsupported rank/contraction shapes raise, like the scan
+    tier: a wrong binding fails loudly, never silently reverts
+    to another function.
+    """
+    ops = info["operands"]
+    params = info["params"]
+    order = [(i, m) for i, o in enumerate(ops) for m in o["metas"]]
+    dummies: dict = {}
+    memo: dict = {}
+
+    def _zeros(device: Any) -> Any:
+        import torch
+
+        t = dummies.get(device)
+        if t is None:
+            t = torch.zeros(1, dtype=torch.int64, device=device)
+            dummies[device] = t
+        return t
+
+    def _plan(vals: dict, key: tuple) -> tuple:
+        """Launch plan for a call signature, memoised by *key*."""
+        plan = memo.get(key)
+        if plan is not None:
+            return plan
+        m_sh, v_sh, ob, tt, kk, dv = _decayed_shapes(vals, ops)
+        dt = vals[params[0]].dtype
+        if any(vals[m].dtype != dt for m in params[1:]):
+            dt = _scan_dtype(vals, params)
+        out_sh = (*tuple(ob), tt, dv)
+        nb = math.prod(ob)
+        if nb * tt * dv == 0 or kk == 0:
+            plan = (None, None, out_sh, nb, tt, kk, dv, dt)
+        else:
+            slots, flags = _decayed_plan(
+                vals, ops, tuple(ob), m_sh, v_sh, dt, _zeros
+            )
+            plan = (slots, flags, out_sh, nb, tt, kk, dv, dt)
+        if len(memo) >= _DECAY_MEMO_CAP:
+            memo.clear()
+        memo[key] = plan
+        return plan
+
+    def fn(*args: Any, **_attrs: Any) -> Any:
+        import torch
+
+        vals = dict(zip(params, args, strict=True))
+        _decayed_check(vals, params)
+        slots, flags, out_sh, nb, tt, kk, dv, dt = _plan(
+            vals, _decayed_key(vals, params)
+        )
+        device = vals[params[0]].device
+        if slots is None:
+            return torch.zeros(out_sh, dtype=dt, device=device)
+        launch = _decayed_tensors(vals, order, slots, dt)
+        out = torch.empty((nb, tt, dv), dtype=dt, device=device)
+        kern[(nb, -(-tt // _DECAY_BM), -(-dv // _DECAY_BN))](
+            *launch,
+            out,
+            tt,
+            kk,
+            dv,
+            **flags,
+            BM=_DECAY_BM,
+            BN=_DECAY_BN,
+            BK=_DECAY_BK,
+        )
+        return out.view(out_sh)
+
+    return fn
+
+
+def _decayed_check(vals: dict, params: list) -> None:
+    """Raise on non-CUDA operands — a wrong binding fails loudly."""
+    if not all(vals[m].is_cuda for m in params):
+        raise RuntimeError(
+            "generated decayed kernels need CUDA tensors"
+        )
+
+
+def _decayed_key(vals: dict, params: list) -> tuple:
+    """Call-signature key for the launch-plan memo."""
+    return tuple(
+        (
+            tuple(vals[m].shape),
+            tuple(vals[m].stride()),
+            vals[m].dtype,
+            vals[m].device,
+        )
+        for m in params
+    )
+
+
+def _decayed_tensors(
+    vals: dict, order: list, slots: list, dt: Any
+) -> list:
+    """Interleave per-call tensors with their plan slots.
+
+    Each slot's ``(batch_offsets, row_stride, col_stride)`` comes
+    from the memoised plan; the tensor itself is bound fresh —
+    cast to the plan dtype when the site mixes dtypes.
+    """
+    launch: list = []
+    for (bo, rs, cs), (_, m) in zip(slots, order, strict=True):
+        t = vals[m]
+        if t.dtype != dt:
+            t = t.to(dt)
+        launch += [t, bo, rs, cs]
+    return launch
+
+
+def decayed_triton_bindings(handlers: dict) -> dict:
+    """Generate a fused Triton kernel per decayed-contraction handler.
+
+    The third codegen tier: each handler whose *pattern*
+    :func:`decayed_spec` recognises gets a binding whose callable
+    runs a generated fused ``(s·d)@v`` matmul — real ``triton.jit``
+    source on disk under the kernel cache.  Unrecognised or
+    un-generatable specs are skipped — the handler keeps its torch
+    path, exactly as the other tiers decline.
+    """
+    out: dict[str, Any] = {}
+    for h in handlers.values():
+        info = decayed_spec(h["pattern"])
+        if info is None:
+            continue
+        src = _decayed_triton_source(info)
+        path = _kernel_cache() / f"_gd_{h['kernel']}.py"
+        path.write_text(src)
+        kern = _load_generated(path, "_gd")
+        if kern is None:
+            continue  # module load declined — keep the torch path
+        out[h["kernel"]] = _decayed_binding(kern, info)
+    return out
+
+
+def decayed_handlers(
+    terms: list, *, covered: set | None = None
+) -> dict:
+    """Mint handler entries for ``om_decayed``/spelled decay sites.
+
+    The decayed-tier analogue of :func:`scan_handlers`:
+    ``decayed_<i>`` entries ``{pattern, kernel, args}`` for each
+    term whose spec the fused-contraction codegen recognises —
+    ``("om_decayed", s, d, v)`` or the spelled
+    ``("matmul", ("mul", s, d), v)`` it lifts from.  The minted
+    ``decayed_<i>_k`` op's declared meaning is the element
+    semantics verbatim — the same function the ambient
+    ``om_decayed`` executor spells — so minting needs no new
+    semantics check beyond the op's own well-typedness gate.
+    """
+    from catopt_discovery.meta_arena import (
+        _canon_concrete,
+        _spec_of,
+    )
+
+    skip = covered if covered is not None else set()
+    out: dict[str, dict] = {}
+    for term in terms:
+        pattern = (
+            term
+            if isinstance(term, (tuple, list))
+            else _spec_of(term, {})
+        )
+        if decayed_spec(pattern) is None:
+            continue
+        canon = _canon_concrete(pattern)
+        if canon in skip or any(
+            _canon_concrete(h["pattern"]) == canon for h in out.values()
+        ):
+            continue
+        tag = f"decayed_{len(out)}"
+        out[tag] = {
+            "pattern": pattern,
+            "kernel": f"{tag}_k",
+            "args": tuple(_spec_metas(pattern)),
+        }
+    return out
+
+
+def decayed_triton_sink(handlers: dict) -> Any:
+    """Build a ``TorchSink`` binding minted decayed ops to Triton.
+
+    Same posture as :func:`scan_triton_sink`: ``supported_ops``
+    reports the ambient table plus every generated decayed kernel —
+    the feasibility bound the board prices decayed claims against —
+    and a claim on an unrecognised spec stays unpriced-unlowerable.
+    """
+    import catopt_torch.torch_bridge as tb
+    from catopt_core.ops import OpTable
+    from catopt_torch.adapters import TorchSink
+
+    bindings = dict(tb._IR_TO_TORCH)
+    bindings.update(decayed_triton_bindings(handlers))
     table = OpTable.core().register(torch_bindings=bindings)
     return TorchSink(ops=table)

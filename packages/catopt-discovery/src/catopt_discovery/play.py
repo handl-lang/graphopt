@@ -915,6 +915,122 @@ def _has_triton() -> bool:
 
 
 # ---------------------------------------------------------------------------
+#  The decayed-tier probe — fused (s ⊙ d) @ v vs today's delivery
+# ---------------------------------------------------------------------------
+
+
+def _spelled_decay(s: Any, d: Any, v: Any) -> Any:
+    """Evaluate the spelled body: ``(s * d) @ v``, verbatim."""
+    return (s * d) @ v
+
+
+def _decay_carrier_ir(batch: int, steps: int, width: int) -> Any:
+    """``om_decayed(s, d, v)`` over leaf vars — the lifted site.
+
+    RetNet inner-chunk layout: scores ``(B, T, T)``, a ``(T, T)``
+    decay matrix broadcast over the batch, values ``(B, T, dv)``.
+    """
+    from catopt_core.ir import IR
+
+    s = Var("s", TensorType((batch, steps, steps)))
+    d = Var("d", TensorType((steps, steps)))
+    v = Var("v", TensorType((batch, steps, width)))
+    return IR(
+        root=Op.make("om_decayed", s, d, v),
+        inputs=[s, d, v],
+        input_names={"s", "d", "v"},
+        params={},
+    )
+
+
+#: Default probe shapes — ``(B, T, dv)`` RetNet inner-chunk fp64
+#: sites.  The last is the memory-bound case: the spelled mul
+#: materialises a ``(8, 512, 512)`` fp64 intermediate (~134 MB).
+_DECAY_PROBE_SHAPES = (
+    (2, 64, 128),
+    (8, 128, 256),
+    (4, 256, 128),
+    (8, 512, 512),
+)
+
+
+def decay_probe(
+    *,
+    shapes: Any = None,
+    reps: int = 100,
+) -> list[dict]:
+    """Time the generated decayed kernel vs today's delivery paths.
+
+    The honest-number arm for the decayed tier: per ``(B, T, dv)``
+    shape — fp64 CUDA, ``s`` ``(B,T,T)``, broadcast decay ``d``
+    ``(T,T)``, ``v`` ``(B,T,dv)`` — the row reports median µs for
+    the spelled eager ``(s*d)@v``, its ``torch.compile`` (inductor
+    may already fuse the mul into the matmul — if it wins, the row
+    says so), the reference executor path (generic ``TorchSink``
+    eval of ``om_decayed`` — the spelled body verbatim), and the
+    generated Triton kernel from
+    :func:`~catopt_discovery.genkernel.decayed_triton_bindings`.
+    Every arm is verified against the spelled body before timing.
+    On a host without CUDA+triton the row reports ``delivered:
+    False`` honestly.
+    """
+    import torch
+    from catopt_torch.adapters import TorchSink
+
+    from catopt_discovery import genkernel as gk
+
+    if shapes is None:
+        shapes = _DECAY_PROBE_SHAPES
+    if not (torch.cuda.is_available() and _has_triton()):
+        return [{"delivered": False, "note": "needs cuda + triton"}]
+    _dyno_cfg: Any = torch._dynamo.config
+    _dyno_cfg.recompile_limit = max(int(_dyno_cfg.recompile_limit), 256)
+    kern = gk.decayed_triton_bindings(
+        {
+            "d": {
+                "pattern": ("om_decayed", "S", "D", "V"),
+                "kernel": "dc_probe",
+                "args": ("S", "D", "V"),
+            }
+        }
+    )["dc_probe"]
+    compiled = torch.compile(_spelled_decay)
+    dt, dev = torch.float64, "cuda"
+    rows: list[dict] = []
+    for batch, steps, width in shapes:
+        s = torch.randn(batch, steps, steps, device=dev, dtype=dt)
+        d = torch.rand(steps, steps, device=dev, dtype=dt)
+        v = torch.randn(batch, steps, width, device=dev, dtype=dt)
+        want = _spelled_decay(s, d, v)
+        executor = TorchSink().lower(
+            _decay_carrier_ir(batch, steps, width), params={}
+        )
+        arms: dict[str, Any] = {
+            "spelled": _spelled_decay,
+            "spelled_compiled": compiled,
+            "executor": executor,
+            "triton_decayed": kern,
+        }
+        row: dict[str, Any] = {
+            "shape": (batch, steps, width),
+            "delivered": True,
+        }
+        for name, fn in arms.items():
+            torch.testing.assert_close(
+                fn(s, d, v), want, atol=1e-9, rtol=1e-9
+            )
+            row[f"{name}_us"] = _time_module(fn, (s, d, v), reps)
+        row["vs_spelled"] = round(
+            row["spelled_us"] / row["triton_decayed_us"], 3
+        )
+        row["vs_compiled"] = round(
+            row["spelled_compiled_us"] / row["triton_decayed_us"], 3
+        )
+        rows.append(row)
+    return rows
+
+
+# ---------------------------------------------------------------------------
 #  Domain: search — SearchEnv adapted to the Board contract
 # ---------------------------------------------------------------------------
 
@@ -1187,7 +1303,7 @@ def _table(table: dict[str, list[dict]]) -> str:
 
 
 def _extras(args: Any, d: Any, ev: list, player: Any) -> None:
-    """Run the ``--deliver`` / ``--probe`` / ``--zoo`` report arms."""
+    """Run the ``--*probe`` / ``--deliver`` / ``--zoo`` report arms."""
     if args.deliver:
         arm = (
             d.scripted() if d.scripted is not None else player.frozen(0)
@@ -1203,10 +1319,20 @@ def _extras(args: Any, d: Any, ev: list, player: Any) -> None:
                 )
     if args.zoo:
         _zoo_rows()
+    _kernel_probes(args)
+
+
+def _kernel_probes(args: Any) -> None:
+    """Run the generated-kernel timing arms (CUDA + triton)."""
     if args.scan_probe:
         for row in scan_probe():
             print(  # stdout-compat
                 f"scan[{row.get('shape', '-')}]: {row}"
+            )
+    if args.decay_probe:
+        for row in decay_probe():
+            print(  # stdout-compat
+                f"decay[{row.get('shape', '-')}]: {row}"
             )
 
 
@@ -1244,6 +1370,14 @@ def main(argv: list[str] | None = None) -> int:
         help=(
             "time the generated Triton scan kernel against the "
             "spelled loop and the carrier executor path (CUDA)"
+        ),
+    )
+    ap.add_argument(
+        "--decay-probe",
+        action="store_true",
+        help=(
+            "time the generated fused (s·d)@v Triton kernel against "
+            "eager, torch.compile, and the om_decayed executor (CUDA)"
         ),
     )
     ap.add_argument("--json", type=str, default=None)
