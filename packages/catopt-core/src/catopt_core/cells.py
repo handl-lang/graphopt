@@ -108,7 +108,14 @@ OBJECT_CELL_KINDS: frozenset[str] = frozenset(
 
 #: Provenance origins — where a cell entered the store.
 ORIGINS: frozenset[str] = frozenset(
-    ("shipped", "constructed", "admitted", "minted", "declared")
+    (
+        "shipped",
+        "constructed",
+        "admitted",
+        "minted",
+        "declared",
+        "imported",
+    )
 )
 
 _SHIPPED = "shipped"

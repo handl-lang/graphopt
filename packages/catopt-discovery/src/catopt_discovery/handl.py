@@ -1,0 +1,304 @@
+"""Handl-fragment schema bridge — catopt cells as language data.
+
+Phase 3a of the cell-store plan: emit catopt's assembled
+:class:`~catopt_core.cells.CellStore` in the *shape* of a handl
+language fragment — the ``ast.yaml`` / ``transforms.yaml`` data a
+``merge_fragments`` call assembles into ``lang.ast`` /
+``lang.transforms`` — so both kernels can read the same vocabulary.
+
+The mapping is honest about which layer carries what:
+
+- ``role="op"``     → ``AstShapeDef`` (``node_kind`` + child roles +
+                      ``payload_schema``); the op's shape rule rides
+                      in ``catopt.opdef`` — handl has no shape DSL yet.
+- ``role="law"``/``"object"`` → ``TransformDef``: the lhs pattern's
+                      root kind becomes ``node_kind``, inner op
+                      positions become ``when: !KindAt`` checks,
+                      metavars bind to child *paths* — first
+                      occurrence pins the path, repeats re-use it —
+                      and the rhs rebuilds as ``!Declarative``
+                      ``!Create``/``!KeepPath`` children.  Guards
+                      (``cond``/``dspec``) and ``check``/``derive``
+                      hooks live under ``catopt.law`` verbatim —
+                      structural data maps, semantic data survives.
+- ``role="handle"`` → a ``!Native``-style binding record
+                      (``catopt:<kernel>``) — handl's own resolver
+                      seam; the catopt kernel name is the tag.
+
+Every emitted node carries a ``catopt`` extension field with the
+cell's own serialized body — the bridge is *lossless by
+construction*: the handl-shaped fields are a structural view, the
+``catopt`` field is authoritative, and
+:func:`cell_from_handl` reconstructs the cell from it.
+
+The schema here is a *data* contract, not a runtime dependency —
+nothing imports handl; the output is plain YAML-able dicts.
+"""
+
+from typing import Any
+
+from catopt_core.cells import Cell, CellStore
+from catopt_core.egraph import Rewrite
+from catopt_core.ir import Const, Op, Var
+from catopt_core.laws.serialize import law_to_data, object_to_data
+from catopt_core.opdata import opdef_to_data
+
+__all__ = [
+    "cell_to_handl",
+    "handle_to_handl",
+    "law_to_handl",
+    "opdef_to_handl",
+    "store_to_handl",
+]
+
+
+def _op_parts(term: Any) -> tuple | None:
+    """Split a pattern node into ``(kind, arg-tuple)`` — Op or spec.
+
+    Law patterns are ``Op`` trees; handler patterns are spec
+    tuples ``("matmul", …)`` — both carry the same head+args shape;
+    ``None`` on leaves.
+    """
+    if isinstance(term, Op):
+        return term.op, tuple(term.args)
+    if (
+        isinstance(term, (tuple, list))
+        and term
+        and isinstance(term[0], str)
+    ):
+        return term[0], tuple(
+            e for e in term[1:] if not isinstance(e, dict)
+        )
+    return None
+
+
+def _metavar_paths(term: Any, paths: dict, at: tuple = ()) -> None:
+    """Collect metavariable leaf positions inside a pattern term.
+
+    A metavar leaf is a bare ``str``; its *path* is the tuple of
+    child indices from the pattern root — the position a handl
+    ``!KeepPath`` steps reproduces.  First occurrence wins.
+    """
+    if isinstance(term, str):
+        paths.setdefault(term, at)
+        return
+    parts = _op_parts(term)
+    if parts:
+        for i, a in enumerate(parts[1]):
+            _metavar_paths(a, paths, (*at, i))
+
+
+def _when_clauses(term: Any) -> list:
+    """Emit ``KindAt``/``ChildCount`` conditions at depth one.
+
+    Each op child of the pattern root becomes a ``!KindAt``; the
+    root's arity is its ``!ChildCount``.  Deeper positions exceed
+    what handl's single-index ``KindAt`` vocabulary can express —
+    the full lhs survives in ``catopt.law`` regardless.
+    """
+    parts = _op_parts(term)
+    if parts is None:
+        return []
+    out: list = []
+    for i, a in enumerate(parts[1]):
+        sub = _op_parts(a)
+        if sub:
+            out.append({"KindAt": {"index": i, "kind": sub[0]}})
+    out.append({"ChildCount": len(parts[1])})
+    return out
+
+
+def _children_spec(term: Any, paths: dict) -> dict:
+    """Render a rhs pattern as handl ``children`` steps.
+
+    Metavars → ``!KeepPath`` (the bound position from the lhs);
+    op nodes → ``!Create`` (new structure); vars/consts →
+    ``"catopt:leaf"`` records — handl's child vocabulary has no
+    literal-leaf step, so the leaf survives under the extension
+    tag rather than being silently dropped.
+    """
+    if isinstance(term, str):
+        p = paths.get(term)
+        return (
+            {"KeepPath": list(p)}
+            if p is not None
+            else {"catopt:leaf": term}
+        )
+    parts = _op_parts(term)
+    if parts:
+        return {
+            "Create": {
+                "kind": parts[0],
+                "children": [
+                    _children_spec(a, paths) for a in parts[1]
+                ],
+            }
+        }
+    if isinstance(term, Const):
+        return {"catopt:leaf": {"const": term.value}}
+    if isinstance(term, Var):
+        return {"catopt:leaf": {"var": term.name}}
+    return {"catopt:leaf": {"data": repr(term)}}  # pragma: no cover
+
+
+def law_to_handl(rule: Rewrite, name: str) -> dict:
+    """Map a law/object cell body to a ``TransformDef`` fragment row.
+
+    The structural fields (``node_kind``/``when``/``rule``) are the
+    handl-native view — a rewrite over the lhs's root kind whose
+    children rebuild the rhs via bound paths.  ``catopt.law`` keeps
+    the full serialized law — the authoritative record — so guards,
+    derivations and provenance round-trip verbatim.
+    """
+    paths: dict = {}
+    _metavar_paths(rule.lhs, paths)
+    lhs_parts = _op_parts(rule.lhs)
+    rhs_parts = _op_parts(rule.rhs)
+    return {
+        "id": f"transform.catopt.{name}",
+        "pass": "catopt",
+        "node_kind": lhs_parts[0] if lhs_parts else None,
+        "when": _when_clauses(rule.lhs),
+        "rule": {
+            "Declarative": {
+                "target_kind": rhs_parts[0] if rhs_parts else None,
+                "children": (
+                    [_children_spec(a, paths) for a in rhs_parts[1]]
+                    if rhs_parts
+                    else [_children_spec(rule.rhs, paths)]
+                ),
+            }
+        },
+        "catopt": {
+            "law": law_to_data(rule),
+            "metavars": {m: list(p) for m, p in paths.items()},
+        },
+    }
+
+
+def opdef_to_handl(d: Any) -> dict:
+    """Map an op cell body to an ``AstShapeDef`` fragment row."""
+    children = [{"role": f"arg{i}"} for i in range(d.arity or 0)]
+    return {
+        "id": f"ast.catopt.{d.name}",
+        "node_kind": d.name,
+        "children": children,
+        "payload_schema": {
+            "type": "object",
+            "properties": {
+                "attrs": {"type": "object"},
+                "children": {
+                    "type": "array",
+                    "minItems": d.arity or 0,
+                    "maxItems": d.arity or 0,
+                },
+            },
+            "required": ["children"],
+        },
+        "catopt": {"opdef": opdef_to_data(d)},
+    }
+
+
+def handle_to_handl(name: str, h: dict) -> dict:
+    """Map a handle cell to handl's ``!Native`` binding record.
+
+    The ``native`` tag spells the resolver seam — ``catopt:<kernel>``
+    names the generated/shipped kernel the same way handl spells a
+    native resolver; ``pattern``/``args`` keep the binding spec.
+    """
+    return {
+        "id": f"native.catopt.{name}",
+        "native": f"catopt:{h.get('kernel', name)}",
+        "pattern": h.get("pattern"),
+        "args": list(h.get("args", ())),
+        "catopt": {"handler": dict(h)},
+    }
+
+
+def object_to_handl(cell: Cell) -> dict:
+    """Map an object cell — a ``TransformDef`` with object provenance."""
+    row = law_to_handl(cell.body, cell.name)
+    row["catopt"]["object"] = object_to_data(cell.body, kind=cell.kind)
+    return row
+
+
+def cell_to_handl(cell: Cell) -> dict:
+    """Map one cell to its handl-fragment row (any role)."""
+    if cell.role == "op":
+        return opdef_to_handl(cell.body)
+    if cell.role == "object":
+        return object_to_handl(cell)
+    if cell.role == "law":
+        return law_to_handl(cell.body, cell.name)
+    if cell.role == "handle":
+        return handle_to_handl(cell.name, cell.body)
+    raise ValueError(  # pragma: no cover — role is validated
+        f"no handl mapping for cell role {cell.role!r}"
+    )
+
+
+def store_to_handl(store: CellStore) -> dict:
+    """Assemble a store into handl's fragment *shape*.
+
+    Returns the mergeable fragment: ``ast`` rows (op cells),
+    ``transforms`` rows (law + object cells), ``natives`` rows
+    (handle cells) — plus a ``catopt`` provenance block listing the
+    fragment sources the store was merged from.
+    """
+    ast: list = []
+    transforms: list = []
+    natives: list = []
+    for c in store:
+        row = cell_to_handl(c)
+        if c.role == "op":
+            ast.append(row)
+        elif c.role in ("law", "object"):
+            transforms.append(row)
+        elif c.role == "handle":  # pragma: no branch — the four
+            natives.append(row)  # roles exhaust the vocabulary
+    return {
+        "ast": ast,
+        "transforms": transforms,
+        "natives": natives,
+        "catopt": {
+            "cells": len(list(store)),
+            "provenance": sorted({c.provenance.origin for c in store}),
+        },
+    }
+
+
+def cell_from_handl(row: dict) -> Cell | None:
+    """Reconstruct a cell from a handl row's ``catopt`` extension.
+
+    The inverse of :func:`cell_to_handl` where the extension data is
+    present — ``None`` on a row without catopt data (a pure-handl
+    node the bridge did not emit).
+    """
+    from catopt_core.cells import Provenance
+    from catopt_core.laws.serialize import law_from_data
+    from catopt_core.opdata import opdef_from_data
+
+    ext = row.get("catopt") or {}
+    if "law" in ext:
+        return Cell(
+            role="law",
+            name=row["id"].rsplit(".", 1)[-1],
+            body=law_from_data(ext["law"]),
+            provenance=Provenance(origin="imported"),
+        )
+    if "opdef" in ext:
+        d = opdef_from_data(ext["opdef"])
+        return Cell(
+            role="op",
+            name=d.name,
+            body=d,
+            provenance=Provenance(origin="imported"),
+        )
+    if "handler" in ext:
+        return Cell(
+            role="handle",
+            name=row["id"].rsplit(".", 1)[-1],
+            body=ext["handler"],
+            provenance=Provenance(origin="imported"),
+        )
+    return None

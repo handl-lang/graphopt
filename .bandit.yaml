@@ -46,3 +46,10 @@ skips:
   - B404
   - B603
   - B607
+  # B105 hardcoded_password_string --------------------------------------
+  # handl.py emits `"pass": "catopt"` — the *pass name* field of a
+  # handl `TransformDef` row (handl's own transforms.yaml spells the
+  # same field for its "desugar" pass — see the Phase-3a schema
+  # bridge).  B105 keys on the identifier `pass` holding a string
+  # literal; the value here names a rewrite pass, not a credential.
+  - B105
