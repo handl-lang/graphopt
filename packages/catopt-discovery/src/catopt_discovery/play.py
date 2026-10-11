@@ -512,21 +512,34 @@ def _gen_cases(seed: int, n: int) -> list:
 
 def _gen_board(case: Any) -> ma.MetaArena:
     """Board a gen case under its generated handler table."""
+    from catopt_core.cells import Provenance
     from catopt_core.cost.basic import count_cost
+    from catopt_core.laws import DEFAULT
 
+    from catopt_discovery import cellstore as cs
     from catopt_discovery import genkernel as gk
+    from catopt_discovery import lawdata
 
     ex = case[5]
 
     def novel(op: str) -> bool:
         return op.startswith(("claim_", "foldabs_", "gen_"))
 
+    store = cs.ambient_store(
+        rules=DEFAULT, handlers=lawdata.HANDLERS
+    ).merge(
+        cs.handlers_fragment(
+            "gen",
+            ex["gen_handlers"],
+            provenance=Provenance("minted"),
+        )
+    )
     return ma.MetaArena(
         case[1],
-        handlers=ex["handlers"],
         supported=case[4],
         corpus=[case[1]],
         cost_fn=gk.novel_cost(count_cost, novel, 0.5),
+        store=store,
     )
 
 

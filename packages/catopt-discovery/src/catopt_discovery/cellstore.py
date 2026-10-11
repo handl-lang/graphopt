@@ -85,16 +85,17 @@ def handlers_fragment(
 ) -> Fragment:
     """Bundle a handler table as a handle-cell fragment.
 
-    One cell per entry, named by kernel — the same identity the
-    binding builders (``gen_bindings`` / ``scan_triton_bindings``)
-    key their callables by.  *provenance* stamps the whole table:
-    shipped for the ambient menu, minted for generated tables.
+    One cell per entry, named by the table's tag — the key the
+    ambient table ships and ``handle`` actions resolve (the kernel
+    name lives inside the entry).  *provenance* stamps the whole
+    table: shipped for the ambient menu, minted for generated
+    tables.
     """
     return Fragment(
         name,
         tuple(
-            handle_cell(h["kernel"], h, provenance=provenance)
-            for h in handlers.values()
+            handle_cell(tag, h, provenance=provenance)
+            for tag, h in handlers.items()
         ),
     )
 

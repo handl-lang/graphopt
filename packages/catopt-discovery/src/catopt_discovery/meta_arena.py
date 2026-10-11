@@ -1174,8 +1174,26 @@ class MetaArena:
         max_specs: int = 32,
         weights: dict | None = None,
         handlers: dict | None = None,
+        store: Any = None,
     ) -> None:
-        """Bind the program, the library, the bound, and the budget."""
+        """Bind the program, the library, the bound, and the budget.
+
+        *store* is a :class:`catopt_core.cells.CellStore` — the
+        assembled vocabulary the episode runs over.  Passing it
+        supplies ``rules`` (the store's law/object cells) and
+        ``handlers`` (its handle cells) in one step; either argument
+        alongside it is a ``ValueError`` — one spelling per
+        vocabulary.  The store stays on the board as the merge base
+        :meth:`cellstore` folds constructed cells into.
+        """
+        if store is not None:
+            if rules is not None or handlers is not None:
+                raise ValueError(
+                    "store= supplies rules and handlers; pass it alone"
+                )
+            rules = store.laws()
+            handlers = store.handlers()
+        self._store = store
         self.term = term
         self.eg = EGraph()
         self.root = self.eg.add_term(term)
@@ -1295,7 +1313,23 @@ class MetaArena:
         provenance; ``"handlers"`` — the board's handler table as
         handle cells.  The merged store's :meth:`laws` view equals
         the live ``self.rules`` — the same vocabulary, one spelling.
+
+        When the board was opened on a *store*, the base is the
+        store itself and only the episode's constructed fragment
+        merges on top — the cell records the caller assembled
+        (op/handle roles, custom provenance) round-trip intact.
         """
+        if self._store is not None:
+            constructed = tuple(
+                self._cells[n]
+                for n in self.declared
+                if n in self._cells
+            )
+            if not constructed:
+                return self._store
+            return self._store.merge(
+                Fragment("constructed", constructed)
+            )
         declared = set(self.declared)
         frags = [
             laws_fragment(
@@ -1312,8 +1346,8 @@ class MetaArena:
             Fragment(
                 "handlers",
                 tuple(
-                    handle_cell(h["kernel"], h, provenance=Provenance())
-                    for h in self.handlers.values()
+                    handle_cell(tag, h, provenance=Provenance())
+                    for tag, h in self.handlers.items()
                 ),
             )
         )

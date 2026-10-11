@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import sqlite3
 
+import pytest
 from catopt_core.cells import merge_fragments
 from catopt_core.egraph import Rewrite
 from catopt_core.ir import Op, TensorType, Var
@@ -81,10 +82,10 @@ class TestHandlerCells:
         }
         frag = cs.handlers_fragment("h", handlers)
         assert frag.cells[0].role == "handle"
-        assert frag.cells[0].name == "k1"
+        assert frag.cells[0].name == "t1"
         assert frag.cells[0].body["kernel"] == "k1"
         store = merge_fragments(frag)
-        assert store.handlers()["k1"]["pattern"] == ("mul", "a", "b")
+        assert store.handlers()["t1"]["pattern"] == ("mul", "a", "b")
 
 
 # ---------------------------------------------------------------------------
@@ -134,12 +135,12 @@ class TestMachineFragment:
     def test_ambient_store_defaults_to_shipped(self):
         store = cs.ambient_store()
         assert len(store.laws()) > 0
-        assert store.handlers() == {
-            h["kernel"]: h
-            for h in __import__(
+        assert (
+            store.handlers()
+            == __import__(
                 "catopt_discovery.lawdata", fromlist=["HANDLERS"]
-            ).HANDLERS.values()
-        }
+            ).HANDLERS
+        )
 
     def test_corrupt_row_is_skipped(self):
         conn = _conn()
@@ -168,9 +169,7 @@ class TestBoardCellStore:
         assert {r.name for r in store.laws()} == {
             r.name for r in board.rules
         }
-        assert set(store.handlers()) == {
-            h["kernel"] for h in board.handlers.values()
-        }
+        assert set(store.handlers()) == set(board.handlers)
 
     def test_declare_lands_as_an_object_cell(self):
         board = ma.MetaArena(_sub_gap())
@@ -221,3 +220,41 @@ class TestBoardCellStore:
         cell = store.get("law", "mylaw")
         assert cell is not None
         assert cell.provenance.origin == "constructed"
+
+    def test_board_opened_on_a_store(self):
+        from catopt_core.laws import DEFAULT
+        from catopt_discovery import lawdata
+
+        base = cs.ambient_store(
+            rules=list(DEFAULT)[:8], handlers=lawdata.HANDLERS
+        )
+        board = ma.MetaArena(_sub_gap(), store=base)
+        assert [r.name for r in board.rules] == [
+            r.name for r in base.laws()
+        ]
+        assert board.handlers == base.handlers()
+        assert board.cellstore() is base
+        board.step(
+            ma.Action.declare(
+                {
+                    "op": "fold",
+                    "params": {
+                        "name": "myabs",
+                        "spelled": ("add", "X", ("neg", "Y")),
+                        "kernel": ("myabs", "X", "Y"),
+                    },
+                }
+            )
+        )
+        merged = board.cellstore()
+        assert merged is not base
+        assert merged.get("object", "myabs") is not None
+        assert set(merged.handlers()) == set(base.handlers())
+        assert ("handle", next(iter(lawdata.HANDLERS))) in merged
+
+    def test_store_conflicts_with_rules_and_handlers(self):
+        base = cs.ambient_store(rules=[], handlers={})
+        with pytest.raises(ValueError, match="store= supplies"):
+            ma.MetaArena(_sub_gap(), rules=(), store=base)
+        with pytest.raises(ValueError, match="store= supplies"):
+            ma.MetaArena(_sub_gap(), handlers={}, store=base)

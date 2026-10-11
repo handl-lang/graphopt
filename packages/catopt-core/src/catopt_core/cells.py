@@ -441,10 +441,15 @@ class CellStore:
         return tuple(c.body for c in self.cells("op"))
 
     def handlers(self) -> dict[str, dict]:
-        """Return the handler table, keyed by kernel name."""
-        return {
-            c.body["kernel"]: dict(c.body) for c in self.cells("handle")
-        }
+        """Return the handler table, keyed by entry tag.
+
+        The tag is the table's lookup key — the name ``handle``
+        actions and binding builders resolve — while ``kernel``
+        lives inside each entry.  ``{tag: handler}`` is the exact
+        shape the ambient tables ship, so a store's handler view
+        round-trips into the consumers unchanged.
+        """
+        return {c.name: dict(c.body) for c in self.cells("handle")}
 
     def ruleset(self, name: str = "cellstore") -> RuleSet:
         """Return the 2-cells as a :class:`RuleSet` for ``EGraph.run``."""
