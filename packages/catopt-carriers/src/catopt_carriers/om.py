@@ -1016,6 +1016,20 @@ def _decay_torch(g: torch.Tensor, *a, **kw) -> torch.Tensor:
     return torch.tril(g[..., None, None] ** diff.clamp_min(0))
 
 
+def _decay_vec_torch(g: torch.Tensor, *a, **kw) -> torch.Tensor:
+    """Lower ``decay_vec`` — ``g^(sign·k + offset)``, ``k`` in ``[0,T)``.
+
+    Same leading-batch-dims convention as ``decay``: a scalar rate
+    gives ``(T,)``, a per-head ``(H,)`` rate ``(H,T)``.
+    """
+    t = int(kw.get("t", 0) or 0)
+    off = int(kw.get("offset", 0) or 0)
+    sign = int(kw.get("sign", 1) or 1)
+    g = torch.as_tensor(g)
+    pos = torch.arange(t, dtype=g.dtype, device=g.device)
+    return g[..., None] ** (pos * sign + off)
+
+
 #: Torch lowering bindings — an EXPORT, not an import-time mutation
 #: (plan 0001 phase 2c): :class:`catopt_core.ops.OpTable` folds this dict in
 #: via ``register``/``full()``; importing this module registers nothing
@@ -1029,6 +1043,8 @@ TORCH_BINDINGS: dict[str, Any] = {
     "om_decayed": _om_decayed_torch,
     # The causal-decay matrix generator — same place.
     "decay": _decay_torch,
+    # Its rank-1 vector factor — cross blocks of the chunked form.
+    "decay_vec": _decay_vec_torch,
 }
 
 #: The masked_fill fill-value in rule RHSs.  _instantiate turns a
@@ -2083,6 +2099,193 @@ DECAY_BLOCK_DIAG = R(
 
 
 # ---------------------------------------------------------------------------
+#  The decay vector — ``decay_vec(g, t=T, offset=o, sign=s)`` makes the
+#  cross block rank-1:  ``X[r,c] = g^(o_i - o_j + r - c) = xi[r] * eta[c]``
+#  with ``xi = decay_vec(g, T_i, offset=o_i-o_j)`` (g^{d+r}) and
+#  ``eta = decay_vec(g, T_j, sign=-1)`` (g^{-c}).  The RetNet
+#  inter-chunk factorization: the cross term is an outer product, so
+#  the decayed product over it distributes —
+#      (s (.) xi*eta^T) @ v  =  xi_row (.) ((s (.) eta_row) @ v)
+#  — row and column scalings, no rank left.
+#
+#  ``decay_block_cross`` writes the strict-lower (i,j), i>j block of a
+#  split decay as the factored spelling; ``om_decayed_cross`` then
+#  pushes the outer product through the contraction.  Composed with
+#  the chunk splits + ``decay_block_diag``, a decayed product over
+#  concat'd chunks becomes the four-block form whose cross term is
+#  the carried state — the algebraic shape the inter-chunk
+#  recurrence needs (numerics note: ``eta = g^{-c}`` grows like
+#  g^{-T_j}; fp64 carries it past T~2800, fp32 past ~830 — bounded
+#  by CHUNK size, not total T, which is why chunked processing
+#  exists).
+# ---------------------------------------------------------------------------
+
+op_def(
+    "decay_vec",
+    1,
+    1,
+    law="decay-vector generator: decay_vec(g, t=T, offset=o, sign=s)"
+    "[...,k] = g^(s*k + o), k in [0,T) — g's dims leading batch dims."
+    "  The rank-1 factor of the causal decay's cross blocks (the"
+    " RetNet xi/eta vectors); decay_vec(g, T) is decay(g,T)'s"
+    " diagonal.",
+)
+
+
+def _cross_attrs(bound: dict) -> tuple | None:
+    """Read ``(SZ, I, J)`` of a strict-lower double-split — ``i > j``.
+
+    Same ``split`` vocabulary as the diagonal: the sizes tuple
+    partitions the matrix extent, ``I`` the row-block and ``J`` the
+    column-block index.  ``j < i`` selects the block BELOW the
+    diagonal — ``i <= j`` is either the diagonal itself
+    (``decay_block_diag``) or the provably-zero strict upper.
+    """
+    sz, t = bound.get("$attr:SZ"), bound.get("$attr:T")
+    i, j = bound.get("$attr:I"), bound.get("$attr:J")
+    if not (
+        isinstance(sz, (tuple, list))
+        and all(isinstance(x, int) for x in sz)
+        and isinstance(i, int)
+        and isinstance(j, int)
+        and 0 <= j < i < len(sz)
+        and isinstance(t, int)
+        and t == sum(sz)
+    ):
+        return None
+    return sz, i, j
+
+
+def _check_decay_block_cross(bound: dict) -> bool:
+    """Strict-lower block, decay-aligned axes — see ``_cross_attrs``."""
+    if _cross_attrs(bound) is None:
+        return False
+    dr, dc = bound.get("$attr:DR"), bound.get("$attr:DC")
+    if not (isinstance(dr, int) and isinstance(dc, int)):
+        return False
+    gs = _vshape(bound.get("g"))
+    if not isinstance(gs, tuple):
+        return dr == -2 and dc == -1
+    r = len(gs) + 2
+    return dr % r == r - 2 and dc % r == r - 1
+
+
+def _derive_decay_block_cross(bound: dict) -> dict | None:
+    """``TI``/``TJ`` := block extents; ``OD`` := the offset ``o_i-o_j``."""
+    attrs = _cross_attrs(bound)
+    if attrs is None:
+        return None
+    sz, i, j = attrs
+    return {
+        "$attr:TI": sz[i],
+        "$attr:TJ": sz[j],
+        "$attr:OD": sum(sz[:i]) - sum(sz[:j]),
+    }
+
+
+DECAY_BLOCK_CROSS = R(
+    "decay_block_cross",
+    Op.make(
+        "split",
+        Op.make(
+            "split",
+            Op.make("decay", "g", t="T"),
+            sizes="SZ",
+            dim="DR",
+            index="I",
+        ),
+        sizes="SZ",
+        dim="DC",
+        index="J",
+    ),
+    Op.make(
+        "mul",
+        Op.make(
+            "unsqueeze",
+            Op.make("decay_vec", "g", t="TI", offset="OD"),
+            dim=-1,
+        ),
+        Op.make(
+            "unsqueeze",
+            Op.make("decay_vec", "g", t="TJ", sign=-1),
+            dim=-2,
+        ),
+    ),
+    check=_check_decay_block_cross,
+    derive=_derive_decay_block_cross,
+    law="the strict-lower (i,j) block of the causal decay is rank-1: "
+    "X[r,c] = g^(o_i-o_j+r-c) = g^(o_i-o_j+r) * g^-c — an outer "
+    "product of two decay vectors (the RetNet xi/eta factorization), "
+    "so the cross-chunk term needs no materialised block.",
+)
+
+
+def _check_om_decayed_cross(bound: dict) -> bool:
+    """Require the factored-decay distribution to be well-typed.
+
+    ``unsq(xi, -1)`` broadcasts against the mul's row axis and
+    ``unsq(eta, -2)`` against its column axis; the rearranged rhs
+    must broadcast identically and the inner matmul must contract.
+    """
+    ss, xs, es, vs = (
+        _vshape(bound.get("s")),
+        _vshape(bound.get("xi")),
+        _vshape(bound.get("eta")),
+        _vshape(bound.get("v")),
+    )
+    if not all(isinstance(x, tuple) for x in (ss, xs, es, vs)):
+        return False
+    if not (es and xs and len(ss) >= 1):
+        return False
+    from catopt_core.typing import (
+        INVALID,
+        broadcast,
+        matmul_shape,
+    )
+
+    # s ⊙ (1,…,1,TJ) must broadcast (eta on the column axis)
+    eta_b = (*((1,) * max(len(es) - 1, 0)), 1, es[-1])
+    m = broadcast(ss, eta_b)
+    if m is INVALID:
+        return False
+    n = matmul_shape(m, vs)
+    if n is None:
+        return False
+    # (TI,…,1) broadcasting the row axis of the product
+    xi_b = (*((1,) * max(len(xs) - 1, 0)), xs[-1], 1)
+    return broadcast(n, xi_b) is not INVALID
+
+
+OM_DECAYED_CROSS = R(
+    "om_decayed_cross",
+    Op.make(
+        "om_decayed",
+        "s",
+        Op.make(
+            "mul",
+            Op.make("unsqueeze", "xi", dim="UX"),
+            Op.make("unsqueeze", "eta", dim="UE"),
+        ),
+        "v",
+    ),
+    Op.make(
+        "mul",
+        Op.make("unsqueeze", "xi", dim="UX"),
+        Op.make(
+            "matmul",
+            Op.make("mul", "s", Op.make("unsqueeze", "eta", dim="UE")),
+            "v",
+        ),
+    ),
+    check=_check_om_decayed_cross,
+    law="a decayed product over a rank-1 decay distributes into "
+    "row/column scalings: (s (.) xi*eta^T) @ v = xi_row (.) ((s (.) "
+    "eta_row) @ v) — the outer product never multiplies a matrix, "
+    "the factored form is what the inter-chunk recurrence carries.",
+)
+
+
+# ---------------------------------------------------------------------------
 #  Law set
 # ---------------------------------------------------------------------------
 
@@ -2108,6 +2311,8 @@ OM_LAWS: list[Rewrite] = [
     DECAY_LIFT_DIAG,
     *OM_DECAYED_CHUNK_LAWS,
     DECAY_BLOCK_DIAG,
+    DECAY_BLOCK_CROSS,
+    OM_DECAYED_CROSS,
 ]
 
 #: The same set as a composable :class:`~catopt_core.laws.RuleSet` —

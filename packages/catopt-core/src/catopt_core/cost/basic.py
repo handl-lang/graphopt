@@ -84,6 +84,8 @@ _OP_FLOPS: dict[str, int] = {
     # decay(γ,t=T) materialises tril(γ^{i−j}) — the spelled subgraph it
     # replaces: sub + clamp_min + pow(2) + tril ≈ 5 passes over (T,T).
     "decay": 5,
+    # decay_vec(γ,t=T) — arange + scale + pow: ~3 passes over (T,).
+    "decay_vec": 3,
     # Traced-monoidal ops (catopt_carriers.trace): wire juxtaposition and
     # constant morphisms carry no FLOPs; trace/inv are priced in
     # _flops_of directly (solve cost depends on usize).

@@ -1427,6 +1427,26 @@ register_shape_rule("om", _om_shape)
 register_shape_rule("om_elem", _om_elem_shape)
 register_shape_rule("om_decayed", _om_decayed_shape)
 register_shape_rule("decay", _decay_shape)
+
+
+def _decay_vec_shape(op: Op, shapes: list) -> tuple | str | None:
+    """``decay_vec`` — ``g^(sign*k + offset)``: ``(*g.shape, T)``.
+
+    Same leading-batch-dims convention as ``decay`` — a scalar
+    rate gives ``(T,)``, a per-head ``(H,)`` rate ``(H,T)``.
+    ``T`` is the ``t`` attr: missing/non-int reports unknown,
+    negative is provably ill-typed.
+    """
+    g = shapes[0]
+    t = op.attrs.get("t")
+    if not isinstance(t, int):
+        return None
+    if t < 0:
+        return _INVALID
+    return (*g, t)
+
+
+register_shape_rule("decay_vec", _decay_vec_shape)
 register_shape_rule("trace", _trace_shape)
 register_shape_rule("bdiag", _bdiag_shape)
 register_shape_rule("parl", _bdiag_shape)
