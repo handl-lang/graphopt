@@ -35,6 +35,21 @@ intermediate) — each declined spec keeps its torch path honestly.
 delivery path (`kernel_for`), same device for both arms.  The
 certificate is the replayable 2-cell; its replay is the referee.
 
+The decayed-attention structure is fully equational end-to-end:
+`decay(γ,t)` names the causal triangle `γ^{i−j}` and `decay_vec`
+the `γ^{s·k+o}` vectors, so a spelled `tril(γ^{i−j})` lifts into the
+generator (`decay_lift`), and the chunked form is a law closure —
+`om_decayed_chunkify_{rows,keys}` bisect a fused site, `split_*`
+laws push the partition through the score matmul, `decay_block_*`
+rewrite each block (diagonal → `decay`; strict-lower → the rank-1
+`ξ·ηᵀ`), `om_decayed_cross` distributes `(s ⊙ ξηᵀ)·v` so the block
+never materializes, and the state-lift folds the weighted sum into
+`applyd` scan carriers.  On ChunkedRetention's real
+`torch.export` graph the saturation produces `decay`,
+`decay_vec`, and `applyd`/`aff_diag` enodes itself — the RetNet
+recurrence as an equational structure the machine derived, not a
+hand-named algorithm.
+
 ## The loop, step by step
 
 Running example throughout: the recurrence `h_t = A·h_{t-1} + x_t`.
