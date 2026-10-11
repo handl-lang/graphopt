@@ -134,7 +134,11 @@ class TestLinearPolicy:
 class TestDomains:
     def test_registry(self):
         assert set(play.DOMAINS) == {
-            "meta", "joint", "search", "torch", "gen"
+            "meta",
+            "joint",
+            "search",
+            "torch",
+            "gen",
         }
 
     def test_torch_domain(self):
@@ -147,7 +151,9 @@ class TestDomains:
         arena = play._torch_board(cases[0])
         assert isinstance(arena, ma.MetaArena)
         # the scripted arm plays the whole game
-        traj = play.play("torch", cases[0], ma.ScriptedPlayer(), budget=6)
+        traj = play.play(
+            "torch", cases[0], ma.ScriptedPlayer(), budget=6
+        )
         assert traj.terminal is not None
 
     def test_play_api_meta(self):
@@ -230,8 +236,13 @@ class TestEdges:
             legal=_toy_legal,
             featurizer=lambda s, a, h: {},
         )
-        arms = play._arms(d, LinearPolicy(0, legal=_toy_legal,
-                                          featurizer=lambda s, a, h: {}), 0)
+        arms = play._arms(
+            d,
+            LinearPolicy(
+                0, legal=_toy_legal, featurizer=lambda s, a, h: {}
+            ),
+            0,
+        )
         assert "scripted" not in arms and "learned" in arms
 
     def test_train_policy_no_learner(self):
@@ -245,11 +256,16 @@ class TestEdges:
         out_path = tmp_path / "run.json"
         rc = play.main(
             [
-                "--domain", "search",
-                "--train-cases", "2",
-                "--eval-cases", "1",
-                "--budget", "4",
-                "--json", str(out_path),
+                "--domain",
+                "search",
+                "--train-cases",
+                "2",
+                "--eval-cases",
+                "1",
+                "--budget",
+                "4",
+                "--json",
+                str(out_path),
             ]
         )
         assert rc == 0
@@ -261,15 +277,21 @@ class TestEdges:
         # the product loop end to end: play -> lower -> verified module
         pytest.importorskip("torch")
         cases = play._torch_cases(0, 2)
-        res = play.deliver("torch", cases[0], ma.ScriptedPlayer(), budget=6)
+        res = play.deliver(
+            "torch", cases[0], ma.ScriptedPlayer(), budget=6
+        )
         assert res["delivered"] and res["verified"]
         assert res["cert"] is True
         assert res["max_abs"] == 0.0
 
     def test_deliver_rejects_deliverless_domain(self):
         with pytest.raises(ValueError, match="no deliver hook"):
-            play.deliver("meta", mp.gen_cases(0, 1)[0],
-                         ma.ScriptedPlayer(), budget=4)
+            play.deliver(
+                "meta",
+                mp.gen_cases(0, 1)[0],
+                ma.ScriptedPlayer(),
+                budget=4,
+            )
 
     def test_torch_spelled_silu_delivers_fused(self):
         # a module spelling x*sigmoid(x) plays to a verified silu
@@ -283,7 +305,9 @@ class TestEdges:
             if case is not None:
                 break
         assert case is not None
-        res = play.deliver("torch", case, ma.ScriptedPlayer(), budget=10)
+        res = play.deliver(
+            "torch", case, ma.ScriptedPlayer(), budget=10
+        )
         assert res["delivered"] and res["verified"]
         assert res["cost"] is not None and res["cost"] <= 1.0
 
@@ -295,18 +319,23 @@ class TestEdges:
         monkeypatch.setattr(
             board.eg, "extract_best", lambda *a, **k: None
         )
-        res = play._torch_deliver(board, cases[0],
-                                  engine.Trajectory([]))
+        res = play._torch_deliver(
+            board, cases[0], engine.Trajectory([])
+        )
         assert res == {"delivered": False, "reward": 0.0}
 
     def test_main_deliver_flag(self, capsys):
         pytest.importorskip("torch")
         rc = play.main(
             [
-                "--domain", "torch",
-                "--train-cases", "1",
-                "--eval-cases", "1",
-                "--budget", "6",
+                "--domain",
+                "torch",
+                "--train-cases",
+                "1",
+                "--eval-cases",
+                "1",
+                "--budget",
+                "6",
                 "--deliver",
             ]
         )
@@ -319,8 +348,12 @@ class TestEdges:
         # without a fabricated state — the horizon ends first)
         go = play._scripted_search()
         st = play._SearchState(
-            actions=("a", "b"), ops=frozenset({"x"}),
-            steps=0, done=False, cost=1.0, baseline=1.0,
+            actions=("a", "b"),
+            ops=frozenset({"x"}),
+            steps=0,
+            done=False,
+            cost=1.0,
+            baseline=1.0,
         )
         assert go(st) in ("a", "b")
         assert go(st) in ("a", "b")
@@ -336,10 +369,14 @@ class TestEdges:
         )
         rc = play.main(
             [
-                "--domain", "search",
-                "--train-cases", "1",
-                "--eval-cases", "1",
-                "--budget", "4",
+                "--domain",
+                "search",
+                "--train-cases",
+                "1",
+                "--eval-cases",
+                "1",
+                "--budget",
+                "4",
             ]
         )
         assert rc == 0 and bumped == [40_000]
@@ -379,9 +416,10 @@ class TestFusionSites:
 
     def test_non_elementwise_head_not_a_site(self):
         x = Var("x", TensorType((4, 4)))
-        assert play._fusion_sites(
-            Op.make("matmul", x, Op.make("relu", x))
-        ) == []
+        assert (
+            play._fusion_sites(Op.make("matmul", x, Op.make("relu", x)))
+            == []
+        )
 
     def test_chainfuse_claim_binds_gen_over_mm(self):
         # the headline: claim(gen) on a metavar-boundary site —
@@ -421,7 +459,10 @@ class TestZooProbe:
 
         wl = _zoo.zoo()[0]
         case = play._zoo_case(wl)
-        assert case[0].startswith("zoo:") and case[5]["gen_handlers"] is not None
+        assert (
+            case[0].startswith("zoo:")
+            and case[5]["gen_handlers"] is not None
+        )
 
     def test_zoo_case_binds_input_vars_for_profitable(
         self, monkeypatch
@@ -468,17 +509,147 @@ class TestZooProbe:
         def _ok():
             import torch.nn as nn
 
-            return nn.Linear(4, 4), __import__("torch").randn(2, 4).double()
+            return nn.Linear(4, 4), __import__("torch").randn(
+                2, 4
+            ).double()
 
         monkeypatch.setattr(
             "catopt_discovery.zoo.zoo",
             lambda: [_W("bad", _boom), _W("ok", _ok)],
         )
         monkeypatch.setattr(
-            play, "gen_probe",
+            play,
+            "gen_probe",
             lambda c, **k: calls.append(c[0]) or {"case": c[0]},
         )
         rows = play.zoo_probe()
         assert rows[0]["delivered"] is False
         assert "export declined" in rows[0]["note"]
         assert calls == ["zoo:ok"]
+
+
+class TestDecayedMint:
+    """The decayed-tier mint path — sites, referee, zoo wiring."""
+
+    def test_decayed_sites_finds_spelled_and_lifted(self):
+        pytest.importorskip("torch")
+        from catopt_core.ir import Op
+
+        spelled = Op.make("matmul", Op.make("mul", "a", "b"), "c")
+        lifted = Op.make("om_decayed", "a", "b", "c")
+        term = Op.make("add", spelled, lifted)
+        sites = play._decayed_sites(term)
+        assert ("matmul", ("mul", "S", "D"), "V") in sites
+        assert ("om_decayed", "S", "D", "V") in sites
+
+    def test_decayed_sites_ignores_other_matmuls(self):
+        pytest.importorskip("torch")
+        from catopt_core.ir import Op
+
+        term = Op.make("matmul", Op.make("add", "a", "b"), "c")
+        assert play._decayed_sites(term) == []
+
+    def test_triton_kernel_for_declines_without_cuda(self, monkeypatch):
+        pytest.importorskip("torch")
+        import torch
+
+        monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
+        h = {
+            "pattern": ("matmul", ("mul", "S", "D"), "V"),
+            "kernel": "decayed_0_k",
+            "args": ("S", "D", "V"),
+        }
+        assert play._triton_kernel_for("decayed_0", h, {}) is None
+
+    def test_triton_kernel_for_declines_on_binding_miss(
+        self, monkeypatch
+    ):
+        pytest.importorskip("torch")
+        import torch
+
+        monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+        monkeypatch.setattr(play, "_has_triton", lambda: True)
+        from catopt_discovery import genkernel as gk
+
+        monkeypatch.setattr(
+            gk, "decayed_triton_bindings", lambda handlers: {}
+        )
+        h = {
+            "pattern": ("matmul", ("mul", "S", "D"), "V"),
+            "kernel": "decayed_0_k",
+            "args": ("S", "D", "V"),
+        }
+        assert play._triton_kernel_for("decayed_0", h, {}) is None
+
+    def test_profitable_uses_kernel_for(self, monkeypatch):
+        pytest.importorskip("torch")
+        import torch
+
+        from catopt_discovery import genkernel as gk
+        from catopt_core.ir import Op
+
+        from catopt_core.ir import TensorType, Var
+
+        site = Op.make(
+            "matmul",
+            Op.make(
+                "mul",
+                Var("s", TensorType((4, 4))),
+                Var("d", TensorType((4, 4))),
+            ),
+            Var("v", TensorType((4, 4))),
+        )
+        handler = {
+            "k": {
+                "pattern": ("matmul", ("mul", "S", "D"), "V"),
+                "kernel": "kk",
+                "args": ("S", "D", "V"),
+            }
+        }
+        vals = {
+            "s": torch.randn(4, 4, dtype=torch.float64),
+            "d": torch.randn(4, 4, dtype=torch.float64),
+            "v": torch.randn(4, 4, dtype=torch.float64),
+        }
+        calls = []
+
+        def kern(name, h, bound):
+            calls.append(name)
+            return lambda *a: (bound["S"] * bound["D"]) @ bound["V"]
+
+        gk.profitable(
+            handler,
+            site,
+            vals,
+            reps=3,
+            kernel_for=kern,
+        )
+        assert calls == ["k"]
+
+    def test_zoo_case_mints_decayed_handlers(self, monkeypatch):
+        pytest.importorskip("torch")
+        import torch
+
+        monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
+        from catopt_discovery import genkernel as gk
+        from catopt_discovery.zoo import _ChunkedRetention
+        from catopt_discovery.intake import Workload
+
+        wl = Workload(
+            "ChunkedRetention",
+            lambda: (
+                _ChunkedRetention(16),
+                torch.randn(2, 8, 16, dtype=torch.float64),
+            ),
+            kind="zoo",
+        )
+        case = play._zoo_case(wl)
+        decayed = gk.decayed_handlers(
+            play._decayed_sites(case[5]["ir"].root)
+        )
+        assert "decayed_0" in decayed
+        assert decayed["decayed_0"]["pattern"] == (
+            "matmul",
+            ("mul", "S", "D"),
+            "V",
+        )

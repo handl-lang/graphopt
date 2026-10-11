@@ -357,6 +357,34 @@ def _fusion_sites(term: Any) -> list:
     return out
 
 
+def _decayed_sites(term: Any) -> list:
+    """``matmul(mul(s,d),v)``/``om_decayed`` subterms, spec'd.
+
+    The decayed-tier site collector — the elementwise walk cannot
+    see a contraction site, so each ``mul`` feeding a ``matmul``
+    (and each already-lifted ``om_decayed``) mints a pattern whose
+    operands are metavars binding whole subterms at match time —
+    the kernel then receives the evaluated operand tensors.
+    """
+    out: list = []
+
+    def walk(t: Any) -> None:
+        if isinstance(t, Op):
+            if t.op == "om_decayed":
+                out.append(("om_decayed", "S", "D", "V"))
+            elif (
+                t.op == "matmul"
+                and isinstance(t.args[0], Op)
+                and t.args[0].op == "mul"
+            ):
+                out.append(("matmul", ("mul", "S", "D"), "V"))
+            for a in t.args:
+                walk(a)
+
+    walk(term)
+    return out
+
+
 def _flat_ops(spec: Any):
     """Yield op names inside a fusion pattern tuple."""
     if isinstance(spec, (tuple, list)) and spec:
@@ -650,6 +678,36 @@ def gen_probe(case: Any, *, budget: int = 12, reps: int = 200) -> dict:
     return rows[0]
 
 
+def _triton_kernel_for(tag: str, h: dict, vals: dict) -> Any:
+    """Return the delivery-path callable a decayed claim would run.
+
+    ``profitable``'s ``kernel_for``: build this handler's generated
+    Triton binding and return the kernel — the callable the
+    ``hybrid_sink`` delivery actually ships — on CUDA-bound values
+    (the probe's device).  Falls back to ``None`` (the compiled-
+    spelled default) when Triton/CUDA or the codegen declines.
+    """
+    import torch
+
+    from catopt_discovery import genkernel as gk
+
+    if not (torch.cuda.is_available() and _has_triton()):
+        return None
+    try:
+        fn = gk.decayed_triton_bindings({tag: h}).get(h["kernel"])
+        if fn is None:
+            return None
+        mvs = gk._spec_metas(h["pattern"])
+        cvals = tuple(vals[m].cuda() for m in mvs)
+    except (AttributeError, KeyError, RuntimeError, TypeError):
+        return None
+
+    def kern(*a: Any) -> Any:
+        return fn(*cvals)
+
+    return kern
+
+
 def _probe_delivery(
     sink: Any,
     ir: Any,
@@ -684,6 +742,7 @@ def _zoo_case(wl: Any) -> Any:
         _canon_concrete(h["pattern"]) for h in lawdata.HANDLERS.values()
     }
     genh = gk.gen_handlers(sites, covered=covered)
+    genh.update(gk.decayed_handlers(_decayed_sites(ir.root)))
     # the measured-cost referee: mint only claims whose generated
     # kernel actually beats its spelled site on the real values;
     # the env must bind the input vars too — a param-only env makes
@@ -693,7 +752,13 @@ def _zoo_case(wl: Any) -> Any:
     var_env.update(
         {v.name: t for v, t in zip(ir.inputs, feeds, strict=False)}
     )
-    genh = gk.profitable(genh, ir.root, var_env, reps=20)
+    genh = gk.profitable(
+        genh,
+        ir.root,
+        var_env,
+        reps=20,
+        kernel_for=_triton_kernel_for,
+    )
     sink = gk.gen_sink(genh, compile_kernels=False)
     return (
         f"zoo:{wl.name}",
