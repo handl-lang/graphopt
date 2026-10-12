@@ -385,13 +385,91 @@ def _decayed_sites(term: Any) -> list:
     return out
 
 
+def _scan_sites(term: Any) -> list:
+    """``applyd``-carrier members of the saturated graph, spec'd.
+
+    The scan tier's site source is not raw IR — carriers only exist
+    once the lifts run.  This collector runs a bounded carrier-
+    producing saturation (the om laws that introduce ``applyd``)
+    and harvests every ``applyd`` member's decoded spec, pinned
+    ``kind=unrolled`` — the machine-folded carriers' ambient
+    reading, not the fold-over-steps variant the seq form declares.
+    """
+    from catopt_carriers.om import OM_LAWS
+    from catopt_core.egraph import EGraph
+    from catopt_core.laws.tensor import SPLIT_SCALAR_RULES
+
+    from catopt_discovery.meta_arena import _spec_of
+
+    eg = EGraph()
+    root = eg.add_term(term)
+    eg.run(
+        list(OM_LAWS) + list(SPLIT_SCALAR_RULES),
+        root,
+        max_iterations=10,
+        max_nodes=60_000,
+        rule_budgets={
+            "om_decayed_chunkify_rows": 20,
+            "om_decayed_chunkify_keys": 20,
+        },
+    )
+    out: list = []
+    carrier_ops = ("aff_diag", "affd_compose")
+    for cls in eg._classes.values():
+        for n in cls.nodes:
+            if n.op != "applyd":
+                continue
+            member = _carrier_member(eg, n, carrier_ops)
+            if member is None:
+                continue
+            f_term = member.args[0]
+            if not isinstance(f_term, Op):
+                continue
+            names: dict = {}
+            # the state abstracts to a metavar — the handler's
+            # pattern is ``applyd(<map>, X_h)`` over ANY state;
+            # whatever the fold produced there binds at match time
+            spec = (
+                "applyd",
+                _spec_of(f_term, names),
+                f"X{len(names) + 1}",
+                {"kind": "unrolled"},
+            )
+            if any(spec == s for s in out):  # dicts are unhashable
+                continue
+            out.append(spec)
+    return out
+
+
+def _carrier_member(eg: Any, node: Any, carrier_ops: tuple) -> Any:
+    """Decode an ``applyd`` enode preferring carrier-shaped children.
+
+    ``any_term`` prefers leaves — useless for the map slot, which
+    must surface as ``aff_diag``/``affd_compose``.  Children decode
+    to the carrier op member when their class carries one, else the
+    class rep.
+    """
+    args = []
+    for c in node.children:
+        cls = eg._classes[eg.find(c)]
+        pick = next((m for m in cls.nodes if m.op in carrier_ops), None)
+        if pick is not None:
+            args.append(_carrier_member(eg, pick, carrier_ops))
+        else:
+            args.append(eg.any_term(eg.find(c)))
+    if any(a is None for a in args):
+        return None
+    return Op.make(node.op, *args, **dict(node.attrs))
+
+
 #: Site collectors, keyed by codegen-tier name — the term-traversal
 #: knowledge that pairs with ``genkernel.TIERS``.  A tier without a
-#: collector (``scan`` — its sites come from the lift machinery, not
-#: raw IR) simply mints nothing here.
+#: collector mints nothing here; the ``scan`` collector is the only
+#: one whose sites live in the saturated graph, not raw IR.
 TIER_SITES: dict[str, Any] = {
     "gen": _fusion_sites,
     "decayed": _decayed_sites,
+    "scan": _scan_sites,
 }
 
 

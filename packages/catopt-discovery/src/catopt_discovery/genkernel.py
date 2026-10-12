@@ -1241,6 +1241,20 @@ def scan_triton_bindings(
     return out
 
 
+def _canon_taken(pattern: Any, out: dict, skip: set) -> bool:
+    """Whether the spec's concrete canon is already covered.
+
+    Equality over containment — canon specs carry attr dicts, so
+    ``in``/set membership would raise on the unhashable elements.
+    """
+    from catopt_discovery.meta_arena import _canon_concrete
+
+    canon = _canon_concrete(pattern)
+    return any(canon == c for c in skip) or any(
+        _canon_concrete(h["pattern"]) == canon for h in out.values()
+    )
+
+
 def scan_handlers(
     terms: list, *, axis: int | None = -2, covered: set | None = None
 ) -> dict:
@@ -1260,10 +1274,7 @@ def scan_handlers(
     handler belongs on sites whose ``a``/``b`` operands genuinely
     carry a step axis — the binding raises on operands that do not.
     """
-    from catopt_discovery.meta_arena import (
-        _canon_concrete,
-        _spec_of,
-    )
+    from catopt_discovery.meta_arena import _spec_of
 
     skip = covered if covered is not None else set()
     out: dict[str, dict] = {}
@@ -1275,10 +1286,8 @@ def scan_handlers(
         )
         if scan_spec(pattern) is None:
             continue
-        canon = _canon_concrete(pattern)
-        if canon in skip or any(
-            _canon_concrete(h["pattern"]) == canon for h in out.values()
-        ):
+        # equality, not membership — canon specs carry attr dicts
+        if _canon_taken(pattern, out, skip):
             continue
         tag = f"scan_{len(out)}"
         out[tag] = {

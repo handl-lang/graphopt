@@ -528,6 +528,54 @@ class TestZooProbe:
         assert calls == ["zoo:ok"]
 
 
+class TestScanSites:
+    """The scan tier's site collector — carriers post-saturation."""
+
+    def test_scan_sites_harvests_applyd_members(self):
+        pytest.importorskip("torch")
+        from catopt_core.ir import Op, TensorType, Var
+
+        def v(n, *s):
+            return Var(n, TensorType(s))
+
+        g = v("g")
+        b0 = v("b0", 3, 6)
+        b1 = v("b1", 3, 6)
+        term = Op.make(
+            "add",
+            Op.make("mul", Op.make("pow", g, 8), b0),
+            Op.make("mul", Op.make("pow", g, 4), b1),
+        )
+        sites = play._scan_sites(term)
+        assert sites, "the fold should mint an applyd site"
+        from catopt_discovery import genkernel as gk
+
+        for s in sites:
+            assert s[0] == "applyd"
+            assert s[-1] == {"kind": "unrolled"}
+            # the state slot is abstracted to a metavar
+            assert isinstance(s[2], str)
+            info = gk.scan_spec(s)
+            assert info is not None and info["kind"] == "unrolled"
+
+    def test_scan_sites_empty_without_carriers(self):
+        pytest.importorskip("torch")
+        from catopt_core.ir import Op, TensorType, Var
+
+        term = Op.make(
+            "mul", Var("a", TensorType((4,))), Var("b", TensorType((4,)))
+        )
+        assert play._scan_sites(term) == []
+
+    def test_mint_tiers_includes_scan(self):
+        """The registry walk reaches the scan tier's collector."""
+        import catopt_discovery.genkernel as gk
+
+        assert "scan" in play.TIER_SITES
+        assert play.TIER_SITES["scan"] is play._scan_sites
+        assert any(t.name == "scan" for t in gk.TIERS)
+
+
 class TestDecayedMint:
     """The decayed-tier mint path — sites, referee, zoo wiring."""
 
