@@ -535,17 +535,47 @@ def _triton_expr(spec: Any) -> str | None:
     as literals; attr dicts on ops this tier doesn't model make
     the whole spec decline honestly (``None``).
     """
+    return _triton_expr_h(spec, None)
+
+
+def _triton_expr_h(spec: Any, hoists: dict | None) -> str | None:
+    """Render *spec*; unrenderable subterms hoist into *hoists*.
+
+    When *hoists* is given, a node outside the elementwise grammar
+    that is not itself a metavar/constant — ``decay_vec(g, …)``, a
+    view op, a compound like ``om_decayed`` — registers as a
+    ``__c<i>`` computed operand instead of declining the whole
+    spec: the binding evaluates the subterm on the host and passes
+    it as another kernel argument.  ``None`` in *hoists* keeps the
+    old decline behaviour.
+    """
     if isinstance(spec, str):
         return spec
     if not isinstance(spec, (tuple, list)):
         return f"({float(spec)})"
+    return _triton_node_h(spec, hoists)
+
+
+def _triton_node_h(spec: Any, hoists: dict | None) -> str | None:
+    """Render one op node — dispatch, or hoist the whole subterm."""
     kids = [e for e in spec[1:] if not isinstance(e, dict)]
     if len(spec[1:]) != len(kids):
-        return None  # attr-carrying op this tier doesn't model
-    args = [_triton_expr(k) for k in kids]
+        # attr-carrying op this tier doesn't model inline
+        return _hoist(spec, hoists) if hoists is not None else None
+    args = [_triton_expr_h(k, hoists) for k in kids]
     if any(a is None for a in args):
         return None
-    return _triton_dispatch(spec[0], args)
+    out = _triton_dispatch(spec[0], args)
+    if out is None and hoists is not None:
+        return _hoist(spec, hoists)
+    return out
+
+
+def _hoist(spec: Any, hoists: dict) -> str:
+    """Register *spec* as a host-computed operand; return its name."""
+    name = f"__c{len(hoists)}"
+    hoists[name] = spec
+    return name
 
 
 def _triton_dispatch(op: str, args: list) -> str | None:
@@ -787,7 +817,9 @@ def _affd_leaves(f_spec: Any) -> list | None:
     return [*left, *right]
 
 
-def _leaf_exprs(leaves: list, h: str) -> tuple[list, list] | None:
+def _leaf_exprs(
+    leaves: list, h: str, hoists: dict | None
+) -> tuple[list, list] | None:
     """Render leaf operands to Triton exprs, in chronological order.
 
     In-order leaves of an ``affd_compose`` tree are REVERSE
@@ -797,7 +829,10 @@ def _leaf_exprs(leaves: list, h: str) -> tuple[list, list] | None:
     ``(a_expr, b_expr)`` rendered pairs.  ``None`` declines: an
     operand the elementwise renderer cannot express, a metavar that
     collides with kernel names, or the state meta rebound as a
-    sequence operand.
+    sequence operand.  With *hoists*, unrenderable non-leaf
+    subterms become host-computed ``__c<i>`` operands rather than
+    declines — the unrolled path only (a seq operand's step-axis
+    indexing has no meaning for a state-shaped subterm).
     """
     metas: list = []
     for a_spec, b_spec in leaves:
@@ -812,7 +847,8 @@ def _leaf_exprs(leaves: list, h: str) -> tuple[list, list] | None:
         return None
     steps = []
     for a_spec, b_spec in reversed(leaves):
-        ea, eb = _triton_expr(a_spec), _triton_expr(b_spec)
+        ea = _triton_expr_h(a_spec, hoists)
+        eb = _triton_expr_h(b_spec, hoists)
         if ea is None or eb is None:
             return None
         steps.append((ea, eb))
@@ -857,32 +893,70 @@ def scan_spec(spec: Any) -> dict | None:
     generated binding's positional signature.  A trailing attr dict
     on the ``applyd`` node may declare ``{"axis": int}`` — surfaced
     as ``info["axis"]``; a ``None``/absent axis defers to the
-    binding's default or its derive-from-``h`` rule.
+    binding's default or its derive-from-``h`` rule.  It may also
+    declare ``{"kind": "unrolled"}`` to pin the ambient single-step
+    reading of a one-leaf ``aff_diag`` (the e-graph's folded
+    carriers are that shape — ``a ⊙ h + x`` once, not a fold).
+    ``info["computed"]`` lists ``(name, subterm)`` pairs the
+    renderer hoisted — the binding evaluates them host-side and
+    passes them as extra kernel args after ``params``.
     """
     parts = _applyd_operands(spec)
     if parts is None:
         return None
     f_spec, h_spec, attrs = parts
     leaves = _affd_leaves(f_spec)
-    if leaves is None:
+    kind = _scan_kind(leaves, attrs)
+    if kind is None or leaves is None:
         return None
-    rendered = _leaf_exprs(leaves, h_spec)
+    hoists: dict | None = {} if kind == "unrolled" else None
+    rendered = _leaf_exprs(leaves, h_spec, hoists)
     if rendered is None:
         return None
+    return _scan_info(kind, rendered, h_spec, attrs, hoists)
+
+
+def _scan_info(
+    kind: str,
+    rendered: tuple[list, list],
+    h_spec: Any,
+    attrs: dict | None,
+    hoists: dict | None,
+) -> dict:
+    """Assemble the ``scan_spec`` descriptor for a rendered carrier."""
     metas, steps = rendered
     info: dict[str, Any] = {
         "h": h_spec,
         "seq": metas,
         "params": [*metas, h_spec],
     }
-    if len(leaves) == 1:
+    if kind == "seq":
         (ea, eb) = steps[0]
         info.update({"kind": "seq", "a": ea, "b": eb})
     else:
-        info.update({"kind": "unrolled", "steps": steps})
+        _unrolled_info(info, steps, hoists)
     if attrs is not None and "axis" in attrs:
         info["axis"] = attrs["axis"]
     return info
+
+
+def _scan_kind(leaves: list | None, attrs: dict | None) -> str | None:
+    """Resolve the spec's carrier kind — attr pin, then arity."""
+    if leaves is None:
+        return None
+    kind = (attrs or {}).get("kind")
+    if kind is None:
+        return "seq" if len(leaves) == 1 else "unrolled"
+    return kind if kind in ("seq", "unrolled") else None
+
+
+def _unrolled_info(
+    info: dict, steps: list, hoists: dict | None
+) -> None:
+    """Fill *info*'s unrolled-kind fields from the rendered steps."""
+    info.update({"kind": "unrolled", "steps": steps})
+    if hoists:
+        info["computed"] = list(hoists.items())
 
 
 def _seq_triton_source(info: dict) -> str:
@@ -917,18 +991,35 @@ def _seq_triton_source(info: dict) -> str:
     )
 
 
+def _unrolled_sig(info: dict) -> list:
+    """Build the kernel signature: caller params, then hoisted args."""
+    return [
+        *info["params"],
+        *(n for n, _ in info.get("computed", [])),
+    ]
+
+
+def _flat_loads(names: Any) -> str:
+    """Emit the flat-space load lines for operand names."""
+    return "".join(
+        f"    {m} = tl.load({m}_ptr + off, mask=mask, other=0.0)\n"
+        for m in names
+    )
+
+
 def _unrolled_triton_source(info: dict) -> str:
     """Emit the unrolled carrier kernel for a compose-tree spec.
 
     One flat pass over the broadcast state space applying each leaf
     step in chronological order — ``acc = a_i * acc + b_i`` — exactly
     the ambient ``applyd``/``affd_compose`` semantics fused into one
-    kernel.
+    kernel.  Hoisted operands ride as extra pointer args after the
+    caller's ``params`` — the binding evaluates them on the host.
     """
-    params = ", ".join(f"{m}_ptr" for m in info["params"])
-    loads = "".join(
-        f"    {m} = tl.load({m}_ptr + off, mask=mask, other=0.0)\n"
-        for m in info["seq"]
+    sig = _unrolled_sig(info)
+    params = ", ".join(f"{m}_ptr" for m in sig)
+    loads = _flat_loads(
+        (*info["seq"], *(n for n, _ in info.get("computed", [])))
     )
     steps = "".join(
         f"    acc = ({ea}) * acc + ({eb})\n" for ea, eb in info["steps"]
@@ -1079,13 +1170,24 @@ def _unrolled_binding(kern: Any, info: dict) -> Any:
     ``fn(*vals)`` binds the spec metavars positionally, broadcasts
     every operand (and the state) to one flat index space, and
     applies each leaf step in chronological order inside the kernel.
+    Hoisted operands — the spec subterms the elementwise renderer
+    declined — are evaluated on the host against the same env and
+    broadcast in with the rest.
     """
+    computed = info.get("computed", [])
 
     def fn(*args: Any, **_attrs: Any) -> Any:
+        import catopt_torch.torch_bridge as tb
         import torch
 
         vals = dict(zip(info["params"], args, strict=True))
-        xs = torch.broadcast_tensors(*(vals[m] for m in info["params"]))
+        extra = [
+            _eval_spec(sub, vals, tb._IR_TO_TORCH)
+            for _n, sub in computed
+        ]
+        xs = torch.broadcast_tensors(
+            *(vals[m] for m in info["params"]), *extra
+        )
         if not xs[0].is_cuda:
             raise RuntimeError(
                 "generated scan kernels need CUDA tensors"

@@ -600,6 +600,71 @@ class TestScanSpec:
             is None
         )
 
+    def test_kind_attr_pins_unrolled(self):
+        """``{"kind": "unrolled"}`` reads the one-leaf carrier as the
+        ambient single-step ``a ⊙ h + x``, not a fold."""
+        spec = (
+            "applyd",
+            ("aff_diag", "A", "B"),
+            "H",
+            {"kind": "unrolled"},
+        )
+        info = gk.scan_spec(spec)
+        assert info["kind"] == "unrolled"
+        assert info["steps"] == [("A", "B")]
+        # an unknown kind declines rather than guessing
+        assert (
+            gk.scan_spec(
+                ("applyd", ("aff_diag", "A", "B"), "H",
+                 {"kind": "bogus"})
+            )
+            is None
+        )
+
+    def test_unrolled_hoists_unrenderable_operands(self):
+        """``decay_vec``/view subterms hoist to host-computed params."""
+        spec = (
+            "applyd",
+            (
+                "aff_diag",
+                ("mul",
+                 ("unsqueeze",
+                  ("decay_vec", "g", {"offset": 4, "t": 1}),
+                  {"dim": -1}),
+                 ("unsqueeze",
+                  ("decay_vec", "g", {"sign": -1, "t": 4}),
+                  {"dim": -2})),
+                "x",
+            ),
+            "h",
+            {"kind": "unrolled"},
+        )
+        info = gk.scan_spec(spec)
+        assert info["kind"] == "unrolled"
+        assert [n for n, _ in info["computed"]] == ["__c0", "__c1"]
+        assert info["steps"] == [("((__c0) * (__c1))", "x")]
+        # seq form still declines the same operand — no step axis
+        # for a state-shaped subterm
+        spec_seq = (
+            "applyd",
+            ("aff_diag",
+             ("decay_vec", "g", {"t": 4}),
+             "x"),
+            "h",
+        )
+        assert gk.scan_spec(spec_seq) is None
+        # a non-attr op outside the grammar hoists whole in the
+        # unrolled kind — (q·kᵀ) as a computed operand
+        info_mm = gk.scan_spec(
+            ("applyd",
+             ("aff_diag", "A", ("matmul", "Q", "K")),
+             "H",
+             {"kind": "unrolled"})
+        )
+        assert info_mm["kind"] == "unrolled"
+        assert [n for n, _ in info_mm["computed"]] == ["__c0"]
+        assert info_mm["steps"] == [("A", "__c0")]
+
 
 class TestScanSources:
     """``_scan_triton_source`` — emitted module text."""
@@ -796,6 +861,61 @@ class TestScanBindings:
         want = a1 * want + b1_
         want = a2 * want + b2_
         torch.testing.assert_close(got, want, atol=1e-12, rtol=1e-12)
+
+    def test_unrolled_binding_with_hoisted_operands(self):
+        """The minted decayed-attention carrier shape, delivered.
+
+        ``applyd(aff_diag(g^o·eta, x), h)`` where the weight is a
+        ``decay_vec`` product — the form the e-graph produces on a
+        real export — renders as a one-step carrier with the decay
+        vectors hoisted to host-computed kernel args.
+        """
+        torch = _cuda()
+        hs = {
+            "s": {
+                "pattern": (
+                    "applyd",
+                    (
+                        "aff_diag",
+                        (
+                            "mul",
+                            (
+                                "unsqueeze",
+                                ("decay_vec", "g",
+                                 {"offset": 4, "t": 1}),
+                                {"dim": -1},
+                            ),
+                            (
+                                "unsqueeze",
+                                ("decay_vec", "g",
+                                 {"sign": -1, "t": 4}),
+                                {"dim": -2},
+                            ),
+                        ),
+                        "X",
+                    ),
+                    "H",
+                    {"kind": "unrolled"},
+                ),
+                "kernel": "sc_dv",
+                "args": ("g", "X", "H"),
+            }
+        }
+        b = gk.scan_triton_bindings(hs)
+        dt = torch.float64
+        g = torch.tensor(0.9, dtype=dt, device="cuda")
+        x = torch.randn(4, 4, dtype=dt, device="cuda")
+        h = torch.randn(4, 4, dtype=dt, device="cuda")
+        got = b["sc_dv"](g, x, h)
+        # a = (γ^4 · γ^{-c}) broadcast — the (1,4) decay row
+        a = (0.9 ** 4) * torch.tensor(
+            [0.9 ** 0, 0.9 ** -1, 0.9 ** -2, 0.9 ** -3],
+            dtype=dt,
+            device="cuda",
+        )
+        torch.testing.assert_close(
+            got, a * h + x, atol=1e-12, rtol=1e-12
+        )
 
     def test_fused_step_operands_evaluated_inside_kernel(self):
         torch = _cuda()
