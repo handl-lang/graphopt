@@ -3,10 +3,12 @@
 
 The board turns ``enumerate_candidates``' stream into episodes: one
 ``evaluate`` move per pending candidate, ``stop`` to end early, and
-the reward carries the verdict tier (``OPEN_GAME_REWARD``).  These
-tests pin the board contract (``Board`` protocol via
-``engine.run_episode``), the verdict ladder, the featurizer schema,
-and the domain registration in ``play.DOMAINS``.
+the reward carries the verdict tier (``OPEN_GAME_REWARD``) plus the
+per-find ordering credit (``OPEN_GAME_EFFICIENCY / evals``) a useful
+verdict earns.  These tests pin the board contract (``Board``
+protocol via ``engine.run_episode``), the verdict ladder, the
+order-sensitive credit, the featurizer schema, and the domain
+registration in ``play.DOMAINS``.
 """
 
 from __future__ import annotations
@@ -36,7 +38,12 @@ class TestBoard:
         act = og.legal_actions(st)[0]
         st2, rep = board.step(act)
         assert rep.applied and not rep.terminal
-        assert rep.note.split(":")[0] in ("known", "false", "true", "useful")
+        assert rep.note.split(":")[0] in (
+            "known",
+            "false",
+            "true",
+            "useful",
+        )
         assert st2.n_seen == 1 and len(st2.pending) == 11
 
     def test_step_reward_tiers(self):
@@ -45,17 +52,54 @@ class TestBoard:
         act = og.legal_actions(st)[0]
         _, rep = board.step(act)
         verdict = rep.note.split(":")[0]
-        expected = og.OPEN_GAME_REWARD["step"] + og.OPEN_GAME_REWARD[verdict]
+        expected = (
+            og.OPEN_GAME_REWARD["step"] + og.OPEN_GAME_REWARD[verdict]
+        )
+        if verdict == "useful":
+            # a useful verdict also pays the per-find ordering credit
+            expected += og.OPEN_GAME_EFFICIENCY / 1
         assert rep.reward == pytest.approx(expected)
 
     def test_stop_terminal(self):
         board = _board()
-        st = board.observe()
         _, rep = board.step(Action("stop", {}))
         assert rep.terminal and rep.reward == 0.0
         assert board.observe().done
         with pytest.raises(RuntimeError):
             board.step(Action("stop", {}))
+
+    def test_useful_credit_is_order_sensitive(self):
+        """The ordering credit pays a useful law found earlier more.
+
+        The credit is ``OPEN_GAME_EFFICIENCY / evals``, so the same
+        useful candidate (index 8 of page 0 — a ``unary-hom`` law)
+        pays ``1.0`` when evaluated first and ``1/9`` when reached
+        after eight non-paying evals.  Only the credit differs; the
+        tier and the eval cost are identical, so the reward gap is
+        exactly ``OPEN_GAME_EFFICIENCY·(1 - 1/9)``.
+        """
+
+        def reward_at(order: list[int], target: int) -> float:
+            board = _board(page=16)
+            for idx in order:
+                st = board.observe()
+                act = next(
+                    a
+                    for a in og.legal_actions(st)
+                    if a.op == "evaluate" and a.params["i"] == idx
+                )
+                _, rep = board.step(act)
+                if idx == target:
+                    assert rep.note.split(":")[0] == "useful"
+                    return rep.reward
+            raise AssertionError("target not evaluated")
+
+        early = reward_at([8], 8)
+        late = reward_at([0, 1, 2, 3, 4, 5, 6, 7, 8], 8)
+        assert early > late
+        assert early - late == pytest.approx(
+            og.OPEN_GAME_EFFICIENCY * (1 - 1 / 9)
+        )
 
     def test_drains_to_done(self):
         board = _board(page=4)
@@ -128,5 +172,7 @@ class TestRegistry:
             featurizer=og.featurize,
             features=og.OPEN_GAME_FEATURES,
         )
-        traj = play("open", og.gen_cases(0, 1, page=6)[0], player, budget=8)
+        traj = play(
+            "open", og.gen_cases(0, 1, page=6)[0], player, budget=8
+        )
         assert len(traj.reports) >= 1

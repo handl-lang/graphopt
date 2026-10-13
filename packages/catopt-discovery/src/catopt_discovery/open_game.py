@@ -17,7 +17,10 @@ Board:
   the bound pool member and record the verdict.  Reward is the
   verdict tier from :data:`OPEN_GAME_REWARD`: a useful-new law
   pays, a true-but-shallow one pays less, a known/false one just
-  costs the evaluation.
+  costs the evaluation.  A ``useful`` verdict also pays an ordering
+  credit of ``OPEN_GAME_EFFICIENCY / evals`` — the paying laws found
+  per oracle eval so far — so finding a paying shape *earlier* in
+  the page is worth strictly more than finding it late.
 * ``stop`` — end the episode early (a player that has drained the
   paying members should take it).
 
@@ -48,6 +51,7 @@ from catopt_discovery.meta_player import _Hist
 from catopt_discovery.players import LinearPolicy, _dot
 
 __all__ = [
+    "OPEN_GAME_EFFICIENCY",
     "OPEN_GAME_FEATURES",
     "OPEN_GAME_REWARD",
     "OpenArena",
@@ -64,14 +68,40 @@ __all__ = [
 
 #: Verdict tiers an evaluated candidate lands in, most valuable
 #: first — the reward composition is ``step`` (the eval cost) plus
-#: the tier the outcome earns.
+#: the tier the outcome earns, plus the ordering credit
+#: (:data:`OPEN_GAME_EFFICIENCY`) a ``useful`` verdict also pays.
+#:
+#: ``step`` is priced at ``-0.002`` — an order of magnitude below
+#: the ~0.02 expected tier of a candidate page — so a candidate that
+#: lands ``true`` (0.2) or ``useful`` (1.0) clearly out-earns the
+#: eval that found it: the marginal candidate is *not* break-even,
+#: and the reward is dominated by the verdict, not the eval count.
+#:
+#: Cheap evals alone do **not** make the game ordering-sensitive:
+#: draining the whole page nets the same ``Σ tier`` whatever the
+#: order.  The ordering signal is the efficiency credit below.
 OPEN_GAME_REWARD: dict[str, float] = {
-    "step": -0.02,
+    "step": -0.002,
     "known": 0.0,
     "false": 0.0,
     "true": 0.2,
     "useful": 1.0,
 }
+
+#: Coefficient on the per-find ordering credit ``1 / evals``.
+#:
+#: Each ``useful`` verdict also pays ``OPEN_GAME_EFFICIENCY /
+#: evals_spent`` — the paying laws found *per oracle eval so far*.
+#: That is the real objective the game prices, and paying it *per
+#: find* (not at the end) makes the reward order-sensitive for every
+#: policy: the same useful law found at eval 1 pays ten times the
+#: credit of one found at eval 10, so a player that ranks the paying
+#: shapes first — whether it then ``stop``s or drains the page —
+#: out-earns one that finds them late.  Summed over an episode it is
+#: the dense form of the yield-per-eval ratio a terminal
+#: ``useful / evals`` bonus would pay; the dense form is preferred
+#: because it prices the *ordering*, not just the stopping.
+OPEN_GAME_EFFICIENCY: float = 1.0
 
 #: The enumerator's rewriting forms — the ``a:form:*`` one-hot
 #: schema (labels carry ``"<form>:<n>"``).
@@ -237,6 +267,19 @@ class OpenArena:
             pool_size=len(self.pool),
         )
 
+    def _efficiency(self) -> float:
+        """Ordering credit for a useful law found at eval ``e``.
+
+        The find is worth ``OPEN_GAME_EFFICIENCY / e`` — the useful
+        laws found *per oracle eval spent so far*.  Paid the moment a
+        paying law lands (not at the end), so the reward is
+        order-sensitive for every policy, draining or stopping: the
+        same useful law found at eval 1 pays ten times the credit of
+        one found at eval 10.  Summed over an episode it is the
+        dense form of the yield-per-eval objective the game prices.
+        """
+        return OPEN_GAME_EFFICIENCY / self.steps
+
     def step(self, action: Any) -> tuple[OpenState, Any]:
         """Evaluate one candidate (``evaluate``) or end (``stop``)."""
         from catopt_discovery.engine import Report
@@ -257,8 +300,10 @@ class OpenArena:
         self.done = not any(
             j not in self.verdicts for j in range(len(self.pool))
         )
-        reward = OPEN_GAME_REWARD["step"] + OPEN_GAME_REWARD[verdict]
         self.steps += 1
+        reward = OPEN_GAME_REWARD["step"] + OPEN_GAME_REWARD[verdict]
+        if verdict == "useful":
+            reward += self._efficiency()
         return self.observe(), Report(
             action=action,
             reward=reward,

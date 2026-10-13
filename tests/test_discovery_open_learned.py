@@ -22,19 +22,35 @@ Two honest problems with the naive recipe, both handled here:
    useful in 584 candidates).  The even/odd split balances the two
    halves (8 useful train, 7 useful eval).
 
+The reward was recalibrated so the *ordering* pays.  The old table
+priced an eval at ``-0.02`` — the page's ~0.02 expected tier — so the
+marginal candidate was break-even and the metric rewarded *stopping*,
+not ranking.  Now ``step = -0.002`` (the verdict dominates) and each
+``useful`` verdict also pays an ordering credit
+``OPEN_GAME_EFFICIENCY / evals`` — the paying laws found per oracle
+eval so far.  A useful law found at eval 1 pays ten times one found at
+eval 10, so the same page in a better order scores strictly higher.
+
 The measured result (seed 0, deterministic under ``torch.manual_seed``):
 
-* the learned arm beats random on reward/episode, useful/episode and
-  useful/eval — and never loses to random across train seeds 0-5
-  (measured offline); the reward margin is modest (≈+0.05/episode)
-  because the game's per-eval cost is calibrated to the *average*
-  candidate, so ordering barely moves the episode total;
+* ``learned`` beats ``random`` on reward/episode, useful/episode and
+  useful/eval;
+* ``learned-greedy`` (ranks the whole page, then drains it) beats
+  ``random`` on reward/episode — its better ordering reaches the
+  paying laws earlier, which the credit pays more; a scripted
+  rank-first page beats the same page rank-last, and a rank-and-stop
+  arm beats the naive pool-order drain;
+* the cheap eval is a real trade-off, reported not hidden: a *ranked*
+  drain still outscores a rank-and-stop policy, because with each
+  eval worth ~0.018 in expectation the extra true-but-shallow finds
+  pay for themselves.  The reward prices the *ordering* — where the
+  paying laws are found — not a blanket preference for stopping;
 * the learned *ranking* (average precision) beats random but stays
   well below the cost-delta heuristic, which already finds every
-  useful candidate — so the honest verdict is "learned beats random,
+  useful candidate — the honest verdict is "learned beats random,
   heuristic still beats learned".
 
-A run is ~30 s (bounded): 36 training pages + 36 eval pages, 3 arms.
+A run is ~40 s (bounded): 36 training pages + 36 eval pages, 3 arms.
 """
 
 from __future__ import annotations
@@ -44,6 +60,7 @@ import torch
 from catopt_discovery import engine, play
 from catopt_discovery import open_game as og
 from catopt_discovery import proposal as lp
+from catopt_discovery.meta_arena import Action
 
 #: Page size — the episode horizon (budget = page + 1).
 PAGE = 16
@@ -81,6 +98,58 @@ def _play_arm(mk, ev: list[dict]) -> dict:
     }
 
 
+def _scripted(order_per_page: dict[int, list[int]]):
+    """A player that plays a fixed per-page order, then stops.
+
+    The order is a list of pool indices; ``stop`` is returned once
+    every index is evaluated.  Used to pin the reward's ordering
+    sensitivity: the *same* page drained in two orders, or drained
+    vs. stopped, must score differently.
+    """
+
+    def make(i: int):
+        order = order_per_page[i]
+
+        def player(state):
+            for j in order:
+                if j in state.pending:
+                    return Action(
+                        "evaluate", {"i": j, "cand": state.pool[j]}
+                    )
+            return Action("stop", {})
+
+        return player
+
+    return make
+
+
+def _rank_orders(
+    per_page: list[tuple[list, list[int]]],
+) -> dict[str, dict[int, list[int]]]:
+    """Build the scripted orderings over the useful-bearing pages.
+
+    ``first``/``last`` drain the whole page with the paying laws
+    ranked first/last (same set, same eval count — only the order
+    differs); ``stop`` evaluates the paying laws only; ``drain``
+    walks the page in pool order.
+    """
+    pages = [k for k, (_, useful) in enumerate(per_page) if useful]
+    orders: dict[str, dict[int, list[int]]] = {
+        "first": {},
+        "last": {},
+        "stop": {},
+        "drain": {},
+    }
+    for k, page in enumerate(pages):
+        cands, useful = per_page[page]
+        rest = [j for j in range(len(cands)) if j not in useful]
+        orders["first"][k] = useful + rest
+        orders["last"][k] = rest + useful
+        orders["stop"][k] = list(useful)
+        orders["drain"][k] = list(range(len(cands)))
+    return orders
+
+
 @pytest.fixture(scope="module")
 def measured() -> dict:
     """Train once, evaluate the arms, and rank the held-out pool."""
@@ -92,19 +161,30 @@ def measured() -> dict:
     table = {name: _play_arm(arms[name], ev) for name in arms}
     pool: list = []
     outcomes: dict = {}
+    per_page: list[tuple[list, list[int]]] = []
     for case in ev:
         st = og.OpenArena(case).observe()
         cands = list(st.pool)
         outs = lp.evaluate(cands)
+        per_page.append(
+            (cands, [i for i, o in enumerate(outs) if o.useful])
+        )
         for c, o in zip(cands, outs, strict=True):
             outcomes[len(pool)] = o
             pool.append(c)
     ranking = lp.rank_pool(pool, outcomes, scorer=player.rank_score)
+    orders = _rank_orders(per_page)
+    useful_pages = [ev[k] for k, (_, u) in enumerate(per_page) if u]
+    ordered = {
+        name: _play_arm(_scripted(order), useful_pages)
+        for name, order in orders.items()
+    }
     return {
         "player": player,
         "eval": ev,
         "table": table,
         "ranking": ranking,
+        "ordered": ordered,
     }
 
 
@@ -133,16 +213,72 @@ class TestHeldOutYield:
             >= t["random"]["useful_per_ep"]
         )
 
-    def test_greedy_finds_more_but_costs_more(self, measured):
-        """The honest counterweight: greedy evaluates the whole page,
-        finds *more* useful laws, yet scores *less* reward — the
-        per-eval cost dominates once the page is sparse."""
+    def test_learned_greedy_beats_random_on_reward(self, measured):
+        """The greedy ranking arm now out-earns random.
+
+        Under the old break-even reward the two tied (both drained
+        the page for ≈0); with the cheap eval and the ordering credit
+        the greedy arm's ranked drain finds the paying laws earlier
+        and scores strictly more.
+        """
+        t = measured["table"]
+        assert t["learned-greedy"]["reward"] > t["random"]["reward"]
+
+    def test_greedy_finds_more_and_scores_more(self, measured):
+        """The greedy arm drains the page — and now pays for it.
+
+        It finds at least as many useful laws as random and scores
+        more reward: with the eval cheap and the ordering credit
+        rewarding early finds, a ranked drain is no longer penalised
+        into a loss.
+        """
         t = measured["table"]
         assert (
             t["learned-greedy"]["useful_per_ep"]
             >= t["random"]["useful_per_ep"]
         )
-        assert t["learned-greedy"]["reward"] < t["random"]["reward"]
+        assert t["learned-greedy"]["reward"] > t["random"]["reward"]
+
+
+class TestOrderingSensitivity:
+    """The reward pays for *where* a useful law is found."""
+
+    def test_rank_first_drain_beats_rank_last(self, measured):
+        """Same page, same evals, better order — strictly more reward.
+
+        ``first`` and ``last`` evaluate the identical candidate set
+        (the whole page) for the identical eval count; only the
+        order differs, so the tier sum and the eval cost are equal
+        and the gap is exactly the ordering credit.
+        """
+        o = measured["ordered"]
+        assert o["first"]["evals_per_ep"] == o["last"]["evals_per_ep"]
+        assert o["first"]["found"] == o["last"]["found"]
+        assert o["first"]["reward"] > o["last"]["reward"]
+
+    def test_rank_and_stop_beats_draining_the_page(self, measured):
+        """Rank the paying laws, then stop — beats evaluating all.
+
+        ``stop`` evaluates only the paying candidates and ends; the
+        naive ``drain`` walks the whole page.  Same useful set, far
+        fewer evals, and the credit pays the early finds more.
+        """
+        o = measured["ordered"]
+        assert o["stop"]["found"] == o["drain"]["found"]
+        assert o["stop"]["evals_per_ep"] < o["drain"]["evals_per_ep"]
+        assert o["stop"]["reward"] > o["drain"]["reward"]
+
+    def test_ranked_drain_still_outscores_rank_and_stop(self, measured):
+        """The honest trade-off the cheap eval buys.
+
+        ``first`` ranks the paying laws first and *keeps going*: it
+        banks the true-but-shallow tiers the ``stop`` arm skips, and
+        with each eval worth ~0.018 in expectation that pays.  The
+        reward prices the ordering, not a blanket preference for
+        stopping — a policy that stops is not automatically rewarded.
+        """
+        o = measured["ordered"]
+        assert o["first"]["reward"] > o["stop"]["reward"]
 
 
 class TestRanking:
