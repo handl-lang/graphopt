@@ -38,6 +38,7 @@ Measured on the dev box (RTX 2050, fp64, small sizes — see
 | `chainfuse` — laws + a kernel minted mid-search | **2.94×** |
 | llama-style SwiGLU MLP | **2.11×** |
 | held-out model zoo (22 architectures) | **11/18 verified wins**, best 2.18× |
+| spelled RetNet export, T=512 — derived chunked carrier | **1.82–2.33×** |
 | joint fwd+bwd step vs `torch.autograd` | **+13%** |
 | pure pointwise fusion | **0.82× loss** — Inductor's home turf |
 
@@ -58,8 +59,9 @@ universal speedup.
   mid-search; `claim` can bind a minted elementwise pattern to a
   *generated Triton kernel* and deliver it.
 - **The machine derives the algorithm.** On a spelled RetNet export the
-  e-graph derives the chunked-scan recurrence itself — the sequential
-  O(T·C) carrier is a *member* of the saturated graph, not a hand-written
+  e-graph derives the chunked recurrence itself — the cross-block
+  carrier is a *member* of the saturated graph, and extraction
+  *prefers* it at T=512 (29.4M vs 39.1M FLOPs) — not a hand-written
   template.
 - **Four independent dimensions** — semantics / search / evaluation /
   execution. Cost models never change semantics; policies never decide
