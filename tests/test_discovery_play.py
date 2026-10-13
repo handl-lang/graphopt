@@ -531,8 +531,7 @@ class TestZooProbe:
 class TestScanSites:
     """The scan tier's site collector — carriers post-saturation."""
 
-    def test_scan_sites_harvests_applyd_members(self):
-        pytest.importorskip("torch")
+    def _folded_term(self):
         from catopt_core.ir import Op, TensorType, Var
 
         def v(n, *s):
@@ -541,22 +540,132 @@ class TestScanSites:
         g = v("g")
         b0 = v("b0", 3, 6)
         b1 = v("b1", 3, 6)
-        term = Op.make(
+        return Op.make(
             "add",
             Op.make("mul", Op.make("pow", g, 8), b0),
             Op.make("mul", Op.make("pow", g, 4), b1),
         )
-        sites = play._scan_sites(term)
+
+    def test_scan_sites_harvests_applyd_members(self):
+        pytest.importorskip("torch")
+        sites = play._scan_sites(self._folded_term())
         assert sites, "the fold should mint an applyd site"
         from catopt_discovery import genkernel as gk
 
         for s in sites:
-            assert s[0] == "applyd"
-            assert s[-1] == {"kind": "unrolled"}
+            spec = s["spec"]
+            assert spec[0] == "applyd"
+            assert spec[-1] == {"kind": "unrolled"}
             # the state slot is abstracted to a metavar
-            assert isinstance(s[2], str)
-            info = gk.scan_spec(s)
+            assert isinstance(spec[2], str)
+            info = gk.scan_spec(spec)
             assert info is not None and info["kind"] == "unrolled"
+            # every spec metavar carries its decoded leaf binding
+            assert set(s["leaf_env"]) == set(gk._spec_metas(spec))
+
+    def test_scan_site_leaf_env_evals_the_member(self):
+        # the recorded env binds each metavar to its decoded
+        # subterm; the spec spelled under it IS the member — which
+        # saturation proved equal to the source term
+        torch = pytest.importorskip("torch")
+        import catopt_torch.torch_bridge as tb
+
+        from catopt_discovery import genkernel as gk
+
+        sites = play._scan_sites(self._folded_term())
+        assert sites
+        var_env = {
+            "g": torch.tensor(0.9),
+            "b0": torch.randn(3, 6),
+            "b1": torch.randn(3, 6),
+        }
+        bindings = tb._IR_TO_TORCH
+        for s in sites:
+            vals = {
+                m: gk._bound_val(t, var_env, bindings)
+                for m, t in s["leaf_env"].items()
+            }
+            got = gk._eval_spec(s["spec"], vals, bindings)
+            want = var_env["g"] ** 4 * var_env["b1"] + (
+                var_env["g"] ** 8 * var_env["b0"]
+            )
+            torch.testing.assert_close(got, want)
+
+    def test_scan_handlers_carry_leaf_env(self):
+        pytest.importorskip("torch")
+        from catopt_discovery import genkernel as gk
+
+        hs = gk.scan_handlers(play._scan_sites(self._folded_term()))
+        assert hs
+        for h in hs.values():
+            assert set(h["leaf_env"]) == set(h["args"])
+
+    def test_profitable_measures_scan_claims(self):
+        # the referee binds the recorded env — a scan claim minted
+        # post-saturation verifies against its spelled body, which
+        # _site_env could never locate in the raw IR
+        torch = pytest.importorskip("torch")
+        from catopt_discovery import genkernel as gk
+
+        term = self._folded_term()
+        hs = gk.scan_handlers(play._scan_sites(term))
+        var_env = {
+            "g": torch.tensor(0.9),
+            "b0": torch.randn(3, 6),
+            "b1": torch.randn(3, 6),
+        }
+        keep = gk.profitable(
+            hs,
+            term,
+            var_env,
+            reps=2,
+            margin=1e9,  # huge margin: kept iff the env bound+verified
+            kernel_for=play._triton_kernel_for,
+        )
+        assert keep == hs
+
+    def test_profitable_scan_claim_measures_cuda_kernel(self):
+        # on a CUDA host the referee times the generated Triton
+        # carrier kernel itself — all-tensor metas reach it
+        torch = pytest.importorskip("torch")
+        pytest.importorskip("triton")
+        if not torch.cuda.is_available():
+            pytest.skip("needs cuda for triton")
+        from catopt_core.ir import Op, TensorType, Var
+
+        from catopt_discovery import genkernel as gk
+
+        def v(n, *s):
+            return Var(n, TensorType(s))
+
+        a, x, h = v("a", 8), v("x", 8), v("h", 8)
+        hs = {
+            "s": {
+                "pattern": (
+                    "applyd",
+                    ("aff_diag", "A", "X"),
+                    "H",
+                    {"kind": "unrolled"},
+                ),
+                "kernel": "sc_ref",
+                "args": ("A", "X", "H"),
+                "leaf_env": {"A": a, "X": x, "H": h},
+            }
+        }
+        var_env = {
+            "a": torch.rand(8) * 0.4 + 0.4,
+            "x": torch.randn(8),
+            "h": torch.randn(8),
+        }
+        keep = gk.profitable(
+            hs,
+            Op.make("applyd", Op.make("aff_diag", a, x), h),
+            var_env,
+            reps=2,
+            margin=1e9,
+            kernel_for=play._triton_kernel_for,
+        )
+        assert keep == hs
 
     def test_scan_sites_empty_without_carriers(self):
         pytest.importorskip("torch")

@@ -308,6 +308,44 @@ def _site_env(spec: Any, term: Any) -> dict | None:
     return None
 
 
+def _bound_val(leaf: Any, var_env: dict, bindings: dict) -> Any:
+    """Evaluate one bound metavar leaf under *var_env*.
+
+    IR subterms evaluate through :func:`eval_term`; bound literals
+    (a raw ``pow`` exponent, a shape int — non-term leaves a spec
+    metavar may legally bind) pass through unchanged — the spelled
+    body's binding consumes the scalar directly.
+    """
+    from catopt_core.ir import Const, Op, Param, Var
+    from catopt_torch.torch_bridge import eval_term
+
+    if isinstance(leaf, (Op, Var, Const, Param)):
+        return eval_term(
+            leaf,
+            var_env=var_env,
+            param_env=var_env,
+            bindings=bindings,
+            strict=True,
+        )
+    return leaf
+
+
+def _handler_env(h: dict, term: Any) -> dict | None:
+    """Resolve the metavar→leaf map the referee evaluates.
+
+    A ``"leaf_env"`` entry wins when present — handlers minted from
+    saturated-graph sites carry the recorded binding because the
+    occurrence exists only inside the collector's throwaway
+    e-graph, so no raw-IR match can ever rebind it.  Every other
+    handler falls back to the first concrete occurrence of its
+    pattern in the term.
+    """
+    leaf = h.get("leaf_env")
+    if leaf:
+        return leaf
+    return _site_env(h["pattern"], term)
+
+
 def _referee_kernel(
     kernel_for: Any, name: str, h: dict, vals: dict, kerneled: Any
 ) -> tuple:
@@ -375,10 +413,14 @@ def profitable(
     the ``torch.compile``d spelled body (the pointwise path's own
     delivery).  The referee times and verifies *that* callable, so
     a tier is credited only what it would actually ship.
+
+    Handlers minted from saturated-graph sites carry ``"leaf_env"``
+    — the metavar→subterm map recorded at harvest; the referee
+    evaluates it directly (:func:`_handler_env`), since the
+    occurrence lives only in the collector's throwaway e-graph.
     """
     import catopt_torch.torch_bridge as tb
     import torch
-    from catopt_torch.torch_bridge import eval_term
 
     # measurement integrity — see gen_probe: per-handler compiled
     # fns would exhaust dynamo's default recompile limit (8) and
@@ -389,18 +431,12 @@ def profitable(
     bindings = tb._IR_TO_TORCH
     keep: dict[str, dict] = {}
     for name, h in handlers.items():
-        env = _site_env(h["pattern"], term)
+        env = _handler_env(h, term)
         if env is None:
             continue
         try:
             vals = {
-                k: eval_term(
-                    v,
-                    var_env=var_env,
-                    param_env=var_env,
-                    bindings=bindings,
-                    strict=True,
-                )
+                k: _bound_val(v, var_env, bindings)
                 for k, v in env.items()
             }
         except Exception:
@@ -1255,6 +1291,19 @@ def _canon_taken(pattern: Any, out: dict, skip: set) -> bool:
     )
 
 
+def _site_parts(item: Any) -> tuple:
+    """Split a site-collector item into ``(term_or_spec, extra)``.
+
+    Collectors return plain specs/terms — or ``{"spec": ...,
+    "leaf_env": ...}`` records when the site exists only post-
+    saturation.  *extra* merges verbatim into the minted entry so
+    the recorded metavar binding reaches the referee.
+    """
+    if isinstance(item, dict):
+        return item["spec"], {"leaf_env": item.get("leaf_env")}
+    return item, {}
+
+
 def scan_handlers(
     terms: list, *, axis: int | None = -2, covered: set | None = None
 ) -> dict:
@@ -1267,7 +1316,10 @@ def scan_handlers(
     form (an ``affd_compose`` tree, e.g. what ``affd_scan2_lift`` /
     ``affd_scan4_lift`` leave behind).  ``axis`` is recorded in the
     entry as the declared step axis; ``None`` defers to call-time
-    derivation.
+    derivation.  A ``{"spec", "leaf_env"}`` site record merges its
+    ``leaf_env`` into the entry — the recorded metavar binding the
+    referee evaluates, since the occurrence lives only in the
+    collector's throwaway e-graph.
 
     The caller owns the semantics check for the sequence form: the
     minted ``scan_<i>_k`` op's declared meaning is the fold, so the
@@ -1279,6 +1331,7 @@ def scan_handlers(
     skip = covered if covered is not None else set()
     out: dict[str, dict] = {}
     for term in terms:
+        term, extra = _site_parts(term)
         pattern = (
             term
             if isinstance(term, (tuple, list))
@@ -1295,6 +1348,7 @@ def scan_handlers(
             "kernel": f"{tag}_k",
             "args": tuple(_spec_metas(pattern)),
             "axis": axis,
+            **extra,
         }
     return out
 

@@ -18,6 +18,7 @@ from catopt_carriers.om import (  # noqa: E402
     DECAY_VEC_OFFSET,
     MATMUL_COL_DECAY,
     MATMUL_SCALAR_FACTOR,
+    OM_CHUNKIFY,
     OM_DECAYED_CHUNKIFY_KEYS,
     OM_DECAYED_CHUNKIFY_ROWS,
     OM_DECAYED_CROSS,
@@ -374,7 +375,7 @@ class TestComposition:
         eg = EGraph()
         root = eg.add_term(site)
         eg.run(
-            OM_LAWS,
+            list(OM_LAWS) + list(OM_CHUNKIFY),
             root,
             max_iterations=8,
             rule_budgets={
@@ -939,7 +940,7 @@ class TestRealExportFold:
         from catopt_core.laws.tensor import SPLIT_SCALAR_RULES
 
         eg.run(
-            list(OM_LAWS) + list(SPLIT_SCALAR_RULES),
+            list(OM_LAWS) + list(OM_CHUNKIFY) + list(SPLIT_SCALAR_RULES),
             root,
             max_iterations=12,
             max_nodes=100_000,

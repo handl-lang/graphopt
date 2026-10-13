@@ -120,6 +120,38 @@ _LAUNCH_PENALTY = 1.0
 _INVALID_COST = 1e15
 
 
+def _applyd_flops(term: Op, n_out: int, memo: dict | None) -> float:
+    """FLOPs of ``applyd(f, h)`` — ``f₀⊙h + f₁`` as one node.
+
+    Mul + add, elementwise over the broadcast of the map's scale
+    part, ``h`` and the contribution — the three-factor broadcast
+    ``catopt_carriers.xcarrier._xshape`` reports for the value shape.
+    The contribution slot is reachable only on a bare ``aff_diag``
+    map; other map spellings (``affd_compose`` trees, opaque maps)
+    price on the convention (scale-part) shape the ``applyd`` shape
+    rule itself reports.  Reaching this helper means neither direct
+    operand is ``_INVALID`` (``_flops_of`` priced that already), but
+    the broadcast can still prove ill-typed — including against a
+    contribution the convention shape hides.
+    """
+    if len(term.args) != 2:
+        return float(2 * n_out)
+    f, h = term.args
+    out = _broadcast(_shape_of(f, memo), _shape_of(h, memo))
+    if (
+        out is not _INVALID
+        and isinstance(f, Op)
+        and f.op == "aff_diag"
+        and len(f.args) == 2
+    ):
+        out = _broadcast(out, _shape_of(f.args[1], memo))
+    if out is _INVALID:
+        return _INVALID_COST
+    if isinstance(out, tuple) and out:
+        return float(2 * _numel(out))
+    return float(2 * n_out)
+
+
 def _om_decayed_flops(term: Op, n_out: int, memo: dict | None) -> float:
     """FLOPs of ``om_decayed(s, d, v)`` — the spelled work as one node.
 
@@ -190,8 +222,21 @@ def _flops_of(term: Op, memo: dict | None = None) -> float:
                 k //= g
             return float(2 * n_out * k)
         return float(2 * n_out)
-    if term.op == "aff":
-        # Packaging a pair — no runtime work.
+    if term.op in (
+        # Carrier packaging — assembling the carried pair/triple/
+        # quadruple — and the pair-slot projections (f[0]/f[1] tuple
+        # indexing under the torch bindings).  No runtime work: the
+        # members' own subtrees already carry the cost (the fusion
+        # model's _FUSION_TRANSPARENT_OPS counts no kernel either).
+        "aff",
+        "aff_diag",
+        "om",
+        "omd",
+        "affd_a",
+        "affd_b",
+        "aff_A",
+        "aff_b",
+    ):
         return 0.0
     if term.op == "aff_compose":
         # (A2,b2)∘(A1,b1) = (A2·A1, A2·b1 + b2): one d×d matmul,
@@ -218,19 +263,12 @@ def _flops_of(term: Op, memo: dict | None = None) -> float:
         ):
             return float(2 * n_out * f[-1])
         return float(2 * n_out)
-    if term.op == "aff_diag":
-        # Packaging a diagonal pair — no runtime work.
-        return 0.0
     if term.op == "affd_compose":
         # (a2,b2)∘(a1,b1) = (a2⊙a1, a2⊙b1 + b2): mul + mul + add, all
         # elementwise ≈ 3·n_out — O(d), not the dense carrier's O(d³).
         return float(3 * n_out)
     if term.op == "applyd":
-        # f₀⊙h + f₁: mul + add ≈ 2·n_out.
-        return float(2 * n_out)
-    if term.op == "om":
-        # Packaging the (m, l, a) triple — no runtime work.
-        return 0.0
+        return _applyd_flops(term, n_out, memo)
     if term.op == "om_elem":
         # rowmax + (s−m) + exp + rowsum ≈ 3·numel(s), plus the
         # exp(s−m) @ v GEMM at 2·n_out·K (K = scores' last dim).

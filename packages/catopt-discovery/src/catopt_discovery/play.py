@@ -394,8 +394,15 @@ def _scan_sites(term: Any) -> list:
     and harvests every ``applyd`` member's decoded spec, pinned
     ``kind=unrolled`` — the machine-folded carriers' ambient
     reading, not the fold-over-steps variant the seq form declares.
+
+    Each site is a ``{"spec": ..., "leaf_env": ...}`` record: the
+    leaf env binds every spec metavar — the abstracted leaves AND
+    the abstracted state — to the decoded subterm it stands for.
+    The member the spec came from exists only inside this
+    throwaway graph, so no raw-IR match can ever rebind it; the
+    record carries the binding the referee needs.
     """
-    from catopt_carriers.om import OM_LAWS
+    from catopt_carriers.om import OM_CHUNKIFY, OM_LAWS
     from catopt_core.egraph import EGraph
     from catopt_core.laws.tensor import SPLIT_SCALAR_RULES
 
@@ -404,7 +411,7 @@ def _scan_sites(term: Any) -> list:
     eg = EGraph()
     root = eg.add_term(term)
     eg.run(
-        list(OM_LAWS) + list(SPLIT_SCALAR_RULES),
+        list(OM_LAWS) + list(OM_CHUNKIFY) + list(SPLIT_SCALAR_RULES),
         root,
         max_iterations=10,
         max_nodes=60_000,
@@ -426,19 +433,40 @@ def _scan_sites(term: Any) -> list:
             if not isinstance(f_term, Op):
                 continue
             names: dict = {}
+            f_spec = _spec_of(f_term, names)
+            leaf_env = _spec_leaf_env(f_term, names)
             # the state abstracts to a metavar — the handler's
             # pattern is ``applyd(<map>, X_h)`` over ANY state;
-            # whatever the fold produced there binds at match time
-            spec = (
-                "applyd",
-                _spec_of(f_term, names),
-                f"X{len(names) + 1}",
-                {"kind": "unrolled"},
-            )
-            if any(spec == s for s in out):  # dicts are unhashable
+            # whatever the fold produced there is recorded too
+            state = f"X{len(names) + 1}"
+            leaf_env[state] = member.args[1]
+            spec = ("applyd", f_spec, state, {"kind": "unrolled"})
+            if any(spec == s["spec"] for s in out):
                 continue
-            out.append(spec)
+            out.append({"spec": spec, "leaf_env": leaf_env})
     return out
+
+
+def _spec_leaf_env(term: Any, names: dict) -> dict:
+    """Bind each metavar ``_spec_of`` minted to its leaf subterm.
+
+    The inverse of leaf abstraction: every non-``Op``/non-``Const``
+    leaf maps to ``names[repr(leaf)]`` — the env a spec harvested
+    post-saturation carries so its metavars evaluate without a
+    match (``eval_term`` on the term, the literal itself on a raw
+    scalar leaf like a ``pow`` exponent).
+    """
+    env: dict = {}
+
+    def walk(t: Any) -> None:
+        if isinstance(t, Op):
+            for a in t.args:
+                walk(a)
+        elif not isinstance(t, Const):
+            env[names[repr(t)]] = t
+
+    walk(term)
+    return env
 
 
 def _carrier_member(eg: Any, node: Any, carrier_ops: tuple) -> Any:

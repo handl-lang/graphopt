@@ -2795,12 +2795,21 @@ OM_LAWS: list[Rewrite] = [
     UNSQ_MUL,
     _decay_state_lift("decay_state_lift", True),
     _decay_state_lift("decay_state_lift_post", False),
-    OM_DECAYED_CHUNKIFY_ROWS,
-    OM_DECAYED_CHUNKIFY_KEYS,
     SPLIT_MATMUL_ROWS,
     SPLIT_MATMUL_COLS,
     SPLIT_TRANSPOSE,
     SPLIT_COMMUTE,
+]
+
+#: The recursive bisection pair — split-introduction on a fused
+#: ``om_decayed`` site.  These CREATE splits: an unbounded
+#: saturation bisects every chunk again, so they stay out of the
+#: everyday ``OM_LAWS`` set.  Sites that want the chunked space
+#: opt in explicitly (``OM_LAWS + OM_CHUNKIFY``) and price the
+#: search with ``rule_budgets``.
+OM_CHUNKIFY: list[Rewrite] = [
+    OM_DECAYED_CHUNKIFY_ROWS,
+    OM_DECAYED_CHUNKIFY_KEYS,
 ]
 
 #: The same set as a composable :class:`~catopt_core.laws.RuleSet` —
