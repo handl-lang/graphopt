@@ -43,6 +43,19 @@ human table, and the tool says which it believes it is.  The test is
 ``derive_vocabulary()`` is the seam the pipeline reads
 (``law_pipeline --vocab derived``).
 
+The second half of the module is the *need* side of the same question
+(plan 0024 part B): the op-classification half reads the vocabulary a
+corpus *has*, and :func:`detect_need` / :func:`propose_atom` /
+:func:`scan_needs` read the vocabulary the derive bank *lacks*.  Given
+a procedural ``derive`` that ``dspec_synth`` refuses, :func:`detect_need`
+probes each candidate bank op in a local bank copy and reports the one
+that would unblock it (``agreement_gain``, ``rules_blocked``);
+:func:`propose_atom` turns that into a ``declare``-shaped proposal — a
+minted atom as data, **not** an auto-admission (ADR 0005: proposing is
+machine work, admitting stays gated); :func:`scan_needs` runs the whole
+carrier law set and ranks the missing ops by how many rules each would
+unblock.
+
 Run::
 
     .venv/bin/python -m catopt_discovery.vocab
@@ -56,13 +69,16 @@ from __future__ import annotations
 import argparse
 import json
 from dataclasses import dataclass, field
+from itertools import product
 from pathlib import Path
 from typing import Any
 
 import torch
 from catopt_core.ir import Op, TensorType, Var
+from catopt_core.laws.cond import _DOPS, _Decline
 from catopt_core.typing import _shape_of
 
+from catopt_discovery import dspec_synth as _dsp
 from catopt_discovery.census import _iter_subterms
 
 # ``law_impact`` / ``law_shape_census`` own the corpus; reuse them so
@@ -71,12 +87,18 @@ from catopt_discovery.impact import _bench_cases, model_cases
 from catopt_discovery.proposal import _allclose
 
 __all__ = [
+    "CANDIDATE_OPS",
+    "AtomNeed",
+    "CandidateOp",
     "OpClass",
     "Vocabulary",
     "classify",
     "corpus_ops",
     "derive_vocabulary",
+    "detect_need",
     "main",
+    "propose_atom",
+    "scan_needs",
     "validate",
 ]
 
@@ -638,6 +660,399 @@ def main(argv: list[str] | None = None) -> int:
         _dump_json(args.json, vocab, val)
         print(f"wrote {args.json}")  # stdout-compat
     return 0
+
+
+# ---------------------------------------------------------------------------
+#  Need detection — the vocabulary the derive bank LACKS (plan 0024 B)
+#
+#  ``dspec_synth`` refuses a procedural derive when no expression in the
+#  bank reproduces its measured outputs; the refusal names a gap.  This
+#  half of the module turns that refusal into a *finding*: which bank op
+#  would make the derive expressible (a targeted probe over a local bank
+#  copy), and — for a whole rule set — the ranked backlog of missing
+#  ops.  A proposal is data, never an admission (ADR 0005).
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class CandidateOp:
+    """A bank op the synthesizer could gain — the probe's hypothesis."""
+
+    name: str
+    arity: int
+    #: The observable semantics a declared atom would carry.
+    semantics: str
+    #: When the op declines (its strictness contract).
+    decline: str
+
+
+#: The arity-2 int ops the derive bank could gain.  ``pow`` is pinned
+#: by the refusal tests (``2 ** a``); ``mod`` is the axis-normalisation
+#: ``dim % rank`` a carrier-aware derive spells.  Both are ``_DOPS``
+#: members, so the probe's value function is the shipped handler — one
+#: semantics, no drift.
+CANDIDATE_OPS: tuple[CandidateOp, ...] = (
+    CandidateOp(
+        "pow",
+        2,
+        "base ** exp  (int ** int, exp >= 0)",
+        "non-int operand / negative exponent / oversized result",
+    ),
+    CandidateOp(
+        "mod",
+        2,
+        "a % b  (int % int)",
+        "non-int operand / zero divisor",
+    ),
+)
+
+
+@dataclass(frozen=True)
+class AtomNeed:
+    """A measured vocabulary gap: the bank op a refused derive needs.
+
+    ``agreement_gain`` is how many more samples the probe reproduces
+    with the op than the shipped bank reaches alone; ``rules_blocked``
+    names the rules the op makes *fully* expressible (a valid, held-out
+    fit) — empty when the op only narrows the gap.
+    """
+
+    op: str
+    agreement_gain: int
+    rules_blocked: tuple[str, ...]
+    before: int = 0
+    after: int = 0
+    samples: int = 0
+
+    def to_data(self) -> dict[str, Any]:
+        """Return the finding as JSON-safe data."""
+        return {
+            "op": self.op,
+            "agreement_gain": self.agreement_gain,
+            "rules_blocked": list(self.rules_blocked),
+            "before": self.before,
+            "after": self.after,
+            "samples": self.samples,
+        }
+
+
+def _candidate(op: str) -> CandidateOp:
+    """Return the :class:`CandidateOp` named *op* (``ValueError`` else)."""
+    for c in CANDIDATE_OPS:
+        if c.name == op:
+            return c
+    raise ValueError(f"unknown candidate op: {op!r}")
+
+
+def _candidate_value(op: str):
+    """Return the value-level fn for bank op *op* — ``None`` on decline.
+
+    The op is evaluated through its shipped ``_DOPS`` handler with the
+    two operands bound as literals, so the probe's semantics is exactly
+    the bank's (the ``_vbin`` value-level twin, for an op the
+    synthesizer's ``BINOPS`` does not carry).
+    """
+    handler = _DOPS[op]
+
+    def value(a: Any, b: Any) -> Any:
+        try:
+            return handler((("lit", a), ("lit", b)), {})
+        except _Decline:
+            return None
+
+    return value
+
+
+def _uses_op(expr: Any, op: str) -> bool:
+    """Return whether *expr* mentions *op* anywhere in its tree."""
+    if not isinstance(expr, tuple):
+        return False
+    return expr[0] == op or any(_uses_op(a, op) for a in expr[1:])
+
+
+def _agreement(sig: tuple, samples: list[tuple]) -> int:
+    """Count the samples *sig* reproduces exactly."""
+    return sum(
+        1 for v, (_b, e) in zip(sig, samples, strict=True) if v == e
+    )
+
+
+def _bin_level(level: list[tuple], op: str, apply: Any) -> list[tuple]:
+    """One level of arity-2 compositions over *level* (plus *op*)."""
+    out: list[tuple] = []
+    for o in (*_dsp.BINOPS, op):
+        for (ea, sa), (eb, sb) in product(level, level):
+            out.append(
+                (
+                    (o, ea, eb),
+                    tuple(
+                        apply(o, a, b)
+                        for a, b in zip(sa, sb, strict=True)
+                    ),
+                )
+            )
+    return out
+
+
+def _unary_level(level: list[tuple]) -> list[tuple]:
+    """One level of arity-1 and ``len`` compositions over *level*."""
+    out: list[tuple] = []
+    for o in _dsp.UNOPS:
+        for ea, sa in level:
+            out.append(((o, ea), tuple(_dsp._vun(o, a) for a in sa)))
+    for ea, sa in level:
+        out.append((("len", ea), tuple(_dsp._vlen(a) for a in sa)))
+    return out
+
+
+def _candidates_with(
+    op: str, samples: list[tuple], *, max_depth: int
+) -> list[tuple]:
+    """Enumerate ``(expr, sig)`` over the bank plus one extra arity-2 op.
+
+    The local bank copy the probe reads: ``dspec_synth``'s enumerator
+    with *op* joined to its ``BINOPS``, so a candidate that needs the
+    op at any depth ≤ *max_depth* is reachable.  Deduped by value
+    fingerprint exactly as the shipped enumerator is.
+    """
+    value = _candidate_value(op)
+
+    def apply(o: str, a: Any, b: Any) -> Any:
+        return value(a, b) if o == op else _dsp._vbin(o, a, b)
+
+    bound = samples[0][0]
+    values = {v for _b, v in samples}
+    level = _dsp._dedupe(
+        [
+            (e, _dsp._signature(e, samples))
+            for e in _dsp._leaves(bound, values)
+        ]
+    )
+    out = list(level)
+    for _ in range(max_depth):
+        nxt = _dsp._dedupe(
+            _bin_level(level, op, apply) + _unary_level(level)
+        )
+        out.extend(nxt)
+        level = nxt
+    return out
+
+
+def _probe_op(
+    op: str, samples: list[tuple], *, max_depth: int
+) -> tuple[int, bool]:
+    """Probe one candidate op: best agreement and whether it fully fits.
+
+    *fitted* is True iff some op-using candidate is a valid fit —
+    reproduces every sample on both the even/odd halves and reads a
+    bound value (``dspec_synth``'s own acceptance test), so a
+    degenerate constant never counts as an unblock.
+    """
+    fit = range(0, len(samples), 2)
+    holdout = range(1, len(samples), 2)
+    best = 0
+    fitted = False
+    for expr, sig in _candidates_with(op, samples, max_depth=max_depth):
+        if not _uses_op(expr, op):
+            continue
+        best = max(best, _agreement(sig, samples))
+        if not fitted and _dsp._reproduces(
+            expr, sig, samples, fit, holdout
+        ):
+            fitted = True
+    return best, fitted
+
+
+def _hook_and_name(rule_or_hook: Any) -> tuple[Any, str]:
+    """Return ``(derive_hook, name)`` for a rule or a bare hook."""
+    derive = getattr(rule_or_hook, "derive", None)
+    if derive is not None and getattr(rule_or_hook, "name", None):
+        return derive, rule_or_hook.name
+    if callable(rule_or_hook):
+        return rule_or_hook, getattr(rule_or_hook, "__name__", "hook")
+    raise ValueError(f"not a rule or a hook: {rule_or_hook!r}")
+
+
+def detect_need(
+    rule_or_hook: Any, domain: list[dict], *, max_depth: int = 2
+) -> AtomNeed | None:
+    """Characterize the vocabulary gap that blocks a procedural derive.
+
+    *rule_or_hook* is a :class:`Rewrite` (its ``derive`` and ``name``
+    are read) or a bare ``derive``-shaped callable.  *domain* is the
+    binding environments to measure over.  Returns the
+    :class:`AtomNeed` naming the candidate op with the largest
+    agreement gain — or ``None`` when the derive is already expressible
+    (``dspec_synth`` finds a spec), too thinly sampled to fit, or no
+    candidate op helps.  This *characterizes* a need; it admits nothing.
+    """
+    hook, name = _hook_and_name(rule_or_hook)
+    samples = _dsp.samples_from_hook(hook, list(domain))
+    if len(samples) < _dsp.MIN_SAMPLES:
+        return None
+    if _dsp.synth_dspec(samples, max_depth=max_depth) is not None:
+        return None
+    before = _baseline(samples, max_depth=max_depth)
+    found: list[AtomNeed] = []
+    for cand in CANDIDATE_OPS:
+        after, fitted = _probe_op(
+            cand.name, samples, max_depth=max_depth
+        )
+        if after <= before:
+            continue
+        found.append(
+            AtomNeed(
+                op=cand.name,
+                agreement_gain=after - before,
+                rules_blocked=(name,) if fitted else (),
+                before=before,
+                after=after,
+                samples=len(samples),
+            )
+        )
+    if not found:
+        return None
+    return max(found, key=lambda n: (n.agreement_gain, n.op))
+
+
+def _baseline(samples: list[tuple], *, max_depth: int) -> int:
+    """Best agreement the shipped bank already reaches (0 if none)."""
+    near = _dsp._near_misses(samples, max_depth=max_depth, k=1)
+    return near[0][1] if near else 0
+
+
+#: Input pairs the observable-semantics probe evaluates (small ints).
+_PROBE_INPUTS: tuple[tuple[int, int], ...] = (
+    (2, 3),
+    (3, 2),
+    (5, 0),
+    (7, 3),
+    (0, 4),
+)
+
+
+def _observations(op: str) -> list[dict[str, Any]]:
+    """Return the op's ``{in, out}`` pairs — its observable semantics.
+
+    Evaluated through the shipped ``_DOPS`` handler on real ints, so a
+    proposal carries *what the atom computes*, not just a docstring
+    (``None`` marks a decline — the strictness contract).
+    """
+    value = _candidate_value(op)
+    return [
+        {"in": [a, b], "out": value(a, b)} for a, b in _PROBE_INPUTS
+    ]
+
+
+def propose_atom(need: AtomNeed) -> dict[str, Any]:
+    """Emit a ``declare``-shaped proposal for *need*'s missing op.
+
+    The vocabulary-minting path as data: the op becomes a declared atom
+    with an observable semantics, wrapped in the ``declare`` move's
+    shape (``{"op": "declare", "params": {...}}``) and carrying the
+    measured evidence.  ``admitted`` is always ``False`` — proposing is
+    machine work, admitting stays gated (ADR 0005); a human or the
+    gauntlet acts on the proposal, it does not auto-land.
+    """
+    decl = _candidate(need.op)
+    return {
+        "op": "declare",
+        "params": {
+            "construction": {
+                "op": "atom",
+                "params": {
+                    "kind": "derive-bank-op",
+                    "name": decl.name,
+                    "arity": decl.arity,
+                    "semantics": decl.semantics,
+                    "decline": decl.decline,
+                    "observable": _observations(decl.name),
+                },
+            },
+            "unfold": False,
+        },
+        "evidence": need.to_data(),
+        "admitted": False,
+    }
+
+
+def scan_needs(
+    rules: Any,
+    *,
+    corpus: Any = (),
+    synth_limit: int = 60,
+    max_depth: int = 2,
+    deadline: float | None = None,
+    max_rules: int | None = None,
+    measure: Any = None,
+) -> list[AtomNeed]:
+    """Rank the missing bank ops by how many rules each would unblock.
+
+    *rules* is an iterable of :class:`Rewrite`; every residual
+    procedural derive (``dspec is None`` with a ``derive`` hook) is
+    measured over its domain (``object_synthesis._measure_domain``, or
+    an injected *measure* of the same shape) and probed.  The per-op
+    needs are aggregated — ``rules_blocked`` unions the rules an op
+    fully unblocks, ``agreement_gain`` sums the gains — and sorted by
+    unblock count then gain.  *deadline* (seconds) and *max_rules*
+    bound the scan; a partial result is honest.
+    """
+    import time
+
+    if measure is None:
+        from catopt_discovery import object_synthesis as osyn
+
+        measure = osyn._measure_domain
+
+    start = time.monotonic()
+    found: list[AtomNeed] = []
+    seen = 0
+    for rule in rules:
+        if max_rules is not None and seen >= max_rules:
+            break
+        if (
+            deadline is not None
+            and time.monotonic() - start >= deadline
+        ):
+            break
+        if (
+            getattr(rule, "dspec", None) is not None
+            or getattr(rule, "derive", None) is None
+        ):
+            continue
+        seen += 1
+        dom = measure(rule, corpus, synth_limit)
+        need = detect_need(
+            rule, [env for env, _outcome in dom], max_depth=max_depth
+        )
+        if need is not None:
+            found.append(need)
+    return _rank_needs(found)
+
+
+def _rank_needs(needs: list[AtomNeed]) -> list[AtomNeed]:
+    """Aggregate per-rule needs into a per-op ranked backlog."""
+    groups: dict[str, list[AtomNeed]] = {}
+    for n in needs:
+        groups.setdefault(n.op, []).append(n)
+    ranked: list[AtomNeed] = []
+    for op, group in groups.items():
+        ranked.append(
+            AtomNeed(
+                op=op,
+                agreement_gain=sum(n.agreement_gain for n in group),
+                rules_blocked=tuple(
+                    sorted({r for n in group for r in n.rules_blocked})
+                ),
+                before=sum(n.before for n in group),
+                after=sum(n.after for n in group),
+                samples=sum(n.samples for n in group),
+            )
+        )
+    ranked.sort(
+        key=lambda n: (-len(n.rules_blocked), -n.agreement_gain, n.op)
+    )
+    return ranked
 
 
 if __name__ == "__main__":

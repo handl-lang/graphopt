@@ -9,7 +9,9 @@ so every verdict — True / False / untestable — is pinned.
 
 import json
 
+import pytest
 import torch
+from catopt_core.egraph import Rewrite
 from catopt_core.ir import Op, TensorType, Var
 from catopt_discovery import vocab as vc
 
@@ -229,3 +231,227 @@ def test_main_derives_validates_dumps(tmp_path, capsys):
     assert "corpus_ops" in payload["validation"]
     text = capsys.readouterr().out
     assert "derived vs hand tables" in text
+
+
+# ---------------------------------------------------------------------------
+#  Need detection — the vocabulary the derive bank LACKS (plan 0024 B)
+# ---------------------------------------------------------------------------
+
+
+def _rank_var(shape: tuple) -> Var:
+    return Var("x", TensorType(shape))
+
+
+def _rank_domain() -> list[dict]:
+    """Five bindings whose ranks interleave — no single rank fits."""
+    return [
+        {"x": _rank_var(sh)}
+        for sh in [
+            (4,),
+            (2, 4),
+            (2, 3, 4),
+            (2, 2, 3, 4),
+            (2, 2, 2, 3, 4),
+        ]
+    ]
+
+
+def _rank_of(bound: dict) -> int | None:
+    sh = getattr(getattr(bound.get("x"), "typ", None), "shape", None)
+    return len(sh) if sh else None
+
+
+def _pow_rank_hook(bound: dict) -> dict | None:
+    r = _rank_of(bound)
+    return None if r is None else {"$attr:M": 2**r}
+
+
+def _mod_rank_hook(bound: dict) -> dict | None:
+    r = _rank_of(bound)
+    return None if r is None else {"$attr:M": r % 2}
+
+
+def _mul_rank_hook(bound: dict) -> dict | None:
+    r = _rank_of(bound)
+    return None if r is None else {"$attr:M": 2 * r}
+
+
+def _str_hook(bound: dict) -> dict:
+    return {"$attr:S": "r" + str(bound["$attr:a"])}
+
+
+class TestCandidateRegistry:
+    def test_candidate_lookup(self):
+        assert vc._candidate("pow").arity == 2
+        assert vc._candidate("mod").semantics == "a % b  (int % int)"
+        with pytest.raises(ValueError):
+            vc._candidate("nope")
+
+    def test_candidate_value_is_the_bank_handler(self):
+        assert vc._candidate_value("pow")(2, 3) == 8
+        assert vc._candidate_value("mod")(7, 3) == 1
+        # a decline surfaces as None, never an exception
+        assert vc._candidate_value("pow")(2, -1) is None
+        assert vc._candidate_value("mod")(7, 0) is None
+        assert vc._candidate_value("pow")("x", 2) is None
+
+    def test_helpers_uses_op_and_agreement(self):
+        assert vc._uses_op(("pow", ("attr", "a"), 2), "pow") is True
+        assert vc._uses_op(("add", ("pow", 1, 2), 3), "pow") is True
+        assert vc._uses_op(("add", 1, 2), "pow") is False
+        assert vc._uses_op("x", "pow") is False
+        samples = [({}, 1), ({}, 2), ({}, 3)]
+        assert vc._agreement((1, 2, 9), samples) == 2
+
+
+class TestDetectNeed:
+    def test_detects_pow_gap(self):
+        need = vc.detect_need(_pow_rank_hook, _rank_domain())
+        assert need is not None
+        assert need.op == "pow"
+        assert need.agreement_gain > 0
+        assert need.rules_blocked == ("_pow_rank_hook",)
+        assert need.before < need.after == need.samples
+
+    def test_detects_mod_gap(self):
+        need = vc.detect_need(_mod_rank_hook, _rank_domain())
+        assert need is not None
+        assert need.op == "mod"
+        assert need.rules_blocked == ("_mod_rank_hook",)
+
+    def test_expressible_derive_needs_nothing(self):
+        # ``2 * rank`` fits the shipped bank — no gap to report
+        assert vc.detect_need(_mul_rank_hook, _rank_domain()) is None
+
+    def test_thin_domain_refused(self):
+        assert (
+            vc.detect_need(_pow_rank_hook, _rank_domain()[:2]) is None
+        )
+
+    def test_no_candidate_op_helps(self):
+        dom = [{"q": "Q", "$attr:a": i} for i in range(1, 7)]
+        assert vc.detect_need(_str_hook, dom) is None
+
+    def test_rule_reads_name_and_derive(self):
+        rule = Rewrite(
+            "synth_pow",
+            Op.make("add", "x", "y"),
+            Op.make("add", "x", "y"),
+            derive=_pow_rank_hook,
+        )
+        need = vc.detect_need(rule, _rank_domain())
+        assert need is not None and need.rules_blocked == ("synth_pow",)
+
+    def test_not_a_rule_or_hook_raises(self):
+        with pytest.raises(ValueError):
+            vc.detect_need(42, [])
+
+    def test_need_to_data_is_json_safe(self):
+        need = vc.detect_need(_pow_rank_hook, _rank_domain())
+        data = need.to_data()
+        assert json.loads(json.dumps(data)) == data
+        assert data["rules_blocked"] == ["_pow_rank_hook"]
+
+
+class TestProposeAtom:
+    def test_proposal_is_declare_shaped_and_not_admitted(self):
+        need = vc.detect_need(_pow_rank_hook, _rank_domain())
+        prop = vc.propose_atom(need)
+        assert prop["op"] == "declare"
+        assert prop["admitted"] is False
+        atom = prop["params"]["construction"]["params"]
+        assert atom["name"] == "pow"
+        assert atom["arity"] == 2
+        assert atom["kind"] == "derive-bank-op"
+        assert "**" in atom["semantics"]
+        assert atom["observable"][0] == {"in": [2, 3], "out": 8}
+        assert prop["evidence"]["op"] == "pow"
+        assert prop["evidence"]["agreement_gain"] == need.agreement_gain
+
+    def test_observable_semantics_are_numeric(self):
+        assert vc._observations("pow")[0] == {"in": [2, 3], "out": 8}
+        assert vc._observations("mod")[1] == {"in": [3, 2], "out": 1}
+        # a decline is carried as None, never dropped
+        assert {"in": [5, 0], "out": 1} in vc._observations("pow")
+        assert {"in": [5, 0], "out": None} in vc._observations("mod")
+
+    def test_proposal_json_roundtrip(self):
+        need = vc.detect_need(_mod_rank_hook, _rank_domain())
+        prop = vc.propose_atom(need)
+        assert json.loads(json.dumps(prop)) == prop
+
+    def test_unknown_op_raises(self):
+        bogus = vc.AtomNeed("nope", 1, ())
+        with pytest.raises(ValueError):
+            vc.propose_atom(bogus)
+
+
+class TestScanNeeds:
+    def _measure(self, dom):
+        def measure(rule, corpus, limit):
+            return [(env, "equal") for env in dom]
+
+        return measure
+
+    def test_ranks_by_unblock_then_gain(self):
+        ranked = vc._rank_needs(
+            [
+                vc.AtomNeed("pow", 3, ("a",)),
+                vc.AtomNeed("pow", 2, ("b",)),
+                vc.AtomNeed("mod", 9, ("c", "d")),
+            ]
+        )
+        # two full unblocks beat one, then gain breaks the tie
+        assert [n.op for n in ranked] == ["mod", "pow"]
+        assert ranked[0].rules_blocked == ("c", "d")
+        assert ranked[1].rules_blocked == ("a", "b")
+        assert ranked[1].agreement_gain == 5
+
+    def test_scan_over_rules_with_injected_measure(self):
+        dom = _rank_domain()
+        need_rule = Rewrite(
+            "needs_pow",
+            Op.make("add", "x", "y"),
+            Op.make("add", "x", "y"),
+            derive=_pow_rank_hook,
+        )
+        expressible = Rewrite(
+            "expressible",
+            Op.make("add", "x", "y"),
+            Op.make("add", "x", "y"),
+            derive=_mul_rank_hook,
+        )
+        spec_rule = Rewrite(
+            "has_dspec",
+            Op.make("add", "x", "y"),
+            Op.make("add", "x", "y"),
+            derive={"M": ("attr", "a")},
+        )
+        no_derive = Rewrite(
+            "no_derive",
+            Op.make("add", "x", "y"),
+            Op.make("add", "x", "y"),
+        )
+        ranked = vc.scan_needs(
+            [need_rule, expressible, spec_rule, no_derive],
+            measure=self._measure(dom),
+        )
+        assert [n.op for n in ranked] == ["pow"]
+        assert ranked[0].rules_blocked == ("needs_pow",)
+
+    def test_scan_bounds(self):
+        dom = _rank_domain()
+        rule = Rewrite(
+            "needs_pow",
+            Op.make("add", "x", "y"),
+            Op.make("add", "x", "y"),
+            derive=_pow_rank_hook,
+        )
+        assert vc.scan_needs([rule], max_rules=0) == []
+        assert (
+            vc.scan_needs(
+                [rule], deadline=0.0, measure=self._measure(dom)
+            )
+            == []
+        )
+        assert vc.scan_needs([rule], measure=self._measure(dom)) != []

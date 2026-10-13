@@ -33,7 +33,6 @@ import functools
 import json
 
 import pytest
-
 from catopt_core.egraph import EGraph, Rewrite
 from catopt_core.ir import Const, Op, Param, TensorType, Var
 from catopt_core.laws import all_rules
@@ -42,7 +41,10 @@ from catopt_core.laws.cond import (
     compile_guard,
     cond_from_data,
     cond_to_data,
+    derive_from_data,
+    derive_to_data,
     eval_cond,
+    eval_derive,
 )
 from catopt_core.laws.serialize import (
     law_from_data,
@@ -1827,3 +1829,60 @@ def test_promoted_channel_to_row_scale():
     bad = Op.make("linear", x, Op.make("mul", w, c2))
     want2 = Op.make("mul", Op.make("linear", x, w), c2)
     assert not _merged(LINEAR_CHANNEL_TO_ROW_SCALE, bad, want2)
+
+
+class TestDeriveIntOps:
+    """The int arithmetic the derive bank gained for carrier-aware
+    shape sources: ``pow`` (``2 ** rank``) and ``mod`` (``dim % rank``).
+    Both follow ``max``/``min``'s int-only convention and decline rather
+    than compute a heterogeneously-typed value."""
+
+    def test_pow_int_power(self):
+        b = {"$attr:a": 5, "$attr:r": 3}
+        assert eval_derive({"M": ("pow", ("attr", "a"), ("lit", 2))}, b) == {
+            "$attr:M": 25
+        }
+        assert eval_derive({"M": ("pow", 2, ("attr", "r"))}, b) == {
+            "$attr:M": 8
+        }
+
+    def test_pow_declines_non_int_negative_and_oversized(self):
+        # a non-int side (str / None / tuple) declines, never compares
+        assert eval_derive({"M": ("pow", 2, ("lit", "x"))}, {}) is None
+        assert eval_derive({"M": ("pow", ("attr", "NOPE"), 2)}, {}) is None
+        # a negative exponent would be a float — decline
+        assert eval_derive({"M": ("pow", 2, -1)}, {}) is None
+        # a result past the bit budget declines (no unbounded int)
+        assert eval_derive({"M": ("pow", 2, 100_000)}, {}) is None
+
+    def test_pow_trivial_bases_skip_the_budget(self):
+        # 0/1/-1 stay bounded for any exponent
+        assert eval_derive({"M": ("pow", 1, 100_000)}, {}) == {"$attr:M": 1}
+        assert eval_derive({"M": ("pow", 0, 7)}, {}) == {"$attr:M": 0}
+        assert eval_derive({"M": ("pow", -1, 9)}, {}) == {"$attr:M": -1}
+
+    def test_mod_remainder_and_declines(self):
+        b = {"$attr:d": 7, "$attr:r": 3}
+        assert eval_derive({"R": ("mod", ("attr", "d"), ("attr", "r"))}, b) == {
+            "$attr:R": 1
+        }
+        # a zero divisor and a non-int side both decline
+        assert eval_derive({"R": ("mod", 7, 0)}, {}) is None
+        assert eval_derive({"R": ("mod", ("lit", "x"), 3)}, {}) is None
+
+    def test_pow_mod_roundtrip_through_json(self):
+        spec = {
+            "M": ("pow", ("attr", "a"), ("lit", 2)),
+            "R": ("mod", ("attr", "d"), ("attr", "r")),
+        }
+        data = derive_to_data(spec)
+        assert data == {
+            "M": ["pow", ["attr", "a"], ["lit", 2]],
+            "R": ["mod", ["attr", "d"], ["attr", "r"]],
+        }
+        # list tree (json.loads output) canonicalises to the source form
+        assert derive_from_data(data) == derive_from_data(spec)
+        assert eval_derive(data, {"$attr:a": 3, "$attr:d": 7, "$attr:r": 3}) == {
+            "$attr:M": 9,
+            "$attr:R": 1,
+        }

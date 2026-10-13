@@ -169,6 +169,8 @@ value expressions evaluated against the same ``bound`` environment:
            | ("posmap", e_dom, e_keys)         # dom.index(k) per key
            | ("add"|"sub"|"mul"|"fdiv"|"floordiv", e, e)
            | ("max"|"min", e, e)                # int-only selection
+           | ("pow", e, e)                      # int ** int, exp >= 0
+           | ("mod", e, e)                      # int % int, nonzero divisor
            | ("neg"|"recip"|"float"|"int", e)
            | ("bcast", T, T)                   # broadcast two shapes —
                                                # concrete or veto
@@ -1792,6 +1794,53 @@ def _d_maxmin(op: str):
     return handler
 
 
+#: Result bit budget for the integer ``pow`` — a derive spells small
+#: exponents (``2 ** rank``, ``2 ** depth``); a result past the budget
+#: declines rather than materialising an unbounded integer.
+_POW_MAX_BITS: int = 1 << 16
+
+
+def _d_pow(args: tuple, bound: dict) -> int:
+    """``("pow", e, e)`` — an int base raised to a non-negative int power.
+
+    Both operands must resolve to ``int`` (``bool`` admitted — the
+    ``isinstance(x, int)`` contract ``max``/``min`` keep); a non-int
+    side, a negative exponent (the result would be a float) or a
+    result past the bit budget declines rather than computing an
+    unbounded integer.  The ``2 ** rank`` a carrier-aware derive
+    spells needs it.
+    """
+    base = _dexpr(args[0], bound)
+    exp = _dexpr(args[1], bound)
+    if not (isinstance(base, int) and isinstance(exp, int)):
+        raise _Decline("pow: non-int operand")
+    if exp < 0:
+        raise _Decline("pow: negative exponent")
+    if (
+        base not in (0, 1, -1)
+        and exp * base.bit_length() > _POW_MAX_BITS
+    ):
+        raise _Decline("pow: result too large")
+    return base**exp
+
+
+def _d_mod(args: tuple, bound: dict) -> int:
+    """``("mod", e, e)`` — the int remainder ``a % b``.
+
+    Both operands must resolve to ``int`` (``bool`` admitted, matching
+    the ``max``/``min`` convention); a non-int side or a zero divisor
+    declines.  The axis-normalisation ``dim % rank`` a carrier-aware
+    derive spells needs it.
+    """
+    a = _dexpr(args[0], bound)
+    b = _dexpr(args[1], bound)
+    if not (isinstance(a, int) and isinstance(b, int)):
+        raise _Decline("mod: non-int operand")
+    if b == 0:
+        raise _Decline("mod: zero divisor")
+    return a % b
+
+
 def _d_guard(args: tuple, bound: dict) -> Any:
     """``("guard", COND, e)`` — evaluate *e* only when COND holds.
 
@@ -1885,6 +1934,8 @@ _DOPS: dict = {
     "if": _d_if,
     "max": _d_maxmin("max"),
     "min": _d_maxmin("min"),
+    "pow": _d_pow,
+    "mod": _d_mod,
     **{k: _binop(k) for k in _DBINOPS},
     **{k: _unop(k) for k in _DUNOPS},
 }
