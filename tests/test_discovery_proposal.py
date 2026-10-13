@@ -19,7 +19,8 @@ import torch
 from catopt_core.cost import dag_cost, flops_cost
 from catopt_core.egraph import Rewrite
 from catopt_core.ir import Const, Op, Param, TensorType, Var, op_repr
-from catopt_core.laws import ALL_RULES
+from catopt_core.laws import ALL_RULES, serialize
+from catopt_core.laws.cond import eval_cond
 from catopt_discovery import proposal as pp
 from catopt_discovery import shape_proposal as sp
 from catopt_discovery import verifier as vf
@@ -384,6 +385,190 @@ def test_yield_table_aggregates():
     assert row["new"] == 4
     assert row["useful"] == 3
     assert row["useful_new"] == 3
+
+
+# ---------------------------------------------------------------------------
+#  propose_guarded — the auto-cond rescue move
+# ---------------------------------------------------------------------------
+
+
+def _unsq_candidate() -> pp.Candidate:
+    """The conditional ``add(unsq(u,d),v) = add(u,v)`` proposal.
+
+    Holds exactly where the unsqueeze inserts a broadcast pad the
+    ``u ⊙ v`` grid already had — the region auto-cond separates.
+    """
+    return pp.Candidate(
+        "schema",
+        "add_unsq",
+        _p("add", _p("unsqueeze", "U", dim="D"), "V"),
+        _p("add", "U", "V"),
+    )
+
+
+def test_propose_guarded_declines_a_false_candidate():
+    """``FALSE_exp_add`` is unequal at every measured site — no guard
+    can be minted, and the decline lands in the row's note."""
+    torch.manual_seed(0)
+    cand = {c.label: c for c in pp.schema_candidates()}["FALSE_exp_add"]
+    outs = pp.evaluate([cand])
+    assert outs[0].num_true is False
+    rows = pp.propose_guarded([cand], outs)
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.candidate.strategy == "auto_cond"
+    assert row.candidate.rule is None  # nothing minted
+    assert "declined:" in row.candidate.note
+    assert "no equal site" in row.candidate.note
+    assert row.num_true is False
+    assert not row.truth and not row.useful
+
+
+def test_propose_guarded_mints_a_guard_and_pays():
+    """The undecidable ``add_unsq`` pattern mints a guard; the guarded
+    rule re-evaluates true (clean accepted region) and paying (the
+    dead pad node drops the extracted cost)."""
+    torch.manual_seed(0)
+    cand = _unsq_candidate()
+    outs = pp.evaluate([cand])
+    assert outs[0].num_true is None and not outs[0].truth
+    # a real corpus match joins the measured domain: unsq(u,-2) pads
+    # (4,) to (1,4), inside the guard's accepted region
+    corpus = [
+        _p("add", _p("unsqueeze", _v("u", 4), dim=-2), _v("w", 4, 4))
+    ]
+    rows = pp.propose_guarded([cand], outs, corpus_terms=corpus)
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.candidate.strategy == "auto_cond"
+    rule = row.candidate.rule
+    assert isinstance(rule, Rewrite) and rule.cond is not None
+    assert row.candidate.as_rule() is rule
+    assert row.num_true is True and row.relation == "new"
+    assert row.useful and row.cand_cost < row.base_cost
+    # the declined shadow still reports what it is
+    assert "guard" in row.candidate.note
+
+
+def test_propose_guarded_skips_true_and_dedups():
+    """Already-true verdicts are not rescue targets, and two failures
+    sharing an abstracted key mint at most one row."""
+    torch.manual_seed(0)
+    by = {c.label: c for c in pp.schema_candidates()}
+    cands = [
+        by["mul_factor"],
+        by["FALSE_square_add"],
+        by["FALSE_square_add"],
+    ]
+    outs = pp.evaluate(cands)
+    assert outs[0].truth  # not a rescue target
+    assert outs[1].num_true is False
+    rows = pp.propose_guarded(cands, outs)
+    assert len(rows) == 1  # mul_factor skipped; the dup deduped
+    assert rows[0].candidate.strategy == "auto_cond"
+    assert "declined:" in rows[0].candidate.note
+
+
+def test_propose_guarded_skips_post_abstraction_tautology():
+    """A pair abstracting to ``p == p`` produces no guarded row."""
+    cand = pp.Candidate(
+        "t", "tt", _p("add", "U", "V"), _p("add", "U", "V")
+    )
+    assert pp.propose_guarded([cand]) == []
+
+
+def test_propose_guarded_evaluates_and_validates_inputs():
+    """``outcomes=None`` runs the unguarded measure first; a
+    misaligned outcome list is a bug, not a decline."""
+    torch.manual_seed(0)
+    cand = _unsq_candidate()
+    rows = pp.propose_guarded([cand])
+    assert len(rows) == 1 and rows[0].candidate.rule is not None
+    with pytest.raises(ValueError):
+        pp.propose_guarded([cand, cand], [])
+
+
+def test_propose_guarded_carries_procedural_hooks():
+    """A candidate whose own rule packs procedural hooks keeps them
+    on the probe — a derive veto declines every measured site."""
+    torch.manual_seed(0)
+    base = Rewrite(
+        "t:veto",
+        _p("add", "X", "Y"),
+        _p("mul", "X", "Y"),
+        check=lambda _b: True,
+        derive=lambda _b: None,
+    )
+    cand = pp.Candidate("t", "veto", base.lhs, base.rhs, rule=base)
+    probe = pp._probe_rule(cand, base.lhs, base.rhs)
+    assert probe.check is not None and probe.derive is not None
+    outs = pp.evaluate([cand])
+    assert outs[0].num_true is None
+    rows = pp.propose_guarded([cand], outs)
+    assert len(rows) == 1
+    assert "declined:" in rows[0].candidate.note
+    # the derive veto rode the probe: every site declined
+    assert "no evaluable site" in rows[0].candidate.note
+
+
+def test_evaluate_autocond_is_opt_in():
+    """``autocond=True`` appends guarded-rescue rows; the default run
+    is unchanged — same verdicts, no ``auto_cond`` strategy."""
+    by = {c.label: c for c in pp.schema_candidates()}
+    cands = [by["FALSE_exp_add"], by["mul_zero"]]
+
+    def sig(o):
+        return (
+            o.candidate.label,
+            o.num_true,
+            o.derivable,
+            o.relation,
+            o.base_cost,
+            o.cand_cost,
+        )
+
+    torch.manual_seed(0)
+    plain = pp.evaluate(cands)
+    torch.manual_seed(0)
+    off = pp.evaluate(cands, autocond=False)
+    assert [sig(o) for o in off] == [sig(o) for o in plain]
+    assert all(o.candidate.strategy != "auto_cond" for o in off)
+    torch.manual_seed(0)
+    on = pp.evaluate(cands, autocond=True)
+    extra = on[len(plain) :]
+    assert [sig(o) for o in on[: len(plain)]] == [
+        sig(o) for o in plain
+    ]
+    # FALSE_exp_add declines (no equal site); mul_zero mints a scalar
+    # guard but stays non-paying — both rows carry the strategy mark.
+    assert len(extra) == 2
+    assert {o.candidate.strategy for o in extra} == {"auto_cond"}
+    assert not any(o.useful for o in extra)
+    assert "declined:" in extra[0].candidate.note
+    assert extra[1].candidate.rule is not None
+
+
+def test_propose_guarded_cond_round_trips_serialize():
+    """The minted guard is pure data — ``object_to_data`` →
+    ``object_from_data`` rebuilds a rule whose cond gates identically."""
+    torch.manual_seed(0)
+    rows = pp.propose_guarded(
+        [_unsq_candidate()], pp.evaluate([_unsq_candidate()])
+    )
+    rule = rows[0].candidate.rule
+    assert serialize.missing_hooks(rule) == ()
+    data = serialize.object_to_data(rule, kind="abstraction")
+    assert data["serializable"] is True
+    rebuilt = serialize.object_from_data(data)
+    assert rebuilt.cond == rule.cond
+    assert serialize.missing_hooks(rebuilt) == ()
+    # the rebuilt guard still decides bindings identically:
+    # u=(4,), v=(4,4), dim=-2 inserts a pad (accepts); dim=1 on a
+    # (4,4) operand changes the broadcast grid (declines).
+    good = {"U": _v("u", 4), "V": _v("v", 4, 4), "$attr:D": -2}
+    bad = {"U": _v("u", 4, 4), "V": _v("v", 4, 4), "$attr:D": 1}
+    assert eval_cond(rebuilt.cond, good) is True
+    assert eval_cond(rebuilt.cond, bad) is False
 
 
 # ---------------------------------------------------------------------------

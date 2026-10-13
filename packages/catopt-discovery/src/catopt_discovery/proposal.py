@@ -46,6 +46,15 @@ Strategies:
    rule-value net, a cost-delta heuristic, and random, then compare
    top-k precision on the *useful* target.
 
+A fifth, opt-in pass — :func:`propose_guarded`, reachable as
+``evaluate(..., autocond=True)`` — is the *guarded second chance*:
+a candidate the unguarded oracle refuses may still be a conditional
+equality, true on a region of its binding domain a declarative
+``cond`` can separate (``select_mul``'s shipped guard was minted
+exactly this way).  The move hands the candidate's abstracted pattern
+to :func:`catopt_discovery.object_synthesis.auto_cond_object`, then
+re-measures the minted guarded rule.
+
 Run::
 
     .venv/bin/python -m catopt_discovery.proposal
@@ -58,6 +67,8 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections.abc import Iterable
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -65,21 +76,28 @@ from typing import Any
 import torch
 from catopt_core.cost import dag_cost, flops_cost
 from catopt_core.egraph import EGraph, Rewrite
+from catopt_core.egraph.terms import _term_match
 from catopt_core.egraph.types import _LeafRegistry
 from catopt_core.features import compute_features
 from catopt_core.game import Action
-from catopt_core.ir import Op, Param, TensorType, Var, op_repr
+from catopt_core.ir import Const, Op, Param, TensorType, Var, op_repr
 from catopt_core.laws import ALL_RULES
 from catopt_core.laws import tags as _tags
 from catopt_core.laws.serialize import (
     _canon,  # noqa: F401 — compat re-export (grammar_proposal)
+    _proc_check,
+    _proc_derive,
     alpha_key,
 )
 from catopt_core.trajectories import rule_samples
 from catopt_torch.learned_policy import LearnedPolicy, train_rule_value
 
 from catopt_discovery import lawdata
-from catopt_discovery.object_synthesis import term_from_spec
+from catopt_discovery.object_synthesis import (
+    _AUTO_MAX_CLAUSES,
+    auto_cond_object,
+    term_from_spec,
+)
 from catopt_discovery.verifier import (
     instance_of,
     verify_law,
@@ -92,6 +110,7 @@ __all__ = [
     "evaluate",
     "main",
     "near_miss_candidates",
+    "propose_guarded",
     "rank_pool",
     "schema_candidates",
     "seed_terms",
@@ -118,6 +137,13 @@ _SCAN_NODES = 2_500
 #: Numeric-comparison tolerance (fp64).
 _TOL = 1e-6
 
+#: Synthesis window for the auto-cond rescue — mirrors
+#: ``auto_cond_object``'s own default domain bound.
+_GUARD_SYNTH_LIMIT = 360
+
+#: Accepted equal sites a guarded candidate's pay check saturates.
+_GUARD_PAY_TERMS = 8
+
 
 # ---------------------------------------------------------------------------
 #  Candidate + outcome records
@@ -126,16 +152,25 @@ _TOL = 1e-6
 
 @dataclass(frozen=True)
 class Candidate:
-    """One proposed equality ``lhs = rhs`` with its provenance."""
+    """One proposed equality ``lhs = rhs`` with its provenance.
+
+    ``rule`` carries a pre-built ``Rewrite`` when the proposal's
+    fireable form is not the bare ``lhs -> rhs`` pair — the
+    ``auto_cond`` strategy's minted guarded rule — so ``as_rule``
+    returns the cond-carrying object every firing site honours.
+    """
 
     strategy: str
     label: str
     lhs: Any
     rhs: Any
     note: str = ""
+    rule: Any = None
 
     def as_rule(self) -> Rewrite:
         """Return the candidate as a fireable ``Rewrite``."""
+        if self.rule is not None:
+            return self.rule
         return Rewrite(
             f"{self.strategy}:{self.label}", self.lhs, self.rhs
         )
@@ -759,12 +794,24 @@ def evaluate(
     candidates: list[Candidate],
     *,
     cost_fn: Any = None,
+    autocond: bool = False,
+    corpus_terms: Iterable = (),
+    synth_limit: int = _GUARD_SYNTH_LIMIT,
+    max_clauses: int = _AUTO_MAX_CLAUSES,
 ) -> list[Outcome]:
-    """Measure every candidate: derivable, num-true, relation, useful."""
+    """Measure every candidate: derivable, num-true, relation, useful.
+
+    ``autocond=True`` composes :func:`propose_guarded`: each
+    truth-failed candidate gets a guarded second chance, and the new
+    rows — minted guards and declines alike, marked
+    ``strategy="auto_cond"`` — are appended.  The unguarded verdicts,
+    and the default ``autocond=False``, are unchanged.
+    """
     cost_fn = cost_fn or flops_cost
     lib = _library_keys()
+    cands = list(candidates)
     out: list[Outcome] = []
-    for cand in candidates:
+    for cand in cands:
         res = verify_law(cand.lhs, cand.rhs, list(ALL_RULES))
         rel = _relation(cand.lhs, cand.rhs, lib)
         base, with_rule = _cost_delta(cand, [cand.lhs], cost_fn)
@@ -777,6 +824,17 @@ def evaluate(
                 relation=rel,
                 base_cost=base,
                 cand_cost=with_rule,
+            )
+        )
+    if autocond:
+        out.extend(
+            propose_guarded(
+                cands,
+                out,
+                corpus_terms=corpus_terms,
+                synth_limit=synth_limit,
+                max_clauses=max_clauses,
+                cost_fn=cost_fn,
             )
         )
     return out
@@ -804,6 +862,243 @@ def yield_table(outcomes: list[Outcome]) -> dict:
         row["useful"] += int(o.useful)
         row["useful_new"] += int(o.useful and o.new)
     return table
+
+
+# ---------------------------------------------------------------------------
+#  Guarded second chance — the auto-cond rescue move
+# ---------------------------------------------------------------------------
+#
+#  A candidate the unguarded numeric oracle refuses may still be a
+#  *conditional* equality: true on a region of its binding domain a
+#  declarative ``cond`` can separate (``select_mul``'s shipped guard
+#  was minted exactly this way).  :func:`propose_guarded` is the move:
+#  abstract the candidate's concrete leaves to metavariables, let
+#  :func:`object_synthesis.auto_cond_object` measure the bare pattern's
+#  domain and mint the smallest guard covering the equal sites, then
+#  re-measure the minted rule — truth as the guarded-region sweep, pay
+#  as the cost delta over the accepted instances.
+
+
+def _abstract(term: Any, mv: dict[str, str]) -> Any:
+    """Abstract the concrete leaves of *term* to shared metavariables.
+
+    ``Var`` / ``Param`` leaves become ``M0``, ``M1``, … under the
+    shared *mv* map — the pipeline's ``_to_pattern`` convention — but
+    a bare ``str`` leaf (a metavariable the candidate already carries)
+    keeps its name, so the minted guard reads the caller's own
+    metavariables.  ``Const`` leaves stay literal.
+    """
+    if isinstance(term, Op):
+        return Op.make(
+            term.op,
+            *(_abstract(a, mv) for a in term.args),
+            **dict(term.attrs),
+        )
+    if isinstance(term, (Const, str)):
+        return term
+    key = repr(term)
+    if key not in mv:
+        mv[key] = f"M{len(mv)}"
+    return mv[key]
+
+
+def _probe_rule(cand: Candidate, lhs: Any, rhs: Any) -> Rewrite:
+    """Return the bare-pattern probe ``auto_cond_object`` measures.
+
+    Any *declarative* guard the candidate's own rule carries is
+    dropped — the search measures the bare domain — while a
+    procedural ``check``/``derive`` rides along honestly (a derive
+    veto is a firing abort, not a site) and ``dspec``/``tags``
+    provenance survives to the minted object.
+    """
+    base = cand.as_rule()
+    return Rewrite(
+        f"auto_cond:{cand.strategy}:{cand.label}",
+        lhs,
+        rhs,
+        law=base.law,
+        check=base.check if _proc_check(base) else None,
+        derive=base.derive if _proc_derive(base) else None,
+        tags=base.tags,
+        error_bound=base.error_bound,
+        bound_norm=base.bound_norm,
+        derivation=base.derivation,
+        dspec=base.dspec,
+    )
+
+
+def _guard_sites(
+    rule: Rewrite, corpus_terms: Iterable, limit: int
+) -> Iterable:
+    """Yield ``(subst, lhs_instance)`` over the measured domain.
+
+    The same union ``auto_cond_object`` measures — the oracle's
+    synthesized binding envs (bounded by *limit*) plus every real
+    corpus match — re-enumerated for the guarded rule's own sweep.
+    """
+    from catopt_discovery import evidence as ev
+    from catopt_discovery.shape_proposal import Schema, real_matches
+
+    # The try/except is the enumerator's honest boundary (see
+    # ``object_synthesis._measure_domain``): whatever real matches
+    # follow still measure.
+    with suppress(TypeError, ValueError, KeyError):
+        yield from ev._synth_sites(rule.lhs, rule.rhs, limit=limit)
+    schema = Schema(rule.name, rule.lhs, rule.rhs)
+    for m in real_matches(list(corpus_terms), schema):
+        subst = _term_match(rule.lhs, m)
+        if subst is not None:
+            yield subst, m
+
+
+def _eval_guarded(
+    cand: Candidate,
+    guarded: Rewrite,
+    detail: str,
+    *,
+    corpus_terms: Iterable,
+    synth_limit: int,
+    cost_fn: Any,
+    lib: list,
+) -> Outcome:
+    """Re-measure the minted guarded rule as a candidate row.
+
+    Truth is the guarded-region sweep — the rule's own ``cond``
+    decides which bindings the equality must hold on
+    (``evidence._guarded_evals`` counts the accepted region;
+    ``_region_ok`` requires it clean and non-vacuous).  Pay is the
+    cost delta over the accepted *equal* sites — concrete
+    instantiated LHS terms, since the guarded rule only fires where
+    its cond accepts.  The emitted candidate keeps the pattern pair
+    and carries the minted rule, so ``as_rule`` returns the
+    cond-carrying form.
+    """
+    from catopt_discovery import evidence as ev
+
+    region = ev._guarded_evals(
+        guarded, _guard_sites(guarded, corpus_terms, synth_limit)
+    )
+    terms: list = []
+    for subst, lhs_i in _guard_sites(
+        guarded, corpus_terms, synth_limit
+    ):
+        if ev._site_outcome(guarded, subst, lhs_i) == "equal":
+            terms.append(lhs_i)
+            if len(terms) >= _GUARD_PAY_TERMS:
+                break
+    gcand = Candidate(
+        "auto_cond",
+        f"{cand.label}+guard",
+        guarded.lhs,
+        guarded.rhs,
+        note=detail,
+        rule=guarded,
+    )
+    base, with_rule = _cost_delta(gcand, terms, cost_fn)
+    proof = verify_law(guarded.lhs, guarded.rhs, list(ALL_RULES))
+    return Outcome(
+        candidate=gcand,
+        derivable=proof.derivable,
+        witness=tuple(proof.witness_rules),
+        num_true=ev._region_ok(region, need_equal=True),
+        relation=_relation(guarded.lhs, guarded.rhs, lib),
+        base_cost=base,
+        cand_cost=with_rule,
+    )
+
+
+def propose_guarded(
+    candidates: Iterable,
+    outcomes: Iterable | None = None,
+    *,
+    corpus_terms: Iterable = (),
+    synth_limit: int = _GUARD_SYNTH_LIMIT,
+    max_clauses: int = _AUTO_MAX_CLAUSES,
+    cost_fn: Any = None,
+) -> list[Outcome]:
+    """Give truth-failed candidates a guarded second chance.
+
+    For every ``(candidate, outcome)`` pair where the outcome carries
+    no truth verdict — ``num_true`` ``False`` (a measured
+    counterexample) or ``None`` (undecidable) and not derivable — the
+    candidate's leaves are abstracted to metavariables and
+    :func:`object_synthesis.auto_cond_object` searches the
+    declarative guard vocabulary for the smallest ``cond`` covering
+    the measured-equal sites while declining the bad ones.
+
+    A minted guard produces a new ``Outcome`` row: the candidate is
+    marked ``strategy="auto_cond"`` and carries the guarded
+    ``Rewrite`` in ``.rule`` (so ``as_rule`` returns the
+    cond-carrying form), re-measured by :func:`_eval_guarded`.  A
+    refusal produces a row whose ``note`` carries the reason
+    (``"declined: …"``) — the decline is visible in the yield table
+    rather than silent.  *outcomes* may be omitted — the candidates
+    are evaluated first — and the returned rows are *appended*
+    verdicts: callers concatenate them onto the unguarded list
+    (``evaluate(autocond=True)`` is exactly that composition).
+    ``synth_limit``/``max_clauses`` bound the synthesis and pass
+    through to ``auto_cond_object``; *corpus_terms* is the real-term
+    domain the measured guard must also cover.
+    """
+    cost_fn = cost_fn or flops_cost
+    cands = list(candidates)
+    outs = (
+        list(outcomes)
+        if outcomes is not None
+        else evaluate(cands, cost_fn=cost_fn)
+    )
+    if len(outs) != len(cands):
+        raise ValueError(
+            f"outcomes must align with candidates: "
+            f"{len(outs)} != {len(cands)}"
+        )
+    lib = _library_keys()
+    out: list[Outcome] = []
+    seen: set = set()
+    for cand, o in zip(cands, outs, strict=True):
+        if o.truth:
+            continue
+        mv: dict[str, str] = {}
+        lhs_p = _abstract(cand.lhs, mv)
+        rhs_p = _abstract(cand.rhs, mv)
+        key = _key(lhs_p, rhs_p)
+        if key[0] == key[1] or key in seen:
+            continue
+        seen.add(key)
+        res = auto_cond_object(
+            _probe_rule(cand, lhs_p, rhs_p),
+            corpus_terms=corpus_terms,
+            synth_limit=synth_limit,
+            max_clauses=max_clauses,
+            kind="abstraction",
+        )
+        if res.object is None:
+            out.append(
+                Outcome(
+                    candidate=Candidate(
+                        "auto_cond",
+                        f"{cand.label}+guard",
+                        lhs_p,
+                        rhs_p,
+                        note=f"declined: {res.detail}",
+                    ),
+                    num_true=o.num_true,
+                    relation=_relation(lhs_p, rhs_p, lib),
+                )
+            )
+            continue
+        out.append(
+            _eval_guarded(
+                cand,
+                res.object.rule,
+                res.detail,
+                corpus_terms=corpus_terms,
+                synth_limit=synth_limit,
+                cost_fn=cost_fn,
+                lib=lib,
+            )
+        )
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -844,6 +1139,33 @@ def _fmt_useful(outcomes: list[Outcome]) -> str:
     return "\n".join(lines)
 
 
+def _outcome_row(o: Outcome) -> dict:
+    """Return the JSON-safe row one outcome contributes to the dump.
+
+    ``cond`` carries the minted declarative guard for ``auto_cond``
+    rows (``None`` otherwise); ``note`` propagates the search detail
+    or a refusal reason.
+    """
+    from catopt_core.laws.cond import cond_to_data
+
+    rule = o.candidate.rule
+    return {
+        "strategy": o.candidate.strategy,
+        "label": o.candidate.label,
+        "lhs": op_repr(o.candidate.lhs),
+        "rhs": op_repr(o.candidate.rhs),
+        "derivable": o.derivable,
+        "witness": list(o.witness),
+        "num_true": o.num_true,
+        "relation": o.relation,
+        "base_cost": o.base_cost,
+        "cand_cost": o.cand_cost,
+        "useful": o.useful,
+        "note": o.candidate.note,
+        "cond": cond_to_data(rule.cond) if rule is not None else None,
+    }
+
+
 def _dump_json(
     path: str, outcomes: list[Outcome], table: dict, ranking: dict
 ) -> None:
@@ -851,22 +1173,7 @@ def _dump_json(
     payload = {
         "yield": table,
         "ranking": ranking,
-        "outcomes": [
-            {
-                "strategy": o.candidate.strategy,
-                "label": o.candidate.label,
-                "lhs": op_repr(o.candidate.lhs),
-                "rhs": op_repr(o.candidate.rhs),
-                "derivable": o.derivable,
-                "witness": list(o.witness),
-                "num_true": o.num_true,
-                "relation": o.relation,
-                "base_cost": o.base_cost,
-                "cand_cost": o.cand_cost,
-                "useful": o.useful,
-            }
-            for o in outcomes
-        ],
+        "outcomes": [_outcome_row(o) for o in outcomes],
     }
     Path(path).write_text(json.dumps(payload, indent=2) + "\n")
 
@@ -883,6 +1190,14 @@ def main(argv: list[str] | None = None) -> int:
     """Run every strategy, evaluate, and print the yield report."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--json", help="write machine-readable results")
+    parser.add_argument(
+        "--autocond",
+        action="store_true",
+        help="give truth-failed candidates a guarded second chance "
+        "(catopt_discovery.object_synthesis.auto_cond_object): mint the "
+        "smallest declarative cond covering the measured-equal sites, "
+        "then re-measure the guarded rule",
+    )
     args = parser.parse_args(argv)
 
     seeds = seed_terms()
@@ -891,7 +1206,9 @@ def main(argv: list[str] | None = None) -> int:
     schemas = schema_candidates()
     pool = near + comp + schemas
 
-    outcomes = evaluate(pool)
+    outcomes = evaluate(
+        pool, autocond=args.autocond, corpus_terms=seeds
+    )
     table = yield_table(outcomes)
 
     print(  # stdout-compat
