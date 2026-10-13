@@ -216,9 +216,9 @@ def test_machine_shipped_is_exactly_the_promotion_table():
     assert MACHINE_SHIPPED == _PROMOTION_TABLE
     shipped_names = {r.name for r in ALL_RULES}
     assert shipped_names >= MACHINE_SHIPPED
-    # 69 human-authored + 10 promoted = the 79-rule library.
-    assert len(ALL_RULES) == 79
-    assert len(shipped_names - MACHINE_SHIPPED) == 69
+    # 71 human-authored + 10 promoted = the 81-rule library.
+    assert len(ALL_RULES) == 81
+    assert len(shipped_names - MACHINE_SHIPPED) == 71
 
 
 def test_machine_stored_objects_are_unshipped_names():

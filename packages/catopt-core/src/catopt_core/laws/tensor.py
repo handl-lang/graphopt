@@ -931,6 +931,30 @@ RIGHT_FACTOR = R(
     derivation=("right_distribute_matmul",),
 )
 
+#  Pointwise (Hadamard) distributivity — elementwise, unguarded.
+#  c ⊙ (x + y) = c⊙x + c⊙y: the elementwise product distributes over
+#  the additive monoid — the factoring direction the carrier fold
+#  chains need (a shared scalar/vector factor pulled off a sum).
+
+DISTRIBUTE_MUL_ADD = R(
+    "distribute_mul_add",
+    Op.make("mul", "c", Op.make("add", "x", "y")),
+    Op.make("add", Op.make("mul", "c", "x"), Op.make("mul", "c", "y")),
+    law="Hadamard distributivity: c ⊙ (x+y) = c⊙x + c⊙y — the "
+    "elementwise product distributes over the additive monoid.",
+    tags=_CAT,
+)
+
+FACTOR_MUL_ADD = R(
+    "factor_mul_add",
+    Op.make("add", Op.make("mul", "c", "x"), Op.make("mul", "c", "y")),
+    Op.make("mul", "c", Op.make("add", "x", "y")),
+    law="Factor a shared elementwise factor (reverse distributivity) "
+    "— c⊙x + c⊙y = c⊙(x+y); what the carrier fold chains consume.",
+    tags=_CAT,
+    derivation=("distribute_mul_add",),
+)
+
 # THE WEIGHT-MERGE RULE.  x@W1 + x@W2 = x @ (W1 + W2): two projections of
 # the SAME input collapse to one matmul on a summed weight.  This is the
 # LoRA/adapter/model-soup merge that deployment tooling does by hand.
@@ -2087,6 +2111,8 @@ CATEGORICAL_RULES: list[Rewrite] = [
     NATURALITY_SCALAR_REV,
     ASSOC_MATMUL,
     ASSOC_MATMUL_REV,
+    DISTRIBUTE_MUL_ADD,
+    FACTOR_MUL_ADD,
     *SPLIT_SCALAR_RULES,
     # Product structure (fused projections)
     SWIGLU_FUSE,
