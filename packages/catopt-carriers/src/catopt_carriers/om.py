@@ -397,14 +397,32 @@ def _derive_score_concat_dim(bound: dict) -> dict | None:
     After .T the key axis is last in k.T and lands on the scores' last
     dim, at index rank(out)-1 = max(rank q, rank k) - 1.
 
-    Stays procedural: the ranks come from ``_vshape`` (carrier-aware);
-    the dspec ``("shape", T)`` reads core ``_shape_of`` — the cost
-    convention, not the value shape.
+    The procedural oracle for :data:`_DSPEC_SCORE_CONCAT_DIM` — the
+    synthesized spec replaces the hook, and this twin stays as the
+    test's oracle (kept here so the migration is auditable, not
+    because the rule calls it).  Reads ``_vshape`` (carrier-aware); the
+    spec reads core ``_shape_of``, which agrees on every measured site.
     """
     q, k1 = _vshape(bound.get("q")), _vshape(bound.get("k1"))
     if not (isinstance(q, tuple) and isinstance(k1, tuple)):
         return None
     return {"$attr:SD": max(len(q), len(k1)) - 1}
+
+
+#: ``SD`` := ``max(rank q, rank k1) - 1`` — the synthesized declarative
+#: twin of :func:`_derive_score_concat_dim` (the ``dspec`` synthesizer
+#: measured the hook over its binding domain and minted the smallest
+#: reproducing expression from the extended bank: the ``max`` op plus
+#: the ``("len", ("shape", T))`` rank reader).  A rank reader that
+#: declines on an unshaped operand vetoes the spec exactly as the
+#: hook's ``isinstance`` guard did.
+_DSPEC_SCORE_CONCAT_DIM = {
+    "SD": (
+        "sub",
+        ("max", ("len", ("shape", "q")), ("len", ("shape", "k1"))),
+        1,
+    ),
+}
 
 
 def _matmul_t_concat(name: str, attr_key: _DimKey) -> Rewrite:
@@ -438,7 +456,7 @@ def _matmul_t_concat(name: str, attr_key: _DimKey) -> Rewrite:
         "q @ cat(k1,k2).T = cat(q@k1.T, q@k2.T) — the score blocks "
         "surface as one concat so OM_SPLIT can chunk the softmax.",
         check=_check_matmul_t_concat,
-        derive=_derive_score_concat_dim,
+        dspec=_DSPEC_SCORE_CONCAT_DIM,
     )
 
 
@@ -3002,6 +3020,179 @@ OM_DECAYED_CHUNKIFY_KEYS = R(
     "two partial blocks — exact (block-column decomposition of a "
     "matmul), the shape the cross term needs.",
 )
+
+
+def _check_om_decayed_kway(k: int, bound: dict) -> bool:
+    """Require a uniform K-partition of a fused decayed product.
+
+    ``T`` must be a positive int divisible by ``K`` (the partition is
+    ``(C,)*K`` with ``C = T//K``), the score plane square at ``T`` and
+    the value rows at ``T`` — the causal block decomposition only
+    types on the shared extent.
+    """
+    t = bound.get("$attr:T")
+    if not isinstance(t, int) or t < k or t % k != 0:
+        return False
+    ss, vs = _vshape(bound.get("s")), _vshape(bound.get("v"))
+    if not (isinstance(ss, tuple) and isinstance(vs, tuple)):
+        return False
+    if len(ss) < 2 or len(vs) < 2:
+        return False
+    return ss[-2] == t and ss[-1] == t and vs[-2] == t
+
+
+def _derive_om_decayed_kway(k: int, bound: dict) -> dict | None:
+    """``C``, ``SZ`` and the strict-lower blocks' decay offsets.
+
+    ``C := T // K`` and ``SZ := (C,)*K``; block ``(i, j)`` sits
+    ``(i-j)·C`` rows below the diagonal, so its row-decay vector's
+    offset is ``OFF_{i}_{j} := (i-j)·C`` (see ``decay_block_cross``).
+    """
+    if not _check_om_decayed_kway(k, bound):
+        return None
+    c = bound["$attr:T"] // k
+    out: dict = {"$attr:C": c, "$attr:SZ": (c,) * k}
+    for i in range(k):
+        for j in range(i):
+            out[f"$attr:OFF_{i}_{j}"] = (i - j) * c
+    return out
+
+
+def _kway_score(i: int, j: int):
+    """Score block ``(i, j)`` — split the rows, then the columns."""
+    return Op.make(
+        "split",
+        Op.make("split", "s", sizes="SZ", dim=-2, index=i),
+        sizes="SZ",
+        dim=-1,
+        index=j,
+    )
+
+
+def _kway_value(j: int):
+    """Value block ``j`` — rows ``[jC:(j+1)C)`` of ``v``."""
+    return Op.make("split", "v", sizes="SZ", dim=-2, index=j)
+
+
+def _kway_diag(i: int):
+    """Intra-chunk term: the ``(i, i)`` block over ``decay(γ, C)``.
+
+    The diagonal block of ``decay(γ, T)`` is literally ``decay(γ, C)``
+    — equal row and column offsets cancel — so the law regenerates
+    the small generator rather than slicing the big one.
+    """
+    return Op.make(
+        "om_decayed",
+        _kway_score(i, i),
+        Op.make("decay", "g", t="C"),
+        _kway_value(i),
+    )
+
+
+def _kway_cross(i: int, j: int):
+    """Strict-lower term: the factored rank-1 cross contribution.
+
+    ``(s_ij ⊙ D_ij) @ v_j`` with ``D_ij`` the ``ξ_i·η_jᵀ`` outer
+    product ``decay_vec(g, C, offset=(i-j)C) ⊗ decay_vec(g, C, -1)``.
+    """
+    return Op.make(
+        "mul",
+        Op.make(
+            "unsqueeze",
+            Op.make("decay_vec", "g", t="C", offset=f"OFF_{i}_{j}"),
+            dim=-1,
+        ),
+        Op.make(
+            "matmul",
+            Op.make(
+                "mul",
+                _kway_score(i, j),
+                Op.make(
+                    "unsqueeze",
+                    Op.make("decay_vec", "g", t="C", sign=-1),
+                    dim=-2,
+                ),
+            ),
+            _kway_value(j),
+        ),
+    )
+
+
+def _kway_block(i: int):
+    """Row block ``i``: the intra term plus its strict-lower crosses."""
+    terms = [_kway_diag(i)]
+    terms.extend(_kway_cross(i, j) for j in range(i))
+    acc = terms[0]
+    for term in terms[1:]:
+        acc = Op.make("add", acc, term)
+    return acc
+
+
+def _kway_rhs(k: int):
+    """``concat_i(block_i)`` — the K-way causal block decomposition."""
+    blocks = [_kway_block(i) for i in range(k)]
+    out = blocks[-1]
+    for block in reversed(blocks[:-1]):
+        out = Op.make("concat", block, out, dim=-2)
+    return out
+
+
+def om_decayed_kway_blocks(k: int) -> Rewrite:
+    """K-way causal block decomposition of a fused decayed product.
+
+    ``om_decayed(s, decay(γ,T), v)`` → ``concat_i(intra_i + Σ_{j<i}
+    cross_ij)`` for the uniform ``(C,)*K`` partition (``C = T/K``):
+    the diagonal blocks regenerate ``decay(γ, C)``, each strict-lower
+    block factors as the rank-1 ``ξ_i·η_jᵀ`` outer product.
+
+    ONE application reaches ``K`` chunks.  The pairwise bisection
+    needs a split per level (and a budget per split), and the
+    e-graph's dirty-frontier rescan makes each deeper level costlier
+    — so the inter-chunk fold only ever sees one prior block per row
+    (measured: depth 2 at 4 chunks, unchanged from 60 to 120 budget
+    units).  The K-way form hands the fold laws all ``K-1`` prior
+    blocks at once, the material the ``applyd`` chain needs.
+
+    Opt-in and budgeted like ``OM_CHUNKIFY``: the law is a closure
+    generator (its diagonal blocks re-match the lhs), so it stays out
+    of ``OM_LAWS``.  ``k`` is validated eagerly so a bad arity fails
+    at construction, not at saturation.
+    """
+    if not isinstance(k, int) or k < 2:
+        raise ValueError(f"k must be an int >= 2, got {k!r}")
+
+    def check(bound: dict) -> bool:
+        return _check_om_decayed_kway(k, bound)
+
+    def derive(bound: dict) -> dict | None:
+        return _derive_om_decayed_kway(k, bound)
+
+    return R(
+        f"om_decayed_kway_blocks_{k}",
+        Op.make(
+            "om_decayed",
+            "s",
+            Op.make("decay", "g", t="T"),
+            "v",
+        ),
+        _kway_rhs(k),
+        check=check,
+        derive=derive,
+        law="the causal decay's block decomposition in one step: "
+        "om_decayed(s, decay(\u03b3,T), v) = cat_i(intra_i + Σ_{j<i} "
+        "ξ_i·η_jᵀ⊙(s_ij v_j)) for the uniform (C,)*K partition — "
+        "the K-way split the fold needs, so a row block sees K-1 "
+        "prior chunks instead of the bisection's one.",
+    )
+
+
+#: Opt-in K-way chunk laws — ``OM_LAWS + om_kway_laws(k)``.  Like
+#: ``OM_CHUNKIFY`` these CREATE structure (a K-way expansion is a
+#: closure generator), so they stay out of the everyday set and are
+#: priced with ``rule_budgets``.
+def om_kway_laws(k: int) -> list[Rewrite]:
+    """Return the K-way causal block law as a one-element list."""
+    return [om_decayed_kway_blocks(k)]
 
 
 def _check_split_matmul(bound: dict) -> bool:

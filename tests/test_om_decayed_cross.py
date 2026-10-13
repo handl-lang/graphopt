@@ -34,6 +34,8 @@ from catopt_carriers.om import (  # noqa: E402
     SPLIT_TRANSPOSE,
     UNSQ_MUL,
     _decay_vec_torch,
+    om_decayed_kway_blocks,
+    om_kway_laws,
 )
 from catopt_core.egraph import EGraph  # noqa: E402
 from catopt_core.ir import (  # noqa: E402
@@ -1720,3 +1722,214 @@ class TestMachineFold:
         ) * ((s[T1:, :T1] * eta.unsqueeze(-2)) @ v[:T1])
         chunked = torch.cat([row0, row1], dim=0)
         assert torch.allclose(fused, chunked, atol=1e-10)
+
+
+class TestOmDecayedKway:
+    """The K-way causal block law — the fold's material in one step.
+
+    ``om_decayed(s, decay(g,T), v)`` -> the full causal block
+    decomposition for the uniform ``(C,)*K`` partition (``C = T/K``):
+    diagonal blocks regenerate ``decay(g,C)``, strict-lower blocks
+    factor as the rank-1 ``xi_i * eta_j^T`` outer product.  ONE
+    application reaches ``K`` chunks, so a row block sees ``K-1``
+    prior contributions at once — the pairwise bisection only ever
+    hands the inter-chunk fold one prior block per row (plan 0023
+    construct 3).
+    """
+
+    def _site(self, T):
+        return Op.make(
+            "om_decayed",
+            _v("s", T, T),
+            Op.make("decay", _v("g"), t=T),
+            _v("v", T, 4),
+        )
+
+    @pytest.mark.parametrize("k", [2, 4, 8])
+    def test_kway_fires_and_derives(self, k):
+        law = om_decayed_kway_blocks(k)
+        T = 16
+        subst = match_pattern(law.lhs, self._site(T), {})
+        assert subst is not None
+        assert law.check(subst)
+        der = law.derive(subst)
+        c = T // k
+        assert der["$attr:C"] == c
+        assert der["$attr:SZ"] == (c,) * k
+        # strict-lower block (i,j) sits (i-j)C rows below the diagonal
+        for i in range(k):
+            for j in range(i):
+                assert der[f"$attr:OFF_{i}_{j}"] == (i - j) * c
+
+    @pytest.mark.parametrize("k", [2, 4, 8])
+    def test_kway_verifies(self, k):
+        """The K-way rhs ≡ the fused decayed product, fp64."""
+        T, DV = 16, 4
+        law = om_decayed_kway_blocks(k)
+        lhs = self._site(T)
+        subst = match_pattern(law.lhs, lhs, {})
+        rhs = instantiate_pattern(
+            law.rhs, {**subst, **law.derive(subst)}
+        )
+        torch.manual_seed(0)
+        s = torch.randn(T, T, dtype=torch.float64)
+        v = torch.randn(T, DV, dtype=torch.float64)
+        env = {"s": s, "v": v, "g": G}
+        a = eval_term(lhs, var_env=env, bindings=tb._IR_TO_TORCH)
+        b = eval_term(rhs, var_env=env, bindings=tb._IR_TO_TORCH)
+        assert torch.allclose(a, b, atol=1e-10)
+
+    def test_kway_rhs_is_the_block_decomposition(self):
+        """K diagonal blocks, K(K-1)/2 factored crosses, one concat."""
+        k = 4
+        rhs = om_decayed_kway_blocks(k).rhs
+        ops = op_repr(rhs)
+        assert ops.count("decay_vec") == k * (k - 1)  # 2 per cross
+        assert ops.count("concat") == k - 1  # nested binary cat
+
+    def test_kway_declines(self):
+        law = om_decayed_kway_blocks(4)
+        ok = {"s": _v("s", 16, 16), "v": _v("v", 16, 4)}
+        # T not divisible by k
+        assert not law.check({**ok, "$attr:T": 12})
+        # T < k
+        assert not law.check({**ok, "$attr:T": 2})
+        # non-int / missing T
+        assert not law.check({**ok, "$attr:T": "x"})
+        assert not law.check(ok)
+        # non-square score plane
+        assert not law.check(
+            {"$attr:T": 16, "s": _v("s", 16, 8), "v": _v("v", 16, 4)}
+        )
+        # value rows disagree with the decay extent
+        assert not law.check(
+            {"$attr:T": 16, "s": _v("s", 16, 16), "v": _v("v", 8, 4)}
+        )
+        # rank-1 operands — no block axes to split
+        assert not law.check(
+            {"$attr:T": 16, "s": _v("s", 16), "v": _v("v", 16, 4)}
+        )
+        # unshapeable operand
+        assert not law.check({"$attr:T": 16, "s": None, "v": None})
+        # the derive declines wherever the check does
+        assert law.derive({"$attr:T": 12, **ok}) is None
+
+    def test_kway_arity_validated(self):
+        """A bad arity fails at construction, not at saturation."""
+        with pytest.raises(ValueError):
+            om_decayed_kway_blocks(1)
+        with pytest.raises(ValueError):
+            om_decayed_kway_blocks("x")
+
+    def test_kway_laws_is_opt_in(self):
+        """The K-way law is NOT in the everyday carrier set."""
+        laws = om_kway_laws(4)
+        assert len(laws) == 1
+        assert laws[0].name == "om_decayed_kway_blocks_4"
+        assert laws[0].check is not None
+        assert laws[0].derive is not None
+        names = {r.name for r in OM_LAWS}
+        assert "om_decayed_kway_blocks_4" not in names
+
+    def test_kway_reaches_more_chunks_than_bisection(self):
+        """ONE application ⇒ K chunks; the bisection needs a split/level.
+
+        On the fused site the bisection's own law yields two blocks; the
+        K-way law yields K — the structural claim the fold rides on.
+        """
+        T = 16
+        site = self._site(T)
+        kway = om_decayed_kway_blocks(4)
+        subst = match_pattern(kway.lhs, site, {})
+        rhs = instantiate_pattern(
+            kway.rhs, {**subst, **kway.derive(subst)}
+        )
+        # every leaf om_decayed sits over a (T/4, T/4) score block
+        sizes = {
+            dict(n.attrs).get("sizes")
+            for n in _walk_ops(rhs)
+            if n.op == "split"
+        }
+        assert sizes == {(T // 4,) * 4}
+
+    def test_kway_drops_the_extracted_cost_on_the_real_export(self):
+        """The K-way material lowers the carrier's priced cost.
+
+        On the real ChunkedRetention export the pairwise bisection
+        saturates the carrier at ~2.25M FLOPs (T=128); handing the
+        fold laws the K-way block decomposition in ONE application
+        drops the extracted cost to ~1.21M — and extraction still
+        selects the chunked carrier, not the fused quadratic.
+        """
+        pytest.importorskip("catopt_torch")
+        from catopt_core.cost import dag_cost, flops_cost
+        from catopt_core.laws.tensor import (
+            ASSOC_MATMUL_REV,
+            DIV_ADD_FACTOR,
+            FACTOR_MUL,
+            FACTOR_MUL_ADD,
+            MATMUL_DIV_DISTRIBUTE,
+            MUL_DIV_SWAP,
+            SPLIT_SCALAR_RULES,
+        )
+        from catopt_discovery.zoo import _ChunkedRetention
+        from catopt_torch.adapters import TorchSource
+
+        base = (
+            list(OM_LAWS)
+            + list(OM_CHUNKIFY)
+            + list(SPLIT_SCALAR_RULES)
+            + [
+                MUL_DIV_SWAP,
+                MATMUL_DIV_DISTRIBUTE,
+                ASSOC_MATMUL_REV,
+                FACTOR_MUL,
+                FACTOR_MUL_ADD,
+                DIV_ADD_FACTOR,
+            ]
+        )
+        chunk_budget = {
+            "om_decayed_chunkify_rows": 60,
+            "om_decayed_chunkify_keys": 60,
+        }
+
+        def saturate(rules, budgets):
+            m = _ChunkedRetention(16).double()
+            x = torch.randn(2, 128, 16, dtype=torch.float64)
+            term = TorchSource().to_ir(m, x)[0].root
+            eg = EGraph()
+            root = eg.add_term(term)
+            eg.run(
+                rules,
+                root,
+                max_iterations=16,
+                max_nodes=150_000,
+                patience=8,
+                rule_budgets=budgets,
+            )
+            rc = eg.find(root)
+            return eg.extract_best(rc, flops_cost)
+
+        base_best = saturate(base, chunk_budget)
+        kw_best = saturate(
+            base + om_kway_laws(2),
+            {**chunk_budget, "om_decayed_kway_blocks_2": 60},
+        )
+        assert base_best.op == "concat"
+        assert kw_best.op == "concat"
+        assert dag_cost(kw_best, flops_cost) < dag_cost(
+            base_best, flops_cost
+        )
+
+
+def _walk_ops(term, out=None, seen=None):
+    """Yield every ``Op`` node of a term DAG once (cycle-safe)."""
+    if out is None:
+        out, seen = [], set()
+    if not isinstance(term, Op) or id(term) in seen:
+        return out
+    seen.add(id(term))
+    out.append(term)
+    for a in term.args:
+        _walk_ops(a, out, seen)
+    return out
