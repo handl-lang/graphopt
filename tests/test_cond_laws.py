@@ -807,7 +807,7 @@ def test_cond_data_roundtrip_is_canonical():
 
 
 def test_every_shipped_cond_roundtrips_through_json():
-    """All 53 cond-carrying rules' conds survive the store wire format."""
+    """All 55 cond-carrying rules' conds survive the store wire format."""
     seen = 0
     for rule in all_rules():
         if rule.cond is None:
@@ -824,7 +824,9 @@ def test_every_shipped_cond_roundtrips_through_json():
             cond=json.loads(blob),  # list tree: canonicalized
         )
         assert rebuilt.cond == rule.cond
-    assert seen == 53
+    # 53 + the div-naturality pair (div_add_factor,
+    # matmul_div_distribute) added by ``da917b1``
+    assert seen == 55
 
 
 def test_rebuilt_rule_fires_identically_in_egraph():
@@ -891,7 +893,9 @@ def test_migrated_rules_carry_cond_and_folded_check():
     migrated = [
         r for r in all_rules() if r.cond is not None
     ]
-    assert len(migrated) == 53
+    # 53 + the div-naturality pair (``da917b1``) — the cond-as-data
+    # count, repinned honestly
+    assert len(migrated) == 55
     for r in migrated:
         assert callable(r.check), r.name
     # every shipped guard is data now — the once-procedural laws all

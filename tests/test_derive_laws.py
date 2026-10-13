@@ -210,6 +210,55 @@ def test_arithmetic_declines():
     assert eval_derive({"I": ("int", ("lit", "x"))}, b) is None
 
 
+def test_max_min_ops():
+    """``max``/``min`` — the int-selection pair the rank derives need."""
+    b = {"$attr:K": 6, "$attr:J": 2}
+    assert eval_derive({"M": ("max", ("attr", "K"), ("attr", "J"))}, b) == {
+        "$attr:M": 6
+    }
+    assert eval_derive({"M": ("min", ("attr", "K"), ("attr", "J"))}, b) == {
+        "$attr:M": 2
+    }
+    # composed with the rank reader: ``max(rank a, rank b) - 1``
+    w, v = _p("w", 6, 4), _v("v", 2, 6, 4)
+    ranks = {
+        "M": (
+            "sub",
+            (
+                "max",
+                ("len", ("shape", "w")),
+                ("len", ("shape", "v")),
+            ),
+            1,
+        )
+    }
+    assert eval_derive(ranks, {"w": w, "v": v}) == {"$attr:M": 2}
+
+
+def test_max_min_declines():
+    """A non-int operand, a missing attr and an unshaped rank all veto."""
+    b = {"$attr:K": 6, "w": _p("w", 6, 4), "unk": "leaf"}
+    # a non-int side (str / None / tuple) declines rather than compare
+    assert eval_derive({"M": ("max", ("attr", "K"), ("lit", "x"))}, b) is None
+    assert eval_derive({"M": ("min", ("attr", "K"), None)}, b) is None
+    assert (
+        eval_derive({"M": ("max", ("shape", "w"), ("attr", "K"))}, b)
+        is None
+    )
+    # a missing attr declines (never defaults)
+    assert eval_derive({"M": ("max", ("attr", "NOPE"), 1)}, b) is None
+    # an unshaped operand makes the rank reader decline
+    assert (
+        eval_derive(
+            {"M": ("max", ("len", ("shape", "unk")), 1)}, b
+        )
+        is None
+    )
+    # a bare string is malformed, not a decline
+    with pytest.raises(ValueError):
+        eval_derive({"M": ("max", "K", 1)}, b)
+
+
 def test_bcast_op():
     h, x = _v("h", 4), _v("x", 4)
     wide = _v("w", 2, 4)

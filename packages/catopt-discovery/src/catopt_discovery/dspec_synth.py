@@ -13,6 +13,15 @@ the missing bank op is reported (``_near_misses`` names the closest
 candidates and their first divergence), which is the honest signal
 that the DSL needs extending — the same shape as ``auto_cond``'s
 "no declarable conjunction of ≤ N covers …" decline.
+
+The bank the synthesizer searches is ``_DOPS``' arithmetic plus the
+``("len", ("shape", T))`` rank reader and the ``max``/``min`` pair the
+residual survey measured as missing (the ``om``/``xcarrier`` derives
+are rank arithmetic over bound metavariables).  Enumeration propagates
+each candidate's *value vector* over the samples and collapses a level
+to one representative per vector (``_dedupe``) — the blind product is
+quartic in the leaf count, so without the collapse a rank bank's
+level-2 product explodes.
 """
 
 from __future__ import annotations
@@ -20,7 +29,7 @@ from __future__ import annotations
 from itertools import product
 from typing import Any
 
-from catopt_core.laws.cond import _DOPS
+from catopt_core.laws.cond import _DBINOPS, _DOPS, _DUNOPS
 
 __all__ = [
     "samples_from_hook",
@@ -29,8 +38,17 @@ __all__ = [
 
 #: Arity-2 derive ops the synthesizer composes (the arithmetic bank
 #: plus the two int-tuple readers — everything else in ``_DOPS`` is
-#: either a leaf form or shape-specialised).
-BINOPS: tuple[str, ...] = ("add", "sub", "mul", "floordiv")
+#: either a leaf form or shape-specialised).  ``max``/``min`` are the
+#: rank-selection pair a carrier-aware derive spells as
+#: ``max(rank a, rank b) - 1``.
+BINOPS: tuple[str, ...] = (
+    "add",
+    "sub",
+    "mul",
+    "floordiv",
+    "max",
+    "min",
+)
 UNOPS: tuple[str, ...] = ("neg", "int", "float")
 
 
@@ -47,47 +65,128 @@ def _eval(expr: Any, bound: dict) -> Any:
 
 
 def _leaves(bound: dict, values: set) -> list[Any]:
-    """Leaf exprs: attr refs, metavar refs, and observed constants."""
+    """Leaf exprs: attr refs, rank readers, observed constants.
+
+    Attr refs read ``$attr:`` bindings; each bound *term* contributes a
+    rank reader ``("len", ("shape", T))`` — the carrier-aware derives
+    (``om``/``trace``/``xcarrier``) are rank arithmetic over bound
+    metavariables, so the reader is seeded as a leaf (reached at depth
+    one rather than composing ``len`` over ``shape`` at depth two, past
+    the bank's ``max_depth``).  A term whose shape is unknown declines
+    the reader, exactly as the procedural hook vetoed.  Observed int
+    values seed literals, so the ``- 1`` / ``- 2`` offsets a rank
+    derive spells are expressible.
+    """
     out: list[Any] = []
     for key in sorted(bound):
         if key.startswith("$attr:"):
             out.append(("attr", key[len("$attr:") :]))
+    for key in sorted(bound):
+        if key.startswith("$attr:"):
+            continue
+        out.append(("len", ("shape", key)))
     for v in sorted(values, key=repr):
         if isinstance(v, int) and not isinstance(v, bool):
             out.append(("lit", v))
     return out
 
 
+def _signature(expr: Any, samples: list[tuple]) -> tuple:
+    """Return *expr*'s value over every sample — its fit fingerprint."""
+    return tuple(_eval(expr, b) for b, _e in samples)
+
+
+def _vbin(op: str, a: Any, b: Any) -> Any:
+    """Apply an arity-2 bank op to two *values* — ``None`` on decline.
+
+    The value-level twin of ``_DOPS[op]``: enumeration folds operands'
+    value vectors instead of re-walking the tree (measured: the tree
+    walk made a rank bank's level-2 product cost minutes per rule).
+    ``None`` is the shared decline/value sentinel — an operand that
+    declines vetoes the op exactly as ``_dexpr``'s ``_Decline`` did.
+    """
+    if op in ("max", "min"):
+        if not (isinstance(a, int) and isinstance(b, int)):
+            return None
+        return (max if op == "max" else min)(a, b)
+    if a is None or b is None:
+        return None
+    try:
+        return _DBINOPS[op](a, b)
+    except (ArithmeticError, TypeError, ValueError):
+        return None
+
+
+def _vun(op: str, a: Any) -> Any:
+    """Apply an arity-1 bank op to a *value* — ``None`` on decline."""
+    if a is None:
+        return None
+    try:
+        return _DUNOPS[op](a)
+    except (ArithmeticError, TypeError, ValueError):
+        return None
+
+
+def _vlen(a: Any) -> Any:
+    """``len`` of a value — ``None`` when it is not sized."""
+    return len(a) if isinstance(a, (tuple, list, str)) else None
+
+
+def _dedupe(pairs: list[tuple]) -> list[tuple]:
+    """Keep one ``(expr, sig)`` per fingerprint — smallest, then repr.
+
+    Two expressions that agree on *every* sample are interchangeable
+    for the fit (``add(a, b)`` vs ``add(b, a)``), so collapsing each
+    level to one representative per fingerprint prunes the quartic
+    blow-up of the blind product without losing a distinguishable
+    candidate.
+    """
+    best: dict = {}
+    for expr, sig in pairs:
+        prev = best.get(sig)
+        if prev is None or (_size(expr), repr(expr)) < (
+            _size(prev[0]),
+            repr(prev[0]),
+        ):
+            best[sig] = (expr, sig)
+    return list(best.values())
+
+
 def _candidates(
-    bound: dict, values: set, *, max_depth: int
-) -> list[Any]:
-    """Enumerate expr trees up to *max_depth* over the leaf set."""
-    leaves = _leaves(bound, values)
-    level = list(leaves)
-    out = list(leaves)
+    bound: dict, values: set, *, max_depth: int, samples: list[tuple]
+) -> list[tuple]:
+    """Enumerate ``(expr, sig)`` trees up to *max_depth* over the bank.
+
+    Each level is deduped by fingerprint (:func:`_dedupe`) so the
+    quartic product stays tractable; the smallest representative is
+    kept, so the final ``min`` by size still mints the smallest fit.
+    """
+    level = _dedupe(
+        [(e, _signature(e, samples)) for e in _leaves(bound, values)]
+    )
+    out = list(level)
     for _ in range(max_depth):
-        nxt = []
+        nxt: list[tuple] = []
         for op in BINOPS:
-            for a, b in product(level, level):
-                nxt.append((op, a, b))
+            for (ea, sa), (eb, sb) in product(level, level):
+                nxt.append(
+                    (
+                        (op, ea, eb),
+                        tuple(
+                            _vbin(op, a, b)
+                            for a, b in zip(sa, sb, strict=True)
+                        ),
+                    )
+                )
         for op in UNOPS:
-            for a in level:
-                nxt.append((op, a))
-        # int readers over shape-ish leaves
-        for a in level:
-            nxt.append(("len", a))
+            for ea, sa in level:
+                nxt.append(((op, ea), tuple(_vun(op, a) for a in sa)))
+        for ea, sa in level:
+            nxt.append((("len", ea), tuple(_vlen(a) for a in sa)))
+        nxt = _dedupe(nxt)
         out.extend(nxt)
         level = nxt
     return out
-
-
-def _matches(expr: Any, samples: list[tuple]) -> bool:
-    """Return True iff *expr* reproduces every measured value."""
-    for bound, expected in samples:
-        got = _eval(expr, bound)
-        if got != expected:
-            return False
-    return True
 
 
 def _size(expr: Any) -> int:
@@ -165,19 +264,41 @@ def synth_dspec(
         # expr producing that constant "matches" and the synth
         # would be a coincidence, not a derivation.
         return None
-    fit = samples[0::2]
-    holdout = samples[1::2]
+    fit = range(0, len(samples), 2)
+    holdout = range(1, len(samples), 2)
     bound = samples[0][0]
-    cands = _candidates(bound, values, max_depth=max_depth)
+    cands = _candidates(
+        bound, values, max_depth=max_depth, samples=samples
+    )
     hits = [
-        c
-        for c in cands
-        if _reads_bound(c) and _matches(c, fit) and _matches(c, holdout)
+        expr
+        for expr, sig in cands
+        if _reproduces(expr, sig, samples, fit, holdout)
     ]
     if not hits:
         return None
     best = min(hits, key=lambda c: (_size(c), repr(c)))
     return {(name or "OUT"): best}
+
+
+def _reproduces(
+    expr: Any,
+    sig: tuple,
+    samples: list[tuple],
+    fit: range,
+    holdout: range,
+) -> bool:
+    """Return True iff *expr*'s value vector fits the even/odd split.
+
+    The read-guard plus the held-out validation, split out of
+    :func:`synth_dspec` so its cyclomatic complexity stays under the
+    ratchet ceiling.
+    """
+    if not _reads_bound(expr):
+        return False
+    return all(sig[i] == samples[i][1] for i in fit) and all(
+        sig[i] == samples[i][1] for i in holdout
+    )
 
 
 def _near_misses(
@@ -187,10 +308,19 @@ def _near_misses(
     if not samples:
         return []
     values = {v for _b, v in samples}
-    cands = _candidates(samples[0][0], values, max_depth=max_depth)
-    scored = []
-    for c in cands:
-        agree = sum(1 for b, e in samples if _eval(c, b) == e)
-        scored.append((c, agree))
+    cands = _candidates(
+        samples[0][0], values, max_depth=max_depth, samples=samples
+    )
+    scored = [
+        (
+            expr,
+            sum(
+                1
+                for v, (_b, e) in zip(sig, samples, strict=True)
+                if v == e
+            ),
+        )
+        for expr, sig in cands
+    ]
     scored.sort(key=lambda p: (-p[1], _size(p[0]), repr(p[0])))
     return scored[:k]

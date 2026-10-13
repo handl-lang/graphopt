@@ -168,6 +168,7 @@ value expressions evaluated against the same ``bound`` environment:
            | ("unique", e)                     # first-occurrence uniques
            | ("posmap", e_dom, e_keys)         # dom.index(k) per key
            | ("add"|"sub"|"mul"|"fdiv"|"floordiv", e, e)
+           | ("max"|"min", e, e)                # int-only selection
            | ("neg"|"recip"|"float"|"int", e)
            | ("bcast", T, T)                   # broadcast two shapes —
                                                # concrete or veto
@@ -1768,6 +1769,29 @@ def _d_sum(args: tuple, bound: dict) -> Any:
         raise _Decline(f"sum: non-numeric element: {e}") from None
 
 
+def _d_maxmin(op: str):
+    """Build the ``(max|min)`` handler for *op* — int-only selection.
+
+    Both operands must resolve to ``int`` (``bool`` admitted — the
+    ``isinstance(x, int)`` contract the rest of the bank keeps); a
+    non-int side declines rather than comparing heterogeneously, so a
+    tuple- or ``None``-valued operand vetoes the whole derive.  The
+    op exists for the rank arithmetic a carrier-aware derive spells —
+    ``max(rank a, rank b) - 1`` — where Python's ``max`` over mixed
+    types would otherwise raise.
+    """
+    fn = max if op == "max" else min
+
+    def handler(args: tuple, bound: dict) -> int:
+        a = _dexpr(args[0], bound)
+        b = _dexpr(args[1], bound)
+        if not (isinstance(a, int) and isinstance(b, int)):
+            raise _Decline(f"{op}: non-int operand")
+        return fn(a, b)
+
+    return handler
+
+
 def _d_guard(args: tuple, bound: dict) -> Any:
     """``("guard", COND, e)`` — evaluate *e* only when COND holds.
 
@@ -1859,6 +1883,8 @@ _DOPS: dict = {
     "sum": _d_sum,
     "guard": _d_guard,
     "if": _d_if,
+    "max": _d_maxmin("max"),
+    "min": _d_maxmin("min"),
     **{k: _binop(k) for k in _DBINOPS},
     **{k: _unop(k) for k in _DUNOPS},
 }
