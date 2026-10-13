@@ -53,6 +53,7 @@ from catopt_core.search_env import SearchEnv
 from . import engine, lawdata, training
 from . import meta_arena as ma
 from . import meta_player as mp
+from . import open_game as og
 from .meta_player import _bucket
 from .players import LinearPolicy
 
@@ -1478,6 +1479,13 @@ DOMAINS: dict[str, Domain] = {
         features=lawdata.META_ARENA_FEATURES,
         scripted=ma.ScriptedPlayer,
         deliver=_torch_deliver,
+    ),
+    "open": Domain(
+        cases=og.gen_cases,
+        board_of=og.OpenArena,
+        legal=og.legal_actions,
+        featurizer=og.featurize,
+        features=og.OPEN_GAME_FEATURES,
     ),
 }
 

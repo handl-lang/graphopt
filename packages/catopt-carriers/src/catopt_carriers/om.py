@@ -2538,7 +2538,15 @@ DECAY_VEC_OFFSET = R(
 
 
 def _check_matmul_scalar(bound: dict) -> bool:
-    """Require the scalar to broadcast to the right operand."""
+    """Require the scalar to broadcast to the right operand.
+
+    ``c ⊙ (q@B) = q @ (c⊙B)`` is exact only when ``c`` is constant
+    along the contracted axis: the lhs scales the product's *output*
+    rows ``r`` while the rhs scales ``B``'s *contracted* rows ``k``.
+    A ``c`` varying there (a ``(T,1)`` row-decay vector is the
+    observed case) gives ``c[r]·(q@B) ≠ q@(c[k]⊙B)`` — the guard
+    right-aligns ``c`` to ``b`` and requires dim ``-2`` to be 1.
+    """
     cs, bs = _vshape(bound.get("c")), _vshape(bound.get("b"))
     qs = _vshape(bound.get("q"))
     if not all(isinstance(x, tuple) for x in (cs, bs, qs)):
@@ -2561,7 +2569,12 @@ def _check_matmul_scalar(bound: dict) -> bool:
     if broadcast(cs, m) is INVALID:
         return False
     cb = broadcast(cs, bs)
-    return len(cb) <= len(bs)
+    if len(cb) > len(bs):
+        return False
+    # contraction-axis constancy: right-aligned to b, dim -2 is 1 —
+    # scalars and per-column scales qualify, row vectors do not.
+    ca = (1,) * (len(bs) - len(cs)) + tuple(cs)
+    return ca[-2] == 1
 
 
 MATMUL_SCALAR_FACTOR = R(
@@ -2573,6 +2586,69 @@ MATMUL_SCALAR_FACTOR = R(
     "matmul: c ⊙ (q·B) = q · (c ⊙ B) — the per-chunk decay weight "
     "g^o pulls off the cross contribution and onto the state term, "
     "which is the spelling the affine-scan lifts fold.",
+)
+
+
+def _check_state_weight_sink(bound: dict) -> bool:
+    """``a`` must be constant along the contracted axis of ``B``.
+
+    ``a⊙b ⊙ (q@B) = b ⊙ (q @ (a⊙B))`` is exact iff ``a`` does not
+    vary along the contraction: on the lhs ``a`` scales the product's
+    output rows ``r``, on the rhs it scales ``B``'s contracted rows
+    ``k`` — equal only when ``a``'s right-aligned dim ``-2`` is 1
+    (scalars and per-column/batch scales qualify; a row-decay vector
+    does not — same condition ``matmul_scalar_factor`` enforces).
+    ``b`` is the residual row-side factor and need only broadcast
+    over the rearranged product.
+    """
+    ss, xs, qs, bs = (
+        _vshape(bound.get("a")),
+        _vshape(bound.get("b")),
+        _vshape(bound.get("q")),
+        _vshape(bound.get("B")),
+    )
+    if not all(isinstance(t, tuple) for t in (ss, xs, qs, bs)):
+        return False
+    if len(bs) < 2 or len(ss) > len(bs):
+        return False
+    from catopt_core.typing import (
+        INVALID,
+        broadcast,
+        matmul_shape,
+    )
+
+    a_al = (1,) * (len(bs) - len(ss)) + tuple(ss)
+    if a_al[-2] != 1:
+        return False
+    ab = broadcast(ss, bs)
+    if ab is INVALID:
+        return False
+    m = matmul_shape(qs, ab)
+    if m is None:
+        return False
+    return broadcast(xs, m) is not INVALID
+
+
+DECAY_STATE_WEIGHT_SINK = R(
+    "decay_state_weight_sink",
+    Op.make(
+        "mul",
+        Op.make("mul", "a", "b"),
+        Op.make("matmul", "q", "B"),
+    ),
+    Op.make(
+        "mul",
+        "b",
+        Op.make("matmul", "q", Op.make("mul", "a", "B")),
+    ),
+    check=_check_state_weight_sink,
+    law="of a two-factor row scale on a matmul product, the "
+    "contraction-constant factor sinks into the state: "
+    "(a⊙b) ⊙ (q·B) = b ⊙ (q · (a⊙B)) when a is constant along B's "
+    "rows — the per-block decay weight g^o detaches from the shared "
+    "row vector g^r and lands on the state term, the weighted-sum "
+    "spelling the inter-chunk accumulator folds.",
+    derivation=("matmul_scalar_factor",),
 )
 
 
@@ -2982,6 +3058,7 @@ OM_LAWS: list[Rewrite] = [
     MATMUL_COL_DECAY,
     DECAY_VEC_OFFSET,
     MATMUL_SCALAR_FACTOR,
+    DECAY_STATE_WEIGHT_SINK,
     UNSQ_MUL,
     _decay_state_lift("decay_state_lift", True),
     _decay_state_lift("decay_state_lift_post", False),
