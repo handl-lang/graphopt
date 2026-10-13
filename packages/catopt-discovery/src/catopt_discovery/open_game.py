@@ -45,7 +45,7 @@ from catopt_discovery import proposal as lp
 from catopt_discovery.enumerate import enumerate_candidates
 from catopt_discovery.meta_arena import Action
 from catopt_discovery.meta_player import _Hist
-from catopt_discovery.players import LinearPolicy
+from catopt_discovery.players import LinearPolicy, _dot
 
 __all__ = [
     "OPEN_GAME_FEATURES",
@@ -347,6 +347,20 @@ class OpenLearnedPlayer(LinearPolicy):
         """Return the per-episode action histogram."""
         return _Hist()
 
+    def rank_score(self, cand: lp.Candidate) -> float:
+        """Return the policy's score for evaluating *cand*.
+
+        The ranker hook: every ``evaluate`` move on a page shares its
+        ``st:``/``h:``/``op:`` features (the state and the move kind
+        are identical at step 0), so the policy's ordering over the
+        page is exactly the ordering of ``w · _cand_feats(cand)`` —
+        a ``candidate -> float`` scorer that
+        :func:`catopt_discovery.proposal.rank_pool` consumes to
+        compare the learned ordering against the heuristic and
+        random ones.
+        """
+        return _dot(self._w, _cand_feats(cand))
+
 
 # ---------------------------------------------------------------------------
 #  Cases — pages into the enumerated stream
@@ -354,14 +368,35 @@ class OpenLearnedPlayer(LinearPolicy):
 
 
 def gen_cases(
-    seed: int, n: int, *, ops: tuple | None = None, page: int = 48
+    seed: int,
+    n: int,
+    *,
+    ops: tuple | None = None,
+    page: int = 48,
+    start: int = 0,
+    step: int = 1,
 ) -> list[dict]:
-    """Generate *n* cases — successive pages of the grammar.
+    """Generate *n* cases — pages of the enumerated grammar.
 
     ``ops`` defaults to the enumerator's op set; page size bounds
-    the episode horizon.  Cases are ordered pages so every case
-    faces a fresh slice — the learned ordering must transfer.
+    the episode horizon.  Cases are pages into the deterministic
+    stream, so every case faces a fresh slice — the learned ordering
+    must transfer.
+
+    ``start`` is the first page index and ``step`` the page stride.
+    A **held-out** split is two disjoint page sets: with ``step=2``
+    the even pages (``start=0``) train and the odd pages
+    (``start=1``) evaluate — disjoint, and *balanced* because the
+    stream's ~15 useful candidates are front-loaded (13 of 15 in the
+    first 58%), so a contiguous train/eval cut starves the eval half.
+    ``seed`` is retained for the ``Domain.cases`` contract
+    (``play.DOMAINS["open"].cases`` is this function) but the stream
+    is fixed, so the page selection is ``start``/``step``: a seed
+    cannot perturb it, and the prime-offset idiom (``seed + 7919``)
+    would fall off the stream's ~1.1k-candidate end.
     """
+    del seed  # the stream is deterministic — see the docstring
     return [
-        {"ops": ops, "offset": i * page, "page": page} for i in range(n)
+        {"ops": ops, "offset": (start + i * step) * page, "page": page}
+        for i in range(n)
     ]

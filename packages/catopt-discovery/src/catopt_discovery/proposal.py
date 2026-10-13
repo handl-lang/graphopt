@@ -729,11 +729,33 @@ def _train_scorer(seeds: list) -> Any:
     )
 
 
+def _learned_scores(
+    pool: list[Candidate], seeds: list | None, scorer: Any
+) -> list[float]:
+    """Score the pool for the ``learned`` arm.
+
+    An injected *scorer* (``candidate -> float``) wins; otherwise
+    the rule-value net is trained on *seeds* and every candidate is
+    scored by its fireable rule.
+    """
+    if scorer is not None:
+        return [scorer(c) for c in pool]
+    model = _train_scorer(seeds or [])
+    policy = LearnedPolicy(
+        model, {c.as_rule().name: c.as_rule() for c in pool}
+    )
+    return [
+        policy.score(_pool_features(c), Action(c.as_rule().name))
+        for c in pool
+    ]
+
+
 def rank_pool(
     pool: list[Candidate],
     outcomes: dict[int, Outcome],
     *,
     seeds: list | None = None,
+    scorer: Any = None,
 ) -> dict:
     """Compare learned / heuristic / random ranking on the pool.
 
@@ -745,19 +767,19 @@ def rank_pool(
     ``useful / pool``, reported as the ``random`` baseline.  ``{}``
     is returned when the pool carries no positive example (ranking is
     then undefined, not "random wins").
+
+    *scorer* overrides the ``learned`` arm: any
+    ``candidate -> float`` callable, higher-is-better.  The default
+    trains the rule-value net on *seeds*; a domain that ships its own
+    learned policy (``open_game.OpenLearnedPlayer.rank_score``) injects
+    it so the same AP metric prices *its* ordering.  The heuristic and
+    random arms are unchanged.
     """
     n_pos = sum(1 for o in outcomes.values() if o.useful)
     if n_pos == 0:
         return {}
-    model = _train_scorer(seeds or [])
-    policy = LearnedPolicy(
-        model, {c.as_rule().name: c.as_rule() for c in pool}
-    )
     scored: dict[str, list[float]] = {
-        "learned": [
-            policy.score(_pool_features(c), Action(c.as_rule().name))
-            for c in pool
-        ],
+        "learned": _learned_scores(pool, seeds, scorer),
         "heuristic": [_heuristic_score(c) for c in pool],
     }
     result: dict[str, Any] = {
