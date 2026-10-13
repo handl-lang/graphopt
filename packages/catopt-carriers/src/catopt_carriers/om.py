@@ -232,9 +232,12 @@ def _check_om_concat_dims(bound: dict) -> bool:
         return False
     if not (isinstance(sd, int) and isinstance(vd, int)):
         return False
-    if sd % len(s1) != len(s1) - 1:
+    # rank-0 operands carry no concat axis; ``max(len, 1)`` keeps the
+    # modulo well-defined so they decline here instead of raising.
+    n1, n2 = len(s1), len(v1)
+    if sd % max(n1, 1) != n1 - 1:
         return False  # scores must concat along the key axis
-    if vd % len(v1) != len(v1) - 2:
+    if vd % max(n2, 1) != n2 - 2:
         return False  # values concat along the key axis (-2 before @)
     return _chunks_compatible(s1, s2, v1, v2)
 

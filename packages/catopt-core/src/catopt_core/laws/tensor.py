@@ -955,6 +955,18 @@ FACTOR_MUL_ADD = R(
     derivation=("distribute_mul_add",),
 )
 
+#: Unguarded Hadamard distributivity — OPT-IN.  The pair is a
+#: closure generator of the comm/assoc class (each direction creates
+#: the other's match site), so it stays out of
+#: ``CATEGORICAL_RULES``/``ALL_RULES``/``DEFAULT`` — call sites that
+#: want the fold-chain reachability opt in explicitly (the scan-site
+#: saturation does), the same convention as LAYOUT/ATTENTION/
+#: SYMMETRY.
+POINTWISE_FACTOR_RULES: list[Rewrite] = [
+    DISTRIBUTE_MUL_ADD,
+    FACTOR_MUL_ADD,
+]
+
 # THE WEIGHT-MERGE RULE.  x@W1 + x@W2 = x @ (W1 + W2): two projections of
 # the SAME input collapse to one matmul on a summed weight.  This is the
 # LoRA/adapter/model-soup merge that deployment tooling does by hand.
@@ -2111,8 +2123,6 @@ CATEGORICAL_RULES: list[Rewrite] = [
     NATURALITY_SCALAR_REV,
     ASSOC_MATMUL,
     ASSOC_MATMUL_REV,
-    DISTRIBUTE_MUL_ADD,
-    FACTOR_MUL_ADD,
     *SPLIT_SCALAR_RULES,
     # Product structure (fused projections)
     SWIGLU_FUSE,

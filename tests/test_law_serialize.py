@@ -169,7 +169,7 @@ def test_serializability_census_of_shipped_library():
             need_derive.append(rule.name)
         else:
             need_check.append((rule.name, missing))
-    assert len(ALL_RULES) == 81
+    assert len(ALL_RULES) == 79
     # the whole shipped library is full-data now: the four stragglers
     # went declarative in stage 0 of plan 0017 — glu_fold's parity on
     # a dim-mod predicate, the rms pair's trailing block on the
@@ -177,7 +177,7 @@ def test_serializability_census_of_shipped_library():
     # attr-eq-attr / repeat-heads triple — and the ten promoted
     # discovery laws carry pure-data cond/dspec/derivation
     # (project/retros/promoted-laws.md)
-    assert len(full) == 81
+    assert len(full) == 79
     assert need_derive == []
     assert need_check == []
 
@@ -256,7 +256,7 @@ def test_law_record_roundtrip_rewrite_equality_unguarded():
             rebuilt = law_from_data(_json_roundtrip(law_to_data(rule)))
             assert rebuilt == rule, rule.name
             n += 1
-    assert n == 27
+    assert n == 25
 
 
 def _flagged_rule():

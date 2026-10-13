@@ -201,8 +201,8 @@ def test_laws_exports_every_rewrite():
     # transpose_noop/chunk_single view identities, the four broadcast-
     # pad/reshape strips, the two mask-free sdpa folds, and the
     # channel->row scale composite — project/retros/promoted-laws.md)
-    # + 8 split_scalar pointwise-split rules + 2 pointwise
-    # distribute/factor (Hadamard over add)
+    # + 8 split_scalar pointwise-split rules + the opt-in
+    # pointwise factor/distribute pair
     # + 6 dense-scan + 16 diagonal-scan + 77 layout + 37 attention
     # rewrites.
     assert len(found) == 217
@@ -210,20 +210,20 @@ def test_laws_exports_every_rewrite():
 
 def test_all_rules_count_unchanged():
     # The default set excludes LAYOUT_RULES (opt-in — closure-cost
-    # regression documented in laws.tensor); WITH_LAYOUT keeps 158.
-    assert len(laws.all_rules()) == 81
+    # regression documented in laws.tensor); WITH_LAYOUT keeps 156.
+    assert len(laws.all_rules()) == 79
     assert laws.all_rules() == laws.ALL_RULES
     assert len(laws.ALL_RULES) == (
         len(laws.SIMPLIFICATION_RULES) + len(laws.CATEGORICAL_RULES)
     )
-    assert len(laws.ALL_RULES_WITH_LAYOUT) == 158
+    assert len(laws.ALL_RULES_WITH_LAYOUT) == 156
     # each call returns a fresh list, not the shared ALL_RULES object
     assert laws.all_rules() is not laws.ALL_RULES
 
 
 def test_collections_split_by_domain():
     assert len(laws.SIMPLIFICATION_RULES) == 30
-    assert len(laws.CATEGORICAL_RULES) == 51
+    assert len(laws.CATEGORICAL_RULES) == 49
     assert len(laws.SCAN_LAWS) == 6
     assert len(laws.SCAN_DIAG_LAWS) == 16
     # layout: 12 unary + 4 binary pointwise commutations x 2 spellings
@@ -333,8 +333,8 @@ def test_axiom_lemma_marker_covers_all_rules():
                     r.name,
                     premise,
                 )
-    assert len(kinds["axiom"]) == 56
-    assert len(kinds["lemma"]) == 23
+    assert len(kinds["axiom"]) == 55
+    assert len(kinds["lemma"]) == 22
     assert len(kinds["redundant"]) == 2
     # the redundant kind rides on the tags.REDUNDANT constant
     assert {
