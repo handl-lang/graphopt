@@ -1921,6 +1921,321 @@ class TestOmDecayedKway:
             base_best, flops_cost
         )
 
+    def test_kway_deep_fold_exists_but_extraction_keeps_the_spelled_form(
+        self,
+    ):
+        """The deep fold reaches the target depth, yet extraction keeps
+        the non-fold — a fold is a *cost-neutral relabelling*.
+
+        At ``k=8`` (``C=16``, ``T=128``) the saturated root class holds
+        a finite member whose ``applyd`` nesting is the acceptance
+        target ``T/C-1 == 7``: the deep fold DOES exist.  But the root
+        class has no ``applyd``-headed member, a fold prices exactly
+        like the ``mul``/``add`` it re-spells (see
+        ``test_fold_is_a_cost_neutral_relabelling``), and extraction
+        (correctly) keeps the ``concat`` spelled form at nesting 0.
+        The *paying* fold needs the cross-sum reassociated onto a
+        SHARED state recurrence, which the law set never spells — a
+        search gap, not a cost gap.
+        """
+        pytest.importorskip("catopt_torch")
+        from catopt_core.cost import flops_cost
+        from catopt_core.egraph import EGraph
+        from catopt_core.laws.tensor import (
+            ASSOC_MATMUL_REV,
+            DIV_ADD_FACTOR,
+            FACTOR_MUL,
+            FACTOR_MUL_ADD,
+            MATMUL_DIV_DISTRIBUTE,
+            MUL_DIV_SWAP,
+            SPLIT_SCALAR_RULES,
+        )
+        from catopt_discovery.zoo import _ChunkedRetention
+        from catopt_torch.adapters import TorchSource
+
+        T, K = 128, 8
+        rules = (
+            list(OM_LAWS)
+            + list(OM_CHUNKIFY)
+            + list(SPLIT_SCALAR_RULES)
+            + [
+                MUL_DIV_SWAP,
+                MATMUL_DIV_DISTRIBUTE,
+                ASSOC_MATMUL_REV,
+                FACTOR_MUL,
+                FACTOR_MUL_ADD,
+                DIV_ADD_FACTOR,
+            ]
+            + om_kway_laws(K)
+        )
+        budgets = {
+            "om_decayed_chunkify_rows": 60,
+            "om_decayed_chunkify_keys": 60,
+            f"om_decayed_kway_blocks_{K}": 200,
+        }
+        torch.manual_seed(0)
+        m = _ChunkedRetention(16).double()
+        x = torch.randn(2, T, 16, dtype=torch.float64)
+        term = TorchSource().to_ir(m, x)[0].root
+        eg = EGraph()
+        root = eg.add_term(term)
+        eg.run(
+            rules,
+            root,
+            max_iterations=16,
+            max_nodes=150_000,
+            patience=8,
+            rule_budgets=budgets,
+        )
+        rc = eg.find(root)
+        root_ops = {n.op for n in eg._classes[rc].nodes}
+        # No member of the root class is headed by the fold carrier.
+        assert "applyd" not in root_ops
+        assert "affd_compose" not in root_ops
+        best = eg.extract_best(rc, flops_cost)
+        assert best.op == "concat"
+        assert _fold_nesting(best) == 0
+        # …yet the deep fold exists, at the acceptance depth T/C-1, and
+        # extraction leaves it on the table.
+        deep = _finite_fold_depth(eg, rc)
+        assert deep == T // (T // K) - 1
+        assert deep > _fold_nesting(best)
+
+    def test_fold_is_a_cost_neutral_relabelling(self):
+        """``applyd(aff_diag(a, x), h)`` prices EXACTLY like the
+        ``add(mul(a, h), x)`` it re-spells.
+
+        Folding alone saves no FLOPs — the O(T·C) win comes from the
+        reassociation onto a shared state, not the carrier spelling —
+        so extraction has no cost reason to prefer a fold member.
+        """
+        from catopt_core.cost import flops_cost
+
+        a, x, h = _v("a"), _v("x", 32, 16), _v("h", 32, 16)
+        folded = Op.make("applyd", Op.make("aff_diag", a, x), h)
+        spelled = Op.make("add", Op.make("mul", a, h), x)
+        assert flops_cost(folded) == flops_cost(spelled)
+
+    def test_shared_state_fold_prices_below_the_spelled_cross(self):
+        """The *paying* fold is O(T·C); the e-graph's relabelling is not.
+
+        A hand-built shared-state recurrence — each ``S_i`` one
+        e-class consumed by block ``i``'s output and block ``i+1``'s
+        step — prices far below the spelled cross sum.  So the missing
+        O(T·C) win is a search gap (the law set never spells the
+        shared state), not a cost-model gap.
+        """
+        from catopt_core.cost import dag_cost, flops_cost
+
+        T, C, K, d = 128, 16, 8, 16
+        shared = _shared_state_fold(T, C, K, d)
+        spelled = _spelled_cross(T, C, K, d)
+        assert dag_cost(shared, flops_cost) < dag_cost(
+            spelled, flops_cost
+        )
+
+
+def _fold_nesting(term):
+    """Max ``applyd``/``affd_compose`` nesting of a decoded term."""
+    memo: dict[int, int] = {}
+
+    def depth(t, stack):
+        if not isinstance(t, Op):
+            return 0
+        key = id(t)
+        if key in memo:
+            return memo[key]
+        if key in stack:
+            return 0
+        stack = stack | {key}
+        child = max((depth(a, stack) for a in t.args), default=0)
+        best = child + (t.op in ("applyd", "affd_compose"))
+        memo[key] = best
+        return best
+
+    return depth(term, frozenset())
+
+
+def _finite_fold_depth(eg, root):
+    """Deepest *finite* fold nesting over the root class's members.
+
+    Buildability is the least fixpoint (a class is buildable when some
+    member's children are all buildable); the depth is then the
+    level-by-level reachability of a fold-headed member.  Unlike a
+    naive e-graph walk this cannot be inflated by cycles — a
+    rewrite-introduced ``applyd`` chain can revisit a class, which no
+    finite term ever does.
+    """
+    fold_ops = ("applyd", "affd_compose")
+    build: set = set()
+    changed = True
+    while changed:
+        changed = False
+        for cid, cls in eg._classes.items():
+            cid = eg.find(cid)
+            if cid in build:
+                continue
+            for n in cls.nodes:
+                if n.op == "leaf" or all(
+                    eg.find(c) in build for c in n.children
+                ):
+                    build.add(cid)
+                    changed = True
+                    break
+    reach: list[set] = [set(build)]
+    d = 1
+    while d <= 64:
+        prev = reach[d - 1]
+        cur: set = set()
+        for cid, cls in eg._classes.items():
+            cid = eg.find(cid)
+            for n in cls.nodes:
+                if n.op not in fold_ops:
+                    continue
+                if not all(eg.find(c) in build for c in n.children):
+                    continue
+                if any(eg.find(c) in prev for c in n.children):
+                    cur.add(cid)
+                    break
+        if not cur:
+            break
+        # Non-fold members propagate the same level.
+        closing = True
+        while closing:
+            closing = False
+            for cid, cls in eg._classes.items():
+                cid = eg.find(cid)
+                if cid in cur:
+                    continue
+                for n in cls.nodes:
+                    if n.op == "leaf" or n.op in fold_ops:
+                        continue
+                    if not all(eg.find(c) in build for c in n.children):
+                        continue
+                    if any(eg.find(c) in cur for c in n.children):
+                        cur.add(cid)
+                        closing = True
+                        break
+        reach.append(cur)
+        d += 1
+    rc = eg.find(root)
+    return max(
+        (lvl for lvl, s in enumerate(reach) if rc in s), default=0
+    )
+
+
+def _block(x, i, dim, sz):
+    """Block ``i`` of a uniform ``sz`` split on axis ``dim``."""
+    return Op.make("split", x, sizes=sz, dim=dim, index=i)
+
+
+def _shared_state_fold(T, C, K, d):
+    """The paying fold — a shared per-chunk state recurrence.
+
+    ``out_i = intra_i + xi0 ⊙ (q_i @ S_{i-1})`` with ``S_i =
+    applyd(aff_diag(g^C, (eta_i ⊙ k_i)ᵀ v_i), S_{i-1})``: the state
+    ``S_{i-1}`` is ONE term consumed by block ``i``'s output and block
+    ``i+1``'s step, so the whole fold is O(T·C).  This is the spelling
+    the e-graph never produces.
+    """
+    sz = (C,) * K
+    q, k, v, s = (
+        _v("q", T, d),
+        _v("k", T, d),
+        _v("v", T, d),
+        _v("s", T, T),
+    )
+    g, a = _v("g"), _v("a")  # a := g^C (a compile-time scalar)
+    eta = Op.make("decay_vec", g, t=C, sign=-1)
+    xi0 = Op.make("decay_vec", g, t=C)
+    S = _v("S0", d, d)
+    blocks = []
+    for i in range(K):
+        qi, ki, vi = (
+            _block(q, i, -2, sz),
+            _block(k, i, -2, sz),
+            _block(v, i, -2, sz),
+        )
+        intra = Op.make(
+            "om_decayed",
+            Op.make(
+                "split",
+                _block(s, i, -2, sz),
+                sizes=sz,
+                dim=-1,
+                index=i,
+            ),
+            Op.make("decay", g, t=C),
+            vi,
+        )
+        s_prev = S
+        b = Op.make(
+            "matmul",
+            Op.make(
+                "transpose",
+                Op.make("mul", ki, Op.make("unsqueeze", eta, dim=-1)),
+                dim0=-2,
+                dim1=-1,
+            ),
+            vi,
+        )
+        S = Op.make("applyd", Op.make("aff_diag", a, b), s_prev)
+        cross = Op.make(
+            "mul",
+            Op.make("unsqueeze", xi0, dim=-1),
+            Op.make("matmul", qi, s_prev),
+        )
+        blocks.append(Op.make("add", intra, cross))
+    out = blocks[-1]
+    for blk in reversed(blocks[:-1]):
+        out = Op.make("concat", blk, out, dim=-2)
+    return out
+
+
+def _spelled_cross(T, C, K, d):
+    """The explicit factored cross sum extraction actually selects."""
+    sz = (C,) * K
+    v, s = _v("v", T, d), _v("s", T, T)
+    g = _v("g")
+    eta = Op.make("decay_vec", g, t=C, sign=-1)
+    blocks = []
+    for i in range(K):
+        vi = _block(v, i, -2, sz)
+        si = Op.make(
+            "split",
+            _block(s, i, -2, sz),
+            sizes=sz,
+            dim=-1,
+            index=i,
+        )
+        acc = Op.make("om_decayed", si, Op.make("decay", g, t=C), vi)
+        for j in range(i):
+            xi = Op.make("decay_vec", g, t=C, offset=(i - j) * C)
+            sj = Op.make(
+                "split",
+                _block(s, i, -2, sz),
+                sizes=sz,
+                dim=-1,
+                index=j,
+            )
+            cross = Op.make(
+                "mul",
+                Op.make("unsqueeze", xi, dim=-1),
+                Op.make(
+                    "matmul",
+                    Op.make(
+                        "mul", sj, Op.make("unsqueeze", eta, dim=-2)
+                    ),
+                    _block(v, j, -2, sz),
+                ),
+            )
+            acc = Op.make("add", acc, cross)
+        blocks.append(acc)
+    out = blocks[-1]
+    for blk in reversed(blocks[:-1]):
+        out = Op.make("concat", blk, out, dim=-2)
+    return out
+
 
 def _walk_ops(term, out=None, seen=None):
     """Yield every ``Op`` node of a term DAG once (cycle-safe)."""
