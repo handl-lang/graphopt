@@ -37,6 +37,7 @@ from catopt_core.laws.cond import (
     compile_derive,
     derive_from_data,
     derive_to_data,
+    eval_cond,
     eval_derive,
 )
 from catopt_core.laws.scan import (
@@ -581,3 +582,243 @@ def test_affd_lift_unit_fires_and_mints_bcast_shape():
         h,
     )
     assert _fires(AFFD_LIFT_UNIT, src, want)
+
+
+# ---------------------------------------------------------------------------
+#  Grammar extensions — nth/take/sum reads, guard/if cond-gated exprs,
+#  and the attr-cmp/attr-ints predicates they need
+# ---------------------------------------------------------------------------
+
+
+def test_nth_reads_and_declines():
+    b = {"$attr:SZ": (8, 4, 2)}
+    nth = ("nth", ("attr", "SZ"), ("attr", "I"))
+    b1 = {**b, "$attr:I": 1}
+    assert eval_derive({"X": nth}, b1) == {"$attr:X": 4}
+    # negative indexing has Python reach
+    assert eval_derive({"X": nth}, {**b, "$attr:I": -1}) == {
+        "$attr:X": 2
+    }
+    # bool index — the isinstance(i, int) contract admits it
+    assert eval_derive({"X": nth}, {**b, "$attr:I": True}) == {
+        "$attr:X": 4
+    }
+    for bad in (
+        {**b, "$attr:I": 3},  # out of range
+        {**b, "$attr:I": -4},
+        {**b, "$attr:I": "x"},  # non-int index
+        {"$attr:SZ": 8, "$attr:I": 0},  # non-sequence
+        {"$attr:SZ": "abc", "$attr:I": 0},  # str is not a seq here
+        {"$attr:I": 0},  # SZ unbound
+    ):
+        assert eval_derive({"X": nth}, bad) is None, bad
+
+
+def test_take_and_sum():
+    b = {"$attr:SZ": (4, 5), "$attr:I": 1}
+    assert eval_derive(
+        {"P": ("take", ("attr", "SZ"), ("attr", "I"))}, b
+    ) == {"$attr:P": (4,)}
+    # oversized counts clamp like Python slicing
+    assert eval_derive(
+        {"P": ("take", ("attr", "SZ"), 9)}, b
+    ) == {"$attr:P": (4, 5)}
+    assert eval_derive(
+        {"O": ("sum", ("take", ("attr", "SZ"), ("attr", "I")))}, b
+    ) == {"$attr:O": 4}
+    assert eval_derive({"O": ("sum", ("attr", "SZ"))}, b) == {
+        "$attr:O": 9
+    }
+    # declines: non-sequence take/sum, non-int count, non-numeric elem
+    assert eval_derive(
+        {"P": ("take", ("attr", "SZ"), ("attr", "I"))},
+        {"$attr:SZ": 4, "$attr:I": 1},
+    ) is None
+    assert eval_derive(
+        {"P": ("take", ("attr", "SZ"), ("attr", "I"))},
+        {"$attr:SZ": (4,), "$attr:I": "x"},
+    ) is None
+    assert eval_derive({"O": ("sum", ("attr", "SZ"))}, {}) is None
+    assert eval_derive(
+        {"O": ("sum", ("attr", "SZ"))}, {"$attr:SZ": 4}
+    ) is None
+    assert eval_derive({"O": ("sum", ("attr", "SZ"))}, {
+        "$attr:SZ": (4, "x")
+    }) is None
+
+
+def test_guard_vetoes_and_if_branches():
+    b = {"$attr:I": 1, "$attr:SZ": (4, 5)}
+    spec = {
+        "X": (
+            "guard",
+            ("attr-cmp", "I", "<", 2),
+            ("nth", ("attr", "SZ"), ("attr", "I")),
+        )
+    }
+    assert eval_derive(spec, b) == {"$attr:X": 5}
+    assert eval_derive(spec, {**b, "$attr:I": 9}) is None
+    # a malformed cond inside guard/if is a bug, not a decline
+    with pytest.raises(ValueError):
+        eval_derive({"X": ("guard", ("nosuch", "I"), 1)}, b)
+    # if picks one arm — a declining untaken arm cannot veto
+    spec_if = {
+        "X": (
+            "if",
+            ("attr-eq-attr", "I", "SZ"),
+            ("attr", "I"),
+            ("attr", "MISSING"),  # would decline — not taken
+        )
+    }
+    assert eval_derive(spec_if, b) is None  # cond False → else arm
+    assert eval_derive(
+        spec_if, {"$attr:I": 3, "$attr:SZ": 3}
+    ) == {"$attr:X": 3}
+
+
+def test_attr_cmp_and_attr_ints_predicates():
+    # attr-cmp: names, literals, and inline exprs as operands
+    b = {"$attr:T": 9, "$attr:SZ": (4, 5)}
+    cond = ("attr-cmp", "T", "==", ("sum", ("attr", "SZ")))
+    assert eval_cond(cond, b) is True
+    assert (
+        eval_cond(("attr-cmp", 0, "<=", "I"), {"$attr:I": 0}) is True
+    )
+    # a missing or uncomputable side declines
+    assert eval_cond(("attr-cmp", "T", "<", "NOPE"), b) is False
+    assert eval_cond(("attr-cmp", "NOPE", "<", "T"), b) is False
+    assert (
+        eval_cond(("attr-cmp", "T", "<", ("attr", "NOPE")), b) is False
+    )
+    # an unorderable pair declines, it does not raise
+    b2 = {**b, "$attr:X": "abc"}
+    assert eval_cond(("attr-cmp", "T", "<", "X"), b2) is False
+    # attr-ints: tuple/list of ints, bool admitted, everything else no
+    for v, want in (
+        ((4, 5), True),
+        ([4, 5], True),
+        ((True, 5), True),  # isinstance(True, int) — the hook contract
+        ((), True),
+        ((4, "x"), False),
+        ("45", False),
+        (4, False),
+    ):
+        assert eval_cond(("attr-ints", "A"), {"$attr:A": v}) is want
+    assert eval_cond(("attr-ints", "NOPE"), b) is False
+
+
+# ---------------------------------------------------------------------------
+#  Carrier migration regression — the migrated derives are pure data
+# ---------------------------------------------------------------------------
+
+
+def test_migrated_carrier_rules_carry_dspec():
+    """Every migrated carrier derive is now declarative data.
+
+    ``missing_hooks`` must not report ``"derive"`` — the folded hook
+    is the spec-only closure — and the spec must survive the
+    law-record JSON hop minting identical attrs.
+    """
+    from catopt_carriers import decode_geom, decode_laws, om, trace
+    from catopt_core.laws.serialize import (
+        law_from_data,
+        law_to_data,
+        missing_hooks,
+    )
+
+    migrated = [
+        trace.TR_VANISH_SPLIT,
+        trace.TR_VANISH_MERGE,
+        trace.TR_SUPERPOSE_REV,
+        trace.TR_SLIDE,
+        trace.TR_SLIDE_REV,
+        trace.TR_EXPAND,
+        om.SPLIT_TRANSPOSE,
+        om.DECAY_BLOCK_DIAG,
+        om.DECAY_BLOCK_CROSS,
+        decode_laws.INDEX_SELECT_DEDUP,
+        decode_geom.CAT_NARROW_MERGE,
+    ]
+    for rule in migrated:
+        assert rule.dspec is not None, rule.name
+        assert "derive" not in missing_hooks(rule), rule.name
+        blob = json.dumps(derive_to_data(rule.dspec))
+        assert (
+            derive_from_data(json.loads(blob)) == rule.dspec
+        ), rule.name
+        rebuilt = law_from_data(
+            json.loads(json.dumps(law_to_data(rule)))
+        )
+        assert rebuilt.dspec == rule.dspec, rule.name
+
+
+def test_migrated_carrier_derives_mint_identically():
+    """The specs produce the same attr maps the Python hooks did."""
+    from catopt_carriers import decode_geom, decode_laws, om, trace
+
+    v = lambda n, *s: Var(n, TensorType(tuple(s)))  # noqa: E731
+    # tr_vanish_split: usize (u,v) → two int dims
+    assert trace.TR_VANISH_SPLIT.derive(
+        {"f": v("f", 8, 8), "$attr:UV": (3, 2)}
+    ) == {"$attr:DU": 3, "$attr:DV": 2}
+    assert trace.TR_VANISH_SPLIT.derive({"$attr:UV": (3, 2, 1)}) is None
+    # tr_slide / tr_slide_rev: the widened block axis
+    g = v("g", 5, 7)
+    assert trace.TR_SLIDE.derive({"g": g, "$attr:DU": 3}) == {
+        "$attr:DY": 2
+    }
+    assert trace.TR_SLIDE.derive({"g": v("g2", 3, 7), "$attr:DU": 3}) is None
+    assert trace.TR_SLIDE.derive({"g": v("g3", None, 7), "$attr:DU": 3}) is None
+    assert trace.TR_SLIDE_REV.derive(
+        {"g": v("g4", 7, 5), "$attr:DU": 3}
+    ) == {"$attr:DX": 2}
+    # tr_expand: (du, f_i − du) per axis
+    assert trace.TR_EXPAND.derive({"f": v("f", 6, 8), "$attr:DU": 4}) == {
+        "$attr:RS": (4, 2),
+        "$attr:CS": (4, 4),
+    }
+    assert trace.TR_EXPAND.derive(
+        {"f": v("f", 6, 8), "$attr:DU": 0}
+    ) is None
+    # tr_vanish_merge / tr_superpose_rev: the fused product size
+    b = {"$attr:DU": 4, "$attr:DV": 2}
+    assert trace.TR_VANISH_MERGE.derive(b) == {"$attr:UV": (4, 2)}
+    assert trace.TR_SUPERPOSE_REV.derive(b) == {"$attr:UV": (4, 2)}
+    # split_transpose: the pre-transpose axis pick
+    dims = {"$attr:SD": -2, "$attr:D0": -2, "$attr:D1": -1}
+    assert om.SPLIT_TRANSPOSE.derive(dims) == {"$attr:DP": -1}
+    assert om.SPLIT_TRANSPOSE.derive(
+        {**dims, "$attr:SD": -1}
+    ) == {"$attr:DP": -2}
+    assert om.SPLIT_TRANSPOSE.derive({**dims, "$attr:SD": 0}) == {
+        "$attr:DP": 0
+    }
+    assert (
+        om.SPLIT_TRANSPOSE.derive({**dims, "$attr:SD": "x"}) is None
+    )
+    # decay_block_diag: TC = SZ[I] on the (i,i) block
+    ok = {"$attr:SZ": (8, 8), "$attr:I": 1, "$attr:T": 16}
+    assert om.DECAY_BLOCK_DIAG.derive(ok) == {"$attr:TC": 8}
+    assert om.DECAY_BLOCK_DIAG.derive({**ok, "$attr:I": 5}) is None
+    assert om.DECAY_BLOCK_DIAG.derive({**ok, "$attr:SZ": (8, "x")}) is None
+    assert om.DECAY_BLOCK_DIAG.derive({**ok, "$attr:T": 12}) is None
+    # decay_block_cross: extents + the strict-lower offset
+    ok2 = {"$attr:SZ": (4, 5), "$attr:T": 9, "$attr:I": 1, "$attr:J": 0}
+    assert om.DECAY_BLOCK_CROSS.derive(ok2) == {
+        "$attr:TI": 5,
+        "$attr:TJ": 4,
+        "$attr:OD": 4,
+    }
+    assert om.DECAY_BLOCK_CROSS.derive({**ok2, "$attr:J": 1}) is None
+    assert om.DECAY_BLOCK_CROSS.derive({**ok2, "$attr:T": 8}) is None
+    # index_select_dedup: uniques + position map
+    assert decode_laws.INDEX_SELECT_DEDUP.derive(
+        {"$attr:I": (7, 3, 7, 0, 3)}
+    ) == {"$attr:U": (7, 3, 0), "$attr:VI": (0, 1, 0, 2, 1)}
+    # cat_narrow_merge: the merged extent
+    assert decode_geom.CAT_NARROW_MERGE.derive(
+        {"$attr:L1": 2, "$attr:L2": 4}
+    ) == {"$attr:LT": 6}
+    assert (
+        decode_geom.CAT_NARROW_MERGE.derive({"$attr:L1": "2"}) is None
+    )

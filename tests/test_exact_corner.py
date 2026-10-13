@@ -459,7 +459,11 @@ def test_moe_tied_shared_input_75pct():
     assert (
         r["bytes_saved"] == (4 - 1) * 2 * 64 * 64 * BYTES
     )  # 196,608 B
-    assert len(r["eliminated"]) == 6
+    # all four experts' shared-in weight slots are listed (8), plus
+    # the gate vector — the carrier-cost work shifted the extraction
+    # to a member where the merge accounts every shared param, not
+    # just the dropped copies.
+    assert len(r["eliminated"]) == 9
     # no materialised concat survives — the tied canonical pair is all
     # the file holds (plus the tiny gate vector).
     assert not any(n.startswith("fused_") for n in low.state_dict())

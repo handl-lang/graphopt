@@ -80,6 +80,7 @@ from catopt_core.ir import Op
 from catopt_core.laws import R as _R
 from catopt_core.laws import RuleSet
 from catopt_core.laws import tags as _tags
+from catopt_core.laws.cond import as_derive
 from catopt_core.typing import broadcast
 
 
@@ -272,12 +273,22 @@ def _check_narrow_merge(bound: dict) -> bool:
     return s1 >= 0 and l1 >= 0 and s2 == s1 + l1 and l2 >= 0
 
 
-def _derive_narrow_merge(bound: dict) -> dict | None:
-    """``length`` = l1 + l2 — the merged extent."""
-    l1, l2 = bound.get("$attr:L1"), bound.get("$attr:L2")
-    if not (isinstance(l1, int) and isinstance(l2, int)):
-        return None
-    return {"$attr:LT": l1 + l2}
+#: ``LT`` = ``L1 + L2`` — the merged extent; both lengths must be
+#: bound ints (the hook's ``isinstance`` veto, as data).
+_DSPEC_NARROW_MERGE = {
+    "LT": (
+        "guard",
+        (
+            "and",
+            ("attr-type", "L1", "int"),
+            ("attr-type", "L2", "int"),
+        ),
+        ("add", ("attr", "L1"), ("attr", "L2")),
+    ),
+}
+
+#: Compat alias — the test-facing hook (the same data as the spec).
+_derive_narrow_merge = as_derive(_DSPEC_NARROW_MERGE)
 
 
 CAT_NARROW_MERGE = R(
@@ -290,7 +301,7 @@ CAT_NARROW_MERGE = R(
     ),
     Op.make("narrow", "t", dim="D1", start="S1", length="LT"),
     check=_check_narrow_merge,
-    derive=_derive_narrow_merge,
+    dspec=_DSPEC_NARROW_MERGE,
     law="Narrow spelling of the merge: cat(narrow(t,a,l1), "
     "narrow(t,a+l1,l2), d) ≡ narrow(t,a,l1+l2).",
 )
@@ -625,7 +636,12 @@ def _check_gather_select(bound: dict) -> bool:
 
 
 def _derive_gather_select(bound: dict) -> dict | None:
-    """Map the post-removal gather axis into *t*'s coordinates."""
+    """Map the post-removal gather axis into *t*'s coordinates.
+
+    Stays procedural: normalises the bound dims mod ``_xshape(t)``'s
+    rank — carrier-aware value shapes plus ``%``-arithmetic the dspec
+    grammar cannot express.
+    """
     ts = _shape(bound.get("t"))
     if not (ts and len(ts) >= 2):
         return None
@@ -649,7 +665,11 @@ def _check_gather_select_rev(bound: dict) -> bool:
 
 
 def _derive_gather_select_rev(bound: dict) -> dict | None:
-    """Map the gather axis into the selected tensor's coordinates."""
+    """Map the gather axis into the selected tensor's coordinates.
+
+    Stays procedural: carrier-aware ``_xshape`` rank + ``%`` axes —
+    see ``_derive_gather_select``.
+    """
     ts = _shape(bound.get("t"))
     if not (ts and len(ts) >= 2):
         return None
@@ -678,7 +698,11 @@ def _check_gather_stack(bound: dict) -> bool:
 
 
 def _derive_gather_stack(bound: dict) -> dict | None:
-    """Map the stacked gather axis into the operands' coordinates."""
+    """Map the stacked gather axis into the operands' coordinates.
+
+    Stays procedural: carrier-aware ``_xshape`` rank + ``%`` axes —
+    see ``_derive_gather_select``.
+    """
     a = _shape(bound.get("x"))
     if not a:
         return None
@@ -704,7 +728,11 @@ def _check_gather_stack_rev(bound: dict) -> bool:
 
 
 def _derive_gather_stack_rev(bound: dict) -> dict | None:
-    """Map the operand gather axis into the stacked coordinates."""
+    """Map the operand gather axis into the stacked coordinates.
+
+    Stays procedural: carrier-aware ``_xshape`` rank + ``%`` axes —
+    see ``_derive_gather_select``.
+    """
     a = _shape(bound.get("x"))
     if not a:
         return None
@@ -927,7 +955,11 @@ def _check_gather_same_axis(bound: dict) -> bool:
 
 
 def _derive_gather_same_axis(bound: dict) -> dict | None:
-    """J = Ix + (ex + Iy) — the packed-axis index list."""
+    """J = Ix + (ex + Iy) — the packed-axis index list.
+
+    Stays procedural: reads ``_xshape(x)`` for the left extent and
+    mints a per-element mapped index — both beyond the grammar.
+    """
     xs = _shape(bound.get("x"))
     ix, iy = bound.get("$attr:IX"), bound.get("$attr:IY")
     if not (

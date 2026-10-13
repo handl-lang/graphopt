@@ -704,6 +704,12 @@ def _check_chunk_apply_ok(bound: dict) -> bool:
 
 
 def _derive_chunk_apply(bound: dict):
+    """Derive ``DA`` — stays procedural.
+
+    ``DA`` normalises mod the carrier-aware value rank of ``c``
+    (``_xshape``); a dspec ``("len", ("shape", "c"))`` would read the
+    cost-convention shape instead.
+    """
     ok, da = _check_chunk_apply(bound)
     return {"$attr:DA": da} if ok else None
 
@@ -1405,6 +1411,10 @@ def _derive_reshape_apply(bound: dict):
 
     A -1 in S is carried through verbatim — numel(A) = numel(v)·i so
     the inferred dim resolves identically on the map.
+
+    Stays procedural: ``A[-1]`` is a ``_xshape`` read (carrier-aware),
+    and the ``-1`` resolution/numel check is view logic the dspec
+    grammar cannot express.
     """
     A = _apply_value_shapes(bound)
     S = bound.get("$attr:S")
@@ -1425,6 +1435,9 @@ def _derive_transpose_apply(bound: dict):
 
     The map has rank len(A) — normalise mod the value rank so the
     map's last (input) axis can never be permuted.
+
+    Stays procedural: the ranks come from ``_xshape`` (carrier-aware)
+    and the normalisation is ``%``-arithmetic the dspec lacks.
     """
     A = _apply_value_shapes(bound)
     if A is None:
@@ -1460,6 +1473,11 @@ def _check_transpose_applyd(bound: dict) -> bool:
 
 
 def _derive_transpose_applyd(bound: dict):
+    """Derive the diagonal transpose dims — stays procedural.
+
+    Same ``_xshape`` rank + ``%``-normalisation as
+    ``_derive_transpose_apply`` — see that note.
+    """
     a = _applyd_value_shapes(bound)
     if a is None:
         return None
@@ -1616,6 +1634,12 @@ def _check_transpose_apply_rev(bound: dict) -> bool:
 
 
 def _derive_transpose_apply_rev(bound: dict):
+    """Derive the refold dims — stays procedural.
+
+    The axis agreement + ``%``-normalisation of
+    ``_transpose_apply_rev_dims`` is carrier-aware shape logic the
+    dspec grammar cannot express.
+    """
     dd = _transpose_apply_rev_dims(bound)
     if dd is None:
         return None
@@ -1673,6 +1697,11 @@ def _check_transpose_applyd_rev(bound: dict) -> bool:
 
 
 def _derive_transpose_applyd_rev(bound: dict):
+    """Derive the refold dims — stays procedural.
+
+    Same ``_xshape`` rank + set-equality axis normalisation as
+    ``_derive_transpose_apply_rev``.
+    """
     dd = _transpose_applyd_rev_dims(bound)
     if dd is None:
         return None

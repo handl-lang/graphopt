@@ -82,6 +82,7 @@ from catopt_core.ir import Const, Op, op_def
 from catopt_core.laws import R as _R
 from catopt_core.laws import RuleSet
 from catopt_core.laws import tags as _tags
+from catopt_core.laws.cond import as_derive
 
 
 def R(name: str, lhs, rhs, **kw) -> Rewrite:
@@ -266,6 +267,11 @@ def _derive_om_concat_dims(bound: dict) -> dict | None:
 
     Scores join on their last dim, values on dim -2.  Vetoes (returns
     None) when the two chunks cannot form a well-typed cat.
+
+    Stays procedural: reads the carrier-aware ``_vshape`` — a bound
+    metavar may resolve to a carrier member whose *cost-convention*
+    shape is not the value shape — and the ``_chunks_compatible``
+    veto is shape logic the dspec grammar cannot express.
     """
     s1, s2 = _vshape(bound.get("s1")), _vshape(bound.get("s2"))
     v1, v2 = _vshape(bound.get("v1")), _vshape(bound.get("v2"))
@@ -387,6 +393,10 @@ def _derive_score_concat_dim(bound: dict) -> dict | None:
 
     After .T the key axis is last in k.T and lands on the scores' last
     dim, at index rank(out)-1 = max(rank q, rank k) - 1.
+
+    Stays procedural: the ranks come from ``_vshape`` (carrier-aware);
+    the dspec ``("shape", T)`` reads core ``_shape_of`` — the cost
+    convention, not the value shape.
     """
     q, k1 = _vshape(bound.get("q")), _vshape(bound.get("k1"))
     if not (isinstance(q, tuple) and isinstance(k1, tuple)):
@@ -570,6 +580,12 @@ def _check_mask_cat(sliced_key: str, fixed_keys: tuple, mode: str):
 
 
 def _derive_mask_cat(sliced_key: str, fixed_keys: tuple):
+    """Compute the mask plan's attrs — stays procedural.
+
+    Mints mode-dependent attrs from ``_cat_axis_plan`` — a
+    carrier-aware shape analysis the dspec grammar cannot express.
+    """
+
     def derive(bound: dict) -> dict | None:
         plan = _cat_axis_plan(bound, sliced_key, fixed_keys)
         if plan is None:
@@ -738,6 +754,12 @@ def _cat_pair_check(bound: dict) -> bool:
 
 
 def _cat_pair_derive(bound: dict) -> dict | None:
+    """Derive ``DO`` — stays procedural.
+
+    ``DO`` is the broadcast-grid axis the ``_check_cat_pair``
+    analysis computes — carrier-aware shapes and broadcast joins the
+    dspec grammar cannot express.
+    """
     oa = _check_cat_pair(bound)
     return None if oa is None else {"$attr:DO": oa}
 
@@ -1124,6 +1146,10 @@ def _derive_sdpa_cat(bound: dict) -> dict | None:
     The bound ``scale`` attr if given, else the default 1/√E with
     E = q's head dim.  Lands in the RHS ``fill(q, value=SC)`` — the only
     way a derived number reaches an operand.
+
+    Stays procedural: the fallback reads ``_vshape(q)`` (carrier-aware)
+    and needs ``** -0.5`` — the dspec has neither the carrier-aware
+    ``shape`` read nor a power op.
     """
     sc = bound.get("$attr:SC")
     if sc is None:
@@ -1532,7 +1558,12 @@ def _check_decay_lift(bound: dict) -> bool:
 
 
 def _derive_decay_lift(bound: dict) -> dict | None:
-    """``T`` := the shared arange's extent."""
+    """``T`` := the shared arange's extent.
+
+    Stays procedural: ``_arange_params`` reads the bound term's OWN op
+    attrs (start/end/step spellings) — the dspec grammar has no
+    term-structure read, only bound ``$attr:`` metavars and shapes.
+    """
     p = _arange_params(bound.get("a1"))
     if p is None:
         return None
@@ -1682,7 +1713,11 @@ def _check_om_decayed_rows(mode: str):
 
 
 def _derive_om_decayed_rows(bound: dict) -> dict | None:
-    """Split sizes + the row axis in ``d``'s own coords (slice mode)."""
+    """Split sizes + the row axis in ``d``'s own coords (slice mode).
+
+    Stays procedural: mints attrs from ``_cat_axis_plan`` — the
+    carrier-aware shape analysis the dspec grammar cannot express.
+    """
     plan = _cat_axis_plan(bound, "d")
     if plan is None or plan["mode"] != "slice":
         return None
@@ -1898,7 +1933,11 @@ def _check_key_cat(s_cat: bool, mode: str):
 
 
 def _derive_key_cat(s_cat: bool):
-    """Derive ``SZ`` = the (K1,K2) key extents from the v blocks."""
+    """Derive ``SZ`` = the (K1,K2) key extents from the v blocks.
+
+    Stays procedural: the extents come from ``_key_cat_plan`` —
+    carrier-aware ``_vshape`` reads plus the well-typedness veto.
+    """
 
     def derive(bound: dict) -> dict | None:
         plan = _key_cat_plan(bound, s_cat)
@@ -2068,10 +2107,27 @@ def _check_decay_block_diag(bound: dict) -> bool:
     return dr % r == r - 2 and dc % r == r - 1
 
 
-def _derive_decay_block_diag(bound: dict) -> dict | None:
-    """``TC`` := ``SZ[i]`` — the diagonal block's extent."""
-    attrs = _diag_attrs(bound)
-    return None if attrs is None else {"$attr:TC": attrs[0][attrs[1]]}
+#: The ``_diag_attrs`` contract as data: ``SZ`` a 2-element int
+#: partition of ``T``, ``I`` the block index in ``{0, 1}`` —
+#: ``TC := SZ[I]``.
+_DIAG_COND = (
+    "and",
+    ("attr-ints", "SZ"),
+    ("attr-cmp", ("len", ("attr", "SZ")), "==", 2),
+    ("attr-type", "I", "int"),
+    ("attr-cmp", 0, "<=", "I"),
+    ("attr-cmp", "I", "<", 2),
+    ("attr-type", "T", "int"),
+    (
+        "attr-cmp",
+        "T",
+        "==",
+        ("add", ("nth", ("attr", "SZ"), 0), ("nth", ("attr", "SZ"), 1)),
+    ),
+)
+_DSPEC_DECAY_BLOCK_DIAG = {
+    "TC": ("guard", _DIAG_COND, ("nth", ("attr", "SZ"), ("attr", "I"))),
+}
 
 
 DECAY_BLOCK_DIAG = R(
@@ -2091,7 +2147,7 @@ DECAY_BLOCK_DIAG = R(
     ),
     Op.make("decay", "g", t="TC"),
     check=_check_decay_block_diag,
-    derive=_derive_decay_block_diag,
+    dspec=_DSPEC_DECAY_BLOCK_DIAG,
     law="the (i,i) block of the causal decay triangle IS the local "
     "decay of chunk i — g^((o+r)-(o+c)) = g^(r-c): diagonal blocks "
     "regenerate instead of slicing materialised decay.",
@@ -2170,17 +2226,41 @@ def _check_decay_block_cross(bound: dict) -> bool:
     return dr % r == r - 2 and dc % r == r - 1
 
 
-def _derive_decay_block_cross(bound: dict) -> dict | None:
-    """``TI``/``TJ`` := block extents; ``OD`` := the offset ``o_i-o_j``."""
-    attrs = _cross_attrs(bound)
-    if attrs is None:
-        return None
-    sz, i, j = attrs
-    return {
-        "$attr:TI": sz[i],
-        "$attr:TJ": sz[j],
-        "$attr:OD": sum(sz[:i]) - sum(sz[:j]),
-    }
+#: The ``_cross_attrs`` contract as data: ``SZ`` an int partition of
+#: ``T``, ``0 <= J < I < len(SZ)`` — ``TI``/``TJ`` the two block
+#: extents, ``OD`` the offset ``sum(sz[:i]) - sum(sz[:j])``.
+_CROSS_COND = (
+    "and",
+    ("attr-ints", "SZ"),
+    ("attr-type", "I", "int"),
+    ("attr-type", "J", "int"),
+    ("attr-type", "T", "int"),
+    ("attr-cmp", 0, "<=", "J"),
+    ("attr-cmp", "J", "<", "I"),
+    ("attr-cmp", "I", "<", ("len", ("attr", "SZ"))),
+    ("attr-cmp", "T", "==", ("sum", ("attr", "SZ"))),
+)
+_DSPEC_DECAY_BLOCK_CROSS = {
+    "TI": (
+        "guard",
+        _CROSS_COND,
+        ("nth", ("attr", "SZ"), ("attr", "I")),
+    ),
+    "TJ": (
+        "guard",
+        _CROSS_COND,
+        ("nth", ("attr", "SZ"), ("attr", "J")),
+    ),
+    "OD": (
+        "guard",
+        _CROSS_COND,
+        (
+            "sub",
+            ("sum", ("take", ("attr", "SZ"), ("attr", "I"))),
+            ("sum", ("take", ("attr", "SZ"), ("attr", "J"))),
+        ),
+    ),
+}
 
 
 DECAY_BLOCK_CROSS = R(
@@ -2212,7 +2292,7 @@ DECAY_BLOCK_CROSS = R(
         ),
     ),
     check=_check_decay_block_cross,
-    derive=_derive_decay_block_cross,
+    dspec=_DSPEC_DECAY_BLOCK_CROSS,
     law="the strict-lower (i,j) block of the causal decay is rank-1: "
     "X[r,c] = g^(o_i-o_j+r-c) = g^(o_i-o_j+r) * g^-c — an outer "
     "product of two decay vectors (the RetNet xi/eta factorization), "
@@ -2485,6 +2565,10 @@ def _derive_chunkify(bound: dict) -> dict | None:
     ``om_decayed`` carries no partition, so the introduction halves
     the axis; deeper chunking is saturation recursion, not a bigger
     law.
+
+    Stays procedural: reads ``_vshape`` — the carrier-aware value
+    shape; ``("dim", "s", -2)`` in a dspec would read core
+    ``_shape_of``'s carrier-convention shape instead.
     """
     s = _vshape(bound.get("s"))
     if not (isinstance(s, tuple) and len(s) >= 2):
@@ -2507,7 +2591,10 @@ def _check_chunkify_rows(bound: dict) -> bool:
 
 
 def _derive_chunkify_keys(bound: dict) -> dict | None:
-    """``SZ`` := the key-axis bisection — same halving on ``s[-1]``."""
+    """``SZ`` := the key-axis bisection — same halving on ``s[-1]``.
+
+    Stays procedural: reads ``_vshape`` — see ``_derive_chunkify``.
+    """
     s = _vshape(bound.get("s"))
     if not (isinstance(s, tuple) and len(s) >= 2):
         return None
@@ -2648,16 +2735,35 @@ SPLIT_MATMUL_COLS = R(
 )
 
 
-def _derive_split_transpose(bound: dict) -> dict | None:
-    """``DP`` := the split's pre-transpose axis — the axis ``D`` names."""
-    d, p1, p2 = (
-        bound.get("$attr:SD"),
-        bound.get("$attr:D0"),
-        bound.get("$attr:D1"),
-    )
-    if not all(isinstance(x, int) for x in (d, p1, p2)):
-        return None
-    return {"$attr:DP": p2 if d == p1 else p1 if d == p2 else d}
+#: ``DP`` := the split's pre-transpose axis — the axis ``SD`` names:
+#: ``D1`` when ``SD == D0``, ``D0`` when ``SD == D1``, else ``SD``
+#: itself.  All three dims must be bound ints (the procedural hook's
+#: ``isinstance`` veto, as data).
+_DSPEC_SPLIT_TRANSPOSE = {
+    "DP": (
+        "guard",
+        (
+            "and",
+            ("attr-type", "SD", "int"),
+            ("attr-type", "D0", "int"),
+            ("attr-type", "D1", "int"),
+        ),
+        (
+            "if",
+            ("attr-eq-attr", "SD", "D0"),
+            ("attr", "D1"),
+            (
+                "if",
+                ("attr-eq-attr", "SD", "D1"),
+                ("attr", "D0"),
+                ("attr", "SD"),
+            ),
+        ),
+    ),
+}
+
+#: Compat alias — ``_check_split_transpose`` calls the hook shape.
+_derive_split_transpose = as_derive(_DSPEC_SPLIT_TRANSPOSE)
 
 
 def _check_split_transpose(bound: dict) -> bool:
@@ -2737,7 +2843,7 @@ SPLIT_TRANSPOSE = R(
         dim1="D1",
     ),
     check=_check_split_transpose,
-    derive=_derive_split_transpose,
+    dspec=_DSPEC_SPLIT_TRANSPOSE,
     law="split commutes through transpose: splitting the transposed "
     "axis D is splitting the axis D names in the pre-image "
     "(d1 when D=d0, d0 when D=d1, D otherwise) — kᵀ's key blocks "

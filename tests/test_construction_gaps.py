@@ -637,11 +637,10 @@ def test_metavar_gather_compose_needs_a_missing_derive():
 
 def test_compose_over_procedural_gather_laws_stays_procedural():
     """``compose`` transports the shipped gather laws' Python ``check``
-    guards *and* their ``derive`` hooks — the composite keeps every
-    procedural remainder honestly recorded (the transported derive
-    can't serialize, so it joins the missing-hooks list) and
-    full-data declines — composition does not launder procedural
-    evidence."""
+    guard — the composite keeps the procedural remainder honestly
+    recorded and full-data declines — composition does not launder
+    procedural evidence.  The dedup *derive* is a dspec now, so it
+    transports as data and no longer joins the missing-hooks list."""
     obj = synth.compose_objects(
         "dedup_then_id",
         _DECODE["index_select_dedup"],
@@ -650,7 +649,7 @@ def test_compose_over_procedural_gather_laws_stays_procedural():
     assert obj is not None
     rep, rec = _gauntlet(obj, _gg_case())
     assert not rep.usable
-    assert sorted(rec["missing_hooks"]) == ["check", "derive"]
+    assert sorted(rec["missing_hooks"]) == ["check"]
     assert not _stages(rep)["full-data"].passed
 
 

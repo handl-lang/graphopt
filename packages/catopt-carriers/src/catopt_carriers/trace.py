@@ -105,6 +105,7 @@ from catopt_core.ir import Op, op_def
 from catopt_core.laws import R as _R
 from catopt_core.laws import RuleSet
 from catopt_core.laws import tags as _tags
+from catopt_core.laws.cond import as_derive
 
 
 def R(name: str, lhs, rhs, **kw) -> Rewrite:
@@ -251,11 +252,20 @@ def _check_vanish_split(bound: dict) -> bool:
     )
 
 
-def _derive_vanish_split(bound: dict):
-    uv = _usize_split2(bound)
-    if uv is None:
-        return None
-    return {"$attr:DU": uv[0], "$attr:DV": uv[1]}
+#: The ``_usize_split2`` contract as data: UV is a 2-element int
+#: factorisation — ``(DU, DV)`` are its two entries.
+_USIZE2_COND = (
+    "and",
+    ("attr-ints", "UV"),
+    ("attr-cmp", ("len", ("attr", "UV")), "==", 2),
+)
+_DSPEC_VANISH_SPLIT = {
+    "DU": ("guard", _USIZE2_COND, ("nth", ("attr", "UV"), 0)),
+    "DV": ("guard", _USIZE2_COND, ("nth", ("attr", "UV"), 1)),
+}
+
+#: Compat alias — the test-facing hook (the same data as the spec).
+_derive_vanish_split = as_derive(_DSPEC_VANISH_SPLIT)
 
 
 TR_VANISH_SPLIT = R(
@@ -266,7 +276,7 @@ TR_VANISH_SPLIT = R(
     "decomposes into nested traces (feedback-first wiring makes "
     "the inner factor literally the leading block).",
     check=_check_vanish_split,
-    derive=_derive_vanish_split,
+    dspec=_DSPEC_VANISH_SPLIT,
 )
 
 
@@ -287,7 +297,7 @@ TR_VANISH_MERGE = R(
     law="Nested traces fuse into a trace over the product wire "
     "U⊗V — the reverse of tr_vanish_split.",
     check=_check_vanish_merge,
-    derive=lambda b: {"$attr:UV": (b["$attr:DU"], b["$attr:DV"])},
+    dspec={"UV": ("tuple", ("attr", "DU"), ("attr", "DV"))},
 )
 
 
@@ -348,7 +358,7 @@ TR_SUPERPOSE_REV = R(
     law="Reverse superposing: independent loops fuse into one joint "
     "loop — the eqsat-visible schedule/memory tradeoff.",
     check=lambda b: _both_int(b, "$attr:DU", "$attr:DV"),
-    derive=lambda b: {"$attr:UV": (b["$attr:DU"], b["$attr:DV"])},
+    dspec={"UV": ("tuple", ("attr", "DU"), ("attr", "DV"))},
 )
 
 
@@ -373,12 +383,40 @@ def _check_slide(bound: dict) -> bool:
     return hs == (du, du) and gs[1] == du + dx and gs[0] > du
 
 
-def _derive_slide(bound: dict):
-    gs = _dim2(bound.get("g"))
-    du = bound.get("$attr:DU")
-    if gs is None or not isinstance(du, int) or gs[0] <= du:
-        return None
-    return {"$attr:DY": gs[0] - du}
+def _slide_guard(axis: int) -> tuple:
+    """Build the ``_dim2(g)``/``isinstance(du, int)``/``gs[a] > du`` cond.
+
+    *axis* is the g-dim the slide widens (0 for the forward law, 1
+    for the reverse); the other dim is pinned concrete so the spec
+    keeps the hook's "concrete 2-D" veto.
+    """
+    return (
+        "and",
+        ("rank", "g", "==", 2),
+        ("concrete", "g"),
+        ("attr-type", "DU", "int"),
+        ("attr-cmp", "DU", "<", ("dim", "g", axis)),
+    )
+
+
+_DSPEC_SLIDE = {
+    "DY": (
+        "guard",
+        _slide_guard(0),
+        ("sub", ("dim", "g", 0), ("attr", "DU")),
+    ),
+}
+_DSPEC_SLIDE_REV = {
+    "DX": (
+        "guard",
+        _slide_guard(1),
+        ("sub", ("dim", "g", 1), ("attr", "DU")),
+    ),
+}
+
+#: Compat aliases — the test-facing hooks (the same data as the specs).
+_derive_slide = as_derive(_DSPEC_SLIDE)
+_derive_slide_rev = as_derive(_DSPEC_SLIDE_REV)
 
 
 _TR_SLIDE_LHS = Op.make(
@@ -404,7 +442,7 @@ TR_SLIDE = R(
     law="Sliding: Tr(g·(h⊕I_in)) = Tr((h⊕I_out)·g) — a map on the "
     "feedback wire crosses the loop boundary.",
     check=_check_slide,
-    derive=_derive_slide,
+    dspec=_DSPEC_SLIDE,
 )
 
 
@@ -418,21 +456,13 @@ def _check_slide_rev(bound: dict) -> bool:
     return hs == (du, du) and gs[0] == du + dy and gs[1] > du
 
 
-def _derive_slide_rev(bound: dict):
-    gs = _dim2(bound.get("g"))
-    du = bound.get("$attr:DU")
-    if gs is None or not isinstance(du, int) or gs[1] <= du:
-        return None
-    return {"$attr:DX": gs[1] - du}
-
-
 TR_SLIDE_REV = R(
     "tr_slide_rev",
     _TR_SLIDE_RHS,
     _TR_SLIDE_LHS,
     law="Sliding, reverse direction.",
     check=_check_slide_rev,
-    derive=_derive_slide_rev,
+    dspec=_DSPEC_SLIDE_REV,
 )
 
 
@@ -579,18 +609,35 @@ def _check_expand(bound: dict) -> bool:
     )
 
 
-def _derive_expand(bound: dict):
-    fs = _dim2(bound.get("f"))
-    du = bound.get("$attr:DU")
-    if (
-        fs is None
-        or not isinstance(du, int)
-        or du <= 0
-        or fs[0] <= du
-        or fs[1] <= du
-    ):
-        return None
-    return {"$attr:RS": (du, fs[0] - du), "$attr:CS": (du, fs[1] - du)}
+#: The ``_dim2(f)`` + ``0 < du < min(fs)`` contract as data — the
+#: split sizes are ``(du, f_i − du)`` per axis.
+_EXPAND_COND = (
+    "and",
+    ("attr-type", "DU", "int"),
+    ("attr-cmp", 0, "<", "DU"),
+    ("rank", "f", "==", 2),
+    ("concrete", "f"),
+    ("attr-cmp", "DU", "<", ("dim", "f", 0)),
+    ("attr-cmp", "DU", "<", ("dim", "f", 1)),
+)
+
+
+def _expand_size(axis: int) -> tuple:
+    return (
+        "guard",
+        _EXPAND_COND,
+        (
+            "tuple",
+            ("attr", "DU"),
+            ("sub", ("dim", "f", axis), ("attr", "DU")),
+        ),
+    )
+
+
+_DSPEC_EXPAND = {"RS": _expand_size(0), "CS": _expand_size(1)}
+
+#: Compat alias — the test-facing hook (the same data as the spec).
+_derive_expand = as_derive(_DSPEC_EXPAND)
 
 
 def _blk(t: Any, sizes_attr: str, dim: int, idx: int) -> Op:
@@ -628,7 +675,7 @@ TR_EXPAND = R(
     "resolvent lives on the feedback block.  The local bridge "
     "from iterative to closed/parallel form.",
     check=_check_expand,
-    derive=_derive_expand,
+    dspec=_DSPEC_EXPAND,
 )
 
 

@@ -216,9 +216,9 @@ def test_machine_shipped_is_exactly_the_promotion_table():
     assert MACHINE_SHIPPED == _PROMOTION_TABLE
     shipped_names = {r.name for r in ALL_RULES}
     assert shipped_names >= MACHINE_SHIPPED
-    # 61 human-authored + 10 promoted = the 71-rule library.
-    assert len(ALL_RULES) == 71
-    assert len(shipped_names - MACHINE_SHIPPED) == 61
+    # 69 human-authored + 10 promoted = the 79-rule library.
+    assert len(ALL_RULES) == 79
+    assert len(shipped_names - MACHINE_SHIPPED) == 69
 
 
 def test_machine_stored_objects_are_unshipped_names():
@@ -322,15 +322,19 @@ def test_store_lift_wins_where_the_default_library_misses():
     cin = dag_cost(res.ir.root, res.cost_fn)
     cout = dag_cost(res.term, res.cost_fn)
     assert cout < cin
-    # The shipped default cannot produce this member — no carrier
-    # lift law is in DEFAULT_RULES.
+    # The shipped default now carries ``decay_state_lift`` — the
+    # machine-derived carrier fold — so the DEFAULT arm reaches an
+    # applyd member too.  ``affd_step_lift``'s historical edge is
+    # subsumed, not lost: the store still fires it, and the default
+    # win now belongs to the shipped carrier law.
     res2, _x2 = _search("AdaLNBlock", default_rules())
     assert not {n for n in res2.stats["rule_fires"]} & {
         "affd_step_lift",
         "affd_lift",
     }
+    assert "decay_state_lift" in res2.stats["rule_fires"]
     cout2 = dag_cost(res2.term, res2.cost_fn)
-    assert cout2 == pytest.approx(dag_cost(res2.ir.root, res2.cost_fn))
+    assert cout2 < dag_cost(res2.ir.root, res2.cost_fn)
 
 
 def test_lora_win_is_human_law_yield():

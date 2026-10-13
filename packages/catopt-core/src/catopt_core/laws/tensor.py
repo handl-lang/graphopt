@@ -2018,7 +2018,7 @@ def _split_scalar(op: str, scalar_left: bool) -> Rewrite:
         "grid; the scalar accompanies every block unchanged.",
         cond=("scalar", "c"),
         tags=_CAT,
-        derivation=("split_scalar_naturality", op, suf),
+        derivation=("naturality_scalar",),
     )
 
 

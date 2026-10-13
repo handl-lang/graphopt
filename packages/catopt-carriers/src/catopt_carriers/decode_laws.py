@@ -78,6 +78,7 @@ from catopt_core.ir import Op
 from catopt_core.laws import R as _R
 from catopt_core.laws import RuleSet
 from catopt_core.laws import tags as _tags
+from catopt_core.laws.cond import as_derive
 from catopt_core.laws.tensor import _check_repeat_chain
 
 
@@ -171,6 +172,10 @@ def _derive_scatter_end(bound: dict) -> dict | None:
 
     ``_check_cat_prefix`` already proved ``buf.shape[d] == n + m``;
     the derive re-verifies so a standalone replay stays safe.
+
+    Stays procedural: reads ``_dshape`` — the carrier-aware value
+    shape; a dspec ``("dim", "buf", …)`` would resolve the
+    cost-convention shape instead.
     """
     bs, cd = _dshape(bound.get("buf")), bound.get("$attr:CD")
     if not (isinstance(bs, tuple) and bs and isinstance(cd, int)):
@@ -363,19 +368,15 @@ def _check_dedup_index(bound: dict) -> bool:
     )
 
 
-def _derive_dedup_index(bound: dict) -> dict:
-    """U = first-occurrence uniques; inv[i] = I[i]'s slot in U."""
-    pos: dict[int, int] = {}
-    uniq: list[int] = []
-    inv: list[int] = []
-    for i in tuple(bound["$attr:I"]):
-        j = pos.get(i)
-        if j is None:
-            j = len(uniq)
-            pos[i] = j
-            uniq.append(i)
-        inv.append(j)
-    return {"$attr:U": tuple(uniq), "$attr:VI": tuple(inv)}
+#: ``U`` = first-occurrence uniques; ``VI`` = each ``I[i]``'s slot in
+#: ``U`` — the ``unique``/``posmap`` pair, spelled as data.
+_DSPEC_DEDUP_INDEX = {
+    "U": ("unique", ("attr", "I")),
+    "VI": ("posmap", ("unique", ("attr", "I")), ("attr", "I")),
+}
+
+#: Compat alias — the test-facing hook (the same data as the spec).
+_derive_dedup_index = as_derive(_DSPEC_DEDUP_INDEX)
 
 
 INDEX_SELECT_DEDUP = R(
@@ -388,7 +389,7 @@ INDEX_SELECT_DEDUP = R(
         index="VI",
     ),
     check=_check_dedup_index,
-    derive=_derive_dedup_index,
+    dspec=_DSPEC_DEDUP_INDEX,
     law="Gather-of-gather: t[I] ≡ t[U][inv] — deduplicate the gathered "
     "axis to its first-occurrence uniques, then re-expand.  The decode "
     "reading: the inner select touches |U| rows of the table where the "
@@ -419,6 +420,9 @@ def _derive_repeat_gather(bound: dict) -> dict | None:
 
     The merged axis is d−1 of k (the check proves d ≥ 1); its extent h
     and the repeat factor r = ES[d] must be concrete to mint the map.
+
+    Stays procedural: reads ``_dshape`` (carrier-aware) and mints the
+    ``range``-computed index — both beyond the dspec grammar.
     """
     ks = _dshape(bound.get("k"))
     d, es = bound.get("$attr:UDk"), bound.get("$attr:ESk")

@@ -52,6 +52,16 @@ Grammar
           | ("attr-cmp-dim", NAME, CMP, T, K)
                                      # $attr:NAME CMP shape(T)[$attr:K]
           | ("attr-eq-attr", A, B)   # bound attrs equal (both bound)
+          | ("attr-cmp", A, CMP, B)  # resolved comparison: the
+                                     #   _aval of A CMP the _aval of
+                                     #   B — names, literals, or
+                                     #   inline exprs (a transported
+                                     #   guard compares a DERIVED
+                                     #   value this way); a missing or
+                                     #   unorderable side declines
+          | ("attr-ints", A)         # bound attr is a tuple/list of
+                                     #   ints (bool admitted — the
+                                     #   isinstance(x, int) contract)
           | ("dim-mod", T, K, m, r)  # sa[K mod rank] % m == r
           | ("bcast-eq", A,B,C,D)    # bcast(sA,sB) == bcast(sC,sD)
           | ("ones-before", T, K)    # s[i]==1 for i < K mod (rank+1)
@@ -161,6 +171,17 @@ value expressions evaluated against the same ``bound`` environment:
            | ("neg"|"recip"|"float"|"int", e)
            | ("bcast", T, T)                   # broadcast two shapes —
                                                # concrete or veto
+           | ("nth", e_seq, e_i)               # seq[i] — tuple/list
+                                               #   seq, int index
+           | ("take", e_seq, e_k)              # seq[:k] — the prefix
+                                               #   slice a block
+                                               #   offset reads
+           | ("sum", e)                        # sum of a tuple/list
+           | ("guard", COND, e)                # veto unless COND —
+                                               #   a cond tree
+           | ("if", COND, e_t, e_f)            # pick by COND — a cond
+                                               #   tree; only the
+                                               #   taken arm evaluates
 
     NAME := attribute metavar name — the result maps under
             ``"$attr:NAME"``; a ``"$attr:"``-prefixed spec key is
@@ -941,6 +962,40 @@ def _p_attr_eq_attr(args: tuple, bound: dict) -> bool:
     return a is not _MISSING and a == b
 
 
+def _p_attr_cmp(args: tuple, bound: dict) -> bool:
+    """``("attr-cmp", A, CMP, B)`` — compare two resolved attr args.
+
+    The ``CMP``-comparing sibling of ``attr-eq-attr``: both operands
+    resolve through :func:`_aval` — attr metavar names, literals, or
+    inline derive exprs (a transported ``guard`` compares a *derived*
+    quantity — ``sz[i]`` against ``t``, a bound index against a
+    computed length — this way).  An unbound side or an unorderable
+    pair declines; a bogus ``CMP`` is malformed, like ``rank``'s.
+    """
+    a, b = _aval(bound, args[0]), _aval(bound, args[2])
+    if a is _MISSING or b is _MISSING:
+        return False
+    try:
+        return bool(_CMPS[args[1]](a, b))
+    except (ArithmeticError, TypeError):
+        return False
+
+
+def _p_attr_ints(args: tuple, bound: dict) -> bool:
+    """``("attr-ints", A)`` — a tuple/list of ints.
+
+    The elementwise shape the split-size derives all read
+    (``isinstance(sz, (tuple, list)) and all(isinstance(x, int))``) —
+    bools are admitted, matching the ``isinstance(x, int)``
+    contract the procedural hooks spell.  A non-sequence or a
+    non-int element declines.
+    """
+    v = _aval(bound, args[0])
+    return isinstance(v, (tuple, list)) and all(
+        isinstance(x, int) for x in v
+    )
+
+
 def _p_bcast_eq(args: tuple, bound: dict) -> bool:
     """``bcast(sa, sb) == bcast(sc, sd)`` — output grids coincide.
 
@@ -1344,6 +1399,8 @@ _OPS: dict = {
     "attr-len": _p_attr_len,
     "attr-cmp-dim": _p_attr_cmp_dim,
     "attr-eq-attr": _p_attr_eq_attr,
+    "attr-cmp": _p_attr_cmp,
+    "attr-ints": _p_attr_ints,
     "bcast-eq": _p_bcast_eq,
     "ones-before": _p_ones_before,
     "axes-noop": _p_axes_noop,
@@ -1663,6 +1720,83 @@ def _d_bcast(args: tuple, bound: dict) -> tuple:
     return tuple(out)
 
 
+def _d_nth(args: tuple, bound: dict) -> Any:
+    """``("nth", e_seq, e_i)`` — ``seq[i]``, plain indexing.
+
+    The element read the split-size derives spell (``sz[i]``): the
+    sequence must be a tuple/list and the index an int — bool
+    admitted, matching the ``sz[i]`` the hooks wrote under an
+    ``isinstance(i, int)`` guard — with Python's negative-index
+    reach; an out-of-range or ill-typed read declines.
+    """
+    seq = _dexpr(args[0], bound)
+    i = _dexpr(args[1], bound)
+    if not isinstance(seq, (tuple, list)) or not isinstance(i, int):
+        raise _Decline("nth: not a (sequence, int-index) pair")
+    if not (-len(seq) <= i < len(seq)):
+        raise _Decline("nth: index out of range")
+    return seq[i]
+
+
+def _d_take(args: tuple, bound: dict) -> tuple:
+    """``("take", e_seq, e_k)`` — ``seq[:k]``, the prefix slice.
+
+    The block-offset read: ``sum(sz[:i])`` — a strict-lower split's
+    offset — is ``sum`` over ``take``.  A non-sequence operand or a
+    non-int count declines; *k* is Python-clamped, so an oversized
+    prefix is the whole sequence (guards pin the honest range).
+    """
+    seq = _dexpr(args[0], bound)
+    k = _dexpr(args[1], bound)
+    if not isinstance(seq, (tuple, list)) or not isinstance(k, int):
+        raise _Decline("take: not a (sequence, int-count) pair")
+    return tuple(seq[:k])
+
+
+def _d_sum(args: tuple, bound: dict) -> Any:
+    """``("sum", e)`` — the sum of a tuple/list of numbers.
+
+    A non-sequence operand or a non-numeric element declines — the
+    same failure the procedural ``sum(sz)`` met on a bad binding.
+    """
+    v = _dexpr(args[0], bound)
+    if not isinstance(v, (tuple, list)):
+        raise _Decline("sum: not a sequence")
+    try:
+        return sum(v)
+    except TypeError as e:
+        raise _Decline(f"sum: non-numeric element: {e}") from None
+
+
+def _d_guard(args: tuple, bound: dict) -> Any:
+    """``("guard", COND, e)`` — evaluate *e* only when COND holds.
+
+    The derive-side veto: *COND* is a cond tree (the predicates
+    above — ``attr-type``, ``attr-cmp``, ``attr-ints``, …) run by
+    :func:`eval_cond`; a False verdict vetoes the spec the way a
+    hand-written ``if …: return None`` did.  A malformed COND raises
+    ``ValueError`` — a bug, not a decline.
+    """
+    if not eval_cond(args[0], bound):
+        raise _Decline("guard: condition unmet")
+    return _dexpr(args[1], bound)
+
+
+def _d_if(args: tuple, bound: dict) -> Any:
+    """``("if", COND, e_t, e_f)`` — branch on a cond tree.
+
+    *COND* evaluates through :func:`eval_cond` (an unprovable
+    predicate is False — the strictness contract); only the taken
+    arm is evaluated, so a declining untaken arm cannot veto — the
+    ``p2 if d == p1 else …`` chains the hand-written hooks spelled.
+    """
+    return (
+        _dexpr(args[1], bound)
+        if eval_cond(args[0], bound)
+        else _dexpr(args[2], bound)
+    )
+
+
 _DBINOPS: dict = {
     "add": lambda a, b: a + b,
     "sub": lambda a, b: a - b,
@@ -1720,6 +1854,11 @@ _DOPS: dict = {
     "unique": _d_unique,
     "posmap": _d_posmap,
     "bcast": _d_bcast,
+    "nth": _d_nth,
+    "take": _d_take,
+    "sum": _d_sum,
+    "guard": _d_guard,
+    "if": _d_if,
     **{k: _binop(k) for k in _DBINOPS},
     **{k: _unop(k) for k in _DUNOPS},
 }
