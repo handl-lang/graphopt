@@ -197,32 +197,33 @@ def test_laws_exports_every_rewrite():
 
     found = _iter_module_rules(laws)
     assert all(isinstance(r, Rewrite) for r in found)
-    # 79 tensor (61 + the promoted discovery set: softsign_fold, the
+    # 80 tensor (62 + the promoted discovery set: softsign_fold, the
     # transpose_noop/chunk_single view identities, the four broadcast-
-    # pad/reshape strips, the two mask-free sdpa folds, and the
-    # channel->row scale composite — project/retros/promoted-laws.md)
+    # pad/reshape strips, the two mask-free sdpa folds, the
+    # channel->row scale composite, and the div_add_factor
+    # shared-denominator naturality — project/retros/promoted-laws.md)
     # + 8 split_scalar pointwise-split rules + the opt-in
     # pointwise factor/distribute pair
     # + 6 dense-scan + 16 diagonal-scan + 77 layout + 37 attention
     # rewrites.
-    assert len(found) == 219
+    assert len(found) == 220
 
 
 def test_all_rules_count_unchanged():
     # The default set excludes LAYOUT_RULES (opt-in — closure-cost
     # regression documented in laws.tensor); WITH_LAYOUT keeps 156.
-    assert len(laws.all_rules()) == 81
+    assert len(laws.all_rules()) == 82
     assert laws.all_rules() == laws.ALL_RULES
     assert len(laws.ALL_RULES) == (
         len(laws.SIMPLIFICATION_RULES) + len(laws.CATEGORICAL_RULES)
     )
-    assert len(laws.ALL_RULES_WITH_LAYOUT) == 158
+    assert len(laws.ALL_RULES_WITH_LAYOUT) == 159
     # each call returns a fresh list, not the shared ALL_RULES object
     assert laws.all_rules() is not laws.ALL_RULES
 
 
 def test_collections_split_by_domain():
-    assert len(laws.SIMPLIFICATION_RULES) == 32
+    assert len(laws.SIMPLIFICATION_RULES) == 33
     assert len(laws.CATEGORICAL_RULES) == 49
     assert len(laws.SCAN_LAWS) == 6
     assert len(laws.SCAN_DIAG_LAWS) == 16
@@ -300,9 +301,10 @@ def test_axiom_lemma_marker_covers_all_rules():
     conditionals, ``project/retros/promoted-laws.md``): the declared
     kernel is the 32 primitives plus one designated member per
     derivability cycle = 46 axioms, plus the nine promoted discovery
-    laws that hold no derivation (55 total); the other 24 rules carry
-    a ``derivation`` naming their premise rules — 22 lemmas (inverse
-    twins + the emergent silu_mul_form + the promoted
+    laws that hold no derivation — plus the ``div_add_factor``
+    shared-denominator naturality (56 total); the other 24 rules
+    carry a ``derivation`` naming their premise rules — 22 lemmas
+    (inverse twins + the emergent silu_mul_form + the promoted
     ``linear_channel_to_row_scale`` + the eight ``split_scalar_*``
     naturality lemmas) and 2 redundant alpha-duplicates.
     The measured catalogue reports 9 ``no-instance`` verdicts (the
@@ -333,7 +335,7 @@ def test_axiom_lemma_marker_covers_all_rules():
                     r.name,
                     premise,
                 )
-    assert len(kinds["axiom"]) == 57
+    assert len(kinds["axiom"]) == 58
     assert len(kinds["lemma"]) == 22
     assert len(kinds["redundant"]) == 2
     # the redundant kind rides on the tags.REDUNDANT constant

@@ -993,6 +993,21 @@ MATMUL_DIV_DISTRIBUTE = R(
     tags=_SIM,
 )
 
+DIV_ADD_FACTOR = R(
+    "div_add_factor",
+    Op.make(
+        "add",
+        Op.make("div", "x", "c"),
+        Op.make("div", "y", "c"),
+    ),
+    Op.make("div", Op.make("add", "x", "y"), "c"),
+    law="x/c + y/c = (x+y)/c — shared-denominator factoring over "
+    "the additive monoid; the score scale exits the block sum the "
+    "way it exited the contraction.",
+    cond=("scalar", "c"),
+    tags=_SIM,
+)
+
 # THE WEIGHT-MERGE RULE.  x@W1 + x@W2 = x @ (W1 + W2): two projections of
 # the SAME input collapse to one matmul on a summed weight.  This is the
 # LoRA/adapter/model-soup merge that deployment tooling does by hand.
@@ -2129,6 +2144,7 @@ SIMPLIFICATION_RULES: list[Rewrite] = [
     RECIP_SQRT_TO_RSQRT,
     MUL_DIV_SWAP,
     MATMUL_DIV_DISTRIBUTE,
+    DIV_ADD_FACTOR,
 ]
 
 #: Rules that implement the categorical insight: distributivity and naturality.

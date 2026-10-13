@@ -15,6 +15,9 @@ torch = pytest.importorskip("torch")
 import catopt_torch.torch_bridge as tb  # noqa: E402
 from catopt_carriers.om import (  # noqa: E402
     DECAY_BLOCK_CROSS,
+    DECAY_BLOCK_CROSS_FLAT,
+    DECAY_STATE_WEIGHT_EXIT,
+    DECAY_STATE_WEIGHT_SINK,
     DECAY_VEC_OFFSET,
     MATMUL_COL_DECAY,
     MATMUL_SCALAR_FACTOR,
@@ -25,6 +28,7 @@ from catopt_carriers.om import (  # noqa: E402
     OM_DECAYED_CROSS_GEN,
     OM_LAWS,
     SPLIT_COMMUTE,
+    SPLIT_FLATTEN,
     SPLIT_MATMUL_COLS,
     SPLIT_MATMUL_ROWS,
     SPLIT_TRANSPOSE,
@@ -305,6 +309,259 @@ class TestCrossDeclines:
             "v": _v("v", 4, 6),
         }
         assert not OM_DECAYED_CROSS.check(bound)
+
+
+class TestDecayBlockCrossFlat:
+    """The mixed-partition strict-lower block law.
+
+    Recursive bisection partitions the two axes differently (the
+    ``(16,8,8)``-rows against ``(16,16)``-cols split nests are the
+    observed shape), so the strict-lower test is range arithmetic:
+    ``sum(SZR[:I]) >= sum(SZC[:J+1])``.  On equal partitions that is
+    exactly ``J < I`` — this law subsumes the strict sibling's
+    sites it cannot see under a shared ``SZ`` metavar.
+    """
+
+    T = 32
+
+    def _term(self, szr=(16, 8, 8), i=1, szc=(16, 16), j=0,
+              dr=-2, dc=-1):
+        return Op.make(
+            "split",
+            Op.make(
+                "split",
+                Op.make("decay", _v("g"), t=self.T),
+                sizes=szr,
+                dim=dr,
+                index=i,
+            ),
+            sizes=szc,
+            dim=dc,
+            index=j,
+        )
+
+    def test_fires_and_derives_mixed(self):
+        """Rows 16:24 x cols 0:16 — TI=8, TJ=16, OD=16."""
+        subst = match_pattern(
+            DECAY_BLOCK_CROSS_FLAT.lhs, self._term(), {}
+        )
+        assert subst is not None
+        assert DECAY_BLOCK_CROSS_FLAT.check(subst)
+        der = DECAY_BLOCK_CROSS_FLAT.derive(subst)
+        assert der == {"$attr:TI": 8, "$attr:TJ": 16, "$attr:OD": 16}
+
+    def test_equal_partitions_subsumed(self):
+        """The strict sibling's site also matches the flat lhs."""
+        subst = match_pattern(
+            DECAY_BLOCK_CROSS_FLAT.lhs,
+            self._term(szr=(16, 16), i=1, szc=(16, 16), j=0),
+            {},
+        )
+        assert subst is not None
+        assert DECAY_BLOCK_CROSS_FLAT.check(subst)
+        der = DECAY_BLOCK_CROSS_FLAT.derive(subst)
+        assert der == {"$attr:TI": 16, "$attr:TJ": 16, "$attr:OD": 16}
+
+    def test_straddle_declines(self):
+        """Rows 8:16 x cols 0:16 contains the diagonal — not rank-1."""
+        subst = match_pattern(
+            DECAY_BLOCK_CROSS_FLAT.lhs,
+            self._term(szr=(8, 8, 16), i=1, szc=(16, 16), j=0),
+            {},
+        )
+        assert subst is not None
+        assert not DECAY_BLOCK_CROSS_FLAT.check(subst)
+
+    def test_upper_declines(self):
+        """Rows 0:8 x cols 16:32 is provably zero — not this law."""
+        subst = match_pattern(
+            DECAY_BLOCK_CROSS_FLAT.lhs,
+            self._term(szr=(8, 8, 16), i=0, szc=(16, 16), j=1),
+            {},
+        )
+        assert subst is not None
+        assert not DECAY_BLOCK_CROSS_FLAT.check(subst)
+
+    def test_wrong_axes_decline(self):
+        subst = match_pattern(
+            DECAY_BLOCK_CROSS_FLAT.lhs,
+            self._term(dr=-1, dc=-2),
+            {},
+        )
+        assert subst is not None
+        assert not DECAY_BLOCK_CROSS_FLAT.check(subst)
+
+    def test_numerically_equals_sliced_block(self):
+        """The mixed-partition factored block IS the slice."""
+        pos = torch.arange(self.T, dtype=torch.float64)
+        D = torch.tril(
+            G ** (pos.unsqueeze(1) - pos.unsqueeze(0)).clamp_min(0)
+        )
+        block = D[16:24, 0:16]  # rows 16:24 x cols 0:16
+        rhs_term = instantiate_pattern(
+            DECAY_BLOCK_CROSS_FLAT.rhs,
+            {
+                "g": _v("g"),
+                "$attr:TI": 8,
+                "$attr:TJ": 16,
+                "$attr:OD": 16,
+            },
+        )
+        factored = eval_term(
+            rhs_term, var_env={"g": G}, bindings=tb._IR_TO_TORCH
+        )
+        assert torch.allclose(block, factored, atol=1e-12)
+
+
+class TestSplitFlatten:
+    """``split(split(t, SZ, D, I), SZ2, D, J)`` → the flat block.
+
+    Recursive bisection leaves nested same-axis splits; flattening
+    joins the partition tuples so a flat inner split can stand in
+    for the nested pair — the member the block laws match.
+    """
+
+    def _term(self, sz=(16, 16), i=1, sz2=(8, 8), j=1, d=-2, d2=-2):
+        return Op.make(
+            "split",
+            Op.make(
+                "split", _v("t", 4, 32, 8), sizes=sz, dim=d, index=i
+            ),
+            sizes=sz2,
+            dim=d2,
+            index=j,
+        )
+
+    def test_fires_and_derives(self):
+        subst = match_pattern(SPLIT_FLATTEN.lhs, self._term(), {})
+        assert subst is not None
+        assert SPLIT_FLATTEN.check(subst)
+        der = SPLIT_FLATTEN.derive(subst)
+        assert der == {"$attr:SZF": (16, 8, 8), "$attr:IF": 2}
+
+    def test_rhs_is_the_flat_split(self):
+        subst = match_pattern(SPLIT_FLATTEN.lhs, self._term(), {})
+        subst.update(SPLIT_FLATTEN.derive(subst))
+        out = instantiate_pattern(SPLIT_FLATTEN.rhs, subst)
+        r = op_repr(out)
+        assert "sizes=(16, 8, 8)" in r and "index=2" in r
+
+    def test_exact_slice(self):
+        """The flat member IS the nested slice."""
+        subst = match_pattern(SPLIT_FLATTEN.lhs, self._term(), {})
+        subst.update(SPLIT_FLATTEN.derive(subst))
+        out = instantiate_pattern(SPLIT_FLATTEN.rhs, subst)
+        env = {"t": torch.randn(4, 32, 8, dtype=torch.float64)}
+        a = eval_term(
+            self._term(), var_env=env, bindings=tb._IR_TO_TORCH
+        )
+        b = eval_term(out, var_env=env, bindings=tb._IR_TO_TORCH)
+        assert torch.equal(a, b)
+
+    def test_bad_partition_declines(self):
+        """SZ2 not a partition of SZ[I] → no flat form."""
+        subst = match_pattern(
+            SPLIT_FLATTEN.lhs, self._term(sz2=(6, 9)), {}
+        )
+        assert subst is not None
+        assert not SPLIT_FLATTEN.check(subst)
+
+    def test_mismatched_dims_decline(self):
+        subst = match_pattern(
+            SPLIT_FLATTEN.lhs, self._term(d2=-1), {}
+        )
+        assert subst is None or not SPLIT_FLATTEN.check(subst)
+
+    def test_out_of_range_declines(self):
+        subst = match_pattern(
+            SPLIT_FLATTEN.lhs, self._term(j=3), {}
+        )
+        assert subst is not None
+        assert not SPLIT_FLATTEN.check(subst)
+
+
+class TestStateWeightLaws:
+    """The contraction-constant scalar bridges around the state.
+
+    ``(a⊙b)⊙(q@B) = b⊙(q@(a⊙B))`` (sink) and its inverse
+    ``q@(a⊙B) = a⊙(q@B)`` (exit) — exact only when ``a`` is
+    constant along ``B``'s contracted axis, the same condition
+    ``matmul_scalar_factor`` enforces.
+    """
+
+    def test_sink_fires_scalar(self):
+        lhs = Op.make(
+            "mul",
+            Op.make("mul", _v("a"), _v("b", 5, 1)),
+            Op.make("matmul", _v("q", 5, 3), _v("B", 3, 6)),
+        )
+        subst = match_pattern(DECAY_STATE_WEIGHT_SINK.lhs, lhs, {})
+        assert subst is not None
+        assert DECAY_STATE_WEIGHT_SINK.check(subst)
+        out = instantiate_pattern(DECAY_STATE_WEIGHT_SINK.rhs, subst)
+        env = {
+            "a": torch.tensor(0.81, dtype=torch.float64),
+            "b": torch.randn(5, 1, dtype=torch.float64),
+            "q": torch.randn(5, 3, dtype=torch.float64),
+            "B": torch.randn(3, 6, dtype=torch.float64),
+        }
+        a_ = eval_term(lhs, var_env=env, bindings=tb._IR_TO_TORCH)
+        b_ = eval_term(out, var_env=env, bindings=tb._IR_TO_TORCH)
+        assert torch.allclose(a_, b_)
+
+    def test_sink_declines_row_varying(self):
+        """``a`` varying along B's contracted rows is not exact."""
+        bound = {
+            "a": _v("a", 3, 1),
+            "b": _v("b", 5, 1),
+            "q": _v("q", 5, 3),
+            "B": _v("B", 3, 6),
+        }
+        assert not DECAY_STATE_WEIGHT_SINK.check(bound)
+
+    def test_sink_declines_unbroadcastable_residual(self):
+        bound = {
+            "a": _v("a"),
+            "b": _v("b", 7),
+            "q": _v("q", 5, 3),
+            "B": _v("B", 3, 6),
+        }
+        assert not DECAY_STATE_WEIGHT_SINK.check(bound)
+
+    def test_exit_fires_scalar(self):
+        lhs = Op.make(
+            "matmul",
+            _v("q", 5, 3),
+            Op.make("mul", _v("a"), _v("B", 3, 6)),
+        )
+        subst = match_pattern(DECAY_STATE_WEIGHT_EXIT.lhs, lhs, {})
+        assert subst is not None
+        assert DECAY_STATE_WEIGHT_EXIT.check(subst)
+        out = instantiate_pattern(DECAY_STATE_WEIGHT_EXIT.rhs, subst)
+        env = {
+            "a": torch.tensor(0.81, dtype=torch.float64),
+            "q": torch.randn(5, 3, dtype=torch.float64),
+            "B": torch.randn(3, 6, dtype=torch.float64),
+        }
+        a_ = eval_term(lhs, var_env=env, bindings=tb._IR_TO_TORCH)
+        b_ = eval_term(out, var_env=env, bindings=tb._IR_TO_TORCH)
+        assert torch.allclose(a_, b_)
+
+    def test_exit_declines_row_varying(self):
+        bound = {
+            "a": _v("a", 3, 1),
+            "q": _v("q", 5, 3),
+            "B": _v("B", 3, 6),
+        }
+        assert not DECAY_STATE_WEIGHT_EXIT.check(bound)
+
+    def test_exit_declines_bad_contraction(self):
+        bound = {
+            "a": _v("a"),
+            "q": _v("q", 5, 5),
+            "B": _v("B", 3, 6),
+        }
+        assert not DECAY_STATE_WEIGHT_EXIT.check(bound)
 
 
 class TestOmDecayedCross:
@@ -740,7 +997,48 @@ class TestStateFoldLaws:
                 "b": _v("b", 3, 6),
             }
         )
+        # c varying along b's contracted rows — the unsound corner:
+        # c[r]⊙(q@B) ≠ q@(c[k]⊙B).  Square operands broadcast fine;
+        # the contraction-constancy arm is what declines.
+        assert not MATMUL_SCALAR_FACTOR.check(
+            {
+                "c": _v("c", 5, 1),
+                "q": _v("q", 5, 5),
+                "b": _v("b", 5, 5),
+            }
+        )
         assert not MATMUL_SCALAR_FACTOR.check({})
+
+    def test_matmul_scalar_factor_row_varying_is_wrong(self):
+        """The declined corner really is wrong — not a missed fire."""
+        lhs = Op.make(
+            "mul",
+            _v("c", 5, 1),
+            Op.make("matmul", _v("q", 5, 5), _v("b", 5, 5)),
+        )
+        out = Op.make(
+            "matmul",
+            _v("q", 5, 5),
+            Op.make("mul", _v("c", 5, 1), _v("b", 5, 5)),
+        )
+        env = {
+            "c": torch.randn(5, 1, dtype=torch.float64),
+            "q": torch.randn(5, 5, dtype=torch.float64),
+            "b": torch.randn(5, 5, dtype=torch.float64),
+        }
+        a = eval_term(lhs, var_env=env, bindings=tb._IR_TO_TORCH)
+        b = eval_term(out, var_env=env, bindings=tb._IR_TO_TORCH)
+        assert not torch.allclose(a, b)
+        # per-column c IS exact — the boundary the guard draws
+        env["c"] = torch.randn(1, 5, dtype=torch.float64)
+        lhs2 = Op.make(
+            "mul",
+            _v("c", 1, 5),
+            Op.make("matmul", _v("q", 5, 5), _v("b", 5, 5)),
+        )
+        a2 = eval_term(lhs2, var_env=env, bindings=tb._IR_TO_TORCH)
+        b2 = eval_term(out, var_env=env, bindings=tb._IR_TO_TORCH)
+        assert torch.allclose(a2, b2)
 
     def test_unsq_mul_fires(self):
         lhs = Op.make(
@@ -1182,6 +1480,75 @@ class TestRealExportFold:
         assert "decay_vec" in ops
         # the weighted state folded into the carrier
         assert "applyd" in ops
+
+    def test_real_export_reaches_state_fold(self):
+        """The sequential-carrier form: ``matmul(·, add(·,·))``.
+
+        With the state-weight bridges shipped — flattened splits,
+        the mixed-partition cross law, the scalar sink/exit, and the
+        shared-denominator naturality — the saturated graph spells a
+        block contribution as ``matmul(q_i, add(S', S''))``: the
+        inter-chunk accumulator sitting INSIDE the contraction, the
+        O(T·C) fold the plan is named for.
+        """
+        pytest.importorskip("catopt_torch")
+        from catopt_torch.adapters import TorchSource
+        from catopt_discovery.zoo import _ChunkedRetention
+        from catopt_core.laws.tensor import (
+            ASSOC_MATMUL_REV,
+            DIV_ADD_FACTOR,
+            FACTOR_MUL,
+            FACTOR_MUL_ADD,
+            MATMUL_DIV_DISTRIBUTE,
+            MUL_DIV_SWAP,
+            SPLIT_SCALAR_RULES,
+        )
+
+        m = _ChunkedRetention(16)
+        x = torch.randn(2, 32, 16)
+        term = TorchSource().to_ir(m, x)[0].root
+        eg = EGraph()
+        root = eg.add_term(term)
+        eg.run(
+            list(OM_LAWS) + list(OM_CHUNKIFY) + list(SPLIT_SCALAR_RULES)
+            + [
+                MUL_DIV_SWAP,
+                MATMUL_DIV_DISTRIBUTE,
+                ASSOC_MATMUL_REV,
+                FACTOR_MUL,
+                FACTOR_MUL_ADD,
+                DIV_ADD_FACTOR,
+            ],
+            root,
+            max_iterations=16,
+            max_nodes=150_000,
+            patience=8,
+            rule_budgets={
+                "om_decayed_chunkify_rows": 60,
+                "om_decayed_chunkify_keys": 60,
+            },
+        )
+        cls = eg._classes
+        matmul_rhs_adds = [
+            n
+            for c in cls.values()
+            for n in c.nodes
+            if n.op == "matmul"
+            and len(n.children) == 2
+            and any(
+                x.op == "add"
+                for x in cls[eg.find(n.children[1])].nodes
+            )
+        ]
+        assert matmul_rhs_adds, (
+            "no matmul(·, add) member — the accumulator never "
+            "reached the right operand"
+        )
+        # the sum inside carries the weighted-state spelling: an
+        # applyd fold or a mul(γ, S) member on an addend
+        rhs = eg.find(matmul_rhs_adds[0].children[1])
+        rhs_ops = {x.op for x in cls[rhs].nodes}
+        assert "applyd" in rhs_ops or "mul" in rhs_ops
 
 
 class TestMachineFold:

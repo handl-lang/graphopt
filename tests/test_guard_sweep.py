@@ -530,6 +530,18 @@ def _seeds() -> dict:
             "$attr:J": 0,
         }
     ]
+    seeds["decay_block_cross_flat"] = [
+        {
+            "g": _v("g", 8),
+            "$attr:T": 8,
+            "$attr:SZR": (4, 2, 2),
+            "$attr:SZC": (4, 4),
+            "$attr:DR": -2,
+            "$attr:DC": -1,
+            "$attr:I": 1,
+            "$attr:J": 0,
+        }
+    ]
     seeds["decay_vec_offset"] = [
         {"g": _v("g", 4), "$attr:T": 4, "$attr:OD": 2}
     ]
@@ -750,7 +762,7 @@ def test_every_conditional_rule_is_swept(sweep_rows):
     """Every conditional shipped + carrier law gets a row."""
     names = {r.name for r in _swept_rules()}
     assert set(sweep_rows) == names
-    assert len(names) == 119  # the 54 core conds + 64 carrier guards
+    assert len(names) == 124  # the 55 core conds + 69 carrier guards
 
 
 def test_no_false_region_rewrites(sweep_rows, capsys):

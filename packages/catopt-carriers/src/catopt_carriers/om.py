@@ -2303,6 +2303,113 @@ DECAY_BLOCK_CROSS = R(
 )
 
 
+def _partition_of(sz, t) -> tuple | None:
+    """``sz`` as a positive-int partition of ``t``, or ``None``."""
+    if not (
+        isinstance(sz, (tuple, list))
+        and all(isinstance(x, int) and x > 0 for x in sz)
+        and isinstance(t, int)
+        and sum(sz) == t
+    ):
+        return None
+    return tuple(sz)
+
+
+def _cross_flat_attrs(bound: dict) -> tuple | None:
+    """Read ``(SZR, SZC, I, J)`` of a mixed-partition strict-lower.
+
+    The recursive bisection leaves the row and column splits under
+    DIFFERENT partitions (``(16,8,8)`` rows against ``(16,16)`` cols
+    is the observed case), so block (I,J) is strict-lower iff its
+    row range starts where the column range ends:
+    ``sum(SZR[:I]) >= sum(SZC[:J+1])``.  For equal partitions that is
+    exactly ``J < I``.
+    """
+    t = bound.get("$attr:T")
+    szr = _partition_of(bound.get("$attr:SZR"), t)
+    szc = _partition_of(bound.get("$attr:SZC"), t)
+    i, j = bound.get("$attr:I"), bound.get("$attr:J")
+    if not (
+        szr is not None
+        and szc is not None
+        and isinstance(i, int)
+        and isinstance(j, int)
+        and 0 <= i < len(szr)
+        and 0 <= j < len(szc)
+    ):
+        return None
+    if sum(szr[:i]) < sum(szc[: j + 1]):
+        return None
+    return (szr, szc, i, j)
+
+
+def _check_decay_block_cross_flat(bound: dict) -> bool:
+    """Strict-lower block, mixed partitions, decay-aligned axes."""
+    if _cross_flat_attrs(bound) is None:
+        return False
+    dr, dc = bound.get("$attr:DR"), bound.get("$attr:DC")
+    if not (isinstance(dr, int) and isinstance(dc, int)):
+        return False
+    gs = _vshape(bound.get("g"))
+    if not isinstance(gs, tuple):
+        return dr == -2 and dc == -1
+    r = len(gs) + 2
+    return dr % r == r - 2 and dc % r == r - 1
+
+
+def _derive_decay_block_cross_flat(bound: dict) -> dict | None:
+    """``TI``/``TJ``/``OD`` from the two partitions' ranges."""
+    attrs = _cross_flat_attrs(bound)
+    if attrs is None:
+        return None
+    szr, szc, i, j = attrs
+    return {
+        "$attr:TI": szr[i],
+        "$attr:TJ": szc[j],
+        "$attr:OD": sum(szr[:i]) - sum(szc[:j]),
+    }
+
+
+DECAY_BLOCK_CROSS_FLAT = R(
+    "decay_block_cross_flat",
+    Op.make(
+        "split",
+        Op.make(
+            "split",
+            Op.make("decay", "g", t="T"),
+            sizes="SZR",
+            dim="DR",
+            index="I",
+        ),
+        sizes="SZC",
+        dim="DC",
+        index="J",
+    ),
+    Op.make(
+        "mul",
+        Op.make(
+            "unsqueeze",
+            Op.make("decay_vec", "g", t="TI", offset="OD"),
+            dim=-1,
+        ),
+        Op.make(
+            "unsqueeze",
+            Op.make("decay_vec", "g", t="TJ", sign=-1),
+            dim=-2,
+        ),
+    ),
+    check=_check_decay_block_cross_flat,
+    derive=_derive_decay_block_cross_flat,
+    law="the strict-lower block of the causal decay under MIXED "
+    "partitions is still rank-1: X[r,c] = g^(o_r-o_c+r-c) factors "
+    "into decay_vec(g, TI, offset=o_r-o_c) ⊗ decay_vec(g, TJ, "
+    "sign=-1) for any row/column partitions whose block is "
+    "provably below the diagonal — the flattened bisection's "
+    "(16,8,8)-vs-(16,16) sites the strict law cannot see.",
+    derivation=("decay_block_cross",),
+)
+
+
 def _check_om_decayed_cross(bound: dict) -> bool:
     """Require the factored-decay distribution to be well-typed.
 
@@ -2537,6 +2644,21 @@ DECAY_VEC_OFFSET = R(
 )
 
 
+def _const_along_contraction(cs: tuple, bs: tuple) -> bool:
+    """``c`` constant along ``b``'s contracted axis (``-2``).
+
+    Right-aligned to ``b``, ``c``'s dim at ``-2`` must be 1 — the
+    exactness condition of ``c ⊙ (q@B) = q @ (c⊙B)``: the lhs scales
+    the product's output rows ``r``, the rhs scales ``B``'s
+    contracted rows ``k``.  Scalars and per-column scales qualify;
+    a ``(T,1)`` row vector does not.
+    """
+    if len(bs) < 2 or len(cs) > len(bs):
+        return False
+    ca = (1,) * (len(bs) - len(cs)) + tuple(cs)
+    return ca[-2] == 1
+
+
 def _check_matmul_scalar(bound: dict) -> bool:
     """Require the scalar to broadcast to the right operand.
 
@@ -2573,8 +2695,7 @@ def _check_matmul_scalar(bound: dict) -> bool:
         return False
     # contraction-axis constancy: right-aligned to b, dim -2 is 1 —
     # scalars and per-column scales qualify, row vectors do not.
-    ca = (1,) * (len(bs) - len(cs)) + tuple(cs)
-    return ca[-2] == 1
+    return _const_along_contraction(cs, bs)
 
 
 MATMUL_SCALAR_FACTOR = R(
@@ -2590,7 +2711,7 @@ MATMUL_SCALAR_FACTOR = R(
 
 
 def _check_state_weight_sink(bound: dict) -> bool:
-    """``a`` must be constant along the contracted axis of ``B``.
+    """Require ``a`` constant along the contracted axis of ``B``.
 
     ``a⊙b ⊙ (q@B) = b ⊙ (q @ (a⊙B))`` is exact iff ``a`` does not
     vary along the contraction: on the lhs ``a`` scales the product's
@@ -2609,7 +2730,7 @@ def _check_state_weight_sink(bound: dict) -> bool:
     )
     if not all(isinstance(t, tuple) for t in (ss, xs, qs, bs)):
         return False
-    if len(bs) < 2 or len(ss) > len(bs):
+    if not _const_along_contraction(ss, bs):
         return False
     from catopt_core.typing import (
         INVALID,
@@ -2617,9 +2738,6 @@ def _check_state_weight_sink(bound: dict) -> bool:
         matmul_shape,
     )
 
-    a_al = (1,) * (len(bs) - len(ss)) + tuple(ss)
-    if a_al[-2] != 1:
-        return False
     ab = broadcast(ss, bs)
     if ab is INVALID:
         return False
@@ -2648,6 +2766,51 @@ DECAY_STATE_WEIGHT_SINK = R(
     "rows — the per-block decay weight g^o detaches from the shared "
     "row vector g^r and lands on the state term, the weighted-sum "
     "spelling the inter-chunk accumulator folds.",
+    derivation=("matmul_scalar_factor",),
+)
+
+
+def _check_state_weight_exit(bound: dict) -> bool:
+    """Require ``a`` constant along the contracted axis of ``B``.
+
+    The exactness condition is the sink's, read backward: ``a`` may
+    only scale ``B``'s columns (right-aligned dim ``-2`` is 1), else
+    the exit ``mul(a, q@B)`` would re-index the weight onto the
+    output rows.
+    """
+    ss, qs, bs = (
+        _vshape(bound.get("a")),
+        _vshape(bound.get("q")),
+        _vshape(bound.get("B")),
+    )
+    if not all(isinstance(t, tuple) for t in (ss, qs, bs)):
+        return False
+    if not _const_along_contraction(ss, bs):
+        return False
+    from catopt_core.typing import (
+        INVALID,
+        broadcast,
+        matmul_shape,
+    )
+
+    ab = broadcast(ss, bs)
+    if ab is INVALID:
+        return False
+    m = matmul_shape(qs, ab)
+    if m is None:
+        return False
+    return broadcast(ss, m) is not INVALID
+
+
+DECAY_STATE_WEIGHT_EXIT = R(
+    "decay_state_weight_exit",
+    Op.make("matmul", "q", Op.make("mul", "a", "B")),
+    Op.make("mul", "a", Op.make("matmul", "q", "B")),
+    check=_check_state_weight_exit,
+    law="a contraction-constant scale exits the state term: "
+    "q · (a⊙B) = a ⊙ (q·B) when a is constant along B's rows — the "
+    "per-block decay weight leaves mul(g^o, S_j), the addend "
+    "spelling decay_state_lift's lhs folds onto applyd.",
     derivation=("matmul_scalar_factor",),
 )
 
@@ -2986,6 +3149,60 @@ SPLIT_COMMUTE = R(
 )
 
 
+def _check_split_flatten(bound: dict) -> bool:
+    """Require well-typed nested same-axis splits that partition.
+
+    ``SZ2`` must sum to ``SZ[I]`` — the outer split carves the inner
+    block into pieces, so its sizes must partition that block's
+    extent exactly (an inconsistent pair would mint an ill-typed
+    flat split).
+    """
+    return (
+        _split_attrs_ok(bound, "$attr:SZ", "$attr:I")
+        and _split_attrs_ok(bound, "$attr:SZ2", "$attr:J")
+        and sum(bound["$attr:SZ2"])
+        == bound["$attr:SZ"][bound["$attr:I"]]
+    )
+
+
+def _derive_split_flatten(bound: dict) -> dict | None:
+    """``SZF`` := ``SZ[:I] + SZ2 + SZ[I+1:]``, ``IF`` := ``I + J``.
+
+    The flat partition: inner blocks before ``I`` stay whole, block
+    ``I`` is replaced by its ``SZ2`` sub-partition, so the flat index
+    of sub-block ``J`` is ``I + J``.
+    """
+    if not _check_split_flatten(bound):
+        return None
+    sz, sz2 = bound["$attr:SZ"], bound["$attr:SZ2"]
+    i, j = bound["$attr:I"], bound["$attr:J"]
+    return {
+        "$attr:SZF": (*sz[:i], *sz2, *sz[i + 1 :]),
+        "$attr:IF": i + j,
+    }
+
+
+SPLIT_FLATTEN = R(
+    "split_flatten",
+    Op.make(
+        "split",
+        Op.make("split", "t", sizes="SZ", dim="D", index="I"),
+        sizes="SZ2",
+        dim="D",
+        index="J",
+    ),
+    Op.make("split", "t", sizes="SZF", dim="D", index="IF"),
+    check=_check_split_flatten,
+    derive=_derive_split_flatten,
+    law="nested splits on the same axis collapse to one flat "
+    "partition: split(split_{SZ,I}(t), SZ2, j) = "
+    "split_{SZ[:I]+SZ2+SZ[I+1:], I+J}(t) — the recursive bisection "
+    "produces nested (16,16)→(8,8) splits, but the block laws need "
+    "the flat (16,8,8)-style partition to see ``split(split(decay))`` "
+    "sites at depth ≥2.",
+)
+
+
 SPLIT_TRANSPOSE = R(
     "split_transpose",
     Op.make(
@@ -3053,12 +3270,14 @@ OM_LAWS: list[Rewrite] = [
     *OM_DECAYED_CHUNK_LAWS,
     DECAY_BLOCK_DIAG,
     DECAY_BLOCK_CROSS,
+    DECAY_BLOCK_CROSS_FLAT,
     OM_DECAYED_CROSS,
     OM_DECAYED_CROSS_GEN,
     MATMUL_COL_DECAY,
     DECAY_VEC_OFFSET,
     MATMUL_SCALAR_FACTOR,
     DECAY_STATE_WEIGHT_SINK,
+    DECAY_STATE_WEIGHT_EXIT,
     UNSQ_MUL,
     _decay_state_lift("decay_state_lift", True),
     _decay_state_lift("decay_state_lift_post", False),
@@ -3066,6 +3285,7 @@ OM_LAWS: list[Rewrite] = [
     SPLIT_MATMUL_COLS,
     SPLIT_TRANSPOSE,
     SPLIT_COMMUTE,
+    SPLIT_FLATTEN,
 ]
 
 #: The recursive bisection pair — split-introduction on a fused
