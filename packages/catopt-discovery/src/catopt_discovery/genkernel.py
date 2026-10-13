@@ -457,10 +457,63 @@ def profitable(
         def spelled(s=h["pattern"], v=vals) -> Any:
             return _eval_spec(s, v, bindings)
 
-        # the referee verifies before it times: the kernel must
-        # reproduce the spelled body on the bound values — an
-        # inductor miscompile or dtype drift would otherwise win
-        # the timing race it should have lost.
+        # the verify-before-time gate (and the timing itself) live in
+        # the helper; a kernel that raises on its bound values — a
+        # site the codegen accepted but cannot lower — declines there
+        # rather than aborting the whole sweep.
+        timings = _kernel_pays(kernel, spelled, vals, mvs, reps)
+        if timings is None:
+            continue
+        t_spelled, t_kernel = timings
+        if t_kernel <= t_spelled * margin:
+            keep[name] = h
+    return keep
+
+
+def _median_time(fn: Any, reps: int) -> float:
+    """Median per-call seconds of ``fn()`` over *reps* runs.
+
+    Five warmup calls precede timing (dynamo/inductor compilation and
+    cudnn autotune must settle); CUDA is synchronised around each
+    timed call so the measurement covers the work, not the enqueue.
+    """
+    import time
+
+    import torch
+
+    for _ in range(5):
+        fn()
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+    ts = []
+    for _ in range(reps):
+        t0 = time.perf_counter()
+        fn()
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+        ts.append(time.perf_counter() - t0)
+    ts.sort()
+    return ts[len(ts) // 2]
+
+
+def _kernel_pays(
+    kernel: Any, spelled: Any, vals: dict, mvs: list, reps: int
+) -> tuple | None:
+    """Time *kernel* against its spelled body; ``None`` declines.
+
+    The referee verifies before it times: the kernel must reproduce
+    the spelled body on the bound values — an inductor miscompile or
+    dtype drift would otherwise win the timing race it should have
+    lost.  A kernel that RAISES on its bound values — a site the
+    codegen accepted but cannot lower, e.g. operands sharing no
+    broadcast so the unrolled binding's own shape check fires —
+    declines here exactly as a binding-builder decline does: the
+    measured-cost filter must not abort the whole sweep on one
+    unloweable site.
+    """
+    import torch
+
+    try:
         out = _referee_out(kernel, vals, mvs)
         if not torch.allclose(
             out,
@@ -468,34 +521,14 @@ def profitable(
             rtol=1e-4,
             atol=1e-5,
         ):
-            continue
-
-        def _t(fn: Any) -> float:
-            import time
-
-            for _ in range(5):
-                fn()
-            if torch.cuda.is_available():
-                torch.cuda.synchronize()
-            ts = []
-            for _ in range(reps):
-                t0 = time.perf_counter()
-                fn()
-                if torch.cuda.is_available():
-                    torch.cuda.synchronize()
-                ts.append(time.perf_counter() - t0)
-            ts.sort()
-            return ts[len(ts) // 2]
-
-        t_spelled = _t(spelled)
-        t_kernel = _t(
-            lambda kernel=kernel, vals=vals, mvs=mvs: kernel(
-                *[vals[m] for m in mvs]
-            )
+            return None
+        t_spelled = _median_time(spelled, reps)
+        t_kernel = _median_time(
+            lambda: kernel(*[vals[m] for m in mvs]), reps
         )
-        if t_kernel <= t_spelled * margin:
-            keep[name] = h
-    return keep
+    except Exception:
+        return None
+    return t_spelled, t_kernel
 
 
 def _kernel_cache() -> Any:

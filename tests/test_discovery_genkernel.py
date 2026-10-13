@@ -421,6 +421,81 @@ class TestMeasuredReferee:
         )
         assert "g" in keep
 
+    def test_raising_kernel_declines_not_propagates(self):
+        """A kernel that RAISES on its bound values declines.
+
+        The scan tier's unrolled binding raises on a site the codegen
+        accepted but cannot lower (operands sharing no broadcast) —
+        the measured-cost filter must skip that handler, not abort
+        the whole sweep.  A real export (``ChunkedRetention``) mints
+        exactly such a site, so the crash would take down the gen
+        domain's case builder.
+        """
+        torch = pytest.importorskip("torch")
+        x = _v("x", 16)
+        term = _p("mul", x, _p("relu", x))
+        hs = {
+            "g": {
+                "pattern": ("mul", "X1", ("relu", "X1")),
+                "kernel": "gk_raise",
+                "args": ("X1",),
+            }
+        }
+
+        def kernel_for(name, h, vals):
+            def boom(*a, **k):
+                raise RuntimeError("cannot lower this site")
+
+            return boom
+
+        assert (
+            gk.profitable(
+                hs,
+                term,
+                {"x": torch.rand(16)},
+                reps=2,
+                kernel_for=kernel_for,
+            )
+            == {}
+        )
+
+    def test_kernel_raising_mid_timing_declines(self):
+        """A kernel that verifies once then raises during timing
+        declines — the timing loop is guarded too."""
+        torch = pytest.importorskip("torch")
+        x = _v("x", 16)
+        term = _p("mul", x, _p("relu", x))
+        hs = {
+            "g": {
+                "pattern": ("mul", "X1", ("relu", "X1")),
+                "kernel": "gk_flaky",
+                "args": ("X1",),
+            }
+        }
+        xv = torch.rand(16)
+        good = xv * torch.relu(xv)
+        calls = [0]
+
+        def kernel_for(name, h, vals):
+            def flaky(*a, **k):
+                calls[0] += 1
+                if calls[0] > 1:
+                    raise RuntimeError("flaky kernel")
+                return good
+
+            return flaky
+
+        assert (
+            gk.profitable(
+                hs,
+                term,
+                {"x": xv},
+                reps=2,
+                kernel_for=kernel_for,
+            )
+            == {}
+        )
+
 
 def _spelled_scan(a, b, h, axis=-2):
     """The torch-loop oracle: ``h_t = a_t * h_{t-1} + b_t``."""

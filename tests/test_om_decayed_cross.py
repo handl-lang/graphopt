@@ -1550,6 +1550,73 @@ class TestRealExportFold:
         rhs_ops = {x.op for x in cls[rhs].nodes}
         assert "applyd" in rhs_ops or "mul" in rhs_ops
 
+    def test_extraction_prefers_the_chunked_carrier_at_t512(self):
+        """T=512 ≫ the fused quadratic: extraction picks the carrier.
+
+        Plan 0023's headline, costed honestly.  On the same real
+        export, saturated with the state-weight bridges, the root
+        class holds BOTH the fused ``om_decayed`` (the ``(T,T)``
+        quadratic) and the chunked cross-block carrier — per-chunk
+        intra ``om_decayed`` plus the ``q_i @ (k_jᵀ v_j)`` state
+        readout.  Under ``flops_cost`` the chunked member prices
+        lower because it does less work, not because a carrier
+        discount was invented, so extraction selects it.  The fused
+        member must still price higher (the honest direction).
+        """
+        pytest.importorskip("catopt_torch")
+        from catopt_core.cost import dag_cost, flops_cost
+        from catopt_core.laws.tensor import (
+            ASSOC_MATMUL_REV,
+            DIV_ADD_FACTOR,
+            FACTOR_MUL,
+            FACTOR_MUL_ADD,
+            MATMUL_DIV_DISTRIBUTE,
+            MUL_DIV_SWAP,
+            SPLIT_SCALAR_RULES,
+        )
+        from catopt_discovery.zoo import _ChunkedRetention
+        from catopt_torch.adapters import TorchSource
+
+        m = _ChunkedRetention(16).double()
+        x = torch.randn(2, 512, 16, dtype=torch.float64)
+        term = TorchSource().to_ir(m, x)[0].root
+        eg = EGraph()
+        root = eg.add_term(term)
+        eg.run(
+            list(OM_LAWS) + list(OM_CHUNKIFY) + list(SPLIT_SCALAR_RULES)
+            + [
+                MUL_DIV_SWAP,
+                MATMUL_DIV_DISTRIBUTE,
+                ASSOC_MATMUL_REV,
+                FACTOR_MUL,
+                FACTOR_MUL_ADD,
+                DIV_ADD_FACTOR,
+            ],
+            root,
+            max_iterations=16,
+            max_nodes=150_000,
+            patience=8,
+            rule_budgets={
+                "om_decayed_chunkify_rows": 60,
+                "om_decayed_chunkify_keys": 60,
+            },
+        )
+        rc = eg.find(root)
+        best = eg.extract_best(rc, flops_cost)
+        assert best.op == "concat", (
+            f"extraction picked {best.op!r}, not the chunked carrier"
+        )
+        fused = [
+            n for n in eg._classes[rc].nodes if n.op == "om_decayed"
+        ]
+        assert fused, "the fused om_decayed member vanished"
+        fused_term = eg.extract_best(
+            rc, flops_cost, overrides={rc: fused[0]}
+        )
+        assert dag_cost(best, flops_cost) < dag_cost(
+            fused_term, flops_cost
+        ), "the carrier must price lower honestly, not by discount"
+
 
 class TestMachineFold:
     """The machine derives the recurrence from spelled cross terms.
