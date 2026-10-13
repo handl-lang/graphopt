@@ -57,6 +57,10 @@ universal speedup.
 - **The board invents operators.** Construction moves write new rules
   mid-search; `claim` can bind a minted elementwise pattern to a
   *generated Triton kernel* and deliver it.
+- **The machine derives the algorithm.** On a spelled RetNet export the
+  e-graph derives the chunked-scan recurrence itself — the sequential
+  O(T·C) carrier is a *member* of the saturated graph, not a hand-written
+  template.
 - **Four independent dimensions** — semantics / search / evaluation /
   execution. Cost models never change semantics; policies never decide
   equivalence.
@@ -85,7 +89,7 @@ result, not the speedup.
 ```text
 module → export → e-graph saturation → extract (cost) → certify → lower
                       ▲                                    ↓
-          laws as data (81 rules,      verified, runnable nn.Module
+          laws as data (82 rules,      verified, runnable nn.Module
           all serializable)            (+ optional compile/CUDA-graph runner)
 ```
 
