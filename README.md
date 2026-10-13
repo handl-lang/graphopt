@@ -61,24 +61,45 @@ universal speedup.
   execution. Cost models never change semantics; policies never decide
   equivalence.
 
+## The methodology
+
+Falsifiable directions, measured claims.
+
+1. **State the thesis as an ADR** — a decision record with a
+   falsification path, not a hope (`project/adrs/`).
+2. **Certify before measuring** — equivalence is a replayable
+   certificate, not a benchmark.
+3. **Measure to admit** — a transformation only counts if it lands on
+   real tensors faster.
+4. **Kill what fails** — negative results are kept, not hidden
+   (ADR 0001 is closed negative).
+5. **The game must find it** — a transform isn't "discovered" until the
+   machine reaches it, not when a human writes it.
+
+The claim is *reachability + verification*: categorical semantics expose
+moves a tensor-IR can't efficiently state. The methodology is the
+result, not the speedup.
+
 ## How it works
 
 ```text
 module → export → e-graph saturation → extract (cost) → certify → lower
                       ▲                                    ↓
-          laws as data (71 rules,      verified, runnable nn.Module
+          laws as data (81 rules,      verified, runnable nn.Module
           all serializable)            (+ optional compile/CUDA-graph runner)
 ```
 
 Discovery runs the same machinery on the law library itself:
 `catopt_discovery.pipeline` (census → propose → verify → measure →
-rank → emit) has shipped ten machine-found laws, and
-`catopt_discovery.play` exposes the whole loop as an RL environment
-(`--domain meta|joint|search|torch|gen`).
+rank → emit) plus the open game (`catopt_discovery.open_game` — the
+enumerated candidate stream as a playable board, scored by verdict),
+and `catopt_discovery.play` exposes the whole loop as an RL
+environment (`--domain meta|joint|search|torch|gen|open`).
 
 ```bash
 python -m catopt_discovery.play --domain torch --deliver  # optimize a real module
 python -m catopt_discovery.play --domain gen --probe      # mint → claim → deliver → time
+python -m catopt_discovery.play --domain open             # the enumerator as a board
 python -m catopt_discovery.play --zoo                     # the probe over held-out models
 ```
 
