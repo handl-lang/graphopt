@@ -2368,6 +2368,86 @@ OM_DECAYED_CROSS = R(
 )
 
 
+def _check_om_decayed_cross_gen(bound: dict) -> bool:
+    """Require the generalized factored-decay distribution to type.
+
+    ``x`` absorbs the residual row-side decay factors, so it must be
+    constant along the contracted (column) axis: right-aligned to the
+    decay product's broadcast shape its last dim is 1.  That is what
+    makes ``(s (.) x (.) e) @ v = x (.) ((s (.) e) @ v)`` exact — a
+    row scaling factors out of the contraction pointwise.  ``e =
+    unsq(eta, UE)`` stays inside, so it need only broadcast against
+    ``s``; the inner matmul and the lhs product must both type.
+    """
+    ss, xs, es, vs = (
+        _vshape(bound.get("s")),
+        _vshape(bound.get("x")),
+        _vshape(bound.get("eta")),
+        _vshape(bound.get("v")),
+    )
+    if not all(isinstance(t, tuple) for t in (ss, xs, es, vs)):
+        return False
+    ue = bound.get("$attr:UE", -2)
+    if not ss or not isinstance(ue, int):
+        return False
+    from catopt_core.typing import (
+        INVALID,
+        broadcast,
+        matmul_shape,
+    )
+
+    # unsq(eta, UE): a broadcast axis inserted into es at UE
+    ue_n = ue % (len(es) + 1)
+    eta_b = (*es[:ue_n], 1, *es[ue_n:])
+    d = broadcast(xs, eta_b)
+    if d is INVALID:
+        return False
+    p = broadcast(ss, d)
+    q = broadcast(ss, eta_b)
+    if p is INVALID or q is INVALID:
+        return False
+    # x constant along p's last (contracted) axis — right-aligned,
+    # its last dim must broadcast as 1 (scalar () qualifies)
+    xp = (1,) * max(len(p) - len(xs), 0) + tuple(xs)
+    if xp[-1] != 1:
+        return False
+    m = matmul_shape(q, vs)
+    if m is None or matmul_shape(p, vs) is None:
+        return False
+    return broadcast(m, xs) is not INVALID
+
+
+OM_DECAYED_CROSS_GEN = R(
+    "om_decayed_cross_gen",
+    Op.make(
+        "om_decayed",
+        "s",
+        Op.make(
+            "mul",
+            "x",
+            Op.make("unsqueeze", "eta", dim="UE"),
+        ),
+        "v",
+    ),
+    Op.make(
+        "mul",
+        "x",
+        Op.make(
+            "matmul",
+            Op.make("mul", "s", Op.make("unsqueeze", "eta", dim="UE")),
+            "v",
+        ),
+    ),
+    check=_check_om_decayed_cross_gen,
+    law="the factored-decay distribution generalized over the row "
+    "side: (s (.) x*e) @ v = x (.) ((s (.) e) @ v) for any "
+    "row-constant x — the e-graph's decay chains arrive as deeper "
+    "unsqueeze-products (every residual factor a row broadcaster), "
+    "not the strict mul(unsq(xi), unsq(eta)) spelling, so the "
+    "metavar absorbs them and the xi/eta split still happens.",
+)
+
+
 def _check_matmul_col_decay(bound: dict) -> bool:
     """Column-scaling must broadcast and the contraction must type.
 
@@ -2898,6 +2978,7 @@ OM_LAWS: list[Rewrite] = [
     DECAY_BLOCK_DIAG,
     DECAY_BLOCK_CROSS,
     OM_DECAYED_CROSS,
+    OM_DECAYED_CROSS_GEN,
     MATMUL_COL_DECAY,
     DECAY_VEC_OFFSET,
     MATMUL_SCALAR_FACTOR,

@@ -22,6 +22,7 @@ from catopt_carriers.om import (  # noqa: E402
     OM_DECAYED_CHUNKIFY_KEYS,
     OM_DECAYED_CHUNKIFY_ROWS,
     OM_DECAYED_CROSS,
+    OM_DECAYED_CROSS_GEN,
     OM_LAWS,
     SPLIT_COMMUTE,
     SPLIT_MATMUL_COLS,
@@ -356,6 +357,226 @@ class TestOmDecayedCross:
         )
         subst = match_pattern(OM_DECAYED_CROSS.lhs, term, {})
         assert subst is None or not OM_DECAYED_CROSS.check(subst)
+
+
+class TestOmDecayedCrossGen:
+    """The generalized cross law — ``x`` absorbs residual row factors.
+
+    On the real ChunkedRetention export the block decay arrives as a
+    deeper unsqueeze-product chain (every residual factor a row
+    broadcaster), not the strict two-factor spelling — the metavar
+    absorbs the whole row-side product and the xi/eta split still
+    happens.
+    """
+
+    def _lhs(self, x=None, ue=-2):
+        if x is None:
+            x = Op.make(
+                "mul",
+                Op.make("unsqueeze", _v("a", 5), dim=-1),
+                Op.make("unsqueeze", _v("b", 5), dim=-1),
+            )
+        return Op.make(
+            "om_decayed",
+            _v("s", 5, 4),
+            Op.make(
+                "mul",
+                x,
+                Op.make("unsqueeze", _v("eta", 4), dim=ue),
+            ),
+            _v("v", 4, 6),
+        )
+
+    def test_fires_on_deep_row_chain(self):
+        subst = match_pattern(OM_DECAYED_CROSS_GEN.lhs, self._lhs(), {})
+        assert subst is not None and OM_DECAYED_CROSS_GEN.check(subst)
+
+    def test_exact_distribution(self):
+        """(s ⊙ x·etaᵀ) @ v = x ⊙ ((s ⊙ etaᵀ) @ v) — exact at fp64."""
+        lhs = self._lhs()
+        subst = match_pattern(OM_DECAYED_CROSS_GEN.lhs, lhs, {})
+        out = instantiate_pattern(OM_DECAYED_CROSS_GEN.rhs, subst)
+        env = {
+            "s": torch.randn(5, 4, dtype=torch.float64),
+            "a": torch.tensor(
+                [0.9**k for k in range(6, 11)], dtype=torch.float64
+            ),
+            "b": torch.tensor(
+                [0.9**k for k in range(5)], dtype=torch.float64
+            ),
+            "eta": torch.tensor(
+                [1.0, 0.9**-1, 0.9**-2, 0.9**-3],
+                dtype=torch.float64,
+            ),
+            "v": torch.randn(4, 6, dtype=torch.float64),
+        }
+        a = eval_term(lhs, var_env=env, bindings=tb._IR_TO_TORCH)
+        b = eval_term(out, var_env=env, bindings=tb._IR_TO_TORCH)
+        assert torch.allclose(a, b, atol=1e-12)
+
+    def test_subsumes_strict_spelling(self):
+        """x = unsq(xi, -1) is the strict law's site, verbatim."""
+        lhs = self._lhs(x=Op.make("unsqueeze", _v("xi", 5), dim=-1))
+        subst = match_pattern(OM_DECAYED_CROSS_GEN.lhs, lhs, {})
+        assert subst is not None
+        assert OM_DECAYED_CROSS_GEN.check(subst)
+        out = instantiate_pattern(OM_DECAYED_CROSS_GEN.rhs, subst)
+        env = {
+            "s": torch.randn(5, 4, dtype=torch.float64),
+            "xi": torch.tensor(
+                [0.9**k for k in range(6, 11)], dtype=torch.float64
+            ),
+            "eta": torch.tensor(
+                [1.0, 0.9**-1, 0.9**-2, 0.9**-3],
+                dtype=torch.float64,
+            ),
+            "v": torch.randn(4, 6, dtype=torch.float64),
+        }
+        a = eval_term(lhs, var_env=env, bindings=tb._IR_TO_TORCH)
+        b = eval_term(out, var_env=env, bindings=tb._IR_TO_TORCH)
+        assert torch.allclose(a, b, atol=1e-12)
+
+    def test_row_factor_eta_stays_inside(self):
+        """UE = -1: a row-side eta stays inside the contraction."""
+        lhs = Op.make(
+            "om_decayed",
+            _v("s", 5, 4),
+            Op.make(
+                "mul",
+                _v("x", 5, 1),
+                Op.make("unsqueeze", _v("eta", 5), dim=-1),
+            ),
+            _v("v", 4, 6),
+        )
+        subst = match_pattern(OM_DECAYED_CROSS_GEN.lhs, lhs, {})
+        assert subst is not None
+        assert OM_DECAYED_CROSS_GEN.check(subst)
+        out = instantiate_pattern(OM_DECAYED_CROSS_GEN.rhs, subst)
+        env = {
+            "s": torch.randn(5, 4, dtype=torch.float64),
+            "x": torch.randn(5, 1, dtype=torch.float64),
+            "eta": torch.tensor(
+                [0.9**k for k in range(5)], dtype=torch.float64
+            ),
+            "v": torch.randn(4, 6, dtype=torch.float64),
+        }
+        a = eval_term(lhs, var_env=env, bindings=tb._IR_TO_TORCH)
+        b = eval_term(out, var_env=env, bindings=tb._IR_TO_TORCH)
+        assert torch.allclose(a, b, atol=1e-12)
+
+    def test_batched_fires(self):
+        lhs = Op.make(
+            "om_decayed",
+            _v("s", 2, 5, 4),
+            Op.make(
+                "mul",
+                _v("x", 2, 5, 1),
+                Op.make("unsqueeze", _v("eta", 4), dim=-2),
+            ),
+            _v("v", 2, 4, 6),
+        )
+        subst = match_pattern(OM_DECAYED_CROSS_GEN.lhs, lhs, {})
+        assert subst is not None and OM_DECAYED_CROSS_GEN.check(subst)
+
+
+class TestOmDecayedCrossGenDeclines:
+    """Every guard branch of the generalized law declines honestly."""
+
+    def test_unbound_metas_decline(self):
+        assert not OM_DECAYED_CROSS_GEN.check({})
+        assert not OM_DECAYED_CROSS_GEN.check(
+            {"s": _v("s", 5, 4), "x": _v("x", 5, 1)}
+        )
+
+    def test_column_varying_x_declines(self):
+        """x varying along columns CANNOT factor out — the crux."""
+        assert not OM_DECAYED_CROSS_GEN.check(
+            {
+                "s": _v("s", 5, 4),
+                "x": _v("x", 5, 4),  # last dim 4: not row-constant
+                "eta": _v("eta", 4),
+                "v": _v("v", 4, 6),
+                "$attr:UE": -2,
+            }
+        )
+        # a bare length-4 vector varies along the contracted axis —
+        # a column-role factor that must stay inside the matmul
+        assert not OM_DECAYED_CROSS_GEN.check(
+            {
+                "s": _v("s", 5, 4),
+                "x": _v("x", 4),
+                "eta": _v("eta", 4),
+                "v": _v("v", 4, 6),
+                "$attr:UE": -2,
+            }
+        )
+
+    def test_scalar_x_fires(self):
+        """A scalar x is constant along every axis — distributes."""
+        assert OM_DECAYED_CROSS_GEN.check(
+            {
+                "s": _v("s", 5, 4),
+                "x": _v("x"),
+                "eta": _v("eta", 4),
+                "v": _v("v", 4, 6),
+                "$attr:UE": -2,
+            }
+        )
+
+    def test_unbroadcastable_eta_declines(self):
+        assert not OM_DECAYED_CROSS_GEN.check(
+            {
+                "s": _v("s", 5, 4),
+                "x": _v("x", 5, 1),
+                "eta": _v("eta", 7),  # 7 ≠ s's col dim 4
+                "v": _v("v", 4, 6),
+                "$attr:UE": -2,
+            }
+        )
+
+    def test_unbroadcastable_x_declines(self):
+        assert not OM_DECAYED_CROSS_GEN.check(
+            {
+                "s": _v("s", 5, 4),
+                "x": _v("x", 7, 1),  # 7 ≠ product's row dim 5
+                "eta": _v("eta", 4),
+                "v": _v("v", 4, 6),
+                "$attr:UE": -2,
+            }
+        )
+
+    def test_bad_contraction_declines(self):
+        assert not OM_DECAYED_CROSS_GEN.check(
+            {
+                "s": _v("s", 5, 4),
+                "x": _v("x", 5, 1),
+                "eta": _v("eta", 4),
+                "v": _v("v", 5, 6),  # inner dim 5 ≠ s's cols 4
+                "$attr:UE": -2,
+            }
+        )
+
+    def test_scalar_s_declines(self):
+        assert not OM_DECAYED_CROSS_GEN.check(
+            {
+                "s": _v("s"),
+                "x": _v("x"),
+                "eta": _v("eta"),
+                "v": _v("v"),
+                "$attr:UE": -2,
+            }
+        )
+
+    def test_non_int_ue_declines(self):
+        assert not OM_DECAYED_CROSS_GEN.check(
+            {
+                "s": _v("s", 5, 4),
+                "x": _v("x", 5, 1),
+                "eta": _v("eta", 4),
+                "v": _v("v", 4, 6),
+                "$attr:UE": "x",
+            }
+        )
 
 
 class TestComposition:

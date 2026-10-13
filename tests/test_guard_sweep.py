@@ -533,6 +533,18 @@ def _seeds() -> dict:
     seeds["decay_vec_offset"] = [
         {"g": _v("g", 4), "$attr:T": 4, "$attr:OD": 2}
     ]
+    # The generalized cross law: ``x`` accepts only row-constant
+    # broadcasters (broadcast shape ending in a 1-axis) — a corner
+    # the unconstrained enumeration can miss.
+    seeds["om_decayed_cross_gen"] = [
+        {
+            "s": _v("s", 5, 4),
+            "x": _v("x", 5, 1),
+            "eta": _v("eta", 4),
+            "v": _v("v", 4, 6),
+            "$attr:UE": -2,
+        }
+    ]
     return seeds
 
 
@@ -738,7 +750,7 @@ def test_every_conditional_rule_is_swept(sweep_rows):
     """Every conditional shipped + carrier law gets a row."""
     names = {r.name for r in _swept_rules()}
     assert set(sweep_rows) == names
-    assert len(names) == 117  # the 54 core conds + 63 carrier guards
+    assert len(names) == 118  # the 54 core conds + 64 carrier guards
 
 
 def test_no_false_region_rewrites(sweep_rows, capsys):
