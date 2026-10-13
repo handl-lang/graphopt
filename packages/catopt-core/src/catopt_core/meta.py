@@ -84,6 +84,7 @@ representative of the same critical pair.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Iterable
 from typing import Any, Protocol
 
@@ -189,6 +190,20 @@ def _flatten_chain(term: Op) -> list[Any]:
     return out
 
 
+def _is_identity(value: Any, ident: float) -> bool:
+    """Whether *value* is the identity element, sign-aware.
+
+    ``-0.0 == 0`` in IEEE arithmetic, but ``-0.0`` is not the
+    additive identity (``-0.0 + -0.0 = -0.0``) — a bare ``==``
+    would drop it from an ``add`` chain and re-materialise ``+0.0``.
+    """
+    if value != ident:
+        return False
+    if ident == 0:
+        return math.copysign(1.0, value) > 0
+    return True
+
+
 def canonicalize(term: Any, memo: dict | None = None) -> Any:
     """Return the coherence-canonical form of *term*.
 
@@ -227,7 +242,9 @@ def canonicalize(term: Any, memo: dict | None = None) -> Any:
         flat = [
             t
             for t in flat
-            if not (isinstance(t, Const) and t.value == ident)
+            if not (
+                isinstance(t, Const) and _is_identity(t.value, ident)
+            )
         ]
         if not flat:
             out = Const(ident)
