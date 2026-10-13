@@ -967,6 +967,32 @@ POINTWISE_FACTOR_RULES: list[Rewrite] = [
     FACTOR_MUL_ADD,
 ]
 
+#  Division naturality — the pointwise/linear identities that let a
+#  scalar-denominated score's factor move inside or out of the
+#  contraction.  Single-direction, unguarded (mul and div broadcast
+#  identically) or scalar-guarded.
+
+MUL_DIV_SWAP = R(
+    "mul_div_swap",
+    Op.make("mul", Op.make("div", "a", "b"), "c"),
+    Op.make("div", Op.make("mul", "a", "c"), "b"),
+    law="(a/b)·c = (a·c)/b — pointwise div/mul naturality, exact "
+    "for any broadcast (the decay-weighted score's scale slides "
+    "out of the product).",
+    tags=_SIM,
+)
+
+MATMUL_DIV_DISTRIBUTE = R(
+    "matmul_div_distribute",
+    Op.make("matmul", Op.make("div", "a", "c"), "v"),
+    Op.make("div", Op.make("matmul", "a", "v"), "c"),
+    law="(a/c)@v = (a@v)/c when c is scalar — linear readout of a "
+    "scalar-denominated operand; the score scale exits the "
+    "contraction.",
+    cond=("scalar", "c"),
+    tags=_SIM,
+)
+
 # THE WEIGHT-MERGE RULE.  x@W1 + x@W2 = x @ (W1 + W2): two projections of
 # the SAME input collapse to one matmul on a summed weight.  This is the
 # LoRA/adapter/model-soup merge that deployment tooling does by hand.
@@ -2101,6 +2127,8 @@ SIMPLIFICATION_RULES: list[Rewrite] = [
     DIV_SQRT_TO_RSQRT,
     POW_TO_RSQRT,
     RECIP_SQRT_TO_RSQRT,
+    MUL_DIV_SWAP,
+    MATMUL_DIV_DISTRIBUTE,
 ]
 
 #: Rules that implement the categorical insight: distributivity and naturality.

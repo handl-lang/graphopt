@@ -205,24 +205,24 @@ def test_laws_exports_every_rewrite():
     # pointwise factor/distribute pair
     # + 6 dense-scan + 16 diagonal-scan + 77 layout + 37 attention
     # rewrites.
-    assert len(found) == 217
+    assert len(found) == 219
 
 
 def test_all_rules_count_unchanged():
     # The default set excludes LAYOUT_RULES (opt-in — closure-cost
     # regression documented in laws.tensor); WITH_LAYOUT keeps 156.
-    assert len(laws.all_rules()) == 79
+    assert len(laws.all_rules()) == 81
     assert laws.all_rules() == laws.ALL_RULES
     assert len(laws.ALL_RULES) == (
         len(laws.SIMPLIFICATION_RULES) + len(laws.CATEGORICAL_RULES)
     )
-    assert len(laws.ALL_RULES_WITH_LAYOUT) == 156
+    assert len(laws.ALL_RULES_WITH_LAYOUT) == 158
     # each call returns a fresh list, not the shared ALL_RULES object
     assert laws.all_rules() is not laws.ALL_RULES
 
 
 def test_collections_split_by_domain():
-    assert len(laws.SIMPLIFICATION_RULES) == 30
+    assert len(laws.SIMPLIFICATION_RULES) == 32
     assert len(laws.CATEGORICAL_RULES) == 49
     assert len(laws.SCAN_LAWS) == 6
     assert len(laws.SCAN_DIAG_LAWS) == 16
@@ -333,7 +333,7 @@ def test_axiom_lemma_marker_covers_all_rules():
                     r.name,
                     premise,
                 )
-    assert len(kinds["axiom"]) == 55
+    assert len(kinds["axiom"]) == 57
     assert len(kinds["lemma"]) == 22
     assert len(kinds["redundant"]) == 2
     # the redundant kind rides on the tags.REDUNDANT constant
