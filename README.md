@@ -39,7 +39,8 @@ Measured on the dev box (RTX 2050, fp64, small sizes — see
 | llama-style SwiGLU MLP | **2.11×** |
 | held-out model zoo (22 architectures) | **11/18 verified wins**, best 2.18× |
 | spelled RetNet export, T=512 — derived chunked carrier | **1.82–2.33×** |
-| same export — K-way chunk construct | **4.4× fewer FLOPs** (29.4M → 6.70M) |
+| same export — K-way chunk construct (FLOPs) | **4.4× fewer** (29.4M → 6.70M) |
+| same export, T=2048 — the carrier as wall time | **5.0–5.9×** vs eager, **6.2–7.4×** vs `torch.compile` |
 | same export — shared-state reassociation | **10.8–24.5% fewer FLOPs** |
 | joint fwd+bwd step vs `torch.autograd` | **+13%** |
 | pure pointwise fusion | **0.82× loss** — Inductor's home turf |

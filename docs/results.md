@@ -140,15 +140,15 @@ extraction prefers it; delivery is measured, not asserted.
 |---|---|---|
 | **WIN** | the derived chunked carrier is preferred by extraction | 29.4M vs 39.1M FLOPs (T=512) |
 | **WIN** | end-to-end, delivered + verified vs the fused baseline | **1.82–2.33×** (866–1113 µs vs 2018–2028 µs), max_abs ≈1.3e-8 |
-| **WIN** (symbolic) | K-way chunk construct | **4.4×** fewer FLOPs (29.4M → 6.70M); fold depth 1 → 7 |
+| **WIN** | K-way chunk construct — FLOPs | **4.4×** fewer than the bisection-chunked form (29.4M → 6.70M; 5.83× vs the fused quadratic); fold depth 1 → 7 |
+| **WIN** (T≥1024) | the K-way carrier as wall time | **5.0–5.9× vs eager / 6.2–7.4× vs `torch.compile`** at T=2048 (lowered through the ambient sink, fp64-verified) |
+| **LOSS** (T=512) | the same carrier below the crossover | 0.51× vs eager — the FLOP cut does not hide launch overhead on many small ops |
 | **WIN** (symbolic) | shared-state reassociation | **10.8–24.5%** fewer FLOPs (T=512, K=8: 8.57M → 7.64M) |
 | **PARTIAL** | the *folded* carrier is never cheaper than the spelled form | a fold is a cost-neutral relabelling — the gap is search, not pricing |
 
 **Honest scope.**  The 1.82–2.33× pays through the decayed fused
 kernel plus an elementwise generated kernel; the scan kernels are
-declined as unloweable at these sites.  The K-way and shared-state
-figures are FLOP counts of extracted programs, not wall time — the
-timing probe for the K-way extraction is in flight.  All numbers
+declined as unloweable at these sites.  The K-way figure is now measured as wall time: it **loses ~2× at T=512** and wins 5–7× by T=2048 — the crossover (~T=1024) is the honest shape of an asymptotic win. The shared-state figure remains a FLOP count.  All numbers
 are fp64-verified against the source module.
 
 **`gen` probe, re-run 2026-10-15 (CUDA):** 10/10 cases delivered
