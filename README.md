@@ -39,6 +39,8 @@ Measured on the dev box (RTX 2050, fp64, small sizes — see
 | llama-style SwiGLU MLP | **2.11×** |
 | held-out model zoo (22 architectures) | **11/18 verified wins**, best 2.18× |
 | spelled RetNet export, T=512 — derived chunked carrier | **1.82–2.33×** |
+| same export — K-way chunk construct | **4.4× fewer FLOPs** (29.4M → 6.70M) |
+| same export — shared-state reassociation | **10.8–24.5% fewer FLOPs** |
 | joint fwd+bwd step vs `torch.autograd` | **+13%** |
 | pure pointwise fusion | **0.82× loss** — Inductor's home turf |
 
@@ -62,7 +64,16 @@ universal speedup.
   e-graph derives the chunked recurrence itself — the cross-block
   carrier is a *member* of the saturated graph, and extraction
   *prefers* it at T=512 (29.4M vs 39.1M FLOPs) — not a hand-written
-  template.
+  template. Constructs the search needs are laws too: the K-way
+  chunk split (4.4×) and the shared-state reassociation (10.8–24.5%)
+  are both admitted, guarded, fp64-verified data.
+- **It finds its own laws.** The enumerator instantiates law shapes
+  over the op grammar (1,160 candidates at depth ≤2 → five paying
+  laws); the game synthesizes the *guard* a candidate needs
+  (`xy + xz = x(y+z)` iff `x≡y` — a conditional law no library had);
+  and the synthesizer writes a shipped rule's `derive` from measured
+  bindings. Where it is blocked, the refusal names the missing
+  vocabulary — measured, not guessed.
 - **Four independent dimensions** — semantics / search / evaluation /
   execution. Cost models never change semantics; policies never decide
   equivalence.
@@ -97,10 +108,14 @@ module → export → e-graph saturation → extract (cost) → certify → lowe
 
 Discovery runs the same machinery on the law library itself:
 `catopt_discovery.pipeline` (census → propose → verify → measure →
-rank → emit) plus the open game (`catopt_discovery.open_game` — the
-enumerated candidate stream as a playable board, scored by verdict),
-and `catopt_discovery.play` exposes the whole loop as an RL
-environment (`--domain meta|joint|search|torch|gen|open`).
+rank → emit), the **enumerator** (`enumerate` — law shapes
+instantiated over the op grammar; `forms` — the shapes themselves),
+the **guard/derive synthesizers** (`auto_cond`, `dspec_synth`, and
+`vocab`'s need detection, which names the missing vocabulary from
+measured refusals), and the **open game** (`open_game` — the
+candidate stream as a playable board, scored by verdict).
+`catopt_discovery.play` exposes the whole loop as an RL environment
+(`--domain meta|joint|search|torch|gen|open`).
 
 ```bash
 python -m catopt_discovery.play --domain torch --deliver  # optimize a real module
