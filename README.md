@@ -27,30 +27,49 @@ out = opt(x)   # verified-equal to model(x)
 
 ## Results
 
-Measured on the dev box (RTX 2050, fp64, small sizes — see
-[limits](#limits)); full provenance in
-[`docs/results.md`](docs/results.md).
+Measured on the dev box (RTX 2050, fp64 — see [limits](#limits)); full
+provenance in [`docs/results.md`](docs/results.md).  Each block states
+**what was measured on what**.
 
-| | vs `torch.compile` |
+### Optimized models, end-to-end
+
+| model | vs `torch.compile` |
 |---|---|
-| deep weight chains (reassoc to 1 GEMM) | **17.1×** |
+| deep weight chains (reassoc to 1 GEMM, k=8/k=16) | **8.93× / 16.12×** |
 | spelled `x@A@B@C` block | **3.96×** |
 | `chainfuse` — laws + a kernel minted mid-search | **2.94×** |
+| spelled RetNet export, T=2048 (derived carrier) | **6.2–7.4×** |
+| spelled RetNet export, T=512 (derived carrier) | **1.82–2.33×** |
 | llama-style SwiGLU MLP | **2.11×** |
 | held-out model zoo (22 architectures) | **11/18 verified wins**, best 2.18× |
-| spelled RetNet export, T=512 — derived chunked carrier | **1.82–2.33×** |
-| same export — K-way chunk construct (FLOPs) | **4.4× fewer** (29.4M → 6.70M) |
-| same export, T=2048 — the carrier as wall time | **5.0–5.9×** vs eager, **6.2–7.4×** vs `torch.compile` |
-| same export — shared-state reassociation | **10.8–24.5% fewer FLOPs** |
-| same export, T=4096 — peak activation memory | **20.4× less** (13.1 vs 268.1 MiB) |
-| deep weight chain, k=16 — stored parameters | **16× less** (256 KB vs 4.0 MB) |
 | joint fwd+bwd step vs `torch.autograd` | **+13%** |
 | pure pointwise fusion | **0.82× loss** — Inductor's home turf |
 
+### Savings — structural and memory
+
+| | saved |
+|---|---|
+| RetNet export, T=2048 — peak activation memory | **7.30×** (169.66 → 23.26 MiB, verified) |
+| RetNet export — K-way chunk construct (FLOPs) | **4.4×** (29.4M → 6.70M) |
+| RetNet export — shared-state reassociation (FLOPs) | **10.8–24.5%** |
+| deep weight chain, k=16 — stored parameters | **16×** (256 KB vs 4.0 MB) |
+| shared-input MoE — stored parameters | **192 KB** eliminated |
+
+### Learned models
+
+| model | training | result |
+|---|---|---|
+| open-game prior | RL (linear), baked | **AP 0.133** vs cost-delta heuristic 0.045 |
+| meta-arena prior | RL (linear), baked | **−0.06** vs scripted −0.10, random −0.57 |
+| `PairPolicyNet` (contraction) | RL (neural) | 0.94–0.96 equal-rollouts at n≤30 |
+| `PairPolicyNet` distilled | supervised | n=40 **0.91** — beats the teacher (the shipped default) |
+| `RuleValueNet` | supervised | AP 0.023 — loses to the heuristic |
+
 Wins are structural — weight folding, shared-input pairing, scan lifts —
 the transforms op-level compilers cannot express. GEMM-bound code with
-no structure sees parity; launch-bound decode can lose. This is not a
-universal speedup.
+no structure sees parity; launch-bound decode can lose; the derived
+carrier *loses* below T≈1024 and wins above. This is not a universal
+speedup.
 
 ## What makes it different
 
