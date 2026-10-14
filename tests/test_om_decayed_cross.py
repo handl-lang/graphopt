@@ -35,8 +35,11 @@ from catopt_carriers.om import (  # noqa: E402
     UNSQ_MUL,
     _decay_vec_torch,
     om_decayed_kway_blocks,
+    om_div_bridge_laws,
     om_kway_laws,
+    om_shared_state_budgets,
     om_shared_state_laws,
+    om_shared_state_stages,
 )
 from catopt_core.egraph import EGraph  # noqa: E402
 from catopt_core.ir import (  # noqa: E402
@@ -2313,6 +2316,190 @@ class TestSharedStateReassoc:
             {**budgets, **{r.name: 400 for r in shared}},
         )
         assert law_best < base_best
+
+
+class TestDivBridgeStaging:
+    """The div bridge and the scheduled pair it belongs to.
+
+    ``om_shared_mat_reassoc`` fires 0× on the real export because the
+    score is ``q(x)@k(x)ᵀ/√t``: the scalar denominator wraps every cross
+    contraction (``div(matmul(q_i, B_j), c)``), so the reassociation
+    never sees ``mul(W, matmul(Q, B))``.  The bridge that lifts the
+    denominator inside — ``div(A@B, c) = (A/c)@B`` — is the *exact
+    inverse* of the shipped ``matmul_div_distribute``, so the two are a
+    two-cycle and can never be co-resident.  ``om_shared_state_stages``
+    splits them across two saturation stages.
+    """
+
+    def _div_of_matmul(self, cshape=()):
+        return Op.make(
+            "div",
+            Op.make("matmul", _v("A", 4, 5), _v("B", 5, 3)),
+            _v("c", *cshape),
+        )
+
+    def test_bridge_is_the_exact_inverse_of_matmul_div_distribute(self):
+        """Same equality, opposite spelling — that is why they cycle."""
+        from catopt_core.laws.tensor import MATMUL_DIV_DISTRIBUTE
+
+        law = om_div_bridge_laws()[0]
+        assert law.name == "div_into_matmul"
+        assert _op_skeleton(MATMUL_DIV_DISTRIBUTE.rhs) == _op_skeleton(
+            law.lhs
+        )
+        assert _op_skeleton(MATMUL_DIV_DISTRIBUTE.lhs) == _op_skeleton(
+            law.rhs
+        )
+
+    def test_fires_and_spells_the_distributed_form(self):
+        law = om_div_bridge_laws()[0]
+        subst = match_pattern(law.lhs, self._div_of_matmul(), {})
+        assert subst is not None
+        assert law.check(subst)
+        out = instantiate_pattern(law.rhs, subst)
+        assert out.op == "matmul"
+        assert out.args[0].op == "div"
+
+    def test_is_exact_fp64(self):
+        """``div(A@B, c) = (A/c)@B`` — exact to fp64 round-off."""
+        law = om_div_bridge_laws()[0]
+        lhs = self._div_of_matmul()
+        subst = match_pattern(law.lhs, lhs, {})
+        assert subst is not None and law.check(subst)
+        out = instantiate_pattern(law.rhs, subst)
+        env = {
+            "A": torch.randn(4, 5, dtype=torch.float64),
+            "B": torch.randn(5, 3, dtype=torch.float64),
+            "c": torch.tensor(2.5, dtype=torch.float64),
+        }
+        a = eval_term(lhs, var_env=env, bindings=tb._IR_TO_TORCH)
+        b = eval_term(out, var_env=env, bindings=tb._IR_TO_TORCH)
+        assert torch.allclose(a, b, atol=1e-14)
+
+    def test_declines_a_non_scalar_denominator(self):
+        """Only a scalar denominator may move inside the contraction."""
+        law = om_div_bridge_laws()[0]
+        subst = match_pattern(law.lhs, self._div_of_matmul((4, 3)), {})
+        assert subst is None or not law.check(subst)
+
+    def test_bridge_is_opt_in(self):
+        laws = om_div_bridge_laws()
+        assert [r.name for r in laws] == ["div_into_matmul"]
+        assert "div_into_matmul" not in {r.name for r in OM_LAWS}
+        assert "div_into_matmul" not in {r.name for r in OM_CHUNKIFY}
+
+    def test_stages_split_the_two_div_laws(self):
+        """Stage A has ``matmul_div_distribute``; stage B its inverse."""
+        reach, reassoc = om_shared_state_stages(4)
+        reach_names = {r.name for r in reach}
+        reassoc_names = {r.name for r in reassoc}
+        assert "matmul_div_distribute" in reach_names
+        assert "matmul_div_distribute" not in reassoc_names
+        assert "div_into_matmul" in reassoc_names
+        assert "div_into_matmul" not in reach_names
+        # the reassociation family is a stage-B concern only
+        assert not any(n.startswith("om_shared_") for n in reach_names)
+        assert "om_shared_mat_reassoc" in reassoc_names
+        # stage B is stage A plus the bridge and the reassociation family
+        assert reach_names <= reassoc_names | {"matmul_div_distribute"}
+
+    def test_budgets_cover_the_closure_generators(self):
+        budgets = om_shared_state_budgets(8, kway=200)
+        assert budgets["om_decayed_kway_blocks_8"] == 200
+        assert budgets["div_into_matmul"] > 0
+        assert budgets["om_shared_mat_reassoc"] > 0
+        assert budgets["om_decayed_chunkify_rows"] > 0
+
+    def test_staged_saturation_unlocks_the_mat_reassoc(self):
+        """The scheduling works: the bridge revives the mat variant.
+
+        Co-resident the two div laws explode the closure (measured: the
+        T=128/K=8 saturation does not finish inside 800 s); scheduled,
+        stage B completes and ``om_shared_mat_reassoc`` fires — 0× in
+        the all-at-once arm — while extraction picks a cheaper member.
+        """
+        pytest.importorskip("catopt_torch")
+        from catopt_core.cost import dag_cost, flops_cost
+        from catopt_discovery.zoo import _ChunkedRetention
+        from catopt_torch.adapters import TorchSource
+
+        T, K = 64, 4
+        reach, reassoc = om_shared_state_stages(K)
+        budgets = om_shared_state_budgets(K, kway=100)
+
+        def build():
+            torch.manual_seed(0)
+            m = _ChunkedRetention(16).double()
+            x = torch.randn(2, T, 16, dtype=torch.float64)
+            eg = EGraph()
+            return eg, eg.add_term(TorchSource().to_ir(m, x)[0].root)
+
+        eg, root = build()
+        eg.run(
+            reach,
+            root,
+            max_iterations=16,
+            max_nodes=150_000,
+            patience=8,
+            rule_budgets=budgets,
+        )
+        reach_cost = dag_cost(
+            eg.extract_best(eg.find(root), flops_cost), flops_cost
+        )
+        assert eg.rule_fires.get("om_shared_mat_reassoc", 0) == 0
+
+        eg.run(
+            reassoc,
+            root,
+            max_iterations=16,
+            max_nodes=150_000,
+            patience=8,
+            rule_budgets=budgets,
+        )
+        staged_cost = dag_cost(
+            eg.extract_best(eg.find(root), flops_cost), flops_cost
+        )
+        # the bridge fired and the mat reassociation came alive
+        assert eg.rule_fires["div_into_matmul"] > 0
+        assert eg.rule_fires["om_shared_mat_reassoc"] > 0
+        assert staged_cost < reach_cost
+        # …and the shared state is a real class with ≥2 parents
+        assert _shared_state_classes(eg, root) > 0
+
+
+def _op_skeleton(term):
+    """Return *term*'s op tree with every leaf collapsed to ``"@"``.
+
+    Two patterns with the same skeleton are the same *shape* of
+    expression — alpha-equivalent up to metavariable names.
+    """
+    if not isinstance(term, Op):
+        return "@"
+    return (term.op, tuple(_op_skeleton(a) for a in term.args))
+
+
+def _shared_state_classes(eg, root) -> int:
+    """Carrier-state e-classes reachable from *root* with ≥2 parents."""
+    seen: set[int] = set()
+    stack = [eg.find(root)]
+    while stack:
+        cid = stack.pop()
+        if cid in seen:
+            continue
+        seen.add(cid)
+        for n in eg.get_class(cid).nodes:
+            stack.extend(eg.find(c) for c in n.children)
+    out = 0
+    for cid in seen:
+        if not any(
+            n.op in ("applyd", "aff_diag")
+            for n in eg.get_class(cid).nodes
+        ):
+            continue
+        parents = {eg.find(p) for p in eg._parents.get(cid, ())}
+        if len(parents) >= 2:
+            out += 1
+    return out
 
 
 def _fold_nesting(term):

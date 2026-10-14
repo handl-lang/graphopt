@@ -3459,6 +3459,156 @@ def om_shared_state_laws() -> list[Rewrite]:
     ]
 
 
+# ---------------------------------------------------------------------------
+#  The div bridge — the scheduled twin of ``matmul_div_distribute``
+# ---------------------------------------------------------------------------
+#  The chunked export's score is ``q(x)@k(x)ᵀ/√t``, so every cross
+#  contribution reaches the e-graph with the scalar denominator OUTSIDE
+#  the contraction — ``div(matmul(q_i, B_j), c)``.  The reassociation's
+#  ``_mat`` variant needs the contraction to be the *direct* operand of
+#  the weight mul (``mul(W, matmul(Q, B))``), so the denominator has to
+#  move inside first:
+#
+#      div(A@B, c)  =  (A/c) @ B      (c scalar)
+#
+#  — the naturality ``MATMUL_DIV_DISTRIBUTE`` (``catopt_core.laws.tensor``)
+#  spells in the OPPOSITE direction.  The two are exact inverses, so as
+#  an e-graph rule pair they are a two-cycle: co-resident, every score
+#  class merges with its distributed twin and the closure explodes
+#  (measured: T=128/K=8, k=8 saturation did not finish inside 800 s,
+#  against ~30 s for the reachability stage alone).
+#
+#  They must therefore be SCHEDULED — never co-resident.  The bridge is
+#  a *reachability* law for the reassociation stage; see
+#  :func:`om_shared_state_stages`, which returns the two stage lists.
+# ---------------------------------------------------------------------------
+
+
+DIV_INTO_MATMUL = R(
+    "div_into_matmul",
+    Op.make("div", Op.make("matmul", "A", "B"), "c"),
+    Op.make("matmul", Op.make("div", "A", "c"), "B"),
+    cond=("scalar", "c"),
+    law="div(A@B, c) = (A/c)@B for a scalar c — the score's scalar "
+    "denominator moves INSIDE the contraction, which is what lets the "
+    "shared-state reassociation see mul(W, matmul(Q, B)).  Exact "
+    "inverse of matmul_div_distribute; the pair must be scheduled, "
+    "never co-resident (see om_shared_state_stages).",
+)
+
+
+def om_div_bridge_laws() -> list[Rewrite]:
+    """Return the div-naturality bridge as a one-element list.
+
+    The bridge is the *exact inverse* of ``matmul_div_distribute``, so
+    it is only ever sound to run it in a stage from which that law is
+    absent — :func:`om_shared_state_stages` does exactly that.
+    """
+    return [DIV_INTO_MATMUL]
+
+
+def _fold_bridges() -> list[Rewrite]:
+    """Return the naturality bridges the chunked carrier needs.
+
+    The six the fold's last hops need (plan 0023): div/mul naturality,
+    the contraction readouts, the associativity reversal and the
+    shared-denominator factorings.
+    """
+    from catopt_core.laws.tensor import (
+        ASSOC_MATMUL_REV,
+        DIV_ADD_FACTOR,
+        FACTOR_MUL,
+        FACTOR_MUL_ADD,
+        MATMUL_DIV_DISTRIBUTE,
+        MUL_DIV_SWAP,
+    )
+
+    return [
+        MUL_DIV_SWAP,
+        MATMUL_DIV_DISTRIBUTE,
+        ASSOC_MATMUL_REV,
+        FACTOR_MUL,
+        FACTOR_MUL_ADD,
+        DIV_ADD_FACTOR,
+    ]
+
+
+def om_shared_state_stages(
+    k: int,
+) -> tuple[list[Rewrite], list[Rewrite]]:
+    """Return the two scheduled rule stages the shared fold needs.
+
+    ``(reach, reassoc)``.  Saturate with ``reach`` to a fixed point,
+    then continue with ``reassoc`` on the SAME e-graph — staging is
+    successive :meth:`~catopt_core.egraph.EGraph.run` calls, and
+    ``rule_budgets`` persist across them, so the split costs nothing
+    beyond the second pass.
+
+    ``reach`` is the everyday chunked-carrier set: ``OM_LAWS`` +
+    ``OM_CHUNKIFY`` + ``SPLIT_SCALAR_RULES`` + the six naturality
+    bridges + ``om_kway_laws(k)``.  It reaches the chunked carrier and
+    the folded *tree*, but the score's scalar denominator sits outside
+    every cross contraction, so the reassociation never fires.
+
+    ``reassoc`` is ``reach`` with ``matmul_div_distribute`` REPLACED by
+    its exact inverse :data:`DIV_INTO_MATMUL`, plus
+    ``om_shared_state_laws()``.  The bridge lifts the denominator
+    inside the contraction — ``om_shared_mat_reassoc`` then sees
+    ``mul(W, matmul(Q, B))`` and fires — and splitting the two div laws
+    across the stages is what keeps the closure finite.
+
+    Both stages are opt-in and priced with ``rule_budgets``: the K-way
+    law and the bridge are closure generators.
+    """
+    from catopt_core.laws.tensor import (
+        MATMUL_DIV_DISTRIBUTE,
+        SPLIT_SCALAR_RULES,
+    )
+
+    bridges = _fold_bridges()
+    reach = (
+        list(OM_LAWS)
+        + list(OM_CHUNKIFY)
+        + list(SPLIT_SCALAR_RULES)
+        + bridges
+        + om_kway_laws(k)
+    )
+    reassoc = (
+        list(OM_LAWS)
+        + list(OM_CHUNKIFY)
+        + list(SPLIT_SCALAR_RULES)
+        + [r for r in bridges if r is not MATMUL_DIV_DISTRIBUTE]
+        + om_kway_laws(k)
+        + om_div_bridge_laws()
+        + om_shared_state_laws()
+    )
+    return reach, reassoc
+
+
+def om_shared_state_budgets(
+    k: int,
+    *,
+    kway: int = 200,
+    bridge: int = 400,
+    reassoc: int = 400,
+    chunkify: int = 60,
+) -> dict[str, int]:
+    """Return the ``rule_budgets`` map :func:`om_shared_state_stages` wants.
+
+    The closure generators — the K-way expansion, the div bridge and
+    the reassociation family — are bounded; the everyday laws are
+    unbudgeted and reach their exact fixed point.
+    """
+    out = {
+        "om_decayed_chunkify_rows": chunkify,
+        "om_decayed_chunkify_keys": chunkify,
+        f"om_decayed_kway_blocks_{k}": kway,
+        "div_into_matmul": bridge,
+    }
+    out.update({r.name: reassoc for r in om_shared_state_laws()})
+    return out
+
+
 def _check_split_matmul(bound: dict) -> bool:
     """Require a well-typed split: int sizes partitioning the extent."""
     sz, i = bound.get("$attr:SZ"), bound.get("$attr:I")
