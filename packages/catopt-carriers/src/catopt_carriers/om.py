@@ -1080,7 +1080,9 @@ def _decay_vec_torch(g: torch.Tensor, *a, **kw) -> torch.Tensor:
     """
     t = int(kw.get("t", 0) or 0)
     off = int(kw.get("offset", 0) or 0)
-    sign = int(kw.get("sign", 1) or 1)
+    # ``or 1`` would swallow sign=0 — a legal exponent (the merge's
+    # S1+S2 lands there): ``g^(0·k+o)`` is the constant g^o, not g^k.
+    sign = int(kw["sign"]) if "sign" in kw else 1
     g = torch.as_tensor(g)
     pos = torch.arange(t, dtype=g.dtype, device=g.device)
     return g[..., None] ** (pos * sign + off)
