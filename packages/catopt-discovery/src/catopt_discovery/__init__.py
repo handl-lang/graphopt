@@ -15,8 +15,10 @@ ADR-0004 "construction operations" that *build* declared objects for
 the evidence store to admit).  The game layer: boards
 (:mod:`.arena`, :mod:`.meta_arena`), the generic driver
 (:mod:`.engine` — one ``Board`` protocol over all of them), the
-reusable learner (:mod:`.players.LinearPolicy`,
-:mod:`.meta_player`), the reverse handler (:mod:`.training`), the
+player/featurizer abstraction (:mod:`.players` — ``LinearPolicy``,
+the one ``LearnedPlayer`` and the per-domain ``DomainSpec`` of
+composable feature parts), the meta preset (:mod:`.meta_player`),
+the reverse handler (:mod:`.training`), the
 generated-kernel machinery (:mod:`.genkernel` — minted handlers +
 bindings + gen sink — the lowerings the search itself builds),
 and the domain registry + CLI (:mod:`.play` —

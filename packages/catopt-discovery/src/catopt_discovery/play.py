@@ -3,16 +3,22 @@
 One registry of *domains* (a board family plus its player
 vocabulary), one entrypoint: pick a domain, pick arms, get the
 paired-boards table.  Adding a domain is data — a case generator, a
-``case -> Board`` factory, the legal-move enumerator and the
-learned player's featurizer — no driver code:
+``case -> Board`` factory and a player *spec* (the feature schema,
+the featurizer's composable parts and the legal-move enumerator) —
+no driver code and no player subclass:
 
 .. code-block:: text
 
-    DOMAINS[name] = Domain(
+    SPEC = DomainSpec.build(
+        features=FEATURES,          # the learned arm's schema
+        legal=legal_actions,        # state -> tuple[action, ...]
+        parts=(Bias(), StateBroadcast(...), ...),  # the feature row
+        weights=PLAYER_WEIGHTS,     # the baked prior (optional)
+    )
+    DOMAINS[name] = _spec_domain(
         cases=gen_cases,            # seed, n -> [case, ...]
         board_of=...,               # case -> Board
-        legal=...,                  # state -> tuple[action, ...]
-        featurizer=...,             # (state, action, hist) -> dict
+        spec=SPEC,
         scripted=...,               # optional fixed-playbook arm
     )
 
@@ -55,7 +61,13 @@ from . import meta_arena as ma
 from . import meta_player as mp
 from . import open_game as og
 from .meta_player import _bucket
-from .players import LinearPolicy
+from .players import (
+    ActionFeats,
+    Bias,
+    DomainSpec,
+    LinearPolicy,
+    StateBroadcast,
+)
 
 __all__ = [
     "DOMAINS",
@@ -67,15 +79,46 @@ __all__ = [
 
 @dataclass(frozen=True)
 class Domain:
-    """One board family's registration — data, not code."""
+    """One board family's registration — data, not code.
+
+    A domain binds a *cases* generator, a ``case -> Board`` factory
+    and the learned player's vocabulary: its legal-move enumerator
+    (``legal``), featurizer and feature schema (``features``).  A
+    domain that ships a :class:`~catopt_discovery.players.DomainSpec`
+    builds its record with :func:`_spec_domain`, which fills those
+    three from the spec and records it on ``spec``; a domain may set
+    them directly instead.  ``scripted`` and ``deliver`` are extras.
+    """
 
     cases: Any  # (seed, n) -> [case, ...]
     board_of: Any  # case -> Board
-    legal: Any  # state -> tuple[action, ...]
-    featurizer: Any  # (state, action, hist) -> dict
+    legal: Any = None  # state -> tuple[action, ...]
+    featurizer: Any = None  # (state, action, hist) -> dict
     features: Any = ()  # the learned arm's schema
     scripted: Any = None  # () -> player, or None
     deliver: Any = None  # (board, case, traj) -> artifact | None
+    spec: DomainSpec | None = None  # the player spec, when one is bound
+
+
+def _spec_domain(
+    cases: Any,
+    board_of: Any,
+    spec: DomainSpec,
+    *,
+    scripted: Any = None,
+    deliver: Any = None,
+) -> Domain:
+    """Build a :class:`Domain` whose player fields come from *spec*."""
+    return Domain(
+        cases=cases,
+        board_of=board_of,
+        legal=spec.legal,
+        featurizer=spec.featurize,
+        features=spec.features,
+        scripted=scripted,
+        deliver=deliver,
+        spec=spec,
+    )
 
 
 def play(
@@ -1371,18 +1414,21 @@ def _search_legal(state: _SearchState) -> tuple:
     return state.actions
 
 
-def _search_featurizer(
-    state: _SearchState, action: Any, _hist: Any
-) -> dict:
-    """Minimal row: rule bucket plus the board summary."""
+def _search_state(state: _SearchState) -> dict[str, float]:
+    """Return the ``st:*`` broadcast block — progress and improvement."""
     return {
-        "bias": 1.0,
         "st:steps": state.steps / 8.0,
         "st:improve": max(
             0.0, 1.0 - state.cost / max(state.baseline, 1e-9)
         ),
-        f"a:r:{_bucket(action, 'rule'):02d}": 1.0,
     }
+
+
+def _search_act(
+    action: Any, _row: dict[str, float]
+) -> dict[str, float]:
+    """Return the fired rule's identity bucket — the only action feature."""
+    return {f"a:r:{_bucket(action, 'rule'):02d}": 1.0}
 
 
 SEARCH_FEATURES: tuple = (
@@ -1392,6 +1438,19 @@ SEARCH_FEATURES: tuple = (
     *(
         f"a:r:{b:02d}"
         for b in range(lawdata.META_ARENA_HASH_BUCKETS["rule"])
+    ),
+)
+
+#: The search adapter's spec — a rule-fire board has no move-kind
+#: one-hot and no play-rate history, so its parts are just the
+#: intercept, the ``st:*`` broadcast and the rule bucket.
+SEARCH_SPEC = DomainSpec.build(
+    features=SEARCH_FEATURES,
+    legal=_search_legal,
+    parts=(
+        Bias(),
+        StateBroadcast(_search_state),
+        ActionFeats(_search_act),
     ),
 )
 
@@ -1438,55 +1497,39 @@ def _scripted_search() -> Any:
 
 
 DOMAINS: dict[str, Domain] = {
-    "meta": Domain(
-        cases=mp.gen_cases,
-        board_of=_meta_board,
-        legal=ma.legal_actions,
-        featurizer=mp.featurize,
-        features=lawdata.META_ARENA_FEATURES,
+    "meta": _spec_domain(
+        mp.gen_cases,
+        _meta_board,
+        mp.META_SPEC,
         scripted=ma.ScriptedPlayer,
     ),
-    "joint": Domain(
-        cases=_joint_cases,
-        board_of=_joint_board,
-        legal=ma.legal_actions,
-        featurizer=mp.featurize,
-        features=lawdata.META_ARENA_FEATURES,
+    "joint": _spec_domain(
+        _joint_cases,
+        _joint_board,
+        mp.META_SPEC,
         scripted=ma.ScriptedPlayer,
     ),
-    "torch": Domain(
-        cases=_torch_cases,
-        board_of=_torch_board,
-        legal=ma.legal_actions,
-        featurizer=mp.featurize,
-        features=lawdata.META_ARENA_FEATURES,
+    "torch": _spec_domain(
+        _torch_cases,
+        _torch_board,
+        mp.META_SPEC,
         scripted=ma.ScriptedPlayer,
         deliver=_torch_deliver,
     ),
-    "search": Domain(
-        cases=_search_cases,
-        board_of=_search_board,
-        legal=_search_legal,
-        featurizer=_search_featurizer,
-        features=SEARCH_FEATURES,
+    "search": _spec_domain(
+        _search_cases,
+        _search_board,
+        SEARCH_SPEC,
         scripted=_scripted_search,
     ),
-    "gen": Domain(
-        cases=_gen_cases,
-        board_of=_gen_board,
-        legal=ma.legal_actions,
-        featurizer=mp.featurize,
-        features=lawdata.META_ARENA_FEATURES,
+    "gen": _spec_domain(
+        _gen_cases,
+        _gen_board,
+        mp.META_SPEC,
         scripted=ma.ScriptedPlayer,
         deliver=_torch_deliver,
     ),
-    "open": Domain(
-        cases=og.gen_cases,
-        board_of=og.OpenArena,
-        legal=og.legal_actions,
-        featurizer=og.featurize,
-        features=og.OPEN_GAME_FEATURES,
-    ),
+    "open": _spec_domain(og.gen_cases, og.OpenArena, og.OPEN_SPEC),
 }
 
 
