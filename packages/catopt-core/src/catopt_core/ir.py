@@ -616,6 +616,18 @@ op_def(
     "per row-block.",
 )
 op_def(
+    "pack",
+    0,
+    1,
+    law="n-ary pairing (the product's universal map): pack(t0, "
+    "..., tn) assembles the monoidal product of its operand wires "
+    "into one tuple-valued output.  It is the multi-output root — "
+    "a module returning several tensors exports as a single pack "
+    "term, so the single-root search saturates every output "
+    "without dropping any.  Arity is variadic (n_in documents the "
+    "fixed-arity convention; pack takes >= 1 operand).",
+)
+op_def(
     "embedding",
     2,
     1,
@@ -659,12 +671,33 @@ class IR:
     :class:`Var` objects that are the program's inputs.  Parameters
     (:class:`Param`) are implicitly tracked as the learnable weights
     inside the term.
+
+    A *single-output* program's ``root`` is its one output.  A
+    *multi-output* program (a module returning a tuple) is exported
+    with a :data:`pack` root pairing every output wire, so ``root``
+    stays the one term the single-root search saturates and lowers —
+    nothing is dropped.  :attr:`roots` is the output-tuple view over
+    either shape.
     """
 
     root: Any  # Var | Const | Param | Op
     inputs: list[Var] = field(default_factory=list)
     input_names: set[str] = field(default_factory=set)
     params: dict[str, Param] = field(default_factory=dict)
+
+    @property
+    def roots(self) -> tuple[Any, ...]:
+        """The program's output tuple — every graph output.
+
+        ``(root,)`` for a single-output program (``root`` is the
+        single-output alias).  For a multi-output program — whose
+        ``root`` is the ``pack`` pairing of its outputs — this is the
+        pairing's operand tuple, one entry per output in export order.
+        """
+        r = self.root
+        if getattr(r, "op", None) == "pack":
+            return r.args
+        return (r,)
 
     def __repr__(self) -> str:
         """Return an S-expression rendering of the root term."""

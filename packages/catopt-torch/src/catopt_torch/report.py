@@ -42,11 +42,18 @@ _REL_FLOOR = 1e-8
 
 @dataclass(frozen=True)
 class VerifyReport:
-    """Result of one equivalence check between two output tensors."""
+    """Result of one equivalence check between two outputs.
+
+    For a multi-output module the check is over every output: the
+    scalar fields are the worst case across the outputs and
+    ``per_output`` carries each output's ``max|ref - out|`` in export
+    order (``None`` for a single-output comparison).
+    """
 
     max_abs: float  # max|ref - out|
     max_rel: float  # max_abs / (max|ref| + _REL_FLOOR)
     passed: bool
+    per_output: tuple[float, ...] | None = None
 
 
 def rel_diff(a: torch.Tensor, b: torch.Tensor) -> float:
@@ -60,9 +67,56 @@ def rel_diff(a: torch.Tensor, b: torch.Tensor) -> float:
     )
 
 
+def _verify_outputs(
+    ref_out: tuple | list,
+    out: Any,
+    rtol: float,
+    atol: float | None,
+) -> VerifyReport:
+    """Compare two multi-output results, element by element.
+
+    Every output must verify: ``passed`` is the conjunction and the
+    scalar fields are the worst case over the outputs, with each
+    output's ``max_abs`` recorded in ``per_output``.  A shape mismatch
+    (the lowered module returned a different number of outputs) fails
+    closed rather than comparing a prefix.
+    """
+    if not isinstance(out, (tuple, list)) or len(out) != len(ref_out):
+        return VerifyReport(
+            max_abs=float("inf"),
+            max_rel=float("inf"),
+            passed=False,
+        )
+    reports = [
+        verify_equiv(r, o, rtol=rtol, atol=atol)
+        for r, o in zip(ref_out, out, strict=True)
+    ]
+    return VerifyReport(
+        max_abs=max(r.max_abs for r in reports),
+        max_rel=max(r.max_rel for r in reports),
+        passed=all(r.passed for r in reports),
+        per_output=tuple(r.max_abs for r in reports),
+    )
+
+
+def _verify_pair(
+    ref_out: Any,
+    out: Any,
+    rtol: float,
+    atol: float | None,
+) -> VerifyReport:
+    """Compare two single-output results — the historical metric."""
+    max_abs = (ref_out - out).abs().max().item()
+    max_rel = max_abs / (ref_out.abs().max().item() + _REL_FLOOR)
+    passed = bool(max_rel < rtol) and (
+        atol is None or bool(max_abs <= atol)
+    )
+    return VerifyReport(max_abs=max_abs, max_rel=max_rel, passed=passed)
+
+
 def verify_equiv(
-    ref_out: torch.Tensor,
-    out: torch.Tensor,
+    ref_out: Any,
+    out: Any,
     rtol: float = 1e-4,
     atol: float | None = None,
 ) -> VerifyReport:
@@ -75,13 +129,14 @@ def verify_equiv(
     * ``max_rel = max|ref - out| / (max|ref| + 1e-8)``
     * ``passed = max_rel < rtol`` and, when ``atol`` is given,
       additionally ``max_abs <= atol``.
+
+    A tuple/list ``ref_out`` is a multi-output result: every output is
+    compared (see :func:`_verify_outputs`) — a module returning
+    several tensors verifies on all of them, not just the first.
     """
-    max_abs = (ref_out - out).abs().max().item()
-    max_rel = max_abs / (ref_out.abs().max().item() + _REL_FLOOR)
-    passed = bool(max_rel < rtol) and (
-        atol is None or bool(max_abs <= atol)
-    )
-    return VerifyReport(max_abs=max_abs, max_rel=max_rel, passed=passed)
+    if isinstance(ref_out, (tuple, list)):
+        return _verify_outputs(ref_out, out, rtol, atol)
+    return _verify_pair(ref_out, out, rtol, atol)
 
 
 def verify_module(
@@ -97,6 +152,10 @@ def verify_module(
     ``no_grad`` and the comparison goes through :func:`verify_equiv`.
     Tensor inputs are cloned so a forward that mutates its arguments
     cannot corrupt the comparison.
+
+    A multi-output module (one returning a tuple) is verified on
+    EVERY output: the report's scalars are the worst case and
+    ``per_output`` lists each output's ``max|Δ|``.
     """
     args = inputs if isinstance(inputs, tuple) else (inputs,)
     ref_mod.eval()
@@ -114,12 +173,6 @@ def verify_module(
                 for a in args
             ]
         )
-    # ``export_to_ir`` models the exported graph's FIRST output — a
-    # module returning several (MHA's attention weights, an RNN's
-    # ``(h_n, c_n)`` state tuple) verifies on the modelled output
-    # alone.
-    if isinstance(ref, (tuple, list)):
-        ref = ref[0]
     return verify_equiv(ref, out, rtol=rtol, atol=atol)
 
 

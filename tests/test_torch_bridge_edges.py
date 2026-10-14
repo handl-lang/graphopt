@@ -787,3 +787,66 @@ class TestConvNetOps:
         from catopt_core.attrs import ATTR_SCHEMA
 
         assert ATTR_SCHEMA["upsample_bilinear2d"][2] == "align_corners"
+
+
+# ---------------------------------------------------------------------------
+#  Multi-output export — the pack root
+# ---------------------------------------------------------------------------
+
+
+class TestMultiOutputExport:
+    """A module returning a tuple exports every output — the silent
+    drop of all but the first is gone (U^2-Net's ``(d0, ..., d6)``)."""
+
+    class _Multi(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.a = torch.nn.Linear(4, 4, bias=False)
+
+        def forward(self, x):
+            h = self.a(x)
+            return h, torch.relu(h), h + 1.0
+
+    def test_export_packs_every_output(self):
+        m = self._Multi().eval().double()
+        x = torch.randn(2, 4, dtype=torch.float64)
+        ir, leaves = export_to_ir(m, x)
+        # A multi-output program's root is the ``pack`` pairing.
+        assert isinstance(ir.root, Op) and ir.root.op == "pack"
+        assert len(ir.roots) == 3
+        assert ir.root.args == ir.roots
+
+    def test_lowered_multi_output_returns_the_tuple(self):
+        m = self._Multi().eval().double()
+        x = torch.randn(2, 4, dtype=torch.float64)
+        ir, leaves = export_to_ir(m, x)
+        mod = ir_to_torch_module(ir, leaves)
+        with torch.no_grad():
+            ref = m(x)
+            out = mod(x)
+        assert isinstance(out, tuple) and len(out) == 3
+        for r, o in zip(ref, out):
+            assert torch.allclose(r, o)
+
+    def test_single_output_is_not_packed(self):
+        class One(torch.nn.Module):
+            def forward(self, x):
+                return x + 1.0
+
+        x = torch.randn(2, dtype=torch.float64)
+        ir, _ = export_to_ir(One().eval().double(), x)
+        assert getattr(ir.root, "op", None) != "pack"
+        # ``roots`` is the single-output alias view.
+        assert ir.roots == (ir.root,)
+
+    def test_non_tensor_output_is_refused(self):
+        """An output leaf that is not a tensor cannot be modelled —
+        the exporter refuses loudly rather than dropping it."""
+
+        class Mixed(torch.nn.Module):
+            def forward(self, x):
+                return x + 1.0, 3
+
+        x = torch.randn(2, dtype=torch.float64)
+        with pytest.raises(ValueError, match="do not resolve"):
+            export_to_ir(Mixed().eval().double(), x)
