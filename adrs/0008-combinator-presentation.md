@@ -141,3 +141,37 @@ The direction fails, measurably, if:
 - **Both surfaces coexist deliberately** — the op-graph stays for
   lowering (sinks already speak it); the combinator layer is where
   semantics, laws, and discovery live.  The bridge is the seam.
+
+## Measurements (added post-landing)
+
+Bridge prototype + falsification gates measured (`841b99c`, `481eec7`,
+merged `32962d0`; `tools/combinator.py` + `tools/combinator_probe.py`).
+
+- **Gate 1 — corpus round-trip: PASS.**  321/321 exported workloads
+  (zoo + intake + model registries) round-trip *structurally exact*
+  (hash-consed identity); the 2 rejections are upstream
+  `torch.export` failures, not bridge gaps.  Mean blowup 2.61×
+  (max 7.27× on a sharing-heavy case); largest morphism 1.1% of the
+  enode budget.  **Zero ops refuse translation.**  10 sampled
+  survivors lower through `TorchSink` bit-identical.
+- **Gate 2 — carrier as a `loop` term: PASS.**  The shared-state fold
+  spells as `seq(pre, loop(step, K), post)`, lowered and verified
+  against `zoo._ChunkedRetention` at 1e-7–2.6e-7 (the documented
+  γ⁻ᶜ conditioning bound).  Named extension: **bounded scan**
+  `loop_n` — a bare trace `Tr^S` is insufficient; n-fold iteration
+  over block inputs is the required combinator.  Bonus: the
+  staged-saturation extract projects through the bridge round-trip
+  EQUAL (1590-node morphism, 92 explicit Δ sites) — same recurrence
+  modulo spelling.
+- **Gate 3 — open.**  `loop` structure is erased at export: fused
+  recurrences (`lstm.input`, `cumsum`) translate fine but the fold
+  must be *proposed by search*, never recovered by the bridge.
+  Whether search reaches `loop` forms is the remaining substrate
+  risk.
+- **Cost scars.**  Permutation bookkeeping dominates morphism mass
+  (Σperm 6057 > Σdag 3519) — the flat context encoding is honest but
+  wasteful; a real layer wants a better normal form.  Also: the
+  shared-state probe's `_honest_reference_cost` fold is numerically
+  off (missing `/√T` on cross terms, a γ^C on ξ) — valid as a FLOP
+  floor (attrs don't move FLOPs), but it was never a verified
+  program; the spelled `loop` is.
