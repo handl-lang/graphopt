@@ -275,6 +275,73 @@ def _fill_src(node: Any, dst_fx: Any, env: dict[str, Any]) -> Any:
     )
 
 
+def _view_chain(dst_fx: Any) -> tuple[Any, list]:
+    """Walk a functionalized write target up its view chain.
+
+    Returns ``(root_fx, steps)`` where ``steps`` lists
+    ``(view_fx, base_fx, kind, index)`` entries ordered INNERMOST
+    first (the write target's own view first) and ``root_fx`` is the
+    first non-``slice``/``select`` producer — the tensor the write
+    ultimately mutates.  ``kind`` is ``"slice"`` (``index =
+    (dim, start, end, step)``) or ``"select"`` (``index = (dim,
+    index)``).  A non-view target returns ``(dst_fx, [])`` — the
+    whole-tensor write.
+    """
+    steps: list = []
+    node = dst_fx
+    while True:
+        target_attr = getattr(node, "target", None)
+        if target_attr is None:
+            # A non-FX operand (an unminted base, a literal) ends the
+            # chain — the caller declines on the missing binding.
+            return node, steps
+        target = _aten_name(target_attr)
+        args = getattr(node, "args", ())
+        if target == "slice" and len(args) >= 4:
+            step = args[4] if len(args) > 4 else 1
+            steps.append(
+                (
+                    node,
+                    args[0],
+                    "slice",
+                    (args[1], args[2], args[3], step),
+                )
+            )
+        elif target == "select" and len(args) >= 3:
+            steps.append((node, args[0], "select", (args[1], args[2])))
+        else:
+            return node, steps
+        node = args[0]
+
+
+def _scatter_view(kind: str, base: Any, val: Any, idx: tuple) -> Any:
+    """Scatter *val* into *base* at *idx* — the functional write."""
+    if kind == "slice":
+        dim, start, end, step = idx
+        return Op.make(
+            "slice_scatter",
+            base,
+            val,
+            dim=dim,
+            start=start,
+            end=end,
+            step=step,
+        )
+    dim, index = idx
+    return Op.make("select_scatter", base, val, dim=dim, index=index)
+
+
+def _read_view(kind: str, base: Any, idx: tuple) -> Any:
+    """Read *base* at *idx* — the ``slice``/``select`` view term."""
+    if kind == "slice":
+        dim, start, end, step = idx
+        return Op.make(
+            "slice", base, dim=dim, start=start, end=end, step=step
+        )
+    dim, index = idx
+    return Op.make("select", base, dim=dim, index=index)
+
+
 def _handle_copy_(node: Any, env: dict[str, Any]) -> None:
     """Thread a functionalized ``copy_``/``fill_``/``zero_`` write.
 
@@ -286,6 +353,16 @@ def _handle_copy_(node: Any, env: dict[str, Any]) -> None:
     ``y[:, :4] = 0`` slice fill lowers through ``slice_scatter`` like
     the ``copy_`` view-write it functionalises from.  A copy on a
     whole tensor rewrites the dst binding itself to a ``copy`` op.
+
+    The write target may sit behind a CHAIN of views — ``y[:, :3, :2]
+    = v`` exports as ``fill_(slice(slice(y, 1, 0, 3), 2, 0, 2), v)``.
+    The chain is folded from the innermost write outward
+    (:func:`_scatter_view`), each step scattering the already-written
+    value onto its own base, and the ROOT base's binding is rebound to
+    the composed result — so the mutation reaches the tensor readers
+    actually observe instead of orphaning on an intermediate view.
+    Each view node's binding is then rebuilt from the rebound root so
+    later reads of the chain see the write.
     """
     if not node.args:
         return
@@ -310,48 +387,30 @@ def _handle_copy_(node: Any, env: dict[str, Any]) -> None:
         src = env.get(node.args[1].name)
         if src is None:
             return
-    dst_target = _aten_name(dst_fx.target)
-    view_args = getattr(dst_fx, "args", ())
-    if dst_target == "slice" and len(view_args) >= 4:
-        base_fx = view_args[0]
-        base = env.get(base_fx.name)
-        if base is None:
-            return
-        dim = view_args[1]
-        start = view_args[2]
-        end = view_args[3]
-        step = view_args[4] if len(view_args) > 4 else 1
-        new_base = Op.make(
-            "slice_scatter",
-            base,
-            src,
-            dim=dim,
-            start=start,
-            end=end,
-            step=step,
-        )
-        env[base_fx.name] = new_base
-        # The view node still exists — it reads the post-write base.
-        env[dst_fx.name] = Op.make(
-            "slice", new_base, dim=dim, start=start, end=end, step=step
-        )
-    elif dst_target == "select" and len(view_args) >= 3:
-        base_fx = view_args[0]
-        base = env.get(base_fx.name)
-        if base is None:
-            return
-        dim, index = view_args[1], view_args[2]
-        new_base = Op.make(
-            "select_scatter", base, src, dim=dim, index=index
-        )
-        env[base_fx.name] = new_base
-        env[dst_fx.name] = Op.make(
-            "select", new_base, dim=dim, index=index
-        )
-    else:
+    root_fx, steps = _view_chain(dst_fx)
+    if not steps:
         # Whole-tensor write (or an unrecognised view): dst's readers
         # see the broadcast-cloned source.
         env[dst_fx.name] = Op.make("copy", dst, src)
+        env[node.name] = env[dst_fx.name]
+        return
+    root = env.get(getattr(root_fx, "name", None))
+    if root is None:
+        return
+    # Fold the scatters innermost-outward; each reads its base's
+    # current binding so successive writes compose.
+    val = src
+    for _view_fx, base_fx, kind, idx in steps:
+        base = env.get(getattr(base_fx, "name", None))
+        if base is None:
+            return
+        val = _scatter_view(kind, base, val, idx)
+    env[root_fx.name] = val
+    # Rebuild each view from the rebound root (root -> outward).
+    cur = val
+    for view_fx, _base_fx, kind, idx in reversed(steps):
+        cur = _read_view(kind, cur, idx)
+        env[view_fx.name] = cur
     env[node.name] = env[dst_fx.name]
 
 
@@ -896,6 +955,20 @@ def _upsample_bilinear2d_torch(x: Any, *a: Any, **kw: Any) -> Any:
     )
 
 
+def _adaptive_avg_pool2d_torch(x: Any, *a: Any, **kw: Any) -> Any:
+    """``aten.adaptive_avg_pool2d[.default]`` → F.adaptive_avg_pool2d.
+
+    The output size is the lone positional (``[H, W]`` at export,
+    canonicalised to the ``size`` attr by ``ATTR_SCHEMA``); a bare
+    ``1`` pools to 1x1.  Measured: BiRefNet's ASPP global-average
+    branch.
+    """
+    size = a[0] if a else attr_of(kw, "size", default=None)
+    if isinstance(size, list):
+        size = tuple(size)
+    return torch.nn.functional.adaptive_avg_pool2d(x, size)
+
+
 def _upsample_nearest2d_torch(x: Any, *a: Any, **kw: Any) -> Any:
     """``aten.upsample_nearest2d[.vec]`` → F.interpolate nearest.
 
@@ -1066,20 +1139,40 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
         dilation=kw.get("dilation", 1),
         groups=kw.get("groups", 1),
     ),
-    # aten.max_pool2d[.default] — the pooling op ``nn.MaxPool2d``
-    # exports as (measured: U^2-Net's stage pools).  torch.export
-    # passes every attribute positionally — ``ceil_mode`` included,
-    # so defaulting it to False silently truncates the output shape.
+    # aten.max_pool2d[.default] — the pooling op ``nn.MaxPool2d`` /
+    # ``F.max_pool2d`` exports as (measured: U^2-Net's stage pools).
+    # torch.export passes every present attribute positionally and
+    # elides only TRAILING defaults, so the kernel/stride/padding/
+    # dilation/ceil_mode land under their canonical ``ATTR_SCHEMA``
+    # names; ``ceil_mode`` must be honoured or the output shape
+    # silently truncates.  The positional tail is still accepted for
+    # direct callers.
     "max_pool2d": lambda x, *a, **kw: torch.nn.functional.max_pool2d(
         x,
-        kernel_size=a[0] if a else kw.get("kernel_size", 2),
-        stride=(a[1] if len(a) > 1 else kw.get("stride", None)),
-        padding=a[2] if len(a) > 2 else kw.get("padding", 0),
-        dilation=a[3] if len(a) > 3 else kw.get("dilation", 1),
+        kernel_size=(
+            a[0] if a else attr_of(kw, "kernel_size", default=2)
+        ),
+        stride=(
+            a[1] if len(a) > 1 else attr_of(kw, "stride", default=None)
+        ),
+        padding=(
+            a[2] if len(a) > 2 else attr_of(kw, "padding", default=0)
+        ),
+        dilation=(
+            a[3] if len(a) > 3 else attr_of(kw, "dilation", default=1)
+        ),
         ceil_mode=bool(
-            a[4] if len(a) > 4 else kw.get("ceil_mode", False)
+            a[4]
+            if len(a) > 4
+            else attr_of(kw, "ceil_mode", default=False)
         ),
     ),
+    # aten.adaptive_avg_pool2d[.default] — ``nn.AdaptiveAvgPool2d`` /
+    # ``F.adaptive_avg_pool2d`` (measured: BiRefNet's ASPP
+    # global-average branch).  The output size is the lone positional
+    # (``[H, W]`` at export, canonicalised to the ``size`` attr); a
+    # bare ``1`` pools to 1x1.
+    "adaptive_avg_pool2d": _adaptive_avg_pool2d_torch,
     "concat": lambda *ts, **kw: torch.cat(
         list(ts), dim=int(attr_of(kw, "dim", default=0))
     ),

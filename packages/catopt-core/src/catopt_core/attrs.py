@@ -204,6 +204,23 @@ ATTR_SCHEMA: dict[str, dict[int, str]] = {
     # align_corners flag, so its scale lands at position 3, not 2
     # (measured: U^2-Net's decoder upsamples).
     "upsample_bilinear2d": {1: "size", 2: "align_corners", 3: "scale"},
+    # aten.max_pool2d.default(x, kernel_size, stride, padding,
+    # dilation, ceil_mode) — torch.export elides only TRAILING
+    # defaults, so whichever of these are present land here by
+    # position (measured: U^2-Net's pools, ``F.max_pool2d``).  Named
+    # so the binding reads them: an unnamed list positional collapses
+    # onto ``dim`` and the kernel/stride/padding silently revert to
+    # aten defaults — a wrong-shaped output, not a loud failure.
+    "max_pool2d": {
+        1: "kernel_size",
+        2: "stride",
+        3: "padding",
+        4: "dilation",
+        5: "ceil_mode",
+    },
+    # aten.adaptive_avg_pool2d.default(x, output_size) — the lone
+    # list positional (measured: BiRefNet's ASPP global-average pool).
+    "adaptive_avg_pool2d": {1: "size"},
     # aten.lstm.input(x, hx[2], params[*], has_biases, num_layers,
     # dropout, train, bidirectional, batch_first) — positions 1-2 are
     # tensor LIST operands (flattened into args at export); the
