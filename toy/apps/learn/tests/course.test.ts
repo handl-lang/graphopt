@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it } from "vite-plus/test";
 
+import { CONCEPTS, MODULES, tier } from "engine";
+
 import { Coherence } from "../src/components/coherence.ts";
 import { Compare } from "../src/components/compare.ts";
 import { Course, STORAGE_KEY } from "../src/components/course.ts";
@@ -36,6 +38,17 @@ function withStorage(): Map<string, string> {
   return map;
 }
 
+/** Answer every part of the current level's checkpoint correctly. */
+function pass(c: Course): void {
+  c.level.checkpoint.parts.forEach((p, i) => c.answerAt(i, p.ok));
+}
+
+const CONCEPT_IDS = new Set(CONCEPTS.map((c) => c.id));
+const MODULE_IDS = MODULES.map((m) => m.id);
+
+/** The measured forward-reference count after step 2 — it may only go down. */
+const FORWARD_REF_CEILING = 0;
+
 afterEach(() => {
   delete (globalThis as unknown as { localStorage?: unknown }).localStorage;
 });
@@ -49,9 +62,11 @@ describe("course gating", () => {
     expect(c.i).toBe(0);
   });
 
-  it("advances once the correct option is picked", () => {
+  it("advances once every part of the checkpoint is picked", () => {
     const c = new Course();
-    c.answer(c.level.checkpoint.ok);
+    c.answer(c.level.checkpoint.ok); // the primary part alone is not enough
+    expect(c.canAdvance).toBe(false);
+    pass(c);
     expect(c.canAdvance).toBe(true);
     c.next();
     expect(c.i).toBe(1);
@@ -69,7 +84,7 @@ describe("course gating", () => {
     const c = new Course();
     for (let k = 0; k < c.n; k++) {
       c.goto(k);
-      c.answer(c.level.checkpoint.ok);
+      pass(c);
     }
     expect(c.complete).toBe(true);
     expect(c.done).toBe(c.n);
@@ -78,6 +93,7 @@ describe("course gating", () => {
   it("every checkpoint's correct option is one of its options", () => {
     for (const l of new Course().levels) {
       expect(l.checkpoint.opts).toContain(l.checkpoint.ok);
+      for (const p of l.checkpoint.parts) expect(p.opts).toContain(p.ok);
     }
   });
 
@@ -101,18 +117,177 @@ describe("course gating", () => {
     const c = new Course();
     expect(c.pct).toBe(0);
     c.goto(0);
-    c.answer(c.level.checkpoint.ok);
+    pass(c);
     expect(c.pct).toBe(Math.round(100 / 22));
     expect(c.recap[0].passed).toBe(true);
   });
 
+  it("tracks checkpoint progress part by part", () => {
+    const c = new Course();
+    const total = c.level.checkpoint.parts.length;
+    expect(c.checkpointProgress).toEqual({ correct: 0, total, done: false });
+    c.answerAt(0, c.level.checkpoint.parts[0].ok);
+    expect(c.checkpointProgress.correct).toBe(1);
+    expect(c.checkpointProgress.done).toBe(false);
+    pass(c);
+    expect(c.checkpointProgress.done).toBe(true);
+  });
+
   it("restart clears progress", () => {
     const c = new Course();
-    c.answer(c.level.checkpoint.ok);
+    pass(c);
     c.next();
     c.restart();
     expect(c.i).toBe(0);
     expect(c.done).toBe(0);
+  });
+});
+
+describe("the per-level template (plan 0028 §B)", () => {
+  it("gives every level the four template fields plus 'why' and 'module'", () => {
+    for (const l of new Course().levels) {
+      expect(l.why.length).toBeGreaterThan(0);
+      expect(l.outcome.length).toBeGreaterThan(0);
+      expect(l.terms.length).toBeGreaterThan(0);
+      expect(l.repo.length).toBeGreaterThan(0);
+      for (const r of l.repo) {
+        expect(r.path.length).toBeGreaterThan(0);
+        expect(r.note.length).toBeGreaterThan(0);
+      }
+      expect(MODULE_IDS).toContain(l.module);
+    }
+  });
+
+  it("lists exactly the concepts the graph introduces at each level", () => {
+    const c = new Course();
+    for (const l of c.levels) {
+      const terms = [...l.terms].sort();
+      const graph = c
+        .graphTerms(l.id)
+        .map((x) => x.id)
+        .sort();
+      expect(terms).toEqual(graph);
+    }
+  });
+
+  it("resolves the current level's new terms from the graph", () => {
+    const c = new Course();
+    expect(c.level.id).toBe("tree");
+    expect(c.levelTerms.map((t) => t.id).sort()).toEqual(["program-tree", "work"]);
+    for (const t of c.levelTerms) expect(t.def.length).toBeGreaterThan(0);
+  });
+
+  it("names a module for every level", () => {
+    const c = new Course();
+    for (const l of c.levels) {
+      c.gotoLevel(l.id);
+      expect(c.module?.id).toBe(l.module);
+    }
+  });
+});
+
+describe("multi-part checkpoints", () => {
+  it("gives every level at least two parts, one from the interactive", () => {
+    for (const l of new Course().levels) {
+      expect(l.checkpoint.parts.length).toBeGreaterThanOrEqual(2);
+      expect(l.checkpoint.parts.some((p) => p.interactive)).toBe(true);
+    }
+  });
+
+  it("keeps parts[0] identical to the single-question fields", () => {
+    for (const l of new Course().levels) {
+      expect(l.checkpoint.parts[0].q).toBe(l.checkpoint.q);
+      expect(l.checkpoint.parts[0].ok).toBe(l.checkpoint.ok);
+      expect(l.checkpoint.parts[0].opts).toEqual(l.checkpoint.opts);
+      expect(l.checkpoint.parts[0].why).toBe(l.checkpoint.why);
+    }
+  });
+
+  it("tags every part with a concept from the graph", () => {
+    for (const l of new Course().levels) {
+      for (const p of l.checkpoint.parts) {
+        expect(CONCEPT_IDS.has(p.concept)).toBe(true);
+        expect(p.q.length).toBeGreaterThan(0);
+        expect(p.why.length).toBeGreaterThan(0);
+      }
+    }
+  });
+});
+
+describe("forward references (the ordering gate)", () => {
+  it("has zero forward references — and the count can only go down", () => {
+    const c = new Course();
+    expect(c.forwardRefs.length).toBeLessThanOrEqual(FORWARD_REF_CEILING);
+    expect(c.forwardRefs).toHaveLength(0);
+  });
+});
+
+describe("the glossary", () => {
+  it("lists every concept once, with a definition and a home level", () => {
+    const c = new Course();
+    expect(c.glossary).toHaveLength(CONCEPTS.length);
+    expect(new Set(c.glossary.map((r) => r.id)).size).toBe(CONCEPTS.length);
+    for (const r of c.glossary) {
+      expect(r.label.length).toBeGreaterThan(0);
+      expect(r.def.length).toBeGreaterThan(0);
+      expect(r.title.length).toBeGreaterThan(0);
+      expect(c.levels.some((l) => l.id === r.introduced)).toBe(true);
+    }
+  });
+
+  it("jumps to a concept's home level", () => {
+    const c = new Course();
+    const row = c.glossary.find((r) => r.id === "inversion")!;
+    expect(row.introduced).toBe("pricing");
+    c.gotoLevel(row.introduced);
+    expect(c.level.id).toBe("pricing");
+  });
+});
+
+describe("prerequisites (the ladder is not flat)", () => {
+  it("shows the current level's prerequisites as earlier levels", () => {
+    const c = new Course();
+    c.gotoLevel("pricing");
+    expect(c.prerequisites.length).toBeGreaterThan(0);
+    for (const p of c.prerequisites) {
+      expect(p.index).toBeLessThan(c.i);
+      expect(p.title.length).toBeGreaterThan(0);
+    }
+    expect(c.prerequisites.map((p) => p.id)).toContain("measure");
+  });
+
+  it("gives the entry level none", () => {
+    const c = new Course();
+    c.gotoLevel("tree");
+    expect(c.prerequisites).toHaveLength(0);
+  });
+});
+
+describe("gamification wiring (plan 0028 §C)", () => {
+  it("awards the base only when the whole multi-part checkpoint passes", () => {
+    const c = new Course();
+    c.answer(c.level.checkpoint.ok); // part 0 only
+    expect(c.levelXp.base).toBe(0);
+    pass(c);
+    expect(c.levelXp.base).toBeGreaterThan(0);
+  });
+
+  it("feeds the mastery meter from each part's concept tag", () => {
+    const c = new Course();
+    pass(c);
+    const concepts = new Set(c.level.checkpoint.parts.map((p) => p.concept));
+    for (const id of concepts) expect(tier(c.mastery[id])).not.toBe("weak");
+  });
+
+  it("counts a concept mastered after a part right in two places", () => {
+    const c = new Course();
+    const id = c.level.checkpoint.parts[0].concept;
+    // answer the same concept's question at this level and again at another
+    pass(c);
+    c.gotoLevel("reach");
+    pass(c);
+    // at least the level's own concept is no longer weak
+    expect(tier(c.mastery[id])).not.toBe("weak");
   });
 });
 
@@ -154,7 +329,7 @@ describe("persistence", () => {
   it("writes progress on answer and on advance", () => {
     const map = withStorage();
     const c = new Course();
-    c.answer(c.level.checkpoint.ok);
+    pass(c);
     c.next();
     expect(map.has(STORAGE_KEY)).toBe(true);
     expect(c.i).toBe(1);
@@ -163,7 +338,7 @@ describe("persistence", () => {
   it("restores level and answers on init", () => {
     withStorage();
     const a = new Course();
-    a.answer(a.level.checkpoint.ok);
+    pass(a);
     a.next();
 
     const b = new Course();
@@ -177,7 +352,7 @@ describe("persistence", () => {
   it("resetProgress wipes the stored key and the in-memory state", () => {
     const map = withStorage();
     const c = new Course();
-    c.answer(c.level.checkpoint.ok);
+    pass(c);
     c.next();
     c.resetProgress();
     expect(map.has(STORAGE_KEY)).toBe(false);
@@ -205,7 +380,7 @@ describe("persistence", () => {
 
   it("does nothing when storage is unavailable", () => {
     const c = new Course();
-    c.answer(c.level.checkpoint.ok);
+    pass(c);
     c.next();
     expect(c.i).toBe(1);
   });
