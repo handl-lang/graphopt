@@ -3339,6 +3339,93 @@ def _cache_replay(
     )
 
 
+def _roll_back_delivery(
+    model: Any,
+    new_model: Any,
+    composer: Any,
+    replacements: Mapping[str, Any],
+) -> Any:
+    """Return the un-grafted composition after a failed e2e verify.
+
+    A graft that breaks the whole-model forward must never ship
+    (fail-closed): the delivery reverts to the original composition
+    with NO replacement installed.  The per-block gate cannot catch
+    this — it only ever sees each block's FIRST captured call, so a
+    shape-specialized graft survives it and then breaks a second call
+    at another resolution (the BiRefNet ``bb`` trap).
+
+    ``new_model`` is the already-built clone; when nothing was grafted
+    it IS the un-grafted composition (an empty graft is a no-op), so
+    it is returned as-is.  Otherwise a fresh param-sharing clone keeps
+    the "returned model is not the caller's live object" invariant the
+    successful path holds; if that clone fails the input is returned
+    unmodified — the same honest fallback ``clone_sharing`` uses.
+    """
+    if not replacements:
+        return new_model
+    try:
+        return composer.clone_sharing(model)
+    except Exception:
+        return model
+
+
+def _e2e_or_rollback(
+    model: Any,
+    new_model: Any,
+    composer: Any,
+    replacements: dict[str, Any],
+    sink: Any,
+    example_input: Any,
+    verbose: bool,
+) -> tuple[Any, dict[str, Any], dict[str, Any]]:
+    """Run the whole-model check; revert the graft on failure.
+
+    Returns ``(model_to_return, replacements_that_shipped, end_to_end)``.
+    Fail-closed: a raising verify OR a non-passing report reverts the
+    delivery to the un-grafted composition (:func:`_roll_back_delivery`)
+    and empties ``replacements`` — a verified-failing graft never
+    ships.  The per-block gate cannot catch this: it only ever sees
+    each block's FIRST captured call, so a shape-specialized graft
+    passes it and then breaks a second call at another resolution (the
+    BiRefNet ``bb`` trap).
+    """
+    args2 = (
+        example_input
+        if isinstance(example_input, tuple)
+        else (example_input,)
+    )
+    e2e: dict[str, Any] = {}
+    ok = False
+    try:
+        vr = sink.verify(model, new_model, args2)
+        e2e = {
+            "max_abs_diff": vr.max_abs,
+            "max_rel_diff": vr.max_rel,
+        }
+        ok = vr.passed
+        if verbose:
+            print(
+                f"[Compositional] end-to-end rel diff: {vr.max_rel:.3e}"
+            )
+    except Exception as e:
+        e2e = {"error": f"{type(e).__name__}: {e}"}
+        if verbose:
+            print(f"[Compositional] end-to-end check failed: {e}")
+    if ok:
+        return new_model, replacements, e2e
+    e2e["rolled_back"] = True
+    if verbose:
+        print(
+            "[Compositional] end-to-end check failed — rolled back to "
+            "the un-grafted composition"
+        )
+    return (
+        _roll_back_delivery(model, new_model, composer, replacements),
+        {},
+        e2e,
+    )
+
+
 def _optimize_compositional(
     model: Any,
     example_input: Any,
@@ -3711,7 +3798,38 @@ def _optimize_compositional(
         replacements = {}
     composer.graft(new_model, replacements)
 
-    # -- End-to-end verification ----------------------------------------
+    # -- End-to-end verification (fail-closed) ---------------------------
+    # The per-block gate only ever sees each block's FIRST captured call,
+    # so a shape-specialized graft can pass it and still break a second
+    # call at another resolution (the BiRefNet ``bb`` trap: ``mul_scl_
+    # ipt='cat'`` calls the backbone twice per forward).  A failed
+    # whole-model check therefore rolls the delivery BACK to the
+    # un-grafted composition — a verified-failing graft never ships.
+    if in_place:
+        # new_model IS the input model — a verify would be a
+        # self-comparison that always reports 0.0.  Record the
+        # degenerate case honestly instead of a false pass.
+        e2e: dict[str, Any] = {
+            "skipped": "in_place",
+            "reason": "param-sharing clone failed — returned model "
+            "is the input module, unmodified",
+        }
+        logger.warning(
+            "optimize_compositional: clone failed — returning the "
+            "input module unmodified (no blocks grafted; "
+            "report.in_place=True)"
+        )
+    else:
+        new_model, replacements, e2e = _e2e_or_rollback(
+            model,
+            new_model,
+            composer,
+            replacements,
+            sink,
+            example_input,
+            verbose,
+        )
+
     agg["bytes_saved"] = agg["original_bytes"] - agg["optimized_bytes"]
     agg["ratio"] = (
         agg["optimized_bytes"] / agg["original_bytes"]
@@ -3721,6 +3839,8 @@ def _optimize_compositional(
     stats: dict[str, Any] = {
         "compositional": True,
         "n_blocks": len(blocks),
+        # Post-rollback: a failed e2e cleared ``replacements``, so this
+        # counts what actually shipped (0 when the graft was reverted).
         "n_optimized": len(replacements),
         "n_failed": sum(
             1 for r in block_reports.values() if r["status"] == "failed"
@@ -3735,6 +3855,7 @@ def _optimize_compositional(
         "shared_params": not in_place,
         "param_report": agg,
         "cross_pairs": cross_pairs,
+        "end_to_end": e2e,
     }
     if cache is not None:
         stats["cache"] = {
@@ -3742,42 +3863,6 @@ def _optimize_compositional(
             "misses": cache_misses,
             "fallbacks": cache_fallbacks,
         }
-
-    if in_place:
-        # new_model IS the input model — a verify would be a
-        # self-comparison that always reports 0.0.  Record the
-        # degenerate case honestly instead of a false pass.
-        stats["end_to_end"] = {
-            "skipped": "in_place",
-            "reason": "param-sharing clone failed — returned model "
-            "is the input module, unmodified",
-        }
-        logger.warning(
-            "optimize_compositional: clone failed — returning the "
-            "input module unmodified (no blocks grafted; "
-            "report.in_place=True)"
-        )
-    else:
-        args2 = (
-            example_input
-            if isinstance(example_input, tuple)
-            else (example_input,)
-        )
-        try:
-            vr = sink.verify(model, new_model, args2)
-            stats["end_to_end"] = {
-                "max_abs_diff": vr.max_abs,
-                "max_rel_diff": vr.max_rel,
-            }
-            if verbose:
-                print(
-                    f"[Compositional] end-to-end rel diff: "
-                    f"{stats['end_to_end']['max_rel_diff']:.3e}"
-                )
-        except Exception as e:
-            stats["end_to_end"] = {"error": f"{type(e).__name__}: {e}"}
-            if verbose:
-                print(f"[Compositional] end-to-end check failed: {e}")
 
     stats["wall_time_s"] = time.time() - t_start
     return new_model, stats
