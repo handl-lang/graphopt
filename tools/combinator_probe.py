@@ -380,16 +380,61 @@ def _gate2_projection(t: int = 64, k: int = 4, iters: int = 10) -> None:
         f"   projects: round-trip {'EQUAL' if rt == best else 'FAIL'}"
         f"  morph={st.nodes} dup={st.dup} copies={st.dup_copies}"
     )
-    # Same fold signature on the spelled loop's expansion?  (Verbatim
-    # subterm equality is out of scope: the extract speaks the export's
-    # leaf names, the spelled program its own — the *signature* is the
-    # comparable datum.)
+    # Same fold signature on the spelled loop's expansion?  The
+    # probe's ``_fold_signature`` is leaf-name-keyed (it expects the
+    # export's ``p_*`` leaves), so compare a name-agnostic structural
+    # depth instead: the longest ``add(mul(w, S), B)`` nesting chain —
+    # the ``S_i = a·S_{i-1} + B_i`` recurrence shape, whoever spelled
+    # the leaves.
     spelled = _expanded_fold_term(t, k)
-    s_reads, s_chained = osp._fold_signature(spelled)
     print(
-        f"   spelled loop expansion: reads={s_reads} "
-        f"chained={s_chained}  (extract: reads={reads} "
-        f"chained={chained})"
+        f"   fold-chain depth: spelled={_fold_depth(spelled)}  "
+        f"extract={_fold_depth(best)}"
+    )
+
+
+def _fold_depth(term: Any) -> int:
+    """Longest nesting chain of ``add(mul(w, S), B)`` state updates.
+
+    Name-agnostic: a fold node is an ``add`` with a ``mul`` child whose
+    one factor is a leaf (the scalar rate) and whose other factor is a
+    leaf or another fold node (the state).  Depth 0 = no recurrence.
+    """
+    memo: dict[int, int] = {}
+
+    def is_leaf(x: Any) -> bool:
+        return not isinstance(x, Op)
+
+    def fold_arg(n: Op) -> tuple[Any, bool]:
+        """Return the state child of an ``add(mul(w,S),B)`` node."""
+        if n.op != "add":
+            return None, False
+        for a in n.args:
+            if isinstance(a, Op) and a.op == "mul" and len(a.args) == 2:
+                lf, rt = a.args
+                if is_leaf(lf) or is_leaf(rt):
+                    # spelled form: mul(rate-leaf, state)
+                    cand = rt if is_leaf(lf) else lf
+                    return cand, True
+                # scaled form: mul(rate, add(state, B)) — the state
+                # nests under the decay mul
+                for x in (lf, rt):
+                    if isinstance(x, Op) and x.op == "add":
+                        return x, True
+        return None, False
+
+    def depth(n: Any) -> int:
+        if not isinstance(n, Op):
+            return 0
+        if id(n) in memo:
+            return memo[id(n)]
+        cand, ok = fold_arg(n)
+        memo[id(n)] = 1 + depth(cand) if ok else 0
+        return memo[id(n)]
+
+    return max(
+        (depth(s) for s in _iter_subterms(term) if isinstance(s, Op)),
+        default=0,
     )
 
 
