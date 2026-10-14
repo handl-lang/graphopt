@@ -127,46 +127,41 @@ Two reconciliation notes:
   pinned baseline's literal column: the 1.32 is vs eager and the
   vs-Inductor delivered range tops out at 1.25 on this baseline.
 
-## Derived structure on a real export (2026-10-15)
+## Machine-derived structure — results by kind (2026-10-15)
 
-*Does the machine derive a real architecture's recurrence, and does
-it pay?*  Not a `bench/` suite — an ad-hoc probe run on the dev box
-(RTX 2050, fp64); scripts in `tools/`.
+*What the derivation machinery achieved, separated by **what was
+measured on what**.*  Scope legend:
 
-**Expected** — the e-graph reaches the chunked recurrence and
-extraction prefers it; delivery is measured, not asserted.
+- **[model]** — a real `nn.Module`, delivered + fp64-verified
+- **[form]** — a synthetic comparison of two computational forms
+  (random tensors; measures the asymptote, not a model)
+- **[symbolic]** — a cost-model count over the extracted program
+  (`flops_cost` / `param_bytes_cost`), not wall time
 
-| verdict | finding | headline |
-|---|---|---|
-| **WIN** | the derived chunked carrier is preferred by extraction | 29.4M vs 39.1M FLOPs (T=512) |
-| **WIN** | end-to-end, delivered + verified vs the fused baseline | **1.82–2.33×** (866–1113 µs vs 2018–2028 µs), max_abs ≈1.3e-8 |
-| **WIN** | K-way chunk construct — FLOPs | **4.4×** fewer than the bisection-chunked form (29.4M → 6.70M; 5.83× vs the fused quadratic); fold depth 1 → 7 |
-| **WIN** (T≥1024) | the K-way carrier as wall time | **5.0–5.9× vs eager / 6.2–7.4× vs `torch.compile`** at T=2048 (lowered through the ambient sink, fp64-verified) |
-| **LOSS** (T=512) | the same carrier below the crossover | 0.51× vs eager — the FLOP cut does not hide launch overhead on many small ops |
-| **WIN** (symbolic) | shared-state reassociation | **10.8–24.5%** fewer FLOPs (T=512, K=8: 8.57M → 7.64M) |
-| **PARTIAL** | the *folded* carrier is never cheaper than the spelled form | a fold is a cost-neutral relabelling — the gap is search, not pricing |
+### 1. Optimized models, end-to-end [model]
 
-**Honest scope.**  The 1.82–2.33× pays through the decayed fused
-kernel plus an elementwise generated kernel; the scan kernels are
-declined as unloweable at these sites.  The K-way figure is now measured as wall time: it **loses ~2× at T=512** and wins 5–7× by T=2048 — the crossover (~T=1024) is the honest shape of an asymptotic win. The shared-state figure remains a FLOP count.  All numbers
-are fp64-verified against the source module.
+| model | T | vs eager | vs `torch.compile` | max_abs |
+|---|---|---|---|---|
+| `ChunkedRetention` (RetNet-style) | 512 | — | **1.82–2.33×** | 1.3e-8 |
+| `ChunkedRetention` | 2048 | **5.0–5.9×** | **6.2–7.4×** | 9.8e-9 |
+| `chainfuse` (x@A@B@C + pointwise tail) | 256×512 | 3.71× | 2.90× | 1.7e-5 |
+| `swiglu_mlp` (llama-style) | — | 1.17× | 2.00–2.04× | 6e-8 |
+| `chain_mlp` | — | 1.06× | 2.52× | 4e-6 |
+| `mulrelu` | — | 1.22× | 1.39× | **0.0** |
+| `mulsoftplus` | — | 1.31× | 1.46× | 1e-6 |
+| `mlp` (base) | — | 1.13× | 2.82× | 0.0 |
 
-**`gen` probe, re-run 2026-10-15 (CUDA):** 10/10 cases delivered
-and verified; 9/10 faster than eager; all faster than
-`torch.compile` — `chainfuse` 3.71×/2.90×, `swiglu_mlp`
-1.17×/2.00×, `chain_mlp` 1.06×/2.52×, `mulrelu` 1.22×/1.39×.
+`gen` probe re-run 2026-10-15: **10/10 delivered and verified**;
+9/10 faster than eager; all faster than `torch.compile`.
 
-## Savings ledger (2026-10-15)
+**The crossover is the honest shape of the carrier claim:** the
+derived carrier *loses* at T=512 and wins asymptotically.
 
-*What does the machinery actually save — compute, storage, memory, and
-oracle evaluations?*  Measured on the dev box; each row names its
-instrument.
+### 2. Peak activation memory [model] vs [form]
 
-### Activation memory — fused quadratic vs the chunked carrier
-
-**On the real module** — `_ChunkedRetention(16)` forward vs the
-extracted carrier lowered through the ambient sink, peak
-`torch.cuda.max_memory_allocated` (fp64, B=2), verified fp64:
+**Real module** — `_ChunkedRetention(16)` forward vs its extracted
+carrier lowered through the ambient sink, peak
+`torch.cuda.max_memory_allocated`, fp64, B=2:
 
 | T | model | carrier | saved | max_abs |
 |---|---|---|---|---|
@@ -174,25 +169,31 @@ extracted carrier lowered through the ambient sink, peak
 | 1024 | 48.90 MiB | 14.39 MiB | 3.40× | 1.7e-16 |
 | 2048 | 169.66 MiB | 23.26 MiB | **7.30×** | 9.8e-09 |
 
-**Synthetic proxy** (random tensors, same shapes — measures the
-asymptote further out, not a model): `(q@kᵀ)@v` against the C=16
-chunked form, fp64, B=2, d=16:
+**Synthetic proxy** (same shapes, random tensors — extrapolates the
+asymptote past the model's feasible range):
 
-| T | fused | chunked carrier | saved |
+| T | `(q@kᵀ)@v` | C=16 chunked | saved |
 |---|---|---|---|
 | 512 | 12.6 MiB | 8.8 MiB | 1.4× |
 | 1024 | 25.1 MiB | 9.4 MiB | 2.7× |
 | 2048 | 74.1 MiB | 10.6 MiB | 7.0× |
-| 4096 | **268.1 MiB** | **13.1 MiB** | **20.4×** (proxy) |
+| 4096 | **268.1 MiB** | **13.1 MiB** | **20.4×** |
 
 The carrier's peak is near-flat (8.8 → 13.1 MiB across an 8× T range)
-while the fused quadratic grows 21× (12.6 → 268.1 MiB).  This is the
-asymptotic claim as memory: O(T·C) against O(T²).
+while the fused form grows 21×.  O(T·C) against O(T²), as memory.
 
-### Parameter storage — the weight fold
+### 3. Structural savings [symbolic]
 
-`catopt_core.cost.param_bytes_cost` on `x@W₀@…@W_{k-1}` vs the folded
-`x@W_cat` (d=512, fp32):
+**Compute — FLOPs:**
+
+| optimization | saved | instrument |
+|---|---|---|
+| weight fold (k GEMMs → 1) | **k×** (2–16×) | `flops_cost` |
+| K-way chunk construct | **4.4×** vs bisection; 5.83× vs fused | `flops_cost` |
+| shared-state reassociation | **10.8–24.5%** | `flops_cost` |
+
+**Storage — parameter bytes** (`param_bytes_cost`, d=512, fp32,
+`x@W₀@…@W_{k-1}` vs the folded `x@W_cat`):
 
 | k | before | after | saved |
 |---|---|---|---|
@@ -201,29 +202,60 @@ asymptotic claim as memory: O(T·C) against O(T²).
 | 8 | 2.0 MB | 256 KB | 1.75 MB (8.0×) |
 | 16 | 4.0 MB | 256 KB | **3.75 MB (16.0×)** |
 
-The shared-input MoE fold eliminates **196,608 B (192 KB)** of stored
-parameters (pinned by test).
+Plus the shared-input MoE fold: **196,608 B (192 KB)** eliminated
+(pinned by test).
 
-### Compute — FLOPs
-
-| optimization | saved | instrument |
-|---|---|---|
-| weight fold (k GEMMs → 1) | **k×** (2–16×) | `flops_cost` |
-| K-way chunk construct | **4.4×** vs bisection; 5.83× vs fused | `flops_cost` |
-| shared-state reassociation | **10.8–24.5%** | `flops_cost` |
-
-### Wall time
-
-| case | speedup |
-|---|---|
-| derived carrier, T=2048 | **7.38×** vs `torch.compile` (5.9× vs eager) |
-| spelled RetNet export, T=512 | 1.82–2.33× |
-| `chainfuse` (laws + minted kernel) | 2.90× vs compile |
-
-### Oracle evaluations
+### 4. Oracle-evaluation savings [symbolic]
 
 | | saved |
 |---|---|
 | saturating e-graph encodes every bracketing | 16,796 programs in **231 e-nodes** (k=11); ≥10^5.6 in ~0.5 s (k=24) |
 | trained prior vs cost-delta heuristic | AP **0.133 vs 0.045** (~3×), ~2× more useful laws per eval |
 | evidence store, second run | 50/50 verdicts cached: **128 s → 6.6 s (19×)** |
+
+### 5. Honest losses
+
+| finding | measured |
+|---|---|
+| the carrier below the crossover | **0.51×** vs eager at T=512 |
+| the *folded* carrier vs the spelled form | a fold is a **cost-neutral relabelling** — the gap is search, not pricing |
+| pure pointwise fusion | **0.82× loss** — Inductor's home turf |
+| shared-state on the real export | 10.8–24.5% [symbolic]; the ~589,952-scale target is unreached (a rule-set loop blocks the bridge) |
+
+## Learned models (2026-10-15)
+
+*What the project trains, and how each performs.*  Separate from the
+architectures above: these **steer** the search; the models in §1 are
+what gets optimized.
+
+### Neural — contraction ordering
+
+| model | training | result |
+|---|---|---|
+| `PairPolicyNet` | **RL** (curriculum REINFORCE), 25 KB | equal-rollouts n=20 **0.96** / n=30 **0.94** (beats the teacher); n=40 1.26; wall-clock parity 1.00–1.02 at n≤30 |
+| `PairPolicyNet` **distilled** (`oe-all`, *shipped default*) | supervised (teacher's trial distribution) | n=40 **0.91** — the first arm to beat the teacher |
+| `oe-best` (distilled, selected order) | supervised | n=40 1.17 |
+| `dp` (imitation of the RL curriculum) | supervised | **127×** at n=40 — the curriculum is a bad teacher |
+
+Player is `best_order` (best-of-N sampled rollouts); the single argmax
+is brittle at n=40 for every arm (RL 4.15×).  Not wired into
+`Optimizer.optimize` — a standalone research artifact.
+
+### Neural — rule value (supervised)
+
+| model | result |
+|---|---|
+| `RuleValueNet` (MLP 32) | `rank_pool` AP ~0.023 vs the cost-delta heuristic's 0.045 — **loses** |
+
+### Linear — the discovery game (RL, baked presets)
+
+| model | result |
+|---|---|
+| **open-game prior** (`OPEN_GAME_PLAYER_WEIGHTS`) | reward/ep **0.304** vs random 0.134 / cold 0.143; useful/ep 0.167 vs 0.083; **AP 0.133 vs heuristic 0.045** |
+| **meta-arena prior** (`META_ARENA_PLAYER_WEIGHTS`) | **−0.06** vs random −0.57, cold −0.49, hand-written `scripted` −0.10 |
+
+Regenerate with `tools/train_open_prior.py` / `tools/train_meta_prior.py`.
+
+**Honest note:** in *both* families the best result is not the neural
+one — distillation beats neural RL at n=40, and the linear prior beats
+the neural rule-value net.
