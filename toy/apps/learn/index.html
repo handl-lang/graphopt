@@ -16,7 +16,7 @@
             >a course in structural optimization</span
           >
           <div class="ml-auto flex items-center gap-3 relative">
-            <div class="hidden sm:block w-40 h-1.5 rounded-full bg-panel2 overflow-hidden">
+            <div class="hidden sm:block w-32 h-1.5 rounded-full bg-panel2 overflow-hidden">
               <div
                 class="h-full bg-gold transition-all duration-500"
                 :style="`width:${(100 * done) / n}%`"
@@ -26,13 +26,36 @@
               ><span class="text-eva" x-text="done"></span>/<span x-text="n"></span
               ><span class="hidden sm:inline text-faint" x-text="' · ' + pct + '%'"></span
             ></span>
+            <span class="hidden sm:inline-flex items-baseline gap-1.5 text-[12px]">
+              <span class="text-gold font-semibold font-mono" x-text="xp.toLocaleString()"></span>
+              <span class="text-faint">xp</span>
+              <span class="text-[11.5px] text-dim" x-text="'· ' + rank.name"></span>
+            </span>
             <span class="hidden md:inline text-[11.5px] text-faint" x-text="savedLabel"></span>
+            <button
+              @click="toggleMastery()"
+              class="text-[12px] px-2.5 py-1 rounded-lg border text-dim hover:text-ink"
+              :class="masteryPanel ? 'border-gold text-gold' : 'border-line'"
+            >
+              ◇<span class="hidden sm:inline"> mastery</span>
+            </button>
+            <button
+              @click="toggleBadges()"
+              class="text-[12px] px-2.5 py-1 rounded-lg border text-dim hover:text-ink"
+              :class="badgesPanel ? 'border-gold text-gold' : 'border-line'"
+            >
+              ◆<span class="hidden sm:inline"> badges</span>
+              <span
+                class="hidden md:inline text-faint"
+                x-text="' ' + badgesEarned.length + '/' + (badgesEarned.length + badgesLocked.length)"
+              ></span>
+            </button>
             <button
               @click="toggleSettings()"
               class="text-[12px] px-2.5 py-1 rounded-lg border text-dim hover:text-ink"
               :class="settings ? 'border-gold text-gold' : 'border-line'"
             >
-              ⚙ settings
+              ⚙<span class="hidden sm:inline"> settings</span>
             </button>
 
             <!-- settings popover -->
@@ -45,12 +68,21 @@
             >
               <div class="text-[11.5px] uppercase tracking-widest text-faint mb-2">settings</div>
               <div class="text-[13px] text-dim">
-                Progress is kept in this browser (<code class="text-ink">localStorage</code>) —
+                Progress — levels, XP, mastery and badges — is kept in this browser (<code
+                  class="text-ink"
+                  >localStorage</code
+                >, key <code class="text-ink">catopt-course-v4</code>) —
                 <span x-text="savedLabel"></span>.
               </div>
               <div class="mt-3 text-[13px] text-dim">
                 <span class="text-ink font-semibold" x-text="done"></span> of
-                <span x-text="n"></span> levels passed.
+                <span x-text="n"></span> levels passed ·
+                <span class="text-gold font-semibold font-mono" x-text="xp.toLocaleString()"></span>
+                xp · <span class="text-ink font-semibold" x-text="rank.name"></span>
+              </div>
+              <div class="mt-2 text-[12px] text-faint">
+                The gamification layer landed with this version: the storage key moved from
+                <code>v3</code> to <code>v4</code>, so older progress resets cleanly on first load.
               </div>
               <div class="mt-4 pt-3 border-t border-line">
                 <template x-if="!confirming">
@@ -89,6 +121,103 @@
               >
                 restart the course (keep nothing)
               </button>
+            </div>
+
+            <!-- mastery popover — one meter per concept -->
+            <div
+              x-show="masteryPanel"
+              x-cloak
+              x-transition
+              @click.outside="masteryPanel = false"
+              class="absolute right-0 top-11 w-[22rem] max-w-[92vw] rounded-2xl border border-line bg-panel p-4 shadow-2xl z-40"
+            >
+              <div class="text-[11.5px] uppercase tracking-widest text-faint mb-2">
+                mastery · the concept graph
+              </div>
+              <div class="flex items-baseline gap-2 text-[13px]">
+                <span class="text-eva font-semibold" x-text="masterySummary.mastered"></span>
+                <span class="text-dim">mastered</span>
+                <span class="text-gold font-semibold" x-text="masterySummary.familiar"></span>
+                <span class="text-dim">familiar</span>
+                <span class="text-faint font-semibold" x-text="masterySummary.weak"></span>
+                <span class="text-dim">weak</span>
+              </div>
+              <div class="mt-2 h-1.5 rounded-full bg-panel2 overflow-hidden">
+                <div
+                  class="h-full bg-eva transition-all duration-500"
+                  :style="`width:${Math.round(100 * masterySummary.ratio)}%`"
+                ></div>
+              </div>
+              <div class="mt-3 max-h-80 overflow-auto space-y-3 pr-1">
+                <template x-for="grp in masteryByModule" :key="grp.module.id">
+                  <div>
+                    <div class="text-[10.5px] uppercase tracking-widest text-faint mb-1">
+                      module <span x-text="grp.module.roman"></span> ·
+                      <span x-text="grp.module.title"></span>
+                    </div>
+                    <div class="space-y-1">
+                      <template x-for="c in grp.concepts" :key="c.id">
+                        <div class="flex items-center gap-2">
+                          <span
+                            class="w-3 text-center text-[11px]"
+                            :class="
+                              c.tier === 'mastered'
+                                ? 'text-eva'
+                                : c.tier === 'familiar'
+                                  ? 'text-gold'
+                                  : 'text-faint'
+                            "
+                            :title="c.tier"
+                            x-text="c.tier === 'mastered' ? '●' : c.tier === 'familiar' ? '◐' : '○'"
+                          ></span>
+                          <span
+                            class="flex-1 text-[12px]"
+                            :class="c.tier === 'weak' ? 'text-faint' : 'text-ink'"
+                            :title="c.def"
+                            x-text="c.label"
+                          ></span>
+                          <span class="text-[10.5px] text-faint font-mono" x-text="c.level"></span>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+              </div>
+              <div class="mt-3 pt-3 border-t border-line text-[11.5px] text-faint">
+                <span x-text="forwardRefs.length"></span> concepts are used before they are defined
+                — the ordering step 2 fixes.
+              </div>
+            </div>
+
+            <!-- badges popover — earned versus locked -->
+            <div
+              x-show="badgesPanel"
+              x-cloak
+              x-transition
+              @click.outside="badgesPanel = false"
+              class="absolute right-0 top-11 w-80 max-w-[92vw] rounded-2xl border border-line bg-panel p-4 shadow-2xl z-40"
+            >
+              <div class="text-[11.5px] uppercase tracking-widest text-faint mb-2">badges</div>
+              <div class="space-y-2 max-h-80 overflow-auto pr-1">
+                <template x-for="b in badgesEarned" :key="b.id">
+                  <div class="flex items-start gap-2">
+                    <span class="text-gold text-[12px] mt-0.5">◆</span>
+                    <div>
+                      <div class="text-[12.5px] text-gold font-semibold" x-text="b.name"></div>
+                      <div class="text-[11.5px] text-dim" x-text="b.blurb"></div>
+                    </div>
+                  </div>
+                </template>
+                <template x-for="b in badgesLocked" :key="b.id">
+                  <div class="flex items-start gap-2 opacity-60">
+                    <span class="text-faint text-[12px] mt-0.5">◇</span>
+                    <div>
+                      <div class="text-[12.5px] text-faint font-semibold" x-text="b.name"></div>
+                      <div class="text-[11.5px] text-faint" x-text="b.blurb"></div>
+                    </div>
+                  </div>
+                </template>
+              </div>
             </div>
           </div>
         </div>
@@ -139,7 +268,34 @@
             ><span class="text-dim" x-text="level.objective"></span>
           </p>
 
-          <div class="mt-8 space-y-6">
+          <!-- what this level teaches, and what it is worth -->
+          <div class="mt-3 flex items-center gap-2 flex-wrap">
+            <span class="text-[11.5px] uppercase tracking-widest text-faint">teaches</span>
+            <template x-for="c in levelConcepts" :key="c.id">
+              <span
+                class="px-2 py-0.5 rounded-full border text-[11.5px]"
+                :class="
+                  c.tier === 'mastered'
+                    ? 'border-eva/50 text-eva'
+                    : c.tier === 'familiar'
+                      ? 'border-gold/50 text-gold'
+                      : 'border-line text-dim'
+                "
+                :title="c.def"
+                x-text="c.label"
+              ></span>
+            </template>
+            <span class="ml-auto text-[11.5px] font-mono whitespace-nowrap">
+              <span class="text-faint" x-text="'worth ' + levelPotentialXp + ' xp · '"></span>
+              <span
+                :class="engagedHere ? 'text-gold' : 'text-faint'"
+                x-text="engagedHere ? '✓ widget engaged' : 'engage the widget'"
+              ></span>
+            </span>
+          </div>
+
+          <!-- the live widgets: any interaction here counts as engaging the level -->
+          <div class="mt-8 space-y-6" @click="engage()" @input="engage()">
             <!-- ── 0 · a program is a tree ───────────────────────── -->
             <section x-show="i === 0" x-data="inspect">
               <p class="text-dim leading-relaxed">

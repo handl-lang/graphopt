@@ -1,3 +1,38 @@
+import {
+  CONCEPTS,
+  LEVEL_ORDER,
+  MODULES,
+  conceptsTaughtAt,
+  earned,
+  emptyMastery,
+  forLevel,
+  forwardRefs as conceptForwardRefs,
+  levelBase,
+  levelIndex,
+  locked,
+  masteredCount,
+  nextRank,
+  rank,
+  rankProgress,
+  recordAll,
+  summary,
+  tier,
+  totalXp,
+  weakest,
+  WIDGET_BONUS,
+} from "engine";
+import type {
+  Badge,
+  BadgeState,
+  ForwardRef,
+  MasteryState,
+  MasterySummary,
+  Module,
+  Rank,
+  Tier,
+  WeakConcept,
+} from "engine";
+
 export interface Checkpoint {
   q: string;
   opts: string[];
@@ -14,12 +49,31 @@ export interface Level {
   checkpoint: Checkpoint;
 }
 
-/** Where progress lives. Bump the suffix if the level list changes shape. */
-export const STORAGE_KEY = "catopt-course-v3";
+/** One concept's row in the mastery meter. */
+export interface ConceptRow {
+  id: string;
+  label: string;
+  def: string;
+  tier: Tier;
+  /** The level that teaches it. */
+  level: string;
+  levelTitle: string;
+}
+
+/** A module and the concept rows it teaches. */
+export interface ModuleMastery {
+  module: Module;
+  concepts: ConceptRow[];
+}
+
+/** Where progress lives. Bumped to v4 when the gamification layer landed. */
+export const STORAGE_KEY = "catopt-course-v4";
 
 interface Saved {
   i: number;
   answers: Record<string, string>;
+  engaged?: string[];
+  reviewed?: string[];
 }
 
 /** A localStorage shim that no-ops when storage is unavailable. */
@@ -361,8 +415,14 @@ export class Course {
 
   i = 0;
   answers: Record<string, string> = {};
+  /** Level ids whose live widget was engaged — what earns the XP bonus. */
+  engaged: string[] = [];
+  /** Module ids whose review is passed (step 3 supplies the questions). */
+  reviewed: string[] = [];
   settings = false;
   confirming = false;
+  masteryPanel = false;
+  badgesPanel = false;
   restored = false;
 
   /** Alpine calls this on mount: restore any saved progress. */
@@ -379,6 +439,11 @@ export class Course {
       if (data.answers && typeof data.answers === "object") {
         this.answers = { ...data.answers };
       }
+      if (Array.isArray(data.engaged))
+        this.engaged = data.engaged.filter((x) => typeof x === "string");
+      if (Array.isArray(data.reviewed)) {
+        this.reviewed = data.reviewed.filter((x) => typeof x === "string");
+      }
       this.restored = true;
     } catch {
       // corrupt or unreadable storage: start clean rather than crash
@@ -390,7 +455,15 @@ export class Course {
     const s = store();
     if (!s) return;
     try {
-      s.setItem(STORAGE_KEY, JSON.stringify({ i: this.i, answers: this.answers }));
+      s.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          i: this.i,
+          answers: this.answers,
+          engaged: this.engaged,
+          reviewed: this.reviewed,
+        }),
+      );
     } catch {
       // quota or private mode: progress simply does not persist
     }
@@ -431,6 +504,154 @@ export class Course {
     return this.restored ? "restored from this browser" : "saved as you go";
   }
 
+  // ── the gamification layer (plan 0028 §C) ──────────────────────
+
+  /** The progress value the points, mastery and badge models read. */
+  get progress(): { passed: string[]; engaged: string[]; reviewed: string[] } {
+    return {
+      passed: this.levels.filter((l) => this.passed(l.id)).map((l) => l.id),
+      engaged: [...this.engaged],
+      reviewed: [...this.reviewed],
+    };
+  }
+
+  /** Total XP — the level curve plus the widget bonuses plus the reviews. */
+  get xp(): number {
+    return totalXp(this.progress, LEVEL_ORDER);
+  }
+
+  /** The named rank the XP total has reached. */
+  get rank(): Rank {
+    return rank(this.xp);
+  }
+
+  /** The next rank up, or `null` at the top. */
+  get nextRank(): Rank | null {
+    return nextRank(this.xp);
+  }
+
+  /** Progress toward the next rank, as a percentage. */
+  get rankPct(): number {
+    return Math.round(100 * rankProgress(this.xp));
+  }
+
+  /** The current level's XP, broken into base and widget bonus. */
+  get levelXp(): {
+    base: number;
+    bonus: number;
+    total: number;
+    passed: boolean;
+    engaged: boolean;
+  } {
+    return forLevel(this.level.id, this.progress, LEVEL_ORDER);
+  }
+
+  /** Whether the current level's live widget has been engaged. */
+  get engagedHere(): boolean {
+    return this.engaged.includes(this.level.id);
+  }
+
+  /** The XP the current level is worth in full — base plus widget bonus. */
+  get levelPotentialXp(): number {
+    return levelBase(levelIndex(this.level.id, LEVEL_ORDER)) + WIDGET_BONUS;
+  }
+
+  /** Per-concept mastery, folded from every checkpoint answer. */
+  get mastery(): MasteryState {
+    let s = emptyMastery();
+    for (const l of this.levels) {
+      const picked = this.answers[l.id];
+      if (picked === undefined) continue;
+      const ids = conceptsTaughtAt(l.id).map((c) => c.id);
+      s = recordAll(s, ids, picked === l.checkpoint.ok);
+    }
+    return s;
+  }
+
+  /** Tier counts and the overall ratio across the concept graph. */
+  get masterySummary(): MasterySummary {
+    return summary(this.mastery, CONCEPTS);
+  }
+
+  /** How many concepts are mastered. */
+  get conceptsMastered(): number {
+    return masteredCount(this.mastery, CONCEPTS);
+  }
+
+  /** The concepts to revisit — the module-review "send you back" data. */
+  get weakestConcepts(): WeakConcept[] {
+    return weakest(this.mastery, CONCEPTS, 5);
+  }
+
+  /** The concept graph, grouped by the module whose levels teach it. */
+  get masteryByModule(): ModuleMastery[] {
+    const m = this.mastery;
+    return MODULES.map((module) => ({
+      module,
+      concepts: module.levels.flatMap((lvl) =>
+        conceptsTaughtAt(lvl).map((c) => ({
+          id: c.id,
+          label: c.label,
+          def: c.def,
+          tier: tier(m[c.id]),
+          level: lvl,
+          levelTitle: this.levels.find((l) => l.id === lvl)?.title ?? lvl,
+        })),
+      ),
+    }));
+  }
+
+  /** The concepts the current level teaches — its new terms. */
+  get levelConcepts(): ConceptRow[] {
+    const m = this.mastery;
+    return conceptsTaughtAt(this.level.id).map((c) => ({
+      id: c.id,
+      label: c.label,
+      def: c.def,
+      tier: tier(m[c.id]),
+      level: this.level.id,
+      levelTitle: this.level.title,
+    }));
+  }
+
+  /** Every mastered concept, for the completion recap. */
+  get masteredConcepts(): { id: string; label: string; def: string }[] {
+    const m = this.mastery;
+    return CONCEPTS.filter((c) => tier(m[c.id]) === "mastered").map((c) => ({
+      id: c.id,
+      label: c.label,
+      def: c.def,
+    }));
+  }
+
+  /** The mastery state a badge predicate reads. */
+  get badgeState(): BadgeState {
+    return {
+      order: LEVEL_ORDER,
+      passed: this.progress.passed,
+      engaged: this.progress.engaged,
+      reviewed: this.progress.reviewed,
+      mastery: this.mastery,
+      concepts: CONCEPTS,
+      modules: MODULES,
+    };
+  }
+
+  /** The badges earned so far. */
+  get badgesEarned(): Badge[] {
+    return earned(this.badgeState);
+  }
+
+  /** The badges still locked. */
+  get badgesLocked(): Badge[] {
+    return locked(this.badgeState);
+  }
+
+  /** Concepts used before they are introduced — the step-2 ordering work. */
+  get forwardRefs(): ForwardRef[] {
+    return conceptForwardRefs();
+  }
+
   passed(id: string): boolean {
     const lvl = this.levels.find((l) => l.id === id);
     return lvl ? this.answers[id] === lvl.checkpoint.ok : false;
@@ -442,6 +663,20 @@ export class Course {
 
   answer(opt: string): void {
     this.answers = { ...this.answers, [this.level.id]: opt };
+    this.save();
+  }
+
+  /** Mark a level's live widget as engaged — it earns the XP bonus. */
+  engage(id: string = this.level.id): void {
+    if (this.engaged.includes(id)) return;
+    this.engaged = [...this.engaged, id];
+    this.save();
+  }
+
+  /** Record a passed module review (step 3 supplies the questions). */
+  markReviewed(id: string): void {
+    if (this.reviewed.includes(id)) return;
+    this.reviewed = [...this.reviewed, id];
     this.save();
   }
 
@@ -476,6 +711,8 @@ export class Course {
   restart(): void {
     this.i = 0;
     this.answers = {};
+    this.engaged = [];
+    this.reviewed = [];
     this.restored = false;
     this.save();
   }
@@ -490,6 +727,8 @@ export class Course {
     }
     this.i = 0;
     this.answers = {};
+    this.engaged = [];
+    this.reviewed = [];
     this.restored = false;
     this.confirming = false;
     this.settings = false;
@@ -498,5 +737,19 @@ export class Course {
   toggleSettings(): void {
     this.settings = !this.settings;
     this.confirming = false;
+    this.masteryPanel = false;
+    this.badgesPanel = false;
+  }
+
+  toggleMastery(): void {
+    this.masteryPanel = !this.masteryPanel;
+    this.settings = false;
+    this.badgesPanel = false;
+  }
+
+  toggleBadges(): void {
+    this.badgesPanel = !this.badgesPanel;
+    this.settings = false;
+    this.masteryPanel = false;
   }
 }
