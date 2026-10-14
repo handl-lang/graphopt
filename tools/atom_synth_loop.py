@@ -37,6 +37,11 @@ it through all four stages:
    duplicate-vs-library x serializability).  The emitted fragment
    is a ``cellstore`` runtime fragment — the emergent-runtime
    thesis made data.
+5. **pay** — the honest read: a bounded ``EGraph.run`` on each
+   corpus term naming the need's ops, default vs default+certified
+   rulesets — certified-law firings and the *incremental* cost
+   delta.  Zero fires is a verdict, not a bug: the corpus's real
+   sites may live in a law's guarded-out region.
 
 Test subjects are the measured scan-family needs: ``cumsum``
 (largest invisible FLOPs share in the corpus screen — RunningNorm,
