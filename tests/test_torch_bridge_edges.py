@@ -732,3 +732,58 @@ def test_defensive_branch_inventory():
     assert out_node.op == "output"
     assert isinstance(out_node.args[0], tuple)
     assert not hasattr(out_node.args[0], "name")
+
+
+# ---------------------------------------------------------------------------
+#  Conv-net ops (measured on U^2-Net's export)
+# ---------------------------------------------------------------------------
+
+
+class TestConvNetOps:
+    """``relu_`` / ``max_pool2d`` / ``upsample_bilinear2d`` — the
+    ops a spatial CNN exports that the flagship pipelines never
+    touched (measured: U^2-Net's ``REBNCONV`` in-place ReLU, the
+    stage pools, and the decoder's bilinear upsamples).
+    """
+
+    def test_relu_inplace_binding_matches_relu(self):
+        import torch
+        from catopt_torch.torch_bridge import _CORE_TORCH_BINDINGS as B
+
+        assert "relu_" in B
+        x = torch.randn(2, 3)
+        assert torch.equal(B["relu_"](x), torch.relu(x))
+
+    def test_max_pool2d_reads_ceil_mode_positionally(self):
+        """The export passes every attr positionally — a binding
+        that defaults ``ceil_mode`` truncates the output shape."""
+        import torch
+        from catopt_torch.torch_bridge import _CORE_TORCH_BINDINGS as B
+
+        x = torch.randn(1, 1, 5, 5)
+        # (input, kernel, stride, padding, dilation, ceil_mode)
+        out = B["max_pool2d"](x, [2, 2], [2, 2], [0, 0], [1, 1], True)
+        assert tuple(out.shape) == (1, 1, 3, 3)  # ceil, not floor (2)
+        assert torch.equal(
+            out, torch.nn.functional.max_pool2d(x, 2, 2, 0, 1, True)
+        )
+
+    def test_upsample_bilinear2d_reads_positional_attrs(self):
+        import torch
+        from catopt_torch.torch_bridge import _CORE_TORCH_BINDINGS as B
+
+        x = torch.randn(1, 1, 4, 4)
+        # (input, output_size, align_corners, scale_factors)
+        out = B["upsample_bilinear2d"](x, [8, 8], False, None)
+        assert tuple(out.shape) == (1, 1, 8, 8)
+        assert torch.allclose(
+            out,
+            torch.nn.functional.interpolate(
+                x, size=(8, 8), mode="bilinear", align_corners=False
+            ),
+        )
+
+    def test_bilinear_attr_schema_names_align_corners(self):
+        from catopt_core.attrs import ATTR_SCHEMA
+
+        assert ATTR_SCHEMA["upsample_bilinear2d"][2] == "align_corners"

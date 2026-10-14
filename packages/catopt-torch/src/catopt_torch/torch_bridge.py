@@ -127,6 +127,8 @@ _IR_TO_TORCH_EXTRA: dict[str, str] = {
     # emits for F.interpolate/nn.Upsample in ``nearest`` mode; the
     # vec suffix is an overload tag, not a different op.
     "upsample_nearest2d.vec": "upsample_nearest2d",
+    # the bilinear spelling (measured: U^2-Net's decoder upsamples).
+    "upsample_bilinear2d.vec": "upsample_bilinear2d",
 }
 
 #: Positional-argument → named-attribute mapping lives in
@@ -867,6 +869,33 @@ def _instance_norm_torch(x: Any, *a: Any, **kw: Any) -> Any:
     )
 
 
+def _upsample_bilinear2d_torch(x: Any, *a: Any, **kw: Any) -> Any:
+    """``aten.upsample_bilinear2d[.vec]`` → F.interpolate bilinear.
+
+    The bilinear twin of :func:`_upsample_nearest2d_torch` — same
+    ``size``/``scale`` attr convention, ``align_corners=False`` (the
+    default torch.export emits).
+    """
+    size = a[0] if a else attr_of(kw, "size", default=None)
+    align = (
+        bool(a[1])
+        if len(a) > 1
+        else bool(kw.get("align_corners", False))
+    )
+    scale = a[2] if len(a) > 2 else attr_of(kw, "scale", default=None)
+    if isinstance(size, int) and not isinstance(size, bool):
+        size = (size, size)
+    if isinstance(scale, (int, float)) and not isinstance(scale, bool):
+        scale = (float(scale), float(scale))
+    return torch.nn.functional.interpolate(
+        x,
+        size=size,
+        scale_factor=scale,
+        mode="bilinear",
+        align_corners=align,
+    )
+
+
 def _upsample_nearest2d_torch(x: Any, *a: Any, **kw: Any) -> Any:
     """``aten.upsample_nearest2d[.vec]`` → F.interpolate nearest.
 
@@ -935,6 +964,11 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
     "neg": torch.neg,
     "silu": torch.nn.functional.silu,
     "relu": torch.nn.functional.relu,
+    # aten.relu_ — the in-place spelling ``nn.ReLU(inplace=True)``
+    # exports as (measured: U^2-Net's REBNCONV).  In the exported
+    # functional DAG the mutation is unobservable, so the out-of-place
+    # kernel is the same function.
+    "relu_": torch.nn.functional.relu,
     "sigmoid": torch.sigmoid,
     "tanh": torch.tanh,
     "gelu": torch.nn.functional.gelu,
@@ -1031,6 +1065,20 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
         padding=kw.get("padding", 0),
         dilation=kw.get("dilation", 1),
         groups=kw.get("groups", 1),
+    ),
+    # aten.max_pool2d[.default] — the pooling op ``nn.MaxPool2d``
+    # exports as (measured: U^2-Net's stage pools).  torch.export
+    # passes every attribute positionally — ``ceil_mode`` included,
+    # so defaulting it to False silently truncates the output shape.
+    "max_pool2d": lambda x, *a, **kw: torch.nn.functional.max_pool2d(
+        x,
+        kernel_size=a[0] if a else kw.get("kernel_size", 2),
+        stride=(a[1] if len(a) > 1 else kw.get("stride", None)),
+        padding=a[2] if len(a) > 2 else kw.get("padding", 0),
+        dilation=a[3] if len(a) > 3 else kw.get("dilation", 1),
+        ceil_mode=bool(
+            a[4] if len(a) > 4 else kw.get("ceil_mode", False)
+        ),
     ),
     "concat": lambda *ts, **kw: torch.cat(
         list(ts), dim=int(attr_of(kw, "dim", default=0))
@@ -1469,6 +1517,7 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
     ),
     "instance_norm": _instance_norm_torch,
     "upsample_nearest2d": _upsample_nearest2d_torch,
+    "upsample_bilinear2d": _upsample_bilinear2d_torch,
     # The recurrent kernel — an aten passthrough (the term IS the
     # overload; ``aten.lstm.data`` — the PackedSequence variant — stays
     # unbound deliberately: same base name, different input type).

@@ -199,6 +199,11 @@ ATTR_SCHEMA: dict[str, dict[int, str]] = {
     # vs float.  (aten.upsample_nearest2d.default's lone output_size
     # arg shares position 1.)
     "upsample_nearest2d": {1: "size", 2: "scale"},
+    # aten.upsample_bilinear2d.vec(x, output_size, align_corners,
+    # scale_factors) — the bilinear overload interleaves the
+    # align_corners flag, so its scale lands at position 3, not 2
+    # (measured: U^2-Net's decoder upsamples).
+    "upsample_bilinear2d": {1: "size", 2: "align_corners", 3: "scale"},
     # aten.lstm.input(x, hx[2], params[*], has_biases, num_layers,
     # dropout, train, bidirectional, batch_first) — positions 1-2 are
     # tensor LIST operands (flattened into args at export); the
