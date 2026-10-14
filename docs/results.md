@@ -155,3 +155,64 @@ are fp64-verified against the source module.
 and verified; 9/10 faster than eager; all faster than
 `torch.compile` — `chainfuse` 3.71×/2.90×, `swiglu_mlp`
 1.17×/2.00×, `chain_mlp` 1.06×/2.52×, `mulrelu` 1.22×/1.39×.
+
+## Savings ledger (2026-10-15)
+
+*What does the machinery actually save — compute, storage, memory, and
+oracle evaluations?*  Measured on the dev box; each row names its
+instrument.
+
+### Activation memory — fused quadratic vs the chunked carrier
+
+Direct comparison of `(q@kᵀ)@v` against the C=16 chunked form, same
+inputs, peak `torch.cuda.max_memory_allocated` (fp64, B=2, d=16):
+
+| T | fused | chunked carrier | saved |
+|---|---|---|---|
+| 512 | 12.6 MiB | 8.8 MiB | 1.4× |
+| 1024 | 25.1 MiB | 9.4 MiB | 2.7× |
+| 2048 | 74.1 MiB | 10.6 MiB | 7.0× |
+| 4096 | **268.1 MiB** | **13.1 MiB** | **20.4×** |
+
+The carrier's peak is near-flat (8.8 → 13.1 MiB across an 8× T range)
+while the fused quadratic grows 21× (12.6 → 268.1 MiB).  This is the
+asymptotic claim as memory: O(T·C) against O(T²).
+
+### Parameter storage — the weight fold
+
+`catopt_core.cost.param_bytes_cost` on `x@W₀@…@W_{k-1}` vs the folded
+`x@W_cat` (d=512, fp32):
+
+| k | before | after | saved |
+|---|---|---|---|
+| 2 | 512 KB | 256 KB | 256 KB (2.0×) |
+| 4 | 1.0 MB | 256 KB | 768 KB (4.0×) |
+| 8 | 2.0 MB | 256 KB | 1.75 MB (8.0×) |
+| 16 | 4.0 MB | 256 KB | **3.75 MB (16.0×)** |
+
+The shared-input MoE fold eliminates **196,608 B (192 KB)** of stored
+parameters (pinned by test).
+
+### Compute — FLOPs
+
+| optimization | saved | instrument |
+|---|---|---|
+| weight fold (k GEMMs → 1) | **k×** (2–16×) | `flops_cost` |
+| K-way chunk construct | **4.4×** vs bisection; 5.83× vs fused | `flops_cost` |
+| shared-state reassociation | **10.8–24.5%** | `flops_cost` |
+
+### Wall time
+
+| case | speedup |
+|---|---|
+| derived carrier, T=2048 | **7.38×** vs `torch.compile` (5.9× vs eager) |
+| spelled RetNet export, T=512 | 1.82–2.33× |
+| `chainfuse` (laws + minted kernel) | 2.90× vs compile |
+
+### Oracle evaluations
+
+| | saved |
+|---|---|
+| saturating e-graph encodes every bracketing | 16,796 programs in **231 e-nodes** (k=11); ≥10^5.6 in ~0.5 s (k=24) |
+| trained prior vs cost-delta heuristic | AP **0.133 vs 0.045** (~3×), ~2× more useful laws per eval |
+| evidence store, second run | 50/50 verdicts cached: **128 s → 6.6 s (19×)** |
