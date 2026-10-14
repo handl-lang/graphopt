@@ -10,11 +10,27 @@ the original's name.
 
 from __future__ import annotations
 
-__all__ = ["OnnxLoweringError", "UnsupportedOnnxOpError"]
+__all__ = [
+    "OnnxImportError",
+    "OnnxLoweringError",
+    "UnsupportedOnnxOpError",
+]
 
 
 class OnnxLoweringError(Exception):
     """Base class for every ONNX lowering failure."""
+
+
+class OnnxImportError(Exception):
+    """Base class for ONNX -> IR import failures (direction 2).
+
+    Structural problems rather than op coverage: a declared opset
+    outside the pinned window, a graph input with no tensor type, a
+    non-tensor graph output, an output with no producer.  Op-level
+    refusals raise :class:`UnsupportedOnnxOpError` — the same error
+    the sink raises, since it is the same mapping in the other
+    direction.
+    """
 
 
 class UnsupportedOnnxOpError(OnnxLoweringError):

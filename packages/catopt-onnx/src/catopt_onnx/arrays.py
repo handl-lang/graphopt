@@ -59,6 +59,7 @@ from onnx import TensorProto
 
 __all__ = [
     "DTYPE_NAMES",
+    "ONNX_TYPE_NAMES",
     "WORKING_DTYPES",
     "numpy_to_onnx_type",
     "ort_type_to_numpy",
@@ -97,6 +98,15 @@ _NUMPY_TO_ONNX: dict[str, int] = {
     "int8": TensorProto.INT8,
     "uint8": TensorProto.UINT8,
     "bool": TensorProto.BOOL,
+}
+
+#: ONNX tensor element type -> the name the IR records (the inverse
+#: of :data:`_NUMPY_TO_ONNX`).  The source reads declared dtypes off
+#: graph inputs and ``Cast`` targets; element types outside this
+#: table (string, bfloat16, float8, complex) have no IR name and are
+#: refused where they matter.
+ONNX_TYPE_NAMES: dict[int, str] = {
+    v: k for k, v in _NUMPY_TO_ONNX.items()
 }
 
 #: onnxruntime's input type string -> NumPy dtype (the inverse of

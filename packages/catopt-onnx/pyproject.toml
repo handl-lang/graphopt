@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "catopt-onnx"
 version = "0.1.0dev"
-description = "ONNX sink for catopt (ADR 0006 stage 1): catopt IR -> ONNX graph, verified through onnxruntime."
+description = "ONNX backend for catopt (ADR 0006): catopt IR <-> ONNX graph — OnnxSink exports, OnnxSource imports, both verified through onnxruntime."
 requires-python = ">=3.11"
 dependencies = [
     "catopt-core",
