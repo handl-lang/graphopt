@@ -427,7 +427,11 @@ class GraphLifter:
         resolves its output, like any other undefined producer.
         """
         for node in self.graph.node:
-            if node.op_type != "Constant" or not node.output:
+            if (
+                node.op_type != "Constant"
+                or node.domain not in ("", "ai.onnx")
+                or not node.output
+            ):
                 continue
             for name in (
                 "value",
@@ -449,6 +453,13 @@ class GraphLifter:
 
     def _lift_node(self, node: onnx.NodeProto) -> None:
         """Lift one node through the table; bind its outputs."""
+        if node.domain not in ("", "ai.onnx"):
+            raise UnsupportedOnnxOpError(
+                node.op_type,
+                f"node {node.name or node.output[0]!r}: non-default "
+                f"domain {node.domain!r} — the lifting table covers "
+                "the default domain only",
+            )
         if node.op_type == "Constant":
             # Constants were pre-scanned; their term materialises on
             # first use.  A Constant that is never consumed mints

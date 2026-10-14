@@ -303,13 +303,17 @@ def _mod(fmod_flag: bool) -> OnnxBuilder:
 def _remainder(b: GraphBuilder, term: Op, ins: list[str]) -> str:
     """``remainder`` — floor-mod, spelled out.
 
-    ONNX ``Mod(fmod=0)`` *is* floor-mod, but onnxruntime's CPU
-    kernels refuse it for floating types ("fmod attribute must be
-    true for floating point types"), so the sink composes
-    ``x - floor(x / y) * y`` instead of emitting a node that cannot
-    run.
+    ONNX ``Mod(fmod=0)`` *is* floor-mod, and onnxruntime accepts it
+    for integer inputs (``fmod=0`` is the integer path the runtime
+    requires).  For floating types it refuses ("fmod attribute must
+    be true for floating point types"), so floats compose
+    ``x - floor(x / y) * y`` instead — a spelling ORT has no integer
+    ``Floor`` kernel for either, which is why the composition is
+    float-only.
     """
     x, y = ins[0], ins[1]
+    if b.dtype_of(x).kind in "iu":
+        return b.node("Mod", ins, fmod=0)[0]
     floored = b.node("Floor", b.node("Div", [x, y]))[0]
     return b.node("Sub", [x, b.node("Mul", [floored, y])[0]])[0]
 

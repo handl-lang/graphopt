@@ -341,7 +341,34 @@ class GraphBuilder:
         for i, arg in enumerate(term.args):
             if not isinstance(arg, Const):
                 names[i] = self.emit(arg)
+        ref = self._scalar_dtype(names)
+        for i, arg in enumerate(term.args):
+            if isinstance(arg, Const):
+                names[i] = self.constant(arg.value, ref)
+        return [n for n in names if n is not None]
+
+    def _scalar_dtype(self, names: list[str | None]) -> np.dtype | None:
+        """Return the dtype a ``Const`` operand should adopt.
+
+        A scalar adopts a sibling's dtype — but a *boolean* sibling
+        is a predicate, never the constant's own type (``where``'s
+        condition, ``masked_fill``'s mask).  Prefer the first
+        non-bool tracked dtype; an all-bool term falls back to the
+        first tracked one so ``logical_and(mask, Const)`` still
+        emits a bool scalar.
+        """
         ref = next(
+            (
+                self._dtypes[n]
+                for n in names
+                if n is not None
+                and self._dtypes.get(n, np.dtype(np.bool_)).kind != "b"
+            ),
+            None,
+        )
+        if ref is not None:
+            return ref
+        return next(
             (
                 self._dtypes[n]
                 for n in names
@@ -349,10 +376,6 @@ class GraphBuilder:
             ),
             None,
         )
-        for i, arg in enumerate(term.args):
-            if isinstance(arg, Const):
-                names[i] = self.constant(arg.value, ref)
-        return [n for n in names if n is not None]
 
     def emit(self, term: Any) -> str:
         """Emit ``term`` (and its children); return its value name.
