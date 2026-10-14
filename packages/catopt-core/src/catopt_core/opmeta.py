@@ -224,6 +224,7 @@ _CLASSIFIED: dict[str, frozenset[str]] = {
     "om": frozenset({COST_VIEW}),
     "one_hot": frozenset({TABLE}),
     "pad": frozenset({RELAYOUT}),
+    "pack": frozenset({COST_VIEW}),
     "permute": frozenset({RELAYOUT, VIEWISH}),
     "pow": frozenset({POINTWISE}),
     "prod": frozenset({REDUCE_DIM}),

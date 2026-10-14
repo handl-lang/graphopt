@@ -251,3 +251,58 @@ def test_verify_module_single_and_tuple_inputs():
     vr = verify_module(m1, m3, x, rtol=1e-9)
     assert not vr.passed
     assert vr.max_abs > 0.0
+
+
+# ---------------------------------------------------------------------------
+#  verify_equiv — multi-output: EVERY output is compared
+# ---------------------------------------------------------------------------
+
+
+def test_verify_equiv_multi_output_compares_every_output():
+    """A tuple result verifies on all outputs, not just the first."""
+    torch.manual_seed(0)
+    a = torch.randn(3, 4, dtype=torch.float64)
+    b = torch.randn(3, 4, dtype=torch.float64)
+
+    vr = verify_equiv((a, b), (a.clone(), b.clone()))
+    assert vr.passed
+    assert vr.per_output == (0.0, 0.0)
+
+    # the SECOND output differs — the gate fails on it (the silent
+    # first-output-only check would have passed)
+    vr = verify_equiv((a, b), (a.clone(), b + 1.0), rtol=1e-9)
+    assert not vr.passed
+    assert vr.per_output[0] == 0.0
+    assert vr.per_output[1] > 0.0
+    assert vr.max_abs == vr.per_output[1]
+
+
+def test_verify_equiv_multi_output_length_mismatch_fails_closed():
+    """A different number of outputs fails rather than comparing a
+    prefix."""
+    a = torch.randn(2, dtype=torch.float64)
+    vr = verify_equiv((a, a), (a.clone(),))
+    assert not vr.passed and vr.max_abs == float("inf")
+    # a non-tuple result is a mismatch too
+    vr = verify_equiv((a, a), a.clone())
+    assert not vr.passed
+
+
+def test_verify_module_multi_output():
+    """A module returning a tuple is verified on every output."""
+
+    class Multi(nn.Module):
+        def forward(s, x):
+            return x + 1.0, x * 2.0
+
+    class MultiBad(nn.Module):
+        def forward(s, x):
+            return x + 1.0, x * 3.0  # second output differs
+
+    x = torch.randn(2, 3, dtype=torch.float64)
+    vr = verify_module(Multi().eval(), Multi().eval(), x)
+    assert vr.passed and vr.per_output == (0.0, 0.0)
+
+    vr = verify_module(Multi().eval(), MultiBad().eval(), x, rtol=1e-9)
+    assert not vr.passed
+    assert vr.per_output[0] == 0.0 and vr.per_output[1] > 0.0

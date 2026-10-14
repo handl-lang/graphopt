@@ -75,6 +75,9 @@ _OP_FLOPS: dict[str, int] = {
     "concat": 0,
     "chunk": 0,
     "split": 0,
+    # pack is the multi-output product: it pairs already-computed
+    # output wires into a tuple — pure wire bookkeeping, no kernel.
+    "pack": 0,
     # index_select is a gather: memory traffic, no arithmetic.
     "index_select": 0,
     # contiguous copies memory (0 FLOPs but real bandwidth — the

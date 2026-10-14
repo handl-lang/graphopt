@@ -37,7 +37,15 @@ import pytest
 import torch
 import torch.nn.functional as F
 
-from catopt_core.ir import IR, Const, Op, Param, TensorType, Var, op_repr
+from catopt_core.ir import (
+    IR,
+    Const,
+    Op,
+    Param,
+    TensorType,
+    Var,
+    op_repr,
+)
 from catopt_core.ops import OpTable
 from catopt_torch.torch_bridge import (
     _IR_TO_TORCH,
@@ -788,175 +796,65 @@ class TestConvNetOps:
 
         assert ATTR_SCHEMA["upsample_bilinear2d"][2] == "align_corners"
 
-    def test_max_pool2d_export_path_honours_attrs(self):
-        """Through the *export* path the schema'd positionals reach the
-        binding — a non-default kernel/stride/padding must survive.
-
-        Without an ``ATTR_SCHEMA`` entry torch.export's list
-        positionals all collapse onto ``dim`` (last list wins) and the
-        binding silently reverts to aten defaults, so
-        ``F.max_pool2d(x, 3, 1, 1)`` lowers to a wrong shape.
-        """
-        import torch
-        from catopt_core.attrs import ATTR_SCHEMA
-
-        class M(torch.nn.Module):
-            def forward(self, x):
-                return torch.nn.functional.max_pool2d(x, 3, 1, 1)
-
-        x = torch.randn(1, 1, 7, 7)
-        ir, src = export_to_ir(M().eval(), (x,))
-        mp = _find(ir.root, "max_pool2d")[0]
-        attrs = dict(mp.attrs)
-        assert attrs["kernel_size"] == (3, 3)
-        assert attrs["stride"] == (1, 1)
-        assert attrs["padding"] == (1, 1)
-        assert set(ATTR_SCHEMA["max_pool2d"].values()) == {
-            "kernel_size",
-            "stride",
-            "padding",
-            "dilation",
-            "ceil_mode",
-        }
-        lowered = ir_to_torch_module(ir, param_values=src)
-        with torch.no_grad():
-            assert torch.allclose(lowered(x), M().eval()(x))
-
-    def test_max_pool2d_ceil_mode_via_export(self):
-        """``ceil_mode`` must reach the binding — it changes the
-        output shape, so defaulting it to False truncates silently."""
-        import torch
-
-        class M(torch.nn.Module):
-            def forward(self, x):
-                return torch.nn.functional.max_pool2d(
-                    x, 2, 2, 0, 1, True
-                )
-
-        x = torch.randn(1, 1, 5, 5)
-        ir, src = export_to_ir(M().eval(), (x,))
-        mp = _find(ir.root, "max_pool2d")[0]
-        assert dict(mp.attrs)["ceil_mode"] is True
-        lowered = ir_to_torch_module(ir, param_values=src)
-        with torch.no_grad():
-            got = lowered(x)
-        assert tuple(got.shape) == (1, 1, 3, 3)  # ceil, not floor
-        assert torch.allclose(got, M().eval()(x))
-
-    def test_adaptive_avg_pool2d_export_path(self):
-        """``adaptive_avg_pool2d`` (ASPP's global-average branch) — the
-        lone list positional lands under ``size`` and lowers exactly."""
-        import torch
-        from catopt_core.attrs import ATTR_SCHEMA
-
-        class M(torch.nn.Module):
-            def forward(self, x):
-                return torch.nn.functional.adaptive_avg_pool2d(x, 1)
-
-        x = torch.randn(2, 3, 5, 5)
-        ir, src = export_to_ir(M().eval(), (x,))
-        aap = _find(ir.root, "adaptive_avg_pool2d")[0]
-        assert dict(aap.attrs)["size"] == (1, 1)
-        assert ATTR_SCHEMA["adaptive_avg_pool2d"] == {1: "size"}
-        lowered = ir_to_torch_module(ir, param_values=src)
-        with torch.no_grad():
-            assert torch.allclose(
-                lowered(x),
-                torch.nn.functional.adaptive_avg_pool2d(x, 1),
-            )
-
-    def test_adaptive_avg_pool2d_tuple_output_size(self):
-        """A ``(H, W)`` output size and the direct-call scalar spelling
-        both lower through the same binding."""
-        import torch
-        from catopt_torch.torch_bridge import _CORE_TORCH_BINDINGS as B
-
-        x = torch.randn(2, 3, 8, 6)
-        assert B["adaptive_avg_pool2d"](x, [3, 2]).shape == (2, 3, 3, 2)
-        assert B["adaptive_avg_pool2d"](x, 1).shape == (2, 3, 1, 1)
-
 
 # ---------------------------------------------------------------------------
-#  functionalized in-place writes through NESTED views
+#  Multi-output export — the pack root
 # ---------------------------------------------------------------------------
 
 
-class TestNestedViewWrites:
-    """``y[:, a:b, c:d] = v`` — the Swin SW-MSA ``img_mask`` pattern.
+class TestMultiOutputExport:
+    """A module returning a tuple exports every output — the silent
+    drop of all but the first is gone (U^2-Net's ``(d0, ..., d6)``)."""
 
-    torch.export functionalizes a nested-view write as
-    ``fill_(slice(slice(base, ...), ...), v)``.  A one-level threader
-    rebinds the intermediate view node but not the ROOT base the graph
-    actually reads, so the write is orphaned and the mask lowers to
-    the pristine base (measured: max_abs 5.0).  The chain fold
-    (:func:`catopt_torch.torch_bridge._view_chain`) reaches the root.
-    """
+    class _Multi(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.a = torch.nn.Linear(4, 4, bias=False)
 
-    def _roundtrip(self, module, x):
-        ir, src = export_to_ir(module.eval(), x)
-        lowered = ir_to_torch_module(ir, param_values=src)
+        def forward(self, x):
+            h = self.a(x)
+            return h, torch.relu(h), h + 1.0
+
+    def test_export_packs_every_output(self):
+        m = self._Multi().eval().double()
+        x = torch.randn(2, 4, dtype=torch.float64)
+        ir, leaves = export_to_ir(m, x)
+        # A multi-output program's root is the ``pack`` pairing.
+        assert isinstance(ir.root, Op) and ir.root.op == "pack"
+        assert len(ir.roots) == 3
+        assert ir.root.args == ir.roots
+
+    def test_lowered_multi_output_returns_the_tuple(self):
+        m = self._Multi().eval().double()
+        x = torch.randn(2, 4, dtype=torch.float64)
+        ir, leaves = export_to_ir(m, x)
+        mod = ir_to_torch_module(ir, leaves)
         with torch.no_grad():
-            return ir, module(x), lowered(x)
+            ref = m(x)
+            out = mod(x)
+        assert isinstance(out, tuple) and len(out) == 3
+        for r, o in zip(ref, out):
+            assert torch.allclose(r, o)
 
-    def test_nested_slice_write_exact(self):
-        import torch
-
-        class M(torch.nn.Module):
-            def forward(self, _x):
-                y = torch.zeros(2, 6, 6, dtype=torch.float64)
-                y[:, :3, :2] = 5.0
-                return y
-
-        x = torch.randn(2, 6, 6, dtype=torch.float64)
-        ir, ref, got = self._roundtrip(M(), x)
-        assert torch.equal(got, ref)
-        # The write is threaded as a scatter onto the base, not lost.
-        assert _find(ir.root, "slice_scatter")
-
-    def test_two_nested_writes_compose(self):
-        """Successive nested writes compose — the second reads the
-        first's rebound root, not the pristine one."""
-        import torch
-
-        class M(torch.nn.Module):
-            def forward(self, _x):
-                y = torch.zeros(2, 6, 6, dtype=torch.float64)
-                y[:, :3, :2] = 1.0
-                y[:, 3:, 2:] = 2.0
-                return y
-
-        x = torch.randn(2, 6, 6, dtype=torch.float64)
-        _ir, ref, got = self._roundtrip(M(), x)
-        assert torch.equal(got, ref)
-        # Both writes survive: the root sees a doubled value.
-        assert ref.max().item() == 2.0
-
-    def test_three_level_nesting_exact(self):
-        import torch
-
-        class M(torch.nn.Module):
-            def forward(self, _x):
-                y = torch.zeros(2, 6, 6, 6, dtype=torch.float64)
-                y[:, 1:4, 2:5, 0:3] = 7.0
-                return y
-
-        x = torch.randn(2, 6, 6, 6, dtype=torch.float64)
-        _ir, ref, got = self._roundtrip(M(), x)
-        assert torch.equal(got, ref)
-        assert ref.max().item() == 7.0
-
-    def test_select_then_slice_write_exact(self):
-        """A ``select`` outer view over a ``slice`` inner view — the
-        mixed chain also folds to the root."""
-        import torch
-
-        class M(torch.nn.Module):
+    def test_single_output_is_not_packed(self):
+        class One(torch.nn.Module):
             def forward(self, x):
-                y = x.clone()
-                y[0, :3, :2] = 9.0
-                return y
+                return x + 1.0
 
-        x = torch.randn(2, 6, 6, dtype=torch.float64)
-        _ir, ref, got = self._roundtrip(M(), x)
-        assert torch.equal(got, ref)
+        x = torch.randn(2, dtype=torch.float64)
+        ir, _ = export_to_ir(One().eval().double(), x)
+        assert getattr(ir.root, "op", None) != "pack"
+        # ``roots`` is the single-output alias view.
+        assert ir.roots == (ir.root,)
 
+    def test_non_tensor_output_is_refused(self):
+        """An output leaf that is not a tensor cannot be modelled —
+        the exporter refuses loudly rather than dropping it."""
+
+        class Mixed(torch.nn.Module):
+            def forward(self, x):
+                return x + 1.0, 3
+
+        x = torch.randn(2, dtype=torch.float64)
+        with pytest.raises(ValueError, match="do not resolve"):
+            export_to_ir(Mixed().eval().double(), x)

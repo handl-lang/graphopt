@@ -731,35 +731,11 @@ def export_to_ir(
                 ir_node = Op.make(ir_op, **attrs)
             env[node.name] = ir_node
 
-    # Find root
-    root = None
-    for node in reversed(
-        graph.nodes
-    ):  # pragma: no branch — output node is always last, first when reversed
-        if (
-            node.op == "output" and node.args
-        ):  # pragma: no branch — same invariant
-            arg = node.args[0]
-            # The FX output arg is a tuple ``(out,)`` — unwrap to the
-            # node so env rewrites (e.g. the copy_ mutation threader
-            # rebinding ``clone`` to its scatter) are honoured.
-            arg = (
-                arg[0]
-                if isinstance(arg, (tuple, list)) and arg
-                else arg
-            )
-            if (
-                hasattr(arg, "name") and arg.name in env
-            ):  # pragma: no branch — tuples don't carry .name
-                root = env[
-                    arg.name
-                ]  # pragma: no cover — tuples don't carry .name
-            break  # pragma: no cover — same
-    if (
-        root is None and env
-    ):  # pragma: no cover — output args resolve via the tuple unwrap
-        # above; this only fires on a structurally-degenerate graph.
-        root = list(env.values())[-1]
+    # Find the graph's output(s) and build the search root — a single
+    # output IS the root; several are paired by ``pack`` (the product
+    # morphism), so every output is optimised and lowered, none
+    # dropped.
+    root = _graph_root(graph, env)
 
     return IR(
         root=root,
@@ -767,6 +743,63 @@ def export_to_ir(
         input_names={v.name for v in inputs},
         params=params,
     ), source_tensors
+
+
+def _graph_root(graph: Any, env: dict[str, Any]) -> Any:
+    """Resolve the FX graph's output(s) into one catopt root term.
+
+    The FX output node's ``args[0]`` is the tuple of the model's return
+    leaves — ``(out,)`` for a single-output module, ``(o0, ..., on)``
+    for a tuple-returning one (``torch.export`` flattens the return
+    pytree).  Each leaf is resolved through ``env`` (honouring env
+    rewrites — e.g. the copy_ mutation threader rebinding ``clone`` to
+    its scatter), so NO output is silently dropped.
+
+    A single output returns that term; several return their ``pack``
+    pairing — the product morphism the single-root search saturates.
+    A non-tensor output leaf cannot be modelled, so it is refused
+    loudly rather than dropped.
+    """
+    outputs, unresolved = _graph_outputs(graph, env)
+    if unresolved:
+        # A model returning a non-tensor (an int, ``None``) cannot be
+        # modelled by the IR — refuse loudly rather than dropping it.
+        raise ValueError(
+            f"export_to_ir: {unresolved} model output(s) do not resolve "
+            "to an IR term (a non-tensor return value); multi-output "
+            "lowering supports tensor outputs only"
+        )
+    return (
+        outputs[0] if len(outputs) == 1 else Op.make("pack", *outputs)
+    )
+
+
+def _graph_outputs(
+    graph: Any, env: dict[str, Any]
+) -> tuple[list[Any], int]:
+    """Collect every resolvable output term plus the unresolvable count."""
+    outputs: list[Any] = []
+    unresolved = 0
+    for node in reversed(
+        graph.nodes
+    ):  # pragma: no branch — output node is always last, first when reversed
+        if node.op == "output" and node.args:
+            arg = node.args[0]
+            leaves = (
+                list(arg) if isinstance(arg, (tuple, list)) else [arg]
+            )
+            for leaf in leaves:
+                if hasattr(leaf, "name") and leaf.name in env:
+                    outputs.append(env[leaf.name])
+                else:  # pragma: no cover — a non-tensor return leaf
+                    unresolved += 1
+            break
+    if (
+        not outputs and env
+    ):  # pragma: no cover — output args resolve via the tuple flatten
+        # above; this only fires on a structurally-degenerate graph.
+        outputs = [list(env.values())[-1]]
+    return outputs, unresolved
 
 
 def _resolve_attr(module: torch.nn.Module, target: str) -> torch.Tensor:
@@ -799,6 +832,17 @@ def _scalar_value(v: Any) -> Any:
     if torch.is_tensor(v):
         return v.item() if v.dim() == 0 else v
     return v
+
+
+def _pack_torch(*ts: Any) -> tuple:
+    """``pack`` — pair the model's output wires into one tuple.
+
+    The multi-output root's binding: the operands are already
+    evaluated, so packing is pure wire bookkeeping (no kernel) — it
+    returns the tuple the original module's ``forward`` returned, one
+    entry per output in export order.
+    """
+    return tuple(ts)
 
 
 def _scatter_torch(t: Any, idx: Any, v: Any = None, **kw: Any) -> Any:
@@ -1176,6 +1220,10 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
     "concat": lambda *ts, **kw: torch.cat(
         list(ts), dim=int(attr_of(kw, "dim", default=0))
     ),
+    # pack — the multi-output root's binding: pair the (already
+    # evaluated) output wires into one tuple, exactly the value the
+    # original forward returned.  No kernel, no copy.
+    "pack": _pack_torch,
     "chunk": lambda t, chunks=2, dim=-1, index=0, **kw: torch.chunk(
         t,
         int(attr_of(kw, "chunks", default=chunks)),
