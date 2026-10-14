@@ -167,13 +167,30 @@ def eval_body(body: Any, env: dict, bindings: dict) -> Any:
         return _fold_eval(body, env, bindings)
     if kind == "fold_zip":
         _, steps, state = body
-        acc = env[state]
+        acc = _as_tensor(env[state])
         for a_s, b_s in steps:
-            acc = _eval_spec(a_s, env, bindings) * acc + _eval_spec(
-                b_s, env, bindings
+            acc = _as_tensor(_eval_spec(a_s, env, bindings)) * acc + (
+                _as_tensor(_eval_spec(b_s, env, bindings))
             )
         return acc
     raise ValueError(f"unknown handler-body tag: {kind!r}")
+
+
+def _as_tensor(v: Any) -> Any:
+    """Lift a scalar operand to a 0-dim tensor so it can broadcast.
+
+    A law or term may spell a fold operand — the initial state above
+    all — as a bare constant: ``Const(0.0)`` is the zero-carry scan,
+    the selective-scan site's init.  ``_eval_spec`` returns that
+    constant as a python number, and ``broadcast_tensors`` /
+    ``broadcast_to`` reject a bare number, so the operand is lifted
+    here; a tensor passes through untouched.  Without this the
+    recognition law that rewrites the spelled emitted sequence into
+    the minted atom is structurally unevaluable.
+    """
+    import torch
+
+    return v if torch.is_tensor(v) else torch.as_tensor(v)
 
 
 def _fold_eval(body: Any, env: dict, bindings: dict) -> Any:
@@ -193,14 +210,16 @@ def _fold_eval(body: Any, env: dict, bindings: dict) -> Any:
     else:
         _, a_s, b_s, state, emit, axis = body
     av, bv = torch.broadcast_tensors(
-        _eval_spec(a_s, env, bindings),
-        _eval_spec(b_s, env, bindings),
+        _as_tensor(_eval_spec(a_s, env, bindings)),
+        _as_tensor(_eval_spec(b_s, env, bindings)),
     )
     full = tuple(av.shape)
     if not full:
         raise ValueError("fold operands carry no step axis")
     ax = axis % len(full)
-    acc = torch.broadcast_to(env[state], full[:ax] + full[ax + 1 :])
+    acc = torch.broadcast_to(
+        _as_tensor(env[state]), full[:ax] + full[ax + 1 :]
+    )
     a_seq = av.movedim(ax, 0).unbind(0)
     b_seq = bv.movedim(ax, 0).unbind(0)
     slices = (
@@ -233,7 +252,9 @@ def _step_slices(emit: Any, env: dict, full: tuple, ax: int) -> dict:
         if m == "$acc":
             continue
         out[m] = (
-            torch.broadcast_to(env[m], full).movedim(ax, 0).unbind(0)
+            torch.broadcast_to(_as_tensor(env[m]), full)
+            .movedim(ax, 0)
+            .unbind(0)
         )
     return out
 
