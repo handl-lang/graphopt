@@ -24,6 +24,7 @@
             </div>
             <span class="text-[12px] text-faint"
               ><span class="text-eva" x-text="done"></span>/<span x-text="n"></span
+              ><span class="hidden sm:inline text-faint" x-text="' · ' + pct + '%'"></span
             ></span>
             <span class="hidden md:inline text-[11.5px] text-faint" x-text="savedLabel"></span>
             <button
@@ -125,7 +126,14 @@
           <div class="text-[11.5px] uppercase tracking-widest text-faint">
             level <span x-text="i"></span> of <span x-text="n - 1"></span>
           </div>
-          <h1 class="text-3xl font-bold tracking-tight mt-1" x-text="level.title"></h1>
+          <div class="mt-1 flex items-center gap-3 flex-wrap">
+            <h1 class="text-3xl font-bold tracking-tight" x-text="level.title"></h1>
+            <span
+              class="px-2.5 py-1 rounded-full text-[11.5px] font-semibold border whitespace-nowrap"
+              :class="passed(level.id) ? 'border-eva text-eva' : 'border-line text-faint'"
+              x-text="passed(level.id) ? '✓ cleared' : 'not yet cleared'"
+            ></span>
+          </div>
           <p class="text-[14px] mt-2">
             <span class="text-gold font-semibold">objective · </span
             ><span class="text-dim" x-text="level.objective"></span>
@@ -377,27 +385,27 @@
                 <b class="text-ink">In the real system, laws are found, not only written.</b>
                 A discovery pipeline — census → propose → verify → measure → rank → emit — counts
                 op-and-shape patterns across real model graphs and runs every candidate through the
-                same referee the next level teaches. It has shipped laws no human wrote — <b
-                  class="text-ink">11 machine-admitted</b> ones now sit in the default rule set
+                same referee the next level teaches. It has shipped laws no human wrote —
+                <b class="text-ink">11 machine-admitted</b> ones now sit in the default rule set
                 (<code class="text-ink">MACHINE_SHIPPED</code> in the real package's provenance
                 table). The newest is <code class="text-ink">mul_unsq_nat</code> (the census-minted
                 two-sided unsqueeze naturality, guarded by a condition the adversarial sweep
-                synthesized, −12.3&thinsp;% on its source workload). Four further laws — <code
-                  class="text-ink">select_mul</code> (<code
+                synthesized, −12.3&thinsp;% on its source workload). Four further laws —
+                <code class="text-ink">select_mul</code> (<code
                   >mul(select u, select v) → select (mul u v)</code
                 >
-                — 25 corpus sites, −25.9&thinsp;% modeled cost), <code class="text-ink"
-                  >softmax_fold</code
-                >, <code class="text-ink">silu_fold</code> and <code class="text-ink">glu_fold</code>
-                — had machine-<em>assisted</em> discovery but were hand-integrated before the
+                — 25 corpus sites, −25.9&thinsp;% modeled cost),
+                <code class="text-ink">softmax_fold</code>,
+                <code class="text-ink">silu_fold</code> and <code class="text-ink">glu_fold</code> —
+                had machine-<em>assisted</em> discovery but were hand-integrated before the
                 admission machinery existed, so the provenance table counts them as human-authored.
-                Plus the canonicalization bridges that make
-                noncanonical spellings reach the fold. The corpus itself is machine-fed: 166 real
-                <code>nn.*</code> workloads through the export boundary, 114 verified — an intake
-                that also caught three lowering bugs no test caught. Held out of the library and
-                re-run, the pipeline re-proposes <code>select_mul</code> at rank #1 of 35 candidates
-                — and it also refuses: a candidate that fired 23 times and lowered cost was rejected
-                because the numeric oracle called it false.
+                Plus the canonicalization bridges that make noncanonical spellings reach the fold.
+                The corpus itself is machine-fed: 166 real <code>nn.*</code> workloads through the
+                export boundary, 114 verified — an intake that also caught three lowering bugs no
+                test caught. Held out of the library and re-run, the pipeline re-proposes
+                <code>select_mul</code> at rank #1 of 35 candidates — and it also refuses: a
+                candidate that fired 23 times and lowered cost was rejected because the numeric
+                oracle called it false.
                 <b class="text-ink">Structure proposes; the referee decides.</b>
               </div>
             </section>
@@ -1671,14 +1679,452 @@
               <div
                 class="mt-4 rounded-2xl border border-line bg-panel p-5 text-[13.5px] text-dim leading-relaxed"
               >
-                <b class="text-ink">Why this is the last level.</b> A course that only taught the
+                <b class="text-ink">Why the refusals are taught.</b> A course that only taught the
                 wins would be an advertisement. The measured refusals — the closed weight-space
                 hypothesis (ADR 0001), the atom pay-null, the BiRefNet bounded negative, the
                 antiunify reach-null, the enumeration-beats-learning ledger — are the methodology
                 made visible:
                 <b class="text-ink">truth, pay, reach and yield are four different measurements</b>,
-                and the honest answer is often no.
+                and the honest answer is often no. The last level maps these lessons onto the
+                project's own open work.
                 <span class="text-faint">(<code>project/retros/</code>, ADRs 0001/0007.)</span>
+              </div>
+            </section>
+
+            <!-- ── 18 · approximation with a certificate ─────────── -->
+            <section x-show="i === 18" x-data="bounded">
+              <p class="text-dim leading-relaxed">
+                Rewriting is exact by default: the certificate replays and the result is the
+                <em>same function</em>. But sometimes a near-equal program is allowed — if it
+                carries a <b class="text-ink">certified bound</b> on how far it may drift. That
+                opens a second lane: offer members whose error is inside a budget ε. It is not free.
+                Approximation must clear <b class="text-ink">two</b> gates — a certificate (is it
+                within ε?) and an economics test (is it cheaper?). Pick a budget.
+              </p>
+              <div class="mt-5 grid lg:grid-cols-5 gap-4">
+                <div class="lg:col-span-2 rounded-2xl border border-line bg-panel p-5">
+                  <div class="text-[11.5px] uppercase tracking-widest text-faint mb-3">
+                    budget ε
+                  </div>
+                  <div class="space-y-2">
+                    <template x-for="(b, k) in budgets" :key="k">
+                      <button
+                        @click="select(k)"
+                        class="w-full text-left px-3.5 py-2 rounded-xl border bg-panel transition"
+                        :class="sel === k ? 'border-gold' : 'border-line hover:border-dim'"
+                      >
+                        <span
+                          class="font-mono text-[13px]"
+                          :class="sel === k ? 'text-gold' : 'text-ink'"
+                          x-text="k === 0 ? 'none — the exact lane' : b.toExponential(0)"
+                        ></span>
+                      </button>
+                    </template>
+                  </div>
+                  <button
+                    @click="toggle()"
+                    class="mt-4 w-full px-3 py-2 rounded-xl border text-[13px] transition"
+                    :class="thick ? 'border-gold text-gold' : 'border-line text-dim hover:text-ink'"
+                    x-text="thick ? '✓ thick dedup (next target)' : 'assume thin dedup (measured)'"
+                  ></button>
+                </div>
+                <div class="lg:col-span-3 rounded-2xl border border-line bg-panel p-5">
+                  <div class="text-[11.5px] uppercase tracking-widest text-faint mb-3">
+                    the funnel at ε = <span x-text="budgetLabel"></span>
+                  </div>
+                  <div class="grid grid-cols-3 gap-3 text-center">
+                    <div>
+                      <div class="font-mono text-3xl font-bold text-gold" x-text="offered"></div>
+                      <div class="text-faint text-[12px]">offered</div>
+                    </div>
+                    <div>
+                      <div class="font-mono text-3xl font-bold text-eva" x-text="certified"></div>
+                      <div class="text-faint text-[12px]">certified</div>
+                    </div>
+                    <div>
+                      <div
+                        class="font-mono text-3xl font-bold"
+                        :class="delivered ? 'text-eva' : 'text-bad'"
+                        x-text="delivered"
+                      ></div>
+                      <div class="text-faint text-[12px]">delivered</div>
+                    </div>
+                  </div>
+                  <div class="mt-4 space-y-3">
+                    <template x-for="(r, k) in rows" :key="k">
+                      <div class="rounded-xl border border-line bg-panel2 p-3">
+                        <div class="flex items-center justify-between gap-2">
+                          <span
+                            class="font-mono text-[12.5px] text-sea"
+                            x-text="r.member.site"
+                          ></span>
+                          <span
+                            class="text-[11.5px] whitespace-nowrap"
+                            :class="
+                              r.certified ? (r.delivered ? 'text-eva' : 'text-bad') : 'text-faint'
+                            "
+                            x-text="
+                              r.certified
+                                ? r.delivered
+                                  ? 'delivered'
+                                  : 'refused — pricing'
+                                : 'not offered'
+                            "
+                          ></span>
+                        </div>
+                        <div
+                          class="mt-2 flex items-center gap-x-4 gap-y-1 flex-wrap font-mono text-[11.5px] text-dim"
+                        >
+                          <span
+                            >bound ≤ <span x-text="r.member.bound.toExponential(0)"></span
+                          ></span>
+                          <span x-text="r.member.sites + ' sites'"></span>
+                          <span
+                            >dense <span class="text-ink" x-text="r.member.denseFlops"></span
+                          ></span>
+                          <span
+                            >member
+                            <span
+                              :class="r.ratio < 1 ? 'text-eva' : 'text-bad'"
+                              x-text="Math.round(r.memberFlops)"
+                            ></span
+                          ></span>
+                          <span
+                            :class="r.ratio < 1 ? 'text-eva' : 'text-bad'"
+                            x-text="r.ratio.toFixed(2) + '×'"
+                          ></span>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                  <div
+                    class="mt-4 pt-3 border-t border-line text-[13px]"
+                    :class="delivered ? 'text-eva' : 'text-dim'"
+                    x-text="verdict"
+                  ></div>
+                </div>
+              </div>
+              <div
+                class="mt-4 rounded-2xl border border-line bg-panel p-5 text-[13.5px] text-dim leading-relaxed"
+              >
+                <b class="text-ink">The bound gate stayed clean; the pricing refused.</b> On the
+                real BiRefNet checkpoint the lane offered <b class="text-ink">20</b> certified
+                members at ε = 1e-2 and <b class="text-ink">56</b> at 3e-2 — every one inside
+                budget, no block declined for its bound (<code class="text-ink"
+                  >fresh_rel = 0.0</code
+                >, bitwise identical). And <b class="text-ink">none delivered</b>: only
+                0.78&thinsp;% of the qkv weight deduped, so the gather/re-expand/bias-add wrapper
+                cost <b class="text-ink">1.32×</b> the dense member — the cost model declined it,
+                correctly. The refusal is the lesson: approximation is allowed, but it must also
+                pay.
+                <span class="text-faint"
+                  >(<code>project/retros/birefnet-bounded-lane.md</code>, plans 0012/0025.)</span
+                >
+              </div>
+            </section>
+
+            <!-- ── 19 · the program must run ─────────────────────── -->
+            <section x-show="i === 19" x-data="deliver">
+              <p class="text-dim leading-relaxed">
+                Search picks a <em>term</em>; something still has to <b class="text-ink">run</b> it.
+                The same term, delivered five ways, runs at wildly different speeds — one dispatch
+                per op, a batched carrier, a fused lowering, a captured CUDA graph, or a minted
+                kernel. The <b class="text-ink">modeled</b> column is computed live from a
+                dispatch-aware model (work + launches); the <b class="text-ink">measured</b> column
+                is the clock. Pick a term and a delivery.
+              </p>
+              <div class="mt-5 grid lg:grid-cols-5 gap-4">
+                <div class="lg:col-span-2 rounded-2xl border border-line bg-panel p-5">
+                  <div class="text-[11.5px] uppercase tracking-widest text-faint mb-3">
+                    the term
+                  </div>
+                  <div class="space-y-2">
+                    <template x-for="(c, k) in cases" :key="c.id">
+                      <button
+                        @click="select(k)"
+                        class="w-full text-left px-3.5 py-2.5 rounded-xl border bg-panel transition"
+                        :class="sel === k ? 'border-gold' : 'border-line hover:border-dim'"
+                      >
+                        <div
+                          class="font-mono text-[12.5px]"
+                          :class="sel === k ? 'text-gold' : 'text-ink'"
+                          x-text="c.term"
+                        ></div>
+                        <div class="text-[11.5px] text-dim mt-0.5" x-text="c.shape"></div>
+                      </button>
+                    </template>
+                  </div>
+                  <div class="mt-4 pt-3 border-t border-line">
+                    <div class="text-[11.5px] uppercase tracking-widest text-faint mb-1.5">
+                      delivery
+                    </div>
+                    <div class="space-y-1.5">
+                      <template x-for="(r, k) in rows" :key="r.delivery.kind">
+                        <button
+                          @click="choose(k)"
+                          class="w-full text-left px-3 py-2 rounded-lg border bg-panel2 transition text-[12.5px]"
+                          :class="picked === k ? 'border-gold text-gold' : 'border-line text-dim hover:text-ink'"
+                          x-text="r.delivery.label"
+                        ></button>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+                <div class="lg:col-span-3 rounded-2xl border border-line bg-panel p-5">
+                  <div class="text-[11.5px] uppercase tracking-widest text-faint mb-3">
+                    modeled vs measured
+                  </div>
+                  <div class="space-y-1.5">
+                    <template x-for="(r, k) in rows" :key="r.delivery.kind">
+                      <div
+                        class="grid grid-cols-[1fr_auto_auto_auto] items-center gap-3 px-2.5 py-2 rounded-lg border"
+                        :class="r.winner ? 'border-eva/50 bg-panel2' : 'border-line'"
+                      >
+                        <span
+                          class="font-mono text-[12.5px] text-sea truncate"
+                          x-text="r.delivery.label"
+                        ></span>
+                        <span
+                          class="font-mono text-[12px] text-dim w-20 text-right"
+                          x-text="Math.round(r.modeledUs) + ' µs'"
+                        ></span>
+                        <span
+                          class="font-mono text-[12px] text-ink w-20 text-right"
+                          x-text="r.delivery.measuredUs + ' µs'"
+                        ></span>
+                        <span
+                          class="text-[11px] w-24 text-right"
+                          :class="r.winner ? 'text-eva' : r.modelPick ? 'text-gold' : 'text-faint'"
+                          x-text="
+                            r.winner
+                              ? 'measured best'
+                              : r.modelPick
+                                ? 'model pick'
+                                : r.delivery.sourced
+                                  ? ''
+                                  : 'illustrative'
+                          "
+                        ></span>
+                      </div>
+                    </template>
+                  </div>
+                  <div class="mt-4 pt-3 border-t border-line text-[13px]">
+                    <span class="text-[11.5px] uppercase tracking-widest text-faint">selected</span>
+                    <div class="mt-1.5 text-dim" x-text="delivery.note"></div>
+                    <div
+                      class="mt-1 font-mono text-[11.5px]"
+                      :class="delivery.sourced ? 'text-eva' : 'text-faint'"
+                      x-text="(delivery.sourced ? 'measured · ' : 'illustrative · ') + delivery.source"
+                    ></div>
+                  </div>
+                  <div class="mt-3 text-[13px]" :class="agrees ? 'text-eva' : 'text-bad'">
+                    <span
+                      x-text="agrees ? '✓ the model agrees with the clock' : '✕ the model disagrees with the clock'"
+                    ></span>
+                    <span
+                      class="text-faint ml-2"
+                      x-text="speedup.toFixed(1) + '× faster than generic'"
+                    ></span>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="mt-4 rounded-2xl border border-line bg-panel p-5 text-[13.5px] text-dim leading-relaxed"
+              >
+                <b class="text-ink">Where the win is structural, delivery carries it.</b> The fused
+                carrier lowering lands at
+                <b class="text-ink">parity with the paper's own chunked implementation</b>
+                (2.08 vs 2.12 ms at T = 2048) — the extracted program <em>is</em> the published
+                algorithm, delivered. And <code class="text-ink">chainfuse</code> reached
+                <b class="text-ink">2.94× vs <code class="text-ink">torch.compile</code></b>
+                (86 vs 253 µs) only once the search minted the fusion kernel: the laws fold the
+                weight chain to one GEMM (already 1.34×), but the fused tail needed a kernel nobody
+                wrote. Where the win is pure pointwise fusion — Inductor's home turf — compile wins;
+                the toy reports both regimes.
+                <span class="text-faint"
+                  >(<code>project/retros/retnet-external-baselines.md</code>,
+                  <code>gen-kernels.md</code>.)</span
+                >
+              </div>
+            </section>
+
+            <!-- ── 20 · the cost model can be wrong ──────────────── -->
+            <section x-show="i === 20" x-data="pricing">
+              <p class="text-dim leading-relaxed">
+                The cost model <em>steers</em> selection: the search extracts the cheapest member it
+                can price. So when the model is wrong, the search is wrong. Here is the measured
+                <b class="text-ink">executor-routing inversion</b> — the routed model priced the
+                batched carrier route 20–30&thinsp;% <em>cheaper</em> than the generic route, and
+                the clock said the carrier was 1.9–2.7× <em>slower</em>. Pick a case; toggle
+                calibration.
+              </p>
+              <div class="mt-5 grid lg:grid-cols-5 gap-4">
+                <div class="lg:col-span-2 rounded-2xl border border-line bg-panel p-5">
+                  <div class="text-[11.5px] uppercase tracking-widest text-faint mb-3">
+                    the case
+                  </div>
+                  <div class="space-y-2">
+                    <template x-for="(c, k) in cases" :key="c.id">
+                      <button
+                        @click="select(k)"
+                        class="w-full text-left px-3.5 py-2.5 rounded-xl border bg-panel transition"
+                        :class="sel === k ? 'border-gold' : 'border-line hover:border-dim'"
+                      >
+                        <div
+                          class="font-mono text-[13px]"
+                          :class="sel === k ? 'text-gold' : 'text-ink'"
+                          x-text="c.shape"
+                        ></div>
+                        <div class="text-[11.5px] text-dim mt-0.5" x-text="c.note"></div>
+                      </button>
+                    </template>
+                  </div>
+                  <button
+                    @click="toggle()"
+                    class="mt-4 w-full px-3 py-2 rounded-xl border text-[13px] transition"
+                    :class="calibrated ? 'border-gold text-gold' : 'border-line text-dim hover:text-ink'"
+                    x-text="calibrated ? '✓ calibrated (measured corrections)' : 'uncalibrated model'"
+                  ></button>
+                </div>
+                <div class="lg:col-span-3 rounded-2xl border border-line bg-panel p-5">
+                  <div class="text-[11.5px] uppercase tracking-widest text-faint mb-3">
+                    route table
+                  </div>
+                  <div class="space-y-1.5">
+                    <template x-for="(r, k) in rows" :key="r.route.name">
+                      <div
+                        class="grid grid-cols-[1fr_auto_auto_auto] items-center gap-3 px-2.5 py-2 rounded-lg border"
+                        :class="r.winner ? 'border-eva/50 bg-panel2' : 'border-line'"
+                      >
+                        <span
+                          class="font-mono text-[12.5px] text-sea truncate"
+                          x-text="r.route.label"
+                        ></span>
+                        <span
+                          class="font-mono text-[12px] text-dim w-20 text-right"
+                          x-text="Math.round(r.price) + ' µs'"
+                        ></span>
+                        <span
+                          class="font-mono text-[12px] text-ink w-20 text-right"
+                          x-text="r.route.measured + ' µs'"
+                        ></span>
+                        <span
+                          class="text-[11px] w-24 text-right"
+                          :class="r.winner ? 'text-eva' : r.modelPick ? 'text-gold' : 'text-faint'"
+                          x-text="
+                            r.winner ? 'measured best' : r.modelPick ? 'model pick' : '×' + r.factor.toFixed(2)
+                          "
+                        ></span>
+                      </div>
+                    </template>
+                  </div>
+                  <div class="mt-4 pt-3 border-t border-line space-y-1.5 text-[13px]">
+                    <div class="flex items-center justify-between">
+                      <span class="text-dim">the model picks</span>
+                      <span class="font-mono text-gold" x-text="pick.label"></span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-dim">the clock picks</span>
+                      <span class="font-mono text-eva" x-text="best.label"></span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-dim">the uncalibrated pick runs</span>
+                      <span
+                        class="font-mono font-bold"
+                        :class="inverted && !calibrated ? 'text-bad' : 'text-dim'"
+                        x-text="speedup.toFixed(2) + '× slower'"
+                      ></span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-dim">probe cases correct</span>
+                      <span
+                        class="font-mono"
+                        x-text="correctCount.right + '/' + correctCount.total"
+                      ></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="mt-4 rounded-2xl border border-line bg-panel p-5 text-[13.5px] text-dim leading-relaxed"
+              >
+                <b class="text-ink">A model is a ranking, not the truth.</b> The routed model priced
+                its batched route −20…30&thinsp;% and measured it 1.9–2.7× slower — the search
+                selected a member the clock hates. The fix is not a better policy: it is
+                <b class="text-ink">measured feedback</b>. Feeding the profile's pooled per-family
+                corrections (the <code class="text-ink">measured/modeled</code> factor) into the
+                delivered-price comparison landed the measured-fastest member on
+                <b class="text-ink">12/12</b> probe cases. The cost model still only
+                <em>ranks</em> — ADR 0003 is intact — but now it ranks with the clock in the room.
+                <span class="text-faint"
+                  >(<code>project/retros/executor-pricing-fix.md</code>,
+                  <code>measured-cost-model.md</code>.)</span
+                >
+              </div>
+            </section>
+
+            <!-- ── 21 · the payoff: where to improve ─────────────── -->
+            <section x-show="i === 21" x-data="improve">
+              <p class="text-dim leading-relaxed">
+                This course is not the point — <b class="text-ink">improving the project</b> is.
+                Every idea you met maps to a real piece of open work: a named
+                <b class="text-ink">blocker</b>, the <b class="text-ink">next measurement</b> that
+                would resolve it, and the level that teaches the idea behind it. Pick a gap and read
+                the connection.
+              </p>
+              <div class="mt-5 grid lg:grid-cols-5 gap-4">
+                <div class="lg:col-span-2 rounded-2xl border border-line bg-panel p-5">
+                  <div class="text-[11.5px] uppercase tracking-widest text-faint mb-3">
+                    the project's open work
+                  </div>
+                  <div class="space-y-2">
+                    <template x-for="(g, k) in gaps" :key="g.id">
+                      <button
+                        @click="pick(k)"
+                        class="w-full text-left px-3.5 py-2.5 rounded-xl border bg-panel transition"
+                        :class="sel === k ? 'border-gold' : 'border-line hover:border-dim'"
+                      >
+                        <div
+                          class="text-[12.5px]"
+                          :class="sel === k ? 'text-gold' : 'text-ink'"
+                          x-text="g.idea"
+                        ></div>
+                        <div
+                          class="font-mono text-[11px] text-faint mt-0.5"
+                          x-text="'level ' + g.levelNo + ' · ' + g.source"
+                        ></div>
+                      </button>
+                    </template>
+                  </div>
+                </div>
+                <div class="lg:col-span-3 rounded-2xl border border-line bg-panel p-5 space-y-4">
+                  <template x-for="(c, k) in connection" :key="k">
+                    <div class="rounded-xl border border-line bg-panel2 p-4">
+                      <div
+                        class="text-[11.5px] uppercase tracking-widest text-gold mb-1.5"
+                        x-text="c.idea"
+                      ></div>
+                      <div class="text-[13.5px] text-ink leading-relaxed" x-text="c.blocker"></div>
+                      <div
+                        class="mt-2 text-[12.5px] text-dim border-l-2 border-eva/50 pl-3"
+                        x-text="c.next"
+                      ></div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+              <div
+                class="mt-4 rounded-2xl border border-line bg-panel p-5 text-[13.5px] text-dim leading-relaxed"
+              >
+                <b class="text-ink">Idea → blocker → next measurement.</b> Not every gap is a build.
+                The enumeration-ordering gap is a <em>measurement</em> away from resolution (does a
+                canonical seed make the minted atom pay?); the three law families (precision, data
+                movement, weight space) are each killed by their own measurement — a closed family
+                recorded with numbers is a result, not a failure. That is the project's method, and
+                the reason this course taught the refusals.
+                <span class="text-faint"
+                  >(<code>project/plans/0025-minting-and-substrate.md</code>.)</span
+                >
               </div>
             </section>
           </div>
@@ -1736,6 +2182,38 @@
             <span class="text-[12.5px] text-eva ml-auto" x-show="complete" x-cloak>
               course complete — you can explain the architecture.
             </span>
+          </div>
+
+          <!-- ── completion recap ──────────────────────────────────── -->
+          <div
+            x-show="complete"
+            x-cloak
+            class="mt-8 rounded-2xl border border-gold/40 bg-panel p-6"
+          >
+            <div class="text-[11.5px] uppercase tracking-widest text-gold mb-2">
+              course complete · the ladder
+            </div>
+            <p class="text-[13.5px] text-dim leading-relaxed mb-4">
+              You cleared all <span class="text-ink" x-text="n"></span> levels. Here is the whole
+              course, in order — its own summary of itself.
+            </p>
+            <ol class="space-y-1.5">
+              <template x-for="(r, k) in recap" :key="r.id">
+                <li class="flex items-baseline gap-3 text-[13px]">
+                  <span
+                    class="font-mono text-[11.5px] w-6 text-right shrink-0"
+                    :class="r.passed ? 'text-eva' : 'text-faint'"
+                    x-text="k"
+                  ></span>
+                  <span class="text-ink w-56 shrink-0" x-text="r.title"></span>
+                  <span class="text-dim" x-text="r.idea"></span>
+                </li>
+              </template>
+            </ol>
+            <div class="mt-5 pt-4 border-t border-line text-[13px] text-dim">
+              Now improve it — level 21 mapped every idea to the project's open work. Pick a gap and
+              run the next measurement.
+            </div>
           </div>
 
           <footer class="mt-16 pt-6 border-t border-line text-[12.5px] text-faint">

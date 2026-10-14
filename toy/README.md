@@ -14,36 +14,40 @@ vp run -r build        # engine → dist, app → dist
 
 ## The ladder (basics → advanced)
 
-| #   | Level                          | Idea                                |
-| --- | ------------------------------ | ----------------------------------- |
-| 0   | a program is a tree            | ops over data, one root             |
-| 1   | two programs, one function     | equality is not syntactic           |
-| 2   | the reachable set              | reach is the closure of your laws   |
-| 3   | laws come from structure       | monoid / comonoid / trace / product |
-| 4   | staying correct                | the certificate is the referee      |
-| 5   | choosing among equals          | keep the frontier, don't scalarize  |
-| 6   | searching the space            | a policy orders legal moves         |
-| 7   | learning the policy            | trajectories, then reward           |
-| 8   | measuring the machine          | features describe, a model predicts |
-| 9   | the architecture               | four dimensions, swappable parts    |
-| 10  | advanced tensions              | where the design gets hard          |
-| 11  | laws about laws                | derivable · inverse · divergent     |
-| 12  | the vocabulary grows itself    | need → handler → laws → admission   |
-| 13  | true is not the same as paying | guard synthesis + adversarial sweep |
-| 14  | where discovery can pay        | exposure is bimodal                 |
-| 15  | sharing is a morphism          | Δ sharing, `loop` recurrence        |
-| 16  | a backend is a port            | swap the sink, core never changes   |
-| 17  | the ledger of negatives        | methodology as a result             |
+| #   | Level                            | Idea                                  |
+| --- | -------------------------------- | ------------------------------------- |
+| 0   | a program is a tree              | ops over data, one root               |
+| 1   | two programs, one function       | equality is not syntactic             |
+| 2   | the reachable set                | reach is the closure of your laws     |
+| 3   | laws come from structure         | monoid / comonoid / trace / product   |
+| 4   | staying correct                  | the certificate is the referee        |
+| 5   | choosing among equals            | keep the frontier, don't scalarize    |
+| 6   | searching the space              | a policy orders legal moves           |
+| 7   | learning the policy              | trajectories, then reward             |
+| 8   | measuring the machine            | features describe, a model predicts   |
+| 9   | the architecture                 | four dimensions, swappable parts      |
+| 10  | advanced tensions                | where the design gets hard            |
+| 11  | laws about laws                  | derivable · inverse · divergent       |
+| 12  | the vocabulary grows itself      | need → handler → laws → admission     |
+| 13  | true is not the same as paying   | guard synthesis + adversarial sweep   |
+| 14  | where discovery can pay          | exposure is bimodal                   |
+| 15  | sharing is a morphism            | Δ sharing, `loop` recurrence          |
+| 16  | a backend is a port              | swap the sink, core never changes     |
+| 17  | the ledger of negatives          | methodology as a result               |
+| 18  | approximation with a certificate | certificate **and** an economics test |
+| 19  | the program must run             | same term, different runtime          |
+| 20  | the cost model can be wrong      | the model ranks — and can be wrong    |
+| 21  | the payoff: where to improve     | idea → blocker → next measurement     |
 
 ## Layout
 
 ```
 apps/
   learn/                     the course
-    index.html               the eighteen levels + checkpoint shell
+    index.html               the twenty-two levels + checkpoint shell
     src/main.ts              Alpine bootstrap
     src/style.css            Tailwind v4 (@import + @theme tokens)
-    src/components/course.ts the level list, gating, progress
+    src/components/course.ts the level list, gating, progress, recap
     src/components/*.ts      one interactive per level
     tests/course.test.ts     gating, reach, compare, tensions, coherence, …
 packages/
@@ -58,8 +62,13 @@ packages/
     src/exposure.ts          the bimodal exposure screen (live histogram)
     src/combinators.ts       dag ↔ combinator bridge (Δ, loop)
     src/ports.ts             Source / Sink + a core-mutation counter
+    src/pricing.ts           the executor route table — the inversion, live
+    src/delivery.ts          one term, five deliveries (modeled vs measured)
+    src/bounded.ts           the bounded lane — certificate × economics, live
+    src/improve.ts           the project's open work as data (gap table)
     tests/engine.test.ts     vitest, incl. Catalan(3) = 5 bracketings
-    tests/cycle3.test.ts     vitest, the six new modules
+    tests/cycle3.test.ts     vitest, the six cycle-3 modules
+    tests/cycle4.test.ts     vitest, the four cycle-4 modules
 ```
 
 ## What is real, and what is a toy
@@ -73,20 +82,24 @@ level-11 probe computes real critical-pair verdicts (confluent /
 library-mediated / divergent) by bounded saturation.
 
 The **toy's own numbers** — costs, reach counts, verdicts — are computed
-live by the engine. Three of the new levels compute their idea live in TS:
-the guard-synthesis sweep (level 13 enumerates a shape domain and _finds_
-bad accepts for the naive guard, 0 for the exact one), the exposure
-histogram (level 14 buckets the workload slice on the fly), and the
-combinator round trip (level 15 checks `dag → comb → dag` is the identity).
-The minting funnel (level 12) and the backend swap (level 16) run live
-over a fixed bank of measured stage outcomes; the negatives (level 17) are
-a gallery of measured refusals.
+live by the engine. Several levels compute their idea live in TS: the
+guard-synthesis sweep (level 13 enumerates a shape domain and _finds_ bad
+accepts for the naive guard, 0 for the exact one), the exposure histogram
+(level 14 buckets the workload slice on the fly), the combinator round
+trip (level 15 checks `dag → comb → dag` is the identity), the bounded
+lane's economics (level 18 prices the certified member against dense and
+refuses it, live), the delivery model (level 19's modeled column is
+`work + launches × overhead`), the executor route table (level 20
+computes the routing inversion and its calibrated fix live), and the gap
+table (level 21 is data). The minting funnel (level 12) and the backend
+swap (level 16) run live over a fixed bank of measured stage outcomes;
+the negatives (level 17) are a gallery of measured refusals.
 
 The **measured numbers in the prose callouts** come from the real Python
 system (`project/retros/`): the **11 machine-admitted laws** the library
 ships (`catopt_core.laws.provenance.MACHINE_SHIPPED`; the newest is
 `mul_unsq_nat` −12.3 % on its source workload — the first minted from a
-corpus op-tuple, with four further laws machine-*assisted* but
+corpus op-tuple, with four further laws machine-_assisted_ but
 hand-integrated: `select_mul`, `softmax_fold`, `glu_fold`,
 `rms_norm_fold`), the false-but-cost-lowering
 candidate the oracle rejected, the **82-rule** basis catalogue (58 axioms
@@ -97,8 +110,12 @@ carrier lowering at **parity with the paper's own chunked implementation**
 (2.08 vs 2.12 ms at T = 2048), the contraction player's ~1.04× parity with
 best-of-N greedy at n = 40, the ~10× enumeration-vs-learned-proposer yield
 gap, the executor-routing inversion (modeled −20…30 %, measured 1.9–2.7×
-slower) and its measured-corrections fix, and the atom pay-null (a verified
-minted atom that fires zero certified laws on the corpus).
+slower) and its measured-corrections fix (**12/12** probe cases), the
+BiRefNet bounded lane (**20** certified offers at 1e-2, **56** at 3e-2,
+**0** delivered — the member priced **1.32×** dense), the `chainfuse`
+minted kernel (**2.94× vs `torch.compile`**, 86 vs 253 µs), and the atom
+pay-null (a verified minted atom that fires zero certified laws on the
+corpus).
 
 ## Stack
 
