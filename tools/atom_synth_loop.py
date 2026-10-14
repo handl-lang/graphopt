@@ -396,11 +396,26 @@ def _scan_fold_candidates(cap: int) -> list[Candidate]:
                     dim=1,
                 ),
             ),
-            _sf(_p("sigmoid", "a"), "b", Const(0.0)),
-            note="the SelectiveScan site -> the atom: emitted "
-            "sequence vs the fold's total — expected to die on "
-            "shape (the minted atom is the total, the corpus "
-            "emits per-step)",
+            _sf("a", "b", Const(0.0)),
+            cond=(
+                "and",
+                ("rank", "a", "==", 3),
+                ("shape-compat", "a", "b"),
+            ),
+            note="the SelectiveScan site -> the minted emitted-"
+            "sequence atom: scan_fold(a, b, 0) IS the corpus's "
+            "per-step output (the atom's body applies the sigmoid "
+            "gate itself, so the RHS passes the raw a).  Two exact "
+            "preconditions: rank 3 (the corpus spells dim=1, the "
+            "atom bakes axis=-2 — equal only at rank 3) and "
+            "shape-compat a/b (the atom broadcasts a,b then folds; "
+            "the corpus scans then broadcasts — the orders agree "
+            "only when nothing broadcasts into the scan axis).  The "
+            "law still fails on the real site: the corpus's "
+            "clamp_min(.,1e-6) stabilization is active there (the "
+            "gate cumprod underflows below 1e-6), and the minted "
+            "atom is the ideal unclamped recurrence — a semantics "
+            "gap the affine grammar cannot close",
         ),
         Candidate(
             "sf.b0",
