@@ -54,7 +54,6 @@ elementwise claims.
 
 from __future__ import annotations
 
-from collections import deque
 from itertools import combinations, permutations, product
 from typing import Any, NamedTuple
 
@@ -168,13 +167,30 @@ def eval_body(body: Any, env: dict, bindings: dict) -> Any:
         return _fold_eval(body, env, bindings)
     if kind == "fold_zip":
         _, steps, state = body
-        acc = env[state]
+        acc = _as_tensor(env[state])
         for a_s, b_s in steps:
-            acc = _eval_spec(a_s, env, bindings) * acc + _eval_spec(
-                b_s, env, bindings
+            acc = _as_tensor(_eval_spec(a_s, env, bindings)) * acc + (
+                _as_tensor(_eval_spec(b_s, env, bindings))
             )
         return acc
     raise ValueError(f"unknown handler-body tag: {kind!r}")
+
+
+def _as_tensor(v: Any) -> Any:
+    """Lift a scalar operand to a 0-dim tensor so it can broadcast.
+
+    A law or term may spell a fold operand — the initial state above
+    all — as a bare constant: ``Const(0.0)`` is the zero-carry scan,
+    the selective-scan site's init.  ``_eval_spec`` returns that
+    constant as a python number, and ``broadcast_tensors`` /
+    ``broadcast_to`` reject a bare number, so the operand is lifted
+    here; a tensor passes through untouched.  Without this the
+    recognition law that rewrites the spelled emitted sequence into
+    the minted atom is structurally unevaluable.
+    """
+    import torch
+
+    return v if torch.is_tensor(v) else torch.as_tensor(v)
 
 
 def _fold_eval(body: Any, env: dict, bindings: dict) -> Any:
@@ -194,14 +210,16 @@ def _fold_eval(body: Any, env: dict, bindings: dict) -> Any:
     else:
         _, a_s, b_s, state, emit, axis = body
     av, bv = torch.broadcast_tensors(
-        _eval_spec(a_s, env, bindings),
-        _eval_spec(b_s, env, bindings),
+        _as_tensor(_eval_spec(a_s, env, bindings)),
+        _as_tensor(_eval_spec(b_s, env, bindings)),
     )
     full = tuple(av.shape)
     if not full:
         raise ValueError("fold operands carry no step axis")
     ax = axis % len(full)
-    acc = torch.broadcast_to(env[state], full[:ax] + full[ax + 1 :])
+    acc = torch.broadcast_to(
+        _as_tensor(env[state]), full[:ax] + full[ax + 1 :]
+    )
     a_seq = av.movedim(ax, 0).unbind(0)
     b_seq = bv.movedim(ax, 0).unbind(0)
     slices = (
@@ -234,7 +252,9 @@ def _step_slices(emit: Any, env: dict, full: tuple, ax: int) -> dict:
         if m == "$acc":
             continue
         out[m] = (
-            torch.broadcast_to(env[m], full).movedim(ax, 0).unbind(0)
+            torch.broadcast_to(_as_tensor(env[m]), full)
+            .movedim(ax, 0)
+            .unbind(0)
         )
     return out
 
@@ -347,14 +367,57 @@ def _round_robin(gens: Any) -> Any:
     Fair interleave across columns: no partition's deep region can
     starve another partition's cheap candidates behind it.
     """
-    live = deque(g for g in gens)
+    live = [iter(g) for g in gens]
     while live:
-        g = live.popleft()
-        try:
-            yield next(g)
-        except StopIteration:
-            continue
-        live.append(g)
+        nxt = []
+        for it in live:
+            try:
+                yield next(it)
+            except StopIteration:
+                continue
+            nxt.append(it)
+        live = nxt
+
+
+def _canonical_emit_seeds(metas: list) -> list:
+    """Propose the canonical emitted-scan bodies first.
+
+    ``acc_t = g(m_a) ⊙ acc_{t-1} + m_b`` with the running
+    accumulator as the per-step output (``out_t = $acc``) — the
+    structural instance the ``fold_emit`` grammar exists to express,
+    and the selective-scan total the atom-synth loop targets.  The
+    round-robin column walk buried this form behind every column's
+    non-accumulator projections (the canonical ``$acc`` emit sits
+    past 200k proposals for a three-meta spec); seeding it ahead of
+    the walk puts it within the first few hundred.
+
+    The seed is structural, not a hard-coded answer: the gate ``g``
+    ranges over the grammar's unary vocabulary and the plain
+    identity, ``m_a``/``m_b`` over the non-state metas, so the
+    verifier still decides which instance (if any) is the atom.  It
+    is bounded to the token axis ``FOLD_AXES[0]`` — the corpus's
+    ``(B, T, C)`` middle axis, where the emitted scan lives — so the
+    seed stays a few hundred candidates rather than scaling with the
+    meta count and crowding out the other families' budget.
+    """
+    out = []
+    for state in metas:
+        rest = tuple(m for m in metas if m != state)
+        for a_m in rest:
+            a_sides = (a_m, *((u, a_m) for u in _UNARY))
+            for a_side in a_sides:
+                for b_m in rest:
+                    out.append(
+                        (
+                            "fold_emit",
+                            a_side,
+                            b_m,
+                            state,
+                            "$acc",
+                            FOLD_AXES[0],
+                        )
+                    )
+    return out
 
 
 def _contract_bodies(metas: list, consts: tuple, max_ops: int) -> Any:
@@ -391,12 +454,17 @@ def _contract_column(
                         yield ("contract", eq, e1, e2)
 
 
-def _side_exprs(
-    required: frozenset, consts: tuple, n: int, empty: Any
-) -> list:
-    """EW exprs for one fold side; *empty* fills an empty role."""
+def _side_exprs(required: frozenset, consts: tuple, n: int) -> list:
+    """EW exprs for one fold side, covering exactly *required*.
+
+    An empty side has no expression.  The former ``1.0``/``0.0``
+    fillers were structurally dead: ``_fold_eval`` broadcasts the two
+    sides through ``torch.broadcast_tensors``, which rejects a bare
+    float, so every candidate carrying one raised — the generator no
+    longer emits that region.
+    """
     if not required:
-        return [empty] if n == 0 else []
+        return []
     return _ew_exprs(required, tuple(sorted(required)) + consts, n)
 
 
@@ -413,8 +481,8 @@ def _fold_column(
         lo = max(0, total - max_ops)
         for i in range(lo, min(max_ops, total) + 1):
             j = total - i
-            for ea in _side_exprs(a_set, consts, i, 1.0):
-                for eb in _side_exprs(b_set, consts, j, 0.0):
+            for ea in _side_exprs(a_set, consts, i):
+                for eb in _side_exprs(b_set, consts, j):
                     yield ("fold", ea, eb, state, axis)
 
 
@@ -484,10 +552,8 @@ def _fold_emit_column(
         for total in range(2 * _MAX_EW_OPS + 1):
             lo = max(0, total - _MAX_EW_OPS)
             for i in range(lo, min(_MAX_EW_OPS, total) + 1):
-                for ea in _side_exprs(a_set, consts, i, 1.0):
-                    for eb in _side_exprs(
-                        b_set, consts, total - i, 0.0
-                    ):
+                for ea in _side_exprs(a_set, consts, i):
+                    for eb in _side_exprs(b_set, consts, total - i):
                         yield ("fold_emit", ea, eb, state, emit, axis)
 
 
@@ -625,8 +691,9 @@ def propose_bodies(
 
     Deterministic and simplest-first: the ``ew`` replay (elementwise
     specs only — the ``genkernel`` baseline) leads, then the
-    families interleave round-robin so no family's deep region
-    starves another's cheap candidates.  *families* restricts the
+    ``fold_emit`` canonical emitted-scan forms (:func:`_canonical_emit_seeds`
+    — the ordering gap the round-robin walk left), then every admitted
+    family's columns interleave round-robin.  *families* restricts the
     template vocabulary; *max_ops* bounds each elementwise factor's
     depth (``_MAX_EW_OPS`` tops the grammar).
     """
@@ -634,6 +701,8 @@ def propose_bodies(
     metas = _spec_metas(spec)
     if "ew" in fams and elementwise_spec(spec):
         yield ("ew", spec)
+    if "fold_emit" in fams and len(metas) >= 3:
+        yield from _canonical_emit_seeds(metas)
     gens = _family_gens(fams, metas, tuple(_spec_consts(spec)), max_ops)
     yield from _round_robin(gens)
 
