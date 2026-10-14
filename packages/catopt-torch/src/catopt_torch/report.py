@@ -105,7 +105,9 @@ def _verify_outputs(
     """
     ref_flat = _flatten_outputs(ref_out)
     out_flat = _flatten_outputs(out)
-    if not isinstance(out, (tuple, list)) or len(out_flat) != len(ref_flat):
+    if not isinstance(out, (tuple, list)) or len(out_flat) != len(
+        ref_flat
+    ):
         return VerifyReport(
             max_abs=float("inf"),
             max_rel=float("inf"),
