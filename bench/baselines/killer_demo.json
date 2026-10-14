@@ -4,28 +4,25 @@
   "title": "Compositional pairing demo",
   "summary": "Per-model lowering autotune (eager / generic / batched / compiled): the fastest verified lowering is reported, including when eager wins.",
   "env": {
-    "timestamp_utc": "2026-10-02T00:19:09+00:00",
+    "timestamp_utc": "2026-10-14T06:18:43+00:00",
     "python": "3.13.9",
-    "torch": "2.14.0+cpu",
-    "torch_cuda": "none",
+    "torch": "2.14.0+cu130",
+    "torch_cuda": "13.0",
     "device": "cpu",
     "device_name": "12th Gen Intel(R) Core(TM) i5-12500H",
     "cpu_count": 16,
-    "git_sha": "ba38bd9",
+    "git_sha": "2c782dd",
     "git_dirty": true,
     "argv": [
       "/home/luis/Desktop/catopt/bench/__main__.py",
       "run",
       "killer_demo",
-      "--device",
-      "cpu",
-      "--out",
-      "/tmp/canon",
-      "--no-plots",
-      "--no-html"
+      "--pin"
     ]
   },
-  "provenance": {},
+  "provenance": {
+    "quick": false
+  },
   "units": {
     "median_s": "seconds"
   },
@@ -33,13 +30,13 @@
     {
       "claim": "the Autotuned lowering beats eager on at least one model",
       "verdict": "win",
-      "headline": "best 2.55\u00d7 vs eager on matrix_chain",
+      "headline": "best 2.69\u00d7 vs eager on matrix_chain",
       "metric": "catopt_best / eager",
-      "value": 2.5523617520681747,
+      "value": 2.68929375222698,
       "evidence": {
         "picks": {
           "linear_recurrence": "eager",
-          "residual_mlp": "generic",
+          "residual_mlp": "batched",
           "matrix_chain": "batched",
           "retnet_stack": "eager"
         }
@@ -69,7 +66,7 @@
         {
           "name": "inductor",
           "flops": null,
-          "note": "torch.compile eager \u2014 compiled in 2.5s"
+          "note": "torch.compile eager \u2014 compiled in 2.2s"
         },
         {
           "name": "catopt_best",
@@ -78,17 +75,17 @@
         }
       ],
       "median_s": {
-        "eager": 3.395887500118988e-05,
-        "inductor": 2.1599000319838524e-05,
-        "catopt_best": 3.586057000575238e-05
+        "eager": 2.618153050025285e-05,
+        "inductor": 2.3167000108514912e-05,
+        "catopt_best": 2.6355586000590847e-05
       },
       "aux": {
         "pick": "eager",
         "verified": true,
         "lowering": "batched",
-        "search_s": 2.13,
-        "autotune": "eager:0.031ms generic:0.057ms batched:11.527ms compiled:unknown",
-        "inductor_status": "compiled in 2.5s"
+        "search_s": 3.84,
+        "autotune": "eager:0.028ms generic:0.051ms batched:0.290ms compiled:unknown",
+        "inductor_status": "compiled in 2.2s"
       }
     },
     {
@@ -105,26 +102,26 @@
         {
           "name": "inductor",
           "flops": null,
-          "note": "torch.compile eager \u2014 compiled in 0.4s"
+          "note": "torch.compile eager \u2014 compiled in 1.4s"
         },
         {
           "name": "catopt_best",
           "flops": null,
-          "note": "pick=generic"
+          "note": "pick=batched"
         }
       ],
       "median_s": {
-        "eager": 4.356839498541376e-05,
-        "inductor": 6.233549902390223e-05,
-        "catopt_best": 4.142211999351275e-05
+        "eager": 3.2263470000543746e-05,
+        "inductor": 5.415499981609173e-05,
+        "catopt_best": 3.070161100004043e-05
       },
       "aux": {
-        "pick": "generic",
+        "pick": "batched",
         "verified": true,
         "lowering": "generic",
-        "search_s": 0.06,
-        "autotune": "eager:18.651ms generic:14.848ms batched:21.486ms compiled:unknown",
-        "inductor_status": "compiled in 0.4s"
+        "search_s": 0.05,
+        "autotune": "eager:0.045ms generic:0.044ms batched:0.043ms compiled:unknown",
+        "inductor_status": "compiled in 1.4s"
       }
     },
     {
@@ -150,16 +147,16 @@
         }
       ],
       "median_s": {
-        "eager": 1.4964060500460618e-05,
-        "inductor": 3.332899905217346e-05,
-        "catopt_best": 5.862829000761849e-06
+        "eager": 1.1455955449991963e-05,
+        "inductor": 3.289500000391854e-05,
+        "catopt_best": 4.259837900008279e-06
       },
       "aux": {
         "pick": "batched",
         "verified": true,
         "lowering": "generic",
-        "search_s": 0.26,
-        "autotune": "eager:6.565ms generic:0.016ms batched:0.015ms compiled:unknown",
+        "search_s": 0.03,
+        "autotune": "eager:0.015ms generic:0.006ms batched:0.006ms compiled:unknown",
         "inductor_status": "compiled in 0.1s"
       }
     },
@@ -177,7 +174,7 @@
         {
           "name": "inductor",
           "flops": null,
-          "note": "torch.compile eager \u2014 compiled in 0.4s"
+          "note": "torch.compile eager \u2014 compiled in 2.3s"
         },
         {
           "name": "catopt_best",
@@ -186,17 +183,17 @@
         }
       ],
       "median_s": {
-        "eager": 0.0004153083000346669,
-        "inductor": 7.13775007170625e-05,
-        "catopt_best": 0.0004083965499376063
+        "eager": 0.0002895666899985372,
+        "inductor": 6.039399977453286e-05,
+        "catopt_best": 0.00030897382000148353
       },
       "aux": {
         "pick": "eager",
         "verified": true,
         "lowering": "batched",
-        "search_s": 56.59,
-        "autotune": "eager:1.563ms generic:2.653ms batched:2.015ms compiled:unknown",
-        "inductor_status": "compiled in 0.4s"
+        "search_s": 28.3,
+        "autotune": "eager:0.293ms generic:0.486ms batched:0.446ms compiled:unknown",
+        "inductor_status": "compiled in 2.3s"
       }
     }
   ]

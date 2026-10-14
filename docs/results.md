@@ -15,10 +15,10 @@ per-suite reports (timings, plots, raw metrics) are produced by
 
 | verdict | finding | headline |
 |---|---|---|
-| **WIN** | bounded rewrites (error_budget) buy wall-time on a real checkpoint | 4/5 budgets delivered a bounded member; best 1.322× vs eager |
+| **WIN** | bounded rewrites (error_budget) buy wall-time on a real checkpoint | 4/5 budgets delivered a bounded member; best 1.410× vs eager |
 | **WIN** | every budget's optimized module stays within the fp32 gate | 5/5 budgets optimized cleanly |
 
-Measured 2026-10-02T01:00:43+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git `b63355d` (dirty)) — baseline [`bench/baselines/bounded_e2e.json`](../bench/baselines/bounded_e2e.json).
+Measured 2026-10-14T06:54:12+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git `2c782dd`) — baseline [`bench/baselines/bounded_e2e.json`](../bench/baselines/bounded_e2e.json).
 
 ## MiniGPT end-to-end
 
@@ -28,10 +28,10 @@ Measured 2026-10-02T01:00:43+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git 
 
 | verdict | finding | headline |
 |---|---|---|
-| **WIN** | the composed catopt+Inductor module beats plain Inductor end-to-end | best 1.03× vs Inductor on tiny_llama@4x256 |
+| **WIN** | the composed catopt+Inductor module beats plain Inductor end-to-end | best 1.06× vs Inductor on tiny_llama@4x128 |
 | **WIN** | the optimized module verifies against eager | 5/5 cells verified |
 
-Measured 2026-10-02T00:47:33+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git `f1e5d1a` (dirty)) — baseline [`bench/baselines/e2e_model.json`](../bench/baselines/e2e_model.json).
+Measured 2026-10-14T06:33:13+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git `2c782dd`) — baseline [`bench/baselines/e2e_model.json`](../bench/baselines/e2e_model.json).
 
 ## Compositional pairing demo
 
@@ -41,10 +41,10 @@ Measured 2026-10-02T00:47:33+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git 
 
 | verdict | finding | headline |
 |---|---|---|
-| **WIN** | the Autotuned lowering beats eager on at least one model | best 2.55× vs eager on matrix_chain |
+| **WIN** | the Autotuned lowering beats eager on at least one model | best 2.69× vs eager on matrix_chain |
 | **WIN** | every model's optimized lowering verifies | 4/4 models verified |
 
-Measured 2026-10-02T00:19:09+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git `ba38bd9` (dirty)) — baseline [`bench/baselines/killer_demo.json`](../bench/baselines/killer_demo.json).
+Measured 2026-10-14T06:18:43+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git `2c782dd`) — baseline [`bench/baselines/killer_demo.json`](../bench/baselines/killer_demo.json).
 
 ## Rewrite-law effect bench
 
@@ -56,7 +56,7 @@ Measured 2026-10-02T00:19:09+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git 
 |---|---|---|
 | **WIN** | every registered law fires, is picked by extraction, and lowers to a verified term | 11 verified / 11 picked / 13 fired across 13 cells |
 
-Measured 2026-10-02T00:18:07+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git `ba38bd9` (dirty)) — baseline [`bench/baselines/law_bench.json`](../bench/baselines/law_bench.json).
+Measured 2026-10-14T06:13:49+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git `2c782dd`) — baseline [`bench/baselines/law_bench.json`](../bench/baselines/law_bench.json).
 
 ## Morphism-window composition
 
@@ -66,10 +66,10 @@ Measured 2026-10-02T00:18:07+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git 
 
 | verdict | finding | headline |
 |---|---|---|
-| **WIN** | morphism windows convert term-level flops headroom into measured wall time | best 14.83× vs eager on chain_x4@4096x128 |
+| **WIN** | morphism windows convert term-level flops headroom into measured wall time | best 12.85× vs eager on chain_x4@4096x128 |
 | **WIN** | every morphism rewrite verifies equivalent | 14/14 cells verified |
 
-Measured 2026-10-02T00:40:26+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git `f1e5d1a` (dirty)) — baseline [`bench/baselines/morphism_e2e.json`](../bench/baselines/morphism_e2e.json).
+Measured 2026-10-14T06:17:01+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git `2c782dd`) — baseline [`bench/baselines/morphism_e2e.json`](../bench/baselines/morphism_e2e.json).
 
 ## Weight-chain reassociation vs Inductor
 
@@ -79,10 +79,10 @@ Measured 2026-10-02T00:40:26+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git 
 
 | verdict | finding | headline |
 |---|---|---|
-| **WIN** | catopt reaches a weight-folded form Inductor's post-grad graph cannot express | 17.12× vs Inductor at (k,d,B·T)=(16,512,4096) (18.63× vs eager) |
+| **WIN** | catopt reaches a weight-folded form Inductor's post-grad graph cannot express | 14.92× vs Inductor at (k,d,B·T)=(16,512,4096) (17.40× vs eager) |
 | **WIN** | every timed cell passes the fp32 equivalence gate | 12/12 cells verified |
 
-Measured 2026-10-02T00:22:06+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git `ba38bd9` (dirty)) — baseline [`bench/baselines/reassoc_scale.json`](../bench/baselines/reassoc_scale.json).
+Measured 2026-10-14T06:09:00+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git `2c782dd`) — baseline [`bench/baselines/reassoc_scale.json`](../bench/baselines/reassoc_scale.json).
 
 ## Tooling-level measurements (hand-maintained)
 
@@ -121,11 +121,10 @@ Two reconciliation notes:
   teacher at equal wall-clock (the figure in the table above).  The
   curriculum-RL weights remain bundled as an alternate artifact.
 - **The `bounded_e2e` baseline's headline is vs eager** (best
-  1.322×, above).  Its per-cell `speedup_vs_inductor` spans
-  0.94–1.25 (1.16–1.25 over the budgets that delivered a bounded
-  member) — so the README's "1.15–1.32× vs Inductor" is not the
-  pinned baseline's literal column: the 1.32 is vs eager and the
-  vs-Inductor delivered range tops out at 1.25 on this baseline.
+  1.410×, above).  Its per-cell `speedup_vs_inductor` spans
+  0.95–1.34 (1.16–1.34 over the budgets that delivered a bounded
+  member) — the vs-Inductor delivered range tops out at 1.34 on this
+  baseline.
 
 ## Machine-derived structure — results by kind (2026-10-15)
 

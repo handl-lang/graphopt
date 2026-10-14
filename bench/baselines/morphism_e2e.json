@@ -4,25 +4,20 @@
   "title": "Morphism-window composition",
   "summary": "Term-flops \u2192 wall-time conversion for the morphism laws: which structural rewrites actually pay off at GEMM-bound sizes.",
   "env": {
-    "timestamp_utc": "2026-10-02T00:40:26+00:00",
+    "timestamp_utc": "2026-10-14T06:17:47+00:00",
     "python": "3.13.9",
-    "torch": "2.14.0+cpu",
-    "torch_cuda": "none",
+    "torch": "2.14.0+cu130",
+    "torch_cuda": "13.0",
     "device": "cpu",
     "device_name": "12th Gen Intel(R) Core(TM) i5-12500H",
     "cpu_count": 16,
-    "git_sha": "f1e5d1a",
+    "git_sha": "2c782dd",
     "git_dirty": true,
     "argv": [
       "/home/luis/Desktop/catopt/bench/__main__.py",
       "run",
       "morphism_e2e",
-      "--device",
-      "cpu",
-      "--out",
-      "/tmp/canon2",
-      "--no-plots",
-      "--no-html"
+      "--pin"
     ]
   },
   "provenance": {
@@ -35,9 +30,9 @@
     {
       "claim": "morphism windows convert term-level flops headroom into measured wall time",
       "verdict": "win",
-      "headline": "best 14.83\u00d7 vs eager on chain_x4@4096x128",
+      "headline": "best 12.85\u00d7 vs eager on chain_x4@4096x128",
       "metric": "morphism / eager",
-      "value": 14.8345277898,
+      "value": 12.853765156817643,
       "evidence": {
         "term_flops_ratio": {
           "chain_x2@8x16": 6.0625,
@@ -97,10 +92,10 @@
         }
       ],
       "median_s": {
-        "eager": 2.7793757000836195e-05,
-        "inductor": 3.263299913669471e-05,
-        "morphism": 7.998251000572056e-06,
-        "morphism+inductor": 2.3296999643207528e-05
+        "eager": 2.519548219997887e-05,
+        "inductor": 4.032150036437088e-05,
+        "morphism": 7.18427800002246e-06,
+        "morphism+inductor": 3.347999972902471e-05
       },
       "aux": {
         "name": "chain_x2@8x16",
@@ -110,7 +105,7 @@
           "dim": 16
         },
         "param_bytes_eager": 12288,
-        "opt_s": 1.25,
+        "opt_s": 2.98,
         "fires": {
           "out_in_compose": 1
         },
@@ -138,7 +133,7 @@
         "inductor_status": "compiled in 1.2s",
         "inductor_verified": true,
         "inductor_rel": 0.0,
-        "morph_ind_status": "compiled in 0.3s",
+        "morph_ind_status": "compiled in 0.1s",
         "morph_ind_verified": true,
         "morph_ind_rel": 3.8991816500633817e-16
       }
@@ -173,10 +168,10 @@
         }
       ],
       "median_s": {
-        "eager": 0.00600213209991125,
-        "inductor": 0.005413960000623774,
-        "morphism": 0.0005001485000320826,
-        "morphism+inductor": 0.0002308805005668546
+        "eager": 0.001035821224995743,
+        "inductor": 0.0010331559997212025,
+        "morphism": 0.00016416964700010793,
+        "morphism+inductor": 0.00020450849979170016
       },
       "aux": {
         "name": "chain_x2@1024x64",
@@ -186,7 +181,7 @@
           "dim": 64
         },
         "param_bytes_eager": 196608,
-        "opt_s": 0.91,
+        "opt_s": 0.23,
         "fires": {
           "out_in_compose": 1
         },
@@ -211,7 +206,7 @@
         "rt_flops_eager": 50462720.0,
         "rt_flops_morphism": 8388608.0,
         "rt_flops_ratio": 6.015625,
-        "inductor_status": "compiled in 0.2s",
+        "inductor_status": "compiled in 0.1s",
         "inductor_verified": true,
         "inductor_rel": 0.0,
         "morph_ind_status": "compiled in 0.1s",
@@ -249,10 +244,10 @@
         }
       ],
       "median_s": {
-        "eager": 0.018370615000094404,
-        "inductor": 0.01685554649975529,
-        "morphism": 0.002665624000655953,
-        "morphism+inductor": 0.0027006890004486195
+        "eager": 0.015694103750001888,
+        "inductor": 0.016165424999599054,
+        "morphism": 0.0025783686399972793,
+        "morphism+inductor": 0.002554348000558093
       },
       "aux": {
         "name": "chain_x2@4096x128",
@@ -325,10 +320,10 @@
         }
       ],
       "median_s": {
-        "eager": 5.3365430012490833e-05,
-        "inductor": 4.828899909625761e-05,
-        "morphism": 1.065851100065629e-05,
-        "morphism+inductor": 2.61329996646964e-05
+        "eager": 4.643574199963041e-05,
+        "inductor": 5.44380000064848e-05,
+        "morphism": 9.151426700009323e-06,
+        "morphism+inductor": 3.481150042716763e-05
       },
       "aux": {
         "name": "chain_x4@8x16",
@@ -338,7 +333,7 @@
           "dim": 16
         },
         "param_bytes_eager": 24576,
-        "opt_s": 0.95,
+        "opt_s": 1.22,
         "fires": {
           "window_compose": 1
         },
@@ -375,7 +370,7 @@
         "rt_flops_eager": 49664.0,
         "rt_flops_morphism": 4096.0,
         "rt_flops_ratio": 12.125,
-        "inductor_status": "compiled in 0.1s",
+        "inductor_status": "compiled in 0.2s",
         "inductor_verified": true,
         "inductor_rel": 0.0,
         "morph_ind_status": "compiled in 0.1s",
@@ -413,10 +408,10 @@
         }
       ],
       "median_s": {
-        "eager": 0.002295118399888452,
-        "inductor": 0.0022349339997163042,
-        "morphism": 0.00018764828000712442,
-        "morphism+inductor": 0.00021665299937012605
+        "eager": 0.0020799927799998843,
+        "inductor": 0.002053789500223502,
+        "morphism": 0.0001675657414998568,
+        "morphism+inductor": 0.00020983899958082475
       },
       "aux": {
         "name": "chain_x4@1024x64",
@@ -426,7 +421,7 @@
           "dim": 64
         },
         "param_bytes_eager": 393216,
-        "opt_s": 1.12,
+        "opt_s": 1.21,
         "fires": {
           "window_compose": 1
         },
@@ -463,7 +458,7 @@
         "rt_flops_eager": 100925440.0,
         "rt_flops_morphism": 8388608.0,
         "rt_flops_ratio": 12.03125,
-        "inductor_status": "compiled in 0.1s",
+        "inductor_status": "compiled in 0.2s",
         "inductor_verified": true,
         "inductor_rel": 0.0,
         "morph_ind_status": "compiled in 0.1s",
@@ -501,10 +496,10 @@
         }
       ],
       "median_s": {
-        "eager": 0.04156014900036098,
-        "inductor": 0.035265617999357346,
-        "morphism": 0.0028015821999360924,
-        "morphism+inductor": 0.0027510609997989377
+        "eager": 0.031215194000651536,
+        "inductor": 0.030196245999832172,
+        "morphism": 0.0024284864099990955,
+        "morphism+inductor": 0.0024690504997124663
       },
       "aux": {
         "name": "chain_x4@4096x128",
@@ -514,7 +509,7 @@
           "dim": 128
         },
         "param_bytes_eager": 1572864,
-        "opt_s": 1.21,
+        "opt_s": 1.34,
         "fires": {
           "window_compose": 1
         },
@@ -551,7 +546,7 @@
         "rt_flops_eager": 1612709888.0,
         "rt_flops_morphism": 134217728.0,
         "rt_flops_ratio": 12.015625,
-        "inductor_status": "compiled in 0.1s",
+        "inductor_status": "compiled in 0.2s",
         "inductor_verified": true,
         "inductor_rel": 0.0,
         "morph_ind_status": "compiled in 0.1s",
@@ -589,10 +584,10 @@
         }
       ],
       "median_s": {
-        "eager": 4.369453499748488e-05,
-        "inductor": 0.0001406344990755315,
-        "morphism": 0.00011195102500096255,
-        "morphism+inductor": 3.742600165423937e-05
+        "eager": 3.855407750006634e-05,
+        "inductor": 4.9284499709756346e-05,
+        "morphism": 2.7476130999730228e-05,
+        "morphism+inductor": 4.457700015336741e-05
       },
       "aux": {
         "name": "resid_x3@8x16",
@@ -602,7 +597,7 @@
           "dim": 16
         },
         "param_bytes_eager": 18432,
-        "opt_s": 0.45,
+        "opt_s": 0.42,
         "fires": {
           "residual_reassoc": 1
         },
@@ -627,10 +622,10 @@
         "rt_flops_eager": 37632.0,
         "rt_flops_morphism": 13312.0,
         "rt_flops_ratio": 2.826923076923077,
-        "inductor_status": "compiled in 0.1s",
+        "inductor_status": "compiled in 0.2s",
         "inductor_verified": true,
         "inductor_rel": 0.0,
-        "morph_ind_status": "compiled in 0.5s",
+        "morph_ind_status": "compiled in 1.5s",
         "morph_ind_verified": true,
         "morph_ind_rel": 2.5985308991305546e-16
       }
@@ -665,10 +660,10 @@
         }
       ],
       "median_s": {
-        "eager": 0.0021977572499963572,
-        "inductor": 0.002100704999975278,
-        "morphism": 0.0009655034999013878,
-        "morphism+inductor": 0.0007585269995615818
+        "eager": 0.001651315680001062,
+        "inductor": 0.0015941299998303293,
+        "morphism": 0.0007534507800028223,
+        "morphism+inductor": 0.0006053409997548442
       },
       "aux": {
         "name": "resid_x3@1024x64",
@@ -678,12 +673,12 @@
           "dim": 64
         },
         "param_bytes_eager": 294912,
-        "opt_s": 0.42,
+        "opt_s": 0.44,
         "fires": {
           "residual_reassoc": 1
         },
         "n_rewritten": 3,
-        "e2e_rel": 4.503819826950613e-16,
+        "e2e_rel": 4.825521243161371e-16,
         "n_grafted": 1,
         "matches": {
           "residual_reassoc:blocks.0+blocks.1+blocks.2": {
@@ -691,7 +686,7 @@
             "boundary": "residual_wrapped+residual_wrapped",
             "cost_before": 75890688.0,
             "cost_after": 25362432.0,
-            "rel_diff": 4.503819826950613e-16
+            "rel_diff": 4.825521243161371e-16
           }
         },
         "term_flops_before": 75890688.0,
@@ -699,16 +694,16 @@
         "flops_ratio": 2.992248062015504,
         "param_bytes_opt": 98304,
         "morph_verified": true,
-        "morph_rel": 4.503819826950613e-16,
+        "morph_rel": 4.825521243161371e-16,
         "rt_flops_eager": 75890688.0,
         "rt_flops_morphism": 25690112.0,
         "rt_flops_ratio": 2.954081632653061,
-        "inductor_status": "compiled in 0.1s",
+        "inductor_status": "compiled in 0.2s",
         "inductor_verified": true,
         "inductor_rel": 0.0,
-        "morph_ind_status": "compiled in 0.2s",
+        "morph_ind_status": "compiled in 0.7s",
         "morph_ind_verified": true,
-        "morph_ind_rel": 4.503819826950613e-16
+        "morph_ind_rel": 4.825521243161371e-16
       }
     },
     {
@@ -741,10 +736,10 @@
         }
       ],
       "median_s": {
-        "eager": 0.03180620800048928,
-        "inductor": 0.030201773000953835,
-        "morphism": 0.014746376499715552,
-        "morphism+inductor": 0.011148749500534905
+        "eager": 0.027288138399944727,
+        "inductor": 0.02309529299964197,
+        "morphism": 0.013564944500058119,
+        "morphism+inductor": 0.00796999100020912
       },
       "aux": {
         "name": "resid_x3@4096x128",
@@ -754,7 +749,7 @@
           "dim": 128
         },
         "param_bytes_eager": 1179648,
-        "opt_s": 0.56,
+        "opt_s": 0.57,
         "fires": {
           "residual_reassoc": 1
         },
@@ -779,10 +774,10 @@
         "rt_flops_eager": 1211105280.0,
         "rt_flops_morphism": 406847488.0,
         "rt_flops_ratio": 2.9768041237113403,
-        "inductor_status": "compiled in 0.1s",
+        "inductor_status": "compiled in 0.2s",
         "inductor_verified": true,
         "inductor_rel": 0.0,
-        "morph_ind_status": "compiled in 0.1s",
+        "morph_ind_status": "compiled in 0.7s",
         "morph_ind_verified": true,
         "morph_ind_rel": 6.638900357069024e-16
       }
@@ -817,10 +812,10 @@
         }
       ],
       "median_s": {
-        "eager": 0.0001966052900024806,
-        "inductor": 0.00017528100033814553,
-        "morphism": 0.00015376843999547417,
-        "morphism+inductor": 4.229700061841868e-05
+        "eager": 5.0578224999753735e-05,
+        "inductor": 5.7250000281783286e-05,
+        "morphism": 3.690456100002848e-05,
+        "morphism+inductor": 4.8816000344231725e-05
       },
       "aux": {
         "name": "resid_x4@8x16",
@@ -830,7 +825,7 @@
           "dim": 16
         },
         "param_bytes_eager": 24576,
-        "opt_s": 0.5,
+        "opt_s": 0.46,
         "fires": {
           "residual_reassoc": 1
         },
@@ -855,10 +850,10 @@
         "rt_flops_eager": 50176.0,
         "rt_flops_morphism": 17920.0,
         "rt_flops_ratio": 2.8,
-        "inductor_status": "compiled in 0.1s",
+        "inductor_status": "compiled in 0.2s",
         "inductor_verified": true,
         "inductor_rel": 0.0,
-        "morph_ind_status": "compiled in 0.2s",
+        "morph_ind_status": "compiled in 0.9s",
         "morph_ind_verified": true,
         "morph_ind_rel": 4.0525399812299945e-16
       }
@@ -893,10 +888,10 @@
         }
       ],
       "median_s": {
-        "eager": 0.006497870999737643,
-        "inductor": 0.0025574119990778854,
-        "morphism": 0.0013021448000472447,
-        "morphism+inductor": 0.0009350635009468533
+        "eager": 0.002242009940000571,
+        "inductor": 0.0021633699998346856,
+        "morphism": 0.0010676331900003788,
+        "morphism+inductor": 0.0008466575000056764
       },
       "aux": {
         "name": "resid_x4@1024x64",
@@ -906,7 +901,7 @@
           "dim": 64
         },
         "param_bytes_eager": 393216,
-        "opt_s": 0.51,
+        "opt_s": 0.49,
         "fires": {
           "residual_reassoc": 1
         },
@@ -919,7 +914,7 @@
             "boundary": "residual_wrapped+residual_wrapped+residual_wrapped",
             "cost_before": 101187584.0,
             "cost_after": 33882112.0,
-            "rel_diff": 5.158366324196072e-16
+            "rel_diff": 4.585214510396509e-16
           }
         },
         "term_flops_before": 101187584.0,
@@ -931,10 +926,10 @@
         "rt_flops_eager": 101187584.0,
         "rt_flops_morphism": 34340864.0,
         "rt_flops_ratio": 2.946564885496183,
-        "inductor_status": "compiled in 0.1s",
+        "inductor_status": "compiled in 0.2s",
         "inductor_verified": true,
         "inductor_rel": 0.0,
-        "morph_ind_status": "compiled in 0.2s",
+        "morph_ind_status": "compiled in 0.9s",
         "morph_ind_verified": true,
         "morph_ind_rel": 4.585214510396509e-16
       }
@@ -969,10 +964,10 @@
         }
       ],
       "median_s": {
-        "eager": 0.0418420360001619,
-        "inductor": 0.061331109500315506,
-        "morphism": 0.02016075249957794,
-        "morphism+inductor": 0.014497685000605998
+        "eager": 0.0362913314997968,
+        "inductor": 0.031402669999806676,
+        "morphism": 0.018304556900011447,
+        "morphism+inductor": 0.011556960500001878
       },
       "aux": {
         "name": "resid_x4@4096x128",
@@ -982,12 +977,12 @@
           "dim": 128
         },
         "param_bytes_eager": 1572864,
-        "opt_s": 0.71,
+        "opt_s": 0.66,
         "fires": {
           "residual_reassoc": 1
         },
         "n_rewritten": 4,
-        "e2e_rel": 8.517074426866389e-16,
+        "e2e_rel": 8.060802582569976e-16,
         "n_grafted": 1,
         "matches": {
           "residual_reassoc:blocks.0+blocks.1+blocks.2+blocks.3": {
@@ -995,7 +990,7 @@
             "boundary": "residual_wrapped+residual_wrapped+residual_wrapped",
             "cost_before": 1614807040.0,
             "cost_after": 539492352.0,
-            "rel_diff": 8.517074426866389e-16
+            "rel_diff": 8.060802582569976e-16
           }
         },
         "term_flops_before": 1614807040.0,
@@ -1003,16 +998,16 @@
         "flops_ratio": 2.993197278911565,
         "param_bytes_opt": 524288,
         "morph_verified": true,
-        "morph_rel": 8.517074426866389e-16,
+        "morph_rel": 8.060802582569976e-16,
         "rt_flops_eager": 1614807040.0,
         "rt_flops_morphism": 543162368.0,
         "rt_flops_ratio": 2.972972972972973,
-        "inductor_status": "compiled in 0.1s",
+        "inductor_status": "compiled in 0.2s",
         "inductor_verified": true,
         "inductor_rel": 0.0,
-        "morph_ind_status": "compiled in 0.2s",
+        "morph_ind_status": "compiled in 0.9s",
         "morph_ind_verified": true,
-        "morph_ind_rel": 8.517074426866389e-16
+        "morph_ind_rel": 8.060802582569976e-16
       }
     },
     {
@@ -1045,10 +1040,10 @@
         }
       ],
       "median_s": {
-        "eager": 6.606445000215899e-05,
-        "inductor": 6.822599971201271e-05,
-        "morphism": 7.381332001386909e-05,
-        "morphism+inductor": 8.415699994657189e-05
+        "eager": 6.110334100003457e-05,
+        "inductor": 7.773149945933255e-05,
+        "morphism": 6.990397200024745e-05,
+        "morphism+inductor": 9.543499982100911e-05
       },
       "aux": {
         "name": "kv_x2@8x16",
@@ -1058,7 +1053,7 @@
           "dim": 16
         },
         "param_bytes_eager": 8192,
-        "opt_s": 0.06,
+        "opt_s": 0.05,
         "fires": {
           "kv_latent_share": 1
         },
@@ -1102,10 +1097,10 @@
         "rt_flops_eager": 16512.0,
         "rt_flops_morphism": 11648.0,
         "rt_flops_ratio": 1.4175824175824177,
-        "inductor_status": "compiled in 0.1s",
+        "inductor_status": "compiled in 0.2s",
         "inductor_verified": true,
         "inductor_rel": 0.0,
-        "morph_ind_status": "compiled in 0.2s",
+        "morph_ind_status": "compiled in 0.8s",
         "morph_ind_verified": true,
         "morph_ind_rel": 2.5058835729339943e-14
       }
@@ -1140,10 +1135,10 @@
         }
       ],
       "median_s": {
-        "eager": 0.002719947999958094,
-        "inductor": 0.0029456199990818277,
-        "morphism": 0.0029406719986582175,
-        "morphism+inductor": 0.002938196499599144
+        "eager": 0.002403570310007126,
+        "inductor": 0.002332281500002864,
+        "morphism": 0.00249165234999964,
+        "morphism+inductor": 0.002453277000313392
       },
       "aux": {
         "name": "kv_x2@512x64",
@@ -1153,7 +1148,7 @@
           "dim": 64
         },
         "param_bytes_eager": 131072,
-        "opt_s": 0.37,
+        "opt_s": 0.07,
         "fires": {
           "kv_latent_share": 1
         },
@@ -1197,10 +1192,10 @@
         "rt_flops_eager": 16809984.0,
         "rt_flops_morphism": 11632640.0,
         "rt_flops_ratio": 1.4450704225352113,
-        "inductor_status": "compiled in 0.1s",
+        "inductor_status": "compiled in 0.2s",
         "inductor_verified": true,
         "inductor_rel": 0.0,
-        "morph_ind_status": "compiled in 0.3s",
+        "morph_ind_status": "compiled in 0.9s",
         "morph_ind_verified": true,
         "morph_ind_rel": 9.398685399150736e-15
       }

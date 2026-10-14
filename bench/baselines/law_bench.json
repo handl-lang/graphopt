@@ -4,28 +4,25 @@
   "title": "Rewrite-law effect bench",
   "summary": "Per registered law: a synthetic term \u2192 saturate on that rule alone \u2192 extract \u2192 lower \u2192 verify, timed before/after.",
   "env": {
-    "timestamp_utc": "2026-10-02T00:18:07+00:00",
+    "timestamp_utc": "2026-10-14T06:13:49+00:00",
     "python": "3.13.9",
-    "torch": "2.14.0+cpu",
-    "torch_cuda": "none",
+    "torch": "2.14.0+cu130",
+    "torch_cuda": "13.0",
     "device": "cpu",
     "device_name": "12th Gen Intel(R) Core(TM) i5-12500H",
     "cpu_count": 16,
-    "git_sha": "ba38bd9",
-    "git_dirty": true,
+    "git_sha": "2c782dd",
+    "git_dirty": false,
     "argv": [
       "/home/luis/Desktop/catopt/bench/__main__.py",
       "run",
       "law_bench",
-      "--device",
-      "cpu",
-      "--out",
-      "/tmp/canon",
-      "--no-plots",
-      "--no-html"
+      "--pin"
     ]
   },
-  "provenance": {},
+  "provenance": {
+    "quick": false
+  },
   "units": {
     "median_s": "seconds"
   },
@@ -62,8 +59,8 @@
         }
       ],
       "median_s": {
-        "before": 2.3601730999871508e-05,
-        "after": 2.255186100046558e-06
+        "before": 1.982392750001054e-05,
+        "after": 1.8402746700030546e-06
       },
       "aux": {
         "fired": 1,
@@ -96,8 +93,8 @@
         }
       ],
       "median_s": {
-        "before": 4.31459650008037e-05,
-        "after": 2.3231760000271608e-06
+        "before": 3.495035679998182e-05,
+        "after": 1.8446038650017727e-06
       },
       "aux": {
         "fired": 1,
@@ -148,8 +145,8 @@
         }
       ],
       "median_s": {
-        "before": 0.0012362151999695925,
-        "after": 2.198987100018712e-05
+        "before": 0.0005153419850012142,
+        "after": 1.7876237000018592e-05
       },
       "aux": {
         "fired": 1,
@@ -200,8 +197,8 @@
         }
       ],
       "median_s": {
-        "before": 0.003029659000276297,
-        "after": 0.000784735449906293
+        "before": 0.0021522341699983373,
+        "after": 0.0005394501600039802
       },
       "aux": {
         "fired": 16,
@@ -234,8 +231,8 @@
         }
       ],
       "median_s": {
-        "before": 0.003933745001631905,
-        "after": 0.000695066600019345
+        "before": 0.0010770085299964195,
+        "after": 0.0005387845700033722
       },
       "aux": {
         "fired": 1,
@@ -268,8 +265,8 @@
         }
       ],
       "median_s": {
-        "before": 0.0014013494499522494,
-        "after": 0.0006730445499670168
+        "before": 0.0011114520450018974,
+        "after": 0.0005395571500002917
       },
       "aux": {
         "fired": 1,
@@ -302,8 +299,8 @@
         }
       ],
       "median_s": {
-        "before": 0.0042622281000149085,
-        "after": 0.002308988200093154
+        "before": 0.0011110154999960287,
+        "after": 0.0005728822400033096
       },
       "aux": {
         "fired": 1,
@@ -336,8 +333,8 @@
         }
       ],
       "median_s": {
-        "before": 0.0020024797000587568,
-        "after": 0.001875673499853292
+        "before": 0.0005632092799987731,
+        "after": 0.0005414405650026311
       },
       "aux": {
         "fired": 1,
@@ -370,8 +367,8 @@
         }
       ],
       "median_s": {
-        "before": 0.0017930759995579137,
-        "after": 0.0017409651500202017
+        "before": 0.0011194691250011601,
+        "after": 0.001091032174999782
       },
       "aux": {
         "fired": 1,
@@ -404,8 +401,8 @@
         }
       ],
       "median_s": {
-        "before": 0.000649355200039281,
-        "after": 0.0005664338001224678
+        "before": 9.457544599990797e-05,
+        "after": 7.271867500003281e-05
       },
       "aux": {
         "fired": 1,
@@ -438,8 +435,8 @@
         }
       ],
       "median_s": {
-        "before": 3.2780036501208084e-05,
-        "after": 0.00010358180006733164
+        "before": 4.326282999954855e-06,
+        "after": 2.2131054300007235e-05
       },
       "aux": {
         "fired": 1,

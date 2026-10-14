@@ -35,7 +35,7 @@ provenance in [`docs/results.md`](docs/results.md).  Each block states
 
 | model | speed vs eager | speed vs `torch.compile` | fp64 max_abs |
 |---|---|---|---|
-| deep weight chains (reassoc to 1 GEMM, k=8 / k=16) | — | **8.93× / 16.12×** | exact |
+| deep weight chains (reassoc to 1 GEMM, k=8 / k=16) | — | **8.22× / 14.92×** | exact |
 | spelled `x@A@B@C` block | — | **3.96×** | 1.7e-5 |
 | `chainfuse` — laws + a kernel minted mid-search | 3.71× | **2.94×** | 1.7e-5 |
 | spelled RetNet export, T=2048 — **derived carrier** | **5.0–5.9×** | **6.2–7.4×** | 9.8e-9 |

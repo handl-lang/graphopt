@@ -26,28 +26,28 @@ def append(report: Report, path: str | Path = DEFAULT_LEDGER) -> Path:
     return path
 
 
-def load(path: str | Path = DEFAULT_LEDGER):
-    """Read the ledger as a ``polars.DataFrame`` (one row per run)."""
-    import polars as pl
+def load(path: str | Path = DEFAULT_LEDGER) -> list[dict]:
+    """Read the ledger as a list of run records (one dict per run).
 
+    Records are document-shaped — per-suite ``cells``/``fires``
+    payloads differ in structure — so they are kept as dicts rather
+    than forced into a polars frame (which raises on heterogeneous
+    nested columns).
+    """
     path = Path(path)
     if not path.exists():
-        return pl.DataFrame()
-    rows = [
+        return []
+    return [
         json.loads(line)
         for line in path.read_text().splitlines()
         if line.strip()
     ]
-    return pl.DataFrame(rows) if rows else pl.DataFrame()
 
 
 def latest(report_suite: str, path: str | Path = DEFAULT_LEDGER):
     """The most recent ledger record for ``report_suite`` (or ``None``)."""
-    df = load(path)
-    if df.is_empty() or "suite" not in df.columns:
-        return None
-    hits = df.filter(df["suite"] == report_suite)
-    return None if hits.is_empty() else hits.tail(1).to_dicts()[0]
+    hits = [r for r in load(path) if r.get("suite") == report_suite]
+    return hits[-1] if hits else None
 
 
 def write_baseline(report: Report, outdir: str | Path) -> Path:

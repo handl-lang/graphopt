@@ -4,25 +4,20 @@
   "title": "Certified bounded rewrites on a checkpoint",
   "summary": "search(error_budget=B) sweep on stories15M: speedup vs bound vs held-out KL / top-k drift \u2014 including the honest negative when the gate declines every candidate.",
   "env": {
-    "timestamp_utc": "2026-10-02T01:00:43+00:00",
+    "timestamp_utc": "2026-10-14T06:54:12+00:00",
     "python": "3.13.9",
-    "torch": "2.14.0+cpu",
-    "torch_cuda": "none",
+    "torch": "2.14.0+cu130",
+    "torch_cuda": "13.0",
     "device": "cpu",
     "device_name": "12th Gen Intel(R) Core(TM) i5-12500H",
     "cpu_count": 16,
-    "git_sha": "b63355d",
+    "git_sha": "2c782dd",
     "git_dirty": true,
     "argv": [
       "/home/luis/Desktop/catopt/bench/__main__.py",
       "run",
       "bounded_e2e",
-      "--device",
-      "cpu",
-      "--out",
-      "/tmp/canon2",
-      "--no-plots",
-      "--no-html"
+      "--pin"
     ]
   },
   "provenance": {
@@ -35,7 +30,7 @@
     {
       "claim": "bounded rewrites (error_budget) buy wall-time on a real checkpoint",
       "verdict": "win",
-      "headline": "4/5 budgets delivered a bounded member; best 1.322\u00d7 vs eager",
+      "headline": "4/5 budgets delivered a bounded member; best 1.410\u00d7 vs eager",
       "metric": "budgets delivering",
       "value": 4.0,
       "evidence": {
@@ -77,9 +72,9 @@
         }
       ],
       "median_s": {
-        "eager": 0.04782756700114987,
-        "inductor": 0.045913556999948923,
-        "catopt": 0.047656746000939165
+        "eager": 0.0413812209990283,
+        "inductor": 0.039036663500155555,
+        "catopt": 0.04113580899866065
       },
       "aux": {
         "name": "budget=none",
@@ -88,7 +83,7 @@
           "seq": 128
         },
         "optimize_device": "cpu",
-        "opt_s": 17.4,
+        "opt_s": 13.8,
         "n_optimized": 8,
         "n_blocks": 8,
         "cache": {
@@ -106,7 +101,7 @@
             "cache": "miss",
             "rel_diff": 0.0,
             "error": null,
-            "time_s": 3.5,
+            "time_s": 2.8,
             "bound_total": null,
             "bounds": [],
             "specials_offered": [],
@@ -183,7 +178,7 @@
             "cache": "miss",
             "rel_diff": 0.0,
             "error": null,
-            "time_s": 12.2,
+            "time_s": 10.0,
             "bound_total": null,
             "bounds": [],
             "specials_offered": [],
@@ -204,11 +199,11 @@
           "max_abs_logit": 0.0,
           "n_positions": 640
         },
-        "ms_eager": 0.04782756700114987,
-        "ms_inductor": 0.045913556999948923,
-        "ms_catopt": 0.047656746000939165,
-        "speedup_vs_eager": 1.0035844033540884,
-        "speedup_vs_inductor": 0.9634219885479406,
+        "ms_eager": 0.0413812209990283,
+        "ms_inductor": 0.039036663500155555,
+        "ms_catopt": 0.04113580899866065,
+        "speedup_vs_eager": 1.0059658970211487,
+        "speedup_vs_inductor": 0.9489703606273201,
         "verdict": "no bounded offer even qualified \u2014 no weight is within budget of a structural special"
       }
     },
@@ -236,9 +231,9 @@
         }
       ],
       "median_s": {
-        "eager": 0.05323949900048319,
-        "inductor": 0.04655714699947566,
-        "catopt": 0.04935957399902691
+        "eager": 0.04630026899940276,
+        "inductor": 0.040158808000342106,
+        "catopt": 0.03458129250066122
       },
       "aux": {
         "name": "budget=1e-4",
@@ -247,7 +242,7 @@
           "seq": 128
         },
         "optimize_device": "cpu",
-        "opt_s": 452.6,
+        "opt_s": 390.6,
         "n_optimized": 8,
         "n_blocks": 8,
         "cache": {
@@ -265,7 +260,7 @@
             "cache": "miss",
             "rel_diff": 0.0,
             "error": null,
-            "time_s": 3.3,
+            "time_s": 2.8,
             "bound_total": 0.0,
             "bounds": [],
             "specials_offered": [],
@@ -276,7 +271,7 @@
             "cache": "miss",
             "rel_diff": 0.0,
             "error": null,
-            "time_s": 3.5,
+            "time_s": 3.0,
             "bound_total": 0.0,
             "bounds": [],
             "specials_offered": [],
@@ -342,7 +337,7 @@
             "cache": "miss",
             "rel_diff": 5.688349269330689e-05,
             "error": null,
-            "time_s": 445.1,
+            "time_s": 384.4,
             "bound_total": 2.364814281463623e-05,
             "bounds": [
               {
@@ -378,12 +373,12 @@
           "max_abs_logit": 0.0015254020690917969,
           "n_positions": 640
         },
-        "ms_eager": 0.05323949900048319,
-        "ms_inductor": 0.04655714699947566,
-        "ms_catopt": 0.04935957399902691,
-        "speedup_vs_eager": 1.0786053178160082,
-        "speedup_vs_inductor": 0.9432242466353844,
-        "verdict": "1 bounded members, bound 2.36e-05, speedup 1.079x, KL -1.08e-06"
+        "ms_eager": 0.04630026899940276,
+        "ms_inductor": 0.040158808000342106,
+        "ms_catopt": 0.03458129250066122,
+        "speedup_vs_eager": 1.3388819691605647,
+        "speedup_vs_inductor": 1.1612870744948078,
+        "verdict": "1 bounded members, bound 2.36e-05, speedup 1.339x, KL -1.08e-06"
       }
     },
     {
@@ -410,9 +405,9 @@
         }
       ],
       "median_s": {
-        "eager": 0.05018946299969684,
-        "inductor": 0.048128235999683966,
-        "catopt": 0.041332925999086
+        "eager": 0.041472091999821714,
+        "inductor": 0.0392984363999858,
+        "catopt": 0.03305221399932634
       },
       "aux": {
         "name": "budget=1e-3",
@@ -421,7 +416,7 @@
           "seq": 128
         },
         "optimize_device": "cpu",
-        "opt_s": 356.9,
+        "opt_s": 334.3,
         "n_optimized": 8,
         "n_blocks": 8,
         "cache": {
@@ -439,7 +434,7 @@
             "cache": "miss",
             "rel_diff": 0.0,
             "error": null,
-            "time_s": 3.4,
+            "time_s": 2.8,
             "bound_total": 0.0,
             "bounds": [],
             "specials_offered": [],
@@ -450,7 +445,7 @@
             "cache": "miss",
             "rel_diff": 0.0,
             "error": null,
-            "time_s": 4.0,
+            "time_s": 3.1,
             "bound_total": 0.0,
             "bounds": [],
             "specials_offered": [],
@@ -461,7 +456,7 @@
             "cache": "hit",
             "rel_diff": 0.0,
             "error": null,
-            "time_s": 0.5,
+            "time_s": 0.1,
             "bound_total": 0.0,
             "bounds": [],
             "specials_offered": [],
@@ -472,7 +467,7 @@
             "cache": "hit",
             "rel_diff": 0.0,
             "error": null,
-            "time_s": 0.2,
+            "time_s": 0.1,
             "bound_total": 0.0,
             "bounds": [],
             "specials_offered": [],
@@ -483,7 +478,7 @@
             "cache": "hit",
             "rel_diff": 0.0,
             "error": null,
-            "time_s": 0.2,
+            "time_s": 0.1,
             "bound_total": 0.0,
             "bounds": [],
             "specials_offered": [],
@@ -516,7 +511,7 @@
             "cache": "miss",
             "rel_diff": 0.006759522388855351,
             "error": null,
-            "time_s": 348.3,
+            "time_s": 328.0,
             "bound_total": 0.0009999144822359085,
             "bounds": [
               {
@@ -552,12 +547,12 @@
           "max_abs_logit": 0.1190800666809082,
           "n_positions": 640
         },
-        "ms_eager": 0.05018946299969684,
-        "ms_inductor": 0.048128235999683966,
-        "ms_catopt": 0.041332925999086,
-        "speedup_vs_eager": 1.214273168098641,
-        "speedup_vs_inductor": 1.1644042814861022,
-        "verdict": "1 bounded members, bound 1.00e-03, speedup 1.214x, KL 5.85e-06"
+        "ms_eager": 0.041472091999821714,
+        "ms_inductor": 0.0392984363999858,
+        "ms_catopt": 0.03305221399932634,
+        "speedup_vs_eager": 1.25474475025083,
+        "speedup_vs_inductor": 1.1889804537991546,
+        "verdict": "1 bounded members, bound 1.00e-03, speedup 1.255x, KL 5.85e-06"
       }
     },
     {
@@ -584,9 +579,9 @@
         }
       ],
       "median_s": {
-        "eager": 0.04113519500060647,
-        "inductor": 0.03916600050069974,
-        "catopt": 0.03335013900050399
+        "eager": 0.04265929800021695,
+        "inductor": 0.039906721000079415,
+        "catopt": 0.031944913000188535
       },
       "aux": {
         "name": "budget=3e-3",
@@ -595,7 +590,7 @@
           "seq": 128
         },
         "optimize_device": "cpu",
-        "opt_s": 227.7,
+        "opt_s": 238.1,
         "n_optimized": 8,
         "n_blocks": 8,
         "cache": {
@@ -613,7 +608,7 @@
             "cache": "miss",
             "rel_diff": 0.0,
             "error": null,
-            "time_s": 3.2,
+            "time_s": 2.7,
             "bound_total": 0.0,
             "bounds": [],
             "specials_offered": [],
@@ -624,7 +619,7 @@
             "cache": "miss",
             "rel_diff": 0.0,
             "error": null,
-            "time_s": 3.2,
+            "time_s": 3.0,
             "bound_total": 0.0,
             "bounds": [],
             "specials_offered": [],
@@ -690,7 +685,7 @@
             "cache": "miss",
             "rel_diff": 0.020763723662450283,
             "error": null,
-            "time_s": 220.8,
+            "time_s": 231.9,
             "bound_total": 0.0029997825622558594,
             "bounds": [
               {
@@ -726,12 +721,12 @@
           "max_abs_logit": 0.39759373664855957,
           "n_positions": 640
         },
-        "ms_eager": 0.04113519500060647,
-        "ms_inductor": 0.03916600050069974,
-        "ms_catopt": 0.03335013900050399,
-        "speedup_vs_eager": 1.2334339895850162,
-        "speedup_vs_inductor": 1.1743879238436716,
-        "verdict": "1 bounded members, bound 3.00e-03, speedup 1.233x, KL 6.50e-05"
+        "ms_eager": 0.04265929800021695,
+        "ms_inductor": 0.039906721000079415,
+        "ms_catopt": 0.031944913000188535,
+        "speedup_vs_eager": 1.3354019151645578,
+        "speedup_vs_inductor": 1.249235551207915,
+        "verdict": "1 bounded members, bound 3.00e-03, speedup 1.335x, KL 6.50e-05"
       }
     },
     {
@@ -758,9 +753,9 @@
         }
       ],
       "median_s": {
-        "eager": 0.053652863999559486,
-        "inductor": 0.05071466600020358,
-        "catopt": 0.04057024000030651
+        "eager": 0.04244444799951452,
+        "inductor": 0.040424983999400865,
+        "catopt": 0.030104414001471014
       },
       "aux": {
         "name": "budget=1e-2",
@@ -769,7 +764,7 @@
           "seq": 128
         },
         "optimize_device": "cpu",
-        "opt_s": 157.7,
+        "opt_s": 149.7,
         "n_optimized": 8,
         "n_blocks": 8,
         "cache": {
@@ -787,7 +782,7 @@
             "cache": "miss",
             "rel_diff": 0.0,
             "error": null,
-            "time_s": 3.0,
+            "time_s": 2.8,
             "bound_total": 0.0,
             "bounds": [],
             "specials_offered": [],
@@ -798,7 +793,7 @@
             "cache": "miss",
             "rel_diff": 0.0,
             "error": null,
-            "time_s": 2.9,
+            "time_s": 3.1,
             "bound_total": 0.0,
             "bounds": [],
             "specials_offered": [],
@@ -864,7 +859,7 @@
             "cache": "miss",
             "rel_diff": 0.08276065123198757,
             "error": null,
-            "time_s": 151.1,
+            "time_s": 143.4,
             "bound_total": 0.009999886155128479,
             "bounds": [
               {
@@ -900,12 +895,12 @@
           "max_abs_logit": 2.1795692443847656,
           "n_positions": 640
         },
-        "ms_eager": 0.053652863999559486,
-        "ms_inductor": 0.05071466600020358,
-        "ms_catopt": 0.04057024000030651,
-        "speedup_vs_eager": 1.3224684891968628,
-        "speedup_vs_inductor": 1.250045994300759,
-        "verdict": "1 bounded members, bound 1.00e-02, speedup 1.322x, KL 7.11e-04"
+        "ms_eager": 0.04244444799951452,
+        "ms_inductor": 0.040424983999400865,
+        "ms_catopt": 0.030104414001471014,
+        "speedup_vs_eager": 1.4099077961604078,
+        "speedup_vs_inductor": 1.342825806123499,
+        "verdict": "1 bounded members, bound 1.00e-02, speedup 1.410x, KL 7.11e-04"
       }
     },
     {
@@ -920,7 +915,7 @@
         "error_budget_kw": "accepted",
         "law_budget_armed": true,
         "kv_budget": 0.01,
-        "opt_s": 13.3,
+        "opt_s": 9.1,
         "n_blocks": 8,
         "n_lifted": 8,
         "n_rewritten": 0,

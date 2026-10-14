@@ -4,28 +4,25 @@
   "title": "Weight-chain reassociation vs Inductor",
   "summary": "Deep x @ W1 @ \u2026 @ Wk chains: the e-graph finds the weights-first form (one runtime GEMM) and the post-grad FX capture proves Inductor cannot reach it.",
   "env": {
-    "timestamp_utc": "2026-10-02T00:22:06+00:00",
+    "timestamp_utc": "2026-10-14T06:16:44+00:00",
     "python": "3.13.9",
-    "torch": "2.14.0+cpu",
-    "torch_cuda": "none",
+    "torch": "2.14.0+cu130",
+    "torch_cuda": "13.0",
     "device": "cpu",
     "device_name": "12th Gen Intel(R) Core(TM) i5-12500H",
     "cpu_count": 16,
-    "git_sha": "ba38bd9",
+    "git_sha": "2c782dd",
     "git_dirty": true,
     "argv": [
       "/home/luis/Desktop/catopt/bench/__main__.py",
       "run",
       "reassoc_scale",
-      "--device",
-      "cpu",
-      "--out",
-      "/tmp/canon",
-      "--no-plots",
-      "--no-html"
+      "--pin"
     ]
   },
-  "provenance": {},
+  "provenance": {
+    "quick": false
+  },
   "units": {
     "median_s": "seconds"
   },
@@ -33,13 +30,13 @@
     {
       "claim": "catopt reaches a weight-folded form Inductor's post-grad graph cannot express",
       "verdict": "win",
-      "headline": "17.12\u00d7 vs Inductor at (k,d,B\u00b7T)=(16,512,4096) (18.63\u00d7 vs eager)",
+      "headline": "14.92\u00d7 vs Inductor at (k,d,B\u00b7T)=(16,512,4096) (17.40\u00d7 vs eager)",
       "metric": "catopt+inductor / inductor",
-      "value": 17.1242116941093,
+      "value": 14.92433267651564,
       "evidence": {
         "inductor_mm": 16,
         "catopt_mm": 1,
-        "x_vs_eager": 18.6274509250765
+        "x_vs_eager": 17.40010466678885
       }
     },
     {
@@ -87,11 +84,11 @@
         }
       ],
       "median_s": {
-        "eager": 0.059283066500029236,
-        "inductor": 0.06610350899973128,
-        "manual_ref": 0.02605876800043916,
-        "catopt": 0.027360934000171255,
-        "catopt_inductor": 0.047623766999095096
+        "eager": 0.04191115300000092,
+        "inductor": 0.037885470999754034,
+        "manual_ref": 0.019794281150052485,
+        "catopt": 0.019694835850032177,
+        "catopt_inductor": 0.020036604500091926
       },
       "aux": {
         "verify": {
@@ -119,7 +116,7 @@
             "assoc_matmul_rev": 1
           },
           "inductor_backend_mm": 1,
-          "pipeline_s": 0.4230473041534424
+          "pipeline_s": 2.2598042488098145
         },
         "extracted_root": "(matmul x, fused_2)",
         "flops_model": {
@@ -164,11 +161,11 @@
         }
       ],
       "median_s": {
-        "eager": 0.5494650919990818,
-        "inductor": 0.5431004460006079,
-        "manual_ref": 0.208603843999299,
-        "catopt": 0.11783874799948535,
-        "catopt_inductor": 0.14776142000027903
+        "eager": 0.17620957700000872,
+        "inductor": 0.17525591400044505,
+        "manual_ref": 0.09559224199983873,
+        "catopt": 0.09533747199930076,
+        "catopt_inductor": 0.09573269499924209
       },
       "aux": {
         "verify": {
@@ -196,7 +193,7 @@
             "assoc_matmul_rev": 1
           },
           "inductor_backend_mm": 1,
-          "pipeline_s": 0.25383949279785156
+          "pipeline_s": 0.09697389602661133
         },
         "extracted_root": "(matmul x, fused_2)",
         "flops_model": {
@@ -241,11 +238,11 @@
         }
       ],
       "median_s": {
-        "eager": 0.9986345550005353,
-        "inductor": 1.559318218000044,
-        "manual_ref": 0.4727781870005856,
-        "catopt": 0.4605855520003388,
-        "catopt_inductor": 1.111239943998953
+        "eager": 0.7617955799996707,
+        "inductor": 0.7663674659997923,
+        "manual_ref": 0.36947552699984954,
+        "catopt": 0.36716335599976446,
+        "catopt_inductor": 0.35340636299952166
       },
       "aux": {
         "verify": {
@@ -273,7 +270,7 @@
             "assoc_matmul_rev": 1
           },
           "inductor_backend_mm": 1,
-          "pipeline_s": 0.2544553279876709
+          "pipeline_s": 0.1032712459564209
         },
         "extracted_root": "(matmul x, fused_2)",
         "flops_model": {
@@ -318,11 +315,11 @@
         }
       ],
       "median_s": {
-        "eager": 0.36429007399965485,
-        "inductor": 0.2758611760000349,
-        "manual_ref": 0.06431469349899999,
-        "catopt": 0.06753061200106458,
-        "catopt_inductor": 0.02946838700063381
+        "eager": 0.08471033099976921,
+        "inductor": 0.08219506800014642,
+        "manual_ref": 0.019761021349995644,
+        "catopt": 0.01866391329999715,
+        "catopt_inductor": 0.019614267000179098
       },
       "aux": {
         "verify": {
@@ -352,7 +349,7 @@
             "assoc_matmul_rev": 16
           },
           "inductor_backend_mm": 1,
-          "pipeline_s": 0.3495619297027588
+          "pipeline_s": 0.18848156929016113
         },
         "extracted_root": "(matmul x, fused_6)",
         "flops_model": {
@@ -397,11 +394,11 @@
         }
       ],
       "median_s": {
-        "eager": 1.1225202189998527,
-        "inductor": 0.47765818300104,
-        "manual_ref": 0.15304547200048546,
-        "catopt": 0.19576119649991597,
-        "catopt_inductor": 0.12956394400043791
+        "eager": 0.36815961799948127,
+        "inductor": 0.326809952000076,
+        "manual_ref": 0.08628627400048572,
+        "catopt": 0.08785325900043972,
+        "catopt_inductor": 0.08686131900049077
       },
       "aux": {
         "verify": {
@@ -431,7 +428,7 @@
             "assoc_matmul_rev": 16
           },
           "inductor_backend_mm": 1,
-          "pipeline_s": 0.6102585792541504
+          "pipeline_s": 0.19245004653930664
         },
         "extracted_root": "(matmul x, fused_6)",
         "flops_model": {
@@ -476,11 +473,11 @@
         }
       ],
       "median_s": {
-        "eager": 4.602309527001125,
-        "inductor": 2.1443376789993636,
-        "manual_ref": 0.5115277240001888,
-        "catopt": 0.555329487000563,
-        "catopt_inductor": 0.5202333110009931
+        "eager": 1.348530748000485,
+        "inductor": 1.288736761999644,
+        "manual_ref": 0.33904163999977754,
+        "catopt": 0.33864726000047085,
+        "catopt_inductor": 0.3559985229994709
       },
       "aux": {
         "verify": {
@@ -510,7 +507,7 @@
             "assoc_matmul_rev": 16
           },
           "inductor_backend_mm": 1,
-          "pipeline_s": 0.38315749168395996
+          "pipeline_s": 0.2082061767578125
         },
         "extracted_root": "(matmul x, fused_6)",
         "flops_model": {
@@ -555,11 +552,11 @@
         }
       ],
       "median_s": {
-        "eager": 0.24206891399990127,
-        "inductor": 0.39227042800121126,
-        "manual_ref": 0.06539460600015445,
-        "catopt": 0.06295322450023377,
-        "catopt_inductor": 0.0700151699984417
+        "eager": 0.1678666815005272,
+        "inductor": 0.15777665149971654,
+        "manual_ref": 0.01919954185004826,
+        "catopt": 0.018300536549986646,
+        "catopt_inductor": 0.019187754999620665
       },
       "aux": {
         "verify": {
@@ -591,10 +588,10 @@
           "note": "matmul(x, W_q@W_kv1@\u2026@W_kv7) \u2014 weights-first",
           "assoc_rule_fires": {
             "assoc_matmul_rev": 550,
-            "assoc_matmul": 141
+            "assoc_matmul": 140
           },
           "inductor_backend_mm": 1,
-          "pipeline_s": 1.1057765483856201
+          "pipeline_s": 0.6273095607757568
         },
         "extracted_root": "(matmul x, fused_14)",
         "flops_model": {
@@ -639,11 +636,11 @@
         }
       ],
       "median_s": {
-        "eager": 0.9236067540005024,
-        "inductor": 2.329287075999673,
-        "manual_ref": 0.13779919449916633,
-        "catopt": 0.28249205199972494,
-        "catopt_inductor": 0.29027629000120214
+        "eager": 0.6777203729998291,
+        "inductor": 0.6414631920006286,
+        "manual_ref": 0.08543024400023569,
+        "catopt": 0.08660374000010052,
+        "catopt_inductor": 0.08538708400010364
       },
       "aux": {
         "verify": {
@@ -675,10 +672,10 @@
           "note": "matmul(x, W_q@W_kv1@\u2026@W_kv7) \u2014 weights-first",
           "assoc_rule_fires": {
             "assoc_matmul_rev": 550,
-            "assoc_matmul": 141
+            "assoc_matmul": 140
           },
           "inductor_backend_mm": 1,
-          "pipeline_s": 1.3589544296264648
+          "pipeline_s": 0.5824024677276611
         },
         "extracted_root": "(matmul x, fused_14)",
         "flops_model": {
@@ -723,11 +720,11 @@
         }
       ],
       "median_s": {
-        "eager": 3.705160788000285,
-        "inductor": 3.3701731740002288,
-        "manual_ref": 0.4531920640001772,
-        "catopt": 0.45551795800020045,
-        "catopt_inductor": 0.48861760399995546
+        "eager": 2.736618380999971,
+        "inductor": 2.507907418999821,
+        "manual_ref": 0.3420353250003245,
+        "catopt": 0.339370288000282,
+        "catopt_inductor": 0.35137229899919475
       },
       "aux": {
         "verify": {
@@ -759,10 +756,10 @@
           "note": "matmul(x, W_q@W_kv1@\u2026@W_kv7) \u2014 weights-first",
           "assoc_rule_fires": {
             "assoc_matmul_rev": 550,
-            "assoc_matmul": 141
+            "assoc_matmul": 140
           },
           "inductor_backend_mm": 1,
-          "pipeline_s": 1.670116662979126
+          "pipeline_s": 0.620513916015625
         },
         "extracted_root": "(matmul x, fused_14)",
         "flops_model": {
@@ -807,16 +804,16 @@
         }
       ],
       "median_s": {
-        "eager": 0.47820272799981467,
-        "inductor": 0.4563740780013177,
-        "manual_ref": 0.02586596099899907,
-        "catopt": 0.02567193600043538,
-        "catopt_inductor": 0.02665080799943098
+        "eager": 0.3333951570002682,
+        "inductor": 0.31598574700001336,
+        "manual_ref": 0.01928144820003581,
+        "catopt": 0.019160525949973816,
+        "catopt_inductor": 0.021172520999698463
       },
       "aux": {
         "verify": {
-          "max_abs": 7.510185241699219e-06,
-          "max_rel": 1.2582957642169446e-06,
+          "max_abs": 7.808208465576172e-06,
+          "max_rel": 1.308228135812855e-06,
           "allclose_fp32": true,
           "rtol": 0.0001,
           "atol": 1e-05
@@ -850,11 +847,11 @@
           "weights_first": true,
           "note": "matmul(x, W_q@W_kv1@\u2026@W_kv15) \u2014 weights-first",
           "assoc_rule_fires": {
-            "assoc_matmul_rev": 1096,
-            "assoc_matmul": 1193
+            "assoc_matmul_rev": 1079,
+            "assoc_matmul": 365
           },
           "inductor_backend_mm": 1,
-          "pipeline_s": 1.433523178100586
+          "pipeline_s": 0.9929788112640381
         },
         "extracted_root": "(matmul x, fused_30)",
         "flops_model": {
@@ -899,16 +896,16 @@
         }
       ],
       "median_s": {
-        "eager": 1.8293261830003757,
-        "inductor": 1.678822129000764,
-        "manual_ref": 0.11590386949956155,
-        "catopt": 0.11659227249947435,
-        "catopt_inductor": 0.11653913150075823
+        "eager": 1.3977742959996249,
+        "inductor": 1.2893540149998444,
+        "manual_ref": 0.08772641999985353,
+        "catopt": 0.0879496340003243,
+        "catopt_inductor": 0.08673843300039152
       },
       "aux": {
         "verify": {
-          "max_abs": 7.510185241699219e-06,
-          "max_rel": 1.0893253721515872e-06,
+          "max_abs": 8.58306884765625e-06,
+          "max_rel": 1.2449432824589566e-06,
           "allclose_fp32": true,
           "rtol": 0.0001,
           "atol": 1e-05
@@ -942,11 +939,11 @@
           "weights_first": true,
           "note": "matmul(x, W_q@W_kv1@\u2026@W_kv15) \u2014 weights-first",
           "assoc_rule_fires": {
-            "assoc_matmul_rev": 1096,
-            "assoc_matmul": 1193
+            "assoc_matmul_rev": 1079,
+            "assoc_matmul": 365
           },
           "inductor_backend_mm": 1,
-          "pipeline_s": 1.4012339115142822
+          "pipeline_s": 1.0310983657836914
         },
         "extracted_root": "(matmul x, fused_30)",
         "flops_model": {
@@ -991,16 +988,16 @@
         }
       ],
       "median_s": {
-        "eager": 7.047858763999102,
-        "inductor": 6.561009717999696,
-        "manual_ref": 0.45755446499970276,
-        "catopt": 0.45820284799992805,
-        "catopt_inductor": 0.43333883800005424
+        "eager": 5.933644368999921,
+        "inductor": 5.376209404000292,
+        "manual_ref": 0.3613060880006742,
+        "catopt": 0.36228890500024136,
+        "catopt_inductor": 0.36137520800002676
       },
       "aux": {
         "verify": {
-          "max_abs": 9.298324584960938e-06,
-          "max_rel": 1.348688555997203e-06,
+          "max_abs": 8.702278137207031e-06,
+          "max_rel": 1.2622341613819978e-06,
           "allclose_fp32": true,
           "rtol": 0.0001,
           "atol": 1e-05
@@ -1034,11 +1031,11 @@
           "weights_first": true,
           "note": "matmul(x, W_q@W_kv1@\u2026@W_kv15) \u2014 weights-first",
           "assoc_rule_fires": {
-            "assoc_matmul_rev": 1096,
-            "assoc_matmul": 1193
+            "assoc_matmul_rev": 1079,
+            "assoc_matmul": 365
           },
           "inductor_backend_mm": 1,
-          "pipeline_s": 1.3602592945098877
+          "pipeline_s": 1.1615052223205566
         },
         "extracted_root": "(matmul x, fused_30)",
         "flops_model": {
