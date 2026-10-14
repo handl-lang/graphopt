@@ -67,6 +67,26 @@ def rel_diff(a: torch.Tensor, b: torch.Tensor) -> float:
     )
 
 
+def _flatten_outputs(x: Any) -> list:
+    """Flatten a returned pytree to its tensor leaves, in order.
+
+    ``torch.export`` flattens a model's return pytree, and the IR's
+    ``pack`` root pairs those leaves in the same order — so the
+    lowered module returns a *flat* tuple even when the source module
+    returns a nested one (measured: ``nn.LSTM`` returns
+    ``(output, (h_n, c_n))``).  Comparing the nested reference
+    against the flat result pairs a tuple against a tensor and
+    reports ``inf``; flattening both sides is what makes the
+    comparison meaningful.
+    """
+    if isinstance(x, (tuple, list)):
+        out: list = []
+        for item in x:
+            out.extend(_flatten_outputs(item))
+        return out
+    return [x]
+
+
 def _verify_outputs(
     ref_out: tuple | list,
     out: Any,
@@ -79,9 +99,13 @@ def _verify_outputs(
     scalar fields are the worst case over the outputs, with each
     output's ``max_abs`` recorded in ``per_output``.  A shape mismatch
     (the lowered module returned a different number of outputs) fails
-    closed rather than comparing a prefix.
+    closed rather than comparing a prefix.  Both sides are flattened
+    first, since a nested return pytree compares against the flat
+    ``pack`` result (:func:`_flatten_outputs`).
     """
-    if not isinstance(out, (tuple, list)) or len(out) != len(ref_out):
+    ref_flat = _flatten_outputs(ref_out)
+    out_flat = _flatten_outputs(out)
+    if not isinstance(out, (tuple, list)) or len(out_flat) != len(ref_flat):
         return VerifyReport(
             max_abs=float("inf"),
             max_rel=float("inf"),
@@ -89,7 +113,7 @@ def _verify_outputs(
         )
     reports = [
         verify_equiv(r, o, rtol=rtol, atol=atol)
-        for r, o in zip(ref_out, out, strict=True)
+        for r, o in zip(ref_flat, out_flat, strict=True)
     ]
     return VerifyReport(
         max_abs=max(r.max_abs for r in reports),

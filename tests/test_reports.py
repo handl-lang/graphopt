@@ -306,3 +306,31 @@ def test_verify_module_multi_output():
     vr = verify_module(Multi().eval(), MultiBad().eval(), x, rtol=1e-9)
     assert not vr.passed
     assert vr.per_output[0] == 0.0 and vr.per_output[1] > 0.0
+
+
+def test_verify_module_nested_output_pytree():
+    """A *nested* return pytree verifies against the flat lowered tuple.
+
+    ``torch.export`` flattens the return pytree, so the lowered module
+    returns a flat tuple even when the source returns nested
+    (measured: ``nn.LSTM`` returns ``(output, (h_n, c_n))``).  Before
+    the flatten, the nested reference was zipped against the flat
+    result, pairing a tuple with a tensor and reporting ``inf``.
+    """
+
+    class Nested(nn.Module):
+        def forward(s, x):
+            h = x + 1.0
+            return h, (h * 2.0, h * 3.0)
+
+    class NestedFlat(nn.Module):
+        """The lowered shape: the same three leaves, flat."""
+
+        def forward(s, x):
+            h = x + 1.0
+            return h, h * 2.0, h * 3.0
+
+    x = torch.randn(2, 3, dtype=torch.float64)
+    vr = verify_module(Nested().eval(), NestedFlat().eval(), x)
+    assert vr.passed, vr
+    assert vr.per_output == (0.0, 0.0, 0.0)
