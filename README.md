@@ -42,6 +42,8 @@ Measured on the dev box (RTX 2050, fp64, small sizes — see
 | same export — K-way chunk construct (FLOPs) | **4.4× fewer** (29.4M → 6.70M) |
 | same export, T=2048 — the carrier as wall time | **5.0–5.9×** vs eager, **6.2–7.4×** vs `torch.compile` |
 | same export — shared-state reassociation | **10.8–24.5% fewer FLOPs** |
+| same export, T=4096 — peak activation memory | **20.4× less** (13.1 vs 268.1 MiB) |
+| deep weight chain, k=16 — stored parameters | **16× less** (256 KB vs 4.0 MB) |
 | joint fwd+bwd step vs `torch.autograd` | **+13%** |
 | pure pointwise fusion | **0.82× loss** — Inductor's home turf |
 
