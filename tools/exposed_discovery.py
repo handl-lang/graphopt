@@ -103,6 +103,21 @@ def _vocab_of(term: Any) -> tuple:
     return tuple(out)
 
 
+def _attr_keys_of(term: Any) -> dict:
+    """Return the attr key-sets observed per op inside *term*.
+
+    Every distinct ``sorted(node.attrs)`` spelling — including the
+    bare ``()`` — is one enumeration spelling
+    (``enumerate_candidates``' ``attr_keys``), so a minted pattern's
+    attr-key set is exactly the one a real node carries.
+    """
+    sets: dict[str, set] = {}
+    for s in _iter_subterms(term):
+        if isinstance(s, Op):
+            sets.setdefault(s.op, set()).add(tuple(sorted(s.attrs)))
+    return {op: tuple(sorted(vs)) for op, vs in sets.items()}
+
+
 def _cases_by_name(names: list[str] | None) -> dict[str, TermCase]:
     """Export the requested workloads (or the whole zoo) to cases."""
     want = set(names) if names else None
@@ -162,9 +177,12 @@ def _enumerate_arm(
     vocab = _vocab_of(case.term)
     if not vocab:
         return {"vocab": (), "emitted": 0, "outcomes": []}
+    attr_keys = _attr_keys_of(case.term)
     cands = []
     for c in enumerate_candidates(
-        ops=vocab, max_candidates=args.max_candidates
+        ops=vocab,
+        attr_keys=attr_keys,
+        max_candidates=args.max_candidates,
     ):
         cands.append(c)
         if len(cands) >= args.max_candidates:

@@ -276,6 +276,141 @@ def test_false_shape_exp_add_rejected_numerically():
     assert out.useful is False
 
 
+# ---------------------------------------------------------------------------
+#  Attr spellings — pattern rules that reach real exported terms
+# ---------------------------------------------------------------------------
+
+_ATTR_KEYS = {
+    "select": (("dim", "index"),),
+    "unsqueeze": (("dim",),),
+}
+
+
+def _find(cands, form):
+    return [c for c in cands if c.label.split(":")[0] == form]
+
+
+def _hom_select(cands):
+    """The ``select(add A B) = add(select A, select B)`` candidate."""
+    return next(
+        c
+        for c in _find(cands, "unary-hom")
+        if isinstance(c.rule.lhs, Op) and c.rule.lhs.op == "select"
+    )
+
+
+def test_rule_carries_metavar_pattern_with_attr_metavars():
+    cands = _cands(("add", "select"), metas=("A", "B"), attr_keys=_ATTR_KEYS)
+    hom = _hom_select(cands)
+    rule = hom.as_rule()
+    # The fireable form is the pattern: str metavar leaves, attr
+    # metavariables — not the evaluated instance's Vars/values.
+    assert isinstance(rule.lhs.args[0], Op)
+    assert all(isinstance(a, str) for a in rule.lhs.args[0].args)
+    assert rule.lhs.attrs == {
+        "dim": "select_dim",
+        "index": "select_index",
+    }
+    # RHS re-mints the bound attrs — the transported spelling.
+    for node in rule.rhs.args:
+        assert node.attrs == rule.lhs.attrs
+    # The evaluated instance is concrete and already true.
+    (out,) = lp.evaluate([hom])
+    assert out.num_true is True
+    assert isinstance(hom.lhs.attrs["dim"], int)
+
+
+def test_pattern_rule_fires_on_a_real_attr_bearing_term():
+    from catopt_core.egraph import EGraph
+
+    cands = _cands(("add", "select"), metas=("A", "B"), attr_keys=_ATTR_KEYS)
+    rule = _hom_select(cands).as_rule()
+    x = Var("x0", en.TensorType((4, 4)))
+    y = Var("w", en.TensorType((4, 4)))
+    term = Op.make("select", Op.make("add", x, y), dim=1, index=2)
+    eg = EGraph()
+    root = eg.add_term(term)
+    eg.run([rule], root, max_iterations=4, max_nodes=2000)
+    assert eg.rule_fires.get(rule.name, 0) == 1
+
+
+def test_rhs_only_op_keeps_concrete_attrs():
+    cands = _cands(("add", "select"), metas=("A", "B"), attr_keys=_ATTR_KEYS)
+    selfop = next(
+        c
+        for c in _find(cands, "self-op")
+        if isinstance(c.rule.rhs, Op) and c.rule.rhs.op == "select"
+    )
+    # No attr metavar is minted for an op absent from the LHS — the
+    # instantiated RHS carries the evaluated draw.
+    assert all(
+        not isinstance(v, str) for v in selfop.rule.rhs.attrs.values()
+    )
+
+
+def _sum_keysets(cands):
+    """Every attr key-set minted on a ``sum`` node across candidates."""
+    out: set = set()
+    for c in cands:
+        stack = [c.rule.lhs, c.rule.rhs]
+        while stack:
+            t = stack.pop()
+            if isinstance(t, Op):
+                if t.op == "sum":
+                    out.add(frozenset(t.attrs))
+                stack.extend(t.args)
+    return out
+
+
+def test_attr_key_variants_emit_distinct_spellings():
+    keys = {"sum": (("dim",), ("dim", "keepdim")), "add": ((),)}
+    cands = _cands(("add", "sum"), metas=("A",), attr_keys=keys)
+    # unary-of-lit emits ``sum(A) = add(k, A)`` — under both spellings.
+    hits = _find(cands, "unary-of-lit")
+    assert hits
+    keysets = _sum_keysets(hits)
+    assert frozenset({"dim"}) in keysets
+    assert frozenset({"dim", "keepdim"}) in keysets
+
+
+def test_default_attr_keys_schema_derived():
+    keys = en._default_attr_keys(("select", "flatten", "add"))
+    assert keys["select"] == (("dim", "index"),)
+    # Declared spelling first, then the required-only elision.
+    assert keys["flatten"] == (("start_dim", "end_dim"), ("start_dim",))
+    assert "add" not in keys
+
+
+def test_spellings_product_is_capped():
+    keys = {
+        "x": (("a",), ("b",), ("c",), ("d",)),
+        "y": (("u",), ("v",), ("w",), ("z",)),
+    }
+    assert len(en._spellings({"x", "y"}, keys)) == en._MAX_SPELLINGS
+    assert len(en._spellings({"x"}, keys)) == 4
+    # An unlisted op spells bare.
+    assert en._spellings({"q"}, keys) == [{"q": ()}]
+
+
+def test_unenumerable_attr_kind_mints_bare_eval():
+    # A key the attr-kind table cannot type is honestly
+    # unenumerable: the instance mints the bare node, the pattern
+    # still carries the metavar (the eval reports undecidable).
+    keys = {"add": (("bogus_key",),)}
+    cands = _cands(("add", "neg"), metas=("A",), attr_keys=keys)
+    (idem,) = _find(cands, "idempotent")
+    assert idem.lhs.attrs == {}  # bare instance mint
+    assert idem.rule.lhs.attrs == {"bogus_key": "add_bogus_key"}
+
+
+def test_helpers_spec_ops_and_attr_mv():
+    assert en._spec_ops(("add", ("select", "A"), "B")) == {
+        "add",
+        "select",
+    }
+    assert en._attr_mv("select", "dim") == "select_dim"
+
+
 def test_true_new_family_neg_add_and_lit_self():
     cands = _cands()
     neg_add = _by_note(
