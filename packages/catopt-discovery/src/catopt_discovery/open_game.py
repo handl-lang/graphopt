@@ -28,7 +28,12 @@ The learned arm (:class:`OpenLearnedPlayer`) scores ``evaluate``
 moves by the candidate's *shape* features — rewriting form, op
 histogram, depth, metavariable count, the cost-delta heuristic —
 plus episode-history rates.  That is exactly the prior a proposer
-needs: "shapes of this form have been paying."
+needs: "shapes of this form have been paying."  The arm ships
+*warm*: it defaults to the baked prior
+:data:`catopt_discovery.lawdata.OPEN_GAME_PLAYER_WEIGHTS`, trained
+over even pages by ``tools/train_open_prior.py`` and measured on the
+held-out odd pages (``tests/test_discovery_open_prior.py``); pass
+``weights={}`` for the cold start.
 
 Cases (:func:`gen_cases`) are pages into the deterministic
 enumerated stream — case *i* sees a different slice of the same
@@ -44,6 +49,7 @@ from typing import Any
 
 from catopt_core.ir import Op, Var
 
+from catopt_discovery import lawdata
 from catopt_discovery import proposal as lp
 from catopt_discovery.enumerate import enumerate_candidates
 from catopt_discovery.meta_arena import Action
@@ -358,7 +364,14 @@ def featurize(
 
 
 class OpenLearnedPlayer(LinearPolicy):
-    """The open-game preset — enumerate featurizer and schema bound."""
+    """The open-game preset — enumerate featurizer and schema bound.
+
+    *weights* defaults to the shipped trained prior
+    (:data:`lawdata.OPEN_GAME_PLAYER_WEIGHTS`) — the baked preset
+    ``tools/train_open_prior.py`` regenerates.  Pass ``weights={}``
+    explicitly for the cold start (the honest uniform baseline the
+    held-out measurement compares against).
+    """
 
     FEATURES = OPEN_GAME_FEATURES
 
@@ -380,7 +393,11 @@ class OpenLearnedPlayer(LinearPolicy):
             seed,
             legal=legal_actions if legal is None else legal,
             featurizer=featurize if featurizer is None else featurizer,
-            weights={} if weights is None else weights,
+            weights=(
+                lawdata.OPEN_GAME_PLAYER_WEIGHTS
+                if weights is None
+                else weights
+            ),
             lr=lr,
             temperature=temperature,
             greedy=greedy,

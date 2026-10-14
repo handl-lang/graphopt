@@ -137,12 +137,14 @@ class TestPlayer:
         p.finish_episode(traj.total)  # no per-step rewards
 
     def test_frozen_does_not_learn(self):
+        # the frozen copy shares the parent's weights and never moves
+        # them — the parent may be the baked prior or the cold start
         p = mp.MetaLearnedPlayer(0)
         q = p.frozen(3, greedy=True)
         arena = _silu_board()
         traj = ma.run_episode(arena, q, 6)
         q.finish_episode(traj.total)
-        assert all(v == 0.0 for v in q.weights_dict().values())
+        assert q.weights_dict() == p.weights_dict()
 
     def test_epsilon_explores(self):
         # epsilon=1 forces the uniform branch; still legal, still plays
@@ -197,7 +199,7 @@ class TestImitate:
         assert p.imitate(st, move) is False
 
     def test_frozen_does_not_learn(self):
-        p = mp.MetaLearnedPlayer(0, learn=False)
+        p = mp.MetaLearnedPlayer(0, weights={}, learn=False)
         arena = _silu_board()
         st = arena.observe()
         assert p.imitate(st, ma.Action.saturate()) is True
@@ -205,8 +207,10 @@ class TestImitate:
 
     def test_imitation_warm_start_picks_expert_line(self):
         # expert: saturate → extract — after imitation the policy
-        # should rank the demonstrated line top under greedy eval
-        p = mp.MetaLearnedPlayer(0)
+        # should rank the demonstrated line top under greedy eval.
+        # Cold start (``{}``): imitation is the only signal, so the
+        # test measures the warm-start, not the shipped prior.
+        p = mp.MetaLearnedPlayer(0, weights={})
         for _ in range(8):
             arena = _silu_board()
             st = arena.observe()

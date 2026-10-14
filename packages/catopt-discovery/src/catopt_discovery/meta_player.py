@@ -212,10 +212,10 @@ class MetaLearnedPlayer(LinearPolicy):
 
     A :class:`~catopt_discovery.players.LinearPolicy` over
     ``meta_arena.legal_actions`` scored by this module's
-    ``featurize``; *weights* defaults to
-    :data:`lawdata.META_ARENA_PLAYER_WEIGHTS` (empty ⇒ uniform, the
-    honest cold start).  ``learn=False`` freezes the policy for
-    eval; ``frozen`` returns a non-learning copy.
+    ``featurize``; *weights* defaults to the shipped trained prior
+    :data:`lawdata.META_ARENA_PLAYER_WEIGHTS` (pass ``weights={}``
+    for the uniform cold start).  ``learn=False`` freezes the policy
+    for eval; ``frozen`` returns a non-learning copy.
     """
 
     FEATURES = lawdata.META_ARENA_FEATURES

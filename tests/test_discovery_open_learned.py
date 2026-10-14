@@ -155,7 +155,13 @@ def measured() -> dict:
     """Train once, evaluate the arms, and rank the held-out pool."""
     torch.manual_seed(SEED)
     train, ev = _split()
-    player = og.OpenLearnedPlayer(seed=SEED)
+    # The cold start (``{}``), explicitly: this module pins the
+    # *training* claim — does training from scratch move the arm
+    # past random?  The shipped baked prior
+    # (``lawdata.OPEN_GAME_PLAYER_WEIGHTS``) is what the player
+    # defaults to, and is measured in
+    # ``tests/test_discovery_open_prior.py``.
+    player = og.OpenLearnedPlayer(seed=SEED, weights={})
     engine.train_policy(player, train, og.OpenArena, budget=BUDGET)
     arms = play._arms(play.DOMAINS["open"], player, SEED)
     table = {name: _play_arm(arms[name], ev) for name in arms}
@@ -296,10 +302,12 @@ class TestRanking:
         assert r["learned_ap"] > r["random_ap"]
 
     def test_learned_ranking_below_heuristic(self, measured):
-        """The honest negative: the learned prior does *not* beat the
-        cost-delta heuristic — the heuristic already finds every
-        useful candidate, so the learned arm's edge over random comes
-        from coverage, not a sharper shape ranking."""
+        """The honest negative: the *cold-start-trained* prior does
+        not beat the cost-delta heuristic — one epoch from ``{}``
+        leaves the shape ranking no sharper than the heuristic, so
+        its edge over random comes from coverage.  (The shipped baked
+        prior, trained further, does clear the heuristic — see
+        ``tests/test_discovery_open_prior.py``.)"""
         r = measured["ranking"]
         assert r["learned_ap"] < r["heuristic_ap"]
 
