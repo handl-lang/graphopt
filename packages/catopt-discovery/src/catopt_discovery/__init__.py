@@ -21,6 +21,9 @@ composable feature parts), the meta preset (:mod:`.meta_player`),
 the reverse handler (:mod:`.training`), the
 generated-kernel machinery (:mod:`.genkernel` — minted handlers +
 bindings + gen sink — the lowerings the search itself builds),
+the handler-grammar minter (:mod:`.handler_synth` — ADR 0007
+layer 2: structured loop/fold/contraction handler bodies verified
+against the pre-mint subterm),
 and the domain registry + CLI (:mod:`.play` —
 ``python -m catopt_discovery.play --domain meta|joint|search|torch|gen``).
 Formerly the ``tools/law_*.py``
