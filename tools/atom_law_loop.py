@@ -1,5 +1,4 @@
-"""ADR-0007 layer 3 prototype — synthesize an atom's laws from
-measured bindings.
+"""ADR-0007 layer 3 prototype: an atom's laws from measured bindings.
 
 The runtime-assembly loop, proven on the hand-built carrier atoms
 (``om_decayed`` / ``applyd`` / ``decay_vec`` — the ops
@@ -40,12 +39,14 @@ Run::
 from __future__ import annotations
 
 import argparse
+import contextlib
 import itertools
 import json
 import sys
 import time
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any, Iterable
+from typing import Any
 
 import catopt_carriers  # noqa: F401 — registers carrier bindings
 import torch
@@ -111,8 +112,8 @@ def _ew_exprs(
         nxt: list[Any] = []
         for op in ops:
             for e in level:
-                for l in leaves:
-                    for t in (_p(op, e, l), _p(op, l, e)):
+                for leaf in leaves:
+                    for t in (_p(op, e, leaf), _p(op, leaf, e)):
                         r = op_repr(t)
                         if r not in seen:
                             seen.add(r)
@@ -127,8 +128,8 @@ def _affd_candidates(cap: int) -> list[Candidate]:
 
     ``applyd(aff_diag(a,b), h) = a⊙h + b`` is affine in ``h``, so for
     ANY ``lhs`` term affine in its state metavar the folded map is
-    recoverable *per env*: ``L = ∂lhs/∂h`` (a two-draw difference) and
-    ``B = lhs − L⊙h``.  The battery is one schema — lhs patterns whose
+    recoverable *per env*: ``L = d lhs/d h`` (a two-draw difference) and
+    ``B = lhs - L⊙h``.  The battery is one schema — lhs patterns whose
     rhs is the folded ``applyd(aff_diag(E1,E2), h)`` — and the driver
     solves the slots (see :func:`_affine_candidates`): self-compose,
     add-merge, scale-absorb and the matmul readout all land in the
@@ -302,23 +303,44 @@ _ATOMS: dict[str, Any] = {
 _TYPED_FAMILIES: dict[str, list[dict[str, tuple]]] = {
     "applyd": [
         {"a1": (4,), "b1": (4,), "a2": (4,), "b2": (4,), "h": (4,)},
-        {"a1": (3, 4), "b1": (3, 4), "a2": (3, 4), "b2": (3, 4),
-         "h": (4,)},
+        {
+            "a1": (3, 4),
+            "b1": (3, 4),
+            "a2": (3, 4),
+            "b2": (3, 4),
+            "h": (4,),
+        },
         {"a": (4,), "b": (4,), "h": (4,), "r": ()},
         {"a": (3, 4), "b": (3, 4), "h": (4,), "r": ()},
-        {"e": (5, 4), "a": (4,), "b": (4,), "h": (4,)},
-        {"e": (2, 5, 4), "a": (3, 4), "b": (3, 4), "h": (4,)},
+        # readout corner: matmul contracts the map's leading (K) axis
+        # while h stays broadcast — the elementwise-Jacobian corner.
+        {"e": (5, 4), "a": (4, 6), "b": (4, 6), "h": (6,)},
+        {"e": (2, 5, 4), "a": (4, 6), "b": (4, 6), "h": (6,)},
     ],
     "om_decayed": [
         {"s": (4, 4), "d": (4, 4), "v": (4, 3), "x": (4, 4)},
         {"s": (2, 4, 4), "d": (4, 4), "v": (2, 4, 3), "x": (1,)},
-        {"s1": (2, 4), "s2": (3, 4), "d1": (2, 4), "d2": (3, 4),
-         "v": (4, 3), "d": (5, 4), "s": (5, 4)},
+        {
+            "s1": (2, 4),
+            "s2": (3, 4),
+            "d1": (2, 4),
+            "d2": (3, 4),
+            "v": (4, 3),
+            "d": (5, 4),
+            "s": (5, 4),
+        },
         # column-split corner — the FALSE region of ``omd.rowcat``
         # made evaluable: concat on dim ±1 is well-typed here, so the
         # equality is measured, not just declined.
-        {"s1": (2, 3), "s2": (2, 5), "d1": (2, 3), "d2": (2, 5),
-         "v": (8, 3), "d": (2, 8), "s": (2, 8)},
+        {
+            "s1": (2, 3),
+            "s2": (2, 5),
+            "d1": (2, 3),
+            "d2": (2, 5),
+            "v": (8, 3),
+            "d": (2, 8),
+            "s": (2, 8),
+        },
     ],
     "decay_vec": [
         {"g": (), "x": (6,)},
@@ -341,6 +363,120 @@ _ATTR_DOMAINS: dict[str, dict[str, tuple]] = {
     "om_decayed": {"D": (0, -2, 1, -1)},
     "applyd": {},
 }
+
+
+# ---------------------------------------------------------------------------
+#  Affine-in-state solve — the applyd slot recoverer
+# ---------------------------------------------------------------------------
+
+
+def _slot_match(
+    bank: list[Any], bound: dict, env: dict, target: Any
+) -> list[Any]:
+    """Bank exprs whose measured value broadcast-matches *target*."""
+    out = []
+    for e in bank:
+        try:
+            t = _term_instantiate(e, bound)
+        except Exception:
+            continue
+        ok, val = lvo._eval(t, env)
+        if not ok or not isinstance(val, torch.Tensor):
+            continue
+        try:
+            va, ta = torch.broadcast_tensors(val, target)
+        except RuntimeError:
+            continue
+        if lp._allclose(va, ta, lvo._TOL):
+            out.append(e)
+    return out
+
+
+def _affine_candidates(
+    cand: Candidate,
+    envs: list[tuple[dict, Any]],
+    *,
+    state: str = "h",
+    solve_envs: int = 4,
+    cap: int = 12,
+) -> list[Candidate]:
+    """Solve the folded map's two slots from measured envs.
+
+    ``applyd(aff_diag(a,b), h) = a⊙h + b`` is affine in the state, so
+    any lhs affine in *state* decomposes per env as
+    ``L = (lhs(h+δ) - lhs(h))/δ`` and ``B = lhs(h) - L⊙h`` (δ drawn
+    bounded away from 0).  ``h`` enters applyd-family folds
+    elementwise along its own axes, so the per-element division
+    recovers the composed map's linear slot exactly — including the
+    ``matmul`` readout whose Jacobian is diagonal in the broadcast
+    axis.  Each slot's value is matched against the bounded expr bank
+    and *intersected across envs*, so a wrong expr dies on one env —
+    no pair product, the quartic corner never opens.  Survivors emit
+    spelled ``applyd(aff_diag(E1,E2), h)`` candidates that re-enter
+    the ordinary measure/guard/certify path; an empty slot set is a
+    refusal, not a guess.
+    """
+    metas = sorted(
+        s
+        for s in _iter_subterms(cand.lhs)
+        if isinstance(s, str) and s != state
+    )
+    if state not in {
+        s for s in _iter_subterms(cand.lhs) if isinstance(s, str)
+    }:
+        return []
+    bank = _ew_exprs(tuple(metas), ("add", "mul", "sub", "matmul"), 2)
+    l_set: list[Any] | None = None
+    b_set: list[Any] | None = None
+    fitted = 0
+    for bound, lhs_i in envs:
+        if fitted >= solve_envs:
+            break
+        h_var = bound.get(state)
+        if not isinstance(h_var, Var):
+            continue
+        env = lvo._env_for(lhs_i)
+        if env is None or h_var not in env:
+            continue
+        ok1, v1 = lvo._eval(lhs_i, env)
+        if not ok1 or not isinstance(v1, torch.Tensor):
+            continue
+        delta = torch.randn_like(env[h_var]) + 2.0
+        env2 = {**env, h_var: env[h_var] + delta}
+        ok2, v2 = lvo._eval(lhs_i, env2)
+        if not ok2 or not isinstance(v2, torch.Tensor):
+            continue
+        try:
+            lin = (v2 - v1) / delta
+            bias = v1 - lin * env[h_var]
+        except (RuntimeError, ZeroDivisionError):
+            continue
+        l_now = _slot_match(bank, bound, env, lin)
+        b_now = _slot_match(bank, bound, env, bias)
+        l_set = (
+            l_now if l_set is None else [e for e in l_set if e in l_now]
+        )
+        b_set = (
+            b_now if b_set is None else [e for e in b_set if e in b_now]
+        )
+        fitted += 1
+        if not l_set or not b_set:
+            break
+    if not fitted or not l_set or not b_set:
+        return []
+    out = []
+    for i, (e1, e2) in enumerate(
+        itertools.islice(itertools.product(l_set, b_set), cap)
+    ):
+        out.append(
+            Candidate(
+                f"{cand.name}[{i}]",
+                cand.lhs,
+                _p("applyd", _p("aff_diag", e1, e2), state),
+                note=f"solved slots L={op_repr(e1)} B={op_repr(e2)}",
+            )
+        )
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -368,7 +504,7 @@ class Verdict:
 
 
 def _typed_envs(atom: str, lhs: Any) -> list[tuple[dict, Any]]:
-    """Instantiate *lhs* under typed shape families × attr domains.
+    """Instantiate *lhs* under typed shape families x attr domains.
 
     Leaf metavars bind to fresh ``Var``s of the family's declared
     shapes; attr metavars bind to the atom's attr-domain product
@@ -379,12 +515,11 @@ def _typed_envs(atom: str, lhs: Any) -> list[tuple[dict, Any]]:
     attr_names = sorted(_attr_metavars(lhs))
     doms = _ATTR_DOMAINS.get(atom, {})
     attr_lists = [doms.get(a, (0, 1, -1)) for a in attr_names]
-    attr_combos = itertools.islice(
-        lvo._diag_product(attr_lists), 48
-    )
+    attr_combos = itertools.islice(lvo._diag_product(attr_lists), 48)
     for combo in attr_combos:
         base_attrs = {
-            f"$attr:{n}": v for n, v in zip(attr_names, combo, strict=True)
+            f"$attr:{n}": v
+            for n, v in zip(attr_names, combo, strict=True)
         }
         for shapes in _TYPED_FAMILIES.get(atom, []):
             mvs = {s for s in _iter_subterms(lhs) if isinstance(s, str)}
@@ -435,9 +570,16 @@ def _measure(
     rule: Rewrite, envs: list[tuple[dict, Any]], *, bail: int = 1
 ) -> dict:
     """Tally outcomes over envs; early-bail after *bail* bad verdicts."""
-    t = {"envs": 0, "equal": 0, "unequal": 0, "rhs_err": 0,
-         "other": 0, "declined": 0, "first_lhs": None,
-         "first_rhs": None}
+    t = {
+        "envs": 0,
+        "equal": 0,
+        "unequal": 0,
+        "rhs_err": 0,
+        "other": 0,
+        "declined": 0,
+        "first_lhs": None,
+        "first_rhs": None,
+    }
     for bound, lhs_i in envs:
         t["envs"] += 1
         o = _outcome(rule, bound, lhs_i)
@@ -447,14 +589,10 @@ def _measure(
                 t["first_lhs"] = lhs_i
                 inst = dict(bound)
                 if rule.derive is not None:
-                    try:
+                    with contextlib.suppress(Exception):
                         inst.update(rule.derive(bound) or {})
-                    except Exception:
-                        pass
-                try:
+                with contextlib.suppress(Exception):
                     t["first_rhs"] = _term_instantiate(rule.rhs, inst)
-                except Exception:
-                    pass
         elif o == "unequal":
             t["unequal"] += 1
         elif o == "rhs-err":
@@ -463,11 +601,86 @@ def _measure(
             t["declined"] += 1
         else:
             t["other"] += 1
-        if o in ("unequal", "rhs-err") and (
-            t["unequal"] + t["rhs_err"]
-        ) >= bail:
+        if (
+            o in ("unequal", "rhs-err")
+            and (t["unequal"] + t["rhs_err"]) >= bail
+        ):
             break
     return t
+
+
+def _mint_axis_guard(
+    cand: Candidate, envs: list[tuple[dict, Any]]
+) -> Rewrite | None:
+    """Mint an ``axis``/``attr-eq`` guard covering this env list.
+
+    The ``auto_cond`` fallback for attr-heavy carrier patterns: its
+    measured domain is the generic enumerator, which cannot reach a
+    ``concat dim`` / ``decay_vec t`` binding the way the typed
+    families do.  The bank here is deliberately small — one-clause
+    ``("axis", T, A, k)`` normalizations and ``("attr-eq", A, v)``
+    constants over the envs' own values — evaluated on THIS measured
+    list, so the minted guard is honestly measured, not assumed.  A
+    guard is minted only when it accepts every equal env and declines
+    every measured-bad one, and the guarded rule is re-measured over
+    the whole env list before the caller certifies it.
+    """
+    bare = Rewrite(
+        name=cand.name, lhs=cand.lhs, rhs=cand.rhs, dspec=cand.dspec
+    )
+    outcomes = [_outcome(bare, b, li) for b, li in envs]
+    eq = {i for i, o in enumerate(outcomes) if o == "equal"}
+    bad = {
+        i
+        for i, o in enumerate(outcomes)
+        if o in ("unequal", "rhs-err", "guard-err")
+    }
+    if not eq or not bad:
+        return None
+    leaf_mvs = [
+        s for s in _iter_subterms(cand.lhs) if isinstance(s, str)
+    ]
+    attr_mvs = sorted(_attr_metavars(cand.lhs))
+    attr_vals = {
+        a: {
+            b.get(f"$attr:{a}")
+            for b, _ in envs
+            if b.get(f"$attr:{a}") is not None
+        }
+        for a in attr_mvs
+    }
+    preds = [
+        ("axis", mv, a, k)
+        for mv in leaf_mvs
+        for a in attr_mvs
+        for k in (-3, -2, -1, 0, 1)
+    ]
+    preds += [("attr-eq", a, v) for a in attr_mvs for v in attr_vals[a]]
+    from catopt_core.laws.cond import eval_cond
+
+    def covers(pred: Any) -> bool:
+        try:
+            return all(
+                eval_cond(pred, envs[i][0]) for i in eq
+            ) and not any(eval_cond(pred, envs[i][0]) for i in bad)
+        except (ValueError, TypeError, KeyError):
+            return False
+
+    good = [p for p in preds if covers(p)]
+    if not good:
+        return None
+    cond = min(good, key=repr)
+    guarded = Rewrite(
+        name=cand.name,
+        lhs=cand.lhs,
+        rhs=cand.rhs,
+        cond=cond,
+        dspec=cand.dspec,
+    )
+    re = _measure(guarded, envs, bail=len(envs) + 1)
+    if re["equal"] < len(eq) or re["unequal"] or re["rhs_err"]:
+        return None
+    return guarded
 
 
 def _corpus_with(atom: str) -> list[Any]:
@@ -480,10 +693,10 @@ def _corpus_with(atom: str) -> list[Any]:
         if any(
             isinstance(s, Op) and s.op == atom
             for s in _iter_subterms(case.term)
-        ):
-            terms.append(case.term)
-        # also keep plain-tensor models for op-adjacent lhs patterns
-        elif atom in ("decay_vec", "om_decayed"):
+        ) or atom in ("decay_vec", "om_decayed"):
+            # the spelled-lhs patterns (mul/concat over plain ops) can
+            # match terms that never name the atom, so the corpus
+            # corner stays whole for them
             terms.append(case.term)
     return terms
 
@@ -519,9 +732,7 @@ def _certify(
         verdict.verify = "rejected-tautology"
 
 
-def _solve_dv_merge(
-    lhs_i: Any, bound: dict
-) -> dict | None:
+def _solve_dv_merge(lhs_i: Any, bound: dict) -> dict | None:
     """Measured derive for the decay_vec merge: solve (O, S) on values.
 
     Evaluates the instantiated ``mul(dv.., dv..)`` lhs on the env's
@@ -529,8 +740,6 @@ def _solve_dv_merge(
     ``decay_vec`` whose value matches — the *measured* output the
     synthesizer fits a declarative ``dspec`` to.
     """
-    from catopt_discovery.proposal import _eval_backend
-
     env = lvo._env_for(lhs_i)
     if env is None:
         return None
@@ -611,14 +820,12 @@ def _run_atom(
         key = op_repr(cand.lhs)
         if key not in env_cache:
             envs = list(_typed_envs(atom, cand.lhs))
-            try:
+            with contextlib.suppress(Exception):
                 envs += list(
                     ev._synth_sites(
                         cand.lhs, cand.rhs, limit=args.synth_limit
                     )
                 )
-            except Exception:
-                pass
             envs += _real_envs(cand.lhs, corpus)
             env_cache[key] = envs
         return env_cache[key]
@@ -692,13 +899,27 @@ def _run_atom(
             )
             row.note = row.note or "no measured equal site"
         elif bad:
-            # mixed domain → guard synthesis
+            # mixed domain → guard synthesis; auto_cond measures its
+            # own domain, which cannot reach attr-heavy carrier
+            # corners (decay_vec dims, concat axes) — when it refuses
+            # for "no evaluable site", fall back to a small axis/attr
+            # guard bank evaluated on THIS env list
             ac = obs.auto_cond_object(
                 rule, corpus_terms=corpus, synth_limit=args.synth_limit
             )
             if ac.object is None:
-                row.outcome = "rejected-undeclarable"
-                row.note = ac.detail
+                guarded = _mint_axis_guard(cand, envs)
+                if guarded is None:
+                    row.outcome = "rejected-undeclarable"
+                    row.note = ac.detail
+                else:
+                    row.rule = guarded
+                    row.cond = guarded.cond
+                    row.outcome = "guarded"
+                    row.note = (
+                        f"auto_cond refused ({ac.detail}); "
+                        "axis-bank guard minted on typed envs"
+                    )
             else:
                 row.rule = ac.object.rule
                 row.cond = ac.cond
@@ -719,11 +940,7 @@ def _report(res: dict) -> None:
         cond_s = ""
         if r.cond not in (None, True):
             cond_s = f" cond={r.cond!r}"[:90]
-        ds = (
-            f" dspec={r.dspec}"
-            if r.dspec
-            else ""
-        )
+        ds = f" dspec={r.dspec}" if r.dspec else ""
         print(
             f"  {r.name:<28} {r.outcome:<22} envs={r.envs:<4} "
             f"eq={r.equal:<3} bad={r.unequal:<3} real={r.real_sites:<3} "
@@ -788,7 +1005,8 @@ def main(argv: list[str] | None = None) -> int:
                             "law": (
                                 law_to_data(r.rule)
                                 if r.rule is not None
-                                and r.outcome in ("unconditional", "guarded")
+                                and r.outcome
+                                in ("unconditional", "guarded")
                                 else None
                             ),
                             "serializable": (
@@ -803,7 +1021,9 @@ def main(argv: list[str] | None = None) -> int:
             )
         from pathlib import Path
 
-        Path(args.json).write_text(json.dumps(blob, indent=1, default=str))
+        Path(args.json).write_text(
+            json.dumps(blob, indent=1, default=str)
+        )
         print(f"\nwrote {args.json}")
     return 0
 
