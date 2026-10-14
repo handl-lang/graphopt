@@ -11,3 +11,8 @@ export * from "./rules.ts";
 export * from "./referee.ts";
 export * from "./features.ts";
 export * from "./programs.ts";
+export * from "./minting.ts";
+export * from "./guards.ts";
+export * from "./exposure.ts";
+export * from "./combinators.ts";
+export * from "./ports.ts";
