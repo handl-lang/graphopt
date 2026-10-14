@@ -459,3 +459,181 @@ def test_main_without_json(capsys):
     )
     assert rc == 0
     assert "top-ranked" in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------------------
+#  Depth — min_classes filter and the non-derivability filter
+# ---------------------------------------------------------------------------
+
+
+def test_distinct_classes_counts_bin_and_un_separately():
+    # one bin class on the left, one un class on the right.
+    assert (
+        fm._distinct_classes(("bin", 0, "X", "Y"), ("un", 0, "X")) == 2
+    )
+    # the same slot index in both kinds is two distinct classes.
+    assert (
+        fm._distinct_classes(("bin", 0, "X", "Y"), ("bin", 0, "X", "Y"))
+        == 1
+    )
+    # three unary classes: U0(X) = U1(U2(X)).
+    sk = ("un", 0, "X"), ("un", 1, ("un", 2, "X"))
+    assert fm._distinct_classes(*sk) == 3
+
+
+def test_min_classes_filters_the_stream():
+    full = list(
+        itertools.islice(
+            fm.enumerate_forms(
+                max_nodes=3, bin_ops=_BIN, un_ops=_UN, literals=(0, 1)
+            ),
+            6000,
+        )
+    )
+    deep = list(
+        itertools.islice(
+            fm.enumerate_forms(
+                max_nodes=3,
+                bin_ops=_BIN,
+                un_ops=_UN,
+                literals=(0, 1),
+                min_classes=3,
+            ),
+            400,
+        )
+    )
+    assert deep, "expected three-class forms"
+    for sk in deep:
+        assert fm._distinct_classes(sk.lhs, sk.rhs) >= 3
+    # the filter is exactly the class-count predicate: the deep stream
+    # is the full stream filtered, in the same order.
+    expected = [
+        sk for sk in full if fm._distinct_classes(sk.lhs, sk.rhs) >= 3
+    ][:400]
+    assert [_skey(sk) for sk in deep] == [_skey(sk) for sk in expected]
+
+
+def test_min_classes_default_is_the_full_space():
+    a = list(
+        itertools.islice(
+            fm.enumerate_forms(
+                max_nodes=2, bin_ops=_BIN, un_ops=_UN, literals=(0,)
+            ),
+            50,
+        )
+    )
+    b = list(
+        itertools.islice(
+            fm.enumerate_forms(
+                max_nodes=2,
+                bin_ops=_BIN,
+                un_ops=_UN,
+                literals=(0,),
+                min_classes=1,
+            ),
+            50,
+        )
+    )
+    assert a == b
+
+
+def _fake_outcome(
+    form_key, *, num_true=True, derivable=False, useful=False
+):
+    """Build an ``Outcome`` annotated with *form_key* for filter tests."""
+    cand = lp.Candidate(
+        "form", "0", "X", "Y", note=f"form={form_key}; r"
+    )
+    return lp.Outcome(
+        candidate=cand,
+        derivable=derivable,
+        num_true=num_true,
+        base_cost=2.0,
+        cand_cost=1.0 if useful else 2.0,
+    )
+
+
+def test_non_derivable_true_selects_the_deep_instances():
+    outs = [
+        _fake_outcome("A", num_true=True, derivable=False),
+        _fake_outcome("A", num_true=True, derivable=True),
+        _fake_outcome("B", num_true=None, derivable=False),
+        _fake_outcome("C", num_true=False, derivable=False),
+        _fake_outcome("D", num_true=True, derivable=False),
+    ]
+    deep = fm.non_derivable_true(outs)
+    assert [fm._form_key(o.candidate) for o in deep] == ["A", "D"]
+    assert fm.deep_form_keys(outs) == ["A", "D"]
+
+
+def test_falsification_report_has_deep_fields():
+    rep = fm.falsification_report(
+        budget=300, evaluate_n=120, max_nodes=3, min_classes=3
+    )
+    for key in (
+        "non_derivable_true",
+        "deep_forms",
+        "deep_new_forms",
+        "deep_shipped_forms",
+        "new_form_instances",
+        "new_form_derivable",
+        "new_form_non_derivable",
+        "min_classes",
+    ):
+        assert key in rep
+    assert rep["min_classes"] == 3
+    # every deep form key is either shipped or listed new.
+    shipped = rep["shipped"]
+    for k in rep["deep_forms"]:
+        assert k in shipped or k in rep["deep_new_forms"]
+    # the split of paying new-form laws is exact.
+    assert (
+        rep["new_form_derivable"] + rep["new_form_non_derivable"]
+        == rep["new_form_instances"]
+    )
+    # deep instances are all num_true and not derivable.
+    for o in fm.non_derivable_true(rep["outcomes"]):
+        assert o.num_true is True and not o.derivable
+
+
+def test_min_classes_three_admits_a_deep_new_form():
+    # The measured positive: over three-class forms, the harness admits
+    # a form outside the shipped set whose instance is true but not
+    # derivable — the falsification flips.
+    rep = fm.falsification_report(
+        budget=800, evaluate_n=250, max_nodes=3, min_classes=3
+    )
+    assert rep["deep_new_forms"], "expected a deep new form"
+    assert "U0(X) = U1(U2(X))" in rep["deep_new_forms"]
+    # and at least one of its instances pays.
+    assert rep["new_form_non_derivable"] >= 1
+
+
+def test_fmt_report_includes_deep_section():
+    rep = fm.falsification_report(
+        budget=800, evaluate_n=250, max_nodes=3, min_classes=3
+    )
+    text = fm._fmt_report({k: v for k, v in rep.items()})
+    assert "non-derivability filter" in text
+    assert "deep NEW forms" in text
+    # the deep new form is listed by name.
+    assert rep["deep_new_forms"]
+    assert "deep new form:" in text
+
+
+def test_main_min_classes_smoke(capsys):
+    rc = fm.main(
+        [
+            "--ops",
+            "add,mul,sub,div,neg,exp,square,sqrt",
+            "--min-classes",
+            "3",
+            "--budget",
+            "120",
+            "--evaluate",
+            "40",
+        ]
+    )
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "non-derivability filter" in out
