@@ -42,13 +42,17 @@ baseline / bounded-lane probes — the latter needs scratch deps
 outside the lockfile).  The minting machinery itself is in
 `catopt_discovery` (`antiunify`, `handler_synth`) — ADR 0007/0008.
 
-**Machine-discovered laws are in `DEFAULT`.**  `search(...,
-rules=DEFAULT)` ships four machine-minted laws alongside the
-hand-written kernel: `select_mul`, `softmax_fold`, `silu_fold`, and
-`mul_unsq_nat` (the first minted from a corpus op-tuple; provenance
-`MACHINE_SHIPPED`, `catopt_core.laws.provenance`).  A change to a
-default rule changes extraction behavior for every caller — run the
-full suite (not just a slice) when touching the bank.
+**Machine-admitted laws are in `DEFAULT`.**  `search(..., rules=DEFAULT)`
+ships **11 machine-admitted laws** alongside the hand-written kernel
+(`catopt_core.laws.provenance.MACHINE_SHIPPED` — the promoted set;
+`project/retros/promoted-laws.md`).  The newest is `mul_unsq_nat` — the
+first law minted from a corpus op-tuple, guard resolved by the
+adversarial sweep.  Note the authorship split in `provenance.py`:
+`select_mul` / `softmax_fold` / `glu_fold` / `rms_norm_fold` had
+machine-*assisted* discovery but were hand-integrated before the
+admission machinery existed and classify as **human-authored**.  A
+change to any default rule changes extraction behavior for every
+caller — run the full suite (not just a slice) when touching the bank.
 
 ## Verification commands
 

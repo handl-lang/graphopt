@@ -377,15 +377,21 @@
                 <b class="text-ink">In the real system, laws are found, not only written.</b>
                 A discovery pipeline — census → propose → verify → measure → rank → emit — counts
                 op-and-shape patterns across real model graphs and runs every candidate through the
-                same referee the next level teaches. It has shipped laws no human wrote — the four
-                the course counts are <code class="text-ink">select_mul</code> (<code
+                same referee the next level teaches. It has shipped laws no human wrote — <b
+                  class="text-ink">11 machine-admitted</b> ones now sit in the default rule set
+                (<code class="text-ink">MACHINE_SHIPPED</code> in the real package's provenance
+                table). The newest is <code class="text-ink">mul_unsq_nat</code> (the census-minted
+                two-sided unsqueeze naturality, guarded by a condition the adversarial sweep
+                synthesized, −12.3&thinsp;% on its source workload). Four further laws — <code
+                  class="text-ink">select_mul</code> (<code
                   >mul(select u, select v) → select (mul u v)</code
                 >
-                — 25 corpus sites, −25.9&thinsp;% modeled cost),
-                <code class="text-ink">softmax_fold</code>, <code class="text-ink">silu_fold</code>,
-                and <code class="text-ink">mul_unsq_nat</code> (the census-minted two-sided
-                unsqueeze naturality, guarded by a condition the adversarial sweep synthesized,
-                −12.3&thinsp;% on its source workload) — plus the canonicalization bridges that make
+                — 25 corpus sites, −25.9&thinsp;% modeled cost), <code class="text-ink"
+                  >softmax_fold</code
+                >, <code class="text-ink">silu_fold</code> and <code class="text-ink">glu_fold</code>
+                — had machine-<em>assisted</em> discovery but were hand-integrated before the
+                admission machinery existed, so the provenance table counts them as human-authored.
+                Plus the canonicalization bridges that make
                 noncanonical spellings reach the fold. The corpus itself is machine-fed: 166 real
                 <code>nn.*</code> workloads through the export boundary, 114 verified — an intake
                 that also caught three lowering bugs no test caught. Held out of the library and
@@ -1733,7 +1739,7 @@
           </div>
 
           <footer class="mt-16 pt-6 border-t border-line text-[12.5px] text-faint">
-            A toy of the real thing — the board is a three-law algebra, the referee a numeric
+            A toy of the real thing — the board is a six-law algebra, the referee a numeric
             evaluator. The real engine's referee is
             <code class="text-dim">verify_certificate</code>, its board an e-graph, its scoreboard a
             measured <code class="text-dim">Meter</code>.
