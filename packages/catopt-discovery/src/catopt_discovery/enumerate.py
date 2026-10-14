@@ -103,6 +103,34 @@ unchanged.  The CLI evaluates under the bounded-saturation variant
 ``grammar._evaluate`` established (the unbounded verify can
 comm-assoc-explode on mul/add chains).
 
+Two forms per candidate
+-----------------------
+
+The evaluated ``lhs``/``rhs`` are the *instance*: ``Var``/``Const``
+leaves plus a concrete attr draw per op (the first domain element of
+``oracle._attr_options``, the same enumeration the view oracle
+sweeps).  ``Candidate.rule`` carries the *pattern*: ``str`` leaves
+for the metavariables and one attribute metavariable per attr key —
+``select`` mints ``dim="select_dim", index="select_index"`` — shared
+across every occurrence of the op name, so a match on a real
+``select(x, dim=1, index=0)`` binds the values and the RHS re-mints
+them (the ``pipeline._view_node`` convention).  Both halves matter:
+an attr-free ``select X`` pattern can never satisfy the matcher's
+exact attr-key equality, and a ``Var`` leaf compiles to a literal
+``_PLeaf`` that only matches the enumerator's own instance — the two
+defects that left the enumerate arm at zero fires on real models
+(``project/retros/exposed-math.md``).  Attr metavars mint only for
+ops the LHS mentions; an op that exists RHS-only keeps the
+instance's concrete attrs — the one sound spelling a derive-less
+rule can produce.
+
+Which keys an op spells is data, not shape: *attr_keys* maps an op
+name to the attr key-sets observed on real terms (one spelling per
+set, the product over the pair's ops capped at
+``_MAX_SPELLINGS``).  The default is ``ATTR_SCHEMA``-derived — every
+declared canonical name, plus the ``ATTR_REQUIRED`` subset when it
+differs (the elided-default spelling an export may produce).
+
 Run::
 
     .venv/bin/python -m catopt_discovery.enumerate \
@@ -120,13 +148,17 @@ from collections import deque
 from pathlib import Path
 from typing import Any
 
+from catopt_core.attrs import ATTR_REQUIRED, ATTR_SCHEMA
+from catopt_core.egraph import Rewrite
 from catopt_core.ir import Const, Op, TensorType, Var, op_repr
 from catopt_core.opmeta import arity as _op_arity
+from catopt_core.typing import shape_of
 
 from catopt_discovery import lawdata
 from catopt_discovery import proposal as lp
 from catopt_discovery.grammar import _evaluate as _bounded_evaluate
 from catopt_discovery.object_synthesis import term_from_spec
+from catopt_discovery.oracle import _attr_options
 
 __all__ = [
     "DEFAULT_OPS",
@@ -634,20 +666,201 @@ def _filter_reason(lhs: Any, rhs: Any, max_depth: int) -> str | None:
     return None
 
 
-def _instantiate(spec: Any, env: dict) -> Any:
-    """Instantiate a spec: metas -> env vars, ints -> ``Const``."""
+# ---------------------------------------------------------------------------
+#  Attribute spellings — the metavar bridge to real exported terms
+# ---------------------------------------------------------------------------
+
+#: Cap on the attr key-set product enumerated per candidate pair — an
+#: op observed under several spellings multiplies the pair's variants;
+#: the product is cut in deterministic (sorted) order so a cap keeps a
+#: fair cross-section rather than an exhaustive (explosive) listing.
+_MAX_SPELLINGS = 8
+
+
+def _attr_mv(op: str, key: str) -> str:
+    """Name the attr metavariable for *op*'s *key* (per-op shared)."""
+    return f"{op}_{key}"
+
+
+def _spec_ops(spec: Any, out: set | None = None) -> set:
+    """Return every op name used in a spec tree."""
+    out = set() if out is None else out
     if isinstance(spec, tuple):
-        return Op.make(
-            spec[0], *(_instantiate(c, env) for c in spec[1:])
+        out.add(spec[0])
+        for c in spec[1:]:
+            _spec_ops(c, out)
+    return out
+
+
+def _default_attr_keys(ops: tuple) -> dict:
+    """Return the ``ATTR_SCHEMA``-derived key-sets for *ops*.
+
+    One spelling holds every declared canonical name (position order —
+    the spelling a full export emits); when ``ATTR_REQUIRED`` names a
+    strict nonempty subset, a second spelling covers the
+    elided-defaults shape an export may produce.  A caller that has
+    the real term should pass *attr_keys* instead — observed sets are
+    exact where this table is generic.
+    """
+    out: dict[str, tuple] = {}
+    for op in ops:
+        schema = ATTR_SCHEMA.get(op)
+        if not schema:
+            continue
+        declared = tuple(schema[i] for i in sorted(schema))
+        sets = [declared]
+        req = ATTR_REQUIRED.get(op)
+        if req:
+            required = tuple(sorted(req))
+            if required != declared:
+                sets.append(required)
+        out[op] = tuple(sets)
+    return out
+
+
+def _spellings(ops_in: set, attr_keys: dict) -> list[dict]:
+    """Return the per-pair attr key-set assignments, bounded.
+
+    ``attr_keys[op]`` is a tuple of key-sets (``()`` is the bare
+    spelling); an op absent from the map gets the bare spelling only.
+    """
+    names = sorted(ops_in)
+    lists = [attr_keys.get(op, ((),)) for op in names]
+    return [
+        dict(zip(names, combo, strict=True))
+        for combo in itertools.islice(
+            itertools.product(*lists), _MAX_SPELLINGS
         )
+    ]
+
+
+def _eval_attrs(op: str, keys: tuple, shape: tuple) -> dict | None:
+    """Return one concrete attr dict for *op*, or ``None``.
+
+    The first domain element of ``oracle._attr_options`` — the same
+    honest enumeration the view oracle sweeps — restricted to the
+    spelling's keys.  ``None`` means no honest draw exists (an
+    unenumerable attr kind, or a shape that admits no option); the
+    caller mints the bare node and the numeric oracle reports the
+    instance undecidable rather than guessing an attr.
+    """
+    opts = _attr_options(op, keys, shape)
+    if not opts:
+        return None
+    draw = opts[0]
+    if not set(keys) <= set(draw):
+        return None
+    return {k: draw[k] for k in keys}
+
+
+def _instantiate(
+    spec: Any,
+    env: dict,
+    spelling: dict | None = None,
+    memo: dict | None = None,
+) -> Any:
+    """Instantiate a spec: metas -> env vars, ints -> ``Const``.
+
+    An op the spelling attributes gets a concrete attr draw
+    (:func:`_eval_attrs`) valid for its first operand's inferred
+    shape; a spelling the draw cannot honestly fill — or one
+    ``Op.make`` validation rejects — mints the bare node, so the
+    numeric oracle reports the instance undecidable instead of seeing
+    a fabricated attr.  ``spelling``/``memo`` default to the bare,
+    shape-blind instantiation ``forms`` uses.
+    """
+    spelling = {} if spelling is None else spelling
+    memo = {} if memo is None else memo
+    if isinstance(spec, tuple):
+        kids = tuple(
+            _instantiate(c, env, spelling, memo) for c in spec[1:]
+        )
+        keys = spelling.get(spec[0], ())
+        if keys:
+            shape = shape_of(kids[0], memo) if kids else ()
+            attrs = _eval_attrs(
+                spec[0],
+                keys,
+                shape if isinstance(shape, tuple) else (),
+            )
+            if attrs is not None:
+                try:
+                    return Op.make(spec[0], *kids, **attrs)
+                except ValueError:
+                    pass  # fall through to the bare mint
+        return Op.make(spec[0], *kids)
     if isinstance(spec, str):
         return env[spec]
     return Const(spec)
 
 
+def _pattern_of(
+    spec: Any, inst: Any, lhs_ops: set, spelling: dict
+) -> Any:
+    """Build the fireable pattern for *spec* beside its instance.
+
+    Leaf metavars stay ``str`` (a real ``Var`` leaf in a pattern is a
+    literal the matcher compares by ``repr`` — it can only ever match
+    the enumerator's own instance); literal leaves keep the instance's
+    ``Const``.  An op occurring in the LHS mints its spelling's keys
+    as shared attr metavariables (``"{op}_{key}"``) — a match binds
+    the real values and the RHS re-mints them.  An op appearing only
+    on the RHS has no binding to reuse, so it keeps the evaluated
+    instance's concrete attrs.
+    """
+    if isinstance(spec, tuple):
+        op = spec[0]
+        attrs: dict[str, Any] = (
+            {k: _attr_mv(op, k) for k in spelling.get(op, ())}
+            if op in lhs_ops
+            else dict(inst.attrs)
+        )
+        return Op.make(
+            op,
+            *(
+                _pattern_of(c, i, lhs_ops, spelling)
+                for c, i in zip(spec[1:], inst.args, strict=True)
+            ),
+            **attrs,
+        )
+    if isinstance(spec, str):
+        return spec
+    return inst
+
+
 # ---------------------------------------------------------------------------
 #  The candidate stream
 # ---------------------------------------------------------------------------
+
+
+def _instances(
+    ls: Any,
+    rs: Any,
+    max_depth: int,
+    attr_keys: dict,
+    env: dict,
+    memo: dict,
+):
+    """Yield ``(inst_l, inst_r, pat_l, pat_r)`` for one oriented pair.
+
+    Applies the pre-evaluation filter, then enumerates the pair's
+    attr key-set assignments; a spelling the instantiation or the
+    pattern cannot mint honestly (``ValueError`` — e.g. a key-set
+    missing a required attr) is skipped, not crashed on.
+    """
+    if _filter_reason(ls, rs, max_depth) is not None:
+        return
+    lhs_ops = _spec_ops(ls)
+    spellings = _spellings(lhs_ops | _spec_ops(rs), attr_keys)
+    for spelling in spellings:
+        try:
+            inst_l = _instantiate(ls, env, spelling, memo)
+            inst_r = _instantiate(rs, env, spelling, memo)
+            pat_l = _pattern_of(ls, inst_l, lhs_ops, spelling)
+            pat_r = _pattern_of(rs, inst_r, lhs_ops, spelling)
+        except ValueError:
+            continue
+        yield inst_l, inst_r, pat_l, pat_r
 
 
 def enumerate_candidates(
@@ -657,45 +870,74 @@ def enumerate_candidates(
     literals: tuple | None = None,
     max_depth: int = 2,
     max_candidates: int | None = None,
+    attr_keys: dict | None = None,
 ):
     """Yield ``Candidate``s paired by rewriting form, deduped.
 
     Streams the form generators round-robin (a cap cuts a
     cross-section of every family), tries each pair in both
     orientations, drops the pre-evaluation-filtered pairs
-    (``_filter_reason`` plus tautology), dedupes on the
-    alpha-normal ``proposal._key``, and annotates each survivor
-    with its library relation in ``note``.  Metavariables
-    instantiate on ``(4,4)`` vars, so the emitted candidates run
-    through ``proposal.evaluate`` unchanged.
+    (``_filter_reason`` plus tautology), enumerates each survivor's
+    attr spellings (``_spellings`` over *attr_keys*, defaulting to
+    the ``ATTR_SCHEMA`` table), dedupes on the alpha-normal
+    ``proposal._key`` of the *pattern* — distinct spellings are
+    distinct candidates — and annotates each survivor with its
+    library relation in ``note``.  Each candidate carries two forms
+    (module docstring, *Two forms per candidate*): the evaluated
+    ``lhs``/``rhs`` instance runs through ``proposal.evaluate``
+    unchanged, and ``rule`` is the fireable ``Rewrite`` — ``str``
+    metavariable leaves plus attr metavariables — that actually
+    matches real exported terms.
     """
     ops = DEFAULT_OPS if ops is None else tuple(ops)
     lits = lawdata.GRAMMAR_LITERALS if literals is None else literals
+    attr_keys = (
+        _default_attr_keys(ops) if attr_keys is None else attr_keys
+    )
+    env = {m: Var(m, TensorType((_D, _D))) for m in metas}
+    yield from _candidate_stream(
+        ops, metas, lits, max_depth, attr_keys, env, max_candidates
+    )
+
+
+def _candidate_stream(
+    ops: tuple,
+    metas: tuple,
+    literals: tuple,
+    max_depth: int,
+    attr_keys: dict,
+    env: dict,
+    max_candidates: int | None,
+):
+    """Drive the form/pair/spelling stream behind the public front."""
     bin_, un_ = _split(ops)
     lib = lp._library_keys()
-    env = {m: Var(m, TensorType((_D, _D))) for m in metas}
+    memo: dict = {}
     seen: set = set()
     n = 0
-    for form, lhs, rhs in _form_pairs(bin_, un_, metas, lits):
+    for form, lhs, rhs in _form_pairs(bin_, un_, metas, literals):
         for ls, rs in ((lhs, rhs), (rhs, lhs)):
-            if _filter_reason(ls, rs, max_depth) is not None:
-                continue
-            lt, rt = term_from_spec(ls), term_from_spec(rs)
-            key = lp._key(lt, rt)
-            if key[0] == key[1] or key in seen:
-                continue
-            seen.add(key)
-            rel = lp._relation(lt, rt, lib)
-            yield lp.Candidate(
-                "enumerate",
-                f"{form}:{n}",
-                _instantiate(ls, env),
-                _instantiate(rs, env),
-                note=(f"{op_repr(lt)} = {op_repr(rt)}; relation={rel}"),
-            )
-            n += 1
-            if max_candidates is not None and n >= max_candidates:
-                return
+            for il, ir, pl, pr in _instances(
+                ls, rs, max_depth, attr_keys, env, memo
+            ):
+                key = lp._key(pl, pr)
+                if key[0] == key[1] or key in seen:
+                    continue
+                seen.add(key)
+                rel = lp._relation(pl, pr, lib)
+                yield lp.Candidate(
+                    "enumerate",
+                    f"{form}:{n}",
+                    il,
+                    ir,
+                    note=(
+                        f"{op_repr(pl)} = {op_repr(pr)}; relation={rel}"
+                    ),
+                    rule=Rewrite(f"enumerate:{form}:{n}", pl, pr),
+                )
+                n += 1
+                if max_candidates is not None and n >= max_candidates:
+                    return
 
 
 # ---------------------------------------------------------------------------

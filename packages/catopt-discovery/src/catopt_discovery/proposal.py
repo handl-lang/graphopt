@@ -366,12 +366,18 @@ def _sat_cost(term: Any, rules: list, cost_fn: Any) -> float:
 
 
 def _rule_budgets(rules: list) -> dict[str, int]:
-    """Budget the EXPANSIVE rules present in *rules* (bounded saturation)."""
-    names = {r.name for r in rules}
+    """Budget the EXPANSIVE rules present in *rules* (bounded saturation).
+
+    A rule outside ``ALL_RULES`` — a candidate under test — is
+    unbounded-blast-radius by definition: it earns the same budget,
+    so a self-feeding candidate pattern cannot churn the graph to the
+    node cap one fire at a time.
+    """
+    lib = {r.name: r for r in ALL_RULES}
     return {
         r.name: _EXPANSIVE_BUDGET
-        for r in ALL_RULES
-        if r.name in names and _tags.EXPANSIVE in r.tags
+        for r in rules
+        if r.name not in lib or _tags.EXPANSIVE in lib[r.name].tags
     }
 
 

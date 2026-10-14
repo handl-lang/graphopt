@@ -652,12 +652,18 @@ def _relaxed_census(
 
 
 def _rule_budgets(rules: list[Rewrite]) -> dict[str, int]:
-    """Per-rule enode budget for the EXPANSIVE closure generators."""
-    names = {r.name for r in rules}
+    """Per-rule enode budget for the EXPANSIVE closure generators.
+
+    Non-library rules — candidates under test — are
+    unbounded-blast-radius by definition and earn the same budget,
+    so a self-feeding probe rule cannot churn the graph to the node
+    cap one fire at a time (mirrors ``proposal._rule_budgets``).
+    """
+    lib = {r.name: r for r in ALL_RULES}
     return {
         r.name: _EXPANSIVE_BUDGET
-        for r in ALL_RULES
-        if r.name in names and _tags.EXPANSIVE in r.tags
+        for r in rules
+        if r.name not in lib or _tags.EXPANSIVE in lib[r.name].tags
     }
 
 
