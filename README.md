@@ -38,8 +38,8 @@ provenance in [`docs/results.md`](docs/results.md).  Each block states
 | deep weight chains (reassoc to 1 GEMM, k=8/k=16) | **8.93× / 16.12×** |
 | spelled `x@A@B@C` block | **3.96×** |
 | `chainfuse` — laws + a kernel minted mid-search | **2.94×** |
-| spelled RetNet export, T=2048 (derived carrier) | **6.2–7.4×** |
-| spelled RetNet export, T=512 (derived carrier) | **1.82–2.33×** |
+| spelled RetNet export, T=2048 — **derived carrier** | **6.2–7.4×** |
+| spelled RetNet export, T=512 — fused + minted kernel (not the carrier) | **1.82–2.33×** |
 | llama-style SwiGLU MLP | **2.11×** |
 | held-out model zoo (22 architectures) | **11/18 verified wins**, best 2.18× |
 | joint fwd+bwd step vs `torch.autograd` | **+13%** |

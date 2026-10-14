@@ -142,7 +142,8 @@ measured on what**.*  Scope legend:
 
 | model | T | vs eager | vs `torch.compile` | max_abs |
 |---|---|---|---|---|
-| `ChunkedRetention` (RetNet-style) | 512 | — | **1.82–2.33×** | 1.3e-8 |
+| `ChunkedRetention` (RetNet-style), T=512 — fused + minted kernel | 512 | — | **1.82–2.33×** | 1.3e-8 |
+| `ChunkedRetention`, T=512 — **the derived carrier itself** | 512 | 0.51× (loss) | 0.48× | 1.6e-8 |
 | `ChunkedRetention` | 2048 | **5.0–5.9×** | **6.2–7.4×** | 9.8e-9 |
 | `chainfuse` (x@A@B@C + pointwise tail) | 256×512 | 3.71× | 2.90× | 1.7e-5 |
 | `swiglu_mlp` (llama-style) | — | 1.17× | 2.00–2.04× | 6e-8 |
