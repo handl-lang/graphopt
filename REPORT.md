@@ -4,6 +4,17 @@
 program. Optimizing that program — with certificates — covers
 computation structure and parameter storage in a single search.*
 
+> **Scope note (2026-10-14).**  This report covers the weight-space /
+> ε-axis phases (0–5) and their falsifications; it is kept as the
+> historical record of those measurements.  The current state of the
+> system — the discovery loop that mints and ships its own laws, the
+> minting stack (ADR 0007), the combinator substrate prototype
+> (ADR 0008), the ONNX backend (ADR 0006), and the corpus-level yield
+> measurements — is written up in
+> [`RESEARCH_WRITEUP.md`](RESEARCH_WRITEUP.md) (see §3 "Verified
+> results" and §4 "Honest losses"), with per-work retros under
+> `project/retros/` and decisions under `project/adrs/`.
+
 ---
 
 ## 1. The thesis

@@ -80,6 +80,82 @@ lowering routing (`stats["lowering"]`), honest param-only discount
 `exec_generic` 0.070→0.316 — positive but not yet predictive; the
 frontier on scan blocks is thin (4 near-identical alts).
 
+**Meta-level results** (the game layer — `catopt_discovery`):
+`joint_probe` puts a forward term and all derived VJP terms in one
+e-graph — `linear_fwd` extracts at 13.0→10.0 certified (the `tanh`
+VJP reuses the whole forward term, billed once), while
+silu/softmax stay flat (single-use sharing ≡ fusion under
+`count_cost`).  The meta-arena's learned player over the mixed
+board answers plan-0021 Q3: cold `LinearPolicy` beats scripted on
+mean reward (−0.03 vs −0.10, 40 held-out boards) *and* produces 3
+certified structural wins the playbook can't reach — but only
+after the `claim(tag)` option move fused the paying
+declare→handle line into one refereed action; consolidation
+remains sampling luck, not learned preference.
+
+**Delivered-vs-incumbent** (`gen_probe`, RTX 2050, verified):
+spelled matmul chain delivered at **3.96× vs `torch.compile`**
+(22µs vs 87µs — the reassoc laws fold to one GEMM; Inductor keeps
+three); spelled llama-MLP swiglu at **2.11×**; pure pointwise
+fusion honestly loses (0.82–0.88×).  `joint_step` — forward +
+derived grads under one shared memo — beats autograd's fwd+bwd
+13% on the tanh-linear archetype, verified at 9.5e-07.  The gen
+kernel machinery (`genkernel` — minted handlers, compiled
+bindings, gen sink) closes the loop for sites no law names;
+`claim` binds them with no new moves.
+Artifacts: `project/retros/joint-training-graph.md`,
+`project/retros/meta-arena-player.md`,
+`project/retros/generic-game-layer.md`,
+`project/retros/gen-kernels.md`.
+
+**Machine-minted laws and atoms (this cycle).**  The loop no longer
+only *audits* a hand-written bank — it grows the bank and ships into
+it.  `mul_unsq_nat` (`mul(unsqueeze U d, unsqueeze V d) =
+unsqueeze(mul U V, d)`) was minted from a corpus op-tuple (a
+DeltaNet-style block's own `β·k` write): the naive broadcast guard
+was **falsified** by the adversarial sweep (212 bad accepts), the
+exact `flat-map-unsq` guard was synthesized instead (0 bad accepts /
+0 misses), closure cost +18 enodes, **−12.27%** on its source
+workload, provenance `MACHINE_SHIPPED` — it is in the default rule
+set.  A structured handler grammar minted and fp64-verified handler
+bodies (the `om_decayed` carrier element at **8.9e-16** — previously
+a hand-written executor); a law-synthesis loop derived and certified
+25 law rows around shipped atoms (false twins rejected), and caught
+a real lowering bug (`decay_vec` `sign=0` coercion) because the
+oracle refused to certify rather than ship it.  The composed loop
+(`need → handler → laws → admission`) minted `scan_fold` (the
+selective-scan recurrence, 1.78e-15) with a certified law set —
+and measured its own honest null (below).
+Artifacts: `project/retros/mul-unsq-nat.md`,
+`project/retros/handler-proposals.md`,
+`project/retros/layer3-loop.md`,
+`project/retros/atom-synth-loop.md`; ADR 0007.
+
+**Backend generality, measured twice.**  `catopt-onnx` landed both
+directions (`OnnxSink` IR→ONNX, `OnnxSource` ONNX→IR) with **zero
+edits under `catopt-core`** — the hexagonal boundary tested by a
+second, non-torch backend and held.  fp64 round-trip through
+`onnxruntime` at **1.11e-16** (machine epsilon); 107 input op types,
+opsets 13–21; package coverage 100%.  Artifact:
+`project/retros/onnx-package.md`; ADR 0006.
+
+**The substrate prototype.**  A combinator presentation
+(`tools/combinator.py` — monoidal basis with explicit `Δ` sharing
+and a bounded `loop` trace) round-trips **321/321** corpus workloads
+structurally exact with zero ops refusing translation (mean blowup
+2.61×), and the RetNet shared-state fold spells as a `loop` term
+verified at 1e-7–2.6e-7 — carrier atoms become *definable*, not
+primitive.  The open gate: `loop` structure is erased at export, so
+folds must be proposed by search.  Artifact: ADR 0008.
+
+**Delivery caught up on speed.**  The fused carrier lowering
+(`decayed_lower`) reaches **parity with the paper's own chunked
+implementation** (2.08 vs 2.12 ms at T=2048) and beats it under
+graph replay (0.670 vs 0.822 ms at T=1024), fp64-exact 1.4e-16 —
+the remaining gap to FLA is kernel-level (fused fp32 Triton vs fp64
+torch GEMMs + a materialized score tensor), not structural.
+Artifact: `project/retros/retnet-external-baselines.md`.
+
 ## 4. Honest losses and boundaries
 
 - **Inductor wins wherever it compiles the raw graph.** Executor
@@ -99,12 +175,49 @@ frontier on scan blocks is thin (4 near-identical alts).
   **parity** on wall time.
 - Chunked om-attention loses to fused SDPA head-to-head when K,V fit
   on device; the win is memory/incremental state, not throughput.
+- **The minted atom did not pay.**  The composed loop's first full
+  semantic atom (`scan_fold`) computes the fold's *total*, while the
+  corpus *emits* the sequence — 0 certified laws fire on real terms.
+  The paying sibling (`fold_emit`) sits >200k deep in the round-robin
+  enumeration; it verifies at 6.7e-16 when reached directly, so the
+  gap is enumeration *ordering*, not expressiveness.  Truth and pay
+  are measured separately, and they were disjoint here.
+- **Discovery yield is sparse.**  A 60-model sweep of the
+  law-LHS-exposed class found **no paying new law beyond
+  `mul_unsq_nat`** (~1.5% of the exposed class carries fresh paying
+  unpublished structure), and exposure itself is bimodal — 81/321
+  workloads expose literally nothing (the fused-op class: convs,
+  pools, `sdpa` spellings).  Exposure predicts reachability, not
+  payoff.
+- **Anti-unification compression is a measured null.**  Definitional
+  atoms mint soundly and shorten spellings (12 vs 26 ops on one
+  winner) but did **not** expand reach on any of three workloads
+  (identical cheapest extractable member with/without atoms); the
+  strict arm is worse under tight node budgets.  Recorded as the ADR's
+  falsification clause firing.
+- **The precision lane is a certified negative on real BiRefNet.**
+  On the 220M-parameter checkpoint the bounded machinery offered
+  members (20 at budget 1e-2, 56 at 3e-2) and **correctly refused all
+  of them**: thin dedup structure (18/2304 rows) makes the gather-
+  wrapped bounded member price 1.32× *worse* than dense.  The
+  fp32 gate stayed bitwise-clean (nothing wrong shipped), but no
+  speedup exists on that model.  Side findings: 43 `BatchNorm2d`
+  modules (so conv+BN fusion targets do exist), and `deform_conv2d`
+  exported with no lowering binding — a real coverage gap since
+  fixed.
 
 ## 5. Open work
 
+- **Enumeration ordering**: reach the canonical emitted-scan seed
+  early (the measured blocker between the minted atom and pay).
+- **Proposal-space extension**: the substrate prototype (ADR 0008)
+  makes the enumeration space uniform over morphisms; gate 3 (does
+  search *reach* `loop` forms) is the open question that decides
+  whether folds are discoverable rather than spellable.
 - **Executor leanness**: per-leaf dispatch is the loss driver;
   fusion/tiling inside `scan_lower`/`om_lower` or codegen for the
-  batched levels.
+  batched levels.  The FLA gap is now precisely attributed here
+  (fused fp32 kernels vs fp64 torch GEMMs).
 - **Fusion-aware extraction**: `fusion_regions` is landed for
   *reporting*; completing it for *selection* needs either additive
   decomposition that respects kernel boundaries or more
@@ -129,13 +242,22 @@ derived, not encoded; closed-form resolvents via `trace`), the
 pipeline *delivers* them end-to-end under certificates (not just
 finds them in an e-graph), and the verifier has repeatedly caught
 would-be false claims — the methodology is the result as much as
-the numbers. The performance story is real but narrow: wins where
+the numbers.  This cycle strengthens the claim in one specific way:
+**the loop now mints content that ships** — a law derived from a
+model's own op-tuple is in the default rule set with a synthesized
+guard that survived an adversarial sweep, and a handler grammar
+re-minted a previously hand-written carrier executor — while the
+same machinery honestly refused its apparent siblings, its first
+composed atom (pay-null), and its own compression layer (reach-null).
+The performance story is real but narrow: wins where
 work is asymptotically reduced (fold, reassoc, log-depth scan) or
 where Inductor cannot produce code at all (GLA T=2048), and losses
 wherever Inductor's fused kernels apply — executor overhead, not
 search, is the gap. Nothing discovered is novel to practitioners;
 the contribution is automatic discovery + certified equivalence +
-per-shape selection. Framed as "verified reachability with a real,
-regime-bounded performance win," it is a solid systems/PL workshop
+per-shape selection, with a measured ~1.5% yield of fresh paying
+structure in the exposed corpus. Framed as "verified reachability
+with a real, regime-bounded performance win, and a discovery loop
+that ships what it proves," it is a solid systems/PL workshop
 or short-paper result; a full venue paper needs the scale
 validation and executor work above.
