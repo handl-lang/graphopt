@@ -403,6 +403,28 @@ def test_unenumerable_attr_kind_mints_bare_eval():
     assert idem.rule.lhs.attrs == {"bogus_key": "add_bogus_key"}
 
 
+def test_unmintable_spelling_skips_the_variant():
+    # ``select`` requires {dim, index}: a spelling naming only
+    # ``dim`` cannot mint a valid node — candidates whose LHS needs
+    # select are skipped entirely, and RHS-only selects mint bare.
+    keys = {"select": (("dim",),), "add": ((),)}
+    cands = _cands(("add", "select"), metas=("A", "B"), attr_keys=keys)
+    assert cands
+    select_nodes = []
+    for c in cands:
+        stack = [c.rule.lhs, c.rule.rhs]
+        while stack:
+            t = stack.pop()
+            if isinstance(t, Op):
+                if t.op == "select":
+                    select_nodes.append(t)
+                stack.extend(t.args)
+    # Every surviving select node is the bare RHS-only fallback —
+    # no attr metavar made it into a pattern.
+    assert select_nodes
+    assert all(n.attrs == {} for n in select_nodes)
+
+
 def test_helpers_spec_ops_and_attr_mv():
     assert en._spec_ops(("add", ("select", "A"), "B")) == {
         "add",

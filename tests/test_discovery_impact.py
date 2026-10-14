@@ -403,9 +403,12 @@ def test_rule_budgets_only_expansive_shipped_rules():
     budgets = im._rule_budgets([*ALL_RULES, extra])
     expansive = {r.name for r in ALL_RULES if tags.EXPANSIVE in r.tags}
     assert expansive  # premise: shipped rules carry the tag
-    assert set(budgets) == expansive
+    # Every shipped expansive rule is budgeted — and so is the
+    # non-library candidate, whose blast radius is unbounded by
+    # definition (a firing candidate churns the reach saturation to
+    # the node cap otherwise).
+    assert set(budgets) == expansive | {"t_x"}
     assert all(v == im._EXPANSIVE_BUDGET for v in budgets.values())
-    assert "t_x" not in budgets
 
 
 def test_saturate_and_cert_ok(sink, cost):
