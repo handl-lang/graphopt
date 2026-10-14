@@ -5,14 +5,31 @@
  * for every concept, the level that *introduces* it and the levels
  * that *use* it, in curriculum order.
  *
- * Seeded honestly from the 22 existing levels' text (plan 0028 step 1
- * — no content rewrite).  Where a term is used before it is defined,
- * that ordering bug is **recorded, not hidden**: {@link forwardRefs}
- * returns every concept whose first use precedes its introduction —
- * including the ones no level defines yet (`introduced === null`,
- * treated as introduced "at infinity").  That list is a deliverable
- * for step 2, which defines the terms; this file keeps the labels in
- * data so the graph can be rebuilt without re-reading the prose.
+ * Step 1 seeded the graph honestly from the 22 levels' text and
+ * recorded the ordering bugs (22 forward references — terms used
+ * before they are defined).  Step 2 (this revision) **fixes** them:
+ * a term is now either introduced at or before its first use, or the
+ * incidental prose mention was removed.  {@link forwardRefs} therefore
+ * returns **zero** and stays a live gate — the test asserts the count
+ * can only go down.
+ *
+ * Two kinds of fix were applied, and the graph records which:
+ *
+ * - **Promoted** — the first-use level genuinely teaches the term, so
+ *   its `introduced` moved up to meet its first use: `closure` and
+ *   `e-graph` → reach (2), `monoid`/`comonoid` → structure (3),
+ *   `non-dominated-set` → choice (5), `ranking` → measure (8),
+ *   `features` → learn (7), `critical-pair` → coherence (11),
+ *   `monoidal-product` → substrate (15).
+ * - **Removed** — the early mention was incidental foreshadowing, so
+ *   the `used` list dropped it (and the prose was reworded): `referee`,
+ *   `oracle`, `cost-model`, `minting`, `admission`, `census`,
+ *   `provenance`, `guard`, `adversarial-sweep` (level 3's callout),
+ *   `learned-policy`, `legal-move` (level 4), `dispatch` (level 8),
+ *   `carrier` (level 15).
+ *
+ * The labels stay in data so the graph — and the glossary it drives —
+ * can be rebuilt without re-reading the prose.
  */
 
 export interface Concept {
@@ -97,8 +114,15 @@ export const CONCEPTS: readonly Concept[] = [
     id: "closure",
     label: "Closure",
     def: "The fixed point of applying laws from a seed — everything reachable.",
-    introduced: null,
+    introduced: "reach",
     used: ["reach", "truthpay"],
+  },
+  {
+    id: "e-graph",
+    label: "E-graph",
+    def: "The equality-saturation structure holding every equivalent form.",
+    introduced: "reach",
+    used: ["reach", "exposure"],
   },
   // ── 3 · laws come from structure ─────────────────────────────
   {
@@ -119,14 +143,14 @@ export const CONCEPTS: readonly Concept[] = [
     id: "monoid",
     label: "Monoid",
     def: "A set with an associative operation and an identity — it gives associativity.",
-    introduced: null,
+    introduced: "structure",
     used: ["structure"],
   },
   {
     id: "comonoid",
     label: "Comonoid",
     def: "The dual structure whose law is duplication.",
-    introduced: null,
+    introduced: "structure",
     used: ["structure"],
   },
   // ── 4 · staying correct ──────────────────────────────────────
@@ -142,14 +166,14 @@ export const CONCEPTS: readonly Concept[] = [
     label: "Referee",
     def: "The arbiter that decides equivalence — semantics, never cost or search.",
     introduced: "referee",
-    used: ["structure", "referee", "architecture", "mint"],
+    used: ["referee", "architecture", "mint"],
   },
   {
     id: "oracle",
     label: "Oracle",
     def: "The numeric check that a candidate rewrite is true.",
     introduced: "referee",
-    used: ["structure", "referee", "learn"],
+    used: ["referee", "learn"],
   },
   // ── 5 · choosing among equals ────────────────────────────────
   {
@@ -163,7 +187,7 @@ export const CONCEPTS: readonly Concept[] = [
     id: "non-dominated-set",
     label: "Non-dominated set",
     def: "The set kept because nothing beats it on every axis.",
-    introduced: null,
+    introduced: "choice",
     used: ["choice"],
   },
   {
@@ -186,7 +210,7 @@ export const CONCEPTS: readonly Concept[] = [
     label: "Legal move",
     def: "A move a law licenses — the only moves a policy may order.",
     introduced: "search",
-    used: ["search", "referee"],
+    used: ["search"],
   },
   {
     id: "search-space",
@@ -211,26 +235,26 @@ export const CONCEPTS: readonly Concept[] = [
     used: ["learn"],
   },
   {
+    id: "features",
+    label: "Features",
+    def: "Static numbers describing a program without running it.",
+    introduced: "learn",
+    used: ["learn", "measure"],
+  },
+  {
     id: "learned-policy",
     label: "Learned policy",
     def: "A policy learned from trajectories — it may be wrong, but never illegal.",
     introduced: "learn",
-    used: ["referee", "search", "learn"],
+    used: ["learn"],
   },
   // ── 8 · measuring the machine ────────────────────────────────
-  {
-    id: "features",
-    label: "Features",
-    def: "Static numbers describing a program without running it.",
-    introduced: "measure",
-    used: ["learn", "measure"],
-  },
   {
     id: "cost-model",
     label: "Cost model",
     def: "A static or fitted model that predicts runtime.",
     introduced: "measure",
-    used: ["structure", "choice", "measure", "deliver", "pricing"],
+    used: ["measure", "deliver", "pricing"],
   },
   {
     id: "roofline",
@@ -238,6 +262,13 @@ export const CONCEPTS: readonly Concept[] = [
     def: "The compute-or-memory bound a program hits.",
     introduced: "measure",
     used: ["measure", "deliver"],
+  },
+  {
+    id: "ranking",
+    label: "Ranking",
+    def: "What a cost model does — it orders; it does not decide truth.",
+    introduced: "measure",
+    used: ["measure", "pricing"],
   },
   {
     id: "calibration",
@@ -274,7 +305,7 @@ export const CONCEPTS: readonly Concept[] = [
     id: "critical-pair",
     label: "Critical pair",
     def: "Two laws that fire on one redex and whose reducts may not rejoin.",
-    introduced: null,
+    introduced: "coherence",
     used: ["coherence"],
   },
   {
@@ -297,28 +328,28 @@ export const CONCEPTS: readonly Concept[] = [
     label: "Minting",
     def: "Growing the vocabulary by measurement: need → handler → laws → admission.",
     introduced: "mint",
-    used: ["structure", "mint", "improve"],
+    used: ["mint", "improve"],
   },
   {
     id: "admission",
     label: "Admission",
     def: "The gauntlet a minted atom clears to enter the library.",
     introduced: "mint",
-    used: ["structure", "mint"],
+    used: ["mint"],
   },
   {
     id: "census",
     label: "Census",
     def: "The measured count of op-and-shape patterns in the corpus.",
     introduced: "mint",
-    used: ["structure", "mint", "exposure"],
+    used: ["mint", "exposure"],
   },
   {
     id: "provenance",
     label: "Provenance",
     def: "Where a law came from — minted, assisted, or hand-written.",
     introduced: "mint",
-    used: ["structure", "mint"],
+    used: ["mint"],
   },
   // ── 13 · true is not the same as paying ──────────────────────
   {
@@ -326,21 +357,14 @@ export const CONCEPTS: readonly Concept[] = [
     label: "Guard",
     def: "The condition that licenses a rewrite on a shape.",
     introduced: "truthpay",
-    used: ["structure", "truthpay"],
+    used: ["truthpay"],
   },
   {
     id: "adversarial-sweep",
     label: "Adversarial sweep",
     def: "Enumerating shapes to break a guard before shipping it.",
     introduced: "truthpay",
-    used: ["structure", "truthpay"],
-  },
-  {
-    id: "e-graph",
-    label: "E-graph",
-    def: "The equality-saturation structure holding every equivalent form.",
-    introduced: null,
-    used: ["truthpay", "exposure"],
+    used: ["truthpay"],
   },
   // ── 14 · where discovery can pay ─────────────────────────────
   {
@@ -383,15 +407,8 @@ export const CONCEPTS: readonly Concept[] = [
     id: "monoidal-product",
     label: "Monoidal product",
     def: "The ⊗ that runs two programs side by side (`par`).",
-    introduced: null,
+    introduced: "substrate",
     used: ["substrate"],
-  },
-  {
-    id: "carrier",
-    label: "Carrier",
-    def: "An executor-level lowerer for a whole subgraph, not one op.",
-    introduced: null,
-    used: ["substrate", "deliver", "pricing"],
   },
   // ── 16 · a backend is a port ─────────────────────────────────
   {
@@ -451,7 +468,14 @@ export const CONCEPTS: readonly Concept[] = [
     label: "Dispatch",
     def: "One launch per op — the overhead delivery removes.",
     introduced: "deliver",
-    used: ["measure", "deliver"],
+    used: ["deliver"],
+  },
+  {
+    id: "carrier",
+    label: "Carrier",
+    def: "An executor-level lowerer for a whole subgraph, not one op.",
+    introduced: "deliver",
+    used: ["deliver", "pricing"],
   },
   {
     id: "minted-kernel",
@@ -462,11 +486,11 @@ export const CONCEPTS: readonly Concept[] = [
   },
   // ── 20 · the cost model can be wrong ─────────────────────────
   {
-    id: "ranking",
-    label: "Ranking",
-    def: "What a cost model does — it orders; it does not decide truth.",
+    id: "inversion",
+    label: "Inversion",
+    def: "A cost model's error that flips its ranking — it prices the slower member cheaper.",
     introduced: "pricing",
-    used: ["pricing", "measure"],
+    used: ["pricing"],
   },
   // ── 21 · the payoff ──────────────────────────────────────────
   {
@@ -593,4 +617,68 @@ export function conceptsTaughtAt(
 /** Concepts with no introducing level yet — the glossary step 2 must write. */
 export function undefinedConcepts(concepts: readonly Concept[] = CONCEPTS): Concept[] {
   return concepts.filter((c) => c.introduced === null);
+}
+
+/** The levels a level depends on — the introducers of the concepts it uses.
+ *
+ * Plan 0028 §A: the ladder is not flat.  A level `L` depends on
+ * every level that *introduces* a concept `L` uses, when that
+ * introduction precedes `L`.  Concepts introduced at `L` itself are
+ * not prerequisites; a forward reference (introduction after `L`)
+ * would be excluded here *and* flagged by {@link forwardRefs} — but
+ * the graph has none.
+ */
+export function prerequisites(
+  levelId: string,
+  concepts: readonly Concept[] = CONCEPTS,
+  order: readonly string[] = LEVEL_ORDER,
+): string[] {
+  const here = levelIndex(levelId, order);
+  if (here < 0) return [];
+  const out = new Set<string>();
+  for (const c of conceptsAt(levelId, concepts)) {
+    if (c.introduced === null) continue;
+    const i = levelIndex(c.introduced, order);
+    if (i >= 0 && i < here) out.add(c.introduced);
+  }
+  return [...out].sort((a, b) => levelIndex(a, order) - levelIndex(b, order));
+}
+
+/** One concept's row in the glossary — label, definition, and home level. */
+export interface GlossaryRow {
+  id: string;
+  label: string;
+  def: string;
+  /** The level that introduces (or first uses) the concept. */
+  introduced: string;
+  /** Its curriculum index. */
+  index: number;
+  /** The levels that use it. */
+  used: readonly string[];
+}
+
+/** The glossary: every concept, ordered by the level that introduces it.
+ *
+ * Plan 0028 §B step 2: the glossary panel is the concept graph made
+ * browsable — one line per idea, the level that defines it, and a jump
+ * to that level.  Derived from the graph, so it cannot drift from the
+ * mastery meter or the prerequisite display.
+ */
+export function glossary(
+  concepts: readonly Concept[] = CONCEPTS,
+  order: readonly string[] = LEVEL_ORDER,
+): GlossaryRow[] {
+  return concepts
+    .map((c) => {
+      const introduced = c.introduced ?? firstUsed(c, order) ?? order[0];
+      return {
+        id: c.id,
+        label: c.label,
+        def: c.def,
+        introduced,
+        index: levelIndex(introduced, order),
+        used: c.used,
+      };
+    })
+    .sort((a, b) => a.index - b.index || a.label.localeCompare(b.label));
 }

@@ -9,11 +9,18 @@ import {
   conceptsTaughtAt,
   firstUsed,
   forwardRefs,
+  glossary,
   introductionIndex,
   levelIndex,
+  prerequisites,
   taughtAt,
   undefinedConcepts,
 } from "../src/index.ts";
+
+/** The measured forward-reference count after step 2.  It may only go
+ * down: every change to the graph or the level text must keep the graph
+ * free of terms used before they are defined. */
+const FORWARD_REF_CEILING = 0;
 
 describe("concept graph — shape", () => {
   it("runs the 22 levels, in course order, with unique ids", () => {
@@ -69,10 +76,10 @@ describe("concept graph — shape", () => {
     expect(new Set(counted).size).toBe(CONCEPTS.length);
   });
 
-  it("falls back to the first-use level when a concept has no introduction", () => {
-    const closure = conceptById("closure")!;
-    expect(taughtAt(closure)).toBe("reach");
-    expect(conceptsTaughtAt("reach").map((c) => c.id)).toContain("closure");
+  it("teaches every concept at its introducing level", () => {
+    for (const c of CONCEPTS) {
+      expect(taughtAt(c)).toBe(c.introduced);
+    }
   });
 });
 
@@ -87,11 +94,11 @@ describe("concept graph — lookups", () => {
 
   it("reports a concept's first use and introduction index", () => {
     const referee = conceptById("referee")!;
-    expect(firstUsed(referee)).toBe("structure");
+    expect(firstUsed(referee)).toBe("referee");
     expect(introductionIndex(referee)).toBe(4);
     const closure = conceptById("closure")!;
     expect(firstUsed(closure)).toBe("reach");
-    expect(introductionIndex(closure)).toBe(Number.POSITIVE_INFINITY);
+    expect(introductionIndex(closure)).toBe(2);
   });
 
   it("lists concepts a level uses and introduces", () => {
@@ -101,10 +108,15 @@ describe("concept graph — lookups", () => {
   });
 });
 
-describe("concept graph — forward references (the ordering bugs)", () => {
-  it("flags the terms used before they are defined", () => {
-    const ids = forwardRefs().map((r) => r.id);
-    // the plan's audit, plus the ones the prose adds
+describe("concept graph — forward references (the ordering gate)", () => {
+  it("has no concept used before it is introduced", () => {
+    // 22 → 0 in step 2; the ceiling may only go down.
+    expect(forwardRefs().length).toBeLessThanOrEqual(FORWARD_REF_CEILING);
+    expect(forwardRefs()).toHaveLength(0);
+  });
+
+  it("never flags a term that used to be a forward reference", () => {
+    const flagged = new Set(forwardRefs().map((r) => r.id));
     for (const id of [
       "closure",
       "monoid",
@@ -112,63 +124,96 @@ describe("concept graph — forward references (the ordering bugs)", () => {
       "non-dominated-set",
       "critical-pair",
       "monoidal-product",
-      "referee",
-      "oracle",
-      "cost-model",
-      "features",
+      "e-graph",
+      "carrier",
+      "ranking",
+      "dispatch",
+      "guard",
+      "adversarial-sweep",
       "minting",
       "admission",
       "census",
       "provenance",
-      "guard",
-      "adversarial-sweep",
+      "cost-model",
       "learned-policy",
-      "dispatch",
-      "e-graph",
-      "carrier",
+      "legal-move",
+      "referee",
+      "oracle",
+      "features",
     ]) {
-      expect(ids).toContain(id);
+      expect(flagged.has(id)).toBe(false);
     }
   });
 
-  it("records the plan's five terms as used at their audited levels", () => {
-    const by = new Map(forwardRefs().map((r) => [r.id, r]));
-    expect(by.get("closure")?.firstUsedAt).toBe("reach");
-    expect(by.get("monoid")?.firstUsedAt).toBe("structure");
-    expect(by.get("non-dominated-set")?.firstUsedAt).toBe("choice");
-    expect(by.get("critical-pair")?.firstUsedAt).toBe("coherence");
-    expect(by.get("monoidal-product")?.firstUsedAt).toBe("substrate");
-  });
-
-  it("treats a term no level defines as introduced at infinity", () => {
-    const closure = forwardRefs().find((r) => r.id === "closure")!;
-    expect(closure.introducedAt).toBeNull();
-    expect(closure.gap).toBe(Number.POSITIVE_INFINITY);
-  });
-
-  it("measures a defined-later term by its gap, worst first", () => {
-    const refs = forwardRefs();
-    for (let i = 1; i < refs.length; i++) {
-      expect(refs[i - 1].gap).toBeGreaterThanOrEqual(refs[i].gap);
+  it("defines every concept at or before its first use", () => {
+    for (const c of CONCEPTS) {
+      const first = firstUsed(c)!;
+      expect(introductionIndex(c)).toBeLessThanOrEqual(levelIndex(first));
     }
-    const dispatch = refs.find((r) => r.id === "dispatch")!;
-    expect(dispatch.firstUsedAt).toBe("measure");
-    expect(dispatch.introducedAt).toBe("deliver");
-    expect(dispatch.gap).toBe(11);
   });
 
-  it("never flags a concept that is defined before or at first use", () => {
-    const flagged = new Set(forwardRefs().map((r) => r.id));
-    expect(flagged.has("certificate")).toBe(false);
-    expect(flagged.has("morphism")).toBe(false);
-    expect(flagged.has("exposure")).toBe(false);
+  it("has no concept left undefined", () => {
+    expect(undefinedConcepts()).toHaveLength(0);
+    for (const c of CONCEPTS) expect(c.introduced).not.toBeNull();
+  });
+});
+
+describe("concept graph — prerequisites (the ladder is not flat)", () => {
+  it("gives the entry level no prerequisites", () => {
+    expect(prerequisites("tree")).toHaveLength(0);
   });
 
-  it("lists the concepts no level defines yet", () => {
-    const ids = undefinedConcepts().map((c) => c.id);
-    expect(ids).toContain("closure");
-    expect(ids).toContain("e-graph");
-    expect(ids).toContain("carrier");
-    expect(ids).not.toContain("certificate");
+  it("only ever depends on earlier levels", () => {
+    for (const l of LEVEL_ORDER) {
+      for (const p of prerequisites(l)) {
+        expect(levelIndex(p)).toBeLessThan(levelIndex(l));
+      }
+    }
+  });
+
+  it("links a level to the levels that introduce the concepts it uses", () => {
+    // the referee uses semantic-equality (introduced at `equal`)
+    expect(prerequisites("referee")).toContain("equal");
+    // `measure` introduces the cost model but uses features (introduced at learn)
+    expect(prerequisites("measure")).toContain("learn");
+    // `pricing` reaches back across the whole ladder
+    expect(prerequisites("pricing")).toContain("measure");
+    expect(prerequisites("pricing")).toContain("deliver");
+  });
+
+  it("returns prerequisites in curriculum order, without duplicates", () => {
+    const p = prerequisites("improve");
+    expect(new Set(p).size).toBe(p.length);
+    for (let i = 1; i < p.length; i++) {
+      expect(levelIndex(p[i - 1])).toBeLessThan(levelIndex(p[i]));
+    }
+    expect(prerequisites("nope")).toHaveLength(0);
+  });
+});
+
+describe("concept graph — the glossary", () => {
+  it("lists every concept exactly once", () => {
+    const rows = glossary();
+    expect(rows).toHaveLength(CONCEPTS.length);
+    expect(new Set(rows.map((r) => r.id)).size).toBe(CONCEPTS.length);
+    expect(new Set(rows.map((r) => r.id))).toEqual(new Set(CONCEPTS.map((c) => c.id)));
+  });
+
+  it("gives every row a label, a definition and a real home level", () => {
+    for (const r of glossary()) {
+      expect(r.label.length).toBeGreaterThan(0);
+      expect(r.def.length).toBeGreaterThan(0);
+      expect(LEVEL_ORDER).toContain(r.introduced);
+      expect(r.index).toBe(levelIndex(r.introduced));
+      expect(r.used.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("orders rows by the level that introduces them", () => {
+    const rows = glossary();
+    for (let i = 1; i < rows.length; i++) {
+      expect(rows[i - 1].index).toBeLessThanOrEqual(rows[i].index);
+    }
+    expect(rows[0].index).toBe(0);
   });
 });
