@@ -48,7 +48,7 @@ from typing import Any
 
 import catopt_carriers  # noqa: F401 — registers the carrier machinery
 import torch
-from catopt_core.ir import Op, op_repr
+from catopt_core.ir import Op, op_repr, term_to_data
 from catopt_core.laws import ALL_RULES
 from catopt_core.opmeta import arity as _op_arity
 from catopt_discovery import pipeline as pipe
@@ -103,23 +103,46 @@ def _vocab_of(term: Any) -> tuple:
     return tuple(out)
 
 
-def _cases_by_name(names: list[str] | None) -> dict[str, TermCase]:
-    """Export the requested workloads (or the whole zoo) to cases."""
+def _cases_by_name(
+    names: list[str] | None,
+) -> dict[str, TermCase]:
+    """Export the requested workloads (or the whole zoo) to cases.
+
+    Names may be bare (``SwiGLU`` — first match wins when several
+    registries carry the name) or source-qualified
+    (``intake:SwiGLU``), which disambiguates the corpus collisions
+    (``SwiGLU``/``LinearAttention``/``ConvNeXtBlock`` each exist in
+    two sources).  The result is keyed by the requested spelling —
+    qualified or bare — so callers get one row per request.
+    """
     want = set(names) if names else None
+    qualified = {
+        (n.split(":", 1)[0], n.split(":", 1)[1])
+        for n in want or ()
+        if ":" in n
+    }
+    bare = {n for n in want or () if ":" not in n}
     out: dict[str, TermCase] = {}
     for source, wl in _workloads("zoo" if want is None else "all"):
-        if want is not None and wl.name not in want:
-            continue
+        if want is not None:
+            hit = wl.name if wl.name in bare else None
+            if (source, wl.name) in qualified:
+                hit = f"{source}:{wl.name}"
+            if hit is None:
+                continue
+        else:
+            hit = wl.name
         _row, case = _export(wl, source)
         if case is not None:
-            out[wl.name] = case
+            out[hit] = case
         else:
             print(  # stdout-compat
                 f"   {source}:{wl.name} — rejected: {_row.note}",
                 file=sys.stderr,
             )
     if want is not None:
-        for m in sorted(want - set(out)):
+        seen = set(out)
+        for m in sorted(want - seen):
             print(  # stdout-compat
                 f"   {m}: not found or failed export",
                 file=sys.stderr,
@@ -180,6 +203,8 @@ def _enumerate_arm(
                 "label": o.candidate.label,
                 "lhs": op_repr(o.candidate.lhs),
                 "rhs": op_repr(o.candidate.rhs),
+                "lhs_data": term_to_data(o.candidate.lhs),
+                "rhs_data": term_to_data(o.candidate.rhs),
                 "relation": o.relation,
                 "num_true": o.num_true,
                 "derivable": o.derivable,
@@ -236,6 +261,8 @@ def _ev_row(ev: Any) -> dict:
         "fire_cases": list(ev.fire_cases),
         "lhs": op_repr(ev.proposal.lhs),
         "rhs": op_repr(ev.proposal.rhs),
+        "lhs_data": term_to_data(ev.proposal.lhs),
+        "rhs_data": term_to_data(ev.proposal.rhs),
     }
 
 
