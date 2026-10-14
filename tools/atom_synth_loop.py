@@ -248,6 +248,19 @@ def _cumsum_candidates(cap: int) -> list[Candidate]:
             note="prefix after the seam = total of x1 + cumsum(x2)",
         ),
         Candidate(
+            "cum.add_const",
+            _cs(_p("add", "x", "c")),
+            _p(
+                "add",
+                _cs("x"),
+                _p("mul", _cs(_p("div", "x", "x")), "c"),
+            ),
+            cond=("scalar", "c"),
+            note="the real corpus shape (cumsum(add(elu k, 1.0))): "
+            "x + c accumulates c*(t+1) — true, but div(x,x) "
+            "injects nan at x==0 — the ones-spelling trap",
+        ),
+        Candidate(
             # the false twin — the scan is linear, not multiplicative
             "cum.mul_wrong",
             _cs(_p("mul", "x", "y")),
@@ -943,6 +956,70 @@ def _derive_bank_lane(rules: list, args: argparse.Namespace) -> dict:
 
 
 # ---------------------------------------------------------------------------
+#  Stage 5 — the honest pay probe (fires on the real corpus, bounded)
+# ---------------------------------------------------------------------------
+
+
+def _fire_stage(
+    need: Need,
+    cases: list,
+    rules: list,
+    certified: list,
+    args: argparse.Namespace,
+) -> dict:
+    """Saturate the corpus terms under default + certified laws.
+
+    The admission record says the laws are true; this stage says
+    whether they *pay*: a bounded ``EGraph.run`` per corpus term that
+    names the need's ops, counting firings of the certified names and
+    the extracted cost delta — the same measurement
+    ``exposure_screen --fire`` ships.  Zero fires is an honest
+    verdict: the corpus's real sites may live entirely in a
+    certified law's guarded-out region.
+    """
+    if not certified:
+        return {"fires": 0, "terms": 0, "delta": 0.0, "skipped": True}
+    from catopt_core.cost import backend_cost, dag_cost
+    from catopt_core.cost.executor import executor_cost_for
+    from catopt_core.egraph import EGraph
+    from catopt_torch.adapters import TorchSink
+
+    cost_fn = backend_cost(
+        executor_cost_for(lowering="generic"), TorchSink().supported_ops
+    )
+    names = {r.name for r in certified}
+    fires = 0
+    delta = 0.0
+    terms = 0
+    for case in cases:
+        ops = {
+            s.op for s in _iter_subterms(case.term) if isinstance(s, Op)
+        }
+        if not (ops & set(need.corpus_ops)):
+            continue
+        terms += 1
+        bests: list = []
+        for ruleset in (rules, [*rules, *certified]):
+            eg = EGraph()
+            root = eg.add_term(case.term)
+            eg.run(ruleset, root, max_iterations=6, max_nodes=60_000)
+            if ruleset is not rules:
+                hits = {
+                    n: c
+                    for n, c in eg.rule_fires.items()
+                    if c and n in names
+                }
+                fires += sum(hits.values())
+            best = eg.extract_best(root, cost_fn)
+            bests.append(
+                dag_cost(best, cost_fn) if best is not None else None
+            )
+        if bests[0] is not None and bests[1] is not None:
+            delta += bests[0] - bests[1]  # incremental gain only
+    return {"fires": fires, "terms": terms, "delta": round(delta, 4)}
+
+
+# ---------------------------------------------------------------------------
 #  Driver + report
 # ---------------------------------------------------------------------------
 
@@ -964,7 +1041,8 @@ def _need_line(rec: dict) -> str:
         f"handler={h['status']:<16} laws: {n_unc} unc {n_gua} gua "
         f"{n_rej} rej {n_ref} ref  ->  "
         f"{'ADMITTED' if cert['admitted'] else 'not admitted'} "
-        f"({cert['laws_certified']} laws)"
+        f"({cert['laws_certified']} laws) "
+        f"fire={rec.get('fire', {}).get('fires', '-')}"
     )
 
 
@@ -999,6 +1077,18 @@ def _run_need(
     # stage 4 — admission
     rec["admission"] = _admit(need, handler_row, law_res, args)
     rec["corpus_terms"] = len(corpus)
+    # stage 5 — pay probe (bounded saturation on the real terms)
+    certified = [
+        r.rule
+        for r in law_res.get("rows", [])
+        if r.outcome in ("unconditional", "guarded")
+        and r.verify in ("primitive", "derivable")
+    ]
+    rec["fire"] = (
+        _fire_stage(need, cases, rules, certified, args)
+        if args.fire
+        else {"skipped": True}
+    )
     return rec
 
 
@@ -1064,6 +1154,12 @@ def main(argv: list[str] | None = None) -> int:
         "the full scan was measured once — zero blocked rules)",
     )
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument(
+        "--fire",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="run the bounded pay probe on corpus terms",
+    )
     ap.add_argument(
         "--families",
         default=None,
@@ -1161,6 +1257,7 @@ def main(argv: list[str] | None = None) -> int:
                         for r in laws.get("rows", [])
                     ],
                     "corpus_terms": rec.get("corpus_terms"),
+                    "fire": rec.get("fire"),
                     "admission": rec["admission"],
                     "derive_lane": rec.get("derive_lane"),
                     "elapsed_s": rec["elapsed_s"],
