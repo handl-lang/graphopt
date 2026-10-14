@@ -26,6 +26,30 @@ every name lives at its real package path — `catopt_core.egraph`,
 `catopt_cuda.CudaGraphRunner`, … Tests in
 `tests/`. The dev virtualenv is `.venv/` (uv-managed).
 
+**Discovery / minting tooling lives in `tools/`** (run with
+`.venv/bin/python`): `exposure_screen.py` (law-LHS exposure census
+over the corpus), `exposed_discovery.py` (per-model discovery driver),
+`discovery_scale.py` (budgeted corpus sweep + novelty pass),
+`atom_law_loop.py` (ADR-0007 layer 3 — synthesize+certify an atom's
+law set from measured bindings), `atom_synth_loop.py` (the composed
+need → handler → laws → admission loop), `anti_unify_probe.py`
+(layer 1), `combinator.py` + `combinator_probe.py` (ADR-0008 bridge
+prototype: `dag_to_comb`/`comb_to_dag` + round-trip/`loop` gates),
+`retnet_baseline_probe.py` and `birefnet_bounded_probe.py` (external
+baseline / bounded-lane probes — the latter needs scratch deps
+`timm einops kornia transformers torchvision`, the former
+`torchscale fla-core einops fairscale`, both installed `--no-deps`
+outside the lockfile).  The minting machinery itself is in
+`catopt_discovery` (`antiunify`, `handler_synth`) — ADR 0007/0008.
+
+**Machine-discovered laws are in `DEFAULT`.**  `search(...,
+rules=DEFAULT)` ships four machine-minted laws alongside the
+hand-written kernel: `select_mul`, `softmax_fold`, `silu_fold`, and
+`mul_unsq_nat` (the first minted from a corpus op-tuple; provenance
+`MACHINE_SHIPPED`, `catopt_core.laws.provenance`).  A change to a
+default rule changes extraction behavior for every caller — run the
+full suite (not just a slice) when touching the bank.
+
 ## Verification commands
 
 Run these before finishing any change; all must pass.

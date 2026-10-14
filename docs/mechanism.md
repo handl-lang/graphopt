@@ -178,6 +178,72 @@ keyed by corpus × rules × code revision (~19× on a warm run) so
 "what did we measure, and did it change?" is a query, not a
 re-run.
 
+**Minting — the object language grows (ADR 0007).**  The loop above
+admits *laws over a fixed vocabulary*; the minting stack makes the
+vocabulary itself a product of measurement, in four layers with one
+admission gauntlet.  **Layer 1 — definitional atoms**
+(`catopt_discovery.antiunify`): anti-unify recurring subgraphs, mint
+a named atom whose semantics *is* its expansion.  Sound by
+construction; measured **NULL on reach-expansion** — compression is
+real (shorter spellings, provenance) but naming structure did not
+expand reach on any measured workload (recorded in the ADR).
+**Layer 2 — handler-interpreted atoms**
+(`catopt_discovery.handler_synth`): a structured handler grammar
+(`ew`/`contract`/`fold`/`fold_emit`/`fold_zip` — descriptors are
+plain data, interpreted, never `eval`'d) proposes handler bodies and
+verifies each fp64 against the spelled spec; the machine minted a
+verified handler for the `om_decayed` element itself (8.9e-16) —
+a pattern that previously required a hand-written executor.
+**Layer 3 — law-theoretic atoms** (`tools/atom_law_loop.py`): for an
+atom, enumerate measured binding environments, run `auto_cond` /
+`dspec_synth` to synthesize the laws it satisfies, certify via
+`verify_law` — 25 certified rows on the shipped carrier atoms,
+deliberate false twins rejected.  **Layer 4 — induced atoms**
+(bounded-error lane, fenced: an approximate atom may never appear on
+an exact law's RHS).
+
+The composed loop (`tools/atom_synth_loop.py`) runs need → handler →
+laws → admission → pay probe end to end; on the corpus it minted
+`scan_fold` (the selective-scan recurrence, 1.78e-15) with a
+certified law set, and measured the honest null that the minted
+*total* does not pay where the corpus *emits* the sequence.
+
+**The admission story — `mul_unsq_nat`.**  The first law minted from
+a *corpus op-tuple* rather than a hand-declared need: the census
+saw `mul(unsqueeze, unsqueeze)` in DeltaRuleBlock's own `β_t·k_t`
+write; the candidate `mul(unsqueeze U d, unsqueeze V d) =
+unsqueeze(mul U V, d)` was proposed; `auto_cond`'s first guard
+(plain broadcast equality) was **falsified by the adversarial
+sweep** (212 bad accepts); the exact `flat-map-unsq` guard was
+synthesized instead — 0 bad accepts, 0 misses; closure cost +18
+enodes; it pays −12.27% on its source workload and ships in
+`DEFAULT` with `MACHINE_SHIPPED` provenance.  Its apparent sibling
+(`mul_unsqueeze_r_id`, the largest "blocked structure" the corpus
+sweep found) was **correctly rejected at admission** — its real
+sites are semantically unequal, and the guard declines all of them.
+
+**Exposure — where discovery can pay at all.**  The screen
+(`tools/exposure_screen.py`) scores every corpus workload by the
+FLOPs-weighted share of ops any law's LHS can name: the distribution
+is **bimodal** — 81/321 workloads expose literally nothing (the
+fused-op class: `nn.Conv*`, `nn.*Pool*`, `sdpa` spellings) and 140
+score ≥95%.  Exposure predicts *reachability*, not *payoff*: a
+corpus-wide discovery sweep (60 models) found 0 paying new laws
+beyond `mul_unsq_nat` — the yield of fresh paying structure in the
+exposed class is ~1.5%, and it concentrates where a model's op-tuple
+is itself novel.
+
+**The substrate beneath the syntax (ADR 0008).**  A prototype
+combinator presentation (`tools/combinator.py`) re-expresses the IR
+as morphisms of a monoidal category with explicit `dup` (Δ, sharing
+as a morphism) and `loop` (bounded trace): 321/321 corpus workloads
+round-trip structurally exact, zero ops refuse translation, and the
+RetNet shared-state fold spells as `seq(pre, loop(step, K), post)` —
+verified at 1e-7 — which is the carrier-atoms-become-definable
+claim measured.  The open gate: `loop` structure is erased at
+export, so folds must be *proposed by search*, never recovered by
+the bridge.
+
 ## Where this lives in the code
 
 | Step | Code |
@@ -190,6 +256,10 @@ re-run.
 | Certify | `verify_certificate` |
 | Evaluate | `catopt_core.features` (`ProgramFeatures`, `StaticProfiler`) · `SearchResult.frontier` · `PredictedCriterion`; `Meter` / `TargetProfile` for measurements (`tools/calibrate_profile.py`) |
 | Discover (meta) | `catopt_discovery.pipeline` (census → propose → verify → measure → rank → emit) · `catopt_discovery.vocab` (property-derived op alphabet) · `catopt_discovery.gap_gen` (adversarial witnesses) · `catopt_discovery.emit` (admission patch) |
+| Mint (meta) | `catopt_discovery.antiunify` (layer 1 — definitional atoms) · `catopt_discovery.handler_synth` (layer 2 — handler bodies) · `tools/atom_law_loop.py` (layer 3 — law synthesis per atom) · `tools/atom_synth_loop.py` (the composed loop) |
+| Screen / sweep | `tools/exposure_screen.py` (law-LHS exposure census) · `tools/discovery_scale.py` (budgeted corpus sweep + novelty pass) · `tools/exposed_discovery.py` (per-model discovery driver) |
+| Substrate (prototype) | `tools/combinator.py` (`BASIS`, `dag_to_comb` / `comb_to_dag`) · `tools/combinator_probe.py` (round-trip + `loop`-spell gates) |
+| Backends | `catopt_torch` (`TorchSource`/`TorchSink`) · `catopt_onnx` (`OnnxSource`/`OnnxSink`, ADR 0006) |
 | Coherence (meta) | `catopt_discovery.coherence` (`--emit-basis`) · `catopt_discovery.coherence2` (stratification / reach / mediators) · `catopt_discovery.evidence` (sqlite verdict store) |
 
 ## See also
@@ -198,6 +268,10 @@ re-run.
   thesis this pipeline implements.
 - `project/adrs/0003-evaluation-is-an-independent-dimension.md` — the
   evaluation dimension this pipeline appends.
+- `project/adrs/0007-semantic-atom-minting.md` — the four-layer
+  minting stack (with its measured L1 null recorded).
+- `project/adrs/0008-combinator-presentation.md` — the substrate
+  direction (bridge gates 1–2 measured PASS; gate 3 open).
 - `project/plans/0014-certified-re-expression.md` — the staged
   path from proofs to delivery.
 - `project/retros/axiom-lemma-split.md` and
@@ -206,3 +280,11 @@ re-run.
 - `project/retros/automated-admission.md` and
   `project/retros/law-gap-targeted-gen.md` — the emit step and
   the adversarial oracle half of the discovery loop.
+- `project/retros/mul-unsq-nat.md` — the first corpus-minted law's
+  admission evidence; `project/retros/layer3-loop.md` — the
+  law-synthesis tally; `project/retros/exposed-math.md` and
+  `project/retros/discovery-scale.md` — the exposure screen and the
+  corpus-wide yield measurement; `project/retros/handler-proposals.md`
+  — the handler-grammar results; `project/retros/atom-synth-loop.md`
+  — the composed loop's funnel; `project/retros/birefnet-bounded-lane.md`
+  — the certified negative on the precision lane.

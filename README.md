@@ -60,6 +60,7 @@ provenance in [`docs/results.md`](docs/results.md).  Each block states
 | **storage** — shared-input MoE | — | — | **196,608 B** | `param_bytes_cost` |
 | **evaluations** — prior ranking AP | heuristic 0.045 | **0.133** | **3.0×** | held-out pages |
 | **evaluations** — evidence store, 2nd run | 128 s | 6.6 s | **19.4×** | wall time |
+| **backend** — ONNX round-trip, both directions | — | **1.11e-16 fp64** | **0 core edits** | `onnxruntime`, opsets 13–21 |
 
 ### Learned models
 
@@ -96,22 +97,52 @@ speedup.
   *published* chunkwise duality (verified vs a faithful reimplementation
   at 9.8e-9) — mechanical reachability + certification of a known
   algorithm, not a new one; hand-tuned baselines still beat the
-  delivered artifact (~3× less memory, ~11× faster vs FLA Triton).
-  Constructs the search needs are laws too: the K-way chunk split
-  (4.4×) and the shared-state reassociation (10.8–24.5%) are both
-  admitted, guarded, fp64-verified data.
+  delivered artifact on memory (~3× vs FLA Triton).  On **speed** the
+  delivered lowering has since caught up to the paper's own chunked
+  implementation — 2.08 vs 2.12 ms at T=2048, and *faster* under graph
+  replay (0.670 vs 0.822 ms) — so the remaining FLA gap is a
+  kernel-level one (fused fp32 Triton vs fp64 torch GEMMs), not a
+  structural one.  Constructs the search needs are laws too: the K-way
+  chunk split (4.4×) and the shared-state reassociation (10.8–24.5%)
+  are both admitted, guarded, fp64-verified data.
 - **The prior learns.** The open game's policy ships *trained*
   (regenerable via `tools/train_open_prior.py`); on held-out pages its
   ordering beats both the cold start and the cost-delta heuristic
   (average precision 0.133 vs 0.045), and finds ~2× more useful laws
   per episode.
-- **It finds its own laws.** The enumerator instantiates law shapes
-  over the op grammar (1,160 candidates at depth ≤2 → five paying
-  laws); the game synthesizes the *guard* a candidate needs
-  (`xy + xz = x(y+z)` iff `x≡y` — a conditional law no library had);
-  and the synthesizer writes a shipped rule's `derive` from measured
-  bindings. Where it is blocked, the refusal names the missing
-  vocabulary — measured, not guessed.
+- **It finds its own laws — and ships one.** The enumerator
+  instantiates law shapes over the op grammar; the game synthesizes
+  the *guard* a candidate needs (`xy + xz = x(y+z)` iff `x≡y` — a
+  conditional law no library had); the synthesizer writes a shipped
+  rule's `derive` from measured bindings. The first law minted from a
+  *corpus op-tuple* now ships in the default rule set: **`mul_unsq_nat`**
+  (`mul(unsqueeze U d, unsqueeze V d) = unsqueeze(mul U V, d)`, found
+  in a DeltaNet-style block's own `β·k` write) — the naive guard was
+  falsified by the adversarial sweep (212 bad accepts), the exact
+  guard was synthesized instead, closure cost +18 enodes, and it pays
+  **−12.27%** on its source workload.  Honest scope: a 60-model sweep
+  of the exposed corpus found no other paying law — the fresh-paying
+  yield is ~1.5%, and an apparent sibling with 12 matching models was
+  *correctly rejected* at admission (its sites are semantically
+  unequal). Where the machinery is blocked, the refusal names the
+  missing vocabulary — measured, not guessed.
+- **The vocabulary grows itself.** Beyond laws, the machine mints
+  *semantics*: a structured handler grammar proposes and fp64-verifies
+  handler bodies (it re-minted the `om_decayed` carrier element at
+  8.9e-16 — previously a hand-written executor); a law-synthesis loop
+  derives and certifies an atom's law set from measured bindings
+  (25 certified rows, deliberate false twins rejected); and the
+  composed loop runs need → handler → laws → admission end to end.
+  Its honest null: the first composed atom computes a *total* where
+  the corpus *emits* a sequence — truth and pay are measured
+  separately, and the ADR records the negative.
+- **The substrate is being made uniform.** A prototype bridge
+  re-expresses the IR as morphisms of a monoidal category with
+  explicit sharing (`Δ`) and a bounded trace (`loop`): 321/321 corpus
+  workloads round-trip structurally exact with zero ops refusing
+  translation, and the RetNet carrier spells as a `loop` term verified
+  at 1e-7 — the "carrier atoms become definable, not primitive"
+  claim measured (ADR 0008).
 - **Four independent dimensions** — semantics / search / evaluation /
   execution. Cost models never change semantics; policies never decide
   equivalence.

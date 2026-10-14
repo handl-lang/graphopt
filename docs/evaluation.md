@@ -195,6 +195,23 @@ A policy may only *reorder* — every rule still runs, so the fixed point
 and the certificate are unchanged.  A model may only *rank* — the
 feasibility bound (`supported_ops`) is still what decides reach.
 
+## Screening — evaluation *before* search
+
+Evaluation also decides where search is worth running at all.
+`tools/exposure_screen.py` scores each corpus workload by the
+FLOPs-weighted share of ops that any law's LHS can name — the
+distribution is **bimodal** (81/321 workloads expose literally
+nothing; 140 score ≥95%), and exposure predicts *reachability*, not
+*payoff* (100%-exposed models can still fire nothing).  Measured
+consequences: a 60-model sweep of the exposed class found no paying
+new law beyond the one corpus-minted `mul_unsq_nat` (~1.5% yield),
+and the precision lane on real BiRefNet was a **certified negative**
+— bounded offers existed (56 by budget 3e-2) but the bounded member
+priced 1.32× worse than dense, so the machinery correctly refused
+them.  The lesson is evaluation-shaped: run discovery where structure
+is exposed, and let the measured referee — not the search budget —
+decide what ships.
+
 ## The rule
 
 Evaluation is an independent dimension: a profiler **observes**, a
