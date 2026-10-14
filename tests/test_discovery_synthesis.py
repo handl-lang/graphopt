@@ -2031,7 +2031,11 @@ def test_oracle_sites_derive_and_instantiate_edges(monkeypatch):
         {"A": va, "B": vb2},  # instantiates to a distinct site
         {"A": va, "B": vb},  # a replay — deduped by signature
     ]
-    monkeypatch.setattr(lvo, "_binding_envs", lambda _l, _r: iter(envs))
+    # the stub mirrors ``_binding_envs``' arity: the optional
+    # ``source`` bank (``None`` = the shipped leaf bank) rides it
+    monkeypatch.setattr(
+        lvo, "_binding_envs", lambda _l, _r, _source=None: iter(envs)
+    )
     got = list(synth._oracle_sites(lhs, rhs, None, 10))
     assert len(got) == 2
     assert got[0][0]["B"] is vb and got[1][0]["B"] is vb2
