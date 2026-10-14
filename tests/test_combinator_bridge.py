@@ -13,7 +13,7 @@ import torch
 from catopt_core.ir import Const, Op, Param, TensorType, Var
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "tools"))
-import combinator as cb  # noqa: E402
+import combinator as cb
 
 
 def _v(name, *shape):
