@@ -3195,6 +3195,270 @@ def om_kway_laws(k: int) -> list[Rewrite]:
     return [om_decayed_kway_blocks(k)]
 
 
+# ---------------------------------------------------------------------------
+#  The shared-state reassociation — the sequential carrier's missing move
+# ---------------------------------------------------------------------------
+#  A fold is a *cost-neutral relabelling*: ``applyd(aff_diag(a,x),h)``
+#  prices exactly like the ``add(mul(a,h),x)`` it re-spells, so a
+#  fold-only member can never win an extraction.  The O(T·C) win needs
+#  the state to be *shared* across row blocks, and the inter-chunk
+#  cross sum is spelled as a FLAT, left-nested add —
+#  ``Σ_{j<i} γ^{(i-j)C} b_j`` — so every row block re-spells its own
+#  copy of the weighted contributions and the affine-scan lifts fold a
+#  TREE, never a recurrence.
+#
+#  The move that makes the sum shared is the geometric reassociation
+#
+#      W1⊙X + W2⊙Y  =  W2 ⊙ (γ^{O1−O2} ⊙ X + Y)
+#
+#  for two weights from the SAME decay base at geometric-neighbour
+#  offsets ``O1 > O2``.  ``decay_vec(g, t, O)`` is ``γ^{O+r}`` on its
+#  axis, so ``W1 = γ^{O1−O2} ⊙ W2`` for the SAME ``g``/``t`` and the
+#  identity is EXACT (not a broadcast approximation).  Applied
+#  bottom-up over the flat sum it produces the nested
+#
+#      T_k = γ^C ⊙ T_{k−1} + b_{k−1}
+#
+#  whose inner ``add(mul(γ^C, ·), ·)`` is exactly the spelling
+#  ``decay_state_lift`` folds onto ``applyd`` — and, crucially, is ONE
+#  e-class consumed by row block ``k``'s output and by block ``k+1``'s
+#  step, so the state is *shared*.  That is the recurrence the e-graph
+#  otherwise never reaches.
+#
+#  The block sum carries its intra-chunk term as the FIRST addend
+#  (``add(add(add(intra, c₀), c₁), …)``), so the cross terms are never
+#  directly adjacent: the ``_PREFIX`` variant matches the two-level
+#  nesting ``add(add(P, mul(W1,X)), mul(W2,Y))`` and leaves ``P``
+#  untouched, which is what actually fires on a real export.  The
+#  ``MAT`` variant additionally pins the shared left operand ``Q`` of
+#  a contraction pair, so the reassociated state is ``Q @ (…)`` with
+#  the q-free inner sum shared across blocks.
+#
+#  OPT-IN, like ``OM_CHUNKIFY`` / ``om_kway_laws``: the reassociation
+#  ranges over the whole cross-sum space (a closure generator), so it
+#  stays out of ``OM_LAWS`` and is priced with ``rule_budgets``.
+# ---------------------------------------------------------------------------
+
+
+def _shared_weight(offset: str, t: str | int):
+    """``unsqueeze(decay_vec(g, t, offset), dim=D)`` — a decay row weight.
+
+    ``g`` (the decay base) and ``D`` (the inserted broadcast axis) are
+    shared metavariables, so the two weights a law matches are forced
+    onto the SAME base and the SAME axis — exactly the condition under
+    which ``decay_vec(g, t, O1) = γ^{O1−O2} ⊙ decay_vec(g, t, O2)``.
+    ``t`` may itself be a metavariable: the identity is indifferent to
+    the weight's period (a scalar ``t=1`` and a per-position ``t=C``
+    vector telescope identically, both carrying the same ``γ^{O}``
+    offset factor).
+    """
+    return Op.make(
+        "unsqueeze",
+        Op.make("decay_vec", "g", t=t, offset=offset),
+        dim="D",
+    )
+
+
+def _shared_step(bound: dict) -> int | None:
+    """Return the geometric step ``O1 − O2``, or ``None`` if not legal.
+
+    The reassociation is exact for ANY two offsets sharing a base, so
+    soundness needs only that ``OD`` is derivable.  The *alignment*
+    clause (``OD`` a positive divisor of both offsets) is a search
+    guard, not a soundness one: it confines the law to
+    geometric-weighted cross sums (offsets that are multiples of a
+    common chunk step) so the reassociation cannot chain away on
+    unrelated sums.  A zero or negative step is rejected outright —
+    the RHS would mint a non-advancing weight.
+    """
+    o1, o2 = bound.get("$attr:O1"), bound.get("$attr:O2")
+    if not (isinstance(o1, int) and isinstance(o2, int)):
+        return None
+    step = o1 - o2
+    if step <= 0 or o2 <= 0 or o2 % step or o1 % step:
+        return None
+    return step
+
+
+def _check_shared_reassoc(bound: dict) -> bool:
+    """Require a legal geometric step and a well-typed summand pair.
+
+    The identity is unconditionally exact once ``OD = O1 − O2``; the
+    shape clause only keeps the rule from minting an ill-typed
+    ``add``/``mul`` on operands that cannot broadcast.
+    """
+    if _shared_step(bound) is None:
+        return False
+    xs, ys = _vshape(bound.get("X")), _vshape(bound.get("Y"))
+    if not (isinstance(xs, tuple) and isinstance(ys, tuple)):
+        return False
+    from catopt_core.typing import INVALID, broadcast
+
+    return broadcast(xs, ys) is not INVALID
+
+
+def _derive_shared_reassoc(bound: dict) -> dict | None:
+    """``OD`` := ``O1 − O2`` — the geometric step the RHS spells."""
+    step = _shared_step(bound)
+    if step is None:
+        return None
+    return {"$attr:OD": step}
+
+
+SHARED_STATE_REASSOC = R(
+    "om_shared_reassoc",
+    Op.make(
+        "add",
+        Op.make("mul", _shared_weight("O1", "T"), "X"),
+        Op.make("mul", _shared_weight("O2", "T"), "Y"),
+    ),
+    Op.make(
+        "mul",
+        _shared_weight("O2", "T"),
+        Op.make(
+            "add",
+            Op.make("mul", _shared_weight("OD", 1), "X"),
+            "Y",
+        ),
+    ),
+    check=_check_shared_reassoc,
+    derive=_derive_shared_reassoc,
+    law="geometric reassociation of a decay-weighted sum: W1⊙X + W2⊙Y "
+    "= W2 ⊙ (gamma^{O1-O2}⊙X + Y) for two weights from one decay base "
+    "at geometric-neighbour offsets.  Applied bottom-up it turns the "
+    "flat cross sum Σ_{j<i} gamma^{(i-j)C} b_j into the nested T_k = "
+    "gamma^C⊙T_{k-1} + b_{k-1}, whose inner add is ONE shared e-class "
+    "— the recurrence the affine-scan lifts fold and the O(T·C) "
+    "sequential carrier needs.",
+)
+
+
+SHARED_STATE_REASSOC_PREFIX = R(
+    "om_shared_reassoc_prefix",
+    Op.make(
+        "add",
+        Op.make(
+            "add", "P", Op.make("mul", _shared_weight("O1", "T"), "X")
+        ),
+        Op.make("mul", _shared_weight("O2", "T"), "Y"),
+    ),
+    Op.make(
+        "add",
+        "P",
+        Op.make(
+            "mul",
+            _shared_weight("O2", "T"),
+            Op.make(
+                "add",
+                Op.make("mul", _shared_weight("OD", 1), "X"),
+                "Y",
+            ),
+        ),
+    ),
+    check=_check_shared_reassoc,
+    derive=_derive_shared_reassoc,
+    law="the block-nested form of om_shared_reassoc: the cross sum "
+    "carries its intra-chunk term P as the first addend, so the two "
+    "weighted cross terms are only ever adjacent through "
+    "add(add(P, W1⊙X), W2⊙Y).  Leaves P in place and reassociates the "
+    "pair — the variant that actually fires on the chunked export and "
+    "chains the shared state T_k up the row blocks.",
+)
+
+
+def _check_shared_mat_reassoc(bound: dict) -> bool:
+    """Require a legal step, a typed contraction pair and a shared Q.
+
+    ``Q`` is a repeated metavariable, so the matcher already forces the
+    two contractions onto one left operand — the condition that makes
+    the reassociated state ``Q @ (…)`` shared rather than duplicated.
+    The γ^{step} factor is a scalar, hence constant along the
+    contraction (``_const_along_contraction``): that is what lets it
+    move inside the state, ``Q @ (c⊙A) = c⊙(Q@A)``.
+    """
+    if _shared_step(bound) is None:
+        return False
+    qs = _vshape(bound.get("Q"))
+    as_, bs = _vshape(bound.get("A")), _vshape(bound.get("B"))
+    if not all(isinstance(x, tuple) for x in (qs, as_, bs)):
+        return False
+    if len(as_) < 2 or len(bs) < 2:
+        return False
+    if not _const_along_contraction((1, 1), as_):
+        return False
+    from catopt_core.typing import matmul_shape
+
+    return (
+        matmul_shape(qs, as_) is not None
+        and matmul_shape(qs, bs) is not None
+    )
+
+
+SHARED_STATE_MAT_REASSOC = R(
+    "om_shared_mat_reassoc",
+    Op.make(
+        "add",
+        Op.make(
+            "add",
+            "P",
+            Op.make(
+                "mul",
+                _shared_weight("O1", "T"),
+                Op.make("matmul", "Q", "A"),
+            ),
+        ),
+        Op.make(
+            "mul",
+            _shared_weight("O2", "T"),
+            Op.make("matmul", "Q", "B"),
+        ),
+    ),
+    Op.make(
+        "add",
+        "P",
+        Op.make(
+            "mul",
+            _shared_weight("O2", "T"),
+            Op.make(
+                "matmul",
+                "Q",
+                Op.make(
+                    "add",
+                    Op.make("mul", _shared_weight("OD", 1), "A"),
+                    "B",
+                ),
+            ),
+        ),
+    ),
+    check=_check_shared_mat_reassoc,
+    derive=_derive_shared_reassoc,
+    law="the contraction-factoring form of the reassociation: when two "
+    "weighted cross terms share one left operand Q, the geometric step "
+    "pulls INSIDE the contraction — W1⊙(Q@A) + W2⊙(Q@B) = W2 ⊙ "
+    "(Q @ (gamma^{O1-O2}⊙A + B)).  The reassociated state Q@(…) is now "
+    "q-free inside, so the SAME inner add is consumed by two row "
+    "blocks — the shared recurrence, not a tree.",
+)
+
+
+#: The shared-state reassociation family — ``OM_LAWS +
+#: om_shared_state_laws()``.  Opt-in (a closure generator over the
+#: cross-sum space) and priced with ``rule_budgets``.
+def om_shared_state_laws() -> list[Rewrite]:
+    """Return the shared-state reassociation laws as a list.
+
+    ``om_shared_reassoc`` is the algebra-level move; the ``_prefix``
+    and ``_mat`` variants are the spellings the chunked export
+    actually presents (intra term first; a shared contraction left
+    operand).
+    """
+    return [
+        SHARED_STATE_REASSOC,
+        SHARED_STATE_REASSOC_PREFIX,
+        SHARED_STATE_MAT_REASSOC,
+    ]
+
+
 def _check_split_matmul(bound: dict) -> bool:
     """Require a well-typed split: int sizes partitioning the extent."""
     sz, i = bound.get("$attr:SZ"), bound.get("$attr:I")

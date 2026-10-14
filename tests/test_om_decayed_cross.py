@@ -36,6 +36,7 @@ from catopt_carriers.om import (  # noqa: E402
     _decay_vec_torch,
     om_decayed_kway_blocks,
     om_kway_laws,
+    om_shared_state_laws,
 )
 from catopt_core.egraph import EGraph  # noqa: E402
 from catopt_core.ir import (  # noqa: E402
@@ -2033,6 +2034,285 @@ class TestOmDecayedKway:
         assert dag_cost(shared, flops_cost) < dag_cost(
             spelled, flops_cost
         )
+
+
+class TestSharedStateReassoc:
+    """The shared-state reassociation — the sequential carrier's move.
+
+    A fold is a *cost-neutral relabelling* (``applyd(aff_diag(a,x),h)``
+    prices exactly like ``add(mul(a,h),x)``), so the O(T·C) win needs
+    the cross sum reassociated onto a *shared* recurrence
+    ``T_k = gamma^C⊙T_{k-1} + b_{k-1}`` rather than the flat left-nested
+    tree.  ``om_shared_state_laws()`` supplies the geometric move
+    ``W1⊙X + W2⊙Y = W2 ⊙ (gamma^{O1-O2}⊙X + Y)`` plus its block-nested
+    and contraction-factoring variants; it is opt-in (a closure
+    generator over the cross-sum space) and stays out of ``OM_LAWS``.
+    """
+
+    @staticmethod
+    def _w(off, t=1):
+        return Op.make(
+            "unsqueeze",
+            Op.make("decay_vec", _v("g"), t=t, offset=off),
+            dim=-1,
+        )
+
+    def _flat_lhs(self, t=1):
+        return Op.make(
+            "add",
+            Op.make("mul", self._w(2, t), _v("X", 4, 4)),
+            Op.make("mul", self._w(1, t), _v("Y", 4, 4)),
+        )
+
+    def test_flat_fires_and_derives(self):
+        law = om_shared_state_laws()[0]
+        subst = match_pattern(law.lhs, self._flat_lhs(), {})
+        assert subst is not None
+        assert law.check(subst)
+        assert law.derive(subst) == {"$attr:OD": 1}
+        subst.update(law.derive(subst))
+        out = instantiate_pattern(law.rhs, subst)
+        r = op_repr(out)
+        assert "offset=1" in r and "add" in r
+
+    @pytest.mark.parametrize("t", [1, 4])
+    def test_flat_is_exact_fp64(self, t):
+        """``W1⊙X + W2⊙Y = W2 ⊙ (gamma^{O1-O2}⊙X + Y)`` — exact."""
+        law = om_shared_state_laws()[0]
+        lhs = self._flat_lhs(t)
+        subst = match_pattern(law.lhs, lhs, {})
+        assert subst is not None and law.check(subst)
+        subst.update(law.derive(subst))
+        out = instantiate_pattern(law.rhs, subst)
+        env = {
+            "g": G,
+            "X": torch.randn(4, 4, dtype=torch.float64),
+            "Y": torch.randn(4, 4, dtype=torch.float64),
+        }
+        a = eval_term(lhs, var_env=env, bindings=tb._IR_TO_TORCH)
+        b = eval_term(out, var_env=env, bindings=tb._IR_TO_TORCH)
+        assert torch.allclose(a, b, atol=1e-12)
+
+    def test_mat_factoring_is_exact_fp64(self):
+        """``W1⊙(Q@A) + W2⊙(Q@B) = W2⊙(Q@(gamma^{step}⊙A + B))``."""
+        law = om_shared_state_laws()[2]
+        q = _v("Q", 3, 4)
+        lhs = Op.make(
+            "add",
+            Op.make(
+                "add",
+                _v("P", 3, 4),
+                Op.make(
+                    "mul",
+                    self._w(2),
+                    Op.make("matmul", q, _v("A", 4, 4)),
+                ),
+            ),
+            Op.make(
+                "mul",
+                self._w(1),
+                Op.make("matmul", q, _v("B", 4, 4)),
+            ),
+        )
+        subst = match_pattern(law.lhs, lhs, {})
+        assert subst is not None and law.check(subst)
+        subst.update(law.derive(subst))
+        out = instantiate_pattern(law.rhs, subst)
+        env = {
+            "g": G,
+            "P": torch.randn(3, 4, dtype=torch.float64),
+            "Q": torch.randn(3, 4, dtype=torch.float64),
+            "A": torch.randn(4, 4, dtype=torch.float64),
+            "B": torch.randn(4, 4, dtype=torch.float64),
+        }
+        a = eval_term(lhs, var_env=env, bindings=tb._IR_TO_TORCH)
+        b = eval_term(out, var_env=env, bindings=tb._IR_TO_TORCH)
+        assert torch.allclose(a, b, atol=1e-12)
+
+    def test_step_guard_declines(self):
+        """Zero / negative / non-aligned / non-int steps all veto."""
+        law = om_shared_state_laws()[0]
+        # OD <= 0
+        assert law.derive({"$attr:O1": 4, "$attr:O2": 4}) is None
+        assert law.derive({"$attr:O1": 2, "$attr:O2": 4}) is None
+        # the step must divide both offsets (chunk alignment)
+        assert law.derive({"$attr:O1": 5, "$attr:O2": 2}) is None
+        # non-int offsets
+        assert law.derive({"$attr:O1": "x", "$attr:O2": 2}) is None
+        # a genuine geometric pair passes
+        assert law.derive({"$attr:O1": 8, "$attr:O2": 4}) == {
+            "$attr:OD": 4
+        }
+
+    def test_declines_unshapeable_operands(self):
+        """The check needs resolvable value shapes on both summands."""
+        law = om_shared_state_laws()[0]
+        bound = {"$attr:O1": 2, "$attr:O2": 1, "X": _v("X", 4, 4)}
+        assert not law.check(bound)  # Y unbound
+        bound["Y"] = _v("Y", 4, 4)
+        assert law.check(bound)
+
+    def test_declines_unbroadcastable_summands(self):
+        law = om_shared_state_laws()[0]
+        bound = {
+            "$attr:O1": 2,
+            "$attr:O2": 1,
+            "X": _v("X", 4, 4),
+            "Y": _v("Y", 3, 4),  # rows disagree → no broadcast
+        }
+        assert not law.check(bound)
+
+    def test_laws_are_opt_in(self):
+        laws = om_shared_state_laws()
+        names = [r.name for r in laws]
+        assert names == [
+            "om_shared_reassoc",
+            "om_shared_reassoc_prefix",
+            "om_shared_mat_reassoc",
+        ]
+        everyday = {r.name for r in OM_LAWS}
+        assert not (set(names) & everyday)
+        for law in laws:
+            assert law.check is not None and law.derive is not None
+
+    def test_prefix_reassociates_the_block_nesting(self):
+        """``add(add(P, W1⊙X), W2⊙Y)`` → the nested pair, P intact."""
+        law = om_shared_state_laws()[1]
+        lhs = Op.make(
+            "add",
+            Op.make("add", _v("P", 4, 4), Op.make("mul", self._w(2), _v("X", 4, 4))),
+            Op.make("mul", self._w(1), _v("Y", 4, 4)),
+        )
+        subst = match_pattern(law.lhs, lhs, {})
+        assert subst is not None and law.check(subst)
+        subst.update(law.derive(subst))
+        out = instantiate_pattern(law.rhs, subst)
+        assert out.op == "add"
+        assert op_repr(out.args[0]) == "P"
+        assert out.args[1].op == "mul"
+
+    def test_shared_state_is_shared_across_row_blocks(self):
+        """The reassociated state is ONE e-class used by two blocks.
+
+        Two row blocks whose cross sums share the prefix ``B0, B1``: the
+        flat spelling re-derives the weighted contributions per block,
+        the reassociated one consumes a single state class — so the DAG
+        cost drops and the state has ≥2 parents.
+        """
+        law = om_shared_state_laws()[1]
+        from catopt_core.cost import dag_cost, flops_cost
+
+        w = self._w
+        B0, B1, B2 = _v("B0", 4, 4), _v("B1", 4, 4), _v("B2", 4, 4)
+        X, Y = _v("X", 4, 4), _v("Y", 4, 4)
+        blk2 = Op.make(
+            "add",
+            Op.make("add", X, Op.make("mul", w(2), B0)),
+            Op.make("mul", w(1), B1),
+        )
+        blk3 = Op.make(
+            "add",
+            Op.make(
+                "add",
+                Op.make("add", Y, Op.make("mul", w(3), B0)),
+                Op.make("mul", w(2), B1),
+            ),
+            Op.make("mul", w(1), B2),
+        )
+        root_term = Op.make("concat", blk2, blk3, dim=-2)
+        eg = EGraph()
+        root = eg.add_term(root_term)
+        before = dag_cost(
+            eg.extract_best(eg.find(root), flops_cost), flops_cost
+        )
+        eg.run([law], root, max_iterations=10, max_nodes=20_000)
+        after = dag_cost(
+            eg.extract_best(eg.find(root), flops_cost), flops_cost
+        )
+        assert after < before
+        # the state add(mul(gamma^C, B0), B1) is one class with two parents
+        state = Op.make("add", Op.make("mul", w(1), B0), B1)
+        sc = eg.find(eg.add_term(state))
+        parents = {
+            eg.find(cid)
+            for cid, cl in eg._classes.items()
+            for n in cl.nodes
+            if any(eg.find(c) == sc for c in n.children)
+        }
+        assert len(parents) >= 2
+
+    def test_reassoc_drops_the_extracted_cost_on_the_real_export(self):
+        """The law fires on the chunked export and lowers its cost.
+
+        Measured (T=64, K=4, C=16, budget 200): the reassociation fires
+        across the block-nested cross sums and extraction picks a
+        strictly cheaper member — the shared-state spelling is reachable
+        and priced.  (The state is not yet fully shared across ALL row
+        blocks — the score's scalar division wraps the contraction, so
+        the q-factored ``matmul(Q, ·)`` member the ``_mat`` variant
+        wants is not exposed; see the plan's remaining gap.)
+        """
+        pytest.importorskip("catopt_torch")
+        from catopt_core.cost import dag_cost, flops_cost
+        from catopt_core.laws.tensor import (
+            ASSOC_MATMUL_REV,
+            DIV_ADD_FACTOR,
+            FACTOR_MUL,
+            FACTOR_MUL_ADD,
+            MATMUL_DIV_DISTRIBUTE,
+            MUL_DIV_SWAP,
+            SPLIT_SCALAR_RULES,
+        )
+        from catopt_discovery.zoo import _ChunkedRetention
+        from catopt_torch.adapters import TorchSource
+
+        T, K = 64, 4
+        base = (
+            list(OM_LAWS)
+            + list(OM_CHUNKIFY)
+            + list(SPLIT_SCALAR_RULES)
+            + [
+                MUL_DIV_SWAP,
+                MATMUL_DIV_DISTRIBUTE,
+                ASSOC_MATMUL_REV,
+                FACTOR_MUL,
+                FACTOR_MUL_ADD,
+                DIV_ADD_FACTOR,
+            ]
+            + om_kway_laws(K)
+        )
+        budgets = {
+            "om_decayed_chunkify_rows": 60,
+            "om_decayed_chunkify_keys": 60,
+            f"om_decayed_kway_blocks_{K}": 200,
+        }
+
+        def saturate(rules, rule_budgets):
+            torch.manual_seed(0)
+            m = _ChunkedRetention(16).double()
+            x = torch.randn(2, T, 16, dtype=torch.float64)
+            term = TorchSource().to_ir(m, x)[0].root
+            eg = EGraph()
+            root = eg.add_term(term)
+            eg.run(
+                rules,
+                root,
+                max_iterations=16,
+                max_nodes=150_000,
+                patience=8,
+                rule_budgets=rule_budgets,
+            )
+            return dag_cost(
+                eg.extract_best(eg.find(root), flops_cost), flops_cost
+            )
+
+        shared = om_shared_state_laws()
+        base_best = saturate(base, budgets)
+        law_best = saturate(
+            base + shared,
+            {**budgets, **{r.name: 400 for r in shared}},
+        )
+        assert law_best < base_best
 
 
 def _fold_nesting(term):
