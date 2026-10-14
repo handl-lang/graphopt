@@ -121,6 +121,11 @@ Grammar
                                      #   normalized_shape), else None
           | ("isel-out", T, D, I)    # index_select output: s with
                                      #   axis D replaced by len(I)
+          | ("vshape", T)           # T's *value* shape — the
+                                     #   carrier-aware read (through
+                                     #   the registered resolver; the
+                                     #   cost convention's shape when
+                                     #   none is registered)
     D*/NAME := attribute metavar names — looked up under "$attr:NAME".
              An attr position also accepts a derive *expr* (a tuple,
              evaluated inline against ``bound`` — how a transported
@@ -158,6 +163,12 @@ value expressions evaluated against the same ``bound`` environment:
            | ("attr0", NAME)                   # v[0] if tuple else v
            | ("const", T)                      # bound leaf's ``.value``
            | ("shape", T)                      # inferred shape tuple
+                                               #   (the cost convention)
+           | ("vshape", T)                     # *value* shape tuple —
+                                               #   carrier-aware: reads
+                                               #   the registered
+                                               #   resolver, else the
+                                               #   cost convention
            | ("dim", T, i)                     # int dim of shape(T)
            | ("leaf-dim", T, i)                # dim of declared .typ
            | ("len", e)                        # len of a tuple/list
@@ -216,6 +227,7 @@ from catopt_core.typing import (
     _matmul_shape,
     _numel,
     _shape_of,
+    value_shape_of,
 )
 
 __all__ = [
@@ -613,10 +625,26 @@ def _s_isel_out(args: tuple, bound: dict) -> Any:
     return tuple(out)
 
 
+def _s_vshape(args: tuple, bound: dict) -> Any:
+    """``("vshape", T)`` — a term's *value* shape as a shape spec.
+
+    The carrier-aware twin of a bare metavar ref: resolves through the
+    registered value-shape resolver rather than the cost convention, so
+    it composes under every shape-reading predicate and derive op
+    (``("dim", ("vshape", T), -1)``, ``("shaped", ("vshape", T))``, …).
+    A non-tuple/unknown result resolves to ``None`` — the spec
+    strictness contract declines.
+    """
+    if len(args) != 1:
+        return None
+    return _vshape(bound, args[0])
+
+
 #: Tag-dispatch for tuple shape specs — each handler takes
 #: ``(args, bound)`` and validates its own arity.
 _SPEC_OPS: dict = {
     "mm-out": _s_mm_out,
+    "vshape": _s_vshape,
     "bcast": _s_bcast,
     "unsq-out": _s_unsq_out,
     "reshape-out": _s_reshape_out,
@@ -658,6 +686,26 @@ def _tshape(bound: dict, ref: Any) -> tuple | None:
     """Resolve a spec to a tuple shape, or ``None`` when not a tuple."""
     s = _shape(bound, ref)
     return s if isinstance(s, tuple) else None
+
+
+def _vshape(bound: dict, ref: Any) -> Any:
+    """Resolve a shape spec to the term's *value* shape.
+
+    The twin of :func:`_shape` for the derive DSL's ``("vshape", T)``:
+    a metavar name reads through the registered value-shape resolver
+    (:func:`catopt_core.typing.value_shape_of`) — the carrier-aware
+    shape, or ``_shape_of``'s cost convention when no resolver is
+    registered — rather than the cost convention directly.  A spec
+    tuple dispatches through ``_SPEC_OPS`` exactly as ``_shape`` does;
+    anything else resolves to ``None`` (unknown → decline).
+    """
+    if isinstance(ref, str):
+        return value_shape_of(bound.get(ref), _MEMO)
+    if isinstance(ref, (tuple, list)) and ref:
+        handler = _SPEC_OPS.get(ref[0])
+        if handler is not None:
+            return handler(tuple(ref[1:]), bound)
+    return None
 
 
 def _dim_at(shape: tuple, i: int) -> tuple[bool, Any]:
@@ -1580,6 +1628,22 @@ def _d_shape(args: tuple, bound: dict) -> tuple:
     return s
 
 
+def _d_vshape(args: tuple, bound: dict) -> tuple:
+    """``("vshape", T)`` — the *value* shape of a bound term.
+
+    The carrier-aware twin of ``("shape", T)``: reads the registered
+    value-shape resolver, so a bound metavar that resolves to a carrier
+    member reports the tensor value's shape rather than the cost
+    convention's state/map slot.  Declines on a non-tuple result — the
+    same strictness as ``("shape", T)`` (an unshaped term, or a
+    ``None`` from a resolver with nothing to report).
+    """
+    s = _vshape(bound, args[0])
+    if not isinstance(s, tuple):
+        raise _Decline(f"{args[0]} unshaped")
+    return s
+
+
 def _d_dim(args: tuple, bound: dict) -> int:
     """``("dim", T, i)`` — a concrete dim of the inferred shape."""
     s = _tshape(bound, args[0])
@@ -1918,6 +1982,7 @@ _DOPS: dict = {
     "attr0": _d_attr0,
     "const": _d_const,
     "shape": _d_shape,
+    "vshape": _d_vshape,
     "dim": _d_dim,
     "leaf-dim": _d_leaf_dim,
     "len": _d_len,

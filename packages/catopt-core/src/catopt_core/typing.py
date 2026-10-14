@@ -36,6 +36,15 @@ operand shapes and must still map a carrier-internal ``()`` operand to
 have their handler called with ``shapes = []`` — their shapes are
 fully determined by attrs.
 
+A second, adapter-pushed seam answers a different question: the *value*
+shape.  ``_shape_of`` reports the cost convention (``applyd`` the state
+slot, ``aff`` the map's linear part) — exact on the recurrence spine,
+but wrong for a promoted/stacked carrier member.  :func:`register_value_shape`
+installs a resolver (the carriers pass ``xcarrier._xshape``) and
+:func:`value_shape_of` reads through it, defaulting to ``_shape_of``
+when none is registered; the derive DSL's ``("vshape", T)`` dispatches
+through it.
+
 The ``aff``/``apply``/``om``/``omd``/``trace``/``bdiag``/``parl``
 carrier-family registrations live at the bottom of this module for
 now; later refactor phases move each family next to its laws in its
@@ -64,7 +73,9 @@ __all__ = [
     "matmul_shape",
     "numel",
     "register_shape_rule",
+    "register_value_shape",
     "shape_of",
+    "value_shape_of",
 ]
 
 # ---------------------------------------------------------------------------
@@ -1210,6 +1221,52 @@ def register_shape_rule(op: str, fn: _ShapeRule) -> None:
     never a fabricated scalar.
     """
     _SHAPE_RULES[op] = fn
+
+
+# --- value-shape resolver ---------------------------------------------
+#
+# ``_shape_of`` reports the *cost convention*: ``applyd`` reports the
+# state slot, ``aff`` the map's linear part — exact on the recurrence
+# spine, wrong for a promoted/stacked carrier member whose true value
+# shape differs.  A carrier package can install a resolver that reports
+# the TRUE value shape (``catopt_carriers.xcarrier._xshape``); the
+# derive DSL's ``("vshape", T)`` dispatches through it.  Core never
+# imports the carrier: the resolver is *pushed* in, the same sink
+# direction as the torch binding tables (:mod:`catopt_core.ops`).
+
+#: The registered value-shape resolver — a callable ``term -> shape``
+#: reporting a bound term's true value shape.  ``None`` until an
+#: adapter registers one (the carriers register ``_xshape``); the
+#: DSL's ``("vshape", T)`` then falls back to :func:`_shape_of`.
+_VALUE_SHAPE: Callable[[Any], Any] | None = None
+
+
+def register_value_shape(fn: Callable[[Any], Any]) -> None:
+    """Register the carrier-aware value-shape resolver.
+
+    ``fn`` is a callable ``term -> shape`` returning a term's true value
+    shape (``tuple``/``_INVALID``/``None`` — the same contract as
+    :func:`_shape_of`).  Pushed in by an adapter at import time
+    (``catopt_carriers.xcarrier`` passes its ``_xshape``); core imports
+    no adapter.  Idempotent — the last registration wins.
+    """
+    global _VALUE_SHAPE
+    _VALUE_SHAPE = fn
+
+
+def value_shape_of(
+    term: Any, memo: dict | None = None
+) -> tuple | str | None:
+    """Return *term*'s VALUE shape through the registered resolver.
+
+    Falls back to :func:`_shape_of` (the cost convention) when no
+    resolver is registered — a catopt-core-only environment, or a
+    carrier package not yet imported.  ``memo`` is honored only on the
+    fallback path; a registered resolver owns its own memoisation.
+    """
+    if _VALUE_SHAPE is None:
+        return _shape_of(term, memo)
+    return _VALUE_SHAPE(term)
 
 
 # --- carrier-family registrations -------------------------------------

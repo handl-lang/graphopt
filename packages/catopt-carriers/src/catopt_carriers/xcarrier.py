@@ -126,9 +126,14 @@ VERIFICATION
 
 Torch bindings for the new ops are declared in ``TORCH_BINDINGS`` at
 module level — an export :class:`catopt_core.ops.OpTable` folds in via
-``register``/``full()`` (plan 0001 phase 2c).  Importing this module
-mutates nothing: :data:`catopt_torch.torch_bridge._IR_TO_TORCH` resolves the
-bindings lazily when a consumer actually reads them.
+``register``/``full()`` (plan 0001 phase 2c).  The torch binding table
+is not mutated at import: :data:`catopt_torch.torch_bridge._IR_TO_TORCH`
+resolves the bindings lazily when a consumer actually reads them.  The
+one import-time side effect is a *push into core*: ``_xshape`` is
+registered (``catopt_core.typing.register_value_shape``) as the
+value-shape resolver the derive DSL's ``("vshape", T)`` dispatches
+through — the same sink direction as ``register_shape_rule``, and it
+names no carrier from core.
 """
 
 from __future__ import annotations
@@ -141,6 +146,7 @@ from catopt_core.ir import Op, TensorType, Var
 from catopt_core.laws import R as _R
 from catopt_core.laws import RuleSet
 from catopt_core.laws import tags as _tags
+from catopt_core.typing import register_value_shape
 
 
 def R(name: str, lhs, rhs, **kw) -> Rewrite:
@@ -311,6 +317,18 @@ def _xshape_rec(t: Any, memo: dict):
 def _shape(t):
     s = _xshape(t)
     return s if isinstance(s, tuple) else None
+
+
+# Register ``_xshape`` with core as THE value-shape resolver, so the
+# derive DSL's ``("vshape", T)`` (and any shape spec reading it) reports
+# a carrier member's TRUE value shape rather than ``_shape_of``'s cost
+# convention.  This is a push into a core registry (the same sink
+# direction as ``register_shape_rule`` / the torch binding tables), not
+# a carrier import from core: core never names this module.  ``_xshape``
+# is already the resolver this package's law modules call through
+# ``om._vshape`` / ``decode_geom._shape``; registering it here keeps the
+# DSL read and the procedural reads on one function.
+register_value_shape(_xshape)
 
 
 # ---------------------------------------------------------------------------

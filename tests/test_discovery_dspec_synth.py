@@ -165,6 +165,59 @@ class TestNewOps:
         assert "max" in repr(expr)
 
 
+class TestValueShapeSource:
+    """The bank gained the carrier-aware rank reader
+    ``("len", ("vshape", T))`` — the derive DSL's value-shape source.
+    It is reachable only when a bound term's value shape differs from
+    the cost convention; a resolver installs the mapping here."""
+
+    #: (declared/cost shape, true value shape).  The cost shapes all
+    #: share rank 3 while the value ranks vary, so the convention
+    #: reader is constant and only the value-shape reader fits.
+    _PAIRS = (
+        ((2, 4, 6), (4, 6)),
+        ((2, 4, 8), (4, 6, 8)),
+        ((2, 4, 10), (4,)),
+        ((2, 4, 12), (4, 6, 8, 10)),
+        ((2, 4, 14), (4, 6)),
+    )
+
+    def _setup(self, monkeypatch, *, resolver):
+        import catopt_core.typing as ty
+        from catopt_core.ir import TensorType, Var
+
+        bounds = [
+            {"t": Var("t", TensorType(tuple(cs)))}
+            for cs, _vs in self._PAIRS
+        ]
+        vmap = {
+            b["t"]: vs
+            for b, (_cs, vs) in zip(bounds, self._PAIRS, strict=True)
+        }
+        monkeypatch.setattr(
+            ty,
+            "_VALUE_SHAPE",
+            (lambda x: vmap.get(x)) if resolver else None,
+        )
+
+        def rank_hook(bound):
+            return {"$attr:R": len(vmap[bound["t"]])}
+
+        return samples_from_hook(rank_hook, bounds)
+
+    def test_finds_the_value_shape_rank(self, monkeypatch):
+        samples = self._setup(monkeypatch, resolver=True)
+        spec = synth_dspec(samples, name="R")
+        assert spec is not None
+        assert spec["R"] == ("len", ("vshape", "t"))
+
+    def test_without_a_resolver_the_source_declines(self, monkeypatch):
+        # the cost-convention rank reader cannot reproduce the value
+        # ranks, so the synth honestly refuses
+        samples = self._setup(monkeypatch, resolver=False)
+        assert synth_dspec(samples, name="R") is None
+
+
 class TestNearMisses:
     def test_near_misses_report_partial_agreement(self):
         # ``2 ** a`` — still outside the bank, so the closest

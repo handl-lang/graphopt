@@ -1452,6 +1452,30 @@ def test_collect_skips_non_om_members_in_carrier_cone():
     assert len(offers) == 1 and offers[0]["kind"] == "diag"
 
 
+def test_xshape_is_the_registered_value_shape_resolver():
+    """Importing ``xcarrier`` installs ``_xshape`` as core's value-shape
+    resolver, so the derive DSL's ``("vshape", T)`` reads the TRUE value
+    shape where ``("shape", T)`` reports the cost convention."""
+    from catopt_core.laws.cond import eval_derive
+    from catopt_core.typing import _VALUE_SHAPE, value_shape_of
+
+    assert _VALUE_SHAPE is XC._xshape
+    # a promoted dense map: ``_shape_of`` reports h's (state) shape, the
+    # value shape is the applied output A[:-1]
+    t = Op.make(
+        "apply", Op.make("aff", _v("A", 5, 4), _v("c", 5)), _v("h", 4)
+    )
+    assert _shape_of(t) == (4,)
+    assert XC._xshape(t) == (5,)
+    assert value_shape_of(t) == (5,)
+    b = {"t": t}
+    assert eval_derive({"S": ("vshape", "t")}, b) == {"$attr:S": (5,)}
+    assert eval_derive({"S": ("shape", "t")}, b) == {"$attr:S": (4,)}
+    assert eval_derive({"R": ("len", ("vshape", "t"))}, b) == {
+        "$attr:R": 1
+    }
+
+
 #: NOTE on unreachable lines in the passes: ``_offer_witness``'s
 #: ``src is None`` return (line 1955) requires an e-class whose EVERY
 #: member resolves cyclically through ``_oldest_term`` — but every

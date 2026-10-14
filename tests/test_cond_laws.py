@@ -1886,3 +1886,102 @@ class TestDeriveIntOps:
             "$attr:M": 9,
             "$attr:R": 1,
         }
+
+
+class TestDeriveValueShape:
+    """``("vshape", T)`` — the carrier-aware shape source.
+
+    ``("shape", T)`` reads the cost convention; ``("vshape", T)`` reads
+    through the registered value-shape resolver
+    (:func:`catopt_core.typing.value_shape_of`), defaulting to the cost
+    convention when nothing is registered.  A bound metavar may resolve
+    to a carrier member whose true value shape differs from the cost
+    model's state/map slot — the structural seam the residual survey
+    named.
+    """
+
+    def test_falls_back_to_the_cost_convention(self, monkeypatch):
+        import catopt_core.typing as ty
+
+        monkeypatch.setattr(ty, "_VALUE_SHAPE", None)
+        b = {"t": _v("t", 2, 3)}
+        assert eval_derive({"S": ("vshape", "t")}, b) == {
+            "$attr:S": (2, 3)
+        }
+        # the two reads agree while no resolver is installed
+        assert eval_derive({"S": ("shape", "t")}, b) == {
+            "$attr:S": (2, 3)
+        }
+
+    def test_declines_without_a_resolver(self, monkeypatch):
+        import catopt_core.typing as ty
+
+        monkeypatch.setattr(ty, "_VALUE_SHAPE", None)
+        # an unshaped term: the fallback is not a tuple, so the
+        # strictness contract declines (never a fabricated ())
+        assert eval_derive({"S": ("vshape", "t")}, {}) is None
+
+    def test_resolves_with_a_registered_resolver(self, monkeypatch):
+        import catopt_core.typing as ty
+
+        monkeypatch.setattr(ty, "_VALUE_SHAPE", lambda _t: (9, 9))
+        b = {"t": _v("t", 2, 3)}
+        assert eval_derive({"S": ("vshape", "t")}, b) == {
+            "$attr:S": (9, 9)
+        }
+        # the resolver is consulted; ("shape", T) stays the convention
+        assert eval_derive({"S": ("shape", "t")}, b) == {
+            "$attr:S": (2, 3)
+        }
+
+    def test_resolver_returning_non_tuple_declines(self, monkeypatch):
+        import catopt_core.typing as ty
+
+        monkeypatch.setattr(ty, "_VALUE_SHAPE", lambda _t: None)
+        assert (
+            eval_derive({"S": ("vshape", "t")}, {"t": _v("t", 2)})
+            is None
+        )
+
+    def test_composes_as_a_shape_spec(self, monkeypatch):
+        import catopt_core.typing as ty
+
+        monkeypatch.setattr(
+            ty,
+            "_VALUE_SHAPE",
+            lambda t: (7, 5, 3) if t is not None else None,
+        )
+        b = {"t": _v("t", 2, 3)}
+        assert eval_derive({"R": ("len", ("vshape", "t"))}, b) == {
+            "$attr:R": 3
+        }
+        assert eval_derive({"D": ("dim", ("vshape", "t"), -1)}, b) == {
+            "$attr:D": 3
+        }
+        # a shape-reading predicate reads the value shape too
+        assert eval_cond(("rank", ("vshape", "t"), "==", 3), b)
+        assert not eval_cond(("rank", ("shape", "t"), "==", 3), b)
+        # an unknown shape still declines through the spec path
+        assert (
+            eval_derive({"R": ("len", ("vshape", "missing"))}, b)
+            is None
+        )
+
+    def test_vshape_spec_dispatch_and_declines(self, monkeypatch):
+        import catopt_core.typing as ty
+
+        monkeypatch.setattr(
+            ty,
+            "_VALUE_SHAPE",
+            lambda t: (2, 4, 6) if t is not None else None,
+        )
+        b = {"a": _v("a", 2, 4, 6), "b": _v("b", 2, 1, 6)}
+        # a nested shape spec resolves through the value-shape source
+        assert eval_derive(
+            {"R": ("len", ("vshape", ("bcast", "a", "b")))}, b
+        ) == {"$attr:R": 3}
+        # a malformed spec arity, an unknown spec tag, and a non-spec
+        # operand all decline through the spec path
+        assert not eval_cond(("shaped", ("vshape", "a", "b")), b)
+        assert not eval_cond(("shaped", ("vshape", ("nope", "a"))), b)
+        assert not eval_cond(("shaped", ("vshape", 7)), b)

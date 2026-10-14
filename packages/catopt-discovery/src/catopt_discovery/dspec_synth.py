@@ -15,9 +15,11 @@ that the DSL needs extending — the same shape as ``auto_cond``'s
 "no declarable conjunction of ≤ N covers …" decline.
 
 The bank the synthesizer searches is ``_DOPS``' arithmetic plus the
-``("len", ("shape", T))`` rank reader and the ``max``/``min`` pair the
-residual survey measured as missing (the ``om``/``xcarrier`` derives
-are rank arithmetic over bound metavariables).  Enumeration propagates
+``("len", ("shape", T))`` / ``("len", ("vshape", T))`` rank readers
+(the cost-convention and carrier-aware shape sources) and the
+``max``/``min`` pair the residual survey measured as missing (the
+``om``/``xcarrier`` derives are rank arithmetic over bound
+metavariables).  Enumeration propagates
 each candidate's *value vector* over the samples and collapses a level
 to one representative per vector (``_dedupe``) — the blind product is
 quartic in the leaf count, so without the collapse a rank bank's
@@ -84,7 +86,14 @@ def _leaves(bound: dict, values: set) -> list[Any]:
     for key in sorted(bound):
         if key.startswith("$attr:"):
             continue
+        # Two rank readers: the cost-convention ``shape`` and the
+        # carrier-aware ``vshape`` (the derive DSL's value-shape source,
+        # resolved through the registered resolver — ``_shape_of`` when
+        # none is registered, so the two dedupe to one for a plain
+        # tensor term).  A carrier member whose true value rank differs
+        # from its convention rank is reachable only through ``vshape``.
         out.append(("len", ("shape", key)))
+        out.append(("len", ("vshape", key)))
     for v in sorted(values, key=repr):
         if isinstance(v, int) and not isinstance(v, bool):
             out.append(("lit", v))
@@ -224,7 +233,14 @@ def _reads_bound(expr: Any) -> bool:
     """
     if not isinstance(expr, tuple):
         return False
-    if expr[0] in ("attr", "attr0", "shape", "dim", "leaf-dim"):
+    if expr[0] in (
+        "attr",
+        "attr0",
+        "shape",
+        "vshape",
+        "dim",
+        "leaf-dim",
+    ):
         return True
     return any(_reads_bound(a) for a in expr[1:])
 

@@ -25,6 +25,8 @@ from catopt_core.typing import (
     _numel,
     _shape_of,
     register_shape_rule,
+    register_value_shape,
+    value_shape_of,
 )
 
 B, T, K, D = 4, 8, 3, 16
@@ -298,6 +300,25 @@ def test_register_shape_rule_hook():
         _SHAPE_RULES.pop("myop_test", None)
     # After unregistering the same term falls back to shapes[0].
     assert _shape_of(Op.make("myop_test", x234)) == (2, 3, 4)
+
+
+def test_register_value_shape_hook():
+    """The value-shape registry: a registered resolver is consulted by
+    ``value_shape_of``; with none it falls back to ``_shape_of``."""
+    import catopt_core.typing as ty
+
+    prev = ty._VALUE_SHAPE
+    try:
+        ty._VALUE_SHAPE = None
+        # fallback: the cost convention, exactly _shape_of
+        assert value_shape_of(x234) == (2, 3, 4)
+        assert value_shape_of(x234) == _shape_of(x234)
+        register_value_shape(lambda _t: (9, 9))
+        assert value_shape_of(x234) == (9, 9)
+        # the registered resolver owns the read — _shape_of is untouched
+        assert _shape_of(x234) == (2, 3, 4)
+    finally:
+        ty._VALUE_SHAPE = prev
 
 
 def test_leaf_typing():
