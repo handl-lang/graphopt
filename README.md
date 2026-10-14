@@ -40,6 +40,7 @@ provenance in [`docs/results.md`](docs/results.md).  Each block states
 | `chainfuse` — laws + a kernel minted mid-search | 3.71× | **2.94×** | 1.7e-5 |
 | spelled RetNet export, T=2048 — **derived carrier** | **5.0–5.9×** | **6.2–7.4×** | 9.8e-9 |
 | spelled RetNet export, T=512 — fused + minted kernel (not the carrier) | — | **1.82–2.33×** | 1.3e-8 |
+| BiRefNet Swin block (SDPA + conv decoder) | 0.90× | **0.80× loss** — fused ops expose nothing to fold | 9.7e-17 |
 | llama-style SwiGLU MLP | 1.17× | **2.11×** | 6e-8 |
 | held-out model zoo (22 architectures) | — | **11/18 verified wins**, best 2.18× | — |
 | joint fwd+bwd step vs `torch.autograd` | **+13%** | — | 9.5e-7 |
@@ -49,7 +50,9 @@ provenance in [`docs/results.md`](docs/results.md).  Each block states
 
 | quantity | before | after | **saved** | instrument |
 |---|---|---|---|---|
-| **memory** — RetNet peak activation, T=2048 | 169.66 MiB | 23.26 MiB | **7.30×** | `max_memory_allocated` |
+| **memory** — RetNet peak activation, T=2048, vs its own spelled input | 169.9 MiB | 30.0 MiB | **5.66×** | `max_memory_allocated` |
+| **memory** — same carrier vs paper's own chunkwise impl | 26.9 MiB | 30.0 MiB | **0.90× loses** | torchscale path |
+| **memory** — same carrier vs FLA tuned kernel (fp32) | 9.96 MiB | 19.5 MiB | **0.51× loses** | `fla.ops.retention` |
 | **compute** — K-way chunk, T=512 | 29,386,752 FLOPs | 6,700,800 FLOPs | **4.4×** | `flops_cost` |
 | **compute** — shared-state, T=512 K=8 | 8,572,928 FLOPs | 7,643,912 FLOPs | **10.8%** | `flops_cost` |
 | **storage** — weight chain, k=16 | 4,194,304 B | 262,144 B | **16.0×** | `param_bytes_cost` |
@@ -88,9 +91,14 @@ speedup.
   e-graph derives the chunked recurrence itself — the cross-block
   carrier is a *member* of the saturated graph, and extraction
   *prefers* it at T=512 (29.4M vs 39.1M FLOPs) — not a hand-written
-  template. Constructs the search needs are laws too: the K-way
-  chunk split (4.4×) and the shared-state reassociation (10.8–24.5%)
-  are both admitted, guarded, fp64-verified data.
+  template. Honest scope: the derived form coincides with RetNet's
+  *published* chunkwise duality (verified vs a faithful reimplementation
+  at 9.8e-9) — mechanical reachability + certification of a known
+  algorithm, not a new one; hand-tuned baselines still beat the
+  delivered artifact (~3× less memory, ~11× faster vs FLA Triton).
+  Constructs the search needs are laws too: the K-way chunk split
+  (4.4×) and the shared-state reassociation (10.8–24.5%) are both
+  admitted, guarded, fp64-verified data.
 - **The prior learns.** The open game's policy ships *trained*
   (regenerable via `tools/train_open_prior.py`); on held-out pages its
   ordering beats both the cold start and the cost-delta heuristic
@@ -172,11 +180,15 @@ python -m catopt_discovery.play --zoo                     # the probe over held-
 | `catopt-cuda` | CUDA-graph runner |
 | `catopt-orchestrator` | backend-neutral pipeline |
 | `catopt-discovery` | law discovery + the game layer (`python -m catopt_discovery.<mod>`) |
+| `catopt-onnx` | ONNX backend — `OnnxSource` (import) + `OnnxSink` (export), opset 18 |
 | `catopt-native` | optional PyO3/Rust search engine |
 
 The hexagonal boundary is enforced by import-linter: core imports no
 `torch`, `numpy`, or GPU library — a new backend implements `Sink` and
-nothing in core changes.
+nothing in core changes. ONNX exercised exactly that: `OnnxSource` +
+`OnnxSink` (import **and** export, opset 18, verified through
+onnxruntime to 1.1e-16 fp64) landed with **zero** edits under
+`catopt-core`.
 
 ## Docs
 
