@@ -15,6 +15,7 @@ dependencies = [
     "catopt-orchestrator",
     "catopt-cuda",
     "catopt-discovery",
+    "catopt-onnx",
     "torch>=2.0",
     "numpy>=1.24",
 ]
@@ -119,6 +120,7 @@ catopt-carriers = { workspace = true }
 catopt-orchestrator = { workspace = true }
 catopt-cuda = { workspace = true }
 catopt-discovery = { workspace = true }
+catopt-onnx = { workspace = true }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -150,6 +152,7 @@ root_packages = [
     "catopt_orchestrator",
     "catopt_cuda",
     "catopt_discovery",
+    "catopt_onnx",
 ]
 # `catopt_native` is deliberately NOT a root package: it is an optional
 # maturin/cargo build outside the uv workspace, so `uv sync` (and CI)
@@ -170,6 +173,7 @@ forbidden_modules = [
     "catopt_orchestrator",
     "catopt_cuda",
     "catopt_discovery",
+    "catopt_onnx",
 ]
 
 [[tool.importlinter.contracts]]
@@ -204,6 +208,10 @@ allow_indirect_imports = true
 # (`catopt_orchestrator.carriers`), never by importing them.
 # `catopt_native` is a peer of core (it implements the Engine port
 # over the same IR) and is checked to stay above core only.
+# `catopt_onnx` is the second backend (ADR 0006): it implements the
+# `Sink` port over `onnx`/`onnxruntime` and depends on `catopt_core`
+# alone — not on `catopt_orchestrator`, and not on the torch backend
+# family — so it is a peer of `catopt_native`, directly above core.
 [[tool.importlinter.contracts]]
 name = "dependency layers"
 type = "layers"
@@ -217,6 +225,7 @@ layers = [
     "catopt_torch : catopt_carriers",
     "catopt_orchestrator",
     "(catopt_native)",
+    "catopt_onnx",
     "catopt_core",
 ]
 
@@ -255,6 +264,7 @@ extra-paths = [
     "packages/catopt-orchestrator/src",
     "packages/catopt-cuda/src",
     "packages/catopt-discovery/src",
+    "packages/catopt-onnx/src",
     # catopt-native is optional (maturin-built); its `python/` source
     # dir holds the adapter plus the `_native.pyi` stub ty resolves
     # against the compiled extension.
