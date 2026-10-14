@@ -16,3 +16,7 @@ export * from "./guards.ts";
 export * from "./exposure.ts";
 export * from "./combinators.ts";
 export * from "./ports.ts";
+export * from "./pricing.ts";
+export * from "./delivery.ts";
+export * from "./bounded.ts";
+export * from "./improve.ts";
