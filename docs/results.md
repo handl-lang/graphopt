@@ -223,7 +223,7 @@ eliminated (pinned by test).
 | the carrier below the crossover | **0.51×** vs eager at T=512 |
 | the *folded* carrier vs the spelled form | a fold is a **cost-neutral relabelling** — the gap is search, not pricing |
 | pure pointwise fusion | **0.82× loss** — Inductor's home turf |
-| shared-state on the real export | 10.8–24.5% [symbolic]; the ~589,952-scale target is unreached (a rule-set loop blocks the bridge) |
+| shared-state on the real export | ~~unreached~~ — **reached**: the staged extract carries the chained shared recurrence (7 fold reads + 7 single-computed state blocks at K=8; 6,943,236 vs the like-for-like floor 7,082,496 — ~2% under). The earlier "0/13 fold" probe counted `applyd`-spelled members, which extraction never prefers; the like-for-like reference also omitted projections + in-graph score construction. fp64-verified via `TorchSink` (6.7e-16) |
 
 ## Learned models (2026-10-15)
 
