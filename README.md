@@ -33,37 +33,39 @@ provenance in [`docs/results.md`](docs/results.md).  Each block states
 
 ### Optimized models, end-to-end
 
-| model | vs `torch.compile` |
-|---|---|
-| deep weight chains (reassoc to 1 GEMM, k=8/k=16) | **8.93× / 16.12×** |
-| spelled `x@A@B@C` block | **3.96×** |
-| `chainfuse` — laws + a kernel minted mid-search | **2.94×** |
-| spelled RetNet export, T=2048 — **derived carrier** | **6.2–7.4×** |
-| spelled RetNet export, T=512 — fused + minted kernel (not the carrier) | **1.82–2.33×** |
-| llama-style SwiGLU MLP | **2.11×** |
-| held-out model zoo (22 architectures) | **11/18 verified wins**, best 2.18× |
-| joint fwd+bwd step vs `torch.autograd` | **+13%** |
-| pure pointwise fusion | **0.82× loss** — Inductor's home turf |
+| model | speed vs eager | speed vs `torch.compile` | fp64 max_abs |
+|---|---|---|---|
+| deep weight chains (reassoc to 1 GEMM, k=8 / k=16) | — | **8.93× / 16.12×** | exact |
+| spelled `x@A@B@C` block | — | **3.96×** | 1.7e-5 |
+| `chainfuse` — laws + a kernel minted mid-search | 3.71× | **2.94×** | 1.7e-5 |
+| spelled RetNet export, T=2048 — **derived carrier** | **5.0–5.9×** | **6.2–7.4×** | 9.8e-9 |
+| spelled RetNet export, T=512 — fused + minted kernel (not the carrier) | — | **1.82–2.33×** | 1.3e-8 |
+| llama-style SwiGLU MLP | 1.17× | **2.11×** | 6e-8 |
+| held-out model zoo (22 architectures) | — | **11/18 verified wins**, best 2.18× | — |
+| joint fwd+bwd step vs `torch.autograd` | **+13%** | — | 9.5e-7 |
+| pure pointwise fusion | — | **0.82× loss** — Inductor's home turf | — |
 
-### Savings — structural and memory
+### Savings — memory, compute, storage, evaluations
 
-| | saved |
-|---|---|
-| RetNet export, T=2048 — peak activation memory | **7.30×** (169.66 → 23.26 MiB, verified) |
-| RetNet export — K-way chunk construct (FLOPs) | **4.4×** (29.4M → 6.70M) |
-| RetNet export — shared-state reassociation (FLOPs) | **10.8–24.5%** |
-| deep weight chain, k=16 — stored parameters | **16×** (256 KB vs 4.0 MB) |
-| shared-input MoE — stored parameters | **192 KB** eliminated |
+| quantity | before | after | **saved** | instrument |
+|---|---|---|---|---|
+| **memory** — RetNet peak activation, T=2048 | 169.66 MiB | 23.26 MiB | **7.30×** | `max_memory_allocated` |
+| **compute** — K-way chunk, T=512 | 29,386,752 FLOPs | 6,700,800 FLOPs | **4.4×** | `flops_cost` |
+| **compute** — shared-state, T=512 K=8 | 8,572,928 FLOPs | 7,643,912 FLOPs | **10.8%** | `flops_cost` |
+| **storage** — weight chain, k=16 | 4,194,304 B | 262,144 B | **16.0×** | `param_bytes_cost` |
+| **storage** — shared-input MoE | — | — | **196,608 B** | `param_bytes_cost` |
+| **evaluations** — prior ranking AP | heuristic 0.045 | **0.133** | **3.0×** | held-out pages |
+| **evaluations** — evidence store, 2nd run | 128 s | 6.6 s | **19.4×** | wall time |
 
 ### Learned models
 
-| model | training | result |
-|---|---|---|
-| open-game prior | RL (linear), baked | **AP 0.133** vs cost-delta heuristic 0.045 |
-| meta-arena prior | RL (linear), baked | **−0.06** vs scripted −0.10, random −0.57 |
-| `PairPolicyNet` (contraction) | RL (neural) | 0.94–0.96 equal-rollouts at n≤30 |
-| `PairPolicyNet` distilled | supervised | n=40 **0.91** — beats the teacher (the shipped default) |
-| `RuleValueNet` | supervised | AP 0.023 — loses to the heuristic |
+| model | training | metric | value | baseline |
+|---|---|---|---|---|
+| open-game prior | RL (linear), baked | ranking AP | **0.133** | heuristic 0.045 |
+| meta-arena prior | RL (linear), baked | reward / episode | **−0.06** | scripted −0.10, random −0.57 |
+| `PairPolicyNet` (contraction) | RL (neural) | equal-rollouts ratio | **0.94–0.96** (n≤30) | teacher 1.0 |
+| `PairPolicyNet` distilled | supervised | equal-rollouts ratio | **0.91** (n=40) | teacher 1.0 |
+| `RuleValueNet` | supervised | ranking AP | 0.023 | heuristic 0.045 (loses) |
 
 Wins are structural — weight folding, shared-input pairing, scan lifts —
 the transforms op-level compilers cannot express. GEMM-bound code with

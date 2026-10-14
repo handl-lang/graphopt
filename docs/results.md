@@ -185,34 +185,37 @@ while the fused form grows 21×.  O(T·C) against O(T²), as memory.
 
 ### 3. Structural savings [symbolic]
 
-**Compute — FLOPs:**
+**Compute — FLOPs** (instrument `flops_cost`; ratio = before ÷ after):
 
-| optimization | saved | instrument |
-|---|---|---|
-| weight fold (k GEMMs → 1) | **k×** (2–16×) | `flops_cost` |
-| K-way chunk construct | **4.4×** vs bisection; 5.83× vs fused | `flops_cost` |
-| shared-state reassociation | **10.8–24.5%** | `flops_cost` |
-
-**Storage — parameter bytes** (`param_bytes_cost`, d=512, fp32,
-`x@W₀@…@W_{k-1}` vs the folded `x@W_cat`):
-
-| k | before | after | saved |
+| optimization | before (FLOPs) | after (FLOPs) | **compute saved** |
 |---|---|---|---|
-| 2 | 512 KB | 256 KB | 256 KB (2.0×) |
-| 4 | 1.0 MB | 256 KB | 768 KB (4.0×) |
-| 8 | 2.0 MB | 256 KB | 1.75 MB (8.0×) |
-| 16 | 4.0 MB | 256 KB | **3.75 MB (16.0×)** |
+| weight fold, k=8 (d=512) | 8,388,608 | 1,048,576 | **8.0×** |
+| weight fold, k=16 (d=512) | 16,777,216 | 1,048,576 | **16.0×** |
+| K-way chunk vs bisection-chunked (T=512) | 29,386,752 | 6,700,800 | **4.4×** |
+| K-way chunk vs fused quadratic (T=512) | 39,059,456 | 6,700,800 | **5.83×** |
+| shared-state reassociation (T=512, K=8) | 8,572,928 | 7,643,912 | **10.8%** (24.5% at T=128) |
 
-Plus the shared-input MoE fold: **196,608 B (192 KB)** eliminated
-(pinned by test).
+**Storage — parameter bytes** (instrument `param_bytes_cost`; d=512,
+fp32, `x@W₀@…@W_{k-1}` vs the folded `x@W_cat`):
+
+| k | before (stored) | after (stored) | **storage saved** |
+|---|---|---|---|
+| 2 | 524,288 B | 262,144 B | **262,144 B** (2.0×) |
+| 4 | 1,048,576 B | 262,144 B | **786,432 B** (4.0×) |
+| 8 | 2,097,152 B | 262,144 B | **1,835,008 B** (8.0×) |
+| 16 | 4,194,304 B | 262,144 B | **3,932,160 B** (16.0×) |
+
+Plus the shared-input MoE fold: **196,608 B** of stored parameters
+eliminated (pinned by test).
 
 ### 4. Oracle-evaluation savings [symbolic]
 
-| | saved |
-|---|---|
-| saturating e-graph encodes every bracketing | 16,796 programs in **231 e-nodes** (k=11); ≥10^5.6 in ~0.5 s (k=24) |
-| trained prior vs cost-delta heuristic | AP **0.133 vs 0.045** (~3×), ~2× more useful laws per eval |
-| evidence store, second run | 50/50 verdicts cached: **128 s → 6.6 s (19×)** |
+| quantity | before | after | **saved** |
+|---|---|---|---|
+| programs encoded per e-node (k=11) | — | 16,796 programs in 231 e-nodes | **72.7 programs/e-node** |
+| ranking quality (AP, held-out pages) | heuristic 0.045 | trained prior **0.133** | **3.0×** |
+| useful laws found per episode | random 0.083 | trained prior **0.167** | **2.0×** |
+| wall time, second run (evidence store) | 128 s | 6.6 s | **19.4×** |
 
 ### 5. Honest losses
 
@@ -231,12 +234,12 @@ what gets optimized.
 
 ### Neural — contraction ordering
 
-| model | training | result |
-|---|---|---|
-| `PairPolicyNet` | **RL** (curriculum REINFORCE), 25 KB | equal-rollouts n=20 **0.96** / n=30 **0.94** (beats the teacher); n=40 1.26; wall-clock parity 1.00–1.02 at n≤30 |
-| `PairPolicyNet` **distilled** (`oe-all`, *shipped default*) | supervised (teacher's trial distribution) | n=40 **0.91** — the first arm to beat the teacher |
-| `oe-best` (distilled, selected order) | supervised | n=40 1.17 |
-| `dp` (imitation of the RL curriculum) | supervised | **127×** at n=40 — the curriculum is a bad teacher |
+| model | training | metric | value (vs teacher = 1.0) |
+|---|---|---|---|
+| `PairPolicyNet` | **RL** (curriculum REINFORCE), 25 KB | equal-rollouts cost ratio | n=20 **0.96** / n=30 **0.94** ✓; n=40 1.26 ✗ |
+| `PairPolicyNet` **distilled** (`oe-all`, *shipped default*) | supervised (teacher's trial distribution) | equal-rollouts cost ratio | n=40 **0.91** ✓ — first arm to beat the teacher |
+| `oe-best` (distilled, selected order) | supervised | equal-rollouts cost ratio | n=40 1.17 ✗ |
+| `dp` (imitation of the RL curriculum) | supervised | equal-rollouts cost ratio | n=40 **127×** — the curriculum is a bad teacher |
 
 Player is `best_order` (best-of-N sampled rollouts); the single argmax
 is brittle at n=40 for every arm (RL 4.15×).  Not wired into
@@ -244,16 +247,18 @@ is brittle at n=40 for every arm (RL 4.15×).  Not wired into
 
 ### Neural — rule value (supervised)
 
-| model | result |
-|---|---|
-| `RuleValueNet` (MLP 32) | `rank_pool` AP ~0.023 vs the cost-delta heuristic's 0.045 — **loses** |
+| model | metric | value | baseline | verdict |
+|---|---|---|---|---|
+| `RuleValueNet` (MLP 32) | ranking AP (`rank_pool`) | 0.023 | heuristic 0.045 | **loses** |
 
 ### Linear — the discovery game (RL, baked presets)
 
-| model | result |
-|---|---|
-| **open-game prior** (`OPEN_GAME_PLAYER_WEIGHTS`) | reward/ep **0.304** vs random 0.134 / cold 0.143; useful/ep 0.167 vs 0.083; **AP 0.133 vs heuristic 0.045** |
-| **meta-arena prior** (`META_ARENA_PLAYER_WEIGHTS`) | **−0.06** vs random −0.57, cold −0.49, hand-written `scripted` −0.10 |
+| model | metric | random | cold `{}` | trained | baseline |
+|---|---|---|---|---|---|
+| **open-game prior** (`OPEN_GAME_PLAYER_WEIGHTS`) | reward / episode | 0.134 | 0.143 | **0.304** | — |
+| | useful laws / episode | 0.083 | 0.083 | **0.167** | — |
+| | ranking AP | 0.012 | 0.012 | **0.133** | heuristic 0.045 |
+| **meta-arena prior** (`META_ARENA_PLAYER_WEIGHTS`) | reward / episode | −0.57 | −0.49 | **−0.06** | scripted −0.10 |
 
 Regenerate with `tools/train_open_prior.py` / `tools/train_meta_prior.py`.
 
