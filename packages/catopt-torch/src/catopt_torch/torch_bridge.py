@@ -9,6 +9,7 @@ names (W1, W2, ...) and retrieve their shapes.
 from __future__ import annotations
 
 import contextlib
+import importlib
 from collections.abc import Callable
 from typing import Any, cast
 
@@ -77,6 +78,12 @@ _ATEN_TO_IR: dict[str, str] = {
     "inverse": "inv",
     "scaled_dot_product_attention": "sdpa",
     "conv2d": "conv2d",
+    # torchvision::deform_conv2d — the deformable-conv v2 kernel.  The
+    # identity alias is deliberate: it names the op the sink must bind
+    # and pulls it under the ``test_contracts`` binding-coverage pin
+    # (before this it exported into IR but had NO lowering binding — a
+    # silent coverage gap behind the "no missing bindings" claim).
+    "deform_conv2d": "deform_conv2d",
     "cat": "concat",
     # List-form split exports as aten.split_with_sizes; unsafe_*
     # variants are the functionalization-internal spellings of the
@@ -1060,6 +1067,76 @@ def _lstm_input_torch(
     )
 
 
+def _torchvision_deform_conv2d() -> Any:
+    """Resolve torchvision's ``deform_conv2d`` kernel — loudly.
+
+    The kernel is registered by torchvision's C++ extension, so the
+    ``torch.ops.torchvision`` namespace only carries ``deform_conv2d``
+    once the package is imported.  Resolving it on demand (rather than
+    at module import) keeps ``catopt-torch`` free of a hard torchvision
+    dependency: a graph without deform ops never touches this path.
+    When torchvision is missing the failure names the dependency and
+    why it is needed — the lazy ``torch.ops`` namespace would otherwise
+    raise a bare ``AttributeError`` that reads like a typo.
+    """
+    try:
+        # Import for its side effect — loading torchvision registers
+        # the op into the ``torch.ops.torchvision`` namespace.
+        importlib.import_module("torchvision")
+    except ImportError as e:
+        raise RuntimeError(
+            "deform_conv2d lowering needs the torchvision package: the "
+            "exported graph calls torchvision::deform_conv2d, whose "
+            "kernel ships in torchvision (not torch).  Install a "
+            "torchvision build matching the installed torch."
+        ) from e
+    return torch.ops.torchvision.deform_conv2d
+
+
+def _deform_conv2d_torch(
+    x: Any,
+    w: Any,
+    offset: Any,
+    mask: Any = None,
+    bias: Any = None,
+    *a: Any,
+    **kw: Any,
+) -> Any:
+    """``torchvision::deform_conv2d`` — delegate to torchvision's kernel.
+
+    Operands arrive in the aten order ``(input, weight, offset, mask,
+    bias)``; the per-axis stride/pad/dilation, ``groups``,
+    ``offset_groups`` and the ``use_mask`` flag arrive as canonical
+    attrs (:data:`catopt_core.attrs.ATTR_SCHEMA`).  torchvision's
+    Python wrapper fills an absent mask/bias with zeros tensors at
+    export, so both are normally real operands — the zero fills below
+    only matter for a hand-minted term, and they mirror the wrapper's
+    own defaults so the kernel sees the same call either way.
+    """
+    if mask is None:
+        mask = torch.zeros(
+            (x.shape[0], 1), device=x.device, dtype=x.dtype
+        )
+    if bias is None:
+        bias = torch.zeros(w.shape[0], device=x.device, dtype=x.dtype)
+    return _torchvision_deform_conv2d()(
+        x,
+        w,
+        offset,
+        mask,
+        bias,
+        int(attr_of(kw, "stride_h", default=1)),
+        int(attr_of(kw, "stride_w", default=1)),
+        int(attr_of(kw, "pad_h", default=0)),
+        int(attr_of(kw, "pad_w", default=0)),
+        int(attr_of(kw, "dilation_h", default=1)),
+        int(attr_of(kw, "dilation_w", default=1)),
+        int(attr_of(kw, "groups", default=1)),
+        int(attr_of(kw, "offset_groups", default=1)),
+        bool(attr_of(kw, "use_mask", default=False)),
+    )
+
+
 #: Core torch lowering bindings — the base ``OpTable``'s table (plan
 #: 0001 phase 2c).  Carrier ops (``trace``/``omd_*``/``cmask``...)
 #: are deliberately ABSENT: they live in each carrier
@@ -1183,6 +1260,12 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
         dilation=kw.get("dilation", 1),
         groups=kw.get("groups", 1),
     ),
+    # torchvision::deform_conv2d — the deformable-conv v2 kernel.  The
+    # kernel ships in torchvision's C++ extension, not in torch, so the
+    # binding resolves it on demand (``_torchvision_deform_conv2d``) and
+    # raises a clear, dependency-naming error when torchvision is
+    # absent rather than failing at eval with a bare AttributeError.
+    "deform_conv2d": _deform_conv2d_torch,
     # aten.max_pool2d[.default] — the pooling op ``nn.MaxPool2d`` /
     # ``F.max_pool2d`` exports as (measured: U^2-Net's stage pools).
     # torch.export passes every present attribute positionally and

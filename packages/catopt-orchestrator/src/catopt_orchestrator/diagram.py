@@ -1534,6 +1534,29 @@ def _optimize_diagram(
                 replacements[node.name] = rep_mod
 
     new_model, in_place = _deliver(model, composer, replacements)
+
+    # End-to-end verification (fail-closed): a graft that breaks the
+    # whole-model forward is rolled back to the un-grafted composition
+    # rather than shipped (the per-block gate only sees the first call).
+    if in_place:
+        e2e: dict[str, Any] = {
+            "skipped": "in_place",
+            "reason": "param-sharing clone failed — model unmodified",
+        }
+    else:
+        from catopt_orchestrator.optimize import _e2e_or_rollback
+
+        new_model, replacements, e2e = _e2e_or_rollback(
+            model,
+            new_model,
+            composer,
+            replacements,
+            sink,
+            x,
+            verbose,
+            label="ContractionSearch",
+        )
+
     stats = _diagram_stats(
         diagram,
         move_stats,
@@ -1543,21 +1566,7 @@ def _optimize_diagram(
         in_place,
     )
     stats["diagram_search"] = dsearch
-    if in_place:
-        stats["end_to_end"] = {
-            "skipped": "in_place",
-            "reason": "param-sharing clone failed — model unmodified",
-        }
-    else:
-        args2 = x if isinstance(x, tuple) else (x,)
-        try:
-            vr = sink.verify(model, new_model, args2)
-            stats["end_to_end"] = {
-                "max_abs_diff": vr.max_abs,
-                "max_rel_diff": vr.max_rel,
-            }
-        except Exception as e:
-            stats["end_to_end"] = {"error": f"{type(e).__name__}: {e}"}
+    stats["end_to_end"] = e2e
     stats["wall_time_s"] = time.time() - t_start
     return new_model, stats
 

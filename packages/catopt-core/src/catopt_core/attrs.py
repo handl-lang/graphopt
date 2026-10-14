@@ -260,6 +260,24 @@ ATTR_SCHEMA: dict[str, dict[int, str]] = {
     # the exporter (list-valued stride/padding never reach ``argN``).
     "conv2d": {3: "stride", 4: "padding", 5: "dilation", 6: "groups"},
     "conv1d": {3: "stride", 4: "padding", 5: "dilation", 6: "groups"},
+    # torchvision::deform_conv2d — the deformable-conv v2 kernel
+    # (measured: BiRefNet's ASPPDeformable decoder).  NOT a torch op:
+    # the operands are (input, weight, offset, mask, bias) and the
+    # per-axis window geometry plus the grouping land as canonical
+    # attrs.  torch.export spells them per-axis (stride_h/stride_w, …)
+    # rather than the packed stride/padding/dilation tuples conv2d
+    # uses, so the schema mirrors torchvision's own op schema.
+    "deform_conv2d": {
+        5: "stride_h",
+        6: "stride_w",
+        7: "pad_h",
+        8: "pad_w",
+        9: "dilation_h",
+        10: "dilation_w",
+        11: "groups",
+        12: "offset_groups",
+        13: "use_mask",
+    },
     # aten.mode is the median-style (values, indices) pair picked by
     # a getitem consumer.
     "mode": {1: "dim", 2: "keepdim"},
