@@ -21,8 +21,10 @@ truth region — the selection criterion was *family coverage*:
 * token mixers — MLP-Mixer, a Fourier neural operator block, GCN;
 * routing — soft-MoE slot dispatch, expert-choice top-k, capsule
   routing;
-* recurrence/scan — chunked RetNet retention, a deep-equilibrium
-  unroll, WaveNet gated dilated conv;
+* recurrence/scan — chunked RetNet retention, a delta-rule
+  unrolled matrix-state recurrence (DeltaNet — its chunked form
+  is not in the law library), a deep-equilibrium unroll, WaveNet
+  gated dilated conv;
 * adapters/heads — LoRA, mixture-of-softmaxes, a VICReg-style
   covariance head, a KAN basis layer, Highway gates, RealNVP.
 
@@ -480,6 +482,47 @@ class _ChunkedRetention(nn.Module):
         return (s * decay) @ self.v(x)
 
 
+class _DeltaRuleBlock(nn.Module):
+    """Delta-rule linear attention — an unrolled matrix-state recurrence.
+
+    Schlag et al. 2021 (DeltaNet): the state is a ``(dk, dv)``
+    matrix updated by ``S <- S·(I - beta k k^T) + beta k v^T``, the
+    "write then partially erase" rule.  Unrolled T steps and spelled
+    elementwise — ``matmul`` on per-step ``select`` slices plus
+    ``sub``/``add``/``mul`` — it is a real program whose efficient
+    form (the chunked delta-rule scan) is NOT in the law library:
+    the aff/affd scan monoids lift ``h' = a·h + b`` maps, not a
+    data-dependent ``(I - beta k k^T)`` contraction on a matrix
+    state.
+    """
+
+    def __init__(self, dk: int, dv: int, steps: int) -> None:
+        """Build the k/v/β projections and record the unroll count."""
+        super().__init__()
+        self.steps = steps
+        self.dk = dk
+        self.k = nn.Linear(dk, dk)
+        self.v = nn.Linear(dk, dv)
+        self.beta = nn.Linear(dk, 1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Unroll the delta rule; return the final read-out rows."""
+        b = x.shape[0]
+        kk = self.k(x)  # (B, T, dk)
+        vv = self.v(x)  # (B, T, dv)
+        bb = torch.sigmoid(self.beta(x))  # (B, T, 1)
+        s = torch.zeros(b, self.dk, vv.shape[-1], dtype=x.dtype)
+        for t in range(self.steps):
+            k_t = kk[:, t]  # (B, dk)
+            v_t = vv[:, t]  # (B, dv)
+            beta_t = bb[:, t].unsqueeze(-1)  # (B, 1, 1)
+            # residual read: v_t - k_t^T S  ->  (B, dv)
+            read = v_t - (k_t.unsqueeze(1) @ s).squeeze(1)
+            # rank-1 write: S += beta . k_t (x) read
+            s = s + beta_t * k_t.unsqueeze(-1) * read.unsqueeze(-2)
+        return s
+
+
 class _DeepEquilibrium(nn.Module):
     """Deep-equilibrium block — an unrolled shared-weight fixed point.
 
@@ -756,6 +799,11 @@ def zoo(d: int = 16, t: int = 8, b: int = 2) -> list[Workload]:
         Workload(
             "DeepEquilibrium",
             lambda: (_DeepEquilibrium(d, 3), _r(4, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "DeltaRuleBlock",
+            lambda: (_DeltaRuleBlock(d, d, 4), _r(b, 4, d)),
             kind="zoo",
         ),
         Workload(
