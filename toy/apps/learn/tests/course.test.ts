@@ -3,10 +3,14 @@ import { afterEach, describe, expect, it } from "vite-plus/test";
 import { Coherence } from "../src/components/coherence.ts";
 import { Compare } from "../src/components/compare.ts";
 import { Course, STORAGE_KEY } from "../src/components/course.ts";
+import { Bounded } from "../src/components/bounded.ts";
+import { Deliver } from "../src/components/deliver.ts";
 import { Expose } from "../src/components/exposure.ts";
 import { Honest } from "../src/components/honest.ts";
+import { Improve } from "../src/components/improve.ts";
 import { Mint } from "../src/components/mint.ts";
 import { Ports } from "../src/components/ports.ts";
+import { Pricing } from "../src/components/pricing.ts";
 import { Reach } from "../src/components/reach.ts";
 import { Substrate } from "../src/components/substrate.ts";
 import { Tensions } from "../src/components/tensions.ts";
@@ -77,11 +81,29 @@ describe("course gating", () => {
     }
   });
 
-  it("runs eighteen levels, 0 through 17", () => {
+  it("runs twenty-two levels, 0 through 21", () => {
     const c = new Course();
-    expect(c.n).toBe(18);
-    expect(c.levels.at(-1)?.id).toBe("honest");
+    expect(c.n).toBe(22);
+    expect(c.levels.at(-1)?.id).toBe("improve");
     expect(c.levels.map((l) => l.id).length).toBe(new Set(c.levels.map((l) => l.id)).size);
+  });
+
+  it("gives every level a ladder one-liner and a recap in order", () => {
+    const c = new Course();
+    for (const l of c.levels) expect(l.idea.length).toBeGreaterThan(0);
+    expect(c.recap).toHaveLength(22);
+    expect(c.recap[0].idea).toBe("ops over data, one root");
+    expect(c.recap.at(-1)?.idea).toBe("idea → blocker → next measurement");
+    expect(c.recap.every((r) => !r.passed)).toBe(true);
+  });
+
+  it("reports a cleared percentage for the progress meter", () => {
+    const c = new Course();
+    expect(c.pct).toBe(0);
+    c.goto(0);
+    c.answer(c.level.checkpoint.ok);
+    expect(c.pct).toBe(Math.round(100 / 22));
+    expect(c.recap[0].passed).toBe(true);
   });
 
   it("restart clears progress", () => {
@@ -324,5 +346,77 @@ describe("honest", () => {
     expect(h.score).toBe(0);
     h.answer(0, h.items[0].ok);
     expect(h.score).toBe(1);
+  });
+});
+
+describe("bounded", () => {
+  it("certifies offers the pricing then refuses", () => {
+    const b = new Bounded();
+    b.select(5); // 3e-2
+    expect(b.offered).toBe(56);
+    expect(b.delivered).toBe(0);
+    expect(b.pricedRefused).toBe(56);
+    expect(b.gateClean).toBe(true);
+    expect(b.verdict).toContain("pricing refused");
+  });
+
+  it("delivers once the dedup is thick", () => {
+    const b = new Bounded();
+    b.select(5);
+    b.toggle();
+    expect(b.thick).toBe(true);
+    expect(b.delivered).toBe(56);
+    expect(b.rows[0].ratio).toBeLessThan(1);
+  });
+});
+
+describe("deliver", () => {
+  it("picks the minted kernel on both terms, agreeing with the clock", () => {
+    const d = new Deliver();
+    expect(d.deliveryCase.id).toBe("retention");
+    expect(d.modelPick.kind).toBe("minted");
+    expect(d.winner.kind).toBe("minted");
+    expect(d.agrees).toBe(true);
+    expect(d.speedup).toBeGreaterThan(3);
+    d.select(1);
+    expect(d.deliveryCase.id).toBe("chainfuse");
+    expect(d.rows.filter((r) => r.winner)).toHaveLength(1);
+  });
+
+  it("marks the illustrative delivery", () => {
+    const d = new Deliver();
+    expect(d.rows.some((r) => !r.delivery.sourced)).toBe(true);
+  });
+});
+
+describe("pricing", () => {
+  it("computes the inversion and flips it when calibrated", () => {
+    const p = new Pricing();
+    expect(p.inverted).toBe(true);
+    expect(p.speedup).toBeGreaterThan(1.9);
+    expect(p.speedup).toBeLessThan(2.7);
+    expect(p.correct).toBe(false);
+    p.toggle();
+    expect(p.correct).toBe(true);
+    expect(p.pick.name).toBe("generic");
+  });
+
+  it("selects a case and counts the model's hits", () => {
+    const p = new Pricing();
+    p.select(2);
+    expect(p.routeCase.id).toBe("manual-softmax-small");
+    expect(p.correctCount.right).toBe(1);
+    expect(p.rows).toHaveLength(3);
+  });
+});
+
+describe("improve", () => {
+  it("reads the three-step connection for a picked gap", () => {
+    const g = new Improve();
+    expect(g.gaps.length).toBeGreaterThanOrEqual(6);
+    expect(g.gap.level).toBe("mint");
+    expect(g.connection).toHaveLength(3);
+    g.pick(99);
+    expect(g.gap.level).toBe("honest");
   });
 });

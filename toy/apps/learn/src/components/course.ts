@@ -8,12 +8,14 @@ export interface Checkpoint {
 export interface Level {
   id: string;
   title: string;
+  /** The ladder one-liner — the course's summary of itself. */
+  idea: string;
   objective: string;
   checkpoint: Checkpoint;
 }
 
 /** Where progress lives. Bump the suffix if the level list changes shape. */
-export const STORAGE_KEY = "catopt-course-v2";
+export const STORAGE_KEY = "catopt-course-v3";
 
 interface Saved {
   i: number;
@@ -35,6 +37,7 @@ export class Course {
     {
       id: "tree",
       title: "A program is a tree",
+      idea: "ops over data, one root",
       objective: "Read a tensor program as a tree of operations over data.",
       checkpoint: {
         q: "In `(a·b)·c`, which node produces the final result?",
@@ -46,6 +49,7 @@ export class Course {
     {
       id: "equal",
       title: "Two programs, one function",
+      idea: "equality is not syntactic",
       objective: "Different trees can compute the same function — at different costs.",
       checkpoint: {
         q: "With a : 2×3, b : 3×4, c : 4×5, the two trees cost 180 and 128 FLOPs. Same function?",
@@ -57,6 +61,7 @@ export class Course {
     {
       id: "reach",
       title: "The reachable set",
+      idea: "reach is the closure of your laws",
       objective: "Reach is the closure of your laws, not the power of your search.",
       checkpoint: {
         q: "What bounds how many equivalent programs you can ever find?",
@@ -68,6 +73,7 @@ export class Course {
     {
       id: "structure",
       title: "Laws come from structure",
+      idea: "monoid / comonoid / trace / product",
       objective: "A law is a consequence of algebraic structure, not an op pattern.",
       checkpoint: {
         q: "Why can't an op-level rule find `(Q·Kᵀ)·V → Q·(Kᵀ·V)`?",
@@ -83,6 +89,7 @@ export class Course {
     {
       id: "referee",
       title: "Staying correct",
+      idea: "the certificate is the referee",
       objective: "Free rewriting is dangerous. Certificates make it safe.",
       checkpoint: {
         q: "What makes a rewrite legal?",
@@ -98,6 +105,7 @@ export class Course {
     {
       id: "choice",
       title: "Choosing among equals",
+      idea: "keep the frontier, don't scalarize",
       objective: "Among many equals, do not collapse to one scalar too early.",
       checkpoint: {
         q: "Why keep a Pareto frontier instead of picking the cheapest immediately?",
@@ -109,6 +117,7 @@ export class Course {
     {
       id: "search",
       title: "Searching the space",
+      idea: "a policy orders legal moves",
       objective: "The space is exponential. A policy decides what to try.",
       checkpoint: {
         q: "What may a search policy never do?",
@@ -120,6 +129,7 @@ export class Course {
     {
       id: "learn",
       title: "Learning the policy",
+      idea: "trajectories, then reward",
       objective: "A policy can be learned: from trajectories, or from reward.",
       checkpoint: {
         q: "You add a new rewrite rule at runtime. Must the learned policy be retrained?",
@@ -131,6 +141,7 @@ export class Course {
     {
       id: "measure",
       title: "Measuring the machine",
+      idea: "features describe, a model predicts",
       objective: "Static features describe; hardware is truth; a model predicts.",
       checkpoint: {
         q: "What may a performance model never do?",
@@ -142,6 +153,7 @@ export class Course {
     {
       id: "architecture",
       title: "The architecture",
+      idea: "four dimensions, swappable parts",
       objective: "Everything so far is one of four jobs. Keeping them apart is the design.",
       checkpoint: {
         q: "A cost model rejects a rewrite as unsound. Which rule did it break?",
@@ -157,6 +169,7 @@ export class Course {
     {
       id: "advanced",
       title: "Advanced tensions",
+      idea: "where the design gets hard",
       objective: "Where the design actually gets hard.",
       checkpoint: {
         q: "Why is the certificate a hard filter rather than a reward term?",
@@ -172,6 +185,7 @@ export class Course {
     {
       id: "coherence",
       title: "Laws about laws",
+      idea: "derivable · inverse · divergent",
       objective:
         "Laws relate — derivable, inverse, divergent. Measure the relations; fill the gaps.",
       checkpoint: {
@@ -188,6 +202,7 @@ export class Course {
     {
       id: "mint",
       title: "The vocabulary grows itself",
+      idea: "need → handler → laws → admission",
       objective:
         "New meaning enters the object language by measurement, not by hand — need → handler → laws → admission.",
       checkpoint: {
@@ -204,6 +219,7 @@ export class Course {
     {
       id: "truthpay",
       title: "True is not the same as paying",
+      idea: "guard synthesis + adversarial sweep",
       objective:
         "A guard that separates its measured domain perfectly can be unsound just outside it — so sweep.",
       checkpoint: {
@@ -220,6 +236,7 @@ export class Course {
     {
       id: "exposure",
       title: "Where discovery can pay",
+      idea: "exposure is bimodal",
       objective: "Exposure is bimodal: the e-graph can only rewrite math it can see.",
       checkpoint: {
         q: "Of 321 exported workloads, 81 score exactly 0% FLOPs-weighted law coverage. What are they?",
@@ -235,6 +252,7 @@ export class Course {
     {
       id: "substrate",
       title: "Sharing is a morphism",
+      idea: "Δ sharing, `loop` recurrence",
       objective:
         "Re-present the IR as combinators: Δ makes sharing explicit, `loop` makes recurrence first-class.",
       checkpoint: {
@@ -247,6 +265,7 @@ export class Course {
     {
       id: "ports",
       title: "A backend is a port",
+      idea: "swap the sink, core never changes",
       objective: "Swap the backend and nothing in core changes — only what extraction may select.",
       checkpoint: {
         q: "You swap the torch sink for the ONNX sink. What may change in core?",
@@ -258,6 +277,7 @@ export class Course {
     {
       id: "honest",
       title: "The ledger of negatives",
+      idea: "methodology as a result",
       objective: "Methodology as a result: the measured refusals are taught, not buried.",
       checkpoint: {
         q: "The composed atom loop minted a verified atom and admitted four law sets — and fired nothing on the corpus. What does that refusal teach?",
@@ -268,6 +288,73 @@ export class Course {
         ],
         ok: "truth and pay are separate measurements — the negative is a result",
         why: "Every claim in this course is bounded by what was measured. The ledger of negatives — the falsified weight hypothesis, the pay-null, the BiRefNet bounded negative, the antiunify reach-null — is the methodology, taught as a result rather than a footnote.",
+      },
+    },
+    {
+      id: "bounded",
+      title: "Approximation with a certificate",
+      idea: "certificate AND an economics test",
+      objective:
+        "Approximation is allowed — but only with a certified bound and an economics test.",
+      checkpoint: {
+        q: "56 bounded offers carry certified bounds inside a 3e-2 budget, the bound gate refuses nothing — and nothing is delivered. Why?",
+        opts: [
+          "the bound gate is broken",
+          "the bounded member priced 1.32× the dense member, so the pricing refused it",
+          "the budget was too small",
+        ],
+        ok: "the bounded member priced 1.32× the dense member, so the pricing refused it",
+        why: "Approximation must clear two gates: a certificate (is it within ε?) and an economics test (is it cheaper?). BiRefNet's near-duplicate rows are real but thin — 0.78% of the qkv weight — so the gather/re-expand/bias-add wrapper cost 1.32× the dense member. The bound gate stayed bitwise-clean (fresh_rel = 0.0); the cost model refused, correctly.",
+      },
+    },
+    {
+      id: "deliver",
+      title: "The program must run",
+      idea: "same term, different runtime",
+      objective:
+        "The same term, delivered differently, runs at wildly different speeds — delivery is its own dimension.",
+      checkpoint: {
+        q: "`chainfuse` — `x@A@B@C` plus a 6-op pointwise tail — takes 315 µs eager and 253 µs under `torch.compile`. What delivered it at 86 µs (2.94× vs compile)?",
+        opts: [
+          "a bigger search budget",
+          "the laws plus a minted fusion kernel (the Triton tier)",
+          "a faster GPU",
+        ],
+        ok: "the laws plus a minted fusion kernel (the Triton tier)",
+        why: "The reassociation laws fold the weight chain to one GEMM — 181 µs, already 1.34× vs compile — but the fused tail was unreachable: no shipped law names it. The search minted the kernel, claimed it, and the delivered module ran it: 86 µs, verified 1.7e-05. Delivery is the execution dimension; semantics is unchanged.",
+      },
+    },
+    {
+      id: "pricing",
+      title: "The cost model can be wrong",
+      idea: "the model ranks — and can be wrong",
+      objective: "The cost model steers selection — and it can be confidently wrong.",
+      checkpoint: {
+        q: "On the SSM cases the uncalibrated model picks the batched carrier route — which then runs 1.9–2.7× slower than the generic route it skipped. What fixed the pick?",
+        opts: [
+          "a better search policy",
+          "measured corrections fed back into the cost model (calibration)",
+          "nothing — it was noise",
+        ],
+        ok: "measured corrections fed back into the cost model (calibration)",
+        why: "The routed model priced the carrier 20–30% cheaper; the clock disagreed. Wiring the measured profile into the delivered-price comparison — a pooled per-family correction — landed the measured-fastest member on 12/12 probe cases. A cost model is a ranking, not the truth: it must be measured, and it may be wrong (ADR 0003).",
+      },
+    },
+    {
+      id: "improve",
+      title: "The payoff: where to improve",
+      idea: "idea → blocker → next measurement",
+      objective:
+        "Map each idea to the project's open work: the blocker, the next measurement, and the level that teaches it.",
+      checkpoint: {
+        q: "A gap's next step is a *measurement*, not a build. Which is the project's stated next step for the enumeration-ordering blocker?",
+        opts: [
+          "rewrite the proposer from scratch",
+          "re-measure the SelectiveScan funnel after a canonical emitted-scan seed",
+          "delete the fold atom",
+        ],
+        ok: "re-measure the SelectiveScan funnel after a canonical emitted-scan seed",
+        why: "The paying `fold_emit` verifies at 6.7e-16 when reached directly — so the gap is ordering, not expressiveness, and the next step is a measurement: does the canonical seed make the minted atom's law set fire on a real corpus term? If not, the pay-null is semantic and the atom is done. Idea → blocker → next measurement is the whole course, applied.",
       },
     },
   ];
@@ -323,6 +410,21 @@ export class Course {
 
   get complete(): boolean {
     return this.done === this.n;
+  }
+
+  /** Cleared fraction, for the shell's progress meter. */
+  get pct(): number {
+    return this.n === 0 ? 0 : Math.round((100 * this.done) / this.n);
+  }
+
+  /** The ladder's one-liners in order — the completion recap. */
+  get recap(): { id: string; title: string; idea: string; passed: boolean }[] {
+    return this.levels.map((l) => ({
+      id: l.id,
+      title: l.title,
+      idea: l.idea,
+      passed: this.passed(l.id),
+    }));
   }
 
   get savedLabel(): string {
