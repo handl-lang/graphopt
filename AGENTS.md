@@ -6,6 +6,9 @@ live under `packages/` (`catopt-core` — the torch-free engine;
 `catopt-torch` — PyTorch adapters; `catopt-carriers` — carrier
 laws/executors; `catopt-cuda` — the CUDA-graph runner;
 `catopt-orchestrator` — the backend-neutral pipeline;
+`catopt-onnx` — the ONNX backend (ADR 0006: `OnnxSink` lowers IR to
+a checked ONNX artifact, `OnnxSource` lifts ONNX graphs back to IR;
+both verified through onnxruntime);
 `catopt-discovery` — the law-discovery engine, formerly
 `tools/law_*.py`; invoke as `python -m catopt_discovery.<mod>`;
 the game layer is `engine` (the `Board` protocol + generic
@@ -40,8 +43,8 @@ uv run pytest                 # full test suite (~7.5 min, single-process —
 .venv/bin/bandit -c .bandit.yaml -r packages   # security SAST
 .venv/bin/semgrep --config .semgrep.yml packages   # dataflow (offline)
 .venv/bin/python tools/radon_ratchet.py   # complexity ratchet
-coverage run -m pytest tests/ -q   # source list includes catopt_discovery
-coverage report -m --omit="*/catopt_discovery/*"   # the five: fail_under=100
+coverage run -m pytest tests/ -q   # source list includes catopt_discovery + catopt_onnx
+coverage report -m --omit="*/catopt_discovery/*"   # the six: fail_under=100
 coverage report -m --include="*/catopt_discovery/*" --fail-under=99   # ratchet floor — measured 99%; tighten, never lower
 ```
 
@@ -281,8 +284,10 @@ on `catopt_cuda`; import `CudaGraphRunner` from `catopt_cuda`.
 - Line length 72 (ruff). E501/B008/SIM108 intentionally ignored — see
   `[tool.ruff.lint]` for rationale.
 - Coverage floor: `fail_under = 100` in `[tool.coverage.report]` —
-  the suite is pinned at 100% for the five original packages; new
-  branches need tests (or a justified `pragma: no cover`).
+  the suite is pinned at 100% for the original packages plus
+  `catopt_onnx` (which climbed to the wall in
+  `project/retros/onnx-package.md`); new branches need tests (or a
+  justified `pragma: no cover`).
   `catopt_discovery` joined the source list after its staged climb
   and sits under a **pinned ratchet floor** (`--fail-under=99` at
   landing — tighten the number as the residual gaps close, never

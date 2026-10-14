@@ -284,7 +284,10 @@ error-on-warning = false
 # yet — the move from tools/ staged its coverage climb (see
 # project/retros/discovery-package.md and the ratchet below); the
 # gate runs a second `coverage report` with the pinned discovery floor.
-source = ["catopt_core", "catopt_torch", "catopt_carriers", "catopt_orchestrator", "catopt_cuda", "catopt_discovery"]
+# catopt_onnx joined the 100 wall after its own climb (see
+# project/retros/onnx-package.md) — it reports in the main wall, not
+# the discovery ratchet.
+source = ["catopt_core", "catopt_torch", "catopt_carriers", "catopt_orchestrator", "catopt_cuda", "catopt_discovery", "catopt_onnx"]
 branch = true
 omit = ["*/tests/*"]
 
