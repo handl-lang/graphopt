@@ -649,8 +649,8 @@ def main(argv: list[str] | None = None) -> int:
     else:
         dev = torch.device(args.device)
     avail_gb = (
-        __import__("os").sysconf("SC_AVPHYS_PAGES")
-        * __import__("os").sysconf("SC_PAGE_SIZE")
+        os.sysconf("SC_AVPHYS_PAGES")
+        * os.sysconf("SC_PAGE_SIZE")
         / 2**30
     )
     if avail_gb < 1.5:
