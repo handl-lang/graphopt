@@ -171,3 +171,68 @@ held-out task to stay open.
   falsification clause, Layer 1's *reach-expansion* claim is measured
   negative on these workloads; the machinery remains as compression
   tooling (shorter spellings, provenance), not a reach mechanism.
+- **Layer 2 — landed; falsification #3 NOT falsified** (`7c39f5e`,
+  merged into `12e6a56` lineage).  `handler_synth.py` proposes handler
+  bodies from a structured grammar (`ew`/`contract`/`fold`/
+  `fold_emit`/`fold_zip` — plain data, interpreted, never `eval`'d)
+  and verifies each fp64 against the spelled spec.  Measured: every
+  named non-elementwise shape produced a verified handler in bounded
+  search — the `om_decayed` element (`matmul(mul(S,D),V)`) at
+  **8.9e-16** in 13 candidates, the masked inner-chunk at 1.8e-15,
+  closed-form fold 4.4e-16, `applyd` 2-step nest at 0.0.  A pattern
+  that previously required a hand-written executor is now machine-
+  minted with provenance.  Named grammar gaps (measured refusals):
+  reductions/softmax (0 candidates), seq-`fold` needs a spelled fold,
+  fresh constants unproposable, emit trees ≤1 non-acc op deep.
+- **Layer 3 — landed; the law-synthesis loop closes**
+  (`7614220`/`53de015`, merged `ec74f0c`).  `tools/atom_law_loop.py`
+  runs per atom: candidate schemas → measured envs (typed shape
+  families × attr domains + synth sites + real corpus matches) →
+  numeric oracle → `auto_cond`/dspec synth → `verify_law` against the
+  composed default ruleset.  Tally: **25 certified rows / 4 rejected
+  / 0 refused** (distinct laws modulo commutative spellings).  New
+  certified primitives include `affd.compose` (slot-*solved*, not
+  spelled), `dv.merge`, `omd.absorb_score`, `omd.rowcat` (guard
+  minted by the driver's attr bank where `auto_cond`'s measured
+  domain could not reach); subsumed laws correctly classified;
+  deliberate false twins all rejected.  The loop found a real
+  lowering bug (`decay_vec`'s `sign=0` silently coerced to 1) because
+  the oracle refused to certify rather than ship a wrong law.
+- **The composed loop — one atom through all four layers, pay-null
+  measured honestly** (`a562bc3`, merged `695cd89`).
+  `tools/atom_synth_loop.py` runs need census → signature → handler →
+  laws → admission → pay probe.  Minted: `scan_fold` (the
+  selective-scan recurrence, 1.78e-15) with 5 certified laws;
+  `cumsum`/`cumprod`/`logcumsumexp` law sets (incl. the cross-atom
+  `cumprod(exp x) = exp(cumsum x)`); `pow` unblocked.  But **0
+  certified laws fire on real terms** — the minted atom computes the
+  *total*, the corpus *emits* the sequence, and the paying
+  `fold_emit` sibling sits >200k deep in the round-robin enumeration
+  (it verifies at 6.7e-16 when reached directly: the gap is
+  *ordering*, not expressiveness).  Truth and pay measured
+  separately, and disjoint here — the ADR's falsification criteria
+  working as designed.  The ordering fix is in flight
+  (`feat/enum-order`).
+- **The admission milestone — the first corpus-minted law ships**
+  (`9dce25e`, merged `ec74f0c`).  `census:mul_unsqueeze` admitted as
+  **`mul_unsq_nat`** into the default simplification set: the census
+  saw DeltaRuleBlock's own `mul(unsqueeze, unsqueeze)` op-tuple;
+  `auto_cond`'s naive broadcast guard was **falsified by the
+  adversarial sweep** (212 bad accepts); the exact `flat-map-unsq`
+  guard was synthesized instead (0 bad accepts / 0 misses); closure
+  +18 enodes; pays **−12.27%** on its source workload; provenance
+  `MACHINE_SHIPPED`.  The apparent sibling `mul_unsqueeze_r_id` — the
+  largest "blocked structure" the corpus sweep found (−14.3%, 12
+  models / 22 sites) — was **correctly rejected at admission**: its
+  real sites are semantically unequal and the guard declines all of
+  them.  The discovery machinery over-reported; the admission
+  machinery caught it.
+- **Corpus-level yield — the honest number.**  A 60-model sweep of
+  the exposed class (`tools/discovery_scale.py`, merged `1604ffd`)
+  found **0 paying new laws beyond `mul_unsq_nat`**: ~1.5% of the
+  exposed class carries fresh paying unpublished structure, and it
+  concentrates where a model's op-tuple is itself novel.  Per this
+  ADR's falsification clause, the *minting* machinery works
+  end-to-end and has shipped; the *yield* of the current proposal
+  space is sparse — the next lever is proposal-space extension
+  (ADR 0008's uniform morphism enumeration), not more layers.
