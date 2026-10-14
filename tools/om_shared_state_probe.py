@@ -48,6 +48,10 @@ Measured (seeded, ``iters=16``, kway budget 200, single process):
     core             7,643,656       25,855      196    57
     staged           6,943,236      124,005    5,820   429
 
+(and on the staged arm: ``reads`` = K−1 = 7 ``q_i @ S_{i-1}`` matmuls,
+``chain`` = True — the folded carrier IS what extraction picks; see
+the residual note below.)
+
 ``om_shared_mat_reassoc`` fires **112×** in the staged arm against
 **0×** in ``core`` — the bridge is what revives it — and the extracted
 cost lands 9.2 % below the current best.  At T=128/K=8 the drop is
@@ -58,14 +62,27 @@ Co-residency is confirmed explosive: at T=128/K=8 running the two div
 laws together (``matmul_div_distribute`` + ``div_into_matmul`` in one
 stage) did **not** finish inside 800 s, against ~30 s for stage A alone.
 
-Residual gap (honest): the extracted term still carries no fold, and
-the reassociated state is not *i-independent*.  The export's cross
-terms are ``mul(W, matmul(score_ij ⊙ η_j, v_j))`` — the score is
-row-block dependent — so folding reassociates *q-bearing* terms and
-each row block gets its own state.  The q-free factorization
-(``matmul_scalar_factor`` + ``factor_matmul``, both in the set) is the
-missing link between this and the hand-built reference
-(``_shared_state_fold``: 1,405,952 at T=512/K=8, 589,952 at K=32).
+Residual — RESOLVED, the earlier diagnosis was a metric artifact.
+The ``extracted_is_fold`` column counts ``applyd``/``aff_diag`` ops in
+the extracted term — but ``applyd`` is a COST-NEUTRAL respelling of
+``add(mul(a,h),x)``, so extraction never prefers that spelling even
+when it has selected exactly that structure.  Measured directly on the
+extracted DAG, the staged arm DOES carry the shared recurrence: at
+T=512/K=8 the winner has exactly K diagonal score matmuls feeding the
+K intra ``om_decayed`` blocks, K−1 state contributions
+``(k_j ⊙ η)ᵀ v_j`` each computed once, and K−1 fold reads
+``q_i @ S_{i-1}`` where block ``i``'s state subterm literally nests
+block ``i−1``'s (``S_i = γ^C·S_{i-1} + B_i`` — one shared chain).  The
+``reads``/``chain`` columns below report that signature.
+
+The nominal gap to the hand-built ``_shared_state_fold`` reference
+(1,405,952 at T=512/K=8) is a like-for-like mismatch, not a search
+residual: the reference runs on leaf-level unbatched ``q,k,v,s``, so
+it prices neither the projections (1,572,864) nor the in-graph
+diagonal score construction (2,097,152), and its intra carrier is
+batch-1 (the export's B=2 doubles it to 2,162,688).  A hand-built
+fold carrying the same work prices 7,082,496 — the extract lands
+~2% BELOW the honest reference.
 
 Usage::
 
@@ -152,7 +169,13 @@ def _shared_state_census(eg, root):
 
 
 def _has_fold(term) -> bool:
-    """Return True when ``term``'s DAG carries an ``applyd``/``aff_diag``."""
+    """Return True when ``term``'s DAG carries an ``applyd``/``aff_diag``.
+
+    NB: extraction never prefers the carrier spelling (it prices
+    exactly like the ``add(mul(a,h),x)`` it re-spells), so this column
+    stays False even when the shared-state structure is selected —
+    see :func:`_fold_signature` for the real signature.
+    """
     if not isinstance(term, Op):
         return False
     seen: set[int] = set()
@@ -166,6 +189,147 @@ def _has_fold(term) -> bool:
             return True
         stack.extend(t.args)
     return False
+
+
+_Q_LEAVES = {"p_q_weight", "p_q_bias"}
+_KV_LEAVES = {"p_k_weight", "p_k_bias", "p_v_weight", "p_v_bias"}
+
+
+def _fold_signature(term) -> tuple[int, bool]:
+    """Return the structural fold signature of an extracted term.
+
+    ``reads`` counts ``matmul(q_i, S)`` members — left subtree free of
+    the k/v leaves, right subtree free of q and carrying BOTH the k and
+    v paths (the q-independent state).  ``chained`` reports whether one
+    read's state subterm nests another's — the ``S_i = γ^C·S_{i-1} +
+    B_i`` recurrence shared across row blocks rather than a per-pair
+    respelling.
+    """
+
+    def leaves(t, acc=None):
+        acc = set() if acc is None else acc
+        if not isinstance(t, Op):
+            acc.add(repr(t))
+            return acc
+        for a in t.args:
+            leaves(a, acc)
+        return acc
+
+    reads: list[Op] = []
+    seen: set[int] = set()
+    stack = [term]
+    while stack:
+        t = stack.pop()
+        if not isinstance(t, Op) or id(t) in seen:
+            continue
+        seen.add(id(t))
+        if t.op == "matmul" and len(t.args) == 2:
+            left, right = t.args
+            if isinstance(left, Op) and isinstance(right, Op):
+                ll, rl = leaves(left), leaves(right)
+                if (
+                    not (ll & _KV_LEAVES)
+                    and {"p_k_weight", "p_v_weight"} <= rl
+                    and not (rl & _Q_LEAVES)
+                ):
+                    reads.append(t)
+        stack.extend(t.args)
+    states = [r.args[1] for r in reads]
+
+    def subtree_ids(t):
+        ids: set[int] = set()
+        st = [t]
+        while st:
+            x = st.pop()
+            if not isinstance(x, Op) or id(x) in ids:
+                continue
+            ids.add(id(x))
+            st.extend(x.args)
+        return ids
+
+    idsets = [subtree_ids(s) for s in states]
+    chained = any(
+        id(sj) in si_ids
+        for i, si_ids in enumerate(idsets)
+        for j, sj in enumerate(states)
+        if i != j
+    )
+    return len(reads), chained
+
+
+def _honest_reference_cost(t: int, k: int) -> float:
+    """Price the hand-built fold carrying the export's real work.
+
+    ``_shared_state_fold``-shaped program but like-for-like with the
+    ``_ChunkedRetention`` export: batch-2 leaves, the q/k/v projections
+    spelled as ``linear`` ops, and each intra block's score built
+    in-graph as ``div(matmul(q_i, k_iᵀ), √t)`` — the work the leaf-level
+    reference gets for free.  This is the floor a staged extraction
+    should be compared against, not 1.4M.
+    """
+    from catopt_core.ir import TensorType, Var
+
+    def v_(name, *shape):
+        return Var(name, TensorType(shape))
+
+    b, d = 2, 16
+    c_dim = t // k
+    sz = (c_dim,) * k
+    x = v_("x", b, t, d)
+    wq, bq = v_("wq", d, d), v_("bq", d)
+    wk, bk = v_("wk", d, d), v_("bk", d)
+    wv, bv = v_("wv", d, d), v_("bv", d)
+    g, a = v_("g"), v_("a")
+    c = float(t) ** 0.5
+    qfull = Op.make("linear", x, wq, bq)
+    kfull = Op.make("linear", x, wk, bk)
+    vfull = Op.make("linear", x, wv, bv)
+    kt = Op.make("transpose", kfull, dim0=-2, dim1=-1)
+
+    def blk(term, i, dim=-2):
+        return Op.make("split", term, sizes=sz, dim=dim, index=i)
+
+    eta = Op.make("decay_vec", g, t=c_dim, sign=-1)
+    xi0 = Op.make("decay_vec", g, t=c_dim)
+    state = None
+    blocks = []
+    for i in range(k):
+        qi, ki, vi = blk(qfull, i), blk(kfull, i), blk(vfull, i)
+        score = Op.make("div", Op.make("matmul", qi, blk(kt, i, -1)), c)
+        intra = Op.make(
+            "om_decayed", score, Op.make("decay", g, t=c_dim), vi
+        )
+        bj = Op.make(
+            "matmul",
+            Op.make(
+                "transpose",
+                Op.make("mul", ki, Op.make("unsqueeze", eta, dim=-1)),
+                dim0=-2,
+                dim1=-1,
+            ),
+            vi,
+        )
+        if state is None:
+            state = bj
+            blocks.append(intra)
+            continue
+        blocks.append(
+            Op.make(
+                "add",
+                intra,
+                Op.make(
+                    "mul",
+                    Op.make("unsqueeze", xi0, dim=-1),
+                    Op.make("matmul", qi, state),
+                ),
+            )
+        )
+        if i < k - 1:
+            state = Op.make("add", Op.make("mul", a, state), bj)
+    out = blocks[-1]
+    for block in reversed(blocks[:-1]):
+        out = Op.make("concat", block, out, dim=-2)
+    return dag_cost(out, flops_cost)
 
 
 def _run_arm(t, k, iters, mode, budgets):
@@ -191,6 +355,7 @@ def _run_arm(t, k, iters, mode, budgets):
         for a, b in eg.rule_fires.items()
         if "shared" in a or "div_into" in a
     }
+    reads, chained = _fold_signature(best)
     return {
         "cost": dag_cost(best, flops_cost),
         "nodes": eg.n_enodes,
@@ -199,6 +364,8 @@ def _run_arm(t, k, iters, mode, budgets):
         "n_shared": len(shared),
         "shared_ops": dict(ops.most_common(6)),
         "extracted_is_fold": _has_fold(best),
+        "reads": reads,
+        "chained": chained,
     }
 
 
@@ -214,6 +381,11 @@ def main(argv: list[str] | None = None) -> int:
         default="reach,core,staged",
         help="comma-separated subset of reach,core,staged",
     )
+    ap.add_argument(
+        "--ref",
+        action="store_true",
+        help="also print the like-for-like fold floor",
+    )
     args = ap.parse_args(argv)
     budgets = om_shared_state_budgets(args.k, kway=args.budget)
     print(
@@ -221,9 +393,15 @@ def main(argv: list[str] | None = None) -> int:
         f"iters={args.iters}  kway_budget={args.budget}",
         flush=True,
     )
+    if args.ref:
+        print(
+            f"{'ref':>8} {_honest_reference_cost(args.t, args.k):>13,.0f}"
+            "   (hand fold + projections + in-graph scores, B=2)",
+            flush=True,
+        )
     print(
         f"{'arm':>8} {'extract':>13} {'n_enodes':>9} {'shared':>7} "
-        f"{'fold':>5} {'secs':>7}",
+        f"{'fold':>5} {'reads':>6} {'chain':>6} {'secs':>7}",
         flush=True,
     )
     for arm in args.arms.split(","):
@@ -231,6 +409,7 @@ def main(argv: list[str] | None = None) -> int:
         print(
             f"{arm:>8} {r['cost']:>13,.0f} {r['nodes']:>9} "
             f"{r['n_shared']:>7} {r['extracted_is_fold']!s:>5} "
+            f"{r['reads']:>6} {r['chained']!s:>6} "
             f"{r['secs']:>7.1f}",
             flush=True,
         )

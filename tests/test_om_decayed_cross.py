@@ -2025,9 +2025,9 @@ class TestOmDecayedKway:
 
         A hand-built shared-state recurrence — each ``S_i`` one
         e-class consumed by block ``i``'s output and block ``i+1``'s
-        step — prices far below the spelled cross sum.  So the missing
-        O(T·C) win is a search gap (the law set never spells the
-        shared state), not a cost-model gap.
+        step — prices far below the spelled cross sum.  (Written when
+        this was still a search gap; the staged pair now spells and
+        selects it — see ``TestSharedStateExtraction``.)
         """
         from catopt_core.cost import dag_cost, flops_cost
 
@@ -2467,6 +2467,183 @@ class TestDivBridgeStaging:
         assert _shared_state_classes(eg, root) > 0
 
 
+class TestSharedStateExtraction:
+    """The staged extract *is* the shared-state carrier.
+
+    The earlier read — "the reassociated state is not i-independent,
+    the extract carries no fold" — came from counting ``applyd`` /
+    ``aff_diag`` members in the extracted term.  That metric is
+    structurally blind: ``applyd(aff_diag(a,x),h)`` is a COST-NEUTRAL
+    respelling of ``add(mul(a,h),x)``, so extraction never prefers the
+    carrier spelling even when it has selected exactly that structure.
+    The real signature is the DAG shape of the extract: every
+    cross-bearing row block reads ``ξ ⊙ (q_i @ S_{i-1})`` where
+    ``S_i = g^C·S_{i-1} + B_i`` is ONE subterm — block ``i+1``'s state
+    literally nests block ``i``'s.  These tests assert that signature
+    (and the fp64 correctness of the delivered program).
+    """
+
+    @staticmethod
+    def _leaves(t, acc=None):
+        acc = set() if acc is None else acc
+        if not isinstance(t, Op):
+            acc.add(repr(t))
+            return acc
+        for a in t.args:
+            TestSharedStateExtraction._leaves(a, acc)
+        return acc
+
+    @classmethod
+    def _fold_reads(cls, term):
+        """The ``q_i @ S`` read matmuls: q-only left, q-free kv right."""
+        kv_leaves = {"p_k_weight", "p_k_bias", "p_v_weight", "p_v_bias"}
+        q_leaves = {"p_q_weight", "p_q_bias"}
+        kv_core = {"p_k_weight", "p_v_weight"}
+        reads = []
+        seen: set[int] = set()
+        stack = [term]
+        while stack:
+            t = stack.pop()
+            if not isinstance(t, Op) or id(t) in seen:
+                continue
+            seen.add(id(t))
+            if t.op == "matmul" and len(t.args) == 2:
+                left, right = t.args
+                if isinstance(left, Op) and isinstance(right, Op):
+                    ll = cls._leaves(left)
+                    rl = cls._leaves(right)
+                    # right arg is a state: carries BOTH the k and v
+                    # paths and no q — the score blocks (k-only) and
+                    # the projections do not qualify.
+                    if (
+                        not (ll & kv_leaves)
+                        and kv_core <= rl
+                        and not (rl & q_leaves)
+                    ):
+                        reads.append(t)
+            stack.extend(t.args)
+        return reads
+
+    @staticmethod
+    def _subtree_ids(t):
+        ids: set[int] = set()
+        stack = [t]
+        while stack:
+            x = stack.pop()
+            if not isinstance(x, Op) or id(x) in ids:
+                continue
+            ids.add(id(x))
+            stack.extend(x.args)
+        return ids
+
+    def test_extract_carries_the_chained_shared_state(self):
+        """Every cross block reads a shared state; states chain.
+
+        At T=64/K=4 the extract contains the fold reads
+        ``q_i @ S_{i-1}`` (left subtree touches only the q projection;
+        right subtree is q-free and carries the k/v paths), and the
+        state object of an earlier block is nested inside a later
+        block's — the ``S_i = g^C·S_{i-1} + B_i`` chain, shared.
+        """
+        pytest.importorskip("catopt_torch")
+        from catopt_core.cost import dag_cost, flops_cost
+        from catopt_discovery.zoo import _ChunkedRetention
+        from catopt_torch.adapters import TorchSource
+
+        T, K = 64, 4
+        reach, reassoc = om_shared_state_stages(K)
+        budgets = om_shared_state_budgets(K, kway=200)
+        torch.manual_seed(0)
+        m = _ChunkedRetention(16).double()
+        x = torch.randn(2, T, 16, dtype=torch.float64)
+        term = TorchSource().to_ir(m, x)[0].root
+        eg = EGraph()
+        root = eg.add_term(term)
+        eg.run(
+            reach,
+            root,
+            max_iterations=16,
+            max_nodes=150_000,
+            patience=8,
+            rule_budgets=budgets,
+        )
+        reach_best = dag_cost(
+            eg.extract_best(eg.find(root), flops_cost), flops_cost
+        )
+        eg.run(
+            reassoc,
+            root,
+            max_iterations=16,
+            max_nodes=150_000,
+            patience=8,
+            rule_budgets=budgets,
+        )
+        best = eg.extract_best(eg.find(root), flops_cost)
+        staged_cost = dag_cost(best, flops_cost)
+        assert staged_cost < reach_best
+
+        reads = self._fold_reads(best)
+        assert len(reads) >= K - 2
+        states = [r.args[1] for r in reads]
+        ids = [self._subtree_ids(s) for s in states]
+        chained = any(
+            id(sj) in si_ids
+            for i, si_ids in enumerate(ids)
+            for j, sj in enumerate(states)
+            if i != j
+        )
+        assert chained, (
+            "no row-block state nests another — the extracted cross "
+            "sum is a per-pair spelling, not the shared recurrence"
+        )
+
+    def test_extracted_carrier_verifies_fp64(self):
+        """The extracted shared-state program lowers and verifies."""
+        pytest.importorskip("catopt_torch")
+        from catopt_core.cost import flops_cost
+        from catopt_core.ir import IR
+        from catopt_discovery.zoo import _ChunkedRetention
+        from catopt_torch.adapters import TorchSink, TorchSource
+
+        T, K = 64, 4
+        reach, reassoc = om_shared_state_stages(K)
+        budgets = om_shared_state_budgets(K, kway=200)
+        torch.manual_seed(0)
+        model = _ChunkedRetention(16).double()
+        x = torch.randn(2, T, 16, dtype=torch.float64)
+        ir, leaves = TorchSource().to_ir(model, x)
+        eg = EGraph()
+        root = eg.add_term(ir.root)
+        for stage in (reach, reassoc):
+            eg.run(
+                stage,
+                root,
+                max_iterations=16,
+                max_nodes=150_000,
+                patience=8,
+                rule_budgets=budgets,
+            )
+        best = eg.extract_best(eg.find(root), flops_cost)
+        ops = set()
+        stack = [best]
+        while stack:
+            t = stack.pop()
+            if isinstance(t, Op):
+                ops.add(t.op)
+                stack.extend(t.args)
+        sink = TorchSink()
+        assert not (ops - sink.supported_ops)
+        ex_ir = IR(
+            root=best,
+            inputs=list(ir.inputs),
+            input_names=set(ir.input_names),
+            params=dict(ir.params),
+        )
+        module = sink.lower(ex_ir, params=leaves)
+        rep = sink.verify(model, module, (x,))
+        assert rep.passed and rep.max_abs < 1e-9
+
+
 def _op_skeleton(term):
     """Return *term*'s op tree with every leaf collapsed to ``"@"``.
 
@@ -2602,8 +2779,11 @@ def _shared_state_fold(T, C, K, d):
     ``out_i = intra_i + xi0 ⊙ (q_i @ S_{i-1})`` with ``S_i =
     applyd(aff_diag(g^C, (eta_i ⊙ k_i)ᵀ v_i), S_{i-1})``: the state
     ``S_{i-1}`` is ONE term consumed by block ``i``'s output and block
-    ``i+1``'s step, so the whole fold is O(T·C).  This is the spelling
-    the e-graph never produces.
+    ``i+1``'s step, so the whole fold is O(T·C).  Under the staged pair
+    (``om_shared_state_stages``) the e-graph DOES produce and select
+    this spelling — see ``TestSharedStateExtraction`` — in its
+    ``add(mul(g,S),B)`` form (``applyd`` is a cost-neutral respelling
+    the extractor never prefers).
     """
     sz = (C,) * K
     q, k, v, s = (
