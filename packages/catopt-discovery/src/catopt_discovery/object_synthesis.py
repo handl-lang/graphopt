@@ -2351,7 +2351,11 @@ def _env_key(env: dict) -> str:
 
 
 def _oracle_sites(
-    lhs_pat: Any, rhs_pat: Any, derive: Any, limit: int
+    lhs_pat: Any,
+    rhs_pat: Any,
+    derive: Any,
+    limit: int,
+    source: Any = None,
 ) -> Iterable:
     """Yield ``(env, lhs_i)`` deduped on the oracle's instance signature.
 
@@ -2363,6 +2367,11 @@ def _oracle_sites(
     same domain — measured: the no-op-transpose counterexample corner
     of the ``_g`` twin lies inside this window, outside the other.
     The union of the two windows is the measured domain.
+
+    *source* is the leaf binding bank (``None`` = the shipped
+    leaf-only bank); the carrier op-term bank deepens this window so a
+    carrier-aware derive — one whose bound metavariable resolves to a
+    compound carrier member — is measurable.
     """
     from catopt_core.ir import op_repr
 
@@ -2388,7 +2397,7 @@ def _oracle_sites(
         )
 
     seen: set[tuple] = set()
-    for full in lvo._binding_envs(lhs_pat, rhs_pat):
+    for full in lvo._binding_envs(lhs_pat, rhs_pat, source):
         inst = full
         if derive is not None:
             try:
@@ -2412,10 +2421,39 @@ def _oracle_sites(
             return
 
 
+def _oracle_windows(
+    rule: Rewrite, synth_limit: int, deep: bool
+) -> Iterable:
+    """Yield the ``_oracle_sites`` windows — leaf, then (deep) op-term.
+
+    The leaf window is the shipped measurement domain.  *deep* appends
+    the carrier **op-term** window (:func:`oracle._term_bindings`), so a
+    bound metavariable can resolve to a compound carrier member — the
+    only condition under which a derive's carrier-aware value-shape read
+    diverges from the cost convention.  Both are capped by
+    *synth_limit*; the caller unions them by env key.
+    """
+    yield from _oracle_sites(
+        rule.lhs, rule.rhs, rule.derive, synth_limit
+    )
+    if deep:
+        from catopt_discovery import oracle as lvo
+
+        yield from _oracle_sites(
+            rule.lhs,
+            rule.rhs,
+            rule.derive,
+            synth_limit,
+            lvo._term_bindings,
+        )
+
+
 def _measure_domain(
     rule: Rewrite,
     corpus_terms: Iterable,
     synth_limit: int,
+    *,
+    deep: bool = False,
 ) -> list[tuple[dict, str]]:
     """Measure ``(bound-env, outcome)`` over the synthesized+real domain.
 
@@ -2430,6 +2468,16 @@ def _measure_domain(
     :func:`evidence._synth_sites` (pair-dedup) and
     :func:`_oracle_sites` (instance-sig dedup, the ``synthesize``
     convention) — since the capped windows expose different corners.
+
+    *deep* adds a third window over the carrier **op-term** bank
+    (:func:`_oracle_windows`), so a bound metavariable can resolve to a
+    compound carrier member — the only condition under which a derive
+    reading the carrier-aware value shape diverges from the cost
+    convention.  It is off by default: the guard synthesis (this
+    module's auto-cond) rests on the leaf domain's measured outcomes,
+    so the deepening is opt-in for the derive-synthesis path
+    (:func:`catopt_discovery.vocab.scan_needs`).  The window is capped
+    by *synth_limit*, exactly as the leaf windows are.
     """
     from catopt_discovery import evidence as ev
     from catopt_discovery.shape_proposal import Schema, real_matches
@@ -2450,9 +2498,7 @@ def _measure_domain(
             rule.lhs, rule.rhs, limit=synth_limit
         ):
             record(subst, lhs_i)
-        for env, lhs_i in _oracle_sites(
-            rule.lhs, rule.rhs, rule.derive, synth_limit
-        ):
+        for env, lhs_i in _oracle_windows(rule, synth_limit, deep):
             record(env, lhs_i)
     except (TypeError, ValueError, KeyError):
         # The enumerator's honest boundary (nested views and friends

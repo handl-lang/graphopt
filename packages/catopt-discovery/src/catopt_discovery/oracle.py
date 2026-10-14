@@ -778,6 +778,61 @@ def _leaf_bindings(
     return out
 
 
+#: Carrier-application shapes the *op-term* binding source builds:
+#: ``(A, c, h)`` for ``apply(aff(A, c), h)``.  ``apply``'s cost
+#: convention reports ``h``'s shape (the state slot), while its true
+#: value shape is the map's linear part ``A`` — so a term from this
+#: bank has ``_shape_of(T) != value_shape_of(T)``, the condition under
+#: which the derive DSL's ``("vshape", T)`` and ``("shape", T)``
+#: readers disagree.  Their ranks differ, so a *rank* derive — the
+#: carrier-aware shape arithmetic the residual's derives spell — is
+#: reproducible only through ``vshape``.
+_OP_TERM_SHAPES: tuple[tuple[tuple, tuple, tuple], ...] = (
+    ((5, 3), (5,), (7, 3)),
+    ((5, 3), (5,), (3,)),
+    ((4, 2, 3), (4, 2), (6, 2, 3)),
+)
+
+
+def _op_terms(mv: str) -> list[Op]:
+    """Compound carrier terms binding metavariable *mv*.
+
+    Each is ``apply(aff(A, c), h)`` — the carrier member whose *value*
+    shape differs from the cost convention, so a derive reading the
+    carrier-aware shape (:func:`catopt_carriers.xcarrier._xshape`) is
+    measurable only when the metavariable resolves to one of these.
+    Fresh leaves per metavariable keep the bindings disjoint (a shape
+    spec resolves the metavar name, not the nested leaf).
+    """
+    out: list[Op] = []
+    for i, (ash, csh, hsh) in enumerate(_OP_TERM_SHAPES):
+        a = Var(f"{mv}@A{i}", TensorType(tuple(ash)))
+        c = Var(f"{mv}@c{i}", TensorType(tuple(csh)))
+        h = Var(f"{mv}@h{i}", TensorType(tuple(hsh)))
+        out.append(Op.make("apply", Op.make("aff", a, c), h))
+    return out
+
+
+def _term_bindings(
+    mv: str,
+    parents: set[str],
+    derived: Iterable[tuple],
+    extra_viewed: tuple = (),
+) -> list[Any]:
+    """Leaf bank with the carrier op-term bank led.
+
+    The deepened measurement source: the compound carrier members come
+    first so a capped window reaches them, then the leaf bank (the
+    shipped source) so the window still carries the leaf corner.  It
+    is *added* alongside :func:`_leaf_bindings` — the caller unions the
+    two windows — so the leaf-only enumeration that existing
+    measurements rest on is unchanged.
+    """
+    return _op_terms(mv) + _leaf_bindings(
+        mv, parents, derived, extra_viewed
+    )
+
+
 def _operand_shape(term: Any) -> tuple:
     """Return the declared shape of a bound operand (``()`` if unknown).
 
@@ -854,14 +909,31 @@ def _has_chained_view(nodes: list[Op]) -> bool:
     )
 
 
+def _bank(source: Any) -> Any:
+    """Return the leaf binding bank *source* names — ``None`` → shipped.
+
+    The single place the optional *source* resolves, so the enumeration
+    functions that thread it stay branch-free (the ratchet pins their
+    complexity).
+    """
+    return source or _leaf_bindings
+
+
 def _viewed_bindings(
-    mvs: list[str], parents: dict, extra_viewed: tuple = ()
+    mvs: list[str],
+    parents: dict,
+    extra_viewed: tuple = (),
+    source: Any = None,
 ) -> Iterable[dict]:
-    """Yield binding dicts for metavariables under a view node."""
+    """Yield binding dicts for metavariables under a view node.
+
+    *source* is the leaf binding bank
+    (``(mv, parents, derived, extra_viewed) -> list[terms]``); ``None``
+    selects the shipped leaf-only :func:`_leaf_bindings`.
+    """
+    src = _bank(source)
     viewed = [m for m in mvs if parents.get(m, set()) & _VIEWISH]
-    lists = [
-        _leaf_bindings(m, parents[m], (), extra_viewed) for m in viewed
-    ]
+    lists = [src(m, parents[m], (), extra_viewed) for m in viewed]
     for combo in _diag_product(lists):
         yield dict(zip(viewed, combo, strict=True))
 
@@ -1263,13 +1335,17 @@ def _synth_bases_for(
         yield (base, u_shapes, out_shapes)
 
 
-def _synth_bases(lhs_pat: Any, rhs_pat: Any) -> Iterable:
+def _synth_bases(
+    lhs_pat: Any, rhs_pat: Any, source: Any = None
+) -> Iterable:
     """Yield ``(base, viewed_shapes, out_shapes)`` per viewed combo.
 
     The outer half of the enumeration: every leaf-metavar binding
     under a view op, merged with each shape-valid attribute
     assignment.  *viewed_shapes* / *out_shapes* are the operand and
     LHS-view output shapes the free operand's bank derives from.
+    *source* is the leaf binding bank (``None`` = the shipped
+    leaf-only :func:`_leaf_bindings`).
 
     The two inner dimensions — the viewed binding and the attribute
     combination — are interleaved by index-sum (:func:`_diag_groups`),
@@ -1295,7 +1371,8 @@ def _synth_bases(lhs_pat: Any, rhs_pat: Any) -> Iterable:
     extra = _CHAIN_VIEWED_SHAPES if _has_chained_view(nodes) else ()
     groups: list = []
     for viewed in itertools.islice(
-        _viewed_bindings(mvs, parents, extra), _MAX_VIEWED_BINDINGS
+        _viewed_bindings(mvs, parents, extra, source),
+        _MAX_VIEWED_BINDINGS,
     ):
         domains = _attr_domains(nodes, viewed)
         if domains is None:
@@ -1323,29 +1400,32 @@ def _pull_bases(
     free: list[str],
     parents: dict,
     extra: tuple,
+    source: Any = None,
 ) -> int:
     """Pull every base due at round *total* into *entries*.
 
     Returns the count appended.  A base's free-combo generator is
     built lazily at pull time, so a capped sweep never materializes
-    bases it cannot yield.
+    bases it cannot yield.  *source* is the leaf binding bank (``None``
+    = the shipped leaf-only :func:`_leaf_bindings`).
     """
     added = 0
+    src_fn = _bank(source)
     while not src.done and len(entries) <= total:
         got = src.get(len(entries))
         if got is None:
             break
         base, u_shapes, out_shapes = got
         derived = _derived_free_shapes(u_shapes, out_shapes)
-        lists = [
-            _leaf_bindings(m, parents[m], derived, extra) for m in free
-        ]
+        lists = [src_fn(m, parents[m], derived, extra) for m in free]
         entries.append([base, _diag_product(lists), True])
         added += 1
     return added
 
 
-def _binding_envs(lhs_pat: Any, rhs_pat: Any) -> Iterable[dict]:
+def _binding_envs(
+    lhs_pat: Any, rhs_pat: Any, source: Any = None
+) -> Iterable[dict]:
     """Yield full binding dicts over the synthesized domain.
 
     The enumeration is Cantor-ordered across the whole nested
@@ -1357,6 +1437,12 @@ def _binding_envs(lhs_pat: Any, rhs_pat: Any) -> Iterable[dict]:
     sites over a single rank-1 viewed binding — the guard's true
     region is never reached).  The diagonal keeps the cap honest:
     it truncates a *corner* of the space, not a whole dimension.
+
+    *source* is the leaf binding bank — ``(mv, parents, derived,
+    extra_viewed) -> list[terms]``.  ``None`` keeps the shipped
+    leaf-only :func:`_leaf_bindings`; the carrier op-term bank
+    (:func:`_term_bindings`) is a separate source so a deepened window
+    can be *unioned* with the leaf window rather than displacing it.
     """
     parents = _metavar_parents(lhs_pat, rhs_pat)
     free = sorted(
@@ -1375,11 +1461,13 @@ def _binding_envs(lhs_pat: Any, rhs_pat: Any) -> Iterable[dict]:
         else ()
     )
     entries: list[list] = []
-    src = _LazySeq(_synth_bases(lhs_pat, rhs_pat))
+    src = _LazySeq(_synth_bases(lhs_pat, rhs_pat, source))
     total = 0
     live = 0
     while live or not src.done:
-        live += _pull_bases(src, entries, total, free, parents, extra)
+        live += _pull_bases(
+            src, entries, total, free, parents, extra, source
+        )
         for i in range(min(total, len(entries) - 1), -1, -1):
             entry = entries[i]
             if not entry[2]:

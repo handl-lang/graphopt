@@ -15,10 +15,13 @@ from __future__ import annotations
 
 from catopt_core.laws.cond import eval_derive
 from catopt_discovery.dspec_synth import (
+    BINOPS,
     MIN_SAMPLES,
     _near_misses,
+    samples_by_attr,
     samples_from_hook,
     synth_dspec,
+    synth_dspec_multi,
 )
 
 
@@ -255,4 +258,234 @@ class TestMigration:
             assert rule.derive(env) == _derive_score_concat_dim(env), (
                 env
             )
+
+
+class TestExtendedBank:
+    """The ops the residual survey measured as missing, landed:
+    ``mod`` (``%`` axis normalisation) and the ``("dim", S, i)`` dim
+    readers (cost convention and carrier-aware)."""
+
+    def test_mod_is_in_the_bank(self):
+        assert "mod" in BINOPS
+
+    def test_finds_mod_normalisation(self):
+        # ``dim % rank`` — the axis normalisation a carrier-aware
+        # derive spells; the rank bank cannot express it without ``%``.
+        # The divisor is the rank reader (the observed-value literals
+        # carry no ``3``), exactly the ``dim % rank`` idiom.
+        from catopt_core.ir import TensorType, Var
+
+        bounds = [
+            {"$attr:a": i, "t": Var("t", TensorType((2, 3, 5)))}
+            for i in range(1, 7)
+        ]
+
+        def mod_hook(bound):
+            rank = len(bound["t"].typ.shape)
+            return {"$attr:M": bound["$attr:a"] % rank}
+
+        spec = synth_dspec(
+            samples_from_hook(mod_hook, bounds), name="M"
+        )
+        assert spec is not None
+        assert "mod" in repr(spec["M"])
+
+    def test_finds_a_dim_reader(self):
+        # ``("dim", ("shape", t), -1)`` — a concrete dim, not just the
+        # rank the ``("len", ("shape", t))`` reader reaches.
+        from catopt_core.ir import TensorType, Var
+
+        bounds = [
+            {"t": Var("t", TensorType((2, 3, i)))}
+            for i in range(4, 10)
+        ]
+
+        def dim_hook(bound):
+            return {"$attr:L": bound["t"].typ.shape[-1]}
+
+        spec = synth_dspec(
+            samples_from_hook(dim_hook, bounds), name="L"
+        )
+        assert spec is not None
+        assert "dim" in repr(spec["L"])
+
+
+class TestMultiOutput:
+    """A hook returning several attrs is fitted per-attr — a ``dspec``
+    is a ``{NAME: expr}`` map, so the flattened single-expr fit is not
+    a spelling of the hook at all."""
+
+    def _bounds(self):
+        return [
+            {"$attr:a": i, "$attr:c": 3 * i} for i in range(1, 7)
+        ]
+
+    def _pair_hook(self, bound):
+        a, c = bound["$attr:a"], bound["$attr:c"]
+        return {"$attr:S": a + c, "$attr:D": a - c}
+
+    def test_groups_samples_by_attr(self):
+        by = samples_by_attr(self._pair_hook, self._bounds())
+        assert sorted(by) == ["D", "S"]
+        assert len(by["S"]) == len(by["D"]) == 6
+
+    def test_flattening_is_not_a_spelling_of_the_hook(self):
+        # the two attrs have different values on one bound, so no
+        # single expr reproduces the flattened list
+        flat = samples_from_hook(self._pair_hook, self._bounds())
+        assert len(flat) == 12
+        assert synth_dspec(flat, name="S") is None
+
+    def test_fits_each_attr_separately(self):
+        bounds = self._bounds()
+        spec = synth_dspec_multi(self._pair_hook, bounds)
+        assert spec is not None
+        assert sorted(spec) == ["D", "S"]
+        for b in bounds:
+            assert eval_derive(spec, b) == self._pair_hook(b)
+
+    def test_partial_map_refused(self):
+        # one attr fittable, one not (``2 ** a`` is outside the bank)
+        def hook(bound):
+            a, c = bound["$attr:a"], bound["$attr:c"]
+            return {"$attr:S": a + c, "$attr:P": 2 ** a}
+
+        assert synth_dspec_multi(hook, self._bounds()) is None
+
+    def test_empty_hook_refused(self):
+        assert synth_dspec_multi(lambda _b: None, self._bounds()) is None
+
+
+class TestOpTermBank:
+    """``oracle._term_bindings`` — the carrier op-term source the
+    deepened measurement domain binds, so a metavariable resolves to a
+    compound carrier member (the only condition under which a derive's
+    ``_vshape`` read diverges from the cost convention)."""
+
+    def test_op_terms_differ_in_value_shape(self):
+        import catopt_carriers.xcarrier  # noqa: F401  registers _xshape
+        from catopt_core.typing import _shape_of, value_shape_of
+        from catopt_discovery import oracle as lvo
+
+        terms = lvo._op_terms("q")
+        assert terms
+        for t in terms:
+            assert _shape_of(t) != value_shape_of(t)
+
+    def test_term_bindings_leads_with_the_op_terms(self):
+        from catopt_discovery import oracle as lvo
+
+        op_terms = lvo._op_terms("q")
+        bank = lvo._term_bindings("q", set(), ())
+        assert bank[: len(op_terms)] == op_terms
+        assert len(bank) > len(op_terms)
+
+
+class TestDeepDomain:
+    """``_measure_domain(deep=True)`` unions the carrier op-term window
+    with the leaf windows — bounded by ``synth_limit`` exactly as they
+    are.  It is opt-in: the leaf domain is the guard-synthesis default."""
+
+    def _rule(self):
+        from catopt_carriers.om import MATMUL_T_CONCAT
+
+        return MATMUL_T_CONCAT
+
+    @staticmethod
+    def _vshape_gap(dom):
+        """Envs where some bound term's value shape differs."""
+        import catopt_carriers.xcarrier  # noqa: F401  registers _xshape
+        from catopt_core.typing import _shape_of, value_shape_of
+
+        return [
+            env
+            for env, _o in dom
+            if any(
+                _shape_of(v) != value_shape_of(v)
+                for k, v in env.items()
+                if not k.startswith("$attr:")
+            )
+        ]
+
+    def test_leaf_domain_has_no_vshape_gap(self):
+        from catopt_discovery import object_synthesis as osyn
+
+        dom = osyn._measure_domain(self._rule(), (), 60)
+        assert dom
+        assert self._vshape_gap(dom) == []
+
+    def test_deep_domain_reaches_the_vshape_gap(self):
+        from catopt_discovery import object_synthesis as osyn
+
+        dom = osyn._measure_domain(self._rule(), (), 60, deep=True)
+        assert self._vshape_gap(dom)
+
+    def test_deep_domain_is_a_bounded_union(self):
+        from catopt_discovery import object_synthesis as osyn
+
+        limit = 60
+        leaf = osyn._measure_domain(self._rule(), (), limit)
+        deep = osyn._measure_domain(self._rule(), (), limit, deep=True)
+        # the leaf window stays; the deep window is added, deduped,
+        # and capped by the same limit — three windows at most
+        assert len(deep) > len(leaf)
+        assert len(deep) <= 3 * limit
+
+
+class TestShippedDspecFaithfulOnTheDeepDomain:
+    """The deepening's headline finding was that ``MATMUL_T_CONCAT``'s
+    ``dspec`` read the cost convention ``("shape", T)`` while its
+    oracle hook reads ``_vshape`` — the two agreed only on leaf sites
+    (the deep window exposed an SD=1 vs SD=0 divergence on carrier
+    members).  The shipped spec now reads ``("vshape", T)`` — the same
+    value-shape source the oracle reads — and these tests pin the
+    agreement on both domains, vetoes included."""
+
+    def _rule(self):
+        from catopt_carriers.om import MATMUL_T_CONCAT
+
+        return MATMUL_T_CONCAT
+
+    def test_dspec_reads_the_value_shape(self):
+        # the audit's fix: the shipped spec must consult the
+        # carrier-aware reader, not the cost convention
+        spec = repr(self._rule().dspec)
+        assert "('vshape', 'q')" in spec
+        assert "('shape', 'q')" not in spec
+
+    def test_agrees_on_the_leaf_domain(self):
+        from catopt_carriers.om import _derive_score_concat_dim
+        from catopt_discovery import object_synthesis as osyn
+
+        rule = self._rule()
+        dom = osyn._measure_domain(rule, (), 60)
+        assert dom
+        for env, _o in dom:
+            assert rule.derive(env) == _derive_score_concat_dim(env)
+
+    def test_agrees_on_the_deep_domain(self):
+        # carrier-member sites included — the window where ``shape``
+        # and ``vshape`` disagree
+        import catopt_carriers.xcarrier  # noqa: F401  registers _xshape
+        from catopt_carriers.om import _derive_score_concat_dim
+        from catopt_core.typing import _shape_of, value_shape_of
+        from catopt_discovery import object_synthesis as osyn
+
+        rule = self._rule()
+        dom = osyn._measure_domain(rule, (), 60, deep=True)
+        gap = [
+            env
+            for env, _o in dom
+            if any(
+                _shape_of(v) != value_shape_of(v)
+                for k, v in env.items()
+                if not k.startswith("$attr:")
+            )
+        ]
+        assert gap, "the deep window must reach carrier members"
+        for env, _o in dom:
+            assert (
+                eval_derive(rule.dspec, env)
+                == _derive_score_concat_dim(env)
+            ), env
 

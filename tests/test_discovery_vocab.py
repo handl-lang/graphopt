@@ -13,6 +13,7 @@ import pytest
 import torch
 from catopt_core.egraph import Rewrite
 from catopt_core.ir import Op, TensorType, Var
+from catopt_discovery import dspec_synth
 from catopt_discovery import vocab as vc
 
 
@@ -313,11 +314,15 @@ class TestDetectNeed:
         assert need.rules_blocked == ("_pow_rank_hook",)
         assert need.before < need.after == need.samples
 
-    def test_detects_mod_gap(self):
-        need = vc.detect_need(_mod_rank_hook, _rank_domain())
-        assert need is not None
-        assert need.op == "mod"
-        assert need.rules_blocked == ("_mod_rank_hook",)
+    def test_mod_derive_is_now_expressible(self):
+        # ``r % 2`` needed ``mod``; the bank gained it (plan 0024 B),
+        # so the derive is expressible and no need is reported — the
+        # gap closed, the probe finds nothing.
+        dom = _rank_domain()
+        assert vc.detect_need(_mod_rank_hook, dom) is None
+        spec = dspec_synth.synth_dspec_multi(_mod_rank_hook, dom)
+        assert spec is not None
+        assert "mod" in repr(spec["M"])
 
     def test_expressible_derive_needs_nothing(self):
         # ``2 * rank`` fits the shipped bank — no gap to report
@@ -376,7 +381,7 @@ class TestProposeAtom:
         assert {"in": [5, 0], "out": None} in vc._observations("mod")
 
     def test_proposal_json_roundtrip(self):
-        need = vc.detect_need(_mod_rank_hook, _rank_domain())
+        need = vc.detect_need(_pow_rank_hook, _rank_domain())
         prop = vc.propose_atom(need)
         assert json.loads(json.dumps(prop)) == prop
 

@@ -69,6 +69,7 @@ from __future__ import annotations
 import argparse
 import json
 from dataclasses import dataclass, field
+from functools import partial
 from itertools import product
 from pathlib import Path
 from typing import Any
@@ -688,8 +689,11 @@ class CandidateOp:
 
 #: The arity-2 int ops the derive bank could gain.  ``pow`` is pinned
 #: by the refusal tests (``2 ** a``); ``mod`` is the axis-normalisation
-#: ``dim % rank`` a carrier-aware derive spells.  Both are ``_DOPS``
-#: members, so the probe's value function is the shipped handler — one
+#: ``dim % rank`` a carrier-aware derive spells — since ``mod`` landed
+#: in the bank (``dspec_synth.BINOPS``) the probe finds no gap for it
+#: (its agreement equals the base bank's), so the entry now documents
+#: the proposal rather than an open need.  Both are ``_DOPS`` members,
+#: so the probe's value function is the shipped handler — one
 #: semantics, no drift.
 CANDIDATE_OPS: tuple[CandidateOp, ...] = (
     CandidateOp(
@@ -838,15 +842,16 @@ def _candidates_with(
     return out
 
 
-def _probe_op(
+def _probe_attr(
     op: str, samples: list[tuple], *, max_depth: int
 ) -> tuple[int, bool]:
-    """Probe one candidate op: best agreement and whether it fully fits.
+    """Probe one candidate op against one attr's sample list.
 
     *fitted* is True iff some op-using candidate is a valid fit —
     reproduces every sample on both the even/odd halves and reads a
     bound value (``dspec_synth``'s own acceptance test), so a
-    degenerate constant never counts as an unblock.
+    degenerate constant never counts as an unblock.  *best* is the
+    agreement of the closest op-using candidate.
     """
     fit = range(0, len(samples), 2)
     holdout = range(1, len(samples), 2)
@@ -861,6 +866,31 @@ def _probe_op(
         ):
             fitted = True
     return best, fitted
+
+
+def _probe_op(
+    op: str, by_attr: dict, *, max_depth: int
+) -> tuple[int, bool]:
+    """Probe one candidate op across every attr the hook returns.
+
+    A multi-output hook is unblocked by *op* only when the op makes
+    **every** returned attr expressible — a partial unblock is not a
+    conversion — so *fitted* is the conjunction over attrs; an attr
+    that already fits the shipped bank (``synth_dspec``) counts as
+    fitted.  *best* sums each attr's closest op-using agreement.
+    """
+    total = 0
+    fitted = True
+    for samples in by_attr.values():
+        best, ok = _probe_attr(op, samples, max_depth=max_depth)
+        total += best
+        if not ok:
+            ok = (
+                _dsp.synth_dspec(samples, max_depth=max_depth)
+                is not None
+            )
+        fitted = fitted and ok
+    return total, fitted
 
 
 def _hook_and_name(rule_or_hook: Any) -> tuple[Any, str]:
@@ -883,20 +913,31 @@ def detect_need(
     binding environments to measure over.  Returns the
     :class:`AtomNeed` naming the candidate op with the largest
     agreement gain — or ``None`` when the derive is already expressible
-    (``dspec_synth`` finds a spec), too thinly sampled to fit, or no
+    (``synth_dspec`` finds a spec), too thinly sampled to fit, or no
     candidate op helps.  This *characterizes* a need; it admits nothing.
+
+    The derive is measured per attr (:func:`dspec_synth.samples_by_attr`)
+    and probed per attr (:func:`_probe_op`): a hook returning several
+    attrs is blocked only when some attr lacks a fit, and an op unblocks
+    it only when every attr becomes expressible — the same honesty the
+    ``dspec`` map itself enforces.
     """
     hook, name = _hook_and_name(rule_or_hook)
-    samples = _dsp.samples_from_hook(hook, list(domain))
-    if len(samples) < _dsp.MIN_SAMPLES:
+    bounds = list(domain)
+    by_attr = _dsp.samples_by_attr(hook, bounds)
+    total = sum(len(s) for s in by_attr.values())
+    if total < _dsp.MIN_SAMPLES:
         return None
-    if _dsp.synth_dspec(samples, max_depth=max_depth) is not None:
+    if (
+        _dsp.synth_dspec_multi(hook, bounds, max_depth=max_depth)
+        is not None
+    ):
         return None
-    before = _baseline(samples, max_depth=max_depth)
+    before = _baseline(by_attr, max_depth=max_depth)
     found: list[AtomNeed] = []
     for cand in CANDIDATE_OPS:
         after, fitted = _probe_op(
-            cand.name, samples, max_depth=max_depth
+            cand.name, by_attr, max_depth=max_depth
         )
         if after <= before:
             continue
@@ -907,7 +948,7 @@ def detect_need(
                 rules_blocked=(name,) if fitted else (),
                 before=before,
                 after=after,
-                samples=len(samples),
+                samples=total,
             )
         )
     if not found:
@@ -915,10 +956,13 @@ def detect_need(
     return max(found, key=lambda n: (n.agreement_gain, n.op))
 
 
-def _baseline(samples: list[tuple], *, max_depth: int) -> int:
-    """Best agreement the shipped bank already reaches (0 if none)."""
-    near = _dsp._near_misses(samples, max_depth=max_depth, k=1)
-    return near[0][1] if near else 0
+def _baseline(by_attr: dict, *, max_depth: int) -> int:
+    """Best agreement the shipped bank already reaches, summed per attr."""
+    total = 0
+    for samples in by_attr.values():
+        near = _dsp._near_misses(samples, max_depth=max_depth, k=1)
+        total += near[0][1] if near else 0
+    return total
 
 
 #: Input pairs the observable-semantics probe evaluates (small ints).
@@ -990,8 +1034,10 @@ def scan_needs(
 
     *rules* is an iterable of :class:`Rewrite`; every residual
     procedural derive (``dspec is None`` with a ``derive`` hook) is
-    measured over its domain (``object_synthesis._measure_domain``, or
-    an injected *measure* of the same shape) and probed.  The per-op
+    measured over its domain (``object_synthesis._measure_domain`` with
+    ``deep=True`` — the carrier op-term window, so a derive that reads
+    the carrier-aware value shape is measurable — or an injected
+    *measure* of the same shape) and probed.  The per-op
     needs are aggregated — ``rules_blocked`` unions the rules an op
     fully unblocks, ``agreement_gain`` sums the gains — and sorted by
     unblock count then gain.  *deadline* (seconds) and *max_rules*
@@ -1002,7 +1048,7 @@ def scan_needs(
     if measure is None:
         from catopt_discovery import object_synthesis as osyn
 
-        measure = osyn._measure_domain
+        measure = partial(osyn._measure_domain, deep=True)
 
     start = time.monotonic()
     found: list[AtomNeed] = []

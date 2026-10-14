@@ -16,14 +16,22 @@ that the DSL needs extending — the same shape as ``auto_cond``'s
 
 The bank the synthesizer searches is ``_DOPS``' arithmetic plus the
 ``("len", ("shape", T))`` / ``("len", ("vshape", T))`` rank readers
-(the cost-convention and carrier-aware shape sources) and the
-``max``/``min`` pair the residual survey measured as missing (the
-``om``/``xcarrier`` derives are rank arithmetic over bound
-metavariables).  Enumeration propagates
+(the cost-convention and carrier-aware shape sources), the
+``("dim", S, i)`` dim readers, the ``max``/``min`` pair the residual
+survey measured as missing (the ``om``/``xcarrier`` derives are rank
+arithmetic over bound metavariables), and the ``mod`` (``%``) axis
+normalisation a carrier-aware derive spells as ``dim % rank``.
+Enumeration propagates
 each candidate's *value vector* over the samples and collapses a level
 to one representative per vector (``_dedupe``) — the blind product is
 quartic in the leaf count, so without the collapse a rank bank's
 level-2 product explodes.
+
+A hook that returns *several* attrs is fitted per-attr
+(:func:`synth_dspec_multi`): the ``dspec`` map is ``{NAME: expr}``, so
+flattening the outputs into one expr (what :func:`samples_from_hook`
+does) is not a spelling of the hook at all — two attrs with different
+values on one bound can never be a single expr.
 """
 
 from __future__ import annotations
@@ -32,22 +40,27 @@ from itertools import product
 from typing import Any
 
 from catopt_core.laws.cond import _DBINOPS, _DOPS, _DUNOPS
+from catopt_core.typing import _shape_of
 
 __all__ = [
+    "samples_by_attr",
     "samples_from_hook",
     "synth_dspec",
+    "synth_dspec_multi",
 ]
 
 #: Arity-2 derive ops the synthesizer composes (the arithmetic bank
 #: plus the two int-tuple readers — everything else in ``_DOPS`` is
 #: either a leaf form or shape-specialised).  ``max``/``min`` are the
 #: rank-selection pair a carrier-aware derive spells as
-#: ``max(rank a, rank b) - 1``.
+#: ``max(rank a, rank b) - 1``; ``mod`` is the ``%`` axis
+#: normalisation a carrier-aware derive spells as ``dim % rank``.
 BINOPS: tuple[str, ...] = (
     "add",
     "sub",
     "mul",
     "floordiv",
+    "mod",
     "max",
     "min",
 )
@@ -94,9 +107,42 @@ def _leaves(bound: dict, values: set) -> list[Any]:
         # from its convention rank is reachable only through ``vshape``.
         out.append(("len", ("shape", key)))
         out.append(("len", ("vshape", key)))
+        out.extend(_dim_leaves(key, bound[key]))
     for v in sorted(values, key=repr):
         if isinstance(v, int) and not isinstance(v, bool):
             out.append(("lit", v))
+    return out
+
+
+#: The axes the dim-reader bank seeds — the last axis (the
+#: ``q[-1]`` / ``k1[-1]`` feature idiom a carrier-aware derive names
+#: literally) and the first.  Deliberately *not* the whole
+#: ``[-r, r)`` window: a *data-dependent* axis (the ``dim % rank``
+#: cat axis ``_cat_axis_plan`` computes) is not expressible by a
+#: literal-index reader anyway, so seeding every index only inflates
+#: the level-2 product — measured on ``om_merge``: 32 dim leaves
+#: turned it into 1.4 M candidates / 67 s against 13.6 k / 1.9 s for
+#: the same fit.
+_DIM_AXES: tuple[int, ...] = (-1, 0)
+
+
+def _dim_leaves(key: str, term: Any) -> list[Any]:
+    """``("dim", S, i)`` readers of a bound term's shape.
+
+    The cost-convention dim read (``("dim", ("shape", T), i)``) and
+    the carrier-aware twin (``("dim", ("vshape", T), i)``) seeded at
+    the literal axes of :data:`_DIM_AXES` that the term's rank admits.
+    An index past a *different* sample's rank declines at eval, so
+    seeding the window is honest.
+    """
+    s = _shape_of(term)
+    r = len(s) if isinstance(s, tuple) else 0
+    out: list[Any] = []
+    for i in _DIM_AXES:
+        if not (-r <= i < r):
+            continue
+        out.append(("dim", ("shape", key), i))
+        out.append(("dim", ("vshape", key), i))
     return out
 
 
@@ -113,17 +159,43 @@ def _vbin(op: str, a: Any, b: Any) -> Any:
     walk made a rank bank's level-2 product cost minutes per rule).
     ``None`` is the shared decline/value sentinel — an operand that
     declines vetoes the op exactly as ``_dexpr``'s ``_Decline`` did.
+    The int-only ops (``max``/``min``/``mod``) delegate to their
+    strictness twins below.
     """
     if op in ("max", "min"):
-        if not (isinstance(a, int) and isinstance(b, int)):
-            return None
-        return (max if op == "max" else min)(a, b)
+        return _vsel(op, a, b)
     if a is None or b is None:
         return None
+    if op == "mod":
+        return _vmod(a, b)
     try:
         return _DBINOPS[op](a, b)
     except (ArithmeticError, TypeError, ValueError):
         return None
+
+
+def _vsel(op: str, a: Any, b: Any) -> Any:
+    """``max``/``min`` over int operands — ``None`` on a non-int side.
+
+    The value-level twin of ``_DOPS[op]``'s int-only selection: both
+    operands must be ``int`` (``bool`` admitted, the handler's
+    ``isinstance`` contract).
+    """
+    if not (isinstance(a, int) and isinstance(b, int)):
+        return None
+    return (max if op == "max" else min)(a, b)
+
+
+def _vmod(a: Any, b: Any) -> Any:
+    """Apply ``a % b`` over int operands — ``None`` on a decline.
+
+    The value-level twin of ``_DOPS["mod"]``: both operands must be
+    ``int`` (``bool`` admitted, matching the handler) and the divisor
+    nonzero — exactly the handler's strictness.
+    """
+    if not (isinstance(a, int) and isinstance(b, int)) or b == 0:
+        return None
+    return a % b
 
 
 def _vun(op: str, a: Any) -> Any:
@@ -211,7 +283,9 @@ def samples_from_hook(
 
     Rows whose hook declines are dropped (they carry no value to
     reproduce); a hook that declines everywhere yields an empty set
-    and the caller refuses honestly.
+    and the caller refuses honestly.  A hook that returns *several*
+    attrs is flattened here — the single-expr fit's view; the per-attr
+    fit reads :func:`samples_by_attr`.
     """
     out: list[tuple[dict, Any]] = []
     for bound in bounds:
@@ -220,6 +294,33 @@ def samples_from_hook(
             continue
         for value in got.values():
             out.append((bound, value))
+    return out
+
+
+def samples_by_attr(
+    derive: Any, bounds: list[dict]
+) -> dict[str, list[tuple[dict, Any]]]:
+    """Measure a hook, grouping its samples by the attr it returns.
+
+    The multi-output twin of :func:`samples_from_hook`: a hook
+    returning ``{"$attr:A": …, "$attr:B": …}`` yields one sample list
+    per attr, so each is fitted by its own expr.  The ``$attr:``
+    prefix is stripped (the ``dspec`` key convention); a declining
+    bound contributes to no group — the same honest drop the
+    single-output path takes.
+    """
+    out: dict[str, list[tuple[dict, Any]]] = {}
+    for bound in bounds:
+        got = derive(bound)
+        if got is None:
+            continue
+        for key, value in got.items():
+            name = (
+                key[len("$attr:") :]
+                if key.startswith("$attr:")
+                else key
+            )
+            out.setdefault(name, []).append((bound, value))
     return out
 
 
@@ -295,6 +396,37 @@ def synth_dspec(
         return None
     best = min(hits, key=lambda c: (_size(c), repr(c)))
     return {(name or "OUT"): best}
+
+
+def synth_dspec_multi(
+    derive: Any, bounds: list[dict], *, max_depth: int = 2
+) -> dict | None:
+    """Fit a multi-output hook — one expr per returned attr.
+
+    The hook is measured over *bounds* with :func:`samples_by_attr`,
+    and each ``$attr:NAME`` it returns is fitted *separately* over the
+    shared domain.  This is the honest spelling of the hook: a
+    ``dspec`` is a ``{NAME: expr}`` map, so the single flattened expr
+    the single-output path would build (:func:`samples_from_hook` then
+    :func:`synth_dspec`) cannot denote a hook that returns two attrs —
+    two different values on one bound are never one expr.  A *partial*
+    map is refused: if any attr lacks a fit, ``None`` is returned, so a
+    half-expressed hook never ships as a derivation.
+
+    The per-attr guards are :func:`synth_dspec`'s own (thin-set and
+    constant-only refusals, the even/odd held-out split), applied to
+    each attr's sample list.
+    """
+    out: dict = {}
+    by_attr = samples_by_attr(derive, bounds)
+    if not by_attr:
+        return None
+    for name, samples in by_attr.items():
+        spec = synth_dspec(samples, name=name, max_depth=max_depth)
+        if spec is None:
+            return None
+        out.update(spec)
+    return out
 
 
 def _reproduces(

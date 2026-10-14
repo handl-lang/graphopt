@@ -84,6 +84,14 @@ from catopt_core.laws import RuleSet
 from catopt_core.laws import tags as _tags
 from catopt_core.laws.cond import as_derive
 
+# Registers ``_xshape`` as the value-shape resolver
+# (``typing.register_value_shape``) — the derive DSL's
+# ``("vshape", T)`` falls back to the cost convention without it, and
+# this module ships a ``vshape``-reading ``dspec``
+# (:data:`_DSPEC_SCORE_CONCAT_DIM`).  One-way edge: xcarrier imports
+# core only.
+import catopt_carriers.xcarrier as _xc  # noqa: F401
+
 
 def R(name: str, lhs, rhs, **kw) -> Rewrite:
     """Module-local law constructor — om laws carry the ``CARRIER`` tag."""
@@ -401,7 +409,11 @@ def _derive_score_concat_dim(bound: dict) -> dict | None:
     synthesized spec replaces the hook, and this twin stays as the
     test's oracle (kept here so the migration is auditable, not
     because the rule calls it).  Reads ``_vshape`` (carrier-aware); the
-    spec reads core ``_shape_of``, which agrees on every measured site.
+    spec must read ``("vshape", T)`` — the same value-shape source —
+    not the cost-convention ``("shape", T)``: on a bound carrier
+    member the two disagree (a deeper measurement domain over op-term
+    bindings caught the original ``shape`` spelling minting the
+    convention rank, e.g. SD=1 where the oracle's value rank gives 0).
     """
     q, k1 = _vshape(bound.get("q")), _vshape(bound.get("k1"))
     if not (isinstance(q, tuple) and isinstance(k1, tuple)):
@@ -409,17 +421,18 @@ def _derive_score_concat_dim(bound: dict) -> dict | None:
     return {"$attr:SD": max(len(q), len(k1)) - 1}
 
 
-#: ``SD`` := ``max(rank q, rank k1) - 1`` — the synthesized declarative
-#: twin of :func:`_derive_score_concat_dim` (the ``dspec`` synthesizer
-#: measured the hook over its binding domain and minted the smallest
-#: reproducing expression from the extended bank: the ``max`` op plus
-#: the ``("len", ("shape", T))`` rank reader).  A rank reader that
-#: declines on an unshaped operand vetoes the spec exactly as the
-#: hook's ``isinstance`` guard did.
+#: ``SD`` := ``max(rank q, rank k1) - 1`` — the declarative twin of
+#: :func:`_derive_score_concat_dim`, re-audited over the carrier
+#: op-term domain: the rank readers go through ``("vshape", T)`` — the
+#: derive DSL's value-shape source, resolved by the registered
+#: ``_xshape`` — matching the hook's carrier-aware read on compound
+#: members as well as leaves.  A rank reader that declines on an
+#: unshaped operand vetoes the spec exactly as the hook's
+#: ``isinstance`` guard did.
 _DSPEC_SCORE_CONCAT_DIM = {
     "SD": (
         "sub",
-        ("max", ("len", ("shape", "q")), ("len", ("shape", "k1"))),
+        ("max", ("len", ("vshape", "q")), ("len", ("vshape", "k1"))),
         1,
     ),
 }
