@@ -52,7 +52,8 @@ provenance in [`docs/results.md`](docs/results.md).  Each block states
 |---|---|---|---|---|
 | **memory** — RetNet peak activation, T=2048, vs its own spelled input | 169.9 MiB | 30.0 MiB | **5.66×** | `max_memory_allocated` |
 | **memory** — same carrier vs paper's own chunkwise impl | 26.9 MiB | 30.0 MiB | **0.90× loses** | torchscale path |
-| **memory** — same carrier vs FLA tuned kernel (fp32) | 9.96 MiB | 19.5 MiB | **0.51× loses** | `fla.ops.retention` |
+| **memory** — vs FLA tuned kernel (fp32) | 9.96 MiB | 19.5 MiB | **0.51× loses** | `fla.ops.retention` |
+| **speed** — fused carrier lowering vs paper impl (T=2048) | 2.12 ms | 2.08 ms | **1.02× — parity+** | `decayed_lower` + graph replay |
 | **compute** — K-way chunk, T=512 | 29,386,752 FLOPs | 6,700,800 FLOPs | **4.4×** | `flops_cost` |
 | **compute** — shared-state, T=512 K=8 | 8,572,928 FLOPs | 7,643,912 FLOPs | **10.8%** | `flops_cost` |
 | **storage** — weight chain, k=16 | 4,194,304 B | 262,144 B | **16.0×** | `param_bytes_cost` |
