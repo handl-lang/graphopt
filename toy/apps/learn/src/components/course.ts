@@ -1,7 +1,9 @@
 import {
   CONCEPTS,
+  GAPS,
   LEVEL_ORDER,
   MODULES,
+  ReviewRound,
   conceptById,
   conceptsIntroducedAt,
   conceptsTaughtAt,
@@ -14,6 +16,8 @@ import {
   levelIndex,
   locked,
   masteredCount,
+  moduleCleared,
+  moduleComplete,
   nextRank,
   prerequisites as conceptPrerequisites,
   rank,
@@ -30,11 +34,13 @@ import type {
   BadgeState,
   Concept,
   ForwardRef,
+  Gap,
   GlossaryRow,
   MasteryState,
   MasterySummary,
   Module,
   Rank,
+  ReviewResult,
   Tier,
   WeakConcept,
 } from "engine";
@@ -119,14 +125,62 @@ export interface ModuleMastery {
   concepts: ConceptRow[];
 }
 
-/** Where progress lives. Stays `v4` — the shape did not change in step 2. */
-export const STORAGE_KEY = "catopt-course-v4";
+/** A module's review state — what the review panel reads (plan 0028 §C). */
+export interface ModuleReviewState {
+  module: Module;
+  /** Every level in the arc passed. */
+  levelsCleared: boolean;
+  /** The review passed. */
+  reviewed: boolean;
+  /** Levels cleared *and* review passed — the gated completion. */
+  cleared: boolean;
+  /** The review is unlocked (its levels are all cleared). */
+  unlocked: boolean;
+  /** How many review questions are answered. */
+  answered: number;
+  total: number;
+  /** The round passes as answered so far. */
+  passed: boolean;
+  /** The concept ids behind the wrong answers. */
+  weak: string[];
+}
+
+/** The completion state — plan 0028 §C's "completion that means something". */
+export interface CompletionState {
+  xp: number;
+  rank: Rank;
+  nextRank: Rank | null;
+  levelsCleared: number;
+  levelsTotal: number;
+  reviewsPassed: number;
+  reviewsTotal: number;
+  weak: number;
+  familiar: number;
+  mastered: number;
+  conceptsTotal: number;
+  ratio: number;
+  badgesEarned: number;
+  badgesTotal: number;
+  /** The project's open work, from the improve level's data. */
+  gaps: Gap[];
+}
+
+/** Where progress lives.
+ *
+ * Plan 0028 step 3: the saved shape **changed** — module reviews add a
+ * `reviews` field (moduleId → questionId → option) so spaced retrieval
+ * survives a reload.  The key moves to `v5`; a `v4` blob is ignored,
+ * so saved progress resets cleanly (announced in the settings text).
+ */
+export const STORAGE_KEY = "catopt-course-v5";
 
 interface Saved {
   i: number;
   answers: Record<string, string>;
   engaged?: string[];
   reviewed?: string[];
+  /** Module review answers, keyed moduleId → questionId → option. */
+  reviews?: Record<string, Record<string, string>>;
 }
 
 /** The storage key for a checkpoint part — part 0 keeps the level id, so
@@ -224,6 +278,67 @@ export class Course {
           why: "128 vs 180 FLOPs for the same answer. Reassociating a matrix chain is classic (Sethi–Ullman); the point is that a rewriter that cannot reassociate is stuck with the tree it was handed.",
           concept: "associativity",
           interactive: true,
+        },
+      ),
+    },
+    {
+      id: "corpus",
+      title: "Where programs come from",
+      idea: "real workloads through the export boundary",
+      objective: "The system is measured on real exported programs, not hand-written ones.",
+      module: "foundations",
+      why: "You can tell two trees apart by function — but where do the trees the system is actually asked to rewrite come from?",
+      terms: ["corpus", "export", "intake"],
+      outcome:
+        "trace a workload from a real `nn.Module` through `torch.export` and the intake, and read what each class of the funnel means.",
+      repo: [
+        {
+          path: "tools/law_intake.py",
+          note: "the intake path: export → classify → persist",
+        },
+        {
+          path: "packages/catopt-discovery/src/catopt_discovery/zoo.py",
+          note: "the held-out workload zoo",
+        },
+        {
+          path: "project/retros/workload-intake.md",
+          note: "166 workloads in, three lowering defects out",
+        },
+        {
+          path: "project/retros/model-zoo-yield.md",
+          note: "the held-out zoo: what fires, what pays",
+        },
+      ],
+      checkpoint: checkpoint(
+        {
+          q: "Where do the programs the census counts come from?",
+          opts: [
+            "hand-written terms",
+            "real `nn.Module`s through `torch.export`",
+            "randomly generated trees",
+          ],
+          ok: "real `nn.Module`s through `torch.export`",
+          why: "The corpus is real code. torch's own `nn.*` modules turned out to be the richer source: `permute`, `unflatten`, packed-QKV attention — spellings the hand corpus never wrote.",
+          concept: "corpus",
+        },
+        {
+          q: "In the live funnel, how many of the twelve workloads land in `census-only`?",
+          opts: ["1", "5", "6"],
+          ok: "5",
+          why: "Five of the twelve export but bind an op the sink cannot lower — the pooling trio, the loss family, `gru.input`, `col2im`. They count in the census but never enter the reachable set.",
+          concept: "export",
+          interactive: true,
+        },
+        {
+          q: "The intake caught three real modules lowering *wrong*. What does that show?",
+          opts: [
+            "the e-graph is unsound",
+            "the boundary can emit a term that was never the program — the verify gate catches it",
+            "torch.export is broken",
+          ],
+          ok: "the boundary can emit a term that was never the program — the verify gate catches it",
+          why: "Nothing in the e-graph, the laws or the executor was wrong: `export_to_ir` dropped an elided aten `dim` default (twice) and a `torch.dtype` kwarg. Lowering the ingested term and diffing fp64 against the original found all three.",
+          concept: "intake",
         },
       ),
     },
@@ -550,6 +665,120 @@ export class Course {
           why: "A cost model is a ranking, not the truth. It may order; it may never remove a certified alternative — that is a hard feasibility bound, decided elsewhere.",
           concept: "ranking",
           interactive: true,
+        },
+      ),
+    },
+    {
+      id: "models",
+      title: "The cost-model family",
+      idea: "features → roofline → executor → delivered",
+      objective: "One model is not enough — a family prices a term, and a profile re-targets it.",
+      module: "evaluation",
+      why: "You met *a* cost model; the real system prices with a family, and calibrates it to a machine.",
+      terms: ["cost-model-family", "delivered-pricing", "target-profile"],
+      outcome:
+        "explain why features, a roofline, an executor route and delivered pricing are four different questions, and how a `TargetProfile` re-targets them.",
+      repo: [
+        {
+          path: "packages/catopt-core/src/catopt_core/perf_model.py",
+          note: "the roofline prediction",
+        },
+        {
+          path: "packages/catopt-orchestrator/src/catopt_orchestrator/optimize.py",
+          note: "`delivered_cost_for` and the carrier-upgrade comparison",
+        },
+        {
+          path: "packages/catopt-core/src/catopt_core/profile.py",
+          note: "`TargetProfile` — the measured target",
+        },
+        {
+          path: "project/retros/measured-cost-model.md",
+          note: "the inversion, and the corrections that fix it",
+        },
+      ],
+      checkpoint: checkpoint(
+        {
+          q: "Which model bills a term under the lowering it would actually be delivered by?",
+          opts: ["the roofline", "delivered pricing", "static features"],
+          ok: "delivered pricing",
+          why: "The roofline bounds the work; the executor adds the route's launches; delivered pricing bills the term as it would run — the only one that can catch a slower carrier winning a modeled comparison.",
+          concept: "cost-model-family",
+        },
+        {
+          q: "In the widget, switch on delivered pricing with the measured factors. Which route does the SSM case now pick?",
+          opts: ["the batched carrier", "the generic route", "it ties"],
+          ok: "the generic route",
+          why: "Uncalibrated, the delivered model prices the batched carrier ~25 % cheaper and it measures 1.9–2.7× slower — the inversion. Feeding the measured per-family corrections back lands the generic route, the measured-fastest member.",
+          concept: "delivered-pricing",
+          interactive: true,
+        },
+        {
+          q: "What does `TargetProfile` carry that the built-in constants do not?",
+          opts: [
+            "the law set",
+            "measured constants plus per-family corrections",
+            "the certificate",
+          ],
+          ok: "measured constants plus per-family corrections",
+          why: "`tools/calibrate_profile.py` micro-benchmarks the machine and writes the constants and the executor-family corrections, so extraction ranks by this machine's numbers, not the built-in ones.",
+          concept: "target-profile",
+        },
+      ),
+    },
+    {
+      id: "artifacts",
+      title: "What 'runnable' means",
+      idea: "module · safetensors · torchscript · `.pt2` · CUDA graph · native",
+      objective: "A delivered term must run standalone — the artifact and the runner are choices.",
+      module: "evaluation",
+      why: "A price is not a program; something has to ship as a file that runs without catopt.",
+      terms: ["delivery-artifact", "cuda-graph", "native-engine"],
+      outcome:
+        "name the artifact a delivered term ships as, and explain what each needs to run standalone.",
+      repo: [
+        {
+          path: "packages/catopt-torch/src/catopt_torch/export.py",
+          note: "`export_optimized` / `load_optimized` — the artifact formats",
+        },
+        {
+          path: "packages/catopt-cuda/src/catopt_cuda/runners.py",
+          note: "the CUDA-graph runner",
+        },
+        {
+          path: "packages/catopt-native/",
+          note: "the opt-in PyO3/Rust engine",
+        },
+        {
+          path: "project/retros/onnx-package.md",
+          note: "a second backend, verified through onnxruntime",
+        },
+      ],
+      checkpoint: checkpoint(
+        {
+          q: "Which export format round-trips to a standalone runnable module with no catopt at inference?",
+          opts: ["state_dict", "`.pt2`", "safetensors"],
+          ok: "`.pt2`",
+          why: "`.pt2` roundtrips standalone (docs/api.md). A `state_dict` or `safetensors` is weights only — it needs the model class back; torchscript bakes the graph but still needs torch.",
+          concept: "delivery-artifact",
+        },
+        {
+          q: "In the widget, pick the CUDA-graph replay. What does it need to run?",
+          opts: [
+            "a CUDA device and the captured input shapes",
+            "a bigger search budget",
+            "a new law",
+          ],
+          ok: "a CUDA device and the captured input shapes",
+          why: "`CudaGraphRunner` captures the executor into one replay — compile-free, but it needs the device and the exact shapes it was captured with, since the graph is fixed.",
+          concept: "cuda-graph",
+          interactive: true,
+        },
+        {
+          q: "What is the opt-in Rust engine?",
+          opts: ["a different IR", "a faster closure over the same IR", "a new law set"],
+          ok: "a faster closure over the same IR",
+          why: "`catopt-native` is the PyO3/Rust search engine (~17× on match-bound closures) — the same IR and laws, a faster closure. The pure-Python engine stays the reference.",
+          concept: "native-engine",
         },
       ),
     },
@@ -950,6 +1179,190 @@ export class Course {
       ),
     },
     {
+      id: "cellstore",
+      title: "One record per idea",
+      idea: "a cell, merged from fragments",
+      objective:
+        "Every vocabulary item — op, law, object, handle — is one cell, assembled from fragments.",
+      module: "substrate",
+      why: "The project spelled 'a cell as data' five ways; the cell store makes it one record, merged from fragments.",
+      terms: ["cell", "fragment-merge", "provenance-origin", "handl-bridge"],
+      outcome:
+        "assemble a store from fragments, read a cell's provenance origin, and emit the store as a handl fragment.",
+      repo: [
+        {
+          path: "packages/catopt-core/src/catopt_core/cells.py",
+          note: "`Cell` / `merge_fragments` / `CellStore`",
+        },
+        {
+          path: "packages/catopt-discovery/src/catopt_discovery/cellstore.py",
+          note: "the ambient store and the machine fragment",
+        },
+        {
+          path: "packages/catopt-discovery/src/catopt_discovery/handl.py",
+          note: "the handl schema bridge",
+        },
+        {
+          path: "project/plans/0022-cell-store.md",
+          note: "one record, fragment-merged",
+        },
+      ],
+      checkpoint: checkpoint(
+        {
+          q: "How many records does a vocabulary item become in the store?",
+          opts: ["one cell", "one per backend", "one per law"],
+          ok: "one cell",
+          why: "Laws, constructed objects, `OpDef`s and handler-table dicts all normalise to one `Cell{role, name, body, kind, provenance}` — the Sanada operations-and-handlers mapping made literal.",
+          concept: "cell",
+        },
+        {
+          q: "In the widget, add the rival fragment. What does the merge do?",
+          opts: [
+            "keeps the last",
+            "raises — a duplicate `(role, name)` is a conflict",
+            "silently overrides",
+          ],
+          ok: "raises — a duplicate `(role, name)` is a conflict",
+          why: "Silent override is how vocabularies drift. `merge_fragments` raises by default; alpha-equal 2-cells across fragments are reported as a discovery fact, not a schema error.",
+          concept: "fragment-merge",
+          interactive: true,
+        },
+        {
+          q: "Which origin is *not* one of the store's provenance origins?",
+          opts: ["shipped", "minted", "guessed"],
+          ok: "guessed",
+          why: "The origins are `shipped` / `constructed` / `admitted` / `minted` / `declared` / `imported` — where a cell came from, not what it can do. 'Guessed' is not one.",
+          concept: "provenance-origin",
+        },
+        {
+          q: "A law cell becomes what in a handl fragment?",
+          opts: ["an `AstShapeDef`", "a `TransformDef`", "a `!Native`"],
+          ok: "a `TransformDef`",
+          why: "The handl bridge maps op cells → `AstShapeDef`, law/object cells → `TransformDef`, handle cells → `!Native`. Every row carries a `catopt:` extension so the round-trip is lossless.",
+          concept: "handl-bridge",
+        },
+      ),
+    },
+    {
+      id: "game",
+      title: "The game layer",
+      idea: "boards, players, learned priors",
+      objective:
+        "The pipeline is also a game: boards, players, and learned priors over certified moves.",
+      module: "substrate",
+      why: "The same machinery is played as a game — a board, a player, and a prior that orders legal moves.",
+      terms: ["board", "meta-arena", "play-domain"],
+      outcome:
+        "describe the game layer — a `Board` protocol, players, the meta-arena, and `play --domain` — and what a learned prior measurably buys.",
+      repo: [
+        {
+          path: "packages/catopt-discovery/src/catopt_discovery/engine.py",
+          note: "the `Board` protocol + episode/train/eval drivers",
+        },
+        {
+          path: "packages/catopt-discovery/src/catopt_discovery/players.py",
+          note: "`LinearPolicy`, the learned arm",
+        },
+        {
+          path: "packages/catopt-discovery/src/catopt_discovery/meta_arena.py",
+          note: "the mid-search construction board",
+        },
+        {
+          path: "packages/catopt-discovery/src/catopt_discovery/play.py",
+          note: "the domain registry + CLI",
+        },
+      ],
+      checkpoint: checkpoint(
+        {
+          q: "A `Board` is which three things?",
+          opts: [
+            "a program, a legal move set, a referee",
+            "a cost model and a law",
+            "a graph and a sink",
+          ],
+          ok: "a program, a legal move set, a referee",
+          why: "`catopt_discovery.engine` factors the shared shape out: every domain is 'a program + a legal move set + a referee', and the reward is certified improvement.",
+          concept: "board",
+        },
+        {
+          q: "In the widget, run the learned prior. What does it buy over the cost-delta heuristic on held-out pages?",
+          opts: ["nothing", "AP 0.133 vs 0.045", "a new law set"],
+          ok: "AP 0.133 vs 0.045",
+          why: "The baked learned prior's ordering beats the cost-delta heuristic on held-out pages (ADR 0005). It orders moves; it never changes what is legal.",
+          concept: "play-domain",
+          interactive: true,
+        },
+        {
+          q: "Which meta-arena move mints a new abstraction mid-search?",
+          opts: ["`fire`", "`declare`", "`extract`"],
+          ok: "`declare`",
+          why: "`fire` applies a law, `saturate` takes a bounded closure step, `declare` inserts a construction (fold/lift/compose) mid-search, and `extract` is terminal — extract, replay the certificate, score the delta.",
+          concept: "meta-arena",
+        },
+      ),
+    },
+    {
+      id: "gates",
+      title: "How the project stays honest",
+      idea: "coverage · ty · ratchets · bench gate",
+      objective:
+        "The project keeps itself honest with ratchets, gates, and a no-new-suppressions rule.",
+      module: "engineering",
+      why: "Every claim so far is only as good as the gates that keep the tree honest.",
+      terms: ["coverage-floor", "ratchet", "no-suppressions", "bench-gate"],
+      outcome:
+        "name the gates the project enforces — coverage floors, the type/lint/security checks, the radon ratchet, the bench gate — and explain the no-new-suppressions rule.",
+      repo: [
+        {
+          path: "AGENTS.md",
+          note: "the verification commands every change must pass",
+        },
+        {
+          path: "tools/radon_ratchet.py",
+          note: "the complexity ceiling, pinned per function",
+        },
+        {
+          path: "bench/README.md",
+          note: "the bench gate and pinned baselines",
+        },
+        {
+          path: "project/retros/onnx-package.md",
+          note: "a 75% → 100% coverage climb, zero suppressions",
+        },
+      ],
+      checkpoint: checkpoint(
+        {
+          q: "A ratchet is a ceiling that may move which way?",
+          opts: ["up", "one way — never backwards", "either way"],
+          ok: "one way — never backwards",
+          why: "The radon ratchet pins every function's complexity; the coverage floor is pinned at 100% (shipped) / 99% (discovery). Both may only tighten — never loosen.",
+          concept: "ratchet",
+        },
+        {
+          q: "In the widget, break the coverage gate. What does the run report?",
+          opts: ["a warning", "a failure — the gate is a floor, not a target", "nothing"],
+          ok: "a failure — the gate is a floor, not a target",
+          why: "A floor fails the run, it does not warn. The project ships at 100% statement+branch coverage on the six shipped packages; discovery holds a 99% ratchet that may only tighten.",
+          concept: "coverage-floor",
+          interactive: true,
+        },
+        {
+          q: "A lint finding appears in new code. What is the rule?",
+          opts: ["add a `# noqa`", "fix it — no new suppressions", "delete the file"],
+          ok: "fix it — no new suppressions",
+          why: "No new suppressions: no `# noqa`, no `# ty: ignore`, no baseline entry. The `ty` ratchet's exclude list is empty and stays empty — annotate, never opt out.",
+          concept: "no-suppressions",
+        },
+        {
+          q: "A suite regresses against its pinned baseline. What happens?",
+          opts: ["the run fails", "it is ignored", "the baseline updates automatically"],
+          ok: "the run fails",
+          why: "The bench gate compares every run against the committed baseline; a regression fails. Regenerating a baseline is a reviewed, intentional act — never automatic.",
+          concept: "bench-gate",
+        },
+      ),
+    },
+    {
       id: "honest",
       title: "The ledger of negatives",
       idea: "methodology as a result",
@@ -1182,9 +1595,9 @@ export class Course {
         },
         {
           q: "Pick the precision gap in the widget. Which level does its connection point to?",
-          opts: ["12 mint", "18 bounded", "20 pricing"],
-          ok: "18 bounded",
-          why: "Idea → blocker → next measurement: the precision gap's blocker is BiRefNet's thin dedup, its next step is a wide-MLP checkpoint, and it is taught by level 18. Every gap maps to a level.",
+          opts: ["15 mint", "24 bounded", "26 pricing"],
+          ok: "24 bounded",
+          why: "Idea → blocker → next measurement: the precision gap's blocker is BiRefNet's thin dedup, its next step is a wide-MLP checkpoint, and it is taught by level 24 (approximation with a certificate). Every gap maps to a level.",
           concept: "next-measurement",
           interactive: true,
         },
@@ -1196,13 +1609,16 @@ export class Course {
   answers: Record<string, string> = {};
   /** Level ids whose live widget was engaged — what earns the XP bonus. */
   engaged: string[] = [];
-  /** Module ids whose review is passed (step 3 supplies the questions). */
+  /** Module ids whose review is passed. */
   reviewed: string[] = [];
+  /** Module review answers, keyed moduleId → questionId → option. */
+  reviewAnswers: Record<string, Record<string, string>> = {};
   settings = false;
   confirming = false;
   masteryPanel = false;
   badgesPanel = false;
   glossaryPanel = false;
+  reviewPanel = false;
   restored = false;
 
   /** Alpine calls this on mount: restore any saved progress. */
@@ -1224,6 +1640,13 @@ export class Course {
       if (Array.isArray(data.reviewed)) {
         this.reviewed = data.reviewed.filter((x) => typeof x === "string");
       }
+      if (data.reviews && typeof data.reviews === "object") {
+        const out: Record<string, Record<string, string>> = {};
+        for (const [mid, ans] of Object.entries(data.reviews)) {
+          if (ans && typeof ans === "object") out[mid] = { ...ans };
+        }
+        this.reviewAnswers = out;
+      }
       this.restored = true;
     } catch {
       // corrupt or unreadable storage: start clean rather than crash
@@ -1242,6 +1665,7 @@ export class Course {
           answers: this.answers,
           engaged: this.engaged,
           reviewed: this.reviewed,
+          reviews: this.reviewAnswers,
         }),
       );
     } catch {
@@ -1371,7 +1795,13 @@ export class Course {
     return levelBase(levelIndex(this.level.id, LEVEL_ORDER)) + WIDGET_BONUS;
   }
 
-  /** Per-concept mastery, folded from every checkpoint part's answer. */
+  /** Per-concept mastery, folded from every checkpoint *and* review answer.
+   *
+   * Plan 0028 §C: spaced retrieval — a concept's tally accumulates
+   * correct answers from the level checkpoints and the module reviews
+   * alike.  Only *answered* questions count (an untouched question is
+   * not a wrong one).
+   */
   get mastery(): MasteryState {
     let s = emptyMastery();
     for (const l of this.levels) {
@@ -1380,6 +1810,14 @@ export class Course {
         if (picked === undefined) return;
         s = record(s, part.concept, picked === part.ok);
       });
+    }
+    for (const m of MODULES) {
+      const answers = this.reviewAnswers[m.id];
+      if (!answers) continue;
+      for (const q of m.questions) {
+        if (answers[q.id] === undefined) continue;
+        s = record(s, q.concept, answers[q.id] === q.ok);
+      }
     }
     return s;
   }
@@ -1479,6 +1917,124 @@ export class Course {
   /** The concepts a level introduces — the graph's view of its new terms. */
   graphTerms(levelId: string): Concept[] {
     return conceptsIntroducedAt(levelId);
+  }
+
+  // ── module reviews (plan 0028 §A/§C) ───────────────────────────
+
+  /** The module the current level belongs to (never undefined). */
+  get currentModule(): Module {
+    return MODULES.find((m) => m.id === this.level.module) ?? MODULES[0];
+  }
+
+  /** Every module's review state — levels cleared, reviewed, cleared. */
+  get moduleStates(): ModuleReviewState[] {
+    const passed = this.progress.passed;
+    return MODULES.map((module) => {
+      const levelsCleared = moduleComplete(module, passed);
+      const round = this.reviewFor(module.id);
+      return {
+        module,
+        levelsCleared,
+        reviewed: this.reviewed.includes(module.id),
+        cleared: moduleCleared(module, passed, this.reviewed),
+        unlocked: levelsCleared,
+        answered: round.answered,
+        total: round.total,
+        passed: round.passed,
+        weak: round.weak,
+      };
+    });
+  }
+
+  /** The current level's module review state — the review card reads this. */
+  get currentModuleState(): ModuleReviewState {
+    return (
+      this.moduleStates.find((s) => s.module.id === this.currentModule.id) ?? this.moduleStates[0]
+    );
+  }
+
+  /** The review round for a module, with the learner's answers applied. */
+  reviewFor(moduleId: string): ReviewRound {
+    const m = MODULES.find((x) => x.id === moduleId) ?? MODULES[0];
+    const r = new ReviewRound(m);
+    const answers = this.reviewAnswers[moduleId] ?? {};
+    for (const [qid, opt] of Object.entries(answers)) r.answer(qid, opt);
+    return r;
+  }
+
+  /** Answer one review question (moduleId, questionId, option). */
+  answerReview(moduleId: string, qid: string, opt: string): void {
+    const cur = this.reviewAnswers[moduleId] ?? {};
+    this.reviewAnswers = { ...this.reviewAnswers, [moduleId]: { ...cur, [qid]: opt } };
+    this.save();
+  }
+
+  /** The option picked for a review question. */
+  reviewPicked(moduleId: string, qid: string): string | undefined {
+    return this.reviewAnswers[moduleId]?.[qid];
+  }
+
+  /** Whether a review question's picked answer is right. */
+  reviewPassed(moduleId: string, qid: string): boolean {
+    const m = MODULES.find((x) => x.id === moduleId);
+    const q = m?.questions.find((x) => x.id === qid);
+    return q !== undefined && this.reviewAnswers[moduleId]?.[qid] === q.ok;
+  }
+
+  /** Submit a module review; a pass records it.  Returns the verdict. */
+  submitReview(moduleId: string): ReviewResult {
+    const result = this.reviewFor(moduleId).result;
+    if (result.passed) this.markReviewed(moduleId);
+    return result;
+  }
+
+  /** Reset a module's review — clear the answers and the pass, and retry. */
+  resetReview(moduleId: string): void {
+    const next = { ...this.reviewAnswers };
+    delete next[moduleId];
+    this.reviewAnswers = next;
+    this.reviewed = this.reviewed.filter((x) => x !== moduleId);
+    this.save();
+  }
+
+  /** How many module reviews are passed. */
+  get reviewsPassed(): number {
+    return this.reviewed.length;
+  }
+
+  /** The concepts a review sends you back to, with the levels that teach them. */
+  reviewWeak(moduleId: string): WeakConcept[] {
+    const weak = new Set(this.reviewFor(moduleId).weak);
+    return weakest(this.mastery, CONCEPTS, CONCEPTS.length).filter((c) => weak.has(c.id));
+  }
+
+  /** Every level passed *and* every review passed — the full-comprehension state. */
+  get fullyComplete(): boolean {
+    return this.complete && this.reviewed.length === MODULES.length;
+  }
+
+  // ── the completion state (plan 0028 §C) ────────────────────────
+
+  /** The final state: XP, rank, levels, mastery, badges, and the gaps to attack. */
+  get completion(): CompletionState {
+    const s = this.masterySummary;
+    return {
+      xp: this.xp,
+      rank: this.rank,
+      nextRank: this.nextRank,
+      levelsCleared: this.done,
+      levelsTotal: this.n,
+      reviewsPassed: this.reviewsPassed,
+      reviewsTotal: MODULES.length,
+      weak: s.weak,
+      familiar: s.familiar,
+      mastered: s.mastered,
+      conceptsTotal: s.total,
+      ratio: s.ratio,
+      badgesEarned: this.badgesEarned.length,
+      badgesTotal: this.badgesEarned.length + this.badgesLocked.length,
+      gaps: [...GAPS],
+    };
   }
 
   // ── gating (plan 0028 §B step 6) ───────────────────────────────
@@ -1590,6 +2146,7 @@ export class Course {
     this.answers = {};
     this.engaged = [];
     this.reviewed = [];
+    this.reviewAnswers = {};
     this.restored = false;
     this.save();
   }
@@ -1606,6 +2163,7 @@ export class Course {
     this.answers = {};
     this.engaged = [];
     this.reviewed = [];
+    this.reviewAnswers = {};
     this.restored = false;
     this.confirming = false;
     this.settings = false;
@@ -1617,6 +2175,7 @@ export class Course {
     this.masteryPanel = false;
     this.badgesPanel = false;
     this.glossaryPanel = false;
+    this.reviewPanel = false;
   }
 
   toggleMastery(): void {
@@ -1624,6 +2183,7 @@ export class Course {
     this.settings = false;
     this.badgesPanel = false;
     this.glossaryPanel = false;
+    this.reviewPanel = false;
   }
 
   toggleBadges(): void {
@@ -1631,6 +2191,7 @@ export class Course {
     this.settings = false;
     this.masteryPanel = false;
     this.glossaryPanel = false;
+    this.reviewPanel = false;
   }
 
   toggleGlossary(): void {
@@ -1638,5 +2199,14 @@ export class Course {
     this.settings = false;
     this.masteryPanel = false;
     this.badgesPanel = false;
+    this.reviewPanel = false;
+  }
+
+  toggleReview(): void {
+    this.reviewPanel = !this.reviewPanel;
+    this.settings = false;
+    this.masteryPanel = false;
+    this.badgesPanel = false;
+    this.glossaryPanel = false;
   }
 }

@@ -163,7 +163,7 @@ describe("improve — the payoff", () => {
     expect(g.gap.level).toBe("mint");
     const c = g.connection;
     expect(c).toHaveLength(3);
-    expect(c[0].next).toContain("level 12");
+    expect(c[0].next).toContain("level 15");
     g.pick(99);
     expect(g.gap.id).toBe("weight-space");
     expect(g.gap.level).toBe("honest");

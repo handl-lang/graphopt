@@ -51,6 +51,17 @@
               ></span>
             </button>
             <button
+              @click="toggleReview()"
+              class="text-[12px] px-2.5 py-1 rounded-lg border text-dim hover:text-ink"
+              :class="reviewPanel ? 'border-gold text-gold' : 'border-line'"
+            >
+              ▷<span class="hidden sm:inline"> reviews</span>
+              <span
+                class="hidden md:inline text-faint"
+                x-text="' ' + reviewsPassed + '/' + moduleStates.length"
+              ></span>
+            </button>
+            <button
               @click="toggleGlossary()"
               class="text-[12px] px-2.5 py-1 rounded-lg border text-dim hover:text-ink"
               :class="glossaryPanel ? 'border-gold text-gold' : 'border-line'"
@@ -76,23 +87,26 @@
             >
               <div class="text-[11.5px] uppercase tracking-widest text-faint mb-2">settings</div>
               <div class="text-[13px] text-dim">
-                Progress — levels, XP, mastery and badges — is kept in this browser (<code
+                Progress — levels, XP, mastery, badges and reviews — is kept in this browser (<code
                   class="text-ink"
                   >localStorage</code
-                >, key <code class="text-ink">catopt-course-v4</code>) —
+                >, key <code class="text-ink">catopt-course-v5</code>) —
                 <span x-text="savedLabel"></span>.
               </div>
               <div class="mt-3 text-[13px] text-dim">
                 <span class="text-ink font-semibold" x-text="done"></span> of
                 <span x-text="n"></span> levels passed ·
+                <span class="text-ink font-semibold" x-text="reviewsPassed"></span> of
+                <span x-text="moduleStates.length"></span> reviews ·
                 <span class="text-gold font-semibold font-mono" x-text="xp.toLocaleString()"></span>
                 xp · <span class="text-ink font-semibold" x-text="rank.name"></span>
               </div>
               <div class="mt-2 text-[12px] text-faint">
-                Checkpoints are now <b class="text-ink">multi-part</b> — a level clears only when
-                every part is right, and each part feeds the mastery meter by its concept. The
-                storage key stays <code>v4</code> (the saved shape is unchanged), so progress
-                restores cleanly.
+                The course is now <b class="text-ink">28 levels in six modules</b>, and every module
+                ends in a <b class="text-ink">review</b> that recombines its concepts. The storage
+                key moved to <code>v5</code> — reviews add a saved field, so
+                <b class="text-ink">progress from v4 resets</b> (start clean and it will persist
+                again from here).
               </div>
               <div class="mt-4 pt-3 border-t border-line">
                 <template x-if="!confirming">
@@ -266,6 +280,55 @@
                     ></div>
                   </button>
                 </template>
+              </div>
+            </div>
+
+            <!-- reviews popover — the six arcs and their review state -->
+            <div
+              x-show="reviewPanel"
+              x-cloak
+              x-transition
+              @click.outside="reviewPanel = false"
+              class="absolute right-0 top-11 w-80 max-w-[92vw] rounded-2xl border border-line bg-panel p-4 shadow-2xl z-40"
+            >
+              <div class="text-[11.5px] uppercase tracking-widest text-faint mb-2">
+                module reviews · <span x-text="reviewsPassed"></span>/<span
+                  x-text="moduleStates.length"
+                ></span>
+              </div>
+              <div class="space-y-2">
+                <template x-for="s in moduleStates" :key="s.module.id">
+                  <button
+                    @click="gotoLevel(s.module.levels[0]); reviewPanel = false"
+                    class="w-full text-left rounded-lg border bg-panel2 px-2.5 py-2"
+                    :class="s.cleared ? 'border-eva/40' : 'border-line hover:border-gold'"
+                  >
+                    <div class="flex items-baseline gap-2">
+                      <span
+                        class="text-[12.5px] font-semibold"
+                        :class="s.cleared ? 'text-eva' : 'text-ink'"
+                        x-text="'module ' + s.module.roman + ' · ' + s.module.title"
+                      ></span>
+                      <span
+                        class="ml-auto text-[10.5px] font-mono text-faint whitespace-nowrap"
+                        x-text="
+                          s.cleared
+                            ? '✓ cleared'
+                            : s.reviewed
+                              ? 'reviewed'
+                              : s.levelsCleared
+                                ? 'review ready'
+                                : 'levels pending'
+                        "
+                      ></span>
+                    </div>
+                    <div class="text-[11.5px] text-dim mt-0.5" x-text="s.module.arc"></div>
+                  </button>
+                </template>
+              </div>
+              <div class="mt-3 pt-3 border-t border-line text-[11.5px] text-faint">
+                A module clears when every level is passed <em>and</em> its review passes. Open any
+                level in the arc to take its review.
               </div>
             </div>
           </div>
@@ -512,8 +575,104 @@
               </div>
             </section>
 
-            <!-- ── 2 · the reachable set ─────────────────────────── -->
-            <section x-show="i === 2" x-data="reach">
+            <!-- ── 2 · where programs come from ──────────────────── -->
+            <section x-show="i === 2" x-data="corpus">
+              <p class="text-dim leading-relaxed">
+                The system is measured on <b class="text-ink">real programs</b>, not hand-written
+                terms. The <b class="text-ink">intake</b> takes a candidate
+                <code>nn.Module</code> through <code>torch.export</code> →
+                <code>export_to_ir</code> → classify → persist, and every candidate lands in exactly
+                one class: <b class="text-ink">ingested</b> (bound, lowered, verified fp64),
+                <b class="text-ink">census-only</b> (an op is unbound), or
+                <b class="text-ink">rejected</b> (<code>torch.export</code> raised).
+              </p>
+              <div class="mt-5 grid lg:grid-cols-5 gap-4">
+                <div class="lg:col-span-2 rounded-2xl border border-line bg-panel p-5">
+                  <div class="text-[11.5px] uppercase tracking-widest text-faint mb-3">
+                    a workload
+                  </div>
+                  <div class="space-y-2 max-h-[26rem] overflow-auto pr-1">
+                    <template x-for="(w, k) in workloads" :key="w.id">
+                      <button
+                        @click="pick(k)"
+                        class="w-full text-left px-3.5 py-2.5 rounded-xl border bg-panel transition"
+                        :class="sel === k ? 'border-gold' : 'border-line hover:border-dim'"
+                      >
+                        <div class="flex items-baseline gap-2">
+                          <span
+                            class="font-mono text-[12.5px]"
+                            :class="sel === k ? 'text-gold' : 'text-ink'"
+                            x-text="w.name"
+                          ></span>
+                          <span
+                            class="ml-auto text-[10.5px] font-mono text-faint"
+                            x-text="w.family"
+                          ></span>
+                        </div>
+                        <div
+                          class="text-[11px] text-faint mt-0.5"
+                          x-text="w.status + ' · ' + w.nodes + ' nodes'"
+                        ></div>
+                      </button>
+                    </template>
+                  </div>
+                </div>
+                <div class="lg:col-span-3 rounded-2xl border border-line bg-panel p-5 space-y-4">
+                  <div>
+                    <div class="text-[11.5px] uppercase tracking-widest text-faint mb-2">
+                      the intake funnel
+                    </div>
+                    <div class="space-y-2">
+                      <template x-for="f in funnel" :key="f.key">
+                        <div>
+                          <div class="flex items-baseline justify-between text-[12.5px]">
+                            <span class="text-dim" x-text="f.label"></span>
+                            <span class="font-mono text-ink" x-text="f.count"></span>
+                          </div>
+                          <div class="mt-1 h-1.5 rounded-full bg-panel2 overflow-hidden">
+                            <div
+                              class="h-full bg-gold"
+                              :style="`width:${(100 * f.count) / classes.total}%`"
+                            ></div>
+                          </div>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                  <div class="pt-3 border-t border-line">
+                    <div
+                      class="text-[11.5px] uppercase tracking-widest text-faint mb-1.5"
+                      x-text="picked.name"
+                    ></div>
+                    <div class="text-[13px] text-dim leading-relaxed" x-text="picked.note"></div>
+                    <div class="mt-2 font-mono text-[11.5px] text-faint">
+                      <span x-text="picked.ops + ' ops · ' + picked.nodes + ' nodes'"></span>
+                      <span
+                        x-text="picked.sourced ? ' · sourced: ' + picked.source : ' · illustrative'"
+                      ></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="mt-4 rounded-2xl border border-line bg-panel p-5 text-[13.5px] text-dim leading-relaxed"
+              >
+                <b class="text-ink">The intake's real yield is the defect list.</b> Three real
+                modules exported and bound cleanly but lowered <em>wrong</em> — each a boundary that
+                emitted a term that was never the program (<code>nn.MultiheadAttention</code>,
+                <code>nn.TransformerDecoderLayer</code>, <code>nn.LSTM</code>). Lowering the
+                ingested term and diffing fp64 against the original found all three; the corpus is
+                now <b class="text-ink">166 workloads, 114 verified</b>, with the defects pinned as
+                a regression test.
+                <span class="text-faint"
+                  >(<code>project/retros/workload-intake.md</code>,
+                  <code>intake-defect-fixes.md</code>.)</span
+                >
+              </div>
+            </section>
+
+            <!-- ── 3 · the reachable set ─────────────────────────── -->
+            <section x-show="i === 3" x-data="reach">
               <p class="text-dim leading-relaxed">
                 If two trees can be equal, how many equal trees are there? The answer is not a
                 number — it is the <b class="text-ink">closure of your laws</b>. Start from a
@@ -574,7 +733,7 @@
             </section>
 
             <!-- ── 3 · laws come from structure ──────────────────── -->
-            <section x-show="i === 3" x-data="structures">
+            <section x-show="i === 4" x-data="structures">
               <p class="text-dim leading-relaxed">
                 So where do laws come from? Not from operations. They are consequences of the
                 <b class="text-ink">algebraic structure</b> a program instantiates. A monoid gives
@@ -644,7 +803,7 @@
             </section>
 
             <!-- ── 4 · staying correct ───────────────────────────── -->
-            <section x-show="i === 4" x-data="board">
+            <section x-show="i === 5" x-data="board">
               <p class="text-dim leading-relaxed">
                 Rewriting freely is dangerous — you could rewrite into something that computes the
                 wrong answer. So every move carries a <b class="text-ink">derivation</b>, and the
@@ -762,7 +921,7 @@
             </section>
 
             <!-- ── 5 · choosing among equals ─────────────────────── -->
-            <section x-show="i === 5" x-data="frontier">
+            <section x-show="i === 6" x-data="frontier">
               <p class="text-dim leading-relaxed">
                 Now you have a class of equal programs. Which do you ship? A single scalar cost
                 answers that by <em>hiding</em> the trade-off. Keep the landscape instead: the
@@ -844,7 +1003,7 @@
             </section>
 
             <!-- ── 6 · searching ─────────────────────────────────── -->
-            <section x-show="i === 6" x-data="players">
+            <section x-show="i === 7" x-data="players">
               <p class="text-dim leading-relaxed">
                 The class can be astronomically large — you cannot enumerate it. So you need a
                 <b class="text-ink">policy</b>: a rule for what to try next. Watch three players
@@ -931,7 +1090,7 @@
             </section>
 
             <!-- ── 7 · learning the policy ───────────────────────── -->
-            <section x-show="i === 7" x-data="episode">
+            <section x-show="i === 8" x-data="episode">
               <p class="text-dim leading-relaxed">
                 Where does a policy come from? You can <b class="text-ink">learn</b> it. Treat the
                 search as a game: the <em>state</em> is the current program's features, the
@@ -1024,7 +1183,7 @@
             </section>
 
             <!-- ── 8 · measuring ─────────────────────────────────── -->
-            <section x-show="i === 8" x-data="evaluation">
+            <section x-show="i === 9" x-data="evaluation">
               <p class="text-dim leading-relaxed">
                 Cost models are <em>guesses</em>. The machine is truth. So describe the program
                 statically — <b class="text-ink">features</b> — and predict the runtime from a
@@ -1133,8 +1292,220 @@
               </div>
             </section>
 
-            <!-- ── 9 · the architecture ──────────────────────────── -->
-            <section x-show="i === 9" x-data="swap">
+            <!-- ── 10 · the cost-model family ────────────────────── -->
+            <section x-show="i === 10" x-data="costmodels">
+              <p class="text-dim leading-relaxed">
+                One model is not enough. The system prices a term with a
+                <b class="text-ink">family</b>: static <code>features</code> describe, a
+                <code>roofline</code> bounds, an <code>executor</code> adds the launch cost of the
+                route it would take, and <b class="text-ink">delivered pricing</b> bills the term
+                under the lowering it would actually be delivered by. A measured
+                <code>TargetProfile</code> re-targets them all.
+              </p>
+              <div class="mt-5 grid lg:grid-cols-5 gap-4">
+                <div class="lg:col-span-2 rounded-2xl border border-line bg-panel p-5">
+                  <div class="text-[11.5px] uppercase tracking-widest text-faint mb-3">a term</div>
+                  <div class="space-y-2">
+                    <template x-for="(cs, k) in cases" :key="cs.id">
+                      <button
+                        @click="select(k)"
+                        class="w-full text-left px-3.5 py-2.5 rounded-xl border bg-panel transition"
+                        :class="sel === k ? 'border-gold' : 'border-line hover:border-dim'"
+                      >
+                        <span
+                          class="font-mono text-[12.5px]"
+                          :class="sel === k ? 'text-gold' : 'text-ink'"
+                          x-text="cs.term"
+                        ></span>
+                        <div class="text-[11px] text-faint mt-0.5" x-text="cs.shape"></div>
+                      </button>
+                    </template>
+                  </div>
+                  <button
+                    @click="toggle()"
+                    class="mt-4 w-full px-3 py-2 rounded-lg text-[13px] border"
+                    :class="
+                      calibrated
+                        ? 'border-eva text-eva'
+                        : 'border-line bg-panel2 hover:border-gold'
+                    "
+                  >
+                    <span
+                      x-text="calibrated ? '✓ measured corrections on' : 'turn calibration on'"
+                    ></span>
+                  </button>
+                </div>
+                <div class="lg:col-span-3 rounded-2xl border border-line bg-panel p-5 space-y-4">
+                  <div>
+                    <div class="text-[11.5px] uppercase tracking-widest text-faint mb-2">
+                      the family
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                      <template x-for="mo in models" :key="mo.key">
+                        <span
+                          class="px-2 py-0.5 rounded-md border border-line text-[11.5px] font-mono text-dim"
+                          :title="mo.question"
+                          x-text="mo.label"
+                        ></span>
+                      </template>
+                    </div>
+                    <div class="mt-2 text-[12px] text-dim font-mono">
+                      <span
+                        x-text="features.flops.toExponential(1) + ' flops · ' + features.bytes.toExponential(1) + ' B · intensity ' + features.intensity.toFixed(0)"
+                      ></span>
+                      <span class="text-faint" x-text="' · roofline ' + roofline + ' µs'"></span>
+                    </div>
+                  </div>
+                  <div class="pt-3 border-t border-line space-y-2">
+                    <template x-for="r in rows" :key="r.route.kind">
+                      <div
+                        class="rounded-xl border bg-panel2 p-3"
+                        :class="r.winner ? 'border-eva/50' : 'border-line'"
+                      >
+                        <div class="flex items-baseline gap-2">
+                          <span
+                            class="font-mono text-[12px]"
+                            :class="r.winner ? 'text-eva' : 'text-ink'"
+                            x-text="r.route.label"
+                          ></span>
+                          <span
+                            class="ml-auto text-[10.5px] font-mono text-faint"
+                            x-text="
+                              r.deliveredPick ? '← delivered pick' : r.winner ? '← measured winner' : ''
+                            "
+                          ></span>
+                        </div>
+                        <div class="mt-1 flex flex-wrap gap-3 text-[11.5px] font-mono text-dim">
+                          <span x-text="'roofline ' + r.roofline"></span>
+                          <span x-text="'executor ' + r.executor.toFixed(0)"></span>
+                          <span x-text="'delivered ' + r.delivered.toFixed(0)"></span>
+                          <span
+                            class="text-faint"
+                            x-text="'measured ' + r.route.measuredUs + ' µs'"
+                          ></span>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                  <div
+                    class="pt-3 border-t border-line text-[13px] font-semibold"
+                    :class="correct ? 'text-eva' : 'text-bad'"
+                  >
+                    <span
+                      x-text="
+                        correct
+                          ? '✓ delivered pricing picks the measured-fastest route'
+                          : '✕ the delivered pick is inverted — the model prices the slower route cheaper'
+                      "
+                    ></span>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="mt-4 rounded-2xl border border-line bg-panel p-5 text-[13.5px] text-dim leading-relaxed"
+              >
+                <b class="text-ink">The inversion is a calibration gap.</b> Uncalibrated, the
+                delivered model prices the batched carrier ~25 % cheaper and it measures 1.9–2.7×
+                slower — the ranking is inverted. Feeding measured per-family corrections back lands
+                the measured-fastest route on every probe case.
+                <span class="text-faint"
+                  >(<code>project/retros/measured-cost-model.md</code>.)</span
+                >
+              </div>
+            </section>
+
+            <!-- ── 11 · what 'runnable' means ────────────────────── -->
+            <section x-show="i === 11" x-data="artifacts">
+              <p class="text-dim leading-relaxed">
+                A price is not a program. Something has to ship as a file that
+                <b class="text-ink">runs</b>. <code>export_optimized</code> writes a
+                <code>module</code> / <code>safetensors</code> / <code>state_dict</code> /
+                <code>torchscript</code> artifact, and a <code>.pt2</code> round-trips to a
+                <b class="text-ink">standalone</b> program with no catopt at inference. Delivery is
+                also a <em>runner</em> — the CUDA-graph runner captures an executor into one replay,
+                and the opt-in Rust engine is a faster closure over the same IR.
+              </p>
+              <div class="mt-5 grid lg:grid-cols-5 gap-4">
+                <div class="lg:col-span-2 rounded-2xl border border-line bg-panel p-5">
+                  <div class="text-[11.5px] uppercase tracking-widest text-faint mb-3">
+                    an artifact
+                  </div>
+                  <div class="space-y-2">
+                    <template x-for="(a, k) in artifacts" :key="a.id">
+                      <button
+                        @click="pick(k)"
+                        class="w-full text-left px-3.5 py-2.5 rounded-xl border bg-panel transition"
+                        :class="sel === k ? 'border-gold' : 'border-line hover:border-dim'"
+                      >
+                        <div class="flex items-baseline gap-2">
+                          <span
+                            class="text-[12.5px]"
+                            :class="sel === k ? 'text-gold' : 'text-ink'"
+                            x-text="a.label"
+                          ></span>
+                          <span
+                            class="ml-auto font-mono text-[10.5px] text-faint"
+                            x-text="a.ext"
+                          ></span>
+                        </div>
+                        <div
+                          class="text-[11px] text-faint mt-0.5"
+                          x-text="a.standalone ? 'runs standalone' : 'needs the runtime'"
+                        ></div>
+                      </button>
+                    </template>
+                  </div>
+                </div>
+                <div class="lg:col-span-3 rounded-2xl border border-line bg-panel p-5 space-y-4">
+                  <div>
+                    <div class="text-[12.5px] text-ink font-semibold" x-text="artifact.label"></div>
+                    <div
+                      class="text-[13px] text-dim leading-relaxed mt-1"
+                      x-text="artifact.note"
+                    ></div>
+                  </div>
+                  <div class="pt-3 border-t border-line">
+                    <div class="text-[11.5px] uppercase tracking-widest text-faint mb-2">
+                      to run standalone it needs
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                      <template x-for="n in needs" :key="n">
+                        <span
+                          class="px-2 py-0.5 rounded-md border border-line text-[11.5px] font-mono text-dim"
+                          x-text="n"
+                        ></span>
+                      </template>
+                    </div>
+                    <div
+                      class="mt-3 text-[13px] font-semibold"
+                      :class="standalone ? 'text-eva' : 'text-gold'"
+                      x-text="
+                        standalone
+                          ? '✓ runs with no catopt at inference'
+                          : '— needs the catopt runtime or the model class back'
+                      "
+                    ></div>
+                  </div>
+                  <div class="pt-3 border-t border-line text-[12px] text-faint">
+                    <span x-text="standaloneCount + ' of ' + artifacts.length"></span> artifacts run
+                    standalone · <code>.pt2</code> is the format that round-trips with no catopt.
+                  </div>
+                </div>
+              </div>
+              <div
+                class="mt-4 rounded-2xl border border-line bg-panel p-5 text-[13.5px] text-dim leading-relaxed"
+              >
+                <b class="text-ink">Delivery is the execution dimension, one level down.</b> The
+                runner decides how the term runs (<code>CudaGraphRunner</code>,
+                <code>TorchCompileRunner</code>, <code>ChainedRunner</code>), and the artifact
+                decides what ships. A new backend (ONNX) landed as a port pair with zero core edits
+                — the same boundary that makes the artifact swappable.
+                <span class="text-faint">(<code>docs/api.md</code>.)</span>
+              </div>
+            </section>
+
+            <!-- ── 12 · the architecture ─────────────────────────── -->
+            <section x-show="i === 12" x-data="swap">
               <p class="text-dim leading-relaxed">
                 Look back at everything you touched. Each piece belongs to exactly one of four jobs:
                 <b style="color: var(--color-sem)">semantics</b> (what is equivalent),
@@ -1235,7 +1606,7 @@
             </section>
 
             <!-- ── 10 · advanced tensions ────────────────────────── -->
-            <section x-show="i === 10" x-data="tensions">
+            <section x-show="i === 13" x-data="tensions">
               <p class="text-dim leading-relaxed">
                 You now have the whole machine. These are the cases that separate a toy from a
                 system — each one is a place where the four dimensions are doing real work.
@@ -1271,7 +1642,7 @@
             </section>
 
             <!-- ── 11 · laws about laws ────────────────────────────── -->
-            <section x-show="i === 11" x-data="coherence">
+            <section x-show="i === 14" x-data="coherence">
               <p class="text-dim leading-relaxed">
                 Every level so far treated the law library as a flat set. It is not — laws
                 <b class="text-ink">relate</b>. One can <em>derive</em> another (then it adds no new
@@ -1355,7 +1726,7 @@
             </section>
 
             <!-- ── 12 · the vocabulary grows itself ──────────────── -->
-            <section x-show="i === 12" x-data="mint">
+            <section x-show="i === 15" x-data="mint">
               <p class="text-dim leading-relaxed">
                 Everything so far assumed the vocabulary was given: five ops, six laws. The real
                 system can <b class="text-ink">grow its own vocabulary</b> — mint a new semantic
@@ -1445,7 +1816,7 @@
             </section>
 
             <!-- ── 13 · true is not the same as paying ───────────── -->
-            <section x-show="i === 13" x-data="truthpay">
+            <section x-show="i === 16" x-data="truthpay">
               <p class="text-dim leading-relaxed">
                 A candidate law can be <em>true</em> and still not <em>pay</em>. Worse: a guard that
                 certifies it can be perfect on every binding you measured — and unsound just outside
@@ -1561,7 +1932,7 @@
             </section>
 
             <!-- ── 14 · where discovery can pay ──────────────────── -->
-            <section x-show="i === 14" x-data="expose">
+            <section x-show="i === 17" x-data="expose">
               <p class="text-dim leading-relaxed">
                 Discovery can only rewrite math the IR can <em>see</em>. Export a model to the
                 op-graph and measure the FLOPs-weighted share of nodes whose op appears in at least
@@ -1683,7 +2054,7 @@
             </section>
 
             <!-- ── 15 · sharing is a morphism ────────────────────── -->
-            <section x-show="i === 15" x-data="substrate">
+            <section x-show="i === 18" x-data="substrate">
               <p class="text-dim leading-relaxed">
                 The op-graph IR is the lowering surface. A second, parallel presentation re-reads it
                 as <b class="text-ink">morphisms</b>: <code>seq</code> (composition),
@@ -1766,7 +2137,7 @@
             </section>
 
             <!-- ── 16 · a backend is a port ──────────────────────── -->
-            <section x-show="i === 16" x-data="ports">
+            <section x-show="i === 19" x-data="ports">
               <p class="text-dim leading-relaxed">
                 A backend is a <b class="text-ink">port</b>: a <code>Source</code> that lifts a
                 model to the IR and a <code>Sink</code> that lowers the IR to something runnable,
@@ -1871,8 +2242,287 @@
               </div>
             </section>
 
-            <!-- ── 17 · the ledger of negatives ──────────────────── -->
-            <section x-show="i === 17" x-data="honest">
+            <!-- ── 20 · one record per idea ──────────────────────── -->
+            <section x-show="i === 20" x-data="cellstore">
+              <p class="text-dim leading-relaxed">
+                The project spelled "a cell as data" five ways — laws, constructed objects,
+                <code>OpDef</code>s, handler dicts, evidence rows. The
+                <b class="text-ink">cell store</b> makes it one record: every vocabulary item is a
+                <code>Cell{role, name, body, kind, provenance}</code>, where role ∈
+                <code>op</code> / <code>law</code> / <code>object</code> / <code>handle</code>.
+                <code>merge_fragments</code> assembles the store from named fragments — and a
+                duplicate <code>(role, name)</code> <b class="text-ink">raises</b>.
+              </p>
+              <div class="mt-5 grid lg:grid-cols-5 gap-4">
+                <div class="lg:col-span-2 rounded-2xl border border-line bg-panel p-5">
+                  <div class="text-[11.5px] uppercase tracking-widest text-faint mb-3">
+                    assemble the store
+                  </div>
+                  <div class="text-[13px] text-dim">
+                    <span class="text-ink font-semibold" x-text="size"></span> cells merged from
+                    fragments
+                  </div>
+                  <button
+                    @click="addDuplicate()"
+                    class="mt-4 w-full px-3 py-2 rounded-lg text-[13px] border border-line bg-panel2 hover:border-bad"
+                  >
+                    add the rival fragment…
+                  </button>
+                  <button
+                    @click="reset()"
+                    class="mt-2 w-full px-3 py-2 rounded-lg text-[13px] border border-line text-dim hover:text-ink"
+                  >
+                    reset
+                  </button>
+                  <div
+                    class="mt-4 rounded-xl border p-3 text-[12.5px]"
+                    :class="conflict ? 'border-bad/50 text-bad' : 'border-eva/40 text-eva'"
+                  >
+                    <span
+                      x-text="
+                        conflict
+                          ? '✕ conflict — ' + conflict.role + ':' + conflict.name + ' already exists; the merge raised'
+                          : '✓ merged cleanly — no duplicate (role, name)'
+                      "
+                    ></span>
+                  </div>
+                </div>
+                <div class="lg:col-span-3 rounded-2xl border border-line bg-panel p-5 space-y-4">
+                  <div>
+                    <div class="text-[11.5px] uppercase tracking-widest text-faint mb-2">
+                      one cell per role → one handl row
+                    </div>
+                    <div class="space-y-1.5">
+                      <template x-for="r in byRole" :key="r.role">
+                        <div class="flex items-center gap-2 text-[12.5px]">
+                          <span class="font-mono text-ink w-16" x-text="r.role"></span>
+                          <span class="font-mono text-faint" x-text="r.count + ' cells'"></span>
+                          <span class="ml-auto font-mono text-sea" x-text="'→ ' + r.handl"></span>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                  <div class="pt-3 border-t border-line">
+                    <div class="text-[11.5px] uppercase tracking-widest text-faint mb-2">
+                      provenance origins present
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                      <template x-for="o in allOrigins" :key="o">
+                        <span
+                          class="px-2 py-0.5 rounded-md border text-[11.5px] font-mono"
+                          :class="
+                            origins.includes(o)
+                              ? 'border-eva/40 text-eva'
+                              : 'border-line text-faint'
+                          "
+                          x-text="o"
+                        ></span>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="mt-4 rounded-2xl border border-line bg-panel p-5 text-[13.5px] text-dim leading-relaxed"
+              >
+                <b class="text-ink">One schema, many views.</b> <code>laws()</code> /
+                <code>ruleset()</code> feed <code>EGraph.run</code>; <code>handlers()</code> keys by
+                tag; <code>to_data</code>/<code>from_data</code> is one codec over the
+                law/object/opdef records. Silent override is how vocabularies drift — so the merge
+                refuses it, and alpha-equal 2-cells are a discovery fact, not a schema error.
+                <span class="text-faint">(<code>project/plans/0022-cell-store.md</code>.)</span>
+              </div>
+            </section>
+
+            <!-- ── 21 · the game layer ───────────────────────────── -->
+            <section x-show="i === 21" x-data="game">
+              <p class="text-dim leading-relaxed">
+                The same machinery is also a <b class="text-ink">game</b>.
+                <code>catopt_discovery.engine</code> is the <code>Board</code> protocol — a program,
+                a legal move set, a referee — plus the generic episode/train/eval drivers;
+                <code>players</code> is <code>LinearPolicy</code>, the learned arm; and
+                <code>python -m catopt_discovery.play --domain …</code> is the registry + CLI.
+              </p>
+              <div class="mt-5 grid lg:grid-cols-5 gap-4">
+                <div class="lg:col-span-2 rounded-2xl border border-line bg-panel p-5">
+                  <div class="text-[11.5px] uppercase tracking-widest text-faint mb-3">
+                    step an episode
+                  </div>
+                  <div class="space-y-1.5">
+                    <template x-for="(t, k) in transcript" :key="k">
+                      <div
+                        class="rounded-lg border px-3 py-2"
+                        :class="k === step ? 'border-gold' : 'border-line bg-panel2'"
+                      >
+                        <span
+                          class="font-mono text-[12px]"
+                          :class="k === step ? 'text-gold' : 'text-ink'"
+                          x-text="t.move + '()'"
+                        ></span>
+                        <div class="text-[11px] text-dim mt-0.5" x-text="t.note"></div>
+                      </div>
+                    </template>
+                  </div>
+                  <div class="mt-4 flex gap-2">
+                    <button
+                      @click="next()"
+                      :disabled="done"
+                      class="flex-1 px-3 py-2 rounded-lg text-[13px] border border-line bg-panel2 hover:border-gold disabled:opacity-30"
+                    >
+                      step →
+                    </button>
+                    <button
+                      @click="reset()"
+                      class="flex-1 px-3 py-2 rounded-lg text-[13px] border border-line text-dim hover:text-ink"
+                    >
+                      reset
+                    </button>
+                  </div>
+                  <div class="mt-2 text-[12px] text-faint font-mono">
+                    reward collected <span class="text-ink" x-text="reward.toFixed(2)"></span>
+                  </div>
+                </div>
+                <div class="lg:col-span-3 rounded-2xl border border-line bg-panel p-5 space-y-4">
+                  <div>
+                    <div class="text-[11.5px] uppercase tracking-widest text-faint mb-2">
+                      the players (measured AP)
+                    </div>
+                    <div class="space-y-2">
+                      <template x-for="p in players" :key="p.id">
+                        <div>
+                          <div class="flex items-baseline justify-between text-[12.5px]">
+                            <span
+                              :class="p.id === best.id ? 'text-eva' : 'text-dim'"
+                              x-text="p.label"
+                            ></span>
+                            <span class="font-mono text-ink" x-text="p.ap.toFixed(3)"></span>
+                          </div>
+                          <div class="mt-1 h-1.5 rounded-full bg-panel2 overflow-hidden">
+                            <div
+                              class="h-full"
+                              :class="p.id === best.id ? 'bg-eva' : 'bg-gold'"
+                              :style="`width:${Math.min(100, 100 * p.ap * 6)}%`"
+                            ></div>
+                          </div>
+                          <div class="text-[11px] text-faint mt-0.5" x-text="p.note"></div>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                  <div class="pt-3 border-t border-line text-[13px] text-dim">
+                    The learned prior buys
+                    <span class="text-eva font-semibold" x-text="priorGain.toFixed(1) + '×'"></span>
+                    the cost-delta heuristic on held-out pages —
+                    <span class="font-mono text-ink" x-text="priorComparison.learned.ap"></span> vs
+                    <span class="font-mono text-ink" x-text="priorComparison.heuristic.ap"></span>
+                    AP.
+                  </div>
+                  <div class="pt-3 border-t border-line">
+                    <div class="text-[11.5px] uppercase tracking-widest text-faint mb-2">
+                      registered domains
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                      <template x-for="d in domains" :key="d">
+                        <span
+                          class="px-2 py-0.5 rounded-md border border-line text-[11.5px] font-mono text-dim"
+                          x-text="d"
+                        ></span>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="mt-4 rounded-2xl border border-line bg-panel p-5 text-[13.5px] text-dim leading-relaxed"
+              >
+                <b class="text-ink">A board is a program + a legal move set + a referee.</b> The
+                reward is certified improvement; a policy may only <em>order</em> moves, never
+                change what is legal. The meta-arena mixes the two dimensions — <code>fire</code>,
+                <code>saturate</code>, <code>declare</code>, <code>claim</code>,
+                <code>extract</code>
+                — so a construction can be minted mid-search.
+                <span class="text-faint"
+                  >(<code>project/retros/generic-game-layer.md</code>,
+                  <code>meta-arena.md</code>.)</span
+                >
+              </div>
+            </section>
+
+            <!-- ── 22 · how the project stays honest ─────────────── -->
+            <section x-show="i === 22" x-data="gates">
+              <p class="text-dim leading-relaxed">
+                Every claim in the course is only as good as the checks that keep the tree honest.
+                The project runs a stack of <b class="text-ink">gates</b> before any change finishes
+                — and the rule that keeps them honest is
+                <b class="text-ink">no new suppressions</b>. Break one and watch the run fail.
+              </p>
+              <div class="mt-5 grid lg:grid-cols-5 gap-4">
+                <div class="lg:col-span-2 rounded-2xl border border-line bg-panel p-5">
+                  <div class="text-[11.5px] uppercase tracking-widest text-faint mb-3">
+                    break a gate
+                  </div>
+                  <div class="space-y-1.5">
+                    <template x-for="g in gates" :key="g.id">
+                      <button
+                        @click="break(g.id)"
+                        class="w-full text-left px-3 py-2 rounded-lg border text-[12.5px] transition"
+                        :class="
+                          broken === g.id
+                            ? 'border-bad text-bad'
+                            : 'border-line bg-panel2 hover:border-gold'
+                        "
+                      >
+                        <span class="font-mono" x-text="g.label"></span>
+                        <span class="text-faint" x-text="' · ' + g.floor"></span>
+                      </button>
+                    </template>
+                  </div>
+                  <button
+                    @click="repair()"
+                    class="mt-4 w-full px-3 py-2 rounded-lg text-[13px] border border-line text-dim hover:text-ink"
+                  >
+                    repair the tree
+                  </button>
+                </div>
+                <div class="lg:col-span-3 rounded-2xl border border-line bg-panel p-5 space-y-4">
+                  <div class="space-y-1.5">
+                    <template x-for="r in results" :key="r.gate.id">
+                      <div class="flex items-center gap-2 text-[12.5px]">
+                        <span
+                          class="w-3 text-center font-mono"
+                          :class="r.pass ? 'text-eva' : 'text-bad'"
+                          x-text="r.pass ? '✓' : '✕'"
+                        ></span>
+                        <span class="font-mono text-ink w-28" x-text="r.gate.label"></span>
+                        <span class="text-dim" x-text="r.gate.what"></span>
+                      </div>
+                    </template>
+                  </div>
+                  <div
+                    class="pt-3 border-t border-line font-mono text-[13px]"
+                    :class="passing ? 'text-eva' : 'text-bad'"
+                    x-text="report"
+                  ></div>
+                  <div class="pt-3 border-t border-line text-[12.5px] text-dim leading-relaxed">
+                    <b class="text-ink">the rule — </b><span x-text="rule"></span>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="mt-4 rounded-2xl border border-line bg-panel p-5 text-[13.5px] text-dim leading-relaxed"
+              >
+                <b class="text-ink">Floors, not targets.</b> Coverage is pinned at
+                <b class="text-ink">100 %</b> on the shipped six packages and a
+                <b class="text-ink">99 %</b> ratchet on discovery; <code>ty</code>'s exclude list is
+                empty and stays empty; the radon ratchet pins every function's complexity; the bench
+                gate compares against committed baselines. A finding is fixed, never silenced — that
+                is what makes the rest of the course's numbers trustworthy.
+                <span class="text-faint">(<code>AGENTS.md</code>.)</span>
+              </div>
+            </section>
+
+            <!-- ── 23 · the ledger of negatives ──────────────────── -->
+            <section x-show="i === 23" x-data="honest">
               <p class="text-dim leading-relaxed">
                 Every claim in this course is bounded by what was measured — and the most
                 instructive results are the <b class="text-ink">refusals</b>. Methodology is not a
@@ -1927,7 +2577,7 @@
             </section>
 
             <!-- ── 18 · approximation with a certificate ─────────── -->
-            <section x-show="i === 18" x-data="bounded">
+            <section x-show="i === 24" x-data="bounded">
               <p class="text-dim leading-relaxed">
                 Rewriting is exact by default: the certificate replays and the result is the
                 <em>same function</em>. But sometimes a near-equal program is allowed — if it
@@ -2059,7 +2709,7 @@
             </section>
 
             <!-- ── 19 · the program must run ─────────────────────── -->
-            <section x-show="i === 19" x-data="deliver">
+            <section x-show="i === 25" x-data="deliver">
               <p class="text-dim leading-relaxed">
                 Search picks a <em>term</em>; something still has to <b class="text-ink">run</b> it.
                 The same term, delivered five ways, runs at wildly different speeds — one dispatch
@@ -2184,7 +2834,7 @@
             </section>
 
             <!-- ── 20 · the cost model can be wrong ──────────────── -->
-            <section x-show="i === 20" x-data="pricing">
+            <section x-show="i === 26" x-data="pricing">
               <p class="text-dim leading-relaxed">
                 The cost model <em>steers</em> selection: the search extracts the cheapest member it
                 can price. So when the model is wrong, the search is wrong. Here is the measured
@@ -2299,7 +2949,7 @@
             </section>
 
             <!-- ── 21 · the payoff: where to improve ─────────────── -->
-            <section x-show="i === 21" x-data="improve">
+            <section x-show="i === 27" x-data="improve">
               <p class="text-dim leading-relaxed">
                 This course is not the point — <b class="text-ink">improving the project</b> is.
                 Every idea you met maps to a real piece of open work: a named
@@ -2423,6 +3073,121 @@
             </div>
           </div>
 
+          <!-- ── module review (plan 0028 §C) ─────────────────────── -->
+          <div
+            x-show="currentModuleState.unlocked"
+            x-cloak
+            class="mt-10 rounded-2xl border bg-panel p-6"
+            :class="currentModuleState.cleared ? 'border-eva/40' : 'border-gold/40'"
+          >
+            <div class="flex items-baseline gap-2 flex-wrap">
+              <div class="text-[11.5px] uppercase tracking-widest text-gold">
+                module review · <span x-text="currentModule.roman"></span>
+                <span class="normal-case tracking-normal" x-text="currentModule.title"></span>
+              </div>
+              <span
+                class="ml-auto text-[11.5px] font-semibold"
+                :class="currentModuleState.cleared ? 'text-eva' : 'text-faint'"
+                x-text="
+                  currentModuleState.cleared
+                    ? '✓ review passed'
+                    : currentModuleState.answered + '/' + currentModuleState.total + ' answered'
+                "
+              ></span>
+            </div>
+            <p class="text-[13px] text-dim mt-1">
+              Spaced retrieval over the arc — every question recombines concepts from at least two
+              of its levels. Pass ≥ 70 % to clear the module.
+            </p>
+            <div class="mt-4 space-y-5">
+              <template x-for="(q, qi) in currentModule.questions" :key="q.id">
+                <div>
+                  <div class="flex items-baseline gap-2 flex-wrap">
+                    <span class="font-mono text-[11px] text-faint" x-text="qi + 1"></span>
+                    <span class="text-[15px] font-semibold" x-text="q.q"></span>
+                    <span
+                      class="px-1.5 py-0.5 rounded border border-line text-[10.5px] uppercase tracking-widest text-faint"
+                      x-text="q.concept"
+                    ></span>
+                  </div>
+                  <div class="mt-3 flex flex-wrap gap-2">
+                    <template x-for="o in q.opts" :key="o">
+                      <button
+                        @click="answerReview(currentModule.id, q.id, o)"
+                        class="px-3.5 py-2 rounded-lg text-[13.5px] border transition"
+                        :class="
+                          reviewPicked(currentModule.id, q.id) === o
+                            ? o === q.ok
+                              ? 'border-eva text-eva'
+                              : 'border-bad text-bad'
+                            : 'border-line bg-panel2 hover:border-gold'
+                        "
+                        x-text="o"
+                      ></button>
+                    </template>
+                  </div>
+                  <div
+                    class="mt-3 text-[13.5px] text-dim"
+                    x-show="reviewPicked(currentModule.id, q.id) !== undefined"
+                    x-cloak
+                  >
+                    <span
+                      class="font-semibold"
+                      :class="reviewPassed(currentModule.id, q.id) ? 'text-eva' : 'text-bad'"
+                      x-text="reviewPassed(currentModule.id, q.id) ? '✓ correct — ' : '✕ not quite — '"
+                    ></span>
+                    <span x-text="q.why"></span>
+                  </div>
+                </div>
+              </template>
+            </div>
+            <div class="mt-5 flex items-center gap-3 flex-wrap">
+              <button
+                @click="submitReview(currentModule.id)"
+                class="px-4 py-2 rounded-xl text-[13.5px] font-semibold"
+                :class="
+                  currentModuleState.passed
+                    ? 'bg-eva text-black hover:opacity-90'
+                    : 'border border-line text-faint'
+                "
+                x-text="currentModuleState.cleared ? '✓ passed' : 'submit the review'"
+              ></button>
+              <button
+                @click="resetReview(currentModule.id)"
+                class="px-3 py-2 rounded-lg border border-line text-[13px] text-dim hover:text-ink"
+              >
+                retry
+              </button>
+              <span
+                class="text-[12.5px]"
+                :class="currentModuleState.passed ? 'text-eva' : 'text-faint'"
+                x-text="
+                  currentModuleState.passed
+                    ? 'passed — the module is cleared'
+                    : 'pass ≥ 70 % to clear the module'
+                "
+              ></span>
+            </div>
+            <div
+              x-show="currentModuleState.weak.length"
+              x-cloak
+              class="mt-4 pt-3 border-t border-line"
+            >
+              <div class="text-[11.5px] uppercase tracking-widest text-faint mb-1.5">
+                send me back to
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <template x-for="w in reviewWeak(currentModule.id)" :key="w.id">
+                  <button
+                    @click="gotoLevel(w.levels[0])"
+                    class="px-2 py-0.5 rounded-full border border-gold/40 text-[11.5px] text-gold hover:bg-panel2"
+                    x-text="w.label + ' — ' + w.levels[0]"
+                  ></button>
+                </template>
+              </div>
+            </div>
+          </div>
+
           <!-- ── you can now · in the real project (plan 0028 §B 7–8) ── -->
           <div class="mt-6 grid lg:grid-cols-2 gap-4">
             <div class="rounded-2xl border border-eva/40 bg-panel p-5">
@@ -2482,6 +3247,71 @@
               You cleared all <span class="text-ink" x-text="n"></span> levels. Here is the whole
               course, in order — its own summary of itself.
             </p>
+            <!-- the completion state (plan 0028 §C) -->
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+              <div class="rounded-xl border border-line bg-panel2 p-3">
+                <div class="text-[11px] uppercase tracking-widest text-faint">xp · rank</div>
+                <div
+                  class="text-[15px] font-semibold text-gold font-mono"
+                  x-text="completion.xp.toLocaleString()"
+                ></div>
+                <div
+                  class="text-[12px] text-dim"
+                  x-text="
+                    completion.rank.name +
+                    (completion.nextRank ? ' → ' + completion.nextRank.name : ' — top rank')
+                  "
+                ></div>
+              </div>
+              <div class="rounded-xl border border-line bg-panel2 p-3">
+                <div class="text-[11px] uppercase tracking-widest text-faint">levels · reviews</div>
+                <div
+                  class="text-[15px] font-semibold text-ink font-mono"
+                  x-text="completion.levelsCleared + '/' + completion.levelsTotal"
+                ></div>
+                <div
+                  class="text-[12px] text-dim"
+                  x-text="completion.reviewsPassed + '/' + completion.reviewsTotal + ' module reviews'"
+                ></div>
+              </div>
+              <div class="rounded-xl border border-line bg-panel2 p-3">
+                <div class="text-[11px] uppercase tracking-widest text-faint">concepts</div>
+                <div
+                  class="text-[15px] font-semibold text-eva font-mono"
+                  x-text="completion.mastered + '/' + completion.conceptsTotal + ' mastered'"
+                ></div>
+                <div class="text-[12px] text-dim">
+                  <span class="text-eva" x-text="completion.mastered"></span> mastered ·
+                  <span class="text-gold" x-text="completion.familiar"></span> familiar ·
+                  <span class="text-faint" x-text="completion.weak"></span> weak
+                </div>
+              </div>
+              <div class="rounded-xl border border-line bg-panel2 p-3">
+                <div class="text-[11px] uppercase tracking-widest text-faint">badges</div>
+                <div
+                  class="text-[15px] font-semibold text-gold font-mono"
+                  x-text="completion.badgesEarned + '/' + completion.badgesTotal"
+                ></div>
+                <div
+                  class="text-[12px] text-dim"
+                  x-text="fullyComplete ? 'full comprehension' : 'keep going — reviews and mastery'"
+                ></div>
+              </div>
+            </div>
+            <div class="mb-5 rounded-xl border border-line bg-panel2 p-4">
+              <div class="text-[11.5px] uppercase tracking-widest text-gold mb-2">
+                the gaps you are now equipped to attack
+              </div>
+              <ul class="space-y-2">
+                <template x-for="g in completion.gaps" :key="g.id">
+                  <li class="text-[12.5px]">
+                    <span class="text-ink font-semibold" x-text="g.idea"></span>
+                    <span class="text-dim"> — next: <span x-text="g.next"></span></span>
+                    <span class="text-faint"> (level <span x-text="g.levelNo"></span>)</span>
+                  </li>
+                </template>
+              </ul>
+            </div>
             <ol class="space-y-1.5">
               <template x-for="(r, k) in recap" :key="r.id">
                 <li class="flex items-baseline gap-3 text-[13px]">
@@ -2496,7 +3326,7 @@
               </template>
             </ol>
             <div class="mt-5 pt-4 border-t border-line text-[13px] text-dim">
-              Now improve it — level 21 mapped every idea to the project's open work. Pick a gap and
+              Now improve it — level 27 mapped every idea to the project's open work. Pick a gap and
               run the next measurement.
             </div>
           </div>

@@ -4,10 +4,16 @@ import { CONCEPTS, MODULES, tier } from "engine";
 
 import { Coherence } from "../src/components/coherence.ts";
 import { Compare } from "../src/components/compare.ts";
+import { Corpus } from "../src/components/corpus.ts";
+import { CostModelFamily } from "../src/components/models.ts";
 import { Course, STORAGE_KEY } from "../src/components/course.ts";
 import { Bounded } from "../src/components/bounded.ts";
+import { CellStore } from "../src/components/cellstore.ts";
 import { Deliver } from "../src/components/deliver.ts";
+import { DeliveryArtifacts } from "../src/components/artifacts.ts";
 import { Expose } from "../src/components/exposure.ts";
+import { Game } from "../src/components/game.ts";
+import { Gates } from "../src/components/gates.ts";
 import { Honest } from "../src/components/honest.ts";
 import { Improve } from "../src/components/improve.ts";
 import { Mint } from "../src/components/mint.ts";
@@ -97,17 +103,28 @@ describe("course gating", () => {
     }
   });
 
-  it("runs twenty-two levels, 0 through 21", () => {
+  it("runs twenty-eight levels, 0 through 27", () => {
     const c = new Course();
-    expect(c.n).toBe(22);
+    expect(c.n).toBe(28);
     expect(c.levels.at(-1)?.id).toBe("improve");
     expect(c.levels.map((l) => l.id).length).toBe(new Set(c.levels.map((l) => l.id)).size);
+  });
+
+  it("includes the six coverage levels (plan 0028 §D) in course order", () => {
+    const c = new Course();
+    const ids = c.levels.map((l) => l.id);
+    for (const id of ["corpus", "models", "artifacts", "cellstore", "game", "gates"]) {
+      expect(ids).toContain(id);
+    }
+    expect(ids.indexOf("corpus")).toBeLessThan(ids.indexOf("reach"));
+    expect(ids.indexOf("models")).toBeLessThan(ids.indexOf("architecture"));
+    expect(ids.indexOf("gates")).toBeLessThan(ids.indexOf("honest"));
   });
 
   it("gives every level a ladder one-liner and a recap in order", () => {
     const c = new Course();
     for (const l of c.levels) expect(l.idea.length).toBeGreaterThan(0);
-    expect(c.recap).toHaveLength(22);
+    expect(c.recap).toHaveLength(28);
     expect(c.recap[0].idea).toBe("ops over data, one root");
     expect(c.recap.at(-1)?.idea).toBe("idea → blocker → next measurement");
     expect(c.recap.every((r) => !r.passed)).toBe(true);
@@ -118,7 +135,7 @@ describe("course gating", () => {
     expect(c.pct).toBe(0);
     c.goto(0);
     pass(c);
-    expect(c.pct).toBe(Math.round(100 / 22));
+    expect(c.pct).toBe(Math.round(100 / 28));
     expect(c.recap[0].passed).toBe(true);
   });
 
@@ -593,5 +610,219 @@ describe("improve", () => {
     expect(g.connection).toHaveLength(3);
     g.pick(99);
     expect(g.gap.level).toBe("honest");
+  });
+});
+
+describe("module reviews (plan 0028 §A/§C)", () => {
+  it("gives every level a module, and every module a review", () => {
+    const c = new Course();
+    for (const l of c.levels) {
+      const m = MODULES.find((x) => x.id === l.module);
+      expect(m).toBeDefined();
+      expect(m!.questions.length).toBeGreaterThanOrEqual(4);
+    }
+    expect(c.moduleStates).toHaveLength(6);
+    expect(c.currentModule.id).toBe(c.level.module);
+  });
+
+  it("unlocks a module's review only when its levels are all passed", () => {
+    const c = new Course();
+    const m = MODULES[0];
+    expect(c.moduleStates[0].unlocked).toBe(false);
+    for (const id of m.levels) {
+      c.gotoLevel(id);
+      pass(c);
+    }
+    expect(c.moduleStates[0].levelsCleared).toBe(true);
+    expect(c.moduleStates[0].unlocked).toBe(true);
+    expect(c.moduleStates[0].cleared).toBe(false); // the review is still needed
+  });
+
+  it("passes the review, records it, and clears the module", () => {
+    const c = new Course();
+    const m = MODULES[0];
+    for (const id of m.levels) {
+      c.gotoLevel(id);
+      pass(c);
+    }
+    for (const q of m.questions) c.answerReview(m.id, q.id, q.ok);
+    const r = c.submitReview(m.id);
+    expect(r.passed).toBe(true);
+    expect(c.reviewed).toContain(m.id);
+    expect(c.moduleStates[0].cleared).toBe(true);
+    expect(c.reviewsPassed).toBe(1);
+    expect(c.reviewPassed(m.id, m.questions[0].id)).toBe(true);
+  });
+
+  it("fails a review below threshold and sends the weak concepts back", () => {
+    const c = new Course();
+    const m = MODULES[0];
+    for (const id of m.levels) {
+      c.gotoLevel(id);
+      pass(c);
+    }
+    m.questions.forEach((q, i) => c.answerReview(m.id, q.id, i < 3 ? "definitely wrong" : q.ok));
+    const r = c.submitReview(m.id);
+    expect(r.passed).toBe(false);
+    expect(c.reviewed).not.toContain(m.id);
+    expect(c.moduleStates[0].weak.length).toBeGreaterThan(0);
+    expect(c.reviewWeak(m.id).length).toBeGreaterThan(0);
+    expect(c.reviewWeak(m.id)[0].levels.length).toBeGreaterThan(0);
+  });
+
+  it("feeds the mastery meter from review answers (spaced retrieval)", () => {
+    const c = new Course();
+    const m = MODULES[0];
+    const q = m.questions[0];
+    c.answerReview(m.id, q.id, q.ok);
+    expect(tier(c.mastery[q.concept])).not.toBe("weak");
+  });
+
+  it("persists review answers and the reviewed list", () => {
+    const map = withStorage();
+    const a = new Course();
+    const m = MODULES[0];
+    for (const q of m.questions) a.answerReview(m.id, q.id, q.ok);
+    a.submitReview(m.id);
+    expect(map.has(STORAGE_KEY)).toBe(true);
+
+    const b = new Course();
+    b.init();
+    expect(b.reviewed).toContain(m.id);
+    expect(b.reviewAnswers[m.id][m.questions[0].id]).toBe(m.questions[0].ok);
+    expect(b.reviewsPassed).toBe(1);
+  });
+
+  it("resets a review and un-records the pass", () => {
+    const c = new Course();
+    const m = MODULES[0];
+    for (const q of m.questions) c.answerReview(m.id, q.id, q.ok);
+    c.submitReview(m.id);
+    expect(c.reviewed).toContain(m.id);
+    c.resetReview(m.id);
+    expect(c.reviewed).not.toContain(m.id);
+    expect(c.reviewAnswers[m.id]).toBeUndefined();
+  });
+});
+
+describe("the completion state (plan 0028 §C)", () => {
+  it("reports XP, rank, levels, mastery, badges and the gaps", () => {
+    const c = new Course();
+    for (let k = 0; k < c.n; k++) {
+      c.goto(k);
+      pass(c);
+      c.engage();
+    }
+    const s = c.completion;
+    expect(s.levelsCleared).toBe(28);
+    expect(s.levelsTotal).toBe(28);
+    expect(s.xp).toBeGreaterThan(0);
+    expect(s.rank.name.length).toBeGreaterThan(0);
+    expect(s.weak + s.familiar + s.mastered).toBe(s.conceptsTotal);
+    expect(s.badgesEarned).toBeGreaterThan(0);
+    expect(s.badgesTotal).toBeGreaterThanOrEqual(s.badgesEarned);
+    expect(s.reviewsTotal).toBe(6);
+    expect(s.gaps.length).toBeGreaterThanOrEqual(6);
+    expect(s.gaps[0].blocker.length).toBeGreaterThan(0);
+    expect(s.gaps[0].next.length).toBeGreaterThan(0);
+  });
+
+  it("is not fully complete until every review passes", () => {
+    const c = new Course();
+    for (let k = 0; k < c.n; k++) {
+      c.goto(k);
+      pass(c);
+    }
+    expect(c.complete).toBe(true);
+    expect(c.fullyComplete).toBe(false);
+    for (const m of MODULES) {
+      for (const q of m.questions) c.answerReview(m.id, q.id, q.ok);
+      c.submitReview(m.id);
+    }
+    expect(c.reviewsPassed).toBe(6);
+    expect(c.fullyComplete).toBe(true);
+  });
+});
+
+describe("corpus", () => {
+  it("computes the funnel and cites the corpus totals", () => {
+    const c = new Corpus();
+    expect(c.classes.total).toBe(c.workloads.length);
+    expect(c.funnel.reduce((s, f) => s + f.count, 0)).toBe(c.workloads.length);
+    expect(c.classes.censusOnly).toBe(5);
+    expect(c.corpus.total).toBe(166);
+    expect(c.corpus.verified).toBe(114);
+    expect(c.defects).toHaveLength(3);
+    c.pick(99);
+    expect(c.picked.status).toBe("rejected");
+  });
+});
+
+describe("costmodels", () => {
+  it("shows the inversion and its calibrated fix", () => {
+    const m = new CostModelFamily();
+    expect(m.models).toHaveLength(4);
+    expect(m.inverted).toBe(true);
+    expect(m.correct).toBe(false);
+    expect(m.pick("roofline")).toContain("route-independent");
+    m.toggle();
+    expect(m.calibrated).toBe(true);
+    expect(m.correct).toBe(true);
+    expect(m.deliveredPick.kind).toBe("generic");
+    expect(m.rows).toHaveLength(2);
+    expect(m.rows.filter((r) => r.deliveredPick)).toHaveLength(1);
+  });
+});
+
+describe("artifacts", () => {
+  it("reads what each artifact needs to run", () => {
+    const a = new DeliveryArtifacts();
+    expect(a.standaloneCount).toBe(2);
+    expect(a.portable.id).toBe("pt2");
+    a.pick(5);
+    expect(a.artifact.id).toBe("cuda-graph");
+    expect(a.needs).toContain("a CUDA device");
+    expect(a.standalone).toBe(false);
+  });
+});
+
+describe("cellstore", () => {
+  it("assembles a store and raises on a duplicate", () => {
+    const c = new CellStore();
+    expect(c.size).toBeGreaterThan(0);
+    expect(c.conflict).toBeNull();
+    c.addDuplicate();
+    expect(c.conflict?.name).toBe("assoc");
+    expect(c.byRole.find((r) => r.role === "handle")!.handl).toBe("!Native");
+    c.reset();
+    expect(c.conflict).toBeNull();
+  });
+});
+
+describe("game", () => {
+  it("steps the episode and compares the priors", () => {
+    const g = new Game();
+    expect(g.domains).toContain("open");
+    expect(g.at.move).toBe("saturate");
+    g.next();
+    expect(g.at.move).toBe("declare");
+    expect(g.best.id).toBe("learned");
+    expect(g.priorComparison.learned.ap).toBeCloseTo(0.133, 6);
+    expect(g.priorComparison.heuristic.ap).toBeCloseTo(0.045, 6);
+    g.reset();
+    expect(g.step).toBe(0);
+  });
+});
+
+describe("gates", () => {
+  it("breaks a gate and fails the run", () => {
+    const g = new Gates();
+    expect(g.passing).toBe(true);
+    g.break("coverage");
+    expect(g.passing).toBe(false);
+    expect(g.report).toContain("FAIL");
+    expect(g.rule).toContain("never silenced");
+    g.repair();
+    expect(g.passing).toBe(true);
   });
 });
