@@ -68,6 +68,11 @@ universal speedup.
   template. Constructs the search needs are laws too: the K-way
   chunk split (4.4×) and the shared-state reassociation (10.8–24.5%)
   are both admitted, guarded, fp64-verified data.
+- **The prior learns.** The open game's policy ships *trained*
+  (regenerable via `tools/train_open_prior.py`); on held-out pages its
+  ordering beats both the cold start and the cost-delta heuristic
+  (average precision 0.133 vs 0.045), and finds ~2× more useful laws
+  per episode.
 - **It finds its own laws.** The enumerator instantiates law shapes
   over the op grammar (1,160 candidates at depth ≤2 → five paying
   laws); the game synthesizes the *guard* a candidate needs
