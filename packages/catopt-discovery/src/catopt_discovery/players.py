@@ -2,22 +2,40 @@
 
 :class:`LinearPolicy` is the reusable learner: a softmax linear
 policy over whatever ``legal(state)`` enumerates, scored by an
-injected ``featurizer`` — the same architecture both arena players
-use, factored so a new domain is a featurizer and a schema, never a
-new policy class.  Training is episode REINFORCE with reward-to-go
-credit (a move gets the terminal payout it armed), an EMA baseline
-and clipped advantage; *epsilon* mixes uniform exploration into the
-sample for sparse-reward boards.
+injected ``featurizer``.  Training is episode REINFORCE with
+reward-to-go credit (a move gets the terminal payout it armed), an
+EMA baseline and clipped advantage; *epsilon* mixes uniform
+exploration into the sample for sparse-reward boards.
+
+The player/featurizer abstraction is *data*: a domain ships a
+:class:`DomainSpec` — its feature schema, its featurizer's
+**composable parts** (a state broadcast, the play-rate history, the
+move-kind one-hot, the action's own params) and its legal-move
+enumerator.  :class:`LearnedPlayer` is the one policy built from
+that spec; :class:`PlayHist` is the shared play-rate history the
+meta and open featurizers both read.
 """
 
 from __future__ import annotations
 
 import math
 import random
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable, Mapping
+from dataclasses import dataclass, field
 from typing import Any
 
-__all__ = ["LinearPolicy"]
+__all__ = [
+    "ActionFeats",
+    "Bias",
+    "DomainSpec",
+    "LearnedPlayer",
+    "LinearPolicy",
+    "OpOneHot",
+    "PlayHist",
+    "PlayRates",
+    "StateBroadcast",
+    "compose_featurizer",
+]
 
 #: REINFORCE constants — per-episode-return update normalized by
 #: step count, EMA running baseline, clipped advantage.
@@ -59,6 +77,184 @@ def _grad_row(
     return feats[i], ephi
 
 
+@dataclass
+class PlayHist:
+    """Within-episode play counts — the shared adaptation channel.
+
+    ``record`` tallies one played move of kind *op*; ``rate`` is that
+    kind's share of the episode's plays so far.  Both the meta and the
+    open featurizer render their ``h:<op>`` rows from it, so it lives
+    with the player rather than with either domain.
+    """
+
+    counts: dict[str, int] = field(default_factory=dict)
+    n: int = 0
+
+    def record(self, op: str) -> None:
+        """Tally one played move of kind *op*."""
+        self.counts[op] = self.counts.get(op, 0) + 1
+        self.n += 1
+
+    def rate(self, op: str) -> float:
+        """Share of this episode's plays of kind *op*."""
+        return self.counts.get(op, 0) / max(self.n, 1)
+
+
+#: The pre-consolidation name, kept as an alias for callers/tests.
+_Hist = PlayHist
+
+
+# ---------------------------------------------------------------------------
+#  Composable feature parts — a domain's featurizer as data
+# ---------------------------------------------------------------------------
+#
+#  Every part is a callable ``(state, action, hist, row) -> dict``: it
+#  returns the slice of the feature row it owns, and ``row`` is the
+#  partially-built row so a later part can read an earlier one's keys
+#  (the interaction terms).  A domain composes an ordered tuple of
+#  parts and the player reads the row they build — no per-domain
+#  ``featurize`` function.
+
+
+@dataclass(frozen=True)
+class Bias:
+    """The constant intercept every feature row carries."""
+
+    def __call__(
+        self, _state: Any, _action: Any, _hist: Any, _row: dict
+    ) -> dict[str, float]:
+        """Return ``{"bias": 1.0}``."""
+        return {"bias": 1.0}
+
+
+@dataclass(frozen=True)
+class StateBroadcast:
+    """A domain's ``st:*`` block — ``fn(state) -> dict``."""
+
+    fn: Callable[[Any], dict[str, float]]
+
+    def __call__(
+        self, state: Any, _action: Any, _hist: Any, _row: dict
+    ) -> dict[str, float]:
+        """Return the board-summary features for *state*."""
+        return self.fn(state)
+
+
+@dataclass(frozen=True)
+class PlayRates:
+    """``h:<op>`` rows — the play rates of *ops* this episode."""
+
+    ops: tuple[str, ...]
+
+    def __call__(
+        self, _state: Any, _action: Any, hist: PlayHist, _row: dict
+    ) -> dict[str, float]:
+        """Return ``hist.rate(op)`` for each tracked op."""
+        return {f"h:{op}": hist.rate(op) for op in self.ops}
+
+
+@dataclass(frozen=True)
+class OpOneHot:
+    """The ``op:<op>`` move-kind one-hot, filtered to the schema."""
+
+    schema: frozenset
+
+    def __call__(
+        self, _state: Any, action: Any, _hist: Any, _row: dict
+    ) -> dict[str, float]:
+        """Return the move-kind one-hot when the schema names it."""
+        key = f"op:{action.op}"
+        return {key: 1.0} if key in self.schema else {}
+
+
+@dataclass(frozen=True)
+class ActionFeats:
+    """A domain's action-param block — ``fn(action, row) -> dict``.
+
+    *row* is the partially-built feature row, so an interaction term
+    can read a broadcast value (``x:extract:improve = row["st:improve"]``).
+    """
+
+    fn: Callable[[Any, dict], dict[str, float]]
+
+    def __call__(
+        self, _state: Any, action: Any, _hist: Any, row: dict
+    ) -> dict[str, float]:
+        """Return the action's own params and interaction terms."""
+        return self.fn(action, row)
+
+
+def compose_featurizer(parts: tuple) -> Callable:
+    """Compose ordered feature *parts* into one featurizer.
+
+    Returns ``featurize(state, action, hist=None) -> dict``: each part
+    updates the row in order, so a later part can read an earlier
+    part's keys.  *hist* defaults to an empty :class:`PlayHist`.
+    """
+
+    def featurize(
+        state: Any, action: Any, hist: PlayHist | None = None
+    ) -> dict[str, float]:
+        h = PlayHist() if hist is None else hist
+        row: dict[str, float] = {}
+        for part in parts:
+            row.update(part(state, action, h, row))
+        return row
+
+    return featurize
+
+
+@dataclass(frozen=True)
+class DomainSpec:
+    """Per-domain player data — one :class:`LearnedPlayer`, many specs.
+
+    A domain declares its feature *schema*, the composable *parts*
+    that produce a feature row, its legal-move *enumerator*, its
+    default weight *prior* and (optionally) a candidate *rank*
+    scorer.  The player is constructed from this data; adding a
+    domain is a spec, never a player subclass.
+
+    ``featurize`` is the composed ``(state, action, hist) -> dict``
+    (:meth:`build` composes it from *parts*); it is a *stored*
+    attribute, so a module can re-export the very same function
+    object the registry binds.
+    """
+
+    features: tuple[str, ...]
+    legal: Any
+    parts: tuple
+    featurize: Any
+    weights: Mapping[str, float] | None = None
+    rank: Any = None
+    lr: float = _LR
+
+    def new_hist(self) -> PlayHist:
+        """Return an empty play-rate history for this domain."""
+        return PlayHist()
+
+    @classmethod
+    def build(
+        cls,
+        *,
+        features: Iterable[str],
+        legal: Any,
+        parts: tuple,
+        weights: Mapping[str, float] | None = None,
+        rank: Any = None,
+        lr: float = _LR,
+    ) -> DomainSpec:
+        """Build a spec, composing *parts* into its featurizer."""
+        return cls(
+            features=tuple(features),
+            legal=legal,
+            parts=tuple(parts),
+            featurize=compose_featurizer(parts),
+            weights=weights,
+            rank=rank,
+            lr=lr,
+        )
+
+
 class LinearPolicy:
     """A softmax linear policy over a board's legal moves.
 
@@ -87,7 +283,7 @@ class LinearPolicy:
         *,
         legal: Any,
         featurizer: Any,
-        weights: dict | None = None,
+        weights: Mapping | None = None,
         lr: float = _LR,
         temperature: float = 1.0,
         greedy: bool = False,
@@ -256,3 +452,83 @@ class LinearPolicy:
         for k, g in grad.items():
             self._w[k] = self._w.get(k, 0.0) + g
         self._ep = []
+
+
+class LearnedPlayer(LinearPolicy):
+    """The one learned player — a policy bound to a :class:`DomainSpec`.
+
+    ``SPEC`` is the class-level default spec; a shipped preset is a
+    subclass that sets it (``MetaLearnedPlayer`` / ``OpenLearnedPlayer``
+    — a ``SPEC`` each, no player code), and ``spec=`` binds one
+    explicitly.  The spec supplies the enumerator, the composed
+    featurizer, the feature schema, the weight prior and the learning
+    rate; *weights* / *legal* / *featurizer* / *lr* override it.
+    ``rank_score`` is the spec's candidate ranker (the open game's
+    page ordering), or ``None`` when the domain ships none.
+    """
+
+    SPEC: DomainSpec | None = None
+
+    def __init__(
+        self,
+        seed: int = 0,
+        *,
+        spec: DomainSpec | None = None,
+        weights: Mapping | None = None,
+        lr: float | None = None,
+        temperature: float = 1.0,
+        greedy: bool = False,
+        learn: bool = True,
+        legal: Any = None,
+        featurizer: Any = None,
+        epsilon: float = 0.0,
+    ) -> None:
+        """Bind the spec's enumerator, featurizer, prior and schema."""
+        spec = self.SPEC if spec is None else spec
+        if spec is None:
+            raise ValueError("LearnedPlayer requires a DomainSpec")
+        self._spec = spec
+        super().__init__(
+            seed,
+            legal=spec.legal if legal is None else legal,
+            featurizer=spec.featurize
+            if featurizer is None
+            else featurizer,
+            weights=spec.weights if weights is None else weights,
+            lr=spec.lr if lr is None else lr,
+            temperature=temperature,
+            greedy=greedy,
+            learn=learn,
+            epsilon=epsilon,
+            features=spec.features,
+        )
+
+    def fresh_hist(self) -> PlayHist:
+        """Return the domain's empty play-rate history."""
+        return self._spec.new_hist()
+
+    def frozen(self, seed: int = 0, *, greedy: bool = False) -> Any:
+        """Return a non-learning copy sharing the spec and weights."""
+        return type(self)(
+            seed=seed,
+            spec=self._spec,
+            legal=self._legal,
+            featurizer=self._featurizer,
+            weights=self.weights_dict(),
+            temperature=self._temp,
+            greedy=greedy,
+            learn=False,
+            epsilon=0.0,
+        )
+
+    def rank_score(self, cand: Any) -> float:
+        """Score *cand* under the spec's candidate ranker.
+
+        The open game's page ordering is exactly
+        ``w · rank(cand)``: every ``evaluate`` move shares its state
+        and move-kind features, so the policy's ordering over a page
+        is this scorer's ordering.
+        """
+        if self._spec.rank is None:
+            raise ValueError("this domain ships no candidate ranker")
+        return _dot(self._w, self._spec.rank(cand))

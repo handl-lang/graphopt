@@ -9,14 +9,15 @@ is four moves deep: ``declare`` a fresh fold of a mined spec,
 ``saturate`` so the minted rule fires, ``handle`` to bind a
 supported kernel, ``extract`` to collect.
 
-``MetaLearnedPlayer`` is the same architecture as
-``arena_player.LearnedPlayer`` — a linear softmax policy over the
-legal move set, trained by episode-return REINFORCE — featurizing
-:class:`meta_arena.MetaState` instead.  The board is small (~dozens
-of legal moves vs the construction arena's ~50k), so the softmax
-is *exact* over the unplayed set — no perceptual cap, no played-mass
-correction; the gradient row is ``φ_chosen - E_π[φ]`` computed
-directly.
+``MetaLearnedPlayer`` is a linear softmax policy over the legal move
+set, trained by episode-return REINFORCE — the shared
+:class:`~catopt_discovery.players.LearnedPlayer`, bound to the
+:data:`META_SPEC` declared below (the feature schema, the featurizer's
+composable parts and ``meta_arena.legal_actions``).  The board is
+small (~dozens of legal moves vs the construction arena's ~50k), so
+the softmax is *exact* over the unplayed set — no perceptual cap, no
+played-mass correction; the gradient row is ``φ_chosen - E_π[φ]``
+computed directly.
 
 ``gen_cases`` builds the training corpus: seeded variants of the
 sites the handlers cover (a ``mul(x, sigmoid(x))`` under a ruleset
@@ -41,9 +42,19 @@ from catopt_core.laws import DEFAULT
 
 from . import lawdata
 from . import meta_arena as ma
-from .players import LinearPolicy
+from .players import (
+    ActionFeats,
+    Bias,
+    DomainSpec,
+    LearnedPlayer,
+    OpOneHot,
+    PlayHist,
+    PlayRates,
+    StateBroadcast,
+)
 
 __all__ = [
+    "META_SPEC",
     "MetaLearnedPlayer",
     "evaluate",
     "featurize",
@@ -52,8 +63,11 @@ __all__ = [
     "train_player",
 ]
 
-#: REINFORCE default — re-exposed for the preset's signature.
+#: REINFORCE default — the spec's learning rate.
 _LR = 0.1
+
+#: The pre-consolidation name, kept as an alias for callers/tests.
+_Hist = PlayHist
 
 
 # ---------------------------------------------------------------------------
@@ -68,26 +82,8 @@ def _bucket(name: Any, kind: str) -> int:
     return int.from_bytes(h[:4]) % width
 
 
-class _Hist:
-    """Within-episode play counts — the adaptation channel."""
-
-    def __init__(self) -> None:
-        """Start an empty episode history."""
-        self.counts: dict[str, int] = {}
-        self.n = 0
-
-    def record(self, op: str) -> None:
-        """Tally one played move of kind *op*."""
-        self.counts[op] = self.counts.get(op, 0) + 1
-        self.n += 1
-
-    def rate(self, op: str) -> float:
-        """Share of this episode's plays of kind *op*."""
-        return self.counts.get(op, 0) / max(self.n, 1)
-
-
-def _state_feats(state: ma.MetaState, hist: _Hist) -> dict[str, float]:
-    """Broadcast features — the board summary every move carries."""
+def _state_feats(state: ma.MetaState) -> dict[str, float]:
+    """Return the ``st:*`` broadcast block — the summary per move."""
     total = state.n_enodes + max(state.budget_left, 0)
     rel = (
         state.best_cost / state.baseline_cost
@@ -95,7 +91,6 @@ def _state_feats(state: ma.MetaState, hist: _Hist) -> dict[str, float]:
         else 1.0
     )
     return {
-        "bias": 1.0,
         "st:steps": state.steps / 32.0,
         "st:enodes_frac": state.n_enodes / max(total, 1),
         "st:classes_frac": state.n_classes / max(state.n_enodes, 1),
@@ -111,11 +106,6 @@ def _state_feats(state: ma.MetaState, hist: _Hist) -> dict[str, float]:
         "st:claimable": state.claimable / 8.0,
         "st:specs": len(state.specs) / 32.0,
         "st:fires": sum(c for _, c in state.rule_fires) / 64.0,
-        "h:fire": hist.rate("fire"),
-        "h:saturate": hist.rate("saturate"),
-        "h:declare": hist.rate("declare"),
-        "h:handle": hist.rate("handle"),
-        "h:claim": hist.rate("claim"),
     }
 
 
@@ -144,13 +134,16 @@ def _spec_index(action: ma.Action) -> float:
 
 
 def _act_feats(
-    action: ma.Action, sf: dict[str, float]
+    action: ma.Action, row: dict[str, float]
 ) -> dict[str, float]:
-    """Score the move: op one-hot, params, interactions."""
+    """Return the move's own params and interactions — ``a:*``/``x:*``.
+
+    *row* is the partially-built feature row (the state broadcasts and
+    play rates), so an interaction term can read a broadcast value.
+    The move-kind one-hot is a separate part (:class:`OpOneHot`).
+    """
     op = action.op
     out: dict[str, float] = {}
-    if f"op:{op}" in lawdata.META_ARENA_FEATURES:
-        out[f"op:{op}"] = 1.0
     if op == "fire":
         out[f"a:r:{_bucket(action.params.get('rule'), 'rule'):02d}"] = (
             1.0
@@ -161,12 +154,12 @@ def _act_feats(
             out["a:unbounded"] = 1.0
         else:
             out["a:budget"] = float(budget) / 512.0
-        out["x:pressure:saturate"] = sf["st:enodes_frac"]
+        out["x:pressure:saturate"] = row["st:enodes_frac"]
     elif op == "declare":
         out["a:spec_i"] = _spec_index(action)
-        out["x:specs:declare"] = sf["st:specs"]
-        out["x:handleable:declare"] = sf["st:handleable"]
-        out["x:claimable:declare"] = sf["st:claimable"]
+        out["x:specs:declare"] = row["st:specs"]
+        out["x:handleable:declare"] = row["st:handleable"]
+        out["x:claimable:declare"] = row["st:claimable"]
     elif op == "handle":
         out[
             f"a:h:{_bucket(action.params.get('handler'), 'handler')}"
@@ -174,32 +167,42 @@ def _act_feats(
         out[f"a:o:{_bucket(action.params.get('object'), 'object')}"] = (
             1.0
         )
-        out["x:declared:handle"] = sf["st:declared"]
-        out["x:unhandled:handle"] = sf["st:unhandled"]
+        out["x:declared:handle"] = row["st:declared"]
+        out["x:unhandled:handle"] = row["st:unhandled"]
     elif op == "claim":
         out[
             f"a:h:{_bucket(action.params.get('handler'), 'handler')}"
         ] = 1.0
-        out["x:handleable:claim"] = sf["st:handleable"]
-        out["x:claimable:claim"] = sf["st:claimable"]
+        out["x:handleable:claim"] = row["st:handleable"]
+        out["x:claimable:claim"] = row["st:claimable"]
     elif op == "extract":
-        out["x:extract:improve"] = sf["st:improve"]
-        out["x:late:extract"] = sf["st:steps"]
+        out["x:extract:improve"] = row["st:improve"]
+        out["x:late:extract"] = row["st:steps"]
     return out
 
 
-def featurize(
-    state: ma.MetaState, action: ma.Action, hist: _Hist | None = None
-) -> dict[str, float]:
-    """Return the feature row for one legal move — public for tests.
+#: The meta featurizer's composable parts, in row order: the intercept,
+#: the ``st:*`` broadcast, the ``h:*`` play rates, the move-kind
+#: one-hot, then the action's params and interactions.
+META_PARTS: tuple = (
+    Bias(),
+    StateBroadcast(_state_feats),
+    PlayRates(("fire", "saturate", "declare", "handle", "claim")),
+    OpOneHot(frozenset(lawdata.META_ARENA_FEATURES)),
+    ActionFeats(_act_feats),
+)
 
-    Keys are a subset of :data:`lawdata.META_ARENA_FEATURES`;
-    scoring is ``Σ w[name]·value``.  *hist* defaults to an empty
-    episode history.
-    """
-    hist = _Hist() if hist is None else hist
-    sf = _state_feats(state, hist)
-    return {**sf, **_act_feats(action, sf)}
+#: The meta-arena player spec — schema, parts, enumerator, prior.
+META_SPEC = DomainSpec.build(
+    features=lawdata.META_ARENA_FEATURES,
+    legal=ma.legal_actions,
+    parts=META_PARTS,
+    weights=lawdata.META_ARENA_PLAYER_WEIGHTS,
+    lr=_LR,
+)
+
+#: The composed featurizer — public for tests.
+featurize = META_SPEC.featurize
 
 
 # ---------------------------------------------------------------------------
@@ -207,52 +210,18 @@ def featurize(
 # ---------------------------------------------------------------------------
 
 
-class MetaLearnedPlayer(LinearPolicy):
-    """The meta-arena preset — meta featurizer and schema bound.
+class MetaLearnedPlayer(LearnedPlayer):
+    """The meta-arena preset — the meta :class:`DomainSpec` bound.
 
-    A :class:`~catopt_discovery.players.LinearPolicy` over
-    ``meta_arena.legal_actions`` scored by this module's
-    ``featurize``; *weights* defaults to the shipped trained prior
+    A :class:`~catopt_discovery.players.LearnedPlayer` over
+    ``meta_arena.legal_actions`` scored by :data:`META_SPEC`'s
+    featurizer; *weights* defaults to the shipped trained prior
     :data:`lawdata.META_ARENA_PLAYER_WEIGHTS` (pass ``weights={}``
     for the uniform cold start).  ``learn=False`` freezes the policy
     for eval; ``frozen`` returns a non-learning copy.
     """
 
-    FEATURES = lawdata.META_ARENA_FEATURES
-
-    def __init__(
-        self,
-        seed: int = 0,
-        *,
-        weights: dict | None = None,
-        lr: float = _LR,
-        temperature: float = 1.0,
-        greedy: bool = False,
-        learn: bool = True,
-        legal: Any = None,
-        featurizer: Any = None,
-        epsilon: float = 0.0,
-    ) -> None:
-        """Bind the meta enumerator, featurizer and sampler."""
-        super().__init__(
-            seed,
-            legal=ma.legal_actions if legal is None else legal,
-            featurizer=featurize if featurizer is None else featurizer,
-            weights=(
-                lawdata.META_ARENA_PLAYER_WEIGHTS
-                if weights is None
-                else weights
-            ),
-            lr=lr,
-            temperature=temperature,
-            greedy=greedy,
-            learn=learn,
-            epsilon=epsilon,
-        )
-
-    def fresh_hist(self) -> Any:
-        """Return the meta-arena history object."""
-        return _Hist()
+    SPEC = META_SPEC
 
 
 def _key(action: ma.Action) -> tuple:

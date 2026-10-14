@@ -24,11 +24,13 @@ Board:
 * ``stop`` — end the episode early (a player that has drained the
   paying members should take it).
 
-The learned arm (:class:`OpenLearnedPlayer`) scores ``evaluate``
-moves by the candidate's *shape* features — rewriting form, op
-histogram, depth, metavariable count, the cost-delta heuristic —
-plus episode-history rates.  That is exactly the prior a proposer
-needs: "shapes of this form have been paying."  The arm ships
+The learned arm (:class:`OpenLearnedPlayer` — the shared
+:class:`~catopt_discovery.players.LearnedPlayer` bound to
+:data:`OPEN_SPEC`) scores ``evaluate`` moves by the candidate's
+*shape* features — rewriting form, op histogram, depth, metavariable
+count, the cost-delta heuristic — plus episode-history rates.  That
+is exactly the prior a proposer needs: "shapes of this form have been
+paying."  The arm ships
 *warm*: it defaults to the baked prior
 :data:`catopt_discovery.lawdata.OPEN_GAME_PLAYER_WEIGHTS`, trained
 over even pages by ``tools/train_open_prior.py`` and measured on the
@@ -53,13 +55,21 @@ from catopt_discovery import lawdata
 from catopt_discovery import proposal as lp
 from catopt_discovery.enumerate import enumerate_candidates
 from catopt_discovery.meta_arena import Action
-from catopt_discovery.meta_player import _Hist
-from catopt_discovery.players import LinearPolicy, _dot
+from catopt_discovery.players import (
+    ActionFeats,
+    Bias,
+    DomainSpec,
+    LearnedPlayer,
+    OpOneHot,
+    PlayRates,
+    StateBroadcast,
+)
 
 __all__ = [
     "OPEN_GAME_EFFICIENCY",
     "OPEN_GAME_FEATURES",
     "OPEN_GAME_REWARD",
+    "OPEN_SPEC",
     "OpenArena",
     "OpenLearnedPlayer",
     "OpenState",
@@ -207,6 +217,27 @@ def _verdict(o: lp.Outcome) -> str:
     return "useful" if o.useful else "true"
 
 
+def _state_feats(state: OpenState) -> dict[str, float]:
+    """Return the ``st:*`` broadcast block — progress and verdict rates."""
+    n = max(state.pool_size, 1)
+    return {
+        "st:pending_frac": len(state.pending) / n,
+        "st:seen_frac": state.n_seen / n,
+        "st:useful_rate": state.n_useful / max(state.n_seen, 1),
+        "st:true_rate": state.n_true / max(state.n_seen, 1),
+    }
+
+
+def _act_feats(
+    action: Action, _row: dict[str, float]
+) -> dict[str, float]:
+    """Return the candidate's shape block — ``a:*`` (empty for ``stop``)."""
+    if action.op != "evaluate":
+        return {}
+    cand = action.params.get("cand")
+    return {} if cand is None else _cand_feats(cand)
+
+
 # ---------------------------------------------------------------------------
 #  The board
 # ---------------------------------------------------------------------------
@@ -340,88 +371,44 @@ def legal_actions(state: OpenState) -> tuple[Action, ...]:
     return tuple(acts)
 
 
-def featurize(
-    state: OpenState, action: Action, hist: _Hist | None = None
-) -> dict[str, float]:
-    """Feature row for one legal move — ``st``/``h``/``op``/``a``."""
-    hist = _Hist() if hist is None else hist
-    n = max(state.pool_size, 1)
-    feats: dict[str, float] = {
-        "bias": 1.0,
-        "st:pending_frac": len(state.pending) / n,
-        "st:seen_frac": state.n_seen / n,
-        "st:useful_rate": state.n_useful / max(state.n_seen, 1),
-        "st:true_rate": state.n_true / max(state.n_seen, 1),
-        "h:evaluate": hist.rate("evaluate"),
-        "h:stop": hist.rate("stop"),
-        f"op:{action.op}": 1.0,
-    }
-    if action.op == "evaluate":
-        cand = action.params.get("cand")
-        if cand is not None:
-            feats.update(_cand_feats(cand))
-    return feats
+#: The open featurizer's composable parts, in row order: the
+#: intercept, the ``st:*`` broadcast, the ``h:*`` play rates, the
+#: move-kind one-hot, then the candidate's shape block.
+OPEN_PARTS: tuple = (
+    Bias(),
+    StateBroadcast(_state_feats),
+    PlayRates(("evaluate", "stop")),
+    OpOneHot(frozenset(OPEN_GAME_FEATURES)),
+    ActionFeats(_act_feats),
+)
+
+#: The open-game player spec — schema, parts, enumerator, prior, ranker.
+OPEN_SPEC = DomainSpec.build(
+    features=OPEN_GAME_FEATURES,
+    legal=legal_actions,
+    parts=OPEN_PARTS,
+    weights=lawdata.OPEN_GAME_PLAYER_WEIGHTS,
+    rank=_cand_feats,
+    lr=0.05,
+)
+
+#: The composed featurizer — public for tests.
+featurize = OPEN_SPEC.featurize
 
 
-class OpenLearnedPlayer(LinearPolicy):
-    """The open-game preset — enumerate featurizer and schema bound.
+class OpenLearnedPlayer(LearnedPlayer):
+    """The open-game preset — the open :class:`DomainSpec` bound.
 
     *weights* defaults to the shipped trained prior
     (:data:`lawdata.OPEN_GAME_PLAYER_WEIGHTS`) — the baked preset
     ``tools/train_open_prior.py`` regenerates.  Pass ``weights={}``
     explicitly for the cold start (the honest uniform baseline the
-    held-out measurement compares against).
+    held-out measurement compares against).  ``rank_score`` is the
+    spec's candidate ranker (:func:`_cand_feats`), the page ordering
+    :func:`catopt_discovery.proposal.rank_pool` prices.
     """
 
-    FEATURES = OPEN_GAME_FEATURES
-
-    def __init__(
-        self,
-        seed: int = 0,
-        *,
-        weights: dict | None = None,
-        lr: float = 0.05,
-        temperature: float = 1.0,
-        greedy: bool = False,
-        learn: bool = True,
-        legal: Any = None,
-        featurizer: Any = None,
-        epsilon: float = 0.0,
-    ) -> None:
-        """Bind the enumerator, featurizer and sampler."""
-        super().__init__(
-            seed,
-            legal=legal_actions if legal is None else legal,
-            featurizer=featurize if featurizer is None else featurizer,
-            weights=(
-                lawdata.OPEN_GAME_PLAYER_WEIGHTS
-                if weights is None
-                else weights
-            ),
-            lr=lr,
-            temperature=temperature,
-            greedy=greedy,
-            learn=learn,
-            epsilon=epsilon,
-        )
-
-    def fresh_hist(self) -> _Hist:
-        """Return the per-episode action histogram."""
-        return _Hist()
-
-    def rank_score(self, cand: lp.Candidate) -> float:
-        """Return the policy's score for evaluating *cand*.
-
-        The ranker hook: every ``evaluate`` move on a page shares its
-        ``st:``/``h:``/``op:`` features (the state and the move kind
-        are identical at step 0), so the policy's ordering over the
-        page is exactly the ordering of ``w · _cand_feats(cand)`` —
-        a ``candidate -> float`` scorer that
-        :func:`catopt_discovery.proposal.rank_pool` consumes to
-        compare the learned ordering against the heuristic and
-        random ones.
-        """
-        return _dot(self._w, _cand_feats(cand))
+    SPEC = OPEN_SPEC
 
 
 # ---------------------------------------------------------------------------

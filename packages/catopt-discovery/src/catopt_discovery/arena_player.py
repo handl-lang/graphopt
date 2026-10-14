@@ -74,6 +74,7 @@ from typing import Any
 
 from catopt_discovery import arena as ar
 from catopt_discovery import lawdata
+from catopt_discovery.players import _dot
 
 __all__ = [
     "FEAT_IDX",
@@ -792,16 +793,6 @@ class LearnedPlayer:
             for k, g in grad.items():
                 self._w[k] = self._w.get(k, 0.0) + scale * g
         self._ep = []
-
-
-def _dot(w: dict, feats: dict) -> float:
-    """Return the linear score ``w·feats`` over a sparse feature dict."""
-    s = 0.0
-    for k, v in feats.items():
-        wv = w.get(k)
-        if wv:
-            s += wv * v
-    return s
 
 
 def _move_key(a: ar.Action) -> tuple:
