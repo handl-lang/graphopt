@@ -431,6 +431,19 @@ def test_helpers_spec_ops_and_attr_mv():
         "select",
     }
     assert en._attr_mv("select", "dim") == "select_dim"
+    # ``unsqueeze``'s required set IS its declared set — no elision
+    # variant is appended (same for select/transpose/softmax/…).
+    assert en._default_attr_keys(("unsqueeze",)) == {
+        "unsqueeze": (("dim",),)
+    }
+    # A schema'd op with no required table spells only the declared
+    # key-set.
+    assert en._default_attr_keys(("dropout",)) == {
+        "dropout": (("p", "train"),)
+    }
+    # A key-set naming an attr the op's honest domain cannot fill is
+    # rejected outright — never partially minted.
+    assert en._eval_attrs("select", ("dim", "bogus"), (4, 4)) is None
 
 
 def test_true_new_family_neg_add_and_lit_self():
