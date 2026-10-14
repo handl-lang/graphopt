@@ -64,10 +64,25 @@ falsification outcome — if every paying law is a re-instantiation of a
 shipped form, the level adds nothing and the honest conclusion is that
 the form list is the real grammar.
 
+**Depth.**  The first run of that harness admitted 7 paying laws from
+new forms, but each was a *composite re-spelling* of two shipped
+identities (the cross-op-agreement family ``sub(X,0)=add(X,0)``,
+``B0(X,K)=B1(K,X)``, …) — shallow, because ``proposal._relation`` only
+checks alpha-equality, so a two-class form that agrees with the library
+on one operand is indistinguishable from a real one.  The fix is the
+**non-derivability filter** (:func:`non_derivable_true`): an *admitted*
+form must produce at least one instance that is ``num_true`` yet
+``verify_law`` cannot derive from ``ALL_RULES``.  The ``min_classes``
+depth filter (:func:`enumerate_forms`) focuses the stream on forms over
+**three** distinct op classes, which have a third identity to spend and
+cannot be a single re-spelling.
+
 Run::
 
     .venv/bin/python -m catopt_discovery.forms \
         --ops add,mul,neg,sub --budget 400 --evaluate 80
+    .venv/bin/python -m catopt_discovery.forms --min-classes 3 \
+        --budget 600 --evaluate 200
 
 CPU-only; the enumerated prefix is the bounded part.
 """
@@ -99,10 +114,12 @@ from catopt_discovery.object_synthesis import term_from_spec
 
 __all__ = [
     "Skeleton",
+    "deep_form_keys",
     "enumerate_form_candidates",
     "enumerate_forms",
     "falsification_report",
     "main",
+    "non_derivable_true",
     "shipped_skeleton_keys",
     "skeleton_key",
 ]
@@ -395,6 +412,32 @@ def _skeletons_of(
             yield sl, sr
 
 
+def _distinct_classes(lhs: Any, rhs: Any) -> int:
+    """Return the number of distinct op-classes the pair names.
+
+    Binary and unary op-classes are counted separately (a ``bin`` slot
+    ``0`` and a ``un`` slot ``0`` are different classes).  This is the
+    skeleton's *depth* in the sense the falsification harness measures:
+    the shipped forms mostly name one or two classes, and the shallow
+    cross-op-agreement family is exactly the two-class corner — a
+    form that names three classes has a third identity to spend and
+    cannot be a single re-spelling of one shipped law.
+    """
+    bins: set = set()
+    uns: set = set()
+
+    def walk(x: Any) -> None:
+        if isinstance(x, str) or x is _LIT:
+            return
+        (bins if x[0] == "bin" else uns).add(x[1])
+        for c in x[2:]:
+            walk(c)
+
+    walk(lhs)
+    walk(rhs)
+    return len(bins) + len(uns)
+
+
 def enumerate_forms(
     *,
     max_nodes: int = 3,
@@ -403,6 +446,7 @@ def enumerate_forms(
     literals: tuple,
     metas: tuple = ("X", "Y", "Z"),
     max_forms: int | None = None,
+    min_classes: int = 1,
 ) -> Iterator[Skeleton]:
     """Yield law skeletons over the meta-grammar, lazily.
 
@@ -413,9 +457,17 @@ def enumerate_forms(
     for the instantiation step (one literal-class suffices — literal
     occurrences instantiate independently).
 
+    *min_classes* is the **depth** filter: a skeleton is skipped when
+    it names fewer than *min_classes* distinct op-classes.  The default
+    ``1`` admits the whole space (the superset property is unaffected);
+    ``3`` restricts the stream to forms over **three** distinct op
+    classes — the measured reach that carries content beyond the
+    two-class cross-op-agreement family the shallow falsification found
+    (see :func:`falsification_report`).
+
     The stream is deterministic and a **superset** of the shipped
     ``enumerate._FORMS``: every hand-written form's skeleton reappears
-    as a member.
+    as a member (at the default ``min_classes=1``).
     """
     bin_ops = tuple(bin_ops)
     un_ops = tuple(un_ops)
@@ -428,6 +480,11 @@ def enumerate_forms(
     n = 0
     for lhs, rhs in _pair_shapes(max_nodes, metas):
         for sl, sr in _skeletons_of((lhs, rhs), max_bin, max_un):
+            if (
+                min_classes > 1
+                and _distinct_classes(sl, sr) < min_classes
+            ):
+                continue
             yield Skeleton(sl, sr, bin_ops, un_ops, literals)
             n += 1
             if max_forms is not None and n >= max_forms:
@@ -540,6 +597,7 @@ def enumerate_form_candidates(
     max_forms: int | None = None,
     max_candidates: int | None = None,
     max_depth: int | None = None,
+    min_classes: int = 1,
 ) -> Iterator[lp.Candidate]:
     """Yield ``Candidate``s instantiated from the skeleton stream.
 
@@ -550,6 +608,10 @@ def enumerate_form_candidates(
     ``proposal._key``, and annotated with its library relation and its
     skeleton key.  Metavariables instantiate on ``(4,4)`` vars, so the
     emitted candidates run through ``proposal.evaluate`` unchanged.
+
+    *min_classes* forwards the depth filter to
+    :func:`enumerate_forms` — ``3`` restricts the stream to forms over
+    three distinct op classes (see :func:`falsification_report`).
     """
     if bin_ops is None or un_ops is None:
         bin_ops, un_ops = _split(tuple(DEFAULT_OPS))
@@ -570,6 +632,7 @@ def enumerate_form_candidates(
         literals=lits,
         metas=metas,
         max_forms=max_forms,
+        min_classes=min_classes,
     ):
         for lhs, rhs, note in _instantiated(sk, lib, seen, depth):
             yield lp.Candidate(
@@ -618,6 +681,57 @@ def _form_key(cand: lp.Candidate) -> str:
     return cand.note.split(";", 1)[0].removeprefix("form=")
 
 
+def non_derivable_true(outcomes: list) -> list:
+    """Return the outcomes that are numerically true but not derivable.
+
+    The plan's **non-derivability filter**: an instance is *deep* when
+    ``num_true is True`` (a real equality on random fp64 tensors) and
+    ``derivable`` is ``False`` (``verify_law`` could not prove it from
+    ``ALL_RULES`` under the bounded saturation).  A form that admits
+    such an instance carries content the shipped library does not —
+    the signal that separates a genuine new form from the shallow
+    cross-op-agreement re-spellings, which are all derivable.
+    """
+    return [
+        o for o in outcomes if o.num_true is True and not o.derivable
+    ]
+
+
+def deep_form_keys(outcomes: list) -> list[str]:
+    """Return the sorted form keys admitting ≥1 non-derivable true law."""
+    return sorted(
+        {_form_key(o.candidate) for o in non_derivable_true(outcomes)}
+    )
+
+
+def _paying_split(paying: list, shipped: set[str]) -> dict:
+    """Split paying laws by whether their form is new, then by depth."""
+    new_paying = [
+        o for o in paying if _form_key(o.candidate) not in shipped
+    ]
+    new_deep = [o for o in new_paying if not o.derivable]
+    return {
+        "paying_new_form": len(new_paying),
+        "new_forms": sorted(
+            {_form_key(o.candidate) for o in new_paying}
+        ),
+        "new_form_instances": len(new_paying),
+        "new_form_derivable": len(new_paying) - len(new_deep),
+        "new_form_non_derivable": len(new_deep),
+    }
+
+
+def _deep_summary(deep: list, shipped: set[str]) -> dict:
+    """Summarize the non-derivable-true laws by their form."""
+    keys = sorted({_form_key(o.candidate) for o in deep})
+    return {
+        "non_derivable_true": len(deep),
+        "deep_forms": keys,
+        "deep_new_forms": [k for k in keys if k not in shipped],
+        "deep_shipped_forms": [k for k in keys if k in shipped],
+    }
+
+
 def falsification_report(
     *,
     budget: int = 400,
@@ -628,6 +742,7 @@ def falsification_report(
     literals: tuple | None = None,
     metas: tuple = ("X", "Y", "Z"),
     max_forms: int | None = None,
+    min_classes: int = 1,
 ) -> dict:
     """Count paying laws from forms *outside* the shipped 27.
 
@@ -636,6 +751,20 @@ def falsification_report(
     (useful) laws into those whose skeleton is a shipped form and those
     whose skeleton is new.  The latter count is the plan's discovery
     number — ``0`` is the honest falsification outcome.
+
+    *min_classes* restricts the stream to forms naming at least that
+    many distinct op classes (the **depth** filter); ``3`` focuses on
+    forms over three distinct op classes.
+
+    The report also applies the **non-derivability filter**
+    (:func:`non_derivable_true`): ``deep_forms`` are the form keys that
+    admit at least one ``num_true`` instance ``verify_law`` cannot
+    derive from ``ALL_RULES``, and ``deep_new_forms`` are those outside
+    the shipped set — the *admitted* forms under the filter.  For the
+    paying laws attributed to new forms the report splits them into
+    derivable (*shallow* — a re-spelling of shipped identities) and
+    non-derivable (*deep*), which is the machine-checkable statement of
+    *why* the earlier falsification's new forms were shallow.
     """
     if bin_ops is None or un_ops is None:
         bin_ops, un_ops = _split(tuple(DEFAULT_OPS))
@@ -653,24 +782,21 @@ def falsification_report(
         metas=metas,
         max_forms=max_forms,
         max_candidates=budget,
+        min_classes=min_classes,
     )
     cands = list(itertools.islice(stream, budget))
     outcomes = _bounded_evaluate(cands[:evaluate_n])
     paying = [o for o in outcomes if o.useful]
-    new_paying = [
-        o for o in paying if _form_key(o.candidate) not in shipped
-    ]
     return {
         "forms_shipped": len(shipped),
         "candidates": len(cands),
         "evaluated": len(outcomes),
         "paying": len(paying),
-        "paying_new_form": len(new_paying),
-        "new_forms": sorted(
-            {_form_key(o.candidate) for o in new_paying}
-        ),
+        "min_classes": min_classes,
         "shipped": shipped,
         "outcomes": outcomes,
+        **_paying_split(paying, shipped),
+        **_deep_summary(non_derivable_true(outcomes), shipped),
     }
 
 
@@ -697,7 +823,25 @@ def _fmt_report(rep: dict) -> str:
     else:
         for key in rep["new_forms"]:
             lines.append(f"     new form: {key}")
+    if "non_derivable_true" in rep:
+        lines.extend(_fmt_deep(rep))
     return "\n".join(lines)
+
+
+def _fmt_deep(rep: dict) -> list[str]:
+    """Render the non-derivability (depth) section of the report."""
+    lines = [
+        "   -- non-derivability filter --",
+        f"   non-derivable true laws: {rep['non_derivable_true']}",
+        f"   deep forms (>=1 such):   {len(rep['deep_forms'])}",
+        f"   deep NEW forms:          {len(rep['deep_new_forms'])}",
+        f"   new-form paying laws:    {rep['new_form_instances']} "
+        f"(derivable/shallow={rep['new_form_derivable']}, "
+        f"deep={rep['new_form_non_derivable']})",
+    ]
+    for key in rep["deep_new_forms"]:
+        lines.append(f"     deep new form: {key}")
+    return lines
 
 
 def _parse_csv(text: str, cast: Any = str) -> tuple:
@@ -743,6 +887,12 @@ def main(argv: list[str] | None = None) -> int:
         default=80,
         help="bounded-evaluate the first N candidates",
     )
+    parser.add_argument(
+        "--min-classes",
+        type=int,
+        default=1,
+        help="depth filter: min distinct op-classes per form",
+    )
     parser.add_argument("--json", help="write machine-readable results")
     args = parser.parse_args(argv)
 
@@ -763,6 +913,7 @@ def main(argv: list[str] | None = None) -> int:
         literals=literals,
         metas=metas,
         max_forms=args.max_forms,
+        min_classes=args.min_classes,
     )
     outcomes = rep.pop("outcomes")
     shipped = rep.pop("shipped")

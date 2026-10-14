@@ -3,7 +3,9 @@
 The meta-level toolkit that finds, verifies and ranks candidate
 rewrite laws over the core IR: shape census (:mod:`.census`),
 proposal generators (:mod:`.proposal`, :mod:`.shape_proposal`,
-:mod:`.grammar`), oracles (:mod:`.verifier`, :mod:`.oracle`), the
+:mod:`.grammar`, the form-level proposer :mod:`.forms` and the
+vocabulary proposer :mod:`.propose`), oracles (:mod:`.verifier`,
+:mod:`.oracle`), the
 impact/verdict probes (:mod:`.impact`, :mod:`.pipeline`), the sqlite
 evidence store (:mod:`.evidence`), the coherence catalogue
 (:mod:`.coherence`, :mod:`.coherence2`), workload intake
