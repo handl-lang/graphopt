@@ -70,7 +70,7 @@ from typing import Any
 import atom_law_loop as l3
 import catopt_carriers  # noqa: F401 — registers carrier bindings
 import torch
-from catopt_core.ir import Op, TensorType, Var
+from catopt_core.ir import Const, Op, TensorType, Var
 from catopt_core.laws.serialize import law_to_data, missing_hooks
 from catopt_discovery import vocab as vc
 from catopt_discovery.genkernel import _spec_metas
@@ -359,6 +359,31 @@ def _scan_fold_candidates(cap: int) -> list[Candidate]:
             note="the mint-verified semantics spelled out",
         ),
         Candidate("sf.refold", closed, _sf("a", "b", "h")),
+        Candidate(
+            "sf.corpus_refold",
+            _p(
+                "mul",
+                _p("cumprod", _p("sigmoid", "a"), dim=1),
+                _p(
+                    "cumsum",
+                    _p(
+                        "div",
+                        "b",
+                        _p(
+                            "clamp_min",
+                            _p("cumprod", _p("sigmoid", "a"), dim=1),
+                            min=1e-6,
+                        ),
+                    ),
+                    dim=1,
+                ),
+            ),
+            _sf(_p("sigmoid", "a"), "b", Const(0.0)),
+            note="the SelectiveScan site -> the atom: emitted "
+            "sequence vs the fold's total — expected to die on "
+            "shape (the minted atom is the total, the corpus "
+            "emits per-step)",
+        ),
         Candidate(
             "sf.b0",
             _sf("a", _p("sub", "x", "x"), "h"),
@@ -848,7 +873,7 @@ def _fragment(need: Need, handler_row: dict, certified: list) -> dict:
             "kernel": f"torch:{need.atom}",
             "args": (),
         }
-        prov = Provenance(origin="ambient")
+        prov = Provenance(origin="shipped")
     frag_h = handlers_fragment(
         need.atom, {need.atom: handle}, provenance=prov
     )
