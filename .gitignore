@@ -24,6 +24,8 @@ wheels/
 venv/
 env/
 .venv/
+# worktree setups may use a symlinked venv (a file, not a directory)
+.venv
 
 # PyTorch / ML
 *.pt
