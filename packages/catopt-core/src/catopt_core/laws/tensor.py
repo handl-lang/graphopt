@@ -422,6 +422,49 @@ MUL_RESHAPE_INERT_L = R(
 )
 
 
+#: ``unsq(u, d) · unsq(v, d) = unsq(u · v, d)`` — the two-sided
+#: unsqueeze naturality.  Census-minted on ``DeltaRuleBlock``
+#: (``census:mul_unsqueeze`` — ``project/retros/exposed-math.md``):
+#: the view oracle measured it conditional with no single-feature
+#: separator, and auto-cond's minted clause (broadcast-grid
+#: coincidence alone) is *unsound* in the unequal-rank mid-insert
+#: corner — ``u=(2,), v=(1,2,2), d=1`` equalizes the grids while
+#: ``u``'s data axis lands on different output axes each side.
+#: The honest guard is the ``wl``-naturality predicate instantiated
+#: with the *partner's own unsq-out spec* as its LHS shape:
+#: ``flat-map-unsq`` decides the full condition — grid coincidence
+#: ``bcast(unsq u, unsq v) == unsq(bcast(u,v), d)`` AND each operand's
+#: flat-read coefficient map agreeing across the two orders — which
+#: the adversarial sweep measured *exact*: every equal site accepted,
+#: every ``unequal``/``rhs-err`` site declined (IR-semantics sweep,
+#: ranks ≤3, dims ∈ {-8..8}).  Concrete-int shapes only — symbolic
+#: dims decline.
+MUL_UNSQ_NAT = R(
+    "mul_unsq_nat",
+    Op.make(
+        "mul",
+        Op.make("unsqueeze", "u", dim="UD"),
+        Op.make("unsqueeze", "v", dim="UD"),
+    ),
+    Op.make("unsqueeze", Op.make("mul", "u", "v"), dim="UD"),
+    law="unsqueeze(u, d) · unsqueeze(v, d) = unsqueeze(u · v, d) — "
+    "elementwise mul commutes with a shared size-1 axis insertion "
+    "exactly when the broadcast grids coincide AND both operands' "
+    "flat-read maps agree across the two orders (the flat-map-unsq "
+    "region — equal ranks always qualify; unequal ranks only when "
+    "the insert lands in the pad).  Fuses two views into one and "
+    "shrinks the pointwise domain a rank.",
+    cond=(
+        "flat-map-unsq",
+        "u",
+        "UD",
+        "v",
+        ("unsq-out", "v", "UD"),
+    ),
+    tags=_SIM,
+)
+
+
 # ---------------------------------------------------------------------------
 #  Kernel recognition — the manual-softmax fold
 # ---------------------------------------------------------------------------
@@ -2134,6 +2177,7 @@ SIMPLIFICATION_RULES: list[Rewrite] = [
     MUL_UNSQ_PAD_L,
     MUL_UNSQ_PAD_R,
     SUB_UNSQ_PAD_L,
+    MUL_UNSQ_NAT,
     MUL_RESHAPE_INERT_L,
     SOFTMAX_FOLD,
     GLU_FOLD,

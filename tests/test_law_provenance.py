@@ -41,13 +41,16 @@ from catopt_torch.backend import TorchBackend
 _ZOO = {w.name: w for w in zoo_mod.zoo()}
 _BY_NAME = {r.name: r for r in ALL_RULES}
 
-#: The promotion table (``project/retros/promoted-laws.md``) — the ten
-#: machine-admitted objects as they shipped into ``ALL_RULES``.
+#: The promotion table (``project/retros/promoted-laws.md`` plus the
+#: ``mul_unsq_nat`` admission of ``project/retros/mul-unsq-nat.md``) —
+#: the eleven machine-admitted objects as they shipped into
+#: ``ALL_RULES``.
 _PROMOTION_TABLE = frozenset(
     {
         "softsign_fold",
         "sdpa_fold_nomask",
         "sdpa_fold_div_nomask",
+        "mul_unsq_nat",
         "mul_unsq_pad_l",
         "mul_unsq_pad_r",
         "sub_unsq_pad_l",
@@ -212,12 +215,12 @@ def test_every_law_classifies_by_provenance():
 
 
 def test_machine_shipped_is_exactly_the_promotion_table():
-    """``MACHINE_SHIPPED`` pins the ten promoted laws, all shipped."""
+    """``MACHINE_SHIPPED`` pins the eleven promoted laws, all shipped."""
     assert MACHINE_SHIPPED == _PROMOTION_TABLE
     shipped_names = {r.name for r in ALL_RULES}
     assert shipped_names >= MACHINE_SHIPPED
-    # 72 human-authored + 10 promoted = the 82-rule library.
-    assert len(ALL_RULES) == 82
+    # 72 human-authored + 11 promoted = the 83-rule library.
+    assert len(ALL_RULES) == 83
     assert len(shipped_names - MACHINE_SHIPPED) == 72
 
 
