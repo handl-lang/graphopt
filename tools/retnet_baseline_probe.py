@@ -10,6 +10,14 @@ arms (B=2, d=16, H=1, T in {512, 1024, 2048}):
   (``zoo._ChunkedRetention``), eager and under ``torch.compile``.
 - ``carrier`` — the extracted K-way carrier, lowered via the ambient
   ``TorchSink`` (the same artifact as ``om_decayed_kway_deliver_probe``).
+- ``carrier-fused`` — the SAME extracted term routed through the sink's
+  executor table (the delivery path ``optimize``'s lower phase takes):
+  the chunked decayed-scan executor claims it and runs a
+  pairwise-batched schedule — const-folded decay generators, batched
+  state halves, batched pair products, deterministic segment-sum
+  accumulation.  ``fused32`` is the fp32 copy; ``carrier-f+g`` is the
+  same module under the executor's CUDA-graph capture (measured last
+  so its private pool cannot pollute other rows).
 - ``paper-eqn`` — a faithful in-script reimplementation of the paper's
   chunkwise-recurrent algorithm (Sun et al. 2023): intra-chunk masked
   QK^T V + cross-chunk decayed state recurrence, no stability rescale.
@@ -48,6 +56,7 @@ import torch
 from catopt_core.ir import IR
 from catopt_discovery.play import _time_module
 from catopt_discovery.zoo import _ChunkedRetention
+from catopt_orchestrator.optimize import _lower_extracted
 from catopt_torch.adapters import TorchSink
 
 GAMMA = 0.9
@@ -174,6 +183,11 @@ def _run_t(
     )
     base = sat["model"].to("cuda").double()
     carrier = sink.lower(ex, params=sat["leaves"]).to("cuda").double()
+    # Executor routing — the same table ``optimize``'s lower phase
+    # consults: the chunked decayed-scan executor claims the term, so
+    # this arm IS the delivery path, not a probe-only construction.
+    fused = _lower_extracted(ex.root, ex, sat["leaves"], sink)
+    fused = fused.to("cuda").double()
     comp = torch.compile(sat["model"].to("cuda").double())
     x64 = sat["x"].to("cuda")
     c = t // k
@@ -182,6 +196,7 @@ def _run_t(
     arms["spelled-eager"] = lambda: base(x64)
     arms["spelled-compiled"] = lambda: comp(x64)
     arms["carrier"] = lambda: carrier(x64)
+    arms["carrier-fused"] = lambda: fused(x64)
     arms["paper-eqn"] = lambda: _paper_eqn(x64, base, c)
     arms["paper-code"] = lambda: _torchscale_arm(x64, base, c)
 
@@ -190,9 +205,11 @@ def _run_t(
     # nn.Module.to() is in-place so cloning must precede conversion.
     leaves32 = {n: t.detach().float() for n, t in sat["leaves"].items()}
     carrier32 = sink.lower(ex, params=leaves32).to("cuda")
+    fused32 = _lower_extracted(ex.root, ex, leaves32, sink).to("cuda")
     x32 = x64.float()
     base32 = copy.deepcopy(base).float()
     arms["carrier32"] = lambda: carrier32(x32)
+    arms["fused32"] = lambda: fused32(x32)
     from fla.ops.retention import (
         chunk_retention,
         fused_recurrent_retention,
@@ -204,6 +221,19 @@ def _run_t(
     arms["fla-rec"] = lambda: fused_recurrent_retention(
         *_fla_inputs(x32, base32)
     )[0]
+    if hasattr(fused, "capture_cuda_graph"):
+        # A second instance (capture mutates forward into replay),
+        # captured lazily on first call: the graph's private memory
+        # pool would otherwise inflate every row measured after it.
+        fusedg = _lower_extracted(ex.root, ex, sat["leaves"], sink)
+        fusedg = fusedg.to("cuda").double()
+
+        def _fused_graph():
+            if not fusedg.is_graph_captured:
+                fusedg.capture_cuda_graph(x64)
+            return fusedg(x64)
+
+        arms["carrier-f+g"] = _fused_graph
 
     print(
         f"\n=== T={t} K={k} C={c} === "
@@ -211,6 +241,7 @@ def _run_t(
     )
     print(f"{'arm':>17} {'peak MiB':>9} {'med ms':>8} {'vs model':>9}")
     ref = sink.verify(base, carrier, (x64,))
+    ref_f = sink.verify(base, fused, (x64,))
     rows = {}
     for name, fn in arms.items():
         try:
@@ -233,14 +264,25 @@ def _run_t(
     # numeric agreement, fp64
     with torch.no_grad():
         ours = carrier(x64)
+        fus = fused(x64)
         pe = _paper_eqn(x64, base, c)
         ts = _torchscale_arm(x64, base, c)
+    batched = getattr(fused, "is_batched", False)
     print(f"\ncarrier vs spelled-eager : {ref.max_abs:.2e}")
     print(
         f"carrier vs paper-eqn     : {(ours - pe).abs().max().item():.2e}"
     )
     print(
         f"carrier vs paper-code    : {(ours - ts).abs().max().item():.2e}"
+    )
+    print(
+        f"fused executor engaged   : {batched} "
+        f"(verify max_abs {ref_f.max_abs:.2e})"
+    )
+    print(
+        f"fused vs spelled-eager   : {ref_f.max_abs:.2e}  "
+        f"vs carrier {(fus - ours).abs().max().item():.2e}  "
+        f"vs paper-eqn {(fus - pe).abs().max().item():.2e}"
     )
     del sat
     torch.cuda.empty_cache()

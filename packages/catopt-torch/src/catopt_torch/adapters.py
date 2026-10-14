@@ -174,6 +174,10 @@ def _executor_specs(ops: OpTable) -> dict[str, ExecutorSpec]:
 
     table: dict[str, ExecutorSpec] = {}
     try:
+        from catopt_carriers.decayed_lower import (
+            is_decayed_chunked_term,
+            to_chunked_decayed_module,
+        )
         from catopt_carriers.om_lower import (
             is_om_apply_term,
             to_batched_om_module,
@@ -192,6 +196,19 @@ def _executor_specs(ops: OpTable) -> dict[str, ExecutorSpec]:
     else:
         table.update(
             {
+                "om_decayed_chunked": ExecutorSpec(
+                    "om_decayed_chunked",
+                    lambda ir, p: to_chunked_decayed_module(
+                        ir, param_values=p
+                    ),
+                    is_decayed_chunked_term,
+                    lambda m: bool(getattr(m, "is_batched", False)),
+                    (
+                        frozenset({"concat"}),
+                        frozenset({"add", "mul", "div", "matmul"}),
+                        frozenset({"om_decayed", "decay", "decay_vec"}),
+                    ),
+                ),
                 "scan": ExecutorSpec(
                     "scan",
                     lambda ir, p: to_batched_scan_module(
