@@ -51,6 +51,14 @@
               ></span>
             </button>
             <button
+              @click="toggleGlossary()"
+              class="text-[12px] px-2.5 py-1 rounded-lg border text-dim hover:text-ink"
+              :class="glossaryPanel ? 'border-gold text-gold' : 'border-line'"
+            >
+              ▤<span class="hidden sm:inline"> glossary</span>
+              <span class="hidden md:inline text-faint" x-text="' ' + glossary.length"></span>
+            </button>
+            <button
               @click="toggleSettings()"
               class="text-[12px] px-2.5 py-1 rounded-lg border text-dim hover:text-ink"
               :class="settings ? 'border-gold text-gold' : 'border-line'"
@@ -81,8 +89,10 @@
                 xp · <span class="text-ink font-semibold" x-text="rank.name"></span>
               </div>
               <div class="mt-2 text-[12px] text-faint">
-                The gamification layer landed with this version: the storage key moved from
-                <code>v3</code> to <code>v4</code>, so older progress resets cleanly on first load.
+                Checkpoints are now <b class="text-ink">multi-part</b> — a level clears only when
+                every part is right, and each part feeds the mastery meter by its concept. The
+                storage key stays <code>v4</code> (the saved shape is unchanged), so progress
+                restores cleanly.
               </div>
               <div class="mt-4 pt-3 border-t border-line">
                 <template x-if="!confirming">
@@ -184,8 +194,13 @@
                 </template>
               </div>
               <div class="mt-3 pt-3 border-t border-line text-[11.5px] text-faint">
-                <span x-text="forwardRefs.length"></span> concepts are used before they are defined
-                — the ordering step 2 fixes.
+                <span x-show="forwardRefs.length === 0"
+                  >✓ every term is defined before its first use — the ordering gate passes.</span
+                >
+                <span x-show="forwardRefs.length > 0"
+                  ><span x-text="forwardRefs.length"></span> concepts are used before they are
+                  defined — a regression against the ordering gate.</span
+                >
               </div>
             </div>
 
@@ -216,6 +231,40 @@
                       <div class="text-[11.5px] text-faint" x-text="b.blurb"></div>
                     </div>
                   </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- glossary popover — every concept, its definition, its home level -->
+            <div
+              x-show="glossaryPanel"
+              x-cloak
+              x-transition
+              @click.outside="glossaryPanel = false"
+              class="absolute right-0 top-11 w-[24rem] max-w-[92vw] rounded-2xl border border-line bg-panel p-4 shadow-2xl z-40"
+            >
+              <div class="text-[11.5px] uppercase tracking-widest text-faint mb-2">
+                glossary · <span x-text="glossary.length"></span> concepts, in curriculum order
+              </div>
+              <div class="max-h-96 overflow-auto space-y-2 pr-1">
+                <template x-for="g in glossary" :key="g.id">
+                  <button
+                    @click="gotoLevel(g.introduced); glossaryPanel = false"
+                    class="w-full text-left rounded-lg border border-line bg-panel2 px-2.5 py-2 hover:border-gold"
+                  >
+                    <div class="flex items-baseline gap-2">
+                      <span class="text-[12.5px] text-ink font-semibold" x-text="g.label"></span>
+                      <span
+                        class="ml-auto text-[10.5px] font-mono text-faint whitespace-nowrap"
+                        x-text="g.index + ' · ' + g.introduced"
+                      ></span>
+                    </div>
+                    <div class="text-[11.5px] text-dim mt-0.5" x-text="g.def"></div>
+                    <div
+                      class="text-[11px] text-faint mt-0.5"
+                      x-text="'introduced at — ' + g.title"
+                    ></div>
+                  </button>
                 </template>
               </div>
             </div>
@@ -252,8 +301,15 @@
 
         <!-- ── main ──────────────────────────────────────────────── -->
         <main class="pt-10 min-w-0">
-          <div class="text-[11.5px] uppercase tracking-widest text-faint">
-            level <span x-text="i"></span> of <span x-text="n - 1"></span>
+          <div
+            class="text-[11.5px] uppercase tracking-widest text-faint flex items-center gap-2 flex-wrap"
+          >
+            <span x-show="module"
+              >module <span x-text="module && module.roman"></span> ·
+              <span class="normal-case tracking-normal" x-text="module && module.title"></span
+            ></span>
+            <span x-show="module" class="text-faint/60">·</span>
+            <span>level <span x-text="i"></span> of <span x-text="n - 1"></span></span>
           </div>
           <div class="mt-1 flex items-center gap-3 flex-wrap">
             <h1 class="text-3xl font-bold tracking-tight" x-text="level.title"></h1>
@@ -267,31 +323,61 @@
             <span class="text-gold font-semibold">objective · </span
             ><span class="text-dim" x-text="level.objective"></span>
           </p>
+          <p class="text-[13.5px] mt-2 text-dim border-l-2 border-gold pl-3">
+            <span class="text-ink font-semibold">Why you are here — </span
+            ><span x-text="level.why"></span>
+          </p>
 
-          <!-- what this level teaches, and what it is worth -->
-          <div class="mt-3 flex items-center gap-2 flex-wrap">
-            <span class="text-[11.5px] uppercase tracking-widest text-faint">teaches</span>
-            <template x-for="c in levelConcepts" :key="c.id">
-              <span
-                class="px-2 py-0.5 rounded-full border text-[11.5px]"
-                :class="
-                  c.tier === 'mastered'
-                    ? 'border-eva/50 text-eva'
-                    : c.tier === 'familiar'
-                      ? 'border-gold/50 text-gold'
-                      : 'border-line text-dim'
-                "
-                :title="c.def"
-                x-text="c.label"
-              ></span>
-            </template>
-            <span class="ml-auto text-[11.5px] font-mono whitespace-nowrap">
-              <span class="text-faint" x-text="'worth ' + levelPotentialXp + ' xp · '"></span>
-              <span
-                :class="engagedHere ? 'text-gold' : 'text-faint'"
-                x-text="engagedHere ? '✓ widget engaged' : 'engage the widget'"
-              ></span>
-            </span>
+          <!-- prerequisites: the ladder is not flat -->
+          <div class="mt-4" x-show="prerequisites.length" x-cloak>
+            <div class="text-[11.5px] uppercase tracking-widest text-faint mb-1.5">
+              prerequisites
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <template x-for="p in prerequisites" :key="p.id">
+                <button
+                  @click="gotoLevel(p.id)"
+                  class="px-2 py-0.5 rounded-full border border-line text-[11.5px] text-dim hover:border-gold hover:text-ink"
+                  x-text="p.index + ' · ' + p.title"
+                ></button>
+              </template>
+            </div>
+          </div>
+          <div class="mt-4 text-[12px] text-faint" x-show="!prerequisites.length">
+            No prerequisites — an entry point of the ladder.
+          </div>
+
+          <!-- new terms — plan 0028 §B step 2 -->
+          <div class="mt-5 rounded-2xl border border-line bg-panel p-4">
+            <div class="flex items-baseline gap-2 flex-wrap">
+              <span class="text-[11.5px] uppercase tracking-widest text-faint">new terms</span>
+              <span class="text-[11.5px] text-faint">defined before first use</span>
+              <span class="ml-auto text-[11.5px] font-mono whitespace-nowrap">
+                <span class="text-faint" x-text="'worth ' + levelPotentialXp + ' xp · '"></span>
+                <span
+                  :class="engagedHere ? 'text-gold' : 'text-faint'"
+                  x-text="engagedHere ? '✓ widget engaged' : 'engage the widget'"
+                ></span>
+              </span>
+            </div>
+            <dl class="mt-2 space-y-1.5">
+              <template x-for="t in levelTerms" :key="t.id">
+                <div class="flex items-baseline gap-2">
+                  <dt
+                    class="text-[12.5px] font-semibold shrink-0"
+                    :class="
+                      t.tier === 'mastered'
+                        ? 'text-eva'
+                        : t.tier === 'familiar'
+                          ? 'text-gold'
+                          : 'text-ink'
+                    "
+                    x-text="t.label"
+                  ></dt>
+                  <dd class="text-[12px] text-dim" x-text="'— ' + t.def"></dd>
+                </div>
+              </template>
+            </dl>
           </div>
 
           <!-- the live widgets: any interaction here counts as engaging the level -->
@@ -432,7 +518,8 @@
                 If two trees can be equal, how many equal trees are there? The answer is not a
                 number — it is the <b class="text-ink">closure of your laws</b>. Start from a
                 program and apply laws until nothing new appears; everything you reach is
-                equivalent.
+                equivalent. The structure that computes that closure is the
+                <b class="text-ink">e-graph</b> — it holds every equivalent form at once.
               </p>
               <p class="text-dim leading-relaxed mt-3">
                 Flip between a rewriter with <em>no</em> laws and one with six. Same programs, same
@@ -539,30 +626,20 @@
                 class="mt-4 rounded-2xl border border-line bg-panel p-5 text-[13.5px] text-dim leading-relaxed"
               >
                 <b class="text-ink">In the real system, laws are found, not only written.</b>
-                A discovery pipeline — census → propose → verify → measure → rank → emit — counts
-                op-and-shape patterns across real model graphs and runs every candidate through the
-                same referee the next level teaches. It has shipped laws no human wrote —
-                <b class="text-ink">11 machine-admitted</b> ones now sit in the default rule set
-                (<code class="text-ink">MACHINE_SHIPPED</code> in the real package's provenance
-                table). The newest is <code class="text-ink">mul_unsq_nat</code> (the census-minted
-                two-sided unsqueeze naturality, guarded by a condition the adversarial sweep
-                synthesized, −12.3&thinsp;% on its source workload). Four further laws —
-                <code class="text-ink">select_mul</code> (<code
-                  >mul(select u, select v) → select (mul u v)</code
+                The shipped law bank is a hand-written kernel plus
+                <b class="text-ink">11 laws the machine discovered</b> — the newest,
+                <code class="text-ink">mul_unsq_nat</code>, is a two-sided unsqueeze naturality
+                worth −12.3&thinsp;% on its source workload, and four more (<code class="text-ink"
+                  >select_mul</code
                 >
-                — 25 corpus sites, −25.9&thinsp;% modeled cost),
+                — <code>mul(select u, select v) → select (mul u v)</code>, 25 corpus sites —
                 <code class="text-ink">softmax_fold</code>,
-                <code class="text-ink">silu_fold</code> and <code class="text-ink">glu_fold</code> —
-                had machine-<em>assisted</em> discovery but were hand-integrated before the
-                admission machinery existed, so the provenance table counts them as human-authored.
-                Plus the canonicalization bridges that make noncanonical spellings reach the fold.
-                The corpus itself is machine-fed: 166 real <code>nn.*</code> workloads through the
-                export boundary, 114 verified — an intake that also caught three lowering bugs no
-                test caught. Held out of the library and re-run, the pipeline re-proposes
-                <code>select_mul</code> at rank #1 of 35 candidates — and it also refuses: a
-                candidate that fired 23 times and lowered cost was rejected because the numeric
-                oracle called it false.
-                <b class="text-ink">Structure proposes; the referee decides.</b>
+                <code class="text-ink">silu_fold</code> and <code class="text-ink">glu_fold</code>)
+                were machine-assisted but hand-integrated. The corpus is machine-fed too: 166 real
+                <code>nn.*</code> workloads through the export boundary, 114 verified — an intake
+                that also caught three lowering bugs no test caught. Later levels follow that
+                machinery end to end; here, note only its shape:
+                <b class="text-ink">structure proposes, and a numeric check decides.</b>
               </div>
             </section>
 
@@ -655,13 +732,13 @@
                   ></div>
                   <div class="mt-4 text-[13px] text-dim border-l-2 border-eva pl-3">
                     <b class="text-ink">This is the safety argument.</b> The referee runs
-                    <em>after</em> the search, not inside it — which is why a learned player can
+                    <em>after</em> the search, not inside it — which is why a heuristic player can
                     pick a terrible move but never an unsound one.
                   </div>
                   <div class="mt-4 text-[13px] text-dim border-l-2 border-gold pl-3">
                     <b class="text-ink">The referee judges machines too — and gets audited.</b> A
                     machine-discovered candidate that fired 23 times and lowered cost was rejected
-                    by the numeric oracle — a false equality. And when a learned proposer offered
+                    by the numeric oracle — a false equality. And when a machine proposer offered
                     <code class="text-ink">select(u) = unsqueeze(select(u))</code> as a "law", it
                     exposed a hole in the oracle itself: the equality check broadcast across ranks,
                     so a rank-changing rewrite scored "true". The fix — exact shape equality before
@@ -669,16 +746,16 @@
                     verdict changed. The referee referees humans, machines, and itself. <br /><br />
                     <b class="text-ink">Then the machine audited its own first law.</b> A view/index
                     oracle built to resolve the "unproven" bucket swept every real site
-                    <em>plus</em> synthesized adversarial ones — and proved the shipped
+                    <em>plus</em> synthesized edge cases — and proved the shipped
                     <code class="text-ink">select_mul</code> <em>unsound</em>: broadcasting
                     <code>mul</code> along the selected axis changes the result. All 13 real sites
                     happened to satisfy the missing condition, so it never bit — until the machine
-                    went looking off the corpus. Guarded now, by a condition that is itself pure
+                    went looking off the corpus. Constrained now, by a condition that is itself pure
                     data. And the object language caught up: every shipped law is now fully
-                    serializable — pattern, guard, proof — and the machine can
+                    serializable — pattern, condition, proof — and the machine can
                     <em>declare</em> objects (fold / lift / compose a new one into the store) and
-                    have the whole adversarial gauntlet admit or refuse it. Two built objects
-                    already passed.
+                    have the whole checking round admit or refuse it. Two built objects already
+                    passed.
                   </div>
                 </div>
               </div>
@@ -801,10 +878,12 @@
                 </div>
               </div>
               <div class="mt-4 text-[13px] text-dim border-l-2 border-gold pl-3">
-                <b class="text-ink">In the real system the learned player has earned its place.</b>
-                The shipped contraction player <b class="text-ink">beats</b> best-of-N randomized
-                greedy at n&nbsp;=&nbsp;40 — 0.87–0.98× at equal wall-clock — and the deterministic
-                external greedy ~2× — shipped as a 25&thinsp;KiB artifact,
+                <b class="text-ink"
+                  >In the real system the shipped contraction policy has earned its place.</b
+                >
+                It <b class="text-ink">beats</b> best-of-N randomized greedy at n&nbsp;=&nbsp;40 —
+                0.87–0.98× at equal wall-clock — and the deterministic external greedy ~2× — shipped
+                as a 25&thinsp;KiB artifact,
                 <code class="text-ink">load_contraction_policy()</code>. What it still can't do is
                 the next level's ledger.
               </div>
@@ -935,10 +1014,10 @@
                     imagination, carry the discoveries.
                   </li>
                   <li>
-                    <b class="text-ink">Cannot feed itself.</b> Resampling the workload census to
-                    train on mints provably zero new op-tuples; mutation's novel tuples are
-                    semantically arbitrary. Self-play needs real programs — their shapes carry the
-                    justifications.
+                    <b class="text-ink">Cannot feed itself.</b> Resampling the corpus to train on
+                    freshly named atoms provably yields zero new op-tuples; mutation's novel tuples
+                    are semantically arbitrary. Self-play needs real programs — their shapes carry
+                    the justifications.
                   </li>
                 </ul>
               </div>
@@ -1041,7 +1120,7 @@
                 <b class="text-ink"
                   >A model can be calibrated by measurement — and being wrong has consequences.</b
                 >
-                The real pipeline's dispatch-count cost model once priced a batched-scan delivery
+                The real pipeline's launch-count cost model once priced a batched-scan delivery
                 ~20–30&thinsp;% <em>cheaper</em> than the generic eval; on the GPU the same term
                 measured 1.9–2.7× <em>slower</em>. The modeled executor-routing comparison was wrong
                 on 5 of 6 cases. The fix feeds measured per-executor corrections — a
@@ -1677,7 +1756,7 @@
                 <b class="text-ink">Sharing as structure is the strongest immediate argument.</b>
                 When Δ is a morphism, fan-out is explicit — the DAG-vs-tree ambiguity class of bugs
                 is impossible by construction. And <code>loop</code> makes recurrence first-class:
-                the RetNet carrier the machine extracted is a spelled
+                the RetNet loop form the machine extracted is a spelled
                 <code class="text-ink">seq(pre, loop(step, K), post)</code>, verified against the
                 real <code class="text-ink">_ChunkedRetention</code> at 1e-7–2.6e-7. The bridge is
                 measured: <b class="text-ink">321/321</b> exported workloads round-trip structurally
@@ -2285,33 +2364,83 @@
             </section>
           </div>
 
-          <!-- ── checkpoint ────────────────────────────────────────── -->
+          <!-- ── check it (plan 0028 §B step 6 — multi-part) ───────── -->
           <div class="mt-10 rounded-2xl border border-line bg-panel p-6">
-            <div class="text-[11.5px] uppercase tracking-widest text-faint mb-2">checkpoint</div>
-            <div class="text-[15px] font-semibold" x-text="level.checkpoint.q"></div>
-            <div class="mt-4 flex flex-wrap gap-2">
-              <template x-for="o in level.checkpoint.opts" :key="o">
-                <button
-                  @click="answer(o)"
-                  class="px-3.5 py-2 rounded-lg text-[13.5px] border transition"
-                  :class="
-                    picked === o
-                      ? o === level.checkpoint.ok
-                        ? 'border-eva text-eva'
-                        : 'border-bad text-bad'
-                      : 'border-line bg-panel2 hover:border-gold'
-                  "
-                  x-text="o"
-                ></button>
+            <div class="flex items-baseline gap-2 flex-wrap">
+              <div class="text-[11.5px] uppercase tracking-widest text-faint">check it</div>
+              <span class="text-[11.5px] text-faint"
+                ><span class="text-ink" x-text="checkpointProgress.correct"></span>/<span
+                  x-text="checkpointProgress.total"
+                ></span>
+                correct</span
+              >
+              <span
+                class="ml-auto text-[11.5px] font-semibold"
+                :class="checkpointProgress.done ? 'text-eva' : 'text-faint'"
+                x-text="checkpointProgress.done ? '✓ checkpoint passed' : 'answer every part'"
+              ></span>
+            </div>
+            <div class="mt-4 space-y-5">
+              <template x-for="(part, pi) in level.checkpoint.parts" :key="pi">
+                <div>
+                  <div class="flex items-baseline gap-2 flex-wrap">
+                    <span class="font-mono text-[11px] text-faint" x-text="pi + 1"></span>
+                    <span class="text-[15px] font-semibold" x-text="part.q"></span>
+                    <span
+                      class="px-1.5 py-0.5 rounded border text-[10.5px] uppercase tracking-widest"
+                      :class="
+                        part.interactive ? 'border-gold/50 text-gold' : 'border-line text-faint'
+                      "
+                      x-text="part.interactive ? 'from the interactive' : 'recall'"
+                    ></span>
+                  </div>
+                  <div class="mt-3 flex flex-wrap gap-2">
+                    <template x-for="o in part.opts" :key="o">
+                      <button
+                        @click="answerAt(pi, o)"
+                        class="px-3.5 py-2 rounded-lg text-[13.5px] border transition"
+                        :class="
+                          partPicked(pi) === o
+                            ? o === part.ok
+                              ? 'border-eva text-eva'
+                              : 'border-bad text-bad'
+                            : 'border-line bg-panel2 hover:border-gold'
+                        "
+                        x-text="o"
+                      ></button>
+                    </template>
+                  </div>
+                  <div class="mt-3 text-[13.5px] text-dim" x-show="partAnswered(pi)" x-cloak>
+                    <span
+                      class="font-semibold"
+                      :class="partPassed(pi) ? 'text-eva' : 'text-bad'"
+                      x-text="partPassed(pi) ? '✓ correct — ' : '✕ not quite — '"
+                    ></span>
+                    <span x-text="part.why"></span>
+                  </div>
+                </div>
               </template>
             </div>
-            <div class="mt-4 text-[13.5px] text-dim" x-show="answered(level.id)" x-cloak>
-              <span
-                class="font-semibold"
-                :class="canAdvance ? 'text-eva' : 'text-bad'"
-                x-text="canAdvance ? '✓ correct — ' : '✕ not quite — '"
-              ></span>
-              <span x-text="level.checkpoint.why"></span>
+          </div>
+
+          <!-- ── you can now · in the real project (plan 0028 §B 7–8) ── -->
+          <div class="mt-6 grid lg:grid-cols-2 gap-4">
+            <div class="rounded-2xl border border-eva/40 bg-panel p-5">
+              <div class="text-[11.5px] uppercase tracking-widest text-eva mb-2">you can now</div>
+              <p class="text-[13.5px] text-ink leading-relaxed" x-text="level.outcome"></p>
+            </div>
+            <div class="rounded-2xl border border-line bg-panel p-5">
+              <div class="text-[11.5px] uppercase tracking-widest text-faint mb-2">
+                in the real project
+              </div>
+              <ul class="space-y-2">
+                <template x-for="r in level.repo" :key="r.path">
+                  <li class="text-[12.5px]">
+                    <code class="text-sea break-all" x-text="r.path"></code>
+                    <span class="text-dim"> — <span x-text="r.note"></span></span>
+                  </li>
+                </template>
+              </ul>
             </div>
           </div>
 

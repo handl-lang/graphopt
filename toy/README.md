@@ -1,8 +1,8 @@
 # catopt toy — a course in structural optimization
 
 An interactive course on catopt's architecture: **one idea per level**, a worked
-example, an interactive, and a **checkpoint you must pass before advancing**.
-Scaffolded as a **Vite+ monorepo** with `vp`.
+example, an interactive, and a **multi-part checkpoint you must pass before
+advancing**. Scaffolded as a **Vite+ monorepo** with `vp`.
 
 ```bash
 vp install             # install the workspace
@@ -11,6 +11,42 @@ vp check               # format + lint + typecheck (oxfmt / oxlint / tsgo)
 vp run -r test         # vitest across the workspace
 vp run -r build        # engine → dist, app → dist
 ```
+
+## The per-level template (plan 0028 §B)
+
+Every level renders the same eight-part clarity contract, in order:
+
+1. **Why you are here** — one sentence tying the level to the one before.
+2. **New terms** — the concepts this level introduces, defined before first use.
+3. **The idea** — short prose, one idea.
+4. **See it** — the worked example (numbers on screen).
+5. **Do it** — the live interactive.
+6. **Check it** — a **multi-part** checkpoint (≥2 questions; at least one
+   answerable only from the interactive). Every part is tagged with the concept
+   it exercises, so it feeds both the XP award and the per-concept mastery meter.
+7. **You can now** — the outcome restated as a capability.
+8. **In the real project** — file pointers into `packages/` + the retro/ADR.
+
+A level also shows its **module** (one of the six arcs) and its
+**prerequisites** — the levels that introduce the concepts it uses, read
+straight off the concept graph, so the ladder is no longer flat.
+
+## The concept graph, the glossary, and the ordering gate
+
+`packages/engine/src/concepts.ts` is the prerequisite structure as data: for
+every concept, the level that introduces it and the levels that use it. It
+drives three things:
+
+- the **prerequisite display** on each level (`prerequisites()`),
+- the **mastery meter** (`mastery.ts`), and
+- the **glossary panel** (`glossary()`) — every concept, its one-line
+  definition, its home level, and a jump to that level, reachable from the shell.
+
+`forwardRefs()` returns every concept used before it is introduced. Step 1
+seeded the graph and **recorded 22 ordering bugs**; step 2 **fixed them all —
+22 → 0** — by either promoting a term's introduction to its first-use level
+(the level genuinely teaches it) or removing the incidental prose mention.
+The tests assert the count, so it can only go down.
 
 ## The ladder (basics → advanced)
 
@@ -44,12 +80,12 @@ vp run -r build        # engine → dist, app → dist
 ```
 apps/
   learn/                     the course
-    index.html               the twenty-two levels + checkpoint shell
+    index.html               the twenty-two levels + multi-part checkpoint shell
     src/main.ts              Alpine bootstrap
     src/style.css            Tailwind v4 (@import + @theme tokens)
-    src/components/course.ts the level list, gating, progress, recap
+    src/components/course.ts the levels + template, gating, prerequisites, glossary
     src/components/*.ts      one interactive per level
-    tests/course.test.ts     gating, reach, compare, tensions, coherence, …
+    tests/course.test.ts     gating, template, multi-part checkpoints, glossary, …
 packages/
   engine/                    the toy e-graph engine, as a library
     src/term.ts              the term language + cost model
@@ -57,6 +93,11 @@ packages/
     src/referee.ts           numeric equivalence on concrete matrices
     src/features.ts          ProgramFeatures, mirroring catopt_core.features
     src/programs.ts          the starting programs
+    src/concepts.ts          the concept graph: introduce/use, prerequisites, glossary
+    src/points.ts            the XP model — the level curve and the named ranks
+    src/mastery.ts           per-concept mastery (weak / familiar / mastered)
+    src/review.ts            the module arcs + the review round
+    src/badges.ts            the badge predicates
     src/minting.ts           the ADR-0007 minting funnel
     src/guards.ts            a live guard-synthesis mini-sweep
     src/exposure.ts          the bimodal exposure screen (live histogram)
@@ -67,6 +108,7 @@ packages/
     src/bounded.ts           the bounded lane — certificate × economics, live
     src/improve.ts           the project's open work as data (gap table)
     tests/engine.test.ts     vitest, incl. Catalan(3) = 5 bracketings
+    tests/concepts.test.ts   the ordering gate, prerequisites and the glossary
     tests/cycle3.test.ts     vitest, the six cycle-3 modules
     tests/cycle4.test.ts     vitest, the four cycle-4 modules
 ```
