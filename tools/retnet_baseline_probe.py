@@ -30,6 +30,8 @@ arms (B=2, d=16, H=1, T in {512, 1024, 2048}):
 
 Usage::
 
+    # scratch deps (not in the lockfile — benchmark-only):
+    .venv/bin/pip install --no-deps torchscale fla-core einops fairscale
     .venv/bin/python tools/retnet_baseline_probe.py
     .venv/bin/python tools/retnet_baseline_probe.py --t 2048
 """
