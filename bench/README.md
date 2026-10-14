@@ -84,9 +84,12 @@ disagree between formats:
 | Slidev | `--slidev` | assets + a slide fragment for `pitch/liquid` |
 | dashboard | `python -m bench dashboard` | cross-suite `index.html` |
 
-Plots use plotly (interactive + `kaleido` static export); the ledger
-uses polars; the CLI is tyro (dataclass → typed flags); console output
-is rich.
+Plots use plotly (interactive + `kaleido` static export); the CLI is
+tyro (dataclass → typed flags); console output is rich.  The ledger
+(`benchkit/ledger.py`) reads and writes **raw JSONL records**
+(`list[dict]`) — suite rows carry heterogeneous nested
+`cells`/`fires` documents, which a polars frame cannot represent;
+polars is used only for the flat stats surfaces (`stats.py`).
 
 ## Checkpoints
 
