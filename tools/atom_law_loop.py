@@ -69,10 +69,6 @@ def _p(op: str, *args: Any, **attrs: Any) -> Op:
     return Op.make(op, *args, **attrs)
 
 
-def _v(name: str, *shape: int) -> Var:
-    return Var(name, TensorType(tuple(shape)))
-
-
 #: Marker for a candidate whose RHS is *solved*, not spelled — the
 #: affine-in-state slot solve fills ``applyd(aff_diag(E1,E2), h)``
 #: from measured slot values (:func:`_affine_candidates`).
