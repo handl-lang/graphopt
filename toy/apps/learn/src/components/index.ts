@@ -5,14 +5,20 @@ import { Compare } from "./compare.ts";
 import { Course } from "./course.ts";
 import { Episode } from "./episode.ts";
 import { Evaluation } from "./evaluation.ts";
+import { Expose } from "./exposure.ts";
 import { Frontier } from "./frontier.ts";
+import { Honest } from "./honest.ts";
 import { Inspect } from "./inspect.ts";
 import { Leaks } from "./leaks.ts";
+import { Mint } from "./mint.ts";
 import { Players } from "./players.ts";
+import { Ports } from "./ports.ts";
 import { Reach } from "./reach.ts";
 import { Structures } from "./structures.ts";
+import { Substrate } from "./substrate.ts";
 import { Swap } from "./swap.ts";
 import { Tensions } from "./tensions.ts";
+import { Truthpay } from "./truthpay.ts";
 
 /** Every Alpine component the course registers. */
 export const COMPONENTS: Record<string, () => object> = {
@@ -31,4 +37,10 @@ export const COMPONENTS: Record<string, () => object> = {
   leaks: () => new Leaks(),
   tensions: () => new Tensions(),
   coherence: () => new Coherence(),
+  mint: () => new Mint(),
+  truthpay: () => new Truthpay(),
+  expose: () => new Expose(),
+  substrate: () => new Substrate(),
+  ports: () => new Ports(),
+  honest: () => new Honest(),
 };

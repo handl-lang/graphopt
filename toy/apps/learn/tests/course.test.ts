@@ -3,8 +3,14 @@ import { afterEach, describe, expect, it } from "vite-plus/test";
 import { Coherence } from "../src/components/coherence.ts";
 import { Compare } from "../src/components/compare.ts";
 import { Course, STORAGE_KEY } from "../src/components/course.ts";
+import { Expose } from "../src/components/exposure.ts";
+import { Honest } from "../src/components/honest.ts";
+import { Mint } from "../src/components/mint.ts";
+import { Ports } from "../src/components/ports.ts";
 import { Reach } from "../src/components/reach.ts";
+import { Substrate } from "../src/components/substrate.ts";
 import { Tensions } from "../src/components/tensions.ts";
+import { Truthpay } from "../src/components/truthpay.ts";
 
 /** Install a Map-backed localStorage shim; returns the backing map. */
 function withStorage(): Map<string, string> {
@@ -71,10 +77,10 @@ describe("course gating", () => {
     }
   });
 
-  it("runs twelve levels, 0 through 11", () => {
+  it("runs eighteen levels, 0 through 17", () => {
     const c = new Course();
-    expect(c.n).toBe(12);
-    expect(c.levels.at(-1)?.id).toBe("coherence");
+    expect(c.n).toBe(18);
+    expect(c.levels.at(-1)?.id).toBe("honest");
     expect(c.levels.map((l) => l.id).length).toBe(new Set(c.levels.map((l) => l.id)).size);
   });
 
@@ -216,5 +222,107 @@ describe("coherence", () => {
     const c = new Coherence();
     c.pick(4); // expand × square on sqdup — square has no redex there
     expect(c.current.verdict).toBe("no-cofire");
+  });
+});
+
+describe("mint", () => {
+  it("moves the funnel through the four layers for a picked need", () => {
+    const m = new Mint();
+    expect(m.needs.length).toBe(6);
+    m.pick(0);
+    expect(m.layers.every((l) => l.ok)).toBe(true);
+    expect(m.verdict).toContain("pays nothing");
+    m.pick(5); // the vocabulary gap
+    expect(m.layers.some((l) => !l.ok)).toBe(true);
+  });
+
+  it("exposes the live funnel tallies", () => {
+    const m = new Mint();
+    const laws = m.funnel.find((s) => s.key === "laws")!;
+    const pay = m.funnel.find((s) => s.key === "pay")!;
+    expect(laws.count).toBe(15);
+    expect(pay.count).toBe(0);
+  });
+});
+
+describe("truthpay", () => {
+  it("breaks the naive guard and finds the exact one clean", () => {
+    const t = new Truthpay();
+    expect(t.guard).toBe("naive");
+    expect(t.witnessCount).toBeGreaterThan(0);
+    expect(t.witness?.bad).toBe(true);
+    t.setGuard("exact");
+    expect(t.witnessCount).toBe(0);
+    expect(t.synthesized).toContain("flat-map-unsq");
+  });
+
+  it("steps the counterexample viewer", () => {
+    const t = new Truthpay();
+    expect(t.witnessIndex).toBe(0);
+    t.next();
+    expect(t.witnessIndex).toBeGreaterThanOrEqual(0);
+    t.prev();
+    expect(t.witnessIndex).toBe(0);
+  });
+});
+
+describe("expose", () => {
+  it("computes the live histogram and cites the corpus anchors", () => {
+    const e = new Expose();
+    expect(e.histogram.reduce((p, b) => p + b.count, 0)).toBe(e.workloads.length);
+    expect(e.corpus.total).toBe(321);
+    expect(e.modes.zero).toBe(8);
+    expect(e.visibleButNull.length).toBe(4);
+    e.setMode("ops");
+    expect(e.mode).toBe("ops");
+    expect(e.invisibleOps.some((o) => o.op === "conv2d")).toBe(true);
+    expect(e.visibleOps.some((o) => o.op === "matmul")).toBe(true);
+  });
+});
+
+describe("substrate", () => {
+  it("round-trips every term and spells the loop", () => {
+    const s = new Substrate();
+    expect(s.roundTrips).toBe(true);
+    s.pick(2); // dup — the shared program
+    expect(s.dups).toBe(2);
+    expect(s.comb).toContain("dup");
+    expect(s.loopRoundTrips).toBe(true);
+    expect(s.loopComb).toContain("loop(");
+  });
+});
+
+describe("ports", () => {
+  it("swaps the sink with the core counter at zero", () => {
+    const p = new Ports();
+    expect(p.sink).toBe("TorchSink");
+    p.swap("OnnxSink");
+    expect(p.sink).toBe("OnnxSink");
+    expect(p.coreMutations).toBe(0);
+    expect(p.unchanged).toBe(true);
+    expect(p.unsupported).toContain("sqq");
+    expect(p.lowerable).toBe(false);
+  });
+
+  it("only a core edit moves the counter", () => {
+    const p = new Ports();
+    p.edit();
+    expect(p.coreMutations).toBe(1);
+    expect(p.unchanged).toBe(false);
+  });
+});
+
+describe("honest", () => {
+  it("has a valid correct option per refusal", () => {
+    for (const r of new Honest().items) {
+      expect(r.opts).toContain(r.ok);
+    }
+  });
+
+  it("scores answers", () => {
+    const h = new Honest();
+    expect(h.score).toBe(0);
+    h.answer(0, h.items[0].ok);
+    expect(h.score).toBe(1);
   });
 });

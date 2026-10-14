@@ -377,25 +377,21 @@
                 <b class="text-ink">In the real system, laws are found, not only written.</b>
                 A discovery pipeline — census → propose → verify → measure → rank → emit — counts
                 op-and-shape patterns across real model graphs and runs every candidate through the
-                same referee the next level teaches. It has shipped six fold laws no human wrote —
-                <code class="text-ink">select_mul</code> (<code
+                same referee the next level teaches. It has shipped laws no human wrote — the four
+                the course counts are <code class="text-ink">select_mul</code> (<code
                   >mul(select u, select v) → select (mul u v)</code
                 >
                 — 25 corpus sites, −25.9&thinsp;% modeled cost),
-                <code class="text-ink">softmax_fold</code>,
-                <code class="text-ink">silu_fold</code>,
-                <code class="text-ink">rms_norm_fold</code> (the manual
-                RMSNorm spelling, −83&thinsp;% cost, bitwise-equal) and
-                <code class="text-ink">glu_fold</code> — plus the
-                canonicalization bridges that make noncanonical
-                spellings reach the fold. The corpus itself is
-                machine-fed: 166 real <code>nn.*</code> workloads
-                through the export boundary, 114 verified — an intake
-                that also caught three lowering bugs no test caught.
-                Held out
-                of the library and re-run, the pipeline re-proposes <code>select_mul</code> at rank
-                #1 of 35 candidates — and it also refuses: a candidate that fired 23 times and
-                lowered cost was rejected because the numeric oracle called it false.
+                <code class="text-ink">softmax_fold</code>, <code class="text-ink">silu_fold</code>,
+                and <code class="text-ink">mul_unsq_nat</code> (the census-minted two-sided
+                unsqueeze naturality, guarded by a condition the adversarial sweep synthesized,
+                −12.3&thinsp;% on its source workload) — plus the canonicalization bridges that make
+                noncanonical spellings reach the fold. The corpus itself is machine-fed: 166 real
+                <code>nn.*</code> workloads through the export boundary, 114 verified — an intake
+                that also caught three lowering bugs no test caught. Held out of the library and
+                re-run, the pipeline re-proposes <code>select_mul</code> at rank #1 of 35 candidates
+                — and it also refuses: a candidate that fired 23 times and lowered cost was rejected
+                because the numeric oracle called it false.
                 <b class="text-ink">Structure proposes; the referee decides.</b>
               </div>
             </section>
@@ -500,10 +496,9 @@
                     exposed a hole in the oracle itself: the equality check broadcast across ranks,
                     so a rank-changing rewrite scored "true". The fix — exact shape equality before
                     the value comparison — flipped three past candidates true → false, and no ship
-                    verdict changed. The referee referees humans, machines, and itself.
-                    <br><br>
-                    <b class="text-ink">Then the machine audited its own first law.</b> A
-                    view/index oracle built to resolve the "unproven" bucket swept every real site
+                    verdict changed. The referee referees humans, machines, and itself. <br /><br />
+                    <b class="text-ink">Then the machine audited its own first law.</b> A view/index
+                    oracle built to resolve the "unproven" bucket swept every real site
                     <em>plus</em> synthesized adversarial ones — and proved the shipped
                     <code class="text-ink">select_mul</code> <em>unsound</em>: broadcasting
                     <code>mul</code> along the selected axis changes the result. All 13 real sites
@@ -1095,18 +1090,589 @@
                     x-text="verdictNote"
                   ></div>
                   <div class="mt-5 text-[13px] text-dim border-l-2 border-gold pl-3">
-                    <b class="text-ink">In the real library this probe is a catalogue.</b> All 61
-                    shipped rules, pairwise: <b class="text-ink">46 axioms / 13 lemmas / 2
-                    redundant</b>, 10 equivalence classes of "the same law two ways", and
-                    44 co-firing pairs — 37 rejoin on their own, 5 needed the library, and
-                    <b class="text-ink">2 genuinely diverged</b>. Both divergences were one critical
-                    pair: <code class="text-ink">silu_expand × swiglu_fuse</code> — expanding the
-                    silu inside the <code>mul</code> destroys the fuse redex. The fill was the
+                    <b class="text-ink">In the real library this probe is a catalogue.</b> All 82
+                    shipped rules, pairwise:
+                    <b class="text-ink">58 axioms / 22 lemmas / 2 redundant</b> — the axiom/lemma
+                    split is a recorded field on every rule, and the lemmas are equivalence classes
+                    of "the same law two ways". Exactly one coherence gap was measured:
+                    <code class="text-ink">silu_expand × swiglu_fuse</code> — expanding the silu
+                    inside the <code>mul</code> destroys the fuse redex. The fill was the
                     definitional inverse <code class="text-ink">silu_fold</code> (x·σ(x) → silu(x)):
                     divergent pairs went 2 → 0 — and the mediator is a paying law in its own right
                     (~1.4–2.6× on its bench case).
                   </div>
                 </div>
+              </div>
+            </section>
+
+            <!-- ── 12 · the vocabulary grows itself ──────────────── -->
+            <section x-show="i === 12" x-data="mint">
+              <p class="text-dim leading-relaxed">
+                Everything so far assumed the vocabulary was given: five ops, six laws. The real
+                system can <b class="text-ink">grow its own vocabulary</b> — mint a new semantic
+                atom from a measured need. ADR 0007's four layers, in order: a <em>need</em> the
+                runtime sees but no law names; a <em>signature</em> read off real occurrences; a
+                <em>handler</em> proposed from a structured grammar and verified numerically; the
+                <em>laws</em> the atom satisfies, synthesized and certified — then the
+                <em>admission</em> gauntlet and a pay probe.
+              </p>
+              <p class="text-dim leading-relaxed mt-3">
+                Pick a measured need and read the funnel. Every admitted need clears the same four
+                layers — so watch the <em>last</em> column.
+              </p>
+              <div class="mt-5 grid lg:grid-cols-5 gap-4">
+                <div class="lg:col-span-2 rounded-2xl border border-line bg-panel p-5">
+                  <div class="text-[11.5px] uppercase tracking-widest text-faint mb-3">
+                    the need bank
+                  </div>
+                  <div class="space-y-2">
+                    <template x-for="(nd, k) in needs" :key="k">
+                      <button
+                        @click="pick(k)"
+                        class="w-full text-left px-3.5 py-2.5 rounded-xl border bg-panel transition"
+                        :class="sel === k ? 'border-gold' : 'border-line hover:border-dim'"
+                      >
+                        <div
+                          class="font-mono text-[13px]"
+                          :class="sel === k ? 'text-gold' : 'text-ink'"
+                          x-text="nd.op"
+                        ></div>
+                        <div
+                          class="text-[11.5px] text-dim mt-0.5"
+                          x-text="nd.sites ? nd.flops + ' flops / ' + nd.sites + ' sites' : 'no measured sites'"
+                        ></div>
+                      </button>
+                    </template>
+                  </div>
+                  <div class="mt-4 pt-3 border-t border-line text-[12px] text-faint">
+                    <span x-text="totalFlops"></span> measured flops ranked by the census
+                  </div>
+                </div>
+                <div class="lg:col-span-3 rounded-2xl border border-line bg-panel p-5">
+                  <div class="text-[11.5px] uppercase tracking-widest text-faint mb-3">
+                    the funnel
+                  </div>
+                  <div class="space-y-2">
+                    <template x-for="l in layers" :key="l.key">
+                      <div
+                        class="flex items-start gap-3 px-3 py-2.5 rounded-xl border bg-panel2"
+                        :class="l.ok ? 'border-line' : 'border-bad/60'"
+                      >
+                        <span
+                          class="w-5 text-center font-bold"
+                          :class="l.ok ? 'text-eva' : 'text-bad'"
+                          x-text="l.ok ? '✓' : '✗'"
+                        ></span>
+                        <div class="flex-1">
+                          <div class="text-[13px] font-semibold" x-text="l.label"></div>
+                          <div class="text-[12px] text-dim" x-text="l.detail"></div>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                  <div
+                    class="mt-4 text-[13.5px] font-semibold"
+                    :class="verdictTone"
+                    x-text="verdict"
+                  ></div>
+                </div>
+              </div>
+              <div
+                class="mt-4 rounded-2xl border border-line bg-panel p-5 text-[13.5px] text-dim leading-relaxed"
+              >
+                <b class="text-ink">The honest headline is the pay column.</b> The loop composes end
+                to end and mints: <code class="text-ink">scan_fold</code> — the selective-scan
+                recurrence h<sub>t</sub> = a<sub>t</sub>·h<sub>t−1</sub> + b<sub>t</sub>, verified
+                at 1.78e-15 — with five certified laws; <code class="text-ink">cumsum</code>,
+                <code class="text-ink">cumprod</code> and <code class="text-ink">logcumsumexp</code>
+                law sets. Then the pay probe fires
+                <b class="text-ink">zero certified laws on every real term</b> — the minted atom
+                computes the <em>total</em>, the corpus <em>emits the sequence</em>. Truth and pay
+                are measured separately, and they are disjoint here.
+                <span class="text-faint"
+                  >(Numbers: <code>project/retros/atom-synth-loop.md</code>, ADR 0007.)</span
+                >
+              </div>
+            </section>
+
+            <!-- ── 13 · true is not the same as paying ───────────── -->
+            <section x-show="i === 13" x-data="truthpay">
+              <p class="text-dim leading-relaxed">
+                A candidate law can be <em>true</em> and still not <em>pay</em>. Worse: a guard that
+                certifies it can be perfect on every binding you measured — and unsound just outside
+                them. The census minted
+                <code class="text-ink">mul(unsq u d, unsq v d) = unsq(mul u v, d)</code>, and the
+                obvious guard was "the two output grids coincide". Here is the
+                <b class="text-ink">adversarial sweep</b>: enumerate shapes, try to break the naive
+                guard, then read the guard the machine synthesized instead.
+              </p>
+              <div class="mt-5 grid lg:grid-cols-5 gap-4">
+                <div class="lg:col-span-2 rounded-2xl border border-line bg-panel p-5">
+                  <div class="text-[11.5px] uppercase tracking-widest text-faint mb-3">
+                    the guard
+                  </div>
+                  <div class="space-y-2">
+                    <template x-for="gd in guards" :key="gd.key">
+                      <button
+                        @click="setGuard(gd.key)"
+                        class="w-full text-left px-3.5 py-2.5 rounded-xl border bg-panel transition"
+                        :class="guard === gd.key ? 'border-gold' : 'border-line hover:border-dim'"
+                      >
+                        <div
+                          class="font-mono text-[13px]"
+                          :class="guard === gd.key ? 'text-gold' : 'text-ink'"
+                          x-text="gd.label"
+                        ></div>
+                        <div class="text-[11.5px] text-dim mt-0.5" x-text="gd.note"></div>
+                      </button>
+                    </template>
+                  </div>
+                  <div class="mt-4 pt-3 border-t border-line space-y-1.5 font-mono text-[12px]">
+                    <template x-for="r in sweep" :key="r.key">
+                      <div class="flex items-center justify-between">
+                        <span class="text-dim" x-text="r.label"></span>
+                        <span :class="r.badAccept ? 'text-bad font-bold' : 'text-eva'">
+                          <span x-text="r.badAccept + ' bad accepts'"></span>
+                        </span>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+                <div class="lg:col-span-3 rounded-2xl border border-line bg-panel p-5">
+                  <div class="text-[11.5px] uppercase tracking-widest text-faint mb-3">
+                    counterexample
+                    <span
+                      class="text-faint"
+                      x-text="witnessCount ? witnessIndex + 1 + ' / ' + witnessCount : 'none — the guard is clean'"
+                    ></span>
+                  </div>
+                  <template x-if="witness">
+                    <div>
+                      <div class="grid sm:grid-cols-2 gap-3 font-mono text-[12.5px]">
+                        <div class="rounded-lg bg-panel2 border border-line px-3 py-2">
+                          <div class="text-faint text-[11px] mb-1">lhs · u ⊗ v</div>
+                          <div class="text-sea" x-text="witness.lhsU + ' ⊗ ' + witness.lhsV"></div>
+                        </div>
+                        <div class="rounded-lg bg-panel2 border border-line px-3 py-2">
+                          <div class="text-faint text-[11px] mb-1">rhs grid</div>
+                          <div class="text-sea" x-text="witness.grid"></div>
+                        </div>
+                      </div>
+                      <div class="mt-3 text-[13px]" x-text="'dim d = ' + witness.d"></div>
+                      <div
+                        class="mt-2 text-[13.5px] font-semibold"
+                        :class="witness.bad ? 'text-bad' : 'text-eva'"
+                        x-text="
+                          witness.bad
+                            ? 'grids coincide — the naive guard accepts — but the flat reads differ: UNSOUND'
+                            : 'the guard accepts, and the equality holds'
+                        "
+                      ></div>
+                      <div class="mt-4 flex gap-2">
+                        <button
+                          @click="prev()"
+                          class="px-3 py-1.5 rounded-lg text-[13px] border border-line bg-panel2 hover:border-gold"
+                        >
+                          ← prev
+                        </button>
+                        <button
+                          @click="next()"
+                          class="px-3 py-1.5 rounded-lg text-[13px] border border-line bg-panel2 hover:border-gold"
+                        >
+                          next →
+                        </button>
+                      </div>
+                      <div
+                        class="mt-4 text-[12.5px] text-dim border-l-2 border-gold pl-3"
+                        x-show="guard === 'exact'"
+                        x-cloak
+                      >
+                        <b class="text-ink">The synthesized guard:</b>
+                        <span class="font-mono" x-text="synthesized"></span>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+              <div
+                class="mt-4 rounded-2xl border border-line bg-panel p-5 text-[13.5px] text-dim leading-relaxed"
+              >
+                <b class="text-ink">Then the shipped-vs-rejected pair.</b>
+                <code class="text-ink">mul_unsq_nat</code> was admitted — the exact
+                <code class="text-ink">flat-map-unsq</code> guard has 0 bad accepts and 0 misses,
+                pays −12.3&thinsp;% on its source workload, and closure grows +1.3&thinsp;% enodes.
+                Its apparent sibling <code class="text-ink">mul_unsqueeze_r_id</code> — the largest
+                "blocked structure" the corpus sweep found (−14.3&thinsp;%, 12 models / 22 sites) —
+                was <b class="text-ink">correctly rejected</b>: its real sites are semantically
+                unequal (an identity masks the difference) and the same guard declines all of them.
+                <span class="text-faint"
+                  >(<code>project/retros/mul-unsq-nat.md</code>, ADR 0007.)</span
+                >
+              </div>
+            </section>
+
+            <!-- ── 14 · where discovery can pay ──────────────────── -->
+            <section x-show="i === 14" x-data="expose">
+              <p class="text-dim leading-relaxed">
+                Discovery can only rewrite math the IR can <em>see</em>. Export a model to the
+                op-graph and measure the FLOPs-weighted share of nodes whose op appears in at least
+                one law's LHS. The screen is <b class="text-ink">bimodal</b>: the fused-op class
+                scores exactly 0%, the spelled-math class ≥95%. Flip between the workload histogram
+                and the op classifier.
+              </p>
+              <div class="mt-5 grid lg:grid-cols-5 gap-4">
+                <div class="lg:col-span-3 rounded-2xl border border-line bg-panel p-5">
+                  <div class="flex gap-2 mb-4 flex-wrap">
+                    <button
+                      @click="setMode('workloads')"
+                      class="px-3 py-1.5 rounded-lg text-[13px] border bg-panel2 hover:border-gold"
+                      :class="mode === 'workloads' ? 'border-gold text-gold' : 'border-line'"
+                    >
+                      workloads
+                    </button>
+                    <button
+                      @click="setMode('ops')"
+                      class="px-3 py-1.5 rounded-lg text-[13px] border bg-panel2 hover:border-gold"
+                      :class="mode === 'ops' ? 'border-gold text-gold' : 'border-line'"
+                    >
+                      ops
+                    </button>
+                  </div>
+                  <template x-if="mode === 'workloads'">
+                    <div class="space-y-2">
+                      <template x-for="b in histogram" :key="b.label">
+                        <div class="flex items-center gap-3 text-[12px] font-mono">
+                          <span class="w-16 text-dim" x-text="b.label"></span>
+                          <span
+                            class="flex-1 h-4 rounded bg-panel2 border border-line overflow-hidden"
+                          >
+                            <span
+                              class="block h-full bg-sea/80"
+                              :style="`width:${(100 * b.count) / maxBin}%`"
+                            ></span>
+                          </span>
+                          <span class="w-8 text-right" x-text="b.count"></span>
+                        </div>
+                      </template>
+                    </div>
+                  </template>
+                  <template x-if="mode === 'ops'">
+                    <div class="space-y-3">
+                      <div>
+                        <div class="text-[11.5px] uppercase tracking-widest text-faint mb-1.5">
+                          law-visible
+                        </div>
+                        <div class="flex flex-wrap gap-1.5">
+                          <template x-for="o in visibleOps" :key="o.op">
+                            <span
+                              class="px-2 py-1 rounded-md border border-eva/40 text-eva text-[11.5px] font-mono"
+                              :title="o.where"
+                              x-text="o.op"
+                            ></span>
+                          </template>
+                        </div>
+                      </div>
+                      <div>
+                        <div class="text-[11.5px] uppercase tracking-widest text-faint mb-1.5">
+                          invisible (the black boxes)
+                        </div>
+                        <div class="flex flex-wrap gap-1.5">
+                          <template x-for="o in invisibleOps" :key="o.op">
+                            <span
+                              class="px-2 py-1 rounded-md border border-bad/40 text-bad text-[11.5px] font-mono"
+                              :title="o.where"
+                              x-text="o.op"
+                            ></span>
+                          </template>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+                <div class="lg:col-span-2 rounded-2xl border border-line bg-panel p-5">
+                  <div class="text-[11.5px] uppercase tracking-widest text-faint mb-2">
+                    the whole corpus
+                  </div>
+                  <div class="font-mono text-4xl font-bold text-gold" x-text="corpus.total"></div>
+                  <div class="text-dim text-[13px]">exported workloads</div>
+                  <div class="mt-4 pt-4 border-t border-line space-y-2 text-[13px]">
+                    <div class="flex items-center justify-between">
+                      <span class="text-dim">exactly 0%</span>
+                      <span class="font-mono font-bold text-bad" x-text="corpus.zero"></span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-dim">≥ 95%</span>
+                      <span class="font-mono font-bold text-eva" x-text="corpus.high"></span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-dim">paying new structure</span>
+                      <span class="font-mono font-bold text-gold" x-text="yield + '%'"></span>
+                    </div>
+                  </div>
+                  <div class="mt-5 text-[13px] text-dim border-l-2 border-gold pl-3">
+                    Exposure is <em>necessary, not sufficient</em>.
+                    <span x-text="visibleButNull.length"></span> fully-visible models pay nothing —
+                    <span x-text="visibleButNull.map((w) => w.name).join(', ')"></span>.
+                  </div>
+                </div>
+              </div>
+              <div
+                class="mt-4 rounded-2xl border border-line bg-panel p-5 text-[13.5px] text-dim leading-relaxed"
+              >
+                <b class="text-ink">The bimodal shape is the whole point.</b> The 0% tail is exactly
+                the fused-op class — every <code class="text-ink">nn.*</code> native that exports to
+                a single opaque node (<code>nn.LayerNorm</code>, <code>nn.Conv*</code>,
+                <code>nn.*Pool*</code>, <code>sdpa</code>):
+                <b class="text-ink">the e-graph literally cannot see the computation</b>. Visible ≠
+                reachable either — the <code>sdpa</code> class scores 100% coverage but 0 strict
+                matches. And reachable ≠ paying: of the zoo's eight most-exposed models, five fire
+                shipped rules and four pay (ChunkedRetention −48%, LoRAAdapter −20%, GAU −9.5%,
+                GCNLayer −7.7%). The corpus-wide yield of fresh paying unpublished structure is
+                <b class="text-ink">~1.5%</b>.
+                <span class="text-faint">(<code>project/retros/exposed-math.md</code>.)</span>
+              </div>
+            </section>
+
+            <!-- ── 15 · sharing is a morphism ────────────────────── -->
+            <section x-show="i === 15" x-data="substrate">
+              <p class="text-dim leading-relaxed">
+                The op-graph IR is the lowering surface. A second, parallel presentation re-reads it
+                as <b class="text-ink">morphisms</b>: <code>seq</code> (composition),
+                <code>par</code> (the monoidal product ⊗), <code>arr</code> (apply an op),
+                <code>dup</code> (Δ — sharing, made explicit), and <code>loop</code> (a typed
+                trace). The bridge is a bijection: <code>dagToComb</code> fans shared subterms out
+                into Δ sites; <code>combToDag</code> inlines them back.
+              </p>
+              <div class="mt-5 grid lg:grid-cols-5 gap-4">
+                <div class="lg:col-span-2 rounded-2xl border border-line bg-panel p-5">
+                  <div class="text-[11.5px] uppercase tracking-widest text-faint mb-3">a term</div>
+                  <div class="space-y-2">
+                    <template x-for="(id, k) in programs" :key="id">
+                      <button
+                        @click="pick(k)"
+                        class="w-full text-left px-3.5 py-2.5 rounded-xl border bg-panel transition"
+                        :class="sel === k ? 'border-gold' : 'border-line hover:border-dim'"
+                      >
+                        <span
+                          class="font-mono text-[13px]"
+                          :class="sel === k ? 'text-gold' : 'text-ink'"
+                          x-text="id"
+                        ></span>
+                      </button>
+                    </template>
+                  </div>
+                </div>
+                <div class="lg:col-span-3 rounded-2xl border border-line bg-panel p-5 space-y-4">
+                  <div>
+                    <div class="text-[11.5px] uppercase tracking-widest text-faint mb-1.5">
+                      as a combinator term
+                    </div>
+                    <div class="font-mono text-[12.5px] text-sea break-all" x-text="comb"></div>
+                  </div>
+                  <div class="pt-3 border-t border-line">
+                    <div class="text-[11.5px] uppercase tracking-widest text-faint mb-1.5">
+                      round trip
+                    </div>
+                    <div class="font-mono text-[12px] text-dim break-all" x-text="back"></div>
+                    <div
+                      class="mt-2 text-[13px] font-semibold"
+                      :class="roundTrips ? 'text-eva' : 'text-bad'"
+                    >
+                      <span
+                        x-text="roundTrips ? '✓ dag → comb → dag is the identity' : '✕ lost structure'"
+                      ></span>
+                      <span class="text-faint ml-2" x-text="dups + ' Δ sites'"></span>
+                    </div>
+                  </div>
+                  <div class="pt-3 border-t border-line">
+                    <div class="text-[11.5px] uppercase tracking-widest text-faint mb-1.5">
+                      a recurrence as loop(step)
+                    </div>
+                    <div class="font-mono text-[12px] text-sea break-all" x-text="loopComb"></div>
+                    <div
+                      class="mt-1 font-mono text-[11.5px] text-dim break-all"
+                      x-text="loopBack"
+                    ></div>
+                    <div
+                      class="mt-1 text-[13px] font-semibold"
+                      :class="loopRoundTrips ? 'text-eva' : 'text-bad'"
+                      x-text="loopRoundTrips ? '✓ loop round-trips too' : '✕'"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="mt-4 rounded-2xl border border-line bg-panel p-5 text-[13.5px] text-dim leading-relaxed"
+              >
+                <b class="text-ink">Sharing as structure is the strongest immediate argument.</b>
+                When Δ is a morphism, fan-out is explicit — the DAG-vs-tree ambiguity class of bugs
+                is impossible by construction. And <code>loop</code> makes recurrence first-class:
+                the RetNet carrier the machine extracted is a spelled
+                <code class="text-ink">seq(pre, loop(step, K), post)</code>, verified against the
+                real <code class="text-ink">_ChunkedRetention</code> at 1e-7–2.6e-7. The bridge is
+                measured: <b class="text-ink">321/321</b> exported workloads round-trip structurally
+                exact, zero ops refuse translation.
+                <span class="text-faint">(ADR 0008.)</span>
+              </div>
+            </section>
+
+            <!-- ── 16 · a backend is a port ──────────────────────── -->
+            <section x-show="i === 16" x-data="ports">
+              <p class="text-dim leading-relaxed">
+                A backend is a <b class="text-ink">port</b>: a <code>Source</code> that lifts a
+                model to the IR and a <code>Sink</code> that lowers the IR to something runnable,
+                plus the set of ops the sink can lower. Swap the sink and watch the
+                <b class="text-ink">core</b> — the IR and the law set — stay byte-identical. The
+                only thing that moves is <code>supported_ops</code>, which re-bounds extraction.
+              </p>
+              <div class="mt-5 grid lg:grid-cols-5 gap-4">
+                <div class="lg:col-span-2 rounded-2xl border border-line bg-panel p-5">
+                  <div class="text-[11.5px] uppercase tracking-widest text-faint mb-3">
+                    replace the sink
+                  </div>
+                  <div class="space-y-2">
+                    <template x-for="s in sinks" :key="s">
+                      <button
+                        @click="swap(s)"
+                        class="w-full text-left px-3.5 py-2.5 rounded-xl border bg-panel transition"
+                        :class="sink === s ? 'border-gold' : 'border-line hover:border-dim'"
+                      >
+                        <span
+                          class="font-mono text-[13px]"
+                          :class="sink === s ? 'text-gold' : 'text-ink'"
+                          x-text="s"
+                        ></span>
+                      </button>
+                    </template>
+                  </div>
+                  <button
+                    @click="edit()"
+                    class="mt-4 w-full px-3 py-2 rounded-lg text-[13px] border border-line bg-panel2 hover:border-bad"
+                  >
+                    edit core (add a law)…
+                  </button>
+                </div>
+                <div class="lg:col-span-3 rounded-2xl border border-line bg-panel p-5">
+                  <div class="text-[11.5px] uppercase tracking-widest text-faint mb-3">
+                    the core
+                  </div>
+                  <div class="font-mono text-[12.5px] text-sea break-all" x-text="ir"></div>
+                  <div class="font-mono text-[12px] text-dim mt-1" x-text="'rules: ' + rules"></div>
+                  <div class="mt-4 pt-3 border-t border-line space-y-2 text-[13px]">
+                    <div class="flex items-center justify-between">
+                      <span class="text-dim">core mutations</span>
+                      <span
+                        class="font-mono font-bold"
+                        :class="coreMutations === 0 ? 'text-eva' : 'text-bad'"
+                        x-text="coreMutations"
+                      ></span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-dim">sink swaps</span>
+                      <span class="font-mono" x-text="swaps"></span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-dim">core unchanged</span>
+                      <span
+                        class="font-mono font-bold"
+                        :class="unchanged ? 'text-eva' : 'text-bad'"
+                        x-text="unchanged ? '✓' : '✕'"
+                      ></span>
+                    </div>
+                  </div>
+                  <div class="mt-4 pt-3 border-t border-line">
+                    <div class="text-[11.5px] uppercase tracking-widest text-faint mb-1.5">
+                      supported_ops
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                      <template x-for="o in supported" :key="o">
+                        <span
+                          class="px-2 py-0.5 rounded-md border border-eva/40 text-eva text-[11.5px] font-mono"
+                          x-text="o"
+                        ></span>
+                      </template>
+                      <template x-for="o in unsupported" :key="o">
+                        <span
+                          class="px-2 py-0.5 rounded-md border border-bad/40 text-bad text-[11.5px] font-mono line-through"
+                          x-text="o"
+                        ></span>
+                      </template>
+                    </div>
+                    <div
+                      class="mt-3 font-mono text-[12.5px]"
+                      :class="lowerable ? 'text-eva' : 'text-bad'"
+                      x-text="artifact"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="mt-4 rounded-2xl border border-line bg-panel p-5 text-[13.5px] text-dim leading-relaxed"
+              >
+                <b class="text-ink">A second backend landed with zero core edits.</b> ONNX became a
+                <code class="text-ink">Source</code> + <code class="text-ink">Sink</code> pair and
+                nothing in <code class="text-ink">catopt-core</code> changed — the port boundary is
+                the whole architecture, one level down from the four dimensions. Extraction is
+                priced through the sink's <code>supported_ops</code>, so the search only selects
+                forms the backend can actually lower: here the ONNX sink can't lower
+                <code>sqq</code>, so that fused member drops out and the core counter never moves.
+                <span class="text-faint"
+                  >(ADR 0006; <code>project/retros/onnx-package.md</code>.)</span
+                >
+              </div>
+            </section>
+
+            <!-- ── 17 · the ledger of negatives ──────────────────── -->
+            <section x-show="i === 17" x-data="honest">
+              <p class="text-dim leading-relaxed">
+                Every claim in this course is bounded by what was measured — and the most
+                instructive results are the <b class="text-ink">refusals</b>. Methodology is not a
+                footnote here; it is a deliverable. Read each measured negative, then pick which
+                claim its number kills.
+              </p>
+              <div class="mt-5 space-y-4">
+                <template x-for="(t, k) in items" :key="k">
+                  <div class="rounded-2xl border border-line bg-panel p-5">
+                    <div class="text-[13.5px] text-dim leading-relaxed" x-text="t.text"></div>
+                    <div
+                      class="mt-3 font-mono text-[12.5px] text-gold border-l-2 border-gold pl-3"
+                      x-text="t.number"
+                    ></div>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                      <template x-for="o in t.opts" :key="o">
+                        <button
+                          @click="answer(k, o)"
+                          class="px-3 py-1.5 rounded-lg text-[13px] border transition"
+                          :class="t.picked === o ? (o === t.ok ? 'border-eva text-eva' : 'border-bad text-bad') : 'border-line bg-panel2 hover:border-gold'"
+                          x-text="o"
+                        ></button>
+                      </template>
+                    </div>
+                    <div
+                      class="mt-3 text-[13px] text-dim"
+                      x-show="t.picked"
+                      x-cloak
+                      x-text="t.why"
+                    ></div>
+                  </div>
+                </template>
+              </div>
+              <div class="mt-5 text-[13px] text-faint">
+                score <span class="text-gold font-bold" x-text="score"></span>/<span
+                  x-text="items.length"
+                ></span>
+              </div>
+              <div
+                class="mt-4 rounded-2xl border border-line bg-panel p-5 text-[13.5px] text-dim leading-relaxed"
+              >
+                <b class="text-ink">Why this is the last level.</b> A course that only taught the
+                wins would be an advertisement. The measured refusals — the closed weight-space
+                hypothesis (ADR 0001), the atom pay-null, the BiRefNet bounded negative, the
+                antiunify reach-null, the enumeration-beats-learning ledger — are the methodology
+                made visible:
+                <b class="text-ink">truth, pay, reach and yield are four different measurements</b>,
+                and the honest answer is often no.
+                <span class="text-faint">(<code>project/retros/</code>, ADRs 0001/0007.)</span>
               </div>
             </section>
           </div>

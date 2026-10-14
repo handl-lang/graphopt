@@ -13,7 +13,7 @@ export interface Level {
 }
 
 /** Where progress lives. Bump the suffix if the level list changes shape. */
-export const STORAGE_KEY = "catopt-course-v1";
+export const STORAGE_KEY = "catopt-course-v2";
 
 interface Saved {
   i: number;
@@ -183,6 +183,91 @@ export class Course {
         ],
         ok: "a mediating law — often the definitional inverse of the rule that caused the split",
         why: "The real library's one measured divergence — silu_expand × swiglu_fuse — was filled by silu_fold, x·σ(x) → silu(x): the inverse of the expansion that killed the fuse redex. Divergent pairs went 2 → 0, and the mediator is a paying law in its own right.",
+      },
+    },
+    {
+      id: "mint",
+      title: "The vocabulary grows itself",
+      objective:
+        "New meaning enters the object language by measurement, not by hand — need → handler → laws → admission.",
+      checkpoint: {
+        q: "The funnel mints `scan_fold`, verifies it at 1.78e-15, and admits five certified laws. What did the pay probe find?",
+        opts: [
+          "it pays on the corpus",
+          "zero certified-law fires on every real term",
+          "the handler failed to verify",
+        ],
+        ok: "zero certified-law fires on every real term",
+        why: "Truth and pay are separate measurements, and disjoint here — the minted atom computes the total, the corpus emits the sequence. Minting works end to end; paying is a different question.",
+      },
+    },
+    {
+      id: "truthpay",
+      title: "True is not the same as paying",
+      objective:
+        "A guard that separates its measured domain perfectly can be unsound just outside it — so sweep.",
+      checkpoint: {
+        q: "The naive guard `grid-eq` separates its measured domain perfectly. Why is it not the shipped guard?",
+        opts: [
+          "it is slower",
+          "the adversarial sweep found bad accepts past its measured domain",
+          "the cost model rejects it",
+        ],
+        ok: "the adversarial sweep found bad accepts past its measured domain",
+        why: "Perfect on the measured envs is not sound. The synthesized flat-map-unsq clause — grid coincidence plus both flat-read maps — has 0 bad accepts and 0 misses, and the apparent sibling was refused by the same guard.",
+      },
+    },
+    {
+      id: "exposure",
+      title: "Where discovery can pay",
+      objective: "Exposure is bimodal: the e-graph can only rewrite math it can see.",
+      checkpoint: {
+        q: "Of 321 exported workloads, 81 score exactly 0% FLOPs-weighted law coverage. What are they?",
+        opts: [
+          "broken exports",
+          "the fused-op class — `nn.*` natives that export as one opaque node",
+          "models with no matmuls",
+        ],
+        ok: "the fused-op class — `nn.*` natives that export as one opaque node",
+        why: "The e-graph literally cannot see the computation: there is nothing to rewrite. Exposure is bimodal, and it is necessary but not sufficient — four fully-visible models pay nothing.",
+      },
+    },
+    {
+      id: "substrate",
+      title: "Sharing is a morphism",
+      objective:
+        "Re-present the IR as combinators: Δ makes sharing explicit, `loop` makes recurrence first-class.",
+      checkpoint: {
+        q: "In the combinator presentation, what becomes of a value the DAG shares between two parents?",
+        opts: ["a pointer", "an explicit Δ morphism — `dup`", "a second copy"],
+        ok: "an explicit Δ morphism — `dup`",
+        why: "Sharing is a morphism, not a pointer convention, so the DAG-vs-tree ambiguity is impossible by construction. The bridge round-trips — `dag → comb → dag` is the identity — and a recurrence spells as `loop(step)`.",
+      },
+    },
+    {
+      id: "ports",
+      title: "A backend is a port",
+      objective: "Swap the backend and nothing in core changes — only what extraction may select.",
+      checkpoint: {
+        q: "You swap the torch sink for the ONNX sink. What may change in core?",
+        opts: ["the IR", "the law set", "nothing — only which forms the extraction may select"],
+        ok: "nothing — only which forms the extraction may select",
+        why: "A backend is a port: the core-mutation counter stays at zero across the swap. What changes is `supported_ops`, which re-bounds extraction — the ONNX sink can't lower `sqq`, so that member drops out.",
+      },
+    },
+    {
+      id: "honest",
+      title: "The ledger of negatives",
+      objective: "Methodology as a result: the measured refusals are taught, not buried.",
+      checkpoint: {
+        q: "The composed atom loop minted a verified atom and admitted four law sets — and fired nothing on the corpus. What does that refusal teach?",
+        opts: [
+          "the minting machinery is broken",
+          "truth and pay are separate measurements — the negative is a result",
+          "the corpus is wrong",
+        ],
+        ok: "truth and pay are separate measurements — the negative is a result",
+        why: "Every claim in this course is bounded by what was measured. The ledger of negatives — the falsified weight hypothesis, the pay-null, the BiRefNet bounded negative, the antiunify reach-null — is the methodology, taught as a result rather than a footnote.",
       },
     },
   ];
