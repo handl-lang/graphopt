@@ -103,7 +103,7 @@ datacenter hardware:
 | `silu_fold` on the bench case | **−53–55% modeled cost, 1.43–2.62× wall-clock** | `bench run law_bench` | [three-cell-mediator](../project/retros/three-cell-mediator.md) |
 | contraction player, n=40 vs `opt_einsum` | **0.89–1.01× of randomised greedy at equal wall-clock** (0.91–0.98 at T≤1, three seeds, fed budgets); **0.51–0.90× deterministic greedy** | `tools/contraction_guided_restart.py` | [contraction-synthesis](../project/retros/contraction-synthesis.md), [contraction-player-shipped](../project/retros/contraction-player-shipped.md) |
 | pipeline held-out rediscovery | **winner re-ranks #1, SHIP, every run** | `catopt_discovery.pipeline --holdout` | [law-proposer-extensions](../project/retros/law-proposer-extensions.md), [groupnorm-convnext-corpus](../project/retros/groupnorm-convnext-corpus.md) |
-| coherence catalogue over `ALL_RULES` (71) | **47 axioms / 13 lemmas / 2 redundant; 9 no-instance; divergence 1** (`rms_norm_fold` × `_nogain` — measured, unresolved) | `catopt_discovery.coherence --emit-basis` | [axiom-lemma-split](../project/retros/axiom-lemma-split.md) |
+| coherence catalogue over `ALL_RULES` (82) | **47 axioms / 13 lemmas / 2 redundant; 9 no-instance; divergence 1** (`rms_norm_fold` × `_nogain` — measured, unresolved) | `catopt_discovery.coherence --emit-basis` | [axiom-lemma-split](../project/retros/axiom-lemma-split.md) |
 | evidence store, second run | **50/50 verdicts cached; 128 s → 6.6 s (~19×)** | `catopt_discovery.pipeline --evidence-db` | [evidence-store](../project/retros/evidence-store.md) |
 | `chainfuse` — laws + `claim(gen_0)`, Triton-bound | synthetic composite (`x@A@B@C` + 6-op pointwise tail, 256×512): **2.94× vs `torch.compile`** (86µs vs 253µs), verified 1.7e-05; laws alone reach 181µs — the minted kernel is required for the full win | `python -m catopt_discovery.play --domain gen --probe` | [gen-kernels](../project/retros/gen-kernels.md) |
 | delivered module vs `torch.compile` (`gen` probe) | spelled matmul chain **3.96×** (22µs vs 87µs; Inductor keeps all three GEMMs even under `freezing`); swiglu **2.11×**; pointwise fusion **0.82–0.88× loss** | `python -m catopt_discovery.play --domain gen --probe` | [gen-kernels](../project/retros/gen-kernels.md) |
@@ -126,3 +126,32 @@ Two reconciliation notes:
   member) — so the README's "1.15–1.32× vs Inductor" is not the
   pinned baseline's literal column: the 1.32 is vs eager and the
   vs-Inductor delivered range tops out at 1.25 on this baseline.
+
+## Derived structure on a real export (2026-10-15)
+
+*Does the machine derive a real architecture's recurrence, and does
+it pay?*  Not a `bench/` suite — an ad-hoc probe run on the dev box
+(RTX 2050, fp64); scripts in `tools/`.
+
+**Expected** — the e-graph reaches the chunked recurrence and
+extraction prefers it; delivery is measured, not asserted.
+
+| verdict | finding | headline |
+|---|---|---|
+| **WIN** | the derived chunked carrier is preferred by extraction | 29.4M vs 39.1M FLOPs (T=512) |
+| **WIN** | end-to-end, delivered + verified vs the fused baseline | **1.82–2.33×** (866–1113 µs vs 2018–2028 µs), max_abs ≈1.3e-8 |
+| **WIN** (symbolic) | K-way chunk construct | **4.4×** fewer FLOPs (29.4M → 6.70M); fold depth 1 → 7 |
+| **WIN** (symbolic) | shared-state reassociation | **10.8–24.5%** fewer FLOPs (T=512, K=8: 8.57M → 7.64M) |
+| **PARTIAL** | the *folded* carrier is never cheaper than the spelled form | a fold is a cost-neutral relabelling — the gap is search, not pricing |
+
+**Honest scope.**  The 1.82–2.33× pays through the decayed fused
+kernel plus an elementwise generated kernel; the scan kernels are
+declined as unloweable at these sites.  The K-way and shared-state
+figures are FLOP counts of extracted programs, not wall time — the
+timing probe for the K-way extraction is in flight.  All numbers
+are fp64-verified against the source module.
+
+**`gen` probe, re-run 2026-10-15 (CUDA):** 10/10 cases delivered
+and verified; 9/10 faster than eager; all faster than
+`torch.compile` — `chainfuse` 3.71×/2.90×, `swiglu_mlp`
+1.17×/2.00×, `chain_mlp` 1.06×/2.52×, `mulrelu` 1.22×/1.39×.
