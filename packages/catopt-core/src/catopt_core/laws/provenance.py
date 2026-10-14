@@ -44,15 +44,19 @@ __all__ = [
     "law_provenance",
 ]
 
-#: The ten machine-admitted objects promoted into the shipped
+#: The eleven machine-admitted objects promoted into the shipped
 #: ``ALL_RULES`` (``promoted-laws.md`` — the promotion table's shipped
 #: names, including the two objects that shipped as the strictly more
-#: general view identities ``transpose_noop`` / ``chunk_single``).
+#: general view identities ``transpose_noop`` / ``chunk_single``, and
+#: ``mul_unsq_nat`` — the census-minted two-sided unsqueeze naturality
+#: whose guard was resolved by the adversarial sweep, see
+#: ``project/retros/mul-unsq-nat.md``).
 MACHINE_SHIPPED: frozenset[str] = frozenset(
     {
         "softsign_fold",
         "sdpa_fold_nomask",
         "sdpa_fold_div_nomask",
+        "mul_unsq_nat",
         "mul_unsq_pad_l",
         "mul_unsq_pad_r",
         "sub_unsq_pad_l",

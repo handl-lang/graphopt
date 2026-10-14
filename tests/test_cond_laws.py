@@ -61,6 +61,7 @@ from catopt_core.laws.tensor import (
     LINEAR_ROW_SCALE,
     LINEAR_ROW_SCALE_REV,
     MUL_RESHAPE_INERT_L,
+    MUL_UNSQ_NAT,
     MUL_UNSQ_PAD_L,
     MUL_UNSQ_PAD_R,
     SDPA_FOLD_DIV_NOMASK,
@@ -809,7 +810,7 @@ def test_cond_data_roundtrip_is_canonical():
 
 
 def test_every_shipped_cond_roundtrips_through_json():
-    """All 55 cond-carrying rules' conds survive the store wire format."""
+    """All 56 cond-carrying rules' conds survive the store wire format."""
     seen = 0
     for rule in all_rules():
         if rule.cond is None:
@@ -827,8 +828,8 @@ def test_every_shipped_cond_roundtrips_through_json():
         )
         assert rebuilt.cond == rule.cond
     # 53 + the div-naturality pair (div_add_factor,
-    # matmul_div_distribute) added by ``da917b1``
-    assert seen == 55
+    # matmul_div_distribute) added by ``da917b1``, + mul_unsq_nat
+    assert seen == 56
 
 
 def test_rebuilt_rule_fires_identically_in_egraph():
@@ -895,9 +896,9 @@ def test_migrated_rules_carry_cond_and_folded_check():
     migrated = [
         r for r in all_rules() if r.cond is not None
     ]
-    # 53 + the div-naturality pair (``da917b1``) — the cond-as-data
-    # count, repinned honestly
-    assert len(migrated) == 55
+    # 53 + the div-naturality pair (``da917b1``) + mul_unsq_nat —
+    # the cond-as-data count, repinned honestly
+    assert len(migrated) == 56
     for r in migrated:
         assert callable(r.check), r.name
     # every shipped guard is data now — the once-procedural laws all
@@ -1672,6 +1673,7 @@ PROMOTED_LAWS = (
     MUL_UNSQ_PAD_L,
     MUL_UNSQ_PAD_R,
     SUB_UNSQ_PAD_L,
+    MUL_UNSQ_NAT,
     MUL_RESHAPE_INERT_L,
     SDPA_FOLD_NOMASK,
     SDPA_FOLD_DIV_NOMASK,
@@ -1757,6 +1759,59 @@ def test_promoted_unsq_pad_right():
     u2, v2 = _v("u2", 8, 8), _v("v2", 1, 1, 1)
     bad = Op.make("mul", u2, Op.make("unsqueeze", v2, dim=0))
     assert not _merged(MUL_UNSQ_PAD_R, bad, Op.make("mul", u2, v2))
+
+
+def test_promoted_mul_unsq_nat():
+    """The two-sided unsqueeze naturality — census-minted on
+    ``DeltaRuleBlock`` (``project/retros/mul-unsq-nat.md``).
+
+    The guard is the ``flat-map-unsq`` region — grid coincidence AND
+    equal flat-read maps — the exact truth boundary the adversarial
+    sweep measured: equal ranks always qualify; unequal ranks only
+    when the insert lands inside the broadcast pad.
+    """
+    # the DeltaRuleBlock spelling: equal ranks, trailing insert.
+    u, v = _v("u", 2, 1), _v("v", 2, 16)
+    src = Op.make(
+        "mul",
+        Op.make("unsqueeze", u, dim=-1),
+        Op.make("unsqueeze", v, dim=-1),
+    )
+    want = Op.make("unsqueeze", Op.make("mul", u, v), dim=-1)
+    assert _merged(MUL_UNSQ_NAT, src, want)
+    assert _merged(_rt(MUL_UNSQ_NAT), src, want)
+    assert MUL_UNSQ_NAT in all_rules()
+
+    # the pad region: unequal ranks, leading insert — still true.
+    u2, v2 = _v("u2", 8), _v("v2", 4, 8)
+    src2 = Op.make(
+        "mul",
+        Op.make("unsqueeze", u2, dim=0),
+        Op.make("unsqueeze", v2, dim=0),
+    )
+    want2 = Op.make("unsqueeze", Op.make("mul", u2, v2), dim=0)
+    assert _merged(MUL_UNSQ_NAT, src2, want2)
+
+    # the unsound corner the minted grid-eq clause alone accepts:
+    # unequal ranks, a mid-rank insert — u's data axis lands on
+    # different output axes each side.  flat-map-unsq declines.
+    u3, v3 = _v("u3", 2), _v("v3", 1, 2, 2)
+    bad = Op.make(
+        "mul",
+        Op.make("unsqueeze", u3, dim=1),
+        Op.make("unsqueeze", v3, dim=1),
+    )
+    want_bad = Op.make("unsqueeze", Op.make("mul", u3, v3), dim=1)
+    assert not _merged(MUL_UNSQ_NAT, bad, want_bad)
+
+    # different attr values on the two views do not match at all.
+    u4, v4 = _v("u4", 2, 1), _v("v4", 2, 16)
+    mismatched = Op.make(
+        "mul",
+        Op.make("unsqueeze", u4, dim=-1),
+        Op.make("unsqueeze", v4, dim=0),
+    )
+    assert not _merged(MUL_UNSQ_NAT, mismatched, want)
 
 
 def test_promoted_reshape_inert_strip():

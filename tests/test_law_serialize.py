@@ -159,7 +159,7 @@ def test_alpha_key_canonicalizer_branches():
 
 
 def test_serializability_census_of_shipped_library():
-    """Pin the honest partition of the 71 shipped laws."""
+    """Pin the honest partition of the 83 shipped laws."""
     full, need_derive, need_check = [], [], []
     for rule in ALL_RULES:
         missing = missing_hooks(rule)
@@ -169,15 +169,15 @@ def test_serializability_census_of_shipped_library():
             need_derive.append(rule.name)
         else:
             need_check.append((rule.name, missing))
-    assert len(ALL_RULES) == 82
+    assert len(ALL_RULES) == 83
     # the whole shipped library is full-data now: the four stragglers
     # went declarative in stage 0 of plan 0017 — glu_fold's parity on
     # a dim-mod predicate, the rms pair's trailing block on the
     # tail-block spec, and gqa_absorb_repeat's repeat-chain /
-    # attr-eq-attr / repeat-heads triple — and the ten promoted
+    # attr-eq-attr / repeat-heads triple — and the eleven promoted
     # discovery laws carry pure-data cond/dspec/derivation
     # (project/retros/promoted-laws.md)
-    assert len(full) == 82
+    assert len(full) == 83
     assert need_derive == []
     assert need_check == []
 
