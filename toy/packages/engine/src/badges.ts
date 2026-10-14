@@ -10,7 +10,7 @@ import { CONCEPTS, LEVEL_ORDER } from "./concepts.ts";
 import type { MasteryState } from "./mastery.ts";
 import { allFamiliar } from "./mastery.ts";
 import type { Module } from "./review.ts";
-import { MODULES, moduleComplete } from "./review.ts";
+import { MODULES, moduleCleared } from "./review.ts";
 
 /** Everything a badge may look at. */
 export interface BadgeState {
@@ -38,10 +38,10 @@ function moduleBadge(m: Module): Badge {
   return {
     id: `module-${m.id}`,
     name: `Module ${m.roman} Complete`,
-    blurb: `Clear every level in ${m.title}.`,
+    blurb: `Clear every level in ${m.title} and pass its review.`,
     test: (s) => {
       const mod = s.modules.find((x) => x.id === m.id);
-      return mod ? moduleComplete(mod, s.passed) : false;
+      return mod ? moduleCleared(mod, s.passed, s.reviewed) : false;
     },
   };
 }
@@ -82,8 +82,9 @@ export const BADGES: readonly Badge[] = [
   {
     id: "curriculum-complete",
     name: "Modules I–VI Complete",
-    blurb: "Clear all six arcs.",
-    test: (s) => s.modules.length > 0 && s.modules.every((m) => moduleComplete(m, s.passed)),
+    blurb: "Clear all six arcs — every level and every review.",
+    test: (s) =>
+      s.modules.length > 0 && s.modules.every((m) => moduleCleared(m, s.passed, s.reviewed)),
   },
   {
     id: "course-cleared",

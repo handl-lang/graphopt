@@ -30,6 +30,12 @@
  *
  * The labels stay in data so the graph — and the glossary it drives —
  * can be rebuilt without re-reading the prose.
+ *
+ * Step 3 (plan 0028 §D) grows the ladder 22 → 28 levels: the six
+ * coverage levels each introduce their own concepts here, placed at
+ * their module's position so {@link forwardRefs} stays at zero — the
+ * new terms are defined at or before their first use, exactly as the
+ * ordering gate requires.
  */
 
 export interface Concept {
@@ -44,10 +50,16 @@ export interface Concept {
   used: readonly string[];
 }
 
-/** The 22 level ids, in course order — the curriculum skeleton. */
+/** The 28 level ids, in course order — the curriculum skeleton.
+ *
+ * Plan 0028 step 3 adds the six coverage levels (`corpus`, `models`,
+ * `artifacts`, `cellstore`, `game`, `gates`) at their module's
+ * position, so the ladder reads as the plan's six arcs (I–VI).
+ */
 export const LEVEL_ORDER: readonly string[] = [
   "tree",
   "equal",
+  "corpus",
   "reach",
   "structure",
   "referee",
@@ -55,6 +67,8 @@ export const LEVEL_ORDER: readonly string[] = [
   "search",
   "learn",
   "measure",
+  "models",
+  "artifacts",
   "architecture",
   "advanced",
   "coherence",
@@ -63,6 +77,9 @@ export const LEVEL_ORDER: readonly string[] = [
   "exposure",
   "substrate",
   "ports",
+  "cellstore",
+  "game",
+  "gates",
   "honest",
   "bounded",
   "deliver",
@@ -102,7 +119,29 @@ export const CONCEPTS: readonly Concept[] = [
     introduced: "equal",
     used: ["equal", "structure", "coherence", "deliver"],
   },
-  // ── 2 · the reachable set ────────────────────────────────────
+  // ── 2 · where programs come from ─────────────────────────────
+  {
+    id: "corpus",
+    label: "Corpus",
+    def: "The real exported programs the system is measured on — not hand-written terms.",
+    introduced: "corpus",
+    used: ["corpus", "gates", "improve"],
+  },
+  {
+    id: "export",
+    label: "Export",
+    def: "Reading a real `nn.Module` into a graph the intake can bind, via `torch.export`.",
+    introduced: "corpus",
+    used: ["corpus", "artifacts"],
+  },
+  {
+    id: "intake",
+    label: "Intake",
+    def: "The funnel that exports, binds, lowers and verifies a workload end to end.",
+    introduced: "corpus",
+    used: ["corpus"],
+  },
+  // ── 3 · the reachable set ────────────────────────────────────
   {
     id: "reach",
     label: "Reach",
@@ -124,7 +163,7 @@ export const CONCEPTS: readonly Concept[] = [
     introduced: "reach",
     used: ["reach", "exposure"],
   },
-  // ── 3 · laws come from structure ─────────────────────────────
+  // ── 4 · laws come from structure ─────────────────────────────
   {
     id: "law",
     label: "Law",
@@ -153,7 +192,7 @@ export const CONCEPTS: readonly Concept[] = [
     introduced: "structure",
     used: ["structure"],
   },
-  // ── 4 · staying correct ──────────────────────────────────────
+  // ── 5 · staying correct ──────────────────────────────────────
   {
     id: "certificate",
     label: "Certificate",
@@ -175,7 +214,7 @@ export const CONCEPTS: readonly Concept[] = [
     introduced: "referee",
     used: ["referee", "learn"],
   },
-  // ── 5 · choosing among equals ────────────────────────────────
+  // ── 6 · choosing among equals ────────────────────────────────
   {
     id: "frontier",
     label: "Frontier",
@@ -197,13 +236,13 @@ export const CONCEPTS: readonly Concept[] = [
     introduced: "choice",
     used: ["choice", "pricing"],
   },
-  // ── 6 · searching the space ──────────────────────────────────
+  // ── 7 · searching the space ──────────────────────────────────
   {
     id: "policy",
     label: "Policy",
     def: "A rule for which legal move to try next.",
     introduced: "search",
-    used: ["search", "learn"],
+    used: ["search", "learn", "game"],
   },
   {
     id: "legal-move",
@@ -219,7 +258,7 @@ export const CONCEPTS: readonly Concept[] = [
     introduced: "search",
     used: ["search", "learn", "improve"],
   },
-  // ── 7 · learning the policy ──────────────────────────────────
+  // ── 8 · learning the policy ──────────────────────────────────
   {
     id: "reward",
     label: "Reward",
@@ -246,15 +285,15 @@ export const CONCEPTS: readonly Concept[] = [
     label: "Learned policy",
     def: "A policy learned from trajectories — it may be wrong, but never illegal.",
     introduced: "learn",
-    used: ["learn"],
+    used: ["learn", "game"],
   },
-  // ── 8 · measuring the machine ────────────────────────────────
+  // ── 9 · measuring the machine ────────────────────────────────
   {
     id: "cost-model",
     label: "Cost model",
     def: "A static or fitted model that predicts runtime.",
     introduced: "measure",
-    used: ["measure", "deliver", "pricing"],
+    used: ["measure", "models", "deliver", "pricing"],
   },
   {
     id: "roofline",
@@ -275,9 +314,53 @@ export const CONCEPTS: readonly Concept[] = [
     label: "Calibration",
     def: "Correcting a model with measured per-family factors.",
     introduced: "measure",
-    used: ["measure", "pricing"],
+    used: ["measure", "models", "pricing"],
   },
-  // ── 9 · the architecture ─────────────────────────────────────
+  // ── 10 · the cost-model family ───────────────────────────────
+  {
+    id: "cost-model-family",
+    label: "Cost-model family",
+    def: "One model is not enough: features, roofline, executor and delivered pricing answer four different questions.",
+    introduced: "models",
+    used: ["models", "gates"],
+  },
+  {
+    id: "delivered-pricing",
+    label: "Delivered pricing",
+    def: "Billing a term under the lowering it would actually be delivered by, not the generic evaluator.",
+    introduced: "models",
+    used: ["models", "improve"],
+  },
+  {
+    id: "target-profile",
+    label: "TargetProfile",
+    def: "The measured target a model is calibrated against — constants plus per-family corrections.",
+    introduced: "models",
+    used: ["models"],
+  },
+  // ── 11 · what 'runnable' means ───────────────────────────────
+  {
+    id: "delivery-artifact",
+    label: "Delivery artifact",
+    def: "The standalone file a delivered term ships as — module, safetensors, state_dict, torchscript, `.pt2`.",
+    introduced: "artifacts",
+    used: ["artifacts", "improve"],
+  },
+  {
+    id: "cuda-graph",
+    label: "CUDA graph",
+    def: "A captured replay of a whole executor — one launch instead of many.",
+    introduced: "artifacts",
+    used: ["artifacts"],
+  },
+  {
+    id: "native-engine",
+    label: "Native engine",
+    def: "The opt-in PyO3/Rust search engine — the same IR, a faster closure.",
+    introduced: "artifacts",
+    used: ["artifacts"],
+  },
+  // ── 12 · the architecture ────────────────────────────────────
   {
     id: "four-dimensions",
     label: "The four dimensions",
@@ -292,7 +375,7 @@ export const CONCEPTS: readonly Concept[] = [
     introduced: "architecture",
     used: ["architecture", "advanced", "pricing"],
   },
-  // ── 10 · advanced tensions ───────────────────────────────────
+  // ── 13 · advanced tensions ───────────────────────────────────
   {
     id: "hard-filter",
     label: "Hard filter",
@@ -300,7 +383,7 @@ export const CONCEPTS: readonly Concept[] = [
     introduced: "advanced",
     used: ["advanced"],
   },
-  // ── 11 · laws about laws ─────────────────────────────────────
+  // ── 14 · laws about laws ─────────────────────────────────────
   {
     id: "critical-pair",
     label: "Critical pair",
@@ -322,7 +405,7 @@ export const CONCEPTS: readonly Concept[] = [
     introduced: "coherence",
     used: ["coherence"],
   },
-  // ── 12 · the vocabulary grows itself ─────────────────────────
+  // ── 15 · the vocabulary grows itself ─────────────────────────
   {
     id: "minting",
     label: "Minting",
@@ -349,9 +432,9 @@ export const CONCEPTS: readonly Concept[] = [
     label: "Provenance",
     def: "Where a law came from — minted, assisted, or hand-written.",
     introduced: "mint",
-    used: ["mint"],
+    used: ["mint", "cellstore"],
   },
-  // ── 13 · true is not the same as paying ──────────────────────
+  // ── 16 · true is not the same as paying ──────────────────────
   {
     id: "guard",
     label: "Guard",
@@ -366,7 +449,7 @@ export const CONCEPTS: readonly Concept[] = [
     introduced: "truthpay",
     used: ["truthpay"],
   },
-  // ── 14 · where discovery can pay ─────────────────────────────
+  // ── 17 · where discovery can pay ─────────────────────────────
   {
     id: "exposure",
     label: "Exposure",
@@ -381,7 +464,7 @@ export const CONCEPTS: readonly Concept[] = [
     introduced: "exposure",
     used: ["exposure"],
   },
-  // ── 15 · sharing is a morphism ───────────────────────────────
+  // ── 18 · sharing is a morphism ───────────────────────────────
   {
     id: "morphism",
     label: "Morphism",
@@ -410,7 +493,7 @@ export const CONCEPTS: readonly Concept[] = [
     introduced: "substrate",
     used: ["substrate"],
   },
-  // ── 16 · a backend is a port ─────────────────────────────────
+  // ── 19 · a backend is a port ─────────────────────────────────
   {
     id: "port",
     label: "Port",
@@ -425,7 +508,87 @@ export const CONCEPTS: readonly Concept[] = [
     introduced: "ports",
     used: ["ports"],
   },
-  // ── 17 · the ledger of negatives ─────────────────────────────
+  // ── 20 · one record per idea ─────────────────────────────────
+  {
+    id: "cell",
+    label: "Cell",
+    def: "One record per vocabulary item — `op` / `law` / `object` / `handle`.",
+    introduced: "cellstore",
+    used: ["cellstore", "game"],
+  },
+  {
+    id: "fragment-merge",
+    label: "Fragment merge",
+    def: "Assembling a store from named fragments; a duplicate `(role, name)` raises.",
+    introduced: "cellstore",
+    used: ["cellstore"],
+  },
+  {
+    id: "provenance-origin",
+    label: "Provenance origin",
+    def: "Where a cell came from — `shipped` / `constructed` / `admitted` / `minted` / `declared` / `imported`.",
+    introduced: "cellstore",
+    used: ["cellstore"],
+  },
+  {
+    id: "handl-bridge",
+    label: "Handl bridge",
+    def: "Emitting the store as a handl fragment — op cells as shape defs, law cells as transforms, handle cells as natives.",
+    introduced: "cellstore",
+    used: ["cellstore"],
+  },
+  // ── 21 · the game layer ──────────────────────────────────────
+  {
+    id: "board",
+    label: "Board",
+    def: "The `Board` protocol — a program, a legal move set and a referee, as an RL environment.",
+    introduced: "game",
+    used: ["game", "improve"],
+  },
+  {
+    id: "meta-arena",
+    label: "Meta-arena",
+    def: "The mid-search construction board: `fire` / `saturate` / `declare` / `claim` / `extract`.",
+    introduced: "game",
+    used: ["game"],
+  },
+  {
+    id: "play-domain",
+    label: "Play domain",
+    def: "A registered board — `meta` / `joint` / `search` / `torch` / `gen` — played through one CLI.",
+    introduced: "game",
+    used: ["game"],
+  },
+  // ── 22 · how the project stays honest ────────────────────────
+  {
+    id: "coverage-floor",
+    label: "Coverage floor",
+    def: "The pinned coverage gate — 100% on the shipped six, a 99% ratchet on discovery.",
+    introduced: "gates",
+    used: ["gates"],
+  },
+  {
+    id: "ratchet",
+    label: "Ratchet",
+    def: "A ceiling that may only move one way — complexity, coverage, types.",
+    introduced: "gates",
+    used: ["gates"],
+  },
+  {
+    id: "no-suppressions",
+    label: "No new suppressions",
+    def: "A lint finding is fixed, never silenced — the rule that keeps the gates honest.",
+    introduced: "gates",
+    used: ["gates"],
+  },
+  {
+    id: "bench-gate",
+    label: "Bench gate",
+    def: "The pinned baseline a suite is compared against; a regression fails the run.",
+    introduced: "gates",
+    used: ["gates", "improve"],
+  },
+  // ── 23 · the ledger of negatives ─────────────────────────────
   {
     id: "negative-result",
     label: "Negative result",
@@ -440,7 +603,7 @@ export const CONCEPTS: readonly Concept[] = [
     introduced: "honest",
     used: ["honest", "improve"],
   },
-  // ── 18 · approximation with a certificate ────────────────────
+  // ── 24 · approximation with a certificate ────────────────────
   {
     id: "bounded-approximation",
     label: "Bounded approximation",
@@ -455,7 +618,7 @@ export const CONCEPTS: readonly Concept[] = [
     introduced: "bounded",
     used: ["bounded", "pricing"],
   },
-  // ── 19 · the program must run ────────────────────────────────
+  // ── 25 · the program must run ────────────────────────────────
   {
     id: "delivery",
     label: "Delivery",
@@ -484,7 +647,7 @@ export const CONCEPTS: readonly Concept[] = [
     introduced: "deliver",
     used: ["deliver"],
   },
-  // ── 20 · the cost model can be wrong ─────────────────────────
+  // ── 26 · the cost model can be wrong ─────────────────────────
   {
     id: "inversion",
     label: "Inversion",
@@ -492,7 +655,7 @@ export const CONCEPTS: readonly Concept[] = [
     introduced: "pricing",
     used: ["pricing"],
   },
-  // ── 21 · the payoff ──────────────────────────────────────────
+  // ── 27 · the payoff ──────────────────────────────────────────
   {
     id: "gap",
     label: "Gap",

@@ -53,7 +53,7 @@ describe("points — totals", () => {
   it("adds every level's award plus the reviews", () => {
     const all = { passed: [...LEVEL_ORDER], engaged: [...LEVEL_ORDER], reviewed: ["foundations"] };
     const levels = LEVEL_ORDER.reduce((s, _id, i) => s + levelBase(i), 0);
-    expect(totalXp(all)).toBe(levels + 22 * WIDGET_BONUS + REVIEW_AWARD);
+    expect(totalXp(all)).toBe(levels + LEVEL_ORDER.length * WIDGET_BONUS + REVIEW_AWARD);
   });
 
   it("reaches the top rank when everything is done", () => {

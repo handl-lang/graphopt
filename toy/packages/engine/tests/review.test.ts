@@ -6,11 +6,14 @@ import {
   MODULES,
   REVIEW_PASS,
   ReviewRound,
+  conceptById,
   gradeReview,
+  moduleCleared,
   moduleComplete,
   moduleConcepts,
   moduleOf,
   reviewAttempts,
+  reviewLevels,
 } from "../src/index.ts";
 import type { Module } from "../src/index.ts";
 
@@ -73,11 +76,57 @@ describe("modules — the provisional arcs", () => {
     expect(moduleComplete({ ...found, levels: [] }, [])).toBe(false);
   });
 
+  it("gates module completion on the review passing", () => {
+    const found = moduleOf("tree")!;
+    expect(moduleCleared(found, found.levels, [])).toBe(false);
+    expect(moduleCleared(found, found.levels, [found.id])).toBe(true);
+    expect(moduleCleared(found, found.levels.slice(0, 1), [found.id])).toBe(false);
+  });
+
   it("collects a module's concepts from its levels", () => {
     const ids = moduleConcepts(FIXTURE, CONCEPTS).map((c) => c.id);
     expect(ids).toContain("semantic-equality");
     expect(ids).toContain("associativity");
     expect(ids).toContain("program-tree");
+  });
+});
+
+describe("module review — the six real reviews", () => {
+  it("gives every arc a multi-question review", () => {
+    for (const m of MODULES) {
+      expect(m.questions.length).toBeGreaterThanOrEqual(4);
+      expect(new Set(m.questions.map((q) => q.id)).size).toBe(m.questions.length);
+    }
+  });
+
+  it("tags every question with a concept from the graph", () => {
+    for (const m of MODULES) {
+      for (const q of m.questions) {
+        expect(conceptById(q.concept)).toBeDefined();
+        expect(q.opts).toContain(q.ok);
+        expect(q.why.length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("recombines concepts across at least two levels of the arc", () => {
+    for (const m of MODULES) {
+      const levels = reviewLevels(m);
+      expect(levels.length).toBeGreaterThanOrEqual(2);
+      for (const l of levels) expect(m.levels).toContain(l);
+    }
+  });
+
+  it("passes a perfect round and sends the weak concepts back", () => {
+    const m = MODULES[2]; // evaluation
+    const all = Object.fromEntries(m.questions.map((q) => [q.id, q.ok]));
+    expect(gradeReview(m, all).passed).toBe(true);
+    // three wrong of six is below the 0.7 threshold — the round fails
+    const wrong = { ...all };
+    for (const q of m.questions.slice(0, 3)) wrong[q.id] = "definitely not the answer";
+    const r = gradeReview(m, wrong);
+    expect(r.passed).toBe(false);
+    expect(r.weak).toContain(m.questions[0].concept);
   });
 });
 
@@ -142,11 +191,22 @@ describe("module review — the playable round", () => {
     expect(r.passed).toBe(true);
   });
 
-  it("stays locked until step 3 supplies the questions", () => {
-    const r = new ReviewRound(MODULES[0]);
+  it("stays locked for a question-less module", () => {
+    const r = new ReviewRound({ ...MODULES[0], questions: [] });
     expect(r.total).toBe(0);
     expect(r.gate).toBe(false);
     expect(r.passed).toBe(false);
+    expect(r.weak).toEqual([]);
+  });
+
+  it("plays the real foundations review to a verdict", () => {
+    const r = new ReviewRound(MODULES[0]);
+    expect(r.total).toBe(MODULES[0].questions.length);
+    expect(r.gate).toBe(false);
+    for (const q of MODULES[0].questions) r.answer(q.id, q.ok);
+    expect(r.gate).toBe(true);
+    expect(r.passed).toBe(true);
+    expect(r.score).toBe(1);
     expect(r.weak).toEqual([]);
   });
 });

@@ -23,11 +23,19 @@ import {
 const FORWARD_REF_CEILING = 0;
 
 describe("concept graph — shape", () => {
-  it("runs the 22 levels, in course order, with unique ids", () => {
-    expect(LEVEL_ORDER).toHaveLength(22);
+  it("runs the 28 levels, in course order, with unique ids", () => {
+    expect(LEVEL_ORDER).toHaveLength(28);
     expect(LEVEL_ORDER[0]).toBe("tree");
     expect(LEVEL_ORDER.at(-1)).toBe("improve");
     expect(new Set(LEVEL_ORDER).size).toBe(LEVEL_ORDER.length);
+    // the six coverage levels (plan 0028 §D) are in their module's position
+    for (const id of ["corpus", "models", "artifacts", "cellstore", "game", "gates"]) {
+      expect(LEVEL_ORDER).toContain(id);
+    }
+    expect(LEVEL_ORDER.indexOf("corpus")).toBeLessThan(LEVEL_ORDER.indexOf("reach"));
+    expect(LEVEL_ORDER.indexOf("models")).toBeGreaterThan(LEVEL_ORDER.indexOf("measure"));
+    expect(LEVEL_ORDER.indexOf("models")).toBeLessThan(LEVEL_ORDER.indexOf("architecture"));
+    expect(LEVEL_ORDER.indexOf("gates")).toBeLessThan(LEVEL_ORDER.indexOf("honest"));
   });
 
   it("gives every concept a unique id, a label and a one-line definition", () => {
@@ -88,17 +96,17 @@ describe("concept graph — lookups", () => {
     expect(conceptById("reach")?.introduced).toBe("reach");
     expect(conceptById("nope")).toBeUndefined();
     expect(levelIndex("tree")).toBe(0);
-    expect(levelIndex("improve")).toBe(21);
+    expect(levelIndex("improve")).toBe(27);
     expect(levelIndex("nope")).toBe(-1);
   });
 
   it("reports a concept's first use and introduction index", () => {
     const referee = conceptById("referee")!;
     expect(firstUsed(referee)).toBe("referee");
-    expect(introductionIndex(referee)).toBe(4);
+    expect(introductionIndex(referee)).toBe(5);
     const closure = conceptById("closure")!;
     expect(firstUsed(closure)).toBe("reach");
-    expect(introductionIndex(closure)).toBe(2);
+    expect(introductionIndex(closure)).toBe(3);
   });
 
   it("lists concepts a level uses and introduces", () => {

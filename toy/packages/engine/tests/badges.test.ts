@@ -72,15 +72,23 @@ describe("badges — predicates", () => {
     expect(isEarned("sweep-breaker", badgeState({ passed: ["truthpay"] }))).toBe(false);
   });
 
-  it("earns a module badge only when the whole arc is cleared", () => {
-    expect(isEarned(`module-${MODULES[0].id}`, badgeState({ passed: [...ARC1] }))).toBe(true);
-    expect(isEarned(`module-${MODULES[0].id}`, badgeState({ passed: ARC1.slice(0, 1) }))).toBe(
-      false,
+  it("earns a module badge only when the whole arc is cleared *and* reviewed", () => {
+    const mod = MODULES[0].id;
+    expect(isEarned(`module-${mod}`, badgeState({ passed: [...ARC1], reviewed: [mod] }))).toBe(
+      true,
     );
+    expect(isEarned(`module-${mod}`, badgeState({ passed: [...ARC1] }))).toBe(false);
+    expect(
+      isEarned(`module-${mod}`, badgeState({ passed: ARC1.slice(0, 1), reviewed: [mod] })),
+    ).toBe(false);
   });
 
-  it("earns Modules I–VI Complete only when every arc is done", () => {
-    expect(isEarned("curriculum-complete", badgeState({ passed: [...ALL] }))).toBe(true);
+  it("earns Modules I–VI Complete only when every arc is done and reviewed", () => {
+    const allReviews = MODULES.map((m) => m.id);
+    expect(
+      isEarned("curriculum-complete", badgeState({ passed: [...ALL], reviewed: allReviews })),
+    ).toBe(true);
+    expect(isEarned("curriculum-complete", badgeState({ passed: [...ALL] }))).toBe(false);
     expect(isEarned("curriculum-complete", badgeState({ passed: ARC1 }))).toBe(false);
   });
 
