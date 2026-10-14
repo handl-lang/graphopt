@@ -164,15 +164,26 @@ instrument.
 
 ### Activation memory — fused quadratic vs the chunked carrier
 
-Direct comparison of `(q@kᵀ)@v` against the C=16 chunked form, same
-inputs, peak `torch.cuda.max_memory_allocated` (fp64, B=2, d=16):
+**On the real module** — `_ChunkedRetention(16)` forward vs the
+extracted carrier lowered through the ambient sink, peak
+`torch.cuda.max_memory_allocated` (fp64, B=2), verified fp64:
+
+| T | model | carrier | saved | max_abs |
+|---|---|---|---|---|
+| 512 | 18.52 MiB | 10.91 MiB | 1.70× | 1.6e-08 |
+| 1024 | 48.90 MiB | 14.39 MiB | 3.40× | 1.7e-16 |
+| 2048 | 169.66 MiB | 23.26 MiB | **7.30×** | 9.8e-09 |
+
+**Synthetic proxy** (random tensors, same shapes — measures the
+asymptote further out, not a model): `(q@kᵀ)@v` against the C=16
+chunked form, fp64, B=2, d=16:
 
 | T | fused | chunked carrier | saved |
 |---|---|---|---|
 | 512 | 12.6 MiB | 8.8 MiB | 1.4× |
 | 1024 | 25.1 MiB | 9.4 MiB | 2.7× |
 | 2048 | 74.1 MiB | 10.6 MiB | 7.0× |
-| 4096 | **268.1 MiB** | **13.1 MiB** | **20.4×** |
+| 4096 | **268.1 MiB** | **13.1 MiB** | **20.4×** (proxy) |
 
 The carrier's peak is near-flat (8.8 → 13.1 MiB across an 8× T range)
 while the fused quadratic grows 21× (12.6 → 268.1 MiB).  This is the
