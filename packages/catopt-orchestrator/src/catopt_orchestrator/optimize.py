@@ -3377,6 +3377,7 @@ def _e2e_or_rollback(
     sink: Any,
     example_input: Any,
     verbose: bool,
+    label: str = "Compositional",
 ) -> tuple[Any, dict[str, Any], dict[str, Any]]:
     """Run the whole-model check; revert the graft on failure.
 
@@ -3388,6 +3389,9 @@ def _e2e_or_rollback(
     each block's FIRST captured call, so a shape-specialized graft
     passes it and then breaks a second call at another resolution (the
     BiRefNet ``bb`` trap).
+
+    ``label`` prefixes the verbose lines; the compositional, morphism
+    and diagram drivers all deliver through this one gate.
     """
     args2 = (
         example_input
@@ -3404,20 +3408,18 @@ def _e2e_or_rollback(
         }
         ok = vr.passed
         if verbose:
-            print(
-                f"[Compositional] end-to-end rel diff: {vr.max_rel:.3e}"
-            )
+            print(f"[{label}] end-to-end rel diff: {vr.max_rel:.3e}")
     except Exception as e:
         e2e = {"error": f"{type(e).__name__}: {e}"}
         if verbose:
-            print(f"[Compositional] end-to-end check failed: {e}")
+            print(f"[{label}] end-to-end check failed: {e}")
     if ok:
         return new_model, replacements, e2e
     e2e["rolled_back"] = True
     if verbose:
         print(
-            "[Compositional] end-to-end check failed — rolled back to "
-            "the un-grafted composition"
+            f"[{label}] end-to-end check failed — rolled back to the "
+            "un-grafted composition"
         )
     return (
         _roll_back_delivery(model, new_model, composer, replacements),
