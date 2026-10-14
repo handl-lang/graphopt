@@ -155,3 +155,19 @@ held-out task to stay open.
 - **Runtimes become artifacts.**  A coherent {atoms, handlers, laws}
   set is serializable, versionable, and reviewable — a generated
   package, not a hand-grown one.
+
+## Measurements (added post-landing)
+
+- **Layer 1 — landed, falsification #1 measured NULL** (`a1c3b57`,
+  merged `96e9058`).  `antiunify.py` mints real definitional atoms
+  (provenance-carrying, unfoldable, verified fp64 end-to-end), and
+  compression is real (deq winner: 12 ops vs 26 unfolded).  But on all
+  three workloads — delta×6, deq×6, retnet T=64/K=4 — the cheapest
+  extractable member and class count were *identical* with and
+  without atoms: naming structure did not expand reach.  The strict
+  arm is strictly worse under tight `max_nodes` (intro members consume
+  enodes with no pay).  `fold_ruleset` found zero targets: minted
+  motifs live in exports, not in law outputs.  Per this ADR's own
+  falsification clause, Layer 1's *reach-expansion* claim is measured
+  negative on these workloads; the machinery remains as compression
+  tooling (shorter spellings, provenance), not a reach mechanism.
