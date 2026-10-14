@@ -432,17 +432,26 @@ class TestDeepDomain:
         assert len(deep) <= 3 * limit
 
 
-class TestShippedDspecIsUnfaithfulOffTheLeafDomain:
-    """The deepening's headline finding: ``MATMUL_T_CONCAT``'s shipped
-    ``dspec`` reads the cost convention ``("shape", T)`` while its
-    oracle hook reads ``_vshape`` — the two agree only on leaf sites.
-    The deep window exposes the divergence; the correct spelling is
-    ``("vshape", T)``."""
+class TestShippedDspecFaithfulOnTheDeepDomain:
+    """The deepening's headline finding was that ``MATMUL_T_CONCAT``'s
+    ``dspec`` read the cost convention ``("shape", T)`` while its
+    oracle hook reads ``_vshape`` — the two agreed only on leaf sites
+    (the deep window exposed an SD=1 vs SD=0 divergence on carrier
+    members).  The shipped spec now reads ``("vshape", T)`` — the same
+    value-shape source the oracle reads — and these tests pin the
+    agreement on both domains, vetoes included."""
 
     def _rule(self):
         from catopt_carriers.om import MATMUL_T_CONCAT
 
         return MATMUL_T_CONCAT
+
+    def test_dspec_reads_the_value_shape(self):
+        # the audit's fix: the shipped spec must consult the
+        # carrier-aware reader, not the cost convention
+        spec = repr(self._rule().dspec)
+        assert "('vshape', 'q')" in spec
+        assert "('shape', 'q')" not in spec
 
     def test_agrees_on_the_leaf_domain(self):
         from catopt_carriers.om import _derive_score_concat_dim
@@ -454,39 +463,29 @@ class TestShippedDspecIsUnfaithfulOffTheLeafDomain:
         for env, _o in dom:
             assert rule.derive(env) == _derive_score_concat_dim(env)
 
-    def test_diverges_on_carrier_member_sites(self):
+    def test_agrees_on_the_deep_domain(self):
+        # carrier-member sites included — the window where ``shape``
+        # and ``vshape`` disagree
+        import catopt_carriers.xcarrier  # noqa: F401  registers _xshape
         from catopt_carriers.om import _derive_score_concat_dim
+        from catopt_core.typing import _shape_of, value_shape_of
         from catopt_discovery import object_synthesis as osyn
 
         rule = self._rule()
         dom = osyn._measure_domain(rule, (), 60, deep=True)
-        bad = [
+        gap = [
             env
             for env, _o in dom
-            if rule.derive(env) != _derive_score_concat_dim(env)
-        ]
-        assert bad, "the deep window must expose the divergence"
-
-    def test_the_vshape_spelling_would_agree(self):
-        from catopt_carriers.om import _derive_score_concat_dim
-        from catopt_discovery import object_synthesis as osyn
-
-        rule = self._rule()
-        dom = osyn._measure_domain(rule, (), 60, deep=True)
-        fixed = {
-            "SD": (
-                "sub",
-                (
-                    "max",
-                    ("len", ("vshape", "q")),
-                    ("len", ("vshape", "k1")),
-                ),
-                1,
+            if any(
+                _shape_of(v) != value_shape_of(v)
+                for k, v in env.items()
+                if not k.startswith("$attr:")
             )
-        }
+        ]
+        assert gap, "the deep window must reach carrier members"
         for env, _o in dom:
-            want = _derive_score_concat_dim(env)
-            if want is None:
-                continue
-            assert eval_derive(fixed, env) == want
+            assert (
+                eval_derive(rule.dspec, env)
+                == _derive_score_concat_dim(env)
+            ), env
 
