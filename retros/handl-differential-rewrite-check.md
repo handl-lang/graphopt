@@ -96,6 +96,15 @@ Differential numbers are **unchanged** by all of this: 19 agree / 0
 disagree / 5 root-eliminating / 3 leaf-rhs skipped / 37 declined / 19
 guard-raised.
 
+**Related, unfixed (no bank law hits it):** the bridge emits
+`node_kind: None` for a *bare-metavar lhs* (`TransformDef.node_kind` is
+also a `String`), which serde_yaml likewise coerces to the string
+`"null"`.  No shipped law has a bare-metavar lhs (checked: 0), so it is
+latent; it is pinned only by the synthetic
+`test_bare_metavar_root_refuses_as_native`.  A
+`node_kind` has no `!Native` analogue (it is the dispatch key), so this
+one has no clean refusal either — noted here rather than fixed.
+
 ## Finding 2 — one synthesized term per law is not universally sound
 
 19 laws' guards **raise** on a synthesized term (bare `f64` variables):
