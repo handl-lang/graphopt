@@ -49,9 +49,9 @@ per step, so forward latency is the honest unit.
 Usage:
     PYTHONPATH="packages/catopt-core/src:packages/catopt-torch/src:\
 packages/catopt-carriers/src:packages/catopt-orchestrator/src:." \
-        /tmp/catopt-cuda-venv/bin/python bench/e2e_model.py \
+        /tmp/catopt-cuda-venv/bin/python bench/suites/e2e/e2e_model.py \
         --device cuda
-    .venv/bin/python bench/e2e_model.py --device cpu --quick
+    .venv/bin/python bench/suites/e2e/e2e_model.py --device cpu --quick
 """
 # ruff: noqa: E402, RUF001, RUF003 -- ×, ·, → in
 # strings/docstrings are deliberate math notation; sys.path setup

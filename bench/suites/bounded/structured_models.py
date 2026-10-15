@@ -53,9 +53,9 @@ bounded ``elide_bounded`` / ``zero_bounded`` members):
 The honest payoff table: which structure class pays how much, per
 budget — and which offers the default cost model declines.
 
-    .venv/bin/python bench/structured_models.py --device cpu
-    .venv/bin/python bench/structured_models.py --quick
-    .venv/bin/python bench/structured_models.py --variants lora_r8,pruned_f0.4
+    .venv/bin/python bench/suites/bounded/structured_models.py --device cpu
+    .venv/bin/python bench/suites/bounded/structured_models.py --quick
+    .venv/bin/python bench/suites/bounded/structured_models.py --variants lora_r8,pruned_f0.4
 """
 # ruff: noqa: E402, RUF001, RUF003 -- ×, ·, →, −, ‖ in
 # strings/docstrings are deliberate math notation; sys.path setup

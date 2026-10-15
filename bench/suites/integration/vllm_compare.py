@@ -45,15 +45,15 @@ Legs:
 Typical invocations:
 
     # everything in one env with both stacks installed + a GPU:
-    .venv-vllm/bin/python bench/vllm_compare.py --device cuda
+    .venv-vllm/bin/python bench/suites/integration/vllm_compare.py --device cuda
 
     # catopt legs on the repo .venv, vllm leg delegated to a venv
     # that has it (results are labelled cross-interpreter):
-    .venv/bin/python bench/vllm_compare.py --device cpu \\
+    .venv/bin/python bench/suites/integration/vllm_compare.py --device cpu \\
         --vllm-python ~/vllm-probe/bin/python
 
     # harnessed:
-    python bench/run_all.py --suites vllm_compare --quick
+    python -m bench run-all --suites vllm_compare --quick
 """
 
 from __future__ import annotations
@@ -264,7 +264,7 @@ def write_hf_dir(hf_dir: Path, sd_hf: dict, cfg: dict) -> dict:
         wrote = "model.safetensors"
     manifest = {
         "catopt_hf_export": 1,
-        "source": "llama2.c checkpoint via bench/vllm_compare.py",
+        "source": "llama2.c checkpoint via bench/suites/integration/vllm_compare.py",
         "config": config,
         "weights_file": wrote,
         "rope": "q/k projection rows permuted interleaved→rotate_half",

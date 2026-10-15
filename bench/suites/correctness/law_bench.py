@@ -35,10 +35,10 @@ with, so "picked?" answers "would the pipeline even choose this
 form?".
 
 Usage:
-    python bench/law_bench.py --laws id_add,assoc_linear --sizes 256
-    python bench/law_bench.py --laws default --sizes 128,256
-    python bench/law_bench.py --laws simpl --quick
-    python bench/law_bench.py --list          # registry contents
+    python bench/suites/correctness/law_bench.py --laws id_add,assoc_linear --sizes 256
+    python bench/suites/correctness/law_bench.py --laws default --sizes 128,256
+    python bench/suites/correctness/law_bench.py --laws simpl --quick
+    python bench/suites/correctness/law_bench.py --list          # registry contents
 
 ``--laws`` accepts comma-separated rule names, group names
 (``simpl``, ``categorical``, ``sdpa_fold``, ``scan``, ``scan_diag``,

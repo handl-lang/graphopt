@@ -47,9 +47,9 @@ plots: a per-cell predicted-vs-measured scatter (one log-log panel
 per cost fn) plus a ρ-by-cost-fn bar chart across cells.
 
 Usage:
-    python bench/cost_fidelity.py --device cpu --quick
-    python bench/cost_fidelity.py --device cpu --models chain,swiglu
-    python bench/cost_fidelity.py --device cuda --sizes 128,512
+    python bench/suites/cost/cost_fidelity.py --device cpu --quick
+    python bench/suites/cost/cost_fidelity.py --device cpu --models chain,swiglu
+    python bench/suites/cost/cost_fidelity.py --device cuda --sizes 128,512
 """
 # ruff: noqa: E402 RUF001 RUF002 RUF003 — ρ, τ, ×, ≥, − in strings are
 # deliberate math notation; sys.path setup must precede the

@@ -10,8 +10,8 @@ names.
 
 Run::
 
-    .venv/bin/python lab/probes/grammar_probe.py
-    .venv/bin/python lab/probes/grammar_probe.py cumsum-verbatim softmax
+    .venv/bin/python lab/audit/grammar_probe.py
+    .venv/bin/python lab/audit/grammar_probe.py cumsum-verbatim softmax
 """
 
 from __future__ import annotations

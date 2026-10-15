@@ -32,8 +32,8 @@ deliveries at the propagated output bound.  Stories15M's
 candidacy regardless.
 
 Usage:
-    .venv/bin/python bench/bounded_e2e.py --device cpu
-    .venv/bin/python bench/bounded_e2e.py --quick
+    .venv/bin/python bench/suites/bounded/bounded_e2e.py --device cpu
+    .venv/bin/python bench/suites/bounded/bounded_e2e.py --quick
 """
 # ruff: noqa: E402, RUF001, RUF003 -- ×, ·, →, −, ‖ in
 # strings/docstrings are deliberate math notation; sys.path setup

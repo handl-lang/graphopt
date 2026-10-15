@@ -6,7 +6,7 @@ Plan-0011's morphism engine lifts each composer-selected block to a
 ``ResidualAbsorb`` / ``NormCascade`` / ``WeightTie`` + the KV-family
 law ``KVLatentShare``), reifies each match through a verified joint
 e-graph, and grafts the survivors.  The synthetic fixtures
-(``bench/suites/algebra/morphism_e2e.py``) show the wins; this suite
+(``bench/suites/speedup/morphism_e2e.py``) show the wins; this suite
 asks the honest question on *real* trained weights — the llama2.c
 ``stories15M`` and ``stories110M`` checkpoints:
 
@@ -38,7 +38,7 @@ delivered module.
 
 Usage:
     .venv/bin/python -m bench run morphism_coverage --device cpu
-    .venv/bin/python bench/suites/models/morphism_coverage.py \
+    .venv/bin/python bench/suites/correctness/morphism_coverage.py \
         --models stories15M --seq 64
 """
 # ruff: noqa: E402, RUF001 -- math notation in docstrings is

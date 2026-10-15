@@ -35,8 +35,8 @@ a few probe coordinates prune the scan) and validates bound/imap/
 firsts/keep against the real function on every weight where it is
 affordable plus a planted synthetic matrix.
 
-    .venv/bin/python bench/bound_amplification.py
-    .venv/bin/python bench/bound_amplification.py --models 15M
+    .venv/bin/python bench/suites/structure/bound_amplification.py
+    .venv/bin/python bench/suites/structure/bound_amplification.py --models 15M
 """
 # ruff: noqa: RUF001, RUF002, RUF003 -- ×, ‖, –, −, Δ, ⱼ in
 # strings/docstrings are deliberate math notation.

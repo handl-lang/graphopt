@@ -4,7 +4,7 @@ The intake feeds the census programs nobody wrote by hand: a
 ``torch.nn.Module`` + example input is pushed through the real export
 boundary (``torch.export`` → ``export_to_ir``), classified
 ingested / census-only / rejected, and — when it survives — appended
-to the census through the ``tools/data/intake_corpus.json`` +
+to the census through the cached ``intake_corpus.json`` +
 ``intake_tensors.pt`` side-files.
 
 These tests exercise the real boundary on a handful of the

@@ -51,9 +51,9 @@ script writes the two suite-specific plots: the money plot
 
 Usage:
 
-    .venv/bin/python bench/search_efficiency.py --device cpu
-    .venv/bin/python bench/search_efficiency.py --depths 4,8,16 --out /tmp/se
-    .venv/bin/python bench/search_efficiency.py --no-artifacts   # console only
+    .venv/bin/python bench/suites/search/search_efficiency.py --device cpu
+    .venv/bin/python bench/suites/search/search_efficiency.py --depths 4,8,16 --out /tmp/se
+    .venv/bin/python bench/suites/search/search_efficiency.py --no-artifacts   # console only
 """
 # ruff: noqa: RUF001 -- math notation in strings/comments.
 

@@ -38,9 +38,9 @@ picked, or is picked but doesn't pay at runtime, is reported as such.
 Usage:
     PYTHONPATH="packages/catopt-core/src:packages/catopt-torch/src:\
 packages/catopt-carriers/src:packages/catopt-orchestrator/src:." \
-        /tmp/catopt-cuda-venv/bin/python bench/laws_effect.py \
+        /tmp/catopt-cuda-venv/bin/python bench/suites/correctness/laws_effect.py \
         --device cuda
-    .venv/bin/python bench/laws_effect.py --device cpu --quick
+    .venv/bin/python bench/suites/correctness/laws_effect.py --device cpu --quick
 """
 # ruff: noqa: E402, RUF001, RUF003 -- ×, ·, → in strings/docstrings are
 # deliberate math notation; sys.path setup must precede the

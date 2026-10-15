@@ -62,7 +62,7 @@ Honesty conventions:
 Usage:
     PYTHONPATH="packages/catopt-core/src:packages/catopt-torch/src:\
 packages/catopt-carriers/src:packages/catopt-orchestrator/src:." \\
-        /tmp/catopt-cuda-venv/bin/python bench/e2e_llm.py --device cuda
+        /tmp/catopt-cuda-venv/bin/python bench/suites/e2e/e2e_llm.py --device cuda
 """
 # ruff: noqa: E402, RUF001, RUF003 -- ×, ·, → in strings are deliberate math
 # notation; sys.path setup must precede benchkit/catopt imports.

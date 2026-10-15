@@ -55,9 +55,9 @@ Protocol per model (same contract as ``real_win_hunt``):
 Usage:
     PYTHONPATH="packages/catopt-core/src:packages/catopt-torch/src:\
 packages/catopt-carriers/src:packages/catopt-orchestrator/src:." \
-        /tmp/catopt-cuda-venv/bin/python bench/model_bench.py \
+        /tmp/catopt-cuda-venv/bin/python bench/suites/e2e/model_bench.py \
         --device cuda
-    .venv/bin/python bench/model_bench.py --device cpu --quick
+    .venv/bin/python bench/suites/e2e/model_bench.py --device cpu --quick
 """
 # ruff: noqa: E402 RUF001 RUF002 RUF003 -- ×, ·, Σ in
 # strings/docstrings are deliberate math notation; sys.path setup

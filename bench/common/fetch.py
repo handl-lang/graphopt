@@ -7,9 +7,9 @@ file size, and skips files already present and valid.  A valid copy
 already sitting in ``/tmp`` (the path older runs of these benches
 used) is copied into the cache instead of re-downloaded.
 
-    python bench/fetch.py                    # both models
-    python bench/fetch.py --models 15M       # just one
-    python bench/fetch.py --models 15M,110M
+    python bench/common/fetch.py                    # both models
+    python bench/common/fetch.py --models 15M       # just one
+    python bench/common/fetch.py --models 15M,110M
 """
 
 from __future__ import annotations

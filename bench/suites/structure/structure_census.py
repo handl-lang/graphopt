@@ -5,7 +5,7 @@ how much of the structure they exploit — low-rank factors, dead and
 duplicate weight slices, diagonal/block-diagonal weights, tied
 parameters — actually exists in trained weights?
 
-For each available llama2.c checkpoint (``bench/fetch.py``) this
+For each available llama2.c checkpoint (``bench/common/fetch.py``) this
 reports, per weight matrix (normalised to ``(out, in)``):
 
 * effective rank (SVD energy at 90%/99%) and the SVD-certified
@@ -41,8 +41,8 @@ produce per token is summed into a per-model "exploitable slack"
 table (GEMM flops only — attention/rope excluded; percentages are
 explicitly scoped).  Written to ``bench/results/structure_census.json``.
 
-    python bench/structure_census.py            # both checkpoints
-    python bench/structure_census.py --ckpt ~/.cache/catopt/stories15M.bin
+    python bench/suites/structure/structure_census.py            # both checkpoints
+    python bench/suites/structure/structure_census.py --ckpt ~/.cache/catopt/stories15M.bin
 """
 # ruff: noqa: RUF001 -- the multiplication sign in tables is notation.
 
@@ -1052,7 +1052,7 @@ def main() -> None:
                     break
     if not paths:
         sys.exit(
-            "no checkpoints found — run `python bench/fetch.py` or "
+            "no checkpoints found — run `python bench/common/fetch.py` or "
             "pass --ckpt"
         )
 

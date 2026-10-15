@@ -44,8 +44,8 @@ Variants per cell (only verified-equal ones are timed):
                            is the same convention e2e_model uses).
 
 Usage:
-    .venv/bin/python bench/morphism_e2e.py --device cpu --quick
-    .venv/bin/python bench/morphism_e2e.py --cells 8x16,1024x64,4096x128
+    .venv/bin/python bench/suites/speedup/morphism_e2e.py --device cpu --quick
+    .venv/bin/python bench/suites/speedup/morphism_e2e.py --cells 8x16,1024x64,4096x128
 """
 # ruff: noqa: E402, RUF001, RUF002, RUF003 -- ×, ·, →, − in
 # strings/docstrings are deliberate math notation; sys.path setup

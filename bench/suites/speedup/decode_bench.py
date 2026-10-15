@@ -35,8 +35,8 @@ B > 1 on that class would measure batch-1 work under a batch-N label.
 weights (``load_state_dict`` copy) but run a true (B, T, D) forward;
 B=1 output is verified bitwise against the stock model at load time.
 
-    python bench/decode_bench.py --device cuda --quick
-    python bench/decode_bench.py --device cuda \
+    python bench/suites/speedup/decode_bench.py --device cuda --quick
+    python bench/suites/speedup/decode_bench.py --device cuda \
         --ckpt ~/.cache/catopt/stories110M.bin
 """
 
@@ -246,7 +246,7 @@ def main():
         default=None,
         help="checkpoint path — default resolves "
         "$XDG_CACHE_HOME/catopt/stories15M.bin then "
-        "/tmp/stories15M.bin (see bench/fetch.py)",
+        "/tmp/stories15M.bin (see bench/common/fetch.py)",
     )
     ap.add_argument(
         "--quick",

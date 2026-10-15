@@ -76,9 +76,9 @@ medians stable within ~10-20%):
 Usage:
     PYTHONPATH="packages/catopt-core/src:packages/catopt-torch/src:\
 packages/catopt-carriers/src:packages/catopt-orchestrator/src:." \
-        /tmp/catopt-cuda-venv/bin/python bench/real_win_hunt.py \
+        /tmp/catopt-cuda-venv/bin/python bench/suites/speedup/real_win_hunt.py \
         --device cuda
-    .venv/bin/python bench/real_win_hunt.py --device cpu --quick
+    .venv/bin/python bench/suites/speedup/real_win_hunt.py --device cpu --quick
 """
 # ruff: noqa: E402, RUF001, RUF002, RUF003 -- ×, ·, Σ, ᵀ in
 # strings/docstrings are deliberate math notation; sys.path setup

@@ -63,11 +63,11 @@ in fp64 (final ``h``, ``rel_to_max``) and gated fp32
 A cell whose optimized form fails the gate is reported, not timed.
 
 Usage:
-    .venv/bin/python bench/decode_scan_bench.py --device cpu --quick
-    .venv/bin/python bench/decode_scan_bench.py --device cpu
+    .venv/bin/python bench/suites/speedup/decode_scan_bench.py --device cpu --quick
+    .venv/bin/python bench/suites/speedup/decode_scan_bench.py --device cpu
     PYTHONPATH="packages/catopt-core/src:packages/catopt-torch/src:\
 packages/catopt-carriers/src:packages/catopt-orchestrator/src:." \
-        /tmp/catopt-cuda-venv/bin/python bench/decode_scan_bench.py \
+        /tmp/catopt-cuda-venv/bin/python bench/suites/speedup/decode_scan_bench.py \
         --device cuda
 """
 # ruff: noqa: E402 RUF001 RUF002 RUF003 — ×, ·, −, ⊙, σ, γ in

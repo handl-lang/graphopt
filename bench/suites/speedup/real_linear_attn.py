@@ -77,10 +77,10 @@ module (``rel_to_max`` reported; the scan reassociation is exact to
 ~1e-14) and fp32 with the reassoc_scale gate (rtol 1e-4, atol 1e-5).
 
 Usage:
-    python bench/real_linear_attn.py --device cpu --quick
-    python bench/real_linear_attn.py --device cpu \
+    python bench/suites/speedup/real_linear_attn.py --device cpu --quick
+    python bench/suites/speedup/real_linear_attn.py --device cpu \
         --sizes 128,512,2048 --families retnet,gla
-    python bench/real_linear_attn.py --device cuda --sizes 512,4096
+    python bench/suites/speedup/real_linear_attn.py --device cuda --sizes 512,4096
 """
 # ruff: noqa: E402 RUF001 RUF002 RUF003 -- ×, ·, −, ², γ, β, ⊙ in
 # strings/docstrings are deliberate math notation; sys.path setup
@@ -680,7 +680,7 @@ def try_compile(model: nn.Module, x: torch.Tensor, budget_s: float):
 
 
 # ---------------------------------------------------------------------------
-#  Timing helpers (same contract as bench/reassoc_scale.py)
+#  Timing helpers (same contract as bench/suites/speedup/reassoc_scale.py)
 # ---------------------------------------------------------------------------
 
 

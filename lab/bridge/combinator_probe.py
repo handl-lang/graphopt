@@ -17,10 +17,10 @@ presentation" check.
 
 Run::
 
-    .venv/bin/python lab/probes/combinator_probe.py            # gate 1, all
-    .venv/bin/python lab/probes/combinator_probe.py --verify 8 # + end-to-end
-    .venv/bin/python lab/probes/combinator_probe.py --gate2    # loop spelling
-    .venv/bin/python lab/probes/combinator_probe.py --gate2 --extracted
+    .venv/bin/python lab/bridge/combinator_probe.py            # gate 1, all
+    .venv/bin/python lab/bridge/combinator_probe.py --verify 8 # + end-to-end
+    .venv/bin/python lab/bridge/combinator_probe.py --gate2    # loop spelling
+    .venv/bin/python lab/bridge/combinator_probe.py --gate2 --extracted
 """
 
 from __future__ import annotations
