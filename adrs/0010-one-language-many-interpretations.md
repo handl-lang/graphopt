@@ -173,3 +173,31 @@ follows.
   hope.
 - **catopt and handl share one idea**, so a construct expressed in one
   has a target in the other — via the existing bridge.
+
+## Outcome (spike, 2026-10-14)
+
+The boundary spike (`plan 0029`) measured this ADR's central claim and
+**it holds**:
+
+* **The load works.**  `language_from_dir` assembles a `Language` from a
+  directory of catopt-emitted fragments, and after closing two gaps the
+  **whole bank loads — 83 laws** in `lang.transforms`, with the three
+  minted leaf kinds (`catopt:const` / `catopt:var` / `catopt:data`)
+  declared (`handl 9372bd32`, catopt `5ca8aef`).
+* **The two gaps were representational, not semantic**: handl's
+  `when` is ONE condition (fold the clause list into `And([...])`), and
+  enum variants are YAML *tags* under `serde_yaml`, not JSON maps.  A
+  third — the `pass:node_kind:priority` rule identity — required a
+  load-time disambiguator, since catopt's saturation has no order to
+  give.
+* **The tensor channel exists but is not needed**: `TaggedValue::Resource`
+  carries an opaque host pointer by reference, while the *host-function
+  seam* is JSON-valued, so a tensor would cross as a debug process-local
+  pointer or as copied bytes.  ADR 0011 keeps tensors out of v1
+  entirely, which is why this is a footnote rather than a blocker.
+* **Direction**: (A) — catopt embeds handl as an optional peer, the
+  `catopt-native` pattern (`retros/handl-q3-integration-direction.md`).
+
+What this ADR still does **not** have: a *built* peer, or a rewrite run
+through handl's engine on a catopt term.  Those are sequenced in
+`plans/0030-handl-peer-integration.md`.

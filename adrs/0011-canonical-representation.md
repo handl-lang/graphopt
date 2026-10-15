@@ -114,3 +114,25 @@ lossy view of the other.**
   ADR 0010's "handl is the kernel" cheap: no tensor runtime to port, no
   second set of executors.
 - **The seam has one test**: round-trip identity on the shipped bank.
+
+## Outcome (spike, 2026-10-14)
+
+The decision is now backed by measurements rather than symmetry:
+
+* **The calculus side works for the whole bank.**  83 laws load as
+  `TransformDef` rows, and catopt's own seam test proves the bridge is
+  lossless in both directions on the shipped bank (no cell silently
+  dropped; every row re-emits byte-identically).  So "laws are data in
+  the calculus" is not aspiration — it is the current behaviour of the
+  bridge, one mapping away from being the *only* representation.
+* **The op-graph side is untouched and needs to be**: no measurement
+  asked execution to move, and Q1b showed the boundary is JSON-valued,
+  so moving it would buy nothing and cost every sink a second
+  implementation.
+* **The authority rule held**: the `catopt:` extension is ignored by
+  handl's serde and round-trips exactly, which is what makes the two
+  representations non-drifting *by construction* rather than by
+  discipline.
+* **The named refusal metric moved**: the leaf gap (the bridge's first
+  measured refusal) is closed; the leaf now maps to `!Fresh` or a
+  `!Create` of a declared kind.
