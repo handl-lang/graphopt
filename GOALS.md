@@ -147,6 +147,8 @@ affected figures were discarded rather than reported.
 | **coverage ratchet** | verified for the changed module: `catopt_discovery/handl.py` is **100%** (117 stmts, 50 branches, 0 missed) — the floor is safe |
 | **docs** | both repos updated with the rewrite result (catopt `docs/mechanism.md`; handl `docs/explanation/kits-and-manifests.md`) |
 
+| **the differential rewrite check** | **new asset**: catopt's engine vs handl's over the whole bank — **19 compared, 19 agree, 0 disagree** (83 accounted for; the rest reported with reasons).  Two findings: root-eliminating laws cannot be expressed (handl's `Declarative` always creates a node), and 19 guards are shape-sensitive enough to raise on a synthesized term.  `lab/audit/handl_differential.py` + a pinning test (`project/retros/handl-differential-rewrite-check.md`) |
+
 **One caveat worth carrying forward**: the `priority` field is the first
 place handl's schema demanded something catopt does not have (an order),
 and it is currently supplied as a *load-time disambiguator* that means

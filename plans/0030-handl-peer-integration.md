@@ -62,7 +62,27 @@ from the uv workspace, opt-in.
 - **Fail**: if it cannot be optional — i.e. something in the default
   path needs it — the cost lands on every user and the design is wrong.
 
-### 3 · Leaf semantics *in handl* (a real step, not a workaround)
+### 3 · Rule forms *in handl*: leaves **and** root-eliminating laws
+
+Two gaps now measured, both of the same kind (a step handl's vocabulary
+does not have), so they belong in one step:
+
+* **a leaf** — today `!Create` of a declared `catopt:`-namespaced kind
+  with the data in the payload (loadable and lossless via the `catopt:`
+  record, but handl's engine sees an opaque created node);
+* **a root-eliminating law** (5 in the bank, e.g.
+  `double_neg: neg(neg(a)) -> a`) — handl's `TransformRule::Declarative`
+  always *creates* a node (`target_kind: String`), so a law that returns
+  a subterm cannot be expressed faithfully; the differential probe
+  (`project/retros/handl-differential-rewrite-check.md`) reports these
+  separately rather than papering over the divergence.
+
+**Pass**: a law with a **constant** leaf fires and produces the right
+*value*, and a root-eliminating law fires and returns the *subterm*.
+**Fail**: the workarounds stay, and they must be documented as
+workarounds — with the note that the `catopt:` record is authoritative
+and that handl's engine sees something coarser than the law means.
+
 
 Today a leaf maps to `Create` of a `catopt:`-namespaced kind with the
 data in the payload: loadable and lossless, but handl's engine treats it
