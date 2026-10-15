@@ -90,11 +90,14 @@ def _emit(node: object, indent: int) -> str:
     pad = " " * indent
     if isinstance(node, dict):
         if len(node) == 1:
-            (key, value), = node.items()
+            ((key, value),) = node.items()
             if key in _TAGS:
                 inner = _emit(value, indent)
                 # a tag on a scalar/flow value reads better inline
-                if isinstance(value, (str, int, float)) or value is None:
+                if (
+                    isinstance(value, (str, int, float))
+                    or value is None
+                ):
                     return f"{pad}!{key} {_scalar(value)}"
                 return f"{pad}!{key}\n{inner}"
         if not node:

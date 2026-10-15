@@ -86,22 +86,32 @@ a measurement.
 slice is **42.6 s** (8.7×).  The full pass still runs everything.
 
 ```sh
-uv run pytest                 # full test suite (~7.5 min, single-process —
-                              # pytest-xdist is installed but the suite runs
-                              # serially; see the note below before enabling
-                              # `-n` on this suite)
+# The shipped source: packages/ + lab/ + scripts/ + examples/.
 .venv/bin/ty check            # typecheck — 0 errors required (warnings OK)
-.venv/bin/ruff check          # lint
-.venv/bin/ruff format --check # formatting
+.venv/bin/ruff check packages lab scripts examples   # lint
+.venv/bin/ruff format --check packages lab scripts examples   # formatting
 .venv/bin/vulture             # dead code (uses [tool.vulture] paths)
 .venv/bin/lint-imports        # hexagonal boundary contracts
 .venv/bin/bandit -c .bandit.yaml -r packages   # security SAST
 .venv/bin/semgrep --config .semgrep.yml packages   # dataflow (offline)
 .venv/bin/python scripts/radon_ratchet.py   # complexity ratchet
+
+# The suite, once, under coverage (both floors below).
+uv run pytest                 # ~28 min serial while contended; 6,341 tests.
+                              # Iterate with `-m "not slow"`.  Single-process:
+                              # see the parallel warning below before `-n`.
 coverage run -m pytest tests/ -q   # source list includes catopt_discovery + catopt_onnx
 coverage report -m --omit="*/catopt_discovery/*"   # the six: fail_under=100
 coverage report -m --include="*/catopt_discovery/*" --fail-under=99   # ratchet floor — measured 99%; tighten, never lower
 ```
+
+**Scope the ruff commands to the shipped source, as above.**  The bare
+`.venv/bin/ruff check` / `--check` forms are *not* green on `main` and
+cannot be: they include the documented drift class — `tests/**` and
+`bench/**` (pre-existing isort/format differences under the pinned ruff
+0.16.9) and markdown code blocks in `README.md` and friends, which the
+formatter would rewrap.  `packages`, `lab`, `scripts` and `examples` are
+clean under both, and `scripts/gates.sh` checks exactly those.
 
 > **Parallel-warning (measured, not theoretical).**  Do *not* run this
 > suite — with or without coverage — under `pytest -n auto` on
