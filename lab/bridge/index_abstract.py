@@ -156,11 +156,6 @@ def index_family(root: Any, dim: int = -2) -> dict[tuple, list[int]]:
     return {k: sorted(v) for k, v in fams.items()}
 
 
-def _size(x: Any) -> int:
-    """Count the distinct op nodes under ``x``."""
-    return len(_subterms(x)) if isinstance(x, Op) else 0
-
-
 def _is_split(x: Any) -> bool:
     """Return True for a ``split`` node — a per-block slice."""
     return isinstance(x, Op) and x.op == "split"
