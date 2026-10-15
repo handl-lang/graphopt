@@ -4,8 +4,28 @@
 **Commit**: `aa56e55` (catopt `main`).
 **Decides**: ADR 0008 gate 3 → still **FAIL**; the third named cause
 (*extraction mixes two state spellings*) is **measured**, is a real
-extraction defect, and is **not sufficient** — fixing it recovers 5.06 %
-FLOPs and leaves the gate negative.  ADR 0009 stage 4 stays unjustified.
+extraction defect, and is **not sufficient** — fixing it recovers
+**1.01 %** FLOPs (~~5.06 %~~ — see the correction note) and leaves the
+gate negative.  ADR 0009 stage 4 stays unjustified.
+
+> **Correction 2026-10-15** (`project/retros/saturation-determinism.md`,
+> catopt `abf6114`).  The sharing-aware recovery this retro reports
+> (**455,752 → 432,696, −5.06 %, 5 overrides**) is **superseded**.  The
+> staged gate-3 saturation and its sharing-aware optimum were
+> **hash-order dependent** — the matcher and the extraction scanned
+> `EClass.nodes` (a `set` whose iteration order follows `ENode`'s hash) —
+> so the numbers moved with `PYTHONHASHSEED`.  Both are now
+> **deterministic** (canonical member order, `abf6114`).  The
+> reproducible reading is **455,752 → 451,128 FLOPs (−1.01 %), 3
+> overrides**, with the read sequence **unchanged** from the greedy term
+> (`reexp|reexp|fold|fold|reexp|shared|shared`) and the e-graph at
+> **9,784** enodes (was ~~9,733~~).  The **432,696 / −5.06 % / 5-override**
+> figures below are kept visible struck through; 432,696 was a hash-order
+> artifact of the pre-fix scan.  The retro's **mechanism** and its gate-3
+> **FAIL** conclusion are unaffected: the extraction *is* still off the
+> cost its own model assigns — by **1.01 %**, not 5.06 %.  Numbers
+> reported before `abf6114` may be seeded/arbitrary; the reproducible
+> runs use `PYTHONHASHSEED` 0–6 + unset, all identical.
 
 ## What the gate was, and what was asked
 
@@ -22,7 +42,8 @@ attacked cause 2 alone, as an **extraction/pricing** question:
 The answer, measured: **the two spellings are a cost tie**, broken by
 `extract_best`'s member order (op name) — arbitrary with respect to
 *sharing*.  A principled fix exists and was applied; it recovers
-**5.06 %** of the winner's FLOPs and **does not** close gate 3.
+**1.01 %** (~~5.06 %~~ — see the correction note) of the winner's FLOPs
+and **does not** close gate 3.
 
 ## What was built
 
@@ -50,14 +71,14 @@ effect is one workload; the prototype is where that measurement belongs.
 
 ## The mechanism — measured, with numbers
 
-Command (the probe; `PYTHONHASHSEED=0` for reproducibility — see the
-caveat at the end):
+Command (the probe; `PYTHONHASHSEED=0` as reported here — the seed is no
+longer load-bearing, see the caveat at the end):
 
 ```sh
 PYTHONHASHSEED=0 .venv/bin/python lab/probes/gate3_state_spelling_probe.py --t 64 --k 4
 ```
 
-Staged arm, T=64 K=4, 9733 enodes, winner dag=139, cost **455,752**,
+Staged arm, T=64 K=4, ~~9733~~ **9,784** enodes, winner dag=139, cost **455,752**,
 read sequence (the winner's per-block state-read spelling)
 
 ```
@@ -106,26 +127,42 @@ non-local saving the per-class greedy pass cannot see.
 
 ### 3. The arbitrary break is strictly suboptimal
 
-The full sharing-aware pass (coordinate descent over every class)
-reaches **432,696** — **23,056 FLOPs, 5.06 % below the greedy winner**:
+**Corrected 2026-10-15** (`project/retros/saturation-determinism.md`):
+the reproducible sharing-aware optimum is **451,128 FLOPs** — **4,624
+FLOPs, 1.01 %** below the greedy winner — through **three** overrides
+(`{355: split, 347: split, 93: matmul}`).  The superseded figures
+(**432,696**, **−23,056**, **−5.06 %**, **5** overrides) were a
+*hash-order artifact* of the pre-fix member scan; the pass now scans in
+canonical member order, so it is deterministic across processes.  The
+greedy arm is unchanged:
 
 ```
 greedy           cost 455,752   dag=139   morph=1590   round-trip EQUAL
-sharing-aware    cost 432,696   dag=133   morph=1509   round-trip EQUAL
-                 Δ = -23,056 (-5.06 %),  max|greedy - fix| = 2.220e-16
+sharing-aware    cost 451,128   (was 432,696)         round-trip EQUAL
+                 Δ = -4,624 (-1.01 %, was -23,056 / -5.06 %),
+                 max|greedy - fix| = 2.220e-16
 ```
+
+(The sharing-aware arm's `dag`/`morph` were reported for the superseded
+hash-order term — `dag=133`, `morph=1509` — and were **not re-reported**
+after `abf6114`; the reproducible term is numerically equivalent to the
+greedy one, below.)
 
 The numeric check lowers both terms through `TorchSink` on the same
 weights and feeds and reads **2.2e-16** — the cheaper term is the same
 program to machine epsilon (and the e-graph guarantees the equivalence
 by construction).  Overrides kept: `{355: split, 347: split,
-93: matmul, 341: split, 6424: applyd}`.
+93: matmul}` (the superseded run kept two more, `{341: split, 6424:
+applyd}`, as part of the artifact).
 
 **This is a finding in its own right**: on the gate-3 workload the
-per-class greedy extraction is **5.06 % off** the cost its own model
-assigns, and a bounded, monotone coordination recovers it.  It is the
-same non-local blindness `extract_paired` exists for, here on the
-tie-break rather than on a group decision.
+per-class greedy extraction is **1.01 %** (~~5.06 %~~) off the cost its
+own model assigns, and a bounded, monotone coordination recovers it —
+though at ~1 % on a single workload the promotion of the tie-break into
+`catopt_core.egraph.extract` is a **judgement call**, not the obvious win
+the 5 % figure implied.  It is the same non-local blindness
+`extract_paired` exists for, here on the tie-break rather than on a group
+decision.
 
 ### 4. It is not a rule-budget artifact
 
@@ -145,12 +182,12 @@ PYTHONHASHSEED=0 .venv/bin/python lab/bridge/combinator_probe.py \
 
 | | before (greedy) | after (sharing-aware) |
 |---|---|---|
-| extracted cost (FLOPs) | 455,752 | **432,696** (−5.06 %) |
-| extracted dag | 139 | 133 |
-| bridge morph | 1590 | 1509 |
+| extracted cost (FLOPs) | 455,752 | **451,128** (−1.01 %; ~~432,696 / −5.06 %~~) |
+| extracted dag | 139 | 133 (superseded term; not re-reported) |
+| bridge morph | 1590 | 1509 (superseded term; not re-reported) |
 | bridge round-trip | EQUAL | EQUAL |
 | numeric max\|Δ\| (greedy vs fix) | — | 2.2e-16 |
-| read sequence | reexp\|reexp\|fold\|fold\|reexp\|shared\|shared | reexp\|reexp\|fold\|fold\|**shared**\|shared\|shared |
+| read sequence | reexp\|reexp\|fold\|fold\|reexp\|shared\|shared | reexp\|reexp\|fold\|fold\|reexp\|shared\|shared (**unchanged**; ~~reexp\|reexp\|fold\|fold\|**shared**\|shared\|shared~~) |
 | `loop`-propose fires | 0 | 0 |
 | `loop`-headed reachable | False | False |
 | **abstraction verdict** | **IRREGULAR** | **IRREGULAR** |
@@ -163,8 +200,10 @@ the gate is **still FAIL**, with the **same first difference**:
 block1/block2/add[1]/mul[1]: op om_decayed vs add
 ```
 
-So the fix moves the winner's *cost* and unifies the large-chunk
-family's top-level read — and the winner still does not collapse.
+So the fix moves the winner's *cost* (by 1.01 %) — and the winner still
+does not collapse.  (The superseded claim that it also *unified* the
+large-chunk family's top-level read was part of the hash-order artifact:
+the reproducible read sequence is **unchanged** from the greedy term.)
 
 ## Why fixing cause 2 does not close the gate
 
@@ -205,11 +244,15 @@ ties, and one of them is a genuine cost preference.
 * **Cause 2 is real, and it is an extraction defect — but a *small,
   arbitrary* one.**  The state-read spelling is a cost tie in 5 of 7
   blocks (a 4-way tie at block 4), broken by op-name order, and the
-  greedy pass is **5.06 %** off the cost its own model assigns.
+  greedy pass is **1.01 %** (~~5.06 %~~) off the cost its own model
+  assigns.
 * **A principled fix exists and was applied.**  Sharing-aware
   coordinated extraction removes the arbitrary choice and adds the real
   (non-local) sharing signal; it is monotone, numerically verified
-  equivalent (2.2e-16), and recovers 23,056 FLOPs.
+  equivalent (2.2e-16), and recovers **4,624** FLOPs (~~23,056~~).  At
+  ~1 % on one workload, though, promoting the tie-break into
+  `catopt_core.egraph.extract` is a **judgement call**, not an obvious
+  win.
 * **The fix does not close gate 3.**  The verdict is unchanged, and the
   remaining causes are named below.
 
@@ -242,20 +285,25 @@ the winner still fails for:
    `matmul` for one parallel block and `mul` for another
    (`_state_inputs`' "outermost own-split-free subterm" rule).
 
-## Caveat — the saturation is not reproducible across processes
+## Caveat — reproducibility (resolved)
 
-The staged saturation consumes `rule_budgets` in a set-iteration order,
-so `PYTHONHASHSEED` changes the e-graph: measured **9733 / 9752 / 9756**
-enodes across runs.  The winner's *cost* is stable (455,752 in every
-run) and the read sequence is stable, but the sharing-aware local
-optimum is not (an unseeded run reached 451,128 with three overrides,
-against 432,696 with five at seed 0).  All headline numbers here are
-`PYTHONHASHSEED=0`.  Anyone re-measuring should pin it.
+**Corrected 2026-10-15** (`abf6114`): this caveat is **resolved**.  The
+staged saturation used to consume `rule_budgets` in a set-iteration
+order, so `PYTHONHASHSEED` changed the e-graph (measured **9733 / 9752 /
+9756** enodes across runs) and the sharing-aware local optimum varied
+between **432,696** (5 overrides) and **451,128** (3 overrides).  With
+the canonical member order both are deterministic: the reproducible
+staged arm is **9,784** enodes and **451,128** FLOPs in every process
+(`PYTHONHASHSEED` 0–6 + unset, all identical).  Numbers reported before
+`abf6114` — including this retro's headline 432,696 / −5.06 % — may be
+seeded/arbitrary; pin the seed when re-measuring anyway, and prefer the
+canonical reading.
 
 ## Cost
 
 * The probe: one 15 s staged saturation + ~2 s of class enumeration +
-  the sharing-aware pass (1307 trials, ~64 s).  Peak RSS well under 1 GB.
+  the sharing-aware pass (898 trials, ~46 s; ~~1307 trials, ~64 s~~ for
+  the superseded hash-order run).  Peak RSS well under 1 GB.
 * The gate-3 arms unchanged: one 15 s saturation + the 80 s
   sharing-aware arm.
 * New surface: one lab module (`lab/bridge/sharing_extract.py`,

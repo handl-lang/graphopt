@@ -445,8 +445,9 @@ abstraction over the step, and a sharing-aware extraction — each *worked* on a
 control and each failed on the real export: the search never reaches a
 `loop`-headed form.  The full story, with the numbers, is the paper's §2.2
 (`../docs/paper_draft.md`); the one positive the gate work produced is an
-extraction defect (greedy per-class extraction is 5.06 % off its own cost
-model on that workload).  So the substrate's *discovery* value is closed, and
+extraction defect (greedy per-class extraction is **1.01 %** off its own cost
+model on that workload — corrected 2026-10-15; the 5.06 % figure was a
+hash-order artifact).  So the substrate's *discovery* value is closed, and
 the presentation value — uniformity, explicit Δ, the eliminated DAG-vs-tree
 bug class — must carry ADR 0008 alone (plan 0025 section C).  The two named
 causes that would re-open the gate are in the paper's §2.2; the retros are
@@ -528,7 +529,7 @@ Kept here so a future collaborator does not have to reconstruct them from
 | ONNX round-trip | 1.11e-16 fp64; zero core changes | `retros/onnx-package.md` |
 | Combinator bridge | 321/321 round-trip; mean blowup 2.61× | `adrs/0008` |
 | Gate 3 (substrate discovery value) | negative ×3; proposing rule fires 0×; 7 blocks / 2 families `IRREGULAR` | `retros/gate3-loop-proposing-rule.md`, `retros/gate3-parametric-abstraction.md` |
-| Greedy extraction suboptimality | 455,752 → 432,696 FLOPs (−5.06 %); max\|Δ\| 2.2e-16 | `retros/gate3-extraction-state-spelling.md` |
+| Greedy extraction suboptimality | 455,752 → 451,128 FLOPs (−1.01 %; ~~432,696 / −5.06 %~~ artifact); max\|Δ\| 2.2e-16 | `retros/gate3-extraction-state-spelling.md` |
 | Unconsumed ports | 4 ports green, 0 consumers | `adrs/0003` |
 | Features fix → RL regression | documented benefit lost, no RL change | `adrs/0003`, `retros/stage7-multifamily-results.md` |
 | Host OOMs | quartic `dspec` sweep; arena 10^13 rows; `pytest -n` fan-out | `retros/weightspace-fold.md`, `retros/arena-player.md`, `AGENTS.md` |

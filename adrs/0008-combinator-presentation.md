@@ -317,8 +317,8 @@ merged `32962d0`; `lab/bridge/combinator.py` + `lab/bridge/combinator_probe.py`)
   it; this is that measurement plus the principled fix —
   `lab/probes/gate3_state_spelling_probe.py` and
   `lab/bridge/sharing_extract.py` (commit `aa56e55`), wired as
-  `--sharing-extract`.  Same staged arm (T=64 K=4, 9733 enodes,
-  `PYTHONHASHSEED=0`); the winner is unchanged (`dag=139`,
+  `--sharing-extract`.  Same staged arm (T=64 K=4, ~~9733~~ **9,784**
+  enodes, `PYTHONHASHSEED=0`); the winner is unchanged (`dag=139`,
   **455,752 FLOPs**, `morph=1590`, round-trip EQUAL) and its read
   sequence is `reexp|reexp|fold|fold|reexp|shared|shared`.
 
@@ -335,8 +335,9 @@ merged `32962d0`; `lab/bridge/combinator.py` + `lab/bridge/combinator_probe.py`)
 
   ```
   greedy           cost 455,752   dag=139   morph=1590   round-trip EQUAL
-  sharing-aware    cost 432,696   dag=133   morph=1509   round-trip EQUAL
-                   Δ = -23,056 (-5.06 %),  max|greedy - fix| = 2.220e-16
+  sharing-aware    cost 451,128   (was 432,696)         round-trip EQUAL
+                   Δ = -4,624 (-1.01 %, was -23,056 / -5.06 %),
+                   max|greedy - fix| = 2.220e-16
   ```
 
   **The fix** — `extract_sharing_aware`: a bounded, *monotone*
@@ -359,9 +360,17 @@ merged `32962d0`; `lab/bridge/combinator.py` + `lab/bridge/combinator_probe.py`)
   still negative, and this task *retires one candidate fix*: the state
   spelling cannot be normalised by a principled tie-break, because part
   of the mix is a genuine cost optimum.  See
-  `project/retros/gate3-extraction-state-spelling.md`.  (Caveat carried
-  there: the staged saturation is not reproducible across processes —
-  9733/9752/9756 enodes — so pin `PYTHONHASHSEED` when re-measuring.)
+  `project/retros/gate3-extraction-state-spelling.md`.  (**Correction
+  2026-10-15**, `abf6114`: the recovery above is **451,128 (−1.01 %, 3
+  overrides)**, not 432,696 (−5.06 %, 5 overrides) — 432,696 was a
+  hash-order artifact of the pre-fix scan, and the read sequence is
+  **unchanged** from greedy.  The *caveat* this bullet used to carry —
+  the staged saturation was not reproducible across processes
+  (9733/9752/9756 enodes) — is **resolved**: `abf6114` made the
+  saturation and the sharing-aware optimum deterministic (canonical
+  member order), reproducible in every process under `PYTHONHASHSEED`
+  0–6 + unset.  Numbers reported before that fix may be seeded/arbitrary.
+  The defect is real but **1.01 %**, a much weaker case for promotion.)
 - **Gate 3 — MEASURED 2026-10-16 (later still again): still FAIL — the
   block width (`sizes`) is abstracted, and it is *not* the binding
   cause.**  The previous bullet named "the two chunk widths" first; this
@@ -401,10 +410,12 @@ merged `32962d0`; `lab/bridge/combinator.py` + `lab/bridge/combinator_probe.py`)
   limitation is **not fixable in the move** — the strongest relaxation
   (allow any shared candidate) leaves the verdict and the first
   difference byte-identical.  Cost/dag/morph are unchanged
-  (455,752 / 139 / 1590 and 432,696 / 133 / 1509, round-trip EQUAL).
-  **Stage 4 stays unjustified.**  See
-  `project/retros/gate3-sizes-abstraction.md`.  (Caveats: `PYTHONHASHSEED=0`
-  throughout; a *concurrent* `catopt_core/egraph` edit moved the staged
+  (455,752 / 139 / 1590 and **451,128** (~~432,696~~) / 133 / 1509,
+  round-trip EQUAL; the sharing arm's cost is corrected by `abf6114`,
+  and its `dag`/`morph` were not re-reported).  **Stage 4 stays
+  unjustified.**  See `project/retros/gate3-sizes-abstraction.md`.
+  (Caveats: `PYTHONHASHSEED=0` throughout; the **determinism fix**
+  (`abf6114`, a *concurrent* `catopt_core/egraph` edit) moved the staged
   arm's enode count 9733 → 9784 during this task — verified not to be
   this change, which never touches the saturation.)
 - **Gate 3 — the protocol** (added 2026-10-14; it is

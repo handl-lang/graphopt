@@ -95,7 +95,7 @@ PYTHONHASHSEED=0 .venv/bin/python lab/bridge/combinator_probe.py \
 
 | | before (retro 3) | after (this task) |
 |---|---|---|
-| extracted cost (FLOPs) | 455,752 / 432,696 | **455,752 / 432,696** (unchanged) |
+| extracted cost (FLOPs) | 455,752 / 432,696 | **455,752 / 451,128** (unchanged; ~~432,696~~ superseded 2026-10-15) |
 | extracted dag | 139 / 133 | 139 / 133 |
 | bridge morph | 1590 / 1509 | 1590 / 1509 |
 | bridge round-trip | EQUAL / EQUAL | EQUAL / EQUAL |
@@ -237,7 +237,11 @@ is left unchanged (a tweak would be churn that buys nothing).
 * **Seed.**  The staged saturation consumes `rule_budgets` in a
   set-iteration order, so it is not reproducible across processes; every
   number here is `PYTHONHASHSEED=0`.  The winner's *cost* (455,752 /
-  432,696) and read sequence are stable across seeds.
+  ~~432,696~~ **451,128**) and read sequence are stable across seeds.
+  (**Corrected 2026-10-15**, `abf6114`: the saturation is now
+  deterministic — canonical member order — and the sharing-aware optimum
+  is 451,128 in every process; the 432,696 quoted here was a hash-order
+  artifact.)
 * **A concurrent edit moved the enode count.**  During this task another
   change was in flight in `catopt_core/egraph/{core,extract,types}.py`;
   the staged arm reports **9784** enodes here against the retro's

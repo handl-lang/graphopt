@@ -264,13 +264,14 @@ that create their consumers**, not added up front:
    **Re-measured again 2026-10-16 (later still): still negative, and one
    candidate fix is retired.**  The "two state spellings" cause was
    measured to be a cost *tie* broken by op name, and a principled
-   sharing-aware extraction recovers 5.06 % of the winner's FLOPs
-   (455,752 → 432,696, numerically equivalent to 2.2e-16) while leaving
-   the gate FAIL.  The mix is a cascade of per-class ties, and the
-   small-chunk family's unfactored spelling is a genuine cost optimum —
-   so the spelling cannot be normalised by a tie-break.  Stage 4 is
-   still not justified by the presentation's discovery value.  See ADR
-   0008's third gate-3 FAIL bullet and
+   sharing-aware extraction recovers **1.01 %** of the winner's FLOPs
+   (455,752 → **451,128**; ~~5.06 % / 432,696~~ was a hash-order artifact,
+   corrected 2026-10-15 by `abf6114`; numerically equivalent to 2.2e-16)
+   while leaving the gate FAIL.  The mix is a cascade of per-class ties,
+   and the small-chunk family's unfactored spelling is a genuine cost
+   optimum — so the spelling cannot be normalised by a tie-break.  Stage
+   4 is still not justified by the presentation's discovery value.  See
+   ADR 0008's third gate-3 FAIL bullet and
    `project/retros/gate3-extraction-state-spelling.md`.
    **Re-measured once more 2026-10-16: still negative, and the "two
    chunk widths" cause is retired.**  The block width (`sizes`) was

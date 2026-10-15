@@ -286,8 +286,10 @@ package).  Catopt-side, and independent of the peer.
   the class minimum (a 4-way tie in block 4), and `extract_best` breaks
   the tie by op name.  A principled, monotone *sharing-aware* extraction
   (`lab/bridge/sharing_extract.py`, catopt `aa56e55`, wired as
-  `--sharing-extract`) recovers **5.06 %** of the winner's FLOPs
-  (455,752 → 432,696, numerically equivalent to 2.2e-16) and leaves the
+  `--sharing-extract`) recovers **1.01 %** of the winner's FLOPs
+  (455,752 → **451,128**; ~~5.06 % / 432,696~~ was a hash-order artifact,
+  corrected 2026-10-15 by `abf6114`; numerically equivalent to 2.2e-16)
+  and leaves the
   abstraction `IRREGULAR` with the same first difference.  The mix is a
   cascade of per-class ties, and the small-chunk family's unfactored
   spelling is a genuine cost optimum (`C²d < Cd²` at `C<d`), so the
