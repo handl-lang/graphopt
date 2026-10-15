@@ -322,12 +322,12 @@ merged `32962d0`; `lab/bridge/combinator.py` + `lab/bridge/combinator_probe.py`)
   **455,752 FLOPs**, `morph=1590`, round-trip EQUAL) and its read
   sequence is `reexp|reexp|fold|fold|reexp|shared|shared`.
 
-  **The mechanism, measured**: every one of the 7 state-read e-classes
-  has ≥ 2 members at the class minimum (a **4-way tie at 232,000** in
-  block 4), so `extract_best`'s tie-break — `nops`, then member sort
-  order `(op, children, repr(attrs))`, i.e. **op name** — decides the
-  spelling, arbitrarily with respect to *sharing*.  Forcing the factored
-  `matmul(q, S)` read per class moves the whole term by
+  **The mechanism, measured**: 5 of the 7 state-read e-classes have
+  ≥ 2 members at the class minimum (2-way in blocks 0–3, a **4-way tie
+  at 232,000** in block 4), so `extract_best`'s tie-break — `nops`, then
+  member sort order `(op, children, repr(attrs))`, i.e. **op name** —
+  decides the spelling, arbitrarily with respect to *sharing*.  Forcing
+  the factored `matmul(q, S)` read per class moves the whole term by
   `Δ ∈ {−528, 0, +16, +16, +144}` FLOPs: the model is **indifferent**
   (±0.03 %), and in block 4 it *strictly prefers* the factored read
   (which shares its state with block 5's read) — a non-local saving the

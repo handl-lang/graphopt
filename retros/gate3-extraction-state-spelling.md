@@ -71,9 +71,9 @@ the *nested fold* (`add(mul(γ, S_{i-1}), B_i)`), blocks 5/6 as the
 
 ### 1. The cost model is indifferent — it is a tie
 
-Every block's state-read e-class has **more than one member at the class
-minimum**, and `extract_best` breaks that tie by `nops` then by member
-sort order `(op, children, repr(attrs))` — i.e. **by op name**:
+For each block, the state-read e-class has several members priced the
+same, and `extract_best` breaks the tie by `nops` then by member sort
+order `(op, children, repr(attrs))` — i.e. **by op name**:
 
 | block | class | members | tied at min | chosen member | class min |
 |---|---|---|---|---|---|
@@ -85,9 +85,9 @@ sort order `(op, children, repr(attrs))` — i.e. **by op name**:
 | 5 | 6345 | 4 | 1 | `matmul(div(split(q)), S)` | 249,924 |
 | 6 | 6353 | 11 | 1 | `matmul(div(split(q)), S)` | 267,844 |
 
-Block 4 is a **4-way tie at 232,000**: the winner picks
-`div(om_decayed(matmul(q,kᵀ)))` because `'div' < 'matmul' < 'om_decayed'`
-in the member sort — not because it is cheaper.
+**5 of the 7** classes are tied at the minimum (2-way in blocks 0–3, a
+**4-way tie at 232,000** in block 4); blocks 5–6 have a unique minimum
+and already take the factored spelling, so no mix arises there.
 
 ### 2. Forcing the factored read per class moves the total by ≤ 0.03 %
 
