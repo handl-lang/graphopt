@@ -5,255 +5,211 @@
 ![coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 
-**catopt plays a verified rewrite game over neural-network graphs.** A
-model is exported to an e-graph; players take only legal,
-certificate-replayable moves — apply a law, saturate, mint a new
-operator mid-search — and the winning program is delivered as a
-runnable, verified `nn.Module`.
+**A sound mathematical discovery and optimization engine, where search
+is a game that can be learned.**
 
-```bash
-uv sync
-python demo.py   # ~60s: optimize a gated block, replay the certificate,
-                 # race vs eager and torch.compile
-```
+Catopt discovers better solutions by combining mathematical reasoning,
+verified transformations, and learned search.  It treats optimization
+as a game over a structured space of equivalent solutions — using
+reinforcement learning to navigate that space and formal foundations
+to preserve correctness.  Applications and backends are replaceable
+interfaces to this general engine.
 
 ```python
 from catopt_orchestrator import Optimizer
+from catopt_torch import TorchBackend      # one adapter; not the core
+
+opt, stats = Optimizer(backend=TorchBackend()).optimize(model, x)
+out = opt(x)          # verified-equal to model(x); ships a replayable certificate
+```
+
+## 1. What problem does it solve better?
+
+Existing compilers choose a better implementation **from the
+transformations a human already wrote** — Inductor fuses pointwise
+ops, TVM autotunes schedules, e-graph superoptimizers (TENSAT) rewrite
+with a fixed rule set.  Three things they do not do:
+
+| | existing tools | catopt |
+|---|---|---|
+| **Discovery** | fixed rule set | **mints new laws, atoms and kernels from measured need** — the first corpus-minted law now ships in the default rule set |
+| **Soundness** | trust the pass | **every move carries a replayable certificate**; candidates clear an oracle, a typed gate, an adversarial sweep and a measured-pay gate before shipping |
+| **Search** | heuristic ordering | **learned policies** — the search is an RL environment; a policy may only *reorder* moves, never change what is legal |
+
+The wins are therefore **structural, not codegen**: folding a chain of
+GEMMs into one, deriving a quadratic→linear recurrence, lifting a
+scan.  Those are transformations op-level compilers cannot express.
+Where the structure is already fused (a `scaled_dot_product_attention`
+call, a dense conv), catopt is honest about the ceiling: parity, and
+the delivered graph can be handed to `torch.compile` for codegen.
+
+**The scope is honest:** this is not a universal speedup.  Wins are
+regime-bounded, and the project keeps its measured losses in the same
+table as its wins.
+
+## 2. What can I run on my own model today?
+
+```bash
+uv sync
+python demo.py                                  # ~60s end-to-end, no GPU needed
+python -m bench run <suite> --device cpu        # the benchmark harness
+cd toy && vp install && vp -C apps/learn dev    # the 28-level interactive course
+```
+
+**On your model** — export, optimize, verify, and optionally deliver:
+
+```python
+from catopt_orchestrator import Optimizer, Compositional
 from catopt_torch import TorchBackend
 
 opt, stats = Optimizer(backend=TorchBackend()).optimize(model, x)
-out = opt(x)   # verified-equal to model(x)
+assert stats["lowering"]        # which executor the winner was lowered by
+
+# multi-block models, per-block + end-to-end verification with rollback
+opt, stats = Optimizer(backend=TorchBackend()).optimize(
+    model, x, strategy=Compositional())
+
+# export a standalone artifact (.pt2 runs with no catopt at inference)
+from catopt_torch import export_optimized
+export_optimized(model, opt, "out.pt2", fmt="torchscript")
 ```
 
-## Results
+**Discovery** (the engine pointed at its own library):
 
-Measured on the dev box (RTX 2050, fp64 — see [limits](#limits)); full
-provenance in [`docs/results.md`](docs/results.md).  Each block states
-**what was measured on what**.
+```bash
+python -m catopt_discovery.pipeline            # census → propose → verify → measure → rank → emit
+python -m catopt_discovery.play --domain torch --deliver   # optimize a real module
+python -m catopt_discovery.play --domain gen --probe       # mint a kernel mid-search, deliver it
+python -m catopt_discovery.play --zoo                      # held-out models
+python -m catopt_discovery.evidence --report <db>          # what was measured, and did it change?
+```
 
-### Optimized models, end-to-end
+**When it will not help you:** if your model's math is already inside
+fused kernels (`nn.Conv*`, pooling, `sdpa`), the e-graph cannot see
+inside it and you should expect parity, not a win.  `tools/exposure_screen.py`
+measures this *before* you spend search time — the distribution is
+bimodal (81 of 321 exported workloads expose literally nothing).
 
-| model | speed vs eager | speed vs `torch.compile` | fp64 max_abs |
-|---|---|---|---|
-| deep weight chains (reassoc to 1 GEMM, k=8 / k=16) | — | **8.22× / 14.92×** | exact |
-| spelled `x@A@B@C` block | — | **3.96×** | 1.7e-5 |
-| `chainfuse` — laws + a kernel minted mid-search | 3.71× | **2.94×** | 1.7e-5 |
-| spelled RetNet export, T=2048 — **derived carrier** | **5.0–5.9×** | **6.2–7.4×** | 9.8e-9 |
-| spelled RetNet export, T=512 — fused + minted kernel (not the carrier) | — | **1.82–2.33×** | 1.3e-8 |
-| BiRefNet Swin block (SDPA + conv decoder) | 0.90× | **0.80× loss** — fused ops expose nothing to fold | 9.7e-17 |
-| llama-style SwiGLU MLP | 1.17× | **2.11×** | 6e-8 |
-| held-out model zoo (22 architectures) | — | **11/18 verified wins**, best 2.18× | — |
-| joint fwd+bwd step vs `torch.autograd` | **+13%** | — | 9.5e-7 |
-| pure pointwise fusion | — | **0.82× loss** — Inductor's home turf | — |
+**Backends are adapters.**  The core (`catopt-core`) is torch-free and
+dependency-light; `import-linter` enforces that.  Two backends exist:
+PyTorch (`catopt-torch`) and ONNX (`catopt-onnx`, import **and**
+export, verified through `onnxruntime`).  The ONNX backend landed with
+**zero changes under `catopt-core`** — the boundary is measured, not
+asserted.
 
-### Savings — memory, compute, storage, evaluations
+## 3. What evidence shows it works beyond curated examples?
 
-| quantity | before | after | **saved** | instrument |
-|---|---|---|---|---|
-| **memory** — RetNet peak activation, T=2048, vs its own spelled input | 169.9 MiB | 30.0 MiB | **5.66×** | `max_memory_allocated` |
-| **memory** — same carrier vs paper's own chunkwise impl | 26.9 MiB | 30.0 MiB | **0.90× loses** | torchscale path |
-| **memory** — vs FLA tuned kernel (fp32) | 9.96 MiB | 19.5 MiB | **0.51× loses** | `fla.ops.retention` |
-| **speed** — fused carrier lowering vs paper impl (T=2048) | 2.12 ms | 2.08 ms | **1.02× — parity+** | `decayed_lower` + graph replay |
-| **compute** — K-way chunk, T=512 | 29,386,752 FLOPs | 6,700,800 FLOPs | **4.4×** | `flops_cost` |
-| **compute** — shared-state, T=512 K=8 | 8,572,928 FLOPs | 7,643,912 FLOPs | **10.8%** | `flops_cost` |
-| **storage** — weight chain, k=16 | 4,194,304 B | 262,144 B | **16.0×** | `param_bytes_cost` |
-| **storage** — shared-input MoE | — | — | **196,608 B** | `param_bytes_cost` |
-| **evaluations** — prior ranking AP | heuristic 0.045 | **0.133** | **3.0×** | held-out pages |
-| **evaluations** — evidence store, 2nd run | 128 s | 6.6 s | **19.4×** | wall time |
-| **backend** — ONNX round-trip, both directions | — | **1.11e-16 fp64** | **0 core edits** | `onnxruntime`, opsets 13–21 |
+| claim | measurement | artifact |
+|---|---|---|
+| **Novelty** — mints laws nobody wrote | `mul_unsq_nat`, minted from a model's own op-tuple, in the default rule set (−12.27% on its source workload); 11 machine-admitted laws ship | [`project/retros/mul-unsq-nat.md`](project/retros/mul-unsq-nat.md) |
+| **Novelty, at scale** | 321 exported workloads screened; **~1.5%** of the exposed class carries fresh paying unpublished structure — the honest yield | [`project/retros/discovery-scale.md`](project/retros/discovery-scale.md) |
+| **Soundness** — catches its own false candidates | the naive guard was falsified by the adversarial sweep (**212 bad accepts**); the exact guard was synthesized instead; the apparent sibling was **rejected** at admission (12 matching models, semantically unequal sites) | [`project/retros/mul-unsq-nat.md`](project/retros/mul-unsq-nat.md) |
+| **Soundness, negative** | deliberately-false twins all rejected; the verifier has repeatedly retracted would-be claims | [`docs/mechanism.md`](docs/mechanism.md) |
+| **Value, held out** | **11 of 18** delivered modules beat `torch.compile` on the held-out zoo (best 2.18×); deep weight chains **8.22× / 14.92×** | [`docs/results.md`](docs/results.md) |
+| **Value, asymptotic** | spelled RetNet export T=2048: **5.0–5.9× vs eager**, **6.2–7.4× vs `torch.compile`**, 7.2× less peak activation memory — verified 9.8e-9 | [`docs/results.md`](docs/results.md) |
+| **Honest losses** | BiRefNet Swin block **0.80× vs compiled** (fused ops expose nothing); the precision lane on real BiRefNet was a **certified negative** (56 offers, 0 delivered); the carrier *loses* below T≈1024 | [`docs/results.md`](docs/results.md) |
 
-### Learned models
+Every benchmark report lives with the harness and is regenerated from
+pinned baselines — **not** in this README:
 
-| model | training | metric | value | baseline |
-|---|---|---|---|---|
-| open-game prior | RL (linear), baked | ranking AP | **0.133** | heuristic 0.045 |
-| meta-arena prior | RL (linear), baked | reward / episode | **−0.06** | scripted −0.10, random −0.57 |
-| `PairPolicyNet` (contraction) | RL (neural) | equal-rollouts ratio | **0.94–0.96** (n≤30) | teacher 1.0 |
-| `PairPolicyNet` distilled | supervised | equal-rollouts ratio | **0.91** (n=40) | teacher 1.0 |
-| `RuleValueNet` | supervised | ranking AP | 0.023 | heuristic 0.045 (loses) |
+- [`bench/`](bench/README.md) — the harness (`run` / `compare` / `gate`), pinned baselines, the ledger
+- [`docs/results.md`](docs/results.md) — the measured results, generated from those baselines
+- [`docs/results_tooling.md`](docs/results_tooling.md) — tooling-level measurements, each with its retro
 
-Wins are structural — weight folding, shared-input pairing, scan lifts —
-the transforms op-level compilers cannot express. GEMM-bound code with
-no structure sees parity; launch-bound decode can lose; the derived
-carrier *loses* below T≈1024 and wins above. This is not a universal
-speedup.
+## The three pillars
 
-## What makes it different
-
-- **Laws from algebra, not op lists.** Rewrite rules derive from
-  categorical structure (monoid carriers, traces, products), so the
-  reachable set is the closure of a law library — larger than any fixed
-  pass list.
-- **Proof, not spot checks.** Every delivered program ships a replayable
-  derivation; `verify_certificate` re-runs each step on real terms.
-- **The board invents operators.** Construction moves write new rules
-  mid-search; `claim` can bind a minted elementwise pattern to a
-  *generated Triton kernel* and deliver it.
-- **The machine derives the algorithm.** On a spelled RetNet export the
-  e-graph derives the chunked recurrence itself — the cross-block
-  carrier is a *member* of the saturated graph, and extraction
-  *prefers* it at T=512 (29.4M vs 39.1M FLOPs) — not a hand-written
-  template. Honest scope: the derived form coincides with RetNet's
-  *published* chunkwise duality (verified vs a faithful reimplementation
-  at 9.8e-9) — mechanical reachability + certification of a known
-  algorithm, not a new one; hand-tuned baselines still beat the
-  delivered artifact on memory (~3× vs FLA Triton).  On **speed** the
-  delivered lowering has since caught up to the paper's own chunked
-  implementation — 2.08 vs 2.12 ms at T=2048, and *faster* under graph
-  replay (0.670 vs 0.822 ms) — so the remaining FLA gap is a
-  kernel-level one (fused fp32 Triton vs fp64 torch GEMMs), not a
-  structural one.  Constructs the search needs are laws too: the K-way
-  chunk split (4.4×) and the shared-state reassociation (10.8–24.5%)
-  are both admitted, guarded, fp64-verified data.
-- **The prior learns.** The open game's policy ships *trained*
-  (regenerable via `tools/train_open_prior.py`); on held-out pages its
-  ordering beats both the cold start and the cost-delta heuristic
-  (average precision 0.133 vs 0.045), and finds ~2× more useful laws
-  per episode.
-- **It finds its own laws — and ships one.** The enumerator
-  instantiates law shapes over the op grammar; the game synthesizes
-  the *guard* a candidate needs (`xy + xz = x(y+z)` iff `x≡y` — a
-  conditional law no library had); the synthesizer writes a shipped
-  rule's `derive` from measured bindings. The first law minted from a
-  *corpus op-tuple* now ships in the default rule set: **`mul_unsq_nat`**
-  (`mul(unsqueeze U d, unsqueeze V d) = unsqueeze(mul U V, d)`, found
-  in a DeltaNet-style block's own `β·k` write) — the naive guard was
-  falsified by the adversarial sweep (212 bad accepts), the exact
-  guard was synthesized instead, closure cost +18 enodes, and it pays
-  **−12.27%** on its source workload.  Honest scope: a 60-model sweep
-  of the exposed corpus found no other paying law — the fresh-paying
-  yield is ~1.5%, and an apparent sibling with 12 matching models was
-  *correctly rejected* at admission (its sites are semantically
-  unequal). Where the machinery is blocked, the refusal names the
-  missing vocabulary — measured, not guessed.
-- **The vocabulary grows itself.** Beyond laws, the machine mints
-  *semantics*: a structured handler grammar proposes and fp64-verifies
-  handler bodies (it re-minted the `om_decayed` carrier element at
-  8.9e-16 — previously a hand-written executor); a law-synthesis loop
-  derives and certifies an atom's law set from measured bindings
-  (25 certified rows, deliberate false twins rejected); and the
-  composed loop runs need → handler → laws → admission end to end.
-  Its honest null: the first composed atom computes a *total* where
-  the corpus *emits* a sequence — truth and pay are measured
-  separately, and the ADR records the negative.
-- **The substrate is being made uniform.** A prototype bridge
-  re-expresses the IR as morphisms of a monoidal category with
-  explicit sharing (`Δ`) and a bounded trace (`loop`): 321/321 corpus
-  workloads round-trip structurally exact with zero ops refusing
-  translation, and the RetNet carrier spells as a `loop` term verified
-  at 1e-7 — the "carrier atoms become definable, not primitive"
-  claim measured (ADR 0008).
-- **Four independent dimensions** — semantics / search / evaluation /
-  execution. Cost models never change semantics; policies never decide
-  equivalence.
-
-## The methodology
-
-Falsifiable directions, measured claims.
-
-1. **State the thesis as an ADR** — a decision record with a
-   falsification path, not a hope (`project/adrs/`).
-2. **Certify before measuring** — equivalence is a replayable
-   certificate, not a benchmark.
-3. **Measure to admit** — a transformation only counts if it lands on
-   real tensors faster.
-4. **Kill what fails** — negative results are kept, not hidden
-   (ADR 0001 is closed negative).
-5. **The game must find it** — a transform isn't "discovered" until the
-   machine reaches it, not when a human writes it.
-
-The claim is *reachability + verification*: categorical semantics expose
-moves a tensor-IR can't efficiently state. The methodology is the
-result, not the speedup.
+1. **Mathematical discovery.**  `catopt_discovery` grows the library:
+   census → propose → verify → measure → rank → emit.  It mints laws
+   (guard synthesized, adversarially swept), handler bodies for
+   non-elementwise patterns, and — mid-search — Triton kernels bound to
+   new operators (`claim`).  ADR 0007's four-layer minting stack is the
+   design; the corpus-minted law is the proof.
+2. **Categorical soundness.**  Programs are morphisms of a category;
+   laws are its equations; a rewrite is a 2-cell.  The formal layer
+   fixes what is *admissible* — which is what lets the learner explore
+   aggressively.  Verification boundaries are **per artifact**: a law
+   (oracle + typed gate + certificate replay + adversarial sweep), the
+   search procedure (a policy may only reorder — the fixed point and
+   certificate are unchanged), a delivery (the lowered module is
+   verified against the source), an approximation (a certified error
+   budget).  See [ADR 0002](project/adrs/0002-categorical-re-expression-thesis.md),
+   [ADR 0003](project/adrs/0003-evaluation-is-an-independent-dimension.md).
+3. **Learned search.**  Optimization is a game over the space of
+   *valid* moves.  Boards, players and priors live in
+   `catopt_discovery`; the learned prior ships trained (ranking AP
+   0.133 vs 0.045 heuristic on held-out pages) and finds ~2× more
+   useful laws per episode.  See [ADR 0005](project/adrs/0005-the-open-game.md).
 
 ## How it works
 
 ```text
-module → export → e-graph saturation → extract (cost) → certify → lower
+model → export → e-graph saturation → extract (cost) → certify → lower
                       ▲                                    ↓
-          laws as data (82 rules,      verified, runnable nn.Module
-          all serializable)            (+ optional compile/CUDA-graph runner)
+          laws as data (composable rule sets,   verified, runnable module
+          every rule serializable)              (+ optional compile / CUDA-graph runner)
 ```
 
-Discovery runs the same machinery on the law library itself:
-`catopt_discovery.pipeline` (census → propose → verify → measure →
-rank → emit), the **enumerator** (`enumerate` — law shapes
-instantiated over the op grammar; `forms` — the shapes themselves),
-the **guard/derive synthesizers** (`auto_cond`, `dspec_synth`, and
-`vocab`'s need detection, which names the missing vocabulary from
-measured refusals), and the **open game** (`open_game` — the
-candidate stream as a playable board, scored by verdict).
-`catopt_discovery.play` exposes the whole loop as an RL environment
-(`--domain meta|joint|search|torch|gen|open`).
+Four independent dimensions — **semantics / search / evaluation /
+execution** — never mixed: a cost model ranks but never decides
+equivalence; a policy orders but never changes what is legal.
 
-```bash
-python -m catopt_discovery.play --domain torch --deliver  # optimize a real module
-python -m catopt_discovery.play --domain gen --probe      # mint → claim → deliver → time
-python -m catopt_discovery.play --domain open             # the enumerator as a board
-python -m catopt_discovery.play --zoo                     # the probe over held-out models
-```
+- [`docs/mechanism.md`](docs/mechanism.md) — the conceptual pipeline
+- [`docs/api.md`](docs/api.md) — the API surface
+- [`docs/evaluation.md`](docs/evaluation.md) — features, calibration, criteria, policies
 
-## Limits
-
-- Inference only — weight folding destroys per-layer gradients.
-- Compile-time search — seconds per block; very large models need the
-  `Compositional` strategy.
-- Regime-dependent — wins live where algebraic structure exists.
-- Dev-box magnitudes — `tools/calibrate_profile.py` re-targets the cost
-  model to your hardware.
-
-## Packages
+## Architecture — adapters, not core
 
 | package | role |
 |---|---|
-| `catopt-core` | torch-free engine: IR, e-graph, laws, cost, ports |
-| `catopt-torch` | PyTorch export/lower/verify, `TorchBackend` |
+| `catopt-core` | the engine: IR, e-graph, laws as data, cost, ports — **torch-free** |
+| `catopt-orchestrator` | the backend-neutral pipeline (takes ports as a `Backend`) |
+| `catopt-discovery` | discovery + the game layer (`python -m catopt_discovery.<mod>`) |
 | `catopt-carriers` | carrier laws and executors (scan, attention) |
-| `catopt-cuda` | CUDA-graph runner |
-| `catopt-orchestrator` | backend-neutral pipeline |
-| `catopt-discovery` | law discovery + the game layer (`python -m catopt_discovery.<mod>`) |
-| `catopt-onnx` | ONNX backend — `OnnxSource` (import) + `OnnxSink` (export), opset 18 |
+| `catopt-torch` | **adapter** — PyTorch export/lower/verify, `TorchBackend` |
+| `catopt-onnx` | **adapter** — `OnnxSource` (import) + `OnnxSink` (export), opset 18 |
+| `catopt-cuda` | the CUDA-graph runner |
 | `catopt-native` | optional PyO3/Rust search engine |
 
-The hexagonal boundary is enforced by import-linter: core imports no
-`torch`, `numpy`, or GPU library — a new backend implements `Sink` and
-nothing in core changes. ONNX exercised exactly that: `OnnxSource` +
-`OnnxSink` (import **and** export, opset 18, verified through
-onnxruntime to 1.1e-16 fp64) landed with **zero** edits under
-`catopt-core`.
+A new backend implements `Sink`; nothing in `catopt-core` changes.
+PyTorch is one application of the engine, not its identity.
 
 ## Learn the whole thing
 
-`toy/` is an interactive course on this architecture — **28 levels in
-6 modules**, each with one idea, a live widget, and a checkpoint you
-must pass to advance. It is not a summary: the ladder builds
-progressively (no term is used before it is defined — a test pins
-that), every level ends with *"in the real project"* pointing at the
-files that implement it, and it finishes with **where to improve the
-project** (idea → blocker → next measurement). Points, per-concept
-mastery, module reviews (spaced retrieval), and badges track
-comprehension; the completion panel reports what you can now attack.
+[`toy/`](toy/README.md) is an interactive course — **28 gated levels in
+6 modules**, each with one idea, a live widget and a checkpoint.
+No term is used before it is defined (a test pins that), every level
+ends with *"in the real project"* pointing at the implementing files,
+and the last level maps every idea to the project's open work
+(idea → blocker → next measurement).  Points, per-concept mastery,
+module reviews and badges track comprehension.
 
-```bash
-cd toy && vp install && vp -C apps/learn dev   # http://localhost:5173
-```
+## Limits
 
-Modules: *Foundations* → *Correctness & choice* → *Evaluation &
-execution* → *Discovery & minting* → *Substrate & backends* →
-*Engineering & payoff* (the gates, the honest negatives, and the
-payoff). See [`toy/README.md`](toy/README.md).
+- **Regime-dependent.**  Wins live where algebraic structure is
+  exposed; fused-op models see parity.
+- **Inference only** — weight folding destroys per-layer gradients.
+- **Compile-time search** — seconds per block; large models need the
+  `Compositional` strategy.
+- **Dev-box magnitudes** — `tools/calibrate_profile.py` re-targets the
+  cost model to your hardware.
+- **Not a general speedup.**  The honest losses are kept in
+  [`docs/results.md`](docs/results.md) alongside the wins.
 
 ## Docs
 
 | doc | contents |
 |---|---|
-| [`toy/`](toy/README.md) | **the interactive course** — 28 gated levels, live widgets, mastery |
-| [`docs/mechanism.md`](docs/mechanism.md) | the conceptual pipeline — syntax → structure → search → certificate |
+| [`docs/paper_draft.md`](docs/paper_draft.md) | the paper draft — thesis, mechanism, the three questions answered |
+| [`project/research_lab_notebook.md`](project/research_lab_notebook.md) | the lab notebook — questions, dead ends, process lessons |
+| [`docs/product_landing_page.md`](docs/product_landing_page.md) | the landing page |
+| [`toy/`](toy/README.md) | the interactive course (28 levels) |
+| [`docs/mechanism.md`](docs/mechanism.md) | syntax → structure → search → certificate |
 | [`docs/evaluation.md`](docs/evaluation.md) | features, calibration, criteria, policies |
-| [`docs/api.md`](docs/api.md) | the API surface — `Optimizer`, strategies, runners, criteria |
-| [`docs/results.md`](docs/results.md) | measured results, generated from pinned baselines |
+| [`docs/api.md`](docs/api.md) | the API surface |
+| [`docs/results.md`](docs/results.md) | measured results (generated from pinned baselines) |
 | [`bench/README.md`](bench/README.md) | the benchmark harness |
-| [`AGENTS.md`](AGENTS.md) | repo layout and the full verification gate list |
+| [`project/adrs/`](project/adrs/) | the decision records, with their falsification paths |
+| [`AGENTS.md`](AGENTS.md) | repo layout + the full verification gate list |
 
 ## Verification
 
@@ -264,3 +220,11 @@ uv run pytest                              # full suite (serial — no -n auto)
 .venv/bin/bandit -c .bandit.yaml -r packages
 .venv/bin/semgrep --config .semgrep.yml packages
 ```
+
+Coverage is pinned at 100% for the original packages (99% ratchet for
+`catopt_discovery`); no new suppressions are accepted.  See
+[`AGENTS.md`](AGENTS.md).
+
+## License
+
+MIT.
