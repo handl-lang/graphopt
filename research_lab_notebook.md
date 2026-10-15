@@ -437,21 +437,22 @@ the op-algebra laws.  Three families are named and untried, in cost order:
    (`int | float`), so a per-channel `scale` is unspellable today.  Two
    ordered blockers, both named (`retros/weightspace-fold.md`).
 
-### 5.2 ADR 0008 gate 3 — does search reach `loop` forms?
+### 5.2 ADR 0008 gate 3 — does search reach `loop` forms?  (closed, negative)
 
-The combinator presentation (ADR 0008) makes carrier atoms *definable* as
-`loop` terms rather than primitives, and gates 1–2 passed: 321/321 corpus
-workloads round-trip structurally exact (zero ops refuse translation, mean
-blowup 2.61×), and the RetNet shared-state fold spells as
-`seq(pre, loop(step, K), post)` verified at 1e-7.  **Gate 3 is open**: `loop`
-structure is *erased at export*, so a fused recurrence translates fine but
-the fold must be **proposed by search**, never recovered by the bridge.
-Whether search *reaches* `loop` forms is the remaining substrate risk, and it
-decides whether the substrate is a discovery surface or only a presentation
-win.  Plan 0025 section C states the falsification: a negative closes the
-substrate's *discovery* value, and the presentation value (uniformity,
-explicit Δ, the eliminated DAG-vs-tree bug class) must then carry the ADR
-alone.
+This was the last open substrate question; it is now **closed**, and the
+answer is negative.  Three attempts — a proposing rule, a parametric
+abstraction over the step, and a sharing-aware extraction — each *worked* on a
+control and each failed on the real export: the search never reaches a
+`loop`-headed form.  The full story, with the numbers, is the paper's §2.2
+(`../docs/paper_draft.md`); the one positive the gate work produced is an
+extraction defect (greedy per-class extraction is 5.06 % off its own cost
+model on that workload).  So the substrate's *discovery* value is closed, and
+the presentation value — uniformity, explicit Δ, the eliminated DAG-vs-tree
+bug class — must carry ADR 0008 alone (plan 0025 section C).  The two named
+causes that would re-open the gate are in the paper's §2.2; the retros are
+`retros/gate3-loop-proposing-rule.md`,
+`retros/gate3-parametric-abstraction.md` and
+`retros/gate3-extraction-state-spelling.md`.
 
 ### 5.3 The enumeration-ordering blocker
 
@@ -526,6 +527,8 @@ Kept here so a future collaborator does not have to reconstruct them from
 | Precision lane on BiRefNet | certified negative; 0 delivered; 1.32× worse | `retros/birefnet-bounded-lane.md` |
 | ONNX round-trip | 1.11e-16 fp64; zero core changes | `retros/onnx-package.md` |
 | Combinator bridge | 321/321 round-trip; mean blowup 2.61× | `adrs/0008` |
+| Gate 3 (substrate discovery value) | negative ×3; proposing rule fires 0×; 7 blocks / 2 families `IRREGULAR` | `retros/gate3-loop-proposing-rule.md`, `retros/gate3-parametric-abstraction.md` |
+| Greedy extraction suboptimality | 455,752 → 432,696 FLOPs (−5.06 %); max\|Δ\| 2.2e-16 | `retros/gate3-extraction-state-spelling.md` |
 | Unconsumed ports | 4 ports green, 0 consumers | `adrs/0003` |
 | Features fix → RL regression | documented benefit lost, no RL change | `adrs/0003`, `retros/stage7-multifamily-results.md` |
 | Host OOMs | quartic `dspec` sweep; arena 10^13 rows; `pytest -n` fan-out | `retros/weightspace-fold.md`, `retros/arena-player.md`, `AGENTS.md` |
