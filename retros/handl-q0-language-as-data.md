@@ -1,0 +1,97 @@
+# Retro — spike Q0: can catopt's language be handl data?
+
+**Date**: 2026-10-14.  **Plan**: 0029 (the handl ↔ catopt boundary
+spike), **Q0**.  **Verdict**: **PASS**, with two representational
+requirements (both fixed) and one named residue.
+
+**Evidence**: catopt `8d5b47d` (`lab/handl-spike/dump_fragments.py` +
+the generated `fragments/`), the emitter fix in `8de8cb5`; handl
+`b20b978a` (`crates/handl-kit-data-canonical/tests/catopt_fragments.rs`
++ `tests/data/catopt-fragments/`).
+
+## The question
+
+ADR 0010 claims handl *is* the kernel — catopt's vocabulary should be
+handl data, not merely similar to it.  Q0 is the cheapest decisive test:
+encode one catopt law as a `TransformDef` (+ the shapes it needs), load
+it through handl's `language_from_dir`, and check it survives.
+
+## Method
+
+1. Compare catopt's emitted rows (`catopt_discovery.handl`) against
+   handl's actual types, field by field — `TransformDef`, `TransformRule`,
+   `RewriteStep`, `TransformCondition`, `AstShapeDef`.
+2. Materialize the seam: `lab/handl-spike/dump_fragments.py` writes
+   catopt's vocabulary into the **ten-file layout** `language_from_dir`
+   reads (eight required shell files + `transforms.yaml`).
+3. Load it from Rust (handl's test) and assert the merge + the fields.
+
+## Result — PASS
+
+```
+test catopt_fragment_dir_assembles_a_language ... ok
+test catopt_law_survives_as_data ... ok
+```
+
+A `Language` assembles from catopt's data; the law is retrievable by id
+(`transform.catopt.assoc_add`), its `pass`/`node_kind` are intact, and
+its folded `when` deserializes as `And([KindAt, ChildCount])`.
+
+### Field-by-field: everything matched except two spellings
+
+| catopt emits | handl expects | verdict |
+|---|---|---|
+| `id` · `pass` · `node_kind` | same | ✅ |
+| `rule: {Declarative: {target_kind, children}}` | `TransformRule::Declarative` | ✅ |
+| `KindAt{index,kind}` · `ChildCount(n)` | `TransformCondition` variants | ✅ |
+| `KeepPath([...])` · `Create{kind, children}` | `RewriteStep` variants | ✅ |
+| `children: [{role: arg0}, …]` · `payload_schema` | `AstShapeDef` fields | ✅ |
+| the `catopt:` provenance block | no such field | ✅ (serde ignores unknown fields) |
+| **`when: [clause, …]` (a list)** | `Option<TransformCondition>` — **one** | ❌ → fold into `And([...])` |
+| **`{"Declarative": …}` (JSON map)** | **`!Declarative` (YAML tag)** | ❌ → emit tags |
+
+### The two requirements, both now satisfied
+
+1. **`when` is a single condition.**  handl's field is
+   `Option<TransformCondition>`; a conjunction is spelled `And([...])`.
+   catopt emitted a bare clause list, which does not deserialize.
+   Fixed in the emitter (`8de8cb5`): omitted when empty, the clause
+   itself when there is one, `And([...])` otherwise.
+2. **Enum variants are YAML tags.**  Under `serde_yaml` a variant is
+   `!Declarative`/`!Create`/`!KeepPath`/`!KindAt`/`!And`; under
+   `serde_json` it is a map.  `language_from_dir` reads YAML, so the
+   dump tool emits tags (measured failure: *"invalid type: map, expected
+   a YAML tag starting with '!'"*).  Fixed in the dump tool.
+
+### Named residue (not exercised here)
+
+- **The leaf step has no counterpart.**  catopt renders a literal leaf
+  as `{"catopt:leaf": …}`; handl's `RewriteStep` has no such variant.
+  `assoc_add` is structural, so it never arises — but any law with a
+  constant on the rhs would need a mapping (candidate: a `Create`d node
+  carrying the value in its `payload`, or `Fresh(hint)` for variables).
+- **The shell is a stub.**  catopt supplies `ast.yaml` (op shapes) and
+  `transforms.yaml` (laws) of the ten files; the eight required shell
+  files are empty today, because catopt's "syntax" is the IR, not a text
+  language.  A *real* catopt language would need `eval`/`types` entries —
+  which is precisely ADR 0010's "interpretations" question, not Q0's.
+
+## What Q0 does **not** prove
+
+- **That a rewrite fires.**  Loading a `Language` is not running its
+  engine; firing needs an `Ast` to rewrite, i.e. the next step.
+- **Anything about tensor values.**  That is Q1 (a host function
+  carrying a tensor), and it is the question ADR 0010's "host functions"
+  claim actually rests on.
+- **That the load path is reachable from the CLI.**  It is not:
+  `hnl` loads kits through registered *emitters*; a data directory is
+  reachable only through the `language_from_dir` API (or a small host
+  that calls it).  `FragmentSource::DataFile` is modeled but returns
+  `LangError::NotImplemented` — that is the *runtime* half of the seam,
+  and it is Q3's business.
+
+## Cost
+
+Hours, not days — because `hnl` is already installed and the load path
+already exists.  No Rust code was written on the catopt side; the only
+handl-side change is a test.
