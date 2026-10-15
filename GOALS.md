@@ -135,3 +135,20 @@ irreversible without asking.  **Exception:** for a period the `-n 2`
 slice arm and a full-suite run were both live (contention, and it
 distorted the numbers); the duplicate was killed when noticed, and the
 affected figures were discarded rather than reported.
+
+### Late additions (same night)
+
+| item | result |
+|---|---|
+| **a rewrite fires** (plan 0030 step 1 — the gate on the peer) | **PASS**: `assoc_add` executes through handl's `RewriteEngine` (one rewrite, result `add(add(a,b),c)`), and catopt's own `EGraph.apply_rule` produces the same member on the same term.  The two engines agree.  handl `82194954` |
+| **the leaf + collision gaps** | **closed** — a leaf maps to `!Fresh` / `!Create` of a declared kind, and rules get distinct priorities per `(pass, node_kind)`; the **whole bank loads (83 laws)**.  catopt `5ca8aef`, handl `9372bd32` |
+| **plan 0030** | written (`1382f19`); step 1 **DONE**, so the optional peer (step 2) is justified rather than speculative |
+| **ADR 0008 gate 3** | given a **protocol** — one command, one criterion, with a negative result as valuable as a positive one (`337a839`).  Not run: the box was busy with a full suite |
+| **coverage ratchet** | verified for the changed module: `catopt_discovery/handl.py` is **100%** (117 stmts, 50 branches, 0 missed) — the floor is safe |
+| **docs** | both repos updated with the rewrite result (catopt `docs/mechanism.md`; handl `docs/explanation/kits-and-manifests.md`) |
+
+**One caveat worth carrying forward**: the `priority` field is the first
+place handl's schema demanded something catopt does not have (an order),
+and it is currently supplied as a *load-time disambiguator* that means
+nothing semantically.  Plan 0030 step 4 exists so it does not ossify
+into an implied meaning.
