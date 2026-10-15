@@ -1,0 +1,51 @@
+device: cuda  (torch 2.14.0+cu130)
+policy: bundled  meta={'hidden': 64, 'state_dim': 7, 'pair_dim': 9, 'feature_contract': 'scale-free-v1', 'trainer': 'distill-oe-all', 'train_scales': [8, 12, 16, 20, 24], 'epochs': 200, 'teacher': 'oe-rand-greedy (all trial trajectories)', 'teacher_repeats': 128, 'teacher_budget': 0.75, 'trial_cap': 8, 'seed': 1, 'family': 'random_bond_network', 'git_sha': '6c08a9db1ea92a84f28efea4a4572db0aba0c371', 'torch': '2.14.0+cu130', 'created': '2026-10-04'}
+boards/cell: 4  temps: (0.5, 1.0, 2.0)
+
+== 1. equal wall-clock: 200 ms per instance ==
+    n          player  our-ratio   oe-ratio    work      ms     r/s
+--------------------------------------------------------------------
+   40      our-greedy    783.370    783.365    39.0     5.3 7368.72
+   40     our-restart    533.326    533.322    29.8   202.9  146.60
+   40       oe-greedy      2.076      2.076    39.0     1.2 32555.73
+   40  oe-rand-greedy      1.191      1.191   182.0   200.5  907.97
+   40     single-pass      2.723      2.723    39.0    12.9 3033.75
+   40      guided-lin      1.163      1.163   258.8   203.0 1274.71
+   40     guided-T0.5      1.120      1.120   512.0   328.1 1560.57
+   40       guided-T1      1.062      1.062   512.0   338.1 1518.07
+   40       guided-T2      1.125      1.125   512.0   331.2 1545.76
+
+== 1. equal wall-clock: 1000 ms per instance ==
+    n          player  our-ratio   oe-ratio    work      ms     r/s
+--------------------------------------------------------------------
+   40      our-greedy    749.993    749.989    39.0     5.3 7334.33
+   40     our-restart    442.363    442.359   146.2  1004.5  145.60
+   40       oe-greedy      2.042      2.042    39.0     1.2 32312.38
+   40  oe-rand-greedy      1.166      1.166   923.0  1000.6  922.45
+   40     single-pass      2.665      2.665    39.0    12.5 3127.73
+   40      guided-lin      1.043      1.043  1492.8  1012.5 1474.50
+   40     guided-T0.5      1.102      1.102  1536.0   995.3 1543.24
+   40       guided-T1      1.029      1.029  1536.0   995.7 1542.72
+   40       guided-T2      1.118      1.118  1536.0  1005.6 1527.75
+
+== 2. pairwise, oe cost (mean; <1 = row player wins) ==
+      ms   n          player  /oe-rand-greedy     /our-restart       /oe-greedy     /single-pass
+------------------------------------------------------------------------------------------------
+     200  40     guided-T0.5            0.955            0.005            0.604            0.532
+     200  40       guided-T1            0.909            0.005            0.552            0.502
+     200  40       guided-T2            0.972            0.005            0.602            0.535
+     200  40     our-restart          405.834                -          238.924          159.831
+     200  40     single-pass            2.189            0.008            1.330                -
+    1000  40     guided-T0.5            0.955            0.012            0.598            0.528
+    1000  40       guided-T1            0.898            0.012            0.544            0.497
+    1000  40       guided-T2            0.979            0.014            0.601            0.534
+    1000  40     our-restart          341.068                -          195.059          130.488
+    1000  40     single-pass            2.206            0.024            1.330                -
+
+== 3. equal rollout count (N = guided-T1 clocked rollouts) ==
+  all players re-run at the same episode count per board;
+  ratios are oe costs (mean; <1 = guided wins)
+      ms   n     N  0.5/unif    1/unif    2/unif     0.5/oe      1/oe      2/oe    unif/oe
+------------------------------------------------------------------------------------------
+     200  40   512     0.027     0.027     0.030      0.959     0.912     0.976     49.020
+    1000  40  1536     0.065     0.066     0.072      1.053     0.997     1.079     36.043

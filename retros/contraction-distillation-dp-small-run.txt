@@ -1,0 +1,115 @@
+device: cuda  (torch 2.14.0+cu130)
+feature contract: scale-free-v1 (STATE_DIM=7, PAIR_DIM=9)
+train scales: (8, 12, 16, 20, 24)  arms: ['dp-small']
+oe teacher: RandomGreedy repeats<=128, max_time=0.75s
+dp-small dataset (ns=(8, 12)) in 10.7s: 432 rows
+trained dp-small in 7.5s
+all training done in 18.2s
+
+== held-out agreement: walk the oe-rand-greedy order (n=40) ==
+  top-1 = fraction of teacher pairs the policy argmaxes;  rho = Spearman(policy scores, -pair cost)
+        player   top-1     rho  roll/tch
+---------------------------------------
+    our-greedy   0.106     nan         -
+      dp-small   0.202   0.793    29.113
+  (roll/tch < 1 => the policy's own rollout beats the order it imitates)
+
+== equal single-pass: 1 rollout ==
+    n          player  our-ratio   oe-ratio      work
+---------------------------------------------------
+   20      our-greedy     84.564     84.555      19.0
+   20        dp-small      3.703      3.703       1.0
+   20       oe-greedy      1.011      1.011      19.0
+   20       oe-rand-1      1.073      1.073      19.0
+   30      our-greedy    264.890    264.879      29.0
+   30        dp-small      4.079      4.079       1.0
+   30       oe-greedy      1.000      1.000      29.0
+   30       oe-rand-1      1.021      1.021      29.0
+   40      our-greedy    363.509    363.507      39.0
+   40        dp-small     13.851     13.851       1.0
+   40       oe-greedy      1.000      1.000      39.0
+   40       oe-rand-1      1.000      1.000      39.0
+
+== equal single-pass: learned / opt_einsum pairwise (mean; <1 = learned wins) ==
+         tag   n          player    our/oe-greedy    our/oe-rand-1     oe/oe-greedy     oe/oe-rand-1
+----------------------------------------------------------------------------------------------------
+   1 rollout  20        dp-small            3.622            3.594            3.622            3.594
+   1 rollout  30        dp-small            4.079            4.048            4.079            4.048
+   1 rollout  40        dp-small           13.846           13.851           13.846           13.851
+
+== equal rollouts: best-of-64 ==
+    n          player  our-ratio   oe-ratio      work
+---------------------------------------------------
+   20      our-greedy     96.948     96.937       1.0
+   20     our-restart      9.468      9.445      64.0
+   20        dp-small      1.166      1.166      64.0
+   20       oe-greedy      1.151      1.151       1.0
+   20  oe-rand-greedy      1.000      1.000      64.0
+   30      our-greedy    277.930    277.918       1.0
+   30     our-restart     94.770     94.755      64.0
+   30        dp-small      1.904      1.903      64.0
+   30       oe-greedy      1.219      1.219       1.0
+   30  oe-rand-greedy      1.000      1.000      64.0
+   40      our-greedy    586.108    586.105       1.0
+   40     our-restart    121.191    121.191      64.0
+   40        dp-small      1.381      1.381      64.0
+   40       oe-greedy      1.645      1.645       1.0
+   40  oe-rand-greedy      1.000      1.000      64.0
+
+== equal rollouts: learned / opt_einsum pairwise (mean; <1 = learned wins) ==
+         tag   n          player    our/oe-greedy our/oe-rand-greedy     oe/oe-greedy oe/oe-rand-greedy
+-------------------------------------------------------------------------------------------------------
+  best-of-64  20        dp-small            1.016            1.166            1.016            1.166
+  best-of-64  30        dp-small            1.690            1.904            1.690            1.903
+  best-of-64  40        dp-small            0.910            1.381            0.910            1.381
+
+== equal wall-clock: 1000 ms ==
+    n          player  our-ratio   oe-ratio      work
+---------------------------------------------------
+   20      our-greedy    100.741    100.730       1.0
+   20     our-restart      3.737      3.718    1135.7
+   20        dp-small      1.149      1.148     720.0
+   20       oe-greedy      1.220      1.220       1.0
+   20  oe-rand-greedy      1.000      1.000         -
+   30      our-greedy    303.693    303.681       1.0
+   30     our-restart     29.766     29.746     308.0
+   30        dp-small      1.840      1.840     316.7
+   30       oe-greedy      1.314      1.314       1.0
+   30  oe-rand-greedy      1.000      1.000         -
+   40      our-greedy    865.313    865.310       1.0
+   40     our-restart    547.349    547.347     135.3
+   40        dp-small      1.610      1.610     200.0
+   40       oe-greedy      2.030      2.030       1.0
+   40  oe-rand-greedy      1.000      1.000         -
+
+== equal wall-clock: 200 ms ==
+    n          player  our-ratio   oe-ratio      work
+---------------------------------------------------
+   20      our-greedy     99.169     99.157       1.0
+   20     our-restart      5.187      5.167     218.0
+   20        dp-small      1.180      1.180     135.0
+   20       oe-greedy      1.201      1.201       1.0
+   20  oe-rand-greedy      1.000      1.000         -
+   30      our-greedy    299.542    299.530       1.0
+   30     our-restart     82.247     82.228      66.0
+   30        dp-small      1.941      1.941      63.7
+   30       oe-greedy      1.300      1.300       1.0
+   30  oe-rand-greedy      1.000      1.000         -
+   40      our-greedy    800.451    800.448       1.0
+   40     our-restart    514.765    514.762      26.7
+   40        dp-small      2.122      2.122      29.7
+   40       oe-greedy      1.944      1.944       1.0
+   40  oe-rand-greedy      1.000      1.000         -
+
+== equal wall-clock: learned / opt_einsum pairwise (mean; <1 = learned wins) ==
+         tag   n          player    our/oe-greedy our/oe-rand-greedy     oe/oe-greedy oe/oe-rand-greedy
+-------------------------------------------------------------------------------------------------------
+      200 ms  20        dp-small            0.980            1.180            0.979            1.180
+      200 ms  30        dp-small            1.622            1.941            1.622            1.941
+      200 ms  40        dp-small            1.172            2.122            1.172            2.122
+     1000 ms  20        dp-small            0.941            1.149            0.940            1.148
+     1000 ms  30        dp-small            1.521            1.840            1.521            1.840
+     1000 ms  40        dp-small            0.818            1.610            0.818            1.610
+
+== verdict ==
+  compare each distilled arm's pairwise vs oe-rand-greedy with rl's: <1.04 means the stronger teacher transferred.

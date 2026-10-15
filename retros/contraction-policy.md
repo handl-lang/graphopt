@@ -203,7 +203,11 @@ not** — a single learned rollout does not beat the best cheap player.
 * **Not compute-equal.**  A policy rollout scores every pair with a
   small MLP per step; `greedy`/`restart` sort scalar pair costs.  The
   *number of rollouts* is matched (1 vs 1, 64 vs 64), the per-step cost
-  is not — the learned player is the more expensive one.
+  is not — the learned player is the more expensive one.  **Resolved in
+  `contraction-policy-compute.md`**: at equal *wall-clock* the policy
+  still wins (0.65-0.90 vs `restart`), with ~4x fewer rollouts and a
+  measured ~4x per-rollout cost — the win is quality per unit of work,
+  not matched rollout count.
 * **Two trainers, one architecture, one cost model.**  All numbers use
   the classic scalar-mult cost and a 64-wide MLP.  A bigger net, a
   learned critic, or a launch-aware cost would shift the exact ratios.

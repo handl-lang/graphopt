@@ -36,7 +36,7 @@ The three families, each with a guaranteed strictly-improving rule
 | `linear` | `relu(linear(linear(x)))`, via `TorchSource` | `assoc_linear_bias` |
 
 Metrics per held-out program, matching
-`bench/suites/evaluation/policy_value.py`: **rank** of the picked rule
+`benches/suites/evaluation/policy_value.py`: **rank** of the picked rule
 by true delta (1 = best; 1-based *average* ranks, ties share) and
 **hit** (the pick's delta is strictly positive).  Rank 26.5 is the
 floor — a pick tied with every non-improving rule (51 rules).

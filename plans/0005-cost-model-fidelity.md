@@ -48,7 +48,7 @@ equivalence-class members correlate with measured end-to-end latency?
 
 ## Method
 
-`bench/cost_fidelity.py` (benchkit Report):
+`benches/cost_fidelity.py` (benchkit Report):
 
 Per cell (model, shape, device):
 1. `discover_alternatives(m, x, top_k)` → the frontier of distinct
@@ -81,7 +81,7 @@ Cells: matrix chain k∈{4,8,16} (win regime), retnet/gla T∈{128,512}
 
 ## Deliverables
 
-- `bench/cost_fidelity.py` → JSON + MD + predicted-vs-measured
+- `benches/cost_fidelity.py` → JSON + MD + predicted-vs-measured
   scatter plots.
 - A cost-model fix for any identified unmodeled term, then a re-run
   showing ρ improvement and selection changes.
@@ -120,3 +120,15 @@ Cells: matrix chain k∈{4,8,16} (win regime), retnet/gla T∈{128,512}
   equivalence where the baseline can't produce code — not a
   universal speedup claim.  Pipeline scalability (spine walk +
   saturation at large T) is the open engineering cost.
+
+## Scale + pipeline findings (main 57ad951)
+
+- Decode crossover measured on GPU (`decode_scan_bench`):
+  carrier+graph wins 1.5-2.8x at d<=384, flips to 0.78-0.92x loss at
+  d=512, parity at d=1024 — the win is launch-bound, not compute.
+- Prefill T=512: retnet scan 4.7-9.5x vs eager; Inductor hits the
+  90s compile timeout at every d>=256 cell — the compile wall arrives
+  at production T*d products earlier than the T=2048 datapoint.
+- trace_lift pipeline: per-scan shape memo → _scan_plans ~20x;
+  optimize_model T=2048 wall 215-262s → 117s.  extract_best is now
+  the dominant remaining cost (~73% of what's left).

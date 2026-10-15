@@ -4,7 +4,7 @@
 
 ARCHIVED — weight-space probe, falsified axis (see ../REPORT.md).
 Lives under retros/ as evidence for the report's exact-corner pins;
-the llama2c loader it imports is bench/llama2c.py on main.
+the llama2c loader it imports is benches/common/llama2c.py on main.
 
 The corner's legitimate scope is EXACT structure only:
   * share_duplicate_params        — whole-tensor tying (bitwise-equal params)
@@ -36,8 +36,12 @@ import torch  # noqa: E402
 import torch.nn as nn  # noqa: E402
 import torch.nn.functional as F  # noqa: E402
 
-from catopt.cost import param_bytes_cost_for  # noqa: E402
-from catopt.optimize import optimize_model, param_report  # noqa: E402
+from catopt_core.cost import param_bytes_cost_for  # noqa: E402
+from catopt_torch.composer import param_report
+from catopt_orchestrator import Optimizer
+
+from catopt_torch.backend import TorchBackend
+  # noqa: E402
 
 CKPT = "/tmp/stories15M.bin"
 
@@ -320,14 +324,8 @@ def probe(
     if example.is_floating_point():
         example = example.double()
     t0 = time.time()
-    low, stats = optimize_model(
-        model,
-        example,
-        cost_fn=param_bytes_cost_for(),
-        max_iterations=max_iterations,
-        max_enodes=max_enodes,
-        verbose=False,
-    )
+    low, stats = Optimizer(backend=TorchBackend()).optimize(model, example, cost_fn=param_bytes_cost_for(), max_iterations=max_iterations, max_enodes=max_enodes, verify=False, verbose=False)
+
     dt = time.time() - t0
     with torch.no_grad():
         ref = model(example.clone())
@@ -365,9 +363,9 @@ def probe_stories15m():
         return None
     import numpy as np
 
-    from catopt.egraph import EGraph
-    from catopt.ir import Param, TensorType
-    from catopt.rules import (
+    from catopt_core.egraph import EGraph
+    from catopt_core.ir import Param, TensorType
+    from catopt_core.laws import (
         share_duplicate_param_slices,
         share_duplicate_params,
     )
