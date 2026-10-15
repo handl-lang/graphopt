@@ -310,6 +310,58 @@ merged `32962d0`; `lab/bridge/combinator.py` + `lab/bridge/combinator_probe.py`)
   bullet implied (a move that normalises the state spelling *and* the
   chunking, not just a form-level proposer).  See
   `project/retros/gate3-parametric-abstraction.md`.
+- **Gate 3 — MEASURED 2026-10-16 (later still): still FAIL — cause 2
+  (the mixed state spelling) is an extraction *tie*, and the fix is real
+  but does not close the gate.**  The parametric-abstraction bullet
+  above named "extraction mixed two state spellings" without measuring
+  it; this is that measurement plus the principled fix —
+  `lab/probes/gate3_state_spelling_probe.py` and
+  `lab/bridge/sharing_extract.py` (commit `aa56e55`), wired as
+  `--sharing-extract`.  Same staged arm (T=64 K=4, 9733 enodes,
+  `PYTHONHASHSEED=0`); the winner is unchanged (`dag=139`,
+  **455,752 FLOPs**, `morph=1590`, round-trip EQUAL) and its read
+  sequence is `reexp|reexp|fold|fold|reexp|shared|shared`.
+
+  **The mechanism, measured**: every one of the 7 state-read e-classes
+  has ≥ 2 members at the class minimum (a **4-way tie at 232,000** in
+  block 4), so `extract_best`'s tie-break — `nops`, then member sort
+  order `(op, children, repr(attrs))`, i.e. **op name** — decides the
+  spelling, arbitrarily with respect to *sharing*.  Forcing the factored
+  `matmul(q, S)` read per class moves the whole term by
+  `Δ ∈ {−528, 0, +16, +16, +144}` FLOPs: the model is **indifferent**
+  (±0.03 %), and in block 4 it *strictly prefers* the factored read
+  (which shares its state with block 5's read) — a non-local saving the
+  greedy pass cannot see.  So the greedy extraction is **suboptimal**:
+
+  ```
+  greedy           cost 455,752   dag=139   morph=1590   round-trip EQUAL
+  sharing-aware    cost 432,696   dag=133   morph=1509   round-trip EQUAL
+                   Δ = -23,056 (-5.06 %),  max|greedy - fix| = 2.220e-16
+  ```
+
+  **The fix** — `extract_sharing_aware`: a bounded, *monotone*
+  coordinate descent (force one class at a time; keep only strict
+  improvements to the whole term's `dag_cost`) — removes the arbitrary
+  choice and adds the real sharing signal.  It is numerically verified
+  equivalent to machine epsilon, and it **still leaves the gate FAIL**:
+  the abstraction's verdict is `IRREGULAR` with the **same first
+  difference** (`block1/block2/add[1]/mul[1]: op om_decayed vs add`).
+  The mix is a *cascade* of per-class ties, and the small-chunk family
+  (`C=4 < d=16`) genuinely prefers the unfactored spelling
+  (`C²d < Cd²`) — so forcing it would be manufacturing a result, not a
+  fix.  The remaining causes are the **two chunk widths** (the
+  abstraction abstracts `index`/`t`/`offset`/`sign` but not `sizes`) and
+  the abstraction's own structural state identification (per family it
+  binds `state_in = None|unsqueeze|unsqueeze|unsqueeze` for the small
+  family and `None|matmul|mul` for the large one).
+
+  **What this means for ADR 0009 stage 4**: unchanged.  The gate is
+  still negative, and this task *retires one candidate fix*: the state
+  spelling cannot be normalised by a principled tie-break, because part
+  of the mix is a genuine cost optimum.  See
+  `project/retros/gate3-extraction-state-spelling.md`.  (Caveat carried
+  there: the staged saturation is not reproducible across processes —
+  9733/9752/9756 enodes — so pin `PYTHONHASHSEED` when re-measuring.)
 - **Gate 3 — the protocol** (added 2026-10-14; it is
   the last gate standing between this ADR and ADR 0009's stage 4, so
   "open" without a way to close it was the real problem).

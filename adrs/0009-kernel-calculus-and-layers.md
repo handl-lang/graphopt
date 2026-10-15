@@ -256,6 +256,17 @@ that create their consumers**, not added up front:
    (two chunk sizes, two state spellings).  See ADR 0008's second
    gate-3 FAIL bullet and
    `project/retros/gate3-parametric-abstraction.md`.
+   **Re-measured again 2026-10-16 (later still): still negative, and one
+   candidate fix is retired.**  The "two state spellings" cause was
+   measured to be a cost *tie* broken by op name, and a principled
+   sharing-aware extraction recovers 5.06 % of the winner's FLOPs
+   (455,752 → 432,696, numerically equivalent to 2.2e-16) while leaving
+   the gate FAIL.  The mix is a cascade of per-class ties, and the
+   small-chunk family's unfactored spelling is a genuine cost optimum —
+   so the spelling cannot be normalised by a tie-break.  Stage 4 is
+   still not justified by the presentation's discovery value.  See ADR
+   0008's third gate-3 FAIL bullet and
+   `project/retros/gate3-extraction-state-spelling.md`.
 2. **A port with no consumer is decoration.**  If `Calculus`/`Machine`/
    `Engine`/`Proposer`/`Environment` cannot name an existing consumer and
    a conformance test, they do not land.
