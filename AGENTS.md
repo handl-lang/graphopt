@@ -177,7 +177,8 @@ clean under both, and `scripts/gates.sh` checks exactly those.
 > ~98%.  **Those 24 tests are now `@pytest.mark.slow`** (measured
 > 2026-10-15), so `-m "not slow"` skips them: the learned module ran
 > **>900 s** before the 900-s box killed it (the `measured` fixture
-> dominates; `EGraph`-free tests in it are seconds),
+> dominates; `EGraph`-free tests in it are seconds) and the prior
+> module's fixture ran **>712 s** (11:52) before it was terminated,
 > `test_every_miss_spelling_reaches_rms_norm` **>9:49** and still
 > climbing (~1.2 GB RSS), and
 > `test_canonical_rsqrt_spellings_fold_with_their_bridges` **>7 min**
