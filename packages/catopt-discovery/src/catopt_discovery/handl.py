@@ -108,6 +108,24 @@ def _when_clauses(term: Any) -> list:
     return out
 
 
+def _when_condition(term: Any) -> dict | None:
+    """Fold the clause list into handl's single ``TransformCondition``.
+
+    handl's ``TransformDef.when`` is ``Option<TransformCondition>`` — one
+    condition — and a conjunction is spelled ``And([...])``.  So the
+    clauses ``_when_clauses`` produces fold here: ``None`` when there are
+    none, the clause itself when there is one, ``{"And": [...]}``
+    otherwise.  Emitting the bare list (the earlier shape) does not
+    deserialize.
+    """
+    clauses = _when_clauses(term)
+    if not clauses:
+        return None
+    if len(clauses) == 1:
+        return clauses[0]
+    return {"And": clauses}
+
+
 def _children_spec(term: Any, paths: dict) -> dict:
     """Render a rhs pattern as handl ``children`` steps.
 
@@ -154,11 +172,10 @@ def law_to_handl(rule: Rewrite, name: str) -> dict:
     _metavar_paths(rule.lhs, paths)
     lhs_parts = _op_parts(rule.lhs)
     rhs_parts = _op_parts(rule.rhs)
-    return {
+    row: dict = {
         "id": f"transform.catopt.{name}",
         "pass": "catopt",
         "node_kind": lhs_parts[0] if lhs_parts else None,
-        "when": _when_clauses(rule.lhs),
         "rule": {
             "Declarative": {
                 "target_kind": rhs_parts[0] if rhs_parts else None,
@@ -174,6 +191,13 @@ def law_to_handl(rule: Rewrite, name: str) -> dict:
             "metavars": {m: list(p) for m, p in paths.items()},
         },
     }
+    # ``when`` is a single ``TransformCondition`` in handl's schema — a
+    # conjunction is spelled ``And([...])`` — so the clause list folds
+    # (and the field is omitted entirely when there are no clauses).
+    condition = _when_condition(rule.lhs)
+    if condition is not None:
+        row["when"] = condition
+    return row
 
 
 def opdef_to_handl(d: Any) -> dict:

@@ -1,6 +1,5 @@
 """The handl-fragment schema bridge — cells as language data."""
 
-import pytest
 
 from catopt_core.cells import (
     Fragment,
@@ -11,7 +10,6 @@ from catopt_core.cells import (
     object_cell,
     op_cell,
 )
-from catopt_core.egraph import Rewrite
 from catopt_core.ir import Op
 from catopt_core.laws.base import R
 from catopt_core.opdata import OpDef
@@ -49,9 +47,12 @@ class TestLawToHandl:
     def test_root_kind_and_when(self):
         row = handl.law_to_handl(OM_LIFT, "om_decayed_lift")
         assert row["node_kind"] == "matmul"
-        kinds = [c.get("KindAt") for c in row["when"]]
+        # handl's `when` is ONE TransformCondition; a conjunction folds
+        # into And([...]) — a bare list does not deserialize.
+        clauses = row["when"]["And"]
+        kinds = [c.get("KindAt") for c in clauses]
         assert {"index": 0, "kind": "mul"} in kinds
-        assert {"ChildCount": 2} in row["when"]
+        assert {"ChildCount": 2} in clauses
 
     def test_metavar_paths_rebuild_children(self):
         row = handl.law_to_handl(OM_LIFT, "om_decayed_lift")
@@ -116,10 +117,18 @@ class TestLawToHandl:
         assert kids[0] == {"catopt:leaf": {"const": 2.0}}
         assert kids[1] == {"catopt:leaf": {"var": "w"}}
 
+    def test_when_condition_folds_for_handl(self):
+        """0 clauses omit the field; 1 is bare; 2+ become And([...])."""
+        assert handl._when_condition("a") is None
+        one = handl._when_condition(Op.make("eye", n=4))
+        assert one == {"ChildCount": 0}
+        many = handl._when_condition(OM_LIFT.lhs)
+        assert set(many) == {"And"} and len(many["And"]) >= 2
+
     def test_bare_metavar_root(self):
         r = R("x", "a", "b")
         row = handl.law_to_handl(r, "x")
-        assert row["node_kind"] is None and row["when"] == []
+        assert row["node_kind"] is None and "when" not in row
         kids = row["rule"]["Declarative"]["children"]
         assert kids == [{"catopt:leaf": "b"}]
         assert row["rule"]["Declarative"]["target_kind"] is None
@@ -128,7 +137,7 @@ class TestLawToHandl:
         r = R("x", Op.make("eye", n=4), Op.make("eye", n=4))
         row = handl.law_to_handl(r, "x")
         assert row["node_kind"] == "eye"
-        assert row["when"] == [{"ChildCount": 0}]
+        assert row["when"] == {"ChildCount": 0}
 
     def test_op_parts_accepts_spec_tuples(self):
         assert handl._op_parts(("matmul", "s", "v")) == (
