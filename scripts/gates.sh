@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+# scripts/gates.sh — the one-command local verification gate.
+#
+# Why this exists: the gate list in AGENTS.md ran the *whole test suite
+# twice* — once bare (`uv run pytest`) and once under coverage
+# (`coverage run -m pytest tests/ -q`).  CI (`.github/workflows/ci.yml`)
+# only ever ran it once, under coverage, so the local duplicate bought
+# nothing and doubled the wall time.  This script runs the suite
+# exactly once, under coverage, and then applies both coverage floors.
+#
+# Order is cheap-first so a red gate fails fast: the static gates
+# (seconds) run before the suite (tens of minutes).
+#
+# Usage:
+#     scripts/gates.sh                    # default parallelism (see NP)
+#     CATOPT_GATES_NP=1 scripts/gates.sh  # force the suite serial
+#
+# Env knobs:
+#     CATOPT_GATES_NP
+#         xdist worker count for the suite stage.  Default 2 — see the
+#         measured serial-vs-parallel table in AGENTS.md.  Set to 1 to
+#         force a single serial process (e.g. on a low-RAM host).
+#     TORCHINDUCTOR_COMPILE_THREADS
+#         Inductor compile-worker cap.  Defaults to 2 when NP>1, so the
+#         pytest×compile fan-out stays bounded (NP·2 workers, not
+#         NP·16); left at torch's default when NP=1.
+#
+# Every gate is a hard failure (`set -e`): the script stops at the first
+# red gate.  Each stage prints its own wall time.
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+PY=.venv/bin/python
+NP="${CATOPT_GATES_NP:-2}"
+
+# Keep Inductor's kernel cache pinned into the repo cache dir so repeat
+# runs reuse compiled kernels instead of recompiling from scratch (the
+# same default tests/conftest.py installs; setting it here also covers
+# the collection phase before conftest runs).
+if [[ -z "${TORCHINDUCTOR_CACHE_DIR:-}" ]]; then
+    _base="${XDG_CACHE_HOME:-$HOME/.cache}"
+    export TORCHINDUCTOR_CACHE_DIR="${CATOPT_CACHE_DIR:-$_base/catopt}/inductor"
+    mkdir -p "$TORCHINDUCTOR_CACHE_DIR"
+fi
+
+# Bound the Inductor fan-out only when we are also fanning out at the
+# pytest level; a single pytest process can use torch's own default.
+if [[ "$NP" -gt 1 && -z "${TORCHINDUCTOR_COMPILE_THREADS:-}" ]]; then
+    export TORCHINDUCTOR_COMPILE_THREADS=2
+fi
+
+t0=$SECONDS
+stage() {  # stage <name> -- <cmd...>
+    local name="$1"; shift
+    [[ "${1:-}" == "--" ]] && shift
+    local s=$SECONDS
+    "$@"
+    printf '  [ok] %-26s %3ds\n' "$name" "$((SECONDS - s))"
+}
+
+echo "== static gates =="
+# Shipped source only.  tests/ and bench/ carry pre-existing ruff drift
+# under the pinned ruff 0.16.9 (see AGENTS.md "Known drift"); packages,
+# scripts and lab are clean and are what the repo ships.
+stage "ruff check"      -- .venv/bin/ruff check packages scripts lab
+stage "ruff format"     -- .venv/bin/ruff format --check packages scripts lab
+stage "ty check"        -- .venv/bin/ty check
+stage "vulture"         -- .venv/bin/vulture
+stage "import-linter"   -- .venv/bin/lint-imports
+stage "bandit"          -- .venv/bin/bandit -c .bandit.yaml -r packages
+stage "semgrep"         -- .venv/bin/semgrep --config .semgrep.yml packages
+stage "radon ratchet"   -- $PY scripts/radon_ratchet.py
+
+echo "== test suite (once, under coverage) =="
+rm -f .coverage .coverage.*
+suite_s=$SECONDS
+if [[ "$NP" -gt 1 ]]; then
+    # pytest-cov combines xdist workers' coverage (a bare `coverage run`
+    # does not measure the worker subprocesses).  Its own fail_under
+    # check is disabled here: it would apply the config's 100% floor to
+    # the union *including* catopt_discovery, which sits on a 99%
+    # ratchet — the two `coverage report` stages below own both floors.
+    $PY -m pytest tests/ -q -n "$NP" --cov --cov-report= --cov-fail-under=0
+else
+    .venv/bin/coverage run -m pytest tests/ -q
+fi
+printf '  [ok] %-26s %3ds\n' "suite (NP=$NP)" "$((SECONDS - suite_s))"
+
+echo "== coverage floors =="
+# The six shipped packages + catopt_onnx: fail_under=100 (config).
+stage "coverage (six, =100)" -- \
+    .venv/bin/coverage report -m --omit="*/catopt_discovery/*"
+# catopt_discovery ratchet floor: --fail-under=99 (tighten, never lower).
+stage "coverage (discovery)" -- \
+    .venv/bin/coverage report -m --include="*/catopt_discovery/*" --fail-under=99
+
+echo "== all gates green in $((SECONDS - t0))s =="
