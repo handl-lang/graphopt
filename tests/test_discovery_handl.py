@@ -126,13 +126,45 @@ class TestLawToHandl:
         many = handl._when_condition(OM_LIFT.lhs)
         assert set(many) == {"And"} and len(many["And"]) >= 2
 
-    def test_bare_metavar_root(self):
+    def test_bare_metavar_root_refuses_as_native(self):
+        """A root-eliminating law refuses explicitly with a ``!Native``.
+
+        The rhs is a bare metavar (a subterm), which handl's
+        ``TransformRule::Declarative`` cannot express — it always creates
+        a node.  Emitting ``target_kind: None`` is not a valid refusal:
+        serde_yaml coerces the YAML ``null`` scalar into the *string*
+        ``"null"``, so handl's engine silently fabricates a node of kind
+        ``"null"``.  The bridge emits a ``!Native`` naming the missing
+        operation instead, and the law still round-trips via ``catopt``.
+        """
         r = R("x", "a", "b")
         row = handl.law_to_handl(r, "x")
         assert row["node_kind"] is None and "when" not in row
-        kids = row["rule"]["Declarative"]["children"]
-        assert kids == [{"Fresh": "b"}]
-        assert row["rule"]["Declarative"]["target_kind"] is None
+        assert row["rule"] == {"Native": handl._ELIMINATE_ROOT_NATIVE}
+        cell = handl.cell_from_handl(row)
+        assert cell is not None and cell.body.rhs == "b"
+
+    def test_root_eliminating_bank_law_refuses(self):
+        """Every root-eliminating bank law emits the refusal, not a null.
+
+        The 5 shipped root-eliminating laws (``id_add``, ``id_mul``,
+        ``double_neg``, ``transpose_noop``, ``chunk_single``) all have a
+        bare-metavar rhs; each emits ``!Native`` (never
+        ``target_kind: None``), keeps its dispatch ``node_kind``, and
+        round-trips through the ``catopt`` record.
+        """
+        from catopt_core.laws import ALL_RULES
+
+        native = {"Native": handl._ELIMINATE_ROOT_NATIVE}
+        eliminating = [r for r in ALL_RULES if isinstance(r.rhs, str)]
+        assert len(eliminating) == 5, "bank root-eliminating set moved"
+        for law in eliminating:
+            row = handl.law_to_handl(law, law.name)
+            assert row["rule"] == native
+            assert row["node_kind"] is not None, "dispatch kind is kept"
+            cell = handl.cell_from_handl(row)
+            assert cell is not None
+            assert cell.body.lhs == law.lhs and cell.body.rhs == law.rhs
 
     def test_zero_arity_root(self):
         r = R("x", Op.make("eye", n=4), Op.make("eye", n=4))

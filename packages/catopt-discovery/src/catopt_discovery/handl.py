@@ -21,6 +21,14 @@ The mapping is honest about which layer carries what:
                       (``cond``/``dspec``) and ``check``/``derive``
                       hooks live under ``catopt.law`` verbatim —
                       structural data maps, semantic data survives.
+- a **root-eliminating** law (rhs a bare metavar, e.g.
+                      ``double_neg: neg(neg(a)) → a``) has *no*
+                      ``!Declarative`` form — handl's
+                      ``TransformRule::Declarative`` always *creates* a
+                      node (``target_kind: String``) — so the bridge
+                      refuses explicitly with ``!Native``
+                      (``catopt:eliminate_root``), which handl's engine
+                      rejects loudly.  See :data:`_ELIMINATE_ROOT_NATIVE`.
 - ``role="handle"`` → a ``!Native``-style binding record
                       (``catopt:<kernel>``) — handl's own resolver
                       seam; the catopt kernel name is the tag.
@@ -134,6 +142,23 @@ _CONST_KIND = "catopt:const"
 _VAR_KIND = "catopt:var"
 _DATA_KIND = "catopt:data"
 
+#: The ``Native`` rule name the bridge emits for a **root-eliminating** law
+#: — one whose rhs is a bare metavar, returning a subterm (5 in the shipped
+#: bank: ``id_add``, ``id_mul``, ``double_neg``, ``transpose_noop``,
+#: ``chunk_single``).  handl's ``TransformRule::Declarative`` always
+#: *creates* a node (``target_kind: String``), so such a law has no faithful
+#: declarative form.  Emitting ``target_kind: None`` is not a valid refusal
+#: either: serde_yaml coerces the YAML ``null`` scalar into the *string*
+#: ``"null"``, so handl's engine silently fabricates a malformed node of
+#: kind ``"null"`` (measured — the bridge used to do exactly this).  The
+#: bridge therefore refuses *explicitly* with a ``!Native`` rule naming the
+#: missing operation: handl's engine rejects it loudly ("requires native
+#: rewrite … but no native registry is wired") rather than fabricating a
+#: node, and handl's own validator warns the native must be registered.  The
+#: law's meaning still round-trips verbatim through ``catopt.law``.
+#: Plan 0030 step 3 / ``project/retros/handl-differential-rewrite-check.md``.
+_ELIMINATE_ROOT_NATIVE = "catopt:eliminate_root"
+
 #: The ``AstShapeDef`` rows declaring those kinds (emitted with the ops).
 _LEAF_SHAPES = (
     {
@@ -220,6 +245,28 @@ def _children_spec(term: Any, paths: dict) -> dict:
     )  # pragma: no cover
 
 
+def _rule_body(rule: Rewrite, paths: dict) -> dict:
+    """Render a law's ``TransformRule`` — ``!Declarative`` or a refusal.
+
+    An rhs with an **op root** maps to ``!Declarative``: create
+    ``target_kind`` (the root op) from the child steps.  An rhs that is a
+    **bare metavar** — a *root-eliminating* law returning a subterm — has
+    no faithful declarative form (handl always creates a node), so the
+    bridge refuses explicitly with ``!Native`` naming the missing
+    operation; see :data:`_ELIMINATE_ROOT_NATIVE` for why a null
+    ``target_kind`` is not a valid refusal.
+    """
+    parts = _op_parts(rule.rhs)
+    if parts is None:
+        return {"Native": _ELIMINATE_ROOT_NATIVE}
+    return {
+        "Declarative": {
+            "target_kind": parts[0],
+            "children": [_children_spec(a, paths) for a in parts[1]],
+        }
+    }
+
+
 def law_to_handl(rule: Rewrite, name: str) -> dict:
     """Map a law/object cell body to a ``TransformDef`` fragment row.
 
@@ -232,21 +279,11 @@ def law_to_handl(rule: Rewrite, name: str) -> dict:
     paths: dict = {}
     _metavar_paths(rule.lhs, paths)
     lhs_parts = _op_parts(rule.lhs)
-    rhs_parts = _op_parts(rule.rhs)
     row: dict = {
         "id": f"transform.catopt.{name}",
         "pass": "catopt",
         "node_kind": lhs_parts[0] if lhs_parts else None,
-        "rule": {
-            "Declarative": {
-                "target_kind": rhs_parts[0] if rhs_parts else None,
-                "children": (
-                    [_children_spec(a, paths) for a in rhs_parts[1]]
-                    if rhs_parts
-                    else [_children_spec(rule.rhs, paths)]
-                ),
-            }
-        },
+        "rule": _rule_body(rule, paths),
         "catopt": {
             "law": law_to_data(rule),
             "metavars": {m: list(p) for m, p in paths.items()},

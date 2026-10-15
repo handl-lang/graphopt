@@ -69,9 +69,13 @@ def _eliminates_root(rule: object) -> bool:
 
     handl's `TransformRule::Declarative` always *creates* a node (its
     `target_kind` is a `String`), so a law that returns a subterm has no
-    faithful rule form: catopt emits `target_kind: None` and the two
-    engines necessarily diverge.  Those laws are reported separately —
-    the gap is real and is *not* papered over.
+    faithful rule form.  Measured (this probe + the peer): the bridge used
+    to emit `target_kind: None`, which serde_yaml coerces into the *string*
+    `"null"`, so handl's engine silently fabricated a malformed node of kind
+    `"null"`; it now emits a `!Native` (`catopt:eliminate_root`) refusal that
+    handl's engine rejects loudly.  Either way the two engines cannot be
+    compared, so these laws are reported separately — the gap is real and is
+    *not* papered over.
     """
     return isinstance(rule.rhs, str)
 
@@ -245,7 +249,10 @@ def main(argv: list[str] | None = None) -> int:
         f"  root-eliminating   : {eliminates}  (handl's Declarative always"
     )
     print(
-        "                        creates a node — a named gap, plan 0030)"
+        "                        creates a node; the bridge refuses with"
+    )
+    print(
+        "                        !Native catopt:eliminate_root — plan 0030)"
     )
     print(f"  declined by an engine: {declined}")
     print(f"  guard raised (synth) : {guard_errors}")
