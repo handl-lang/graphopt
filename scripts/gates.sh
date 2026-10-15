@@ -17,9 +17,9 @@
 #
 # Env knobs:
 #     CATOPT_GATES_NP
-#         xdist worker count for the suite stage.  Default 2 — see the
-#         measured serial-vs-parallel table in AGENTS.md.  Set to 1 to
-#         force a single serial process (e.g. on a low-RAM host).
+#         xdist worker count for the suite stage.  Default 1 (serial) —
+#         see the measured serial-vs-parallel table in AGENTS.md.  Set to
+#         2 to opt into the parallel arm (with the inductor cap below).
 #     TORCHINDUCTOR_COMPILE_THREADS
 #         Inductor compile-worker cap.  Defaults to 2 when NP>1, so the
 #         pytest×compile fan-out stays bounded (NP·2 workers, not
@@ -32,10 +32,13 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 PY=.venv/bin/python
-# Default SERIAL: the serial-vs-parallel comparison has not been
-# measured on this host (the run that would produce it died at 36%).
-# Set NP=2 only with a measured wall-time win and a peak-RSS figure
-# that fits the box; see AGENTS.md.
+# Default SERIAL.  Measured 2026-10-15 (6,372 tests, uncontended 11 GB /
+# 16-core host, whole-tree RSS sampled from /proc): NEITHER arm
+# finished inside a 30-min box — serial reached 36%, `-n 2` (inductor
+# cap 2) reached 98% (2.72x further, peak RSS 8,814 MB tree-summed).  A
+# *completed* wall-time win is required to flip the default and neither
+# arm completed, so it stays serial; opt in with CATOPT_GATES_NP=2.  See
+# AGENTS.md for the measured table and the tests that dominate the wall.
 NP="${CATOPT_GATES_NP:-1}"
 
 # Keep Inductor's kernel cache pinned into the repo cache dir so repeat

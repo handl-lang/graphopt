@@ -75,9 +75,10 @@ Run these before finishing any change; all must pass.
 gates cheap-first, then the suite **once** under coverage (CI always ran
 it once; this documented list used to run it twice), then both coverage
 floors — with per-stage wall times and `set -euo pipefail`.  It defaults
-to a **serial** suite (`CATOPT_GATES_NP=1`); the parallel arm is not yet
-measured on this host (see the warning below), so do not raise it without
-a measurement.
+to a **serial** suite (`CATOPT_GATES_NP=1`): the full-suite `-n 2` arm was
+measured (2026-10-15) and **neither arm finished inside a 30-min box**, so
+the parallel arm is not a safe default on this 11 GB host — see the
+measured table below before raising it.
 
 **Iterate with `-m "not slow"`.**  The minutes-scale tests are marked
 `slow` from measured durations — the heaviest slice
@@ -97,9 +98,10 @@ slice is **42.6 s** (8.7×).  The full pass still runs everything.
 .venv/bin/python scripts/radon_ratchet.py   # complexity ratchet
 
 # The suite, once, under coverage (both floors below).
-uv run pytest                 # ~28 min serial while contended; 6,341 tests.
-                              # Iterate with `-m "not slow"`.  Single-process:
-                              # see the parallel warning below before `-n`.
+uv run pytest                 # 6,372 tests; does NOT finish in 30 min on
+                              # either serial or `-n 2` (see the table
+                              # below).  Iterate with `-m "not slow"`.
+                              # Single-process: see the warning below.
 coverage run -m pytest tests/ -q   # source list includes catopt_discovery + catopt_onnx
 coverage report -m --omit="*/catopt_discovery/*"   # the six: fail_under=100
 coverage report -m --include="*/catopt_discovery/*" --fail-under=99   # ratchet floor — measured 99%; tighten, never lower
@@ -122,27 +124,47 @@ clean under both, and `scripts/gates.sh` checks exactly those.
 > 16-core host, `-n auto` OOM-froze the machine; even `-n 3` drove
 > memory to 10.2 GB near the suite's tail.
 >
-> **The suite is also much longer than it used to be.**  The old "~7.5
-> min" figure is stale: the suite is now **6,341 tests**, and a serial
-> run took **~28 min** while contended (a clean figure is not yet
-> measured — see below).  Use `scripts/gates.sh`, and iterate with
-> `-m "not slow"`.
+> **The suite does not finish in 30 min in *either* arm (full-suite
+> measured 2026-10-15).**  On an *uncontended* 11 GB / 16-core host (load
+> avg ~1.6), each arm was given a 30-min box and sampled with the same
+> whole-tree `/proc` RSS helper (`peakrss.py`) — 6,372 tests:
 >
-> **A parallel arm is measured on a slice, not on the suite.**  On the
+> | arm | wall | progress in 30 min | peak RSS (tree sum) | min `free` headroom |
+> |---|---|---|---|---|
+> | serial | **did not finish** (killed at the box) | 36% (2,304/6,372) | 10,320 MB | ≥ 6.8 GB avail |
+> | `-n 2` + `TORCHINDUCTOR_COMPILE_THREADS=2` | **did not finish** (killed at the box) | 98% (6,264/6,372) | 8,814 MB | ≥ 4.7 GB avail |
+>
+> So `-n 2` reaches **2.72× further in the same wall time** (98% vs
+> 36%) — a real speed-up — but **neither arm completed**, so the
+> *completed* wall-time win the default rule demands does not exist yet,
+> and `scripts/gates.sh` stays **serial** (`CATOPT_GATES_NP=2` is the
+> opt-in).  Caveat on the RSS column: the tree sum over-counts shared
+> pages — the serial peak is a ~14-process fan-out each `mmap`ing the
+> 419 MB `stories110M.bin`, so the real footprint is the `free` column,
+> not the sum; both arms are memory-safe on this box, `-n 2` less so.
+>
+> **What the wall time is made of.**  The `slow` marker covers only six
+> tests (`test_torch_integration`, `test_om_decayed_cross`).  The
+> *dominant* tail is elsewhere and **unmarked** — the discovery
+> "held-out-claim" fixtures (the module-scoped `measured` fixture in
+> `test_discovery_open_learned` / `_open_prior` / `_meta_prior` /
+> `_open_game`: a 36-page × 4-arm episode loop, ~15 min each) and the
+> e-graph saturation tests (`test_square_rsqrt_laws::test_every_miss_spelling_reaches_rms_norm`,
+> `EGraph.run(..., max_nodes=60_000)`).  Serial stalls at ~36% inside the
+> discovery block; `-n 2` overlaps those with the rest and reaches ~98%.
+> The suite is **6,372 tests** (the old "~7.5 min" and "~28 min" figures
+> are both stale).
+>
+> **The slice comparison is the only *completed* measurement.**  On the
 > heaviest slice (`test_torch_integration` + `test_om_decayed_cross`, 176
 > tests): **serial 370.8 s / `-n 2` 251.4 s** with
 > `TORCHINDUCTOR_COMPILE_THREADS=2` — **1.47×**, peak RSS **2.4 GB** (two
 > workers; the cap keeps the inductor fan-out at ~2×2 rather than 2×16).
-> That is a real win, but it is *one slice*: the full suite spreads the
-> compile-heavy files across 94 files, so its fan-out is wider and its
-> arm is unmeasured.  Hence `scripts/gates.sh` stays **serial** by
-> default, and `CATOPT_GATES_NP=2` is the documented opt-in (with the
-> thread cap) for a machine that has the RAM.  (An earlier claim here that
-> two runs "died at 36%" was a **misdiagnosis** — the runs were alive;
-> pytest's `-q` progress is block-buffered when redirected, so the log
-> looks frozen, and `ps` greps must match the pytest *child*, not the
-> wrapper shell.  Measure with `/proc` sampling, not the log.)  Until a
-> comparison exists, `scripts/gates.sh` stays serial.
+> Re-confirmed 2026-10-15: serial **364.4 s, peak 1,229 MB**.  (An earlier
+> claim here that two runs "died at 36%" was a **misdiagnosis** — the runs
+> were alive; pytest's `-q` progress is block-buffered when redirected, so
+> the log looks frozen, and `ps` greps must match the pytest *child*, not
+> the wrapper shell.  Measure with `/proc` sampling, not the log.)
 >
 > The coverage gate is a commit-time check; for iteration use a scoped
 > `coverage run -m pytest tests/test_<file>.py`.
