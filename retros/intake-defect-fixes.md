@@ -134,6 +134,6 @@ boring on purpose — lower the ingested term, run it fp64 against the
 original, diff — and it is now a regression test, so the corpus keeps
 paying it forward: any future export/lowering drift that breaks these
 three shapes fails `test_intake_defects` before it fails the intake.
-`tools/data/intake_corpus.json`/`intake_tensors.pt` (gitignored side files)
+`$XDG_CACHE_HOME/catopt/intake_corpus.json`/`intake_tensors.pt` (gitignored side files)
 were regenerated in place: the persisted terms now carry `dim: 0` /
 `dtype: "float64"` and all three records read `ingested`.

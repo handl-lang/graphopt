@@ -18,7 +18,7 @@ price it — and it should not.**  The order signal genuinely lives in
 a *different* substrate (activation-tensor contraction), which catopt
 already has in the e-graph rule space.
 
-Reproduce: `.venv/bin/python tools/probes/contraction/contraction_cost_probe.py`
+Reproduce: `.venv/bin/python lab/probes/contraction/contraction_cost_probe.py`
 (<~5 s, CPU-only, torch-free, seeded).
 
 ## 1. The claim reproduces — with the exact code path
@@ -216,7 +216,7 @@ the runtime discount.
 ## Reproduce
 
 ```sh
-.venv/bin/python tools/probes/contraction/contraction_cost_probe.py
+.venv/bin/python lab/probes/contraction/contraction_cost_probe.py
 # the diagram driver's reified term (needs torch, ~seconds):
 .venv/bin/python -c "
 from tools.contraction_precondition import _chain_model, diagram_chain_costs

@@ -7,7 +7,7 @@ members on stories15M (1.41× vs eager at 1e-2); the `34607e0`
 BiRefNet trial exported the real checkpoint but found no exact-lane
 win. The bounded lane had never been opened on it.
 
-Probe: `tools/probes/birefnet_bounded_probe.py` (2026-10-14,
+Probe: `lab/probes/birefnet_bounded_probe.py` (2026-10-14,
 `feat/bounded-real-model` worktree, RTX 2050 3.68 GB, torch
 2.14.0+cu130, `TORCHINDUCTOR_COMPILE_THREADS=2`).
 

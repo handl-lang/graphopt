@@ -12,7 +12,7 @@ in `stage7-learned-policy-results.md`; this is the *full RL* player.
 * `catopt_torch.rl` — `PolicyNet` (scores each rule from the state
   plus its **structural** vector), `RLPolicy` (the `Policy` port),
   `train_reinforce` (**REINFORCE** with a running-mean baseline).
-* `tools/train/train_rl_policy.py` — trains on the GPU, then races the
+* `lab/train/train_rl_policy.py` — trains on the GPU, then races the
   players on held-out programs.
 
 ## Measured result
@@ -55,6 +55,6 @@ associativity move from reward alone — no labels.
 ## Reproduce
 
 ```sh
-.venv/bin/python tools/train/train_rl_policy.py --device cuda \
+.venv/bin/python lab/train/train_rl_policy.py --device cuda \
     --episodes 2000 --train 60 --horizon 6 --hidden 64
 ```

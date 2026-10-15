@@ -157,7 +157,7 @@ ones and collapse).
 * `.venv/bin/lint-imports` — 4 contracts kept
 * `.venv/bin/bandit -c .bandit.yaml -r packages` — 0 findings
 * `.venv/bin/semgrep --config .semgrep.yml packages` — 0 findings
-* `tools/gates/radon_ratchet.py` — pass
+* `scripts/radon_ratchet.py` — pass
 * `law_pipeline.py --holdout softmax_fold` — **PASS**
   (`recognize:softmax` rank 1 of 50, SHIP; emitted artifact applied
   to a throwaway `tensor.py` → generated tests 9/9 pass under a

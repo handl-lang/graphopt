@@ -264,7 +264,7 @@ already shipped.
   committed tree with `catopt_discovery.zoo`, `intake.ingest`,
   `intake._run_delta`, `evidence._guarded_evals` and
   `impact._probe` — no engine internals were modified, and nothing
-  was written to `tools/data/intake_corpus.json` (the holdout stays
+  was written to `$XDG_CACHE_HOME/catopt/intake_corpus.json` (the holdout stays
   out of the census).
 
 ## Files

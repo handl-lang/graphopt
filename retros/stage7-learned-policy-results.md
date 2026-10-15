@@ -10,7 +10,7 @@ what the numbers honestly say.
   hash buckets, arities, check/derive flags).  Torch-free.
 * `catopt_torch.learned_policy` — `RuleValueNet` (an MLP) +
   `LearnedPolicy` (a `Policy`) + `train_rule_value`.
-* `tools/train/train_search_policy.py` — pretrain on synthetic matmul
+* `lab/train/train_search_policy.py` — pretrain on synthetic matmul
   chains, post-train on small real torch models (exported to IR), then
   predict a rule for a held-out program and score it against the best
   and the mean.
@@ -78,6 +78,6 @@ engine's cost model already rewards, chosen by a learned model.
 ## Reproduce
 
 ```sh
-.venv/bin/python tools/train/train_search_policy.py --device cuda \
+.venv/bin/python lab/train/train_search_policy.py --device cuda \
     --pretrain 60 --posttrain 8 --epochs 3000 --hidden 96
 ```

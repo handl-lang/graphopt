@@ -34,11 +34,11 @@ ships" and "mints, ships, and *pays at scale*":
 
 - `catopt_discovery.handler_synth` — the structured handler grammar +
   `verify_body` + `mint_handlers` + record round-trip (ADR 0007 L2).
-- `tools/atom_law_loop.py` — per-atom law synthesis (25 certified
+- `lab/mint/atom_law_loop.py` — per-atom law synthesis (25 certified
   rows, 4 rejected, 0 refused) (ADR 0007 L3).
-- `tools/atom_synth_loop.py` — the composed need → handler → laws →
+- `lab/mint/atom_synth_loop.py` — the composed need → handler → laws →
   admission → pay loop, with the stage-level funnel.
-- `tools/combinator.py` / `combinator_probe.py` — the bridge,
+- `lab/bridge/combinator.py` / `combinator_probe.py` — the bridge,
   `BASIS` as data, both gates + the corpus round-trip driver.
 - `catopt_discovery.enumerate` / `forms` (plan 0024) — instance and
   skeleton enumeration; the attr-spelling fix (`feat/enum-attr-gap`,

@@ -216,7 +216,7 @@ express (noted in the comment; they join the counted-not-fuzzed set).
 * `.venv/bin/lint-imports` — 4 contracts kept
 * `.venv/bin/bandit -c .bandit.yaml -r packages` — 0 findings
 * `.venv/bin/semgrep --config .semgrep.yml packages` — 0 findings
-* `.venv/bin/python tools/gates/radon_ratchet.py` — ok (2038 functions; the
+* `.venv/bin/python scripts/radon_ratchet.py` — ok (2038 functions; the
   dims/ns helpers were split to stay rank-C)
 * Scoped pytest — `test_rms_norm_laws` (25), `test_laws_structure`,
   `test_cond_laws`, `test_softmax_laws`, `test_glu_fold_law`,

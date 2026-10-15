@@ -236,5 +236,5 @@ Run from the main worktree, HEAD plus `python -m catopt_discovery.pipeline` (no
 * `.venv/bin/ruff format --check packages tools` — pass (126 files)
 * `.venv/bin/ty check` — pass (0 errors)
 * `.venv/bin/vulture` — exit 0
-* `.venv/bin/python tools/gates/radon_ratchet.py` — pass (1879 functions)
+* `.venv/bin/python scripts/radon_ratchet.py` — pass (1879 functions)
 * `uv run pytest -q` — pass (3364 passed, 31 skipped)

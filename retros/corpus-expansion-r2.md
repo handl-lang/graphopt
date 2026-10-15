@@ -209,7 +209,7 @@ Per-candidate notes:
 * `.venv/bin/ruff format --check packages tools` — pass
 * `.venv/bin/ty check` — pass (0 errors)
 * `.venv/bin/vulture` — pass
-* `tools/gates/radon_ratchet.py` — pass (2028 functions; the nine builders
+* `scripts/radon_ratchet.py` — pass (2028 functions; the nine builders
   stay under the rank-C threshold)
 * `pytest tests/test_corpus_models.py` — **3 passed** (forward +
   export + lowered fp64 verify over all 19 corpus builders)

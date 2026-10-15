@@ -242,7 +242,7 @@ workloads and stays green.
 - **Measured, not proven.**  The grown corpus fires these guards on
   the sites it contains; a guard region outside both enumeration
   windows still stands until a wider sweep reaches it.
-- **The side-file is generated.**  `tools/data/intake_corpus.json` +
+- **The side-file is generated.**  `$XDG_CACHE_HOME/catopt/intake_corpus.json` +
   `intake_tensors.pt` are gitignored artifacts; the growth persists by
   re-running `python -m catopt_discovery.intake`, not by committing a
   blob.

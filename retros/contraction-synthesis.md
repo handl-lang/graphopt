@@ -11,7 +11,7 @@ Three retros each carried half of a result:
   than the baseline's trials/s** (~1.8x at n = 40).  What it lacked
   was per-rollout quality (RL-v1 sits ~1.17 at n = 40 fed).
 * `policy-guided-restart.md` — the affine-scheduled guided-restart
-  protocol (`tools/probes/contraction/contraction_guided_restart.py`) is the honest way
+  protocol (`lab/probes/contraction/contraction_guided_restart.py`) is the honest way
   to spend that throughput: best-of-N sampled episodes under a
   wall-clock budget, with an equal-rollout arm that separates quality
   from rate.
@@ -35,23 +35,23 @@ Reproduce (RTX 2050, `uv sync --group einsum` first):
 ```sh
 # 1. retrain the oe-all arm and serialise it (new --save flag writes
 #    <stem>-<arm>.pt in the shipped artifact format):
-.venv/bin/python tools/probes/contraction/contraction_distill.py --device cuda \
+.venv/bin/python lab/probes/contraction/contraction_distill.py --device cuda \
     --arms oe-all --save /tmp/distill-synthesis
 # -> /tmp/distill-synthesis-oe-all.pt  (scratch artifact; the bundled
 #    .pt is untouched)
 
 # 2. the ladder against every baseline, distilled policy:
-.venv/bin/python tools/probes/contraction/contraction_guided_restart.py --device cuda \
+.venv/bin/python lab/probes/contraction/contraction_guided_restart.py --device cuda \
     --boards 4 --policy /tmp/distill-synthesis-oe-all.pt
 
 # 3. the attribution arm — bundled RL-v1 artifact, same seed/boards:
-.venv/bin/python tools/probes/contraction/contraction_guided_restart.py --device cuda \
+.venv/bin/python lab/probes/contraction/contraction_guided_restart.py --device cuda \
     --boards 4
 
 # 4. seed stability (seed offsets also redraw the board sets):
-.venv/bin/python tools/probes/contraction/contraction_guided_restart.py --device cuda \
+.venv/bin/python lab/probes/contraction/contraction_guided_restart.py --device cuda \
     --boards 4 --seed 4 --policy /tmp/distill-synthesis-oe-all.pt
-.venv/bin/python tools/probes/contraction/contraction_guided_restart.py --device cuda \
+.venv/bin/python lab/probes/contraction/contraction_guided_restart.py --device cuda \
     --boards 4 --seed 8 --scales 30,40 \
     --policy /tmp/distill-synthesis-oe-all.pt
 ```
@@ -237,7 +237,7 @@ the natural next lever).
 
 ## Gates
 
-* `tools/probes/contraction/contraction_distill.py`: +73 lines — `--save` (serialise
+* `lab/probes/contraction/contraction_distill.py`: +73 lines — `--save` (serialise
   each trained arm as `<stem>-<arm>.pt` via the shipped
   `save_contraction_policy`, with provenance meta) and its `_save_arms`
   / `_git_sha` helpers.  No `packages/` edits; the bundled artifact

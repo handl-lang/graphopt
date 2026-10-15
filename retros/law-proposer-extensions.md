@@ -174,7 +174,7 @@ None was guessed — a chain without a recognizer stays a census fact.
 * `.venv/bin/ruff format --check packages tools` — pass
 * `.venv/bin/ty check` — pass (0 errors)
 * `.venv/bin/vulture` — pass
-* `tools/gates/radon_ratchet.py` — pass (scans `packages`; tool code is
+* `scripts/radon_ratchet.py` — pass (scans `packages`; tool code is
   outside its target list)
 * `uv run pytest -q` — **3367 passed, 31 skipped** (~8 min)
 * `law_pipeline.py --vocab derived --holdout select_mul` — **PASS**

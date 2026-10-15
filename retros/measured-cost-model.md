@@ -3,7 +3,7 @@
 `law-wallclock-verification.md` found the pipeline's dispatch-count
 cost model praising SSM extractions that measure *slower* than raw:
 the picked term lowers to `BatchedScanModule`, which loses to the
-unrolled path at these dims.  `tools/probes/executor_cost_probe.py` now
+unrolled path at these dims.  `lab/probes/executor_cost_probe.py` now
 localises the blind spot precisely, measures the executor families on
 the real model shapes, and demonstrates that a *measured* executor
 price — applied at both decision points that need it — restores the
@@ -249,9 +249,9 @@ each on-device, and ships the measured winner.  On these cases:
 
 ## 7. Gates
 
-* `.venv/bin/ruff check tools/probes/executor_cost_probe.py` — pass
-* `.venv/bin/ruff format --check tools/probes/executor_cost_probe.py` — pass
-* `tools/probes/executor_cost_probe.py` runs to completion (~9 min);
+* `.venv/bin/ruff check lab/probes/executor_cost_probe.py` — pass
+* `.venv/bin/ruff format --check lab/probes/executor_cost_probe.py` — pass
+* `lab/probes/executor_cost_probe.py` runs to completion (~9 min);
   `--json` writes the machine-readable measured cost table.
 * No `packages/` changes — the demonstration rides the public
   `search(cost_fn=…)` seam and post-hoc re-runs of the shipped

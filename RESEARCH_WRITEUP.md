@@ -140,7 +140,7 @@ opsets 13–21; package coverage 100%.  Artifact:
 `project/retros/onnx-package.md`; ADR 0006.
 
 **The substrate prototype.**  A combinator presentation
-(`tools/combinator.py` — monoidal basis with explicit `Δ` sharing
+(`lab/bridge/combinator.py` — monoidal basis with explicit `Δ` sharing
 and a bounded `loop` trace) round-trips **321/321** corpus workloads
 structurally exact with zero ops refusing translation (mean blowup
 2.61×), and the RetNet shared-state fold spells as a `loop` term

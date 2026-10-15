@@ -12,7 +12,7 @@ its advantage too.
 The caveat, flagged then and measured now: `oe-rand-greedy`'s edge is
 best-of-N *restarts* — a search procedure.  Its returned path is the
 argmin of ~10²-10³ stochastic trials, and a single order's per-step
-labels cannot carry the restart structure.  `tools/probes/contraction/contraction_distill.py`
+labels cannot carry the restart structure.  `lab/probes/contraction/contraction_distill.py`
 runs the experiment with two distillation arms that bracket the
 question:
 
@@ -32,11 +32,11 @@ only, the shipped imitation recipe).
 Reproduce:
 
     uv sync --group einsum
-    .venv/bin/python tools/probes/contraction/contraction_distill.py --device cuda \
+    .venv/bin/python lab/probes/contraction/contraction_distill.py --device cuda \
         --iterations 1800 --per-n 24 --epochs 200 \
         --teacher-repeats 128 --teacher-budget 0.75 --trial-cap 8
     # control arm separately:
-    .venv/bin/python tools/probes/contraction/contraction_distill.py --device cuda \
+    .venv/bin/python lab/probes/contraction/contraction_distill.py --device cuda \
         --arms dp-small --iterations 1
 
 **Feature contract note.**  `catopt_torch.contraction_policy` was

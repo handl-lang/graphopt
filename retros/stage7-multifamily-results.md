@@ -12,10 +12,10 @@ training help, or dilute?" gets numbers instead of a guess.
 * `tools/families.py` (new) — the three training families and the
   per-family scoring.  Torch-free except the linear builder, which
   exports a small torch model through `TorchSource`.
-* `tools/train/train_search_policy.py` — the mixture is now the default
+* `lab/train/train_search_policy.py` — the mixture is now the default
   (`--train-families`), and it prints a **per-family** rank / hit-rate
   table.  `--train-families chain` reproduces the one-family baseline.
-* `tools/train/train_rl_policy.py` — same mixture default, plus a per-family
+* `lab/train/train_rl_policy.py` — same mixture default, plus a per-family
   race table (random / declaration / greedy / RL / no-op).
 * `catopt_torch/rl.py` — **the REINFORCE baseline fix** (this
   revision): the single running-mean baseline over returns is
@@ -258,15 +258,15 @@ its per-`(features, rule)` target is dense.
 
 ```sh
 # supervised — one-family baseline vs the mixture (default)
-.venv/bin/python tools/train/train_search_policy.py --device cuda \
+.venv/bin/python lab/train/train_search_policy.py --device cuda \
     --train-families chain --per-family 60 --epochs 3000 --hidden 96
-.venv/bin/python tools/train/train_search_policy.py --device cuda \
+.venv/bin/python lab/train/train_search_policy.py --device cuda \
     --train-families chain,dup,linear --per-family 60 --epochs 3000 --hidden 96
 
 # RL — one-family baseline vs the mixture (default)
-.venv/bin/python tools/train/train_rl_policy.py --device cuda \
+.venv/bin/python lab/train/train_rl_policy.py --device cuda \
     --train-families chain --train 60 --episodes 2000 --horizon 6 --hidden 64
-.venv/bin/python tools/train/train_rl_policy.py --device cuda \
+.venv/bin/python lab/train/train_rl_policy.py --device cuda \
     --train-families chain,dup,linear --train 20 --episodes 2000 --horizon 6 --hidden 64
 ```
 

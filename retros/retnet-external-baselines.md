@@ -1,6 +1,6 @@
 # Retro: RetNet carrier vs external baselines
 
-Date: session of 2026-10-14.  Probe: `tools/probes/retnet_baseline_probe.py`
+Date: session of 2026-10-14.  Probe: `lab/probes/retnet_baseline_probe.py`
 (committed `6eca509`).  Dev box: RTX 2050-class GPU, fp64 unless noted.
 
 ## Why this exists

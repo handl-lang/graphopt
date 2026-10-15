@@ -212,7 +212,7 @@ kernel by hand gets the kernel back.
 * `.venv/bin/lint-imports` — 4 contracts kept.
 * `.venv/bin/bandit -c .bandit.yaml -r packages` — 0 findings.
 * `.venv/bin/semgrep --config .semgrep.yml packages` — 0 findings.
-* `.venv/bin/python tools/gates/radon_ratchet.py` — ok (1948 functions).
+* `.venv/bin/python scripts/radon_ratchet.py` — ok (1948 functions).
 * **Focused tests** (no full-suite run — 25 min serial on this
   machine): `tests/test_silu_fold_laws.py` standalone (10 passed),
   `test_laws_structure` + `test_rules` + `test_rulesets` +

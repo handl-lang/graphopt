@@ -17,7 +17,7 @@ hand-built runtime: atoms + handlers + laws).
 The e-graph composes and folds exactly what its vocabulary can spell.
 Measured so far: the RetNet fold is a *rediscovery* — the carrier the
 machine extracted is numerically identical (9.8e-9 fp64) to the
-paper's published chunkwise duality (`tools/probes/retnet_baseline_probe.py`),
+paper's published chunkwise duality (`lab/probes/retnet_baseline_probe.py`),
 and hand-tuned baselines still beat the delivered artifact.  The
 discovery machinery can mint new *spellings* (law instances, guards,
 derives, paying forms — `square(X)=square(neg X)` was non-derivable),
@@ -185,7 +185,7 @@ held-out task to stay open.
   reductions/softmax (0 candidates), seq-`fold` needs a spelled fold,
   fresh constants unproposable, emit trees ≤1 non-acc op deep.
 - **Layer 3 — landed; the law-synthesis loop closes**
-  (`7614220`/`53de015`, merged `ec74f0c`).  `tools/atom_law_loop.py`
+  (`7614220`/`53de015`, merged `ec74f0c`).  `lab/mint/atom_law_loop.py`
   runs per atom: candidate schemas → measured envs (typed shape
   families × attr domains + synth sites + real corpus matches) →
   numeric oracle → `auto_cond`/dspec synth → `verify_law` against the
@@ -200,7 +200,7 @@ held-out task to stay open.
   the oracle refused to certify rather than ship a wrong law.
 - **The composed loop — one atom through all four layers, pay-null
   measured honestly** (`a562bc3`, merged `695cd89`).
-  `tools/atom_synth_loop.py` runs need census → signature → handler →
+  `lab/mint/atom_synth_loop.py` runs need census → signature → handler →
   laws → admission → pay probe.  Minted: `scan_fold` (the
   selective-scan recurrence, 1.78e-15) with 5 certified laws;
   `cumsum`/`cumprod`/`logcumsumexp` law sets (incl. the cross-atom
@@ -228,7 +228,7 @@ held-out task to stay open.
   them.  The discovery machinery over-reported; the admission
   machinery caught it.
 - **Corpus-level yield — the honest number.**  A 60-model sweep of
-  the exposed class (`tools/discovery_scale.py`, merged `1604ffd`)
+  the exposed class (`lab/screen/discovery_scale.py`, merged `1604ffd`)
   found **0 paying new laws beyond `mul_unsq_nat`**: ~1.5% of the
   exposed class carries fresh paying unpublished structure, and it
   concentrates where a model's op-tuple is itself novel.  Per this

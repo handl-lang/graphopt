@@ -143,7 +143,7 @@ Per-candidate notes on the enlarged corpus:
 * `.venv/bin/ruff format --check packages tools` — pass
 * `.venv/bin/ty check` — pass (0 errors)
 * `.venv/bin/vulture` — pass
-* `tools/gates/radon_ratchet.py` — pass (1903 functions)
+* `scripts/radon_ratchet.py` — pass (1903 functions)
 * `uv run pytest -q` — **3367 passed, 31 skipped** (~7.7 min)
 * `coverage` — pinned at 100 %; new builders fully exercised by
   `tests/test_corpus_models.py` (forward + export + lowered verify +

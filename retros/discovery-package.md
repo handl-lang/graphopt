@@ -67,8 +67,8 @@ without a shim.
 * **Artifacts stayed in `tools/`.**  `intake_corpus.json` and
   `intake_tensors.pt` did not move; `intake` resolves them through
   `catopt_discovery.TOOLS`.
-* **Staying → moved coupling.**  `tools/train/train_rl_policy.py` and
-  `tools/train/train_search_policy.py` (which stay) import `families` (which
+* **Staying → moved coupling.**  `lab/train/train_rl_policy.py` and
+  `lab/train/train_search_policy.py` (which stay) import `families` (which
   moved).  Their `import families` lines became
   `from catopt_discovery import families` — the only edits to staying
   files.  No moved module imports a stayed one.
@@ -96,12 +96,12 @@ without a shim.
 * `[tool.importlinter]`: `catopt_discovery` added to `root_packages`,
   to the core `forbidden` contract, and as the top `dependency layers`
   layer (it reads core/torch/orchestrator; nothing may depend back).
-* `tools/gates/complexity_baseline.json`: regenerated (+797 entries).
+* `scripts/complexity_baseline.json`: regenerated (+797 entries).
 * Coverage **not** extended: `catopt_discovery` is not in
   `[tool.coverage.run] source` — the 100% floor is a separate staged
   effort (the engine is mostly CLI/reporting code; its test coverage
   is the law-focused subset, not the whole surface).
-* `tools/gates/runtime_types.sh` and `tools/gates/mutmut.sh` keep their hardcoded
+* `scripts/runtime_types.sh` and `scripts/mutmut.sh` keep their hardcoded
   package lists — discovery is deliberately not instrumented there
   yet, same staging decision as coverage.
 

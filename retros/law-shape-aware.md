@@ -340,5 +340,5 @@ Run from the main worktree, HEAD plus `python -m catopt_discovery.census` and
 * `.venv/bin/ruff format --check packages tools` — pass
 * `.venv/bin/ty check` — pass (0 errors; `tools/` is out of scope)
 * `.venv/bin/vulture` — exit 0
-* `.venv/bin/python tools/gates/radon_ratchet.py` — pass
+* `.venv/bin/python scripts/radon_ratchet.py` — pass
 * `uv run pytest -q` — pass

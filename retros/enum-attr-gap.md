@@ -74,7 +74,7 @@ candidate under test is unbounded-blast-radius by definition.
 Factor-left's `_cost_delta` went 200 s+ → 4 s (fixed point at ~1.8k
 enodes).
 
-## Measured: `tools/exposed_discovery.py`, same 8-model slice
+## Measured: `lab/screen/exposed_discovery.py`, same 8-model slice
 
 Per-model enumerate arm (`--evaluate 200`, `impact._probe` on every
 new+true candidate):

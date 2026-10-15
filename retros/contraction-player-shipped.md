@@ -26,7 +26,7 @@ distilled policy is now the bundled default
   pass as a fallback.
 * `catopt-torch`'s `package-data = artifacts/*.pt` glob covers both;
   the `.gitignore` `!…/artifacts/*.pt` exception does too.  No loader
-  or format change — `--save` in `tools/probes/contraction/contraction_distill.py`
+  or format change — `--save` in `lab/probes/contraction/contraction_distill.py`
   already writes the shipped format.
 * `tests/test_contraction_policy_artifact.py` — 36 tests: the bundled
   fixture asserts the distilled meta; a new test loads the lineage
@@ -46,7 +46,7 @@ distilled policy is now the bundled default
 
 `/tmp` did not survive the session gap, so the measured weights were
 retrained with the retro's recipe
-(`tools/probes/contraction/contraction_distill.py --device cuda --arms oe-all --save`,
+(`lab/probes/contraction/contraction_distill.py --device cuda --arms oe-all --save`,
 defaults; ~7 min on the RTX 2050).  **The first retrain (seed 0) was a
 bad draw**: under the guided-restart protocol it read 1.10–1.26 vs
 `oe-rand-greedy` at n = 40 on the seed-0 boards — the nondeterminism
@@ -76,7 +76,7 @@ selection and verification used disjoint boards.
 ## 3. Shipped-code verification
 
 `load_contraction_policy()` (no path — the bundled default) under
-`tools/probes/contraction/contraction_guided_restart.py`, n = 40, 4 boards/cell, oe-cost
+`lab/probes/contraction/contraction_guided_restart.py`, n = 40, 4 boards/cell, oe-cost
 pairwise vs `oe-rand-greedy` at equal wall-clock
 (`contraction-player-shipped-guided-{seed0,seed4}.txt`):
 

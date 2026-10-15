@@ -63,8 +63,8 @@ boundary pipeline.  Every candidate lands in exactly one class:
 | `rejected` | `torch.export` / `export_to_ir` raised | the rejection record, verbatim |
 
 The census seam is a **side-file, not a code edit**: `--write` emits
-`tools/data/intake_corpus.json` (terms via `term_to_data`, per-workload
-metadata, the rejection backlog) and `tools/data/intake_tensors.pt`
+`$XDG_CACHE_HOME/catopt/intake_corpus.json` (terms via `term_to_data`, per-workload
+metadata, the rejection backlog) and `$XDG_CACHE_HOME/catopt/intake_tensors.pt`
 (feeds/params via `torch.save`, `weights_only` load).  Two union
 points read it:
 
@@ -222,12 +222,12 @@ training-step graph), then `conv3d`/`conv_transpose2d.input`.
 
 * `.venv/bin/ruff check python -m catopt_discovery.intake python -m catopt_discovery.census python -m catopt_discovery.pipeline` — pass
 * `.venv/bin/ruff format --check` (same) — pass
-* `.venv/bin/python tools/gates/radon_ratchet.py` — pass (2038 functions)
+* `.venv/bin/python scripts/radon_ratchet.py` — pass (2038 functions)
 * `.venv/bin/python python -m catopt_discovery.intake` — runs; tables above (~7 min incl. two mirrored pipeline runs)
 * `.venv/bin/python python -m catopt_discovery.pipeline --holdout select_mul` — PASS, rank 1 of 58 SHIP
 * Not run: full pytest suite (task bound); `ty`/`vulture`/`lint-imports`/`bandit`/`semgrep` cover `packages` only, which this change does not touch.
 
 Files: `python -m catopt_discovery.intake` (new), `python -m catopt_discovery.census`
 (+side-file union, `n_intake`), `python -m catopt_discovery.pipeline` (+intake in
-`real_terms`/probe/corpus-hash/JSON/print), `tools/data/intake_corpus.json`
-+ `tools/data/intake_tensors.pt` (generated artifacts, uncommitted).
+`real_terms`/probe/corpus-hash/JSON/print), `$XDG_CACHE_HOME/catopt/intake_corpus.json`
++ `$XDG_CACHE_HOME/catopt/intake_tensors.pt` (generated artifacts, uncommitted).

@@ -14,7 +14,7 @@ with measurements:
 literature (NP-hard, greedy known to lose), in a generic measurement,
 and inside catopt's *own* machinery (the e-graph rule space).
 
-Reproduce: `.venv/bin/python tools/probes/contraction/contraction_precondition.py`
+Reproduce: `.venv/bin/python lab/probes/contraction/contraction_precondition.py`
 (~24 s, CPU-only, seeded; `--instances N --seed S`).
 
 ## What was measured
@@ -108,7 +108,7 @@ prices a matmul at `2·M·N·K`).  So the saturated optimum *is* the true
 matrix-chain optimum — the e-graph space is the right place to score
 greedy.
 
-The one-step greedy oracle is exactly `tools/train/train_rl_policy.py`'s
+The one-step greedy oracle is exactly `lab/train/train_rl_policy.py`'s
 `_greedy_rule`: pick the rule with the largest `rule_samples` delta,
 apply it, repeat for `horizon` steps until `patience` stalls.
 
@@ -203,7 +203,7 @@ cheaper, never wrong.
 ## Reproduce
 
 ```sh
-.venv/bin/python tools/probes/contraction/contraction_precondition.py --instances 60
+.venv/bin/python lab/probes/contraction/contraction_precondition.py --instances 60
 # chain-only, to see the proving instance in isolation:
 .venv/bin/python -c "
 from catopt_core.laws import all_rules

@@ -20,15 +20,15 @@ The answer is the cleanest result on this thread yet — and it is a
   rollout diversity is.
 * **Nothing ships.**  The v2 bump was implemented, trained, measured
   and reverted; the bundled artifact stays `scale-free-v1`.  The only
-  durable changes are `tools/probes/contraction/contraction_feature_probe.py` and this
+  durable changes are `lab/probes/contraction/contraction_feature_probe.py` and this
   note.
 
 Reproduce:
 
     uv sync --group einsum
-    .venv/bin/python tools/probes/contraction/contraction_feature_probe.py --device cuda \
+    .venv/bin/python lab/probes/contraction/contraction_feature_probe.py --device cuda \
         --scales 40 --boards 12 --holdout 12 --epochs 400
-    .venv/bin/python tools/probes/contraction/contraction_feature_probe.py --device cuda \
+    .venv/bin/python lab/probes/contraction/contraction_feature_probe.py --device cuda \
         --e2e bundled --e2e-budgets 200 --e2e-scales 20,30,40
 
 ## 1. What the teacher actually scores — a code read, not a guess
@@ -59,7 +59,7 @@ algorithmic detail no per-pair feature can see.
 
 ## 2. Sufficiency — v1 features + the teacher's own metric
 
-Probe: `tools/probes/contraction/contraction_feature_probe.py`.  Same methodology as the
+Probe: `lab/probes/contraction/contraction_feature_probe.py`.  Same methodology as the
 train-scale §2 — replay oe-greedy's order into `(state, action)`
 samples at n = 40 (12 train / 12 held-out bond boards, 468 states
 each), fit the same MLP at masked cross-entropy, 400 epochs, hidden 64.
@@ -178,7 +178,7 @@ Sharper policies, less diverse rollouts, worse anytime player.
 ## Gates
 
 * `.venv/bin/ruff check` / `ruff format --check` on
-  `tools/probes/contraction/contraction_feature_probe.py` — pass.
+  `lab/probes/contraction/contraction_feature_probe.py` — pass.
 * `pytest tests/test_contraction_policy_artifact.py -q` — 33 green
   (run both under the v2 bump, with the retrained artifact, and after
   the revert).

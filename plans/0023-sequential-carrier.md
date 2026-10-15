@@ -284,7 +284,7 @@ closure generator (its diagonal blocks re-match the lhs) so it stays
 out of `OM_LAWS`, budgeted like `OM_CHUNKIFY`.
 
 **Measured (T=512, C=16, fold-depth target 31; probe
-`tools/probes/om_decayed_kway_probe.py`, seeded):**
+`lab/probes/om_decayed_kway_probe.py`, seeded):**
 
 | law | k | budget | n_enodes | dag_cost | fold depth | split |
 |-----|---|--------|----------|----------|------------|-------|
@@ -322,7 +322,7 @@ validation, opt-in, the real-export cost drop).
 
 ## Progress (2026-10-16) — the fold's depth is NOT the blocker; the fold's *cost* is
 
-Re-ran the probe and decoded the root class's members (`tools/probes/om_decayed_kway_probe.py`,
+Re-ran the probe and decoded the root class's members (`lab/probes/om_decayed_kway_probe.py`,
 plus a member/decode harness).  Measured (T=512 unless noted, seeded,
 `OM_LAWS + OM_CHUNKIFY + SPLIT_SCALAR_RULES + the 6 bridges + om_kway_laws(k)`):
 

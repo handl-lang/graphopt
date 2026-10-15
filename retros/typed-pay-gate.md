@@ -24,7 +24,7 @@ count visible.
 Reproduce:
 
     .venv/bin/python python -m catopt_discovery.pipeline --vocab derived \
-        --evidence-db tools/data/evidence.db --json /tmp/pipeline-typed.json
+        --evidence-db $XDG_CACHE_HOME/catopt/evidence.db --json /tmp/pipeline-typed.json
 
 ## 1. What was measured before
 
@@ -196,7 +196,7 @@ ill-typed member — the tuple-valued-`U` signatures the oracle named),
   predicates, the per-fire split (typed, ill-typed-by-broadcast,
   ill-typed-by-tuple-operand), paid suppression at the `_fire` and
   `_reach_row` levels, and the verdict strings.
-* `tools/data/evidence.db` — the new run's verdicts recorded under the
+* `$XDG_CACHE_HOME/catopt/evidence.db` — the new run's verdicts recorded under the
   new `code_rev` (untracked local artifact; rows are keyed by
   content hash, so the pre-gate rows remain for comparison).
 

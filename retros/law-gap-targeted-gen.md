@@ -200,7 +200,7 @@ no `packages/` change:
   pass
 * `.venv/bin/python tools/law_gap_targeted_gen.py` — runs to
   completion (~8 min incl. the baseline pipeline); tables above
-* `.venv/bin/python tools/gates/radon_ratchet.py` — pass (tools/ is
+* `.venv/bin/python scripts/radon_ratchet.py` — pass (tools/ is
   outside the ratchet's `packages` target)
 
 Per the task bound the full pytest/coverage gate was **not** run

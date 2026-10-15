@@ -91,7 +91,7 @@ return "SHIP" if ev.shippable else f"no:{ev.no_ship_reason}"
 
 ## The delta — measured
 
-Reclassifying every row in the real store (`tools/data/evidence.db`,
+Reclassifying every row in the real store (`$XDG_CACHE_HOME/catopt/evidence.db`,
 132 verdict rows / 66 candidates) under the new rule:
 
 | class | rows | verdict change |

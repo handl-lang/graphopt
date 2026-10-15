@@ -27,13 +27,13 @@ randomised-greedy one.
 Reproduce (RTX 2050, ~8 min/seed):
 
 ```sh
-.venv/bin/python tools/probes/contraction/contraction_policy.py --mode time \
+.venv/bin/python lab/probes/contraction/contraction_policy.py --mode time \
     --instances 6 --seed 0 --device cuda
 ```
 
 ## What was added
 
-`tools/probes/contraction/contraction_policy.py` gained a **`--mode time`** equal-wall-clock
+`lab/probes/contraction/contraction_policy.py` gained a **`--mode time`** equal-wall-clock
 ladder; **nothing under `packages/` changed** and the existing
 rollout-matched mode is untouched (`--mode rollout`, the default).
 
@@ -280,16 +280,16 @@ player given more work.
 
 ```sh
 # the equal-compute ladder (GPU), both seeds:
-.venv/bin/python tools/probes/contraction/contraction_policy.py --mode time \
+.venv/bin/python lab/probes/contraction/contraction_policy.py --mode time \
     --instances 6 --seed 0 --device cuda
-.venv/bin/python tools/probes/contraction/contraction_policy.py --mode time \
+.venv/bin/python lab/probes/contraction/contraction_policy.py --mode time \
     --instances 6 --seed 1 --device cuda
 # a faster smoke test:
-.venv/bin/python tools/probes/contraction/contraction_policy.py --mode time \
+.venv/bin/python lab/probes/contraction/contraction_policy.py --mode time \
     --trainer rl --iterations 300 --instances 1 --scales 20 \
     --budgets 50,200 --device cuda
 # both ladders (rollout-matched + compute-equal):
-.venv/bin/python tools/probes/contraction/contraction_policy.py --mode both --device cuda
+.venv/bin/python lab/probes/contraction/contraction_policy.py --mode both --device cuda
 ```
 
 Gates at this HEAD: `ruff check packages tools` clean, `ruff format

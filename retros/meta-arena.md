@@ -158,7 +158,7 @@ kernel a sink can lower.**
   always has members, so it is unreachable-defensive.
 * Pre-existing ratchet drift (not this change): `EGraph.apply_rule`
   reads 25 vs baseline 24 — commit 7ed07f0 added a branch without
-  regenerating `tools/gates/complexity_baseline.json`.
+  regenerating `scripts/complexity_baseline.json`.
 
 ## The ``handle`` move — scoped interpretation, landed
 

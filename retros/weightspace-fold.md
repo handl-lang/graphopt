@@ -1,6 +1,6 @@
 # Retro — the weight-space lane: the conv+BN fold, derived or refused
 
-**Date**: 2026-10-14.  **Tool**: `tools/probes/weightspace_fold_probe.py`
+**Date**: 2026-10-14.  **Tool**: `lab/probes/weightspace_fold_probe.py`
 (merged `f83928d`).  **Depends on**: plan 0025 (the missing law
 families), plan 0012 (bounded rewrites), ADR 0003.
 

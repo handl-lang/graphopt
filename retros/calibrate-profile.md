@@ -1,4 +1,4 @@
-# Calibrated profiles as a public path — `delivered_cost_for` + `tools/calibrate_profile.py`
+# Calibrated profiles as a public path — `delivered_cost_for` + `scripts/calibrate_profile.py`
 
 `executor-pricing-fix.md` wired the measured-feedback channel end to
 end but left the claim "the cost model is measured, never assumed"
@@ -50,7 +50,7 @@ model, i.e. exactly what `cost_fn=` is for.
 
 ## 2. The calibration entry point
 
-`tools/calibrate_profile.py` — the documented "run this on your
+`scripts/calibrate_profile.py` — the documented "run this on your
 machine" script:
 
 * Phase 1: `catopt_torch.calibrate.calibrate()` — the measured
@@ -77,7 +77,7 @@ machine" script:
 
 ## 3. End-to-end proof on the probe cases
 
-Full run on the dev box (RTX 2050): `tools/calibrate_profile.py`
+Full run on the dev box (RTX 2050): `scripts/calibrate_profile.py`
 → `calibrated_profile.json` (measured factors this run:
 `batched ×0.518`, `generic ×0.067` — the generic factor clamps to
 0.1 at consumption, cf. the retro's `[0.1, 10]` note).  Then a
@@ -144,7 +144,7 @@ difference is that the selection now comes from shipped API:
   keying/x-derivation, and the shipped search keeping the `add`
   pick where the unbucketed search re-inverts — no spies, no
   hand-rolled cost fn).
-* `tools/calibrate_profile.py --out /tmp/calibrated_profile.json` —
+* `scripts/calibrate_profile.py --out /tmp/calibrated_profile.json` —
   full 12-case run (~5 min) completed; `TargetProfile.load` round
   trip verified; `--quick --skip-executor-corrections` smoke on the
   constants-only path.

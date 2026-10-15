@@ -171,7 +171,7 @@ and the `_c_glu_fold` bench case.
 * `.venv/bin/lint-imports` — 4 contracts kept, 0 broken
 * `.venv/bin/bandit -c .bandit.yaml -r packages` — 0 findings
 * `.venv/bin/semgrep --config .semgrep.yml packages` — 0 findings
-* `.venv/bin/python tools/gates/radon_ratchet.py` — ok (2038 functions;
+* `.venv/bin/python scripts/radon_ratchet.py` — ok (2038 functions;
   `_check_glu_fold` is rank A at complexity 5)
 * scoped pytest (all touched areas — corpus, laws-structure,
   serialize, cond, contracts, rulesets, silu/matmul regression,

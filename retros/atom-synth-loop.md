@@ -1,12 +1,12 @@
-# Retro — the composed atom-synthesis loop (`tools/atom_synth_loop.py`)
+# Retro — the composed atom-synthesis loop (`lab/mint/atom_synth_loop.py`)
 
 **Date**: 2026-10-14.  **Branch**: `feat/atom-synth` (merged `695cd89`).
 **Depends on**: ADR 0007 (semantic-atom minting), `handler_synth`
-(layer 2), `tools/atom_law_loop.py` (layer 3).
+(layer 2), `lab/mint/atom_law_loop.py` (layer 3).
 
 ## What was built
 
-`tools/atom_synth_loop.py` (~1290 lines) — the five-stage composed
+`lab/mint/atom_synth_loop.py` (~1290 lines) — the five-stage composed
 loop the ADR-0007 layers only worked separately:
 
     measured need -> candidate signature -> verified handler

@@ -10,7 +10,7 @@ never pulled was the **training distribution**: the policy was trained
 on n = 8–12 and tested at n = 20–40.
 
 This retro records the experiment and its diagnosis tool,
-`tools/probes/contraction/contraction_scale_probe.py`.  The headline is **the first
+`lab/probes/contraction/contraction_scale_probe.py`.  The headline is **the first
 positive on this thread in a while**:
 
 * **Training at scale narrows the n = 40 gap from ~1.8× to ~1.04×** at
@@ -31,11 +31,11 @@ Three policies, same features, same net, same training budget
 Reproduce:
 
     uv sync --group einsum
-    .venv/bin/python tools/probes/contraction/contraction_scale_probe.py --device cuda \
+    .venv/bin/python lab/probes/contraction/contraction_scale_probe.py --device cuda \
         --scales 40 --boards 12 --holdout 12 \
         --epochs 400 --iterations 1800 --teacher-budget 1.0
 
-    .venv/bin/python tools/probes/contraction/contraction_einsum.py --device cuda \
+    .venv/bin/python lab/probes/contraction/contraction_einsum.py --device cuda \
         --train-scales 16,20,24 --compare-scales 8,12,16,20,24
 
 CUDA used; ~10 min for the three trainings plus the ladders.

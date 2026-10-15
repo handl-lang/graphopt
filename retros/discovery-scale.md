@@ -6,7 +6,7 @@ e-graph reachability — 140 score ≥95% FLOPs-weighted law coverage —
 and ran the three-arm discovery machinery on eight of them, minting
 one paying unpublished law (`census:mul_unsqueeze`, −12.27% on
 DeltaRuleBlock).  Nobody had run discovery across the rest of the
-exposed class.  This retro runs `tools/discovery_scale.py` — a
+exposed class.  This retro runs `lab/screen/discovery_scale.py` — a
 budgeted sweep driver over `exposed_discovery.py`'s arms — on the
 top 60 eligible models and asks the corpus-level question the project
 thesis lives on: **how much unpublished paying structure actually
@@ -25,7 +25,7 @@ the structure.  On organic architectures: nothing new pays.
 `mul_unsqueeze` remains the only unpublished machine-minted law that
 pays — 1 find in 68 swept exposed models (~1.5%).
 
-## The sweep — `tools/discovery_scale.py`
+## The sweep — `lab/screen/discovery_scale.py`
 
 Selection: screen rows with `lhs_cover ≥ 0.95`, minus the eight
 already-run models (`DONE` — LoRAAdapter, GatedAttentionUnit,
@@ -160,7 +160,7 @@ recorded with evidence.
   fires on 12 real models — the largest measured paying structure
   still stuck behind `unsq:d_in_pad`).
 
-Tooling: `tools/discovery_scale.py` (the budgeted sweep + corpus
-novelty driver), `tools/exposed_discovery.py` (+`source:name`
+Tooling: `lab/screen/discovery_scale.py` (the budgeted sweep + corpus
+novelty driver), `lab/screen/exposed_discovery.py` (+`source:name`
 qualified selection, `lhs_data`/`rhs_data` serialization in evidence
 rows).  Evidence: `project/retros/discovery-scale.json` (untracked).
