@@ -198,32 +198,41 @@ def test_laws_exports_every_rewrite():
     found = _iter_module_rules(laws)
     assert all(isinstance(r, Rewrite) for r in found)
     # 80 tensor (62 + the promoted discovery set: softsign_fold, the
-    # transpose_noop/chunk_single view identities, the four broadcast-
-    # pad/reshape strips, the two mask-free sdpa folds, the
-    # channel->row scale composite, and the div_add_factor
-    # shared-denominator naturality — project/retros/promoted-laws.md)
+    # transpose_noop/chunk_single view identities, the five broadcast-
+    # pad/reshape/unsqueeze strips — mul_unsq_pad_l/r, sub_unsq_pad_l,
+    # mul_reshape_inert_l, and the machine-admitted mul_unsq_nat
+    # (commit 9dce25e, project/retros/mul-unsq-nat.md) — the two
+    # mask-free sdpa folds, the channel->row scale composite, and the
+    # div_add_factor shared-denominator naturality —
+    # project/retros/promoted-laws.md)
     # + 8 split_scalar pointwise-split rules + the opt-in
     # pointwise factor/distribute pair
     # + 6 dense-scan + 16 diagonal-scan + 77 layout + 37 attention
     # rewrites.
-    assert len(found) == 220
+    assert len(found) == 221
 
 
 def test_all_rules_count_unchanged():
     # The default set excludes LAYOUT_RULES (opt-in — closure-cost
-    # regression documented in laws.tensor); WITH_LAYOUT keeps 156.
-    assert len(laws.all_rules()) == 82
+    # regression documented in laws.tensor); WITH_LAYOUT = default + 77.
+    # 83 = the machine-admitted ``mul_unsq_nat`` (commit 9dce25e,
+    # MACHINE_SHIPPED 10->11, project/retros/mul-unsq-nat.md) on top of
+    # the previous 82.
+    assert len(laws.all_rules()) == 83
     assert laws.all_rules() == laws.ALL_RULES
     assert len(laws.ALL_RULES) == (
         len(laws.SIMPLIFICATION_RULES) + len(laws.CATEGORICAL_RULES)
     )
-    assert len(laws.ALL_RULES_WITH_LAYOUT) == 159
+    assert len(laws.ALL_RULES_WITH_LAYOUT) == 160
     # each call returns a fresh list, not the shared ALL_RULES object
     assert laws.all_rules() is not laws.ALL_RULES
 
 
 def test_collections_split_by_domain():
-    assert len(laws.SIMPLIFICATION_RULES) == 33
+    # 34 = 33 + the machine-admitted ``mul_unsq_nat`` (commit 9dce25e,
+    # project/retros/mul-unsq-nat.md) — it ships in the default
+    # SIMPLIFICATION_RULES.
+    assert len(laws.SIMPLIFICATION_RULES) == 34
     assert len(laws.CATEGORICAL_RULES) == 49
     assert len(laws.SCAN_LAWS) == 6
     assert len(laws.SCAN_DIAG_LAWS) == 16
@@ -299,16 +308,20 @@ def test_axiom_lemma_marker_covers_all_rules():
     Measured by ``python -m catopt_discovery.coherence --emit-basis`` (see
     ``project/retros/axiom-lemma-split.md`` and, for the promoted
     conditionals, ``project/retros/promoted-laws.md``): the declared
-    kernel is the 32 primitives plus one designated member per
-    derivability cycle = 46 axioms, plus the nine promoted discovery
-    laws that hold no derivation — plus the ``div_add_factor``
-    shared-denominator naturality (56 total); the other 24 rules
+    kernel is the primitives plus one designated member per
+    derivability cycle — 49 non-promoted axioms (including the
+    hand-authored ``div_add_factor`` shared-denominator naturality) —
+    plus the ten promoted discovery laws that hold no derivation (the
+    nine earlier promotions plus the machine-admitted ``mul_unsq_nat``
+    — commit 9dce25e, ``MACHINE_SHIPPED`` 10->11,
+    ``project/retros/mul-unsq-nat.md``) = 59 axioms; the other 24 rules
     carry a ``derivation`` naming their premise rules — 22 lemmas
     (inverse twins + the emergent silu_mul_form + the promoted
     ``linear_channel_to_row_scale`` + the eight ``split_scalar_*``
     naturality lemmas) and 2 redundant alpha-duplicates.
-    The measured catalogue reports 9 ``no-instance`` verdicts (the
-    promoted conditionals it cannot build a site for).
+    The measured catalogue reports 19 ``no-instance`` verdicts (the
+    promoted conditionals and the pointwise-split family it cannot
+    build a site for).
     """
     by_name = {r.name: r for r in laws.ALL_RULES}
     kinds = {"axiom": [], "lemma": [], "redundant": []}
@@ -335,7 +348,7 @@ def test_axiom_lemma_marker_covers_all_rules():
                     r.name,
                     premise,
                 )
-    assert len(kinds["axiom"]) == 58
+    assert len(kinds["axiom"]) == 59
     assert len(kinds["lemma"]) == 22
     assert len(kinds["redundant"]) == 2
     # the redundant kind rides on the tags.REDUNDANT constant

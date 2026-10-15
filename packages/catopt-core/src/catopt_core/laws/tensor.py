@@ -2230,17 +2230,18 @@ CATEGORICAL_RULES: list[Rewrite] = [
 ]
 #: All rules combined — the default saturation set.
 #:
-#: The axiom/lemma split is declared on the rules: 55 of these 71
-#: carry no derivation — ``kind == "axiom"`` — and 16 carry a recorded
-#: ``derivation`` from the kernel (14 ``"lemma"`` — inverse twins
-#: whose direction buys reach, the emergent ``silu_mul_form``, and the
-#: promoted guarded composite ``linear_channel_to_row_scale`` — plus
-#: 2 ``"redundant"`` alpha-duplicate spellings tagged
-#: ``tags.REDUNDANT``).  The measured catalogue (``catopt_discovery
-#: .coherence --emit-basis``; ``project/retros/axiom-lemma-split.md``)
-#: reads 47 axioms / 13 lemmas / 2 redundant plus 9 ``no-instance``
-#: verdicts — the promoted conditional laws its instancer cannot
-#: build a site for (``project/retros/promoted-laws.md``).
+#: The axiom/lemma split is declared on the rules: 59 of these 83
+#: carry no derivation — ``kind == "axiom"`` — and 24 carry a recorded
+#: ``derivation`` from the kernel (22 ``"lemma"`` — inverse twins
+#: whose direction buys reach, the emergent ``silu_mul_form``, the
+#: promoted guarded composite ``linear_channel_to_row_scale``, and the
+#: eight ``split_scalar_*`` naturality lemmas — plus 2 ``"redundant"``
+#: alpha-duplicate spellings tagged ``tags.REDUNDANT``).  The measured
+#: catalogue (``catopt_discovery.coherence --emit-basis``;
+#: ``project/retros/axiom-lemma-split.md``) reads 49 axioms / 13 lemmas
+#: / 2 redundant plus 19 ``no-instance`` verdicts — the promoted
+#: conditional and pointwise-split laws its instancer cannot build a
+#: site for (``project/retros/promoted-laws.md``).
 #:
 #: LAYOUT_RULES are deliberately NOT in the default: measured on the
 #: laws_effect bench they deliver runtime parity (the NT-GEMM form is

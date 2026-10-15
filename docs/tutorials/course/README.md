@@ -194,7 +194,7 @@ ships (`catopt_core.laws.provenance.MACHINE_SHIPPED`; the newest is
 corpus op-tuple, with four further laws machine-_assisted_ but
 hand-integrated: `select_mul`, `softmax_fold`, `glu_fold`,
 `rms_norm_fold`), the false-but-cost-lowering
-candidate the oracle rejected, the **82-rule** basis catalogue (58 axioms
+candidate the oracle rejected, the **83-rule** basis catalogue (59 axioms
 / 22 lemmas / 2 redundant) whose one divergence `silu_fold` closed, the
 exposure screen's bimodality (**81 of 321** workloads at exactly 0 %,
 **140 at ≥95 %**) and its ~1.5 % corpus discovery yield, the fused
