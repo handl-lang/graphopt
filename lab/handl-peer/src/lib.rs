@@ -51,6 +51,7 @@ pub fn rewrite(dir: &str, ast_json: &str, at: usize, rule_id: &str) -> Result<St
     let root = out.root;
     Ok(serde_json::json!({
         "rewrites": out.trace.rewrites.len(),
+        "root_index": root.index(),
         "root": render(root),
         "arena": (0..out.ast.len()).map(|i| render(AstRef::new(i))).collect::<Vec<_>>(),
     })

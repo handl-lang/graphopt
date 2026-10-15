@@ -95,3 +95,34 @@ def test_the_peer_agrees_with_catopts_own_engine() -> None:
     assert graph.find(graph.add_term(expected)) == graph.find(root), (
         "catopt's engine agrees: add(add(a,b),c) is the rewritten member"
     )
+
+
+def test_the_differential_reports_no_disagreement() -> None:
+    """catopt's engine and handl's agree wherever both fire.
+
+    The probe (`lab/audit/handl_differential.py`) synthesizes one term per
+    law, rewrites it with both engines and compares the results.  This
+    pins the *measured* state: 19 laws comparable, 19 agreeing, 0
+    disagreements.  The laws it cannot compare are reported by the probe
+    with their reason (leaf rhs, root-eliminating, declined, guard
+    raised) -- none of which is a disagreement.
+    """
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "handl_differential", _REPO / "lab" / "audit" / "handl_differential.py"
+    )
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    import io
+    from contextlib import redirect_stdout
+
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        code = mod.main([])
+    report = buf.getvalue()
+    assert "DISAGREE           : 0" in report, report
+    assert "agree              : 19" in report, report
+    assert code == 0, report
