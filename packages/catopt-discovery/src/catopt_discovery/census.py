@@ -82,7 +82,7 @@ def corpus() -> list[CorpusTerm]:
     Reuses ``law_impact``'s builders so the census and the impact
     probe read byte-identical graphs.  A builder that raised is
     already reported by ``law_impact``; here it is simply absent.
-    When ``tools/data/intake_corpus.json`` exists (written by
+    When the cache census (``catopt_discovery.intake_dir()``) exists (written by
     ``catopt_discovery.intake``), the ingested workloads union in under
     the ``"intake"`` source — the side-file census.
     """

@@ -2,7 +2,7 @@
 
 The export boundary (``torch.export`` → ``export_to_ir``), the
 ingested / census-only / rejected classification, the
-``tools/data/intake_corpus.json`` + ``intake_tensors.pt`` side-file
+cache side-files (``intake_corpus.json`` + ``intake_tensors.pt``)
 round-trip (``catopt_discovery.census.corpus`` and
 ``pipeline.run_pipeline`` union it when present), and the census
 delta against the baseline corpus.  The ``ingest`` orchestrator
@@ -30,7 +30,7 @@ from catopt_core.ir import (
 from catopt_torch.adapters import TorchSink
 from catopt_torch.torch_bridge import export_to_ir
 
-from catopt_discovery import TOOLS
+from catopt_discovery import intake_dir
 from catopt_discovery.impact import (
     TermCase,
     _ir_of,
@@ -39,10 +39,12 @@ from catopt_discovery.impact import (
 
 from .registry import Workload
 
-#: The default side-file paths — the appended census + its tensors,
-#: which stayed behind in ``tools/`` when the engine moved here.
-_DEFAULT_JSON = TOOLS / "intake_corpus.json"
-_DEFAULT_TENSORS = TOOLS / "intake_tensors.pt"
+#: The default side-file paths — the appended census + its tensors.
+#: They live in the local artifact cache (see
+#: :func:`catopt_discovery.intake_dir`), not in the tree: large,
+#: regenerable, and shared across worktrees.
+_DEFAULT_JSON = intake_dir() / "intake_corpus.json"
+_DEFAULT_TENSORS = intake_dir() / "intake_tensors.pt"
 
 #: Verify tolerance for the lower-the-term-vs-original-model check.
 _RTOL = 1e-4

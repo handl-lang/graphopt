@@ -1739,7 +1739,8 @@ def main(argv: list[str] | None = None) -> int:
         metavar="PATH",
         help="sqlite evidence store (catopt_discovery.evidence): upsert "
         "candidates + verdicts after the run, keyed by corpus/rule/"
-        "code content hashes.  Keep PATH outside tools/ — untracked "
+        "code content hashes.  Keep PATH outside lab/ and scripts/ — "
+        "untracked "
         "code-path files are hashed into the cache key",
     )
     parser.add_argument(

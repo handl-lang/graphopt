@@ -24,7 +24,8 @@ unshipped).  :func:`law_provenance` is *total* over rule names —
 every shipped law resolves, and a name unknown to both sets classifies
 as human-authored (the default authorship of the library).
 
-The committed ``tools/data/evidence.db`` holds no ``lemmas`` rows — the
+The local evidence store (``catopt_discovery.cache_dir()``) holds no
+``lemmas`` rows — the
 admission runs recorded their objects in ephemeral stores — so
 :data:`MACHINE_STORED` is the honest ledger of *names* the committed
 tests pin as ``usable`` (``tests/test_discovery_synthesis.py`` /

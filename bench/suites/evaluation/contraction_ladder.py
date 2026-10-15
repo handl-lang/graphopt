@@ -2,7 +2,7 @@
 
 Plan 0016 stage 7 / ADR 0003 (the EVALUATION dimension).  The
 contraction-ordering precondition
-(`tools/probes/contraction/contraction_precondition.py`,
+(`lab/probes/contraction/contraction_precondition.py`,
 `project/retros/contraction-precondition.md`) showed that the one-step
 greedy cost-model oracle is *provably* suboptimal on matrix chains and
 general tensor networks.  This suite turns that precondition into a

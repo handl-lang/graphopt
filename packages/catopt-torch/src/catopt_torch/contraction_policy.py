@@ -3,7 +3,7 @@
 The contraction thread's headline is
 ``project/retros/contraction-synthesis.md``: a policy **distilled on
 every trial trajectory** of ``opt_einsum``'s ``RandomGreedy`` teacher
-(the ``oe-all`` arm of ``tools/probes/contraction/contraction_distill.py``), driven under
+(the ``oe-all`` arm of ``lab/probes/contraction/contraction_distill.py``), driven under
 the lockstep/affine guided-restart protocol, **beats the teacher at
 equal wall-clock at n = 40** — 0.89-1.01 oe-cost ratios across three
 seeds at fed budgets, 0.89-0.98 at the best temperature — the first
@@ -15,8 +15,8 @@ that player: the contraction game it runs on, the net, a usable
 oe-all distilled player) and ``contraction_policy_curriculum.pt`` (the
 earlier REINFORCE curriculum weights, kept as lineage and loadable via
 an explicit path).  The weights are the only artifacts; training stays
-a tools concern (``tools/probes/contraction/contraction_distill.py`` for the default,
-``tools/train/train_contraction_artifact.py`` for the lineage weights).
+a tools concern (``lab/probes/contraction/contraction_distill.py`` for the default,
+``lab/train/train_contraction_artifact.py`` for the lineage weights).
 
 **Honest capability statement.**  The default weights were trained on
 the :func:`random_bond_network` einsum-valid instance family (every

@@ -194,7 +194,7 @@ plain data, interpreted, never `eval`'d) proposes handler bodies and
 verifies each fp64 against the spelled spec; the machine minted a
 verified handler for the `om_decayed` element itself (8.9e-16) —
 a pattern that previously required a hand-written executor.
-**Layer 3 — law-theoretic atoms** (`tools/atom_law_loop.py`): for an
+**Layer 3 — law-theoretic atoms** (`lab/mint/atom_law_loop.py`): for an
 atom, enumerate measured binding environments, run `auto_cond` /
 `dspec_synth` to synthesize the laws it satisfies, certify via
 `verify_law` — 25 certified rows on the shipped carrier atoms,
@@ -202,7 +202,7 @@ deliberate false twins rejected.  **Layer 4 — induced atoms**
 (bounded-error lane, fenced: an approximate atom may never appear on
 an exact law's RHS).
 
-The composed loop (`tools/atom_synth_loop.py`) runs need → handler →
+The composed loop (`lab/mint/atom_synth_loop.py`) runs need → handler →
 laws → admission → pay probe end to end; on the corpus it minted
 `scan_fold` (the selective-scan recurrence, 1.78e-15) with a
 certified law set, and measured the honest null that the minted
@@ -223,7 +223,7 @@ sweep found) was **correctly rejected at admission** — its real
 sites are semantically unequal, and the guard declines all of them.
 
 **Exposure — where discovery can pay at all.**  The screen
-(`tools/exposure_screen.py`) scores every corpus workload by the
+(`lab/screen/exposure_screen.py`) scores every corpus workload by the
 FLOPs-weighted share of ops any law's LHS can name: the distribution
 is **bimodal** — 81/321 workloads expose literally nothing (the
 fused-op class: `nn.Conv*`, `nn.*Pool*`, `sdpa` spellings) and 140
@@ -234,7 +234,7 @@ exposed class is ~1.5%, and it concentrates where a model's op-tuple
 is itself novel.
 
 **The substrate beneath the syntax (ADR 0008).**  A prototype
-combinator presentation (`tools/combinator.py`) re-expresses the IR
+combinator presentation (`lab/bridge/combinator.py`) re-expresses the IR
 as morphisms of a monoidal category with explicit `dup` (Δ, sharing
 as a morphism) and `loop` (bounded trace): 321/321 corpus workloads
 round-trip structurally exact, zero ops refuse translation, and the
@@ -254,11 +254,11 @@ the bridge.
 | Saturate | `EGraph` |
 | Extract | `extract_best`, `backend_cost` (measured pricing: `delivered_cost_for(profile, x=…)` / `executor_cost_for`) |
 | Certify | `verify_certificate` |
-| Evaluate | `catopt_core.features` (`ProgramFeatures`, `StaticProfiler`) · `SearchResult.frontier` · `PredictedCriterion`; `Meter` / `TargetProfile` for measurements (`tools/calibrate_profile.py`) |
+| Evaluate | `catopt_core.features` (`ProgramFeatures`, `StaticProfiler`) · `SearchResult.frontier` · `PredictedCriterion`; `Meter` / `TargetProfile` for measurements (`scripts/calibrate_profile.py`) |
 | Discover (meta) | `catopt_discovery.pipeline` (census → propose → verify → measure → rank → emit) · `catopt_discovery.vocab` (property-derived op alphabet) · `catopt_discovery.gap_gen` (adversarial witnesses) · `catopt_discovery.emit` (admission patch) |
-| Mint (meta) | `catopt_discovery.antiunify` (layer 1 — definitional atoms) · `catopt_discovery.handler_synth` (layer 2 — handler bodies) · `tools/atom_law_loop.py` (layer 3 — law synthesis per atom) · `tools/atom_synth_loop.py` (the composed loop) |
-| Screen / sweep | `tools/exposure_screen.py` (law-LHS exposure census) · `tools/discovery_scale.py` (budgeted corpus sweep + novelty pass) · `tools/exposed_discovery.py` (per-model discovery driver) |
-| Substrate (prototype) | `tools/combinator.py` (`BASIS`, `dag_to_comb` / `comb_to_dag`) · `tools/probes/combinator_probe.py` (round-trip + `loop`-spell gates) |
+| Mint (meta) | `catopt_discovery.antiunify` (layer 1 — definitional atoms) · `catopt_discovery.handler_synth` (layer 2 — handler bodies) · `lab/mint/atom_law_loop.py` (layer 3 — law synthesis per atom) · `lab/mint/atom_synth_loop.py` (the composed loop) |
+| Screen / sweep | `lab/screen/exposure_screen.py` (law-LHS exposure census) · `lab/screen/discovery_scale.py` (budgeted corpus sweep + novelty pass) · `lab/screen/exposed_discovery.py` (per-model discovery driver) |
+| Substrate (prototype) | `lab/bridge/combinator.py` (`BASIS`, `dag_to_comb` / `comb_to_dag`) · `lab/probes/combinator_probe.py` (round-trip + `loop`-spell gates) |
 | Backends | `catopt_torch` (`TorchSource`/`TorchSink`) · `catopt_onnx` (`OnnxSource`/`OnnxSink`, ADR 0006) |
 | Coherence (meta) | `catopt_discovery.coherence` (`--emit-basis`) · `catopt_discovery.coherence2` (stratification / reach / mediators) · `catopt_discovery.evidence` (sqlite verdict store) |
 

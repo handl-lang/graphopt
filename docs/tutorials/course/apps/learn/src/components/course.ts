@@ -720,7 +720,7 @@ export class Course {
             "the certificate",
           ],
           ok: "measured constants plus per-family corrections",
-          why: "`tools/calibrate_profile.py` micro-benchmarks the machine and writes the constants and the executor-family corrections, so extraction ranks by this machine's numbers, not the built-in ones.",
+          why: "`scripts/calibrate_profile.py` micro-benchmarks the machine and writes the constants and the executor-family corrections, so extraction ranks by this machine's numbers, not the built-in ones.",
           concept: "target-profile",
         },
       ),
@@ -1318,7 +1318,7 @@ export class Course {
           note: "the verification commands every change must pass",
         },
         {
-          path: "tools/gates/radon_ratchet.py",
+          path: "scripts/radon_ratchet.py",
           note: "the complexity ceiling, pinned per function",
         },
         {

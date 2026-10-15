@@ -71,11 +71,4 @@ mutants/
 
 # mutmut flat-layout sandbox
 .mutmut-sandbox/
-tools/intake_corpus.json
-tools/intake_tensors.pt
-tools/evidence.db
 packages/catopt-native/target/
-
-# tools/data/ — local, regenerable measurement artifacts
-# (corpus snapshots, tensor caches, the evidence store)
-tools/data/

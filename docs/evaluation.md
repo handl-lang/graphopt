@@ -27,22 +27,22 @@ Features are **not** a "profile": a profile
 (`catopt_core.profile.TargetProfile`) is a *measured target*; features
 describe a *program*.
 
-## Calibration — `catopt_torch.calibrate`, `tools/calibrate_profile.py`
+## Calibration — `catopt_torch.calibrate`, `scripts/calibrate_profile.py`
 
 The roofline/executor cost models price programs with *measured*
 constants: `calibrate()` micro-benchmarks the machine it runs on
 (peak FLOPS, bandwidth, launch/dispatch/leaf-eval/compiled-graph
 overheads, and a per-op-class kernel table) and returns a
-`TargetProfile`.  `tools/calibrate_profile.py` is the "run this on
+`TargetProfile`.  `scripts/calibrate_profile.py` is the "run this on
 your hardware" entry point — it writes a loadable profile JSON that
 additionally carries the *executor-family corrections*
-`tools/probes/executor_cost_probe.py` measures (batched vs generic routed
+`lab/probes/executor_cost_probe.py` measures (batched vs generic routed
 deliveries, per shape bucket), so the delivered-price comparison in
 `_carrier_upgrade` — and extraction under `delivered_cost_for` —
 rank by this machine's numbers, not the built-in constants:
 
 ```sh
-.venv/bin/python tools/calibrate_profile.py --out calibrated_profile.json
+.venv/bin/python scripts/calibrate_profile.py --out calibrated_profile.json
 ```
 
 ```python
@@ -135,7 +135,7 @@ pick = policy.choose(GameState(None, 0, features=f), actions)
 ```
 
 Pretrain, post-train, and predict in one command — see
-`tools/train/train_search_policy.py` and the measured result in
+`lab/train/train_search_policy.py` and the measured result in
 [`project/retros/stage7-learned-policy-results.md`](../project/retros/stage7-learned-policy-results.md).
 
 ## Performance prediction — `catopt_core.perf_model`
@@ -198,7 +198,7 @@ feasibility bound (`supported_ops`) is still what decides reach.
 ## Screening — evaluation *before* search
 
 Evaluation also decides where search is worth running at all.
-`tools/exposure_screen.py` scores each corpus workload by the
+`lab/screen/exposure_screen.py` scores each corpus workload by the
 FLOPs-weighted share of ops that any law's LHS can name — the
 distribution is **bimodal** (81/321 workloads expose literally
 nothing; 140 score ≥95%), and exposure predicts *reachability*, not

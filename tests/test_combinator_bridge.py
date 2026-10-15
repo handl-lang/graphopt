@@ -1,19 +1,15 @@
 """Unit tests for the ADR-0008 combinator-bridge prototype.
 
-The bridge lives in ``tools/combinator.py`` (a falsification
+The bridge lives in ``lab/bridge/combinator.py`` (a falsification
 prototype, not shipped source): sharing-compilation round-trips
 and the spelled ``loop`` RetNet fold are the properties under test.
 """
-
-import sys
-from pathlib import Path
 
 import pytest
 import torch
 from catopt_core.ir import Const, Op, Param, TensorType, Var
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "tools"))
-import combinator as cb
+from lab.bridge import combinator as cb
 
 
 def _v(name, *shape):

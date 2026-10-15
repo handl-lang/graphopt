@@ -86,7 +86,7 @@ python -m catopt_discovery.evidence --report <db>          # what was measured, 
 
 **When it will not help you:** if your model's math is already inside
 fused kernels (`nn.Conv*`, pooling, `sdpa`), the e-graph cannot see
-inside it and you should expect parity, not a win.  `tools/exposure_screen.py`
+inside it and you should expect parity, not a win.  `lab/screen/exposure_screen.py`
 measures this *before* you spend search time — the distribution is
 bimodal (81 of 321 exported workloads expose literally nothing).
 
@@ -190,7 +190,7 @@ module reviews and badges track comprehension.
 - **Inference only** — weight folding destroys per-layer gradients.
 - **Compile-time search** — seconds per block; large models need the
   `Compositional` strategy.
-- **Dev-box magnitudes** — `tools/calibrate_profile.py` re-targets the
+- **Dev-box magnitudes** — `scripts/calibrate_profile.py` re-targets the
   cost model to your hardware.
 - **Not a general speedup.**  The honest losses are kept in
   [`docs/results.md`](docs/results.md) alongside the wins.

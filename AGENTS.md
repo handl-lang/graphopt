@@ -26,21 +26,34 @@ every name lives at its real package path — `catopt_core.egraph`,
 `catopt_cuda.CudaGraphRunner`, … Tests in
 `tests/`. The dev virtualenv is `.venv/` (uv-managed).
 
-**Discovery / minting tooling lives in `tools/`** (run with
-`.venv/bin/python`): `exposure_screen.py` (law-LHS exposure census
-over the corpus), `exposed_discovery.py` (per-model discovery driver),
-`discovery_scale.py` (budgeted corpus sweep + novelty pass),
-`atom_law_loop.py` (ADR-0007 layer 3 — synthesize+certify an atom's
-law set from measured bindings), `atom_synth_loop.py` (the composed
-need → handler → laws → admission loop), `anti_unify_probe.py`
-(layer 1), `combinator.py` + `combinator_probe.py` (ADR-0008 bridge
-prototype: `dag_to_comb`/`comb_to_dag` + round-trip/`loop` gates),
-`retnet_baseline_probe.py` and `birefnet_bounded_probe.py` (external
-baseline / bounded-lane probes — the latter needs scratch deps
-`timm einops kornia transformers torchvision`, the former
-`torchscale fla-core einops fairscale`, both installed `--no-deps`
-outside the lockfile).  The minting machinery itself is in
+**The experimental surface is `lab/`** (there is no `tools/`): the
+research drivers live in `lab/mint/` (`atom_law_loop.py` — ADR-0007
+layer 3; `atom_synth_loop.py` — the composed need → handler → laws →
+admission loop), `lab/bridge/` (`combinator.py` + `combinator_probe.py`
+— the ADR-0008 bridge), `lab/audit/` (`dspec_audit.py`,
+`grammar_probe.py`), `lab/screen/` (`exposure_screen.py`,
+`exposed_discovery.py`, `discovery_scale.py`), `lab/probes/` (the
+measurement probes, incl. `contraction/`) and `lab/train/` (the six
+`train_*.py`).  Run them with `.venv/bin/python lab/<sub>/<mod>.py`.
+Some probes need scratch deps installed `--no-deps` outside the
+lockfile: `birefnet_bounded_probe.py` wants
+`timm einops kornia transformers torchvision`;
+`retnet_baseline_probe.py` wants `torchscale fla-core einops fairscale`.
+**Dev gates and user-facing utilities live in `scripts/`**
+(`radon_ratchet.py` + `complexity_baseline.json`, `runtime_types.sh`,
+`mutmut.sh`, `calibrate_profile.py`).  **Regenerable artifacts live in
+the cache**, not the tree: `catopt_discovery.cache_dir()`
+(`$CATOPT_CACHE_DIR` → `$XDG_CACHE_HOME/catopt` → `~/.cache/catopt`)
+holds the intake census side-files (`intake_dir()`) and the evidence
+store — shared across worktrees.  The minting machinery itself is in
 `catopt_discovery` (`antiunify`, `handler_synth`) — ADR 0007/0008.
+
+**Promotion rule.**  `lab/` is the promotion queue: a driver moves into
+`catopt_discovery` (its `lab/<sub>/` directory mirrors the package
+layout) when its tests clear the **99% coverage floor**.  Measured so
+far: `lab/bridge/combinator.py` sits at **92%** under
+`tests/test_combinator_bridge.py`; the other drivers have no tests yet.
+Do not promote a module that would fail the floor — and never widen it.
 
 **Machine-admitted laws are in `DEFAULT`.**  `search(..., rules=DEFAULT)`
 ships **11 machine-admitted laws** alongside the hand-written kernel
@@ -70,7 +83,7 @@ uv run pytest                 # full test suite (~7.5 min, single-process —
 .venv/bin/lint-imports        # hexagonal boundary contracts
 .venv/bin/bandit -c .bandit.yaml -r packages   # security SAST
 .venv/bin/semgrep --config .semgrep.yml packages   # dataflow (offline)
-.venv/bin/python tools/gates/radon_ratchet.py   # complexity ratchet
+.venv/bin/python scripts/radon_ratchet.py   # complexity ratchet
 coverage run -m pytest tests/ -q   # source list includes catopt_discovery + catopt_onnx
 coverage report -m --omit="*/catopt_discovery/*"   # the six: fail_under=100
 coverage report -m --include="*/catopt_discovery/*" --fail-under=99   # ratchet floor — measured 99%; tighten, never lower
@@ -94,8 +107,8 @@ Manual-stage gates (not run on every commit — network/slower):
 ```sh
 .venv/bin/pip-audit                                          # dependency CVEs (network)
 .venv/bin/semgrep --config p/python --config p/security-audit packages  # registry rules (network)
-sh tools/gates/runtime_types.sh                                    # typeguard runtime contracts
-MUTMUT_ONLY=catopt_core/ir.py MUTMUT_TESTS='tests/test_ir.py' tools/gates/mutmut.sh run  # mutation testing
+sh scripts/runtime_types.sh                                    # typeguard runtime contracts
+MUTMUT_ONLY=catopt_core/ir.py MUTMUT_TESTS='tests/test_ir.py' scripts/mutmut.sh run  # mutation testing
 ```
 
 Pre-commit (`pre-commit install`) runs ruff check/format, **ty**,
@@ -185,12 +198,12 @@ enodes that become identical after child canonicalisation are unioned
 
 The engine is math-heavy (47 rank-C, 11 D, 7 E, 5 F functions at
 migration), so a hard ceiling is impractical.  Instead
-`tools/gates/radon_ratchet.py` pins every function's cyclomatic complexity in
-`tools/gates/complexity_baseline.json`: a function may not exceed its recorded
+`scripts/radon_ratchet.py` pins every function's cyclomatic complexity in
+`scripts/complexity_baseline.json`: a function may not exceed its recorded
 value, and a function **not** in the baseline must stay at or below
 `THRESHOLD = 11` (rank C).  After an intentional complexity change,
 regenerate with `--update` and review the diff.  Run
-`.venv/bin/python tools/gates/radon_ratchet.py`.
+`.venv/bin/python scripts/radon_ratchet.py`.
 
 ## Docstring quality (ruff `D`)
 
@@ -208,7 +221,7 @@ error.  The gate applies to shipped code only — `tests/**` and
 ## Runtime contracts (typeguard)
 
 `typeguard` (dev dep) enforces annotations at runtime.
-`tools/gates/runtime_types.sh` instruments all four packages
+`scripts/runtime_types.sh` instruments all four packages
 (`--typeguard-packages=catopt_core,catopt_torch,catopt_carriers,catopt_orchestrator`)
 and runs the curated (1372 tests) — a manual-stage gate that CI also
 runs (~11 min).  It caught several real annotation bugs, all fixed:
@@ -228,7 +241,7 @@ list in the script.
 
 ## Mutation testing (mutmut)
 
-`tools/gates/mutmut.sh` runs mutmut against a flat-layout sandbox
+`scripts/mutmut.sh` runs mutmut against a flat-layout sandbox
 (`.mutmut-sandbox/`, gitignored): mutmut 3 derives mutant keys from
 paths, but a per-package `src/` layout imports under a different dotted
 name, so the wrapper symlinks each package at the sandbox top level

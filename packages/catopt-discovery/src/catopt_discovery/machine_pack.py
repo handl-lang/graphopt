@@ -57,7 +57,7 @@ from catopt_core.egraph import Rewrite
 from catopt_core.laws import MACHINE_STORED, RuleSet
 from catopt_core.laws.serialize import missing_hooks
 
-from catopt_discovery import TOOLS
+from catopt_discovery import cache_dir
 from catopt_discovery import evidence as ev
 
 __all__ = [
@@ -70,10 +70,12 @@ __all__ = [
     "store_ruleset",
 ]
 
-#: The committed store path — ``tools/data/evidence.db`` rides the repo.
-#: It is the default *location*, not a guarantee of content: a store
-#: with no ``lemmas`` rows packs to the empty set, honestly.
-DEFAULT_STORE: Path = TOOLS / "evidence.db"
+#: The default store path — the local artifact cache
+#: (:func:`catopt_discovery.cache_dir`), not the repo: the store is
+#: regenerable and shared across worktrees.  It is the default
+#: *location*, not a guarantee of content: a store with no
+#: ``lemmas`` rows packs to the empty set, honestly.
+DEFAULT_STORE: Path = cache_dir() / "evidence.db"
 
 
 @dataclass(frozen=True)

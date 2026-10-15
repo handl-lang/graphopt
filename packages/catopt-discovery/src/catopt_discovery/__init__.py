@@ -35,11 +35,41 @@ scripts; every module keeps its CLI — invoke as
    Absolute path of the repository root, derived from this editable
    file location (``packages/catopt-discovery/src/catopt_discovery``
    is four levels below the root).  Used to reach ``bench`` (a
-   repo-root package, not an installed distribution) and the
-   ``tools/`` artifacts that stayed behind.
+   repo-root package, not an installed distribution).
 """
 
+from __future__ import annotations
+
+import os
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
-TOOLS = REPO_ROOT / "tools"
+
+#: The environment override for :func:`cache_dir`.
+CACHE_DIR_ENV = "CATOPT_CACHE_DIR"
+
+
+def cache_dir() -> Path:
+    """Directory for regenerable local artifacts.
+
+    ``$CATOPT_CACHE_DIR`` wins; else ``$XDG_CACHE_HOME/catopt``; else
+    ``~/.cache/catopt`` — the same convention as
+    ``catopt_core.profile.profiles_dir()``.  Holds the intake census
+    side-files (``intake/``) and the evidence store, none of which
+    belong in the tree: they are large, regenerable, and shared across
+    worktrees.
+    """
+    env = os.environ.get(CACHE_DIR_ENV)
+    if env:
+        return Path(env)
+    xdg = os.environ.get("XDG_CACHE_HOME")
+    base = Path(xdg) if xdg else Path.home() / ".cache"
+    return base / "catopt"
+
+
+def intake_dir() -> Path:
+    """Return the intake census side-files directory.
+
+    Holds ``intake_corpus.json`` and ``intake_tensors.pt``.
+    """
+    return cache_dir() / "intake"

@@ -277,7 +277,7 @@ def _carrier_plans() -> dict[str, Callable]:
 #: compiled deliveries record under their builder names.  The
 #: ``executor_cost_for`` *lowering* names are accepted aliases too,
 #: so a table keyed by lowering (e.g. a hand-built or
-#: ``tools/probes/executor_cost_probe.py --emit-profile`` profile) applies.
+#: ``lab/probes/executor_cost_probe.py --emit-profile`` profile) applies.
 _DELIVERED_CANDIDATES: dict[str, tuple[str, ...]] = {
     "generic": ("generic",),
     "batched_scan": ("batched", "batched_scan"),
@@ -366,12 +366,12 @@ def delivered_cost_for(
     :func:`~catopt_core.cost.executor_cost_for` default, extraction
     sees the batched-vs-generic executor delta, so a term that is
     cheaper *delivered* can win greedy extraction directly — the
-    mechanism ``tools/probes/executor_cost_probe.py`` demonstrates with its
+    mechanism ``lab/probes/executor_cost_probe.py`` demonstrates with its
     tools-level ``_delivered_cost_fn``.
 
     ``profile`` — a measured
     :class:`~catopt_core.profile.TargetProfile` (produce one with
-    ``tools/calibrate_profile.py``) — supplies both the executor
+    ``scripts/calibrate_profile.py``) — supplies both the executor
     constants and the measured-feedback corrections
     :func:`_delivered_cost` consumes through
     :func:`~catopt_core.profile.corrected_price_ns`: a learned

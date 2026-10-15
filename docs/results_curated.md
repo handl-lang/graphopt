@@ -153,7 +153,7 @@ is brittle at n=40 for every arm (RL 4.15×).  Not wired into
 | | ranking AP | 0.012 | 0.012 | **0.133** | heuristic 0.045 |
 | **meta-arena prior** (`META_ARENA_PLAYER_WEIGHTS`) | reward / episode | −0.57 | −0.49 | **−0.06** | scripted −0.10 |
 
-Regenerate with `tools/train/train_open_prior.py` / `tools/train/train_meta_prior.py`.
+Regenerate with `lab/train/train_open_prior.py` / `lab/train/train_meta_prior.py`.
 
 **Honest note:** in *both* families the best result is not the neural
 one — distillation beats neural RL at n=40, and the linear prior beats
