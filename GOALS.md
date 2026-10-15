@@ -80,7 +80,7 @@ committed to its branch before anything else.
 
 | q | result | artifact |
 |---|---|---|
-| **Q0** | **PASS** — catopt's vocabulary assembles as handl data; the law lands in `lang.transforms` with its condition as `And([KindAt, ChildCount])` | catopt `8de8cb5` + `8d5b47d`; handl `b20b978a`; retro `retros/handl-q0-language-as-data.md` |
+| **Q0** | **PASS, unqualified** — catopt's vocabulary assembles as handl data, and after closing two gaps (the leaf step; the `pass:node_kind:priority` rule collision) the **whole bank loads: 83 laws** in `lang.transforms`, with the three minted leaf kinds declared | catopt `8de8cb5` + `8d5b47d` + `5ca8aef`; handl `b20b978a` + `9372bd32`; retro `retros/handl-q0-language-as-data.md` |
 | **Q1a** | **yes, by reference** — `TaggedValue::Resource(Rc<ForeignResource>)`: an opaque pointer + finalizer, no copy | retro `retros/handl-q1-tensor-crossing.md` |
 | **Q1b** | **the seam is JSON-valued** — `Function::call(&[Value]) -> Result<Value>` with `Value = serde_json::Value`; a `Resource`'s JSON encoding is a *debug* process-local pointer (`{"__resource__": {"ptr": n}}`), dangling across processes | same retro |
 | **Q3** | **(A) catopt embeds handl as an optional peer** (the `catopt-native` pattern); (B) sequenced, not rejected | retro `retros/handl-q3-integration-direction.md` |

@@ -142,3 +142,37 @@ and it changes the spike's read on Q0 from "expressible" to "expressible
 for the structural majority; one named mapping stands between the bank
 and the kernel".  That is a better answer than a PASS that only held for
 the case that was easiest to pass.
+
+---
+
+## Closure (2026-10-14) — the gap is shut; the whole bank loads
+
+The leaf mapping landed, and the bank revealed **one more** gap behind
+it: handl keys a rule by `pass:node_kind:priority`, and catopt has many
+laws per root kind, so they collided (`comm_add` vs `assoc_add`).  Both
+are now closed on the producer's side:
+
+| gap | mapping |
+|---|---|
+| leaf (`{"catopt:leaf": …}` — a map where serde wants a tag) | `!Fresh` for an unbound pattern variable; `!Create` of a declared `catopt:const` / `catopt:var` / `catopt:data` kind, with the data in the payload |
+| rule collision (`pass:node_kind:priority`) | distinct priorities per `(pass, node_kind)` — a *load-time disambiguator*, since catopt's saturation is unordered |
+
+handl's `catopt_full_bank_loads` (the pinned gap, flipped) asserts
+**83 laws** in `lang.transforms` and that the three leaf kinds are
+declared.  Catopt `5ca8aef`; handl `9372bd32`.
+
+**So Q0's verdict is now unqualified:** catopt's whole law bank is
+expressible as handl language data and loads into a `Language` — not
+just the one-law slice the first measurement used.
+
+Two lessons worth keeping, both about *where* a gap lives:
+
+1. **The first gap hid the second.**  Fixing the leaf took one edit; the
+   collision only appeared once the leaf stopped failing first.  A bank
+   is not a slice, and a pinned-gap test is what makes the second one
+   visible instead of mysterious.
+2. **`priority` is the interesting one.**  It is the first place where
+   handl's schema demanded something catopt does not *have* (an order),
+   and the honest answer was to supply a disambiguator and say plainly
+   that it means nothing semantically.  A future producer with a real
+   ordering should map it to something that means something.
