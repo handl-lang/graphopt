@@ -1,0 +1,16 @@
+[package]
+name = "catopt-handl-peer"
+version = "0.1.0"
+edition = "2021"
+description = "Spike: catopt calls handl's language loader and rewrite engine (local-only path deps)"
+
+[lib]
+name = "catopt_handl_peer"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+pyo3 = { version = "0.26" }
+serde_json = "1"
+handl-language = { path = "/home/luis/GitHub/handl-lang/platform/crates/handl-language" }
+handl-kit-data-canonical = { path = "/home/luis/GitHub/handl-lang/platform/crates/handl-kit-data-canonical" }
+handl-plugin-engine-transform-rewrite = { path = "/home/luis/GitHub/handl-lang/platform/crates/plugin-engine-transform-rewrite" }

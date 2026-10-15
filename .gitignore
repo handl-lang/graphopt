@@ -72,3 +72,7 @@ mutants/
 # mutmut flat-layout sandbox
 .mutmut-sandbox/
 packages/catopt-native/target/
+
+# handl peer spike build artifacts (built by cargo, never committed)
+lab/handl-peer/target/
+lab/handl-peer/*.so
