@@ -1,8 +1,10 @@
 # Retro — spike Q1: can a tensor cross the boundary?
 
 **Date**: 2026-10-14.  **Plan**: 0029, **Q1**.
-**Status**: **Q1a answered (mechanism exists); Q1b (a runnable demo) is
-the remaining measurement.**
+**Status**: **answered — Q1a (the value model) and Q1b (the
+host-function seam) are both measured.**  What is *not* done is a
+runnable demonstration; see "Q1b" for why that is now off the critical
+path.
 
 ## The question
 
@@ -64,17 +66,62 @@ and the value carries the pointer.  Nothing serializes, nothing copies.
    tensor-bearing value is a runtime notion — the language's `eval`
    schemes never see it as JSON.
 
-## Q1b — the remaining measurement
+## Q1b — the host-function seam (measured by reading it and its tests)
 
-A runnable demonstration: register a host function that receives a
-`Resource` and returns one (a stand-in for `matmul` over a host-owned
-buffer), run a small term through handl's exec, and check the numeric
-result against the same computation done directly.
+The seam a tensor op would register into:
 
-What it would prove: that the *channel* works end-to-end through exec
-(not merely that the variant exists).  What it would still not prove:
-that the host object is a *torch* tensor — that is a PyO3 question, and
-it belongs to Q3 (integration direction), not here.
+```rust
+impl Function for AddHostFn {
+    fn call(&self, args: &[Value], _ctx: &mut EvalContext)
+        -> Result<Value, handl_platform::EvalError>
+}
+```
 
-Not run yet: the host box was busy with a full-suite benchmark (see
-`GOALS.md` G1); the Rust target is warm, so it is a small increment.
+with `Value = serde_json::Value` (the same alias as the language-level
+value).  That is the finding: **the host-function seam is JSON-valued**,
+while the resource lives in the runtime's richer `TaggedValue`.
+
+A `Resource` does have a JSON encoding — but read what it says about
+itself (`crates/handl-value/src/lib.rs`):
+
+```rust
+/// JSON encoding is `{"__resource__": {"ptr": <address>}}` — a debug
+TaggedValue::Resource(r) => json!({"__resource__": {"ptr": r.ptr as i64}}),
+```
+
+and, at the decoder:
+
+> `{"__resource__": {"ptr": <n>}}` — a raw process-local pointer; in
+> another run it decodes to a **dangling** [`ForeignResource`].
+
+So a tensor reaches a host function by one of three routes:
+
+| route | what it costs | honest verdict |
+|---|---|---|
+| **smuggle the pointer** through `{"__resource__": {"ptr": n}}` | nothing (no copy) | **valid in-process** — the same address space — and **dangling across processes**; the encoding is documented as debug-only and the boundary is unsafe |
+| **copy the bytes** — `Bytes` (`{"__bytes__": [n, …]}`) plus an `Obj` for shape/dtype | a full copy per crossing | safe and portable; wrong for a hot loop |
+| **extend the seam** to speak `TaggedValue` | a handl change | the clean fix; not ours to make unilaterally |
+
+### Why this is off the critical path
+
+ADR 0011 decides that **rewriting** is canonical in the calculus and
+**execution** stays catopt's — so in the first version **no tensor needs
+to cross at all**.  The useful integration is the language: catopt's
+fragments in, handl's `Language` + rewrite/typecheck engines, terms out.
+Q1b's demo would measure a channel that v1 does not use.
+
+That also means the unsafe, single-threaded, process-local caveats above
+do not block the integration — they would only matter if tensors were
+made to cross, which is a *later* question with a named answer (the
+pointer route, valid in-process, which is exactly what the Q3-(A) PyO3
+peer is).
+
+## What is still not measured
+
+- **A tensor op running through exec end-to-end.**  The channel analysis
+  above says it can (in-process, via the pointer encoding), but no run
+  demonstrates it.  Deliberately deferred, with the reason recorded.
+- **Whether the pointer route survives PyO3.**  A PyO3 extension owns
+  Python objects; handing handl a `*mut c_void` to a Python object with a
+  finalizer that decrefs is the natural shape — but it is a *design*, not
+  a measurement, and it belongs to the peer's build (Q3-(A) follow-up).
