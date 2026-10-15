@@ -113,7 +113,7 @@ it finds ~2× more useful laws per episode.
 ```bash
 git clone https://github.com/luisfuturist/catopt && cd catopt
 uv sync
-python demo.py                                   # ~60s, no GPU needed
+python examples/quickstart.py                    # ~15s, no GPU needed
 cd docs/tutorials/course && vp install && vp -C apps/learn dev  # the 28-level course
 ```
 

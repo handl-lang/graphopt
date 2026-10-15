@@ -51,7 +51,7 @@ table as its wins.
 
 ```bash
 uv sync
-python demo.py                                  # ~60s end-to-end, no GPU needed
+python examples/quickstart.py                   # ~15s end-to-end, no GPU needed
 python -m bench run <suite> --device cpu        # the benchmark harness
 cd docs/tutorials/course && vp install && vp -C apps/learn dev   # the 28-level course
 ```

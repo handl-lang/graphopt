@@ -1,4 +1,4 @@
-"""catopt demo — categorical optimization of a real block, end to end.
+"""catopt quickstart — categorical optimization of a real block, end to end.
 
 One command, five acts:
 
@@ -30,14 +30,12 @@ saturation, extraction and the certificate — is bit-for-bit
 deterministic across runs (model weights are ``manual_seed(0)``).
 
 Usage:
-    python demo.py                  # CPU
-    python demo.py --device cuda    # GPU
-    python demo.py --quick          # shorter timing loop
+    python examples/quickstart.py                  # CPU (~15 s with --quick)
+    python examples/quickstart.py --device cuda    # GPU
+    python examples/quickstart.py --quick          # shorter timing loop
 
-    # CUDA dev venv (see bench/README.md for the GPU recipe):
-    PYTHONPATH="packages/catopt-core/src:packages/catopt-torch/src:\
-packages/catopt-carriers/src:packages/catopt-orchestrator/src:." \
-        /tmp/catopt-cuda-venv/bin/python demo.py --device cuda
+A GPU run needs a CUDA-enabled venv; see ``bench/README.md`` for the
+recipe, then run this script from the repo root with that interpreter.
 """
 
 # ruff: noqa: RUF001 RUF002 RUF003
@@ -59,14 +57,11 @@ import torch.nn as nn
 from catopt_core.egraph import verify_certificate
 from catopt_core.ir import Op, Param, Var, op_repr
 from catopt_core.laws import FULL
-from catopt_orchestrator.optimize import discover_alternatives
-
-from catopt_torch.composer import param_report
-
-from catopt_torch.adapters import TorchSink, TorchSource
 from catopt_orchestrator import Optimizer
-
+from catopt_orchestrator.optimize import discover_alternatives
+from catopt_torch.adapters import TorchSink, TorchSource
 from catopt_torch.backend import TorchBackend
+from catopt_torch.composer import param_report
 
 # ----------------------------------------------------------------------
 #  The model
@@ -86,6 +81,7 @@ class GatedProjectionBlock(nn.Module):
     """
 
     def __init__(self, d: int, k: int, seed: int = 0) -> None:
+        """Build the block: two gate projections + a 10-deep value chain."""
         super().__init__()
         g = torch.Generator().manual_seed(seed)
         self.wg = nn.Linear(d, d, bias=False)
@@ -103,6 +99,7 @@ class GatedProjectionBlock(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Run the block (the eager reference)."""
         gate = torch.sigmoid(self.wg(x))
         rest = torch.sigmoid(self.wr(x))
         u = self.wv(x)
@@ -126,10 +123,12 @@ class RecordingSink(TorchSink):
     """
 
     def __init__(self) -> None:
+        """Wrap a lowered IR module for the equivalence check."""
         super().__init__()
         self.lowered_ir = None
 
     def lower(self, ir, params=None):
+        """Record the IR the sink lowers (the delivery seam)."""
         self.lowered_ir = ir
         return super().lower(ir, params)
 
@@ -293,12 +292,15 @@ def _stage(n: int, title: str) -> None:
 
 
 # ----------------------------------------------------------------------
-#  The demo
+#  The quickstart
 # ----------------------------------------------------------------------
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="catopt end-to-end demo")
+    """Run the five acts and return the exit status."""
+    ap = argparse.ArgumentParser(
+        description="catopt quickstart — end to end"
+    )
     ap.add_argument("--device", default="cpu", choices=["cpu", "cuda"])
     ap.add_argument(
         "--quick", action="store_true", help="shorter timing loop"
@@ -313,7 +315,7 @@ def main() -> int:
     cuda = dev.type == "cuda"
     n_calls, warmup = (25, 6) if args.quick else (50, 10)
 
-    print("catopt demo — categorical optimization, end to end")
+    print("catopt quickstart — categorical optimization, end to end")
     print(f"device: {dev} | torch {torch.__version__}")
     t_all = time.perf_counter()
 
@@ -340,7 +342,9 @@ def main() -> int:
     print("non-local passes → extract cheapest program → lower.")
     sink = RecordingSink()
     t0 = time.perf_counter()
-    opt_mod, stats = Optimizer(backend=TorchBackend(), sink=sink).optimize(model, x, verify=False, verbose=False)
+    opt_mod, stats = Optimizer(
+        backend=TorchBackend(), sink=sink
+    ).optimize(model, x, verify=False, verbose=False)
 
     search_s = time.perf_counter() - t0
     fires = stats.get("rule_fires") or {}

@@ -21,14 +21,13 @@ The autotune harness's own per-candidate medians land in the cell's
 equivalence gate), and ``search_s`` (the one paid e-graph search).
 
 Usage:
-    python bench/killer_demo.py --device cpu --quick
-    python bench/killer_demo.py --device cuda
+    python -m bench run killer_demo --device cpu --quick
+    python -m bench run killer_demo --device cuda
 
-    # CUDA dev venv:
+    # CUDA dev venv (see bench/README.md for the recipe):
     PYTHONPATH="packages/catopt-core/src:packages/catopt-torch/src:\
 packages/catopt-carriers/src:packages/catopt-orchestrator/src:." \
-        /tmp/catopt-cuda-venv/bin/python bench/killer_demo.py \
-        --device cuda
+        <cuda-venv>/bin/python -m bench run killer_demo --device cuda
 """
 # ruff: noqa: E402, RUF001 -- sys.path setup must precede the benchkit/catopt
 # imports (bench_omd2 / real_linear_attn convention).
