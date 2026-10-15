@@ -266,7 +266,8 @@ for every caller, a change the full suite must land.
 
 > **Correction 2026-10-15** (`project/retros/saturation-determinism.md`,
 > catopt `abf6114`).  This paragraph previously read **432,696 FLOPs
-> (Δ = −23,056; **−5.06 %**)**, and reported `dag` 139 → 133.  The staged
+> (Δ = −23,056; **−5.06 %**)**, and reported `dag` 139 → 133
+> (re-derived deterministically: **139 → 135**, `morph` 1590 → 1554).  The staged
 > saturation and the sharing-aware optimum were **hash-order dependent** — the
 > extraction scanned `EClass.nodes`, a `set` whose iteration order follows
 > `ENode`'s hash, so the local optimum moved with `PYTHONHASHSEED` — and
