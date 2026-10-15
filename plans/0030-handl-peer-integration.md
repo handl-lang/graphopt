@@ -26,7 +26,13 @@ that decides whether the rest is worth building.
 
 ## Steps, in order, each with its pass criterion
 
-### 1 · Make a rewrite fire (hours — decisive)
+### 1 · Make a rewrite fire (hours — decisive) — ✅ **DONE**
+
+**Measured 2026-10-14** (handl `82194954`): `assoc_add` fires through
+handl's `RewriteEngine` — exactly one rewrite, and the result is
+`add(add(a, b), c)`.  Cross-checked against catopt's own engine on the
+same term: `EGraph.apply_rule` fires and the expected member lands in the
+root's e-class.  **The two engines agree**, so step 2 is justified.
 
 Build a handl-side test that takes a catopt-derived `Language`, an
 `Ast` shaped like a catopt term, and runs the `RewriteEngine` with

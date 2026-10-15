@@ -91,6 +91,12 @@ language-only in v1** (fragments in, terms out; no tensors across).
 That is what the measurements support, and it is what ADR 0011 already
 assumes.
 
+**And the gate is met**: plan 0030's step 1 — *does a rewrite fire?* — is
+**measured yes** (handl `82194954`): a catopt law fires through handl's
+`RewriteEngine` and produces exactly what catopt's own engine produces.
+So the peer is worth building, and "handl is the kernel" now rests on an
+executed rewrite rather than a load.
+
 Two representational requirements were found and fixed on the way, both
 in catopt: `when` must fold into `And([...])` (handl's field is ONE
 condition), and enum variants must be spelled as **YAML tags** under

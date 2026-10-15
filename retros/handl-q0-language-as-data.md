@@ -78,8 +78,13 @@ its folded `when` deserializes as `And([KindAt, ChildCount])`.
 
 ## What Q0 does **not** prove
 
-- **That a rewrite fires.**  Loading a `Language` is not running its
-  engine; firing needs an `Ast` to rewrite, i.e. the next step.
+- ~~**That a rewrite fires.**~~  **Measured later the same night** (plan
+  0030 step 1): a catopt law *does* fire through handl's
+  `RewriteEngine` — one rewrite, and the result is
+  `add(add(a, b), c)`, which is exactly what catopt's own
+  `EGraph.apply_rule` produces for the same term (handl `82194954`).
+  What remains unproven is only the *peer*: nothing in catopt calls
+  handl yet.
 - **Anything about tensor values.**  That is Q1 (a host function
   carrying a tensor), and it is the question ADR 0010's "host functions"
   claim actually rests on.
