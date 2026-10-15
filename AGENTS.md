@@ -71,6 +71,20 @@ caller — run the full suite (not just a slice) when touching the bank.
 
 Run these before finishing any change; all must pass.
 
+**One command instead of the list:** `scripts/gates.sh` runs the static
+gates cheap-first, then the suite **once** under coverage (CI always ran
+it once; this documented list used to run it twice), then both coverage
+floors — with per-stage wall times and `set -euo pipefail`.  It defaults
+to a **serial** suite (`CATOPT_GATES_NP=1`); the parallel arm is not yet
+measured on this host (see the warning below), so do not raise it without
+a measurement.
+
+**Iterate with `-m "not slow"`.**  The minutes-scale tests are marked
+`slow` from measured durations — the heaviest slice
+(`test_torch_integration` + `test_om_decayed_cross`) runs 176 tests in
+**370.8 s**, of which six tests are ~349 s; with `-m "not slow"` the same
+slice is **42.6 s** (8.7×).  The full pass still runs everything.
+
 ```sh
 uv run pytest                 # full test suite (~7.5 min, single-process —
                               # pytest-xdist is installed but the suite runs
@@ -96,11 +110,23 @@ coverage report -m --include="*/catopt_discovery/*" --fail-under=99   # ratchet 
 > inductor pool of **16 compile workers per pytest process**, so
 > `-n N` multiplies the fan-out to ~`16·N` subprocesses.  On an 11 GB /
 > 16-core host, `-n auto` OOM-froze the machine; even `-n 3` drove
-> memory to 10.2 GB near the suite's tail.  The coverage gate is a
-> commit-time check (~20-25 min serial under tracing); for iteration
-> use a scoped `coverage run -m pytest tests/test_<file>.py`.
-> If a bigger machine needs it anyway, cap both fan-outs:
-> `TORCHINDUCTOR_COMPILE_THREADS=2 pytest -n 2 --cov=...` — untested.
+> memory to 10.2 GB near the suite's tail.
+>
+> **The suite is also much longer than it used to be.**  The old "~7.5
+> min" figure is stale: the suite is now **6,341 tests**, and a serial
+> run took **~28 min** while contended (a clean figure is not yet
+> measured — see below).  Use `scripts/gates.sh`, and iterate with
+> `-m "not slow"`.
+>
+> **A parallel arm is unmeasured.**  `-n 2` with
+> `TORCHINDUCTOR_COMPILE_THREADS=2` is the candidate; it is *not* adopted
+> because the measurement kept dying — **two full-suite runs ended at
+> exactly 36%** on this host.  A third run under `-v` is in flight to
+> name the last test started (a crashing test vs an OOM).  Until that is
+> answered, `scripts/gates.sh` stays serial.
+>
+> The coverage gate is a commit-time check; for iteration use a scoped
+> `coverage run -m pytest tests/test_<file>.py`.
 
 Manual-stage gates (not run on every commit — network/slower):
 
