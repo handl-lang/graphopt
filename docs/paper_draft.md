@@ -221,7 +221,7 @@ the subterm to bind.
 |---|---|---|---|
 | 1 — proposing rule (`loop_propose.py`, `b7ba9ff`) | `unroll(step, n) → Loop(step, n)`, n≥2 | authored `unroll(step,4)`: fires 1×, cheapest reachable term `Loop`-headed (**69** vs spelled 285) | **0** `unroll(step, n≥2)` subterms → fires **0×**; spelled scan in a *different* e-class |
 | 2 — parametric abstraction (`index_abstract.py`, `e4a193a`) | bind the block index and the recurrence state as parameters (a parameter is a wire) | presentation's spelled fold, expanded: collapses, round-trips, reaches a `Loop` (**109**) at K=2/4/8 | **7 blocks, 2 `split` families**, `IRREGULAR`: `block1/block2/add[1]/mul[1]: op om_decayed vs add` |
-| 3 — the state spelling (`sharing_extract.py`, `aa56e55`) | sharing-aware coordinated extraction | — (a measurement) | the mix is a cost *tie*; the fix recovers 5.06 % and the winner still does not collapse |
+| 3 — the state spelling (`sharing_extract.py`, `aa56e55`) | sharing-aware coordinated extraction | — (a measurement) | the mix is a cost *tie*; the fix recovers **1.01 %** (~~5.06 %~~ — see the correction in §2.2) and the winner still does not collapse |
 
 The reason is one sentence, measured three ways: **the presentation's whole
 advantage — a single shared `step` — is exactly what the flat DAG erased**,
@@ -240,20 +240,20 @@ recurrences; it is not where they will be *found*.  On this evidence ADR 0009
 stage 4 is not justified by the presentation's discovery value (ADR 0009's own
 falsification clause); it must rest on something else or on nothing.
 
-**The positive finding: an extraction defect.**  The gate work forced the
-winner's spelling to be inspected, and the inspection found a real defect in
-the *extractor*.  The state-read spelling is a cost tie in **5 of the 7**
-blocks (2-way in blocks 0–3, a **4-way tie at 232,000** in block 4), and
-`extract_best` breaks the tie by `nops` then member sort order — i.e. by
-**op name**, arbitrarily with respect to *sharing*.  Forcing the factored read
-per class moves the whole term by Δ ∈ {−528, 0, +16, +16, +144} FLOPs (the
-model is indifferent to ±0.03 %), except that block 4 strictly prefers the
-factored read because it shares its state with block 5's read — a non-local
-saving the per-class greedy pass cannot see.  So on this workload the greedy
-per-class extraction is **5.06 % off the cost its own model assigns**: a
-sharing-aware pass reaches **432,696 FLOPs against the greedy 455,752**
-(Δ = −23,056; `dag` 139 → 133), numerically equivalent at **2.2e-16**.  The
-fix is small and lives in `lab/` (`extract_sharing_aware`,
+**The positive finding: an extraction defect — a real but *small* one.**  The
+gate work forced the winner's spelling to be inspected, and the inspection
+found a real defect in the *extractor*.  The state-read spelling is a cost tie
+in **5 of the 7** blocks (2-way in blocks 0–3, a **4-way tie at 232,000** in
+block 4), and `extract_best` breaks the tie by `nops` then member sort order —
+i.e. by **op name**, arbitrarily with respect to *sharing*.  Forcing the
+factored read per class moves the whole term by Δ ∈ {−528, 0, +16, +16, +144}
+FLOPs (the model is indifferent to ±0.03 %), except that block 4 strictly
+prefers the factored read because it shares its state with block 5's read — a
+non-local saving the per-class greedy pass cannot see.  So on this workload the
+greedy per-class extraction is off the cost its own model assigns: a
+sharing-aware pass reaches **451,128 FLOPs against the greedy 455,752**
+(Δ = −4,624; **−1.01 %**), numerically equivalent at **2.2e-16**.  The fix is
+small and lives in `lab/` (`extract_sharing_aware`,
 `lab/bridge/sharing_extract.py`): a bounded, *monotone* coordinate descent that
 begins at `extract_best` and keeps only per-class overrides that strictly lower
 the whole term's `dag_cost`.  Monotone means it can never manufacture a form
@@ -263,6 +263,25 @@ and adds the sharing signal.  It is the same non-local blindness
 decision; it is a `lab/` prototype rather than a change to
 `catopt_core.egraph.extract` because the same tie-break would change extraction
 for every caller, a change the full suite must land.
+
+> **Correction 2026-10-15** (`project/retros/saturation-determinism.md`,
+> catopt `abf6114`).  This paragraph previously read **432,696 FLOPs
+> (Δ = −23,056; **−5.06 %**)**, and reported `dag` 139 → 133.  The staged
+> saturation and the sharing-aware optimum were **hash-order dependent** — the
+> extraction scanned `EClass.nodes`, a `set` whose iteration order follows
+> `ENode`'s hash, so the local optimum moved with `PYTHONHASHSEED` — and
+> **432,696 was a hash-order artifact**.  Both are now **deterministic**
+> (canonical member order, `abf6114`); the reproducible reading is **451,128**
+> with **3 overrides** in every process (`PYTHONHASHSEED` 0–6 + unset, all
+> identical), the read sequence is **unchanged** from the greedy term
+> (`reexp|reexp|fold|fold|reexp|shared|shared`), and the e-graph is **9,784**
+> enodes (was ~~9,733~~).  Numbers reported before `abf6114` may be
+> seeded/arbitrary.  The **defect is still real** — greedy per-class extraction
+> *is* off its own cost model, and the monotone fix *does* recover it — but the
+> magnitude is **1.01 %**, not 5.06 %.  That is a much weaker case for
+> promoting the tie-break into `catopt_core.egraph.extract`: at ~1 % on a
+> single workload the promotion is a **judgement call**, not the obvious win
+> the 5 % figure implied.  It is not a paper claim.
 
 **What would change the conclusion.**  Two causes remain, and neither is a
 small tweak.
@@ -283,9 +302,13 @@ small tweak.
 A move that does both would re-open the gate; a smaller one will not.  The
 retros are `project/retros/gate3-loop-proposing-rule.md`,
 `gate3-parametric-abstraction.md` and `gate3-extraction-state-spelling.md`;
-the caveat they carry is that the staged saturation is not reproducible across
-processes (`PYTHONHASHSEED` changes the e-graph — 9733/9752/9756 enodes — and
-the sharing-aware local optimum), so pin the seed when re-measuring.
+the caveat they carried — that the staged saturation was not reproducible
+across processes (`PYTHONHASHSEED` changed the e-graph, 9,733/9,752/9,756
+enodes, and the sharing-aware local optimum) — is now **resolved**.  catopt
+`abf6114` made the saturation and the extraction **deterministic** (canonical
+member order), and the reproducible runs (`PYTHONHASHSEED` 0–6 + unset) are all
+identical at **9,784** enodes and **451,128** FLOPs.  Numbers reported before
+that fix may be seeded/arbitrary.
 
 ## 3. Verification boundaries are per-artifact
 
@@ -576,8 +599,9 @@ saturation is not idiosyncratic.
   measured negative three times (§2.2): the combinator presentation expresses
   and verifies recurrences, but search never reaches a `loop`-headed form from
   a corpus graph.  The gate work did expose an extraction defect — greedy
-  per-class extraction is 5.06 % off its own cost model on that workload (fix
-  in `lab/`, pending the full suite).
+  per-class extraction is **1.01 %** off its own cost model on that workload
+  (~~5.06 %~~; corrected by the determinism fix, `abf6114`; fix in `lab/`,
+  pending the full suite — at ~1 % the promotion is a judgement call).
 
 ## 7. What would falsify each pillar
 
@@ -648,7 +672,7 @@ venue paper needs the scale validation and the executor work named in §6.
 | The loop caught a real lowering bug by refusing | `decay_vec` `sign=0` coercion | `layer3-loop.md` |
 | The typed-pay gate suppressed inflated "pays" | 19/33 mint ill-typed; 11 pays + 12 drops suppressed | `typed-pay-gate.md` |
 | **Substrate.** The combinator presentation is a presentation, not a search space | gate 3 FAIL ×3: proposing rule fires 0×; 7 blocks / 2 families `IRREGULAR`; winner un-collapsed | `project/retros/gate3-loop-proposing-rule.md`; `gate3-parametric-abstraction.md`; ADR 0008 |
-| Greedy per-class extraction is suboptimal on the gate-3 workload | 455,752 → 432,696 FLOPs (−5.06 %); max\|Δ\| 2.2e-16 | `project/retros/gate3-extraction-state-spelling.md` |
+| Greedy per-class extraction is suboptimal on the gate-3 workload | 455,752 → 451,128 FLOPs (−1.01 %; ~~432,696 / −5.06 %~~ was a hash-order artifact, `abf6114`); max\|Δ\| 2.2e-16 | `project/retros/gate3-extraction-state-spelling.md` |
 | **Value (wins).** Weight-chain fold | 14.92× vs Inductor (17.40× vs eager) | `bench/baselines/reassoc_scale.json` |
 | Asymptotic reassoc | 8.0× at T=2048 (retired source — unsourced) | `docs/results_curated.md` §8 |
 | Spelled RetNet export T=2048 | 5.0–5.9× vs eager; 6.2–7.4× vs compile; 7.30× memory | `docs/results.md` |

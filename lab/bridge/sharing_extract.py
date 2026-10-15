@@ -65,8 +65,10 @@ THE READING
     an artifact of the member scan order: the descent kept the *first*
     strictly improving member of each class, and the scan ran over a
     ``set`` whose iteration order follows ``ENode``'s hash — so the
-    "optimum" moved with ``PYTHONHASHSEED`` (432,696 at seed 0, 451,128
-    unseeded).  The descent now scans in canonical member order
+    "optimum" moved with ``PYTHONHASHSEED`` (432,696 with 5 overrides at
+    ``PYTHONHASHSEED=0`` — a hash-order artifact; the canonical order
+    gives 451,128 with 3 overrides in every process).  The descent now
+    scans in canonical member order
     (:func:`catopt_core.egraph.types._member_key`), and the reproducible
     reading is 451,128 with three overrides in every process.  The
     *qualitative* finding is unchanged — the greedy pass is off the cost
@@ -152,8 +154,9 @@ def extract_sharing_aware(
     improving member of a class, so a raw ``set`` order (``nodes`` is a
     ``set`` of :class:`~catopt_core.egraph.ENode`, whose hash folds in
     the op name) would land on a different local optimum in every
-    process — measured 432,696 at ``PYTHONHASHSEED=0`` against 451,128
-    unseeded.
+    process — pre-fix it reached 432,696 (5 overrides) at
+    ``PYTHONHASHSEED=0``; the canonical order gives 451,128 (3 overrides)
+    in every process.
     """
     root_eid = eg.find(root_eid)
     best = eg.extract_best(root_eid, cost_fn)
