@@ -285,12 +285,22 @@ speak it, and tensors are host resources.  The `catopt:` extension field
 is the authority, so the two cannot drift silently: a drift is a failed
 round-trip, which is testable.
 
+**And a law fires there.**  The strongest measurement so far: a catopt
+law *executes* through handl's rewrite engine — one rewrite, producing
+exactly the term catopt's own `EGraph.apply_rule` produces for the same
+input (handl's `catopt_law_fires_through_the_rewrite_engine`).  The whole
+bank loads too: **83 laws** in `lang.transforms`, with the three minted
+leaf kinds (`catopt:const` / `catopt:var` / `catopt:data`) declared.  So
+the relationship is not "catopt emits data handl can read" — handl runs
+catopt's laws.
+
 **What this is not (yet).**  The tensor channel is *available* but
 unused: Q1a found `TaggedValue::Resource(Rc<ForeignResource>)` — an
 opaque pointer with a finalizer, `Rc`-held and not `Send`/`Sync` — so a
 tensor crosses by reference, but no run yet demonstrates a tensor op
-through exec (Q1b).  And the direction is decided (Q3: catopt embeds
-handl as an *optional* peer, the `catopt-native` pattern), not built.
+through exec (Q1b).  And the peer is decided (Q3: catopt embeds handl as
+an *optional* peer, the `catopt-native` pattern) but not built: nothing
+in catopt calls handl yet (`project/plans/0030-handl-peer-integration.md`).
 
 ## Where this lives in the code
 
