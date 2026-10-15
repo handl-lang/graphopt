@@ -163,7 +163,41 @@ merged `32962d0`; `lab/bridge/combinator.py` + `lab/bridge/combinator_probe.py`)
   staged-saturation extract projects through the bridge round-trip
   EQUAL (1590-node morphism, 92 explicit Δ sites) — same recurrence
   modulo spelling.
-- **Gate 3 — open, and now with a protocol** (added 2026-10-14; it is
+- **Gate 3 — MEASURED 2026-10-15: PARTIAL, and the partial is the
+  useful part.**  Ran the protocol (`--gate2 --extracted`; staged arm
+  T=64 K=4, 15 s, 9,734 enodes):
+
+  ```
+  extracted term: dag=139  reads=2 chained=True
+  projects: round-trip EQUAL  morph=1590 dup=92 copies=184
+  fold-chain depth: spelled=3  extract=2
+  ```
+
+  Read against the criterion: the search **does** reach the algorithmic
+  content — a *chained* shared-state fold (`chained=True`, depth 2
+  against the spelled 3) — and that term **projects through the
+  presentation EQUAL**.  What it does **not** produce is a
+  `loop`-**headed** term, and the probe says why in its own words:
+
+  > the DAG bridge never mints `loop` — it is a *proposed* form, not a
+  > recovered one.
+
+  So gate 3 splits, and the split is actionable:
+
+  * **as an expression** — PASS: the calculus spells recurrences that
+    lower and verify (gate 2), and the search's winner round-trips
+    through it.
+  * **as a search space** — NOT YET: a presentation that can only
+    *project* an extracted term cannot be reached *by* search.  Closing
+    gate 3 needs a **proposing rule** — a rewrite whose right-hand side
+    introduces `loop` — so the question becomes whether saturation
+    *selects* it, which is a different (and now well-posed) experiment.
+
+  **What this means for ADR 0009 stage 4**: a `catopt-kernel` is
+  justified as the home of *rules over combinators* (the proposing rule
+  is exactly such a rule), not as a projection target.  The stage-4
+  framing should say that, and this measurement is why.
+- **Gate 3 — the protocol** (added 2026-10-14; it is
   the last gate standing between this ADR and ADR 0009's stage 4, so
   "open" without a way to close it was the real problem).
   `loop` structure is erased at export: fused recurrences
