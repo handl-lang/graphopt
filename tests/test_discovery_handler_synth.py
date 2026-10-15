@@ -84,6 +84,26 @@ class TestEvalBody:
         acc = env["A"] * acc + env["B"]
         torch.testing.assert_close(out, acc)
 
+    def test_reduce(self):
+        env = _env({"X": (4, 5)})
+        out = hs.eval_body(("reduce", "sum", "X", -1), env, BINDINGS)
+        torch.testing.assert_close(out, env["X"].sum(dim=-1))
+
+    def test_norm(self):
+        env = _env({"X": (4, 5)})
+        body = (
+            "norm",
+            "div",
+            ("exp", "X"),
+            "sum",
+            ("exp", "X"),
+            -1,
+            True,
+        )
+        out = hs.eval_body(body, env, BINDINGS)
+        e = torch.exp(env["X"])
+        torch.testing.assert_close(out, e / e.sum(dim=-1, keepdim=True))
+
     def test_fold_rank_zero_raises(self):
         env = _env({"A": (), "B": (), "H": ()})
         with pytest.raises(ValueError, match="step axis"):
@@ -333,6 +353,36 @@ class TestMint:
         assert report[0]["family"] == "reduce"
         h = handlers[report[0]["tag"]]
         assert h["handler_body"] == ("reduce", "sum", "X", -1)
+
+    def test_normalization_mints(self):
+        """The norm family closes the softmax gap.
+
+        ``softmax`` is a value normalized by a reduction of itself —
+        the composite the ``reduce`` family cannot spell (its operand
+        is the whole spec).  The ``norm`` family mints the
+        shape-general spelling (``keepdim=True`` so the reduction
+        broadcasts back), on a non-square operand.
+        """
+        spec = (
+            "div",
+            ("exp", "X"),
+            ("sum", ("exp", "X"), {"dim": -1, "keepdim": True}),
+        )
+        handlers, report = hs.mint_handlers(
+            [spec], domain=[{"X": (4, 5)}]
+        )
+        assert report[0]["verdict"] == "minted"
+        assert report[0]["family"] == "norm"
+        h = handlers[report[0]["tag"]]
+        assert h["handler_body"] == (
+            "norm",
+            "div",
+            ("exp", "X"),
+            "sum",
+            ("exp", "X"),
+            -1,
+            True,
+        )
 
     def test_refusal_outside_grammar(self):
         """A meta-less non-elementwise spec proposes nothing.

@@ -42,6 +42,16 @@ THE GRAMMAR (descriptors are plain data — tuples, strings, numbers):
   elementwise *sub* over every meta.  ``sum(X, dim=-1)`` is
   ``("reduce", "sum", "X", -1)`` — the shape the loop/contraction
   families cannot spell.
+* ``("norm", op, lhs, red_op, rhs, axis, keepdim)`` — the
+  normalization: an elementwise ``op`` combining *lhs* with a
+  reduction ``red_op`` of *rhs* along *axis*.  ``softmax`` is
+  ``("norm", "div", ("exp","X"), "sum", ("exp","X"), -1, True)`` —
+  the composite the ``reduce`` family's whole-spec operand cannot
+  spell (a reduction is one of the operands of an elementwise op,
+  not the whole spec).  *keepdim* is a real degree of freedom: the
+  shape-general softmax keeps the reduced axis so it broadcasts
+  back against the operand, while a non-``keepdim`` spelling only
+  broadcasts on a square operand (a different function).
 
 A fold side or carry may be a *constant*: the a-side ``1.0`` (the
 multiplicative identity) and the b-side ``0.0`` (the additive
@@ -79,6 +89,7 @@ __all__ = [
     "CONTRACT_EQS",
     "FOLD_AXES",
     "FOLD_CARRIES",
+    "NORM_OPS",
     "REDUCE_AXES",
     "REDUCE_OPS",
     "VerifyResult",
@@ -147,6 +158,18 @@ REDUCE_OPS: tuple[str, ...] = ("sum", "mean", "prod", "amax", "amin")
 #: reached through the spec's own declared axis.
 REDUCE_AXES: tuple[int, ...] = (-1, -2)
 
+#: Outer elementwise ops a normalization may use — the center
+#: (``x - red(x)``) and scale (``x / red(x)``) shapes.  A
+#: normalization combines a value with a reduction of itself, which
+#: the ``reduce`` family (reduction of the whole spec) cannot spell.
+NORM_OPS: tuple[str, ...] = ("div", "sub")
+
+#: The ``keepdim`` values a normalization's reduction may declare.
+#: Both are real: the shape-general softmax keeps the reduced axis so
+#: it broadcasts back against the operand, while a non-``keepdim``
+#: spelling is a different function (equal only on a square operand).
+NORM_KEEPDIMS: tuple[bool, ...] = (False, True)
+
 #: The template families, in proposal order.
 _FAMILIES: tuple[str, ...] = (
     "ew",
@@ -155,6 +178,7 @@ _FAMILIES: tuple[str, ...] = (
     "fold_emit",
     "fold_zip",
     "reduce",
+    "norm",
 )
 
 #: fp64 verification gate — a handler reproduces its pre-mint term
@@ -211,6 +235,16 @@ def eval_body(body: Any, env: dict, bindings: dict) -> Any:
     if kind == "reduce":
         _, op, sub, axis = body
         return bindings[op](_eval_spec(sub, env, bindings), dim=axis)
+    if kind == "norm":
+        _, op, lhs, red_op, rhs, axis, keepdim = body
+        return bindings[op](
+            _eval_spec(lhs, env, bindings),
+            bindings[red_op](
+                _eval_spec(rhs, env, bindings),
+                dim=axis,
+                keepdim=keepdim,
+            ),
+        )
     raise ValueError(f"unknown handler-body tag: {kind!r}")
 
 
@@ -818,6 +852,105 @@ def _reduce_bodies(metas: list, consts: tuple, axes: tuple) -> Any:
     return _round_robin(gens)
 
 
+def _norm_column(
+    op: str, red_op: str, subs: list, axis: int, keepdim: bool
+) -> Any:
+    """``norm`` candidates for one (op, red_op, axis, keepdim) column."""
+    for lhs in subs:
+        for rhs in subs:
+            yield ("norm", op, lhs, red_op, rhs, axis, keepdim)
+
+
+def _norm_bodies(metas: list, consts: tuple, axes: tuple) -> Any:
+    """Round-robin norm columns: (op, red_op, axis, keepdim) x pairs.
+
+    A normalization combines a value with a reduction of (another)
+    value; both operands are the grammar's elementwise exprs over the
+    full meta set, bounded to ``_MAX_EW_OPS``.  Ops come from
+    :data:`NORM_OPS`, reductions from :data:`REDUCE_OPS`, keepdim from
+    :data:`NORM_KEEPDIMS`, axes from the spec's own ``dim`` attrs plus
+    :data:`REDUCE_AXES`.
+    """
+    req = frozenset(metas)
+    atoms = tuple(sorted(req)) + consts
+    subs: list = []
+    for n in range(_MAX_EW_OPS + 1):
+        subs.extend(_ew_exprs(req, atoms, n))
+    gens = [
+        _norm_column(op, red_op, subs, axis, keepdim)
+        for op in NORM_OPS
+        for red_op in REDUCE_OPS
+        for axis in axes
+        for keepdim in NORM_KEEPDIMS
+    ]
+    return _round_robin(gens)
+
+
+def _top_op(spec: Any) -> Any:
+    """Return the spec's outermost op name, or ``None`` for a leaf."""
+    if isinstance(spec, (tuple, list)) and spec:
+        return spec[0]
+    return None
+
+
+def _canonical_norm_seeds(
+    metas: list, consts: tuple, axes: tuple
+) -> list:
+    """Propose the canonical normalization bodies first.
+
+    ``op(ew, red_op(ew, axis, keepdim))`` — a value normalized by a
+    reduction of *itself*, the softmax / ``x - mean(x)`` shape.  Like
+    the ``fold_emit`` seed it is structural, not a hard-coded answer:
+    the operand ``ew`` ranges over the grammar's one-op vocabulary and
+    the plain meta, ``op``/``red_op``/``axis``/``keepdim`` over their
+    vocabularies, so the verifier decides which instance (if any) is
+    the atom.  The equal-operand seed keeps the plausible
+    normalization within the first few hundred proposals — the full
+    column walk interleaves the unequal-operand pairs ahead of it.
+
+    Called only when the spec's top op is a :data:`NORM_OPS` op (the
+    normalization shape): the seed is a few hundred candidates, so
+    proposing it for a plain reduction would push that spec's mint
+    from ~37 to ~277 (measured).
+    """
+    req = frozenset(metas)
+    atoms = tuple(sorted(req)) + consts
+    ews: list = []
+    for n in range(min(1, _MAX_EW_OPS) + 1):
+        ews.extend(_ew_exprs(req, atoms, n))
+    out = []
+    for op in NORM_OPS:
+        for red_op in REDUCE_OPS:
+            for axis in axes:
+                for keepdim in NORM_KEEPDIMS:
+                    for ew in ews:
+                        out.append(
+                            ("norm", op, ew, red_op, ew, axis, keepdim)
+                        )
+    return out
+
+
+def _admitted_families(n: int) -> set:
+    """Return the families whose meta gate admits an *n*-meta spec.
+
+    The fold families need ``>= 3`` metas (the ``state + a + b``
+    count the full walk's columns need); a smaller spec's canonical
+    recurrence is reached through the ``fold_emit`` seed
+    (:func:`_canonical_emit_seeds`) instead, so the floor is not a
+    reach limit.  The contraction needs two factors; ``fold_zip`` an
+    even non-state count; the ``reduce``/``norm`` families any
+    non-empty meta set.
+    """
+    out = {"reduce", "norm"} if n else set()
+    if n >= 2:
+        out.add("contract")
+    if n >= 3:
+        out.update(("fold", "fold_emit"))
+    if not (n - 1) % 2:
+        out.add("fold_zip")
+    return out
+
+
 def _family_gens(
     fams: tuple,
     metas: list,
@@ -838,21 +971,24 @@ def _family_gens(
     candidates and a two-meta spec's from 144 to >200000, while every
     spec in the battery mints the *same* body at the *same* budget
     index (the seed leads).  The floor stays; the seed carries the
-    small-spec reach.  The ``reduce`` family is new and admits any
+    small-spec reach.  The ``reduce``/``norm`` families admit any
     non-empty meta set — a one-meta reduction (``sum(X, dim)``) is
-    its whole point.
+    their whole point.  The gates live in :func:`_admitted_families`.
     """
+    adm = set(fams) & _admitted_families(len(metas))
     gens = []
-    if "contract" in fams and len(metas) >= 2:
+    if "contract" in adm:
         gens.append(_contract_bodies(metas, consts, max_ops))
-    if "fold" in fams and len(metas) >= 3:
+    if "fold" in adm:
         gens.append(_fold_bodies(metas, consts, max_ops))
-    if "fold_emit" in fams and len(metas) >= 3:
+    if "fold_emit" in adm:
         gens.append(_fold_emit_bodies(metas, consts))
-    if "fold_zip" in fams and not (len(metas) - 1) % 2:
+    if "fold_zip" in adm:
         gens.append(_fold_zip_bodies(metas))
-    if "reduce" in fams and metas:
+    if "reduce" in adm:
         gens.append(_reduce_bodies(metas, consts, axes))
+    if "norm" in adm:
+        gens.append(_norm_bodies(metas, consts, axes))
     return gens
 
 
@@ -867,21 +1003,23 @@ def propose_bodies(
     Deterministic and simplest-first: the ``ew`` replay (elementwise
     specs only — the ``genkernel`` baseline) leads, then the
     ``fold_emit`` canonical emitted-scan forms (:func:`_canonical_emit_seeds`
-    — the ordering gap the round-robin walk left), then every admitted
-    family's columns interleave round-robin.  *families* restricts the
-    template vocabulary; *max_ops* bounds each elementwise factor's
-    depth (``_MAX_EW_OPS`` tops the grammar).
+    — the ordering gap the round-robin walk left) and the ``norm``
+    canonical normalization forms (:func:`_canonical_norm_seeds`),
+    then every admitted family's columns interleave round-robin.
+    *families* restricts the template vocabulary; *max_ops* bounds
+    each elementwise factor's depth (``_MAX_EW_OPS`` tops the grammar).
     """
     fams = families if families is not None else _FAMILIES
     metas = _spec_metas(spec)
+    consts = tuple(_spec_consts(spec))
+    axes = tuple(dict.fromkeys([*_spec_dims(spec), *REDUCE_AXES]))
     if "ew" in fams and elementwise_spec(spec):
         yield ("ew", spec)
     if "fold_emit" in fams and metas:
         yield from _canonical_emit_seeds(metas)
-    axes = tuple(dict.fromkeys([*_spec_dims(spec), *REDUCE_AXES]))
-    gens = _family_gens(
-        fams, metas, tuple(_spec_consts(spec)), max_ops, axes
-    )
+    if "norm" in fams and metas and _top_op(spec) in NORM_OPS:
+        yield from _canonical_norm_seeds(metas, consts, axes)
+    gens = _family_gens(fams, metas, consts, max_ops, axes)
     yield from _round_robin(gens)
 
 
@@ -1315,9 +1453,15 @@ def _battery() -> list:
             "spec": (
                 "div",
                 ("exp", "X"),
-                ("sum", ("exp", "X"), {"dim": -1}),
+                ("sum", ("exp", "X"), {"dim": -1, "keepdim": True}),
             ),
-            "domain": [{"X": (4, 4)}],
+            "domain": [{"X": (4, 5)}],
+        },
+        # the residual refusal: a meta-less non-elementwise graph the
+        # templates cannot shape (every meta-bearing spec now proposes)
+        {
+            "spec": ("applyd", ("aff_diag", 1.0, 2.0), 3.0),
+            "domain": [{}],
         },
     ]
 

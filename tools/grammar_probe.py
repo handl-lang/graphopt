@@ -48,6 +48,11 @@ SPECS: dict[str, object] = {
     "softmax": (
         "div",
         ("exp", "X"),
+        ("sum", ("exp", "X"), {"dim": -1, "keepdim": True}),
+    ),
+    "softmax-nokeepdim": (
+        "div",
+        ("exp", "X"),
         ("sum", ("exp", "X"), {"dim": -1}),
     ),
     "selective-init-clamped": (
