@@ -162,3 +162,111 @@ def test_compile_with_inputs_consumes_the_inputs():
         tmpl, [ia._state_var(), ia._input_var(0)]
     )
     assert cb.arity(step) == (2, 2)
+
+
+# ---------------------------------------------------------------------------
+#  The block width as a parameter (gate 3, cause 1)
+# ---------------------------------------------------------------------------
+
+
+def _fold_widths(widths, surviving=None, structural=False):
+    """A ``K``-block fold whose blocks differ in their block **width**.
+
+    ``widths`` — the per-block width.  ``surviving`` — when given, a
+    ``decay_vec`` carrying the width on ``t`` that *survives* into the
+    template (the width does not reach a wire).  ``structural`` — when
+    true, block 2 gets an extra factor, a *non*-parametric difference the
+    move must not paper over.
+    """
+    x = _v("x", 2, sum(widths), 16)
+    state = _v("s0", 2, 16, 16)
+    outs = []
+    for i, w in enumerate(widths):
+        b = Op.make("split", x, sizes=(w,), dim=-2, index=i)
+        tail = (
+            Op.make("decay_vec", Const(0.9), t=w, sign=-1)
+            if surviving
+            else Const(2.0)
+        )
+        o = Op.make("add", Op.make("mul", b, state), tail)
+        if structural and i == 2:
+            o = Op.make("mul", Const(3.0), o)
+        outs.append(o)
+        state = Op.make("add", Op.make("mul", Const(0.9), state), b)
+    root = outs[0]
+    for o in outs[1:]:
+        root = Op.make("concat", root, o, dim=-2)
+    return root
+
+
+def test_own_split_width_is_already_a_wire():
+    """A block's *own* split width needs no new parameter: it is the wire.
+
+    The own split is replaced wholesale, so its ``sizes`` never reaches
+    the template — a fold whose blocks differ only in their own width is
+    *already* exactly regular.  This is the half of "abstract sizes" that
+    the move always had; it is recorded so the other half is not mistaken
+    for the whole.
+    """
+    rep = ia.abstract_index(_fold_widths((4, 16, 16, 4)))
+    assert rep.agree
+    assert rep.verdict == "regular"
+    assert rep.roundtrip
+
+
+def test_width_on_a_surviving_node_is_recognised_modulo_attrs():
+    """The width-parametric recognition the gate-3 retro asked for.
+
+    A width that survives into the template (here a ``decay_vec``'s
+    ``t``) makes the templates differ *exactly* but leaves them the same
+    step up to the block width and index: ``agree_mod`` is True and the
+    param-attr diff is empty.
+    """
+    rep = ia.abstract_index(
+        _fold_widths((4, 16, 16, 4), surviving=True)
+    )
+    assert not rep.agree
+    assert rep.agree_mod
+    assert rep.diff_mod == ""
+    assert rep.diff  # the exact difference is still named
+    # the widths the negative is up against are reported
+    assert sorted(rep.param_families) == [
+        (("sign", "-1"), ("t", "16")),
+        (("sign", "-1"), ("t", "4")),
+    ]
+
+
+def test_mod_agreement_never_promotes_to_a_pass():
+    """Parametric agreement explains a negative; it is never a verdict.
+
+    The width-parametric fold still has no fold built (``morph`` is
+    ``None``) and stays ``irregular``: the fixed-shape IR cannot carry a
+    width parameter, so the exact collapse — and the round-trip — are
+    still required.
+    """
+    rep = ia.abstract_index(
+        _fold_widths((4, 16, 16, 4), surviving=True)
+    )
+    assert rep.verdict == "irregular"
+    assert rep.morph is None
+    assert not rep.roundtrip
+
+
+def test_a_structural_difference_is_not_a_width_parameter():
+    """A genuine structural difference survives the param-attr erasure."""
+    rep = ia.abstract_index(
+        _fold_widths((4, 16, 16, 4), structural=True)
+    )
+    assert not rep.agree
+    assert not rep.agree_mod
+    assert rep.diff_mod  # the non-parametric difference is named
+
+
+def test_templates_agree_mod_implies_templates_agree_is_weaker():
+    """Mod agreement is strictly weaker: exact agreement implies it."""
+    exact = ia.abstract_index(_fold_widths((16, 16, 16, 16)))
+    assert exact.agree and exact.agree_mod
+    mod = ia.abstract_index(
+        _fold_widths((4, 16, 16, 4), surviving=True)
+    )
+    assert mod.agree_mod and not mod.agree

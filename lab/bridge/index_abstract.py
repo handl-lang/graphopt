@@ -21,15 +21,26 @@ THE MOVE
 
     1. **Decompose** — flatten the ``concat`` chain into the ``K`` block
        outputs; find the ``split(…, index=i)`` family.
-    2. **Abstract the index** — in each block, replace its own indexed
-       ``split`` with a fresh *block-input* generator, and replace every
-       subterm shared with an earlier block (the recurrence state) with a
-       fresh *state* generator.  The index and the state are now
-       **parameters**, not constants.
+    2. **Abstract the index and the width** — in each block, replace its
+       own indexed ``split`` with a fresh *block-input* generator, and
+       replace every subterm shared with an earlier block (the recurrence
+       state) with a fresh *state* generator.  The index and the state are
+       now **parameters**, not constants.  A block's *own* split is
+       replaced wholesale, so its ``sizes`` (the block **width**) rides on
+       the input wire; the width of a node that *survives* into a template
+       (an inherited read, a ``decay``/``decay_vec``) is abstracted by
+       :data:`WIDTH_ATTRS`, so the move can also ask whether ``K`` blocks
+       are the same step *up to the block width* (step 3b).
     3. **Test regularity** — all ``K`` abstracted templates must be the
        same term (hash-consed identity).  This is the whole question: does
        the abstraction actually collapse the ``K`` blocks to one shared
        ``step``?
+    3b. **Test width-parametric regularity** — the strictly weaker
+       question, and the one the gate-3 retro named: are the ``K`` blocks
+       the same step once the block index **and** the block width are
+       parameters (:func:`templates_agree_mod`)?  It can explain a
+       negative; it is never promoted to a pass (the verdict still needs
+       the exact collapse *and* the fold to reproduce).
     4. **Fold** — when regular, emit ``unroll(step, K)`` (the shared step
        applied ``K`` times); otherwise report the *first* difference, so
        the negative names its own cause.
@@ -63,12 +74,16 @@ from lab.bridge.loop_propose import (
 
 __all__ = [
     "INDEX_ATTRS",
+    "PARAM_ATTRS",
+    "WIDTH_ATTRS",
     "AbstractionReport",
     "abstract_index",
     "abstract_index_report",
     "block_outputs",
     "index_family",
+    "param_families",
     "templates_agree",
+    "templates_agree_mod",
 ]
 
 
@@ -78,6 +93,24 @@ __all__ = [
 #: spellings the reassociation re-writes (``xi_C`` outside, ``xi_1``
 #: inside — the second confound the gate-3 retro named).
 INDEX_ATTRS: tuple[str, ...] = ("index", "t", "offset", "sign")
+
+#: The **block width**.  A chunked scan's ``split`` carries the per-block
+#: sizes, and the two chunk-width families of the gate-3 winner differ
+#: here (``(4, 4, 4, 4, 16, 16, 16)`` vs ``(16, 16, 16, 16)``).  The
+#: gate-3 state-spelling retro named this as the first remaining cause,
+#: because the abstraction abstracted the index but not the width.  A
+#: *block's own* split already carries its width on the **input wire**
+#: the move introduces (the split node is replaced wholesale, so its
+#: ``sizes`` never reaches the template) — ``WIDTH_ATTRS`` is what makes
+#: the width a parameter for the nodes that *survive* into a template
+#: (an inherited read of an earlier block, a ``decay``/``decay_vec``).
+WIDTH_ATTRS: tuple[str, ...] = ("sizes",)
+
+#: Every attribute the move treats as a *parameter*: the per-block index
+#: and the per-block width.  Two templates that differ only here are the
+#: *same step up to its parameters* — the width-parametric reading the
+#: gate-3 retro asked for.  See :func:`templates_agree_mod`.
+PARAM_ATTRS: tuple[str, ...] = INDEX_ATTRS + WIDTH_ATTRS
 
 #: Placeholder type for the parameter wires the abstraction introduces.
 #: The move is structural — the parameters carry no value, so an empty
@@ -316,6 +349,29 @@ def _leaf_desc(x: Any) -> str:
     return f"{type(x).__name__}({x!r})"
 
 
+def _param_key(t: Any) -> Any:
+    """Canonical structural key of ``t`` with the **param attrs erased**.
+
+    This is the *width-parametric* identity of a template: two templates
+    with the same key are the same step up to the block index and the
+    block width (:data:`PARAM_ATTRS`).  Only the *values* of those attrs
+    are dropped — every op, every child, and every other attribute is
+    kept, so a genuine structural difference still separates two keys.
+    The key is content-based (``Op`` is hash-consed, so identity and
+    content agree) and never touches ``id``.
+    """
+    if not isinstance(t, Op):
+        return t
+    a = tuple(
+        sorted(
+            (k, repr(v))
+            for k, v in dict(t.attrs).items()
+            if k not in PARAM_ATTRS
+        )
+    )
+    return (t.op, tuple(_param_key(x) for x in t.args), a)
+
+
 def _first_diff(a: Any, b: Any, path: str) -> str:
     """Describe the first structural difference between two terms."""
     if not isinstance(a, Op) or not isinstance(b, Op):
@@ -336,6 +392,98 @@ def _first_diff(a: Any, b: Any, path: str) -> str:
     return ""
 
 
+def _first_diff_mod(a: Any, b: Any, path: str) -> str:
+    """First difference between two terms **modulo** the param attrs.
+
+    :func:`_first_diff` with :data:`PARAM_ATTRS` erased, so the message
+    names the first *non-parametric* difference — the reason the width
+    and the index cannot be the whole story.
+    """
+    if not isinstance(a, Op) or not isinstance(b, Op):
+        if a == b:
+            return ""
+        return f"{path}: {_leaf_desc(a)} vs {_leaf_desc(b)}"
+    if a.op != b.op:
+        return f"{path}: op {a.op} vs {b.op}"
+    da = {
+        k: v for k, v in dict(a.attrs).items() if k not in PARAM_ATTRS
+    }
+    db = {
+        k: v for k, v in dict(b.attrs).items() if k not in PARAM_ATTRS
+    }
+    if da != db:
+        return f"{path}: {a.op} attrs {da} vs {db}"
+    if len(a.args) != len(b.args):
+        return f"{path}: arity {len(a.args)} vs {len(b.args)}"
+    for i, (ca, c_other) in enumerate(zip(a.args, b.args, strict=True)):
+        d = _first_diff_mod(ca, c_other, f"{path}/{a.op}[{i}]")
+        if d:
+            return d
+    return ""
+
+
+def _abstract_blocks(
+    root: Any,
+) -> tuple[list[Any], list[Any], list[dict[Any, Any]], list[Any]]:
+    """Abstract every block once; return the shared intermediate state.
+
+    Returns ``(blocks, state_in, own_of, raw)`` — the decomposition, the
+    per-block consumed state, the own-split→wire map, and the abstracted
+    templates.  Factored out so the exact and the width-parametric
+    agreement checks share one abstraction (they must not disagree about
+    what a block *is*).
+    """
+    blocks = block_outputs(root)
+    own_ids = _block_splits(blocks)
+    state_in = _state_inputs(blocks, own_ids)
+    own_of, _ = _split_slots(blocks, own_ids)
+    raw = [
+        _abstract_block(b, own, si, {})
+        for b, own, si in zip(blocks, own_of, state_in, strict=True)
+    ]
+    return blocks, state_in, own_of, raw
+
+
+def _agree(
+    raw: list[Any],
+    key: Any,
+    diff: Any,
+) -> tuple[bool, list[Any], str]:
+    """Group ``raw`` templates by ``key``; return ``(agree, templates, diff)``.
+
+    ``key`` decides what "the same template" means (exact identity, or
+    identity modulo the param attrs); ``diff`` names the first difference
+    the same way.  The interior mismatch is reported first — blocks
+    ``1..K-1`` are the full (non-degenerate) steps — then the boundary
+    block 0, whose state is an external input.
+    """
+    groups: dict[Any, list[int]] = {}
+    for i, t in enumerate(raw):
+        groups.setdefault(key(t), []).append(i)
+    if len(groups) == 1:
+        return True, raw, ""
+    ref = max(
+        groups, key=lambda k: (len(groups[k]), 0 not in groups[k])
+    )
+    ref_raw = next(t for t in raw if key(t) == ref)
+    aligned = [t if key(t) == ref else _align(ref_raw, t) for t in raw]
+    for i, t in enumerate(aligned[2:], start=2):
+        if key(t) != key(aligned[1]):
+            return (
+                False,
+                aligned,
+                diff(aligned[1], t, f"block1/block{i}"),
+            )
+    for i, t in enumerate(aligned[1:], start=1):
+        if key(t) != key(aligned[0]):
+            return (
+                False,
+                aligned,
+                diff(aligned[0], t, f"block0/block{i}"),
+            )
+    return True, aligned, ""
+
+
 def templates_agree(
     root: Any, dim: int = -2
 ) -> tuple[bool, list[Any], str]:
@@ -353,43 +501,65 @@ def templates_agree(
     structural difference between block 0 and the rest survives the
     alignment and is reported.
     """
-    blocks = block_outputs(root)
+    blocks, _state_in, _own_of, raw = _abstract_blocks(root)
     if len(blocks) < 2:
         return False, blocks, "fewer than two blocks"
-    state_in = _state_inputs(blocks, _block_splits(blocks))
-    own_of, _ = _split_slots(blocks, _block_splits(blocks))
-    raw = [
-        _abstract_block(b, own, si, {})
-        for b, own, si in zip(blocks, own_of, state_in, strict=True)
-    ]
-    groups: dict[Any, list[int]] = {}
+    return _agree(raw, key=lambda t: t, diff=_first_diff)
+
+
+def templates_agree_mod(
+    root: Any, dim: int = -2
+) -> tuple[bool, list[Any], str]:
+    """As :func:`templates_agree`, but **modulo the param attrs**.
+
+    This is the *width-parametric* reading the gate-3 retro asked for:
+    are the ``K`` blocks the same step once the block index **and** the
+    block width are treated as parameters (:data:`PARAM_ATTRS`)?  It is
+    strictly weaker than :func:`templates_agree` — an exact collapse
+    implies a parametric one — so it can only ever *explain* an exact
+    negative, never manufacture a positive: the verdict still requires
+    the exact templates to collapse *and* the fold to reproduce.
+    """
+    blocks, _state_in, _own_of, raw = _abstract_blocks(root)
+    if len(blocks) < 2:
+        return False, blocks, "fewer than two blocks"
+    return _agree(raw, key=_param_key, diff=_first_diff_mod)
+
+
+def param_families(root: Any) -> dict[Any, list[int]]:
+    """Return the distinct param-attr *values* per template, as text.
+
+    Reports which block widths / indices actually appear on the
+    abstracted templates, so the negative can name the parameter it is
+    up against (e.g. ``sizes=(4, 4, 4, 4, 16, 16, 16)`` vs
+    ``sizes=(16, 16, 16, 16)``).  Values are deduplicated — one entry per
+    distinct ``(attr, value)`` pair, not one per occurrence.
+    """
+    _blocks, _state_in, _own_of, raw = _abstract_blocks(root)
+    fams: dict[Any, list[int]] = {}
     for i, t in enumerate(raw):
-        groups.setdefault(t, []).append(i)
-    if len(groups) == 1:
-        return True, raw, ""
-    ref = max(
-        groups, key=lambda k: (len(groups[k]), 0 not in groups[k])
-    )
-    aligned = [t if t == ref else _align(ref, t) for t in raw]
-    # Report the *interior* mismatch first: blocks 1..K-1 are the full
-    # (non-degenerate) steps, so a difference among them is the deep
-    # reason the abstraction cannot collapse.  Block 0 is the boundary
-    # (its state is an external input), a separate and expected confound.
-    for i, t in enumerate(aligned[2:], start=2):
-        if t != aligned[1]:
-            return (
-                False,
-                aligned,
-                _first_diff(aligned[1], t, f"block1/block{i}"),
-            )
-    for i, t in enumerate(aligned[1:], start=1):
-        if t != aligned[0]:
-            return (
-                False,
-                aligned,
-                _first_diff(aligned[0], t, f"block0/block{i}"),
-            )
-    return True, aligned, ""
+        vals = tuple(
+            sorted({(k, repr(v)) for k, v in _param_values(t)})
+        )
+        fams.setdefault(vals, []).append(i)
+    return fams
+
+
+def _param_values(t: Any) -> list[tuple[str, Any]]:
+    """Every ``(attr, value)`` with a param-attr key anywhere in ``t``."""
+    out: list[tuple[str, Any]] = []
+    seen: set[Any] = set()
+    stack = [t]
+    while stack:
+        x = stack.pop()
+        if not isinstance(x, Op) or x in seen:
+            continue
+        seen.add(x)
+        for k, v in dict(x.attrs).items():
+            if k in PARAM_ATTRS:
+                out.append((k, v))
+        stack.extend(x.args)
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -502,6 +672,15 @@ class AbstractionReport:
     families: dict = field(default_factory=dict)
     agree: bool = False
     diff: str = ""
+    #: Agreement *modulo the param attrs* — the same step up to the block
+    #: index and the block **width** (:data:`PARAM_ATTRS`).  Strictly
+    #: weaker than :attr:`agree`; it explains a negative, it never
+    #: replaces it (the verdict still needs :attr:`agree`).
+    agree_mod: bool = False
+    diff_mod: str = ""
+    #: Which param-attr values actually appear per template (the widths
+    #: and indices the negative is up against).
+    param_families: dict = field(default_factory=dict)
     n_inputs: int = 0
     #: ``unroll(step, K)`` when the abstraction collapsed the blocks;
     #: ``None`` when it did not (the gate-3 negative).
@@ -532,7 +711,10 @@ def abstract_index(root: Any, dim: int = -2) -> AbstractionReport:
     Binds the per-block index (and the recurrence state) as parameters; if
     the ``K`` blocks then collapse to one shared ``step``, returns the
     ``unroll(step, K)`` spelling (the loop-carrying form).  Otherwise the
-    report names the first difference — the negative's cause.
+    report names the first difference — the negative's cause — and, when
+    the blocks are the same step *modulo the block width and index*
+    (:func:`templates_agree_mod`), says so: that is the width-parametric
+    reading, and it is recorded without ever being promoted to a pass.
     """
     blocks = block_outputs(root)
     rep = AbstractionReport(
@@ -540,6 +722,9 @@ def abstract_index(root: Any, dim: int = -2) -> AbstractionReport:
     )
     agree, templates, diff = templates_agree(root, dim)
     rep.agree, rep.diff = agree, diff
+    agree_mod, _templates_mod, diff_mod = templates_agree_mod(root, dim)
+    rep.agree_mod, rep.diff_mod = agree_mod, diff_mod
+    rep.param_families = param_families(root)
     if not agree:
         return rep
     own_ids = _block_splits(blocks)
@@ -670,6 +855,25 @@ def abstract_index_report(root: Any, control: Any = None) -> None:
                 "the term — the abstracted state is not the recurrence state"
             )
         print(f"      first difference: {rep.diff}")
+        if rep.agree_mod:
+            print(
+                "      ... but they ARE the same step modulo the block "
+                "width and index (sizes/index abstracted): the width is a "
+                "parameter the fixed-shape IR cannot carry, so no fold is "
+                "built"
+            )
+        else:
+            print(
+                "      ... and they are NOT the same step even modulo the "
+                "block width and index — the difference is structural, not "
+                "a width/index parameter"
+            )
+            print(
+                f"      first difference mod width/index: {rep.diff_mod}"
+            )
+        for vals, idxs in rep.param_families.items():
+            shown = ", ".join(f"{k}={v}" for k, v in vals) or "(none)"
+            print(f"      param values blocks={idxs}: {shown}")
     if control is not None:
         crep = abstract_index(control)
         line = (
