@@ -22,13 +22,16 @@ The mapping is honest about which layer carries what:
                       hooks live under ``catopt.law`` verbatim —
                       structural data maps, semantic data survives.
 - a **root-eliminating** law (rhs a bare metavar, e.g.
-                      ``double_neg: neg(neg(a)) → a``) has *no*
-                      ``!Declarative`` form — handl's
-                      ``TransformRule::Declarative`` always *creates* a
-                      node (``target_kind: String``) — so the bridge
-                      refuses explicitly with ``!Native``
-                      (``catopt:eliminate_root``), which handl's engine
-                      rejects loudly.  See :data:`_ELIMINATE_ROOT_NATIVE`.
+                      ``double_neg: neg(neg(a)) → a``) maps to
+                      handl's ``!Replace { path }`` rule form (ADR-0127):
+                      the rewritten node *is* the existing descendant at
+                      ``path``, so no node is created and the law is
+                      expressed faithfully.  (Before ADR-0127 no faithful
+                      form existed — ``TransformRule::Declarative`` always
+                      *creates* a node — and the bridge emitted an explicit
+                      ``!Native`` refusal; that is now only the fallback for
+                      a bare-metavar rhs with *no* bound path, see
+                      :data:`_ELIMINATE_ROOT_NATIVE`.)
 - ``role="handle"`` → a ``!Native``-style binding record
                       (``catopt:<kernel>``) — handl's own resolver
                       seam; the catopt kernel name is the tag.
@@ -142,20 +145,24 @@ _CONST_KIND = "catopt:const"
 _VAR_KIND = "catopt:var"
 _DATA_KIND = "catopt:data"
 
-#: The ``Native`` rule name the bridge emits for a **root-eliminating** law
-#: — one whose rhs is a bare metavar, returning a subterm (5 in the shipped
-#: bank: ``id_add``, ``id_mul``, ``double_neg``, ``transpose_noop``,
-#: ``chunk_single``).  handl's ``TransformRule::Declarative`` always
-#: *creates* a node (``target_kind: String``), so such a law has no faithful
-#: declarative form.  Emitting ``target_kind: None`` is not a valid refusal
-#: either: serde_yaml coerces the YAML ``null`` scalar into the *string*
-#: ``"null"``, so handl's engine silently fabricates a malformed node of
-#: kind ``"null"`` (measured — the bridge used to do exactly this).  The
-#: bridge therefore refuses *explicitly* with a ``!Native`` rule naming the
-#: missing operation: handl's engine rejects it loudly ("requires native
-#: rewrite … but no native registry is wired") rather than fabricating a
-#: node, and handl's own validator warns the native must be registered.  The
-#: law's meaning still round-trips verbatim through ``catopt.law``.
+#: The ``Native`` rule name the bridge emits as a **fallback refusal** for a
+#: root-eliminating law whose rhs is a bare metavar with *no* bound path —
+#: i.e. a metavar that does not occur in the lhs (no shipped law has one).
+#: A root-eliminating law whose rhs metavar *is* bound in the lhs — the 5 in
+#: the shipped bank (``id_add``, ``id_mul``, ``double_neg``,
+#: ``transpose_noop``, ``chunk_single``) — now maps faithfully to handl's
+#: ``!Replace { path }`` rule form (handl ADR-0127), so it no longer lands
+#: here.  ``TransformRule::Declarative`` always *creates* a node
+#: (``target_kind: String``), so before ``Replace`` existed such a law had no
+#: faithful form at all.  Emitting ``target_kind: None`` is not a valid
+#: refusal either: serde_yaml coerces the YAML ``null`` scalar into the
+#: *string* ``"null"``, so handl's engine silently fabricated a malformed
+#: node of kind ``"null"`` (measured — the bridge used to do exactly this).
+#: For the residual case the bridge therefore refuses *explicitly* with a
+#: ``!Native`` rule naming the missing operation: handl's engine rejects it
+#: loudly ("requires native rewrite … but no native registry is wired")
+#: rather than fabricating a node.  The law's meaning still round-trips
+#: verbatim through ``catopt.law``.
 #: Plan 0030 step 3 / ``project/retros/handl-differential-rewrite-check.md``.
 _ELIMINATE_ROOT_NATIVE = "catopt:eliminate_root"
 
@@ -246,18 +253,27 @@ def _children_spec(term: Any, paths: dict) -> dict:
 
 
 def _rule_body(rule: Rewrite, paths: dict) -> dict:
-    """Render a law's ``TransformRule`` — ``!Declarative`` or a refusal.
+    """Render a law's ``TransformRule`` — ``!Declarative`` or ``!Replace``.
 
     An rhs with an **op root** maps to ``!Declarative``: create
     ``target_kind`` (the root op) from the child steps.  An rhs that is a
-    **bare metavar** — a *root-eliminating* law returning a subterm — has
-    no faithful declarative form (handl always creates a node), so the
-    bridge refuses explicitly with ``!Native`` naming the missing
-    operation; see :data:`_ELIMINATE_ROOT_NATIVE` for why a null
-    ``target_kind`` is not a valid refusal.
+    **bare metavar bound in the lhs** — a *root-eliminating* law returning a
+    subterm — maps to ``!Replace { path }`` (handl ADR-0127): the rewritten
+    node *is* the existing descendant at the metavar's bound position, so
+    ``double_neg: neg(neg(a)) → a`` becomes ``!Replace { path: [0, 0] }``.
+    That is the faithful form — handl's ``!Declarative`` always *creates* a
+    node, so it cannot express a law that drops its root.
+
+    A bare-metavar rhs with **no non-empty** bound path — a metavar absent
+    from the lhs, or bound only at the lhs root (an empty path, which would
+    name the matched node itself) — has no descendant to name, so it falls
+    back to the explicit ``!Native`` refusal; see
+    :data:`_ELIMINATE_ROOT_NATIVE`.
     """
     parts = _op_parts(rule.rhs)
     if parts is None:
+        if isinstance(rule.rhs, str) and paths.get(rule.rhs):
+            return {"Replace": {"path": list(paths[rule.rhs])}}
         return {"Native": _ELIMINATE_ROOT_NATIVE}
     return {
         "Declarative": {

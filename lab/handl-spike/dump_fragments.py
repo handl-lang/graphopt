@@ -59,6 +59,7 @@ _SLICE_LAW = "assoc_add"
 _TAGS = frozenset(
     {
         "Declarative",
+        "Replace",
         "Native",
         "Keep",
         "KeepRole",

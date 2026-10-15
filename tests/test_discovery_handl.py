@@ -126,16 +126,31 @@ class TestLawToHandl:
         many = handl._when_condition(OM_LIFT.lhs)
         assert set(many) == {"And"} and len(many["And"]) >= 2
 
-    def test_bare_metavar_root_refuses_as_native(self):
-        """A root-eliminating law refuses explicitly with a ``!Native``.
+    def test_bound_bare_metavar_rhs_emits_replace(self):
+        """A root-eliminating law with a *bound* rhs metavar → ``!Replace``.
 
-        The rhs is a bare metavar (a subterm), which handl's
-        ``TransformRule::Declarative`` cannot express — it always creates
-        a node.  Emitting ``target_kind: None`` is not a valid refusal:
-        serde_yaml coerces the YAML ``null`` scalar into the *string*
-        ``"null"``, so handl's engine silently fabricates a node of kind
-        ``"null"``.  The bridge emits a ``!Native`` naming the missing
-        operation instead, and the law still round-trips via ``catopt``.
+        ``double_neg: neg(neg(a)) → a`` — the path to ``a`` is ``[0, 0]``,
+        which is exactly the ``!Replace { path }`` the engine follows to
+        return the subterm (handl ADR-0127).  No node is created, so the law
+        is expressed faithfully.
+        """
+        r = R("x", Op.make("neg", Op.make("neg", "a")), "a")
+        row = handl.law_to_handl(r, "x")
+        assert row["rule"] == {"Replace": {"path": [0, 0]}}
+        assert row["node_kind"] == "neg"
+        cell = handl.cell_from_handl(row)
+        assert cell is not None and cell.body.rhs == "a"
+
+    def test_unbound_bare_metavar_rhs_refuses_as_native(self):
+        """A bare-metavar rhs with no *bound* path still refuses explicitly.
+
+        The rhs metavar does not occur in the lhs, so there is no descendant
+        for ``!Replace`` to name; the bridge falls back to the ``!Native``
+        refusal.  No shipped law hits this (all 5 root-eliminating laws bind
+        their rhs metavar), so it is a synthetic guard.  Emitting
+        ``target_kind: None`` is not a valid refusal: serde_yaml coerces the
+        YAML ``null`` scalar into the *string* ``"null"``, so handl's engine
+        silently fabricates a node of kind ``"null"``.
         """
         r = R("x", "a", "b")
         row = handl.law_to_handl(r, "x")
@@ -144,23 +159,28 @@ class TestLawToHandl:
         cell = handl.cell_from_handl(row)
         assert cell is not None and cell.body.rhs == "b"
 
-    def test_root_eliminating_bank_law_refuses(self):
-        """Every root-eliminating bank law emits the refusal, not a null.
+    def test_root_eliminating_bank_law_emits_replace(self):
+        """Every root-eliminating bank law emits ``!Replace { path }``.
 
         The 5 shipped root-eliminating laws (``id_add``, ``id_mul``,
         ``double_neg``, ``transpose_noop``, ``chunk_single``) all have a
-        bare-metavar rhs; each emits ``!Native`` (never
-        ``target_kind: None``), keeps its dispatch ``node_kind``, and
-        round-trips through the ``catopt`` record.
+        bare-metavar rhs *bound in the lhs*, so each maps to handl's
+        ``!Replace`` rule form (ADR-0127): the rewritten node IS the existing
+        descendant at the metavar's bound path — no node is created.  Each
+        keeps its dispatch ``node_kind`` and round-trips through the
+        ``catopt`` record.
         """
         from catopt_core.laws import ALL_RULES
 
-        native = {"Native": handl._ELIMINATE_ROOT_NATIVE}
         eliminating = [r for r in ALL_RULES if isinstance(r.rhs, str)]
         assert len(eliminating) == 5, "bank root-eliminating set moved"
         for law in eliminating:
+            paths: dict = {}
+            handl._metavar_paths(law.lhs, paths)
             row = handl.law_to_handl(law, law.name)
-            assert row["rule"] == native
+            assert row["rule"] == {
+                "Replace": {"path": list(paths[law.rhs])}
+            }, law.name
             assert row["node_kind"] is not None, "dispatch kind is kept"
             cell = handl.cell_from_handl(row)
             assert cell is not None

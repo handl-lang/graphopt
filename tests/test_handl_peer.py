@@ -146,10 +146,15 @@ def test_the_differential_reports_no_disagreement() -> None:
 
     The probe (`lab/audit/handl_differential.py`) synthesizes one term per
     law, rewrites it with both engines and compares the results.  This
-    pins the *measured* state: 19 laws comparable, 19 agreeing, 0
+    pins the *measured* state: 24 laws comparable, 24 agreeing, 0
     disagreements.  The laws it cannot compare are reported by the probe
-    with their reason (leaf rhs, root-eliminating, declined, guard
-    raised) -- none of which is a disagreement.
+    with their reason (leaf rhs, declined, guard raised) -- none of which
+    is a disagreement.  Root-eliminating laws (``id_add``, ``id_mul``,
+    ``double_neg``, ``transpose_noop``, ``chunk_single``) are now
+    *expressible* via handl's ``!Replace`` (handl ADR-0127): three are
+    compared here, and the other two are declined only because the probe's
+    synthesized term cannot satisfy their guard -- see
+    `test_root_eliminating_laws_agree_on_satisfying_terms`.
     """
     import importlib.util
 
@@ -168,5 +173,85 @@ def test_the_differential_reports_no_disagreement() -> None:
         code = mod.main([])
     report = buf.getvalue()
     assert "DISAGREE           : 0" in report, report
-    assert "agree              : 19" in report, report
+    assert "agree              : 24" in report, report
     assert code == 0, report
+
+
+def test_root_eliminating_laws_agree_on_satisfying_terms() -> None:
+    """The two guarded root-eliminating laws agree when both engines fire.
+
+    The probe's generic term cannot satisfy ``transpose_noop``'s
+    ``axes-noop`` guard or ``chunk_single``'s ``attr-eq CK 1`` guard, so it
+    reports them ``declined`` -- a limitation of the probe's synthesis, not
+    of the ``!Replace`` rule form.  Given a term whose guard *holds*, both
+    engines must return the subterm, so the faithful form is pinned for
+    all five root-eliminating laws.
+    """
+    from catopt_core.egraph import EGraph
+    from catopt_core.ir import Op, TensorType, Var
+
+    fragments_all = _REPO / "lab" / "handl-spike" / "fragments-all"
+    assert fragments_all.is_dir(), "the full bank fragment dir is required"
+
+    cases = {
+        # chunk(u, chunks=1, …) -> u
+        "chunk_single": Op.make(
+            "chunk", Var("u", TensorType((4,))), chunks=1, dim=0, index=0
+        ),
+        # transpose(u, 0, 0) -> u (the axes coincide)
+        "transpose_noop": Op.make(
+            "transpose", Var("u", TensorType((4, 4))), dim0=0, dim1=0
+        ),
+    }
+    for name, term in cases.items():
+        law = next(r for r in ALL_RULES if r.name == name)
+        graph = EGraph()
+        assert graph.apply_rule(law, graph.add_term(term)), (
+            f"catopt's engine must fire {name} on a satisfying term"
+        )
+        ast = json.dumps(
+            [{"kind": n["kind"], "payload": {"children": n["children"]}}
+             for n in _arena_of(term)]
+        )
+        if _ext is not None:
+            out = json.loads(
+                _ext.apply_rule(
+                    str(fragments_all),
+                    ast,
+                    _root_of(term),
+                    f"transform.catopt.{name}",
+                )
+            )
+        else:
+            proc = subprocess.run(
+                [str(_BIN), str(fragments_all), f"transform.catopt.{name}",
+                 str(_root_of(term)), ast],
+                capture_output=True, text=True, timeout=120,
+            )
+            assert proc.returncode == 0, proc.stderr
+            out = json.loads(proc.stdout)
+        root = out["arena"][out["root_index"]]
+        assert root["kind"] == "u", (
+            f"{name}: handl must return the subterm, got {root}"
+        )
+
+
+def _arena_of(term) -> list[dict]:
+    """Flatten a catopt term to the peer's flat node list (post-order)."""
+    arena: list[dict] = []
+    _flatten_into(term, arena)
+    return arena
+
+
+def _flatten_into(node, arena: list[dict]) -> int:
+    if isinstance(node, Op):
+        kids = [_flatten_into(a, arena) for a in node.args]
+        arena.append({"kind": node.op, "children": kids})
+    else:
+        arena.append({"kind": getattr(node, "name", str(node)), "children": []})
+    return len(arena) - 1
+
+
+def _root_of(term) -> int:
+    """Index of ``term``'s root in the post-order arena `_arena_of` builds."""
+    return len(_arena_of(term)) - 1

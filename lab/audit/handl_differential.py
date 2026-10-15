@@ -20,12 +20,22 @@ probe:
 
 Scope, stated honestly
 ----------------------
-* **Structural laws only.**  A law whose rhs carries a leaf (a constant or
-  a variable) is skipped: handl sees the leaf as a ``Create`` of a
-  ``catopt:``-namespaced kind carrying the value in the payload, so the
+* **Structural laws only.**  A law whose *right-hand side* carries a leaf (a
+  constant or a variable) is skipped: handl sees the leaf as a ``Create`` of
+  a ``catopt:``-namespaced kind carrying the value in the payload, so the
   two renderings are not directly comparable yet (plan 0030 step 3).
   The probe reports how many laws that excludes — that number *is* the
-  size of the remaining mapping work.
+  size of the remaining mapping work.  (Only the *rhs* is filtered: a leaf
+  in the *lhs* is part of the synthesized **input**, which the probe builds
+  from catopt's own IR and feeds to both engines identically, so it is
+  perfectly comparable — filtering it out used to hide ``id_add``/``id_mul``
+  needlessly.)
+* **Root-eliminating laws are compared.**  A law whose rhs is a bare
+  metavar (``double_neg``, ``id_add``, ``id_mul``, ``transpose_noop``,
+  ``chunk_single``) drops its root and returns a subterm.  handl's
+  ``!Replace { path }`` rule form (handl ADR-0127) expresses exactly that,
+  so these 5 laws are no longer classified-and-skipped: they are fired on
+  both engines and compared like any other structural law.
 * **Guarded laws** are included only when their guard holds for the
   synthesized term (otherwise the two engines agree by both declining).
 * **One term per law.**  This is a smoke-level differential, not
@@ -65,17 +75,15 @@ except ImportError:  # pragma: no cover - depends on the local build
 
 
 def _eliminates_root(rule: object) -> bool:
-    """Report whether the law's rhs is a bare metavar — the root is dropped.
+    """Whether the law's rhs is a bare metavar — the law drops its root.
 
-    handl's `TransformRule::Declarative` always *creates* a node (its
-    `target_kind` is a `String`), so a law that returns a subterm has no
-    faithful rule form.  Measured (this probe + the peer): the bridge used
-    to emit `target_kind: None`, which serde_yaml coerces into the *string*
-    `"null"`, so handl's engine silently fabricated a malformed node of kind
-    `"null"`; it now emits a `!Native` (`catopt:eliminate_root`) refusal that
-    handl's engine rejects loudly.  Either way the two engines cannot be
-    compared, so these laws are reported separately — the gap is real and is
-    *not* papered over.
+    These are the laws a ``TransformRule::Declarative`` could not express
+    (it always *creates* a node), so before handl ADR-0127 the probe had to
+    classify them *before firing* rather than compare them.  The bridge now
+    emits ``!Replace { path }`` for them — the rewritten node IS the existing
+    descendant at ``path`` — so they are **compared like any other
+    structural law**.  This predicate is kept only to *report* how many of
+    the compared laws are root-eliminating; it no longer skips anything.
     """
     return isinstance(rule.rhs, str)
 
@@ -176,6 +184,39 @@ def _from_handl(arena: list[dict], index: int) -> dict:
     }
 
 
+def _outcome(rule: object) -> str:
+    """Compare one law on both engines and return its outcome.
+
+    ``"skipped"`` — the rhs carries a leaf (not directly comparable yet,
+    plan 0030 step 3); ``"guard"`` — a guard raised on the synthesized term;
+    ``"declined"`` — an engine did not fire; ``"agree"``/``"disagree"`` —
+    both engines fired and the rendered results (did not) match.
+    """
+    if not _is_structural(rule.rhs):
+        return "skipped"
+    fresh: dict = {}
+    term = _instantiate(rule.lhs, fresh)
+    graph = EGraph()
+    root_eid = graph.add_term(term)
+    try:
+        fired = graph.apply_rule(rule, root_eid)
+    except Exception:  # a guard raised on a synthesized term
+        # Some guards are *shape-sensitive*: they consult the shape of a
+        # child, and a synthesized term (bare f64 variables) cannot
+        # satisfy every such lookup.  That is a limitation of
+        # synthesizing one term per law, not an engine disagreement --
+        # counted separately so it cannot hide a real one.
+        return "guard"
+    if not fired:
+        return "declined"
+    expected = _render(_instantiate(rule.rhs, fresh))
+    got = _handl_rewrite(f"transform.catopt.{rule.name}", term)
+    if got is None:
+        return "declined"
+    actual = _from_handl(got["arena"], _root_index(got))
+    return "agree" if actual == expected else "disagree"
+
+
 def main(argv: list[str] | None = None) -> int:
     """Run the differential and print a report."""
     args = list(sys.argv[1:] if argv is None else argv)
@@ -195,67 +236,46 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 2
 
-    agree = disagree = declined = skipped = eliminates = (
-        guard_errors
-    ) = 0
+    outcomes = {
+        "agree": 0,
+        "disagree": 0,
+        "declined": 0,
+        "skipped": 0,
+        "guard": 0,
+    }
     disagreements: list[str] = []
+    #: (name, outcome) for every root-eliminating law — the 5 whose
+    #: expression handl's `!Replace` (ADR-0127) made possible.  Reported
+    #: per law so a decline cannot hide among the aggregate buckets.
+    elim: list[tuple[str, str]] = []
     for rule in ALL_RULES:
-        if limit is not None and agree + disagree >= limit:
+        if (
+            limit is not None
+            and outcomes["agree"] + outcomes["disagree"] >= limit
+        ):
             break
-        if _eliminates_root(rule):
-            eliminates += 1
-            continue
-        if not (_is_structural(rule.lhs) and _is_structural(rule.rhs)):
-            skipped += 1
-            continue
-
-        fresh: dict = {}
-        term = _instantiate(rule.lhs, fresh)
-        graph = EGraph()
-        root_eid = graph.add_term(term)
-        try:
-            fired = graph.apply_rule(rule, root_eid)
-        except Exception:  # a guard raised on a synthesized term
-            # Some guards are *shape-sensitive*: they consult the shape of a
-            # child, and a synthesized term (bare f64 variables) cannot
-            # satisfy every such lookup.  That is a limitation of
-            # synthesizing one term per law, not an engine disagreement --
-            # counted separately so it cannot hide a real one.
-            guard_errors += 1
-            continue
-        if not fired:
-            declined += 1
-            continue
-        expected = _render(_instantiate(rule.rhs, fresh))
-
-        got = _handl_rewrite(f"transform.catopt.{rule.name}", term)
-        if got is None:
-            declined += 1
-            continue
-        actual = _from_handl(got["arena"], _root_index(got))
-
-        if actual == expected:
-            agree += 1
-        else:
-            disagree += 1
+        result = _outcome(rule)
+        outcomes[result] += 1
+        if result == "disagree":
             disagreements.append(rule.name)
+        if _eliminates_root(rule):
+            elim.append((rule.name, result))
 
+    agree, disagree = outcomes["agree"], outcomes["disagree"]
     print("differential rewrite check — catopt vs handl")
     print(f"  laws compared      : {agree + disagree}")
     print(f"  agree              : {agree}")
     print(f"  DISAGREE           : {disagree}")
-    print(f"  skipped (leaf rhs) : {skipped}")
-    print(
-        f"  root-eliminating   : {eliminates}  (handl's Declarative always"
-    )
-    print(
-        "                        creates a node; the bridge refuses with"
-    )
-    print(
-        "                        !Native catopt:eliminate_root — plan 0030)"
-    )
-    print(f"  declined by an engine: {declined}")
-    print(f"  guard raised (synth) : {guard_errors}")
+    print(f"  skipped (leaf rhs) : {outcomes['skipped']}")
+    print(f"  declined by an engine: {outcomes['declined']}")
+    print(f"  guard raised (synth) : {outcomes['guard']}")
+    if elim:
+        print(
+            "  root-eliminating laws (bare-metavar rhs — handl"
+            " !Replace, ADR-0127):"
+        )
+        for name, result in elim:
+            print(f"    - {name}: {result}")
     if disagreements:
         print("  disagreements:", ", ".join(disagreements[:10]))
     return 1 if disagree else 0

@@ -240,7 +240,9 @@
   pass: "catopt"
   node_kind: "add"
   rule:
-    !Native "catopt:eliminate_root"
+    !Replace
+    path:
+      - 0
   catopt:
     law:
       version: 2
@@ -275,7 +277,9 @@
   pass: "catopt"
   node_kind: "mul"
   rule:
-    !Native "catopt:eliminate_root"
+    !Replace
+    path:
+      - 0
   catopt:
     law:
       version: 2
@@ -310,7 +314,10 @@
   pass: "catopt"
   node_kind: "neg"
   rule:
-    !Native "catopt:eliminate_root"
+    !Replace
+    path:
+      - 0
+      - 0
   catopt:
     law:
       version: 2
@@ -894,7 +901,9 @@
   pass: "catopt"
   node_kind: "transpose"
   rule:
-    !Native "catopt:eliminate_root"
+    !Replace
+    path:
+      - 0
   catopt:
     law:
       version: 2
@@ -934,7 +943,9 @@
   pass: "catopt"
   node_kind: "chunk"
   rule:
-    !Native "catopt:eliminate_root"
+    !Replace
+    path:
+      - 0
   catopt:
     law:
       version: 2
