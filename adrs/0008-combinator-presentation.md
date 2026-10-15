@@ -163,11 +163,48 @@ merged `32962d0`; `lab/bridge/combinator.py` + `lab/bridge/combinator_probe.py`)
   staged-saturation extract projects through the bridge round-trip
   EQUAL (1590-node morphism, 92 explicit Δ sites) — same recurrence
   modulo spelling.
-- **Gate 3 — open.**  `loop` structure is erased at export: fused
-  recurrences (`lstm.input`, `cumsum`) translate fine but the fold
-  must be *proposed by search*, never recovered by the bridge.
-  Whether search reaches `loop` forms is the remaining substrate
-  risk.
+- **Gate 3 — open, and now with a protocol** (added 2026-10-14; it is
+  the last gate standing between this ADR and ADR 0009's stage 4, so
+  "open" without a way to close it was the real problem).
+  `loop` structure is erased at export: fused recurrences
+  (`lstm.input`, `cumsum`) translate fine but the fold must be
+  *proposed by search*, never recovered by the bridge.  Whether search
+  reaches `loop` forms is the remaining substrate risk.
+
+  **The protocol** (one command, one criterion):
+
+  ```sh
+  .venv/bin/python lab/bridge/combinator_probe.py --gate2 --extracted
+  ```
+
+  This runs one bounded staged saturation (`om_shared_state_stages`)
+  over the exported RetNet graph and projects the extracted winner
+  through the bridge.  Read the result as:
+
+  * **PASS** — the extracted winner is `loop`-headed (or contains a
+    `loop` at the shared-state position), and it round-trips through the
+    bridge equal.  Then the presentation is a *discovery substrate*: the
+    search reached a form the export erased, and ADR 0009's stage 4 is
+    justified on this evidence.
+  * **FAIL** — the winner is the spelled (unrolled) form again.  Then
+    search did **not** reach `loop`, and the honest reading is that the
+    bridge is a *presentation* (a way to say recurrences) rather than a
+    *search space*, and stage 4 should not be justified by it.
+
+  **Why this is the right criterion**: gate 2 already proves the
+  *spelling* works (a hand-written `loop` term lowers and verifies at
+  1e-7).  Gate 3 is the only question a presentation cannot answer about
+  itself — whether the search, not the author, gets there.  A negative
+  result is therefore as valuable as a positive one, and both are
+  publishable statements about the substrate.
+
+  **Prior evidence, for calibration** (from the staged-saturation run
+  recorded above): the extract did reach the carrier at t512
+  (`TestRealExportFold::test_extraction_prefers_the_chunked_carrier_at_t512`)
+  and the staged extract round-tripped EQUAL with 92 explicit Δ sites —
+  which is *encouraging but not the gate*: those wins are
+  carrier-rooted extractions, not a `loop`-headed winner at the
+  shared-state position.  The protocol above is what distinguishes them.
 - **Cost scars.**  Permutation bookkeeping dominates morphism mass
   (Σperm 6057 > Σdag 3519) — the flat context encoding is honest but
   wasteful; a real layer wants a better normal form.  Also: the
