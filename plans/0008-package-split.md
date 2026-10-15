@@ -67,7 +67,7 @@ historical alias paths — `catopt.egraph`, `catopt.cost`,
 
 * Remove `optimize_model` / `optimize_compositional` /
   `optimize_model_autotuned` (the one-line wrappers 0006 left).
-* Migrate every call site (`tests/`, `benches/`, `demo.py`):
+* Migrate every call site (`tests/`, `bench/`, `demo.py`):
 
 ```
 optimize_model(m, x, **kw)           ->  Optimizer(backend=TorchBackend())
@@ -100,7 +100,7 @@ optimize_model_autotuned(m, x, **kw) ->  Optimizer(backend=TorchBackend())
 2. Reduce `catopt/` to a thin, torch-free re-export namespace —
    delete the `sys.modules` alias loop and every torch re-export.
 3. Remove the `optimize_*` wrappers.
-4. Migrate call sites (`tests/`, `benches/`, `demo.py`).
+4. Migrate call sites (`tests/`, `bench/`, `demo.py`).
 5. Rewrite import-linter contracts + CI; run the full gate suite.
 
 ## Tests & gates

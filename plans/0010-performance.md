@@ -68,7 +68,7 @@ and stop when the cost stops improving for `patience` iterations
 * `"improving"` is a **heuristic** — it can stop before the true
   optimum. The default stays **`"fixed_point"`**; `"improving"` is
   opt-in, and is only reconsidered as the default with corpus
-  evidence (no quality loss on `benches/`) — a data decision, not a
+  evidence (no quality loss on `bench/`) — a data decision, not a
   design one.
 
 ## Lever 2 — do less per match
@@ -152,7 +152,7 @@ Every lever must be checked against a known-good path:
 
 ## Measurement
 
-Profile before changing anything: `benches/search_efficiency.py` plus
+Profile before changing anything: `bench/search_efficiency.py` plus
 `cProfile` on a real model (the demo block and a stacked transformer
 block). Record per-phase time (match / union / rebuild / extract) so
 each lever is attributed. Add a scaling table (enodes vs seconds) to

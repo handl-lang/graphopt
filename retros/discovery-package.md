@@ -59,7 +59,7 @@ without a shim.
   `vocab`/`emit` reach orchestrator internals lazily.  The package was
   declared with all four deps.
 * **The `bench` boundary.**  `impact`/`verifier` lazily import
-  `benches.suites.correctness.law_bench.LAW_CASES` — `benches` is a
+  `bench.suites.correctness.law_bench.LAW_CASES` — `bench` is a
   repo-root package, not an installed distribution.  The engine now
   reaches it through `catopt_discovery.REPO_ROOT` (derived from the
   editable file location), keeping the same sys.path mechanism but
@@ -109,7 +109,7 @@ without a shim.
 
 * The five shimmed CLIs still work as `python tools/law_X.py`.
 * `tools/` keeps its dev-infra (`radon_ratchet.py`, `mutmut.sh`,
-  `runtime_types.sh`, `complexity_baseline.json`), the benches/RL
+  `runtime_types.sh`, `complexity_baseline.json`), the bench/RL
   drivers (`contraction_*.py`, `train_*.py`, `calibrate_profile.py`,
   `executor_cost_probe.py`, `coordination_probe.py`,
   `law_wallclock.py`) and the artifacts (`evidence.db`,

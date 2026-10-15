@@ -156,7 +156,7 @@ kernel by hand gets the kernel back.
   `ALL_RULES_WITH_LAYOUT`, `SIMPLIFICATION` preset pick it up
   automatically).
 * `laws/__init__.py` — exported (`SILU_FOLD`, `__all__`).
-* `benches/suites/correctness/law_bench.py` — `LAW_CASES["silu_fold"]`
+* `bench/suites/correctness/law_bench.py` — `LAW_CASES["silu_fold"]`
   (`_one_var(mul(x, sigmoid(x)))`).
 * `tests/test_contracts.py` — `_LAW_SPECS["silu_fold"] = {"x": (2,3)}`
   (fuzzer now covers it; `check`/`derive` are absent — nothing to

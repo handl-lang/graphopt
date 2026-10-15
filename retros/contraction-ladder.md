@@ -6,7 +6,7 @@ contraction-ordering precondition
 cost-model oracle is *provably* suboptimal on matrix chains and general
 tensor networks.  This retro scores the players on a **hard-instance
 set**, against the exact DP optimum, as a bench suite
-(`benches/suites/evaluation/contraction_ladder.py`).
+(`bench/suites/evaluation/contraction_ladder.py`).
 
 The question it answers:
 
@@ -18,9 +18,9 @@ The consequence is the honest one: on this space a learned policy has
 **no quality headroom** above the non-learned players — the residual
 headroom is *search cost*, not quality.
 
-Reproduce: `python -m benches run contraction_ladder` (~18 s,
+Reproduce: `python -m bench run contraction_ladder` (~18 s,
 CPU-only, seeded; `--quick` shrinks to ~7 s).  Direct:
-`python -m benches.suites.evaluation.contraction_ladder`.
+`python -m bench.suites.evaluation.contraction_ladder`.
 
 ## The hard-instance set
 
@@ -160,7 +160,7 @@ need no other change.
 ## Reproduce
 
 ```sh
-python -m benches run contraction_ladder          # full ladder + findings
-python -m benches run contraction_ladder --quick   # ~7 s
-python -m benches.suites.evaluation.contraction_ladder --no-artifacts
+python -m bench run contraction_ladder          # full ladder + findings
+python -m bench run contraction_ladder --quick   # ~7 s
+python -m bench.suites.evaluation.contraction_ladder --no-artifacts
 ```

@@ -4,7 +4,7 @@
 
 ARCHIVED — weight-space probe, falsified axis (see ../REPORT.md).
 Lives under retros/ as evidence for the report's exact-corner pins;
-the llama2c loader it imports is benches/common/llama2c.py on main.
+the llama2c loader it imports is bench/common/llama2c.py on main.
 
 The corner's legitimate scope is EXACT structure only:
   * share_duplicate_params        — whole-tensor tying (bitwise-equal params)

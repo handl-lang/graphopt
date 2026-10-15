@@ -287,7 +287,7 @@ Benchmarks are deliberately last.
   node's local cost from its children's totals, which is exact only
   for an *additive* cost function.  A model-backed criterion predicts
   over the whole subtree, so it cannot steer extraction — measured: no
-  target changes the extracted program (`python -m benches run
+  target changes the extracted program (`python -m bench run
   eval_axis`, 0/7 families; the true roofline argmin is
   target-invariant in 7/7).  A `PerformanceModel` ranks *candidates*,
   not *nodes*; treating it as a cost function is a category error this

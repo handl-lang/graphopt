@@ -493,7 +493,7 @@ Kept here so a future collaborator does not have to reconstruct them from
 | Layer-3 law synthesis | 25 certified / 4 rejected / 0 refused | `retros/layer3-loop.md` |
 | Composed-loop mint | `scan_fold` 1.78e-15; **0 fires on real terms** | `retros/atom-synth-loop.md` |
 | Anti-unification reach | null on all 3 workloads (12 vs 26 ops) | `adrs/0007` |
-| Weight-chain fold | 14.92× vs Inductor (17.40× vs eager) | `benches/baselines/reassoc_scale.json` |
+| Weight-chain fold | 14.92× vs Inductor (17.40× vs eager) | `bench/baselines/reassoc_scale.json` |
 | Spelled RetNet T=2048 | 5.0–5.9× vs eager; 6.2–7.4× vs compile; 7.30× memory | `docs/results.md` |
 | Carrier below crossover | 0.51× vs eager at T=512 | `docs/results.md` |
 | Held-out zoo | 11/18 beat `torch.compile` | `retros/gen-kernels.md` |

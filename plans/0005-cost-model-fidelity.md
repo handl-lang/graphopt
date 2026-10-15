@@ -48,7 +48,7 @@ equivalence-class members correlate with measured end-to-end latency?
 
 ## Method
 
-`benches/cost_fidelity.py` (benchkit Report):
+`bench/cost_fidelity.py` (benchkit Report):
 
 Per cell (model, shape, device):
 1. `discover_alternatives(m, x, top_k)` → the frontier of distinct
@@ -81,7 +81,7 @@ Cells: matrix chain k∈{4,8,16} (win regime), retnet/gla T∈{128,512}
 
 ## Deliverables
 
-- `benches/cost_fidelity.py` → JSON + MD + predicted-vs-measured
+- `bench/cost_fidelity.py` → JSON + MD + predicted-vs-measured
   scatter plots.
 - A cost-model fix for any identified unmodeled term, then a re-run
   showing ρ improvement and selection changes.

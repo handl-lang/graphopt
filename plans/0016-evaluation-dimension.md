@@ -19,7 +19,7 @@ it stages what ADR 0003 decides.
 | 7 learned policy | done | supervised: `catopt_core.trajectories` + `catopt_torch.learned_policy` + `tools/train_search_policy.py`; **RL**: `catopt_core.search_env` + `catopt_torch.rl` + `tools/train_rl_policy.py` |
 | 8 performance model | done | `catopt_core.perf_model` (`AnalyticalPerformanceModel`) |
 | 9–11 | done | `docs/evaluation.md`; property tests |
-| 12 benchmarks | done | `benches/suites/evaluation/policy_value.py` |
+| 12 benchmarks | done | `bench/suites/evaluation/policy_value.py` |
 
 Stage 7's measured results:
 `project/retros/stage7-learned-policy-results.md` (supervised),
@@ -215,7 +215,7 @@ existing gate catches an unconsumed port.
    prediction is a function of the whole subtree, so the marginal is
    either mis-ranked (`swiglu`) or collapses to bit-identical values
    for forms whose true predictions differ by 25 % (`linattn`).
-   Measured by `python -m benches run eval_axis`: pluggable evaluation
+   Measured by `python -m bench run eval_axis`: pluggable evaluation
    does **not** change the extracted program (0/7 families), and the
    true roofline argmin is target-invariant in 7/7.  Either the model
    criterion is confined to post-hoc ranking, or extraction needs a

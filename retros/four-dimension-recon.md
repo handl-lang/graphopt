@@ -36,7 +36,7 @@ execution**.
   guards are shape/typing only; `_INVALID_COST` poisons provably
   ill-typed members; `extract_certified` filters on certified bounds;
   autotune runs `sink.verify` *before* timing (`autotune.py:714`).
-- **`benches/` is purely observational.** Suites call `sink.verify` /
+- **`bench/` is purely observational.** Suites call `sink.verify` /
   `torch.allclose` as gates *over* pipeline output; nothing feeds an
   equivalence decision back into the e-graph or laws.
 - **Adapters consume equivalence, never define it** (`sink.verify` →
@@ -110,7 +110,7 @@ except #1:
 |---|---|---|---|
 | 1 | `TorchMeter.time` | `catopt_torch/meter.py:40-74` | implements `Meter`/`TimingResult` |
 | 2 | `calibrate()` probes | `catopt_torch/calibrate.py:127-526` | parallel loops; does **not** use `Meter` |
-| 3 | `benchkit.Runner` | `benches/benchkit/runner.py:64-88` | separate engine |
+| 3 | `benchkit.Runner` | `bench/benchkit/runner.py:64-88` | separate engine |
 | 4 | ad-hoc `perf_counter` loops | bench suites, `demo.py` | none |
 
 Gaps against ADR 0003:
@@ -126,13 +126,13 @@ Gaps against ADR 0003:
 3. **Swallowed failures leave no record.**  `catopt_cuda/runners.py:71-72`
    bare `except Exception` → silent `drop_cuda_graph()`;
    `calibrate.py:476-481,633,657,668,681` collapse to DEBUG/fallback;
-   `benches/benchkit/runner.py:68-80` kills a case on one variant's
+   `bench/benchkit/runner.py:68-80` kills a case on one variant's
    exception.  *Disposition:* extend — record a classified reason.
 4. **Provenance thin on the production path.**  `TargetProfile` carries
    `device` / `measured_at` / `meta={dtype, torch, platform}`
    (`calibrate.py:685-701`) but **no git sha, driver/CUDA version,
    seed, warmup or iteration count**; `TimingResult` carries no
-   provenance at all.  Bench is stronger (`benches/benchkit/env.py:62-89`
+   provenance at all.  Bench is stronger (`bench/benchkit/env.py:62-89`
    records git sha+dirty, torch, CUDA version, device, argv, UTC) but
    still lacks seed and driver.  *Disposition:* new-work — extend
    `TimingResult` / profile `meta`.

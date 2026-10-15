@@ -13,8 +13,8 @@ from an *enabler* into a *result* — and the honest verdict where it
 does not exist.
 
 Measured by the new suite
-`benches/suites/evaluation/eval_axis.py` (registered as `eval_axis`,
-`python -m benches run eval_axis --device cpu --quick`).  CPU-only,
+`bench/suites/evaluation/eval_axis.py` (registered as `eval_axis`,
+`python -m bench run eval_axis --device cpu --quick`).  CPU-only,
 deterministic, ~3 s.
 
 > **Revision note.**  An earlier run of this suite reported a WIN on
@@ -228,12 +228,12 @@ artefact.
 ## Reproduce
 
 ```sh
-.venv/bin/python -m benches run eval_axis --device cpu --quick
-# canonical (non-quick), with artifacts under benches/results/:
-.venv/bin/python -m benches run eval_axis --device cpu
+.venv/bin/python -m bench run eval_axis --device cpu --quick
+# canonical (non-quick), with artifacts under bench/results/:
+.venv/bin/python -m bench run eval_axis --device cpu
 ```
 
-Artifacts: `benches/results/eval_axis.{json,md,html}` (JSON carries the
+Artifacts: `bench/results/eval_axis.{json,md,html}` (JSON carries the
 per-family `aux`: every pick's signature, runtime features
 (`read` / `write` / `traffic`), the search `marginal` and the true
 model value under all three targets, plus the frontier rows).
