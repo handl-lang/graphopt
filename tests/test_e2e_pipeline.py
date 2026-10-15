@@ -27,6 +27,10 @@ from catopt_orchestrator import Compositional, Optimizer
 
 from catopt_torch.backend import TorchBackend
 
+import pytest
+
+pytestmark = pytest.mark.e2e  # boundary-purpose file: crosses an external engine boundary
+
 
 def _T(*shape):
     return TensorType(tuple(shape))

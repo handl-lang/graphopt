@@ -25,6 +25,7 @@ sweep, both regimes included.
 from __future__ import annotations
 
 import pytest
+pytestmark = pytest.mark.e2e  # boundary-purpose file: crosses an external engine boundary
 import torch
 from catopt_carriers.om import OM_CHUNKIFY, OM_LAWS, om_kway_laws
 from catopt_core.cost import flops_cost

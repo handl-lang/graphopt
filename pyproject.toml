@@ -127,6 +127,7 @@ testpaths = ["tests"]
 markers = [
     "requires_cuda: test allocates CUDA tensors; skipped at setup when CUDA is absent or OOMs on a probe allocation",
     "slow: minutes-scale test (saturation at large budgets, torch.compile/Inductor); iterate with -m \"not slow\", run the full suite before committing",
+    "e2e: crosses an external engine boundary (torch.compile/Inductor, onnxruntime, CUDA-graph capture, deliver pipeline); module-level marker, tagged on boundary-purpose files only",
 ]
 
 # --- dead-code + architecture linting (dev tooling) ----------------

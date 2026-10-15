@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+pytestmark = pytest.mark.e2e  # boundary-purpose file: crosses an external engine boundary
 
 pytest.importorskip("onnx")
 pytest.importorskip("onnxruntime")

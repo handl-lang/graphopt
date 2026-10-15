@@ -5,6 +5,7 @@ These cover the real-model path added for the polyhedral-RFC targets
 """
 
 import pytest
+pytestmark = pytest.mark.e2e  # boundary-purpose file: crosses an external engine boundary
 import torch
 from catopt_core.cost import flops_cost
 from catopt_core.egraph import EGraph

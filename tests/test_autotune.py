@@ -10,6 +10,7 @@ import catopt_orchestrator.autotune as at_mod
 import catopt_torch.calibrate as cal_mod
 
 import pytest
+pytestmark = pytest.mark.e2e  # boundary-purpose file: crosses an external engine boundary
 import torch
 import torch.nn as nn
 from catopt_torch.calibrate import TargetProfile, shape_bucket

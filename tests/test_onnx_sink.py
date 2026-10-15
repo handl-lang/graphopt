@@ -26,6 +26,7 @@ import sys
 
 import numpy as np
 import pytest
+pytestmark = pytest.mark.e2e  # boundary-purpose file: crosses an external engine boundary
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

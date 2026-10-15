@@ -9,6 +9,7 @@ left-to-right, and a custom duck-typed runner plugs straight in.
 from __future__ import annotations
 
 import pytest
+pytestmark = pytest.mark.e2e  # boundary-purpose file: crosses an external engine boundary
 import torch
 import torch.nn as nn
 from catopt_orchestrator.autotune import AutotuneContext, CandidateUnavailableError

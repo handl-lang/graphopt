@@ -61,13 +61,16 @@ try:  # the shipping surface — absent until maturin builds it
 except ImportError:  # pragma: no cover - depends on the local build
     _ext = None
 
-pytestmark = pytest.mark.skipif(
-    (_ext is None and not _BIN.exists()) or not _FRAGMENTS.is_dir(),
-    reason=(
-        "handl peer (extension or CLI) or fragment dir not available "
-        "(see the docstring)"
+pytestmark = [
+    pytest.mark.e2e,  # crosses into the compiled handl engine
+    pytest.mark.skipif(
+        (_ext is None and not _BIN.exists()) or not _FRAGMENTS.is_dir(),
+        reason=(
+            "handl peer (extension or CLI) or fragment dir not available "
+            "(see the docstring)"
+        ),
     ),
-)
+]
 
 
 def _ast(*nodes: tuple[str, list[int]]) -> str:

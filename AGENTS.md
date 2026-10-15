@@ -105,6 +105,38 @@ What it still costs: the tens-of-seconds tests that are *not* marked
 fast loop, **not** a substitute for the full pass — the full pass still
 runs everything.
 
+**The suite is tiered by kind, not just duration.**  Three markers:
+
+- `e2e` — the test crosses an **external engine boundary**
+  (torch.compile/Inductor, onnxruntime, CUDA-graph capture, the deliver
+  pipeline).  Module-level on boundary-purpose files only:
+  `test_e2e_pipeline`, `test_onnx_{sink,source,liftmap,opmap}`,
+  `test_om_decayed_kway_deliver`, `test_runners`, `test_autotune`,
+  `test_torch_integration`, `test_handl_peer` (**517 tests**).
+  Torch-*eager* adapter
+  tests are *not* e2e — they exercise the boundary shim, not the engine
+  behind it.  Mixed files are deliberately left unmarked for now.
+- `slow` — minutes-scale by construction (RL-training fixtures,
+  60k-node saturation, compile sweeps): **30 tests**, orthogonal to
+  `e2e`.
+- `requires_cuda` — hardware gate, unchanged.
+
+```sh
+# smoke (~6 s): fast core sanity — 230 tests
+.venv/bin/python -m pytest tests/test_ir.py tests/test_laws_structure.py \
+    tests/test_egraph_internals.py tests/test_property_ir.py \
+    tests/test_property_laws.py tests/test_cond_laws.py -q
+
+# core lane: unit/integration only — no external engines, no soaks
+.venv/bin/python -m pytest -m "not e2e and not slow"     # 5,837 tests
+
+# dev lane: everything except the minutes-scale
+.venv/bin/python -m pytest -m "not slow"                 # 6,353 tests
+
+# gate: everything, once, under coverage
+scripts/gates.sh
+```
+
 ```sh
 # The shipped source: packages/ + lab/ + scripts/ + examples/.
 .venv/bin/ty check            # typecheck — 0 errors required (warnings OK)
