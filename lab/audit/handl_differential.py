@@ -37,7 +37,6 @@ Usage::
 
 from __future__ import annotations
 
-import argparse
 import json
 import os
 import subprocess
@@ -45,7 +44,7 @@ import sys
 from pathlib import Path
 
 from catopt_core.egraph import EGraph
-from catopt_core.ir import Const, Op, Var
+from catopt_core.ir import Op, Var
 from catopt_core.laws import ALL_RULES
 
 _REPO = Path(__file__).resolve().parents[2]
@@ -59,7 +58,7 @@ _FRAGMENTS = _REPO / "lab" / "handl-spike" / "fragments-all"
 
 
 def _eliminates_root(rule: object) -> bool:
-    """True when the law's rhs is a bare metavar — the root is dropped.
+    """Report whether the law's rhs is a bare metavar — the root is dropped.
 
     handl's `TransformRule::Declarative` always *creates* a node (its
     `target_kind` is a `String`), so a law that returns a subterm has no
@@ -71,7 +70,7 @@ def _eliminates_root(rule: object) -> bool:
 
 
 def _is_structural(node: object) -> bool:
-    """True when the pattern is ops/metavars only (no leaves)."""
+    """Report whether the pattern is ops/metavars only (no leaves)."""
     if isinstance(node, str):
         return True
     parts = _parts(node)
@@ -191,7 +190,7 @@ def main(argv: list[str] | None = None) -> int:
         root_eid = graph.add_term(term)
         try:
             fired = graph.apply_rule(rule, root_eid)
-        except Exception:  # noqa: BLE001 — a guard raised on a synthesized term
+        except Exception:  # a guard raised on a synthesized term
             # Some guards are *shape-sensitive*: they consult the shape of a
             # child, and a synthesized term (bare f64 variables) cannot
             # satisfy every such lookup.  That is a limitation of
