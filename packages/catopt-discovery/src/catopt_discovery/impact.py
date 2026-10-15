@@ -13,7 +13,7 @@ This tool answers that question in three measurements, all CPU-only
 and bounded to a few minutes:
 
 1. **Firing** — run each law alone over every bench law case
-   (``bench.suites.correctness.law_bench.LAW_CASES``) and over real
+   (``benches.suites.correctness.law_bench.LAW_CASES``) and over real
    model graphs (``catopt_torch.models``), plus a synthetic control
    (each law's own LHS instance).  Report firing counts, including
    zeros.
@@ -68,7 +68,7 @@ from catopt_discovery import REPO_ROOT, lawdata
 from catopt_discovery.proposal import _leaves, _spec_term
 
 # ``bench`` is a repo-root package, not an installed distribution —
-# the lazy ``from bench.suites...`` imports below need the root on
+# the lazy ``from benches.suites...`` imports below need the root on
 # ``sys.path`` regardless of the caller's cwd.
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
@@ -189,7 +189,7 @@ def _bench_cases() -> tuple[list[TermCase], list[str]]:
     probe the new laws against.  A builder that raises is reported in
     the second list rather than crashing the corpus.
     """
-    from bench.suites.correctness.law_bench import LAW_CASES
+    from benches.suites.correctness.law_bench import LAW_CASES
 
     out: list[TermCase] = []
     errors: list[str] = []

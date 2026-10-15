@@ -1,0 +1,1280 @@
+{
+  "schema": 1,
+  "suite": "eval_axis",
+  "title": "Evaluation-axis selection",
+  "summary": "For each family: the root-class Pareto frontier over every pair of built-in axes, and the program a compute- / bandwidth- / launch-bound PredictedCriterion extracts (each pick certified by lower -> verify).",
+  "env": {
+    "timestamp_utc": "2026-10-03T03:10:46+00:00",
+    "python": "3.13.9",
+    "torch": "2.14.0+cu130",
+    "torch_cuda": "13.0",
+    "device": "cpu",
+    "device_name": "12th Gen Intel(R) Core(TM) i5-12500H",
+    "cpu_count": 16,
+    "git_sha": "ecfbf50",
+    "git_dirty": true,
+    "argv": [
+      "/home/luis/Desktop/catopt/bench/__main__.py",
+      "run",
+      "eval_axis",
+      "--quick",
+      "--no-ledger"
+    ]
+  },
+  "provenance": {
+    "families": [
+      "chain3",
+      "rect",
+      "swiglu",
+      "qkv_sum",
+      "linattn",
+      "deep_parallel",
+      "parallel8"
+    ],
+    "axes": [
+      "flops",
+      "launch",
+      "count",
+      "depth",
+      "peak",
+      "params",
+      "roofline"
+    ],
+    "targets": {
+      "compute": "synth-compute-bound",
+      "bandwidth": "synth-bandwidth-bound",
+      "launch": "synth-launch-bound"
+    },
+    "genuine_gap": 0.01,
+    "device": "cpu",
+    "quick": true
+  },
+  "units": {
+    "median_s": "seconds",
+    "iqr_s": "seconds"
+  },
+  "findings": [
+    {
+      "claim": "a bandwidth-bound target extracts a different certified program than the compute / launch targets",
+      "verdict": "negative",
+      "headline": "0/7 families: the bandwidth pick is distinct from both the compute and launch picks nowhere \u2014 it equals the launch pick in every family.  The three targets disagree among themselves in only 1/7 (swiglu); 2/7 move at all against the default, and every pick verified=True",
+      "metric": "families where the bandwidth pick is distinct from both the compute and launch picks",
+      "value": 0.0,
+      "evidence": {
+        "all_verified": true,
+        "targets_disagree": [
+          "swiglu"
+        ],
+        "move_vs_default": [
+          "swiglu",
+          "linattn"
+        ],
+        "per_family": {
+          "chain3": {
+            "distinct_certified": 1,
+            "default_traffic": 20480.0,
+            "bandwidth_pick_traffic": 20480.0,
+            "bandwidth_vs_compute": false,
+            "bandwidth_vs_launch": false,
+            "bandwidth_vs_default": false,
+            "targets_agree": true
+          },
+          "rect": {
+            "distinct_certified": 1,
+            "default_traffic": 20480.0,
+            "bandwidth_pick_traffic": 20480.0,
+            "bandwidth_vs_compute": false,
+            "bandwidth_vs_launch": false,
+            "bandwidth_vs_default": false,
+            "targets_agree": true
+          },
+          "swiglu": {
+            "distinct_certified": 2,
+            "default_traffic": 266240.0,
+            "bandwidth_pick_traffic": 266240.0,
+            "bandwidth_vs_compute": true,
+            "bandwidth_vs_launch": false,
+            "bandwidth_vs_default": false,
+            "targets_agree": false
+          },
+          "qkv_sum": {
+            "distinct_certified": 1,
+            "default_traffic": 20480.0,
+            "bandwidth_pick_traffic": 20480.0,
+            "bandwidth_vs_compute": false,
+            "bandwidth_vs_launch": false,
+            "bandwidth_vs_default": false,
+            "targets_agree": true
+          },
+          "linattn": {
+            "distinct_certified": 2,
+            "default_traffic": 638976.0,
+            "bandwidth_pick_traffic": 835584.0,
+            "bandwidth_vs_compute": false,
+            "bandwidth_vs_launch": false,
+            "bandwidth_vs_default": true,
+            "targets_agree": true
+          },
+          "deep_parallel": {
+            "distinct_certified": 1,
+            "default_traffic": 20480.0,
+            "bandwidth_pick_traffic": 20480.0,
+            "bandwidth_vs_compute": false,
+            "bandwidth_vs_launch": false,
+            "bandwidth_vs_default": false,
+            "targets_agree": true
+          },
+          "parallel8": {
+            "distinct_certified": 1,
+            "default_traffic": 20480.0,
+            "bandwidth_pick_traffic": 20480.0,
+            "bandwidth_vs_compute": false,
+            "bandwidth_vs_launch": false,
+            "bandwidth_vs_default": false,
+            "targets_agree": true
+          }
+        }
+      }
+    },
+    {
+      "claim": "the root-class Pareto frontier exposes a genuine multi-axis trade-off",
+      "verdict": "negative",
+      "headline": "0 genuine frontiers over 7 families x 21 axis pairs \u2014 the 6 >1 results are 1 exact tie(s) and 5 float-noise pair(s)",
+      "metric": "genuine frontiers",
+      "value": 0.0,
+      "evidence": {
+        "axis_pairs": 147,
+        "non_trivial": 6,
+        "ties": [
+          "linattn:['count', 'params']"
+        ],
+        "noise": [
+          "chain3:['flops', 'depth']",
+          "chain3:['launch', 'depth']",
+          "chain3:['count', 'depth']",
+          "chain3:['depth', 'params']",
+          "chain3:['depth', 'roofline']"
+        ]
+      }
+    },
+    {
+      "claim": "the residual target-sensitivity traces to a hardware-genuine trade-off",
+      "verdict": "negative",
+      "headline": "No \u2014 the true roofline value (model.predict(features, target)) ranks the same form first under all three targets in 7/7 families, so the move is the additive marginal decomposition extract_best applies to the non-additive PredictedCriterion, not hardware",
+      "metric": "families where the true roofline argmin is target-invariant",
+      "value": 7.0,
+      "evidence": {
+        "families": 7,
+        "target_invariant": 7,
+        "per_family": {
+          "swiglu": {
+            "true_argmin": {
+              "compute": "(linear (mul (silu (split (linear x, (concat W, W, dim=0)), dim=-1, index=0, sizes=(256, 256))), (split (linear x, (concat W, W, dim=0)), dim=-1, index=1, sizes=(256, 256))), W)",
+              "bandwidth": "(linear (mul (silu (split (linear x, (concat W, W, dim=0)), dim=-1, index=0, sizes=(256, 256))), (split (linear x, (concat W, W, dim=0)), dim=-1, index=1, sizes=(256, 256))), W)",
+              "launch": "(linear (mul (silu (split (linear x, (concat W, W, dim=0)), dim=-1, index=0, sizes=(256, 256))), (split (linear x, (concat W, W, dim=0)), dim=-1, index=1, sizes=(256, 256))), W)"
+            },
+            "search_pick": {
+              "compute": "(linear (mul (mul (split (linear x, (concat W, W, dim=0)), dim=-1, index=0, sizes=(256, 256)), (sigmoid (split (linear x, (concat W, W, dim=0)), dim=-1, index=0, sizes=(256, 256)))), (split (linear x, (concat W, W, dim=0)), dim=-1, index=1, sizes=(256, 256))), W)",
+              "bandwidth": "(linear (mul (silu (split (linear x, (concat W, W, dim=0)), dim=-1, index=0, sizes=(256, 256))), (split (linear x, (concat W, W, dim=0)), dim=-1, index=1, sizes=(256, 256))), W)",
+              "launch": "(linear (mul (silu (split (linear x, (concat W, W, dim=0)), dim=-1, index=0, sizes=(256, 256))), (split (linear x, (concat W, W, dim=0)), dim=-1, index=1, sizes=(256, 256))), W)"
+            },
+            "search_matches_true": {
+              "compute": false,
+              "bandwidth": true,
+              "launch": true
+            },
+            "forms": {
+              "(linear (mul (silu (split (linear x, (concat W, W, dim=0)), dim=-1, index=0, sizes=(256, 256))), (split (linear x, (concat W, W, dim=0)), dim=-1, index=1, sizes=(256, 256))), W)": {
+                "flops": 794624.0,
+                "write": 34816.0,
+                "ops": 7,
+                "marginal": {
+                  "compute": 0.000795076,
+                  "bandwidth": 0.00483578,
+                  "launch": 0.025000048332800003
+                },
+                "true": {
+                  "compute": 0.000798124,
+                  "bandwidth": 0.0053283,
+                  "launch": 0.035000053248000006
+                }
+              },
+              "(linear (mul (mul (split (linear x, (concat W, W, dim=0)), dim=-1, index=0, sizes=(256, 256)), (sigmoid (split (linear x, (concat W, W, dim=0)), dim=-1, index=0, sizes=(256, 256)))), (split (linear x, (concat W, W, dim=0)), dim=-1, index=1, sizes=(256, 256))), W)": {
+                "flops": 794624.0,
+                "write": 43008.0,
+                "ops": 8,
+                "marginal": {
+                  "compute": 0.000793028,
+                  "bandwidth": 0.00483578,
+                  "launch": 0.025000048332799993
+                },
+                "true": {
+                  "compute": 0.000798624,
+                  "bandwidth": 0.0058203199999999995,
+                  "launch": 0.0400000581632
+                }
+              }
+            }
+          },
+          "linattn": {
+            "true_argmin": {
+              "compute": "(matmul (matmul (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=0, sizes=(64, 64, 64)), (transpose (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=1, sizes=(64, 64, 64)), dim0=-2, dim1=-1)), (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=2, sizes=(64, 64, 64)))",
+              "bandwidth": "(matmul (matmul (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=0, sizes=(64, 64, 64)), (transpose (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=1, sizes=(64, 64, 64)), dim0=-2, dim1=-1)), (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=2, sizes=(64, 64, 64)))",
+              "launch": "(matmul (matmul (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=0, sizes=(64, 64, 64)), (transpose (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=1, sizes=(64, 64, 64)), dim0=-2, dim1=-1)), (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=2, sizes=(64, 64, 64)))"
+            },
+            "search_pick": {
+              "compute": "(matmul (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=0, sizes=(64, 64, 64)), (matmul (transpose (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=1, sizes=(64, 64, 64)), dim0=-2, dim1=-1), (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=2, sizes=(64, 64, 64))))",
+              "bandwidth": "(matmul (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=0, sizes=(64, 64, 64)), (matmul (transpose (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=1, sizes=(64, 64, 64)), dim0=-2, dim1=-1), (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=2, sizes=(64, 64, 64))))",
+              "launch": "(matmul (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=0, sizes=(64, 64, 64)), (matmul (transpose (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=1, sizes=(64, 64, 64)), dim0=-2, dim1=-1), (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=2, sizes=(64, 64, 64))))"
+            },
+            "search_matches_true": {
+              "compute": false,
+              "bandwidth": false,
+              "launch": false
+            },
+            "forms": {
+              "(matmul (matmul (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=0, sizes=(64, 64, 64)), (transpose (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=1, sizes=(64, 64, 64)), dim0=-2, dim1=-1)), (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=2, sizes=(64, 64, 64)))": {
+                "flops": 8388608.0,
+                "write": 294912.0,
+                "ops": 9,
+                "marginal": {
+                  "compute": 0.006293956000000001,
+                  "bandwidth": 0.006228420000000001,
+                  "launch": 0.0250000622592
+                },
+                "true": {
+                  "compute": 0.008393108,
+                  "bandwidth": 0.01278402,
+                  "launch": 0.0450001277952
+                }
+              },
+              "(matmul (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=0, sizes=(64, 64, 64)), (matmul (transpose (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=1, sizes=(64, 64, 64)), dim0=-2, dim1=-1), (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=2, sizes=(64, 64, 64))))": {
+                "flops": 10485760.0,
+                "write": 393216.0,
+                "ops": 9,
+                "marginal": {
+                  "compute": 0.006293956000000001,
+                  "bandwidth": 0.006228420000000001,
+                  "launch": 0.0250000622592
+                },
+                "true": {
+                  "compute": 0.01049026,
+                  "bandwidth": 0.01671618,
+                  "launch": 0.0450001671168
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "cells": [
+    {
+      "name": "chain3",
+      "params": {
+        "family": "chain3",
+        "n_root_alts": 5
+      },
+      "variants": [
+        {
+          "name": "default",
+          "flops": 65536.0,
+          "note": "default extraction model"
+        },
+        {
+          "name": "compute",
+          "flops": 65536.0,
+          "note": "compute-bound target"
+        },
+        {
+          "name": "bandwidth",
+          "flops": 65536.0,
+          "note": "bandwidth-bound target"
+        },
+        {
+          "name": "launch",
+          "flops": 65536.0,
+          "note": "launch-bound target"
+        }
+      ],
+      "median_s": {
+        "default": 0.018904429000031087,
+        "compute": 0.019486044999212027,
+        "bandwidth": 0.019557379999241675,
+        "launch": 0.02038783499847341
+      },
+      "iqr_s": {
+        "default": 0.0,
+        "compute": 0.0,
+        "bandwidth": 0.0,
+        "launch": 0.0
+      },
+      "aux": {
+        "family": "chain3",
+        "note": "three-deep linear chain",
+        "n_root_alts": 5,
+        "default": {
+          "sig": "(linear x, (matmul W, (matmul W, W)))",
+          "flops": 65536.0,
+          "read": 18432.0,
+          "write": 2048.0,
+          "traffic": 20480.0,
+          "ops": 3,
+          "marginal": {
+            "compute": 6.6036e-05,
+            "bandwidth": 0.00041009475711999995,
+            "launch": 0.005000000327679999
+          },
+          "true": {
+            "compute": 0.001115612,
+            "bandwidth": 0.00041109999999999996,
+            "launch": 0.015000005570559999
+          }
+        },
+        "picks": {
+          "compute": {
+            "sig": "(linear x, (matmul W, (matmul W, W)))",
+            "flops": 65536.0,
+            "read": 18432.0,
+            "write": 2048.0,
+            "traffic": 20480.0,
+            "ops": 3,
+            "marginal": {
+              "compute": 6.6036e-05,
+              "bandwidth": 0.00041009475711999995,
+              "launch": 0.005000000327679999
+            },
+            "true": {
+              "compute": 0.001115612,
+              "bandwidth": 0.00041109999999999996,
+              "launch": 0.015000005570559999
+            },
+            "verified": true,
+            "max_rel": 3.4304855476806876e-07
+          },
+          "bandwidth": {
+            "sig": "(linear x, (matmul W, (matmul W, W)))",
+            "flops": 65536.0,
+            "read": 18432.0,
+            "write": 2048.0,
+            "traffic": 20480.0,
+            "ops": 3,
+            "marginal": {
+              "compute": 6.6036e-05,
+              "bandwidth": 0.00041009475711999995,
+              "launch": 0.005000000327679999
+            },
+            "true": {
+              "compute": 0.001115612,
+              "bandwidth": 0.00041109999999999996,
+              "launch": 0.015000005570559999
+            },
+            "verified": true,
+            "max_rel": 3.4304855476806876e-07
+          },
+          "launch": {
+            "sig": "(linear x, (matmul W, (matmul W, W)))",
+            "flops": 65536.0,
+            "read": 18432.0,
+            "write": 2048.0,
+            "traffic": 20480.0,
+            "ops": 3,
+            "marginal": {
+              "compute": 6.6036e-05,
+              "bandwidth": 0.00041009475711999995,
+              "launch": 0.005000000327679999
+            },
+            "true": {
+              "compute": 0.001115612,
+              "bandwidth": 0.00041109999999999996,
+              "launch": 0.015000005570559999
+            },
+            "verified": true,
+            "max_rel": 3.4304855476806876e-07
+          }
+        },
+        "distinct_certified": 1,
+        "frontiers": [
+          {
+            "axes": [
+              "flops",
+              "depth"
+            ],
+            "size": 2,
+            "kind": "noise",
+            "vectors": [
+              {
+                "flops": 65536.0,
+                "depth": 8930.112359550563
+              },
+              {
+                "flops": 131072.0,
+                "depth": 8930.112359550561
+              }
+            ]
+          },
+          {
+            "axes": [
+              "launch",
+              "depth"
+            ],
+            "size": 2,
+            "kind": "noise",
+            "vectors": [
+              {
+                "launch": 65537.0,
+                "depth": 8930.112359550563
+              },
+              {
+                "launch": 131074.0,
+                "depth": 8930.112359550561
+              }
+            ]
+          },
+          {
+            "axes": [
+              "count",
+              "depth"
+            ],
+            "size": 2,
+            "kind": "noise",
+            "vectors": [
+              {
+                "count": 1.0,
+                "depth": 8930.112359550563
+              },
+              {
+                "count": 2.0,
+                "depth": 8930.112359550561
+              }
+            ]
+          },
+          {
+            "axes": [
+              "depth",
+              "params"
+            ],
+            "size": 2,
+            "kind": "noise",
+            "vectors": [
+              {
+                "depth": 8930.112359550563,
+                "params": 4096.0
+              },
+              {
+                "depth": 8930.112359550561,
+                "params": 8192.0
+              }
+            ]
+          },
+          {
+            "axes": [
+              "depth",
+              "roofline"
+            ],
+            "size": 2,
+            "kind": "noise",
+            "vectors": [
+              {
+                "depth": 8930.112359550563,
+                "roofline": 8930.112359550563
+              },
+              {
+                "depth": 8930.112359550561,
+                "roofline": 17860.224719101127
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "rect",
+      "params": {
+        "family": "rect",
+        "n_root_alts": 3
+      },
+      "variants": [
+        {
+          "name": "default",
+          "flops": 65536.0,
+          "note": "default extraction model"
+        },
+        {
+          "name": "compute",
+          "flops": 65536.0,
+          "note": "compute-bound target"
+        },
+        {
+          "name": "bandwidth",
+          "flops": 65536.0,
+          "note": "bandwidth-bound target"
+        },
+        {
+          "name": "launch",
+          "flops": 65536.0,
+          "note": "launch-bound target"
+        }
+      ],
+      "median_s": {
+        "default": 0.018001102998823626,
+        "compute": 0.018110804001480574,
+        "bandwidth": 0.01813100900108111,
+        "launch": 0.018058744999507326
+      },
+      "iqr_s": {
+        "default": 0.0,
+        "compute": 0.0,
+        "bandwidth": 0.0,
+        "launch": 0.0
+      },
+      "aux": {
+        "family": "rect",
+        "note": "rectangular two-chain (k > d)",
+        "n_root_alts": 3,
+        "default": {
+          "sig": "(linear x, (matmul W, W))",
+          "flops": 65536.0,
+          "read": 18432.0,
+          "write": 2048.0,
+          "traffic": 20480.0,
+          "ops": 2,
+          "marginal": {
+            "compute": 6.603599999999979e-05,
+            "bandwidth": 0.00041008951424,
+            "launch": 0.0050000003276799996
+          },
+          "true": {
+            "compute": 0.002163688,
+            "bandwidth": 0.0004106,
+            "launch": 0.01000001081344
+          }
+        },
+        "picks": {
+          "compute": {
+            "sig": "(linear x, (matmul W, W))",
+            "flops": 65536.0,
+            "read": 18432.0,
+            "write": 2048.0,
+            "traffic": 20480.0,
+            "ops": 2,
+            "marginal": {
+              "compute": 6.603599999999979e-05,
+              "bandwidth": 0.00041008951424,
+              "launch": 0.0050000003276799996
+            },
+            "true": {
+              "compute": 0.002163688,
+              "bandwidth": 0.0004106,
+              "launch": 0.01000001081344
+            },
+            "verified": true,
+            "max_rel": 3.128532810277264e-07
+          },
+          "bandwidth": {
+            "sig": "(linear x, (matmul W, W))",
+            "flops": 65536.0,
+            "read": 18432.0,
+            "write": 2048.0,
+            "traffic": 20480.0,
+            "ops": 2,
+            "marginal": {
+              "compute": 6.603599999999979e-05,
+              "bandwidth": 0.00041008951424,
+              "launch": 0.0050000003276799996
+            },
+            "true": {
+              "compute": 0.002163688,
+              "bandwidth": 0.0004106,
+              "launch": 0.01000001081344
+            },
+            "verified": true,
+            "max_rel": 3.128532810277264e-07
+          },
+          "launch": {
+            "sig": "(linear x, (matmul W, W))",
+            "flops": 65536.0,
+            "read": 18432.0,
+            "write": 2048.0,
+            "traffic": 20480.0,
+            "ops": 2,
+            "marginal": {
+              "compute": 6.603599999999979e-05,
+              "bandwidth": 0.00041008951424,
+              "launch": 0.0050000003276799996
+            },
+            "true": {
+              "compute": 0.002163688,
+              "bandwidth": 0.0004106,
+              "launch": 0.01000001081344
+            },
+            "verified": true,
+            "max_rel": 3.128532810277264e-07
+          }
+        },
+        "distinct_certified": 1,
+        "frontiers": []
+      }
+    },
+    {
+      "name": "swiglu",
+      "params": {
+        "family": "swiglu",
+        "n_root_alts": 1
+      },
+      "variants": [
+        {
+          "name": "default",
+          "flops": 794624.0,
+          "note": "default extraction model"
+        },
+        {
+          "name": "compute",
+          "flops": 794624.0,
+          "note": "compute-bound target"
+        },
+        {
+          "name": "bandwidth",
+          "flops": 794624.0,
+          "note": "bandwidth-bound target"
+        },
+        {
+          "name": "launch",
+          "flops": 794624.0,
+          "note": "launch-bound target"
+        }
+      ],
+      "median_s": {
+        "default": 0.023680509999394417,
+        "compute": 0.025608776999433758,
+        "bandwidth": 0.025047328999789897,
+        "launch": 0.025314749000244774
+      },
+      "iqr_s": {
+        "default": 0.0,
+        "compute": 0.0,
+        "bandwidth": 0.0,
+        "launch": 0.0
+      },
+      "aux": {
+        "family": "swiglu",
+        "note": "SwiGLU MLP (fusable gate/up pair)",
+        "n_root_alts": 1,
+        "default": {
+          "sig": "(linear (mul (silu (split (linear x, (concat W, W, dim=0)), dim=-1, index=0, sizes=(256, 256))), (split (linear x, (concat W, W, dim=0)), dim=-1, index=1, sizes=(256, 256))), W)",
+          "flops": 794624.0,
+          "read": 231424.0,
+          "write": 34816.0,
+          "traffic": 266240.0,
+          "ops": 7,
+          "marginal": {
+            "compute": 0.000795076,
+            "bandwidth": 0.00483578,
+            "launch": 0.025000048332800003
+          },
+          "true": {
+            "compute": 0.000798124,
+            "bandwidth": 0.0053283,
+            "launch": 0.035000053248000006
+          }
+        },
+        "picks": {
+          "compute": {
+            "sig": "(linear (mul (mul (split (linear x, (concat W, W, dim=0)), dim=-1, index=0, sizes=(256, 256)), (sigmoid (split (linear x, (concat W, W, dim=0)), dim=-1, index=0, sizes=(256, 256)))), (split (linear x, (concat W, W, dim=0)), dim=-1, index=1, sizes=(256, 256))), W)",
+            "flops": 794624.0,
+            "read": 247808.0,
+            "write": 43008.0,
+            "traffic": 290816.0,
+            "ops": 8,
+            "marginal": {
+              "compute": 0.000793028,
+              "bandwidth": 0.00483578,
+              "launch": 0.025000048332799993
+            },
+            "true": {
+              "compute": 0.000798624,
+              "bandwidth": 0.0058203199999999995,
+              "launch": 0.0400000581632
+            },
+            "verified": true,
+            "max_rel": 1.6905358586967501e-07
+          },
+          "bandwidth": {
+            "sig": "(linear (mul (silu (split (linear x, (concat W, W, dim=0)), dim=-1, index=0, sizes=(256, 256))), (split (linear x, (concat W, W, dim=0)), dim=-1, index=1, sizes=(256, 256))), W)",
+            "flops": 794624.0,
+            "read": 231424.0,
+            "write": 34816.0,
+            "traffic": 266240.0,
+            "ops": 7,
+            "marginal": {
+              "compute": 0.000795076,
+              "bandwidth": 0.00483578,
+              "launch": 0.025000048332800003
+            },
+            "true": {
+              "compute": 0.000798124,
+              "bandwidth": 0.0053283,
+              "launch": 0.035000053248000006
+            },
+            "verified": true,
+            "max_rel": 0.0
+          },
+          "launch": {
+            "sig": "(linear (mul (silu (split (linear x, (concat W, W, dim=0)), dim=-1, index=0, sizes=(256, 256))), (split (linear x, (concat W, W, dim=0)), dim=-1, index=1, sizes=(256, 256))), W)",
+            "flops": 794624.0,
+            "read": 231424.0,
+            "write": 34816.0,
+            "traffic": 266240.0,
+            "ops": 7,
+            "marginal": {
+              "compute": 0.000795076,
+              "bandwidth": 0.00483578,
+              "launch": 0.025000048332800003
+            },
+            "true": {
+              "compute": 0.000798124,
+              "bandwidth": 0.0053283,
+              "launch": 0.035000053248000006
+            },
+            "verified": true,
+            "max_rel": 0.0
+          }
+        },
+        "distinct_certified": 2,
+        "frontiers": []
+      }
+    },
+    {
+      "name": "qkv_sum",
+      "params": {
+        "family": "qkv_sum",
+        "n_root_alts": 3
+      },
+      "variants": [
+        {
+          "name": "default",
+          "flops": 65536.0,
+          "note": "default extraction model"
+        },
+        {
+          "name": "compute",
+          "flops": 65536.0,
+          "note": "compute-bound target"
+        },
+        {
+          "name": "bandwidth",
+          "flops": 65536.0,
+          "note": "bandwidth-bound target"
+        },
+        {
+          "name": "launch",
+          "flops": 65536.0,
+          "note": "launch-bound target"
+        }
+      ],
+      "median_s": {
+        "default": 0.02066637399911997,
+        "compute": 0.021701943000152824,
+        "bandwidth": 0.021607934999337886,
+        "launch": 0.021329971999875852
+      },
+      "iqr_s": {
+        "default": 0.0,
+        "compute": 0.0,
+        "bandwidth": 0.0,
+        "launch": 0.0
+      },
+      "aux": {
+        "family": "qkv_sum",
+        "note": "sum of three same-input projections",
+        "n_root_alts": 3,
+        "default": {
+          "sig": "(linear x, (add (add W, W), W))",
+          "flops": 65536.0,
+          "read": 18432.0,
+          "write": 2048.0,
+          "traffic": 20480.0,
+          "ops": 3,
+          "marginal": {
+            "compute": 6.603599999999999e-05,
+            "bandwidth": 0.00041009995903999995,
+            "launch": 0.005000004055039999
+          },
+          "true": {
+            "compute": 7.522799999999999e-05,
+            "bandwidth": 0.00041109999999999996,
+            "launch": 0.015000004095999999
+          }
+        },
+        "picks": {
+          "compute": {
+            "sig": "(linear x, (add (add W, W), W))",
+            "flops": 65536.0,
+            "read": 18432.0,
+            "write": 2048.0,
+            "traffic": 20480.0,
+            "ops": 3,
+            "marginal": {
+              "compute": 6.603599999999999e-05,
+              "bandwidth": 0.00041009995903999995,
+              "launch": 0.005000004055039999
+            },
+            "true": {
+              "compute": 7.522799999999999e-05,
+              "bandwidth": 0.00041109999999999996,
+              "launch": 0.015000004095999999
+            },
+            "verified": true,
+            "max_rel": 2.5782359176019615e-07
+          },
+          "bandwidth": {
+            "sig": "(linear x, (add (add W, W), W))",
+            "flops": 65536.0,
+            "read": 18432.0,
+            "write": 2048.0,
+            "traffic": 20480.0,
+            "ops": 3,
+            "marginal": {
+              "compute": 6.603599999999999e-05,
+              "bandwidth": 0.00041009995903999995,
+              "launch": 0.005000004055039999
+            },
+            "true": {
+              "compute": 7.522799999999999e-05,
+              "bandwidth": 0.00041109999999999996,
+              "launch": 0.015000004095999999
+            },
+            "verified": true,
+            "max_rel": 2.5782359176019615e-07
+          },
+          "launch": {
+            "sig": "(linear x, (add (add W, W), W))",
+            "flops": 65536.0,
+            "read": 18432.0,
+            "write": 2048.0,
+            "traffic": 20480.0,
+            "ops": 3,
+            "marginal": {
+              "compute": 6.603599999999999e-05,
+              "bandwidth": 0.00041009995903999995,
+              "launch": 0.005000004055039999
+            },
+            "true": {
+              "compute": 7.522799999999999e-05,
+              "bandwidth": 0.00041109999999999996,
+              "launch": 0.015000004095999999
+            },
+            "verified": true,
+            "max_rel": 2.5782359176019615e-07
+          }
+        },
+        "distinct_certified": 1,
+        "frontiers": []
+      }
+    },
+    {
+      "name": "linattn",
+      "params": {
+        "family": "linattn",
+        "n_root_alts": 2
+      },
+      "variants": [
+        {
+          "name": "default",
+          "flops": 8388608.0,
+          "note": "default extraction model"
+        },
+        {
+          "name": "compute",
+          "flops": 10485760.0,
+          "note": "compute-bound target"
+        },
+        {
+          "name": "bandwidth",
+          "flops": 10485760.0,
+          "note": "bandwidth-bound target"
+        },
+        {
+          "name": "launch",
+          "flops": 10485760.0,
+          "note": "launch-bound target"
+        }
+      ],
+      "median_s": {
+        "default": 0.023705894000158878,
+        "compute": 0.02682143099991663,
+        "bandwidth": 0.027122227000290877,
+        "launch": 0.025738969001395162
+      },
+      "iqr_s": {
+        "default": 0.0,
+        "compute": 0.0,
+        "bandwidth": 0.0,
+        "launch": 0.0
+      },
+      "aux": {
+        "family": "linattn",
+        "note": "unnormalised attention (QK^T)V",
+        "n_root_alts": 2,
+        "default": {
+          "sig": "(matmul (matmul (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=0, sizes=(64, 64, 64)), (transpose (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=1, sizes=(64, 64, 64)), dim0=-2, dim1=-1)), (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=2, sizes=(64, 64, 64)))",
+          "flops": 8388608.0,
+          "read": 344064.0,
+          "write": 294912.0,
+          "traffic": 638976.0,
+          "ops": 9,
+          "marginal": {
+            "compute": 0.006293956000000001,
+            "bandwidth": 0.006228420000000001,
+            "launch": 0.0250000622592
+          },
+          "true": {
+            "compute": 0.008393108,
+            "bandwidth": 0.01278402,
+            "launch": 0.0450001277952
+          }
+        },
+        "picks": {
+          "compute": {
+            "sig": "(matmul (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=0, sizes=(64, 64, 64)), (matmul (transpose (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=1, sizes=(64, 64, 64)), dim0=-2, dim1=-1), (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=2, sizes=(64, 64, 64))))",
+            "flops": 10485760.0,
+            "read": 442368.0,
+            "write": 393216.0,
+            "traffic": 835584.0,
+            "ops": 9,
+            "marginal": {
+              "compute": 0.006293956000000001,
+              "bandwidth": 0.006228420000000001,
+              "launch": 0.0250000622592
+            },
+            "true": {
+              "compute": 0.01049026,
+              "bandwidth": 0.01671618,
+              "launch": 0.0450001671168
+            },
+            "verified": true,
+            "max_rel": 4.559944805746715e-07
+          },
+          "bandwidth": {
+            "sig": "(matmul (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=0, sizes=(64, 64, 64)), (matmul (transpose (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=1, sizes=(64, 64, 64)), dim0=-2, dim1=-1), (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=2, sizes=(64, 64, 64))))",
+            "flops": 10485760.0,
+            "read": 442368.0,
+            "write": 393216.0,
+            "traffic": 835584.0,
+            "ops": 9,
+            "marginal": {
+              "compute": 0.006293956000000001,
+              "bandwidth": 0.006228420000000001,
+              "launch": 0.0250000622592
+            },
+            "true": {
+              "compute": 0.01049026,
+              "bandwidth": 0.01671618,
+              "launch": 0.0450001671168
+            },
+            "verified": true,
+            "max_rel": 4.559944805746715e-07
+          },
+          "launch": {
+            "sig": "(matmul (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=0, sizes=(64, 64, 64)), (matmul (transpose (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=1, sizes=(64, 64, 64)), dim0=-2, dim1=-1), (split (linear x, (concat (concat W, W, dim=0), W, dim=0)), dim=-1, index=2, sizes=(64, 64, 64))))",
+            "flops": 10485760.0,
+            "read": 442368.0,
+            "write": 393216.0,
+            "traffic": 835584.0,
+            "ops": 9,
+            "marginal": {
+              "compute": 0.006293956000000001,
+              "bandwidth": 0.006228420000000001,
+              "launch": 0.0250000622592
+            },
+            "true": {
+              "compute": 0.01049026,
+              "bandwidth": 0.01671618,
+              "launch": 0.0450001671168
+            },
+            "verified": true,
+            "max_rel": 4.559944805746715e-07
+          }
+        },
+        "distinct_certified": 2,
+        "frontiers": [
+          {
+            "axes": [
+              "count",
+              "params"
+            ],
+            "size": 2,
+            "kind": "tie",
+            "vectors": [
+              {
+                "count": 5.0,
+                "params": 12288.0
+              },
+              {
+                "count": 5.0,
+                "params": 12288.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "deep_parallel",
+      "params": {
+        "family": "deep_parallel",
+        "n_root_alts": 4
+      },
+      "variants": [
+        {
+          "name": "default",
+          "flops": 65536.0,
+          "note": "default extraction model"
+        },
+        {
+          "name": "compute",
+          "flops": 65536.0,
+          "note": "compute-bound target"
+        },
+        {
+          "name": "bandwidth",
+          "flops": 65536.0,
+          "note": "bandwidth-bound target"
+        },
+        {
+          "name": "launch",
+          "flops": 65536.0,
+          "note": "launch-bound target"
+        }
+      ],
+      "median_s": {
+        "default": 0.02551476900043781,
+        "compute": 0.027654684001390706,
+        "bandwidth": 0.027353199000572204,
+        "launch": 0.027433202998508932
+      },
+      "iqr_s": {
+        "default": 0.0,
+        "compute": 0.0,
+        "bandwidth": 0.0,
+        "launch": 0.0
+      },
+      "aux": {
+        "family": "deep_parallel",
+        "note": "(x@W1 + x@W2) @ W3",
+        "n_root_alts": 4,
+        "default": {
+          "sig": "(linear x, (matmul W, (add W, W)))",
+          "flops": 65536.0,
+          "read": 18432.0,
+          "write": 2048.0,
+          "traffic": 20480.0,
+          "ops": 3,
+          "marginal": {
+            "compute": 6.603600000000022e-05,
+            "bandwidth": 0.00041008943232,
+            "launch": 0.005000000327679999
+          },
+          "true": {
+            "compute": 0.0021805720000000004,
+            "bandwidth": 0.00041109999999999996,
+            "launch": 0.015000010895359999
+          }
+        },
+        "picks": {
+          "compute": {
+            "sig": "(linear x, (matmul W, (add W, W)))",
+            "flops": 65536.0,
+            "read": 18432.0,
+            "write": 2048.0,
+            "traffic": 20480.0,
+            "ops": 3,
+            "marginal": {
+              "compute": 6.603600000000022e-05,
+              "bandwidth": 0.00041008943232,
+              "launch": 0.005000000327679999
+            },
+            "true": {
+              "compute": 0.0021805720000000004,
+              "bandwidth": 0.00041109999999999996,
+              "launch": 0.015000010895359999
+            },
+            "verified": true,
+            "max_rel": 4.844872791693451e-07
+          },
+          "bandwidth": {
+            "sig": "(linear x, (matmul W, (add W, W)))",
+            "flops": 65536.0,
+            "read": 18432.0,
+            "write": 2048.0,
+            "traffic": 20480.0,
+            "ops": 3,
+            "marginal": {
+              "compute": 6.603600000000022e-05,
+              "bandwidth": 0.00041008943232,
+              "launch": 0.005000000327679999
+            },
+            "true": {
+              "compute": 0.0021805720000000004,
+              "bandwidth": 0.00041109999999999996,
+              "launch": 0.015000010895359999
+            },
+            "verified": true,
+            "max_rel": 4.844872791693451e-07
+          },
+          "launch": {
+            "sig": "(linear x, (matmul W, (add W, W)))",
+            "flops": 65536.0,
+            "read": 18432.0,
+            "write": 2048.0,
+            "traffic": 20480.0,
+            "ops": 3,
+            "marginal": {
+              "compute": 6.603600000000022e-05,
+              "bandwidth": 0.00041008943232,
+              "launch": 0.005000000327679999
+            },
+            "true": {
+              "compute": 0.0021805720000000004,
+              "bandwidth": 0.00041109999999999996,
+              "launch": 0.015000010895359999
+            },
+            "verified": true,
+            "max_rel": 4.844872791693451e-07
+          }
+        },
+        "distinct_certified": 1,
+        "frontiers": []
+      }
+    },
+    {
+      "name": "parallel8",
+      "params": {
+        "family": "parallel8",
+        "n_root_alts": 3
+      },
+      "variants": [
+        {
+          "name": "default",
+          "flops": 65536.0,
+          "note": "default extraction model"
+        },
+        {
+          "name": "compute",
+          "flops": 65536.0,
+          "note": "compute-bound target"
+        },
+        {
+          "name": "bandwidth",
+          "flops": 65536.0,
+          "note": "bandwidth-bound target"
+        },
+        {
+          "name": "launch",
+          "flops": 65536.0,
+          "note": "launch-bound target"
+        }
+      ],
+      "median_s": {
+        "default": 0.04405800200038357,
+        "compute": 0.053456392999578384,
+        "bandwidth": 0.052157290001559886,
+        "launch": 0.05317702300089877
+      },
+      "iqr_s": {
+        "default": 0.0,
+        "compute": 0.0,
+        "bandwidth": 0.0,
+        "launch": 0.0
+      },
+      "aux": {
+        "family": "parallel8",
+        "note": "eight-expert projection sum",
+        "n_root_alts": 3,
+        "default": {
+          "sig": "(linear x, (add (add (add (add (add (add (add W, W), W), W), W), W), W), W))",
+          "flops": 65536.0,
+          "read": 18432.0,
+          "write": 2048.0,
+          "traffic": 20480.0,
+          "ops": 8,
+          "marginal": {
+            "compute": 6.6036e-05,
+            "bandwidth": 0.00041009985663999996,
+            "launch": 0.0050000039526399975
+          },
+          "true": {
+            "compute": 9.8208e-05,
+            "bandwidth": 0.00041359999999999997,
+            "launch": 0.040000004096
+          }
+        },
+        "picks": {
+          "compute": {
+            "sig": "(linear x, (add (add (add (add (add (add (add W, W), W), W), W), W), W), W))",
+            "flops": 65536.0,
+            "read": 18432.0,
+            "write": 2048.0,
+            "traffic": 20480.0,
+            "ops": 8,
+            "marginal": {
+              "compute": 6.6036e-05,
+              "bandwidth": 0.00041009985663999996,
+              "launch": 0.0050000039526399975
+            },
+            "true": {
+              "compute": 9.8208e-05,
+              "bandwidth": 0.00041359999999999997,
+              "launch": 0.040000004096
+            },
+            "verified": true,
+            "max_rel": 2.4166140037484517e-07
+          },
+          "bandwidth": {
+            "sig": "(linear x, (add (add (add (add (add (add (add W, W), W), W), W), W), W), W))",
+            "flops": 65536.0,
+            "read": 18432.0,
+            "write": 2048.0,
+            "traffic": 20480.0,
+            "ops": 8,
+            "marginal": {
+              "compute": 6.6036e-05,
+              "bandwidth": 0.00041009985663999996,
+              "launch": 0.0050000039526399975
+            },
+            "true": {
+              "compute": 9.8208e-05,
+              "bandwidth": 0.00041359999999999997,
+              "launch": 0.040000004096
+            },
+            "verified": true,
+            "max_rel": 2.4166140037484517e-07
+          },
+          "launch": {
+            "sig": "(linear x, (add (add (add (add (add (add (add W, W), W), W), W), W), W), W))",
+            "flops": 65536.0,
+            "read": 18432.0,
+            "write": 2048.0,
+            "traffic": 20480.0,
+            "ops": 8,
+            "marginal": {
+              "compute": 6.6036e-05,
+              "bandwidth": 0.00041009985663999996,
+              "launch": 0.0050000039526399975
+            },
+            "true": {
+              "compute": 9.8208e-05,
+              "bandwidth": 0.00041359999999999997,
+              "launch": 0.040000004096
+            },
+            "verified": true,
+            "max_rel": 2.4166140037484517e-07
+          }
+        },
+        "distinct_certified": 1,
+        "frontiers": []
+      }
+    }
+  ]
+}

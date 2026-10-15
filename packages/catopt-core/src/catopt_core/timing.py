@@ -8,7 +8,7 @@ inventing its own:
 * :class:`catopt_torch.meter.TorchMeter` — the production
   :class:`~catopt_core.ports.Meter` port;
 * :mod:`catopt_torch.calibrate` — its micro-benchmark probes;
-* :class:`bench.benchkit.runner.Runner` — the benchmark harness.
+* :class:`benches.benchkit.runner.Runner` — the benchmark harness.
 
 The contract
 ------------

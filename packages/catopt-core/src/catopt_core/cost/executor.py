@@ -41,7 +41,7 @@ if TYPE_CHECKING:
 #  Lowering-aware pricing — price the lowering, not just the term
 # ---------------------------------------------------------------------------
 #
-# The fidelity study (bench/suites/core/cost_fidelity.py) showed term-level cost is
+# The fidelity study (benches/suites/core/cost_fidelity.py) showed term-level cost is
 # blind to the lowering: the same term prices identically whether the
 # generic IRModule dispatches it node-by-node, a batched carrier
 # executor level-schedules it, or a compiled kernel fuses it — while

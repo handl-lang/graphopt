@@ -1,11 +1,11 @@
 # catopt — measured results
 
-Generated from the pinned baselines in `bench/baselines/` —
-regenerate with `python -m bench results --out docs/results.md`.
+Generated from the pinned baselines in `benches/baselines/` —
+regenerate with `python -m benches results --out docs/results.md`.
 Each entry states what the suite asked, what it expected, what
 it measured, and the machine it measured on.  The full
 per-suite reports (timings, plots, raw metrics) are produced by
-`python -m bench report <baseline.json>`.
+`python -m benches report <baseline.json>`.
 
 ## Certified bounded rewrites
 
@@ -18,7 +18,7 @@ per-suite reports (timings, plots, raw metrics) are produced by
 | **WIN** | bounded rewrites (error_budget) buy wall-time on a real checkpoint | 4/5 budgets delivered a bounded member; best 1.410× vs eager |
 | **WIN** | every budget's optimized module stays within the fp32 gate | 5/5 budgets optimized cleanly |
 
-Measured 2026-10-14T06:54:12+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git `2c782dd`) — baseline [`bench/baselines/bounded_e2e.json`](../bench/baselines/bounded_e2e.json).
+Measured 2026-10-14T06:54:12+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git `2c782dd` (dirty)) — baseline [`benches/baselines/bounded_e2e.json`](../benches/baselines/bounded_e2e.json).
 
 ## MiniGPT end-to-end
 
@@ -31,7 +31,7 @@ Measured 2026-10-14T06:54:12+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git 
 | **WIN** | the composed catopt+Inductor module beats plain Inductor end-to-end | best 1.06× vs Inductor on tiny_llama@4x128 |
 | **WIN** | the optimized module verifies against eager | 5/5 cells verified |
 
-Measured 2026-10-14T06:33:13+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git `2c782dd`) — baseline [`bench/baselines/e2e_model.json`](../bench/baselines/e2e_model.json).
+Measured 2026-10-14T06:33:13+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git `2c782dd` (dirty)) — baseline [`benches/baselines/e2e_model.json`](../benches/baselines/e2e_model.json).
 
 ## Compositional pairing demo
 
@@ -44,7 +44,7 @@ Measured 2026-10-14T06:33:13+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git 
 | **WIN** | the Autotuned lowering beats eager on at least one model | best 2.69× vs eager on matrix_chain |
 | **WIN** | every model's optimized lowering verifies | 4/4 models verified |
 
-Measured 2026-10-14T06:18:43+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git `2c782dd`) — baseline [`bench/baselines/killer_demo.json`](../bench/baselines/killer_demo.json).
+Measured 2026-10-14T06:18:43+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git `2c782dd` (dirty)) — baseline [`benches/baselines/killer_demo.json`](../benches/baselines/killer_demo.json).
 
 ## Rewrite-law effect bench
 
@@ -56,7 +56,7 @@ Measured 2026-10-14T06:18:43+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git 
 |---|---|---|
 | **WIN** | every registered law fires, is picked by extraction, and lowers to a verified term | 11 verified / 11 picked / 13 fired across 13 cells |
 
-Measured 2026-10-14T06:13:49+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git `2c782dd`) — baseline [`bench/baselines/law_bench.json`](../bench/baselines/law_bench.json).
+Measured 2026-10-14T06:13:49+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git `2c782dd`) — baseline [`benches/baselines/law_bench.json`](../benches/baselines/law_bench.json).
 
 ## Morphism-window composition
 
@@ -69,7 +69,7 @@ Measured 2026-10-14T06:13:49+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git 
 | **WIN** | morphism windows convert term-level flops headroom into measured wall time | best 12.85× vs eager on chain_x4@4096x128 |
 | **WIN** | every morphism rewrite verifies equivalent | 14/14 cells verified |
 
-Measured 2026-10-14T06:17:01+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git `2c782dd`) — baseline [`bench/baselines/morphism_e2e.json`](../bench/baselines/morphism_e2e.json).
+Measured 2026-10-14T06:17:47+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git `2c782dd` (dirty)) — baseline [`benches/baselines/morphism_e2e.json`](../benches/baselines/morphism_e2e.json).
 
 ## Weight-chain reassociation vs Inductor
 
@@ -82,14 +82,14 @@ Measured 2026-10-14T06:17:01+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git 
 | **WIN** | catopt reaches a weight-folded form Inductor's post-grad graph cannot express | 14.92× vs Inductor at (k,d,B·T)=(16,512,4096) (17.40× vs eager) |
 | **WIN** | every timed cell passes the fp32 equivalence gate | 12/12 cells verified |
 
-Measured 2026-10-14T06:09:00+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git `2c782dd`) — baseline [`bench/baselines/reassoc_scale.json`](../bench/baselines/reassoc_scale.json).
+Measured 2026-10-14T06:16:44+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git `2c782dd` (dirty)) — baseline [`benches/baselines/reassoc_scale.json`](../benches/baselines/reassoc_scale.json).
 
 ## Tooling-level measurements (hand-maintained)
 
 This file is appended verbatim to `docs/results.md` by
-`bench results` / `render_results_doc` — edit it here, never in the
+`benches results` / `render_results_doc` — edit it here, never in the
 generated file.  These measurements live in `tools/` and are
-recorded in the retros, not in `bench/baselines/`.
+recorded in the retros, not in `benches/baselines/`.
 
 All measured on the dev box (RTX 2050 / i5-12500H, fp64 — same
 hardware class as the baselines); magnitudes do not extrapolate to
@@ -100,7 +100,7 @@ datacenter hardware:
 | `softmax_fold` on `ManualSoftmaxAttention` | **+13–27% eager, +29–48% CUDA-graph** vs raw | `tools/law_wallclock.py` | [law-wallclock-verification](../project/retros/law-wallclock-verification.md) |
 | `select_mul` marginal (optimized vs law-ablated) | **faster in 19/20 measurements** | `tools/law_wallclock.py` | [law-wallclock-verification](../project/retros/law-wallclock-verification.md) |
 | executor routing after measured pricing | **12/12 cases ship the measured-fastest member** (uncorrected picks ran 2–3× slower) | `tools/executor_cost_probe.py` | [executor-pricing-fix](../project/retros/executor-pricing-fix.md) |
-| `silu_fold` on the bench case | **−53–55% modeled cost, 1.43–2.62× wall-clock** | `bench run law_bench` | [three-cell-mediator](../project/retros/three-cell-mediator.md) |
+| `silu_fold` on the bench case | **−53–55% modeled cost, 1.43–2.62× wall-clock** | `benches run law_bench` | [three-cell-mediator](../project/retros/three-cell-mediator.md) |
 | contraction player, n=40 vs `opt_einsum` | **0.89–1.01× of randomised greedy at equal wall-clock** (0.91–0.98 at T≤1, three seeds, fed budgets); **0.51–0.90× deterministic greedy** | `tools/contraction_guided_restart.py` | [contraction-synthesis](../project/retros/contraction-synthesis.md), [contraction-player-shipped](../project/retros/contraction-player-shipped.md) |
 | pipeline held-out rediscovery | **winner re-ranks #1, SHIP, every run** | `catopt_discovery.pipeline --holdout` | [law-proposer-extensions](../project/retros/law-proposer-extensions.md), [groupnorm-convnext-corpus](../project/retros/groupnorm-convnext-corpus.md) |
 | coherence catalogue over `ALL_RULES` (82, re-run 2026-10-15) | **58 axioms / 22 lemmas / 2 redundant; 19 no-instance; divergence 1** (`rms_norm_fold` × `_nogain` — measured, unresolved) | `catopt_discovery.coherence --emit-basis` | [axiom-lemma-split](../project/retros/axiom-lemma-split.md) |
@@ -137,6 +137,11 @@ Two reconciliation notes:
   member) — so the README's "1.15–1.32× vs Inductor" is not the
   pinned baseline's literal column: the 1.32 is vs eager and the
   vs-Inductor delivered range tops out at 1.25 on this baseline.
+
+<!-- Hand-maintained curated results.  Appended verbatim to
+     `docs/results.md` by `benches.benchkit.render.results`
+     (`python -m benches results`) — edit it HERE, never in the
+     generated file, or the doc-sync test will fail. -->
 
 ## Machine-derived structure — results by kind (2026-10-15)
 

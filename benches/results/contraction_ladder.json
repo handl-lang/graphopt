@@ -1,0 +1,7027 @@
+{
+  "schema": 1,
+  "suite": "contraction_ladder",
+  "title": "Contraction-ordering ladder",
+  "summary": "A seeded hard-instance set of 4-8 matrix chains and 3-6 tensor networks, scoring the non-learned contraction-ordering players (one-step oracle, greedy episode, saturation, classic greedy) by cost and rank against the exact DP optimum.",
+  "env": {
+    "timestamp_utc": "2026-10-03T04:44:29+00:00",
+    "python": "3.13.9",
+    "torch": "2.14.0+cu130",
+    "torch_cuda": "13.0",
+    "device": "cpu",
+    "device_name": "12th Gen Intel(R) Core(TM) i5-12500H",
+    "cpu_count": 16,
+    "git_sha": "3abcb5c",
+    "git_dirty": true,
+    "argv": [
+      "/home/luis/Desktop/catopt/bench/__main__.py",
+      "run",
+      "contraction_ladder"
+    ]
+  },
+  "provenance": {
+    "chains": 60,
+    "nets": 60,
+    "seed": 0,
+    "repeats": 3,
+    "n_rules": 51,
+    "subset_dp_validated": 40,
+    "quick": false
+  },
+  "units": {
+    "median_s": "seconds",
+    "iqr_s": "seconds"
+  },
+  "findings": [
+    {
+      "claim": "a learned search policy can beat greedy on contraction-ordering *quality*",
+      "verdict": "negative",
+      "headline": "no \u2014 the priced rule space already reaches the DP optimum: saturate ties optimal on 60/60 chains; the residual headroom above greedy is search cost, not quality",
+      "metric": "saturate chains at the DP optimum",
+      "value": 1.0,
+      "evidence": {
+        "chain": {
+          "greedy-1step": {
+            "n": 60,
+            "mean": 1.2760822173293573,
+            "median": 1.0,
+            "at_opt": 38,
+            "pct_opt": 63.333333333333336,
+            "worst": 4.094818496761561,
+            "mean_rank": 3.0416666666666665
+          },
+          "greedy-episode": {
+            "n": 60,
+            "mean": 1.000114006514658,
+            "median": 1.0,
+            "at_opt": 59,
+            "pct_opt": 98.33333333333333,
+            "worst": 1.0068403908794787,
+            "mean_rank": 2.341666666666667
+          },
+          "saturate": {
+            "n": 60,
+            "mean": 1.0,
+            "median": 1.0,
+            "at_opt": 60,
+            "pct_opt": 100.0,
+            "worst": 1.0,
+            "mean_rank": 2.308333333333333
+          }
+        },
+        "net": {
+          "greedy-classic": {
+            "n": 60,
+            "mean": 1.5737438425344308,
+            "median": 1.0471785250396883,
+            "at_opt": 20,
+            "pct_opt": 33.333333333333336,
+            "worst": 5.501424501424501,
+            "mean_rank": 1.8333333333333333
+          },
+          "optimal": {
+            "n": 60,
+            "mean": 1.0,
+            "median": 1.0,
+            "at_opt": 60,
+            "pct_opt": 100.0,
+            "worst": 1.0,
+            "mean_rank": 1.1666666666666667
+          }
+        }
+      }
+    },
+    {
+      "claim": "full equality saturation reaches the exact contraction-ordering DP optimum on matrix chains",
+      "verdict": "win",
+      "headline": "saturate == 2\u00b7DP optimum on 60/60 chains (worst ratio 1.000)",
+      "metric": "saturate chains at optimum / n",
+      "value": 1.0,
+      "evidence": {
+        "saturate": {
+          "n": 60,
+          "mean": 1.0,
+          "median": 1.0,
+          "at_opt": 60,
+          "pct_opt": 100.0,
+          "worst": 1.0,
+          "mean_rank": 2.308333333333333
+        }
+      }
+    },
+    {
+      "claim": "the one-step greedy cost-model oracle is optimal on contraction ordering",
+      "verdict": "negative",
+      "headline": "one-step oracle at the optimum on 38/60 chains (63%); mean ratio 1.28, worst 4.09x",
+      "metric": "one-step oracle chains at optimum / n",
+      "value": 0.633,
+      "evidence": {
+        "greedy-1step": {
+          "n": 60,
+          "mean": 1.2760822173293573,
+          "median": 1.0,
+          "at_opt": 38,
+          "pct_opt": 63.333333333333336,
+          "worst": 4.094818496761561,
+          "mean_rank": 3.0416666666666665
+        }
+      }
+    },
+    {
+      "claim": "the multi-step greedy episode is optimal on contraction ordering",
+      "verdict": "negative",
+      "headline": "greedy episode (h6/p2) at the optimum on 59/60 chains vs one-step 38/60; worst 1.01x",
+      "metric": "greedy episode chains at optimum / n",
+      "value": 0.983,
+      "evidence": {
+        "greedy-episode": {
+          "n": 60,
+          "mean": 1.000114006514658,
+          "median": 1.0,
+          "at_opt": 59,
+          "pct_opt": 98.33333333333333,
+          "worst": 1.0068403908794787,
+          "mean_rank": 2.341666666666667
+        },
+        "greedy-1step": {
+          "n": 60,
+          "mean": 1.2760822173293573,
+          "median": 1.0,
+          "at_opt": 38,
+          "pct_opt": 63.333333333333336,
+          "worst": 4.094818496761561,
+          "mean_rank": 3.0416666666666665
+        }
+      }
+    },
+    {
+      "claim": "classic greedy is optimal on general tensor networks",
+      "verdict": "negative",
+      "headline": "classic greedy at the optimum on 20/60 networks (33%); mean ratio 1.57, worst 5.5x",
+      "metric": "classic greedy networks at optimum / n",
+      "value": 0.333,
+      "evidence": {
+        "greedy-classic": {
+          "n": 60,
+          "mean": 1.5737438425344308,
+          "median": 1.0471785250396883,
+          "at_opt": 20,
+          "pct_opt": 33.333333333333336,
+          "worst": 5.501424501424501,
+          "mean_rank": 1.8333333333333333
+        },
+        "optimal": {
+          "n": 60,
+          "mean": 1.0,
+          "median": 1.0,
+          "at_opt": 60,
+          "pct_opt": 100.0,
+          "worst": 1.0,
+          "mean_rank": 1.1666666666666667
+        }
+      }
+    }
+  ],
+  "cells": [
+    {
+      "name": "chain-00",
+      "params": {
+        "n_mats": 7,
+        "dims": "(27, 3, 17, 33, 32, 26, 20, 31)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.01678374800030724,
+        "greedy-episode": 0.06744505700044101,
+        "saturate": 0.015178497000306379,
+        "optimal": 1.2262000382179394e-05
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 108742.0,
+            "ratio": 4.094818496761561,
+            "rank": 4.0
+          },
+          "greedy-episode": {
+            "cost": 26556.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "saturate": {
+            "cost": 26556.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 26556.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          }
+        },
+        "optimal": 26556.0,
+        "n_mats": 7,
+        "dims": "(27, 3, 17, 33, 32, 26, 20, 31)"
+      }
+    },
+    {
+      "name": "chain-01",
+      "params": {
+        "n_mats": 6,
+        "dims": "(38, 14, 33, 9, 19, 9, 7)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.014191775000654161,
+        "greedy-episode": 0.04162954700223054,
+        "saturate": 0.0062259019978228025,
+        "optimal": 8.118000550894067e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 21740.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 21740.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 21740.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 21740.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 21740.0,
+        "n_mats": 6,
+        "dims": "(38, 14, 33, 9, 19, 9, 7)"
+      }
+    },
+    {
+      "name": "chain-02",
+      "params": {
+        "n_mats": 8,
+        "dims": "(17, 35, 39, 10, 20, 7, 5, 22, 31)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.018339177000598283,
+        "greedy-episode": 0.05381005500021274,
+        "saturate": 0.04866818599839462,
+        "optimal": 1.6431000403827056e-05
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 38990.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 38990.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 38990.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 38990.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 38990.0,
+        "n_mats": 8,
+        "dims": "(17, 35, 39, 10, 20, 7, 5, 22, 31)"
+      }
+    },
+    {
+      "name": "chain-03",
+      "params": {
+        "n_mats": 8,
+        "dims": "(7, 23, 28, 21, 40, 14, 36, 31, 29)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.01833219000036479,
+        "greedy-episode": 0.08103750000009313,
+        "saturate": 0.04894450199935818,
+        "optimal": 1.5977999282767996e-05
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 124628.0,
+            "ratio": 1.72820811492914,
+            "rank": 4.0
+          },
+          "greedy-episode": {
+            "cost": 72114.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "saturate": {
+            "cost": 72114.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 72114.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          }
+        },
+        "optimal": 72114.0,
+        "n_mats": 8,
+        "dims": "(7, 23, 28, 21, 40, 14, 36, 31, 29)"
+      }
+    },
+    {
+      "name": "chain-04",
+      "params": {
+        "n_mats": 8,
+        "dims": "(17, 4, 36, 1, 6, 26, 1, 40, 32)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.01802601999952458,
+        "greedy-episode": 0.08050568999897223,
+        "saturate": 0.04932942099912907,
+        "optimal": 1.6327001503668725e-05
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 4460.0,
+            "ratio": 1.0127157129881925,
+            "rank": 4.0
+          },
+          "greedy-episode": {
+            "cost": 4404.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "saturate": {
+            "cost": 4404.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 4404.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          }
+        },
+        "optimal": 4404.0,
+        "n_mats": 8,
+        "dims": "(17, 4, 36, 1, 6, 26, 1, 40, 32)"
+      }
+    },
+    {
+      "name": "chain-05",
+      "params": {
+        "n_mats": 6,
+        "dims": "(16, 21, 5, 13, 37, 15, 16)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.014464915999269579,
+        "greedy-episode": 0.05660904699834646,
+        "saturate": 0.006414406001567841,
+        "optimal": 8.154001989169046e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 24700.0,
+            "ratio": 1.322269807280514,
+            "rank": 4.0
+          },
+          "greedy-episode": {
+            "cost": 18680.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "saturate": {
+            "cost": 18680.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 18680.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          }
+        },
+        "optimal": 18680.0,
+        "n_mats": 6,
+        "dims": "(16, 21, 5, 13, 37, 15, 16)"
+      }
+    },
+    {
+      "name": "chain-06",
+      "params": {
+        "n_mats": 5,
+        "dims": "(35, 29, 6, 6, 21, 33)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.012088457999197999,
+        "greedy-episode": 0.036015415000292705,
+        "saturate": 0.0031434320007974748,
+        "optimal": 5.866997526027262e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 35868.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 35868.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 35868.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 35868.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 35868.0,
+        "n_mats": 5,
+        "dims": "(35, 29, 6, 6, 21, 33)"
+      }
+    },
+    {
+      "name": "chain-07",
+      "params": {
+        "n_mats": 7,
+        "dims": "(7, 20, 36, 19, 8, 36, 22, 35)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.016392970999731915,
+        "greedy-episode": 0.06799967800179729,
+        "saturate": 0.01557499200134771,
+        "optimal": 1.1693999113049358e-05
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 53616.0,
+            "ratio": 1.12440231524201,
+            "rank": 4.0
+          },
+          "greedy-episode": {
+            "cost": 47684.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "saturate": {
+            "cost": 47684.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 47684.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          }
+        },
+        "optimal": 47684.0,
+        "n_mats": 7,
+        "dims": "(7, 20, 36, 19, 8, 36, 22, 35)"
+      }
+    },
+    {
+      "name": "chain-08",
+      "params": {
+        "n_mats": 5,
+        "dims": "(39, 36, 38, 19, 29, 6)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.011681534997478593,
+        "greedy-episode": 0.02318628200009698,
+        "saturate": 0.0030737439992662985,
+        "optimal": 5.350000719772652e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 48540.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 48540.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 48540.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 48540.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 48540.0,
+        "n_mats": 5,
+        "dims": "(39, 36, 38, 19, 29, 6)"
+      }
+    },
+    {
+      "name": "chain-09",
+      "params": {
+        "n_mats": 8,
+        "dims": "(25, 21, 37, 16, 19, 12, 13, 12, 3)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.017430174000764964,
+        "greedy-episode": 0.034491688002162846,
+        "saturate": 0.04842584400103078,
+        "optimal": 1.650600097491406e-05
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 16428.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 16428.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 16428.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 16428.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 16428.0,
+        "n_mats": 8,
+        "dims": "(25, 21, 37, 16, 19, 12, 13, 12, 3)"
+      }
+    },
+    {
+      "name": "chain-10",
+      "params": {
+        "n_mats": 8,
+        "dims": "(17, 31, 5, 6, 9, 10, 3, 6, 35)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.0170212619996164,
+        "greedy-episode": 0.05178974400041625,
+        "saturate": 0.047485742001299514,
+        "optimal": 1.601599797140807e-05
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 9966.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 9966.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 9966.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 9966.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 9966.0,
+        "n_mats": 8,
+        "dims": "(17, 31, 5, 6, 9, 10, 3, 6, 35)"
+      }
+    },
+    {
+      "name": "chain-11",
+      "params": {
+        "n_mats": 7,
+        "dims": "(34, 18, 34, 16, 14, 38, 27, 38)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.01657650499691954,
+        "greedy-episode": 0.06760311900143279,
+        "saturate": 0.015497729000344407,
+        "optimal": 1.174799763248302e-05
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 143136.0,
+            "ratio": 1.0341001040342157,
+            "rank": 4.0
+          },
+          "greedy-episode": {
+            "cost": 138416.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "saturate": {
+            "cost": 138416.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 138416.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          }
+        },
+        "optimal": 138416.0,
+        "n_mats": 7,
+        "dims": "(34, 18, 34, 16, 14, 38, 27, 38)"
+      }
+    },
+    {
+      "name": "chain-12",
+      "params": {
+        "n_mats": 6,
+        "dims": "(29, 32, 23, 6, 21, 40, 8)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.014236776001780527,
+        "greedy-episode": 0.04174441999930423,
+        "saturate": 0.006187630999193061,
+        "optimal": 8.123999577946961e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 36672.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 36672.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 36672.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 36672.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 36672.0,
+        "n_mats": 6,
+        "dims": "(29, 32, 23, 6, 21, 40, 8)"
+      }
+    },
+    {
+      "name": "chain-13",
+      "params": {
+        "n_mats": 7,
+        "dims": "(38, 22, 13, 16, 2, 18, 8, 15)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.01672716799657792,
+        "greedy-episode": 0.04855694499929086,
+        "saturate": 0.015314739001041744,
+        "optimal": 1.1606000043684617e-05
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 8656.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 8656.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 8656.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 8656.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 8656.0,
+        "n_mats": 7,
+        "dims": "(38, 22, 13, 16, 2, 18, 8, 15)"
+      }
+    },
+    {
+      "name": "chain-14",
+      "params": {
+        "n_mats": 6,
+        "dims": "(11, 22, 28, 4, 7, 10, 15)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.014327885997772682,
+        "greedy-episode": 0.04223853499934194,
+        "saturate": 0.0062690580016351305,
+        "optimal": 7.87899989518337e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 9944.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 9944.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 9944.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 9944.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 9944.0,
+        "n_mats": 6,
+        "dims": "(11, 22, 28, 4, 7, 10, 15)"
+      }
+    },
+    {
+      "name": "chain-15",
+      "params": {
+        "n_mats": 4,
+        "dims": "(37, 35, 39, 5, 2)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.010104259999934584,
+        "greedy-episode": 0.019573926001612563,
+        "saturate": 0.0014766599997528829,
+        "optimal": 3.0459996196441352e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 11420.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 11420.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 11420.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 11420.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 11420.0,
+        "n_mats": 4,
+        "dims": "(37, 35, 39, 5, 2)"
+      }
+    },
+    {
+      "name": "chain-16",
+      "params": {
+        "n_mats": 4,
+        "dims": "(13, 39, 37, 8, 26)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.010380782001448097,
+        "greedy-episode": 0.030076606999500655,
+        "saturate": 0.001458133996493416,
+        "optimal": 3.3100004657171667e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 36608.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 36608.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 36608.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 36608.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 36608.0,
+        "n_mats": 4,
+        "dims": "(13, 39, 37, 8, 26)"
+      }
+    },
+    {
+      "name": "chain-17",
+      "params": {
+        "n_mats": 4,
+        "dims": "(24, 8, 3, 39, 2)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.009805410001717974,
+        "greedy-episode": 0.019396907002374064,
+        "saturate": 0.001525916999526089,
+        "optimal": 3.217002813471481e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 1332.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 1332.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 1332.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 1332.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 1332.0,
+        "n_mats": 4,
+        "dims": "(24, 8, 3, 39, 2)"
+      }
+    },
+    {
+      "name": "chain-18",
+      "params": {
+        "n_mats": 5,
+        "dims": "(12, 8, 31, 14, 4, 2)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.012184392999188276,
+        "greedy-episode": 0.023686278000241145,
+        "saturate": 0.003104225997958565,
+        "optimal": 5.474001227412373e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 3336.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 3336.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 3336.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 3336.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 3336.0,
+        "n_mats": 5,
+        "dims": "(12, 8, 31, 14, 4, 2)"
+      }
+    },
+    {
+      "name": "chain-19",
+      "params": {
+        "n_mats": 8,
+        "dims": "(28, 40, 7, 17, 5, 15, 5, 20, 23)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.018098560998623725,
+        "greedy-episode": 0.08110279999891645,
+        "saturate": 0.048899798002821626,
+        "optimal": 1.6533998859813437e-05
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 27830.0,
+            "ratio": 1.0182949140139042,
+            "rank": 4.0
+          },
+          "greedy-episode": {
+            "cost": 27330.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "saturate": {
+            "cost": 27330.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 27330.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          }
+        },
+        "optimal": 27330.0,
+        "n_mats": 8,
+        "dims": "(28, 40, 7, 17, 5, 15, 5, 20, 23)"
+      }
+    },
+    {
+      "name": "chain-20",
+      "params": {
+        "n_mats": 7,
+        "dims": "(12, 4, 33, 30, 3, 39, 7, 26)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.016160833998583257,
+        "greedy-episode": 0.04727874200034421,
+        "saturate": 0.01484173399876454,
+        "optimal": 1.1361000360921025e-05
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 11622.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 11622.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 11622.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 11622.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 11622.0,
+        "n_mats": 7,
+        "dims": "(12, 4, 33, 30, 3, 39, 7, 26)"
+      }
+    },
+    {
+      "name": "chain-21",
+      "params": {
+        "n_mats": 5,
+        "dims": "(17, 23, 31, 37, 11, 14)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.011905872001079842,
+        "greedy-episode": 0.034665911000047345,
+        "saturate": 0.0030472419966827147,
+        "optimal": 5.22199843544513e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 54758.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 54758.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 54758.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 54758.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 54758.0,
+        "n_mats": 5,
+        "dims": "(17, 23, 31, 37, 11, 14)"
+      }
+    },
+    {
+      "name": "chain-22",
+      "params": {
+        "n_mats": 4,
+        "dims": "(11, 11, 22, 34, 17)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.009972963998734485,
+        "greedy-episode": 0.02951239500180236,
+        "saturate": 0.0014918880006007385,
+        "optimal": 3.4000004234258085e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 33286.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 33286.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 33286.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 33286.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 33286.0,
+        "n_mats": 4,
+        "dims": "(11, 11, 22, 34, 17)"
+      }
+    },
+    {
+      "name": "chain-23",
+      "params": {
+        "n_mats": 4,
+        "dims": "(39, 29, 12, 1, 31)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.009876508996967459,
+        "greedy-episode": 0.029551790001278277,
+        "saturate": 0.0017495109968876932,
+        "optimal": 3.1279996619559824e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 5376.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 5376.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 5376.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 5376.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 5376.0,
+        "n_mats": 4,
+        "dims": "(39, 29, 12, 1, 31)"
+      }
+    },
+    {
+      "name": "chain-24",
+      "params": {
+        "n_mats": 7,
+        "dims": "(37, 33, 20, 23, 25, 17, 10, 36)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.01627194399770815,
+        "greedy-episode": 0.047685435998573666,
+        "saturate": 0.015057166001497535,
+        "optimal": 1.1678999726427719e-05
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 93460.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 93460.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 93460.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 93460.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 93460.0,
+        "n_mats": 7,
+        "dims": "(37, 33, 20, 23, 25, 17, 10, 36)"
+      }
+    },
+    {
+      "name": "chain-25",
+      "params": {
+        "n_mats": 4,
+        "dims": "(30, 6, 22, 3, 35)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.010080934000143316,
+        "greedy-episode": 0.02914518099714769,
+        "saturate": 0.0017343020008411258,
+        "optimal": 3.315999492770061e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 8172.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 8172.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 8172.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 8172.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 8172.0,
+        "n_mats": 4,
+        "dims": "(30, 6, 22, 3, 35)"
+      }
+    },
+    {
+      "name": "chain-26",
+      "params": {
+        "n_mats": 6,
+        "dims": "(9, 16, 31, 23, 40, 19, 23)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.014620173998991959,
+        "greedy-episode": 0.057276497998827836,
+        "saturate": 0.00633749199914746,
+        "optimal": 8.462997357128188e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 94024.0,
+            "ratio": 1.5705218146589164,
+            "rank": 4.0
+          },
+          "greedy-episode": {
+            "cost": 59868.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "saturate": {
+            "cost": 59868.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 59868.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          }
+        },
+        "optimal": 59868.0,
+        "n_mats": 6,
+        "dims": "(9, 16, 31, 23, 40, 19, 23)"
+      }
+    },
+    {
+      "name": "chain-27",
+      "params": {
+        "n_mats": 8,
+        "dims": "(40, 9, 20, 25, 27, 6, 1, 39, 13)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.018208921999757877,
+        "greedy-episode": 0.05380897999930312,
+        "saturate": 0.048537836999457795,
+        "optimal": 1.673099905019626e-05
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 5808.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 5808.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 5808.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 5808.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 5808.0,
+        "n_mats": 8,
+        "dims": "(40, 9, 20, 25, 27, 6, 1, 39, 13)"
+      }
+    },
+    {
+      "name": "chain-28",
+      "params": {
+        "n_mats": 6,
+        "dims": "(11, 16, 15, 29, 25, 37, 27)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.014673194000351941,
+        "greedy-episode": 0.05610707400046522,
+        "saturate": 0.006407696000678698,
+        "optimal": 8.625000191386789e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 106140.0,
+            "ratio": 1.4514276337381031,
+            "rank": 4.0
+          },
+          "greedy-episode": {
+            "cost": 73128.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "saturate": {
+            "cost": 73128.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 73128.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          }
+        },
+        "optimal": 73128.0,
+        "n_mats": 6,
+        "dims": "(11, 16, 15, 29, 25, 37, 27)"
+      }
+    },
+    {
+      "name": "chain-29",
+      "params": {
+        "n_mats": 4,
+        "dims": "(26, 37, 27, 3, 11)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.01047009700050694,
+        "greedy-episode": 0.02976362700064783,
+        "saturate": 0.0015496579981117975,
+        "optimal": 3.335000656079501e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 13482.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 13482.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 13482.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 13482.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 13482.0,
+        "n_mats": 4,
+        "dims": "(26, 37, 27, 3, 11)"
+      }
+    },
+    {
+      "name": "chain-30",
+      "params": {
+        "n_mats": 7,
+        "dims": "(5, 17, 11, 29, 34, 32, 36, 39)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.0167692140021245,
+        "greedy-episode": 0.0714170479986933,
+        "saturate": 0.016686658000253374,
+        "optimal": 1.2747001164825633e-05
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 203264.0,
+            "ratio": 3.957632398753894,
+            "rank": 4.0
+          },
+          "greedy-episode": {
+            "cost": 51360.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "saturate": {
+            "cost": 51360.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 51360.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          }
+        },
+        "optimal": 51360.0,
+        "n_mats": 7,
+        "dims": "(5, 17, 11, 29, 34, 32, 36, 39)"
+      }
+    },
+    {
+      "name": "chain-31",
+      "params": {
+        "n_mats": 4,
+        "dims": "(3, 32, 21, 20, 30)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.011118933998659486,
+        "greedy-episode": 0.0430658309996943,
+        "saturate": 0.001668558001256315,
+        "optimal": 3.7809986679349095e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 33012.0,
+            "ratio": 3.25177304964539,
+            "rank": 4.0
+          },
+          "greedy-episode": {
+            "cost": 10152.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "saturate": {
+            "cost": 10152.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 10152.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          }
+        },
+        "optimal": 10152.0,
+        "n_mats": 4,
+        "dims": "(3, 32, 21, 20, 30)"
+      }
+    },
+    {
+      "name": "chain-32",
+      "params": {
+        "n_mats": 4,
+        "dims": "(27, 13, 36, 6, 9)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.011054889000661206,
+        "greedy-episode": 0.03245926899762708,
+        "saturate": 0.0016982189990812913,
+        "optimal": 3.663997631520033e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 12744.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 12744.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 12744.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 12744.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 12744.0,
+        "n_mats": 4,
+        "dims": "(27, 13, 36, 6, 9)"
+      }
+    },
+    {
+      "name": "chain-33",
+      "params": {
+        "n_mats": 4,
+        "dims": "(26, 27, 21, 1, 14)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.010772628000268014,
+        "greedy-episode": 0.0309497240014025,
+        "saturate": 0.0018478550009604078,
+        "optimal": 3.78299955627881e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 3266.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 3266.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 3266.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 3266.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 3266.0,
+        "n_mats": 4,
+        "dims": "(26, 27, 21, 1, 14)"
+      }
+    },
+    {
+      "name": "chain-34",
+      "params": {
+        "n_mats": 4,
+        "dims": "(1, 34, 40, 7, 13)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.010345381000661291,
+        "greedy-episode": 0.04091586799768265,
+        "saturate": 0.00156991400217521,
+        "optimal": 3.5570010368246585e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 11040.0,
+            "ratio": 3.1889081455805894,
+            "rank": 4.0
+          },
+          "greedy-episode": {
+            "cost": 3462.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "saturate": {
+            "cost": 3462.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 3462.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          }
+        },
+        "optimal": 3462.0,
+        "n_mats": 4,
+        "dims": "(1, 34, 40, 7, 13)"
+      }
+    },
+    {
+      "name": "chain-35",
+      "params": {
+        "n_mats": 4,
+        "dims": "(39, 13, 20, 18, 12)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.009869002999039367,
+        "greedy-episode": 0.020124295002460713,
+        "saturate": 0.0015696400005253963,
+        "optimal": 3.4030017559416592e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 27048.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 27048.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 27048.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 27048.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 27048.0,
+        "n_mats": 4,
+        "dims": "(39, 13, 20, 18, 12)"
+      }
+    },
+    {
+      "name": "chain-36",
+      "params": {
+        "n_mats": 4,
+        "dims": "(31, 26, 6, 2, 18)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.009911583001667168,
+        "greedy-episode": 0.030540796000423143,
+        "saturate": 0.0017576570025994442,
+        "optimal": 3.236000338802114e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 6080.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 6080.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 6080.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 6080.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 6080.0,
+        "n_mats": 4,
+        "dims": "(31, 26, 6, 2, 18)"
+      }
+    },
+    {
+      "name": "chain-37",
+      "params": {
+        "n_mats": 7,
+        "dims": "(8, 17, 9, 34, 23, 8, 10, 18)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.01671743100087042,
+        "greedy-episode": 0.0683543879968056,
+        "saturate": 0.015353721999417758,
+        "optimal": 1.1840998922707513e-05
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 27216.0,
+            "ratio": 1.0822331795769047,
+            "rank": 4.0
+          },
+          "greedy-episode": {
+            "cost": 25148.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "saturate": {
+            "cost": 25148.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 25148.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          }
+        },
+        "optimal": 25148.0,
+        "n_mats": 7,
+        "dims": "(8, 17, 9, 34, 23, 8, 10, 18)"
+      }
+    },
+    {
+      "name": "chain-38",
+      "params": {
+        "n_mats": 4,
+        "dims": "(3, 3, 14, 17, 36)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.010472893998667132,
+        "greedy-episode": 0.04036301299856859,
+        "saturate": 0.0015050430010887794,
+        "optimal": 3.0420014809351414e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 5406.0,
+            "ratio": 1.0100896860986548,
+            "rank": 4.0
+          },
+          "greedy-episode": {
+            "cost": 5352.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "saturate": {
+            "cost": 5352.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 5352.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          }
+        },
+        "optimal": 5352.0,
+        "n_mats": 4,
+        "dims": "(3, 3, 14, 17, 36)"
+      }
+    },
+    {
+      "name": "chain-39",
+      "params": {
+        "n_mats": 6,
+        "dims": "(24, 37, 3, 39, 32, 30, 28)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.014352985999721568,
+        "greedy-episode": 0.057121788999211276,
+        "saturate": 0.006437617998017231,
+        "optimal": 8.317998435813934e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 75984.0,
+            "ratio": 2.748263888888889,
+            "rank": 4.0
+          },
+          "greedy-episode": {
+            "cost": 27648.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "saturate": {
+            "cost": 27648.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 27648.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          }
+        },
+        "optimal": 27648.0,
+        "n_mats": 6,
+        "dims": "(24, 37, 3, 39, 32, 30, 28)"
+      }
+    },
+    {
+      "name": "chain-40",
+      "params": {
+        "n_mats": 6,
+        "dims": "(35, 12, 14, 25, 38, 19, 1)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.01375620800172328,
+        "greedy-episode": 0.02718788700076402,
+        "saturate": 0.006299025000771508,
+        "optimal": 8.118000550894067e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 5220.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 5220.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 5220.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 5220.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 5220.0,
+        "n_mats": 6,
+        "dims": "(35, 12, 14, 25, 38, 19, 1)"
+      }
+    },
+    {
+      "name": "chain-41",
+      "params": {
+        "n_mats": 5,
+        "dims": "(10, 18, 22, 22, 24, 6)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.011748318996978924,
+        "greedy-episode": 0.02369630399698508,
+        "saturate": 0.0030766689997108188,
+        "optimal": 5.669000529451296e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 19056.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 19056.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 19056.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 19056.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 19056.0,
+        "n_mats": 5,
+        "dims": "(10, 18, 22, 22, 24, 6)"
+      }
+    },
+    {
+      "name": "chain-42",
+      "params": {
+        "n_mats": 6,
+        "dims": "(40, 3, 3, 18, 11, 10, 38)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.014454194002610166,
+        "greedy-episode": 0.057787885001744144,
+        "saturate": 0.006234235002921196,
+        "optimal": 8.15699968370609e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 16620.0,
+            "ratio": 1.2377122430741734,
+            "rank": 4.0
+          },
+          "greedy-episode": {
+            "cost": 13428.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "saturate": {
+            "cost": 13428.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 13428.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          }
+        },
+        "optimal": 13428.0,
+        "n_mats": 6,
+        "dims": "(40, 3, 3, 18, 11, 10, 38)"
+      }
+    },
+    {
+      "name": "chain-43",
+      "params": {
+        "n_mats": 6,
+        "dims": "(24, 26, 36, 9, 19, 8, 31)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.01402761799909058,
+        "greedy-episode": 0.042111079001188045,
+        "saturate": 0.0062229590002971236,
+        "optimal": 8.523998985765502e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 44784.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 44784.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 44784.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 44784.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 44784.0,
+        "n_mats": 6,
+        "dims": "(24, 26, 36, 9, 19, 8, 31)"
+      }
+    },
+    {
+      "name": "chain-44",
+      "params": {
+        "n_mats": 5,
+        "dims": "(4, 20, 12, 34, 5, 20)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.012097850001737243,
+        "greedy-episode": 0.04807901199819753,
+        "saturate": 0.0030880720005370677,
+        "optimal": 5.363999662222341e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 8080.0,
+            "ratio": 1.10989010989011,
+            "rank": 4.0
+          },
+          "greedy-episode": {
+            "cost": 7280.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "saturate": {
+            "cost": 7280.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 7280.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          }
+        },
+        "optimal": 7280.0,
+        "n_mats": 5,
+        "dims": "(4, 20, 12, 34, 5, 20)"
+      }
+    },
+    {
+      "name": "chain-45",
+      "params": {
+        "n_mats": 7,
+        "dims": "(22, 20, 27, 7, 7, 36, 31, 31)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.016386529998271726,
+        "greedy-episode": 0.06882851299815229,
+        "saturate": 0.015649695000320207,
+        "optimal": 1.2002001312794164e-05
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 54992.0,
+            "ratio": 1.0126321216808456,
+            "rank": 4.0
+          },
+          "greedy-episode": {
+            "cost": 54306.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "saturate": {
+            "cost": 54306.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 54306.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          }
+        },
+        "optimal": 54306.0,
+        "n_mats": 7,
+        "dims": "(22, 20, 27, 7, 7, 36, 31, 31)"
+      }
+    },
+    {
+      "name": "chain-46",
+      "params": {
+        "n_mats": 6,
+        "dims": "(22, 8, 31, 8, 32, 28, 3)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.014381471999513451,
+        "greedy-episode": 0.02810201799729839,
+        "saturate": 0.00654332100020838,
+        "optimal": 8.513001375831664e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 10944.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 10944.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 10944.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 10944.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 10944.0,
+        "n_mats": 6,
+        "dims": "(22, 8, 31, 8, 32, 28, 3)"
+      }
+    },
+    {
+      "name": "chain-47",
+      "params": {
+        "n_mats": 6,
+        "dims": "(22, 10, 11, 37, 25, 6, 5)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.013948637999419589,
+        "greedy-episode": 0.02763952299937955,
+        "saturate": 0.006460230997618055,
+        "optimal": 8.245002391049638e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 18120.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 18120.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 18120.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 18120.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 18120.0,
+        "n_mats": 6,
+        "dims": "(22, 10, 11, 37, 25, 6, 5)"
+      }
+    },
+    {
+      "name": "chain-48",
+      "params": {
+        "n_mats": 4,
+        "dims": "(13, 15, 4, 25, 1)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.009928644998581149,
+        "greedy-episode": 0.01958901599937235,
+        "saturate": 0.0015904559986665845,
+        "optimal": 3.498000296531245e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 710.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 710.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 710.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 710.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 710.0,
+        "n_mats": 4,
+        "dims": "(13, 15, 4, 25, 1)"
+      }
+    },
+    {
+      "name": "chain-49",
+      "params": {
+        "n_mats": 4,
+        "dims": "(26, 36, 34, 19, 29)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.010221812000963837,
+        "greedy-episode": 0.029859099002351286,
+        "saturate": 0.0015712839995103423,
+        "optimal": 3.2700008887331933e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 110732.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 110732.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 110732.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 110732.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 110732.0,
+        "n_mats": 4,
+        "dims": "(26, 36, 34, 19, 29)"
+      }
+    },
+    {
+      "name": "chain-50",
+      "params": {
+        "n_mats": 7,
+        "dims": "(38, 14, 28, 6, 24, 15, 17, 38)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.016891800998564577,
+        "greedy-episode": 0.06796125899927574,
+        "saturate": 0.01668160299959709,
+        "optimal": 1.251499998033978e-05
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 53304.0,
+            "ratio": 1.224028658032516,
+            "rank": 4.0
+          },
+          "greedy-episode": {
+            "cost": 43548.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "saturate": {
+            "cost": 43548.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 43548.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          }
+        },
+        "optimal": 43548.0,
+        "n_mats": 7,
+        "dims": "(38, 14, 28, 6, 24, 15, 17, 38)"
+      }
+    },
+    {
+      "name": "chain-51",
+      "params": {
+        "n_mats": 5,
+        "dims": "(28, 13, 23, 8, 5, 2)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.01222815199798788,
+        "greedy-episode": 0.024625168000056874,
+        "saturate": 0.003163591001793975,
+        "optimal": 5.678000889020041e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 3548.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 3548.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 3548.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 3548.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 3548.0,
+        "n_mats": 5,
+        "dims": "(28, 13, 23, 8, 5, 2)"
+      }
+    },
+    {
+      "name": "chain-52",
+      "params": {
+        "n_mats": 8,
+        "dims": "(29, 13, 8, 32, 26, 17, 14, 3, 14)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.020047214999067364,
+        "greedy-episode": 0.05807065499902819,
+        "saturate": 0.052161596999212634,
+        "optimal": 1.7104997823480517e-05
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 15930.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 15930.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 15930.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 15930.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 15930.0,
+        "n_mats": 8,
+        "dims": "(29, 13, 8, 32, 26, 17, 14, 3, 14)"
+      }
+    },
+    {
+      "name": "chain-53",
+      "params": {
+        "n_mats": 8,
+        "dims": "(10, 7, 13, 30, 25, 24, 35, 10, 7)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.019228331999329384,
+        "greedy-episode": 0.03594620600051712,
+        "saturate": 0.05018164599823649,
+        "optimal": 1.7111000488512218e-05
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 43274.0,
+            "ratio": 1.0068403908794787,
+            "rank": 3.5
+          },
+          "greedy-episode": {
+            "cost": 43274.0,
+            "ratio": 1.0068403908794787,
+            "rank": 3.5
+          },
+          "saturate": {
+            "cost": 42980.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          },
+          "optimal": {
+            "cost": 42980.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          }
+        },
+        "optimal": 42980.0,
+        "n_mats": 8,
+        "dims": "(10, 7, 13, 30, 25, 24, 35, 10, 7)"
+      }
+    },
+    {
+      "name": "chain-54",
+      "params": {
+        "n_mats": 8,
+        "dims": "(32, 10, 37, 26, 28, 34, 32, 21, 32)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.019529032997525064,
+        "greedy-episode": 0.08370324200222967,
+        "saturate": 0.049510318000102416,
+        "optimal": 1.631199847906828e-05
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 206120.0,
+            "ratio": 1.690062315513283,
+            "rank": 4.0
+          },
+          "greedy-episode": {
+            "cost": 121960.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "saturate": {
+            "cost": 121960.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 121960.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          }
+        },
+        "optimal": 121960.0,
+        "n_mats": 8,
+        "dims": "(32, 10, 37, 26, 28, 34, 32, 21, 32)"
+      }
+    },
+    {
+      "name": "chain-55",
+      "params": {
+        "n_mats": 7,
+        "dims": "(13, 35, 40, 15, 1, 22, 21, 21)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.015966266000759788,
+        "greedy-episode": 0.047634756003390066,
+        "saturate": 0.015621457998349797,
+        "optimal": 1.1890999303432181e-05
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 7262.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 7262.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 7262.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 7262.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 7262.0,
+        "n_mats": 7,
+        "dims": "(13, 35, 40, 15, 1, 22, 21, 21)"
+      }
+    },
+    {
+      "name": "chain-56",
+      "params": {
+        "n_mats": 4,
+        "dims": "(34, 10, 17, 39, 10)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.009995102001994383,
+        "greedy-episode": 0.019383908998861443,
+        "saturate": 0.0015840399973967578,
+        "optimal": 3.4389995562378317e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 23460.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 23460.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 23460.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 23460.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 23460.0,
+        "n_mats": 4,
+        "dims": "(34, 10, 17, 39, 10)"
+      }
+    },
+    {
+      "name": "chain-57",
+      "params": {
+        "n_mats": 7,
+        "dims": "(38, 19, 31, 5, 6, 34, 3, 5)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.01620299400019576,
+        "greedy-episode": 0.04799340200042934,
+        "saturate": 0.01541770200128667,
+        "optimal": 1.2155000149505213e-05
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 11340.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 11340.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 11340.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 11340.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 11340.0,
+        "n_mats": 7,
+        "dims": "(38, 19, 31, 5, 6, 34, 3, 5)"
+      }
+    },
+    {
+      "name": "chain-58",
+      "params": {
+        "n_mats": 5,
+        "dims": "(9, 3, 20, 1, 29, 22)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.012016896002023714,
+        "greedy-episode": 0.03525798699774896,
+        "saturate": 0.00307670300026075,
+        "optimal": 6.254998879740015e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 1846.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "greedy-episode": {
+            "cost": 1846.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "saturate": {
+            "cost": 1846.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          },
+          "optimal": {
+            "cost": 1846.0,
+            "ratio": 1.0,
+            "rank": 2.5
+          }
+        },
+        "optimal": 1846.0,
+        "n_mats": 5,
+        "dims": "(9, 3, 20, 1, 29, 22)"
+      }
+    },
+    {
+      "name": "chain-59",
+      "params": {
+        "n_mats": 5,
+        "dims": "(10, 30, 24, 33, 25, 34)"
+      },
+      "variants": [
+        {
+          "name": "greedy-1step",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "greedy-episode",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "saturate",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-1step": 0.012637012998311548,
+        "greedy-episode": 0.06226310999772977,
+        "saturate": 0.004046925998409279,
+        "optimal": 7.528000423917547e-06
+      },
+      "iqr_s": {
+        "greedy-1step": 0.0,
+        "greedy-episode": 0.0,
+        "saturate": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "chain",
+        "players": {
+          "greedy-1step": {
+            "cost": 107600.0,
+            "ratio": 1.688107938500157,
+            "rank": 4.0
+          },
+          "greedy-episode": {
+            "cost": 63740.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "saturate": {
+            "cost": 63740.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 63740.0,
+            "ratio": 1.0,
+            "rank": 2.0
+          }
+        },
+        "optimal": 63740.0,
+        "n_mats": 5,
+        "dims": "(10, 30, 24, 33, 25, 34)"
+      }
+    },
+    {
+      "name": "net-00",
+      "params": {
+        "n_tensors": 4,
+        "tensors": "[(2,), (3,), (3, 5), (1, 6)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 1.0247000318486243e-05,
+        "optimal": 3.5543002013582736e-05
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 588.0,
+            "ratio": 1.1620553359683794,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 506.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 506.0,
+        "n_tensors": 4,
+        "tensors": "[(2,), (3,), (3, 5), (1, 6)]"
+      }
+    },
+    {
+      "name": "net-01",
+      "params": {
+        "n_tensors": 6,
+        "tensors": "[(0, 1, 4), (0,), (4,), (3,), (1, 2, 3), (4,)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 1.9332001102156937e-05,
+        "optimal": 0.0003063789990846999
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 6360.0,
+            "ratio": 5.36256323777403,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 1186.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 1186.0,
+        "n_tensors": 6,
+        "tensors": "[(0, 1, 4), (0,), (4,), (3,), (1, 2, 3), (4,)]"
+      }
+    },
+    {
+      "name": "net-02",
+      "params": {
+        "n_tensors": 5,
+        "tensors": "[(1, 2, 3), (3,), (0, 1, 3), (2,), (0, 2, 3)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 1.5245001122821122e-05,
+        "optimal": 0.00010147400098503567
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 1611.0,
+            "ratio": 1.028735632183908,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 1566.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 1566.0,
+        "n_tensors": 5,
+        "tensors": "[(1, 2, 3), (3,), (0, 1, 3), (2,), (0, 2, 3)]"
+      }
+    },
+    {
+      "name": "net-03",
+      "params": {
+        "n_tensors": 6,
+        "tensors": "[(3,), (5,), (3, 5), (2,), (2, 5, 6), (3,)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 2.1689000277547166e-05,
+        "optimal": 0.00028964800003450364
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 799.0,
+            "ratio": 1.9023809523809523,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 420.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 420.0,
+        "n_tensors": 6,
+        "tensors": "[(3,), (5,), (3, 5), (2,), (2, 5, 6), (3,)]"
+      }
+    },
+    {
+      "name": "net-04",
+      "params": {
+        "n_tensors": 6,
+        "tensors": "[(0, 1), (0, 1, 2), (2,), (0,), (2,), (0, 1, 2)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 2.2799998987466097e-05,
+        "optimal": 0.0002676559997780714
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 797.0,
+            "ratio": 1.0127064803049555,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 787.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 787.0,
+        "n_tensors": 6,
+        "tensors": "[(0, 1), (0, 1, 2), (2,), (0,), (2,), (0, 1, 2)]"
+      }
+    },
+    {
+      "name": "net-05",
+      "params": {
+        "n_tensors": 5,
+        "tensors": "[(0, 3, 5), (1, 4, 6), (0, 1, 3), (2, 6), (1, 4, 6)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 1.5833997167646885e-05,
+        "optimal": 0.00013394599955063313
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 3112.0,
+            "ratio": 1.0169934640522875,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 3060.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 3060.0,
+        "n_tensors": 5,
+        "tensors": "[(0, 3, 5), (1, 4, 6), (0, 1, 3), (2, 6), (1, 4, 6)]"
+      }
+    },
+    {
+      "name": "net-06",
+      "params": {
+        "n_tensors": 5,
+        "tensors": "[(0, 1, 4), (0, 1, 4), (0, 2, 4), (0,), (0, 2)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 1.4199998986441642e-05,
+        "optimal": 9.781900007510558e-05
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 215.0,
+            "ratio": 1.0858585858585859,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 198.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 198.0,
+        "n_tensors": 5,
+        "tensors": "[(0, 1, 4), (0, 1, 4), (0, 2, 4), (0,), (0, 2)]"
+      }
+    },
+    {
+      "name": "net-07",
+      "params": {
+        "n_tensors": 5,
+        "tensors": "[(0,), (0, 2), (0, 1, 2), (0, 1, 2), (0,)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 1.3385000784182921e-05,
+        "optimal": 8.642800094094127e-05
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 426.0,
+            "ratio": 1.1064935064935064,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 385.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 385.0,
+        "n_tensors": 5,
+        "tensors": "[(0,), (0, 2), (0, 1, 2), (0, 1, 2), (0,)]"
+      }
+    },
+    {
+      "name": "net-08",
+      "params": {
+        "n_tensors": 6,
+        "tensors": "[(0, 1), (1, 2, 3), (1,), (3,), (0,), (1, 2, 3)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 2.1168998500797898e-05,
+        "optimal": 0.0003083139999944251
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 680.0,
+            "ratio": 1.021021021021021,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 666.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 666.0,
+        "n_tensors": 6,
+        "tensors": "[(0, 1), (1, 2, 3), (1,), (3,), (0,), (1, 2, 3)]"
+      }
+    },
+    {
+      "name": "net-09",
+      "params": {
+        "n_tensors": 6,
+        "tensors": "[(0, 1, 2), (0, 1, 3), (1,), (2,), (0,), (2, 3)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 2.171500091208145e-05,
+        "optimal": 0.0003133770005661063
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 648.0,
+            "ratio": 1.0156739811912225,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 638.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 638.0,
+        "n_tensors": 6,
+        "tensors": "[(0, 1, 2), (0, 1, 3), (1,), (2,), (0,), (2, 3)]"
+      }
+    },
+    {
+      "name": "net-10",
+      "params": {
+        "n_tensors": 4,
+        "tensors": "[(0, 1, 2), (2,), (0, 1, 2), (1,)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 6.283997208811343e-06,
+        "optimal": 2.1961001039016992e-05
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 275.0,
+            "ratio": 1.2222222222222223,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 225.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 225.0,
+        "n_tensors": 4,
+        "tensors": "[(0, 1, 2), (2,), (0, 1, 2), (1,)]"
+      }
+    },
+    {
+      "name": "net-11",
+      "params": {
+        "n_tensors": 6,
+        "tensors": "[(3,), (5,), (2, 4), (0, 2), (2, 3, 6), (1,)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 2.0182000298518687e-05,
+        "optimal": 0.00035874500099453144
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 439537.0,
+            "ratio": 4.031192105214887,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 109034.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 109034.0,
+        "n_tensors": 6,
+        "tensors": "[(3,), (5,), (2, 4), (0, 2), (2, 3, 6), (1,)]"
+      }
+    },
+    {
+      "name": "net-12",
+      "params": {
+        "n_tensors": 5,
+        "tensors": "[(1, 2), (0, 1, 2), (2,), (0,), (0,)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 1.3584001862909645e-05,
+        "optimal": 9.036499977810308e-05
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 259.0,
+            "ratio": 1.1359649122807018,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 228.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 228.0,
+        "n_tensors": 5,
+        "tensors": "[(1, 2), (0, 1, 2), (2,), (0,), (0,)]"
+      }
+    },
+    {
+      "name": "net-13",
+      "params": {
+        "n_tensors": 5,
+        "tensors": "[(1, 2, 4), (0, 2), (1, 3), (4,), (0, 2, 4)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 1.531500311102718e-05,
+        "optimal": 0.00011074500071117654
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 736.0,
+            "ratio": 1.2777777777777777,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 576.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 576.0,
+        "n_tensors": 5,
+        "tensors": "[(1, 2, 4), (0, 2), (1, 3), (4,), (0, 2, 4)]"
+      }
+    },
+    {
+      "name": "net-14",
+      "params": {
+        "n_tensors": 5,
+        "tensors": "[(0, 1, 2), (0, 1, 2), (1, 2), (0, 1, 2), (0, 2)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 1.3376000424614176e-05,
+        "optimal": 8.664399865665473e-05
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 308.0,
+            "ratio": 1.0694444444444444,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 288.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 288.0,
+        "n_tensors": 5,
+        "tensors": "[(0, 1, 2), (0, 1, 2), (1, 2), (0, 1, 2), (0, 2)]"
+      }
+    },
+    {
+      "name": "net-15",
+      "params": {
+        "n_tensors": 3,
+        "tensors": "[(0, 2), (0,), (0, 1, 2)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 4.713001544587314e-06,
+        "optimal": 9.250001312466338e-06
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 540.0,
+            "ratio": 1.1538461538461537,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 468.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 468.0,
+        "n_tensors": 3,
+        "tensors": "[(0, 2), (0,), (0, 1, 2)]"
+      }
+    },
+    {
+      "name": "net-16",
+      "params": {
+        "n_tensors": 4,
+        "tensors": "[(0, 1, 2), (1, 2, 3), (0, 1, 3), (2,)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 8.844999683788046e-06,
+        "optimal": 3.1597999623045325e-05
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 56.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          },
+          "optimal": {
+            "cost": 56.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          }
+        },
+        "optimal": 56.0,
+        "n_tensors": 4,
+        "tensors": "[(0, 1, 2), (1, 2, 3), (0, 1, 3), (2,)]"
+      }
+    },
+    {
+      "name": "net-17",
+      "params": {
+        "n_tensors": 5,
+        "tensors": "[(2, 3), (0,), (3, 4), (2,), (4,)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 1.3172000763006508e-05,
+        "optimal": 9.875699834083207e-05
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 266.0,
+            "ratio": 1.8732394366197183,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 142.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 142.0,
+        "n_tensors": 5,
+        "tensors": "[(2, 3), (0,), (3, 4), (2,), (4,)]"
+      }
+    },
+    {
+      "name": "net-18",
+      "params": {
+        "n_tensors": 4,
+        "tensors": "[(1,), (0, 2), (3,), (4,)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 8.776998583925888e-06,
+        "optimal": 3.363599898875691e-05
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 20538.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          },
+          "optimal": {
+            "cost": 20538.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          }
+        },
+        "optimal": 20538.0,
+        "n_tensors": 4,
+        "tensors": "[(1,), (0, 2), (3,), (4,)]"
+      }
+    },
+    {
+      "name": "net-19",
+      "params": {
+        "n_tensors": 3,
+        "tensors": "[(2,), (1, 2, 3), (4,)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 4.823999915970489e-06,
+        "optimal": 9.854000381892547e-06
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 1870.0,
+            "ratio": 3.5416666666666665,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 528.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 528.0,
+        "n_tensors": 3,
+        "tensors": "[(2,), (1, 2, 3), (4,)]"
+      }
+    },
+    {
+      "name": "net-20",
+      "params": {
+        "n_tensors": 4,
+        "tensors": "[(1,), (1,), (0, 1, 2), (0, 1, 2)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 7.883998478064314e-06,
+        "optimal": 2.697400122997351e-05
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 334.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          },
+          "optimal": {
+            "cost": 334.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          }
+        },
+        "optimal": 334.0,
+        "n_tensors": 4,
+        "tensors": "[(1,), (1,), (0, 1, 2), (0, 1, 2)]"
+      }
+    },
+    {
+      "name": "net-21",
+      "params": {
+        "n_tensors": 3,
+        "tensors": "[(0, 4), (1, 5, 6), (6,)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 5.5060008889995515e-06,
+        "optimal": 1.0903000656981021e-05
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 2916.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          },
+          "optimal": {
+            "cost": 2916.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          }
+        },
+        "optimal": 2916.0,
+        "n_tensors": 3,
+        "tensors": "[(0, 4), (1, 5, 6), (6,)]"
+      }
+    },
+    {
+      "name": "net-22",
+      "params": {
+        "n_tensors": 4,
+        "tensors": "[(0, 1, 3), (2,), (0, 1), (0, 1, 3)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 9.521001629764214e-06,
+        "optimal": 3.1823001336306334e-05
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 2808.0,
+            "ratio": 1.4385245901639345,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 1952.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 1952.0,
+        "n_tensors": 4,
+        "tensors": "[(0, 1, 3), (2,), (0, 1), (0, 1, 3)]"
+      }
+    },
+    {
+      "name": "net-23",
+      "params": {
+        "n_tensors": 5,
+        "tensors": "[(4, 6), (0, 3), (1, 2), (0, 5), (0, 4)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 1.5549001545878127e-05,
+        "optimal": 0.00013102899902150966
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 10104.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          },
+          "optimal": {
+            "cost": 10104.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          }
+        },
+        "optimal": 10104.0,
+        "n_tensors": 5,
+        "tensors": "[(4, 6), (0, 3), (1, 2), (0, 5), (0, 4)]"
+      }
+    },
+    {
+      "name": "net-24",
+      "params": {
+        "n_tensors": 5,
+        "tensors": "[(3, 4), (4,), (1,), (0, 1), (2, 3, 4)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 1.5194000297924504e-05,
+        "optimal": 0.00011582699880818836
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 3285.0,
+            "ratio": 3.421875,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 960.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 960.0,
+        "n_tensors": 5,
+        "tensors": "[(3, 4), (4,), (1,), (0, 1), (2, 3, 4)]"
+      }
+    },
+    {
+      "name": "net-25",
+      "params": {
+        "n_tensors": 6,
+        "tensors": "[(1, 2, 3), (0, 1, 2), (0, 2, 3), (2, 3), (0, 2), (0, 2, 3)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 1.872699795057997e-05,
+        "optimal": 0.0002513270010240376
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 4356.0,
+            "ratio": 2.314558979808714,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 1882.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 1882.0,
+        "n_tensors": 6,
+        "tensors": "[(1, 2, 3), (0, 1, 2), (0, 2, 3), (2, 3), (0, 2), (0, 2, 3)]"
+      }
+    },
+    {
+      "name": "net-26",
+      "params": {
+        "n_tensors": 6,
+        "tensors": "[(2,), (1, 2), (0, 1, 2), (0, 1, 2), (0, 2, 3), (0, 1)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 1.9297000108053908e-05,
+        "optimal": 0.00027179599783266895
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 587.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          },
+          "optimal": {
+            "cost": 587.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          }
+        },
+        "optimal": 587.0,
+        "n_tensors": 6,
+        "tensors": "[(2,), (1, 2), (0, 1, 2), (0, 1, 2), (0, 2, 3), (0, 1)]"
+      }
+    },
+    {
+      "name": "net-27",
+      "params": {
+        "n_tensors": 3,
+        "tensors": "[(3,), (1, 3), (1, 3)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 4.869001713814214e-06,
+        "optimal": 9.1419969976414e-06
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 54.0,
+            "ratio": 1.8,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 30.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 30.0,
+        "n_tensors": 3,
+        "tensors": "[(3,), (1, 3), (1, 3)]"
+      }
+    },
+    {
+      "name": "net-28",
+      "params": {
+        "n_tensors": 6,
+        "tensors": "[(0, 1, 2), (0, 2), (2,), (0, 2), (2,), (0, 1, 2)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 2.022199987550266e-05,
+        "optimal": 0.00026753900237963535
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 118.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          },
+          "optimal": {
+            "cost": 118.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          }
+        },
+        "optimal": 118.0,
+        "n_tensors": 6,
+        "tensors": "[(0, 1, 2), (0, 2), (2,), (0, 2), (2,), (0, 1, 2)]"
+      }
+    },
+    {
+      "name": "net-29",
+      "params": {
+        "n_tensors": 4,
+        "tensors": "[(2, 4), (1, 2, 3), (3, 4), (1,)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 8.613002137281e-06,
+        "optimal": 3.1581999792251736e-05
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 360.0,
+            "ratio": 1.0650887573964498,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 338.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 338.0,
+        "n_tensors": 4,
+        "tensors": "[(2, 4), (1, 2, 3), (3, 4), (1,)]"
+      }
+    },
+    {
+      "name": "net-30",
+      "params": {
+        "n_tensors": 3,
+        "tensors": "[(0, 1, 2), (0, 1, 2), (0, 1, 2)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 3.987999662058428e-06,
+        "optimal": 7.547001587226987e-06
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 1680.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          },
+          "optimal": {
+            "cost": 1680.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          }
+        },
+        "optimal": 1680.0,
+        "n_tensors": 3,
+        "tensors": "[(0, 1, 2), (0, 1, 2), (0, 1, 2)]"
+      }
+    },
+    {
+      "name": "net-31",
+      "params": {
+        "n_tensors": 5,
+        "tensors": "[(1,), (0, 1, 2), (0, 1, 2), (2,), (0, 1)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 1.076099943020381e-05,
+        "optimal": 7.186000220826827e-05
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 264.0,
+            "ratio": 1.306930693069307,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 202.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 202.0,
+        "n_tensors": 5,
+        "tensors": "[(1,), (0, 1, 2), (0, 1, 2), (2,), (0, 1)]"
+      }
+    },
+    {
+      "name": "net-32",
+      "params": {
+        "n_tensors": 4,
+        "tensors": "[(2, 3, 4), (1, 3, 5), (0, 4), (3, 4, 5)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 8.495000656694174e-06,
+        "optimal": 3.485599881969392e-05
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 22575.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          },
+          "optimal": {
+            "cost": 22575.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          }
+        },
+        "optimal": 22575.0,
+        "n_tensors": 4,
+        "tensors": "[(2, 3, 4), (1, 3, 5), (0, 4), (3, 4, 5)]"
+      }
+    },
+    {
+      "name": "net-33",
+      "params": {
+        "n_tensors": 4,
+        "tensors": "[(0, 2, 3), (1, 3, 4), (0,), (0, 1, 2)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 1.0406001820228994e-05,
+        "optimal": 3.5829998523695394e-05
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 7200.0,
+            "ratio": 1.25,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 5760.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 5760.0,
+        "n_tensors": 4,
+        "tensors": "[(0, 2, 3), (1, 3, 4), (0,), (0, 1, 2)]"
+      }
+    },
+    {
+      "name": "net-34",
+      "params": {
+        "n_tensors": 6,
+        "tensors": "[(1, 3), (0, 2, 3), (4,), (0, 2), (3,), (1,)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 2.4744000256760046e-05,
+        "optimal": 0.00033933099985006265
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 384.0,
+            "ratio": 1.0105263157894737,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 380.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 380.0,
+        "n_tensors": 6,
+        "tensors": "[(1, 3), (0, 2, 3), (4,), (0, 2), (3,), (1,)]"
+      }
+    },
+    {
+      "name": "net-35",
+      "params": {
+        "n_tensors": 5,
+        "tensors": "[(1, 4), (1,), (0, 2), (5,), (2, 3, 5)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 1.536099807708524e-05,
+        "optimal": 0.00012444000094546936
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 1188.0,
+            "ratio": 2.495798319327731,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 476.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 476.0,
+        "n_tensors": 5,
+        "tensors": "[(1, 4), (1,), (0, 2), (5,), (2, 3, 5)]"
+      }
+    },
+    {
+      "name": "net-36",
+      "params": {
+        "n_tensors": 5,
+        "tensors": "[(1, 2, 3), (1, 3), (2, 4), (1, 2, 3), (0, 1, 2)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 1.527399945189245e-05,
+        "optimal": 0.00010857300003408454
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 15448.0,
+            "ratio": 5.501424501424501,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 2808.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 2808.0,
+        "n_tensors": 5,
+        "tensors": "[(1, 2, 3), (1, 3), (2, 4), (1, 2, 3), (0, 1, 2)]"
+      }
+    },
+    {
+      "name": "net-37",
+      "params": {
+        "n_tensors": 4,
+        "tensors": "[(0, 1, 2), (0, 1, 2), (0, 2), (0,)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 8.350998541573063e-06,
+        "optimal": 2.795799809973687e-05
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 438.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          },
+          "optimal": {
+            "cost": 438.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          }
+        },
+        "optimal": 438.0,
+        "n_tensors": 4,
+        "tensors": "[(0, 1, 2), (0, 1, 2), (0, 2), (0,)]"
+      }
+    },
+    {
+      "name": "net-38",
+      "params": {
+        "n_tensors": 6,
+        "tensors": "[(1,), (0, 2, 3), (3,), (0, 3), (0,), (0,)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 2.091500209644437e-05,
+        "optimal": 0.00030796800274401903
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 1199.0,
+            "ratio": 3.622356495468278,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 331.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 331.0,
+        "n_tensors": 6,
+        "tensors": "[(1,), (0, 2, 3), (3,), (0, 3), (0,), (0,)]"
+      }
+    },
+    {
+      "name": "net-39",
+      "params": {
+        "n_tensors": 6,
+        "tensors": "[(0, 2, 4), (0, 1, 3), (1, 3), (1, 3), (1,), (3, 4)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 2.2694999643135816e-05,
+        "optimal": 0.00034142999720643274
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 972.0,
+            "ratio": 1.311740890688259,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 741.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 741.0,
+        "n_tensors": 6,
+        "tensors": "[(0, 2, 4), (0, 1, 3), (1, 3), (1, 3), (1,), (3, 4)]"
+      }
+    },
+    {
+      "name": "net-40",
+      "params": {
+        "n_tensors": 3,
+        "tensors": "[(0,), (0,), (1, 2)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 3.4320000850129873e-06,
+        "optimal": 6.80099765304476e-06
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 41.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          },
+          "optimal": {
+            "cost": 41.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          }
+        },
+        "optimal": 41.0,
+        "n_tensors": 3,
+        "tensors": "[(0,), (0,), (1, 2)]"
+      }
+    },
+    {
+      "name": "net-41",
+      "params": {
+        "n_tensors": 4,
+        "tensors": "[(0,), (1, 2), (0, 1, 2), (0, 1)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 6.392998329829425e-06,
+        "optimal": 2.242399932583794e-05
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 828.0,
+            "ratio": 1.0823529411764705,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 765.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 765.0,
+        "n_tensors": 4,
+        "tensors": "[(0,), (1, 2), (0, 1, 2), (0, 1)]"
+      }
+    },
+    {
+      "name": "net-42",
+      "params": {
+        "n_tensors": 3,
+        "tensors": "[(4,), (0,), (0, 6)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 3.96000177715905e-06,
+        "optimal": 7.608003215864301e-06
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 68.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          },
+          "optimal": {
+            "cost": 68.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          }
+        },
+        "optimal": 68.0,
+        "n_tensors": 3,
+        "tensors": "[(4,), (0,), (0, 6)]"
+      }
+    },
+    {
+      "name": "net-43",
+      "params": {
+        "n_tensors": 5,
+        "tensors": "[(1, 2, 3), (0, 1, 2), (0,), (1, 2, 3), (0, 1, 2)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 1.3904002116760239e-05,
+        "optimal": 9.579399920767173e-05
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 920.0,
+            "ratio": 1.0098792535675083,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 911.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 911.0,
+        "n_tensors": 5,
+        "tensors": "[(1, 2, 3), (0, 1, 2), (0,), (1, 2, 3), (0, 1, 2)]"
+      }
+    },
+    {
+      "name": "net-44",
+      "params": {
+        "n_tensors": 3,
+        "tensors": "[(0, 1, 4), (0,), (0,)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 2.4950022634584457e-06,
+        "optimal": 5.5770033213775605e-06
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 485.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          },
+          "optimal": {
+            "cost": 485.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          }
+        },
+        "optimal": 485.0,
+        "n_tensors": 3,
+        "tensors": "[(0, 1, 4), (0,), (0,)]"
+      }
+    },
+    {
+      "name": "net-45",
+      "params": {
+        "n_tensors": 3,
+        "tensors": "[(2, 4), (2,), (1,)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 3.3129981602542102e-06,
+        "optimal": 6.685997504973784e-06
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 90.0,
+            "ratio": 2.0454545454545454,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 44.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 44.0,
+        "n_tensors": 3,
+        "tensors": "[(2, 4), (2,), (1,)]"
+      }
+    },
+    {
+      "name": "net-46",
+      "params": {
+        "n_tensors": 3,
+        "tensors": "[(0, 2), (0, 2), (6,)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 3.8860016502439976e-06,
+        "optimal": 7.840000762371346e-06
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 56.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          },
+          "optimal": {
+            "cost": 56.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          }
+        },
+        "optimal": 56.0,
+        "n_tensors": 3,
+        "tensors": "[(0, 2), (0, 2), (6,)]"
+      }
+    },
+    {
+      "name": "net-47",
+      "params": {
+        "n_tensors": 3,
+        "tensors": "[(3,), (4,), (1, 2, 4)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 5.232999683357775e-06,
+        "optimal": 1.0310999641660601e-05
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 2403.0,
+            "ratio": 2.2755681818181817,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 1056.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 1056.0,
+        "n_tensors": 3,
+        "tensors": "[(3,), (4,), (1, 2, 4)]"
+      }
+    },
+    {
+      "name": "net-48",
+      "params": {
+        "n_tensors": 4,
+        "tensors": "[(0, 4, 5), (1, 5), (2,), (2, 4)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 9.472001693211496e-06,
+        "optimal": 3.614599700085819e-05
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 248.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          },
+          "optimal": {
+            "cost": 248.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          }
+        },
+        "optimal": 248.0,
+        "n_tensors": 4,
+        "tensors": "[(0, 4, 5), (1, 5), (2,), (2, 4)]"
+      }
+    },
+    {
+      "name": "net-49",
+      "params": {
+        "n_tensors": 3,
+        "tensors": "[(1, 2, 4), (2, 4), (0, 2)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 5.040001269662753e-06,
+        "optimal": 1.0267998732160777e-05
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 204.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          },
+          "optimal": {
+            "cost": 204.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          }
+        },
+        "optimal": 204.0,
+        "n_tensors": 3,
+        "tensors": "[(1, 2, 4), (2, 4), (0, 2)]"
+      }
+    },
+    {
+      "name": "net-50",
+      "params": {
+        "n_tensors": 5,
+        "tensors": "[(3,), (3, 6), (3, 5), (4,), (1,)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 1.400900146109052e-05,
+        "optimal": 0.00010587699944153428
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 36685.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          },
+          "optimal": {
+            "cost": 36685.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          }
+        },
+        "optimal": 36685.0,
+        "n_tensors": 5,
+        "tensors": "[(3,), (3, 6), (3, 5), (4,), (1,)]"
+      }
+    },
+    {
+      "name": "net-51",
+      "params": {
+        "n_tensors": 5,
+        "tensors": "[(1, 2, 3), (2, 4), (0, 1, 4), (2,), (0, 1, 4)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 1.5051999071147293e-05,
+        "optimal": 0.0001095750012609642
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 660.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          },
+          "optimal": {
+            "cost": 660.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          }
+        },
+        "optimal": 660.0,
+        "n_tensors": 5,
+        "tensors": "[(1, 2, 3), (2, 4), (0, 1, 4), (2,), (0, 1, 4)]"
+      }
+    },
+    {
+      "name": "net-52",
+      "params": {
+        "n_tensors": 5,
+        "tensors": "[(1,), (2,), (0, 1, 2), (2,), (2,)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 1.2750999303534627e-05,
+        "optimal": 8.227799844462425e-05
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 211.0,
+            "ratio": 1.0292682926829269,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 205.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 205.0,
+        "n_tensors": 5,
+        "tensors": "[(1,), (2,), (0, 1, 2), (2,), (2,)]"
+      }
+    },
+    {
+      "name": "net-53",
+      "params": {
+        "n_tensors": 5,
+        "tensors": "[(1, 2, 4), (1, 3, 5), (2, 5), (0, 1, 3), (1, 3)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 1.6255999071290717e-05,
+        "optimal": 0.00012571800107252784
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 9968.0,
+            "ratio": 3.5049226441631505,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 2844.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 2844.0,
+        "n_tensors": 5,
+        "tensors": "[(1, 2, 4), (1, 3, 5), (2, 5), (0, 1, 3), (1, 3)]"
+      }
+    },
+    {
+      "name": "net-54",
+      "params": {
+        "n_tensors": 6,
+        "tensors": "[(4, 5, 6), (0, 2), (0, 1), (5, 6), (0, 4, 6), (4, 5)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 2.5351000658702105e-05,
+        "optimal": 0.00040558700129622594
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 510120.0,
+            "ratio": 1.0077240670867822,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 506210.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 506210.0,
+        "n_tensors": 6,
+        "tensors": "[(4, 5, 6), (0, 2), (0, 1), (5, 6), (0, 4, 6), (4, 5)]"
+      }
+    },
+    {
+      "name": "net-55",
+      "params": {
+        "n_tensors": 6,
+        "tensors": "[(3, 4, 5), (2, 3), (4,), (1, 4), (1, 2, 6), (0, 3, 4)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 2.5364999601151794e-05,
+        "optimal": 0.00044069599971408024
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 9322.0,
+            "ratio": 1.8878088294856217,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 4938.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 4938.0,
+        "n_tensors": 6,
+        "tensors": "[(3, 4, 5), (2, 3), (4,), (1, 4), (1, 2, 6), (0, 3, 4)]"
+      }
+    },
+    {
+      "name": "net-56",
+      "params": {
+        "n_tensors": 3,
+        "tensors": "[(0,), (1, 2), (1, 2)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 2.586999471532181e-06,
+        "optimal": 5.058998794993386e-06
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 79.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          },
+          "optimal": {
+            "cost": 79.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          }
+        },
+        "optimal": 79.0,
+        "n_tensors": 3,
+        "tensors": "[(0,), (1, 2), (1, 2)]"
+      }
+    },
+    {
+      "name": "net-57",
+      "params": {
+        "n_tensors": 3,
+        "tensors": "[(1, 3), (0,), (2,)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 2.9799994081258774e-06,
+        "optimal": 5.779002094641328e-06
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 1925.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          },
+          "optimal": {
+            "cost": 1925.0,
+            "ratio": 1.0,
+            "rank": 1.5
+          }
+        },
+        "optimal": 1925.0,
+        "n_tensors": 3,
+        "tensors": "[(1, 3), (0,), (2,)]"
+      }
+    },
+    {
+      "name": "net-58",
+      "params": {
+        "n_tensors": 5,
+        "tensors": "[(2, 3, 5), (1, 3), (3, 5), (0,), (1,)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 9.122999472310767e-06,
+        "optimal": 7.19679992471356e-05
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 139.0,
+            "ratio": 2.0144927536231885,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 69.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 69.0,
+        "n_tensors": 5,
+        "tensors": "[(2, 3, 5), (1, 3), (3, 5), (0,), (1,)]"
+      }
+    },
+    {
+      "name": "net-59",
+      "params": {
+        "n_tensors": 6,
+        "tensors": "[(0, 2), (0,), (0, 2), (0, 1, 2), (2,), (2,)]"
+      },
+      "variants": [
+        {
+          "name": "greedy-classic",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        },
+        {
+          "name": "optimal",
+          "flops": null,
+          "note": "one-shot wall-clock; median backfilled from the best-of-k run (IQR 0), quality stats in aux"
+        }
+      ],
+      "median_s": {
+        "greedy-classic": 1.266899926122278e-05,
+        "optimal": 0.00017532800120534375
+      },
+      "iqr_s": {
+        "greedy-classic": 0.0,
+        "optimal": 0.0
+      },
+      "aux": {
+        "family": "net",
+        "players": {
+          "greedy-classic": {
+            "cost": 1068.0,
+            "ratio": 1.0084985835694051,
+            "rank": 2.0
+          },
+          "optimal": {
+            "cost": 1059.0,
+            "ratio": 1.0,
+            "rank": 1.0
+          }
+        },
+        "optimal": 1059.0,
+        "n_tensors": 6,
+        "tensors": "[(0, 2), (0,), (0, 2), (0, 1, 2), (2,), (2,)]"
+      }
+    }
+  ]
+}

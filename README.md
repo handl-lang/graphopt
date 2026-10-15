@@ -52,7 +52,7 @@ table as its wins.
 ```bash
 uv sync
 python demo.py                                  # ~60s end-to-end, no GPU needed
-python -m bench run <suite> --device cpu        # the benchmark harness
+python -m benches run <suite> --device cpu        # the benchmark harness
 cd toy && vp install && vp -C apps/learn dev    # the 28-level interactive course
 ```
 
@@ -112,7 +112,7 @@ asserted.
 Every benchmark report lives with the harness and is regenerated from
 pinned baselines — **not** in this README:
 
-- [`bench/`](bench/README.md) — the harness (`run` / `compare` / `gate`), pinned baselines, the ledger
+- [`benches/`](benches/README.md) — the harness (`run` / `compare` / `gate`), pinned baselines, the ledger
 - [`docs/results.md`](docs/results.md) — the measured results, generated from those baselines
 - [`docs/results_tooling.md`](docs/results_tooling.md) — tooling-level measurements, each with its retro
 
@@ -207,7 +207,7 @@ module reviews and badges track comprehension.
 | [`docs/evaluation.md`](docs/evaluation.md) | features, calibration, criteria, policies |
 | [`docs/api.md`](docs/api.md) | the API surface |
 | [`docs/results.md`](docs/results.md) | measured results (generated from pinned baselines) |
-| [`bench/README.md`](bench/README.md) | the benchmark harness |
+| [`benches/README.md`](benches/README.md) | the benchmark harness |
 | [`project/adrs/`](project/adrs/) | the decision records, with their falsification paths |
 | [`AGENTS.md`](AGENTS.md) | repo layout + the full verification gate list |
 

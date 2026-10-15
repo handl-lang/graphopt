@@ -16,7 +16,7 @@ policy's pick per family.
   fuses the two linears into one GEMM.
 
 Torch-free except :func:`linear_programs`, which imports the adapter
-lazily.  Ranking matches ``bench/suites/evaluation/policy_value.py``:
+lazily.  Ranking matches ``benches/suites/evaluation/policy_value.py``:
 1-based *average* ranks, largest true delta first, ties share.
 """
 

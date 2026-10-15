@@ -49,7 +49,7 @@ def test_zoo_disjoint_from_model_and_bench_corpus():
     """The corpus is bench + models + intake — check the other two."""
     from catopt_discovery.impact import _model_cases
 
-    from bench.suites.correctness.law_bench import LAW_CASES
+    from benches.suites.correctness.law_bench import LAW_CASES
 
     zoo_names = {w.name for w in _ZOO}
     model_names = {name for name, _m, _x in _model_cases()}

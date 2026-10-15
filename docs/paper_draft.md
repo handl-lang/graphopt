@@ -345,7 +345,7 @@ at all.
 
 | Win | Measurement | Artifact |
 |---|---|---|
-| Weight-chain fold, `x@W₁@…@W_k` → 1 GEMM (Inductor keeps all k `mm`s) | **14.92× vs Inductor** at (k,d,B·T)=(16,512,4096); 17.40× vs eager | `bench/baselines/reassoc_scale.json` |
+| Weight-chain fold, `x@W₁@…@W_k` → 1 GEMM (Inductor keeps all k `mm`s) | **14.92× vs Inductor** at (k,d,B·T)=(16,512,4096); 17.40× vs eager | `benches/baselines/reassoc_scale.json` |
 | Asymptotic reassoc `(QKᵀ)V → Q(KᵀV)` | **8.0× at T=2048** | `RESEARCH_WRITEUP.md` §3 |
 | Spelled RetNet export, T=2048 | **5.0–5.9× vs eager**, **6.2–7.4× vs `torch.compile`**; 7.30× less peak activation memory; verified 9.8e-9 | `docs/results.md` |
 | Held-out zoo (18 deliverable workloads) | **11/18 beat `torch.compile`** (LoRAAdapter 2.18×, WaveNetGate 1.51×) | `project/retros/gen-kernels.md` |
@@ -549,7 +549,7 @@ venue paper needs the scale validation and the executor work named in §6.
 | Shipped laws were unsound off-corpus and fixed | matmul false region (max diff 12.83); `select_mul` broadcast | `matmul-unsound-fix.md`; `select-mul-broadcast.md` |
 | The loop caught a real lowering bug by refusing | `decay_vec` `sign=0` coercion | `layer3-loop.md` |
 | The typed-pay gate suppressed inflated "pays" | 19/33 mint ill-typed; 11 pays + 12 drops suppressed | `typed-pay-gate.md` |
-| **Value (wins).** Weight-chain fold | 14.92× vs Inductor (17.40× vs eager) | `bench/baselines/reassoc_scale.json` |
+| **Value (wins).** Weight-chain fold | 14.92× vs Inductor (17.40× vs eager) | `benches/baselines/reassoc_scale.json` |
 | Asymptotic reassoc | 8.0× at T=2048 | `RESEARCH_WRITEUP.md` §3 |
 | Spelled RetNet export T=2048 | 5.0–5.9× vs eager; 6.2–7.4× vs compile; 7.30× memory | `docs/results.md` |
 | Held-out zoo | 11/18 beat `torch.compile` | `gen-kernels.md` |
@@ -577,7 +577,7 @@ uv run pytest                                   # full suite (serial — no -n a
 python -m catopt_discovery.pipeline             # census → propose → verify → measure → rank → emit
 python -m catopt_discovery.play --domain gen --probe
 python -m catopt_discovery.play --zoo
-python -m bench run <suite> --device cpu
+python -m benches run <suite> --device cpu
 ```
 
 The per-work records this paper summarises live under `project/retros/`; the

@@ -332,7 +332,7 @@ def test_composite_candidates_are_derivable():
 
 
 def test_composite_skips_non_instanced_and_caps():
-    # mul_square has no bench/generic instance — it is skipped as a
+    # mul_square has no benches/generic instance — it is skipped as a
     # source (and still appears as a r2 when applicable).
     uni = [
         _BY_NAME[n]

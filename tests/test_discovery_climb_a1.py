@@ -51,7 +51,7 @@ def _case(name: str, term: Op, source: str = "test") -> TermCase:
 
 
 def _tiny_corpus() -> tuple[list[TermCase], list[TermCase]]:
-    """A bench/model split where factor_left and neg_add both apply."""
+    """A benches/model split where factor_left and neg_add both apply."""
     x, y, z = (_v(n, _D, _D) for n in "xyz")
     bench = [
         _case("b_fact", _p("add", _p("mul", x, y), _p("mul", x, z))),

@@ -2,7 +2,7 @@
 
 Question: does `search(..., error_budget=)` buy headroom on a real
 pretrained model where the *exact* lane was already FLOP-neutral?
-`bench/suites/bounded/bounded_e2e.py` delivered certified-bounded
+`benches/suites/bounded/bounded_e2e.py` delivered certified-bounded
 members on stories15M (1.41× vs eager at 1e-2); the `34607e0`
 BiRefNet trial exported the real checkpoint but found no exact-lane
 win. The bounded lane had never been opened on it.
@@ -78,7 +78,7 @@ delivered module re-verified and timed on CUDA. 99 Linear blocks
 selected, all 99 optimized every cell (structural cache 80 hits /
 19 misses). Timing: `_time_module` median of 30 reps under
 `no_grad`; inductor baseline compiled once (10.5 s) and timed once.
-Evidence JSON: `bench/results/birefnet_bounded.json`,
+Evidence JSON: `benches/results/birefnet_bounded.json`,
 `birefnet_bounded_3e-2.json` (untracked).
 
 ## Per-budget results

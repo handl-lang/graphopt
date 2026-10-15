@@ -4,13 +4,13 @@
 #
 # The scan is already scoped to shipped source by `-r packages`;
 # `exclude_dirs` is stated explicitly so that a bare
-# `bandit -c .bandit.yaml -r .` stays equivalent.  tests/ and bench/ are
+# `bandit -c .bandit.yaml -r .` stays equivalent.  tests/ and benches/ are
 # not production code and are intentionally out of scope.
 
 # Directories excluded from the scan (matched by path component).
 exclude_dirs:
   - tests
-  - bench
+  - benches
 
 # Rule skips.  Every entry carries the reason it is safe in this codebase.
 skips:
@@ -38,8 +38,8 @@ skips:
   # `git rev-parse HEAD` — a literal argument list, no shell, no
   # user-influenced input — to stamp the measured profile's provenance
   # with the checkout's commit.  It mirrors the identical, already-
-  # reviewed probe in bench/benchkit/env.py `_git_state`, which the scan
-  # does not reach because bench/ is excluded.  B404 (the import), B603
+  # reviewed probe in benches/benchkit/env.py `_git_state`, which the scan
+  # does not reach because benches/ is excluded.  B404 (the import), B603
   # (no shell=True) and B607 (the bare `git` name resolves via PATH) are
   # all the benign shape of a fixed, non-injectable command; the probe is
   # best-effort and any failure yields no git_sha rather than an error.

@@ -1,0 +1,712 @@
+{
+  "schema": 1,
+  "suite": "policy_value",
+  "title": "Learned search policy vs heuristics",
+  "summary": "For held-out matmul chains: the rank (1 = best), cost delta and hit rate of the rule each player picks \u2014 random / declaration-order / cost-model greedy / learned \u2014 plus the per-decision cost.",
+  "env": {
+    "timestamp_utc": "2026-10-03T00:04:21+00:00",
+    "python": "3.13.9",
+    "torch": "2.14.0+cu130",
+    "torch_cuda": "13.0",
+    "device": "cpu",
+    "device_name": "12th Gen Intel(R) Core(TM) i5-12500H",
+    "cpu_count": 16,
+    "git_sha": "2211664",
+    "git_dirty": true,
+    "argv": [
+      "/home/luis/Desktop/catopt/bench/__main__.py",
+      "run",
+      "policy_value",
+      "--quick",
+      "--no-plots"
+    ]
+  },
+  "provenance": {
+    "train_programs": 24,
+    "epochs": 120,
+    "hidden": 32,
+    "seed": 0,
+    "n_rules": 51,
+    "held_out": 8,
+    "device": "cpu",
+    "quick": true
+  },
+  "units": {
+    "median_s": "seconds",
+    "iqr_s": "seconds"
+  },
+  "findings": [
+    {
+      "claim": "a learned search policy matches the cost-model greedy on held-out programs",
+      "verdict": "negative",
+      "headline": "learned mean rank 13.6 vs greedy 7.2 (hit 4/8 vs 6/8)",
+      "metric": "learned mean rank / greedy mean rank",
+      "value": 1.879,
+      "evidence": {
+        "learned": {
+          "mean_rank": 13.625,
+          "mean_delta": 52.75,
+          "hits": 4,
+          "n": 8,
+          "hit_rate": 0.5
+        },
+        "greedy": {
+          "mean_rank": 7.25,
+          "mean_delta": 71.5,
+          "hits": 6,
+          "n": 8,
+          "hit_rate": 0.75
+        }
+      }
+    },
+    {
+      "claim": "a learned search policy ranks rules better than random and declaration-order",
+      "verdict": "win",
+      "headline": "learned mean rank 13.6 vs random/declaration 26.4; hit rate 50% vs 0%",
+      "metric": "learned mean rank",
+      "value": 13.625,
+      "evidence": {
+        "random": {
+          "mean_rank": 26.375,
+          "mean_delta": 0.0,
+          "hits": 0,
+          "n": 8,
+          "hit_rate": 0.0
+        },
+        "declaration": {
+          "mean_rank": 26.375,
+          "mean_delta": 0.0,
+          "hits": 0,
+          "n": 8,
+          "hit_rate": 0.0
+        }
+      }
+    }
+  ],
+  "cells": [
+    {
+      "name": "R 3x5x2",
+      "params": {
+        "program": "R 3x5x2",
+        "d": 3,
+        "k": 5,
+        "m": 2
+      },
+      "variants": [
+        {
+          "name": "random",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "declaration",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "greedy",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "learned",
+          "flops": null,
+          "note": ""
+        }
+      ],
+      "median_s": {
+        "random": 2.94102490000796e-07,
+        "declaration": 6.720979800002169e-08,
+        "greedy": 2.3090121099994574e-06,
+        "learned": 0.0022808572400003866
+      },
+      "iqr_s": {
+        "random": 2.10899997910008e-11,
+        "declaration": 0.0,
+        "greedy": 0.0,
+        "learned": 0.0
+      },
+      "aux": {
+        "program": "R 3x5x2",
+        "d": 3,
+        "k": 5,
+        "m": 2,
+        "n_rules": 51,
+        "best_rule": "assoc_matmul",
+        "best_delta": 54.0,
+        "policies": {
+          "random": {
+            "pick": "assoc_linear_bias",
+            "rank": 26.5,
+            "delta": 0.0,
+            "hit": false
+          },
+          "declaration": {
+            "pick": "comm_add",
+            "rank": 26.5,
+            "delta": 0.0,
+            "hit": false
+          },
+          "greedy": {
+            "pick": "assoc_matmul",
+            "rank": 1.0,
+            "delta": 54.0,
+            "hit": true
+          },
+          "learned": {
+            "pick": "assoc_matmul_rev",
+            "rank": 26.5,
+            "delta": 0.0,
+            "hit": false
+          }
+        }
+      }
+    },
+    {
+      "name": "R 4x6x3",
+      "params": {
+        "program": "R 4x6x3",
+        "d": 4,
+        "k": 6,
+        "m": 3
+      },
+      "variants": [
+        {
+          "name": "random",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "declaration",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "greedy",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "learned",
+          "flops": null,
+          "note": ""
+        }
+      ],
+      "median_s": {
+        "random": 2.8440321000005043e-07,
+        "declaration": 7.090639500006546e-08,
+        "greedy": 2.314961370000219e-06,
+        "learned": 0.002328272660000721
+      },
+      "iqr_s": {
+        "random": 3.8879999976871383e-10,
+        "declaration": 0.0,
+        "greedy": 0.0,
+        "learned": 0.0
+      },
+      "aux": {
+        "program": "R 4x6x3",
+        "d": 4,
+        "k": 6,
+        "m": 3,
+        "n_rules": 51,
+        "best_rule": "assoc_matmul",
+        "best_delta": 96.0,
+        "policies": {
+          "random": {
+            "pick": "silu_expand",
+            "rank": 26.5,
+            "delta": 0.0,
+            "hit": false
+          },
+          "declaration": {
+            "pick": "comm_add",
+            "rank": 26.5,
+            "delta": 0.0,
+            "hit": false
+          },
+          "greedy": {
+            "pick": "assoc_matmul",
+            "rank": 1.0,
+            "delta": 96.0,
+            "hit": true
+          },
+          "learned": {
+            "pick": "assoc_matmul_rev",
+            "rank": 26.5,
+            "delta": 0.0,
+            "hit": false
+          }
+        }
+      }
+    },
+    {
+      "name": "R 2x5x4",
+      "params": {
+        "program": "R 2x5x4",
+        "d": 2,
+        "k": 5,
+        "m": 4
+      },
+      "variants": [
+        {
+          "name": "random",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "declaration",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "greedy",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "learned",
+          "flops": null,
+          "note": ""
+        }
+      ],
+      "median_s": {
+        "random": 2.8348442999970303e-07,
+        "declaration": 6.974516100001438e-08,
+        "greedy": 2.345697679999148e-06,
+        "learned": 0.0023302845099999556
+      },
+      "iqr_s": {
+        "random": 4.4950000415154024e-11,
+        "declaration": 0.0,
+        "greedy": 0.0,
+        "learned": 0.0
+      },
+      "aux": {
+        "program": "R 2x5x4",
+        "d": 2,
+        "k": 5,
+        "m": 4,
+        "n_rules": 51,
+        "best_rule": "assoc_matmul",
+        "best_delta": 8.0,
+        "policies": {
+          "random": {
+            "pick": "assoc_mul",
+            "rank": 26.5,
+            "delta": 0.0,
+            "hit": false
+          },
+          "declaration": {
+            "pick": "comm_add",
+            "rank": 26.5,
+            "delta": 0.0,
+            "hit": false
+          },
+          "greedy": {
+            "pick": "assoc_matmul",
+            "rank": 1.0,
+            "delta": 8.0,
+            "hit": true
+          },
+          "learned": {
+            "pick": "assoc_matmul",
+            "rank": 1.0,
+            "delta": 8.0,
+            "hit": true
+          }
+        }
+      }
+    },
+    {
+      "name": "L 5x2x6",
+      "params": {
+        "program": "L 5x2x6",
+        "d": 5,
+        "k": 2,
+        "m": 6
+      },
+      "variants": [
+        {
+          "name": "random",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "declaration",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "greedy",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "learned",
+          "flops": null,
+          "note": ""
+        }
+      ],
+      "median_s": {
+        "random": 2.8372675500008883e-07,
+        "declaration": 6.989199499992083e-08,
+        "greedy": 2.4153640300005463e-06,
+        "learned": 0.0023049550999996882
+      },
+      "iqr_s": {
+        "random": 2.2976449997713485e-09,
+        "declaration": 0.0,
+        "greedy": 0.0,
+        "learned": 0.0
+      },
+      "aux": {
+        "program": "L 5x2x6",
+        "d": 5,
+        "k": 2,
+        "m": 6,
+        "n_rules": 51,
+        "best_rule": "assoc_matmul_rev",
+        "best_delta": 200.0,
+        "policies": {
+          "random": {
+            "pick": "right_distribute_matmul",
+            "rank": 26.5,
+            "delta": 0.0,
+            "hit": false
+          },
+          "declaration": {
+            "pick": "comm_add",
+            "rank": 26.5,
+            "delta": 0.0,
+            "hit": false
+          },
+          "greedy": {
+            "pick": "assoc_matmul_rev",
+            "rank": 1.0,
+            "delta": 200.0,
+            "hit": true
+          },
+          "learned": {
+            "pick": "assoc_matmul_rev",
+            "rank": 1.0,
+            "delta": 200.0,
+            "hit": true
+          }
+        }
+      }
+    },
+    {
+      "name": "L 3x2x5",
+      "params": {
+        "program": "L 3x2x5",
+        "d": 3,
+        "k": 2,
+        "m": 5
+      },
+      "variants": [
+        {
+          "name": "random",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "declaration",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "greedy",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "learned",
+          "flops": null,
+          "note": ""
+        }
+      ],
+      "median_s": {
+        "random": 2.90197704999855e-07,
+        "declaration": 7.107011800007968e-08,
+        "greedy": 2.3357660099998157e-06,
+        "learned": 0.002302270559999897
+      },
+      "iqr_s": {
+        "random": 2.3207500021271688e-10,
+        "declaration": 0.0,
+        "greedy": 0.0,
+        "learned": 0.0
+      },
+      "aux": {
+        "program": "L 3x2x5",
+        "d": 3,
+        "k": 2,
+        "m": 5,
+        "n_rules": 51,
+        "best_rule": "assoc_matmul_rev",
+        "best_delta": 54.0,
+        "policies": {
+          "random": {
+            "pick": "right_distribute_matmul",
+            "rank": 26.5,
+            "delta": 0.0,
+            "hit": false
+          },
+          "declaration": {
+            "pick": "comm_add",
+            "rank": 26.5,
+            "delta": 0.0,
+            "hit": false
+          },
+          "greedy": {
+            "pick": "assoc_matmul_rev",
+            "rank": 1.0,
+            "delta": 54.0,
+            "hit": true
+          },
+          "learned": {
+            "pick": "assoc_matmul_rev",
+            "rank": 1.0,
+            "delta": 54.0,
+            "hit": true
+          }
+        }
+      }
+    },
+    {
+      "name": "L 4x2x7",
+      "params": {
+        "program": "L 4x2x7",
+        "d": 4,
+        "k": 2,
+        "m": 7
+      },
+      "variants": [
+        {
+          "name": "random",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "declaration",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "greedy",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "learned",
+          "flops": null,
+          "note": ""
+        }
+      ],
+      "median_s": {
+        "random": 2.7838216999953145e-07,
+        "declaration": 6.910023900002215e-08,
+        "greedy": 2.4056192500006544e-06,
+        "learned": 0.0022821513899998537
+      },
+      "iqr_s": {
+        "random": 6.83870000557387e-10,
+        "declaration": 0.0,
+        "greedy": 0.0,
+        "learned": 0.0
+      },
+      "aux": {
+        "program": "L 4x2x7",
+        "d": 4,
+        "k": 2,
+        "m": 7,
+        "n_rules": 51,
+        "best_rule": "assoc_matmul_rev",
+        "best_delta": 160.0,
+        "policies": {
+          "random": {
+            "pick": "sdpa_fold_addmul",
+            "rank": 26.5,
+            "delta": 0.0,
+            "hit": false
+          },
+          "declaration": {
+            "pick": "comm_add",
+            "rank": 26.5,
+            "delta": 0.0,
+            "hit": false
+          },
+          "greedy": {
+            "pick": "assoc_matmul_rev",
+            "rank": 1.0,
+            "delta": 160.0,
+            "hit": true
+          },
+          "learned": {
+            "pick": "assoc_matmul_rev",
+            "rank": 1.0,
+            "delta": 160.0,
+            "hit": true
+          }
+        }
+      }
+    },
+    {
+      "name": "R 5x3x6",
+      "params": {
+        "program": "R 5x3x6",
+        "d": 5,
+        "k": 3,
+        "m": 6
+      },
+      "variants": [
+        {
+          "name": "random",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "declaration",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "greedy",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "learned",
+          "flops": null,
+          "note": ""
+        }
+      ],
+      "median_s": {
+        "random": 2.8234456500001674e-07,
+        "declaration": 6.886353200002304e-08,
+        "greedy": 2.4365698600001906e-06,
+        "learned": 0.0024209605099997588
+      },
+      "iqr_s": {
+        "random": 1.5750549999893064e-09,
+        "declaration": 0.0,
+        "greedy": 0.0,
+        "learned": 0.0
+      },
+      "aux": {
+        "program": "R 5x3x6",
+        "d": 5,
+        "k": 3,
+        "m": 6,
+        "n_rules": 51,
+        "best_rule": "comm_add",
+        "best_delta": 0.0,
+        "policies": {
+          "random": {
+            "pick": "sdpa_fold_masked_fill_drop",
+            "rank": 26.0,
+            "delta": 0.0,
+            "hit": false
+          },
+          "declaration": {
+            "pick": "comm_add",
+            "rank": 26.0,
+            "delta": 0.0,
+            "hit": false
+          },
+          "greedy": {
+            "pick": "comm_add",
+            "rank": 26.0,
+            "delta": 0.0,
+            "hit": false
+          },
+          "learned": {
+            "pick": "assoc_matmul_rev",
+            "rank": 26.0,
+            "delta": 0.0,
+            "hit": false
+          }
+        }
+      }
+    },
+    {
+      "name": "L 4x6x3",
+      "params": {
+        "program": "L 4x6x3",
+        "d": 4,
+        "k": 6,
+        "m": 3
+      },
+      "variants": [
+        {
+          "name": "random",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "declaration",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "greedy",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "learned",
+          "flops": null,
+          "note": ""
+        }
+      ],
+      "median_s": {
+        "random": 2.831556549995184e-07,
+        "declaration": 7.183756699998867e-08,
+        "greedy": 2.3492706599995472e-06,
+        "learned": 0.0024610912000002827
+      },
+      "iqr_s": {
+        "random": 1.97155500018194e-09,
+        "declaration": 0.0,
+        "greedy": 0.0,
+        "learned": 0.0
+      },
+      "aux": {
+        "program": "L 4x6x3",
+        "d": 4,
+        "k": 6,
+        "m": 3,
+        "n_rules": 51,
+        "best_rule": "comm_add",
+        "best_delta": 0.0,
+        "policies": {
+          "random": {
+            "pick": "weight_distribute_linear",
+            "rank": 26.0,
+            "delta": 0.0,
+            "hit": false
+          },
+          "declaration": {
+            "pick": "comm_add",
+            "rank": 26.0,
+            "delta": 0.0,
+            "hit": false
+          },
+          "greedy": {
+            "pick": "comm_add",
+            "rank": 26.0,
+            "delta": 0.0,
+            "hit": false
+          },
+          "learned": {
+            "pick": "assoc_matmul_rev",
+            "rank": 26.0,
+            "delta": 0.0,
+            "hit": false
+          }
+        }
+      }
+    }
+  ]
+}

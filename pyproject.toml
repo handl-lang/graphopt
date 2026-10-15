@@ -41,7 +41,7 @@ dev = [
 ]
 
 [dependency-groups]
-bench = [
+benches = [
     "jinja2>=3.1.6",
     "kaleido>=1.4.0",
     "matplotlib>=3.8",
@@ -241,16 +241,16 @@ ignore = [
     "SIM108",   # ternary suggestion — if/else often clearer here
 ]
 
-# The docstring gate applies to shipped code only: tests and bench are
+# The docstring gate applies to shipped code only: tests and benches are
 # example/measurement code, not a public API surface.
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["D"]
-"bench/**" = ["D"]
+"benches/**" = ["D"]
 
 # --- typecheck (ty) -----------------------------------------------
 # ty is Astral's type checker (it replaced the earlier pyright ratchet).
 # `[tool.ty.src] include` scopes checking to the shipped packages
-# (tests/ and bench/ are not type-checked).  The ratchet `exclude` list
+# (tests/ and benches/ are not type-checked).  The ratchet `exclude` list
 # is now EMPTY: every file that carried a baseline error count has been
 # annotated, so `ty check` is clean with no opt-outs.  Keep it that way
 # — add annotations, not exclude entries.  New modules under

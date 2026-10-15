@@ -1,0 +1,1289 @@
+{
+  "schema": 1,
+  "suite": "morphism_e2e",
+  "title": "Morphism-window composition",
+  "summary": "Term-flops \u2192 wall-time conversion for the morphism laws: which structural rewrites actually pay off at GEMM-bound sizes.",
+  "env": {
+    "timestamp_utc": "2026-10-14T06:17:47+00:00",
+    "python": "3.13.9",
+    "torch": "2.14.0+cu130",
+    "torch_cuda": "13.0",
+    "device": "cpu",
+    "device_name": "12th Gen Intel(R) Core(TM) i5-12500H",
+    "cpu_count": 16,
+    "git_sha": "2c782dd",
+    "git_dirty": true,
+    "argv": [
+      "/home/luis/Desktop/catopt/bench/__main__.py",
+      "run",
+      "morphism_e2e",
+      "--pin"
+    ]
+  },
+  "provenance": {
+    "quick": false
+  },
+  "units": {
+    "median_s": "seconds",
+    "iqr_s": "seconds"
+  },
+  "findings": [
+    {
+      "claim": "morphism windows convert term-level flops headroom into measured wall time",
+      "verdict": "win",
+      "headline": "best 12.85\u00d7 vs eager on chain_x4@4096x128",
+      "metric": "morphism / eager",
+      "value": 12.853765156817643,
+      "evidence": {
+        "term_flops_ratio": {
+          "chain_x2@8x16": 6.0625,
+          "chain_x2@1024x64": 6.015625,
+          "chain_x2@4096x128": 6.0078125,
+          "chain_x4@8x16": 12.125,
+          "chain_x4@1024x64": 12.03125,
+          "chain_x4@4096x128": 12.015625,
+          "resid_x3@8x16": 2.9696969696969697,
+          "resid_x3@1024x64": 2.992248062015504,
+          "resid_x3@4096x128": 2.9961089494163424,
+          "resid_x4@8x16": 2.9473684210526314,
+          "resid_x4@1024x64": 2.986460348162476,
+          "resid_x4@4096x128": 2.993197278911565,
+          "kv_x2@8x16": 1.32,
+          "kv_x2@512x64": 1.0665280665280665
+        }
+      }
+    },
+    {
+      "claim": "every morphism rewrite verifies equivalent",
+      "verdict": "win",
+      "headline": "14/14 cells verified",
+      "metric": "verified cells",
+      "value": 14.0,
+      "evidence": {}
+    }
+  ],
+  "cells": [
+    {
+      "name": "chain_x2@8x16",
+      "params": {
+        "fixture": "chain_x2",
+        "rows": 8,
+        "dim": 16
+      },
+      "variants": [
+        {
+          "name": "eager",
+          "flops": 24832.0,
+          "note": ""
+        },
+        {
+          "name": "inductor",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "morphism",
+          "flops": 4096.0,
+          "note": ""
+        },
+        {
+          "name": "morphism+inductor",
+          "flops": null,
+          "note": ""
+        }
+      ],
+      "median_s": {
+        "eager": 2.519548219997887e-05,
+        "inductor": 4.032150036437088e-05,
+        "morphism": 7.18427800002246e-06,
+        "morphism+inductor": 3.347999972902471e-05
+      },
+      "iqr_s": {
+        "eager": 0.0,
+        "inductor": 3.1484996725339442e-06,
+        "morphism": 0.0,
+        "morphism+inductor": 1.2920008884975687e-06
+      },
+      "aux": {
+        "name": "chain_x2@8x16",
+        "params": {
+          "fixture": "chain_x2",
+          "rows": 8,
+          "dim": 16
+        },
+        "param_bytes_eager": 12288,
+        "opt_s": 2.98,
+        "fires": {
+          "out_in_compose": 1
+        },
+        "n_rewritten": 2,
+        "e2e_rel": 3.8991816500633817e-16,
+        "n_grafted": 1,
+        "matches": {
+          "out_in_compose:blocks.0+blocks.1": {
+            "status": "grafted",
+            "boundary": "chain",
+            "cost_before": 24832.0,
+            "cost_after": 4096.0,
+            "rel_diff": 3.8991816500633817e-16
+          }
+        },
+        "term_flops_before": 24832.0,
+        "term_flops_after": 4096.0,
+        "flops_ratio": 6.0625,
+        "param_bytes_opt": 2048,
+        "morph_verified": true,
+        "morph_rel": 3.8991816500633817e-16,
+        "rt_flops_eager": 24832.0,
+        "rt_flops_morphism": 4096.0,
+        "rt_flops_ratio": 6.0625,
+        "inductor_status": "compiled in 1.2s",
+        "inductor_verified": true,
+        "inductor_rel": 0.0,
+        "morph_ind_status": "compiled in 0.1s",
+        "morph_ind_verified": true,
+        "morph_ind_rel": 3.8991816500633817e-16
+      }
+    },
+    {
+      "name": "chain_x2@1024x64",
+      "params": {
+        "fixture": "chain_x2",
+        "rows": 1024,
+        "dim": 64
+      },
+      "variants": [
+        {
+          "name": "eager",
+          "flops": 50462720.0,
+          "note": ""
+        },
+        {
+          "name": "inductor",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "morphism",
+          "flops": 8388608.0,
+          "note": ""
+        },
+        {
+          "name": "morphism+inductor",
+          "flops": null,
+          "note": ""
+        }
+      ],
+      "median_s": {
+        "eager": 0.001035821224995743,
+        "inductor": 0.0010331559997212025,
+        "morphism": 0.00016416964700010793,
+        "morphism+inductor": 0.00020450849979170016
+      },
+      "iqr_s": {
+        "eager": 0.0,
+        "inductor": 2.6258499929099344e-05,
+        "morphism": 0.0,
+        "morphism+inductor": 4.246250682626851e-06
+      },
+      "aux": {
+        "name": "chain_x2@1024x64",
+        "params": {
+          "fixture": "chain_x2",
+          "rows": 1024,
+          "dim": 64
+        },
+        "param_bytes_eager": 196608,
+        "opt_s": 0.23,
+        "fires": {
+          "out_in_compose": 1
+        },
+        "n_rewritten": 2,
+        "e2e_rel": 8.919553791225219e-16,
+        "n_grafted": 1,
+        "matches": {
+          "out_in_compose:blocks.0+blocks.1": {
+            "status": "grafted",
+            "boundary": "chain",
+            "cost_before": 50462720.0,
+            "cost_after": 8388608.0,
+            "rel_diff": 8.919553791225219e-16
+          }
+        },
+        "term_flops_before": 50462720.0,
+        "term_flops_after": 8388608.0,
+        "flops_ratio": 6.015625,
+        "param_bytes_opt": 32768,
+        "morph_verified": true,
+        "morph_rel": 8.919553791225219e-16,
+        "rt_flops_eager": 50462720.0,
+        "rt_flops_morphism": 8388608.0,
+        "rt_flops_ratio": 6.015625,
+        "inductor_status": "compiled in 0.1s",
+        "inductor_verified": true,
+        "inductor_rel": 0.0,
+        "morph_ind_status": "compiled in 0.1s",
+        "morph_ind_verified": true,
+        "morph_ind_rel": 8.919553791225219e-16
+      }
+    },
+    {
+      "name": "chain_x2@4096x128",
+      "params": {
+        "fixture": "chain_x2",
+        "rows": 4096,
+        "dim": 128
+      },
+      "variants": [
+        {
+          "name": "eager",
+          "flops": 806354944.0,
+          "note": ""
+        },
+        {
+          "name": "inductor",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "morphism",
+          "flops": 134217728.0,
+          "note": ""
+        },
+        {
+          "name": "morphism+inductor",
+          "flops": null,
+          "note": ""
+        }
+      ],
+      "median_s": {
+        "eager": 0.015694103750001888,
+        "inductor": 0.016165424999599054,
+        "morphism": 0.0025783686399972793,
+        "morphism+inductor": 0.002554348000558093
+      },
+      "iqr_s": {
+        "eager": 0.0,
+        "inductor": 0.00036159299952487345,
+        "morphism": 0.0,
+        "morphism+inductor": 0.00018614399959915318
+      },
+      "aux": {
+        "name": "chain_x2@4096x128",
+        "params": {
+          "fixture": "chain_x2",
+          "rows": 4096,
+          "dim": 128
+        },
+        "param_bytes_eager": 786432,
+        "opt_s": 0.29,
+        "fires": {
+          "out_in_compose": 1
+        },
+        "n_rewritten": 2,
+        "e2e_rel": 1.1546202280224345e-15,
+        "n_grafted": 1,
+        "matches": {
+          "out_in_compose:blocks.0+blocks.1": {
+            "status": "grafted",
+            "boundary": "chain",
+            "cost_before": 806354944.0,
+            "cost_after": 134217728.0,
+            "rel_diff": 1.1546202280224345e-15
+          }
+        },
+        "term_flops_before": 806354944.0,
+        "term_flops_after": 134217728.0,
+        "flops_ratio": 6.0078125,
+        "param_bytes_opt": 131072,
+        "morph_verified": true,
+        "morph_rel": 1.1546202280224345e-15,
+        "rt_flops_eager": 806354944.0,
+        "rt_flops_morphism": 134217728.0,
+        "rt_flops_ratio": 6.0078125,
+        "inductor_status": "compiled in 0.1s",
+        "inductor_verified": true,
+        "inductor_rel": 0.0,
+        "morph_ind_status": "compiled in 0.1s",
+        "morph_ind_verified": true,
+        "morph_ind_rel": 1.1546202280224345e-15
+      }
+    },
+    {
+      "name": "chain_x4@8x16",
+      "params": {
+        "fixture": "chain_x4",
+        "rows": 8,
+        "dim": 16
+      },
+      "variants": [
+        {
+          "name": "eager",
+          "flops": 49664.0,
+          "note": ""
+        },
+        {
+          "name": "inductor",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "morphism",
+          "flops": 4096.0,
+          "note": ""
+        },
+        {
+          "name": "morphism+inductor",
+          "flops": null,
+          "note": ""
+        }
+      ],
+      "median_s": {
+        "eager": 4.643574199963041e-05,
+        "inductor": 5.44380000064848e-05,
+        "morphism": 9.151426700009323e-06,
+        "morphism+inductor": 3.481150042716763e-05
+      },
+      "iqr_s": {
+        "eager": 3.1473850003749395e-07,
+        "inductor": 1.5050000001792796e-06,
+        "morphism": 0.0,
+        "morphism+inductor": 1.355249651169288e-06
+      },
+      "aux": {
+        "name": "chain_x4@8x16",
+        "params": {
+          "fixture": "chain_x4",
+          "rows": 8,
+          "dim": 16
+        },
+        "param_bytes_eager": 24576,
+        "opt_s": 1.22,
+        "fires": {
+          "window_compose": 1
+        },
+        "n_rewritten": 4,
+        "e2e_rel": 3.5064085798545327e-16,
+        "n_grafted": 1,
+        "matches": {
+          "window_compose:blocks.0+blocks.1+blocks.2+blocks.3": {
+            "status": "grafted",
+            "boundary": "chain+chain+chain",
+            "cost_before": 49664.0,
+            "cost_after": 4096.0,
+            "rel_diff": 3.5064085798545327e-16
+          },
+          "out_in_compose:blocks.0+blocks.1": {
+            "status": "skipped",
+            "reason": "node already rewritten"
+          },
+          "out_in_compose:blocks.1+blocks.2": {
+            "status": "skipped",
+            "reason": "node already rewritten"
+          },
+          "out_in_compose:blocks.2+blocks.3": {
+            "status": "skipped",
+            "reason": "node already rewritten"
+          }
+        },
+        "term_flops_before": 49664.0,
+        "term_flops_after": 4096.0,
+        "flops_ratio": 12.125,
+        "param_bytes_opt": 2048,
+        "morph_verified": true,
+        "morph_rel": 3.5064085798545327e-16,
+        "rt_flops_eager": 49664.0,
+        "rt_flops_morphism": 4096.0,
+        "rt_flops_ratio": 12.125,
+        "inductor_status": "compiled in 0.2s",
+        "inductor_verified": true,
+        "inductor_rel": 0.0,
+        "morph_ind_status": "compiled in 0.1s",
+        "morph_ind_verified": true,
+        "morph_ind_rel": 3.5064085798545327e-16
+      }
+    },
+    {
+      "name": "chain_x4@1024x64",
+      "params": {
+        "fixture": "chain_x4",
+        "rows": 1024,
+        "dim": 64
+      },
+      "variants": [
+        {
+          "name": "eager",
+          "flops": 100925440.0,
+          "note": ""
+        },
+        {
+          "name": "inductor",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "morphism",
+          "flops": 8388608.0,
+          "note": ""
+        },
+        {
+          "name": "morphism+inductor",
+          "flops": null,
+          "note": ""
+        }
+      ],
+      "median_s": {
+        "eager": 0.0020799927799998843,
+        "inductor": 0.002053789500223502,
+        "morphism": 0.0001675657414998568,
+        "morphism+inductor": 0.00020983899958082475
+      },
+      "iqr_s": {
+        "eager": 0.0,
+        "inductor": 6.036275021870097e-05,
+        "morphism": 0.0,
+        "morphism+inductor": 6.368000413203845e-06
+      },
+      "aux": {
+        "name": "chain_x4@1024x64",
+        "params": {
+          "fixture": "chain_x4",
+          "rows": 1024,
+          "dim": 64
+        },
+        "param_bytes_eager": 393216,
+        "opt_s": 1.21,
+        "fires": {
+          "window_compose": 1
+        },
+        "n_rewritten": 4,
+        "e2e_rel": 1.2397143289022856e-15,
+        "n_grafted": 1,
+        "matches": {
+          "window_compose:blocks.0+blocks.1+blocks.2+blocks.3": {
+            "status": "grafted",
+            "boundary": "chain+chain+chain",
+            "cost_before": 100925440.0,
+            "cost_after": 8388608.0,
+            "rel_diff": 1.2397143289022856e-15
+          },
+          "out_in_compose:blocks.0+blocks.1": {
+            "status": "skipped",
+            "reason": "node already rewritten"
+          },
+          "out_in_compose:blocks.1+blocks.2": {
+            "status": "skipped",
+            "reason": "node already rewritten"
+          },
+          "out_in_compose:blocks.2+blocks.3": {
+            "status": "skipped",
+            "reason": "node already rewritten"
+          }
+        },
+        "term_flops_before": 100925440.0,
+        "term_flops_after": 8388608.0,
+        "flops_ratio": 12.03125,
+        "param_bytes_opt": 32768,
+        "morph_verified": true,
+        "morph_rel": 1.2397143289022856e-15,
+        "rt_flops_eager": 100925440.0,
+        "rt_flops_morphism": 8388608.0,
+        "rt_flops_ratio": 12.03125,
+        "inductor_status": "compiled in 0.2s",
+        "inductor_verified": true,
+        "inductor_rel": 0.0,
+        "morph_ind_status": "compiled in 0.1s",
+        "morph_ind_verified": true,
+        "morph_ind_rel": 1.2397143289022856e-15
+      }
+    },
+    {
+      "name": "chain_x4@4096x128",
+      "params": {
+        "fixture": "chain_x4",
+        "rows": 4096,
+        "dim": 128
+      },
+      "variants": [
+        {
+          "name": "eager",
+          "flops": 1612709888.0,
+          "note": ""
+        },
+        {
+          "name": "inductor",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "morphism",
+          "flops": 134217728.0,
+          "note": ""
+        },
+        {
+          "name": "morphism+inductor",
+          "flops": null,
+          "note": ""
+        }
+      ],
+      "median_s": {
+        "eager": 0.031215194000651536,
+        "inductor": 0.030196245999832172,
+        "morphism": 0.0024284864099990955,
+        "morphism+inductor": 0.0024690504997124663
+      },
+      "iqr_s": {
+        "eager": 0.00031546699938189704,
+        "inductor": 0.000742215999707696,
+        "morphism": 0.0,
+        "morphism+inductor": 4.959975012752693e-05
+      },
+      "aux": {
+        "name": "chain_x4@4096x128",
+        "params": {
+          "fixture": "chain_x4",
+          "rows": 4096,
+          "dim": 128
+        },
+        "param_bytes_eager": 1572864,
+        "opt_s": 1.34,
+        "fires": {
+          "window_compose": 1
+        },
+        "n_rewritten": 4,
+        "e2e_rel": 1.583769020636777e-15,
+        "n_grafted": 1,
+        "matches": {
+          "window_compose:blocks.0+blocks.1+blocks.2+blocks.3": {
+            "status": "grafted",
+            "boundary": "chain+chain+chain",
+            "cost_before": 1612709888.0,
+            "cost_after": 134217728.0,
+            "rel_diff": 1.583769020636777e-15
+          },
+          "out_in_compose:blocks.0+blocks.1": {
+            "status": "skipped",
+            "reason": "node already rewritten"
+          },
+          "out_in_compose:blocks.1+blocks.2": {
+            "status": "skipped",
+            "reason": "node already rewritten"
+          },
+          "out_in_compose:blocks.2+blocks.3": {
+            "status": "skipped",
+            "reason": "node already rewritten"
+          }
+        },
+        "term_flops_before": 1612709888.0,
+        "term_flops_after": 134217728.0,
+        "flops_ratio": 12.015625,
+        "param_bytes_opt": 131072,
+        "morph_verified": true,
+        "morph_rel": 1.583769020636777e-15,
+        "rt_flops_eager": 1612709888.0,
+        "rt_flops_morphism": 134217728.0,
+        "rt_flops_ratio": 12.015625,
+        "inductor_status": "compiled in 0.2s",
+        "inductor_verified": true,
+        "inductor_rel": 0.0,
+        "morph_ind_status": "compiled in 0.1s",
+        "morph_ind_verified": true,
+        "morph_ind_rel": 1.583769020636777e-15
+      }
+    },
+    {
+      "name": "resid_x3@8x16",
+      "params": {
+        "fixture": "resid_x3",
+        "rows": 8,
+        "dim": 16
+      },
+      "variants": [
+        {
+          "name": "eager",
+          "flops": 37632.0,
+          "note": ""
+        },
+        {
+          "name": "inductor",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "morphism",
+          "flops": 13312.0,
+          "note": ""
+        },
+        {
+          "name": "morphism+inductor",
+          "flops": null,
+          "note": ""
+        }
+      ],
+      "median_s": {
+        "eager": 3.855407750006634e-05,
+        "inductor": 4.9284499709756346e-05,
+        "morphism": 2.7476130999730228e-05,
+        "morphism+inductor": 4.457700015336741e-05
+      },
+      "iqr_s": {
+        "eager": 4.229345006479023e-07,
+        "inductor": 1.4992504020483466e-06,
+        "morphism": 3.9709225006845426e-07,
+        "morphism+inductor": 1.2119999155402184e-06
+      },
+      "aux": {
+        "name": "resid_x3@8x16",
+        "params": {
+          "fixture": "resid_x3",
+          "rows": 8,
+          "dim": 16
+        },
+        "param_bytes_eager": 18432,
+        "opt_s": 0.42,
+        "fires": {
+          "residual_reassoc": 1
+        },
+        "n_rewritten": 3,
+        "e2e_rel": 2.5985308991305546e-16,
+        "n_grafted": 1,
+        "matches": {
+          "residual_reassoc:blocks.0+blocks.1+blocks.2": {
+            "status": "grafted",
+            "boundary": "residual_wrapped+residual_wrapped",
+            "cost_before": 37632.0,
+            "cost_after": 12672.0,
+            "rel_diff": 2.5985308991305546e-16
+          }
+        },
+        "term_flops_before": 37632.0,
+        "term_flops_after": 12672.0,
+        "flops_ratio": 2.9696969696969697,
+        "param_bytes_opt": 6144,
+        "morph_verified": true,
+        "morph_rel": 2.5985308991305546e-16,
+        "rt_flops_eager": 37632.0,
+        "rt_flops_morphism": 13312.0,
+        "rt_flops_ratio": 2.826923076923077,
+        "inductor_status": "compiled in 0.2s",
+        "inductor_verified": true,
+        "inductor_rel": 0.0,
+        "morph_ind_status": "compiled in 1.5s",
+        "morph_ind_verified": true,
+        "morph_ind_rel": 2.5985308991305546e-16
+      }
+    },
+    {
+      "name": "resid_x3@1024x64",
+      "params": {
+        "fixture": "resid_x3",
+        "rows": 1024,
+        "dim": 64
+      },
+      "variants": [
+        {
+          "name": "eager",
+          "flops": 75890688.0,
+          "note": ""
+        },
+        {
+          "name": "inductor",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "morphism",
+          "flops": 25690112.0,
+          "note": ""
+        },
+        {
+          "name": "morphism+inductor",
+          "flops": null,
+          "note": ""
+        }
+      ],
+      "median_s": {
+        "eager": 0.001651315680001062,
+        "inductor": 0.0015941299998303293,
+        "morphism": 0.0007534507800028223,
+        "morphism+inductor": 0.0006053409997548442
+      },
+      "iqr_s": {
+        "eager": 0.0,
+        "inductor": 2.88459996227175e-05,
+        "morphism": 0.0,
+        "morphism+inductor": 8.437999895249959e-06
+      },
+      "aux": {
+        "name": "resid_x3@1024x64",
+        "params": {
+          "fixture": "resid_x3",
+          "rows": 1024,
+          "dim": 64
+        },
+        "param_bytes_eager": 294912,
+        "opt_s": 0.44,
+        "fires": {
+          "residual_reassoc": 1
+        },
+        "n_rewritten": 3,
+        "e2e_rel": 4.825521243161371e-16,
+        "n_grafted": 1,
+        "matches": {
+          "residual_reassoc:blocks.0+blocks.1+blocks.2": {
+            "status": "grafted",
+            "boundary": "residual_wrapped+residual_wrapped",
+            "cost_before": 75890688.0,
+            "cost_after": 25362432.0,
+            "rel_diff": 4.825521243161371e-16
+          }
+        },
+        "term_flops_before": 75890688.0,
+        "term_flops_after": 25362432.0,
+        "flops_ratio": 2.992248062015504,
+        "param_bytes_opt": 98304,
+        "morph_verified": true,
+        "morph_rel": 4.825521243161371e-16,
+        "rt_flops_eager": 75890688.0,
+        "rt_flops_morphism": 25690112.0,
+        "rt_flops_ratio": 2.954081632653061,
+        "inductor_status": "compiled in 0.2s",
+        "inductor_verified": true,
+        "inductor_rel": 0.0,
+        "morph_ind_status": "compiled in 0.7s",
+        "morph_ind_verified": true,
+        "morph_ind_rel": 4.825521243161371e-16
+      }
+    },
+    {
+      "name": "resid_x3@4096x128",
+      "params": {
+        "fixture": "resid_x3",
+        "rows": 4096,
+        "dim": 128
+      },
+      "variants": [
+        {
+          "name": "eager",
+          "flops": 1211105280.0,
+          "note": ""
+        },
+        {
+          "name": "inductor",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "morphism",
+          "flops": 406847488.0,
+          "note": ""
+        },
+        {
+          "name": "morphism+inductor",
+          "flops": null,
+          "note": ""
+        }
+      ],
+      "median_s": {
+        "eager": 0.027288138399944727,
+        "inductor": 0.02309529299964197,
+        "morphism": 0.013564944500058119,
+        "morphism+inductor": 0.00796999100020912
+      },
+      "iqr_s": {
+        "eager": 0.0,
+        "inductor": 0.0006545634996655281,
+        "morphism": 0.0,
+        "morphism+inductor": 0.00024689299971214496
+      },
+      "aux": {
+        "name": "resid_x3@4096x128",
+        "params": {
+          "fixture": "resid_x3",
+          "rows": 4096,
+          "dim": 128
+        },
+        "param_bytes_eager": 1179648,
+        "opt_s": 0.57,
+        "fires": {
+          "residual_reassoc": 1
+        },
+        "n_rewritten": 3,
+        "e2e_rel": 6.638900357069024e-16,
+        "n_grafted": 1,
+        "matches": {
+          "residual_reassoc:blocks.0+blocks.1+blocks.2": {
+            "status": "grafted",
+            "boundary": "residual_wrapped+residual_wrapped",
+            "cost_before": 1211105280.0,
+            "cost_after": 404226048.0,
+            "rel_diff": 6.638900357069024e-16
+          }
+        },
+        "term_flops_before": 1211105280.0,
+        "term_flops_after": 404226048.0,
+        "flops_ratio": 2.9961089494163424,
+        "param_bytes_opt": 393216,
+        "morph_verified": true,
+        "morph_rel": 6.638900357069024e-16,
+        "rt_flops_eager": 1211105280.0,
+        "rt_flops_morphism": 406847488.0,
+        "rt_flops_ratio": 2.9768041237113403,
+        "inductor_status": "compiled in 0.2s",
+        "inductor_verified": true,
+        "inductor_rel": 0.0,
+        "morph_ind_status": "compiled in 0.7s",
+        "morph_ind_verified": true,
+        "morph_ind_rel": 6.638900357069024e-16
+      }
+    },
+    {
+      "name": "resid_x4@8x16",
+      "params": {
+        "fixture": "resid_x4",
+        "rows": 8,
+        "dim": 16
+      },
+      "variants": [
+        {
+          "name": "eager",
+          "flops": 50176.0,
+          "note": ""
+        },
+        {
+          "name": "inductor",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "morphism",
+          "flops": 17920.0,
+          "note": ""
+        },
+        {
+          "name": "morphism+inductor",
+          "flops": null,
+          "note": ""
+        }
+      ],
+      "median_s": {
+        "eager": 5.0578224999753735e-05,
+        "inductor": 5.7250000281783286e-05,
+        "morphism": 3.690456100002848e-05,
+        "morphism+inductor": 4.8816000344231725e-05
+      },
+      "iqr_s": {
+        "eager": 4.47482000481619e-07,
+        "inductor": 1.7700003809295595e-06,
+        "morphism": 5.990670003939131e-07,
+        "morphism+inductor": 1.6109997886815108e-06
+      },
+      "aux": {
+        "name": "resid_x4@8x16",
+        "params": {
+          "fixture": "resid_x4",
+          "rows": 8,
+          "dim": 16
+        },
+        "param_bytes_eager": 24576,
+        "opt_s": 0.46,
+        "fires": {
+          "residual_reassoc": 1
+        },
+        "n_rewritten": 4,
+        "e2e_rel": 4.0525399812299945e-16,
+        "n_grafted": 1,
+        "matches": {
+          "residual_reassoc:blocks.0+blocks.1+blocks.2+blocks.3": {
+            "status": "grafted",
+            "boundary": "residual_wrapped+residual_wrapped+residual_wrapped",
+            "cost_before": 50176.0,
+            "cost_after": 17024.0,
+            "rel_diff": 4.0525399812299945e-16
+          }
+        },
+        "term_flops_before": 50176.0,
+        "term_flops_after": 17024.0,
+        "flops_ratio": 2.9473684210526314,
+        "param_bytes_opt": 8192,
+        "morph_verified": true,
+        "morph_rel": 4.0525399812299945e-16,
+        "rt_flops_eager": 50176.0,
+        "rt_flops_morphism": 17920.0,
+        "rt_flops_ratio": 2.8,
+        "inductor_status": "compiled in 0.2s",
+        "inductor_verified": true,
+        "inductor_rel": 0.0,
+        "morph_ind_status": "compiled in 0.9s",
+        "morph_ind_verified": true,
+        "morph_ind_rel": 4.0525399812299945e-16
+      }
+    },
+    {
+      "name": "resid_x4@1024x64",
+      "params": {
+        "fixture": "resid_x4",
+        "rows": 1024,
+        "dim": 64
+      },
+      "variants": [
+        {
+          "name": "eager",
+          "flops": 101187584.0,
+          "note": ""
+        },
+        {
+          "name": "inductor",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "morphism",
+          "flops": 34340864.0,
+          "note": ""
+        },
+        {
+          "name": "morphism+inductor",
+          "flops": null,
+          "note": ""
+        }
+      ],
+      "median_s": {
+        "eager": 0.002242009940000571,
+        "inductor": 0.0021633699998346856,
+        "morphism": 0.0010676331900003788,
+        "morphism+inductor": 0.0008466575000056764
+      },
+      "iqr_s": {
+        "eager": 0.0,
+        "inductor": 3.02420003208681e-05,
+        "morphism": 0.0,
+        "morphism+inductor": 8.938000291891512e-06
+      },
+      "aux": {
+        "name": "resid_x4@1024x64",
+        "params": {
+          "fixture": "resid_x4",
+          "rows": 1024,
+          "dim": 64
+        },
+        "param_bytes_eager": 393216,
+        "opt_s": 0.49,
+        "fires": {
+          "residual_reassoc": 1
+        },
+        "n_rewritten": 4,
+        "e2e_rel": 4.585214510396509e-16,
+        "n_grafted": 1,
+        "matches": {
+          "residual_reassoc:blocks.0+blocks.1+blocks.2+blocks.3": {
+            "status": "grafted",
+            "boundary": "residual_wrapped+residual_wrapped+residual_wrapped",
+            "cost_before": 101187584.0,
+            "cost_after": 33882112.0,
+            "rel_diff": 4.585214510396509e-16
+          }
+        },
+        "term_flops_before": 101187584.0,
+        "term_flops_after": 33882112.0,
+        "flops_ratio": 2.986460348162476,
+        "param_bytes_opt": 131072,
+        "morph_verified": true,
+        "morph_rel": 4.585214510396509e-16,
+        "rt_flops_eager": 101187584.0,
+        "rt_flops_morphism": 34340864.0,
+        "rt_flops_ratio": 2.946564885496183,
+        "inductor_status": "compiled in 0.2s",
+        "inductor_verified": true,
+        "inductor_rel": 0.0,
+        "morph_ind_status": "compiled in 0.9s",
+        "morph_ind_verified": true,
+        "morph_ind_rel": 4.585214510396509e-16
+      }
+    },
+    {
+      "name": "resid_x4@4096x128",
+      "params": {
+        "fixture": "resid_x4",
+        "rows": 4096,
+        "dim": 128
+      },
+      "variants": [
+        {
+          "name": "eager",
+          "flops": 1614807040.0,
+          "note": ""
+        },
+        {
+          "name": "inductor",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "morphism",
+          "flops": 543162368.0,
+          "note": ""
+        },
+        {
+          "name": "morphism+inductor",
+          "flops": null,
+          "note": ""
+        }
+      ],
+      "median_s": {
+        "eager": 0.0362913314997968,
+        "inductor": 0.031402669999806676,
+        "morphism": 0.018304556900011447,
+        "morphism+inductor": 0.011556960500001878
+      },
+      "iqr_s": {
+        "eager": 0.001177518250187859,
+        "inductor": 0.0005507249998117913,
+        "morphism": 0.0,
+        "morphism+inductor": 0.000270536250582154
+      },
+      "aux": {
+        "name": "resid_x4@4096x128",
+        "params": {
+          "fixture": "resid_x4",
+          "rows": 4096,
+          "dim": 128
+        },
+        "param_bytes_eager": 1572864,
+        "opt_s": 0.66,
+        "fires": {
+          "residual_reassoc": 1
+        },
+        "n_rewritten": 4,
+        "e2e_rel": 8.060802582569976e-16,
+        "n_grafted": 1,
+        "matches": {
+          "residual_reassoc:blocks.0+blocks.1+blocks.2+blocks.3": {
+            "status": "grafted",
+            "boundary": "residual_wrapped+residual_wrapped+residual_wrapped",
+            "cost_before": 1614807040.0,
+            "cost_after": 539492352.0,
+            "rel_diff": 8.060802582569976e-16
+          }
+        },
+        "term_flops_before": 1614807040.0,
+        "term_flops_after": 539492352.0,
+        "flops_ratio": 2.993197278911565,
+        "param_bytes_opt": 524288,
+        "morph_verified": true,
+        "morph_rel": 8.060802582569976e-16,
+        "rt_flops_eager": 1614807040.0,
+        "rt_flops_morphism": 543162368.0,
+        "rt_flops_ratio": 2.972972972972973,
+        "inductor_status": "compiled in 0.2s",
+        "inductor_verified": true,
+        "inductor_rel": 0.0,
+        "morph_ind_status": "compiled in 0.9s",
+        "morph_ind_verified": true,
+        "morph_ind_rel": 8.060802582569976e-16
+      }
+    },
+    {
+      "name": "kv_x2@8x16",
+      "params": {
+        "fixture": "kv_x2",
+        "rows": 8,
+        "dim": 16
+      },
+      "variants": [
+        {
+          "name": "eager",
+          "flops": 16512.0,
+          "note": ""
+        },
+        {
+          "name": "inductor",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "morphism",
+          "flops": 11648.0,
+          "note": ""
+        },
+        {
+          "name": "morphism+inductor",
+          "flops": null,
+          "note": ""
+        }
+      ],
+      "median_s": {
+        "eager": 6.110334100003457e-05,
+        "inductor": 7.773149945933255e-05,
+        "morphism": 6.990397200024745e-05,
+        "morphism+inductor": 9.543499982100911e-05
+      },
+      "iqr_s": {
+        "eager": 1.0485150028217408e-07,
+        "inductor": 2.659749725353322e-06,
+        "morphism": 0.0,
+        "morphism+inductor": 2.9875004656787496e-06
+      },
+      "aux": {
+        "name": "kv_x2@8x16",
+        "params": {
+          "fixture": "kv_x2",
+          "rows": 8,
+          "dim": 16
+        },
+        "param_bytes_eager": 8192,
+        "opt_s": 0.05,
+        "fires": {
+          "kv_latent_share": 1
+        },
+        "n_rewritten": 2,
+        "e2e_rel": 2.5058835729339943e-14,
+        "n_grafted": 1,
+        "matches": {
+          "kv_latent_share:blocks.0+blocks.1": {
+            "status": "grafted",
+            "boundary": "family",
+            "cost_before": 21120.0,
+            "cost_after": 16000.0,
+            "rel_diff": 2.5058835729339943e-14,
+            "latent_rank": 4,
+            "n_kv_sites": 4,
+            "kv_flops_before": 8192.0,
+            "kv_flops_after": 3072.0,
+            "kv_bytes_before": 4096.0,
+            "kv_bytes_after": 1536.0
+          },
+          "kv_latent_share:blocks.0": {
+            "status": "skipped",
+            "reason": "node already rewritten"
+          },
+          "kv_latent_share:blocks.1": {
+            "status": "skipped",
+            "reason": "node already rewritten"
+          }
+        },
+        "term_flops_before": 21120.0,
+        "term_flops_after": 16000.0,
+        "flops_ratio": 1.32,
+        "kv_flops_before": 8192.0,
+        "kv_flops_after": 3072.0,
+        "kv_flops_ratio": 2.6666666666666665,
+        "kv_bytes_before": 4096.0,
+        "kv_bytes_after": 1536.0,
+        "param_bytes_opt": 5632,
+        "morph_verified": true,
+        "morph_rel": 2.5058835729339943e-14,
+        "rt_flops_eager": 16512.0,
+        "rt_flops_morphism": 11648.0,
+        "rt_flops_ratio": 1.4175824175824177,
+        "inductor_status": "compiled in 0.2s",
+        "inductor_verified": true,
+        "inductor_rel": 0.0,
+        "morph_ind_status": "compiled in 0.8s",
+        "morph_ind_verified": true,
+        "morph_ind_rel": 2.5058835729339943e-14
+      }
+    },
+    {
+      "name": "kv_x2@512x64",
+      "params": {
+        "fixture": "kv_x2",
+        "rows": 512,
+        "dim": 64
+      },
+      "variants": [
+        {
+          "name": "eager",
+          "flops": 16809984.0,
+          "note": ""
+        },
+        {
+          "name": "inductor",
+          "flops": null,
+          "note": ""
+        },
+        {
+          "name": "morphism",
+          "flops": 11632640.0,
+          "note": ""
+        },
+        {
+          "name": "morphism+inductor",
+          "flops": null,
+          "note": ""
+        }
+      ],
+      "median_s": {
+        "eager": 0.002403570310007126,
+        "inductor": 0.002332281500002864,
+        "morphism": 0.00249165234999964,
+        "morphism+inductor": 0.002453277000313392
+      },
+      "iqr_s": {
+        "eager": 0.0,
+        "inductor": 4.624925054486084e-05,
+        "morphism": 0.0,
+        "morphism+inductor": 4.9000999752024654e-05
+      },
+      "aux": {
+        "name": "kv_x2@512x64",
+        "params": {
+          "fixture": "kv_x2",
+          "rows": 512,
+          "dim": 64
+        },
+        "param_bytes_eager": 131072,
+        "opt_s": 0.07,
+        "fires": {
+          "kv_latent_share": 1
+        },
+        "n_rewritten": 2,
+        "e2e_rel": 9.398685399150736e-15,
+        "n_grafted": 1,
+        "matches": {
+          "kv_latent_share:blocks.0+blocks.1": {
+            "status": "grafted",
+            "boundary": "family",
+            "cost_before": 84049920.0,
+            "cost_after": 78807040.0,
+            "rel_diff": 9.398685399150736e-15,
+            "latent_rank": 16,
+            "n_kv_sites": 4,
+            "kv_flops_before": 8388608.0,
+            "kv_flops_after": 3145728.0,
+            "kv_bytes_before": 65536.0,
+            "kv_bytes_after": 24576.0
+          },
+          "kv_latent_share:blocks.0": {
+            "status": "skipped",
+            "reason": "node already rewritten"
+          },
+          "kv_latent_share:blocks.1": {
+            "status": "skipped",
+            "reason": "node already rewritten"
+          }
+        },
+        "term_flops_before": 84049920.0,
+        "term_flops_after": 78807040.0,
+        "flops_ratio": 1.0665280665280665,
+        "kv_flops_before": 8388608.0,
+        "kv_flops_after": 3145728.0,
+        "kv_flops_ratio": 2.6666666666666665,
+        "kv_bytes_before": 65536.0,
+        "kv_bytes_after": 24576.0,
+        "param_bytes_opt": 90112,
+        "morph_verified": true,
+        "morph_rel": 9.398685399150736e-15,
+        "rt_flops_eager": 16809984.0,
+        "rt_flops_morphism": 11632640.0,
+        "rt_flops_ratio": 1.4450704225352113,
+        "inductor_status": "compiled in 0.2s",
+        "inductor_verified": true,
+        "inductor_rel": 0.0,
+        "morph_ind_status": "compiled in 0.9s",
+        "morph_ind_verified": true,
+        "morph_ind_rel": 9.398685399150736e-15
+      }
+    }
+  ]
+}
