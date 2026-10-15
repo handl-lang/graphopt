@@ -158,6 +158,16 @@ def test_level1_uses_less_memory():
             tracemalloc.stop()
         return eg, stats, peak
 
+    # Warm the interpreter before measuring.  The first saturation pays
+    # one-time costs (law-pattern compilation, interning caches) that a
+    # second one reuses — so measuring the pair cold makes the *order*
+    # decide the result, and the level-1 run can peak higher than the
+    # level-2 one for reasons that have nothing to do with provenance
+    # records.  (Observed: 170795 < 166287 failed in a batch, passed in
+    # isolation.)  The warm-up is discarded; the comparison below is
+    # unchanged, and is *additionally* checked in both orders.
+    saturate(1)
+
     eg1, stats1, mem1 = saturate(1)
     eg2, stats2, mem2 = saturate(2)
 
@@ -168,7 +178,12 @@ def test_level1_uses_less_memory():
 
     assert eg1.n_proof_edges == 0
     assert eg2.n_proof_edges > 0
-    assert mem1 < mem2
+    assert mem1 < mem2, "level 1 must peak lower than level 2 (warm)"
+    # Order-independence: measuring the other way round must agree, so a
+    # single lucky ordering cannot carry the claim.
+    eg2b, _stats2b, mem2b = saturate(2)
+    eg1b, _stats1b, mem1b = saturate(1)
+    assert mem1b < mem2b, "level 1 must peak lower than level 2 (reversed)"
     print(
         f"\n  level1 peak={mem1 / 1024:.0f}KiB "
         f"level2 peak={mem2 / 1024:.0f}KiB "
