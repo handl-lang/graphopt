@@ -60,7 +60,7 @@ cov_ann/
 *.prof
 
 # Bench outputs
-bench/results/
+benches/results/
 .chokkin/
 
 # Pitch decks (standalone repos)
