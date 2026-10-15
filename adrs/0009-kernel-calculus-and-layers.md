@@ -126,7 +126,7 @@ implementation (`Engine`), not a domain.
 | an engine for the search dimension | a **dimension** implementation (`catopt-native`) |
 | a backend that mints code | a **domain** package (Triton is torch-adjacent) |
 
-### Ports to add in core
+### Ports to add in core (see Revision 2 — most already exist)
 
 Each lands **with a conformance test that the current implementation
 already satisfies** — ADR 0003's lesson: an unconsumed port is
@@ -170,6 +170,34 @@ reorders the whole plan.
    about it), and there is no versioning or compatibility story for the
    bank or for minted atoms.  No package split addresses this; it is
    recorded here as the standing gap.
+
+### Revision 2 (2026-10-14) — most of the "ports to add" already exist
+
+Checking the list against the code before writing any of it (ADR 0003's
+lesson applied to this ADR's own proposal):
+
+| proposed port | measured state |
+|---|---|
+| `Engine` | **already exists** — `catopt_core.ports.Engine` (plan 0010 lever 3): `add_term` / `find` / `run` / `extract_best`, with the pure-Python `EGraph` as the reference and `catopt-native` as the opt-in |
+| `Environment` + `Reward` | **already exist** — `catopt_discovery.engine.Board` (`observe` / `step -> (state, report)`) plus the `Report` dataclass carrying `reward` + `terminal` |
+| `Calculus` | its **surface is already named** — `RuleLike` / `RuleSetLike` (laws as data) and `ShapeRule` (shape inference). What is missing is not a protocol but a **`Language` *value*** — a data structure (ADR 0010), not a port |
+| `Prover` / `Bound` | `Verifier` **exists** (the semantic gate). `Bound` (the certified-approximation boundary) is genuinely absent — and its consumer (the bounded-member path) lives in the orchestrator, so it is named there or not at all |
+| `Proposer` | genuinely absent — and it cannot be a real port yet: its shape would be `propose(...) -> Iterable[Candidate]`, but `Candidate` lives in `catopt_discovery.proposal`, so a core-owned *view* (the way `VerifyResult` is the core-owned view of a verify report) must exist first |
+
+**So one of the six already existed in core, two existed elsewhere, one
+is a data structure rather than a port, and one needs a core-owned shape
+before it can be honest.**  The ports are therefore **tied to the stages
+that create their consumers**, not added up front:
+
+* `Proposer` — when the proposal layer's candidate shape is promoted (a
+  core-owned `Candidate` view), i.e. with stage 1's *data* work, not
+  before.
+* `Environment` / `Reward` — when the game layer is extracted into
+  `catopt-game` (stage 5): a package cannot depend on a protocol it does
+  not own, and the port belongs where the drivers live.
+* `Bound` — with the bounded-member path, if it needs naming at all.
+* `Calculus` — not a port: a `Language` value (ADR 0010).  Its tables'
+  read surfaces are the ports that already exist.
 
 ### Staged plan (revised order)
 
