@@ -21,6 +21,7 @@ Run::
     .venv/bin/python lab/bridge/combinator_probe.py --verify 8 # + end-to-end
     .venv/bin/python lab/bridge/combinator_probe.py --gate2    # loop spelling
     .venv/bin/python lab/bridge/combinator_probe.py --gate2 --extracted
+    .venv/bin/python lab/bridge/combinator_probe.py --gate2 --extracted --propose-loop
 """
 
 from __future__ import annotations
@@ -276,7 +277,7 @@ def gate1(which: str, verify: int) -> list[Row]:
     return rows
 
 
-def gate2(extracted: bool) -> None:
+def gate2(extracted: bool, propose_loop: bool = False) -> None:
     """Spell the RetNet fold as ``loop (arr step)``; verify + project."""
     import catopt_carriers  # noqa: F401 — carrier op bindings
     from catopt_core.cost import dag_cost, flops_cost
@@ -338,15 +339,19 @@ def gate2(extracted: bool) -> None:
         "form, not a recovered one."
     )
     if extracted:
-        _gate2_projection()
+        _gate2_projection(propose_loop=propose_loop)
 
 
-def _gate2_projection(t: int = 64, k: int = 4, iters: int = 10) -> None:
+def _gate2_projection(
+    t: int = 64, k: int = 4, iters: int = 10, propose_loop: bool = False
+) -> None:
     """Saturate the RetNet export (staged arms) and project the winner.
 
     Reports whether the extracted term round-trips through the bridge,
     and whether its shared-state chain carries the same fold signature
-    the spelled ``loop`` expands to.
+    the spelled ``loop`` expands to.  With ``propose_loop`` it also runs
+    the gate-3 *proposing rule* (``lab/bridge/loop_propose.py``) over the
+    projected winner and over an authored spelled scan (the control).
     """
     from catopt_carriers.om import (
         om_shared_state_budgets,
@@ -392,6 +397,29 @@ def _gate2_projection(t: int = 64, k: int = 4, iters: int = 10) -> None:
         f"   fold-chain depth: spelled={_fold_depth(spelled)}  "
         f"extract={_fold_depth(best)}"
     )
+    if propose_loop:
+        from catopt_core.ir import Const
+
+        from lab.bridge import loop_propose as lp
+
+        # Is the presentation's *spelled* scan even a term the search
+        # reached?  Add it to the (already-saturated) e-graph; if it
+        # lands in a different e-class the search never derived it, so
+        # no proposing rule keyed on that spelling could ever fire.
+        spelled_cls = eg.find(eg.add_term(spelled))
+        print(
+            "   the presentation's spelled scan is in the search's root "
+            f"e-class: {spelled_cls == eg.find(root)}"
+        )
+        C = t // k
+        control = lp.unroll(
+            cb.retnet_step(
+                Const(0.9), Const(0.9**C), float(t) ** 0.5, C
+            ),
+            k,
+        )
+        print("-- gate 3: the `loop`-proposing rule --")
+        lp.propose_loop_report(morph, control)
 
 
 def _fold_depth(term: Any) -> int:
@@ -478,11 +506,16 @@ def main(argv: list[str] | None = None) -> int:
     )
     ap.add_argument("--gate2", action="store_true")
     ap.add_argument("--extracted", action="store_true")
+    ap.add_argument(
+        "--propose-loop",
+        action="store_true",
+        help="run the gate-3 loop-proposing rule over the projected winner",
+    )
     ap.add_argument("--json", help="write machine-readable gate-1 rows")
     args = ap.parse_args(argv)
 
     if args.gate2:
-        gate2(args.extracted)
+        gate2(args.extracted, propose_loop=args.propose_loop)
         return 0
     rows = gate1(args.set, args.verify)
     if args.json:
