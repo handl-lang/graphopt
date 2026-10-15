@@ -126,21 +126,80 @@ def _when_condition(term: Any) -> dict | None:
     return {"And": clauses}
 
 
+#: Node kinds the bridge mints for right-hand-side leaves.  handl's
+#: ``RewriteStep`` has no literal-leaf step, so a leaf becomes a ``Create``
+#: of a catopt-namespaced kind carrying its data in the payload; the shape
+#: rows below declare them, so the fragment loads.
+_CONST_KIND = "catopt:const"
+_VAR_KIND = "catopt:var"
+_DATA_KIND = "catopt:data"
+
+#: The ``AstShapeDef`` rows declaring those kinds (emitted with the ops).
+_LEAF_SHAPES = (
+    {
+        "id": "ast.catopt.const",
+        "node_kind": _CONST_KIND,
+        "children": [],
+        "payload_schema": {
+            "type": "object",
+            "properties": {"value": {}},
+        },
+        "catopt": {"leaf": "const"},
+    },
+    {
+        "id": "ast.catopt.var",
+        "node_kind": _VAR_KIND,
+        "children": [],
+        "payload_schema": {
+            "type": "object",
+            "properties": {"name": {}},
+        },
+        "catopt": {"leaf": "var"},
+    },
+    {
+        "id": "ast.catopt.data",
+        "node_kind": _DATA_KIND,
+        "children": [],
+        "payload_schema": {
+            "type": "object",
+            "properties": {"repr": {}},
+        },
+        "catopt": {"leaf": "data"},
+    },
+)
+
+
+def _leaf_step(kind: str, payload: dict) -> dict:
+    """Render a leaf as a ``Create`` of a declared catopt-namespaced kind."""
+    return {
+        "Create": {"kind": kind, "payload": payload, "children": []}
+    }
+
+
 def _children_spec(term: Any, paths: dict) -> dict:
     """Render a rhs pattern as handl ``children`` steps.
 
-    Metavars → ``!KeepPath`` (the bound position from the lhs);
-    op nodes → ``!Create`` (new structure); vars/consts →
-    ``"catopt:leaf"`` records — handl's child vocabulary has no
-    literal-leaf step, so the leaf survives under the extension
-    tag rather than being silently dropped.
+    Metavars → ``!KeepPath`` (the bound position from the lhs); op nodes
+    → ``!Create`` (new structure); a **leaf** → a step handl's
+    ``RewriteStep`` vocabulary actually has:
+
+    * an unbound metavar → ``!Fresh`` (allocate a fresh variable — what
+      an unbound pattern variable on the right-hand side means);
+    * a ``Const`` → ``!Create`` of kind ``catopt:const`` with the value in
+      the node's ``payload``;
+    * a ``Var`` → ``!Create`` of kind ``catopt:var`` with the name in the
+      payload.
+
+    The two ``catopt:``-namespaced kinds are declared in the fragment's
+    ``ast`` rows, so handl can resolve them.  (An earlier version emitted
+    ``{"catopt:leaf": …}`` — an *extension*, not a step — which handl's
+    serde rejects with *"expected a YAML tag"*: the full bank failed to
+    load because of it.)
     """
     if isinstance(term, str):
         p = paths.get(term)
         return (
-            {"KeepPath": list(p)}
-            if p is not None
-            else {"catopt:leaf": term}
+            {"KeepPath": list(p)} if p is not None else {"Fresh": term}
         )
     parts = _op_parts(term)
     if parts:
@@ -153,10 +212,12 @@ def _children_spec(term: Any, paths: dict) -> dict:
             }
         }
     if isinstance(term, Const):
-        return {"catopt:leaf": {"const": term.value}}
+        return _leaf_step(_CONST_KIND, {"value": term.value})
     if isinstance(term, Var):
-        return {"catopt:leaf": {"var": term.name}}
-    return {"catopt:leaf": {"data": repr(term)}}  # pragma: no cover
+        return _leaf_step(_VAR_KIND, {"name": term.name})
+    return _leaf_step(
+        _DATA_KIND, {"repr": repr(term)}
+    )  # pragma: no cover
 
 
 def law_to_handl(rule: Rewrite, name: str) -> dict:
@@ -264,12 +325,13 @@ def cell_to_handl(cell: Cell) -> dict:
 def store_to_handl(store: CellStore) -> dict:
     """Assemble a store into handl's fragment *shape*.
 
-    Returns the mergeable fragment: ``ast`` rows (op cells),
+    Returns the mergeable fragment: ``ast`` rows (op cells, plus the
+    leaf kinds the bridge mints — see :data:`_LEAF_SHAPES`),
     ``transforms`` rows (law + object cells), ``natives`` rows
     (handle cells) — plus a ``catopt`` provenance block listing the
     fragment sources the store was merged from.
     """
-    ast: list = []
+    ast: list = list(_LEAF_SHAPES)
     transforms: list = []
     natives: list = []
     for c in store:
@@ -280,6 +342,13 @@ def store_to_handl(store: CellStore) -> dict:
             transforms.append(row)
         elif c.role == "handle":  # pragma: no branch — the four
             natives.append(row)  # roles exhaust the vocabulary
+    # handl keys a rule by `pass:node_kind:priority`, so two laws with the
+    # same root kind collide unless they carry distinct priorities.  The
+    # value here is a *load-time disambiguator*, not a semantic ordering:
+    # catopt's saturation is unordered, so only handl's per-kind
+    # application order is affected (and that order is not part of the
+    # law's meaning).
+    _disambiguate_priorities(transforms)
     return {
         "ast": ast,
         "transforms": transforms,
@@ -289,6 +358,19 @@ def store_to_handl(store: CellStore) -> dict:
             "provenance": sorted({c.provenance.origin for c in store}),
         },
     }
+
+
+def _disambiguate_priorities(rows: list) -> None:
+    """Give same-kind transform rows distinct ``priority`` values.
+
+    handl's identity key is ``pass:node_kind:priority``; a bank with
+    several laws per node kind (catopt has many) collides without this.
+    """
+    seen: dict = {}
+    for row in rows:
+        key = (row.get("pass"), row.get("node_kind"))
+        seen[key] = seen.get(key, 0) + 1
+        row["priority"] = seen[key]
 
 
 def cell_from_handl(row: dict) -> Cell | None:

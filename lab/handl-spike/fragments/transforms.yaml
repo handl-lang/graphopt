@@ -68,3 +68,4 @@
       index: 1
       kind: "add"
     - !ChildCount 2
+  priority: 1

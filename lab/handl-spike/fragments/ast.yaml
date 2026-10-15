@@ -1,1 +1,27 @@
-[]
+- id: "ast.catopt.const"
+  node_kind: "catopt:const"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      value: {}
+  catopt:
+    leaf: "const"
+- id: "ast.catopt.var"
+  node_kind: "catopt:var"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      name: {}
+  catopt:
+    leaf: "var"
+- id: "ast.catopt.data"
+  node_kind: "catopt:data"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      repr: {}
+  catopt:
+    leaf: "data"

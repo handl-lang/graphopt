@@ -81,7 +81,7 @@ class TestLawToHandl:
         )
         row = handl.law_to_handl(r, "x")
         last = row["rule"]["Declarative"]["children"][-1]
-        assert last == {"catopt:leaf": "c"}
+        assert last == {"Fresh": "c"}
 
     def test_rhs_op_children_create(self):
         r = R(
@@ -115,8 +115,8 @@ class TestLawToHandl:
         )
         row = handl.law_to_handl(r, "x")
         kids = row["rule"]["Declarative"]["children"]
-        assert kids[0] == {"catopt:leaf": {"const": 2.0}}
-        assert kids[1] == {"catopt:leaf": {"var": "w"}}
+        assert kids[0] == {"Create": {"kind": "catopt:const", "payload": {"value": 2.0}, "children": []}}
+        assert kids[1] == {"Create": {"kind": "catopt:var", "payload": {"name": "w"}, "children": []}}
 
     def test_when_condition_folds_for_handl(self):
         """0 clauses omit the field; 1 is bare; 2+ become And([...])."""
@@ -131,7 +131,7 @@ class TestLawToHandl:
         row = handl.law_to_handl(r, "x")
         assert row["node_kind"] is None and "when" not in row
         kids = row["rule"]["Declarative"]["children"]
-        assert kids == [{"catopt:leaf": "b"}]
+        assert kids == [{"Fresh": "b"}]
         assert row["rule"]["Declarative"]["target_kind"] is None
 
     def test_zero_arity_root(self):
@@ -159,7 +159,7 @@ class TestLawToHandl:
         )
         row = handl.law_to_handl(r, "x")
         kids = row["rule"]["Declarative"]["children"]
-        assert kids[1] == {"catopt:leaf": {"var": "w"}}
+        assert kids[1] == {"Create": {"kind": "catopt:var", "payload": {"name": "w"}, "children": []}}
 
     def test_law_data_roundtrips(self):
         row = handl.law_to_handl(OM_LIFT, "om_decayed_lift")
@@ -217,7 +217,9 @@ class TestStoreToHandl:
     def test_fragment_shape(self):
         frag = handl.store_to_handl(_store())
         assert len(frag["transforms"]) == 1
-        assert len(frag["ast"]) == 1
+        # `ast` = the store's op cells + the minted leaf kinds the bridge
+        # declares (catopt:const / catopt:var / catopt:data).
+        assert len(frag["ast"]) == 1 + len(handl._LEAF_SHAPES)
         assert len(frag["natives"]) == 1
         assert frag["catopt"]["cells"] == 3
         assert set(frag["catopt"]["provenance"]) <= {
@@ -259,7 +261,10 @@ class TestShippedBankRoundTrip:
     def test_no_cell_is_silently_dropped(self):
         store = ambient_store()
         frag = handl.store_to_handl(store)
-        emitted = len(frag["ast"]) + len(frag["transforms"]) + len(frag["natives"])
+        # `ast` also carries the minted leaf kinds (catopt:const/var/data),
+        # which are bridge vocabulary, not store cells.
+        op_rows = [r for r in frag["ast"] if not r["node_kind"].startswith("catopt:")]
+        emitted = len(op_rows) + len(frag["transforms"]) + len(frag["natives"])
         assert emitted == len(list(store)), (
             f"store has {len(list(store))} cells, fragments emit {emitted} rows"
         )
@@ -267,11 +272,20 @@ class TestShippedBankRoundTrip:
     def test_every_row_round_trips_idempotently(self):
         store = ambient_store()
         frag = handl.store_to_handl(store)
+        leaf_kinds = {s["node_kind"] for s in handl._LEAF_SHAPES}
         rows = frag["ast"] + frag["transforms"] + frag["natives"]
         assert rows, "the shipped bank must emit rows"
-        for row in rows:
+        # `natives` rows carry no `node_kind` (they are binding records).
+        cells = [r for r in rows if r.get("node_kind") not in leaf_kinds]
+        leaves = [r for r in rows if r.get("node_kind") in leaf_kinds]
+        assert len(leaves) == len(handl._LEAF_SHAPES), "leaf shapes are minted"
+        for row in cells:
             cell = handl.cell_from_handl(row)
             assert cell is not None, f"row did not reconstruct: {row.get('id')}"
-            assert handl.cell_to_handl(cell) == row, (
+            # `priority` is a store-level disambiguator (handl keys a rule
+            # by pass:node_kind:priority), not part of the cell, so the
+            # per-cell re-emission does not carry it.
+            without_priority = {k: v for k, v in row.items() if k != "priority"}
+            assert handl.cell_to_handl(cell) == without_priority, (
                 f"row drifted on round-trip: {row.get('id')}"
             )
