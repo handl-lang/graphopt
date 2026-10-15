@@ -1,0 +1,7784 @@
+- id: "transform.catopt.comm_add"
+  pass: "catopt"
+  node_kind: "add"
+  rule:
+    !Declarative
+    target_kind: "add"
+    children:
+      - !KeepPath
+        - 1
+      - !KeepPath
+        - 0
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "comm_add"
+      law: "Commutativity in a symmetric monoidal category: \u03c3 \u2218 (f \u2297 g) = g \u2297 f."
+      lhs:
+        op: "add"
+        args:
+          - mvar: "a"
+          - mvar: "b"
+        attrs: {}
+      rhs:
+        op: "add"
+        args:
+          - mvar: "b"
+          - mvar: "a"
+        attrs: {}
+      cond: null
+      dspec: null
+      tags:
+        - "expansive"
+        - "symmetry"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      a:
+        - 0
+      b:
+        - 1
+  when:
+    !ChildCount 2
+- id: "transform.catopt.comm_mul"
+  pass: "catopt"
+  node_kind: "mul"
+  rule:
+    !Declarative
+    target_kind: "mul"
+    children:
+      - !KeepPath
+        - 1
+      - !KeepPath
+        - 0
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "comm_mul"
+      law: "Hadamard product is commutative (SMC symmetry)."
+      lhs:
+        op: "mul"
+        args:
+          - mvar: "a"
+          - mvar: "b"
+        attrs: {}
+      rhs:
+        op: "mul"
+        args:
+          - mvar: "b"
+          - mvar: "a"
+        attrs: {}
+      cond: null
+      dspec: null
+      tags:
+        - "expansive"
+        - "symmetry"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      a:
+        - 0
+      b:
+        - 1
+  when:
+    !ChildCount 2
+- id: "transform.catopt.assoc_add"
+  pass: "catopt"
+  node_kind: "add"
+  rule:
+    !Declarative
+    target_kind: "add"
+    children:
+      - !Create
+        kind: "add"
+        children:
+          - !KeepPath
+            - 0
+          - !KeepPath
+            - 1
+            - 0
+      - !KeepPath
+        - 1
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "assoc_add"
+      law: "Associativity of sequential composition in a category."
+      lhs:
+        op: "add"
+        args:
+          - mvar: "a"
+          - op: "add"
+            args:
+              - mvar: "b"
+              - mvar: "c"
+            attrs: {}
+        attrs: {}
+      rhs:
+        op: "add"
+        args:
+          - op: "add"
+            args:
+              - mvar: "a"
+              - mvar: "b"
+            attrs: {}
+          - mvar: "c"
+        attrs: {}
+      cond: null
+      dspec: null
+      tags:
+        - "expansive"
+        - "symmetry"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      a:
+        - 0
+      b:
+        - 1
+        - 0
+      c:
+        - 1
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 1
+      kind: "add"
+    - !ChildCount 2
+- id: "transform.catopt.assoc_mul"
+  pass: "catopt"
+  node_kind: "mul"
+  rule:
+    !Declarative
+    target_kind: "mul"
+    children:
+      - !Create
+        kind: "mul"
+        children:
+          - !KeepPath
+            - 0
+          - !KeepPath
+            - 1
+            - 0
+      - !KeepPath
+        - 1
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "assoc_mul"
+      law: "Associativity of parallel composition in a monoidal category."
+      lhs:
+        op: "mul"
+        args:
+          - mvar: "a"
+          - op: "mul"
+            args:
+              - mvar: "b"
+              - mvar: "c"
+            attrs: {}
+        attrs: {}
+      rhs:
+        op: "mul"
+        args:
+          - op: "mul"
+            args:
+              - mvar: "a"
+              - mvar: "b"
+            attrs: {}
+          - mvar: "c"
+        attrs: {}
+      cond: null
+      dspec: null
+      tags:
+        - "expansive"
+        - "symmetry"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      a:
+        - 0
+      b:
+        - 1
+        - 0
+      c:
+        - 1
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 1
+      kind: "mul"
+    - !ChildCount 2
+- id: "transform.catopt.id_add"
+  pass: "catopt"
+  node_kind: "add"
+  rule:
+    !Declarative
+    target_kind: null
+    children:
+      - !KeepPath
+        - 0
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "id_add"
+      law: "Additive identity: a + 0 = a."
+      lhs:
+        op: "add"
+        args:
+          - mvar: "a"
+          - const: 0
+        attrs: {}
+      rhs:
+        mvar: "a"
+      cond: null
+      dspec: null
+      tags:
+        - "simplification"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      a:
+        - 0
+  when:
+    !ChildCount 2
+- id: "transform.catopt.id_mul"
+  pass: "catopt"
+  node_kind: "mul"
+  rule:
+    !Declarative
+    target_kind: null
+    children:
+      - !KeepPath
+        - 0
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "id_mul"
+      law: "Multiplicative identity: a * 1 = a."
+      lhs:
+        op: "mul"
+        args:
+          - mvar: "a"
+          - const: 1
+        attrs: {}
+      rhs:
+        mvar: "a"
+      cond: null
+      dspec: null
+      tags:
+        - "simplification"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      a:
+        - 0
+  when:
+    !ChildCount 2
+- id: "transform.catopt.double_neg"
+  pass: "catopt"
+  node_kind: "neg"
+  rule:
+    !Declarative
+    target_kind: null
+    children:
+      - !KeepPath
+        - 0
+        - 0
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "double_neg"
+      law: "Double negation: \u00ac\u00aca = a (involution)."
+      lhs:
+        op: "neg"
+        args:
+          - op: "neg"
+            args:
+              - mvar: "a"
+            attrs: {}
+        attrs: {}
+      rhs:
+        mvar: "a"
+      cond: null
+      dspec: null
+      tags:
+        - "simplification"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      a:
+        - 0
+        - 0
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "neg"
+    - !ChildCount 1
+- id: "transform.catopt.sub_to_add"
+  pass: "catopt"
+  node_kind: "sub"
+  rule:
+    !Declarative
+    target_kind: "add"
+    children:
+      - !KeepPath
+        - 0
+      - !Create
+        kind: "neg"
+        children:
+          - !KeepPath
+            - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "sub_to_add"
+      law: "Subtraction as addition of inverse: a - b = a + (-b)."
+      lhs:
+        op: "sub"
+        args:
+          - mvar: "a"
+          - mvar: "b"
+        attrs: {}
+      rhs:
+        op: "add"
+        args:
+          - mvar: "a"
+          - op: "neg"
+            args:
+              - mvar: "b"
+            attrs: {}
+        attrs: {}
+      cond: null
+      dspec: null
+      tags:
+        - "simplification"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      a:
+        - 0
+      b:
+        - 1
+  when:
+    !ChildCount 2
+- id: "transform.catopt.silu_expand"
+  pass: "catopt"
+  node_kind: "silu"
+  rule:
+    !Declarative
+    target_kind: "mul"
+    children:
+      - !KeepPath
+        - 0
+      - !Create
+        kind: "sigmoid"
+        children:
+          - !KeepPath
+            - 0
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "silu_expand"
+      law: "SiLU definition: silu(x) = x \u00b7 \u03c3(x)."
+      lhs:
+        op: "silu"
+        args:
+          - mvar: "x"
+        attrs: {}
+      rhs:
+        op: "mul"
+        args:
+          - mvar: "x"
+          - op: "sigmoid"
+            args:
+              - mvar: "x"
+            attrs: {}
+        attrs: {}
+      cond: null
+      dspec: null
+      tags:
+        - "simplification"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      x:
+        - 0
+  when:
+    !ChildCount 1
+- id: "transform.catopt.silu_fold"
+  pass: "catopt"
+  node_kind: "mul"
+  rule:
+    !Declarative
+    target_kind: "silu"
+    children:
+      - !KeepPath
+        - 0
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "silu_fold"
+      law: "The manual-silu fold: x \u00b7 \u03c3(x) = silu(x) \u2014 the definitional inverse of silu_expand, and the mediating 3-cell of the silu_expand/silu_mul_form \u00d7 swiglu_fuse critical pairs."
+      lhs:
+        op: "mul"
+        args:
+          - mvar: "x"
+          - op: "sigmoid"
+            args:
+              - mvar: "x"
+            attrs: {}
+        attrs: {}
+      rhs:
+        op: "silu"
+        args:
+          - mvar: "x"
+        attrs: {}
+      cond: null
+      dspec: null
+      tags:
+        - "simplification"
+      derivation:
+        - "silu_expand"
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      x:
+        - 0
+  when:
+    !And
+    - !KindAt
+      index: 1
+      kind: "sigmoid"
+    - !ChildCount 2
+- id: "transform.catopt.silu_mul_form"
+  pass: "catopt"
+  node_kind: "mul"
+  rule:
+    !Declarative
+    target_kind: "mul"
+    children:
+      - !Create
+        kind: "mul"
+        children:
+          - !KeepPath
+            - 0
+            - 0
+          - !Create
+            kind: "sigmoid"
+            children:
+              - !KeepPath
+                - 0
+                - 0
+      - !KeepPath
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "silu_mul_form"
+      law: "SwiGLU: silu(g)*u = (g*sigmoid(g))*u (factor for prefix sharing)."
+      lhs:
+        op: "mul"
+        args:
+          - op: "silu"
+            args:
+              - mvar: "g"
+            attrs: {}
+          - mvar: "u"
+        attrs: {}
+      rhs:
+        op: "mul"
+        args:
+          - op: "mul"
+            args:
+              - mvar: "g"
+              - op: "sigmoid"
+                args:
+                  - mvar: "g"
+                attrs: {}
+            attrs: {}
+          - mvar: "u"
+        attrs: {}
+      cond: null
+      dspec: null
+      tags:
+        - "simplification"
+      derivation:
+        - "silu_expand"
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      g:
+        - 0
+        - 0
+      u:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "silu"
+    - !ChildCount 2
+- id: "transform.catopt.softsign_fold"
+  pass: "catopt"
+  node_kind: "div"
+  rule:
+    !Declarative
+    target_kind: "softsign"
+    children:
+      - !KeepPath
+        - 0
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "softsign_fold"
+      law: "x / (|x| + 1) = softsign(x) \u2014 the bounded rational map, written as a three-op decomposed spelling, folds into the one kernel."
+      lhs:
+        op: "div"
+        args:
+          - mvar: "x"
+          - op: "add"
+            args:
+              - op: "abs"
+                args:
+                  - mvar: "x"
+                attrs: {}
+              - const: 1
+            attrs: {}
+        attrs: {}
+      rhs:
+        op: "softsign"
+        args:
+          - mvar: "x"
+        attrs: {}
+      cond: null
+      dspec: null
+      tags:
+        - "simplification"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      x:
+        - 0
+  when:
+    !And
+    - !KindAt
+      index: 1
+      kind: "add"
+    - !ChildCount 2
+- id: "transform.catopt.square_expand"
+  pass: "catopt"
+  node_kind: "square"
+  rule:
+    !Declarative
+    target_kind: "mul"
+    children:
+      - !KeepPath
+        - 0
+      - !KeepPath
+        - 0
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "square_expand"
+      law: "Self-composition: x\u00b2 = x \u00b7 x."
+      lhs:
+        op: "square"
+        args:
+          - mvar: "x"
+        attrs: {}
+      rhs:
+        op: "mul"
+        args:
+          - mvar: "x"
+          - mvar: "x"
+        attrs: {}
+      cond: null
+      dspec: null
+      tags:
+        - "simplification"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      x:
+        - 0
+  when:
+    !ChildCount 1
+- id: "transform.catopt.pow_to_square"
+  pass: "catopt"
+  node_kind: "pow"
+  rule:
+    !Declarative
+    target_kind: "square"
+    children:
+      - !KeepPath
+        - 0
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "pow_to_square"
+      law: "pow(x, 2) \u2261 square(x) \u2261 x\u00b7x (SwiGLU/RMSNorm bridge)."
+      lhs:
+        op: "pow"
+        args:
+          - mvar: "x"
+          - const: 2
+        attrs: {}
+      rhs:
+        op: "square"
+        args:
+          - mvar: "x"
+        attrs: {}
+      cond: null
+      dspec: null
+      tags:
+        - "simplification"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      x:
+        - 0
+  when:
+    !ChildCount 2
+- id: "transform.catopt.square_to_pow"
+  pass: "catopt"
+  node_kind: "square"
+  rule:
+    !Declarative
+    target_kind: "pow"
+    children:
+      - !KeepPath
+        - 0
+      - catopt:leaf:
+          const: 2
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "square_to_pow"
+      law: "Reverse: square(x) \u2261 pow(x, 2) for shape/cost reasons."
+      lhs:
+        op: "square"
+        args:
+          - mvar: "x"
+        attrs: {}
+      rhs:
+        op: "pow"
+        args:
+          - mvar: "x"
+          - const: 2
+        attrs: {}
+      cond: null
+      dspec: null
+      tags:
+        - "simplification"
+      derivation:
+        - "pow_to_square"
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      x:
+        - 0
+  when:
+    !ChildCount 1
+- id: "transform.catopt.mul_square"
+  pass: "catopt"
+  node_kind: "mul"
+  rule:
+    !Declarative
+    target_kind: "square"
+    children:
+      - !KeepPath
+        - 0
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "mul_square"
+      law: "x\u00b7x = square(x): the mul spelling of x\u00b2 folds to the unary kernel \u2014 the definitional inverse of square_expand."
+      lhs:
+        op: "mul"
+        args:
+          - mvar: "u"
+          - mvar: "u"
+        attrs: {}
+      rhs:
+        op: "square"
+        args:
+          - mvar: "u"
+        attrs: {}
+      cond: null
+      dspec: null
+      tags:
+        - "simplification"
+      derivation:
+        - "square_expand"
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      u:
+        - 0
+  when:
+    !ChildCount 2
+- id: "transform.catopt.select_mul"
+  pass: "catopt"
+  node_kind: "mul"
+  rule:
+    !Declarative
+    target_kind: "select"
+    children:
+      - !Create
+        kind: "mul"
+        children:
+          - !KeepPath
+            - 0
+            - 0
+          - !KeepPath
+            - 1
+            - 0
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "select_mul"
+      law: "mul commutes with select: sel(u) \u2299 sel(v) = sel(u \u2299 v) \u2014 the elementwise product of two slices is the slice of the product (naturality of the elementwise action over the select view).  Removes one dispatched op per site."
+      lhs:
+        op: "mul"
+        args:
+          - op: "select"
+            args:
+              - mvar: "u"
+            attrs:
+              dim: "D"
+              index: "I"
+          - op: "select"
+            args:
+              - mvar: "v"
+            attrs:
+              dim: "D"
+              index: "I"
+        attrs: {}
+      rhs:
+        op: "select"
+        args:
+          - op: "mul"
+            args:
+              - mvar: "u"
+              - mvar: "v"
+            attrs: {}
+        attrs:
+          dim: "D"
+          index: "I"
+      cond:
+        - "and"
+        - - "dim-eq-attr"
+          - "u"
+          - "D"
+          - "v"
+          - "D"
+        - - "shaped"
+          - - "bcast"
+            - "u"
+            - "v"
+      dspec: null
+      tags:
+        - "simplification"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      u:
+        - 0
+        - 0
+      v:
+        - 1
+        - 0
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "select"
+    - !KindAt
+      index: 1
+      kind: "select"
+    - !ChildCount 2
+- id: "transform.catopt.transpose_noop"
+  pass: "catopt"
+  node_kind: "transpose"
+  rule:
+    !Declarative
+    target_kind: null
+    children:
+      - !KeepPath
+        - 0
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "transpose_noop"
+      law: "A transpose whose swap axes coincide (d0 == d1 mod rank) or whose swapped extents are both 1 is a semantic no-op \u2014 the stride permutation maps each position to itself; strip the view."
+      lhs:
+        op: "transpose"
+        args:
+          - mvar: "u"
+        attrs:
+          dim0: "D0"
+          dim1: "D1"
+      rhs:
+        mvar: "u"
+      cond:
+        - "axes-noop"
+        - "u"
+        - "D0"
+        - "D1"
+      dspec: null
+      tags:
+        - "simplification"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      u:
+        - 0
+  when:
+    !ChildCount 1
+- id: "transform.catopt.chunk_single"
+  pass: "catopt"
+  node_kind: "chunk"
+  rule:
+    !Declarative
+    target_kind: null
+    children:
+      - !KeepPath
+        - 0
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "chunk_single"
+      law: "chunk(u, chunks=1, dim, index) is u \u2014 a one-section partition returns the whole tensor unchanged."
+      lhs:
+        op: "chunk"
+        args:
+          - mvar: "u"
+        attrs:
+          chunks: "CK"
+          dim: "CD"
+          index: "CI"
+      rhs:
+        mvar: "u"
+      cond:
+        - "attr-eq"
+        - "CK"
+        - 1
+      dspec: null
+      tags:
+        - "simplification"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      u:
+        - 0
+  when:
+    !ChildCount 1
+- id: "transform.catopt.mul_unsq_pad_l"
+  pass: "catopt"
+  node_kind: "mul"
+  rule:
+    !Declarative
+    target_kind: "mul"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+      - !KeepPath
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "mul_unsq_pad_l"
+      law: "unsqueeze(u, d) \u00b7 v = u \u00b7 v when the inserted axis is a broadcast pad and the broadcast grids coincide \u2014 the lifted operand reads the same positions, so the pad view is dead.  Drops one dispatched op per site (the exported ALiBi spelling carries it)."
+      lhs:
+        op: "mul"
+        args:
+          - op: "unsqueeze"
+            args:
+              - mvar: "u"
+            attrs:
+              dim: "UD"
+          - mvar: "v"
+        attrs: {}
+      rhs:
+        op: "mul"
+        args:
+          - mvar: "u"
+          - mvar: "v"
+        attrs: {}
+      cond:
+        - "and"
+        - - "bcast-eq"
+          - - "unsq-out"
+            - "u"
+            - "UD"
+          - "v"
+          - "u"
+          - "v"
+        - - "bcast-into"
+          - "u"
+          - - "unsq-out"
+            - "u"
+            - "UD"
+      dspec: null
+      tags:
+        - "simplification"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      u:
+        - 0
+        - 0
+      v:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "unsqueeze"
+    - !ChildCount 2
+- id: "transform.catopt.mul_unsq_pad_r"
+  pass: "catopt"
+  node_kind: "mul"
+  rule:
+    !Declarative
+    target_kind: "mul"
+    children:
+      - !KeepPath
+        - 0
+      - !KeepPath
+        - 1
+        - 0
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "mul_unsq_pad_r"
+      law: "Right-operand twin of mul_unsq_pad_l: u \u00b7 unsqueeze(v, d) = u \u00b7 v under the same broadcast-pad grid guard."
+      lhs:
+        op: "mul"
+        args:
+          - mvar: "u"
+          - op: "unsqueeze"
+            args:
+              - mvar: "v"
+            attrs:
+              dim: "UD"
+        attrs: {}
+      rhs:
+        op: "mul"
+        args:
+          - mvar: "u"
+          - mvar: "v"
+        attrs: {}
+      cond:
+        - "and"
+        - - "bcast-eq"
+          - - "unsq-out"
+            - "v"
+            - "UD"
+          - "u"
+          - "v"
+          - "u"
+        - - "bcast-into"
+          - "v"
+          - - "unsq-out"
+            - "v"
+            - "UD"
+      dspec: null
+      tags:
+        - "simplification"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      u:
+        - 0
+      v:
+        - 1
+        - 0
+  when:
+    !And
+    - !KindAt
+      index: 1
+      kind: "unsqueeze"
+    - !ChildCount 2
+- id: "transform.catopt.sub_unsq_pad_l"
+  pass: "catopt"
+  node_kind: "sub"
+  rule:
+    !Declarative
+    target_kind: "sub"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+      - !KeepPath
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "sub_unsq_pad_l"
+      law: "unsqueeze(u, d) - v = u - v under the broadcast-pad guard \u2014 same strip for the asymmetric operand pair (the guard, not the op's commutativity, is what carries it)."
+      lhs:
+        op: "sub"
+        args:
+          - op: "unsqueeze"
+            args:
+              - mvar: "u"
+            attrs:
+              dim: "UD"
+          - mvar: "v"
+        attrs: {}
+      rhs:
+        op: "sub"
+        args:
+          - mvar: "u"
+          - mvar: "v"
+        attrs: {}
+      cond:
+        - "and"
+        - - "bcast-eq"
+          - - "unsq-out"
+            - "u"
+            - "UD"
+          - "v"
+          - "u"
+          - "v"
+        - - "bcast-into"
+          - "u"
+          - - "unsq-out"
+            - "u"
+            - "UD"
+      dspec: null
+      tags:
+        - "simplification"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      u:
+        - 0
+        - 0
+      v:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "unsqueeze"
+    - !ChildCount 2
+- id: "transform.catopt.mul_unsq_nat"
+  pass: "catopt"
+  node_kind: "mul"
+  rule:
+    !Declarative
+    target_kind: "unsqueeze"
+    children:
+      - !Create
+        kind: "mul"
+        children:
+          - !KeepPath
+            - 0
+            - 0
+          - !KeepPath
+            - 1
+            - 0
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "mul_unsq_nat"
+      law: "unsqueeze(u, d) \u00b7 unsqueeze(v, d) = unsqueeze(u \u00b7 v, d) \u2014 elementwise mul commutes with a shared size-1 axis insertion exactly when the broadcast grids coincide AND both operands' flat-read maps agree across the two orders (the flat-map-unsq region \u2014 equal ranks always qualify; unequal ranks only when the insert lands in the pad).  Fuses two views into one and shrinks the pointwise domain a rank."
+      lhs:
+        op: "mul"
+        args:
+          - op: "unsqueeze"
+            args:
+              - mvar: "u"
+            attrs:
+              dim: "UD"
+          - op: "unsqueeze"
+            args:
+              - mvar: "v"
+            attrs:
+              dim: "UD"
+        attrs: {}
+      rhs:
+        op: "unsqueeze"
+        args:
+          - op: "mul"
+            args:
+              - mvar: "u"
+              - mvar: "v"
+            attrs: {}
+        attrs:
+          dim: "UD"
+      cond:
+        - "flat-map-unsq"
+        - "u"
+        - "UD"
+        - "v"
+        - - "unsq-out"
+          - "v"
+          - "UD"
+      dspec: null
+      tags:
+        - "simplification"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      u:
+        - 0
+        - 0
+      v:
+        - 1
+        - 0
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "unsqueeze"
+    - !KindAt
+      index: 1
+      kind: "unsqueeze"
+    - !ChildCount 2
+- id: "transform.catopt.mul_reshape_inert_l"
+  pass: "catopt"
+  node_kind: "mul"
+  rule:
+    !Declarative
+    target_kind: "mul"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+      - !KeepPath
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "mul_reshape_inert_l"
+      law: "reshape(u, S) \u00b7 v = u \u00b7 v when the reshape is broadcast-inert \u2014 equal broadcast grids force the reshape to a 1-axis insert/remove (a permuting reshape changes an extent and the grids disagree).  Grid equality is the minted single-clause guard."
+      lhs:
+        op: "mul"
+        args:
+          - op: "reshape"
+            args:
+              - mvar: "u"
+            attrs:
+              shape: "RS"
+          - mvar: "v"
+        attrs: {}
+      rhs:
+        op: "mul"
+        args:
+          - mvar: "u"
+          - mvar: "v"
+        attrs: {}
+      cond:
+        - "bcast-eq"
+        - - "reshape-out"
+          - "u"
+          - "RS"
+        - "v"
+        - "u"
+        - "v"
+      dspec: null
+      tags:
+        - "simplification"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      u:
+        - 0
+        - 0
+      v:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "reshape"
+    - !ChildCount 2
+- id: "transform.catopt.softmax_fold"
+  pass: "catopt"
+  node_kind: "div"
+  rule:
+    !Declarative
+    target_kind: "softmax"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "softmax_fold"
+      law: "exp(u) / \u03a3 exp(u) = softmax(u): the manual normalization fold \u2014 a composed-then-reduced chain IS the kernel's definition.  Folds div+exp+sum to one dispatched op."
+      lhs:
+        op: "div"
+        args:
+          - op: "exp"
+            args:
+              - mvar: "u"
+            attrs: {}
+          - op: "sum"
+            args:
+              - op: "exp"
+                args:
+                  - mvar: "u"
+                attrs: {}
+            attrs:
+              dim: "RD"
+              keepdim: "RK"
+        attrs: {}
+      rhs:
+        op: "softmax"
+        args:
+          - mvar: "u"
+        attrs:
+          dim: "SD"
+      cond:
+        - "and"
+        - - "attr-is"
+          - "RK"
+          - true
+        - - "or"
+          - - "attr-type"
+            - "RD"
+            - "int"
+          - - "and"
+            - - "attr-type"
+              - "RD"
+              - "tuple"
+            - - "attr-len"
+              - "RD"
+              - "=="
+              - 1
+      dspec:
+        SD:
+          - "attr0"
+          - "RD"
+      tags:
+        - "simplification"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      u:
+        - 0
+        - 0
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "exp"
+    - !KindAt
+      index: 1
+      kind: "sum"
+    - !ChildCount 2
+- id: "transform.catopt.glu_fold"
+  pass: "catopt"
+  node_kind: "mul"
+  rule:
+    !Declarative
+    target_kind: "glu"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "glu_fold"
+      law: "chunk-half \u00b7 \u03c3(chunk-half) IS glu(u): the manual-GLU fold \u2014 a \u2297 \u03c3(b) over the two equal halves of u IS the kernel's definition.  Folds mul+sigmoid+2 chunks to one dispatched op."
+      lhs:
+        op: "mul"
+        args:
+          - op: "chunk"
+            args:
+              - mvar: "u"
+            attrs:
+              chunks: 2
+              dim: "D"
+              index: 0
+          - op: "sigmoid"
+            args:
+              - op: "chunk"
+                args:
+                  - mvar: "u"
+                attrs:
+                  chunks: 2
+                  dim: "D"
+                  index: 1
+            attrs: {}
+        attrs: {}
+      rhs:
+        op: "glu"
+        args:
+          - mvar: "u"
+        attrs:
+          dim: "D"
+      cond:
+        - "and"
+        - - "rank"
+          - "u"
+          - ">="
+          - 1
+        - - "dim-mod"
+          - "u"
+          - "D"
+          - 2
+          - 0
+      dspec: null
+      tags:
+        - "simplification"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      u:
+        - 0
+        - 0
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "chunk"
+    - !KindAt
+      index: 1
+      kind: "sigmoid"
+    - !ChildCount 2
+- id: "transform.catopt.rms_norm_fold"
+  pass: "catopt"
+  node_kind: "mul"
+  rule:
+    !Declarative
+    target_kind: "rms_norm"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+      - !KeepPath
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "rms_norm_fold"
+      law: "x\u00b7rsqrt(mean(x\u00b2)+eps)\u00b7w IS rms_norm(x, w): the manual-RMSNorm fold \u2014 composed-then-reduced then scaled IS the kernel's definition.  Folds mul+mul+rsqrt+add+mean+pow to one dispatched op."
+      lhs:
+        op: "mul"
+        args:
+          - op: "mul"
+            args:
+              - mvar: "u"
+              - op: "rsqrt"
+                args:
+                  - op: "add"
+                    args:
+                      - op: "mean"
+                        args:
+                          - op: "pow"
+                            args:
+                              - mvar: "u"
+                              - mvar: "P"
+                            attrs: {}
+                        attrs:
+                          dim: "MD"
+                          keepdim: "MK"
+                      - mvar: "EPS"
+                    attrs: {}
+                attrs: {}
+            attrs: {}
+          - mvar: "w"
+        attrs: {}
+      rhs:
+        op: "rms_norm"
+        args:
+          - mvar: "u"
+          - mvar: "w"
+        attrs:
+          dim: "ND"
+          eps: "EP"
+      cond:
+        - "and"
+        - - "and"
+          - - "attr-is"
+            - "MK"
+            - true
+          - - "const-num"
+            - "EPS"
+          - - "const-cmp"
+            - "P"
+            - "=="
+            - 2
+        - - "shape-eq"
+          - "w"
+          - - "tail-block"
+            - "u"
+            - "MD"
+      dspec:
+        EP:
+          - "float"
+          - - "const"
+            - "EPS"
+        ND:
+          - "shape"
+          - - "tail-block"
+            - "u"
+            - "MD"
+      tags:
+        - "simplification"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      u:
+        - 0
+        - 0
+      P:
+        - 0
+        - 1
+        - 0
+        - 0
+        - 0
+        - 1
+      EPS:
+        - 0
+        - 1
+        - 0
+        - 1
+      w:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "mul"
+    - !ChildCount 2
+- id: "transform.catopt.rms_norm_fold_nogain"
+  pass: "catopt"
+  node_kind: "mul"
+  rule:
+    !Declarative
+    target_kind: "rms_norm"
+    children:
+      - !KeepPath
+        - 0
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "rms_norm_fold_nogain"
+      law: "x\u00b7rsqrt(mean(x\u00b2)+eps) IS rms_norm(x): the weight-free manual-RMSNorm fold \u2014 the gained fold's inner ``mul`` and a real spelling of its own (gain-free RMSNorm blocks)."
+      lhs:
+        op: "mul"
+        args:
+          - mvar: "u"
+          - op: "rsqrt"
+            args:
+              - op: "add"
+                args:
+                  - op: "mean"
+                    args:
+                      - op: "pow"
+                        args:
+                          - mvar: "u"
+                          - mvar: "P"
+                        attrs: {}
+                    attrs:
+                      dim: "MD"
+                      keepdim: "MK"
+                  - mvar: "EPS"
+                attrs: {}
+            attrs: {}
+        attrs: {}
+      rhs:
+        op: "rms_norm"
+        args:
+          - mvar: "u"
+        attrs:
+          dim: "ND"
+          eps: "EP"
+      cond:
+        - "and"
+        - - "and"
+          - - "attr-is"
+            - "MK"
+            - true
+          - - "const-num"
+            - "EPS"
+          - - "const-cmp"
+            - "P"
+            - "=="
+            - 2
+        - - "shaped"
+          - - "tail-block"
+            - "u"
+            - "MD"
+      dspec:
+        EP:
+          - "float"
+          - - "const"
+            - "EPS"
+        ND:
+          - "shape"
+          - - "tail-block"
+            - "u"
+            - "MD"
+      tags:
+        - "simplification"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      u:
+        - 0
+      P:
+        - 1
+        - 0
+        - 0
+        - 0
+        - 1
+      EPS:
+        - 1
+        - 0
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 1
+      kind: "rsqrt"
+    - !ChildCount 2
+- id: "transform.catopt.div_sqrt_to_rsqrt"
+  pass: "catopt"
+  node_kind: "div"
+  rule:
+    !Declarative
+    target_kind: "rsqrt"
+    children:
+      - !KeepPath
+        - 1
+        - 0
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "div_sqrt_to_rsqrt"
+      law: "1 / sqrt(x) = rsqrt(x): the two-op reciprocal-root spelling folds to the dispatched kernel \u2014 the canonical form the RMSNorm fold's pattern pins."
+      lhs:
+        op: "div"
+        args:
+          - mvar: "ONE"
+          - op: "sqrt"
+            args:
+              - mvar: "u"
+            attrs: {}
+        attrs: {}
+      rhs:
+        op: "rsqrt"
+        args:
+          - mvar: "u"
+        attrs: {}
+      cond:
+        - "const-cmp"
+        - "ONE"
+        - "=="
+        - 1
+      dspec: null
+      tags:
+        - "simplification"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      ONE:
+        - 0
+      u:
+        - 1
+        - 0
+  when:
+    !And
+    - !KindAt
+      index: 1
+      kind: "sqrt"
+    - !ChildCount 2
+- id: "transform.catopt.pow_to_rsqrt"
+  pass: "catopt"
+  node_kind: "pow"
+  rule:
+    !Declarative
+    target_kind: "rsqrt"
+    children:
+      - !KeepPath
+        - 0
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "pow_to_rsqrt"
+      law: "pow(x, -0.5) = rsqrt(x): the negative-half-power spelling folds to the dispatched kernel \u2014 the same canonicalization as div_sqrt_to_rsqrt one op-family over."
+      lhs:
+        op: "pow"
+        args:
+          - mvar: "u"
+          - mvar: "P"
+        attrs: {}
+      rhs:
+        op: "rsqrt"
+        args:
+          - mvar: "u"
+        attrs: {}
+      cond:
+        - "const-cmp"
+        - "P"
+        - "=="
+        - -0.5
+      dspec: null
+      tags:
+        - "simplification"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      u:
+        - 0
+      P:
+        - 1
+  when:
+    !ChildCount 2
+- id: "transform.catopt.recip_sqrt_to_rsqrt"
+  pass: "catopt"
+  node_kind: "reciprocal"
+  rule:
+    !Declarative
+    target_kind: "rsqrt"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "recip_sqrt_to_rsqrt"
+      law: "reciprocal(sqrt(x)) = rsqrt(x): the exported ``1/sqrt`` spelling \u2014 aten lowers scalar-over-tensor div to reciprocal \u2014 folds to the same canonical kernel."
+      lhs:
+        op: "reciprocal"
+        args:
+          - op: "sqrt"
+            args:
+              - mvar: "u"
+            attrs: {}
+        attrs: {}
+      rhs:
+        op: "rsqrt"
+        args:
+          - mvar: "u"
+        attrs: {}
+      cond: null
+      dspec: null
+      tags:
+        - "simplification"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      u:
+        - 0
+        - 0
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "sqrt"
+    - !ChildCount 1
+- id: "transform.catopt.mul_div_swap"
+  pass: "catopt"
+  node_kind: "mul"
+  rule:
+    !Declarative
+    target_kind: "div"
+    children:
+      - !Create
+        kind: "mul"
+        children:
+          - !KeepPath
+            - 0
+            - 0
+          - !KeepPath
+            - 1
+      - !KeepPath
+        - 0
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "mul_div_swap"
+      law: "(a/b)\u00b7c = (a\u00b7c)/b \u2014 pointwise div/mul naturality, exact for any broadcast (the decay-weighted score's scale slides out of the product)."
+      lhs:
+        op: "mul"
+        args:
+          - op: "div"
+            args:
+              - mvar: "a"
+              - mvar: "b"
+            attrs: {}
+          - mvar: "c"
+        attrs: {}
+      rhs:
+        op: "div"
+        args:
+          - op: "mul"
+            args:
+              - mvar: "a"
+              - mvar: "c"
+            attrs: {}
+          - mvar: "b"
+        attrs: {}
+      cond: null
+      dspec: null
+      tags:
+        - "simplification"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      a:
+        - 0
+        - 0
+      b:
+        - 0
+        - 1
+      c:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "div"
+    - !ChildCount 2
+- id: "transform.catopt.matmul_div_distribute"
+  pass: "catopt"
+  node_kind: "matmul"
+  rule:
+    !Declarative
+    target_kind: "div"
+    children:
+      - !Create
+        kind: "matmul"
+        children:
+          - !KeepPath
+            - 0
+            - 0
+          - !KeepPath
+            - 1
+      - !KeepPath
+        - 0
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "matmul_div_distribute"
+      law: "(a/c)@v = (a@v)/c when c is scalar \u2014 linear readout of a scalar-denominated operand; the score scale exits the contraction."
+      lhs:
+        op: "matmul"
+        args:
+          - op: "div"
+            args:
+              - mvar: "a"
+              - mvar: "c"
+            attrs: {}
+          - mvar: "v"
+        attrs: {}
+      rhs:
+        op: "div"
+        args:
+          - op: "matmul"
+            args:
+              - mvar: "a"
+              - mvar: "v"
+            attrs: {}
+          - mvar: "c"
+        attrs: {}
+      cond:
+        - "scalar"
+        - "c"
+      dspec: null
+      tags:
+        - "simplification"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      a:
+        - 0
+        - 0
+      c:
+        - 0
+        - 1
+      v:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "div"
+    - !ChildCount 2
+- id: "transform.catopt.div_add_factor"
+  pass: "catopt"
+  node_kind: "add"
+  rule:
+    !Declarative
+    target_kind: "div"
+    children:
+      - !Create
+        kind: "add"
+        children:
+          - !KeepPath
+            - 0
+            - 0
+          - !KeepPath
+            - 1
+            - 0
+      - !KeepPath
+        - 0
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "div_add_factor"
+      law: "x/c + y/c = (x+y)/c \u2014 shared-denominator factoring over the additive monoid; the score scale exits the block sum the way it exited the contraction."
+      lhs:
+        op: "add"
+        args:
+          - op: "div"
+            args:
+              - mvar: "x"
+              - mvar: "c"
+            attrs: {}
+          - op: "div"
+            args:
+              - mvar: "y"
+              - mvar: "c"
+            attrs: {}
+        attrs: {}
+      rhs:
+        op: "div"
+        args:
+          - op: "add"
+            args:
+              - mvar: "x"
+              - mvar: "y"
+            attrs: {}
+          - mvar: "c"
+        attrs: {}
+      cond:
+        - "scalar"
+        - "c"
+      dspec: null
+      tags:
+        - "simplification"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      x:
+        - 0
+        - 0
+      c:
+        - 0
+        - 1
+      y:
+        - 1
+        - 0
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "div"
+    - !KindAt
+      index: 1
+      kind: "div"
+    - !ChildCount 2
+- id: "transform.catopt.distribute_matmul_over_add"
+  pass: "catopt"
+  node_kind: "matmul"
+  rule:
+    !Declarative
+    target_kind: "add"
+    children:
+      - !Create
+        kind: "matmul"
+        children:
+          - !KeepPath
+            - 0
+          - !KeepPath
+            - 1
+            - 0
+      - !Create
+        kind: "matmul"
+        children:
+          - !KeepPath
+            - 0
+          - !KeepPath
+            - 1
+            - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "distribute_matmul_over_add"
+      law: "Distributivity of linear maps over addition (bilinearity)."
+      lhs:
+        op: "matmul"
+        args:
+          - mvar: "W"
+          - op: "add"
+            args:
+              - mvar: "a"
+              - mvar: "b"
+            attrs: {}
+        attrs: {}
+      rhs:
+        op: "add"
+        args:
+          - op: "matmul"
+            args:
+              - mvar: "W"
+              - mvar: "a"
+            attrs: {}
+          - op: "matmul"
+            args:
+              - mvar: "W"
+              - mvar: "b"
+            attrs: {}
+        attrs: {}
+      cond:
+        - "or"
+        - - "and"
+          - - "rank-eq"
+            - "a"
+            - "b"
+          - - "rank"
+            - "a"
+            - ">="
+            - 1
+          - - "shape-eq"
+            - "a"
+            - "b"
+        - - "and"
+          - - "rank"
+            - "a"
+            - ">="
+            - 2
+          - - "rank"
+            - "b"
+            - ">="
+            - 2
+          - - "dim-eq"
+            - "a"
+            - -2
+            - "b"
+            - -2
+      dspec: null
+      tags:
+        - "categorical"
+        - "expansive"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      W:
+        - 0
+      a:
+        - 1
+        - 0
+      b:
+        - 1
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 1
+      kind: "add"
+    - !ChildCount 2
+- id: "transform.catopt.factor_matmul"
+  pass: "catopt"
+  node_kind: "add"
+  rule:
+    !Declarative
+    target_kind: "matmul"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+      - !Create
+        kind: "add"
+        children:
+          - !KeepPath
+            - 0
+            - 1
+          - !KeepPath
+            - 1
+            - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "factor_matmul"
+      law: "Factoring common linear maps (reverse distributivity)."
+      lhs:
+        op: "add"
+        args:
+          - op: "matmul"
+            args:
+              - mvar: "W"
+              - mvar: "a"
+            attrs: {}
+          - op: "matmul"
+            args:
+              - mvar: "W"
+              - mvar: "b"
+            attrs: {}
+        attrs: {}
+      rhs:
+        op: "matmul"
+        args:
+          - mvar: "W"
+          - op: "add"
+            args:
+              - mvar: "a"
+              - mvar: "b"
+            attrs: {}
+        attrs: {}
+      cond:
+        - "or"
+        - - "and"
+          - - "rank-eq"
+            - "a"
+            - "b"
+          - - "rank"
+            - "a"
+            - ">="
+            - 1
+          - - "shape-eq"
+            - "a"
+            - "b"
+        - - "and"
+          - - "rank"
+            - "a"
+            - ">="
+            - 2
+          - - "rank"
+            - "b"
+            - ">="
+            - 2
+          - - "dim-eq"
+            - "a"
+            - -2
+            - "b"
+            - -2
+      dspec: null
+      tags:
+        - "categorical"
+        - "expansive"
+      derivation:
+        - "distribute_matmul_over_add"
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      W:
+        - 0
+        - 0
+      a:
+        - 0
+        - 1
+      b:
+        - 1
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "matmul"
+    - !KindAt
+      index: 1
+      kind: "matmul"
+    - !ChildCount 2
+- id: "transform.catopt.right_distribute_matmul"
+  pass: "catopt"
+  node_kind: "matmul"
+  rule:
+    !Declarative
+    target_kind: "add"
+    children:
+      - !Create
+        kind: "matmul"
+        children:
+          - !KeepPath
+            - 0
+            - 0
+          - !KeepPath
+            - 1
+      - !Create
+        kind: "matmul"
+        children:
+          - !KeepPath
+            - 0
+            - 1
+          - !KeepPath
+            - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "right_distribute_matmul"
+      law: "Bilinearity: linear maps distribute over addition in BOTH slots."
+      lhs:
+        op: "matmul"
+        args:
+          - op: "add"
+            args:
+              - mvar: "a"
+              - mvar: "b"
+            attrs: {}
+          - mvar: "W"
+        attrs: {}
+      rhs:
+        op: "add"
+        args:
+          - op: "matmul"
+            args:
+              - mvar: "a"
+              - mvar: "W"
+            attrs: {}
+          - op: "matmul"
+            args:
+              - mvar: "b"
+              - mvar: "W"
+            attrs: {}
+        attrs: {}
+      cond: null
+      dspec: null
+      tags:
+        - "categorical"
+        - "expansive"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      a:
+        - 0
+        - 0
+      b:
+        - 0
+        - 1
+      W:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "add"
+    - !ChildCount 2
+- id: "transform.catopt.right_factor_matmul"
+  pass: "catopt"
+  node_kind: "add"
+  rule:
+    !Declarative
+    target_kind: "matmul"
+    children:
+      - !Create
+        kind: "add"
+        children:
+          - !KeepPath
+            - 0
+            - 0
+          - !KeepPath
+            - 1
+            - 0
+      - !KeepPath
+        - 0
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "right_factor_matmul"
+      law: "Factor a shared right-weight (the slot `x @ W` uses)."
+      lhs:
+        op: "add"
+        args:
+          - op: "matmul"
+            args:
+              - mvar: "a"
+              - mvar: "W"
+            attrs: {}
+          - op: "matmul"
+            args:
+              - mvar: "b"
+              - mvar: "W"
+            attrs: {}
+        attrs: {}
+      rhs:
+        op: "matmul"
+        args:
+          - op: "add"
+            args:
+              - mvar: "a"
+              - mvar: "b"
+            attrs: {}
+          - mvar: "W"
+        attrs: {}
+      cond: null
+      dspec: null
+      tags:
+        - "categorical"
+        - "expansive"
+      derivation:
+        - "right_distribute_matmul"
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      a:
+        - 0
+        - 0
+      W:
+        - 0
+        - 1
+      b:
+        - 1
+        - 0
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "matmul"
+    - !KindAt
+      index: 1
+      kind: "matmul"
+    - !ChildCount 2
+- id: "transform.catopt.weight_factor_matmul"
+  pass: "catopt"
+  node_kind: "add"
+  rule:
+    !Declarative
+    target_kind: "matmul"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+      - !Create
+        kind: "add"
+        children:
+          - !KeepPath
+            - 0
+            - 1
+          - !KeepPath
+            - 1
+            - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "weight_factor_matmul"
+      law: "Merge shared-input projections: x@W1 + x@W2 = x@(W1+W2)."
+      lhs:
+        op: "add"
+        args:
+          - op: "matmul"
+            args:
+              - mvar: "x"
+              - mvar: "W"
+            attrs: {}
+          - op: "matmul"
+            args:
+              - mvar: "x"
+              - mvar: "W2"
+            attrs: {}
+        attrs: {}
+      rhs:
+        op: "matmul"
+        args:
+          - mvar: "x"
+          - op: "add"
+            args:
+              - mvar: "W"
+              - mvar: "W2"
+            attrs: {}
+        attrs: {}
+      cond:
+        - "or"
+        - - "and"
+          - - "rank-eq"
+            - "W"
+            - "W2"
+          - - "rank"
+            - "W"
+            - ">="
+            - 1
+          - - "shape-eq"
+            - "W"
+            - "W2"
+        - - "and"
+          - - "rank"
+            - "W"
+            - ">="
+            - 2
+          - - "rank"
+            - "W2"
+            - ">="
+            - 2
+          - - "dim-eq"
+            - "W"
+            - -2
+            - "W2"
+            - -2
+      dspec: null
+      tags:
+        - "categorical"
+        - "expansive"
+        - "redundant"
+      derivation:
+        - "distribute_matmul_over_add"
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      x:
+        - 0
+        - 0
+      W:
+        - 0
+        - 1
+      W2:
+        - 1
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "matmul"
+    - !KindAt
+      index: 1
+      kind: "matmul"
+    - !ChildCount 2
+- id: "transform.catopt.weight_distribute_matmul"
+  pass: "catopt"
+  node_kind: "matmul"
+  rule:
+    !Declarative
+    target_kind: "add"
+    children:
+      - !Create
+        kind: "matmul"
+        children:
+          - !KeepPath
+            - 0
+          - !KeepPath
+            - 1
+            - 0
+      - !Create
+        kind: "matmul"
+        children:
+          - !KeepPath
+            - 0
+          - !KeepPath
+            - 1
+            - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "weight_distribute_matmul"
+      law: "Reverse weight merge (lets eqsat weigh fused vs split forms)."
+      lhs:
+        op: "matmul"
+        args:
+          - mvar: "x"
+          - op: "add"
+            args:
+              - mvar: "W"
+              - mvar: "W2"
+            attrs: {}
+        attrs: {}
+      rhs:
+        op: "add"
+        args:
+          - op: "matmul"
+            args:
+              - mvar: "x"
+              - mvar: "W"
+            attrs: {}
+          - op: "matmul"
+            args:
+              - mvar: "x"
+              - mvar: "W2"
+            attrs: {}
+        attrs: {}
+      cond:
+        - "or"
+        - - "and"
+          - - "rank-eq"
+            - "W"
+            - "W2"
+          - - "rank"
+            - "W"
+            - ">="
+            - 1
+          - - "shape-eq"
+            - "W"
+            - "W2"
+        - - "and"
+          - - "rank"
+            - "W"
+            - ">="
+            - 2
+          - - "rank"
+            - "W2"
+            - ">="
+            - 2
+          - - "dim-eq"
+            - "W"
+            - -2
+            - "W2"
+            - -2
+      dspec: null
+      tags:
+        - "categorical"
+        - "expansive"
+        - "redundant"
+      derivation:
+        - "distribute_matmul_over_add"
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      x:
+        - 0
+      W:
+        - 1
+        - 0
+      W2:
+        - 1
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 1
+      kind: "add"
+    - !ChildCount 2
+- id: "transform.catopt.weight_factor_linear"
+  pass: "catopt"
+  node_kind: "add"
+  rule:
+    !Declarative
+    target_kind: "linear"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+      - !Create
+        kind: "add"
+        children:
+          - !KeepPath
+            - 0
+            - 1
+          - !KeepPath
+            - 1
+            - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "weight_factor_linear"
+      law: "Merge shared-input nn.Linears: linear(x,W1)+linear(x,W2) = linear(x, W1+W2)  (transpose distributes over +)."
+      lhs:
+        op: "add"
+        args:
+          - op: "linear"
+            args:
+              - mvar: "x"
+              - mvar: "W"
+            attrs: {}
+          - op: "linear"
+            args:
+              - mvar: "x"
+              - mvar: "W2"
+            attrs: {}
+        attrs: {}
+      rhs:
+        op: "linear"
+        args:
+          - mvar: "x"
+          - op: "add"
+            args:
+              - mvar: "W"
+              - mvar: "W2"
+            attrs: {}
+        attrs: {}
+      cond:
+        - "or"
+        - - "and"
+          - - "rank-eq"
+            - "W"
+            - "W2"
+          - - "rank"
+            - "W"
+            - ">="
+            - 1
+          - - "shape-eq"
+            - "W"
+            - "W2"
+        - - "and"
+          - - "rank"
+            - "W"
+            - ">="
+            - 2
+          - - "rank"
+            - "W2"
+            - ">="
+            - 2
+          - - "dim-eq"
+            - "W"
+            - -1
+            - "W2"
+            - -1
+      dspec: null
+      tags:
+        - "categorical"
+        - "expansive"
+      derivation:
+        - "weight_distribute_linear"
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      x:
+        - 0
+        - 0
+      W:
+        - 0
+        - 1
+      W2:
+        - 1
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "linear"
+    - !KindAt
+      index: 1
+      kind: "linear"
+    - !ChildCount 2
+- id: "transform.catopt.weight_distribute_linear"
+  pass: "catopt"
+  node_kind: "linear"
+  rule:
+    !Declarative
+    target_kind: "add"
+    children:
+      - !Create
+        kind: "linear"
+        children:
+          - !KeepPath
+            - 0
+          - !KeepPath
+            - 1
+            - 0
+      - !Create
+        kind: "linear"
+        children:
+          - !KeepPath
+            - 0
+          - !KeepPath
+            - 1
+            - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "weight_distribute_linear"
+      law: "Expand a merged nn.Linear so eqsat can compare both forms."
+      lhs:
+        op: "linear"
+        args:
+          - mvar: "x"
+          - op: "add"
+            args:
+              - mvar: "W"
+              - mvar: "W2"
+            attrs: {}
+        attrs: {}
+      rhs:
+        op: "add"
+        args:
+          - op: "linear"
+            args:
+              - mvar: "x"
+              - mvar: "W"
+            attrs: {}
+          - op: "linear"
+            args:
+              - mvar: "x"
+              - mvar: "W2"
+            attrs: {}
+        attrs: {}
+      cond:
+        - "or"
+        - - "and"
+          - - "rank-eq"
+            - "W"
+            - "W2"
+          - - "rank"
+            - "W"
+            - ">="
+            - 1
+          - - "shape-eq"
+            - "W"
+            - "W2"
+        - - "and"
+          - - "rank"
+            - "W"
+            - ">="
+            - 2
+          - - "rank"
+            - "W2"
+            - ">="
+            - 2
+          - - "dim-eq"
+            - "W"
+            - -1
+            - "W2"
+            - -1
+      dspec: null
+      tags:
+        - "categorical"
+        - "expansive"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      x:
+        - 0
+      W:
+        - 1
+        - 0
+      W2:
+        - 1
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 1
+      kind: "add"
+    - !ChildCount 2
+- id: "transform.catopt.right_factor_linear"
+  pass: "catopt"
+  node_kind: "add"
+  rule:
+    !Declarative
+    target_kind: "linear"
+    children:
+      - !Create
+        kind: "add"
+        children:
+          - !KeepPath
+            - 0
+            - 0
+          - !KeepPath
+            - 1
+            - 0
+      - !KeepPath
+        - 0
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "right_factor_linear"
+      law: "Factor a shared right-hand nn.Linear weight."
+      lhs:
+        op: "add"
+        args:
+          - op: "linear"
+            args:
+              - mvar: "a"
+              - mvar: "W"
+            attrs: {}
+          - op: "linear"
+            args:
+              - mvar: "b"
+              - mvar: "W"
+            attrs: {}
+        attrs: {}
+      rhs:
+        op: "linear"
+        args:
+          - op: "add"
+            args:
+              - mvar: "a"
+              - mvar: "b"
+            attrs: {}
+          - mvar: "W"
+        attrs: {}
+      cond: null
+      dspec: null
+      tags:
+        - "categorical"
+        - "expansive"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      a:
+        - 0
+        - 0
+      W:
+        - 0
+        - 1
+      b:
+        - 1
+        - 0
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "linear"
+    - !KindAt
+      index: 1
+      kind: "linear"
+    - !ChildCount 2
+- id: "transform.catopt.assoc_linear"
+  pass: "catopt"
+  node_kind: "linear"
+  rule:
+    !Declarative
+    target_kind: "linear"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+      - !Create
+        kind: "matmul"
+        children:
+          - !KeepPath
+            - 1
+          - !KeepPath
+            - 0
+            - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "assoc_linear"
+      law: "Compose stacked nn.Linears: fused weight is B @ A (transposes flip the product order)."
+      lhs:
+        op: "linear"
+        args:
+          - op: "linear"
+            args:
+              - mvar: "x"
+              - mvar: "A"
+            attrs: {}
+          - mvar: "B"
+        attrs: {}
+      rhs:
+        op: "linear"
+        args:
+          - mvar: "x"
+          - op: "matmul"
+            args:
+              - mvar: "B"
+              - mvar: "A"
+            attrs: {}
+        attrs: {}
+      cond: null
+      dspec: null
+      tags:
+        - "categorical"
+        - "expansive"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      x:
+        - 0
+        - 0
+      A:
+        - 0
+        - 1
+      B:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "linear"
+    - !ChildCount 2
+- id: "transform.catopt.assoc_linear_rev"
+  pass: "catopt"
+  node_kind: "linear"
+  rule:
+    !Declarative
+    target_kind: "linear"
+    children:
+      - !Create
+        kind: "linear"
+        children:
+          - !KeepPath
+            - 0
+          - !KeepPath
+            - 1
+            - 1
+      - !KeepPath
+        - 1
+        - 0
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "assoc_linear_rev"
+      law: "Reverse linear composition: linear(x, B@A) = linear(linear(x, A), B) (eqsat weighs fused vs split)."
+      lhs:
+        op: "linear"
+        args:
+          - mvar: "x"
+          - op: "matmul"
+            args:
+              - mvar: "B"
+              - mvar: "A"
+            attrs: {}
+        attrs: {}
+      rhs:
+        op: "linear"
+        args:
+          - op: "linear"
+            args:
+              - mvar: "x"
+              - mvar: "A"
+            attrs: {}
+          - mvar: "B"
+        attrs: {}
+      cond: null
+      dspec: null
+      tags:
+        - "categorical"
+        - "expansive"
+      derivation:
+        - "assoc_linear"
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      x:
+        - 0
+      B:
+        - 1
+        - 0
+      A:
+        - 1
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 1
+      kind: "matmul"
+    - !ChildCount 2
+- id: "transform.catopt.assoc_linear_bias"
+  pass: "catopt"
+  node_kind: "linear"
+  rule:
+    !Declarative
+    target_kind: "add"
+    children:
+      - !Create
+        kind: "linear"
+        children:
+          - !KeepPath
+            - 0
+            - 0
+          - !Create
+            kind: "matmul"
+            children:
+              - !KeepPath
+                - 1
+              - !KeepPath
+                - 0
+                - 1
+          - !Create
+            kind: "matmul"
+            children:
+              - !KeepPath
+                - 1
+              - !KeepPath
+                - 0
+                - 2
+      - !KeepPath
+        - 2
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "assoc_linear_bias"
+      law: "Affine-map composition: (B,b2)\u2218(A,b1) = (BA, B\u00b7b1 + b2).  Fused weight is B @ A (same transpose flip as assoc_linear); the fused bias is spelled linear(x, BA, B\u00b7b1) + b2 so both B-products fold at compile time \u2014 one GEMM plus one broadcast add at runtime."
+      lhs:
+        op: "linear"
+        args:
+          - op: "linear"
+            args:
+              - mvar: "x"
+              - mvar: "A"
+              - mvar: "b1"
+            attrs: {}
+          - mvar: "B"
+          - mvar: "b2"
+        attrs: {}
+      rhs:
+        op: "add"
+        args:
+          - op: "linear"
+            args:
+              - mvar: "x"
+              - op: "matmul"
+                args:
+                  - mvar: "B"
+                  - mvar: "A"
+                attrs: {}
+              - op: "matmul"
+                args:
+                  - mvar: "B"
+                  - mvar: "b1"
+                attrs: {}
+            attrs: {}
+          - mvar: "b2"
+        attrs: {}
+      cond:
+        - "and"
+        - - "rank"
+          - "A"
+          - "=="
+          - 2
+        - - "rank"
+          - "B"
+          - "=="
+          - 2
+        - - "dim-eq"
+          - "B"
+          - 1
+          - "A"
+          - 0
+        - - "rank"
+          - "b1"
+          - "=="
+          - 1
+        - - "dim-eq"
+          - "b1"
+          - 0
+          - "A"
+          - 0
+        - - "or"
+          - - "scalar"
+            - "b2"
+          - - "and"
+            - - "rank"
+              - "b2"
+              - "=="
+              - 1
+            - - "dim-eq"
+              - "b2"
+              - 0
+              - "B"
+              - 0
+        - - "rank"
+          - "x"
+          - ">="
+          - 1
+        - - "dim-eq"
+          - "x"
+          - -1
+          - "A"
+          - 1
+      dspec: null
+      tags:
+        - "categorical"
+        - "expansive"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      x:
+        - 0
+        - 0
+      A:
+        - 0
+        - 1
+      b1:
+        - 0
+        - 2
+      B:
+        - 1
+      b2:
+        - 2
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "linear"
+    - !ChildCount 3
+- id: "transform.catopt.assoc_linear_bias_rev"
+  pass: "catopt"
+  node_kind: "add"
+  rule:
+    !Declarative
+    target_kind: "linear"
+    children:
+      - !Create
+        kind: "linear"
+        children:
+          - !KeepPath
+            - 0
+            - 0
+          - !KeepPath
+            - 0
+            - 1
+            - 1
+          - !KeepPath
+            - 0
+            - 2
+            - 1
+      - !KeepPath
+        - 0
+        - 1
+        - 0
+      - !KeepPath
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "assoc_linear_bias_rev"
+      law: "Reverse affine composition (eqsat weighs fused vs split)."
+      lhs:
+        op: "add"
+        args:
+          - op: "linear"
+            args:
+              - mvar: "x"
+              - op: "matmul"
+                args:
+                  - mvar: "B"
+                  - mvar: "A"
+                attrs: {}
+              - op: "matmul"
+                args:
+                  - mvar: "B"
+                  - mvar: "b1"
+                attrs: {}
+            attrs: {}
+          - mvar: "b2"
+        attrs: {}
+      rhs:
+        op: "linear"
+        args:
+          - op: "linear"
+            args:
+              - mvar: "x"
+              - mvar: "A"
+              - mvar: "b1"
+            attrs: {}
+          - mvar: "B"
+          - mvar: "b2"
+        attrs: {}
+      cond:
+        - "and"
+        - - "rank"
+          - "A"
+          - "=="
+          - 2
+        - - "rank"
+          - "B"
+          - "=="
+          - 2
+        - - "dim-eq"
+          - "B"
+          - 1
+          - "A"
+          - 0
+        - - "rank"
+          - "b1"
+          - "=="
+          - 1
+        - - "dim-eq"
+          - "b1"
+          - 0
+          - "A"
+          - 0
+        - - "or"
+          - - "scalar"
+            - "b2"
+          - - "and"
+            - - "rank"
+              - "b2"
+              - "=="
+              - 1
+            - - "dim-eq"
+              - "b2"
+              - 0
+              - "B"
+              - 0
+        - - "rank"
+          - "x"
+          - ">="
+          - 1
+        - - "dim-eq"
+          - "x"
+          - -1
+          - "A"
+          - 1
+      dspec: null
+      tags:
+        - "categorical"
+        - "expansive"
+      derivation:
+        - "assoc_linear_bias"
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      x:
+        - 0
+        - 0
+      B:
+        - 0
+        - 1
+        - 0
+      A:
+        - 0
+        - 1
+        - 1
+      b1:
+        - 0
+        - 2
+        - 1
+      b2:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "linear"
+    - !ChildCount 2
+- id: "transform.catopt.naturality_scalar"
+  pass: "catopt"
+  node_kind: "matmul"
+  rule:
+    !Declarative
+    target_kind: "mul"
+    children:
+      - !Create
+        kind: "matmul"
+        children:
+          - !KeepPath
+            - 0
+          - !KeepPath
+            - 1
+            - 0
+      - !KeepPath
+        - 1
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "naturality_scalar"
+      law: "Naturality: scalar multiplication commutes with linear maps."
+      lhs:
+        op: "matmul"
+        args:
+          - mvar: "W"
+          - op: "mul"
+            args:
+              - mvar: "x"
+              - mvar: "c"
+            attrs: {}
+        attrs: {}
+      rhs:
+        op: "mul"
+        args:
+          - op: "matmul"
+            args:
+              - mvar: "W"
+              - mvar: "x"
+            attrs: {}
+          - mvar: "c"
+        attrs: {}
+      cond:
+        - "scalar"
+        - "c"
+      dspec: null
+      tags:
+        - "categorical"
+        - "expansive"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      W:
+        - 0
+      x:
+        - 1
+        - 0
+      c:
+        - 1
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 1
+      kind: "mul"
+    - !ChildCount 2
+- id: "transform.catopt.naturality_scalar_rev"
+  pass: "catopt"
+  node_kind: "mul"
+  rule:
+    !Declarative
+    target_kind: "matmul"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+      - !Create
+        kind: "mul"
+        children:
+          - !KeepPath
+            - 0
+            - 1
+          - !KeepPath
+            - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "naturality_scalar_rev"
+      law: "Reverse naturality: pull scalar into the matmul's input."
+      lhs:
+        op: "mul"
+        args:
+          - op: "matmul"
+            args:
+              - mvar: "W"
+              - mvar: "x"
+            attrs: {}
+          - mvar: "c"
+        attrs: {}
+      rhs:
+        op: "matmul"
+        args:
+          - mvar: "W"
+          - op: "mul"
+            args:
+              - mvar: "x"
+              - mvar: "c"
+            attrs: {}
+        attrs: {}
+      cond:
+        - "scalar"
+        - "c"
+      dspec: null
+      tags:
+        - "categorical"
+        - "expansive"
+      derivation:
+        - "naturality_scalar"
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      W:
+        - 0
+        - 0
+      x:
+        - 0
+        - 1
+      c:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "matmul"
+    - !ChildCount 2
+- id: "transform.catopt.assoc_matmul"
+  pass: "catopt"
+  node_kind: "matmul"
+  rule:
+    !Declarative
+    target_kind: "matmul"
+    children:
+      - !Create
+        kind: "matmul"
+        children:
+          - !KeepPath
+            - 0
+          - !KeepPath
+            - 1
+            - 0
+      - !KeepPath
+        - 1
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "assoc_matmul"
+      law: "Associativity of composition in a category: (f\u2218g)\u2218h = f\u2218(g\u2218h)."
+      lhs:
+        op: "matmul"
+        args:
+          - mvar: "A"
+          - op: "matmul"
+            args:
+              - mvar: "B"
+              - mvar: "C"
+            attrs: {}
+        attrs: {}
+      rhs:
+        op: "matmul"
+        args:
+          - op: "matmul"
+            args:
+              - mvar: "A"
+              - mvar: "B"
+            attrs: {}
+          - mvar: "C"
+        attrs: {}
+      cond: null
+      dspec: null
+      tags:
+        - "categorical"
+        - "expansive"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      A:
+        - 0
+      B:
+        - 1
+        - 0
+      C:
+        - 1
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 1
+      kind: "matmul"
+    - !ChildCount 2
+- id: "transform.catopt.assoc_matmul_rev"
+  pass: "catopt"
+  node_kind: "matmul"
+  rule:
+    !Declarative
+    target_kind: "matmul"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+      - !Create
+        kind: "matmul"
+        children:
+          - !KeepPath
+            - 0
+            - 1
+          - !KeepPath
+            - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "assoc_matmul_rev"
+      law: "Reverse associativity: f\u2218(g\u2218h) = (f\u2218g)\u2218h."
+      lhs:
+        op: "matmul"
+        args:
+          - op: "matmul"
+            args:
+              - mvar: "A"
+              - mvar: "B"
+            attrs: {}
+          - mvar: "C"
+        attrs: {}
+      rhs:
+        op: "matmul"
+        args:
+          - mvar: "A"
+          - op: "matmul"
+            args:
+              - mvar: "B"
+              - mvar: "C"
+            attrs: {}
+        attrs: {}
+      cond: null
+      dspec: null
+      tags:
+        - "categorical"
+        - "expansive"
+      derivation:
+        - "assoc_matmul"
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      A:
+        - 0
+        - 0
+      B:
+        - 0
+        - 1
+      C:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "matmul"
+    - !ChildCount 2
+- id: "transform.catopt.split_scalar_add_r"
+  pass: "catopt"
+  node_kind: "split"
+  rule:
+    !Declarative
+    target_kind: "add"
+    children:
+      - !Create
+        kind: "split"
+        children:
+          - !KeepPath
+            - 0
+            - 0
+      - !KeepPath
+        - 0
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "split_scalar_add_r"
+      law: "split commutes with pointwise add when the other operand is scalar: the partition reads the same elementwise grid; the scalar accompanies every block unchanged."
+      lhs:
+        op: "split"
+        args:
+          - op: "add"
+            args:
+              - mvar: "x"
+              - mvar: "c"
+            attrs: {}
+        attrs:
+          sizes: "SZ"
+          dim: "D"
+          index: "I"
+      rhs:
+        op: "add"
+        args:
+          - op: "split"
+            args:
+              - mvar: "x"
+            attrs:
+              sizes: "SZ"
+              dim: "D"
+              index: "I"
+          - mvar: "c"
+        attrs: {}
+      cond:
+        - "scalar"
+        - "c"
+      dspec: null
+      tags:
+        - "categorical"
+        - "expansive"
+      derivation:
+        - "naturality_scalar"
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      x:
+        - 0
+        - 0
+      c:
+        - 0
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "add"
+    - !ChildCount 1
+- id: "transform.catopt.split_scalar_add_l"
+  pass: "catopt"
+  node_kind: "split"
+  rule:
+    !Declarative
+    target_kind: "add"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+      - !Create
+        kind: "split"
+        children:
+          - !KeepPath
+            - 0
+            - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "split_scalar_add_l"
+      law: "split commutes with pointwise add when the other operand is scalar: the partition reads the same elementwise grid; the scalar accompanies every block unchanged."
+      lhs:
+        op: "split"
+        args:
+          - op: "add"
+            args:
+              - mvar: "c"
+              - mvar: "x"
+            attrs: {}
+        attrs:
+          sizes: "SZ"
+          dim: "D"
+          index: "I"
+      rhs:
+        op: "add"
+        args:
+          - mvar: "c"
+          - op: "split"
+            args:
+              - mvar: "x"
+            attrs:
+              sizes: "SZ"
+              dim: "D"
+              index: "I"
+        attrs: {}
+      cond:
+        - "scalar"
+        - "c"
+      dspec: null
+      tags:
+        - "categorical"
+        - "expansive"
+      derivation:
+        - "naturality_scalar"
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      c:
+        - 0
+        - 0
+      x:
+        - 0
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "add"
+    - !ChildCount 1
+- id: "transform.catopt.split_scalar_div_r"
+  pass: "catopt"
+  node_kind: "split"
+  rule:
+    !Declarative
+    target_kind: "div"
+    children:
+      - !Create
+        kind: "split"
+        children:
+          - !KeepPath
+            - 0
+            - 0
+      - !KeepPath
+        - 0
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "split_scalar_div_r"
+      law: "split commutes with pointwise div when the other operand is scalar: the partition reads the same elementwise grid; the scalar accompanies every block unchanged."
+      lhs:
+        op: "split"
+        args:
+          - op: "div"
+            args:
+              - mvar: "x"
+              - mvar: "c"
+            attrs: {}
+        attrs:
+          sizes: "SZ"
+          dim: "D"
+          index: "I"
+      rhs:
+        op: "div"
+        args:
+          - op: "split"
+            args:
+              - mvar: "x"
+            attrs:
+              sizes: "SZ"
+              dim: "D"
+              index: "I"
+          - mvar: "c"
+        attrs: {}
+      cond:
+        - "scalar"
+        - "c"
+      dspec: null
+      tags:
+        - "categorical"
+        - "expansive"
+      derivation:
+        - "naturality_scalar"
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      x:
+        - 0
+        - 0
+      c:
+        - 0
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "div"
+    - !ChildCount 1
+- id: "transform.catopt.split_scalar_div_l"
+  pass: "catopt"
+  node_kind: "split"
+  rule:
+    !Declarative
+    target_kind: "div"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+      - !Create
+        kind: "split"
+        children:
+          - !KeepPath
+            - 0
+            - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "split_scalar_div_l"
+      law: "split commutes with pointwise div when the other operand is scalar: the partition reads the same elementwise grid; the scalar accompanies every block unchanged."
+      lhs:
+        op: "split"
+        args:
+          - op: "div"
+            args:
+              - mvar: "c"
+              - mvar: "x"
+            attrs: {}
+        attrs:
+          sizes: "SZ"
+          dim: "D"
+          index: "I"
+      rhs:
+        op: "div"
+        args:
+          - mvar: "c"
+          - op: "split"
+            args:
+              - mvar: "x"
+            attrs:
+              sizes: "SZ"
+              dim: "D"
+              index: "I"
+        attrs: {}
+      cond:
+        - "scalar"
+        - "c"
+      dspec: null
+      tags:
+        - "categorical"
+        - "expansive"
+      derivation:
+        - "naturality_scalar"
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      c:
+        - 0
+        - 0
+      x:
+        - 0
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "div"
+    - !ChildCount 1
+- id: "transform.catopt.split_scalar_mul_r"
+  pass: "catopt"
+  node_kind: "split"
+  rule:
+    !Declarative
+    target_kind: "mul"
+    children:
+      - !Create
+        kind: "split"
+        children:
+          - !KeepPath
+            - 0
+            - 0
+      - !KeepPath
+        - 0
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "split_scalar_mul_r"
+      law: "split commutes with pointwise mul when the other operand is scalar: the partition reads the same elementwise grid; the scalar accompanies every block unchanged."
+      lhs:
+        op: "split"
+        args:
+          - op: "mul"
+            args:
+              - mvar: "x"
+              - mvar: "c"
+            attrs: {}
+        attrs:
+          sizes: "SZ"
+          dim: "D"
+          index: "I"
+      rhs:
+        op: "mul"
+        args:
+          - op: "split"
+            args:
+              - mvar: "x"
+            attrs:
+              sizes: "SZ"
+              dim: "D"
+              index: "I"
+          - mvar: "c"
+        attrs: {}
+      cond:
+        - "scalar"
+        - "c"
+      dspec: null
+      tags:
+        - "categorical"
+        - "expansive"
+      derivation:
+        - "naturality_scalar"
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      x:
+        - 0
+        - 0
+      c:
+        - 0
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "mul"
+    - !ChildCount 1
+- id: "transform.catopt.split_scalar_mul_l"
+  pass: "catopt"
+  node_kind: "split"
+  rule:
+    !Declarative
+    target_kind: "mul"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+      - !Create
+        kind: "split"
+        children:
+          - !KeepPath
+            - 0
+            - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "split_scalar_mul_l"
+      law: "split commutes with pointwise mul when the other operand is scalar: the partition reads the same elementwise grid; the scalar accompanies every block unchanged."
+      lhs:
+        op: "split"
+        args:
+          - op: "mul"
+            args:
+              - mvar: "c"
+              - mvar: "x"
+            attrs: {}
+        attrs:
+          sizes: "SZ"
+          dim: "D"
+          index: "I"
+      rhs:
+        op: "mul"
+        args:
+          - mvar: "c"
+          - op: "split"
+            args:
+              - mvar: "x"
+            attrs:
+              sizes: "SZ"
+              dim: "D"
+              index: "I"
+        attrs: {}
+      cond:
+        - "scalar"
+        - "c"
+      dspec: null
+      tags:
+        - "categorical"
+        - "expansive"
+      derivation:
+        - "naturality_scalar"
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      c:
+        - 0
+        - 0
+      x:
+        - 0
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "mul"
+    - !ChildCount 1
+- id: "transform.catopt.split_scalar_sub_r"
+  pass: "catopt"
+  node_kind: "split"
+  rule:
+    !Declarative
+    target_kind: "sub"
+    children:
+      - !Create
+        kind: "split"
+        children:
+          - !KeepPath
+            - 0
+            - 0
+      - !KeepPath
+        - 0
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "split_scalar_sub_r"
+      law: "split commutes with pointwise sub when the other operand is scalar: the partition reads the same elementwise grid; the scalar accompanies every block unchanged."
+      lhs:
+        op: "split"
+        args:
+          - op: "sub"
+            args:
+              - mvar: "x"
+              - mvar: "c"
+            attrs: {}
+        attrs:
+          sizes: "SZ"
+          dim: "D"
+          index: "I"
+      rhs:
+        op: "sub"
+        args:
+          - op: "split"
+            args:
+              - mvar: "x"
+            attrs:
+              sizes: "SZ"
+              dim: "D"
+              index: "I"
+          - mvar: "c"
+        attrs: {}
+      cond:
+        - "scalar"
+        - "c"
+      dspec: null
+      tags:
+        - "categorical"
+        - "expansive"
+      derivation:
+        - "naturality_scalar"
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      x:
+        - 0
+        - 0
+      c:
+        - 0
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "sub"
+    - !ChildCount 1
+- id: "transform.catopt.split_scalar_sub_l"
+  pass: "catopt"
+  node_kind: "split"
+  rule:
+    !Declarative
+    target_kind: "sub"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+      - !Create
+        kind: "split"
+        children:
+          - !KeepPath
+            - 0
+            - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "split_scalar_sub_l"
+      law: "split commutes with pointwise sub when the other operand is scalar: the partition reads the same elementwise grid; the scalar accompanies every block unchanged."
+      lhs:
+        op: "split"
+        args:
+          - op: "sub"
+            args:
+              - mvar: "c"
+              - mvar: "x"
+            attrs: {}
+        attrs:
+          sizes: "SZ"
+          dim: "D"
+          index: "I"
+      rhs:
+        op: "sub"
+        args:
+          - mvar: "c"
+          - op: "split"
+            args:
+              - mvar: "x"
+            attrs:
+              sizes: "SZ"
+              dim: "D"
+              index: "I"
+        attrs: {}
+      cond:
+        - "scalar"
+        - "c"
+      dspec: null
+      tags:
+        - "categorical"
+        - "expansive"
+      derivation:
+        - "naturality_scalar"
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      c:
+        - 0
+        - 0
+      x:
+        - 0
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "sub"
+    - !ChildCount 1
+- id: "transform.catopt.swiglu_fuse"
+  pass: "catopt"
+  node_kind: "mul"
+  rule:
+    !Declarative
+    target_kind: "mul"
+    children:
+      - !Create
+        kind: "silu"
+        children:
+          - !Create
+            kind: "chunk"
+            children:
+              - !Create
+                kind: "linear"
+                children:
+                  - !KeepPath
+                    - 0
+                    - 0
+                    - 0
+                  - !Create
+                    kind: "concat"
+                    children:
+                      - !KeepPath
+                        - 0
+                        - 0
+                        - 1
+                      - !KeepPath
+                        - 1
+                        - 1
+      - !Create
+        kind: "chunk"
+        children:
+          - !Create
+            kind: "linear"
+            children:
+              - !KeepPath
+                - 0
+                - 0
+                - 0
+              - !Create
+                kind: "concat"
+                children:
+                  - !KeepPath
+                    - 0
+                    - 0
+                    - 1
+                  - !KeepPath
+                    - 1
+                    - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "swiglu_fuse"
+      law: "Product universal property: <f,g> = (f x g) . Delta.  Two projections of the same input are ONE GEMM into V x V, then project.  (Fused SwiGLU gate/up \u2014 MergedColumnParallelLinear.)"
+      lhs:
+        op: "mul"
+        args:
+          - op: "silu"
+            args:
+              - op: "linear"
+                args:
+                  - mvar: "x"
+                  - mvar: "A"
+                attrs: {}
+            attrs: {}
+          - op: "linear"
+            args:
+              - mvar: "x"
+              - mvar: "B"
+            attrs: {}
+        attrs: {}
+      rhs:
+        op: "mul"
+        args:
+          - op: "silu"
+            args:
+              - op: "chunk"
+                args:
+                  - op: "linear"
+                    args:
+                      - mvar: "x"
+                      - op: "concat"
+                        args:
+                          - mvar: "A"
+                          - mvar: "B"
+                        attrs:
+                          dim: 0
+                    attrs: {}
+                attrs:
+                  chunks: 2
+                  dim: -1
+                  index: 0
+            attrs: {}
+          - op: "chunk"
+            args:
+              - op: "linear"
+                args:
+                  - mvar: "x"
+                  - op: "concat"
+                    args:
+                      - mvar: "A"
+                      - mvar: "B"
+                    attrs:
+                      dim: 0
+                attrs: {}
+            attrs:
+              chunks: 2
+              dim: -1
+              index: 1
+        attrs: {}
+      cond:
+        - "and"
+        - - "shape-compat"
+          - "A"
+          - "B"
+        - - "rank"
+          - "A"
+          - ">="
+          - 2
+        - - "rank"
+          - "B"
+          - ">="
+          - 2
+      dspec: null
+      tags:
+        - "fusion"
+        - "subsumed"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      x:
+        - 0
+        - 0
+        - 0
+      A:
+        - 0
+        - 0
+        - 1
+      B:
+        - 1
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "silu"
+    - !KindAt
+      index: 1
+      kind: "linear"
+    - !ChildCount 2
+- id: "transform.catopt.parallel_mul_fuse"
+  pass: "catopt"
+  node_kind: "mul"
+  rule:
+    !Declarative
+    target_kind: "mul"
+    children:
+      - !Create
+        kind: "chunk"
+        children:
+          - !Create
+            kind: "linear"
+            children:
+              - !KeepPath
+                - 0
+                - 0
+              - !Create
+                kind: "concat"
+                children:
+                  - !KeepPath
+                    - 0
+                    - 1
+                  - !KeepPath
+                    - 1
+                    - 1
+      - !Create
+        kind: "chunk"
+        children:
+          - !Create
+            kind: "linear"
+            children:
+              - !KeepPath
+                - 0
+                - 0
+              - !Create
+                kind: "concat"
+                children:
+                  - !KeepPath
+                    - 0
+                    - 1
+                  - !KeepPath
+                    - 1
+                    - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "parallel_mul_fuse"
+      law: "Pairing without a gate nonlinearity: mul(<pi1 f>, <pi2 g>) recovers the parallel-product form."
+      lhs:
+        op: "mul"
+        args:
+          - op: "linear"
+            args:
+              - mvar: "x"
+              - mvar: "A"
+            attrs: {}
+          - op: "linear"
+            args:
+              - mvar: "x"
+              - mvar: "B"
+            attrs: {}
+        attrs: {}
+      rhs:
+        op: "mul"
+        args:
+          - op: "chunk"
+            args:
+              - op: "linear"
+                args:
+                  - mvar: "x"
+                  - op: "concat"
+                    args:
+                      - mvar: "A"
+                      - mvar: "B"
+                    attrs:
+                      dim: 0
+                attrs: {}
+            attrs:
+              chunks: 2
+              dim: -1
+              index: 0
+          - op: "chunk"
+            args:
+              - op: "linear"
+                args:
+                  - mvar: "x"
+                  - op: "concat"
+                    args:
+                      - mvar: "A"
+                      - mvar: "B"
+                    attrs:
+                      dim: 0
+                attrs: {}
+            attrs:
+              chunks: 2
+              dim: -1
+              index: 1
+        attrs: {}
+      cond:
+        - "and"
+        - - "shape-compat"
+          - "A"
+          - "B"
+        - - "rank"
+          - "A"
+          - ">="
+          - 2
+        - - "rank"
+          - "B"
+          - ">="
+          - 2
+      dspec: null
+      tags:
+        - "fusion"
+        - "subsumed"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      x:
+        - 0
+        - 0
+      A:
+        - 0
+        - 1
+      B:
+        - 1
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "linear"
+    - !KindAt
+      index: 1
+      kind: "linear"
+    - !ChildCount 2
+- id: "transform.catopt.qkv_fuse"
+  pass: "catopt"
+  node_kind: "sdpa"
+  rule:
+    !Declarative
+    target_kind: "sdpa"
+    children:
+      - !Create
+        kind: "transpose"
+        children:
+          - !Create
+            kind: "reshape"
+            children:
+              - !Create
+                kind: "chunk"
+                children:
+                  - !Create
+                    kind: "linear"
+                    children:
+                      - !KeepPath
+                        - 0
+                        - 0
+                        - 0
+                        - 0
+                      - !Create
+                        kind: "concat"
+                        children:
+                          - !Create
+                            kind: "concat"
+                            children:
+                              - !KeepPath
+                                - 0
+                                - 0
+                                - 0
+                                - 1
+                              - !KeepPath
+                                - 1
+                                - 0
+                                - 0
+                                - 1
+                          - !KeepPath
+                            - 2
+                            - 0
+                            - 0
+                            - 1
+      - !Create
+        kind: "transpose"
+        children:
+          - !Create
+            kind: "reshape"
+            children:
+              - !Create
+                kind: "chunk"
+                children:
+                  - !Create
+                    kind: "linear"
+                    children:
+                      - !KeepPath
+                        - 0
+                        - 0
+                        - 0
+                        - 0
+                      - !Create
+                        kind: "concat"
+                        children:
+                          - !Create
+                            kind: "concat"
+                            children:
+                              - !KeepPath
+                                - 0
+                                - 0
+                                - 0
+                                - 1
+                              - !KeepPath
+                                - 1
+                                - 0
+                                - 0
+                                - 1
+                          - !KeepPath
+                            - 2
+                            - 0
+                            - 0
+                            - 1
+      - !Create
+        kind: "transpose"
+        children:
+          - !Create
+            kind: "reshape"
+            children:
+              - !Create
+                kind: "chunk"
+                children:
+                  - !Create
+                    kind: "linear"
+                    children:
+                      - !KeepPath
+                        - 0
+                        - 0
+                        - 0
+                        - 0
+                      - !Create
+                        kind: "concat"
+                        children:
+                          - !Create
+                            kind: "concat"
+                            children:
+                              - !KeepPath
+                                - 0
+                                - 0
+                                - 0
+                                - 1
+                              - !KeepPath
+                                - 1
+                                - 0
+                                - 0
+                                - 1
+                          - !KeepPath
+                            - 2
+                            - 0
+                            - 0
+                            - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "qkv_fuse"
+      law: "Triple pairing <q,k,v> : X -> V^3 \u2014 three projections of the same input are ONE GEMM into the product space, then three zero-cost chunk projections.  (Fused QKV.)"
+      lhs:
+        op: "sdpa"
+        args:
+          - op: "transpose"
+            args:
+              - op: "reshape"
+                args:
+                  - op: "linear"
+                    args:
+                      - mvar: "x"
+                      - mvar: "Q"
+                    attrs: {}
+                attrs:
+                  shape: "S"
+            attrs:
+              dim0: 1
+              dim1: 2
+          - op: "transpose"
+            args:
+              - op: "reshape"
+                args:
+                  - op: "linear"
+                    args:
+                      - mvar: "x"
+                      - mvar: "K"
+                    attrs: {}
+                attrs:
+                  shape: "S"
+            attrs:
+              dim0: 1
+              dim1: 2
+          - op: "transpose"
+            args:
+              - op: "reshape"
+                args:
+                  - op: "linear"
+                    args:
+                      - mvar: "x"
+                      - mvar: "V"
+                    attrs: {}
+                attrs:
+                  shape: "S"
+            attrs:
+              dim0: 1
+              dim1: 2
+        attrs:
+          scale: "SC"
+      rhs:
+        op: "sdpa"
+        args:
+          - op: "transpose"
+            args:
+              - op: "reshape"
+                args:
+                  - op: "chunk"
+                    args:
+                      - op: "linear"
+                        args:
+                          - mvar: "x"
+                          - op: "concat"
+                            args:
+                              - op: "concat"
+                                args:
+                                  - mvar: "Q"
+                                  - mvar: "K"
+                                attrs:
+                                  dim: 0
+                              - mvar: "V"
+                            attrs:
+                              dim: 0
+                        attrs: {}
+                    attrs:
+                      chunks: 3
+                      dim: -1
+                      index: 0
+                attrs:
+                  shape: "S"
+            attrs:
+              dim0: 1
+              dim1: 2
+          - op: "transpose"
+            args:
+              - op: "reshape"
+                args:
+                  - op: "chunk"
+                    args:
+                      - op: "linear"
+                        args:
+                          - mvar: "x"
+                          - op: "concat"
+                            args:
+                              - op: "concat"
+                                args:
+                                  - mvar: "Q"
+                                  - mvar: "K"
+                                attrs:
+                                  dim: 0
+                              - mvar: "V"
+                            attrs:
+                              dim: 0
+                        attrs: {}
+                    attrs:
+                      chunks: 3
+                      dim: -1
+                      index: 1
+                attrs:
+                  shape: "S"
+            attrs:
+              dim0: 1
+              dim1: 2
+          - op: "transpose"
+            args:
+              - op: "reshape"
+                args:
+                  - op: "chunk"
+                    args:
+                      - op: "linear"
+                        args:
+                          - mvar: "x"
+                          - op: "concat"
+                            args:
+                              - op: "concat"
+                                args:
+                                  - mvar: "Q"
+                                  - mvar: "K"
+                                attrs:
+                                  dim: 0
+                              - mvar: "V"
+                            attrs:
+                              dim: 0
+                        attrs: {}
+                    attrs:
+                      chunks: 3
+                      dim: -1
+                      index: 2
+                attrs:
+                  shape: "S"
+            attrs:
+              dim0: 1
+              dim1: 2
+        attrs:
+          scale: "SC"
+      cond: null
+      dspec: null
+      tags:
+        - "fusion"
+        - "subsumed"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      x:
+        - 0
+        - 0
+        - 0
+        - 0
+      Q:
+        - 0
+        - 0
+        - 0
+        - 1
+      K:
+        - 1
+        - 0
+        - 0
+        - 1
+      V:
+        - 2
+        - 0
+        - 0
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "transpose"
+    - !KindAt
+      index: 1
+      kind: "transpose"
+    - !KindAt
+      index: 2
+      kind: "transpose"
+    - !ChildCount 3
+- id: "transform.catopt.qkv_fuse_asym"
+  pass: "catopt"
+  node_kind: "sdpa"
+  rule:
+    !Declarative
+    target_kind: "sdpa"
+    children:
+      - !Create
+        kind: "transpose"
+        children:
+          - !Create
+            kind: "reshape"
+            children:
+              - !Create
+                kind: "split"
+                children:
+                  - !Create
+                    kind: "linear"
+                    children:
+                      - !KeepPath
+                        - 0
+                        - 0
+                        - 0
+                        - 0
+                      - !Create
+                        kind: "concat"
+                        children:
+                          - !Create
+                            kind: "concat"
+                            children:
+                              - !KeepPath
+                                - 0
+                                - 0
+                                - 0
+                                - 1
+                              - !KeepPath
+                                - 1
+                                - 0
+                                - 0
+                                - 1
+                          - !KeepPath
+                            - 2
+                            - 0
+                            - 0
+                            - 1
+      - !Create
+        kind: "transpose"
+        children:
+          - !Create
+            kind: "reshape"
+            children:
+              - !Create
+                kind: "split"
+                children:
+                  - !Create
+                    kind: "linear"
+                    children:
+                      - !KeepPath
+                        - 0
+                        - 0
+                        - 0
+                        - 0
+                      - !Create
+                        kind: "concat"
+                        children:
+                          - !Create
+                            kind: "concat"
+                            children:
+                              - !KeepPath
+                                - 0
+                                - 0
+                                - 0
+                                - 1
+                              - !KeepPath
+                                - 1
+                                - 0
+                                - 0
+                                - 1
+                          - !KeepPath
+                            - 2
+                            - 0
+                            - 0
+                            - 1
+      - !Create
+        kind: "transpose"
+        children:
+          - !Create
+            kind: "reshape"
+            children:
+              - !Create
+                kind: "split"
+                children:
+                  - !Create
+                    kind: "linear"
+                    children:
+                      - !KeepPath
+                        - 0
+                        - 0
+                        - 0
+                        - 0
+                      - !Create
+                        kind: "concat"
+                        children:
+                          - !Create
+                            kind: "concat"
+                            children:
+                              - !KeepPath
+                                - 0
+                                - 0
+                                - 0
+                                - 1
+                              - !KeepPath
+                                - 1
+                                - 0
+                                - 0
+                                - 1
+                          - !KeepPath
+                            - 2
+                            - 0
+                            - 0
+                            - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "qkv_fuse_asym"
+      law: "Asymmetric triple pairing: the same product law as qkv_fuse, but the three projections have different output dims \u2014 one GEMM, three uneven split views.  (GQA fused QKV.)"
+      lhs:
+        op: "sdpa"
+        args:
+          - op: "transpose"
+            args:
+              - op: "reshape"
+                args:
+                  - op: "linear"
+                    args:
+                      - mvar: "x"
+                      - mvar: "Q"
+                    attrs: {}
+                attrs:
+                  shape: "S1"
+            attrs:
+              dim0: 1
+              dim1: 2
+          - op: "transpose"
+            args:
+              - op: "reshape"
+                args:
+                  - op: "linear"
+                    args:
+                      - mvar: "x"
+                      - mvar: "K"
+                    attrs: {}
+                attrs:
+                  shape: "S2"
+            attrs:
+              dim0: 1
+              dim1: 2
+          - op: "transpose"
+            args:
+              - op: "reshape"
+                args:
+                  - op: "linear"
+                    args:
+                      - mvar: "x"
+                      - mvar: "V"
+                    attrs: {}
+                attrs:
+                  shape: "S3"
+            attrs:
+              dim0: 1
+              dim1: 2
+        attrs:
+          scale: "SC"
+          enable_gqa: "G"
+      rhs:
+        op: "sdpa"
+        args:
+          - op: "transpose"
+            args:
+              - op: "reshape"
+                args:
+                  - op: "split"
+                    args:
+                      - op: "linear"
+                        args:
+                          - mvar: "x"
+                          - op: "concat"
+                            args:
+                              - op: "concat"
+                                args:
+                                  - mvar: "Q"
+                                  - mvar: "K"
+                                attrs:
+                                  dim: 0
+                              - mvar: "V"
+                            attrs:
+                              dim: 0
+                        attrs: {}
+                    attrs:
+                      sizes: "SZ"
+                      dim: -1
+                      index: 0
+                attrs:
+                  shape: "S1"
+            attrs:
+              dim0: 1
+              dim1: 2
+          - op: "transpose"
+            args:
+              - op: "reshape"
+                args:
+                  - op: "split"
+                    args:
+                      - op: "linear"
+                        args:
+                          - mvar: "x"
+                          - op: "concat"
+                            args:
+                              - op: "concat"
+                                args:
+                                  - mvar: "Q"
+                                  - mvar: "K"
+                                attrs:
+                                  dim: 0
+                              - mvar: "V"
+                            attrs:
+                              dim: 0
+                        attrs: {}
+                    attrs:
+                      sizes: "SZ"
+                      dim: -1
+                      index: 1
+                attrs:
+                  shape: "S2"
+            attrs:
+              dim0: 1
+              dim1: 2
+          - op: "transpose"
+            args:
+              - op: "reshape"
+                args:
+                  - op: "split"
+                    args:
+                      - op: "linear"
+                        args:
+                          - mvar: "x"
+                          - op: "concat"
+                            args:
+                              - op: "concat"
+                                args:
+                                  - mvar: "Q"
+                                  - mvar: "K"
+                                attrs:
+                                  dim: 0
+                              - mvar: "V"
+                            attrs:
+                              dim: 0
+                        attrs: {}
+                    attrs:
+                      sizes: "SZ"
+                      dim: -1
+                      index: 2
+                attrs:
+                  shape: "S3"
+            attrs:
+              dim0: 1
+              dim1: 2
+        attrs:
+          scale: "SC"
+          enable_gqa: "G"
+      cond: null
+      dspec:
+        SZ:
+          - "tuple"
+          - - "leaf-dim"
+            - "Q"
+            - 0
+          - - "leaf-dim"
+            - "K"
+            - 0
+          - - "leaf-dim"
+            - "V"
+            - 0
+      tags:
+        - "fusion"
+        - "subsumed"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      x:
+        - 0
+        - 0
+        - 0
+        - 0
+      Q:
+        - 0
+        - 0
+        - 0
+        - 1
+      K:
+        - 1
+        - 0
+        - 0
+        - 1
+      V:
+        - 2
+        - 0
+        - 0
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "transpose"
+    - !KindAt
+      index: 1
+      kind: "transpose"
+    - !KindAt
+      index: 2
+      kind: "transpose"
+    - !ChildCount 3
+- id: "transform.catopt.linear_channel_scale"
+  pass: "catopt"
+  node_kind: "linear"
+  rule:
+    !Declarative
+    target_kind: "linear"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+      - !Create
+        kind: "mul"
+        children:
+          - !KeepPath
+            - 1
+          - !KeepPath
+            - 0
+            - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "linear_channel_scale"
+      law: "Channel scale is a right diagonal: (xD)W = x(DW).  Folds the norm's affine gain into the weight at compile time."
+      lhs:
+        op: "linear"
+        args:
+          - op: "mul"
+            args:
+              - mvar: "x"
+              - mvar: "c"
+            attrs: {}
+          - mvar: "W"
+        attrs: {}
+      rhs:
+        op: "linear"
+        args:
+          - mvar: "x"
+          - op: "mul"
+            args:
+              - mvar: "W"
+              - mvar: "c"
+            attrs: {}
+        attrs: {}
+      cond:
+        - "and"
+        - - "mm-shape-ok"
+          - "x"
+          - - "transpose-out"
+            - "W"
+            - null
+            - null
+        - - "rank"
+          - "W"
+          - "<="
+          - 2
+        - - "shaped"
+          - "c"
+        - - "rank"
+          - "W"
+          - ">="
+          - 1
+        - - "or"
+          - - "scalar"
+            - "c"
+          - - "and"
+            - - "dim-eq"
+              - "c"
+              - -1
+              - "W"
+              - -1
+            - - "ones-but-last"
+              - "c"
+      dspec: null
+      tags:
+        - "expansive"
+        - "symmetry"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      x:
+        - 0
+        - 0
+      c:
+        - 0
+        - 1
+      W:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "mul"
+    - !ChildCount 2
+- id: "transform.catopt.linear_channel_scale_rev"
+  pass: "catopt"
+  node_kind: "linear"
+  rule:
+    !Declarative
+    target_kind: "linear"
+    children:
+      - !Create
+        kind: "mul"
+        children:
+          - !KeepPath
+            - 0
+          - !KeepPath
+            - 1
+            - 1
+      - !KeepPath
+        - 1
+        - 0
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "linear_channel_scale_rev"
+      law: "Reverse channel-scale fold (eqsat compares both forms)."
+      lhs:
+        op: "linear"
+        args:
+          - mvar: "x"
+          - op: "mul"
+            args:
+              - mvar: "W"
+              - mvar: "c"
+            attrs: {}
+        attrs: {}
+      rhs:
+        op: "linear"
+        args:
+          - op: "mul"
+            args:
+              - mvar: "x"
+              - mvar: "c"
+            attrs: {}
+          - mvar: "W"
+        attrs: {}
+      cond:
+        - "and"
+        - - "mm-shape-ok"
+          - "x"
+          - - "transpose-out"
+            - "W"
+            - null
+            - null
+        - - "rank"
+          - "W"
+          - "<="
+          - 2
+        - - "shaped"
+          - "c"
+        - - "rank"
+          - "W"
+          - ">="
+          - 1
+        - - "or"
+          - - "scalar"
+            - "c"
+          - - "and"
+            - - "dim-eq"
+              - "c"
+              - -1
+              - "W"
+              - -1
+            - - "ones-but-last"
+              - "c"
+      dspec: null
+      tags:
+        - "expansive"
+        - "symmetry"
+      derivation:
+        - "linear_channel_scale"
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      x:
+        - 0
+      W:
+        - 1
+        - 0
+      c:
+        - 1
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 1
+      kind: "mul"
+    - !ChildCount 2
+- id: "transform.catopt.linear_row_scale"
+  pass: "catopt"
+  node_kind: "linear"
+  rule:
+    !Declarative
+    target_kind: "mul"
+    children:
+      - !Create
+        kind: "linear"
+        children:
+          - !KeepPath
+            - 0
+            - 0
+          - !KeepPath
+            - 1
+      - !KeepPath
+        - 0
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "linear_row_scale"
+      law: "Row scale is a left diagonal: commutes through the linear map to the output (naturality of scalar action)."
+      lhs:
+        op: "linear"
+        args:
+          - op: "mul"
+            args:
+              - mvar: "x"
+              - mvar: "r"
+            attrs: {}
+          - mvar: "W"
+        attrs: {}
+      rhs:
+        op: "mul"
+        args:
+          - op: "linear"
+            args:
+              - mvar: "x"
+              - mvar: "W"
+            attrs: {}
+          - mvar: "r"
+        attrs: {}
+      cond:
+        - "and"
+        - - "or"
+          - - "scalar"
+            - "r"
+          - - "dim-eq-const"
+            - "r"
+            - -1
+            - 1
+        - - "bcast-into"
+          - "r"
+          - - "mm-out"
+            - "x"
+            - - "transpose-out"
+              - "W"
+              - null
+              - null
+        - - "rank"
+          - "W"
+          - "<="
+          - 2
+      dspec: null
+      tags:
+        - "expansive"
+        - "symmetry"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      x:
+        - 0
+        - 0
+      r:
+        - 0
+        - 1
+      W:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "mul"
+    - !ChildCount 2
+- id: "transform.catopt.linear_row_scale_rev"
+  pass: "catopt"
+  node_kind: "mul"
+  rule:
+    !Declarative
+    target_kind: "linear"
+    children:
+      - !Create
+        kind: "mul"
+        children:
+          - !KeepPath
+            - 0
+            - 0
+          - !KeepPath
+            - 1
+      - !KeepPath
+        - 0
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "linear_row_scale_rev"
+      law: "Reverse row-scale hoist (eqsat compares both forms)."
+      lhs:
+        op: "mul"
+        args:
+          - op: "linear"
+            args:
+              - mvar: "x"
+              - mvar: "W"
+            attrs: {}
+          - mvar: "r"
+        attrs: {}
+      rhs:
+        op: "linear"
+        args:
+          - op: "mul"
+            args:
+              - mvar: "x"
+              - mvar: "r"
+            attrs: {}
+          - mvar: "W"
+        attrs: {}
+      cond:
+        - "and"
+        - - "or"
+          - - "scalar"
+            - "r"
+          - - "dim-eq-const"
+            - "r"
+            - -1
+            - 1
+        - - "bcast-into"
+          - "r"
+          - - "mm-out"
+            - "x"
+            - - "transpose-out"
+              - "W"
+              - null
+              - null
+        - - "rank"
+          - "W"
+          - "<="
+          - 2
+      dspec: null
+      tags:
+        - "expansive"
+        - "symmetry"
+      derivation:
+        - "linear_row_scale"
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      x:
+        - 0
+        - 0
+      W:
+        - 0
+        - 1
+      r:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "linear"
+    - !ChildCount 2
+- id: "transform.catopt.linear_channel_to_row_scale"
+  pass: "catopt"
+  node_kind: "linear"
+  rule:
+    !Declarative
+    target_kind: "mul"
+    children:
+      - !Create
+        kind: "linear"
+        children:
+          - !KeepPath
+            - 0
+          - !KeepPath
+            - 1
+            - 0
+      - !KeepPath
+        - 1
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "linear_channel_to_row_scale"
+      law: "linear(x, W\u2218c) = c\u00b7linear(x, W) \u2014 a channel scale folded into the weight migrates through the linear map and re-emerges as a row scale on the output (channel_scale_rev then row_scale, fused into one premise-guarded step)."
+      lhs:
+        op: "linear"
+        args:
+          - mvar: "x"
+          - op: "mul"
+            args:
+              - mvar: "W"
+              - mvar: "c"
+            attrs: {}
+        attrs: {}
+      rhs:
+        op: "mul"
+        args:
+          - op: "linear"
+            args:
+              - mvar: "x"
+              - mvar: "W"
+            attrs: {}
+          - mvar: "c"
+        attrs: {}
+      cond:
+        - "and"
+        - - "and"
+          - - "mm-shape-ok"
+            - "x"
+            - - "transpose-out"
+              - "W"
+              - null
+              - null
+          - - "rank"
+            - "W"
+            - "<="
+            - 2
+          - - "shaped"
+            - "c"
+          - - "rank"
+            - "W"
+            - ">="
+            - 1
+          - - "or"
+            - - "scalar"
+              - "c"
+            - - "and"
+              - - "dim-eq"
+                - "c"
+                - -1
+                - "W"
+                - -1
+              - - "ones-but-last"
+                - "c"
+        - - "and"
+          - - "or"
+            - - "scalar"
+              - "c"
+            - - "dim-eq-const"
+              - "c"
+              - -1
+              - 1
+          - - "bcast-into"
+            - "c"
+            - - "mm-out"
+              - "x"
+              - - "transpose-out"
+                - "W"
+                - null
+                - null
+          - - "rank"
+            - "W"
+            - "<="
+            - 2
+      dspec: null
+      tags:
+        - "categorical"
+      derivation:
+        - "linear_channel_scale_rev"
+        - "linear_row_scale"
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      x:
+        - 0
+      W:
+        - 1
+        - 0
+      c:
+        - 1
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 1
+      kind: "mul"
+    - !ChildCount 2
+- id: "transform.catopt.gqa_absorb_repeat"
+  pass: "catopt"
+  node_kind: "sdpa"
+  rule:
+    !Declarative
+    target_kind: "sdpa"
+    children:
+      - !Create
+        kind: "transpose"
+        children:
+          - !KeepPath
+            - 0
+            - 0
+      - !Create
+        kind: "transpose"
+        children:
+          - !KeepPath
+            - 1
+            - 0
+            - 0
+            - 0
+            - 0
+      - !Create
+        kind: "transpose"
+        children:
+          - !KeepPath
+            - 2
+            - 0
+            - 0
+            - 0
+            - 0
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "gqa_absorb_repeat"
+      law: "The diagonal is natural: unsqueeze->expand->reshape copies each kv head r times (repeat_kv).  SDPA implements that copy inside the kernel via enable_gqa \u2014 pushing Delta into the consumer deletes the materialisation entirely."
+      lhs:
+        op: "sdpa"
+        args:
+          - op: "transpose"
+            args:
+              - mvar: "q"
+            attrs:
+              dim0: 1
+              dim1: 2
+          - op: "transpose"
+            args:
+              - op: "reshape"
+                args:
+                  - op: "expand"
+                    args:
+                      - op: "unsqueeze"
+                        args:
+                          - mvar: "k"
+                        attrs:
+                          dim: "UDk"
+                    attrs:
+                      shape: "ESk"
+                attrs:
+                  shape: "RSk"
+            attrs:
+              dim0: 1
+              dim1: 2
+          - op: "transpose"
+            args:
+              - op: "reshape"
+                args:
+                  - op: "expand"
+                    args:
+                      - op: "unsqueeze"
+                        args:
+                          - mvar: "v"
+                        attrs:
+                          dim: "UDv"
+                    attrs:
+                      shape: "ESv"
+                attrs:
+                  shape: "RSv"
+            attrs:
+              dim0: 1
+              dim1: 2
+        attrs:
+          arg4: "D"
+          arg5: "C"
+      rhs:
+        op: "sdpa"
+        args:
+          - op: "transpose"
+            args:
+              - mvar: "q"
+            attrs:
+              dim0: 1
+              dim1: 2
+          - op: "transpose"
+            args:
+              - mvar: "k"
+            attrs:
+              dim0: 1
+              dim1: 2
+          - op: "transpose"
+            args:
+              - mvar: "v"
+            attrs:
+              dim0: 1
+              dim1: 2
+        attrs:
+          arg4: "D"
+          arg5: "C"
+          arg7: true
+      cond:
+        - "and"
+        - - "rank"
+          - "q"
+          - "=="
+          - 4
+        - - "rank"
+          - "k"
+          - "=="
+          - 4
+        - - "rank"
+          - "v"
+          - "=="
+          - 4
+        - - "repeat-chain"
+          - "k"
+          - "UDk"
+          - "ESk"
+          - "RSk"
+        - - "repeat-chain"
+          - "v"
+          - "UDv"
+          - "ESv"
+          - "RSv"
+        - - "attr-eq-attr"
+          - "ESk"
+          - "ESv"
+        - - "repeat-heads"
+          - "q"
+          - "k"
+          - "UDk"
+          - "ESk"
+      dspec: null
+      tags:
+        - "fusion"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      q:
+        - 0
+        - 0
+      k:
+        - 1
+        - 0
+        - 0
+        - 0
+        - 0
+      v:
+        - 2
+        - 0
+        - 0
+        - 0
+        - 0
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "transpose"
+    - !KindAt
+      index: 1
+      kind: "transpose"
+    - !KindAt
+      index: 2
+      kind: "transpose"
+    - !ChildCount 3
+- id: "transform.catopt.sdpa_fold_addmul"
+  pass: "catopt"
+  node_kind: "matmul"
+  rule:
+    !Declarative
+    target_kind: "sdpa"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+        - 0
+      - !KeepPath
+        - 1
+      - !KeepPath
+        - 0
+        - 0
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "sdpa_fold_addmul"
+      law: "softmax(qk^T s + m) v is sdpa \u2014 the additive mask is the kernel's attn_mask argument."
+      lhs:
+        op: "matmul"
+        args:
+          - op: "softmax"
+            args:
+              - op: "add"
+                args:
+                  - op: "mul"
+                    args:
+                      - op: "matmul"
+                        args:
+                          - mvar: "Q"
+                          - op: "transpose"
+                            args:
+                              - mvar: "K"
+                            attrs:
+                              dim0: "TD1"
+                              dim1: "TD2"
+                        attrs: {}
+                      - mvar: "S"
+                    attrs: {}
+                  - mvar: "M"
+                attrs: {}
+            attrs:
+              dim: "SD"
+          - mvar: "V"
+        attrs: {}
+      rhs:
+        op: "sdpa"
+        args:
+          - mvar: "Q"
+          - mvar: "K"
+          - mvar: "V"
+          - mvar: "M"
+        attrs:
+          scale: "SC"
+      cond:
+        - "and"
+        - - "and"
+          - - "and"
+            - - "concrete"
+              - "K"
+            - - "attr-type"
+              - "TD1"
+              - "int"
+            - - "attr-type"
+              - "TD2"
+              - "int"
+            - - "axes-last2"
+              - "K"
+              - "TD1"
+              - "TD2"
+          - - "axis"
+            - "Q"
+            - "SD"
+            - -1
+        - - "const-num"
+          - "S"
+      dspec:
+        SC:
+          - "float"
+          - - "const"
+            - "S"
+      tags:
+        - "fusion"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      Q:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+      K:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+        - 0
+      S:
+        - 0
+        - 0
+        - 0
+        - 1
+      M:
+        - 0
+        - 0
+        - 1
+      V:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "softmax"
+    - !ChildCount 2
+- id: "transform.catopt.sdpa_fold_masked_fillmul"
+  pass: "catopt"
+  node_kind: "matmul"
+  rule:
+    !Declarative
+    target_kind: "sdpa"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+        - 0
+      - !KeepPath
+        - 1
+      - !Create
+        kind: "logical_not"
+        children:
+          - !KeepPath
+            - 0
+            - 0
+            - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "sdpa_fold_masked_fillmul"
+      law: "masked_fill(m, -inf) before softmax is a boolean attn_mask \u2014 logical_not turns the fill-mask into SDPA's keep-mask."
+      lhs:
+        op: "matmul"
+        args:
+          - op: "softmax"
+            args:
+              - op: "masked_fill"
+                args:
+                  - op: "mul"
+                    args:
+                      - op: "matmul"
+                        args:
+                          - mvar: "Q"
+                          - op: "transpose"
+                            args:
+                              - mvar: "K"
+                            attrs:
+                              dim0: "TD1"
+                              dim1: "TD2"
+                        attrs: {}
+                      - mvar: "S"
+                    attrs: {}
+                  - mvar: "MK"
+                  - mvar: "F"
+                attrs: {}
+            attrs:
+              dim: "SD"
+          - mvar: "V"
+        attrs: {}
+      rhs:
+        op: "sdpa"
+        args:
+          - mvar: "Q"
+          - mvar: "K"
+          - mvar: "V"
+          - op: "logical_not"
+            args:
+              - mvar: "MK"
+            attrs: {}
+        attrs:
+          scale: "SC"
+      cond:
+        - "and"
+        - - "and"
+          - - "and"
+            - - "and"
+              - - "concrete"
+                - "K"
+              - - "attr-type"
+                - "TD1"
+                - "int"
+              - - "attr-type"
+                - "TD2"
+                - "int"
+              - - "axes-last2"
+                - "K"
+                - "TD1"
+                - "TD2"
+            - - "axis"
+              - "Q"
+              - "SD"
+              - -1
+          - - "const-cmp"
+            - "F"
+            - "<"
+            - -1e+30
+        - - "const-num"
+          - "S"
+      dspec:
+        SC:
+          - "float"
+          - - "const"
+            - "S"
+      tags:
+        - "fusion"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      Q:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+      K:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+        - 0
+      S:
+        - 0
+        - 0
+        - 0
+        - 1
+      MK:
+        - 0
+        - 0
+        - 1
+      F:
+        - 0
+        - 0
+        - 2
+      V:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "softmax"
+    - !ChildCount 2
+- id: "transform.catopt.sdpa_fold_addmul_drop"
+  pass: "catopt"
+  node_kind: "matmul"
+  rule:
+    !Declarative
+    target_kind: "sdpa"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+        - 0
+      - !KeepPath
+        - 1
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "sdpa_fold_addmul_drop"
+      law: "softmax(qk^T s + m) v is sdpa \u2014 the additive mask is the kernel's attn_mask argument."
+      lhs:
+        op: "matmul"
+        args:
+          - op: "dropout"
+            args:
+              - op: "softmax"
+                args:
+                  - op: "add"
+                    args:
+                      - op: "mul"
+                        args:
+                          - op: "matmul"
+                            args:
+                              - mvar: "Q"
+                              - op: "transpose"
+                                args:
+                                  - mvar: "K"
+                                attrs:
+                                  dim0: "TD1"
+                                  dim1: "TD2"
+                            attrs: {}
+                          - mvar: "S"
+                        attrs: {}
+                      - mvar: "M"
+                    attrs: {}
+                attrs:
+                  dim: "SD"
+            attrs:
+              p: "DP"
+              train: "DT"
+          - mvar: "V"
+        attrs: {}
+      rhs:
+        op: "sdpa"
+        args:
+          - mvar: "Q"
+          - mvar: "K"
+          - mvar: "V"
+          - mvar: "M"
+        attrs:
+          scale: "SC"
+      cond:
+        - "and"
+        - - "and"
+          - - "and"
+            - - "concrete"
+              - "K"
+            - - "attr-type"
+              - "TD1"
+              - "int"
+            - - "attr-type"
+              - "TD2"
+              - "int"
+            - - "axes-last2"
+              - "K"
+              - "TD1"
+              - "TD2"
+          - - "axis"
+            - "Q"
+            - "SD"
+            - -1
+        - - "const-num"
+          - "S"
+      dspec:
+        SC:
+          - "float"
+          - - "const"
+            - "S"
+      tags:
+        - "fusion"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      Q:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+      K:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+        - 0
+      S:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+      M:
+        - 0
+        - 0
+        - 0
+        - 1
+      V:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "dropout"
+    - !ChildCount 2
+- id: "transform.catopt.sdpa_fold_masked_fillmul_drop"
+  pass: "catopt"
+  node_kind: "matmul"
+  rule:
+    !Declarative
+    target_kind: "sdpa"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+        - 0
+      - !KeepPath
+        - 1
+      - !Create
+        kind: "logical_not"
+        children:
+          - !KeepPath
+            - 0
+            - 0
+            - 0
+            - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "sdpa_fold_masked_fillmul_drop"
+      law: "masked_fill(m, -inf) before softmax is a boolean attn_mask \u2014 logical_not turns the fill-mask into SDPA's keep-mask."
+      lhs:
+        op: "matmul"
+        args:
+          - op: "dropout"
+            args:
+              - op: "softmax"
+                args:
+                  - op: "masked_fill"
+                    args:
+                      - op: "mul"
+                        args:
+                          - op: "matmul"
+                            args:
+                              - mvar: "Q"
+                              - op: "transpose"
+                                args:
+                                  - mvar: "K"
+                                attrs:
+                                  dim0: "TD1"
+                                  dim1: "TD2"
+                            attrs: {}
+                          - mvar: "S"
+                        attrs: {}
+                      - mvar: "MK"
+                      - mvar: "F"
+                    attrs: {}
+                attrs:
+                  dim: "SD"
+            attrs:
+              p: "DP"
+              train: "DT"
+          - mvar: "V"
+        attrs: {}
+      rhs:
+        op: "sdpa"
+        args:
+          - mvar: "Q"
+          - mvar: "K"
+          - mvar: "V"
+          - op: "logical_not"
+            args:
+              - mvar: "MK"
+            attrs: {}
+        attrs:
+          scale: "SC"
+      cond:
+        - "and"
+        - - "and"
+          - - "and"
+            - - "and"
+              - - "concrete"
+                - "K"
+              - - "attr-type"
+                - "TD1"
+                - "int"
+              - - "attr-type"
+                - "TD2"
+                - "int"
+              - - "axes-last2"
+                - "K"
+                - "TD1"
+                - "TD2"
+            - - "axis"
+              - "Q"
+              - "SD"
+              - -1
+          - - "const-cmp"
+            - "F"
+            - "<"
+            - -1e+30
+        - - "const-num"
+          - "S"
+      dspec:
+        SC:
+          - "float"
+          - - "const"
+            - "S"
+      tags:
+        - "fusion"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      Q:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+      K:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+        - 0
+      S:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+      MK:
+        - 0
+        - 0
+        - 0
+        - 1
+      F:
+        - 0
+        - 0
+        - 0
+        - 2
+      V:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "dropout"
+    - !ChildCount 2
+- id: "transform.catopt.sdpa_fold_adddiv"
+  pass: "catopt"
+  node_kind: "matmul"
+  rule:
+    !Declarative
+    target_kind: "sdpa"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+        - 0
+      - !KeepPath
+        - 1
+      - !KeepPath
+        - 0
+        - 0
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "sdpa_fold_adddiv"
+      law: "softmax(qk^T s + m) v is sdpa \u2014 the additive mask is the kernel's attn_mask argument."
+      lhs:
+        op: "matmul"
+        args:
+          - op: "softmax"
+            args:
+              - op: "add"
+                args:
+                  - op: "div"
+                    args:
+                      - op: "matmul"
+                        args:
+                          - mvar: "Q"
+                          - op: "transpose"
+                            args:
+                              - mvar: "K"
+                            attrs:
+                              dim0: "TD1"
+                              dim1: "TD2"
+                        attrs: {}
+                      - mvar: "S"
+                    attrs: {}
+                  - mvar: "M"
+                attrs: {}
+            attrs:
+              dim: "SD"
+          - mvar: "V"
+        attrs: {}
+      rhs:
+        op: "sdpa"
+        args:
+          - mvar: "Q"
+          - mvar: "K"
+          - mvar: "V"
+          - mvar: "M"
+        attrs:
+          scale: "SC"
+      cond:
+        - "and"
+        - - "and"
+          - - "and"
+            - - "concrete"
+              - "K"
+            - - "attr-type"
+              - "TD1"
+              - "int"
+            - - "attr-type"
+              - "TD2"
+              - "int"
+            - - "axes-last2"
+              - "K"
+              - "TD1"
+              - "TD2"
+          - - "axis"
+            - "Q"
+            - "SD"
+            - -1
+        - - "const-num"
+          - "S"
+      dspec:
+        SC:
+          - "recip"
+          - - "float"
+            - - "const"
+              - "S"
+      tags:
+        - "fusion"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      Q:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+      K:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+        - 0
+      S:
+        - 0
+        - 0
+        - 0
+        - 1
+      M:
+        - 0
+        - 0
+        - 1
+      V:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "softmax"
+    - !ChildCount 2
+- id: "transform.catopt.sdpa_fold_masked_filldiv"
+  pass: "catopt"
+  node_kind: "matmul"
+  rule:
+    !Declarative
+    target_kind: "sdpa"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+        - 0
+      - !KeepPath
+        - 1
+      - !Create
+        kind: "logical_not"
+        children:
+          - !KeepPath
+            - 0
+            - 0
+            - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "sdpa_fold_masked_filldiv"
+      law: "masked_fill(m, -inf) before softmax is a boolean attn_mask \u2014 logical_not turns the fill-mask into SDPA's keep-mask."
+      lhs:
+        op: "matmul"
+        args:
+          - op: "softmax"
+            args:
+              - op: "masked_fill"
+                args:
+                  - op: "div"
+                    args:
+                      - op: "matmul"
+                        args:
+                          - mvar: "Q"
+                          - op: "transpose"
+                            args:
+                              - mvar: "K"
+                            attrs:
+                              dim0: "TD1"
+                              dim1: "TD2"
+                        attrs: {}
+                      - mvar: "S"
+                    attrs: {}
+                  - mvar: "MK"
+                  - mvar: "F"
+                attrs: {}
+            attrs:
+              dim: "SD"
+          - mvar: "V"
+        attrs: {}
+      rhs:
+        op: "sdpa"
+        args:
+          - mvar: "Q"
+          - mvar: "K"
+          - mvar: "V"
+          - op: "logical_not"
+            args:
+              - mvar: "MK"
+            attrs: {}
+        attrs:
+          scale: "SC"
+      cond:
+        - "and"
+        - - "and"
+          - - "and"
+            - - "and"
+              - - "concrete"
+                - "K"
+              - - "attr-type"
+                - "TD1"
+                - "int"
+              - - "attr-type"
+                - "TD2"
+                - "int"
+              - - "axes-last2"
+                - "K"
+                - "TD1"
+                - "TD2"
+            - - "axis"
+              - "Q"
+              - "SD"
+              - -1
+          - - "const-cmp"
+            - "F"
+            - "<"
+            - -1e+30
+        - - "const-num"
+          - "S"
+      dspec:
+        SC:
+          - "recip"
+          - - "float"
+            - - "const"
+              - "S"
+      tags:
+        - "fusion"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      Q:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+      K:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+        - 0
+      S:
+        - 0
+        - 0
+        - 0
+        - 1
+      MK:
+        - 0
+        - 0
+        - 1
+      F:
+        - 0
+        - 0
+        - 2
+      V:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "softmax"
+    - !ChildCount 2
+- id: "transform.catopt.sdpa_fold_adddiv_drop"
+  pass: "catopt"
+  node_kind: "matmul"
+  rule:
+    !Declarative
+    target_kind: "sdpa"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+        - 0
+      - !KeepPath
+        - 1
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "sdpa_fold_adddiv_drop"
+      law: "softmax(qk^T s + m) v is sdpa \u2014 the additive mask is the kernel's attn_mask argument."
+      lhs:
+        op: "matmul"
+        args:
+          - op: "dropout"
+            args:
+              - op: "softmax"
+                args:
+                  - op: "add"
+                    args:
+                      - op: "div"
+                        args:
+                          - op: "matmul"
+                            args:
+                              - mvar: "Q"
+                              - op: "transpose"
+                                args:
+                                  - mvar: "K"
+                                attrs:
+                                  dim0: "TD1"
+                                  dim1: "TD2"
+                            attrs: {}
+                          - mvar: "S"
+                        attrs: {}
+                      - mvar: "M"
+                    attrs: {}
+                attrs:
+                  dim: "SD"
+            attrs:
+              p: "DP"
+              train: "DT"
+          - mvar: "V"
+        attrs: {}
+      rhs:
+        op: "sdpa"
+        args:
+          - mvar: "Q"
+          - mvar: "K"
+          - mvar: "V"
+          - mvar: "M"
+        attrs:
+          scale: "SC"
+      cond:
+        - "and"
+        - - "and"
+          - - "and"
+            - - "concrete"
+              - "K"
+            - - "attr-type"
+              - "TD1"
+              - "int"
+            - - "attr-type"
+              - "TD2"
+              - "int"
+            - - "axes-last2"
+              - "K"
+              - "TD1"
+              - "TD2"
+          - - "axis"
+            - "Q"
+            - "SD"
+            - -1
+        - - "const-num"
+          - "S"
+      dspec:
+        SC:
+          - "recip"
+          - - "float"
+            - - "const"
+              - "S"
+      tags:
+        - "fusion"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      Q:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+      K:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+        - 0
+      S:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+      M:
+        - 0
+        - 0
+        - 0
+        - 1
+      V:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "dropout"
+    - !ChildCount 2
+- id: "transform.catopt.sdpa_fold_masked_filldiv_drop"
+  pass: "catopt"
+  node_kind: "matmul"
+  rule:
+    !Declarative
+    target_kind: "sdpa"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+        - 0
+      - !KeepPath
+        - 1
+      - !Create
+        kind: "logical_not"
+        children:
+          - !KeepPath
+            - 0
+            - 0
+            - 0
+            - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "sdpa_fold_masked_filldiv_drop"
+      law: "masked_fill(m, -inf) before softmax is a boolean attn_mask \u2014 logical_not turns the fill-mask into SDPA's keep-mask."
+      lhs:
+        op: "matmul"
+        args:
+          - op: "dropout"
+            args:
+              - op: "softmax"
+                args:
+                  - op: "masked_fill"
+                    args:
+                      - op: "div"
+                        args:
+                          - op: "matmul"
+                            args:
+                              - mvar: "Q"
+                              - op: "transpose"
+                                args:
+                                  - mvar: "K"
+                                attrs:
+                                  dim0: "TD1"
+                                  dim1: "TD2"
+                            attrs: {}
+                          - mvar: "S"
+                        attrs: {}
+                      - mvar: "MK"
+                      - mvar: "F"
+                    attrs: {}
+                attrs:
+                  dim: "SD"
+            attrs:
+              p: "DP"
+              train: "DT"
+          - mvar: "V"
+        attrs: {}
+      rhs:
+        op: "sdpa"
+        args:
+          - mvar: "Q"
+          - mvar: "K"
+          - mvar: "V"
+          - op: "logical_not"
+            args:
+              - mvar: "MK"
+            attrs: {}
+        attrs:
+          scale: "SC"
+      cond:
+        - "and"
+        - - "and"
+          - - "and"
+            - - "and"
+              - - "concrete"
+                - "K"
+              - - "attr-type"
+                - "TD1"
+                - "int"
+              - - "attr-type"
+                - "TD2"
+                - "int"
+              - - "axes-last2"
+                - "K"
+                - "TD1"
+                - "TD2"
+            - - "axis"
+              - "Q"
+              - "SD"
+              - -1
+          - - "const-cmp"
+            - "F"
+            - "<"
+            - -1e+30
+        - - "const-num"
+          - "S"
+      dspec:
+        SC:
+          - "recip"
+          - - "float"
+            - - "const"
+              - "S"
+      tags:
+        - "fusion"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      Q:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+      K:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+        - 0
+      S:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+      MK:
+        - 0
+        - 0
+        - 0
+        - 1
+      F:
+        - 0
+        - 0
+        - 0
+        - 2
+      V:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "dropout"
+    - !ChildCount 2
+- id: "transform.catopt.sdpa_fold_add"
+  pass: "catopt"
+  node_kind: "matmul"
+  rule:
+    !Declarative
+    target_kind: "sdpa"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 0
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 1
+        - 0
+      - !KeepPath
+        - 1
+      - !KeepPath
+        - 0
+        - 0
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "sdpa_fold_add"
+      law: "softmax(qk^T s + m) v is sdpa \u2014 the additive mask is the kernel's attn_mask argument."
+      lhs:
+        op: "matmul"
+        args:
+          - op: "softmax"
+            args:
+              - op: "add"
+                args:
+                  - op: "matmul"
+                    args:
+                      - mvar: "Q"
+                      - op: "transpose"
+                        args:
+                          - mvar: "K"
+                        attrs:
+                          dim0: "TD1"
+                          dim1: "TD2"
+                    attrs: {}
+                  - mvar: "M"
+                attrs: {}
+            attrs:
+              dim: "SD"
+          - mvar: "V"
+        attrs: {}
+      rhs:
+        op: "sdpa"
+        args:
+          - mvar: "Q"
+          - mvar: "K"
+          - mvar: "V"
+          - mvar: "M"
+        attrs:
+          scale: "SC"
+      cond:
+        - "and"
+        - - "and"
+          - - "concrete"
+            - "K"
+          - - "attr-type"
+            - "TD1"
+            - "int"
+          - - "attr-type"
+            - "TD2"
+            - "int"
+          - - "axes-last2"
+            - "K"
+            - "TD1"
+            - "TD2"
+        - - "axis"
+          - "Q"
+          - "SD"
+          - -1
+      dspec:
+        SC: 1.0
+      tags:
+        - "fusion"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      Q:
+        - 0
+        - 0
+        - 0
+        - 0
+      K:
+        - 0
+        - 0
+        - 0
+        - 1
+        - 0
+      M:
+        - 0
+        - 0
+        - 1
+      V:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "softmax"
+    - !ChildCount 2
+- id: "transform.catopt.sdpa_fold_masked_fill"
+  pass: "catopt"
+  node_kind: "matmul"
+  rule:
+    !Declarative
+    target_kind: "sdpa"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 0
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 1
+        - 0
+      - !KeepPath
+        - 1
+      - !Create
+        kind: "logical_not"
+        children:
+          - !KeepPath
+            - 0
+            - 0
+            - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "sdpa_fold_masked_fill"
+      law: "masked_fill(m, -inf) before softmax is a boolean attn_mask \u2014 logical_not turns the fill-mask into SDPA's keep-mask."
+      lhs:
+        op: "matmul"
+        args:
+          - op: "softmax"
+            args:
+              - op: "masked_fill"
+                args:
+                  - op: "matmul"
+                    args:
+                      - mvar: "Q"
+                      - op: "transpose"
+                        args:
+                          - mvar: "K"
+                        attrs:
+                          dim0: "TD1"
+                          dim1: "TD2"
+                    attrs: {}
+                  - mvar: "MK"
+                  - mvar: "F"
+                attrs: {}
+            attrs:
+              dim: "SD"
+          - mvar: "V"
+        attrs: {}
+      rhs:
+        op: "sdpa"
+        args:
+          - mvar: "Q"
+          - mvar: "K"
+          - mvar: "V"
+          - op: "logical_not"
+            args:
+              - mvar: "MK"
+            attrs: {}
+        attrs:
+          scale: "SC"
+      cond:
+        - "and"
+        - - "and"
+          - - "and"
+            - - "concrete"
+              - "K"
+            - - "attr-type"
+              - "TD1"
+              - "int"
+            - - "attr-type"
+              - "TD2"
+              - "int"
+            - - "axes-last2"
+              - "K"
+              - "TD1"
+              - "TD2"
+          - - "axis"
+            - "Q"
+            - "SD"
+            - -1
+        - - "const-cmp"
+          - "F"
+          - "<"
+          - -1e+30
+      dspec:
+        SC: 1.0
+      tags:
+        - "fusion"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      Q:
+        - 0
+        - 0
+        - 0
+        - 0
+      K:
+        - 0
+        - 0
+        - 0
+        - 1
+        - 0
+      MK:
+        - 0
+        - 0
+        - 1
+      F:
+        - 0
+        - 0
+        - 2
+      V:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "softmax"
+    - !ChildCount 2
+- id: "transform.catopt.sdpa_fold_add_drop"
+  pass: "catopt"
+  node_kind: "matmul"
+  rule:
+    !Declarative
+    target_kind: "sdpa"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+        - 0
+      - !KeepPath
+        - 1
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "sdpa_fold_add_drop"
+      law: "softmax(qk^T s + m) v is sdpa \u2014 the additive mask is the kernel's attn_mask argument."
+      lhs:
+        op: "matmul"
+        args:
+          - op: "dropout"
+            args:
+              - op: "softmax"
+                args:
+                  - op: "add"
+                    args:
+                      - op: "matmul"
+                        args:
+                          - mvar: "Q"
+                          - op: "transpose"
+                            args:
+                              - mvar: "K"
+                            attrs:
+                              dim0: "TD1"
+                              dim1: "TD2"
+                        attrs: {}
+                      - mvar: "M"
+                    attrs: {}
+                attrs:
+                  dim: "SD"
+            attrs:
+              p: "DP"
+              train: "DT"
+          - mvar: "V"
+        attrs: {}
+      rhs:
+        op: "sdpa"
+        args:
+          - mvar: "Q"
+          - mvar: "K"
+          - mvar: "V"
+          - mvar: "M"
+        attrs:
+          scale: "SC"
+      cond:
+        - "and"
+        - - "and"
+          - - "concrete"
+            - "K"
+          - - "attr-type"
+            - "TD1"
+            - "int"
+          - - "attr-type"
+            - "TD2"
+            - "int"
+          - - "axes-last2"
+            - "K"
+            - "TD1"
+            - "TD2"
+        - - "axis"
+          - "Q"
+          - "SD"
+          - -1
+      dspec:
+        SC: 1.0
+      tags:
+        - "fusion"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      Q:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+      K:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+        - 0
+      M:
+        - 0
+        - 0
+        - 0
+        - 1
+      V:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "dropout"
+    - !ChildCount 2
+- id: "transform.catopt.sdpa_fold_masked_fill_drop"
+  pass: "catopt"
+  node_kind: "matmul"
+  rule:
+    !Declarative
+    target_kind: "sdpa"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+        - 0
+      - !KeepPath
+        - 1
+      - !Create
+        kind: "logical_not"
+        children:
+          - !KeepPath
+            - 0
+            - 0
+            - 0
+            - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "sdpa_fold_masked_fill_drop"
+      law: "masked_fill(m, -inf) before softmax is a boolean attn_mask \u2014 logical_not turns the fill-mask into SDPA's keep-mask."
+      lhs:
+        op: "matmul"
+        args:
+          - op: "dropout"
+            args:
+              - op: "softmax"
+                args:
+                  - op: "masked_fill"
+                    args:
+                      - op: "matmul"
+                        args:
+                          - mvar: "Q"
+                          - op: "transpose"
+                            args:
+                              - mvar: "K"
+                            attrs:
+                              dim0: "TD1"
+                              dim1: "TD2"
+                        attrs: {}
+                      - mvar: "MK"
+                      - mvar: "F"
+                    attrs: {}
+                attrs:
+                  dim: "SD"
+            attrs:
+              p: "DP"
+              train: "DT"
+          - mvar: "V"
+        attrs: {}
+      rhs:
+        op: "sdpa"
+        args:
+          - mvar: "Q"
+          - mvar: "K"
+          - mvar: "V"
+          - op: "logical_not"
+            args:
+              - mvar: "MK"
+            attrs: {}
+        attrs:
+          scale: "SC"
+      cond:
+        - "and"
+        - - "and"
+          - - "and"
+            - - "concrete"
+              - "K"
+            - - "attr-type"
+              - "TD1"
+              - "int"
+            - - "attr-type"
+              - "TD2"
+              - "int"
+            - - "axes-last2"
+              - "K"
+              - "TD1"
+              - "TD2"
+          - - "axis"
+            - "Q"
+            - "SD"
+            - -1
+        - - "const-cmp"
+          - "F"
+          - "<"
+          - -1e+30
+      dspec:
+        SC: 1.0
+      tags:
+        - "fusion"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      Q:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+      K:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+        - 0
+      MK:
+        - 0
+        - 0
+        - 0
+        - 1
+      F:
+        - 0
+        - 0
+        - 0
+        - 2
+      V:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "dropout"
+    - !ChildCount 2
+- id: "transform.catopt.sdpa_fold_nomask"
+  pass: "catopt"
+  node_kind: "matmul"
+  rule:
+    !Declarative
+    target_kind: "sdpa"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+      - !KeepPath
+        - 0
+        - 0
+        - 1
+        - 0
+      - !KeepPath
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "sdpa_fold_nomask"
+      law: "softmax(q k\u1d40) v is sdpa(q, k, v, scale=1) \u2014 the mask-free spelled attention is one fused kernel (the add/masked_fill family's empty-mask row)."
+      lhs:
+        op: "matmul"
+        args:
+          - op: "softmax"
+            args:
+              - op: "matmul"
+                args:
+                  - mvar: "Q"
+                  - op: "transpose"
+                    args:
+                      - mvar: "K"
+                    attrs:
+                      dim0: "TD1"
+                      dim1: "TD2"
+                attrs: {}
+            attrs:
+              dim: "SD"
+          - mvar: "V"
+        attrs: {}
+      rhs:
+        op: "sdpa"
+        args:
+          - mvar: "Q"
+          - mvar: "K"
+          - mvar: "V"
+        attrs:
+          scale: "SC"
+      cond:
+        - "and"
+        - - "and"
+          - - "and"
+            - - "concrete"
+              - "K"
+            - - "attr-type"
+              - "TD1"
+              - "int"
+            - - "attr-type"
+              - "TD2"
+              - "int"
+            - - "axes-last2"
+              - "K"
+              - "TD1"
+              - "TD2"
+          - - "axis"
+            - "Q"
+            - "SD"
+            - -1
+        - - "and"
+          - - "rank"
+            - "Q"
+            - ">="
+            - 2
+          - - "rank"
+            - "V"
+            - ">="
+            - 2
+      dspec:
+        SC: 1.0
+      tags:
+        - "fusion"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      Q:
+        - 0
+        - 0
+        - 0
+      K:
+        - 0
+        - 0
+        - 1
+        - 0
+      V:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "softmax"
+    - !ChildCount 2
+- id: "transform.catopt.sdpa_fold_div_nomask"
+  pass: "catopt"
+  node_kind: "matmul"
+  rule:
+    !Declarative
+    target_kind: "sdpa"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 0
+      - !KeepPath
+        - 0
+        - 0
+        - 0
+        - 1
+        - 0
+      - !KeepPath
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "sdpa_fold_div_nomask"
+      law: "softmax(q k\u1d40 / s) v is sdpa(q, k, v, scale=1/s) \u2014 the mask-free spelled form with the decomposed pre-softmax scale."
+      lhs:
+        op: "matmul"
+        args:
+          - op: "softmax"
+            args:
+              - op: "div"
+                args:
+                  - op: "matmul"
+                    args:
+                      - mvar: "Q"
+                      - op: "transpose"
+                        args:
+                          - mvar: "K"
+                        attrs:
+                          dim0: "TD1"
+                          dim1: "TD2"
+                    attrs: {}
+                  - mvar: "S"
+                attrs: {}
+            attrs:
+              dim: "SD"
+          - mvar: "V"
+        attrs: {}
+      rhs:
+        op: "sdpa"
+        args:
+          - mvar: "Q"
+          - mvar: "K"
+          - mvar: "V"
+        attrs:
+          scale: "SC"
+      cond:
+        - "and"
+        - - "and"
+          - - "and"
+            - - "and"
+              - - "concrete"
+                - "K"
+              - - "attr-type"
+                - "TD1"
+                - "int"
+              - - "attr-type"
+                - "TD2"
+                - "int"
+              - - "axes-last2"
+                - "K"
+                - "TD1"
+                - "TD2"
+            - - "axis"
+              - "Q"
+              - "SD"
+              - -1
+          - - "const-num"
+            - "S"
+        - - "and"
+          - - "rank"
+            - "Q"
+            - ">="
+            - 2
+          - - "rank"
+            - "V"
+            - ">="
+            - 2
+      dspec:
+        SC:
+          - "recip"
+          - - "float"
+            - - "const"
+              - "S"
+      tags:
+        - "fusion"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      Q:
+        - 0
+        - 0
+        - 0
+        - 0
+      K:
+        - 0
+        - 0
+        - 0
+        - 1
+        - 0
+      S:
+        - 0
+        - 0
+        - 1
+      V:
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "softmax"
+    - !ChildCount 2
