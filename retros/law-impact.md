@@ -302,7 +302,7 @@ Run from the main worktree, HEAD plus `tools/law_impact.py` only
   file owned by another agent — not touched here)
 * `.venv/bin/ty check` — pass (0 errors; `tools/` is out of scope)
 * `.venv/bin/vulture` — exit 0
-* `.venv/bin/python tools/radon_ratchet.py` — pass (1873 functions)
+* `.venv/bin/python tools/gates/radon_ratchet.py` — pass (1873 functions)
 * `uv run pytest -q` — pass (3340 passed, 31 skipped).  One earlier
   full-suite run flaked 2 `tests/test_benchkit.py` cases with
   `ModuleNotFoundError: No module named 'plotly'` (plotly is installed

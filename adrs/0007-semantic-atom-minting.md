@@ -17,7 +17,7 @@ hand-built runtime: atoms + handlers + laws).
 The e-graph composes and folds exactly what its vocabulary can spell.
 Measured so far: the RetNet fold is a *rediscovery* — the carrier the
 machine extracted is numerically identical (9.8e-9 fp64) to the
-paper's published chunkwise duality (`tools/retnet_baseline_probe.py`),
+paper's published chunkwise duality (`tools/probes/retnet_baseline_probe.py`),
 and hand-tuned baselines still beat the delivered artifact.  The
 discovery machinery can mint new *spellings* (law instances, guards,
 derives, paying forms — `square(X)=square(neg X)` was non-derivable),

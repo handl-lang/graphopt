@@ -151,7 +151,7 @@ Per ADR 0007's own falsification clause #1, layer 1's reach-expansion claim
 is **measured negative** on these workloads.  The machinery stays as
 compression tooling (shorter spellings, provenance), not a reach mechanism.
 The retro is the ADR's own measurements section; the tool is
-`tools/anti_unify_probe.py`.
+`tools/probes/anti_unify_probe.py`.
 
 ### 2.2 The atom pay-null (the composed loop)
 
@@ -181,7 +181,7 @@ pay are measured separately, and they were disjoint here**
 Question: does the precision lane (`error_budget=`) buy headroom on a real
 pretrained model where the exact lane was already FLOP-neutral?  Model: the
 real `ZhengPeng7/BiRefNet` HF checkpoint, 220.18 M params, Swin-v1-L + an
-ASPPDeformable decoder (`tools/birefnet_bounded_probe.py`).
+ASPPDeformable decoder (`tools/probes/birefnet_bounded_probe.py`).
 
 The bounded offers *exist*: 20 sites at budget 1e-2, 56 at 3e-2, certified
 bounds inside budget.  The bound gate stayed honest.  And **nothing

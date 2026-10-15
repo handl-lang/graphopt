@@ -36,7 +36,7 @@ search-coverage one.
 > branch is therefore capped at G ≤ 3, with a bounded fallback above
 > it that can never be worse than the old all-forced term.
 
-Reproduce: `.venv/bin/python tools/coordination_probe.py`
+Reproduce: `.venv/bin/python tools/probes/coordination_probe.py`
 (~80 s, CPU-only, seeded, no torch).  `--instances N --space-cap C`
 widen the sweep.
 
@@ -210,6 +210,6 @@ minority of graphs that mix a profitable and an unprofitable group.
 ## Reproduce
 
 ```sh
-.venv/bin/python tools/coordination_probe.py                    # n=80, cap=4096
-.venv/bin/python tools/coordination_probe.py --instances 60 --space-cap 16384
+.venv/bin/python tools/probes/coordination_probe.py                    # n=80, cap=4096
+.venv/bin/python tools/probes/coordination_probe.py --instances 60 --space-cap 16384
 ```

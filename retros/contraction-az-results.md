@@ -7,7 +7,7 @@ learned policy is no longer compute-starved — yet it still loses to
 **structural**: quality *saturates* with rollout count (20 -> 120
 rollouts moves the n = 40 ratio only 1.9 -> 1.8).  More compute cannot
 close a quality gap, so the policy needs a **better decision**, not
-more of them.  `tools/contraction_az.py` is the direct response: an
+more of them.  `tools/probes/contraction/contraction_az.py` is the direct response: an
 AlphaZero-ification of the single-player contraction game.
 
 **Short verdict: it does not work.**  PUCT + a learned value head is
@@ -17,7 +17,7 @@ It wins in exactly one cell, and the reason is instructive (below).
 
 ## What was built
 
-`tools/contraction_az.py` (new, self-contained; nothing under
+`tools/probes/contraction/contraction_az.py` (new, self-contained; nothing under
 `packages/` changed):
 
 * **Two heads, one trunk.**  The net keeps the per-pair policy head and
@@ -98,7 +98,7 @@ any more on search around it.
 ## Reproduce
 
 ```sh
-.venv/bin/python tools/contraction_az.py --device cuda --seed 0
+.venv/bin/python tools/probes/contraction/contraction_az.py --device cuda --seed 0
 ```
 
 GPU, ~90 s of training (9 s for the plain policy, 75 s for the PUCT

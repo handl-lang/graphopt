@@ -41,10 +41,10 @@ The headline is again **honest and negative-but-informative**:
 
 Reproduce:
 
-    .venv/bin/python tools/law_shape_census.py --top 400
+    .venv/bin/python python -m catopt_discovery.census --top 400
     .venv/bin/python tools/law_vocab.py
-    .venv/bin/python tools/law_pipeline.py
-    .venv/bin/python tools/law_pipeline.py --holdout select_mul
+    .venv/bin/python python -m catopt_discovery.pipeline
+    .venv/bin/python python -m catopt_discovery.pipeline --holdout select_mul
 
 ## 1. What was added and why
 
@@ -209,7 +209,7 @@ Per-candidate notes:
 * `.venv/bin/ruff format --check packages tools` — pass
 * `.venv/bin/ty check` — pass (0 errors)
 * `.venv/bin/vulture` — pass
-* `tools/radon_ratchet.py` — pass (2028 functions; the nine builders
+* `tools/gates/radon_ratchet.py` — pass (2028 functions; the nine builders
   stay under the rank-C threshold)
 * `pytest tests/test_corpus_models.py` — **3 passed** (forward +
   export + lowered fp64 verify over all 19 corpus builders)

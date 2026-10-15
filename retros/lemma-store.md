@@ -7,15 +7,15 @@ What was still missing was the *record*: nothing serialised a whole
 `Rewrite`, and nothing stored one.  This change adds the codec
 (`catopt_core.laws.serialize`), lifts the term codec and the
 alpha-normal key to core where the seam can reach them, and gives
-`tools/law_evidence.py` a `lemmas` table with a `--admit` path that
+`python -m catopt_discovery.evidence` a `lemmas` table with a `--admit` path that
 rebuilds a stored row into a live `Rewrite` that fires.
 
 Reproduce:
 
     .venv/bin/python -m pytest tests/test_law_serialize.py -q
-    .venv/bin/python tools/law_evidence.py --report /tmp/l.db \
+    .venv/bin/python python -m catopt_discovery.evidence --report /tmp/l.db \
         --add-lemma softmax_fold
-    .venv/bin/python tools/law_evidence.py --report /tmp/l.db \
+    .venv/bin/python python -m catopt_discovery.evidence --report /tmp/l.db \
         --admit '<alpha_key printed above>'
 
 ## 1. The mechanism
@@ -54,7 +54,7 @@ Reproduce:
     delegates).  The evidence store keys lemma rows by `repr` of the
     pair — the same identity the `candidates`/`verdicts` tables
     already use, so a lemma row joins to the verdict that earned it.
-* `tools/law_evidence.py` — a third table and two CLI verbs:
+* `python -m catopt_discovery.evidence` — a third table and two CLI verbs:
 
       CREATE TABLE lemmas (
           alpha_key TEXT PRIMARY KEY,   -- repr(alpha_key(lhs, rhs))
@@ -97,12 +97,12 @@ pattern stores; the guard is `missing_hooks: ["check"]`.
 
 ## 3. The admit demo
 
-    $ tools/law_evidence.py --report /tmp/l.db --add-lemma weight_factor_matmul
+    $ python -m catopt_discovery.evidence --report /tmp/l.db --add-lemma weight_factor_matmul
     stored weight_factor_matmul  [full-data]
       alpha_key = (('add', (('matmul', …
-    $ tools/law_evidence.py --report /tmp/l.db --add-lemma softmax_fold
+    $ python -m catopt_discovery.evidence --report /tmp/l.db --add-lemma softmax_fold
     stored softmax_fold  [missing hooks: derive]
-    $ tools/law_evidence.py --report /tmp/l.db --admit '<key>'
+    $ python -m catopt_discovery.evidence --report /tmp/l.db --admit '<key>'
     admitted weight_factor_matmul  [full-data]
       weight_factor_matmul: (add (matmul 'x', 'W'), (matmul 'x', 'W2'))
           -> (matmul 'x', (add 'W', 'W2'))

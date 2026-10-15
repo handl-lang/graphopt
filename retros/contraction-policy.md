@@ -24,12 +24,12 @@ cheap players: the learned policy *ties* the best cheap player as a
 single rollout and *beats* it once both sides get restarts.  It is a
 real but not a dramatic win, and it is not uniform across instances.
 
-Reproduce: `.venv/bin/python tools/contraction_policy.py --device cuda`
+Reproduce: `.venv/bin/python tools/probes/contraction/contraction_policy.py --device cuda`
 (~4-5 min on an RTX 2050; seeded, deterministic on the GPU).
 
 ## What was built
 
-`tools/contraction_policy.py` — self-contained; **nothing under
+`tools/probes/contraction/contraction_policy.py` — self-contained; **nothing under
 `packages/` changed**.  It imports the players and cost model straight
 from `contraction_scale` (so the comparison is on the *same* cost), and
 re-implements only the game and the policy.
@@ -220,11 +220,11 @@ not** — a single learned rollout does not beat the best cheap player.
 ## Reproduce
 
 ```sh
-.venv/bin/python tools/contraction_policy.py --device cuda --seed 0 --instances 6
+.venv/bin/python tools/probes/contraction/contraction_policy.py --device cuda --seed 0 --instances 6
 # seed 1 (robustness):
-.venv/bin/python tools/contraction_policy.py --device cuda --seed 1 --instances 6
+.venv/bin/python tools/probes/contraction/contraction_policy.py --device cuda --seed 1 --instances 6
 # faster / CPU smoke test:
-.venv/bin/python tools/contraction_policy.py --trainer rl --iterations 300 \
+.venv/bin/python tools/probes/contraction/contraction_policy.py --trainer rl --iterations 300 \
     --instances 1 --scales 20 --device cpu
 ```
 

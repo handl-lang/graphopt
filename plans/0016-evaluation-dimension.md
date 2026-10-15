@@ -16,7 +16,7 @@ it stages what ADR 0003 decides.
 | 4 evaluation | done | `catopt_core.pareto` (`CostVector`, `frontier`, `best`) |
 | 5 game API | done | `catopt_core.game` (`Action` / `GameState` / `RuleBook` / `transition` / `Evaluator`) |
 | 6 policies | done | `catopt_core.policies` (random / existing / greedy / beam-score) |
-| 7 learned policy | done | supervised: `catopt_core.trajectories` + `catopt_torch.learned_policy` + `tools/train_search_policy.py`; **RL**: `catopt_core.search_env` + `catopt_torch.rl` + `tools/train_rl_policy.py` |
+| 7 learned policy | done | supervised: `catopt_core.trajectories` + `catopt_torch.learned_policy` + `tools/train/train_search_policy.py`; **RL**: `catopt_core.search_env` + `catopt_torch.rl` + `tools/train/train_rl_policy.py` |
 | 8 performance model | done | `catopt_core.perf_model` (`AnalyticalPerformanceModel`) |
 | 9–11 | done | `docs/evaluation.md`; property tests |
 | 12 benchmarks | done | `bench/suites/evaluation/policy_value.py` |
@@ -339,7 +339,7 @@ uv run pytest
 .venv/bin/lint-imports
 .venv/bin/bandit -c .bandit.yaml -r packages
 .venv/bin/semgrep --config .semgrep.yml packages
-.venv/bin/python tools/radon_ratchet.py
+.venv/bin/python tools/gates/radon_ratchet.py
 ```
 
 Coverage stays `fail_under = 100`.  **Every new Protocol ships with a
@@ -521,7 +521,7 @@ pretrained search policy → runtime rules / model / hardware
   **failure** tests; the failure suite is the one that classifies
   OOM / timeout / NaN rather than crashing.
 - Gate: 100% coverage; `typeguard` runtime contracts on the new
-  modules (grow `tools/runtime_types.sh`).
+  modules (grow `tools/gates/runtime_types.sh`).
 - Risk: instrumentation time — keep heavy suites out of the
   instrumented list, as today.
 

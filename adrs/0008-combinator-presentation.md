@@ -145,7 +145,7 @@ The direction fails, measurably, if:
 ## Measurements (added post-landing)
 
 Bridge prototype + falsification gates measured (`841b99c`, `481eec7`,
-merged `32962d0`; `tools/combinator.py` + `tools/combinator_probe.py`).
+merged `32962d0`; `tools/combinator.py` + `tools/probes/combinator_probe.py`).
 
 - **Gate 1 — corpus round-trip: PASS.**  321/321 exported workloads
   (zoo + intake + model registries) round-trip *structurally exact*

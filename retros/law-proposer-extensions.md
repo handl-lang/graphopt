@@ -13,7 +13,7 @@ oracle gaps:
    commutation.
 
 This retro records implementing both extensions in
-`tools/law_pipeline.py` and re-running the validated pipeline.
+`python -m catopt_discovery.pipeline` and re-running the validated pipeline.
 
 The headline is the pipeline's **second machine-discovered SHIP**:
 
@@ -32,12 +32,12 @@ The headline is the pipeline's **second machine-discovered SHIP**:
 
 Reproduce:
 
-    .venv/bin/python tools/law_pipeline.py --vocab derived
-    .venv/bin/python tools/law_pipeline.py --vocab derived --holdout select_mul
+    .venv/bin/python python -m catopt_discovery.pipeline --vocab derived
+    .venv/bin/python python -m catopt_discovery.pipeline --vocab derived --holdout select_mul
 
 CPU-only, ~6 min (the new candidates that fire add reach saturations).
 
-## 1. What was added (all in `tools/law_pipeline.py`)
+## 1. What was added (all in `python -m catopt_discovery.pipeline`)
 
 * **`Proposal.check` / `Proposal.derive`** — the `Rewrite`
   side-condition hooks, threaded through `Proposal.as_rule()`.  A
@@ -174,7 +174,7 @@ None was guessed — a chain without a recognizer stays a census fact.
 * `.venv/bin/ruff format --check packages tools` — pass
 * `.venv/bin/ty check` — pass (0 errors)
 * `.venv/bin/vulture` — pass
-* `tools/radon_ratchet.py` — pass (scans `packages`; tool code is
+* `tools/gates/radon_ratchet.py` — pass (scans `packages`; tool code is
   outside its target list)
 * `uv run pytest -q` — **3367 passed, 31 skipped** (~8 min)
 * `law_pipeline.py --vocab derived --holdout select_mul` — **PASS**

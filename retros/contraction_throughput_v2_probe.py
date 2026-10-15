@@ -11,7 +11,7 @@
   old per-game rollout driver (``_old_rollouts``) against the shipped
   :func:`rollout_orders`, throughput (episodes/s at a batch sweep)
   and equal-wall-clock quality (best-of-N under an affine batch
-  scheduler, the protocol of ``tools/contraction_guided_restart.py``)
+  scheduler, the protocol of ``tools/probes/contraction/contraction_guided_restart.py``)
   vs ``opt_einsum``'s players — every order scored by
   ``oe.contract_path``, the independent metric.
 

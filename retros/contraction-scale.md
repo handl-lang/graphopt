@@ -25,7 +25,7 @@ players — up to **13× mean, 28× worst** — so the domain is **open**,
 with the honest caveat below about *which* search the headroom is
 above.
 
-Reproduce: `.venv/bin/python tools/contraction_scale.py`
+Reproduce: `.venv/bin/python tools/probes/contraction/contraction_scale.py`
 (~3 min, CPU-only, seeded; `--instances K`, `--sat-deadline S`).
 
 ## What was measured
@@ -189,12 +189,12 @@ one-step oracle is not the binding baseline at scale.
 ## Reproduce
 
 ```sh
-.venv/bin/python tools/contraction_scale.py            # ~3 min
-.venv/bin/python tools/contraction_scale.py --instances 1 --seed 1
+.venv/bin/python tools/probes/contraction/contraction_scale.py            # ~3 min
+.venv/bin/python tools/probes/contraction/contraction_scale.py --instances 1 --seed 1
 # the unbounded saturation curve (§1, supplementary):
 .venv/bin/python -c "
 import importlib.util as u
-s = u.spec_from_file_location('cs', 'tools/contraction_scale.py')
+s = u.spec_from_file_location('cs', 'tools/probes/contraction/contraction_scale.py')
 cs = u.module_from_spec(s); s.loader.exec_module(cs)
 a, ar, c = cs.contract_rules()
 for n in (8, 10, 12, 13):

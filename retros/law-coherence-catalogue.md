@@ -2,20 +2,20 @@
 
 A rewrite law is a 2-cell `lhs ~[2]~> rhs`; a relation *between* two
 laws is a 3-cell (ADR 0002).  The pipeline has always detected these
-implicitly — `tools/law_pipeline.py`'s ranker flags proposals as
+implicitly — `python -m catopt_discovery.pipeline`'s ranker flags proposals as
 `duplicate` / `inverse` of shipped rules by alpha-normal key, and
 `tools/law_verifier.py` asks whether one law is derivable from the
 rest of the library.  What never existed is the *pairwise* catalogue:
 for every ordered pair `(A, B)` of shipped laws, does `A` derive `B`?
 Do they commute?  Are they the same 2-cell carried by two rules?
 
-`tools/law_coherence.py` builds that catalogue.  Everything is
+`python -m catopt_discovery.coherence` builds that catalogue.  Everything is
 measured by the shipped machinery — `EGraph` saturation on each law's
 concrete instance (`law_verifier.instance_of`, extended with a
 generic pattern-driven fallback for the layout family) — never
 asserted.
 
-Reproduce: `.venv/bin/python tools/law_coherence.py` (~2 s, CPU-only;
+Reproduce: `.venv/bin/python python -m catopt_discovery.coherence` (~2 s, CPU-only;
 `--with-layout` for the 130-rule universe, `--json PATH` for raw
 data).
 

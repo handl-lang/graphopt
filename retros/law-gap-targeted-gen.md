@@ -9,7 +9,7 @@ search** — synthesize a workload that *contains* a census-identified
 unsatisfied shape, rather than hoping sampling hits one.  This retro
 closes that loop with `tools/law_gap_targeted_gen.py`.
 
-The pipeline (`tools/law_pipeline.py`, `--vocab derived`, 50
+The pipeline (`python -m catopt_discovery.pipeline`, `--vocab derived`, 50
 proposals) reports 28 candidates that never fired on a real model and
 were not proven false — the "no firing on a real model" /
 "inapplicable (no real match)" / "unproven (no oracle)" verdicts.
@@ -200,7 +200,7 @@ no `packages/` change:
   pass
 * `.venv/bin/python tools/law_gap_targeted_gen.py` — runs to
   completion (~8 min incl. the baseline pipeline); tables above
-* `.venv/bin/python tools/radon_ratchet.py` — pass (tools/ is
+* `.venv/bin/python tools/gates/radon_ratchet.py` — pass (tools/ is
   outside the ratchet's `packages` target)
 
 Per the task bound the full pytest/coverage gate was **not** run

@@ -8,7 +8,7 @@ batched-vs-generic comparison that could catch a slow carrier
 delivery always ran on the built-in constants.  This change wires
 the profile through and adds the measured-corrections consumer the
 delivered comparison needed.  Re-running
-`tools/executor_cost_probe.py` against the shipped code path —
+`tools/probes/executor_cost_probe.py` against the shipped code path —
 no post-hoc re-implementation of the upgrade loop — now lands on
 the measured-fastest member on **all 12 probe cases**: `add`-rooted
 `IRModule`s on all six SSM cases instead of
@@ -57,7 +57,7 @@ builders stay the routing gate.  The profile only moves the
 
 ## 2. Calibration path
 
-`tools/executor_cost_probe.py --emit-profile PATH` now writes a
+`tools/probes/executor_cost_probe.py --emit-profile PATH` now writes a
 `TargetProfile` JSON: the pooled per-family geomean factor
 (`measured_routed_ns / modeled_ns`, eager) under every measured
 `shape_bucket`, with `n` = pooled observation count.  Pooled rather
@@ -173,7 +173,7 @@ member.
   baseline 8).
 * `pytest tests/test_optimize_routing.py` — 25/25 (~12 s; the only
   test file run — full suite deliberately not run).
-* `tools/executor_cost_probe.py --json /tmp/ec2.json
+* `tools/probes/executor_cost_probe.py --json /tmp/ec2.json
   --emit-profile /tmp/ec_profile.json` — runs to completion
   (~9 min); verdict `correct` on 12/12 through the shipped
   `_carrier_upgrade`, no post-hoc re-implementation.

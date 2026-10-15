@@ -7,7 +7,7 @@ view-naturality candidate.  `select_mul` was discoverable only because
 `select` happened to be listed.  This retro records replacing the
 lookup with a **test**: `tools/law_vocab.py` classifies every op that
 occurs in the corpus by what it *does*, and
-`tools/law_pipeline.py --vocab derived` runs the whole pipeline on the
+`python -m catopt_discovery.pipeline --vocab derived` runs the whole pipeline on the
 derived alphabet.
 
 The headline is a **pass on both checks that matter**:
@@ -25,7 +25,7 @@ The headline is a **pass on both checks that matter**:
 Reproduce:
 
     .venv/bin/python tools/law_vocab.py
-    .venv/bin/python tools/law_pipeline.py --vocab derived --holdout select_mul
+    .venv/bin/python python -m catopt_discovery.pipeline --vocab derived --holdout select_mul
 
 CPU-only, ~30 s for the derivation plus the pipeline's usual ~25 s.
 
@@ -133,9 +133,9 @@ classes.
 ## Gates
 
 `tools/`-only change (`tools/law_vocab.py` new, `--vocab` flag in
-`tools/law_pipeline.py`):
+`python -m catopt_discovery.pipeline`):
 
-* `.venv/bin/ruff check tools/law_vocab.py tools/law_pipeline.py` — pass
+* `.venv/bin/ruff check tools/law_vocab.py python -m catopt_discovery.pipeline` — pass
 * `.venv/bin/ruff format --check` on both — pass
 * `tools/law_vocab.py` — runs CPU-only, ~30 s, deterministic
 * `law_pipeline.py --vocab derived --holdout select_mul` — PASS

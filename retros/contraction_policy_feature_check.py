@@ -4,7 +4,7 @@ Companion to ``contraction-policy-throughput.md``.  It defines the
 *pre-optimisation* scalar feature construction inline (a faithful copy
 of the original ``ContractionGame`` feature code) and drives both it and
 the shipped vectorised ``ContractionGame`` (from
-``tools/contraction_policy.py``) along the *same* action sequence,
+``tools/probes/contraction/contraction_policy.py``) along the *same* action sequence,
 asserting the state and pair feature vectors are equal **bit for bit**
 on every step, on both instance families and the four real einsums.
 

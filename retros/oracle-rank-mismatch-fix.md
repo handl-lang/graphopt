@@ -54,7 +54,7 @@ What was deliberately *not* changed:
 
 ## 3. Regression audit — did any past verdict change?
 
-Re-ran `tools/law_pipeline.py --vocab derived` before and after the
+Re-ran `python -m catopt_discovery.pipeline --vocab derived` before and after the
 fix (same tree, `--json`, all 50 candidates) and diffed the `true`
 column per candidate name.  **Three flips, all `True → False`, all the
 same hole class:**
@@ -129,7 +129,7 @@ no `packages/` edit:
 
 * `.venv/bin/ruff check tools/law_proposal.py` — pass
 * `.venv/bin/ruff format --check tools/law_proposal.py` — pass
-* `tools/law_pipeline.py --vocab derived` before/after — three
+* `python -m catopt_discovery.pipeline --vocab derived` before/after — three
   `true→false` flips, all rank-collapse candidates (§3); no
   `derivable`/`shippable` verdict changed
 * reproducer `select(u) = unsqueeze(select(u))` — `True → False`

@@ -29,7 +29,7 @@ bundled as package data.
   batch 24, seed 0, family `random_bond_network`, git sha `4311e457`,
   torch `2.14.0+cu130`.  The loader uses `weights_only=True` and
   rejects wrong-format / feature-drifted payloads with `ValueError`.
-* `tools/train_contraction_artifact.py` — the reproducible trainer:
+* `tools/train/train_contraction_artifact.py` — the reproducible trainer:
   curriculum regime, `_on_family` patch (no opt_einsum needed —
   training needs only the generator), save, reload-through-the-shipped-
   loader, and a held-out sanity table.
@@ -45,7 +45,7 @@ bundled as package data.
   `package-data = artifacts/*.pt`; `.gitignore` gets a narrow
   `!artifacts/*.pt` exception (first bundled-weights precedent);
   `uv.lock` re-resolved.
-* Tools refactor: `tools/contraction_policy.py` now imports the game /
+* Tools refactor: `tools/probes/contraction/contraction_policy.py` now imports the game /
   net / rollout machinery from the package (the old names stay as
   aliases, so `contraction_einsum`, `contraction_scale_probe`,
   `contraction_az`, `contraction_value_probe` are untouched);
@@ -64,13 +64,13 @@ best   = policy.best_order(tensors, sizes, samples=64, seed=0)
 ```
 
 `path=` loads a user checkpoint written by
-`save_contraction_policy` / `tools/train_contraction_artifact.py`;
+`save_contraction_policy` / `tools/train/train_contraction_artifact.py`;
 `device="cuda"` gives the throughput the experiments measured.
 Nothing loads at import — the `torch.load` happens on call.
 
 Reproduce the weights:
 
-    .venv/bin/python tools/train_contraction_artifact.py   # ~265 s, CUDA
+    .venv/bin/python tools/train/train_contraction_artifact.py   # ~265 s, CUDA
 
 ## 3. Capability statement (honest)
 
@@ -118,7 +118,7 @@ measurement is an experiment protocol, not an API.
 * Scoped coverage (`--include=contraction_policy.py`): **100 %**
 * `.venv/bin/vulture`, `lint-imports` (4 contracts kept), `bandit`,
   `semgrep --config .semgrep.yml` — clean
-* `tools/radon_ratchet.py --update` regenerated the baseline: 43 new
+* `tools/gates/radon_ratchet.py --update` regenerated the baseline: 43 new
   entries for the module plus the committed `meta_eval` fix (7→8)
 * `uv lock` — resolved (numpy declared for catopt-torch)
 * Training: CUDA, 265.2 s, `p_train_artifact` converged; artifact

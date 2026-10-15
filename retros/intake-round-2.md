@@ -1,6 +1,6 @@
 # Retro — intake round 2: 166 real workloads, 0 shippable laws
 
-**Status:** landed (`tools/law_intake.py`, `torch_bridge.py`,
+**Status:** landed (`python -m catopt_discovery.intake`, `torch_bridge.py`,
 `attrs.py`); pipeline delta is an honest negative.
 
 ## What landed

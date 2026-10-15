@@ -24,9 +24,9 @@ The headline is **honest and negative-but-informative**:
 
 Reproduce:
 
-    .venv/bin/python tools/law_shape_census.py
-    .venv/bin/python tools/law_pipeline.py --vocab derived
-    .venv/bin/python tools/law_pipeline.py --vocab derived --holdout select_mul
+    .venv/bin/python python -m catopt_discovery.census
+    .venv/bin/python python -m catopt_discovery.pipeline --vocab derived
+    .venv/bin/python python -m catopt_discovery.pipeline --vocab derived --holdout select_mul
 
 ## 1. What was added and why
 
@@ -143,7 +143,7 @@ Per-candidate notes on the enlarged corpus:
 * `.venv/bin/ruff format --check packages tools` — pass
 * `.venv/bin/ty check` — pass (0 errors)
 * `.venv/bin/vulture` — pass
-* `tools/radon_ratchet.py` — pass (1903 functions)
+* `tools/gates/radon_ratchet.py` — pass (1903 functions)
 * `uv run pytest -q` — **3367 passed, 31 skipped** (~7.7 min)
 * `coverage` — pinned at 100 %; new builders fully exercised by
   `tests/test_corpus_models.py` (forward + export + lowered verify +

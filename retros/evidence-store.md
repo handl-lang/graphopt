@@ -1,21 +1,21 @@
 # The evidence store — verdicts are a pure function, so cache them
 
-`tools/law_pipeline.py` recomputed every verdict on every run (~2 min
+`python -m catopt_discovery.pipeline` recomputed every verdict on every run (~2 min
 on this box; the retro's "~25 s" was a quieter machine) and scattered
 the results across `/tmp` JSON dumps and prose retros — so "what did
 we measure, and did it change?" was answered by grepping prose.  A
 verdict is **deterministic given the corpus, the search rule set and
-the verification code** — a perfect cache.  `tools/law_evidence.py`
+the verification code** — a perfect cache.  `python -m catopt_discovery.evidence`
 is that store: a `sqlite3` database (stdlib only, no new
 dependencies) wired into the pipeline as a pure side effect.
 
 Reproduce:
 
-    .venv/bin/python tools/law_pipeline.py --evidence-db /tmp/laws.db
-    .venv/bin/python tools/law_pipeline.py --evidence-db /tmp/laws.db \
+    .venv/bin/python python -m catopt_discovery.pipeline --evidence-db /tmp/laws.db
+    .venv/bin/python python -m catopt_discovery.pipeline --evidence-db /tmp/laws.db \
         --use-evidence-cache
-    .venv/bin/python tools/law_evidence.py --report /tmp/laws.db
-    .venv/bin/python tools/law_evidence.py --report /tmp/laws.db --ships
+    .venv/bin/python python -m catopt_discovery.evidence --report /tmp/laws.db
+    .venv/bin/python python -m catopt_discovery.evidence --report /tmp/laws.db --ships
 
 ## 1. Schema
 
@@ -104,8 +104,8 @@ recorded verdict for a candidate.
 
 ## Gates
 
-`ruff check` / `ruff format --check` clean on `tools/law_evidence.py`
-and `tools/law_pipeline.py`; pipeline runs to completion fresh,
+`ruff check` / `ruff format --check` clean on `python -m catopt_discovery.evidence`
+and `python -m catopt_discovery.pipeline`; pipeline runs to completion fresh,
 cached, and under `--holdout select_mul` (rediscovery still PASS —
 `census:mul_select` SHIP at rank 1 of 50).  No test suite run —
 tooling-only change.

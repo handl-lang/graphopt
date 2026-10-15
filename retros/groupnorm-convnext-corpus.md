@@ -26,9 +26,9 @@ The headline is again **honest and negative-but-informative**:
 
 Reproduce:
 
-    .venv/bin/python tools/law_shape_census.py --top 200
-    .venv/bin/python tools/law_pipeline.py --vocab derived
-    .venv/bin/python tools/law_pipeline.py --vocab derived --holdout select_mul
+    .venv/bin/python python -m catopt_discovery.census --top 200
+    .venv/bin/python python -m catopt_discovery.pipeline --vocab derived
+    .venv/bin/python python -m catopt_discovery.pipeline --vocab derived --holdout select_mul
 
 ## 1. The schema fix — `arg5` is `cudnn_enabled`
 

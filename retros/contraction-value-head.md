@@ -23,7 +23,7 @@ PUCT loses — lookahead is.**
 
 ## What was built
 
-`tools/contraction_value_probe.py` (new, self-contained; nothing under
+`tools/probes/contraction/contraction_value_probe.py` (new, self-contained; nothing under
 `packages/` changed).  It:
 
 1. trains the AZ net exactly as `contraction_az.train_search` does;
@@ -83,7 +83,7 @@ with the net's own inputs.
 
 ## 3. The fix: make the normaliser observable
 
-Two changes to `tools/contraction_az.py` (both behind a documented
+Two changes to `tools/probes/contraction/contraction_az.py` (both behind a documented
 `--value-unit` / feature flag; `packages/` untouched):
 
 * **`_sf`** appends the board's `log2(ref)` to the state features, so
@@ -200,11 +200,11 @@ genuine defect worth fixing; it was not the binding constraint.
 
 ```sh
 # the value probe: V(s) vs the exact DP, error + rank + sibling rank
-.venv/bin/python tools/contraction_value_probe.py --device cuda --value-unit ref
-.venv/bin/python tools/contraction_value_probe.py --device cuda --value-unit abs
+.venv/bin/python tools/probes/contraction/contraction_value_probe.py --device cuda --value-unit ref
+.venv/bin/python tools/probes/contraction/contraction_value_probe.py --device cuda --value-unit abs
 
 # the paired end-to-end control (same search, learned value vs analytic)
-.venv/bin/python tools/contraction_az.py --device cuda --seed 0 \
+.venv/bin/python tools/probes/contraction/contraction_az.py --device cuda --seed 0 \
     --value-unit ref --puct-analytic --instances 5 --budgets 200
 ```
 

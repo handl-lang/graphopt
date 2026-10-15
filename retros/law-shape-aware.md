@@ -8,7 +8,7 @@ decoupled from reality: it optimised algebraic novelty, not
 applicability.
 
 This retro closes that loop.  It mines the shape distribution of the
-real corpus (`tools/law_shape_census.py`), then drives a proposer
+real corpus (`python -m catopt_discovery.census`), then drives a proposer
 (`tools/law_shape_proposal.py`) from the *frequent shapes* and asks the
 only question that matters: **is there a true, cost-reducing equality
 whose LHS is (or contains) that shape?**
@@ -35,14 +35,14 @@ is inapplicable.  Shape-awareness finds a law exactly where the shape's
 
 Reproduce:
 
-    .venv/bin/python tools/law_shape_census.py --json /tmp/census.json
+    .venv/bin/python python -m catopt_discovery.census --json /tmp/census.json
     .venv/bin/python tools/law_shape_proposal.py --json /tmp/shape.json
 
 CPU-only, no network, a few minutes.  Output is deterministic.
 
 ## 1. The shape census (the deliverable that outlives the experiment)
 
-`tools/law_shape_census.py` reads the same corpus the impact tool
+`python -m catopt_discovery.census` reads the same corpus the impact tool
 probes — the 60 bench law cases plus the 22 exported
 `catopt_torch.models` blocks — and reports three tables.  Corpus: **82
 terms, 610 op nodes, 124 distinct op-tuples, 322 distinct shapes.**
@@ -333,12 +333,12 @@ payoff of supplying it.
 
 ## Gates
 
-Run from the main worktree, HEAD plus `tools/law_shape_census.py` and
+Run from the main worktree, HEAD plus `python -m catopt_discovery.census` and
 `tools/law_shape_proposal.py` (no `packages/` change):
 
 * `.venv/bin/ruff check packages tools` — pass
 * `.venv/bin/ruff format --check packages tools` — pass
 * `.venv/bin/ty check` — pass (0 errors; `tools/` is out of scope)
 * `.venv/bin/vulture` — exit 0
-* `.venv/bin/python tools/radon_ratchet.py` — pass
+* `.venv/bin/python tools/gates/radon_ratchet.py` — pass
 * `uv run pytest -q` — pass

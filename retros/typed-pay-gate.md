@@ -23,8 +23,8 @@ count visible.
 
 Reproduce:
 
-    .venv/bin/python tools/law_pipeline.py --vocab derived \
-        --evidence-db tools/evidence.db --json /tmp/pipeline-typed.json
+    .venv/bin/python python -m catopt_discovery.pipeline --vocab derived \
+        --evidence-db tools/data/evidence.db --json /tmp/pipeline-typed.json
 
 ## 1. What was measured before
 
@@ -181,7 +181,7 @@ ill-typed member — the tuple-valued-`U` signatures the oracle named),
 
 ## 5. What changed
 
-* `tools/law_pipeline.py` — the typedness-audit block
+* `python -m catopt_discovery.pipeline` — the typedness-audit block
   (`_bad_subterms`, `_evals`, `_term_typed`, `_pick_ill_typed`,
   `_subst_key`, `_app_typed`, `_TypedAudit`, `_typed_probe`);
   `_fire` splits fires and gates `changed`/`paid`/`verify_fail` on
@@ -196,7 +196,7 @@ ill-typed member — the tuple-valued-`U` signatures the oracle named),
   predicates, the per-fire split (typed, ill-typed-by-broadcast,
   ill-typed-by-tuple-operand), paid suppression at the `_fire` and
   `_reach_row` levels, and the verdict strings.
-* `tools/evidence.db` — the new run's verdicts recorded under the
+* `tools/data/evidence.db` — the new run's verdicts recorded under the
   new `code_rev` (untracked local artifact; rows are keyed by
   content hash, so the pre-gate rows remain for comparison).
 

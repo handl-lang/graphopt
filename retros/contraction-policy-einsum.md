@@ -36,21 +36,21 @@ Reproduce (RTX 2050, ~2.5 min/seed including 60 s of training):
 
 ```sh
 uv sync --group einsum
-.venv/bin/python tools/contraction_einsum.py --device cuda --seed 0
-.venv/bin/python tools/contraction_einsum.py --device cuda --seed 1
+.venv/bin/python tools/probes/contraction/contraction_einsum.py --device cuda --seed 0
+.venv/bin/python tools/probes/contraction/contraction_einsum.py --device cuda --seed 1
 ```
 
 ## What was added
 
 **`opt_einsum` is a new opt-in dependency group**, mirroring the
 existing `oracle` group for `egglog`: it is *not* in `dev`, nothing
-under `packages/` imports it, and `tools/contraction_einsum.py` exits
+under `packages/` imports it, and `tools/probes/contraction/contraction_einsum.py` exits
 with a `uv sync --group einsum` hint when the group is absent.  The pin
 is `opt_einsum>=3.4.0,<4` — 3.4.0 was published 2024-09-26, well over
 the 7-day floor, and the upper bound keeps the lockfile off an untested
 major.
 
-**`tools/contraction_einsum.py`** — self-contained; **nothing under
+**`tools/probes/contraction/contraction_einsum.py`** — self-contained; **nothing under
 `packages/` changed**.  It reuses the existing machinery
 (`contraction_scale`'s players and cost model, `contraction_policy`'s
 policy net and training loop) and adds only the comparison:
@@ -294,10 +294,10 @@ the earlier result was the baselines, not the learner.
 ```sh
 uv sync --group einsum
 # the full comparison, both seeds (~2.5 min each on an RTX 2050):
-.venv/bin/python tools/contraction_einsum.py --device cuda --seed 0
-.venv/bin/python tools/contraction_einsum.py --device cuda --seed 1
+.venv/bin/python tools/probes/contraction/contraction_einsum.py --device cuda --seed 0
+.venv/bin/python tools/probes/contraction/contraction_einsum.py --device cuda --seed 1
 # a fast smoke test (no training):
-.venv/bin/python tools/contraction_einsum.py --trainer none \
+.venv/bin/python tools/probes/contraction/contraction_einsum.py --trainer none \
     --scales 20 --control 8 --instances 1 --budgets 50 --device cpu
 ```
 

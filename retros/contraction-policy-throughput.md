@@ -31,14 +31,14 @@ Reproduce (RTX 2050, `uv sync --group einsum` first):
 
 ```sh
 .venv/bin/python project/retros/contraction_policy_feature_check.py
-.venv/bin/python tools/contraction_policy.py --mode time \
+.venv/bin/python tools/probes/contraction/contraction_policy.py --mode time \
     --instances 6 --seed 0 --device cuda
-.venv/bin/python tools/contraction_einsum.py --device cuda --seed 0
+.venv/bin/python tools/probes/contraction/contraction_einsum.py --device cuda --seed 0
 ```
 
 ## What changed
 
-**`tools/contraction_policy.py` only — nothing under `packages/`
+**`tools/probes/contraction/contraction_policy.py` only — nothing under `packages/`
 changed.**  `ContractionGame` keeps its exact interface (`ts`, `pairs`,
 `step`, `state_features`, `all_pair_features`, `cost`, `greedy_ref`)
 and its exact **feature values**; only its internals and cost changed.
@@ -237,11 +237,11 @@ uv sync --group einsum
 # 1. the feature-identity assertion (no GPU):
 .venv/bin/python project/retros/contraction_policy_feature_check.py
 # 2. the per-decision / equal-wall-clock ladder on the retro's family:
-.venv/bin/python tools/contraction_policy.py --mode time \
+.venv/bin/python tools/probes/contraction/contraction_policy.py --mode time \
     --instances 6 --seed 0 --device cuda
 # 3. the head-to-head vs opt_einsum (~6 min/seed):
-.venv/bin/python tools/contraction_einsum.py --device cuda --seed 0
-.venv/bin/python tools/contraction_einsum.py --device cuda --seed 1
+.venv/bin/python tools/probes/contraction/contraction_einsum.py --device cuda --seed 0
+.venv/bin/python tools/probes/contraction/contraction_einsum.py --device cuda --seed 1
 ```
 
 Gates at this HEAD: `ruff check packages tools` clean, `ruff format

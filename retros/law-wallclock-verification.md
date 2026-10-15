@@ -4,7 +4,7 @@ Every prior "pays" claim for the two shipped machine-discovered laws
 was made under the pipeline's *own* cost model —
 `executor_cost_for("generic")`'s roofline-plus-per-dispatch proxy —
 plus one `law_bench` timing on a *registered synthetic term* per law.
-Nothing had timed the real models end-to-end.  `tools/law_wallclock.py`
+Nothing had timed the real models end-to-end.  `tools/probes/law_wallclock.py`
 closes that gap: for each model a law fires on it builds three arms —
 the raw `nn.Module`, the pipeline-optimized module
 (`Optimizer(backend=TorchBackend())`, composed `default_rules()`), and
@@ -151,9 +151,9 @@ level — most of the pipeline win comes from other rewrites — and up to
 
 ## 6. Gates
 
-* `.venv/bin/ruff check tools/law_wallclock.py` — pass
-* `.venv/bin/ruff format --check tools/law_wallclock.py` — pass
-* `tools/law_wallclock.py` runs to completion; `--json` writes the
+* `.venv/bin/ruff check tools/probes/law_wallclock.py` — pass
+* `.venv/bin/ruff format --check tools/probes/law_wallclock.py` — pass
+* `tools/probes/law_wallclock.py` runs to completion; `--json` writes the
   machine-readable table.
 * Full pytest/coverage intentionally not run: measurement task, and
   this host cannot afford two heavy jobs (RAM).

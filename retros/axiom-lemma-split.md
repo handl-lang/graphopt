@@ -12,7 +12,7 @@ it.
 
 Reproduce:
 
-    .venv/bin/python tools/law_coherence.py --emit-basis   # ~30 s, CPU
+    .venv/bin/python python -m catopt_discovery.coherence --emit-basis   # ~30 s, CPU
     .venv/bin/python -m pytest tests/test_laws_structure.py -q
 
 ## 1. The mechanism
@@ -35,7 +35,7 @@ Reproduce:
   `()` — they are not shipped-library members and keep their own
   provenance (`parents` / `guard_pats`), so the default reads
   "unmeasured", never "kernel".
-* `tools/law_coherence.py --emit-basis` computes the whole table
+* `python -m catopt_discovery.coherence --emit-basis` computes the whole table
   from the measured catalogue: primitives plus the
   alphabetically-first member of each equivalence class are axioms;
   a non-seed class member is `redundant` when an *earlier* classmate

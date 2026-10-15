@@ -247,6 +247,6 @@ change):
 * `.venv/bin/ruff format --check packages tools` — pass
 * `.venv/bin/ty check` — pass (0 errors; `tools/` is out of scope)
 * `.venv/bin/vulture` — exit 0
-* `.venv/bin/python tools/radon_ratchet.py` — pass (1873 functions)
+* `.venv/bin/python tools/gates/radon_ratchet.py` — pass (1873 functions)
 * `uv run pytest -q` — 3339 passed, 31 skipped
 * coverage unchanged (no `packages/` file touched)

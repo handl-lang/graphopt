@@ -24,7 +24,7 @@ All changes are additive and live in `catopt-torch` plus tests:
 | `packages/catopt-torch/src/catopt_torch/model_trajectories.py` | `model_rule_samples` — real-model trajectories, reusing `catopt_core.trajectories`'s encoding verbatim |
 | `packages/catopt-torch/src/catopt_torch/learned_policy.py` | `LearnedPolicy.features_of` (the derivation seam), batched `scores`, cached structural rule vectors |
 | `tests/test_graph_policy.py`, `tests/test_learned_policy.py` | tests + 100% coverage of the new lines |
-| `tools/train_graph_policy.py` | train on real models, then race default / learned / random on held-out ones |
+| `tools/train/train_graph_policy.py` | train on real models, then race default / learned / random on held-out ones |
 
 No `catopt-core` change was needed.
 
@@ -219,7 +219,7 @@ neither is a better-trained net:
 ## Reproduce
 
 ```sh
-.venv/bin/python tools/train_graph_policy.py --device cuda
+.venv/bin/python tools/train/train_graph_policy.py --device cuda
 ```
 
 It prints the training label counts, the three held-out races (fixed

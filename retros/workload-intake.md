@@ -5,7 +5,7 @@ still-untested half of self-play: **real workload intake** — ingesting
 programs not written by hand into the census.  `corpus-expansion-r2.md`
 proved real architectures produce new law candidates; both fold laws
 shipped from corpus additions.  This retro builds the intake path,
-`tools/law_intake.py`: candidate `nn.Module`s → `torch.export` →
+`python -m catopt_discovery.intake`: candidate `nn.Module`s → `torch.export` →
 `export_to_ir` → classify → persist → union into the census and the
 pipeline.
 
@@ -45,13 +45,13 @@ exactly the spellings the hand corpus never wrote.
 
 Reproduce:
 
-    .venv/bin/python tools/law_intake.py --json /tmp/intake.json
-    .venv/bin/python tools/law_shape_census.py --top 400
-    .venv/bin/python tools/law_pipeline.py --holdout select_mul
+    .venv/bin/python python -m catopt_discovery.intake --json /tmp/intake.json
+    .venv/bin/python python -m catopt_discovery.census --top 400
+    .venv/bin/python python -m catopt_discovery.pipeline --holdout select_mul
 
 ## 1. The intake mechanism
 
-`tools/law_intake.py` is self-contained: a candidate registry of
+`python -m catopt_discovery.intake` is self-contained: a candidate registry of
 `(name, thunk -> (model, example_input))` — 32 torch-native modules
 plus 7 compound assemblies built inside the tool — and the four-step
 boundary pipeline.  Every candidate lands in exactly one class:
@@ -63,8 +63,8 @@ boundary pipeline.  Every candidate lands in exactly one class:
 | `rejected` | `torch.export` / `export_to_ir` raised | the rejection record, verbatim |
 
 The census seam is a **side-file, not a code edit**: `--write` emits
-`tools/intake_corpus.json` (terms via `term_to_data`, per-workload
-metadata, the rejection backlog) and `tools/intake_tensors.pt`
+`tools/data/intake_corpus.json` (terms via `term_to_data`, per-workload
+metadata, the rejection backlog) and `tools/data/intake_tensors.pt`
 (feeds/params via `torch.save`, `weights_only` load).  Two union
 points read it:
 
@@ -220,14 +220,14 @@ training-step graph), then `conv3d`/`conv_transpose2d.input`.
 
 ## Gates
 
-* `.venv/bin/ruff check tools/law_intake.py tools/law_shape_census.py tools/law_pipeline.py` — pass
+* `.venv/bin/ruff check python -m catopt_discovery.intake python -m catopt_discovery.census python -m catopt_discovery.pipeline` — pass
 * `.venv/bin/ruff format --check` (same) — pass
-* `.venv/bin/python tools/radon_ratchet.py` — pass (2038 functions)
-* `.venv/bin/python tools/law_intake.py` — runs; tables above (~7 min incl. two mirrored pipeline runs)
-* `.venv/bin/python tools/law_pipeline.py --holdout select_mul` — PASS, rank 1 of 58 SHIP
+* `.venv/bin/python tools/gates/radon_ratchet.py` — pass (2038 functions)
+* `.venv/bin/python python -m catopt_discovery.intake` — runs; tables above (~7 min incl. two mirrored pipeline runs)
+* `.venv/bin/python python -m catopt_discovery.pipeline --holdout select_mul` — PASS, rank 1 of 58 SHIP
 * Not run: full pytest suite (task bound); `ty`/`vulture`/`lint-imports`/`bandit`/`semgrep` cover `packages` only, which this change does not touch.
 
-Files: `tools/law_intake.py` (new), `tools/law_shape_census.py`
-(+side-file union, `n_intake`), `tools/law_pipeline.py` (+intake in
-`real_terms`/probe/corpus-hash/JSON/print), `tools/intake_corpus.json`
-+ `tools/intake_tensors.pt` (generated artifacts, uncommitted).
+Files: `python -m catopt_discovery.intake` (new), `python -m catopt_discovery.census`
+(+side-file union, `n_intake`), `python -m catopt_discovery.pipeline` (+intake in
+`real_terms`/probe/corpus-hash/JSON/print), `tools/data/intake_corpus.json`
++ `tools/data/intake_tensors.pt` (generated artifacts, uncommitted).

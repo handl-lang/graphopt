@@ -6,7 +6,7 @@ FLOP-neutral extraction.  Is the loss *lowering quality* (plan-tape
 interpreter overhead) rather than semantics — i.e. does
 `torch.compile(delivered)` recover `torch.compile(source)`?
 
-Probe: `tools/birefnet_parity_probe.py` (2026-10-14, main checkout,
+Probe: `tools/probes/birefnet_parity_probe.py` (2026-10-14, main checkout,
 RTX 2050 4 GB, torch 2.14.0+cu130, `TORCHINDUCTOR_COMPILE_THREADS=2`).
 
 Block: **real timm `SwinTransformerBlock` ×2** (timm 1.0.30), shaped

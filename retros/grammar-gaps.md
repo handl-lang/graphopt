@@ -10,7 +10,7 @@ admission -> pay.  Five refusals were measured; this round closes
 four and names the fifth precisely.
 
 Changed code lives in `packages/catopt-discovery/src/catopt_discovery/handler_synth.py`
-plus its test file; `tools/grammar_probe.py` is the census
+plus its test file; `tools/probes/grammar_probe.py` is the census
 instrument.  Nothing under `catopt-core` changed.
 
 ## The refusals, before -> after (mint verdict at budget 512)

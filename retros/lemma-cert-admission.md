@@ -13,9 +13,9 @@ Reproduce:
 
     .venv/bin/python -m pytest tests/test_lemma_certificates.py \
         tests/test_law_serialize.py tests/test_derive_laws.py -q
-    .venv/bin/python tools/law_evidence.py --report /tmp/l.db \
+    .venv/bin/python python -m catopt_discovery.evidence --report /tmp/l.db \
         --add-lemma factor_matmul
-    .venv/bin/python tools/law_evidence.py --report /tmp/l.db \
+    .venv/bin/python python -m catopt_discovery.evidence --report /tmp/l.db \
         --admit '<alpha_key printed above>'
 
 ## 1. What got wired — the existing seam, extended

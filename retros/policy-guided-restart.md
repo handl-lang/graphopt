@@ -11,7 +11,7 @@ distribution and keep the best order found.
 The shipped machinery already implements the move:
 `rollout_orders(greedy=False)` samples `Categorical(logits / T)`, so
 "policy-guided restart" is exactly best-of-N sampled rollouts.  This
-retro measures it properly — `tools/contraction_guided_restart.py`
+retro measures it properly — `tools/probes/contraction/contraction_guided_restart.py`
 adds what the earlier ladders never isolated:
 
 * a **temperature sweep** {0.5, 1.0, 2.0} on the sampled restarts;
@@ -39,7 +39,7 @@ freshly trained `scale` (16–24) artifact for the n = 40 check.
 Reproduce:
 
     uv sync --group einsum
-    .venv/bin/python tools/contraction_guided_restart.py \
+    .venv/bin/python tools/probes/contraction/contraction_guided_restart.py \
         --device cuda --boards 4
 
 (Runs to completion in ~3 min.  Caveat: at the time of writing the
@@ -201,12 +201,12 @@ result.
   memory-removed heuristic) may move the per-rollout numbers at
   n = 40; re-run then.
 * **`packages/` untouched** — the only change is the new
-  `tools/contraction_guided_restart.py`.
+  `tools/probes/contraction/contraction_guided_restart.py`.
 
 ## Gates
 
-* `tools/contraction_guided_restart.py` new; `tools/` only.
-  (`tools/contraction_einsum.py` was briefly given a `temperature`
+* `tools/probes/contraction/contraction_guided_restart.py` new; `tools/` only.
+  (`tools/probes/contraction/contraction_einsum.py` was briefly given a `temperature`
   parameter, then reverted — the ladder drives `_policy_rollouts`
   directly; final diff is the new file only.)
 * `.venv/bin/ruff check` / `ruff format --check` on the new file — pass.

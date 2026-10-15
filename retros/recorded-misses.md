@@ -203,7 +203,7 @@ Scoped per the task (no full suite):
 * `ruff check packages tools` — clean; `ruff format --check` — clean
   (both limited to the format-gated surface).
 * `ty check` — clean.  `vulture` — clean.
-  `tools/radon_ratchet.py` — clean (the two heavier ops registered as
+  `tools/gates/radon_ratchet.py` — clean (the two heavier ops registered as
   `_SHAPE_RULES` handlers instead of growing `_infer_op_shape` past
   its baseline).
 * Scoped pytest — `test_square_rsqrt_laws.py` (new, 15),

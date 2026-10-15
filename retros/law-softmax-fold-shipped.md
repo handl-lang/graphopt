@@ -172,7 +172,7 @@ changes.
 * `.venv/bin/lint-imports` — 4 contracts kept
 * `.venv/bin/bandit -c .bandit.yaml -r packages` — 0 findings
 * `.venv/bin/semgrep --config .semgrep.yml packages` — 0 findings
-* `.venv/bin/python tools/radon_ratchet.py` — ok (1905 functions; the
+* `.venv/bin/python tools/gates/radon_ratchet.py` — ok (1905 functions; the
   two new hooks are rank A)
 * `uv run pytest -q` — **3382 passed, 31 skipped**
 * `coverage run … && coverage report` — **100 %** (18175 stmts, 6856

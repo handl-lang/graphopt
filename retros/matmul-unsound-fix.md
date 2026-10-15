@@ -162,7 +162,7 @@ the fuse-pair guard declines `A=(4,4) B=(1,4)` and fires on equal
 weights; the unguarded left pair is pinned sound (mixed-rank numeric
 equality + firing).
 
-`tools/law_coherence.py` re-run: the
+`python -m catopt_discovery.coherence` re-run: the
 {`distribute_matmul_over_add`, `factor_matmul`,
 `weight_distribute_matmul`, `weight_factor_matmul`} class is intact
 (duplicate+inverse edges preserved), 0 divergent critical pairs, all
@@ -177,7 +177,7 @@ and unchanged.
 * `.venv/bin/bandit -c .bandit.yaml -r packages` — 0 issues ·
   `semgrep --config .semgrep.yml packages` — 0 findings ·
   `radon_ratchet.py` — ok
-* `.venv/bin/python tools/law_coherence.py` — class intact (§6)
+* `.venv/bin/python python -m catopt_discovery.coherence` — class intact (§6)
 * pytest (scoped, serial): `test_matmul_factor_laws` (15),
   `test_laws_structure`, `test_certificates`, `test_contracts`,
   `test_meta`, `test_silu_fold_laws`, `test_softmax_laws`,

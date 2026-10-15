@@ -81,7 +81,7 @@ SILU_FOLD = R(
 
 ## 2. Confluence, measured
 
-`.venv/bin/python tools/law_coherence.py` before → after:
+`.venv/bin/python python -m catopt_discovery.coherence` before → after:
 
 | measure | before | after |
 |---|---|---|
@@ -163,7 +163,7 @@ kernel by hand gets the kernel back.
   satisfy).
 * `tests/test_laws_structure.py` — counts 53→54, 15→16, 130→131,
   189→190; `SILU_FOLD` in `PUBLIC_NAMES`.
-* `tools/law_coherence.py` — docstring/CLI universe counts.
+* `python -m catopt_discovery.coherence` — docstring/CLI universe counts.
 * `tests/test_silu_fold_laws.py` (10 tests) — the `select_mul` /
   `softmax_fold` shape: registration/tags, match-instantiate
   round-trip, fp64 soundness (`allclose 1e-15` — the fused kernel
@@ -212,7 +212,7 @@ kernel by hand gets the kernel back.
 * `.venv/bin/lint-imports` — 4 contracts kept.
 * `.venv/bin/bandit -c .bandit.yaml -r packages` — 0 findings.
 * `.venv/bin/semgrep --config .semgrep.yml packages` — 0 findings.
-* `.venv/bin/python tools/radon_ratchet.py` — ok (1948 functions).
+* `.venv/bin/python tools/gates/radon_ratchet.py` — ok (1948 functions).
 * **Focused tests** (no full-suite run — 25 min serial on this
   machine): `tests/test_silu_fold_laws.py` standalone (10 passed),
   `test_laws_structure` + `test_rules` + `test_rulesets` +

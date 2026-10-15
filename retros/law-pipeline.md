@@ -3,7 +3,7 @@
 The loop that produced `select_mul` (`law-shape-aware.md`) was a
 sequence of one-off tools with a human deciding which experiment to
 run next.  This retro records the loop made **runnable end to end** —
-one entry point, `tools/law_pipeline.py` — and the **held-out
+one entry point, `python -m catopt_discovery.pipeline` — and the **held-out
 rediscovery** that validates it.
 
 The headline is a **pass**:
@@ -23,15 +23,15 @@ The headline is a **pass**:
 
 Reproduce:
 
-    .venv/bin/python tools/law_pipeline.py
-    .venv/bin/python tools/law_pipeline.py --holdout select_mul
+    .venv/bin/python python -m catopt_discovery.pipeline
+    .venv/bin/python python -m catopt_discovery.pipeline --holdout select_mul
 
 CPU-only, no network, ~25 s per run.  Output is stable (see
 *Honesty*, §6).
 
 ## 1. The pipeline
 
-`tools/law_pipeline.py` composes the existing tools — it adds the
+`python -m catopt_discovery.pipeline` composes the existing tools — it adds the
 composition, a closure-safety ratio, and the ranking; it does not
 re-implement any stage.
 
@@ -82,7 +82,7 @@ the runs — nothing was tuned to make `select_mul` win.
 `SIMPLIFICATION_RULES`).  Remove it from the search rule set and
 re-run:
 
-    .venv/bin/python tools/law_pipeline.py --holdout select_mul
+    .venv/bin/python python -m catopt_discovery.pipeline --holdout select_mul
 
 ```
 search rule set: 51 rules (held out: select_mul)
@@ -229,12 +229,12 @@ adjusted after seeing the result.
 
 ## Gates
 
-Run from the main worktree, HEAD plus `tools/law_pipeline.py` (no
+Run from the main worktree, HEAD plus `python -m catopt_discovery.pipeline` (no
 `packages/` change):
 
 * `.venv/bin/ruff check packages tools` — pass
 * `.venv/bin/ruff format --check packages tools` — pass (126 files)
 * `.venv/bin/ty check` — pass (0 errors)
 * `.venv/bin/vulture` — exit 0
-* `.venv/bin/python tools/radon_ratchet.py` — pass (1879 functions)
+* `.venv/bin/python tools/gates/radon_ratchet.py` — pass (1879 functions)
 * `uv run pytest -q` — pass (3364 passed, 31 skipped)

@@ -10,7 +10,7 @@ That step is now emitted by the pipeline itself.  Closing the loop is
 hand-writing.
 
 The new machinery is `tools/law_emit.py`, wired into
-`tools/law_pipeline.py` as `--emit-admission <name> --out <dir>`:
+`python -m catopt_discovery.pipeline` as `--emit-admission <name> --out <dir>`:
 
 * the proposal's pattern trees render as `Op.make` calls with
   metavar / `$attr:`-metavar leaves (the same spelling `select_mul` /
@@ -35,7 +35,7 @@ The new machinery is `tools/law_emit.py`, wired into
 
 Reproduce:
 
-    .venv/bin/python tools/law_pipeline.py --holdout softmax_fold \
+    .venv/bin/python python -m catopt_discovery.pipeline --holdout softmax_fold \
         --emit-admission recognize:softmax --out /tmp/admission
 
 CPU-only, ~6 min (the pipeline run dominates; emission adds seconds).
@@ -157,7 +157,7 @@ ones and collapse).
 * `.venv/bin/lint-imports` — 4 contracts kept
 * `.venv/bin/bandit -c .bandit.yaml -r packages` — 0 findings
 * `.venv/bin/semgrep --config .semgrep.yml packages` — 0 findings
-* `tools/radon_ratchet.py` — pass
+* `tools/gates/radon_ratchet.py` — pass
 * `law_pipeline.py --holdout softmax_fold` — **PASS**
   (`recognize:softmax` rank 1 of 50, SHIP; emitted artifact applied
   to a throwaway `tensor.py` → generated tests 9/9 pass under a
