@@ -80,9 +80,33 @@ def test_check_spelled_custom_inputs():
     ]
 
 
+def test_mod_is_now_expressible_so_it_is_not_a_need():
+    """``mod`` left the backlog when the bank learned to spell it.
+
+    The synth-domain work (`1bffe82`) extended the derive bank with
+    ``mod`` (+ the value-level twin ``dspec_synth._vmod``: int-only
+    operands, nonzero divisor — the handler's strictness).  A need is a
+    *measured vocabulary gap*; an op the bank can spell is no longer one,
+    so ``detect_need`` correctly refuses.  This test pins that fact —
+    the honest refusal the ``mod_example`` docstring anticipated.
+    """
+    assert vc.detect_need(pp._mod_rank_hook, pp._rank_domain()) is None
+    # the op is still a candidate with a spelled form (sugar, not a
+    # primitive) — expressibility is what removed it from the backlog.
+    assert pp.spelled_term("mod") is not None
+    assert pp.check_spelled("mod")["agrees"] is True
+
+
 def test_build_proposal_is_complete_and_checkable():
-    need = vc.detect_need(pp._mod_rank_hook, pp._rank_domain())
-    assert need is not None and need.op == "mod"
+    # The need is *constructed*, not detected: `mod` is expressible now
+    # (above), so no domain can produce this need anymore.  The record
+    # still exercises `build_proposal`'s shape, which any future need
+    # would take.
+    need = vc.AtomNeed(
+        op="mod",
+        agreement_gain=0,
+        rules_blocked=("_mod_rank_hook",),
+    )
     prop = pp.build_proposal(need)
     assert prop["op"] == "declare"
     assert prop["admitted"] is False
@@ -110,13 +134,17 @@ def test_build_proposal_pow_marks_primitive():
     assert atom["spelled_check"]["agrees"] is None
 
 
-def test_mod_example_is_a_bank_op_proposal():
+def test_mod_example_reports_the_honest_refusal():
+    """The ``mod`` example now demonstrates the *expressible* verdict.
+
+    Its docstring anticipated exactly this: ``None`` in the ``need``
+    slot "would mean the derive was already expressible — the honest
+    refusal".  The bank learned ``mod`` (`1bffe82`), so the example
+    keeps its name/kind and reports no need and no proposal.
+    """
     ex = pp.mod_example()
     assert ex["name"] == "mod" and ex["kind"] == "bank-op"
-    assert ex["need"]["op"] == "mod"
-    assert ex["need"]["rules_blocked"] == ["_mod_rank_hook"]
-    atom = ex["proposal"]["params"]["construction"]["params"]
-    assert atom["spelled_check"]["agrees"] is True
+    assert ex["need"] is None and ex["proposal"] is None
 
 
 def test_shape_source_example_refuses_arity2_and_proposes_a_source():
@@ -151,7 +179,10 @@ def test_backlog_pairs_each_need_with_a_proposal():
         pp._synthetic_rules(), measure=pp._synthetic_measure
     )
     ops = {r["need"]["op"] for r in rows}
-    assert {"mod", "pow"} <= ops
+    # `pow` is still primitive; `mod` left the backlog when the bank
+    # learned to spell it (`1bffe82`) — a need is a *measured* gap.
+    assert "pow" in ops
+    assert "mod" not in ops
     for row in rows:
         assert row["need"]["rules_blocked"]
         atom = row["proposal"]["params"]["construction"]["params"]
@@ -165,7 +196,7 @@ def test_fmt_backlog_renders_needs_and_proposals():
     )
     text = pp._fmt_backlog(rows)
     assert "ranked backlog" in text
-    assert "mod" in text and "pow" in text
+    assert "pow" in text
     assert "spelled:" in text and "agrees:" in text
     assert "(primitive)" in text
 
@@ -178,7 +209,8 @@ def test_fmt_examples_renders_both_kinds():
     text = pp._fmt_examples(pp.examples())
     assert "worked examples" in text
     assert "shape source" in text
-    assert "declare derive-bank-op mod" in text
+    # `mod` renders its expressible verdict now, not a declare line.
+    assert "mod: no need (expressible)" in text
 
 
 def test_main_synthetic_smoke(capsys):
@@ -197,7 +229,8 @@ def test_main_synthetic_json(tmp_path, capsys):
     assert rc == 0
     payload = json.loads(out.read_text())
     assert payload["examples"] == []
-    assert {r["need"]["op"] for r in payload["backlog"]} >= {"mod"}
+    # `mod` is expressible now (`1bffe82`); `pow` is the remaining need.
+    assert {r["need"]["op"] for r in payload["backlog"]} >= {"pow"}
 
 
 def test_main_carrier_mode_is_bounded():
