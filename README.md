@@ -53,7 +53,7 @@ table as its wins.
 uv sync
 python demo.py                                  # ~60s end-to-end, no GPU needed
 python -m bench run <suite> --device cpu        # the benchmark harness
-cd toy && vp install && vp -C apps/learn dev    # the 28-level interactive course
+cd docs/tutorials/course && vp install && vp -C apps/learn dev   # the 28-level course
 ```
 
 **On your model** — export, optimize, verify, and optionally deliver:
@@ -175,7 +175,7 @@ PyTorch is one application of the engine, not its identity.
 
 ## Learn the whole thing
 
-[`toy/`](toy/README.md) is an interactive course — **28 gated levels in
+[`docs/tutorials/course/`](docs/tutorials/course/README.md) is an interactive course — **28 gated levels in
 6 modules**, each with one idea, a live widget and a checkpoint.
 No term is used before it is defined (a test pins that), every level
 ends with *"in the real project"* pointing at the implementing files,
@@ -202,7 +202,7 @@ module reviews and badges track comprehension.
 | [`docs/paper_draft.md`](docs/paper_draft.md) | the paper draft — thesis, mechanism, the three questions answered |
 | [`project/research_lab_notebook.md`](project/research_lab_notebook.md) | the lab notebook — questions, dead ends, process lessons |
 | [`docs/product_landing_page.md`](docs/product_landing_page.md) | the landing page |
-| [`toy/`](toy/README.md) | the interactive course (28 levels) |
+| [`docs/tutorials/course/`](docs/tutorials/course/README.md) | the interactive course (28 levels) |
 | [`docs/mechanism.md`](docs/mechanism.md) | syntax → structure → search → certificate |
 | [`docs/evaluation.md`](docs/evaluation.md) | features, calibration, criteria, policies |
 | [`docs/api.md`](docs/api.md) | the API surface |

@@ -114,7 +114,7 @@ it finds ~2× more useful laws per episode.
 git clone https://github.com/luisfuturist/catopt && cd catopt
 uv sync
 python demo.py                                   # ~60s, no GPU needed
-cd toy && vp install && vp -C apps/learn dev     # the 28-level interactive course
+cd docs/tutorials/course && vp install && vp -C apps/learn dev  # the 28-level course
 ```
 
 ```python
@@ -130,7 +130,7 @@ out = opt(x)      # verified-equal to model(x)
 | | |
 |---|---|
 | **[`README.md`](../README.md)** | the professional overview — the three questions, quickstart, docs index |
-| **[`toy/`](../toy/README.md)** | the interactive course: 28 gated levels, live widgets, mastery |
+| **[`docs/tutorials/course/`](tutorials/course/README.md)** | the interactive course: 28 gated levels, live widgets, mastery |
 | **[`docs/paper_draft.md`](paper_draft.md)** | the paper draft — thesis, mechanism, novelty/soundness/value with evidence |
 | **[`project/research_lab_notebook.md`](../project/research_lab_notebook.md)** | the lab notebook — questions, dead ends, process lessons |
 | **[`docs/results.md`](results.md)** | every measurement, generated from pinned baselines |

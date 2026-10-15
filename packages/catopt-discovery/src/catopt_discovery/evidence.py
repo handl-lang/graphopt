@@ -157,7 +157,8 @@ _VERDICT_COLS = (
 
 #: Repo paths a verdict can depend on — the engine, the tools and the
 #: bench corpus builders.  The dirty-worktree hash reads only these,
-#: so an unrelated untracked dir (e.g. ``toy/``) does not flip it.
+#: so an unrelated untracked dir (e.g. ``.mutmut-sandbox/``) does not
+#: flip it.
 _CODE_PATHS = (
     "packages",
     "tools",
