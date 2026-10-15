@@ -37,6 +37,29 @@ THE GRAMMAR (descriptors are plain data — tuples, strings, numbers):
   *steps* is a tuple of ``(a_i, b_i)`` metavar pairs applied in
   order — ``acc = a_i ⊙ acc + b_i`` — the semantics an unrolled
   ``applyd`` nest already spells.
+* ``("reduce", op, sub, axis)`` — the reduction sibling of the
+  contraction: ``op`` in ``_REDUCE_OPS`` applied along *axis* to the
+  elementwise *sub* over every meta.  ``sum(X, dim=-1)`` is
+  ``("reduce", "sum", "X", -1)`` — the shape the loop/contraction
+  families cannot spell.
+* ``("norm", op, lhs, red_op, rhs, axis, keepdim)`` — the
+  normalization: an elementwise ``op`` combining *lhs* with a
+  reduction ``red_op`` of *rhs* along *axis*.  ``softmax`` is
+  ``("norm", "div", ("exp","X"), "sum", ("exp","X"), -1, True)`` —
+  the composite the ``reduce`` family's whole-spec operand cannot
+  spell (a reduction is one of the operands of an elementwise op,
+  not the whole spec).  *keepdim* is read off the spec
+  (:func:`_spec_keepdim`), not searched: a normalization's
+  denominator must keep the reduced axis to broadcast back against
+  the operand, so the spec's own ``keepdim`` is the only sound
+  value.
+
+A fold side or carry may be a *constant*: the a-side ``1.0`` (the
+multiplicative identity) and the b-side ``0.0`` (the additive
+identity) are proposed for an empty partition, and the carry may be
+the neutral ``0.0``/``1.0`` instead of a metavar — so a spec with no
+explicit carry meta (``cumsum(X)``, ``cumprod(X)``, the corpus's
+selective scan) spells its recurrence without inventing a state.
 
 Every descriptor is JSON-able provenance data: grammar path,
 verified domain, measured error.  The
@@ -66,6 +89,10 @@ from catopt_discovery.genkernel import (
 __all__ = [
     "CONTRACT_EQS",
     "FOLD_AXES",
+    "FOLD_CARRIES",
+    "NORM_OPS",
+    "REDUCE_AXES",
+    "REDUCE_OPS",
     "VerifyResult",
     "body_from_data",
     "body_to_data",
@@ -96,6 +123,14 @@ _BINARY = ("mul", "add", "sub", "div")
 #: stays reachable while the candidate space stays small.
 _MAX_EW_OPS = 2
 
+#: Maximum op nodes in a ``fold_emit`` projection's non-accumulator
+#: factor.  Kept at one: the emitted-scan corpus shape projects the
+#: accumulator itself (``out = $acc``) and the next-deepest useful
+#: form is one op (``out = q ⊙ acc``); a two-op projection
+#: (``out = q ⊙ acc + r``) is outside the cap — confirmed by
+#: measurement, not assumed (see :func:`_emit_exprs`).
+_MAX_EMIT_OPS = 1
+
 #: The contraction equations the grammar may propose — batched
 #: matmul in its four orientations, the output-transposed form, the
 #: matvec and the full inner product.  A closed set: an equation
@@ -113,6 +148,31 @@ CONTRACT_EQS: tuple[str, ...] = (
 #: Step axes a fold body may declare.
 FOLD_AXES: tuple[int, ...] = (-2, -1)
 
+#: The neutral carries a fold may start from — the additive and
+#: multiplicative identities.  A constant carry lets a spec with no
+#: explicit state metavar spell its recurrence (``cumsum(X)``,
+#: ``cumprod(X)``, the corpus's zero-init selective scan); it is the
+#: scan's own neutral element, not a guessed parameter.
+FOLD_CARRIES: tuple[float, ...] = (0.0, 1.0)
+
+#: Reductions the grammar may propose — exactly the dim-reductions
+#: the torch bridge lowers (``sum``/``mean``/``prod``/``amax``/
+#: ``amin``).  A reduction outside this set is a grammar extension,
+#: not a candidate.
+REDUCE_OPS: tuple[str, ...] = ("sum", "mean", "prod", "amax", "amin")
+
+#: Reduction axes the grammar may declare.  The spec's own ``dim``
+#: attrs join this per-spec (read off the signature), so the common
+#: last-axis reduction is always reachable while a middle-axis one is
+#: reached through the spec's own declared axis.
+REDUCE_AXES: tuple[int, ...] = (-1, -2)
+
+#: Outer elementwise ops a normalization may use — the center
+#: (``x - red(x)``) and scale (``x / red(x)``) shapes.  A
+#: normalization combines a value with a reduction of itself, which
+#: the ``reduce`` family (reduction of the whole spec) cannot spell.
+NORM_OPS: tuple[str, ...] = ("div", "sub")
+
 #: The template families, in proposal order.
 _FAMILIES: tuple[str, ...] = (
     "ew",
@@ -120,6 +180,8 @@ _FAMILIES: tuple[str, ...] = (
     "fold",
     "fold_emit",
     "fold_zip",
+    "reduce",
+    "norm",
 )
 
 #: fp64 verification gate — a handler reproduces its pre-mint term
@@ -167,13 +229,37 @@ def eval_body(body: Any, env: dict, bindings: dict) -> Any:
         return _fold_eval(body, env, bindings)
     if kind == "fold_zip":
         _, steps, state = body
-        acc = _as_tensor(env[state])
+        acc = _as_tensor(_carry_value(env, state))
         for a_s, b_s in steps:
             acc = _as_tensor(_eval_spec(a_s, env, bindings)) * acc + (
                 _as_tensor(_eval_spec(b_s, env, bindings))
             )
         return acc
+    if kind == "reduce":
+        _, op, sub, axis = body
+        return bindings[op](_eval_spec(sub, env, bindings), dim=axis)
+    if kind == "norm":
+        _, op, lhs, red_op, rhs, axis, keepdim = body
+        return bindings[op](
+            _eval_spec(lhs, env, bindings),
+            bindings[red_op](
+                _eval_spec(rhs, env, bindings),
+                dim=axis,
+                keepdim=keepdim,
+            ),
+        )
     raise ValueError(f"unknown handler-body tag: {kind!r}")
+
+
+def _carry_value(env: dict, state: Any) -> Any:
+    """Resolve a fold carry: a metavar's value or a constant neutral.
+
+    *state* is a metavar name (``env[state]``) or a bare constant —
+    the neutral ``0.0``/``1.0`` a spec with no explicit carry meta
+    needs.  A constant passes through untouched; ``_as_tensor`` lifts
+    it downstream.
+    """
+    return env[state] if isinstance(state, str) else state
 
 
 def _as_tensor(v: Any) -> Any:
@@ -218,7 +304,7 @@ def _fold_eval(body: Any, env: dict, bindings: dict) -> Any:
         raise ValueError("fold operands carry no step axis")
     ax = axis % len(full)
     acc = torch.broadcast_to(
-        _as_tensor(env[state]), full[:ax] + full[ax + 1 :]
+        _as_tensor(_carry_value(env, state)), full[:ax] + full[ax + 1 :]
     )
     a_seq = av.movedim(ax, 0).unbind(0)
     b_seq = bv.movedim(ax, 0).unbind(0)
@@ -356,6 +442,65 @@ def _spec_consts(spec: Any) -> list:
     return out
 
 
+def _spec_dims(spec: Any) -> list:
+    """Ordered distinct ``dim`` axes declared as attrs inside a spec.
+
+    The reduction family reads the spec's own declared axis off the
+    signature: a corpus site spells ``dim=-1`` or ``dim=1``, and the
+    reduction descriptor must carry that literal.  A ``dim`` given as
+    a sequence contributes each entry.
+    """
+    out: list = []
+
+    def add(d: Any) -> None:
+        if isinstance(d, bool):
+            return
+        if isinstance(d, int):
+            if d not in out:
+                out.append(d)
+        elif isinstance(d, (tuple, list)):
+            for e in d:
+                add(e)
+
+    def walk(s: Any) -> None:
+        if isinstance(s, (tuple, list)):
+            for e in s[1:]:
+                if isinstance(e, dict):
+                    add(e.get("dim"))
+                else:
+                    walk(e)
+
+    walk(spec)
+    return out
+
+
+def _spec_keepdim(spec: Any) -> bool:
+    """Whether the spec's reductions declare ``keepdim``.
+
+    A normalization's denominator must broadcast back against the
+    operand, which requires the reduced axis to survive — so the
+    normalization's ``keepdim`` is *read off the spec*, not
+    enumerated.  Enumerating both values would propose the
+    non-``keepdim`` form against a ``keepdim`` spec (and vice versa):
+    dead space, since a non-``keepdim`` reduction only broadcasts
+    back on a coincidental shape (measured: 141 of the first 600
+    ``cumsum`` candidates raised, all non-``keepdim`` norm bodies).
+    """
+    found = False
+
+    def walk(s: Any) -> None:
+        nonlocal found
+        if isinstance(s, (tuple, list)):
+            for e in s[1:]:
+                if isinstance(e, dict) and e.get("keepdim"):
+                    found = True
+                elif not isinstance(e, dict):
+                    walk(e)
+
+    walk(spec)
+    return found
+
+
 # ---------------------------------------------------------------------------
 #  Proposal enumeration — candidate bodies, simplest first
 # ---------------------------------------------------------------------------
@@ -379,6 +524,17 @@ def _round_robin(gens: Any) -> Any:
         live = nxt
 
 
+def _fold_states(metas: list) -> list:
+    """Return the carries a fold may start from: metas plus neutrals.
+
+    A spec's explicit carry (``H0``) is a metavar; a spec that spells
+    its recurrence without one (``cumsum(X)``, the corpus's
+    zero-init selective scan) starts from the scan's neutral element
+    — ``FOLD_CARRIES``.  Both are proposed; the verifier decides.
+    """
+    return [*metas, *FOLD_CARRIES]
+
+
 def _canonical_emit_seeds(metas: list) -> list:
     """Propose the canonical emitted-scan bodies first.
 
@@ -393,30 +549,65 @@ def _canonical_emit_seeds(metas: list) -> list:
 
     The seed is structural, not a hard-coded answer: the gate ``g``
     ranges over the grammar's unary vocabulary and the plain
-    identity, ``m_a``/``m_b`` over the non-state metas, so the
-    verifier still decides which instance (if any) is the atom.  It
-    is bounded to the token axis ``FOLD_AXES[0]`` — the corpus's
-    ``(B, T, C)`` middle axis, where the emitted scan lives — so the
-    seed stays a few hundred candidates rather than scaling with the
-    meta count and crowding out the other families' budget.
+    identity, ``m_a``/``m_b`` over the non-state metas, and the state
+    over the metas plus the neutral carries (``FOLD_CARRIES``) — so a
+    spec with no explicit carry meta (``cumsum(X)``, ``cumprod(X)``,
+    the corpus's zero-init selective scan) still reaches its
+    canonical form, and the verifier decides which instance (if any)
+    is the atom.  It is bounded to the token axis ``FOLD_AXES[0]`` —
+    the corpus's ``(B, T, C)`` middle axis, where the emitted scan
+    lives — so the seed stays a few hundred candidates rather than
+    scaling with the meta count and crowding out the other families'
+    budget.
+
+    The neutral carries and identity sides are the *small-spec*
+    reach: for a carry-less spec (one or two metas) they are the only
+    way to spell the recurrence, and the ``fold_emit`` *family* is
+    gated at ``>= 3`` metas so nothing else reaches it.  For three or
+    more metas the ``fold_emit`` family itself carries the neutral
+    carries (:func:`_fold_states`) and the identity sides
+    (:func:`_side_exprs`), so the seed keeps the narrower meta-only
+    vocabulary — otherwise the extra states/sides multiply a
+    five-meta seed from ~640 to ~1260 candidates and consume a
+    default budget before ``fold_zip`` is reached (measured: the
+    ``applyd``-nest mint regressed to a refusal at ``budget=1500``).
+    """
+    small = len(metas) < 3
+    states = _fold_states(metas) if small else list(metas)
+    a_extra = (1.0,) if small else ()
+    b_extra = (0.0,) if small else ()
+    out = []
+    for state in states:
+        rest = tuple(m for m in metas if m != state)
+        for a_side, b_side in _seed_pairs(rest, a_extra, b_extra):
+            out.append(
+                (
+                    "fold_emit",
+                    a_side,
+                    b_side,
+                    state,
+                    "$acc",
+                    FOLD_AXES[0],
+                )
+            )
+    return out
+
+
+def _seed_pairs(rest: tuple, a_extra: tuple, b_extra: tuple) -> list:
+    """Return the seed's (a-side, b-side) pairs, minus dead ones.
+
+    ``a_extra``/``b_extra`` are the small-spec identities (``1.0`` /
+    ``0.0``).  The pair where *both* sides are the identity is a
+    constant fold — no step axis, so ``_fold_eval`` raises on it: a
+    structurally dead candidate, never proposed.
     """
     out = []
-    for state in metas:
-        rest = tuple(m for m in metas if m != state)
-        for a_m in rest:
-            a_sides = (a_m, *((u, a_m) for u in _UNARY))
-            for a_side in a_sides:
-                for b_m in rest:
-                    out.append(
-                        (
-                            "fold_emit",
-                            a_side,
-                            b_m,
-                            state,
-                            "$acc",
-                            FOLD_AXES[0],
-                        )
-                    )
+    for a_m in rest:
+        for a_side in (a_m, *a_extra, *((u, a_m) for u in _UNARY)):
+            for b_side in (*rest, *b_extra):
+                if a_side == 1.0 and b_side == 0.0:
+                    continue
+                out.append((a_side, b_side))
     return out
 
 
@@ -454,17 +645,23 @@ def _contract_column(
                         yield ("contract", eq, e1, e2)
 
 
-def _side_exprs(required: frozenset, consts: tuple, n: int) -> list:
+def _side_exprs(
+    required: frozenset, consts: tuple, n: int, identity: float
+) -> list:
     """EW exprs for one fold side, covering exactly *required*.
 
-    An empty side has no expression.  The former ``1.0``/``0.0``
-    fillers were structurally dead: ``_fold_eval`` broadcasts the two
-    sides through ``torch.broadcast_tensors``, which rejects a bare
-    float, so every candidate carrying one raised — the generator no
-    longer emits that region.
+    An empty side is the side's *identity* — ``1.0`` for the
+    multiplier ``a``, ``0.0`` for the addend ``b`` — so a spec whose
+    recurrence has no operand on one side (``cumsum(X)``: ``a ≡ 1``;
+    ``cumprod(X)``: ``b ≡ 0``) is spellable.  The former ``1.0``/
+    ``0.0`` fillers were structurally dead while ``_fold_eval``
+    broadcast a bare float; ``_as_tensor`` (the scalar-operand lift)
+    made them live again, so the identity is re-emitted — only at
+    ``n == 0`` (the identity is a zero-op expr; a deeper expr over an
+    empty set is the grammar's declared gap, not a hidden search).
     """
     if not required:
-        return []
+        return [identity] if n == 0 else []
     return _ew_exprs(required, tuple(sorted(required)) + consts, n)
 
 
@@ -481,15 +678,20 @@ def _fold_column(
         lo = max(0, total - max_ops)
         for i in range(lo, min(max_ops, total) + 1):
             j = total - i
-            for ea in _side_exprs(a_set, consts, i):
-                for eb in _side_exprs(b_set, consts, j):
+            for ea in _side_exprs(a_set, consts, i, 1.0):
+                for eb in _side_exprs(b_set, consts, j, 0.0):
                     yield ("fold", ea, eb, state, axis)
 
 
 def _fold_bodies(metas: list, consts: tuple, max_ops: int) -> Any:
-    """Round-robin the fold columns: (state, a-partition, axis)."""
+    """Round-robin the fold columns: (state, a-partition, axis).
+
+    The state ranges over the metas *and* the neutral carries
+    (:func:`_fold_states`), so a spec with no explicit carry meta
+    still reaches a foldable column.
+    """
     gens = []
-    for state in metas:
+    for state in _fold_states(metas):
         rest = tuple(m for m in metas if m != state)
         for k in range(len(rest) + 1):
             for a_set in combinations(rest, k):
@@ -515,7 +717,10 @@ def _emit_exprs(rest: tuple, consts: tuple) -> list:
     every emit names it — the ``out_i = g(q_i, state_i)`` shape.
     Ordering is cheapest-first: a binary over one meta and ``$acc``
     (``q_i ⊙ acc_i`` is the canonical form), then the trivial emits,
-    then deeper non-accumulator factors (two metas, one op).
+    then non-accumulator factors up to ``_MAX_EMIT_OPS`` deep.  The
+    depth is a real cap: an emit needing two non-acc ops
+    (``add(mul(Q,$acc),R)``) is outside it (measured — no corpus
+    site needs one; the emitted-scan corpus emit is ``$acc``).
     """
     out: list = []
     for b in _BINARY:
@@ -528,7 +733,7 @@ def _emit_exprs(rest: tuple, consts: tuple) -> list:
         for s_e in combinations(sorted(rest), size):
             req = frozenset(s_e)
             atoms = tuple(sorted(req)) + consts
-            for e in _ew_exprs(req, atoms, 1):
+            for e in _ew_exprs(req, atoms, _MAX_EMIT_OPS):
                 for b in _BINARY:
                     out.append((b, e, "$acc"))
                     out.append((b, "$acc", e))
@@ -546,14 +751,21 @@ def _fold_emit_column(
     """``fold_emit`` candidates for one (state, a-part, axis) column.
 
     *emits* is the column's pre-filtered projection list — emits
-    covering the metas the a/b sides left uncovered.
+    covering the metas the a/b sides left uncovered.  A column whose
+    a/b sides are both empty is skipped: the only non-empty sides are
+    the identities (``1.0``/``0.0``), a constant fold with no step
+    axis — a structurally dead candidate.
     """
+    if not a_set and not b_set:
+        return
     for emit in emits:
         for total in range(2 * _MAX_EW_OPS + 1):
             lo = max(0, total - _MAX_EW_OPS)
             for i in range(lo, min(_MAX_EW_OPS, total) + 1):
-                for ea in _side_exprs(a_set, consts, i):
-                    for eb in _side_exprs(b_set, consts, total - i):
+                for ea in _side_exprs(a_set, consts, i, 1.0):
+                    for eb in _side_exprs(
+                        b_set, consts, total - i, 0.0
+                    ):
                         yield ("fold_emit", ea, eb, state, emit, axis)
 
 
@@ -617,7 +829,7 @@ def _fold_emit_bodies(metas: list, consts: tuple) -> Any:
     by shrinking a/b coverage so full-recurrence candidates lead.
     """
     gens = []
-    for state in metas:
+    for state in _fold_states(metas):
         rest = tuple(m for m in metas if m != state)
         gens.extend(_fold_emit_state_gens(state, rest, consts))
     return _round_robin(gens)
@@ -665,19 +877,174 @@ def _fold_zip_bodies(metas: list) -> Any:
     return _round_robin(gens)
 
 
-def _family_gens(
-    fams: tuple, metas: list, consts: tuple, max_ops: int
+def _reduce_column(op: str, subs: list, axis: int) -> Any:
+    """``reduce`` candidates for one (op, axis) column."""
+    for sub in subs:
+        yield ("reduce", op, sub, axis)
+
+
+def _reduce_bodies(metas: list, consts: tuple, axes: tuple) -> Any:
+    """Round-robin reduce columns: (op, axis) x full-coverage subs.
+
+    The reduction's operand must name every meta (the reduction is
+    the spec's whole value, so nothing is left outside); the subs are
+    the grammar's elementwise exprs over the full meta set, bounded
+    to ``_MAX_EW_OPS``.  Ops come from :data:`REDUCE_OPS` — the
+    dim-reductions the backend lowers — and axes from the spec's own
+    ``dim`` attrs plus :data:`REDUCE_AXES`.
+    """
+    req = frozenset(metas)
+    atoms = tuple(sorted(req)) + consts
+    subs: list = []
+    for n in range(_MAX_EW_OPS + 1):
+        subs.extend(_ew_exprs(req, atoms, n))
+    gens = [
+        _reduce_column(op, subs, axis)
+        for op in REDUCE_OPS
+        for axis in axes
+    ]
+    return _round_robin(gens)
+
+
+def _norm_column(
+    op: str, red_op: str, subs: list, axis: int, keepdim: bool
+) -> Any:
+    """``norm`` candidates for one (op, red_op, axis, keepdim) column."""
+    for lhs in subs:
+        for rhs in subs:
+            yield ("norm", op, lhs, red_op, rhs, axis, keepdim)
+
+
+def _norm_bodies(
+    metas: list, consts: tuple, axes: tuple, keepdim: bool
+) -> Any:
+    """Round-robin norm columns: (op, red_op, axis) x operand pairs.
+
+    A normalization combines a value with a reduction of (another)
+    value; both operands are the grammar's elementwise exprs over the
+    full meta set, bounded to ``_MAX_EW_OPS``.  Ops come from
+    :data:`NORM_OPS`, reductions from :data:`REDUCE_OPS`, axes from
+    the spec's own ``dim`` attrs plus :data:`REDUCE_AXES`.  *keepdim*
+    is read off the spec (:func:`_spec_keepdim`) — a property of the
+    reduction, not a search dimension.
+    """
+    req = frozenset(metas)
+    atoms = tuple(sorted(req)) + consts
+    subs: list = []
+    for n in range(_MAX_EW_OPS + 1):
+        subs.extend(_ew_exprs(req, atoms, n))
+    gens = [
+        _norm_column(op, red_op, subs, axis, keepdim)
+        for op in NORM_OPS
+        for red_op in REDUCE_OPS
+        for axis in axes
+    ]
+    return _round_robin(gens)
+
+
+def _top_op(spec: Any) -> Any:
+    """Return the spec's outermost op name, or ``None`` for a leaf."""
+    if isinstance(spec, (tuple, list)) and spec:
+        return spec[0]
+    return None
+
+
+def _canonical_norm_seeds(
+    metas: list, consts: tuple, axes: tuple, keepdim: bool
 ) -> list:
-    """One candidate generator per admitted template family."""
+    """Propose the canonical normalization bodies first.
+
+    ``op(ew, red_op(ew, axis, keepdim))`` — a value normalized by a
+    reduction of *itself*, the softmax / ``x - mean(x)`` shape.  Like
+    the ``fold_emit`` seed it is structural, not a hard-coded answer:
+    the operand ``ew`` ranges over the grammar's one-op vocabulary and
+    the plain meta, ``op``/``red_op``/``axis`` over their
+    vocabularies, so the verifier decides which instance (if any) is
+    the atom.  The equal-operand seed keeps the plausible
+    normalization within the first few hundred proposals — the full
+    column walk interleaves the unequal-operand pairs ahead of it.
+
+    Called only when the spec's top op is a :data:`NORM_OPS` op (the
+    normalization shape): the seed is a few hundred candidates, so
+    proposing it for a plain reduction would push that spec's mint
+    from ~37 to ~277 (measured).
+    """
+    req = frozenset(metas)
+    atoms = tuple(sorted(req)) + consts
+    ews: list = []
+    for n in range(min(1, _MAX_EW_OPS) + 1):
+        ews.extend(_ew_exprs(req, atoms, n))
+    out = []
+    for op in NORM_OPS:
+        for red_op in REDUCE_OPS:
+            for axis in axes:
+                for ew in ews:
+                    out.append(
+                        ("norm", op, ew, red_op, ew, axis, keepdim)
+                    )
+    return out
+
+
+def _admitted_families(n: int) -> set:
+    """Return the families whose meta gate admits an *n*-meta spec.
+
+    The fold families need ``>= 3`` metas (the ``state + a + b``
+    count the full walk's columns need); a smaller spec's canonical
+    recurrence is reached through the ``fold_emit`` seed
+    (:func:`_canonical_emit_seeds`) instead, so the floor is not a
+    reach limit.  The contraction needs two factors; ``fold_zip`` an
+    even non-state count; the ``reduce``/``norm`` families any
+    non-empty meta set.
+    """
+    out = {"reduce", "norm"} if n else set()
+    if n >= 2:
+        out.add("contract")
+    if n >= 3:
+        out.update(("fold", "fold_emit"))
+    if not (n - 1) % 2:
+        out.add("fold_zip")
+    return out
+
+
+def _family_gens(
+    fams: tuple,
+    metas: list,
+    consts: tuple,
+    max_ops: int,
+    axes: tuple,
+    keepdim: bool,
+) -> list:
+    """One candidate generator per admitted template family.
+
+    The fold families keep their ``>= 3`` meta floor (the
+    ``state + a + b`` count the walk's full columns need): a
+    one- or two-meta spec's canonical recurrence is reached through
+    the ``fold_emit`` seed (:func:`_canonical_emit_seeds`), not the
+    exhaustive walk, so relaxing the floor here only explodes the
+    candidate space without enabling a mint — measured: with the
+    floor relaxed to any non-empty meta set, ``cumsum(X)``'s
+    ``fold_emit`` column grows from 36 (the seed) to 147700
+    candidates and a two-meta spec's from 144 to >200000, while every
+    spec in the battery mints the *same* body at the *same* budget
+    index (the seed leads).  The floor stays; the seed carries the
+    small-spec reach.  The ``reduce``/``norm`` families admit any
+    non-empty meta set — a one-meta reduction (``sum(X, dim)``) is
+    their whole point.  The gates live in :func:`_admitted_families`.
+    """
+    adm = set(fams) & _admitted_families(len(metas))
     gens = []
-    if "contract" in fams and len(metas) >= 2:
+    if "contract" in adm:
         gens.append(_contract_bodies(metas, consts, max_ops))
-    if "fold" in fams and len(metas) >= 3:
+    if "fold" in adm:
         gens.append(_fold_bodies(metas, consts, max_ops))
-    if "fold_emit" in fams and len(metas) >= 3:
+    if "fold_emit" in adm:
         gens.append(_fold_emit_bodies(metas, consts))
-    if "fold_zip" in fams and not (len(metas) - 1) % 2:
+    if "fold_zip" in adm:
         gens.append(_fold_zip_bodies(metas))
+    if "reduce" in adm:
+        gens.append(_reduce_bodies(metas, consts, axes))
+    if "norm" in adm:
+        gens.append(_norm_bodies(metas, consts, axes, keepdim))
     return gens
 
 
@@ -692,18 +1059,31 @@ def propose_bodies(
     Deterministic and simplest-first: the ``ew`` replay (elementwise
     specs only — the ``genkernel`` baseline) leads, then the
     ``fold_emit`` canonical emitted-scan forms (:func:`_canonical_emit_seeds`
-    — the ordering gap the round-robin walk left), then every admitted
-    family's columns interleave round-robin.  *families* restricts the
-    template vocabulary; *max_ops* bounds each elementwise factor's
-    depth (``_MAX_EW_OPS`` tops the grammar).
+    — the ordering gap the round-robin walk left) and the ``norm``
+    canonical normalization forms (:func:`_canonical_norm_seeds`),
+    then every admitted family's columns interleave round-robin.
+    *families* restricts the template vocabulary; *max_ops* bounds
+    each elementwise factor's depth (``_MAX_EW_OPS`` tops the grammar).
     """
     fams = families if families is not None else _FAMILIES
     metas = _spec_metas(spec)
+    consts = tuple(_spec_consts(spec))
+    axes = tuple(dict.fromkeys([*_spec_dims(spec), *REDUCE_AXES]))
+    keepdim = _spec_keepdim(spec)
+    # A normalization is only proposed for a normalization-shaped spec
+    # (top op in NORM_OPS): its candidates on any other spec are dead
+    # — a non-``keepdim`` reduction of a scan operand cannot broadcast
+    # back (measured: 141 of a scan spec's first 600 candidates
+    # raised, all norm bodies).
+    if _top_op(spec) not in NORM_OPS:
+        fams = tuple(f for f in fams if f != "norm")
     if "ew" in fams and elementwise_spec(spec):
         yield ("ew", spec)
-    if "fold_emit" in fams and len(metas) >= 3:
+    if "fold_emit" in fams and metas:
         yield from _canonical_emit_seeds(metas)
-    gens = _family_gens(fams, metas, tuple(_spec_consts(spec)), max_ops)
+    if "norm" in fams and metas:
+        yield from _canonical_norm_seeds(metas, consts, axes, keepdim)
+    gens = _family_gens(fams, metas, consts, max_ops, axes, keepdim)
     yield from _round_robin(gens)
 
 
@@ -1133,6 +1513,20 @@ def _battery() -> list:
             ],
         },
         {"spec": ("sum", "X", {"dim": -1}), "domain": [{"X": (4, 4)}]},
+        {
+            "spec": (
+                "div",
+                ("exp", "X"),
+                ("sum", ("exp", "X"), {"dim": -1, "keepdim": True}),
+            ),
+            "domain": [{"X": (4, 5)}],
+        },
+        # the residual refusal: a meta-less non-elementwise graph the
+        # templates cannot shape (every meta-bearing spec now proposes)
+        {
+            "spec": ("applyd", ("aff_diag", 1.0, 2.0), 3.0),
+            "domain": [{}],
+        },
     ]
 
 
