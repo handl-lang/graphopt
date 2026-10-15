@@ -190,15 +190,102 @@ as plain data, never `eval`'d), law-theoretic atoms (synthesize + certify a
 law set from measured bindings), and induced atoms (the bounded-error lane,
 fenced: an approximate atom may never appear on an exact law's RHS).
 
-**The substrate beneath the syntax (ADR 0008).**  A prototype combinator
-presentation (`lab/bridge/combinator.py`) re-expresses the IR as morphisms of a
-monoidal category with explicit `dup` (Δ, sharing as a morphism) and `loop`
-(bounded trace): 321/321 corpus workloads round-trip structurally exact,
-zero ops refuse translation, mean blowup 2.61×.  The RetNet shared-state fold
-spells as `seq(pre, loop(step, K), post)` and verifies at 1e-7 — the
-"carrier atoms become *definable*, not primitive" claim, measured.  The open
-gate: `loop` structure is erased at export, so folds must be *proposed by
-search*.
+One layer sits *beneath* the syntax: the presentation the discovery machinery
+could enumerate over.  Whether that presentation is a *search space* or only a
+way to *say* things is §2.2.
+
+### 2.2 The substrate beneath the syntax — a presentation, not a search space (ADR 0008)
+
+A prototype combinator presentation (`lab/bridge/combinator.py`) re-expresses
+the IR as morphisms of a monoidal category with explicit `dup` (Δ, sharing as a
+morphism) and `loop` (bounded trace).  Gates 1–2 pass: 321/321 corpus
+workloads round-trip structurally exact (zero ops refuse translation, mean
+blowup 2.61×), and the RetNet shared-state fold spells as
+`seq(pre, loop(step, K), post)` and verifies at 1e-7 — the "carrier atoms
+become *definable*, not primitive" claim, measured.
+
+Gate 3 is the one question a presentation cannot answer about itself: does
+*search*, not the author, reach a `loop`-headed form?  `loop` structure is
+erased at export — a fused recurrence translates fine, but the fold must be
+*proposed by search*, never recovered by the bridge.  The criterion (ADR
+0008): PASS = a `loop`-headed winner that round-trips equal; FAIL = the
+spelled/unrolled form again.  ADR 0009's stage 4 (promote the calculus to a
+package) is gated on it, so a negative is as much a result as a positive would
+have been.
+
+**Three attempts, three negatives.**  Each built the move the previous
+negative named, and each move **worked** — on a control.  The search never had
+the subterm to bind.
+
+| attempt | move built | control (the move, on an authored fold) | the winner |
+|---|---|---|---|
+| 1 — proposing rule (`loop_propose.py`, `b7ba9ff`) | `unroll(step, n) → Loop(step, n)`, n≥2 | authored `unroll(step,4)`: fires 1×, cheapest reachable term `Loop`-headed (**69** vs spelled 285) | **0** `unroll(step, n≥2)` subterms → fires **0×**; spelled scan in a *different* e-class |
+| 2 — parametric abstraction (`index_abstract.py`, `e4a193a`) | bind the block index and the recurrence state as parameters (a parameter is a wire) | presentation's spelled fold, expanded: collapses, round-trips, reaches a `Loop` (**109**) at K=2/4/8 | **7 blocks, 2 `split` families**, `IRREGULAR`: `block1/block2/add[1]/mul[1]: op om_decayed vs add` |
+| 3 — the state spelling (`sharing_extract.py`, `aa56e55`) | sharing-aware coordinated extraction | — (a measurement) | the mix is a cost *tie*; the fix recovers 5.06 % and the winner still does not collapse |
+
+The reason is one sentence, measured three ways: **the presentation's whole
+advantage — a single shared `step` — is exactly what the flat DAG erased**,
+and the erasure is not one thing but three.  The recurrence is *parametrically*
+regular (each block's step differs by `split(…, index=i)`) but not
+*syntactically* regular, so there is no repeated `step` subterm to bind.  The
+chunking is not uniform (7 blocks: four of size 4 and three of size 16, from
+two `split` families).  And extraction mixed the state spelling — three ways,
+`reexp | reexp | fold | fold | reexp | shared | shared`.
+
+**The substrate conclusion.**  The bridge is a *presentation*, not a *search
+space*.  That is a statement about *finding*, not about *expressing*: gates
+1–2 stand, and the search's winner still *projects* through the presentation
+EQUAL (`morph=1590`, 92 explicit Δ sites).  The calculus expresses and verifies
+recurrences; it is not where they will be *found*.  On this evidence ADR 0009
+stage 4 is not justified by the presentation's discovery value (ADR 0009's own
+falsification clause); it must rest on something else or on nothing.
+
+**The positive finding: an extraction defect.**  The gate work forced the
+winner's spelling to be inspected, and the inspection found a real defect in
+the *extractor*.  The state-read spelling is a cost tie in **5 of the 7**
+blocks (2-way in blocks 0–3, a **4-way tie at 232,000** in block 4), and
+`extract_best` breaks the tie by `nops` then member sort order — i.e. by
+**op name**, arbitrarily with respect to *sharing*.  Forcing the factored read
+per class moves the whole term by Δ ∈ {−528, 0, +16, +16, +144} FLOPs (the
+model is indifferent to ±0.03 %), except that block 4 strictly prefers the
+factored read because it shares its state with block 5's read — a non-local
+saving the per-class greedy pass cannot see.  So on this workload the greedy
+per-class extraction is **5.06 % off the cost its own model assigns**: a
+sharing-aware pass reaches **432,696 FLOPs against the greedy 455,752**
+(Δ = −23,056; `dag` 139 → 133), numerically equivalent at **2.2e-16**.  The
+fix is small and lives in `lab/` (`extract_sharing_aware`,
+`lab/bridge/sharing_extract.py`): a bounded, *monotone* coordinate descent that
+begins at `extract_best` and keeps only per-class overrides that strictly lower
+the whole term's `dag_cost`.  Monotone means it can never manufacture a form
+the model did not already prefer — it removes the arbitrary per-class choice
+and adds the sharing signal.  It is the same non-local blindness
+`extract_paired` exists for, here on the tie-break rather than on a group
+decision; it is a `lab/` prototype rather than a change to
+`catopt_core.egraph.extract` because the same tie-break would change extraction
+for every caller, a change the full suite must land.
+
+**What would change the conclusion.**  Two causes remain, and neither is a
+small tweak.
+
+1. **`sizes` is not abstracted.**  The abstraction abstracts
+   `index`/`t`/`offset`/`sign` but not `sizes`, so the two families
+   (`sizes=(16,16,16,16)` and `(4,4,4,4,16,16,16)`) can never be one step.
+   The small-chunk family's *unfactored* spelling is a genuine cost optimum
+   (`C²d < Cd²` at `C=4 < d=16`), so a cost-minimising extraction cannot be
+   made to spell it uniformly for free; forcing it would manufacture a result.
+2. **The abstraction's structural state identification is not stable.**  Per
+   family it binds `None|unsqueeze|unsqueeze|unsqueeze` for the small family
+   and `None|matmul|mul` for the large one, because its "outermost
+   own-split-free subterm" rule is a heuristic.  A complete move would need the
+   step's *arity* — which inputs are state — which the flat export does not
+   carry.
+
+A move that does both would re-open the gate; a smaller one will not.  The
+retros are `project/retros/gate3-loop-proposing-rule.md`,
+`gate3-parametric-abstraction.md` and `gate3-extraction-state-spelling.md`;
+the caveat they carry is that the staged saturation is not reproducible across
+processes (`PYTHONHASHSEED` changes the e-graph — 9733/9752/9756 enodes — and
+the sharing-aware local optimum), so pin the seed when re-measuring.
 
 ## 3. Verification boundaries are per-artifact
 
@@ -485,6 +572,12 @@ saturation is not idiosyncratic.
 * **The value story is narrow.**  Wins where work is asymptotically reduced
   or where Inductor cannot codegen; losses wherever Inductor's fused kernels
   apply.
+* **The substrate is a presentation, not a search space.**  ADR 0008 gate 3
+  measured negative three times (§2.2): the combinator presentation expresses
+  and verifies recurrences, but search never reaches a `loop`-headed form from
+  a corpus graph.  The gate work did expose an extraction defect — greedy
+  per-class extraction is 5.06 % off its own cost model on that workload (fix
+  in `lab/`, pending the full suite).
 
 ## 7. What would falsify each pillar
 
@@ -554,6 +647,8 @@ venue paper needs the scale validation and the executor work named in §6.
 | Shipped laws were unsound off-corpus and fixed | matmul false region (max diff 12.83); `select_mul` broadcast | `matmul-unsound-fix.md`; `select-mul-broadcast.md` |
 | The loop caught a real lowering bug by refusing | `decay_vec` `sign=0` coercion | `layer3-loop.md` |
 | The typed-pay gate suppressed inflated "pays" | 19/33 mint ill-typed; 11 pays + 12 drops suppressed | `typed-pay-gate.md` |
+| **Substrate.** The combinator presentation is a presentation, not a search space | gate 3 FAIL ×3: proposing rule fires 0×; 7 blocks / 2 families `IRREGULAR`; winner un-collapsed | `project/retros/gate3-loop-proposing-rule.md`; `gate3-parametric-abstraction.md`; ADR 0008 |
+| Greedy per-class extraction is suboptimal on the gate-3 workload | 455,752 → 432,696 FLOPs (−5.06 %); max\|Δ\| 2.2e-16 | `project/retros/gate3-extraction-state-spelling.md` |
 | **Value (wins).** Weight-chain fold | 14.92× vs Inductor (17.40× vs eager) | `bench/baselines/reassoc_scale.json` |
 | Asymptotic reassoc | 8.0× at T=2048 (retired source — unsourced) | `docs/results_curated.md` §8 |
 | Spelled RetNet export T=2048 | 5.0–5.9× vs eager; 6.2–7.4× vs compile; 7.30× memory | `docs/results.md` |
