@@ -137,7 +137,8 @@ progressively"*, four structural gaps stand out:
 
 ## Status (2026-10-14) — implemented
 
-All three steps landed on `main` (`toy/` only):
+All three steps landed on `main` (`docs/tutorials/course/` only —
+`toy/` at the time):
 
 1. **Engine + shell** (`4cf9b8c`, salvaged from the OOM reboot):
    `concepts.ts` (concept graph), `points.ts`, `mastery.ts`, `badges.ts`,

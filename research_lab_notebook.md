@@ -336,7 +336,8 @@ the reconstruction, with the source of each item:
    wall-clock budget, a memory abort floor, and (for row-parallel work)
    subprocess isolation with a `ulimit` + timeout.  (OOMs #1, #2.)
 4. **Commit early and often, per work item.**  The retros and the
-   `toy/`-style single-path commits exist so a reboot costs one work item,
+   `docs/tutorials/course/`-style single-path commits exist so a reboot
+   costs one work item,
    not a session.  "Salvaged from the OOM reboot" appears in the log twice.
 5. **Write the retro before you close the task.**  A negative with a named
    gap is a deliverable; an unrecorded negative is a future repeat.

@@ -2,11 +2,11 @@
 
 Depends on: ADR 0007 (semantic-atom minting), ADR 0008 (combinator
 presentation), ADR 0006 (ONNX backend), ADR 0003 (four dimensions);
-the toy's existing 12-level ladder (`toy/README.md`).
+the toy's existing 12-level ladder (`docs/tutorials/course/README.md`).
 
 ## Motivation
 
-`toy/` is the didactic surface — one idea per level, a worked example,
+`docs/tutorials/course/` is the didactic surface — one idea per level, a worked example,
 an interactive, a checkpoint you must pass before advancing.  It is
 **stale by one cycle**: the ladder ends at "laws about laws" and its
 prose still cites *two* machine-discovered laws and the 30-of-53
@@ -39,7 +39,7 @@ example, an interactive component, a gated `checkpoint` with a `why`.
 | 16 | `ports` | a backend is a port — nothing in core changes | swap the sink (torch ↔ ONNX-shaped) on a fixed core; the core panel stays byte-identical |
 | 17 | `honest` | the ledger of negatives — methodology as a result | a gallery of measured refusals (ADR 0001 closed negative, the pay-null, the bounded-lane BiRefNet negative, the antiunify reach-null), each with its number; pick which claim each one kills |
 
-### Engine additions (toy/packages/engine)
+### Engine additions (docs/tutorials/course/packages/engine)
 
 Small, testable, faithful-to-the-real-thing:
 
