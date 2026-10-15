@@ -110,9 +110,7 @@ def measure_conv_fold(seed: int = 0) -> dict[str, Any]:
     # perturb the running stats off their (0, 1) defaults so the fold
     # is a real affine map, not the identity
     with torch.no_grad():
-        mod.bn.running_mean.copy_(
-            torch.randn_like(mod.bn.running_mean)
-        )
+        mod.bn.running_mean.copy_(torch.randn_like(mod.bn.running_mean))
         mod.bn.running_var.copy_(
             torch.rand_like(mod.bn.running_var) * 2 + 0.25
         )
@@ -235,7 +233,7 @@ def _scalar_samples(r: dict[str, Any], n: int = 8) -> list[dict]:
 
 
 def _hook_fold_w(bound: dict) -> dict | None:
-    """The measured hook: ``W' = W * g / sqrt(var+eps)`` (scalar)."""
+    """Measure the hook ``W' = W * g / sqrt(var+eps)`` (scalar)."""
     w, g = bound.get("$attr:W"), bound.get("$attr:gamma")
     v, e = bound.get("$attr:var"), bound.get("$attr:eps")
     if None in (w, g, v, e):
@@ -244,7 +242,7 @@ def _hook_fold_w(bound: dict) -> dict | None:
 
 
 def _hook_fold_b(bound: dict) -> dict | None:
-    """The measured hook: ``b' = (b-mu)*g/sqrt(var+eps) + beta``."""
+    """Measure the hook ``b' = (b-mu)*g/sqrt(var+eps) + beta``."""
     b = bound.get("$attr:b")
     m = bound.get("$attr:mu")
     g = bound.get("$attr:gamma")
@@ -254,6 +252,31 @@ def _hook_fold_b(bound: dict) -> dict | None:
     if None in (b, m, g, v, e, be):
         return None
     return {"$attr:bn": (b - m) * g / np.sqrt(v + e) + be}
+
+
+def _fit(
+    samples: list[tuple],
+    name: str | None = None,
+    *,
+    max_depth: int = 2,
+    budget_s: float = 60.0,
+) -> dict | None:
+    """Bounded synth fit — the streamed last level (never OOMs).
+
+    ``dspec_synth.synth_dspec``'s blind level product is quartic in the
+    leaf count; at ``max_depth=3`` on the fold's seven-attr bank it
+    exhausts RAM and OOM-kills the host (measured: a bare ``MemoryError``
+    under a 4 GB cap after ~17 s, an OS kill without one).  The
+    ``dspec_audit.bounded_synth`` twin enumerates the same candidate
+    space with the deepest level *streamed* (early-bailed against the
+    expected vector) under a wall-clock budget, so the same fit is
+    decided without the blow-up.
+    """
+    audit = _load_audit()
+    spec, _meta = audit.bounded_synth(
+        samples, name=name, max_depth=max_depth, budget_s=budget_s
+    )
+    return spec
 
 
 def gate_synth_fit(r: dict[str, Any]) -> dict[str, Any]:
@@ -280,26 +303,15 @@ def gate_synth_fit(r: dict[str, Any]) -> dict[str, Any]:
         }
         for s in rows
     ]
-    w_fit = dsp.synth_dspec(
-        dsp.samples_from_hook(_hook_fold_w, raw_bounds), name="Wn"
-    )
-    b_fit = dsp.synth_dspec(
-        dsp.samples_from_hook(_hook_fold_b, raw_bounds), name="bn"
-    )
-    w_near = dsp._near_misses(
-        dsp.samples_from_hook(_hook_fold_w, raw_bounds)
-    )
+    w_samples = dsp.samples_from_hook(_hook_fold_w, raw_bounds)
+    b_samples = dsp.samples_from_hook(_hook_fold_b, raw_bounds)
+    w_fit = _fit(w_samples, "Wn")
+    b_fit = _fit(b_samples, "bn")
+    w_near = dsp._near_misses(w_samples)
     # depth sweep: the b' fold `(b-mu)*scale+beta` is a depth-3 tree,
     # past the default max_depth=2 — measure whether depth alone
     # unblocks it (isolating a depth gap from the sqrt/fdiv gap).
-    b_depth = {
-        d: dsp.synth_dspec(
-            dsp.samples_from_hook(_hook_fold_b, raw_bounds),
-            name="bn",
-            max_depth=d,
-        )
-        for d in (2, 3)
-    }
+    b_depth = {d: _fit(b_samples, "bn", max_depth=d) for d in (2, 3)}
     return {
         "raw_w_fit": w_fit,
         "raw_b_fit": b_fit,
@@ -344,14 +356,10 @@ def gate_prescaled_fit(r: dict[str, Any]) -> dict[str, Any]:
                 "$attr:beta": s["beta"],
             }
         )
-    w_fit = dsp.synth_dspec(
-        dsp.samples_from_hook(hook_w, bounds), name="Wn"
-    )
+    w_fit = _fit(dsp.samples_from_hook(hook_w, bounds), "Wn")
     b_fit = {
-        d: dsp.synth_dspec(
-            dsp.samples_from_hook(hook_b, bounds),
-            name="bn",
-            max_depth=d,
+        d: _fit(
+            dsp.samples_from_hook(hook_b, bounds), "bn", max_depth=d
         )
         for d in (2, 3)
     }
@@ -359,7 +367,7 @@ def gate_prescaled_fit(r: dict[str, Any]) -> dict[str, Any]:
 
 
 def gate_dsl_expressibility() -> dict[str, Any]:
-    """Gate 3 — can the *cond DSL itself* hand-spell the fold's sqrt?
+    """Gate 3 — spell the fold's sqrt in the cond DSL, or report the gap.
 
     The DSL is strictly richer than the synth's search bank (it carries
     ``fdiv``/``recip``/``pow``).  ``sqrt(v) == v**0.5``; if ``pow``
@@ -388,9 +396,7 @@ def gate_dsl_expressibility() -> dict[str, Any]:
             {"S": ("fdiv", ("lit", 1.0), ("lit", 4.0))}, b
         )
         is not None,
-        "recip_ok": eval_derive(
-            {"S": ("recip", ("lit", 4.0))}, b
-        )
+        "recip_ok": eval_derive({"S": ("recip", ("lit", 4.0))}, b)
         is not None,
     }
 
@@ -417,13 +423,13 @@ def gate_value_domain() -> dict[str, Any]:
 
     err = None
     try:
-        dsp.synth_dspec(
-            dsp.samples_from_hook(hook, bounds), name="Wn"
-        )
-    except Exception as exc:  # noqa: BLE001 — the finding IS the raise
+        dsp.synth_dspec(dsp.samples_from_hook(hook, bounds), name="Wn")
+    except Exception as exc:
         err = f"{type(exc).__name__}: {exc}"
     return {
-        "const_value_types": str(Const.__dataclass_fields__["value"].type),
+        "const_value_types": str(
+            Const.__dataclass_fields__["value"].type
+        ),
         "tensor_sample_error": err,
     }
 
@@ -447,7 +453,7 @@ def _load_audit() -> Any:
 
 
 def gate_egraph_visibility() -> dict[str, Any]:
-    """Gate 5 — does the e-graph *see* a ``batch_norm`` node?
+    """Gate 5 — check whether the e-graph *sees* a ``batch_norm`` node.
 
     Export a real ``ResNetBlock`` (conv→BN→relu) and count the op
     families in the IR; then check whether any shipped law's LHS
@@ -500,7 +506,7 @@ def _walk(t: Any) -> list[Any]:
 
 
 def gate_cost_model() -> dict[str, Any]:
-    """Gate 6 — does the cost model price a ``batch_norm`` node?
+    """Gate 6 — check whether the cost model prices a ``batch_norm`` node.
 
     A fold only pays if the fused conv is cheaper than conv+BN.  The
     model must price the BN node it would remove (and the folded conv
@@ -537,9 +543,7 @@ def gate_derived_leaf_seam() -> dict[str, Any]:
     return {
         "seam_exists": True,
         "seam_is_procedural": True,
-        "seam_registers_source_tensors": (
-            "source_tensors" in doc
-        ),
+        "seam_registers_source_tensors": ("source_tensors" in doc),
     }
 
 
@@ -556,7 +560,9 @@ def main(argv: list[str] | None = None) -> int:
     lin = measure_linear_ln_fold()
 
     print("=" * 72)
-    print("GATE 1 — BINDING SOURCE: the fold is a measured parameter identity")
+    print(
+        "GATE 1 — BINDING SOURCE: the fold is a measured parameter identity"
+    )
     print("=" * 72)
     for r in (conv, lin):
         print(
