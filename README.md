@@ -222,10 +222,32 @@ nothing in core changes. ONNX exercised exactly that: `OnnxSource` +
 onnxruntime to 1.1e-16 fp64) landed with **zero** edits under
 `catopt-core`.
 
+## Learn the whole thing
+
+`toy/` is an interactive course on this architecture — **28 levels in
+6 modules**, each with one idea, a live widget, and a checkpoint you
+must pass to advance. It is not a summary: the ladder builds
+progressively (no term is used before it is defined — a test pins
+that), every level ends with *"in the real project"* pointing at the
+files that implement it, and it finishes with **where to improve the
+project** (idea → blocker → next measurement). Points, per-concept
+mastery, module reviews (spaced retrieval), and badges track
+comprehension; the completion panel reports what you can now attack.
+
+```bash
+cd toy && vp install && vp -C apps/learn dev   # http://localhost:5173
+```
+
+Modules: *Foundations* → *Correctness & choice* → *Evaluation &
+execution* → *Discovery & minting* → *Substrate & backends* →
+*Engineering & payoff* (the gates, the honest negatives, and the
+payoff). See [`toy/README.md`](toy/README.md).
+
 ## Docs
 
 | doc | contents |
 |---|---|
+| [`toy/`](toy/README.md) | **the interactive course** — 28 gated levels, live widgets, mastery |
 | [`docs/mechanism.md`](docs/mechanism.md) | the conceptual pipeline — syntax → structure → search → certificate |
 | [`docs/evaluation.md`](docs/evaluation.md) | features, calibration, criteria, policies |
 | [`docs/api.md`](docs/api.md) | the API surface — `Optimizer`, strategies, runners, criteria |
