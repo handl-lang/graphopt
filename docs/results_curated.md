@@ -1,6 +1,6 @@
 <!-- Hand-maintained curated results.  Appended verbatim to
-     `docs/results.md` by `benches.benchkit.render.results`
-     (`python -m benches results`) — edit it HERE, never in the
+     `docs/results.md` by `bench.benchkit.render.results`
+     (`python -m bench results`) — edit it HERE, never in the
      generated file, or the doc-sync test will fail. -->
 
 ## Machine-derived structure — results by kind (2026-10-15)

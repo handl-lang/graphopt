@@ -1,4 +1,4 @@
-"""Tests for the bench harness (``benches.benchkit``).
+"""Tests for the bench harness (``bench.benchkit``).
 
 The harness is dev tooling, not shipped code, so it sits outside the
 100% coverage floor — but its renderers and the ledger comparison are
@@ -17,8 +17,8 @@ import pytest
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-from benches import registry  # noqa: E402
-from benches.benchkit import (  # noqa: E402
+from bench import registry  # noqa: E402
+from bench.benchkit import (  # noqa: E402
     Case,
     Cell,
     Finding,
@@ -27,7 +27,7 @@ from benches.benchkit import (  # noqa: E402
     Variant,
     Verdict,
 )
-from benches.benchkit.compare import compare_baseline  # noqa: E402
+from bench.benchkit.compare import compare_baseline  # noqa: E402
 
 
 def _report() -> Report:
@@ -164,8 +164,8 @@ def test_compare_detects_regression(tmp_path: Path) -> None:
 def test_registry_lookup() -> None:
     spec = registry.get("reassoc_scale")
     assert spec.intent == "speedup"
-    assert spec.module == "benches.suites.speedup.reassoc_scale"
-    assert registry.get("benches.suites.speedup.reassoc_scale.py") is spec
+    assert spec.module == "bench.suites.speedup.reassoc_scale"
+    assert registry.get("bench.suites.speedup.reassoc_scale.py") is spec
     with pytest.raises(KeyError):
         registry.get("does_not_exist")
     assert registry.harnessed()
@@ -192,37 +192,37 @@ def test_runner_times_a_call() -> None:
 
 def test_catalog_readme_in_sync() -> None:
     """The README's generated block must match the registry."""
-    from benches.benchkit.render import catalog as _catalog
+    from bench.benchkit.render import catalog as _catalog
 
-    readme = REPO / "benches/README.md"
+    readme = REPO / "bench/README.md"
     assert _catalog.readme_synced(readme), (
-        "benches/README.md catalog drifted — run "
-        "`python -m benches catalog --write`"
+        "bench/README.md catalog drifted — run "
+        "`python -m bench catalog --write`"
     )
 
 
 def test_results_doc_in_sync() -> None:
     """docs/results.md must match the pinned baselines."""
-    from benches.benchkit.render.results import render_results_doc
+    from bench.benchkit.render.results import render_results_doc
 
     doc = REPO / "docs/results.md"
     assert doc.exists(), (
-        "docs/results.md missing — run `python -m benches results`"
+        "docs/results.md missing — run `python -m bench results`"
     )
     assert doc.read_text() == render_results_doc(
-        REPO / "benches/baselines"
-    ), "docs/results.md drifted — run `python -m benches results`"
+        REPO / "bench/baselines"
+    ), "docs/results.md drifted — run `python -m bench results`"
 
 
 def test_pinned_baselines_state_findings() -> None:
     """A pinned baseline is not golden unless it states a verdict."""
-    for path in sorted((REPO / "benches/baselines").glob("*.json")):
+    for path in sorted((REPO / "bench/baselines").glob("*.json")):
         payload = json.loads(path.read_text())
         assert payload["findings"], f"{path.name} states no finding"
 
 
 def test_expected_verdict_parses_registry_prose() -> None:
-    from benches.benchkit.compare import expected_verdict
+    from bench.benchkit.compare import expected_verdict
 
     assert expected_verdict("WIN - 8.9-16.1x vs Inductor") == "WIN"
     assert expected_verdict("NEGATIVE on stories15M - 0 accepted") == (

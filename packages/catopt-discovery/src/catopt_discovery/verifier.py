@@ -283,7 +283,7 @@ def _law_cases() -> dict:
     root = str(REPO_ROOT)
     if root not in sys.path:
         sys.path.insert(0, root)
-    from benches.suites.correctness.law_bench import LAW_CASES
+    from bench.suites.correctness.law_bench import LAW_CASES
 
     return LAW_CASES
 

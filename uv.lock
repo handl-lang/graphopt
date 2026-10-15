@@ -217,7 +217,7 @@ dev = [
 ]
 
 [package.dev-dependencies]
-benches = [
+bench = [
     { name = "jinja2" },
     { name = "kaleido" },
     { name = "matplotlib" },
@@ -284,7 +284,7 @@ requires-dist = [
 provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
-benches = [
+bench = [
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "kaleido", specifier = ">=1.4.0" },
     { name = "matplotlib", specifier = ">=3.8" },

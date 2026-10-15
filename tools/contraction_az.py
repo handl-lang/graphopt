@@ -40,7 +40,7 @@ once the normaliser is observable).
 
 Usage::
 
-    uv sync --group einsum --group benches
+    uv sync --group einsum --group bench
     .venv/bin/python tools/contraction_az.py --mode compare --device cuda
 """
 

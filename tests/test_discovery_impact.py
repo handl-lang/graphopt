@@ -169,7 +169,7 @@ def test_params_of_and_ir_of():
 
 
 # ---------------------------------------------------------------------------
-#  Term sources — the real benches/model/synthetic corpora
+#  Term sources — the real bench/model/synthetic corpora
 # ---------------------------------------------------------------------------
 
 
@@ -184,7 +184,7 @@ def test_bench_cases_builds_every_registered_case():
 
 
 def test_bench_cases_reports_builder_errors(monkeypatch):
-    from benches.suites.correctness import law_bench as lb
+    from bench.suites.correctness import law_bench as lb
 
     real = dict(lb.LAW_CASES)
     good_name = sorted(real)[0]

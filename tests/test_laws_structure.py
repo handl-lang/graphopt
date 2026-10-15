@@ -29,7 +29,7 @@ from catopt_core.egraph import Rewrite
 
 #: Every public name the old ``catopt_core.rules`` shim exposed — the
 #: union of all ``from catopt_core.rules import ...`` sites across
-#: packages/, the old façade, tests/, and benches/, plus the rule objects
+#: packages/, the old façade, tests/, and bench/, plus the rule objects
 #: accessed as module attributes.
 PUBLIC_NAMES = [
     # rewrite-constructor shorthand (om/trace/xcarrier use it)

@@ -104,7 +104,7 @@ import-linter, vulture, bandit, semgrep and the radon ratchet.  The
 `pre-commit run --hook-stage manual --all-files`.
 
 Known drift: the installed ruff (0.16.9) still flags pre-existing
-isort / format differences across `tests/` and `benches/`, which are not
+isort / format differences across `tests/` and `bench/`, which are not
 format-checked.  The shipped source — `packages` and `tools` —
 is clean under both `ruff check` and `ruff format --check`.
 
@@ -113,7 +113,7 @@ is clean under both `ruff check` and `ruff format --check`.
 - Checker: **ty** (`[tool.ty]` in `pyproject.toml`) — Astral's type
   checker, replacing the earlier pyright ratchet.
   `[tool.ty.src] include = ["packages"]` scopes checking to the
-  shipped packages (tests/ and benches/ are not type-checked);
+  shipped packages (tests/ and bench/ are not type-checked);
   `[tool.ty.environment]` sets the 3.13 target and the per-package
   `extra-paths`; `[tool.ty.terminal] error-on-warning = false`.
 - Installed in `.venv` via the `dev` dependency group (`ty>=0.0.84`;
@@ -203,7 +203,7 @@ codebase adopts **D211** (blank line before a class docstring) and
 exclusive D203/D213 — ruff prints its usual "incompatible" warning for
 those pairs; that is the expected signature of the choice, not an
 error.  The gate applies to shipped code only — `tests/**` and
-`benches/**` ignore `D`.
+`bench/**` ignore `D`.
 
 ## Runtime contracts (typeguard)
 
@@ -386,7 +386,7 @@ materializes each recorded derivation as a replayable `Certificate`
 see `project/retros/lemma-certificates.md`).  The composable `RuleSet`
 presets live in `catopt_core.laws.ruleset`.
 
-Measure it: `python -m benches.suites.correctness.law_bench --laws <name[,name|group]>`
+Measure it: `python -m bench.suites.correctness.law_bench --laws <name[,name|group]>`
 (`--sizes <d[,d]>` selects sizes; the suite's own CLI is the entry point) —
 per law: registered synthetic term → `eg.run` on that rule alone →
 extraction (pipeline cost model) → `_lower_extracted` → `sink.verify` →
@@ -395,15 +395,15 @@ cost & ms before→after; non-firing laws report honestly.  Add a builder
 in `LAW_CASES` keyed by rule name for new laws.  Gates: `uv run pytest`,
 `.venv/bin/ty`, `.venv/bin/ruff check` (packages), coverage stays 100.
 
-Benchmarks are a package, not scripts: `python -m benches list` shows the
-catalog; `python -m benches run <suite>` emits JSON + Markdown + HTML +
+Benchmarks are a package, not scripts: `python -m bench list` shows the
+catalog; `python -m bench run <suite>` emits JSON + Markdown + HTML +
 plotly plots (+ optional Quarto/Slidev) from one canonical `Report`;
-`python -m benches dashboard` builds the cross-suite HTML index;
-`python -m benches catalog` emits the docs.  Suites live in
-`benches/suites/<intent>/` and expose `run_bench(args) -> Report`; shared
-data (checkpoint loaders) is in `benches/common/`.  `benches/registry.py`
+`python -m bench dashboard` builds the cross-suite HTML index;
+`python -m bench catalog` emits the docs.  Suites live in
+`bench/suites/<intent>/` and expose `run_bench(args) -> Report`; shared
+data (checkpoint loaders) is in `bench/common/`.  `bench/registry.py`
 is the source of truth for a suite's **intent** (the question it
 answers), its `question`/`expects`, `tier`, `status`, controlled
 `mechanisms` and `needs_cuda` — the README tables and the dashboard
 grouping are generated from it, so they cannot drift.  Details in
-`benches/README.md`.
+`bench/README.md`.

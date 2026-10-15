@@ -1,9 +1,9 @@
 ## Tooling-level measurements (hand-maintained)
 
 This file is appended verbatim to `docs/results.md` by
-`benches results` / `render_results_doc` — edit it here, never in the
+`bench results` / `render_results_doc` — edit it here, never in the
 generated file.  These measurements live in `tools/` and are
-recorded in the retros, not in `benches/baselines/`.
+recorded in the retros, not in `bench/baselines/`.
 
 All measured on the dev box (RTX 2050 / i5-12500H, fp64 — same
 hardware class as the baselines); magnitudes do not extrapolate to
@@ -14,7 +14,7 @@ datacenter hardware:
 | `softmax_fold` on `ManualSoftmaxAttention` | **+13–27% eager, +29–48% CUDA-graph** vs raw | `tools/law_wallclock.py` | [law-wallclock-verification](../project/retros/law-wallclock-verification.md) |
 | `select_mul` marginal (optimized vs law-ablated) | **faster in 19/20 measurements** | `tools/law_wallclock.py` | [law-wallclock-verification](../project/retros/law-wallclock-verification.md) |
 | executor routing after measured pricing | **12/12 cases ship the measured-fastest member** (uncorrected picks ran 2–3× slower) | `tools/executor_cost_probe.py` | [executor-pricing-fix](../project/retros/executor-pricing-fix.md) |
-| `silu_fold` on the bench case | **−53–55% modeled cost, 1.43–2.62× wall-clock** | `benches run law_bench` | [three-cell-mediator](../project/retros/three-cell-mediator.md) |
+| `silu_fold` on the bench case | **−53–55% modeled cost, 1.43–2.62× wall-clock** | `bench run law_bench` | [three-cell-mediator](../project/retros/three-cell-mediator.md) |
 | contraction player, n=40 vs `opt_einsum` | **0.89–1.01× of randomised greedy at equal wall-clock** (0.91–0.98 at T≤1, three seeds, fed budgets); **0.51–0.90× deterministic greedy** | `tools/contraction_guided_restart.py` | [contraction-synthesis](../project/retros/contraction-synthesis.md), [contraction-player-shipped](../project/retros/contraction-player-shipped.md) |
 | pipeline held-out rediscovery | **winner re-ranks #1, SHIP, every run** | `catopt_discovery.pipeline --holdout` | [law-proposer-extensions](../project/retros/law-proposer-extensions.md), [groupnorm-convnext-corpus](../project/retros/groupnorm-convnext-corpus.md) |
 | coherence catalogue over `ALL_RULES` (82, re-run 2026-10-15) | **58 axioms / 22 lemmas / 2 redundant; 19 no-instance; divergence 1** (`rms_norm_fold` × `_nogain` — measured, unresolved) | `catopt_discovery.coherence --emit-basis` | [axiom-lemma-split](../project/retros/axiom-lemma-split.md) |

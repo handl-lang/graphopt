@@ -178,7 +178,7 @@ reconstruct; a corrupted derivation cert fails cert.
   on the bare pattern still says conditional.  The gauntlet reports
   both readings; "usable" rests on the guarded one.
 - **Corpus and backend scope.**  `measure` runs over the same
-  real/benches/model/intake corpus and `TermCaseSink` the pipeline
+  real/bench/model/intake corpus and `TermCaseSink` the pipeline
   uses; "pays" means pays on *those* programs under *that* cost
   model.  A different backend's costing is not adjudicated here.
 - **No certificate where no derivation exists.**  The synthesized

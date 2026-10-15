@@ -1,6 +1,6 @@
 """BiRefNet bounded-rewrite probe — the ``error_budget=`` lane on a real pretrained vision model.
 
-Context: ``benches/suites/bounded/bounded_e2e.py`` delivered
+Context: ``bench/suites/bounded/bounded_e2e.py`` delivered
 certified-bounded members on stories15M (1.41x vs eager at budget
 1e-2, every budget inside the fp32 equivalence gate).  The BiRefNet
 trial (commit ``34607e0``) exported the real 215M checkpoint but the
@@ -626,7 +626,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--catopt-inductor", action="store_true")
     ap.add_argument("--full-ir-census", action="store_true")
     ap.add_argument(
-        "--out", default="benches/results/birefnet_bounded.json"
+        "--out", default="bench/results/birefnet_bounded.json"
     )
     args = ap.parse_args(argv)
     sys.setrecursionlimit(400_000)

@@ -9,7 +9,7 @@ These tests exercise it two ways:
   on hand-built terms, ``rank`` ordering and ``_evidence_from_row``;
 * **integration** — ``run_pipeline`` and ``main`` against a *tiny*
   synthetic corpus (two-to-three ``TermCase``s monkeypatched in for
-  the benches/model/intake loaders), keeping the whole loop under a
+  the bench/model/intake loaders), keeping the whole loop under a
   second while still running real e-graph saturation, real oracles
   and real torch verification.  The held-out rediscovery paths are
   exercised with ``select_mul`` and ``softmax_fold``, both of which
