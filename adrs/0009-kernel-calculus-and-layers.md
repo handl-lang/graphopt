@@ -211,7 +211,18 @@ that create their consumers**, not added up front:
 4. **Promote the calculus** to a dimension-named package — **gated on
    ADR 0008 gate 3** (does search *reach* `loop`-headed forms?).  If the
    gate measures negative, the calculus is a presentation win and this
-   stage is not justified.
+   stage is not justified.  **MEASURED 2026-10-16: the gate is
+   negative.**  A `loop`-proposing rule over the presentation was built
+   (`lab/bridge/loop_propose.py`, catopt `b7ba9ff`); it works on the
+   presentation's spelled scan, but the search's winner has no regular
+   spelled-scan subterm and the presentation's spelled form is not even
+   in the search's root e-class — so the rule fires 0× and no
+   `loop`-headed winner is reached.  **Stage 4 is therefore not
+   justified by the presentation's discovery value**; it may proceed
+   only on a different argument, and a *form-level* proposer (which
+   abstracts the step, rather than a syntactic e-graph rewrite) is the
+   piece of work that would re-open the gate.  See
+   `project/retros/gate3-loop-proposing-rule.md`.
 5. **Extract `catopt-game`** — the RL layer out of the 50k-line package
    (the clear navigability win).
 6. **Fold `genkernel` into a domain package** — no `catopt-kernels`.
@@ -223,7 +234,12 @@ that create their consumers**, not added up front:
 
 1. **Gate 3 decides the calculus.**  If search cannot reach
    `loop`-headed forms from a corpus graph, stage 4 is not justified.
-   Measure before spending the coverage budget.
+   Measure before spending the coverage budget.  **Measured 2026-10-16:
+   negative** — the proposing rule fires 0× on the RetNet export
+   (the winner has no regular spelled-scan subterm; the presentation's
+   spelled form is in a different e-class).  Stage 4 is not justified by
+   the discovery value of the presentation.  See ADR 0008's gate-3 FAIL
+   bullet and `project/retros/gate3-loop-proposing-rule.md`.
 2. **A port with no consumer is decoration.**  If `Calculus`/`Machine`/
    `Engine`/`Proposer`/`Environment` cannot name an existing consumer and
    a conformance test, they do not land.

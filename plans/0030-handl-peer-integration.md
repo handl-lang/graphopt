@@ -112,6 +112,20 @@ package).  Catopt-side, and independent of the peer.
 - **Pass/fail**: measured yes or no.  A **no** means the calculus is a
   presentation win, stage 4 is not justified, and that should be written
   down rather than deferred again.
+- **MEASURED 2026-10-16 — the answer is NO.**  The proposing rule was
+  built (`lab/bridge/loop_propose.py`, catopt `b7ba9ff`): a sound
+  rewrite `unroll(step, n) → Loop(step, n)` over the presentation.  It
+  fires and reaches a `Loop`-headed winner on the presentation's
+  *spelled* scan (the control), but on the real export the search's
+  winner has **zero** `unroll(step, n≥2)` subterms — the recurrence is
+  parametrically regular (per-block `split(index=i)`) but not
+  *syntactically* regular — and the presentation's spelled form is not
+  even in the search's root e-class.  So the rule fires 0× and no
+  `loop`-headed winner is reached.  **Stage 4 is not justified by the
+  presentation's discovery value**; the missing piece is a *form-level*
+  proposer that abstracts the step, not a syntactic rewrite.  Written
+  down here and in ADR 0008's gate-3 FAIL bullet; retro:
+  `project/retros/gate3-loop-proposing-rule.md`.
 
 ### 6 · Laws as data, exclusively (the standing principle)
 

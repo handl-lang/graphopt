@@ -196,7 +196,75 @@ merged `32962d0`; `lab/bridge/combinator.py` + `lab/bridge/combinator_probe.py`)
   **What this means for ADR 0009 stage 4**: a `catopt-kernel` is
   justified as the home of *rules over combinators* (the proposing rule
   is exactly such a rule), not as a projection target.  The stage-4
-  framing should say that, and this measurement is why.
+  framing should say that, and this measurement is why.  **(Measured
+  2026-10-16 — the proposing rule was built; it works, but the search
+  does not reach it.  See the FAIL bullet immediately below, which
+  supersedes this paragraph's optimistic reading of stage 4.)**
+- **Gate 3 — MEASURED 2026-10-16: FAIL.  The proposing rule works; the
+  search does not reach it.**  Built the rule the PARTIAL bullet above
+  asked for — `lab/bridge/loop_propose.py` (commit `b7ba9ff`): a
+  rewrite `unroll(step, n) → Loop(step, n)` over the presentation, plus
+  the smallest search that can carry it (a term-level rewrite closure
+  with cost extraction).  `unroll(step, n)` is the presentation's
+  *spelled* bounded scan — one shared `step`, explicit perms — and the
+  tests prove it denotes the same morphism as `Loop(step, n)`
+  (`comb_to_dag(unroll(step,n)) == comb_to_dag(Loop(step,n))`).  The
+  gate-3 command is unchanged, now with the rule armed:
+
+  ```sh
+  .venv/bin/python lab/bridge/combinator_probe.py --gate2 --extracted --propose-loop
+  ```
+
+  ```
+  extracted term: dag=139  reads=2 chained=True
+  projects: round-trip EQUAL  morph=1590 dup=92 copies=184
+  fold-chain depth: spelled=3  extract=2
+  the presentation's spelled scan is in the search's root e-class: False
+  -- gate 3: the `loop`-proposing rule --
+     loop-propose: winner morph=1590 spelled-scan subterms (n>=2) found=0 ns=[]
+        saturation: terms=1 fired={'loop_propose': 0, 'loop_expand': 0}
+          loop-headed reachable=False  best_is_loop=False  best_cost=1590
+     control (authored spelled scan): spelled-scan subterms=1 ns=[4]
+        fired={'loop_propose': 1, 'loop_expand': 0}  loop-headed reachable=True
+        best_is_loop=True  best_cost=69 (spelled 285)
+  ```
+
+  Two measurements, both negative for the gate:
+
+  1. **The rule is well-formed.**  On the *authored* spelled scan
+     (`unroll(retnet_step, 4)`) it fires once and the closure's
+     cheapest term **is** `Loop`-headed (cost 69 against the spelled
+     285).  That is the control — it proves the rewrite itself works,
+     not that the search reaches it.
+  2. **The search never reaches it.**  The winner's projection is a
+     flat DAG compilation (`morph=1590`) with **zero**
+     `unroll(step, n≥2)` subterms, so the rule fires 0× and the search
+     stays un-`loop`-ed.  Independently, the presentation's spelled
+     scan lands in a **different e-class** from the root (`False`) —
+     the saturation never derives it, so no rule keyed on that
+     spelling could ever fire.
+
+  **Why** (measured, and deeper than "the rule was too narrow"): the
+  export's unrolled recurrence is *parametrically* regular but not
+  *syntactically* regular.  Each block's step differs by the block
+  index (`split(…, index=i)`) and the reassociation re-spells the decay
+  rate, so no fixed syntactic pattern — and in particular no
+  presentation `unroll(step, n)`, whose whole point is a *single
+  shared* `step` — matches it.  Reaching the loop therefore needs
+  *abstraction over the step* (a form-level / parametric move), not an
+  e-graph rewrite.  The presentation makes the loop **expressible**
+  (gate 2, PASS) but does not by itself make it **findable**.
+
+  **What this means for ADR 0009 stage 4**: the gate measured
+  **negative**, so on this evidence a `catopt-kernel` is **not**
+  justified as a discovery substrate — the presentation is a
+  *presentation*, not a *search space*.  Stage 4 now rests on something
+  else or on nothing; this is exactly the outcome ADR 0009's own
+  falsification clause asked to be measured and written down ("if
+  search cannot reach `loop`-headed forms, stage 4 is not justified").
+  A real combinator search — a form-level proposer that abstracts the
+  step — is the missing piece, and it is a *different and larger*
+  piece of work than "promote the prototype to a package".
 - **Gate 3 — the protocol** (added 2026-10-14; it is
   the last gate standing between this ADR and ADR 0009's stage 4, so
   "open" without a way to close it was the real problem).
