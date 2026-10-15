@@ -1,7 +1,9 @@
 # ADR 0010 — one language, many interpretations (the VM *is* the language)
 
-**Status**: proposed — **a prerequisite**: ADR 0009's calculus stage does
-not proceed until this model is fixed.
+**Status**: proposed — **revised** (the first draft recommended porting the
+pattern into Python; the revision uses `handl` *as* the kernel).
+**A prerequisite**: ADR 0009's calculus stage does not proceed until this
+model is fixed.
 **Date**: 2026-10-14.
 **Depends on**: ADR 0002 (categorical re-expression), ADR 0003 (four
 dimensions), ADR 0004 (abstraction as move), ADR 0008 (combinator
@@ -69,13 +71,28 @@ they read and the globals bound at instantiation.
    agree on.  This replaces ADR 0009's `Machine` port with a
    **`Calculus`** (the term/rule structure) plus per-interpretation
    entry points.
-4. **Adopt the pattern in Python; keep `handl` interop as the path.**
-   `catopt-core` is zero-dependency by contract, so the *pattern* lands
-   in Python (a `Language` dataclass + engines over one term type).
-   The existing `catopt_discovery.handl` bridge stays the
-   interoperability seam: catopt emits/consumes `Language` fragments
-   (`AstShapeDef`, `TransformDef`, `!Native`) rather than reimplementing
-   a Rust engine.
+4. **Use `handl` *as* the kernel — do not reimplement it.**  The first
+   draft proposed porting the pattern into Python; that was wrong.
+   `handl` **already is** the arrow calculus (`arr`, `flow`/`>>>`,
+   `axis_flow`, `loop`, `if`, `op`/`handle`, `graded_arrow`), its
+   language is data (ADR-0044), and it has the engines — rewrite (with
+   traversals, traces, stats), typecheck, parse, fmt, lint, test, and
+   **three** exec strategies.  Critically, it **supports host
+   functions** (`crates/handl-runtime/src/vm_primitives.rs` — "host
+   functions for the exec model's VM instruction set"; the conformance
+   corpus has a case calling a foreign host function), so **catopt's
+   tensor primitives are host functions**, not a reason to fork the
+   kernel.
+
+   catopt then contributes only what is genuinely catopt's: the
+   **language fragments** (laws as `TransformDef` rows, shapes,
+   semantics tables), the **host functions** for tensor ops, the
+   **domain adapters** (`catopt-torch`/`onnx`/`cuda`) and the
+   **evaluation dimension** (cost, profiles, meters), plus discovery and
+   RL.  Precedent in this repository: `catopt-native` is already an
+   optional Rust engine, excluded from the workspace, built with
+   maturin — a Rust kernel is an established shape here, not a new kind
+   of dependency.
 5. **Laws become rows.**  A law is a `transforms` entry (data), not a
    Python constructor — the *data-only* principle, in a format that
    already has a proven engine behind it.  This is what gives minted
@@ -92,6 +109,18 @@ follows.
 
 ## Falsification
 
+0. **The boundary spike decides the shape.**  Three unknowns, each
+   measurable: (a) **exec boundary performance** — one host-function
+   dispatch per tensor op versus catopt's batched/fused/graph paths (the
+   kernel's job is *search/rewrite*; the hot loop is the *delivered*
+   module, so this may not matter); (b) **embedding direction** — catopt
+   embeds handl (a PyO3 peer, like `catopt-native`) or handl drives
+   catopt as a plugin; (c) **the new verification seam** — term/fragment
+   round-trip and semantics agreement, which handl's own suite cannot
+   cover.  If the spike shows the boundary cannot carry tensor semantics
+   faithfully or efficiently, the fallback is the split: handl owns the
+   language + rewrite + typecheck, catopt owns the tensor exec
+   interpretation.
 1. **Interpretation leakage.**  If the interpretations cannot share one
    term type without special-casing — e.g. `eval` needs a distinction
    `types` cannot express, or a law needs a node kind the shapes table
@@ -114,11 +143,14 @@ follows.
 
 ## Honest scars
 
-- **`handl` is Rust + YAML with its own crate graph.**  Adopting the
-  *pattern* in Python is a reimplementation; adopting the *engines*
-  means a compiled dependency, which core's zero-dependency rule
-  forbids.  The split (pattern now, interop later) is a judgement, not a
-  proof.
+- **`handl` is Rust + YAML with its own crate graph**, so using it as the
+  kernel means a compiled dependency and a second toolchain.  It cannot
+  live *inside* `catopt-core` (zero-dependency, `import-linter`-enforced);
+  it is a **peer** — exactly the shape `catopt-native` already has.
+- **The first draft was wrong** and is recorded rather than quietly
+  dropped: porting the pattern into Python would have duplicated a
+  proven engine and created the drift this ADR's own falsification
+  forbids.
 - **The current e-graph is op-graph-specific.**  Calling it "one rewrite
   strategy" is the *direction*; today it is the only one, and it is
   bound to the op-graph IR.
