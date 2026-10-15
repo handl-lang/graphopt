@@ -25,6 +25,7 @@ from catopt_core.egraph.types import (
     Rewrite,
     UnionFind,
     _LeafRegistry,
+    _member_key,
     _norm_attr_value,
     _pattern_attrs,
 )
@@ -688,7 +689,11 @@ class EGraph(_ExtractMixin, _ProofMixin):
 
         Members merged in after the freeze (``ep.added``) are
         subtracted, preserving the call-time member set — and its
-        iteration order (``ec.nodes`` order minus removals).
+        iteration order.  The order is the CANONICAL member order
+        (``_member_key``), not the raw ``ec.nodes`` set order: the
+        enumeration order decides which substitutions the per-rule
+        ``enode_budget`` / ``_MATCH_CAP`` admits before it stops, so
+        it must not follow the set's per-process hash order.
         """
         key = (eid, op)
         lst = ep.nlists.get(key)
@@ -702,9 +707,14 @@ class EGraph(_ExtractMixin, _ProofMixin):
                 # rebuilding the filter every epoch.
                 lst = self._nodes_of(ec, op)
             else:
-                lst = [
-                    n for n in ec.nodes if n.op == op and n not in added
-                ]
+                lst = sorted(
+                    (
+                        n
+                        for n in ec.nodes
+                        if n.op == op and n not in added
+                    ),
+                    key=_member_key,
+                )
             ep.nlists[key] = lst
         return lst
 
@@ -915,14 +925,22 @@ class EGraph(_ExtractMixin, _ProofMixin):
         """Member enodes of *eclass* carrying *op* — lazily indexed.
 
         ``eclass.by_op`` is invalidated at every ``nodes`` mutation
-        (union merge, rebuild), so the bucket never goes stale.
+        (union merge, rebuild), so the bucket never goes stale.  The
+        bucket is kept in the canonical member order (``_member_key``)
+        because it is the matcher's enumeration order: under a
+        ``rule_budget`` the order decides which matches land before the
+        rule is suspended, and a raw ``set`` order would vary per
+        process with hash randomisation.
         """
         bo = eclass.by_op
         if bo is None:
             bo = eclass.by_op = {}
         lst = bo.get(op)
         if lst is None:
-            lst = [n for n in eclass.nodes if n.op == op]
+            lst = sorted(
+                (n for n in eclass.nodes if n.op == op),
+                key=_member_key,
+            )
             bo[op] = lst
         return lst
 
@@ -1030,14 +1048,25 @@ class EGraph(_ExtractMixin, _ProofMixin):
         proportional to the delta, not to ``E``; merges it fires
         enqueue their own deltas, iterating to the same fixed point
         the whole-graph rescan reached.
+
+        The worklist is drained in a canonical order (``_member_key``
+        on the enode, then the class id) rather than ``set.pop`` order:
+        the batch's merge order decides which root of each union wins,
+        i.e. which class id survives — and class ids order the dirty
+        frontier, which under ``rule_budgets`` orders budget
+        consumption.  A ``set`` order would make the whole run
+        ``PYTHONHASHSEED``-dependent.
         """
         owner = self._cong_owner
         pend = self._cong_pend
         changed = False
         while pend:
             merges: list[tuple[int, int]] = []
-            while pend:
-                eid0, node = pend.pop()
+            batch = sorted(
+                pend, key=lambda p: (_member_key(p[1]), p[0])
+            )
+            pend.clear()
+            for eid0, node in batch:
                 eid = self.find(eid0)
                 # ``find`` returns a live canonical id — always present.
                 eclass = self._classes[eid]
@@ -1156,13 +1185,16 @@ class EGraph(_ExtractMixin, _ProofMixin):
         ``_memo`` shares resolutions across the recursive descent —
         e-class subgraphs are heavily shared (residual streams), so
         without it the walk re-expands the same cones exponentially.
-        Returns the same member as the unmemoised recursion.
+        Returns the same member as the unmemoised recursion.  Members
+        are scanned in canonical order (``_member_key``) so "any"
+        member is the same member in every process.
         """
         if _memo is None:
             _memo = {}
         eid = self.find(eid)
         eclass = self._classes[eid]
-        for node in eclass.nodes:
+        nodes = sorted(eclass.nodes, key=_member_key)
+        for node in nodes:
             if node.op == "leaf":
                 key = node.attrs[0][1] if node.attrs else "??"
                 return _LeafRegistry.decode(key)
@@ -1170,7 +1202,7 @@ class EGraph(_ExtractMixin, _ProofMixin):
         if hit is not None:
             return hit
         _seen = _seen | {eid}
-        for node in eclass.nodes:
+        for node in nodes:
             args = []
             ok = True
             for c in node.children:
@@ -1201,10 +1233,16 @@ class EGraph(_ExtractMixin, _ProofMixin):
         class).  Returns ``(None, inf)`` when every member is cyclic
         under ``_seen``; ``None`` results are never memoised (a class
         that fails under one ``_seen`` may succeed under another).
+
+        Members are scanned in canonical order (``_member_key``): the
+        minimum is picked with a strict ``<``, so equal-size members
+        would otherwise resolve to whichever the set happened to yield
+        first — a per-process choice that reaches ``check``/``derive``.
         """
         eid = self.find(eid)
         eclass = self._classes[eid]
-        for node in eclass.nodes:
+        nodes = sorted(eclass.nodes, key=_member_key)
+        for node in nodes:
             if node.op == "leaf":
                 key = node.attrs[0][1] if node.attrs else "??"
                 res = (_LeafRegistry.decode(key), 1)
@@ -1217,7 +1255,7 @@ class EGraph(_ExtractMixin, _ProofMixin):
             return (None, float("inf"))
         _seen = _seen | {eid}
         best = (None, float("inf"))
-        for node in eclass.nodes:
+        for node in nodes:
             args = []
             sz = 1
             ok = True

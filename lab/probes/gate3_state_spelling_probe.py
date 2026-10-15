@@ -31,6 +31,7 @@ from typing import Any
 
 from catopt_core.cost import dag_cost, flops_cost
 from catopt_core.egraph import EGraph
+from catopt_core.egraph.types import _member_key
 from catopt_core.ir import Op
 from catopt_discovery.impact import _iter_subterms
 
@@ -125,7 +126,10 @@ def _class_members(
     eid = eg.find(eid)
     ec = eg.get_class(eid)
     rows: list[tuple[float, int, Any]] = []
-    for node in ec.nodes:
+    # Canonical member order, not the ``set``'s hash order: ``rows.sort``
+    # is stable, so equal-cost members would otherwise rank by hash
+    # order — a per-process tie table.
+    for node in sorted(ec.nodes, key=_member_key):
         if node.op == "leaf":
             continue
         m = eg.extract_best(eid, flops_cost, overrides={eid: node})

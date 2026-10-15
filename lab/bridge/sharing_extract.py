@@ -42,18 +42,37 @@ THE FIX
     It lives in ``lab/`` deliberately: the equivalent change inside
     :mod:`catopt_core.egraph.extract` would alter extraction for *every*
     caller (the AGENTS rule is explicit that such a change needs the
-    full suite), and the measured effect is 5 % on one workload.
+    full suite), and the measured effect is 1 % on one workload.
 
 THE READING
-    On the gate-3 winner it recovers **23,056 FLOPs (5.06 %)** —
-    455,752 → 432,696, numerically verified equivalent to machine
-    epsilon (max|Δ| = 2.2e-16) — and unifies the *large*-chunk family's
-    top-level state read (``matmul(q, S)``).  The gate-3 abstraction
-    **still** reports ``irregular``, with the *same* first difference:
-    the mix is a *cascade* of per-class ties, not one arbitrary choice.
-    So the mixed spelling is a genuine extraction defect, but fixing it
-    does not close the gate.  See
+    On the gate-3 winner it recovers **4,624 FLOPs (1.01 %)** —
+    455,752 → 451,128 through three overrides (two ``split`` classes and
+    one ``matmul``) — numerically verified equivalent to machine
+    epsilon (max|Δ| = 2.2e-16).  The gate-3 abstraction **still**
+    reports ``irregular``, with the *same* first difference
+    (``block1/block2/add[1]/mul[1]: op om_decayed vs add``), and the
+    per-block read sequence is unchanged from the greedy term
+    (``reexp|reexp|fold|fold|reexp|shared|shared``): the mix is a
+    *cascade* of per-class ties, not one arbitrary choice.  So the mixed
+    spelling is a genuine extraction defect, but fixing it does not
+    close the gate.  See
     ``project/retros/gate3-extraction-state-spelling.md``.
+
+    **Corrected 2026-10-15** (``project/retros/saturation-determinism.md``).
+    This section previously read "23,056 FLOPs (5.06 %) — 455,752 →
+    432,696, … five overrides", "unifies the large-chunk family's
+    top-level state read" and a changed read sequence.  That 432,696 was
+    an artifact of the member scan order: the descent kept the *first*
+    strictly improving member of each class, and the scan ran over a
+    ``set`` whose iteration order follows ``ENode``'s hash — so the
+    "optimum" moved with ``PYTHONHASHSEED`` (432,696 at seed 0, 451,128
+    unseeded).  The descent now scans in canonical member order
+    (:func:`catopt_core.egraph.types._member_key`), and the reproducible
+    reading is 451,128 with three overrides in every process.  The
+    *qualitative* finding is unchanged — the greedy pass is off the cost
+    its own model assigns, and a monotone coordination recovers it —
+    only the size of the recovery, and the claim that it unified a read,
+    were overstated.
 """
 # ruff: noqa: RUF002
 
@@ -63,6 +82,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from catopt_core.cost import dag_cost
+from catopt_core.egraph.types import _member_key
 from catopt_core.ir import Op
 
 __all__ = ["SharingResult", "extract_sharing_aware"]
@@ -124,8 +144,16 @@ def extract_sharing_aware(
     term's :func:`~catopt_core.cost.dag_cost` strictly falls.  The
     result is never worse than ``eg.extract_best`` (the empty override
     map is always in the neighbourhood), and it is deterministic —
-    classes are visited in term order, members in the e-class's own
-    iteration order, and only strict improvements are kept.
+    classes are visited in term order, members in the e-class's
+    CANONICAL member order (``_member_key``), and only strict
+    improvements are kept.
+
+    The member order matters: the descent keeps the *first* strictly
+    improving member of a class, so a raw ``set`` order (``nodes`` is a
+    ``set`` of :class:`~catopt_core.egraph.ENode`, whose hash folds in
+    the op name) would land on a different local optimum in every
+    process — measured 432,696 at ``PYTHONHASHSEED=0`` against 451,128
+    unseeded.
     """
     root_eid = eg.find(root_eid)
     best = eg.extract_best(root_eid, cost_fn)
@@ -139,7 +167,9 @@ def extract_sharing_aware(
         for cls in _term_classes(eg, cur)[:max_classes]:
             if kept.get(cls) is not None:
                 continue
-            for node in eg.get_class(cls).nodes:
+            for node in sorted(
+                eg.get_class(cls).nodes, key=_member_key
+            ):
                 if node.op == "leaf":
                     continue
                 trial = dict(kept)

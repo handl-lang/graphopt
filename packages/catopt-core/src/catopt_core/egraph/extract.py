@@ -20,6 +20,7 @@ from catopt_core.cost import (
 from catopt_core.egraph.types import (
     ENode,
     _LeafRegistry,
+    _member_key,
     _pattern_attrs,
 )
 from catopt_core.ir import Op, Var
@@ -135,8 +136,7 @@ class _ExtractMixin:
             in_prog.add(cid)
             best = (float("inf"), None)
             for node in sorted(
-                self._classes[cid].nodes,
-                key=lambda n: (n.op, n.children, repr(n.attrs)),
+                self._classes[cid].nodes, key=_member_key
             ):
                 if node.op == "leaf":
                     key = node.attrs[0][1] if node.attrs else "??"
@@ -185,7 +185,7 @@ class _ExtractMixin:
         eid = self.find(eid)
         eclass = self._classes[eid]
         seen: dict[str, tuple[float, Any]] = {}
-        for node in eclass.nodes:
+        for node in sorted(eclass.nodes, key=_member_key):
             if node.op == "leaf":
                 continue
             term = self.extract_best(
@@ -197,6 +197,9 @@ class _ExtractMixin:
             cost = dag_cost(term, cost_fn)
             if key not in seen or cost < seen[key][0]:
                 seen[key] = (cost, term)
+        # Deterministic tie order: the canonical member scan above fixes
+        # the insertion order, and this stable sort keeps it for
+        # equal-cost alternatives (a hash-ordered scan would not).
         ranked = sorted(seen.values(), key=lambda kv: kv[0])
         return ranked[:top_k]
 
@@ -216,13 +219,16 @@ class _ExtractMixin:
                 continue
             sketches: list[str] = []
             seen_sketch = set()
-            for n in ec.nodes:
+            for n in sorted(ec.nodes, key=_member_key):
                 if n.op == "leaf":
                     key = n.attrs[0][1] if n.attrs else "?"
                     sk = key.split(":")[-1][:24]
                 else:
                     child_ops = [
-                        next(iter(self._classes[self.find(c)].nodes)).op
+                        min(
+                            self._classes[self.find(c)].nodes,
+                            key=_member_key,
+                        ).op
                         if self._classes[self.find(c)].nodes
                         else "?"
                         for c in n.children
@@ -232,7 +238,8 @@ class _ExtractMixin:
                     seen_sketch.add(sk)
                     sketches.append(sk)
             out.append({"eid": eid, "members": sketches})
-        out.sort(key=lambda d: -len(d["members"]))
+        # Total order: most diverse first, then class id.
+        out.sort(key=lambda d: (-len(d["members"]), d["eid"]))
         return out
 
     def extract_best(
@@ -388,10 +395,7 @@ class _ExtractMixin:
                 (override,)
                 if override is not None
                 else (
-                    sorted(
-                        eclass.nodes,
-                        key=lambda n: (n.op, n.children, repr(n.attrs)),
-                    )
+                    sorted(eclass.nodes, key=_member_key)
                     if len(eclass.nodes) > 1
                     else tuple(eclass.nodes)
                 )
@@ -978,12 +982,16 @@ class _ExtractMixin:
             if cid in member_over or len(ec.nodes) < 2:
                 continue
             member_reaching = [
-                n for n in ec.nodes if enode_reaches_member(n)
+                n
+                for n in sorted(ec.nodes, key=_member_key)
+                if enode_reaches_member(n)
             ]
             if member_reaching and len(member_reaching) < len(ec.nodes):
                 # class has both member-reaching and bypassing enodes —
                 # force the cheapest member route so the shared GEMM
-                # is used without dragging in junk subtrees
+                # is used without dragging in junk subtrees.  ``min``
+                # keeps the first of an equal-score run, so the
+                # canonical scan order above makes the tie process-stable.
                 route = min(member_reaching, key=steered_score)
                 if steered_score(route) != float("inf"):
                     overrides[cid] = route
@@ -1033,6 +1041,10 @@ class _ExtractMixin:
         The enode is matched by structure — op, attrs, and per-child
         e-classes — so it pins down exactly which member of the class
         the term uses.  ``enode`` is ``None`` when no member matches.
+        Members are scanned in canonical order (``_member_key``): the
+        attrs compare is numerically lenient and children compare by
+        canonical class, so two distinct members can both match, and
+        "the first match" must not be the set's hash order.
         """
         memo: dict = {}
         if eid is None:
@@ -1044,7 +1056,7 @@ class _ExtractMixin:
         if ec is None:
             return eid, None
         if not isinstance(term, Op):
-            for n in ec.nodes:
+            for n in sorted(ec.nodes, key=_member_key):
                 if (
                     n.op == "leaf"
                     and n.attrs
@@ -1053,7 +1065,7 @@ class _ExtractMixin:
                     return eid, n
             return eid, None
         child_cls = [self._class_of_term(a, memo) for a in term.args]
-        for n in ec.nodes:
+        for n in sorted(ec.nodes, key=_member_key):
             if n.op != term.op or len(n.children) != len(term.args):
                 continue
             if dict(n.attrs) != term.attrs:

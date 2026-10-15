@@ -53,6 +53,22 @@ class ENode:
         return self._h
 
 
+def _member_key(node: ENode) -> tuple:
+    """Return the canonical sort key of an enode member.
+
+    ``EClass.nodes`` is a ``set``, so its iteration order follows the
+    enodes' hashes — and :class:`ENode`'s hash folds in the ``op`` name
+    (a ``str``) and the attr reprs, so that order varies *per process*
+    under hash randomisation.  Every site that reads members in an
+    order that can reach a decision (which match fires first, which
+    representative resolves a side condition, which merge lands first)
+    must iterate through this key instead, so the result does not
+    depend on ``PYTHONHASHSEED``.  It is a total order: two distinct
+    enodes differ in op, children, or an attr repr.
+    """
+    return (node.op, node.children, repr(node.attrs))
+
+
 @dataclass
 class EClass:
     """An equivalence class of semantically-equivalent terms."""
