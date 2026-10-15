@@ -13,7 +13,9 @@ probe:
 
 1. builds a term matching the lhs, with each metavar a fresh variable;
 2. rewrites it with catopt's engine (``EGraph.apply_rule``);
-3. rewrites it with handl's engine, through the peer CLI;
+3. rewrites it with handl's engine, through the peer — the PyO3
+   extension ``catopt_handl_peer`` when it is importable, else the CLI
+   (the same Rust library, `lab/handl-peer`);
 4. renders both results as ``{kind, children}`` and compares structurally.
 
 Scope, stated honestly
@@ -55,6 +57,11 @@ _BIN = Path(
     )
 )
 _FRAGMENTS = _REPO / "lab" / "handl-spike" / "fragments-all"
+
+try:  # the shipping surface — absent until maturin builds it
+    import catopt_handl_peer as _ext
+except ImportError:  # pragma: no cover - depends on the local build
+    _ext = None
 
 
 def _eliminates_root(rule: object) -> bool:
@@ -111,7 +118,11 @@ def _render(node: object) -> dict:
 
 
 def _handl_rewrite(rule_id: str, term: object) -> dict | None:
-    """Rewrite *term* with handl through the peer; ``None`` on refusal."""
+    """Rewrite *term* with handl through the peer; ``None`` on refusal.
+
+    Prefers the PyO3 extension (``catopt_handl_peer``) and falls back to
+    the CLI binary — both are the same Rust library.
+    """
     arena: list[dict] = []
     root = _flatten(term, arena)
     ast = json.dumps(
@@ -120,6 +131,13 @@ def _handl_rewrite(rule_id: str, term: object) -> dict | None:
             for n in arena
         ]
     )
+    if _ext is not None:
+        try:
+            return json.loads(
+                _ext.apply_rule(str(_FRAGMENTS), ast, root, rule_id)
+            )
+        except ValueError:
+            return None
     out = subprocess.run(
         [str(_BIN), str(_FRAGMENTS), rule_id, str(root), ast],
         capture_output=True,
@@ -161,11 +179,14 @@ def main(argv: list[str] | None = None) -> int:
     if "--limit" in args:
         limit = int(args[args.index("--limit") + 1])
 
-    if not _BIN.exists():
-        print(f"peer binary not built: {_BIN}", file=sys.stderr)
+    if _ext is None and not _BIN.exists():
         print(
-            "  cd lab/handl-peer && CARGO_TARGET_DIR=~/GitHub/handl-lang"
-            "/platform/target cargo build --bin rewrite",
+            f"peer not available (no catopt_handl_peer, no binary: {_BIN})",
+            file=sys.stderr,
+        )
+        print(
+            "  cd lab/handl-peer && VIRTUAL_ENV=../../.venv maturin develop"
+            " --target-dir ~/GitHub/handl-lang/platform/target",
             file=sys.stderr,
         )
         return 2

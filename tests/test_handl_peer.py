@@ -1,23 +1,38 @@
 """The handl peer's call path — catopt drives handl's rewrite engine.
 
-This is plan 0030 step 2's proof in its cheapest form.  The *shipping*
-shape is a PyO3 extension (`lab/handl-peer`), but its packaging needs
-maturin, which is not installed in this venv; the crate therefore also
-builds a CLI over the same library code, and that is what these tests
-drive.
-
-They **skip** unless the binary has been built — it is a spike artifact,
-not part of the wheel:
+This is plan 0030 step 2's proof.  The peer (`lab/handl-peer`) is a PyO3
+extension, `catopt_handl_peer`, built with maturin; these tests drive it
+through the **extension** when it is importable:
 
     cd lab/handl-peer
-    CARGO_TARGET_DIR=~/GitHub/handl-lang/platform/target \\
+    VIRTUAL_ENV=../../.venv maturin develop \\
+        --target-dir ~/GitHub/handl-lang/platform/target
+
+The same crate also builds a CLI over the same library code
+(`src/bin/rewrite.rs`), and that is the **fallback** surface — a checkout
+with no maturin build (and no `catopt_handl_peer` on `sys.path`) still
+exercises the call path through the binary:
+
+    cd lab/handl-peer
+    PYO3_PYTHON=$(git rev-parse --show-toplevel)/.venv/bin/python \\
+        CARGO_TARGET_DIR=~/GitHub/handl-lang/platform/target \\
         cargo build --bin rewrite
+
+They **skip** when neither surface is available — the extension is a
+spike artifact, not part of the wheel:
+
+    pytestmark = skipif(no extension and no CLI binary, or no fragments)
+
+`PYO3_PYTHON` is load-bearing on this host: `python3` on `PATH` is 3.14,
+and a raw `cargo build` binds against it, emitting an extern `Py_TYPE`
+symbol (pyo3-ffi makes `Py_TYPE` extern only under `Py_3_14`) that the
+3.13 runtime does not export — the import then fails with
+`undefined symbol: Py_TYPE`.  maturin picks the venv interpreter itself.
 
 What is proven here: catopt calls handl, handl loads catopt's fragment
 directory as a `Language`, applies one of catopt's laws, and returns the
 term — the same term catopt's own engine produces.  What is *not*
-proven: the PyO3 packaging (maturin), and any tensor crossing (ADR 0011
-keeps those out of v1 on purpose).
+proven: any tensor crossing (ADR 0011 keeps those out of v1 on purpose).
 """
 
 from __future__ import annotations
@@ -41,9 +56,17 @@ _BIN = Path(
 )
 _FRAGMENTS = _REPO / "lab" / "handl-spike" / "fragments"
 
+try:  # the shipping surface — absent until maturin builds it
+    import catopt_handl_peer as _ext
+except ImportError:  # pragma: no cover - depends on the local build
+    _ext = None
+
 pytestmark = pytest.mark.skipif(
-    not _BIN.exists() or not _FRAGMENTS.is_dir(),
-    reason="handl peer binary or fragment dir not built (see the docstring)",
+    (_ext is None and not _BIN.exists()) or not _FRAGMENTS.is_dir(),
+    reason=(
+        "handl peer (extension or CLI) or fragment dir not available "
+        "(see the docstring)"
+    ),
 )
 
 
@@ -54,6 +77,15 @@ def _ast(*nodes: tuple[str, list[int]]) -> str:
 
 
 def _run(*args: str) -> str:
+    """Rewrite through the peer: the extension if importable, else the CLI.
+
+    *args* is the CLI's spelling — ``(rule_id, at, ast_json)``.  Both
+    surfaces call the same Rust library, so the result is identical; the
+    extension is preferred and the CLI is the no-maturin fallback.
+    """
+    rule_id, at, ast = args
+    if _ext is not None:
+        return _ext.apply_rule(str(_FRAGMENTS), ast, int(at), rule_id)
     out = subprocess.run(
         [str(_BIN), str(_FRAGMENTS), *args],
         capture_output=True,
@@ -62,6 +94,18 @@ def _run(*args: str) -> str:
     )
     assert out.returncode == 0, out.stderr
     return out.stdout
+
+
+def test_the_extension_is_the_preferred_surface() -> None:
+    """The PyO3 extension is importable and reports the fragment's laws.
+
+    Skips — without failing — when only the CLI is built, so a fresh
+    checkout stays green; the fallback still exercises the call path.
+    """
+    if _ext is None:
+        pytest.skip("extension not installed; using the CLI fallback")
+    ids = _ext.language_transform_ids(str(_FRAGMENTS))
+    assert "transform.catopt.assoc_add" in ids
 
 
 def test_the_peer_rewrites_with_a_catopt_law() -> None:

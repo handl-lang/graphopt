@@ -1,9 +1,14 @@
 //! `rewrite <fragment-dir> <rule-id> <at> <ast-json>` — the peer as a CLI.
 //!
-//! The PyO3 extension is the shipping shape, but its packaging needs
-//! maturin (not installed here); this binary proves the *call path*
-//! (catopt -> handl's loader + rewrite engine) with the same library
-//! code, so the integration can be verified from Python today.
+//! The PyO3 extension (`catopt_handl_peer`, built with maturin) is the
+//! shipping surface; this binary is the fallback for a checkout without a
+//! maturin build.  Both call the same library code, so they prove the same
+//! *call path* (catopt -> handl's loader + rewrite engine) and are
+//! interchangeable — the tests prefer the extension and fall back here.
+//!
+//! Build it against the venv interpreter: `PYO3_PYTHON=<venv>/bin/python`
+//! (a bare `cargo build` binds to `python3` on `PATH`, which may be a
+//! different minor version — see `README.md`, *The `Py_TYPE` trap*).
 
 use catopt_handl_peer::rewrite;
 use std::process::ExitCode;
