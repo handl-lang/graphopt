@@ -48,10 +48,11 @@ THE GRAMMAR (descriptors are plain data — tuples, strings, numbers):
   ``("norm", "div", ("exp","X"), "sum", ("exp","X"), -1, True)`` —
   the composite the ``reduce`` family's whole-spec operand cannot
   spell (a reduction is one of the operands of an elementwise op,
-  not the whole spec).  *keepdim* is a real degree of freedom: the
-  shape-general softmax keeps the reduced axis so it broadcasts
-  back against the operand, while a non-``keepdim`` spelling only
-  broadcasts on a square operand (a different function).
+  not the whole spec).  *keepdim* is read off the spec
+  (:func:`_spec_keepdim`), not searched: a normalization's
+  denominator must keep the reduced axis to broadcast back against
+  the operand, so the spec's own ``keepdim`` is the only sound
+  value.
 
 A fold side or carry may be a *constant*: the a-side ``1.0`` (the
 multiplicative identity) and the b-side ``0.0`` (the additive
@@ -122,6 +123,14 @@ _BINARY = ("mul", "add", "sub", "div")
 #: stays reachable while the candidate space stays small.
 _MAX_EW_OPS = 2
 
+#: Maximum op nodes in a ``fold_emit`` projection's non-accumulator
+#: factor.  Kept at one: the emitted-scan corpus shape projects the
+#: accumulator itself (``out = $acc``) and the next-deepest useful
+#: form is one op (``out = q ⊙ acc``); a two-op projection
+#: (``out = q ⊙ acc + r``) is outside the cap — confirmed by
+#: measurement, not assumed (see :func:`_emit_exprs`).
+_MAX_EMIT_OPS = 1
+
 #: The contraction equations the grammar may propose — batched
 #: matmul in its four orientations, the output-transposed form, the
 #: matvec and the full inner product.  A closed set: an equation
@@ -163,12 +172,6 @@ REDUCE_AXES: tuple[int, ...] = (-1, -2)
 #: normalization combines a value with a reduction of itself, which
 #: the ``reduce`` family (reduction of the whole spec) cannot spell.
 NORM_OPS: tuple[str, ...] = ("div", "sub")
-
-#: The ``keepdim`` values a normalization's reduction may declare.
-#: Both are real: the shape-general softmax keeps the reduced axis so
-#: it broadcasts back against the operand, while a non-``keepdim``
-#: spelling is a different function (equal only on a square operand).
-NORM_KEEPDIMS: tuple[bool, ...] = (False, True)
 
 #: The template families, in proposal order.
 _FAMILIES: tuple[str, ...] = (
@@ -471,6 +474,33 @@ def _spec_dims(spec: Any) -> list:
     return out
 
 
+def _spec_keepdim(spec: Any) -> bool:
+    """Whether the spec's reductions declare ``keepdim``.
+
+    A normalization's denominator must broadcast back against the
+    operand, which requires the reduced axis to survive — so the
+    normalization's ``keepdim`` is *read off the spec*, not
+    enumerated.  Enumerating both values would propose the
+    non-``keepdim`` form against a ``keepdim`` spec (and vice versa):
+    dead space, since a non-``keepdim`` reduction only broadcasts
+    back on a coincidental shape (measured: 141 of the first 600
+    ``cumsum`` candidates raised, all non-``keepdim`` norm bodies).
+    """
+    found = False
+
+    def walk(s: Any) -> None:
+        nonlocal found
+        if isinstance(s, (tuple, list)):
+            for e in s[1:]:
+                if isinstance(e, dict) and e.get("keepdim"):
+                    found = True
+                elif not isinstance(e, dict):
+                    walk(e)
+
+    walk(spec)
+    return found
+
+
 # ---------------------------------------------------------------------------
 #  Proposal enumeration — candidate bodies, simplest first
 # ---------------------------------------------------------------------------
@@ -549,19 +579,35 @@ def _canonical_emit_seeds(metas: list) -> list:
     out = []
     for state in states:
         rest = tuple(m for m in metas if m != state)
-        for a_m in rest:
-            for a_side in (a_m, *a_extra, *((u, a_m) for u in _UNARY)):
-                for b_side in (*rest, *b_extra):
-                    out.append(
-                        (
-                            "fold_emit",
-                            a_side,
-                            b_side,
-                            state,
-                            "$acc",
-                            FOLD_AXES[0],
-                        )
-                    )
+        for a_side, b_side in _seed_pairs(rest, a_extra, b_extra):
+            out.append(
+                (
+                    "fold_emit",
+                    a_side,
+                    b_side,
+                    state,
+                    "$acc",
+                    FOLD_AXES[0],
+                )
+            )
+    return out
+
+
+def _seed_pairs(rest: tuple, a_extra: tuple, b_extra: tuple) -> list:
+    """Return the seed's (a-side, b-side) pairs, minus dead ones.
+
+    ``a_extra``/``b_extra`` are the small-spec identities (``1.0`` /
+    ``0.0``).  The pair where *both* sides are the identity is a
+    constant fold — no step axis, so ``_fold_eval`` raises on it: a
+    structurally dead candidate, never proposed.
+    """
+    out = []
+    for a_m in rest:
+        for a_side in (a_m, *a_extra, *((u, a_m) for u in _UNARY)):
+            for b_side in (*rest, *b_extra):
+                if a_side == 1.0 and b_side == 0.0:
+                    continue
+                out.append((a_side, b_side))
     return out
 
 
@@ -671,7 +717,10 @@ def _emit_exprs(rest: tuple, consts: tuple) -> list:
     every emit names it — the ``out_i = g(q_i, state_i)`` shape.
     Ordering is cheapest-first: a binary over one meta and ``$acc``
     (``q_i ⊙ acc_i`` is the canonical form), then the trivial emits,
-    then deeper non-accumulator factors (two metas, one op).
+    then non-accumulator factors up to ``_MAX_EMIT_OPS`` deep.  The
+    depth is a real cap: an emit needing two non-acc ops
+    (``add(mul(Q,$acc),R)``) is outside it (measured — no corpus
+    site needs one; the emitted-scan corpus emit is ``$acc``).
     """
     out: list = []
     for b in _BINARY:
@@ -684,7 +733,7 @@ def _emit_exprs(rest: tuple, consts: tuple) -> list:
         for s_e in combinations(sorted(rest), size):
             req = frozenset(s_e)
             atoms = tuple(sorted(req)) + consts
-            for e in _ew_exprs(req, atoms, 1):
+            for e in _ew_exprs(req, atoms, _MAX_EMIT_OPS):
                 for b in _BINARY:
                     out.append((b, e, "$acc"))
                     out.append((b, "$acc", e))
@@ -702,8 +751,13 @@ def _fold_emit_column(
     """``fold_emit`` candidates for one (state, a-part, axis) column.
 
     *emits* is the column's pre-filtered projection list — emits
-    covering the metas the a/b sides left uncovered.
+    covering the metas the a/b sides left uncovered.  A column whose
+    a/b sides are both empty is skipped: the only non-empty sides are
+    the identities (``1.0``/``0.0``), a constant fold with no step
+    axis — a structurally dead candidate.
     """
+    if not a_set and not b_set:
+        return
     for emit in emits:
         for total in range(2 * _MAX_EW_OPS + 1):
             lo = max(0, total - _MAX_EW_OPS)
@@ -861,15 +915,18 @@ def _norm_column(
             yield ("norm", op, lhs, red_op, rhs, axis, keepdim)
 
 
-def _norm_bodies(metas: list, consts: tuple, axes: tuple) -> Any:
-    """Round-robin norm columns: (op, red_op, axis, keepdim) x pairs.
+def _norm_bodies(
+    metas: list, consts: tuple, axes: tuple, keepdim: bool
+) -> Any:
+    """Round-robin norm columns: (op, red_op, axis) x operand pairs.
 
     A normalization combines a value with a reduction of (another)
     value; both operands are the grammar's elementwise exprs over the
     full meta set, bounded to ``_MAX_EW_OPS``.  Ops come from
-    :data:`NORM_OPS`, reductions from :data:`REDUCE_OPS`, keepdim from
-    :data:`NORM_KEEPDIMS`, axes from the spec's own ``dim`` attrs plus
-    :data:`REDUCE_AXES`.
+    :data:`NORM_OPS`, reductions from :data:`REDUCE_OPS`, axes from
+    the spec's own ``dim`` attrs plus :data:`REDUCE_AXES`.  *keepdim*
+    is read off the spec (:func:`_spec_keepdim`) — a property of the
+    reduction, not a search dimension.
     """
     req = frozenset(metas)
     atoms = tuple(sorted(req)) + consts
@@ -881,7 +938,6 @@ def _norm_bodies(metas: list, consts: tuple, axes: tuple) -> Any:
         for op in NORM_OPS
         for red_op in REDUCE_OPS
         for axis in axes
-        for keepdim in NORM_KEEPDIMS
     ]
     return _round_robin(gens)
 
@@ -894,7 +950,7 @@ def _top_op(spec: Any) -> Any:
 
 
 def _canonical_norm_seeds(
-    metas: list, consts: tuple, axes: tuple
+    metas: list, consts: tuple, axes: tuple, keepdim: bool
 ) -> list:
     """Propose the canonical normalization bodies first.
 
@@ -902,7 +958,7 @@ def _canonical_norm_seeds(
     reduction of *itself*, the softmax / ``x - mean(x)`` shape.  Like
     the ``fold_emit`` seed it is structural, not a hard-coded answer:
     the operand ``ew`` ranges over the grammar's one-op vocabulary and
-    the plain meta, ``op``/``red_op``/``axis``/``keepdim`` over their
+    the plain meta, ``op``/``red_op``/``axis`` over their
     vocabularies, so the verifier decides which instance (if any) is
     the atom.  The equal-operand seed keeps the plausible
     normalization within the first few hundred proposals — the full
@@ -922,11 +978,10 @@ def _canonical_norm_seeds(
     for op in NORM_OPS:
         for red_op in REDUCE_OPS:
             for axis in axes:
-                for keepdim in NORM_KEEPDIMS:
-                    for ew in ews:
-                        out.append(
-                            ("norm", op, ew, red_op, ew, axis, keepdim)
-                        )
+                for ew in ews:
+                    out.append(
+                        ("norm", op, ew, red_op, ew, axis, keepdim)
+                    )
     return out
 
 
@@ -957,6 +1012,7 @@ def _family_gens(
     consts: tuple,
     max_ops: int,
     axes: tuple,
+    keepdim: bool,
 ) -> list:
     """One candidate generator per admitted template family.
 
@@ -988,7 +1044,7 @@ def _family_gens(
     if "reduce" in adm:
         gens.append(_reduce_bodies(metas, consts, axes))
     if "norm" in adm:
-        gens.append(_norm_bodies(metas, consts, axes))
+        gens.append(_norm_bodies(metas, consts, axes, keepdim))
     return gens
 
 
@@ -1013,13 +1069,21 @@ def propose_bodies(
     metas = _spec_metas(spec)
     consts = tuple(_spec_consts(spec))
     axes = tuple(dict.fromkeys([*_spec_dims(spec), *REDUCE_AXES]))
+    keepdim = _spec_keepdim(spec)
+    # A normalization is only proposed for a normalization-shaped spec
+    # (top op in NORM_OPS): its candidates on any other spec are dead
+    # — a non-``keepdim`` reduction of a scan operand cannot broadcast
+    # back (measured: 141 of a scan spec's first 600 candidates
+    # raised, all norm bodies).
+    if _top_op(spec) not in NORM_OPS:
+        fams = tuple(f for f in fams if f != "norm")
     if "ew" in fams and elementwise_spec(spec):
         yield ("ew", spec)
     if "fold_emit" in fams and metas:
         yield from _canonical_emit_seeds(metas)
-    if "norm" in fams and metas and _top_op(spec) in NORM_OPS:
-        yield from _canonical_norm_seeds(metas, consts, axes)
-    gens = _family_gens(fams, metas, consts, max_ops, axes)
+    if "norm" in fams and metas:
+        yield from _canonical_norm_seeds(metas, consts, axes, keepdim)
+    gens = _family_gens(fams, metas, consts, max_ops, axes, keepdim)
     yield from _round_robin(gens)
 
 
