@@ -31,9 +31,20 @@ class ENode:
     attrs: tuple[tuple[str, Any], ...] = ()
     _sig: tuple = field(init=False, repr=False, compare=False)
     _h: int = field(init=False, repr=False, compare=False)
+    _mk: tuple = field(init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
-        """Precompute the spelling-strict signature and its hash."""
+        """Precompute the signature, its hash, and the member key.
+
+        ``_mk`` is :func:`_member_key`'s value — the canonical sort
+        key every decision-reaching member read orders by.  It is
+        computed once here (``repr(attrs)`` included) because the key
+        is consumed inside every ``sorted``/``min``/``max`` over class
+        members — matching, the congruence drain, ``any_term``,
+        ``_min_term``, extraction — where recomputing the attrs repr
+        per enode per sort was the saturation hot loop's dominant
+        cost.
+        """
         sig = (
             self.op,
             self.children,
@@ -41,6 +52,9 @@ class ENode:
         )
         object.__setattr__(self, "_sig", sig)
         object.__setattr__(self, "_h", hash(sig))
+        object.__setattr__(
+            self, "_mk", (self.op, self.children, repr(self.attrs))
+        )
 
     def __eq__(self, other: Any) -> bool:
         """Compare the strict signature — attr spellings, not numbers."""
@@ -65,8 +79,13 @@ def _member_key(node: ENode) -> tuple:
     must iterate through this key instead, so the result does not
     depend on ``PYTHONHASHSEED``.  It is a total order: two distinct
     enodes differ in op, children, or an attr repr.
+
+    The key is precomputed per enode (``ENode._mk``) — it feeds the
+    key function of every member-ordering ``sorted``/``min``/``max``
+    in the saturation and extraction hot loops, so even one
+    ``repr(attrs)`` per call was measurable.
     """
-    return (node.op, node.children, repr(node.attrs))
+    return node._mk
 
 
 @dataclass
