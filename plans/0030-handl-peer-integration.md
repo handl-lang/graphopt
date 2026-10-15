@@ -127,9 +127,9 @@ Checked against the engine source:
 | replace the node *by* a child | **no** — `Declarative` always creates; only `Native` can return an existing node |
 | `TransformRule::Native(name)` | **the only mechanism, but not a faithful form here** — a native returns an `AstRef`, so `ctx.remap_child(i)` *can* return a subterm (`plugin-engine-transform/src/native.rs:118`); but (a) it needs a wired `NativeRewrite` registry — the peer wires none, so `fire_native` errors (`walk.rs:410`) — and (b) the implementation would be **catopt's** Rust, so handl's engine would be running catopt's code and the differential would stop being two *independent* engines (circular for exactly these 5 laws).  That is why the bridge emits it as a **refusal marker**, not as a fix |
 
-**Option A — a rule form in handl (the honest fix).**  handl needs one
-declarative rule shape that *returns an existing node* instead of
-creating one.  The minimal exact shape:
+**Option A — a rule form in handl (the honest fix) — TAKEN, see 3a-ii.**
+handl needs one declarative rule shape that *returns an existing node*
+instead of creating one.  The minimal exact shape:
 
 ```rust
 // handl-language/src/fragments/transform_def.rs — TransformRule
@@ -140,14 +140,13 @@ i.e. "the result is the node at index path `p` below the matched node"
 — `Replace { path: [0, 0] }` is exactly `double_neg`.  It is a
 `KeepPath` promoted to the rule level: the engine already navigates the
 path and remaps the target (`step.rs:186` `KeepPath`), so
-`fire_untraced` would resolve the final index and return it without
+`fire_untraced` resolves the final index and returns it without
 pushing a node.  Cost: a new `TransformRule` variant + one `walk.rs`
 arm + validation — a **vocabulary addition**, which per handl's
 `engine-genericity` rule is *an engine edit and handl's design
 decision*, not something catopt may make.  With it, the bridge maps a
-root-eliminating law to `!Replace { path }`, the 5 laws leave the
-"root-eliminating" bucket and become *comparable*, and they should
-agree.
+root-eliminating law to `!Replace { path }` and the 5 laws leave the
+"root-eliminating" bucket and become *comparable*.
 
 **Option B — a declared `catopt:alias` kind whose payload carries the
 path.  This is *not* a fix.**  It loads and is lossless via the
@@ -157,16 +156,79 @@ semantic difference is **hidden from the very tool built to find
 divergences**.  It is strictly worse than the loud `!Native` refusal:
 same non-faithfulness, but silent.
 
-**Proposal (handl-side, for handl's authors — not applied here).**  Add
-`TransformRule::Replace { path: Vec<usize> }` (option A) to
-`transform_def.rs`, interpreted by `RewriteEngine` as "return the
-remapped node at `path`".  Rationale: it closes the *only* remaining
-declarative-expressiveness gap the differential found, and it is the
-same navigation `KeepPath` already implements, so it is small.  Cost: a
-new enum variant (schema + one engine arm + validation) — a handl
-design decision, deliberately **not** taken by editing handl's
-`transform_def.rs` from catopt.  Until then the bridge's `!Native`
-refusal is the honest placeholder.
+#### 3a-ii · Option A implemented — handl ADR-0127 (2026-10-16)
+
+**DONE.**  handl took option A: **handl ADR-0127**,
+`project/adrs/0127-transform-rule-replace.md` (handl `c538b766`).  The
+variant lives in
+`crates/handl-language/src/fragments/transform_def.rs`; the engine arm in
+`crates/plugin-engine-transform-rewrite/src/walk.rs::fire_untraced`
+(one arm, sharing `step::descendant_index` with `KeepPath` — so `Replace`
+is literally `KeepPath` promoted to the rule level); validation in
+`crates/plugin-engine-transform/src/validate.rs` (empty path and
+out-of-range first index are **Errors**, mirroring `KeepPath`).  An
+unresolvable path is a hard error at runtime too — **never** a fabricated
+node, which is the exact failure mode that motivated the ADR.
+
+handl tests: 5 engine tests (`tests/engine.rs` — returns-the-subterm,
+deep path, top-down traversal, out-of-range error, empty-path error), 2
+validation tests (`plugin-engine-transform/src/lib.rs`), a serde
+round-trip (`transform_def.rs`), and a conformance test that loads
+catopt's emitted `!Replace` rows and fires `double_neg` through the real
+engine (`crates/handl-kit-data-canonical/tests/catopt_fragments.rs`).
+
+**The bridge now emits `!Replace { path }`** (catopt `8bf9911`): for a
+bare-metavar rhs *bound in the lhs*, `_rule_body` returns the metavar's
+lhs path — `double_neg` → `[0, 0]`, `id_add`/`id_mul`/`transpose_noop`/
+`chunk_single` → `[0]`.  The `!Native` refusal is now only the residual
+fallback for a bare-metavar rhs with *no* bound path (absent from the lhs,
+or bound at the lhs root); no shipped law has one, so the whole bank maps
+faithfully.
+
+**Measured — the differential re-run** (`lab/audit/handl_differential.py`,
+same peer, new fragment fixtures):
+
+| bucket | before | after |
+|---|---|---|
+| compared | 19 | **24** |
+| agree | 19 | **24** |
+| **DISAGREE** | **0** | **0** |
+| skipped (leaf rhs) | 3 | 1 |
+| declined | 37 | 39 |
+| guard raised (synth) | 19 | 19 |
+
+All five root-eliminating laws are now **expressible**.  The probe reports
+them per law:
+
+```
+  root-eliminating laws (bare-metavar rhs — handl !Replace, ADR-0127):
+    - id_add: agree
+    - id_mul: agree
+    - double_neg: agree
+    - transpose_noop: declined
+    - chunk_single: declined
+```
+
+**Three agree in the probe** (`id_add`, `id_mul`, `double_neg`); the other
+two are **declined by catopt's own engine** on the probe's synthesized
+term — their guards (`axes-noop`, `attr-eq CK 1`) need concrete attrs the
+generic synthesis cannot supply (retro Finding 2).  Given a
+guard-satisfying term **both engines return the subterm**, so **all five
+agree wherever both fire** — pinned by
+`tests/test_handl_peer.py::test_root_eliminating_laws_agree_on_satisfying_terms`.
+
+The probe was adjusted honestly, in two places, and **hides nothing**
+(`DISAGREE` is still 0):
+1. the obsolete `_eliminates_root` pre-classification is gone — the laws
+   are fired and compared like any other structural law;
+2. the "structural laws only" filter now filters the **rhs** only, which
+   is its documented intent.  Filtering the lhs too had needlessly skipped
+   the four laws whose *lhs* carries a leaf but whose rhs is structural
+   (`id_add`, `id_mul`, `softsign_fold`, `pow_to_square`) — a leaf in the
+   synthesized **input** is perfectly comparable, and all four agree.
+
+So the 19→24 gain is the 5 root-eliminating laws minus the 2 the guards
+decline, plus the 4 the lhs-filter hid.
 
 ### 4 · Decide `priority` (small, but say it out loud)
 

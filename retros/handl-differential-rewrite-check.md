@@ -105,6 +105,65 @@ latent; it is pinned only by the synthetic
 `node_kind` has no `!Native` analogue (it is the dispatch key), so this
 one has no clean refusal either — noted here rather than fixed.
 
+### Addendum 2 (2026-10-16) — the rule form landed; the 5 laws are compared
+
+The `Replace { path }` proposal was taken by handl: **handl ADR-0127**
+(`crates/handl-language/src/fragments/transform_def.rs` for the variant,
+one arm in `plugin-engine-transform-rewrite/src/walk.rs::fire_untraced`,
+validation in `plugin-engine-transform/src/validate.rs`).  An unresolvable
+path is a hard error, never a fabricated node — the failure mode Finding 1
+records is now impossible by construction.
+
+catopt's bridge emits `!Replace { path }` for a bare-metavar rhs bound in
+the lhs (the metavar's lhs path), so the whole bank maps faithfully; the
+`!Native` refusal survives only for a bare-metavar rhs with no bound path
+(no shipped law).
+
+**The probe changed in two honest ways** (it hides nothing — `DISAGREE`
+stays 0):
+
+1. the obsolete `_eliminates_root` pre-classification is gone; the laws
+   are fired and compared like any other structural law;
+2. the "structural laws only" filter now filters the **rhs** only — its
+   documented intent.  Filtering the lhs too had needlessly skipped four
+   laws whose *lhs* carries a leaf but whose rhs is structural
+   (`id_add`, `id_mul`, `softsign_fold`, `pow_to_square`); a leaf in the
+   synthesized **input** is perfectly comparable.
+
+**Re-measured — whole bank, all 83 laws accounted for:**
+
+| bucket | before | after |
+|---|---|---|
+| compared | 19 | **24** |
+| **agree** | **19** | **24** |
+| **DISAGREE** | **0** | **0** |
+| skipped (leaf rhs) | 3 | 1 |
+| declined by an engine | 37 | 39 |
+| guard raised (synthesized term) | 19 | 19 |
+
+`root-eliminating` is no longer a bucket (nothing is skipped for it); the
+probe now prints the five per law:
+
+```
+  root-eliminating laws (bare-metavar rhs — handl !Replace, ADR-0127):
+    - id_add: agree
+    - id_mul: agree
+    - double_neg: agree
+    - transpose_noop: declined
+    - chunk_single: declined
+```
+
+So **three of the five agree inside the probe**; `transpose_noop` and
+`chunk_single` are **declined by catopt's own engine** on the probe's
+synthesized term — their guards (`axes-noop`, `attr-eq CK 1`) need
+concrete attrs the generic synthesis cannot supply (that is Finding 2, not
+a divergence).  Given a guard-satisfying term **both engines return the
+subterm**, so **all five agree wherever both fire** — pinned by
+`tests/test_handl_peer.py::test_root_eliminating_laws_agree_on_satisfying_terms`.
+
+The 19→24 gain is the five root-eliminating laws (minus the two the guards
+decline) plus the four the lhs-filter had hidden.
+
 ## Finding 2 — one synthesized term per law is not universally sound
 
 19 laws' guards **raise** on a synthesized term (bare `f64` variables):
@@ -130,9 +189,11 @@ the comparison on real corpus terms, where shapes are known).
 
 1. **A new asset**: cross-engine agreement over the bank, measured, with
    the non-comparable laws named.
-2. **A regression guard**: `tests/test_handl_peer.py` pins 19 agree / 0
-   disagree, so a change in *either* engine that breaks agreement fails a
-   test.
-3. **Two gaps, named**: the root-eliminating rule form (a real
-   representational gap in handl's vocabulary) and the shape-sensitive
-   guard limitation (a probe improvement).
+2. **A regression guard**: `tests/test_handl_peer.py` pins **24 agree / 0
+   disagree** (was 19 — Addendum 2), so a change in *either* engine that
+   breaks agreement fails a test.
+3. **One gap closed, one named**: the root-eliminating rule form was a real
+   representational gap in handl's vocabulary and is now **closed** (handl
+   ADR-0127); the shape-sensitive guard limitation (a probe improvement)
+   remains and is what still keeps `transpose_noop`/`chunk_single` out of
+   the compared set.
