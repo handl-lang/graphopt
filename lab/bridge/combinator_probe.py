@@ -22,6 +22,7 @@ Run::
     .venv/bin/python lab/bridge/combinator_probe.py --gate2    # loop spelling
     .venv/bin/python lab/bridge/combinator_probe.py --gate2 --extracted
     .venv/bin/python lab/bridge/combinator_probe.py --gate2 --extracted --propose-loop
+    .venv/bin/python lab/bridge/combinator_probe.py --gate2 --extracted --abstract-index
 """
 
 from __future__ import annotations
@@ -277,7 +278,11 @@ def gate1(which: str, verify: int) -> list[Row]:
     return rows
 
 
-def gate2(extracted: bool, propose_loop: bool = False) -> None:
+def gate2(
+    extracted: bool,
+    propose_loop: bool = False,
+    abstract_index: bool = False,
+) -> None:
     """Spell the RetNet fold as ``loop (arr step)``; verify + project."""
     import catopt_carriers  # noqa: F401 — carrier op bindings
     from catopt_core.cost import dag_cost, flops_cost
@@ -339,11 +344,17 @@ def gate2(extracted: bool, propose_loop: bool = False) -> None:
         "form, not a recovered one."
     )
     if extracted:
-        _gate2_projection(propose_loop=propose_loop)
+        _gate2_projection(
+            propose_loop=propose_loop, abstract_index=abstract_index
+        )
 
 
 def _gate2_projection(
-    t: int = 64, k: int = 4, iters: int = 10, propose_loop: bool = False
+    t: int = 64,
+    k: int = 4,
+    iters: int = 10,
+    propose_loop: bool = False,
+    abstract_index: bool = False,
 ) -> None:
     """Saturate the RetNet export (staged arms) and project the winner.
 
@@ -352,6 +363,8 @@ def _gate2_projection(
     the spelled ``loop`` expands to.  With ``propose_loop`` it also runs
     the gate-3 *proposing rule* (``lab/bridge/loop_propose.py``) over the
     projected winner and over an authored spelled scan (the control).
+    With ``abstract_index`` it runs the gate-3 *parametric-abstraction*
+    move (``lab/bridge/index_abstract.py``) — abstraction over the step.
     """
     from catopt_carriers.om import (
         om_shared_state_budgets,
@@ -420,6 +433,13 @@ def _gate2_projection(
         )
         print("-- gate 3: the `loop`-proposing rule --")
         lp.propose_loop_report(morph, control)
+    if abstract_index:
+        from lab.bridge import index_abstract as ia
+
+        print("-- gate 3: parametric abstraction over the step --")
+        ia.abstract_index_report(
+            best, control=_expanded_fold_term(t, k)
+        )
 
 
 def _fold_depth(term: Any) -> int:
@@ -511,11 +531,20 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="run the gate-3 loop-proposing rule over the projected winner",
     )
+    ap.add_argument(
+        "--abstract-index",
+        action="store_true",
+        help="run the gate-3 parametric-abstraction move (over the step)",
+    )
     ap.add_argument("--json", help="write machine-readable gate-1 rows")
     args = ap.parse_args(argv)
 
     if args.gate2:
-        gate2(args.extracted, propose_loop=args.propose_loop)
+        gate2(
+            args.extracted,
+            propose_loop=args.propose_loop,
+            abstract_index=args.abstract_index,
+        )
         return 0
     rows = gate1(args.set, args.verify)
     if args.json:
