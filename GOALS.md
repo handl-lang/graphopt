@@ -106,7 +106,7 @@ condition), and enum variants must be spelled as **YAML tags** under
 | **ADR 0011** (canonical representation) | **done** (`78ce874`) — the calculus for laws, the op-graph for execution |
 | ADR 0009 corrected | **done** (`0446e73`) — most of the "ports to add" already exist (`Engine` in core; `Environment`/`Reward` as `Board`/`Report`; `Calculus` is data, not a port) |
 | docs in both repos | **done** — handl `337b2c83` (`docs/explanation/kits-and-manifests.md`: the per-file data path + the catopt example); catopt `b9d0e7c` (`docs/mechanism.md`: the kernel, and the platform next door) |
-| **full-suite / NP measurement** | **OPEN — and it is a finding**: two full-suite runs died at **exactly 36%** on this host.  A third run under `-v` is in flight to name the last test started, which distinguishes a crashing test from an OOM.  `gates.sh` defaults to serial, so nothing depends on the answer. |
+| **full-suite / NP measurement** | **OPEN** (and my first diagnosis was wrong).  I claimed two runs "died at 36%" — they had not: the runs were alive, pytest's `-q` progress is block-buffered when redirected (so the log looks frozen), and my `ps | grep` matched the wrapper shell instead of the pytest child.  A serial run is in flight; the parallel arm is still unmeasured, so `gates.sh` stays serial.  Corrected in `AGENTS.md` (`5077e00`). |
 
 ### G2 — the chain
 
