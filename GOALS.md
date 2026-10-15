@@ -71,3 +71,61 @@ spike's decision, plus docs updated in **both** repositories.
 The ledger shows **which** goal is unmet and **why** — no silent drops.
 Salvage beats abandon: uncommitted work in a dying worktree gets
 committed to its branch before anything else.
+
+---
+
+## Night status — 2026-10-14/15
+
+### G0 — the handl ↔ catopt boundary spike: **DONE**
+
+| q | result | artifact |
+|---|---|---|
+| **Q0** | **PASS** — catopt's vocabulary assembles as handl data; the law lands in `lang.transforms` with its condition as `And([KindAt, ChildCount])` | catopt `8de8cb5` + `8d5b47d`; handl `b20b978a`; retro `retros/handl-q0-language-as-data.md` |
+| **Q1a** | **yes, by reference** — `TaggedValue::Resource(Rc<ForeignResource>)`: an opaque pointer + finalizer, no copy | retro `retros/handl-q1-tensor-crossing.md` |
+| **Q1b** | **the seam is JSON-valued** — `Function::call(&[Value]) -> Result<Value>` with `Value = serde_json::Value`; a `Resource`'s JSON encoding is a *debug* process-local pointer (`{"__resource__": {"ptr": n}}`), dangling across processes | same retro |
+| **Q3** | **(A) catopt embeds handl as an optional peer** (the `catopt-native` pattern); (B) sequenced, not rejected | retro `retros/handl-q3-integration-direction.md` |
+| **Q2** | **not applicable as posed** — v1 has no host-fn dispatch; the measured cost is the fragment load, which is instant | retro `retros/handl-q2-boundary-cost.md` |
+
+**Spike decision: `go (A)` — catopt embeds handl as an optional peer,
+language-only in v1** (fragments in, terms out; no tensors across).
+That is what the measurements support, and it is what ADR 0011 already
+assumes.
+
+Two representational requirements were found and fixed on the way, both
+in catopt: `when` must fold into `And([...])` (handl's field is ONE
+condition), and enum variants must be spelled as **YAML tags** under
+`serde_yaml`, not JSON maps.  One residue is named: the leaf step
+(`{"catopt:leaf": …}`) has no `RewriteStep` counterpart.
+
+### G1 — supporting work
+
+| item | state |
+|---|---|
+| `slow` markers | **done** — placed from measured durations; the heaviest slice goes 370.8 s → 42.6 s under `-m "not slow"` (`7463327`) |
+| `scripts/gates.sh` | **landed** (`1bbe13d`), defaulting to **serial** until the parallel arm is measured (`ed86dd4`) |
+| **ADR 0011** (canonical representation) | **done** (`78ce874`) — the calculus for laws, the op-graph for execution |
+| ADR 0009 corrected | **done** (`0446e73`) — most of the "ports to add" already exist (`Engine` in core; `Environment`/`Reward` as `Board`/`Report`; `Calculus` is data, not a port) |
+| docs in both repos | **done** — handl `337b2c83` (`docs/explanation/kits-and-manifests.md`: the per-file data path + the catopt example); catopt `b9d0e7c` (`docs/mechanism.md`: the kernel, and the platform next door) |
+| **full-suite / NP measurement** | **OPEN — and it is a finding**: two full-suite runs died at **exactly 36%** on this host.  A third run under `-v` is in flight to name the last test started, which distinguishes a crashing test from an OOM.  `gates.sh` defaults to serial, so nothing depends on the answer. |
+
+### G2 — the chain
+
+`0010 (handl is the kernel)` → **spike (G0, done)** → `0011 (canonical
+representation, written)` → `0009 stage 4 (the calculus package)`, now
+**unblocked in principle**: the decision is `go (A)`, and the remaining
+gate for stage 4 is ADR 0008's gate 3 (does search *reach* `loop`-headed
+forms), which is a catopt-side measurement, not a boundary one.
+
+### G\* — the enduring goal
+
+**Untouched, as stated.**  Nothing above is evidence that the machine
+discovers new algorithms; the spike only made the substrate real.
+
+### Invariants — held, with one honest exception
+
+No force-push, no remote-branch deletion, no `rm -rf` outside
+regenerable caches, no ratchet widened, no invented numbers, nothing
+irreversible without asking.  **Exception:** for a period the `-n 2`
+slice arm and a full-suite run were both live (contention, and it
+distorted the numbers); the duplicate was killed when noticed, and the
+affected figures were discarded rather than reported.
