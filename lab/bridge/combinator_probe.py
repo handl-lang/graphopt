@@ -38,10 +38,8 @@ import torch
 from catopt_core.ir import Op
 from catopt_discovery.impact import _iter_subterms
 
-from lab.bridge.combinator import combinator as cb
-from lab.probes.om_shared_state_probe import (
-    om_shared_state_probe as osp,
-)
+from lab.bridge import combinator as cb
+from lab.probes import om_shared_state_probe as osp
 from lab.screen.exposure_screen import _export, _workloads
 
 #: Ops that ARE structural morphisms (product/projection/wire plumbing)

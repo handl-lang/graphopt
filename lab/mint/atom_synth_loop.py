@@ -84,7 +84,7 @@ from catopt_discovery.handler_synth import (
 )
 from catopt_discovery.impact import _iter_subterms
 
-from lab.mint.atom_law_loop import atom_law_loop as l3
+from lab.mint import atom_law_loop as l3
 from lab.screen.exposure_screen import _export, _workloads
 
 Candidate = l3.Candidate
