@@ -232,7 +232,12 @@ that create their consumers**, not added up front:
   extraction mixed two state spellings, so no constant-parameter
   abstraction can unite them.  Stage 4 is still not justified, and
   the missing piece is larger than this bullet implied.  See
-  `project/retros/gate3-parametric-abstraction.md`.**
+  `project/retros/gate3-parametric-abstraction.md`.  **Re-measured
+  2026-10-16 (later still): still not justified.**  The block width was
+  abstracted (`514888c`) and the winner is still 7 distinct templates
+  *even modulo the width and the index* — the residual is the state
+  spelling (the cross term is the unfolded geometric sum), not a
+  parameter.  See `project/retros/gate3-sizes-abstraction.md`.**
 5. **Extract `catopt-game`** — the RL layer out of the 50k-line package
    (the clear navigability win).
 6. **Fold `genkernel` into a domain package** — no `catopt-kernels`.
@@ -267,6 +272,15 @@ that create their consumers**, not added up front:
    still not justified by the presentation's discovery value.  See ADR
    0008's third gate-3 FAIL bullet and
    `project/retros/gate3-extraction-state-spelling.md`.
+   **Re-measured once more 2026-10-16: still negative, and the "two
+   chunk widths" cause is retired.**  The block width (`sizes`) was
+   abstracted in the move (ADR 0008's fourth gate-3 FAIL bullet, catopt
+   `514888c`) and the winner's 7 blocks are still **7 distinct
+   templates** even modulo the width *and* the index — the difference is
+   structural (the cross term is the unfolded geometric sum), not a
+   parameter.  Stage 4 is still not justified, and the remaining piece is
+   the state spelling alone.  See
+   `project/retros/gate3-sizes-abstraction.md`.
 2. **A port with no consumer is decoration.**  If `Calculus`/`Machine`/
    `Engine`/`Proposer`/`Environment` cannot name an existing consumer and
    a conformance test, they do not land.

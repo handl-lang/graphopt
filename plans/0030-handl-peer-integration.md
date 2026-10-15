@@ -297,6 +297,22 @@ package).  Catopt-side, and independent of the peer.
   structural state identification.  Written down here and in ADR 0008's
   third gate-3 FAIL bullet; retro:
   `project/retros/gate3-extraction-state-spelling.md`.
+- **MEASURED 2026-10-16 (later still again) — still NO; the "two chunk
+  widths" cause is retired.**  The width *was* abstracted
+  (`lab/bridge/index_abstract.py`, catopt `514888c`: the previously-dead
+  `INDEX_ATTRS` wired in plus `WIDTH_ATTRS = ("sizes",)`, with
+  `templates_agree_mod`).  The winner's 7 blocks are still **7 distinct
+  templates even modulo the block width and the index**, so the width
+  was never the binding constraint: the blocks differ *structurally*, at
+  the cross position, in the **arity of the unfolded geometric sum**
+  (block 1's cross is one `om_decayed`, block 2's an `add` of two).  The
+  state-identification limitation is **not fixable in the move** — the
+  strongest relaxation leaves the verdict and the first difference
+  byte-identical, because the small-chunk family has no shared state
+  subterm.  Cost/dag/morph unchanged.  **Stage 4 is still not
+  justified**; the remaining piece is the state spelling alone.  Written
+  down here and in ADR 0008's fourth gate-3 FAIL bullet; retro:
+  `project/retros/gate3-sizes-abstraction.md`.
 
 ### 6 · Laws as data, exclusively (the standing principle)
 

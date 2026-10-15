@@ -362,6 +362,51 @@ merged `32962d0`; `lab/bridge/combinator.py` + `lab/bridge/combinator_probe.py`)
   `project/retros/gate3-extraction-state-spelling.md`.  (Caveat carried
   there: the staged saturation is not reproducible across processes —
   9733/9752/9756 enodes — so pin `PYTHONHASHSEED` when re-measuring.)
+- **Gate 3 — MEASURED 2026-10-16 (later still again): still FAIL — the
+  block width (`sizes`) is abstracted, and it is *not* the binding
+  cause.**  The previous bullet named "the two chunk widths" first; this
+  task built that abstraction — `lab/bridge/index_abstract.py` (commit
+  `514888c`), the move now wires the previously-**dead** `INDEX_ATTRS`
+  in and adds `WIDTH_ATTRS = ("sizes",)` as `PARAM_ATTRS`, with
+  `templates_agree_mod` / `param_families` answering the retro's
+  question: are the `K` blocks the same step once the block **index** and
+  the block **width** are parameters?  (A block's *own* split already
+  carried its width on the input wire; the width of a node that
+  *survives* into a template — an inherited read, a `decay_vec` — is now
+  abstracted by erasure, so it can be *recognised* but never *folded*:
+  the IR is fixed-shape and has no width parameter.)  Gate-3 command
+  unchanged:
+
+  ```sh
+  .venv/bin/python lab/bridge/combinator_probe.py \
+      --gate2 --extracted --propose-loop --abstract-index
+  ```
+
+  ```
+  verdict=IRREGULAR — the 7 blocks do NOT collapse to one shared step
+  first difference: block1/block2/add[1]/mul[1]: op om_decayed vs add
+  ... and they are NOT the same step even modulo the block width and
+  index — the difference is structural, not a width/index parameter
+  first difference mod width/index: block1/block2/add[1]/mul[1]: op om_decayed vs add
+  ```
+
+  The measurement: abstracting `sizes` (and `index`/`t`/`offset`/`sign`)
+  leaves **7 distinct** templates — on the greedy winner and on the
+  sharing-aware one alike — so the width was **never** the binding
+  constraint.  The blocks differ *structurally*, at the cross position,
+  in the **arity of the unfolded geometric sum**: block 1's cross is one
+  `om_decayed`, block 2's is an `add` of two.  The remaining cause is the
+  **state spelling** (the cross sum is unfolded and q-dependent, so there
+  is no shared state subterm to bind), and the state-identification
+  limitation is **not fixable in the move** — the strongest relaxation
+  (allow any shared candidate) leaves the verdict and the first
+  difference byte-identical.  Cost/dag/morph are unchanged
+  (455,752 / 139 / 1590 and 432,696 / 133 / 1509, round-trip EQUAL).
+  **Stage 4 stays unjustified.**  See
+  `project/retros/gate3-sizes-abstraction.md`.  (Caveats: `PYTHONHASHSEED=0`
+  throughout; a *concurrent* `catopt_core/egraph` edit moved the staged
+  arm's enode count 9733 → 9784 during this task — verified not to be
+  this change, which never touches the saturation.)
 - **Gate 3 — the protocol** (added 2026-10-14; it is
   the last gate standing between this ADR and ADR 0009's stage 4, so
   "open" without a way to close it was the real problem).
