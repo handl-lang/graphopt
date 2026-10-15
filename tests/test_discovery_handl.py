@@ -14,6 +14,7 @@ from catopt_core.ir import Op
 from catopt_core.laws.base import R
 from catopt_core.opdata import OpDef
 from catopt_discovery import handl
+from catopt_discovery.cellstore import ambient_store
 
 OM_LIFT = R(
     "om_decayed_lift",
@@ -243,3 +244,34 @@ class TestStoreToHandl:
 
     def test_cell_from_handl_declines_pure_rows(self):
         assert handl.cell_from_handl({"id": "x", "kind": "y"}) is None
+
+
+class TestShippedBankRoundTrip:
+    """The seam's acceptance test: the *whole* shipped bank, both ways.
+
+    Per-cell round-trips are covered above; this is the bank-level
+    identity ADR 0011 names as the seam test — every emitted row
+    reconstructs to a cell, no cell is silently dropped, and re-emitting
+    the reconstructed cell reproduces the row byte-for-byte (row
+    idempotence), so the two representations cannot drift silently.
+    """
+
+    def test_no_cell_is_silently_dropped(self):
+        store = ambient_store()
+        frag = handl.store_to_handl(store)
+        emitted = len(frag["ast"]) + len(frag["transforms"]) + len(frag["natives"])
+        assert emitted == len(list(store)), (
+            f"store has {len(list(store))} cells, fragments emit {emitted} rows"
+        )
+
+    def test_every_row_round_trips_idempotently(self):
+        store = ambient_store()
+        frag = handl.store_to_handl(store)
+        rows = frag["ast"] + frag["transforms"] + frag["natives"]
+        assert rows, "the shipped bank must emit rows"
+        for row in rows:
+            cell = handl.cell_from_handl(row)
+            assert cell is not None, f"row did not reconstruct: {row.get('id')}"
+            assert handl.cell_to_handl(cell) == row, (
+                f"row drifted on round-trip: {row.get('id')}"
+            )
