@@ -2,7 +2,7 @@
 
 The export boundary (``torch.export`` → ``export_to_ir``), the
 ingested / census-only / rejected classification, the
-``tools/intake_corpus.json`` + ``intake_tensors.pt`` side-file
+``tools/data/intake_corpus.json`` + ``intake_tensors.pt`` side-file
 round-trip (``catopt_discovery.census.corpus`` and
 ``pipeline.run_pipeline`` union it when present), and the census
 delta against the baseline corpus.  The ``ingest`` orchestrator

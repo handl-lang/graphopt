@@ -36,7 +36,7 @@ overheads, and a per-op-class kernel table) and returns a
 `TargetProfile`.  `tools/calibrate_profile.py` is the "run this on
 your hardware" entry point — it writes a loadable profile JSON that
 additionally carries the *executor-family corrections*
-`tools/executor_cost_probe.py` measures (batched vs generic routed
+`tools/probes/executor_cost_probe.py` measures (batched vs generic routed
 deliveries, per shape bucket), so the delivered-price comparison in
 `_carrier_upgrade` — and extraction under `delivered_cost_for` —
 rank by this machine's numbers, not the built-in constants:
@@ -135,7 +135,7 @@ pick = policy.choose(GameState(None, 0, features=f), actions)
 ```
 
 Pretrain, post-train, and predict in one command — see
-`tools/train_search_policy.py` and the measured result in
+`tools/train/train_search_policy.py` and the measured result in
 [`project/retros/stage7-learned-policy-results.md`](../project/retros/stage7-learned-policy-results.md).
 
 ## Performance prediction — `catopt_core.perf_model`

@@ -258,7 +258,7 @@ the bridge.
 | Discover (meta) | `catopt_discovery.pipeline` (census → propose → verify → measure → rank → emit) · `catopt_discovery.vocab` (property-derived op alphabet) · `catopt_discovery.gap_gen` (adversarial witnesses) · `catopt_discovery.emit` (admission patch) |
 | Mint (meta) | `catopt_discovery.antiunify` (layer 1 — definitional atoms) · `catopt_discovery.handler_synth` (layer 2 — handler bodies) · `tools/atom_law_loop.py` (layer 3 — law synthesis per atom) · `tools/atom_synth_loop.py` (the composed loop) |
 | Screen / sweep | `tools/exposure_screen.py` (law-LHS exposure census) · `tools/discovery_scale.py` (budgeted corpus sweep + novelty pass) · `tools/exposed_discovery.py` (per-model discovery driver) |
-| Substrate (prototype) | `tools/combinator.py` (`BASIS`, `dag_to_comb` / `comb_to_dag`) · `tools/combinator_probe.py` (round-trip + `loop`-spell gates) |
+| Substrate (prototype) | `tools/combinator.py` (`BASIS`, `dag_to_comb` / `comb_to_dag`) · `tools/probes/combinator_probe.py` (round-trip + `loop`-spell gates) |
 | Backends | `catopt_torch` (`TorchSource`/`TorchSink`) · `catopt_onnx` (`OnnxSource`/`OnnxSink`, ADR 0006) |
 | Coherence (meta) | `catopt_discovery.coherence` (`--emit-basis`) · `catopt_discovery.coherence2` (stratification / reach / mediators) · `catopt_discovery.evidence` (sqlite verdict store) |
 

@@ -128,7 +128,7 @@ class Rewrite:
     not live here, so the e-graph type stays free of scheduling policy.
 
     ``derivation`` is the axiom/lemma bookkeeping (measured by
-    ``tools/law_coherence.py``): the names of shipped rules forming
+    ``python -m catopt_discovery.coherence``): the names of shipped rules forming
     ONE recorded derivation of this law's instance — typically a
     single premise (a measured direct edge ``{A} ⇒ this``), i.e. a
     one-step proof from the kernel.  The empty tuple designates an

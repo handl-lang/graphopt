@@ -70,7 +70,7 @@ uv run pytest                 # full test suite (~7.5 min, single-process —
 .venv/bin/lint-imports        # hexagonal boundary contracts
 .venv/bin/bandit -c .bandit.yaml -r packages   # security SAST
 .venv/bin/semgrep --config .semgrep.yml packages   # dataflow (offline)
-.venv/bin/python tools/radon_ratchet.py   # complexity ratchet
+.venv/bin/python tools/gates/radon_ratchet.py   # complexity ratchet
 coverage run -m pytest tests/ -q   # source list includes catopt_discovery + catopt_onnx
 coverage report -m --omit="*/catopt_discovery/*"   # the six: fail_under=100
 coverage report -m --include="*/catopt_discovery/*" --fail-under=99   # ratchet floor — measured 99%; tighten, never lower
@@ -94,8 +94,8 @@ Manual-stage gates (not run on every commit — network/slower):
 ```sh
 .venv/bin/pip-audit                                          # dependency CVEs (network)
 .venv/bin/semgrep --config p/python --config p/security-audit packages  # registry rules (network)
-sh tools/runtime_types.sh                                    # typeguard runtime contracts
-MUTMUT_ONLY=catopt_core/ir.py MUTMUT_TESTS='tests/test_ir.py' tools/mutmut.sh run  # mutation testing
+sh tools/gates/runtime_types.sh                                    # typeguard runtime contracts
+MUTMUT_ONLY=catopt_core/ir.py MUTMUT_TESTS='tests/test_ir.py' tools/gates/mutmut.sh run  # mutation testing
 ```
 
 Pre-commit (`pre-commit install`) runs ruff check/format, **ty**,
@@ -185,12 +185,12 @@ enodes that become identical after child canonicalisation are unioned
 
 The engine is math-heavy (47 rank-C, 11 D, 7 E, 5 F functions at
 migration), so a hard ceiling is impractical.  Instead
-`tools/radon_ratchet.py` pins every function's cyclomatic complexity in
-`tools/complexity_baseline.json`: a function may not exceed its recorded
+`tools/gates/radon_ratchet.py` pins every function's cyclomatic complexity in
+`tools/gates/complexity_baseline.json`: a function may not exceed its recorded
 value, and a function **not** in the baseline must stay at or below
 `THRESHOLD = 11` (rank C).  After an intentional complexity change,
 regenerate with `--update` and review the diff.  Run
-`.venv/bin/python tools/radon_ratchet.py`.
+`.venv/bin/python tools/gates/radon_ratchet.py`.
 
 ## Docstring quality (ruff `D`)
 
@@ -208,7 +208,7 @@ error.  The gate applies to shipped code only — `tests/**` and
 ## Runtime contracts (typeguard)
 
 `typeguard` (dev dep) enforces annotations at runtime.
-`tools/runtime_types.sh` instruments all four packages
+`tools/gates/runtime_types.sh` instruments all four packages
 (`--typeguard-packages=catopt_core,catopt_torch,catopt_carriers,catopt_orchestrator`)
 and runs the curated (1372 tests) — a manual-stage gate that CI also
 runs (~11 min).  It caught several real annotation bugs, all fixed:
@@ -228,7 +228,7 @@ list in the script.
 
 ## Mutation testing (mutmut)
 
-`tools/mutmut.sh` runs mutmut against a flat-layout sandbox
+`tools/gates/mutmut.sh` runs mutmut against a flat-layout sandbox
 (`.mutmut-sandbox/`, gitignored): mutmut 3 derives mutant keys from
 paths, but a per-package `src/` layout imports under a different dotted
 name, so the wrapper symlinks each package at the sandbox top level

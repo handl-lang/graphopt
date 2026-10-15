@@ -293,7 +293,7 @@ export class Course {
         "trace a workload from a real `nn.Module` through `torch.export` and the intake, and read what each class of the funnel means.",
       repo: [
         {
-          path: "tools/law_intake.py",
+          path: "python -m catopt_discovery.intake",
           note: "the intake path: export → classify → persist",
         },
         {
@@ -1318,7 +1318,7 @@ export class Course {
           note: "the verification commands every change must pass",
         },
         {
-          path: "tools/radon_ratchet.py",
+          path: "tools/gates/radon_ratchet.py",
           note: "the complexity ceiling, pinned per function",
         },
         {

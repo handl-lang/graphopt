@@ -31,7 +31,7 @@ truth region — the selection criterion was *family coverage*:
 The registry reuses :class:`catopt_discovery.intake.Workload` so
 :func:`catopt_discovery.intake.ingest` consumes it unchanged — the
 holdout is a *provenance* property (the zoo is never registered in
-``candidates()`` and never written to the ``tools/intake_corpus.json``
+``candidates()`` and never written to the ``tools/data/intake_corpus.json``
 side-file), not a different ingestion path.  ``kind="zoo"`` keeps
 the provenance visible in every report table and ``fire_cases`` name.
 """

@@ -33,7 +33,7 @@ is exactly the prior a proposer needs: "shapes of this form have been
 paying."  The arm ships
 *warm*: it defaults to the baked prior
 :data:`catopt_discovery.lawdata.OPEN_GAME_PLAYER_WEIGHTS`, trained
-over even pages by ``tools/train_open_prior.py`` and measured on the
+over even pages by ``tools/train/train_open_prior.py`` and measured on the
 held-out odd pages (``tests/test_discovery_open_prior.py``); pass
 ``weights={}`` for the cold start.
 
@@ -401,7 +401,7 @@ class OpenLearnedPlayer(LearnedPlayer):
 
     *weights* defaults to the shipped trained prior
     (:data:`lawdata.OPEN_GAME_PLAYER_WEIGHTS`) — the baked preset
-    ``tools/train_open_prior.py`` regenerates.  Pass ``weights={}``
+    ``tools/train/train_open_prior.py`` regenerates.  Pass ``weights={}``
     explicitly for the cold start (the honest uniform baseline the
     held-out measurement compares against).  ``rank_score`` is the
     spec's candidate ranker (:func:`_cand_feats`), the page ordering

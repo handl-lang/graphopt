@@ -23,7 +23,7 @@ const FOLD: RuleId = "square";
 
 /** Pairwise law relations, measured by the toy's own saturation probe.
  *
- * Mirrors `tools/law_coherence.py`: fire each law once on a shared
+ * Mirrors `python -m catopt_discovery.coherence`: fire each law once on a shared
  * redex, then ask whether the two one-step reducts rejoin — under the
  * pair alone (pair-confluent), else under the whole library
  * (library-mediated), else divergent.

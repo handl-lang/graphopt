@@ -13,7 +13,7 @@ so a good line extracts cheaply — the learned table is legible
 (``op:extract`` high, ``op:fire`` low).  The run is deterministic
 (``torch.manual_seed`` fixes the numeric oracle's tensors) and cheap —
 no training here, just one held-out evaluation.  Regenerate the preset
-with ``python tools/train_meta_prior.py``.
+with ``python tools/train/train_meta_prior.py``.
 """
 
 from __future__ import annotations

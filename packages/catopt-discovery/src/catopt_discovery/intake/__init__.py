@@ -39,9 +39,9 @@ Every candidate lands in exactly one class:
   exception is recorded verbatim.
 
 The census seam is a side-file, not a code edit: a run emits
-``tools/intake_corpus.json`` (terms via ``catopt_core.ir.term_to_data``
+``tools/data/intake_corpus.json`` (terms via ``catopt_core.ir.term_to_data``
 plus per-workload metadata and the rejection backlog) and
-``tools/intake_tensors.pt`` (the feeds/params ``torch.save``'d, so a
+``tools/data/intake_tensors.pt`` (the feeds/params ``torch.save``'d, so a
 loaded term lowers and verifies exactly like an exported model).
 ``catopt_discovery.census.corpus()`` unions :func:`load_cases` when the
 file exists — the file IS the appended census — and
@@ -220,13 +220,13 @@ def main(argv: list[str] | None = None) -> int:
         "--out",
         type=Path,
         default=_DEFAULT_JSON,
-        help="side-file census (default tools/intake_corpus.json)",
+        help="side-file census (default tools/data/intake_corpus.json)",
     )
     parser.add_argument(
         "--tensors",
         type=Path,
         default=_DEFAULT_TENSORS,
-        help="feed/param tensor blob (tools/intake_tensors.pt)",
+        help="feed/param tensor blob (tools/data/intake_tensors.pt)",
     )
     parser.add_argument(
         "--no-write",

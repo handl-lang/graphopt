@@ -70,7 +70,7 @@ __all__ = [
     "store_ruleset",
 ]
 
-#: The committed store path — ``tools/evidence.db`` rides the repo.
+#: The committed store path — ``tools/data/evidence.db`` rides the repo.
 #: It is the default *location*, not a guarantee of content: a store
 #: with no ``lemmas`` rows packs to the empty set, honestly.
 DEFAULT_STORE: Path = TOOLS / "evidence.db"

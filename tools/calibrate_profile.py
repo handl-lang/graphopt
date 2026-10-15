@@ -11,7 +11,7 @@ on your machine" entry point: it writes a loadable
   batched-scan leaf-eval overhead, compiled-graph call overhead,
   and the per-op-class measured kernel table (``op_kernel_ns``);
 * the measured executor-family corrections
-  ``tools/executor_cost_probe.py`` derives — per-family geomean of
+  ``tools/probes/executor_cost_probe.py`` derives — per-family geomean of
   ``measured_routed_ns / modeled_ns``, written into the profile's
   ``corrections`` table under each measured case's
   :func:`~catopt_core.profile.shape_bucket`, so
@@ -99,7 +99,7 @@ def _measure_corrections(
     Searches each case, lowers every root-eclass alternative through
     its routed executor (and the generic one), times both on CUDA,
     and pools ``measured/modeled`` ratios per executor family — the
-    exact machinery ``tools/executor_cost_probe.py`` runs, imported
+    exact machinery ``tools/probes/executor_cost_probe.py`` runs, imported
     rather than duplicated.  Returns the assembled ``corrections``
     table plus the pooled factors for reporting.
     """
@@ -242,7 +242,7 @@ def main(argv: list[str] | None = None) -> int:
             meta={
                 **profile.meta,
                 "executor_corrections": {
-                    "source": "tools/executor_cost_probe.py",
+                    "source": "tools/probes/executor_cost_probe.py",
                     "factors_eager": factors,
                     "note": (
                         "pooled same-run factors keyed by "

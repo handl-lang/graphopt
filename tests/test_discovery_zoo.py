@@ -11,7 +11,7 @@ two properties that make the measurement honest:
   (so ``--real-only`` and the full-corpus runs can never have seen
   these modules), nor with the ``_PURPOSE_BUILT`` ledger, the model
   corpus names, the bench law-case names, or the persisted
-  ``tools/intake_corpus.json`` records;
+  ``tools/data/intake_corpus.json`` records;
 * **viability** — every workload's thunk builds and the module runs
   fp64 to a finite output, and the intake's own ``ingest`` boundary
   consumes the zoo unchanged (the holdout is a provenance property,

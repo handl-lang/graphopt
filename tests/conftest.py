@@ -26,7 +26,7 @@ import torch
 # MetaPathFinder mapping every workspace package back to the real
 # ``packages/*/src``.  It runs ahead of path-based resolution, so inside
 # the flat sandbox mutmut builds (``.mutmut-sandbox/``, see
-# tools/mutmut.sh) it would shadow the mutated copies and no mutant
+# tools/gates/mutmut.sh) it would shadow the mutated copies and no mutant
 # would ever be imported (mutmut then reports "no test case for any
 # mutant").  When running from that sandbox, drop the finder so the
 # ``mutants/`` copies win.  It is a no-op for normal runs.

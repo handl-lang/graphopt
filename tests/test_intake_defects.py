@@ -1,6 +1,6 @@
 """Intake-defect regressions — lowering fidelity the workload intake caught.
 
-``tools/law_intake.py`` ingests real ``nn.Module``s through the export
+``python -m catopt_discovery.intake`` ingests real ``nn.Module``s through the export
 boundary and verifies the lowered ``IRModule`` fp64.  Three torch-native
 modules exported + bound cleanly but verified *wrong* — lowering
 defects no hand-built corpus model had exercised:

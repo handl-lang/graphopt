@@ -1,4 +1,4 @@
-"""Tests for the typed-pay gate in ``tools/law_pipeline.py``.
+"""Tests for the typed-pay gate in ``python -m catopt_discovery.pipeline``.
 
 ``law_impact._probe`` counts a rule's e-graph fires and whether the
 extracted cost dropped — but never asked whether the instantiated
@@ -20,7 +20,7 @@ as a paying fire.  These tests pin the audit:
   sites" / "mints ill-typed members".
 
 The pipeline lives in ``catopt_discovery.pipeline`` (formerly
-``tools/law_pipeline.py``).
+``python -m catopt_discovery.pipeline``).
 """
 
 import torch

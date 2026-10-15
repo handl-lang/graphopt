@@ -37,7 +37,7 @@ verifies.  Every distinct paying candidate then gets the **novelty
 sweep**: is its LHS strictly matchable anywhere else in the corpus
 (the DeltaRuleBlock check — ``mul(unsqueeze, unsqueeze)`` existed on
 one architecture only)?  Intake terms come from the committed
-``tools/intake_corpus.json`` ledger; zoo and corpus-model terms are
+``tools/data/intake_corpus.json`` ledger; zoo and corpus-model terms are
 re-exported live.
 
 Results stream to ``--json`` after every model, so a dead box still

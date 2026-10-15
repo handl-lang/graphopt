@@ -13,7 +13,7 @@ heuristic.
 The run is deterministic (the stream is fixed, the sampler is a seeded
 ``random.Random``) and bounded: 36 held-out pages x 4 arms, plus one
 average-precision pass over the same pool.  Regenerate the preset with
-``python tools/train_open_prior.py``.
+``python tools/train/train_open_prior.py``.
 
 Honest negatives kept visible:
 

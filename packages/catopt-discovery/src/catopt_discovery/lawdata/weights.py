@@ -113,7 +113,7 @@ ARENA_PLAYER_CANDIDATES: int | None = 2048
 #: :class:`catopt_discovery.meta_player.MetaLearnedPlayer` defaults to
 #: it (pass ``weights={}`` for the uniform cold start, the baseline
 #: the measurement keeps).  A trained snapshot:
-#: ``tools/train_meta_prior.py`` (seed 0, 40 cases x 30 epochs, cold
+#: ``tools/train/train_meta_prior.py`` (seed 0, 40 cases x 30 epochs, cold
 #: start) emits exactly this literal — reproducible, not hand-tuned.
 #:
 #: The seeded held-out split (train ``gen_cases(0, 40)``, evaluate
@@ -125,7 +125,7 @@ ARENA_PLAYER_CANDIDATES: int | None = 2048
 #: prices spend, so the paying move is the cheap extract.
 #: Regenerate with::
 #:
-#:     python tools/train_meta_prior.py
+#:     python tools/train/train_meta_prior.py
 #:
 #: Weights are rounded to 4 decimals and near-zero entries dropped —
 #: ``LinearPolicy`` reads a missing feature as ``0``.
@@ -172,7 +172,7 @@ META_ARENA_PLAYER_WEIGHTS: dict[str, float] = {
 #: The open-game learned prior — the shipped preset
 #: :class:`catopt_discovery.open_game.OpenLearnedPlayer` defaults to
 #: (empty ⇒ uniform, the cold start the measurement keeps as a
-#: baseline).  A trained snapshot: ``tools/train_open_prior.py``
+#: baseline).  A trained snapshot: ``tools/train/train_open_prior.py``
 #: (seed 0, 36 even train pages x 5 epochs, cold start) emits exactly
 #: this literal — the table is reproducible, not hand-tuned.
 #:
@@ -185,7 +185,7 @@ META_ARENA_PLAYER_WEIGHTS: dict[str, float] = {
 #: cold-start ordering scores 0.012).  Pinned by
 #: ``tests/test_discovery_open_prior.py``.  Regenerate with::
 #:
-#:     python tools/train_open_prior.py
+#:     python tools/train/train_open_prior.py
 #:
 #: Weights are rounded to 4 decimals and near-zero entries dropped —
 #: ``LinearPolicy`` reads a missing feature as ``0``.

@@ -296,7 +296,7 @@ def test_laws_preserves_module_level_objects():
 def test_axiom_lemma_marker_covers_all_rules():
     """The axiom/lemma split — every shipped rule carries a kernel kind.
 
-    Measured by ``tools/law_coherence.py --emit-basis`` (see
+    Measured by ``python -m catopt_discovery.coherence --emit-basis`` (see
     ``project/retros/axiom-lemma-split.md`` and, for the promoted
     conditionals, ``project/retros/promoted-laws.md``): the declared
     kernel is the 32 primitives plus one designated member per
