@@ -240,9 +240,10 @@ as a morphism) and `loop` (bounded trace): 321/321 corpus workloads
 round-trip structurally exact, zero ops refuse translation, and the
 RetNet shared-state fold spells as `seq(pre, loop(step, K), post)` —
 verified at 1e-7 — which is the carrier-atoms-become-definable
-claim measured.  The open gate: `loop` structure is erased at
-export, so folds must be *proposed by search*, never recovered by
-the bridge.
+claim measured.  The gate this raises — does *search*, not the author,
+reach a `loop`-headed form? — was measured three times, **negative**
+(ADR 0008 gate 3; `paper_draft.md` §2.2): the presentation *expresses
+and verifies* recurrences, but it is not where they are *found*.
 
 ## The kernel, and the platform next door
 
