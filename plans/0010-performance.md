@@ -152,7 +152,7 @@ Every lever must be checked against a known-good path:
 
 ## Measurement
 
-Profile before changing anything: `bench/search_efficiency.py` plus
+Profile before changing anything: `bench/suites/search/search_efficiency.py` plus
 `cProfile` on a real model (the demo block and a stacked transformer
 block). Record per-phase time (match / union / rebuild / extract) so
 each lever is attributed. Add a scaling table (enodes vs seconds) to
