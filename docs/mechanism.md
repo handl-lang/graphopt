@@ -244,6 +244,54 @@ claim measured.  The open gate: `loop` structure is erased at
 export, so folds must be *proposed by search*, never recovered by
 the bridge.
 
+## The kernel, and the platform next door
+
+The calculus above is not only a catopt idea: it is implemented, as a
+language *and* a set of engines, by the **handl** platform
+(`handl-lang/platform` — one `Language` whose tables are data: `eval`,
+`types`, `ast`, `transforms`, `lexer_rules`; engines for lexing,
+parsing, execution ×3, typechecking and **rewriting**).  ADR 0010 adopts
+its model — *one language, many interpretations*: eval, typecheck and
+rewrite are interpretations of the same language, differing in the
+scheme table they read, not three languages.  There is no bespoke VM
+here, and no second type language.
+
+**What catopt contributes** (measured, spike `plan 0029`):
+
+| catopt | handl |
+|---|---|
+| the **language fragments** — laws as `TransformDef` rows, op shapes as `AstShapeDef` | the language model, the rewrite engine (traversals, traces, stats), typechecking, parsing, the VM |
+| **host functions** for tensor ops (a tensor crosses by reference as an opaque `ForeignResource` pointer) | the value channel and the FFI seam |
+| the **domain adapters** (`catopt-torch`/`onnx`/`cuda`) and the **evaluation** dimension | — |
+
+The seam is **data in, terms out**: `catopt_discovery.handl` emits
+handl-shaped rows (every row carrying an authoritative `catopt:` record,
+which handl's serde ignores, so the bridge is lossless), and handl
+assembles a `Language` from them with `language_from_dir`.  Measured
+end-to-end: a catopt law lands in `lang.transforms` with its fields
+intact, and its condition deserializes as `And([KindAt, ChildCount])`
+(`project/retros/handl-q0-language-as-data.md`; the handl-side test is
+`crates/handl-kit-data-canonical/tests/catopt_fragments.rs`).
+
+Two traps cost real time and are worth knowing: `TransformDef.when` is
+**one** condition (a conjunction is spelled `And([...])`), and under
+`serde_yaml` enum variants are **YAML tags** (`!Declarative`, `!Create`,
+`!KeepPath`, `!KindAt`), not JSON maps.
+
+**Which representation is canonical** (ADR 0011): the calculus for
+*laws and rewriting* — a law is a data row; the op-graph IR for
+*execution* — the sinks, the cost model and the certificate replay
+speak it, and tensors are host resources.  The `catopt:` extension field
+is the authority, so the two cannot drift silently: a drift is a failed
+round-trip, which is testable.
+
+**What this is not (yet).**  The tensor channel is *available* but
+unused: Q1a found `TaggedValue::Resource(Rc<ForeignResource>)` — an
+opaque pointer with a finalizer, `Rc`-held and not `Send`/`Sync` — so a
+tensor crosses by reference, but no run yet demonstrates a tensor op
+through exec (Q1b).  And the direction is decided (Q3: catopt embeds
+handl as an *optional* peer, the `catopt-native` pattern), not built.
+
 ## Where this lives in the code
 
 | Step | Code |
@@ -288,3 +336,10 @@ the bridge.
   — the handler-grammar results; `project/retros/atom-synth-loop.md`
   — the composed loop's funnel; `project/retros/birefnet-bounded-lane.md`
   — the certified negative on the precision lane.
+- `project/adrs/0010-one-language-many-interpretations.md` — one
+  language, many interpretations; handl *is* the kernel.
+- `project/adrs/0011-canonical-representation.md` — the calculus is
+  canonical for laws, the op-graph for execution.
+- `project/retros/handl-q0-language-as-data.md`,
+  `handl-q1-tensor-crossing.md`, `handl-q3-integration-direction.md` —
+  the boundary spike's measurements.
