@@ -130,10 +130,12 @@ clean under both, and `scripts/gates.sh` checks exactly those.
 >
 > **A parallel arm is unmeasured.**  `-n 2` with
 > `TORCHINDUCTOR_COMPILE_THREADS=2` is the candidate; it is *not* adopted
-> because the measurement kept dying — **two full-suite runs ended at
-> exactly 36%** on this host.  A third run under `-v` is in flight to
-> name the last test started (a crashing test vs an OOM).  Until that is
-> answered, `scripts/gates.sh` stays serial.
+> because no clean comparison exists yet.  (An earlier claim here that
+> two runs "died at 36%" was a **misdiagnosis** — the runs were alive;
+> pytest's `-q` progress is block-buffered when redirected, so the log
+> looks frozen, and `ps` greps must match the pytest *child*, not the
+> wrapper shell.  Measure with `/proc` sampling, not the log.)  Until a
+> comparison exists, `scripts/gates.sh` stays serial.
 >
 > The coverage gate is a commit-time check; for iteration use a scoped
 > `coverage run -m pytest tests/test_<file>.py`.
