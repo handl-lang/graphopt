@@ -143,10 +143,10 @@ sharing-aware    cost 451,128   (was 432,696)         round-trip EQUAL
                  max|greedy - fix| = 2.220e-16
 ```
 
-(The sharing-aware arm's `dag`/`morph` were reported for the superseded
-hash-order term — `dag=133`, `morph=1509` — and were **not re-reported**
-after `abf6114`; the reproducible term is numerically equivalent to the
-greedy one, below.)
+(The sharing-aware arm's `dag`/`morph` were re-reported after `abf6114`
+on the deterministic term — `dag=135`, `morph=1554` (the superseded
+hash-order term measured `dag=133`, `morph=1509`); the reproducible term
+is numerically equivalent to the greedy one, below.)
 
 The numeric check lowers both terms through `TorchSink` on the same
 weights and feeds and reads **2.2e-16** — the cheaper term is the same
@@ -183,8 +183,8 @@ PYTHONHASHSEED=0 .venv/bin/python lab/bridge/combinator_probe.py \
 | | before (greedy) | after (sharing-aware) |
 |---|---|---|
 | extracted cost (FLOPs) | 455,752 | **451,128** (−1.01 %; ~~432,696 / −5.06 %~~) |
-| extracted dag | 139 | 133 (superseded term; not re-reported) |
-| bridge morph | 1590 | 1509 (superseded term; not re-reported) |
+| extracted dag | 139 | **135** (~~133~~ on the superseded hash-order term) |
+| bridge morph | 1590 | **1554** (~~1509~~ on the superseded term) |
 | bridge round-trip | EQUAL | EQUAL |
 | numeric max\|Δ\| (greedy vs fix) | — | 2.2e-16 |
 | read sequence | reexp\|reexp\|fold\|fold\|reexp\|shared\|shared | reexp\|reexp\|fold\|fold\|reexp\|shared\|shared (**unchanged**; ~~reexp\|reexp\|fold\|fold\|**shared**\|shared\|shared~~) |
