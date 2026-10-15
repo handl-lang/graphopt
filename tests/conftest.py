@@ -15,8 +15,23 @@ fills up *between* tests still skips rather than flakes.  Probing is a
 ~32 MiB alloc + a kernel launch + sync — milliseconds.
 """
 
+import os
 import sys
 from pathlib import Path
+
+# --- persistent Inductor cache -------------------------------------
+# torch.compile tests recompile their kernels from scratch on every run
+# unless Inductor's cache is pinned somewhere durable.  Pin it into the
+# repo's local artifact cache (the same convention as
+# ``catopt_discovery.cache_dir()``: $CATOPT_CACHE_DIR, then
+# $XDG_CACHE_HOME, then ~/.cache) so repeat runs reuse compiled kernels.
+# Set before ``import torch`` so nothing reads the default first.
+if not os.environ.get("TORCHINDUCTOR_CACHE_DIR"):
+    _xdg = os.environ.get("XDG_CACHE_HOME")
+    _base = Path(_xdg) if _xdg else Path.home() / ".cache"
+    _inductor = Path(os.environ.get("CATOPT_CACHE_DIR", _base / "catopt")) / "inductor"
+    _inductor.mkdir(parents=True, exist_ok=True)
+    os.environ["TORCHINDUCTOR_CACHE_DIR"] = str(_inductor)
 
 import pytest
 import torch
