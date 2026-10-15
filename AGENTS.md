@@ -128,9 +128,16 @@ clean under both, and `scripts/gates.sh` checks exactly those.
 > measured — see below).  Use `scripts/gates.sh`, and iterate with
 > `-m "not slow"`.
 >
-> **A parallel arm is unmeasured.**  `-n 2` with
-> `TORCHINDUCTOR_COMPILE_THREADS=2` is the candidate; it is *not* adopted
-> because no clean comparison exists yet.  (An earlier claim here that
+> **A parallel arm is measured on a slice, not on the suite.**  On the
+> heaviest slice (`test_torch_integration` + `test_om_decayed_cross`, 176
+> tests): **serial 370.8 s / `-n 2` 251.4 s** with
+> `TORCHINDUCTOR_COMPILE_THREADS=2` — **1.47×**, peak RSS **2.4 GB** (two
+> workers; the cap keeps the inductor fan-out at ~2×2 rather than 2×16).
+> That is a real win, but it is *one slice*: the full suite spreads the
+> compile-heavy files across 94 files, so its fan-out is wider and its
+> arm is unmeasured.  Hence `scripts/gates.sh` stays **serial** by
+> default, and `CATOPT_GATES_NP=2` is the documented opt-in (with the
+> thread cap) for a machine that has the RAM.  (An earlier claim here that
 > two runs "died at 36%" was a **misdiagnosis** — the runs were alive;
 > pytest's `-q` progress is block-buffered when redirected, so the log
 > looks frozen, and `ps` greps must match the pytest *child*, not the
