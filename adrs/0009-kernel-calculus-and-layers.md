@@ -1,12 +1,17 @@
 # ADR 0009 — the kernel calculus as a package, and the layer ladder
 
 **Status**: proposed — **revised** (see *Revision*, which reorders the
-stages and fixes the naming rule).
+stages and fixes the naming rule).  **Gated on ADR 0010**: the
+interpretation model ("one language, many interpretations") is a
+prerequisite — there is no bespoke VM, and the `Machine` port below is
+superseded by 0010's `Calculus` + per-interpretation entry points.
 **Date**: 2026-10-14.
 **Depends on**: ADR 0002 (categorical re-expression), ADR 0003 (four
 dimensions — *and* its lesson that a port with no consumer is
 decoration), ADR 0004 (abstraction as move), ADR 0005 (the open game),
-ADR 0007 (semantic-atom minting), ADR 0008 (combinator presentation).
+ADR 0007 (semantic-atom minting), ADR 0008 (combinator
+presentation), **ADR 0010 (one language, many interpretations — the
+prerequisite)**.
 **Related**: `catopt_core.ports` (27 protocols), the `lab/bridge`
 combinator prototype, plan 0025 (the open frontier), the import-linter
 layer contract in `pyproject.toml`.
@@ -129,8 +134,7 @@ decoration.
 
 | port | shape | consumer today (unported) |
 |---|---|---|
-| `Calculus` | 0/1/2/3-cell structure | the kernel; `Rewrite`/`derivation` in core |
-| `Machine` | `eval(term, env)`; `apply(cell, term)` | the calculus package (`Sink` keeps lowering) |
+| `Calculus` | the one object language: term/rule structure, shapes, transforms | ADR 0010; `Rewrite`/`derivation`/`typing` today — **interpretations** (eval/types/rewrite/lower/cost) read it; there is no separate `Machine` |
 | `Engine` | `saturate(cells, budget) -> Graph` | `catopt-native` (already `engine=` opt-in) |
 | `Proposer` | `propose(graph, budget) -> iterable[Candidate]` | `enumerate`/`forms`/`propose` |
 | `Environment` + `Reward` | `reset/step/observe`; `reward(state, action)` | `engine.Board`, `arena`, `meta_arena`, `open_game` |
@@ -173,8 +177,9 @@ reorders the whole plan.
    churn.
 2. **Fix the carrier inversion** — carrier *laws* to the semantic side,
    carrier *executors* into the domain package.
-3. **Decide the canonical representation** (its own ADR) — op-graph IR
-   vs arrow calculus.  *Then*, and only then:
+3. **Adopt the interpretation model** (ADR 0010) — one language, many
+   engines; and **decide the canonical representation** (its own ADR) —
+   op-graph IR vs arrow calculus.  *Then*, and only then:
 4. **Promote the calculus** to a dimension-named package — **gated on
    ADR 0008 gate 3** (does search *reach* `loop`-headed forms?).  If the
    gate measures negative, the calculus is a presentation win and this
