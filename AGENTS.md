@@ -80,11 +80,30 @@ measured (2026-10-15) and **neither arm finished inside a 30-min box**, so
 the parallel arm is not a safe default on this 11 GB host — see the
 measured table below before raising it.
 
-**Iterate with `-m "not slow"`.**  The minutes-scale tests are marked
-`slow` from measured durations — the heaviest slice
-(`test_torch_integration` + `test_om_decayed_cross`) runs 176 tests in
-**370.8 s**, of which six tests are ~349 s; with `-m "not slow"` the same
-slice is **42.6 s** (8.7×).  The full pass still runs everything.
+**Iterate with `-m "not slow"`.**  The minutes-scale work is marked
+`slow` from measured durations.  There are **30** such tests:
+
+- the six `torch.compile` tests (`test_torch_integration`,
+  `test_om_decayed_cross`) — the 176-test slice runs **370.8 s**,
+  ~349 s of it those six; the same slice with `-m "not slow"` is
+  **42.6 s**;
+- the two discovery held-out-claim fixtures (below);
+- the two `test_square_rsqrt_laws` saturations (below).
+
+**The fixture caveat matters.**  A module-scoped fixture is *not*
+skipped by marking one test that uses it.  The discovery `measured`
+fixtures cost minutes each, so **every** test that requests them is
+marked (at class level in `test_discovery_open_learned` /
+`test_discovery_open_prior`); with all of them deselected pytest never
+instantiates the fixture.  Verified: `-m "not slow"` over the five
+affected files selects 40 of 64 and runs in **14.1 s**, and no `setup`
+entry for either `measured` fixture appears in `--durations`.
+
+What it still costs: the tens-of-seconds tests that are *not* marked
+(`test_om_decayed_kway_deliver` 20.9/15.8 s, `test_om_mha` 12.1 s,
+`test_omd_lower` 11.7 s) and everything else.  So `-m "not slow"` is a
+fast loop, **not** a substitute for the full pass — the full pass still
+runs everything.
 
 ```sh
 # The shipped source: packages/ + lab/ + scripts/ + examples/.
@@ -143,17 +162,32 @@ clean under both, and `scripts/gates.sh` checks exactly those.
 > 419 MB `stories110M.bin`, so the real footprint is the `free` column,
 > not the sum; both arms are memory-safe on this box, `-n 2` less so.
 >
-> **What the wall time is made of.**  The `slow` marker covers only six
-> tests (`test_torch_integration`, `test_om_decayed_cross`).  The
-> *dominant* tail is elsewhere and **unmarked** — the discovery
-> "held-out-claim" fixtures (the module-scoped `measured` fixture in
-> `test_discovery_open_learned` / `_open_prior` / `_meta_prior` /
-> `_open_game`: a 36-page × 4-arm episode loop, ~15 min each) and the
-> e-graph saturation tests (`test_square_rsqrt_laws::test_every_miss_spelling_reaches_rms_norm`,
-> `EGraph.run(..., max_nodes=60_000)`).  Serial stalls at ~36% inside the
-> discovery block; `-n 2` overlaps those with the rest and reaches ~98%.
-> The suite is **6,372 tests** (the old "~7.5 min" and "~28 min" figures
-> are both stale).
+> **What the wall time is made of — and that the tail is now marked.**
+> The 30-min box above *predates* the marking: as measured then, the
+> `slow` marker covered only six tests (`test_torch_integration`,
+> `test_om_decayed_cross`) and the *dominant* tail was **unmarked** — the
+> discovery "held-out-claim" fixture (the module-scoped `measured`
+> fixture in `test_discovery_open_learned` / `_open_prior`: a 36-page ×
+> 4-arm episode loop) and the e-graph saturations in
+> `test_square_rsqrt_laws`
+> (`test_every_miss_spelling_reaches_rms_norm`,
+> `test_canonical_rsqrt_spellings_fold_with_their_bridges`,
+> `EGraph.run(..., max_nodes=60_000)`).  Serial stalls at ~36% inside
+> the discovery block; `-n 2` overlaps those with the rest and reaches
+> ~98%.  **Those 24 tests are now `@pytest.mark.slow`** (measured
+> 2026-10-15), so `-m "not slow"` skips them: the learned module ran
+> **>900 s** before the 900-s box killed it (the `measured` fixture
+> dominates; `EGraph`-free tests in it are seconds),
+> `test_every_miss_spelling_reaches_rms_norm` **>9:49** and still
+> climbing (~1.2 GB RSS), and
+> `test_canonical_rsqrt_spellings_fold_with_their_bridges` **>7 min**
+> (killed at the 420-s box).  The `test_discovery_meta_prior` /
+> `test_discovery_open_game` fixtures are **not** marked — they measured
+> cheap (0.6 s / <2 s), as are the other `max_nodes=60_000` tests in the
+> file (`test_real_export_spellings_fold_and_verify` 2.8 s,
+> `test_bridges_fire_in_default_pipeline` 0.9 s).  The suite is
+> **6,372 tests** (the old "~7.5 min" and "~28 min" figures are both
+> stale).
 >
 > **The slice comparison is the only *completed* measurement.**  On the
 > heaviest slice (`test_torch_integration` + `test_om_decayed_cross`, 176

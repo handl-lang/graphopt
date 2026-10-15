@@ -137,6 +137,7 @@ class TestPreset:
         assert baked != cold
 
 
+@pytest.mark.slow
 class TestHeldOutYield:
     """The baked prior's episode yield on the held-out odd pages."""
 
@@ -195,6 +196,7 @@ class TestHeldOutYield:
         )
 
 
+@pytest.mark.slow
 class TestRanking:
     """Average precision of the baked prior's page ordering."""
 

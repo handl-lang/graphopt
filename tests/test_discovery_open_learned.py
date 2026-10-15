@@ -194,6 +194,7 @@ def measured() -> dict:
     }
 
 
+@pytest.mark.slow
 class TestHeldOutYield:
     """The learned arm's episode yield on the held-out pages."""
 
@@ -246,6 +247,7 @@ class TestHeldOutYield:
         assert t["learned-greedy"]["reward"] > t["random"]["reward"]
 
 
+@pytest.mark.slow
 class TestOrderingSensitivity:
     """The reward pays for *where* a useful law is found."""
 
@@ -287,6 +289,7 @@ class TestOrderingSensitivity:
         assert o["first"]["reward"] > o["stop"]["reward"]
 
 
+@pytest.mark.slow
 class TestRanking:
     """Average precision of the page ordering, learned vs the rest."""
 

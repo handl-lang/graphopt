@@ -45,6 +45,7 @@ Covered surface:
 
 from __future__ import annotations
 
+import pytest
 import torch
 from catopt_core.cost import backend_cost, dag_cost, executor_cost_for
 from catopt_core.egraph import EGraph, verify_certificate
@@ -362,6 +363,7 @@ def test_mul_square_expand_share_one_eclass():
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.slow
 def test_every_miss_spelling_reaches_rms_norm():
     """Each recorded-miss spelling of the manual RMSNorm lands the
     ``rms_norm`` member in the root e-class under ``ALL_RULES`` — the
@@ -379,6 +381,7 @@ def test_every_miss_spelling_reaches_rms_norm():
         assert fires.get("rms_norm_fold", 0) > 0, name
 
 
+@pytest.mark.slow
 def test_canonical_rsqrt_spellings_fold_with_their_bridges():
     """The bridges are load-bearing, not incidental: with the canon
     laws removed, ``mul(x,x)``/``1/√``/``pow(·,-0.5)`` spellings do
