@@ -1925,6 +1925,8 @@ class TestOmDecayedKway:
             base_best, flops_cost
         )
 
+    @pytest.mark.slow
+
     def test_kway_deep_fold_exists_but_extraction_keeps_the_spelled_form(
         self,
     ):
@@ -2244,6 +2246,8 @@ class TestSharedStateReassoc:
         }
         assert len(parents) >= 2
 
+    @pytest.mark.slow
+
     def test_reassoc_drops_the_extracted_cost_on_the_real_export(self):
         """The law fires on the chunked export and lowers its cost.
 
@@ -2410,6 +2414,8 @@ class TestDivBridgeStaging:
         assert budgets["om_shared_mat_reassoc"] > 0
         assert budgets["om_decayed_chunkify_rows"] > 0
 
+    @pytest.mark.slow
+
     def test_staged_saturation_unlocks_the_mat_reassoc(self):
         """The scheduling works: the bridge revives the mat variant.
 
@@ -2536,6 +2542,8 @@ class TestSharedStateExtraction:
             stack.extend(x.args)
         return ids
 
+    @pytest.mark.slow
+
     def test_extract_carries_the_chained_shared_state(self):
         """Every cross block reads a shared state; states chain.
 
@@ -2596,6 +2604,8 @@ class TestSharedStateExtraction:
             "no row-block state nests another — the extracted cross "
             "sum is a per-pair spelling, not the shared recurrence"
         )
+
+    @pytest.mark.slow
 
     def test_extracted_carrier_verifies_fp64(self):
         """The extracted shared-state program lowers and verifies."""

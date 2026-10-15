@@ -1305,6 +1305,9 @@ def test_sdpa_fold_rejects_wrong_dim():
     assert not _check_softmax_dim(bound)
 
 
+@pytest.mark.slow
+
+
 def test_linear_recurrence_scan_structure():
     """Monoid laws alone expose the parallel-scan form: an unrolled
     LTI recurrence h_t = A h_{t-1} + x_t reassociates so matrix powers
