@@ -23,6 +23,7 @@ Run::
     .venv/bin/python lab/bridge/combinator_probe.py --gate2 --extracted
     .venv/bin/python lab/bridge/combinator_probe.py --gate2 --extracted --propose-loop
     .venv/bin/python lab/bridge/combinator_probe.py --gate2 --extracted --abstract-index
+    .venv/bin/python lab/bridge/combinator_probe.py --gate2 --extracted --propose-loop --abstract-index --sharing-extract
 """
 
 from __future__ import annotations
@@ -282,6 +283,7 @@ def gate2(
     extracted: bool,
     propose_loop: bool = False,
     abstract_index: bool = False,
+    sharing_extract: bool = False,
 ) -> None:
     """Spell the RetNet fold as ``loop (arr step)``; verify + project."""
     import catopt_carriers  # noqa: F401 — carrier op bindings
@@ -345,7 +347,9 @@ def gate2(
     )
     if extracted:
         _gate2_projection(
-            propose_loop=propose_loop, abstract_index=abstract_index
+            propose_loop=propose_loop,
+            abstract_index=abstract_index,
+            sharing_extract=sharing_extract,
         )
 
 
@@ -355,6 +359,7 @@ def _gate2_projection(
     iters: int = 10,
     propose_loop: bool = False,
     abstract_index: bool = False,
+    sharing_extract: bool = False,
 ) -> None:
     """Saturate the RetNet export (staged arms) and project the winner.
 
@@ -365,6 +370,10 @@ def _gate2_projection(
     projected winner and over an authored spelled scan (the control).
     With ``abstract_index`` it runs the gate-3 *parametric-abstraction*
     move (``lab/bridge/index_abstract.py``) — abstraction over the step.
+    With ``sharing_extract`` the winner is taken from the
+    *sharing-aware* coordinated extraction
+    (``lab/bridge/sharing_extract.py``) instead of plain
+    ``extract_best`` — the gate-3 fix arm.
     """
     from catopt_carriers.om import (
         om_shared_state_budgets,
@@ -380,7 +389,17 @@ def _gate2_projection(
     t0 = time.time()
     osp._saturate(eg, root, reach, iters, budgets)
     osp._saturate(eg, root, reassoc, iters, budgets)
-    best = eg.extract_best(eg.find(root), flops_cost)
+    if sharing_extract:
+        from lab.bridge.sharing_extract import extract_sharing_aware
+
+        res = extract_sharing_aware(eg, eg.find(root), flops_cost)
+        best = res.term
+        print(
+            f"-- sharing-aware extraction: cost {res.cost:,.0f} "
+            f"(greedy {res.base_cost:,.0f}, Δ={res.delta:+,.0f}) --"
+        )
+    else:
+        best = eg.extract_best(eg.find(root), flops_cost)
     secs = time.time() - t0
     reads, chained = osp._fold_signature(best)
 
@@ -536,6 +555,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="run the gate-3 parametric-abstraction move (over the step)",
     )
+    ap.add_argument(
+        "--sharing-extract",
+        action="store_true",
+        help="take the gate-3 winner from the sharing-aware extraction",
+    )
     ap.add_argument("--json", help="write machine-readable gate-1 rows")
     args = ap.parse_args(argv)
 
@@ -544,6 +568,7 @@ def main(argv: list[str] | None = None) -> int:
             args.extracted,
             propose_loop=args.propose_loop,
             abstract_index=args.abstract_index,
+            sharing_extract=args.sharing_extract,
         )
         return 0
     rows = gate1(args.set, args.verify)
