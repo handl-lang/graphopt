@@ -13,9 +13,11 @@ THE DEFECT THIS ADDRESSES
     Measured on the gate-3 winner (``lab/probes/gate3_state_spelling_probe.py``):
     the state read is spelled two ways (the factored ``matmul(q, S)``
     and the unfactored re-expansion ``om_decayed(matmul(q, kᵀ), D, v)``);
-    the two are cost-tied in 5 of 7 blocks (Δ ∈ {0, +16, +144} FLOPs)
-    and the factored read is *strictly cheaper* in one (Δ = −528,
-    because its state is shared with the next block's read).  So the
+    5 of the 7 read e-classes have members tied at the class minimum, and
+    forcing the factored read moves the whole term by
+    ``Δ ∈ {−528, 0, +16, +16, +144}`` FLOPs — indifferent to within
+    0.03 %, except block 4, where the factored read is *strictly cheaper*
+    because its state is shared with the next block's read.  So the
     greedy pass leaves FLOPs on the table and picks an arbitrary
     spelling.
 
