@@ -1,126 +1,70 @@
-[
-  {
-    "id": "transform.catopt.assoc_add",
-    "pass": "catopt",
-    "node_kind": "add",
-    "rule": {
-      "Declarative": {
-        "target_kind": "add",
-        "children": [
-          {
-            "Create": {
-              "kind": "add",
-              "children": [
-                {
-                  "KeepPath": [
-                    0
-                  ]
-                },
-                {
-                  "KeepPath": [
-                    1,
-                    0
-                  ]
-                }
-              ]
-            }
-          },
-          {
-            "KeepPath": [
-              1,
-              1
-            ]
-          }
-        ]
-      }
-    },
-    "catopt": {
-      "law": {
-        "version": 2,
-        "kind": "law",
-        "name": "assoc_add",
-        "law": "Associativity of sequential composition in a category.",
-        "lhs": {
-          "op": "add",
-          "args": [
-            {
-              "mvar": "a"
-            },
-            {
-              "op": "add",
-              "args": [
-                {
-                  "mvar": "b"
-                },
-                {
-                  "mvar": "c"
-                }
-              ],
-              "attrs": {}
-            }
-          ],
-          "attrs": {}
-        },
-        "rhs": {
-          "op": "add",
-          "args": [
-            {
-              "op": "add",
-              "args": [
-                {
-                  "mvar": "a"
-                },
-                {
-                  "mvar": "b"
-                }
-              ],
-              "attrs": {}
-            },
-            {
-              "mvar": "c"
-            }
-          ],
-          "attrs": {}
-        },
-        "cond": null,
-        "dspec": null,
-        "tags": [
-          "expansive",
-          "symmetry"
-        ],
-        "derivation": [],
-        "cert": null,
-        "error_bound": null,
-        "bound_norm": "spectral",
-        "serializable": true,
-        "missing_hooks": []
-      },
-      "metavars": {
-        "a": [
-          0
-        ],
-        "b": [
-          1,
-          0
-        ],
-        "c": [
-          1,
-          1
-        ]
-      }
-    },
-    "when": {
-      "And": [
-        {
-          "KindAt": {
-            "index": 1,
-            "kind": "add"
-          }
-        },
-        {
-          "ChildCount": 2
-        }
-      ]
-    }
-  }
-]
+- id: "transform.catopt.assoc_add"
+  pass: "catopt"
+  node_kind: "add"
+  rule:
+    !Declarative
+    target_kind: "add"
+    children:
+      - !Create
+        kind: "add"
+        children:
+          - !KeepPath
+            - 0
+          - !KeepPath
+            - 1
+            - 0
+      - !KeepPath
+        - 1
+        - 1
+  catopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "assoc_add"
+      law: "Associativity of sequential composition in a category."
+      lhs:
+        op: "add"
+        args:
+          - mvar: "a"
+          - op: "add"
+            args:
+              - mvar: "b"
+              - mvar: "c"
+            attrs: {}
+        attrs: {}
+      rhs:
+        op: "add"
+        args:
+          - op: "add"
+            args:
+              - mvar: "a"
+              - mvar: "b"
+            attrs: {}
+          - mvar: "c"
+        attrs: {}
+      cond: null
+      dspec: null
+      tags:
+        - "expansive"
+        - "symmetry"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: true
+      missing_hooks: []
+    metavars:
+      a:
+        - 0
+      b:
+        - 1
+        - 0
+      c:
+        - 1
+        - 1
+  when:
+    !And
+    - !KindAt
+      index: 1
+      kind: "add"
+    - !ChildCount 2

@@ -13,8 +13,13 @@ The eight required files are written even when empty (`[]`) — catopt's
 "syntax" is the IR, not a text language, so the shell files are stubs
 today; `ast.yaml` carries the op shapes and `transforms.yaml` the laws.
 
-JSON is valid YAML, so the rows are dumped with `json.dump` and the
-files still parse under `serde_yaml`.
+JSON is valid YAML, so plain maps and lists round-trip either way — but
+**enum variants do not**: `serde_yaml` spells them as YAML *tags*
+(`!Declarative`, `!Create`, `!KeepPath`, `!KindAt`, `!And`) where
+`serde_json` spells them as maps (`{"Declarative": …}`).  `language_from_dir`
+reads YAML, so the rows are written with tags — measured: the map form
+fails to load with *"invalid type: map, expected a YAML tag starting
+with '!'"*.
 
 Usage:
     .venv/bin/python lab/handl-spike/dump_fragments.py [outdir] [--all]
@@ -49,9 +54,79 @@ _SHELL = (
 #: no leaf), so it exercises shapes and matching without touching values.
 _SLICE_LAW = "assoc_add"
 
+#: Enum variants handl spells as YAML tags.  A single-key mapping whose
+#: key is one of these is a variant, not a field.
+_TAGS = frozenset(
+    {
+        "Declarative",
+        "Native",
+        "Keep",
+        "KeepRole",
+        "KeepPath",
+        "KeepRest",
+        "Splice",
+        "Create",
+        "Apply",
+        "Fresh",
+        "KindAt",
+        "AnyChildKind",
+        "PayloadEq",
+        "ChildPayloadEq",
+        "ChildCount",
+        "And",
+        "Or",
+        "Not",
+    }
+)
+
+
+def _scalar(value: object) -> str:
+    """Render a scalar as YAML (JSON scalars are valid YAML)."""
+    return json.dumps(value)
+
+
+def _emit(node: object, indent: int) -> str:
+    """Render *node* as YAML, spelling enum variants as tags."""
+    pad = " " * indent
+    if isinstance(node, dict):
+        if len(node) == 1:
+            (key, value), = node.items()
+            if key in _TAGS:
+                inner = _emit(value, indent)
+                # a tag on a scalar/flow value reads better inline
+                if isinstance(value, (str, int, float)) or value is None:
+                    return f"{pad}!{key} {_scalar(value)}"
+                return f"{pad}!{key}\n{inner}"
+        if not node:
+            return f"{pad}{{}}"
+        out = []
+        for key, value in node.items():
+            rendered = _emit(value, indent + 2)
+            if isinstance(value, (str, int, float)) or value is None:
+                out.append(f"{pad}{key}: {_scalar(value)}")
+            elif isinstance(value, dict) and not value:
+                out.append(f"{pad}{key}: {{}}")
+            elif isinstance(value, list) and not value:
+                out.append(f"{pad}{key}: []")
+            else:
+                out.append(f"{pad}{key}:")
+                out.append(rendered)
+        return "\n".join(out)
+    if isinstance(node, list):
+        if not node:
+            return f"{pad}[]"
+        out = []
+        for item in node:
+            rendered = _emit(item, indent + 2)
+            stripped = rendered[indent + 2 :]
+            out.append(f"{pad}- {stripped}")
+        return "\n".join(out)
+    return f"{pad}{_scalar(node)}"
+
 
 def _dump(path: Path, rows: list) -> None:
-    path.write_text(json.dumps(rows, indent=2) + "\n")
+    """Write *rows* as one YAML sequence (the fragment file's shape)."""
+    path.write_text(_emit(rows, 0) + "\n")
 
 
 def main(argv: list[str] | None = None) -> int:
