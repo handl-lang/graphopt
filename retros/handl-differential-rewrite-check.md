@@ -40,8 +40,7 @@ reason**, and two of those reasons are findings.
 `double_neg` is `neg(neg(a)) → a`: the law **drops its root** and returns
 a subterm.  handl's `TransformRule::Declarative` always *creates* a node
 — its `target_kind` is a `String` — so such a law has no faithful rule
-form.  catopt currently emits `target_kind: None`, and the engines must
-diverge.
+form.  catopt used to emit `target_kind: None`, and the engines diverge.
 
 Two ways out, and they are not equivalent:
 
@@ -53,6 +52,49 @@ Two ways out, and they are not equivalent:
 The probe reports these laws **separately** rather than choosing for us.
 Papering over a divergence inside a tool whose entire purpose is to find
 divergences would defeat it.
+
+### Addendum (2026-10-16) — what `target_kind: None` actually did, and the fix
+
+The gap was investigated.  Two results.
+
+**1. `target_kind: None` was silently wrong — a bug in catopt's bridge.**
+`TransformRule::Declarative.target_kind` is a Rust `String` (not an
+`Option`), but `language_from_dir` parses `transforms.yaml` with
+`serde_yaml::from_str::<Vec<TransformDef>>`, and serde_yaml coerces the
+YAML `null` scalar into the **string `"null"`**.  So the row loaded, and
+handl's engine (`walk.rs::fire_untraced` → `step.rs::build_rewrite`,
+`kind: target_kind.to_string()`) **fabricated a node of kind `"null"`**.
+Firing the old `double_neg` row on `neg(neg(a))` gave handl
+`{'kind': 'null', 'children': [a]}` where catopt gives `a` — a *silent
+lie*, not a refusal (and handl's `validate_transforms` only *Warns*
+about the unknown kind, so assembly still succeeds).
+
+**Fixed** (catopt `8548243`): the bridge now **refuses explicitly** — for
+a bare-metavar rhs it emits `rule: !Native "catopt:eliminate_root"`
+naming the missing operation.  handl's engine then rejects it loudly
+(`"requires native rewrite 'catopt:eliminate_root' but no native
+registry is wired"`), the bank still loads (83 transforms), and the law
+still round-trips through `catopt.law`.  The probe is unchanged — it
+classifies root-eliminating laws before firing — so the divergence stays
+visible, and is now *louder* rather than hidden.
+
+**2. No faithful form exists in handl's *existing* vocabulary.**  Checked
+against the engine: `Splice` lifts a child's children but the
+`Declarative` node still exists; `KeepPath` is a *child step*, never the
+rewritten node; `Declarative` always creates, so a node cannot be
+replaced *by* a child.  `TransformRule::Native` is the only mechanism
+that *can* return a subterm (`ctx.remap_child(i)` returns an existing
+`AstRef`), but the peer wires no registry (so it errors) and the
+implementation would be catopt's Rust — handl's engine would be running
+catopt's code, making the comparison **circular** for exactly these 5
+laws.  So `Native` is a *refusal marker*, not a fix; the honest fix is
+the handl-side `TransformRule::Replace { path }` proposal recorded in
+plan 0030 step 3a (a handl design decision — handl's `transform_def.rs`
+was deliberately not edited).
+
+Differential numbers are **unchanged** by all of this: 19 agree / 0
+disagree / 5 root-eliminating / 3 leaf-rhs skipped / 37 declined / 19
+guard-raised.
 
 ## Finding 2 — one synthesized term per law is not universally sound
 

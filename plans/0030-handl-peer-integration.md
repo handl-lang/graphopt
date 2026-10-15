@@ -70,10 +70,11 @@ does not have), so they belong in one step:
 * **a leaf** — today `!Create` of a declared `catopt:`-namespaced kind
   with the data in the payload (loadable and lossless via the `catopt:`
   record, but handl's engine sees an opaque created node);
-* **a root-eliminating law** (5 in the bank, e.g.
-  `double_neg: neg(neg(a)) -> a`) — handl's `TransformRule::Declarative`
-  always *creates* a node (`target_kind: String`), so a law that returns
-  a subterm cannot be expressed faithfully; the differential probe
+* **a root-eliminating law** (5 in the bank: `id_add`, `id_mul`,
+  `double_neg`, `transpose_noop`, `chunk_single`) — handl's
+  `TransformRule::Declarative` always *creates* a node
+  (`target_kind: String`), so a law that returns a subterm cannot be
+  expressed faithfully; the differential probe
   (`project/retros/handl-differential-rewrite-check.md`) reports these
   separately rather than papering over the divergence.
 
@@ -83,16 +84,89 @@ does not have), so they belong in one step:
 workarounds — with the note that the `catopt:` record is authoritative
 and that handl's engine sees something coarser than the law means.
 
+#### 3a · The root-eliminating gap, investigated (2026-10-16)
 
-Today a leaf maps to `Create` of a `catopt:`-namespaced kind with the
-data in the payload: loadable and lossless, but handl's engine treats it
-as an opaque created node.  Either handl gains a literal/variable step,
-or the kinds are declared in a shared schema the engine resolves.
+The gap is real, and the *first* thing to fix was a bug in catopt's own
+bridge, not a missing handl form.
 
-- **Pass**: a law with a **constant** leaf fires through handl and
-  produces the right value (not merely a structurally-equal node).
-- **Fail**: the workaround stays, and it must be documented as a
-  workaround — with the note that the `catopt:` record is authoritative.
+**What `target_kind: None` actually did (measured, through the peer).**
+`TransformRule::Declarative.target_kind` is a Rust `String`, not an
+`Option` — but `language_from_dir` reads `transforms.yaml` with
+`serde_yaml::from_str::<Vec<TransformDef>>`, and serde_yaml coerces the
+YAML `null` scalar into the **string `"null"`** for a `String` field.
+So the row *loaded*, and the engine (`walk.rs::fire_untraced` →
+`step.rs::build_rewrite`, which does `kind: target_kind.to_string()`)
+**silently fabricated a node of kind `"null"`** whose children were the
+kept child steps.  Firing the old `double_neg` row on `neg(neg(a))`:
+
+```
+root: {'kind': 'null', 'payload': {'children': [0]}}   # handl
+       a                                                # catopt — the subterm
+```
+
+A silent lie, not a refusal — and handl's `validate_transforms` only
+*Warns* ("targets unknown kind 'null'"), which does not fail assembly.
+
+**The bridge now refuses explicitly** (catopt `8548243`): for a
+bare-metavar rhs it emits `rule: !Native "catopt:eliminate_root"` — a
+*declared* handl rule form naming the missing operation — instead of
+`target_kind: None`.  handl's engine then rejects it loudly
+(`"transform rule requires native rewrite 'catopt:eliminate_root' but
+no native registry is wired"`), which is the honest outcome: the bank
+still loads (83 transforms), the law still round-trips through
+`catopt.law`, and the divergence is *louder*, not hidden.  The probe is
+unchanged (it classifies root-eliminating laws before firing).
+
+**Is there a faithful form in handl's *existing* vocabulary?**  No.
+Checked against the engine source:
+
+| candidate | verdict |
+|---|---|
+| `RewriteStep::Splice(i)` (`step.rs:240`) | **no** — lifts a child's *children* into the created node; the `Declarative` node still exists (`build_rewrite` always pushes `target_kind`) |
+| `Keep`/`KeepPath` at the *rule* level | **no such thing** — `KeepPath` is a *child step* (`step.rs:186`); it produces a child, never the rewritten node |
+| replace the node *by* a child | **no** — `Declarative` always creates; only `Native` can return an existing node |
+| `TransformRule::Native(name)` | **the only mechanism, but not a faithful form here** — a native returns an `AstRef`, so `ctx.remap_child(i)` *can* return a subterm (`plugin-engine-transform/src/native.rs:118`); but (a) it needs a wired `NativeRewrite` registry — the peer wires none, so `fire_native` errors (`walk.rs:410`) — and (b) the implementation would be **catopt's** Rust, so handl's engine would be running catopt's code and the differential would stop being two *independent* engines (circular for exactly these 5 laws).  That is why the bridge emits it as a **refusal marker**, not as a fix |
+
+**Option A — a rule form in handl (the honest fix).**  handl needs one
+declarative rule shape that *returns an existing node* instead of
+creating one.  The minimal exact shape:
+
+```rust
+// handl-language/src/fragments/transform_def.rs — TransformRule
+Replace { path: Vec<usize> },   // the rewritten node IS the descendant at `path`
+```
+
+i.e. "the result is the node at index path `p` below the matched node"
+— `Replace { path: [0, 0] }` is exactly `double_neg`.  It is a
+`KeepPath` promoted to the rule level: the engine already navigates the
+path and remaps the target (`step.rs:186` `KeepPath`), so
+`fire_untraced` would resolve the final index and return it without
+pushing a node.  Cost: a new `TransformRule` variant + one `walk.rs`
+arm + validation — a **vocabulary addition**, which per handl's
+`engine-genericity` rule is *an engine edit and handl's design
+decision*, not something catopt may make.  With it, the bridge maps a
+root-eliminating law to `!Replace { path }`, the 5 laws leave the
+"root-eliminating" bucket and become *comparable*, and they should
+agree.
+
+**Option B — a declared `catopt:alias` kind whose payload carries the
+path.  This is *not* a fix.**  It loads and is lossless via the
+`catopt:` record, but handl's engine then sees an opaque *created*
+node — a plausible-looking `catopt:alias` wrapping the subterm — so the
+semantic difference is **hidden from the very tool built to find
+divergences**.  It is strictly worse than the loud `!Native` refusal:
+same non-faithfulness, but silent.
+
+**Proposal (handl-side, for handl's authors — not applied here).**  Add
+`TransformRule::Replace { path: Vec<usize> }` (option A) to
+`transform_def.rs`, interpreted by `RewriteEngine` as "return the
+remapped node at `path`".  Rationale: it closes the *only* remaining
+declarative-expressiveness gap the differential found, and it is the
+same navigation `KeepPath` already implements, so it is small.  Cost: a
+new enum variant (schema + one engine arm + validation) — a handl
+design decision, deliberately **not** taken by editing handl's
+`transform_def.rs` from catopt.  Until then the bridge's `!Native`
+refusal is the honest placeholder.
 
 ### 4 · Decide `priority` (small, but say it out loud)
 
