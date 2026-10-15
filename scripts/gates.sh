@@ -32,7 +32,11 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 PY=.venv/bin/python
-NP="${CATOPT_GATES_NP:-2}"
+# Default SERIAL: the serial-vs-parallel comparison has not been
+# measured on this host (the run that would produce it died at 36%).
+# Set NP=2 only with a measured wall-time win and a peak-RSS figure
+# that fits the box; see AGENTS.md.
+NP="${CATOPT_GATES_NP:-1}"
 
 # Keep Inductor's kernel cache pinned into the repo cache dir so repeat
 # runs reuse compiled kernels instead of recompiling from scratch (the
