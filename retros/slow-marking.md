@@ -16,7 +16,7 @@ retro records the measurement and the marking.
 | target | cost | how measured |
 |---|---|---|
 | `test_discovery_open_learned.py` (module) | **>900 s** (killed at the box) | whole module; the module-scoped `measured` fixture dominates |
-| `test_discovery_open_prior.py` (module) | **>270 s** (killed at the box) | `TestPreset` passed in seconds, then the `measured` fixture stalled |
+| `test_discovery_open_prior.py` (module) | **>712 s** (11:52, terminated) | `TestPreset` passed in seconds, then the `measured` fixture stalled past the 712-s mark |
 | `test_square_rsqrt_laws.py::test_every_miss_spelling_reaches_rms_norm` | **>9:49**, still climbing (~1.2 GB RSS) | killed at the 1000-s box |
 | `test_square_rsqrt_laws.py::test_canonical_rsqrt_spellings_fold_with_their_bridges` | **>7 min** (420-s box) | killed at the box |
 
