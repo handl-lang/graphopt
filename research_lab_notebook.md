@@ -66,8 +66,17 @@ exploit.  The lesson that outlived the measurement: **a norm bound does not
 predict task quality.**  `‖ΔW‖` bounds do not predict `Δppl`.  Certified
 compression is real but certifies the *wrong quantity* for weight space.
 What survived is only the *architectural* corner — tying, materialized GQA
-replication, dead params, merged adapters (measured 0–75 % by archetype,
-`REPORT.md` §10.2).
+replication, dead params, merged adapters (measured 0–75 % by archetype;
+the full phase tables were migrated to `docs/results_curated.md` §7 when
+the report was retired).
+
+The founding report also opened on a *unified* thesis — a model and its
+weights are one semantic program, so parameter storage and computation
+structure fall out of a single search — with parameters as `Param` leaves
+in the same term language as compute, making elimination a corollary.
+That half did not survive: the compute side did, the weight side was
+falsified here.  It is recorded, with its mechanism, in
+`docs/results_curated.md` §7.9.
 
 This is the first dead end and it set the tone: we killed our own founding
 bet with our own measurements and wrote it up as ADR 0001.
@@ -473,6 +482,21 @@ per-leaf dispatch is the loss driver and the FLA gap is now precisely
 attributed there (fused fp32 Triton vs fp64 torch GEMMs + a materialized
 score tensor).
 
+### 5.6 Three more open items (carried over from the retired writeup)
+
+The retired research writeup named three open items beyond the two above;
+they are kept here so they are not lost:
+
+- **Fusion-aware extraction.**  `fusion_regions` (predicted Inductor kernel
+  count) is landed for *reporting*; completing it for *selection* needs
+  either additive decomposition that respects kernel boundaries or more
+  `_carrier_upgrade`-style coordinated passes.
+- **Pipeline scalability.**  The spine walk + saturation at large T is the
+  compile-time wall (215–262 s at T=2048); incremental matching already took
+  4-layer models 768 s → 4.9 s, and the same direction is needed for T.
+- **Thicker frontiers.**  Scan-block alternates are near-identical;
+  discrimination currently rides on executor variants, not form diversity.
+
 ---
 
 ## 6. The measured numbers that matter (quick index)
@@ -483,7 +507,7 @@ Kept here so a future collaborator does not have to reconstruct them from
 | Number | Value | Source |
 |---|---|---|
 | Weight-space exact structure | absent (full rank everywhere, both checkpoints) | `adrs/0001` |
-| Embedding compressibility | rank 19 @ 95 % energy (~15×); **quality-dead** | `REPORT.md` §3, §10 |
+| Embedding compressibility | rank 19 @ 95 % energy (~15×); **quality-dead** | `docs/results_curated.md` §7.2, §7.4; `adrs/0001` |
 | `mul_unsq_nat` on its source workload | −12.27 % (992 496 → 870 722); +18 enodes | `retros/mul-unsq-nat.md` |
 | Naive guard bad-accepts (falsified) | 212 | `retros/mul-unsq-nat.md` |
 | Synthesized guard | 0 bad / 0 miss | `retros/mul-unsq-nat.md` |

@@ -57,8 +57,9 @@
       `bench/suites/speedup/reassoc_scale.py` (head-to-head vs Inductor at scale) and
       `bench/suites/search/search_efficiency.py` (alternatives-space vs e-graph size).
       Audience: compilers/PL reviewers. Frame around the fair-comparison
-      pipeline (same backend, real checkpoints) — cite REPORT.md on this
-      branch for the existing numbers and the falsified directions.
+      pipeline (same backend, real checkpoints) — cite the retired
+      report's numbers, now migrated to `docs/results_curated.md` §7, for
+      the existing numbers and the falsified directions.
       Unblocked (both benches landed); user wants it deferred.
 
 - [ ] `plan 0002` leftovers — Phase E recognizer consolidation

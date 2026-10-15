@@ -2,7 +2,9 @@
 # ruff: noqa: RUF001
 """exact_probe.py — measure the exact-structure corner across model archetypes.
 
-ARCHIVED — weight-space probe, falsified axis (see ../REPORT.md).
+ARCHIVED — weight-space probe, falsified axis (see ADR 0001,
+../adrs/0001-weight-space-structure-falsified.md; the report is
+retired, its measurements now in docs/results_curated.md §7).
 Lives under retros/ as evidence for the report's exact-corner pins;
 the llama2c loader it imports is bench/common/llama2c.py on main.
 

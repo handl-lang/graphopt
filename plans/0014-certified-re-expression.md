@@ -88,7 +88,7 @@ rewrites, 3-cells coherence via `_close_congruence`); budgets
    of structured models (GQA, MoE, LoRA-merged, MLA-style KV, tied
    heads) and measurement at production dims (d≥1024, B≥8, real
    checkpoint, datacenter GPU).  Required for any paper claim; the
-   writeup lists it as blocking.
+   (now-retired) research writeup listed it as blocking.
 
 4. **Contraction search (0013)** — the discovery feeder.  Replace
    the hand-written morphism laws with contraction-order search so

@@ -11,7 +11,7 @@ structure (the four-dimension split).
 The project's capabilities grew independently — carrier monoids,
 non-local lifts, the morphism engine, bounded-error rewrites, exact
 weight sharing — each justified on its own and each documented in a
-different place (README, REPORT.md, RESEARCH_WRITEUP.md, plans
+different place (README, the since-retired report and writeup, plans
 0009–0013). Two things now force a single anchor:
 
 1. ADR 0001 falsified weight-space structure, and the structure
@@ -135,9 +135,9 @@ horizontally) and the budget mechanism — **not** a headline claim.
 
 ## Consequences
 
-- README, REPORT.md, RESEARCH_WRITEUP.md and plans 0009–0013 cite
-  this ADR as the anchor; "compression with a receipt" is scoped to
-  **structural** compression.
+- README and plans 0009–0013 cite this ADR as the anchor (the retired
+  report and writeup did too); "compression with a receipt" is scoped
+  to **structural** compression.
 - 0009 → 0011 → 0013 is one arc (term laws → block laws → block
   search), not three bets.
 - Bounded mode (0012) is restated as the enrichment's lax case,
@@ -161,10 +161,10 @@ completed *after* this ADR is accepted.
       what it is / how / the edge / what it exploits / what it
       delivers / the unique thing (certified approximation) /
       scope / direction.
-- [ ] `project/REPORT.md` — cite ADR 0002 as the thesis; frame
-      Phase 5 / §10.2 as the structural corner that survives.
-- [ ] `project/RESEARCH_WRITEUP.md` — cite ADR 0002; state the
-      re-expression *goal*, not reachability alone.
+- [x] ~~`project/REPORT`~~ — retired and deleted; its thesis framing
+      and Phase 5 / §10.2 numbers migrated to `docs/results_curated.md` §7.
+- [x] ~~`project/RESEARCH_WRITEUP`~~ — retired and deleted; its unique
+      rows migrated to `docs/results_curated.md` §8.
 - [ ] `project/plans/0009-composable-rule-sets.md` — note its
       hierarchy position (term-level laws).
 - [ ] `project/plans/0011-morphism-engine.md` — note its position

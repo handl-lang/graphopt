@@ -30,4 +30,5 @@ negative but is the actual finding: **the weight file is not a
 program worth rewriting; the computation graph is.**
 
 See `adrs/0001-weight-space-structure-falsified.md` for the decision
-record and REPORT.md (main branch) §10 for the full measurements.
+record; the report's full measurements were migrated to
+`docs/results_curated.md` §7 when it was retired.
