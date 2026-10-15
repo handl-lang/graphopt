@@ -200,6 +200,24 @@ package).  Catopt-side, and independent of the peer.
   proposer that abstracts the step, not a syntactic rewrite.  Written
   down here and in ADR 0008's gate-3 FAIL bullet; retro:
   `project/retros/gate3-loop-proposing-rule.md`.
+- **MEASURED 2026-10-16 (later) — still NO, with the cause measured.**
+  The form-level proposer that bullet named was built
+  (`lab/bridge/index_abstract.py`, catopt `e4a193a`): a *parametric
+  abstraction* that binds the per-block index (and the recurrence state)
+  as parameters, wired as `--abstract-index`.  It collapses a *regular*
+  fold to one shared step and the closure reaches a `Loop` (control
+  PASS, `best_is_loop=True`), but on the real export the 7 blocks still
+  do not collapse: they span **two chunk sizes** (4×size-4 + 3×size-16,
+  from two `split` families) and extraction **mixed two state
+  spellings** (the shared-state read `matmul(q, S)` and the intra
+  re-expansion `om_decayed(matmul(q, k_prevᵀ), D, v_prev)`).  First
+  difference reported by the move:
+  `block1/block2/add[1]/mul[1]: op om_decayed vs add`.  Canonicalising
+  every block modulo the varying integers leaves 7 distinct blocks, so
+  no constant-parameter abstraction can unite them.  **Stage 4 is still
+  not justified**; the missing piece is larger than the previous bullet
+  implied.  Written down here and in ADR 0008's second gate-3 FAIL
+  bullet; retro: `project/retros/gate3-parametric-abstraction.md`.
 
 ### 6 · Laws as data, exclusively (the standing principle)
 

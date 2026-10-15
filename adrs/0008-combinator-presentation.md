@@ -265,6 +265,51 @@ merged `32962d0`; `lab/bridge/combinator.py` + `lab/bridge/combinator_probe.py`)
   A real combinator search — a form-level proposer that abstracts the
   step — is the missing piece, and it is a *different and larger*
   piece of work than "promote the prototype to a package".
+- **Gate 3 — MEASURED 2026-10-16 (later): still FAIL — the
+  parametric-abstraction move was built, and it names a *deeper* cause.**
+  The FAIL bullet above named the missing piece ("abstraction over the
+  step"); this is that move, built and measured —
+  `lab/bridge/index_abstract.py` (commit `e4a193a`), wired as
+  `--abstract-index`.  It binds the per-block index (and the recurrence
+  state) as **parameters** (a parameter is a wire — no new node kind),
+  collapses the `K` blocks to one shared `step` when the family is
+  regular, and emits `unroll(step, K)` for the proposing rule to fold.
+  The gate-3 command is unchanged, both arms armed:
+
+  ```sh
+  .venv/bin/python lab/bridge/combinator_probe.py \
+      --gate2 --extracted --propose-loop --abstract-index
+  ```
+
+  ```
+  -- gate 3: parametric abstraction over the step --
+     abstract-index: blocks=7 split-families=2
+        family sizes/dim=('(16, 16, 16, 16)', -2) indices=[0, 1, 2, 3]
+        family sizes/dim=('(4, 4, 4, 4, 16, 16, 16)', -2) indices=[0, 1, 2, 3]
+        verdict=IRREGULAR — the 7 blocks do NOT collapse to one shared step
+        first difference: block1/block2/add[1]/mul[1]: op om_decayed vs add
+     control (regular fold): blocks=4 verdict=regular round-trip=True  closure: best_is_loop=True best_cost=109
+  ```
+
+  The control is the *presentation's own spelled fold*, expanded (the
+  gate-2 program): the move collapses it to one shared step, round-trips,
+  and the closure reaches a `Loop` (`best_is_loop=True`) — measured at
+  `K = 2, 4, 8`.  So the move **works**; the winner still does not
+  collapse.  **The index was not the whole story**: the winner's output is
+  a `concat` of **7 blocks of two sizes** (4×size-4 + 3×size-16, from two
+  `split` families), and extraction **mixed two state spellings** — the
+  shared-state read `matmul(q, S)` and the intra re-expansion
+  `om_decayed(matmul(q, k_prevᵀ), D, v_prev)`.  Canonicalising every block
+  modulo the varying integers (`index`, `t`, `offset`, `sign`) leaves
+  **7 distinct** blocks, so no constant-parameter abstraction can collapse
+  them.  Removing the index is *necessary but not sufficient*; the
+  remaining gap is the state spelling and the chunking.
+
+  **What this means for ADR 0009 stage 4**: unchanged and strengthened —
+  the gate is negative and the missing piece is *larger* than the previous
+  bullet implied (a move that normalises the state spelling *and* the
+  chunking, not just a form-level proposer).  See
+  `project/retros/gate3-parametric-abstraction.md`.
 - **Gate 3 — the protocol** (added 2026-10-14; it is
   the last gate standing between this ADR and ADR 0009's stage 4, so
   "open" without a way to close it was the real problem).

@@ -222,7 +222,17 @@ that create their consumers**, not added up front:
    only on a different argument, and a *form-level* proposer (which
    abstracts the step, rather than a syntactic e-graph rewrite) is the
    piece of work that would re-open the gate.  See
-   `project/retros/gate3-loop-proposing-rule.md`.
+   `project/retros/gate3-loop-proposing-rule.md`.  **Re-measured
+  2026-10-16 (later): that form-level proposer was built
+  (`lab/bridge/index_abstract.py`, catopt `e4a193a`) — a parametric
+  abstraction binding the index *and* the recurrence state as
+  parameters.  It collapses a *regular* fold to one shared step and
+  the closure reaches a `Loop` (control PASS), but the RetNet winner
+  still does not collapse: its 7 blocks span two chunk sizes and
+  extraction mixed two state spellings, so no constant-parameter
+  abstraction can unite them.  Stage 4 is still not justified, and
+  the missing piece is larger than this bullet implied.  See
+  `project/retros/gate3-parametric-abstraction.md`.**
 5. **Extract `catopt-game`** — the RL layer out of the 50k-line package
    (the clear navigability win).
 6. **Fold `genkernel` into a domain package** — no `catopt-kernels`.
@@ -240,6 +250,12 @@ that create their consumers**, not added up front:
    spelled form is in a different e-class).  Stage 4 is not justified by
    the discovery value of the presentation.  See ADR 0008's gate-3 FAIL
    bullet and `project/retros/gate3-loop-proposing-rule.md`.
+   **Re-measured 2026-10-16 (later): the form-level proposer was
+   built and the gate is *still* negative** — the parametric
+   abstraction collapses a regular fold but not the RetNet winner
+   (two chunk sizes, two state spellings).  See ADR 0008's second
+   gate-3 FAIL bullet and
+   `project/retros/gate3-parametric-abstraction.md`.
 2. **A port with no consumer is decoration.**  If `Calculus`/`Machine`/
    `Engine`/`Proposer`/`Environment` cannot name an existing consumer and
    a conformance test, they do not land.
