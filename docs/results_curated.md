@@ -119,6 +119,194 @@ eliminated (pinned by test).
 | ONNX backend, both directions | **zero edits under `catopt-core`**; fp64 round-trip **1.11e-16** via `onnxruntime`; 107 in-op types (opsets 13–21), 169 out-ops; package coverage 100% |
 | combinator bridge (ADR 0008 prototype) | **321/321** corpus workloads round-trip structurally exact, zero ops refuse translation, mean blowup 2.61×; the RetNet carrier spells as a `loop` term verified at 1e-7–2.6e-7 |
 
+## 7. Retired: the weight-space / ε axis (from the retired REPORT)
+
+*Historical record of a closed axis.*  These rows are migrated verbatim
+from the retired REPORT (the weight-space / ε-axis phases 0–5), which
+was itself the historical record; the file has been deleted and this is its
+measurements' new home.  They are **not** pinned baselines — the source was
+the report's own measurement session on llama2.c checkpoints
+(`retros/measure_weights.py`, archived) — so they are kept as the record of
+a *falsified* axis, not as live evidence.  The decision is **ADR 0001**
+(`project/adrs/0001-weight-space-structure-falsified.md`); the narrative is
+the lab notebook §1.1.
+
+### 7.1 Phase 0 — linear falsification (stories15M, 15 M params)
+
+| probe | result | verdict |
+|---|---|---|
+| numerical rank @1e-2 | ~270–288/288 | full — no exact low-rank |
+| displacement rank | ~280/288 | no Toeplitz/generator |
+| symmetry defect | ~1.41 | fully asymmetric |
+| low-rank @99% | 96.3% of params | meaningless saving |
+
+Gate outcome: **exact linear structure is absent.**  Phase 0 tested only
+one algebra, so the axis stayed open to Phase 0b.
+
+### 7.2 Phase 0b — the structured-algebra family
+
+Gated as *storage vs relative Frobenius error against plain SVD*:
+
+| probe | result | verdict |
+|---|---|---|
+| **token embedding** (60% of params) | **rank 19 @ 95% energy** | **~15× — live** |
+| Kronecker-sum (attn/MLP) | 1.3× @ 35% residual | marginal — real, small |
+| H-matrix off-diagonals | rel. rank 1.0 | dead |
+| sparse concentration | top 10% ≈ 46% energy | mild |
+| Monarch/butterfly ALS | diverged | inconclusive |
+| INR coordinate-fit | rel err ≈ 1.0 | dead (no smooth manifold) |
+
+Correction recorded honestly: the earlier "4 terms" was the best-e1 split's
+rank; the storage-optimal split needs K~28, giving ~1.3× at 35% residual.
+
+### 7.3 Phase 1/2 — ε pipeline rate–distortion (2-layer MLP, fp64)
+
+| method | stored | ratio | measured err | certified bound |
+|---|---|---|---|---|
+| int8 quant | 16,384 B | 8.0× | 5.3e-3 | 0.076 (site) / 0.79 (model) |
+| low-rank @10% | — | no offer | — | (weights are full-rank) |
+
+Composite (low-rank embedding + int8 quant on all params, one e-graph, one
+extraction): **577 KB → 16.7 KB (34.6×)**, measured err 2.8e-2 within the
+certified model bound.  Other ε-machinery probes: `low_rank_gather` on the
+real stories15M embedding — **rank 2 at 5% spectral = 142× storage**;
+Kronecker-structured 64×64 weight → K=4 terms, **32,768 → 4,096 bytes
+(8×)**, certified bound, replayable certificate.  `model_bound`
+(output-level certificates) verified on a quantized 2-layer model: err
+0.0034 vs certified 0.397 (spectral products ~100× conservative).
+
+### 7.4 Phase 5 — real perplexity (TinyStories, stories15M, 2819 tokens, fp64; baseline ppl 5.03)
+
+| config | storage | perplexity | verdict |
+|---|---|---|---|
+| emb rank-2 / r19 / r64 / r128 / r192 | 2.5–1.2× | 6108 → 214 | **dead at every rank** |
+| Kronecker-sum (35% resid) | 1.1× | 143 | dead |
+| **int8 RTN quant (certified, catopt)** | **4.0×** | **5.16** | **works, bounded** |
+| int8 per-channel RTN (GPTQ-class baseline) | 4.0× | 5.00 | works, no bound |
+| int4 g128 RTN (GPTQ-class) | 8.0× | 7.01 | works, no bound |
+
+Honest #2 verdict: at matched ratio, certified per-tensor int8 (ppl 5.16)
+≈ per-channel int8 baseline (ppl 5.00) — the certificate costs ~0.16 ppl,
+not bytes.  `quant_params(per_channel=True)` closes the quality gap at the
+same ratio with the bound kept.  The differentiator: **compression parity
+with the RTN-class baseline, plus a certificate** — not a ratio win.  The
+embedding's top-19 singular directions are not the ones next-token
+prediction needs: `‖ΔW‖` bounds do not predict `Δppl`.
+
+### 7.5 §10.1 relational probe — the last untested class
+
+Exact **cross-layer** structure on stories15M **and** stories110M:
+
+| probe | stories15M | stories110M |
+|---|---|---|
+| 1. bitwise cross-layer dup rows/cols/head-blocks | **0 hits** | **0 hits** |
+| 2. shared subspace — rank(stack) vs ambient | **full rank everywhere** (288/288, 768/768, 2048/2048) | **full rank everywhere** |
+| 3. after Procrustes alignment | 0 aligned dup rows, still full rank | 0, still full rank |
+| 4. stacked spectrum (diagnostic) | r95 ≈ 242–265/288 (~85–92%) | r95 ≈ 655–714/768 (~85–93%) |
+| 5. shared dictionary (diagnostic) | k=64 → resid 0.70 @ 0.26× storage | k=64 → resid 0.74–0.93 @ 0.09× |
+
+Verdict: **negative on exact — the door closes.**  Two independently-trained
+checkpoints carry zero bitwise-shared cross-layer structure, and the
+gauge-alignment test finds nothing the permutation/rotation freedom was
+hiding.  Mild *approximate* redundancy exists (85–93% of dims for 95%
+energy), but Phase 5 already showed approximate ≠ quality-preserving.
+
+### 7.6 §10.1b symmetry probes (stories15M)
+
+| probe | hypothesis | result |
+|---|---|---|
+| A. equivariance `WG=GW` | circulant / reversal / block-shift groups | **resid ≈ 1.41 everywhere** (=√2, the random value) — no symmetry |
+| C. polynomial identity | low-degree `p(W)=0`, minimal poly | **minimal poly = full degree**: 288/288 distinct eigenvalues, Krylov rank unsaturated |
+| B. learned displacement | rank(`AW−WB`) over learned diag/circulant `A,B` | residual ~0.12 but **disp-rank ≈ 280/288 — full** |
+
+With Phase 0/0b and §10.1 all negative, **every known hypothesis class for
+exact weight-space structure is closed on trained checkpoints.**
+
+### 7.7 §10.2 the exact corner, measured across archetypes
+
+Under `param_bytes_cost_for` with fp64 output equality verified:
+
+| archetype | saved | mechanism |
+|---|---:|---|
+| stories15M (real, dense) | 0.00% | nothing to dedup (46 tensors probed) |
+| dense transformer (synth) | 0.08% | `linear_channel_scale` fold |
+| GQA 8q/2kv (repeat_kv materialised) | **37.50%** | `share_duplicate_param_slices` |
+| adapter-merged (W+B·A stored) | 11.03% | `_fold_weight_chains` param-only fold |
+| tied embed/classifier stored twice | **50.00%** | `share_duplicate_params` |
+| MoE: 4 weight-tied routed experts | **75.00%** | `share_duplicate_params` |
+| MoE: 4 weight-tied shared-input | 75.00% | tying found; concat copies billed per-occurrence |
+| composed linears w2(w1·x), no act | 50.00% | fold exact: fused W₂·W₁ materialises at d² < 2d² |
+| dead param (unused tensor) | 98.46% | unreachable leaf dropped |
+| adapter UNmerged (Wx+BAx) | 0.00% | pairing honestly declines: concat costs more than it saves |
+
+The claim, plainly: **the exact corner is ~0% on dense trained checkpoints
+and real on structured ones** — GQA replication, double-stored ties,
+weight-tied experts, merged adapters.  Every row fp64-verified
+output-equal.  Archived evidence: `retros/exact_probe.py`,
+`retros/weight-as-programs.md`; decision ADR 0001.
+
+### 7.8 §11 ε-axis limits (retained)
+
+- **`omd` at realistic scale** (`bench_omd2.py`): MQA fires (`omd_applym`)
+  but the dense-fiber numerator is ~dv/dim× oversized — batched executor
+  only **1.15–1.5× vs generic on CUDA**, loses to Inductor **5–20×**
+  everywhere.  MHA now lifts via view-commute laws
+  (`xc_reshape_apply`/`xc_transpose_apply`).
+- **`model_bound` is known unsound for spectral sites at activation
+  positions** (low-rank `eps_lr` members: it misses the ‖activation‖
+  factor; reported **0.14** vs measured **0.246**).  Use
+  `ibp.tight_model_bound` instead — it flags `spectral_unsafe` and gives
+  sound bounds (**118×→3×** on quant sites via realized-delta propagation).
+- **Monolithic saturation** previously didn't scale past ~2 blocks —
+  **fixed**: incremental matching (dirty frontier) + member-resolution
+  memoization + bounded expansive-rule saturation put a 4-layer model at
+  **768 s → 4.9 s**, reaching ≥8 blocks monolithically.  (Also in
+  `docs/paper_draft.md` §6.)
+- **`omd` executor landed** (`omd_lower.py`): **1.2–3.3× vs generic eval**,
+  **2.4–5.8× CUDA-graph**, fp64-exact.
+- **Monarch ALS was inconclusive** — deeper butterfly structure may exist
+  that naive alternating least squares can't reach.
+- ε-passes are opt-in (`eps_rtol`); default extraction is exact-only.
+
+### 7.9 §1 the original unified thesis (the founding bet)
+
+The report opened on: *a PyTorch model and its weights are one semantic
+program; optimizing that program — with certificates — covers computation
+structure and parameter storage in a single search.*  Mechanism:
+parameters are `Param` leaves in the same term language as compute, so
+*elimination is a corollary* (a leaf no extracted member references never
+reaches the state dict) and composition, tying, slice-sharing and bounded
+factorization are the same event at different certificate bound values.
+**Outcome:** the compute half survived; the weight half was falsified
+(ADR 0001).  The ε machinery survives as an opt-in toolkit where a norm
+bound IS the contract (activation paths, verification) — not as a
+weight-compression mechanism.
+
+## 8. Retired baselines (from the retired RESEARCH_WRITEUP)
+
+*The research writeup has been retired (deleted); these are the rows it
+recorded that no surviving doc carried.*  **The first three are unsourced**:
+the writeup cited a "README results table" for them, and **no such table
+exists** (the README never carried one) — so their provenance is the
+retired writeup's own measurement session, and they must **not** be quoted
+as pinned-baseline evidence.  The rest are retained with their config
+named; where a pinned baseline supersedes a row, that is noted.
+
+| measurement | result | source / note |
+|---|---|---|
+| asymptotic reassoc `(QKᵀ)V → Q(KᵀV)`, O(T²d)→O(Td²) | **8.0× at T=2048** | retired RESEARCH_WRITEUP §3 — **UNSOURCED** (claimed "README results table", which does not exist) |
+| streaming attention (`om` monoid) | **260× vs sdpa-recompute at 65 k cache**; 89 MiB flat at 2 M keys | retired RESEARCH_WRITEUP §3 — **UNSOURCED** (same) |
+| FLOP reduction (reassoc/merge/factorize) | **2.51× GPU / 3.02× CPU**, DeepParallel b=4096 | retired RESEARCH_WRITEUP §3 — **UNSOURCED** (same) |
+| weights-first fold, k-chain → 1 GEMM | 15.9× vs Inductor GPU (k=16, d=512, R=65536); ≈k× scaling across a 36-cell sweep | retired RESEARCH_WRITEUP §3 — superseded by the pinned `reassoc_scale.json` (14.92× at B·T=4096) |
+| scan lift (retnet/GLA/delta blocks) | 3.36× vs eager at T=128 CUDA; 3.9× with `compile=True` | retired RESEARCH_WRITEUP §3 |
+| chunked decode carriers, CUDA-graph captured | 1.65–2.8× vs best non-carrier; delta C=8: 29.7 µs vs 49.1 µs | retired RESEARCH_WRITEUP §3 — un-captured carrier loses (dispatch) |
+| projection pairing (QKV, gate·up) on llama2.c | 1.24× vs Inductor | retired RESEARCH_WRITEUP §3 — rediscovers `MergedColumnParallelLinear`/`QKVParallelLinear` |
+| autotuned selection (`optimize_model_autotuned`) | matrix_chain 2.24× CPU | retired RESEARCH_WRITEUP §3 |
+| the carrier below the crossover | 0.184× at retnet T=128 (uncompiled) | retired RESEARCH_WRITEUP §4 — superseded by `docs/results.md`'s 0.51× at T=512 |
+| pipeline cost at T=2048 | CatOpt 215.8 s → 1.04 ms vs Inductor 45.4 s → 0.256 ms | retired RESEARCH_WRITEUP §4; also `project/plans/0005-cost-model-fidelity.md` — Inductor still faster at runtime |
+| real checkpoints (stories15M/110M) | all blocks transform + verify (~2e-5); **−37% GEMM launches** profiler-verified; **parity** on wall time | retired RESEARCH_WRITEUP §4 |
+| cost-model fidelity, post-fix ρ | `lowering_min` 0.167→0.261, `exec_generic` 0.070→0.316 | retired RESEARCH_WRITEUP §3 — positive but not yet predictive (pre-fix: `project/plans/0005-cost-model-fidelity.md`) |
+
 ## Learned models (2026-10-15)
 
 *What the project trains, and how each performs.*  Separate from the

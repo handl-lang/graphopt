@@ -317,7 +317,7 @@ verification layer has repeatedly falsified the engine's own candidates.
   it caught a false-proof matcher bug, a shape misinference that fabricated a
   **1.98× "win"**, a well-typed wrong program (diff **9.83**), and a
   launch-time-vs-execution timing bug.  All regression-tested
-  (`RESEARCH_WRITEUP.md` §2).
+  (`tests/test_cost.py`, `tests/test_torch_integration.py`).
 * **Shipped laws were found unsound off-corpus and guarded.**  The
   weight-merge law rewrote a real, evaluable term into a numerically
   different one (max diff **12.83**); the false region lives in the two
@@ -346,13 +346,18 @@ at all.
 | Win | Measurement | Artifact |
 |---|---|---|
 | Weight-chain fold, `x@W₁@…@W_k` → 1 GEMM (Inductor keeps all k `mm`s) | **14.92× vs Inductor** at (k,d,B·T)=(16,512,4096); 17.40× vs eager | `bench/baselines/reassoc_scale.json` |
-| Asymptotic reassoc `(QKᵀ)V → Q(KᵀV)` | **8.0× at T=2048** | `RESEARCH_WRITEUP.md` §3 |
+| Asymptotic reassoc `(QKᵀ)V → Q(KᵀV)` | **8.0× at T=2048** — *retired source, not pinned* | `docs/results_curated.md` §8 |
 | Spelled RetNet export, T=2048 | **5.0–5.9× vs eager**, **6.2–7.4× vs `torch.compile`**; 7.30× less peak activation memory; verified 9.8e-9 | `docs/results.md` |
 | Held-out zoo (18 deliverable workloads) | **11/18 beat `torch.compile`** (LoRAAdapter 2.18×, WaveNetGate 1.51×) | `project/retros/gen-kernels.md` |
 | `chainfuse` (fold + minted kernel, Triton-bound) | **2.94× vs `torch.compile`** (86 µs vs 253 µs) | `gen-kernels.md` |
 | Joint forward+backward under one shared memo | **+13 % vs `torch.autograd`** (68 µs vs 78 µs, verified 9.5e-07) | `project/retros/joint-training-graph.md` |
-| Streaming attention (`om` monoid) | **260× vs sdpa-recompute** at 65 k cache | `RESEARCH_WRITEUP.md` §3 |
+| Streaming attention (`om` monoid) | **260× vs sdpa-recompute** at 65 k cache — *retired source, not pinned* | `docs/results_curated.md` §8 |
 | ONNX round-trip (portability, not throughput) | **1.11e-16 fp64**, zero core changes | `project/retros/onnx-package.md` |
+
+Two rows here (asymptotic reassoc, streaming attention) come from a retired
+writeup whose cited artifact — a "README results table" — never existed; they
+are recorded in `docs/results_curated.md` §8 as **unsourced** and must not be
+read as pinned-baseline evidence.
 
 **The honest losses, in the same table.**  The project keeps them because a
 value claim without its losses is not a measurement.
@@ -365,7 +370,7 @@ value claim without its losses is not a measurement.
 | Precision (bounded) lane on real BiRefNet (220 M) | **certified negative** — 20 offers at 1e-2, 56 at 3e-2, **0 delivered** (bounded member prices 1.32× worse than dense; 18/2304 rows dedup) | `project/retros/birefnet-bounded-lane.md` |
 | The minted atom did not pay | **0 certified laws fire on real terms** — the minted total vs the corpus's emitted sequence | `project/retros/atom-synth-loop.md` |
 | Anti-unification compression (ADR 0007 L1) | **null on reach-expansion** — identical cheapest member with/without atoms on all 3 workloads | ADR 0007 |
-| CPU decode; launch-bound cells | 0.5–0.8×, all six cells LOSS | `RESEARCH_WRITEUP.md` §4 |
+| CPU decode; launch-bound cells | 0.5–0.8×, all six cells LOSS | `docs/results_curated.md` §8 |
 | FLA (tuned kernels) vs the delivered carrier | FLA ~3× less memory, ~11× faster (a *lowering* gap, not semantics) | `project/retros/retnet-external-baselines.md` |
 
 **The shape of the value claim.**  Wins are structural, not codegen: folding
@@ -545,17 +550,17 @@ venue paper needs the scale validation and the executor work named in §6.
 | The synthesized exact guard is clean | `flat-map-unsq`: 0 bad / 0 miss | `mul-unsq-nat.md` |
 | An apparent paying sibling is rejected | `mul_unsqueeze_r_id` −14.3 %, 12 models/22 sites, unequal | `mul-unsq-nat.md`; `discovery-scale.md` |
 | Deliberately-false twins are rejected | 4 rejected (`addmerge_wrongstate`, `absorb_value`, `keycat_wrong`, `merge_sign_s1`) | `layer3-loop.md` |
-| The verifier retracts would-be claims | false-proof matcher; a 1.98× fabricated win; a wrong program (diff 9.83); a timing bug | `RESEARCH_WRITEUP.md` §2 |
+| The verifier retracts would-be claims | false-proof matcher; a 1.98× fabricated win; a wrong program (diff 9.83); a timing bug | `tests/test_cost.py`; `tests/test_torch_integration.py` |
 | Shipped laws were unsound off-corpus and fixed | matmul false region (max diff 12.83); `select_mul` broadcast | `matmul-unsound-fix.md`; `select-mul-broadcast.md` |
 | The loop caught a real lowering bug by refusing | `decay_vec` `sign=0` coercion | `layer3-loop.md` |
 | The typed-pay gate suppressed inflated "pays" | 19/33 mint ill-typed; 11 pays + 12 drops suppressed | `typed-pay-gate.md` |
 | **Value (wins).** Weight-chain fold | 14.92× vs Inductor (17.40× vs eager) | `bench/baselines/reassoc_scale.json` |
-| Asymptotic reassoc | 8.0× at T=2048 | `RESEARCH_WRITEUP.md` §3 |
+| Asymptotic reassoc | 8.0× at T=2048 (retired source — unsourced) | `docs/results_curated.md` §8 |
 | Spelled RetNet export T=2048 | 5.0–5.9× vs eager; 6.2–7.4× vs compile; 7.30× memory | `docs/results.md` |
 | Held-out zoo | 11/18 beat `torch.compile` | `gen-kernels.md` |
 | `chainfuse` (fold + minted kernel) | 2.94× vs compile | `gen-kernels.md` |
 | Joint fwd+bwd | +13 % vs autograd (9.5e-07) | `joint-training-graph.md` |
-| Streaming attention | 260× vs sdpa-recompute at 65 k | `RESEARCH_WRITEUP.md` §3 |
+| Streaming attention | 260× vs sdpa-recompute at 65 k (retired source — unsourced) | `docs/results_curated.md` §8 |
 | ONNX portability | 1.11e-16 fp64; zero core changes | `onnx-package.md`; ADR 0006 |
 | **Value (losses).** Fused-op vision model | 0.80× vs compiled | `docs/results.md` |
 | Carrier below crossover | 0.51× vs eager at T=512 | `docs/results.md` |
