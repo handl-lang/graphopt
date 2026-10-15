@@ -1,11 +1,12 @@
 # ADR 0009 — the kernel calculus as a package, and the layer ladder
 
-**Status**: proposed.
+**Status**: proposed — **revised** (see *Revision*, which reorders the
+stages and fixes the naming rule).
 **Date**: 2026-10-14.
 **Depends on**: ADR 0002 (categorical re-expression), ADR 0003 (four
 dimensions — *and* its lesson that a port with no consumer is
-decoration), ADR 0005 (the open game), ADR 0007 (semantic-atom
-minting), ADR 0008 (combinator presentation).
+decoration), ADR 0004 (abstraction as move), ADR 0005 (the open game),
+ADR 0007 (semantic-atom minting), ADR 0008 (combinator presentation).
 **Related**: `catopt_core.ports` (27 protocols), the `lab/bridge`
 combinator prototype, plan 0025 (the open frontier), the import-linter
 layer contract in `pyproject.toml`.
@@ -65,24 +66,60 @@ rewrite *with*.  Hughes' own framing is also the honest one for this
 project: arrows are the *meticulous* notion — they make sharing and
 sequencing explicit — which is what `dup`/`loop` in our basis are for.
 
+### What the language is for — a prerequisite, not an engine
+
+State this plainly, because it bounds the claim.  A semantic
+categorical language buys exactly three things:
+
+1. **Uniformity** — laws become *equations over morphisms* (derivable
+   from structure: monoid → associativity, comonoid → duplication,
+   trace → fold), so the space is generatable rather than hand-listed;
+   search becomes enumeration over one space.
+2. **First-class sharing and iteration** — `dup` (Δ) and `loop`
+   (trace) make recurrence forms *expressible* instead of hand-minted.
+   This is what makes **algorithmic** (fold/scan) forms reachable, as
+   opposed to algebraic identities.
+3. **Soundness** — a discovery is an equation carrying a replayable
+   certificate, so "found" and "correct" stay separable measurements.
+
+Measured, that yields: **law-level discovery** (a corpus-minted law,
+guard synthesized, adversarially swept, shipping in `DEFAULT`; 11
+machine-admitted laws; the axiom/lemma split derived) and **equational
+derivation** (derivations are data, `verify_certificate` replays them,
+`lemma_cert` replays lemmas, the sweep falsifies).  It does **not**
+yield: a smaller search space (a universal language enumerates *more* —
+proposers, exposure screening and RL remain the bottleneck), new
+*semantics* without a constructor, general (non-equational) proof
+synthesis, or **algorithm-level novelty** — the largest result to date
+(the RetNet carrier) is a **rediscovery** of a published duality, and
+the measured yield of fresh paying structure is ~1.5% of the exposed
+corpus.
+
 ## Decision
 
-**Adopt an eight-layer ladder, promote the calculus to a package, and
-give the calculus/search/proposal/environment axes ports in core.**
+**Adopt a two-axis package organization, give the
+calculus/search/proposal/environment axes ports in core, and promote
+the calculus to a package only when its own gate says it earns one.**
 
-### The ladder
+### The naming rule (the two axes)
 
-| layer | package | role | port consumed |
-|---|---|---|---|
-| L0 primitives | `catopt-core` | terms/IR, e-graph, cells, cost algebra, **all ports** | — |
-| L1 calculus | **`catopt-kernel`** *(new)* | the arrow calculus: n-cells, the basis as data, `dag↔comb`, `loop`/`dup`/`Param`, interpreter + rewrite machine | `Calculus`, `Machine` |
-| L2 search | `catopt_core.egraph` (reference) · `catopt-native` (fast) | saturation + extraction | `Engine` |
-| L3 evaluation | `catopt_core.cost` + measured profiles | roofline/executor/delivered, calibration | `CostFn`, `PerformanceModel`, `Profiler` |
-| L4 execution | `catopt-torch` · `catopt-onnx` · `catopt-cuda` · **`catopt-kernels`** *(new: `genkernel`)* | lower and run | `Sink`, `Binding`, `Executor`, `Runner` |
-| L5 orchestration | `catopt-orchestrator` | pipeline, strategies, regimes | `Backend`, `Strategy` |
-| L6 discovery | `catopt-discovery` *(slimmed)* | census → propose → verify → measure → emit; intake; evidence | `Proposer`, `Verifier` |
-| L7 learning | **`catopt-game`** *(new)* | boards, players, priors, training, `play` CLI | `Environment`, `Reward`, `Policy` |
-| L8 applications | `bench/` · `lab/` · `examples/` · `docs/tutorials/course` · `scripts/` | measurement, experiments, teaching | — |
+| axis | rule | packages |
+|---|---|---|
+| **dimension** | dimension-named | `catopt-core` (primitives + ports) · `catopt-<calculus>` (the kernel/laws) · `catopt-search` · `catopt-eval` · `catopt-orchestrator` · `catopt-discovery` · `catopt-game` |
+| **domain** | `catopt-<domain>` | **`catopt-torch` · `catopt-onnx` · `catopt-cuda`** — each *is* the execution dimension for its domain |
+
+`exec-` is the **role**, the domain name is the **package**; the domain
+name wins.  `catopt-native` keeps its name: it is a *search*
+implementation (`Engine`), not a domain.
+
+**Where a thing goes:**
+
+| if it is… | it lives in… |
+|---|---|
+| a law / equivalence / rewrite | the **dimension** package (semantic side) |
+| how to *run* an op for a domain | the **domain** package |
+| an engine for the search dimension | a **dimension** implementation (`catopt-native`) |
+| a backend that mints code | a **domain** package (Triton is torch-adjacent) |
 
 ### Ports to add in core
 
@@ -93,79 +130,101 @@ decoration.
 | port | shape | consumer today (unported) |
 |---|---|---|
 | `Calculus` | 0/1/2/3-cell structure | the kernel; `Rewrite`/`derivation` in core |
-| `Machine` | `eval(term, env)`; `apply(cell, term)` | `catopt-kernel` (`Sink` keeps lowering) |
+| `Machine` | `eval(term, env)`; `apply(cell, term)` | the calculus package (`Sink` keeps lowering) |
 | `Engine` | `saturate(cells, budget) -> Graph` | `catopt-native` (already `engine=` opt-in) |
 | `Proposer` | `propose(graph, budget) -> iterable[Candidate]` | `enumerate`/`forms`/`propose` |
 | `Environment` + `Reward` | `reset/step/observe`; `reward(state, action)` | `engine.Board`, `arena`, `meta_arena`, `open_game` |
 | `Prover` / `Bound` | per-artifact verification boundaries | `verify_certificate`; bounded members |
 
-### The split of `catopt-discovery`
+### Revision (2026-10-14) — what the first draft got wrong
 
-- → **`catopt-game`**: `engine`, `players`, `play`, `arena`,
-  `arena_player`, `meta_arena`, `meta_game`, `meta_player`,
-  `open_game`, `training`, `law_order`
-- → **`catopt-kernels`** (an execution adapter, beside torch/onnx):
-  `genkernel` — it mints handlers, i.e. it is a backend
-- → **`catopt-kernel`**: the calculus (from `lab/bridge` + the n-cell
-  representation)
-- **stays**: `census`, `propose`/`proposal`, `enumerate`, `forms`,
-  `families`, `oracle`, `impact`, `emit`, `evidence`, `gap_gen`,
-  `coherence*`, `vocab`, `lemma_cert`, `machine_pack`, `intake/`,
-  `lawdata/`, `verifier`, `zoo`, and the minting stack
+Writing the first draft made two weaknesses visible, and one of them
+reorders the whole plan.
 
-### Staging, with the floor policy
+1. **The deeper inversion is `catopt-carriers`, not `catopt-discovery`.**
+   14k lines hold carrier **laws** (semantics) *and* executors
+   (execution) inside a **torch-coupled** package — i.e. semantics
+   depend on an execution library, which is the opposite of the thesis.
+   The equational part belongs on the semantic side; the executors
+   belong in the domain package.  **This is the first split**, because
+   it is the one that makes "semantic categorical language" true rather
+   than aspirational.
+2. **A peer kernel package hides a decision instead of making it.**
+   Two representations (op-graph IR + arrow calculus) mean every law
+   must exist in both, or one is second-class — exactly the drift ADR
+   0008 warned about.  The architectural question is **which
+   representation is canonical**, and that is its own decision record,
+   not a package move.  Until it is answered, the kernel stays a lab
+   prototype.
+3. **A package for one module is over-fragmentation.**  A
+   `catopt-kernels` holding only `genkernel` means a pyproject, a floor,
+   an import contract and a CI surface for one module.  Fold it into a
+   domain package instead.
+4. **Organizational resilience is weaker than verification
+   resilience.**  Minted laws now sit in `DEFAULT`: a change to the bank
+   silently changes extraction for every caller (AGENTS.md has to warn
+   about it), and there is no versioning or compatibility story for the
+   bank or for minted atoms.  No package split addresses this; it is
+   recorded here as the standing gap.
 
-1. **Ports + conformance tests** — no behaviour change, no import churn.
-2. **`catopt-kernel`** — promote the lab bridge (measured **92%** under
-   its test; needs work to clear the floor).
-3. **`catopt-game`** — mechanical move of the RL layer (the largest
-   navigability win).
-4. **`catopt-kernels`** — move `genkernel` beside the other execution
-   adapters.
-5. Each stage updates the import-linter layer contract; **each new
+### Staged plan (revised order)
+
+1. **Ports + conformance tests** — cheap, no behaviour change, no import
+   churn.
+2. **Fix the carrier inversion** — carrier *laws* to the semantic side,
+   carrier *executors* into the domain package.
+3. **Decide the canonical representation** (its own ADR) — op-graph IR
+   vs arrow calculus.  *Then*, and only then:
+4. **Promote the calculus** to a dimension-named package — **gated on
+   ADR 0008 gate 3** (does search *reach* `loop`-headed forms?).  If the
+   gate measures negative, the calculus is a presentation win and this
+   stage is not justified.
+5. **Extract `catopt-game`** — the RL layer out of the 50k-line package
+   (the clear navigability win).
+6. **Fold `genkernel` into a domain package** — no `catopt-kernels`.
+7. Each stage updates the import-linter layer contract; **each new
    package gets its own coverage ratchet** (the discovery-style
    `--fail-under` climb), never a global widening.
 
 ## Falsification
 
-1. **Gate 3 decides the kernel.**  If ADR 0008's open gate — does search
-   *reach* `loop`-headed forms from a corpus graph? — measures negative,
-   the calculus is a presentation win, not a discovery substrate, and
-   stage 2 is not justified.  Measure first.
+1. **Gate 3 decides the calculus.**  If search cannot reach
+   `loop`-headed forms from a corpus graph, stage 4 is not justified.
+   Measure before spending the coverage budget.
 2. **A port with no consumer is decoration.**  If `Calculus`/`Machine`/
-   `Engine`/`Proposer`/`Environment` cannot name an existing consumer
-   and a conformance test, they do not land.
-3. **The split must pay in navigability, not just in file counts.**  If
-   moving the RL layer out of discovery does not measurably reduce the
-   cost of a change (import surface, test selection, review size), the
-   split was cosmetic.
-4. **No layer inversion.**  The import-linter contract must stay
-   acyclic; a kernel that imports an execution adapter is a failed
-   kernel.
+   `Engine`/`Proposer`/`Environment` cannot name an existing consumer and
+   a conformance test, they do not land.
+3. **The split must pay in *change surface*, not file counts.**  For a
+   representative change (add a law; add a backend; retrain a prior),
+   count the packages it touches before and after.  If that number does
+   not fall, the split was cosmetic.  This is the **acceptance test**,
+   not a footnote.
+4. **No layer inversion.**  The import-linter contract stays acyclic; a
+   calculus package that imports a domain package is a failed calculus.
 
 ## Honest scars
 
-- **Splitting 50k lines is a test project, not a `git mv` project.**  The
-  coverage floors make each extraction cost tests; budget accordingly.
-- **The kernel's value is unproven** — this ADR proposes a home for it,
-  not evidence that it earns one.
-- **`catopt-carriers` (14k lines, torch-coupled) sits awkwardly**: it is
-  carrier *laws* (semantics) with *executors* (execution) in one
-  package.  Left alone here; it is the next split candidate if this one
-  pays.
-- **The lab is not the kernel.**  `lab/` stays the promotion queue; this
-  ADR is about what promotion *is* for the calculus.
+- **Splitting 14k–50k lines is a test project, not a `git mv` project.**
+  The coverage floors make each extraction cost tests; budget
+  accordingly.
+- **The calculus's discovery value is unproven** — this ADR proposes a
+  home for it, not evidence that it earns one.
+- **The language is a prerequisite, not an engine** (above): it makes
+  discoveries expressible, composable and checkable; it does not shrink
+  the search space, invent semantics, or prove general theorems.
+- **The bank has no versioning story** — minted laws in `DEFAULT` are
+  load-bearing for every caller.
 
 ## Consequences
 
 - **The thesis becomes structural.**  "Programs are 1-cells, laws are
   2-cells, derivations are 3-cells" stops being prose and becomes a
-  package with a port, an interpreter, and a rewrite machine.
+  package with a port, an interpreter and a rewrite machine.
 - **Discovery gains a uniform enumeration space** — morphism shapes
-  rather than op-patterns (ADR 0008's intent), which is what its gate 3
-  is waiting on.
-- **Execution adapters multiply cleanly.**  With `genkernel` beside
-  torch/onnx/cuda, "a new backend implements `Sink`" extends to "a new
-  *minting* backend implements `Machine`".
+  rather than op-patterns (ADR 0008's intent), which is what gate 3 is
+  waiting on.
+- **Execution adapters multiply cleanly.**  The domain axis stays
+  `catopt-<domain>`; a new backend implements `Sink`, and a
+  code-minting backend is just another domain package.
 - **Learning becomes optional, not embedded.**  The RL layer can be
   dropped or replaced without touching the pipeline it steers.
