@@ -229,7 +229,7 @@ class TestMint:
         h = handlers[report[0]["tag"]]
         assert h["handler_body"][0] == "contract"
         assert h["provenance"]["family"] == "contract"
-        assert h["provenance"]["grammar"] == "handler-grammar-v1"
+        assert h["provenance"]["grammar"] == "handler-grammar-v2"
         assert h["provenance"]["max_err"] < 1e-12
 
     def test_masked_contract_mints(self):
@@ -383,6 +383,89 @@ class TestMint:
             -1,
             True,
         )
+
+    def test_postnorm_eval_body(self):
+        """The wrapped normalization: ``x - log(sum(exp x))``."""
+        env = _env({"X": (4, 5)})
+        body = (
+            "postnorm",
+            "sub",
+            "X",
+            "log",
+            "sum",
+            ("exp", "X"),
+            -1,
+            True,
+        )
+        out = hs.eval_body(body, env, BINDINGS)
+        e = torch.exp(env["X"])
+        torch.testing.assert_close(
+            out, env["X"] - torch.log(e.sum(dim=-1, keepdim=True))
+        )
+        # and it is log_softmax, to fp64
+        torch.testing.assert_close(
+            out,
+            torch.nn.functional.log_softmax(env["X"], dim=-1),
+            rtol=1e-12,
+            atol=1e-12,
+        )
+
+    def test_postnorm_mints_log_softmax(self):
+        """The grammar-gap residue closed: ``log·sum·exp`` mints.
+
+        ``log_softmax``'s ``x - log(sum(exp x))`` needed the
+        *reduction result* wrapped in a unary — the bare ``norm``
+        template cannot spell it (``grammar-gaps.md`` residue).  The
+        ``postnorm`` seed family mints it.
+        """
+        spec = (
+            "sub",
+            "X",
+            (
+                "log",
+                ("sum", ("exp", "X"), {"dim": -1, "keepdim": True}),
+            ),
+        )
+        handlers, report = hs.mint_handlers(
+            [spec], domain=[{"X": (4, 5)}]
+        )
+        assert report[0]["verdict"] == "minted"
+        assert report[0]["family"] == "postnorm"
+        h = handlers[report[0]["tag"]]
+        assert h["handler_body"] == (
+            "postnorm",
+            "sub",
+            "X",
+            "log",
+            "sum",
+            ("exp", "X"),
+            -1,
+            True,
+        )
+
+    def test_postnorm_gated_off_non_normalization_specs(self):
+        """postnorm shares norm's shape gate — no seeds on a reduce
+        spec (top op ``sum`` is not a normalization outer op)."""
+        spec = ("sum", "X", {"dim": -1})
+        bodies = hs.propose_bodies(spec)
+        assert not any(b[0] == "postnorm" for b in bodies)
+
+    def test_postnorm_seed_record_roundtrips(self):
+        """A minted postnorm body survives the record round-trip."""
+        spec = (
+            "sub",
+            "X",
+            (
+                "log",
+                ("sum", ("exp", "X"), {"dim": -1, "keepdim": True}),
+            ),
+        )
+        handlers, report = hs.mint_handlers(
+            [spec], domain=[{"X": (4, 5)}]
+        )
+        rec = hs.handler_record(report[0]["tag"], handlers[report[0]["tag"]])
+        rebuilt = hs.handler_from_record(rec)
+        assert rebuilt["handler_body"] == handlers[report[0]["tag"]]["handler_body"]
 
     def test_refusal_outside_grammar(self):
         """A meta-less non-elementwise spec proposes nothing.

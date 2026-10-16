@@ -55,6 +55,13 @@ SPECS: dict[str, object] = {
         ("exp", "X"),
         ("sum", ("exp", "X"), {"dim": -1}),
     ),
+    # the corpus residue (grammar-gaps.md): a normalization whose
+    # reduction *result* is wrapped in a unary — ``log . sum . exp``
+    "log-softmax": (
+        "sub",
+        "X",
+        ("log", ("sum", ("exp", "X"), {"dim": -1, "keepdim": True})),
+    ),
     "selective-init-clamped": (
         "mul",
         _CP,

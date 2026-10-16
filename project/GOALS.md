@@ -188,3 +188,15 @@ op-set one is now **closed**:
   (b) the full-fold expr needs enumeration depth ≥4 over the 7-attr
   bank (streamed sweep is budget-bound); (c) content gaps — no law LHS
   names `batch_norm`, and `batch_norm` is absent from `_OP_FLOPS`.
+
+### Handler grammar — `postnorm` (grammar-gaps residue, closed)
+
+The `norm` template covered only a *bare* reduction operand; the
+corpus's `log_softmax` (2 sites, `sub(X, log(sum(exp X)))`) needs the
+reduction result wrapped in a unary.  `handler_synth` gains the
+seed-only `postnorm` family (`op(lhs, post(red(rhs)))`,
+`POST_UNARY = ("log",)`, grammar version → `handler-grammar-v2`) —
+the log-softmax spec mints + verifies fp64, and agrees with
+`F.log_softmax` to 1e-12.  Retro: `retros/handler-grammar-postnorm.md`.
+The stabilized-scan residue stays open (non-affine two-state
+recurrence — a semantics extension, not vocabulary).

@@ -53,6 +53,13 @@ THE GRAMMAR (descriptors are plain data — tuples, strings, numbers):
   denominator must keep the reduced axis to broadcast back against
   the operand, so the spec's own ``keepdim`` is the only sound
   value.
+* ``("postnorm", op, lhs, post, red_op, rhs, axis, keepdim)`` — the
+  wrapped normalization: *post* (a :data:`POST_UNARY` unary) applied
+  to the reduction *result* before the outer op —
+  ``op(lhs, post(red_op(rhs, axis, keepdim)))``.  ``log_softmax`` is
+  ``("postnorm", "sub", "X", "log", "sum", ("exp","X"), -1, True)`` —
+  the ``x - log(sum(exp x))`` spelling the bare ``norm`` template
+  cannot reach (``log·sum·exp`` is not ``sum·log·exp``).
 
 A fold side or carry may be a *constant*: the a-side ``1.0`` (the
 multiplicative identity) and the b-side ``0.0`` (the additive
@@ -91,6 +98,7 @@ __all__ = [
     "FOLD_AXES",
     "FOLD_CARRIES",
     "NORM_OPS",
+    "POST_UNARY",
     "REDUCE_AXES",
     "REDUCE_OPS",
     "VerifyResult",
@@ -173,6 +181,14 @@ REDUCE_AXES: tuple[int, ...] = (-1, -2)
 #: the ``reduce`` family (reduction of the whole spec) cannot spell.
 NORM_OPS: tuple[str, ...] = ("div", "sub")
 
+#: Post-reduction unary wraps a ``postnorm`` body may apply — measured
+#: from the corpus residue (``grammar-gaps.md``): ``log_softmax`` is
+#: ``x - log(sum(exp x))``, a normalization whose *reduction result*
+#: is wrapped in a unary, which the bare-reduction ``norm`` template
+#: cannot spell.  Only ``log`` is measured; other wraps are a grammar
+#: extension, not a candidate.
+POST_UNARY: tuple[str, ...] = ("log",)
+
 #: The template families, in proposal order.
 _FAMILIES: tuple[str, ...] = (
     "ew",
@@ -182,6 +198,7 @@ _FAMILIES: tuple[str, ...] = (
     "fold_zip",
     "reduce",
     "norm",
+    "postnorm",
 )
 
 #: fp64 verification gate — a handler reproduces its pre-mint term
@@ -196,7 +213,7 @@ _BUDGET = 2048
 
 #: Grammar version stamped into provenance — a minted record names
 #: the vocabulary it was verified under.
-_GRAMMAR_VERSION = "handler-grammar-v1"
+_GRAMMAR_VERSION = "handler-grammar-v2"
 
 
 # ---------------------------------------------------------------------------
@@ -246,6 +263,18 @@ def eval_body(body: Any, env: dict, bindings: dict) -> Any:
                 _eval_spec(rhs, env, bindings),
                 dim=axis,
                 keepdim=keepdim,
+            ),
+        )
+    if kind == "postnorm":
+        _, op, lhs, post, red_op, rhs, axis, keepdim = body
+        return bindings[op](
+            _eval_spec(lhs, env, bindings),
+            bindings[post](
+                bindings[red_op](
+                    _eval_spec(rhs, env, bindings),
+                    dim=axis,
+                    keepdim=keepdim,
+                )
             ),
         )
     raise ValueError(f"unknown handler-body tag: {kind!r}")
@@ -985,6 +1014,47 @@ def _canonical_norm_seeds(
     return out
 
 
+def _canonical_postnorm_seeds(
+    metas: list, consts: tuple, axes: tuple, keepdim: bool
+) -> list:
+    """Propose the canonical wrapped-normalization bodies.
+
+    ``op(meta, post(red_op(ew, axis, keepdim)))`` — the lhs stays a
+    *bare meta* (the value being centered/scaled) while the reduced
+    operand carries the shallow elementwise vocabulary; the measured
+    need is ``sub(X, log(sum(exp X)))`` — ``log_softmax``, the corpus
+    residue (``grammar-gaps.md``).  Seed-only on purpose: the
+    refusal measured one canonical shape, so the family exists as a
+    seed, not a full column walk — a non-canonical postnorm body is
+    a declared grammar gap, not hidden search.
+    """
+    req = frozenset(metas)
+    atoms = tuple(sorted(req)) + consts
+    ews: list = []
+    for n in range(min(1, _MAX_EW_OPS) + 1):
+        ews.extend(_ew_exprs(req, atoms, n))
+    out = []
+    for op in NORM_OPS:
+        for post in POST_UNARY:
+            for red_op in REDUCE_OPS:
+                for axis in axes:
+                    for lhs in metas:
+                        for ew in ews:
+                            out.append(
+                                (
+                                    "postnorm",
+                                    op,
+                                    lhs,
+                                    post,
+                                    red_op,
+                                    ew,
+                                    axis,
+                                    keepdim,
+                                )
+                            )
+    return out
+
+
 def _admitted_families(n: int) -> set:
     """Return the families whose meta gate admits an *n*-meta spec.
 
@@ -996,7 +1066,7 @@ def _admitted_families(n: int) -> set:
     even non-state count; the ``reduce``/``norm`` families any
     non-empty meta set.
     """
-    out = {"reduce", "norm"} if n else set()
+    out = {"reduce", "norm", "postnorm"} if n else set()
     if n >= 2:
         out.add("contract")
     if n >= 3:
@@ -1045,6 +1115,9 @@ def _family_gens(
         gens.append(_reduce_bodies(metas, consts, axes))
     if "norm" in adm:
         gens.append(_norm_bodies(metas, consts, axes, keepdim))
+    # ``postnorm`` has no full-walk generator — the family exists as
+    # the canonical seed (``_canonical_postnorm_seeds``), a deliberate
+    # bound: one measured need, not a widened space.
     return gens
 
 
@@ -1074,15 +1147,20 @@ def propose_bodies(
     # (top op in NORM_OPS): its candidates on any other spec are dead
     # — a non-``keepdim`` reduction of a scan operand cannot broadcast
     # back (measured: 141 of a scan spec's first 600 candidates
-    # raised, all norm bodies).
+    # raised, all norm bodies).  ``postnorm`` shares the gate: it is
+    # the same shape with a wrapped reduction result.
     if _top_op(spec) not in NORM_OPS:
-        fams = tuple(f for f in fams if f != "norm")
+        fams = tuple(f for f in fams if f not in ("norm", "postnorm"))
     if "ew" in fams and elementwise_spec(spec):
         yield ("ew", spec)
     if "fold_emit" in fams and metas:
         yield from _canonical_emit_seeds(metas)
     if "norm" in fams and metas:
         yield from _canonical_norm_seeds(metas, consts, axes, keepdim)
+    if "postnorm" in fams and metas:
+        yield from _canonical_postnorm_seeds(
+            metas, consts, axes, keepdim
+        )
     gens = _family_gens(fams, metas, consts, max_ops, axes, keepdim)
     yield from _round_robin(gens)
 
