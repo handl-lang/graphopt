@@ -25,6 +25,13 @@
 #     gate:   this script (everything, once, under coverage)
 #
 # Env knobs:
+#     CATOPT_GATES_LANE
+#         `dev` (default) — the day-to-day gate: static gates + the suite
+#         with `-m "not slow"` (the minutes-scale soak tests are excluded;
+#         coverage is not collected and the floors do not apply — both are
+#         full-suite properties).  `full` — everything, once, under
+#         coverage, both floors enforced.  CI/release runs should use
+#         `full`.
 #     CATOPT_GATES_NP
 #         xdist worker count for the suite stage.  Default 1 (serial) —
 #         see the measured serial-vs-parallel table in AGENTS.md.  Set to
@@ -49,6 +56,7 @@ PY=.venv/bin/python
 # arm completed, so it stays serial; opt in with CATOPT_GATES_NP=2.  See
 # AGENTS.md for the measured table and the tests that dominate the wall.
 NP="${CATOPT_GATES_NP:-1}"
+LANE="${CATOPT_GATES_LANE:-dev}"   # dev | full
 
 # Keep Inductor's kernel cache pinned into the repo cache dir so repeat
 # runs reuse compiled kernels instead of recompiling from scratch (the
@@ -88,27 +96,40 @@ stage "bandit"          -- .venv/bin/bandit -c .bandit.yaml -r packages
 stage "semgrep"         -- .venv/bin/semgrep --config .semgrep.yml packages
 stage "radon ratchet"   -- $PY scripts/radon_ratchet.py
 
-echo "== test suite (once, under coverage) =="
-rm -f .coverage .coverage.*
-suite_s=$SECONDS
-if [[ "$NP" -gt 1 ]]; then
-    # pytest-cov combines xdist workers' coverage (a bare `coverage run`
-    # does not measure the worker subprocesses).  Its own fail_under
-    # check is disabled here: it would apply the config's 100% floor to
-    # the union *including* catopt_discovery, which sits on a 99%
-    # ratchet — the two `coverage report` stages below own both floors.
-    $PY -m pytest tests/ -q -n "$NP" --cov --cov-report= --cov-fail-under=0
-else
-    .venv/bin/coverage run -m pytest tests/ -q
-fi
-printf '  [ok] %-26s %3ds\n' "suite (NP=$NP)" "$((SECONDS - suite_s))"
+if [[ "$LANE" == "full" ]]; then
+    echo "== test suite (once, under coverage) =="
+    rm -f .coverage .coverage.*
+    suite_s=$SECONDS
+    if [[ "$NP" -gt 1 ]]; then
+        # pytest-cov combines xdist workers' coverage (a bare `coverage run`
+        # does not measure the worker subprocesses).  Its own fail_under
+        # check is disabled here: it would apply the config's 100% floor to
+        # the union *including* catopt_discovery, which sits on a 99%
+        # ratchet — the two `coverage report` stages below own both floors.
+        $PY -m pytest tests/ -q -n "$NP" --cov --cov-report= --cov-fail-under=0
+    else
+        .venv/bin/coverage run -m pytest tests/ -q
+    fi
+    printf '  [ok] %-26s %3ds\n' "suite (NP=$NP)" "$((SECONDS - suite_s))"
 
-echo "== coverage floors =="
-# The six shipped packages + catopt_onnx: fail_under=100 (config).
-stage "coverage (six, =100)" -- \
-    .venv/bin/coverage report -m --omit="*/catopt_discovery/*"
-# catopt_discovery ratchet floor: --fail-under=99 (tighten, never lower).
-stage "coverage (discovery)" -- \
-    .venv/bin/coverage report -m --include="*/catopt_discovery/*" --fail-under=99
+    echo "== coverage floors =="
+    # The six shipped packages + catopt_onnx: fail_under=100 (config).
+    stage "coverage (six, =100)" -- \
+        .venv/bin/coverage report -m --omit="*/catopt_discovery/*"
+    # catopt_discovery ratchet floor: --fail-under=99 (tighten, never lower).
+    stage "coverage (discovery)" -- \
+        .venv/bin/coverage report -m --include="*/catopt_discovery/*" --fail-under=99
+else
+    # dev lane — the day-to-day gate: suite minus the minutes-scale `slow`
+    # tests, no coverage (floors are a full-suite property; see LANE doc).
+    echo "== test suite (dev lane: -m 'not slow', no coverage) =="
+    suite_s=$SECONDS
+    if [[ "$NP" -gt 1 ]]; then
+        $PY -m pytest tests/ -q -n "$NP" -m "not slow"
+    else
+        $PY -m pytest tests/ -q -m "not slow"
+    fi
+    printf '  [ok] %-26s %3ds\n' "suite dev-lane (NP=$NP)" "$((SECONDS - suite_s))"
+fi
 
 echo "== all gates green in $((SECONDS - t0))s =="
