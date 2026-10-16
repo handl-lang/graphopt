@@ -284,6 +284,7 @@ def gate2(
     propose_loop: bool = False,
     abstract_index: bool = False,
     sharing_extract: bool = False,
+    form_propose: bool = False,
 ) -> None:
     """Spell the RetNet fold as ``loop (arr step)``; verify + project."""
     import catopt_carriers  # noqa: F401 — carrier op bindings
@@ -350,6 +351,7 @@ def gate2(
             propose_loop=propose_loop,
             abstract_index=abstract_index,
             sharing_extract=sharing_extract,
+            form_propose=form_propose,
         )
 
 
@@ -360,6 +362,7 @@ def _gate2_projection(
     propose_loop: bool = False,
     abstract_index: bool = False,
     sharing_extract: bool = False,
+    form_propose: bool = False,
 ) -> None:
     """Saturate the RetNet export (staged arms) and project the winner.
 
@@ -459,6 +462,55 @@ def _gate2_projection(
         ia.abstract_index_report(
             best, control=_expanded_fold_term(t, k)
         )
+    if form_propose:
+        from lab.bridge import form_propose as fp
+
+        print(
+            "-- gate 3: form-level proposer (e-graph anti-unification) --"
+        )
+
+        def _numeric(rep):
+            return _verify_winner_terms(t, best, rep.rebuilt)
+
+        fp.form_propose_report(
+            eg,
+            best,
+            flops_cost,
+            root_eid=eg.find(root),
+            numeric=_numeric,
+        )
+
+
+def _verify_winner_terms(t: int, a: Any, b: Any) -> float:
+    """Lower two winner-shaped terms through TorchSink; return max|Δ|."""
+    import catopt_carriers  # noqa: F401
+    from catopt_core.ir import IR
+    from catopt_discovery.zoo import _ChunkedRetention
+    from catopt_torch.adapters import TorchSink
+    from catopt_torch.torch_bridge import export_to_ir
+
+    torch.manual_seed(0)
+    model = _ChunkedRetention(16).eval().double()
+    x = torch.randn(2, t, 16, dtype=torch.float64)
+    ir0, tensors = export_to_ir(model, (x,))
+    sink = TorchSink()
+    mod_a = sink.lower(
+        IR(root=a, inputs=list(ir0.inputs), params=dict(ir0.params)),
+        params=dict(tensors),
+    )
+    mod_b = sink.lower(
+        IR(root=b, inputs=list(ir0.inputs), params=dict(ir0.params)),
+        params=dict(tensors),
+    )
+    with torch.no_grad():
+        out_a = mod_a(x)
+        out_b = mod_b(x)
+    if not isinstance(out_a, tuple):
+        out_a, out_b = (out_a,), (out_b,)
+    return max(
+        float((u - v).abs().max())
+        for u, v in zip(out_a, out_b, strict=True)
+    )
 
 
 def _fold_depth(term: Any) -> int:
@@ -560,6 +612,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="take the gate-3 winner from the sharing-aware extraction",
     )
+    ap.add_argument(
+        "--form-propose",
+        action="store_true",
+        help="run the gate-3 form-level proposer (e-graph anti-unification)",
+    )
     ap.add_argument("--json", help="write machine-readable gate-1 rows")
     args = ap.parse_args(argv)
 
@@ -569,6 +626,7 @@ def main(argv: list[str] | None = None) -> int:
             propose_loop=args.propose_loop,
             abstract_index=args.abstract_index,
             sharing_extract=args.sharing_extract,
+            form_propose=args.form_propose,
         )
         return 0
     rows = gate1(args.set, args.verify)
