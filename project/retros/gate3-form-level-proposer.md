@@ -113,3 +113,53 @@ Follow-up measurement (the `compensated_loop_check` arm now in
   candidates that are all *the same value* (verified numerically,
   max|Δ| = 0 between all pairs) in unmerged e-classes — the
   reach-gap phenomenon is real, just not at the boundary.
+
+## Close — the state-reindex law family lands `Loop(step,6)`
+
+The "what would close it" bundle above is now built and measured in
+`lab/bridge/state_reindex.py` (lab law family, not in `DEFAULT`):
+
+- `matmul_contract_split(sizes)` — the bare-`matmul` contraction-axis
+  bisection as a law *parameter* (the `om_decayed_kway_blocks`
+  precedent).  On `M_4`'s singleton 3549-class the measured `(4,4,4,4)`
+  partition mints the four 4-chunk contributions — and through the
+  naturality chain the boundary's signed-offset vectors.
+- `split_mul_aligned` / `split_unsqueeze` / `decay_vec_split_*` —
+  the chain that pushes the minted splits through `mul`, `unsqueeze`
+  (with `split_transpose`, shipped) down to `decay_vec`, whose
+  block-split produces **signed** offsets:
+  `dv(g,T,-1,o)[start_i+k] = dv(g,SZ_i,-1,o-start_i)` — mints
+  `dv(t=4,-1,-8)`, `dv(t=4,-1,-12)` and `decay_vec_usq_factor` mints
+  the scalar `usq(dv(t=1,-8))` steering weight.
+- `decay_scalar_gather` (`γ^a·(γ^b·X) = γ^{a+b}·X`), `decay_scalar_id*`
+  (`γ^0·X = X`), `state_eta_slide*` (`γ^a ⊙ ((k⊙η_o)ᵀv) =
+  (k⊙η_{o+a})ᵀv`), plus `distribute_mul_add` — the slide/merge that
+  re-indexes `γ^{-8}·S_in3` into the absolute accumulation the
+  bisection spells.
+
+The driver `reindex_close` measures the boundary (the missing steering
+eta's `t=4` gives the fine width, the target's contraction gives `T=16`
+→ sizes `(4,4,4,4)`), runs one mint pass, then re-walks the compensated
+arm with a `post_add` saturation hook so the steered terms merge as
+they are minted.  On the real winner: verdicts `{1..6: True}`, the
+steered `S'_4` lands in class 3549 exactly (`add(mul(w_{-8},S_in3),
+B'_3)` ≡ `add(add(m_0,m_1),m_2)+m_3`), and the emitted **single
+`Loop(step,6)`** lowers into the winner's root e-class —
+`single_whole_equal: True` (`test_state_reindex_closes_boundary`).
+
+Two implementation lessons, both measured:
+
+- Budget accounting is in *enodes minted*, not fires, and persists
+  across `eg.run` calls — the first close silently suspended
+  `distribute_mul_add` at its 4000-enode budget before the steered
+  merges could fire.  `reindex_budgets(sizes)` now sizes the family
+  budget to cover the mint pass plus every post-add round.
+- Post-mint the read classes hold extra factored members, so
+  `seed_cands[0]` can be a same-shape/wrong-value candidate — the arm
+  now probes the seed by verifying the first covered block.
+
+`compensated_loop_check` also records `rep.single_envs` /
+`rep.single_seed` so the emitted loop's wire bundles are the
+*compensated* ones (steering `w'`/`η'` on the producing step, the
+reindexed `ξ'` on the boundary read) — the step schema itself is
+unchanged, only the per-iteration wires differ.

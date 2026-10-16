@@ -133,7 +133,13 @@ jump, not a reach gap), so no sound e-graph merge closes it; the
 single-loop-with-reindexed-wires is numerically exact but its
 boundary wires are never minted by the current bank (measured:
 `boundary-xi-nonresident:block4`, `boundary-renorm-unbound:block3->
-block4`).
+block4`).  **The residual is now CLOSED** — the state-reindex law
+family (`lab/bridge/state_reindex.py`: the bare-`matmul` contraction
+bisection, signed-offset `decay_vec` block-splitting, and the scalar
+slide/merge laws) mints the steering wires and derives the steered
+state into `M_4`'s e-class; a single `Loop(step,6)` lands in the
+winner's root class with `whole_equal: True`
+(`test_state_reindex_closes_boundary`).
 
 ### G\* — the enduring goal
 

@@ -735,6 +735,22 @@ class FormReport:
         default_factory=dict
     )  # the named boundary residual, measured (terms + e-classes +
     # the non-resident compensated wires)
+    single_envs: dict[int, dict] = field(
+        default_factory=dict
+    )  # per-iteration effective wire envs (compensated arm)
+    single_seed: Any = None  # the carried seed term (compensated arm)
+    reindex: dict = field(
+        default_factory=dict
+    )  # the state-reindex close's measurement record
+    single_prog: Any = None  # the assembled single-loop program morph
+    single_prog_stats: Any = None
+    single_loop: Any = (
+        None  # the folded Loop(step, n) the closure selects
+    )
+    single_closure: dict = field(default_factory=dict)
+    single_whole_equal: bool = (
+        False  # single-loop DAG in the root class
+    )
 
 
 def form_propose(
@@ -1046,7 +1062,11 @@ def _usq_dv(cbase: Any, **attrs: Any) -> Any:
 
 
 def compensated_loop_check(
-    eg: Any, rep: FormReport, root_term: Any, cost_fn: Any
+    eg: Any,
+    rep: FormReport,
+    root_term: Any,
+    cost_fn: Any,
+    post_add: Any = None,
 ) -> dict[int, bool]:
     """Run the boundary-aware single-loop arm — the state-reindex probe.
 
@@ -1081,8 +1101,22 @@ def compensated_loop_check(
     seed_cands = factored_states(eg, eid, cost_fn)
     if not seed_cands:
         return {}
-    s_cur = eg.extract_best(seed_cands[0]["m_eid"], cost_fn)
     block_cls = [_eclass(eg, b) for b in blocks]
+    # the seed must verify the FIRST covered block: post-saturation the
+    # read class holds extra members, so the canonical order can put a
+    # same-shape/wrong-value candidate first — probe each one.
+    s_cur = None
+    for c in seed_cands:
+        cand = eg.extract_best(c["m_eid"], cost_fn)
+        env_t = dict(rep.bindings.get(first, {}))
+        env_t[S] = cand
+        o_t = _subst(rep.step, env_t).args[1]
+        if eg.find(eg.add_term(o_t)) == eg.find(block_cls[first]):
+            s_cur = cand
+            break
+    if s_cur is None:
+        s_cur = eg.extract_best(seed_cands[0]["m_eid"], cost_fn)
+    rep.single_seed = s_cur
     out: dict[int, bool] = {}
     missing = rep.boundary.setdefault("missing_wires", {})
 
@@ -1125,7 +1159,10 @@ def compensated_loop_check(
         env[S] = s_cur
         inst = _subst(rep.step, env)
         s_default, o_i = inst.args[0], inst.args[1]
-        hit = _eclass(eg, o_i) == block_cls[i]
+        oid = eg.add_term(o_i)
+        if post_add is not None:
+            post_add()
+        hit = eg.find(oid) == eg.find(block_cls[i])
         out[i] = ok and hit
         if not out[i] and "carried_eid" not in rep.boundary:
             # the named residual, as data: the wire value the loop
@@ -1153,8 +1190,14 @@ def compensated_loop_check(
                 }
             )
 
+        rep.single_envs[i] = {
+            v: t for v, t in env.items() if v is not S
+        }
         # --- the update wire, steered into the next family's norm ----
         if pos + 1 >= len(covered):
+            eg.add_term(s_cur)
+            if post_add is not None:
+                post_add()
             break
         j = covered[pos + 1]
         env_j = rep.bindings.get(j, {})
@@ -1189,6 +1232,7 @@ def compensated_loop_check(
                     s_cur = _subst(rep.step, env2).args[0]
                     off = phi_j
                     steered = True
+                    env[CW], env[CE] = cw, ce
                 else:
                     rep.obstructions.append(
                         f"boundary-renorm-unbound:block{i}->block{j} "
@@ -1207,6 +1251,13 @@ def compensated_loop_check(
                 if off is not None
                 else None
             )
+        # re-record now that any steering overrides have landed in env
+        rep.single_envs[i] = {
+            v: t for v, t in env.items() if v is not S
+        }
+        eg.add_term(s_cur)
+        if post_add is not None:
+            post_add()
     return out
 
 

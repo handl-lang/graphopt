@@ -302,3 +302,58 @@ def test_boundary_residual_is_a_value_mismatch():
     m5 = eg.extract_best(m5_cls, flops_cost)
     assert (ev(s5) - ev(m5)).abs().max().item() < 1e-9
     assert eg.find(eg.add_term(s5)) != m5_cls
+
+
+@pytest.mark.slow
+def test_state_reindex_closes_boundary():
+    """The named close: ONE Loop(step,6) in the winner's e-class.
+
+    The state-reindex law family (``lab/bridge/state_reindex.py``)
+    supplies the three missing pieces the residual named: the bare
+    ``matmul`` contraction bisection ``(4,4,4,4)``, signed-offset
+    ``decay_vec`` block-splitting (mints ``dv(t=4,-1,-4i)`` and the
+    scalar steering weights), and the scalar slide/merge laws
+    (``gamma^a·(gamma^b·X) = gamma^{a+b}·X``, ``gamma^0·X = X``,
+    ``gamma^a ⊙ ((k⊙eta_o)ᵀv) = (k⊙eta_{o+a})ᵀv``).  After the mint
+    pass the compensated arm's steered state lands in M_4's e-class,
+    all six covered blocks verify, and the emitted single-loop program
+    lowers into the winner's root class.
+    """
+    import catopt_carriers  # noqa: F401
+    from catopt_carriers.om import (
+        om_shared_state_budgets,
+        om_shared_state_stages,
+    )
+    from catopt_core.cost import flops_cost
+
+    from lab.bridge import state_reindex as sr
+    from lab.bridge.combinator import Loop
+    from lab.probes import om_shared_state_probe as osp
+
+    t, k = 64, 4
+    reach, reassoc = om_shared_state_stages(k)
+    budgets = om_shared_state_budgets(k)
+    eg = EGraph()
+    root = eg.add_term(osp._export(t))
+    osp._saturate(eg, root, reach, 10, budgets)
+    osp._saturate(eg, root, reassoc, 10, budgets)
+    root_eid = eg.find(root)
+    best = eg.extract_best(root_eid, flops_cost)
+    rep = fp.form_propose(eg, best, flops_cost, root_eid=root_eid)
+
+    sr.reindex_close(eg, rep, best, flops_cost, root_eid=root_eid)
+
+    assert rep.reindex["closed"] is True
+    assert rep.reindex["sizes"] == (4, 4, 4, 4)
+    assert rep.single_loop_compensated == {i: True for i in range(1, 7)}
+    assert isinstance(rep.single_loop, Loop)
+    assert rep.single_loop.n == 6
+    assert rep.single_whole_equal
+    # the e-class certificate: the single-loop program's DAG is the
+    # winner's own class member.
+    assert eg.find(
+        eg.add_term(comb_to_dag(rep.single_prog))
+    ) == eg.find(root_eid)
+    # Torch-free spot check is not needed here — the e-class equality
+    # is the certificate — but the program must still eval-lower:
+    assert isinstance(rep.single_prog_stats.nodes, int)
