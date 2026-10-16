@@ -194,7 +194,7 @@ One layer sits *beneath* the syntax: the presentation the discovery machinery
 could enumerate over.  Whether that presentation is a *search space* or only a
 way to *say* things is §2.2.
 
-### 2.2 The substrate beneath the syntax — a presentation, not a search space (ADR 0008)
+### 2.2 The substrate beneath the syntax — a presentation, and a bounded search space (ADR 0008)
 
 A prototype combinator presentation (`lab/bridge/combinator.py`) re-expresses
 the IR as morphisms of a monoidal category with explicit `dup` (Δ, sharing as a
@@ -213,7 +213,7 @@ spelled/unrolled form again.  ADR 0009's stage 4 (promote the calculus to a
 package) is gated on it, so a negative is as much a result as a positive would
 have been.
 
-**Three attempts, three negatives.**  Each built the move the previous
+**Four moves, four negatives.**  Each built the move the previous
 negative named, and each move **worked** — on a control.  The search never had
 the subterm to bind.
 
@@ -222,8 +222,9 @@ the subterm to bind.
 | 1 — proposing rule (`loop_propose.py`, `b7ba9ff`) | `unroll(step, n) → Loop(step, n)`, n≥2 | authored `unroll(step,4)`: fires 1×, cheapest reachable term `Loop`-headed (**69** vs spelled 285) | **0** `unroll(step, n≥2)` subterms → fires **0×**; spelled scan in a *different* e-class |
 | 2 — parametric abstraction (`index_abstract.py`, `e4a193a`) | bind the block index and the recurrence state as parameters (a parameter is a wire) | presentation's spelled fold, expanded: collapses, round-trips, reaches a `Loop` (**109**) at K=2/4/8 | **7 blocks, 2 `split` families**, `IRREGULAR`: `block1/block2/add[1]/mul[1]: op om_decayed vs add` |
 | 3 — the state spelling (`sharing_extract.py`, `aa56e55`) | sharing-aware coordinated extraction | — (a measurement) | the mix is a cost *tie*; the fix recovers **1.01 %** (~~5.06 %~~ — see the correction in §2.2) and the winner still does not collapse |
+| 4 — the width abstraction (`index_abstract.py` `PARAM_ATTRS`, `514888c`) | `sizes` + `index`/`t`/`offset`/`sign` as step *parameters* (`agree_mod` — recognition only, never a verdict) | surviving-width fold recognised `agree_mod=True`; a structural fold `False` | **7 distinct templates even modulo width + index** — the difference is structural (the unfolded cross sum's *arity*), not a parameter |
 
-The reason is one sentence, measured three ways: **the presentation's whole
+The reason is one sentence, measured four ways: **the presentation's whole
 advantage — a single shared `step` — is exactly what the flat DAG erased**,
 and the erasure is not one thing but three.  The recurrence is *parametrically*
 regular (each block's step differs by `split(…, index=i)`) but not
@@ -232,13 +233,42 @@ chunking is not uniform (7 blocks: four of size 4 and three of size 16, from
 two `split` families).  And extraction mixed the state spelling — three ways,
 `reexp | reexp | fold | fold | reexp | shared | shared`.
 
-**The substrate conclusion.**  The bridge is a *presentation*, not a *search
-space*.  That is a statement about *finding*, not about *expressing*: gates
-1–2 stand, and the search's winner still *projects* through the presentation
-EQUAL (`morph=1590`, 92 explicit Δ sites).  The calculus expresses and verifies
-recurrences; it is not where they will be *found*.  On this evidence ADR 0009
-stage 4 is not justified by the presentation's discovery value (ADR 0009's own
-falsification clause); it must rest on something else or on nothing.
+**The fifth move reached the gate — with one named residual**
+(`form_propose.py`, `9ad7c3f`).  Every earlier move looked for the shared step
+in the *syntax* (it is not there) or in *parameters* (no parameter absorbs an
+arity).  The move that worked asked the **saturated e-graph** instead: each
+block's state-read e-class already contains a factored `matmul(q̃, M)` member —
+the q-free accumulated state extraction declined to choose — and those state
+classes are already linked by `add(mul(w,·), B)` update members.  The
+recurrence was in the graph; only the pick was missing.  The proposer
+anti-unifies the block family through those derived members into **one step
+schema** `pack(S′, o)` — `S′ = w·S + (k ⊙ η)ᵀ v`,
+`o = om_decayed(qkᵀ/c, D, v) + ξ ⊙ ((q/c) @ S)` — over **9 wires** (the
+state, the block's own q/k/v splits, and five decay/scale constants), so
+everything family-varying — index, chunk width, constants — is a wire and one
+schema serves both chunk widths.  It emits `unroll(step, 3)` per state chain —
+blocks 1–3 (the 4-wide family) and blocks 4–6 (the 16-wide family); block 0
+is peeled — and `PROPOSE_LOOP` folds each to `Loop(step, 3)` (`loop_propose`
+fired 2×; closure cost 91 each).  The assembled
+`seq(pre, par(unroll, unroll, id), post)` is **e-graph certified**: every
+expanded block lands in its own block e-class and `comb_to_dag(prog)` lands in
+the winner's own root e-class (class 25).  The residual: the single-loop arm
+carries one state across the family boundary and its per-block e-class checks
+fail at 4, 5, 6 — `state-chain-broken:block3→block4` — so the certified
+program holds **two loops under one step schema, not one**.
+
+**The substrate conclusion — amended by the fifth move.**  The bridge *can*
+function as a search substrate — through the e-graph, not through the syntax.
+That is still a statement about *finding* versus *expressing*: gates 1–2
+stand, the search's winner still *projects* through the presentation EQUAL
+(`morph=1590`, 92 explicit Δ sites), and extraction still never *selects* a
+`loop` member — the fold is **proposed** by anti-unification over the
+saturated e-graph and **certified** by class-landing, not chosen on cost.
+But the recurrences are now *found*: the step was synthesised from derived
+members the saturation itself had produced and the extraction had not picked.
+ADR 0009's stage-4 blocker — its own falsification clause — therefore no
+longer fires; whether the promotion is now justified is a decision this
+measurement re-opens rather than takes.
 
 **The positive finding: an extraction defect — a real but *small* one.**  The
 gate work forced the winner's spelling to be inspected, and the inspection
@@ -284,25 +314,20 @@ for every caller, a change the full suite must land.
 > single workload the promotion is a **judgement call**, not the obvious win
 > the 5 % figure implied.  It is not a paper claim.
 
-**What would change the conclusion.**  Two causes remain, and neither is a
-small tweak.
+**What remains.**  One obstruction, named by the graph itself:
+`state-chain-broken:block3→block4`.  The two families' boundary state — the
+small family's terminal state and the large family's initial one — is the
+same *value* (the single-loop arm carries it across the boundary and the
+numeric check passes; the per-block *e-class* checks fail at 4, 5, 6) but the
+staged saturation never merged the two spellings into one *class*.  Closing
+it is a reach problem, not a step-schema problem — the schema already serves
+both families because everything family-varying rides on wires; one
+cross-family state-reindex rewrite would let a single `Loop` cover all six
+read-bearing blocks.
 
-1. **`sizes` is not abstracted.**  The abstraction abstracts
-   `index`/`t`/`offset`/`sign` but not `sizes`, so the two families
-   (`sizes=(16,16,16,16)` and `(4,4,4,4,16,16,16)`) can never be one step.
-   The small-chunk family's *unfactored* spelling is a genuine cost optimum
-   (`C²d < Cd²` at `C=4 < d=16`), so a cost-minimising extraction cannot be
-   made to spell it uniformly for free; forcing it would manufacture a result.
-2. **The abstraction's structural state identification is not stable.**  Per
-   family it binds `None|unsqueeze|unsqueeze|unsqueeze` for the small family
-   and `None|matmul|mul` for the large one, because its "outermost
-   own-split-free subterm" rule is a heuristic.  A complete move would need the
-   step's *arity* — which inputs are state — which the flat export does not
-   carry.
-
-A move that does both would re-open the gate; a smaller one will not.  The
-retros are `project/retros/gate3-loop-proposing-rule.md`,
-`gate3-parametric-abstraction.md` and `gate3-extraction-state-spelling.md`;
+The retros are `project/retros/gate3-loop-proposing-rule.md`,
+`gate3-parametric-abstraction.md`, `gate3-extraction-state-spelling.md`,
+`gate3-sizes-abstraction.md` and `gate3-form-level-proposer.md`;
 the caveat they carried — that the staged saturation was not reproducible
 across processes (`PYTHONHASHSEED` changed the e-graph, 9,733/9,752/9,756
 enodes, and the sharing-aware local optimum) — is now **resolved**.  catopt
@@ -596,13 +621,17 @@ saturation is not idiosyncratic.
 * **The value story is narrow.**  Wins where work is asymptotically reduced
   or where Inductor cannot codegen; losses wherever Inductor's fused kernels
   apply.
-* **The substrate is a presentation, not a search space.**  ADR 0008 gate 3
-  measured negative three times (§2.2): the combinator presentation expresses
-  and verifies recurrences, but search never reaches a `loop`-headed form from
-  a corpus graph.  The gate work did expose an extraction defect — greedy
-  per-class extraction is **1.01 %** off its own cost model on that workload
-  (~~5.06 %~~; corrected by the determinism fix, `abf6114`; fix in `lab/`,
-  pending the full suite — at ~1 % the promotion is a judgement call).
+* **The substrate is a bounded search space at best.**  ADR 0008 gate 3
+  measured negative four times (§2.2) before the form-level proposer reached
+  it: `loop`-headed programs equal to the winner are now reachable — but only
+  through anti-unification over the saturated e-graph (extraction itself still
+  never picks a `loop` member), and the certified program holds two loops
+  under one schema, not one, because the family-boundary state is never merged
+  (a reach gap, `state-chain-broken:block3→block4`).  The gate work also
+  exposed an extraction defect — greedy per-class extraction is **1.01 %** off
+  its own cost model on that workload (~~5.06 %~~; corrected by the
+  determinism fix, `abf6114`; fix in `lab/`, pending the full suite — at ~1 %
+  the promotion is a judgement call).
 
 ## 7. What would falsify each pillar
 
@@ -672,7 +701,7 @@ venue paper needs the scale validation and the executor work named in §6.
 | Shipped laws were unsound off-corpus and fixed | matmul false region (max diff 12.83); `select_mul` broadcast | `matmul-unsound-fix.md`; `select-mul-broadcast.md` |
 | The loop caught a real lowering bug by refusing | `decay_vec` `sign=0` coercion | `layer3-loop.md` |
 | The typed-pay gate suppressed inflated "pays" | 19/33 mint ill-typed; 11 pays + 12 drops suppressed | `typed-pay-gate.md` |
-| **Substrate.** The combinator presentation is a presentation, not a search space | gate 3 FAIL ×3: proposing rule fires 0×; 7 blocks / 2 families `IRREGULAR`; winner un-collapsed | `project/retros/gate3-loop-proposing-rule.md`; `gate3-parametric-abstraction.md`; ADR 0008 |
+| **Substrate.** The combinator presentation is a bounded search space — `loop` is reached through the e-graph oracle, not by extraction | gate 3 FAIL ×4 (proposing rule fires 0×; 7 blocks / 2 families `IRREGULAR`; still 7 templates modulo width+index), then **reached**: two `Loop(step,3)` under one `pack(S′,o)` schema over 9 wires, `comb_to_dag` lands in the winner's root e-class; residual `state-chain-broken:block3→block4` | `project/retros/gate3-loop-proposing-rule.md`; `gate3-parametric-abstraction.md`; `gate3-extraction-state-spelling.md`; `gate3-sizes-abstraction.md`; `gate3-form-level-proposer.md`; ADR 0008 |
 | Greedy per-class extraction is suboptimal on the gate-3 workload | 455,752 → 451,128 FLOPs (−1.01 %; ~~432,696 / −5.06 %~~ was a hash-order artifact, `abf6114`); max\|Δ\| 2.2e-16 | `project/retros/gate3-extraction-state-spelling.md` |
 | **Value (wins).** Weight-chain fold | 14.92× vs Inductor (17.40× vs eager) | `bench/baselines/reassoc_scale.json` |
 | Asymptotic reassoc | 8.0× at T=2048 (retired source — unsourced) | `docs/results_curated.md` §8 |
