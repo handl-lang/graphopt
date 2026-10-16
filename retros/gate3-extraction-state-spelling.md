@@ -8,6 +8,13 @@ extraction defect, and is **not sufficient** — fixing it recovers
 **1.01 %** FLOPs (~~5.06 %~~ — see the correction note) and leaves the
 gate negative.  ADR 0009 stage 4 stays unjustified.
 
+> **Superseded 2026-10-16** (`project/retros/gate3-form-level-proposer.md`,
+> catopt `9ad7c3f`): the *fifth* move (form-level proposer over the
+> saturated e-graph) reached `loop` on the real winner — gate 3 passes
+> with the `state-chain-broken:block3→block4` residual (two `Loop`s, not
+> one).  This retro's negative stands as the fourth move's measurement,
+> not the gate's final verdict.
+
 > **Correction 2026-10-15** (`project/retros/saturation-determinism.md`,
 > catopt `abf6114`).  The sharing-aware recovery this retro reports
 > (**455,752 → 432,696, −5.06 %, 5 overrides**) is **superseded**.  The

@@ -282,6 +282,23 @@ that create their consumers**, not added up front:
    parameter.  Stage 4 is still not justified, and the remaining piece is
    the state spelling alone.  See
    `project/retros/gate3-sizes-abstraction.md`.
+   **Re-measured 2026-10-16 (fifth move, `9ad7c3f`): the gate
+   PASSES, with one named residual.**  The form-level proposer
+   (`lab/bridge/form_propose.py`) uses the saturated e-graph as the
+   anti-unification oracle — the factored state spellings extraction
+   never picked were already derived members.  It anti-unifies the
+   7-block family into one step schema (`pack(S′, o)`, 9 wires),
+   emits `unroll(step, 3)` per chain, and `comb_to_dag(prog)` lands
+   in the winner's own e-class 25 (`whole_equal: True`).  Residual:
+   `state-chain-broken:block3→block4` — the small-family terminal
+   state and the large-family initial state are the same value but
+   saturation never merged them (a reach gap, not a fold defect), so
+   the result is **two `Loop(step, 3)` under one schema, not one
+   `Loop(step, 6)`**.  Stage 4's falsification blocker no longer
+   fires outright — the calculus *is* a reachable search space, with
+   the honest bound that extraction still never *selects* a `loop`
+   member (the fold is proposed and e-class-certified, not
+   cost-chosen).  See `project/retros/gate3-form-level-proposer.md`.
 2. **A port with no consumer is decoration.**  If `Calculus`/`Machine`/
    `Engine`/`Proposer`/`Environment` cannot name an existing consumer and
    a conformance test, they do not land.
