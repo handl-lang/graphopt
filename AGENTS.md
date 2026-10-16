@@ -72,12 +72,13 @@ caller — run the full suite (not just a slice) when touching the bank.
 Run these before finishing any change; all must pass.
 
 **One command instead of the list:** `scripts/gates.sh` runs the static
-gates cheap-first, then the suite **once** under coverage (CI always ran
-it once; this documented list used to run it twice), then both coverage
-floors — with per-stage wall times and `set -euo pipefail`.  It defaults
-to a **serial** suite (`CATOPT_GATES_NP=1`): the full-suite `-n 2` arm was
-measured (2026-10-15) and **neither arm finished inside a 30-min box**, so
-the parallel arm is not a safe default on this 11 GB host — see the
+gates cheap-first, then the suite.  It has two lanes:
+`CATOPT_GATES_LANE=dev` (default) runs `-m "not slow"` with no coverage —
+the day-to-day gate; `=full` runs **everything once under coverage** and
+enforces both floors (CI/release).  It defaults to a **serial** suite
+(`CATOPT_GATES_NP=1`): the full-suite `-n 2` arm was measured
+(2026-10-15) and **neither arm finished inside a 30-min box**, so the
+parallel arm is not a safe default on this 11 GB host — see the
 measured table below before raising it.
 
 **Iterate with `-m "not slow"`.**  The minutes-scale work is marked
