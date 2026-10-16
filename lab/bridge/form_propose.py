@@ -57,6 +57,34 @@ PROTOCOL
 The measurement lives in ``lab/bridge/combinator_probe.py``
 (``--form-propose``); the reading is in
 ``project/retros/gate3-form-level-proposer.md``.
+
+THE BOUNDARY, MEASURED
+    The named residual ``state-chain-broken:block3->block4`` is *not* a
+    reach gap, as the first reading had it: the carried terminal state
+    of the 4-wide chain is **g^12 * M_4** — a different value from the
+    16-wide family's initial state M_4, not a different spelling of it
+    (numeric: max|S_carried - g^12*M_4| <= 1.8e-15 vs max|d| = 12.4
+    unscaled).  The fold invariant is ``S_i = g^phi_i * A_i`` with
+    ``phi_i`` the start of the *previous own-partition chunk* and
+    ``A_i`` the absolute g^{-p}-weighted accumulation; across the
+    boundary ``phi`` jumps 8 -> 0, so the naive hand-off is
+    over-weighted by g^12.  No sound rewrite can merge the two
+    e-classes.
+
+    The uniform step still works *at the value level* with two
+    compensated wires: a reindexed read scale ``xi'_i = decay_vec(
+    offset = start_i - off_i, t = C_i)`` and a steering update weight
+    ``w'_i = decay_vec(t = 1, offset = phi_{i+1} - off_i)`` (with the
+    matching eta offset ``phi_{i+1} - start_i`` on the new
+    contribution).  :func:`compensated_loop_check` walks the covered
+    blocks with those wires, binding each only when it is
+    graph-resident — on the real winner the needed boundary wires
+    (``decay_vec(t=1, offset=-8)`` and ``decay_vec(t=4, sign=-1,
+    offset=-12)`` at the producing step, ``decay_vec(offset=4, t=16)``
+    at block 4's read) are *not* in the graph, and the steered
+    next-state lands in a fresh e-class (a true reach gap at block 5:
+    same value, unmerged).  That is the measured obstruction, and it is
+    what a "state-reindex" law family would have to derive.
 """
 
 from __future__ import annotations
@@ -82,6 +110,7 @@ __all__ = [
     "ChainResult",
     "FormReport",
     "block_wires",
+    "compensated_loop_check",
     "factored_states",
     "form_propose",
     "form_propose_report",
@@ -696,6 +725,16 @@ class FormReport:
     whole_equal: bool = False
     single_loop_verified: dict[int, bool] = field(default_factory=dict)
     max_abs_diff: float | None = None
+    single_loop_compensated: dict[int, bool] = field(
+        default_factory=dict
+    )
+    single_states: dict[int, Any] = field(
+        default_factory=dict
+    )  # the wire term entering each covered block (compensated arm)
+    boundary: dict = field(
+        default_factory=dict
+    )  # the named boundary residual, measured (terms + e-classes +
+    # the non-resident compensated wires)
 
 
 def form_propose(
@@ -898,6 +937,9 @@ def form_propose(
         rep.single_loop_verified = single_loop_check(
             eg, rep, root_term, cost_fn
         )
+        rep.single_loop_compensated = compensated_loop_check(
+            eg, rep, root_term, cost_fn
+        )
     return rep
 
 
@@ -938,6 +980,233 @@ def single_loop_check(
         inst = _subst(rep.step, env)
         s_cur, o_i = inst.args[0], inst.args[1]
         out[i] = _eclass(eg, o_i) == block_cls[i]
+    return out
+
+
+def _dv_attrs(t: Any) -> dict | None:
+    """Attrs of an ``unsqueeze(decay_vec(...))`` or bare ``decay_vec``."""
+    if (
+        isinstance(t, Op)
+        and t.op == "unsqueeze"
+        and t.args
+        and isinstance(t.args[0], Op)
+    ):
+        t = t.args[0]
+    if isinstance(t, Op) and t.op == "decay_vec":
+        return dict(t.attrs)
+    return None
+
+
+def _split_span(env: dict) -> tuple[int, int] | None:
+    """``(start, width)`` of the block's own chunk, from its bound q split."""
+    xq = env.get(XQ)
+    if not isinstance(xq, Op) or xq.op != "split":
+        return None
+    a = dict(xq.attrs)
+    sz, idx = a.get("sizes"), a.get("index")
+    if not (
+        isinstance(sz, (tuple, list))
+        and isinstance(idx, int)
+        and 0 <= idx < len(sz)
+    ):
+        return None
+    return int(sum(sz[:idx])), int(sz[idx])
+
+
+def _decay_base(env: dict) -> Any:
+    """Return the decay-vector base term (the lifted gamma)."""
+    for v in (CW, CE, CD, CX):
+        t = env.get(v)
+        if (
+            isinstance(t, Op)
+            and t.op == "unsqueeze"
+            and t.args
+            and isinstance(t.args[0], Op)
+            and t.args[0].op == "decay_vec"
+            and t.args[0].args
+        ):
+            return t.args[0].args[0]
+        if isinstance(t, Op) and t.op == "decay" and t.args:
+            return t.args[0]
+    return None
+
+
+def _usq_dv(cbase: Any, **attrs: Any) -> Any:
+    """``unsqueeze(decay_vec(cbase, **attrs), dim=-1)`` — a wire term.
+
+    ``offset=0`` is dropped: the bound spellings never carry the
+    default explicitly, and attr dicts compare verbatim.
+    """
+    attrs = {
+        k: v for k, v in attrs.items() if not (k == "offset" and v == 0)
+    }
+    return Op.make(
+        "unsqueeze", Op.make("decay_vec", cbase, **attrs), dim=-1
+    )
+
+
+def compensated_loop_check(
+    eg: Any, rep: FormReport, root_term: Any, cost_fn: Any
+) -> dict[int, bool]:
+    """Run the boundary-aware single-loop arm — the state-reindex probe.
+
+    The fold's carried convention is ``S_i = g^phi_i * A_i``: the
+    absolute accumulation ``A_i = sum_p g^{-p} k_p v_p`` rescaled by the
+    start of the previous own-partition chunk.  A uniform step can
+    still read block ``i`` correctly given *any* carried normalisation
+    ``off_i`` — the read scale just needs the offset that compensates
+    it: ``xi'_i = decay_vec(offset = start_i - off_i, t = C_i)``.  And
+    the update can *steer* the next state into the next family's
+    convention with ``w'_i = decay_vec(t=1, offset = phi_{i+1} -
+    off_i)`` and the matching eta offset ``phi_{i+1} - start_i`` on the
+    new contribution.
+
+    Every compensated wire is bound **only if graph-resident**
+    (``eg._locate``) — a missing wire is named in ``rep.obstructions``
+    (``boundary-xi-nonresident`` / ``boundary-renorm-unbound``), and a
+    produced-but-fresh e-class lands as the honest ``False`` verdict.
+    ``rep.boundary`` records the measured pair (carried term/class vs
+    the target's class/term) at the first broken boundary, plus the
+    non-resident wire terms, so the numeric arm can measure the value
+    gap without re-walking the chain.
+    """
+    blocks = block_outputs(root_term)
+    covered = sorted(i for r in rep.chains for i in r.blocks if r.ok)
+    if len(covered) < 2:
+        return {}
+    first = covered[0]
+    eid, _ = eg._locate(_read_of(blocks[first]))
+    if eid is None:
+        return {}
+    seed_cands = factored_states(eg, eid, cost_fn)
+    if not seed_cands:
+        return {}
+    s_cur = eg.extract_best(seed_cands[0]["m_eid"], cost_fn)
+    block_cls = [_eclass(eg, b) for b in blocks]
+    out: dict[int, bool] = {}
+    missing = rep.boundary.setdefault("missing_wires", {})
+
+    # the seed is the family's own spelling: off = phi_first, read off
+    # the bound xi (offset = start - phi).
+    span0 = _split_span(rep.bindings.get(first, {}))
+    cx0 = _dv_attrs(rep.bindings.get(first, {}).get(CX))
+    off: int | None = (
+        (span0[0] - cx0.get("offset", 0))
+        if (span0 is not None and cx0 is not None)
+        else None
+    )
+
+    for pos, i in enumerate(covered):
+        env = dict(rep.bindings[i])
+        span = _split_span(env)
+        cbase = _decay_base(env)
+        rep.single_states[i] = s_cur
+
+        # --- the read wire, compensated for the carried convention ---
+        ok = True
+        if span is not None and cbase is not None and off is not None:
+            need = span[0] - off
+            a_cx = _dv_attrs(env.get(CX)) or {}
+            if (a_cx.get("offset", 0), a_cx.get("t")) != (
+                need,
+                span[1],
+            ):
+                xi = _usq_dv(cbase, offset=need, t=span[1])
+                if eg._locate(xi)[0] is not None:
+                    env[CX] = xi
+                else:
+                    rep.obstructions.append(
+                        f"boundary-xi-nonresident:block{i} — the "
+                        f"reindexed read scale decay_vec(offset={need},"
+                        f" t={span[1]}) is not in the e-graph"
+                    )
+                    missing[i] = xi
+                    ok = False
+        env[S] = s_cur
+        inst = _subst(rep.step, env)
+        s_default, o_i = inst.args[0], inst.args[1]
+        hit = _eclass(eg, o_i) == block_cls[i]
+        out[i] = ok and hit
+        if not out[i] and "carried_eid" not in rep.boundary:
+            # the named residual, as data: the wire value the loop
+            # carried in vs the state class the block actually reads.
+            read = _read_of(blocks[i])
+            rid, _ = eg._locate(read)
+            cands_i = (
+                factored_states(eg, rid, cost_fn)
+                if rid is not None
+                else []
+            )
+            rep.boundary.update(
+                {
+                    "at": i,
+                    "carried_term": s_cur,
+                    "carried_eid": eg.find(eg.add_term(s_cur)),
+                    "target_eid": (
+                        cands_i[0]["m_eid"] if cands_i else None
+                    ),
+                    "target_term": (
+                        eg.extract_best(cands_i[0]["m_eid"], cost_fn)
+                        if cands_i
+                        else None
+                    ),
+                }
+            )
+
+        # --- the update wire, steered into the next family's norm ----
+        if pos + 1 >= len(covered):
+            break
+        j = covered[pos + 1]
+        env_j = rep.bindings.get(j, {})
+        span_j = _split_span(env_j)
+        cx_j = _dv_attrs(env_j.get(CX))
+        a_cw = _dv_attrs(env.get(CW))
+        a_ce = _dv_attrs(env.get(CE))
+        steered = False
+        if (
+            span is not None
+            and span_j is not None
+            and cbase is not None
+            and cx_j is not None
+            and off is not None
+        ):
+            phi_j = span_j[0] - cx_j.get("offset", 0)
+            need_cw = phi_j - off
+            need_ce = phi_j - span[0]
+            if (a_cw or {}).get("offset", 0) == need_cw and (
+                a_ce or {}
+            ).get("offset", 0) == need_ce:
+                s_cur = s_default  # the bound wires already steer
+                off = phi_j
+                steered = True
+            else:
+                cw = _usq_dv(cbase, t=1, offset=need_cw)
+                ce = _usq_dv(cbase, t=span[1], sign=-1, offset=need_ce)
+                r_cw, r_ce = eg._locate(cw)[0], eg._locate(ce)[0]
+                if r_cw is not None and r_ce is not None:
+                    env2 = dict(rep.bindings[i])
+                    env2[CW], env2[CE], env2[S] = cw, ce, s_cur
+                    s_cur = _subst(rep.step, env2).args[0]
+                    off = phi_j
+                    steered = True
+                else:
+                    rep.obstructions.append(
+                        f"boundary-renorm-unbound:block{i}->block{j} "
+                        f"— the steering pair decay_vec(t=1, offset="
+                        f"{need_cw}) / decay_vec(t={span[1]}, sign=-1,"
+                        f" offset={need_ce}) is not in the e-graph"
+                    )
+                    rep.boundary.setdefault("missing_steer", {})[i] = {
+                        "cw": cw,
+                        "ce": ce,
+                    }
+        if not steered:
+            s_cur = s_default
+            off = (
+                off + (a_cw or {}).get("offset", 0)
+                if off is not None
+                else None
+            )
     return out
 
 
@@ -997,6 +1266,17 @@ def form_propose_report(
             f"      single-loop arm (one state across the family "
             f"boundary): {rep.single_loop_verified}"
         )
+        if rep.single_loop_compensated:
+            print(
+                f"      compensated carry (reindexed boundary wires): "
+                f"{rep.single_loop_compensated}"
+            )
+            if rep.boundary:
+                print(
+                    f"      boundary: block {rep.boundary.get('at')} "
+                    f"carried-cls={rep.boundary.get('carried_eid')} "
+                    f"vs target-cls={rep.boundary.get('target_eid')}"
+                )
     else:
         print(
             "      NO loop proposed — the obstructions above are the "
