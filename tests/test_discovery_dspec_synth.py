@@ -17,6 +17,7 @@ from catopt_core.laws.cond import eval_derive
 from catopt_discovery.dspec_synth import (
     BINOPS,
     MIN_SAMPLES,
+    UNOPS,
     _near_misses,
     samples_by_attr,
     samples_from_hook,
@@ -308,6 +309,71 @@ class TestExtendedBank:
         )
         assert spec is not None
         assert "dim" in repr(spec["L"])
+
+
+class TestRootOps:
+    """The weight-space refusal's missing ops, landed: ``sqrt`` /
+    ``rsqrt`` in ``UNOPS`` and ``fdiv`` in ``BINOPS`` — the bank the
+    conv+BN fold's ``scale = gamma / sqrt(var + eps)`` derivation needs
+    (``project/retros/weightspace-fold.md`` gate 2/3)."""
+
+    def test_root_ops_are_in_the_bank(self):
+        assert "sqrt" in UNOPS
+        assert "rsqrt" in UNOPS
+        assert "fdiv" in BINOPS
+
+    def test_finds_rsqrt_of_sum(self):
+        # ``scale = 1/√(var + eps)`` — the normalisation statistic the
+        # fold's derive needs; minted as ``rsqrt(add(var, eps))``.
+        import math
+
+        def hook(bound):
+            return {
+                "$attr:S": 1.0
+                / math.sqrt(bound["$attr:var"] + bound["$attr:eps"])
+            }
+
+        bounds = [
+            {"$attr:var": v, "$attr:eps": 1e-5}
+            for v in (0.25, 0.5, 1.0, 2.0, 3.5, 5.0)
+        ]
+        spec = synth_dspec(samples_from_hook(hook, bounds), name="S")
+        assert spec is not None
+        assert "rsqrt" in repr(spec["S"])
+        for b in bounds:
+            assert eval_derive(spec, b) == hook(b)
+
+    def test_finds_fdiv_over_sqrt(self):
+        # ``gamma / sqrt(var)`` — the division spelling the refusal
+        # literally wrote (the ``fdiv`` binop over a ``sqrt`` unary).
+        import math
+
+        def hook(bound):
+            return {
+                "$attr:S": bound["$attr:g"]
+                / math.sqrt(bound["$attr:v"])
+            }
+
+        bounds = [
+            {"$attr:g": g, "$attr:v": v}
+            for g, v in (
+                (0.5, 0.25),
+                (1.5, 0.5),
+                (0.75, 1.0),
+                (2.5, 2.0),
+                (1.25, 3.5),
+                (3.0, 5.0),
+            )
+        ]
+        spec = synth_dspec(
+            samples_from_hook(hook, bounds), name="S", max_depth=2
+        )
+        assert spec is not None
+        # whatever the mint, it must reproduce the hook exactly —
+        # through eval_derive, on every bound
+        for b in bounds:
+            assert eval_derive(spec, b) == hook(b)
+        assert "sqrt" in repr(spec["S"]) or "rsqrt" in repr(spec["S"])
 
 
 class TestMultiOutput:

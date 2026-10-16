@@ -366,17 +366,59 @@ def gate_prescaled_fit(r: dict[str, Any]) -> dict[str, Any]:
     return {"prescaled_w_fit": w_fit, "prescaled_b_fit_by_depth": b_fit}
 
 
+def gate_scale_fit(r: dict[str, Any]) -> dict[str, Any]:
+    """Gate 2c — fit the *scale* subexpression ``gamma / sqrt(var+eps)``.
+
+    The fold decomposes as ``W' = W*scale`` / ``b' = (b-mu)*scale +
+    beta`` (gate 2b measured both fit given a ``scale`` leaf) plus the
+    one
+    derivation the bank could not spell: ``scale``.  With ``sqrt`` /
+    ``rsqrt`` / ``fdiv`` in the synth bank this is the measured delta
+    of the op-set extension — a bound restricted to exactly the attrs
+    the statistic reads (``gamma``/``var``/``eps``), so the level
+    product stays small enough for the streamed sweep to terminate.
+    """
+    from catopt_discovery import dspec_synth as dsp
+
+    rows = _scalar_samples(r)
+    bounds = [
+        {
+            "$attr:gamma": s["gamma"],
+            "$attr:var": s["var"],
+            "$attr:eps": s["eps"],
+        }
+        for s in rows
+    ]
+
+    def hook_scale(bound: dict) -> dict | None:
+        return {
+            "$attr:scale": bound["$attr:gamma"]
+            / np.sqrt(bound["$attr:var"] + bound["$attr:eps"])
+        }
+
+    audit = _load_audit()
+    samples = dsp.samples_from_hook(hook_scale, bounds)
+    out: dict[str, Any] = {}
+    for d in (2, 3):
+        spec, meta = audit.bounded_synth(
+            samples, name="scale", max_depth=d, budget_s=60.0
+        )
+        out[f"scale_fit_depth{d}"] = spec
+        out[f"scale_meta_depth{d}"] = meta
+    return out
+
+
 def gate_dsl_expressibility() -> dict[str, Any]:
     """Gate 3 — spell the fold's sqrt in the cond DSL, or report the gap.
 
     The DSL is strictly richer than the synth's search bank (it carries
-    ``fdiv``/``recip``/``pow``).  ``sqrt(v) == v**0.5``; if ``pow``
-    admitted a float exponent the fold would be spellable.  Measured
-    directly through ``eval_derive``.
+    ``recip``/``pow``).  ``sqrt(v) == v**0.5``; the ``pow`` path still
+    declines (int-only exponent) but the DSL now carries ``sqrt`` /
+    ``rsqrt`` directly — measured through ``eval_derive``.
     """
     from catopt_core.laws.cond import _DOPS, eval_derive
 
-    b = {"$attr:var": 4.0, "$attr:eps": 1e-5}
+    b = {"$attr:var": 4.0, "$attr:eps": 1e-5, "$attr:gamma": 2.0}
     fold = {
         "S": (
             "fdiv",
@@ -386,6 +428,13 @@ def gate_dsl_expressibility() -> dict[str, Any]:
                 ("add", ("attr", "var"), ("attr", "eps")),
                 0.5,
             ),
+        )
+    }
+    rsqrt_scale = {
+        "S": (
+            "mul",
+            ("attr", "gamma"),
+            ("rsqrt", ("add", ("attr", "var"), ("attr", "eps"))),
         )
     }
     return {
@@ -398,6 +447,8 @@ def gate_dsl_expressibility() -> dict[str, Any]:
         is not None,
         "recip_ok": eval_derive({"S": ("recip", ("lit", 4.0))}, b)
         is not None,
+        "rsqrt_scale_ok": eval_derive(rsqrt_scale, b)
+        == {"$attr:S": 2.0 / (4.0 + 1e-5) ** 0.5},
     }
 
 
@@ -440,11 +491,15 @@ def gate_value_domain() -> dict[str, Any]:
 
 
 def _load_audit() -> Any:
-    """Load ``lab/audit/dspec_audit.py`` by path (``tools/`` is not a pkg)."""
+    """Load ``lab/audit/dspec_audit.py`` by path (``lab/`` is not a pkg)."""
     import importlib.util
     from pathlib import Path
 
-    path = Path(__file__).resolve().parent / "dspec_audit.py"
+    path = (
+        Path(__file__).resolve().parent.parent
+        / "audit"
+        / "dspec_audit.py"
+    )
     spec = importlib.util.spec_from_file_location("_dspec_audit", path)
     mod = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
@@ -587,6 +642,11 @@ def main(argv: list[str] | None = None) -> int:
         f"  pre-scaled b' fit by depth : "
         f"{pre['prescaled_b_fit_by_depth']}"
     )
+    sc = gate_scale_fit(conv)
+    print(f"  scale fit depth 2 : {sc['scale_fit_depth2']}")
+    print(f"  scale meta depth 2: {sc['scale_meta_depth2']}")
+    print(f"  scale fit depth 3 : {sc['scale_fit_depth3']}")
+    print(f"  scale meta depth 3: {sc['scale_meta_depth3']}")
 
     print()
     print("=" * 72)

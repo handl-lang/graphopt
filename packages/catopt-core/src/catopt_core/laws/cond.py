@@ -183,6 +183,13 @@ value expressions evaluated against the same ``bound`` environment:
            | ("pow", e, e)                      # int ** int, exp >= 0
            | ("mod", e, e)                      # int % int, nonzero divisor
            | ("neg"|"recip"|"float"|"int", e)
+           | ("sqrt"|"rsqrt", e)               # real square root and
+                                               #   reciprocal root —
+                                               #   float-valued;
+                                               #   sqrt declines on a
+                                               #   negative operand,
+                                               #   rsqrt on a
+                                               #   non-positive one
            | ("bcast", T, T)                   # broadcast two shapes —
                                                # concrete or veto
            | ("nth", e_seq, e_i)               # seq[i] — tuple/list
@@ -218,6 +225,7 @@ decline.
 from __future__ import annotations
 
 import functools
+import math
 from typing import Any
 
 from catopt_core.ir import Const, Op
@@ -1947,6 +1955,16 @@ _DUNOPS: dict = {
     "recip": lambda a: 1.0 / a,
     "float": lambda a: float(a),
     "int": lambda a: int(a),
+    # Real roots — the ``scale = gamma * rsqrt(var + eps)`` derivation
+    # the weight-space fold's measured refusal named
+    # (``project/retros/weightspace-fold.md`` gate 3).  ``math.sqrt``
+    # raises ``ValueError`` on a negative operand, and ``rsqrt``'s
+    # reciprocal turns a zero operand into ``ZeroDivisionError`` — both
+    # land in the ``_unop`` handler's decline set, so the strictness
+    # contract (never a fabricated value) holds without a bespoke
+    # handler.
+    "sqrt": math.sqrt,
+    "rsqrt": lambda a: 1.0 / math.sqrt(a),
 }
 
 
@@ -1965,7 +1983,7 @@ def _binop(op: str):
 
 
 def _unop(op: str):
-    """Build the ``(neg|recip|float|int)`` handler for *op*."""
+    """Build the ``(neg|recip|float|int|sqrt|rsqrt)`` handler for *op*."""
 
     def handler(args: tuple, bound: dict) -> Any:
         try:

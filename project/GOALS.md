@@ -167,3 +167,24 @@ place handl's schema demanded something catopt does not have (an order),
 and it is currently supplied as a *load-time disambiguator* that means
 nothing semantically.  Plan 0030 step 4 exists so it does not ossify
 into an implied meaning.
+
+## Session — 2026-10-17
+
+### Derive-DSL root ops (plan 0025 §D3, partial)
+
+The weight-space lane's measured refusal had two named blockers; the
+op-set one is now **closed**:
+
+- `sqrt`/`rsqrt` landed in the derive DSL
+  (`catopt_core/laws/cond.py` `_DUNOPS`, strict: negative/non-positive
+  declines) and in the synthesizer's search bank
+  (`dspec_synth` `UNOPS` += `sqrt`/`rsqrt`, `BINOPS` += `fdiv`).
+- Probe delta (`lab/probes/weightspace_fold_probe.py`, new gate 2c):
+  gate 3 flips — the DSL spells `γ·rsqrt(σ²+ε)` — and the synth now
+  **mints the scale subexpr** at depth 3 (`fdiv(γ, sqrt(add(ε,var)))`,
+  exact on all 6 measured channels).  Retro: `retros/derive-root-ops.md`.
+- **Still open (named)**: (a) the derive value domain is `int|float` —
+  gate 4 unchanged, tensor-valued derives are the real gate on conv+BN;
+  (b) the full-fold expr needs enumeration depth ≥4 over the 7-attr
+  bank (streamed sweep is budget-bound); (c) content gaps — no law LHS
+  names `batch_norm`, and `batch_norm` is absent from `_OP_FLOPS`.

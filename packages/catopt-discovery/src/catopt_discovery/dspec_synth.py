@@ -19,8 +19,11 @@ The bank the synthesizer searches is ``_DOPS``' arithmetic plus the
 (the cost-convention and carrier-aware shape sources), the
 ``("dim", S, i)`` dim readers, the ``max``/``min`` pair the residual
 survey measured as missing (the ``om``/``xcarrier`` derives are rank
-arithmetic over bound metavariables), and the ``mod`` (``%``) axis
-normalisation a carrier-aware derive spells as ``dim % rank``.
+arithmetic over bound metavariables), the ``mod`` (``%``) axis
+normalisation a carrier-aware derive spells as ``dim % rank``, and
+the real-root pair ``sqrt``/``rsqrt`` plus ``fdiv`` — the division a
+measured refusal spelled literally (``scale = gamma / sqrt(var +
+eps)``, the weight-space fold's missing piece).
 Enumeration propagates
 each candidate's *value vector* over the samples and collapses a level
 to one representative per vector (``_dedupe``) — the blind product is
@@ -54,17 +57,28 @@ __all__ = [
 #: either a leaf form or shape-specialised).  ``max``/``min`` are the
 #: rank-selection pair a carrier-aware derive spells as
 #: ``max(rank a, rank b) - 1``; ``mod`` is the ``%`` axis
-#: normalisation a carrier-aware derive spells as ``dim % rank``.
+#: normalisation a carrier-aware derive spells as ``dim % rank``;
+#: ``fdiv`` is the true division the weight-space fold's measured
+#: refusal spelled (``gamma / sqrt(var + eps)``) — the probe's raw
+#: tier could not fit without it
+#: (``project/retros/weightspace-fold.md``).
 BINOPS: tuple[str, ...] = (
     "add",
     "sub",
     "mul",
+    "fdiv",
     "floordiv",
     "mod",
     "max",
     "min",
 )
-UNOPS: tuple[str, ...] = ("neg", "int", "float")
+#: Arity-1 ops.  ``sqrt``/``rsqrt`` are the real roots the same
+#: refusal named — ``rsqrt(var + eps)`` is the normalisation
+#: statistic's
+#: other spelling (their ``_DUNOPS`` handlers decline on a negative /
+#: non-positive operand, so a fit never mints a complex or infinite
+#: value).
+UNOPS: tuple[str, ...] = ("neg", "int", "float", "sqrt", "rsqrt")
 
 
 def _eval(expr: Any, bound: dict) -> Any:

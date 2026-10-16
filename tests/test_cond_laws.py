@@ -1943,6 +1943,57 @@ class TestDeriveIntOps:
         }
 
 
+class TestDeriveRootOps:
+    """The real roots the weight-space refusal named: ``sqrt`` and
+    ``rsqrt`` (``project/retros/weightspace-fold.md`` gate 3 — the DSL
+    could not spell ``scale = gamma / sqrt(var + eps)``).  Both are
+    float-valued; ``sqrt`` declines on a negative operand and ``rsqrt``
+    on a non-positive one — never a fabricated complex or ``inf``."""
+
+    def test_sqrt_and_rsqrt(self):
+        b = {"$attr:v": 4.0, "$attr:e": 0.0}
+        assert eval_derive({"S": ("sqrt", ("attr", "v"))}, b) == {
+            "$attr:S": 2.0
+        }
+        assert eval_derive({"R": ("rsqrt", ("attr", "v"))}, b) == {
+            "$attr:R": 0.5
+        }
+        # the measured fold's inner expr: rsqrt(var + eps)
+        assert eval_derive(
+            {
+                "S": (
+                    "rsqrt",
+                    ("add", ("attr", "v"), ("attr", "e")),
+                )
+            },
+            b,
+        ) == {"$attr:S": 0.5}
+        # int operands produce floats, matching fdiv/recip
+        assert eval_derive({"S": ("sqrt", 9)}, {}) == {"$attr:S": 3.0}
+        assert eval_derive({"R": ("rsqrt", 4)}, {}) == {"$attr:R": 0.5}
+
+    def test_sqrt_declines_on_negative(self):
+        assert eval_derive({"S": ("sqrt", -1.0)}, {}) is None
+        assert eval_derive({"S": ("sqrt", ("attr", "v"))}, {}) is None
+        assert eval_derive({"S": ("sqrt", ("lit", "x"))}, {}) is None
+
+    def test_rsqrt_declines_on_non_positive(self):
+        assert eval_derive({"R": ("rsqrt", 0.0)}, {}) is None
+        assert eval_derive({"R": ("rsqrt", 0)}, {}) is None
+        assert eval_derive({"R": ("rsqrt", -4.0)}, {}) is None
+
+    def test_root_ops_roundtrip_through_json(self):
+        spec = {"S": ("rsqrt", ("add", ("attr", "v"), ("attr", "e")))}
+        data = derive_to_data(spec)
+        assert data == {
+            "S": ["rsqrt", ["add", ["attr", "v"], ["attr", "e"]]]
+        }
+        assert derive_from_data(data) == derive_from_data(spec)
+        assert eval_derive(data, {"$attr:v": 3.0, "$attr:e": 1.0}) == {
+            "$attr:S": 0.5
+        }
+
+
 class TestDeriveValueShape:
     """``("vshape", T)`` — the carrier-aware shape source.
 
