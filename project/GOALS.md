@@ -245,3 +245,25 @@ gate 4).  ADR `0012-tensor-derives.md` lands the seam:
   (`W'`/`b'` — now reachable: stats are terms, `$leaf:` parents
   compose), synth depth ≥4 over the 7-attr bank, `BATCH_NORM_RULES`
   `DEFAULT` admission (guarded sweep).
+
+### conv+BN fold synthesis attempt — measured refusal named (2026-10-18)
+
+`lab/probes/conv_bn_fold_synth_probe.py` runs both entries on a real
+`batch_norm(conv2d(x,W,b), γ,β,μ,σ²)` export seed:
+
+- `synthesize_rules` emits the fold's *LHS* (`batch_norm(conv2d(…))` —
+  6 composites under ALL+BN) but **never the RHS**: `conv2d` occurs in
+  no rule's lhs or rhs across the 86-rule bank, and a composite's rhs
+  head only comes from a parent's rhs.  Named refusal: **missing
+  anchor** — one `conv2d`-headed law (a `conv_channel_scale` absorb,
+  the conv twin of opt-in `linear_channel_scale`) or an anchored path
+  (antiunify over a measured seed/folded pair, the ADR-0008 bridge).
+- `dspec_synth` mints the fold's derives **in stages**: `scale` and
+  `b'` at depth 3, `W'` at depth 2 given `scale`.  The one-shot
+  tensor-tier `W'` refuses on depth ≥4 + broadcasting (needs a pushed
+  channel-broadcast `mul` or an enumerated `tapp`/reshape).
+- Verifier-env artifact found: `numeric_check` drops the BN composite —
+  `_tensor_env` gives `rv<0` → `rsqrt` NaN on both sides.
+- Lab bug fixed: `dspec_audit.bounded_synth` crashed `TypeError:
+  unhashable ndarray` on tensor samples — ported the `_vkey` boxing.
+  Retro: `retros/conv-bn-fold-synth.md`.

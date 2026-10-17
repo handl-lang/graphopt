@@ -510,7 +510,9 @@ def _stream_hits(
             sig = []
             for i in range(n):
                 v = sig_fn(i)
-                if v != expected[i]:
+                # ``_vkey``-boxed equality — raw ``!=`` on ndarray
+                # samples returns an array (ambiguous truthiness).
+                if dsp._vkey(v) != dsp._vkey(expected[i]):
                     break
                 sig.append(v)
             else:
@@ -599,11 +601,22 @@ def bounded_synth(
     if len(samples) < dsp.MIN_SAMPLES:
         meta["why"] = "thin"
         return None, meta
-    values = {v for _b, v in samples}
-    if len(values) < 2:
+    # ADR-0012 port: the constant-check fingerprints every value
+    # through ``_vkey`` (tensor payloads hash via the registered
+    # ``key``, never ``TypeError: unhashable``); the literal seeds
+    # ``_leaves`` reads are ints only — the same split
+    # ``synth_dspec`` performs (the raw ``{v ...}`` set crashed on
+    # ndarray samples — measured on the conv+BN fold probe).
+    if len({dsp._vkey(v) for _b, v in samples}) < 2:
         meta["why"] = "constant"
         return None, meta
+    values = {
+        v
+        for _b, v in samples
+        if isinstance(v, int) and not isinstance(v, bool)
+    }
     expected = tuple(e for _b, e in samples)
+    expected_fp = dsp._box(expected)
     bound = samples[0][0]
     deadline = time.monotonic() + budget_s
     level = dsp._dedupe(
@@ -613,11 +626,13 @@ def bounded_synth(
         ]
     )
     meta["levels"].append(len(level))
-    hits = [(e, s) for e, s in level if s == expected]
+    hits = [(e, s) for e, s in level if dsp._box(s) == expected_fp]
     for _depth in range(max_depth - 1):
         level = _prefix_level(level, samples)
         meta["levels"].append(len(level))
-        hits.extend((e, s) for e, s in level if s == expected)
+        hits.extend(
+            (e, s) for e, s in level if dsp._box(s) == expected_fp
+        )
     hits.extend(_stream_hits(level, expected, deadline, meta))
     hits = [(e, s) for e, s in hits if dsp._reads_bound(e)]
     if not hits:
