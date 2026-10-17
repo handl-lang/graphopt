@@ -979,6 +979,292 @@ BATCH_NORM_RULES: list[Rewrite] = [
 
 
 # ---------------------------------------------------------------------------
+#  conv2d output-affine absorption — the *fold* half of the conv+BN
+#  weight-space pair (the expansion family's twin).
+#
+#  ``batch_norm_expand`` exposes the kernel's per-channel affine as
+#  ordinary ops; these anchors are the absorb the composite needs —
+#  the ``conv2d``-headed RHS ``synthesize_rules`` was structurally
+#  unable to mint while no bank rule named the op
+#  (``project/retros/conv-bn-fold-synth.md``, gate A):
+#
+#      conv2d(x, W, b) · ŝ  =  conv2d(x, W∘ŝ′, b∘s)     ŝ ~ (1, C, 1, 1)
+#      conv2d(x, W, b) + ĉ  =  conv2d(x, W, b + c)      ĉ ~ (1, C, 1, 1)
+#
+#  where C counts the conv's OUTPUT channels (W's axis 0): scaling
+#  output channel o by s[o] equals scaling that channel's filter W[o]
+#  and bias b[o] — convolution is linear in its filter.  This is the
+#  conv twin of ``linear_channel_scale``: linear's channel scale folds
+#  through the weight's INPUT axis; conv's per-output-channel scale
+#  folds through the weight's axis 0 AND the bias, and the per-channel
+#  shift folds into the bias outright.  Verified fp64 against
+#  ``F.conv2d`` (incl. ``groups=2``).
+#
+#  The scale/shift metavar binds any term whose SHAPE is the channel
+#  view — after reassociation the fold site carries a compound
+#  (γ̂·r̂ for the scale, ŝ·(−μ̂)+β̂ for the shift), never a lone
+#  reshape — so the guard reads the broadcast grid, not the term's
+#  head.  The RHS needs the (C,)-squeezed vector for the bias and the
+#  (C,1,1,1) view for the weight; both are derived reshapes of the
+#  bound term (``dspec`` — a law never mints an attr it cannot
+#  verify).
+#
+#  Guards (data): batched conv2d only — ``x``/``W``/``sv`` concrete
+#  rank-4, the view ``(1, W[0], 1, 1)``, and ``F.conv2d``'s
+#  well-typedness ``x[1] == W[1]·groups`` (a plain ``dim-eq`` when the
+#  export elided ``groups``).  The matcher requires an exact attr-key
+#  set and conv2d's positional tail is a PREFIX of
+#  ``(stride, padding, dilation, groups)``, so — like the BN arity
+#  variants — the family is generated per
+#  (attr-prefix × bias-arity × operand-order × direction).
+#
+#  Held out of ``ALL_RULES`` with the BN family: opt-in pending the
+#  measured admission floor.
+# ---------------------------------------------------------------------------
+
+#: conv2d's positional attr tail — torch.export passes it positionally
+#: and elides trailing defaults, so the reachable attr-key sets are
+#: exactly its prefixes (``ATTR_SCHEMA["conv2d"]``).
+_CONV_ATTR_TAIL = ("stride", "padding", "dilation", "groups")
+
+#: Attr metavar names — bound verbatim on the LHS and re-emitted on
+#: the RHS (the fold never touches window geometry or grouping).
+_CONV_ATTR_MV = {
+    "stride": "ST",
+    "padding": "PD",
+    "dilation": "DL",
+    "groups": "GR",
+}
+
+#: Name suffix per attr-prefix length — the generated rules stay
+#: distinct (``_s``/``_sp``/``_spd``/``_spdg``).
+_CONV_ATTR_SUFFIX = ("", "_s", "_sp", "_spd", "_spdg")
+
+
+def _conv_pat(args: tuple, attrs: tuple) -> Op:
+    """Build a ``conv2d`` pattern pinning exactly *attrs* as metavars."""
+    kw: dict[str, Any] = {k: _CONV_ATTR_MV[k] for k in attrs}
+    return Op.make("conv2d", *args, **kw)
+
+
+#: ``F.conv2d``'s in-channel contract: ``x[1] == W[1]·groups``.  The
+#: ``groups`` metavar is bound only when the export spelled it —
+#: otherwise the attr set has no ``groups`` key and the multiplier is
+#: implicitly 1 (a plain ``dim-eq``).
+def _conv_in_ch(attrs: tuple) -> Any:
+    if "groups" in attrs:
+        return (
+            "attr-cmp",
+            ("dim", "x", 1),
+            "==",
+            ("mul", ("dim", "W", 1), ("attr", "GR")),
+        )
+    return ("dim-eq", "x", 1, "W", 1)
+
+
+#: The channel-view guard shared by scale and shift absorb/unfold:
+#: the view operand ``v`` must be the per-output-channel broadcast
+#: ``(1, C, 1, 1)`` with ``C = W[0]`` — concrete dims throughout (an
+#: unshaped member cannot prove the view, so it declines — the
+#: strictness contract).  ``rank-eq`` on ``x`` pins ``v``'s rank to
+#: the batched NCHW rank-4 the absorb's broadcast reads.
+def _cond_conv_channel(v: str, attrs: tuple, bias: bool) -> Any:
+    return (
+        "and",
+        ("concrete", "x"),
+        ("rank", "x", "==", 4),
+        ("concrete", "W"),
+        ("rank", "W", "==", 4),
+        _conv_in_ch(attrs),
+        ("concrete", v),
+        ("rank-eq", v, "x"),
+        ("dim-eq-const", v, 0, 1),
+        ("dim-eq", v, 1, "W", 0),
+        ("dim-eq-const", v, 2, 1),
+        ("dim-eq-const", v, 3, 1),
+        *(
+            (
+                ("concrete", "b"),
+                ("rank", "b", "==", 1),
+                ("dim-eq", "b", 0, "W", 0),
+            )
+            if bias
+            else ()
+        ),
+    )
+
+
+#: The unfold direction's view-pinning: on a ``_rev`` LHS the reshape
+#: targets ``WV``/``SV`` are *bound* attrs — they must equal what the
+#: absorb's derive would mint or the folded weight/bias read the
+#: channel axis at the wrong position.  ``attr-cmp`` resolves the
+#: bound value against the derived expr inline.
+def _cond_conv_rev(v: str, attrs: tuple, bias: bool) -> Any:
+    return (
+        "and",
+        _cond_conv_channel(v, attrs, bias),
+        (
+            "attr-cmp",
+            "WV",
+            "==",
+            (
+                "concat",
+                ("take", ("shape", "W"), 1),
+                ("tuple", 1, 1, 1),
+            ),
+        ),
+        *(
+            (("attr-cmp", "SV", "==", ("take", ("shape", "W"), 1)),)
+            if bias
+            else ()
+        ),
+    )
+
+
+#: The folded views: ``WV`` is the ``(C, 1, 1, 1)`` weight-side reshape
+#: of the bound channel view, ``SV`` its ``(C,)``-squeezed vector for
+#: the bias — both numel-preserving reshapes of a term the guard
+#: proved is ``(1, C, 1, 1)``.
+_DSPEC_CONV_VIEWS = {
+    "WV": ("concat", ("take", ("shape", "W"), 1), ("tuple", 1, 1, 1)),
+    "SV": ("take", ("shape", "W"), 1),
+}
+
+
+def _conv_scaled(args: tuple, attrs: tuple) -> Op:
+    """``conv2d(x, W∘ŝ′[, b∘s], attrs)`` — the absorbed scale form."""
+    return _conv_pat(
+        (
+            "x",
+            Op.make("mul", "W", Op.make("reshape", "sv", shape="WV")),
+            *(
+                (
+                    Op.make(
+                        "mul",
+                        "b",
+                        Op.make("reshape", "sv", shape="SV"),
+                    ),
+                )
+                if len(args) == 3
+                else ()
+            ),
+        ),
+        attrs,
+    )
+
+
+def _conv_shifted(attrs: tuple, bias: bool, sub: bool) -> Op:
+    """``conv2d(x, W, b±ĉ, attrs)`` — the absorbed shift form.
+
+    The bias-free arity mints the bias operand outright
+    (``reshape(cv, SV)`` or its negation for the ``sub`` spelling).
+    """
+    cv = Op.make("reshape", "cv", shape="SV")
+    return _conv_pat(
+        (
+            "x",
+            "W",
+            *(
+                (Op.make("sub" if sub else "add", "b", cv),)
+                if bias
+                else ((Op.make("neg", cv),) if sub else (cv,))
+            ),
+        ),
+        attrs,
+    )
+
+
+def _make_conv_fold_rules() -> list[Rewrite]:
+    """Generate the conv output-affine absorb family.
+
+    Six shapes per (attr-prefix × bias-arity): the scale absorb in
+    both ``mul`` operand orders plus its unfold, and the shift absorb
+    in both ``add`` orders plus the ``sub`` spelling (``xhat``'s
+    ``conv − μ̂`` reads through ``sub_to_add`` or this direct edge).
+    """
+    out: list[Rewrite] = []
+    for na, suf in enumerate(_CONV_ATTR_SUFFIX):
+        attrs = _CONV_ATTR_TAIL[:na]
+        for bias in (True, False):
+            bs = "" if bias else "_nobias"
+            cargs = ("x", "W", *(("b",) if bias else ()))
+            conv = _conv_pat(cargs, attrs)
+            scaled = _conv_scaled(cargs, attrs)
+            c_sc = _cond_conv_channel("sv", attrs, bias)
+            c_sc_rev = _cond_conv_rev("sv", attrs, bias)
+            c_sh = _cond_conv_channel("cv", attrs, bias)
+            base = f"conv_channel_scale{suf}{bs}"
+            out += [
+                R(
+                    base,
+                    Op.make("mul", conv, "sv"),
+                    scaled,
+                    law="conv2d's per-output-channel scale is a right "
+                    "action on the output: (conv·ŝ)[o] = s[o]·out[o] = "
+                    "conv(x, W∘ŝ′, b∘s)[o] — convolution is linear in "
+                    "its filter.  The conv twin of linear_channel_"
+                    "scale: the fold half of the conv+BN pair.",
+                    cond=c_sc,
+                    dspec=_DSPEC_CONV_VIEWS,
+                    tags=_SYM,
+                ),
+                R(
+                    f"conv_channel_scale_l{suf}{bs}",
+                    Op.make("mul", "sv", conv),
+                    scaled,
+                    law="Scale-left twin of conv_channel_scale — the "
+                    "operand order the batch_norm expansion emits "
+                    "(``mul(γ̂, xhat)``).",
+                    cond=c_sc,
+                    dspec=_DSPEC_CONV_VIEWS,
+                    tags=_SYM,
+                ),
+                R(
+                    f"conv_channel_scale_rev{suf}{bs}",
+                    scaled,
+                    Op.make("mul", conv, "sv"),
+                    law="Unfold the absorbed channel scale back out of "
+                    "the conv (eqsat compares both forms).",
+                    cond=c_sc_rev,
+                    dspec=_DSPEC_CONV_VIEWS,
+                    tags=_SYM,
+                    derivation=(base,),
+                ),
+            ]
+            for op, tag, sub in (
+                ("add", "", False),
+                ("add", "_l", False),
+                ("sub", "_sub", True),
+            ):
+                lhs = (
+                    Op.make(op, conv, "cv")
+                    if tag != "_l"
+                    else Op.make(op, "cv", conv)
+                )
+                out.append(
+                    R(
+                        f"conv_channel_shift{tag}{suf}{bs}",
+                        lhs,
+                        _conv_shifted(attrs, bias, sub),
+                        law="conv2d's per-output-channel shift folds "
+                        "into the bias: (conv ± ĉ)[o] = out[o] ± c[o] "
+                        "= conv(x, W, b ± c)[o] — the shift half of "
+                        "the conv+BN weight-space fold.",
+                        cond=c_sh,
+                        dspec=_DSPEC_CONV_VIEWS,
+                        tags=_SYM,
+                    )
+                )
+    return out
+
+
+#: The conv fold family — the ``conv2d``-headed anchors the conv+BN
+#: weight fold's composite needs.  Opt-in: held out of ``ALL_RULES``
+#: with ``BATCH_NORM_RULES`` pending the measured admission floor.
+CONV_FOLD_RULES: list[Rewrite] = _make_conv_fold_rules()
+
+
+# ---------------------------------------------------------------------------
 #  Distributivity / naturality (the categorical insight)
 #
 #  RANK GUARD.  ``matmul`` contracts a rank>=2 right operand's axis -2

@@ -210,8 +210,10 @@ def test_laws_exports_every_rewrite():
     # + 6 dense-scan + 16 diagonal-scan + 77 layout + 37 attention
     # + 3 batch_norm_expand family rules (opt-in BATCH_NORM_RULES —
     # ADR 0012's named content gap, held out of the default set)
+    # + 60 conv output-affine absorb rules (opt-in CONV_FOLD_RULES —
+    # the conv_channel_scale/shift anchor family of the conv+BN fold)
     # rewrites.
-    assert len(found) == 224
+    assert len(found) == 284
 
 
 def test_all_rules_count_unchanged():
