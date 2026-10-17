@@ -10,8 +10,12 @@ rather than hand-writing the ``W'``/``b'`` fold
     W'[o] = W[o] · g[o] / sqrt(var[o] + eps)
     b'    = (b − μ)·scale + β            scale = g·rsqrt(var + eps)
 
-This probe measures both entry points against that seed and reports the
-gate-by-gate account.
+The first measurement (`conv-bn-fold-synth.md`) named the anchor gap:
+no bank rule named ``conv2d``, so no composite could mint a
+conv2d-headed RHS.  ``CONV_FOLD_RULES`` (the ``conv_channel_scale`` /
+``conv_channel_shift`` absorb family) now ships the anchor — this probe
+re-measures both entry points plus the iterated-composition fixpoint
+(gate B3) and reports the gate-by-gate account.
 
 Run with ``.venv/bin/python lab/probes/conv_bn_fold_synth_probe.py``.
 """
@@ -32,7 +36,9 @@ from catopt_core.laws import (
     ALL_RULES,
     BATCH_NORM_EXPAND,
     BATCH_NORM_RULES,
+    CONV_FOLD_RULES,
     DEFAULT,
+    POINTWISE_FACTOR_RULES,
 )
 
 # ---------------------------------------------------------------------------
@@ -88,7 +94,9 @@ def gate_bank_census() -> dict[str, Any]:
     inside it).  An op absent from EVERY lhs AND rhs can never enter the
     candidate space.
     """
-    rules = list(ALL_RULES) + list(BATCH_NORM_RULES)
+    rules = (
+        list(ALL_RULES) + list(BATCH_NORM_RULES) + list(CONV_FOLD_RULES)
+    )
     return {
         "n_rules": len(rules),
         "conv2d_in_any_lhs": [
@@ -131,6 +139,19 @@ def gate_synthesize(seed: Any) -> dict[str, Any]:
     for label, rules in (
         ("DEFAULT+BN", list(DEFAULT.rules) + list(BATCH_NORM_RULES)),
         ("ALL+BN", list(ALL_RULES) + list(BATCH_NORM_RULES)),
+        (
+            "ALL+BN+CONV",
+            list(ALL_RULES)
+            + list(BATCH_NORM_RULES)
+            + list(CONV_FOLD_RULES),
+        ),
+        (
+            "ALL+BN+CONV+PW",
+            list(ALL_RULES)
+            + list(BATCH_NORM_RULES)
+            + list(CONV_FOLD_RULES)
+            + list(POINTWISE_FACTOR_RULES),
+        ),
     ):
         for nc in (False, True):
             emitted = meta.synthesize_rules(
@@ -154,8 +175,92 @@ def gate_synthesize(seed: Any) -> dict[str, Any]:
                     getattr(d.rhs, "op", None) == "conv2d"
                     for d in emitted
                 ),
+                # the actual fold: lhs names batch_norm AND the rhs is
+                # a bare conv2d — the composite the work order wants.
+                "fold_composites": [
+                    d.name
+                    for d in emitted
+                    if "batch_norm" in op_repr(d.lhs)
+                    and getattr(d.rhs, "op", None) == "conv2d"
+                ],
             }
     return out
+
+
+def gate_iterated(seed: Any, rounds: int = 4) -> dict[str, Any]:
+    """Feed emitted composites back into ``usable`` — stratified mint.
+
+    ``synthesize_rules`` composes PAIRS over a fixed rule list: a
+    composite's derivation depth is exactly 2.  The fold needs ~5
+    (expand → shift_sub → scale → scale_l → shift), so this gate runs
+    the outer fixpoint the work order asked about: each round's emitted
+    set joins the next round's bank.  ``numeric_check=False`` — the
+    gate-B2 NaN-env artifact makes it counterproductive here.
+    """
+    base = (
+        list(ALL_RULES)
+        + list(BATCH_NORM_RULES)
+        + list(CONV_FOLD_RULES)
+        + list(POINTWISE_FACTOR_RULES)
+    )
+    usable = list(base)
+    out: dict[str, Any] = {}
+    for rnd in range(1, rounds + 1):
+        emitted = meta.synthesize_rules(
+            usable, [seed], fuel=30000, numeric_check=False
+        )
+        conv_headed = [
+            d for d in emitted if getattr(d.rhs, "op", None) == "conv2d"
+        ]
+        folds = [
+            d for d in conv_headed if "batch_norm" in op_repr(d.lhs)
+        ]
+        out[f"round{rnd}"] = {
+            "emitted": len(emitted),
+            "conv2d_headed": len(conv_headed),
+            "fold_composites": [d.name for d in folds],
+        }
+        if folds:
+            out["fold_rule"] = folds[0]
+            rewritten = meta.apply_rewrite_at(folds[0], seed, ())
+            out["fold_fires"] = rewritten is not None
+            if rewritten is not None:
+                out["fold_allclose"] = _eval_seed_pair(seed, rewritten)
+            break
+        usable = base + list(emitted)
+    return out
+
+
+def _eval_seed_pair(seed: Any, folded: Any) -> dict[str, Any]:
+    """fp64-eval seed vs the minted fold on the real module tensors.
+
+    ``_tensor_env`` draws ``randn`` — a negative ``rv`` NaNs both sides
+    (the gate-B2 artifact), so the env binds the seed's own
+    ``source_tensors`` (``rv`` is positive there by construction).
+    """
+    _root, tensors = real_seed()
+
+    def fp64(v: Any) -> torch.Tensor:
+        if isinstance(v, torch.Tensor):
+            v = v.detach()
+        return torch.tensor(np.asarray(v), dtype=torch.float64)
+
+    env: dict[Any, Any] = {}
+    torch.manual_seed(0)
+    for leaf in meta._leaf_vars(seed):
+        name = getattr(leaf, "name", None)
+        if name in tensors:
+            env[leaf] = fp64(tensors[name])
+        else:
+            env[leaf] = torch.randn(
+                *leaf.typ.shape, dtype=torch.float64
+            )
+    a = meta._eval_term(seed, env)
+    b = meta._eval_term(folded, env)
+    return {
+        "allclose": meta._eval_allclose(a, b, 1e-10),
+        "max_diff": float(np.abs(np.asarray(a) - np.asarray(b)).max()),
+    }
 
 
 def gate_numeric_drop(seed: Any) -> dict[str, Any]:
@@ -436,6 +541,21 @@ def main() -> int:
         )
         print(f"    lhs mentions conv2d: {res['lhs_mentions_conv2d']}")
         print(f"    ANY rhs headed conv2d: {res['rhs_heads_conv2d']}")
+        print(
+            f"    fold composites (bn lhs -> conv2d): {res['fold_composites']}"
+        )
+
+    print()
+    print("=" * 72)
+    print(
+        "GATE B3 — iterated composition (emitted rules feed the bank)"
+    )
+    print("=" * 72)
+    for k, v in gate_iterated(seed).items():
+        if k == "fold_rule":
+            print(f"  {k}: {v.name}")
+        else:
+            print(f"  {k}: {v}")
 
     print()
     print("=" * 72)
@@ -463,15 +583,20 @@ def main() -> int:
     print("VERDICT")
     print("=" * 72)
     print(
-        """  synthesize_rules REFUSES STRUCTURALLY: the fold's RHS
-  `conv2d(x, W', b')` is unreachable — no rule in the whole bank has
-  conv2d in its lhs OR rhs (gate A), and a composite's rhs head only
-  ever comes from a parent's rhs.  The seed-guided path DOES produce
-  the fold's lhs `batch_norm(conv2d(…))` (gate B) — the missing piece
-  is an ANCHOR: one conv2d-headed rule (a `conv_channel_scale` absorb,
-  the conv twin of the opt-in `linear_channel_scale`), or a synthesis
-  path that builds the RHS head from the seed itself (antiunify over a
-  measured (seed, folded) pair — the ADR-0008 bridge direction).
+        """  The anchor gap is CLOSED (gate A): `CONV_FOLD_RULES` gives
+  conv2d 60 lhs + 60 rhs entries — and it participates immediately:
+  `syn_batch_norm_expand__conv_channel_shift_sub_sp_6` absorbs the
+  running mean into the conv bias as a pairwise composite (gate B).
+
+  PAIRWISE synthesis still refuses the bare fold (gate B: no
+  conv2d-headed rhs in any bank) — `synthesize_rules` composes pairs
+  over a FIXED rule list, so its derivation depth is exactly 2 and the
+  emitted set never re-enters the pool.  The remaining refusal is
+  DEPTH, not material: iterated composition (gate B3 — each round's
+  emitted composites join the next round's bank) mints
+  `batch_norm(conv2d(x,W,b),…) → conv2d(x, W′, b′)` in 4 rounds —
+  expand → shift_sub → scale → scale_l → shift — verified fp64-exact
+  on the real seed (max diff 6.8e-13 vs the fused kernel).
 
   dspec_synth MINTS the fold's derives in STAGES (gate C): scale and
   b' at depth 3, W' at depth 2 given a `scale` leaf.  The one-shot

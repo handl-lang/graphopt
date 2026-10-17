@@ -279,3 +279,28 @@ three**: `batch_norm_expand` fires 8 well-typed times but `paid=0`
 infrastructure, not an extraction win); the two short arities match
 no corpus arity (`fires=0`).  `DEFAULT` unchanged.
 Retro: `retros/bn-admission-sweep.md`.
+
+### `conv_channel_scale` anchor landed — the fold mints by iterated composition (2026-10-19)
+
+`CONV_FOLD_RULES` (60 generated rules, opt-in with `BATCH_NORM_RULES`)
+closes gate A of the conv+BN fold: `conv_channel_scale{,_l,_rev}` +
+`conv_channel_shift{,_l,_sub}` × 5 attr-prefixes × 2 bias arities —
+the conv twin of `linear_channel_scale`, per-OUTPUT-channel scale
+folded through W's axis 0 and the bias, per-channel shift folded into
+the bias.  Guards are data (concrete rank-4, `sv == (1,W[0],1,1)`,
+`x[1] == W[1]·groups`); views `WV`/`SV` are dspec-derived.  Verified
+fp64 vs `F.conv2d` incl. `groups=2` (`tests/test_conv_fold_rules.py`).
+
+Probe re-run (`lab/probes/conv_bn_fold_synth_probe.py`):
+
+- **Pairwise `synthesize_rules` still refuses the bare fold** —
+  derivation depth is exactly 2 over a fixed `usable`; no
+  conv2d-headed composite in any bank.  But the anchor participates:
+  `syn_batch_norm_expand__conv_channel_shift_sub_sp_6` absorbs the
+  running mean into the conv bias in one composite.
+- **Iterated composition mints it** (gate B3 — emitted composites
+  re-enter the bank): `batch_norm(conv2d(x,W,b),…) → conv2d(x, W′, b′)`
+  in **4 rounds**, verified fp64-exact (6.8e-13).  Named next step:
+  a `synthesize_rules` fixpoint/`rounds=` knob, or the ADR-0008
+  anchored mint — depth was the refusal, not material.
+- Retro: `retros/conv-channel-scale-anchor.md`.
