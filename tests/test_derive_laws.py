@@ -871,3 +871,306 @@ def test_migrated_carrier_derives_mint_identically():
     assert (
         decode_geom.CAT_NARROW_MERGE.derive({"$attr:L1": "2"}) is None
     )
+
+
+# ---------------------------------------------------------------------------
+#  Tensor-valued derives (ADR 0012): tval/tapp, the $leaf: channel, the
+#  pushed tensor algebra — the weight-space fold's measured gate-4 gap
+# ---------------------------------------------------------------------------
+
+
+class _Arr:
+    """A minimal tensor stand-in — an opaque payload, not an array lib.
+
+    Core's contract on a tensor value is *opacity*: it must support
+    the algebra's pushed ops and nothing else.  A boxed float list
+    with a ``shape`` is enough to exercise the seam without torch or
+    numpy in the core test file.
+    """
+
+    def __init__(self, data):
+        self.data = [float(x) for x in data]
+        self.shape = (len(self.data),)
+
+    def _ew(self, other, fn):
+        if isinstance(other, _Arr):
+            return _Arr(
+                [
+                    fn(a, b)
+                    for a, b in zip(self.data, other.data, strict=True)
+                ]
+            )
+        return _Arr([fn(a, other) for a in self.data])
+
+    def __mul__(self, o):
+        return self._ew(o, lambda a, b: a * b)
+
+    __rmul__ = __mul__
+
+    def __add__(self, o):
+        return self._ew(o, lambda a, b: a + b)
+
+    __radd__ = __add__
+
+    def __sub__(self, o):
+        return self._ew(o, lambda a, b: a - b)
+
+    def __truediv__(self, o):
+        return self._ew(o, lambda a, b: a / b)
+
+    def __neg__(self):
+        return _Arr([-a for a in self.data])
+
+    def __eq__(self, o):
+        return isinstance(o, _Arr) and self.data == o.data
+
+
+def _arr_sqrt(a):
+    import math as _m
+
+    return _Arr([_m.sqrt(x) for x in a.data])
+
+
+def _tensor_fixture(monkeypatch):
+    """Register a ``_Arr`` algebra over a name -> value table."""
+    import hashlib
+
+    import catopt_core.laws.cond as cond
+
+    table = {}
+
+    def source(t):
+        return table.get(getattr(t, "name", None))
+
+    def mint(v, hint):
+        name = f"{hint}__{hashlib.sha256(repr(v.data).encode()).hexdigest()[:12]}"
+        table[name] = v
+        return name, v.shape
+
+    monkeypatch.setitem(cond._TENSOR_ALG, "source", source)
+    monkeypatch.setitem(cond._TENSOR_ALG, "mint", mint)
+    monkeypatch.setitem(
+        cond._TENSOR_ALG,
+        "ops",
+        {
+            "sqrt": _arr_sqrt,
+            "rsqrt": lambda a: _Arr([x**-0.5 for x in a.data]),
+            "reshape": lambda a, s: a,
+        },
+    )
+    monkeypatch.setitem(
+        cond._TENSOR_ALG, "key", lambda a: (a.shape, tuple(a.data))
+    )
+    return table
+
+
+class TestTensorDerives:
+    """ADR 0012 — the derive value domain widens to opaque tensors."""
+
+    def test_tval_resolves_through_the_registered_source(
+        self, monkeypatch
+    ):
+        table = _tensor_fixture(monkeypatch)
+        table["w"] = _Arr([4.0, 9.0])
+        b = {"w": _p("w", 2)}
+        assert eval_derive({"V": ("tval", "w")}, b) == {
+            "$attr:V": _Arr([4.0, 9.0])
+        }
+
+    def test_tval_declines_unregistered_unbound_unresolvable(
+        self, monkeypatch
+    ):
+        import catopt_core.laws.cond as cond
+
+        # no source registered at all
+        monkeypatch.setitem(cond._TENSOR_ALG, "source", None)
+        assert eval_derive({"V": ("tval", "w")}, {"w": _p("w", 2)}) is None
+        table = _tensor_fixture(monkeypatch)
+        # unbound metavar
+        assert eval_derive({"V": ("tval", "w")}, {}) is None
+        # bound but unresolvable term
+        assert eval_derive({"V": ("tval", "w")}, {"w": _p("w", 2)}) is None
+        table["w"] = _Arr([1.0])
+        # a raising source declines, never escapes
+        monkeypatch.setitem(
+            cond._TENSOR_ALG,
+            "source",
+            lambda t: (_ for _ in ()).throw(RuntimeError("boom")),
+        )
+        assert (
+            eval_derive({"V": ("tval", "w")}, {"w": _p("w", 2)}) is None
+        )
+
+    def test_unop_binop_tensor_dispatch(self, monkeypatch):
+        _tensor_fixture(monkeypatch)
+        arr = _Arr([4.0, 9.0])
+        b = {"w": _p("w", 2)}
+        import catopt_core.laws.cond as cond
+
+        cond._TENSOR_ALG["source"] = lambda t: arr
+        # pushed sqrt wins on a non-scalar operand
+        assert eval_derive({"S": ("sqrt", ("tval", "w"))}, b) == {
+            "$attr:S": _Arr([2.0, 3.0])
+        }
+        assert eval_derive({"R": ("rsqrt", ("tval", "w"))}, b) == {
+            "$attr:R": _Arr([0.5, 1.0 / 3.0])
+        }
+        # the Python operator fallback carries mul/add/sub/div and
+        # scalar broadcast — no table entry needed
+        assert eval_derive(
+            {"M": ("mul", ("tval", "w"), ("attr", "g"))},
+            {**b, "$attr:g": 2.0},
+        ) == {"$attr:M": _Arr([8.0, 18.0])}
+        assert eval_derive(
+            {"A": ("add", ("tval", "w"), 1.0)}, b
+        ) == {"$attr:A": _Arr([5.0, 10.0])}
+        # scalar path unchanged
+        assert eval_derive({"S": ("sqrt", 9.0)}, {}) == {"$attr:S": 3.0}
+        # an unregistered unary name declines on a tensor operand
+        cond._TENSOR_ALG["ops"] = {}
+        assert eval_derive({"S": ("sqrt", ("tval", "w"))}, b) is None
+
+    def test_tapp_dispatches_registered_ops(self, monkeypatch):
+        _tensor_fixture(monkeypatch)
+        b = {"w": _p("w", 2)}
+        import catopt_core.laws.cond as cond
+
+        cond._TENSOR_ALG["source"] = lambda t: _Arr([4.0, 9.0])
+        assert eval_derive(
+            {"S": ("tapp", "sqrt", ("tval", "w"))}, b
+        ) == {"$attr:S": _Arr([2.0, 3.0])}
+        # reshape takes a shape expr — the per-channel broadcast a
+        # weight-space fold spells
+        assert eval_derive(
+            {
+                "S": (
+                    "tapp",
+                    "reshape",
+                    ("tval", "w"),
+                    ("tuple", ("dim", "w", 0), ("lit", 1)),
+                )
+            },
+            b,
+        ) == {"$attr:S": _Arr([4.0, 9.0])}
+        # unregistered name declines; non-string name is malformed
+        assert (
+            eval_derive({"S": ("tapp", "exp", ("tval", "w"))}, b)
+            is None
+        )
+        with pytest.raises(ValueError):
+            eval_derive({"S": ("tapp", 3, ("tval", "w"))}, b)
+
+    def test_dollar_leaf_mints_const_and_param(self, monkeypatch):
+        table = _tensor_fixture(monkeypatch)
+        import catopt_core.laws.cond as cond
+
+        cond._TENSOR_ALG["source"] = lambda t: _Arr([4.0, 9.0])
+        b = {"w": _p("w", 2)}
+        # scalar -> Const under the bare metavar key
+        out = eval_derive({"$leaf:k": 3}, b)
+        assert out == {"k": Const(3)}
+        # tensor -> Param minted through the registered mint
+        out = eval_derive({"$leaf:wn": ("sqrt", ("tval", "w"))}, b)
+        assert set(out) == {"wn"}
+        leaf = out["wn"]
+        assert isinstance(leaf, Param)
+        assert leaf.name.startswith("wn__")
+        assert leaf.typ.shape == (2,)
+        assert table[leaf.name] == _Arr([2.0, 3.0])
+
+    def test_dollar_leaf_declines(self, monkeypatch):
+        import catopt_core.laws.cond as cond
+
+        b = {"w": _p("w", 2)}
+        # bool / str / None are not Const values
+        for v in (True, "x", None):
+            assert eval_derive({"$leaf:k": ("lit", v)}, b) is None
+        # no mint registered -> tensor payloads decline
+        monkeypatch.setitem(cond._TENSOR_ALG, "mint", None)
+        cond._TENSOR_ALG["source"] = lambda t: _Arr([1.0])
+        assert eval_derive({"$leaf:wn": ("tval", "w")}, b) is None
+        # malformed mint returns decline
+        table = _tensor_fixture(monkeypatch)
+        table["w"] = _Arr([1.0])
+        cond._TENSOR_ALG["mint"] = lambda v, h: None
+        assert eval_derive({"$leaf:wn": ("tval", "w")}, b) is None
+        cond._TENSOR_ALG["mint"] = lambda v, h: ("n", ("x",))
+        assert eval_derive({"$leaf:wn": ("tval", "w")}, b) is None
+        cond._TENSOR_ALG["mint"] = lambda v, h: ("n", (2,))
+        assert eval_derive({"$leaf:wn": ("tval", "w")}, b) == {
+            "wn": Param("n", TensorType((2,)))
+        }
+
+    def test_dollar_leaf_spec_roundtrips_through_json(self, monkeypatch):
+        _tensor_fixture(monkeypatch)
+        spec = {
+            "$leaf:wn": (
+                "mul",
+                ("tval", "w"),
+                ("rsqrt", ("add", ("tval", "rv"), ("attr", "eps"))),
+            )
+        }
+        data = derive_to_data(spec)
+        assert json.loads(json.dumps(data)) == data
+        assert data["$leaf:wn"][0] == "mul"
+        # canonical form: the $leaf: prefix survives (it IS the channel)
+        assert derive_from_data(data) == derive_from_data(spec)
+        names = [n for n, _e in derive_from_data(spec)]
+        assert names == ["$leaf:wn"]
+
+    def test_dollar_leaf_fires_end_to_end(self, monkeypatch):
+        table = _tensor_fixture(monkeypatch)
+        import catopt_core.laws.cond as cond
+
+        arr = _Arr([4.0, 9.0])
+        cond._TENSOR_ALG["source"] = (
+            lambda t: arr if getattr(t, "name", None) == "w" else None
+        )
+        rule = Rewrite(
+            "test_leaf_fold",
+            Op.make("mul", "x", "w"),
+            Op.make("mul", "x", "wn"),
+            dspec={"$leaf:wn": ("sqrt", ("tval", "w"))},
+        )
+        src = Op.make("mul", _v("x", 2), _p("w", 2))
+        eg = EGraph()
+        root = eg.add_term(src)
+        assert eg.apply_rule(rule, root)
+        want_name = next(n for n in table if n.startswith("wn__"))
+        assert table[want_name] == _Arr([2.0, 3.0])
+        want = Op.make("mul", _v("x", 2), Param(want_name, TensorType((2,))))
+        assert eg.find(root) == eg.find(eg.add_term(want))
+
+    def test_dollar_leaf_term_level_replay_is_deterministic(
+        self, monkeypatch
+    ):
+        _tensor_fixture(monkeypatch)
+        import catopt_core.laws.cond as cond
+        from catopt_core.meta import apply_rewrite_at
+
+        cond._TENSOR_ALG["source"] = lambda t: _Arr([4.0, 9.0])
+        rule = Rewrite(
+            "test_leaf_fold",
+            Op.make("mul", "x", "w"),
+            Op.make("mul", "x", "wn"),
+            dspec={"$leaf:wn": ("sqrt", ("tval", "w"))},
+        )
+        src = Op.make("mul", _v("x", 2), _p("w", 2))
+        out1 = apply_rewrite_at(rule, src, ())
+        out2 = apply_rewrite_at(rule, src, ())
+        assert out1 is not None and out1 == out2
+        assert out1.args[1].name.startswith("wn__")
+
+    def test_dollar_leaf_veto_inside_compile_derive(self, monkeypatch):
+        _tensor_fixture(monkeypatch)
+        drv = compile_derive(
+            {"$leaf:wn": ("tval", "w"), "EP": ("attr", "e")}, None
+        )
+        import catopt_core.laws.cond as cond
+
+        cond._TENSOR_ALG["source"] = lambda t: _Arr([1.0])
+        out = drv({"w": _p("w", 2), "$attr:e": 0.5})
+        assert out is not None and out["$attr:EP"] == 0.5
+        assert isinstance(out["wn"], Param)
+        # a declining $leaf: vetoes the whole spec, attr wins included
+        assert drv({"$attr:e": 0.5}) is None

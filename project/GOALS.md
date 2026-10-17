@@ -206,3 +206,29 @@ the log-softmax spec mints + verifies fp64, and agrees with
 `F.log_softmax` to 1e-12.  Retro: `retros/handler-grammar-postnorm.md`.
 The stabilized-scan residue stays open (non-affine two-state
 recurrence — a semantics extension, not vocabulary).
+
+## Session — 2026-10-18
+
+### Tensor-valued derives — ADR 0012 (plan 0025 §D3, the last capability blocker)
+
+The weight-space lane's final *capability* refusal is **closed**: the
+derive value domain was `int | float`, and a per-channel tensor `scale`
+raised `TypeError: unhashable` in the synthesizer (weightspace-fold
+gate 4).  ADR `0012-tensor-derives.md` lands the seam:
+
+- **`$leaf:` channel in `dspec`** — a spec key mints a *term* binding:
+  `Const` for scalars, `Param` through the pushed `mint` for tensors.
+  `apply_rule` interns non-`$attr:` derive values via `add_term`;
+  term-level instantiate sites needed no change.
+- **Pushed tensor algebra** — `register_tensor_algebra(source=, mint=,
+  ops=, key=)`: core stays torch/numpy-free (sink direction, the
+  `register_value_shape` precedent); `("tval", T)` reads a bound
+  leaf's value, `("tapp", name, e…)` applies registered ops, and
+  `sqrt`/`rsqrt` dispatch into `ops` on non-scalar operands.
+- **`batch_norm` priced** in `_OP_FLOPS` (gate 6; `4·n_out`).
+- Probe re-run: `scale_mints_as_leaf: True`, `tensor_synth_fit:
+  {'Wn': mul(attr g, tval w)}`, `tensor_sample_error: None`.
+  Retro: `retros/tensor-derives.md`.
+- **Still open (named)**: the `batch_norm` LHS law (content — derivable
+  now), synth depth ≥4 over the 7-attr bank, `$leaf:` rules can't
+  auto-compose (attr-only placeholders).

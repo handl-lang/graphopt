@@ -23,7 +23,14 @@ arithmetic over bound metavariables), the ``mod`` (``%``) axis
 normalisation a carrier-aware derive spells as ``dim % rank``, and
 the real-root pair ``sqrt``/``rsqrt`` plus ``fdiv`` — the division a
 measured refusal spelled literally (``scale = gamma / sqrt(var +
-eps)``, the weight-space fold's missing piece).
+eps)``, the weight-space fold's missing piece) — and, when the
+registered tensor algebra carries a ``source`` (ADR 0012), a
+``("tval", T)`` leaf per bound term: the tensor-value read a
+weight-space derive spells.  Fingerprints box every value through
+:func:`_vkey`, so a tensor-valued sample set hashes through the
+algebra's ``key`` (or refuses honestly by identity) instead of
+raising ``TypeError: unhashable`` — the gate-4 crash the
+weight-space probe measured.
 Enumeration propagates
 each candidate's *value vector* over the samples and collapses a level
 to one representative per vector (``_dedupe``) — the blind product is
@@ -42,7 +49,12 @@ from __future__ import annotations
 from itertools import product
 from typing import Any
 
-from catopt_core.laws.cond import _DBINOPS, _DOPS, _DUNOPS
+from catopt_core.laws.cond import (
+    _DBINOPS,
+    _DOPS,
+    _DUNOPS,
+    tensor_algebra,
+)
 from catopt_core.typing import _shape_of
 
 __all__ = [
@@ -93,6 +105,28 @@ def _eval(expr: Any, bound: dict) -> Any:
         return None
 
 
+def _vkey(v: Any) -> Any:
+    """Hashable fingerprint of a sample value (ADR 0012).
+
+    Signatures and sample-equality keys must hash: a scalar boxes as
+    ``("s", v)`` (its own value — the numeric tower's ``8 == 8.0``
+    collapse the raw-value fingerprints already had), a sequence boxes
+    elementwise, and anything else — a tensor payload — boxes through
+    the registered algebra's ``key`` (a content fingerprint) or, when
+    no ``key`` is installed, ``id(v)``: two distinct objects then
+    fingerprint unequal, so a tensor fit without a ``key`` fn refuses
+    honestly rather than crashing on the unhashable — the
+    ``TypeError: unhashable type: 'numpy.ndarray'`` the weight-space
+    probe's gate 4 measured.
+    """
+    if v is None or isinstance(v, (bool, int, float, str)):
+        return ("s", v)
+    if isinstance(v, (tuple, list)):
+        return ("t", tuple(_vkey(x) for x in v))
+    key = tensor_algebra()["key"]
+    return ("a", key(v) if key is not None else id(v))
+
+
 def _leaves(bound: dict, values: set) -> list[Any]:
     """Leaf exprs: attr refs, rank readers, observed constants.
 
@@ -105,14 +139,22 @@ def _leaves(bound: dict, values: set) -> list[Any]:
     the reader, exactly as the procedural hook vetoed.  Observed int
     values seed literals, so the ``- 1`` / ``- 2`` offsets a rank
     derive spells are expressible.
+
+    When the tensor algebra carries a ``source`` (ADR 0012) each bound
+    term also contributes ``("tval", T)`` — the tensor-value read a
+    weight-space derive spells; without a source the leaf would only
+    decline on every sample, so it is not seeded.
     """
     out: list[Any] = []
     for key in sorted(bound):
         if key.startswith("$attr:"):
             out.append(("attr", key[len("$attr:") :]))
+    has_tsrc = tensor_algebra()["source"] is not None
     for key in sorted(bound):
         if key.startswith("$attr:"):
             continue
+        if has_tsrc:
+            out.append(("tval", key))
         # Two rank readers: the cost-convention ``shape`` and the
         # carrier-aware ``vshape`` (the derive DSL's value-shape source,
         # resolved through the registered resolver — ``_shape_of`` when
@@ -165,6 +207,17 @@ def _signature(expr: Any, samples: list[tuple]) -> tuple:
     return tuple(_eval(expr, b) for b, _e in samples)
 
 
+def _box(sig: tuple) -> tuple:
+    """Fingerprint a raw value vector — every element hashable.
+
+    The signature itself stays raw (the level products evaluate
+    children from it); boxing happens only where the vector is a dict
+    key or an equality side — ``_dedupe``, ``_reproduces``,
+    ``_near_misses``.
+    """
+    return tuple(_vkey(v) for v in sig)
+
+
 def _vbin(op: str, a: Any, b: Any) -> Any:
     """Apply an arity-2 bank op to two *values* — ``None`` on decline.
 
@@ -182,9 +235,20 @@ def _vbin(op: str, a: Any, b: Any) -> Any:
         return None
     if op == "mod":
         return _vmod(a, b)
+    if isinstance(a, (bool, int, float)) and isinstance(
+        b, (bool, int, float)
+    ):
+        try:
+            return _DBINOPS[op](a, b)
+        except (ArithmeticError, TypeError, ValueError):
+            return None
+    # Mirror ``cond._binop``'s tensor tier (ADR 0012): the pushed op
+    # wins, the Python operator is the fallback; a pushed fn is
+    # foreign code — any exception it raises is a decline.
     try:
-        return _DBINOPS[op](a, b)
-    except (ArithmeticError, TypeError, ValueError):
+        fn = tensor_algebra()["ops"].get(op) or _DBINOPS[op]
+        return fn(a, b)
+    except Exception:
         return None
 
 
@@ -216,9 +280,18 @@ def _vun(op: str, a: Any) -> Any:
     """Apply an arity-1 bank op to a *value* — ``None`` on decline."""
     if a is None:
         return None
+    if isinstance(a, (bool, int, float)):
+        try:
+            return _DUNOPS[op](a)
+        except (ArithmeticError, TypeError, ValueError):
+            return None
+    # Mirror ``cond._unop``'s tensor tier (ADR 0012): the pushed op
+    # wins, the Python op is the fallback — a pushed fn's exceptions
+    # are declines (foreign code).
     try:
-        return _DUNOPS[op](a)
-    except (ArithmeticError, TypeError, ValueError):
+        fn = tensor_algebra()["ops"].get(op) or _DUNOPS[op]
+        return fn(a)
+    except Exception:
         return None
 
 
@@ -238,12 +311,13 @@ def _dedupe(pairs: list[tuple]) -> list[tuple]:
     """
     best: dict = {}
     for expr, sig in pairs:
-        prev = best.get(sig)
+        fp = _box(sig)
+        prev = best.get(fp)
         if prev is None or (_size(expr), repr(expr)) < (
             _size(prev[0]),
             repr(prev[0]),
         ):
-            best[sig] = (expr, sig)
+            best[fp] = (expr, sig)
     return list(best.values())
 
 
@@ -355,6 +429,7 @@ def _reads_bound(expr: Any) -> bool:
         "vshape",
         "dim",
         "leaf-dim",
+        "tval",
     ):
         return True
     return any(_reads_bound(a) for a in expr[1:])
@@ -389,12 +464,22 @@ def synth_dspec(
     """
     if len(samples) < MIN_SAMPLES:
         return None
-    values = {v for _b, v in samples}
-    if len(values) < 2:
+    # Two views of the measured outputs: the *fingerprint* set for the
+    # all-agree guard (boxed — a tensor payload hashes through the
+    # registered ``key`` or by identity, never raising ``TypeError:
+    # unhashable``), and the literal seeds ``_leaves`` reads — only
+    # ints seed literals anyway, so the raw set is filtered rather
+    # than materialised over unhashable values.
+    if len({_vkey(v) for _b, v in samples}) < 2:
         # every measured value agrees — no signal to fit; any
         # expr producing that constant "matches" and the synth
         # would be a coincidence, not a derivation.
         return None
+    values = {
+        v
+        for _b, v in samples
+        if isinstance(v, int) and not isinstance(v, bool)
+    }
     fit = range(0, len(samples), 2)
     holdout = range(1, len(samples), 2)
     bound = samples[0][0]
@@ -458,8 +543,10 @@ def _reproduces(
     """
     if not _reads_bound(expr):
         return False
-    return all(sig[i] == samples[i][1] for i in fit) and all(
-        sig[i] == samples[i][1] for i in holdout
+    fp = _box(sig)
+    exp = tuple(_vkey(samples[i][1]) for i in range(len(samples)))
+    return all(fp[i] == exp[i] for i in fit) and all(
+        fp[i] == exp[i] for i in holdout
     )
 
 
@@ -469,7 +556,11 @@ def _near_misses(
     """Closest candidates by sample-agreement — the bank-gap probe."""
     if not samples:
         return []
-    values = {v for _b, v in samples}
+    values = {
+        v
+        for _b, v in samples
+        if isinstance(v, int) and not isinstance(v, bool)
+    }
     cands = _candidates(
         samples[0][0], values, max_depth=max_depth, samples=samples
     )
@@ -479,7 +570,7 @@ def _near_misses(
             sum(
                 1
                 for v, (_b, e) in zip(sig, samples, strict=True)
-                if v == e
+                if _vkey(v) == _vkey(e)
             ),
         )
         for expr, sig in cands

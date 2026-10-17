@@ -1455,7 +1455,22 @@ class EGraph(_ExtractMixin, _ProofMixin):
                             extra = rule.derive(bound)
                             if extra is None:
                                 continue
-                            subst = {**subst, **extra}
+                            for k, v in extra.items():
+                                # "$attr:" keys feed RHS attr metavars
+                                # verbatim; any other key is a *term*
+                                # binding (the "$leaf:" channel —
+                                # ADR 0012): intern the minted leaf so
+                                # the RHS metavar resolves to an eid,
+                                # keeping subst uniform (metavar ->
+                                # eid) for the recorded ProofEdge.
+                                subst[k] = (
+                                    v
+                                    if k.startswith("$attr:")
+                                    or isinstance(v, int)
+                                    else self.add_term(
+                                        v, provenance=rule.name
+                                    )
+                                )
                     created = None
                     try:
                         if self._track:

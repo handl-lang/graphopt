@@ -555,3 +555,107 @@ class TestShippedDspecFaithfulOnTheDeepDomain:
                 == _derive_score_concat_dim(env)
             ), env
 
+
+
+# ---------------------------------------------------------------------------
+#  Tensor-valued samples (ADR 0012) — the gate-4 domain gap, closed
+# ---------------------------------------------------------------------------
+
+
+class TestTensorDerives:
+    """The derive value domain admits opaque tensor payloads.
+
+    ``project/retros/weightspace-fold.md`` gate 4 measured the old
+    refusal: a tensor-valued sample crashed fingerprinting with
+    ``TypeError: unhashable type: 'numpy.ndarray'``.  With the pushed
+    algebra (``source`` + ``key``) a tensor derive fits; without
+    ``key`` the fit refuses honestly — never a crash.
+    """
+
+    @staticmethod
+    def _alg(monkeypatch, *, key=True):
+        """Register a numpy-backed tensor algebra for the test."""
+        import catopt_core.laws.cond as cond
+
+        def mint(v, hint):
+            return f"{hint}__{v.size}", tuple(int(d) for d in v.shape)
+
+        monkeypatch.setitem(cond._TENSOR_ALG, "source", lambda t: t)
+        monkeypatch.setitem(cond._TENSOR_ALG, "mint", mint)
+        monkeypatch.setitem(cond._TENSOR_ALG, "ops", {})
+        monkeypatch.setitem(
+            cond._TENSOR_ALG,
+            "key",
+            (lambda v: (tuple(v.shape), v.tobytes())) if key else None,
+        )
+
+    @staticmethod
+    def _bounds(n: int) -> list[dict]:
+        import numpy as np
+
+        # each sample binds "w" to a distinct payload — the per-sample
+        # resolution model a Param-per-channel fold uses
+        return [
+            {"w": np.array([float(i), 2.0 * i]), "$attr:g": float(i)}
+            for i in range(1, n + 1)
+        ]
+
+    def test_tensor_fit_mints_tval_mul(self, monkeypatch):
+        import numpy as np
+
+        self._alg(monkeypatch)
+        bounds = self._bounds(6)
+
+        def hook(bound):
+            return {"$attr:Wn": bound["w"] * bound["$attr:g"]}
+
+        spec = synth_dspec(samples_from_hook(hook, bounds), name="Wn")
+        assert spec == {"Wn": ("mul", ("attr", "g"), ("tval", "w"))}
+        # the minted expr reproduces through eval_derive on every bound
+        for b in bounds:
+            out = eval_derive(spec, b)
+            assert np.array_equal(
+                out["$attr:Wn"], b["w"] * b["$attr:g"]
+            )
+
+    def test_tensor_samples_no_longer_crash(self, monkeypatch):
+        # without a key fn a tensor payload fingerprints by identity —
+        # honest no-fit, never the gate-4 TypeError
+        self._alg(monkeypatch, key=False)
+        bounds = self._bounds(6)
+
+        def hook(bound):
+            return {"$attr:Wn": bound["w"] * bound["$attr:g"]}
+
+        assert (
+            synth_dspec(samples_from_hook(hook, bounds), name="Wn")
+            is None
+        )
+
+    def test_tval_leaf_absent_without_a_source(self, monkeypatch):
+        import catopt_core.laws.cond as cond
+        from catopt_discovery import dspec_synth as dsp
+
+        monkeypatch.setitem(cond._TENSOR_ALG, "source", None)
+        leaves = dsp._leaves({"w": object()}, set())
+        assert all(e != ("tval", "w") for e in leaves)
+        self._alg(monkeypatch)
+        leaves = dsp._leaves({"w": object()}, set())
+        assert ("tval", "w") in leaves
+
+    def test_vkey_boxes_scalars_seqs_and_payloads(self, monkeypatch):
+        import catopt_core.laws.cond as cond
+        import numpy as np
+        from catopt_discovery import dspec_synth as dsp
+
+        assert dsp._vkey(3) == ("s", 3)
+        assert dsp._vkey((1, 2)) == ("t", (("s", 1), ("s", 2)))
+        monkeypatch.setitem(
+            cond._TENSOR_ALG, "key", lambda v: ("K", v.size)
+        )
+        assert dsp._vkey(np.array([1.0, 2.0])) == ("a", ("K", 2))
+        monkeypatch.setitem(cond._TENSOR_ALG, "key", None)
+        a, b = np.array([1.0]), np.array([1.0])
+        # id-fallback: distinct objects fingerprint unequal — and hash
+        assert dsp._vkey(a) != dsp._vkey(b)
+        {dsp._vkey(a), dsp._vkey(b)}

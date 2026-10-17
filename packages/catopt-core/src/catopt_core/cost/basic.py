@@ -84,6 +84,12 @@ _OP_FLOPS: dict[str, int] = {
     # roofline model prices it); sdpa ~2*T work per output element.
     "contiguous": 0,
     "sdpa": 2,
+    # batch_norm eval mode is (x−μ)·scale + β — sub + mul + mul + add ≈
+    # four elementwise passes over n_out, the "priced like the spelled
+    # subgraph" convention decay/om_decayed use.  (ADR 0012: the
+    # conv+BN fold's measured pricing gap — the op was absent and
+    # fell through to the unpriced default.)
+    "batch_norm": 4,
     # decay(γ,t=T) materialises tril(γ^{i−j}) — the spelled subgraph it
     # replaces: sub + clamp_min + pow(2) + tril ≈ 5 passes over (T,T).
     "decay": 5,

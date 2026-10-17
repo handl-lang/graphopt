@@ -458,30 +458,89 @@ def gate_value_domain() -> dict[str, Any]:
     A derive emits ``{"$attr:NAME": value}`` substituted into the RHS's
     *attrs*, which must round-trip through ``attr_to_data`` (JSON-safe).
     A folded weight is a *tensor*; ``Const.value`` is ``int | float``
-    only.  Measured: does the synth's fingerprinting even survive a
-    tensor-valued sample?
+    only.  ADR 0012 lands the ``$leaf:`` channel + the pushed tensor
+    algebra — re-measured here: does the fold's ``scale`` mint as a
+    tensor-valued derive, and does the synth survive tensor samples?
     """
-    from catopt_core.ir import Const
+    import catopt_core.laws.cond as cond
+    from catopt_core.ir import Const, Param, TensorType
     from catopt_discovery import dspec_synth as dsp
 
-    bounds = [
-        {"$attr:W": np.array([1.0, 2.0]), "$attr:g": i}
-        for i in range(1, 7)
-    ]
+    table: dict[str, Any] = {}
 
-    def hook(bound: dict) -> dict | None:
-        return {"$attr:Wn": bound["$attr:W"] * bound["$attr:g"]}
+    def source(t: Any) -> Any:
+        # a bound term resolves by name; a bound value that IS the
+        # payload (the synth's per-sample bounds) passes through
+        return (
+            t
+            if isinstance(t, np.ndarray)
+            else table.get(getattr(t, "name", None))
+        )
 
-    err = None
+    def mint(v: Any, hint: str) -> tuple[str, tuple]:
+        import hashlib
+
+        name = f"{hint}__{hashlib.sha256(v.tobytes()).hexdigest()[:12]}"
+        table[name] = v
+        return name, tuple(int(d) for d in v.shape)
+
+    cond.register_tensor_algebra(
+        source=source,
+        mint=mint,
+        ops={"sqrt": np.sqrt, "rsqrt": lambda a: 1.0 / np.sqrt(a)},
+        key=lambda v: (tuple(v.shape), v.tobytes()),
+    )
     try:
-        dsp.synth_dspec(dsp.samples_from_hook(hook, bounds), name="Wn")
-    except Exception as exc:
-        err = f"{type(exc).__name__}: {exc}"
+        # 4a — the fold's scale as a tensor-valued derive:
+        # scale = gamma * rsqrt(var + eps), evaluated as arrays.
+        gamma = np.array([1.5, 2.0, 0.5])
+        var = np.array([4.0, 9.0, 16.0])
+        table["gamma"] = gamma
+        table["var"] = var
+        bound = {
+            "gamma": Param("gamma", TensorType((3,))),
+            "var": Param("var", TensorType((3,))),
+            "$attr:eps": 1e-5,
+        }
+        scale_spec = {
+            "$leaf:scale": (
+                "mul",
+                ("tval", "gamma"),
+                ("rsqrt", ("add", ("tval", "var"), ("attr", "eps"))),
+            )
+        }
+        got = cond.eval_derive(scale_spec, bound)
+        leaf = got["scale"] if got else None
+        scale_ok = isinstance(leaf, Param) and np.allclose(
+            table[leaf.name], gamma / np.sqrt(var + 1e-5)
+        )
+        # 4b — a tensor-valued synth sample set no longer crashes
+        bounds = [
+            {"w": np.array([float(i), 2.0 * i]), "$attr:g": float(i)}
+            for i in range(1, 7)
+        ]
+
+        def hook(b: dict) -> dict | None:
+            return {"$attr:Wn": b["w"] * b["$attr:g"]}
+
+        err = None
+        fit = None
+        try:
+            fit = dsp.synth_dspec(
+                dsp.samples_from_hook(hook, bounds), name="Wn"
+            )
+        except Exception as exc:
+            err = f"{type(exc).__name__}: {exc}"
+    finally:
+        cond.register_tensor_algebra()
     return {
         "const_value_types": str(
             Const.__dataclass_fields__["value"].type
         ),
         "tensor_sample_error": err,
+        "scale_mints_as_leaf": scale_ok,
+        "scale_leaf_name": getattr(leaf, "name", None),
+        "tensor_synth_fit": fit,
     }
 
 

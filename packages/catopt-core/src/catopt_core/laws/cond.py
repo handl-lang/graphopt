@@ -190,6 +190,15 @@ value expressions evaluated against the same ``bound`` environment:
                                                #   negative operand,
                                                #   rsqrt on a
                                                #   non-positive one
+           | ("tval", T)                       # the bound leaf's tensor
+                                               #   VALUE — resolved by
+                                               #   the registered
+                                               #   algebra's ``source``
+                                               #   (ADR 0012)
+           | ("tapp", NAME, e1, ...)           # apply a registered
+                                               #   tensor op — the
+                                               #   pushed ``ops`` table
+                                               #   ("reshape", "exp", …)
            | ("bcast", T, T)                   # broadcast two shapes —
                                                # concrete or veto
            | ("nth", e_seq, e_i)               # seq[i] — tuple/list
@@ -206,7 +215,13 @@ value expressions evaluated against the same ``bound`` environment:
 
     NAME := attribute metavar name — the result maps under
             ``"$attr:NAME"``; a ``"$attr:"``-prefixed spec key is
-            accepted too.
+            accepted too.  A ``"$leaf:"``-prefixed key instead binds a
+            *term* metavar: the expr's value is packaged as a leaf —
+            ``Const(v)`` for a scalar, ``Param(name, shape)`` minted
+            through the registered algebra's ``mint`` for a tensor —
+            and emitted under the bare name, so the RHS pattern's
+            metavar resolves to it at instantiate time (ADR 0012 — the
+            tensor-valued derive channel).
     T    := a *shape spec* — metavar name or ``("mm-out", T, T)``, the
             same refs the cond predicates resolve.  ``leaf-dim`` takes
             a metavar name directly (a bound leaf's declared ``.typ``
@@ -220,6 +235,39 @@ division by zero, an out-of-range index — vetoes the *whole* derive
 hand-written hooks took.  A malformed node (an unknown op, a bare
 string where an expr belongs) raises ``ValueError`` — a bug, not a
 decline.
+
+Tensor values (ADR 0012)
+------------------------
+
+The scalar value domain above widens to *tensor values* through the
+pushed :data:`TensorAlgebra` — ``register_tensor_algebra`` installs
+the four capabilities core cannot own (it imports no array library —
+the same sink direction as ``catopt_core.ops``' binding tables and
+``catopt_core.typing.register_value_shape``):
+
+* ``source`` — ``term -> array | None``, resolving a bound leaf's
+  value (the adapter closes over ``source_tensors``); consumed by
+  ``("tval", T)``.
+* ``ops`` — ``{name: fn}`` elementwise implementations: consumed by
+  ``("tapp", name, e…)`` *and* as the fallback in the
+  ``_DUNOPS``/``_DBINOPS`` handlers — a scalar operand keeps today's
+  semantics, a non-scalar one dispatches to ``ops[op]`` when
+  registered, else to the Python operator (which array backends
+  already overload).  Only the ``math.*``-backed ops — ``sqrt``,
+  ``rsqrt`` — *need* the table; ``reshape``-style names are
+  ``tapp``-only.
+* ``mint`` — ``(array, hint) -> (name, shape) | None``, registering a
+  derived array and returning its leaf identity under a ``$leaf:``
+  key.  The name must be a *deterministic* function of the content —
+  certificate replay re-runs the derive, so a counter-style fresh
+  name would mint a different ``Param`` on replay.
+* ``key`` — ``array -> hashable``, the content fingerprint
+  ``dspec_synth``'s value signatures use; without it tensor samples
+  dedupe by identity and every tensor fit refuses honestly.
+
+Core never hashes, reprs, compares or serializes a tensor value —
+they are opaque payloads flowing from ``source`` through ``ops`` to
+``mint``.  A missing capability declines, never fabricates.
 """
 
 from __future__ import annotations
@@ -228,7 +276,7 @@ import functools
 import math
 from typing import Any
 
-from catopt_core.ir import Const, Op
+from catopt_core.ir import Const, Op, Param, TensorType
 from catopt_core.typing import (
     _axis_pair,
     _broadcast,
@@ -249,6 +297,8 @@ __all__ = [
     "derive_to_data",
     "eval_cond",
     "eval_derive",
+    "register_tensor_algebra",
+    "tensor_algebra",
 ]
 
 #: Content-keyed shape memo (same contract as ``laws.base._SHAPE_MEMO``:
@@ -1590,6 +1640,65 @@ class _Decline(Exception):
 _MISSING = object()
 
 
+# ---------------------------------------------------------------------------
+#  The pushed tensor algebra (ADR 0012)
+#
+#  Core holds no array library — a tensor value is an opaque payload
+#  the registered algebra creates (``source``), transforms (``ops``)
+#  and names (``mint``); ``key`` fingerprints it for the synthesizer's
+#  value signatures.  Every capability is optional: a missing one
+#  declines the ops needing it (never a fabricated value).  Pushed in
+#  by an adapter at import time — the same sink direction as
+#  ``catopt_core.ops``' binding tables and ``register_value_shape``.
+# ---------------------------------------------------------------------------
+
+_TENSOR_ALG: dict[str, Any] = {
+    "source": None,  # term -> array | None
+    "mint": None,  # (array, hint) -> (name, shape) | None
+    "ops": {},  # {name: elementwise fn}
+    "key": None,  # array -> hashable
+}
+
+
+def register_tensor_algebra(
+    *,
+    source: Any = None,
+    mint: Any = None,
+    ops: Any = None,
+    key: Any = None,
+) -> None:
+    """Register the adapter-pushed tensor algebra (ADR 0012).
+
+    All four capabilities are keyword-only and replace on every call —
+    pass ``None`` to clear a capability (``register_tensor_algebra()``
+    uninstalls the whole algebra).  ``ops`` is the elementwise table
+    ``("tapp", name, …)`` and the non-scalar fallback in the
+    ``_DUNOPS``/``_DBINOPS`` handlers dispatch into; ``mint`` must name
+    leaves *deterministically* in the array's content (certificate
+    replay re-runs the derive).  Core imports no adapter; the
+    adapter pushes the implementations in.
+    """
+    _TENSOR_ALG["source"] = source
+    _TENSOR_ALG["mint"] = mint
+    _TENSOR_ALG["ops"] = dict(ops or {})
+    _TENSOR_ALG["key"] = key
+
+
+def tensor_algebra() -> dict:
+    """Return the registered tensor-algebra table (a read copy).
+
+    The synthesizer (``dspec_synth``) inspects it to decide whether
+    ``("tval", T)`` leaves can resolve and how to fingerprint tensor
+    sample values; the derive handlers read the same slots.
+    """
+    return dict(_TENSOR_ALG)
+
+
+def _top(op: str) -> Any:
+    """Return the registered tensor op for *op*'s name, or ``None``."""
+    return _TENSOR_ALG["ops"].get(op)
+
+
 def _d_lit(args: tuple, bound: dict) -> Any:
     """``("lit", v)`` — an explicit literal (string, tuple, …)."""
     return args[0]
@@ -1683,6 +1792,52 @@ def _d_leaf_dim(args: tuple, bound: dict) -> Any:
     ):
         raise _Decline("leaf-dim: no concrete declared shape")
     return sh[i]
+
+
+def _d_tval(args: tuple, bound: dict) -> Any:
+    """``("tval", T)`` — the bound leaf's tensor *value* (ADR 0012).
+
+    The tensor twin of ``("const", T)``: resolves the metavar's bound
+    term through the registered algebra's ``source`` (the adapter's
+    ``source_tensors`` lookup — a ``Param`` resolves by name).  The
+    value is *opaque*: it flows to other exprs but core never inspects
+    it.  An unbound metavar, an unregistered ``source`` or an
+    unresolvable leaf declines — the strictness contract.
+    """
+    src = _TENSOR_ALG["source"]
+    t = bound.get(args[0]) if isinstance(args[0], str) else None
+    if src is None or t is None:
+        raise _Decline(f"tval: {args[0]!r} unresolvable")
+    try:
+        v = src(t)
+    except Exception as e:
+        raise _Decline(f"tval: {e}") from None
+    if v is None:
+        raise _Decline(f"tval: {args[0]!r} has no registered value")
+    return v
+
+
+def _d_tapp(args: tuple, bound: dict) -> Any:
+    """``("tapp", NAME, e1, ...)`` — apply a registered tensor op.
+
+    The generic apply into the pushed ``ops`` table (``"reshape"``,
+    ``"exp"``, …): the op name is a literal string, the operands are
+    evaluated exprs (tensor values, scalars, or shape tuples — the op
+    owns the typing).  An unregistered name or a raising op declines;
+    a non-string name is malformed (``ValueError``, a bug).
+    """
+    if not args or not isinstance(args[0], str):
+        raise ValueError(f"malformed tapp node: {args!r}")
+    fn = _top(args[0])
+    if fn is None:
+        raise _Decline(f"tapp: {args[0]!r} not registered")
+    vals = [_dexpr(a, bound) for a in args[1:]]
+    try:
+        return fn(*vals)
+    except _Decline:
+        raise
+    except Exception as e:
+        raise _Decline(f"tapp: {e}") from None
 
 
 def _d_len(args: tuple, bound: dict) -> int:
@@ -1968,16 +2123,43 @@ _DUNOPS: dict = {
 }
 
 
+def _is_scalar(v: Any) -> bool:
+    """Check whether *v* is a scalar — ``bool``/``int``/``float``."""
+    return isinstance(v, (bool, int, float))
+
+
+def _tcall(op: str, fn: Any, *vals: Any) -> Any:
+    """Call a pushed tensor op, declining on any error it raises.
+
+    The pushed implementation is foreign code — its exception
+    vocabulary is the adapter's (``RuntimeError`` in torch, anything
+    elsewhere), so the total-evaluator contract widens the catch to
+    ``Exception`` here: any failure is a decline, never a fabricated
+    value and never an escape through ``eval_derive``.
+    """
+    try:
+        return fn(*vals)
+    except Exception as e:
+        raise _Decline(f"{op}: {e}") from None
+
+
 def _binop(op: str):
     """Build the ``(add|sub|mul|fdiv|floordiv)`` handler for *op*."""
 
     def handler(args: tuple, bound: dict) -> Any:
-        try:
-            return _DBINOPS[op](
-                _dexpr(args[0], bound), _dexpr(args[1], bound)
-            )
-        except (ArithmeticError, TypeError, ValueError) as e:
-            raise _Decline(f"{op}: {e}") from None
+        a = _dexpr(args[0], bound)
+        b = _dexpr(args[1], bound)
+        if _is_scalar(a) and _is_scalar(b):
+            try:
+                return _DBINOPS[op](a, b)
+            except (ArithmeticError, TypeError, ValueError) as e:
+                raise _Decline(f"{op}: {e}") from None
+        # Tensor tier (ADR 0012): a pushed op wins when registered;
+        # else the Python operator itself — array backends overload
+        # ``+``/``-``/``*``/``/``/``//`` already, so the generic
+        # fallback carries the elementwise ops without a table entry.
+        fn = _top(op) or _DBINOPS[op]
+        return _tcall(op, fn, a, b)
 
     return handler
 
@@ -1986,10 +2168,17 @@ def _unop(op: str):
     """Build the ``(neg|recip|float|int|sqrt|rsqrt)`` handler for *op*."""
 
     def handler(args: tuple, bound: dict) -> Any:
-        try:
-            return _DUNOPS[op](_dexpr(args[0], bound))
-        except (ArithmeticError, TypeError, ValueError) as e:
-            raise _Decline(f"{op}: {e}") from None
+        v = _dexpr(args[0], bound)
+        if _is_scalar(v):
+            try:
+                return _DUNOPS[op](v)
+            except (ArithmeticError, TypeError, ValueError) as e:
+                raise _Decline(f"{op}: {e}") from None
+        # Tensor tier (ADR 0012): the pushed op wins when registered;
+        # else the Python op itself — ``-a``/``1.0/a`` overload on
+        # arrays, ``math.sqrt`` raises ``TypeError`` and declines.
+        fn = _top(op) or _DUNOPS[op]
+        return _tcall(op, fn, v)
 
     return handler
 
@@ -2015,6 +2204,8 @@ _DOPS: dict = {
     "sum": _d_sum,
     "guard": _d_guard,
     "if": _d_if,
+    "tval": _d_tval,
+    "tapp": _d_tapp,
     "max": _d_maxmin("max"),
     "min": _d_maxmin("min"),
     "pow": _d_pow,
@@ -2048,11 +2239,13 @@ def derive_from_data(data: Any) -> Any:
     Accepts a mapping ``{NAME: expr}`` or a sequence of ``(NAME, expr)``
     pairs — the forms ``json.loads`` hands back and the ones a law
     spells in source.  ``"$attr:"``-prefixed keys lose the prefix (the
-    output keys are bare names; ``eval_derive`` re-prefixes).  Expr
-    trees canonicalise through ``cond_from_data`` — the same
-    list-to-tuple normalisation — so a store-loaded spec is equal and
-    hashable alongside its source-spelled twin.  ``None`` passes
-    through; anything else raises ``ValueError``.
+    output keys are bare names; ``eval_derive`` re-prefixes); a
+    ``"$leaf:"``-prefixed key *keeps* its prefix — the canonical name
+    carries the channel marker so a ``$leaf:wn`` and a ``wn`` spec key
+    never collide.  Expr trees canonicalise through ``cond_from_data``
+    — the same list-to-tuple normalisation — so a store-loaded spec is
+    equal and hashable alongside its source-spelled twin.  ``None``
+    passes through; anything else raises ``ValueError``.
     """
     if data is None:
         return None
@@ -2090,13 +2283,50 @@ def derive_to_data(spec: Any) -> Any:
     }
 
 
+def _mint_leaf(v: Any, hint: str) -> Any:
+    """Package a ``$leaf:`` expr value as a leaf term (ADR 0012).
+
+    A scalar mints ``Const(v)`` — the ``Const`` contract is ``int`` /
+    ``float`` exactly, so ``bool``/``None``/``str`` decline rather
+    than smuggle a non-scalar in.  Anything else is a tensor payload:
+    the registered algebra's ``mint`` names and registers it (into
+    ``source_tensors``), returning ``(name, shape)`` — the
+    deterministic-name contract replay needs.  An unregistered
+    ``mint``, a ``None`` return or a malformed ``(name, shape)`` pair
+    declines.
+    """
+    if isinstance(v, bool) or v is None or isinstance(v, str):
+        raise _Decline(f"$leaf:{hint}: not a leaf value")
+    if isinstance(v, (int, float)):
+        return Const(v)
+    mint = _TENSOR_ALG["mint"]
+    if mint is None:
+        raise _Decline(f"$leaf:{hint}: no tensor mint registered")
+    try:
+        got = mint(v, hint)
+    except Exception as e:
+        raise _Decline(f"$leaf:{hint}: mint failed: {e}") from None
+    if not (
+        isinstance(got, (tuple, list))
+        and len(got) == 2
+        and isinstance(got[0], str)
+        and isinstance(got[1], (tuple, list))
+        and all(isinstance(d, int) for d in got[1])
+    ):
+        raise _Decline(f"$leaf:{hint}: mint returned no (name, shape)")
+    return Param(got[0], TensorType(tuple(got[1])))
+
+
 def eval_derive(dspec: Any, bound: dict) -> dict | None:
     """Evaluate a declarative derive spec against a ``bound`` dict.
 
     ``bound`` is the same environment the ``derive`` hook sees —
     metavar names to resolved member terms plus ``"$attr:NAME"`` keys
-    to matched attribute values.  Returns the extra-substitution map
-    ``{"$attr:NAME": value}`` (possibly empty); the first expr that
+    to matched attribute values.  Returns the extra-substitution map:
+    ``{"$attr:NAME": value}`` for bare/``$attr:``-prefixed keys, and —
+    ADR 0012 — ``{NAME: leaf_term}`` for ``"$leaf:"``-prefixed keys,
+    whose exprs mint ``Const``/``Param`` bindings the RHS pattern's
+    term metavars resolve (possibly empty); the first expr that
     declines vetoes the whole spec and ``None`` comes back — the same
     ``derive`` contract the e-graph and certificate replay honour.
     A malformed expr raises ``ValueError`` — a bug, not a decline.
@@ -2104,7 +2334,12 @@ def eval_derive(dspec: Any, bound: dict) -> dict | None:
     out: dict = {}
     for name, expr in derive_from_data(dspec):
         try:
-            out[f"$attr:{name}"] = _dexpr(expr, bound)
+            if name.startswith("$leaf:"):
+                out[name[len("$leaf:") :]] = _mint_leaf(
+                    _dexpr(expr, bound), name[len("$leaf:") :]
+                )
+            else:
+                out[f"$attr:{name}"] = _dexpr(expr, bound)
         except _Decline:
             return None
     return out
