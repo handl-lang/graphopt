@@ -361,8 +361,10 @@ def test_fire_guarded_derive_placeholders():
     subst, rewritten, conc = out
     # the derived attr stays SYMBOLIC in the instantiated rhs…
     assert rewritten == Op.make("marked", v, tag="@1:Q")
-    # …while conc records the concrete value this instance derived
-    assert conc == {"@1:Q": 7}
+    # …while conc records the concrete value this instance derived —
+    # attr outputs under "@i:" placeholders AND term-level ("$leaf:")
+    # outputs alike
+    assert conc == {"@1:Q": 7, "@1:extra": Const(2.0)}
     assert subst == {"a": v}
 
 
@@ -525,11 +527,12 @@ def test_compose_guards_derive_output_namespaces():
     )
     chk, drv = meta._compose_guards(r1, r2, p1, p2)
     out = drv(bound)
-    # attr outputs land under the parent's namespace; term outputs
-    # pass through un-namespaced
+    # every output lands under the parent's namespace — attr outputs
+    # as "$attr:@i:" entries, term ("$leaf:") outputs as "@i:" leaf
+    # placeholders
     assert out["$attr:@1:S"] == 3
     assert out["$attr:@2:T"] == 4
-    assert out["plain"] == Const(1.0)
+    assert out["@1:plain"] == Const(1.0)
     assert chk(bound)
     # a binding the composite cannot evaluate vetoes the derive
     bad = {k: v for k, v in bound.items() if k != "u"}
@@ -843,7 +846,8 @@ def test_synthesize_seed_attr_placeholder_resolution():
     out = meta.synthesize_rules([r1, r2a, r2b], [seed], fuel=400)
     assert isinstance(out, list)
     # whatever survives is well-formed: every RHS term metavar is
-    # bound by the LHS
+    # bound by the LHS or is a "@i:" leaf placeholder the derived
+    # rule's own composite derive refills (the "$leaf:" channel)
     for d in out:
         rhs_t = {
             m
@@ -855,7 +859,10 @@ def test_synthesize_seed_attr_placeholder_resolution():
             for m in meta.pattern_metavars(d.lhs)
             if not m.startswith("$attr:")
         }
-        assert rhs_t <= lhs_t
+        assert rhs_t - lhs_t <= {
+            m for m in rhs_t if m.startswith(("@1:", "@2:"))
+        }
+        assert rhs_t <= lhs_t | set(meta._rhs_derive_placeholders(d.rhs))
 
 
 def test_synthesize_seed_guard_vetoes_are_continues():

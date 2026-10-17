@@ -56,12 +56,18 @@ Guarded parents are handled soundly: a derived rule's ``check`` is the
 CONJUNCTION of both parents' checks, each evaluated on its own binding
 re-expressed through the intermediate substitution, and a parent's
 ``derive``-produced attributes travel as namespaced placeholders the
-derived rule's own ``derive`` recomputes at fire time.  Compositions
-whose side conditions cannot be re-expressed — or cannot be satisfied
-on any validation instance — are rejected, never emitted.
+derived rule's own ``derive`` recomputes at fire time.  The same holds
+at the *term* level: a ``$leaf:`` output (ADR 0012 — a binding the LHS
+cannot produce) travels as a namespaced leaf metavar ``"@i:NAME"`` the
+composite ``derive`` refills from the parent's re-run spec, resolving
+through the pushed ``TensorAlgebra``'s ``mint``/``ops`` at instantiate
+time.  Compositions whose side conditions cannot be re-expressed — or
+cannot be satisfied on any validation instance — are rejected, never
+emitted.
 
-Every emitted rule is validated: rhs term metavars ⊆ lhs metavars,
-the r1-then-r2 derivation is replayed on a fresh instantiation (or on
+Every emitted rule is validated: rhs term metavars ⊆ lhs metavars up
+to ``@i:``-prefixed placeholders its own ``derive`` refills, the
+r1-then-r2 derivation is replayed on a fresh instantiation (or on
 the seed derivation's own witness binding), and (when every op has a
 torch binding) both sides are evaluated on random tensors and compared
 with ``allclose``.  Provenance — which parent pair a rule descends
@@ -349,17 +355,20 @@ def _has_attr_metavars(pat: Any) -> bool:
 def _synthesizable(r: Rewrite) -> bool:
     """Return whether a rule participates in synthesis (*guarded-sound*).
 
-    Every metavariable in its RHS must be either bound by the LHS or —
-    for attribute metavars only — producible by ``derive``.
+    Every metavariable in its RHS must be either bound by the LHS or
+    producible by ``derive`` — as an attribute (``$attr:`` keys) or as
+    a term binding (ADR 0012's ``$leaf:`` channel: bare metavar keys).
 
     ``check``/``derive`` hooks and attribute metavars no longer exclude
     a rule: parent side conditions are re-expressed on the derived
     rule's own substitution (see :func:`_compose_guards`), and
     derive-produced attributes are carried through the derivation as
     namespaced placeholders (``"@1:SD"`` / ``"@2:SD"``) that the derived
-    rule's own ``derive`` fills at fire time.  A rule whose RHS needs an
-    attribute it can neither match nor derive stays excluded — there is
-    no sound way to propagate it.
+    rule's own ``derive`` fills at fire time.  Derive-produced *term*
+    bindings travel the same way as leaf placeholders (``"@1:wn"`` —
+    the ``$leaf:`` resolver seam).  A rule whose RHS needs a binding it
+    can neither match nor derive stays excluded — there is no sound
+    way to propagate it.
     """
     lhs_mv = pattern_metavars(r.lhs)
     lhs_terms = {v for v in lhs_mv if not v.startswith("$attr:")}
@@ -368,7 +377,7 @@ def _synthesizable(r: Rewrite) -> bool:
         if v.startswith("$attr:"):
             if v not in lhs_attrs and r.derive is None:
                 return False
-        elif v not in lhs_terms:
+        elif v not in lhs_terms and r.derive is None:
             return False
     return True
 
@@ -613,7 +622,8 @@ def _fire_guarded(rule: Rewrite, term: Any, path: tuple, ns: str):
     """Fire *rule* on a CONCRETE term like :func:`apply_rewrite_at`.
 
     Keeps ``derive``-produced attributes symbolic under the *ns*
-    placeholder prefix.
+    placeholder prefix — and ``derive``-produced *term* bindings (the
+    ``$leaf:`` channel) symbolic as namespaced leaf metavars.
 
     Returns ``(subst, rewritten, concrete_attrs)`` where
     ``concrete_attrs`` maps each placeholder name to the value the
@@ -639,12 +649,16 @@ def _fire_guarded(rule: Rewrite, term: Any, path: tuple, ns: str):
         if extra is None:
             return None
         for k, v in extra.items():
-            if k.startswith("$attr:"):
-                ph = ns + k[len("$attr:") :]
-                inst[k] = ph  # stays a metavar in the derived rule
-                conc[ph] = v  # but this instance's value is known
-            else:
-                inst[k] = v
+            # Every derive output stays a metavar in the derived rule:
+            # "$attr:" keys become "@i:" attr placeholders, bare keys
+            # (the "$leaf:" term channel) become "@i:" leaf
+            # placeholders.  conc records this instance's concrete
+            # value either way — a second parent's guards need it.
+            ph = ns + (
+                k[len("$attr:") :] if k.startswith("$attr:") else k
+            )
+            inst[k] = ph  # stays a metavar in the derived rule
+            conc[ph] = v  # but this instance's value is known
     try:
         rhs = instantiate_pattern(rule.rhs, inst)
     except KeyError:
@@ -653,10 +667,15 @@ def _fire_guarded(rule: Rewrite, term: Any, path: tuple, ns: str):
 
 
 def _concretize_attrs(t: Any, conc: dict) -> Any:
-    """Replace placeholder attr values inside a concrete term.
+    """Resolve placeholders inside a concrete term via the fired *conc*.
 
-    Uses the fired *conc* map (placeholder name -> derived value).
+    Placeholders travel in two positions: an ``Op``'s attr values (the
+    original ``@i:`` machinery) and *leaf* positions (the ``$leaf:``
+    term channel — a metavar that bound a placeholder resolves to the
+    concrete leaf the parent's derive minted).
     """
+    if isinstance(t, str):
+        return conc.get(t, t)
     if isinstance(t, Op):
         attrs = {
             k: (conc.get(v, v) if isinstance(v, str) else v)
@@ -781,7 +800,9 @@ def _compose_guards(r1: Rewrite, r2: Rewrite, pat1: dict, pat2: dict):
         # never r1's namespace — merging b1 here would clobber a derived
         # metavar that happens to share a name with an r1 metavar (e.g.
         # om_split binds "v1"/"v2", the same names leaf-generalization
-        # mints).  Only r1's derive-produced attrs join, namespaced.
+        # mints).  Only r1's derive outputs join, namespaced — term
+        # bindings under the "@i:" leaf-placeholder names a pat2 entry
+        # references.
         eff1 = dict(bound)
         e1 = None
         if r1.derive is not None:
@@ -795,7 +816,7 @@ def _compose_guards(r1: Rewrite, r2: Rewrite, pat1: dict, pat2: dict):
                 if k.startswith("$attr:"):
                     eff1["$attr:" + ns1 + k[len("$attr:") :]] = v
                 else:
-                    eff1[k] = v
+                    eff1[ns1 + k] = v
         b2 = _reexpress_binding(pat2, eff1)
         if b2 is None:
             return None
@@ -830,7 +851,11 @@ def _compose_guards(r1: Rewrite, r2: Rewrite, pat1: dict, pat2: dict):
                 if k.startswith("$attr:"):
                     out["$attr:" + ns + k[len("$attr:") :]] = v
                 else:
-                    out[k] = v
+                    # "$leaf:"-channel outputs fill the "@i:" leaf
+                    # placeholders the derived RHS carries — resolved
+                    # from the pushed TensorAlgebra at instantiate
+                    # time, never baked in.
+                    out[ns + k] = v
         return out
 
     return check, derive
@@ -840,10 +865,14 @@ def _rhs_derive_placeholders(rhs: Any) -> set[str]:
     """Return the namespaced derive placeholders in a derived RHS.
 
     Placeholders like ``"@1:X"`` / ``"@2:X"`` that appear as attribute
-    metavars — the keys its composite ``derive`` must provide.
+    metavars — or as *leaf* metavars (the ``$leaf:`` term channel) —
+    the keys its composite ``derive`` must provide.
     """
     out: set[str] = set()
-    if isinstance(rhs, Op):
+    if isinstance(rhs, str):
+        if any(rhs.startswith(p) for p in _DRV_PREFIX):
+            out.add(rhs)
+    elif isinstance(rhs, Op):
         for v in rhs.attrs.values():
             if isinstance(v, str) and any(
                 v.startswith(p) for p in _DRV_PREFIX
@@ -1155,13 +1184,19 @@ def _validate_candidate(
     lhs_mv = pattern_metavars(cand.lhs)
     rhs_mv = pattern_metavars(cand.rhs)
     lhs_terms = {v for v in lhs_mv if not v.startswith("$attr:")}
-    # RHS term metavars must be LHS-bound; RHS attr metavars may also be
-    # produced by the candidate's own ``derive``.
+    # RHS term metavars must be LHS-bound — except the ``@i:`` leaf
+    # placeholders a ``$leaf:`` parent minted, which the candidate's
+    # own ``derive`` refills at fire time (the term-level twin of the
+    # attr-placeholder clause).  An unresolved one vetoes the firing,
+    # which the loop below measures as a refusal.
     for v in rhs_mv:
         if v.startswith("$attr:"):
             if v not in lhs_mv and cand.derive is None:
                 return False
-        elif v not in lhs_terms:
+        elif v not in lhs_terms and not (
+            cand.derive is not None
+            and any(v.startswith(p) for p in _DRV_PREFIX)
+        ):
             return False
     term_mvars = sorted(lhs_terms)
     attr_mvars = sorted(
@@ -1290,7 +1325,12 @@ def synthesize_rules(
     binding re-expressed through the intermediate substitution (see
     :func:`_compose_guards`), and ``derive``-produced attributes are
     carried as namespaced placeholders the derived rule refills at fire
-    time.  A composition whose side condition cannot be re-expressed is
+    time.  ``derive``-produced *term* bindings — ADR 0012's ``$leaf:``
+    channel — travel the same way as ``"@i:"`` leaf metavars: the
+    derived rule's composite ``derive`` re-runs the parent's spec and
+    resolves the leaf through the pushed ``TensorAlgebra`` at
+    instantiate time, so a ``$leaf:`` rule auto-composes.  A
+    composition whose side condition cannot be re-expressed is
     rejected — never emitted unsound.
 
     ``seed_terms`` supplies the concrete terms the seed-guided path
@@ -1436,11 +1476,15 @@ def synthesize_rules(
                                 continue
                             if e2 is None:
                                 continue
-                            for k, v in e2.items():
+                            for k, _v in e2.items():
                                 if k.startswith("$attr:"):
                                     inst2[k] = ns2 + k[len("$attr:") :]
                                 else:
-                                    inst2[k] = v
+                                    # "$leaf:"-channel outputs stay
+                                    # symbolic — "@2:" leaf
+                                    # placeholders the composite
+                                    # derive refills at fire time.
+                                    inst2[k] = ns2 + k
                         try:
                             rhs2 = instantiate_pattern(r2.rhs, inst2)
                         except KeyError:  # pragma: no cover — _synthesizable guarantees a total subst
@@ -1495,16 +1539,22 @@ def synthesize_rules(
         if spent > fuel:
             break
         # Identity instantiation: term metavars stay themselves, LHS
-        # attr metavars keep their names, and RHS attr metavars that
-        # only ``derive`` can produce become "@1:" placeholders.
+        # attr metavars keep their names, and RHS metavars that only
+        # ``derive`` can produce become "@1:" placeholders — attr
+        # metavars as "@1:X" attr placeholders, term metavars (the
+        # "$leaf:" channel) as "@1:X" leaf placeholders.
         subst = {}
         for v in pattern_metavars(r1.lhs):
             subst[v] = (
                 v[len("$attr:") :] if v.startswith("$attr:") else v
             )
         for v in pattern_metavars(r1.rhs):
-            if v.startswith("$attr:") and v not in subst:
-                subst[v] = ns1 + v[len("$attr:") :]
+            if v not in subst:
+                subst[v] = (
+                    ns1 + v[len("$attr:") :]
+                    if v.startswith("$attr:")
+                    else ns1 + v
+                )
         try:
             t1 = instantiate_pattern(r1.rhs, subst)
         except (
@@ -1524,12 +1574,13 @@ def synthesize_rules(
                 m2 = match_pattern(r2.lhs, sub, {})
                 if m2 is None:
                     continue
-                # r2's RHS attr metavars not bound by its LHS need
-                # r2.derive — carried as "@2:" placeholders.
+                # r2's RHS metavars not bound by its LHS need
+                # r2.derive — carried as "@2:" placeholders (attr
+                # metavars and "$leaf:"-channel term metavars alike).
                 inst2 = dict(m2)
                 ok = True
                 for v in pattern_metavars(r2.rhs):
-                    if v.startswith("$attr:") and v not in inst2:
+                    if v not in inst2:
                         if (
                             r2.derive is None
                         ):  # pragma: no cover — filtered by _synthesizable
@@ -1537,7 +1588,9 @@ def synthesize_rules(
                             break
                         inst2[v] = (
                             ns2 + v[len("$attr:") :]
-                        )  # pragma: no cover — r2.derive + unbound attr metavar
+                            if v.startswith("$attr:")
+                            else ns2 + v
+                        )  # pragma: no cover — r2.derive + unbound metavar
 
                 if (
                     not ok

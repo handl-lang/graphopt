@@ -148,13 +148,19 @@ gap.
 - `dspec_synth` fingerprints values through a hashable `_vkey` box —
   the `TypeError: unhashable` crash is gone; tensor leaves
   (`("tval", T)`) join the leaf bank when a `source` is registered.
-- **Known limits, stated honestly**: (a) `meta.synthesize_rules`
+- **Known limits, stated honestly**: (a) ~~`meta.synthesize_rules`
   still requires RHS *term* metavars to be LHS-bound — a `$leaf:`
   rule cannot be auto-composed (the `@i:` placeholder machinery is
   attr-only); term-level namespacing is future work, refused rather
-  than guessed today.  (b) The mint must be deterministic — a
-  non-deterministic adapter breaks cert replay; the contract is
-  documented, not enforced.  (c) A `$leaf:` value that is neither
-  scalar nor mintable declines — there is no third landing zone.
+  than guessed today.~~ **Closed (2026-10-18)**: term-level
+  placeholders landed — a `$leaf:` output travels as an `@i:` leaf
+  metavar refilled by the composite `derive` at instantiate time
+  (`retros/leaf-compose-seam.md`).  (b) The mint must be
+  deterministic — a non-deterministic adapter breaks cert replay; the
+  contract is documented, not enforced.  (c) A `$leaf:` value that is
+  neither scalar nor mintable declines — there is no third landing
+  zone.
 - `DEFAULT` is untouched: no law changes, so extraction behavior for
   existing callers is unchanged except the `batch_norm` price.
+  (Follow-up: `BATCH_NORM_RULES` shipped as an *opt-in* list —
+  `DEFAULT` stays untouched pending admission.)

@@ -208,8 +208,10 @@ def test_laws_exports_every_rewrite():
     # + 8 split_scalar pointwise-split rules + the opt-in
     # pointwise factor/distribute pair
     # + 6 dense-scan + 16 diagonal-scan + 77 layout + 37 attention
+    # + 3 batch_norm_expand family rules (opt-in BATCH_NORM_RULES —
+    # ADR 0012's named content gap, held out of the default set)
     # rewrites.
-    assert len(found) == 221
+    assert len(found) == 224
 
 
 def test_all_rules_count_unchanged():

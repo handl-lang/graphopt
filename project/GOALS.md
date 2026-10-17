@@ -229,6 +229,19 @@ gate 4).  ADR `0012-tensor-derives.md` lands the seam:
 - Probe re-run: `scale_mints_as_leaf: True`, `tensor_synth_fit:
   {'Wn': mul(attr g, tval w)}`, `tensor_sample_error: None`.
   Retro: `retros/tensor-derives.md`.
-- **Still open (named)**: the `batch_norm` LHS law (content — derivable
-  now), synth depth ≥4 over the 7-attr bank, `$leaf:` rules can't
-  auto-compose (attr-only placeholders).
+- **Both named residuals closed (same day)**: the `batch_norm` LHS law
+  landed as `BATCH_NORM_RULES` — three eval-mode expansion variants
+  minting `γ·((x−μ)·rsqrt(σ²+ε)) + β` as data (cond + dspec; the
+  per-channel broadcast `reshape` target derived from `x`'s rank,
+  `Const(eps)` minted through the scalar `$leaf:` channel) — fp64-exact
+  vs `F.batch_norm` (7.3e-13), held out of `DEFAULT` pending the
+  admission floor; and the **`$leaf:` auto-compose seam** landed — the
+  `@i:` placeholder machinery now covers *term* metavars, so a
+  `$leaf:` rule composes in `synthesize_rules` (measured: refusal at
+  `_synthesizable` → emitted composite firing `Const(2.0)` through
+  `"@1:eps"`).  Retro: `retros/leaf-compose-seam.md`; addendum in
+  ADR 0012.
+- **Still open (named)**: the conv+BN *weight fold* law itself
+  (`W'`/`b'` — now reachable: stats are terms, `$leaf:` parents
+  compose), synth depth ≥4 over the 7-attr bank, `BATCH_NORM_RULES`
+  `DEFAULT` admission (guarded sweep).

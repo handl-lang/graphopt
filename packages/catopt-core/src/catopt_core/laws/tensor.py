@@ -798,6 +798,187 @@ RECIP_SQRT_TO_RSQRT = R(
 
 
 # ---------------------------------------------------------------------------
+#  batch_norm expansion — the kernel's eval-mode spelled work.
+#
+#  ``aten.batch_norm`` exports fused (the ResNetBlock census carries
+#  it verbatim — ``weightspace-fold.md`` gate 5 measured that no law
+#  LHS named it).  In eval mode it IS one affine map per channel:
+#
+#      x̂ = (x − μ)·rsqrt(σ² + ε)      y = γ·x̂ + β
+#
+#  Expanding it — kernel → subgraph — is the *expose* half of the
+#  conv+BN weight-space fold: the per-channel scale/shift must sit in
+#  the e-graph as ordinary ops before any weight-space law can fold
+#  them into a neighbouring conv's parameters.  Extraction is safe:
+#  the fused member stays the cheapest spelling of the class
+#  (``_OP_FLOPS`` prices it 4 — below the expanded subgraph's ~7
+#  elementwise passes), so adding the member is optionality, never a
+#  regression.
+#
+#  The stats operands are (C,) vectors while ``x`` is (N, C, …): the
+#  spelled semantics needs each stat *viewed* at rank(x) with C on
+#  axis 1 — ``reshape(rm, (1, C, 1…))``.  The target is *derived*, one
+#  law covering every rank: ``(1,) + shape(rm) + take(ones, rank-2)``
+#  (``take`` is Python-clamped, so the ``rank <= 6`` guard is what
+#  keeps an over-long rank from silently minting a short broadcast
+#  target — the strictness contract: a law never mints an attr it
+#  cannot verify).  ``eps`` is an *attr* on the fused node; the
+#  expanded subgraph needs it as a leaf — the ``$leaf:`` scalar
+#  channel mints the ``Const`` (no tensor algebra needed for scalars).
+#
+#  Held out of ``ALL_RULES`` — the family is opt-in pending the
+#  measured admission floor (the guarded sweep the promoted laws
+#  cleared), the same posture the ATTENTION_RULES opt-in keeps.
+# ---------------------------------------------------------------------------
+
+#: The eval-mode shape/stat guards shared by every arity variant:
+#: ``training`` must be False (training mode computes batch stats and
+#: updates the running pair — different math entirely), ``x`` must be
+#: concretely shaped with a channel axis in range of the ones-bank,
+#: and the running stats must be equal-shaped per-channel vectors
+#: whose extent IS ``x``'s channel axis.
+_COND_BN_EVAL = (
+    "and",
+    ("attr-is", "TR", False),
+    ("concrete", "x"),
+    ("rank", "x", ">=", 2),
+    ("rank", "x", "<=", 6),
+    ("concrete", "rm"),
+    ("rank", "rm", "==", 1),
+    ("dim-eq", "x", 1, "rm", 0),
+    ("shape-eq", "rv", "rm"),
+)
+
+#: The affine pair's per-channel shape agreement (``aten`` reads the
+#: operands between ``x`` and the running stats as ``(w, b)``).
+_COND_BN_AFFINE = ("and", _COND_BN_EVAL, ("shape-eq", "w", "rm"))
+_COND_BN_FULL = ("and", _COND_BN_AFFINE, ("shape-eq", "b", "rm"))
+
+#: The broadcast view + the eps leaf.  ``CH`` is the (1, C, 1…)
+#: reshape target computed from ``x``'s rank and ``rm``'s own extent;
+#: ``$leaf:EPS`` mints ``Const(eps)`` — the scalar twin of ADR 0012's
+#: tensor channel (a non-numeric ``eps`` declines in the mint, so the
+#: whole derive vetoes rather than fabricate a leaf).
+_DSPEC_BN = {
+    "CH": (
+        "concat",
+        ("tuple", 1),
+        ("shape", "rm"),
+        (
+            "take",
+            ("tuple", 1, 1, 1, 1),
+            ("sub", ("len", ("shape", "x")), 2),
+        ),
+    ),
+    "$leaf:EPS": ("attr", "EP"),
+}
+
+#: Compat aliases — the test-facing hooks; they ARE the same data the
+#: rules carry (``as_check`` / ``as_derive`` keep them from drifting).
+_check_bn_eval = as_check(_COND_BN_EVAL)
+_derive_bn = as_derive(_DSPEC_BN)
+
+
+def _bn_stat(t: str) -> Op:
+    """``reshape(t, (1, C, 1…))`` — the channel-broadcast view."""
+    return Op.make("reshape", t, shape="CH")
+
+
+def _bn_xhat(x: str = "x") -> Op:
+    """``(x − μ̂)·rsqrt(σ̂² + ε)`` — the shared normalized core."""
+    return Op.make(
+        "mul",
+        Op.make("sub", x, _bn_stat("rm")),
+        Op.make("rsqrt", Op.make("add", _bn_stat("rv"), "EPS")),
+    )
+
+
+BATCH_NORM_EXPAND = R(
+    "batch_norm_expand",
+    Op.make(
+        "batch_norm",
+        "x",
+        "w",
+        "b",
+        "rm",
+        "rv",
+        training="TR",
+        momentum="M",
+        eps="EP",
+        cudnn_enabled="CU",
+    ),
+    Op.make(
+        "add",
+        Op.make("mul", _bn_stat("w"), _bn_xhat()),
+        _bn_stat("b"),
+    ),
+    law="batch_norm(x, γ, β, μ, σ²) IS γ·((x−μ)·rsqrt(σ²+ε)) + β in "
+    "eval mode — the fused kernel's spelled work, exposed so "
+    "weight-space laws can fold the per-channel affine into a "
+    "neighbouring conv.  Fused member stays cheapest under "
+    "extraction (priced 4 < ~7 expanded passes).",
+    cond=_COND_BN_FULL,
+    dspec=_DSPEC_BN,
+    tags=_SIM,
+)
+
+#: The weight-only variant — a lone mid operand between ``x`` and the
+#: running stats reads as ``w`` at export (``b`` dropped as None):
+#: ``y = γ·x̂``, the affine fold's shift-free half.
+BATCH_NORM_EXPAND_NOBIAS = R(
+    "batch_norm_expand_nobias",
+    Op.make(
+        "batch_norm",
+        "x",
+        "w",
+        "rm",
+        "rv",
+        training="TR",
+        momentum="M",
+        eps="EP",
+        cudnn_enabled="CU",
+    ),
+    Op.make("mul", _bn_stat("w"), _bn_xhat()),
+    law="batch_norm(x, γ, μ, σ²) IS γ·((x−μ)·rsqrt(σ²+ε)) in eval "
+    "mode — the bias-free export arity (the lone mid operand reads "
+    "as weight).",
+    cond=_COND_BN_AFFINE,
+    dspec=_DSPEC_BN,
+    tags=_SIM,
+)
+
+#: The affine-free variant — ``batch_norm(x, μ, σ²)`` is the bare
+#: normalization ``y = x̂`` (both affine operands dropped at export).
+BATCH_NORM_EXPAND_PLAIN = R(
+    "batch_norm_expand_plain",
+    Op.make(
+        "batch_norm",
+        "x",
+        "rm",
+        "rv",
+        training="TR",
+        momentum="M",
+        eps="EP",
+        cudnn_enabled="CU",
+    ),
+    _bn_xhat(),
+    law="batch_norm(x, μ, σ²) IS (x−μ)·rsqrt(σ²+ε) in eval mode — "
+    "the affine-free export arity.",
+    cond=_COND_BN_EVAL,
+    dspec=_DSPEC_BN,
+    tags=_SIM,
+)
+
+#: The batch_norm expansion family — opt-in (see the section header:
+#: held out of the default saturation set pending admission).
+BATCH_NORM_RULES: list[Rewrite] = [
+    BATCH_NORM_EXPAND,
+    BATCH_NORM_EXPAND_NOBIAS,
+    BATCH_NORM_EXPAND_PLAIN,
+]
+
+
+# ---------------------------------------------------------------------------
 #  Distributivity / naturality (the categorical insight)
 #
 #  RANK GUARD.  ``matmul`` contracts a rank>=2 right operand's axis -2
