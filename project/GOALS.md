@@ -267,3 +267,15 @@ gate 4).  ADR `0012-tensor-derives.md` lands the seam:
 - Lab bug fixed: `dspec_audit.bounded_synth` crashed `TypeError:
   unhashable ndarray` on tensor samples — ported the `_vkey` boxing.
   Retro: `retros/conv-bn-fold-synth.md`.
+
+### `BATCH_NORM_RULES` admission sweep — ran, refused at typed-pay
+
+All three stored as objects and gauntleted on the real corpus
+(364 terms / 245 probes; ~10 s corpus + ≤10 s per rule — no bounding
+needed).  Truth sweep green everywhere (synth 16eq/0ne/0rerr each;
+the full variant 10eq/0ne real).  **Stage 6 `typed-pay` refuses all
+three**: `batch_norm_expand` fires 8 well-typed times but `paid=0`
+(the fused member is always cheaper — the expose direction is
+infrastructure, not an extraction win); the two short arities match
+no corpus arity (`fires=0`).  `DEFAULT` unchanged.
+Retro: `retros/bn-admission-sweep.md`.
