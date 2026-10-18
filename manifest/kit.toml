@@ -42,7 +42,7 @@ role = "the canonical Language as data — YAML fragments → Language. A langua
 
 [[component]]
 name = "platform"
-repo = "handl-lang/platform"
+repo = "handl-lang/host"
 float = "main"
 kind = "cargo-git"
 crates = [

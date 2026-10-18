@@ -6,7 +6,7 @@ through the **extension** when it is importable:
 
     cd lab/handl-peer
     VIRTUAL_ENV=../../.venv maturin develop \\
-        --target-dir ~/GitHub/handl-lang/platform/target
+        --target-dir ~/GitHub/handl-lang/host/target
 
 The same crate also builds a CLI over the same library code
 (`src/bin/rewrite.rs`), and that is the **fallback** surface — a checkout
@@ -15,7 +15,7 @@ exercises the call path through the binary:
 
     cd lab/handl-peer
     PYO3_PYTHON=$(git rev-parse --show-toplevel)/.venv/bin/python \\
-        CARGO_TARGET_DIR=~/GitHub/handl-lang/platform/target \\
+        CARGO_TARGET_DIR=~/GitHub/handl-lang/host/target \\
         cargo build --bin rewrite
 
 They **skip** when neither surface is available — the extension is a
@@ -51,7 +51,7 @@ _REPO = Path(__file__).resolve().parents[1]
 _BIN = Path(
     os.environ.get(
         "CATOPT_HANDL_PEER_BIN",
-        Path.home() / "GitHub/handl-lang/platform/target/debug/rewrite",
+        Path.home() / "GitHub/handl-lang/host/target/debug/rewrite",
     )
 )
 _FRAGMENTS = _REPO / "lab" / "handl-spike" / "fragments"

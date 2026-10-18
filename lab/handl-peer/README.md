@@ -36,7 +36,7 @@ agrees with catopt's own `EGraph.apply_rule`.
 # one-time, if the uv tool is not present: uv tool install maturin
 cd lab/handl-peer
 VIRTUAL_ENV=../../.venv maturin develop \
-    --target-dir ~/GitHub/handl-lang/platform/target
+    --target-dir ~/GitHub/handl-lang/host/target
 
 # then, from the repo root:
 .venv/bin/python -c \
@@ -52,7 +52,7 @@ this host as a uv tool (`~/.local/bin/maturin`), not in `.venv`.
 ```sh
 cd lab/handl-peer
 PYO3_PYTHON=$(git rev-parse --show-toplevel)/.venv/bin/python \
-    CARGO_TARGET_DIR=~/GitHub/handl-lang/platform/target \
+    CARGO_TARGET_DIR=~/GitHub/handl-lang/host/target \
     cargo build --bin rewrite
 ```
 
@@ -81,7 +81,7 @@ a **build-time interpreter mismatch, not abi3 and not libpython linkage**:
 ## Gaps — read these before treating it as a package
 
 1. **The path dependencies are absolute and local.**  `Cargo.toml` points
-   at `~/GitHub/handl-lang/platform/crates/...`.  A real package needs
+   at `~/GitHub/handl-lang/host/crates/...`.  A real package needs
    handl published, or a git dependency — and handl's crates use
    workspace inheritance, which a *git* dependency handles and a bare
    vendored copy does not.

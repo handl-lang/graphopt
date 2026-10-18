@@ -249,7 +249,7 @@ and verifies* recurrences, but it is not where they are *found*.
 
 The calculus above is not only a catopt idea: it is implemented, as a
 language *and* a set of engines, by the **handl** platform
-(`handl-lang/platform` — one `Language` whose tables are data: `eval`,
+(`handl-lang/host` — one `Language` whose tables are data: `eval`,
 `types`, `ast`, `transforms`, `lexer_rules`; engines for lexing,
 parsing, execution ×3, typechecking and **rewriting**).  ADR 0010 adopts
 its model — *one language, many interpretations*: eval, typecheck and

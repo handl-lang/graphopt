@@ -20,10 +20,10 @@ handl-value = { git = "https://github.com/handl-lang/kernel", branch = "main" }
 handl-kit-data-canonical = { git = "https://github.com/handl-lang/lang", branch = "main" }
 
 # platform — the runtime + module bridge
-handl-platform = { git = "https://github.com/handl-lang/platform", branch = "main" }
-handl-runtime = { git = "https://github.com/handl-lang/platform", branch = "main" }
-handl-plugin-module = { git = "https://github.com/handl-lang/platform", branch = "main" }
-handl-plugin-lib-handl = { git = "https://github.com/handl-lang/platform", branch = "main" }
+handl-platform = { git = "https://github.com/handl-lang/host", branch = "main" }
+handl-runtime = { git = "https://github.com/handl-lang/host", branch = "main" }
+handl-plugin-module = { git = "https://github.com/handl-lang/host", branch = "main" }
+handl-plugin-lib-handl = { git = "https://github.com/handl-lang/host", branch = "main" }
 
 # engines — the smallest honest set: data lexer, Pratt parser, tree-walk
 # eval (the `hnl-engine-*` crates in their own repos, post-ADR-0128 —

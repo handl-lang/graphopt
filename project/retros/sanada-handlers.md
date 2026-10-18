@@ -1,7 +1,7 @@
 # Retro — Sanada's arrow handlers, mapped onto catopt
 
 Two papers by Takahiro Sanada that HANDL's GMSAC kernel builds on
-(`handl-lang/platform/docs/explanation/graded-modal-sanada-arrow-calculus.md`):
+(`handl-lang/host/docs/explanation/graded-modal-sanada-arrow-calculus.md`):
 
 1. **Algebraic effects and handlers for arrows** (JFP 2024) —
    arrows + `Op`/`Handle`: an `Op` is a *pure effect request* with

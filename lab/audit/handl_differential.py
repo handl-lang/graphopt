@@ -63,7 +63,7 @@ _REPO = Path(__file__).resolve().parents[2]
 _BIN = Path(
     os.environ.get(
         "CATOPT_HANDL_PEER_BIN",
-        Path.home() / "GitHub/handl-lang/platform/target/debug/rewrite",
+        Path.home() / "GitHub/handl-lang/host/target/debug/rewrite",
     )
 )
 _FRAGMENTS = _REPO / "lab" / "handl-spike" / "fragments-all"
@@ -231,7 +231,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         print(
             "  cd lab/handl-peer && VIRTUAL_ENV=../../.venv maturin develop"
-            " --target-dir ~/GitHub/handl-lang/platform/target",
+            " --target-dir ~/GitHub/handl-lang/host/target",
             file=sys.stderr,
         )
         return 2

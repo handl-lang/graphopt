@@ -22,7 +22,7 @@ dependencies = [
 [[package]]
 name = "handl-kit-arrow-lower"
 version = "0.1.0"
-source = "git+https://github.com/handl-lang/platform?branch=main#423ca8559a0031d92b9e65108ae1e19fe01fa67e"
+source = "git+https://github.com/handl-lang/host?branch=main#423ca8559a0031d92b9e65108ae1e19fe01fa67e"
 dependencies = [
  "handl-language",
  "serde_json",
@@ -31,7 +31,7 @@ dependencies = [
 [[package]]
 name = "handl-kit-data"
 version = "0.1.0"
-source = "git+https://github.com/handl-lang/platform?branch=main#423ca8559a0031d92b9e65108ae1e19fe01fa67e"
+source = "git+https://github.com/handl-lang/host?branch=main#423ca8559a0031d92b9e65108ae1e19fe01fa67e"
 dependencies = [
  "handl-language",
  "handl-platform",
@@ -94,7 +94,7 @@ source = "git+https://github.com/handl-lang/lib-str-handl?branch=main#97f335cfd2
 [[package]]
 name = "handl-platform"
 version = "0.1.0"
-source = "git+https://github.com/handl-lang/platform?branch=main#423ca8559a0031d92b9e65108ae1e19fe01fa67e"
+source = "git+https://github.com/handl-lang/host?branch=main#423ca8559a0031d92b9e65108ae1e19fe01fa67e"
 dependencies = [
  "semver",
  "serde",
@@ -106,7 +106,7 @@ dependencies = [
 [[package]]
 name = "handl-plugin-ext-diag"
 version = "0.1.0"
-source = "git+https://github.com/handl-lang/platform?branch=main#423ca8559a0031d92b9e65108ae1e19fe01fa67e"
+source = "git+https://github.com/handl-lang/host?branch=main#423ca8559a0031d92b9e65108ae1e19fe01fa67e"
 dependencies = [
  "handl-language",
  "handl-platform",
@@ -128,7 +128,7 @@ dependencies = [
 [[package]]
 name = "handl-plugin-lib-handl"
 version = "0.1.0"
-source = "git+https://github.com/handl-lang/platform?branch=main#423ca8559a0031d92b9e65108ae1e19fe01fa67e"
+source = "git+https://github.com/handl-lang/host?branch=main#423ca8559a0031d92b9e65108ae1e19fe01fa67e"
 dependencies = [
  "handl-language",
  "handl-lib-dedent",
@@ -152,7 +152,7 @@ dependencies = [
 [[package]]
 name = "handl-plugin-module"
 version = "0.1.0"
-source = "git+https://github.com/handl-lang/platform?branch=main#423ca8559a0031d92b9e65108ae1e19fe01fa67e"
+source = "git+https://github.com/handl-lang/host?branch=main#423ca8559a0031d92b9e65108ae1e19fe01fa67e"
 dependencies = [
  "handl-platform",
  "serde_json",
@@ -161,7 +161,7 @@ dependencies = [
 [[package]]
 name = "handl-runtime"
 version = "0.1.0"
-source = "git+https://github.com/handl-lang/platform?branch=main#423ca8559a0031d92b9e65108ae1e19fe01fa67e"
+source = "git+https://github.com/handl-lang/host?branch=main#423ca8559a0031d92b9e65108ae1e19fe01fa67e"
 dependencies = [
  "handl-kit-arrow-lower",
  "handl-language",

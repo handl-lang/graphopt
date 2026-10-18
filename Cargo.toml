@@ -49,7 +49,7 @@ exclude = [
 # [patch."https://github.com/handl-lang/lang"]
 # handl-kit-data-canonical = { path = "/path/to/lang/crates/handl-kit-data-canonical" }
 #
-# [patch."https://github.com/handl-lang/platform"]
+# [patch."https://github.com/handl-lang/host"]
 # handl-platform = { path = "/path/to/platform/crates/platform" }
 # handl-runtime = { path = "/path/to/platform/crates/handl-runtime" }
 # handl-plugin-module = { path = "/path/to/platform/crates/plugin-module" }
