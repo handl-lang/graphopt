@@ -227,15 +227,15 @@ spelled term `batch_norm(conv2d(x,W,b),…)` and the deployed term
 materialized through the kit — evaluate to the same tensor
 (**bitwise-equal** on the seeded fixture; the full `torch.export` IR
 of the module evaluates at 6.7e-16 max abs diff), and per-call wall
-over `hnl-run --repeat 30` measures:
+over `hnl-run --repeat 30` measures three regimes — the honest
+deployed arm (fold math amortized to load) is ~−5 %; an inline-fold
+arm that recomputes the fold per call runs *slower* (+22–33 %); and a
+subprocess-arm −16 % figure conflates the prelude's unused fold-marshal
+work into the baseline.  `dag_cost` is the stable headline:
+55,296 → 36,864 (−33 %).  Full reconciliation:
+`bench/RESULTS.md` + `lab/probes/conv_fold_wall_regimes_probe.py`.
 
-| arm | per-call (this box) | per-call (recorded) | `dag_cost` |
-|---|---|---|---|
-| spelled `batch_norm(conv2d)` | 87.0 ms | 95.4 ms | 55,296 |
-| deployed `conv2d(x,W2,b2)` | 72.8 ms | 82.1 ms | 36,864 |
-| **delta** | **−16.3 %** | −13.9 % | −33 % |
-
-: The fold decision, priced by the runtime itself.
+: The fold decision, priced by the runtime itself — honest regime-split.
 {#tbl-decision}
 
 One honest subtlety: `dag_cost`'s param-only discount models

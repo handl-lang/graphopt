@@ -21,7 +21,8 @@ guard out of the evidence store, proved it premise-derivable with a
 replayable certificate, measured its pay, and shipped it.  The folded
 form then evaluates **bitwise-equal** to the spelled program through an
 independent runtime (the handl tree-walk engine, via `catopt-kit`) at
-**−16 % per-call wall** (72.8 vs 87.0 ms/call, `hnl-run --repeat 30`;
+**≈−5 % per-call wall** in the deployed regime (fold amortized to
+load; the un-amortized/inline fold arm runs *slower* per call);
 the cost model agrees: `dag_cost` 36,864 vs 55,296).  Full account:
 [`bench/RESULTS.md`](bench/RESULTS.md).  **Scope, stated plainly:** this
 is a kernel-scale result on fp64 fixtures — certified rewrite discovery
