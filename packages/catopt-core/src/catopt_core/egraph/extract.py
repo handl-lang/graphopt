@@ -8,7 +8,6 @@ import logging
 from typing import TYPE_CHECKING, Any, cast
 
 from catopt_core.cost import (
-    _FOLDABLE_ELEMWISE,
     _SOLVER_FACTOR,
     _SOLVER_OPS,
     _local_roofline,
@@ -24,6 +23,7 @@ from catopt_core.egraph.types import (
     _pattern_attrs,
 )
 from catopt_core.ir import Op, Var
+from catopt_core.opmeta import FOLD_OPS
 
 if TYPE_CHECKING:
     from catopt_core.egraph.certs import Certificate
@@ -32,13 +32,14 @@ if TYPE_CHECKING:
 logger = logging.getLogger("catopt_core.egraph.extract")
 
 #: Ops ``IRModule._fold_weight_chains`` actually folds into a
-#: materialised parameter (mirrors ``cost._folds_to_param``).  The
-#: param-only discount applies only to classes whose extracted subtree
-#: is built from these — a param-only ``trace``/``inv`` subtree is NOT
-#: foldable: it evaluates a solver call at runtime, so it must be
-#: billed.  (The e-class level check approximates the per-arg Const
-#: rules — see the function for the exact contract.)
-_FOLDABLE_OPS = _FOLDABLE_ELEMWISE | {"matmul", "concat"}
+#: materialised parameter — :data:`catopt_core.opmeta.FOLD_OPS`, the
+#: same source ``cost._folds_to_param`` and the lowerer's gate read.
+#: The param-only discount applies only to classes whose extracted
+#: subtree is built from these — a param-only ``trace``/``inv``
+#: subtree is NOT foldable: it evaluates a solver call at runtime, so
+#: it must be billed.  (The e-class level check approximates the
+#: per-arg Const rules — see the function for the exact contract.)
+_FOLDABLE_OPS = FOLD_OPS
 
 #: Largest number of pairing groups for which
 #: :meth:`_ExtractMixin.extract_paired` enumerates every ``{0,1}^G``

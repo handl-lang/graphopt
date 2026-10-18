@@ -167,6 +167,9 @@ from .fusion import (
     fusion_regions as fusion_regions,
 )
 from .params import (
+    _FOLD_EVAL_OPS as _FOLD_EVAL_OPS,
+)
+from .params import (
     _FOLDABLE_ELEMWISE as _FOLDABLE_ELEMWISE,
 )
 from .params import (

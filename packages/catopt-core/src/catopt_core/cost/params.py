@@ -16,6 +16,7 @@ from __future__ import annotations
 from typing import Any, cast
 
 from catopt_core.ir import Const, Op, Param
+from catopt_core.opmeta import FOLD_OPS
 from catopt_core.typing import _numel, _shape_of, has_var_leaf
 
 from .basic import _CostMarkers, _memo_dispatch
@@ -139,7 +140,12 @@ def _param_numel(
 #: folds eagerly through the ``_IR_TO_TORCH`` bindings when the whole
 #: subtree is param-only.  ``matmul`` and ``concat`` are spelled out
 #: separately in ``_folds_to_param`` because they fold under tighter arg
-#: rules (real tensor operands, not Consts).  Keep in lock-step.
+#: rules (real tensor operands, not Consts).
+#:
+#: This set is now a *subset* of the canonical fold alphabet
+#: :data:`catopt_core.opmeta.FOLD_OPS` — kept because
+#: :data:`_FUSION_POINTWISE_OPS` builds on it — while
+#: :func:`_folds_to_param` reads ``FOLD_OPS`` directly.
 _FOLDABLE_ELEMWISE = frozenset(
     {
         "add",
@@ -167,7 +173,8 @@ _FOLDABLE_ELEMWISE = frozenset(
 #: re-materialisation keeps its saving.  ``reshape`` is how the
 #: pairing pass spells a stacked expert parameter re-tiled as one
 #: fused weight, so pricing it as foldable is what lets that member
-#: win extraction.
+#: win extraction.  A subset of the canonical :data:`opmeta.FOLD_OPS`,
+#: like ``_FOLDABLE_ELEMWISE``.
 _FOLDABLE_VIEWS = frozenset(
     {
         "reshape",
@@ -185,6 +192,12 @@ _FOLDABLE_VIEWS = frozenset(
         "clone",
     }
 )
+
+
+#: Fold ops evaluated through the shallow ``eval_term`` path —
+#: :data:`opmeta.FOLD_OPS` minus ``matmul``/``concat``, which keep the
+#: tighter real-tensor-operand rule in :func:`_folds_to_param`.
+_FOLD_EVAL_OPS = FOLD_OPS - {"matmul", "concat"}
 
 
 def _has_var_leaf(term: Any, memo: dict) -> bool:
@@ -221,9 +234,12 @@ def _folds_to_param(
     every argument reduces to a stored parameter — a resolvable
     ``Param`` leaf or a subtree that itself folds (folded intermediates
     are registered into ``_param_values`` before their parents are
-    considered).  ``Const`` operands are allowed only where the
-    lowering accepts them: elementwise ops, but not the ``matmul``
-    two-Param fold nor ``concat`` (``torch.cat`` has no scalar form).
+    considered) — and its op is in the fold alphabet
+    (:data:`catopt_core.opmeta.FOLD_OPS`, the one source shared with
+    ``_fold_weight_chains``'s gate).  ``Const`` operands are allowed
+    only where the lowering accepts them: the shallow-eval fold ops,
+    but not the ``matmul`` two-Param fold nor ``concat``
+    (``torch.cat`` has no scalar form).
     """
     if not isinstance(term, Op):
         return False
@@ -243,10 +259,12 @@ def _folds_to_param(
 
         if term.op in ("matmul", "concat") and len(term.args) >= 2:
             res = all(to_param(a, False) for a in term.args)
-        elif term.op in _FOLDABLE_ELEMWISE | _FOLDABLE_VIEWS:
-            # Elementwise ops and value-preserving views alike accept
-            # Const operands at lowering (``isinstance(a, (_Param,
-            # Const))``) — the Const arity rule is uniform.
+        elif term.op in _FOLD_EVAL_OPS:
+            # Every other foldable op — elementwise, views, reductions,
+            # scatters, creators — accepts Const operands at lowering
+            # (``isinstance(a, (_Param, Const))``); the eval itself
+            # declines a spelling a binding cannot evaluate, so the
+            # Const arity rule is uniform here.
             res = all(to_param(a, True) for a in term.args)
     memo[k] = res
     return res

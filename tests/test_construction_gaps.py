@@ -218,10 +218,16 @@ def test_verbatim_assoc_linear_fold_is_a_novelty_decline():
     assert not _stages(rep)["novelty"].passed
 
 
-def test_transpose_spelled_chain_does_not_pay():
-    """``matmul(x, tA·tB)`` bills two non-foldable transposes — the
-    executor model charges ``transpose`` as a real op even on Params,
-    so this spelling clears truth and novelty but not typed-pay."""
+def test_transpose_spelled_chain_pays_via_weight_fold():
+    """``matmul(x, tA·tB)`` pays: both transposes sit inside a
+    param-only weight subtree, so ``_fold_weight_chains`` materialises
+    the product once at lowering and the cost model's ``FOLD_OPS``
+    alphabet (read by ``_folds_to_param`` and the extraction discount)
+    prices it at zero marginal — the runtime graph is one matmul.
+    (Before ``FOLD_OPS`` single-sourced the fold alphabet, extraction's
+    ``_FOLDABLE_OPS`` missed the view ops and billed them per-call,
+    refusing this object at typed-pay — the same drift the conv+BN
+    ``rsqrt`` chains hit.)"""
     obj = synth.compose_objects(
         "linear_chain_mm",
         _lin_as_mm(),
@@ -232,10 +238,11 @@ def test_transpose_spelled_chain_does_not_pay():
     )
     assert obj is not None
     rep, _rec = _gauntlet(obj, _chain_case())
-    assert not rep.usable
+    assert rep.usable, rep.reason
     stages = _stages(rep)
+    assert stages["truth"].passed
     assert stages["novelty"].passed
-    assert not stages["typed-pay"].passed
+    assert stages["typed-pay"].passed
 
 
 def test_three_chain_starves_the_guarded_sweep():

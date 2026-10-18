@@ -59,6 +59,8 @@ __all__ = [
     "COMMUTATIVE_OPS",
     "COST_VIEW",
     "COST_VIEW_OPS",
+    "FOLD",
+    "FOLD_OPS",
     "GENERATOR_VIEW",
     "GENERATOR_VIEW_OPS",
     "POINTWISE",
@@ -130,6 +132,23 @@ TABLE = "table"
 #: Elementwise ops whose result is invariant under operand swap
 #: (``typing._COMMUTATIVE_BROADCAST``).
 COMMUTATIVE = "commutative"
+#: Ops whose parameter-only subtrees evaluate once at compile time:
+#: the reference torch lowering's ``IRModule._fold_weight_chains``
+#: materialises them as a fused ``Param`` before the first forward
+#: (``catopt_torch.torch_bridge``).  This is the single source for the
+#: fold alphabet — the lowerer dispatches on :data:`FOLD_OPS` and the
+#: cost model's fold predicate (``cost._folds_to_param``) and the
+#: extraction-side param-only discount
+#: (``egraph.extract._FOLDABLE_OPS``) read the same set, so a subtree
+#: the lowerer folds is the same subtree the cost model prices at ~0
+#: marginal.  Membership is a *positive* list, not "every bound op":
+#: the slice/extraction family (``select``/``index_select``/``slice``/
+#: ``narrow``/``unbind``/``getitem``/``tensor_split``/``expand``/
+#: ``broadcast_to``/``repeat``/``expand_as``/``unfold``/``stack``/
+#: ``index``/``gather``) deliberately stays runtime — folding them
+#: would bake the dedup re-materialisation back into a full-size param
+#: and erase every sharing saving for near-zero runtime gain.
+FOLD = "fold-at-lowering"
 
 # ---------------------------------------------------------------------------
 #  The classification table — the one place the op sets are written down
@@ -379,6 +398,184 @@ _IR_ONLY_OPS: tuple[str, ...] = (
     "matmul",
 )
 
+#: The :data:`FOLD` membership — ops whose param-only subtrees the
+#: reference lowering (``IRModule._fold_weight_chains``) materialises
+#: as one fused ``Param`` at build time.  Kept as a separate list
+#: (rather than inlined per-entry in ``_CLASSIFIED``) for two reasons:
+#: it is the *lowering contract* the adapter's fold gate dispatches on
+#: verbatim, and ~60 of the names carry no other classification (they
+#: are binding-only spellings — ``sin``/``zeros``/``ones_like``/… —
+#: registered into the vocabulary by this table alone).  ``matmul`` and
+#: ``concat`` fold under a tighter operand rule — every arg must reduce
+#: to a stored parameter, no ``Const`` — which the consumers
+#: (:func:`catopt_core.cost._folds_to_param` and the lowerer itself)
+#: layer on top of membership.
+_FOLD_AT_LOWERING: frozenset[str] = frozenset(
+    {
+        "abs",
+        "acos",
+        "acosh",
+        "add",
+        "addcdiv",
+        "addcmul",
+        "alias",
+        "all",
+        "any",
+        "arange",
+        "argmax",
+        "argmin",
+        "argsort",
+        "asin",
+        "asinh",
+        "atan",
+        "atan2",
+        "atanh",
+        "bfloat16",
+        "bitwise_and",
+        "bitwise_or",
+        "bool",
+        "byte",
+        "ceil",
+        "celu",
+        "char",
+        "clamp",
+        "clamp_max",
+        "clamp_min",
+        "clone",
+        "concat",
+        "contiguous",
+        "cos",
+        "cosh",
+        "count_nonzero",
+        "cumprod",
+        "cumsum",
+        "detach",
+        "detach_",
+        "diag_sum",
+        "digamma",
+        "div",
+        "double",
+        "dropout",
+        "elu",
+        "erf",
+        "erfc",
+        "erfinv",
+        "exp",
+        "exp2",
+        "expm1",
+        "flip",
+        "float",
+        "floor",
+        "flatten",
+        "fmax",
+        "fmin",
+        "fmod",
+        "frac",
+        "full",
+        "full_like",
+        "gammaln",
+        "gelu",
+        "glu",
+        "half",
+        "hardsigmoid",
+        "hardswish",
+        "hardtanh",
+        "heaviside",
+        "i0",
+        "index_add",
+        "index_put",
+        "int",
+        "isclose",
+        "isfinite",
+        "isinf",
+        "isnan",
+        "isneginf",
+        "isposinf",
+        "leaky_relu",
+        "lerp",
+        "linalg_vector_norm",
+        "log",
+        "log10",
+        "log1p",
+        "log2",
+        "log_softmax",
+        "logcumsumexp",
+        "logical_and",
+        "logical_not",
+        "logical_or",
+        "logical_xor",
+        "long",
+        "matmul",
+        "max",
+        "maximum",
+        "mean",
+        "min",
+        "minimum",
+        "mish",
+        "movedim",
+        "mul",
+        "nan_to_num",
+        "nanmean",
+        "nansum",
+        "neg",
+        "new_full",
+        "new_ones",
+        "new_zeros",
+        "nonzero",
+        "one_hot",
+        "ones",
+        "ones_like",
+        "outer",
+        "pad",
+        "permute",
+        "pow",
+        "prelu",
+        "prod",
+        "reciprocal",
+        "relu",
+        "relu6",
+        "remainder",
+        "reshape",
+        "roll",
+        "round",
+        "rsqrt",
+        "scatter",
+        "scatter_add",
+        "scatter_reduce",
+        "select_scatter",
+        "short",
+        "sigmoid",
+        "sign",
+        "silu",
+        "sin",
+        "sinc",
+        "sinh",
+        "slice_scatter",
+        "softmax",
+        "softplus",
+        "softsign",
+        "sqrt",
+        "square",
+        "squeeze",
+        "std",
+        "sub",
+        "sum",
+        "tanh",
+        "to",
+        "transpose",
+        "tril",
+        "triu",
+        "trunc",
+        "type_as",
+        "unflatten",
+        "unsqueeze",
+        "var",
+        "xlogy",
+        "zeros",
+        "zeros_like",
+    }
+)
+
 
 @dataclass(frozen=True)
 class OpMeta:
@@ -406,18 +603,32 @@ class OpMeta:
     tags: frozenset[str]
 
 
+#: ``op name -> {FOLD}`` — the lookup ``_build_registry`` merges into
+#: each entry's tags (precomputed so the comprehension stays linear).
+_FOLD_TAGS: dict[str, frozenset[str]] = {
+    name: frozenset({FOLD}) for name in _FOLD_AT_LOWERING
+}
+
+
 def _build_registry() -> dict[str, OpMeta]:
-    """Compose the registry from its three declared sources.
+    """Compose the registry from its declared sources.
 
     The attr-schema ops (so every schema'd op is registered), the
-    classification table, and the IR-only vocabulary.
+    classification table, the IR-only vocabulary, and the fold
+    membership (which also registers its binding-only spellings).
     """
-    names = set(ATTR_SCHEMA) | set(_CLASSIFIED) | set(_IR_ONLY_OPS)
+    names = (
+        set(ATTR_SCHEMA)
+        | set(_CLASSIFIED)
+        | set(_IR_ONLY_OPS)
+        | set(_FOLD_AT_LOWERING)
+    )
     return {
         name: OpMeta(
             name=name,
             arity=_ARITY.get(name),
-            tags=_CLASSIFIED.get(name, frozenset()),
+            tags=_CLASSIFIED.get(name, frozenset())
+            | _FOLD_TAGS.get(name, frozenset()),
         )
         for name in names
     }
@@ -562,6 +773,9 @@ TABLE_OPS: frozenset[str] = ops(TABLE)
 #: Operand-symmetric elementwise ops
 #: (``typing._COMMUTATIVE_BROADCAST``).
 COMMUTATIVE_OPS: frozenset[str] = ops(COMMUTATIVE)
+#: Param-only subtrees that fold to a materialised ``Param`` at
+#: lowering — the ``_FOLD_AT_LOWERING`` membership, projected.
+FOLD_OPS: frozenset[str] = ops(FOLD)
 
 
 # ---------------------------------------------------------------------------

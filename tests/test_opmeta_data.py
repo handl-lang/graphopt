@@ -116,7 +116,7 @@ def test_declaring_a_shipped_name_raises():
     with pytest.raises(ValueError, match="shipped op"):
         opdata.declare_op(opdata.OpDef(name="add"))
     assert om.meta("add").tags == frozenset(
-        {om.COMMUTATIVE, om.POINTWISE_BINARY}
+        {om.COMMUTATIVE, om.POINTWISE_BINARY, om.FOLD}
     )
 
 

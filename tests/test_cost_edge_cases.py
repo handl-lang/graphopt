@@ -376,6 +376,76 @@ def test_folds_to_param_non_op_and_const_rules():
     assert _folds_to_param(Op.make("matmul", A, B), None, {}) is True
 
 
+def test_folds_to_param_covers_the_lowering_alphabet():
+    """The fold predicate reads the full ``FOLD_OPS`` alphabet, not a
+    hand-narrowed subset — the conv+BN weight-fold spelling
+    (``rsqrt``/``reshape`` chains over bound params) is the drift
+    case: the lowerer folded it while the cost model's 13-op table
+    billed it per-call."""
+    W, V = _p("W", 6, 4, 3, 3), _p("V", 6)
+    # The spelled W' chain of the conv+BN fold: reshape(rsqrt(var+ε)).
+    chain = Op.make(
+        "mul",
+        W,
+        Op.make(
+            "reshape",
+            Op.make("rsqrt", Op.make("add", V, Const(1e-5))),
+            shape=(6, 1, 1, 1),
+        ),
+    )
+    assert _folds_to_param(chain, None, {}) is True
+    # Reductions, gathers-by-construction and creators fold too —
+    # ``_fold_weight_chains`` evaluates them eagerly on bound params.
+    assert (
+        _folds_to_param(Op.make("sum", V, dim=0), None, {}) is True
+    )
+    assert (
+        _folds_to_param(
+            Op.make("flip", V, dims=(0,)), None, {}
+        )
+        is True
+    )
+    # …but the declined slice/extraction family still stays runtime —
+    # re-materialising a dedup slice must keep its sharing saving.
+    assert (
+        _folds_to_param(
+            Op.make("expand", V, shape=(2, 6)), None, {}
+        )
+        is False
+    )
+    # A Var leaf anywhere makes the whole subtree runtime work.
+    assert (
+        _folds_to_param(Op.make("mul", chain, _v("x", 4)), None, {})
+        is False
+    )
+
+
+def test_dag_cost_prices_folded_weight_chains_at_zero():
+    """A subtree closed over Param/Const leaves is compile-time work:
+    ``dag_cost`` charges it nothing, so a folded conv weight prices
+    exactly like the bare one — the premise-pay gap the ``rsqrt``
+    drift caused."""
+    W, V, Bv = _p("W", 6, 4, 3, 3), _p("V", 6), _p("B", 6)
+    chain = Op.make(
+        "mul",
+        W,
+        Op.make(
+            "reshape",
+            Op.make("rsqrt", Op.make("add", V, Const(1e-5))),
+            shape=(6, 1, 1, 1),
+        ),
+    )
+    x = _v("x", 1, 4, 8, 8)
+    assert dag_cost(chain, launch_aware_cost) == 0.0
+    site = Op.make(
+        "conv2d", x, chain, Bv, stride=(1, 1), padding=(1, 1)
+    )
+    bare = Op.make("conv2d", x, W, Bv, stride=(1, 1), padding=(1, 1))
+    assert dag_cost(site, launch_aware_cost) == pytest.approx(
+        dag_cost(bare, launch_aware_cost)
+    )
+
+
 def test_param_bytes_bills_folds_at_output_size():
     """A materialised fold stores its OUTPUT — concat re-stores every
     copy; a folded weight matmul stores the dense product, not the

@@ -53,6 +53,7 @@ def test_projections_are_the_tag_filter():
         om.WRITE,
         om.TABLE,
         om.COMMUTATIVE,
+        om.FOLD,
     ):
         assert om.ops(tag) == frozenset(
             n for n, m in om.REGISTRY.items() if tag in m.tags
@@ -72,6 +73,7 @@ def test_named_projection_constants_match_ops():
     assert om.ops(om.WRITE) == om.WRITE_OPS
     assert om.ops(om.TABLE) == om.TABLE_OPS
     assert om.ops(om.COMMUTATIVE) == om.COMMUTATIVE_OPS
+    assert om.ops(om.FOLD) == om.FOLD_OPS
 
 
 def test_accessors_handle_unknown_ops():
@@ -137,6 +139,47 @@ def test_consumers_read_the_registry_object():
     assert set(layout._POINTWISE_UNARY) == set(om.POINTWISE_UNARY_OPS)
     assert set(layout._POINTWISE_BINARY) == set(om.POINTWISE_BINARY_OPS)
     assert set(pl._POINTWISE) == set(om.POINTWISE_BINARY_OPS)
+
+
+def test_fold_alphabet_is_single_sourced():
+    """The lowerer's fold gate, the cost fold predicate and the
+    extraction param-only discount all read ``FOLD_OPS`` — the one
+    table — so a subtree the lowering folds is exactly the subtree
+    the cost model prices at zero marginal.  The conv+BN weight-fold
+    drift (``rsqrt`` folded at lowering but absent from the cost
+    side's 13-op subset) is what this pins."""
+    from catopt_core.cost import params as cost_params
+    from catopt_core.egraph import extract as ex
+    from catopt_torch import torch_bridge as tb
+
+    assert ex._FOLDABLE_OPS is om.FOLD_OPS
+    assert tb.FOLD_OPS is om.FOLD_OPS
+    # matmul/concat keep their tighter real-operand rule at the
+    # predicate; the shallow-eval residue is the rest of the set.
+    assert cost_params._FOLD_EVAL_OPS | {"matmul", "concat"} == (
+        om.FOLD_OPS
+    )
+    # The declined slice/extraction family stays runtime.
+    assert not (
+        om.FOLD_OPS
+        & {
+            "select",
+            "index_select",
+            "slice",
+            "narrow",
+            "unbind",
+            "getitem",
+            "tensor_split",
+            "expand",
+            "broadcast_to",
+            "repeat",
+            "expand_as",
+            "unfold",
+            "stack",
+            "index",
+            "gather",
+        }
+    )
 
 
 def test_defining_property_arities_hold():
