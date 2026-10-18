@@ -10,10 +10,12 @@
 [dependencies]
 # The package named *portably* — a repo-hosted git source, not a
 # machine-local path. An unpatched git dep resolves to its package-cache
-# slot (`$HANDL_PKG_DIR`/`~/.handl/pkg/host-tensor`) — the directory the
-# ADR-0010 fetch hook materializes (populate it with a checkout or a
-# symlink today; the fetch half is the follow-up seam upstream).
-host-tensor = { git = "https://github.com/handl-lang/host-tensor", branch = "main" }
+# slot (`$HANDL_PKG_DIR`/`~/.handl/pkg/host-tensor`), which the ADR-0010
+# fetch-on-miss hook clones into place; `subdir` names the package root
+# inside the clone (host-tensor's .hnl sources live in `src/`, where its
+# `index.hnl` is) so the git arm and the `[patch]` dir resolve the same
+# tree.
+host-tensor = { git = "https://github.com/handl-lang/host-tensor", branch = "main", subdir = "src" }
 
 [patch]
 # The consumer-side local override — the Cargo `[patch]`/dev-link story.
