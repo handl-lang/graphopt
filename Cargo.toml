@@ -1,0 +1,68 @@
+# Root cargo workspace — created for `catopt-kit` (plan: the modular
+# handl-lang composition seam). The Python monorepo has no other cargo
+# workspace; the two pre-existing Rust crates keep their own manifests
+# and lockfiles and are listed in `exclude` so `cargo` inside them still
+# resolves them standalone.
+
+[workspace]
+resolver = "3"
+members = ["packages/catopt-kit"]
+
+exclude = [
+    # the PyO3 search engine — built with maturin, own Cargo.lock
+    "packages/catopt-native",
+    # the G0 boundary spike — standalone crate with absolute path deps
+    "lab/handl-peer",
+]
+
+# ---------------------------------------------------------------------------
+# Local-override story (the handl-lang `[patch]` convention).
+#
+# `catopt-kit`'s handl deps are git deps floating on `main`
+# (`branch = "main"`). Local development resolves them to sibling-style
+# checkouts in exactly one of two ways:
+#
+# 1. **git insteadOf (this host's default).** Sourcing
+#    `~/.cache/devin/handl_deps.env` maps every
+#    `https://github.com/handl-lang/<repo>` URL onto
+#    `file:///home/luis/GitHub/handl-lang/<repo>` at fetch time
+#    (`url.insteadOf` + `CARGO_NET_GIT_FETCH_WITH_CLI=true`) — the same
+#    redirect `[patch]` performs, one level down. Nothing to uncomment.
+#
+# 2. **`[patch]` tables.** On a machine without the env file, point each
+#    git source at a local checkout by uncommenting and repointing tables
+#    like the one below (the shape every handl-lang repo itself uses —
+#    see e.g. `host-tensor/Cargo.toml`):
+#
+# [patch."https://github.com/handl-lang/kernel"]
+# handl-language = { path = "/path/to/kernel/crates/handl-language" }
+# handl-value = { path = "/path/to/kernel/crates/handl-value" }
+# plugin-engine = { path = "/path/to/kernel/crates/plugin-engine" }
+#
+# [patch."https://github.com/handl-lang/lang"]
+# handl-kit-data-canonical = { path = "/path/to/lang/crates/handl-kit-data-canonical" }
+#
+# [patch."https://github.com/handl-lang/platform"]
+# handl-platform = { path = "/path/to/platform/crates/platform" }
+# handl-runtime = { path = "/path/to/platform/crates/handl-runtime" }
+# handl-plugin-module = { path = "/path/to/platform/crates/plugin-module" }
+# handl-plugin-lib-handl = { path = "/path/to/platform/crates/plugin-lib-handl" }
+# handl-plugin-engine-exec = { path = "/path/to/platform/crates/plugin-engine-exec" }
+# handl-plugin-engine-lex-pattern = { path = "/path/to/platform/crates/plugin-engine-lex-pattern" }
+# handl-plugin-engine-parse-pratt = { path = "/path/to/platform/crates/plugin-engine-parse-pratt" }
+# handl-plugin-engine-exec-tree-walk = { path = "/path/to/platform/crates/plugin-engine-exec-tree-walk" }
+# handl-plugin-engine-exec-bytecode = { path = "/path/to/platform/crates/plugin-engine-exec-bytecode" }
+# # …plus whatever the transitive tree pulls (plugin-engine-lint,
+# # plugin-engine-transform{,-rewrite}, plugin-engine-{lex,parse,typecheck},
+# # plugin-lib-char-native, handl-kit-{data,arrow-lower}, plugin-load,
+# # plugin-ext-diag, handl-test-utils, host-tooling…). Add entries on
+# # demand — cargo names the missing package in the error.
+#
+# [patch."https://github.com/handl-lang/host-tensor"]
+# handl-host-tensor = { path = "/path/to/host-tensor" }
+#
+# [patch."https://github.com/handl-lang/lib-ops"]
+# handl-lib-ops = { path = "/path/to/lib-ops" }
+# handl-lib-str-handl = { path = "/path/to/lib-str-handl" }
+# handl-lib-dedent = { path = "/path/to/lib-dedent" }
+# ---------------------------------------------------------------------------

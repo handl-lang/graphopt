@@ -1,0 +1,11 @@
+# Cargo configuration for the root workspace (currently just `catopt-kit`).
+#
+# `RUST_MIN_STACK`: handl's tree-walk eval engine is a recursive
+# interpreter whose frame chain (eval_node → scheme term → native op →
+# eval_node) recurses deeply enough on ordinary `.hnl` expressions to
+# overflow libtest's default 2 MiB per-test thread stack. Both upstream
+# suites hit the same wall and carry the same knob — platform sets
+# 16 MiB, kit-canonical 32 MiB (see `kit-canonical/.cargo/config.toml`).
+# It only affects test-thread stacks; normal builds are unaffected.
+[env]
+RUST_MIN_STACK = "33554432"

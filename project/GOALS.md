@@ -351,3 +351,30 @@ the lowering-time weight fold, so extraction keeps the spelled term.
 Verdicts: the 4 conv anchors + `batch_norm_expand` **enabled-but-opt-in**;
 the other 56 conv rules refused; `DEFAULT` unchanged.
 Retro: `retros/enablement-floor.md`.
+
+## Session — 2026-10-19 (b): catopt-kit — the modular handl composition
+
+The `go (A)` direction ("catopt embeds handl as an optional peer") gains
+its runtime seam: `packages/catopt-kit/` — a plain Rust library crate in
+a new root cargo workspace (catopt-native and lab/handl-peer excluded,
+standalone as before). It assembles the canonical `Language` via
+`handl-kit-data-canonical`, installs it process-wide, binds the smallest
+honest engine set (`data`/`pratt`/`tree-walk` — no sdkgen/compile/lint/
+lsp), and composes `host-tensor`'s 18-op surface as a `HandlModule` over
+`tensor_op_registry()` under the canonical fp host fns. A `ModuleLoader`
+wires `import "path"` / `.handl.toml` `[dependencies]` name resolution.
+
+**Verified** (`cargo test -p catopt-kit`, **12/12**): real `.hnl` matmul
+→ `[[19,22],[43,50]]`; the result flows back as `TaggedValue::Tensor`
+(both `run`'s wire form decoded and `run_tagged`'s direct variant — no
+`Obj` fallback); conv2d + batch_norm smokes match the upstream spec
+values; `from "host-tensor" import tensor` works on a fixture project.
+Deps float on `main` via git + `handl_deps.env` insteadOf; the `[patch]`
+local-override convention is documented in the root `Cargo.toml`.
+
+**Named gap** (documented, not patched): `.handl.toml` `[dependencies]`
+resolve filesystem dirs only — no cargo/git-package → dir bridge yet, so
+a checked-in manifest can't name the dep portably (ADR-0010 future).
+**Env note**: tree-walk eval needs a >2 MiB test-thread stack —
+`.cargo/config.toml` sets `RUST_MIN_STACK = 32 MiB` (upstream carries
+the same knob). Retro: `retros/catopt-kit.md`.

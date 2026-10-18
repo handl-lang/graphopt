@@ -111,7 +111,10 @@ members = ["packages/*"]
 # excluded from the uv workspace so ``uv sync``/``uv lock`` never need
 # a Rust toolchain.  Build it explicitly:
 #   maturin develop --release   (from packages/catopt-native)
-exclude = ["packages/catopt-native"]
+# catopt-kit is a Rust-only crate (the handl composition seam) — no
+# pyproject.toml, so it is excluded from the uv workspace alongside
+# catopt-native.
+exclude = ["packages/catopt-native", "packages/catopt-kit"]
 
 [tool.uv.sources]
 catopt-core = { workspace = true }
