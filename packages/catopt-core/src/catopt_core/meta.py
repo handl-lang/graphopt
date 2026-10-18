@@ -91,7 +91,7 @@ representative of the same critical pair.
 from __future__ import annotations
 
 import math
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from typing import Any, Protocol
 
 import catopt_core.laws as R
@@ -1296,8 +1296,43 @@ def synthesize_rules(
     numeric_check: bool = True,
     require_overlap: bool = True,
     emit_subsumed: bool = False,
+    rounds: int = 1,
+    max_emitted: int | None = None,
+    on_round: Callable[[int, list[Rewrite]], object] | None = None,
 ) -> list[Rewrite]:
     """Compose ordered pairs of rules into derived rewrite rules.
+
+    ``rounds`` iterates the composition toward a fixpoint: each round's
+    emitted composites feed back into the bank alongside the base rules
+    (``usable = base + latest stratum`` — generation *n*+1 mints pairs
+    over generation *n*), so a fold whose derivation needs *k* pairwise
+    steps mints within *k* strata.  Measured: the conv+BN weight fold —
+    ``batch_norm(conv2d(x,W,b),…) → conv2d(x,W′,b′)``, a depth-5 chain —
+    mints in 4 rounds over ``ALL_RULES`` + the BN/conv/pointwise
+    families (26→61→242→944 emitted;
+    ``lab/probes/conv_bn_fold_synth_probe.py`` gate B3).  The loop ends
+    early when a round emits nothing or *on_round* vetoes; ``rounds=1``
+    is exactly the single-pass behaviour every existing caller sees.
+
+    Growth is exponential — *fuel* bounds each round's rule-application
+    attempts (per stratum, matching the single-pass semantics), and
+    ``max_emitted`` caps the total minted across all rounds: a round
+    stops minting the moment the cap is hit, so the cap bounds
+    *validation* cost (the dominant spend — every candidate replays its
+    derivation and, under ``numeric_check``, evaluates fp64) as well as
+    list size.  ``on_round`` is an optional observer called once per
+    stratum as ``on_round(round_index, emitted)`` — 1-based, the raw
+    per-round mint — and returning ``False`` stops the fixpoint
+    (caller-defined convergence, e.g. a target composite minted).
+
+    A later stratum's bank re-tries every base×base pair, so earlier
+    composites re-mint inside later rounds — except while the previous
+    stratum is still in the bank, where ``_subsumed`` suppresses a
+    re-mint of any *unguarded* composite already present (a guarded
+    composite cannot subsume, so guarded strata keep re-minting).  The
+    *returned* list is deduplicated across rounds by alpha key (first
+    mint wins); the strata passed to *on_round* are not — they are
+    what each round actually minted.  ``rounds`` must be ≥ 1.
 
     Two synthesis paths (seed-guided runs FIRST — it is the preferred
     path for guarded pairs):
@@ -1337,9 +1372,9 @@ def synthesize_rules(
     fires on (and that guarded symbolic candidates mine for witness
     bindings); pass real terms on which the guarded parents actually
     fire — e.g. a materialised attention term for the ``sdpa_fold``
-    family.  ``fuel`` bounds the total number of rule-application
-    attempts.  ``require_overlap`` keeps only pairs whose rewrite sites
-    share an ancestor/descendant relation (true critical pairs —
+    family.  ``fuel`` bounds the number of rule-application attempts
+    *per round*.  ``require_overlap`` keeps only pairs whose rewrite
+    sites share an ancestor/descendant relation (true critical pairs —
     disjoint pairs are just parallel application).  ``numeric_check``
     evaluates each candidate on random fp64 tensors when its ops have
     torch bindings.
@@ -1348,12 +1383,81 @@ def synthesize_rules(
     ``syn_<r1>__<r2>_<i>`` with provenance recorded in ``law``, on
     ``rule.parents``, and in :data:`SYNTH_PARENTS`.
     """
+    if rounds < 1:
+        raise ValueError(f"rounds must be >= 1, got {rounds}")
+    base = list(rules)
+    seeds = tuple(seed_terms)
+    emitted: list[Rewrite] = []
+    usable = base
+    for rnd in range(1, rounds + 1):
+        cap = (
+            None if max_emitted is None else max_emitted - len(emitted)
+        )
+        if cap is not None and cap <= 0:
+            break
+        stratum = _synthesize_once(
+            usable,
+            seeds,
+            fuel=fuel,
+            numeric_check=numeric_check,
+            require_overlap=require_overlap,
+            emit_subsumed=emit_subsumed,
+            emitted_cap=cap,
+        )
+        emitted.extend(stratum)
+        if on_round is not None and on_round(rnd, stratum) is False:
+            break
+        if not stratum:
+            break
+        # Stratified feedback: generation n+1's bank is the base rules
+        # plus generation n's mint — pairs over older strata are
+        # already minted, so they need no re-entry.
+        usable = base + stratum
+    # Every round's bank re-tries the base-base pairs, so earlier
+    # composites re-mint inside later strata; the aggregate dedups by
+    # alpha key (first mint wins).  The strata reported to ``on_round``
+    # stay raw — the honest per-round mint.
+    seen_keys: set[tuple[str, str]] = set()
+    out: list[Rewrite] = []
+    for r in emitted:
+        key = _alpha_key(r.lhs, r.rhs)
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        out.append(r)
+    return out
+
+
+def _synthesize_once(
+    rules: Iterable[Rewrite],
+    seed_terms: Iterable[Any] = (),
+    *,
+    fuel: int = 512,
+    numeric_check: bool = True,
+    require_overlap: bool = True,
+    emit_subsumed: bool = False,
+    emitted_cap: int | None = None,
+) -> list[Rewrite]:
+    """One pair-composition pass over *rules* — a fixpoint stratum.
+
+    The ``rounds=1`` body of :func:`synthesize_rules` (see it for the
+    two paths, the guard-transport contract, and the validation story).
+    ``emitted_cap`` bounds how many rules this pass mints: the
+    enumeration stops the moment ``derived`` reaches it, so the cap
+    bounds validation spend, not just list length.
+    """
     usable = [r for r in rules if _synthesizable(r)]
     derived: list[Rewrite] = []
     seen: set[tuple[str, str]] = set()
     spent = 0
     counter = [0]
     ns1, ns2 = _DRV_PREFIX
+
+    def _stopped() -> bool:
+        """Fuel or the emitted cap is spent — unwind every loop level."""
+        return spent > fuel or (
+            emitted_cap is not None and len(derived) >= emitted_cap
+        )
 
     def offer(
         lhs: Any,
@@ -1421,11 +1525,11 @@ def synthesize_rules(
     # validation as the candidate's witness.  The symbolic path below
     # stays as the fully-general fallback.
     for s in seed_terms:
-        if spent > fuel:
+        if _stopped():
             break
         for r1 in usable:
             for p, _ in _positions(s):
-                if spent > fuel:
+                if _stopped():
                     break
                 f1 = _fire_guarded(r1, s, p, ns1)
                 if f1 is None:
@@ -1435,7 +1539,7 @@ def synthesize_rules(
                 keep = _concrete_matched_leaves(r1.lhs, _subterm(s, p))
                 for r2 in usable:
                     for q, sub2 in _positions(t1):
-                        if spent > fuel:
+                        if _stopped():
                             break
                         if require_overlap and not _overlapping(p, q):
                             continue
@@ -1536,7 +1640,7 @@ def synthesize_rules(
 
     # -- symbolic path: r1 applied to its own lhs -------------------------
     for r1 in usable:
-        if spent > fuel:
+        if _stopped():
             break
         # Identity instantiation: term metavars stay themselves, LHS
         # attr metavars keep their names, and RHS metavars that only
@@ -1569,7 +1673,7 @@ def synthesize_rules(
         for q, sub in _positions(t1):
             for r2 in usable:
                 spent += 1
-                if spent > fuel:
+                if _stopped():
                     break
                 m2 = match_pattern(r2.lhs, sub, {})
                 if m2 is None:
