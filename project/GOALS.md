@@ -418,3 +418,29 @@ channel corner stays unreachable to the enumeration bank;
 enablement-not-admission stands) and `batch_norm_expand` refuses at
 typed-pay (`fires=8 paid=0` — expansion is the non-paying direction;
 the composite is the payer).  Retro: `retros/fold-cost-single-source.md`.
+
+### `_MAX_BINDING_ENVS`: the composite gauntlet terminates (2026-10-19)
+
+The enablement floor's named scaling gap was **misdiagnosed**: not the
+83-rule `_reach`/derivability saturation (measured instant on the
+conv+BN seed — 9 enodes to `fixed_point`), but the binding-env
+enumeration under `oracle.synthesize`.  `synthesize` /
+`evidence._synth_sites` / `object_synthesis._oracle_sites` capped the
+*sites they yield*, never the envs they consume — the composite's
+composed `derive` vetoes every env (2000/2000 at ~8k envs/s on a
+>10⁹ space), so the sweep never produced a site and never stopped.
+
+`oracle._binding_envs` now stops after `_MAX_BINDING_ENVS = 250_000`
+yielded envs — one bound every consumer inherits.  Sized on
+measurement: `sdpa_fold_nomask`'s ~180k envs to natural exhaustion is
+the largest legitimate sweep, so shipped sweeps are preserved; a
+veto-everything domain degrades to a bounded corner of the Cantor
+order (a partial sweep — the documented honesty of the site caps).
+
+**Measured** (`conv_fold_premise_pay_probe.py`): `run_gauntlet` on the
+one-case corpus completes in **4.9 s** (was >9 min, unbounded) with an
+honest refusal — `truth` starved: `0 accepted / 2000 declined / 2360
+envs` on the synth region, `1eq` on the real site, `derivable=False`
+under `ALL_RULES` (the premise closure is outside the corpus rules).
+Pay leg stands: `fires=1 changed=True verified=pass`, fused `17 438.7`
+vs spelled `34 874.3`.  Retro: `retros/binding-env-cap.md`.

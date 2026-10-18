@@ -695,6 +695,53 @@ def test_binding_envs_lazy_pull_matches_eager_order():
     assert lazy == eager[:60]
 
 
+def test_binding_envs_env_cap_truncates_to_a_prefix(monkeypatch):
+    """``_binding_envs`` stops at ``_MAX_BINDING_ENVS`` — the work bound
+    underneath every consumer's site cap.
+
+    A ``derive`` veto or an uninstantiable pair consumes an env without
+    producing a site, so the *site* caps cannot bound a veto-everything
+    guard (measured: the stored conv+BN fold composite's ``derive``
+    declined every env on a space orders past 10⁹ — ``run_gauntlet``
+    never returned).  The env cap truncates to a strict Cantor-order
+    prefix of the uncapped stream.
+    """
+    lhs = _p("mul", _p("unsqueeze", "U", dim="A_d"), "V")
+    rhs = _p("mul", "U", "V")
+    full = list(itertools.islice(vo._binding_envs(lhs, rhs), 400))
+    assert len(full) == 400  # the space reaches well past the test cap
+    monkeypatch.setattr(vo, "_MAX_BINDING_ENVS", 40)
+    capped = list(vo._binding_envs(lhs, rhs))
+    assert capped == full[:40]
+
+
+def test_synthesize_env_cap_bounds_a_veto_everything_derive(
+    monkeypatch,
+):
+    """``synthesize`` returns promptly when ``derive`` vetoes every env.
+
+    Without the env bound the veto path runs the whole space — the
+    composite hang.  With the cap the sweep sees exactly
+    ``_MAX_BINDING_ENVS`` bindings and reports the honest empty
+    window.
+    """
+    monkeypatch.setattr(vo, "_MAX_BINDING_ENVS", 60)
+    calls = []
+
+    def veto(bound: dict) -> None:
+        calls.append(bound)
+        return None
+
+    insts = vo.synthesize(
+        _p("mul", _p("unsqueeze", "U", dim="A_d"), "V"),
+        _p("mul", "U", "V"),
+        limit=360,
+        derive=veto,
+    )
+    assert insts == []
+    assert len(calls) == 60
+
+
 # ---------------------------------------------------------------------------
 #  The (viewed x attr) diagonal — the enumeration-fairness reorder
 # ---------------------------------------------------------------------------

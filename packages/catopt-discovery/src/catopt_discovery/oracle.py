@@ -118,6 +118,22 @@ _MAX_VIEWED_BINDINGS = 512
 #: (see :func:`escalate_limit`): the common case keeps the default.
 _GUARDED_CAP = 2000
 
+#: Hard cap on the binding environments :func:`_binding_envs`
+#: enumerates per sweep — the work bound underneath every consumer's
+#: *site* cap.  ``synthesize``, ``evidence._synth_sites`` and
+#: ``object_synthesis._oracle_sites`` bound the sites they yield, but
+#: a ``derive`` veto or an uninstantiable pair consumes an env without
+#: producing a site: a guarded rule whose accepted corner is not in the
+#: domain at all (a stored composite minted against a concrete seed —
+#: measured: the conv+BN fold's ``derive`` declined 2000/2000 envs at
+#: ~8k envs/s on a space orders past 10⁹) would otherwise never stop.
+#: The largest legitimate sweep measured is ``sdpa_fold_nomask``'s —
+#: ~180k envs to natural exhaustion under ``synthesize`` — so the cap
+#: preserves it with headroom while bounding a pathological sweep to a
+#: fixed corner of the Cantor order: a partial sweep, the same honesty
+#: the instance and viewed-binding caps already document.
+_MAX_BINDING_ENVS = 250_000
+
 
 def escalate_limit(limit: int, *, guarded: bool, accepted: int) -> int:
     """Return the effective enumeration cap after one guarded sweep.
@@ -1443,6 +1459,12 @@ def _binding_envs(
     leaf-only :func:`_leaf_bindings`; the carrier op-term bank
     (:func:`_term_bindings`) is a separate source so a deepened window
     can be *unioned* with the leaf window rather than displacing it.
+
+    The enumeration stops after :data:`_MAX_BINDING_ENVS` yielded envs
+    even when space remains — consumers bound the sites they keep, but
+    a veto (``derive`` returns ``None``) or an uninstantiable pair
+    consumes an env without producing a site, so the env count itself
+    is the work bound a veto-everything guard needs.
     """
     parents = _metavar_parents(lhs_pat, rhs_pat)
     free = sorted(
@@ -1464,6 +1486,7 @@ def _binding_envs(
     src = _LazySeq(_synth_bases(lhs_pat, rhs_pat, source))
     total = 0
     live = 0
+    envs = 0
     while live or not src.done:
         live += _pull_bases(
             src, entries, total, free, parents, extra, source
@@ -1479,6 +1502,9 @@ def _binding_envs(
                 live -= 1
                 continue
             yield {**entry[0], **dict(zip(free, combo, strict=True))}
+            envs += 1
+            if envs >= _MAX_BINDING_ENVS:
+                return
         total += 1
 
 

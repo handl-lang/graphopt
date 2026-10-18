@@ -17,12 +17,17 @@ retro named, in order:
    proof — honest *modulo* the premises' own truth).
 3. **Pay** — ``_probe`` fires the composite alone on the real case:
    does the fused member win extraction over the spelled term?
+4. **Gauntlet** — ``run_gauntlet`` on the one-case corpus, end to end.
 
-The full ``run_gauntlet`` on the composite does NOT terminate in the
-measure stage on this box (>9 min on a one-case corpus — the
-83-rule saturation inside ``_reach``/derivability is the named
-scaling gap, not a wrong answer), so the probe runs the bounded
-stages directly and reports each measured number.
+The gauntlet leg used to hang: ``pl.measure``'s view oracle ran
+``oracle.synthesize`` over ``_binding_envs`` with only an *instance*
+cap — the composite's ``derive`` vetoes every enumerated env, so the
+sweep never produced a site and never stopped (measured >9 min on a
+one-case corpus; the retro misattributed it to the 83-rule
+``_reach``/derivability saturation, which is actually instant on this
+term — 9 enodes to a fixed point).  ``oracle._MAX_BINDING_ENVS`` now
+caps the enumeration itself, so the gauntlet completes in seconds
+with an honest stage-by-stage verdict.
 
 Run with
 ``.venv/bin/python lab/probes/conv_fold_premise_pay_probe.py``.
@@ -237,6 +242,25 @@ def main() -> int:
         f"[pay] extraction: spelled={dag_cost(seed, cost_fn):.1f} "
         f"fused={dag_cost(best, cost_fn) if best is not None else None}"
     )
+
+    # -- 4. the gauntlet, bounded ------------------------------------------
+    corpus = ev.GauntletCorpus(
+        real_terms=(seed,),
+        probe=(case,),
+        base_rules=tuple(ALL_RULES),
+        census_op={},
+        sink=sink,
+        cost_fn=cost_fn,
+    )
+    tg = time.monotonic()
+    rep = ev.run_gauntlet(conn, key, corpus=corpus)
+    print(
+        f"\n[gauntlet] {time.monotonic() - tg:.1f}s usable={rep.usable}"
+    )
+    for s in rep.stages:
+        print(
+            f"  [{'pass' if s.passed else 'FAIL'}] {s.name}: {s.detail}"
+        )
 
     # -- the premise account ------------------------------------------------
     pays = f.fires > 0 and f.changed and f.out_cost < f.base_cost
