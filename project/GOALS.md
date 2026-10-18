@@ -519,3 +519,24 @@ boundary. Also measured: `dag_cost`'s param-only discount models
 compile-time folding the tree-walk runtime does not perform — the
 deployed-form measurement separates fold-once from run-every-call.
 Retro: `project/retros/kit-term-bridge.md`.
+
+### `conv_bn_fold` ships: `DEFAULT` takes a machine-minted composite (2026-10-19)
+
+The admission question the conv+BN arc left open is **decided: admit**.
+The composite cleared the full gauntlet (`usable=True` — truth on both
+legs, premise-anchored derivable, `paid=1`, bounded firing footprint),
+and the premise family's opt-in status is its *own* measured economics,
+not the composite's — the same coherence `linear_channel_to_row_scale`
+set with SYMMETRY-gated parents.  Shipping is **verbatim**, a new class:
+`catopt_core.laws.minted` embeds the stored `syn_*` closure records and
+replays `meta._compose_guards` at import — louder than the store (a
+weak-resolving parent raises, never degrades).  `conv_bn_fold` lands in
+`CATEGORICAL_RULES` tagged FUSION → `ALL_RULES` 84 → `DEFAULT`;
+`MACHINE_SHIPPED` 11→12.  `missing_hooks` honestly reports
+`("check","derive")` — the census gains a *transported* bucket, and
+`kind` reads `axiom` by annotation since `derivation` cannot name
+unshipped intermediates (lineage rides `rule.parents`).  Named residuals:
+the cond sweep keys on `cond`, so transported-check objects are outside
+it (the gauntlet's guarded-region sweep covered this object);
+a `cond`/`dspec` flattening of the transported guard would restore the
+full-data census property.  Retro: `retros/minted-composite-default.md`.

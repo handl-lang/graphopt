@@ -56,9 +56,13 @@ far: `lab/bridge/combinator.py` sits at **92%** under
 Do not promote a module that would fail the floor — and never widen it.
 
 **Machine-admitted laws are in `DEFAULT`.**  `search(..., rules=DEFAULT)`
-ships **11 machine-admitted laws** alongside the hand-written kernel
+ships **12 machine-admitted laws** alongside the hand-written kernel
 (`catopt_core.laws.provenance.MACHINE_SHIPPED` — the promoted set;
-`project/retros/promoted-laws.md`).  The newest is `mul_unsq_nat` — the
+`project/retros/promoted-laws.md`).  The newest is `conv_bn_fold` — the
+first *verbatim* composite: a depth-4 `syn_*` mint shipped through
+`catopt_core.laws.minted` (the embedded premise-closure records replay
+`meta._compose_guards` at import; `missing_hooks` honestly reports the
+transported `check`/`derive` hooks).  Before it, `mul_unsq_nat` — the
 first law minted from a corpus op-tuple, guard resolved by the
 adversarial sweep.  Note the authorship split in `provenance.py`:
 `select_mul` / `softmax_fold` / `glu_fold` / `rms_norm_fold` had

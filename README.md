@@ -101,7 +101,7 @@ asserted.
 
 | claim | measurement | artifact |
 |---|---|---|
-| **Novelty** — mints laws nobody wrote | `mul_unsq_nat`, minted from a model's own op-tuple, in the default rule set (−12.27% on its source workload); 11 machine-admitted laws ship | [`project/retros/mul-unsq-nat.md`](project/retros/mul-unsq-nat.md) |
+| **Novelty** — mints laws nobody wrote | `mul_unsq_nat`, minted from a model's own op-tuple, in the default rule set (−12.27% on its source workload); 12 machine-admitted laws ship | [`project/retros/mul-unsq-nat.md`](project/retros/mul-unsq-nat.md) |
 | **Novelty, at scale** | 321 exported workloads screened; **~1.5%** of the exposed class carries fresh paying unpublished structure — the honest yield | [`project/retros/discovery-scale.md`](project/retros/discovery-scale.md) |
 | **Soundness** — catches its own false candidates | the naive guard was falsified by the adversarial sweep (**212 bad accepts**); the exact guard was synthesized instead; the apparent sibling was **rejected** at admission (12 matching models, semantically unequal sites) | [`project/retros/mul-unsq-nat.md`](project/retros/mul-unsq-nat.md) |
 | **Soundness, negative** | deliberately-false twins all rejected; the verifier has repeatedly retracted would-be claims | [`docs/mechanism.md`](docs/mechanism.md) |
