@@ -29,7 +29,14 @@ Cache key
   source text when inspectable, else the qualified name — worst case a
   stale signature just misses);
 * ``seeds_fp`` — hash of the serialized seed terms, in order;
-* ``params`` — fuel / numeric_check / require_overlap / emit_subsumed.
+* ``params`` — fuel / numeric_check / require_overlap / emit_subsumed
+  plus the fixpoint knobs: ``rounds`` / ``max_emitted`` (both change
+  the mint, so both key) and ``observer`` — the ``on_round`` callable
+  enters the key through its :func:`_hook_sig` proxy, never the object
+  itself: a vetoing observer truncates the fixpoint and must not share
+  the unobserved entry; an uninspectable signature degrades to a
+  miss.  (A *pure* observer — one that only records strata — changes
+  the key too; that is the conservative direction.)
 
 Any change to the parent ruleset, seeds, or synthesis parameters
 produces a different key — a stale cache misses cleanly rather than
@@ -43,7 +50,7 @@ import hashlib
 import inspect
 import json
 import os
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Any
 
@@ -278,11 +285,16 @@ def cache_key(
     numeric_check: bool = True,
     require_overlap: bool = True,
     emit_subsumed: bool = False,
+    rounds: int = 1,
+    max_emitted: int | None = None,
+    on_round: Callable[[int, list[Rewrite]], object] | None = None,
 ) -> str:
     """Return the cache key for one synthesis problem instance.
 
     Combines the ruleset fingerprint, seed fingerprint, synthesis
-    params, and format version.
+    params, and format version.  ``rounds`` / ``max_emitted`` key as
+    plain values; ``on_round`` keys through its :func:`_hook_sig`
+    proxy — see the module docstring's *Cache key* section.
     """
     rules = list(rules)
     payload = {
@@ -294,6 +306,9 @@ def cache_key(
             "numeric_check": numeric_check,
             "require_overlap": require_overlap,
             "emit_subsumed": emit_subsumed,
+            "rounds": rounds,
+            "max_emitted": max_emitted,
+            "observer": _hook_sig(on_round),
         },
     }
     return _sha([json.dumps(payload, sort_keys=True)])
@@ -347,8 +362,15 @@ class RuleCache:
 
         *rules* is the parent ruleset: guarded rules rebuild their
         composite check/derive from the parents' hooks, resolved by
-        name.  A missing parent, a version/key mismatch, or a corrupt
-        file is a clean miss — never a partially-loaded set.
+        name.  Records decode in stored order and each decoded rule
+        joins the resolver, so a fixpoint mint's ``syn_*`` parents —
+        earlier records of the same payload (synthesis emits a rule's
+        parents before it) — resolve payload-internally and a
+        multi-round output round-trips self-contained.  A caller rule
+        and a stored record sharing a name resolve to the stored one:
+        it is the exact object the composite was minted against.  A
+        missing parent, a version/key mismatch, or a corrupt file is a
+        clean miss — never a partially-loaded set.
         """
         p = self.path(key)
         if not p.exists():
@@ -361,7 +383,12 @@ class RuleCache:
             ):
                 return None
             by_name = {r.name: r for r in rules}
-            return [_dec_rule(rec, by_name) for rec in payload["rules"]]
+            out = []
+            for rec in payload["rules"]:
+                rule = _dec_rule(rec, by_name)
+                by_name[rule.name] = rule
+                out.append(rule)
+            return out
         except Exception:
             return None
 
@@ -374,6 +401,9 @@ def synthesize_rules_cached(
     numeric_check: bool = True,
     require_overlap: bool = True,
     emit_subsumed: bool = False,
+    rounds: int = 1,
+    max_emitted: int | None = None,
+    on_round: Callable[[int, list[Rewrite]], object] | None = None,
     cache_dir: Any = None,
 ) -> list[Rewrite]:
     """``meta.synthesize_rules`` with persistence.
@@ -381,6 +411,15 @@ def synthesize_rules_cached(
     On a repeat call with the same ruleset, seeds, and parameters the
     derived rules are loaded from *cache_dir* (composite guards rebuilt
     from the parent hooks) instead of re-derived.
+
+    ``rounds`` / ``max_emitted`` / ``on_round`` are the fixpoint knobs
+    of :func:`catopt_core.meta.synthesize_rules`; both scalar knobs
+    join the cache key and the observer keys through its
+    :func:`_hook_sig` proxy, so a ``rounds=3`` entry never collides
+    with the ``rounds=1`` mint.  Note the hit semantics: *on_round
+    observes a live mint only* — a warm load replays no rounds, so the
+    observer is never called on a cache hit (callers measuring strata
+    counts should not read the hit as an empty fixpoint).
 
     Loaded rules are ordinary ``Rewrite`` objects — they fire in
     e-graphs, carry ``.parents`` provenance, and re-register in
@@ -396,6 +435,9 @@ def synthesize_rules_cached(
         numeric_check=numeric_check,
         require_overlap=require_overlap,
         emit_subsumed=emit_subsumed,
+        rounds=rounds,
+        max_emitted=max_emitted,
+        on_round=on_round,
     )
     hit = cache.load(key, rules)
     if hit is not None:
@@ -407,6 +449,9 @@ def synthesize_rules_cached(
         numeric_check=numeric_check,
         require_overlap=require_overlap,
         emit_subsumed=emit_subsumed,
+        rounds=rounds,
+        max_emitted=max_emitted,
+        on_round=on_round,
     )
     cache.store(key, derived)
     return derived
