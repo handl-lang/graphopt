@@ -92,6 +92,30 @@ pub fn module_chain() -> Rc<dyn ModuleLookup> {
     chain
 }
 
+/// The crate's shipped `.hnl` module — `hnl/conv_bn.hnl`, catopt's
+/// conv→batch_norm composite plus the minted fold's folded form —
+/// embedded in the crate artifact via `include_str!`.
+///
+/// Consumers read the source over the crate API instead of reaching
+/// into the repo tree (`CARGO_MANIFEST_DIR` joins, sibling-checkout
+/// probes, package-cache slots): the text is versioned with the code
+/// that runs it and is included in `cargo package`. To get the exports
+/// in scope through the `from "<path>" import …` machinery, a consumer
+/// materializes the string to a file; to read it as data (the paper's
+/// artifact under measurement) it is already in hand.
+pub const CONV_BN_HNL: &str = include_str!("../hnl/conv_bn.hnl");
+
+/// Look up a shipped `.hnl` module's source by name —
+/// `hnl_module("conv_bn")` → [`CONV_BN_HNL`]. The lookup accepts the
+/// bare module name or the `name.hnl` file spelling; `None` for names
+/// the crate does not ship.
+pub fn hnl_module(name: &str) -> Option<&'static str> {
+    match name.strip_suffix(".hnl").unwrap_or(name) {
+        "conv_bn" => Some(CONV_BN_HNL),
+        _ => None,
+    }
+}
+
 /// catopt's assembled handl kit: the canonical `Language` bound to the
 /// `data`/`pratt`/`tree-walk` pipeline with the `tensor.*` host op
 /// surface and the file/name import machinery wired.

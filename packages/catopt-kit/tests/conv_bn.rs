@@ -150,3 +150,51 @@ fn derive_and_backward_compose_through_the_module() {
         assert_eq!(*t.data, expected, "grads[{field}]");
     }
 }
+
+/// The artifact over the crate API: `CONV_BN_HNL` is the committed
+/// `hnl/conv_bn.hnl` byte for byte, and `hnl_module` resolves it by
+/// name — consumers read the module through the crate, not the repo.
+#[test]
+fn conv_bn_hnl_is_exported_over_the_crate_api() {
+    let on_disk = std::fs::read_to_string(crate_root().join("hnl/conv_bn.hnl"))
+        .expect("hnl/conv_bn.hnl is committed");
+    assert_eq!(
+        catopt_kit::CONV_BN_HNL,
+        on_disk,
+        "export == hnl/conv_bn.hnl"
+    );
+    assert_eq!(
+        catopt_kit::hnl_module("conv_bn"),
+        Some(catopt_kit::CONV_BN_HNL)
+    );
+    assert_eq!(
+        catopt_kit::hnl_module("conv_bn.hnl"),
+        Some(catopt_kit::CONV_BN_HNL),
+        "the file spelling resolves too"
+    );
+    assert_eq!(catopt_kit::hnl_module("nope"), None);
+}
+
+/// The embedded source is the runnable artifact: a downstream consumer
+/// with no repo access materializes `CONV_BN_HNL` to a file and imports
+/// it — the `from "host-tensor" import tensor` inside still resolves
+/// through the project's `.handl.toml`.
+#[test]
+fn embedded_conv_bn_imports_and_evaluates() {
+    let dir = std::env::temp_dir().join(format!("catopt-kit-hnl-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("conv_bn.hnl");
+    std::fs::write(&path, catopt_kit::CONV_BN_HNL).unwrap();
+
+    let kit = CatoptKit::new_with_project(crate_root()).unwrap();
+    let src = format!(
+        "do {{\nfrom \"{}\" import conv_bn\nconv_bn({X}, {W}, {B}, {G}, {BE}, {M}, {V}, 0)\n}}",
+        path.display()
+    );
+    let out = kit
+        .run_tagged(&src)
+        .expect("the embedded source imports and evals");
+    let t = out.as_tensor().expect("conv_bn result is a Tensor");
+    assert_eq!(t.shape, vec![1, 2, 1, 2]);
+    assert_eq!(*t.data, vec![37.0, 46.0, 4.0, 3.0]);
+}

@@ -17,7 +17,7 @@ forks, no vendoring.
 | engines | `hnl-engine-{lex-pattern,parse-pratt,exec-tree-walk}` (+`hnl-engine-exec`) | `"data"`/`"pratt"`/`"tree-walk"` — the smallest honest set (no sdkgen/compile/lint/lsp); one crate per `engine-*` repo post-ADR-0128 |
 | module bridge | `plugin-lib-handl` + `plugin-module` | `HandlModule` + `OpRegistry` + `ModuleRegistry` |
 | tensor ops | `handl-host-tensor` | `tensor_op_registry()` — the 18 `tensor.*` ops |
-| catopt program | `hnl/conv_bn.hnl` | the conv→batch_norm composite + its folded form, `.hnl` over the dep surface |
+| catopt program | `hnl/conv_bn.hnl` → `CONV_BN_HNL` | the conv→batch_norm composite + its folded form, `.hnl` over the dep surface; exported over the crate API (`catopt_kit::CONV_BN_HNL`, `hnl_module("conv_bn")`) |
 | subprocess door | `src/bin/hnl-run.rs` | `.hnl` in on stdin/file → `serde_json` value out; `--project` wires `.handl.toml` deps, `--repeat N` evaluates N times in one kit (the per-call cost hook) |
 
 `CatoptKit::new()` installs the canonical language as the process-wide
@@ -70,6 +70,14 @@ lists — the op surface has no elementwise pow) and folds it into
 to `TaggedValue::Tensor`, value-equal on dyadic fixtures — the minted
 rewrite proven end to end through the consumer. `bn_adjoint`/`bn_grad`
 expose `tensor.derive`/`batch_norm_backward`.
+
+The module ships **over the crate API**: `catopt_kit::CONV_BN_HNL`
+embeds the source via `include_str!` (`hnl_module("conv_bn")` resolves
+it by name), so a consumer reads the artifact without reaching into
+the repo tree — and it is part of `cargo package`. A consumer that
+wants the `from "<path>" import …` form materializes the string to a
+file; `tests/conv_bn.rs` proves the embedded copy imports and
+evaluates identically.
 
 ## The subprocess door — `hnl-run`
 
