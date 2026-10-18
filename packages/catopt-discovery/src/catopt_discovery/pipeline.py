@@ -135,9 +135,21 @@ __all__ = [
 #: Default number of ranked rows printed.
 _DEFAULT_TOP = 20
 
-#: Enode ``out/in`` ratio above which a candidate is closure-unsafe:
-#: a rule that grows the e-graph more than this is a search hazard.
+#: Enode ``out/in`` ratio above which a candidate's *unexplained*
+#: growth is closure-unsafe: a rule that grows the e-graph more than
+#: this — beyond what its own firings provably minted — is a search
+#: hazard.
 _CLOSURE_LIMIT = 2.0
+
+#: How much *secondary* growth a firing footprint may explain.  A
+#: composite's spelled-out RHS legitimately mints many enodes in one
+#: application, and each minted member can wake the base bank (comm /
+#: assoc re-spellings of the folded term).  The gate forgives that
+#: cascade while it stays within this multiple of the enodes the
+#: candidate's own recorded applications created; growth beyond it is
+#: unexplained — the blow-up signal the ratio alone cannot separate
+#: from a large one-shot footprint on a small graph.
+_CLOSURE_CASCADE_FACTOR = 2.0
 
 #: Census rows to keep — large enough to hold every distinct op-tuple
 #: (the corpus has ~124), so the frequency lookup is exact.
@@ -669,8 +681,42 @@ class Evidence:
 
     @property
     def closure_safe(self) -> bool:
-        """True iff adding the rule did not blow up the closure."""
-        return self.closure_ratio <= _CLOSURE_LIMIT
+        """True iff adding the rule did not blow up the closure.
+
+        The raw ``closure_ratio`` (``out/in``) conflates two things:
+        runaway growth — the search hazard the gate exists to refuse —
+        and a large but *bounded* firing footprint, which a composite
+        legitimately carries (its spelled-out premise structure mints
+        many enodes in a single application; on a small base graph the
+        ratio is inflated by the denominator, not by the growth).
+
+        The honest bound is therefore on *unexplained* growth, per
+        reach row: the marginal ``add − base`` must either fit the
+        legacy slack ``(limit − 1) · base_enodes`` — the old bound,
+        unchanged — or exceed it only by enodes the candidate's own
+        recorded applications minted (``cand_enodes``) plus a bounded
+        cascade factor for the secondary firings those minted members
+        wake in the base bank.  A candidate whose minting exhausted
+        its rule budget (``cand_capped``) has a truncated footprint —
+        it cannot prove bounded and gets no forgiveness.  Rows
+        measured before the footprint audit (no ``cand_enodes`` key)
+        and cached verdicts (no reach rows at all) keep the plain
+        ratio bound.
+        """
+        rows = [r for r in self.reach if r.get("base_enodes")]
+        if not rows:
+            return self.closure_ratio <= _CLOSURE_LIMIT
+        for r in rows:
+            marginal = r["add_enodes"] - r["base_enodes"]
+            if marginal <= (_CLOSURE_LIMIT - 1.0) * r["base_enodes"]:
+                continue
+            minted = r.get("cand_enodes", 0)
+            excess = marginal - minted
+            if r.get("cand_capped", True) or excess > (
+                _CLOSURE_CASCADE_FACTOR * minted
+            ):
+                return False
+        return True
 
     @property
     def shippable(self) -> bool:
@@ -999,10 +1045,26 @@ def _reach_row(
         and add_cost < base_cost
     ):
         add_typed = not _pick_ill_typed(add_best, case.term, base_best)
+    # The candidate's own firing footprint: the enodes its recorded
+    # applications created (``_enode_app`` tracks provenance under
+    # level-2 truncation, which ``_saturate``'s default ``EGraph``
+    # runs).  Enodes the term or witness merges created carry no
+    # application and count as unexplained — conservative.
+    cand_names = {r.name for r in laws}
+    apps = add_eg.applications
+    minted = sum(
+        1
+        for ai in getattr(add_eg, "_enode_app", {}).values()
+        if apps[ai]["rule"] in cand_names
+    )
     return {
         "model": case.name,
         "base_enodes": base_stats["n_enodes"],
         "add_enodes": add_stats["n_enodes"],
+        "cand_enodes": minted,
+        "cand_capped": bool(
+            cand_names & set(add_stats.get("budget_suspended", ()))
+        ),
         "base_cost": base_cost,
         "add_cost": add_cost,
         "changed": add_best != base_best,

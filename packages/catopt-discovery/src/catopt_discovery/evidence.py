@@ -1679,11 +1679,27 @@ def _closure_gate(rep: Gauntlet) -> bool:
         for r in evd.reach
         if r["add_cert"] != "pass" and r["base_cert"] == "pass"
     )
+    # The footprint audit for the worst-growth row: ``cand_enodes`` is
+    # what the object's own applications minted; the rest of the
+    # marginal growth is the cascade the bound prices
+    # (``Evidence.closure_safe``).
+    worst = max(
+        (r for r in evd.reach if r.get("base_enodes")),
+        key=lambda r: r["add_enodes"] - r["base_enodes"],
+        default=None,
+    )
+    audit = ""
+    if worst is not None and "cand_enodes" in worst:
+        audit = (
+            f" minted={worst['cand_enodes']}"
+            f" excess={worst['add_enodes'] - worst['base_enodes'] - worst['cand_enodes']}"
+            + (" capped" if worst.get("cand_capped") else "")
+        )
     return _gate(
         rep,
         "closure",
         cert_att == 0 and evd.reach_ill == 0 and evd.closure_safe,
-        f"enode={evd.closure_ratio:.2f}x cert_fail={cert_att} "
+        f"enode={evd.closure_ratio:.2f}x{audit} cert_fail={cert_att} "
         f"(ambient={evd.cert_fail - cert_att}) "
         f"reach_ill={evd.reach_ill}",
     )
