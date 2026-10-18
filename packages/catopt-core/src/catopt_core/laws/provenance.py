@@ -45,13 +45,18 @@ __all__ = [
     "law_provenance",
 ]
 
-#: The eleven machine-admitted objects promoted into the shipped
+#: The twelve machine-admitted objects promoted into the shipped
 #: ``ALL_RULES`` (``promoted-laws.md`` — the promotion table's shipped
 #: names, including the two objects that shipped as the strictly more
 #: general view identities ``transpose_noop`` / ``chunk_single``, and
 #: ``mul_unsq_nat`` — the census-minted two-sided unsqueeze naturality
 #: whose guard was resolved by the adversarial sweep, see
-#: ``project/retros/mul-unsq-nat.md``).
+#: ``project/retros/mul-unsq-nat.md``).  ``conv_bn_fold`` is the first
+#: of a second shipping class: a ``syn_*`` composite promoted *verbatim*
+#: — its stored-closure records embed in
+#: :mod:`catopt_core.laws.minted` and its transported guard rebuilds at
+#: import rather than being transcribed to ``cond``/``dspec``
+#: (``project/retros/minted-composite-default.md``).
 MACHINE_SHIPPED: frozenset[str] = frozenset(
     {
         "softsign_fold",
@@ -65,6 +70,7 @@ MACHINE_SHIPPED: frozenset[str] = frozenset(
         "transpose_noop",
         "chunk_single",
         "linear_channel_to_row_scale",
+        "conv_bn_fold",
     }
 )
 

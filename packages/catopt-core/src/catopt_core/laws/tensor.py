@@ -27,7 +27,7 @@ from typing import Any
 
 from catopt_core.egraph import Rewrite
 from catopt_core.ir import Const, Op
-from catopt_core.laws import tags
+from catopt_core.laws import minted, tags
 from catopt_core.laws.base import R
 from catopt_core.laws.cond import (
     _shape,
@@ -2658,6 +2658,40 @@ SIMPLIFICATION_RULES: list[Rewrite] = [
     DIV_ADD_FACTOR,
 ]
 
+#: Machine-minted composites shipped **verbatim** — the first class of
+#: library member that is not an ``R(...)`` transcription.  The conv+BN
+#: eval-mode weight fold minted as a depth-4 ``syn_*`` composition over
+#: ``batch_norm_expand`` + the conv channel-scale/shift anchors; its
+#: guard is the transported premise composition, rebuilt at import from
+#: the embedded records in :mod:`catopt_core.laws.minted` (missing
+#: ``check``/``derive`` as data — carried procedurally via the stored
+#: guard spec, the class the census pins as *transported*).  The premise
+#: family stays opt-in (``CONV_FOLD_RULES`` / ``BATCH_NORM_RULES`` are
+#: out of ``ALL_RULES`` on their own measured accounts — truth-starved
+#: sweep / no standalone pay); the composite's own gauntlet account is
+#: what ships: premise-anchored derivable, 105eq/0ne on its guarded
+#: region, fires and pays on the eval-mode site (``verified=pass`` —
+#: the fused member halves ``dag_cost``), bounded firing footprint.
+#: Same coherence as ``linear_channel_to_row_scale``: the parents' opt-in
+#: status is their standalone economics; the shipped edge is
+#: self-contained and does not replay them at fire time.
+CONV_BN_FOLD = minted.materialize(
+    "syn_syn_syn_syn_batch_norm_expand__conv_channel_shift_sub_sp_6"
+    "__conv_channel_scale_sp_48__conv_channel_scale_l_sp_209"
+    "__conv_channel_shift_sp_896",
+    {r.name: r for r in [*BATCH_NORM_RULES, *CONV_FOLD_RULES]},
+    ship_as="conv_bn_fold",
+    tags=(tags.FUSION,),
+    law="batch_norm(conv2d(x, W, b), γ, β, μ, σ², training=False) folds "
+    "to conv2d(x, W·ŝ, (b−μ̂)·ŝ+β̂) with ŝ = γ/√(σ²+ε) — the eval-mode "
+    "weight fold, minted as the premise-composed composite over "
+    "batch_norm_expand and the conv channel-scale/shift anchors.  "
+    "Machine-minted (admitted by the full gauntlet; project/retros/"
+    "minted-composite-default.md); the LHS attrs are the seed's "
+    "spelling — the law's region is the default-attr eval-mode fold.",
+)
+MINTED_RULES: list[Rewrite] = [CONV_BN_FOLD]
+
 #: Rules that implement the categorical insight: distributivity and naturality.
 CATEGORICAL_RULES: list[Rewrite] = [
     DISTRIBUTE_MUL,
@@ -2694,10 +2728,12 @@ CATEGORICAL_RULES: list[Rewrite] = [
     GQA_ABSORB,
     # Softmax-attention fold (flash-attention transform)
     *SDPA_FOLD_RULES,
+    # Machine-minted composites shipped verbatim (transported guards)
+    *MINTED_RULES,
 ]
 #: All rules combined — the default saturation set.
 #:
-#: The axiom/lemma split is declared on the rules: 59 of these 83
+#: The axiom/lemma split is declared on the rules: 60 of these 84
 #: carry no derivation — ``kind == "axiom"`` — and 24 carry a recorded
 #: ``derivation`` from the kernel (22 ``"lemma"`` — inverse twins
 #: whose direction buys reach, the emergent ``silu_mul_form``, the
@@ -2709,6 +2745,13 @@ CATEGORICAL_RULES: list[Rewrite] = [
 #: / 2 redundant plus 19 ``no-instance`` verdicts — the promoted
 #: conditional and pointwise-split laws its instancer cannot build a
 #: site for (``project/retros/promoted-laws.md``).
+#:
+#: ``conv_bn_fold`` counts as an axiom by annotation — its true
+#: derivation runs through three unshipped ``syn_*`` intermediates,
+#: which the shipped-names ``derivation`` field cannot express; the
+#: honest lineage rides the object's ``parents`` chain and the
+#: embedded premise-closure records instead
+#: (:mod:`catopt_core.laws.minted`).
 #:
 #: LAYOUT_RULES are deliberately NOT in the default: measured on the
 #: laws_effect bench they deliver runtime parity (the NT-GEMM form is

@@ -212,22 +212,24 @@ def test_laws_exports_every_rewrite():
     # ADR 0012's named content gap, held out of the default set)
     # + 60 conv output-affine absorb rules (opt-in CONV_FOLD_RULES —
     # the conv_channel_scale/shift anchor family of the conv+BN fold)
+    # + 1 machine-minted verbatim composite (conv_bn_fold — the
+    # conv+BN fold, shipped via catopt_core.laws.minted)
     # rewrites.
-    assert len(found) == 284
+    assert len(found) == 285
 
 
 def test_all_rules_count_unchanged():
     # The default set excludes LAYOUT_RULES (opt-in — closure-cost
     # regression documented in laws.tensor); WITH_LAYOUT = default + 77.
-    # 83 = the machine-admitted ``mul_unsq_nat`` (commit 9dce25e,
-    # MACHINE_SHIPPED 10->11, project/retros/mul-unsq-nat.md) on top of
-    # the previous 82.
-    assert len(laws.all_rules()) == 83
+    # 84 = the verbatim-minted ``conv_bn_fold`` composite
+    # (MACHINE_SHIPPED 11->12, project/retros/minted-composite-default.md)
+    # on top of the previous 83.
+    assert len(laws.all_rules()) == 84
     assert laws.all_rules() == laws.ALL_RULES
     assert len(laws.ALL_RULES) == (
         len(laws.SIMPLIFICATION_RULES) + len(laws.CATEGORICAL_RULES)
     )
-    assert len(laws.ALL_RULES_WITH_LAYOUT) == 160
+    assert len(laws.ALL_RULES_WITH_LAYOUT) == 161
     # each call returns a fresh list, not the shared ALL_RULES object
     assert laws.all_rules() is not laws.ALL_RULES
 
@@ -237,7 +239,9 @@ def test_collections_split_by_domain():
     # project/retros/mul-unsq-nat.md) — it ships in the default
     # SIMPLIFICATION_RULES.
     assert len(laws.SIMPLIFICATION_RULES) == 34
-    assert len(laws.CATEGORICAL_RULES) == 49
+    # 50 = 49 + the machine-minted ``conv_bn_fold`` composite
+    # (MINTED_RULES — project/retros/minted-composite-default.md).
+    assert len(laws.CATEGORICAL_RULES) == 50
     assert len(laws.SCAN_LAWS) == 6
     assert len(laws.SCAN_DIAG_LAWS) == 16
     # layout: 12 unary + 4 binary pointwise commutations x 2 spellings
@@ -352,7 +356,12 @@ def test_axiom_lemma_marker_covers_all_rules():
                     r.name,
                     premise,
                 )
-    assert len(kinds["axiom"]) == 59
+    # 60 = 59 + ``conv_bn_fold``: the minted composite is an axiom by
+    # annotation — its derivation runs through unshipped ``syn_*``
+    # intermediates the shipped-names field cannot express (the
+    # premise check above requires every recorded name to resolve
+    # inside ALL_RULES); the honest lineage rides ``rule.parents``.
+    assert len(kinds["axiom"]) == 60
     assert len(kinds["lemma"]) == 22
     assert len(kinds["redundant"]) == 2
     # the redundant kind rides on the tags.REDUNDANT constant

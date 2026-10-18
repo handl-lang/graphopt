@@ -150,8 +150,17 @@ def main() -> int:
 
     t0 = time.monotonic()
     seed, ir, tensors, x = real_seed()
+    # The mint base pins the pre-ship surface: ``conv_bn_fold`` now
+    # ships in ALL_RULES, and without the exclusion the fixpoint's
+    # first fold is ``syn_conv_bn_fold__comm_add_0`` — a trivially
+    # different comm compose whose guard spec names the shipped
+    # composite as a parent (which then needs the composite's own
+    # premise rows stored to transport).  Excluding it reproduces the
+    # admitted object this probe measures; the interaction is the
+    # honest semantics — store rows for the whole premise closure or
+    # no transport.
     base = (
-        list(ALL_RULES)
+        [r for r in ALL_RULES if r.name != "conv_bn_fold"]
         + list(BATCH_NORM_RULES)
         + list(CONV_FOLD_RULES)
         + list(POINTWISE_FACTOR_RULES)
@@ -244,6 +253,12 @@ def main() -> int:
     )
 
     # -- 4. the gauntlet, bounded ------------------------------------------
+    # Post-ship the gauntlet refuses at NOVELTY — ``relation ==
+    # "duplicate"``: the admitted object IS a library law now (its
+    # alpha pair ships as ``conv_bn_fold``), and the novelty gate's job
+    # is exactly to refuse respellings of shipped rules.  ``usable=
+    # False`` here is the signature of "already admitted", not a
+    # regression.
     corpus = ev.GauntletCorpus(
         real_terms=(seed,),
         probe=(case,),
