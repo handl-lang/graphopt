@@ -17,6 +17,7 @@ forks, no vendoring.
 | engines | `plugin-engine-{lex-pattern,parse-pratt,exec-tree-walk}` | `"data"`/`"pratt"`/`"tree-walk"` — the smallest honest set (no sdkgen/compile/lint/lsp) |
 | module bridge | `plugin-lib-handl` + `plugin-module` | `HandlModule` + `OpRegistry` + `ModuleRegistry` |
 | tensor ops | `handl-host-tensor` | `tensor_op_registry()` — the 18 `tensor.*` ops |
+| catopt program | `hnl/conv_bn.hnl` | the conv→batch_norm composite + its folded form, `.hnl` over the dep surface |
 
 `CatoptKit::new()` installs the canonical language as the process-wide
 default (the seam `HandlModule` bridge runtimes bind), builds the
@@ -35,12 +36,39 @@ directory (`index.hnl` inside). **It works** — `tests/compose.rs` proves
 both `import tensor` (the namespace record of string callees) and
 `import * as t` on a temp-dir project.
 
-**What's missing for a checked-in `.handl.toml` here**: upstream
-`resolve_dependencies` maps names to *filesystem* dirs only — there is
-no cargo/git package → directory bridge, so a committed manifest could
-not name the dep without a machine-local `path =`. The ADR-0010
-package-manager story is the upstream future for that; for now the
-embedded `TENSOR_HNL` interface is what a fixture vendors.
+**The bridge now lands** (platform `90853ec2`): this crate ships a
+committed `.handl.toml` that names the dep *portably* —
+
+```toml
+[dependencies]
+host-tensor = { git = "https://github.com/handl-lang/host-tensor", branch = "main" }
+
+[patch]
+host-tensor = "../../../../GitHub/handl-lang/host-tensor/src"
+```
+
+`[dependencies]` accepts `{ git = …, rev|branch|tag }` and resolves an
+unpatched git dep to its package-cache slot (`$HANDL_PKG_DIR`, else
+`~/.handl/pkg/host-tensor`) — the directory the ADR-0010 fetch hook will
+materialize (populate it with a checkout or symlink today).
+`[patch]` is the consumer-side dev-link (the Cargo `[patch]` story): a
+patch whose named directory exists wins over the declared source, a
+missing dir is inert. The package dir is host-tensor's `src/` — where
+its `index.hnl` lives. `tests/conv_bn.rs` asserts both arms.
+
+## The shipped consumer — `hnl/conv_bn.hnl`
+
+The crate's own `.hnl` module is the program catopt's e-graph
+optimizes — the eval-mode conv+BN weight-space fold
+`batch_norm(conv2d(x, W, b), γ, β, μ, σ²) → conv2d(x, W′, b′)`
+(`catopt_core.laws.tensor`'s `BATCH_NORM_RULES` + `CONV_FOLD_RULES`):
+`conv_bn` is the unfolded composite, `conv_bn_fold` computes
+`s = γ·rsqrt(σ²+ε)` per channel (scalar `**` over the materialized stat
+lists — the op surface has no elementwise pow) and folds it into
+`W′ = W∘ŝ′`, `b′ = b∘s + (β − s∘μ)`. Both evaluate through the runtime
+to `TaggedValue::Tensor`, value-equal on dyadic fixtures — the minted
+rewrite proven end to end through the consumer. `bn_adjoint`/`bn_grad`
+expose `tensor.derive`/`batch_norm_backward`.
 
 ## Build & test
 

@@ -1,0 +1,25 @@
+# catopt-kit's handl project manifest — `CatoptKit::new_with_project`
+# reads this file's `[dependencies]`/`[patch]` tables through
+# `handl_platform::resolve_dependencies` into the `ModuleLoader`'s
+# name → package-directory map.
+#
+# `from "host-tensor" import tensor` inside a `.hnl` source resolves the
+# name to a package directory (one holding `index.hnl`); the crate's own
+# `hnl/conv_bn.hnl` is the shipped consumer.
+
+[dependencies]
+# The package named *portably* — a repo-hosted git source, not a
+# machine-local path. An unpatched git dep resolves to its package-cache
+# slot (`$HANDL_PKG_DIR`/`~/.handl/pkg/host-tensor`) — the directory the
+# ADR-0010 fetch hook materializes (populate it with a checkout or a
+# symlink today; the fetch half is the follow-up seam upstream).
+host-tensor = { git = "https://github.com/handl-lang/host-tensor", branch = "main" }
+
+[patch]
+# The consumer-side local override — the Cargo `[patch]`/dev-link story.
+# A patch whose named directory exists wins over the `[dependencies]`
+# source; a missing dir is inert and the git source applies. This path is
+# the handl-lang sibling-checkout convention (`~/GitHub/handl-lang/*`
+# next to `~/Desktop/catopt`) — the package dir is host-tensor's `src/`,
+# where its `index.hnl` lives.
+host-tensor = "../../../../GitHub/handl-lang/host-tensor/src"

@@ -372,9 +372,19 @@ values; `from "host-tensor" import tensor` works on a fixture project.
 Deps float on `main` via git + `handl_deps.env` insteadOf; the `[patch]`
 local-override convention is documented in the root `Cargo.toml`.
 
-**Named gap** (documented, not patched): `.handl.toml` `[dependencies]`
-resolve filesystem dirs only — no cargo/git-package → dir bridge yet, so
-a checked-in manifest can't name the dep portably (ADR-0010 future).
+**Named gap — closed (second pass, same day)**: platform `90853ec2`
+landed the git-package→dir bridge — `[dependencies]` accepts
+`{ git = …, rev|branch|tag }` (unpatched → the `~/.handl/pkg/<name>`
+cache slot the ADR-0010 fetch hook will populate; a symlink is today's
+stand-in) and `[patch]` dev-links the sibling checkout, winning when
+its dir exists. The crate ships a committed `.handl.toml` +
+**`hnl/conv_bn.hnl`** — the conv→batch_norm composite the e-graph
+folds, importing `host-tensor` *by name* through the bridge — plus
+`conv_bn_fold`, the minted rewrite's RHS evaluated (`s = γ·rsqrt(σ²+ε)`,
+`W′ = W∘ŝ′`, `b′ = b∘s + β − s∘μ`), and `bn_adjoint`/`bn_grad`.
+**Verified** (`cargo test -p catopt-kit`, **16/16**): `TaggedValue::
+Tensor` results and *exact* folded-vs-unfolded agreement on a dyadic
+fixture — the consumer proof of the premise-pay story below.
 **Env note**: tree-walk eval needs a >2 MiB test-thread stack —
 `.cargo/config.toml` sets `RUST_MIN_STACK = 32 MiB` (upstream carries
 the same knob). Retro: `retros/catopt-kit.md`.
