@@ -1,0 +1,146 @@
+# kit.toml — the machinery this research composes, declared as data.
+#
+# The paper's thesis is that the entire pipeline — lift, discover+admit,
+# lower — is *composition of declared components*, not a monorepo. This
+# manifest is that claim made checkable: every component the research
+# depends on is a row with its repo, its float policy (`branch = "main"`,
+# no rev pins — the org convention), the crates/packages consumed, and
+# the role it plays in the story.
+#
+# Consumers of this file: the reader (the composition map == the paper's
+# §2), `experiments/` (the Rust arm is *enforced* by Cargo — these rows
+# mirror `experiments/Cargo.toml`'s dep edges), and any future kit tool
+# that wants to materialize the stack from a manifest.
+
+schema = "handl-lang/research-kit@1"
+
+[meta]
+name = "research-mlopt"
+paper = "paper/paper.qmd"
+claim = "certified optimization of ML models/tensor programs — machinery composed as data on handl infra"
+founding_result = "conv_bn_fold"
+
+# ---------------------------------------------------------------------------
+# Components — the Rust arm (enforced by cargo via experiments/Cargo.toml)
+# ---------------------------------------------------------------------------
+
+[[component]]
+name = "kernel"
+repo = "handl-lang/kernel"
+float = "main"
+kind = "cargo-git"
+crates = ["handl-language", "handl-value"]
+role = "the arrow-calculus kernel — the Language data schema, the tagged Value layer (TaggedValue incl. Tensor). The calculus the research lowers *into*."
+
+[[component]]
+name = "lang"
+repo = "handl-lang/lang"
+float = "main"
+kind = "cargo-git"
+crates = ["handl-kit-data-canonical"]
+role = "the canonical Language as data — YAML fragments → Language. A language is a data change, never an engine recompile (the same 'as data' thesis as this paper's)."
+
+[[component]]
+name = "platform"
+repo = "handl-lang/platform"
+float = "main"
+kind = "cargo-git"
+crates = [
+    "handl-platform",
+    "handl-runtime",
+    "handl-plugin-module",
+    "handl-plugin-lib-handl",
+]
+role = "the runtime + module bridge + the ModuleLoader that resolves .handl.toml dependency names. The evaluation substrate the certified artifact runs on."
+
+[[component]]
+name = "engines"
+repo = "handl-lang/engine-{exec,lex-pattern,parse-pratt,exec-tree-walk}"
+float = "main"
+kind = "cargo-git"
+crates = [
+    "hnl-engine-exec",
+    "hnl-engine-lex-pattern",
+    "hnl-engine-parse-pratt",
+    "hnl-engine-exec-tree-walk",
+]
+role = "the smallest honest engine set — data lex / pratt parse / tree-walk eval (post-ADR-0128 these live one crate per repo as `hnl-engine-*`, renamed from `handl-plugin-engine-*`)."
+
+[[component]]
+name = "host-tensor"
+repo = "handl-lang/host-tensor"
+float = "main"
+kind = "cargo-git"
+crates = ["handl-host-tensor"]
+role = "the 18-op `tensor.*` host surface — dense n-d f64 tensors over the {\"__tensor__\":…} wire form. The op vocabulary the lifted program spells and the folded program runs against."
+
+[[component]]
+name = "catopt-kit"
+repo = "handl-lang/catopt"
+path = "packages/catopt-kit"
+float = "main"
+kind = "cargo-git"
+status = "blocked-upstream"
+crates = ["catopt-kit"]
+role = "catopt's composition seam — the intended direct dep (it assembles this same stack), and now an in-tree workspace member (packages/catopt-kit). Blocked as a *git* dep: its manifest still names `handl-plugin-engine-*` deps on platform@main, renamed/moved to `hnl-engine-*` repos (platform 0ce78121); catopt builds only via its committed Cargo.lock's pre-rename pins. The artifact under measurement (hnl/conv_bn.hnl — the minted fold, evaluated) resolves in-tree at packages/catopt-kit/hnl/conv_bn.hnl; when catopt-kit repoints, experiments can take the one-line dep back."
+
+# ---------------------------------------------------------------------------
+# Components — the Python arm (the discovery engine; env-level composition)
+# ---------------------------------------------------------------------------
+
+[[component]]
+name = "catopt"
+repo = "handl-lang/catopt"
+path = "packages/"
+float = "main"
+kind = "python-git"
+packages = [
+    "catopt-core",
+    "catopt-torch",
+    "catopt-discovery",
+    "catopt-orchestrator",
+    "catopt-onnx",
+]
+role = "the discovery + admission machinery — lift (TorchSource: torch IR → catopt calculus), laws-as-data minting, the admission gauntlet, deliver. Composed at the Python env level (uv/pip git deps), not vendored here."
+
+# ---------------------------------------------------------------------------
+# Experiments — the runnable evidence
+# ---------------------------------------------------------------------------
+
+[[experiment]]
+name = "conv-bn-fold"
+kind = "cargo"
+run = "cargo run --release -p mlopt-experiments --bin conv-bn-fold -- --repeat 200"
+produces = "value-equality of spelled vs folded program through the composed kit + per-call wall of each arm (the runtime pay)"
+artifact = "catopt-kit's hnl/conv_bn.hnl — resolved in-tree (packages/catopt-kit/hnl/conv_bn.hnl; the sibling-checkout / pkg-cache-slot / fetch arms remain as fallbacks for a standalone research-mlopt checkout — never vendored)"
+
+[[experiment]]
+name = "conv-fold-premise-pay"
+kind = "python"
+run = "cd $CATOPT_DIR && .venv/bin/python lab/probes/conv_fold_premise_pay_probe.py"
+produces = "the gauntlet account for the minted composite: guard transport, truth (guarded eval + premise-anchored derivability), typed pay, novelty"
+note = "runs inside a catopt checkout (CATOPT_DIR); the probe is catopt's own, invoked — not copied"
+
+# ---------------------------------------------------------------------------
+# Gaps — surfaced, documented, not worked around by vendoring
+# ---------------------------------------------------------------------------
+
+[[gap]]
+what = "catopt-kit's manifest edges are stale vs platform@main: it deps `handl-plugin-engine-{exec,lex-pattern,parse-pratt,exec-tree-walk}` on `handl-lang/platform`, but those crates were renamed `hnl-engine-*` and moved to the engine-* repos (platform 0ce78121, ADR-0128). catopt still builds via its committed Cargo.lock (pre-rename rev 90853ec2); a fresh downstream resolve fails"
+where = "handl-lang/catopt packages/catopt-kit/Cargo.toml — needs the dep repoint upstream"
+workaround = "experiments composes the kit directly over the renamed crates (src/lib.rs — the same documented assembly); the direct catopt-kit dep is restored when upstream repoints"
+
+[[gap]]
+what = ".handl.toml git deps resolve to a package-cache slot ($HANDL_PKG_DIR, else ~/.handl/pkg/<name>) that nothing yet populates"
+where = "platform's ModuleLoader / ADR-0010 fetch hook (upstream follow-up)"
+workaround = "a checkout or symlink at the slot is the stand-in (this machine: ~/.handl/pkg/{host-tensor,catopt-kit} are); `make artifact` fetches the file from the declared git source when no local arm resolves"
+
+[[gap]]
+what = "catopt-kit does not export its hnl/ sources over the crate API (tests read them from CARGO_MANIFEST_DIR)"
+where = "packages/catopt-kit (in-tree)"
+workaround = "the experiment resolves the file in-tree — packages/catopt-kit/hnl/conv_bn.hnl — with the sibling-checkout / pkg-slot / raw-fetch arms kept as fallbacks for a standalone checkout; an exported CONV_BN_HNL const would close it"
+
+[[gap]]
+what = "catopt's Python packages are not cargo deps; the discovery arm composes at the Python env level"
+where = "manifest's python-git component"
+workaround = "declared here for reproducibility; consumed as `git+https://github.com/handl-lang/catopt` uv/pip deps inside a catopt venv"
