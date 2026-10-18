@@ -5,12 +5,12 @@ Context: the ADR-0007 layer-2 handler grammar
 (`catopt_discovery.handler_synth`) mints a non-elementwise atom by
 proposing a descriptor from a structured template vocabulary and
 verifying it fp64 against the pre-mint spec.  The composed loop
-(`tools/atom_synth_loop.py`) runs need -> handler -> laws ->
+(`lab/mint/atom_synth_loop.py`) runs need -> handler -> laws ->
 admission -> pay.  Five refusals were measured; this round closes
 four and names the fifth precisely.
 
 Changed code lives in `packages/catopt-discovery/src/catopt_discovery/handler_synth.py`
-plus its test file; `tools/grammar_probe.py` is the census
+plus its test file; `lab/audit/grammar_probe.py` is the census
 instrument.  Nothing under `catopt-core` changed.
 
 ## The refusals, before -> after (mint verdict at budget 512)

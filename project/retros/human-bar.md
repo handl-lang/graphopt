@@ -29,7 +29,7 @@ below compares **rule objects** (`id()` against the actual arm
 membership), so the collision cannot launder a human law into machine
 credit.
 
-The committed `tools/evidence.db` holds no `lemmas` rows — admission
+The committed `$XDG_CACHE_HOME/catopt/evidence.db` holds no `lemmas` rows — admission
 runs used ephemeral stores — so the store arm rebuilds the recorded
 objects verbatim: the eight guarded view strips
 (`{mul,sub,add}_unsqueeze_l_id`, `mul_unsqueeze_r_id`,

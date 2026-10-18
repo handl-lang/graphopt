@@ -2,7 +2,7 @@
 
 Date: 2026-10-16
 Branch: feat/runtime-loop
-Driver: `tools/atom_law_loop.py` (new).  Artifact:
+Driver: `lab/mint/atom_law_loop.py` (new).  Artifact:
 `project/retros/layer3-loop.json`.
 
 Layer 1 minted definitional atoms (anti-unification); layer 2

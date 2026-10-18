@@ -181,7 +181,7 @@ runs) now covers 217 workloads and stays green.
   the sites it contains; a guard region outside both enumeration
   windows still stands until a wider sweep reaches it — the same
   blind spot every guarded law carries.
-- **The side-file is generated.**  `tools/intake_corpus.json` +
+- **The side-file is generated.**  `$XDG_CACHE_HOME/catopt/intake_corpus.json` +
   `intake_tensors.pt` are gitignored artifacts; the corpus growth
   persists by *re-running* `python -m catopt_discovery.intake`, not
   by committing a blob.

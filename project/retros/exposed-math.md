@@ -31,7 +31,7 @@ certificate and a verified lowering.  A strict-match sweep of the
 whole corpus shows the pattern exists *only* on DeltaRuleBlock —
 the new architecture generated a proposal no corpus term could.
 
-## The screen — `tools/exposure_screen.py`
+## The screen — `lab/screen/exposure_screen.py`
 
 For each workload (23 zoo, ~250 intake candidates, 43 corpus
 models — 321 exported, 2 export-rejected), export to IR and measure:
@@ -136,7 +136,7 @@ disguise, −7.7%), and on `GatedAttentionUnit` (the `relu(uuᵀ)²·V`
 score-masking site, part of its −9.5%).  Carrier laws reach real
 held-out architectures where the spelled math exists.
 
-## Discovery on the exposed models — `tools/exposed_discovery.py`
+## Discovery on the exposed models — `lab/screen/exposed_discovery.py`
 
 Three arms per model, all shipped machinery: (a) `pipeline.propose`
 scoped to the model's own op-tuple census → `pipeline.measure` →
@@ -271,7 +271,7 @@ model that minted a paying unpublished candidate this round.
   it at "can't isolate the guard yet" rather than shipping a
   too-broad law.
 
-Probe: `tools/exposure_screen.py` (the screen),
-`tools/exposed_discovery.py` (the per-model discovery driver).
+Probe: `lab/screen/exposure_screen.py` (the screen),
+`lab/screen/exposed_discovery.py` (the per-model discovery driver).
 Machine-readable: `project/retros/exposed-math-screen.json`,
 `project/retros/exposed-math-discovery.json`.
