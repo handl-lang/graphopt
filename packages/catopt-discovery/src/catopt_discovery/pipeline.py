@@ -691,8 +691,8 @@ class Evidence:
         ratio is inflated by the denominator, not by the growth).
 
         The honest bound is therefore on *unexplained* growth, per
-        reach row: the marginal ``add − base`` must either fit the
-        legacy slack ``(limit − 1) · base_enodes`` — the old bound,
+        reach row: the marginal ``add - base`` must either fit the
+        legacy slack ``(limit - 1) * base_enodes`` — the old bound,
         unchanged — or exceed it only by enodes the candidate's own
         recorded applications minted (``cand_enodes``) plus a bounded
         cascade factor for the secondary firings those minted members
@@ -1217,7 +1217,7 @@ def _has_view_op(proposal: Proposal) -> bool:
 def _derivable_result(
     inst: tuple, base_rules: list[Rewrite], premise_rules: Iterable
 ) -> Any:
-    """The derivability oracle's result, premise-anchored on a miss.
+    """Return the derivability oracle's result, premise-anchored on a miss.
 
     ``verify_law`` under ``base_rules`` first — an axiomatic
     derivation is the stronger claim.  When that fails and

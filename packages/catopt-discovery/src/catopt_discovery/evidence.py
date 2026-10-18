@@ -1513,7 +1513,7 @@ def _premise_credit(evd: Any, base_names: set) -> str:
 def _premise_detail(
     evd: Any, extra: list, premise_note: str, base: list
 ) -> str:
-    """The measure-stage premise fragment (``""`` when nothing ran)."""
+    """Return the measure-stage premise fragment (``""`` when nothing ran)."""
     out = (
         f" | premise closure refused: {premise_note}"
         if premise_note
