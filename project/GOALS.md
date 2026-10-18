@@ -467,3 +467,26 @@ site-verified); `truth` and `typed-pay` now pass (`paid=1`, fused
 **`closure`** — `enode=6.00x` vs the 2.0 cap: expansion cost on the
 one-term graph, a different gate, left open as the next named policy
 question.  Retro: `retros/premise-anchored-derivability.md`.
+
+### `JOINT_SHAPES`: the guarded sweep reaches the conv corner (2026-10-19)
+
+`binding-env-cap.md`'s named residual — "the binding banks have no
+conv-weight-shaped inhabitants" — is closed.  `lawdata.JOINT_SHAPES`
+tabulates correlated operand-shape rows keyed `(op, arity)`; a metavar
+arg of a tabulated node leaves the independent banks and draws through
+the joint row set (merged across nodes under Var agreement), and
+`JOINT_VIEW_SHAPES` appends the `(1,C,1,1)` channel-view corner via
+`extra_viewed` — joint-free enumerations are byte-identical.
+`conv2d`'s `stride` is a measured `pos-int` override (every accepted
+anchor site died on `non-positive stride`); `dilation`/`groups` are
+positive by name default.
+
+**Measured** (`conv_fold_premise_pay_probe.py`): the composite's
+guarded synth region went `0 accepted / 2000 declined / 2360 envs` →
+`105 accepted / 105 equal / 0 ne / 0 rerr` in the 360 window — truth
+PASSES (`derivable=True` premise-anchored), novelty + typed-pay pass
+(`paid=1`).  Every conv anchor sweeps a verified-equal region inside
+the default window; `batch_norm_expand` keeps its corner.  The
+composite's refusal moves to **closure** (`enode=6.00x` — the cost
+gate named in `premise-anchored-derivability.md`, not a truth
+question).  Retro: `retros/joint-shape-schemata.md`.
