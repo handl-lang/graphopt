@@ -378,3 +378,33 @@ a checked-in manifest can't name the dep portably (ADR-0010 future).
 **Env note**: tree-walk eval needs a >2 MiB test-thread stack —
 `.cargo/config.toml` sets `RUST_MIN_STACK = 32 MiB` (upstream carries
 the same knob). Retro: `retros/catopt-kit.md`.
+
+### `FOLD_OPS`: the premise-pay leg flips — cost model sees compile-time folds (2026-10-19)
+
+The enablement-floor blocker was **alphabet drift, not a missing
+model**: `dag_cost`/`extract_best`/`executor_overhead` already price
+param-only subtrees at ~0 marginal, but `cost._folds_to_param`
+consulted a 29-op table that had drifted ~130 names behind
+`IRModule._fold_weight_chains`' 160-op `elif` gate (commit e6a618e
+widened the lowerer, the cost side never re-synced) — and
+extraction's `_FOLDABLE_OPS` was narrower still (no views).  The
+conv+BN W′/b′ chains' `rsqrt` root therefore billed the whole fold
+per-call.
+
+`opmeta` now carries the `fold-at-lowering` tag + the 161-name
+membership; `FOLD_OPS` is the one table the lowerer gate, the fold
+predicate, and the extraction discount all read (drift structurally
+impossible — pinned by `test_fold_alphabet_is_single_sourced`).  60
+binding-only spellings register into the vocabulary through it.
+
+**Measured** (`conv_fold_premise_pay_probe.py`): `fires=1
+changed=False verified=same` → `changed=True verified=pass`;
+`dag_cost` fused `34 874.337` → `17 438.7` vs spelled `34 874.3`.
+Truth unchanged (real site 1eq/0ne; 2-step replayable cert).
+
+**Guarded sweep verdict — DEFAULT unchanged**: the 4 conv anchors
+refuse at **truth** again (`0 accepted / 2360 envs` — the conv
+channel corner stays unreachable to the enumeration bank;
+enablement-not-admission stands) and `batch_norm_expand` refuses at
+typed-pay (`fires=8 paid=0` — expansion is the non-paying direction;
+the composite is the payer).  Retro: `retros/fold-cost-single-source.md`.
