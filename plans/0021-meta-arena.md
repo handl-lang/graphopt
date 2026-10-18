@@ -87,7 +87,7 @@ Retro: `project/retros/meta-arena-player.md`.
 
 ## HANDL formalism notes (for the mixed arena's vocabulary)
 
-From `handl-lang/platform/research/PAPER.md`:
+From `handl-lang/host/research/PAPER.md`:
 
 - `>>>[k]` axis composition: axis 0 = horizontal (cells across a
   shared object — program composition), axis 1 = vertical (cells

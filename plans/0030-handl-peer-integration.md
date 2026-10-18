@@ -4,7 +4,7 @@ Depends on: **ADR 0010** (handl *is* the kernel — one language, many
 interpretations), **ADR 0011** (the calculus is canonical for laws, the
 op-graph for execution), **plan 0029** (the boundary spike — **done**),
 and the spike retros (`handl-q0..q3`).
-External: `handl-lang/platform` — `handl-kit-data-canonical`
+External: `handl-lang/host` — `handl-kit-data-canonical`
 (`language_from_dir`), `plugin-engine-transform-rewrite` (the
 `RewriteEngine`), `plugin-engine-exec*` (the host-function seam).
 

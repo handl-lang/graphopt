@@ -1,6 +1,6 @@
 # `handl` → `catopt`: what is reusable, what is analogous, what is a warning
 
-Read-only survey of `/home/luis/GitHub/handl-lang/platform` (Rust, ~98 crates,
+Read-only survey of `/home/luis/GitHub/handl-lang/host` (Rust, ~98 crates,
 ~133 ADRs under `project/adrs/`, a ~24-file Lean4 library under
 `research/arrow-calculus-kernel-poc/lean/ArrowMinimalityLib/`).  Scope was the
 seven questions in the brief.  Nothing in the handl repo was modified; this is

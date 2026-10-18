@@ -4,7 +4,7 @@ Depends on: **ADR 0010** (handl *is* the kernel — one language, many
 interpretations), ADR 0009 (the ladder; the calculus stage is gated on
 0010), ADR 0008 (combinator presentation), and the existing bridge
 `catopt_discovery.handl`.
-External: `~/GitHub/handl-lang/platform` (Peregrin) — `handl-language`,
+External: `~/GitHub/handl-lang/host` (Peregrin) — `handl-language`,
 `handl-kit-arrow-lower`, `plugin-engine-{exec,typecheck,transform-rewrite}`,
 `handl-runtime/src/vm_primitives.rs` (host functions).
 

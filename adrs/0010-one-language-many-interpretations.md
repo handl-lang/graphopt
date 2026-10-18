@@ -8,7 +8,7 @@ model is fixed.
 **Depends on**: ADR 0002 (categorical re-expression), ADR 0003 (four
 dimensions), ADR 0004 (abstraction as move), ADR 0008 (combinator
 presentation), ADR 0009 (the ladder and the kernel question).
-**Prior art, verified**: the `handl-lang/platform` (Peregrin) workspace —
+**Prior art, verified**: the `handl-lang/host` (Peregrin) workspace —
 `crates/handl-language` (`Language`), `handl-kit-arrow-lower`,
 `plugin-engine-{exec,typecheck,transform-rewrite,fmt,lint,test}`,
 ADR-0044 ("language as data"), ADR-0052 (eval schemes), ADR-0054 (type
