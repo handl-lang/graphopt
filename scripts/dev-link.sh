@@ -35,9 +35,9 @@ END = "# dev-link: end"
 
 # Repos this repo references via git deps (any Cargo.toml, any depth) —
 # plus one hop through the referenced repos' own manifests: patched-in
-# sibling crates git-dep further repos (e.g. platform's own
-# `[patch."…/platform"]` table exists because kit-canonical's manifest
-# git-deps platform crates).
+# sibling crates git-dep further repos (e.g. host's own
+# `[patch."…/host"]` table exists because kit-canonical's manifest
+# git-deps host crates).
 pat = re.compile(r'git = "' + re.escape(base) + r'([A-Za-z0-9._-]+)"')
 
 def refs_of(d: pathlib.Path):
