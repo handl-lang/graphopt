@@ -2,7 +2,7 @@
 name = "mlopt-experiments"
 version = "0.1.0"
 edition = "2024"
-license = "MIT OR Apache-2.0"
+license = "MIT"
 repository = "https://github.com/handl-lang/research-mlopt"
 description = "research-mlopt evidence generation — the paper's experiments, composed from declared git deps on the handl stack; nothing vendored"
 

@@ -3,7 +3,7 @@ name = "catopt-kit"
 version = "0.1.0"
 edition = "2024"
 description = "catopt's handl composition seam — assembles a minimal handl runtime (canonical language + tree-walk eval) and composes the host-tensor op surface"
-license = "MIT OR Apache-2.0"
+license = "MIT"
 
 # handl deps float on `main` (git). Local development resolves them to
 # checkouts via `source ~/.cache/devin/handl_deps.env` (git insteadOf) or
