@@ -1234,10 +1234,13 @@ class Gauntlet:
 
 def _truth_detail(evd: Any) -> str:
     """Render the measured truth evidence for the gauntlet report."""
-    derivable = f"derivable={evd.derivable}"
-    if getattr(evd, "premise_anchored", False):
-        derivable += "(premise-anchored)"
-    parts = [f"numeric={evd.num_true}", derivable]
+    anchored = "(premise-anchored)" * getattr(
+        evd, "premise_anchored", False
+    )
+    parts = [
+        f"numeric={evd.num_true}",
+        f"derivable={evd.derivable}{anchored}",
+    ]
     if evd.view_verdict:
         parts.append(f"view={evd.view_verdict} ({evd.view_note})")
     return " ".join(parts)
@@ -1365,7 +1368,7 @@ def _reconstruct_gate(
 def _premise_rules(
     conn: sqlite3.Connection,
     record: dict,
-    base_by_name: dict,
+    base: list[Any],
 ) -> tuple[list[Any], str]:
     """Resolve *record*'s transitive premise closure through the store.
 
@@ -1377,18 +1380,20 @@ def _premise_rules(
     rebuilt by :func:`_rebuild_stored` at full declared strength
     (``missing_hooks`` minus ``transported`` empty), with its own
     ``guard.parents`` walked transitively.  A name already among
-    *base_by_name* resolves to the axiom itself — the trusted object,
-    no store row needed.
+    *base* resolves to the axiom itself — the trusted object, no store
+    row needed.
 
-    Returns ``(rules, detail)`` — *rules* parents-first, de-duplicated
-    by name.  A member that resolves short of that bar — no row, a
-    weaker-than-declared admit, a cycle back into the closure —
-    empties the whole closure: a partial premise set is not the
-    derivation the object was minted under, so the refusal is total
-    (*detail* names the shortfall).
+    Returns ``(extra, detail)`` — *extra* is the closure's non-axiom
+    members (the ones ``measure`` must add to ``base`` for the
+    anchored leg), parents-first and de-duplicated by name.  A member
+    that resolves short of that bar — no row, a weaker-than-declared
+    admit, a cycle back into the closure — empties the whole closure:
+    a partial premise set is not the derivation the object was minted
+    under, so the refusal is total (*detail* names the shortfall).
     """
     from catopt_core.laws.serialize import object_kind
 
+    base_by_name = {r.name: r for r in base}
     out: list[Any] = []
     seen: set[str] = {record.get("name") or ""}
     failure: list[str] = []
@@ -1437,7 +1442,7 @@ def _premise_rules(
     walk(record, frozenset(seen))
     if failure:
         return [], "; ".join(failure)
-    return out, ""
+    return [r for r in out if r.name not in base_by_name], ""
 
 
 def _premise_steps_verify(
@@ -1484,6 +1489,41 @@ def _premise_steps_verify(
     )
 
 
+def _premise_credit(evd: Any, base_names: set) -> str:
+    """Credit or revoke a premise-anchored derivation on *evd*.
+
+    Called only when a premise closure was supplied to ``measure``.
+    Site-verifies the reported certificate's non-axiom steps
+    (:func:`_premise_steps_verify`); a derivation that invoked an
+    unverified premise loses the credit — the base-only verdict stands
+    (``measure`` already tried ``base_rules`` first).  Returns the
+    stage-detail fragment.
+    """
+    if not evd.derivable:
+        return "premise-anchored: no derivation"
+    ok, detail = _premise_steps_verify(evd.derivation_cert, base_names)
+    evd.premise_anchored = ok and any(
+        s.rule not in base_names for s in evd.derivation_cert.steps
+    )
+    if not ok:
+        evd.derivable = False
+    return detail
+
+
+def _premise_detail(
+    evd: Any, extra: list, premise_note: str, base: list
+) -> str:
+    """The measure-stage premise fragment (``""`` when nothing ran)."""
+    out = (
+        f" | premise closure refused: {premise_note}"
+        if premise_note
+        else ""
+    )
+    if extra:
+        out += " | " + _premise_credit(evd, {r.name for r in base})
+    return out
+
+
 def _measure_gate(
     rep: Gauntlet,
     conn: sqlite3.Connection,
@@ -1523,11 +1563,7 @@ def _measure_gate(
         derive=rule.derive,
     )
     base = list(corpus.base_rules)
-    base_names = {r.name for r in base}
-    premises, premise_note = _premise_rules(
-        conn, record, {r.name: r for r in base}
-    )
-    extra = [r for r in premises if r.name not in base_names]
+    extra, premise_note = _premise_rules(conn, record, base)
     lib = [lp._key(r.lhs, r.rhs) for r in base]
     try:
         evd = pl.measure(
@@ -1545,28 +1581,13 @@ def _measure_gate(
         _gate(rep, "measure", False, f"{type(exc).__name__}: {exc}")
         return False
     rep.evidence = evd
-    detail = f"matches={evd.matches} census={evd.census_sites}"
-    if premise_note:
-        detail += f" | premise closure refused: {premise_note}"
-    if extra:
-        if evd.derivable:
-            ok, premise_note = _premise_steps_verify(
-                evd.derivation_cert, base_names
-            )
-            evd.premise_anchored = ok and any(
-                s.rule not in base_names
-                for s in evd.derivation_cert.steps
-            )
-            if not ok:
-                # The anchored derivation invoked a premise that does
-                # not verify at its applied site — credit revoked;
-                # the base-only verdict stands (``measure`` already
-                # tried base first).
-                evd.derivable = False
-        else:
-            premise_note = "premise-anchored: no derivation"
-        detail += f" | {premise_note}"
-    _gate(rep, "measure", True, detail)
+    _gate(
+        rep,
+        "measure",
+        True,
+        f"matches={evd.matches} census={evd.census_sites}"
+        + _premise_detail(evd, extra, premise_note, base),
+    )
     return _truth_gate(rep, rule, corpus, synth_limit)
 
 

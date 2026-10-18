@@ -1152,6 +1152,26 @@ def _has_view_op(proposal: Proposal) -> bool:
     )
 
 
+def _derivable_result(
+    inst: tuple, base_rules: list[Rewrite], premise_rules: Iterable
+) -> Any:
+    """The derivability oracle's result, premise-anchored on a miss.
+
+    ``verify_law`` under ``base_rules`` first — an axiomatic
+    derivation is the stronger claim.  When that fails and
+    *premise_rules* is non-empty, re-run under ``base_rules +
+    premise_rules`` (the stored object's minting premises); the
+    anchored result is returned only when it actually derives — the
+    base verdict is the honest fallback the gauntlet revokes *to*.
+    """
+    res = verify_law(inst[0], inst[1], base_rules)
+    anchored_rules = [*base_rules, *premise_rules]
+    if res.derivable or len(anchored_rules) == len(base_rules):
+        return res
+    anchored = verify_law(inst[0], inst[1], anchored_rules)
+    return anchored if anchored.derivable else res
+
+
 def measure(
     proposal: Proposal,
     real_terms: list[Any],
@@ -1187,12 +1207,7 @@ def measure(
     inst = proposal.instance or _instance_from_match(proposal, matches)
     if inst is not None:
         ev.num_true = lp._numeric_true(inst[0], inst[1])
-        res = verify_law(inst[0], inst[1], base_rules)
-        anchored_rules = [*base_rules, *premise_rules]
-        if not res.derivable and len(anchored_rules) > len(base_rules):
-            anchored = verify_law(inst[0], inst[1], anchored_rules)
-            if anchored.derivable:
-                res = anchored
+        res = _derivable_result(inst, base_rules, premise_rules)
         ev.derivable = res.derivable
         ev.witness = res.witness_rules
         ev.derivation_cert = res.cert
