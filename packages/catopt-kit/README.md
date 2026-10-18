@@ -18,6 +18,7 @@ forks, no vendoring.
 | module bridge | `plugin-lib-handl` + `plugin-module` | `HandlModule` + `OpRegistry` + `ModuleRegistry` |
 | tensor ops | `handl-host-tensor` | `tensor_op_registry()` — the 18 `tensor.*` ops |
 | catopt program | `hnl/conv_bn.hnl` | the conv→batch_norm composite + its folded form, `.hnl` over the dep surface |
+| subprocess door | `src/bin/hnl-run.rs` | `.hnl` in on stdin/file → `serde_json` value out; `--project` wires `.handl.toml` deps, `--repeat N` evaluates N times in one kit (the per-call cost hook) |
 
 `CatoptKit::new()` installs the canonical language as the process-wide
 default (the seam `HandlModule` bridge runtimes bind), builds the
@@ -69,6 +70,25 @@ lists — the op surface has no elementwise pow) and folds it into
 to `TaggedValue::Tensor`, value-equal on dyadic fixtures — the minted
 rewrite proven end to end through the consumer. `bn_adjoint`/`bn_grad`
 expose `tensor.derive`/`batch_norm_backward`.
+
+## The subprocess door — `hnl-run`
+
+`src/bin/hnl-run.rs` is the Python↔kit seam: a `.hnl` source on stdin
+(or a file path) evaluates through `CatoptKit` and the
+`serde_json::Value` boundary form prints on stdout
+(`{"__tensor__": …}` for a tensor). It is deliberately program-generic
+— the emitted-terms path (`lab/kit/term_hnl.py`, which renders catopt
+e-graph terms as `.hnl` and shells this binary) and the hand-written
+`hnl/` modules go through the same door. `--repeat N` evaluates the
+source N times inside one kit so a per-call cost is measurable —
+how an optimization *decision* is priced by the actual runtime rather
+than the term-level `dag_cost`.
+
+```sh
+cargo build -p catopt-kit --bin hnl-run
+echo 'tensor.matmul(tensor.from_list([[1,2]]), tensor.from_list([[3],[4]]))' \
+  | target/debug/hnl-run -
+```
 
 ## Build & test
 

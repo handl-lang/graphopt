@@ -492,3 +492,30 @@ the default window; `batch_norm_expand` keeps its corner.  The
 composite's refusal moves to **closure** (`enode=6.00x` — the cost
 gate named in `premise-anchored-derivability.md`, not a truth
 question).  Retro: `retros/joint-shape-schemata.md`.
+
+## Session — 2026-10-20
+
+### catopt driving the kit: terms emit as `.hnl`, decisions costed through the runtime
+
+The `catopt-kit` frontier closed: a catopt *term* — the same object the
+e-graph rewrites — emits as a `.hnl` program and evaluates through the
+assembled runtime, and an optimization *decision* is priced by the kit
+itself rather than estimated at the term level.
+
+| piece | result | artifact |
+|---|---|---|
+| `hnl-run` subprocess door | `.hnl` → `serde_json` out; `--project` wires `.handl.toml`; `--repeat N` is the per-call cost hook | `packages/catopt-kit/src/bin/hnl-run.rs` + `tests/cli.rs` (5 tests) — `247691e` |
+| term→`.hnl` bridge | generic `_OpSpec` data table over host-tensor's 18 ops; attrs marshal by `accepts`/`drop`/`arity`; leaves bind in a `do`-prelude (`{"shape","data"}` or `{"hnl"}`); outside-surface ops refuse by name | `lab/kit/term_hnl.py` — `49f9845` |
+| real artifact through the kit | `TorchSource` conv+BN export → `.hnl` → kit → torch-fp64 equal (**6.7e-16**) | `tests/test_kit_bridge.py` (8 tests, `e2e`) |
+| a law's two forms | `conv_channel_scale` via `apply_rewrite_at` — both forms evaluate **dyadic-exact-equal**; `dag_cost` credits the fold | same |
+| the fold decision, measured | deployed `conv2d(x,W2,b2)` vs spelled `batch_norm(conv2d)`: **82.1 vs 95.4 ms/call** (`--repeat 30`); `dag_cost` 36864 vs 55296 — direction agreed | same |
+| the named missing surface | **elementwise unaries absent from host-tensor** — the spelled fold's `s = γ·rsqrt(σ²+ε)` dies on `rsqrt` (tested); `s` rides the `{"hnl"}` channel (to_list + scalar `**`) as `hnl/conv_bn.hnl` does | retro `retros/kit-term-bridge.md` |
+
+**Carried finding — an upstream lexer gap**: handl does not read
+scientific notation; `1e-05` lexes as `1` `e` `-05` and *silently*
+evaluates to `1` in statement position. The emitter expands floats
+through `Decimal` so a catopt `eps` cannot change value across the
+boundary. Also measured: `dag_cost`'s param-only discount models
+compile-time folding the tree-walk runtime does not perform — the
+deployed-form measurement separates fold-once from run-every-call.
+Retro: `project/retros/kit-term-bridge.md`.
