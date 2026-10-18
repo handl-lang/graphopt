@@ -338,6 +338,32 @@ class TestShippedBankRoundTrip:
             # by pass:node_kind:priority), not part of the cell, so the
             # per-cell re-emission does not carry it.
             without_priority = {k: v for k, v in row.items() if k != "priority"}
-            assert handl.cell_to_handl(cell) == without_priority, (
+            got = handl.cell_to_handl(cell)
+            law = row.get("catopt", {}).get("law") or {}
+            if law.get("missing_hooks"):
+                # A record that declared dropped hooks (the transported
+                # composite `conv_bn_fold` — check/derive ride the
+                # guard spec, not the pattern record) rebuilds without
+                # them, so the honesty flags drift exactly as declared:
+                # serializable flips, missing_hooks empties.  Nothing
+                # else may drift.
+                gl = got["catopt"]["law"]
+                assert gl["serializable"] is True
+                assert gl["missing_hooks"] == []
+                assert law["serializable"] is False
+
+                def strip(d: dict) -> dict:
+                    return {
+                        k: v
+                        for k, v in d.items()
+                        if k not in ("serializable", "missing_hooks")
+                    }
+
+                assert strip(gl) == strip(law), (
+                    f"row drifted beyond the declared hooks: "
+                    f"{row.get('id')}"
+                )
+                continue
+            assert got == without_priority, (
                 f"row drifted on round-trip: {row.get('id')}"
             )

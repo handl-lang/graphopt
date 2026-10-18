@@ -18,15 +18,15 @@ from catopt_core.egraph import EGraph
 from catopt_core.ir import Op, Param, TensorType, Var, op_repr
 from catopt_core.laws import (
     ALL_RULES,
-    DEFAULT,
-    FUSION,
     BATCH_NORM_RULES,
     CONV_BN_FOLD,
     CONV_FOLD_RULES,
+    DEFAULT,
+    FUSION,
     MINTED_RULES,
     law_provenance,
+    minted,
 )
-from catopt_core.laws import minted
 from catopt_core.laws.serialize import alpha_key, missing_hooks
 
 

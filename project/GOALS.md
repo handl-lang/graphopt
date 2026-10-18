@@ -536,7 +536,6 @@ weak-resolving parent raises, never degrades).  `conv_bn_fold` lands in
 `("check","derive")` — the census gains a *transported* bucket, and
 `kind` reads `axiom` by annotation since `derivation` cannot name
 unshipped intermediates (lineage rides `rule.parents`).  Named residuals:
-the cond sweep keys on `cond`, so transported-check objects are outside
-it (the gauntlet's guarded-region sweep covered this object);
-a `cond`/`dspec` flattening of the transported guard would restore the
+the seed-literal LHS region (default-attr eval spellings only); a
+`cond`/`dspec` flattening of the transported guard would restore the
 full-data census property.  Retro: `retros/minted-composite-default.md`.

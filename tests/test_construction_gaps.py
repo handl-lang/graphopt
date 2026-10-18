@@ -420,19 +420,21 @@ def test_rsqrt_product_is_a_measured_counterexample():
     assert not _stages(rep)["truth"].passed
 
 
-def test_self_add_clears_pay_but_overflows_closure():
-    """``add(x,x) → mul(x,2)`` is true and pays, but iterating the
-    comm/assoc family around the minted member overflows the closure
-    budget — declined at closure, not stored as usable."""
+def test_self_add_clears_pay_and_closure():
+    """``add(x,x) → mul(x,2)`` is true, pays, and its footprint is its
+    own firing — the closure gate's bounded-footprint forgiveness
+    (``cand_enodes`` + cascade factor, commit ``0f5fc15``) clears it.
+    The gate still refuses *unexplained* growth; this object's
+    ``excess`` fits the minted bound."""
     x = _v("x", 4, 8)
     obj = synth.fold_object(
         "self_add_fold", ("add", "X", "X"), ("mul", "X", 2)
     )
     rep, _rec = _gauntlet(obj, _case("aa", _p("add", x, x), x))
-    assert not rep.usable
+    assert rep.usable, rep.reason
     stages = _stages(rep)
     assert stages["typed-pay"].passed
-    assert not stages["closure"].passed
+    assert stages["closure"].passed
 
 
 # ---------------------------------------------------------------------------

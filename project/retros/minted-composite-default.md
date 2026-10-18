@@ -121,12 +121,12 @@ provenance), not by quarantining it.
   `verify_law` under shipped axioms derives the mint in one step
   (`witness=('conv_bn_fold',)`) — the library law proving its own
   minted origin.
-* Audit coverage gap, named honestly: the library-side cond sweep
-  (`test_guard_sweep._swept_rules`) selects on `cond is not None`, so
-  transported-check objects are outside its enumeration — the covering
-  measurement for this class is the gauntlet's guarded-region sweep
-  (105eq/0ne on this object).  Extending the sweep selector to
-  `guard_pats`-carrying rules is a follow-up.
+* The library-side guard sweep (`test_guard_sweep._guarded` keys on
+  `cond or check or derive`) *does* cover the transported class —
+  `conv_bn_fold` swept 218 sites: 1 true, 217 false, **0 violations**.
+  Thin acceptance is the enumeration's conv-corner starvation the
+  joint-shape work already names, not a coverage hole; the gauntlet's
+  guarded-region sweep (105eq/0ne) remains the deeper measurement.
 
 ## What stays open
 
@@ -140,7 +140,6 @@ provenance), not by quarantining it.
   the default-attr eval-mode fold — narrow, honest, and the common
   spelling; generalizing the attr metvars is a new measurement, not a
   transcription detail.
-* `sweep` coverage for the transported class (above).
 
 Gate account: `tests/test_minted_laws.py` (+9), the count pins
 (`test_laws_structure`, `test_law_serialize` census,
