@@ -375,9 +375,9 @@ local-override convention is documented in the root `Cargo.toml`.
 **Named gap — closed (second pass, same day)**: platform `90853ec2`
 landed the git-package→dir bridge — `[dependencies]` accepts
 `{ git = …, rev|branch|tag }` (unpatched → the `~/.handl/pkg/<name>`
-cache slot the ADR-0010 fetch hook will populate; a symlink is today's
-stand-in) and `[patch]` dev-links the sibling checkout, winning when
-its dir exists. The crate ships a committed `.handl.toml` +
+cache slot, which platform `6ce0e125`'s ADR-0010 fetch-on-miss hook now
+clones into — `subdir` naming the package root inside the clone) and
+`[patch]` dev-links the sibling checkout, winning when its dir exists. The crate ships a committed `.handl.toml` +
 **`hnl/conv_bn.hnl`** — the conv→batch_norm composite the e-graph
 folds, importing `host-tensor` *by name* through the bridge — plus
 `conv_bn_fold`, the minted rewrite's RHS evaluated (`s = γ·rsqrt(σ²+ε)`,
