@@ -1382,3 +1382,160 @@ def test_default_gauntlet_corpus_builds():
     assert len(corpus.probe) > 0
     assert len(corpus.base_rules) == len(ALL_RULES)
     assert corpus.census_op and corpus.cost_fn is not None
+
+
+# ---------------------------------------------------------------------------
+#  Guard transport — stored synthesized composites (the ``"guard"`` field)
+# ---------------------------------------------------------------------------
+#
+#  A ``meta.synthesize_rules`` mint carries ``guard_pats`` + ``parents``
+#  — pure data — so ``store_object`` records the re-expression spec and
+#  ``admit_object`` rebuilds the composed ``check``/``derive`` by
+#  resolving the named parents *in the same store*, transitively.
+
+
+def _guarded_chain_bank() -> list[Rewrite]:
+    """``f→g``, ``g→h``, ``h→k`` with a trivially-true ``cond`` on each.
+
+    ``("and",)`` is the empty conjunction — it accepts every binding,
+    keeps the parents *full-data* (a ``cond`` serializes; a lambda
+    ``check`` would be honestly untransportable), and still mints
+    guarded composites whose ``check`` is a ``_compose_guards``
+    closure — procedural hooks with a data spec, the same shape the
+    conv+BN fold carries.
+    """
+    return [
+        Rewrite(
+            name=f"{a}_to_{b}",
+            lhs=_p(a, "x"),
+            rhs=_p(b, "x"),
+            cond=("and",),
+        )
+        for a, b in (("f", "g"), ("g", "h"), ("h", "k"))
+    ]
+
+
+def _mint_chain(rounds: int = 1) -> tuple[list[Rewrite], list[Rewrite]]:
+    """Mint the chain-bank composites; return ``(bank, derived)``."""
+    from catopt_core import meta
+
+    bank = _guarded_chain_bank()
+    derived = meta.synthesize_rules(
+        bank, fuel=200, rounds=rounds, numeric_check=False
+    )
+    return bank, derived
+
+
+def test_store_writes_guard_spec_for_minted_composites(tmp_path):
+    """``store_object`` records the transport spec; a non-synthesized
+    rule stores no ``"guard"`` field."""
+    conn = ev.connect(str(tmp_path / "s.db"))
+    bank, derived = _mint_chain()
+    assert derived and all(
+        r.check is not None for r in derived
+    )
+    keys = {
+        r.name: ev.store_object(conn, r, kind="abstraction", cert=None)
+        for r in [*bank, *derived]
+    }
+    for r in derived:
+        rec = ev.stored_object(conn, keys[r.name])
+        assert rec["missing_hooks"] == ["check"]
+        assert sorted(rec["guard"]["parents"]) == sorted(
+            r.parents
+        )
+        assert rec["guard"]["pat1"] is not None
+    # the base rules carry no spec — they are not minted composites
+    rec = ev.stored_object(conn, keys[bank[0].name])
+    assert "guard" not in rec
+    conn.close()
+
+
+def test_admit_transports_hooks_from_stored_parents(tmp_path):
+    """The admitted rule fires with its rebuilt composite guard."""
+    conn = ev.connect(str(tmp_path / "s.db"))
+    bank, derived = _mint_chain()
+    keys = {
+        r.name: ev.store_object(conn, r, kind="abstraction", cert=None)
+        for r in [*bank, *derived]
+    }
+    key = keys[derived[0].name]
+    got = ev.admit_object(conn, key)
+    assert got is not None
+    rule, rec = got
+    assert rec["missing_hooks"] == ["check"]
+    assert rec["transported"] == ["check"]
+    assert rule.check is not None and rule.derive is None
+    # and it is a live rule — f(x) -> h(x) rewrites
+    leaf = _v("leaf", 2, 2)
+    from catopt_core import meta
+
+    out = meta.apply_rewrite_at(rule, _p("f", leaf), ())
+    assert out == _p("h", leaf)
+    conn.close()
+
+
+def test_transport_is_transitive_through_syn_parents(tmp_path):
+    """A round-2 composite's ``syn_*`` parent resolves as a store row —
+    the whole derivation closure admits, not just depth 1."""
+    conn = ev.connect(str(tmp_path / "s.db"))
+    bank, derived = _mint_chain(rounds=2)
+    deep = [
+        r
+        for r in derived
+        if any(p.startswith("syn_") for p in (r.parents or ()))
+    ]
+    assert deep
+    keys = {
+        r.name: ev.store_object(conn, r, kind="abstraction", cert=None)
+        for r in [*bank, *derived]
+    }
+    rule, rec = ev.admit_object(conn, keys[deep[0].name])
+    assert rec["transported"] == ["check"]
+    leaf = _v("leaf", 2, 2)
+    from catopt_core import meta
+
+    assert meta.apply_rewrite_at(rule, _p("f", leaf), ()) == _p(
+        "k", leaf
+    )
+    conn.close()
+
+
+def test_transport_refuses_when_a_parent_is_unstored(tmp_path):
+    """A missing parent row is an honest partial admit: bare pattern,
+    no ``transported``, and the gauntlet refuses at ``full-data``."""
+    conn = ev.connect(str(tmp_path / "s.db"))
+    bank, derived = _mint_chain()
+    comp = derived[0]
+    # store only ONE parent — the other stays absent
+    key = ev.store_object(conn, comp, kind="abstraction", cert=None)
+    ev.store_object(conn, bank[0], kind="abstraction", cert=None)
+    got = ev.admit_object(conn, key)
+    assert got is not None
+    rule, rec = got
+    assert rule.check is None
+    assert "transported" not in rec
+    rep = ev.run_gauntlet(conn, key, corpus=_corpus())
+    conn.close()
+    assert rep.reason.startswith("full-data:")
+    assert not rep.usable
+
+
+def test_full_data_gate_counts_transported_hooks(tmp_path):
+    """End to end: a stored guarded composite clears reconstruct AND
+    full-data (the hooks rode in via the spec), then meets the honest
+    downstream stages — here the enumeration cannot evaluate ``f``/``h``
+    so truth starves; the point under test is that transport carried it
+    past stage 2, not the stage it stops at."""
+    conn = ev.connect(str(tmp_path / "s.db"))
+    bank, derived = _mint_chain()
+    keys = {
+        r.name: ev.store_object(conn, r, kind="abstraction", cert=None)
+        for r in [*bank, *derived]
+    }
+    rep = ev.run_gauntlet(conn, keys[derived[0].name], corpus=_corpus())
+    conn.close()
+    stages = _stages(rep)
+    assert stages["reconstruct"].passed
+    assert stages["full-data"].passed
+    assert "transport" in stages["full-data"].detail

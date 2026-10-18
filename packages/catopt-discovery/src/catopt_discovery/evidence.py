@@ -529,6 +529,35 @@ def _materialize_cert(rule: Any, universe: Any) -> Any:
     return cert
 
 
+def _guard_transport_spec(rule: Any) -> dict | None:
+    """Encode a synthesized composite's guard-transport spec, if any.
+
+    A ``meta.synthesize_rules`` mint carries ``guard_pats`` — the
+    ``(pat1, pat2)`` re-expression maps over the derived metavars —
+    plus the ``parents`` pair.  Both are pure data from which
+    ``meta._compose_guards`` rebuilds the procedural ``check`` /
+    ``derive`` at admit time: the record can carry the *spec* of the
+    guard even though the hooks themselves are code.  Returns
+    ``{"parents": [p1, p2], "pat1": …, "pat2": …}`` (the
+    ``rulecache`` binding wire form), or ``None`` for rules with no
+    spec — shipped laws and hand-minted objects.
+    """
+    from catopt_core import meta
+    from catopt_core.rulecache import _enc_binding
+
+    pats = getattr(rule, "guard_pats", None)
+    if pats is None:
+        return None
+    parents = list(meta.provenance(rule))
+    if len(parents) != 2:
+        return None
+    return {
+        "parents": parents,
+        "pat1": _enc_binding(pats[0]),
+        "pat2": _enc_binding(pats[1]),
+    }
+
+
 def store_object(
     conn: sqlite3.Connection,
     rule: Any,
@@ -553,6 +582,15 @@ def store_object(
     context the object was measured under (``""`` when none applies
     — e.g. storing a shipped law).
 
+    A *synthesized composite* additionally writes a ``"guard"`` field
+    — the ``guard_pats`` re-expression maps plus the parent pair
+    (:func:`_guard_transport_spec`).  The ``serializable`` /
+    ``missing_hooks`` flags stay honest — a bare
+    ``object_from_data`` still rebuilds the pattern alone — but
+    :func:`admit_object` resolves the named parents from the same
+    store and rebuilds the composed hooks: a guarded minted object
+    reaches ``full-data`` when its whole parent closure is stored.
+
     ``cert=`` controls the record's ``"cert"`` field: the default
     materializes the rule's recorded ``derivation`` as a replayable
     certificate (through ``catopt_discovery.lemma_cert.materialize``
@@ -573,6 +611,9 @@ def store_object(
     if cert is _UNSET:
         cert = _materialize_cert(rule, universe)
     data = object_to_data(rule, cert=cert, kind=kind)
+    guard = _guard_transport_spec(rule)
+    if guard is not None:
+        data["guard"] = guard
     if provenance is not None:
         data["provenance"] = dict(provenance)
     key = repr(alpha_key(rule.lhs, rule.rhs))
@@ -647,6 +688,121 @@ def stored_object(
     return data
 
 
+def _object_state(record: dict) -> str:
+    """Render a record's data-completeness for the CLI reports.
+
+    ``missing_hooks`` minus whatever ``transported`` (the admit-time
+    annotation a guard spec restored) — a transported composite reads
+    full-data *via transport*, honestly attributed.
+    """
+    transported = tuple(record.get("transported") or ())
+    missing = [
+        h for h in record["missing_hooks"] if h not in transported
+    ]
+    state = (
+        "missing hooks: " + ", ".join(missing)
+        if missing
+        else "full-data"
+    )
+    if transported:
+        state += f"; transported: {', '.join(transported)}"
+    elif missing and record.get("guard"):
+        state += " (guard spec stored — resolves at admit)"
+    return state
+
+
+def _rebuild_stored(
+    conn: sqlite3.Connection, data: dict, seen: frozenset[str]
+) -> tuple[Any, tuple[str, ...]]:
+    """Rebuild one parsed record, transporting the guard spec if stored.
+
+    Returns ``(rule, transported)`` — *transported* names the
+    ``check``/``derive`` hooks the ``"guard"`` field restored
+    (``()`` when the record carries no spec or the spec could not
+    resolve).  A spec resolves only when *both* named parents are
+    stored rows that themselves admit at full declared strength —
+    a parent that rebuilt weaker than it declared is not the object
+    the composite was minted against, and composing over it would
+    smuggle in a weakened guard.  *seen* bounds the transitive walk
+    against a cyclic record.  On any shortfall the bare rebuild is
+    returned — pattern + ``cond`` + ``dspec``, the same honest
+    partial admit a spec-less record gets.
+    """
+    from catopt_core.egraph import Rewrite
+    from catopt_core.laws.serialize import object_from_data, object_kind
+
+    rule = object_from_data(data)
+    guard = data.get("guard")
+    if not isinstance(guard, dict):
+        return rule, ()
+    parents = tuple(guard.get("parents") or ())
+    if len(parents) != 2 or any(p in seen for p in parents):
+        return rule, ()
+    try:
+        pats = (_dec(guard["pat1"]), _dec(guard["pat2"]))
+    except Exception:
+        return rule, ()
+    resolved: list[Any] = []
+    for name in parents:
+        row = conn.execute(
+            "SELECT law_json FROM lemmas WHERE name = ?", (name,)
+        ).fetchone()
+        if row is None:
+            return rule, ()
+        pdata = json.loads(row["law_json"])
+        pdata["kind"] = object_kind(pdata)
+        prule, ptrans = _rebuild_stored(
+            conn, pdata, seen | frozenset(parents)
+        )
+        if set(pdata.get("missing_hooks") or ()) - set(ptrans):
+            return rule, ()
+        resolved.append(prule)
+    from catopt_core import meta
+
+    check, drv = meta._compose_guards(
+        resolved[0], resolved[1], pats[0], pats[1]
+    )
+    if check is None and drv is None:
+        return rule, ()
+    # Same policy as synthesize_rules.offer / rulecache._dec_rule:
+    # the composite derive attaches only where the RHS carries the
+    # "@i:" placeholders it refills.
+    if not (
+        drv is not None and meta._rhs_derive_placeholders(rule.rhs)
+    ):
+        drv = None
+    out = Rewrite(
+        name=rule.name,
+        lhs=rule.lhs,
+        rhs=rule.rhs,
+        law=rule.law,
+        tags=rule.tags,
+        error_bound=rule.error_bound,
+        bound_norm=rule.bound_norm,
+        derivation=rule.derivation,
+        cond=rule.cond,
+        dspec=rule.dspec,
+        check=check,
+        derive=drv,
+    )
+    object.__setattr__(out, "parents", parents)
+    object.__setattr__(out, "guard_pats", pats)
+    meta.SYNTH_PARENTS[out.name] = parents
+    transported = tuple(
+        h
+        for h, f in (("check", check), ("derive", drv))
+        if f is not None
+    )
+    return out, transported
+
+
+def _dec(pairs: list) -> dict:
+    """Decode a ``rulecache``-form substitution map (lazy alias)."""
+    from catopt_core.rulecache import _dec_binding
+
+    return _dec_binding(pairs)
+
+
 def admit_object(
     conn: sqlite3.Connection, alpha_key: str
 ) -> tuple[Any, dict] | None:
@@ -657,19 +813,29 @@ def admit_object(
     ``record["serializable"]`` and ``record["missing_hooks"]`` before
     trusting the rule to fire identically to its source.  A
     ``serializable: false`` record still rebuilds — pattern + cond —
-    but the reconstructed rule fires without the dropped hooks.  A
-    record claiming a kind the codec does not know raises
+    but the reconstructed rule fires without the dropped hooks.
+    *Unless* the record carries a ``"guard"`` transport spec
+    (:func:`store_object` writes one for synthesized composites):
+    then admit re-runs ``meta._compose_guards`` over the named parent
+    rules — resolved as rows of the same store, transitively — and
+    the rebuilt rule carries its minted hooks; the hooks restored
+    this way are reported on the record as ``record["transported"]``
+    (an admit-time annotation, not a stored field).  A record
+    claiming a kind the codec does not know raises
     ``ValueError`` — a declaration the store cannot classify is a
     failure to surface, never a silent admit.  The record's
     ``"cert"`` field stays on the record — decode + verify it with
     :func:`stored_certificate`.
     """
-    from catopt_core.laws.serialize import object_from_data
-
     data = stored_object(conn, alpha_key)
     if data is None:
         return None
-    return object_from_data(data), data
+    rule, transported = _rebuild_stored(
+        conn, data, frozenset({data["name"]})
+    )
+    if transported:
+        data["transported"] = list(transported)
+    return rule, data
 
 
 def admit_lemma(
@@ -1167,14 +1333,24 @@ def _reconstruct_gate(
     rep.rule, rep.record = rule, record
     rep.name, rep.kind = rule.name, record["kind"]
     _gate(rep, "reconstruct", True, f"{record['kind']} rebuilds")
-    missing = list(record["missing_hooks"])
+    transported = tuple(record.get("transported") or ())
+    missing = [
+        h for h in record["missing_hooks"] if h not in transported
+    ]
     ok = _gate(
         rep,
         "full-data",
         not missing,
-        "the record carries every hook"
-        if not missing
-        else "dropped hooks: " + ", ".join(missing),
+        (
+            "the record carries every hook"
+            + (
+                f" ({', '.join(transported)} via guard transport)"
+                if transported
+                else ""
+            )
+            if not missing
+            else "dropped hooks: " + ", ".join(missing)
+        ),
     )
     return (rule, record) if ok else None
 
@@ -1691,11 +1867,7 @@ def _store_object_cli(
     key = store_object(conn, rule, kind=kind)
     # the row was just written — the read-back cannot be empty
     record = cast(dict, stored_object(conn, key))
-    state = (
-        "full-data"
-        if record["serializable"]
-        else "missing hooks: " + ", ".join(record["missing_hooks"])
-    )
+    state = _object_state(record)
     print(f"stored {rule.name}  [{state}]")  # stdout-compat
     print(f"  kind: {record['kind']}")  # stdout-compat
     print(f"  alpha_key = {key}")  # stdout-compat
@@ -1736,11 +1908,7 @@ def _admit_object_cli(
         print(f"no lemma stored under {alpha_key}")  # stdout-compat
         return 1
     rule, data = got
-    state = (
-        "full-data"
-        if data["serializable"]
-        else "missing hooks: " + ", ".join(data["missing_hooks"])
-    )
+    state = _object_state(data)
     print(f"admitted {rule.name}  [{state}]")  # stdout-compat
     print(f"  kind: {data['kind']}")  # stdout-compat
     print(f"  {rule!r}")  # stdout-compat
@@ -1769,11 +1937,7 @@ def _gauntlet_cli(
             f"cannot admit object under {alpha_key}: {rep.reason}"
         )
         return 1
-    state = (
-        "full-data"
-        if rep.record["serializable"]
-        else "missing hooks: " + ", ".join(rep.record["missing_hooks"])
-    )
+    state = _object_state(rep.record)
     print(f"admitted {rep.name}  [{state}]")  # stdout-compat
     print(f"  kind: {rep.kind}")  # stdout-compat
     print(f"  {rep.rule!r}")  # stdout-compat
