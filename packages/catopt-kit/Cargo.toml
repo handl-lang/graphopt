@@ -19,16 +19,20 @@ handl-value = { git = "https://github.com/handl-lang/kernel", branch = "main" }
 # lang — the canonical Language as data (YAML fragments → `Language`)
 handl-kit-data-canonical = { git = "https://github.com/handl-lang/lang", branch = "main" }
 
-# platform — the runtime + the smallest honest engine set (data lexer,
-# Pratt parser, tree-walk eval; no sdkgen/compile/lint/lsp)
+# platform — the runtime + module bridge
 handl-platform = { git = "https://github.com/handl-lang/platform", branch = "main" }
 handl-runtime = { git = "https://github.com/handl-lang/platform", branch = "main" }
 handl-plugin-module = { git = "https://github.com/handl-lang/platform", branch = "main" }
 handl-plugin-lib-handl = { git = "https://github.com/handl-lang/platform", branch = "main" }
-handl-plugin-engine-exec = { git = "https://github.com/handl-lang/platform", branch = "main" }
-handl-plugin-engine-lex-pattern = { git = "https://github.com/handl-lang/platform", branch = "main" }
-handl-plugin-engine-parse-pratt = { git = "https://github.com/handl-lang/platform", branch = "main" }
-handl-plugin-engine-exec-tree-walk = { git = "https://github.com/handl-lang/platform", branch = "main" }
+
+# engines — the smallest honest set: data lexer, Pratt parser, tree-walk
+# eval (the `hnl-engine-*` crates in their own repos, post-ADR-0128 —
+# renamed from `handl-plugin-engine-*` and split out of platform at
+# platform 0ce78121)
+hnl-engine-exec = { git = "https://github.com/handl-lang/engine-exec", branch = "main" }
+hnl-engine-lex-pattern = { git = "https://github.com/handl-lang/engine-lex-pattern", branch = "main" }
+hnl-engine-parse-pratt = { git = "https://github.com/handl-lang/engine-parse-pratt", branch = "main" }
+hnl-engine-exec-tree-walk = { git = "https://github.com/handl-lang/engine-exec-tree-walk", branch = "main" }
 
 # host-tensor — the `tensor.*` host-function surface (18 ops: dense n-d
 # f64 tensors over the `{"__tensor__": …}` wire form → `TaggedValue::Tensor`)

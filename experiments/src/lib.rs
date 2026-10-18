@@ -4,8 +4,7 @@
 //! paper's measurements — the same component set catopt-kit composes
 //! (`packages/catopt-kit`, in-tree in this repo, is the precedent; this
 //! module is the post-ADR-0128 spelling over the renamed `hnl-engine-*`
-//! crates — see the `[[gap]]` row in `manifest/kit.toml` for why the
-//! direct dep is blocked upstream):
+//! crates — the same edges catopt-kit's manifest now declares):
 //!
 //! 1. **Language** — the canonical `Language` assembled from data via
 //!    [`handl_kit_data_canonical::language_from_yaml`].

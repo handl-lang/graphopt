@@ -80,9 +80,8 @@ repo = "handl-lang/catopt"
 path = "packages/catopt-kit"
 float = "main"
 kind = "cargo-git"
-status = "blocked-upstream"
 crates = ["catopt-kit"]
-role = "catopt's composition seam — the intended direct dep (it assembles this same stack), and now an in-tree workspace member (packages/catopt-kit). Blocked as a *git* dep: its manifest still names `handl-plugin-engine-*` deps on platform@main, renamed/moved to `hnl-engine-*` repos (platform 0ce78121); catopt builds only via its committed Cargo.lock's pre-rename pins. The artifact under measurement (hnl/conv_bn.hnl — the minted fold, evaluated) resolves in-tree at packages/catopt-kit/hnl/conv_bn.hnl; when catopt-kit repoints, experiments can take the one-line dep back."
+role = "catopt's composition seam — the intended direct dep (it assembles this same stack), an in-tree workspace member (packages/catopt-kit). Its deps float on the post-ADR-0128 `hnl-engine-*` crates at current main (the rename that briefly blocked it as a *git* dep is repointed). The artifact under measurement (hnl/conv_bn.hnl — the minted fold, evaluated) resolves in-tree at packages/catopt-kit/hnl/conv_bn.hnl."
 
 # ---------------------------------------------------------------------------
 # Components — the Python arm (the discovery engine; env-level composition)
@@ -124,11 +123,6 @@ note = "runs inside a catopt checkout (CATOPT_DIR); the probe is catopt's own, i
 # ---------------------------------------------------------------------------
 # Gaps — surfaced, documented, not worked around by vendoring
 # ---------------------------------------------------------------------------
-
-[[gap]]
-what = "catopt-kit's manifest edges are stale vs platform@main: it deps `handl-plugin-engine-{exec,lex-pattern,parse-pratt,exec-tree-walk}` on `handl-lang/platform`, but those crates were renamed `hnl-engine-*` and moved to the engine-* repos (platform 0ce78121, ADR-0128). catopt still builds via its committed Cargo.lock (pre-rename rev 90853ec2); a fresh downstream resolve fails"
-where = "handl-lang/catopt packages/catopt-kit/Cargo.toml — needs the dep repoint upstream"
-workaround = "experiments composes the kit directly over the renamed crates (src/lib.rs — the same documented assembly); the direct catopt-kit dep is restored when upstream repoints"
 
 [[gap]]
 what = ".handl.toml git deps resolve to a package-cache slot ($HANDL_PKG_DIR, else ~/.handl/pkg/<name>) that nothing yet populates"

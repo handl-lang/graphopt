@@ -17,11 +17,9 @@ exclude = [
     # the G0 boundary spike — standalone crate with absolute path deps
     "lab/handl-peer",
     # the paper's evidence crate (manifest/kit.toml) — deliberately
-    # *not* a member: it deps the post-ADR-0128 `hnl-engine-*` crates on
-    # the engine-* repos, while catopt-kit still pins the pre-rename
-    # `handl-plugin-engine-*` revs. One lockfile can't float
-    # `branch = "main"` to two revs of kernel/platform, so experiments
-    # keeps its own manifest + Cargo.lock and floats on current main.
+    # *not* a member: it keeps its own manifest + Cargo.lock so the
+    # experiment arm stays a standalone composition (the same dep edges
+    # catopt-kit declares, duplicated for the standalone-checkout story).
     "experiments",
 ]
 
@@ -47,7 +45,6 @@ exclude = [
 # [patch."https://github.com/handl-lang/kernel"]
 # handl-language = { path = "/path/to/kernel/crates/handl-language" }
 # handl-value = { path = "/path/to/kernel/crates/handl-value" }
-# plugin-engine = { path = "/path/to/kernel/crates/plugin-engine" }
 #
 # [patch."https://github.com/handl-lang/lang"]
 # handl-kit-data-canonical = { path = "/path/to/lang/crates/handl-kit-data-canonical" }
@@ -57,16 +54,23 @@ exclude = [
 # handl-runtime = { path = "/path/to/platform/crates/handl-runtime" }
 # handl-plugin-module = { path = "/path/to/platform/crates/plugin-module" }
 # handl-plugin-lib-handl = { path = "/path/to/platform/crates/plugin-lib-handl" }
-# handl-plugin-engine-exec = { path = "/path/to/platform/crates/plugin-engine-exec" }
-# handl-plugin-engine-lex-pattern = { path = "/path/to/platform/crates/plugin-engine-lex-pattern" }
-# handl-plugin-engine-parse-pratt = { path = "/path/to/platform/crates/plugin-engine-parse-pratt" }
-# handl-plugin-engine-exec-tree-walk = { path = "/path/to/platform/crates/plugin-engine-exec-tree-walk" }
-# handl-plugin-engine-exec-bytecode = { path = "/path/to/platform/crates/plugin-engine-exec-bytecode" }
-# # …plus whatever the transitive tree pulls (plugin-engine-lint,
-# # plugin-engine-transform{,-rewrite}, plugin-engine-{lex,parse,typecheck},
-# # plugin-lib-char-native, handl-kit-{data,arrow-lower}, plugin-load,
-# # plugin-ext-diag, handl-test-utils, host-tooling…). Add entries on
-# # demand — cargo names the missing package in the error.
+#
+# # The engines live one crate per repo post-ADR-0128 (the `hnl-engine-*`
+# # crates, single-crate-at-root layout like the `lib-*` ports):
+# [patch."https://github.com/handl-lang/engine-exec"]
+# hnl-engine-exec = { path = "/path/to/engine-exec" }
+# [patch."https://github.com/handl-lang/engine-lex-pattern"]
+# hnl-engine-lex-pattern = { path = "/path/to/engine-lex-pattern" }
+# [patch."https://github.com/handl-lang/engine-parse-pratt"]
+# hnl-engine-parse-pratt = { path = "/path/to/engine-parse-pratt" }
+# [patch."https://github.com/handl-lang/engine-exec-tree-walk"]
+# hnl-engine-exec-tree-walk = { path = "/path/to/engine-exec-tree-walk" }
+# # …plus whatever the transitive tree pulls (hnl-engine{,-lex,-parse,
+# # -exec-bytecode,-lint,-transform{,-rewrite},-typecheck},
+# # handl-plugin-lib-char-native, handl-kit-{data,arrow-lower},
+# # plugin-load, plugin-ext-diag, handl-test-utils, host-tooling…).
+# # Add entries on demand — cargo names the missing package in the
+# # error.
 #
 # [patch."https://github.com/handl-lang/host-tensor"]
 # handl-host-tensor = { path = "/path/to/host-tensor" }

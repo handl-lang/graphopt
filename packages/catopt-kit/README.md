@@ -14,7 +14,7 @@ forks, no vendoring.
 | language | `handl-kit-data-canonical` | `language_from_yaml()` — the canonical `Language` as data |
 | value | `handl-value` | `TaggedValue` incl. `Tensor` (the real tensor variant) |
 | runtime | `handl-runtime` | `Runtime` + `EngineRegistry` + `RuntimeConfig` + `ModuleLoader` |
-| engines | `plugin-engine-{lex-pattern,parse-pratt,exec-tree-walk}` | `"data"`/`"pratt"`/`"tree-walk"` — the smallest honest set (no sdkgen/compile/lint/lsp) |
+| engines | `hnl-engine-{lex-pattern,parse-pratt,exec-tree-walk}` (+`hnl-engine-exec`) | `"data"`/`"pratt"`/`"tree-walk"` — the smallest honest set (no sdkgen/compile/lint/lsp); one crate per `engine-*` repo post-ADR-0128 |
 | module bridge | `plugin-lib-handl` + `plugin-module` | `HandlModule` + `OpRegistry` + `ModuleRegistry` |
 | tensor ops | `handl-host-tensor` | `tensor_op_registry()` — the 18 `tensor.*` ops |
 | catopt program | `hnl/conv_bn.hnl` | the conv→batch_norm composite + its folded form, `.hnl` over the dep surface |

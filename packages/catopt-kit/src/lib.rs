@@ -42,14 +42,14 @@ use std::sync::Arc;
 use handl_host_tensor::{TENSOR_HNL, TENSOR_OPS, tensor_op_registry};
 use handl_language::{LangError, Language, Source, Value};
 use handl_platform::ModuleLookup;
-use handl_plugin_engine_exec::{EvalEngine, EvalRequest, ImportResolver};
-use handl_plugin_engine_exec_tree_walk::TreeWalkEngine;
-use handl_plugin_engine_lex_pattern::DataLexerEngine;
-use handl_plugin_engine_parse_pratt::PrattEngine;
 use handl_plugin_lib_handl::HandlModule;
 use handl_plugin_module::ModuleRegistry;
 use handl_runtime::{EngineRegistry, ModuleLoader, Runtime, RuntimeConfig};
 use handl_value::TaggedValue;
+use hnl_engine_exec::{EvalEngine, EvalRequest, ImportResolver};
+use hnl_engine_exec_tree_walk::TreeWalkEngine;
+use hnl_engine_lex_pattern::DataLexerEngine;
+use hnl_engine_parse_pratt::PrattEngine;
 
 /// The engine registry for catopt's runtime — the same three engines the
 /// canonical kit binds as its default pipeline, and nothing else.
