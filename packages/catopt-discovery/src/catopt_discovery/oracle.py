@@ -608,6 +608,8 @@ def _kind_domain(kind: str, shape: tuple) -> list:
             return _red_dims_domain(len(shape))
         case "int":
             return [0, 1, 2]
+        case "pos-int":
+            return [1, 2]
         case "float":
             return [0.5, 1.0, 1e-5]
         case "bool":
@@ -683,6 +685,33 @@ _VIEWED_SHAPES: tuple = lawdata.VIEWED_SHAPES
 #: existing index sums and displace already-measured window-tail
 #: sites.
 _CHAIN_VIEWED_SHAPES: tuple = lawdata.CHAIN_VIEWED_SHAPES
+
+#: Correlated operand-shape rows for ops whose operands form a shape
+#: contract — the *joint* corner the independent leaf banks cannot
+#: mint (:data:`catopt_discovery.lawdata.JOINT_SHAPES`, keyed
+#: ``(op, arity)``).  A metavariable arg of a tabulated node draws
+#: from the joint row set — one shared index across all of the node's
+#: metavariables — instead of its own bank, so a guard whose accepted
+#: region is a relation across operands (``conv2d``'s
+#: ``x[1] == W[1]·groups``, ``batch_norm``'s per-channel stat
+#: vectors) reaches its corner.  The bank is opt-in per op: a covered
+#: metavariable's domain IS the row set, so an entry only lands where
+#: a measured starvation named it.
+_JOINT_SHAPES: dict = lawdata.JOINT_SHAPES
+
+#: Broadcast-view shapes appended to the leaf banks of patterns that
+#: carry a joint node (:data:`catopt_discovery.lawdata.JOINT_VIEW_SHAPES`)
+#: — the channel-view corner a structured site's sibling operand
+#: takes.  Scoped like ``_CHAIN_VIEWED_SHAPES``: joint-free
+#: enumerations are byte-identical.
+_JOINT_VIEW_SHAPES: tuple = lawdata.JOINT_VIEW_SHAPES
+
+#: Caps on the joint enumeration — rows considered per node and the
+#: merged product across a pattern's tabulated nodes.  The product
+#: grows multiplicatively; the caps bound it to a corner of the
+#: diagonal order (the same honesty the other caps document).
+_MAX_JOINT_ROWS = 8
+_MAX_JOINT_COMBOS = 128
 
 
 #: Per-op literal-constant domain — the values a metavariable's
@@ -935,23 +964,133 @@ def _bank(source: Any) -> Any:
     return source or _leaf_bindings
 
 
+# ---------------------------------------------------------------------------
+#  Joint-shape schemata — the correlated corner of a structured site
+# ---------------------------------------------------------------------------
+#
+#  The leaf banks bind each metavariable *independently*.  An op whose
+#  operand shapes form a contract — ``conv2d``'s ``x[1] == W[1]·groups``
+#  plus ``b[0] == W[0]``, ``batch_norm``'s four per-channel stat vectors
+#  all equalling ``x[1]`` — has an accepted region that is a *relation
+#  across* its metavariables, not a product of per-metavar domains.
+#  Independent draws reach it only by coincidence, and past a couple of
+#  relations never at all (measured: the conv+BN composite declined all
+#  2000 enumerated envs — ``project/retros/binding-env-cap.md``).
+#
+#  :data:`_JOINT_SHAPES` is the vocabulary extension: concrete joint
+#  shape rows keyed ``(op, arity)``.  A metavariable arg of a tabulated
+#  node is *covered* — it leaves the independent banks and binds
+#  through the row set, one shared row index across all of the node's
+#  metavariables.  Rows from several tabulated nodes merge under
+#  consistency (two nodes pinning the same metavariable must agree),
+#  so a ``conv2d`` nested inside ``batch_norm``'s input draws the one
+#  coherent corner.  Rows are data — a new corner is a new row, never
+#  an op-specific branch in the machinery.
+
+
+def _joint_nodes(*pats: Any) -> list[Op]:
+    """Op nodes whose ``(op, arity)`` is tabulated with a metavar arg."""
+    nodes: list[Op] = []
+    seen: set[int] = set()
+    for pat in pats:
+        stack = [pat]
+        while stack:
+            t = stack.pop()
+            if id(t) in seen:
+                continue
+            seen.add(id(t))
+            if isinstance(t, Op):
+                if (t.op, len(t.args)) in _JOINT_SHAPES and any(
+                    isinstance(a, str) for a in t.args
+                ):
+                    nodes.append(t)
+                stack.extend(t.args)
+    return nodes
+
+
+def _joint_rows(node: Op) -> list[dict]:
+    """Return the node's row options — metavar args bound by position.
+
+    ``strict=False`` is the documented row contract: a row shorter
+    than the node's args binds a leading prefix of positions.
+    """
+    rows = _JOINT_SHAPES[(node.op, len(node.args))]
+    out: list[dict] = []
+    for row in rows[:_MAX_JOINT_ROWS]:
+        bound = {
+            a: Var(a, TensorType(tuple(s)))
+            for a, s in zip(node.args, row, strict=False)
+            if isinstance(a, str)
+        }
+        if bound and bound not in out:
+            out.append(bound)
+    return out
+
+
+def _joint_plan(*pats: Any) -> tuple[set, list[dict], list[Op]]:
+    """``(covered metavars, merged joint dicts, tabulated nodes)``.
+
+    The product of every tabulated node's row options, merged under
+    consistency: two nodes covering the same metavariable must draw
+    the same ``Var`` or the combo dies (a shared ``x`` cannot take
+    two shapes).  An empty product is the honest *no coherent site* —
+    the enumeration yields nothing rather than a half-bound env.
+    """
+    nodes = _joint_nodes(*pats)
+    covered: set = set()
+    per_node: list[list[dict]] = []
+    for n in nodes:
+        opts = _joint_rows(n)
+        if not opts:
+            continue
+        covered |= {k for o in opts for k in o}
+        per_node.append(opts)
+    combos: list[dict] = [{}]
+    for opts in per_node:
+        nxt: list[dict] = []
+        for acc in combos:
+            for o in opts:
+                if any(acc[k] != v for k, v in o.items() if k in acc):
+                    continue
+                nxt.append({**acc, **o})
+        combos = nxt[:_MAX_JOINT_COMBOS]
+        if not combos:
+            break
+    return covered, combos, nodes
+
+
 def _viewed_bindings(
     mvs: list[str],
     parents: dict,
     extra_viewed: tuple = (),
     source: Any = None,
+    joint: tuple | None = None,
 ) -> Iterable[dict]:
     """Yield binding dicts for metavariables under a view node.
 
     *source* is the leaf binding bank
     (``(mv, parents, derived, extra_viewed) -> list[terms]``); ``None``
     selects the shipped leaf-only :func:`_leaf_bindings`.
+
+    *joint* is ``(combos, covered)`` from :func:`_joint_plan`: the
+    joint row dicts ride the product as its first dimension — a
+    covered metavariable is *replaced* by the joint draw (it leaves
+    this product entirely), and the merged dict is the base's first
+    half exactly as the per-metavar draws are.  ``None`` (or a single
+    empty combo) preserves the shipped enumeration byte-for-byte.
     """
     src = _bank(source)
-    viewed = [m for m in mvs if parents.get(m, set()) & _VIEWISH]
-    lists = [src(m, parents[m], (), extra_viewed) for m in viewed]
+    combos, covered = joint or (({},), set())
+    viewed = [
+        m
+        for m in mvs
+        if (parents.get(m, set()) & _VIEWISH) and m not in covered
+    ]
+    lists = [list(combos)] + [
+        src(m, parents[m], (), extra_viewed) for m in viewed
+    ]
     for combo in _diag_product(lists):
-        yield dict(zip(viewed, combo, strict=True))
+        yield {**combo[0], **dict(zip(viewed, combo[1:], strict=True))}
 
 
 def _derived_free_shapes(
@@ -1381,13 +1520,21 @@ def _synth_bases(
     parents = _metavar_parents(lhs_pat, rhs_pat)
     nodes = _view_nodes([lhs_pat, rhs_pat])
     lhs_views = [n for n in _view_nodes([lhs_pat]) if n.args]
-    need_out = bool(
-        [m for m in parents if not (parents.get(m, set()) & _VIEWISH)]
-    )
+    covered, joint_combos, joint_nodes = _joint_plan(lhs_pat, rhs_pat)
+    free = [
+        m
+        for m in parents
+        if not (parents.get(m, set()) & _VIEWISH) and m not in covered
+    ]
+    need_out = bool(free)
     extra = _CHAIN_VIEWED_SHAPES if _has_chained_view(nodes) else ()
+    if joint_nodes:
+        extra = extra + _JOINT_VIEW_SHAPES
     groups: list = []
     for viewed in itertools.islice(
-        _viewed_bindings(mvs, parents, extra, source),
+        _viewed_bindings(
+            mvs, parents, extra, source, joint=(joint_combos, covered)
+        ),
         _MAX_VIEWED_BINDINGS,
     ):
         domains = _attr_domains(nodes, viewed)
@@ -1467,8 +1614,11 @@ def _binding_envs(
     is the work bound a veto-everything guard needs.
     """
     parents = _metavar_parents(lhs_pat, rhs_pat)
+    covered, _combos, joint_nodes = _joint_plan(lhs_pat, rhs_pat)
     free = sorted(
-        m for m in parents if not (parents.get(m, set()) & _VIEWISH)
+        m
+        for m in parents
+        if not (parents.get(m, set()) & _VIEWISH) and m not in covered
     )
     # entries[i] = [base, free-combo generator, alive] — the i-th
     # (viewed x attr) base.  Entries are pulled lazily: round `total`
@@ -1482,6 +1632,8 @@ def _binding_envs(
         if _has_chained_view(_view_nodes([lhs_pat, rhs_pat]))
         else ()
     )
+    if joint_nodes:
+        extra = extra + _JOINT_VIEW_SHAPES
     entries: list[list] = []
     src = _LazySeq(_synth_bases(lhs_pat, rhs_pat, source))
     total = 0

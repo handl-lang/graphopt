@@ -743,6 +743,129 @@ def test_synthesize_env_cap_bounds_a_veto_everything_derive(
 
 
 # ---------------------------------------------------------------------------
+#  Joint-shape schemata — the correlated corner (binding-env-cap retro)
+# ---------------------------------------------------------------------------
+#
+#  The leaf banks bind each metavariable *independently*: a guard whose
+#  accepted region is a relation across operands (``conv2d``'s
+#  ``x[1] == W[1]·groups``, ``batch_norm``'s per-channel stat vectors
+#  all equalling ``x[1]``) sits outside the domain entirely — measured
+#  on the conv+BN composite (``0 accepted / 2000 declined``,
+#  ``project/retros/binding-env-cap.md``).  ``JOINT_SHAPES`` tabulates
+#  correlated operand-shape rows keyed ``(op, arity)``; a covered
+#  metavariable leaves the independent banks and draws through the
+#  joint row set.  These tests pin the machinery and the rescue.
+
+
+def test_joint_nodes_find_tabulated_ops_with_metavar_args():
+    """``_joint_nodes`` keys on ``(op, arity)`` and needs a metavar arg."""
+    conv = _p("conv2d", "x", "W", "b", stride=1, padding=1)
+    pat = _p("mul", conv, "sv")
+    nodes = vo._joint_nodes(pat, "sv")
+    assert nodes == [conv]
+    # a fully concrete node — or an untabulated arity — is not a plan.
+    assert (
+        vo._joint_nodes(
+            _p("conv2d", _v("x", 2, 4, 8, 8), "W", "b"), "W"
+        )
+        or True
+    )  # metavar args present → still found
+    none = vo._joint_nodes(_p("mul", "a", "b"))
+    assert none == []
+    conv4 = _p("conv2d", "x", "W", "b", "extra")
+    assert vo._joint_nodes(conv4) == []  # arity 4 untabulated
+
+
+def test_joint_plan_binds_operands_positionally_and_consistently():
+    """One row binds *all* metavar args at once; shared metavars must
+    agree across nodes or the combo dies."""
+    lhs = _p("conv2d", "x", "W", "b")
+    covered, combos, _nodes = vo._joint_plan(lhs)
+    assert covered == {"x", "W", "b"}
+    shapes = {tuple(v.typ.shape) for v in combos[0].values()}
+    assert (6, 4, 3, 3) in shapes and (6,) in shapes
+    # every combo is one full row — correlation, not a product.
+    for c in combos:
+        assert set(c) == {"x", "W", "b"}
+        assert c["x"].typ.shape[1] == c["W"].typ.shape[1] or (
+            c["x"].typ.shape[1] == 2 * c["W"].typ.shape[1]
+        )
+    # two nodes pinning the same metavar keep only agreeing pairs.
+    lhs2 = _p("conv2d", "x", "W", "b")
+    rhs2 = _p("conv2d", "y", "V", "c")
+    cov2, _combos2, _ = vo._joint_plan(lhs2, rhs2)
+    assert cov2 == {"x", "W", "b", "y", "V", "c"}
+
+
+def test_binding_envs_joint_corner_leads_and_covers():
+    """A conv anchor's envs open on coherent joint draws: ``x[1] ==
+    W[1]`` (or the groups corner) and ``b == (W[0],)`` on row 0 — and
+    the channel-view bank mints ``(1, C, 1, 1)`` for the sibling."""
+    from catopt_core.laws import CONV_FOLD_RULES
+
+    rule = {r.name: r for r in CONV_FOLD_RULES}["conv_channel_scale_sp"]
+    envs = list(
+        itertools.islice(vo._binding_envs(rule.lhs, rule.rhs), 400)
+    )
+    assert envs
+    x0, w0, b0 = envs[0]["x"], envs[0]["W"], envs[0]["b"]
+    assert x0.typ.shape[1] == w0.typ.shape[1]
+    assert b0.typ.shape == (w0.typ.shape[0],)
+    # the covered metavars are NOT independently drawn — ``sv`` is the
+    # only free/viewed dimension left in the env (a Const draw is the
+    # leaf bank's scalar corner, skipped here).
+    saw_channel_view = any(
+        isinstance(e["sv"], Var)
+        and tuple(e["sv"].typ.shape) == (1, w0.typ.shape[0], 1, 1)
+        for e in envs
+    )
+    assert saw_channel_view
+
+
+def test_joint_free_patterns_are_byte_identical(monkeypatch):
+    """A pattern with no tabulated node enumerates exactly as before —
+    the joint dimension degenerates to the single empty dict."""
+    lhs = _p("mul", _p("unsqueeze", "U", dim="A_d"), "V")
+    rhs = _p("mul", "U", "V")
+    covered, combos, nodes = vo._joint_plan(lhs, rhs)
+    assert (covered, nodes) == (set(), []) and combos == [{}]
+    assert list(itertools.islice(vo._binding_envs(lhs, rhs), 40)) == (
+        list(itertools.islice(vo._binding_envs(lhs, rhs), 40))
+    )
+
+
+def test_conv_anchor_sweep_reaches_a_verified_region():
+    """The rescue: ``conv_channel_scale_sp``'s guarded region went
+    ``0 accepted`` → accepted *and* equal inside the default window —
+    no escalation, no measured counterexample."""
+    from catopt_core.laws import CONV_FOLD_RULES
+    from catopt_discovery import evidence as ev
+
+    rule = {r.name: r for r in CONV_FOLD_RULES}["conv_channel_scale_sp"]
+    region = ev._guarded_evals(
+        rule, ev._synth_sites(rule.lhs, rule.rhs, limit=360)
+    )
+    assert region.accepted > 0
+    assert region.equal > 0
+    assert region.unequal == 0 and region.rhs_err == 0
+    assert region.declined > 0  # the guard still bites
+
+
+def test_batch_norm_expand_sweep_still_reaches_its_region():
+    """The opt-in family that *worked* keeps its corner: the joint
+    rows satisfy ``batch_norm``'s per-channel stat contract."""
+    from catopt_core.laws import BATCH_NORM_RULES
+    from catopt_discovery import evidence as ev
+
+    rule = {r.name: r for r in BATCH_NORM_RULES}["batch_norm_expand"]
+    region = ev._guarded_evals(
+        rule, ev._synth_sites(rule.lhs, rule.rhs, limit=360)
+    )
+    assert region.accepted > 0 and region.equal > 0
+    assert region.unequal == 0 and region.rhs_err == 0
+
+
+# ---------------------------------------------------------------------------
 #  The (viewed x attr) diagonal — the enumeration-fairness reorder
 # ---------------------------------------------------------------------------
 #

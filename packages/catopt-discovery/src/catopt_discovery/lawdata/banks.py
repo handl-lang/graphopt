@@ -32,6 +32,8 @@ __all__ = [
     "INSTANCE_ATTR_DEFAULTS",
     "INSTANCE_LEAF_SHAPES",
     "INSTANCE_SCALAR_MVARS",
+    "JOINT_SHAPES",
+    "JOINT_VIEW_SHAPES",
     "LINEAR_HELD_SHAPES",
     "LINEAR_TRAIN_SHAPES",
     "PURPOSE_BUILT",
@@ -132,7 +134,6 @@ ATTR_KINDS: dict[str, str] = {
     "num_groups": "int",
     "num_classes": "int",
     "num_layers": "int",
-    "groups": "int",
     "shifts": "int",
     "diagonal": "int",
     "correction": "int",
@@ -140,8 +141,13 @@ ATTR_KINDS: dict[str, str] = {
     "downscale_factor": "int",
     "stride": "int",
     "padding": "int",
-    "dilation": "int",
     "m": "int",
+    # strictly positive ints — a 0 draw can only mint an ill-typed op
+    # (``dilation=0`` / ``groups=0`` raise in every torch op that
+    # carries them, so the name default is honest; ``stride`` keeps
+    # ``int`` because ``as_strided`` does admit 0).
+    "dilation": "pos-int",
+    "groups": "pos-int",
     # float scalars — scales, epsilons, rates
     "scale": "float",
     "eps": "float",
@@ -204,7 +210,88 @@ ATTR_KIND_OVERRIDES: dict[tuple[str, str], str] = {
     # unfold's ``size`` is a kernel extent; upsample's ``size`` stays
     # a shape tuple.
     ("unfold", "size"): "int",
+    # conv2d's stride is strictly positive — a 0 draw can only mint
+    # an ill-typed conv (measured: every accepted site of the conv
+    # anchors in the 360-window died on ``non-positive stride``).
+    # Scoped per-op like the rest of the table; a different op whose
+    # ``stride`` admits 0 (``as_strided``) keeps the name default.
+    ("conv2d", "stride"): "pos-int",
 }
+
+#: Correlated operand-shape rows for ops whose operands form a shape
+#: contract — the *joint* corner the independent leaf banks cannot
+#: mint.  Keyed ``(op, arity)``; each row is one concrete joint shape
+#: assignment in operand order (a row shorter than the node's args
+#: binds a leading prefix; non-metavar arg positions carry their
+#: expected shape but bind nothing).  The enumeration binds the
+#: metavariable args of a tabulated node *jointly* from these rows —
+#: a guard whose accepted region is a relation across operands
+#: (``conv2d``'s ``x[1] == W[1]·groups``, ``batch_norm``'s per-channel
+#: stat vectors all equalling ``x[1]``) reaches its corner in one
+#: draw instead of never: independent draws need the coincidence of
+#: every relation at once, and measured over the conv+BN composite
+#: that corner lay outside the domain entirely (``0 accepted / 2000
+#: declined`` — ``project/retros/binding-env-cap.md``).
+#:
+#: Only ops a measured starvation named carry entries — a covered
+#: metavariable's domain IS the row set, so a row for an op whose
+#: sweeps already measure shrinks a working domain for nothing (the
+#: ``CONST_DOMAIN`` discipline).  ``conv2d`` / ``batch_norm`` are the
+#: opt-in families whose guarded sweeps starved; a new entry is a
+#: data row, never an engine edit.
+JOINT_SHAPES: dict[
+    tuple[str, int], tuple[tuple[tuple[int, ...], ...], ...]
+] = {
+    # x (N,C,H,W), W (O,C,kh,kw), b (O,) — the biased conv site.
+    ("conv2d", 3): (
+        ((2, 4, 8, 8), (6, 4, 3, 3), (6,)),  # groups=1: x[1] == W[1]
+        ((2, 4, 8, 8), (6, 2, 3, 3), (6,)),  # groups=2: x[1] == W[1]·2
+        ((1, 3, 6, 6), (5, 3, 3, 3), (5,)),
+    ),
+    # The bias-free export arity.
+    ("conv2d", 2): (
+        ((2, 4, 8, 8), (6, 4, 3, 3)),
+        ((2, 4, 8, 8), (6, 2, 3, 3)),
+        ((1, 3, 6, 6), (5, 3, 3, 3)),
+    ),
+    # batch_norm(x, w, b, rm, rv): x (N,C,·) and the four per-channel
+    # vectors — every row's vector extent IS x's channel axis.
+    ("batch_norm", 5): (
+        ((2, 6, 8, 8), (6,), (6,), (6,), (6,)),
+        ((2, 4, 8, 8), (4,), (4,), (4,), (4,)),
+        ((2, 5, 6, 6), (5,), (5,), (5,), (5,)),
+    ),
+    # batch_norm(x, w, rm, rv) — the bias-free export arity.
+    ("batch_norm", 4): (
+        ((2, 6, 8, 8), (6,), (6,), (6,)),
+        ((2, 4, 8, 8), (4,), (4,), (4,)),
+        ((2, 5, 6, 6), (5,), (5,), (5,)),
+    ),
+    # batch_norm(x, rm, rv) — the affine-free arity.
+    ("batch_norm", 3): (
+        ((2, 6, 8, 8), (6,), (6,)),
+        ((2, 4, 8, 8), (4,), (4,), (4,)),
+        ((2, 5, 6, 6), (5,), (5,), (5,)),
+    ),
+}
+
+#: Broadcast-view shapes appended to the leaf banks when a pattern
+#: carries a joint-shape node — the *channel view* a structured site's
+#: sibling operand takes (``sv ~ (1, C, 1, 1)`` multiplying a conv
+#: output, the per-channel scale the conv+BN fold rides).  The
+#: independent bank mints rank-≤3 shapes and broadcast pads, never a
+#: same-rank singleton view; the extents here span the channel counts
+#: :data:`JOINT_SHAPES` rows produce, so a row and a view draw agree
+#: at a low index-sum.  Scoped to joint patterns (via the
+#: ``extra_viewed`` channel, exactly like ``CHAIN_VIEWED_SHAPES``) so
+#: joint-free enumerations are byte-identical.
+JOINT_VIEW_SHAPES: tuple = (
+    (1, 4, 1, 1),
+    (1, 5, 1, 1),
+    (1, 6, 1, 1),
+    (1, 4, 1),
+    (1, 1, 4),
+)
 
 #: Shared operand shape for the tuple-producing sources below.
 TUPLE_SOURCE_SHAPE: tuple = (2, 4)
