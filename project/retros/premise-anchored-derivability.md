@@ -46,12 +46,14 @@ the truth-gate detail.
 ## Re-measured: the conv+BN composite
 
 `lab/probes/conv_fold_premise_pay_probe.py`, same mint (974 emitted,
-8-rule premise closure, one-case corpus):
+8-rule premise closure, one-case corpus).  Measured at `819beeb` —
+which also landed the joint-shape schemata that unstarve the sweep —
+the composite's account is:
 
 | stage | before (`0721cec`) | now |
 |---|---|---|
 | measure | `derivable=False` under `ALL_RULES` | `derivable=True(premise-anchored)` — replayable cert, premise steps `conv_channel_shift_sp` + `syn_…_209` site-verify |
-| truth | **FAIL** (starved sweep, no waiver) | pass — `numeric=True`, `1eq/0ne` real site, derivable waives starvation |
+| truth | **FAIL** (starved sweep, no waiver) | pass on *both* legs — `numeric=True`, real site `1eq/0ne`, and the joint-shape banks now reach the corner: synth `105eq/0ne` in a 360-env window (was `0 accepted / 2000 declined`); the anchored derivation is present as the waiver it would still need were the sweep starved |
 | typed-pay | not reached | pass — `fires=1 paid=1 verify_fail=0` |
 | closure | not reached | **FAIL** — `enode=6.00x` vs the 2.0 cap |
 
@@ -59,10 +61,11 @@ The gauntlet now refuses at **closure**, not truth: the fold expands
 the real conv+BN term into its spelled form inside the probe e-graph
 (6× enode growth on a one-term graph).  That is a *different*, honest
 gate — expansion cost — and the correct residual blocker: the object
-is proved (premise-anchored) and pays (17 438.7 vs 34 874.3), but its
-closure safety is a corpus-level property the anchor does not touch.
-Whether an expansion composite should carry a different closure bar is
-the next named policy question — deliberately not decided here.
+is proved (premise-anchored), measured (105 guarded equals), and pays
+(17 438.7 vs 34 874.3), but its closure safety is a corpus-level
+property the anchor does not touch.  Whether an expansion composite
+should carry a different closure bar is the next named policy
+question — deliberately not decided here.
 
 ## What the tests pin
 

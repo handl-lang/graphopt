@@ -460,10 +460,12 @@ standalone *and* site-verify every non-axiom step
 merges the e-graph but measures `unequal` where it was applied, and
 the credit revokes to the base-only verdict.
 
-**Measured** (same probe): `derivable` flips `False` →
+**Measured** (same probe, at `819beeb` — which also unstarved the
+sweep via joint-shape banks): `derivable` flips `False` →
 `True(premise-anchored)` (replayable 2-step cert, premise steps
-site-verified); `truth` and `typed-pay` now pass (`paid=1`, fused
-`17 438.7` vs `34 874.3`).  The composite's refusal moves to
+site-verified); `truth` passes on both legs (`numeric=True`, real
+site `1eq/0ne`, synth `105eq/0ne`) and `typed-pay` passes (`paid=1`,
+fused `17 438.7` vs `34 874.3`).  The composite's refusal moves to
 **`closure`** — `enode=6.00x` vs the 2.0 cap: expansion cost on the
 one-term graph, a different gate, left open as the next named policy
 question.  Retro: `retros/premise-anchored-derivability.md`.
