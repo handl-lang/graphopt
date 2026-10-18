@@ -1539,3 +1539,274 @@ def test_full_data_gate_counts_transported_hooks(tmp_path):
     assert stages["reconstruct"].passed
     assert stages["full-data"].passed
     assert "transport" in stages["full-data"].detail
+
+
+# ---------------------------------------------------------------------------
+#  Premise-anchored derivability — the stored composite's minting proof
+# ---------------------------------------------------------------------------
+#
+#  A minted composite's ``derivable`` leg evaluates against
+#  ``base_rules`` plus its transitive premise closure — the record's
+#  ``guard.parents`` resolved through the store — but only when the
+#  anchored certificate's non-axiom steps site-verify (a false premise
+#  cannot vouch).  The bank below is true, evaluable, and sits
+#  *outside* the axiom set, so every flip is measured honestly.
+
+
+def _evaluable_premise_bank() -> list[Rewrite]:
+    """``square(x) -> mul(x,x)`` and ``mul(x,x) -> pow(x,2)`` — both
+    numerically true over real ops, neither in the tiny test corpus's
+    axiom set."""
+    return [
+        Rewrite(
+            name="t_sq_mul",
+            lhs=_p("square", "x"),
+            rhs=_p("mul", "x", "x"),
+            law="square(x) = x*x",
+        ),
+        Rewrite(
+            name="t_mul_pow",
+            lhs=_p("mul", "x", "x"),
+            rhs=_p("pow", "x", Const(2)),
+            law="x*x = x**2",
+        ),
+    ]
+
+
+def _mint_sq_pow(bank: list[Rewrite]) -> Rewrite:
+    """Mint ``square(x) -> pow(x,2)`` — the 2-premise composite."""
+    from catopt_core import meta
+
+    derived = meta.synthesize_rules(
+        bank, fuel=400, rounds=1, numeric_check=False
+    )
+    comp = [
+        r
+        for r in derived
+        if set(r.parents) == {"t_sq_mul", "t_mul_pow"}
+    ]
+    assert comp, "the square->pow composite did not mint"
+    return comp[0]
+
+
+def _sq_pow_case() -> TermCase:
+    """A real firing site for the composite: ``square(v)``, ``v=(4,4)``."""
+    leaf = _v("leaf", 4, 4)
+    return _case("sq_pow", _p("square", leaf), leaf)
+
+
+def _thin_corpus(*cases: TermCase, axioms=("comm_add",)) -> ev.GauntletCorpus:
+    """A corpus whose axiom set is one shipped rule — the premises the
+    composite cites are deliberately NOT axiomatic here."""
+    base = tuple(_BY_NAME[n] for n in axioms)
+    sink = _sink()
+    return ev.GauntletCorpus(
+        real_terms=tuple(c.term for c in cases),
+        probe=tuple(cases),
+        base_rules=base,
+        census_op={},
+        sink=sink,
+        cost_fn=_cost_fn(sink),
+    )
+
+
+def _store_rows(conn, rules: list[Rewrite]) -> dict[str, str]:
+    return {
+        r.name: ev.store_object(conn, r, kind="abstraction", cert=None)
+        for r in rules
+    }
+
+
+def test_premise_anchored_derivable_flips(tmp_path):
+    """``square(x) -> pow(x,2)`` is underivable under the axiom-only
+    corpus — but derivable under the record's premise closure, and the
+    anchored certificate site-verifies both premise steps.  The
+    ``derivable`` leg flips honestly, the truth detail names the
+    anchor, and the truth stage clears on the waived starvation bar."""
+    conn = ev.connect(str(tmp_path / "s.db"))
+    bank = _evaluable_premise_bank()
+    comp = _mint_sq_pow(bank)
+    keys = _store_rows(conn, [*bank, comp])
+    rep = ev.run_gauntlet(
+        conn, keys[comp.name], corpus=_thin_corpus(_sq_pow_case())
+    )
+    conn.close()
+    stages = _stages(rep)
+    assert stages["measure"].passed
+    assert "premise-anchored: t_mul_pow, t_sq_mul" in stages[
+        "measure"
+    ].detail
+    assert rep.evidence.derivable is True
+    assert rep.evidence.premise_anchored is True
+    assert set(rep.evidence.witness) == {"t_sq_mul", "t_mul_pow"}
+    assert stages["truth"].passed
+    assert "derivable=True(premise-anchored)" in stages["truth"].detail
+
+
+def test_premise_anchor_is_transitive_through_the_store(tmp_path):
+    """A depth-2 composite's closure walks *through* a stored
+    intermediate: ``sq_pow``'s own parents join the anchor set, so the
+    recorded ``parents`` field is resolved transitively, not guessed."""
+    conn = ev.connect(str(tmp_path / "s.db"))
+    bank = _evaluable_premise_bank()
+    comp = _mint_sq_pow(bank)  # square(x) -> pow(x,2)
+    deep = Rewrite(
+        name="t_sq_powsplit",
+        lhs=_p("square", "x"),
+        rhs=_p("mul", _p("pow", "x", Const(1)), "x"),
+        law="square(x) = pow(x,1)*x via pow2 then pow-split",
+    )
+    split = Rewrite(
+        name="t_pow_split",
+        lhs=_p("pow", "x", Const(2)),
+        rhs=_p("mul", _p("pow", "x", Const(1)), "x"),
+        law="x**2 = x**1 * x",
+    )
+    object.__setattr__(deep, "parents", (comp.name, "t_pow_split"))
+    object.__setattr__(deep, "guard_pats", ({"x": "x"}, {"x": "x"}))
+    keys = _store_rows(conn, [*bank, comp, split, deep])
+    rep = ev.run_gauntlet(
+        conn, keys[deep.name], corpus=_thin_corpus(_sq_pow_case())
+    )
+    conn.close()
+    assert rep.evidence.derivable is True
+    assert rep.evidence.premise_anchored is True
+
+
+def test_unstored_premise_refuses_the_anchor(tmp_path):
+    """No closure without the rows: the composite alone in the store
+    leaves its parents unresolvable, so the derivable leg runs under
+    axioms only and stays False — never a guessed premise."""
+    conn = ev.connect(str(tmp_path / "s.db"))
+    bank = _evaluable_premise_bank()
+    comp = _mint_sq_pow(bank)
+    keys = _store_rows(conn, [comp])
+    rep = ev.run_gauntlet(
+        conn, keys[comp.name], corpus=_thin_corpus(_sq_pow_case())
+    )
+    conn.close()
+    stages = _stages(rep)
+    assert rep.evidence.derivable is False
+    assert rep.evidence.premise_anchored is False
+    assert "premise closure refused" in stages["measure"].detail
+    assert "not a stored row" in stages["measure"].detail
+
+
+def test_axiom_premise_resolves_from_base(tmp_path):
+    """A premise already among ``base_rules`` needs no store row —
+    the axiom itself is the trusted object the composite cites."""
+    conn = ev.connect(str(tmp_path / "s.db"))
+    bank = _evaluable_premise_bank()
+    comp = Rewrite(
+        name="t_comm_sq",
+        lhs=_p("add", _p("square", "x"), "y"),
+        rhs=_p("add", "y", _p("mul", "x", "x")),
+        law="add(square(x),y) = add(y,x*x) via comm then sq->mul",
+    )
+    object.__setattr__(comp, "parents", ("comm_add", "t_sq_mul"))
+    object.__setattr__(comp, "guard_pats", ({"x": "x"}, {"x": "x"}))
+    keys = _store_rows(conn, [bank[0], comp])
+    x, y = _v("x", 4, 4), _v("y", 4, 4)
+    case = _case("comm_sq", _p("add", _p("square", x), y), x, y)
+    rep = ev.run_gauntlet(
+        conn, keys[comp.name], corpus=_thin_corpus(case)
+    )
+    conn.close()
+    assert rep.evidence.derivable is True
+    assert rep.evidence.premise_anchored is True
+
+
+def test_false_premise_cannot_vouch_derivable(tmp_path):
+    """The anti-gaming pin: a composite claiming FALSE parents derives
+    under base+closure — the e-graph merges — but the anchored cert's
+    first premise step measures ``unequal`` at its applied site, so
+    the credit is revoked and ``derivable`` stands at its base-only
+    False."""
+    conn = ev.connect(str(tmp_path / "s.db"))
+    bad1 = Rewrite(
+        name="bad_sq_add0",
+        lhs=_p("square", "x"),
+        rhs=_p("add", "x", Const(0)),
+        law="false: x*x vs x+0",
+    )
+    bad2 = Rewrite(
+        name="bad_add0_pow",
+        lhs=_p("add", "x", Const(0)),
+        rhs=_p("pow", "x", Const(2)),
+        law="false: x+0 vs x**2",
+    )
+    comp = Rewrite(
+        name="bad_sq_pow",
+        lhs=_p("square", "x"),
+        rhs=_p("pow", "x", Const(2)),
+        law="square(x)=x**2 — a true composite with false premises",
+    )
+    object.__setattr__(comp, "parents", ("bad_sq_add0", "bad_add0_pow"))
+    object.__setattr__(comp, "guard_pats", ({"x": "x"}, {"x": "x"}))
+    keys = _store_rows(conn, [bad1, bad2, comp])
+    rep = ev.run_gauntlet(
+        conn, keys[comp.name], corpus=_thin_corpus(_sq_pow_case())
+    )
+    conn.close()
+    stages = _stages(rep)
+    assert rep.evidence.derivable is False
+    assert rep.evidence.premise_anchored is False
+    assert "bad_sq_add0" in stages["measure"].detail
+    assert "unequal" in stages["measure"].detail
+
+
+def test_weak_premise_record_refuses_the_anchor(tmp_path):
+    """A premise whose own record admits weaker than it declared — a
+    procedural ``check`` the record cannot carry — empties the whole
+    closure; partial premises are not the minted derivation."""
+    conn = ev.connect(str(tmp_path / "s.db"))
+    hooked = Rewrite(
+        name="hooked_premise",
+        lhs=_p("square", "x"),
+        rhs=_p("mul", "x", "x"),
+        law="sq->mul behind an unserializable check",
+        check=lambda b: True,
+    )
+    comp = Rewrite(
+        name="weak_premise_comp",
+        lhs=_p("square", "x"),
+        rhs=_p("pow", "x", Const(2)),
+        law="sq->pow2 claiming a weak premise",
+    )
+    object.__setattr__(comp, "parents", ("hooked_premise", "t_mul_pow"))
+    object.__setattr__(comp, "guard_pats", ({"x": "x"}, {"x": "x"}))
+    keys = _store_rows(
+        conn, [hooked, _evaluable_premise_bank()[1], comp]
+    )
+    rep = ev.run_gauntlet(
+        conn, keys[comp.name], corpus=_thin_corpus(_sq_pow_case())
+    )
+    conn.close()
+    assert rep.evidence.derivable is False
+    assert "weaker than declared" in _stages(rep)["measure"].detail
+
+
+def test_premise_steps_verify_unit():
+    """The audit's edges directly: no cert and a non-replayable cert
+    both refuse; an axiom-only cert verifies without anchoring."""
+    from catopt_discovery.verifier import verify_law
+
+    ok, detail = ev._premise_steps_verify(None, {"comm_add"})
+    assert not ok and "no certificate" in detail
+
+    class _StubCert:
+        replayable = False
+        steps = ()
+
+    ok, detail = ev._premise_steps_verify(_StubCert(), {"comm_add"})
+    assert not ok and "replayable" in detail
+
+    res = verify_law(
+        _p("add", _v("a", 2, 2), _v("b", 2, 2)),
+        _p("add", _v("b", 2, 2), _v("a", 2, 2)),
+        [_BY_NAME["comm_add"]],
+    )
+    assert res.derivable and res.cert is not None
+    ok, detail = ev._premise_steps_verify(res.cert, {"comm_add"})
+    assert ok and "axioms only" in detail
+

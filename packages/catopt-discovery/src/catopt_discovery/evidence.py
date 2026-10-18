@@ -922,9 +922,13 @@ class GauntletCorpus:
     The same inputs ``pipeline.run_pipeline`` assembles:
     ``real_terms`` for match enumeration, ``probe`` (``TermCase``
     list) for the firing / typed-pay / reach stages, ``base_rules``
-    the search rule set the derivability oracle and the reach
-    baseline use, ``census_op`` the op-tuple census, and
-    ``sink``/``cost_fn`` the lowering + pricing backend.  Inject a
+    the axiom set the derivability oracle and the reach baseline use,
+    ``census_op`` the op-tuple census, and ``sink``/``cost_fn`` the
+    lowering + pricing backend.  ``base_rules`` is not the whole
+    derivability context: a stored composite's ``derivable`` leg runs
+    premise-anchored — ``base_rules`` plus the record's transitive
+    premise closure, site-verified step-wise
+    (:func:`_premise_rules`, :func:`_premise_steps_verify`).  Inject a
     small corpus in tests; the default is the real one
     (:func:`default_gauntlet_corpus`).
     """
@@ -1230,7 +1234,10 @@ class Gauntlet:
 
 def _truth_detail(evd: Any) -> str:
     """Render the measured truth evidence for the gauntlet report."""
-    parts = [f"numeric={evd.num_true}", f"derivable={evd.derivable}"]
+    derivable = f"derivable={evd.derivable}"
+    if getattr(evd, "premise_anchored", False):
+        derivable += "(premise-anchored)"
+    parts = [f"numeric={evd.num_true}", derivable]
     if evd.view_verdict:
         parts.append(f"view={evd.view_verdict} ({evd.view_note})")
     return " ".join(parts)
@@ -1355,8 +1362,131 @@ def _reconstruct_gate(
     return (rule, record) if ok else None
 
 
+def _premise_rules(
+    conn: sqlite3.Connection,
+    record: dict,
+    base_by_name: dict,
+) -> tuple[list[Any], str]:
+    """Resolve *record*'s transitive premise closure through the store.
+
+    ``record["guard"]["parents"]`` names the rules the object was
+    synthesized from — the premises of the derivation it was minted
+    under (``ca42c16``'s guard transport resolves the same field).
+    Each member is resolved exactly the way :func:`admit_object`
+    resolves transport parents: a stored row of this same store,
+    rebuilt by :func:`_rebuild_stored` at full declared strength
+    (``missing_hooks`` minus ``transported`` empty), with its own
+    ``guard.parents`` walked transitively.  A name already among
+    *base_by_name* resolves to the axiom itself — the trusted object,
+    no store row needed.
+
+    Returns ``(rules, detail)`` — *rules* parents-first, de-duplicated
+    by name.  A member that resolves short of that bar — no row, a
+    weaker-than-declared admit, a cycle back into the closure —
+    empties the whole closure: a partial premise set is not the
+    derivation the object was minted under, so the refusal is total
+    (*detail* names the shortfall).
+    """
+    from catopt_core.laws.serialize import object_kind
+
+    out: list[Any] = []
+    seen: set[str] = {record.get("name") or ""}
+    failure: list[str] = []
+
+    def walk(rec: dict, ancestors: frozenset[str]) -> None:
+        guard = rec.get("guard")
+        parents = (
+            tuple(guard["parents"])
+            if isinstance(guard, dict)
+            and isinstance(guard.get("parents"), (list, tuple))
+            else ()
+        )
+        for pname in parents:
+            if pname in seen or failure:
+                continue
+            seen.add(pname)
+            row = conn.execute(
+                "SELECT law_json FROM lemmas WHERE name = ?", (pname,)
+            ).fetchone()
+            if row is None:
+                if pname in base_by_name:
+                    out.append(base_by_name[pname])
+                else:
+                    failure.append(
+                        f"premise {pname!r} is not a stored row"
+                    )
+                continue
+            pdata = json.loads(row["law_json"])
+            pdata["kind"] = object_kind(pdata)
+            # ``_rebuild_stored``'s ``seen`` is the ancestor chain for
+            # its cycle guard — the flat *seen* dedup set would make a
+            # premise shared by two siblings read as a cycle.
+            prule, ptrans = _rebuild_stored(
+                conn, pdata, ancestors | {pname}
+            )
+            weak = set(pdata.get("missing_hooks") or ()) - set(ptrans)
+            if weak:
+                failure.append(
+                    f"premise {pname!r} admits weaker than declared"
+                    f" ({', '.join(sorted(weak))})"
+                )
+                continue
+            walk(pdata, ancestors | {pname})
+            out.append(prule)
+
+    walk(record, frozenset(seen))
+    if failure:
+        return [], "; ".join(failure)
+    return out, ""
+
+
+def _premise_steps_verify(
+    cert: Any, base_names: set
+) -> tuple[bool, str]:
+    """Site-verify the non-axiom steps an anchored derivation used.
+
+    Premise-anchored ``derivable`` is honest only if the premises the
+    derivation *invokes* are true — a false stored rule in the closure
+    would let a false composite fake derivability (the replayable cert
+    proves the steps are valid applications of *named* rules, not that
+    the names are true).  The anti-circularity bar, per step naming a
+    rule outside *base_names*: the recorded step instance — the exact
+    terms the rule rewrote between — must numerically evaluate
+    ``equal`` under the same fp64 random-env oracle ``num_true`` uses.
+
+    A premise *true at the site the proof uses* is sufficient: the
+    certificate is a per-instance derivation, and ``derivable`` is a
+    per-instance verdict.  A premise false at its applied site, an
+    unverifiable step (``env-err`` and friends), or a non-replayable
+    witness all refuse the anchored credit — conservative, never
+    guessed.
+    """
+    if cert is None:
+        return False, "no certificate to audit"
+    if not cert.replayable:
+        return False, "witness is not standalone-replayable"
+    from catopt_discovery import oracle as lvo
+
+    used: list[str] = []
+    for step in cert.steps:
+        if step.egraph_dependent or step.rule in base_names:
+            continue
+        outcome, _note = lvo.eval_instance(step.lhs, step.rhs)
+        if outcome != "equal":
+            return False, (
+                f"premise step {step.rule!r} measured {outcome}"
+                " at its applied site"
+            )
+        used.append(step.rule)
+    return True, (
+        "premise-anchored: "
+        + (", ".join(sorted(set(used))) if used else "axioms only")
+    )
+
+
 def _measure_gate(
     rep: Gauntlet,
+    conn: sqlite3.Connection,
     rule: Any,
     record: dict,
     corpus: GauntletCorpus,
@@ -1372,6 +1502,14 @@ def _measure_gate(
     ``cond`` accepts (:func:`_guarded_truth`); the raw view verdict
     stays ``conditional`` there by construction, so it is reported
     but the sweep is the gate.
+
+    Derivability is *premise-anchored* (:func:`_premise_rules`): a
+    stored composite's ``derivable`` leg evaluates against
+    ``corpus.base_rules`` plus its transitive premise closure — the
+    proof it was minted under.  The anchor is credited only when the
+    anchored certificate site-verifies every non-axiom step
+    (:func:`_premise_steps_verify`); the reach baseline, census and
+    novelty relation stay scoped to ``base_rules``.
     """
     from catopt_discovery import pipeline as pl
     from catopt_discovery import proposal as lp
@@ -1384,28 +1522,51 @@ def _measure_gate(
         check=rule.check,
         derive=rule.derive,
     )
-    lib = [lp._key(r.lhs, r.rhs) for r in corpus.base_rules]
+    base = list(corpus.base_rules)
+    base_names = {r.name for r in base}
+    premises, premise_note = _premise_rules(
+        conn, record, {r.name: r for r in base}
+    )
+    extra = [r for r in premises if r.name not in base_names]
+    lib = [lp._key(r.lhs, r.rhs) for r in base]
     try:
         evd = pl.measure(
             prop,
             list(corpus.real_terms),
             list(corpus.probe),
-            list(corpus.base_rules),
+            base,
             lib,
             corpus.census_op,
             corpus.sink,
             corpus.cost_fn,
+            premise_rules=extra,
         )
     except Exception as exc:
         _gate(rep, "measure", False, f"{type(exc).__name__}: {exc}")
         return False
     rep.evidence = evd
-    _gate(
-        rep,
-        "measure",
-        True,
-        f"matches={evd.matches} census={evd.census_sites}",
-    )
+    detail = f"matches={evd.matches} census={evd.census_sites}"
+    if premise_note:
+        detail += f" | premise closure refused: {premise_note}"
+    if extra:
+        if evd.derivable:
+            ok, premise_note = _premise_steps_verify(
+                evd.derivation_cert, base_names
+            )
+            evd.premise_anchored = ok and any(
+                s.rule not in base_names
+                for s in evd.derivation_cert.steps
+            )
+            if not ok:
+                # The anchored derivation invoked a premise that does
+                # not verify at its applied site — credit revoked;
+                # the base-only verdict stands (``measure`` already
+                # tried base first).
+                evd.derivable = False
+        else:
+            premise_note = "premise-anchored: no derivation"
+        detail += f" | {premise_note}"
+    _gate(rep, "measure", True, detail)
     return _truth_gate(rep, rule, corpus, synth_limit)
 
 
@@ -1629,7 +1790,11 @@ def run_gauntlet(
 
     The same gates a shipped law cleared, in the ADR's order:
     reconstruct the record → require full data → measure (numeric
-    oracle, derivability, the view oracle's raw verdict) → truth
+    oracle, derivability — *premise-anchored* for a stored composite:
+    the prover sees ``corpus.base_rules`` plus the record's
+    transitive premise closure, and the anchored derivation is
+    credited only when every non-axiom cert step site-verifies — the
+    view oracle's raw verdict) → truth
     (unguarded: the measured verdict; guarded: the guarded-region
     sweep — every accepted evaluable binding must be equal, and at
     least one must exist) → novelty (the object is not a library
@@ -1673,7 +1838,7 @@ def run_gauntlet(
     rule, record = got
     if corpus is None:
         corpus = default_gauntlet_corpus()
-    if not _measure_gate(rep, rule, record, corpus, synth_limit):
+    if not _measure_gate(rep, conn, rule, record, corpus, synth_limit):
         if auto_cond and _auto_cond_armed(rep, "truth"):
             return _auto_cond_retry(
                 conn, rep, corpus, synth_limit, auto_cond_clauses

@@ -108,6 +108,10 @@ class LawResult:
     witness_steps: int = 0
     replayable: bool = False
     note: str = ""
+    #: The :class:`~catopt_core.egraph.certs.Certificate` reported for
+    #: ``direction`` — the positional derivation whose steps a caller
+    #: may audit (``None`` when the sides never merged).
+    cert: Any = None
 
 
 @dataclass(frozen=True)
@@ -193,6 +197,7 @@ def verify_law(
                     derivable=True,
                     direction=tag,
                     note=f"replay failed: {type(exc).__name__}: {exc}",
+                    cert=cert,
                     **base,
                 )
             )
@@ -207,6 +212,7 @@ def verify_law(
                 note=""
                 if cert.replayable
                 else "e-graph-dependent witness",
+                cert=cert,
                 **base,
             )
         )
@@ -639,6 +645,18 @@ def _summary(rows: list[LawRow]) -> dict:
     return {"counts": counts, "derivable_relations": rels}
 
 
+def _result_data(res: LawResult) -> dict:
+    """``asdict`` a :class:`LawResult` minus its certificate object.
+
+    ``cert`` is a live :class:`Certificate` — the audit handle for
+    premise-anchored callers, not JSON data; its summary is already
+    carried by ``replayable`` / ``witness_rules`` / ``witness_steps``.
+    """
+    d = asdict(res)
+    d.pop("cert", None)
+    return d
+
+
 def _dump_json(
     path: str,
     rows: list[LawRow],
@@ -656,7 +674,7 @@ def _dump_json(
                 "rhs": r.rhs_repr,
                 "result": None
                 if r.result is None
-                else asdict(r.result),
+                else _result_data(r.result),
             }
             for r in rows
         ],
@@ -667,7 +685,7 @@ def _dump_json(
                 "ok": p.ok,
                 "lhs": p.lhs_repr,
                 "rhs": p.rhs_repr,
-                "result": asdict(p.result),
+                "result": _result_data(p.result),
             }
             for p in proposals
         ],

@@ -77,6 +77,7 @@ from __future__ import annotations
 import argparse
 import json
 from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
@@ -619,6 +620,17 @@ class Evidence:
     num_true: bool | None = None
     derivable: bool = False
     witness: tuple[str, ...] = ()
+    #: The certificate ``verify_law`` reported for ``derivable`` —
+    #: kept so the admission gauntlet can audit which rules the
+    #: derivation actually used (premise-anchored derivability
+    #: site-verifies every non-axiom step before crediting it).
+    #: ``None`` when no derivation was found, and never restored from
+    #: a cached verdict row.
+    derivation_cert: Any = None
+    #: ``True`` when ``derivable`` was credited under the stored
+    #: object's premise closure rather than ``base_rules`` alone —
+    #: the proof it was minted under, site-verified by the gauntlet.
+    premise_anchored: bool = False
     relation: str = "new"
     fires: int = 0
     fires_typed: int = 0
@@ -1150,8 +1162,21 @@ def measure(
     sink: Any,
     cost_fn: Any,
     view_oracle: bool = True,
+    premise_rules: Iterable[Rewrite] = (),
 ) -> Evidence:
-    """Run both oracles and every measurement for one *proposal*."""
+    """Run both oracles and every measurement for one *proposal*.
+
+    *premise_rules* is the admission gauntlet's premise-anchored
+    derivability channel: when the candidate is not derivable under
+    ``base_rules`` alone, the prover re-runs under ``base_rules +
+    premise_rules`` — the stored object's minting premises.  Only the
+    ``derivable`` leg sees them; the reach baseline, the census and
+    the novelty relation all stay scoped to ``base_rules``.  The
+    reported ``res.cert`` rides home on ``ev.derivation_cert`` so the
+    caller can audit which rules the derivation used — an anchored
+    ``derivable`` is credit *pending* that audit
+    (:func:`catopt_discovery.evidence._premise_steps_verify`).
+    """
     ev = Evidence(proposal=proposal)
     ev.census_sites = census_op.get(_lhs_tuple(proposal.lhs), 0)
     schema = Schema(proposal.name, proposal.lhs, proposal.rhs)
@@ -1163,8 +1188,14 @@ def measure(
     if inst is not None:
         ev.num_true = lp._numeric_true(inst[0], inst[1])
         res = verify_law(inst[0], inst[1], base_rules)
+        anchored_rules = [*base_rules, *premise_rules]
+        if not res.derivable and len(anchored_rules) > len(base_rules):
+            anchored = verify_law(inst[0], inst[1], anchored_rules)
+            if anchored.derivable:
+                res = anchored
         ev.derivable = res.derivable
         ev.witness = res.witness_rules
+        ev.derivation_cert = res.cert
     # The view/index oracle resolves every non-derivable view-family
     # candidate — it sweeps *every* real match (the stock oracle reads
     # only the first) and synthesizes satisfiable instantiations (view
