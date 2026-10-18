@@ -79,3 +79,8 @@ lab/handl-peer/*.so
 
 # Root cargo workspace artifacts (catopt-kit lives in packages/catopt-kit)
 /target/
+
+# mlopt-experiments — standalone crate (excluded from the root
+# workspace; own lockfile is committed), fetched artifact + build dir
+/experiments/.cache/
+/experiments/target/

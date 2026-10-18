@@ -1,0 +1,52 @@
+[package]
+name = "mlopt-experiments"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/handl-lang/research-mlopt"
+description = "research-mlopt evidence generation — the paper's experiments, composed from declared git deps on the handl stack; nothing vendored"
+
+# Deliberately *not* a member of the root workspace (`exclude` in the
+# root Cargo.toml): this crate deps the post-ADR-0128 `hnl-engine-*`
+# crates on the engine-* repos, while catopt-kit still pins the
+# pre-rename `handl-plugin-engine-*` revs — a single lockfile can't
+# float `branch = "main"` at two revs of kernel/platform. Own manifest,
+# own Cargo.lock, floats on current main.
+
+# The kit is composed here, over the same component set catopt-kit
+# assembles — see `src/lib.rs`. The direct `catopt-kit` cargo dep is
+# documented in manifest/kit.toml as the intended arm; it is currently
+# blocked upstream (gap row): catopt-kit's manifest still names
+# `handl-plugin-engine-*` deps on platform@main, but those crates were
+# renamed `hnl-engine-*` and moved to the engine-* repos (platform
+# 0ce78121, ADR-0128). catopt itself still builds because its committed
+# Cargo.lock pins the pre-rename rev; a fresh resolve — which is what a
+# downstream dep edge does — cannot. When catopt-kit repoints, this
+# crate takes the one-line dep back and `src/kit.rs` collapses to a
+# re-export.
+
+[dependencies]
+serde_json = "1"
+
+# kernel — Language data + the tagged value layer (incl. `TaggedValue::Tensor`)
+handl-language = { git = "https://github.com/handl-lang/kernel", branch = "main" }
+handl-value = { git = "https://github.com/handl-lang/kernel", branch = "main" }
+
+# lang — the canonical Language as data (YAML fragments → `Language`)
+handl-kit-data-canonical = { git = "https://github.com/handl-lang/lang", branch = "main" }
+
+# platform — the runtime + module bridge
+handl-platform = { git = "https://github.com/handl-lang/platform", branch = "main" }
+handl-runtime = { git = "https://github.com/handl-lang/platform", branch = "main" }
+handl-plugin-module = { git = "https://github.com/handl-lang/platform", branch = "main" }
+handl-plugin-lib-handl = { git = "https://github.com/handl-lang/platform", branch = "main" }
+
+# engines — the smallest honest set: data lexer, Pratt parser, tree-walk
+# eval (the `hnl-engine-*` crates in their own repos, post-ADR-0128)
+hnl-engine-exec = { git = "https://github.com/handl-lang/engine-exec", branch = "main" }
+hnl-engine-lex-pattern = { git = "https://github.com/handl-lang/engine-lex-pattern", branch = "main" }
+hnl-engine-parse-pratt = { git = "https://github.com/handl-lang/engine-parse-pratt", branch = "main" }
+hnl-engine-exec-tree-walk = { git = "https://github.com/handl-lang/engine-exec-tree-walk", branch = "main" }
+
+# host-tensor — the `tensor.*` host-function surface (18 ops)
+handl-host-tensor = { git = "https://github.com/handl-lang/host-tensor", branch = "main" }

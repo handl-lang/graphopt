@@ -1,8 +1,11 @@
 # Root cargo workspace — created for `catopt-kit` (plan: the modular
 # handl-lang composition seam). The Python monorepo has no other cargo
-# workspace; the two pre-existing Rust crates keep their own manifests
-# and lockfiles and are listed in `exclude` so `cargo` inside them still
-# resolves them standalone.
+# workspace; the pre-existing Rust crates — and `experiments/`
+# (`mlopt-experiments`, the paper's evidence crate — see
+# `manifest/kit.toml`), which floats on the post-rename `hnl-engine-*`
+# stack catopt-kit can't yet share a lockfile with — keep their own
+# manifests and lockfiles and are listed in `exclude` so `cargo` inside
+# them still resolves them standalone.
 
 [workspace]
 resolver = "3"
@@ -13,6 +16,13 @@ exclude = [
     "packages/catopt-native",
     # the G0 boundary spike — standalone crate with absolute path deps
     "lab/handl-peer",
+    # the paper's evidence crate (manifest/kit.toml) — deliberately
+    # *not* a member: it deps the post-ADR-0128 `hnl-engine-*` crates on
+    # the engine-* repos, while catopt-kit still pins the pre-rename
+    # `handl-plugin-engine-*` revs. One lockfile can't float
+    # `branch = "main"` to two revs of kernel/platform, so experiments
+    # keeps its own manifest + Cargo.lock and floats on current main.
+    "experiments",
 ]
 
 # ---------------------------------------------------------------------------

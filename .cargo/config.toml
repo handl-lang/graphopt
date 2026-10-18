@@ -1,4 +1,4 @@
-# Cargo configuration for the root workspace (currently just `catopt-kit`).
+# Cargo configuration for the root workspace (`catopt-kit` + `mlopt-experiments`).
 #
 # `RUST_MIN_STACK`: handl's tree-walk eval engine is a recursive
 # interpreter whose frame chain (eval_node → scheme term → native op →

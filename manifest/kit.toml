@@ -110,7 +110,7 @@ role = "the discovery + admission machinery — lift (TorchSource: torch IR → 
 [[experiment]]
 name = "conv-bn-fold"
 kind = "cargo"
-run = "cargo run --release -p mlopt-experiments --bin conv-bn-fold -- --repeat 200"
+run = "cargo run --release --manifest-path experiments/Cargo.toml --bin conv-bn-fold -- --repeat 200"
 produces = "value-equality of spelled vs folded program through the composed kit + per-call wall of each arm (the runtime pay)"
 artifact = "catopt-kit's hnl/conv_bn.hnl — resolved in-tree (packages/catopt-kit/hnl/conv_bn.hnl; the sibling-checkout / pkg-cache-slot / fetch arms remain as fallbacks for a standalone research-mlopt checkout — never vendored)"
 
