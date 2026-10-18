@@ -188,14 +188,17 @@ def gate_synthesize(seed: Any) -> dict[str, Any]:
 
 
 def gate_iterated(seed: Any, rounds: int = 4) -> dict[str, Any]:
-    """Feed emitted composites back into ``usable`` — stratified mint.
+    """Run the fixpoint driver — each round's stratum feeds back.
 
     ``synthesize_rules`` composes PAIRS over a fixed rule list: a
     composite's derivation depth is exactly 2.  The fold needs ~5
     (expand → shift_sub → scale → scale_l → shift), so this gate runs
-    the outer fixpoint the work order asked about: each round's emitted
-    set joins the next round's bank.  ``numeric_check=False`` — the
-    gate-B2 NaN-env artifact makes it counterproductive here.
+    the shipped fixpoint: ``synthesize_rules(rounds=…)`` feeds each
+    round's emitted composites back into the bank (``usable = base +
+    latest stratum``), ``on_round`` reports the per-round mint and
+    stops the loop once the fold composite lands.  ``numeric_check=
+    False`` — the gate-B2 NaN-env artifact makes it counterproductive
+    here.
     """
     base = (
         list(ALL_RULES)
@@ -203,31 +206,39 @@ def gate_iterated(seed: Any, rounds: int = 4) -> dict[str, Any]:
         + list(CONV_FOLD_RULES)
         + list(POINTWISE_FACTOR_RULES)
     )
-    usable = list(base)
     out: dict[str, Any] = {}
-    for rnd in range(1, rounds + 1):
-        emitted = meta.synthesize_rules(
-            usable, [seed], fuel=30000, numeric_check=False
-        )
+    folds: list[Any] = []
+
+    def watch(rnd: int, emitted: list[Any]) -> bool:
         conv_headed = [
             d for d in emitted if getattr(d.rhs, "op", None) == "conv2d"
         ]
-        folds = [
-            d for d in conv_headed if "batch_norm" in op_repr(d.lhs)
-        ]
+        fs = [d for d in conv_headed if "batch_norm" in op_repr(d.lhs)]
         out[f"round{rnd}"] = {
             "emitted": len(emitted),
             "conv2d_headed": len(conv_headed),
-            "fold_composites": [d.name for d in folds],
+            "fold_composites": [d.name for d in fs],
         }
-        if folds:
-            out["fold_rule"] = folds[0]
-            rewritten = meta.apply_rewrite_at(folds[0], seed, ())
-            out["fold_fires"] = rewritten is not None
-            if rewritten is not None:
-                out["fold_allclose"] = _eval_seed_pair(seed, rewritten)
-            break
-        usable = base + list(emitted)
+        if fs:
+            folds.extend(fs)
+            return False  # the fold minted — stop the fixpoint
+        return True
+
+    emitted = meta.synthesize_rules(
+        base,
+        [seed],
+        fuel=30000,
+        numeric_check=False,
+        rounds=rounds,
+        on_round=watch,
+    )
+    out["total_emitted"] = len(emitted)
+    if folds:
+        out["fold_rule"] = folds[0]
+        rewritten = meta.apply_rewrite_at(folds[0], seed, ())
+        out["fold_fires"] = rewritten is not None
+        if rewritten is not None:
+            out["fold_allclose"] = _eval_seed_pair(seed, rewritten)
     return out
 
 
@@ -592,11 +603,12 @@ def main() -> int:
   conv2d-headed rhs in any bank) — `synthesize_rules` composes pairs
   over a FIXED rule list, so its derivation depth is exactly 2 and the
   emitted set never re-enters the pool.  The remaining refusal is
-  DEPTH, not material: iterated composition (gate B3 — each round's
-  emitted composites join the next round's bank) mints
+  DEPTH, not material: the shipped fixpoint (gate B3 —
+  `synthesize_rules(rounds=4, on_round=…)`, each round's emitted
+  composites join the next round's bank) mints
   `batch_norm(conv2d(x,W,b),…) → conv2d(x, W′, b′)` in 4 rounds —
   expand → shift_sub → scale → scale_l → shift — verified fp64-exact
-  on the real seed (max diff 6.8e-13 vs the fused kernel).
+  on the real seed (max diff ~1e-12 vs the fused kernel).
 
   dspec_synth MINTS the fold's derives in STAGES (gate C): scale and
   b' at depth 3, W' at depth 2 given a `scale` leaf.  The one-shot
