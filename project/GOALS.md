@@ -304,3 +304,31 @@ Probe re-run (`lab/probes/conv_bn_fold_synth_probe.py`):
   a `synthesize_rules` fixpoint/`rounds=` knob, or the ADR-0008
   anchored mint — depth was the refusal, not material.
 - Retro: `retros/conv-channel-scale-anchor.md`.
+
+### `synthesize_rules(rounds=)` shipped; CONV sweep refuses at truth (2026-10-19)
+
+The fixpoint is a real API (`18e82dd`): `rounds` feeds each emitted
+stratum back into the bank (`usable = base + latest`), `max_emitted`
+bounds the aggregate mint (validation cost dominates — the cap bounds
+spend, not just list length), `on_round` observes/vetoes strata.
+`rounds=1` is the unchanged single pass; the body moved verbatim to
+`_synthesize_once` (radon re-keyed, 51→51).  The probe now calls the
+API and reproduces the mint exactly — 26→61→242→944 raw strata, 974
+unique after alpha-key dedup, fold fires + fp64 `allclose`
+(`62dce40`).
+
+The `CONV_FOLD_RULES` admission sweep ran
+(`lab/probes/conv_fold_admission_probe.py`): **0/60 usable, refused at
+stage 4 truth** — earlier than BN's typed-pay refusal.  Not a
+counterexample: the guarded-region sweep is *vacuous* (0 accepted /
+2360 envs incl. the `_GUARDED_CAP` window; the enumeration bank can't
+spell the conv channel-view corner, the corpus has no spelled
+`mul(conv2d, view)` sites, `derivable=False` with no conv premises).
+The family is fp64-verified true in its unit tests — the refusal is
+domain starvation + enablement-only value.  BN re-confirmed identical
+typed-pay refusals.  `DEFAULT` unchanged; the "enablement-aware
+floor" requirements are named in the retro (corner-reaching truth
+route, premise-of-admitted-composite pay, guard transport for stored
+composites — measured: `law_to_data` honestly flags guarded mints
+`serializable: False`, `rulecache` loads only against a bank that
+contains the parents).  Retro: `retros/fixpoint-api-and-conv-sweep.md`.
