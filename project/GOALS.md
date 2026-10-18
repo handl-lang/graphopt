@@ -332,3 +332,22 @@ route, premise-of-admitted-composite pay, guard transport for stored
 composites — measured: `law_to_data` honestly flags guarded mints
 `serializable: False`, `rulecache` loads only against a bank that
 contains the parents).  Retro: `retros/fixpoint-api-and-conv-sweep.md`.
+
+### Cached fixpoint + the enablement floor, measured (2026-10-19)
+
+`synthesize_rules_cached` takes `rounds`/`max_emitted`/`on_round`
+(`02e05f9`): the scalars join the cache key; `on_round` keys through
+its `_hook_sig` proxy (a vetoing observer must not share the
+unobserved entry); a warm hit calls no observer.  `RuleCache.load`
+resolves `syn_*` parents payload-internally — fixpoint outputs
+round-trip self-contained.  Guard transport landed (`ca42c16`):
+`store_object` writes the `guard_pats`+`parents` spec; `admit_object`
+rebuilds hooks transitively from stored parents; `full-data` counts
+missing-minus-`transported`.  The premise-pay account ran
+(`lab/probes/conv_fold_premise_pay_probe.py`): the conv+BN composite
+admits, fires, truth-verifies (real site 1eq/0ne; premise-derivable,
+2-step replayable cert) but **does not pay** — `dag_cost` cannot see
+the lowering-time weight fold, so extraction keeps the spelled term.
+Verdicts: the 4 conv anchors + `batch_norm_expand` **enabled-but-opt-in**;
+the other 56 conv rules refused; `DEFAULT` unchanged.
+Retro: `retros/enablement-floor.md`.
