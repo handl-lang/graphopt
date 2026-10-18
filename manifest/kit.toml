@@ -128,6 +128,7 @@ note = "runs inside a catopt checkout (CATOPT_DIR); the probe is catopt's own, i
 what = ".handl.toml git deps resolve to a package-cache slot ($HANDL_PKG_DIR, else ~/.handl/pkg/<name>) that nothing yet populates"
 where = "platform's ModuleLoader / ADR-0010 fetch hook (upstream follow-up)"
 workaround = "a checkout or symlink at the slot is the stand-in (this machine: ~/.handl/pkg/{host-tensor,catopt-kit} are); `make artifact` fetches the file from the declared git source when no local arm resolves"
+closed = "platform 6ce0e125 — fetch-on-miss in resolve_dependencies clones the declared repo@selector into the slot (subdir names the package root); HANDL_PKG_FETCH=off disables"
 
 [[gap]]
 what = "catopt's Python packages are not cargo deps; the discovery arm composes at the Python env level"
