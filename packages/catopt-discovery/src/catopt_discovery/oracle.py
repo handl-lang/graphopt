@@ -594,6 +594,15 @@ def _attr_kind(op: str, key: str) -> str | None:
     return _ATTR_KINDS.get(canon)
 
 
+#: The small-int domains — ``int`` admits the zero (index/correction
+#: spellings), ``pos-int`` is for attrs a 0 can only ill-type
+#: (``dilation``/``groups``/conv's ``stride``).
+_INT_DOMAINS: dict[str, list[int]] = {
+    "int": [0, 1, 2],
+    "pos-int": [1, 2],
+}
+
+
 def _kind_domain(kind: str, shape: tuple) -> list:
     """Return the candidate values one attr *kind* ranges over.
 
@@ -606,10 +615,8 @@ def _kind_domain(kind: str, shape: tuple) -> list:
             return _dims(len(shape)) or list(_FALLBACK_AXES)
         case "red-dims":
             return _red_dims_domain(len(shape))
-        case "int":
-            return [0, 1, 2]
-        case "pos-int":
-            return [1, 2]
+        case "int" | "pos-int":
+            return list(_INT_DOMAINS[kind])
         case "float":
             return [0.5, 1.0, 1e-5]
         case "bool":
@@ -1027,14 +1034,29 @@ def _joint_rows(node: Op) -> list[dict]:
     return out
 
 
+def _joint_merge(combos: list[dict], opts: list[dict]) -> list[dict]:
+    """Extend each combo by every consistent option; drop conflicts.
+
+    Two nodes covering the same metavariable must draw the same
+    ``Var`` or the combo dies (a shared ``x`` cannot take two
+    shapes).  The product is capped at :data:`_MAX_JOINT_COMBOS`.
+    """
+    nxt: list[dict] = []
+    for acc in combos:
+        for o in opts:
+            if any(acc[k] != v for k, v in o.items() if k in acc):
+                continue
+            nxt.append({**acc, **o})
+    return nxt[:_MAX_JOINT_COMBOS]
+
+
 def _joint_plan(*pats: Any) -> tuple[set, list[dict], list[Op]]:
     """``(covered metavars, merged joint dicts, tabulated nodes)``.
 
     The product of every tabulated node's row options, merged under
-    consistency: two nodes covering the same metavariable must draw
-    the same ``Var`` or the combo dies (a shared ``x`` cannot take
-    two shapes).  An empty product is the honest *no coherent site* —
-    the enumeration yields nothing rather than a half-bound env.
+    consistency (:func:`_joint_merge`).  An empty product is the
+    honest *no coherent site* — the enumeration yields nothing rather
+    than a half-bound env.
     """
     nodes = _joint_nodes(*pats)
     covered: set = set()
@@ -1047,16 +1069,36 @@ def _joint_plan(*pats: Any) -> tuple[set, list[dict], list[Op]]:
         per_node.append(opts)
     combos: list[dict] = [{}]
     for opts in per_node:
-        nxt: list[dict] = []
-        for acc in combos:
-            for o in opts:
-                if any(acc[k] != v for k, v in o.items() if k in acc):
-                    continue
-                nxt.append({**acc, **o})
-        combos = nxt[:_MAX_JOINT_COMBOS]
+        combos = _joint_merge(combos, opts)
         if not combos:
             break
     return covered, combos, nodes
+
+
+def _viewed_mvs(
+    mvs: list[str], parents: dict, covered: set
+) -> list[str]:
+    """Subset of *mvs* under a view op, minus the covered set."""
+    return [
+        m
+        for m in mvs
+        if m not in covered and (parents.get(m, set()) & _VIEWISH)
+    ]
+
+
+def _free_mvs(parents: dict, covered: set) -> list[str]:
+    """Metavariables with no viewish parent, minus the covered set."""
+    return [
+        m
+        for m in parents
+        if not (parents.get(m, set()) & _VIEWISH) and m not in covered
+    ]
+
+
+def _extra_viewed(nodes: list[Op], joint_nodes: list[Op]) -> tuple:
+    """Pattern-scoped bank extensions — chain shapes, then joint views."""
+    extra = _CHAIN_VIEWED_SHAPES if _has_chained_view(nodes) else ()
+    return extra + _JOINT_VIEW_SHAPES if joint_nodes else extra
 
 
 def _viewed_bindings(
@@ -1064,7 +1106,7 @@ def _viewed_bindings(
     parents: dict,
     extra_viewed: tuple = (),
     source: Any = None,
-    joint: tuple | None = None,
+    joint: tuple = (({},), frozenset()),
 ) -> Iterable[dict]:
     """Yield binding dicts for metavariables under a view node.
 
@@ -1076,16 +1118,12 @@ def _viewed_bindings(
     joint row dicts ride the product as its first dimension — a
     covered metavariable is *replaced* by the joint draw (it leaves
     this product entirely), and the merged dict is the base's first
-    half exactly as the per-metavar draws are.  ``None`` (or a single
+    half exactly as the per-metavar draws are.  The default (a single
     empty combo) preserves the shipped enumeration byte-for-byte.
     """
     src = _bank(source)
-    combos, covered = joint or (({},), set())
-    viewed = [
-        m
-        for m in mvs
-        if (parents.get(m, set()) & _VIEWISH) and m not in covered
-    ]
+    combos, covered = joint
+    viewed = _viewed_mvs(mvs, parents, covered)
     lists = [list(combos)] + [
         src(m, parents[m], (), extra_viewed) for m in viewed
     ]
@@ -1521,15 +1559,8 @@ def _synth_bases(
     nodes = _view_nodes([lhs_pat, rhs_pat])
     lhs_views = [n for n in _view_nodes([lhs_pat]) if n.args]
     covered, joint_combos, joint_nodes = _joint_plan(lhs_pat, rhs_pat)
-    free = [
-        m
-        for m in parents
-        if not (parents.get(m, set()) & _VIEWISH) and m not in covered
-    ]
-    need_out = bool(free)
-    extra = _CHAIN_VIEWED_SHAPES if _has_chained_view(nodes) else ()
-    if joint_nodes:
-        extra = extra + _JOINT_VIEW_SHAPES
+    need_out = bool(_free_mvs(parents, covered))
+    extra = _extra_viewed(nodes, joint_nodes)
     groups: list = []
     for viewed in itertools.islice(
         _viewed_bindings(
@@ -1615,11 +1646,7 @@ def _binding_envs(
     """
     parents = _metavar_parents(lhs_pat, rhs_pat)
     covered, _combos, joint_nodes = _joint_plan(lhs_pat, rhs_pat)
-    free = sorted(
-        m
-        for m in parents
-        if not (parents.get(m, set()) & _VIEWISH) and m not in covered
-    )
+    free = sorted(_free_mvs(parents, covered))
     # entries[i] = [base, free-combo generator, alive] — the i-th
     # (viewed x attr) base.  Entries are pulled lazily: round `total`
     # only reaches entries with index <= total, so a capped sweep
@@ -1627,13 +1654,7 @@ def _binding_envs(
     # every base up front (``gqa_absorb_repeat``'s deep corner made
     # that unmeasurable).  The yield order is unchanged: entry *i*
     # still contributes its (total-i)-th free combo at round `total`.
-    extra = (
-        _CHAIN_VIEWED_SHAPES
-        if _has_chained_view(_view_nodes([lhs_pat, rhs_pat]))
-        else ()
-    )
-    if joint_nodes:
-        extra = extra + _JOINT_VIEW_SHAPES
+    extra = _extra_viewed(_view_nodes([lhs_pat, rhs_pat]), joint_nodes)
     entries: list[list] = []
     src = _LazySeq(_synth_bases(lhs_pat, rhs_pat, source))
     total = 0
