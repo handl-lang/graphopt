@@ -1639,7 +1639,7 @@ def main(argv: list | None = None) -> int:
         with open(args.json, "w") as f:
             f.write(text)
     for r, row in zip(report, rows, strict=True):
-        print(f"{r['spec']!r:.80} -> {row}")
+        print(f"{r['spec']!r:.80} -> {row}")  # stdout-compat: CLI row
     return 0
 
 

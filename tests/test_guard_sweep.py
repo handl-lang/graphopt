@@ -762,7 +762,7 @@ def test_every_conditional_rule_is_swept(sweep_rows):
     """Every conditional shipped + carrier law gets a row."""
     names = {r.name for r in _swept_rules()}
     assert set(sweep_rows) == names
-    assert len(names) == 124  # the 55 core conds + 69 carrier guards
+    assert len(names) == 125  # the 57 core conds + 68 carrier guards
 
 
 def test_no_false_region_rewrites(sweep_rows, capsys):

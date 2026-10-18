@@ -6,7 +6,9 @@
 * no ``print()`` calls remain in the owned sources — an AST-level check
   (docstrings/comments cannot false-positive), with a documented
   ``# stdout-compat`` escape hatch for any line a capsys/capfd test
-  asserts on.  No such test exists today, so no compat prints are kept.
+  asserts on.  One is kept: ``handler_synth.main``'s verdict row, which
+  ``test_discovery_handler_synth.py``'s ``test_cli_battery`` reads via
+  capsys.
 """
 
 import ast
