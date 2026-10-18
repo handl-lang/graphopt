@@ -444,3 +444,26 @@ envs` on the synth region, `1eq` on the real site, `derivable=False`
 under `ALL_RULES` (the premise closure is outside the corpus rules).
 Pay leg stands: `fires=1 changed=True verified=pass`, fused `17 438.7`
 vs spelled `34 874.3`.  Retro: `retros/binding-env-cap.md`.
+
+### Premise-anchored `derivable`: the minting proof counts, guarded (2026-10-19)
+
+The named policy question in `binding-env-cap.md` — should a stored
+composite's `derivable` leg see its premise closure — is **decided:
+yes, with a site-verification guard**.  `run_gauntlet`'s measure stage
+now evaluates derivability against `corpus.base_rules` + the record's
+`guard.parents` resolved transitively through the store (the same
+full-strength bar guard transport sets: stored row, `missing_hooks`
+minus `transported` empty; a base-named premise resolves to the axiom
+itself).  Anti-circularity: the anchored certificate must replay
+standalone *and* site-verify every non-axiom step
+(`eval_instance` on the recorded instance) — a false stored premise
+merges the e-graph but measures `unequal` where it was applied, and
+the credit revokes to the base-only verdict.
+
+**Measured** (same probe): `derivable` flips `False` →
+`True(premise-anchored)` (replayable 2-step cert, premise steps
+site-verified); `truth` and `typed-pay` now pass (`paid=1`, fused
+`17 438.7` vs `34 874.3`).  The composite's refusal moves to
+**`closure`** — `enode=6.00x` vs the 2.0 cap: expansion cost on the
+one-term graph, a different gate, left open as the next named policy
+question.  Retro: `retros/premise-anchored-derivability.md`.
