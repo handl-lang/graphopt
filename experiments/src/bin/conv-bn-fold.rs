@@ -52,7 +52,7 @@ fn project_dir() -> PathBuf {
 ///    symlink there is today's stand-in).
 /// 6. `experiments/.cache/mlopt-kit/hnl/conv_bn.hnl` — the file
 ///    `make artifact` fetches from the declared git source
-///    (`raw.githubusercontent.com/handl-lang/mlopt/main/…`) when no
+///    (`raw.githubusercontent.com/handl-lang/research-mlopt/main/…`) when no
 ///    local arm resolves. `.cache/` is ignored — the file is a
 ///    *fetched dependency artifact*, not a committed copy.
 fn resolve_conv_bn(overrides: &cli::Args) -> Result<PathBuf, String> {

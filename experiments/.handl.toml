@@ -31,7 +31,7 @@
 
 [dependencies]
 host-tensor = { git = "https://github.com/handl-lang/host-tensor", branch = "main", subdir = "src" }
-mlopt-kit  = { git = "https://github.com/handl-lang/mlopt", branch = "main", subdir = "packages/mlopt-kit" }
+mlopt-kit  = { git = "https://github.com/handl-lang/research-mlopt", branch = "main", subdir = "packages/mlopt-kit" }
 
 [patch]
 host-tensor = "../../host-tensor/src"

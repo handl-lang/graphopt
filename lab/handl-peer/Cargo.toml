@@ -11,6 +11,40 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 pyo3 = { version = "0.26" }
 serde_json = "1"
-handl-language = { path = "/home/luis/GitHub/handl-lang/host/crates/handl-language" }
-handl-kit-data-prelude = { path = "/home/luis/GitHub/handl-lang/host/crates/handl-kit-data-prelude" }
-handl-plugin-engine-transform-rewrite = { path = "/home/luis/GitHub/handl-lang/host/crates/plugin-engine-transform-rewrite" }
+handl-language = { path = "../../../kernel/crates/handl-language" }
+handl-kit-data-prelude = { path = "../../../kit-data-prelude/crates/handl-kit-data-prelude" }
+hnl-engine-transform-rewrite = { path = "../../../engine-transform-rewrite" }
+
+# ---------------------------------------------------------------------------
+# The path deps above cover only the direct edges. Everything those crates
+# declare as `git` deps (`branch = "main"`, the org float policy) must
+# resolve to the *same* local checkouts, or cargo builds two copies of each
+# shared crate and the `Language`/`Ast` types stop unifying. The `[patch]`
+# tables below redirect each git source to the sibling checkout — the same
+# convention every handl-lang repo root uses.
+#
+# Anything not listed here still resolves as a normal git dep (one source,
+# one copy) — add entries on demand; cargo names the missing package in
+# the error.
+
+[patch."https://github.com/handl-lang/kernel"]
+handl-language = { path = "../../../kernel/crates/handl-language" }
+handl-value = { path = "../../../kernel/crates/handl-value" }
+
+[patch."https://github.com/handl-lang/engine-transform"]
+hnl-engine-transform = { path = "../../../engine-transform" }
+
+[patch."https://github.com/handl-lang/engine-transform-rewrite"]
+hnl-engine-transform-rewrite = { path = "../../../engine-transform-rewrite" }
+
+[patch."https://github.com/handl-lang/kit-data-prelude"]
+handl-kit-data-prelude = { path = "../../../kit-data-prelude/crates/handl-kit-data-prelude" }
+
+[patch."https://github.com/handl-lang/host"]
+handl-runtime = { path = "../../../host/crates/handl-runtime" }
+handl-kit-data = { path = "../../../host/crates/handl-kit-data" }
+handl-platform = { path = "../../../host/crates/platform" }
+handl-plugin-ext-diag = { path = "../../../host/crates/plugin-ext-diag" }
+handl-plugin-lib-handl = { path = "../../../host/crates/plugin-lib-handl" }
+handl-plugin-lib-tag = { path = "../../../host/crates/plugin-lib-tag" }
+handl-plugin-module = { path = "../../../host/crates/plugin-module" }

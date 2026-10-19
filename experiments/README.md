@@ -52,7 +52,7 @@ bin resolves it by this ladder, first hit wins:
    stand-in);
 6. `experiments/.cache/mlopt-kit/hnl/conv_bn.hnl` — `make artifact`
    fetches it from the declared git source
-   (`raw.githubusercontent.com/handl-lang/mlopt/main/…`) when no local
+   (`raw.githubusercontent.com/handl-lang/research-mlopt/main/…`) when no local
    arm resolves.
 
 The imported program's own `from "host-tensor" import tensor` resolves

@@ -9,29 +9,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
-name = "mlopt-handl-peer"
-version = "0.1.0"
-dependencies = [
- "handl-kit-data-canonical",
- "handl-language",
- "handl-plugin-engine-transform-rewrite",
- "pyo3",
- "serde_json",
-]
-
-[[package]]
 name = "equivalent"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "00d174d5400e5e8fd687ad1049e2f578285fa914201b1af7e8b112a4546bd826"
-
-[[package]]
-name = "handl-emitters"
-version = "0.1.0"
-dependencies = [
- "handl-language",
- "plugin-engine",
-]
 
 [[package]]
 name = "handl-kit-arrow-lower"
@@ -45,24 +26,25 @@ dependencies = [
 name = "handl-kit-data"
 version = "0.1.0"
 dependencies = [
- "handl-emitters",
  "handl-language",
  "handl-platform",
  "handl-runtime",
  "serde",
  "serde_json",
+ "serde_yaml",
+ "toml",
 ]
 
 [[package]]
-name = "handl-kit-data-canonical"
+name = "handl-kit-data-prelude"
 version = "0.1.0"
 dependencies = [
- "handl-emitters",
  "handl-kit-data",
  "handl-language",
- "handl-plugin-engine-transform",
  "handl-plugin-ext-diag",
  "handl-runtime",
+ "hnl-engine-transform",
+ "serde_json",
  "serde_yaml",
 ]
 
@@ -70,7 +52,7 @@ dependencies = [
 name = "handl-language"
 version = "0.1.0"
 dependencies = [
- "plugin-engine",
+ "hnl-engine",
  "serde",
  "serde_json",
  "thiserror",
@@ -85,81 +67,6 @@ dependencies = [
  "serde_json",
  "thiserror",
  "toml",
-]
-
-[[package]]
-name = "handl-plugin-engine-exec"
-version = "0.1.0"
-dependencies = [
- "handl-language",
- "handl-platform",
- "handl-value",
- "rustc-hash",
- "serde_json",
-]
-
-[[package]]
-name = "handl-plugin-engine-lex"
-version = "0.1.0"
-dependencies = [
- "handl-language",
- "serde_json",
-]
-
-[[package]]
-name = "handl-plugin-engine-lex-pattern"
-version = "0.1.0"
-dependencies = [
- "handl-language",
- "handl-plugin-engine-lex",
-]
-
-[[package]]
-name = "handl-plugin-engine-parse"
-version = "0.1.0"
-dependencies = [
- "handl-language",
- "serde_json",
-]
-
-[[package]]
-name = "handl-plugin-engine-parse-pratt"
-version = "0.1.0"
-dependencies = [
- "handl-language",
- "handl-plugin-engine-parse",
- "serde_json",
-]
-
-[[package]]
-name = "handl-plugin-engine-transform"
-version = "0.1.0"
-dependencies = [
- "handl-language",
- "handl-plugin-ext-diag",
- "serde_json",
-]
-
-[[package]]
-name = "handl-plugin-engine-transform-rewrite"
-version = "0.1.0"
-dependencies = [
- "handl-language",
- "handl-plugin-engine-transform",
- "serde_json",
-]
-
-[[package]]
-name = "handl-plugin-engine-typecheck"
-version = "0.1.0"
-dependencies = [
- "handl-language",
- "handl-platform",
- "handl-plugin-engine-lex-pattern",
- "handl-plugin-engine-parse",
- "handl-plugin-engine-parse-pratt",
- "handl-plugin-ext-diag",
- "serde_json",
 ]
 
 [[package]]
@@ -180,13 +87,13 @@ dependencies = [
  "handl-kit-arrow-lower",
  "handl-language",
  "handl-platform",
- "handl-plugin-engine-exec",
- "handl-plugin-engine-lex",
- "handl-plugin-engine-parse",
- "handl-plugin-engine-transform-rewrite",
- "handl-plugin-engine-typecheck",
  "handl-value",
- "plugin-engine",
+ "hnl-engine",
+ "hnl-engine-exec",
+ "hnl-engine-lex",
+ "hnl-engine-parse",
+ "hnl-engine-transform-rewrite",
+ "hnl-engine-typecheck",
  "rustc-hash",
  "serde",
  "serde_json",
@@ -211,6 +118,97 @@ name = "heck"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
+
+[[package]]
+name = "hnl-engine"
+version = "0.1.0"
+source = "git+https://github.com/handl-lang/engine?branch=main#68446aef714e01e633804b2a80cdba315e273817"
+dependencies = [
+ "handl-value",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "hnl-engine-exec"
+version = "0.1.0"
+source = "git+https://github.com/handl-lang/engine-exec?branch=main#48fc199e0ec404b7d5891e51fb8402563ca9b795"
+dependencies = [
+ "handl-language",
+ "handl-platform",
+ "handl-value",
+ "rustc-hash",
+ "serde_json",
+]
+
+[[package]]
+name = "hnl-engine-lex"
+version = "0.1.0"
+source = "git+https://github.com/handl-lang/engine-lex?branch=main#0560545cf9803cc9db8f767fa5c34c4ce8188ed7"
+dependencies = [
+ "handl-language",
+ "serde_json",
+]
+
+[[package]]
+name = "hnl-engine-lex-pattern"
+version = "0.1.0"
+source = "git+https://github.com/handl-lang/engine-lex-pattern?branch=main#4d1525995bebcfcba0a95f9187888bbe366b3ff3"
+dependencies = [
+ "handl-language",
+ "hnl-engine-lex",
+]
+
+[[package]]
+name = "hnl-engine-parse"
+version = "0.1.0"
+source = "git+https://github.com/handl-lang/engine-parse?branch=main#fb7ceb1d387511a6fb1cdc19e26bcf582d764722"
+dependencies = [
+ "handl-language",
+ "serde_json",
+]
+
+[[package]]
+name = "hnl-engine-parse-pratt"
+version = "0.1.0"
+source = "git+https://github.com/handl-lang/engine-parse-pratt?branch=main#e534e8bc3288408209cef6bb2e344a10be26a9ac"
+dependencies = [
+ "handl-language",
+ "hnl-engine-parse",
+ "serde_json",
+]
+
+[[package]]
+name = "hnl-engine-transform"
+version = "0.1.0"
+dependencies = [
+ "handl-language",
+ "handl-plugin-ext-diag",
+ "serde_json",
+]
+
+[[package]]
+name = "hnl-engine-transform-rewrite"
+version = "0.1.0"
+dependencies = [
+ "handl-language",
+ "hnl-engine-transform",
+ "serde_json",
+]
+
+[[package]]
+name = "hnl-engine-typecheck"
+version = "0.1.0"
+source = "git+https://github.com/handl-lang/engine-typecheck?branch=main#0e8113f852a65da54c5a1c6cbe3d722b6b5780f0"
+dependencies = [
+ "handl-language",
+ "handl-platform",
+ "handl-plugin-ext-diag",
+ "hnl-engine-lex-pattern",
+ "hnl-engine-parse",
+ "hnl-engine-parse-pratt",
+ "serde_json",
+]
 
 [[package]]
 name = "indexmap"
@@ -239,9 +237,9 @@ checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
 
 [[package]]
 name = "libc"
-version = "0.2.190"
+version = "0.2.191"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce5d3ddc6d3fa000eb1536d85e147bfe31aacaba692ed6a876f95cb7c855be78"
+checksum = "65cd87c9a6d60536580b316ad985726104730a5151c99845f2490428ef91240a"
 
 [[package]]
 name = "memchr"
@@ -259,19 +257,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "mlopt-handl-peer"
+version = "0.1.0"
+dependencies = [
+ "handl-kit-data-prelude",
+ "handl-language",
+ "hnl-engine-transform-rewrite",
+ "pyo3",
+ "serde_json",
+]
+
+[[package]]
 name = "once_cell"
 version = "1.21.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
-
-[[package]]
-name = "plugin-engine"
-version = "0.1.0"
-dependencies = [
- "handl-value",
- "serde",
- "serde_json",
-]
 
 [[package]]
 name = "portable-atomic"
@@ -568,3 +568,59 @@ name = "zmij"
 version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
+
+[[patch.unused]]
+name = "handl-plugin-lib-handl"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "handl-plugin-lib-tag"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "handl-plugin-module"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "sepia-acp"
+version = "0.0.0"
+
+[[patch.unused]]
+name = "sepia-convert"
+version = "0.0.0"
+
+[[patch.unused]]
+name = "sepia-core"
+version = "0.0.0"
+
+[[patch.unused]]
+name = "sepia-driver"
+version = "0.0.0"
+
+[[patch.unused]]
+name = "sepia-driver-cline"
+version = "0.0.0"
+
+[[patch.unused]]
+name = "sepia-driver-devin"
+version = "0.0.0"
+
+[[patch.unused]]
+name = "sepia-host"
+version = "0.0.0"
+
+[[patch.unused]]
+name = "sepia-meta"
+version = "0.0.0"
+
+[[patch.unused]]
+name = "sepia-proto"
+version = "0.0.0"
+
+[[patch.unused]]
+name = "sepia-session"
+version = "0.0.0"
+
+[[patch.unused]]
+name = "sepia-testkit"
+version = "0.0.0"

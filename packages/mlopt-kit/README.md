@@ -11,7 +11,7 @@ forks, no vendoring.
 
 | layer | crate | piece |
 |---|---|---|
-| language | `handl-kit-data-canonical` | `language_from_yaml()` — the canonical `Language` as data |
+| language | `handl-kit-data-prelude` | `language_from_yaml()` — the canonical `Language` as data |
 | value | `handl-value` | `TaggedValue` incl. `Tensor` (the real tensor variant) |
 | runtime | `handl-runtime` | `Runtime` + `EngineRegistry` + `RuntimeConfig` + `ModuleLoader` |
 | engines | `hnl-engine-{lex-pattern,parse-pratt,exec-tree-walk}` (+`hnl-engine-exec`) | `"data"`/`"pratt"`/`"tree-walk"` — the smallest honest set (no sdkgen/compile/lint/lsp); one crate per `engine-*` repo post-ADR-0128 |
@@ -137,4 +137,4 @@ cargo test -p mlopt-kit
 overflows libtest's default 2 MiB test-thread stack on ordinary
 expressions — the repo-root `.cargo/config.toml` sets
 `RUST_MIN_STACK = 32 MiB`, matching upstream's own
-`kit-canonical/.cargo/config.toml`.
+`kit-prelude/.cargo/config.toml`.

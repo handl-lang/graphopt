@@ -34,10 +34,10 @@ role = "the arrow-calculus kernel — the Language data schema, the tagged Value
 
 [[component]]
 name = "lang"
-repo = "handl-lang/lang"
+repo = "handl-lang/kit-data-prelude"
 float = "main"
 kind = "cargo-git"
-crates = ["handl-kit-data-canonical"]
+crates = ["handl-kit-data-prelude"]
 role = "the canonical Language as data — YAML fragments → Language. A language is a data change, never an engine recompile (the same 'as data' thesis as this paper's)."
 
 [[component]]
@@ -76,7 +76,7 @@ role = "the 18-op `tensor.*` host surface — dense n-d f64 tensors over the {\"
 
 [[component]]
 name = "mlopt-kit"
-repo = "handl-lang/mlopt"
+repo = "handl-lang/research-mlopt"
 path = "packages/mlopt-kit"
 float = "main"
 kind = "cargo-git"
@@ -89,7 +89,7 @@ role = "mlopt's composition seam — the intended direct dep (it assembles this 
 
 [[component]]
 name = "mlopt"
-repo = "handl-lang/mlopt"
+repo = "handl-lang/research-mlopt"
 path = "packages/"
 float = "main"
 kind = "python-git"
@@ -133,4 +133,4 @@ closed = "platform 6ce0e125 — fetch-on-miss in resolve_dependencies clones the
 [[gap]]
 what = "mlopt's Python packages are not cargo deps; the discovery arm composes at the Python env level"
 where = "manifest's python-git component"
-workaround = "declared here for reproducibility; consumed as `git+https://github.com/handl-lang/mlopt` uv/pip deps inside a mlopt venv"
+workaround = "declared here for reproducibility; consumed as `git+https://github.com/handl-lang/research-mlopt` uv/pip deps inside a mlopt venv"

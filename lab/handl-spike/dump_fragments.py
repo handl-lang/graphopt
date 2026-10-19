@@ -2,7 +2,7 @@
 
 The bridge (`mlopt_discovery.handl`) already emits handl-shaped rows;
 this tool writes them into the *ten-file layout* `language_from_dir`
-reads (`handl-kit-data-canonical`), so a handl host can assemble a
+reads (`handl-kit-data-prelude`), so a handl host can assemble a
 `Language` from mlopt's vocabulary:
 
     tokens.yaml · grammar.yaml · eval.yaml · types.yaml · ast.yaml

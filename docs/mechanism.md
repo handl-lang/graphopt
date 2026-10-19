@@ -272,7 +272,7 @@ assembles a `Language` from them with `language_from_dir`.  Measured
 end-to-end: a mlopt law lands in `lang.transforms` with its fields
 intact, and its condition deserializes as `And([KindAt, ChildCount])`
 (`project/retros/handl-q0-language-as-data.md`; the handl-side test is
-`crates/handl-kit-data-canonical/tests/mlopt_fragments.rs`).
+`kit-data-prelude/crates/handl-kit-data-prelude/tests/catopt_fragments.rs`).
 
 Two traps cost real time and are worth knowing: `TransformDef.when` is
 **one** condition (a conjunction is spelled `And([...])`), and under

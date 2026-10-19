@@ -36,7 +36,7 @@ END = "# dev-link: end"
 # Repos this repo references via git deps (any Cargo.toml, any depth) —
 # plus one hop through the referenced repos' own manifests: patched-in
 # sibling crates git-dep further repos (e.g. host's own
-# `[patch."…/host"]` table exists because kit-canonical's manifest
+# `[patch."…/host"]` table exists because kit-data-prelude's manifest
 # git-deps host crates).
 pat = re.compile(r'git = "' + re.escape(base) + r'([A-Za-z0-9._-]+)"')
 

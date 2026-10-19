@@ -190,7 +190,7 @@ impl CatoptKit {
 
     /// The shared assembly step.
     ///
-    /// Mirrors `kit-canonical`'s `Kit::build_kit` minus what mlopt does
+    /// Mirrors `kit-prelude`'s `Kit::build_kit` minus what mlopt does
     /// not compose: no stdlib/meta module chain, no `self`/`hello`
     /// globals, no typecheck engine. (`self` is the `Language`-value
     /// binding meta functions need — drop it until a mlopt `.hnl`
