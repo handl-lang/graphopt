@@ -32,6 +32,7 @@ INTENTS = (
     "e2e",
     "bounded",
     "integration",
+    "discovery",
 )
 
 #: Controlled vocabulary of mechanisms (for filtering / grouping).
@@ -400,6 +401,19 @@ SUITES: list[SuiteSpec] = [
         tier="model",
         mechanisms=("serving", "checkpoint"),
         needs_cuda=True,
+    ),
+    # -- discovery: named optimizations vs the registered floor --------
+    _s(
+        "discovery",
+        "discovery",
+        "Named-optimization scorecard",
+        "Can the engine derive each named optimization from the "
+        "literature, certify it, and beat the best registered "
+        "baseline (eager / inductor / known-good impl)?",
+        "All cases found + certified; ties with the registered floor "
+        "are rediscoveries — only a strictly-below form reports WIN.",
+        tier="micro",
+        mechanisms=("egraph", "laws", "carriers"),
     ),
 ]
 

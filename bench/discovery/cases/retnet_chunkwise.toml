@@ -1,0 +1,38 @@
+name = "retnet_chunkwise"
+title = "RetNet chunkwise retention carrier"
+category = "memory"
+citation = """
+Sun et al. 2023, "Retentive Network" — the chunkwise-recurrent form of
+retention trades the (T,T) decay-masked score matrix for a decayed
+cross-chunk state.  The spelled fixture is the intake zoo's
+`_ChunkedRetention` (`(QKᵀ ⊙ D)V`, decay built in-graph); the engine
+lifts it to the `om_decayed` carrier — measured parity with the
+paper's own chunked impl, faster under graph replay
+(lab/probes/retnet_baseline_probe.py).
+"""
+source = "retnet_chunked"
+size = 64
+rules = "carrier_search"
+cost = "launch"
+max_iterations = 16
+max_enodes = 200_000
+
+[expect]
+signals = ["law:om_decayed_lift", "op:om_decayed"]
+ops = ["om_decayed"]
+
+[[baselines]]
+name = "eager quadratic"
+kind = "self"
+[[baselines]]
+name = "paper chunkwise"
+kind = "ref"
+ref = "retnet_chunked"
+note = "Sun et al. 2023 chunkwise recurrence, reimplemented"
+[[baselines]]
+name = "inductor"
+kind = "compile"
+[[baselines]]
+name = "FLA chunk_retention"
+kind = "external"
+note = "Triton kernel — scratch dep; measured ~7-11x ahead of the carrier"

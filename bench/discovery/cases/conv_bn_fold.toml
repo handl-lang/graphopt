@@ -1,0 +1,33 @@
+name = "conv_bn_fold"
+title = "Conv2d + eval BatchNorm2d fold"
+category = "speed"
+citation = """
+The standard inference fold — PyTorch's `torch.nn.utils.fuse_conv_bn_eval`.
+In mlopt it is `conv_bn_fold`, the first *verbatim* machine-minted
+composite law (depth-4 `syn_*` chain shipped through
+`mlopt_core.laws.minted`; project/retros/promoted-laws.md).  The spelled
+fixture is the eval-mode `BatchNorm2d(Conv2d(x))` site the mint saw
+(tests/test_minted_laws.py).
+"""
+source = "conv_bn_eval"
+size = 6
+rules = "default"
+cost = "launch"
+max_iterations = 8
+
+[expect]
+signals = ["law:conv_bn_fold"]
+ops = ["conv2d"]
+absent_ops = ["batch_norm"]
+
+[[baselines]]
+name = "eager"
+kind = "self"
+[[baselines]]
+name = "hand-folded conv"
+kind = "ref"
+ref = "conv_bn_folded"
+note = "PyTorch fold recipe — one conv, BN absorbed into W'/b'"
+[[baselines]]
+name = "inductor"
+kind = "compile"

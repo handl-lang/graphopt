@@ -1,0 +1,31 @@
+name = "weight_chain_fold"
+title = "Two-layer Linear chain → weights-first fold"
+category = "speed"
+citation = """
+`linear(linear(x,A),B) → linear(x, B·A)` — `assoc_linear` reaches the
+weights-first form whose param-side matmul folds at compile time.  The
+reassoc_scale result (docs/results.md): the e-graph finds a form
+Inductor's post-grad graph cannot express (no weight folding without
+`freezing`).
+"""
+source = "weight_chain"
+size = 16
+rules = "default"
+cost = "launch"
+
+[expect]
+signals = ["law:assoc_linear"]
+ops = ["matmul"]
+
+[[baselines]]
+name = "eager two-GEMM"
+kind = "self"
+[[baselines]]
+name = "pre-folded Linear"
+kind = "ref"
+ref = "weight_chain_fused"
+note = "one Linear carrying W2@W1 — what weight folding ships"
+[[baselines]]
+name = "inductor"
+kind = "compile"
+note = "no freeze — Inductor cannot fold the weights"

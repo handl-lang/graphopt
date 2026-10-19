@@ -1,0 +1,29 @@
+name = "mul_unsq_nat"
+title = "Two-sided unsqueeze naturality"
+category = "speed"
+citation = """
+`mul_unsq_nat` — the first law minted from a corpus op-tuple
+(DeltaRuleBlock's `β·k`): `unsq(u,d)·unsq(v,d) → unsq(u·v,d)`, guard
+resolved by the adversarial sweep (project/retros/mul-unsq-nat.md;
+provenance MACHINE_SHIPPED).  Measured −12.27% on its source workload.
+"""
+source = "mul_unsq_nat"
+size = 6
+rules = "default"
+cost = "launch"
+
+[expect]
+signals = ["law:mul_unsq_nat"]
+# fused form lifts the view ONCE — the spelled form lifts it twice
+max_ops = { unsqueeze = 1 }
+
+[[baselines]]
+name = "eager spelled"
+kind = "self"
+[[baselines]]
+name = "mul-then-unsqueeze"
+kind = "ref"
+ref = "mul_unsq_folded"
+[[baselines]]
+name = "inductor"
+kind = "compile"

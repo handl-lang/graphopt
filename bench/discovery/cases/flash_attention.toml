@@ -1,0 +1,35 @@
+name = "flash_attention"
+title = "Hand-spelled softmax attention → fused SDPA"
+category = "memory"
+citation = """
+Dao et al. 2022, FlashAttention — attention without materialising the
+(T,T) score matrix.  The spelled fixture computes
+`softmax(q@kᵀ/√d + causal-mask) @ v` by hand; the `sdpa_fold_*` family
+folds it to the fused `sdpa` op and the causal-mask specialization
+closes it to `is_causal` (DEFAULT rules).
+"""
+source = "flash_attention"
+size = 8
+rules = "default"
+cost = "launch"
+
+[expect]
+signals = [
+  "law:sdpa_fold_adddiv",
+  "law:sdpa_fold_add",
+  "law:sdpa_fold_masked_fill",
+]
+ops = ["sdpa"]
+absent_ops = ["softmax"]
+
+[[baselines]]
+name = "eager spelled"
+kind = "self"
+[[baselines]]
+name = "F.scaled_dot_product_attention"
+kind = "ref"
+ref = "sdpa_known"
+note = "the fused kernel PyTorch ships"
+[[baselines]]
+name = "inductor"
+kind = "compile"

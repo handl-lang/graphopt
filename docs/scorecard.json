@@ -1,0 +1,586 @@
+{
+  "schema": 1,
+  "lane": "full",
+  "generated_utc": "2026-10-19T23:41:07+00:00",
+  "env": {
+    "timestamp_utc": "2026-10-19T23:41:07+00:00",
+    "python": "3.13.9",
+    "torch": "2.14.0+cu130",
+    "torch_cuda": "13.0",
+    "device": "cpu",
+    "device_name": "12th Gen Intel(R) Core(TM) i5-12500H",
+    "cpu_count": 16,
+    "git_sha": "712c292",
+    "git_dirty": true,
+    "argv": [
+      "/home/luis/GitHub/handl-lang/research-mlopt/bench/discovery/run.py",
+      "--full",
+      "--min-run-time",
+      "0.02",
+      "--out",
+      "docs"
+    ]
+  },
+  "cases": [
+    {
+      "name": "blelloch_scan",
+      "title": "Unrolled first-order recurrence \u2192 parallel scan",
+      "category": "speed",
+      "citation": "Blelloch 1990, \"Prefix sums and their applications\" \u2014 the sequential\nrecurrence `h_t = a\u00b7h_{t-1} + x_t` re-expressed as a parallel prefix\nscan.  The spelled fixture unrolls the recurrence over T steps; the\nengine's diagonal-affine monoid lift (`decay_state_lift`,\nSCAN_DIAG_LAWS) turns it into the `aff_diag`/`applyd` carrier \u2014 the\nsame monoid RetNet's chunked scan runs on.\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 8.881784197001252e-16,
+      "axis": "launch",
+      "cost_before": 759.0,
+      "cost_after": 752.0,
+      "best_baseline": "eager unrolled",
+      "best_baseline_cost": 759.0,
+      "beat_best": true,
+      "beat_best_measured": false,
+      "signals_seen": [
+        "law:decay_state_lift",
+        "op:applyd"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 0.959,
+        "n_enodes": 43,
+        "iterations": 2,
+        "extracted_ops": [
+          "add",
+          "aff_diag",
+          "applyd",
+          "mul",
+          "select",
+          "zeros"
+        ],
+        "cert_steps": 7,
+        "cert_egraph_dep": 0,
+        "median_s": {
+          "mlopt": 0.00020730855001602322,
+          "eager unrolled": 4.823796400160063e-05,
+          "cumsum prefix": 2.2026216000085696e-05,
+          "inductor": 3.864699829136953e-05
+        },
+        "mlopt_ms": 0.20730855001602322
+      },
+      "baselines": [
+        {
+          "name": "eager unrolled",
+          "kind": "self",
+          "available": true,
+          "cost": 759.0,
+          "median_s": 4.823796400160063e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "cumsum prefix",
+          "kind": "ref",
+          "available": true,
+          "cost": 1494.0,
+          "median_s": 2.2026216000085696e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 8.881784197001252e-16,
+          "note": "h_t = P_t \u00b7 cumsum(x_t/P_t) \u2014 the closed-form parallel scan"
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 3.864699829136953e-05,
+          "iqr_s": 1.3092358130961657e-06,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": "measured-only (no symbolic form)"
+        }
+      ]
+    },
+    {
+      "name": "conv_bn_fold",
+      "title": "Conv2d + eval BatchNorm2d fold",
+      "category": "speed",
+      "citation": "The standard inference fold \u2014 PyTorch's `torch.nn.utils.fuse_conv_bn_eval`.\nIn mlopt it is `conv_bn_fold`, the first *verbatim* machine-minted\ncomposite law (depth-4 `syn_*` chain shipped through\n`mlopt_core.laws.minted`; project/retros/promoted-laws.md).  The spelled\nfixture is the eval-mode `BatchNorm2d(Conv2d(x))` site the mint saw\n(tests/test_minted_laws.py).\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 1.6053824936079764e-13,
+      "axis": "launch",
+      "cost_before": 29186.0,
+      "cost_after": 27649.0,
+      "best_baseline": "hand-folded conv",
+      "best_baseline_cost": 27649.0,
+      "beat_best": false,
+      "beat_best_measured": true,
+      "signals_seen": [
+        "law:conv_bn_fold"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 0.04,
+        "n_enodes": 31,
+        "iterations": 2,
+        "extracted_ops": [
+          "add",
+          "conv2d",
+          "mul",
+          "reshape",
+          "rsqrt",
+          "sub"
+        ],
+        "cert_steps": 9,
+        "cert_egraph_dep": 6,
+        "median_s": {
+          "mlopt": 1.2139923099311999e-05,
+          "eager": 2.0923720992868767e-05,
+          "hand-folded conv": 1.2517814600141719e-05,
+          "inductor": 7.355499838013202e-05
+        },
+        "mlopt_ms": 0.012139923099312
+      },
+      "baselines": [
+        {
+          "name": "eager",
+          "kind": "self",
+          "available": true,
+          "cost": 29186.0,
+          "median_s": 2.0923720992868767e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "hand-folded conv",
+          "kind": "ref",
+          "available": true,
+          "cost": 27649.0,
+          "median_s": 1.2517814600141719e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 5.055496332673215e-08,
+          "note": "PyTorch fold recipe \u2014 one conv, BN absorbed into W'/b'"
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 7.355499838013202e-05,
+          "iqr_s": 4.011002602055669e-06,
+          "verify_passed": true,
+          "verify_max_abs": 6.661338147750939e-16,
+          "note": "measured-only (no symbolic form)"
+        }
+      ]
+    },
+    {
+      "name": "flash_attention",
+      "title": "Hand-spelled softmax attention \u2192 fused SDPA",
+      "category": "memory",
+      "citation": "Dao et al. 2022, FlashAttention \u2014 attention without materialising the\n(T,T) score matrix.  The spelled fixture computes\n`softmax(q@k\u1d40/\u221ad + causal-mask) @ v` by hand; the `sdpa_fold_*` family\nfolds it to the fused `sdpa` op and the causal-mask specialization\ncloses it to `is_causal` (DEFAULT rules).\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 2.220446049250313e-16,
+      "axis": "launch",
+      "cost_before": 33544.0,
+      "cost_after": 32772.0,
+      "best_baseline": "F.scaled_dot_product_attention",
+      "best_baseline_cost": 32772.0,
+      "beat_best": false,
+      "beat_best_measured": true,
+      "signals_seen": [
+        "law:sdpa_fold_adddiv"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 0.049,
+        "n_enodes": 21,
+        "iterations": 2,
+        "extracted_ops": [
+          "linear",
+          "sdpa"
+        ],
+        "cert_steps": 1,
+        "cert_egraph_dep": 1,
+        "median_s": {
+          "mlopt": 3.351596499851439e-05,
+          "eager spelled": 4.485657099576201e-05,
+          "F.scaled_dot_product_attention": 3.577583699370734e-05,
+          "inductor": 0.00010062400542665273
+        },
+        "mlopt_ms": 0.03351596499851439
+      },
+      "baselines": [
+        {
+          "name": "eager spelled",
+          "kind": "self",
+          "available": true,
+          "cost": 33544.0,
+          "median_s": 4.485657099576201e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "F.scaled_dot_product_attention",
+          "kind": "ref",
+          "available": true,
+          "cost": 32772.0,
+          "median_s": 3.577583699370734e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 2.220446049250313e-16,
+          "note": "the fused kernel PyTorch ships"
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 0.00010062400542665273,
+          "iqr_s": 4.968504072166979e-06,
+          "verify_passed": true,
+          "verify_max_abs": 1.1102230246251565e-16,
+          "note": "measured-only (no symbolic form)"
+        }
+      ]
+    },
+    {
+      "name": "mul_unsq_nat",
+      "title": "Two-sided unsqueeze naturality",
+      "category": "speed",
+      "citation": "`mul_unsq_nat` \u2014 the first law minted from a corpus op-tuple\n(DeltaRuleBlock's `\u03b2\u00b7k`): `unsq(u,d)\u00b7unsq(v,d) \u2192 unsq(u\u00b7v,d)`, guard\nresolved by the adversarial sweep (project/retros/mul-unsq-nat.md;\nprovenance MACHINE_SHIPPED).  Measured \u221212.27% on its source workload.\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 0.0,
+      "axis": "launch",
+      "cost_before": 75.0,
+      "cost_after": 50.0,
+      "best_baseline": "mul-then-unsqueeze",
+      "best_baseline_cost": 50.0,
+      "beat_best": false,
+      "beat_best_measured": false,
+      "signals_seen": [
+        "law:mul_unsq_nat"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 0.022,
+        "n_enodes": 7,
+        "iterations": 2,
+        "extracted_ops": [
+          "mul",
+          "unsqueeze"
+        ],
+        "cert_steps": 1,
+        "cert_egraph_dep": 0,
+        "median_s": {
+          "mlopt": 5.3192713996395465e-06,
+          "eager spelled": 4.048326300107874e-06,
+          "mul-then-unsqueeze": 3.109276300529018e-06,
+          "inductor": 2.2487001842819154e-05
+        },
+        "mlopt_ms": 0.005319271399639547
+      },
+      "baselines": [
+        {
+          "name": "eager spelled",
+          "kind": "self",
+          "available": true,
+          "cost": 75.0,
+          "median_s": 4.048326300107874e-06,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "mul-then-unsqueeze",
+          "kind": "ref",
+          "available": true,
+          "cost": 50.0,
+          "median_s": 3.109276300529018e-06,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 2.2487001842819154e-05,
+          "iqr_s": 1.1627416824921966e-06,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": "measured-only (no symbolic form)"
+        }
+      ]
+    },
+    {
+      "name": "retnet_chunkwise",
+      "title": "RetNet chunkwise retention carrier",
+      "category": "memory",
+      "citation": "Sun et al. 2023, \"Retentive Network\" \u2014 the chunkwise-recurrent form of\nretention trades the (T,T) decay-masked score matrix for a decayed\ncross-chunk state.  The spelled fixture is the intake zoo's\n`_ChunkedRetention` (`(QK\u1d40 \u2299 D)V`, decay built in-graph); the engine\nlifts it to the `om_decayed` carrier \u2014 measured parity with the\npaper's own chunked impl, faster under graph replay\n(lab/probes/retnet_baseline_probe.py).\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 0.0,
+      "axis": "launch",
+      "cost_before": 761863.0,
+      "cost_after": 761862.0,
+      "best_baseline": "paper chunkwise",
+      "best_baseline_cost": 491656.0,
+      "beat_best": false,
+      "beat_best_measured": true,
+      "signals_seen": [
+        "law:om_decayed_lift",
+        "op:om_decayed"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 0.064,
+        "n_enodes": 28,
+        "iterations": 2,
+        "extracted_ops": [
+          "arange",
+          "clamp_min",
+          "contiguous",
+          "detach_",
+          "div",
+          "linear",
+          "matmul",
+          "om_decayed",
+          "pow",
+          "sub",
+          "transpose",
+          "tril",
+          "unsqueeze"
+        ],
+        "cert_steps": 1,
+        "cert_egraph_dep": 0,
+        "median_s": {
+          "mlopt": 7.883914599369746e-05,
+          "eager quadratic": 0.00013709141498839016,
+          "paper chunkwise": 0.0002462138498958666,
+          "inductor": 0.0002347510016988963
+        },
+        "mlopt_ms": 0.07883914599369746
+      },
+      "baselines": [
+        {
+          "name": "eager quadratic",
+          "kind": "self",
+          "available": true,
+          "cost": 761863.0,
+          "median_s": 0.00013709141498839016,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "paper chunkwise",
+          "kind": "ref",
+          "available": true,
+          "cost": 491656.0,
+          "median_s": 0.0002462138498958666,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 3.3306690738754696e-16,
+          "note": "Sun et al. 2023 chunkwise recurrence, reimplemented"
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 0.0002347510016988963,
+          "iqr_s": 8.018498192541301e-06,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": "measured-only (no symbolic form)"
+        },
+        {
+          "name": "FLA chunk_retention",
+          "kind": "external",
+          "available": false,
+          "cost": null,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
+          "note": "Triton kernel \u2014 scratch dep; measured ~7-11x ahead of the carrier"
+        }
+      ]
+    },
+    {
+      "name": "swiglu_mlp",
+      "title": "Two-projection SwiGLU \u2192 widened-GEMM fuse",
+      "category": "speed",
+      "citation": "LLaMA's SwiGLU MLP (Shazeer 2020, GLU variants): `silu(x@A.T) \u2299 (x@B.T)`\nfuses to one (2d,d) projection plus a split \u2014 the pairing pass\n(`paired_extract`) or `swiglu_fuse`.  Measured 2.00-2.11x vs\ntorch.compile on the delivered artifact (docs/results.md).\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 0.0,
+      "axis": "launch",
+      "cost_before": 4356.0,
+      "cost_after": 4355.0,
+      "best_baseline": "eager two-GEMM",
+      "best_baseline_cost": 4356.0,
+      "beat_best": true,
+      "beat_best_measured": false,
+      "signals_seen": [
+        "stat:paired_extract"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 0.028,
+        "n_enodes": 9,
+        "iterations": 2,
+        "extracted_ops": [
+          "concat",
+          "linear",
+          "mul",
+          "silu",
+          "split"
+        ],
+        "cert_steps": 2,
+        "cert_egraph_dep": 0,
+        "median_s": {
+          "mlopt": 2.221014200767968e-05,
+          "eager two-GEMM": 1.5697737799200694e-05,
+          "fused SwiGLU": 1.5146849599841516e-05,
+          "inductor": 5.440400855150074e-05
+        },
+        "mlopt_ms": 0.02221014200767968
+      },
+      "baselines": [
+        {
+          "name": "eager two-GEMM",
+          "kind": "self",
+          "available": true,
+          "cost": 4356.0,
+          "median_s": 1.5697737799200694e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "fused SwiGLU",
+          "kind": "ref",
+          "available": true,
+          "cost": 4485.0,
+          "median_s": 1.5146849599841516e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": "one widened Linear + split \u2014 the hand-fused impl"
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 5.440400855150074e-05,
+          "iqr_s": 2.8885006031487137e-06,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": "measured-only (no symbolic form)"
+        }
+      ]
+    },
+    {
+      "name": "weight_chain_fold",
+      "title": "Two-layer Linear chain \u2192 weights-first fold",
+      "category": "speed",
+      "citation": "`linear(linear(x,A),B) \u2192 linear(x, B\u00b7A)` \u2014 `assoc_linear` reaches the\nweights-first form whose param-side matmul folds at compile time.  The\nreassoc_scale result (docs/results.md): the e-graph finds a form\nInductor's post-grad graph cannot express (no weight folding without\n`freezing`).\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 2.220446049250313e-16,
+      "axis": "launch",
+      "cost_before": 4098.0,
+      "cost_after": 2049.0,
+      "best_baseline": "pre-folded Linear",
+      "best_baseline_cost": 2049.0,
+      "beat_best": false,
+      "beat_best_measured": true,
+      "signals_seen": [
+        "law:assoc_linear"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 0.019,
+        "n_enodes": 7,
+        "iterations": 2,
+        "extracted_ops": [
+          "linear",
+          "matmul"
+        ],
+        "cert_steps": 1,
+        "cert_egraph_dep": 0,
+        "median_s": {
+          "mlopt": 5.140445800498128e-06,
+          "eager two-GEMM": 9.940823900979013e-06,
+          "pre-folded Linear": 5.641874099092092e-06,
+          "inductor": 5.7689991081133485e-05
+        },
+        "mlopt_ms": 0.005140445800498128
+      },
+      "baselines": [
+        {
+          "name": "eager two-GEMM",
+          "kind": "self",
+          "available": true,
+          "cost": 4098.0,
+          "median_s": 9.940823900979013e-06,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "pre-folded Linear",
+          "kind": "ref",
+          "available": true,
+          "cost": 2049.0,
+          "median_s": 5.641874099092092e-06,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 2.823249983796572e-08,
+          "note": "one Linear carrying W2@W1 \u2014 what weight folding ships"
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 5.7689991081133485e-05,
+          "iqr_s": 2.6205016183666885e-06,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": "no freeze \u2014 Inductor cannot fold the weights"
+        }
+      ]
+    }
+  ]
+}

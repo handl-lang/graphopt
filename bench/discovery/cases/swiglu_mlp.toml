@@ -1,0 +1,29 @@
+name = "swiglu_mlp"
+title = "Two-projection SwiGLU → widened-GEMM fuse"
+category = "speed"
+citation = """
+LLaMA's SwiGLU MLP (Shazeer 2020, GLU variants): `silu(x@A.T) ⊙ (x@B.T)`
+fuses to one (2d,d) projection plus a split — the pairing pass
+(`paired_extract`) or `swiglu_fuse`.  Measured 2.00-2.11x vs
+torch.compile on the delivered artifact (docs/results.md).
+"""
+source = "swiglu_mlp"
+size = 16
+rules = "default"
+cost = "launch"
+
+[expect]
+signals = ["law:swiglu_fuse", "stat:paired_extract"]
+ops = ["concat"]
+
+[[baselines]]
+name = "eager two-GEMM"
+kind = "self"
+[[baselines]]
+name = "fused SwiGLU"
+kind = "ref"
+ref = "swiglu_fused"
+note = "one widened Linear + split — the hand-fused impl"
+[[baselines]]
+name = "inductor"
+kind = "compile"

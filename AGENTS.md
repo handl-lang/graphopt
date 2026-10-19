@@ -612,4 +612,7 @@ is the source of truth for a suite's **intent** (the question it
 answers), its `question`/`expects`, `tier`, `status`, controlled
 `mechanisms` and `needs_cuda` — the README tables and the dashboard
 grouping are generated from it, so they cannot drift.  Details in
-`bench/README.md`.
+`bench/README.md`.  The named-optimization corpus lives in
+`bench/discovery/` (TOML `cases/` + known-good `refs/`); its runner is
+`python -m bench.discovery.run --fast|--full` (registered as the
+`discovery` suite) and emits `docs/scorecard.md` + `.json`.

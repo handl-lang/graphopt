@@ -200,19 +200,25 @@ below; `python -m bench catalog --check` fails if it drifts (and
 |---|---|---|---|
 | `vllm_compare` _(cuda)_ | model | Can vLLM serve a mlopt-optimized model token-for-token? | WIN — token-for-token agreement; the wins are complementary, not competing. |
 
+### discovery
+
+| suite | tier | question | expected |
+|---|---|---|---|
+| `discovery` | micro | Can the engine derive each named optimization from the literature, certify it, and beat the best registered baseline (eager / inductor / known-good impl)? | All cases found + certified; ties with the registered floor are rediscoveries — only a strictly-below form reports WIN. |
+
 ## By mechanism
 
 | mechanism | suites |
 |---|---|
-| laws | `law_bench`, `laws_effect` |
-| egraph | `search_efficiency`, `contraction_ladder`, `reassoc_scale` |
+| laws | `law_bench`, `laws_effect`, `discovery` |
+| egraph | `search_efficiency`, `contraction_ladder`, `reassoc_scale`, `discovery` |
 | cost | `cost_fidelity`, `eval_axis`, `contraction_ladder` |
 | policy | `policy_value` |
 | pairing | `reassoc_scale`, `real_win_hunt`, `killer_demo`, `model_bench`, `e2e_model`, `e2e_models2`, `e2e_llm`, `stories15m_bench`, `bench_e2e` |
 | autotune | `real_win_hunt`, `killer_demo`, `model_bench` |
 | morphism | `morphism_coverage`, `morphism_e2e` |
 | scan | `real_linear_attn` |
-| carriers | `real_linear_attn`, `decode_scan_bench`, `bench_omd2` |
+| carriers | `real_linear_attn`, `decode_scan_bench`, `bench_omd2`, `discovery` |
 | decode | `decode_scan_bench`, `decode_bench` |
 | cuda-graph | `decode_scan_bench` |
 | omd | `bench_omd2` |

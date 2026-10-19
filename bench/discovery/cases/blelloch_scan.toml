@@ -1,0 +1,31 @@
+name = "blelloch_scan"
+title = "Unrolled first-order recurrence → parallel scan"
+category = "speed"
+citation = """
+Blelloch 1990, "Prefix sums and their applications" — the sequential
+recurrence `h_t = a·h_{t-1} + x_t` re-expressed as a parallel prefix
+scan.  The spelled fixture unrolls the recurrence over T steps; the
+engine's diagonal-affine monoid lift (`decay_state_lift`,
+SCAN_DIAG_LAWS) turns it into the `aff_diag`/`applyd` carrier — the
+same monoid RetNet's chunked scan runs on.
+"""
+source = "blelloch_scan"
+size = 8
+rules = "default"
+cost = "launch"
+
+[expect]
+signals = ["law:decay_state_lift", "op:applyd"]
+ops = ["applyd"]
+
+[[baselines]]
+name = "eager unrolled"
+kind = "self"
+[[baselines]]
+name = "cumsum prefix"
+kind = "ref"
+ref = "blelloch_prefix"
+note = "h_t = P_t · cumsum(x_t/P_t) — the closed-form parallel scan"
+[[baselines]]
+name = "inductor"
+kind = "compile"
