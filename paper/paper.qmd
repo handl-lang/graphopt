@@ -45,21 +45,33 @@ result.
 
 # Introduction
 
-A tensor-program optimizer faces four questions that are usually
-conflated: *optimization* (choosing a better implementation among
-known transformations), *discovery* (finding transformations nobody
-wrote), *verification* (establishing validity before acceptance), and
-*search* (exploring the space efficiently).  Equality saturation
-[@tate2009; @willsey2021egg] answers the first and third by closing
-the program space under a fixed law bank and extracting a cheapest
-member; systems such as TENSAT apply it to tensor graphs with a
-hand-written rule set.  Rule-inference work (Ruler [@nandi2021ruler],
-the Babble line [@cao2023babble]) attacks discovery for scalar and
-library-abstraction domains, but the synthesis story for *tensor
-programs with runtime-priced deployment* is thinner.
+Every optimization a production compiler knows was written by a
+person — a hand-derived rule, encoded per framework.  The rule
+library is the bottleneck: human authorship is slow, and the
+pairings nobody names never get found.  For a machine to *author*
+optimizations, four things must exist: rules it can write (data, not
+code), a referee to check them, a score to rank them, and a world —
+a runtime — that programs, rules, and proofs all live inside.
 
-This paper reports the machinery — and one complete measured traversal
-of it — in the mlopt engine.  The claim is narrow and checkable:
+The pieces have arrived separately.  Massalin's superoptimizer
+[@massalin1987superoptimizer] searched programs exhaustively;
+equality saturation [@tate2009; @willsey2021egg] closes the program
+space under a fixed law bank, and TENSAT applies it to tensor
+graphs.  Rule-inference work (Ruler [@nandi2021ruler], the Babble
+line [@cao2023babble]) grows the library itself.  And learned play
+on well-defined games — AlphaGo Zero [@silver2017alphago],
+AlphaTensor [@fawzi2022alphatensor] — reaches structure beyond
+human-written heuristics.  The synthesis story for *tensor
+programs with runtime-priced deployment*, though, is thinner: no
+system connects discovery, certification, pricing, shipping, and
+learned guidance inside one substrate.
+
+This paper reports the connection — and one complete measured traversal
+of it — in the mlopt engine.  The contribution is not any single
+mechanism but their composition: a categorical substrate makes rules
+data, derivations checkable, cost measurable, and provides the runtime
+world — which closes discovery into a well-defined game played by
+learned policies.  The claim is narrow and checkable:
 
 > A rewrite a hand optimizer would write — the eval-mode conv+BN
 > weight fold — was **discovered, proven, priced, and shipped by the

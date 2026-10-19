@@ -5,13 +5,31 @@
 > claims are measured and reproducible, but the manuscript has not had
 > human revision or external review.
 
-**The claim.**  A tensor program is a morphism of a category; the
-category's equations are rewrite laws; equality saturation closes the
-space of equivalent programs; cost-based extraction picks the cheapest
-member the backend can run; a replayable certificate proves the step.
-On top of that substrate, mlopt *mints* new laws from measured need —
-guard synthesized, adversarially swept, admitted through a staged
-gauntlet — and ships them verbatim in the default rule set.
+**The problem.**  Every optimization a compiler knows was written by
+a person — a hand-derived rule, encoded per framework.  The rule
+library is the bottleneck: humans are slow, and the pairings nobody
+names never get found.
+
+**The idea.**  For a machine to *author* optimizations, four things
+must exist: rules it can write (data, not code), a referee to check
+them, a score to rank them, and a world — a runtime — that programs,
+rules, and proofs all live inside.  A categorical substrate delivers
+all four at once: a tensor program is a morphism of a category, the
+category's equations are rewrite laws as data, derivations are
+checkable certificates, and the handl runtime is the world the whole
+loop executes in.  The consequence: discovery closes into a
+well-defined *game* — moves, referee, score, board — and a game can be
+played by learned policies (the AlphaGo Zero lineage).  On top of that
+substrate, mlopt *mints* new laws from measured need — guard
+synthesized, adversarially swept, admitted through a staged gauntlet —
+and ships them verbatim in the default rule set.
+
+**The contribution is the connection.**  Equality saturation
+(Tate/egg/TENSAT), rule inference (Ruler), and learned play on
+perfect-referee games (AlphaGo Zero; contrast AlphaTensor, which
+searches one fixed structure) each existed separately.  mlopt connects
+them: a machine that discovers, proves, prices, and ships its own
+compiler rules — and can learn to play the discovery.
 
 The flagship result: **`conv_bn_fold`, a machine-minted composite, is a
 shipped law.**  The engine minted the eval-mode weight fold
