@@ -79,6 +79,34 @@ wants the `from "<path>" import …` form materializes the string to a
 file; `tests/conv_bn.rs` proves the embedded copy imports and
 evaluates identically.
 
+## The e-graph leg — `egraph-run`
+
+`src/egraph.rs` (`catopt_kit::egraph`) is the kit's second leg: the
+`handl-egraph` saturation substrate (the named Rust port of
+`catopt_core`'s `EGraph`/`Rewrite` spec) driven over the
+`handl-discovery` codec's JSON wire forms
+(`{"mvar"}`/`{"leaf"}`/`{"op"}` — the scheme `ir.term_to_data`
+canonized). `src/bin/egraph-run.rs` is its subprocess door — the same
+shape as `hnl-run`: a JSON run *spec* (terms, declarative rules, run
+options, a per-op cost table, optional `check_terms`) on stdin, a
+canonical run *report* on stdout. The report is engine-independent —
+classes compare by Weisfeiler-Lehman signature, never by internal id —
+because the consumer is `lab/audit/egraph_differential.py` /
+`tests/test_egraph_differential.py`: a Python↔Rust *differential*
+that runs the same fixtures through `catopt_core.egraph.EGraph` and
+`handl-egraph` and asserts identical structure, provenance, and
+extracted winners.
+
+```sh
+source ~/.cache/devin/handl_deps.env
+cargo build -p catopt-kit --bin egraph-run
+echo '{"terms":[{"leaf":"x"}]}' | target/debug/egraph-run -
+```
+
+`tests/gauntlet_stub.rs` exercises `handl-discovery`'s other surface —
+`GauntletLegs` — with stub domain legs driven through `run_gauntlet`
+(the real gate pipeline, stop-on-failure included).
+
 ## The subprocess door — `hnl-run`
 
 `src/bin/hnl-run.rs` is the Python↔kit seam: a `.hnl` source on stdin

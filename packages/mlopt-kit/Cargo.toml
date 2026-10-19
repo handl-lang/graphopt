@@ -11,6 +11,10 @@ license = "MIT"
 # handl-lang convention.
 [dependencies]
 serde_json = "1"
+# sha2 — class-signature digests for the egraph leg's canonical report
+# (the WL label a class ends on is a hash of its member marshal, so the
+# report stays flat no matter how deep the cone is)
+sha2 = "0.10"
 
 # kernel — Language data + the tagged value layer (incl. `TaggedValue::Tensor`)
 handl-language = { git = "https://github.com/handl-lang/kernel", branch = "main" }
@@ -37,3 +41,12 @@ hnl-engine-exec-tree-walk = { git = "https://github.com/handl-lang/engine-exec-t
 # host-tensor — the `tensor.*` host-function surface (18 ops: dense n-d
 # f64 tensors over the `{"__tensor__": …}` wire form → `TaggedValue::Tensor`)
 handl-host-tensor = { git = "https://github.com/handl-lang/host-tensor", branch = "main" }
+
+# egraph — the equality-saturation substrate: the named Rust port of
+# mlopt-core's `EGraph`/`Rewrite` spec (`src/egraph.rs` drives it over
+# the discovery codec's JSON wire forms — `egraph-run` is the bin)
+handl-egraph = { git = "https://github.com/handl-lang/egraph", branch = "main" }
+# discovery — the ported domain-free half of `mlopt_discovery`: the
+# `term_to_data`/`term_from_data` codec the egraph leg speaks, and the
+# `GauntletLegs` trait surface `tests/gauntlet_stub.rs` injects into
+handl-discovery = { git = "https://github.com/handl-lang/discovery", branch = "main" }
