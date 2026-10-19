@@ -4,7 +4,8 @@ Plan 0016 stage 7, the RL half (ADR 0003).  Where
 :mod:`mlopt_torch.learned_policy` is *supervised* on one-step
 trajectories, this is a full RL player: it samples a rule, applies it
 to the e-graph, and is updated from the reward that step produced
-(REINFORCE with a per-episode standardized advantage).
+(REINFORCE with a cross-episode EMA baseline — see
+:class:`EmaBaseline`).
 
 The action encoding is structural (``rule_vector``), so an unseen rule
 is still scorable.  The policy only *orders* legal moves — the
@@ -24,7 +25,13 @@ from mlopt_core.trajectories import RULE_VECTOR_LEN, rule_vector
 from torch import nn
 from torch.distributions import Categorical
 
-__all__ = ["PolicyNet", "RLPolicy", "state_vector", "train_reinforce"]
+__all__ = [
+    "EmaBaseline",
+    "PolicyNet",
+    "RLPolicy",
+    "state_vector",
+    "train_reinforce",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +40,12 @@ _STATE_DIM = len(DIMENSIONS) + 1
 
 #: Returns whose spread is below this carry no advantage signal.
 _EPS = 1e-12
+
+#: REINFORCE baseline constants — the ``LinearPolicy`` recipe
+#: (``mlopt_discovery.players._BASELINE_EMA`` / ``_CLIP``): the
+#: baseline is a 0.2-EMA of episode totals and advantages are clipped.
+_BASELINE_EMA = 0.2
+_ADV_CLIP = 40.0
 
 
 def state_vector(
@@ -151,25 +164,66 @@ def _rollout(
 
 
 def _advantage(returns: torch.Tensor) -> torch.Tensor:
-    """Return the scale-free advantage of one episode's returns.
+    """Return the per-episode standardized advantage — *legacy*.
 
-    REINFORCE needs a baseline, and a single *running mean* over a
-    mixture of program families is dominated by the family with the
-    largest normalized reward — the env's reward is
-    ``(before - after) / before``, so a chain pays ~0.1 and a fused
-    linear ~0.75 — which collapses the policy onto that family.
-    Centering and scaling each episode's returns instead makes the
-    advantage comparable across families with **no family label**:
-    within an episode the best action always scores positive and the
-    worst negative, whatever the family's reward scale.  An episode
-    with no spread (nothing improved) yields a zero advantage — no
-    signal, rather than a spurious one.
+    Retained as a reference for the lab's regression-control arm
+    (``lab/policy_rl_arms.py``, ``adv_mode="per-ep"``); the shipped
+    recipe no longer uses it.  Centering each episode's own returns
+    discards the cross-episode reward *level*: on sparse-reward boards
+    a zero-return absorbing action (``stop``) sits *above* the episode
+    mean and is pushed up every losing episode, and a one-step episode
+    has zero spread — hence zero advantage — forever after.  Both
+    failure modes are structural, which is why :class:`EmaBaseline`
+    replaced this in :func:`train_reinforce`.
     """
     centered = returns - float(returns.mean())
     std = float(returns.std(unbiased=False))
     if std <= _EPS:
         return centered
     return centered / std
+
+
+class EmaBaseline:
+    """Cross-episode EMA baseline — the ``LinearPolicy`` recipe.
+
+    ``value`` is a running exponential moving average (decay
+    ``_BASELINE_EMA``) of episode totals — the return-to-go at ``t=0``
+    — updated once per episode by :meth:`advantage`, which then
+    returns ``clip(G_t - value, ±_ADV_CLIP)`` per step.  Because the
+    baseline lives *across* episodes it preserves the reward level
+    that per-episode standardization discards: an absorbing
+    zero-return action scores ``0 - value`` — losing whenever the
+    policy is net-positive — and a degenerate episode (fewer than two
+    steps, or zero return spread) still gets a well-defined *raw*
+    advantage instead of a collapsed zero/nan.
+
+    This is domain-agnostic: it reads only the returns tensor, so the
+    same object serves ``SearchEnv`` training and the open-domain
+    ``OpenArena`` port in ``lab/policy_rl_arms.py``.
+    """
+
+    def __init__(
+        self, decay: float = _BASELINE_EMA, clip: float = _ADV_CLIP
+    ) -> None:
+        """Bind the EMA *decay* and the advantage *clip* bound."""
+        self.decay = float(decay)
+        self.clip = float(clip)
+        self.value = 0.0
+
+    def advantage(self, returns: torch.Tensor) -> torch.Tensor:
+        """Update the baseline; return ``G_t - baseline`` per step.
+
+        *returns* is one episode's returns-to-go in step order;
+        ``returns[0]`` — the episode's discounted total — moves the
+        EMA, and every step's advantage is measured against the
+        *updated* value (matching ``LinearPolicy.finish_episode``).
+        An empty episode returns an empty advantage, unchanged.
+        """
+        if returns.numel() == 0:
+            return returns
+        total = float(returns[0])
+        self.value += self.decay * (total - self.value)
+        return torch.clamp(returns - self.value, -self.clip, self.clip)
 
 
 def train_reinforce(
@@ -190,9 +244,12 @@ def train_reinforce(
 
     ``programs`` is a cycle of starting programs; each episode samples
     rules, applies them, and updates on the discounted reward with a
-    per-episode standardized advantage (see :func:`_advantage`), so the
-    advantage is comparable across program families rather than
-    dominated by the loudest one.  The device defaults to CUDA when
+    cross-episode EMA baseline (see :class:`EmaBaseline`) — the same
+    recipe ``mlopt_discovery.players.LinearPolicy`` uses — so the
+    advantage keeps its cross-episode level: sparse episodes no longer
+    push a zero-return absorbing action above the baseline, and a
+    degenerate (single-step / flat) episode yields a raw advantage
+    rather than a collapsed one.  The device defaults to CUDA when
     available.
     """
     dev = device or ("cuda" if torch.cuda.is_available() else "cpu")
@@ -205,6 +262,7 @@ def train_reinforce(
         dtype=torch.float32,
         device=dev,
     )
+    baseline = EmaBaseline()
     for ep in range(episodes):
         env = SearchEnv(
             programs[ep % len(programs)],
@@ -215,7 +273,9 @@ def train_reinforce(
         logps, returns = _rollout(
             model, env, rule_vecs, names, dev, gamma
         )
-        adv = _advantage(returns)
+        if not logps:
+            continue  # a zero-step episode carries no signal
+        adv = baseline.advantage(returns)
         loss = -(torch.stack(logps) * adv).sum()
         opt.zero_grad()
         loss.backward()

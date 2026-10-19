@@ -12,6 +12,7 @@ from mlopt_core.ports import Policy
 from mlopt_core.search_env import StepResult
 from mlopt_core.trajectories import RULE_VECTOR_LEN, rule_vector
 from mlopt_torch.rl import (
+    EmaBaseline,
     PolicyNet,
     RLPolicy,
     _advantage,
@@ -102,6 +103,53 @@ def test_advantage_flat_returns_have_no_signal():
     """An episode with no improvement yields a zero advantage."""
     adv = _advantage(torch.zeros(3))
     assert torch.allclose(adv, torch.zeros(3))
+
+
+# ---------------------------------------------------------------------------
+#  EmaBaseline — the cross-episode baseline the shipped recipe uses
+# ---------------------------------------------------------------------------
+
+
+def test_ema_baseline_updates_from_episode_total_then_subtracts():
+    """``value`` is a 0.2-EMA of totals; advantages use the update."""
+    b = EmaBaseline()
+    adv = b.advantage(torch.tensor([1.0, 0.5]))
+    # total is returns[0] = 1.0 -> value = 0.2; adv = G_t - 0.2.
+    assert b.value == 0.2
+    assert torch.allclose(adv, torch.tensor([0.8, 0.3]))
+    adv = b.advantage(torch.tensor([0.0, 0.0]))
+    # total 0 -> value = 0.2 + 0.2 * (0 - 0.2) = 0.16.
+    assert abs(b.value - 0.16) < 1e-7
+    assert torch.allclose(adv, torch.tensor([-0.16, -0.16]))
+
+
+def test_ema_baseline_single_step_episode_keeps_signal():
+    """The collapse fix: a one-step episode gets a nonzero advantage.
+
+    Per-episode standardization made this identically zero (zero
+    spread), which is the absorbing-``stop`` trap; the EMA baseline
+    returns the raw ``G - baseline`` instead.
+    """
+    b = EmaBaseline()
+    b.advantage(torch.tensor([0.5, 0.5]))  # value -> 0.1
+    adv = b.advantage(torch.tensor([-0.002]))
+    assert adv.shape == (1,)
+    assert float(adv[0]) != 0.0
+
+
+def test_ema_baseline_clips_extreme_advantages():
+    """A huge return cannot blow the update past the clip bound."""
+    b = EmaBaseline()
+    adv = b.advantage(torch.tensor([1e9]))
+    assert float(adv.abs().max()) <= 40.0
+
+
+def test_ema_baseline_empty_episode_is_a_no_op():
+    """An empty returns tensor yields empty advantage, no update."""
+    b = EmaBaseline()
+    out = b.advantage(torch.tensor([]))
+    assert out.numel() == 0
+    assert b.value == 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -306,7 +354,7 @@ def test_train_reinforce_gradient_is_the_explicitly_paired_sum(monkeypatch):
         ).log_prob(torch.tensor(names.index(name)))
         for progress, name in holder["env"].seen
     ]
-    adv = _advantage(_returns_to_go(rewards, gamma))
+    adv = EmaBaseline().advantage(_returns_to_go(rewards, gamma))
     loss = -(torch.stack(logps) * adv).sum()
     loss.backward()
 

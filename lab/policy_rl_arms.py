@@ -9,8 +9,8 @@ dedicated-RL machinery beats the trained linear prior:
 
 * **open** — ``mlopt_torch.rl.PolicyNet`` (the ``SearchEnv``
   REINFORCE net: MLP 64->64->1 over ``(state (+) rule)`` inputs,
-  Categorical sampling, gamma 0.95, Adam 3e-3, per-episode
-  standardized advantage) ported to the open-domain episode loop
+  Categorical sampling, gamma 0.95, Adam 3e-3, cross-episode EMA
+  advantage baseline) ported to the open-domain episode loop
   (``OpenArena`` + memoized ``proposal.evaluate``).  ``train_rl_policy``
   only ever ran the search domain; the port keeps the net and the
   update rule verbatim and adapts only the featurization — two input
@@ -233,18 +233,23 @@ def train_open_net(
     One sampled episode per case (cycling), returns-to-go discounted
     by *gamma* and an Adam step per episode — the shipped recipe, with
     only the featurization adapted to the arena.  ``adv_mode`` picks
-    the advantage baseline: ``"std"`` is the shipped per-episode
-    standardization (``rl._advantage``); ``"ema"`` is the
-    ``LinearPolicy``-level baseline — ``G_t - ema`` with ``ema`` the
-    running 0.2-EMA of episode totals — which keeps the cross-episode
-    reward level that per-episode standardization discards.  The
-    caller patches ``lp.evaluate`` with the memoized verdicts, so a
-    candidate's verdict is identical for every arm and epoch.
+    the advantage baseline: ``"shipped"`` is whatever
+    ``mlopt_torch.rl`` trains with — since the stop-collapse fix, a
+    cross-episode :class:`rl.EmaBaseline` (``G_t - ema``, ``ema`` a
+    0.2-EMA of episode totals, clipped); ``"ema"`` is the same
+    baseline inlined here as an implementation-parity cross-check;
+    ``"per-ep"`` is the retired per-episode standardization
+    (``rl._advantage``), kept as the regression control — it loses
+    the cross-episode reward level and collapses to ``stop`` on
+    sparse pages.  The caller patches ``lp.evaluate`` with the
+    memoized verdicts, so a candidate's verdict is identical for
+    every arm and epoch.
     """
     torch.manual_seed(seed)
     feat = _OpenNetFeaturizer(mode)
     model = _open_net(feat, hidden).to(device)
     opt = torch.optim.Adam(model.parameters(), lr=lr)
+    baseline = rl_mod.EmaBaseline()
     ema = 0.0
     means: list[float] = []
     block: list[float] = []
@@ -278,11 +283,13 @@ def train_open_net(
         adv_t = torch.tensor(
             returns, dtype=torch.float32, device=device
         )
-        if adv_mode == "ema":
+        if adv_mode == "shipped":
+            adv = baseline.advantage(adv_t)
+        elif adv_mode == "ema":
             if len(adv_t):
                 ema += 0.2 * (float(adv_t[0]) - ema)
             adv = adv_t - ema
-        else:
+        else:  # "per-ep" — the retired recipe, regression control
             adv = rl_mod._advantage(adv_t)
         loss = -(torch.stack(logps) * adv).sum()
         opt.zero_grad()
@@ -472,10 +479,13 @@ def run_open(
         )
 
         # --- the dedicated RL nets ---------------------------------
+        # Bare tag = the shipped recipe; ``-ema`` = the inlined parity
+        # cross-check; ``-per-ep`` = the retired per-episode
+        # standardization, kept as the collapse control.
         arms = []
         for mode in ("policynet", "full"):
             stem = "rl-net" if mode == "policynet" else "rl-net-full"
-            for adv in ("std", "ema"):
+            for adv in ("per-ep", "shipped", "ema"):
                 for eps_n, suf in (
                     (episodes, ""),
                     (episodes_long, "-long"),
@@ -485,7 +495,10 @@ def run_open(
                             mode,
                             adv,
                             eps_n,
-                            f"{stem}{'-ema' if adv == 'ema' else ''}{suf}",
+                            f"{stem}"
+                            f"{'-ema' if adv == 'ema' else ''}"
+                            f"{'-per-ep' if adv == 'per-ep' else ''}"
+                            f"{suf}",
                         )
                     )
         for mode, adv, eps_n, tag in arms:
@@ -1034,7 +1047,8 @@ def main(argv: list[str] | None = None) -> int:
             "rl_episodes": args.rl_episodes,
             "rl_episodes_long": args.rl_episodes_long,
             "net": "PolicyNet shape (in->64->64->1), Adam 3e-3, "
-            "gamma 0.95, per-episode standardized advantage",
+            "gamma 0.95, cross-episode EMA advantage baseline "
+            "(0.2 decay, ±40 clip)",
             "contraction_iters": args.contraction_iters,
             "az_iters": args.az_iters,
             "az_sims": args.az_sims,

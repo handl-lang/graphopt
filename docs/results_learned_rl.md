@@ -228,3 +228,51 @@ fresh bond-family RL and the shipped distilled artifact both hold
 ~parity with `opt_einsum`'s randomized greedy, while the PUCT +
 learned-value arm loses to all of them at equal wall-clock — more
 search in the loop did not beat more rollouts on this box.
+
+## Post-fix re-measurement — EMA baseline is now the shipped recipe
+
+**Date:** 2026-10-19 · same protocol, seed 0, `lab/policy_rl_arms.py
+--only open` re-run after the `train_reinforce` fix.
+
+The collapse diagnosed above was a *recipe* bug, so the recipe was
+fixed: `mlopt_torch.rl.train_reinforce` now carries a cross-episode
+**`EmaBaseline`** (a 0.2-EMA of episode totals; per-step advantage
+`clip(G_t − ema, ±40)` — the `LinearPolicy` machinery from
+`mlopt_discovery.players`) instead of per-episode standardization.
+`_advantage` survives only as the regression control
+(`adv_mode="per-ep"` below); the bare `rl-net*` tags now run the
+shipped recipe, `-ema` is the same baseline inlined as a parity
+cross-check.
+
+| arm | reward/ep | useful/ep | evals/ep | useful/eval | found | AP |
+|---|---|---|---|---|---|---|
+| random | 0.1339 | 0.083 | 8.67 | 0.0096 | 3 | — |
+| heuristic drain | 0.3595 | 0.167 | 16.00 | 0.0104 | 6 | 0.0450 |
+| trained-linear (baked) | 0.3271 | 0.167 | 13.75 | 0.0121 | 6 | 0.1332 |
+| cold+rl (linear, 5 ep) | 0.3043 | 0.167 | 14.03 | 0.0119 | 6 | 0.1184 |
+| rl-net-per-ep (control) | 0.0000 | 0.000 | 1.00 | 0.0000 | 0 | 0.0081 |
+| rl-net-per-ep-long (control) | 0.0000 | 0.000 | 1.00 | 0.0000 | 0 | 0.0081 |
+| rl-net-full-per-ep (control) | 0.0000 | 0.000 | 1.00 | 0.0000 | 0 | 0.0203 |
+| rl-net-full-per-ep-long (control) | 0.0000 | 0.000 | 1.00 | 0.0000 | 0 | 0.0125 |
+| rl-net (policynet, shipped) | 0.0000 | 0.000 | 1.00 | 0.0000 | 0 | 0.0081 |
+| rl-net-long (shipped) | 0.0000 | 0.000 | 1.00 | 0.0000 | 0 | 0.0081 |
+| rl-net-ema / -ema-long | 0.0000 | 0.000 | 1.00 | 0.0000 | 0 | 0.0081 |
+| **rl-net-full (shipped)** | **0.3505** | 0.167 | 15.72 | 0.0106 | 6 | **0.1092** |
+| rl-net-full-greedy | 0.3611 | 0.167 | 16.00 | 0.0104 | 6 | |
+| **rl-net-full-long (shipped)** | **0.3655** | 0.167 | 15.86 | 0.0105 | 6 | 0.0899 |
+| rl-net-full-long-greedy | **0.3784** | 0.167 | 15.72 | 0.0106 | 6 | |
+| rl-net-full-ema / -ema-long | 0.3505 / 0.3655 | 0.167 | 15.72 / 15.86 | 0.0106 / 0.0105 | 6 | 0.1092 / 0.0899 |
+
+**The recipe fix lands exactly the predicted arm.** `rl-net-full`
+under the shipped recipe reproduces the prior `rl-net-full-ema`
+result to 4 decimals (reward 0.3505, AP 0.1092 — the `shipped` and
+inline-`ema` arms are numerically identical, confirming the port
+matches `EmaBaseline`), and every `per-ep` control still collapses
+to 0.000 under identical oracle draws — the bug is isolated to the
+baseline, now removed. Post-fix `rl-net-full` clears the bar the
+pre-fix table missed: reward > random (0.3505 vs 0.1339), AP >
+heuristic (0.1092 vs 0.0450), within noise of cold+rl-linear (0.1184)
+and still below the trained-linear prior (0.1332). The `policynet`
+input arms still collapse under the fixed recipe — confirming the
+second, separate defect is the *input encoding* (missing `a:*` shape
+features), not the update rule.
