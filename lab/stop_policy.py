@@ -3,30 +3,41 @@
 ``docs/results_richer_features.md``'s flat axis: reward sits at
 ~0.27 across every schema arm because the trained prior drains
 ~15 of 16 evals — ordering sharpens (AP 0.133 -> 0.210) but the
-``stop`` timing is untrained.  A pure ``st:*`` broadcast cannot fix
-it (it cancels in the softmax — the ``open:pending-*`` parts
-measured dead for exactly that reason), so ``open_game.py`` ships
-the ``open:stop`` part: action-level columns
+``stop`` timing is untrained.  Round 1 (the ``open:stop`` feature
+columns alone, 5 epochs) failed: reward *dropped* 0.2728 -> 0.2444
+and the arm stopped *less* — the REINFORCE episode-return gradient
+has no reason to isolate the ~0.03 of quitting headroom.  This
+extension prices the two remaining mechanisms:
 
-* ``x:marginal`` on ``evaluate`` rows — the candidate's pending
-  rank quantile x the payoff a useful find collects *this* step
-  (tier + ordering credit): decays as the episode ages;
-* ``x:stop:marginal`` / ``x:stop:evals_left`` / ``x:stop:finds``
-  on the ``stop`` row — the opportunity cost of quitting now, the
-  evals left, and the finds banked.
+* **(a) features + more training** — ``inc+stop-long``: the same
+  ``open:stop`` part at 4x the epochs (20), the undertraining
+  hypothesis;
+* **(b) an explicit stop head** — ``head`` / ``head+stop``: keep the
+  ranking softmax for the ``evaluate`` picks; a *second* linear scorer
+  over the spec's ``stop``-row features decides quit-vs-continue,
+  trained supervised against the *oracle-optimal* label — "does the
+  best continuation under the ranker's own greedy order still earn
+  more than the step cost", computed exactly from the memoized
+  verdicts — and threshold-calibrated on the train pages;
+* **(b, bakeable)** — ``imitate-stop`` / ``imitate-cold``: fold the
+  same oracle supervision into the single weight vector through
+  ``engine.imitate_policy`` — a cross-entropy step toward the expert
+  action, so the ``x:stop:*`` / ``op:stop`` weights can carry the
+  timing (the only delivery that still serializes as one
+  ``OPEN_GAME_PLAYER_WEIGHTS`` table).
 
-The measurement mirrors ``lab/richer_features.py`` exactly: cold
-retrain per arm (5 epochs x 36 even pages of ``engine.train_policy``
-under the baseline's memoized verdicts), held-out odd pages, budget
-17, page-aware AP (fresh-page ``w.featurize(evaluate)`` rows pooled
-across pages — ``rank_score`` cannot see the pool-relative columns).
+The measurement mirrors round 1 exactly: cold retrain per arm
+(``engine.train_policy`` under the baseline's memoized verdicts),
+held-out odd pages, budget 17, page-aware AP (fresh-page
+``w.featurize(evaluate)`` rows pooled — ``rank_score`` cannot see the
+pool-relative columns).
 
 Bake rule: the extended schema + weights join
 ``OPEN_GAME_PLAYER_WEIGHTS`` only if the stop arm's held-out
 reward/ep AND page-aware AP both clear the incumbent bake
 (0.273 / 0.210 — the richer-features `core4`/`all` rows).
 
-Runtime: ~145 s one-time pool memoization, ~10-15 s per arm.
+Runtime: ~145 s one-time pool memoization, ~10-60 s per arm.
 
 Usage::
 
@@ -44,11 +55,12 @@ from typing import Any
 
 import policy_baseline as pb
 import schema_leaderboard as sl
+import torch
 from mlopt_discovery import engine, play
 from mlopt_discovery import open_game as og
 from mlopt_discovery import proposal as lp
 from mlopt_discovery.meta_arena import Action
-from mlopt_discovery.players import PARTS, DomainSpec, _dot
+from mlopt_discovery.players import PARTS, DomainSpec, PlayHist, _dot
 
 #: Defaults — the shipped bake protocol under memoized verdicts.
 SEED = 0
@@ -56,15 +68,35 @@ PAGE = 16
 OPEN_PAGES = 36  # the even half trains, the odd half evaluates
 BUDGET = PAGE + 1
 EPOCHS = 5  # the shipped bake used 5
+LONG_EPOCHS = (
+    20  # arm (a): 4x — was the failed arm simply undertrained?
+)
+IMITATE_PASSES = 6  # oracle-stop demonstration passes per imitate arm
+HEAD_EPOCHS = 800  # full-batch logistic iterations for the stop head
+_TAU_GRID = 25  # threshold-calibration points over the train scores
 _SAMPLED_SEED = 40_000  # schema_leaderboard's eval-seed offsets
 _GREEDY_SEED = 50_000
+_CAL_SEED = 60_000  # the threshold-calibration decode offset
 
-#: The arms — incumbent schema (retrained cold, the control) and the
-#: stop-column extension; a ``x:marginal``-only arm isolates the
-#: evaluate-side column from the stop-row block.
-ARMS: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("incumbent", ()),
-    ("inc+stop", ("open:stop",)),
+#: The arms — ``(id, extra part tags, kind, rl_epochs)``.
+#:
+#: * ``rl`` — the round-1 mechanism: REINFORCE only (the incumbent
+#:   control, the failed ``inc+stop``, and its 4x-epochs variant);
+#: * ``rl+imitate`` / ``imitate`` — oracle-stop supervision folded
+#:   into the one weight vector (bakeable delivery of the head's
+#:   signal: the expert evaluates in the ranker's greedy order while
+#:   the memoized verdicts say continuing pays, then ``stop``s);
+#: * ``head`` — the explicit second scorer: a logistic stop head over
+#:   the spec's ``stop`` row + a train-calibrated threshold gates a
+#:   ranker whose softmax never sees ``stop``.
+ARMS: tuple[tuple[str, tuple[str, ...], str, int], ...] = (
+    ("incumbent", (), "rl", EPOCHS),
+    ("inc+stop", ("open:stop",), "rl", EPOCHS),
+    ("inc+stop-long", ("open:stop",), "rl", LONG_EPOCHS),
+    ("imitate-stop", ("open:stop",), "rl+imitate", EPOCHS),
+    ("imitate-cold", ("open:stop",), "imitate", 0),
+    ("head", (), "head", EPOCHS),
+    ("head+stop", ("open:stop",), "head", EPOCHS),
 )
 
 
@@ -127,6 +159,285 @@ def _play_pools(
     }
 
 
+# ---------------------------------------------------------------------------
+#  Mechanism (b) — the oracle-priced stop signal
+# ---------------------------------------------------------------------------
+#
+#  Both deliveries share one supervision source: under the memoized
+#  verdicts the *exact* value of continuing is computable — evaluate
+#  the pending set in the ranker's greedy order, sum the reward each
+#  prefix banks (step cost + verdict tier + the ``1/steps`` ordering
+#  credit a ``useful`` find collects at its real eval index), and the
+#  episode should continue iff the best nonempty prefix nets > 0.
+#  That is the "stop where expected-marginal-yield < step cost" rule
+#  with the expectation replaced by the oracle — the cleanest signal
+#  the stop axis can get under this protocol.
+
+
+def _eval_only(state: Any) -> tuple:
+    """``legal_actions`` minus ``stop`` — the gated ranker's pick set."""
+    return tuple(
+        a for a in og.legal_actions(state) if a.op == "evaluate"
+    )
+
+
+def _eval_order(
+    spec: DomainSpec, w: dict[str, float], state: Any
+) -> list[int]:
+    """Pending indices in the ranker's greedy (descending-score) order."""
+
+    def key(i: int) -> float:
+        f = spec.featurize(
+            state, Action("evaluate", {"i": i, "cand": state.pool[i]})
+        )
+        return _dot(w, f)
+
+    return sorted(state.pending, key=key, reverse=True)
+
+
+def _prefix_value(state: Any, order: list[int], by_key: dict) -> float:
+    """Best-prefix value of draining *order* from *state* — oracle-priced.
+
+    The episode should continue iff this is positive: every prefix is
+    priced at the real reward composition (step cost + tier + the
+    ordering credit a ``useful`` verdict collects at its actual eval
+    index ``state.steps + j``).
+    """
+    best = cum = 0.0
+    for j, i in enumerate(order, start=1):
+        v = og._verdict(by_key[pb._cand_key(state.pool[i])])
+        cum += og.OPEN_GAME_REWARD["step"] + og.OPEN_GAME_REWARD[v]
+        if v == "useful":
+            cum += og.OPEN_GAME_EFFICIENCY / (state.steps + j)
+        if cum > best:
+            best = cum
+    return best
+
+
+def _oracle_expert(
+    spec: DomainSpec, w: dict[str, float], by_key: dict
+) -> Any:
+    """Expert factory for ``imitate_policy``: ranker's order, oracle stop.
+
+    Evaluates the top-ranked still-pending candidate while the best
+    continuation prefix nets > 0 under the memoized verdicts, then
+    plays ``stop`` — the joint policy the stop axis wants.
+    """
+
+    def make(_i: int) -> Any:
+        def expert(state: Any) -> Action:
+            if not state.pending:
+                return Action("stop", {})
+            order = _eval_order(spec, w, state)
+            if _prefix_value(state, order, by_key) <= 0.0:
+                return Action("stop", {})
+            i = order[0]
+            return Action("evaluate", {"i": i, "cand": state.pool[i]})
+
+        return expert
+
+    return make
+
+
+def _collect_head_rows(
+    spec: DomainSpec,
+    w: dict[str, float],
+    pools: list[list],
+    by_key: dict,
+    budget: int,
+) -> tuple[list[dict], list[bool]]:
+    """``(stop_row, continue_label)`` pairs along greedy drain traces.
+
+    Every prefix of the ranker's greedy order is a visited state, so
+    one drain per page covers the whole pending-count range — early
+    states label ``True`` (a paying prefix remains), late states
+    ``False`` (only duds left).  The features are the spec's ``stop``
+    row itself, so a head over them prices exactly the quantity the
+    softmax could not isolate.
+    """
+    rows: list[dict] = []
+    labels: list[bool] = []
+    for pool in pools:
+        arena = sl._FixedArena(pool)
+        hist = PlayHist()
+        for _ in range(budget):
+            state = arena.observe()
+            if state.done or not state.pending:
+                break
+            rows.append(spec.featurize(state, Action("stop", {}), hist))
+            order = _eval_order(spec, w, state)
+            labels.append(_prefix_value(state, order, by_key) > 0.0)
+            i = order[0]
+            act = Action("evaluate", {"i": i, "cand": state.pool[i]})
+            arena.step(act)
+            hist.record(act.op)
+    return rows, labels
+
+
+def _fit_head(
+    spec: DomainSpec,
+    rows: list[dict],
+    labels: list[bool],
+    seed: int,
+    epochs: int = HEAD_EPOCHS,
+) -> tuple[dict[str, float], float]:
+    """Logistic stop head over the ``stop``-row features -> weight dict.
+
+    Full-batch BCE on standardized columns (constant columns pass
+    through raw — ``bias`` stays the intercept), then the solution is
+    mapped back to raw feature units so :func:`_dot` scores the row
+    directly.  Returns ``(w, final_loss)``.
+    """
+    names = list(spec.features)
+    x = torch.tensor(
+        [[r.get(n, 0.0) for n in names] for r in rows],
+        dtype=torch.float64,
+    )
+    y = torch.tensor(
+        [float(lab) for lab in labels], dtype=torch.float64
+    )
+    mu0, sd0 = x.mean(0), x.std(0, unbiased=False)
+    const = sd0 < 1e-9
+    mu = torch.where(const, torch.zeros_like(mu0), mu0)
+    sd = torch.where(const, torch.ones_like(sd0), sd0)
+    xz = (x - mu) / sd
+    g = torch.Generator().manual_seed(seed)
+    v = torch.randn(len(names), generator=g, dtype=torch.float64) * 0.01
+    v.requires_grad_()
+    b = torch.zeros((), dtype=torch.float64, requires_grad=True)
+    opt = torch.optim.Adam([v, b], lr=0.05)
+    bce = torch.nn.BCEWithLogitsLoss()
+    loss = torch.tensor(0.0, dtype=torch.float64)
+    for _ in range(epochs):
+        opt.zero_grad()
+        loss = bce(xz @ v + b, y)
+        loss.backward()
+        opt.step()
+    with torch.no_grad():
+        w = {n: float(v[i]) / float(sd[i]) for i, n in enumerate(names)}
+        # fold the intercept: score = v·((x-mu)/sd) + b
+        w["bias"] = (
+            w.get("bias", 0.0)
+            + float(b)
+            - sum(
+                float(v[i]) * float(mu[i]) / float(sd[i])
+                for i in range(len(names))
+            )
+        )
+    return (
+        {n: wv for n, wv in w.items() if abs(wv) > 1e-9},
+        round(float(loss.detach()), 4),
+    )
+
+
+class _StopGate:
+    """The explicit stop head — mechanism (b) as a player wrapper.
+
+    The inner ranker (``learn=False``, ``legal`` = ``evaluate`` rows
+    only) picks *which* candidate; this wrapper decides *whether* to
+    keep spending: ``stop`` iff ``w_head . phi_stop(state) >= tau``
+    where ``phi_stop`` is the spec's ``stop``-row features under the
+    episode's own play history.  ``stop``'s semantics are untouched —
+    the action is the board's own, played at head-chosen times.
+    """
+
+    def __init__(
+        self,
+        inner: Any,
+        spec: DomainSpec,
+        w_head: dict[str, float],
+        tau: float,
+    ) -> None:
+        """Bind the ranker, the head weights and the threshold."""
+        self._inner = inner
+        self._spec = spec
+        self._w = w_head
+        self._tau = tau
+        self._hist = PlayHist()
+        self._prev = -1
+
+    def __call__(self, state: Any) -> Any:
+        """Stop when the head scores quitting above the threshold."""
+        if state.steps == 0 and self._prev > 0:
+            self._hist = PlayHist()
+        self._prev = state.steps
+        if not state.pending:
+            return Action("stop", {})
+        row = self._spec.featurize(
+            state, Action("stop", {}), self._hist
+        )
+        if _dot(self._w, row) >= self._tau:
+            self._hist.record("stop")
+            return Action("stop", {})
+        act = self._inner(state)
+        if act is None:
+            return Action("stop", {})
+        self._hist.record(act.op)
+        return act
+
+
+def _mk_gate(
+    player: Any,
+    spec: DomainSpec,
+    w_head: dict[str, float],
+    tau: float,
+    seed: int,
+    *,
+    greedy: bool = False,
+) -> _StopGate:
+    """Build one gated player: frozen ranker (eval-only) + the head."""
+    inner = og.OpenLearnedPlayer(
+        seed=seed,
+        spec=spec,
+        weights=player.weights_dict(),
+        legal=_eval_only,
+        learn=False,
+        greedy=greedy,
+    )
+    return _StopGate(inner, spec, w_head, tau)
+
+
+def _calibrate_tau(
+    spec: DomainSpec,
+    player: Any,
+    w_head: dict[str, float],
+    rows: list[dict],
+    pools: list[list],
+    budget: int,
+    seed: int,
+) -> tuple[float, float]:
+    """Pick the stop threshold maximizing train reward — greedy decode.
+
+    The grid spans the head's score range on the collected decision
+    rows; each candidate tau is priced by actually playing the gated
+    arm over the train pools (identical memoized verdicts), so the
+    threshold is calibrated on the metric it must earn.
+    """
+    scores = sorted(_dot(w_head, r) for r in rows)
+    lo, hi = scores[0], scores[-1]
+    best_tau, best_reward = lo, -1e9
+    for k in range(_TAU_GRID):
+        tau = lo + (hi - lo) * k / max(_TAU_GRID - 1, 1)
+        total = 0.0
+        for i, pool in enumerate(pools):
+            gate = _mk_gate(
+                player,
+                spec,
+                w_head,
+                tau,
+                seed + _CAL_SEED + i,
+                greedy=True,
+            )
+            traj = engine.run_episode(
+                sl._FixedArena(pool), gate, budget
+            )
+            total += traj.total
+        r = total / len(pools)
+        if r > best_reward:
+            best_reward, best_tau = r, tau
+    return best_tau, round(best_reward, 4)
+
+
 def run(
     seed: int, half: int, page: int, budget: int, epochs: int
 ) -> dict[str, Any]:
@@ -152,9 +463,10 @@ def run(
             pos += 1
     measure_s = time.time() - t0
 
-    rows: list[dict] = []
+    rows_out: list[dict] = []
     curves: dict[str, list[float]] = {}
     weights: dict[str, dict] = {}
+    heads: dict[str, dict] = {}
     orig_evaluate = lp.evaluate
     lp.evaluate = pb._patched_evaluate(by_key)
     try:
@@ -199,55 +511,115 @@ def run(
                     budget,
                 ),
                 "ap": round(
-                    pb._ap(
-                        [0.0] * len(flat_pool), flat_outcomes
-                    ),
+                    pb._ap([0.0] * len(flat_pool), flat_outcomes),
                     4,
                 ),
             },
         }
 
-        for arm_i, (arm_id, tags) in enumerate(ARMS):
+        for arm_i, (arm_id, tags, kind, n_epochs) in enumerate(ARMS):
             t1 = time.time()
             spec = _extra_spec(tags)
             player = og.OpenLearnedPlayer(
                 seed=seed, spec=spec, weights={}
             )
             curve: list[float] = []
-            for _ in range(epochs):
+            for _ in range(n_epochs):
                 totals = engine.train_policy(
                     player, train_pools, sl._FixedArena, budget=budget
                 )
                 curve.append(
                     round(sum(totals) / max(len(totals), 1), 4)
                 )
-            sampled = _play_pools(
-                lambda i, p=player: p.frozen(
-                    seed + _SAMPLED_SEED + i
-                ),
-                ev_pools,
-                budget,
-            )
-            greedy = _play_pools(
-                lambda i, p=player: p.frozen(
-                    seed + _GREEDY_SEED + i, greedy=True
-                ),
-                ev_pools,
-                budget,
-            )
+            w_rank = player.weights_dict()
+            if kind in ("rl+imitate", "imitate"):
+                for _ in range(IMITATE_PASSES):
+                    w_rank = player.weights_dict()
+                    engine.imitate_policy(
+                        player,
+                        _oracle_expert(spec, w_rank, by_key),
+                        train_pools,
+                        sl._FixedArena,
+                        budget=budget,
+                    )
+                w_rank = player.weights_dict()
+            if kind == "head":
+                hrows, hlabels = _collect_head_rows(
+                    spec, w_rank, train_pools, by_key, budget
+                )
+                w_head, hloss = _fit_head(spec, hrows, hlabels, seed)
+                tau, cal_reward = _calibrate_tau(
+                    spec,
+                    player,
+                    w_head,
+                    hrows,
+                    train_pools,
+                    budget,
+                    seed,
+                )
+                heads[arm_id] = {
+                    "tau": round(tau, 4),
+                    "cal_reward": cal_reward,
+                    "loss": hloss,
+                    "n_rows": len(hrows),
+                    "pos_rate": round(
+                        sum(hlabels) / max(len(hlabels), 1), 4
+                    ),
+                    "weights": {
+                        n: round(wv, 4)
+                        for n, wv in w_head.items()
+                        if abs(wv) > 1e-4
+                    },
+                }
+                sampled = _play_pools(
+                    lambda i, p=player, s=spec, wh=w_head, ta=tau: (
+                        _mk_gate(p, s, wh, ta, seed + _SAMPLED_SEED + i)
+                    ),
+                    ev_pools,
+                    budget,
+                )
+                greedy = _play_pools(
+                    lambda i, p=player, s=spec, wh=w_head, ta=tau: (
+                        _mk_gate(
+                            p,
+                            s,
+                            wh,
+                            ta,
+                            seed + _GREEDY_SEED + i,
+                            greedy=True,
+                        )
+                    ),
+                    ev_pools,
+                    budget,
+                )
+            else:
+                sampled = _play_pools(
+                    lambda i, p=player: p.frozen(
+                        seed + _SAMPLED_SEED + i
+                    ),
+                    ev_pools,
+                    budget,
+                )
+                greedy = _play_pools(
+                    lambda i, p=player: p.frozen(
+                        seed + _GREEDY_SEED + i, greedy=True
+                    ),
+                    ev_pools,
+                    budget,
+                )
             ap = round(
                 pb._ap(
-                    _page_scores(
-                        spec, player.weights_dict(), ev_pools
-                    ),
+                    _page_scores(spec, w_rank, ev_pools),
                     flat_outcomes,
                 ),
                 4,
             )
-            rows.append(
+            rows_out.append(
                 {
                     "id": arm_id,
+                    "kind": kind,
                     "extra_parts": list(tags),
+                    "rl_epochs": n_epochs,
                     "n_features": len(spec.features),
                     "reward_ep": sampled["reward"],
                     "reward_greedy_ep": greedy["reward"],
@@ -262,7 +634,7 @@ def run(
             curves[arm_id] = curve
             weights[arm_id] = {
                 n: round(w, 4)
-                for n, w in player.weights_dict().items()
+                for n, w in w_rank.items()
                 if abs(w) > 1e-4
             }
             print(  # stdout-compat
@@ -277,14 +649,18 @@ def run(
 
     n_useful = sum(1 for o in flat_outcomes.values() if o.useful)
     return {
-        "rows": rows,
+        "rows": rows_out,
         "anchors": anchors,
         "train_curve": curves,
         "weights": weights,
+        "heads": heads,
         "pool": {"held_out": len(flat_pool), "useful": n_useful},
         "meta": {
             "measure_seconds": round(measure_s, 1),
             "epochs": epochs,
+            "long_epochs": LONG_EPOCHS,
+            "imitate_passes": IMITATE_PASSES,
+            "head_epochs": HEAD_EPOCHS,
             "elapsed_s": round(time.time() - t0, 1),
         },
     }
@@ -313,6 +689,16 @@ def _print(res: dict[str, Any]) -> None:
             f"{s['useful_per_eval']:>9.4f} "
             f"{s['evals_per_ep']:>8.3f} {'—':>6} {a['ap']:>7.4f}"
         )
+    for arm_id, h in res.get("heads", {}).items():
+        print(  # stdout-compat
+            f"-- head {arm_id}: tau={h['tau']} "
+            f"cal_reward={h['cal_reward']} pos_rate={h['pos_rate']} "
+            f"loss={h['loss']} --"
+        )
+        for n, wv in sorted(
+            h["weights"].items(), key=lambda kv: -abs(kv[1])
+        ):
+            print(f"    {n:<22} {wv:>9.4f}")  # stdout-compat
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -346,7 +732,7 @@ def main(argv: list[str] | None = None) -> int:
             "epochs": args.epochs,
             "oracle_pairing": "memoized per-candidate-seeded verdicts",
             "ap": "page-aware w.featurize(evaluate) on fresh pools",
-            "arms": [a for a, _ in ARMS],
+            "arms": [a for a, *_ in ARMS],
         },
         "results": res,
     }
