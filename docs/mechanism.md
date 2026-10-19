@@ -271,7 +271,9 @@ which handl's serde ignores, so the bridge is lossless), and handl
 assembles a `Language` from them with `language_from_dir`.  Measured
 end-to-end: a mlopt law lands in `lang.transforms` with its fields
 intact, and its condition deserializes as `And([KindAt, ChildCount])`
-(`project/retros/handl-q0-language-as-data.md`; the handl-side test is
+(Q0 — measured in `project/GOALS.md` §G0; the retro itself is in the
+`catopt/` checkout, `catopt/project/retros/handl-q0-language-as-data.md`;
+the handl-side test is
 `kit-data-prelude/crates/handl-kit-data-prelude/tests/catopt_fragments.rs`).
 
 Two traps cost real time and are worth knowing: `TransformDef.when` is
@@ -295,13 +297,31 @@ leaf kinds (`mlopt:const` / `mlopt:var` / `mlopt:data`) declared.  So
 the relationship is not "mlopt emits data handl can read" — handl runs
 mlopt's laws.
 
-**What this is not (yet).**  The tensor channel is *available* but
-unused: Q1a found `TaggedValue::Resource(Rc<ForeignResource>)` — an
-opaque pointer with a finalizer, `Rc`-held and not `Send`/`Sync` — so a
-tensor crosses by reference, but no run yet demonstrates a tensor op
-through exec (Q1b).  And the peer is decided (Q3: mlopt embeds handl as
-an *optional* peer, the `mlopt-native` pattern) but not built: nothing
-in mlopt calls handl yet (`project/plans/0030-handl-peer-integration.md`).
+**What this is not (yet).**  Two of the spike's "not yet"s have since
+closed.  The peer *is* built: `lab/handl-peer` — plan 0030 step 2 in
+its cheapest form — is a PyO3 extension (`import mlopt_handl_peer`:
+`language_transform_ids`, `apply_rule`) over handl's crates, with a CLI
+fallback; `tests/test_handl_peer.py` drives it from Python and checks
+the rewrite agrees with `EGraph.apply_rule`.  And a tensor op *does*
+run through exec: `tests/test_kit_bridge.py` emits a torch.export IR
+program as `.hnl` and evaluates it through the compiled `hnl-run` door
+(`packages/mlopt-kit`), where `hnl/conv_bn.hnl` runs `tensor.conv2d` /
+`tensor.batch_norm` to a torch-fp64-agreeing answer — `hnl-run --repeat`
+even prices the fold *decision* through the real runtime rather than the
+term-level `dag_cost`.
+
+Still open, on purpose or not: the `ForeignResource` channel stays
+available-but-unused — Q1a showed a tensor *can* cross by reference
+(`TaggedValue::Resource(Rc<ForeignResource>)`, `Rc`-held, not
+`Send`/`Sync`), but tensors actually cross as `{"__tensor__"}` JSON
+marshaling at a subprocess boundary (Q1b's verdict stands: the seam is
+JSON-valued — a `Resource`'s JSON form is a dangling debug pointer).
+The peer itself is a spike, not a package: absolute path deps, no
+coverage floor, not promoted to `packages/` — and it touches only
+load+rewrite; nothing calls handl's exec engines from Python
+in-process.  (Plan 0030's writeup lives in the `catopt/` checkout —
+`catopt/project/plans/0030-handl-peer-integration.md`; the in-repo
+record is `project/GOALS.md` §G0 and `lab/handl-peer/README.md`.)
 
 ## Where this lives in the code
 
@@ -351,6 +371,7 @@ in mlopt calls handl yet (`project/plans/0030-handl-peer-integration.md`).
   language, many interpretations; handl *is* the kernel.
 - `project/adrs/0011-canonical-representation.md` — the calculus is
   canonical for laws, the op-graph for execution.
-- `project/retros/handl-q0-language-as-data.md`,
+- `catopt/project/retros/handl-q0-language-as-data.md`,
   `handl-q1-tensor-crossing.md`, `handl-q3-integration-direction.md` —
-  the boundary spike's measurements.
+  the boundary spike's measurements (the retros live in the `catopt/`
+  checkout; `project/GOALS.md` §G0 summarizes them in-repo).
