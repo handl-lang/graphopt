@@ -138,9 +138,7 @@ def test_regular_fold_collapses_to_loop():
     assert eg.find(eg.add_term(comb_to_dag(rep.prog))) == eg.find(
         root_eid
     )
-    assert loop_headed(
-        comb_to_dag(rep.prog) if False else rep.chains[0].loop
-    )
+    assert loop_headed(rep.chains[0].loop)
 
 
 def test_irregular_family_reports_obstruction():
