@@ -12,28 +12,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "catopt-kit"
-version = "0.1.0"
-dependencies = [
- "handl-discovery",
- "handl-egraph",
- "handl-host-tensor",
- "handl-kit-data-canonical",
- "handl-language",
- "handl-platform",
- "handl-plugin-lib-handl",
- "handl-plugin-module",
- "handl-runtime",
- "handl-value",
- "hnl-engine-exec",
- "hnl-engine-exec-tree-walk",
- "hnl-engine-lex-pattern",
- "hnl-engine-parse-pratt",
- "serde_json",
- "sha2",
-]
-
-[[package]]
 name = "cfg-if"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -112,7 +90,6 @@ dependencies = [
 [[package]]
 name = "handl-host-tensor"
 version = "0.1.0"
-source = "git+https://github.com/handl-lang/host-tensor?branch=main#d1acefd0e22ae95338789dd913b9823eec5e2cf8"
 dependencies = [
  "handl-lib-ops",
  "handl-platform",
@@ -146,7 +123,7 @@ dependencies = [
 [[package]]
 name = "handl-kit-data-canonical"
 version = "0.1.0"
-source = "git+https://github.com/handl-lang/lang?branch=main#d5847895bcd48b66e0c5ea1ade9e81fef4f25cfa"
+source = "git+https://github.com/handl-lang/kit-data-canonical?branch=main#3d846797497a58603fb0d31e779a49ff770888c8"
 dependencies = [
  "handl-kit-data",
  "handl-language",
@@ -460,6 +437,28 @@ name = "memchr"
 version = "2.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
+
+[[package]]
+name = "mlopt-kit"
+version = "0.1.0"
+dependencies = [
+ "handl-discovery",
+ "handl-egraph",
+ "handl-host-tensor",
+ "handl-kit-data-canonical",
+ "handl-language",
+ "handl-platform",
+ "handl-plugin-lib-handl",
+ "handl-plugin-module",
+ "handl-runtime",
+ "handl-value",
+ "hnl-engine-exec",
+ "hnl-engine-exec-tree-walk",
+ "hnl-engine-lex-pattern",
+ "hnl-engine-parse-pratt",
+ "serde_json",
+ "sha2",
+]
 
 [[package]]
 name = "proc-macro2"
