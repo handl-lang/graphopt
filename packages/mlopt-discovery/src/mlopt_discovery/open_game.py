@@ -63,12 +63,16 @@ from mlopt_discovery.players import (
     OpOneHot,
     PlayRates,
     StateBroadcast,
+    register_legal,
+    register_part,
+    register_rank,
 )
 
 __all__ = [
     "OPEN_GAME_EFFICIENCY",
     "OPEN_GAME_FEATURES",
     "OPEN_GAME_REWARD",
+    "OPEN_PART_TAGS",
     "OPEN_SPEC",
     "OpenArena",
     "OpenLearnedPlayer",
@@ -381,6 +385,26 @@ OPEN_PARTS: tuple = (
     OpOneHot(frozenset(OPEN_GAME_FEATURES)),
     ActionFeats(_act_feats),
 )
+
+#: The open parts in the spec record's tag vocabulary — the names a
+#: rewritable spec record carries (:meth:`DomainSpec.to_record`).
+OPEN_PART_TAGS: tuple[str, ...] = (
+    "bias",
+    "open:state",
+    "open:hist",
+    "open:onehot",
+    "open:action",
+)
+
+register_part("open:state", lambda: StateBroadcast(_state_feats))
+register_part("open:hist", lambda: PlayRates(("evaluate", "stop")))
+register_part(
+    "open:onehot",
+    lambda: OpOneHot(frozenset(OPEN_GAME_FEATURES)),
+)
+register_part("open:action", lambda: ActionFeats(_act_feats))
+register_legal("open", legal_actions)
+register_rank("open", _cand_feats)
 
 #: The open-game player spec — schema, parts, enumerator, prior, ranker.
 OPEN_SPEC = DomainSpec.build(

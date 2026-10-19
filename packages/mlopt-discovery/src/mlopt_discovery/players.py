@@ -25,6 +25,9 @@ from dataclasses import dataclass, field
 from typing import Any
 
 __all__ = [
+    "LEGALS",
+    "PARTS",
+    "RANKS",
     "ActionFeats",
     "Bias",
     "DomainSpec",
@@ -35,6 +38,10 @@ __all__ = [
     "PlayRates",
     "StateBroadcast",
     "compose_featurizer",
+    "register_legal",
+    "register_part",
+    "register_rank",
+    "spec_from_record",
 ]
 
 #: REINFORCE constants — per-episode-return update normalized by
@@ -204,6 +211,70 @@ def compose_featurizer(parts: tuple) -> Callable:
     return featurize
 
 
+# ---------------------------------------------------------------------------
+#  The parts registry — a spec as *data* (the player-on-board term)
+# ---------------------------------------------------------------------------
+#
+#  ``DomainSpec`` is ~70% data already (``features``, ``weights``,
+#  ``lr``); the rest is callables — the composed ``featurize``, the
+#  ``legal`` enumerator, the candidate ``rank`` scorer and the
+#  ``fn`` inside ``StateBroadcast``/``ActionFeats`` parts.  The
+#  registries below give every callable a *name*, so a spec reifies
+#  to a record of tags — the term the player arena
+#  (:mod:`mlopt_discovery.player_arena`) rewrites.  The idiom is the
+#  codebase's own: ``meta_arena.ACTIONS``, ``genkernel.TIERS``,
+#  ``lawdata.HANDLERS`` — a new binding is a registry entry, not a
+#  player subclass.
+
+#: Part tag -> constructor: ``PARTS[tag]()`` builds the part.
+PARTS: dict[str, Callable[[], Any]] = {}
+
+#: Domain tag -> legal-move enumerator ``state -> tuple``.
+LEGALS: dict[str, Any] = {}
+
+#: Domain tag -> candidate ranker ``cand -> dict``.
+RANKS: dict[str, Any] = {}
+
+
+def register_part(tag: str, ctor: Callable[[], Any]) -> Callable:
+    """Register *ctor* as the constructor behind part tag *tag*.
+
+    ``register_part("meta:state", lambda: StateBroadcast(f))`` — a
+    part the shipped vocabulary owns is one registry entry; a spec
+    record then names it by tag.
+    """
+    PARTS[tag] = ctor
+    return ctor
+
+
+def register_legal(tag: str, fn: Any) -> Any:
+    """Register *fn* as the legal-move enumerator for domain *tag*."""
+    LEGALS[tag] = fn
+    return fn
+
+
+def register_rank(tag: str, fn: Any) -> Any:
+    """Register *fn* as the candidate ranker for domain *tag*."""
+    RANKS[tag] = fn
+    return fn
+
+
+def _part_tag(part: Any) -> str:
+    """Resolve *part* to its registry tag (equality, not identity)."""
+    for tag, ctor in PARTS.items():
+        if ctor() == part:
+            return tag
+    raise ValueError(f"unregistered feature part {part!r}")
+
+
+def _fn_tag(fn: Any, table: dict, what: str) -> str:
+    """Resolve *fn* to its registry tag (identity, then equality)."""
+    for tag, f in table.items():
+        if f is fn or f == fn:
+            return tag
+    raise ValueError(f"unregistered {what} {fn!r}")
+
+
 @dataclass(frozen=True)
 class DomainSpec:
     """Per-domain player data — one :class:`LearnedPlayer`, many specs.
@@ -253,6 +324,60 @@ class DomainSpec:
             rank=rank,
             lr=lr,
         )
+
+    def to_record(self) -> dict[str, Any]:
+        """Reify the spec to a pure-data record — the rewritable term.
+
+        Every callable field resolves to its registry tag
+        (:data:`PARTS`, :data:`LEGALS`, :data:`RANKS`); the record is
+        JSON-serializable — ``{features, legal, parts, weights, rank,
+        lr}`` — and :meth:`build_from_record` restores the spec.
+        Raises ``ValueError`` when a part or callable was never
+        registered (a spec the record cannot name is not data).
+        """
+        return {
+            "features": list(self.features),
+            "legal": _fn_tag(self.legal, LEGALS, "legal enumerator"),
+            "parts": [_part_tag(p) for p in self.parts],
+            "weights": (
+                dict(self.weights) if self.weights is not None else None
+            ),
+            "rank": (
+                None
+                if self.rank is None
+                else _fn_tag(self.rank, RANKS, "rank scorer")
+            ),
+            "lr": self.lr,
+        }
+
+    @classmethod
+    def build_from_record(cls, rec: Mapping[str, Any]) -> DomainSpec:
+        """Rebuild a spec from its record — tags resolve to callables.
+
+        The inverse of :meth:`to_record`: part tags construct through
+        :data:`PARTS`, the ``legal``/``rank`` tags through
+        :data:`LEGALS`/:data:`RANKS`, and the parts recompose into
+        the featurizer through :meth:`build`.
+        """
+        rank = rec.get("rank")
+        return cls.build(
+            features=tuple(rec["features"]),
+            legal=LEGALS[str(rec["legal"])],
+            parts=tuple(PARTS[str(t)]() for t in rec["parts"]),
+            weights=rec.get("weights"),
+            rank=None if rank is None else RANKS[str(rank)],
+            lr=float(rec.get("lr", _LR)),
+        )
+
+
+def spec_from_record(rec: Mapping[str, Any]) -> DomainSpec:
+    """Rebuild a spec from its record — :meth:`DomainSpec.build_from_record`."""
+    return DomainSpec.build_from_record(rec)
+
+
+#: The shared intercept is the one part every domain's row carries —
+#: registered here so any spec record can name it.
+register_part("bias", Bias)
 
 
 class LinearPolicy:

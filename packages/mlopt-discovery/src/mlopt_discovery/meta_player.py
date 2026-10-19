@@ -51,9 +51,12 @@ from .players import (
     PlayHist,
     PlayRates,
     StateBroadcast,
+    register_legal,
+    register_part,
 )
 
 __all__ = [
+    "META_PART_TAGS",
     "META_SPEC",
     "MetaLearnedPlayer",
     "evaluate",
@@ -191,6 +194,30 @@ META_PARTS: tuple = (
     OpOneHot(frozenset(lawdata.META_ARENA_FEATURES)),
     ActionFeats(_act_feats),
 )
+
+#: The meta parts in the spec record's tag vocabulary — the names a
+#: rewritable spec record carries (:meth:`DomainSpec.to_record`).
+META_PART_TAGS: tuple[str, ...] = (
+    "bias",
+    "meta:state",
+    "meta:hist",
+    "meta:onehot",
+    "meta:action",
+)
+
+register_part("meta:state", lambda: StateBroadcast(_state_feats))
+register_part(
+    "meta:hist",
+    lambda: PlayRates(
+        ("fire", "saturate", "declare", "handle", "claim")
+    ),
+)
+register_part(
+    "meta:onehot",
+    lambda: OpOneHot(frozenset(lawdata.META_ARENA_FEATURES)),
+)
+register_part("meta:action", lambda: ActionFeats(_act_feats))
+register_legal("meta", ma.legal_actions)
 
 #: The meta-arena player spec — schema, parts, enumerator, prior.
 META_SPEC = DomainSpec.build(

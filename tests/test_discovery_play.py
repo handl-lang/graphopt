@@ -140,6 +140,7 @@ class TestDomains:
             "torch",
             "gen",
             "open",
+            "player",
         }
 
     def test_torch_domain(self):

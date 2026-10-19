@@ -35,7 +35,13 @@ Shipped domains:
 * ``torch`` — real ``nn.Module``s lifted through
   ``mlopt_torch.adapters.TorchSource`` and played under the real
   sink's ``supported_ops`` bound; the ``--deliver`` flag lowers
-  the winning extraction to a verified runnable module.
+  the winning extraction to a verified runnable module;
+* ``open`` — a page of enumerated law candidates, one oracle
+  evaluation per move (:mod:`open_game`);
+* ``player`` — the two-tier meta-game (:mod:`player_arena`): the
+  state is an object-level *player spec record* under rewrite, and
+  ``evaluate`` runs a nested train+held-out-eval on the ``meta`` or
+  ``open`` board — the player itself is the term being rewritten.
 
 Run it::
 
@@ -60,6 +66,7 @@ from . import engine, lawdata, training
 from . import meta_arena as ma
 from . import meta_player as mp
 from . import open_game as og
+from . import player_arena as pa
 from .meta_player import _bucket
 from .players import (
     ActionFeats,
@@ -67,6 +74,8 @@ from .players import (
     DomainSpec,
     LinearPolicy,
     StateBroadcast,
+    register_legal,
+    register_part,
 )
 
 __all__ = [
@@ -1441,6 +1450,12 @@ SEARCH_FEATURES: tuple = (
     ),
 )
 
+#: The search spec's parts in the record vocabulary — every shipped
+#: spec reifies to data (:meth:`DomainSpec.to_record`).
+register_part("search:state", lambda: StateBroadcast(_search_state))
+register_part("search:action", lambda: ActionFeats(_search_act))
+register_legal("search", _search_legal)
+
 #: The search adapter's spec — a rule-fire board has no move-kind
 #: one-hot and no play-rate history, so its parts are just the
 #: intercept, the ``st:*`` broadcast and the rule bucket.
@@ -1530,6 +1545,12 @@ DOMAINS: dict[str, Domain] = {
         deliver=_torch_deliver,
     ),
     "open": _spec_domain(og.gen_cases, og.OpenArena, og.OPEN_SPEC),
+    "player": _spec_domain(
+        pa.gen_cases,
+        pa.PlayerArena,
+        pa.PLAYER_SPEC,
+        scripted=pa.GreedyEditor,
+    ),
 }
 
 
