@@ -489,6 +489,13 @@ is brittle at n=40 for every arm (RL 4.15×).  Not wired into
 
 Regenerate with `lab/train/train_open_prior.py` / `lab/train/train_meta_prior.py`.
 
+Macro-action minting over `Trajectory` sequences (2026-10-19):
+[`docs/results_macro_moves.md`](results_macro_moves.md)
+(`lab/mint/macro_miner.py`) — mined `claim→extract` /
+`declare→saturate→handle→extract` replayed as single refereed moves;
+scripted+macros beats the base move set +0.19 reward/ep on the
+held-out meta stream (the frozen prior never samples the offers).
+
 **Honest note:** in *both* families the best result is not the neural
 one — distillation beats neural RL at n=40, and the linear prior beats
 the neural rule-value net.
