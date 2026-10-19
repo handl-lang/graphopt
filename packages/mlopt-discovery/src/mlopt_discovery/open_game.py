@@ -390,6 +390,56 @@ def _useful_ct_feat(state: OpenState) -> dict[str, float]:
     return {"st:useful_ct": state.n_useful / max(state.pool_size, 1)}
 
 
+def _stop_feats(
+    state: OpenState, action: Action, _row: dict[str, float]
+) -> dict[str, float]:
+    """``x:marginal`` / ``x:stop:*`` — the stopping-policy columns.
+
+    The learned arm drains ~15 of 16 evals because nothing on the
+    ``stop`` row lets the softmax price *when to quit*: a pure
+    ``st:*`` broadcast cancels in the softmax (it shifts every logit
+    together — the measured dead weight of the ``open:pending-*``
+    parts), so the stopping signal has to ride the action rows.
+
+    * ``x:marginal`` (``evaluate`` rows) — the expected yield of
+      *this* eval if it pays now: the candidate's pending-pool score
+      rank quantile times the payoff a useful find collects this
+      step (``1 + efficiency/(steps+1)`` — the useful tier plus the
+      ordering credit).  Pool-relative like ``a:score_rank``, but
+      decayed by how late in the episode the spend lands — the
+      "another marginal eval late is worth less" gradient the flat
+      reward was missing.
+    * ``x:stop:marginal`` (``stop`` row) — the same payoff scaled to
+      the *best* still-pending score (what the board still offers):
+      the opportunity cost of stopping now, so a negative weight on
+      it reads "don't stop while value remains".
+    * ``x:stop:evals_left`` / ``x:stop:finds`` (``stop`` row) — the
+      evals the page still affords and the paying finds already
+      banked, each /pool size: ``st:evals_left`` /
+      ``st:finds_so_far`` would be dead broadcasts; on the stop row
+      they are action-level.
+    """
+    credit = OPEN_GAME_EFFICIENCY / (state.steps + 1)
+    if action.op == "stop":
+        n = max(state.pool_size, 1)
+        top = max(
+            (_score(state.pool[i]) for i in state.pending),
+            default=0.0,
+        )
+        return {
+            "x:stop:marginal": (top / 16.0) * (1.0 + credit),
+            "x:stop:evals_left": len(state.pending) / n,
+            "x:stop:finds": state.n_useful / n,
+        }
+    cand = _eval_cand(action)
+    if cand is None or not state.pending:
+        return {}
+    s = _score(cand)
+    scores = _pending_scores(state)
+    q = sum(v <= s for v in scores) / len(scores)
+    return {"x:marginal": q * (1.0 + credit)}
+
+
 # ---------------------------------------------------------------------------
 #  The board
 # ---------------------------------------------------------------------------
@@ -568,6 +618,12 @@ OPEN_EXTRA_FEATURES: dict[str, tuple[str, ...]] = {
     "open:pending-top": ("st:pending_top",),
     "open:pending-mean": ("st:pending_mean",),
     "open:useful-ct": ("st:useful_ct",),
+    "open:stop": (
+        "x:marginal",
+        "x:stop:marginal",
+        "x:stop:evals_left",
+        "x:stop:finds",
+    ),
 }
 
 #: The extra parts' tags — the names a spec record (or the player
@@ -596,6 +652,7 @@ register_part(
     "open:pending-mean", lambda: StateBroadcast(_pending_mean_feat)
 )
 register_part("open:useful-ct", lambda: StateBroadcast(_useful_ct_feat))
+register_part("open:stop", lambda: RelFeats(_stop_feats))
 register_legal("open", legal_actions)
 register_rank("open", _cand_feats)
 

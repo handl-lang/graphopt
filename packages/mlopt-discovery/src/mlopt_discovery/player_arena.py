@@ -355,7 +355,10 @@ class Objective:
 OBJECTIVES: dict[str, Objective] = {
     "meta": Objective(
         vocab=mp.META_PART_TAGS,
-        requires=(("meta:state", "meta:action"),),
+        requires=(
+            ("meta:state", "meta:action"),
+            ("meta:state", "meta:macro"),
+        ),
         parent=_meta_parent,
         tables={
             "cold": None,

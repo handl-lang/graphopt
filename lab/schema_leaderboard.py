@@ -105,7 +105,7 @@ OPEN_BUDGET = PAGE + 1
 #: ``lab/richer_features.py``'s axis, not this leaderboard's).
 META_VOCAB: tuple[tuple[str, Any], ...] = tuple(
     zip(
-        ("bias", "state", "hist", "onehot", "action"),
+        ("bias", "state", "hist", "onehot", "action", "macro"),
         ((p,) for p in mp.META_PARTS),
         strict=True,
     )
@@ -121,9 +121,13 @@ OPEN_VOCAB: tuple[tuple[str, Any], ...] = (
     ("ext", tuple(og.OPEN_PARTS[5:])),
 )
 #: Order constraints: writer part → reader part that must follow it.
-#: ``meta_player._act_feats`` reads ``row["st:*"]`` interaction inputs;
+#: ``meta_player._act_feats`` reads ``row["st:*"]`` interaction inputs
+#: and ``_macro_feats`` reads ``st:claimable``/``st:handleable``;
 #: open's ``_act_feats`` ignores ``row`` entirely.
-META_REQUIRES: tuple[tuple[str, str], ...] = (("state", "action"),)
+META_REQUIRES: tuple[tuple[str, str], ...] = (
+    ("state", "action"),
+    ("state", "macro"),
+)
 OPEN_REQUIRES: tuple[tuple[str, str], ...] = ()
 
 #: Eval arm seed offsets — shared across candidates (paired draws).

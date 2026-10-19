@@ -196,6 +196,7 @@ META_ARENA_FEATURES: tuple[str, ...] = (
     "op:handle",
     "op:claim",
     "op:extract",
+    "op:macro",
     # action parameters
     "a:budget",
     "a:unbounded",
@@ -214,4 +215,10 @@ META_ARENA_FEATURES: tuple[str, ...] = (
     "x:handleable:claim",
     "x:claimable:declare",
     "x:claimable:claim",
+    # macro payload — the minted-offer stats and shape (the
+    # ``meta:macro`` part; ``a:h:*``/``x:claimable:claim`` reuse the
+    # spelled-op channels, so the only new columns are these)
+    "x:macro:len",
+    "x:macro:certified",
+    "x:macro:score",
 )

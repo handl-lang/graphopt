@@ -184,15 +184,87 @@ def _act_feats(
     return out
 
 
+def _macro_feats(
+    action: ma.Action, row: dict[str, float]
+) -> dict[str, float]:
+    """Return the macro payload block — ``x:macro:*`` + identity reuse.
+
+    ``docs/results_macro_moves.md``'s diagnosed blindness: every
+    ``op == "macro"`` offer featurized to the same broadcast row, so
+    the softmax could learn *when* a macro pays but never *which*.
+    This part emits the per-offer signal:
+
+    * ``x:macro:len`` — the compressed line's length (``seq``/8):
+      a one-step ``claim→extract`` prices differently from the
+      spelled four-move line;
+    * ``x:macro:certified`` / ``x:macro:score`` — the miner's ranking
+      evidence the offer carries on ``params["macro"]`` (the stat
+      payload ``lab.mint.macro_moves.instantiate`` writes:
+      ``certified`` = share of source episodes that certified;
+      ``score`` = count x mean terminal reward, the miner's rank
+      key, rescaled /8);
+    * ``a:h:<bucket>`` — the *same* handler-identity channel a
+      spelled ``claim``/``handle`` uses, emitted for each claim and
+      handle leg in the seq.  This is what lets the policy prefer
+      ``claim(swiglu)`` over the rank-1 ``claim(silu)`` on a swiglu
+      board — the failure mode the macro doc's honest notes named
+      ("viability is legality, not payoff");
+    * ``x:claimable:claim`` / ``x:handleable:claim`` — the context
+      terms a spelled claim gets, emitted when the seq *contains* a
+      claim, so the macro row inherits the board-fit pricing.
+
+    ``op:macro`` itself comes free through :class:`OpOneHot` once the
+    schema names it.  ``a:macro`` is deliberately absent — it would
+    be the same flag twice.  A hand-spelled ``Action("macro",
+    {"seq": ...})`` with no ``Macro`` record still gets the
+    structural terms; the stat columns read as 0 (missing weight).
+    """
+    if action.op != "macro":
+        return {}
+    seq = tuple(action.params.get("seq") or ())
+    out: dict[str, float] = {"x:macro:len": len(seq) / 8.0}
+    m = action.params.get("macro")
+    if m:
+        if isinstance(m, dict):
+            out["x:macro:certified"] = float(m.get("certified", 0.0))
+            out["x:macro:score"] = float(m.get("score", 0.0)) / 8.0
+        else:  # a Macro-like record duck-typed in by the caller
+            out["x:macro:certified"] = float(
+                getattr(m, "certified", 0.0)
+            )
+            out["x:macro:score"] = (
+                float(getattr(m, "score", 0.0)) / 8.0
+            )
+    has_claim = False
+    for sub in seq:
+        op, params = (
+            (str(sub["op"]), dict(sub.get("params") or {}))
+            if isinstance(sub, dict)
+            else (str(sub.op), dict(getattr(sub, "params", {})))
+        )
+        if op in ("claim", "handle"):
+            tag = params.get("handler")
+            if tag is not None:
+                out[f"a:h:{_bucket(tag, 'handler')}"] = 1.0
+            has_claim = has_claim or op == "claim"
+    if has_claim:
+        out["x:claimable:claim"] = row.get("st:claimable", 0.0)
+        out["x:handleable:claim"] = row.get("st:handleable", 0.0)
+    return out
+
+
 #: The meta featurizer's composable parts, in row order: the intercept,
 #: the ``st:*`` broadcast, the ``h:*`` play rates, the move-kind
-#: one-hot, then the action's params and interactions.
+#: one-hot, then the action's params and interactions — and the macro
+#: payload last (it reads no ``st:*`` keys it doesn't guard, so the
+#: part order only fixes row ordering).
 META_PARTS: tuple = (
     Bias(),
     StateBroadcast(_state_feats),
     PlayRates(("fire", "saturate", "declare", "handle", "claim")),
     OpOneHot(frozenset(lawdata.META_ARENA_FEATURES)),
     ActionFeats(_act_feats),
+    ActionFeats(_macro_feats),
 )
 
 #: The meta parts in the spec record's tag vocabulary — the names a
@@ -203,6 +275,7 @@ META_PART_TAGS: tuple[str, ...] = (
     "meta:hist",
     "meta:onehot",
     "meta:action",
+    "meta:macro",
 )
 
 register_part("meta:state", lambda: StateBroadcast(_state_feats))
@@ -217,6 +290,7 @@ register_part(
     lambda: OpOneHot(frozenset(lawdata.META_ARENA_FEATURES)),
 )
 register_part("meta:action", lambda: ActionFeats(_act_feats))
+register_part("meta:macro", lambda: ActionFeats(_macro_feats))
 register_legal("meta", ma.legal_actions)
 
 #: The meta-arena player spec — schema, parts, enumerator, prior.

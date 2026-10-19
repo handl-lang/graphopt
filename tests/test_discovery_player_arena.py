@@ -164,10 +164,17 @@ class TestBoard:
             )
         )
         assert not rep.applied and rep.reward == 0.0
-        # dropping meta:action first unblocks it
+        # meta:macro also reads st:* (x:claimable:claim & co.) — both
+        # readers must drop before meta:state unblocks
         board.step(
             Action(
                 "toggle_feature", {"part": "meta:action", "add": False}
+            )
+        )
+        assert "meta:state" not in board.observe().droppable
+        board.step(
+            Action(
+                "toggle_feature", {"part": "meta:macro", "add": False}
             )
         )
         st = board.observe()

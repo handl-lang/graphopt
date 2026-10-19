@@ -133,3 +133,41 @@ not stopping), the pool-stat/`st:*` half of the additions is dead
 weight, and `rank_score`/`rank_pool` under-report the shipped
 ordering because the ranker's `cand -> dict` contract cannot see
 the pool — the page-aware probe is the honest AP.
+
+## Neural retest on the enriched rows — does a net exploit the pool-relative info better?
+
+**Date:** 2026-10-19 · `lab/policy_rl_arms.py --only open` re-run
+on the post-`a:score_rank` schema (same protocol, seed 0) plus a
+new supervised arm `ruleval+a*`: the `RuleValueNet` BCE recipe
+(`delta > 0`, standardized inputs, MLP 32) fed
+`input_vector(lhs, rule) ⊕` the spec's `a:*`/`x:*` block —
+`input_vector ⊕ a:score_rank` and friends — scored on the same
+fresh-page rows.
+
+| arm | reward/ep | use/eval | AP |
+|---|---|---|---|
+| trained-linear (baked, richer schema) | 0.2758 | 0.0106 | 0.1284 rank_score slice / 0.2101 page-aware |
+| cold+rl (linear, 5 ep) | 0.2687 | 0.0121 | 0.1066 |
+| rl-net (policynet+a:*) | 0.3390 | 0.0104 | 0.0490 |
+| rl-net-long | 0.3391 | 0.0104 | 0.0767 |
+| rl-net-full (linear row) | 0.2626 | 0.0094 | 0.0237 |
+| rl-net-full-long | 0.2764 | 0.0104 | 0.0148 |
+| **ruleval+a\*** (supervised BCE, enriched rows) | — | — | **0.0435** |
+| heuristic / random anchors | 0.3595 / 0.1339 | — | 0.0450 / 0.0122 |
+
+**The model-class question did not change.**  On the rows that carry
+the pool-relative columns, the MLP arms sit exactly where the
+post-fix run put them — `rl-net` at 0.049 AP (bit-identical to the
+last run's 0.0490; determinism confirmed), `rl-net-long` at 0.0767 —
+still under heuristic-adjacent, far under the linear prior's 0.210
+page-aware AP.  The *supervised* arm is the sharper datapoint:
+`ruleval+a*` at **0.0435** — BCE on the enriched row cannot fall
+into the stop trap, has the full `a:score_rank` information in its
+input, and still lands at *heuristic* level (0.045), an order of
+magnitude under the linear map.  The pool-relative features help a
+*policy* (they price each eval in context, step by step) far more
+than they help a *candidate scorer* (one row per candidate, no
+context to compare against — `a:score_rank` on a fresh page is
+nearly a rescaling of `a:score`).  RL reward still learns fast
+(0.339 sampled, drain-confounded) and RL ranking still lags; the
+linear prior's lead on the enriched schema is intact.

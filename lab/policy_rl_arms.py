@@ -88,7 +88,9 @@ from mlopt_core.trajectories import RULE_VECTOR_LEN, rule_vector
 from mlopt_discovery import open_game as og
 from mlopt_discovery import play
 from mlopt_discovery import proposal as lp
+from mlopt_discovery.meta_arena import Action
 from mlopt_torch import rl as rl_mod
+from mlopt_torch.learned_policy import input_vector
 from torch import nn
 from torch.distributions import Categorical
 
@@ -358,6 +360,86 @@ def train_open_net(
     return model.eval(), means
 
 
+def _fresh_state(pool: list) -> Any:
+    """Return a fresh ``OpenState`` over *pool* — all pending."""
+    return og.OpenState(
+        pool=tuple(pool),
+        pending=tuple(range(len(pool))),
+        verdicts=(),
+        steps=0,
+        done=False,
+        pool_size=len(pool),
+    )
+
+
+def _enriched_row(c: Any, state: Any, i: int) -> list[float]:
+    """``input_vector(lhs, rule)`` ++ the spec's ``a:*``/``x:*`` keys."""
+    f = og.featurize(
+        state, Action("evaluate", {"i": i, "cand": c}), None
+    )
+    return [
+        *input_vector(
+            compute_features(c.lhs), rule_vector(c.as_rule())
+        ),
+        *[f.get(k, 0.0) for k in _CAND_KEYS],
+    ]
+
+
+def _ruleval_enriched_ap(
+    train_pools: list[list],
+    train_outcomes: list[list],
+    ev_pools: list[list],
+    flat_outcomes: dict,
+    *,
+    epochs: int,
+    hidden: int,
+    seed: int,
+) -> float:
+    """Supervised BCE AP arm on the enriched rows — ``ruleval+a*``.
+
+    The ``RuleValueNet`` recipe (BCE on ``delta > 0``, standardized
+    inputs, Adam 1e-2, MLP ``in->h->h->1``) fed the *enriched* row —
+    the shipped structural input concatenated with the candidate's
+    ``a:*``/``x:*`` block (the pool-relative columns the bare input
+    cannot see).  Scores each held-out pool's fresh-page
+    ``evaluate`` rows; the AP is the ordering-only read — no episode.
+    """
+    torch.manual_seed(seed)
+    xs: list[list[float]] = []
+    ys: list[float] = []
+    for pool, outs in zip(train_pools, train_outcomes, strict=True):
+        st = _fresh_state(pool)
+        for i, (c, o) in enumerate(zip(pool, outs, strict=True)):
+            xs.append(_enriched_row(c, st, i))
+            ys.append(1.0 if o.base_cost > o.cand_cost else 0.0)
+    x = torch.tensor(xs, dtype=torch.float32)
+    y = torch.tensor(ys, dtype=torch.float32)
+    mean = x.mean(0)
+    std = x.std(0).clamp_min(1e-6)
+    model = _mlp(x.shape[1], hidden)
+    opt = torch.optim.Adam(model.parameters(), lr=1e-2)
+    loss_fn = nn.BCEWithLogitsLoss()
+    model.train()
+    for _ in range(epochs):
+        opt.zero_grad()
+        loss = loss_fn(model((x - mean) / std).squeeze(-1), y)
+        loss.backward()
+        opt.step()
+    model.eval()
+    scores: list[float] = []
+    with torch.no_grad():
+        for pool in ev_pools:
+            st = _fresh_state(pool)
+            xs2 = torch.tensor(
+                [_enriched_row(c, st, i) for i, c in enumerate(pool)],
+                dtype=torch.float32,
+            )
+            scores.extend(
+                float(v) for v in model((xs2 - mean) / std).squeeze(-1)
+            )
+    return round(pb._ap(scores, flat_outcomes), 4)
+
+
 def _net_player(
     model: nn.Module, mode: str, seed: int, greedy: bool
 ) -> Any:
@@ -530,6 +612,24 @@ def run_open(
             "cold+rl",
             eps,
             aps,
+        )
+
+        # --- the supervised enriched arm ----------------------------
+        # RuleValueNet's BCE recipe on the ``input_vector (+) a:*/x:*``
+        # row — does *supervised* ordering exploit the pool-relative
+        # columns the RL nets cannot?
+        t1 = time.perf_counter()
+        aps["ruleval+a*"] = _ruleval_enriched_ap(
+            train_pools,
+            _train_outcomes,
+            ev_pools,
+            flat_outcomes,
+            epochs=300,
+            hidden=32,
+            seed=seed,
+        )
+        meta.setdefault("train_seconds", {})["ruleval+a*"] = round(
+            time.perf_counter() - t1, 1
         )
 
         # --- the dedicated RL nets ---------------------------------
@@ -945,6 +1045,13 @@ def _print_open(res: dict[str, Any]) -> None:
         )
     for arm, curve in res["train_curve"].items():
         print(f"  train[{arm}]: {curve}")  # stdout-compat
+    ep_stems = {
+        a[:-7] if a.endswith("-greedy") else a
+        for a in res["episodes_table"]
+    }
+    for name, ap in res["ap"].items():
+        if name not in ep_stems:
+            print(f"  AP[{name}] = {ap:.4f}")  # stdout-compat
     r = res["pool"]
     print(  # stdout-compat
         f"  pool={r['held_out']} useful={r['useful']} "

@@ -153,6 +153,15 @@ def instantiate(macro: Macro) -> Action:
     to match.  Everything else replays verbatim: the recorded
     ``spelled`` spec, handler tags, saturate budgets are the data the
     trace earned.
+
+    The miner's evidence rides along on ``params["macro"]`` as plain
+    data — ``{"name", "count", "certified", "mean_terminal",
+    "score"}``.  The referee only reads ``params["seq"]`` (replay is
+    untouched); the stats are what a macro-aware featurizer prices —
+    ``score``/``certified`` are the action-level signal the broadcast
+    row could never carry.  Plain scalars (not the ``Macro`` record
+    itself — its ``seq`` of dicts is unhashable) keep the shared
+    ``_action_key``/played-mask hashing and reprs deterministic.
     """
     rename: dict[str, str] = {}
     seq: list[dict] = []
@@ -188,7 +197,19 @@ def instantiate(macro: Macro) -> Action:
                 rename.get(str(r), r) for r in params["rules"]
             )
         seq.append({"op": op, "params": params})
-    return Action("macro", {"seq": seq})
+    return Action(
+        "macro",
+        {
+            "seq": seq,
+            "macro": {
+                "name": macro.name,
+                "count": macro.count,
+                "certified": macro.certified,
+                "mean_terminal": macro.mean_terminal,
+                "score": macro.score,
+            },
+        },
+    )
 
 
 def viable(macro: Macro, state: ma.MetaState) -> bool:
