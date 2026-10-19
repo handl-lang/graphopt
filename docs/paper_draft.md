@@ -540,8 +540,8 @@ already-structured space, and it may only reorder (ADR 0003, amending ADR
   small edge; the headroom is *search cost*, not quality
   (`project/retros/contraction-player-shipped.md`).
 * **The learned prior.**  The shipped prior ranks held-out law candidates at
-  AP 0.133 vs 0.045 for the heuristic and finds ~2× more useful laws per
-  episode (`README.md`; ADR 0005).
+  AP 0.210 vs 0.045 for the heuristic (~4.7×) and finds ~2× more useful laws
+  per episode (`docs/results_richer_features.md`; ADR 0005).
 
 Two honest warnings the game layer produced.  First, **a policy is coupled to
 the semantics of its features**: a correctness fix in `mlopt_core.features`
@@ -563,6 +563,31 @@ distinction is threefold: it *mints* new laws and atoms from measured need
 adversarial sweep before shipping (§4.2); and the search is an RL
 environment whose policy may only reorder (§4.4).  The e-graph itself is not
 the contribution — it is the substrate the discovery loop writes into.
+
+**The nearest neighbors: mint + verify, learned play, certified learned
+play.**  TASO (Jia et al., SOSP 2019) auto-generates graph substitutions
+for DNNs and verifies them formally with an automated theorem prover — the
+strongest prior on the verify-what-you-mint leg; the generated bank ships
+once and never re-enters subsequent discovery.  Isaria (Thomas & Bornholt,
+ASPLOS 2024) synthesizes *sound* rewrite-rule systems from ISA
+specifications to drive e-graph vectorizing compilers, and Ruler/Enumo
+(Nandi et al., OOPSLA 2021; Pal et al., OOPSLA 2023) infer rulesets and make
+their inference programmable — all offline, all static once shipped.
+Glenside (Smith et al., MLSys 2021) is the closest precedent for
+machine-derived tensor transformations: its e-graphs rediscover
+access-pattern rewrites (im2col-style), the shape of `conv_bn_fold` here.
+On the play side, CompilerGym (Cummins et al., CGO 2022) casts compiler
+optimization as an RL environment over a fixed action space, and the
+Cambridge line — Omelette (Singh, MPhil thesis 2022), MCTS-GEB (He, Singh &
+Yoneki, EuroMLSys 2023), Aurora (Bărbulescu et al., arXiv 2024) — trains
+RL/MCTS policies that steer e-graph construction: learned play exists, but
+over a static bank.  AlphaGeometry (Trinh et al., Nature 2024) couples a
+learned proposer with a certifying symbolic deducer — learned play inside a
+verified loop, over a fixed deduction closure (AlphaTensor, Fawzi et al.,
+Nature 2022, similarly searches one fixed structure).  Each neighbor holds
+pieces of the loop; to our knowledge none makes the minted bank itself an
+object of play — rules re-entering as moves inside the learned game is the
+differentiation (§4.4).
 
 **Program synthesis / library learning.**  Anti-unification library learning
 (the Babble line) is the direct ancestor of ADR 0007 layer 1: anti-unify

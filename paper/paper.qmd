@@ -51,7 +51,7 @@ library is the bottleneck: human authorship is slow, and the
 pairings nobody names never get found.  For a machine to *author*
 optimizations, four things must exist: rules it can write (data, not
 code), a referee to check them, a score to rank them, and a world —
-a runtime — that programs, rules, and proofs all live inside.
+a runtime — that programs, rules, and derivations all live inside.
 
 The pieces have arrived separately.  Massalin's superoptimizer
 [@massalin1987superoptimizer] searched programs exhaustively;
@@ -80,7 +80,7 @@ denotational or design-level, not working machines whose runtime
 executes the morphism hierarchy.  The claim is narrow and checkable:
 
 > A rewrite a hand optimizer would write — the eval-mode conv+BN
-> weight fold — was **discovered, proven, priced, and shipped by the
+> weight fold — was **discovered, certified, priced, and shipped by the
 > machine**, and its deployed form runs bitwise-equal and cheaper
 > through an independent runtime.
 
@@ -210,8 +210,8 @@ module).  A domain is data — a case generator, a board factory, and a
 feature schema — not a subclass.
 
 Two linear priors ship with pinned held-out wins: the open-game policy
-ranks law candidates at ~3× the cost-delta heuristic's average
-precision (AP 0.133 vs 0.045) and ~2× useful laws per episode, and the
+ranks law candidates at ~4.7× the cost-delta heuristic's average
+precision (AP 0.210 vs 0.045) and ~2× useful laws per episode, and the
 meta-arena prior beats the scripted playbook (mean episode reward
 −0.06 vs −0.10) — the latter flagged by its own eval as possibly
 sampling-variance-riding, an honest negative kept in the record.  A
@@ -269,7 +269,7 @@ import, `MACHINE_SHIPPED` grows to 12.  Re-running the gauntlet
 post-ship refuses at novelty with `relation=duplicate` — the
 documented signature of "already admitted."
 
-**Runtime-proven.**  Through the kit bridge (@sec-background), the
+**Runtime-verified.**  Through the kit bridge (@sec-background), the
 spelled term `batch_norm(conv2d(x,W,b),…)` and the deployed term
 `conv2d(x,W2,b2)` — with `W2`,`b2` themselves mlopt subterms
 materialized through the kit — evaluate to the same tensor
@@ -313,6 +313,36 @@ derivability against an object's own premise closure.  Babble
 [@cao2023babble] learns library abstractions by anti-unification;
 mlopt's definitional-atom layer is the same move and measured
 **null** on reach-expansion — the paying layer is above it.
+
+**Generated rule banks.**  TASO [@jia2019taso] auto-generates graph
+substitutions for DNNs and verifies them formally with an automated
+theorem prover — the strongest prior on the verify-what-you-mint leg;
+the generated bank ships once and does not re-enter subsequent
+discovery.  Isaria [@thomas2024isaria] synthesizes *sound*
+rewrite-rule systems from ISA specifications to drive e-graph
+vectorizing compilers, and Enumo [@pal2023enumo] makes rule inference
+programmable — both grow the bank offline, and the ruleset a compiler
+runs is static.  Glenside [@smith2021glenside] is the closest
+precedent for machine-derived tensor transformations: e-graphs
+rediscovering access-pattern rewrites (im2col-style) — the shape of
+the conv+BN fold here.
+
+**Learned play over rewriting.**  CompilerGym
+[@cummins2022compilergym] casts compiler optimization as an RL
+environment over a fixed action space; the Cambridge line — Omelette
+[@singh2022omelette], MCTS-GEB [@he2023mctsgeb], Aurora
+[@barbulescu2024aurora] — trains RL/MCTS policies that steer e-graph
+construction.  Learned play over rewriting exists, but over a static
+bank.  AlphaGeometry [@trinh2024alphageometry] couples a learned
+proposer to a certifying symbolic deducer — learned play inside a
+verified loop, over a fixed deduction closure (AlphaTensor
+[@fawzi2022alphatensor] similarly searches one fixed structure).
+
+Each neighbor holds pieces of the loop — generation, certification,
+learned play — but, to our knowledge, none makes the minted bank
+itself an object of play: in mlopt a law minted during discovery
+re-enters as a move inside the learned game (@sec-game).  The
+differentiation is that closure, not any single leg.
 
 **Compilers.**  TVM [@chen2018tvm] autotunes schedules; TorchInductor
 [@ansel2024pytorch2] fuses pointwise ops and codegen's the graph a

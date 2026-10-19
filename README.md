@@ -13,7 +13,7 @@ names never get found.
 **The idea.**  For a machine to *author* optimizations, four things
 must exist: rules it can write (data, not code), a referee to check
 them, a score to rank them, and a world — a runtime — that programs,
-rules, and proofs all live inside.  A categorical substrate delivers
+rules, and derivations all live inside.  A categorical substrate delivers
 all four at once: a tensor program is a morphism of a category, the
 category's equations are rewrite laws as data, derivations are
 checkable certificates, and the handl runtime is the world the whole
@@ -24,18 +24,24 @@ substrate, mlopt *mints* new laws from measured need — guard
 synthesized, adversarially swept, admitted through a staged gauntlet —
 and ships them verbatim in the default rule set.
 
-**The contribution is the connection.**  Equality saturation
-(Tate/egg/TENSAT), rule inference (Ruler), and learned play on
-perfect-referee games (AlphaGo Zero; contrast AlphaTensor, which
-searches one fixed structure) each existed separately.  mlopt connects
-them: a machine that discovers, proves, prices, and ships its own
-compiler rules — and can learn to play the discovery.
+**The contribution is the connection.**  The pieces exist separately:
+systems that mint *and* verify rule banks (TASO's theorem-proved
+substitutions; Ruler/Enumo inference; Isaria's sound synthesized
+vectorizing rules — each grown offline, static once shipped); learned
+play over rewriting (CompilerGym; Omelette / MCTS-GEB / Aurora steering
+e-graph construction over a fixed bank); and learned play inside a
+certified loop (AlphaGeometry's proposer against a fixed deduction
+closure; AlphaTensor searching one fixed structure).  To our knowledge
+none makes the minted bank itself an object of play.  mlopt connects
+them: a machine that discovers, certifies, prices, and ships its own
+compiler rules — whose minted rules re-enter the bank — and can learn
+to play the discovery.
 
 The flagship result: **`conv_bn_fold`, a machine-minted composite, is a
 shipped law.**  The engine minted the eval-mode weight fold
 `batch_norm(conv2d(x,W,b),…) → conv2d(x,W′,b′)` — the rewrite a hand
 optimizer writes — as a composite over premise laws, transported its
-guard out of the evidence store, proved it premise-derivable with a
+guard out of the evidence store, certified it premise-derivable with a
 replayable certificate, measured its pay, and shipped it.  The folded
 form then evaluates **bitwise-equal** to the spelled program through an
 independent runtime (the handl tree-walk engine, via `mlopt-kit`) at
@@ -48,15 +54,16 @@ and runtime-priced deployment, not a model-scale speedup claim.
 
 **Guidance, as a game.**  The same substrate that makes laws data also
 makes discovery a well-defined game — and the deeper property is the
-*closure*: programs, rules, and proofs are n-morphisms in one calculus,
+*closure*: programs, rules, and derivations are n-morphisms in one calculus,
 so the system produces the values it consumes (minted rules re-enter
 the bank; derivations replay as terms).  Rule applications are
 well-formed moves, the gauntlet is the referee, cost is the score — so
 learned policies can play the search.  Two shipped linear priors already beat
 hand-tuned baselines on held-out boards: the open-game policy ranks
-law-shapes with ~3× the heuristic's average precision, and a distilled
-contraction policy beats `opt_einsum`'s randomized greedy (0.91× its
-cost).  Neural arms currently lose to the linear/distilled players —
+law-shapes with ~4.7× the heuristic's average precision (AP 0.210 vs
+0.045), and a distilled contraction policy beats `opt_einsum`'s
+randomized greedy (0.91× its cost).  Neural arms currently lose to
+the linear/distilled players —
 reported as measured, not tuned.
 
 ## Architecture
