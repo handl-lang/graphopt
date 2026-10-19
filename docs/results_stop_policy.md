@@ -362,3 +362,147 @@ pending-usefulness signal better than the heuristic's AP-0.045 view
 (the `rank1_pred` note stands: a `RelFeats` part cannot see the
 policy's own next-pick probability, so even the confidence column
 is only the linear-score proxy).
+
+---
+
+# Round 4 — the learned value signal + a gate correction that reopens the head
+
+**Date:** 2026-10-19 (same day, fourth run) · **Runner:** identical —
+`timeout 1800 .venv/bin/python lab/stop_policy.py --json /tmp/stop.json`
+(~4 min: 148 s pool memoization + 3 s net + 18 arms).
+
+Round 3 closed on the missing variable: nothing predicts *which*
+pending candidates still pay — the heuristic view tops out at
+candidate AP 0.045.  That prediction is `RuleValueNet`'s own job,
+and it reaches AP ~0.041 on-distribution — comparable to the
+heuristic.  This round trains it on-distribution and feeds its
+per-candidate prediction to the stop arm — **and finds that the
+stop mechanism itself was broken the whole time**.
+
+## Correction: the `_StopGate` comparison was inverted (rounds 2–3 head verdicts were forced)
+
+The supervised head is fit on *continue* labels — high `w·φ_stop`
+means "draining what remains still pays".  The gate then read
+`stop iff w·φ ≥ τ`: it quits **first exactly where continuing is
+worth most**.  Under a perfect head every continue-state scores at
+the top, so the grid's only non-degenerate point is the never-stop
+end — the "the reward-optimal τ is never-stop" result that drove
+rounds 2 and 3's verdicts was **forced by construction**, not
+measured.  The asymmetric-cost-table argument was applied to a
+mechanism that could never express the correct rule.  The gate is
+now `stop iff w·φ ≤ τ` — quit when the head's continue-score drops
+below the threshold — and every head arm in the table below is
+re-measured under the corrected comparison.  (Round-2/3 head rows
+in their own sections remain as recorded under the inverted gate.)
+
+## The predictor
+
+`train_rule_value` on `RuleSample` rows built from the 576 even-page
+candidates' **memoized** verdicts (BCE `delta_cost > 0`, 300 epochs,
+hidden 32 — the `lab/policy_baseline.py` neural path), sigmoid
+predictions injected into the new `open:next-val` part's lookup
+(`og.set_value_preds` — keyed by the same structural
+`(label, repr(lhs), repr(rhs))` identity the verdict memo uses, so
+predictions survive re-enumeration; the part emits zeros unfed):
+
+* the predictor's **own** power, held-out: AP vs its training label
+  (`delta_cost > 0`) is **0.9320** — it learned the quantity it was
+  asked for and it transfers across pages.  AP vs the `useful`
+  verdict is **0.0284** — *below* the heuristic's 0.045, and below
+  the 0.0412 the same model's raw logits earn: 300 epochs of BCE
+  saturates the sigmoid (85% of the pool lands at exactly 0.0/1.0),
+  so the [0,1] features are effectively binary.  Two honest caveats:
+  (a) `delta > 0` — "firing this rule on its own lhs lowers the
+  cost" — is *not* the `useful` verdict (which also requires truth
+  and novelty); the net answers an easier question.  (b) train-page
+  preds are in-sample (~memorized), so the τ calibration sees a
+  near-oracle signal that held-out pages do not have — priced below.
+* **`x:stop:next_value`** — max pred over pending (the
+  `x:stop:best_score` analogue in predicted-pays units);
+  **`x:stop:pool_value`** — Σ preds, the remaining expected yield;
+  **`x:stop:value_frac`** — pool_value / the page's starting value.
+
+The head arms now hold the *ranker* at the incumbent schema
+(`rank_tags=()`) — round 3 showed RL over stop-varying columns can
+collapse the shared ranking (AP 0.0215), a confound outside the
+stop-decision mechanism under test.  `imitate-nv` is the only
+bakeable delivery of a working stop rule; `head+nvh` is the
+ablation — the round-3 heuristic-priced columns under the same
+incumbent ranker.
+
+## Results (head arms re-measured under the corrected gate)
+
+| arm | mechanism | reward/ep | greedy | use/eval | evals/ep | stops | AP |
+|---|---|---|---|---|---|---|---|
+| incumbent | rl 5ep | 0.2728 | 0.3590 | 0.0115 | 14.44 | 19 | 0.2101 |
+| head | gate, incumbent schema | **0.2878** | 0.3508 | 0.0109 | 15.31 | 26/27 | 0.2101 |
+| head+stop | gate over `open:stop` | 0.2735 | 0.3619 | 0.0106 | 15.69 | 4/3 | 0.2149 |
+| head+nextval | gate over `open:next-value` | 0.2641 | 0.2649 | 0.0091 | 15.25 | 27/30 | 0.0215 |
+| head+stop+nextval | gate over both | **0.2876** | 0.3573 | 0.0104 | 15.97 | 31/32 | 0.1139 |
+| inc+nv | rl 5ep | 0.2316 | 0.2682 | 0.0092 | 15.17 | 20 | **0.0098** |
+| inc+stop+nv | rl 5ep | 0.2386 | 0.2682 | 0.0090 | 15.50 | 16 | **0.0098** |
+| imitate-nv | rl + 6 oracle-imitate | 0.0307 | 0.0200 | 0.0000 | 2.28 | 35/35 | 0.0096 |
+| head+nv | gate over `open:next-val` | 0.2450 | 0.3502 | **0.0129** | **10.78** | 32/31 | 0.2101 |
+| head+nvh | gate over `open:next-value`, inc ranker | **0.2835** | 0.3571 | 0.0111 | 14.97 | 36/36 | 0.2101 |
+| head+stop+nv | gate over both families | 0.2435 | 0.3454 | 0.0100 | 13.94 | 19/8 | 0.2101 |
+
+## What the corrected mechanism shows
+
+* **The gate works now — on every schema.**  All six head arms
+  produce real stopping policies (4–36 stops vs ≤2 before): `head`
+  on incumbent features alone earns 0.2878 (+0.015 over incumbent,
+  26 stops at 15.3 evals — mostly tail-dud savings); `head+nvh`
+  0.2835 at 36/36 stops; `head+stop+nextval` 0.2876.  The
+  never-stop "economic verdict" was the inversion, not the cost
+  table.
+* **The value signal is real and used.**  `head+nv` is the first
+  arm to stop early at scale — 10.78 evals/ep (vs ~15.3 everywhere
+  else), the best learned yield-per-eval (0.0129), 32 sampled
+  stops.  The per-column probe confirms it: `x:stop:next_value`
+  solo AP **0.3217** vs the oracle continue-labels — the first
+  genuinely pool-priced column matching the progress counter's
+  0.3287 (`x:stop:value_frac` 0.2846 is second; `x:stop:pool_value`
+  is base-rate solo but LOO −0.055, contributing in context).
+  Head eval AP 0.3694 → **0.4458** over incumbent — the sharpest
+  value-family discrimination yet.
+* **…but it over-stops on held-out pages.**  `head+nv` earns
+  0.2450 — −0.028 vs incumbent: the τ calibrated under near-oracle
+  in-sample train preds (cal 0.3398) stops at 10.78 evals held-out,
+  forfeiting the banked true-tier tail (+0.2 each).  The oracle
+  moves *more* aggressively (3.75 evals) yet earns *more* (0.3877)
+  — so the deficit is stop *placement*, not stopping per se: at
+  per-candidate AP ~0.03–0.04 vs `useful`, the predictor can rank
+  pages but cannot certify which pending member still pays.  The
+  heuristic-column ablation `head+nvh` (0.2835 @ 14.97 evals) earns
+  more precisely because its weaker signal stops less.
+* **Both serializable deliveries still fail.**  `inc+nv`/`inc+stop+nv`
+  collapse a third time (AP 0.0098 — the shared-softmax stop-row
+  gradient noise is structural, now on three feature families);
+  `imitate-nv` folds the same stop-on-average confound as round 2
+  (0.0307 @ 2.28 evals, 35 stops, AP 0.0096).
+
+## Verdict (round 4): not earned — `OPEN_GAME_PLAYER_WEIGHTS` stays
+
+Gate: held-out reward ≥ 0.273 **and** AP ≥ 0.210, honestly.  Three
+corrected head arms clear reward (`head` 0.2878, `head+nvh` 0.2835,
+`head+stop+nextval` 0.2876) and two of those also clear AP — **but a
+gated head is not a weight table**: it ships a second scorer + a
+calibrated threshold + a restricted legal set, none of which
+serializes into `OPEN_GAME_PLAYER_WEIGHTS`.  Every weights-typed
+delivery (softmax columns, CE-folded expert) collapses.  **No bake.**
+
+The blocker has now moved twice.  Rounds 1–3: no feature could price
+the pending pool — tested and confirmed, then a gate inversion hid
+that the head mechanism itself was never exercised.  Round 4: the
+evidence exists (`x:stop:next_value`, solo 0.32, used — earliest real
+stopping) and the mechanism works (corrected gate, three
+reward-clearing arms).  What remains is *delivery*: a serializable
+arm still cannot carry the timing — the softmax stop-row corrupts
+the ranking, and the imitation fold learns marginal propensity not
+conditional timing — plus *precision*: a per-candidate AP ~0.03–0.04
+`useful` predictor places stops ~3× past the oracle point.  The two
+open threads, in order: (a) a *verdict*-trained predictor (`useful`
+labels, not `delta > 0` — the net nails its own label at 0.93 and
+still misses `useful` at 0.03, so the label gap is the binding
+constraint); (b) a serializable gate — e.g. the head folded as a
+*pairwise* stop-vs-top-eval comparison the softmax can express.

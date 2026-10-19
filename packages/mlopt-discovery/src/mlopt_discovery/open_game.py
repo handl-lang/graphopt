@@ -85,6 +85,7 @@ __all__ = [
     "featurize",
     "gen_cases",
     "legal_actions",
+    "set_value_preds",
 ]
 
 # ---------------------------------------------------------------------------
@@ -220,6 +221,74 @@ def _score(cand: lp.Candidate) -> float:
     if v is None:
         v = lp._heuristic_score(cand)
         _CAND_SCORE[cand] = v
+    return v
+
+
+#: Injectable per-candidate *value* table — the ``open:next-val``
+#: part's evidence.  The stop-policy loop's missing variable is a
+#: per-candidate answer to "will this pending member still pay": the
+#: heuristic's view tops out at AP ~0.045, so the signal is injected
+#: from a trained ``RuleValueNet`` (``lab/stop_policy.py`` round 4)
+#: rather than derived from the board.  The seam mirrors the
+#: verdicts' memoization: keys are the *structural* candidate
+#: identity ``(label, repr(lhs), repr(rhs))`` — the same key
+#: ``policy_baseline._cand_key`` uses for the verdict memo — so a
+#: prediction survives re-enumeration (a candidate re-materialized as
+#: a fresh ``Candidate`` object keeps its value).
+_CAND_VALUE: dict[tuple, float] = {}
+
+#: The injected predictor — a ``{key: pred}`` mapping or a
+#: ``cand -> float`` callable; ``None`` means uninjected (the part
+#: then emits zeros — a registered-but-unfed part is inert, not
+#: wrong).
+_value_pred_src: Any = None
+
+#: Structural keys are ``repr``-expensive (two term-tree walks per
+#: candidate); memoize per object — candidates recur every featurize
+#: call within an episode, same seam as ``_CAND_SCORE``.
+_CAND_VALUE_KEY: dict[lp.Candidate, tuple] = {}
+
+
+def set_value_preds(preds: Any) -> None:
+    """Inject (or clear) the next-candidate-value predictions.
+
+    *preds* is either a ``{key: pred}`` mapping keyed by
+    :func:`_value_key`'s structural identity, or a
+    ``candidate -> float`` callable scored lazily (and memoized) as
+    the part asks.  ``None`` clears the table — the ``open:next-val``
+    part falls back to zero-valued columns.
+    """
+    global _value_pred_src
+    _CAND_VALUE.clear()
+    _CAND_VALUE_KEY.clear()
+    _value_pred_src = preds
+
+
+def _value_key(cand: lp.Candidate) -> tuple:
+    """Structural identity of *cand* — ``(label, repr(lhs), repr(rhs))``.
+
+    The same key ``policy_baseline._cand_key`` mints for the verdict
+    memo, so one ``preds`` table lines up with the memoized verdicts
+    it was trained against.
+    """
+    k = _CAND_VALUE_KEY.get(cand)
+    if k is None:
+        k = (cand.label, repr(cand.lhs), repr(cand.rhs))
+        _CAND_VALUE_KEY[cand] = k
+    return k
+
+
+def _value(cand: lp.Candidate) -> float:
+    """Return the injected value prediction for *cand* (0.0 unfed)."""
+    k = _value_key(cand)
+    v = _CAND_VALUE.get(k)
+    if v is None:
+        src = _value_pred_src
+        if callable(src):
+            v = float(src(cand))
+        else:
+            v = float(src.get(k, 0.0)) if src else 0.0
+        _CAND_VALUE[k] = v
     return v
 
 
@@ -499,6 +568,49 @@ def _next_value_feats(
     }
 
 
+def _next_val_feats(
+    state: OpenState, action: Action, _row: dict[str, float]
+) -> dict[str, float]:
+    """``x:stop:next_value`` … — the *predicted* next-candidate value.
+
+    Round 3's ``open:next-value`` part priced the pending pool in the
+    *heuristic's* units (``a:score`` — candidate AP ~0.045); round 2's
+    closing note named what was actually missing: a feature that
+    answers "will this pending candidate still pay".  That is
+    ``RuleValueNet``'s job — this part emits its per-candidate
+    prediction on the ``stop`` row, read through :func:`_value` (the
+    injected table — see :func:`set_value_preds`; unfed, every column
+    is 0.0 and the part is inert):
+
+    * ``x:stop:next_value`` — the highest value prediction still
+      pending: the value-scorer's own rank-1 pick (the
+      ``x:stop:best_score`` analogue in predicted-pays units).  "Is
+      anything left worth paying for" is the operative stop signal,
+      and it is the *max*, not the policy's next pick — a ``RelFeats``
+      part cannot see the weights (the ``rank1_pred`` caveat stands).
+    * ``x:stop:pool_value`` — ``Σ pred`` over pending: the remaining
+      expected yield (expected count of still-paying members), not
+      just the peak.
+    * ``x:stop:value_frac`` — ``pool_value / Σ pred over the whole
+      page``: the share of the page's starting expected yield still
+      on the board — the value-drain progress counter
+      ``x:stop:remaining_frac`` (a raw count) confounds with pool
+      size.
+    """
+    if action.op != "stop":
+        return {}
+    vals = [_value(state.pool[i]) for i in state.pending]
+    pool_value = sum(vals)
+    init = sum(_value(c) for c in state.pool)
+    return {
+        "x:stop:next_value": max(vals, default=0.0),
+        "x:stop:pool_value": pool_value,
+        "x:stop:value_frac": (
+            pool_value / init if init > 1e-9 else 0.0
+        ),
+    }
+
+
 # ---------------------------------------------------------------------------
 #  The board
 # ---------------------------------------------------------------------------
@@ -690,6 +802,11 @@ OPEN_EXTRA_FEATURES: dict[str, tuple[str, ...]] = {
         "x:stop:remaining_frac",
         "x:stop:decay",
     ),
+    "open:next-val": (
+        "x:stop:next_value",
+        "x:stop:pool_value",
+        "x:stop:value_frac",
+    ),
 }
 
 #: The extra parts' tags — the names a spec record (or the player
@@ -722,6 +839,7 @@ register_part("open:stop", lambda: RelFeats(_stop_feats))
 register_part(
     "open:next-value", lambda: RelFeats(_next_value_feats)
 )
+register_part("open:next-val", lambda: RelFeats(_next_val_feats))
 register_legal("open", legal_actions)
 register_rank("open", _cand_feats)
 

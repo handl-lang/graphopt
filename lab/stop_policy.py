@@ -18,7 +18,11 @@ extension prices the two remaining mechanisms:
   trained supervised against the *oracle-optimal* label — "does the
   best continuation under the ranker's own greedy order still earn
   more than the step cost", computed exactly from the memoized
-  verdicts — and threshold-calibrated on the train pages;
+  verdicts — and threshold-calibrated on the train pages.  (Round 4
+  corrected the gate: it is ``stop iff w.phi <= tau`` — the head is
+  fit on *continue* labels, so the round-2/3 ``>= tau`` reading
+  inverted the rule and could only ever calibrate to never-stop or
+  stop-on-confident-continue);
 * **(b, bakeable)** — ``imitate-stop`` / ``imitate-cold``: fold the
   same oracle supervision into the single weight vector through
   ``engine.imitate_policy`` — a cross-entropy step toward the expert
@@ -42,6 +46,24 @@ repeat), and the supervised gate retrained over the new columns
 each new column's solo AP against the oracle continue-labels and its
 leave-one-out cost in the refit head, scored on held-out decision
 rows.
+
+Round 4 closes the loop round 3 opened: the value columns were still
+the *heuristic's* view (candidate AP ~0.045) — the missing evidence
+is a per-candidate "will it still pay" answer, which is exactly
+``RuleValueNet``'s job.  This round trains it on-distribution (the
+``lab/policy_baseline.py`` neural path: ``RuleSample`` rows over the
+even-page candidates' memoized verdicts, ``train_rule_value`` BCE
+300 epochs hidden 32), injects sigmoid predictions into the new
+``open:next-val`` part (``x:stop:next_value`` — the max predicted
+value still pending; ``x:stop:pool_value`` — the remaining expected
+yield; ``x:stop:value_frac`` — its share of the page's starting
+value), and reruns the two live mechanisms: cold RL at the bake
+recipe (``inc+nv``, ``inc+stop+nv``) and the supervised gate
+(``head+nv``, ``head+stop+nv``).  The head arms hold the *ranker* at
+the incumbent schema (round-4-only protocol: ``rank_tags=()``) — the
+arm prices the stop decision, and round 3 showed RL over
+stop-varying columns can collapse the shared ranking (AP 0.0215), a
+confound outside the mechanism under test.
 
 The measurement mirrors round 1 exactly: cold retrain per arm
 (``engine.train_policy`` under the baseline's memoized verdicts),
@@ -73,11 +95,14 @@ from typing import Any
 import policy_baseline as pb
 import schema_leaderboard as sl
 import torch
+from mlopt_core.features import compute_features
+from mlopt_core.trajectories import RuleSample, rule_vector
 from mlopt_discovery import engine, play
 from mlopt_discovery import open_game as og
 from mlopt_discovery import proposal as lp
 from mlopt_discovery.meta_arena import Action
 from mlopt_discovery.players import PARTS, DomainSpec, PlayHist, _dot
+from mlopt_torch.learned_policy import input_vector, train_rule_value
 
 #: Defaults — the shipped bake protocol under memoized verdicts.
 SEED = 0
@@ -90,12 +115,19 @@ LONG_EPOCHS = (
 )
 IMITATE_PASSES = 6  # oracle-stop demonstration passes per imitate arm
 HEAD_EPOCHS = 800  # full-batch logistic iterations for the stop head
+NEURAL_EPOCHS = 300  # ``train_rule_value`` — policy_baseline's recipe
+NEURAL_HIDDEN = 32
 _TAU_GRID = 25  # threshold-calibration points over the train scores
 _SAMPLED_SEED = 40_000  # schema_leaderboard's eval-seed offsets
 _GREEDY_SEED = 50_000
 _CAL_SEED = 60_000  # the threshold-calibration decode offset
 
-#: The arms — ``(id, extra part tags, kind, rl_epochs)``.
+#: The arms — ``(id, head/stop-row part tags, kind, rl_epochs,
+#: rank_tags)``.  ``rank_tags`` is read by ``head`` arms only: it names
+#: the part tags the *ranker* is trained on — equal to the head's tags
+#: in rounds 2-3 (one shared spec), ``()`` in round 4 so the value
+#: signal's stop-decision test is not hostage to the RL corruption of
+#: the shared ranking the round-3 nextval arms showed (AP collapses).
 #:
 #: * ``rl`` — the round-1 mechanism: REINFORCE only (the incumbent
 #:   control, the failed ``inc+stop``, and its 4x-epochs variant);
@@ -106,29 +138,65 @@ _CAL_SEED = 60_000  # the threshold-calibration decode offset
 #: * ``head`` — the explicit second scorer: a logistic stop head over
 #:   the spec's ``stop`` row + a train-calibrated threshold gates a
 #:   ranker whose softmax never sees ``stop``.
-ARMS: tuple[tuple[str, tuple[str, ...], str, int], ...] = (
-    ("incumbent", (), "rl", EPOCHS),
-    ("inc+stop", ("open:stop",), "rl", EPOCHS),
-    ("inc+stop-long", ("open:stop",), "rl", LONG_EPOCHS),
-    ("imitate-stop", ("open:stop",), "rl+imitate", EPOCHS),
-    ("imitate-cold", ("open:stop",), "imitate", 0),
-    ("head", (), "head", EPOCHS),
-    ("head+stop", ("open:stop",), "head", EPOCHS),
+ARMS: tuple[
+    tuple[str, tuple[str, ...], str, int, tuple[str, ...]], ...
+] = (
+    ("incumbent", (), "rl", EPOCHS, ()),
+    ("inc+stop", ("open:stop",), "rl", EPOCHS, ()),
+    ("inc+stop-long", ("open:stop",), "rl", LONG_EPOCHS, ()),
+    ("imitate-stop", ("open:stop",), "rl+imitate", EPOCHS, ()),
+    ("imitate-cold", ("open:stop",), "imitate", 0, ()),
+    ("head", (), "head", EPOCHS, ()),
+    ("head+stop", ("open:stop",), "head", EPOCHS, ("open:stop",)),
     # Round 3 — the next-candidate-value family, same mechanisms.
-    ("inc+nextval", ("open:next-value",), "rl", EPOCHS),
+    ("inc+nextval", ("open:next-value",), "rl", EPOCHS, ()),
     (
         "inc+stop+nextval",
         ("open:stop", "open:next-value"),
         "rl",
         EPOCHS,
+        (),
     ),
-    ("inc+nextval-long", ("open:next-value",), "rl", LONG_EPOCHS),
-    ("head+nextval", ("open:next-value",), "head", EPOCHS),
+    ("inc+nextval-long", ("open:next-value",), "rl", LONG_EPOCHS, ()),
+    (
+        "head+nextval",
+        ("open:next-value",),
+        "head",
+        EPOCHS,
+        ("open:next-value",),
+    ),
     (
         "head+stop+nextval",
         ("open:stop", "open:next-value"),
         "head",
         EPOCHS,
+        ("open:stop", "open:next-value"),
+    ),
+    # Round 4 — the RuleValueNet value signal.  The head arms hold the
+    # ranker at the incumbent schema (``rank_tags=()``): the mechanism
+    # under test is the stop decision, and the round-3 shared-spec
+    # collapse is a confound outside it.  ``imitate-nv`` is the only
+    # bakeable delivery of a working stop rule (the folded weights
+    # serialize); ``head+nvh`` is the ablation — the round-3
+    # heuristic-priced columns under the same incumbent ranker — so
+    # the predictor's contribution reads arm-to-arm.
+    ("inc+nv", ("open:next-val",), "rl", EPOCHS, ()),
+    (
+        "inc+stop+nv",
+        ("open:stop", "open:next-val"),
+        "rl",
+        EPOCHS,
+        (),
+    ),
+    ("imitate-nv", ("open:next-val",), "rl+imitate", EPOCHS, ()),
+    ("head+nv", ("open:next-val",), "head", EPOCHS, ()),
+    ("head+nvh", ("open:next-value",), "head", EPOCHS, ()),
+    (
+        "head+stop+nv",
+        ("open:stop", "open:next-val"),
+        "head",
+        EPOCHS,
+        (),
     ),
 )
 
@@ -136,6 +204,14 @@ ARMS: tuple[tuple[str, tuple[str, ...], str, int], ...] = (
 NEXT_VALUE_FEATURES: tuple[str, ...] = og.OPEN_EXTRA_FEATURES[
     "open:next-value"
 ]
+
+#: The predicted-value columns — the round-4 probe reads them.
+NEXT_VAL_FEATURES: tuple[str, ...] = og.OPEN_EXTRA_FEATURES[
+    "open:next-val"
+]
+
+#: Every stop-row column family the per-feature probe knows.
+PROBE_FEATURES: tuple[str, ...] = NEXT_VALUE_FEATURES + NEXT_VAL_FEATURES
 
 
 def _extra_spec(tags: tuple[str, ...]) -> DomainSpec:
@@ -283,6 +359,7 @@ def _collect_head_rows(
     pools: list[list],
     by_key: dict,
     budget: int,
+    rank_spec: DomainSpec | None = None,
 ) -> tuple[list[dict], list[bool]]:
     """``(stop_row, continue_label)`` pairs along greedy drain traces.
 
@@ -291,8 +368,12 @@ def _collect_head_rows(
     states label ``True`` (a paying prefix remains), late states
     ``False`` (only duds left).  The features are the spec's ``stop``
     row itself, so a head over them prices exactly the quantity the
-    softmax could not isolate.
+    softmax could not isolate.  *rank_spec* supplies the order's
+    featurizer when it differs from the head's schema (round 4's
+    incumbent-ranker arms); default ``spec`` is the shared-spec
+    protocol of rounds 2-3.
     """
+    rs = spec if rank_spec is None else rank_spec
     rows: list[dict] = []
     labels: list[bool] = []
     for pool in pools:
@@ -303,7 +384,7 @@ def _collect_head_rows(
             if state.done or not state.pending:
                 break
             rows.append(spec.featurize(state, Action("stop", {}), hist))
-            order = _eval_order(spec, w, state)
+            order = _eval_order(rs, w, state)
             labels.append(_prefix_value(state, order, by_key) > 0.0)
             i = order[0]
             act = Action("evaluate", {"i": i, "cand": state.pool[i]})
@@ -396,10 +477,20 @@ class _StopGate:
 
     The inner ranker (``learn=False``, ``legal`` = ``evaluate`` rows
     only) picks *which* candidate; this wrapper decides *whether* to
-    keep spending: ``stop`` iff ``w_head . phi_stop(state) >= tau``
+    keep spending: ``stop`` iff ``w_head . phi_stop(state) <= tau``
     where ``phi_stop`` is the spec's ``stop``-row features under the
     episode's own play history.  ``stop``'s semantics are untouched —
     the action is the board's own, played at head-chosen times.
+
+    The comparison direction was ``>=`` through round 3 — an
+    inversion: the head is fit on *continue* labels (high score =
+    "draining still pays"), so ``stop iff score >= tau`` quits first
+    exactly where continuing is worth most.  Under a perfect head the
+    only non-degenerate calibrated point is the never-stop end — the
+    rounds-2/3 "the reward-optimal tau is never-stop" result was
+    forced by construction, not measured.  ``<=`` is the correct
+    reading: quit when the head's continue-score drops below the
+    threshold.
     """
 
     def __init__(
@@ -418,7 +509,7 @@ class _StopGate:
         self._prev = -1
 
     def __call__(self, state: Any) -> Any:
-        """Stop when the head scores quitting above the threshold."""
+        """Stop when the continue-score drops to the threshold."""
         if state.steps == 0 and self._prev > 0:
             self._hist = PlayHist()
         self._prev = state.steps
@@ -427,7 +518,7 @@ class _StopGate:
         row = self._spec.featurize(
             state, Action("stop", {}), self._hist
         )
-        if _dot(self._w, row) >= self._tau:
+        if _dot(self._w, row) <= self._tau:
             self._hist.record("stop")
             return Action("stop", {})
         act = self._inner(state)
@@ -445,11 +536,16 @@ def _mk_gate(
     seed: int,
     *,
     greedy: bool = False,
+    rank_spec: DomainSpec | None = None,
 ) -> _StopGate:
-    """Build one gated player: frozen ranker (eval-only) + the head."""
+    """Build one gated player: frozen ranker (eval-only) + the head.
+
+    The ranker binds *rank_spec* (default *spec* — the shared-schema
+    protocol); the head reads the stop row under *spec*.
+    """
     inner = og.OpenLearnedPlayer(
         seed=seed,
-        spec=spec,
+        spec=spec if rank_spec is None else rank_spec,
         weights=player.weights_dict(),
         legal=_eval_only,
         learn=False,
@@ -466,6 +562,7 @@ def _calibrate_tau(
     pools: list[list],
     budget: int,
     seed: int,
+    rank_spec: DomainSpec | None = None,
 ) -> tuple[float, float]:
     """Pick the stop threshold maximizing train reward — greedy decode.
 
@@ -488,6 +585,7 @@ def _calibrate_tau(
                 tau,
                 seed + _CAL_SEED + i,
                 greedy=True,
+                rank_spec=rank_spec,
             )
             traj = engine.run_episode(
                 sl._FixedArena(pool), gate, budget
@@ -511,9 +609,10 @@ def run(
     eval_outcomes, by_key = pb._measure_pools(
         ev_pools, seed + pb.HELD_OUT_OFFSET
     )
-    _t, train_keys = pb._measure_pools(train_pools, seed + 1_000_003)
+    train_outcomes, train_keys = pb._measure_pools(
+        train_pools, seed + 1_000_003
+    )
     by_key.update(train_keys)
-    del _t
 
     flat_pool = [c for pool in ev_pools for c in pool]
     flat_outcomes: dict[int, Any] = {}
@@ -523,6 +622,77 @@ def run(
             flat_outcomes[pos] = o
             pos += 1
     measure_s = time.time() - t0
+
+    # Round 4 — the value predictor.  ``RuleValueNet`` trained
+    # on-distribution: ``RuleSample`` rows over the even-page
+    # candidates' *memoized* verdicts (the ``policy_baseline`` neural
+    # path — BCE on ``delta_cost > 0``, 300 epochs, hidden 32), then
+    # sigmoid-scored over every candidate the run will featurize.
+    # Held-out pages are honest out-of-sample predictions; train-page
+    # preds are in-sample (300 epochs on 576 rows memorizes — the τ
+    # calibration's slight optimism is priced below).
+    t_net = time.time()
+    flat_train = [c for pool in train_pools for c in pool]
+    flat_train_outcomes = [
+        o for outs in train_outcomes for o in outs
+    ]
+    samples = [
+        RuleSample(
+            compute_features(c.lhs),
+            rule_vector(c.as_rule()),
+            c.as_rule().name,
+            o.base_cost - o.cand_cost,
+            c.label,
+        )
+        for c, o in zip(flat_train, flat_train_outcomes, strict=True)
+    ]
+    net = train_rule_value(
+        samples,
+        epochs=NEURAL_EPOCHS,
+        hidden=NEURAL_HIDDEN,
+        device="cpu",
+        seed=seed,
+    )
+    all_cands = flat_train + flat_pool
+    x_net = torch.tensor(
+        [
+            input_vector(
+                compute_features(c.lhs), rule_vector(c.as_rule())
+            )
+            for c in all_cands
+        ],
+        dtype=torch.float32,
+    )
+    with torch.no_grad():
+        probs = torch.sigmoid(net(x_net))
+    preds = {
+        og._value_key(c): float(p)
+        for c, p in zip(all_cands, probs, strict=True)
+    }
+    og.set_value_preds(preds)
+    # The predictor's own power, on the held-out pool: AP vs the
+    # ``useful`` verdict (the 0.041 policy_baseline read) and AP vs
+    # the net's own training label (``delta_cost > 0`` — "the rule
+    # lowers the cost of the program it was proposed on").
+    pred_scores = [preds[og._value_key(c)] for c in flat_pool]
+    flat_ordered = [flat_outcomes[i] for i in range(len(flat_pool))]
+    predictor = {
+        "train_samples": len(samples),
+        "train_positives": sum(
+            s.delta_cost > 0 for s in samples
+        ),
+        "epochs": NEURAL_EPOCHS,
+        "hidden": NEURAL_HIDDEN,
+        "ap_useful": round(pb._ap(pred_scores, flat_outcomes), 4),
+        "ap_delta": round(
+            _ap_binary(
+                pred_scores,
+                [o.base_cost > o.cand_cost for o in flat_ordered],
+            ),
+            4,
+        ),
+        "seconds": round(time.time() - t_net, 1),
+    }
 
     rows_out: list[dict] = []
     curves: dict[str, list[float]] = {}
@@ -578,11 +748,16 @@ def run(
             },
         }
 
-        for arm_i, (arm_id, tags, kind, n_epochs) in enumerate(ARMS):
+        for arm_i, (arm_id, tags, kind, n_epochs, rank_tags) in (
+            enumerate(ARMS)
+        ):
             t1 = time.time()
             spec = _extra_spec(tags)
+            rank_spec = (
+                _extra_spec(rank_tags) if kind == "head" else spec
+            )
             player = og.OpenLearnedPlayer(
-                seed=seed, spec=spec, weights={}
+                seed=seed, spec=rank_spec, weights={}
             )
             curve: list[float] = []
             for _ in range(n_epochs):
@@ -606,23 +781,33 @@ def run(
                 w_rank = player.weights_dict()
             if kind == "head":
                 hrows, hlabels = _collect_head_rows(
-                    spec, w_rank, train_pools, by_key, budget
+                    spec,
+                    w_rank,
+                    train_pools,
+                    by_key,
+                    budget,
+                    rank_spec=rank_spec,
                 )
                 erows, elabels = _collect_head_rows(
-                    spec, w_rank, ev_pools, by_key, budget
+                    spec,
+                    w_rank,
+                    ev_pools,
+                    by_key,
+                    budget,
+                    rank_spec=rank_spec,
                 )
                 w_head, hloss = _fit_head(spec, hrows, hlabels, seed)
                 eval_ap = _ap_binary(
                     [_dot(w_head, r) for r in erows], elabels
                 )
-                # Round-3 probe — which next-value column carries the
+                # Round-3/4 probe — which stop-row column carries the
                 # timing: solo AP of the raw column, and the AP cost
                 # of dropping it from a refit head, both scored on
                 # the held-out decision rows.  Arms whose schema lacks
                 # the family probe nothing — an absent column is a
                 # constant, not a feature.
                 probe: dict[str, dict] = {}
-                for f in NEXT_VALUE_FEATURES:
+                for f in PROBE_FEATURES:
                     if f not in spec.features:
                         continue
                     solo = _ap_binary(
@@ -653,6 +838,7 @@ def run(
                     train_pools,
                     budget,
                     seed,
+                    rank_spec=rank_spec,
                 )
                 heads[arm_id] = {
                     "tau": round(tau, 4),
@@ -674,14 +860,21 @@ def run(
                     },
                 }
                 sampled = _play_pools(
-                    lambda i, p=player, s=spec, wh=w_head, ta=tau: (
-                        _mk_gate(p, s, wh, ta, seed + _SAMPLED_SEED + i)
+                    lambda i, p=player, s=spec, wh=w_head, ta=tau, rs=rank_spec: (
+                        _mk_gate(
+                            p,
+                            s,
+                            wh,
+                            ta,
+                            seed + _SAMPLED_SEED + i,
+                            rank_spec=rs,
+                        )
                     ),
                     ev_pools,
                     budget,
                 )
                 greedy = _play_pools(
-                    lambda i, p=player, s=spec, wh=w_head, ta=tau: (
+                    lambda i, p=player, s=spec, wh=w_head, ta=tau, rs=rank_spec: (
                         _mk_gate(
                             p,
                             s,
@@ -689,6 +882,7 @@ def run(
                             ta,
                             seed + _GREEDY_SEED + i,
                             greedy=True,
+                            rank_spec=rs,
                         )
                     ),
                     ev_pools,
@@ -711,7 +905,7 @@ def run(
                 )
             ap = round(
                 pb._ap(
-                    _page_scores(spec, w_rank, ev_pools),
+                    _page_scores(rank_spec, w_rank, ev_pools),
                     flat_outcomes,
                 ),
                 4,
@@ -721,6 +915,11 @@ def run(
                     "id": arm_id,
                     "kind": kind,
                     "extra_parts": list(tags),
+                    "rank_parts": (
+                        list(rank_tags)
+                        if kind == "head"
+                        else list(tags)
+                    ),
                     "rl_epochs": n_epochs,
                     "n_features": len(spec.features),
                     "reward_ep": sampled["reward"],
@@ -748,6 +947,7 @@ def run(
             )
     finally:
         lp.evaluate = orig_evaluate
+        og.set_value_preds(None)
 
     n_useful = sum(1 for o in flat_outcomes.values() if o.useful)
     return {
@@ -756,6 +956,7 @@ def run(
         "train_curve": curves,
         "weights": weights,
         "heads": heads,
+        "predictor": predictor,
         "pool": {"held_out": len(flat_pool), "useful": n_useful},
         "meta": {
             "measure_seconds": round(measure_s, 1),
@@ -763,6 +964,10 @@ def run(
             "long_epochs": LONG_EPOCHS,
             "imitate_passes": IMITATE_PASSES,
             "head_epochs": HEAD_EPOCHS,
+            "neural": {
+                "epochs": NEURAL_EPOCHS,
+                "hidden": NEURAL_HIDDEN,
+            },
             "elapsed_s": round(time.time() - t0, 1),
         },
     }
@@ -774,6 +979,14 @@ def _print(res: dict[str, Any]) -> None:
         f"{'arm':<16} {'reward':>8} {'greedy':>8} {'use/eval':>9}"
         f" {'evals/ep':>8} {'stops':>6} {'AP':>7}"
     )
+    pred = res.get("predictor")
+    if pred:
+        print(  # stdout-compat
+            f"== RuleValueNet predictor: {pred['train_samples']} "
+            f"even-page samples ({pred['train_positives']} pos) — "
+            f"held-out AP useful={pred['ap_useful']:.4f} "
+            f"delta={pred['ap_delta']:.4f} ({pred['seconds']}s) =="
+        )
     print("== stopping policy — held-out odd pages ==")  # stdout-compat
     print(head)  # stdout-compat
     print("-" * len(head))  # stdout-compat
