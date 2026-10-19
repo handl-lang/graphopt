@@ -29,8 +29,8 @@ Two phases, honestly separated:
 
 Usage::
 
-    timeout 1800 .venv/bin/python lab/train/train_player_meta_arm.py
-    timeout 1800 .venv/bin/python lab/train/train_player_meta_arm.py \
+    timeout 1800 .venv/bin/python scripts/train_player_meta_arm.py
+    timeout 1800 .venv/bin/python scripts/train_player_meta_arm.py \
         --skip-real --json /tmp/player_arm.json   # train curve only
 """
 
@@ -38,11 +38,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
-from pathlib import Path
 from typing import Any
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from mlopt_discovery import engine
 from mlopt_discovery import player_arena as pa

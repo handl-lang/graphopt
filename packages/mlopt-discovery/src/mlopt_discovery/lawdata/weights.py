@@ -114,7 +114,7 @@ ARENA_PLAYER_CANDIDATES: int | None = 2048
 #: :class:`mlopt_discovery.meta_player.MetaLearnedPlayer` defaults to
 #: it (pass ``weights={}`` for the uniform cold start, the baseline
 #: the measurement keeps).  A trained snapshot:
-#: ``lab/train/train_meta_prior.py`` (seed 0, 40 cases x 30 epochs, cold
+#: ``scripts/train_meta_prior.py`` (seed 0, 40 cases x 30 epochs, cold
 #: start) emits exactly this literal — reproducible, not hand-tuned.
 #:
 #: The seeded held-out split (train ``gen_cases(0, 40)``, evaluate
@@ -126,7 +126,7 @@ ARENA_PLAYER_CANDIDATES: int | None = 2048
 #: prices spend, so the paying move is the cheap extract.
 #: Regenerate with::
 #:
-#:     python lab/train/train_meta_prior.py
+#:     python scripts/train_meta_prior.py
 #:
 #: Weights are rounded to 4 decimals and near-zero entries dropped —
 #: ``LinearPolicy`` reads a missing feature as ``0``.
@@ -173,7 +173,7 @@ META_ARENA_PLAYER_WEIGHTS: dict[str, float] = {
 #: The open-game learned prior — the shipped preset
 #: :class:`mlopt_discovery.open_game.OpenLearnedPlayer` defaults to
 #: (empty ⇒ uniform, the cold start the measurement keeps as a
-#: baseline).  A trained snapshot: ``lab/train/train_open_prior.py``
+#: baseline).  A trained snapshot: ``scripts/train_open_prior.py``
 #: (seed 0, 36 even train pages x 5 epochs, cold start) emits exactly
 #: this literal — the table is reproducible, not hand-tuned.
 #:
@@ -187,7 +187,7 @@ META_ARENA_PLAYER_WEIGHTS: dict[str, float] = {
 #: measures AP 0.210 under the controlled protocol).  Pinned by
 #: ``tests/test_discovery_open_prior.py``.  Regenerate with::
 #:
-#:     python lab/train/train_open_prior.py
+#:     python scripts/train_open_prior.py
 #:
 #: Weights are rounded to 4 decimals and near-zero entries dropped —
 #: ``LinearPolicy`` reads a missing feature as ``0``.
@@ -235,7 +235,7 @@ OPEN_GAME_PLAYER_WEIGHTS: dict[str, float] = {
 #: :data:`mlopt_discovery.player_arena.PLAYER_SPEC` now defaults to
 #: (the ``LearnedPlayer`` over spec records; pass ``weights={}`` for
 #: the uniform cold start the measurement keeps as a baseline).  A
-#: trained snapshot: ``lab/train/train_player_meta_arm.py`` (seed 0,
+#: trained snapshot: ``scripts/train_player_meta_arm.py`` (seed 0,
 #: 12 stub-oracle cases x 150 REINFORCE epochs on a 6-epoch
 #: ``GreedyEditor`` imitation warm start — the nested oracle stubbed
 #: through the board's ``score_fn`` seam, see the driver for the
@@ -253,7 +253,7 @@ OPEN_GAME_PLAYER_WEIGHTS: dict[str, float] = {
 #: ``a:part:open:action`` the *least* dropped part — the editor's
 #: ablate-then-extract game, learned.  Regenerate with::
 #:
-#:     python lab/train/train_player_meta_arm.py
+#:     python scripts/train_player_meta_arm.py
 #:
 #: Weights are rounded to 4 decimals and near-zero entries dropped —
 #: ``LinearPolicy`` reads a missing feature as ``0``.

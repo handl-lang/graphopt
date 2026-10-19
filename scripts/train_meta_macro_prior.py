@@ -6,7 +6,7 @@ shipped prior (0 macro picks — a macro featurizes to the broadcast row
 while ``op:extract`` sits at +3.15).  This driver asks whether a prior
 *trained* against the macro-extended legal set learns to spend them.
 
-Protocol (mirrors ``lab/train/train_meta_prior.py`` exactly, plus the
+Protocol (mirrors ``scripts/train_meta_prior.py`` exactly, plus the
 ``legal=`` seam):
 
 * **mine** — ``macro_miner.collect_trajectories`` + ``mine_macros`` over
@@ -25,8 +25,8 @@ Protocol (mirrors ``lab/train/train_meta_prior.py`` exactly, plus the
 
 Usage::
 
-    .venv/bin/python lab/train/train_meta_macro_prior.py
-    .venv/bin/python lab/train/train_meta_macro_prior.py \
+    .venv/bin/python scripts/train_meta_macro_prior.py
+    .venv/bin/python scripts/train_meta_macro_prior.py \
         --epochs 30 --json /tmp/meta_macro.json
 """
 
@@ -39,9 +39,14 @@ import sys
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+# ``lab/`` and ``scripts/`` are not installed packages — the repo root
+# goes on ``sys.path`` so ``lab.mint.*`` / ``scripts.*`` imports resolve
+# under the documented ``python scripts/…`` invocation (the sanctioned
+# shim shape; cf. ``lab/probes/conv_fold_wall_regimes_probe.py``).
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import torch
+from lab.mint.macro_moves import Macro, legal_with_macros
 from mlopt_core.cost.basic import count_cost
 from mlopt_discovery import lawdata
 from mlopt_discovery import meta_arena as ma
@@ -52,8 +57,7 @@ from lab.mint.macro_miner import (
     collect_trajectories,
     mine_macros,
 )
-from lab.mint.macro_moves import Macro, legal_with_macros
-from lab.train.train_meta_prior import (
+from scripts.train_meta_prior import (
     EPOCHS,
     HELD_OUT_OFFSET,
     SEED,

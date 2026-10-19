@@ -301,10 +301,10 @@ def gate_numeric_drop(seed: Any) -> dict[str, Any]:
 
 
 def _audit() -> Any:
-    """Load ``lab/audit/dspec_audit.py`` by path (``lab/`` is not a pkg)."""
+    """Load ``scripts/dspec_audit.py`` by path (``scripts/`` is not a pkg)."""
     path = (
-        Path(__file__).resolve().parent.parent
-        / "audit"
+        Path(__file__).resolve().parent.parent.parent
+        / "scripts"
         / "dspec_audit.py"
     )
     spec = importlib.util.spec_from_file_location("_dspec_audit", path)

@@ -22,11 +22,14 @@ fails to load with *"invalid type: map, expected a YAML tag starting
 with '!'"*.
 
 Usage:
-    .venv/bin/python lab/handl-spike/dump_fragments.py [outdir] [--all]
+    .venv/bin/python scripts/dump_fragments.py [outdir] [--all]
 
 ``--all`` emits the whole shipped bank; the default emits a small,
 deliberate slice (one structural law plus the op shapes it needs) so the
-spike fixture stays reviewable.
+spike fixture stays reviewable.  With no ``outdir`` the default writes
+into ``lab/handl-spike/fragments/`` — the committed fixture dir the
+handl-peer spike and ``tests/test_handl_peer.py`` consume (``--all``
+output conventionally goes to the sibling ``fragments-all/``).
 """
 
 from __future__ import annotations
@@ -38,6 +41,11 @@ from pathlib import Path
 from mlopt_core.laws import ALL_RULES
 from mlopt_discovery.cellstore import ambient_store
 from mlopt_discovery.handl import store_to_handl
+
+#: The repo root — the default output lives under the spike's committed
+#: fixture dir even though this tool moved to ``scripts/`` (the spike
+#: owns the fixtures; the tool only regenerates them).
+_REPO = Path(__file__).resolve().parent.parent
 
 #: The shell files `language_from_dir` requires (empty is valid).
 _SHELL = (
@@ -138,7 +146,11 @@ def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     everything = "--all" in args
     args = [a for a in args if a != "--all"]
-    out = Path(args[0]) if args else Path(__file__).parent / "fragments"
+    out = (
+        Path(args[0])
+        if args
+        else _REPO / "lab" / "handl-spike" / "fragments"
+    )
     out.mkdir(parents=True, exist_ok=True)
 
     rules = (

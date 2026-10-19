@@ -25,8 +25,8 @@ carrier-aware ``("vshape", T)`` read).
 
 Usage::
 
-    .venv/bin/python lab/audit/dspec_audit.py --audit
-    .venv/bin/python lab/audit/dspec_audit.py --residual [--leaf]
+    .venv/bin/python scripts/dspec_audit.py --audit
+    .venv/bin/python scripts/dspec_audit.py --residual [--leaf]
 
 Both need a ``git`` binary on PATH (oracle recovery runs
 ``git show <rev>:<path>`` inside this repo).

@@ -1,6 +1,6 @@
 """Train the meta-arena policy and emit the baked prior.
 
-The sibling of ``lab/train/train_open_prior.py`` for the meta board:
+The sibling of ``scripts/train_open_prior.py`` for the meta board:
 trains a *cold* :class:`mlopt_discovery.meta_player.MetaLearnedPlayer`
 over a fixed case stream and prints the trained weight table as the
 Python literal that bakes into
@@ -19,8 +19,8 @@ reward per block) and the held-out table — random, the cold start
 
 Usage::
 
-    python lab/train/train_meta_prior.py
-    python lab/train/train_meta_prior.py --epochs 30 --json /tmp/meta.json
+    python scripts/train_meta_prior.py
+    python scripts/train_meta_prior.py --epochs 30 --json /tmp/meta.json
 """
 
 from __future__ import annotations

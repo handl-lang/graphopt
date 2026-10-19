@@ -29,36 +29,71 @@ every name lives at its real package path — `mlopt_core.egraph`,
 **The experimental surface is `lab/`** (there is no `tools/`): the
 research drivers live in `lab/mint/` (`atom_law_loop.py` — ADR-0007
 layer 3; `atom_synth_loop.py` — the composed need → handler → laws →
-admission loop), `lab/bridge/` (`combinator.py` + `combinator_probe.py`
-— the ADR-0008 bridge), `lab/audit/` (`dspec_audit.py`,
-`grammar_probe.py`), `lab/screen/` (`exposure_screen.py`,
-`exposed_discovery.py`, `discovery_scale.py`), `lab/probes/` (the
-measurement probes, incl. Top-level policy drivers `lab/policy_baseline.py` + `lab/policy_ablations.py` run the controlled 4-arm baseline and the bootstrap/exploration/reward/capacity ablations (results in `docs/results_learned_*.md`). `contraction/`), `lab/train/` (the six
-`train_*.py`), `lab/kit/` (`term_hnl.py` — the mlopt-term → `.hnl`
-emit/eval bridge into `CatoptKit`), `lab/handl-spike/`
-(`dump_fragments.py` + the dumped `fragments/`/`fragments-all/`
-language YAML) and `lab/handl-peer/` (`mlopt-handl-peer` — the PyO3
+admission loop; `macro_miner.py` + `macro_moves.py` — minted macro
+actions), `lab/bridge/` (`combinator.py` + `combinator_probe.py`,
+`loop_propose.py`, `index_abstract.py`, `form_propose.py`,
+`sharing_extract.py`, `state_reindex.py` — the ADR-0008 bridge),
+`lab/audit/` (`grammar_probe.py`, `handl_differential.py`,
+`egraph_differential.py` — the handl-side oracles), `lab/screen/`
+(`exposure_screen.py`, `exposed_discovery.py`, `discovery_scale.py`),
+`lab/probes/` (the measurement probes, incl. `contraction/` — whose
+`contraction_distill.py --save` also mints the shipped
+`contraction_policy_distilled.pt`), the top-level policy drivers
+`lab/policy_baseline.py` + `lab/policy_ablations.py` +
+`lab/policy_rl_arms.py` + `lab/schema_leaderboard.py` +
+`lab/stop_policy.py` + `lab/richer_features.py` (results in
+`docs/results_*.md`), `lab/train/` (the three measurement-only
+drivers `train_graph_policy.py`, `train_rl_policy.py`,
+`train_search_policy.py`), `lab/kit/` (`term_hnl.py` — the mlopt-term →
+`.hnl` emit/eval bridge into `CatoptKit`), `lab/handl-spike/` (the
+dumped `fragments/`/`fragments-all/` language YAML the peer tests
+consume — regenerate with `scripts/dump_fragments.py`) and
+`lab/handl-peer/` (`mlopt-handl-peer` — the PyO3
 spike: Python calls handl's loader + rewrite engine directly).
 Run them with `.venv/bin/python lab/<sub>/<mod>.py`.
 Some probes need scratch deps installed `--no-deps` outside the
 lockfile: `birefnet_bounded_probe.py` wants
 `timm einops kornia transformers torchvision`;
 `retnet_baseline_probe.py` wants `torchscale fla-core einops fairscale`.
-**Dev gates and user-facing utilities live in `scripts/`**
-(`radon_ratchet.py` + `complexity_baseline.json`, `runtime_types.sh`,
-`mutmut.sh`, `calibrate_profile.py`).  **Regenerable artifacts live in
-the cache**, not the tree: `mlopt_discovery.cache_dir()`
+**Dev gates, artifact regeneration and user-facing utilities live in
+`scripts/`** (`radon_ratchet.py` + `complexity_baseline.json`,
+`runtime_types.sh`, `mutmut.sh`, `calibrate_profile.py`, plus the
+shipped-artifact bakers promoted out of `lab/`: `train_meta_prior.py`,
+`train_open_prior.py`, `train_player_meta_arm.py`,
+`train_meta_macro_prior.py` — the `lawdata` weight-table literals;
+`train_contraction_artifact.py` — the curriculum `.pt`;
+`dump_fragments.py` — the handl-spike fragment dirs; and
+`dspec_audit.py` — the shipped-`dspec` audit).
+**Regenerable artifacts live in the cache**, not the tree:
+`mlopt_discovery.cache_dir()`
 (`$MLOPT_CACHE_DIR` → `$XDG_CACHE_HOME/mlopt` → `~/.cache/mlopt`)
 holds the intake census side-files (`intake_dir()`) and the evidence
 store — shared across worktrees.  The minting machinery itself is in
 `mlopt_discovery` (`antiunify`, `handler_synth`) — ADR 0007/0008.
 
-**Promotion rule.**  `lab/` is the promotion queue: a driver moves into
-`mlopt_discovery` (its `lab/<sub>/` directory mirrors the package
-layout) when its tests clear the **99% coverage floor**.  Measured so
-far: `lab/bridge/combinator.py` sits at **92%** under
-`tests/test_combinator_bridge.py`; the other drivers have no tests yet.
-Do not promote a module that would fail the floor — and never widen it.
+**Promotion rule — `lab/` dissolves by destination, not by move.**
+Every lab file has one of three exits (the full inventory, per-file
+classification and ranked promote-candidates live in
+`docs/lab_dissolution_plan.md`):
+
+- **prod machinery → `mlopt_discovery`** — a module whose output is
+  shipped behaviour promotes when its tests clear the **99% coverage
+  floor** (its `lab/<sub>/` mirrors the package layout).  Measured so
+  far: `lab/bridge/combinator.py` sits at **92%** under
+  `tests/test_combinator_bridge.py` — the closest; `form_propose.py`
+  84%, `state_reindex.py` 83%, `index_abstract.py` 81%,
+  `loop_propose.py` 80% under their dedicated files.  Do not promote
+  a module that would fail the floor — and never widen it.
+- **dev-facing tooling → `scripts/`** — drivers whose purpose is to
+  *regenerate or audit a committed artifact* (the `train_*_prior`
+  weight bakers, the `.pt` artifact trainers, `dump_fragments.py`,
+  `dspec_audit.py`) are tooling, not research: they moved.  A lab
+  driver that graduates to routine tooling moves the same way.
+- **research drivers stay** — measurement scripts whose output is a
+  result document (`docs/results_*.md`, `project/retros/`) rather
+  than a committed artifact keep living in `lab/` until their line
+  of work settles; nothing dead is archived yet (every file was
+  touched within the last week).
 
 **Machine-admitted laws are in `DEFAULT`.**  `search(..., rules=DEFAULT)`
 ships **12 machine-admitted laws** alongside the hand-written kernel

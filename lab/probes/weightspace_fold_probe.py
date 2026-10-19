@@ -550,13 +550,13 @@ def gate_value_domain() -> dict[str, Any]:
 
 
 def _load_audit() -> Any:
-    """Load ``lab/audit/dspec_audit.py`` by path (``lab/`` is not a pkg)."""
+    """Load ``scripts/dspec_audit.py`` by path (``scripts/`` is not a pkg)."""
     import importlib.util
     from pathlib import Path
 
     path = (
-        Path(__file__).resolve().parent.parent
-        / "audit"
+        Path(__file__).resolve().parent.parent.parent
+        / "scripts"
         / "dspec_audit.py"
     )
     spec = importlib.util.spec_from_file_location("_dspec_audit", path)

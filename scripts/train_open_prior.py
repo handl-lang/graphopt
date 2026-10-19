@@ -23,8 +23,8 @@ measurement, not assumed.
 
 Usage::
 
-    python lab/train/train_open_prior.py            # print curve + literal
-    python lab/train/train_open_prior.py --epochs 5 --json /tmp/prior.json
+    python scripts/train_open_prior.py            # print curve + literal
+    python scripts/train_open_prior.py --epochs 5 --json /tmp/prior.json
 """
 
 from __future__ import annotations

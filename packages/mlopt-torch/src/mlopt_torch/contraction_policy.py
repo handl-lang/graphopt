@@ -16,7 +16,7 @@ oe-all distilled player) and ``contraction_policy_curriculum.pt`` (the
 earlier REINFORCE curriculum weights, kept as lineage and loadable via
 an explicit path).  The weights are the only artifacts; training stays
 a tools concern (``lab/probes/contraction/contraction_distill.py`` for the default,
-``lab/train/train_contraction_artifact.py`` for the lineage weights).
+``scripts/train_contraction_artifact.py`` for the lineage weights).
 
 **Honest capability statement.**  The default weights were trained on
 the :func:`random_bond_network` einsum-valid instance family (every
@@ -1121,7 +1121,7 @@ def save_contraction_policy(
     the training provenance (scales, iterations, seed, git sha, …) so a
     loader can refuse a mismatched artifact instead of silently
     producing a wrong player.  Tensors are stored on CPU — the artifact
-    is device-agnostic.  Called by ``tools/train_contraction_artifact``.
+    is device-agnostic.  Called by ``scripts/train_contraction_artifact``.
     """
     state = {k: v.detach().cpu() for k, v in model.state_dict().items()}
     hidden = int(state["net.0.weight"].shape[0])

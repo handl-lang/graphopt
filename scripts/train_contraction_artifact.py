@@ -28,8 +28,8 @@ re-stated here so the tool runs without the opt-in ``einsum`` group
 
 Usage::
 
-    .venv/bin/python lab/train/train_contraction_artifact.py [--device cuda]
-    .venv/bin/python lab/train/train_contraction_artifact.py --iterations 5 \
+    .venv/bin/python scripts/train_contraction_artifact.py [--device cuda]
+    .venv/bin/python scripts/train_contraction_artifact.py --iterations 5 \
         --out /tmp/smoke.pt          # smoke run, throwaway artifact
 """
 
@@ -52,6 +52,12 @@ from mlopt_torch.contraction_policy import (
     rollout_orders,
     save_contraction_policy,
 )
+
+# ``lab/`` is not an installed package — the repo root goes on
+# ``sys.path`` so the probe imports below resolve under the documented
+# ``python scripts/…`` invocation (the sanctioned shim shape; cf.
+# ``lab/probes/conv_fold_wall_regimes_probe.py``).
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from lab.probes.contraction import contraction_policy as cp
 from lab.probes.contraction import contraction_scale as cs
