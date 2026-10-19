@@ -116,7 +116,7 @@ the trained prior on mean reward (+0.088 vs −0.056).
 
 ## Retraining the prior on the macro-extended board — does the learned arm pick macros?
 
-**Date:** 2026-10-20 · **Script:** `lab/train/train_meta_macro_prior.py`
+**Date:** 2026-10-19 · **Script:** `lab/train/train_meta_macro_prior.py`
 (mines off `gen_cases(0, 24)` train cases only, then retrains cold via
 `train_meta_prior`'s loop against `legal_with_macros(cap=8)` — the
 shipped prior's weights untouched during the run) · **Seed:** 0 ·
