@@ -46,8 +46,8 @@ exclude = [
 # handl-language = { path = "/path/to/kernel/crates/handl-language" }
 # handl-value = { path = "/path/to/kernel/crates/handl-value" }
 #
-# [patch."https://github.com/handl-lang/kit-data-canonical"]
-# handl-kit-data-canonical = { path = "/path/to/lang/crates/handl-kit-data-canonical" }
+# [patch."https://github.com/handl-lang/kit-data-prelude"]
+# handl-kit-data-prelude = { path = "/path/to/lang/crates/handl-kit-data-prelude" }
 #
 # [patch."https://github.com/handl-lang/host"]
 # handl-platform = { path = "/path/to/platform/crates/platform" }
