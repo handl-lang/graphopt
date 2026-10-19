@@ -225,3 +225,140 @@ drain-always).  The missing piece is not a mechanism but
 *evidence*: a feature that actually predicts pending-candidate
 usefulness (the `a:score`/`x:stop:marginal` proxy has AP 0.045).
 Until then the game's economics rationally say keep spending.
+
+---
+
+# Round 3 — the next-candidate-value features (the missing variable, built)
+
+**Date:** 2026-10-19 (same day, third run) · **Runner:** identical —
+`timeout 1800 .venv/bin/python lab/stop_policy.py --json /tmp/stop.json`
+(~3.5 min: 148 s pool memoization + 12 arms).
+
+Round 2's closing diagnosis named the missing variable: nothing
+prices the *remaining* pool — "expected next find" had no feature.
+This round builds it.  The `open:next-value` part (registered,
+unshipped — `RelFeats`, pool-visible) emits five columns on the
+`stop` row:
+
+| feature | what it encodes |
+|---|---|
+| `x:stop:best_score` | max `a:score` still pending — the heuristic's own view of what's left |
+| `x:stop:topk_score` | mean of the top-3 pending scores — paying *mass*, not just the peak |
+| `x:stop:rank1_pred` | softmax(`a:score`) probability on the rank-1 pending member — the policy's next-pick confidence is what is wanted, but a `RelFeats` part cannot see the weights, so this is the linear-score rank proxy |
+| `x:stop:remaining_frac` | pending / pool — drain progress (identical to `x:stop:evals_left`; kept for the probe) |
+| `x:stop:decay` | `best_score × remaining_frac` — combined *value left* |
+
+Five new arms rerun the mechanisms on the enriched stop row:
+`inc+nextval` / `inc+stop+nextval` (cold RL, bake recipe),
+`inc+nextval-long` (the 20-epoch undertraining/collapse check), and
+`head+nextval` / `head+stop+nextval` (the supervised `_StopGate`
+retrained over the new columns).  Each head arm also reports a
+**per-feature probe**: the column's solo AP against the held-out
+oracle continue-labels, and its leave-one-out cost in a refit head.
+
+## Results (new arms; round-1/2 rows repeat bit-identically)
+
+| arm | mechanism | reward/ep | greedy | use/eval | evals/ep | stops | AP |
+|---|---|---|---|---|---|---|---|
+| inc+nextval | rl 5ep | 0.2745 | 0.2910 | 0.0090 | 15.50 | 16 | **0.0215** |
+| inc+stop+nextval | rl 5ep | 0.2711 | 0.3685 | 0.0107 | 15.56 | 20 | 0.1139 |
+| inc+nextval-long | rl 20ep | 0.2307 | 0.2700 | 0.0089 | 15.67 | 8 | **0.0123** |
+| **head+nextval** | gate over `open:next-value` | **0.3036** | 0.2807 | 0.0107 | 15.61 | 1 | 0.0215 |
+| **head+stop+nextval** | gate over both parts | **0.2858** | 0.3664 | 0.0104 | 16.00 | 0 | 0.1139 |
+
+## The features carry real signal — the head got sharper
+
+Held-out decision-row AP (does the head score continue-labelled
+states above stop-labelled ones; base rate ≈ pos rate):
+
+| head arm | schema | head eval AP | pos rate |
+|---|---|---|---|
+| head | incumbent | 0.3694 | 0.165 |
+| head+stop | `open:stop` | 0.4279 | 0.174 |
+| head+nextval | `open:next-value` | 0.3793 | 0.163 |
+| **head+stop+nextval** | both | **0.5494** | 0.196 |
+
+The combined schema's head discriminates at 0.55 — a real jump over
+round 2's 0.43/0.37.  The probe shows where it comes from
+(`head+stop+nextval` rows, base rate 0.196):
+
+| feature | solo AP | LOO AP | LOO Δ |
+|---|---|---|---|
+| `x:stop:remaining_frac` | **0.3287** | 0.5494 | −0.000 |
+| `x:stop:decay` | 0.2062 | 0.5464 | −0.003 |
+| `x:stop:best_score` | 0.2007 | 0.5609 | +0.011 |
+| `x:stop:topk_score` | 0.1936 | 0.5567 | +0.007 |
+| `x:stop:rank1_pred` | 0.1492 | 0.5595 | +0.010 |
+
+**`x:stop:remaining_frac` carries the timing** — the only column
+whose solo AP clears the base rate and the only one whose LOO does
+not *improve* the refit head.  The honest caveat: it is a
+drain-progress counter (identical to `x:stop:evals_left`), not a
+value signal.  Among the genuinely pool-priced columns only
+`x:stop:decay` helps at all (solo 0.206, LOO −0.003); `best_score`/
+`topk_score` sit at base rate, and `rank1_pred` is *anti*-predictive
+solo (0.149 < 0.196 — softmax concentration is highest on small,
+uniformly-negative pools, i.e. late states, so it reads as a stop
+signal inverted).  All LOO deltas are ≈0 — the family is collinear
+with the progress features; the head's 0.55 comes mostly from
+`x:stop:finds`/`st:useful_rate`/`st:true_rate` (weights −151/+60/+20)
+plus progress.
+
+## Why the gate still fails — the honest negative replicates, sharper
+
+* **Every head arm degenerates to drain.**  Even at head eval AP
+  0.55 — well above round 2's — reward-max τ lands at the
+  never-stop end again (`head+stop+nextval` τ=71.3, 0 stops;
+  `head+nextval` τ=17.5, 1 stop in 36 pages).  Its 0.2858/0.3036
+  rewards are the same confound round 2 flagged: never-stopping
+  *earns*, it is not a stopping policy.  Prediction improved; the
+  decision did not — the value columns are still the heuristic's
+  view (candidate AP 0.045), so the head cannot certify "nothing
+  pending pays", and under the asymmetric table (+1.0 missed find
+  vs −0.002 wasted eval) EV stays positive until near-certainty.
+  Better discrimination of the *label* does not move the
+  reward-optimal *threshold*.
+
+* **The RL arms got worse, not better.**  `inc+nextval`'s sampled
+  reward (0.2745) nominally clears 0.273 but its page-aware AP
+  *collapsed to 0.0215 at 5 epochs* — worse than round 1's `inc+stop`
+  (0.2149).  The stop row's logits now vary state-to-state, so the
+  softmax mass on `stop` shifts every step and the shared-weight
+  REINFORCE term randomizes the `a:*` ranking columns (the train
+  curve oscillates 0.24–0.37, no trend).  `inc+stop+nextval` lands
+  mid-collapse (AP 0.1139).
+
+* **The 20-epoch collapse reproduces.**  `inc+nextval-long`: AP
+  0.0123, reward 0.2307 — same signature as `inc+stop-long`.  Longer
+  RL on stop-row columns is confirmed dead, on a second feature
+  family.
+
+* **The learned `x:stop` weights are sane and inert.**  All five
+  next-value columns train negative (−0.02…−0.23 — "don't stop
+  while value remains"), but at magnitudes far too small to move a
+  softmax whose 16 `evaluate` logits dwarf the `stop` row — the arm
+  still drains ~15.5 evals/ep and plays `stop` no more than the
+  incumbent.
+
+## Verdict (round 3): not earned — `OPEN_GAME_PLAYER_WEIGHTS` stays
+
+Gate: held-out reward ≥ 0.273 **and** AP ≥ 0.210, honestly.  No arm
+clears both: the reward-clearing arms are the never-stop confound
+(`head+nextval` 0.3036 / `head+stop+nextval` 0.2858, ≤1 stop) *and*
+fail AP outright (0.02/0.11); the best RL arm's marginal reward
+clear (0.2745) rides a collapsed ranking (AP 0.0215).  **No bake.**
+
+The three-round summary is now closed: the missing-evidence
+hypothesis was tested directly — the next-candidate-value columns
+*do* sharpen the supervised head (0.37 → 0.55 held-out label AP)
+and the probe isolates the carrier (`x:stop:remaining_frac` — a
+progress counter; the pool-priced columns are individually weak and
+collectively redundant).  But sharper stop-*label* prediction does
+not change the stop *decision*: the features cannot certify an
+empty-of-value pool, so both learnable deliveries still converge to
+drain.  The remaining headroom (+0.026 reward, ~4× yield-per-eval)
+needs evidence this feature family structurally cannot provide — a
+pending-usefulness signal better than the heuristic's AP-0.045 view
+(the `rank1_pred` note stands: a `RelFeats` part cannot see the
+policy's own next-pick probability, so even the confidence column
+is only the linear-score proxy).

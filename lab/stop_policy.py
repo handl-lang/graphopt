@@ -26,6 +26,23 @@ extension prices the two remaining mechanisms:
   timing (the only delivery that still serializes as one
   ``OPEN_GAME_PLAYER_WEIGHTS`` table).
 
+Round 3 adds the missing variable round 2 diagnosed — *next-candidate
+value*: the ``open:next-value`` part emits ``x:stop:best_score`` /
+``x:stop:topk_score`` / ``x:stop:rank1_pred`` /
+``x:stop:remaining_frac`` / ``x:stop:decay`` on the ``stop`` row — the
+heuristic ordering's own pricing of what the pending pool still
+offers (the policy's next-pick probability is what
+``x:stop:rank1_pred`` wants, but a ``RelFeats`` part cannot see the
+weights; it ships the linear-score softmax proxy).  The arms rerun
+the round-1/2 mechanisms on the enriched stop row — cold RL at the
+bake recipe (``inc+nextval``, ``inc+stop+nextval``), the 20-epoch
+undertraining check (``inc+nextval-long`` — does the AP collapse
+repeat), and the supervised gate retrained over the new columns
+(``head+nextval``, ``head+stop+nextval``) — plus a per-feature probe:
+each new column's solo AP against the oracle continue-labels and its
+leave-one-out cost in the refit head, scored on held-out decision
+rows.
+
 The measurement mirrors round 1 exactly: cold retrain per arm
 (``engine.train_policy`` under the baseline's memoized verdicts),
 held-out odd pages, budget 17, page-aware AP (fresh-page
@@ -97,7 +114,28 @@ ARMS: tuple[tuple[str, tuple[str, ...], str, int], ...] = (
     ("imitate-cold", ("open:stop",), "imitate", 0),
     ("head", (), "head", EPOCHS),
     ("head+stop", ("open:stop",), "head", EPOCHS),
+    # Round 3 — the next-candidate-value family, same mechanisms.
+    ("inc+nextval", ("open:next-value",), "rl", EPOCHS),
+    (
+        "inc+stop+nextval",
+        ("open:stop", "open:next-value"),
+        "rl",
+        EPOCHS,
+    ),
+    ("inc+nextval-long", ("open:next-value",), "rl", LONG_EPOCHS),
+    ("head+nextval", ("open:next-value",), "head", EPOCHS),
+    (
+        "head+stop+nextval",
+        ("open:stop", "open:next-value"),
+        "head",
+        EPOCHS,
+    ),
 )
+
+#: The next-candidate-value columns — the round-3 probe reads them.
+NEXT_VALUE_FEATURES: tuple[str, ...] = og.OPEN_EXTRA_FEATURES[
+    "open:next-value"
+]
 
 
 def _extra_spec(tags: tuple[str, ...]) -> DomainSpec:
@@ -274,21 +312,44 @@ def _collect_head_rows(
     return rows, labels
 
 
+def _ap_binary(scores: list[float], labels: list[bool]) -> float:
+    """Average precision of *scores* against binary *labels*.
+
+    The decision-row analogue of ``pb._ap``: the oracle
+    continue-labels are booleans, not ``Outcome`` objects, so the
+    AP sum is over ``labels[i]`` hits directly.
+    """
+    order = sorted(range(len(scores)), key=lambda i: -scores[i])
+    hits = 0
+    total = 0.0
+    for rank, i in enumerate(order, 1):
+        if labels[i]:
+            hits += 1
+            total += hits / rank
+    n_pos = sum(1 for lab in labels if lab)
+    return total / n_pos if n_pos else 0.0
+
+
 def _fit_head(
     spec: DomainSpec,
     rows: list[dict],
     labels: list[bool],
     seed: int,
     epochs: int = HEAD_EPOCHS,
+    names: tuple[str, ...] | None = None,
 ) -> tuple[dict[str, float], float]:
     """Logistic stop head over the ``stop``-row features -> weight dict.
 
     Full-batch BCE on standardized columns (constant columns pass
     through raw — ``bias`` stays the intercept), then the solution is
     mapped back to raw feature units so :func:`_dot` scores the row
-    directly.  Returns ``(w, final_loss)``.
+    directly.  *names* restricts the fit to a schema subset — the
+    leave-one-out probe refits without one column.  Returns
+    ``(w, final_loss)``.
     """
-    names = list(spec.features)
+    if names is None:
+        names = spec.features
+    names = list(names)
     x = torch.tensor(
         [[r.get(n, 0.0) for n in names] for r in rows],
         dtype=torch.float64,
@@ -547,7 +608,43 @@ def run(
                 hrows, hlabels = _collect_head_rows(
                     spec, w_rank, train_pools, by_key, budget
                 )
+                erows, elabels = _collect_head_rows(
+                    spec, w_rank, ev_pools, by_key, budget
+                )
                 w_head, hloss = _fit_head(spec, hrows, hlabels, seed)
+                eval_ap = _ap_binary(
+                    [_dot(w_head, r) for r in erows], elabels
+                )
+                # Round-3 probe — which next-value column carries the
+                # timing: solo AP of the raw column, and the AP cost
+                # of dropping it from a refit head, both scored on
+                # the held-out decision rows.  Arms whose schema lacks
+                # the family probe nothing — an absent column is a
+                # constant, not a feature.
+                probe: dict[str, dict] = {}
+                for f in NEXT_VALUE_FEATURES:
+                    if f not in spec.features:
+                        continue
+                    solo = _ap_binary(
+                        [r.get(f, 0.0) for r in erows], elabels
+                    )
+                    wl, _l = _fit_head(
+                        spec,
+                        hrows,
+                        hlabels,
+                        seed,
+                        names=tuple(
+                            n for n in spec.features if n != f
+                        ),
+                    )
+                    loo = _ap_binary(
+                        [_dot(wl, r) for r in erows], elabels
+                    )
+                    probe[f] = {
+                        "solo_ap": round(solo, 4),
+                        "loo_ap": round(loo, 4),
+                        "loo_delta": round(loo - eval_ap, 4),
+                    }
                 tau, cal_reward = _calibrate_tau(
                     spec,
                     player,
@@ -565,6 +662,11 @@ def run(
                     "pos_rate": round(
                         sum(hlabels) / max(len(hlabels), 1), 4
                     ),
+                    "eval_ap": round(eval_ap, 4),
+                    "eval_pos_rate": round(
+                        sum(elabels) / max(len(elabels), 1), 4
+                    ),
+                    "feature_probe": probe,
                     "weights": {
                         n: round(wv, 4)
                         for n, wv in w_head.items()
@@ -693,8 +795,13 @@ def _print(res: dict[str, Any]) -> None:
         print(  # stdout-compat
             f"-- head {arm_id}: tau={h['tau']} "
             f"cal_reward={h['cal_reward']} pos_rate={h['pos_rate']} "
-            f"loss={h['loss']} --"
+            f"loss={h['loss']} eval_ap={h.get('eval_ap')} --"
         )
+        for f, p in h.get("feature_probe", {}).items():
+            print(  # stdout-compat
+                f"    probe {f:<22} solo={p['solo_ap']:.4f} "
+                f"loo={p['loo_ap']:.4f} d={p['loo_delta']:+.4f}"
+            )
         for n, wv in sorted(
             h["weights"].items(), key=lambda kv: -abs(kv[1])
         ):

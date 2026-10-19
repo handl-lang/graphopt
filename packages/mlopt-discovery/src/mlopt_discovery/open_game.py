@@ -45,6 +45,7 @@ pool.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from itertools import islice
 from statistics import fmean
@@ -440,6 +441,64 @@ def _stop_feats(
     return {"x:marginal": q * (1.0 + credit)}
 
 
+def _next_value_feats(
+    state: OpenState, action: Action, _row: dict[str, float]
+) -> dict[str, float]:
+    """``x:stop:best_score`` … — the *next-candidate value* columns.
+
+    Round 2's diagnosis (``docs/results_stop_policy.md``): the
+    ``x:stop:*`` columns encode state-level quantities — evals spent,
+    finds banked, the marginal tier — but nothing that prices the
+    *remaining* pool.  "Expected next find" is the missing variable.
+    This part emits it, on the ``stop`` row (the action whose logit
+    must fall when the board still offers):
+
+    * ``x:stop:best_score`` — the max ``a:score`` still pending: the
+      heuristic's own view of what is left.
+    * ``x:stop:topk_score`` — the mean of the top-3 pending scores:
+      the paying *mass*, not just the peak.
+    * ``x:stop:rank1_pred`` — the softmax probability the score
+      ordering itself puts on its rank-1 pending member
+      (``exp(a:score) / Σ exp``).  The policy's own next-pick
+      probability is what the spec wants here, but a ``RelFeats``
+      part cannot see the policy's weights — only ``state``,
+      ``action`` and the partially-built row — so this is the
+      linear-score rank proxy: the heuristic ordering's confidence
+      that its next pick stands out.
+    * ``x:stop:remaining_frac`` — pending / pool size: how drained
+      the page is (the count the ``rank1_pred`` mass alone confounds
+      with concentration).
+    * ``x:stop:decay`` — ``best_score x remaining_frac``: the
+      combined *value left* — high only while a top-scored pending
+      set is still large.
+    """
+    if action.op != "stop":
+        return {}
+    n = max(state.pool_size, 1)
+    scores = sorted(
+        (_score(state.pool[i]) / 16.0 for i in state.pending),
+        reverse=True,
+    )
+    remain = len(state.pending) / n
+    if not scores:
+        return {
+            "x:stop:best_score": 0.0,
+            "x:stop:topk_score": 0.0,
+            "x:stop:rank1_pred": 0.0,
+            "x:stop:remaining_frac": remain,
+            "x:stop:decay": 0.0,
+        }
+    exps = [math.exp(s) for s in scores]
+    best = scores[0]
+    return {
+        "x:stop:best_score": best,
+        "x:stop:topk_score": fmean(scores[:3]),
+        "x:stop:rank1_pred": exps[0] / sum(exps),
+        "x:stop:remaining_frac": remain,
+        "x:stop:decay": best * remain,
+    }
+
+
 # ---------------------------------------------------------------------------
 #  The board
 # ---------------------------------------------------------------------------
@@ -624,6 +683,13 @@ OPEN_EXTRA_FEATURES: dict[str, tuple[str, ...]] = {
         "x:stop:evals_left",
         "x:stop:finds",
     ),
+    "open:next-value": (
+        "x:stop:best_score",
+        "x:stop:topk_score",
+        "x:stop:rank1_pred",
+        "x:stop:remaining_frac",
+        "x:stop:decay",
+    ),
 }
 
 #: The extra parts' tags — the names a spec record (or the player
@@ -653,6 +719,9 @@ register_part(
 )
 register_part("open:useful-ct", lambda: StateBroadcast(_useful_ct_feat))
 register_part("open:stop", lambda: RelFeats(_stop_feats))
+register_part(
+    "open:next-value", lambda: RelFeats(_next_value_feats)
+)
 register_legal("open", legal_actions)
 register_rank("open", _cand_feats)
 
