@@ -276,3 +276,60 @@ and still below the trained-linear prior (0.1332). The `policynet`
 input arms still collapse under the fixed recipe — confirming the
 second, separate defect is the *input encoding* (missing `a:*` shape
 features), not the update rule.
+
+## Post-encoding-fix re-measurement — rl-net gets the `a:*` block
+
+**Date:** 2026-10-19 · same protocol, seed 0, `lab/policy_rl_arms.py
+--only open` re-run after the `policynet` input-encoding fix *and*
+the richer-schema bake (`docs/results_richer_features.md`).
+
+The second defect diagnosed above was the *input encoding*: the bare
+`PolicyNet` contract (`compute_features ⊕ rule_vector`) lacks the
+discriminative `a:*` shape features.  The bare form is load-bearing
+for the search domain (`SearchEnv`/`RLPolicy` score *rules*, which
+have no `a:*` block), so the port extends rather than replaces it:
+each `evaluate` row is now `structural ⊕ [a:*/x:* keys emitted by
+spec.featurize]` — sourced from the spec so schema growth is picked
+up automatically.  The retired encoding runs as `rl-struct`
+(shipped recipe), the collapse control.  A latent
+`id(cand)`-keyed row cache — silently nondeterministic across arms
+(GC address reuse; it briefly made shipped-vs-inline-`ema` diverge)
+— is now content-keyed on `pb._cand_key`; parity is bit-identical
+again.
+
+Also note: this run's `full`/`policynet` rows and the `cold+rl` /
+`trained-linear` arms ride the *extended* schema (`a:score_rank`,
+`a:score_rel`, `x:score:depth`, `x:score:ops` joined
+`OPEN_GAME_FEATURES`), and `trained-linear` is the newly baked
+richer-schema prior.  Net-arm APs are the net's fresh-page evaluate
+ordering; linear-arm APs are `rank_score` — the *candidate-only*
+slice, which cannot see the pool-relative features (it under-reads
+the shipped ordering — the page-aware probe prices `core4` at
+0.2101).
+
+| arm | reward/ep | useful/ep | evals/ep | useful/eval | found | AP |
+|---|---|---|---|---|---|---|
+| random | 0.1339 | 0.083 | 8.67 | 0.0096 | 3 | — |
+| heuristic drain | 0.3595 | 0.167 | 16.00 | 0.0104 | 6 | 0.0450 |
+| trained-linear (baked, richer schema) | 0.2758 | 0.139 | 13.06 | 0.0106 | 5 | 0.1284 (rank_score slice) |
+| cold+rl (linear, 5 ep) | 0.2687 | 0.167 | 13.75 | 0.0121 | 6 | 0.1066 |
+| rl-net-per-ep / -long (control) | 0.0000 | 0.000 | 1.00 | 0.0000 | 0 | 0.0092 |
+| **rl-net (policynet+a:*, shipped)** | **0.3390** | 0.167 | 16.00 | 0.0104 | 6 | **0.0490** |
+| rl-net-greedy | 0.3387 | 0.167 | 16.00 | 0.0104 | 6 | |
+| **rl-net-long** | **0.3391** | 0.167 | 16.00 | 0.0104 | 6 | 0.0767 |
+| rl-net-ema / -ema-long | 0.3390 / 0.3391 | 0.167 | 16.00 | 0.0104 | 6 | 0.0490 / 0.0767 |
+| rl-struct / -long (bare contract, control) | 0.0000 | 0.000 | 1.00 | 0.0000 | 0 | 0.0081 |
+| rl-net-full (shipped, extended schema) | 0.2626 | 0.139 | 14.72 | 0.0094 | 5 | 0.0237 |
+| rl-net-full-long | 0.2764 | 0.167 | 16.00 | 0.0104 | 6 | 0.0148 |
+
+**The collapse is fixed.**  `rl-net` clears both bars — reward 0.339
+vs random 0.134, AP 0.049 vs heuristic 0.045 — and `rl-struct`
+collapses to `stop` under the identical recipe, pinning the defect
+to the encoding exactly as diagnosed.  Two honest post-fix wrinkles:
+the same net on the *full* linear row now under-ranks on AP
+(0.0237) while still earning reward (0.263) — the extended
+45-feature schema is harder for the MLP to exploit than the compact
+structural⊕shape row — and `rl-net`'s 0.049 AP, while
+collapse-freed, is below the `rank_score` AP of the trained prior
+(0.128) and far below the shipped ordering's page-aware AP (0.210):
+RL *reward* learns fast; RL *ranking* still lags the linear prior.

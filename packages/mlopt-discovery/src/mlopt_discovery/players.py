@@ -36,6 +36,7 @@ __all__ = [
     "OpOneHot",
     "PlayHist",
     "PlayRates",
+    "RelFeats",
     "StateBroadcast",
     "compose_featurizer",
     "register_legal",
@@ -189,6 +190,27 @@ class ActionFeats:
     ) -> dict[str, float]:
         """Return the action's own params and interaction terms."""
         return self.fn(action, row)
+
+
+@dataclass(frozen=True)
+class RelFeats:
+    """Action features *relative to the board* — ``fn(state, action, row)``.
+
+    ``ActionFeats`` sees only the action and the partially-built row,
+    so it cannot express *candidate-vs-pool* terms — "is this the
+    best still-pending option" needs the rest of the board.  This is
+    the part for them: its *fn* additionally receives ``state`` (the
+    open game's pool and pending mask, say) while ``row`` still lets
+    it read an earlier part's emissions.
+    """
+
+    fn: Callable[[Any, Any, dict], dict[str, float]]
+
+    def __call__(
+        self, state: Any, action: Any, _hist: Any, row: dict
+    ) -> dict[str, float]:
+        """Return the state-relative action features."""
+        return self.fn(state, action, row)
 
 
 def compose_featurizer(parts: tuple) -> Callable:
@@ -649,10 +671,14 @@ class LearnedPlayer(LinearPolicy):
     def rank_score(self, cand: Any) -> float:
         """Score *cand* under the spec's candidate ranker.
 
-        The open game's page ordering is exactly
+        The open game's *candidate-only* page ordering is
         ``w · rank(cand)``: every ``evaluate`` move shares its state
-        and move-kind features, so the policy's ordering over a page
-        is this scorer's ordering.
+        and move-kind features, so this scorer gives the ordering the
+        shape block (``_cand_feats``) implies.  Parts that need the
+        *pool* (``RelFeats`` — ``a:score_rank``/``a:score_rel``) or
+        emit terms outside the ranker's vocabulary (``x:score:*``) do
+        not figure here — the in-episode ordering uses them; the
+        page-aware AP probe in ``lab/richer_features.py`` prices them.
         """
         if self._spec.rank is None:
             raise ValueError("this domain ships no candidate ranker")

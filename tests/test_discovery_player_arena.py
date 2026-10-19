@@ -19,8 +19,8 @@ from __future__ import annotations
 import pytest
 from mlopt_discovery import meta_player as mp
 from mlopt_discovery import open_game as og
-from mlopt_discovery import player_arena as pa
 from mlopt_discovery import play
+from mlopt_discovery import player_arena as pa
 from mlopt_discovery.engine import run_episode
 from mlopt_discovery.meta_arena import Action
 from mlopt_discovery.players import (
@@ -28,9 +28,6 @@ from mlopt_discovery.players import (
     Bias,
     DomainSpec,
     LinearPolicy,
-    StateBroadcast,
-    register_legal,
-    register_part,
 )
 
 
@@ -64,7 +61,9 @@ class TestSpecRecord:
         from mlopt_discovery import meta_arena as ma
 
         for a in ma.legal_actions(st):
-            assert spec.featurize(st, a) == mp.META_SPEC.featurize(st, a)
+            assert spec.featurize(st, a) == mp.META_SPEC.featurize(
+                st, a
+            )
 
     def test_open_roundtrip(self):
         rec = og.OPEN_SPEC.to_record()
@@ -75,12 +74,17 @@ class TestSpecRecord:
         case = og.gen_cases(0, 1, page=4)[0]
         st = og.OpenArena(case).observe()
         for a in og.legal_actions(st):
-            assert spec.featurize(st, a) == og.OPEN_SPEC.featurize(st, a)
+            assert spec.featurize(st, a) == og.OPEN_SPEC.featurize(
+                st, a
+            )
 
     def test_search_roundtrip(self):
         rec = play.SEARCH_SPEC.to_record()
         assert rec["legal"] == "search"
-        assert DomainSpec.build_from_record(rec).legal is play._search_legal
+        assert (
+            DomainSpec.build_from_record(rec).legal
+            is play._search_legal
+        )
 
     def test_unregistered_part_raises(self):
         spec = DomainSpec.build(
@@ -120,35 +124,51 @@ class TestBoard:
         ops = {a.op for a in acts}
         assert ops == set(pa._PLAYER_OPS)
         toggles = [a for a in acts if a.op == "toggle_feature"]
-        assert {a.params["part"] for a in toggles} == set(og.OPEN_PART_TAGS)
+        assert {a.params["part"] for a in toggles} == set(
+            og.OPEN_PART_TAGS
+        )
         assert acts[-1].op == "extract"
         # evaluate is offered while the eval budget lasts
         assert any(a.op == "evaluate" for a in acts)
 
     def test_toggle_drop_and_readd(self):
         board = pa.PlayerArena(_toy_case(score_fn=_smaller_is_better))
-        board.step(Action("toggle_feature", {"part": "open:hist", "add": False}))
+        board.step(
+            Action(
+                "toggle_feature", {"part": "open:hist", "add": False}
+            )
+        )
         st = board.observe()
         assert "open:hist" not in st.parts
         assert "open:hist" in st.addable
-        board.step(Action("toggle_feature", {"part": "open:hist", "add": True}))
+        board.step(
+            Action("toggle_feature", {"part": "open:hist", "add": True})
+        )
         # re-added at canonical position, not appended
         assert board.observe().parts == tuple(og.OPEN_PART_TAGS)
 
     def test_meta_requires_blocks_state_drop(self):
         board = pa.PlayerArena(
-            {"objective": "meta", "seed": 0, "score_fn": _smaller_is_better}
+            {
+                "objective": "meta",
+                "seed": 0,
+                "score_fn": _smaller_is_better,
+            }
         )
         st = board.observe()
         # meta:action reads st:* — meta:state is not droppable
         assert "meta:state" not in st.droppable
         _, rep = board.step(
-            Action("toggle_feature", {"part": "meta:state", "add": False})
+            Action(
+                "toggle_feature", {"part": "meta:state", "add": False}
+            )
         )
         assert not rep.applied and rep.reward == 0.0
         # dropping meta:action first unblocks it
         board.step(
-            Action("toggle_feature", {"part": "meta:action", "add": False})
+            Action(
+                "toggle_feature", {"part": "meta:action", "add": False}
+            )
         )
         st = board.observe()
         assert "meta:state" in st.droppable
@@ -170,10 +190,13 @@ class TestBoard:
         board = pa.PlayerArena(_toy_case(score_fn=_smaller_is_better))
         st, rep = board.step(Action("evaluate", {"k": 0}))
         assert rep.applied and rep.reward == (
-            pa.PLAYER_ARENA_REWARD["step"] + pa.PLAYER_ARENA_REWARD["eval"]
+            pa.PLAYER_ARENA_REWARD["step"]
+            + pa.PLAYER_ARENA_REWARD["eval"]
         )
         assert st.evals == 1 and len(st.probes) == 1
-        assert st.parent_score == 0.5  # 5 parts -> 1 - 0.5
+        assert st.parent_score == pytest.approx(
+            0.1
+        )  # 9 parts -> 1 - 0.9
         assert st.probes[0]["delta"] == 0.0  # incumbent resubmitted
         # the same record cannot be probed twice
         st2, rep2 = board.step(Action("evaluate", {"k": 1}))
@@ -190,9 +213,7 @@ class TestBoard:
             calls.append(tuple(record["parts"]))
             return {"score": 0.0, "greedy": 0.0, "evals_ep": 0.0}
 
-        board = pa.PlayerArena(
-            _toy_case(score_fn=score, max_evals=1)
-        )
+        board = pa.PlayerArena(_toy_case(score_fn=score, max_evals=1))
         board.step(Action("evaluate", {"k": 0}))
         board.step(
             Action("toggle_feature", {"part": "bias", "add": False})
@@ -221,10 +242,7 @@ class TestBoard:
             + pa.PLAYER_ARENA_REWARD["delta"] * 0.1
         )
         assert rep.detail["child"]["parts"] == [
-            "open:state",
-            "open:hist",
-            "open:onehot",
-            "open:action",
+            t for t in og.OPEN_PART_TAGS if t != "bias"
         ]
 
     def test_unknown_move_declines(self):
@@ -241,19 +259,25 @@ class TestBoard:
 
 class TestGreedyEditor:
     def test_ablates_dead_parts_and_extracts(self):
-        board = pa.PlayerArena(_toy_case(score_fn=_smaller_is_better))
+        board = pa.PlayerArena(
+            _toy_case(score_fn=_smaller_is_better, max_evals=11)
+        )
         traj = run_episode(board, pa.GreedyEditor(), 30)
         t = traj.terminal
-        assert t is not None and t.detail["delta"] == 0.5
+        assert t is not None and t.detail["delta"] == pytest.approx(0.9)
         assert t.detail["child"]["parts"] == []
-        # five LOO probes, each kept (smaller is always better)
-        assert len(t.detail["probes"]) == 5
+        # nine LOO probes, each kept (smaller is always better)
+        assert len(t.detail["probes"]) == 9
 
     def test_reverts_a_losing_drop(self):
         def score(record, *, seed, cfg):
             # incumbent is optimal; any drop costs 0.2
             return {
-                "score": 0.5 if len(record["parts"]) == 5 else 0.3,
+                "score": (
+                    0.5
+                    if len(record["parts"]) == len(og.OPEN_PART_TAGS)
+                    else 0.3
+                ),
                 "greedy": 0.0,
                 "evals_ep": 0.0,
             }

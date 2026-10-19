@@ -47,6 +47,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from itertools import islice
+from statistics import fmean
 from typing import Any
 
 from mlopt_core.ir import Op, Var
@@ -62,6 +63,7 @@ from mlopt_discovery.players import (
     LearnedPlayer,
     OpOneHot,
     PlayRates,
+    RelFeats,
     StateBroadcast,
     register_legal,
     register_part,
@@ -69,6 +71,8 @@ from mlopt_discovery.players import (
 )
 
 __all__ = [
+    "OPEN_EXTRA_FEATURES",
+    "OPEN_EXTRA_PART_TAGS",
     "OPEN_GAME_EFFICIENCY",
     "OPEN_GAME_FEATURES",
     "OPEN_GAME_REWARD",
@@ -159,7 +163,10 @@ FORMS: tuple[str, ...] = (
 #: The feature schema — ``st:*`` state broadcasts, ``h:*``
 #: within-episode play rates, ``op:*`` move-kind one-hots, and
 #: ``a:*`` the candidate's own shape (rewriting-form one-hot, op
-#: count, depth, meta count, heuristic score).
+#: count, depth, meta count, heuristic score).  The trailing
+#: ``a:score_*``/``x:score:*`` entries are the richer-vocabulary
+#: extension (``lab/richer_features.py`` measured AP 0.210 vs the
+#: incumbent schema's 0.133 — earned the schema and the bake).
 OPEN_GAME_FEATURES: tuple[str, ...] = (
     "bias",
     "st:pending_frac",
@@ -174,7 +181,11 @@ OPEN_GAME_FEATURES: tuple[str, ...] = (
     "a:metas",
     "a:ops",
     "a:score",
+    "a:score_rank",
+    "a:score_rel",
     *(f"a:form:{f}" for f in FORMS),
+    "x:score:depth",
+    "x:score:ops",
 )
 
 
@@ -193,6 +204,24 @@ def _walk(t: Any, metas: set) -> int:
     return 0
 
 
+#: Memoized heuristic score — the pool-relative parts re-read it once
+#: per pending member per (state, action) featurize call, so one dict
+#: lookup replaces the ``dag_cost`` walk on repeat visits.  ``Op`` is
+#: ``eq=False``, so the key is effectively per-object: the memo wins
+#: inside an episode (the same pool objects recur every step) and is
+#: bounded by the stream's size.
+_CAND_SCORE: dict[lp.Candidate, float] = {}
+
+
+def _score(cand: lp.Candidate) -> float:
+    """``lp._heuristic_score(cand)``, memoized — candidates recur."""
+    v = _CAND_SCORE.get(cand)
+    if v is None:
+        v = lp._heuristic_score(cand)
+        _CAND_SCORE[cand] = v
+    return v
+
+
 def _cand_feats(cand: lp.Candidate) -> dict[str, float]:
     """Shape features of one candidate — what the prior sees."""
     metas: set = set()
@@ -203,7 +232,7 @@ def _cand_feats(cand: lp.Candidate) -> dict[str, float]:
         ),
         "a:metas": float(len(metas)),
         "a:ops": float(n_ops),
-        "a:score": lp._heuristic_score(cand) / 16.0,
+        "a:score": _score(cand) / 16.0,
     }
     form = cand.label.split(":", 1)[0]
     key = f"a:form:{form}"
@@ -240,6 +269,125 @@ def _act_feats(
         return {}
     cand = action.params.get("cand")
     return {} if cand is None else _cand_feats(cand)
+
+
+# ---------------------------------------------------------------------------
+#  Candidate vocabulary extensions — richer feature parts (registry data)
+# ---------------------------------------------------------------------------
+#
+#  The shipped schema's whole candidate view is ``_cand_feats``: the
+#  candidate *in isolation*.  The parts below encode what that view
+#  cannot — where the candidate sits relative to the rest of the
+#  *pending* pool (``a:score_rank`` / ``a:score_rel`` — "is this the
+#  best option left on the board"), interactions of its heuristic
+#  score with its shape (``x:score:*``), and pool-/history-level state
+#  the ``st:*`` block lacked (what paying mass is still pending, how
+#  many useful laws this episode has already banked).  Each is one
+#  registered part — a spec record names them by tag
+#  (:data:`OPEN_EXTRA_PART_TAGS`); they join ``OPEN_PARTS``/``OPEN_
+#  GAME_FEATURES`` only if the richer-features measurement
+#  (``lab/richer_features.py``) earns it.
+
+
+def _pending_scores(state: OpenState) -> list[float]:
+    """Raw heuristic scores of the still-pending pool members."""
+    return [_score(state.pool[i]) for i in state.pending]
+
+
+def _eval_cand(action: Action) -> Any:
+    """Return the candidate an ``evaluate`` action binds, or None."""
+    if action.op != "evaluate":
+        return None
+    return action.params.get("cand")
+
+
+def _score_rank_feat(
+    state: OpenState, action: Action, _row: dict[str, float]
+) -> dict[str, float]:
+    """``a:score_rank`` — the candidate's rank quantile within pending.
+
+    ``RelFeats`` (state + action): the fraction of pending members the
+    candidate's heuristic score ties or beats — 1.0 for the best
+    still-pending option, ~1/|pending| for the worst.  ``_cand_feats``
+    cannot express it: it needs the rest of the pool.
+    """
+    cand = _eval_cand(action)
+    if cand is None or not state.pending:
+        return {}
+    s = _score(cand)
+    scores = _pending_scores(state)
+    rank = sum(v <= s for v in scores) / len(scores)
+    return {"a:score_rank": rank}
+
+
+def _score_rel_feat(
+    state: OpenState, action: Action, _row: dict[str, float]
+) -> dict[str, float]:
+    """``a:score_rel`` — the candidate's score over the pending mean.
+
+    Signed, in ``a:score`` units (heuristic / 16): positive marks a
+    candidate above what remains on the board, negative below.
+    """
+    cand = _eval_cand(action)
+    if cand is None or not state.pending:
+        return {}
+    s = _score(cand)
+    mean = fmean(_pending_scores(state))
+    return {"a:score_rel": (s - mean) / 16.0}
+
+
+def _score_x_depth_feat(
+    action: Action, _row: dict[str, float]
+) -> dict[str, float]:
+    """``x:score:depth`` — ``a:score x a:depth``, rescaled to O(a:score).
+
+    Interaction term: does the heuristic pay more for deep shapes than
+    shallow ones?  Depth is /4-normalized so the term stays on the
+    score's scale (one lr serves every feature).
+    """
+    cand = _eval_cand(action)
+    if cand is None:
+        return {}
+    f = _cand_feats(cand)
+    return {"x:score:depth": f["a:score"] * f["a:depth"] / 4.0}
+
+
+def _score_x_ops_feat(
+    action: Action, _row: dict[str, float]
+) -> dict[str, float]:
+    """``x:score:ops`` — ``a:score x a:ops``, rescaled to O(a:score)."""
+    cand = _eval_cand(action)
+    if cand is None:
+        return {}
+    f = _cand_feats(cand)
+    return {"x:score:ops": f["a:score"] * f["a:ops"] / 8.0}
+
+
+def _pending_top_feat(state: OpenState) -> dict[str, float]:
+    """``st:pending_top`` — the best heuristic score still pending.
+
+    What the board still has to offer: a high value argues for
+    spending another eval; near zero says the page's paying mass is
+    already banked — the ``stop``-relevant half of the pool stats.
+    """
+    scores = _pending_scores(state)
+    return {"st:pending_top": max(scores, default=0.0) / 16.0}
+
+
+def _pending_mean_feat(state: OpenState) -> dict[str, float]:
+    """``st:pending_mean`` — the mean heuristic score still pending."""
+    scores = _pending_scores(state)
+    return {"st:pending_mean": fmean(scores) / 16.0 if scores else 0.0}
+
+
+def _useful_ct_feat(state: OpenState) -> dict[str, float]:
+    """``st:useful_ct`` — useful finds banked this episode / pool size.
+
+    The history-conditioned half the ``st:*`` block missed:
+    ``st:useful_rate`` is a ratio (undefined at 0 evals, saturated by
+    the first find); the raw count's gradient differs.
+    """
+    return {"st:useful_ct": state.n_useful / max(state.pool_size, 1)}
 
 
 # ---------------------------------------------------------------------------
@@ -377,13 +525,18 @@ def legal_actions(state: OpenState) -> tuple[Action, ...]:
 
 #: The open featurizer's composable parts, in row order: the
 #: intercept, the ``st:*`` broadcast, the ``h:*`` play rates, the
-#: move-kind one-hot, then the candidate's shape block.
+#: move-kind one-hot, then the candidate's shape block plus the
+#: pool-relative / interaction extensions (the measured AP winners).
 OPEN_PARTS: tuple = (
     Bias(),
     StateBroadcast(_state_feats),
     PlayRates(("evaluate", "stop")),
     OpOneHot(frozenset(OPEN_GAME_FEATURES)),
     ActionFeats(_act_feats),
+    RelFeats(_score_rank_feat),
+    RelFeats(_score_rel_feat),
+    ActionFeats(_score_x_depth_feat),
+    ActionFeats(_score_x_ops_feat),
 )
 
 #: The open parts in the spec record's tag vocabulary — the names a
@@ -394,7 +547,32 @@ OPEN_PART_TAGS: tuple[str, ...] = (
     "open:hist",
     "open:onehot",
     "open:action",
+    "open:score-rank",
+    "open:score-rel",
+    "open:score-x-depth",
+    "open:score-x-ops",
 )
+
+#: The richer-vocabulary features (see the extensions block above) —
+#: name emitted per registered part tag.  Four of them earned the
+#: schema (``a:score_rank``/``a:score_rel``/``x:score:depth``/
+#: ``x:score:ops`` are in ``OPEN_GAME_FEATURES``); the ``st:*``
+#: pool-stat parts measured dead weight (``lab/richer_features.py``)
+#: and stay registered-but-unshipped.  ``DomainSpec.build`` for a
+#: richer candidate spec dedupes names already in the schema.
+OPEN_EXTRA_FEATURES: dict[str, tuple[str, ...]] = {
+    "open:score-rank": ("a:score_rank",),
+    "open:score-rel": ("a:score_rel",),
+    "open:score-x-depth": ("x:score:depth",),
+    "open:score-x-ops": ("x:score:ops",),
+    "open:pending-top": ("st:pending_top",),
+    "open:pending-mean": ("st:pending_mean",),
+    "open:useful-ct": ("st:useful_ct",),
+}
+
+#: The extra parts' tags — the names a spec record (or the player
+#: arena's vocabulary) carries for them.
+OPEN_EXTRA_PART_TAGS: tuple[str, ...] = tuple(OPEN_EXTRA_FEATURES)
 
 register_part("open:state", lambda: StateBroadcast(_state_feats))
 register_part("open:hist", lambda: PlayRates(("evaluate", "stop")))
@@ -403,6 +581,21 @@ register_part(
     lambda: OpOneHot(frozenset(OPEN_GAME_FEATURES)),
 )
 register_part("open:action", lambda: ActionFeats(_act_feats))
+register_part("open:score-rank", lambda: RelFeats(_score_rank_feat))
+register_part("open:score-rel", lambda: RelFeats(_score_rel_feat))
+register_part(
+    "open:score-x-depth", lambda: ActionFeats(_score_x_depth_feat)
+)
+register_part(
+    "open:score-x-ops", lambda: ActionFeats(_score_x_ops_feat)
+)
+register_part(
+    "open:pending-top", lambda: StateBroadcast(_pending_top_feat)
+)
+register_part(
+    "open:pending-mean", lambda: StateBroadcast(_pending_mean_feat)
+)
+register_part("open:useful-ct", lambda: StateBroadcast(_useful_ct_feat))
 register_legal("open", legal_actions)
 register_rank("open", _cand_feats)
 
@@ -428,8 +621,12 @@ class OpenLearnedPlayer(LearnedPlayer):
     ``lab/train/train_open_prior.py`` regenerates.  Pass ``weights={}``
     explicitly for the cold start (the honest uniform baseline the
     held-out measurement compares against).  ``rank_score`` is the
-    spec's candidate ranker (:func:`_cand_feats`), the page ordering
-    :func:`mlopt_discovery.proposal.rank_pool` prices.
+    spec's candidate ranker (:func:`_cand_feats`) — the
+    *candidate-only* slice of the page ordering
+    :func:`mlopt_discovery.proposal.rank_pool` prices; the
+    pool-relative parts (``RelFeats`` — ``a:score_rank``/``a:score_rel``)
+    are outside its vocabulary, so the in-episode ordering is sharper
+    than ``rank_score`` alone reports (``docs/results_richer_features.md``).
     """
 
     SPEC = OPEN_SPEC

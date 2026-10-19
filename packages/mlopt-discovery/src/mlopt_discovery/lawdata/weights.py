@@ -178,12 +178,13 @@ META_ARENA_PLAYER_WEIGHTS: dict[str, float] = {
 #: this literal — the table is reproducible, not hand-tuned.
 #:
 #: The even/odd page split makes the bake earn its place: on the
-#: held-out odd pages (seed 0) the baked prior scores 0.304
+#: held-out odd pages (seed 0) the baked prior scores 0.285
 #: reward/episode against 0.143 for the cold start and 0.134 for
 #: random, finds 0.167 useful laws/episode (cold 0.083, random
 #: 0.083), and its page *ordering* (``rank_score``) beats the
-#: cost-delta heuristic on average precision (0.133 vs 0.045; the
-#: cold-start ordering scores 0.012).  Pinned by
+#: cost-delta heuristic on average precision (0.133-era schema;
+#: see ``docs/results_richer_features.md`` — the extended schema
+#: measures AP 0.210 under the controlled protocol).  Pinned by
 #: ``tests/test_discovery_open_prior.py``.  Regenerate with::
 #:
 #:     python lab/train/train_open_prior.py
@@ -191,40 +192,43 @@ META_ARENA_PLAYER_WEIGHTS: dict[str, float] = {
 #: Weights are rounded to 4 decimals and near-zero entries dropped —
 #: ``LinearPolicy`` reads a missing feature as ``0``.
 OPEN_GAME_PLAYER_WEIGHTS: dict[str, float] = {
-    "op:evaluate": 0.1277,
-    "op:stop": -0.1277,
-    "a:depth": 0.2169,
-    "a:metas": 0.2396,
-    "a:ops": 0.4349,
-    "a:score": 0.1213,
-    "a:form:comm": 0.0028,
-    "a:form:assoc": -0.0036,
-    "a:form:rotate": 0.0164,
-    "a:form:rekey": -0.0251,
-    "a:form:factor-left": 0.0106,
-    "a:form:factor-right": 0.0274,
+    "op:evaluate": 0.1003,
+    "op:stop": -0.1003,
+    "a:depth": 0.1695,
+    "a:metas": 0.1729,
+    "a:ops": 0.3013,
+    "a:score": 0.0628,
+    "a:score_rank": 0.08,
+    "a:score_rel": 0.0249,
+    "a:form:comm": 0.0098,
+    "a:form:assoc": -0.0083,
+    "a:form:rotate": 0.0318,
+    "a:form:rekey": -0.0434,
+    "a:form:factor-left": -0.0013,
+    "a:form:factor-right": 0.0057,
     "a:form:unary-hom": -0.0032,
-    "a:form:pull-left": 0.0101,
-    "a:form:pull-right": 0.007,
-    "a:form:unary-swap": -0.002,
-    "a:form:involution": -0.0016,
-    "a:form:unary-inverse": 0.0159,
-    "a:form:unary-absorb": -0.0003,
-    "a:form:self-op": -0.0015,
-    "a:form:idempotent": 0.0007,
-    "a:form:lit-self": 0.0186,
-    "a:form:const-op": -0.0112,
-    "a:form:id-right": 0.0215,
-    "a:form:id-left": 0.0086,
-    "a:form:annihilate-right": 0.0007,
-    "a:form:annihilate-left": -0.003,
-    "a:form:cancel-self": 0.0121,
-    "a:form:cancel-unary-right": -0.0053,
-    "a:form:cancel-unary-left": -0.0009,
-    "a:form:hom-cross": 0.0332,
-    "a:form:bin-unary-right": -0.0055,
-    "a:form:bin-unary-left": 0.0158,
-    "a:form:unary-of-lit": -0.0108,
+    "a:form:pull-left": 0.0025,
+    "a:form:pull-right": 0.023,
+    "a:form:unary-swap": -0.0026,
+    "a:form:involution": -0.0011,
+    "a:form:unary-inverse": 0.0123,
+    "a:form:self-op": -0.0104,
+    "a:form:idempotent": 0.0034,
+    "a:form:lit-self": 0.0099,
+    "a:form:const-op": -0.0219,
+    "a:form:id-right": 0.0154,
+    "a:form:id-left": 0.0122,
+    "a:form:annihilate-right": -0.0141,
+    "a:form:annihilate-left": 0.0066,
+    "a:form:cancel-self": 0.0023,
+    "a:form:cancel-unary-right": -0.0091,
+    "a:form:cancel-unary-left": -0.0086,
+    "a:form:hom-cross": 0.0228,
+    "a:form:bin-unary-right": 0.001,
+    "a:form:bin-unary-left": 0.0478,
+    "a:form:unary-of-lit": 0.0178,
+    "x:score:depth": 0.0048,
+    "x:score:ops": 0.0093,
 }
 
 #: The player-domain learned prior — the meta-arm

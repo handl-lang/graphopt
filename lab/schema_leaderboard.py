@@ -98,19 +98,27 @@ OPEN_BUDGET = PAGE + 1
 
 #: Part vocabulary, in shipped (canonical) order — the names the
 #: leaderboard uses.  Order in these tables defines "canonical".
+#: Vocab values are *bundles* of parts — an entry may expand to
+#: several featurizer parts (the open board's ``ext`` toggle carries
+#: the measured-AP winners ``a:score_rank``/``a:score_rel``/
+#: ``x:score:*`` as one unit; per-feature importance is
+#: ``lab/richer_features.py``'s axis, not this leaderboard's).
 META_VOCAB: tuple[tuple[str, Any], ...] = tuple(
     zip(
         ("bias", "state", "hist", "onehot", "action"),
-        mp.META_PARTS,
+        ((p,) for p in mp.META_PARTS),
         strict=True,
     )
 )
-OPEN_VOCAB: tuple[tuple[str, Any], ...] = tuple(
-    zip(
-        ("bias", "state", "hist", "onehot", "action"),
-        og.OPEN_PARTS,
-        strict=True,
-    )
+OPEN_VOCAB: tuple[tuple[str, Any], ...] = (
+    *tuple(
+        zip(
+            ("bias", "state", "hist", "onehot", "action"),
+            ((p,) for p in og.OPEN_PARTS[:5]),
+            strict=True,
+        )
+    ),
+    ("ext", tuple(og.OPEN_PARTS[5:])),
 )
 #: Order constraints: writer part → reader part that must follow it.
 #: ``meta_player._act_feats`` reads ``row["st:*"]`` interaction inputs;
@@ -202,7 +210,9 @@ def enumerate_candidates(
                     {
                         "id": ">".join(seq),
                         "names": seq,
-                        "parts": tuple(by_name[n] for n in seq),
+                        "parts": tuple(
+                            p for n in seq for p in by_name[n]
+                        ),
                         "incumbent": seq == canonical,
                     }
                 )

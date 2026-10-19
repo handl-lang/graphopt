@@ -13,15 +13,25 @@ dedicated-RL machinery beats the trained linear prior:
   advantage baseline) ported to the open-domain episode loop
   (``OpenArena`` + memoized ``proposal.evaluate``).  ``train_rl_policy``
   only ever ran the search domain; the port keeps the net and the
-  update rule verbatim and adapts only the featurization — two input
+  update rule verbatim and adapts only the featurization — three input
   encodings:
 
-  - ``policynet`` — the ``PolicyNet`` contract verbatim: each
+  - ``policynet`` — the ``PolicyNet`` contract *extended*: each
     ``evaluate`` action is ``state_vector(compute_features(cand.lhs),
-    progress) (+) rule_vector(cand.as_rule())`` (candidate-as-program,
-    rule = the candidate's rule; ``stop`` is a zero row — a learnable
-    constant logit).  Exactly the ``RuleValueNet`` input plus
-    progress, so it is the controlled RL-vs-BCE comparison too.
+    progress) (+) rule_vector(cand.as_rule()) (+)`` the candidate's
+    ``a:*``/``x:*`` block — the same keys ``spec.featurize`` emits,
+    in ``OPEN_GAME_FEATURES`` order.  The bare contract collapsed
+    (see ``docs/results_learned_rl.md``): it lacked the
+    discriminative shape features — heuristic score, depth, metas,
+    form one-hots — that the linear policy's ``a:*`` row carries.
+    The bare form is load-bearing for the search domain
+    (``SearchEnv``/``RLPolicy`` score *rules*, which have no ``a:*``
+    block), so it is not replaced globally — the port appends the
+    missing features, sourced from ``spec.featurize`` itself so a
+    schema extension is picked up automatically.
+  - ``struct`` — the pre-fix ``policynet`` row (``compute_features``
+    ``(+)`` ``rule_vector``, no ``a:*`` block), kept as the encoding
+    control under the shipped recipe.
   - ``full`` — the *same* MLP shape fed the linear policy's own
     feature rows (``og.featurize(state, action, hist)`` over
     ``OPEN_GAME_FEATURES``) — isolates "is the linear prior's edge
@@ -121,17 +131,31 @@ def _mlp(in_dim: int, hidden: int) -> nn.Module:
     )
 
 
-class _OpenNetFeaturizer:
-    """Per-action input rows for the two open-domain encodings.
+#: The candidate-level block the bare ``PolicyNet`` contract lacked —
+#: the ``a:*``/``x:*`` keys ``spec.featurize`` emits, in schema order.
+#: Sourced from ``OPEN_GAME_FEATURES`` so a schema extension (a new
+#: ``a:*``/``x:*`` part joining the spec) widens this block
+#: automatically.
+_CAND_KEYS: tuple[str, ...] = tuple(
+    k
+    for k in og.OPEN_GAME_FEATURES
+    if k.startswith("a:") or k.startswith("x:")
+)
 
-    ``mode="policynet"`` reuses ``rl.PolicyNet``'s input contract:
+
+class _OpenNetFeaturizer:
+    """Per-action input rows for the open-domain encodings.
+
+    ``mode="policynet"`` reuses ``rl.PolicyNet``'s input contract —
     ``state_vector(compute_features(cand.lhs), progress)`` concatenated
     with ``rule_vector(cand.as_rule())`` — the candidate's LHS plays
-    the program role, its ``as_rule()`` the rule role — so the shipped
-    net class is used *verbatim* (``model.net`` scores a stacked batch
-    of per-action rows; ``PolicyNet.forward``'s single-state broadcast
-    is just the special case where the state column is constant).
-    ``stop`` is an all-zero row: its logit is a learnable constant.
+    the program role, its ``as_rule()`` the rule role — **plus** the
+    candidate's ``a:*``/``x:*`` block (``:data:`_CAND_KEYS```, emitted
+    by ``spec.featurize``).  ``stop`` is an all-zero row: its logit is
+    a learnable constant.
+
+    ``mode="struct"`` is the bare pre-fix contract (no ``a:*`` block)
+    — the encoding that collapsed; kept as the control.
 
     ``mode="full"`` feeds the linear policy's own feature row —
     ``og.featurize(state, action, hist)`` ordered by
@@ -140,19 +164,29 @@ class _OpenNetFeaturizer:
     """
 
     def __init__(self, mode: str) -> None:
-        """Bind *mode* (``policynet`` | ``full``) and the row cache."""
+        """Bind *mode* (``policynet`` | ``struct`` | ``full``)."""
         self.mode = mode
-        self._cache: dict[int, list[float]] = {}
+        # Content-keyed row cache — ``id(cand)`` is *wrong* here: each
+        # episode builds a fresh arena, dead candidates' ids get
+        # reused, and the collision order depends on arm-run order
+        # (a silent nondeterminism).  ``pb._cand_key`` is the stable
+        # content identity the memoized verdicts use too.
+        self._cache: dict[tuple, list[float]] = {}
 
     def dim(self) -> int:
         """Input width for *mode*."""
+        if self.mode == "full":
+            return len(og.OPEN_GAME_FEATURES)
+        n = rl_mod._STATE_DIM + RULE_VECTOR_LEN
         if self.mode == "policynet":
-            return rl_mod._STATE_DIM + RULE_VECTOR_LEN
-        return len(og.OPEN_GAME_FEATURES)
+            n += len(_CAND_KEYS)
+        return n
 
-    def _cand_row(self, cand: Any, progress: float) -> list[float]:
-        """Return the ``policynet`` row for one ``evaluate`` action."""
-        key = id(cand)
+    def _cand_row(
+        self, cand: Any, progress: float, extra: list[float]
+    ) -> list[float]:
+        """Return the structural row for one ``evaluate`` action."""
+        key = pb._cand_key(cand)
         hit = self._cache.get(key)
         if hit is None:
             hit = [
@@ -161,7 +195,7 @@ class _OpenNetFeaturizer:
             ]
             self._cache[key] = hit
         n_feat = rl_mod._STATE_DIM - 1
-        return [*hit[:n_feat], progress, *hit[n_feat:]]
+        return [*hit[:n_feat], progress, *hit[n_feat:], *extra]
 
     def rows(
         self, state: Any, acts: Any, hist: Any
@@ -175,41 +209,61 @@ class _OpenNetFeaturizer:
             ]
         progress = state.n_seen / max(state.pool_size, 1)
         zero = [0.0] * self.dim()
-        return [
-            self._cand_row(a.params["cand"], progress)
-            if a.op == "evaluate"
-            else zero
-            for a in acts
-        ]
+        out: list[list[float]] = []
+        for a in acts:
+            if a.op != "evaluate":
+                out.append(zero)
+                continue
+            extra = (
+                [
+                    og.featurize(state, a, hist).get(k, 0.0)
+                    for k in _CAND_KEYS
+                ]
+                if self.mode == "policynet"
+                else []
+            )
+            out.append(
+                self._cand_row(a.params["cand"], progress, extra)
+            )
+        return out
 
     def rank_rows(self, cands: list) -> list[list[float]]:
         """Rows for the fresh-page AP scorer (progress = 0)."""
-        if self.mode == "full":
-            # A fresh state over the pool itself — ``featurize`` reads
-            # the candidate off the action and the broadcast block off
-            # the state, so a synthetic untouched page is exact.
-            state = og.OpenState(
-                pool=tuple(cands),
-                pending=tuple(range(len(cands))),
-                verdicts=(),
-                steps=0,
-                done=False,
-                pool_size=len(cands),
-            )
-            return self.rows(
-                state,
-                [
-                    og.Action("evaluate", {"i": i, "cand": c})
-                    for i, c in enumerate(cands)
-                ],
-                og.OPEN_SPEC.new_hist(),
-            )
-        return [self._cand_row(c, 0.0) for c in cands]
+        if self.mode == "struct":
+            return [self._cand_row(c, 0.0, []) for c in cands]
+        # A fresh state over the pool itself — ``featurize`` reads
+        # the candidate off the action and the broadcast block off
+        # the state, so a synthetic untouched page is exact.  Pool-
+        # relative features (``a:score_rank`` & co., if baked) see the
+        # whole page pending, which is the right context for an
+        # ordering probe.
+        state = og.OpenState(
+            pool=tuple(cands),
+            pending=tuple(range(len(cands))),
+            verdicts=(),
+            steps=0,
+            done=False,
+            pool_size=len(cands),
+        )
+        return self.rows(
+            state,
+            [
+                og.Action("evaluate", {"i": i, "cand": c})
+                for i, c in enumerate(cands)
+            ],
+            og.OPEN_SPEC.new_hist(),
+        )
 
 
 def _open_net(feat: _OpenNetFeaturizer, hidden: int) -> nn.Module:
-    """Build the scorer — the shipped ``PolicyNet`` where it fits."""
-    if feat.mode == "policynet":
+    """Build the scorer — the ``PolicyNet`` shape at the row's width.
+
+    ``struct`` still fits the shipped class exactly; the extended
+    ``policynet`` and ``full`` rows use the same ``in->h->h->1`` MLP
+    at their own input width (``PolicyNet(hidden).net`` is precisely
+    ``_mlp(_STATE_DIM + RULE_VECTOR_LEN, hidden)``).
+    """
+    if feat.mode == "struct":
         return rl_mod.PolicyNet(hidden).net
     return _mlp(feat.dim(), hidden)
 
@@ -501,6 +555,11 @@ def run_open(
                             f"{suf}",
                         )
                     )
+        # ``rl-struct`` — the retired bare ``PolicyNet`` input
+        # (``compute_features (+) rule_vector``, no ``a:*`` block),
+        # under the shipped recipe: the encoding-collapse control.
+        for eps_n, suf in ((episodes, ""), (episodes_long, "-long")):
+            arms.append(("struct", "shipped", eps_n, f"rl-struct{suf}"))
         for mode, adv, eps_n, tag in arms:
             t1 = time.perf_counter()
             model, curve = train_open_net(
