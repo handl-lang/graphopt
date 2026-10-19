@@ -105,6 +105,12 @@ SAMPLE_TEMP = 1.5
 #: Artifact payload format tag; the loader rejects anything else.
 _FORMAT = "mlopt-contraction-policy/1"
 
+#: Pre-rename spelling of :data:`_FORMAT` — the bundled ``.pt``
+#: artifacts were written before the catopt -> mlopt rename and still
+#: carry ``catopt-contraction-policy/1``.  The loader accepts it as an
+#: alias for the same payload layout (writers always emit ``_FORMAT``).
+_FORMAT_LEGACY = "catopt-contraction-policy/1"
+
 #: Feature contract version — bump if the feature derivation changes.
 _FEATURE_CONTRACT = "scale-free-v1"
 
@@ -1136,13 +1142,12 @@ def save_contraction_policy(
 def _read(path: Path) -> _Artifact:
     """Load and validate an artifact payload; raise ``ValueError``."""
     payload = torch.load(path, map_location="cpu", weights_only=True)
-    if (
-        not isinstance(payload, dict)
-        or payload.get("format") != _FORMAT
-    ):
+    fmt = payload.get("format") if isinstance(payload, dict) else None
+    if fmt not in (_FORMAT, _FORMAT_LEGACY):
         raise ValueError(
             f"{path}: not a mlopt contraction-policy artifact "
-            f"(format tag missing or != {_FORMAT!r})"
+            f"(format tag is {fmt!r}, need {_FORMAT!r} or the "
+            f"pre-rename {_FORMAT_LEGACY!r})"
         )
     meta = payload.get("meta") or {}
     for key, want in (

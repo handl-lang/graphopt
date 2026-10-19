@@ -91,7 +91,11 @@ _BIN_CANDIDATES = [
 
 def _bin() -> Path | None:
     """Locate the compiled ``egraph-run``; ``None`` when unbuilt."""
-    env = os.environ.get("CATOPT_EGRAPH_RUN")
+    # ``CATOPT_EGRAPH_RUN`` is the pre-rename spelling, kept as a
+    # fallback for existing setups.
+    env = os.environ.get("MLOPT_EGRAPH_RUN") or os.environ.get(
+        "CATOPT_EGRAPH_RUN"
+    )
     if env:
         return Path(env)
     for cand in _BIN_CANDIDATES:

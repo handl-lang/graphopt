@@ -40,7 +40,11 @@ _CANDIDATES = [
 
 
 def _find_bin() -> Path | None:
-    env = os.environ.get("CATOPT_EGRAPH_RUN")
+    # ``CATOPT_EGRAPH_RUN`` is the pre-rename spelling, kept as a
+    # fallback for existing setups.
+    env = os.environ.get("MLOPT_EGRAPH_RUN") or os.environ.get(
+        "CATOPT_EGRAPH_RUN"
+    )
     if env:
         p = Path(env)
         return p if p.exists() else None

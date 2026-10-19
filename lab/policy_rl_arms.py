@@ -572,13 +572,13 @@ def _contraction_ladder(
 
 
 def _load_artifact_model(name: str, device: str) -> tuple[Any, dict]:
-    """Load a bundled artifact's ``PairPolicyNet`` + meta, tag-tolerant.
+    """Load a bundled artifact's ``PairPolicyNet`` + meta.
 
     The bundled ``.pt`` payloads predate the catopt -> mlopt rename and
-    carry ``format='catopt-contraction-policy/1'``, which the shipped
-    ``load_contraction_policy``'s tag check now rejects — so this reads
-    the state dict and meta directly (the feature contract
-    ``scale-free-v1`` is validated, the format tag is not).
+    carry ``format='catopt-contraction-policy/1'`` — accepted by the
+    shipped ``load_contraction_policy`` as a legacy alias, but this
+    reads the payload directly so the raw ``format_tag`` can be
+    recorded in the report alongside the meta.
     """
     from importlib import resources
 
