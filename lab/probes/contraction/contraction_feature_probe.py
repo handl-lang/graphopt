@@ -70,7 +70,7 @@ from typing import Any
 
 import numpy as np
 import torch
-from catopt_torch.contraction_policy import (
+from mlopt_torch.contraction_policy import (
     PAIR_DIM,
     STATE_DIM,
     ContractionGame,
@@ -472,7 +472,7 @@ def _e2e(
     artifact (valid only while it matches this checkout's feature
     contract).
     """
-    from catopt_torch.contraction_policy import load_contraction_policy
+    from mlopt_torch.contraction_policy import load_contraction_policy
 
     model = (
         load_contraction_policy(path, device=device).model

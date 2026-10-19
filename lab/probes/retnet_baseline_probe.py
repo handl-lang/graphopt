@@ -52,11 +52,11 @@ import math
 import types
 
 import torch
-from catopt_core.ir import IR
-from catopt_discovery.play import _time_module
-from catopt_discovery.zoo import _ChunkedRetention
-from catopt_orchestrator.optimize import _lower_extracted
-from catopt_torch.adapters import TorchSink
+from mlopt_core.ir import IR
+from mlopt_discovery.play import _time_module
+from mlopt_discovery.zoo import _ChunkedRetention
+from mlopt_orchestrator.optimize import _lower_extracted
+from mlopt_torch.adapters import TorchSink
 
 from lab.probes.om_decayed_kway_deliver_probe import (
     om_decayed_kway_deliver_probe as P,

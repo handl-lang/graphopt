@@ -19,15 +19,15 @@ rather than a pointwise ``mul`` — and the emb/head tie as an
   guard arms (empty arity, param-only subjects, var tables).
 """
 
-import catopt_orchestrator.morphisms as M
+import mlopt_orchestrator.morphisms as M
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from catopt_core.ir import IR, Op, Param, TensorType, Var
-from catopt_orchestrator import MorphismSearch, Optimizer
-from catopt_torch.adapters import TorchSource
-from catopt_torch.backend import TorchBackend
-from catopt_torch.composer import TorchComposer
+from mlopt_core.ir import IR, Op, Param, TensorType, Var
+from mlopt_orchestrator import MorphismSearch, Optimizer
+from mlopt_torch.adapters import TorchSource
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.composer import TorchComposer
 
 # ---------------------------------------------------------------------------
 #  Fixtures

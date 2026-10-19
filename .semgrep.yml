@@ -1,4 +1,4 @@
-# Repo-local Semgrep rules for catopt.
+# Repo-local Semgrep rules for mlopt.
 #
 # Used together with the registry ruleset:
 #   .venv/bin/semgrep --config .semgrep.yml --config p/python packages
@@ -8,12 +8,12 @@
 # findings on the tree; keep them here so regressions are caught.
 
 rules:
-  - id: catopt-no-eval-exec
+  - id: mlopt-no-eval-exec
     languages: [python]
     severity: ERROR
     message: >-
       Builtin eval()/exec() on a computed value enables arbitrary code
-      execution.  catopt never needs dynamic code evaluation; use an
+      execution.  mlopt never needs dynamic code evaluation; use an
       explicit dispatch table instead.
     metadata:
       category: security
@@ -24,7 +24,7 @@ rules:
       - pattern: eval(...)
       - pattern: exec(...)
 
-  - id: catopt-no-shell-true
+  - id: mlopt-no-shell-true
     languages: [python]
     severity: ERROR
     message: >-
@@ -38,7 +38,7 @@ rules:
     patterns:
       - pattern: subprocess.$FUNC(..., shell=True, ...)
 
-  - id: catopt-no-unsafe-yaml-load
+  - id: mlopt-no-unsafe-yaml-load
     languages: [python]
     severity: ERROR
     message: >-

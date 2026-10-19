@@ -1,6 +1,6 @@
 """Fused level-steps for the online-softmax carriers (om_fused).
 
-:mod:`catopt_carriers.om_fused` provides the om/omd analogues of the
+:mod:`mlopt_carriers.om_fused` provides the om/omd analogues of the
 scan fused bodies: ``fused_om_levels`` / ``fused_omd_levels`` /
 ``fused_omdm_levels`` re-bracket a stacked leaf carrier sequence into
 the canonical adjacent-pair reduction (identity-padded to a power of
@@ -10,17 +10,17 @@ same terms, the pad/mask/DAG-occurrence edges, the compiled path, and
 an end-to-end run on an egraph-extracted om term.
 """
 
-import catopt_carriers.xcarrier  # noqa: F401 — omd_* torch bindings
+import mlopt_carriers.xcarrier  # noqa: F401 — omd_* torch bindings
 import pytest
 import torch
-from catopt_core.cost import flops_cost
-from catopt_core.egraph import EGraph
-from catopt_core.ir import IR, Op, Param, TensorType, Var
-from catopt_carriers.om import OM_LAWS
-from catopt_carriers.om_lower import build_om_plan, to_batched_om_module
-from catopt_carriers.omd_lower import build_omd_plan
-from catopt_torch.torch_bridge import ir_to_torch_module
-from catopt_carriers.om_fused import (
+from mlopt_core.cost import flops_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import IR, Op, Param, TensorType, Var
+from mlopt_carriers.om import OM_LAWS
+from mlopt_carriers.om_lower import build_om_plan, to_batched_om_module
+from mlopt_carriers.omd_lower import build_omd_plan
+from mlopt_torch.torch_bridge import ir_to_torch_module
+from mlopt_carriers.om_fused import (
     fused_om_levels,
     fused_omd_levels,
     fused_omdm_levels,
@@ -159,7 +159,7 @@ def test_fused_om_matches_serial(n_blocks):
 def test_fused_om_matches_batched_module():
     """Same term through BatchedOMModule (itself a canonical
     reduction) — cross-schedule agreement at fp64."""
-    from catopt_carriers.om_lower import to_batched_om_module
+    from mlopt_carriers.om_lower import to_batched_om_module
 
     torch.manual_seed(0)
     B, H, T, d, dv = 1, 2, 8, 4, 6
@@ -595,7 +595,7 @@ def test_batched_om_module_fused_validation_and_fallbacks():
 
 def test_batched_omd_module_fused_matches_serial():
     """BatchedOmdModule(fused=...) on both fibers, fp64-exact."""
-    from catopt_carriers.omd_lower import to_batched_omd_module
+    from mlopt_carriers.omd_lower import to_batched_omd_module
 
     for dense in (False, True):
         ir, ss, aa, bb, h = _omd_ir(4, Tq=4, K=3, d=6, dense=dense)
@@ -627,7 +627,7 @@ def test_batched_omd_module_fused_matches_serial():
 def test_batched_omd_module_fused_edges():
     """fused validation, non-plan decline, and the occ-decline
     fallback path are all covered."""
-    from catopt_carriers.omd_lower import to_batched_omd_module
+    from mlopt_carriers.omd_lower import to_batched_omd_module
 
     ir, ss, aa, bb, h = _omd_ir(4, Tq=4, K=3, d=6)
     pv = {
@@ -686,7 +686,7 @@ def test_batched_om_module_compile_wrap_failure_falls_back(monkeypatch):
 
 def test_batched_omd_module_compile_wrap_failure_falls_back(monkeypatch):
     """``torch.compile`` raising at wrap time permanently selects eager."""
-    from catopt_carriers.omd_lower import to_batched_omd_module
+    from mlopt_carriers.omd_lower import to_batched_omd_module
 
     ir, ss, aa, bb, h = _omd_ir(4, Tq=4, K=3, d=6)
     pv = {
@@ -717,7 +717,7 @@ def test_batched_omd_module_compile_wrap_failure_falls_back(monkeypatch):
 def test_batched_omd_module_fused_reuse_and_call_failure():
     """The compiled fn is reused on later calls; a call failure falls
     back to eager permanently."""
-    from catopt_carriers.omd_lower import to_batched_omd_module
+    from mlopt_carriers.omd_lower import to_batched_omd_module
 
     ir, ss, aa, bb, h = _omd_ir(4, Tq=4, K=3, d=6)
     pv = {
@@ -751,7 +751,7 @@ def test_batched_omd_module_fused_reuse_and_call_failure():
 def test_batched_omd_module_fused_shared_leaf_gathers():
     """A DAG-shared leaf yields a non-identity occurrence permutation —
     the gather path — and the fused run stays fp64-exact."""
-    from catopt_carriers.omd_lower import to_batched_omd_module
+    from mlopt_carriers.omd_lower import to_batched_omd_module
 
     n, Tq, K, d = 2, 4, 3, 6
     ss = [_v(f"s{i}", Tq, K) for i in range(n)]

@@ -12,8 +12,8 @@ import pytest
 
 torch = pytest.importorskip("torch")
 
-import catopt_torch.torch_bridge as tb  # noqa: E402
-from catopt_carriers.om import (  # noqa: E402
+import mlopt_torch.torch_bridge as tb  # noqa: E402
+from mlopt_carriers.om import (  # noqa: E402
     DECAY_BLOCK_CROSS,
     DECAY_BLOCK_CROSS_FLAT,
     DECAY_STATE_WEIGHT_EXIT,
@@ -41,20 +41,20 @@ from catopt_carriers.om import (  # noqa: E402
     om_shared_state_laws,
     om_shared_state_stages,
 )
-from catopt_core.egraph import EGraph  # noqa: E402
-from catopt_core.ir import (  # noqa: E402
+from mlopt_core.egraph import EGraph  # noqa: E402
+from mlopt_core.ir import (  # noqa: E402
     Op,
     TensorType,
     Var,
     op_repr,
 )
-from catopt_core.laws.scan import SCAN_DIAG_LAWS  # noqa: E402
-from catopt_core.meta import (  # noqa: E402
+from mlopt_core.laws.scan import SCAN_DIAG_LAWS  # noqa: E402
+from mlopt_core.meta import (  # noqa: E402
     instantiate_pattern,
     match_pattern,
 )
-from catopt_core.typing import shape_of  # noqa: E402
-from catopt_torch.torch_bridge import eval_term  # noqa: E402
+from mlopt_core.typing import shape_of  # noqa: E402
+from mlopt_torch.torch_bridge import eval_term  # noqa: E402
 
 G = torch.tensor(0.9, dtype=torch.float64)
 
@@ -1087,7 +1087,7 @@ class TestStateFoldLaws:
         assert UNSQ_MUL.check({"$attr:UD": -1, "a": _v("a", 4)})
 
     def test_decay_state_like(self):
-        from catopt_carriers.om import _decay_state_like
+        from mlopt_carriers.om import _decay_state_like
 
         # matrix state + scalar weight → lifts
         assert _decay_state_like({"h": _v("h", 3, 6), "a": _v("a")})
@@ -1337,8 +1337,8 @@ class TestScoreSplit:
 
     def test_split_scalar_pointwise(self):
         """split_D(mul(x,c)) = mul(split_D(x),c) — c scalar."""
-        from catopt_core.ir import Const
-        from catopt_core.laws.tensor import SPLIT_SCALAR_RULES
+        from mlopt_core.ir import Const
+        from mlopt_core.laws.tensor import SPLIT_SCALAR_RULES
 
         r = next(
             r for r in SPLIT_SCALAR_RULES if r.name == "split_scalar_div_r"
@@ -1453,16 +1453,16 @@ class TestRealExportFold:
     """
 
     def test_real_export_reaches_applyd(self):
-        pytest.importorskip("catopt_torch")
-        from catopt_torch.adapters import TorchSource
-        from catopt_discovery.zoo import _ChunkedRetention
+        pytest.importorskip("mlopt_torch")
+        from mlopt_torch.adapters import TorchSource
+        from mlopt_discovery.zoo import _ChunkedRetention
 
         m = _ChunkedRetention(16)
         x = torch.randn(2, 8, 16)
         term = TorchSource().to_ir(m, x)[0].root
         eg = EGraph()
         root = eg.add_term(term)
-        from catopt_core.laws.tensor import SPLIT_SCALAR_RULES
+        from mlopt_core.laws.tensor import SPLIT_SCALAR_RULES
 
         eg.run(
             list(OM_LAWS) + list(OM_CHUNKIFY) + list(SPLIT_SCALAR_RULES),
@@ -1497,10 +1497,10 @@ class TestRealExportFold:
         inter-chunk accumulator sitting INSIDE the contraction, the
         O(T·C) fold the plan is named for.
         """
-        pytest.importorskip("catopt_torch")
-        from catopt_torch.adapters import TorchSource
-        from catopt_discovery.zoo import _ChunkedRetention
-        from catopt_core.laws.tensor import (
+        pytest.importorskip("mlopt_torch")
+        from mlopt_torch.adapters import TorchSource
+        from mlopt_discovery.zoo import _ChunkedRetention
+        from mlopt_core.laws.tensor import (
             ASSOC_MATMUL_REV,
             DIV_ADD_FACTOR,
             FACTOR_MUL,
@@ -1569,9 +1569,9 @@ class TestRealExportFold:
         discount was invented, so extraction selects it.  The fused
         member must still price higher (the honest direction).
         """
-        pytest.importorskip("catopt_torch")
-        from catopt_core.cost import dag_cost, flops_cost
-        from catopt_core.laws.tensor import (
+        pytest.importorskip("mlopt_torch")
+        from mlopt_core.cost import dag_cost, flops_cost
+        from mlopt_core.laws.tensor import (
             ASSOC_MATMUL_REV,
             DIV_ADD_FACTOR,
             FACTOR_MUL,
@@ -1580,8 +1580,8 @@ class TestRealExportFold:
             MUL_DIV_SWAP,
             SPLIT_SCALAR_RULES,
         )
-        from catopt_discovery.zoo import _ChunkedRetention
-        from catopt_torch.adapters import TorchSource
+        from mlopt_discovery.zoo import _ChunkedRetention
+        from mlopt_torch.adapters import TorchSource
 
         m = _ChunkedRetention(16).double()
         x = torch.randn(2, 512, 16, dtype=torch.float64)
@@ -1865,9 +1865,9 @@ class TestOmDecayedKway:
         drops the extracted cost to ~1.21M — and extraction still
         selects the chunked carrier, not the fused quadratic.
         """
-        pytest.importorskip("catopt_torch")
-        from catopt_core.cost import dag_cost, flops_cost
-        from catopt_core.laws.tensor import (
+        pytest.importorskip("mlopt_torch")
+        from mlopt_core.cost import dag_cost, flops_cost
+        from mlopt_core.laws.tensor import (
             ASSOC_MATMUL_REV,
             DIV_ADD_FACTOR,
             FACTOR_MUL,
@@ -1876,8 +1876,8 @@ class TestOmDecayedKway:
             MUL_DIV_SWAP,
             SPLIT_SCALAR_RULES,
         )
-        from catopt_discovery.zoo import _ChunkedRetention
-        from catopt_torch.adapters import TorchSource
+        from mlopt_discovery.zoo import _ChunkedRetention
+        from mlopt_torch.adapters import TorchSource
 
         base = (
             list(OM_LAWS)
@@ -1944,10 +1944,10 @@ class TestOmDecayedKway:
         SHARED state recurrence, which the law set never spells — a
         search gap, not a cost gap.
         """
-        pytest.importorskip("catopt_torch")
-        from catopt_core.cost import flops_cost
-        from catopt_core.egraph import EGraph
-        from catopt_core.laws.tensor import (
+        pytest.importorskip("mlopt_torch")
+        from mlopt_core.cost import flops_cost
+        from mlopt_core.egraph import EGraph
+        from mlopt_core.laws.tensor import (
             ASSOC_MATMUL_REV,
             DIV_ADD_FACTOR,
             FACTOR_MUL,
@@ -1956,8 +1956,8 @@ class TestOmDecayedKway:
             MUL_DIV_SWAP,
             SPLIT_SCALAR_RULES,
         )
-        from catopt_discovery.zoo import _ChunkedRetention
-        from catopt_torch.adapters import TorchSource
+        from mlopt_discovery.zoo import _ChunkedRetention
+        from mlopt_torch.adapters import TorchSource
 
         T, K = 128, 8
         rules = (
@@ -2015,7 +2015,7 @@ class TestOmDecayedKway:
         reassociation onto a shared state, not the carrier spelling —
         so extraction has no cost reason to prefer a fold member.
         """
-        from catopt_core.cost import flops_cost
+        from mlopt_core.cost import flops_cost
 
         a, x, h = _v("a"), _v("x", 32, 16), _v("h", 32, 16)
         folded = Op.make("applyd", Op.make("aff_diag", a, x), h)
@@ -2031,7 +2031,7 @@ class TestOmDecayedKway:
         this was still a search gap; the staged pair now spells and
         selects it — see ``TestSharedStateExtraction``.)
         """
-        from catopt_core.cost import dag_cost, flops_cost
+        from mlopt_core.cost import dag_cost, flops_cost
 
         T, C, K, d = 128, 16, 8, 16
         shared = _shared_state_fold(T, C, K, d)
@@ -2205,7 +2205,7 @@ class TestSharedStateReassoc:
         cost drops and the state has ≥2 parents.
         """
         law = om_shared_state_laws()[1]
-        from catopt_core.cost import dag_cost, flops_cost
+        from mlopt_core.cost import dag_cost, flops_cost
 
         w = self._w
         B0, B1, B2 = _v("B0", 4, 4), _v("B1", 4, 4), _v("B2", 4, 4)
@@ -2259,9 +2259,9 @@ class TestSharedStateReassoc:
         the q-factored ``matmul(Q, ·)`` member the ``_mat`` variant
         wants is not exposed; see the plan's remaining gap.)
         """
-        pytest.importorskip("catopt_torch")
-        from catopt_core.cost import dag_cost, flops_cost
-        from catopt_core.laws.tensor import (
+        pytest.importorskip("mlopt_torch")
+        from mlopt_core.cost import dag_cost, flops_cost
+        from mlopt_core.laws.tensor import (
             ASSOC_MATMUL_REV,
             DIV_ADD_FACTOR,
             FACTOR_MUL,
@@ -2270,8 +2270,8 @@ class TestSharedStateReassoc:
             MUL_DIV_SWAP,
             SPLIT_SCALAR_RULES,
         )
-        from catopt_discovery.zoo import _ChunkedRetention
-        from catopt_torch.adapters import TorchSource
+        from mlopt_discovery.zoo import _ChunkedRetention
+        from mlopt_torch.adapters import TorchSource
 
         T, K = 64, 4
         base = (
@@ -2344,7 +2344,7 @@ class TestDivBridgeStaging:
 
     def test_bridge_is_the_exact_inverse_of_matmul_div_distribute(self):
         """Same equality, opposite spelling — that is why they cycle."""
-        from catopt_core.laws.tensor import MATMUL_DIV_DISTRIBUTE
+        from mlopt_core.laws.tensor import MATMUL_DIV_DISTRIBUTE
 
         law = om_div_bridge_laws()[0]
         assert law.name == "div_into_matmul"
@@ -2424,10 +2424,10 @@ class TestDivBridgeStaging:
         stage B completes and ``om_shared_mat_reassoc`` fires — 0× in
         the all-at-once arm — while extraction picks a cheaper member.
         """
-        pytest.importorskip("catopt_torch")
-        from catopt_core.cost import dag_cost, flops_cost
-        from catopt_discovery.zoo import _ChunkedRetention
-        from catopt_torch.adapters import TorchSource
+        pytest.importorskip("mlopt_torch")
+        from mlopt_core.cost import dag_cost, flops_cost
+        from mlopt_discovery.zoo import _ChunkedRetention
+        from mlopt_torch.adapters import TorchSource
 
         T, K = 64, 4
         reach, reassoc = om_shared_state_stages(K)
@@ -2553,10 +2553,10 @@ class TestSharedStateExtraction:
         state object of an earlier block is nested inside a later
         block's — the ``S_i = g^C·S_{i-1} + B_i`` chain, shared.
         """
-        pytest.importorskip("catopt_torch")
-        from catopt_core.cost import dag_cost, flops_cost
-        from catopt_discovery.zoo import _ChunkedRetention
-        from catopt_torch.adapters import TorchSource
+        pytest.importorskip("mlopt_torch")
+        from mlopt_core.cost import dag_cost, flops_cost
+        from mlopt_discovery.zoo import _ChunkedRetention
+        from mlopt_torch.adapters import TorchSource
 
         T, K = 64, 4
         reach, reassoc = om_shared_state_stages(K)
@@ -2609,11 +2609,11 @@ class TestSharedStateExtraction:
 
     def test_extracted_carrier_verifies_fp64(self):
         """The extracted shared-state program lowers and verifies."""
-        pytest.importorskip("catopt_torch")
-        from catopt_core.cost import flops_cost
-        from catopt_core.ir import IR
-        from catopt_discovery.zoo import _ChunkedRetention
-        from catopt_torch.adapters import TorchSink, TorchSource
+        pytest.importorskip("mlopt_torch")
+        from mlopt_core.cost import flops_cost
+        from mlopt_core.ir import IR
+        from mlopt_discovery.zoo import _ChunkedRetention
+        from mlopt_torch.adapters import TorchSink, TorchSource
 
         T, K = 64, 4
         reach, reassoc = om_shared_state_stages(K)

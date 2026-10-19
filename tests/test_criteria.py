@@ -2,7 +2,7 @@
 ``optimize_model(criteria=...)`` param.
 
 The blend is a weighted sum of named cost axes
-(:func:`catopt_orchestrator.criteria.criteria_cost`).  Sum of
+(:func:`mlopt_orchestrator.criteria.criteria_cost`).  Sum of
 additive-per-node models is additive, so extraction's subtractive
 local-cost recovery stays exact for the additive axes — the tests
 below check that contract, the selection flip when two axes
@@ -13,7 +13,7 @@ import math
 
 import pytest
 import torch
-from catopt_core.cost import (
+from mlopt_core.cost import (
     _LAUNCH_S,
     _local_roofline,
     dag_cost,
@@ -21,10 +21,10 @@ from catopt_core.cost import (
     flops_cost,
     param_bytes_cost_for,
 )
-from catopt_core.egraph import EGraph
-from catopt_core.ir import Op, Param, TensorType, Var
-from catopt_core.ports import CostFn, signature_conforms
-from catopt_orchestrator.criteria import (
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import Op, Param, TensorType, Var
+from mlopt_core.ports import CostFn, signature_conforms
+from mlopt_orchestrator.criteria import (
     AXES,
     Blend,
     CompiledCriterion,
@@ -37,10 +37,10 @@ from catopt_orchestrator.criteria import (
     criteria_cost,
     peak_bytes_cost,
 )
-from catopt_orchestrator import Optimizer
+from mlopt_orchestrator import Optimizer
 
 
-from catopt_torch.backend import TorchBackend
+from mlopt_torch.backend import TorchBackend
 
 
 def _v(name: str, *shape) -> Var:

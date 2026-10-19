@@ -17,7 +17,7 @@ both regions:
 
 Bindings come from three sources, in order:
 
-1. ``catopt_discovery.oracle._binding_envs`` — the same honest
+1. ``mlopt_discovery.oracle._binding_envs`` — the same honest
    domain enumeration the law-discovery pipeline uses (per-op attr
    domains valid for the bound operand shapes, ``Const`` corners,
    diagonal/Cantor ordering, capped windows);
@@ -47,13 +47,13 @@ from __future__ import annotations
 import itertools
 
 import pytest
-from catopt_carriers.om import OM_LAWS
-from catopt_core.egraph import EGraph
-from catopt_core.egraph.terms import _term_instantiate, _term_match
-from catopt_core.ir import Const, Op, Param, TensorType, Var, op_repr
-from catopt_core.laws import all_rules
-from catopt_discovery import oracle as vo
-from catopt_discovery.oracle import _GUARDED_CAP, _MAX_INSTANCES
+from mlopt_carriers.om import OM_LAWS
+from mlopt_core.egraph import EGraph
+from mlopt_core.egraph.terms import _term_instantiate, _term_match
+from mlopt_core.ir import Const, Op, Param, TensorType, Var, op_repr
+from mlopt_core.laws import all_rules
+from mlopt_discovery import oracle as vo
+from mlopt_discovery.oracle import _GUARDED_CAP, _MAX_INSTANCES
 
 
 def _v(name, *shape):
@@ -808,7 +808,7 @@ def test_om_split_scalar_operand_declines_cleanly():
     the concat used to crash ``_check_om_concat_dims``
     (``ZeroDivisionError`` on ``sd % len(s1)``) — after the rank
     guard it declines like every other false-region binding."""
-    from catopt_carriers.om import OM_SPLIT
+    from mlopt_carriers.om import OM_SPLIT
 
     t = Op.make(
         "om_elem",

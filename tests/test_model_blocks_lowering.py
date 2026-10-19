@@ -1,15 +1,15 @@
 """Coverage wave-2 tests — model blocks plus the executor/traced
 lowering edge paths that the main suites deliberately leave open:
 
-* ``catopt_torch.models`` — ``ResidualMLP``/``ParallelConv`` forwards and the
+* ``mlopt_torch.models`` — ``ResidualMLP``/``ParallelConv`` forwards and the
   analytic flop helpers, exercised on real tensors.
-* ``catopt_carriers.scan_lower`` — the composition-level memo hit, non-zero-axis
+* ``mlopt_carriers.scan_lower`` — the composition-level memo hit, non-zero-axis
   leaf gathers, and the graph-capture CPU behaviour.
-* ``catopt_carriers.om_lower`` — the domain-recogniser rejections, the
+* ``mlopt_carriers.om_lower`` — the domain-recogniser rejections, the
   ``bmm_qk`` rank-gap/``k_gather`` paths, and replay/compile edges.
-* ``catopt_carriers.omd_lower`` — forest-mode plans, deferred-affine walker
+* ``mlopt_carriers.omd_lower`` — forest-mode plans, deferred-affine walker
   rejections, and the serial-compose fallback inside batched eval.
-* ``catopt_carriers.trace`` / ``catopt_carriers.trace_lift`` — law check-fns in both
+* ``mlopt_carriers.trace`` / ``mlopt_carriers.trace_lift`` — law check-fns in both
   directions and the lift pass's structural decline/cycle-cut paths.
 """
 # ruff: noqa: RUF059 — test-idiom unpacking
@@ -17,10 +17,10 @@ lowering edge paths that the main suites deliberately leave open:
 import torch
 import torch.nn.functional as F
 
-import catopt_carriers.trace_lift as TL
-from catopt_core.egraph import EClass, EGraph
-from catopt_core.ir import IR, Op, Param, TensorType, Var
-from catopt_carriers.om_lower import (
+import mlopt_carriers.trace_lift as TL
+from mlopt_core.egraph import EClass, EGraph
+from mlopt_core.ir import IR, Op, Param, TensorType, Var
+from mlopt_carriers.om_lower import (
     _analyze_elem_group,
     _qk_parts,
     _slice_index,
@@ -29,18 +29,18 @@ from catopt_carriers.om_lower import (
     build_om_plan,
     to_batched_om_module,
 )
-from catopt_carriers.omd_lower import (
+from mlopt_carriers.omd_lower import (
     _leaf_sig,
     build_omd_plan,
     to_batched_omd_module,
 )
-from catopt_carriers.scan_lower import (
+from mlopt_carriers.scan_lower import (
     _select_index,
     build_scan_plan,
     to_batched_scan_module,
 )
-from catopt_torch.torch_bridge import ir_to_torch_module
-from catopt_carriers.trace import (
+from mlopt_torch.torch_bridge import ir_to_torch_module
+from mlopt_carriers.trace import (
     _check_collapse,
     _check_expand,
     _check_slide,
@@ -101,12 +101,12 @@ def _compose(opname, leaves):
 
 
 # ---------------------------------------------------------------------------
-#  catopt_torch.models — real forwards for the never-instantiated blocks
+#  mlopt_torch.models — real forwards for the never-instantiated blocks
 # ---------------------------------------------------------------------------
 
 
 def test_residual_mlp_forward_matches_manual():
-    from catopt_torch.models import ResidualMLP
+    from mlopt_torch.models import ResidualMLP
 
     torch.manual_seed(0)
     m = ResidualMLP(dim=8, hidden_mult=3).eval().double()
@@ -119,7 +119,7 @@ def test_residual_mlp_forward_matches_manual():
 
 
 def test_parallel_conv_forward_is_sum_of_branches():
-    from catopt_torch.models import ParallelConv
+    from mlopt_torch.models import ParallelConv
 
     torch.manual_seed(0)
     m = ParallelConv(4, 8, branches=3, kernel=3).eval().double()
@@ -132,7 +132,7 @@ def test_parallel_conv_forward_is_sum_of_branches():
 
 
 def test_flop_helpers_match_formulas():
-    from catopt_torch.models import MatrixChain, ParallelLinear
+    from mlopt_torch.models import MatrixChain, ParallelLinear
 
     assert ParallelLinear.flops((8, 4), 32) == 2 * 32 * 8 * 4
     dims = (16, 8, 4, 2)

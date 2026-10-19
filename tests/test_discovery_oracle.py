@@ -1,4 +1,4 @@
-"""Second-tier tests for ``catopt_discovery.oracle``.
+"""Second-tier tests for ``mlopt_discovery.oracle``.
 
 ``test_law_view_oracle.py`` pins the headline verdicts; this file
 covers the machinery underneath — the tri-state evaluator's error
@@ -11,7 +11,7 @@ View-under-view chains (``transpose(transpose(u,...),...)`` or the
 ``unsqueeze -> expand -> reshape`` triple of ``gqa_absorb_repeat``)
 are grouped into chained attr domains: the outer node's options are
 computed against the operand shape the drawn inner attrs actually
-produce (:func:`catopt_discovery.oracle._chain_domain`), so the
+produce (:func:`mlopt_discovery.oracle._chain_domain`), so the
 joint draws are consistent by construction.
 """
 
@@ -20,9 +20,9 @@ import json
 
 import pytest
 import torch
-from catopt_core.egraph.terms import _term_instantiate
-from catopt_core.ir import Const, Op, Param, TensorType, Var
-from catopt_discovery import oracle as vo
+from mlopt_core.egraph.terms import _term_instantiate
+from mlopt_core.ir import Const, Op, Param, TensorType, Var
+from mlopt_discovery import oracle as vo
 
 
 def _p(op: str, *args, **attrs) -> Op:
@@ -433,8 +433,8 @@ def test_pow_to_rsqrt_now_measures_a_region():
     """The rescued domain gap: ``pow``'s exponent bank mints ``-0.5``,
     so the shipped ``pow_to_rsqrt`` guard accepts sites the bank
     previously declined (the window was starved)."""
-    from catopt_core.laws import ALL_RULES
-    from catopt_discovery import evidence as ev
+    from mlopt_core.laws import ALL_RULES
+    from mlopt_discovery import evidence as ev
 
     rule = {r.name: r for r in ALL_RULES}["pow_to_rsqrt"]
     region = ev._guarded_evals(
@@ -449,8 +449,8 @@ def test_pow_to_rsqrt_now_measures_a_region():
 def test_div_sqrt_to_rsqrt_now_measures_a_region():
     """``div``'s identity bank mints the unit numerator ``1``, so the
     ``1 / sqrt(x)`` spelling's guard accepts sites now."""
-    from catopt_core.laws import ALL_RULES
-    from catopt_discovery import evidence as ev
+    from mlopt_core.laws import ALL_RULES
+    from mlopt_discovery import evidence as ev
 
     rule = {r.name: r for r in ALL_RULES}["div_sqrt_to_rsqrt"]
     region = ev._guarded_evals(
@@ -801,7 +801,7 @@ def test_binding_envs_joint_corner_leads_and_covers():
     """A conv anchor's envs open on coherent joint draws: ``x[1] ==
     W[1]`` (or the groups corner) and ``b == (W[0],)`` on row 0 — and
     the channel-view bank mints ``(1, C, 1, 1)`` for the sibling."""
-    from catopt_core.laws import CONV_FOLD_RULES
+    from mlopt_core.laws import CONV_FOLD_RULES
 
     rule = {r.name: r for r in CONV_FOLD_RULES}["conv_channel_scale_sp"]
     envs = list(
@@ -838,8 +838,8 @@ def test_conv_anchor_sweep_reaches_a_verified_region():
     """The rescue: ``conv_channel_scale_sp``'s guarded region went
     ``0 accepted`` → accepted *and* equal inside the default window —
     no escalation, no measured counterexample."""
-    from catopt_core.laws import CONV_FOLD_RULES
-    from catopt_discovery import evidence as ev
+    from mlopt_core.laws import CONV_FOLD_RULES
+    from mlopt_discovery import evidence as ev
 
     rule = {r.name: r for r in CONV_FOLD_RULES}["conv_channel_scale_sp"]
     region = ev._guarded_evals(
@@ -854,8 +854,8 @@ def test_conv_anchor_sweep_reaches_a_verified_region():
 def test_batch_norm_expand_sweep_still_reaches_its_region():
     """The opt-in family that *worked* keeps its corner: the joint
     rows satisfy ``batch_norm``'s per-channel stat contract."""
-    from catopt_core.laws import BATCH_NORM_RULES
-    from catopt_discovery import evidence as ev
+    from mlopt_core.laws import BATCH_NORM_RULES
+    from mlopt_discovery import evidence as ev
 
     rule = {r.name: r for r in BATCH_NORM_RULES}["batch_norm_expand"]
     region = ev._guarded_evals(
@@ -930,7 +930,7 @@ def test_synth_bases_interleaves_viewed_shapes():
     guard-satisfying corner (rank-2 ``K``, ``softmax`` over the last
     axis) at base 13 — inside the 360 default.
     """
-    from catopt_core.laws import ALL_RULES
+    from mlopt_core.laws import ALL_RULES
 
     rule = {r.name: r for r in ALL_RULES}["sdpa_fold_add"]
     bases = list(vo._synth_bases(rule.lhs, rule.rhs))
@@ -1017,7 +1017,7 @@ def test_escalate_limit_never_lowers_and_never_raises_past_ceiling():
 
 def _first_equal_index(rule, limit: int) -> int | None:
     """Enumeration index of the first guard-accepted equal site."""
-    from catopt_discovery import evidence as ev
+    from mlopt_discovery import evidence as ev
 
     for idx, (subst, lhs_i) in enumerate(
         ev._synth_sites(rule.lhs, rule.rhs, limit=limit)
@@ -1038,8 +1038,8 @@ def _first_equal_index(rule, limit: int) -> int | None:
 def test_sdpa_folds_measure_at_the_default_cap(name, first_equal):
     """The starved folds now accept and prove inside the 360 window,
     at the measured index the diagonal reaches their corner."""
-    from catopt_core.laws import ALL_RULES
-    from catopt_discovery import evidence as ev
+    from mlopt_core.laws import ALL_RULES
+    from mlopt_discovery import evidence as ev
 
     rule = {r.name: r for r in ALL_RULES}[name]
     region = ev._guarded_evals(
@@ -1057,8 +1057,8 @@ def test_sdpa_fold_drop_twins_surface_too():
     """The ``_drop`` twins (the extra dropout metavars) surfaced at the
     same index as their bare forms — the extra free dimension is
     diagonalized, not left to bury the corner."""
-    from catopt_core.laws import ALL_RULES
-    from catopt_discovery import evidence as ev
+    from mlopt_core.laws import ALL_RULES
+    from mlopt_discovery import evidence as ev
 
     for name in ("sdpa_fold_add_drop", "sdpa_fold_addmul_drop"):
         rule = {r.name: r for r in ALL_RULES}[name]
@@ -1763,8 +1763,8 @@ def test_separating_feature_none_and_no_evaluable():
 def test_run_driver(monkeypatch):
     """``_run`` filters proposals to the view family and verdicts
     them — here over a one-proposal corpus."""
-    from catopt_discovery import pipeline as pl
-    from catopt_discovery.impact import TermCase
+    from mlopt_discovery import pipeline as pl
+    from mlopt_discovery.impact import TermCase
 
     u = _v("u", 3, 1)
     case = TermCase("bench", "t", _p("mul", u, Const(1)), (u,), (), {})
@@ -1779,17 +1779,17 @@ def test_run_driver(monkeypatch):
         rhs=_p("mul", "U", "V"),
     )
     monkeypatch.setattr(
-        "catopt_discovery.census.run_census",
+        "mlopt_discovery.census.run_census",
         lambda top: {"op_tuples": []},
     )
     monkeypatch.setattr(
-        "catopt_discovery.impact._bench_cases", lambda: ([case], [])
+        "mlopt_discovery.impact._bench_cases", lambda: ([case], [])
     )
     monkeypatch.setattr(
-        "catopt_discovery.impact.model_cases", lambda: ([], [])
+        "mlopt_discovery.impact.model_cases", lambda: ([], [])
     )
     monkeypatch.setattr(
-        "catopt_discovery.intake.load_cases", lambda: []
+        "mlopt_discovery.intake.load_cases", lambda: []
     )
     monkeypatch.setattr(
         pl,
@@ -1850,7 +1850,7 @@ def test_gqa_absorb_repeat_guard_accepts_a_chained_binding():
     -> reshape(merge)`` chains and ``q[-2] == k[-2] * r`` clears.  The
     enumeration mints it now: the operand-chained
     ``unsqueeze -> expand -> reshape`` nodes form one chained attr
-    group (:func:`catopt_discovery.oracle._chain_domain`), so the
+    group (:func:`mlopt_discovery.oracle._chain_domain`), so the
     ``expand``/``reshape`` options are drawn against the real
     intermediate shapes — and the pinned rank-4 corner evaluates
     ``equal``.  (The earlier rank-3 spelling — ``q=(2,6,4)``,
@@ -1858,7 +1858,7 @@ def test_gqa_absorb_repeat_guard_accepts_a_chained_binding():
     ``enable_gqa`` RHS cannot contract; the guard's ``rank == 4``
     clauses now decline it — see ``test_cond_laws``.)
     """
-    from catopt_core.laws import ALL_RULES
+    from mlopt_core.laws import ALL_RULES
 
     rule = next(r for r in ALL_RULES if r.name == "gqa_absorb_repeat")
     bound = {
@@ -1954,7 +1954,7 @@ def test_rms_norm_fold_guard_accepts_a_tail_block_binding():
     non-scalar-``u`` corner (all 94 front-passing sites at 6000 have
     ``u=()``) — not a mis-specified guard.
     """
-    from catopt_core.laws import ALL_RULES
+    from mlopt_core.laws import ALL_RULES
 
     rules = {r.name: r for r in ALL_RULES}
     gained = rules["rms_norm_fold"]
@@ -1988,7 +1988,7 @@ def test_synth_domain_enumeration_is_bounded():
     Pre-fix this call did not return — the test is the regression
     pin, not a timing assertion.
     """
-    from catopt_discovery.object_synthesis import term_from_spec
+    from mlopt_discovery.object_synthesis import term_from_spec
 
     # eight leaves, each under a view op — the OOM shape
     spelled = (

@@ -205,7 +205,7 @@ export const MODULES: readonly Module[] = [
       {
         id: "e4",
         concept: "delivery-artifact",
-        q: "Which export format round-trips to a standalone runnable module with no catopt at inference?",
+        q: "Which export format round-trips to a standalone runnable module with no mlopt at inference?",
         opts: ["state_dict", "`.pt2`", "safetensors"],
         ok: "`.pt2`",
         why: "Levels 11 + 12: the artifact (artifacts) is the execution half — a `.pt2` runs standalone, while execution stays a separate dimension (architecture) from the price.",

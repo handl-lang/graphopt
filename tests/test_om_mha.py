@@ -11,7 +11,7 @@ scaled-softmax attention, output projection):
   when the state resolves to a scalar member), and the value e-class
   holds an ``apply`` reporting the state shape ``(D,)``.  Judging the
   lift on those convention shapes fails ``len(shape) >= 2`` and vetoes
-  a legal rewrite.  ``catopt_carriers.om._vshape`` now resolves the *value*
+  a legal rewrite.  ``mlopt_carriers.om._vshape`` now resolves the *value*
   shape via ``xcarrier._xshape``, so the check sees the true
   ``(nh,T,K)`` / ``(nh,T,d)`` regardless of which class member is
   picked.
@@ -36,13 +36,13 @@ from __future__ import annotations
 import pytest
 import torch
 
-import catopt_carriers.om as OM  # registers cmask/fill/attnbias
-import catopt_carriers.xcarrier as XC  # registers omd/affd bindings
-from catopt_core.cost import _infer_op_shape, _shape_of, flops_cost
-from catopt_core.egraph import EGraph
-from catopt_core.ir import IR, Const, Op, Param, TensorType
-from catopt_torch.regime import default_rules
-from catopt_torch.torch_bridge import export_to_ir, ir_to_torch_module
+import mlopt_carriers.om as OM  # registers cmask/fill/attnbias
+import mlopt_carriers.xcarrier as XC  # registers omd/affd bindings
+from mlopt_core.cost import _infer_op_shape, _shape_of, flops_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import IR, Const, Op, Param, TensorType
+from mlopt_torch.regime import default_rules
+from mlopt_torch.torch_bridge import export_to_ir, ir_to_torch_module
 
 # ---------------------------------------------------------------------------
 #  The module — ScanAttnMH shape (bench_omd2.py)
@@ -64,7 +64,7 @@ class _ScanAttnMH(torch.nn.Module):
         self.wo = torch.nn.Linear(nh * hd, D, bias=False)
         # Registered buffer, not a Python float — torch.export
         # serialises a bare float attribute through fp32 (a uniform
-        # ~1e-8 output deviation; an export artifact, not a catopt
+        # ~1e-8 output deviation; an export artifact, not a mlopt
         # issue — same note as bench_omd2.ScanAttnMQA).
         self.register_buffer(
             "sq", torch.tensor(hd**-0.5, dtype=torch.float64)

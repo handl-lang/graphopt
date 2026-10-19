@@ -30,12 +30,12 @@ import functools
 
 import pytest
 import torch
-from catopt_core.ir import Const, Op, TensorType, Var
-from catopt_core.laws import ALL_RULES
-from catopt_discovery import evidence as ev
-from catopt_discovery import pipeline as pl
-from catopt_discovery.impact import TermCase, _cost_fn
-from catopt_discovery.shape_proposal import _sink
+from mlopt_core.ir import Const, Op, TensorType, Var
+from mlopt_core.laws import ALL_RULES
+from mlopt_discovery import evidence as ev
+from mlopt_discovery import pipeline as pl
+from mlopt_discovery.impact import TermCase, _cost_fn
+from mlopt_discovery.shape_proposal import _sink
 
 #: The 11 rules the round-4 intake corpus reports ``shippable``
 #: (``corpus-round-4.md``): the shared-factor algebra, the literal

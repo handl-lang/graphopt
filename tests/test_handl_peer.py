@@ -1,7 +1,7 @@
-"""The handl peer's call path — catopt drives handl's rewrite engine.
+"""The handl peer's call path — mlopt drives handl's rewrite engine.
 
 This is plan 0030 step 2's proof.  The peer (`lab/handl-peer`) is a PyO3
-extension, `catopt_handl_peer`, built with maturin; these tests drive it
+extension, `mlopt_handl_peer`, built with maturin; these tests drive it
 through the **extension** when it is importable:
 
     cd lab/handl-peer
@@ -10,7 +10,7 @@ through the **extension** when it is importable:
 
 The same crate also builds a CLI over the same library code
 (`src/bin/rewrite.rs`), and that is the **fallback** surface — a checkout
-with no maturin build (and no `catopt_handl_peer` on `sys.path`) still
+with no maturin build (and no `mlopt_handl_peer` on `sys.path`) still
 exercises the call path through the binary:
 
     cd lab/handl-peer
@@ -29,9 +29,9 @@ symbol (pyo3-ffi makes `Py_TYPE` extern only under `Py_3_14`) that the
 3.13 runtime does not export — the import then fails with
 `undefined symbol: Py_TYPE`.  maturin picks the venv interpreter itself.
 
-What is proven here: catopt calls handl, handl loads catopt's fragment
-directory as a `Language`, applies one of catopt's laws, and returns the
-term — the same term catopt's own engine produces.  What is *not*
+What is proven here: mlopt calls handl, handl loads mlopt's fragment
+directory as a `Language`, applies one of mlopt's laws, and returns the
+term — the same term mlopt's own engine produces.  What is *not*
 proven: any tensor crossing (ADR 0011 keeps those out of v1 on purpose).
 """
 
@@ -43,21 +43,21 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from catopt_core.egraph import EGraph
-from catopt_core.ir import Op, Var
-from catopt_core.laws import ALL_RULES
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import Op, Var
+from mlopt_core.laws import ALL_RULES
 
 _REPO = Path(__file__).resolve().parents[1]
 _BIN = Path(
     os.environ.get(
-        "CATOPT_HANDL_PEER_BIN",
+        "MLOPT_HANDL_PEER_BIN",
         Path.home() / "GitHub/handl-lang/host/target/debug/rewrite",
     )
 )
 _FRAGMENTS = _REPO / "lab" / "handl-spike" / "fragments"
 
 try:  # the shipping surface — absent until maturin builds it
-    import catopt_handl_peer as _ext
+    import mlopt_handl_peer as _ext
 except ImportError:  # pragma: no cover - depends on the local build
     _ext = None
 
@@ -108,14 +108,14 @@ def test_the_extension_is_the_preferred_surface() -> None:
     if _ext is None:
         pytest.skip("extension not installed; using the CLI fallback")
     ids = _ext.language_transform_ids(str(_FRAGMENTS))
-    assert "transform.catopt.assoc_add" in ids
+    assert "transform.mlopt.assoc_add" in ids
 
 
-def test_the_peer_rewrites_with_a_catopt_law() -> None:
+def test_the_peer_rewrites_with_a_mlopt_law() -> None:
     """handl applies `assoc_add` and returns add(add(a,b), c)."""
     # add(a, add(b, c))
     ast = _ast(("a", []), ("b", []), ("c", []), ("add", [1, 2]), ("add", [0, 3]))
-    result = json.loads(_run("transform.catopt.assoc_add", "4", ast))
+    result = json.loads(_run("transform.mlopt.assoc_add", "4", ast))
 
     assert result["rewrites"] == 1, "exactly one rewrite"
     arena, root = result["arena"], result["root"]
@@ -127,25 +127,25 @@ def test_the_peer_rewrites_with_a_catopt_law() -> None:
     assert arena[kids[1]]["kind"] == "c", "right child is c"
 
 
-def test_the_peer_agrees_with_catopts_own_engine() -> None:
+def test_the_peer_agrees_with_mlopts_own_engine() -> None:
     """The same term, both engines — the two must agree."""
     ast = _ast(("a", []), ("b", []), ("c", []), ("add", [1, 2]), ("add", [0, 3]))
-    handl_root = json.loads(_run("transform.catopt.assoc_add", "4", ast))["root"]
+    handl_root = json.loads(_run("transform.mlopt.assoc_add", "4", ast))["root"]
     assert handl_root["kind"] == "add"
 
     law = next(r for r in ALL_RULES if r.name == "assoc_add")
     a, b, c = Var("a", "f64"), Var("b", "f64"), Var("c", "f64")
     graph = EGraph()
     root = graph.add_term(Op.make("add", a, Op.make("add", b, c)))
-    assert graph.apply_rule(law, root), "catopt's own engine fires the rule"
+    assert graph.apply_rule(law, root), "mlopt's own engine fires the rule"
     expected = Op.make("add", Op.make("add", a, b), c)
     assert graph.find(graph.add_term(expected)) == graph.find(root), (
-        "catopt's engine agrees: add(add(a,b),c) is the rewritten member"
+        "mlopt's engine agrees: add(add(a,b),c) is the rewritten member"
     )
 
 
 def test_the_differential_reports_no_disagreement() -> None:
-    """catopt's engine and handl's agree wherever both fire.
+    """mlopt's engine and handl's agree wherever both fire.
 
     The probe (`lab/audit/handl_differential.py`) synthesizes one term per
     law, rewrites it with both engines and compares the results.  This
@@ -190,8 +190,8 @@ def test_root_eliminating_laws_agree_on_satisfying_terms() -> None:
     engines must return the subterm, so the faithful form is pinned for
     all five root-eliminating laws.
     """
-    from catopt_core.egraph import EGraph
-    from catopt_core.ir import Op, TensorType, Var
+    from mlopt_core.egraph import EGraph
+    from mlopt_core.ir import Op, TensorType, Var
 
     fragments_all = _REPO / "lab" / "handl-spike" / "fragments-all"
     assert fragments_all.is_dir(), "the full bank fragment dir is required"
@@ -210,7 +210,7 @@ def test_root_eliminating_laws_agree_on_satisfying_terms() -> None:
         law = next(r for r in ALL_RULES if r.name == name)
         graph = EGraph()
         assert graph.apply_rule(law, graph.add_term(term)), (
-            f"catopt's engine must fire {name} on a satisfying term"
+            f"mlopt's engine must fire {name} on a satisfying term"
         )
         ast = json.dumps(
             [{"kind": n["kind"], "payload": {"children": n["children"]}}
@@ -222,12 +222,12 @@ def test_root_eliminating_laws_agree_on_satisfying_terms() -> None:
                     str(fragments_all),
                     ast,
                     _root_of(term),
-                    f"transform.catopt.{name}",
+                    f"transform.mlopt.{name}",
                 )
             )
         else:
             proc = subprocess.run(
-                [str(_BIN), str(fragments_all), f"transform.catopt.{name}",
+                [str(_BIN), str(fragments_all), f"transform.mlopt.{name}",
                  str(_root_of(term)), ast],
                 capture_output=True, text=True, timeout=120,
             )
@@ -240,7 +240,7 @@ def test_root_eliminating_laws_agree_on_satisfying_terms() -> None:
 
 
 def _arena_of(term) -> list[dict]:
-    """Flatten a catopt term to the peer's flat node list (post-order)."""
+    """Flatten a mlopt term to the peer's flat node list (post-order)."""
     arena: list[dict] = []
     _flatten_into(term, arena)
     return arena

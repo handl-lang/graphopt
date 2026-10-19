@@ -18,14 +18,14 @@ resolution-markers = [
 
 [manifest]
 members = [
-    "catopt",
-    "catopt-carriers",
-    "catopt-core",
-    "catopt-cuda",
-    "catopt-discovery",
-    "catopt-onnx",
-    "catopt-orchestrator",
-    "catopt-torch",
+    "mlopt",
+    "mlopt-carriers",
+    "mlopt-core",
+    "mlopt-cuda",
+    "mlopt-discovery",
+    "mlopt-onnx",
+    "mlopt-orchestrator",
+    "mlopt-torch",
 ]
 
 [[package]]
@@ -180,17 +180,17 @@ filecache = [
 ]
 
 [[package]]
-name = "catopt"
+name = "mlopt"
 version = "0.1.0.dev0"
 source = { editable = "." }
 dependencies = [
-    { name = "catopt-carriers" },
-    { name = "catopt-core" },
-    { name = "catopt-cuda" },
-    { name = "catopt-discovery" },
-    { name = "catopt-onnx" },
-    { name = "catopt-orchestrator" },
-    { name = "catopt-torch" },
+    { name = "mlopt-carriers" },
+    { name = "mlopt-core" },
+    { name = "mlopt-cuda" },
+    { name = "mlopt-discovery" },
+    { name = "mlopt-onnx" },
+    { name = "mlopt-orchestrator" },
+    { name = "mlopt-torch" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "torch" },
@@ -256,13 +256,13 @@ oracle = [
 [package.metadata]
 requires-dist = [
     { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.9.4" },
-    { name = "catopt-carriers", editable = "packages/catopt-carriers" },
-    { name = "catopt-core", editable = "packages/catopt-core" },
-    { name = "catopt-cuda", editable = "packages/catopt-cuda" },
-    { name = "catopt-discovery", editable = "packages/catopt-discovery" },
-    { name = "catopt-onnx", editable = "packages/catopt-onnx" },
-    { name = "catopt-orchestrator", editable = "packages/catopt-orchestrator" },
-    { name = "catopt-torch", editable = "packages/catopt-torch" },
+    { name = "mlopt-carriers", editable = "packages/mlopt-carriers" },
+    { name = "mlopt-core", editable = "packages/mlopt-core" },
+    { name = "mlopt-cuda", editable = "packages/mlopt-cuda" },
+    { name = "mlopt-discovery", editable = "packages/mlopt-discovery" },
+    { name = "mlopt-onnx", editable = "packages/mlopt-onnx" },
+    { name = "mlopt-orchestrator", editable = "packages/mlopt-orchestrator" },
+    { name = "mlopt-torch", editable = "packages/mlopt-torch" },
     { name = "coverage", marker = "extra == 'dev'", specifier = ">=7.0" },
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.168.1" },
     { name = "import-linter", marker = "extra == 'dev'", specifier = ">=2.15" },
@@ -317,69 +317,69 @@ einsum = [{ name = "opt-einsum", specifier = ">=3.4.0,<4" }]
 oracle = [{ name = "egglog", marker = "python_full_version >= '3.12'", specifier = ">=14.0" }]
 
 [[package]]
-name = "catopt-carriers"
+name = "mlopt-carriers"
 version = "0.1.0.dev0"
-source = { editable = "packages/catopt-carriers" }
+source = { editable = "packages/mlopt-carriers" }
 dependencies = [
-    { name = "catopt-core" },
-    { name = "catopt-orchestrator" },
-    { name = "catopt-torch" },
+    { name = "mlopt-core" },
+    { name = "mlopt-orchestrator" },
+    { name = "mlopt-torch" },
     { name = "torch" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "catopt-core", editable = "packages/catopt-core" },
-    { name = "catopt-orchestrator", editable = "packages/catopt-orchestrator" },
-    { name = "catopt-torch", editable = "packages/catopt-torch" },
+    { name = "mlopt-core", editable = "packages/mlopt-core" },
+    { name = "mlopt-orchestrator", editable = "packages/mlopt-orchestrator" },
+    { name = "mlopt-torch", editable = "packages/mlopt-torch" },
     { name = "torch", specifier = ">=2.0" },
 ]
 
 [[package]]
-name = "catopt-core"
+name = "mlopt-core"
 version = "0.1.0.dev0"
-source = { editable = "packages/catopt-core" }
+source = { editable = "packages/mlopt-core" }
 
 [[package]]
-name = "catopt-cuda"
+name = "mlopt-cuda"
 version = "0.1.0.dev0"
-source = { editable = "packages/catopt-cuda" }
+source = { editable = "packages/mlopt-cuda" }
 dependencies = [
-    { name = "catopt-core" },
+    { name = "mlopt-core" },
     { name = "torch" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "catopt-core", editable = "packages/catopt-core" },
+    { name = "mlopt-core", editable = "packages/mlopt-core" },
     { name = "torch", specifier = ">=2.0" },
 ]
 
 [[package]]
-name = "catopt-discovery"
+name = "mlopt-discovery"
 version = "0.1.0.dev0"
-source = { editable = "packages/catopt-discovery" }
+source = { editable = "packages/mlopt-discovery" }
 dependencies = [
-    { name = "catopt-core" },
-    { name = "catopt-orchestrator" },
-    { name = "catopt-torch" },
+    { name = "mlopt-core" },
+    { name = "mlopt-orchestrator" },
+    { name = "mlopt-torch" },
     { name = "torch" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "catopt-core", editable = "packages/catopt-core" },
-    { name = "catopt-orchestrator", editable = "packages/catopt-orchestrator" },
-    { name = "catopt-torch", editable = "packages/catopt-torch" },
+    { name = "mlopt-core", editable = "packages/mlopt-core" },
+    { name = "mlopt-orchestrator", editable = "packages/mlopt-orchestrator" },
+    { name = "mlopt-torch", editable = "packages/mlopt-torch" },
     { name = "torch", specifier = ">=2.0" },
 ]
 
 [[package]]
-name = "catopt-onnx"
+name = "mlopt-onnx"
 version = "0.1.0.dev0"
-source = { editable = "packages/catopt-onnx" }
+source = { editable = "packages/mlopt-onnx" }
 dependencies = [
-    { name = "catopt-core" },
+    { name = "mlopt-core" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "onnx" },
@@ -388,30 +388,30 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "catopt-core", editable = "packages/catopt-core" },
+    { name = "mlopt-core", editable = "packages/mlopt-core" },
     { name = "numpy", specifier = ">=1.24" },
     { name = "onnx", specifier = ">=1.16" },
     { name = "onnxruntime", specifier = ">=1.17" },
 ]
 
 [[package]]
-name = "catopt-orchestrator"
+name = "mlopt-orchestrator"
 version = "0.1.0.dev0"
-source = { editable = "packages/catopt-orchestrator" }
+source = { editable = "packages/mlopt-orchestrator" }
 dependencies = [
-    { name = "catopt-core" },
+    { name = "mlopt-core" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "catopt-core", editable = "packages/catopt-core" }]
+requires-dist = [{ name = "mlopt-core", editable = "packages/mlopt-core" }]
 
 [[package]]
-name = "catopt-torch"
+name = "mlopt-torch"
 version = "0.1.0.dev0"
-source = { editable = "packages/catopt-torch" }
+source = { editable = "packages/mlopt-torch" }
 dependencies = [
-    { name = "catopt-core" },
-    { name = "catopt-orchestrator" },
+    { name = "mlopt-core" },
+    { name = "mlopt-orchestrator" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "torch" },
@@ -419,8 +419,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "catopt-core", editable = "packages/catopt-core" },
-    { name = "catopt-orchestrator", editable = "packages/catopt-orchestrator" },
+    { name = "mlopt-core", editable = "packages/mlopt-core" },
+    { name = "mlopt-orchestrator", editable = "packages/mlopt-orchestrator" },
     { name = "numpy", specifier = ">=1.24" },
     { name = "torch", specifier = ">=2.0" },
 ]

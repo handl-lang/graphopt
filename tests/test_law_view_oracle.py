@@ -1,4 +1,4 @@
-"""Tests for the view/index oracle (``catopt_discovery.oracle``).
+"""Tests for the view/index oracle (``mlopt_discovery.oracle``).
 
 The oracle resolves law-pipeline candidates the single-instance
 numeric oracle cannot: view/index identities whose truth depends on
@@ -16,11 +16,11 @@ hand-built candidates whose truth is known:
 * ``mul(transpose(u,d0,d1), v) -> mul(u,v)`` — conditional on
   ``d0 == d1`` (the no-op transpose).
 
-The oracle lives in the ``catopt_discovery`` package.
+The oracle lives in the ``mlopt_discovery`` package.
 """
 
-from catopt_core.ir import Const, Op, TensorType, Var
-from catopt_discovery import oracle as vo
+from mlopt_core.ir import Const, Op, TensorType, Var
+from mlopt_discovery import oracle as vo
 
 
 def _p(op: str, *args, **attrs) -> Op:

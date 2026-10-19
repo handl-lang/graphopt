@@ -17,8 +17,8 @@ Per budget cell (``--budgets``, default
   (``stats["weight_specials"]``), the accepted bound ledger
   (``stats["error_bounds"]`` / ``error_bound_total``), the cache
   record and the driver's e2e verify are all captured.
-* Timed variants: ``eager`` / ``inductor`` / ``catopt`` (+ optional
-  ``catopt+inductor`` — the delivered module re-compiled).
+* Timed variants: ``eager`` / ``inductor`` / ``mlopt`` (+ optional
+  ``mlopt+inductor`` — the delivered module re-compiled).
 * Held-out impact proxy: fresh seeded prompts (random + a repeated
   phrase — no tokenizer ships with the checkpoint), per-position
   next-token KL(ref‖opt), top-1 and top-5 agreement.
@@ -37,7 +37,7 @@ Usage:
 """
 # ruff: noqa: E402, RUF001, RUF003 -- ×, ·, →, −, ‖ in
 # strings/docstrings are deliberate math notation; sys.path setup
-# must precede the benchkit/catopt imports (bench_omd2 convention).
+# must precede the benchkit/mlopt imports (bench_omd2 convention).
 
 from __future__ import annotations
 
@@ -51,18 +51,18 @@ from pathlib import Path
 
 sys.setrecursionlimit(400_000)
 
-import catopt_orchestrator.morphisms_kv as K
+import mlopt_orchestrator.morphisms_kv as K
 import numpy as np
 import torch
 import torch.nn.functional as F
-from catopt_orchestrator import (
+from mlopt_orchestrator import (
     Compositional,
     MorphismSearch,
     Optimizer,
     optimize_morphisms,
 )
-from catopt_torch.backend import TorchBackend
-from catopt_torch.report import verify_equiv
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.report import verify_equiv
 
 from bench.benchkit import (
     Case,
@@ -93,7 +93,7 @@ QUICK = {
     "min_run_time": "0.05",
     "compile_timeout": "45.0",
     "prompts": "2",
-    "catopt_inductor": "0",
+    "mlopt_inductor": "0",
 }
 
 _BUDGET_DEFAULT = "none,1e-4,1e-3,3e-3,1e-2"
@@ -397,21 +397,21 @@ def run_budget_cell(
         Variant("inductor", _fwd_stmt(inductor_mod, idx)),
     ]
     if opt_mod is not None:
-        variants.append(Variant("catopt", _fwd_stmt(opt_mod, idx)))
-        if getattr(args, "catopt_inductor", None) not in (None, "0", 0):
+        variants.append(Variant("mlopt", _fwd_stmt(opt_mod, idx)))
+        if getattr(args, "mlopt_inductor", None) not in (None, "0", 0):
             ct = float(getattr(args, "compile_timeout", None) or 45.0)
             oc, st_ = try_compile(opt_mod, (idx,), ct)
-            rec["catopt_ind_status"] = st_
+            rec["mlopt_ind_status"] = st_
             if oc is not None:
                 with torch.no_grad():
                     vr2 = verify_equiv(model(idx), oc(idx))
-                rec["catopt_ind_rel"] = vr2.max_rel
+                rec["mlopt_ind_rel"] = vr2.max_rel
                 if vr2.passed:
                     variants.append(
-                        Variant("catopt+inductor", _fwd_stmt(oc, idx))
+                        Variant("mlopt+inductor", _fwd_stmt(oc, idx))
                     )
             print(
-                f"  catopt+inductor: {rec['catopt_ind_status']}",
+                f"  mlopt+inductor: {rec['mlopt_ind_status']}",
                 flush=True,
             )
     return rec, Case(
@@ -610,7 +610,7 @@ def run_bench(args) -> Report:
         f"{'budget':>8} | {'opt s':>6} | {'offers':>6} | "
         f"{'deliv':>5} | {'bound':>8} | {'fresh_rel':>9} | "
         f"{'KL mean':>9} | {'top1':>6} | "
-        f"{'catopt ms':>9} | {'vs eager':>8} | {'vs ind':>8}"
+        f"{'mlopt ms':>9} | {'vs eager':>8} | {'vs ind':>8}"
     )
     print(hdr)
     print("-" * len(hdr))
@@ -619,11 +619,11 @@ def run_bench(args) -> Report:
         e, ind, c = (
             ms.get("eager"),
             ms.get("inductor"),
-            ms.get("catopt"),
+            ms.get("mlopt"),
         )
         rec["ms_eager"] = e
         rec["ms_inductor"] = ind
-        rec["ms_catopt"] = c
+        rec["ms_mlopt"] = c
         if c and e:
             rec["speedup_vs_eager"] = e / c
         if c and ind:
@@ -804,7 +804,7 @@ def main() -> None:
         "--ckpt",
         default=None,
         help="checkpoint path — default resolves "
-        "$XDG_CACHE_HOME/catopt/stories15M.bin then /tmp (fetch.py)",
+        "$XDG_CACHE_HOME/mlopt/stories15M.bin then /tmp (fetch.py)",
     )
     ap.add_argument(
         "--prompts",
@@ -820,7 +820,7 @@ def main() -> None:
         "(0 disables)",
     )
     ap.add_argument(
-        "--catopt-inductor",
+        "--mlopt-inductor",
         default="1",
         help="also compile each delivered module (0 disables)",
     )

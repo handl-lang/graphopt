@@ -4,22 +4,22 @@
 ``extract_fused`` wrapper, epsilon 5%) add a secondary key among
 members priced within epsilon of the class minimum:
 ``(len(fusion_regions(term)), not exposes_pointwise, nops)`` via
-:func:`catopt_core.cost.fusion_member_key`.  These tests pin the band
+:func:`mlopt_core.cost.fusion_member_key`.  These tests pin the band
 semantics (near-tie only), the key ordering (fewer regions, then a
 root a pointwise consumer could absorb), determinism on exact ties,
 and reuse of the shared cost memo for the region probes.
 """
 
-from catopt_core.egraph import EGraph
-from catopt_core.ir import Const, Op, Param, TensorType, Var, op_repr
-from catopt_core.cost import (
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import Const, Op, Param, TensorType, Var, op_repr
+from mlopt_core.cost import (
     count_cost,
     fusion_member_key,
     fusion_regions,
 )
-from catopt_orchestrator import Optimizer
+from mlopt_orchestrator import Optimizer
 
-from catopt_torch.backend import TorchBackend
+from mlopt_torch.backend import TorchBackend
 
 
 def _t(*shape):

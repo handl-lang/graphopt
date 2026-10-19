@@ -5,7 +5,7 @@
 Follow-up to /tmp/bench_omd.py (toy _ScanAttn).  The question: does the
 cross-carrier omd lift survive contact with a transformer-shaped
 attention — real q/k/v projections, multi-head, causal mask — and is
-BatchedOmdModule (catopt/omd_lower.py) still fast when it does?
+BatchedOmdModule (mlopt/omd_lower.py) still fast when it does?
 
 VARIANTS
     mqa   — ScanAttnMQA: the firing case.  Multi-QUERY attention
@@ -71,20 +71,20 @@ import time
 sys.setrecursionlimit(400_000)
 
 import torch
-from catopt_carriers.omd_lower import to_batched_omd_module
-from catopt_carriers.trace_lift import lift_scan_to_trace
-from catopt_carriers.xcarrier import (
+from mlopt_carriers.omd_lower import to_batched_omd_module
+from mlopt_carriers.trace_lift import lift_scan_to_trace
+from mlopt_carriers.xcarrier import (
     XC_LAWS,
     _elem_affine_options,
     gather_apply_stack,
     gather_applyd_stack,
     omd_tree_lift,
 )
-from catopt_core.cost import _shape_of, flops_cost
-from catopt_core.egraph import EGraph
-from catopt_core.ir import IR, Op
-from catopt_torch.regime import default_rules
-from catopt_torch.torch_bridge import (
+from mlopt_core.cost import _shape_of, flops_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import IR, Op
+from mlopt_torch.regime import default_rules
+from mlopt_torch.torch_bridge import (
     _IR_TO_TORCH,
     export_to_ir,
     ir_to_torch_module,
@@ -141,7 +141,7 @@ class ScanAttnMQA(_CausalScan):
         # fp32 rounding (measured: 32**-0.5 exports as
         # 0.1767766952966369 vs the double 0.17677669529663687 —
         # a uniform ~1e-8 output deviation, an export artifact, not a
-        # catopt issue; invisible at hd=16 where scale=0.25 is
+        # mlopt issue; invisible at hd=16 where scale=0.25 is
         # fp32-exact).  A buffer exports as a double Param — exact.
         self.register_buffer(
             "sq", torch.tensor(hd**-0.5, dtype=torch.float64)

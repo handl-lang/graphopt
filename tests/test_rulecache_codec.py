@@ -1,4 +1,4 @@
-"""Coverage tests for catopt_core.rulecache — the JSON codec (attrs, terms,
+"""Coverage tests for mlopt_core.rulecache — the JSON codec (attrs, terms,
 bindings, rule records incl. guarded re-expression), fingerprinting,
 the filesystem store/load contract, and the cached-synthesis key
 derivation.  Real codec paths only; the synthesis itself is stubbed
@@ -11,10 +11,10 @@ import json
 import pytest
 import torch
 
-import catopt_core.meta as meta
-from catopt_core.egraph import Rewrite
-from catopt_core.ir import Const, Op, Param, TensorType, Var
-from catopt_core.rulecache import (
+import mlopt_core.meta as meta
+from mlopt_core.egraph import Rewrite
+from mlopt_core.ir import Const, Op, Param, TensorType, Var
+from mlopt_core.rulecache import (
     CACHE_VERSION,
     RuleCache,
     _dec_attr,
@@ -194,7 +194,7 @@ def test_rule_decode_guarded_missing_parent_is_miss(tmp_path):
 
 
 def _om_rules():
-    from catopt_core.laws import all_rules
+    from mlopt_core.laws import all_rules
 
     return all_rules()
 

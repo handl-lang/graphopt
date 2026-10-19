@@ -60,12 +60,12 @@ import time
 from pathlib import Path
 from typing import Any
 
-import catopt_carriers  # noqa: F401 — registers the carrier machinery
+import mlopt_carriers  # noqa: F401 — registers the carrier machinery
 import torch
-from catopt_core.egraph.terms import _term_match
-from catopt_core.ir import Op, term_from_data
-from catopt_discovery import intake_dir
-from catopt_discovery.impact import _iter_subterms, new_laws
+from mlopt_core.egraph.terms import _term_match
+from mlopt_core.ir import Op, term_from_data
+from mlopt_discovery import intake_dir
+from mlopt_discovery.impact import _iter_subterms, new_laws
 
 from lab.screen.exposed_discovery import discover
 from lab.screen.exposure_screen import _export, _workloads

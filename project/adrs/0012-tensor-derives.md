@@ -65,7 +65,7 @@ term-level sites need no change.
 
 ### 2. Tensor values are *data handled by a pushed algebra*, never objects core inspects
 
-`catopt-core` stays torch-free **and** numpy-free (the import-linter
+`mlopt-core` stays torch-free **and** numpy-free (the import-linter
 `forbidden` contract).  The derive DSL therefore treats a tensor
 value as **opaque** — it is created, transformed, and named only by
 an adapter-pushed **`TensorAlgebra`**, registered the same way the

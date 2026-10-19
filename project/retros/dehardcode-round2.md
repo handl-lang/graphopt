@@ -3,23 +3,23 @@
 ## What the pass did
 
 Round 1 (plan 0018, `dehardcode.md`) gave the *op* vocabulary one
-registry (`catopt_core.opmeta`); plan 0019 declared the *ops* as data
-(`catopt_core.opdata`).  This pass applies the same discipline to the
+registry (`mlopt_core.opmeta`); plan 0019 declared the *ops* as data
+(`mlopt_core.opdata`).  This pass applies the same discipline to the
 second vocabulary the engine carries: the *content tables* — the
 banks, libraries, ledgers and weights a learned policy could
 plausibly choose — that were still buried as module-level literals in
-`catopt_discovery/` and `catopt_core/meta.py`.
+`mlopt_discovery/` and `mlopt_core/meta.py`.
 
 Two new pure-data modules hold them (the `opmeta` idiom: the table
 lives in exactly one place, consumers bind the **same object**, and a
 consistency test pins the relation):
 
-* **`catopt_core/lawdata.py`** — the law-side vocabulary the core
+* **`mlopt_core/lawdata.py`** — the law-side vocabulary the core
   search machinery reads: the coherence classification
   (`COHERENT_RULE_NAMES`), the canonicalizer's monoid vocabulary
   (`AC_IDENTITY`, `ASSOC_ONLY`), and the bounded instantiation bank
   (`INSTANTIATE_LEAF_SHAPES`, `INSTANTIATE_ATTR_POOL`).
-* **`catopt_discovery/lawdata.py`** — every discovery-side content
+* **`mlopt_discovery/lawdata.py`** — every discovery-side content
   table: oracle enumeration banks, verifier instantiation defaults,
   the gap-synthesis shape pools, the grammar alphabet, training
   families, the coherence-probe neighbourhoods, the intake ledger,
@@ -77,9 +77,9 @@ it replaced — verified by replaying the old builders out of
 | `shape_proposal.schemas()` library | `Op.make` table | `lawdata.SHAPE_SCHEMAS` spec rows | yes | the shape-aware schema library — content |
 | `impact.new_laws()` candidates | `R(...)` call list | `lawdata.CANDIDATE_LAWS` spec rows | yes | the 11 proposed laws — content (the `Rewrite` mint + tags stay code) |
 | `impact.synthetic_cases()` corpus | `Op.make` list | `lawdata.SYNTHETIC_CASES` `(name, spec, var names)` rows | yes | the per-law witness terms — content (the random `feed` stays code) |
-| `meta.COHERENT_RULE_NAMES` | literal frozenset | `catopt_core.lawdata.COHERENT_RULE_NAMES` | yes | the coherence classification — content |
-| `meta._AC_IDENTITY` / `_ASSOC_ONLY` | literals | `catopt_core.lawdata.AC_IDENTITY` / `ASSOC_ONLY` | yes | the canonicalizer's monoid vocabulary — content |
-| `meta._LEAF_SHAPES` / `_ATTR_POOL` | literal tuples | `catopt_core.lawdata.INSTANTIATE_*` | yes | the candidate-instantiation bank — content |
+| `meta.COHERENT_RULE_NAMES` | literal frozenset | `mlopt_core.lawdata.COHERENT_RULE_NAMES` | yes | the coherence classification — content |
+| `meta._AC_IDENTITY` / `_ASSOC_ONLY` | literals | `mlopt_core.lawdata.AC_IDENTITY` / `ASSOC_ONLY` | yes | the canonicalizer's monoid vocabulary — content |
+| `meta._LEAF_SHAPES` / `_ATTR_POOL` | literal tuples | `mlopt_core.lawdata.INSTANTIATE_*` | yes | the candidate-instantiation bank — content |
 | `arena.ACTIONS` | registry dict | unchanged | already data | already the action registry — not duplicated |
 | `arena.FixedRule` playbook | injected `Action` iterable | unchanged | already data | the playbook is caller-authored (`moves` param) — `FixedRule` is a replay mechanism over injected data; the ingest-first + guard-conditional ordering is policy logic (code) |
 | `workload_gen` census pools / mutation probabilities | derived statistics + `0.25`/`0.6` draws | unchanged | no | census pools are *measured* data (recomputed from the corpus), not authored content; the mutation mix is a strategy parameter, not a vocabulary — flagged, not moved (see below) |

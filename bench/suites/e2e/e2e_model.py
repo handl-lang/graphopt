@@ -1,6 +1,6 @@
 """End-to-end in-repo model benchmark — a real-ish decoder, not cells.
 
-``model_bench`` times complete models built from catopt's own model
+``model_bench`` times complete models built from mlopt's own model
 zoo (``ParallelBlock``/``LinearAttnStack``).  This bench asks the
 deployment question on a model that looks like real Llama code:
 token embedding → N decoder blocks (RMSNorm → grouped-query causal
@@ -27,11 +27,11 @@ Protocol per sweep cell (one cell per (model, B, T)):
     and the delivered module is verified per-block (inside the
     driver) and end-to-end against eager.
 2.  whole-graph ``optimize_model`` on a deepcopy (variant
-    ``catopt_full``) — the monolithic search, SIGALRM-guarded; at
+    ``mlopt_full``) — the monolithic search, SIGALRM-guarded; at
     L=4 it still fits, so the table shows what the compositional
     decomposition costs vs buys in search wall time.
 3.  SIGALRM-guarded ``torch.compile`` of eager and of both delivered
-    modules — ``inductor``, ``catopt+inductor``, ``catopt_full+ind``.
+    modules — ``inductor``, ``mlopt+inductor``, ``mlopt_full+ind``.
     ``optimize_compositional`` takes no ``runner=`` (it is a
     per-block driver), so the composed path is the honest equivalent:
     ``torch.compile(recomposed_module)`` — exactly what
@@ -47,15 +47,15 @@ decode loop here would just re-run a growing prefill and recompile
 per step, so forward latency is the honest unit.
 
 Usage:
-    PYTHONPATH="packages/catopt-core/src:packages/catopt-torch/src:\
-packages/catopt-carriers/src:packages/catopt-orchestrator/src:." \
-        /tmp/catopt-cuda-venv/bin/python bench/suites/e2e/e2e_model.py \
+    PYTHONPATH="packages/mlopt-core/src:packages/mlopt-torch/src:\
+packages/mlopt-carriers/src:packages/mlopt-orchestrator/src:." \
+        /tmp/mlopt-cuda-venv/bin/python bench/suites/e2e/e2e_model.py \
         --device cuda
     .venv/bin/python bench/suites/e2e/e2e_model.py --device cpu --quick
 """
 # ruff: noqa: E402, RUF001, RUF003 -- ×, ·, → in
 # strings/docstrings are deliberate math notation; sys.path setup
-# must precede the benchkit/catopt imports (bench_omd2 convention).
+# must precede the benchkit/mlopt imports (bench_omd2 convention).
 
 from __future__ import annotations
 
@@ -72,9 +72,9 @@ sys.setrecursionlimit(400_000)
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from catopt_orchestrator import Compositional, Optimizer
-from catopt_torch.backend import TorchBackend
-from catopt_torch.report import verify_equiv
+from mlopt_orchestrator import Compositional, Optimizer
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.report import verify_equiv
 
 from bench.benchkit import (
     Case,
@@ -456,7 +456,7 @@ def run_cell(
     do_fp64 = True if fp64v is None else bool(fp64v)
     verbose = bool(getattr(args, "verbose", False))
 
-    # -- catopt, block-wise (the compositional path) --------------------
+    # -- mlopt, block-wise (the compositional path) --------------------
     opt_c = None
     t0 = time.time()
     try:
@@ -474,7 +474,7 @@ def run_cell(
         rec["n_optimized"] = rep["n_optimized"]
         rec["n_failed"] = rep["n_failed"]
         e2e = rep.get("end_to_end") or {}
-        rec["catopt_e2e_rel"] = e2e.get("max_rel_diff")
+        rec["mlopt_e2e_rel"] = e2e.get("max_rel_diff")
         # Per-block mechanism ledger — which rewrites actually fired.
         blk = {}
         tot_groups = tot_lifts = n_paired = 0
@@ -506,14 +506,14 @@ def run_cell(
         # e2e verify (fp32) — the delivered module vs eager.
         with torch.no_grad():
             vr = verify_equiv(ref, opt_c(*args_t), rtol=1e-4)
-        rec["catopt_rel"] = vr.max_rel
-        rec["catopt_verified"] = bool(vr.passed)
+        rec["mlopt_rel"] = vr.max_rel
+        rec["mlopt_verified"] = bool(vr.passed)
         # fp64 verification pass: the delivered module deep-copies
         # poorly (IRModules hold non-leaf tensors), so the honest fp64
         # check is a second fp64 search + e2e compare — the same
         # convention model_bench uses (fp64 pipeline, fp32 delivery).
         # It also shows the search is dtype-stable.
-        rec["catopt_fp64_rel"] = "skipped"
+        rec["mlopt_fp64_rel"] = "skipped"
         if do_fp64:
             try:
                 m64 = copy.deepcopy(model).double().eval()
@@ -537,16 +537,16 @@ def run_cell(
                 rec["opt64_s"] = round(time.time() - t64, 2)
                 rec["n64_optimized"] = rep64["n_optimized"]
                 with torch.no_grad():
-                    rec["catopt_fp64_rel"] = verify_equiv(
+                    rec["mlopt_fp64_rel"] = verify_equiv(
                         m64(*a64), opt64(*a64), rtol=1e-4
                     ).max_rel
                 del m64, opt64
             except Exception as e:
-                rec["catopt_fp64_rel"] = f"err:{type(e).__name__}: {e}"
+                rec["mlopt_fp64_rel"] = f"err:{type(e).__name__}: {e}"
         print(
-            f"  catopt: {rec['n_optimized']}/{rec['n_blocks']} blocks in "
+            f"  mlopt: {rec['n_optimized']}/{rec['n_blocks']} blocks in "
             f"{rec['opt_s']:.1f}s  paired={n_paired} groups={tot_groups} "
-            f"rel={vr.max_rel:.2e} fp64_rel={rec['catopt_fp64_rel']}",
+            f"rel={vr.max_rel:.2e} fp64_rel={rec['mlopt_fp64_rel']}",
             flush=True,
         )
     except Exception as e:
@@ -554,7 +554,7 @@ def run_cell(
         rec["opt_s"] = round(time.time() - t0, 2)
         print(f"  optimize_compositional FAILED: {e}", flush=True)
 
-    # -- catopt, whole-graph (monolithic e-graph over all blocks) -------
+    # -- mlopt, whole-graph (monolithic e-graph over all blocks) -------
     opt_f = None
     if do_full:
 
@@ -600,7 +600,7 @@ def run_cell(
                 f"{type(err).__name__}: {err}" if err else "no result"
             )
         print(
-            f"  catopt_full: {rec['full_status']} ({rec['opt_full_s']:.1f}s)",
+            f"  mlopt_full: {rec['full_status']} ({rec['opt_full_s']:.1f}s)",
             flush=True,
         )
 
@@ -616,19 +616,19 @@ def run_cell(
                 vr = verify_equiv(ref, cm(*args_t), rtol=1e-4)
             rec["inductor_rel"] = vr.max_rel
             rec["inductor_verified"] = bool(vr.passed)
-        if opt_c is not None and rec.get("catopt_verified"):
-            oci, rec["catopt_ind_status"] = try_compile(
+        if opt_c is not None and rec.get("mlopt_verified"):
+            oci, rec["mlopt_ind_status"] = try_compile(
                 opt_c, args_t, compile_timeout
             )
             print(
-                f"  catopt+inductor: {rec['catopt_ind_status']}",
+                f"  mlopt+inductor: {rec['mlopt_ind_status']}",
                 flush=True,
             )
             if oci is not None:
                 with torch.no_grad():
                     vr = verify_equiv(ref, oci(*args_t), rtol=1e-4)
-                rec["catopt_ind_rel"] = vr.max_rel
-                rec["catopt_ind_verified"] = bool(vr.passed)
+                rec["mlopt_ind_rel"] = vr.max_rel
+                rec["mlopt_ind_verified"] = bool(vr.passed)
                 if not vr.passed:
                     oci = None
         if opt_f is not None:
@@ -649,10 +649,10 @@ def run_cell(
         for vn, m in (
             ("eager", model),
             ("inductor", cm),
-            ("catopt", opt_c),
-            ("catopt+inductor", oci),
-            ("catopt_full", opt_f),
-            ("catopt_full+ind", ofi),
+            ("mlopt", opt_c),
+            ("mlopt+inductor", oci),
+            ("mlopt_full", opt_f),
+            ("mlopt_full+ind", ofi),
         ):
             if m is not None:
                 try:
@@ -668,20 +668,20 @@ def run_cell(
     ok = {
         "eager": True,
         "inductor": cm is not None and rec.get("inductor_verified"),
-        "catopt": opt_c is not None and rec.get("catopt_verified"),
-        "catopt+inductor": oci is not None
-        and rec.get("catopt_ind_verified", True),
-        "catopt_full": opt_f is not None,
-        "catopt_full+ind": ofi is not None,
+        "mlopt": opt_c is not None and rec.get("mlopt_verified"),
+        "mlopt+inductor": oci is not None
+        and rec.get("mlopt_ind_verified", True),
+        "mlopt_full": opt_f is not None,
+        "mlopt_full+ind": ofi is not None,
     }
     variants = []
     for vn, m in (
         ("eager", model),
         ("inductor", cm),
-        ("catopt", opt_c),
-        ("catopt+inductor", oci),
-        ("catopt_full", opt_f),
-        ("catopt_full+ind", ofi),
+        ("mlopt", opt_c),
+        ("mlopt+inductor", oci),
+        ("mlopt_full", opt_f),
+        ("mlopt_full+ind", ofi),
     ):
         if m is not None and ok.get(vn):
             variants.append(Variant(vn, _fwd_stmt(m, args_t)))
@@ -761,10 +761,10 @@ def run_bench(args) -> Report:
     names = [
         "eager",
         "inductor",
-        "catopt",
-        "catopt+inductor",
-        "catopt_full",
-        "catopt_full+ind",
+        "mlopt",
+        "mlopt+inductor",
+        "mlopt_full",
+        "mlopt_full+ind",
     ]
     hdr = (
         f"{'cell':<22} | "
@@ -779,23 +779,23 @@ def run_bench(args) -> Report:
             (f"{ms[n] * 1e3:>8.3f} ms  " if n in ms else f"{'—':>14}")
             for n in names
         )
-        mi, mc = ms.get("inductor"), ms.get("catopt+inductor")
+        mi, mc = ms.get("inductor"), ms.get("mlopt+inductor")
         ratio = f"{mi / mc:>7.3f}" if mi and mc else f"{'—':>7}"
-        ver = "yes" if rec.get("catopt_verified") else "NO"
+        ver = "yes" if rec.get("mlopt_verified") else "NO"
         print(f"{row} | {ratio} | {ver:>3}")
         print(
             f"{'':<22} | tok/s: "
             + "  ".join(
                 f"{n}={cell.aux.get(f'tok_s_{n}', '—')}"
-                for n in ("eager", "catopt+inductor")
+                for n in ("eager", "mlopt+inductor")
             )
             + f"  opt={rec.get('opt_s', '—')}s"
             f"  ind={rec.get('inductor_status', '—')}"
         )
     print("-" * len(hdr))
     print(
-        "  c+i/ind = inductor_median / catopt+inductor_median "
-        "(>1 = catopt-composed wins).  ver = catopt e2e rel<1e-4."
+        "  c+i/ind = inductor_median / mlopt+inductor_median "
+        "(>1 = mlopt-composed wins).  ver = mlopt e2e rel<1e-4."
     )
     print(
         f"  total wall time {time.perf_counter() - t0:.1f}s", flush=True
@@ -804,18 +804,18 @@ def run_bench(args) -> Report:
     scored = [
         (
             c.case.name,
-            c.medians["inductor"] / c.medians["catopt+inductor"],
+            c.medians["inductor"] / c.medians["mlopt+inductor"],
         )
         for c in cells
         if c.medians.get("inductor")
-        and c.medians.get("catopt+inductor")
+        and c.medians.get("mlopt+inductor")
     ]
     best = max(scored, key=lambda t: t[1], default=None)
-    n_verified = sum(1 for r in recs if r.get("catopt_verified"))
+    n_verified = sum(1 for r in recs if r.get("mlopt_verified"))
     findings = [
         Finding(
             claim=(
-                "the composed catopt+Inductor module beats plain "
+                "the composed mlopt+Inductor module beats plain "
                 "Inductor end-to-end"
             ),
             verdict=(
@@ -832,7 +832,7 @@ def run_bench(args) -> Report:
                 if best
                 else "no cell measured"
             ),
-            metric="inductor / catopt+inductor",
+            metric="inductor / mlopt+inductor",
             value=best[1] if best else None,
         ),
         Finding(
@@ -875,8 +875,8 @@ def main() -> None:
     ap = argparse.ArgumentParser(
         description=(
             "end-to-end bench: in-repo Llama-style decoder — "
-            "eager vs Inductor vs catopt (compositional + full-graph) "
-            "vs catopt∘Inductor"
+            "eager vs Inductor vs mlopt (compositional + full-graph) "
+            "vs mlopt∘Inductor"
         )
     )
     ap.add_argument("--device", default="cpu", choices=["cpu", "cuda"])

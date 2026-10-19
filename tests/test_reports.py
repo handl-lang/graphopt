@@ -10,9 +10,9 @@ implementations with one bit-identical computation.
 import torch
 import torch.nn as nn
 
-from catopt_torch.models import ParallelLinear
+from mlopt_torch.models import ParallelLinear
 
-from catopt_torch.report import (
+from mlopt_torch.report import (
     BlockReport,
     CompositionalReport,
     OptReport,
@@ -20,9 +20,9 @@ from catopt_torch.report import (
     verify_equiv,
     verify_module,
 )
-from catopt_orchestrator import Compositional, Optimizer
+from mlopt_orchestrator import Compositional, Optimizer
 
-from catopt_torch.backend import TorchBackend
+from mlopt_torch.backend import TorchBackend
 
 
 def _small_mlp(seed=0):

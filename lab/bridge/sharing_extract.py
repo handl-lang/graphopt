@@ -1,7 +1,7 @@
 """Sharing-aware extraction — a principled tie-break for ADR-0008 gate 3.
 
 THE DEFECT THIS ADDRESSES
-    :meth:`~catopt_core.egraph.EGraph.extract_best` is *per-class
+    :meth:`~mlopt_core.egraph.EGraph.extract_best` is *per-class
     greedy*: each e-class picks its cheapest member independently, and
     equal-cost members are broken by ``nops`` then by the member sort
     order ``(op, children, repr(attrs))`` — i.e. **by op name**.  The
@@ -23,7 +23,7 @@ THE DEFECT THIS ADDRESSES
 
 THE FIX
     :func:`extract_sharing_aware` — a bounded *coordinated* extraction.
-    Start from :meth:`~catopt_core.egraph.EGraph.extract_best`; then
+    Start from :meth:`~mlopt_core.egraph.EGraph.extract_best`; then
     sweep the extracted term's e-classes, and for each member of each
     class re-extract with that class **forced** to that member
     (``overrides``).  Keep any override that *lowers the whole term's
@@ -36,11 +36,11 @@ THE FIX
     total cost strictly falls — so it can never manufacture a form at a
     price the cost model did not already prefer.  It is the same
     non-local-coordination idea as
-    :meth:`~catopt_core.egraph.EGraph.extract_paired`, specialised to
+    :meth:`~mlopt_core.egraph.EGraph.extract_paired`, specialised to
     the tie-break.
 
     It lives in ``lab/`` deliberately: the equivalent change inside
-    :mod:`catopt_core.egraph.extract` would alter extraction for *every*
+    :mod:`mlopt_core.egraph.extract` would alter extraction for *every*
     caller (the AGENTS rule is explicit that such a change needs the
     full suite), and the measured effect is 1 % on one workload.
 
@@ -69,7 +69,7 @@ THE READING
     ``PYTHONHASHSEED=0`` — a hash-order artifact; the canonical order
     gives 451,128 with 3 overrides in every process).  The descent now
     scans in canonical member order
-    (:func:`catopt_core.egraph.types._member_key`), and the reproducible
+    (:func:`mlopt_core.egraph.types._member_key`), and the reproducible
     reading is 451,128 with three overrides in every process.  The
     *qualitative* finding is unchanged — the greedy pass is off the cost
     its own model assigns, and a monotone coordination recovers it —
@@ -83,9 +83,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from catopt_core.cost import dag_cost
-from catopt_core.egraph.types import _member_key
-from catopt_core.ir import Op
+from mlopt_core.cost import dag_cost
+from mlopt_core.egraph.types import _member_key
+from mlopt_core.ir import Op
 
 __all__ = ["SharingResult", "extract_sharing_aware"]
 
@@ -143,7 +143,7 @@ def extract_sharing_aware(
     A bounded coordinate-descent over the per-class member choice:
     begin at the greedy extraction, then repeatedly force a single
     e-class to one of its members and keep the override when the whole
-    term's :func:`~catopt_core.cost.dag_cost` strictly falls.  The
+    term's :func:`~mlopt_core.cost.dag_cost` strictly falls.  The
     result is never worse than ``eg.extract_best`` (the empty override
     map is always in the neighbourhood), and it is deterministic —
     classes are visited in term order, members in the e-class's
@@ -152,7 +152,7 @@ def extract_sharing_aware(
 
     The member order matters: the descent keeps the *first* strictly
     improving member of a class, so a raw ``set`` order (``nodes`` is a
-    ``set`` of :class:`~catopt_core.egraph.ENode`, whose hash folds in
+    ``set`` of :class:`~mlopt_core.egraph.ENode`, whose hash folds in
     the op name) would land on a different local optimum in every
     process — pre-fix it reached 432,696 (5 overrides) at
     ``PYTHONHASHSEED=0``; the canonical order gives 451,128 (3 overrides)

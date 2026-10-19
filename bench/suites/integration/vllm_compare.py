@@ -1,19 +1,19 @@
-"""catopt vs vLLM on a stories15M-shaped Llama — and the honest framing.
+"""mlopt vs vLLM on a stories15M-shaped Llama — and the honest framing.
 
-vLLM's wins come from a different layer than catopt's: paged KV
+vLLM's wins come from a different layer than mlopt's: paged KV
 caching, continuous batching and fused attention kernels vs
 compile-time structural graph rewrites (QKV/gate-up fusion, weight
 folding).  This bench measures both and, more importantly, exercises
-the *composition*: catopt-delivered weights written as a standard
+the *composition*: mlopt-delivered weights written as a standard
 HF ``LlamaForCausalLM`` checkpoint and served through
 ``vllm.LLM(model=<dir>)``.
 
 Legs:
 
 1. **hf-export** (always runnable — torch only).  Converts the
-   llama2.c checkpoint — or the catopt-OPTIMIZED module — into an HF
+   llama2.c checkpoint — or the mlopt-OPTIMIZED module — into an HF
    checkpoint directory (``config.json`` + ``model.safetensors`` +
-   tokenizer files when a tokenizer can be obtained).  The catopt
+   tokenizer files when a tokenizer can be obtained).  The mlopt
    path splits the fused ``blocks.N.fused_10`` (cat of wq|wk|wv rows)
    and ``fused_11`` (cat of w1|w3 rows) back out, and permutes the
    q/k projection rows from llama2.c's interleaved RoPE layout into
@@ -24,9 +24,9 @@ Legs:
 
 2. **torch decode** (always runnable).  Greedy decode of ``--gen``
    tokens with a FIXED context window ``--ctx`` (every step sees
-   exactly ``ctx`` tokens — catopt's shape-specialized IRModule
+   exactly ``ctx`` tokens — mlopt's shape-specialized IRModule
    executors keep their verified shapes).  Variants: ``eager``,
-   ``inductor``, ``catopt``, ``catopt+inductor``; each verified
+   ``inductor``, ``mlopt``, ``mlopt+inductor``; each verified
    against eager logits, timed as wall seconds per full decode →
    tok/s in aux.  No KV cache on the torch side: this leg measures
    the *module*, while vLLM measures the *engine* — the report says
@@ -47,7 +47,7 @@ Typical invocations:
     # everything in one env with both stacks installed + a GPU:
     .venv-vllm/bin/python bench/suites/integration/vllm_compare.py --device cuda
 
-    # catopt legs on the repo .venv, vllm leg delegated to a venv
+    # mlopt legs on the repo .venv, vllm leg delegated to a venv
     # that has it (results are labelled cross-interpreter):
     .venv/bin/python bench/suites/integration/vllm_compare.py --device cpu \\
         --vllm-python ~/vllm-probe/bin/python
@@ -158,7 +158,7 @@ def hf_state_dict(
 ) -> dict[str, torch.Tensor]:
     """HF ``LlamaForCausalLM`` state dict from stock OR optimized model.
 
-    Reads the module's own ``state_dict`` — for a catopt-optimized
+    Reads the module's own ``state_dict`` — for a mlopt-optimized
     module the fused executors' parameter names are recognised and
     split back to HF layout (``fused_10`` → q|k|v, ``fused_11`` →
     gate|up).  Everything else (folded single weights like
@@ -182,7 +182,7 @@ def hf_state_dict(
     for i in range(cfg["n_layers"]):
         p = f"blocks.{i}."
         hp = f"model.layers.{i}."
-        if p + "fused_10" in sd:  # catopt QKV fusion → split rows
+        if p + "fused_10" in sd:  # mlopt QKV fusion → split rows
             f = sd[p + "fused_10"].detach().cpu().float()
             q, k, v = f[:dim], f[dim : 2 * dim], f[2 * dim :]
         else:
@@ -191,7 +191,7 @@ def hf_state_dict(
                 pick(p + "wk.weight"),
                 pick(p + "wv.weight"),
             )
-        if p + "fused_11" in sd:  # catopt gate|up fusion
+        if p + "fused_11" in sd:  # mlopt gate|up fusion
             f = sd[p + "fused_11"].detach().cpu().float()
             w1, w3 = f[:hidden], f[hidden:]
         else:
@@ -254,22 +254,22 @@ def write_hf_dir(hf_dir: Path, sd_hf: dict, cfg: dict) -> dict:
         save_file(sd_hf, str(hf_dir / "model.safetensors"))
         wrote = "model.safetensors"
     except ImportError:
-        # catopt's own stdlib safetensors writer — no extra dep needed
+        # mlopt's own stdlib safetensors writer — no extra dep needed
         # in the bare .venv to emit a file vllm/transformers read.
-        from catopt_torch.export import _write_safetensors
+        from mlopt_torch.export import _write_safetensors
 
         _write_safetensors(
             sd_hf, hf_dir / "model.safetensors", json.dumps({})
         )
         wrote = "model.safetensors"
     manifest = {
-        "catopt_hf_export": 1,
+        "mlopt_hf_export": 1,
         "source": "llama2.c checkpoint via bench/suites/integration/vllm_compare.py",
         "config": config,
         "weights_file": wrote,
         "rope": "q/k projection rows permuted interleaved→rotate_half",
     }
-    (hf_dir / "catopt_export.manifest.json").write_text(
+    (hf_dir / "mlopt_export.manifest.json").write_text(
         json.dumps(manifest, indent=2)
     )
     return manifest
@@ -333,7 +333,7 @@ def greedy_decode(
     """Greedy decode ``gen`` tokens; each step sees the last ``window``.
 
     ``window`` bounds the attention context each step — a fixed value
-    keeps every forward at the same shape (catopt's executors are
+    keeps every forward at the same shape (mlopt's executors are
     shape-specialized to their optimize-time example).  Pass a window
     ≥ ``prompt_len + gen`` for a *true* decode: the window never
     truncates, positions stay real, and the module sees the full
@@ -350,9 +350,9 @@ def greedy_decode(
 
 def optimize_once(model, idx, device):
     """Compositional optimize + verify against eager on ``idx``."""
-    from catopt_orchestrator import Compositional, Optimizer
-    from catopt_torch.backend import TorchBackend
-    from catopt_torch.report import verify_equiv
+    from mlopt_orchestrator import Compositional, Optimizer
+    from mlopt_torch.backend import TorchBackend
+    from mlopt_torch.report import verify_equiv
 
     with torch.no_grad():
         ref = model(idx)
@@ -372,24 +372,24 @@ def torch_decode_leg(
     """Time the four variants on one full greedy decode each.
 
     ``prompt`` is already ``ctx`` tokens long, so every step of every
-    variant forwards exactly ``(B, ctx)`` — the shape catopt's
+    variant forwards exactly ``(B, ctx)`` — the shape mlopt's
     executors were specialized to.
     """
     B, ctx, gen = args.batch, args.ctx, args.gen
 
     variants: list[tuple[str, torch.nn.Module | Exception]] = [
         ("eager", model),
-        ("catopt", opt),
+        ("mlopt", opt),
     ]
     try:
         variants.append(
             ("inductor", torch.compile(model, dynamic=True))
         )
         variants.append(
-            ("catopt+inductor", torch.compile(opt, dynamic=True))
+            ("mlopt+inductor", torch.compile(opt, dynamic=True))
         )
     except Exception as e:
-        variants += [("inductor", e), ("catopt+inductor", e)]
+        variants += [("inductor", e), ("mlopt+inductor", e)]
 
     with torch.no_grad():
         ref_tokens, _ = greedy_decode(model, prompt, gen, ctx)
@@ -456,7 +456,7 @@ def _vllm_leg_payload(hf_dir: str, args) -> dict:
     from vllm import LLM, SamplingParams
 
     cfg = json.loads(
-        Path(hf_dir, "catopt_export.manifest.json").read_text()
+        Path(hf_dir, "mlopt_export.manifest.json").read_text()
     )["config"]
     B, gen = args.batch, args.gen
     prompts = getattr(args, "prompt_ids", None)
@@ -614,7 +614,7 @@ def vllm_leg(hf_dir: Path, args, prompt_ids=None) -> dict:
 INTEGRATION_RECIPE = """\
 Integration recipe (verified legs marked [*]):
 
-  1. [*] catopt: opt, rep = Optimizer(backend=TorchBackend()).optimize(
+  1. [*] mlopt: opt, rep = Optimizer(backend=TorchBackend()).optimize(
          model, idx, strategy=Compositional())  — fused_10/fused_11
          executors grafted, verified vs eager.
   2. [*] HF export: hf_state_dict(opt, cfg) splits fused rows back to
@@ -632,10 +632,10 @@ Integration recipe (verified legs marked [*]):
 
 vLLM does NOT consume the optimized graph — it re-implements Llama and
 applies its own fusions (QKVParallelLinear is the same QKV merge
-catopt finds).  catopt's structural wins that survive as *weights*
+mlopt finds).  mlopt's structural wins that survive as *weights*
 (folded chains → fewer GEMMs at runtime) map cleanly; executor-level
 wins (eval-plan tapes, batched carriers) stay torch-side.  The honest
-composition is 'catopt-verified weights → HF dir → vllm serve', which
+composition is 'mlopt-verified weights → HF dir → vllm serve', which
 this script runs end-to-end when vllm is importable.
 """
 
@@ -710,7 +710,7 @@ def run_bench(args) -> benchkit.Report:
         f"{rep.get('n_optimized', '?')}/{rep.get('n_blocks', '?')} blocks"
     )
     if not vr.passed:
-        notes.append("catopt leg FAILED verify — catopt rows skipped")
+        notes.append("mlopt leg FAILED verify — mlopt rows skipped")
         opt = None
 
     # ---- leg 1: HF export (stock + optimized) ------------------------
@@ -725,7 +725,7 @@ def run_bench(args) -> benchkit.Report:
     )
     notes.append(f"rope permute attention-score max|Δ|={rope_d:.2e}")
     dirs = {}
-    for tag, src in (("eager", model), ("catopt", opt)):
+    for tag, src in (("eager", model), ("mlopt", opt)):
         if src is None:
             continue
         d = hf_root / tag
@@ -760,7 +760,7 @@ def run_bench(args) -> benchkit.Report:
             notes.append(f"torch decode leg crashed: {e}")
 
     # When transformers is importable (e.g. a vllm env), verify the
-    # exported HF checkpoint's logits against the catopt model — the
+    # exported HF checkpoint's logits against the mlopt model — the
     # strongest proof the weight mapping is correct.
     for tag, d in list(dirs.items()):
         try:
@@ -849,7 +849,7 @@ def run_bench(args) -> benchkit.Report:
     findings = [
         benchkit.Finding(
             claim=(
-                "vLLM serves the catopt-exported HF model "
+                "vLLM serves the mlopt-exported HF model "
                 "token-for-token like torch eager greedy"
             ),
             verdict=(
@@ -887,7 +887,7 @@ def run_bench(args) -> benchkit.Report:
     ]
     return benchkit.Report(
         suite="vllm_compare",
-        title="catopt vs vLLM and through it",
+        title="mlopt vs vLLM and through it",
         summary=(
             "Three legs: verified HF export, fixed-window torch decode, "
             "and vLLM serving the exported checkpoint — with token "

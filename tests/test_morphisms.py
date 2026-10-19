@@ -8,21 +8,21 @@ graph (``lift_graph``), each morphism law's match/no-match surface,
 and the reified programs — every grafted rewrite is verified fp64.
 """
 
-import catopt_orchestrator.morphisms as M
+import mlopt_orchestrator.morphisms as M
 import torch
 import torch.nn as nn
-from catopt_core.ir import IR, Op, Param, TensorType, Var
-from catopt_core.laws import RuleSet
-from catopt_orchestrator import (
+from mlopt_core.ir import IR, Op, Param, TensorType, Var
+from mlopt_core.laws import RuleSet
+from mlopt_orchestrator import (
     MorphismLaw,
     MorphismSearch,
     Optimizer,
     optimize_morphisms,
 )
-from catopt_torch.adapters import TorchSink, TorchSource
-from catopt_torch.backend import TorchBackend
-from catopt_torch.composer import TorchComposer
-from catopt_torch.models import (
+from mlopt_torch.adapters import TorchSink, TorchSource
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.composer import TorchComposer
+from mlopt_torch.models import (
     DeepParallel,
     NormLinear,
     ParallelBlock,
@@ -1224,7 +1224,7 @@ def test_saturate_empty_rules_and_offers():
 def test_e2e_verify_gate_declines(monkeypatch):
     """A failing verify declines the reified rewrite — and every
     per-block fallback fails its gate the same way."""
-    import catopt_torch.adapters as A
+    import mlopt_torch.adapters as A
 
     torch.manual_seed(0)
     model = _ChainStack(dim=16, depth=2).eval().double()
@@ -1248,7 +1248,7 @@ def test_e2e_verify_gate_declines(monkeypatch):
 
 def test_tie_verify_gate_declines(monkeypatch):
     """A failing per-block verify declines a real tie at delivery."""
-    import catopt_torch.adapters as A
+    import mlopt_torch.adapters as A
 
     torch.manual_seed(0)
     model = _TiedPair().eval().double()
@@ -1314,7 +1314,7 @@ def test_no_composer_raises():
 def test_clone_failure_returns_in_place(monkeypatch):
     """A failed param-sharing clone returns the input model unmodified
     and reports it honestly."""
-    import catopt_torch.composer as C
+    import mlopt_torch.composer as C
 
     torch.manual_seed(0)
     model = _ChainStack(dim=16, depth=2).eval().double()
@@ -1455,7 +1455,7 @@ def test_e2e_verbose_and_unbounded_budget(caplog):
     torch.manual_seed(0)
     model = _ChainStack(dim=16, depth=2).eval().double()
     with caplog.at_level(
-        logging.INFO, logger="catopt_orchestrator.morphisms"
+        logging.INFO, logger="mlopt_orchestrator.morphisms"
     ):
         _opt, stats = Optimizer(backend=TorchBackend()).optimize(
             model,
@@ -1467,7 +1467,7 @@ def test_e2e_verbose_and_unbounded_budget(caplog):
         )
     assert any(
         "[Morphism]" in r.getMessage()
-        and r.name == "catopt_orchestrator.morphisms"
+        and r.name == "mlopt_orchestrator.morphisms"
         for r in caplog.records
     )
     assert (

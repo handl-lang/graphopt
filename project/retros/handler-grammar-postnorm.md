@@ -1,7 +1,7 @@
 # Retro — the `postnorm` family: `log_softmax`'s wrapped-reduction gap closed
 
 **Date**: 2026-10-17.  **Scope**:
-`catopt_discovery/handler_synth.py`, `lab/audit/grammar_probe.py`,
+`mlopt_discovery/handler_synth.py`, `lab/audit/grammar_probe.py`,
 `tests/test_discovery_handler_synth.py`.
 
 **Depends on**: `project/retros/grammar-gaps.md` (the residue this

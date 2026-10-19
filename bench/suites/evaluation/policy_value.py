@@ -1,9 +1,9 @@
 """Search-policy value bench — does a learned policy pick better rules?
 
 Plan 0016 stage 12 (ADR 0003, the EVALUATION dimension).  The search
-game (:mod:`catopt_core.game`) has several players —
-:mod:`catopt_core.policies` plus a learned one,
-:mod:`catopt_torch.learned_policy` — and this suite asks the only
+game (:mod:`mlopt_core.game`) has several players —
+:mod:`mlopt_core.policies` plus a learned one,
+:mod:`mlopt_torch.learned_policy` — and this suite asks the only
 question that matters about them:
 
     Does a learned search policy pick better rules than random,
@@ -11,7 +11,7 @@ question that matters about them:
 
 Method.  A small family of two-matmul chains ``a·(b·c)`` / ``(a·b)·c``
 is generated; the engine's own evaluator
-(:func:`catopt_core.trajectories.rule_samples`) prices every legal rule
+(:func:`mlopt_core.trajectories.rule_samples`) prices every legal rule
 applied alone, giving each rule a *true* cost delta.  A tiny
 ``RuleValueNet`` is trained inline (CPU, fixed seed, a few hundred
 epochs) on a disjoint set of small chains, then every policy picks one
@@ -54,17 +54,17 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from catopt_core.features import compute_features
-from catopt_core.game import Action, GameState
-from catopt_core.ir import Op, TensorType, Var
-from catopt_core.laws import all_rules
-from catopt_core.policies import (
+from mlopt_core.features import compute_features
+from mlopt_core.game import Action, GameState
+from mlopt_core.ir import Op, TensorType, Var
+from mlopt_core.laws import all_rules
+from mlopt_core.policies import (
     ExistingPolicy,
     GreedyPolicy,
     RandomPolicy,
 )
-from catopt_core.trajectories import rule_samples
-from catopt_torch.learned_policy import LearnedPolicy, train_rule_value
+from mlopt_core.trajectories import rule_samples
+from mlopt_torch.learned_policy import LearnedPolicy, train_rule_value
 
 from bench.benchkit import (
     Case,

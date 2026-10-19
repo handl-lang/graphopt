@@ -18,14 +18,14 @@ with ``BATCH_NORM_RULES`` pending the admission floor.
 """
 
 import torch
-from catopt_core import meta
-from catopt_core.ir import Op, Param, TensorType, Var, op_repr
-from catopt_core.laws import (
+from mlopt_core import meta
+from mlopt_core.ir import Op, Param, TensorType, Var, op_repr
+from mlopt_core.laws import (
     ALL_RULES,
     CONV_FOLD_RULES,
     DEFAULT,
 )
-from catopt_core.laws.cond import (
+from mlopt_core.laws.cond import (
     cond_from_data,
     cond_to_data,
     derive_from_data,
@@ -33,7 +33,7 @@ from catopt_core.laws.cond import (
 )
 
 # Registers the concrete-eval backend + op bindings for _eval_term.
-from catopt_torch.torch_bridge import export_to_ir  # noqa: F401
+from mlopt_torch.torch_bridge import export_to_ir  # noqa: F401
 
 
 def _T(*shape):

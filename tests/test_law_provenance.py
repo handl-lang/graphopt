@@ -1,6 +1,6 @@
 """Law provenance — human-authored vs machine-admitted, and the ablation.
 
-``catopt_core.laws.provenance`` is the registry-level marker the
+``mlopt_core.laws.provenance`` is the registry-level marker the
 human-bar measurement needs (``project/retros/human-bar.md``): every
 shipped law classifies as ``"human"`` or ``"machine"`` *without* a
 per-law edit, and the machine sets name both the promoted objects now
@@ -8,20 +8,20 @@ in ``ALL_RULES`` (:data:`MACHINE_SHIPPED`) and the gauntlet-cleared
 store objects that stayed unshipped (:data:`MACHINE_STORED`).
 
 The behavioral pins bind the provenance to measured yield on the
-held-out zoo (``catopt_discovery.zoo`` — the disjointness property
+held-out zoo (``mlopt_discovery.zoo`` — the disjointness property
 ``tests/test_discovery_zoo.py`` pins makes this a clean attribution
 domain): the promoted pad strips carry the ``TimeCondConv`` win and
 the machine arm loses the ``LoRAAdapter`` win, both exactly as the
 provenance registry predicts.
 """
 
-import catopt_carriers  # noqa: F401 — register carriers before rules
+import mlopt_carriers  # noqa: F401 — register carriers before rules
 import pytest
 import torch
-from catopt_core.cost import dag_cost
-from catopt_core.egraph import Rewrite
-from catopt_core.ir import Op
-from catopt_core.laws import (
+from mlopt_core.cost import dag_cost
+from mlopt_core.egraph import Rewrite
+from mlopt_core.ir import Op
+from mlopt_core.laws import (
     ALL_RULES,
     ALL_RULES_WITH_LAYOUT,
     ATTENTION_RULES,
@@ -33,10 +33,10 @@ from catopt_core.laws import (
     RuleSet,
     law_provenance,
 )
-from catopt_discovery import object_synthesis as synth
-from catopt_discovery import zoo as zoo_mod
-from catopt_orchestrator.optimize import Optimizer, default_rules
-from catopt_torch.backend import TorchBackend
+from mlopt_discovery import object_synthesis as synth
+from mlopt_discovery import zoo as zoo_mod
+from mlopt_orchestrator.optimize import Optimizer, default_rules
+from mlopt_torch.backend import TorchBackend
 
 _ZOO = {w.name: w for w in zoo_mod.zoo()}
 _BY_NAME = {r.name: r for r in ALL_RULES}
@@ -238,7 +238,7 @@ def test_machine_stored_objects_are_unshipped_names():
 
 def test_om_lift_collision_is_resolved_for_the_shipped_law():
     """``om_lift`` names two objects: the human-authored carrier law
-    (``catopt_carriers.om.OM_LIFT``, metavar-dim guard) and a
+    (``mlopt_carriers.om.OM_LIFT``, metavar-dim guard) and a
     constructed store object (literal ``dim=-1``).  The registry
     classifies *shipped* names, so the name resolves human; the store
     object's provenance rides its construction record."""

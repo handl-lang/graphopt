@@ -20,7 +20,7 @@ pair-cost spread), so a policy trained on small ``n`` can be applied to
 large ``n``.
 
 The policy is a small MLP scoring ``(state-features (+) pair-features)``
-(the shape :class:`catopt_torch.rl.PolicyNet` uses), trained on *small*
+(the shape :class:`mlopt_torch.rl.PolicyNet` uses), trained on *small*
 networks (n = 8-12) where many episodes are affordable, then tested on
 *large* unseen networks (n = 20/30/40).  Two trainers are provided:
 
@@ -42,7 +42,7 @@ result — reported as measured, including a negative.
 
 The player machinery itself — the game, the net, the feature derivation,
 the rollout driver — is **shipped** in
-:mod:`catopt_torch.contraction_policy` (the bundled-weights player,
+:mod:`mlopt_torch.contraction_policy` (the bundled-weights player,
 ``contraction-player-artifact.md``); it is imported above so this tool
 keeps only the trainers and the measurement ladders.
 
@@ -66,30 +66,30 @@ from itertools import count
 from typing import Any
 
 import torch
-from catopt_torch.contraction_policy import (
+from mlopt_torch.contraction_policy import (
     MAX_BATCH as _MAX_BATCH,
 )
-from catopt_torch.contraction_policy import (
+from mlopt_torch.contraction_policy import (
     PAIR_DIM as _PAIR_DIM,
 )
-from catopt_torch.contraction_policy import (
+from mlopt_torch.contraction_policy import (
     SAMPLE_TEMP as _TEMP,
 )
-from catopt_torch.contraction_policy import (
+from mlopt_torch.contraction_policy import (
     STD_FLOOR as _STD_FLOOR,
 )
-from catopt_torch.contraction_policy import (
+from mlopt_torch.contraction_policy import (
     ContractionGame,
     PairPolicyNet,
     run_policy_batch,
 )
-from catopt_torch.contraction_policy import (
+from mlopt_torch.contraction_policy import (
     batch_inputs as _batch_inputs,
 )
-from catopt_torch.contraction_policy import (
+from mlopt_torch.contraction_policy import (
     merge_tensors as _merge_ts,
 )
-from catopt_torch.contraction_policy import (
+from mlopt_torch.contraction_policy import (
     pair_logits as _logits,
 )
 from tools.probes.contraction import contraction_scale as cs

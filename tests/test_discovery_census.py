@@ -1,4 +1,4 @@
-"""Tests for ``catopt_discovery.census`` — the shape census.
+"""Tests for ``mlopt_discovery.census`` — the shape census.
 
 The census counts what real graphs actually contain: op-tuple
 frequencies, leaf-abstracted subterm shapes (a leaf that repeats
@@ -11,8 +11,8 @@ factoring/absorption law needs.  Tests run on synthetic
 
 import json
 
-from catopt_core.ir import Const, Op, TensorType, Var
-from catopt_discovery import census as cs
+from mlopt_core.ir import Const, Op, TensorType, Var
+from mlopt_discovery import census as cs
 
 
 def _p(op: str, *args, **attrs) -> Op:

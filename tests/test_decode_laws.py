@@ -1,7 +1,7 @@
 """DECODE_LAWS — decode-time memory-traffic rewrites.
 
 The bandwidth-bound slice of the rewrite surface (see the audit in
-``catopt_carriers.decode_laws``):
+``mlopt_carriers.decode_laws``):
 
 * ``kv_append_scatter_*`` — ``cat(prefix_view(buf), new)`` ≡
   ``slice_scatter(buf, new, n, n+m)``: the KV-cache append as a buffer
@@ -17,10 +17,10 @@ The bandwidth-bound slice of the rewrite surface (see the audit in
 """
 
 import torch
-from catopt_core.egraph import EGraph
-from catopt_core.ir import IR, Op, Param, TensorType, Var
-from catopt_torch.torch_bridge import ir_to_torch_module
-from catopt_carriers.decode_laws import (
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import IR, Op, Param, TensorType, Var
+from mlopt_torch.torch_bridge import ir_to_torch_module
+from mlopt_carriers.decode_laws import (
     DECODE_LAWS,
     _check_cat_prefix,
     _check_dedup_index,
@@ -30,7 +30,7 @@ from catopt_carriers.decode_laws import (
     _derive_repeat_gather,
     _derive_scatter_end,
 )
-from catopt_core.cost import flops_cost
+from mlopt_core.cost import flops_cost
 
 # ---------------------------------------------------------------------------
 #  helpers
@@ -186,7 +186,7 @@ def test_kv_append_declines_at_egraph_level():
 def test_kv_append_from_exported_graph():
     """torch.export emits cat(slice(buf,0,n), new) — the law fires on
     the real boundary spelling, and the extracted write is exact."""
-    from catopt_torch.torch_bridge import export_to_ir
+    from mlopt_torch.torch_bridge import export_to_ir
 
     class KVAppend(torch.nn.Module):
         def forward(self, buf, new):
@@ -619,8 +619,8 @@ def test_repeat_chain_dedup_compose():
 def test_op_table_scope_limits():
     """The documented limits: the op table has no unique/index_copy,
     and the scatter family + index_select ARE the write/gather seam."""
-    import catopt_torch.torch_bridge  # noqa: F401 — registers tables
-    from catopt_core.ops import OpTable
+    import mlopt_torch.torch_bridge  # noqa: F401 — registers tables
+    from mlopt_core.ops import OpTable
 
     names = set(OpTable.full().torch_bindings)
     for present in (

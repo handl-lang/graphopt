@@ -1,9 +1,9 @@
-"""catopt → `.hnl` → CatoptKit: terms emitted as programs, evaluated.
+"""mlopt → `.hnl` → CatoptKit: terms emitted as programs, evaluated.
 
-The frontier the kit existed for: a catopt *term* — the same object the
+The frontier the kit existed for: a mlopt *term* — the same object the
 e-graph rewrites — emitted as a `.hnl` program and evaluated through
 the assembled runtime by ``lab/kit/term_hnl.py``, over the compiled
-``hnl-run`` subprocess door (``packages/catopt-kit/src/bin/hnl-run.rs``).
+``hnl-run`` subprocess door (``packages/mlopt-kit/src/bin/hnl-run.rs``).
 
 What this proves:
 
@@ -18,7 +18,7 @@ What this proves:
 * an **optimization decision costed through the runtime** — the
   conv+BN fold's deployed form ``conv2d(x, W2, b2)`` vs the spelled
   ``batch_norm(conv2d(x,W,b), …)``, where ``W2``/``b2`` are themselves
-  catopt subterms materialized through the kit (``s = gamma*rsqrt(var+eps)``
+  mlopt subterms materialized through the kit (``s = gamma*rsqrt(var+eps)``
   rides the ``{"hnl"}`` marshaling channel — the surface has no
   elementwise ``rsqrt``, the named gap), and per-call cost is measured
   through ``hnl-run --repeat``, not estimated;
@@ -40,11 +40,11 @@ from pathlib import Path
 import pytest
 import torch
 import torch.nn as nn
-from catopt_core import meta
-from catopt_core.cost.basic import flops_cost
-from catopt_core.cost.params import dag_cost
-from catopt_core.ir import Op, Param, TensorType, Var
-from catopt_core.laws import CONV_FOLD_RULES
+from mlopt_core import meta
+from mlopt_core.cost.basic import flops_cost
+from mlopt_core.cost.params import dag_cost
+from mlopt_core.ir import Op, Param, TensorType, Var
+from mlopt_core.laws import CONV_FOLD_RULES
 
 from lab.kit import term_hnl as kh
 
@@ -53,7 +53,7 @@ pytestmark = pytest.mark.e2e
 _REPO = Path(__file__).resolve().parents[1]
 _BIN = Path(
     os.environ.get(
-        "CATOPT_HNL_RUN", _REPO / "target" / "debug" / "hnl-run"
+        "MLOPT_HNL_RUN", _REPO / "target" / "debug" / "hnl-run"
     )
 )
 
@@ -71,7 +71,7 @@ def _build_bin() -> Path:
             cargo,
             "build",
             "-p",
-            "catopt-kit",
+            "mlopt-kit",
             "--bin",
             "hnl-run",
             "--locked",
@@ -136,7 +136,7 @@ def test_torchsource_conv_bn_evaluates_through_the_kit(
     ``aten.batch_norm``'s full attr tail (``training=False, momentum,
     eps, cudnn_enabled``) — not a hand-spelled term.
     """
-    from catopt_torch.adapters import TorchSource
+    from mlopt_torch.adapters import TorchSource
 
     torch.manual_seed(0)
     mod = _ConvBN().eval().double()
@@ -156,7 +156,7 @@ def test_emit_renders_the_canonical_call(kit: kh.KitRunner) -> None:
     ``eps=1e-05`` must land as ``0.00001``: the handl lexer does not
     read scientific notation (``1e-05`` lexes as ``1`` ``e`` ``-05``).
     """
-    from catopt_torch.adapters import TorchSource
+    from mlopt_torch.adapters import TorchSource
 
     mod = _ConvBN().eval().double()
     x = torch.zeros(1, 4, 8, 8, dtype=torch.float64)
@@ -264,8 +264,8 @@ def test_conv_bn_fold_decision_costed_through_the_runtime(
 ) -> None:
     """Folded-vs-spelled, evaluated and priced by the kit itself.
 
-    The deployed form is ``conv2d(x, W2, b2)`` — a catopt term whose
-    ``W2``/``b2`` leaves are *materialized through the kit* from catopt
+    The deployed form is ``conv2d(x, W2, b2)`` — a mlopt term whose
+    ``W2``/``b2`` leaves are *materialized through the kit* from mlopt
     subterms (``mul(w, reshape(s, (C,1,1,1)))`` /
     ``add(mul(b,s), sub(be, mul(s,m)))`` — every op on the surface).
     Per-call cost is `hnl-run --repeat` wall — the measured decision,
@@ -299,7 +299,7 @@ def test_conv_bn_fold_decision_costed_through_the_runtime(
     # The deployed term — the fold absorbed; W2/b2 are materialized
     # weights (leaves), the compile-time half of the decision.
     deployed = Op.make("conv2d", x, w2, b2)
-    # …computed by catopt subterms — the fold's RHS shape, every op
+    # …computed by mlopt subterms — the fold's RHS shape, every op
     # on the surface.
     w2_term = Op.make(
         "mul", w, Op.make("reshape", s, shape=(c_out, 1, 1, 1))

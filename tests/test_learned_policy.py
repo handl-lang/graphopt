@@ -1,17 +1,17 @@
-"""Learned search policy (:mod:`catopt_torch.learned_policy`)."""
+"""Learned search policy (:mod:`mlopt_torch.learned_policy`)."""
 
 import torch
-from catopt_core.features import DIMENSIONS, compute_features
-from catopt_core.game import Action, GameState
-from catopt_core.ir import Op, TensorType, Var
-from catopt_core.laws import all_rules
-from catopt_core.ports import Policy
-from catopt_core.trajectories import (
+from mlopt_core.features import DIMENSIONS, compute_features
+from mlopt_core.game import Action, GameState
+from mlopt_core.ir import Op, TensorType, Var
+from mlopt_core.laws import all_rules
+from mlopt_core.ports import Policy
+from mlopt_core.trajectories import (
     RULE_VECTOR_LEN,
     rule_samples,
     rule_vector,
 )
-from catopt_torch.learned_policy import (
+from mlopt_torch.learned_policy import (
     LearnedPolicy,
     RuleValueNet,
     input_vector,

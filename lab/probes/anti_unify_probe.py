@@ -12,7 +12,7 @@ Protocol (per workload, one seeded export, one hash seed):
   ``flops_cost``.
 * ``atoms`` (the strict arm) — saturate ``--iters-a`` iterations on
   the same graph, mine + mint + admit atoms
-  (:func:`catopt_discovery.antiunify`), then continue with the
+  (:func:`mlopt_discovery.antiunify`), then continue with the
   *compressed* rule set: intro rules plus ``fold_ruleset(rules,
   atoms, sides, replace=True)`` under the remaining iterations and
   the same node budget.  ``replace=True`` drops rules that gained an
@@ -35,7 +35,7 @@ Workloads::
 
     --workload delta   _DeltaRuleBlock(dk=8, dv=8, steps=S) — the
                        unrolled rank-1 recurrence, spelled elementwise;
-                       rules = catopt_core.laws.DEFAULT.
+                       rules = mlopt_core.laws.DEFAULT.
     --workload deq     _DeepEquilibrium(d=8, iters=N) — the shared-
                        weight fixed-point tower; rules = DEFAULT.
     --workload retnet  _ChunkedRetention(16), T/K chunks — the
@@ -55,10 +55,10 @@ import argparse
 import time
 from typing import Any
 
-from catopt_core.cost import dag_cost, flops_cost
-from catopt_core.egraph import EGraph
-from catopt_core.ir import Op
-from catopt_discovery.antiunify import (
+from mlopt_core.cost import dag_cost, flops_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import Op
+from mlopt_discovery.antiunify import (
     MintedAtom,
     admit_atoms,
     fold_ruleset,
@@ -71,12 +71,12 @@ from catopt_discovery.antiunify import (
 def _export(workload: str, args: argparse.Namespace) -> tuple:
     """Build the seeded workload module's ``(IR, leaves)`` export."""
     import torch
-    from catopt_discovery.zoo import (
+    from mlopt_discovery.zoo import (
         _ChunkedRetention,
         _DeepEquilibrium,
         _DeltaRuleBlock,
     )
-    from catopt_torch.adapters import TorchSource
+    from mlopt_torch.adapters import TorchSource
 
     torch.manual_seed(0)
     if workload == "delta":
@@ -94,11 +94,11 @@ def _export(workload: str, args: argparse.Namespace) -> tuple:
 def _rules(workload: str, args: argparse.Namespace) -> list:
     """Return the saturation set for the workload's stage(s)."""
     if workload == "retnet":
-        from catopt_carriers.om import om_shared_state_stages
+        from mlopt_carriers.om import om_shared_state_stages
 
         reach, _reassoc = om_shared_state_stages(args.k)
         return reach
-    from catopt_core.laws import DEFAULT
+    from mlopt_core.laws import DEFAULT
 
     return list(DEFAULT)
 
@@ -106,7 +106,7 @@ def _rules(workload: str, args: argparse.Namespace) -> list:
 def _budgets(workload: str, args: argparse.Namespace) -> dict | None:
     """Rule budgets for the workload (None when the set is unbudgeted)."""
     if workload == "retnet":
-        from catopt_carriers.om import om_shared_state_budgets
+        from mlopt_carriers.om import om_shared_state_budgets
 
         return om_shared_state_budgets(args.k, kway=args.budget)
     return None  # DEFAULT sets run unbudgeted for delta/deq

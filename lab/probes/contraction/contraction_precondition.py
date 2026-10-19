@@ -14,17 +14,17 @@ This tool measures that precondition, honestly, in three layers:
 2. **General tensor networks** — 3-6 tensors with mixed ranks and
    shared indices.  Greedy (cheapest pair) vs an exact subset DP,
    which is itself validated against exhaustive enumeration.
-3. **catopt's own machinery** — does catopt's contraction search beat
+3. **mlopt's own machinery** — does mlopt's contraction search beat
    greedy on the same instances?
 
-   * :func:`catopt_orchestrator.diagram_search.search_moves` (the
+   * :func:`mlopt_orchestrator.diagram_search.search_moves` (the
      bounded lookahead) vs the greedy ``_apply_moves`` driver, on
      ``nn.Linear`` chain models — the diagram-liftable spelling of a
      matrix chain.
    * the e-graph rule space (``assoc_matmul`` over ``Var``-leaf
-     chains), where catopt actually *prices* the ordering: saturation
+     chains), where mlopt actually *prices* the ordering: saturation
      reaches the exact DP optimum, so the one-step greedy oracle
-     (:func:`catopt_core.trajectories.rule_samples`) can be scored
+     (:func:`mlopt_core.trajectories.rule_samples`) can be scored
      against a true optimum.
 
 Nothing here is tuned to make greedy lose: the random sweeps are
@@ -43,12 +43,12 @@ import random
 import statistics
 from typing import Any
 
-from catopt_core.cost import dag_cost, flops_cost
-from catopt_core.egraph import EGraph
-from catopt_core.ir import Op, TensorType, Var
-from catopt_core.laws import all_rules
-from catopt_core.search_env import SearchEnv
-from catopt_core.trajectories import rule_samples
+from mlopt_core.cost import dag_cost, flops_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import Op, TensorType, Var
+from mlopt_core.laws import all_rules
+from mlopt_core.search_env import SearchEnv
+from mlopt_core.trajectories import rule_samples
 
 __all__ = [
     "CHAIN_CASES",
@@ -262,7 +262,7 @@ def random_nets(n: int, seed: int) -> list[tuple[Any, dict[int, int]]]:
 
 
 # ---------------------------------------------------------------------------
-#  Layer 3a — catopt's diagram contraction-move space
+#  Layer 3a — mlopt's diagram contraction-move space
 # ---------------------------------------------------------------------------
 
 
@@ -303,14 +303,14 @@ def _chain_model(dims: tuple[int, ...]) -> Any:
 
 
 def diagram_chain_costs(dims: tuple[int, ...]) -> dict[str, float]:
-    """Run catopt's contraction driver greedy and search on a chain.
+    """Run mlopt's contraction driver greedy and search on a chain.
 
     Returns ``initial``, ``greedy`` and ``search`` final body costs —
     the same per-node ``dag_cost`` measure both modes report.
     """
     import torch
-    from catopt_orchestrator import ContractionSearch, Optimizer
-    from catopt_torch.backend import TorchBackend
+    from mlopt_orchestrator import ContractionSearch, Optimizer
+    from mlopt_torch.backend import TorchBackend
 
     torch.manual_seed(0)
     x = torch.randn(4, dims[0], dtype=torch.float64)
@@ -334,7 +334,7 @@ def diagram_chain_costs(dims: tuple[int, ...]) -> dict[str, float]:
 
 
 # ---------------------------------------------------------------------------
-#  Layer 3b — catopt's e-graph rule space (the priced ordering)
+#  Layer 3b — mlopt's e-graph rule space (the priced ordering)
 # ---------------------------------------------------------------------------
 
 
@@ -480,10 +480,10 @@ def _net_section(n_rand: int, seed: int) -> dict[str, Any]:
 
 
 def _diagram_section() -> list[tuple[str, float, float, float]]:
-    """Measure catopt's diagram search vs greedy on chain models."""
+    """Measure mlopt's diagram search vs greedy on chain models."""
     print()
     print(
-        "== 3a. catopt diagram search_moves vs greedy _apply_moves =="
+        "== 3a. mlopt diagram search_moves vs greedy _apply_moves =="
     )
     print(
         f"  {'dims':<26} {'initial':>9} {'greedy':>9} "
@@ -508,9 +508,9 @@ def _diagram_section() -> list[tuple[str, float, float, float]]:
 
 
 def _egraph_section(n_rand: int, seed: int) -> dict[str, Any]:
-    """Measure catopt's e-graph: saturation optimum vs the greedy oracle."""
+    """Measure mlopt's e-graph: saturation optimum vs the greedy oracle."""
     print()
-    print("== 3b. catopt e-graph rule space (the priced ordering) ==")
+    print("== 3b. mlopt e-graph rule space (the priced ordering) ==")
     rules = all_rules()
     print(
         f"  {'dims':<26} {'init':>9} {'sat-opt':>9} {'2*DP':>9} "
@@ -580,14 +580,14 @@ def _verdict(
         f"{net['stats']['worst']:.1f}x"
     )
     print(
-        f"  catopt e-graph space  : one-step oracle loses "
+        f"  mlopt e-graph space  : one-step oracle loses "
         f"{eg['one_step']['pct']:.0f}% (worst "
         f"{eg['one_step']['worst']:.2f}x); greedy episode loses "
         f"{eg['greedy']['pct']:.0f}%"
     )
     wins = sum(1 for _, _i, g, s in diagram if s < g - _EPS)
     print(
-        f"  catopt diagram space  : search beats greedy on "
+        f"  mlopt diagram space  : search beats greedy on "
         f"{wins}/{len(diagram)} chain models"
     )
     print(

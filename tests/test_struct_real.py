@@ -25,11 +25,11 @@ import os
 
 import pytest
 import torch
-from catopt_core.cost import flops_cost, param_bytes_cost_for
-from catopt_torch.composer import param_report
-from catopt_orchestrator import Optimizer
+from mlopt_core.cost import flops_cost, param_bytes_cost_for
+from mlopt_torch.composer import param_report
+from mlopt_orchestrator import Optimizer
 
-from catopt_torch.backend import TorchBackend
+from mlopt_torch.backend import TorchBackend
 
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -258,7 +258,7 @@ def test_tied_embedding_classifier_if_stored_twice():
     share_duplicate_params merges the two Param leaves bitwise and the
     optimised file stores one copy — the pass would have exposed the
     tying rather than needing it declared."""
-    from catopt_torch.composer import param_report
+    from mlopt_torch.composer import param_report
 
 
     torch.manual_seed(4)
@@ -298,16 +298,16 @@ def test_tied_embedding_classifier_if_stored_twice():
 def test_real_stories15m_checkpoint_has_no_exact_duplicates():
     """Pins the probe's honest finding: stories15M contains ZERO
     bitwise-equal tensors and ZERO duplicated head/row-block slices —
-    catopt's exact passes legitimately offer nothing on the real file.
+    mlopt's exact passes legitimately offer nothing on the real file.
     Also verifies wcls is stored once (tail is the rope cache)."""
     import sys
 
     import numpy as np
 
     sys.path.insert(0, REPO)
-    from catopt_core.egraph import EGraph
-    from catopt_core.ir import Param, TensorType
-    from catopt_core.laws import (
+    from mlopt_core.egraph import EGraph
+    from mlopt_core.ir import Param, TensorType
+    from mlopt_core.laws import (
         share_duplicate_param_slices,
         share_duplicate_params,
     )

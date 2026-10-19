@@ -48,7 +48,7 @@ describe("referee", () => {
 });
 
 describe("features", () => {
-  it("matches catopt_core.features on the chain", () => {
+  it("matches mlopt_core.features on the chain", () => {
     const f = features(PROGRAMS.chain);
     expect(f.flops).toBe(180);
     expect(f.bytes_read).toBe(212);

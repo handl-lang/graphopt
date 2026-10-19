@@ -17,7 +17,7 @@ against the source.  This probe closes the loop:
    the source module in fp64 (``max_abs``).
 4. Time it — eager baseline, ``torch.compile`` of the source, and the
    lowered carrier — under the exact ``gen_probe`` harness
-   (``catopt_discovery.play._time_module``: 10 warm-ups, median of
+   (``mlopt_discovery.play._time_module``: 10 warm-ups, median of
    *reps*).
 
 The measured row answers the product question: does the 4.4x FLOP
@@ -41,11 +41,11 @@ import argparse
 import time
 
 import torch
-from catopt_carriers.om import OM_CHUNKIFY, OM_LAWS, om_kway_laws
-from catopt_core.cost import dag_cost, flops_cost
-from catopt_core.egraph import EGraph
-from catopt_core.ir import IR, Op
-from catopt_core.laws.tensor import (
+from mlopt_carriers.om import OM_CHUNKIFY, OM_LAWS, om_kway_laws
+from mlopt_core.cost import dag_cost, flops_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import IR, Op
+from mlopt_core.laws.tensor import (
     ASSOC_MATMUL_REV,
     DIV_ADD_FACTOR,
     FACTOR_MUL,
@@ -54,9 +54,9 @@ from catopt_core.laws.tensor import (
     MUL_DIV_SWAP,
     SPLIT_SCALAR_RULES,
 )
-from catopt_discovery.play import _time_module
-from catopt_discovery.zoo import _ChunkedRetention
-from catopt_torch.adapters import TorchSink, TorchSource
+from mlopt_discovery.play import _time_module
+from mlopt_discovery.zoo import _ChunkedRetention
+from mlopt_torch.adapters import TorchSink, TorchSource
 
 #: The naturality bridges the fold's last hops need (plan 0023) —
 #: load-bearing for the carrier preference.

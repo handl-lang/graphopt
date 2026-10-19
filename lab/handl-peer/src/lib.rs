@@ -1,9 +1,9 @@
 //! Spike: the smallest useful handl peer.
 //!
-//! One function, data in / data out: load a catopt fragment directory as
+//! One function, data in / data out: load a mlopt fragment directory as
 //! a handl `Language`, apply one named rewrite rule at one node, and
 //! return the rewritten AST as JSON.  That is enough to prove the shape
-//! the plan asks about (catopt calls handl) without designing an API
+//! the plan asks about (mlopt calls handl) without designing an API
 //! before the integration is proven.
 //!
 //! Path dependencies point at a local handl checkout; a real package
@@ -70,7 +70,7 @@ fn apply_rule(dir: &str, ast_json: &str, at: usize, rule_id: &str) -> PyResult<S
 }
 
 #[pymodule]
-fn catopt_handl_peer(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn mlopt_handl_peer(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(language_transform_ids, m)?)?;
     m.add_function(wrap_pyfunction!(apply_rule, m)?)?;
     Ok(())

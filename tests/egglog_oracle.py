@@ -1,12 +1,12 @@
-"""Test-only differential oracle: catopt's e-graph vs the ``egglog``
+"""Test-only differential oracle: mlopt's e-graph vs the ``egglog``
 library (Phase 4).
 
 This module is an **opt-in, test-only** oracle.  It is *not* a
-production dependency and *not* an engine swap: ``catopt-core`` stays
+production dependency and *not* an engine swap: ``mlopt-core`` stays
 pure-Python and zero-dependency, and nothing under ``packages/`` or
-``catopt/`` imports ``egglog``.  It re-derives the essential parts of
+``mlopt/`` imports ``egglog``.  It re-derives the essential parts of
 the ``spike/egglog-engine`` prototype so the suite can *differentially
-check* catopt's hand-rolled equality-saturation search against the Rust
+check* mlopt's hand-rolled equality-saturation search against the Rust
 ``egglog`` engine on a small op/law subset.
 
 The point of the oracle is **agreement**, not replacement:
@@ -31,8 +31,8 @@ Design notes / deliberate limitations (ported from ``EGGLOG_SPIKE.md``):
 
 * The egglog program is untyped-by-shape: the ``Term`` sort carries no
   tensor type.  Shapes are recovered Python-side from the original IR's
-  leaf shapes plus catopt's ``typing._shape_of``.
-* Rewrites catopt guards with a Python ``check`` callable (e.g.
+  leaf shapes plus mlopt's ``typing._shape_of``.
+* Rewrites mlopt guards with a Python ``check`` callable (e.g.
   ``assoc_linear_bias``'s shape guard) are registered UNCONDITIONALLY
   here — egglog cannot call a Python predicate on a *matched* binding
   during saturation.  The oracle only feeds well-typed terms, so the
@@ -47,8 +47,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
-from catopt_core.cost import flops_cost
-from catopt_core.ir import (
+from mlopt_core.cost import flops_cost
+from mlopt_core.ir import (
     Const,
     Op,
     Param,
@@ -56,7 +56,7 @@ from catopt_core.ir import (
     Var,
     op_repr,
 )
-from catopt_core.laws.tensor import (
+from mlopt_core.laws.tensor import (
     ASSOC_ADD,
     ASSOC_LINEAR,
     ASSOC_LINEAR_BIAS,
@@ -68,7 +68,7 @@ from catopt_core.laws.tensor import (
     DISTRIBUTE_MUL,
     FACTOR_MUL,
 )
-from catopt_core.typing import _shape_of
+from mlopt_core.typing import _shape_of
 from egglog import (
     EGraph,
     Expr,
@@ -89,12 +89,12 @@ __all__ = [
     "Term",
     "build_program",
     "canon",
-    "catopt_equivalent",
-    "catopt_extract",
+    "mlopt_equivalent",
+    "mlopt_extract",
     "evaluate",
     "folded_flops",
     "spike_ruleset",
-    "to_catopt",
+    "to_mlopt",
 ]
 
 #: The op subset the oracle covers.
@@ -102,7 +102,7 @@ SUPPORTED_OPS = frozenset(
     {"add", "mul", "neg", "matmul", "linear", "relu", "transpose"}
 )
 
-#: The small law subset BOTH engines run (catopt rewrites, by name):
+#: The small law subset BOTH engines run (mlopt rewrites, by name):
 #: comm/assoc add+mul, assoc_matmul (+rev), distribute/factor matmul,
 #: assoc_linear (+ the biased 3-ary variant).  ``spike_ruleset`` mirrors
 #: this set in egglog.
@@ -126,7 +126,7 @@ SPIKE_RULES = [
 
 
 class Term(Expr):
-    """A catopt tensor term as an egglog sort (structure only, no type)."""
+    """A mlopt tensor term as an egglog sort (structure only, no type)."""
 
 
 @function(egg_fn="TVar")
@@ -179,7 +179,7 @@ def transpose(a: Term, _arg1: i64Like, _arg2: i64Like) -> Term: ...
 
 
 def build_program(term: Any) -> Term:
-    """Translate a catopt IR term into an egglog ``Term`` expression.
+    """Translate a mlopt IR term into an egglog ``Term`` expression.
 
     Raises ``ValueError`` on ops outside :data:`SUPPORTED_OPS`.
     """
@@ -216,10 +216,10 @@ def build_program(term: Any) -> Term:
 
 
 # ---------------------------------------------------------------------------
-#  egglog -> catopt (for the cost model + result readout)
+#  egglog -> mlopt (for the cost model + result readout)
 # ---------------------------------------------------------------------------
 
-#: egglog function ident name -> builder(args, env) -> catopt term.
+#: egglog function ident name -> builder(args, env) -> mlopt term.
 #: egglog keys module-level ``@function``s by their Python name (not
 #: ``egg_fn``), so both leaves and ops live in one registry.
 _BUILDERS: dict[str, Callable[[list, dict], Any]] = {
@@ -245,8 +245,8 @@ _BUILDERS: dict[str, Callable[[list, dict], Any]] = {
 }
 
 
-def to_catopt(expr: Term, env: dict) -> Any:
-    """Reconstruct the catopt term a (representative) egglog expr denotes."""
+def to_mlopt(expr: Term, env: dict) -> Any:
+    """Reconstruct the mlopt term a (representative) egglog expr denotes."""
     return _from_decl(expr_parts(expr), env)
 
 
@@ -264,12 +264,12 @@ def _from_decl(decl: Any, env: dict) -> Any:
 
 
 # ---------------------------------------------------------------------------
-#  The law subset (mirrors the catopt rule subset)
+#  The law subset (mirrors the mlopt rule subset)
 # ---------------------------------------------------------------------------
 
 
 def _spike_rules() -> list[tuple[str, Any]]:
-    """The small law subset as ``(catopt_rule_name, egglog_rewrite)``."""
+    """The small law subset as ``(mlopt_rule_name, egglog_rewrite)``."""
     a, b, c = vars_("a b c", Term)
     (w,) = vars_("w", Term)
     (x,) = vars_("x", Term)
@@ -329,13 +329,13 @@ def _spike_rules() -> list[tuple[str, Any]]:
 def spike_ruleset() -> Any:
     """The small law subset, as an egglog ruleset.
 
-    Mirrors (by name) the catopt rewrites in :data:`SPIKE_RULES`.
+    Mirrors (by name) the mlopt rewrites in :data:`SPIKE_RULES`.
     """
     return ruleset(*[rw for _, rw in _spike_rules()])
 
 
 def _rule_name_map() -> dict[Any, str]:
-    """Map an egglog rewrite decl (report key) -> catopt rule name."""
+    """Map an egglog rewrite decl (report key) -> mlopt rule name."""
     return {rw.decl: name for name, rw in _spike_rules()}
 
 
@@ -343,7 +343,7 @@ def _rule_name_map() -> dict[Any, str]:
 #  The engine wrapper
 # ---------------------------------------------------------------------------
 
-#: egglog function ident name -> (catopt op name, # of Term-typed args).
+#: egglog function ident name -> (mlopt op name, # of Term-typed args).
 _OP_SPEC: dict[str, tuple[str, int]] = {
     "add": ("add", 2),
     "mul": ("mul", 2),
@@ -363,8 +363,8 @@ class FlopsShape:
 
     The shape is threaded through the tree-cost recursion so that each
     e-node's local FLOPs (which need the *children's* shapes) can be
-    computed by catopt's own shape inference.  ``param_only`` replicates
-    catopt's compile-time fold discount (a subtree with no ``Var`` leaf
+    computed by mlopt's own shape inference.  ``param_only`` replicates
+    mlopt's compile-time fold discount (a subtree with no ``Var`` leaf
     is materialised at lowering time and charged zero).  Ordering is by
     FLOPs only.
     """
@@ -415,7 +415,7 @@ class EgglogEngine:
 
     @classmethod
     def from_ir(cls, ir: Any) -> EgglogEngine:
-        """Build an engine seeded with a catopt ``IR``."""
+        """Build an engine seeded with a mlopt ``IR``."""
         env = {
             "inputs": {v.name: tuple(v.typ.shape) for v in ir.inputs},
             "params": {
@@ -434,7 +434,7 @@ class EgglogEngine:
         input_shapes: dict[str, tuple],
         param_shapes: dict[str, tuple],
     ) -> EgglogEngine:
-        """Build an engine from a bare catopt term + leaf shapes."""
+        """Build an engine from a bare mlopt term + leaf shapes."""
         env = {
             "inputs": dict(input_shapes),
             "params": dict(param_shapes),
@@ -451,7 +451,7 @@ class EgglogEngine:
 
         The *shape* of this node is recovered from the children's carried
         shapes (an e-node's children arrive as opaque e-class values, so
-        the term cannot be re-walked here) using catopt's shape rules.
+        the term cannot be re-walked here) using mlopt's shape rules.
         """
         self._cost_calls += 1
         name, inner = _node_name(expr)
@@ -465,7 +465,7 @@ class EgglogEngine:
             return FlopsShape(0.0, tuple(self.env["params"][nm]), True)
         if name == "tconst":
             return FlopsShape(0.0, (), True)
-        # an op node: rebuild a catopt Op from placeholder children that
+        # an op node: rebuild a mlopt Op from placeholder children that
         # carry the children's recovered shapes, then price it.
         op_name, _n = _OP_SPEC[name]
         term_shapes = [c.shape for c in children_costs if c.shape is not None]
@@ -481,7 +481,7 @@ class EgglogEngine:
             }
         node = Op.make(op_name, *args, **attrs)
         param_only = all(c.param_only for c in children_costs)
-        # catopt's compile-time fold: a param-only subtree is materialised
+        # mlopt's compile-time fold: a param-only subtree is materialised
         # at lowering, so it is charged zero runtime FLOPs.
         local = 0.0 if param_only else flops_cost(node)
         shape = _shape_of(node)
@@ -489,7 +489,7 @@ class EgglogEngine:
         return FlopsShape(total, shape, param_only)
 
     def run(self, iterations: int = 8) -> dict[str, int]:
-        """Saturate; return ``{catopt_rule_name: num_matches}``."""
+        """Saturate; return ``{mlopt_rule_name: num_matches}``."""
         report = self.egraph.run(spike_ruleset() * iterations)
         names = _rule_name_map()
         fires: dict[str, int] = {}
@@ -499,7 +499,7 @@ class EgglogEngine:
         return fires
 
     def extract_best(self) -> tuple[Any, float]:
-        """Extract the lowest-FLOPs term (tree cost, catopt FLOPs)."""
+        """Extract the lowest-FLOPs term (tree cost, mlopt FLOPs)."""
         assert self.root is not None
         expr, cost = self.egraph.extract(
             self.root,
@@ -507,7 +507,7 @@ class EgglogEngine:
             cost_model=self._tree_cost,
             extractor="tree",
         )
-        return to_catopt(expr, self.env), cost.flops
+        return to_mlopt(expr, self.env), cost.flops
 
     def register(self, term: Any) -> Term:
         """Add an extra term to the e-graph (for equivalence checks)."""
@@ -525,16 +525,16 @@ class EgglogEngine:
 
 
 # ---------------------------------------------------------------------------
-#  catopt side helpers (differential comparison)
+#  mlopt side helpers (differential comparison)
 # ---------------------------------------------------------------------------
 
 
-def catopt_extract(term: Any, rules: list | None = None) -> tuple[Any, dict]:
-    """Run catopt's e-graph with the shared law subset.
+def mlopt_extract(term: Any, rules: list | None = None) -> tuple[Any, dict]:
+    """Run mlopt's e-graph with the shared law subset.
 
     Returns ``(extracted_best_term, rule_fires)``.
     """
-    from catopt_core.egraph import EGraph as _EGraph
+    from mlopt_core.egraph import EGraph as _EGraph
 
     eg = _EGraph()
     root = eg.add_term(term)
@@ -547,11 +547,11 @@ def catopt_extract(term: Any, rules: list | None = None) -> tuple[Any, dict]:
     return eg.extract_best(root, flops_cost), dict(eg.rule_fires)
 
 
-def catopt_equivalent(
+def mlopt_equivalent(
     term: Any, other: Any, rules: list | None = None
 ) -> bool:
-    """True if catopt's e-graph puts *term* and *other* in one e-class."""
-    from catopt_core.egraph import EGraph as _EGraph
+    """True if mlopt's e-graph puts *term* and *other* in one e-class."""
+    from mlopt_core.egraph import EGraph as _EGraph
 
     eg = _EGraph()
     root = eg.add_term(term)
@@ -566,7 +566,7 @@ def catopt_equivalent(
 
 
 def folded_flops(term: Any) -> float:
-    """catopt's *extraction* cost: FLOPs with param-only subtrees zeroed.
+    """mlopt's *extraction* cost: FLOPs with param-only subtrees zeroed.
 
     Mirrors the discount in ``EGraph.extract_best`` (a subtree with no
     ``Var`` leaf folds into a materialised parameter at lowering time).
@@ -619,7 +619,7 @@ def evaluate(
     inputs: dict[str, np.ndarray],
     params: dict[str, np.ndarray],
 ) -> np.ndarray:
-    """Evaluate a catopt term (oracle op subset) on concrete leaves."""
+    """Evaluate a mlopt term (oracle op subset) on concrete leaves."""
     if isinstance(term, Var):
         return inputs[term.name]
     if isinstance(term, Param):

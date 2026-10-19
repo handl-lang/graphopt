@@ -20,9 +20,9 @@ chain bank — ``f→g→h→k`` — where every round's mint is exact:
 """
 
 import pytest
-from catopt_core import meta
-from catopt_core.egraph import Rewrite
-from catopt_core.ir import Op, TensorType, Var
+from mlopt_core import meta
+from mlopt_core.egraph import Rewrite
+from mlopt_core.ir import Op, TensorType, Var
 
 
 def _chain_bank() -> list[Rewrite]:

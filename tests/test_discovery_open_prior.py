@@ -1,7 +1,7 @@
 """The baked open-game prior — shipped, and measured on held-out pages.
 
 ``lawdata.OPEN_GAME_PLAYER_WEIGHTS`` is the trained preset
-:class:`catopt_discovery.open_game.OpenLearnedPlayer` now defaults to.
+:class:`mlopt_discovery.open_game.OpenLearnedPlayer` now defaults to.
 This module measures that the bake is *earned*: on the held-out odd
 pages (the even pages trained — see ``gen_cases(start=, step=)``) the
 baked prior beats both the cold start (``weights={}``, the honest
@@ -31,9 +31,9 @@ from __future__ import annotations
 
 import pytest
 import torch
-from catopt_discovery import engine, lawdata, play
-from catopt_discovery import open_game as og
-from catopt_discovery import proposal as lp
+from mlopt_discovery import engine, lawdata, play
+from mlopt_discovery import open_game as og
+from mlopt_discovery import proposal as lp
 
 #: Page size — the episode horizon (budget = page + 1).
 PAGE = 16

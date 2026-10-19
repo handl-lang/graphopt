@@ -1,7 +1,7 @@
 /** The corpus and the intake — where programs come from.
  *
  * Plan 0028 §D1: the system is measured on **real exported programs**,
- * not hand-written terms.  `python -m catopt_discovery.intake` takes a
+ * not hand-written terms.  `python -m mlopt_discovery.intake` takes a
  * candidate `nn.Module` through `torch.export` → `export_to_ir` →
  * classify → persist, and every candidate lands in exactly one class:
  * `ingested` (bound, lowered, verified fp64), `census-only` (exported

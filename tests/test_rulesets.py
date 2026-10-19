@@ -12,10 +12,10 @@ import pytest
 import torch
 import torch.nn as nn
 
-from catopt_core import laws
-from catopt_core.egraph import Rewrite
-from catopt_core.ir import Op
-from catopt_core.laws import (
+from mlopt_core import laws
+from mlopt_core.egraph import Rewrite
+from mlopt_core.ir import Op
+from mlopt_core.laws import (
     ALL_RULES,
     ALL_RULES_WITH_LAYOUT,
     CATEGORICAL_RULES,
@@ -36,7 +36,7 @@ from catopt_core.laws import (
     preset,
     tags,
 )
-from catopt_core.ports import RuleLike, RuleSetLike
+from mlopt_core.ports import RuleLike, RuleSetLike
 
 SUBSUMED_NAMES = {
     "swiglu_fuse",
@@ -201,10 +201,10 @@ def test_tag_assignments():
 
 
 def test_carrier_package_tags():
-    from catopt_carriers.decode_laws import DECODE_LAWS
-    from catopt_carriers.om import OM_LAWS
-    from catopt_carriers.trace import TRACE_LAWS
-    from catopt_carriers.xcarrier import XC_LAWS
+    from mlopt_carriers.decode_laws import DECODE_LAWS
+    from mlopt_carriers.om import OM_LAWS
+    from mlopt_carriers.trace import TRACE_LAWS
+    from mlopt_carriers.xcarrier import XC_LAWS
 
     assert all(
         r.tags == {tags.CARRIER, tags.DECODE} for r in DECODE_LAWS
@@ -297,7 +297,7 @@ def test_preset_lookup():
 
 
 def test_resolve_rules_variants():
-    from catopt_orchestrator.optimize import (
+    from mlopt_orchestrator.optimize import (
         _resolve_rules,
         default_rules,
     )
@@ -320,11 +320,11 @@ def test_resolve_rules_variants():
 
 
 def test_default_rules_composes_carriers():
-    from catopt_carriers.decode_laws import DECODE_LAWS
-    from catopt_carriers.om import OM_LAWS
-    from catopt_carriers.trace import TRACE_LAWS
-    from catopt_carriers.xcarrier import XC_LAWS
-    from catopt_orchestrator import DEFAULT_RULES, default_rules
+    from mlopt_carriers.decode_laws import DECODE_LAWS
+    from mlopt_carriers.om import OM_LAWS
+    from mlopt_carriers.trace import TRACE_LAWS
+    from mlopt_carriers.xcarrier import XC_LAWS
+    from mlopt_orchestrator import DEFAULT_RULES, default_rules
 
     assert DEFAULT_RULES is default_rules()
     names = {r.name for r in DEFAULT_RULES}
@@ -335,19 +335,19 @@ def test_default_rules_composes_carriers():
     for fam in (OM_LAWS, TRACE_LAWS, XC_LAWS, DECODE_LAWS):
         assert {r.name for r in fam} <= names
     # lazy attrs on the package resolve.
-    import catopt_carriers
+    import mlopt_carriers
 
-    assert catopt_carriers.CARRIERS.name.startswith("om+")
-    assert catopt_carriers.OM_RULES.name == "om"
-    assert catopt_carriers.TRACE_RULES.name == "trace"
-    assert catopt_carriers.XC_RULES.name == "xc"
-    assert catopt_carriers.DECODE_RULES.name == "decode"
+    assert mlopt_carriers.CARRIERS.name.startswith("om+")
+    assert mlopt_carriers.OM_RULES.name == "om"
+    assert mlopt_carriers.TRACE_RULES.name == "trace"
+    assert mlopt_carriers.XC_RULES.name == "xc"
+    assert mlopt_carriers.DECODE_RULES.name == "decode"
     with pytest.raises(AttributeError):
-        _ = catopt_carriers.bogus_name
+        _ = mlopt_carriers.bogus_name
 
 
 def test_regime_rule_sets():
-    import catopt_orchestrator.regime as regime
+    import mlopt_orchestrator.regime as regime
 
     search = regime.default_rules()
     assert isinstance(search, RuleSet)
@@ -360,7 +360,7 @@ def test_regime_rule_sets():
 
 
 def test_optimize_getattr_unknown():
-    import catopt_orchestrator.optimize as opt
+    import mlopt_orchestrator.optimize as opt
 
     assert opt.DEFAULT_RULES is opt.default_rules()
     with pytest.raises(AttributeError):
@@ -368,8 +368,8 @@ def test_optimize_getattr_unknown():
 
 
 def test_composer_joint_rules():
-    from catopt_orchestrator.optimize import default_rules
-    from catopt_torch.composer import _JOINT_DEFAULT, _joint_rules
+    from mlopt_orchestrator.optimize import default_rules
+    from mlopt_torch.composer import _JOINT_DEFAULT, _joint_rules
 
     # the pipeline default widens to the layout-inclusive set.
     assert _joint_rules(None) is _JOINT_DEFAULT
@@ -414,10 +414,10 @@ def test_default_parity_with_legacy_all():
     the same fires for every rule the two sets share — so the preset
     change cannot silently alter a default-pipeline result.
     """
-    from catopt_orchestrator import search
-    from catopt_torch.adapters import TorchSource
-    from catopt_torch.torch_bridge import ir_to_torch_module
-    from catopt_core.ir import op_repr
+    from mlopt_orchestrator import search
+    from mlopt_torch.adapters import TorchSource
+    from mlopt_torch.torch_bridge import ir_to_torch_module
+    from mlopt_core.ir import op_repr
 
     torch.manual_seed(0)
     m = _PairMLP().eval().double()
@@ -450,7 +450,7 @@ def test_default_parity_with_legacy_all():
     }
 
     # and the two terms genuinely agree on inputs.
-    from catopt_core.ir import IR
+    from mlopt_core.ir import IR
 
     tm_old = ir_to_torch_module(
         IR(root=res_legacy.term, inputs=res_legacy.ir.inputs),
@@ -467,8 +467,8 @@ def test_default_parity_with_legacy_all():
 
 def test_full_ruleset_saturation_smoke():
     """The composed values drive ``EGraph.run`` / ``search`` directly."""
-    from catopt_orchestrator import search
-    from catopt_torch.adapters import TorchSource
+    from mlopt_orchestrator import search
+    from mlopt_torch.adapters import TorchSource
 
     torch.manual_seed(0)
     m = nn.Linear(8, 8, bias=False).double()

@@ -29,11 +29,11 @@ import time
 from collections import Counter
 from typing import Any
 
-from catopt_core.cost import dag_cost, flops_cost
-from catopt_core.egraph import EGraph
-from catopt_core.egraph.types import _member_key
-from catopt_core.ir import Op
-from catopt_discovery.impact import _iter_subterms
+from mlopt_core.cost import dag_cost, flops_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.egraph.types import _member_key
+from mlopt_core.ir import Op
+from mlopt_discovery.impact import _iter_subterms
 
 from lab.probes import om_shared_state_probe as osp
 
@@ -59,7 +59,7 @@ def _census(term: Any) -> Counter:
 
 
 def _shape(x: Any) -> Any:
-    from catopt_core.typing import _shape_of
+    from mlopt_core.typing import _shape_of
 
     return _shape_of(x, None)
 
@@ -180,7 +180,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = ap.parse_args(argv)
 
-    from catopt_carriers.om import (
+    from mlopt_carriers.om import (
         om_shared_state_budgets,
         om_shared_state_stages,
     )
@@ -261,7 +261,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # --- cost-model sweep: does any principled model unify the read? ---
     print("\n== cost-model sweep (same saturated e-graph) ==")
-    from catopt_core.cost import (
+    from mlopt_core.cost import (
         count_cost,
         launch_aware_cost,
         roofline_cost,
@@ -394,12 +394,12 @@ def main(argv: list[str] | None = None) -> int:
 
 def _verify_pair_terms(t: int, a: Any, b: Any) -> None:
     """Lower two terms with ``TorchSink`` and report ``max|Δ|``."""
-    import catopt_carriers  # noqa: F401 — carrier op bindings
+    import mlopt_carriers  # noqa: F401 — carrier op bindings
     import torch
-    from catopt_core.ir import IR
-    from catopt_discovery.zoo import _ChunkedRetention
-    from catopt_torch.adapters import TorchSink
-    from catopt_torch.torch_bridge import export_to_ir
+    from mlopt_core.ir import IR
+    from mlopt_discovery.zoo import _ChunkedRetention
+    from mlopt_torch.adapters import TorchSink
+    from mlopt_torch.torch_bridge import export_to_ir
 
     torch.manual_seed(0)
     model = _ChunkedRetention(16).eval().double()
@@ -459,7 +459,7 @@ def _block_family(block: Any) -> tuple:
 
 def _family_report(root: Any) -> None:
     """Run the abstraction on each chunking family separately."""
-    import catopt_core.ir as ir
+    import mlopt_core.ir as ir
 
     from lab.bridge import index_abstract as ia
 
@@ -552,7 +552,7 @@ def _read_sequence(root: Any) -> str:
 
 def _sketch(term: Any, width: int = 96) -> str:
     """Return a one-line structural sketch of a term (op names, DFS)."""
-    from catopt_core.ir import op_repr
+    from mlopt_core.ir import op_repr
 
     s = op_repr(term)
     return s if len(s) <= width else s[: width - 3] + "..."

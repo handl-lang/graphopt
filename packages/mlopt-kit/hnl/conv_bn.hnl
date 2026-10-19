@@ -1,0 +1,67 @@
+--- conv_bn.hnl — mlopt's conv→batch_norm composite, in handl.
+---
+--- The program mlopt's e-graph optimizes — the eval-mode conv+BN
+--- weight-space fold `batch_norm(conv2d(x, W, b), γ, β, μ, σ²) →
+--- conv2d(x, W′, b′)` (mlopt_core.laws.tensor: BATCH_NORM_RULES expands
+--- the kernel's per-channel affine; CONV_FOLD_RULES' conv_channel_scale /
+--- conv_channel_shift anchors absorb it into the conv's weight and bias;
+--- the iterated-composition mint and the premise-pay flip are measured in
+--- project/retros/{conv-channel-scale-anchor,fold-cost-single-source}.md)
+--- — spelled over the `host-tensor` op surface so CatoptKit's runtime
+--- evaluates it. NCHW throughout; `eps` is the BN epsilon (pass `null`
+--- for the op's 1e-5 default).
+---
+--- `host-tensor` is a *dependency* here, resolved by name through the
+--- crate's `.handl.toml` — the git-package→dir bridge (platform
+--- 90853ec2): `[dependencies]` names the git source portably and
+--- `[patch]` dev-links it to the sibling checkout.
+
+from "host-tensor" import tensor
+
+--- The unfolded composite — the e-graph's input program.  Eval-mode BN
+--- is `(x − μ)/√(σ² + ε)·γ + β` per channel; the op consumes the running
+--- stats positionally.
+export conv_bn := (x, w, b, g, be, m, v, eps) ~>
+  tensor.batch_norm(tensor.conv2d(x, w, b), g, be, m, v, eps)
+
+--- s[c] = γ[c]·rsqrt(σ²[c] + ε) — the per-output-channel scale the fold
+--- absorbs into W's axis 0 and the bias.  The tensor op surface carries
+--- no elementwise pow, so the (C,) stats materialize to channel lists
+--- and scalar `**` finishes each channel; the W′/b′ arithmetic itself is
+--- tensor ops — the same op heads the minted law's RHS emits
+--- (`mul`/`reshape`/`add`/`sub`).
+channel_scales := (gs, vs, eps) ~> while { gs: gs, vs: vs, acc: [] } {
+  (gs, vs, acc) ~> match gs {
+    []: { out: acc },
+    [g, ...gt]: match vs {
+      []: { out: acc },
+      [v, ...vt]: { state: { gs: gt,
+                            vs: vt,
+                            acc: [...acc, g / ((v + eps) ** 0.5)] } }
+    }
+  }
+}
+
+--- The folded form — `conv2d(x, W′, b′)` with W′ = W∘ŝ′ (ŝ′ the
+--- (C,1,1,1) weight view of s) and b′ = b∘s + (β − s∘μ): the scale is a
+--- right action on the output channel (convolution is linear in its
+--- filter), the shift folds into the bias outright.  Value-equal to
+--- `conv_bn` on every input — the minted rewrite *evaluated*, not
+--- stated.
+export conv_bn_fold := (x, w, b, g, be, m, v, eps) ~> do {
+  s :: tensor.from_list(channel_scales(tensor.to_list(g), tensor.to_list(v), eps))
+  cout :: tensor.shape(w)[0]
+  w2 :: tensor.mul(w, tensor.reshape(s, [cout, 1, 1, 1]))
+  b2 :: tensor.add(tensor.mul(b, s), tensor.sub(be, tensor.mul(s, m)))
+  tensor.conv2d(x, w2, b2)
+}
+
+--- The registered-adjoint surface an optimization loop reads:
+--- `tensor.derive("batch_norm")` → "tensor.batch_norm_backward", and the
+--- adjoint itself — primal signature + upstream grad → the
+--- {input, gamma, beta} grads record (mean/var are statistical in eval
+--- mode and carry none).
+export bn_adjoint := tensor.derive("batch_norm")
+
+export bn_grad := (x, g, be, m, v, grad_out, eps) ~>
+  tensor.batch_norm_backward(x, g, be, m, v, grad_out, eps)

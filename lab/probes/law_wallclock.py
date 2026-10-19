@@ -1,7 +1,7 @@
 """Wall-clock verification for the two shipped machine-discovered laws.
 
 ``tools/law_impact.py`` (since retired) and
-``python -m catopt_discovery.pipeline`` measured the laws
+``python -m mlopt_discovery.pipeline`` measured the laws
 under the pipeline's *own* cost model — ``executor_cost_for``'s
 roofline-plus-per-dispatch proxy — and ``law_bench`` timed only the
 registered synthetic terms.  Nothing so far has timed the *real
@@ -62,13 +62,13 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from catopt_core.cost import dag_cost
-from catopt_orchestrator import Optimizer
-from catopt_orchestrator.optimize import default_rules
-from catopt_torch.backend import TorchBackend
-from catopt_torch.models import ManualSoftmaxAttention
-from catopt_torch.models.hybrid import HybridBlock, TwoLayerHybrid
-from catopt_torch.models.ssm import (
+from mlopt_core.cost import dag_cost
+from mlopt_orchestrator import Optimizer
+from mlopt_orchestrator.optimize import default_rules
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.models import ManualSoftmaxAttention
+from mlopt_torch.models.hybrid import HybridBlock, TwoLayerHybrid
+from mlopt_torch.models.ssm import (
     DiagDenseSSM,
     DiagonalSSM,
     SelectiveSSM,

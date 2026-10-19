@@ -67,17 +67,17 @@ import time
 from pathlib import Path
 from typing import Any
 
-from catopt_core.cost import flops_cost
-from catopt_core.egraph import EGraph
-from catopt_core.ir import Op, Param, TensorType
-from catopt_core.laws import (
+from mlopt_core.cost import flops_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import Op, Param, TensorType
+from mlopt_core.laws import (
     ASSOC_MATMUL,
     ASSOC_MATMUL_REV,
     all_rules,
 )
-from catopt_core.meta import canonicalize, stratified_run
-from catopt_orchestrator import Optimizer
-from catopt_torch.backend import TorchBackend
+from mlopt_core.meta import canonicalize, stratified_run
+from mlopt_orchestrator import Optimizer
+from mlopt_torch.backend import TorchBackend
 
 from bench.benchkit import (
     Case,
@@ -1000,7 +1000,7 @@ def run_bench(args: argparse.Namespace) -> Report:
         "commits to ONE rewrite at each of O(k) match sites per pass — "
         "it cannot hold the space; certifying the optimum by "
         "enumeration would require visiting Omega(Catalan(k-1)) "
-        "concrete programs.  catopt's canonicalize/stratified_run go "
+        "concrete programs.  mlopt's canonicalize/stratified_run go "
         "further: they compute the coherent normal form directly in "
         "O(k log k), never storing the symmetry closure at all."
     )

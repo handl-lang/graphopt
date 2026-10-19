@@ -10,18 +10,18 @@ shipped ordering's.
 
 import pytest
 import torch
-from catopt_core.cost import flops_cost
-from catopt_core.egraph import EGraph
-from catopt_core.features import compute_features
-from catopt_core.game import Action, GameState
-from catopt_core.ir import Op, TensorType, Var, op_repr
-from catopt_core.laws import all_rules
-from catopt_core.ports import Policy
-from catopt_torch.adapters import TorchSource
-from catopt_torch.graph_policy import GraphFeaturePolicy
-from catopt_torch.learned_policy import LearnedPolicy, RuleValueNet
-from catopt_torch.model_trajectories import model_rule_samples
-from catopt_torch.models import LinearAttention, RMSNorm, SwiGLU
+from mlopt_core.cost import flops_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.features import compute_features
+from mlopt_core.game import Action, GameState
+from mlopt_core.ir import Op, TensorType, Var, op_repr
+from mlopt_core.laws import all_rules
+from mlopt_core.ports import Policy
+from mlopt_torch.adapters import TorchSource
+from mlopt_torch.graph_policy import GraphFeaturePolicy
+from mlopt_torch.learned_policy import LearnedPolicy, RuleValueNet
+from mlopt_torch.model_trajectories import model_rule_samples
+from mlopt_torch.models import LinearAttention, RMSNorm, SwiGLU
 
 
 def _v(name: str, *shape: int) -> Var:

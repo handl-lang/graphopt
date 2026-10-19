@@ -20,7 +20,7 @@ stories15M checkpoint, synthesized the way such models actually ship:
   ``elide`` members (dead input gather + deduped output gather around
   a shrunk weight) are bitwise-exact offers.  Baseline: a
   hand-**narrowed** model (dead channels deleted, the deployment
-  equivalent).  A ``catopt_flops`` lane re-runs the same pipeline
+  equivalent).  A ``mlopt_flops`` lane re-runs the same pipeline
   under pure-FLOP extraction (``cost_fn=flops_cost``) to separate
   "the structure is found" from "the executor-aware cost model
   prices the gathers over the saved GEMM work at this size".
@@ -39,9 +39,9 @@ Per (variant, budget) cell — budgets ``exact`` then
 ``{1e-4, 1e-3, 1e-2}`` (``error_budget=`` arms the certified
 bounded ``elide_bounded`` / ``zero_bounded`` members):
 
-* timed ``eager`` / ``inductor`` / ``catopt`` (+ per-variant
-  deployment baselines and the optional ``catopt+inductor`` /
-  ``catopt_flops`` lanes);
+* timed ``eager`` / ``inductor`` / ``mlopt`` (+ per-variant
+  deployment baselines and the optional ``mlopt+inductor`` /
+  ``mlopt_flops`` lanes);
 * offered-vs-delivered structure ledgers (``weight_specials`` /
   ``low_rank_factors`` offers vs the derived params actually present
   in the delivered module);
@@ -59,7 +59,7 @@ budget — and which offers the default cost model declines.
 """
 # ruff: noqa: E402, RUF001, RUF003 -- ×, ·, →, −, ‖ in
 # strings/docstrings are deliberate math notation; sys.path setup
-# must precede the benchkit/catopt imports (bounded_e2e convention).
+# must precede the benchkit/mlopt imports (bounded_e2e convention).
 
 from __future__ import annotations
 
@@ -76,10 +76,10 @@ sys.setrecursionlimit(400_000)
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from catopt_core.cost import flops_cost
-from catopt_orchestrator import Compositional, Optimizer
-from catopt_torch.backend import TorchBackend
-from catopt_torch.report import verify_equiv
+from mlopt_core.cost import flops_cost
+from mlopt_orchestrator import Compositional, Optimizer
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.report import verify_equiv
 
 from bench.benchkit import (
     Case,
@@ -112,7 +112,7 @@ QUICK = {
     "min_run_time": "0.05",
     "compile_timeout": "45.0",
     "prompts": "2",
-    "catopt_inductor": "0",
+    "mlopt_inductor": "0",
 }
 
 _BUDGET_DEFAULT = "none,1e-4,1e-3,1e-2"
@@ -415,7 +415,7 @@ def _factor_probe(w: torch.Tensor) -> dict:
     ``rel_tol=1e-8`` and at 1e-4 — the dtype-noise evidence for why a
     dense-stored fp32 factor product declines where fp64 fires.
     """
-    from catopt_core.laws.factored import _factor_rows, _row_basis
+    from mlopt_core.laws.factored import _factor_rows, _row_basis
 
     out: dict = {"o": int(w.shape[0]), "i": int(w.shape[1])}
     for tol in (1e-8, 1e-4):
@@ -537,25 +537,25 @@ def run_cell(
             f"top1={pe['top1_agree']:.3f} top5={pe['top5_in']:.3f}",
             flush=True,
         )
-        variants.append(Variant("catopt", _fwd_stmt(opt_mod, idx)))
-        if getattr(args, "catopt_inductor", None) not in (
+        variants.append(Variant("mlopt", _fwd_stmt(opt_mod, idx)))
+        if getattr(args, "mlopt_inductor", None) not in (
             None,
             "0",
             0,
         ):
             ct = float(getattr(args, "compile_timeout", None) or 45.0)
             oc, st_ = try_compile(opt_mod, (idx,), ct)
-            rec["catopt_ind_status"] = st_
+            rec["mlopt_ind_status"] = st_
             if oc is not None:
                 with torch.no_grad():
                     vr2 = verify_equiv(model(idx), oc(idx))
-                rec["catopt_ind_rel"] = vr2.max_rel
+                rec["mlopt_ind_rel"] = vr2.max_rel
                 if vr2.passed:
                     variants.append(
-                        Variant("catopt+inductor", _fwd_stmt(oc, idx))
+                        Variant("mlopt+inductor", _fwd_stmt(oc, idx))
                     )
             print(
-                f"  catopt+inductor: {rec['catopt_ind_status']}",
+                f"  mlopt+inductor: {rec['mlopt_ind_status']}",
                 flush=True,
             )
 
@@ -595,9 +595,9 @@ def run_cell(
             rec["flops_fresh_rel"] = vrf.max_rel
             rec["flops_e2e"] = stats_f.get("end_to_end")
             variants.append(
-                Variant("catopt_flops", _fwd_stmt(opt_f, idx))
+                Variant("mlopt_flops", _fwd_stmt(opt_f, idx))
             )
-            if getattr(args, "catopt_inductor", None) not in (
+            if getattr(args, "mlopt_inductor", None) not in (
                 None,
                 "0",
                 0,
@@ -614,12 +614,12 @@ def run_cell(
                     if vr3.passed:
                         variants.append(
                             Variant(
-                                "catopt_flops+ind",
+                                "mlopt_flops+ind",
                                 _fwd_stmt(oc2, idx),
                             )
                         )
                 print(
-                    f"  catopt_flops+inductor: "
+                    f"  mlopt_flops+inductor: "
                     f"{rec['flops_ind_status']}",
                     flush=True,
                 )
@@ -903,7 +903,7 @@ def run_bench(args) -> Report:
         f"{'variant':>16} | {'budget':>6} | {'opt s':>6} | "
         f"{'offers':>14} | {'delivered':>18} | {'params Δ':>9} | "
         f"{'fresh rel':>9} | {'KL':>9} | "
-        f"{'catopt ms':>9} | {'vs eager':>8} | {'vs ind':>8}"
+        f"{'mlopt ms':>9} | {'vs eager':>8} | {'vs ind':>8}"
     )
     print(hdr)
     print("-" * len(hdr))
@@ -913,7 +913,7 @@ def run_bench(args) -> Report:
         e, ind, c = (
             ms.get("eager"),
             ms.get("inductor"),
-            ms.get("catopt"),
+            ms.get("mlopt"),
         )
         p_in = rec.get("params_in") or rec.get("params_model") or 0
         p_out = rec.get("params_delivered") or 0
@@ -949,7 +949,7 @@ def run_bench(args) -> Report:
     for c in cells:
         ms = c.medians
         cats = [
-            (n, ms[n]) for n in ms if n.startswith("catopt") and ms[n]
+            (n, ms[n]) for n in ms if n.startswith("mlopt") and ms[n]
         ]
         if cats and ms.get("inductor"):
             n, t = min(cats, key=lambda kv: kv[1])
@@ -974,7 +974,7 @@ def run_bench(args) -> Report:
                 if best
                 else f"{len(delivered)} cells shipped derived params"
             ),
-            metric="best catopt / inductor",
+            metric="best mlopt / inductor",
             value=best[1] if best else None,
             evidence={
                 "cells_with_delivered_params": len(delivered),
@@ -1070,7 +1070,7 @@ def main() -> None:
         "--ckpt",
         default=None,
         help="checkpoint path — default resolves "
-        "$XDG_CACHE_HOME/catopt/stories15M.bin then /tmp (fetch.py)",
+        "$XDG_CACHE_HOME/mlopt/stories15M.bin then /tmp (fetch.py)",
     )
     ap.add_argument(
         "--prompts",
@@ -1086,7 +1086,7 @@ def main() -> None:
         "(0 disables)",
     )
     ap.add_argument(
-        "--catopt-inductor",
+        "--mlopt-inductor",
         default="1",
         help="also compile each delivered module (0 disables)",
     )

@@ -1,6 +1,6 @@
 """Measure whether the hand-written pairing coordination is optimal.
 
-``EGraph.extract_paired`` (``catopt_core.egraph.extract``) is the
+``EGraph.extract_paired`` (``mlopt_core.egraph.extract``) is the
 non-local *coordination* mechanism for the product law.  Per-class
 greedy extraction cannot see that ``k`` members each choosing
 ``split_i(fused)`` share ONE fused GEMM, so the heuristic forces every
@@ -41,17 +41,17 @@ import itertools
 import random
 from typing import Any
 
-from catopt_core.cost import (
+from mlopt_core.cost import (
     count_cost,
     dag_cost,
     executor_cost_for,
     flops_cost,
     launch_aware_cost,
 )
-from catopt_core.egraph import EGraph
-from catopt_core.ir import Op, Param, TensorType, Var
-from catopt_core.laws import ALL_RULES
-from catopt_core.laws.pairing import pair_shared_input_linears
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import Op, Param, TensorType, Var
+from mlopt_core.laws import ALL_RULES
+from mlopt_core.laws.pairing import pair_shared_input_linears
 
 #: Terms priced at or above this are provably ill-typed (the models
 #: charge ``_INVALID_COST`` = 1e15); such draws are reported, not

@@ -1,4 +1,4 @@
-"""Tests for :mod:`catopt_orchestrator.autotune` — measured autotuning
+"""Tests for :mod:`mlopt_orchestrator.autotune` — measured autotuning
 over the lowering paths."""
 
 from __future__ import annotations
@@ -6,28 +6,28 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 
-import catopt_orchestrator.autotune as at_mod
-import catopt_torch.calibrate as cal_mod
+import mlopt_orchestrator.autotune as at_mod
+import mlopt_torch.calibrate as cal_mod
 
 import pytest
 pytestmark = pytest.mark.e2e  # boundary-purpose file: crosses an external engine boundary
 import torch
 import torch.nn as nn
-from catopt_torch.calibrate import TargetProfile, shape_bucket
-from catopt_core.cost import fused_cost_for
-from catopt_core.failures import FailureClass
-from catopt_core.ir import Op, Param, TensorType, Var
-from catopt_core.ports import TimingResult
-from catopt_orchestrator.autotune import CandidateUnavailableError
+from mlopt_torch.calibrate import TargetProfile, shape_bucket
+from mlopt_core.cost import fused_cost_for
+from mlopt_core.failures import FailureClass
+from mlopt_core.ir import Op, Param, TensorType, Var
+from mlopt_core.ports import TimingResult
+from mlopt_orchestrator.autotune import CandidateUnavailableError
 
 
-from catopt_torch.adapters import TorchSink
-from catopt_torch.report import verify_module
-from catopt_orchestrator.optimize import Autotuned
-from catopt_orchestrator import Optimizer
+from mlopt_torch.adapters import TorchSink
+from mlopt_torch.report import verify_module
+from mlopt_orchestrator.optimize import Autotuned
+from mlopt_orchestrator import Optimizer
 
-from catopt_torch.autotune import TORCH_BUILDERS
-from catopt_torch.backend import TorchBackend
+from mlopt_torch.autotune import TORCH_BUILDERS
+from mlopt_torch.backend import TorchBackend
 
 
 class _MLP(nn.Module):
@@ -125,7 +125,7 @@ def test_batched_route_on_scan_model():
     """LinearRecurrence lowers to the batched carrier — the
     ``batched`` candidate reuses it and ``generic`` re-lowers the
     same term serially."""
-    from catopt_torch.models import LinearRecurrence
+    from mlopt_torch.models import LinearRecurrence
 
     torch.manual_seed(0)
     m = LinearRecurrence(dim=4, steps=8).eval()
@@ -427,7 +427,7 @@ def test_cuda_candidates():
     """CUDA input: ``cuda_graph`` should either time (batched
     carrier captured) or record an honest status — never a silent
     win."""
-    from catopt_torch.models import LinearRecurrence
+    from mlopt_torch.models import LinearRecurrence
 
     torch.manual_seed(0)
     m = LinearRecurrence(dim=8, steps=4).cuda().eval()

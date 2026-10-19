@@ -20,8 +20,8 @@ import pytest
 import torch
 import torch.nn as nn
 
-from catopt_core.attrs import ATTR_SCHEMA
-from catopt_torch.torch_bridge import (
+from mlopt_core.attrs import ATTR_SCHEMA
+from mlopt_torch.torch_bridge import (
     _ATEN_TO_IR,
     _IR_TO_TORCH,
     _torchvision_deform_conv2d,
@@ -45,7 +45,7 @@ def test_deform_conv2d_is_a_registered_bound_op():
 
 def test_deform_conv2d_binding_is_in_supported_ops():
     """The sink reports the op it can now lower (the gap's symptom)."""
-    from catopt_torch.adapters import TorchSink
+    from mlopt_torch.adapters import TorchSink
 
     assert "deform_conv2d" in TorchSink().supported_ops
 
@@ -74,7 +74,7 @@ def test_deform_conv2d_round_trip(masked):
     pytest.importorskip("torchvision")
     from torchvision.ops import DeformConv2d
 
-    from catopt_torch.adapters import TorchSink
+    from mlopt_torch.adapters import TorchSink
 
     torch.manual_seed(0)
 

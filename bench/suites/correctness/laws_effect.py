@@ -3,10 +3,10 @@
 Since the last e2e sweep, three law families entered the default
 search paths:
 
-* **LAYOUT_RULES** (``catopt_core.laws.layout``, in ``ALL_RULES``) —
+* **LAYOUT_RULES** (``mlopt_core.laws.layout``, in ``ALL_RULES``) —
   transpose migration through pointwise ops, product transposes, and
   the NT-GEMM bridge ``matmul(x, W.mT) ≡ linear(x, W)``.
-* **DECODE_LAWS** (``catopt_carriers.decode_laws``, wired into
+* **DECODE_LAWS** (``mlopt_carriers.decode_laws``, wired into
   ``CARRIER_LAWS`` in ``regime.py``) — ``cat(prefix_view(buf), new) ≡
   slice_scatter``, static ``index_select`` dedup, and the
   unsqueeze→expand→reshape head-repeat as an ``index_select``
@@ -30,21 +30,21 @@ One cell per family, each crafted so the family *should* pay:
   storage and are consumed as ``x @ W.t()`` / ``x @ W.transpose(0,1)``
   — both NT-bridge spellings.
 
-Per cell: eager / inductor / catopt(+inductor) variants, rule-fire
+Per cell: eager / inductor / mlopt(+inductor) variants, rule-fire
 evidence, extracted-term op census, equivalence verification
 (rel < 1e-4), benchkit timing.  Honest: a law that fires but isn't
 picked, or is picked but doesn't pay at runtime, is reported as such.
 
 Usage:
-    PYTHONPATH="packages/catopt-core/src:packages/catopt-torch/src:\
-packages/catopt-carriers/src:packages/catopt-orchestrator/src:." \
-        /tmp/catopt-cuda-venv/bin/python bench/suites/correctness/laws_effect.py \
+    PYTHONPATH="packages/mlopt-core/src:packages/mlopt-torch/src:\
+packages/mlopt-carriers/src:packages/mlopt-orchestrator/src:." \
+        /tmp/mlopt-cuda-venv/bin/python bench/suites/correctness/laws_effect.py \
         --device cuda
     .venv/bin/python bench/suites/correctness/laws_effect.py --device cpu --quick
 """
 # ruff: noqa: E402, RUF001, RUF003 -- ×, ·, → in strings/docstrings are
 # deliberate math notation; sys.path setup must precede the
-# benchkit/catopt imports (bench_omd2 convention).
+# benchkit/mlopt imports (bench_omd2 convention).
 
 from __future__ import annotations
 
@@ -60,17 +60,17 @@ sys.setrecursionlimit(400_000)
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from catopt_core.cost import flops_cost, launch_aware_cost
-from catopt_core.ir import IR, Op
-from catopt_orchestrator import Compositional, Optimizer
-from catopt_orchestrator.regime import (
+from mlopt_core.cost import flops_cost, launch_aware_cost
+from mlopt_core.ir import IR, Op
+from mlopt_orchestrator import Compositional, Optimizer
+from mlopt_orchestrator.regime import (
     Regime,
     build_egraph,
     regime_frontier,
 )
-from catopt_torch.backend import TorchBackend
-from catopt_torch.report import verify_equiv
-from catopt_torch.torch_bridge import ir_to_torch_module
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.report import verify_equiv
+from mlopt_torch.torch_bridge import ir_to_torch_module
 
 from bench.benchkit import (
     Case,
@@ -324,11 +324,11 @@ def _decode_cell(args, dev: torch.device) -> tuple[dict, Case]:
         opt_m = None
         rec["main_error"] = f"{type(e).__name__}: {e}"
 
-    catopt_decode = disp.executor_module("decode")
-    ok, rel = _verify(ref, catopt_decode, args_t)
+    mlopt_decode = disp.executor_module("decode")
+    ok, rel = _verify(ref, mlopt_decode, args_t)
     rec["decode_verified"], rec["decode_rel"] = ok, rel
     if not ok:
-        catopt_decode = None
+        mlopt_decode = None
     ok, rel = _verify(ref, scatter_mod, args_t)
     rec["scatter_verified"], rec["scatter_rel"] = ok, rel
     if not ok:
@@ -344,9 +344,9 @@ def _decode_cell(args, dev: torch.device) -> tuple[dict, Case]:
     if not ok:
         cm = None
     oci = None
-    if catopt_decode is not None and ct > 0:
+    if mlopt_decode is not None and ct > 0:
         oci, rec["decode_ind_status"] = try_compile(
-            catopt_decode, args_t, ct
+            mlopt_decode, args_t, ct
         )
         ok, rel = _verify(ref, oci, args_t)
         rec["decode_ind_verified"], rec["decode_ind_rel"] = ok, rel
@@ -357,10 +357,10 @@ def _decode_cell(args, dev: torch.device) -> tuple[dict, Case]:
     for vn, m in (
         ("eager", model),
         ("inductor", cm),
-        ("catopt_main", opt_m),
-        ("catopt_decode", catopt_decode),
-        ("catopt_decode+ind", oci),
-        ("catopt_scatter", scatter_mod),
+        ("mlopt_main", opt_m),
+        ("mlopt_decode", mlopt_decode),
+        ("mlopt_decode+ind", oci),
+        ("mlopt_scatter", scatter_mod),
     ):
         if m is not None:
             variants.append(Variant(vn, _fwd_stmt(m, args_t)))
@@ -514,10 +514,10 @@ def _cross_cell(args, dev: torch.device) -> tuple[dict, Case]:
     for vn, m in (
         ("eager", model),
         ("inductor", cm),
-        ("catopt_blocks", opt_b),
-        ("catopt_blocks+ind", obi),
-        ("catopt_cross", opt_c),
-        ("catopt_cross+ind", oci),
+        ("mlopt_blocks", opt_b),
+        ("mlopt_blocks+ind", obi),
+        ("mlopt_cross", opt_c),
+        ("mlopt_cross+ind", oci),
     ):
         if m is not None:
             variants.append(Variant(vn, _fwd_stmt(m, args_t)))
@@ -593,7 +593,7 @@ def _layout_cell(args, dev: torch.device) -> tuple[dict, Case]:
         rec["pairing_groups"] = st_m.get("pairing_groups")
         rec["census_extracted"] = _module_census(opt_m)
         ok, rel = _verify(ref, opt_m, args_t)
-        rec["catopt_verified"], rec["catopt_rel"] = ok, rel
+        rec["mlopt_verified"], rec["mlopt_rel"] = ok, rel
         if not ok:
             opt_m = None
     except Exception as e:
@@ -610,9 +610,9 @@ def _layout_cell(args, dev: torch.device) -> tuple[dict, Case]:
         cm = None
     oci = None
     if opt_m is not None and ct > 0:
-        oci, rec["catopt_ind_status"] = try_compile(opt_m, args_t, ct)
+        oci, rec["mlopt_ind_status"] = try_compile(opt_m, args_t, ct)
         ok, rel = _verify(ref, oci, args_t)
-        rec["catopt_ind_verified"], rec["catopt_ind_rel"] = ok, rel
+        rec["mlopt_ind_verified"], rec["mlopt_ind_rel"] = ok, rel
         if not ok:
             oci = None
 
@@ -620,8 +620,8 @@ def _layout_cell(args, dev: torch.device) -> tuple[dict, Case]:
     for vn, m in (
         ("eager", model),
         ("inductor", cm),
-        ("catopt", opt_m),
-        ("catopt+inductor", oci),
+        ("mlopt", opt_m),
+        ("mlopt+inductor", oci),
     ):
         if m is not None:
             variants.append(Variant(vn, _fwd_stmt(m, args_t)))
@@ -712,7 +712,7 @@ def run_bench(args) -> Report:
             "yes"
             if rec.get(
                 "cross_verified",
-                rec.get("decode_verified", rec.get("catopt_verified")),
+                rec.get("decode_verified", rec.get("mlopt_verified")),
             )
             else "NO"
         )
@@ -749,7 +749,7 @@ def run_bench(args) -> Report:
     for cell in cells:
         ms = cell.medians
         cats = [
-            (n, ms[n]) for n in ms if n.startswith("catopt") and ms[n]
+            (n, ms[n]) for n in ms if n.startswith("mlopt") and ms[n]
         ]
         if cats and ms.get("eager"):
             n, t = min(cats, key=lambda kv: kv[1])
@@ -760,7 +760,7 @@ def run_bench(args) -> Report:
         for r in recs
         if r.get("cross_verified")
         or r.get("decode_verified")
-        or r.get("catopt_verified")
+        or r.get("mlopt_verified")
     )
     findings = [
         Finding(
@@ -778,7 +778,7 @@ def run_bench(args) -> Report:
                 if best
                 else "no family beats eager"
             ),
-            metric="best catopt / eager",
+            metric="best mlopt / eager",
             value=best[1] if best else None,
         ),
         Finding(

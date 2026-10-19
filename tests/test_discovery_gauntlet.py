@@ -1,4 +1,4 @@
-"""Tests for the admission gauntlet (``catopt_discovery.evidence.run_gauntlet``).
+"""Tests for the admission gauntlet (``mlopt_discovery.evidence.run_gauntlet``).
 
 A stored declared object is not usable on the strength of
 reconstruction — it must clear the same adversarial gauntlet a
@@ -18,15 +18,15 @@ object must pass under its cond).
 import json
 
 import torch
-from catopt_core.egraph import EGraph, Rewrite
-from catopt_core.ir import Const, Op, TensorType, Var
-from catopt_core.laws import ALL_RULES
-from catopt_discovery import evidence as ev
-from catopt_discovery import object_synthesis as synth
-from catopt_discovery import oracle as vo
-from catopt_discovery import pipeline as pl
-from catopt_discovery.impact import TermCase, _cost_fn
-from catopt_discovery.shape_proposal import _sink
+from mlopt_core.egraph import EGraph, Rewrite
+from mlopt_core.ir import Const, Op, TensorType, Var
+from mlopt_core.laws import ALL_RULES
+from mlopt_discovery import evidence as ev
+from mlopt_discovery import object_synthesis as synth
+from mlopt_discovery import oracle as vo
+from mlopt_discovery import pipeline as pl
+from mlopt_discovery.impact import TermCase, _cost_fn
+from mlopt_discovery.shape_proposal import _sink
 
 _BY_NAME = {r.name: r for r in ALL_RULES}
 
@@ -1417,7 +1417,7 @@ def _guarded_chain_bank() -> list[Rewrite]:
 
 def _mint_chain(rounds: int = 1) -> tuple[list[Rewrite], list[Rewrite]]:
     """Mint the chain-bank composites; return ``(bank, derived)``."""
-    from catopt_core import meta
+    from mlopt_core import meta
 
     bank = _guarded_chain_bank()
     derived = meta.synthesize_rules(
@@ -1468,7 +1468,7 @@ def test_admit_transports_hooks_from_stored_parents(tmp_path):
     assert rule.check is not None and rule.derive is None
     # and it is a live rule — f(x) -> h(x) rewrites
     leaf = _v("leaf", 2, 2)
-    from catopt_core import meta
+    from mlopt_core import meta
 
     out = meta.apply_rewrite_at(rule, _p("f", leaf), ())
     assert out == _p("h", leaf)
@@ -1493,7 +1493,7 @@ def test_transport_is_transitive_through_syn_parents(tmp_path):
     rule, rec = ev.admit_object(conn, keys[deep[0].name])
     assert rec["transported"] == ["check"]
     leaf = _v("leaf", 2, 2)
-    from catopt_core import meta
+    from mlopt_core import meta
 
     assert meta.apply_rewrite_at(rule, _p("f", leaf), ()) == _p(
         "k", leaf
@@ -1575,7 +1575,7 @@ def _evaluable_premise_bank() -> list[Rewrite]:
 
 def _mint_sq_pow(bank: list[Rewrite]) -> Rewrite:
     """Mint ``square(x) -> pow(x,2)`` — the 2-premise composite."""
-    from catopt_core import meta
+    from mlopt_core import meta
 
     derived = meta.synthesize_rules(
         bank, fuel=400, rounds=1, numeric_check=False
@@ -1789,7 +1789,7 @@ def test_weak_premise_record_refuses_the_anchor(tmp_path):
 def test_premise_steps_verify_unit():
     """The audit's edges directly: no cert and a non-replayable cert
     both refuse; an axiom-only cert verifies without anchoring."""
-    from catopt_discovery.verifier import verify_law
+    from mlopt_discovery.verifier import verify_law
 
     ok, detail = ev._premise_steps_verify(None, {"comm_add"})
     assert not ok and "no certificate" in detail

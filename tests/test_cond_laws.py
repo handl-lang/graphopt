@@ -1,4 +1,4 @@
-"""Tests for the declarative condition DSL (``catopt_core.laws.cond``).
+"""Tests for the declarative condition DSL (``mlopt_core.laws.cond``).
 
 A law's side condition is the one part of a rewrite that used to be
 opaque code (``check=lambda bound: ...``), blocking the lemma-store
@@ -33,10 +33,10 @@ import functools
 import json
 
 import pytest
-from catopt_core.egraph import EGraph, Rewrite
-from catopt_core.ir import Const, Op, Param, TensorType, Var
-from catopt_core.laws import all_rules
-from catopt_core.laws.cond import (
+from mlopt_core.egraph import EGraph, Rewrite
+from mlopt_core.ir import Const, Op, Param, TensorType, Var
+from mlopt_core.laws import all_rules
+from mlopt_core.laws.cond import (
     as_check,
     compile_guard,
     cond_from_data,
@@ -46,12 +46,12 @@ from catopt_core.laws.cond import (
     eval_cond,
     eval_derive,
 )
-from catopt_core.laws.serialize import (
+from mlopt_core.laws.serialize import (
     law_from_data,
     law_to_data,
     missing_hooks,
 )
-from catopt_core.laws.tensor import (
+from mlopt_core.laws.tensor import (
     CHUNK_SINGLE,
     DISTRIBUTE_MUL,
     FACTOR_MUL,
@@ -76,7 +76,7 @@ from catopt_core.laws.tensor import (
     WEIGHT_FACTOR_LINEAR,
     _check_sum_keepdim,
 )
-from catopt_core.rulecache import ruleset_fingerprint
+from mlopt_core.rulecache import ruleset_fingerprint
 
 
 def _v(name, *shape):
@@ -981,8 +981,8 @@ def test_mm_addends_rank_ge2_requires_contraction_axis():
     leading-axis-padding argument accepted.  The minimal closure
     ``dim-eq(a, -2, b, -2)`` declines it and keeps every sound
     rank>=2 mixed-rank binding."""
-    from catopt_core.egraph.terms import _term_instantiate
-    from catopt_discovery import oracle as vo
+    from mlopt_core.egraph.terms import _term_instantiate
+    from mlopt_discovery import oracle as vo
 
     bad = {"W": _p("W", 4, 3), "a": _v("a", 3, 5), "b": _v("b", 1, 5)}
     assert not DISTRIBUTE_MUL.check(bad)
@@ -1085,8 +1085,8 @@ def test_gqa_absorb_repeat_requires_rank4_operands():
     (``Expected size for first two dimensions of batch2 tensor to be:
     [2, 6] but got: [2, 3]``).  The ``rank == 4`` clauses decline it.
     """
-    from catopt_core.egraph.terms import _term_instantiate
-    from catopt_discovery import oracle as vo
+    from mlopt_core.egraph.terms import _term_instantiate
+    from mlopt_discovery import oracle as vo
 
     # the measured counterexample: all repeat clauses pass, rank-3
     # leaves make the enable_gqa RHS ill-typed.
@@ -1202,7 +1202,7 @@ def test_bcast_and_reshape_out_specs():
 
 
 def _shape_helper(ref, bound):
-    from catopt_core.laws.cond import _shape
+    from mlopt_core.laws.cond import _shape
 
     return _shape(bound, ref)
 
@@ -1999,7 +1999,7 @@ class TestDeriveValueShape:
 
     ``("shape", T)`` reads the cost convention; ``("vshape", T)`` reads
     through the registered value-shape resolver
-    (:func:`catopt_core.typing.value_shape_of`), defaulting to the cost
+    (:func:`mlopt_core.typing.value_shape_of`), defaulting to the cost
     convention when nothing is registered.  A bound metavar may resolve
     to a carrier member whose true value shape differs from the cost
     model's state/map slot — the structural seam the residual survey
@@ -2007,7 +2007,7 @@ class TestDeriveValueShape:
     """
 
     def test_falls_back_to_the_cost_convention(self, monkeypatch):
-        import catopt_core.typing as ty
+        import mlopt_core.typing as ty
 
         monkeypatch.setattr(ty, "_VALUE_SHAPE", None)
         b = {"t": _v("t", 2, 3)}
@@ -2020,7 +2020,7 @@ class TestDeriveValueShape:
         }
 
     def test_declines_without_a_resolver(self, monkeypatch):
-        import catopt_core.typing as ty
+        import mlopt_core.typing as ty
 
         monkeypatch.setattr(ty, "_VALUE_SHAPE", None)
         # an unshaped term: the fallback is not a tuple, so the
@@ -2028,7 +2028,7 @@ class TestDeriveValueShape:
         assert eval_derive({"S": ("vshape", "t")}, {}) is None
 
     def test_resolves_with_a_registered_resolver(self, monkeypatch):
-        import catopt_core.typing as ty
+        import mlopt_core.typing as ty
 
         monkeypatch.setattr(ty, "_VALUE_SHAPE", lambda _t: (9, 9))
         b = {"t": _v("t", 2, 3)}
@@ -2041,7 +2041,7 @@ class TestDeriveValueShape:
         }
 
     def test_resolver_returning_non_tuple_declines(self, monkeypatch):
-        import catopt_core.typing as ty
+        import mlopt_core.typing as ty
 
         monkeypatch.setattr(ty, "_VALUE_SHAPE", lambda _t: None)
         assert (
@@ -2050,7 +2050,7 @@ class TestDeriveValueShape:
         )
 
     def test_composes_as_a_shape_spec(self, monkeypatch):
-        import catopt_core.typing as ty
+        import mlopt_core.typing as ty
 
         monkeypatch.setattr(
             ty,
@@ -2074,7 +2074,7 @@ class TestDeriveValueShape:
         )
 
     def test_vshape_spec_dispatch_and_declines(self, monkeypatch):
-        import catopt_core.typing as ty
+        import mlopt_core.typing as ty
 
         monkeypatch.setattr(
             ty,

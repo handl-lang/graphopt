@@ -1,11 +1,11 @@
 /** The game layer — boards, players, and learned priors.
  *
- * Plan 0028 §D5.  `catopt_discovery.engine` is the `Board` protocol
+ * Plan 0028 §D5.  `mlopt_discovery.engine` is the `Board` protocol
  * (a program, a legal move set, a referee) plus the generic
  * `run_episode` / `train_policy` / `evaluate` drivers;
- * `catopt_discovery.players` is `LinearPolicy`, the learned arm; and
- * `python -m catopt_discovery.play --domain meta|joint|search|torch|gen|open`
- * is the registry + CLI.  `catopt_discovery.meta_arena` is the
+ * `mlopt_discovery.players` is `LinearPolicy`, the learned arm; and
+ * `python -m mlopt_discovery.play --domain meta|joint|search|torch|gen|open`
+ * is the registry + CLI.  `mlopt_discovery.meta_arena` is the
  * mid-search construction board — `fire` / `saturate` / `declare` /
  * `claim` / `extract`.
  *

@@ -15,12 +15,12 @@ export interface Refusal {
 export class Honest {
   items: Refusal[] = [
     {
-      text: "Claim under test: trained checkpoint weights hide exact structure catopt can exploit. Every hypothesis class was probed — Toeplitz/displacement rank, H-matrix, Kronecker-sum, cross-layer duplicates, equivariance, low-degree polynomials.",
+      text: "Claim under test: trained checkpoint weights hide exact structure mlopt can exploit. Every hypothesis class was probed — Toeplitz/displacement rank, H-matrix, Kronecker-sum, cross-layer duplicates, equivariance, low-degree polynomials.",
       number:
         "0 relational hits · full column rank · 0 aligned · minimal polynomial = full degree (288 distinct eigenvalues) · structural compression kills quality (ppl 5.03 → 214)",
       opts: ["weight compression", "graph-level rewriting", "the four dimensions"],
       ok: "weight compression",
-      why: "The door is closed (ADR 0001): weights are information-dense at the bit level. catopt's value is graph-level — the ADR narrowed the project's scope rather than extending it.",
+      why: "The door is closed (ADR 0001): weights are information-dense at the bit level. mlopt's value is graph-level — the ADR narrowed the project's scope rather than extending it.",
       picked: "",
     },
     {

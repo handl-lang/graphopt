@@ -16,15 +16,15 @@ gauntlet — the guarded object faces the same gates, nothing weakened.
 """
 
 import torch
-from catopt_core.egraph import Rewrite
-from catopt_core.ir import Op, TensorType, Var
-from catopt_core.laws import ALL_RULES
-from catopt_core.laws.cond import cond_to_data
-from catopt_core.laws.serialize import law_from_data, missing_hooks
-from catopt_discovery import evidence as ev
-from catopt_discovery import object_synthesis as obs
-from catopt_discovery.impact import TermCase, _cost_fn
-from catopt_discovery.shape_proposal import _sink
+from mlopt_core.egraph import Rewrite
+from mlopt_core.ir import Op, TensorType, Var
+from mlopt_core.laws import ALL_RULES
+from mlopt_core.laws.cond import cond_to_data
+from mlopt_core.laws.serialize import law_from_data, missing_hooks
+from mlopt_discovery import evidence as ev
+from mlopt_discovery import object_synthesis as obs
+from mlopt_discovery.impact import TermCase, _cost_fn
+from mlopt_discovery.shape_proposal import _sink
 
 
 def _p(op: str, *args, **attrs) -> Op:
@@ -439,7 +439,7 @@ def _view_out_spec(op: str, operand, attrs: dict):
 
 def _view_commute_preds(lhs, rhs) -> list:
     """The view-commute predicates the widened bank adds over a pattern."""
-    from catopt_discovery import oracle as lvo
+    from mlopt_discovery import oracle as lvo
 
     mvs = obs._mv_names(lhs, rhs)
     nodes = [n for n in lvo._view_nodes([lhs, rhs]) if n.args]

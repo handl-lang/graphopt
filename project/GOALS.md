@@ -17,19 +17,19 @@ object language itself grows.
 Not a night's deliverable.  Tonight only *unblocks* it.  **No artifact
 below may be presented as G\* being met.**
 
-## G0 — the handl ↔ catopt boundary spike (plan 0029)
+## G0 — the handl ↔ mlopt boundary spike (plan 0029)
 
 Answer four questions with measurements and produce a decision.
 
 | q | question | pass criterion | artifact |
 |---|---|---|---|
-| **Q0** | can catopt's **language** be expressed as handl data? | one catopt law encoded as a `TransformDef` + one shape as `AstShapeDef`; merges; handl's `RewriteEngine` fires it; result matches catopt's own `apply_rule` on the same input | retro + the fragment files |
-| **Q1** | can a **tensor value** cross the boundary? | one catopt op registered as a handl **host function**; a small tensor term evaluates through handl; dtype/shape/device intact and fp64 agreement with catopt's `eval_term` | retro with the numbers |
-| **Q3** | which integration direction? | one of (A) catopt embeds handl (PyO3 peer) or (B) handl drives catopt is buildable in catopt's CI **and** has a named **seam test** | retro + the seam-test sketch |
+| **Q0** | can mlopt's **language** be expressed as handl data? | one mlopt law encoded as a `TransformDef` + one shape as `AstShapeDef`; merges; handl's `RewriteEngine` fires it; result matches mlopt's own `apply_rule` on the same input | retro + the fragment files |
+| **Q1** | can a **tensor value** cross the boundary? | one mlopt op registered as a handl **host function**; a small tensor term evaluates through handl; dtype/shape/device intact and fp64 agreement with mlopt's `eval_term` | retro with the numbers |
+| **Q3** | which integration direction? | one of (A) mlopt embeds handl (PyO3 peer) or (B) handl drives mlopt is buildable in mlopt's CI **and** has a named **seam test** | retro + the seam-test sketch |
 | **Q2** | what does the boundary cost? | host-fn dispatch does **not** dominate **rewrite throughput** (same order of magnitude vs in-process); exec timing is informational | retro with both timings |
 
 **Decision the spike must produce**: `go (A)` · `go (B)` · `split`
-(handl owns language+rewrite+typecheck; catopt owns the tensor exec
+(handl owns language+rewrite+typecheck; mlopt owns the tensor exec
 interpretation) · `no-go`.  A failed question with a **named gap** is a
 successful result; a vague failure is not.
 
@@ -76,32 +76,32 @@ committed to its branch before anything else.
 
 ## Night status — 2026-10-14/15
 
-### G0 — the handl ↔ catopt boundary spike: **DONE**
+### G0 — the handl ↔ mlopt boundary spike: **DONE**
 
 | q | result | artifact |
 |---|---|---|
-| **Q0** | **PASS, unqualified** — catopt's vocabulary assembles as handl data, and after closing two gaps (the leaf step; the `pass:node_kind:priority` rule collision) the **whole bank loads: 83 laws** in `lang.transforms`, with the three minted leaf kinds declared | catopt `8de8cb5` + `8d5b47d` + `5ca8aef`; handl `b20b978a` + `9372bd32`; retro `retros/handl-q0-language-as-data.md` |
+| **Q0** | **PASS, unqualified** — mlopt's vocabulary assembles as handl data, and after closing two gaps (the leaf step; the `pass:node_kind:priority` rule collision) the **whole bank loads: 83 laws** in `lang.transforms`, with the three minted leaf kinds declared | mlopt `8de8cb5` + `8d5b47d` + `5ca8aef`; handl `b20b978a` + `9372bd32`; retro `retros/handl-q0-language-as-data.md` |
 | **Q1a** | **yes, by reference** — `TaggedValue::Resource(Rc<ForeignResource>)`: an opaque pointer + finalizer, no copy | retro `retros/handl-q1-tensor-crossing.md` |
 | **Q1b** | **the seam is JSON-valued** — `Function::call(&[Value]) -> Result<Value>` with `Value = serde_json::Value`; a `Resource`'s JSON encoding is a *debug* process-local pointer (`{"__resource__": {"ptr": n}}`), dangling across processes | same retro |
-| **Q3** | **(A) catopt embeds handl as an optional peer** (the `catopt-native` pattern); (B) sequenced, not rejected | retro `retros/handl-q3-integration-direction.md` |
+| **Q3** | **(A) mlopt embeds handl as an optional peer** (the `mlopt-native` pattern); (B) sequenced, not rejected | retro `retros/handl-q3-integration-direction.md` |
 | **Q2** | **not applicable as posed** — v1 has no host-fn dispatch; the measured cost is the fragment load, which is instant | retro `retros/handl-q2-boundary-cost.md` |
 
-**Spike decision: `go (A)` — catopt embeds handl as an optional peer,
+**Spike decision: `go (A)` — mlopt embeds handl as an optional peer,
 language-only in v1** (fragments in, terms out; no tensors across).
 That is what the measurements support, and it is what ADR 0011 already
 assumes.
 
 **And the gate is met**: plan 0030's step 1 — *does a rewrite fire?* — is
-**measured yes** (handl `82194954`): a catopt law fires through handl's
-`RewriteEngine` and produces exactly what catopt's own engine produces.
+**measured yes** (handl `82194954`): a mlopt law fires through handl's
+`RewriteEngine` and produces exactly what mlopt's own engine produces.
 So the peer is worth building, and "handl is the kernel" now rests on an
 executed rewrite rather than a load.
 
 Two representational requirements were found and fixed on the way, both
-in catopt: `when` must fold into `And([...])` (handl's field is ONE
+in mlopt: `when` must fold into `And([...])` (handl's field is ONE
 condition), and enum variants must be spelled as **YAML tags** under
 `serde_yaml`, not JSON maps.  One residue is named: the leaf step
-(`{"catopt:leaf": …}`) has no `RewriteStep` counterpart.
+(`{"mlopt:leaf": …}`) has no `RewriteStep` counterpart.
 
 ### G1 — supporting work
 
@@ -111,7 +111,7 @@ condition), and enum variants must be spelled as **YAML tags** under
 | `scripts/gates.sh` | **landed** (`1bbe13d`); the **serial** default (`NP=1`, `ed86dd4`) is now *confirmed by measurement* — the `-n 2` arm did not finish a 30-min box (2.7× further, but no completed win) |
 | **ADR 0011** (canonical representation) | **done** (`78ce874`) — the calculus for laws, the op-graph for execution |
 | ADR 0009 corrected | **done** (`0446e73`) — most of the "ports to add" already exist (`Engine` in core; `Environment`/`Reward` as `Board`/`Report`; `Calculus` is data, not a port) |
-| docs in both repos | **done** — handl `337b2c83` (`docs/explanation/kits-and-manifests.md`: the per-file data path + the catopt example); catopt `b9d0e7c` (`docs/mechanism.md`: the kernel, and the platform next door) |
+| docs in both repos | **done** — handl `337b2c83` (`docs/explanation/kits-and-manifests.md`: the per-file data path + the mlopt example); mlopt `b9d0e7c` (`docs/mechanism.md`: the kernel, and the platform next door) |
 | **full-suite / NP measurement** | **done** — both arms run to a 30-min box on an **uncontended** 11 GB / 16-core host (load ~1.6), whole-tree RSS sampled from `/proc`: **neither finished.**  Serial reached **36%** (2,304/6,372 tests; peak **10,320 MB** tree-summed); `-n 2` + `TORCHINDUCTOR_COMPILE_THREADS=2` reached **98%** (6,264/6,372; peak **8,814 MB**).  So `-n 2` is **2.72× further in the same wall time** — but no *completed* wall-time win, so `gates.sh` stays **serial** (`NP=1`); the table is in `AGENTS.md`.  The wall is dominated by **unmarked** tests, not the six `slow` ones: the discovery "held-out-claim" fixtures (module-scoped `measured` in `test_discovery_open_{learned,prior}` / `test_discovery_meta_prior` / `test_discovery_open_game`, ~15 min each) and the e-graph saturation tests (`test_square_rsqrt_laws::test_every_miss_spelling_reaches_rms_norm`, `max_nodes=60_000`).  The RSS column over-counts shared pages (the serial peak is a ~14-process fan-out each `mmap`ing the 419 MB `stories110M.bin`); real headroom stayed ≥ 4.7 GB.  (My first diagnosis was wrong: two runs "died at 36%" — they were alive; `-q` progress is block-buffered and `ps \| grep` matched the wrapper.  Corrected `5077e00`.) |
 
 ### G2 — the chain
@@ -120,7 +120,7 @@ condition), and enum variants must be spelled as **YAML tags** under
 representation, written)` → `0009 stage 4 (the calculus package)`, now
 **unblocked in principle**: the decision is `go (A)`, and the remaining
 gate for stage 4 is ADR 0008's gate 3 (does search *reach* `loop`-headed
-forms), which is a catopt-side measurement, not a boundary one.  **Gate 3
+forms), which is a mlopt-side measurement, not a boundary one.  **Gate 3
 is now PASSED** (`lab/bridge/form_propose.py`, retro
 `project/retros/gate3-form-level-proposer.md`): the e-graph-oracle
 anti-unifier synthesises one step schema, emits `unroll(step,n)` per
@@ -159,17 +159,17 @@ affected figures were discarded rather than reported.
 
 | item | result |
 |---|---|
-| **a rewrite fires** (plan 0030 step 1 — the gate on the peer) | **PASS**: `assoc_add` executes through handl's `RewriteEngine` (one rewrite, result `add(add(a,b),c)`), and catopt's own `EGraph.apply_rule` produces the same member on the same term.  The two engines agree.  handl `82194954` |
-| **the leaf + collision gaps** | **closed** — a leaf maps to `!Fresh` / `!Create` of a declared kind, and rules get distinct priorities per `(pass, node_kind)`; the **whole bank loads (83 laws)**.  catopt `5ca8aef`, handl `9372bd32` |
+| **a rewrite fires** (plan 0030 step 1 — the gate on the peer) | **PASS**: `assoc_add` executes through handl's `RewriteEngine` (one rewrite, result `add(add(a,b),c)`), and mlopt's own `EGraph.apply_rule` produces the same member on the same term.  The two engines agree.  handl `82194954` |
+| **the leaf + collision gaps** | **closed** — a leaf maps to `!Fresh` / `!Create` of a declared kind, and rules get distinct priorities per `(pass, node_kind)`; the **whole bank loads (83 laws)**.  mlopt `5ca8aef`, handl `9372bd32` |
 | **plan 0030** | written (`1382f19`); step 1 **DONE**, so the optional peer (step 2) is justified rather than speculative |
 | **ADR 0008 gate 3** | given a **protocol** — one command, one criterion, with a negative result as valuable as a positive one (`337a839`).  Not run: the box was busy with a full suite |
-| **coverage ratchet** | verified for the changed module: `catopt_discovery/handl.py` is **100%** (117 stmts, 50 branches, 0 missed) — the floor is safe |
-| **docs** | both repos updated with the rewrite result (catopt `docs/mechanism.md`; handl `docs/explanation/kits-and-manifests.md`) |
+| **coverage ratchet** | verified for the changed module: `mlopt_discovery/handl.py` is **100%** (117 stmts, 50 branches, 0 missed) — the floor is safe |
+| **docs** | both repos updated with the rewrite result (mlopt `docs/mechanism.md`; handl `docs/explanation/kits-and-manifests.md`) |
 
-| **the differential rewrite check** | **new asset**: catopt's engine vs handl's over the whole bank — **19 compared, 19 agree, 0 disagree** (83 accounted for; the rest reported with reasons).  Two findings: root-eliminating laws cannot be expressed (handl's `Declarative` always creates a node), and 19 guards are shape-sensitive enough to raise on a synthesized term.  `lab/audit/handl_differential.py` + a pinning test (`project/retros/handl-differential-rewrite-check.md`) |
+| **the differential rewrite check** | **new asset**: mlopt's engine vs handl's over the whole bank — **19 compared, 19 agree, 0 disagree** (83 accounted for; the rest reported with reasons).  Two findings: root-eliminating laws cannot be expressed (handl's `Declarative` always creates a node), and 19 guards are shape-sensitive enough to raise on a synthesized term.  `lab/audit/handl_differential.py` + a pinning test (`project/retros/handl-differential-rewrite-check.md`) |
 
 **One caveat worth carrying forward**: the `priority` field is the first
-place handl's schema demanded something catopt does not have (an order),
+place handl's schema demanded something mlopt does not have (an order),
 and it is currently supplied as a *load-time disambiguator* that means
 nothing semantically.  Plan 0030 step 4 exists so it does not ossify
 into an implied meaning.
@@ -182,7 +182,7 @@ The weight-space lane's measured refusal had two named blockers; the
 op-set one is now **closed**:
 
 - `sqrt`/`rsqrt` landed in the derive DSL
-  (`catopt_core/laws/cond.py` `_DUNOPS`, strict: negative/non-positive
+  (`mlopt_core/laws/cond.py` `_DUNOPS`, strict: negative/non-positive
   declines) and in the synthesizer's search bank
   (`dspec_synth` `UNOPS` += `sqrt`/`rsqrt`, `BINOPS` += `fdiv`).
 - Probe delta (`lab/probes/weightspace_fold_probe.py`, new gate 2c):
@@ -352,11 +352,11 @@ Verdicts: the 4 conv anchors + `batch_norm_expand` **enabled-but-opt-in**;
 the other 56 conv rules refused; `DEFAULT` unchanged.
 Retro: `retros/enablement-floor.md`.
 
-## Session — 2026-10-19 (b): catopt-kit — the modular handl composition
+## Session — 2026-10-19 (b): mlopt-kit — the modular handl composition
 
-The `go (A)` direction ("catopt embeds handl as an optional peer") gains
-its runtime seam: `packages/catopt-kit/` — a plain Rust library crate in
-a new root cargo workspace (catopt-native and lab/handl-peer excluded,
+The `go (A)` direction ("mlopt embeds handl as an optional peer") gains
+its runtime seam: `packages/mlopt-kit/` — a plain Rust library crate in
+a new root cargo workspace (mlopt-native and lab/handl-peer excluded,
 standalone as before). It assembles the canonical `Language` via
 `handl-kit-data-canonical`, installs it process-wide, binds the smallest
 honest engine set (`data`/`pratt`/`tree-walk` — no sdkgen/compile/lint/
@@ -364,7 +364,7 @@ lsp), and composes `host-tensor`'s 18-op surface as a `HandlModule` over
 `tensor_op_registry()` under the canonical fp host fns. A `ModuleLoader`
 wires `import "path"` / `.handl.toml` `[dependencies]` name resolution.
 
-**Verified** (`cargo test -p catopt-kit`, **12/12**): real `.hnl` matmul
+**Verified** (`cargo test -p mlopt-kit`, **12/12**): real `.hnl` matmul
 → `[[19,22],[43,50]]`; the result flows back as `TaggedValue::Tensor`
 (both `run`'s wire form decoded and `run_tagged`'s direct variant — no
 `Obj` fallback); conv2d + batch_norm smokes match the upstream spec
@@ -382,12 +382,12 @@ clones into — `subdir` naming the package root inside the clone) and
 folds, importing `host-tensor` *by name* through the bridge — plus
 `conv_bn_fold`, the minted rewrite's RHS evaluated (`s = γ·rsqrt(σ²+ε)`,
 `W′ = W∘ŝ′`, `b′ = b∘s + β − s∘μ`), and `bn_adjoint`/`bn_grad`.
-**Verified** (`cargo test -p catopt-kit`, **16/16**): `TaggedValue::
+**Verified** (`cargo test -p mlopt-kit`, **16/16**): `TaggedValue::
 Tensor` results and *exact* folded-vs-unfolded agreement on a dyadic
 fixture — the consumer proof of the premise-pay story below.
 **Env note**: tree-walk eval needs a >2 MiB test-thread stack —
 `.cargo/config.toml` sets `RUST_MIN_STACK = 32 MiB` (upstream carries
-the same knob). Retro: `retros/catopt-kit.md`.
+the same knob). Retro: `retros/mlopt-kit.md`.
 
 ### `FOLD_OPS`: the premise-pay leg flips — cost model sees compile-time folds (2026-10-19)
 
@@ -495,16 +495,16 @@ question).  Retro: `retros/joint-shape-schemata.md`.
 
 ## Session — 2026-10-20
 
-### catopt driving the kit: terms emit as `.hnl`, decisions costed through the runtime
+### mlopt driving the kit: terms emit as `.hnl`, decisions costed through the runtime
 
-The `catopt-kit` frontier closed: a catopt *term* — the same object the
+The `mlopt-kit` frontier closed: a mlopt *term* — the same object the
 e-graph rewrites — emits as a `.hnl` program and evaluates through the
 assembled runtime, and an optimization *decision* is priced by the kit
 itself rather than estimated at the term level.
 
 | piece | result | artifact |
 |---|---|---|
-| `hnl-run` subprocess door | `.hnl` → `serde_json` out; `--project` wires `.handl.toml`; `--repeat N` is the per-call cost hook | `packages/catopt-kit/src/bin/hnl-run.rs` + `tests/cli.rs` (5 tests) — `247691e` |
+| `hnl-run` subprocess door | `.hnl` → `serde_json` out; `--project` wires `.handl.toml`; `--repeat N` is the per-call cost hook | `packages/mlopt-kit/src/bin/hnl-run.rs` + `tests/cli.rs` (5 tests) — `247691e` |
 | term→`.hnl` bridge | generic `_OpSpec` data table over host-tensor's 18 ops; attrs marshal by `accepts`/`drop`/`arity`; leaves bind in a `do`-prelude (`{"shape","data"}` or `{"hnl"}`); outside-surface ops refuse by name | `lab/kit/term_hnl.py` — `49f9845` |
 | real artifact through the kit | `TorchSource` conv+BN export → `.hnl` → kit → torch-fp64 equal (**6.7e-16**) | `tests/test_kit_bridge.py` (8 tests, `e2e`) |
 | a law's two forms | `conv_channel_scale` via `apply_rewrite_at` — both forms evaluate **dyadic-exact-equal**; `dag_cost` credits the fold | same |
@@ -514,7 +514,7 @@ itself rather than estimated at the term level.
 **Carried finding — an upstream lexer gap**: handl does not read
 scientific notation; `1e-05` lexes as `1` `e` `-05` and *silently*
 evaluates to `1` in statement position. The emitter expands floats
-through `Decimal` so a catopt `eps` cannot change value across the
+through `Decimal` so a mlopt `eps` cannot change value across the
 boundary. Also measured: `dag_cost`'s param-only discount models
 compile-time folding the tree-walk runtime does not perform — the
 deployed-form measurement separates fold-once from run-every-call.
@@ -528,7 +528,7 @@ legs, premise-anchored derivable, `paid=1`, bounded firing footprint),
 and the premise family's opt-in status is its *own* measured economics,
 not the composite's — the same coherence `linear_channel_to_row_scale`
 set with SYMMETRY-gated parents.  Shipping is **verbatim**, a new class:
-`catopt_core.laws.minted` embeds the stored `syn_*` closure records and
+`mlopt_core.laws.minted` embeds the stored `syn_*` closure records and
 replays `meta._compose_guards` at import — louder than the store (a
 weak-resolving parent raises, never degrades).  `conv_bn_fold` lands in
 `CATEGORICAL_RULES` tagged FUSION → `ALL_RULES` 84 → `DEFAULT`;

@@ -1,6 +1,6 @@
 """Attr-schema contract tests — plan 0001 phase 1b.
 
-``catopt_core.attrs.ATTR_SCHEMA`` declares the canonical positional order
+``mlopt_core.attrs.ATTR_SCHEMA`` declares the canonical positional order
 per op; ``export_to_ir`` lands aten ``argN`` spellings in those names
 at the boundary, and ``Op.make`` validates at mint so a malformed term
 dies loudly at union time rather than silently at eval.  These tests
@@ -24,13 +24,13 @@ import pytest
 import torch
 import torch.nn.functional as F
 
-from catopt_core.attrs import (
+from mlopt_core.attrs import (
     ATTR_REQUIRED,
     ATTR_SCHEMA,
     attr_of,
 )
-from catopt_core.ir import Op, TensorType, Var
-from catopt_torch.torch_bridge import export_to_ir, ir_to_torch_module
+from mlopt_core.ir import Op, TensorType, Var
+from mlopt_torch.torch_bridge import export_to_ir, ir_to_torch_module
 
 _INT64_MAX = 2**63 - 1
 
@@ -480,7 +480,7 @@ class TestMintValidation:
 
     def test_canonical_terms_evaluate_through_bindings(self):
         # Canonical-spelled terms lower through the bindings.
-        from catopt_torch.torch_bridge import _IR_TO_TORCH
+        from mlopt_torch.torch_bridge import _IR_TO_TORCH
 
         out = _IR_TO_TORCH["transpose"](
             torch.arange(6).reshape(2, 3), dim0=0, dim1=1
@@ -498,7 +498,7 @@ class TestMintValidation:
     def test_slice_binding_reads_start_end_step(self):
         # The slice binding lowers through the canonical
         # ``start``/``end``/``step`` (no positional fallback).
-        from catopt_torch.torch_bridge import _IR_TO_TORCH
+        from mlopt_torch.torch_bridge import _IR_TO_TORCH
 
         x = torch.arange(12).reshape(3, 4)
         out = _IR_TO_TORCH["slice"](x, dim=1, start=0, end=4, step=2)
@@ -507,7 +507,7 @@ class TestMintValidation:
     def test_dropout_binding_reads_p_train(self):
         # export_to_ir always exports eval()-mode graphs, so the dropout
         # binding is a semantic identity reading p/train canonically.
-        from catopt_torch.torch_bridge import _IR_TO_TORCH
+        from mlopt_torch.torch_bridge import _IR_TO_TORCH
 
         x = torch.randn(4, 8)
         assert _IR_TO_TORCH["dropout"](x, p=0.5, train=True) is x

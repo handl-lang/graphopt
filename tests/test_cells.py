@@ -1,6 +1,6 @@
 """Tests for the cell store — the fragment-merged vocabulary.
 
-``catopt_core.cells`` is the unification of the project's five
+``mlopt_core.cells`` is the unification of the project's five
 cell spellings: the tests cover the record's validation, fragment
 assembly (conflict policies, alpha-dup reporting), the engine
 views (laws/objects/opdefs/handlers/ruleset), and the one-schema
@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 
 import pytest
-from catopt_core.cells import (
+from mlopt_core.cells import (
     Cell,
     CellStore,
     Fragment,
@@ -30,11 +30,11 @@ from catopt_core.cells import (
     spec_from_data,
     spec_to_data,
 )
-from catopt_core.egraph import Rewrite
-from catopt_core.ir import Op, Var
-from catopt_core.laws import ALL_RULES
-from catopt_core.laws.serialize import alpha_key
-from catopt_core.opdata import OpDef
+from mlopt_core.egraph import Rewrite
+from mlopt_core.ir import Op, Var
+from mlopt_core.laws import ALL_RULES
+from mlopt_core.laws.serialize import alpha_key
+from mlopt_core.opdata import OpDef
 
 
 def _rule(name: str, lhs, rhs, **kw) -> Rewrite:
@@ -252,7 +252,7 @@ class TestViews:
         assert store.handlers()["gen_0_k"]["kernel"] == "gen_0_k"
 
     def test_ruleset_fires_in_the_egraph(self):
-        from catopt_core.egraph import EGraph
+        from mlopt_core.egraph import EGraph
 
         store = self._store()
         eg = EGraph()
@@ -283,7 +283,7 @@ class TestCodec:
         v = Var(
             "x",
             __import__(
-                "catopt_core.ir", fromlist=["TensorType"]
+                "mlopt_core.ir", fromlist=["TensorType"]
             ).TensorType((4,)),
         )
         assert self._roundtrip(v) == v

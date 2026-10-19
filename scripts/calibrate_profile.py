@@ -6,7 +6,7 @@ on your machine" entry point: it writes a loadable
 ``TargetProfile`` JSON combining
 
 * the roofline/executor constants
-  :func:`catopt_torch.calibrate.calibrate` micro-benchmarks — peak
+  :func:`mlopt_torch.calibrate.calibrate` micro-benchmarks — peak
   FLOPS, memory bandwidth, kernel-launch and IR-dispatch overhead,
   batched-scan leaf-eval overhead, compiled-graph call overhead,
   and the per-op-class measured kernel table (``op_kernel_ns``);
@@ -14,10 +14,10 @@ on your machine" entry point: it writes a loadable
   ``lab/probes/executor_cost_probe.py`` derives — per-family geomean of
   ``measured_routed_ns / modeled_ns``, written into the profile's
   ``corrections`` table under each measured case's
-  :func:`~catopt_core.profile.shape_bucket`, so
-  :func:`~catopt_orchestrator.optimize.delivered_cost_for` and
+  :func:`~mlopt_core.profile.shape_bucket`, so
+  :func:`~mlopt_orchestrator.optimize.delivered_cost_for` and
   ``_carrier_upgrade`` consume them through the shipped
-  :func:`~catopt_core.profile.corrected_price_ns` contract.  This
+  :func:`~mlopt_core.profile.corrected_price_ns` contract.  This
   phase requires CUDA — the probe times CUDA kernels (fp64, the
   probe's methodology); ``--skip-executor-corrections`` produces a
   constants-only profile on any machine.
@@ -31,9 +31,9 @@ Usage::
 
 then, in the model's process::
 
-    from catopt_core.profile import TargetProfile
-    from catopt_orchestrator import Optimizer, delivered_cost_for
-    from catopt_torch.backend import TorchBackend
+    from mlopt_core.profile import TargetProfile
+    from mlopt_orchestrator import Optimizer, delivered_cost_for
+    from mlopt_torch.backend import TorchBackend
 
     profile = TargetProfile.load("calibrated_profile.json")
     opt = Optimizer(backend=TorchBackend())
@@ -61,14 +61,14 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from catopt_core.profile import save_profile
-from catopt_torch.calibrate import calibrate
+from mlopt_core.profile import save_profile
+from mlopt_torch.calibrate import calibrate
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import executor_cost_probe as ecp
-from catopt_orchestrator import Optimizer
-from catopt_torch.backend import TorchBackend
+from mlopt_orchestrator import Optimizer
+from mlopt_torch.backend import TorchBackend
 from law_wallclock import _cases
 
 
@@ -259,10 +259,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"persisted {save_profile(profile)}")
     print(
         "\nuse:\n"
-        "    from catopt_core.profile import TargetProfile\n"
-        "    from catopt_orchestrator import (\n"
+        "    from mlopt_core.profile import TargetProfile\n"
+        "    from mlopt_orchestrator import (\n"
         "        Optimizer, delivered_cost_for)\n"
-        "    from catopt_torch.backend import TorchBackend\n"
+        "    from mlopt_torch.backend import TorchBackend\n"
         f"    profile = TargetProfile.load({str(out)!r})\n"
         "    opt = Optimizer(backend=TorchBackend())\n"
         "    res = opt.search(model, x, "

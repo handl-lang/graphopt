@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mlopt-carriers"
+version = "0.1.0dev"
+description = "Semantic carriers for mlopt (om/omd/scan/trace lifts and executors)."
+requires-python = ">=3.11"
+dependencies = ["mlopt-core", "mlopt-torch", "mlopt-orchestrator", "torch>=2.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

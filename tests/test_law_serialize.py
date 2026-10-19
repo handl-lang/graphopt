@@ -1,11 +1,11 @@
-"""Tests for laws-as-data — ``catopt_core.laws.serialize`` + lemma store.
+"""Tests for laws-as-data — ``mlopt_core.laws.serialize`` + lemma store.
 
 The lemma-store seam: a law is a 2-cell — pattern pair, side
 condition, provenance — and with ``cond`` the whole record is JSON.
 This file pins:
 
 * the term codec at its canonical IR home
-  (``catopt_core.ir.term_to_data`` / ``term_from_data`` — the same
+  (``mlopt_core.ir.term_to_data`` / ``term_from_data`` — the same
   scheme ``rulecache`` persists, round-tripped over every shipped
   pattern);
 * the ``Rewrite`` record round-trip — ``law_to_data`` /
@@ -28,9 +28,9 @@ from __future__ import annotations
 import json
 
 import pytest
-from catopt_core.egraph import Certificate, EGraph, Rewrite
-from catopt_core.egraph.certs import CERT_FORMAT
-from catopt_core.ir import (
+from mlopt_core.egraph import Certificate, EGraph, Rewrite
+from mlopt_core.egraph.certs import CERT_FORMAT
+from mlopt_core.ir import (
     Const,
     Op,
     Param,
@@ -39,20 +39,20 @@ from catopt_core.ir import (
     term_from_data,
     term_to_data,
 )
-from catopt_core.laws import ALL_RULES
-from catopt_core.laws.serialize import (
+from mlopt_core.laws import ALL_RULES
+from mlopt_core.laws.serialize import (
     LAW_FORMAT,
     alpha_key,
     law_from_data,
     law_to_data,
     missing_hooks,
 )
-from catopt_core.laws.tensor import (
+from mlopt_core.laws.tensor import (
     FACTOR_MUL,
     SOFTMAX_FOLD,
 )
 
-from catopt_discovery import evidence as le
+from mlopt_discovery import evidence as le
 
 
 def _v(name, *shape):
@@ -169,7 +169,7 @@ def test_serializability_census_of_shipped_library():
             # a machine-minted composite shipped verbatim: its hooks
             # are code, but the *spec* of its guard is data — the
             # record's guard field (guard_pats + parents) rebuilds it
-            # deterministically (catopt_core.laws.minted).
+            # deterministically (mlopt_core.laws.minted).
             transported.append(rule.name)
         elif missing == ("derive",):
             need_derive.append(rule.name)

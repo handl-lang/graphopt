@@ -1,5 +1,5 @@
 """Tests for the ``softmax_fold`` law — the manual-softmax fold
-(:data:`catopt_core.laws.tensor.SOFTMAX_FOLD`).
+(:data:`mlopt_core.laws.tensor.SOFTMAX_FOLD`).
 
 The SECOND machine-discovered law admitted to the library (after
 ``select_mul``) — proposed by the law pipeline's pattern-recognition
@@ -34,30 +34,30 @@ Covered surface:
 from __future__ import annotations
 
 import torch
-from catopt_core.cost import backend_cost, dag_cost, executor_cost_for
-from catopt_core.egraph import EGraph, verify_certificate
-from catopt_core.ir import IR, Op, Param, TensorType, Var
-from catopt_core.laws import (
+from mlopt_core.cost import backend_cost, dag_cost, executor_cost_for
+from mlopt_core.egraph import EGraph, verify_certificate
+from mlopt_core.ir import IR, Op, Param, TensorType, Var
+from mlopt_core.laws import (
     DEFAULT,
     SIMPLIFICATION_RULES,
     SOFTMAX_FOLD,
     tags,
 )
-from catopt_core.laws.tensor import (
+from mlopt_core.laws.tensor import (
     _check_sum_keepdim,
     _derive_softmax_dim,
 )
-from catopt_core.meta import (
+from mlopt_core.meta import (
     instantiate_pattern,
     match_pattern,
     pattern_metavars,
 )
-from catopt_orchestrator import Optimizer
-from catopt_orchestrator.optimize import _lower_extracted
-from catopt_torch.adapters import TorchSink
-from catopt_torch.backend import TorchBackend
-from catopt_torch.models import ManualSoftmaxAttention
-from catopt_torch.torch_bridge import export_to_ir
+from mlopt_orchestrator import Optimizer
+from mlopt_orchestrator.optimize import _lower_extracted
+from mlopt_torch.adapters import TorchSink
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.models import ManualSoftmaxAttention
+from mlopt_torch.torch_bridge import export_to_ir
 
 _SINK = TorchSink()
 

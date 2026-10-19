@@ -1,5 +1,5 @@
-- id: "transform.catopt.comm_add"
-  pass: "catopt"
+- id: "transform.mlopt.comm_add"
+  pass: "mlopt"
   node_kind: "add"
   rule:
     !Declarative
@@ -9,7 +9,7 @@
         - 1
       - !KeepPath
         - 0
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -46,8 +46,8 @@
   when:
     !ChildCount 2
   priority: 1
-- id: "transform.catopt.comm_mul"
-  pass: "catopt"
+- id: "transform.mlopt.comm_mul"
+  pass: "mlopt"
   node_kind: "mul"
   rule:
     !Declarative
@@ -57,7 +57,7 @@
         - 1
       - !KeepPath
         - 0
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -94,8 +94,8 @@
   when:
     !ChildCount 2
   priority: 1
-- id: "transform.catopt.assoc_add"
-  pass: "catopt"
+- id: "transform.mlopt.assoc_add"
+  pass: "mlopt"
   node_kind: "add"
   rule:
     !Declarative
@@ -112,7 +112,7 @@
       - !KeepPath
         - 1
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -165,8 +165,8 @@
       kind: "add"
     - !ChildCount 2
   priority: 2
-- id: "transform.catopt.assoc_mul"
-  pass: "catopt"
+- id: "transform.mlopt.assoc_mul"
+  pass: "mlopt"
   node_kind: "mul"
   rule:
     !Declarative
@@ -183,7 +183,7 @@
       - !KeepPath
         - 1
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -236,14 +236,14 @@
       kind: "mul"
     - !ChildCount 2
   priority: 2
-- id: "transform.catopt.id_add"
-  pass: "catopt"
+- id: "transform.mlopt.id_add"
+  pass: "mlopt"
   node_kind: "add"
   rule:
     !Replace
     path:
       - 0
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -273,14 +273,14 @@
   when:
     !ChildCount 2
   priority: 3
-- id: "transform.catopt.id_mul"
-  pass: "catopt"
+- id: "transform.mlopt.id_mul"
+  pass: "mlopt"
   node_kind: "mul"
   rule:
     !Replace
     path:
       - 0
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -310,15 +310,15 @@
   when:
     !ChildCount 2
   priority: 3
-- id: "transform.catopt.double_neg"
-  pass: "catopt"
+- id: "transform.mlopt.double_neg"
+  pass: "mlopt"
   node_kind: "neg"
   rule:
     !Replace
     path:
       - 0
       - 0
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -355,8 +355,8 @@
       kind: "neg"
     - !ChildCount 1
   priority: 1
-- id: "transform.catopt.sub_to_add"
-  pass: "catopt"
+- id: "transform.mlopt.sub_to_add"
+  pass: "mlopt"
   node_kind: "sub"
   rule:
     !Declarative
@@ -369,7 +369,7 @@
         children:
           - !KeepPath
             - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -408,8 +408,8 @@
   when:
     !ChildCount 2
   priority: 1
-- id: "transform.catopt.silu_expand"
-  pass: "catopt"
+- id: "transform.mlopt.silu_expand"
+  pass: "mlopt"
   node_kind: "silu"
   rule:
     !Declarative
@@ -422,7 +422,7 @@
         children:
           - !KeepPath
             - 0
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -458,8 +458,8 @@
   when:
     !ChildCount 1
   priority: 1
-- id: "transform.catopt.silu_fold"
-  pass: "catopt"
+- id: "transform.mlopt.silu_fold"
+  pass: "mlopt"
   node_kind: "mul"
   rule:
     !Declarative
@@ -467,7 +467,7 @@
     children:
       - !KeepPath
         - 0
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -508,8 +508,8 @@
       kind: "sigmoid"
     - !ChildCount 2
   priority: 4
-- id: "transform.catopt.silu_mul_form"
-  pass: "catopt"
+- id: "transform.mlopt.silu_mul_form"
+  pass: "mlopt"
   node_kind: "mul"
   rule:
     !Declarative
@@ -529,7 +529,7 @@
                 - 0
       - !KeepPath
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -581,8 +581,8 @@
       kind: "silu"
     - !ChildCount 2
   priority: 5
-- id: "transform.catopt.softsign_fold"
-  pass: "catopt"
+- id: "transform.mlopt.softsign_fold"
+  pass: "mlopt"
   node_kind: "div"
   rule:
     !Declarative
@@ -590,7 +590,7 @@
     children:
       - !KeepPath
         - 0
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -634,8 +634,8 @@
       kind: "add"
     - !ChildCount 2
   priority: 1
-- id: "transform.catopt.square_expand"
-  pass: "catopt"
+- id: "transform.mlopt.square_expand"
+  pass: "mlopt"
   node_kind: "square"
   rule:
     !Declarative
@@ -645,7 +645,7 @@
         - 0
       - !KeepPath
         - 0
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -678,8 +678,8 @@
   when:
     !ChildCount 1
   priority: 1
-- id: "transform.catopt.pow_to_square"
-  pass: "catopt"
+- id: "transform.mlopt.pow_to_square"
+  pass: "mlopt"
   node_kind: "pow"
   rule:
     !Declarative
@@ -687,7 +687,7 @@
     children:
       - !KeepPath
         - 0
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -720,8 +720,8 @@
   when:
     !ChildCount 2
   priority: 1
-- id: "transform.catopt.square_to_pow"
-  pass: "catopt"
+- id: "transform.mlopt.square_to_pow"
+  pass: "mlopt"
   node_kind: "square"
   rule:
     !Declarative
@@ -730,11 +730,11 @@
       - !KeepPath
         - 0
       - !Create
-        kind: "catopt:const"
+        kind: "mlopt:const"
         payload:
           value: 2
         children: []
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -768,8 +768,8 @@
   when:
     !ChildCount 1
   priority: 2
-- id: "transform.catopt.mul_square"
-  pass: "catopt"
+- id: "transform.mlopt.mul_square"
+  pass: "mlopt"
   node_kind: "mul"
   rule:
     !Declarative
@@ -777,7 +777,7 @@
     children:
       - !KeepPath
         - 0
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -811,8 +811,8 @@
   when:
     !ChildCount 2
   priority: 6
-- id: "transform.catopt.select_mul"
-  pass: "catopt"
+- id: "transform.mlopt.select_mul"
+  pass: "mlopt"
   node_kind: "mul"
   rule:
     !Declarative
@@ -827,7 +827,7 @@
           - !KeepPath
             - 1
             - 0
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -897,14 +897,14 @@
       kind: "select"
     - !ChildCount 2
   priority: 7
-- id: "transform.catopt.transpose_noop"
-  pass: "catopt"
+- id: "transform.mlopt.transpose_noop"
+  pass: "mlopt"
   node_kind: "transpose"
   rule:
     !Replace
     path:
       - 0
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -939,14 +939,14 @@
   when:
     !ChildCount 1
   priority: 1
-- id: "transform.catopt.chunk_single"
-  pass: "catopt"
+- id: "transform.mlopt.chunk_single"
+  pass: "mlopt"
   node_kind: "chunk"
   rule:
     !Replace
     path:
       - 0
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -981,8 +981,8 @@
   when:
     !ChildCount 1
   priority: 1
-- id: "transform.catopt.mul_unsq_pad_l"
-  pass: "catopt"
+- id: "transform.mlopt.mul_unsq_pad_l"
+  pass: "mlopt"
   node_kind: "mul"
   rule:
     !Declarative
@@ -993,7 +993,7 @@
         - 0
       - !KeepPath
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -1051,8 +1051,8 @@
       kind: "unsqueeze"
     - !ChildCount 2
   priority: 8
-- id: "transform.catopt.mul_unsq_pad_r"
-  pass: "catopt"
+- id: "transform.mlopt.mul_unsq_pad_r"
+  pass: "mlopt"
   node_kind: "mul"
   rule:
     !Declarative
@@ -1063,7 +1063,7 @@
       - !KeepPath
         - 1
         - 0
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -1121,8 +1121,8 @@
       kind: "unsqueeze"
     - !ChildCount 2
   priority: 9
-- id: "transform.catopt.sub_unsq_pad_l"
-  pass: "catopt"
+- id: "transform.mlopt.sub_unsq_pad_l"
+  pass: "mlopt"
   node_kind: "sub"
   rule:
     !Declarative
@@ -1133,7 +1133,7 @@
         - 0
       - !KeepPath
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -1191,8 +1191,8 @@
       kind: "unsqueeze"
     - !ChildCount 2
   priority: 2
-- id: "transform.catopt.mul_unsq_nat"
-  pass: "catopt"
+- id: "transform.mlopt.mul_unsq_nat"
+  pass: "mlopt"
   node_kind: "mul"
   rule:
     !Declarative
@@ -1207,7 +1207,7 @@
           - !KeepPath
             - 1
             - 0
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -1271,8 +1271,8 @@
       kind: "unsqueeze"
     - !ChildCount 2
   priority: 10
-- id: "transform.catopt.mul_reshape_inert_l"
-  pass: "catopt"
+- id: "transform.mlopt.mul_reshape_inert_l"
+  pass: "mlopt"
   node_kind: "mul"
   rule:
     !Declarative
@@ -1283,7 +1283,7 @@
         - 0
       - !KeepPath
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -1335,8 +1335,8 @@
       kind: "reshape"
     - !ChildCount 2
   priority: 11
-- id: "transform.catopt.softmax_fold"
-  pass: "catopt"
+- id: "transform.mlopt.softmax_fold"
+  pass: "mlopt"
   node_kind: "div"
   rule:
     !Declarative
@@ -1345,7 +1345,7 @@
       - !KeepPath
         - 0
         - 0
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -1417,8 +1417,8 @@
       kind: "sum"
     - !ChildCount 2
   priority: 2
-- id: "transform.catopt.glu_fold"
-  pass: "catopt"
+- id: "transform.mlopt.glu_fold"
+  pass: "mlopt"
   node_kind: "mul"
   rule:
     !Declarative
@@ -1427,7 +1427,7 @@
       - !KeepPath
         - 0
         - 0
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -1494,8 +1494,8 @@
       kind: "sigmoid"
     - !ChildCount 2
   priority: 12
-- id: "transform.catopt.rms_norm_fold"
-  pass: "catopt"
+- id: "transform.mlopt.rms_norm_fold"
+  pass: "mlopt"
   node_kind: "mul"
   rule:
     !Declarative
@@ -1506,7 +1506,7 @@
         - 0
       - !KeepPath
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -1606,8 +1606,8 @@
       kind: "mul"
     - !ChildCount 2
   priority: 13
-- id: "transform.catopt.rms_norm_fold_nogain"
-  pass: "catopt"
+- id: "transform.mlopt.rms_norm_fold_nogain"
+  pass: "mlopt"
   node_kind: "mul"
   rule:
     !Declarative
@@ -1615,7 +1615,7 @@
     children:
       - !KeepPath
         - 0
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -1704,8 +1704,8 @@
       kind: "rsqrt"
     - !ChildCount 2
   priority: 14
-- id: "transform.catopt.div_sqrt_to_rsqrt"
-  pass: "catopt"
+- id: "transform.mlopt.div_sqrt_to_rsqrt"
+  pass: "mlopt"
   node_kind: "div"
   rule:
     !Declarative
@@ -1714,7 +1714,7 @@
       - !KeepPath
         - 1
         - 0
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -1761,8 +1761,8 @@
       kind: "sqrt"
     - !ChildCount 2
   priority: 3
-- id: "transform.catopt.pow_to_rsqrt"
-  pass: "catopt"
+- id: "transform.mlopt.pow_to_rsqrt"
+  pass: "mlopt"
   node_kind: "pow"
   rule:
     !Declarative
@@ -1770,7 +1770,7 @@
     children:
       - !KeepPath
         - 0
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -1809,8 +1809,8 @@
   when:
     !ChildCount 2
   priority: 2
-- id: "transform.catopt.recip_sqrt_to_rsqrt"
-  pass: "catopt"
+- id: "transform.mlopt.recip_sqrt_to_rsqrt"
+  pass: "mlopt"
   node_kind: "reciprocal"
   rule:
     !Declarative
@@ -1819,7 +1819,7 @@
       - !KeepPath
         - 0
         - 0
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -1859,8 +1859,8 @@
       kind: "sqrt"
     - !ChildCount 1
   priority: 1
-- id: "transform.catopt.mul_div_swap"
-  pass: "catopt"
+- id: "transform.mlopt.mul_div_swap"
+  pass: "mlopt"
   node_kind: "mul"
   rule:
     !Declarative
@@ -1877,7 +1877,7 @@
       - !KeepPath
         - 0
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -1929,8 +1929,8 @@
       kind: "div"
     - !ChildCount 2
   priority: 15
-- id: "transform.catopt.matmul_div_distribute"
-  pass: "catopt"
+- id: "transform.mlopt.matmul_div_distribute"
+  pass: "mlopt"
   node_kind: "matmul"
   rule:
     !Declarative
@@ -1947,7 +1947,7 @@
       - !KeepPath
         - 0
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -2001,8 +2001,8 @@
       kind: "div"
     - !ChildCount 2
   priority: 1
-- id: "transform.catopt.div_add_factor"
-  pass: "catopt"
+- id: "transform.mlopt.div_add_factor"
+  pass: "mlopt"
   node_kind: "add"
   rule:
     !Declarative
@@ -2020,7 +2020,7 @@
       - !KeepPath
         - 0
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -2082,8 +2082,8 @@
       kind: "div"
     - !ChildCount 2
   priority: 4
-- id: "transform.catopt.distribute_matmul_over_add"
-  pass: "catopt"
+- id: "transform.mlopt.distribute_matmul_over_add"
+  pass: "mlopt"
   node_kind: "matmul"
   rule:
     !Declarative
@@ -2105,7 +2105,7 @@
           - !KeepPath
             - 1
             - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -2188,8 +2188,8 @@
       kind: "add"
     - !ChildCount 2
   priority: 2
-- id: "transform.catopt.factor_matmul"
-  pass: "catopt"
+- id: "transform.mlopt.factor_matmul"
+  pass: "mlopt"
   node_kind: "add"
   rule:
     !Declarative
@@ -2207,7 +2207,7 @@
           - !KeepPath
             - 1
             - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -2295,8 +2295,8 @@
       kind: "matmul"
     - !ChildCount 2
   priority: 5
-- id: "transform.catopt.right_distribute_matmul"
-  pass: "catopt"
+- id: "transform.mlopt.right_distribute_matmul"
+  pass: "mlopt"
   node_kind: "matmul"
   rule:
     !Declarative
@@ -2318,7 +2318,7 @@
             - 1
           - !KeepPath
             - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -2375,8 +2375,8 @@
       kind: "add"
     - !ChildCount 2
   priority: 3
-- id: "transform.catopt.right_factor_matmul"
-  pass: "catopt"
+- id: "transform.mlopt.right_factor_matmul"
+  pass: "mlopt"
   node_kind: "add"
   rule:
     !Declarative
@@ -2394,7 +2394,7 @@
       - !KeepPath
         - 0
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -2456,8 +2456,8 @@
       kind: "matmul"
     - !ChildCount 2
   priority: 6
-- id: "transform.catopt.weight_factor_matmul"
-  pass: "catopt"
+- id: "transform.mlopt.weight_factor_matmul"
+  pass: "mlopt"
   node_kind: "add"
   rule:
     !Declarative
@@ -2475,7 +2475,7 @@
           - !KeepPath
             - 1
             - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -2564,8 +2564,8 @@
       kind: "matmul"
     - !ChildCount 2
   priority: 7
-- id: "transform.catopt.weight_distribute_matmul"
-  pass: "catopt"
+- id: "transform.mlopt.weight_distribute_matmul"
+  pass: "mlopt"
   node_kind: "matmul"
   rule:
     !Declarative
@@ -2587,7 +2587,7 @@
           - !KeepPath
             - 1
             - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -2672,8 +2672,8 @@
       kind: "add"
     - !ChildCount 2
   priority: 4
-- id: "transform.catopt.weight_factor_linear"
-  pass: "catopt"
+- id: "transform.mlopt.weight_factor_linear"
+  pass: "mlopt"
   node_kind: "add"
   rule:
     !Declarative
@@ -2691,7 +2691,7 @@
           - !KeepPath
             - 1
             - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -2779,8 +2779,8 @@
       kind: "linear"
     - !ChildCount 2
   priority: 8
-- id: "transform.catopt.weight_distribute_linear"
-  pass: "catopt"
+- id: "transform.mlopt.weight_distribute_linear"
+  pass: "mlopt"
   node_kind: "linear"
   rule:
     !Declarative
@@ -2802,7 +2802,7 @@
           - !KeepPath
             - 1
             - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -2885,8 +2885,8 @@
       kind: "add"
     - !ChildCount 2
   priority: 1
-- id: "transform.catopt.right_factor_linear"
-  pass: "catopt"
+- id: "transform.mlopt.right_factor_linear"
+  pass: "mlopt"
   node_kind: "add"
   rule:
     !Declarative
@@ -2904,7 +2904,7 @@
       - !KeepPath
         - 0
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -2965,8 +2965,8 @@
       kind: "linear"
     - !ChildCount 2
   priority: 9
-- id: "transform.catopt.assoc_linear"
-  pass: "catopt"
+- id: "transform.mlopt.assoc_linear"
+  pass: "mlopt"
   node_kind: "linear"
   rule:
     !Declarative
@@ -2983,7 +2983,7 @@
           - !KeepPath
             - 0
             - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -3036,8 +3036,8 @@
       kind: "linear"
     - !ChildCount 2
   priority: 2
-- id: "transform.catopt.assoc_linear_rev"
-  pass: "catopt"
+- id: "transform.mlopt.assoc_linear_rev"
+  pass: "mlopt"
   node_kind: "linear"
   rule:
     !Declarative
@@ -3054,7 +3054,7 @@
       - !KeepPath
         - 1
         - 0
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -3108,8 +3108,8 @@
       kind: "matmul"
     - !ChildCount 2
   priority: 3
-- id: "transform.catopt.assoc_linear_bias"
-  pass: "catopt"
+- id: "transform.mlopt.assoc_linear_bias"
+  pass: "mlopt"
   node_kind: "linear"
   rule:
     !Declarative
@@ -3139,7 +3139,7 @@
                 - 2
       - !KeepPath
         - 2
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -3253,8 +3253,8 @@
       kind: "linear"
     - !ChildCount 3
   priority: 4
-- id: "transform.catopt.assoc_linear_bias_rev"
-  pass: "catopt"
+- id: "transform.mlopt.assoc_linear_bias_rev"
+  pass: "mlopt"
   node_kind: "add"
   rule:
     !Declarative
@@ -3280,7 +3280,7 @@
         - 0
       - !KeepPath
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -3399,8 +3399,8 @@
       kind: "linear"
     - !ChildCount 2
   priority: 10
-- id: "transform.catopt.naturality_scalar"
-  pass: "catopt"
+- id: "transform.mlopt.naturality_scalar"
+  pass: "mlopt"
   node_kind: "matmul"
   rule:
     !Declarative
@@ -3417,7 +3417,7 @@
       - !KeepPath
         - 1
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -3472,8 +3472,8 @@
       kind: "mul"
     - !ChildCount 2
   priority: 5
-- id: "transform.catopt.naturality_scalar_rev"
-  pass: "catopt"
+- id: "transform.mlopt.naturality_scalar_rev"
+  pass: "mlopt"
   node_kind: "mul"
   rule:
     !Declarative
@@ -3490,7 +3490,7 @@
             - 1
           - !KeepPath
             - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -3546,8 +3546,8 @@
       kind: "matmul"
     - !ChildCount 2
   priority: 16
-- id: "transform.catopt.assoc_matmul"
-  pass: "catopt"
+- id: "transform.mlopt.assoc_matmul"
+  pass: "mlopt"
   node_kind: "matmul"
   rule:
     !Declarative
@@ -3564,7 +3564,7 @@
       - !KeepPath
         - 1
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -3617,8 +3617,8 @@
       kind: "matmul"
     - !ChildCount 2
   priority: 6
-- id: "transform.catopt.assoc_matmul_rev"
-  pass: "catopt"
+- id: "transform.mlopt.assoc_matmul_rev"
+  pass: "mlopt"
   node_kind: "matmul"
   rule:
     !Declarative
@@ -3635,7 +3635,7 @@
             - 1
           - !KeepPath
             - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -3689,8 +3689,8 @@
       kind: "matmul"
     - !ChildCount 2
   priority: 7
-- id: "transform.catopt.split_scalar_add_r"
-  pass: "catopt"
+- id: "transform.mlopt.split_scalar_add_r"
+  pass: "mlopt"
   node_kind: "split"
   rule:
     !Declarative
@@ -3705,7 +3705,7 @@
       - !KeepPath
         - 0
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -3763,8 +3763,8 @@
       kind: "add"
     - !ChildCount 1
   priority: 1
-- id: "transform.catopt.split_scalar_add_l"
-  pass: "catopt"
+- id: "transform.mlopt.split_scalar_add_l"
+  pass: "mlopt"
   node_kind: "split"
   rule:
     !Declarative
@@ -3779,7 +3779,7 @@
           - !KeepPath
             - 0
             - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -3837,8 +3837,8 @@
       kind: "add"
     - !ChildCount 1
   priority: 2
-- id: "transform.catopt.split_scalar_div_r"
-  pass: "catopt"
+- id: "transform.mlopt.split_scalar_div_r"
+  pass: "mlopt"
   node_kind: "split"
   rule:
     !Declarative
@@ -3853,7 +3853,7 @@
       - !KeepPath
         - 0
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -3911,8 +3911,8 @@
       kind: "div"
     - !ChildCount 1
   priority: 3
-- id: "transform.catopt.split_scalar_div_l"
-  pass: "catopt"
+- id: "transform.mlopt.split_scalar_div_l"
+  pass: "mlopt"
   node_kind: "split"
   rule:
     !Declarative
@@ -3927,7 +3927,7 @@
           - !KeepPath
             - 0
             - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -3985,8 +3985,8 @@
       kind: "div"
     - !ChildCount 1
   priority: 4
-- id: "transform.catopt.split_scalar_mul_r"
-  pass: "catopt"
+- id: "transform.mlopt.split_scalar_mul_r"
+  pass: "mlopt"
   node_kind: "split"
   rule:
     !Declarative
@@ -4001,7 +4001,7 @@
       - !KeepPath
         - 0
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -4059,8 +4059,8 @@
       kind: "mul"
     - !ChildCount 1
   priority: 5
-- id: "transform.catopt.split_scalar_mul_l"
-  pass: "catopt"
+- id: "transform.mlopt.split_scalar_mul_l"
+  pass: "mlopt"
   node_kind: "split"
   rule:
     !Declarative
@@ -4075,7 +4075,7 @@
           - !KeepPath
             - 0
             - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -4133,8 +4133,8 @@
       kind: "mul"
     - !ChildCount 1
   priority: 6
-- id: "transform.catopt.split_scalar_sub_r"
-  pass: "catopt"
+- id: "transform.mlopt.split_scalar_sub_r"
+  pass: "mlopt"
   node_kind: "split"
   rule:
     !Declarative
@@ -4149,7 +4149,7 @@
       - !KeepPath
         - 0
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -4207,8 +4207,8 @@
       kind: "sub"
     - !ChildCount 1
   priority: 7
-- id: "transform.catopt.split_scalar_sub_l"
-  pass: "catopt"
+- id: "transform.mlopt.split_scalar_sub_l"
+  pass: "mlopt"
   node_kind: "split"
   rule:
     !Declarative
@@ -4223,7 +4223,7 @@
           - !KeepPath
             - 0
             - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -4281,8 +4281,8 @@
       kind: "sub"
     - !ChildCount 1
   priority: 8
-- id: "transform.catopt.swiglu_fuse"
-  pass: "catopt"
+- id: "transform.mlopt.swiglu_fuse"
+  pass: "mlopt"
   node_kind: "mul"
   rule:
     !Declarative
@@ -4331,7 +4331,7 @@
                   - !KeepPath
                     - 1
                     - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -4438,8 +4438,8 @@
       kind: "linear"
     - !ChildCount 2
   priority: 17
-- id: "transform.catopt.parallel_mul_fuse"
-  pass: "catopt"
+- id: "transform.mlopt.parallel_mul_fuse"
+  pass: "mlopt"
   node_kind: "mul"
   rule:
     !Declarative
@@ -4481,7 +4481,7 @@
                   - !KeepPath
                     - 1
                     - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -4580,8 +4580,8 @@
       kind: "linear"
     - !ChildCount 2
   priority: 18
-- id: "transform.catopt.qkv_fuse"
-  pass: "catopt"
+- id: "transform.mlopt.qkv_fuse"
+  pass: "mlopt"
   node_kind: "sdpa"
   rule:
     !Declarative
@@ -4701,7 +4701,7 @@
                             - 0
                             - 0
                             - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -4894,8 +4894,8 @@
       kind: "transpose"
     - !ChildCount 3
   priority: 1
-- id: "transform.catopt.qkv_fuse_asym"
-  pass: "catopt"
+- id: "transform.mlopt.qkv_fuse_asym"
+  pass: "mlopt"
   node_kind: "sdpa"
   rule:
     !Declarative
@@ -5015,7 +5015,7 @@
                             - 0
                             - 0
                             - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -5221,8 +5221,8 @@
       kind: "transpose"
     - !ChildCount 3
   priority: 2
-- id: "transform.catopt.linear_channel_scale"
-  pass: "catopt"
+- id: "transform.mlopt.linear_channel_scale"
+  pass: "mlopt"
   node_kind: "linear"
   rule:
     !Declarative
@@ -5239,7 +5239,7 @@
           - !KeepPath
             - 0
             - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -5320,8 +5320,8 @@
       kind: "mul"
     - !ChildCount 2
   priority: 5
-- id: "transform.catopt.linear_channel_scale_rev"
-  pass: "catopt"
+- id: "transform.mlopt.linear_channel_scale_rev"
+  pass: "mlopt"
   node_kind: "linear"
   rule:
     !Declarative
@@ -5338,7 +5338,7 @@
       - !KeepPath
         - 1
         - 0
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -5420,8 +5420,8 @@
       kind: "mul"
     - !ChildCount 2
   priority: 6
-- id: "transform.catopt.linear_row_scale"
-  pass: "catopt"
+- id: "transform.mlopt.linear_row_scale"
+  pass: "mlopt"
   node_kind: "linear"
   rule:
     !Declarative
@@ -5438,7 +5438,7 @@
       - !KeepPath
         - 0
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -5511,8 +5511,8 @@
       kind: "mul"
     - !ChildCount 2
   priority: 7
-- id: "transform.catopt.linear_row_scale_rev"
-  pass: "catopt"
+- id: "transform.mlopt.linear_row_scale_rev"
+  pass: "mlopt"
   node_kind: "mul"
   rule:
     !Declarative
@@ -5529,7 +5529,7 @@
       - !KeepPath
         - 0
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -5603,8 +5603,8 @@
       kind: "linear"
     - !ChildCount 2
   priority: 19
-- id: "transform.catopt.linear_channel_to_row_scale"
-  pass: "catopt"
+- id: "transform.mlopt.linear_channel_to_row_scale"
+  pass: "mlopt"
   node_kind: "linear"
   rule:
     !Declarative
@@ -5621,7 +5621,7 @@
       - !KeepPath
         - 1
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -5724,8 +5724,8 @@
       kind: "mul"
     - !ChildCount 2
   priority: 8
-- id: "transform.catopt.gqa_absorb_repeat"
-  pass: "catopt"
+- id: "transform.mlopt.gqa_absorb_repeat"
+  pass: "mlopt"
   node_kind: "sdpa"
   rule:
     !Declarative
@@ -5755,7 +5755,7 @@
             - 0
             - 0
             - 0
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -5904,8 +5904,8 @@
       kind: "transpose"
     - !ChildCount 3
   priority: 3
-- id: "transform.catopt.sdpa_fold_addmul"
-  pass: "catopt"
+- id: "transform.mlopt.sdpa_fold_addmul"
+  pass: "mlopt"
   node_kind: "matmul"
   rule:
     !Declarative
@@ -5930,7 +5930,7 @@
         - 0
         - 0
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -6039,8 +6039,8 @@
       kind: "softmax"
     - !ChildCount 2
   priority: 8
-- id: "transform.catopt.sdpa_fold_masked_fillmul"
-  pass: "catopt"
+- id: "transform.mlopt.sdpa_fold_masked_fillmul"
+  pass: "mlopt"
   node_kind: "matmul"
   rule:
     !Declarative
@@ -6068,7 +6068,7 @@
             - 0
             - 0
             - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -6190,8 +6190,8 @@
       kind: "softmax"
     - !ChildCount 2
   priority: 9
-- id: "transform.catopt.sdpa_fold_addmul_drop"
-  pass: "catopt"
+- id: "transform.mlopt.sdpa_fold_addmul_drop"
+  pass: "mlopt"
   node_kind: "matmul"
   rule:
     !Declarative
@@ -6219,7 +6219,7 @@
         - 0
         - 0
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -6337,8 +6337,8 @@
       kind: "dropout"
     - !ChildCount 2
   priority: 10
-- id: "transform.catopt.sdpa_fold_masked_fillmul_drop"
-  pass: "catopt"
+- id: "transform.mlopt.sdpa_fold_masked_fillmul_drop"
+  pass: "mlopt"
   node_kind: "matmul"
   rule:
     !Declarative
@@ -6369,7 +6369,7 @@
             - 0
             - 0
             - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -6501,8 +6501,8 @@
       kind: "dropout"
     - !ChildCount 2
   priority: 11
-- id: "transform.catopt.sdpa_fold_adddiv"
-  pass: "catopt"
+- id: "transform.mlopt.sdpa_fold_adddiv"
+  pass: "mlopt"
   node_kind: "matmul"
   rule:
     !Declarative
@@ -6527,7 +6527,7 @@
         - 0
         - 0
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -6637,8 +6637,8 @@
       kind: "softmax"
     - !ChildCount 2
   priority: 12
-- id: "transform.catopt.sdpa_fold_masked_filldiv"
-  pass: "catopt"
+- id: "transform.mlopt.sdpa_fold_masked_filldiv"
+  pass: "mlopt"
   node_kind: "matmul"
   rule:
     !Declarative
@@ -6666,7 +6666,7 @@
             - 0
             - 0
             - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -6789,8 +6789,8 @@
       kind: "softmax"
     - !ChildCount 2
   priority: 13
-- id: "transform.catopt.sdpa_fold_adddiv_drop"
-  pass: "catopt"
+- id: "transform.mlopt.sdpa_fold_adddiv_drop"
+  pass: "mlopt"
   node_kind: "matmul"
   rule:
     !Declarative
@@ -6818,7 +6818,7 @@
         - 0
         - 0
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -6937,8 +6937,8 @@
       kind: "dropout"
     - !ChildCount 2
   priority: 14
-- id: "transform.catopt.sdpa_fold_masked_filldiv_drop"
-  pass: "catopt"
+- id: "transform.mlopt.sdpa_fold_masked_filldiv_drop"
+  pass: "mlopt"
   node_kind: "matmul"
   rule:
     !Declarative
@@ -6969,7 +6969,7 @@
             - 0
             - 0
             - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -7102,8 +7102,8 @@
       kind: "dropout"
     - !ChildCount 2
   priority: 15
-- id: "transform.catopt.sdpa_fold_add"
-  pass: "catopt"
+- id: "transform.mlopt.sdpa_fold_add"
+  pass: "mlopt"
   node_kind: "matmul"
   rule:
     !Declarative
@@ -7126,7 +7126,7 @@
         - 0
         - 0
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -7218,8 +7218,8 @@
       kind: "softmax"
     - !ChildCount 2
   priority: 16
-- id: "transform.catopt.sdpa_fold_masked_fill"
-  pass: "catopt"
+- id: "transform.mlopt.sdpa_fold_masked_fill"
+  pass: "mlopt"
   node_kind: "matmul"
   rule:
     !Declarative
@@ -7245,7 +7245,7 @@
             - 0
             - 0
             - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -7350,8 +7350,8 @@
       kind: "softmax"
     - !ChildCount 2
   priority: 17
-- id: "transform.catopt.sdpa_fold_add_drop"
-  pass: "catopt"
+- id: "transform.mlopt.sdpa_fold_add_drop"
+  pass: "mlopt"
   node_kind: "matmul"
   rule:
     !Declarative
@@ -7377,7 +7377,7 @@
         - 0
         - 0
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -7477,8 +7477,8 @@
       kind: "dropout"
     - !ChildCount 2
   priority: 18
-- id: "transform.catopt.sdpa_fold_masked_fill_drop"
-  pass: "catopt"
+- id: "transform.mlopt.sdpa_fold_masked_fill_drop"
+  pass: "mlopt"
   node_kind: "matmul"
   rule:
     !Declarative
@@ -7507,7 +7507,7 @@
             - 0
             - 0
             - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -7621,8 +7621,8 @@
       kind: "dropout"
     - !ChildCount 2
   priority: 19
-- id: "transform.catopt.sdpa_fold_nomask"
-  pass: "catopt"
+- id: "transform.mlopt.sdpa_fold_nomask"
+  pass: "mlopt"
   node_kind: "matmul"
   rule:
     !Declarative
@@ -7639,7 +7639,7 @@
         - 0
       - !KeepPath
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"
@@ -7730,8 +7730,8 @@
       kind: "softmax"
     - !ChildCount 2
   priority: 20
-- id: "transform.catopt.sdpa_fold_div_nomask"
-  pass: "catopt"
+- id: "transform.mlopt.sdpa_fold_div_nomask"
+  pass: "mlopt"
   node_kind: "matmul"
   rule:
     !Declarative
@@ -7750,7 +7750,7 @@
         - 0
       - !KeepPath
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"

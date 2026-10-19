@@ -4,11 +4,11 @@ A policy may only *reorder* the rules: every rule still runs, so the
 fixed point — and therefore the certificate — is unchanged.
 """
 
-from catopt_core.cost import flops_cost
-from catopt_core.egraph import EGraph
-from catopt_core.game import Action
-from catopt_core.ir import Op, TensorType, Var
-from catopt_core.laws import all_rules
+from mlopt_core.cost import flops_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.game import Action
+from mlopt_core.ir import Op, TensorType, Var
+from mlopt_core.laws import all_rules
 
 
 def _v(name: str, *shape: int) -> Var:

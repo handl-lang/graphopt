@@ -23,8 +23,8 @@ the two families in SCHEDULED STAGES instead:
                              REPLACED by its inverse ``div_into_matmul``,
                              plus ``om_shared_state_laws()``
 
-(both lists come from :func:`catopt_carriers.om.om_shared_state_stages`).
-Staging is successive :class:`~catopt_core.egraph.EGraph` ``run`` calls
+(both lists come from :func:`mlopt_carriers.om.om_shared_state_stages`).
+Staging is successive :class:`~mlopt_core.egraph.EGraph` ``run`` calls
 on the same graph, so the split costs nothing but the second pass.
 
 Arms measured, all on the same seeded export in ONE process (a single
@@ -96,16 +96,16 @@ import time
 from collections import Counter
 
 import torch
-from catopt_carriers.om import (
+from mlopt_carriers.om import (
     om_shared_state_budgets,
     om_shared_state_laws,
     om_shared_state_stages,
 )
-from catopt_core.cost import dag_cost, flops_cost
-from catopt_core.egraph import EGraph
-from catopt_core.ir import Op
-from catopt_discovery.zoo import _ChunkedRetention
-from catopt_torch.adapters import TorchSource
+from mlopt_core.cost import dag_cost, flops_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import Op
+from mlopt_discovery.zoo import _ChunkedRetention
+from mlopt_torch.adapters import TorchSource
 
 
 def _export(t: int):
@@ -267,7 +267,7 @@ def _honest_reference_cost(t: int, k: int) -> float:
     reference gets for free.  This is the floor a staged extraction
     should be compared against, not 1.4M.
     """
-    from catopt_core.ir import TensorType, Var
+    from mlopt_core.ir import TensorType, Var
 
     def v_(name, *shape):
         return Var(name, TensorType(shape))

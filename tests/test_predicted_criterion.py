@@ -5,12 +5,12 @@ operational — it turns a ``PerformanceModel`` (plus a ``Profiler`` for
 the features) into a ``Criterion`` extraction can minimise.
 """
 
-from catopt_core.cost import flops_cost
-from catopt_core.ir import Op, TensorType, Var
-from catopt_core.perf_model import AnalyticalPerformanceModel
-from catopt_core.ports import Criterion, PerformanceModel
-from catopt_orchestrator import PredictedCriterion
-from catopt_orchestrator.criteria import criteria_cost
+from mlopt_core.cost import flops_cost
+from mlopt_core.ir import Op, TensorType, Var
+from mlopt_core.perf_model import AnalyticalPerformanceModel
+from mlopt_core.ports import Criterion, PerformanceModel
+from mlopt_orchestrator import PredictedCriterion
+from mlopt_orchestrator.criteria import criteria_cost
 
 
 def _v(name: str, *shape: int) -> Var:

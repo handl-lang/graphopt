@@ -7,17 +7,17 @@ These cover the real-model path added for the polyhedral-RFC targets
 import pytest
 pytestmark = pytest.mark.e2e  # boundary-purpose file: crosses an external engine boundary
 import torch
-from catopt_core.cost import flops_cost
-from catopt_core.egraph import EGraph
-from catopt_core.ir import IR, Const, Op, Param, TensorType, Var, op_repr
-from catopt_torch.models import MatrixChain, RMSNorm, SwiGLU
-from catopt_core.laws import (
+from mlopt_core.cost import flops_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import IR, Const, Op, Param, TensorType, Var, op_repr
+from mlopt_torch.models import MatrixChain, RMSNorm, SwiGLU
+from mlopt_core.laws import (
     CATEGORICAL,
     CATEGORICAL_RULES,
     SIMPLIFICATION,
     SIMPLIFICATION_RULES,
 )
-from catopt_torch.torch_bridge import (
+from mlopt_torch.torch_bridge import (
     _SCALAR_OPERAND_OPS,
     _canon_aten_name,
     export_to_ir,
@@ -30,7 +30,7 @@ from catopt_torch.torch_bridge import (
 
 
 def test_canon_overload_names():
-    """Overload-qualified ATen names map to catopt generators."""
+    """Overload-qualified ATen names map to mlopt generators."""
     assert _canon_aten_name("mul.Tensor") == "mul"
     assert _canon_aten_name("add.Tensor") == "add"
     assert _canon_aten_name("linear.default") == "linear"
@@ -243,8 +243,8 @@ def test_rmsnorm_roundtrip_and_optimize():
 
 def test_pow_to_square_bridge():
     """pow(x, 2) and square(x) land in the same e-class."""
-    from catopt_core.ir import TensorType, Var
-    from catopt_core.laws import POW_TO_SQUARE, SQUARE_TO_POW
+    from mlopt_core.ir import TensorType, Var
+    from mlopt_core.laws import POW_TO_SQUARE, SQUARE_TO_POW
 
     x = Var("x", TensorType((4, 4)))
     term = Op.make("pow", x, Const(2))
@@ -263,8 +263,8 @@ def test_pow_to_square_bridge():
 
 def test_silu_mul_form_rule():
     """silu(g)*u expands to (g*sigmoid(g))*u in the e-graph."""
-    from catopt_core.ir import TensorType, Var
-    from catopt_core.laws import SILU_MUL_FORM
+    from mlopt_core.ir import TensorType, Var
+    from mlopt_core.laws import SILU_MUL_FORM
 
     g = Var("g", TensorType((4, 4)))
     u = Var("u", TensorType((4, 4)))
@@ -299,10 +299,10 @@ def test_silu_mul_form_rule():
 #  Parallel projections: weight merging (bilinearity) — the composed win
 # ---------------------------------------------------------------------------
 
-from catopt_torch.models import DeepParallel, ParallelLinear  # noqa: E402
-from catopt_orchestrator import Optimizer
+from mlopt_torch.models import DeepParallel, ParallelLinear  # noqa: E402
+from mlopt_orchestrator import Optimizer
 
-from catopt_torch.backend import TorchBackend
+from mlopt_torch.backend import TorchBackend
 
 
 def _eqsat_best(model, x):
@@ -392,7 +392,7 @@ def test_assoc_linear_transpose_order():
     # The naive order (A @ B) does not merely give wrong VALUES here —
     # with distinct dims it is not even shape-valid (12x8 @ 16x12), so a
     # hand-written merge that gets the order wrong fails loudly or silently
-    # broadcasts.  catopt's assoc_linear rule (fused = B @ A) got it right.
+    # broadcasts.  mlopt's assoc_linear rule (fused = B @ A) got it right.
     naive_shape_possible = d.W1.weight.shape[1] == d.W3.weight.shape[0]
     if not naive_shape_possible:
         with pytest.raises(RuntimeError):
@@ -404,7 +404,7 @@ def test_assoc_linear_bias_composes():
     affine-map composition including biases.  Fires on the 3-ary
     linear torch.export emits for bias=True, where assoc_linear
     cannot reach."""
-    from catopt_core.laws import ASSOC_LINEAR_BIAS
+    from mlopt_core.laws import ASSOC_LINEAR_BIAS
 
     torch.manual_seed(0)
     i, h, o = 32, 128, 32
@@ -463,7 +463,7 @@ def test_assoc_linear_bias_end_to_end_param_drop():
     assert n_params < sum(p.numel() for p in m.parameters())
 
     # the optimized weights file: eliminated originals + derived folds
-    from catopt_torch.composer import param_report
+    from mlopt_torch.composer import param_report
 
 
     r = param_report(m, low)
@@ -478,7 +478,7 @@ def test_share_duplicate_params_drops_tied_weight():
     e-class — the duplicate name never reaches the extracted term, so
     the optimized state dict stores one copy.  Exact weight tying,
     discovered rather than declared."""
-    from catopt_torch.composer import param_report
+    from mlopt_torch.composer import param_report
 
 
     torch.manual_seed(0)
@@ -516,7 +516,7 @@ def test_weight_merge_does_not_fire_on_distinct_inputs():
     y = Var("y", TensorType((4, 4)))
     w1 = Param("W1", TensorType((4, 4)))
     w2 = Param("W2", TensorType((4, 4)))
-    from catopt_core.laws import WEIGHT_FACTOR
+    from mlopt_core.laws import WEIGHT_FACTOR
 
     different = Op.make(
         "add", Op.make("matmul", x, w1), Op.make("matmul", y, w2)
@@ -561,7 +561,7 @@ def test_swiglu_fuse_produces_shared_gemm():
     where the two `linear` subterms are literally the SAME object — the
     e-graph stores the fused projection once and lowering runs one GEMM.
     """
-    from catopt_core.cost import launch_aware_cost
+    from mlopt_core.cost import launch_aware_cost
 
     torch.manual_seed(0)
     m = SwiGLU(32, hidden_mult=2)
@@ -602,7 +602,7 @@ def test_swiglu_fuse_produces_shared_gemm():
 
 def test_swiglu_fuse_evals_fused_gemm_once():
     """_eval memoization: the shared fused linear runs exactly once."""
-    from catopt_core.cost import launch_aware_cost
+    from mlopt_core.cost import launch_aware_cost
 
     torch.manual_seed(0)
     m = SwiGLU(32, hidden_mult=2)
@@ -626,7 +626,7 @@ def test_swiglu_fuse_evals_fused_gemm_once():
         calls.append(1)
         return orig_linear(*a, **kw)
 
-    import catopt_torch.torch_bridge as tb
+    import mlopt_torch.torch_bridge as tb
 
     saved = tb._IR_TO_TORCH["linear"]
     tb._IR_TO_TORCH["linear"] = counting
@@ -642,7 +642,7 @@ def test_swiglu_fuse_evals_fused_gemm_once():
 
 def test_swiglu_fuse_requires_shared_input():
     """The pairing rule must not fire when gate/up read DIFFERENT inputs."""
-    from catopt_core.laws import SWIGLU_FUSE
+    from mlopt_core.laws import SWIGLU_FUSE
 
     x = Var("x", TensorType((4, 4)))
     y = Var("y", TensorType((4, 4)))
@@ -669,7 +669,7 @@ def test_swiglu_fuse_requires_shared_input():
 
 def test_attention_roundtrip():
     """AttentionBlock exports and lowers bit-exactly."""
-    from catopt_torch.models import AttentionBlock
+    from mlopt_torch.models import AttentionBlock
 
     torch.manual_seed(0)
     m = AttentionBlock(64, n_heads=4).eval()
@@ -685,8 +685,8 @@ def test_attention_roundtrip():
 
 def test_qkv_fuse_produces_single_gemm():
     """qkv_fuse merges q/k/v into one GEMM + three chunk projections."""
-    from catopt_core.cost import launch_aware_cost
-    from catopt_torch.models import AttentionBlock
+    from mlopt_core.cost import launch_aware_cost
+    from mlopt_torch.models import AttentionBlock
 
     torch.manual_seed(0)
     m = AttentionBlock(64, n_heads=4).eval()
@@ -726,8 +726,8 @@ def test_qkv_fuse_produces_single_gemm():
 
 def test_attr_metavariable_binds_shape():
     """Pattern attr value-as-string binds the node's concrete attr."""
-    from catopt_torch.models import AttentionBlock
-    from catopt_core.laws import QKV_FUSE
+    from mlopt_torch.models import AttentionBlock
+    from mlopt_core.laws import QKV_FUSE
 
     torch.manual_seed(0)
     m = AttentionBlock(32, n_heads=2).eval()
@@ -755,8 +755,8 @@ def test_attr_metavariable_binds_shape():
 
 def test_normlinear_folds_channel_scale():
     """linear(x*rms*wn, W) -> rms * linear(x, W*wn): gain folds at compile time."""
-    from catopt_core.cost import launch_aware_cost
-    from catopt_torch.models import NormLinear
+    from mlopt_core.cost import launch_aware_cost
+    from mlopt_torch.models import NormLinear
 
     torch.manual_seed(0)
     m = NormLinear(64, 64).eval()
@@ -792,7 +792,7 @@ def test_row_scale_rejects_data_scale():
     wrong — the check predicate must reject it (regression for the
     diff=9.83 unsoundness caught by the verifier).
     """
-    from catopt_core.laws import LINEAR_ROW_SCALE
+    from mlopt_core.laws import LINEAR_ROW_SCALE
 
     x = Var("x", TensorType((4, 4)))
     r = Var("r", TensorType((4, 4)))  # data-shaped, NOT per-row
@@ -814,8 +814,8 @@ def test_row_scale_rejects_data_scale():
 
 def test_gqa_asym_fuse():
     """qkv_fuse_asym: uneven head counts -> split with derived sizes."""
-    from catopt_core.cost import launch_aware_cost
-    from catopt_torch.models import GQAAttention
+    from mlopt_core.cost import launch_aware_cost
+    from mlopt_torch.models import GQAAttention
 
     torch.manual_seed(0)
     m = GQAAttention(128, n_heads=4, n_kv_heads=2).eval()
@@ -852,8 +852,8 @@ def test_gqa_asym_fuse():
 
 def test_derive_hook_computes_sizes():
     """Rewrite.derive injects computed attrs into the instantiation."""
-    from catopt_torch.models import GQAAttention
-    from catopt_core.laws import QKV_FUSE_ASYM
+    from mlopt_torch.models import GQAAttention
+    from mlopt_core.laws import QKV_FUSE_ASYM
 
     torch.manual_seed(0)
     m = GQAAttention(64, n_heads=2, n_kv_heads=1).eval()
@@ -875,8 +875,8 @@ def test_derive_hook_computes_sizes():
 
 def test_transformer_block_stacks_fusions():
     """One saturation pass finds BOTH fusions in a full block."""
-    from catopt_core.cost import launch_aware_cost
-    from catopt_torch.models import TransformerBlock
+    from mlopt_core.cost import launch_aware_cost
+    from mlopt_torch.models import TransformerBlock
 
     torch.manual_seed(0)
     m = TransformerBlock(128, n_heads=4, hidden_mult=2).eval()
@@ -913,8 +913,8 @@ def test_transformer_block_stacks_fusions():
 
 def test_pairing_pass_five_way_parallel_block():
     """ParallelBlock: all 5 same-source projections fuse into ONE GEMM."""
-    from catopt_core.ir import op_repr
-    from catopt_torch.models import ParallelBlock
+    from mlopt_core.ir import op_repr
+    from mlopt_torch.models import ParallelBlock
 
 
     torch.manual_seed(0)
@@ -936,9 +936,9 @@ def test_pairing_pass_five_way_parallel_block():
 
 def test_pairing_subsumes_swiglu_rule():
     """The pairing pass alone fuses gate/up — no consumer pattern needed."""
-    from catopt_core.cost import dag_cost, launch_aware_cost
-    from catopt_torch.models import SwiGLU
-    from catopt_core.laws import (
+    from mlopt_core.cost import dag_cost, launch_aware_cost
+    from mlopt_torch.models import SwiGLU
+    from mlopt_core.laws import (
         CATEGORICAL_RULES,
         PARALLEL_MUL_FUSE,
         QKV_FUSE,
@@ -989,7 +989,7 @@ def test_pairing_subsumes_swiglu_rule():
 
 def test_pairing_no_shared_input_no_fusion():
     """Linears with different inputs must NOT be paired."""
-    from catopt_core.laws import pair_shared_input_linears
+    from mlopt_core.laws import pair_shared_input_linears
 
     x = Var("x", TensorType((4, 4)))
     y = Var("y", TensorType((4, 4)))
@@ -1007,7 +1007,7 @@ def test_pairing_no_shared_input_no_fusion():
 
 def test_channel_scale_rejects_row_scale():
     """linear(x*r, W) with r per-row must not fold r into W."""
-    from catopt_core.laws import LINEAR_CHANNEL_SCALE
+    from mlopt_core.laws import LINEAR_CHANNEL_SCALE
 
     x = Var("x", TensorType((4, 8, 4)))
     r = Var("r", TensorType((4, 8, 1)))  # per-row
@@ -1129,7 +1129,7 @@ def test_dag_sharing_scales():
     eg = EGraph()
     t0 = time.time()
     root = eg.add_term(t)
-    from catopt_core.cost import launch_aware_cost
+    from mlopt_core.cost import launch_aware_cost
 
     best = eg.extract_best(root, launch_aware_cost)
     mod = ir_to_torch_module(
@@ -1182,9 +1182,9 @@ def test_conv2d_pairing_not_offered_for_grouped():
     """groups>1 convs must not pair — cat on out-channels would mix
     grouped convolutions incorrectly."""
     import torch.nn as nn
-    from catopt_core.egraph import EGraph
-    from catopt_core.laws import pair_shared_input_convs
-    from catopt_torch.torch_bridge import export_to_ir
+    from mlopt_core.egraph import EGraph
+    from mlopt_core.laws import pair_shared_input_convs
+    from mlopt_torch.torch_bridge import export_to_ir
 
     class Grouped(nn.Module):
         def __init__(self):
@@ -1206,7 +1206,7 @@ def test_conv2d_pairing_not_offered_for_grouped():
 def test_reshape_negative_dim_shape_inference():
     """reshape attrs keep literal -1 dims; shape inference must resolve
     them from input numel rather than poisoning broadcast as _INVALID."""
-    from catopt_core.cost import _broadcast, _infer_op_shape
+    from mlopt_core.cost import _broadcast, _infer_op_shape
 
     x = Var("x", TensorType((4, 8)))
     r = Op.make("reshape", x, shape=(-1, 2, 4))
@@ -1219,7 +1219,7 @@ def test_gqa_absorb_repeat_kv():
     """unsqueeze->expand->reshape before sdpa is repeat_kv (the
     diagonal); the rule must absorb it into enable_gqa and the soundness
     check must verify the repeat structure."""
-    from catopt_torch.models import RepeatKVAttention
+    from mlopt_torch.models import RepeatKVAttention
 
 
     torch.manual_seed(0)
@@ -1235,7 +1235,7 @@ def test_gqa_absorb_repeat_kv():
 def test_gqa_absorb_rejects_bad_repeat():
     """The check must veto chains that are NOT repeat_interleave —
     e.g. expand growing a non-inserted dim."""
-    from catopt_core.laws import _check_gqa_absorb
+    from mlopt_core.laws import _check_gqa_absorb
 
     # Forge a bad binding: expand grows dim 2 (a real dim), not the
     # unsqueezed dim 3.
@@ -1262,8 +1262,8 @@ def test_sdpa_fold_masked_fill():
     """nanoGPT-style masked_fill causal attention must fold to
     sdpa(is_causal=True): the whole softmax-mask-attention chain
     collapses into one fused kernel call."""
-    from catopt_core.ir import op_repr
-    from catopt_torch.models import EagerAttention
+    from mlopt_core.ir import op_repr
+    from mlopt_torch.models import EagerAttention
 
 
     torch.manual_seed(0)
@@ -1281,8 +1281,8 @@ def test_sdpa_fold_masked_fill():
 
 def test_sdpa_fold_additive_mask():
     """HF-style additive causal mask must fold to sdpa(attn_mask=...)."""
-    from catopt_core.ir import op_repr
-    from catopt_torch.models import AdditiveMaskAttention
+    from mlopt_core.ir import op_repr
+    from mlopt_torch.models import AdditiveMaskAttention
 
 
     torch.manual_seed(0)
@@ -1298,8 +1298,8 @@ def test_sdpa_fold_additive_mask():
 
 def test_sdpa_fold_rejects_wrong_dim():
     """softmax over a non-key dim is NOT attention — must not fold."""
-    from catopt_core.ir import TensorType, Var
-    from catopt_core.laws import _check_softmax_dim
+    from mlopt_core.ir import TensorType, Var
+    from mlopt_core.laws import _check_softmax_dim
 
     q = Var("q", TensorType((1, 4, 32, 16)))
     bound = {"Q": q, "$attr:SD": 1}
@@ -1314,12 +1314,12 @@ def test_linear_recurrence_scan_structure():
     LTI recurrence h_t = A h_{t-1} + x_t reassociates so matrix powers
     A^k become shared subproducts and the critical path shortens.
     Verified exact in fp64."""
-    from catopt_core.egraph import EGraph
-    from catopt_core.ir import IR, Op
-    from catopt_torch.models import LinearRecurrence
-    from catopt_torch.torch_bridge import export_to_ir, ir_to_torch_module
+    from mlopt_core.egraph import EGraph
+    from mlopt_core.ir import IR, Op
+    from mlopt_torch.models import LinearRecurrence
+    from mlopt_torch.torch_bridge import export_to_ir, ir_to_torch_module
 
-    from catopt_core import laws as R
+    from mlopt_core import laws as R
 
     def opdepth(t, memo):
         if not isinstance(t, Op):
@@ -1370,12 +1370,12 @@ def test_affine_monoid_parallel_scan():
     rewriting cannot synthesise."""
     import math
 
-    from catopt_core.egraph import EGraph
-    from catopt_core.ir import IR, Op
-    from catopt_torch.models import LinearRecurrence
-    from catopt_torch.torch_bridge import export_to_ir, ir_to_torch_module
+    from mlopt_core.egraph import EGraph
+    from mlopt_core.ir import IR, Op
+    from mlopt_torch.models import LinearRecurrence
+    from mlopt_torch.torch_bridge import export_to_ir, ir_to_torch_module
 
-    from catopt_core import laws as R
+    from mlopt_core import laws as R
 
     def opdepth(t, memo):
         if not isinstance(t, Op):
@@ -1412,7 +1412,7 @@ def test_affine_monoid_parallel_scan():
 def test_aff_monoid_ops_verify():
     """aff/aff_compose/apply lower to tuple-passing torch code and
     compute the affine composition correctly."""
-    from catopt_torch.torch_bridge import _IR_TO_TORCH
+    from mlopt_torch.torch_bridge import _IR_TO_TORCH
 
     torch.manual_seed(0)
     A, b = torch.randn(8, 8), torch.randn(8)
@@ -1428,8 +1428,8 @@ def test_aff_monoid_ops_verify():
 def test_linear_attention_reassociation():
     """(Q K^T) V reassociates to Q (K^T V) — O(T^2 d) -> O(T d^2).
     Exact identity (verified in fp64); the cost model must pick it."""
-    from catopt_core.cost import roofline_cost
-    from catopt_torch.models import LinearAttention
+    from mlopt_core.cost import roofline_cost
+    from mlopt_torch.models import LinearAttention
 
 
     m = LinearAttention().eval()
@@ -1446,7 +1446,7 @@ def test_index_bindings_canonical_spelling():
     """chunk/split/unbind bindings read the canonical
     ``chunks``/``dim``/``index`` spellings."""
     x = torch.arange(24.0).reshape(2, 3, 4)
-    from catopt_torch.torch_bridge import _IR_TO_TORCH
+    from mlopt_torch.torch_bridge import _IR_TO_TORCH
 
     want = x.chunk(2, dim=1)[1]
     got = _IR_TO_TORCH["chunk"](x, chunks=2, dim=1, index=1)
@@ -1468,7 +1468,7 @@ def test_eval_term_does_not_leak_env():
 
     x = Var("x", TensorType((4,)))
     t = Op.make("add", x, Const(1.0))
-    from catopt_torch.torch_bridge import _IR_TO_TORCH, eval_term
+    from mlopt_torch.torch_bridge import _IR_TO_TORCH, eval_term
 
     def _run(data):
         env = {"x": data}  # temp dict — only the closure outlives it

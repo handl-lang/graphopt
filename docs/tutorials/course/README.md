@@ -1,6 +1,6 @@
-# catopt toy — a course in structural optimization
+# mlopt toy — a course in structural optimization
 
-An interactive course on catopt's architecture: **one idea per level**, a worked
+An interactive course on mlopt's architecture: **one idea per level**, a worked
 example, an interactive, and a **multi-part checkpoint you must pass before
 advancing**. Scaffolded as a **Vite+ monorepo** with `vp`.
 
@@ -108,7 +108,7 @@ the recombination the plan's falsification demands (`reviewLevels` measures it).
   and the **gaps the learner is now equipped to attack** (the `improve` level's
   data).
 
-Progress lives under `catopt-course-v5` — reviews add a saved field, so a `v4`
+Progress lives under `mlopt-course-v5` — reviews add a saved field, so a `v4`
 blob resets cleanly (announced in the settings text).
 
 ## Layout
@@ -127,7 +127,7 @@ packages/
     src/term.ts              the term language + cost model
     src/rules.ts             the six laws (+ rewritesAt)
     src/referee.ts           numeric equivalence on concrete matrices
-    src/features.ts          ProgramFeatures, mirroring catopt_core.features
+    src/features.ts          ProgramFeatures, mirroring mlopt_core.features
     src/programs.ts          the starting programs
     src/concepts.ts          the concept graph: introduce/use, prerequisites, glossary
     src/corpus.ts            the intake funnel + the workload browser (level 2)
@@ -189,7 +189,7 @@ measured refusals.
 
 The **measured numbers in the prose callouts** come from the real Python
 system (`project/retros/`): the **12 machine-admitted laws** the library
-ships (`catopt_core.laws.provenance.MACHINE_SHIPPED`; the newest is
+ships (`mlopt_core.laws.provenance.MACHINE_SHIPPED`; the newest is
 `mul_unsq_nat` −12.3 % on its source workload — the first minted from a
 corpus op-tuple, with four further laws machine-_assisted_ but
 hand-integrated: `select_mul`, `softmax_fold`, `glu_fold`,

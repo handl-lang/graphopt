@@ -10,7 +10,7 @@ machine-coverage gaps the store could not reach:
 - **gather/dedup** — no ``index_select`` composition objects at all.
 
 This module constructs those objects with the generic construction
-operators (:func:`catopt_discovery.object_synthesis.fold_object` /
+operators (:func:`mlopt_discovery.object_synthesis.fold_object` /
 ``lift_object`` / ``compose_objects``) — no new law bodies — stores
 each one through the evidence store, and pins the honest gauntlet
 verdict: usable where the sweep measured the claim, declined at the
@@ -19,14 +19,14 @@ exact stage where it did not.  The per-gap write-up lives in
 """
 
 import torch
-from catopt_carriers.decode_laws import DECODE_LAWS
-from catopt_core.egraph import EGraph, Rewrite
-from catopt_core.ir import Const, Op, Param, TensorType, Var
-from catopt_core.laws import ALL_RULES
-from catopt_discovery import evidence as ev
-from catopt_discovery import object_synthesis as synth
-from catopt_discovery.impact import TermCase, _cost_fn
-from catopt_discovery.shape_proposal import _sink
+from mlopt_carriers.decode_laws import DECODE_LAWS
+from mlopt_core.egraph import EGraph, Rewrite
+from mlopt_core.ir import Const, Op, Param, TensorType, Var
+from mlopt_core.laws import ALL_RULES
+from mlopt_discovery import evidence as ev
+from mlopt_discovery import object_synthesis as synth
+from mlopt_discovery.impact import TermCase, _cost_fn
+from mlopt_discovery.shape_proposal import _sink
 
 _BY_NAME = {r.name: r for r in ALL_RULES}
 _DECODE = {r.name: r for r in DECODE_LAWS}
@@ -168,7 +168,7 @@ def test_linear_chain_t_is_usable_and_fires():
     stages = _stages(rep)
     assert stages["truth"].passed and stages["typed-pay"].passed
     # Behavioral pin: the object folds the chain to the fused matmul.
-    from catopt_core.cost import dag_cost
+    from mlopt_core.cost import dag_cost
 
     x, a, b = _v("x", 4, 8), _w("A", 3, 8), _w("B", 5, 3)
     term = _p("linear", _p("linear", x, a), b)
@@ -671,7 +671,7 @@ def test_usable_constructions_deploy_through_machine_pack(tmp_path):
     """Store the usable objects, load them back by name through
     ``machine_pack.load_pack`` — the ``rules=`` seam — and the pack
     fires on the chain site."""
-    from catopt_discovery import machine_pack
+    from mlopt_discovery import machine_pack
 
     conn = ev.connect(str(tmp_path / "store.db"))
     for obj in (_linear_chain_t(), _mul_to_pow2()):

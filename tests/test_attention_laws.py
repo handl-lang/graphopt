@@ -1,4 +1,4 @@
-"""Tests for the attention-path laws (:mod:`catopt_core.laws.attention`).
+"""Tests for the attention-path laws (:mod:`mlopt_core.laws.attention`).
 
 Coverage plan, mirroring ``test_layout_laws.py``:
 
@@ -10,7 +10,7 @@ Coverage plan, mirroring ``test_layout_laws.py``:
   match the LHS but break the side condition must not gain the RHS
   member;
 * **cost-gating** — the folds are shown cheaper under
-  :func:`catopt_core.cost.flops_cost`, the model extraction prices;
+  :func:`mlopt_core.cost.flops_cost`, the model extraction prices;
 * **honest reach** — the exported-IR spellings the patterns cover
   (half-split ``concat``, rotate-half ``add``, matmul-roped
   ``linear``) and the classes that decline (strided slices,
@@ -25,15 +25,15 @@ import math
 
 import pytest
 import torch
-from catopt_core.cost import count_cost, flops_cost
-from catopt_core.egraph import EGraph
-from catopt_core.ir import IR, Const, Op, Param, TensorType, Var
-from catopt_core.laws import (
+from mlopt_core.cost import count_cost, flops_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import IR, Const, Op, Param, TensorType, Var
+from mlopt_core.laws import (
     ATTENTION_RULES,
     NATURALITY_SCALAR_REV,
     preset,
 )
-from catopt_core.laws.attention import (
+from mlopt_core.laws.attention import (
     _check_left_scale,
     _check_linear_mm_absorb,
     _check_linear_mm_absorb_bias,
@@ -48,8 +48,8 @@ from catopt_core.laws.attention import (
     _rope_rh,
     _to_end,
 )
-from catopt_core.laws.ruleset import ATTENTION, DEFAULT, PRESETS
-from catopt_torch.torch_bridge import ir_to_torch_module
+from mlopt_core.laws.ruleset import ATTENTION, DEFAULT, PRESETS
+from mlopt_torch.torch_bridge import ir_to_torch_module
 
 torch.manual_seed(0)
 
@@ -991,8 +991,8 @@ def test_attention_preset_through_optimizer():
             out_i = xr * fs + xi * fc
             return torch.stack([out_r, out_i], dim=-1).flatten(3)
 
-    from catopt_orchestrator import Optimizer
-    from catopt_torch.backend import TorchBackend
+    from mlopt_orchestrator import Optimizer
+    from mlopt_torch.backend import TorchBackend
 
     m = MiniRope().eval()
     x = torch.randn(2, 8, 4, 16)
@@ -1023,7 +1023,7 @@ def test_exported_rope_term_matches_law_pattern():
     """The real exported MiniRope produces terms the laws reason
     about — the half-split cat form matches _rope_cat's structure."""
     import torch.nn as nn
-    from catopt_torch.torch_bridge import export_to_ir
+    from mlopt_torch.torch_bridge import export_to_ir
 
     class SliceRope(nn.Module):
         def forward(self, x, cos, sin):

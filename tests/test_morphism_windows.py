@@ -2,12 +2,12 @@
 
 Extends the pair-level morphism algebra to ≥3-block windows:
 
-* :class:`~catopt_orchestrator.morphisms.WindowCompose` merges a
+* :class:`~mlopt_orchestrator.morphisms.WindowCompose` merges a
   maximal run of ``out∘in``-composable chain pairs into ONE reify —
   one joint term, one e-graph, one verify — where
-  :class:`~catopt_orchestrator.morphisms.OutInCompose` needed k−1
+  :class:`~mlopt_orchestrator.morphisms.OutInCompose` needed k−1
   pairwise passes.
-* :class:`~catopt_orchestrator.morphisms.ResidualReassoc` distributes
+* :class:`~mlopt_orchestrator.morphisms.ResidualReassoc` distributes
   a residual stream's additive structure so a later block's input
   projections compose with *non-adjacent* contributions — the ``+``
   monoid is the legal commute path; bilinearity absorbs them.
@@ -16,15 +16,15 @@ Every grafted rewrite is verified fp64 end to end and cost-gated;
 opaque blocks are boundaries no window crosses.
 """
 
-import catopt_orchestrator.morphisms as M
+import mlopt_orchestrator.morphisms as M
 import torch
 import torch.nn as nn
-from catopt_core.ir import op_repr, op_repr_dag
-from catopt_orchestrator import MorphismLaw, MorphismSearch, Optimizer
-from catopt_torch.adapters import TorchSink, TorchSource
-from catopt_torch.backend import TorchBackend
-from catopt_torch.composer import TorchComposer
-from catopt_torch.models import (
+from mlopt_core.ir import op_repr, op_repr_dag
+from mlopt_orchestrator import MorphismLaw, MorphismSearch, Optimizer
+from mlopt_torch.adapters import TorchSink, TorchSource
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.composer import TorchComposer
+from mlopt_torch.models import (
     DeepParallel,
     ParallelLinear,
     ResidualMLP,
@@ -707,7 +707,7 @@ def test_reify_window_no_improvement_and_no_distribution():
 
 def test_window_verify_gate_declines(monkeypatch):
     """A failing pair verify declines a grafted window honestly."""
-    import catopt_torch.adapters as A
+    import mlopt_torch.adapters as A
 
     torch.manual_seed(0)
     model = _ChainStack(depth=4).eval().double()
@@ -731,7 +731,7 @@ def test_lazy_sibling_reexport_and_family_dispatch():
     reify (and declines honestly on a non-family match)."""
     import pytest
 
-    import catopt_orchestrator.morphisms_kv as kv
+    import mlopt_orchestrator.morphisms_kv as kv
 
     assert M.KVLatentShare is kv.KVLatentShare
     with pytest.raises(AttributeError, match="has no attribute"):

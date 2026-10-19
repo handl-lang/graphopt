@@ -1,10 +1,10 @@
-"""Tests for ``catopt_discovery.object_synthesis`` — constructed objects.
+"""Tests for ``mlopt_discovery.object_synthesis`` — constructed objects.
 
 Stage 3 (``tests/test_discovery_gauntlet.py``) admitted objects the
 pipeline had *found* — census/proposal candidates declared as data.
 These tests admit objects the machinery *constructs* (ADR 0004's
 action space — fold representation | introduce abstraction | compose
-abstractions): :mod:`catopt_discovery.object_synthesis` builds the
+abstractions): :mod:`mlopt_discovery.object_synthesis` builds the
 record programmatically, the evidence store persists it, and the
 adversarial gauntlet decides whether it is usable.  Construction is a
 claim; the gauntlet is the referee — the honest-negatives below are
@@ -13,17 +13,17 @@ constructed objects the gates refuse.
 
 import pytest
 import torch
-from catopt_core.egraph import EGraph, Rewrite
-from catopt_core.ir import Const, Op, TensorType, Var
-from catopt_core.laws import ALL_RULES, serialize
-from catopt_core.laws.cond import eval_cond
-from catopt_core.typing import _shape_of
-from catopt_discovery import evidence as ev
-from catopt_discovery import object_synthesis as synth
-from catopt_discovery import oracle as lvo
-from catopt_discovery import shape_proposal
-from catopt_discovery.impact import TermCase, _cost_fn
-from catopt_discovery.shape_proposal import _sink
+from mlopt_core.egraph import EGraph, Rewrite
+from mlopt_core.ir import Const, Op, TensorType, Var
+from mlopt_core.laws import ALL_RULES, serialize
+from mlopt_core.laws.cond import eval_cond
+from mlopt_core.typing import _shape_of
+from mlopt_discovery import evidence as ev
+from mlopt_discovery import object_synthesis as synth
+from mlopt_discovery import oracle as lvo
+from mlopt_discovery import shape_proposal
+from mlopt_discovery.impact import TermCase, _cost_fn
+from mlopt_discovery.shape_proposal import _sink
 
 _BY_NAME = {r.name: r for r in ALL_RULES}
 
@@ -870,7 +870,7 @@ def _om_chunk2() -> synth.ConstructedObject:
     into the composite, so the composite is admissible exactly where
     ``om_split`` would have fired.
     """
-    from catopt_carriers.om import OM_LAWS
+    from mlopt_carriers.om import OM_LAWS
 
     om_split = next(r for r in OM_LAWS if r.name == "om_split")
     obj = synth.compose_objects(
@@ -936,7 +936,7 @@ def test_first_premise_guard_is_transported():
     ``_check_om_lift`` — softmax over the key axis) rides the composite as
     a procedural step when the caller declares no ``cond``: the composite
     fires only where the head premise would."""
-    from catopt_carriers.om import OM_LAWS
+    from mlopt_carriers.om import OM_LAWS
 
     by_name = {r.name: r for r in OM_LAWS}
     obj = synth.compose_objects(

@@ -1,6 +1,6 @@
 """Intake-defect regressions — lowering fidelity the workload intake caught.
 
-``python -m catopt_discovery.intake`` ingests real ``nn.Module``s through the export
+``python -m mlopt_discovery.intake`` ingests real ``nn.Module``s through the export
 boundary and verifies the lowered ``IRModule`` fp64.  Three torch-native
 modules exported + bound cleanly but verified *wrong* — lowering
 defects no hand-built corpus model had exercised:
@@ -24,11 +24,11 @@ Each case exports + lowers + verifies through the same
 
 import pytest
 import torch
-from catopt_core.egraph import Rewrite
-from catopt_core.ir import IR, Const, Op, TensorType, Var
-from catopt_discovery import intake as li
-from catopt_torch.adapters import TorchSink
-from catopt_torch.torch_bridge import export_to_ir, ir_to_torch_module
+from mlopt_core.egraph import Rewrite
+from mlopt_core.ir import IR, Const, Op, TensorType, Var
+from mlopt_discovery import intake as li
+from mlopt_torch.adapters import TorchSink
+from mlopt_torch.torch_bridge import export_to_ir, ir_to_torch_module
 
 
 def _ops_of(term, acc=None):
@@ -389,7 +389,7 @@ def test_copy_family_slice_write_unminted_base_declines():
     isn't there."""
     from types import SimpleNamespace as NS
 
-    from catopt_torch.torch_bridge import _handle_copy_
+    from mlopt_torch.torch_bridge import _handle_copy_
 
     dst_fx = NS(
         name="d",
@@ -408,7 +408,7 @@ def test_copy_family_unminted_src_declines():
     the write can't be threaded, and the env is left untouched."""
     from types import SimpleNamespace as NS
 
-    from catopt_torch.torch_bridge import _handle_copy_
+    from mlopt_torch.torch_bridge import _handle_copy_
 
     dst_fx = NS(name="d", target="placeholder")
     env = {"d": Op.make("zeros", shape=(4,), dtype="float64")}
@@ -436,8 +436,8 @@ def test_const_int_float_spellings_are_distinct():
     e-graph's leaf-key convention (``repr``) is the invariant the
     equality now matches.
     """
-    from catopt_core.egraph import EGraph
-    from catopt_core.ir import Const
+    from mlopt_core.egraph import EGraph
+    from mlopt_core.ir import Const
 
     assert Const(8) != Const(8.0)
     assert Const(8.0) == Const(8.0)
@@ -468,10 +468,10 @@ def test_sinc_kernel_certificate_replays():
     object involved).  With spelling-strict leaves the e-graph keeps
     both classes and the derivation replays end to end.
     """
-    from catopt_core.egraph import verify_certificate
-    from catopt_core.laws import ALL_RULES
-    from catopt_discovery.impact import _cert_ok, _cost_fn, _saturate
-    from catopt_discovery.intake import _SincKernel
+    from mlopt_core.egraph import verify_certificate
+    from mlopt_core.laws import ALL_RULES
+    from mlopt_discovery.impact import _cert_ok, _cost_fn, _saturate
+    from mlopt_discovery.intake import _SincKernel
 
     d = 16
     feed = (torch.randn(4, d, dtype=torch.float64),)
@@ -529,8 +529,8 @@ def test_attr_int_float_spellings_are_distinct_enodes():
     graph.  Identity is now the repr-keyed ``_sig``; both enodes keep
     their own class.
     """
-    from catopt_core.egraph import EGraph
-    from catopt_core.ir import TensorType, Var
+    from mlopt_core.egraph import EGraph
+    from mlopt_core.ir import TensorType, Var
 
     eg = EGraph()
     x = eg.add_leaf("x")
@@ -555,10 +555,10 @@ def test_attr_match_stays_numerically_lenient():
     (``nv != pv``), the same split ``Const`` got: strict object,
     lenient matcher.  Attr metavariables bind the node's raw value.
     """
-    from catopt_core.egraph import EGraph
-    from catopt_core.egraph.terms import _term_match
-    from catopt_core.ir import Const
-    from catopt_core.meta import match_pattern
+    from mlopt_core.egraph import EGraph
+    from mlopt_core.egraph.terms import _term_match
+    from mlopt_core.ir import Const
+    from mlopt_core.meta import match_pattern
 
     pat = Op.make("clamp", "v", min=0)
     term = Op.make("clamp", Const(1), min=0.0)
@@ -643,10 +643,10 @@ def test_round3_transpose_noop_guard_now_fires():
     ``(C, 1, 1)``) supplies exactly that site: the guard now accepts
     it and the guarded equality holds.
     """
-    from catopt_core.egraph import Rewrite
-    from catopt_core.egraph.terms import _term_match
-    from catopt_discovery import evidence as ev
-    from catopt_discovery.shape_proposal import Schema, real_matches
+    from mlopt_core.egraph import Rewrite
+    from mlopt_core.egraph.terms import _term_match
+    from mlopt_discovery import evidence as ev
+    from mlopt_discovery.shape_proposal import Schema, real_matches
 
     guard = Rewrite(
         name="mul_transpose_l_id",
@@ -673,10 +673,10 @@ def test_round3_transpose_noop_guard_now_fires():
 
 def test_round3_chunk_noop_guard_now_fires():
     """``mul_chunk_l_id``'s ``chunks==1`` guard fires on a round-3 term."""
-    from catopt_core.egraph import Rewrite
-    from catopt_core.egraph.terms import _term_match
-    from catopt_discovery import evidence as ev
-    from catopt_discovery.shape_proposal import Schema, real_matches
+    from mlopt_core.egraph import Rewrite
+    from mlopt_core.egraph.terms import _term_match
+    from mlopt_discovery import evidence as ev
+    from mlopt_discovery.shape_proposal import Schema, real_matches
 
     guard = Rewrite(
         name="mul_chunk_l_id",
@@ -780,9 +780,9 @@ def test_round4_workloads_verify(name, ops):
 
 def _fires(guard, name):
     """Return the guarded region of *guard* over a round-4 term."""
-    from catopt_core.egraph.terms import _term_match
-    from catopt_discovery import evidence as ev
-    from catopt_discovery.shape_proposal import Schema, real_matches
+    from mlopt_core.egraph.terms import _term_match
+    from mlopt_discovery import evidence as ev
+    from mlopt_discovery.shape_proposal import Schema, real_matches
 
     torch.manual_seed(0)
     model, feed = _round4(name)
@@ -1182,7 +1182,7 @@ def test_round4_zero_left_canonicalises_to_zero_right():
 def test_infer_op_shape_declines_on_str_attr_metavar():
     """``_infer_op_shape`` returns ``None`` (unknown), not a TypeError,
     when an axis attribute is still a string metavariable name."""
-    from catopt_core.typing import _infer_op_shape
+    from mlopt_core.typing import _infer_op_shape
 
     unsq = Op.make("unsqueeze", Var("k", TensorType((2, 3))), dim="UDk")
     assert _infer_op_shape(unsq) is None
@@ -1193,8 +1193,8 @@ def test_gqa_absorb_repeat_sweep_no_longer_crashes():
     ``unsqueeze``/``expand``/``reshape`` carry string attr metavars —
     now sweeps without raising (the guard is total; it simply declines
     the uninstantiated bindings)."""
-    from catopt_core.laws import ALL_RULES
-    from catopt_discovery import evidence as ev
+    from mlopt_core.laws import ALL_RULES
+    from mlopt_discovery import evidence as ev
 
     rule = next(r for r in ALL_RULES if r.name == "gqa_absorb_repeat")
     region = ev._guarded_evals(

@@ -72,17 +72,17 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-import catopt_carriers  # noqa: F401 — registers carrier bindings
+import mlopt_carriers  # noqa: F401 — registers carrier bindings
 import torch
-from catopt_core.ir import Const, Op, TensorType, Var
-from catopt_core.laws.serialize import law_to_data, missing_hooks
-from catopt_discovery import vocab as vc
-from catopt_discovery.genkernel import _spec_metas
-from catopt_discovery.handler_synth import (
+from mlopt_core.ir import Const, Op, TensorType, Var
+from mlopt_core.laws.serialize import law_to_data, missing_hooks
+from mlopt_discovery import vocab as vc
+from mlopt_discovery.genkernel import _spec_metas
+from mlopt_discovery.handler_synth import (
     handler_record,
     mint_handlers,
 )
-from catopt_discovery.impact import _iter_subterms
+from mlopt_discovery.impact import _iter_subterms
 
 from lab.mint import atom_law_loop as l3
 from lab.screen.exposure_screen import _export, _workloads
@@ -650,7 +650,7 @@ def _census_rows(which: str) -> tuple[list, list]:
     census).  Bounded to the *which* registry (``intake`` by default:
     the scan-family needs all live there and the set is small).
     """
-    from catopt_core.cost.basic import _flops_of
+    from mlopt_core.cost.basic import _flops_of
     from exposure_screen import law_surface
 
     _rules, lhs_ops, _rhs = law_surface()
@@ -721,7 +721,7 @@ def _handler_stage(need: Need, args: argparse.Namespace) -> dict:
     or ``refused-*`` (a measured grammar gap).  ``probe`` records the
     per-spelling verdicts — minted bodies and measured refusals alike.
     """
-    import catopt_torch.torch_bridge as tb
+    import mlopt_torch.torch_bridge as tb
 
     ambient = need.atom in tb._IR_TO_TORCH
     row: dict[str, Any] = {
@@ -777,7 +777,7 @@ def _bind_minted(need: Need, handler_row: dict) -> Any:
     the oracle, the site-outcome probe and the sink all see the atom —
     "the sink's executor table is the semantics" (ADR 0007).
     """
-    import catopt_torch.torch_bridge as tb
+    import mlopt_torch.torch_bridge as tb
 
     body = handler_row["body"]
     spec = next(
@@ -787,7 +787,7 @@ def _bind_minted(need: Need, handler_row: dict) -> Any:
     bindings = tb._IR_TO_TORCH
 
     def fn(*args: Any, **_attrs: Any) -> Any:
-        from catopt_discovery.handler_synth import eval_body
+        from mlopt_discovery.handler_synth import eval_body
 
         env = dict(zip(metas, args, strict=True))
         return eval_body(body, env, bindings)
@@ -889,11 +889,11 @@ def _fragment(need: Need, handler_row: dict, certified: list) -> dict:
     The emergent-runtime thesis as a fragment record: one handle cell
     for the atom's binding (the minted handler record, or the ambient
     torch-binding name) plus the certified law rows — the same shape
-    ``catopt-carriers`` grew by hand.  Emitted for every admitted
+    ``mlopt-carriers`` grew by hand.  Emitted for every admitted
     need; the store machinery that merges it is ``cellstore``.
     """
-    from catopt_core.cells import Provenance
-    from catopt_discovery.cellstore import (
+    from mlopt_core.cells import Provenance
+    from mlopt_discovery.cellstore import (
         handlers_fragment,
         laws_fragment,
     )
@@ -1000,10 +1000,10 @@ def _fire_stage(
     """
     if not certified:
         return {"fires": 0, "terms": 0, "delta": 0.0, "skipped": True}
-    from catopt_core.cost import backend_cost, dag_cost
-    from catopt_core.cost.executor import executor_cost_for
-    from catopt_core.egraph import EGraph
-    from catopt_torch.adapters import TorchSink
+    from mlopt_core.cost import backend_cost, dag_cost
+    from mlopt_core.cost.executor import executor_cost_for
+    from mlopt_core.egraph import EGraph
+    from mlopt_torch.adapters import TorchSink
 
     cost_fn = backend_cost(
         executor_cost_for(lowering="generic"), TorchSink().supported_ops

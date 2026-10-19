@@ -1,4 +1,4 @@
-"""Coverage-gap tests for catopt_torch.torch_bridge.
+"""Coverage-gap tests for mlopt_torch.torch_bridge.
 
 ``tests/test_torch_integration.py`` exercises the flagship pipeline
 (export → eqsat → lower → verify).  This file drives the boundary and
@@ -37,7 +37,7 @@ import pytest
 import torch
 import torch.nn.functional as F
 
-from catopt_core.ir import (
+from mlopt_core.ir import (
     IR,
     Const,
     Op,
@@ -46,8 +46,8 @@ from catopt_core.ir import (
     Var,
     op_repr,
 )
-from catopt_core.ops import OpTable
-from catopt_torch.torch_bridge import (
+from mlopt_core.ops import OpTable
+from mlopt_torch.torch_bridge import (
     _IR_TO_TORCH,
     _aten_name,
     _canon_aten_name,
@@ -756,7 +756,7 @@ class TestConvNetOps:
 
     def test_relu_inplace_binding_matches_relu(self):
         import torch
-        from catopt_torch.torch_bridge import _CORE_TORCH_BINDINGS as B
+        from mlopt_torch.torch_bridge import _CORE_TORCH_BINDINGS as B
 
         assert "relu_" in B
         x = torch.randn(2, 3)
@@ -766,7 +766,7 @@ class TestConvNetOps:
         """The export passes every attr positionally — a binding
         that defaults ``ceil_mode`` truncates the output shape."""
         import torch
-        from catopt_torch.torch_bridge import _CORE_TORCH_BINDINGS as B
+        from mlopt_torch.torch_bridge import _CORE_TORCH_BINDINGS as B
 
         x = torch.randn(1, 1, 5, 5)
         # (input, kernel, stride, padding, dilation, ceil_mode)
@@ -778,7 +778,7 @@ class TestConvNetOps:
 
     def test_upsample_bilinear2d_reads_positional_attrs(self):
         import torch
-        from catopt_torch.torch_bridge import _CORE_TORCH_BINDINGS as B
+        from mlopt_torch.torch_bridge import _CORE_TORCH_BINDINGS as B
 
         x = torch.randn(1, 1, 4, 4)
         # (input, output_size, align_corners, scale_factors)
@@ -792,7 +792,7 @@ class TestConvNetOps:
         )
 
     def test_bilinear_attr_schema_names_align_corners(self):
-        from catopt_core.attrs import ATTR_SCHEMA
+        from mlopt_core.attrs import ATTR_SCHEMA
 
         assert ATTR_SCHEMA["upsample_bilinear2d"][2] == "align_corners"
 

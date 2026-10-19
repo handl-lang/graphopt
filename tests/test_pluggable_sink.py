@@ -1,6 +1,6 @@
 """A pluggable non-torch sink — the forcing function for Source/Sink.
 
-``NumpySink`` implements ``catopt_core.ports.Sink`` over numpy: it
+``NumpySink`` implements ``mlopt_core.ports.Sink`` over numpy: it
 lowers core-IR ops to numpy closures, reports a numpy op set as
 ``supported_ops``, and verifies by running both executables.  The
 ``TorchSource`` frontend still produces the IR (there is no numpy
@@ -15,20 +15,20 @@ would not fit; that it fits is the conformance evidence.
 import numpy as np
 import torch
 import torch.nn as nn
-from catopt_torch.adapters import TorchSource
-from catopt_core.cost import backend_cost, launch_aware_cost
-from catopt_core.egraph import EGraph
-from catopt_core.ir import IR, Const, Op, Param, Var
-from catopt_core.ops import OpTable
-from catopt_orchestrator.optimize import discover_alternatives
+from mlopt_torch.adapters import TorchSource
+from mlopt_core.cost import backend_cost, launch_aware_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import IR, Const, Op, Param, Var
+from mlopt_core.ops import OpTable
+from mlopt_orchestrator.optimize import discover_alternatives
 
 
-from catopt_core.ports import ExecutorSpec, Sink
-from catopt_torch.report import VerifyReport
-from catopt_core.laws import all_rules
-from catopt_orchestrator import Optimizer
+from mlopt_core.ports import ExecutorSpec, Sink
+from mlopt_torch.report import VerifyReport
+from mlopt_core.laws import all_rules
+from mlopt_orchestrator import Optimizer
 
-from catopt_torch.backend import TorchBackend
+from mlopt_torch.backend import TorchBackend
 
 
 def _to_np(v):

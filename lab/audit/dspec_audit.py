@@ -50,15 +50,15 @@ ROOT = Path(__file__).resolve().parent.parent
 REV_CORE = "34eb570^"  # laws: dspec — declarative derive=, core laws
 REV_CARRIERS = "4f586f8^"  # derive-as-data: carrier hooks migrate
 
-TENSOR_PY = "packages/catopt-core/src/catopt_core/laws/tensor.py"
-SCAN_PY = "packages/catopt-core/src/catopt_core/laws/scan.py"
-OM_PY = "packages/catopt-carriers/src/catopt_carriers/om.py"
-TRACE_PY = "packages/catopt-carriers/src/catopt_carriers/trace.py"
+TENSOR_PY = "packages/mlopt-core/src/mlopt_core/laws/tensor.py"
+SCAN_PY = "packages/mlopt-core/src/mlopt_core/laws/scan.py"
+OM_PY = "packages/mlopt-carriers/src/mlopt_carriers/om.py"
+TRACE_PY = "packages/mlopt-carriers/src/mlopt_carriers/trace.py"
 DECODE_LAWS_PY = (
-    "packages/catopt-carriers/src/catopt_carriers/decode_laws.py"
+    "packages/mlopt-carriers/src/mlopt_carriers/decode_laws.py"
 )
 DECODE_GEOM_PY = (
-    "packages/catopt-carriers/src/catopt_carriers/decode_geom.py"
+    "packages/mlopt-carriers/src/mlopt_carriers/decode_geom.py"
 )
 
 #: (revision, file, function) for each dspec rule's procedural oracle.
@@ -145,12 +145,12 @@ ORACLE_TABLE: dict[str, tuple[str, str, str]] = {
 #: Module the oracle's free names resolve against (the old hook's own
 #: module — its helpers survive post-migration).
 ORACLE_MODULE = {
-    TENSOR_PY: "catopt_core.laws.tensor",
-    SCAN_PY: "catopt_core.laws.scan",
-    OM_PY: "catopt_carriers.om",
-    TRACE_PY: "catopt_carriers.trace",
-    DECODE_LAWS_PY: "catopt_carriers.decode_laws",
-    DECODE_GEOM_PY: "catopt_carriers.decode_geom",
+    TENSOR_PY: "mlopt_core.laws.tensor",
+    SCAN_PY: "mlopt_core.laws.scan",
+    OM_PY: "mlopt_carriers.om",
+    TRACE_PY: "mlopt_carriers.trace",
+    DECODE_LAWS_PY: "mlopt_carriers.decode_laws",
+    DECODE_GEOM_PY: "mlopt_carriers.decode_geom",
 }
 
 
@@ -167,7 +167,7 @@ LAMBDA_ORACLES = {
 #: In-tree oracle — kept deliberately as the migration's audit twin.
 INTREE_ORACLES = {
     "matmul_t_concat": (
-        "catopt_carriers.om",
+        "mlopt_carriers.om",
         "_derive_score_concat_dim",
     ),
 }
@@ -198,8 +198,8 @@ def recover_oracle(rev: str, path: str, func: str) -> Any:
     module = importlib.import_module(ORACLE_MODULE[path])
     ns = dict(vars(module))
     # Old module-level imports the hooks may name.
-    from catopt_core.laws import base as laws_base
-    from catopt_core.typing import _broadcast
+    from mlopt_core.laws import base as laws_base
+    from mlopt_core.typing import _broadcast
 
     ns.setdefault("_shape_of", laws_base._shape_of)
     ns.setdefault("_broadcast", _broadcast)
@@ -221,30 +221,30 @@ def collect_rules() -> dict[str, Any]:
     import importlib
     import pkgutil
 
-    import catopt_carriers
-    import catopt_core
-    import catopt_core.laws
-    from catopt_core.egraph import Rewrite
+    import mlopt_carriers
+    import mlopt_core
+    import mlopt_core.laws
+    from mlopt_core.egraph import Rewrite
 
     seen: dict[str, Any] = {}
     mods = []
-    for m in pkgutil.iter_modules(catopt_core.laws.__path__):
+    for m in pkgutil.iter_modules(mlopt_core.laws.__path__):
         mods.append(
-            importlib.import_module(f"catopt_core.laws.{m.name}")
+            importlib.import_module(f"mlopt_core.laws.{m.name}")
         )
-    for m in pkgutil.iter_modules(catopt_carriers.__path__):
+    for m in pkgutil.iter_modules(mlopt_carriers.__path__):
         try:
             mods.append(
-                importlib.import_module(f"catopt_carriers.{m.name}")
+                importlib.import_module(f"mlopt_carriers.{m.name}")
             )
         except Exception:
             continue
-    for m in pkgutil.iter_modules(catopt_core.__path__):
+    for m in pkgutil.iter_modules(mlopt_core.__path__):
         if m.name == "laws":
             continue
         try:
             mods.append(
-                importlib.import_module(f"catopt_core.{m.name}")
+                importlib.import_module(f"mlopt_core.{m.name}")
             )
         except Exception:
             continue
@@ -291,8 +291,8 @@ def _call_derive(derive: Any, env: dict) -> Any:
 
 def measure_domain(rule: Any, limit: int, deep: bool) -> Any:
     """``_measure_domain`` with the rule's own hooks, ``deep`` opt-in."""
-    from catopt_core.egraph import Rewrite
-    from catopt_discovery import object_synthesis as osyn
+    from mlopt_core.egraph import Rewrite
+    from mlopt_discovery import object_synthesis as osyn
 
     probe = Rewrite(rule.name, rule.lhs, rule.rhs, derive=rule.derive)
     return osyn._measure_domain(probe, (), limit, deep=deep)
@@ -302,8 +302,8 @@ def measure_domain_oracle(
     rule: Any, oracle: Any, limit: int, corpus: Any = ()
 ) -> Any:
     """Deep domain of *rule*, probed with the *oracle* as the derive."""
-    from catopt_core.egraph import Rewrite
-    from catopt_discovery import object_synthesis as osyn
+    from mlopt_core.egraph import Rewrite
+    from mlopt_discovery import object_synthesis as osyn
 
     probe = Rewrite(rule.name, rule.lhs, rule.rhs, derive=oracle)
     return osyn._measure_domain(probe, corpus, limit, deep=True)
@@ -318,7 +318,7 @@ def measure_domain_oracle(
 
 def hand_corpus(name: str) -> list:
     """Return concrete LHS terms for rules the enumerator cannot bind."""
-    from catopt_core.ir import Op, TensorType, Var
+    from mlopt_core.ir import Op, TensorType, Var
 
     def v(s: str, *shape: int) -> Var:
         return Var(s, TensorType(tuple(shape)))
@@ -492,7 +492,7 @@ def _stream_hits(
     ``(size, repr)`` hit is the same one the deduped enumeration
     would mint.
     """
-    from catopt_discovery import dspec_synth as dsp
+    from mlopt_discovery import dspec_synth as dsp
 
     hits: list[tuple] = []
     n = len(expected)
@@ -552,7 +552,7 @@ def _prefix_level(
     level: list[tuple], samples: list[tuple]
 ) -> list[tuple]:
     """One shipped enumeration level over *level* — deduped."""
-    from catopt_discovery import dspec_synth as dsp
+    from mlopt_discovery import dspec_synth as dsp
 
     nxt: list[tuple] = []
     for op in dsp.BINOPS:
@@ -591,7 +591,7 @@ def bounded_synth(
     ``meta`` reports ``levels`` sizes, ``checked`` pairs and whether
     the *budget_s* deadline truncated the sweep (``truncated``).
     """
-    from catopt_discovery import dspec_synth as dsp
+    from mlopt_discovery import dspec_synth as dsp
 
     meta: dict[str, Any] = {
         "checked": 0,
@@ -651,8 +651,8 @@ def audit_shipped(rules: dict, limit: int) -> list[dict]:
     """Compare every shipped ``dspec`` to its oracle on the deep domain."""
     import importlib
 
-    import catopt_carriers.xcarrier  # noqa: F401  registers _xshape
-    from catopt_core.laws.cond import eval_derive
+    import mlopt_carriers.xcarrier  # noqa: F401  registers _xshape
+    from mlopt_core.laws.cond import eval_derive
 
     rows = []
     for name, rule in sorted(rules.items()):
@@ -727,7 +727,7 @@ def audit_shipped(rules: dict, limit: int) -> list[dict]:
 
 def _env_desc(env: dict) -> str:
     """Short env description for divergence witnesses."""
-    from catopt_discovery import oracle as lvo
+    from mlopt_discovery import oracle as lvo
 
     return repr(
         sorted(
@@ -757,8 +757,8 @@ def residual_table(
     measure_s: float,
 ) -> list[dict]:
     """Per-rule row: samples, synth outcome, veto agreement, gap."""
-    import catopt_carriers.xcarrier  # noqa: F401  registers _xshape
-    from catopt_core.laws.cond import eval_derive
+    import mlopt_carriers.xcarrier  # noqa: F401  registers _xshape
+    from mlopt_core.laws.cond import eval_derive
 
     rows = []
     for name, rule in sorted(rules.items()):

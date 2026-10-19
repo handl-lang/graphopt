@@ -1,7 +1,7 @@
 """Corpus-expansion models — export and lowering fidelity.
 
-The law-discovery pipeline reads ``catopt_torch.models`` as its real-
-world corpus (``catopt_discovery.impact.model_cases``).  These builders add
+The law-discovery pipeline reads ``mlopt_torch.models`` as its real-
+world corpus (``mlopt_discovery.impact.model_cases``).  These builders add
 architecture families the corpus lacked — soft MoE dispatch, GEGLU,
 gated residuals, conv norm blocks, manual-softmax attention, learned
 positional embedding, kernelized attention, and the round-2 index /
@@ -20,8 +20,8 @@ lowered ``IRModule`` verified fp64 against the original module.
 """
 
 import torch
-from catopt_core.ir import Op
-from catopt_torch.models import (
+from mlopt_core.ir import Op
+from mlopt_torch.models import (
     CodebookQuantizer,
     ConvNeXtBlock,
     DepthwiseConvBlock,
@@ -42,7 +42,7 @@ from catopt_torch.models import (
     TrilCausalAttention,
     Wav2VecBlock,
 )
-from catopt_torch.torch_bridge import export_to_ir, ir_to_torch_module
+from mlopt_torch.torch_bridge import export_to_ir, ir_to_torch_module
 
 
 def _ops(term, acc):

@@ -1,5 +1,5 @@
 """Tests for the division-naturality bridge laws — ``mul_div_swap``
-and ``matmul_div_distribute`` (:data:`catopt_core.laws.tensor`).
+and ``matmul_div_distribute`` (:data:`mlopt_core.laws.tensor`).
 
     mul(div(a, b), c)      ->  div(mul(a, c), b)     (a/b)·c = (a·c)/b
     matmul(div(a, c), v)   ->  div(matmul(a, v), c)  (a/c)@v = (a@v)/c
@@ -25,16 +25,16 @@ Covered surface:
 from __future__ import annotations
 
 import torch
-from catopt_core.egraph import EGraph
-from catopt_core.ir import Const, Op, TensorType, Var
-from catopt_core.laws import (
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import Const, Op, TensorType, Var
+from mlopt_core.laws import (
     ALL_RULES,
     DIV_ADD_FACTOR,
     MATMUL_DIV_DISTRIBUTE,
     MUL_DIV_SWAP,
     SIMPLIFICATION_RULES,
 )
-import catopt_torch.torch_bridge as tb
+import mlopt_torch.torch_bridge as tb
 
 
 def _eval(t, env):

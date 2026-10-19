@@ -6,7 +6,7 @@ three machine-coverage gaps: no associativity/chain-composition object
 (the ~−20% `LoRAAdapter` win), no self-product fold (the `mul_square`
 spelling bridge on GAU/SplineKAN), no gather/dedup family.  The
 mission was to close them **by construction** — the construction
-operators in `catopt_discovery.object_synthesis` (`fold`, `lift`,
+operators in `mlopt_discovery.object_synthesis` (`fold`, `lift`,
 `compose`, `auto_cond`, `relax_guard`, `specialize`) used the way the
 arena player would — with each candidate stored through the evidence
 store and re-refereed by `evidence.run_gauntlet`.  No law bodies were

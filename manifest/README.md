@@ -24,10 +24,10 @@ silent fork.
   checkouts via `source ~/.cache/devin/handl_deps.env` (git
   `insteadOf`) or the `[patch]` tables `scripts/dev-link.sh`
   regenerates. This is the arm `make experiment` exercises.
-- **Python arm** (`kind = "python-git"`) — catopt's discovery engine.
+- **Python arm** (`kind = "python-git"`) — mlopt's discovery engine.
   Python has no workspace-level git-dep equivalent in this repo, so
   the arm is *declared* (consumed as `git+https://…` deps inside a
-  catopt venv) and its probes are *invoked* in a catopt checkout, not
+  mlopt venv) and its probes are *invoked* in a mlopt checkout, not
   copied here.
 
 ## Why a manifest and not just Cargo.toml

@@ -21,13 +21,13 @@ The eval-mode weight fold `batch_norm(conv2d(x, W, b), γ, β, μ, σ²)
 → conv2d(x, W′, b′)` with `W′ = W ∘ ŝ′`, `b′ = b·s + (β − s·μ)`,
 `s = γ·rsqrt(σ²+ε)` — minted by `meta.synthesize_rules` over
 `BATCH_NORM_RULES` + `CONV_FOLD_RULES`, admitted through the gauntlet,
-and shipped **verbatim** in `DEFAULT` (`catopt_core.laws.minted`;
+and shipped **verbatim** in `DEFAULT` (`mlopt_core.laws.minted`;
 `MACHINE_SHIPPED` = 12 laws).
 
 ### The decision, costed through the runtime itself
 
 Spelled `batch_norm(conv2d(x,W,b),…)` vs deployed `conv2d(x,W2,b2)`
-where `W2`/`b2` are catopt subterms materialized through the kit
+where `W2`/`b2` are mlopt subterms materialized through the kit
 (fold-once compile-time work).  Per-call wall measured by
 `hnl-run --repeat 30` inside one `CatoptKit` process — the runtime
 the e-graph's terms execute on, not an estimate.
@@ -102,7 +102,7 @@ to the torch-fp64 answer at **6.7e-16**.
 - Reproduce the recorded arm:
   `pytest tests/test_kit_bridge.py` (8 tests, `e2e` — 8/8 green in
   26.7 s on this box; needs `target/debug/hnl-run`, built by
-  `cargo build -p catopt-kit --bin hnl-run`).
+  `cargo build -p mlopt-kit --bin hnl-run`).
 - Reproduce the five-arm decomposition (the table above):
   `.venv/bin/python lab/probes/conv_fold_wall_regimes_probe.py`
   (~5 min — five programs × 31 subprocess evals, debug build).
@@ -132,7 +132,7 @@ reproduces the whole arc on the real eval-mode ConvBN seed:
 - Retros: `project/retros/minted-composite-default.md`,
   `premise-anchored-derivability.md`, `fold-cost-single-source.md`.
 
-### The shipped consumer — `cargo test -p catopt-kit` (21/21)
+### The shipped consumer — `cargo test -p mlopt-kit` (21/21)
 
 The Rust kit composes handl's language + engines + host-tensor op
 surface as dependencies; `hnl/conv_bn.hnl` carries both spellings of
@@ -153,7 +153,7 @@ the fold, value-equal on dyadic fixtures.  The bridge test suite is
 ## Reproduction index
 
 ```sh
-# the flagship decision — needs the hnl-run binary (cargo build -p catopt-kit --bin hnl-run)
+# the flagship decision — needs the hnl-run binary (cargo build -p mlopt-kit --bin hnl-run)
 .venv/bin/python -m pytest tests/test_kit_bridge.py -q          # 8 tests, ~27 s
 
 # the fold's wall-clock regimes, decomposed (all five arms, one binary/fixture)
@@ -167,7 +167,7 @@ cd ~/GitHub/handl-lang/research-mlopt &&
     cargo run -p mlopt-experiments --bin conv-bn-fold -- --repeat 100
 
 # the Rust consumer
-cargo test -p catopt-kit                                        # 21 tests
+cargo test -p mlopt-kit                                        # 21 tests
 
 # the dev lane (everything except the minutes-scale marked `slow`)
 .venv/bin/python -m pytest -m "not slow"                        # 6,353 tests

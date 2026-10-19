@@ -2,9 +2,9 @@
 # Run mutmut against a flat-layout sandbox.
 #
 # mutmut 3 derives a mutant's key from its path relative to cwd
-# (`packages.catopt-core.src.catopt_core.attrs.x_foo`) and expects the
+# (`packages.mlopt-core.src.mlopt_core.attrs.x_foo`) and expects the
 # module importable under that dotted name — but this monorepo's
-# per-package `src/` layout imports as `catopt_core.attrs`.  This script
+# per-package `src/` layout imports as `mlopt_core.attrs`.  This script
 # builds a flat sandbox (`.mutmut-sandbox/`, gitignored) where each
 # package is symlinked at the top level (so path == import name)
 # alongside `tests/` and `uv.lock`, writes a
@@ -18,7 +18,7 @@
 #
 # Scope a fast loop with the env vars (globs/paths relative to the
 # sandbox, where the package root is top-level):
-#   MUTMUT_ONLY='catopt_core/egraph/terms.py' \
+#   MUTMUT_ONLY='mlopt_core/egraph/terms.py' \
 #   MUTMUT_TESTS='tests/test_certificates.py tests/test_cert_nonlocal.py' \
 #     scripts/mutmut.sh run
 #
@@ -33,11 +33,11 @@ sandbox="$root/.mutmut-sandbox"
 mkdir -p "$sandbox"
 
 for spec in \
-    catopt-core:catopt_core \
-    catopt-torch:catopt_torch \
-    catopt-carriers:catopt_carriers \
-    catopt-cuda:catopt_cuda \
-    catopt-orchestrator:catopt_orchestrator
+    mlopt-core:mlopt_core \
+    mlopt-torch:mlopt_torch \
+    mlopt-carriers:mlopt_carriers \
+    mlopt-cuda:mlopt_cuda \
+    mlopt-orchestrator:mlopt_orchestrator
 do
     dir=${spec%%:*}
     mod=${spec##*:}
@@ -52,7 +52,7 @@ sel=$(printf '%s' "$tests" | sed 's/ /", "/g')
 
 {
     echo '[tool.mutmut]'
-    echo 'source_paths = ["catopt_core", "catopt_torch", "catopt_carriers", "catopt_orchestrator", "catopt_cuda"]'
+    echo 'source_paths = ["mlopt_core", "mlopt_torch", "mlopt_carriers", "mlopt_orchestrator", "mlopt_cuda"]'
     echo 'pytest_add_cli_args = ["-p", "no:cacheprovider", "-q"]'
     echo "pytest_add_cli_args_test_selection = [\"$sel\"]"
     [ -n "$only" ] && echo "only_mutate = [\"$only\"]"

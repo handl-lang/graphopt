@@ -172,7 +172,7 @@ export interface CompletionState {
  * survives a reload.  The key moves to `v5`; a `v4` blob is ignored,
  * so saved progress resets cleanly (announced in the settings text).
  */
-export const STORAGE_KEY = "catopt-course-v5";
+export const STORAGE_KEY = "mlopt-course-v5";
 
 interface Saved {
   i: number;
@@ -213,7 +213,7 @@ export class Course {
         "read any tensor program as a tree of operations, name its root, and price its work node by node.",
       repo: [
         {
-          path: "packages/catopt-core/src/catopt_core/ir.py",
+          path: "packages/mlopt-core/src/mlopt_core/ir.py",
           note: "the real IR — nodes, leaves, one root",
         },
         {
@@ -251,11 +251,11 @@ export class Course {
         "distinguish semantic from syntactic equality, and show that two equal programs can cost different amounts.",
       repo: [
         {
-          path: "packages/catopt-core/src/catopt_core/egraph/certs.py",
+          path: "packages/mlopt-core/src/mlopt_core/egraph/certs.py",
           note: "the certificates that witness an equality",
         },
         {
-          path: "packages/catopt-core/src/catopt_core/laws/ruleset.py",
+          path: "packages/mlopt-core/src/mlopt_core/laws/ruleset.py",
           note: "the shipped law set (associativity among them)",
         },
         {
@@ -293,11 +293,11 @@ export class Course {
         "trace a workload from a real `nn.Module` through `torch.export` and the intake, and read what each class of the funnel means.",
       repo: [
         {
-          path: "python -m catopt_discovery.intake",
+          path: "python -m mlopt_discovery.intake",
           note: "the intake path: export → classify → persist",
         },
         {
-          path: "packages/catopt-discovery/src/catopt_discovery/zoo.py",
+          path: "packages/mlopt-discovery/src/mlopt_discovery/zoo.py",
           note: "the held-out workload zoo",
         },
         {
@@ -354,11 +354,11 @@ export class Course {
         "explain reach as the closure of your laws, computed by saturating an e-graph, and show that more search over fewer laws finds nothing new.",
       repo: [
         {
-          path: "packages/catopt-core/src/catopt_core/egraph/core.py",
+          path: "packages/mlopt-core/src/mlopt_core/egraph/core.py",
           note: "equality saturation — the closure, computed",
         },
         {
-          path: "packages/catopt-core/src/catopt_core/egraph/match.py",
+          path: "packages/mlopt-core/src/mlopt_core/egraph/match.py",
           note: "where a law's LHS matches a redex",
         },
         {
@@ -404,11 +404,11 @@ export class Course {
         "name the algebraic structure a program instantiates, and read the law it licenses — not from an op's name, but from the algebra.",
       repo: [
         {
-          path: "packages/catopt-core/src/catopt_core/laws/tensor.py",
+          path: "packages/mlopt-core/src/mlopt_core/laws/tensor.py",
           note: "the hand-written tensor law kernel",
         },
         {
-          path: "packages/catopt-core/src/catopt_core/laws/base.py",
+          path: "packages/mlopt-core/src/mlopt_core/laws/base.py",
           note: "the law record — pattern, guard, proof",
         },
         {
@@ -450,11 +450,11 @@ export class Course {
         "explain why legality is semantic, that a certificate is a replayable proof, and that a numeric oracle is what decides truth.",
       repo: [
         {
-          path: "packages/catopt-core/src/catopt_core/egraph/certs.py",
+          path: "packages/mlopt-core/src/mlopt_core/egraph/certs.py",
           note: "certificate replay",
         },
         {
-          path: "packages/catopt-core/src/catopt_core/egraph/proof.py",
+          path: "packages/mlopt-core/src/mlopt_core/egraph/proof.py",
           note: "the proof object a rewrite carries",
         },
         {
@@ -496,7 +496,7 @@ export class Course {
         "keep the non-dominated set instead of scalarizing early, and explain why the target, not the search, picks the trade-off.",
       repo: [
         {
-          path: "packages/catopt-core/src/catopt_core/pareto.py",
+          path: "packages/mlopt-core/src/mlopt_core/pareto.py",
           note: "the Pareto frontier of equal programs",
         },
         {
@@ -542,11 +542,11 @@ export class Course {
         "describe a policy as an ordering over legal moves, and explain that search may be wrong but never illegal.",
       repo: [
         {
-          path: "packages/catopt-core/src/catopt_core/policies.py",
+          path: "packages/mlopt-core/src/mlopt_core/policies.py",
           note: "the policy protocol — order legal moves",
         },
         {
-          path: "packages/catopt-core/src/catopt_core/search_env.py",
+          path: "packages/mlopt-core/src/mlopt_core/search_env.py",
           note: "the environment a policy steps through",
         },
         {
@@ -584,11 +584,11 @@ export class Course {
         "frame optimization as a game (state = features, action = rule, reward = improvement) and explain why a shape-encoded action space generalizes to unseen rules.",
       repo: [
         {
-          path: "packages/catopt-core/src/catopt_core/trajectories.py",
+          path: "packages/mlopt-core/src/mlopt_core/trajectories.py",
           note: "the trajectory data a policy learns from",
         },
         {
-          path: "packages/catopt-torch/src/catopt_torch/learned_policy.py",
+          path: "packages/mlopt-torch/src/mlopt_torch/learned_policy.py",
           note: "the shipped learned policy",
         },
         {
@@ -626,15 +626,15 @@ export class Course {
         "describe a program with static features, predict runtime from a model, and explain why that model may rank but never prune.",
       repo: [
         {
-          path: "packages/catopt-core/src/catopt_core/features.py",
+          path: "packages/mlopt-core/src/mlopt_core/features.py",
           note: "ProgramFeatures — static, no execution",
         },
         {
-          path: "packages/catopt-core/src/catopt_core/perf_model.py",
+          path: "packages/mlopt-core/src/mlopt_core/perf_model.py",
           note: "the performance model",
         },
         {
-          path: "packages/catopt-core/src/catopt_core/cost/roofline.py",
+          path: "packages/mlopt-core/src/mlopt_core/cost/roofline.py",
           note: "compute-or-memory bound",
         },
         {
@@ -680,15 +680,15 @@ export class Course {
         "explain why features, a roofline, an executor route and delivered pricing are four different questions, and how a `TargetProfile` re-targets them.",
       repo: [
         {
-          path: "packages/catopt-core/src/catopt_core/perf_model.py",
+          path: "packages/mlopt-core/src/mlopt_core/perf_model.py",
           note: "the roofline prediction",
         },
         {
-          path: "packages/catopt-orchestrator/src/catopt_orchestrator/optimize.py",
+          path: "packages/mlopt-orchestrator/src/mlopt_orchestrator/optimize.py",
           note: "`delivered_cost_for` and the carrier-upgrade comparison",
         },
         {
-          path: "packages/catopt-core/src/catopt_core/profile.py",
+          path: "packages/mlopt-core/src/mlopt_core/profile.py",
           note: "`TargetProfile` — the measured target",
         },
         {
@@ -731,21 +731,21 @@ export class Course {
       idea: "module · safetensors · torchscript · `.pt2` · CUDA graph · native",
       objective: "A delivered term must run standalone — the artifact and the runner are choices.",
       module: "evaluation",
-      why: "A price is not a program; something has to ship as a file that runs without catopt.",
+      why: "A price is not a program; something has to ship as a file that runs without mlopt.",
       terms: ["delivery-artifact", "cuda-graph", "native-engine"],
       outcome:
         "name the artifact a delivered term ships as, and explain what each needs to run standalone.",
       repo: [
         {
-          path: "packages/catopt-torch/src/catopt_torch/export.py",
+          path: "packages/mlopt-torch/src/mlopt_torch/export.py",
           note: "`export_optimized` / `load_optimized` — the artifact formats",
         },
         {
-          path: "packages/catopt-cuda/src/catopt_cuda/runners.py",
+          path: "packages/mlopt-cuda/src/mlopt_cuda/runners.py",
           note: "the CUDA-graph runner",
         },
         {
-          path: "packages/catopt-native/",
+          path: "packages/mlopt-native/",
           note: "the opt-in PyO3/Rust engine",
         },
         {
@@ -755,7 +755,7 @@ export class Course {
       ],
       checkpoint: checkpoint(
         {
-          q: "Which export format round-trips to a standalone runnable module with no catopt at inference?",
+          q: "Which export format round-trips to a standalone runnable module with no mlopt at inference?",
           opts: ["state_dict", "`.pt2`", "safetensors"],
           ok: "`.pt2`",
           why: "`.pt2` roundtrips standalone (docs/api.md). A `state_dict` or `safetensors` is weights only — it needs the model class back; torchscript bakes the graph but still needs torch.",
@@ -777,7 +777,7 @@ export class Course {
           q: "What is the opt-in Rust engine?",
           opts: ["a different IR", "a faster closure over the same IR", "a new law set"],
           ok: "a faster closure over the same IR",
-          why: "`catopt-native` is the PyO3/Rust search engine (~17× on match-bound closures) — the same IR and laws, a faster closure. The pure-Python engine stays the reference.",
+          why: "`mlopt-native` is the PyO3/Rust search engine (~17× on match-bound closures) — the same IR and laws, a faster closure. The pure-Python engine stays the reference.",
           concept: "native-engine",
         },
       ),
@@ -794,11 +794,11 @@ export class Course {
         "assign any component to one of the four dimensions — semantics, search, evaluation, execution — and explain why that separation makes each replaceable.",
       repo: [
         {
-          path: "packages/catopt-core/src/catopt_core/pipeline.py",
+          path: "packages/mlopt-core/src/mlopt_core/pipeline.py",
           note: "the Backend bundle the four dimensions compose",
         },
         {
-          path: "packages/catopt-core/src/catopt_core/ports.py",
+          path: "packages/mlopt-core/src/mlopt_core/ports.py",
           note: "every adapter contract, named",
         },
         {
@@ -844,7 +844,7 @@ export class Course {
         "recognise where a design gets hard — reward versus filter, ranking versus bound — and say which dimension each tension belongs to.",
       repo: [
         {
-          path: "packages/catopt-core/src/catopt_core/meta.py",
+          path: "packages/mlopt-core/src/mlopt_core/meta.py",
           note: "the rule matcher where a guard raising rejects a candidate",
         },
         {
@@ -895,11 +895,11 @@ export class Course {
         "measure the relations between laws — derivable, inverse, divergent — and fill a divergence with a mediating law.",
       repo: [
         {
-          path: "packages/catopt-core/src/catopt_core/laws/pairing.py",
+          path: "packages/mlopt-core/src/mlopt_core/laws/pairing.py",
           note: "the pairwise law-relation probe",
         },
         {
-          path: "packages/catopt-core/src/catopt_core/laws/ruleset.py",
+          path: "packages/mlopt-core/src/mlopt_core/laws/ruleset.py",
           note: "the axiom/lemma split over the shipped rules",
         },
         {
@@ -942,11 +942,11 @@ export class Course {
         "trace an atom through the minting funnel — need → signature → handler → laws → admission — and read where each law came from.",
       repo: [
         {
-          path: "packages/catopt-discovery/src/catopt_discovery/pipeline.py",
+          path: "packages/mlopt-discovery/src/mlopt_discovery/pipeline.py",
           note: "the composed need → handler → laws → admission loop",
         },
         {
-          path: "packages/catopt-discovery/src/catopt_discovery/handler_synth.py",
+          path: "packages/mlopt-discovery/src/mlopt_discovery/handler_synth.py",
           note: "the handler synthesizer",
         },
         {
@@ -1001,7 +1001,7 @@ export class Course {
         "explain why a guard must be swept adversarially, and why a guard that is perfect on the measured domain can still be unsound.",
       repo: [
         {
-          path: "packages/catopt-discovery/src/catopt_discovery/oracle.py",
+          path: "packages/mlopt-discovery/src/mlopt_discovery/oracle.py",
           note: "the numeric oracle that decides truth",
         },
         {
@@ -1047,11 +1047,11 @@ export class Course {
         "measure FLOPs-weighted exposure, explain its bimodal shape, and say why exposure is necessary but not sufficient.",
       repo: [
         {
-          path: "packages/catopt-discovery/src/catopt_discovery/census.py",
+          path: "packages/mlopt-discovery/src/mlopt_discovery/census.py",
           note: "the corpus census — where a need is counted",
         },
         {
-          path: "packages/catopt-discovery/src/catopt_discovery/zoo.py",
+          path: "packages/mlopt-discovery/src/mlopt_discovery/zoo.py",
           note: "the workload zoo the screen runs over",
         },
         {
@@ -1094,11 +1094,11 @@ export class Course {
         "re-present a program as combinators — Δ makes sharing explicit, `loop` makes recurrence first-class, and the bridge round-trips.",
       repo: [
         {
-          path: "packages/catopt-orchestrator/src/catopt_orchestrator/morphisms/",
+          path: "packages/mlopt-orchestrator/src/mlopt_orchestrator/morphisms/",
           note: "the combinator presentation, as code",
         },
         {
-          path: "packages/catopt-discovery/src/catopt_discovery/antiunify.py",
+          path: "packages/mlopt-discovery/src/mlopt_discovery/antiunify.py",
           note: "the definitional-atom bridge (layer 1)",
         },
         {
@@ -1144,15 +1144,15 @@ export class Course {
         "implement a backend as a Source/Sink port pair, and explain why swapping it changes only supported_ops, never core.",
       repo: [
         {
-          path: "packages/catopt-core/src/catopt_core/ports.py",
+          path: "packages/mlopt-core/src/mlopt_core/ports.py",
           note: "the Source / Sink protocols",
         },
         {
-          path: "packages/catopt-onnx/src/catopt_onnx/sink.py",
+          path: "packages/mlopt-onnx/src/mlopt_onnx/sink.py",
           note: "the ONNX sink that landed with zero core edits",
         },
         {
-          path: "packages/catopt-torch/src/catopt_torch/backend.py",
+          path: "packages/mlopt-torch/src/mlopt_torch/backend.py",
           note: "the torch Backend bundle",
         },
         {
@@ -1191,15 +1191,15 @@ export class Course {
         "assemble a store from fragments, read a cell's provenance origin, and emit the store as a handl fragment.",
       repo: [
         {
-          path: "packages/catopt-core/src/catopt_core/cells.py",
+          path: "packages/mlopt-core/src/mlopt_core/cells.py",
           note: "`Cell` / `merge_fragments` / `CellStore`",
         },
         {
-          path: "packages/catopt-discovery/src/catopt_discovery/cellstore.py",
+          path: "packages/mlopt-discovery/src/mlopt_discovery/cellstore.py",
           note: "the ambient store and the machine fragment",
         },
         {
-          path: "packages/catopt-discovery/src/catopt_discovery/handl.py",
+          path: "packages/mlopt-discovery/src/mlopt_discovery/handl.py",
           note: "the handl schema bridge",
         },
         {
@@ -1238,7 +1238,7 @@ export class Course {
           q: "A law cell becomes what in a handl fragment?",
           opts: ["an `AstShapeDef`", "a `TransformDef`", "a `!Native`"],
           ok: "a `TransformDef`",
-          why: "The handl bridge maps op cells → `AstShapeDef`, law/object cells → `TransformDef`, handle cells → `!Native`. Every row carries a `catopt:` extension so the round-trip is lossless.",
+          why: "The handl bridge maps op cells → `AstShapeDef`, law/object cells → `TransformDef`, handle cells → `!Native`. Every row carries a `mlopt:` extension so the round-trip is lossless.",
           concept: "handl-bridge",
         },
       ),
@@ -1256,19 +1256,19 @@ export class Course {
         "describe the game layer — a `Board` protocol, players, the meta-arena, and `play --domain` — and what a learned prior measurably buys.",
       repo: [
         {
-          path: "packages/catopt-discovery/src/catopt_discovery/engine.py",
+          path: "packages/mlopt-discovery/src/mlopt_discovery/engine.py",
           note: "the `Board` protocol + episode/train/eval drivers",
         },
         {
-          path: "packages/catopt-discovery/src/catopt_discovery/players.py",
+          path: "packages/mlopt-discovery/src/mlopt_discovery/players.py",
           note: "`LinearPolicy`, the learned arm",
         },
         {
-          path: "packages/catopt-discovery/src/catopt_discovery/meta_arena.py",
+          path: "packages/mlopt-discovery/src/mlopt_discovery/meta_arena.py",
           note: "the mid-search construction board",
         },
         {
-          path: "packages/catopt-discovery/src/catopt_discovery/play.py",
+          path: "packages/mlopt-discovery/src/mlopt_discovery/play.py",
           note: "the domain registry + CLI",
         },
       ],
@@ -1281,7 +1281,7 @@ export class Course {
             "a graph and a sink",
           ],
           ok: "a program, a legal move set, a referee",
-          why: "`catopt_discovery.engine` factors the shared shape out: every domain is 'a program + a legal move set + a referee', and the reward is certified improvement.",
+          why: "`mlopt_discovery.engine` factors the shared shape out: every domain is 'a program + a legal move set + a referee', and the reward is certified improvement.",
           concept: "board",
         },
         {
@@ -1421,7 +1421,7 @@ export class Course {
         "explain the bounded lane as two gates — a certificate and an economics test — and why passing the first is not enough.",
       repo: [
         {
-          path: "packages/catopt-orchestrator/src/catopt_orchestrator/criteria.py",
+          path: "packages/mlopt-orchestrator/src/mlopt_orchestrator/criteria.py",
           note: "the acceptance criteria the lane must clear",
         },
         {
@@ -1472,15 +1472,15 @@ export class Course {
         "explain delivery as an execution dimension — eager, carrier, fused, graph, or minted kernel — and why the same term runs at different speeds.",
       repo: [
         {
-          path: "packages/catopt-torch/src/catopt_torch/executors/",
+          path: "packages/mlopt-torch/src/mlopt_torch/executors/",
           note: "the executor tiers a term can run through",
         },
         {
-          path: "packages/catopt-cuda/src/catopt_cuda/runners.py",
+          path: "packages/mlopt-cuda/src/mlopt_cuda/runners.py",
           note: "the CUDA-graph runner",
         },
         {
-          path: "packages/catopt-carriers/src/catopt_carriers/machinery.py",
+          path: "packages/mlopt-carriers/src/mlopt_carriers/machinery.py",
           note: "the carrier seam — whole-subgraph lowerers",
         },
         {
@@ -1526,11 +1526,11 @@ export class Course {
         "explain that a cost model is a ranking that can be wrong, and that measured feedback (calibration) is the fix.",
       repo: [
         {
-          path: "packages/catopt-torch/src/catopt_torch/calibrate.py",
+          path: "packages/mlopt-torch/src/mlopt_torch/calibrate.py",
           note: "the measured corrections fed back into the model",
         },
         {
-          path: "packages/catopt-core/src/catopt_core/cost/executor.py",
+          path: "packages/mlopt-core/src/mlopt_core/cost/executor.py",
           note: "the executor-route pricing",
         },
         {

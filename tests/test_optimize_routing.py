@@ -9,21 +9,21 @@ cost is blind to the lowering (``bench/suites/cost/cost_fidelity.py``).
 
 import pytest
 import torch
-from catopt_core.cost import flops_cost
-from catopt_core.ir import IR, Op, Param, TensorType, Var
-from catopt_torch.torch_bridge import ir_to_torch_module
-from catopt_orchestrator.optimize import _lower_extracted
+from mlopt_core.cost import flops_cost
+from mlopt_core.ir import IR, Op, Param, TensorType, Var
+from mlopt_torch.torch_bridge import ir_to_torch_module
+from mlopt_orchestrator.optimize import _lower_extracted
 
 
-from catopt_orchestrator.runners import ChainedRunner
+from mlopt_orchestrator.runners import ChainedRunner
 
-from catopt_cuda import CudaGraphRunner
-from catopt_torch.runners import TorchCompileRunner
+from mlopt_cuda import CudaGraphRunner
+from mlopt_torch.runners import TorchCompileRunner
 
-from catopt_torch.adapters import TorchSink
-from catopt_orchestrator import Optimizer
+from mlopt_torch.adapters import TorchSink
+from mlopt_orchestrator import Optimizer
 
-from catopt_torch.backend import TorchBackend
+from mlopt_torch.backend import TorchBackend
 
 
 def _T(shape):
@@ -167,7 +167,7 @@ def test_optimize_model_compile_delivers_fused_module():
 def test_optimize_model_compile_failure_falls_back(monkeypatch):
     """A compile failure keeps the uncompiled module — the optimized
     term still ships."""
-    import catopt_orchestrator.optimize as O
+    import mlopt_orchestrator.optimize as O
 
     torch.manual_seed(0)
     m = torch.nn.Sequential(
@@ -191,7 +191,7 @@ def test_optimize_model_compile_failure_falls_back(monkeypatch):
 def test_delivered_cost_priced_by_executor():
     """Carrier-rooted plannable terms price under the batched
     lowering; non-carrier terms under generic."""
-    from catopt_orchestrator.optimize import _delivered_cost
+    from mlopt_orchestrator.optimize import _delivered_cost
 
 
 
@@ -205,7 +205,7 @@ def test_delivered_cost_priced_by_executor():
 
 def test_carrier_upgrade_swaps_to_batched_member():
     """A cheaper batched applyd member replaces the additive winner."""
-    from catopt_torch.models import LinearRecurrence
+    from mlopt_torch.models import LinearRecurrence
 
 
     torch.manual_seed(0)
@@ -227,7 +227,7 @@ def test_optimize_model_delivered_module_captures_cuda_graph():
     scan-shaped model takes the CUDA-graph path — capture replays the
     identical computation, a changed input flows through the static
     buffers, and ``drop_cuda_graph`` restores the eager path."""
-    from catopt_torch.models import LinearRecurrence
+    from mlopt_torch.models import LinearRecurrence
 
 
     torch.manual_seed(0)
@@ -256,14 +256,14 @@ def test_optimize_model_delivered_module_captures_cuda_graph():
 def test_lift_scan_to_applyd_offers_carrier_member():
     """The nonlocal lift seeds applyd members on recurrence classes
     without saturating the carrier laws."""
-    from catopt_core.egraph import EGraph
-    from catopt_torch.models import LinearRecurrence
-    from catopt_carriers.scan_lower import (
+    from mlopt_core.egraph import EGraph
+    from mlopt_torch.models import LinearRecurrence
+    from mlopt_carriers.scan_lower import (
         is_scan_apply_term,
         to_batched_scan_module,
     )
-    from catopt_torch.torch_bridge import export_to_ir
-    from catopt_carriers.trace_lift import lift_scan_to_applyd
+    from mlopt_torch.torch_bridge import export_to_ir
+    from mlopt_carriers.trace_lift import lift_scan_to_applyd
 
     torch.manual_seed(0)
     m = LinearRecurrence(4, 8).eval().double()
@@ -303,10 +303,10 @@ def test_lift_scan_to_applyd_offers_carrier_member():
 def test_lift_scan_to_applyd_skips_existing_carrier():
     """A second pass offers nothing — classes already carrying an
     apply form are skipped."""
-    from catopt_core.egraph import EGraph
-    from catopt_torch.models import LinearRecurrence
-    from catopt_torch.torch_bridge import export_to_ir
-    from catopt_carriers.trace_lift import lift_scan_to_applyd
+    from mlopt_core.egraph import EGraph
+    from mlopt_torch.models import LinearRecurrence
+    from mlopt_torch.torch_bridge import export_to_ir
+    from mlopt_carriers.trace_lift import lift_scan_to_applyd
 
     torch.manual_seed(0)
     m = LinearRecurrence(4, 8).eval().double()
@@ -322,8 +322,8 @@ def test_lift_scan_to_applyd_skips_existing_carrier():
 def test_delivered_cost_declines_non_plannable_carrier():
     """A carrier-rooted term whose batched plan can't be built prices
     as generic — the module would degrade to serial eval anyway."""
-    from catopt_core.cost import executor_cost_for
-    from catopt_orchestrator.optimize import _delivered_cost
+    from mlopt_core.cost import executor_cost_for
+    from mlopt_orchestrator.optimize import _delivered_cost
 
 
 
@@ -344,8 +344,8 @@ def test_delivered_cost_declines_non_plannable_carrier():
 
 def test_carrier_upgrade_returns_incumbent_when_no_carriers():
     """No carrier enodes at root -> incumbent returned unchanged."""
-    from catopt_core.egraph import EGraph
-    from catopt_orchestrator.optimize import _carrier_upgrade
+    from mlopt_core.egraph import EGraph
+    from mlopt_orchestrator.optimize import _carrier_upgrade
 
 
 
@@ -358,8 +358,8 @@ def test_carrier_upgrade_returns_incumbent_when_no_carriers():
 
 def test_carrier_upgrade_handles_failed_extraction(monkeypatch):
     """An override extraction yielding None is skipped."""
-    import catopt_orchestrator.optimize as O
-    from catopt_core.egraph import EGraph
+    import mlopt_orchestrator.optimize as O
+    from mlopt_core.egraph import EGraph
 
     ir, h, env = _scan_ir()
     eg = EGraph()
@@ -377,8 +377,8 @@ def test_carrier_upgrade_handles_failed_extraction(monkeypatch):
 def test_carrier_upgrade_swaps_when_delivered_cheaper(monkeypatch):
     """Carrier member wins when its delivered (batched) price beats
     the incumbent's delivered price."""
-    import catopt_orchestrator.optimize as O
-    from catopt_core.egraph import EGraph
+    import mlopt_orchestrator.optimize as O
+    from mlopt_core.egraph import EGraph
 
     ir, h, env = _scan_ir()
     eg = EGraph()
@@ -423,7 +423,7 @@ def test_batched_module_exposes_param_map():
 def test_cuda_graph_runner_noop_on_cpu():
     """runner=CudaGraphRunner() on a CPU input: stats records False,
     module is unchanged — the runner is a no-op off-CUDA."""
-    from catopt_torch.models import LinearRecurrence
+    from mlopt_torch.models import LinearRecurrence
 
     torch.manual_seed(0)
     m = LinearRecurrence(4, 8).eval().double()
@@ -439,7 +439,7 @@ def test_cuda_graph_runner_noop_on_cpu():
 def test_cuda_graph_skipped_when_compiled():
     """[TorchCompileRunner, CudaGraphRunner]: the compiled module wins —
     capture is not attempted on it (no capture attr)."""
-    from catopt_torch.models import LinearRecurrence
+    from mlopt_torch.models import LinearRecurrence
 
     torch.manual_seed(0)
     m = LinearRecurrence(4, 8).eval().double()
@@ -454,7 +454,7 @@ def test_cuda_graph_skipped_when_compiled():
 def test_cuda_graph_tuple_input_noop_on_cpu():
     """Tuple/list example inputs don't crash the cuda_graph path —
     non-tensor first elements degrade quietly to cuda_graph=False."""
-    from catopt_torch.models import LinearRecurrence
+    from mlopt_torch.models import LinearRecurrence
 
     torch.manual_seed(0)
     m = LinearRecurrence(4, 8).eval().double()
@@ -469,8 +469,8 @@ def test_cuda_graph_tuple_input_noop_on_cpu():
 def test_delivered_cost_compiled_prices_fusion_regions():
     """compiled=True: every candidate prices under the fusion-region
     model — a 128-leaf pointwise spine bills ~1 kernel, not per-node."""
-    from catopt_core.cost import executor_cost_for
-    from catopt_orchestrator.optimize import _delivered_cost
+    from mlopt_core.cost import executor_cost_for
+    from mlopt_orchestrator.optimize import _delivered_cost
 
 
 
@@ -488,7 +488,7 @@ def _profile_with(corrections=None, measured_ns=None):
     ``None`` profile is the measured-feedback table — the same
     isolation ``lab/probes/executor_cost_probe.py``'s emitted profile uses.
     """
-    from catopt_core.profile import TargetProfile
+    from mlopt_core.profile import TargetProfile
 
     return TargetProfile(
         name="routing-test",
@@ -508,8 +508,8 @@ def test_delivered_cost_measured_correction_scales_route():
     """A ``corrections`` factor for the routed candidate scales the
     delivered price — the batched route reads ``"batched"``, the
     generic route ``"generic"``."""
-    from catopt_core.profile import shape_bucket
-    from catopt_orchestrator.optimize import _delivered_cost
+    from mlopt_core.profile import shape_bucket
+    from mlopt_orchestrator.optimize import _delivered_cost
 
 
 
@@ -535,7 +535,7 @@ def test_delivered_cost_measured_correction_scales_route():
 def test_delivered_cost_no_measured_data_unchanged():
     """No profile, empty tables, no bucket, or a cross-device bucket —
     the delivered price stays the pure-model value (backward compat)."""
-    from catopt_orchestrator.optimize import _delivered_cost
+    from mlopt_orchestrator.optimize import _delivered_cost
 
 
 
@@ -563,9 +563,9 @@ def test_carrier_upgrade_declines_measured_slower_carrier():
     """The routing inversion fix: a measured profile pricing the
     batched delivery slower than generic keeps the incumbent — the
     upgrade honours measurement over the built-in constants."""
-    import catopt_orchestrator.optimize as O
-    from catopt_core.egraph import EGraph
-    from catopt_core.profile import shape_bucket
+    import mlopt_orchestrator.optimize as O
+    from mlopt_core.egraph import EGraph
+    from mlopt_core.profile import shape_bucket
 
 
 
@@ -599,10 +599,10 @@ def test_search_profile_marker_reaches_carrier_upgrade(monkeypatch):
     (the SSM inversion ``lab/probes/executor_cost_probe.py`` measures) —
     is declined once the profile prices the carrier delivery slower.
     """
-    import catopt_orchestrator.optimize as O
-    from catopt_core.cost import executor_cost_for
-    from catopt_core.profile import shape_bucket
-    from catopt_torch.models import LinearRecurrence
+    import mlopt_orchestrator.optimize as O
+    from mlopt_core.cost import executor_cost_for
+    from mlopt_core.profile import shape_bucket
+    from mlopt_torch.models import LinearRecurrence
 
 
 
@@ -664,7 +664,7 @@ def test_delivered_cost_for_bills_routed_lowering():
     plannable terms price under the batched lowering, plain terms
     generic — and the ``profile`` marker rides the closure
     (``backend_cost`` forwards it to ``_carrier_upgrade``)."""
-    from catopt_orchestrator.optimize import (
+    from mlopt_orchestrator.optimize import (
         _delivered_cost,
         delivered_cost_for,
     )
@@ -684,7 +684,7 @@ def test_delivered_cost_for_bills_routed_lowering():
 
 def test_delivered_cost_for_compiled_bills_fused():
     """compiled=True: every term prices under the fusion-region model."""
-    from catopt_orchestrator.optimize import (
+    from mlopt_orchestrator.optimize import (
         _delivered_cost,
         delivered_cost_for,
     )
@@ -698,8 +698,8 @@ def test_delivered_cost_for_bucket_keys_corrections():
     """``x=``/``bucket=`` select the corrections bucket — explicit
     ``bucket`` wins, ``bucket=None`` keeps the pure-model price, and
     a cross-device bucket never interpolates."""
-    from catopt_core.profile import shape_bucket
-    from catopt_orchestrator.optimize import (
+    from mlopt_core.profile import shape_bucket
+    from mlopt_orchestrator.optimize import (
         _delivered_cost,
         delivered_cost_for,
     )
@@ -735,9 +735,9 @@ def test_delivered_cost_for_search_keeps_generic_pick():
     a calibrated profile pricing the batched delivery slower keeps
     LinearRecurrence's generic ``add`` member; the same search with
     the bucket left underived re-inverts to the carrier member."""
-    from catopt_core.profile import shape_bucket
-    from catopt_orchestrator import delivered_cost_for
-    from catopt_torch.models import LinearRecurrence
+    from mlopt_core.profile import shape_bucket
+    from mlopt_orchestrator import delivered_cost_for
+    from mlopt_torch.models import LinearRecurrence
 
     torch.manual_seed(0)
     m = LinearRecurrence(4, 8).eval().double()

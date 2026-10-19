@@ -1,6 +1,6 @@
-"""Real-ish win hunt — autotuned catopt vs eager/Inductor on CUDA.
+"""Real-ish win hunt — autotuned mlopt vs eager/Inductor on CUDA.
 
-Priority question: where does catopt produce *consistent wall-clock
+Priority question: where does mlopt produce *consistent wall-clock
 wins* vs TorchInductor on representative model blocks — not synthetic
 microbenchmarks?  Prior evidence: stories15M/110M transformer stacks
 came out at parity; the k-deep weight chain (reassoc_scale) and the
@@ -15,14 +15,14 @@ bench hunts on five/six real-topology cells:
   reordering) and the product-law pairing of the three input
   projections into one GEMM.
 * ``palm_stack`` — PaLM/GPT-J parallel blocks
-  ``x + attn(norm x) + mlp(norm x)`` (``catopt_torch.models.ParallelBlock``
+  ``x + attn(norm x) + mlp(norm x)`` (``mlopt_torch.models.ParallelBlock``
   ×2): five same-input projections the pairing pass can fold into
   one GEMM per block.  Same FLOPs, fewer launches.
 * ``moe_sum`` — mixture-of-small-matmuls / model-soup merge:
   ``Σ_i x @ W_i`` over 8 experts — ``weight_factor_linear`` folds it
   to ONE matmul (a real FLOP cut deployment tools do by hand).
 * ``conv_stem`` — ResNet-style 1×1 multi-branch stem
-  (``catopt_torch.models.ParallelConv``): 4 same-input convs paired into
+  (``mlopt_torch.models.ParallelConv``): 4 same-input convs paired into
   one cuDNN call; Inductor does not fuse conv calls.
 * ``decode_retnet`` — chunked streaming decode of a RetNet step,
   UNBATCHED vector state (the form the affine carrier lifts): the
@@ -43,11 +43,11 @@ picks):
    candidate (``eager,generic,batched,compiled,compiled_generic``,
    plus ``cuda_graph`` on CUDA) is rebuilt, ``sink.verify``-gated,
    and timed (``warmup`` + ``n_calls`` forwards, median).  The
-   reported ``catopt_best`` is the measured winner — never a static
+   reported ``mlopt_best`` is the measured winner — never a static
    cost-model claim.
 3. ``torch.compile`` baseline on a deepcopy (SIGALRM-guarded).
 4. benchkit ``Runner`` times ``eager`` / ``inductor`` /
-   ``catopt_best``; decode cells time full N-token decode loops.
+   ``mlopt_best``; decode cells time full N-token decode loops.
 
 Measured outcome (RTX 2050 fp32, torch 2.14+cu130, two runs —
 medians stable within ~10-20%):
@@ -74,15 +74,15 @@ medians stable within ~10-20%):
   lift, not the timing, layer.
 
 Usage:
-    PYTHONPATH="packages/catopt-core/src:packages/catopt-torch/src:\
-packages/catopt-carriers/src:packages/catopt-orchestrator/src:." \
-        /tmp/catopt-cuda-venv/bin/python bench/suites/speedup/real_win_hunt.py \
+    PYTHONPATH="packages/mlopt-core/src:packages/mlopt-torch/src:\
+packages/mlopt-carriers/src:packages/mlopt-orchestrator/src:." \
+        /tmp/mlopt-cuda-venv/bin/python bench/suites/speedup/real_win_hunt.py \
         --device cuda
     .venv/bin/python bench/suites/speedup/real_win_hunt.py --device cpu --quick
 """
 # ruff: noqa: E402, RUF001, RUF002, RUF003 -- ×, ·, Σ, ᵀ in
 # strings/docstrings are deliberate math notation; sys.path setup
-# must precede the benchkit/catopt imports (bench_omd2 convention).
+# must precede the benchkit/mlopt imports (bench_omd2 convention).
 
 from __future__ import annotations
 
@@ -98,11 +98,11 @@ sys.setrecursionlimit(400_000)
 
 import torch
 import torch.nn as nn
-from catopt_orchestrator import Optimizer
-from catopt_orchestrator.optimize import Autotuned
-from catopt_torch.autotune import TORCH_BUILDERS
-from catopt_torch.backend import TorchBackend
-from catopt_torch.models import (
+from mlopt_orchestrator import Optimizer
+from mlopt_orchestrator.optimize import Autotuned
+from mlopt_torch.autotune import TORCH_BUILDERS
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.models import (
     ParallelBlock,
     ParallelConv,
     ParallelLinear,
@@ -282,7 +282,7 @@ def _cells(args) -> list[HuntCell]:
             _linattn,
             flops={
                 "eager": 4 * 2 * B * T * d * d + 2 * B * H * T * T * dh,
-                "catopt": 4 * 2 * B * T * d * d
+                "mlopt": 4 * 2 * B * T * d * d
                 + 2 * B * H * T * dh * dh,
             },
             mech="assoc_matmul reassoc + qkv pairing",
@@ -319,7 +319,7 @@ def _cells(args) -> list[HuntCell]:
             _moe,
             flops={
                 "eager": 8 * 2 * 4096 * 512 * 512,
-                "catopt": 2 * 4096 * 512 * 512,
+                "mlopt": 2 * 4096 * 512 * 512,
             },
             mech="weight_factor merge: Σ x@Wi → x@(ΣWi)",
         )
@@ -658,7 +658,7 @@ def run_cell(
         if best is not None:
             variants.append(
                 Variant(
-                    "catopt_best",
+                    "mlopt_best",
                     _stmt(best),
                     note=f"pick={rec['pick']}",
                 )
@@ -677,7 +677,7 @@ def run_cell(
         if best is not None:
             variants.append(
                 Variant(
-                    "catopt_best",
+                    "mlopt_best",
                     _fwd_stmt(best, args32),
                     note=f"pick={rec['pick']}",
                 )
@@ -686,8 +686,8 @@ def run_cell(
         for v in variants:
             if v.name == "eager":
                 v.flops = cell.flops.get("eager")
-            elif v.name == "catopt_best":
-                v.flops = cell.flops.get("catopt")
+            elif v.name == "mlopt_best":
+                v.flops = cell.flops.get("mlopt")
 
     rec["mech"] = cell.mech
     case = Case(
@@ -768,7 +768,7 @@ def run_bench(args) -> Report:
     # -- console table -------------------------------------------------
     hdr = (
         f"{'model':<15} | {'eager':>8} | {'inductor':>8} | "
-        f"{'catopt':>8} | {'pick':<10} | {'ver':>4} | {'xE':>5} | "
+        f"{'mlopt':>8} | {'pick':<10} | {'ver':>4} | {'xE':>5} | "
         f"{'xI':>5}"
     )
     print("\n" + hdr)
@@ -782,19 +782,19 @@ def run_bench(args) -> Report:
         e, i, b = (
             ms.get("eager"),
             ms.get("inductor"),
-            ms.get("catopt_best"),
+            ms.get("mlopt_best"),
         )
         xe = f"{e / b:>5.2f}" if e and b else f"{'—':>5}"
         xi = f"{i / b:>5.2f}" if i and b else f"{'—':>5}"
         print(
             f"{rec['name']:<15} | {g('eager')} | {g('inductor')} | "
-            f"{g('catopt_best')} | {rec.get('pick', '—')!s:<10} | "
+            f"{g('mlopt_best')} | {rec.get('pick', '—')!s:<10} | "
             f"{'yes' if rec.get('verified') else 'NO':>4} | {xe} | {xi}"
         )
     print("-" * len(hdr))
     print(
-        "  xE = catopt_best speedup vs eager · xI = vs inductor "
-        "(>1 = catopt wins)"
+        "  xE = mlopt_best speedup vs eager · xI = vs inductor "
+        "(>1 = mlopt wins)"
     )
     print(
         f"  total wall time {time.perf_counter() - t0:.1f}s", flush=True
@@ -803,11 +803,11 @@ def run_bench(args) -> Report:
     scored = [
         (
             c.case.name,
-            c.medians["inductor"] / c.medians["catopt_best"],
-            c.medians["eager"] / c.medians["catopt_best"],
+            c.medians["inductor"] / c.medians["mlopt_best"],
+            c.medians["eager"] / c.medians["mlopt_best"],
         )
         for c in cells
-        if c.medians.get("inductor") and c.medians.get("catopt_best")
+        if c.medians.get("inductor") and c.medians.get("mlopt_best")
     ]
     best = max(scored, key=lambda t: t[1], default=None)
     n_verified = sum(1 for r in recs if r.get("verified"))
@@ -828,7 +828,7 @@ def run_bench(args) -> Report:
                 if best
                 else "no topology beats Inductor"
             ),
-            metric="catopt_best / inductor",
+            metric="mlopt_best / inductor",
             value=best[1] if best else None,
             evidence={
                 "picks": {r["name"]: r.get("pick") for r in recs}
@@ -874,7 +874,7 @@ def run_bench(args) -> Report:
 def main() -> None:
     ap = argparse.ArgumentParser(
         description=(
-            "real-ish win hunt: autotuned catopt vs eager/Inductor "
+            "real-ish win hunt: autotuned mlopt vs eager/Inductor "
             "on representative blocks"
         )
     )

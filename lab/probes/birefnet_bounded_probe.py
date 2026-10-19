@@ -85,12 +85,12 @@ from pathlib import Path
 
 import torch
 import torch.nn as nn
-from catopt_discovery.play import _time_module
-from catopt_orchestrator import Compositional, Optimizer
-from catopt_torch.adapters import TorchSource
-from catopt_torch.backend import TorchBackend
-from catopt_torch.composer import TorchComposer
-from catopt_torch.report import verify_equiv
+from mlopt_discovery.play import _time_module
+from mlopt_orchestrator import Compositional, Optimizer
+from mlopt_torch.adapters import TorchSource
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.composer import TorchComposer
+from mlopt_torch.report import verify_equiv
 
 try:
     from transformers import AutoModelForImageSegmentation
@@ -189,7 +189,7 @@ def _op_hist(term) -> Counter:
     node identity), so the counts are the *spelled* graph's, not a
     tree expansion's.
     """
-    from catopt_core.ir import Op
+    from mlopt_core.ir import Op
 
     acc: Counter = Counter()
     seen: set = set()
@@ -560,7 +560,7 @@ def run_budget_cell(
         rec["timing"]["inductor"] = args.inductor_timing
     arms = {"eager": ref_model}
     if opt_mod is not None:
-        arms["catopt"] = opt_mod
+        arms["mlopt"] = opt_mod
     for name, mod in arms.items():
         if mod is None:
             continue
@@ -575,24 +575,24 @@ def run_budget_cell(
             f"  {name:>16}: {r['us']:9.1f}us  peak {r['peak_mb']:7.1f}MB",
             flush=True,
         )
-    if opt_mod is not None and args.catopt_inductor:
+    if opt_mod is not None and args.mlopt_inductor:
         ref_model.to("cpu")  # headroom for the compiled extra copy
         oc, st_ = _try_compile(
             opt_mod, x_dev, float(args.compile_timeout)
         )
-        rec["catopt_ind_status"] = st_
+        rec["mlopt_ind_status"] = st_
         if oc is not None:
             r = _bench(oc, x_dev, int(args.reps))
-            rec["timing"]["catopt+inductor"] = r
+            rec["timing"]["mlopt+inductor"] = r
             print(
-                f"  {'catopt+inductor':>16}: {r['us']:9.1f}us  "
+                f"  {'mlopt+inductor':>16}: {r['us']:9.1f}us  "
                 f"peak {r['peak_mb']:7.1f}MB",
                 flush=True,
             )
         ref_model.to(dev)
-        print(f"  catopt+inductor: {st_}", flush=True)
+        print(f"  mlopt+inductor: {st_}", flush=True)
     te = rec["timing"].get("eager", {}).get("us")
-    tc = rec["timing"].get("catopt", {}).get("us")
+    tc = rec["timing"].get("mlopt", {}).get("us")
     ti = rec["timing"].get("inductor", {}).get("us")
     if tc and te:
         rec["speedup_vs_eager"] = te / tc
@@ -623,7 +623,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--max-enodes", type=int, default=100_000)
     ap.add_argument("--compile-timeout", type=float, default=180.0)
     ap.add_argument("--no-inductor", action="store_true")
-    ap.add_argument("--catopt-inductor", action="store_true")
+    ap.add_argument("--mlopt-inductor", action="store_true")
     ap.add_argument("--full-ir-census", action="store_true")
     ap.add_argument(
         "--out", default="bench/results/birefnet_bounded.json"
@@ -775,7 +775,7 @@ def main(argv: list[str] | None = None) -> int:
     hdr = (
         f"{'budget':>8} | {'opt s':>7} | {'offers':>6} | "
         f"{'deliv':>5} | {'bound':>9} | {'fresh_rel':>9} | "
-        f"{'IoU min':>7} | {'catopt us':>10} | {'vs eager':>8} | "
+        f"{'IoU min':>7} | {'mlopt us':>10} | {'vs eager':>8} | "
         f"{'vs ind':>8}"
     )
     print(hdr)
@@ -784,7 +784,7 @@ def main(argv: list[str] | None = None) -> int:
         t = rec.get("timing") or {}
         e = (t.get("eager") or {}).get("us")
         i = (t.get("inductor") or {}).get("us")
-        c = (t.get("catopt") or {}).get("us")
+        c = (t.get("mlopt") or {}).get("us")
         p = rec.get("proxy") or {}
         print(
             f"{rec['budget']:>8} | {rec.get('opt_s', 0):>7} | "

@@ -1,16 +1,16 @@
-"""The search game (:mod:`catopt_core.game`)."""
+"""The search game (:mod:`mlopt_core.game`)."""
 
 import pytest
-from catopt_core.egraph import EGraph
-from catopt_core.game import (
+from mlopt_core.egraph import EGraph
+from mlopt_core.game import (
     Action,
     Evaluator,
     GameState,
     RuleBook,
     transition,
 )
-from catopt_core.ir import Op, TensorType, Var
-from catopt_core.laws import all_rules
+from mlopt_core.ir import Op, TensorType, Var
+from mlopt_core.laws import all_rules
 
 
 def _v(name: str, *shape: int) -> Var:

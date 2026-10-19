@@ -17,12 +17,12 @@ tests pin the code-side consequences on main:
 import torch
 import torch.nn as nn
 
-from catopt_core.cost import param_bytes_cost_for
-from catopt_torch.composer import param_report
-from catopt_orchestrator import Optimizer
+from mlopt_core.cost import param_bytes_cost_for
+from mlopt_torch.composer import param_report
+from mlopt_orchestrator import Optimizer
 
 
-from catopt_torch.backend import TorchBackend
+from mlopt_torch.backend import TorchBackend
 
 
 

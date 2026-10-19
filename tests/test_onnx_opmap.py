@@ -2,7 +2,7 @@
 
 ``test_onnx_sink.py`` exercises the sink through torch exports — the
 spellings a real ``nn.Module`` produces.  This file exercises
-:mod:`catopt_onnx.opmap` on the spellings torch *doesn't* produce:
+:mod:`mlopt_onnx.opmap` on the spellings torch *doesn't* produce:
 the alternative attr names the canonical schema accepts (``dims``
 for ``dim``, ``size`` for ``shape``), the attr-vs-operand fold
 positions, and each refusal the builders declare, plus the small
@@ -19,8 +19,8 @@ pytestmark = pytest.mark.e2e  # boundary-purpose file: crosses an external engin
 pytest.importorskip("onnx")
 pytest.importorskip("onnxruntime")
 
-from catopt_core.ir import IR, Const, Op, Param, TensorType, Var
-from catopt_onnx import (
+from mlopt_core.ir import IR, Const, Op, Param, TensorType, Var
+from mlopt_onnx import (
     OnnxExecutor,
     OnnxLoweringError,
     UnsupportedOnnxOpError,

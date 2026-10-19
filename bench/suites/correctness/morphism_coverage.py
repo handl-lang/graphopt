@@ -60,13 +60,13 @@ sys.setrecursionlimit(400_000)
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-import catopt_orchestrator.morphisms as M
-import catopt_orchestrator.morphisms_kv as K
+import mlopt_orchestrator.morphisms as M
+import mlopt_orchestrator.morphisms_kv as K
 import numpy as np
 import torch
-from catopt_orchestrator import MorphismSearch, Optimizer
-from catopt_torch.backend import TorchBackend
-from catopt_torch.report import verify_equiv
+from mlopt_orchestrator import MorphismSearch, Optimizer
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.report import verify_equiv
 
 from bench.benchkit import (
     Case,

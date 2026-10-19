@@ -1,4 +1,4 @@
-# How catopt works — syntax, structure, and the rewrite loop
+# How mlopt works — syntax, structure, and the rewrite loop
 
 The model graph is **syntax**; a category-theoretic **structure**
 interprets it; the structure's **axioms** generate rewrites; **search**
@@ -19,9 +19,9 @@ measures confluence and divergence between laws).  Declared objects
 as *data*, and `opdata` makes a new primitive declarable the same
 way.  Two games are played on this tower: **search** applies 2-cells
 inside one equivalence class (steps 5–6 below); **construction**
-writes new cells (`catopt_discovery.object_synthesis` + `evidence`,
-played as episodes on `catopt_discovery.arena` / `meta_arena` boards,
-exposed as an RL environment by `catopt_discovery.play` — one CLI,
+writes new cells (`mlopt_discovery.object_synthesis` + `evidence`,
+played as episodes on `mlopt_discovery.arena` / `meta_arena` boards,
+exposed as an RL environment by `mlopt_discovery.play` — one CLI,
 five domains, `--deliver`/`--probe`/`--zoo`).  In the `gen` domain the
 board mints a handler for any unnamed elementwise subterm
 (`genkernel`), `claim` declares the handler's own pattern mid-search,
@@ -137,9 +137,9 @@ The loop above runs *inside* a fixed law library.  Two mechanisms
 operate on the library itself.
 
 **Coherence — the 3-cell layer.**  A rewrite is a 2-cell; a law
-*about* rewrites is a 3-cell.  `catopt_discovery.coherence` enumerates
+*about* rewrites is a 3-cell.  `mlopt_discovery.coherence` enumerates
 the pair layer over the shipped library (co-firing critical pairs,
-direct derivability edges); `catopt_discovery.coherence2` measures
+direct derivability edges); `mlopt_discovery.coherence2` measures
 depth 2 — stratification, reach under removal, and the mediator
 table ("the coherence of `A × B` requires `C`").  The measured
 structure: the derived layer of `ALL_RULES` is *flat* — zero laws
@@ -155,12 +155,12 @@ load-bearing derivable law under removal); and **divergence is
 found and mediated** — `silu_fold` shipped to restore confluence
 where `silu_expand` destroyed the `swiglu_fuse` redex, and it pays.
 
-**Discovery — the closed loop.**  `catopt_discovery.pipeline` runs the
+**Discovery — the closed loop.**  `mlopt_discovery.pipeline` runs the
 whole pipeline on a corpus of real exported models (364 terms /
 725 op-tuples today): **census** the op-shape tuples that occur →
 **propose** candidates (census-naturality, mixed-view,
 pattern-recognition and grammar schemas — and the proposers' op
-alphabet is itself property-derived by `catopt_discovery.vocab`, not
+alphabet is itself property-derived by `mlopt_discovery.vocab`, not
 hand-listed) → **verify** each candidate (numeric oracle,
 `sink.verify` on lowered modules, derivability oracle) →
 **measure** (fires / cost deltas / cert replay / closure ratio) →
@@ -170,10 +170,10 @@ bytecode-identical to the hand-written one in the held-out check).
 Two shipped laws came out of this loop (`select_mul`,
 `softmax_fold` — `silu_fold` came out of the coherence layer
 above), and the loop audits itself:
-adversarial witness generation (`catopt_discovery.gap_gen`)
+adversarial witness generation (`mlopt_discovery.gap_gen`)
 produces bindings the corpus cannot — it falsified paying-but-false
 candidates and the shipped matmul-family hole; the sqlite evidence
-store (`--evidence-db` / `catopt_discovery.evidence`) caches verdicts
+store (`--evidence-db` / `mlopt_discovery.evidence`) caches verdicts
 keyed by corpus × rules × code revision (~19× on a warm run) so
 "what did we measure, and did it change?" is a query, not a
 re-run.
@@ -182,13 +182,13 @@ re-run.
 admits *laws over a fixed vocabulary*; the minting stack makes the
 vocabulary itself a product of measurement, in four layers with one
 admission gauntlet.  **Layer 1 — definitional atoms**
-(`catopt_discovery.antiunify`): anti-unify recurring subgraphs, mint
+(`mlopt_discovery.antiunify`): anti-unify recurring subgraphs, mint
 a named atom whose semantics *is* its expansion.  Sound by
 construction; measured **NULL on reach-expansion** — compression is
 real (shorter spellings, provenance) but naming structure did not
 expand reach on any measured workload (recorded in the ADR).
 **Layer 2 — handler-interpreted atoms**
-(`catopt_discovery.handler_synth`): a structured handler grammar
+(`mlopt_discovery.handler_synth`): a structured handler grammar
 (`ew`/`contract`/`fold`/`fold_emit`/`fold_zip` — descriptors are
 plain data, interpreted, never `eval`'d) proposes handler bodies and
 verifies each fp64 against the spelled spec; the machine minted a
@@ -247,7 +247,7 @@ and verifies* recurrences, but it is not where they are *found*.
 
 ## The kernel, and the platform next door
 
-The calculus above is not only a catopt idea: it is implemented, as a
+The calculus above is not only a mlopt idea: it is implemented, as a
 language *and* a set of engines, by the **handl** platform
 (`handl-lang/host` — one `Language` whose tables are data: `eval`,
 `types`, `ast`, `transforms`, `lexer_rules`; engines for lexing,
@@ -257,22 +257,22 @@ rewrite are interpretations of the same language, differing in the
 scheme table they read, not three languages.  There is no bespoke VM
 here, and no second type language.
 
-**What catopt contributes** (measured, spike `plan 0029`):
+**What mlopt contributes** (measured, spike `plan 0029`):
 
-| catopt | handl |
+| mlopt | handl |
 |---|---|
 | the **language fragments** — laws as `TransformDef` rows, op shapes as `AstShapeDef` | the language model, the rewrite engine (traversals, traces, stats), typechecking, parsing, the VM |
 | **host functions** for tensor ops (a tensor crosses by reference as an opaque `ForeignResource` pointer) | the value channel and the FFI seam |
-| the **domain adapters** (`catopt-torch`/`onnx`/`cuda`) and the **evaluation** dimension | — |
+| the **domain adapters** (`mlopt-torch`/`onnx`/`cuda`) and the **evaluation** dimension | — |
 
-The seam is **data in, terms out**: `catopt_discovery.handl` emits
-handl-shaped rows (every row carrying an authoritative `catopt:` record,
+The seam is **data in, terms out**: `mlopt_discovery.handl` emits
+handl-shaped rows (every row carrying an authoritative `mlopt:` record,
 which handl's serde ignores, so the bridge is lossless), and handl
 assembles a `Language` from them with `language_from_dir`.  Measured
-end-to-end: a catopt law lands in `lang.transforms` with its fields
+end-to-end: a mlopt law lands in `lang.transforms` with its fields
 intact, and its condition deserializes as `And([KindAt, ChildCount])`
 (`project/retros/handl-q0-language-as-data.md`; the handl-side test is
-`crates/handl-kit-data-canonical/tests/catopt_fragments.rs`).
+`crates/handl-kit-data-canonical/tests/mlopt_fragments.rs`).
 
 Two traps cost real time and are worth knowing: `TransformDef.when` is
 **one** condition (a conjunction is spelled `And([...])`), and under
@@ -282,44 +282,44 @@ Two traps cost real time and are worth knowing: `TransformDef.when` is
 **Which representation is canonical** (ADR 0011): the calculus for
 *laws and rewriting* — a law is a data row; the op-graph IR for
 *execution* — the sinks, the cost model and the certificate replay
-speak it, and tensors are host resources.  The `catopt:` extension field
+speak it, and tensors are host resources.  The `mlopt:` extension field
 is the authority, so the two cannot drift silently: a drift is a failed
 round-trip, which is testable.
 
-**And a law fires there.**  The strongest measurement so far: a catopt
+**And a law fires there.**  The strongest measurement so far: a mlopt
 law *executes* through handl's rewrite engine — one rewrite, producing
-exactly the term catopt's own `EGraph.apply_rule` produces for the same
-input (handl's `catopt_law_fires_through_the_rewrite_engine`).  The whole
+exactly the term mlopt's own `EGraph.apply_rule` produces for the same
+input (handl's `mlopt_law_fires_through_the_rewrite_engine`).  The whole
 bank loads too: **83 laws** in `lang.transforms`, with the three minted
-leaf kinds (`catopt:const` / `catopt:var` / `catopt:data`) declared.  So
-the relationship is not "catopt emits data handl can read" — handl runs
-catopt's laws.
+leaf kinds (`mlopt:const` / `mlopt:var` / `mlopt:data`) declared.  So
+the relationship is not "mlopt emits data handl can read" — handl runs
+mlopt's laws.
 
 **What this is not (yet).**  The tensor channel is *available* but
 unused: Q1a found `TaggedValue::Resource(Rc<ForeignResource>)` — an
 opaque pointer with a finalizer, `Rc`-held and not `Send`/`Sync` — so a
 tensor crosses by reference, but no run yet demonstrates a tensor op
-through exec (Q1b).  And the peer is decided (Q3: catopt embeds handl as
-an *optional* peer, the `catopt-native` pattern) but not built: nothing
-in catopt calls handl yet (`project/plans/0030-handl-peer-integration.md`).
+through exec (Q1b).  And the peer is decided (Q3: mlopt embeds handl as
+an *optional* peer, the `mlopt-native` pattern) but not built: nothing
+in mlopt calls handl yet (`project/plans/0030-handl-peer-integration.md`).
 
 ## Where this lives in the code
 
 | Step | Code |
 |---|---|
-| Signature | `BlockSig` / `InputSig` / `WeightRef` (`catopt_orchestrator.morphisms`) |
-| Axioms | `catopt_core.laws` (`tensor.py`, `scan.py`); morphism laws' `check` / `derive`; the axiom/lemma marks `Rewrite.derivation` / `kind` + `tags.REDUNDANT` |
+| Signature | `BlockSig` / `InputSig` / `WeightRef` (`mlopt_orchestrator.morphisms`) |
+| Axioms | `mlopt_core.laws` (`tensor.py`, `scan.py`); morphism laws' `check` / `derive`; the axiom/lemma marks `Rewrite.derivation` / `kind` + `tags.REDUNDANT` |
 | Match (lift) | `lift_graph`, carrier recognition (`lift_scan_to_applyd`) |
 | Saturate | `EGraph` |
 | Extract | `extract_best`, `backend_cost` (measured pricing: `delivered_cost_for(profile, x=…)` / `executor_cost_for`) |
 | Certify | `verify_certificate` |
-| Evaluate | `catopt_core.features` (`ProgramFeatures`, `StaticProfiler`) · `SearchResult.frontier` · `PredictedCriterion`; `Meter` / `TargetProfile` for measurements (`scripts/calibrate_profile.py`) |
-| Discover (meta) | `catopt_discovery.pipeline` (census → propose → verify → measure → rank → emit) · `catopt_discovery.vocab` (property-derived op alphabet) · `catopt_discovery.gap_gen` (adversarial witnesses) · `catopt_discovery.emit` (admission patch) |
-| Mint (meta) | `catopt_discovery.antiunify` (layer 1 — definitional atoms) · `catopt_discovery.handler_synth` (layer 2 — handler bodies) · `lab/mint/atom_law_loop.py` (layer 3 — law synthesis per atom) · `lab/mint/atom_synth_loop.py` (the composed loop) |
+| Evaluate | `mlopt_core.features` (`ProgramFeatures`, `StaticProfiler`) · `SearchResult.frontier` · `PredictedCriterion`; `Meter` / `TargetProfile` for measurements (`scripts/calibrate_profile.py`) |
+| Discover (meta) | `mlopt_discovery.pipeline` (census → propose → verify → measure → rank → emit) · `mlopt_discovery.vocab` (property-derived op alphabet) · `mlopt_discovery.gap_gen` (adversarial witnesses) · `mlopt_discovery.emit` (admission patch) |
+| Mint (meta) | `mlopt_discovery.antiunify` (layer 1 — definitional atoms) · `mlopt_discovery.handler_synth` (layer 2 — handler bodies) · `lab/mint/atom_law_loop.py` (layer 3 — law synthesis per atom) · `lab/mint/atom_synth_loop.py` (the composed loop) |
 | Screen / sweep | `lab/screen/exposure_screen.py` (law-LHS exposure census) · `lab/screen/discovery_scale.py` (budgeted corpus sweep + novelty pass) · `lab/screen/exposed_discovery.py` (per-model discovery driver) |
 | Substrate (prototype) | `lab/bridge/combinator.py` (`BASIS`, `dag_to_comb` / `comb_to_dag`) · `lab/bridge/combinator_probe.py` (round-trip + `loop`-spell gates) |
-| Backends | `catopt_torch` (`TorchSource`/`TorchSink`) · `catopt_onnx` (`OnnxSource`/`OnnxSink`, ADR 0006) |
-| Coherence (meta) | `catopt_discovery.coherence` (`--emit-basis`) · `catopt_discovery.coherence2` (stratification / reach / mediators) · `catopt_discovery.evidence` (sqlite verdict store) |
+| Backends | `mlopt_torch` (`TorchSource`/`TorchSink`) · `mlopt_onnx` (`OnnxSource`/`OnnxSink`, ADR 0006) |
+| Coherence (meta) | `mlopt_discovery.coherence` (`--emit-basis`) · `mlopt_discovery.coherence2` (stratification / reach / mediators) · `mlopt_discovery.evidence` (sqlite verdict store) |
 
 ## See also
 

@@ -1,4 +1,4 @@
-"""Property tests for term interning / hash-consing (``catopt_core.ir``).
+"""Property tests for term interning / hash-consing (``mlopt_core.ir``).
 
 Targets the invariants hand-written example tests only sample: for
 *every* small term, ``Op.make`` is idempotent, structural equality
@@ -11,8 +11,8 @@ from __future__ import annotations
 
 import hypothesis.strategies as st
 import pytest
-from catopt_core.attrs import validate_attrs
-from catopt_core.ir import Op, TensorType, Var, op_repr
+from mlopt_core.attrs import validate_attrs
+from mlopt_core.ir import Op, TensorType, Var, op_repr
 from hypothesis import given
 
 from tests.test_property_strategies import leaves, rebuild, terms

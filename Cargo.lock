@@ -3,7 +3,7 @@
 version = 4
 
 [[package]]
-name = "catopt-kit"
+name = "mlopt-kit"
 version = "0.1.0"
 dependencies = [
  "handl-host-tensor",
@@ -30,7 +30,6 @@ checksum = "00d174d5400e5e8fd687ad1049e2f578285fa914201b1af7e8b112a4546bd826"
 [[package]]
 name = "handl-host-tensor"
 version = "0.1.0"
-source = "git+https://github.com/handl-lang/host-tensor?branch=main#d1acefd0e22ae95338789dd913b9823eec5e2cf8"
 dependencies = [
  "handl-lib-ops",
  "handl-platform",
@@ -64,7 +63,7 @@ dependencies = [
 [[package]]
 name = "handl-kit-data-canonical"
 version = "0.1.0"
-source = "git+https://github.com/handl-lang/lang?branch=main#d5847895bcd48b66e0c5ea1ade9e81fef4f25cfa"
+source = "git+https://github.com/handl-lang/kit-data-canonical?branch=main#fb4ace4a60acc169d14a04709f255d9c762909a7"
 dependencies = [
  "handl-kit-data",
  "handl-language",

@@ -46,14 +46,14 @@ import pytest
 import torch
 import torch.nn as nn
 
-import catopt_carriers.trace  # noqa: F401 — registers trace/eye/parl bindings
-from catopt_core import meta
-from catopt_core import laws as R
-from catopt_carriers import trace_lift as TL
-from catopt_core.egraph import EGraph
-from catopt_core.ir import IR, Const, Op, Param, TensorType, Var, op_repr
-from catopt_carriers.scan_lower import is_scan_apply_term, to_batched_scan_module
-from catopt_torch.torch_bridge import (
+import mlopt_carriers.trace  # noqa: F401 — registers trace/eye/parl bindings
+from mlopt_core import meta
+from mlopt_core import laws as R
+from mlopt_carriers import trace_lift as TL
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import IR, Const, Op, Param, TensorType, Var, op_repr
+from mlopt_carriers.scan_lower import is_scan_apply_term, to_batched_scan_module
+from mlopt_torch.torch_bridge import (
     _IR_TO_TORCH,
     export_to_ir,
     ir_to_torch_module,

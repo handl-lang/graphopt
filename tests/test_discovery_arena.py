@@ -1,4 +1,4 @@
-"""Tests for ``catopt_discovery.arena`` — the construction arena.
+"""Tests for ``mlopt_discovery.arena`` — the construction arena.
 
 Plan 0020: the player's action space is the ADR-0004 construction
 vocabulary (fold / lift / compose / auto_cond / ingest) over the
@@ -15,13 +15,13 @@ import random
 
 import pytest
 import torch
-from catopt_core.egraph import Rewrite
-from catopt_core.ir import Const, Op, TensorType, Var, op_repr_dag
-from catopt_core.laws import ALL_RULES
-from catopt_discovery import arena as ar
-from catopt_discovery import evidence as ev
-from catopt_discovery import object_synthesis as obs
-from catopt_discovery.impact import TermCase
+from mlopt_core.egraph import Rewrite
+from mlopt_core.ir import Const, Op, TensorType, Var, op_repr_dag
+from mlopt_core.laws import ALL_RULES
+from mlopt_discovery import arena as ar
+from mlopt_discovery import evidence as ev
+from mlopt_discovery import object_synthesis as obs
+from mlopt_discovery.impact import TermCase
 
 _BY_NAME = {r.name: r for r in ALL_RULES}
 
@@ -489,7 +489,7 @@ def test_fixed_rule_guards_conditionals(tmp_path):
 
 def _spec_occurs(hay: tuple, needle: tuple) -> bool:
     """Whether *needle* spec matches a subterm of *hay* spec."""
-    from catopt_core.meta import match_pattern
+    from mlopt_core.meta import match_pattern
 
     pat = obs.term_from_spec(needle)
     return any(
@@ -671,7 +671,7 @@ def test_carrier_basis_parametrized(tmp_path):
         in acts
     )
     # a lift-shaped rule mines its (carrier, apply, state) template
-    from catopt_core.laws.scan import AFF_LIFT
+    from mlopt_core.laws.scan import AFF_LIFT
 
     arena2 = _arena(carrier_rules=[AFF_LIFT])
     assert arena2.observe().carriers == (("aff", "apply", True),)
@@ -765,7 +765,7 @@ def test_greedy_player_legal_hook(tmp_path):
 def test_depth_probe_small_board(tmp_path):
     """``depth_probe`` plays all four arms on an injected board."""
 
-    from catopt_core.laws import ALL_RULES
+    from mlopt_core.laws import ALL_RULES
 
     def factory(_s: int) -> ar.Arena:
         return _arena(
@@ -860,8 +860,8 @@ def test_ingest_of_missing_names_is_an_honest_noop(tmp_path):
 
 def test_arena_explicit_backend_store_and_pending_dict(tmp_path):
     """The board takes an explicit store, rules, sink and dict pool."""
-    from catopt_discovery.impact import _cost_fn
-    from catopt_discovery.shape_proposal import _sink
+    from mlopt_discovery.impact import _cost_fn
+    from mlopt_discovery.shape_proposal import _sink
 
     sink = _sink()
     conn = ev.connect(str(tmp_path / "s.db"))
@@ -1556,13 +1556,13 @@ def test_composite_spec_walkers_skip_consts_and_attr_dicts(tmp_path):
 
 
 def test_default_carrier_basis_survives_missing_carriers(monkeypatch):
-    """Without ``catopt_carriers`` the basis degrades to the scan
+    """Without ``mlopt_carriers`` the basis degrades to the scan
     lifts — the import failure is the honest edge."""
     import sys
 
-    monkeypatch.setitem(sys.modules, "catopt_carriers", None)
+    monkeypatch.setitem(sys.modules, "mlopt_carriers", None)
     rules = ar._default_carrier_rules()
-    from catopt_core.laws.scan import SCAN_DIAG_LAWS, SCAN_LAWS
+    from mlopt_core.laws.scan import SCAN_DIAG_LAWS, SCAN_LAWS
 
     assert rules == [*SCAN_LAWS, *SCAN_DIAG_LAWS]
 

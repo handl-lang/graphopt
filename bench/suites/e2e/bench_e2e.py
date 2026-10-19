@@ -1,4 +1,4 @@
-"""End-to-end whole-model benchmark: eager vs Inductor vs catopt.
+"""End-to-end whole-model benchmark: eager vs Inductor vs mlopt.
 
 The missing headline number: not per-rewrite speedups but the
 optimized forward pass of a whole stacked model.
@@ -8,9 +8,9 @@ import time
 
 import torch
 import torch.nn as nn
-from catopt_orchestrator import Optimizer
-from catopt_torch.backend import TorchBackend
-from catopt_torch.models import ParallelBlock
+from mlopt_orchestrator import Optimizer
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.models import ParallelBlock
 
 
 class MiniGPT(nn.Module):
@@ -101,8 +101,8 @@ def main():
         )
         print(f"  rule fires (top): {top}")
         print(
-            f"  {'eager':>14} {'inductor':>14} {'catopt':>14} "
-            f"{'catopt+ind':>14}"
+            f"  {'eager':>14} {'inductor':>14} {'mlopt':>14} "
+            f"{'mlopt+ind':>14}"
         )
         print(
             f"  {eager_ms:>12.3f}ms {ind_ms:>12.3f}ms "

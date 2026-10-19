@@ -1,4 +1,4 @@
-"""Shared pytest support for catopt.
+"""Shared pytest support for mlopt.
 
 The ``requires_cuda`` marker marks tests that allocate CUDA tensors.
 Such tests are skipped at setup — cleanly, not with a mid-test failure —
@@ -23,13 +23,13 @@ from pathlib import Path
 # torch.compile tests recompile their kernels from scratch on every run
 # unless Inductor's cache is pinned somewhere durable.  Pin it into the
 # repo's local artifact cache (the same convention as
-# ``catopt_discovery.cache_dir()``: $CATOPT_CACHE_DIR, then
+# ``mlopt_discovery.cache_dir()``: $MLOPT_CACHE_DIR, then
 # $XDG_CACHE_HOME, then ~/.cache) so repeat runs reuse compiled kernels.
 # Set before ``import torch`` so nothing reads the default first.
 if not os.environ.get("TORCHINDUCTOR_CACHE_DIR"):
     _xdg = os.environ.get("XDG_CACHE_HOME")
     _base = Path(_xdg) if _xdg else Path.home() / ".cache"
-    _inductor = Path(os.environ.get("CATOPT_CACHE_DIR", _base / "catopt")) / "inductor"
+    _inductor = Path(os.environ.get("MLOPT_CACHE_DIR", _base / "mlopt")) / "inductor"
     _inductor.mkdir(parents=True, exist_ok=True)
     os.environ["TORCHINDUCTOR_CACHE_DIR"] = str(_inductor)
 

@@ -1,7 +1,7 @@
 """Contraction-state search tests — plan 0013 stage 3.
 
 Sibling of ``test_diagram.py``.  Pins the ``mode="search"`` driver
-(:mod:`catopt_orchestrator.diagram_search`): the state space
+(:mod:`mlopt_orchestrator.diagram_search`): the state space
 (per-node reified bodies written back through ``_terms``), the
 exact-merge state union, the sealed-node fallback for term-less
 foreign moves, the reify cache, the depth/state bounds — and the
@@ -12,20 +12,20 @@ can pair them, reaching a fused state (``split_leaf`` then
 that is strictly cheaper than either move alone.
 """
 
-import catopt_orchestrator.diagram as D
-import catopt_orchestrator.diagram_search as DS
-import catopt_orchestrator.morphisms as M
+import mlopt_orchestrator.diagram as D
+import mlopt_orchestrator.diagram_search as DS
+import mlopt_orchestrator.morphisms as M
 import torch
 import torch.nn as nn
-from catopt_core.cost import dag_cost, launch_aware_cost
-from catopt_core.ir import Op, Param, TensorType
-from catopt_orchestrator import (
+from mlopt_core.cost import dag_cost, launch_aware_cost
+from mlopt_core.ir import Op, Param, TensorType
+from mlopt_orchestrator import (
     ContractionSearch,
     MorphismMatch,
     Optimizer,
     ReifySpec,
 )
-from catopt_torch.backend import TorchBackend
+from mlopt_torch.backend import TorchBackend
 
 from tests.test_diagram import (
     _Chain,
@@ -647,7 +647,7 @@ def test_search_verbose(caplog):
 
     torch.manual_seed(0)
     with caplog.at_level(
-        _logging.INFO, "catopt_orchestrator.diagram_search"
+        _logging.INFO, "mlopt_orchestrator.diagram_search"
     ):
         Optimizer(backend=TorchBackend()).optimize(
             _Parallel().eval().double(),

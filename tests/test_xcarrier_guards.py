@@ -1,4 +1,4 @@
-"""Coverage tests for catopt_carriers.xcarrier — the cross-carrier guards,
+"""Coverage tests for mlopt_carriers.xcarrier — the cross-carrier guards,
 the carrier-aware ``_xshape`` resolver, the view-commute check/derive
 pairs, and the non-local passes' veto paths.
 
@@ -18,11 +18,11 @@ always be produced by a well-typed minted term.
 
 import torch
 
-import catopt_carriers.xcarrier as XC
-from catopt_core import meta
-from catopt_core.egraph import EGraph
-from catopt_core.ir import Const, Op, TensorType, Var
-from catopt_core.typing import _shape_of
+import mlopt_carriers.xcarrier as XC
+from mlopt_core import meta
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import Const, Op, TensorType, Var
+from mlopt_core.typing import _shape_of
 
 torch.manual_seed(0)
 
@@ -1456,8 +1456,8 @@ def test_xshape_is_the_registered_value_shape_resolver():
     """Importing ``xcarrier`` installs ``_xshape`` as core's value-shape
     resolver, so the derive DSL's ``("vshape", T)`` reads the TRUE value
     shape where ``("shape", T)`` reports the cost convention."""
-    from catopt_core.laws.cond import eval_derive
-    from catopt_core.typing import _VALUE_SHAPE, value_shape_of
+    from mlopt_core.laws.cond import eval_derive
+    from mlopt_core.typing import _VALUE_SHAPE, value_shape_of
 
     assert _VALUE_SHAPE is XC._xshape
     # a promoted dense map: ``_shape_of`` reports h's (state) shape, the

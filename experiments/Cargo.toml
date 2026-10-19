@@ -8,13 +8,13 @@ description = "research-mlopt evidence generation — the paper's experiments, c
 
 # Deliberately *not* a member of the root workspace (`exclude` in the
 # root Cargo.toml): own manifest, own Cargo.lock, floats on current
-# main — the same dep edges catopt-kit declares, duplicated so the
+# main — the same dep edges mlopt-kit declares, duplicated so the
 # experiment arm stays a standalone composition.
 
-# The kit is composed here, over the same component set catopt-kit
-# assembles — see `src/lib.rs`. The direct `catopt-kit` cargo dep is
+# The kit is composed here, over the same component set mlopt-kit
+# assembles — see `src/lib.rs`. The direct `mlopt-kit` cargo dep is
 # documented in manifest/kit.toml as the intended arm; it is unblocked
-# now that catopt-kit's deps float on the post-ADR-0128 `hnl-engine-*`
+# now that mlopt-kit's deps float on the post-ADR-0128 `hnl-engine-*`
 # crates at current main, but this crate keeps the composed form as
 # evidence that the stack assembles from declared components alone.
 

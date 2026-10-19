@@ -1,6 +1,6 @@
 /** The referee — numeric equivalence on concrete matrices.
  *
- * Stands in for `catopt_core.egraph.verify_certificate`: it evaluates two
+ * Stands in for `mlopt_core.egraph.verify_certificate`: it evaluates two
  * programs on the same inputs and reports the largest difference.  A move
  * that changes the answer is a lie the referee catches.
  */

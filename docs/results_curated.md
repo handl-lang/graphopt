@@ -116,7 +116,7 @@ eliminated (pinned by test).
 | handler synthesis (ADR 0007 layer 2) | machine-minted verified handler for the `om_decayed` element at **8.9e-16** — previously a hand-written executor; every named non-elementwise shape verifies in bounded search |
 | law synthesis per atom (layer 3) | **25 certified / 4 rejected / 0 refused** rows around shipped atoms; new primitives (`affd.compose` slot-solved, `dv.merge`, `omd.absorb_score`); found a real executor bug (`decay_vec` `sign=0`) by refusing to certify |
 | fused carrier lowering vs the paper's own chunked impl | **speed parity+** — 2.08 vs 2.12 ms (T=2048), **faster under graph replay** (0.670 vs 0.822 ms at T=1024); fp64 1.4e-16; FLA still ahead (kernel-level) |
-| ONNX backend, both directions | **zero edits under `catopt-core`**; fp64 round-trip **1.11e-16** via `onnxruntime`; 107 in-op types (opsets 13–21), 169 out-ops; package coverage 100% |
+| ONNX backend, both directions | **zero edits under `mlopt-core`**; fp64 round-trip **1.11e-16** via `onnxruntime`; 107 in-op types (opsets 13–21), 169 out-ops; package coverage 100% |
 | combinator bridge (ADR 0008 prototype) | **321/321** corpus workloads round-trip structurally exact, zero ops refuse translation, mean blowup 2.61×; the RetNet carrier spells as a `loop` term verified at 1e-7–2.6e-7 |
 
 ## 7. Retired: the weight-space / ε axis (from the retired REPORT)
@@ -181,7 +181,7 @@ Kronecker-structured 64×64 weight → K=4 terms, **32,768 → 4,096 bytes
 |---|---|---|---|
 | emb rank-2 / r19 / r64 / r128 / r192 | 2.5–1.2× | 6108 → 214 | **dead at every rank** |
 | Kronecker-sum (35% resid) | 1.1× | 143 | dead |
-| **int8 RTN quant (certified, catopt)** | **4.0×** | **5.16** | **works, bounded** |
+| **int8 RTN quant (certified, mlopt)** | **4.0×** | **5.16** | **works, bounded** |
 | int8 per-channel RTN (GPTQ-class baseline) | 4.0× | 5.00 | works, no bound |
 | int4 g128 RTN (GPTQ-class) | 8.0× | 7.01 | works, no bound |
 
@@ -303,7 +303,7 @@ named; where a pinned baseline supersedes a row, that is noted.
 | projection pairing (QKV, gate·up) on llama2.c | 1.24× vs Inductor | retired RESEARCH_WRITEUP §3 — rediscovers `MergedColumnParallelLinear`/`QKVParallelLinear` |
 | autotuned selection (`optimize_model_autotuned`) | matrix_chain 2.24× CPU | retired RESEARCH_WRITEUP §3 |
 | the carrier below the crossover | 0.184× at retnet T=128 (uncompiled) | retired RESEARCH_WRITEUP §4 — superseded by `docs/results.md`'s 0.51× at T=512 |
-| pipeline cost at T=2048 | CatOpt 215.8 s → 1.04 ms vs Inductor 45.4 s → 0.256 ms | retired RESEARCH_WRITEUP §4; also `project/plans/0005-cost-model-fidelity.md` — Inductor still faster at runtime |
+| pipeline cost at T=2048 | MLOpt 215.8 s → 1.04 ms vs Inductor 45.4 s → 0.256 ms | retired RESEARCH_WRITEUP §4; also `project/plans/0005-cost-model-fidelity.md` — Inductor still faster at runtime |
 | real checkpoints (stories15M/110M) | all blocks transform + verify (~2e-5); **−37% GEMM launches** profiler-verified; **parity** on wall time | retired RESEARCH_WRITEUP §4 |
 | cost-model fidelity, post-fix ρ | `lowering_min` 0.167→0.261, `exec_generic` 0.070→0.316 | retired RESEARCH_WRITEUP §3 — positive but not yet predictive (pre-fix: `project/plans/0005-cost-model-fidelity.md`) |
 

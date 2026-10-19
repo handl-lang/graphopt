@@ -1,8 +1,8 @@
-"""Production export: optimized model → catopt-free artifacts.
+"""Production export: optimized model → mlopt-free artifacts.
 
 ``export_optimized`` materialises an optimized module (IRModule /
 batched-carrier grafts and all) into artifacts downstream tooling
-loads without catopt: a ``torch.export`` .pt2 program, a safetensors
+loads without mlopt: a ``torch.export`` .pt2 program, a safetensors
 weights container + manifest, a plain ``torch.save`` state dict, or
 TorchScript.  These tests exercise every format's write → load → run
 round-trip and the manifest, plus the documented failure modes.
@@ -17,15 +17,15 @@ import types
 import pytest
 import torch
 import torch.nn as nn
-from catopt_torch.export import ExportError, _diff, _read_safetensors, export_optimized, load_optimized, save_optimized
+from mlopt_torch.export import ExportError, _diff, _read_safetensors, export_optimized, load_optimized, save_optimized
 
 
 
 from tests.test_compositional import MiniGPT
-from catopt_orchestrator import Compositional, Optimizer
+from mlopt_orchestrator import Compositional, Optimizer
 
 
-from catopt_torch.backend import TorchBackend
+from mlopt_torch.backend import TorchBackend
 
 
 @pytest.fixture
@@ -66,9 +66,9 @@ def test_export_module_pt2_roundtrip(optimized_stack, tmp_path):
     assert manifest["verify"]["max_abs_diff"] == 0.0
     assert manifest["artifact_bytes"] == out.stat().st_size
 
-    # The manifest names the grafted catopt executors and what they
-    # replaced — ParallelBlock → catopt_torch IRModule.
-    blocks = manifest["catopt_modules"]
+    # The manifest names the grafted mlopt executors and what they
+    # replaced — ParallelBlock → mlopt_torch IRModule.
+    blocks = manifest["mlopt_modules"]
     assert set(blocks) == {"blocks.0", "blocks.1"}
     assert "IRModule" in blocks["blocks.0"]["optimized"]
     assert "ParallelBlock" in blocks["blocks.0"]["original"]
@@ -82,7 +82,7 @@ def test_export_module_pt2_roundtrip(optimized_stack, tmp_path):
     on_disk = json.loads(_manifest_file(out).read_text())
     assert on_disk["format"] == "pt2"
 
-    # Round-trip: the loaded program runs without catopt and matches
+    # Round-trip: the loaded program runs without mlopt and matches
     # the optimized module bit-for-bit.
     loaded = load_optimized(out)
     with torch.no_grad():
@@ -95,7 +95,7 @@ def test_pt2_artifact_runs_in_clean_interpreter(
     optimized_stack, tmp_path
 ):
     """The .pt2 loads + runs in a Python process that never imports
-    catopt — the actual 'no catopt at inference time' requirement."""
+    mlopt — the actual 'no mlopt at inference time' requirement."""
     _, opt, x = optimized_stack
     out = tmp_path / "opt.pt2"
     export_optimized(None, opt, out, example_input=x, fmt="pt2")
@@ -106,7 +106,7 @@ def test_pt2_artifact_runs_in_clean_interpreter(
         "m = ep.module(); "
         "out = m(torch.randn(1, 8, 32)); "
         "assert out.shape == (1, 8, 32); "
-        "assert not any(m.startswith('catopt') for m in sys.modules)"
+        "assert not any(m.startswith('mlopt') for m in sys.modules)"
     )
     proc = subprocess.run(
         [sys.executable, "-c", code],
@@ -291,7 +291,7 @@ def test_safetensors_roundtrip(optimized_stack, tmp_path):
     data = out.read_bytes()
     (n,) = struct.unpack("<Q", data[:8])
     header = json.loads(data[8 : 8 + n])
-    embedded = json.loads(header["__metadata__"]["catopt_manifest"])
+    embedded = json.loads(header["__metadata__"]["mlopt_manifest"])
     assert embedded["format"] == "safetensors"
 
     # And the tensor bytes decode back to the optimized state_dict.
@@ -365,13 +365,13 @@ def test_safetensors_needs_numpy(tmp_path, monkeypatch):
         )
 
 
-def test_safetensors_plain_model_has_no_catopt_notes(tmp_path):
+def test_safetensors_plain_model_has_no_mlopt_notes(tmp_path):
     """Weights of an unoptimized model carry no graft notes."""
     mod = nn.Linear(4, 4).eval()
     manifest = export_optimized(
         None, mod, tmp_path / "p.safetensors", fmt="safetensors"
     )
-    assert manifest["catopt_modules"] == {}
+    assert manifest["mlopt_modules"] == {}
     assert not any("grafted" in n for n in manifest["notes"])
 
 
@@ -557,7 +557,7 @@ def test_original_absent_marked(optimized_stack, tmp_path):
         nn.Module(), opt, tmp_path / "o.pt2", example_input=x
     )
     assert (
-        manifest["catopt_modules"]["blocks.0"]["original"] == "<absent>"
+        manifest["mlopt_modules"]["blocks.0"]["original"] == "<absent>"
     )
 
 

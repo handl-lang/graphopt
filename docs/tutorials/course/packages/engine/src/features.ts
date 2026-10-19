@@ -1,6 +1,6 @@
 /** Static program features — the EVALUATION dimension's torch-free half.
  *
- * Mirrors `catopt_core.features.compute_features`: flops, bytes, depth,
+ * Mirrors `mlopt_core.features.compute_features`: flops, bytes, depth,
  * reuse — computed from the term alone, never by running it.
  */
 

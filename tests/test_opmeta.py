@@ -1,4 +1,4 @@
-"""Tests for ``catopt_core.opmeta`` — the op-metadata registry.
+"""Tests for ``mlopt_core.opmeta`` — the op-metadata registry.
 
 The registry is the single source the op *vocabulary* sets derive
 from.  These tests pin three things:
@@ -14,8 +14,8 @@ from.  These tests pin three things:
 """
 
 import pytest
-from catopt_core import opmeta as om
-from catopt_core.attrs import ATTR_REQUIRED, ATTR_SCHEMA
+from mlopt_core import opmeta as om
+from mlopt_core.attrs import ATTR_REQUIRED, ATTR_SCHEMA
 
 # ---------------------------------------------------------------------------
 #  Registry composition
@@ -109,8 +109,8 @@ def test_view_sets_agree_across_modules():
     """``pipeline._VIEW_OPS`` and ``signature._VIEW_OPS`` are the same
     *source*, and the generator's alphabet is a subset of it — the
     measured inconsistency the registry removes."""
-    from catopt_discovery import pipeline as pl
-    from catopt_orchestrator.morphisms import signature as sig
+    from mlopt_discovery import pipeline as pl
+    from mlopt_orchestrator.morphisms import signature as sig
 
     assert set(pl._VIEW_OPS) <= set(sig._VIEW_OPS)
     assert set(pl._VIEW_OPS) == set(om.GENERATOR_VIEW_OPS)
@@ -120,12 +120,12 @@ def test_view_sets_agree_across_modules():
 def test_consumers_read_the_registry_object():
     """Each consumer set *is* the registry projection — identity, not
     a copy, so a twin cannot drift."""
-    from catopt_core import typing as ty
-    from catopt_core.cost import basic as cost_basic
-    from catopt_core.laws import layout
-    from catopt_discovery import oracle as orc
-    from catopt_discovery import pipeline as pl
-    from catopt_orchestrator.morphisms import signature as sig
+    from mlopt_core import typing as ty
+    from mlopt_core.cost import basic as cost_basic
+    from mlopt_core.laws import layout
+    from mlopt_discovery import oracle as orc
+    from mlopt_discovery import pipeline as pl
+    from mlopt_orchestrator.morphisms import signature as sig
 
     assert cost_basic._VIEW_OPS is om.COST_VIEW_OPS
     assert ty._COMMUTATIVE_BROADCAST is om.COMMUTATIVE_OPS
@@ -148,9 +148,9 @@ def test_fold_alphabet_is_single_sourced():
     the cost model prices at zero marginal.  The conv+BN weight-fold
     drift (``rsqrt`` folded at lowering but absent from the cost
     side's 13-op subset) is what this pins."""
-    from catopt_core.cost import params as cost_params
-    from catopt_core.egraph import extract as ex
-    from catopt_torch import torch_bridge as tb
+    from mlopt_core.cost import params as cost_params
+    from mlopt_core.egraph import extract as ex
+    from mlopt_torch import torch_bridge as tb
 
     assert ex._FOLDABLE_OPS is om.FOLD_OPS
     assert tb.FOLD_OPS is om.FOLD_OPS
@@ -216,7 +216,7 @@ def test_aten_alias_map_mints_only_registered_ops():
     The alias map legitimately lives in the adapter (core is
     torch-free); this is the check that keeps it honest.
     """
-    from catopt_torch.torch_bridge import (
+    from mlopt_torch.torch_bridge import (
         _ATEN_TO_IR,
         _IR_TO_TORCH_EXTRA,
     )

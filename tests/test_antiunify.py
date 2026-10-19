@@ -15,11 +15,11 @@ from typing import Any
 
 import pytest
 
-from catopt_core.cost import dag_cost, flops_cost
-from catopt_core.egraph import EGraph, Rewrite
-from catopt_core.ir import Op, TensorType, Var, generator, op_repr
-from catopt_core.meta import match_pattern
-from catopt_discovery.antiunify import (
+from mlopt_core.cost import dag_cost, flops_cost
+from mlopt_core.egraph import EGraph, Rewrite
+from mlopt_core.ir import Op, TensorType, Var, generator, op_repr
+from mlopt_core.meta import match_pattern
+from mlopt_discovery.antiunify import (
     DEFINITIONAL,
     _expansion_body_cost,
     admit_atoms,
@@ -442,7 +442,7 @@ class TestFolding:
         )
         eg.apply_rule(folded[-1], root)
         assert seen, "the wrapped check must have run"
-        from catopt_core.ir import op_repr as _repr
+        from mlopt_core.ir import op_repr as _repr
 
         assert all("defn_" not in _repr(t) for t in seen)
 
@@ -494,9 +494,9 @@ class TestElaboration:
 
     def test_helper_leaf_edges(self):
         """Literal (non-metavar) leaves pass through the walk helpers."""
-        from catopt_core.ir import Const
+        from mlopt_core.ir import Const
 
-        from catopt_discovery.antiunify import (
+        from mlopt_discovery.antiunify import (
             _alpha_norm,
             _attr_mvars_of,
             _leaf_mvars,
@@ -570,7 +570,7 @@ class TestElaboration:
         assert shared, "a==b columns must share one attr metavar"
 
     def test_unfolding_cost_uninspectable_fn(self):
-        from catopt_discovery.antiunify import unfolding_cost as uc
+        from mlopt_discovery.antiunify import unfolding_cost as uc
 
         cfn = uc(id, [])  # builtins raise in inspect.signature
         assert cfn(_v("x", 4, 4)) > 0
@@ -635,7 +635,7 @@ class TestElaboration:
     def test_pick_skips_mismatched_keysets(self):
         """A class with same-(op,arity) members of different key-sets
         exercises the ``_pick`` miss-continue arc."""
-        from catopt_discovery.antiunify import _member_index, _pick
+        from mlopt_discovery.antiunify import _member_index, _pick
 
         eg = EGraph()
         x, w = _v("x", 4, 4), _v("W", 4, 4)
@@ -656,7 +656,7 @@ class TestStorage:
     def test_store_atoms_round_trips(self, tmp_path):
         eg, _root, _leaves = _motif_graph()
         atoms = mint_atoms(eg, count=1)
-        from catopt_discovery import evidence as ev
+        from mlopt_discovery import evidence as ev
 
         conn = ev.connect(str(tmp_path / "s.db"))
         keys = store_atoms(conn, atoms, "corpus-x")
@@ -675,7 +675,7 @@ class TestStorage:
         assert prov["atom"] == atoms[0].name
         assert prov["instances"] == atoms[0].n_instances
         # The embedded expand rule reconstructs.
-        from catopt_core.laws.serialize import law_from_data
+        from mlopt_core.laws.serialize import law_from_data
 
         expand = law_from_data(prov["expansion"])
         assert expand.rhs is not None
@@ -686,8 +686,8 @@ class TestEndToEnd:
 
     def test_extract_unfold_lowers_and_verifies(self):
         torch = pytest.importorskip("torch")
-        from catopt_core.ir import IR
-        from catopt_torch.adapters import TorchSink, TorchSource
+        from mlopt_core.ir import IR
+        from mlopt_torch.adapters import TorchSink, TorchSource
 
         class Block(torch.nn.Module):
             """add(chunk(x, i), w) three times — the mined motif."""

@@ -6,18 +6,18 @@ rulecache env, ports signature internals, compositional e2e arms."""
 import pytest
 import torch
 import torch.nn as nn
-from catopt_core.attrs import is_positional_attr
-from catopt_core.ir import Const, Op, Param, TensorType, Var
-from catopt_orchestrator.optimize import OptimizationResourceError
+from mlopt_core.attrs import is_positional_attr
+from mlopt_core.ir import Const, Op, Param, TensorType, Var
+from mlopt_orchestrator.optimize import OptimizationResourceError
 
 
-from catopt_torch.folds import _eval_const
+from mlopt_torch.folds import _eval_const
 
-from catopt_core.ports import CostFn, Verifier, signature_conforms
-from catopt_orchestrator import Compositional, Optimizer
+from mlopt_core.ports import CostFn, Verifier, signature_conforms
+from mlopt_orchestrator import Compositional, Optimizer
 
 
-from catopt_torch.backend import TorchBackend
+from mlopt_torch.backend import TorchBackend
 
 
 class _MLP(nn.Module):
@@ -113,12 +113,12 @@ def test_is_positional_attr():
 
 
 def test_rulecache_default_dir_env(monkeypatch):
-    from catopt_core.rulecache import _default_cache_dir
+    from mlopt_core.rulecache import _default_cache_dir
 
-    monkeypatch.delenv("CATOPT_RULECACHE_DIR", raising=False)
-    assert "catopt" in str(_default_cache_dir())
-    monkeypatch.setenv("CATOPT_RULECACHE_DIR", "/tmp/catopt_rc_test")
-    assert str(_default_cache_dir()) == "/tmp/catopt_rc_test"
+    monkeypatch.delenv("MLOPT_RULECACHE_DIR", raising=False)
+    assert "mlopt" in str(_default_cache_dir())
+    monkeypatch.setenv("MLOPT_RULECACHE_DIR", "/tmp/mlopt_rc_test")
+    assert str(_default_cache_dir()) == "/tmp/mlopt_rc_test"
 
 
 def test_signature_conforms_internals():
@@ -241,7 +241,7 @@ def test_pairing_groups_fire():
 def test_transformer_block_full_pipeline():
     """Real transformer block — pairing + lifts + re-saturation + verify
     print, in one verbose optimize_model call."""
-    import catopt_torch.models as M
+    import mlopt_torch.models as M
 
     torch.manual_seed(0)
     m = M.TransformerBlock(dim=64)
@@ -265,13 +265,13 @@ def test_compositional_no_blocks():
 def test_discover_alternatives_fires_pairing_and_lifts():
     """discover_alternatives runs the same pairing/lift pass — its
     re-saturation blocks execute when groups exist."""
-    import catopt_torch.models as M
-    from catopt_torch.adapters import TorchSource
-    from catopt_orchestrator.optimize import discover_alternatives
+    import mlopt_torch.models as M
+    from mlopt_torch.adapters import TorchSource
+    from mlopt_orchestrator.optimize import discover_alternatives
 
 
 
-    from catopt_core.pipeline import SearchResult
+    from mlopt_core.pipeline import SearchResult
 
     torch.manual_seed(0)
     m = M.TransformerBlock(dim=64)
@@ -290,12 +290,12 @@ def test_verbose_verify_warning_arm(monkeypatch):
     ``optimize_model`` now verifies through the sink, so the torch
     sink's ``verify_module`` is the patched seam (plan 0004).
     """
-    from catopt_torch.report import VerifyReport
+    from mlopt_torch.report import VerifyReport
 
     def fake_verify(*a, **kw):
         return VerifyReport(max_abs=0.5, max_rel=0.5, passed=False)
 
-    monkeypatch.setattr("catopt_torch.adapters.verify_module", fake_verify)
+    monkeypatch.setattr("mlopt_torch.adapters.verify_module", fake_verify)
     torch.manual_seed(0)
     x = torch.randn(2, 8)
     opt, _s = Optimizer(backend=TorchBackend()).optimize(_MLP(), x, max_iterations=1, verify=True, verbose=True)
@@ -334,7 +334,7 @@ def test_signature_conforms_no_self_sig():
 
 def test_compositional_custom_cost_fn():
     """cost_fn provided → the not-None arc."""
-    from catopt_core.cost import flops_cost
+    from mlopt_core.cost import flops_cost
 
     m = _TwoBlock()
     _opt, rep = Optimizer(backend=TorchBackend()).optimize(m, torch.randn(2, 8), strategy=Compositional(), cost_fn=flops_cost, max_iterations=1)
@@ -345,12 +345,12 @@ def test_compositional_custom_cost_fn():
 def test_compositional_block_verify_failure(monkeypatch):
     """verify_module reports failure → the RuntimeError verify arm →
     block marked failed, compositional falls back."""
-    from catopt_torch.report import VerifyReport
+    from mlopt_torch.report import VerifyReport
 
     def fake_verify(*a, **kw):
         return VerifyReport(max_abs=0.5, max_rel=0.5, passed=False)
 
-    monkeypatch.setattr("catopt_torch.adapters.verify_module", fake_verify)
+    monkeypatch.setattr("mlopt_torch.adapters.verify_module", fake_verify)
     torch.manual_seed(0)
     m = _TwoBlock()
     _opt, rep = Optimizer(backend=TorchBackend()).optimize(m, torch.randn(2, 8), strategy=Compositional(), max_iterations=1)

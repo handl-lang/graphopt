@@ -30,9 +30,9 @@ from typing import Any
 import numpy as np
 import torch
 import torch.nn as nn
-from catopt_core import meta
-from catopt_core.ir import Param, TensorType, op_repr
-from catopt_core.laws import (
+from mlopt_core import meta
+from mlopt_core.ir import Param, TensorType, op_repr
+from mlopt_core.laws import (
     ALL_RULES,
     BATCH_NORM_EXPAND,
     BATCH_NORM_RULES,
@@ -62,7 +62,7 @@ class ConvBN(nn.Module):
 
 def real_seed() -> tuple[Any, dict[str, Any]]:
     """``batch_norm(conv2d(x, W, b), γ, β, μ, σ²)`` + source_tensors."""
-    from catopt_torch.adapters import TorchSource
+    from mlopt_torch.adapters import TorchSource
 
     mod = ConvBN().eval()
     with torch.no_grad():
@@ -321,7 +321,7 @@ def gate_dspec_scalar() -> dict[str, Any]:
     the shipped ``synth_dspec`` defaults to ``max_depth=2`` and refuses;
     the streamed audit twin decides them.
     """
-    from catopt_discovery import dspec_synth as dsp
+    from mlopt_discovery import dspec_synth as dsp
 
     audit = _audit()
     rng = np.random.default_rng(0)
@@ -401,7 +401,7 @@ def _register_algebra(*, broadcast_mul: bool) -> dict:
     ``_vbin``/``_binop`` dispatch), so this is an adapter convention,
     not a core edit.
     """
-    import catopt_core.laws.cond as cond
+    import mlopt_core.laws.cond as cond
 
     table: dict[str, Any] = {}
 
@@ -448,8 +448,8 @@ def gate_dspec_tensor() -> dict[str, Any]:
     ``b'`` staged is a depth-3 tree whose level-3 product (~4 G pairs
     on this leaf bank) exceeds the streamed budget.
     """
-    import catopt_core.laws.cond as cond
-    from catopt_discovery import dspec_synth as dsp
+    import mlopt_core.laws.cond as cond
+    from mlopt_discovery import dspec_synth as dsp
 
     audit = _audit()
     rng = np.random.default_rng(0)

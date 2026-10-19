@@ -1,4 +1,4 @@
-"""Second-pass coverage climb for ``catopt_discovery``.
+"""Second-pass coverage climb for ``mlopt_discovery``.
 
 The first pass (``test_discovery_*.py``) left a handful of defensive
 branches and CLI edges uncovered.  This file reaches every one that a
@@ -36,18 +36,18 @@ report, not covered here.
 
 import pytest
 import torch
-from catopt_core.egraph import Rewrite
-from catopt_core.ir import Op, TensorType, Var
-from catopt_core.laws import ALL_RULES
-from catopt_discovery import census as cs
-from catopt_discovery import coherence as lc
-from catopt_discovery import emit
-from catopt_discovery import lemma_cert as llc
-from catopt_discovery import oracle as lvo
-from catopt_discovery import pipeline as pl
-from catopt_discovery import vocab as vc
-from catopt_discovery.impact import TermCase, _cost_fn
-from catopt_discovery.shape_proposal import _sink
+from mlopt_core.egraph import Rewrite
+from mlopt_core.ir import Op, TensorType, Var
+from mlopt_core.laws import ALL_RULES
+from mlopt_discovery import census as cs
+from mlopt_discovery import coherence as lc
+from mlopt_discovery import emit
+from mlopt_discovery import lemma_cert as llc
+from mlopt_discovery import oracle as lvo
+from mlopt_discovery import pipeline as pl
+from mlopt_discovery import vocab as vc
+from mlopt_discovery.impact import TermCase, _cost_fn
+from mlopt_discovery.shape_proposal import _sink
 
 # ---------------------------------------------------------------------------
 #  Helpers (same shapes as test_discovery_pipeline / _emit)
@@ -88,7 +88,7 @@ def sink_cost():
 
 @pytest.fixture
 def lib_keys() -> list:
-    import catopt_discovery.proposal as lp
+    import mlopt_discovery.proposal as lp
 
     return [lp._key(r.lhs, r.rhs) for r in ALL_RULES]
 
@@ -319,7 +319,7 @@ def test_fire_ill_typed_member_keeps_input(sink_cost):
 
 def test_reach_counts_unreplayable_certificate(monkeypatch, sink_cost):
     """A certificate that cannot replay is counted, not hidden."""
-    import catopt_discovery.impact as im
+    import mlopt_discovery.impact as im
 
     _, cost = sink_cost
     x, y, z = _v("x", 4, 4), _v("y", 4, 4), _v("z", 4, 4)

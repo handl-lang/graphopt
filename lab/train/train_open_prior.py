@@ -3,10 +3,10 @@
 The RL arms ship *cold*: ``lawdata.OPEN_GAME_PLAYER_WEIGHTS`` is
 empty, so every run trains only within its own episodes.  This tool
 trains the open-game policy
-(:class:`catopt_discovery.open_game.OpenLearnedPlayer`) over a fixed
+(:class:`mlopt_discovery.open_game.OpenLearnedPlayer`) over a fixed
 page split and prints the trained weight table as a Python literal —
 the snapshot that bakes into
-:data:`catopt_discovery.lawdata.OPEN_GAME_PLAYER_WEIGHTS`.
+:data:`mlopt_discovery.lawdata.OPEN_GAME_PLAYER_WEIGHTS`.
 
 The split is the held-out one the open-game measurement uses: **even
 pages train, odd pages evaluate** (``gen_cases(start=0, step=2)`` vs
@@ -34,8 +34,8 @@ import json
 from typing import Any
 
 import torch
-from catopt_discovery import engine, play
-from catopt_discovery import open_game as og
+from mlopt_discovery import engine, play
+from mlopt_discovery import open_game as og
 
 #: Defaults — the held-out split's page size and the even-page count.
 PAGE = 16

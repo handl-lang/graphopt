@@ -67,7 +67,7 @@ from typing import Any
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from catopt_core.cost import (
+from mlopt_core.cost import (
     count_cost,
     dag_cost,
     depth_cost_for,
@@ -76,19 +76,19 @@ from catopt_core.cost import (
     param_bytes_cost_for,
     roofline_cost,
 )
-from catopt_core.features import compute_features
-from catopt_core.ir import op_repr
-from catopt_core.pareto import CostVector, pareto_frontier
-from catopt_core.perf_model import AnalyticalPerformanceModel
-from catopt_core.profile import TargetProfile
-from catopt_orchestrator import Optimizer
-from catopt_orchestrator.criteria import (
+from mlopt_core.features import compute_features
+from mlopt_core.ir import op_repr
+from mlopt_core.pareto import CostVector, pareto_frontier
+from mlopt_core.perf_model import AnalyticalPerformanceModel
+from mlopt_core.profile import TargetProfile
+from mlopt_orchestrator import Optimizer
+from mlopt_orchestrator.criteria import (
     PredictedCriterion,
     criteria_cost,
     peak_bytes_cost,
 )
-from catopt_torch.backend import TorchBackend
-from catopt_torch.models import DeepParallel, ParallelLinear
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.models import DeepParallel, ParallelLinear
 
 from bench.benchkit import (
     Case,

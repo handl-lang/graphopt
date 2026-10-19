@@ -2,7 +2,7 @@
 
 The runtime-assembly loop, proven on the hand-built carrier atoms
 (``om_decayed`` / ``applyd`` / ``decay_vec`` — the ops
-:mod:`catopt_carriers.om` ships with hand-written law sets).  Given an
+:mod:`mlopt_carriers.om` ships with hand-written law sets).  Given an
 atom the driver runs the closed loop:
 
 1. **candidate enumeration** — small declarative schema batteries per
@@ -48,20 +48,20 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
-import catopt_carriers  # noqa: F401 — registers carrier bindings
+import mlopt_carriers  # noqa: F401 — registers carrier bindings
 import torch
-from catopt_core.egraph import Rewrite
-from catopt_core.egraph.terms import _term_instantiate
-from catopt_core.ir import Const, Op, TensorType, Var, op_repr
-from catopt_core.laws.serialize import law_to_data, missing_hooks
-from catopt_core.meta import match_pattern
-from catopt_discovery import evidence as ev
-from catopt_discovery import object_synthesis as obs
-from catopt_discovery import oracle as lvo
-from catopt_discovery import proposal as lp
-from catopt_discovery.dspec_synth import synth_dspec_multi
-from catopt_discovery.impact import _iter_subterms
-from catopt_discovery.verifier import verify_law
+from mlopt_core.egraph import Rewrite
+from mlopt_core.egraph.terms import _term_instantiate
+from mlopt_core.ir import Const, Op, TensorType, Var, op_repr
+from mlopt_core.laws.serialize import law_to_data, missing_hooks
+from mlopt_core.meta import match_pattern
+from mlopt_discovery import evidence as ev
+from mlopt_discovery import object_synthesis as obs
+from mlopt_discovery import oracle as lvo
+from mlopt_discovery import proposal as lp
+from mlopt_discovery.dspec_synth import synth_dspec_multi
+from mlopt_discovery.impact import _iter_subterms
+from mlopt_discovery.verifier import verify_law
 
 from lab.screen.exposure_screen import _export, _workloads
 
@@ -653,7 +653,7 @@ def _mint_axis_guard(
         for k in (-3, -2, -1, 0, 1)
     ]
     preds += [("attr-eq", a, v) for a in attr_mvs for v in attr_vals[a]]
-    from catopt_core.laws.cond import eval_cond
+    from mlopt_core.laws.cond import eval_cond
 
     def covers(pred: Any) -> bool:
         try:
@@ -699,7 +699,7 @@ def _corpus_with(atom: str) -> list[Any]:
 
 
 def _default_rules() -> list:
-    from catopt_orchestrator.optimize import default_rules
+    from mlopt_orchestrator.optimize import default_rules
 
     return list(default_rules().rules)
 

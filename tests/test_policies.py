@@ -1,13 +1,13 @@
-"""Search policies (:mod:`catopt_core.policies`)."""
+"""Search policies (:mod:`mlopt_core.policies`)."""
 
-from catopt_core.game import Action
-from catopt_core.policies import (
+from mlopt_core.game import Action
+from mlopt_core.policies import (
     BeamPolicy,
     ExistingPolicy,
     GreedyPolicy,
     RandomPolicy,
 )
-from catopt_core.ports import Policy
+from mlopt_core.ports import Policy
 
 
 def _acts() -> list[Action]:

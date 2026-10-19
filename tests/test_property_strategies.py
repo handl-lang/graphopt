@@ -8,7 +8,7 @@ tests.test_property_strategies import ...``.
 from __future__ import annotations
 
 import hypothesis.strategies as st
-from catopt_core.ir import Const, Op, Param, TensorType, Var
+from mlopt_core.ir import Const, Op, Param, TensorType, Var
 
 #: ``op_repr`` is the leaf key and ``canonicalize``'s sort key, so a
 #: leaf name must determine the leaf's type.  The name encodes the

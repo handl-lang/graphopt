@@ -1,6 +1,6 @@
 """Saturation determinism: the result must not depend on ``PYTHONHASHSEED``.
 
-``EClass.nodes`` is a ``set`` of :class:`~catopt_core.egraph.ENode`, and
+``EClass.nodes`` is a ``set`` of :class:`~mlopt_core.egraph.ENode`, and
 ``ENode.__hash__`` folds in the ``op`` name (a ``str``) and the attr
 reprs — so the set's *iteration order* changes per process under hash
 randomisation.  Any site that reads members in an order that can reach
@@ -11,7 +11,7 @@ local optimum moved 451,128 → 432,696.
 
 The contract these tests pin: member reads that reach a decision go
 through the canonical order ``(op, children, repr(attrs))``
-(:func:`catopt_core.egraph.types._member_key`).  ``test_*`` below cover
+(:func:`mlopt_core.egraph.types._member_key`).  ``test_*`` below cover
 the three leaks that made the staged saturation seed-dependent — the
 matcher's enumeration order (which decides what a ``rule_budget`` /
 ``_MATCH_CAP`` admits before the rule is suspended), the representative
@@ -25,10 +25,10 @@ import subprocess
 import sys
 import textwrap
 
-from catopt_core.egraph import EGraph
-from catopt_core.egraph.types import _member_key
-from catopt_core.ir import Op
-from catopt_core.laws.base import R
+from mlopt_core.egraph import EGraph
+from mlopt_core.egraph.types import _member_key
+from mlopt_core.ir import Op
+from mlopt_core.laws.base import R
 
 #: The budgeted saturation whose result must be seed-independent.  One
 #: e-class holds ``N`` distinct ``add`` members, so the rule's match
@@ -39,9 +39,9 @@ from catopt_core.laws.base import R
 #: single created ``mul`` is always the RHS of ``add(L0, L0)``.
 _SEED_SCRIPT = textwrap.dedent(
     """
-    from catopt_core.egraph import EGraph
-    from catopt_core.ir import Op
-    from catopt_core.laws.base import R
+    from mlopt_core.egraph import EGraph
+    from mlopt_core.ir import Op
+    from mlopt_core.laws.base import R
 
     rule = R(
         "add_to_mul", Op.make("add", "x", "y"), Op.make("mul", "x", "y")

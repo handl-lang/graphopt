@@ -4,14 +4,14 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>catopt — a course in structural optimization</title>
+    <title>mlopt — a course in structural optimization</title>
   </head>
   <body class="antialiased">
     <div x-data="course">
       <!-- ── top bar ──────────────────────────────────────────────── -->
       <header class="sticky top-0 z-30 backdrop-blur bg-bg/90 border-b border-line">
         <div class="max-w-6xl mx-auto px-5 py-3 flex items-center gap-4">
-          <span class="text-gold font-bold tracking-widest text-[12px] uppercase">catopt</span>
+          <span class="text-gold font-bold tracking-widest text-[12px] uppercase">mlopt</span>
           <span class="text-dim text-[13px] hidden sm:inline"
             >a course in structural optimization</span
           >
@@ -90,7 +90,7 @@
                 Progress — levels, XP, mastery, badges and reviews — is kept in this browser (<code
                   class="text-ink"
                   >localStorage</code
-                >, key <code class="text-ink">catopt-course-v5</code>) —
+                >, key <code class="text-ink">mlopt-course-v5</code>) —
                 <span x-text="savedLabel"></span>.
               </div>
               <div class="mt-3 text-[13px] text-dim">
@@ -776,7 +776,7 @@
                     <div class="text-[13.5px] text-eva" x-text="current.enables"></div>
                   </div>
                   <div class="mt-5 text-[13px] text-dim border-l-2 border-gold pl-3">
-                    This is why catopt finds things op-level compilers cannot: the law lives in the
+                    This is why mlopt finds things op-level compilers cannot: the law lives in the
                     <em>structure</em>, not in any op's name.
                   </div>
                 </div>
@@ -1421,7 +1421,7 @@
                 <b class="text-ink">runs</b>. <code>export_optimized</code> writes a
                 <code>module</code> / <code>safetensors</code> / <code>state_dict</code> /
                 <code>torchscript</code> artifact, and a <code>.pt2</code> round-trips to a
-                <b class="text-ink">standalone</b> program with no catopt at inference. Delivery is
+                <b class="text-ink">standalone</b> program with no mlopt at inference. Delivery is
                 also a <em>runner</em> — the CUDA-graph runner captures an executor into one replay,
                 and the opt-in Rust engine is a faster closure over the same IR.
               </p>
@@ -1481,14 +1481,14 @@
                       :class="standalone ? 'text-eva' : 'text-gold'"
                       x-text="
                         standalone
-                          ? '✓ runs with no catopt at inference'
-                          : '— needs the catopt runtime or the model class back'
+                          ? '✓ runs with no mlopt at inference'
+                          : '— needs the mlopt runtime or the model class back'
                       "
                     ></div>
                   </div>
                   <div class="pt-3 border-t border-line text-[12px] text-faint">
                     <span x-text="standaloneCount + ' of ' + artifacts.length"></span> artifacts run
-                    standalone · <code>.pt2</code> is the format that round-trips with no catopt.
+                    standalone · <code>.pt2</code> is the format that round-trips with no mlopt.
                   </div>
                 </div>
               </div>
@@ -2231,7 +2231,7 @@
               >
                 <b class="text-ink">A second backend landed with zero core edits.</b> ONNX became a
                 <code class="text-ink">Source</code> + <code class="text-ink">Sink</code> pair and
-                nothing in <code class="text-ink">catopt-core</code> changed — the port boundary is
+                nothing in <code class="text-ink">mlopt-core</code> changed — the port boundary is
                 the whole architecture, one level down from the four dimensions. Extraction is
                 priced through the sink's <code>supported_ops</code>, so the search only selects
                 forms the backend can actually lower: here the ONNX sink can't lower
@@ -2338,10 +2338,10 @@
             <section x-show="i === 21" x-data="game">
               <p class="text-dim leading-relaxed">
                 The same machinery is also a <b class="text-ink">game</b>.
-                <code>catopt_discovery.engine</code> is the <code>Board</code> protocol — a program,
+                <code>mlopt_discovery.engine</code> is the <code>Board</code> protocol — a program,
                 a legal move set, a referee — plus the generic episode/train/eval drivers;
                 <code>players</code> is <code>LinearPolicy</code>, the learned arm; and
-                <code>python -m catopt_discovery.play --domain …</code> is the registry + CLI.
+                <code>python -m mlopt_discovery.play --domain …</code> is the registry + CLI.
               </p>
               <div class="mt-5 grid lg:grid-cols-5 gap-4">
                 <div class="lg:col-span-2 rounded-2xl border border-line bg-panel p-5">

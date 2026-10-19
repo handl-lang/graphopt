@@ -1,8 +1,8 @@
-"""Search trajectory data (:mod:`catopt_core.trajectories`)."""
+"""Search trajectory data (:mod:`mlopt_core.trajectories`)."""
 
-from catopt_core.ir import Op, TensorType, Var
-from catopt_core.laws import all_rules
-from catopt_core.trajectories import (
+from mlopt_core.ir import Op, TensorType, Var
+from mlopt_core.laws import all_rules
+from mlopt_core.trajectories import (
     RULE_VECTOR_LEN,
     RuleSample,
     rule_samples,

@@ -1,4 +1,4 @@
-"""Differential rewrite check: catopt's engine vs handl's, over the bank.
+"""Differential rewrite check: mlopt's engine vs handl's, over the bank.
 
 Why this exists: two independent engines applying the *same* law to the
 *same* term is evidence a single engine cannot give — it is the cheapest
@@ -12,9 +12,9 @@ and whose right-hand side contains **no leaves** (a structural law), the
 probe:
 
 1. builds a term matching the lhs, with each metavar a fresh variable;
-2. rewrites it with catopt's engine (``EGraph.apply_rule``);
+2. rewrites it with mlopt's engine (``EGraph.apply_rule``);
 3. rewrites it with handl's engine, through the peer — the PyO3
-   extension ``catopt_handl_peer`` when it is importable, else the CLI
+   extension ``mlopt_handl_peer`` when it is importable, else the CLI
    (the same Rust library, `lab/handl-peer`);
 4. renders both results as ``{kind, children}`` and compares structurally.
 
@@ -22,12 +22,12 @@ Scope, stated honestly
 ----------------------
 * **Structural laws only.**  A law whose *right-hand side* carries a leaf (a
   constant or a variable) is skipped: handl sees the leaf as a ``Create`` of
-  a ``catopt:``-namespaced kind carrying the value in the payload, so the
+  a ``mlopt:``-namespaced kind carrying the value in the payload, so the
   two renderings are not directly comparable yet (plan 0030 step 3).
   The probe reports how many laws that excludes — that number *is* the
   size of the remaining mapping work.  (Only the *rhs* is filtered: a leaf
   in the *lhs* is part of the synthesized **input**, which the probe builds
-  from catopt's own IR and feeds to both engines identically, so it is
+  from mlopt's own IR and feeds to both engines identically, so it is
   perfectly comparable — filtering it out used to hide ``id_add``/``id_mul``
   needlessly.)
 * **Root-eliminating laws are compared.**  A law whose rhs is a bare
@@ -55,21 +55,21 @@ import subprocess
 import sys
 from pathlib import Path
 
-from catopt_core.egraph import EGraph
-from catopt_core.ir import Op, Var
-from catopt_core.laws import ALL_RULES
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import Op, Var
+from mlopt_core.laws import ALL_RULES
 
 _REPO = Path(__file__).resolve().parents[2]
 _BIN = Path(
     os.environ.get(
-        "CATOPT_HANDL_PEER_BIN",
+        "MLOPT_HANDL_PEER_BIN",
         Path.home() / "GitHub/handl-lang/host/target/debug/rewrite",
     )
 )
 _FRAGMENTS = _REPO / "lab" / "handl-spike" / "fragments-all"
 
 try:  # the shipping surface — absent until maturin builds it
-    import catopt_handl_peer as _ext
+    import mlopt_handl_peer as _ext
 except ImportError:  # pragma: no cover - depends on the local build
     _ext = None
 
@@ -118,7 +118,7 @@ def _instantiate(node: object, fresh: dict) -> object:
 
 
 def _render(node: object) -> dict:
-    """Render a catopt term as ``{kind, children}`` (handl's shape)."""
+    """Render a mlopt term as ``{kind, children}`` (handl's shape)."""
     parts = _parts(node)
     if parts is None:
         kind = getattr(node, "name", repr(node))
@@ -132,7 +132,7 @@ def _render(node: object) -> dict:
 def _handl_rewrite(rule_id: str, term: object) -> dict | None:
     """Rewrite *term* with handl through the peer; ``None`` on refusal.
 
-    Prefers the PyO3 extension (``catopt_handl_peer``) and falls back to
+    Prefers the PyO3 extension (``mlopt_handl_peer``) and falls back to
     the CLI binary — both are the same Rust library.
     """
     arena: list[dict] = []
@@ -210,7 +210,7 @@ def _outcome(rule: object) -> str:
     if not fired:
         return "declined"
     expected = _render(_instantiate(rule.rhs, fresh))
-    got = _handl_rewrite(f"transform.catopt.{rule.name}", term)
+    got = _handl_rewrite(f"transform.mlopt.{rule.name}", term)
     if got is None:
         return "declined"
     actual = _from_handl(got["arena"], _root_index(got))
@@ -226,7 +226,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if _ext is None and not _BIN.exists():
         print(
-            f"peer not available (no catopt_handl_peer, no binary: {_BIN})",
+            f"peer not available (no mlopt_handl_peer, no binary: {_BIN})",
             file=sys.stderr,
         )
         print(
@@ -262,7 +262,7 @@ def main(argv: list[str] | None = None) -> int:
             elim.append((rule.name, result))
 
     agree, disagree = outcomes["agree"], outcomes["disagree"]
-    print("differential rewrite check — catopt vs handl")
+    print("differential rewrite check — mlopt vs handl")
     print(f"  laws compared      : {agree + disagree}")
     print(f"  agree              : {agree}")
     print(f"  DISAGREE           : {disagree}")

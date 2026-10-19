@@ -1,4 +1,4 @@
-"""Tests for ``catopt_discovery.genkernel`` — generated lowerings.
+"""Tests for ``mlopt_discovery.genkernel`` — generated lowerings.
 
 Pins the mint path (concrete subterm → handler entry), the binding
 semantics (the generated callable evaluates the spelled body — the
@@ -9,14 +9,14 @@ supported + lowerable), and the novelty cost wrapper.
 import pytest
 import torch
 
-from catopt_core.ir import Op, TensorType, Var
-from catopt_core.laws import DEFAULT
-from catopt_core.cost.basic import count_cost
-from catopt_discovery import genkernel as gk
-from catopt_discovery import meta_arena as ma
-from catopt_discovery import play
-from catopt_discovery.lawdata import HANDLERS
-from catopt_discovery.meta_arena import _canon_concrete
+from mlopt_core.ir import Op, TensorType, Var
+from mlopt_core.laws import DEFAULT
+from mlopt_core.cost.basic import count_cost
+from mlopt_discovery import genkernel as gk
+from mlopt_discovery import meta_arena as ma
+from mlopt_discovery import play
+from mlopt_discovery.lawdata import HANDLERS
+from mlopt_discovery.meta_arena import _canon_concrete
 
 
 def _v(name: str, *shape: int) -> Var:
@@ -89,7 +89,7 @@ class TestBindings:
         h = gk.gen_handlers([term])
         sink = gk.gen_sink(h, compile_kernels=False)
         assert "gen_0_k" in sink.supported_ops
-        from catopt_core.ir import IR
+        from mlopt_core.ir import IR
 
         ir = IR(
             root=_p("gen_0_k", x),
@@ -147,7 +147,7 @@ class TestGenDomain:
                 best = board.eg.extract_best(
                     board.root, board.feasible_cost
                 )
-                from catopt_core.ir import op_repr
+                from mlopt_core.ir import op_repr
 
                 assert "gen_" in op_repr(board.deliverable(best))
                 return
@@ -160,9 +160,9 @@ class TestGenDomain:
         assert gk._spec_metas(("mul", "X1", 2.0)) == ["X1"]
 
     def test_eval_spec_const_leaf(self):
-        from catopt_core.ops import OpTable
+        from mlopt_core.ops import OpTable
 
-        import catopt_torch.torch_bridge as tb
+        import mlopt_torch.torch_bridge as tb
 
         out = gk._eval_spec(
             ("mul", "X1", 2.0),
@@ -322,7 +322,7 @@ class TestMeasuredReferee:
 
     def test_paying_kernel_kept_losing_dropped(self):
         torch = pytest.importorskip("torch")
-        from catopt_core.ir import TensorType, Var
+        from mlopt_core.ir import TensorType, Var
 
         x = Var("x", TensorType((256, 256)))
         # a big tail — fusion pays; a 1-op site — overhead doesn't
@@ -1203,7 +1203,7 @@ class TestScanSink:
         }
         sink = gk.scan_triton_sink(hs)
         assert "sc_sink" in sink.supported_ops
-        from catopt_core.ir import IR
+        from mlopt_core.ir import IR
 
         a = _v("a", 16, 8)
         b_ = _v("b", 16, 8)
@@ -1247,7 +1247,7 @@ class TestHybridSinkScan:
         sink = gk.hybrid_sink(hs, compile_kernels=False)
         assert "sc_hyb" in sink.supported_ops
         assert "gk_hyb" in sink.supported_ops
-        from catopt_core.ir import IR
+        from mlopt_core.ir import IR
 
         a = _v("a", 16, 8)
         b_ = _v("b", 16, 8)
@@ -1321,7 +1321,7 @@ class TestHybridSinkScan:
         }
         sink = gk.hybrid_sink(hs, compile_kernels=False)
         assert "sc_unr_fb" in sink.supported_ops
-        from catopt_core.ir import IR
+        from mlopt_core.ir import IR
 
         names = ["a2", "b2", "a1", "b1", "h"]
         a2, b2, a1, b1, h = (_v(n, 8) for n in names)
@@ -1776,7 +1776,7 @@ class TestDecayedSink:
         hs = _decayed_handlers("dc_sink")
         sink = gk.decayed_triton_sink(hs)
         assert "dc_sink" in sink.supported_ops
-        from catopt_core.ir import IR
+        from mlopt_core.ir import IR
 
         s = _v("s", 8, 8)
         d = _v("d", 8, 8)
@@ -1817,7 +1817,7 @@ class TestHybridSinkDecayed:
         kern_op = hs["decayed_0"]["kernel"]
         assert kern_op in sink.supported_ops
         assert "gk_hyb2" in sink.supported_ops
-        from catopt_core.ir import IR
+        from mlopt_core.ir import IR
 
         ir = IR(
             root=_p(kern_op, s, d, v),
@@ -1855,7 +1855,7 @@ class TestHybridSinkDecayed:
         }
         sink = gk.hybrid_sink(hs, compile_kernels=False)
         assert "dc_fb" in sink.supported_ops
-        from catopt_core.ir import IR
+        from mlopt_core.ir import IR
 
         s = _v("s", 8, 8)
         d = _v("d", 8, 8)

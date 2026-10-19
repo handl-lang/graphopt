@@ -1,4 +1,4 @@
-"""Tests for ``catopt_discovery.zoo`` — the held-out model zoo.
+"""Tests for ``mlopt_discovery.zoo`` — the held-out model zoo.
 
 The zoo is the holdout set for the honest yield question
 (``project/retros/model-zoo-yield.md``): real ``nn.Module``
@@ -20,9 +20,9 @@ two properties that make the measurement honest:
 
 import pytest
 import torch
-from catopt_discovery import intake as li
-from catopt_discovery import zoo as zoo_mod
-from catopt_torch.adapters import TorchSink
+from mlopt_discovery import intake as li
+from mlopt_discovery import zoo as zoo_mod
+from mlopt_torch.adapters import TorchSink
 
 _ZOO = zoo_mod.zoo()
 
@@ -47,7 +47,7 @@ def test_zoo_disjoint_from_intake_registry():
 
 def test_zoo_disjoint_from_model_and_bench_corpus():
     """The corpus is bench + models + intake — check the other two."""
-    from catopt_discovery.impact import _model_cases
+    from mlopt_discovery.impact import _model_cases
 
     from bench.suites.correctness.law_bench import LAW_CASES
 

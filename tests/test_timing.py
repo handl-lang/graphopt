@@ -1,4 +1,4 @@
-"""Tests for :mod:`catopt_core.timing` — the one timing contract.
+"""Tests for :mod:`mlopt_core.timing` — the one timing contract.
 
 Every measurement path (the ``Meter`` port, ``calibrate``'s probes,
 the bench ``Runner``) reduces its samples through these three
@@ -12,7 +12,7 @@ from __future__ import annotations
 import statistics
 
 import pytest
-from catopt_core.timing import (
+from mlopt_core.timing import (
     IQR_MIN_SAMPLES,
     iqr,
     median,

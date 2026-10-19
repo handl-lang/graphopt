@@ -1,4 +1,4 @@
-"""Tests for ``catopt_discovery.proposal`` + ``.shape_proposal``.
+"""Tests for ``mlopt_discovery.proposal`` + ``.shape_proposal``.
 
 ``proposal`` is the candidate-law machinery: structural
 duplicate/inverse detection via alpha-normal keys, the numeric
@@ -16,15 +16,15 @@ import json
 
 import pytest
 import torch
-from catopt_core.cost import dag_cost, flops_cost
-from catopt_core.egraph import Rewrite
-from catopt_core.ir import Const, Op, Param, TensorType, Var, op_repr
-from catopt_core.laws import ALL_RULES, serialize
-from catopt_core.laws.cond import eval_cond
-from catopt_discovery import proposal as pp
-from catopt_discovery import shape_proposal as sp
-from catopt_discovery import verifier as vf
-from catopt_discovery.impact import TermCase
+from mlopt_core.cost import dag_cost, flops_cost
+from mlopt_core.egraph import Rewrite
+from mlopt_core.ir import Const, Op, Param, TensorType, Var, op_repr
+from mlopt_core.laws import ALL_RULES, serialize
+from mlopt_core.laws.cond import eval_cond
+from mlopt_discovery import proposal as pp
+from mlopt_discovery import shape_proposal as sp
+from mlopt_discovery import verifier as vf
+from mlopt_discovery.impact import TermCase
 
 _BY_NAME = {r.name: r for r in ALL_RULES}
 _D = 4
@@ -248,7 +248,7 @@ def test_class_reps_deterministic_small():
 
 
 def test_class_reps_skips_leaves_and_oversized():
-    from catopt_core.egraph import EGraph
+    from mlopt_core.egraph import EGraph
 
     x, y = _v("x", _D, _D), _v("y", _D, _D)
     eg = EGraph()
@@ -275,7 +275,7 @@ def test_near_miss_max_pairs_early_return():
 
 
 def test_det_rep_cycle_and_seen_guards():
-    from catopt_core.egraph import EGraph
+    from mlopt_core.egraph import EGraph
 
     x, y, z = (_v(n, _D, _D) for n in "xyz")
     eg = EGraph()

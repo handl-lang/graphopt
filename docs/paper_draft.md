@@ -37,7 +37,7 @@ export at 6.2–7.4× vs `torch.compile` — and the losses are real and kept in
 the same table (a fused-op vision model at 0.80× vs compiled; a certified
 negative on the precision lane; a minted atom that pays nothing).  Backends
 are adapters: a second, non-torch backend (ONNX, both directions) landed
-with **zero changes under `catopt-core`**, verified through `onnxruntime` at
+with **zero changes under `mlopt-core`**, verified through `onnxruntime` at
 1.11e-16 (fp64).  The contribution is automatic discovery + certified
 equivalence + per-shape selection; the performance story is narrow and the
 methodology — the verifier that keeps catching would-be false claims — is as
@@ -85,7 +85,7 @@ because conflating them is the failure mode we most want to avoid.
 | Question | What it asks | Who owns it here |
 |---|---|---|
 | **Optimization** | choose a better implementation from *known* transformations | cost-based extraction over the law closure |
-| **Discovery** | find laws/algorithms humans did not encode | `catopt_discovery` (census → propose → verify → measure → rank → emit) |
+| **Discovery** | find laws/algorithms humans did not encode | `mlopt_discovery` (census → propose → verify → measure → rank → emit) |
 | **Verification** | establish validity before accepting | the admission gauntlet + certificate replay |
 | **Search** | explore the candidate space efficiently | a `Policy` over an already-structured space |
 
@@ -99,12 +99,12 @@ changes what is legal, a profiler observes but never runs on the target.
 
 ### 1.2 Backends are adapters, not the core abstraction
 
-PyTorch is *one application* of the engine.  `catopt-core` is torch-free and
+PyTorch is *one application* of the engine.  `mlopt-core` is torch-free and
 dependency-light (`import-linter` enforces that core imports no `torch`,
 `numpy`, or GPU library), and a new backend implements the `Sink` port
 without touching core.  This is not an assertion; it is measured twice.  The
 ONNX backend — `OnnxSink` (IR → ONNX) and `OnnxSource` (ONNX → IR) — landed
-with **zero edits under `catopt-core`** (`git diff --name-only` against the
+with **zero edits under `mlopt-core`** (`git diff --name-only` against the
 package list), and the fp64 round-trip through `onnxruntime` is 1.11e-16,
 machine epsilon (ADR 0006; `project/retros/onnx-package.md`).  The boundary
 is measured, not asserted.  Applications are replaceable interfaces: the same
@@ -159,7 +159,7 @@ The loop above runs *inside* a fixed law library.  Two mechanisms operate on
 the library itself.
 
 **Coherence — the 3-cell layer.**  A rewrite is a 2-cell; a law *about*
-rewrites is a 3-cell.  `catopt_discovery.coherence` enumerates the pair layer
+rewrites is a 3-cell.  `mlopt_discovery.coherence` enumerates the pair layer
 over the shipped library; `coherence2` measures depth 2 — stratification,
 reach under removal, and the mediator table.  The measured structure is
 honest: the derived layer of `ALL_RULES` is *flat* — zero laws derivable from
@@ -172,7 +172,7 @@ under removal), and **divergence is found and mediated** (`silu_fold`
 shipped to restore confluence where `silu_expand` destroyed the `swiglu_fuse`
 redex).
 
-**Discovery — the closed loop.**  `catopt_discovery.pipeline` runs
+**Discovery — the closed loop.**  `mlopt_discovery.pipeline` runs
 census → propose → verify → measure → rank → emit over a corpus of real
 exported models.  Candidates are verified (numeric oracle, `sink.verify` on
 lowered modules, derivability oracle), measured (fires / cost deltas / cert
@@ -291,11 +291,11 @@ the model did not already prefer — it removes the arbitrary per-class choice
 and adds the sharing signal.  It is the same non-local blindness
 `extract_paired` exists for, here on the tie-break rather than on a group
 decision; it is a `lab/` prototype rather than a change to
-`catopt_core.egraph.extract` because the same tie-break would change extraction
+`mlopt_core.egraph.extract` because the same tie-break would change extraction
 for every caller, a change the full suite must land.
 
 > **Correction 2026-10-15** (`project/retros/saturation-determinism.md`,
-> catopt `abf6114`).  This paragraph previously read **432,696 FLOPs
+> mlopt `abf6114`).  This paragraph previously read **432,696 FLOPs
 > (Δ = −23,056; **−5.06 %**)**, and reported `dag` 139 → 133
 > (re-derived deterministically: **139 → 135**, `morph` 1590 → 1554).  The staged
 > saturation and the sharing-aware optimum were **hash-order dependent** — the
@@ -310,7 +310,7 @@ for every caller, a change the full suite must land.
 > seeded/arbitrary.  The **defect is still real** — greedy per-class extraction
 > *is* off its own cost model, and the monotone fix *does* recover it — but the
 > magnitude is **1.01 %**, not 5.06 %.  That is a much weaker case for
-> promoting the tie-break into `catopt_core.egraph.extract`: at ~1 % on a
+> promoting the tie-break into `mlopt_core.egraph.extract`: at ~1 % on a
 > single workload the promotion is a **judgement call**, not the obvious win
 > the 5 % figure implied.  It is not a paper claim.
 
@@ -330,7 +330,7 @@ The retros are `project/retros/gate3-loop-proposing-rule.md`,
 `gate3-sizes-abstraction.md` and `gate3-form-level-proposer.md`;
 the caveat they carried — that the staged saturation was not reproducible
 across processes (`PYTHONHASHSEED` changed the e-graph, 9,733/9,752/9,756
-enodes, and the sharing-aware local optimum) — is now **resolved**.  catopt
+enodes, and the sharing-aware local optimum) — is now **resolved**.  mlopt
 `abf6114` made the saturation and the extraction **deterministic** (canonical
 member order), and the reproducible runs (`PYTHONHASHSEED` 0–6 + unset) are all
 identical at **9,784** enodes and **451,128** FLOPs.  Numbers reported before
@@ -512,7 +512,7 @@ value claim without its losses is not a measurement.
 **The shape of the value claim.**  Wins are structural, not codegen: folding
 a chain of GEMMs into one, deriving a quadratic→linear recurrence, lifting a
 scan.  Where the structure is already fused (a `scaled_dot_product_attention`
-call, a dense conv), catopt is honest about the ceiling — parity, and the
+call, a dense conv), mlopt is honest about the ceiling — parity, and the
 delivered graph can be handed to `torch.compile` for codegen.  The remaining
 gap to tuned kernels is precisely attributed: executor leanness (per-leaf
 dispatch, fp64 torch GEMMs, a materialized score tensor), not structure.
@@ -544,7 +544,7 @@ already-structured space, and it may only reorder (ADR 0003, amending ADR
   episode (`README.md`; ADR 0005).
 
 Two honest warnings the game layer produced.  First, **a policy is coupled to
-the semantics of its features**: a correctness fix in `catopt_core.features`
+the semantics of its features**: a correctness fix in `mlopt_core.features`
 (view/fold-aware traffic accounting) silently invalidated a documented RL
 policy benefit, with no change to the RL code — so any change to
 `ProgramFeatures` must be treated as a change to every policy trained on it
@@ -588,7 +588,7 @@ incumbents throughout.  The comparison is fair by construction — same
 backend, same device, fp64 verification where stated — and the losses are
 kept alongside the wins.
 
-**Differential oracle.**  `tests/test_egglog_oracle.py` cross-checks catopt's
+**Differential oracle.**  `tests/test_egglog_oracle.py` cross-checks mlopt's
 hand-rolled equality saturation against the Rust **egglog** library on a
 small op/law subset (opt-in, test-only; core stays pure-Python).  It asserts
 the extracted lowest-FLOPs terms match up to commutative-representative
@@ -686,7 +686,7 @@ venue paper needs the scale validation and the executor work named in §6.
 
 | Claim | Measurement | Artifact |
 |---|---|---|
-| **Novelty.** A corpus-minted law ships in the default rule set | `mul_unsq_nat`, `MACHINE_SHIPPED`, −12.27 % on DeltaRuleBlock, +18 enodes | `project/retros/mul-unsq-nat.md`; `catopt_core.laws.provenance.MACHINE_SHIPPED` |
+| **Novelty.** A corpus-minted law ships in the default rule set | `mul_unsq_nat`, `MACHINE_SHIPPED`, −12.27 % on DeltaRuleBlock, +18 enodes | `project/retros/mul-unsq-nat.md`; `mlopt_core.laws.provenance.MACHINE_SHIPPED` |
 | 12 machine-admitted laws ship beside the hand-written kernel | `MACHINE_SHIPPED` (12) | `docs/api.md`; `project/retros/promoted-laws.md` |
 | A handler for a previously hand-written executor is machine-minted | `om_decayed` element at 8.9e-16 fp64 | `project/retros/handler-proposals.md`; ADR 0007 |
 | An atom's law set is synthesized and certified | 25 certified / 4 rejected / 0 refused | `project/retros/layer3-loop.md` |
@@ -728,9 +728,9 @@ commands live with their artifacts:
 uv run pytest                                   # full suite (serial — no -n auto)
 .venv/bin/ty check && .venv/bin/ruff check && .venv/bin/ruff format --check
 .venv/bin/vulture && .venv/bin/lint-imports
-python -m catopt_discovery.pipeline             # census → propose → verify → measure → rank → emit
-python -m catopt_discovery.play --domain gen --probe
-python -m catopt_discovery.play --zoo
+python -m mlopt_discovery.pipeline             # census → propose → verify → measure → rank → emit
+python -m mlopt_discovery.play --domain gen --probe
+python -m mlopt_discovery.play --zoo
 python -m bench run <suite> --device cpu
 ```
 

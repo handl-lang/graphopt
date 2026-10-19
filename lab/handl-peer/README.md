@@ -1,7 +1,7 @@
-# `lab/handl-peer` — spike: catopt calls handl
+# `lab/handl-peer` — spike: mlopt calls handl
 
 Plan 0030 step 2, in its cheapest form. The *shipping* shape is a PyO3
-extension, and that shape now works: Python `import catopt_handl_peer`
+extension, and that shape now works: Python `import mlopt_handl_peer`
 and calls into handl directly — no shelling out.
 
 ## What it is
@@ -10,23 +10,23 @@ Two Rust functions over handl's crates, and two ways to reach them:
 
 | surface | what it does |
 |---|---|
-| `transform_ids(dir)` | load a catopt fragment directory as a handl `Language`; return the transform ids |
+| `transform_ids(dir)` | load a mlopt fragment directory as a handl `Language`; return the transform ids |
 | `rewrite(dir, ast_json, at, rule_id)` | apply one named rule at one node; return the rewritten AST as JSON |
 
 * `src/lib.rs` — the library **and** the PyO3 bindings
-  (`language_transform_ids`, `apply_rule`; module `catopt_handl_peer`).
+  (`language_transform_ids`, `apply_rule`; module `mlopt_handl_peer`).
 * `src/bin/rewrite.rs` — the same library as a CLI. The extension is the
   working surface; the CLI is the fallback for a checkout with no maturin
   build (and is what the tests fall back to).
 
 ## Why it exists
 
-`plan 0029` (the boundary spike) proved catopt's vocabulary can *sit* in
+`plan 0029` (the boundary spike) proved mlopt's vocabulary can *sit* in
 handl — all 83 laws load, and handl's `RewriteEngine` fires one of them
-(handl `82194954`). This crate answers the next question: can **catopt**
+(handl `82194954`). This crate answers the next question: can **mlopt**
 make that happen? It can: `tests/test_handl_peer.py` drives the peer from
 Python and asserts both that the rewrite happens and that the result
-agrees with catopt's own `EGraph.apply_rule`.
+agrees with mlopt's own `EGraph.apply_rule`.
 
 ## Build and run
 
@@ -40,11 +40,11 @@ VIRTUAL_ENV=../../.venv maturin develop \
 
 # then, from the repo root:
 .venv/bin/python -c \
-  "import catopt_handl_peer; print(catopt_handl_peer.language_transform_ids('lab/handl-spike/fragments')[:2])"
+  "import mlopt_handl_peer; print(mlopt_handl_peer.language_transform_ids('lab/handl-spike/fragments')[:2])"
 uv run pytest tests/test_handl_peer.py -q
 ```
 
-maturin is the toolchain `catopt-native` already uses; it is installed on
+maturin is the toolchain `mlopt-native` already uses; it is installed on
 this host as a uv tool (`~/.local/bin/maturin`), not in `.venv`.
 
 ### The CLI (the fallback)

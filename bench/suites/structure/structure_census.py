@@ -1,6 +1,6 @@
 """Structural census of REAL trained checkpoints.
 
-The decisive empirical question behind catopt's non-local passes:
+The decisive empirical question behind mlopt's non-local passes:
 how much of the structure they exploit — low-rank factors, dead and
 duplicate weight slices, diagonal/block-diagonal weights, tied
 parameters — actually exists in trained weights?
@@ -12,13 +12,13 @@ reports, per weight matrix (normalised to ``(out, in)``):
   minimum rank at each relative-Frobenius tolerance — a *rigorous
   lower bound*: no rank-``r`` factorisation can reconstruct the
   weight with residual ``<= tol·‖W‖_F`` below that rank, so if the
-  SVD rank already fails catopt's break-even ``r·(i+o) < i·o``, no
+  SVD rank already fails mlopt's break-even ``r·(i+o) < i·o``, no
   low-rank offer can pay, regardless of the basis construction;
 * dead / near-dead row & column fractions (``max|·|`` thresholds);
 * bitwise and near (``max|Δ| <= 1e-3``) duplicate fractions;
 * diagonal-ness, exact block-diagonal partitions, identity/zero.
 
-Then, which catopt offers WOULD fire — the exact decision logic of
+Then, which mlopt offers WOULD fire — the exact decision logic of
 ``offer_weight_specials`` (identity/diagonal/zero/elide/block_diag,
 ``error_bound = 0``) and its ``budget=`` members
 (``elide_bounded``/``zero_bounded``, ``bound_norm="max_abs"``), plus
@@ -42,7 +42,7 @@ table (GEMM flops only — attention/rope excluded; percentages are
 explicitly scoped).  Written to ``bench/results/structure_census.json``.
 
     python bench/suites/structure/structure_census.py            # both checkpoints
-    python bench/suites/structure/structure_census.py --ckpt ~/.cache/catopt/stories15M.bin
+    python bench/suites/structure/structure_census.py --ckpt ~/.cache/mlopt/stories15M.bin
 """
 # ruff: noqa: RUF001 -- the multiplication sign in tables is notation.
 
@@ -74,11 +74,11 @@ LR_TOLS = (1e-8, 1e-4, 1e-3, 1e-2)
 
 
 def cache_dir() -> Path:
-    """``$XDG_CACHE_HOME/catopt``, falling back to ``~/.cache/catopt``."""
+    """``$XDG_CACHE_HOME/mlopt``, falling back to ``~/.cache/mlopt``."""
     root = os.environ.get("XDG_CACHE_HOME") or str(
         Path.home() / ".cache"
     )
-    return Path(root) / "catopt"
+    return Path(root) / "mlopt"
 
 
 def header(path: str) -> dict:
@@ -122,7 +122,7 @@ def build_sites(w: dict, cfg: dict) -> list[dict]:
             "name": "token_embedding",
             "ltype": "embed",
             "wn": emb,
-            "gemm": False,  # index_select site — not a catopt GEMM offer
+            "gemm": False,  # index_select site — not a mlopt GEMM offer
             "shared": False,
         }
     ]
@@ -217,7 +217,7 @@ def _dedup_rows(a: np.ndarray) -> tuple[list[int], np.ndarray, int]:
 
 def _analyse_np(a: np.ndarray) -> dict:
     """``specials._analyse`` equivalent (budget=None branch)."""
-    from catopt_core.laws.specials import _blocks
+    from mlopt_core.laws.specials import _blocks
 
     o, i = a.shape
     spans = _spans(a)
@@ -564,14 +564,14 @@ def _low_rank_member(
 
 
 # ---------------------------------------------------------------------------
-#  Real-pass probes — validate the replicas against catopt itself
+#  Real-pass probes — validate the replicas against mlopt itself
 # ---------------------------------------------------------------------------
 
 
 def _eg_site(wt, prefix="p"):
     """Fresh EGraph holding ``linear(x, W)``; return (eg, tensors)."""
-    from catopt_core.egraph import EGraph
-    from catopt_core.ir import Op, Param, TensorType, Var
+    from mlopt_core.egraph import EGraph
+    from mlopt_core.ir import Op, Param, TensorType, Var
 
     o, i = wt.shape
     eg = EGraph()
@@ -582,10 +582,10 @@ def _eg_site(wt, prefix="p"):
 
 
 def _run_probes(model: str, sites: list[dict]) -> list[dict]:
-    """Validate replica decisions against the real catopt passes."""
+    """Validate replica decisions against the real mlopt passes."""
     import torch
-    from catopt_core.laws.factored import offer_low_rank_factors
-    from catopt_core.laws.specials import (
+    from mlopt_core.laws.factored import offer_low_rank_factors
+    from mlopt_core.laws.specials import (
         _analyse,
         _bounded_elide,
         offer_weight_specials,
@@ -722,9 +722,9 @@ def _run_probes(model: str, sites: list[dict]) -> list[dict]:
 def _run_share_passes(src: dict) -> dict:
     """Whole-model tie detection — the real passes on real params."""
     import torch
-    from catopt_core.egraph import EGraph
-    from catopt_core.ir import Param, TensorType
-    from catopt_core.laws import (
+    from mlopt_core.egraph import EGraph
+    from mlopt_core.ir import Param, TensorType
+    from mlopt_core.laws import (
         share_duplicate_param_slices,
         share_duplicate_params,
     )
@@ -1029,8 +1029,8 @@ def main() -> None:
         action="append",
         default=None,
         help="checkpoint path(s); default discovers stories15M.bin "
-        "and stories110M.bin in $XDG_CACHE_HOME/catopt, "
-        "~/.cache/catopt or /tmp",
+        "and stories110M.bin in $XDG_CACHE_HOME/mlopt, "
+        "~/.cache/mlopt or /tmp",
     )
     ap.add_argument(
         "--out",
@@ -1077,8 +1077,8 @@ def main() -> None:
         "method": (
             "value census over (out,in)-normalised weight matrices; "
             "exact/bounded offer decisions replicate "
-            "catopt_core.laws.specials._analyse/_bounded_elide/_members "
-            "and catopt_core.laws.factored's Gram-Schmidt + break-even; "
+            "mlopt_core.laws.specials._analyse/_bounded_elide/_members "
+            "and mlopt_core.laws.factored's Gram-Schmidt + break-even; "
             "low-rank fire/no-fire additionally gated by the "
             "SVD-certified minimum rank (rigorous lower bound); "
             "replicas validated against the real passes on probe "

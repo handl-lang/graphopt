@@ -61,12 +61,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from catopt_carriers.om import SPLIT_TRANSPOSE
-from catopt_carriers.xcarrier import _xshape
-from catopt_core.egraph import Rewrite
-from catopt_core.ir import Op
-from catopt_core.laws import R as _R
-from catopt_core.laws.tensor import DISTRIBUTE_MUL_ADD
+from mlopt_carriers.om import SPLIT_TRANSPOSE
+from mlopt_carriers.xcarrier import _xshape
+from mlopt_core.egraph import Rewrite
+from mlopt_core.ir import Op
+from mlopt_core.laws import R as _R
+from mlopt_core.laws.tensor import DISTRIBUTE_MUL_ADD
 
 from lab.bridge import combinator as cb
 from lab.bridge import form_propose as fp
@@ -123,7 +123,7 @@ def _check_contract_split(sizes: tuple[int, ...], bound: dict) -> bool:
     tot = sum(sizes)
     if a[-1] != tot or b[-2] != tot:
         return False
-    from catopt_core.typing import INVALID, broadcast
+    from mlopt_core.typing import INVALID, broadcast
 
     return broadcast(a[:-2], b[:-2]) is not INVALID
 

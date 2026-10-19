@@ -1,6 +1,6 @@
 """Grammar-refusal census — candidate counts per spec per family.
 
-The ADR-0007 layer-2 handler grammar (``catopt_discovery.handler_synth``)
+The ADR-0007 layer-2 handler grammar (``mlopt_discovery.handler_synth``)
 is verify-or-refuse: a spec the templates cannot shape refuses with
 *zero candidates proposed*, and a spec the templates shape but cannot
 match refuses with *candidates exhausted*.  This instrument separates
@@ -19,8 +19,8 @@ from __future__ import annotations
 import sys
 from itertools import islice
 
-from catopt_discovery import handler_synth as hs
-from catopt_discovery.genkernel import _spec_metas
+from mlopt_discovery import handler_synth as hs
+from mlopt_discovery.genkernel import _spec_metas
 
 #: The measured refusal battery — each spelling is a corpus shape the
 #: grammar was asked to mint.  ``selective-*`` are the SelectiveScan

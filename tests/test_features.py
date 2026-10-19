@@ -1,14 +1,14 @@
-"""Static program features (:mod:`catopt_core.features`)."""
+"""Static program features (:mod:`mlopt_core.features`)."""
 
-from catopt_core.features import (
+from mlopt_core.features import (
     DIMENSIONS,
     ProgramFeatures,
     StaticProfiler,
     _elems,
     compute_features,
 )
-from catopt_core.ir import Const, Op, Param, TensorType, Var
-from catopt_core.ports import PerformanceModel, Policy, Profiler
+from mlopt_core.ir import Const, Op, Param, TensorType, Var
+from mlopt_core.ports import PerformanceModel, Policy, Profiler
 
 
 def _v(name: str, *shape: int) -> Var:

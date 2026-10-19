@@ -1,4 +1,4 @@
-"""Property tests for the e-graph (``catopt_core.egraph``).
+"""Property tests for the e-graph (``mlopt_core.egraph``).
 
 Covers interning/congruence and the extraction invariant that a
 rewritten (saturated) e-class never extracts a term more expensive than
@@ -10,10 +10,10 @@ from __future__ import annotations
 import math
 
 import hypothesis.strategies as st
-from catopt_core.cost import count_cost, flops_cost
-from catopt_core.egraph import EGraph
-from catopt_core.ir import Op, TensorType, Var, op_repr
-from catopt_core.laws import (
+from mlopt_core.cost import count_cost, flops_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import Op, TensorType, Var, op_repr
+from mlopt_core.laws import (
     ASSOC_ADD,
     ASSOC_MUL,
     COMM_ADD,

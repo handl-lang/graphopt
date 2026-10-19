@@ -2,15 +2,15 @@
 
 Two things are under test here, and the second is the experiment:
 
-1. that :class:`catopt_onnx.OnnxSource` lifts an ONNX graph to catopt
+1. that :class:`mlopt_onnx.OnnxSource` lifts an ONNX graph to mlopt
    IR whose re-lowered numbers match the original model, and
 2. that it does so as a *port implementation* — the pipeline drives
-   it through ``catopt_core.ports.Source`` exactly as it drives the
+   it through ``mlopt_core.ports.Source`` exactly as it drives the
    torch source, so an ONNX model that was never torch gets searched,
    lowered and verified end to end.
 
 The round-trip tests run the original model in onnxruntime, lift it
-to IR, lower it back through :class:`catopt_onnx.OnnxSink`, and
+to IR, lower it back through :class:`mlopt_onnx.OnnxSink`, and
 compare — a refusal anywhere in that chain is a loud failure, which
 is the ADR's rule.  Ops and spellings outside the lifting table are
 exercised by the refusal tests instead.
@@ -28,9 +28,9 @@ pytest.importorskip("onnx")
 pytest.importorskip("onnxruntime")
 
 import onnx
-from catopt_core.ir import Const, Op
-from catopt_core.ports import Source
-from catopt_onnx import (
+from mlopt_core.ir import Const, Op
+from mlopt_core.ports import Source
+from mlopt_onnx import (
     ONNX_LIFTS,
     OnnxExecutor,
     OnnxImportError,
@@ -38,8 +38,8 @@ from catopt_onnx import (
     OnnxSource,
     UnsupportedOnnxOpError,
 )
-from catopt_orchestrator.optimize import Optimizer
-from catopt_torch.torch_bridge import export_to_ir
+from mlopt_orchestrator.optimize import Optimizer
+from mlopt_torch.torch_bridge import export_to_ir
 from onnx import TensorProto, helper, numpy_helper
 
 DT = np.float32

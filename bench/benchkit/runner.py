@@ -4,8 +4,8 @@
 describe ``Case``/``Variant`` data and never call a clock themselves.
 
 The per-cell median/IQR are reduced through the one timing contract,
-:mod:`catopt_core.timing`, so the harness reports the same summary
-statistics as the production :class:`~catopt_core.ports.Meter` port;
+:mod:`mlopt_core.timing`, so the harness reports the same summary
+statistics as the production :class:`~mlopt_core.ports.Meter` port;
 ``torch.utils.benchmark`` only supplies the raw per-call samples.
 """
 
@@ -14,7 +14,7 @@ from __future__ import annotations
 import gc
 
 import torch
-from catopt_core.timing import iqr, median
+from mlopt_core.timing import iqr, median
 from torch.utils.benchmark import Timer
 
 from bench.benchkit.model import Case, Cell

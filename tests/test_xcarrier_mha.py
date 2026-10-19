@@ -43,10 +43,10 @@ from __future__ import annotations
 
 import torch
 
-import catopt_carriers.xcarrier as XC
-from catopt_core import meta
-from catopt_core.egraph import EGraph
-from catopt_core.ir import Op, TensorType, Var
+import mlopt_carriers.xcarrier as XC
+from mlopt_core import meta
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import Op, TensorType, Var
 
 # ---------------------------------------------------------------------------
 #  helpers (same conventions as test_xcarrier.py)
@@ -485,7 +485,7 @@ class _ScanAttnMH(torch.nn.Module):
         self.wo = torch.nn.Linear(nh * hd, D, bias=False)
         # A registered buffer, not a Python float — torch.export
         # serialises a bare float attribute through fp32 (a uniform
-        # ~1e-8 output deviation; an export artifact, not a catopt
+        # ~1e-8 output deviation; an export artifact, not a mlopt
         # issue — same note as bench_omd2.ScanAttnMQA).
         self.register_buffer(
             "sq", torch.tensor(hd**-0.5, dtype=torch.float64)
@@ -539,10 +539,10 @@ def test_mha_omd_fires_and_is_exact():
     ``omd_applym`` lands in the om_apply class — nested (wo follows
     the attention, so omd is NOT at the root — same as the chunked-MH
     variant).  The extracted member evaluates fp64-exact."""
-    from catopt_core.ir import IR
-    from catopt_torch.regime import default_rules
-    from catopt_torch.torch_bridge import export_to_ir, ir_to_torch_module
-    from catopt_carriers.xcarrier import (
+    from mlopt_core.ir import IR
+    from mlopt_torch.regime import default_rules
+    from mlopt_torch.torch_bridge import export_to_ir, ir_to_torch_module
+    from mlopt_carriers.xcarrier import (
         XC_LAWS,
         _elem_affine_options,
         gather_apply_stack,
@@ -636,10 +636,10 @@ def test_mha_omd_value_member_is_viewed_apply():
     the om leaf contains apply(aff(map,h)) whose A part is a
     transpose/reshape view of the projected scan coefficients —
     rank-4 (nh,T,hd,D)."""
-    from catopt_core.cost import _shape_of
-    from catopt_torch.regime import default_rules
-    from catopt_torch.torch_bridge import export_to_ir
-    from catopt_carriers.xcarrier import (
+    from mlopt_core.cost import _shape_of
+    from mlopt_torch.regime import default_rules
+    from mlopt_torch.torch_bridge import export_to_ir
+    from mlopt_carriers.xcarrier import (
         XC_LAWS,
         _elem_affine_options,
         gather_apply_stack,

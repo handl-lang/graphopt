@@ -85,7 +85,7 @@ class Report:
         ``gate`` read ``median_s`` only, so the recorded spread
         (``iqr_s``) buys the reference nothing.  It is also the one
         field the timing contract can move under a frozen baseline —
-        :mod:`catopt_core.timing` defines the IQR as
+        :mod:`mlopt_core.timing` defines the IQR as
         :func:`statistics.quantiles` (exclusive), while the oldest
         baselines were recorded under torch's inclusive quantiles, so
         their stored ``iqr_s`` no longer matches what the harness

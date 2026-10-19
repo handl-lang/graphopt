@@ -1,5 +1,5 @@
 """Tests for the ``select_mul`` law — elementwise ``mul`` through
-``select`` (:data:`catopt_core.laws.tensor.SELECT_MUL`).
+``select`` (:data:`mlopt_core.laws.tensor.SELECT_MUL`).
 
 ``select`` is a stride view (``torch.select``), the same kind of free
 re-layout as ``transpose``.  Elementwise ``mul`` commutes with it:
@@ -30,26 +30,26 @@ Covered surface:
 from __future__ import annotations
 
 import torch
-from catopt_core.cost import backend_cost, dag_cost, executor_cost_for
-from catopt_core.egraph import EGraph, verify_certificate
-from catopt_core.ir import IR, Op, Param, TensorType, Var
-from catopt_core.laws import (
+from mlopt_core.cost import backend_cost, dag_cost, executor_cost_for
+from mlopt_core.egraph import EGraph, verify_certificate
+from mlopt_core.ir import IR, Op, Param, TensorType, Var
+from mlopt_core.laws import (
     DEFAULT,
     SELECT_MUL,
     SIMPLIFICATION_RULES,
     tags,
 )
-from catopt_core.meta import (
+from mlopt_core.meta import (
     instantiate_pattern,
     match_pattern,
     pattern_metavars,
 )
-from catopt_orchestrator import Optimizer
-from catopt_orchestrator.optimize import _lower_extracted
-from catopt_torch.adapters import TorchSink
-from catopt_torch.backend import TorchBackend
-from catopt_torch.models.ssm import SelectiveSSM
-from catopt_torch.torch_bridge import export_to_ir
+from mlopt_orchestrator import Optimizer
+from mlopt_orchestrator.optimize import _lower_extracted
+from mlopt_torch.adapters import TorchSink
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.models.ssm import SelectiveSSM
+from mlopt_torch.torch_bridge import export_to_ir
 
 _SINK = TorchSink()
 
@@ -168,7 +168,7 @@ def test_select_mul_broadcast_axis_guard():
     ``(u·v)[0] = u·v[0]`` (elementwise) — genuinely different tensors.
     Broadcasting on any *other* axis stays allowed.
     """
-    from catopt_core.laws.cond import eval_cond
+    from mlopt_core.laws.cond import eval_cond
 
     unsafe = {
         "u": Var("u", TensorType((4,))),
@@ -206,7 +206,7 @@ def test_select_mul_declines_when_operands_do_not_broadcast():
     RHS ``sel(u ⊙ v)`` is ill-typed.  ``("shaped", ("bcast", u, v))``
     is exactly "``mul(u, v)`` denotes".
     """
-    from catopt_core.laws.cond import eval_cond
+    from mlopt_core.laws.cond import eval_cond
 
     bad = {
         "u": Var("u", TensorType((2, 3))),

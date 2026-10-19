@@ -14,7 +14,7 @@ leaves, where ``assoc_matmul`` closes every bracketing and the products
 are charged):
 
 * ``greedy-1step``   — the one-step rule-delta oracle
-  (:func:`catopt_core.trajectories.rule_samples`): apply the
+  (:func:`mlopt_core.trajectories.rule_samples`): apply the
   largest-delta rule once.
 * ``greedy-episode`` — the RL script's greedy player (horizon 6,
   patience 2): the same oracle driven until it stalls.
@@ -36,7 +36,7 @@ The headline is the honest one: saturation reaches the DP optimum on
 oracle loses badly, and the multi-step episode nearly closes it — so
 the residual headroom a learned ``Policy`` could chase is **search
 cost**, not quality.  A learned player drops into :func:`_chain_players`
-unchanged: it drives the same :class:`catopt_core.search_env.SearchEnv`
+unchanged: it drives the same :class:`mlopt_core.search_env.SearchEnv`
 episode, so its cost is on the same ``flops_cost`` scale and the
 ratio/rank statistics need no change.
 
@@ -52,7 +52,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from catopt_core.laws import all_rules
+from mlopt_core.laws import all_rules
 
 from bench.benchkit import (
     Case,
@@ -116,7 +116,7 @@ def _chain_players(
     Each player maps a ``dims`` tuple to a final cost on the
     ``flops_cost`` scale (``saturate``'s units).  A learned ``Policy``
     player slots in here as ``("learned", learned)``, where ``learned``
-    drives the same :class:`~catopt_core.search_env.SearchEnv` episode
+    drives the same :class:`~mlopt_core.search_env.SearchEnv` episode
     and returns ``env.cost`` — the ratio/rank statistics below need no
     change.  Deliberately not populated today: this suite scores the
     non-learned players only (the learned reward is reworked

@@ -1,6 +1,6 @@
 /** A backend is a port — swapping it changes nothing in core.
  *
- * Mirrors `catopt_core.ports` + ADR 0006: the whole-graph ends are
+ * Mirrors `mlopt_core.ports` + ADR 0006: the whole-graph ends are
  * `Source` (`model → IR`) and `Sink` (`IR → runnable`, plus its
  * `supported_ops` set).  A second backend (ONNX) landed with **zero
  * core edits** — the only thing that changes is which forms the

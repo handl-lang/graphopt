@@ -1,6 +1,6 @@
 # bench/
 
-Systematic, presentable measurement of the catopt engine.  This is a
+Systematic, presentable measurement of the mlopt engine.  This is a
 package, not a pile of scripts: one canonical `Report` per suite, one
 CLI, and several renderers off the same data.
 
@@ -55,12 +55,12 @@ A suite states its conclusion as typed `Finding`s, not console text:
 
 ```python
 Finding(
-    claim="catopt reaches a weight-folded form Inductor cannot express",
+    claim="mlopt reaches a weight-folded form Inductor cannot express",
     verdict=Verdict.WIN,  # win|parity|regression|negative|inconclusive
     headline="N× vs Inductor at (k,d,B·T)=(…)",  # measured, not hardcoded
-    metric="catopt+inductor / inductor",
+    metric="mlopt+inductor / inductor",
     value=...,  # from the timed cells
-    evidence={"inductor_mm": 8, "catopt_mm": 1},
+    evidence={"inductor_mm": 8, "mlopt_mm": 1},
 )
 ```
 
@@ -99,9 +99,9 @@ python -m bench.common.fetch --models 15M
 ```
 
 Downloads `stories15M.bin` / `stories110M.bin` into
-`$XDG_CACHE_HOME/catopt` (default `~/.cache/catopt`), verifies the
+`$XDG_CACHE_HOME/mlopt` (default `~/.cache/mlopt`), verifies the
 7-int32 header and size, and skips valid copies.  Resolution order:
-`--ckpt <path>` → `~/.cache/catopt/<name>` → `/tmp/<name>` → error.
+`--ckpt <path>` → `~/.cache/mlopt/<name>` → `/tmp/<name>` → error.
 
 ## Adding a suite
 
@@ -160,7 +160,7 @@ below; `python -m bench catalog --check` fails if it drifts (and
 
 | suite | tier | question | expected |
 |---|---|---|---|
-| `structure_census` _(ad-hoc)_ | model | How much catopt-exploitable structure do real trained weights carry? | Exact mode: ~zero bitwise structure on dense LLMs, real on structured ones. |
+| `structure_census` _(ad-hoc)_ | model | How much mlopt-exploitable structure do real trained weights carry? | Exact mode: ~zero bitwise structure on dense LLMs, real on structured ones. |
 | `bound_amplification` _(ad-hoc)_ | block | How does a weight-space error bound propagate to the output? | Measured output error exceeds the certified bound — the bound is conservative (honest). |
 
 ### speedup
@@ -198,7 +198,7 @@ below; `python -m bench catalog --check` fails if it drifts (and
 
 | suite | tier | question | expected |
 |---|---|---|---|
-| `vllm_compare` _(cuda)_ | model | Can vLLM serve a catopt-optimized model token-for-token? | WIN — token-for-token agreement; the wins are complementary, not competing. |
+| `vllm_compare` _(cuda)_ | model | Can vLLM serve a mlopt-optimized model token-for-token? | WIN — token-for-token agreement; the wins are complementary, not competing. |
 
 ## By mechanism
 

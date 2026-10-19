@@ -1,0 +1,241 @@
+"""The search/lower seam — the result objects both phases share.
+
+The pipeline's two phases are separate verbs (plan 0006):
+
+* ``search : (Source + Capabilities) -> IR -> EGraph -> extracted term``
+* ``lower  : (Sink + Runner)         -> term -> runnable -> verified``
+
+:func:`mlopt_orchestrator.optimize.search` produces a
+:class:`SearchResult`; :func:`mlopt_orchestrator.optimize.lower` consumes
+one and returns a :class:`LowerResult`.  The *objects* live in
+``mlopt_core`` — torch-free, backend-neutral — because they are part
+of the hexagonal contract, not of any one orchestrator: a caller can
+hold a :class:`SearchResult`, inspect its saturated e-graph,
+enumerate its frontier, prove an equivalence with
+:meth:`SearchResult.certificate`, and lower it under several runners
+without ever re-running the search.
+
+Port needs by phase
+-------------------
+* :class:`SearchResult` is produced by a :class:`~mlopt_core.ports.Source`
+  (``model -> (IR, leaves)``) plus, optionally, a
+  :class:`~mlopt_core.ports.Capabilities` (backend-relative pricing
+  and the const-fold registry).  ``model`` is the original model —
+  kept as provenance; ``lower`` verifies against a fresh lowering of
+  ``ir`` instead, so the reference is a runnable in the SINK's runtime
+  (which the source-side model need not be).
+* :class:`LowerResult` is produced by a :class:`~mlopt_core.ports.Sink`
+  plus a delivery runner.  ``stats`` is a FRESH dict — the search
+  record plus the lowering keys; ``lower`` never mutates
+  :attr:`SearchResult.stats`.
+
+:class:`Backend` (plan 0007) is the immutable bundle of the four
+backend ports — ``source`` / ``sink`` / ``composer`` / ``meter`` — the
+orchestrator consumes.  It is a *plain value*: no registry, no
+``register_backend``, no ``default_backend`` — a caller assembles or
+imports one explicitly (e.g. ``mlopt_torch.backend.TorchBackend()``)
+and passes it to ``Optimizer(backend=...)``.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Iterator, Mapping
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from mlopt_core.egraph import Certificate, EGraph
+    from mlopt_core.ir import IR
+    from mlopt_core.pareto import CostVector
+    from mlopt_core.ports import (
+        Composer,
+        CostFn,
+        Executor,
+        Meter,
+        Sink,
+        Source,
+        VerifyResult,
+    )
+
+__all__ = ["Backend", "LowerResult", "SearchResult"]
+
+
+@dataclass(frozen=True)
+class Backend:
+    """The four ports of one backend, bundled as an immutable value.
+
+    ``source`` lifts a backend-native model to IR; ``sink`` lowers IR
+    to a runnable executor and verifies equivalence; ``composer``
+    supplies the structural machinery the per-block
+    (:class:`Compositional`) strategy needs; ``meter`` times runnables
+    for the measured (:class:`Autotuned`) strategy.  All four are the
+    documented port types from :mod:`mlopt_core.ports`.
+
+    This is a *value object*: constructing it performs no registration
+    and selects no defaults — the orchestrator receives exactly the
+    ports the caller chose.  ``Optimizer(backend=backend)`` resolves
+    each individual port from it; explicit ``source=``/``sink=``/
+    ``composer=``/``meter=`` arguments override a port the backend
+    carries.
+    """
+
+    source: Source
+    sink: Sink
+    composer: Composer
+    meter: Meter
+
+
+def _cost_vector(
+    dims: tuple[str, ...], cost_fns: Mapping[str, CostFn], term: Any
+) -> CostVector:
+    """Price one term on every axis into a :class:`CostVector`."""
+    from mlopt_core.cost import dag_cost
+    from mlopt_core.pareto import CostVector
+
+    return CostVector(
+        dims,
+        tuple(float(dag_cost(term, fn)) for fn in cost_fns.values()),
+    )
+
+
+@dataclass(eq=False)
+class SearchResult:
+    """The record of a ``search`` run — inspectable mid-pipeline.
+
+    ``ir`` / ``param_values`` are the source's export (the program and
+    its concrete leaf values); ``eg`` / ``root_eid`` are the saturated
+    e-graph and the root e-class; ``term`` is the member the search
+    extracted under ``cost_fn``; ``stats`` is the *search* record
+    (``eg.run`` stats plus ``rule_fires``, ``criteria``,
+    ``pairing_groups`` / ``nonlocal_lifts`` / ``paired_extract`` /
+    ``causal_specialized`` when they fired).  ``source`` and ``model``
+    are provenance — which port produced the IR, and which model the
+    result optimizes.
+
+    ``task`` / ``task_tol`` carry the opt-in task-metric contract
+    (plan 0015): a :class:`~mlopt_core.ports.TaskMetric` value and
+    its resolved tolerance.  They change nothing about extraction —
+    they are *delivery provenance*: :func:`lower` re-reads them so
+    the verify gate can evaluate the task metric on the verify input
+    without the caller re-passing the metric.
+
+    ``eq=False``: identity semantics — a result is a handle into one
+    concrete e-graph, not a value.
+    """
+
+    ir: IR
+    eg: EGraph
+    root_eid: int
+    term: Any
+    param_values: Mapping[str, Any]
+    stats: dict[str, Any]
+    cost_fn: CostFn | None = None
+    source: Any = None
+    model: Any = None
+    task: Any = None
+    task_tol: float | None = None
+
+    def alternatives(
+        self, top_k: int = 8, cost_fn: CostFn | None = None
+    ) -> list[tuple[float, Any]]:
+        """Enumerate the cheapest distinct members of the root class.
+
+        Delegates to :meth:`EGraph.extract_alternatives` on
+        ``self.eg``: for each non-leaf root enode, force extraction
+        through it and record the DAG cost.  Returns ``(cost, term)``
+        pairs, cheapest first — the discovery-engine frontier.
+
+        ``cost_fn`` defaults to the pricing the search used (the
+        backend-relative wrapped model when ``capabilities`` priced
+        it); a result carrying no ``cost_fn`` falls back to
+        :func:`~mlopt_core.cost.flops_cost`.
+        """
+        cf = cost_fn if cost_fn is not None else self.cost_fn
+        if cf is None:
+            from mlopt_core.cost import flops_cost
+
+            cf = flops_cost
+        return self.eg.extract_alternatives(self.root_eid, cf, top_k)
+
+    def frontier(
+        self,
+        cost_fns: Mapping[str, CostFn],
+        candidates: int = 32,
+        top_k: int = 8,
+    ) -> list[tuple[CostVector, Any]]:
+        """Return the non-dominated members of the root class.
+
+        ``cost_fns`` maps an axis name (``"flops"``, ``"memory"``, …)
+        to a :class:`~mlopt_core.ports.CostFn`.  Every candidate member
+        is priced on every axis into a
+        :class:`~mlopt_core.pareto.CostVector`, and the non-dominated
+        ones come back — the landscape is kept rather than scalarised
+        early.  For the scalar view, feed these to
+        :func:`mlopt_core.pareto.best`.
+
+        ``candidates`` bounds how many class members are priced (the
+        root class can be astronomically large); ``top_k`` bounds the
+        returned frontier.
+
+        Scope — the candidate set is the **root class** only
+        (:meth:`alternatives` forces one root enode at a time), so a
+        distinction that lives *inside* a child e-class — a per-subtree
+        associativity or fusion choice under the root — is invisible
+        here.  That is deliberate: the frontier is a bounded discovery
+        surface over the top-level shapes, not a whole-graph search.
+        When a sub-class trade-off matters, widen the surface
+        explicitly (e.g. price a :meth:`EGraph.diverse_classes` union)
+        rather than expecting this method to see it.
+        """
+        from mlopt_core.cost import flops_cost
+        from mlopt_core.pareto import pareto_frontier
+
+        base = self.cost_fn if self.cost_fn is not None else flops_cost
+        alts = self.alternatives(top_k=candidates, cost_fn=base)
+        dims = tuple(cost_fns)
+        priced = [
+            (_cost_vector(dims, cost_fns, term), term)
+            for _cost, term in alts
+        ]
+        return pareto_frontier(priced, key=lambda p: p[0])[:top_k]
+
+    def certificate(self, a: Any, b: Any = None) -> Certificate:
+        """Build a proof-carrying derivation ``a`` -> ``b``.
+
+        Delegates to :meth:`EGraph.certificate` pinned to this
+        result's ``root_eid`` and ``cost_fn`` — the natural call is
+        ``res.certificate(res.ir.root, res.term)``: the level-2
+        certificate that the extracted term is provably equivalent to
+        the exported program.  ``b=None`` extracts under ``cost_fn``.
+        """
+        return self.eg.certificate(
+            a, b, root_eid=self.root_eid, cost_fn=self.cost_fn
+        )
+
+
+@dataclass(eq=False)
+class LowerResult:
+    """The record of a ``lower`` run — the delivered module.
+
+    ``module`` is the runnable executor (a carrier-batched module when
+    the extracted root plans one, the sink's generic lowering
+    otherwise, then whatever the delivery runner wrapped it in).
+    ``stats`` is a fresh dict: the *search* record plus the *lower*
+    record (``lowering``, ``runner``, and whatever the runner wrote —
+    ``compiled``, ``cuda_graph``); :attr:`SearchResult.stats` is never
+    mutated.  ``verified`` is the sink's equivalence report, or
+    ``None`` when ``lower`` ran with ``verify=False``.
+
+    Iterates as ``(module, stats)`` so ``mod, stats = lower(...)``
+    mirrors the legacy tuple return — ``eq=False`` keeps the result a
+    handle, not a value.
+    """
+
+    module: Executor
+    stats: dict[str, Any]
+    verified: VerifyResult | None = None
+
+    def __iter__(self) -> Iterator[Any]:
+        """Unpack to ``(module, stats)`` — the legacy return shape."""
+        yield self.module
+        yield self.stats

@@ -8,7 +8,7 @@ regime once (REINFORCE with the greedy-completion critic, ``--iterations
 1800``) on the einsum-valid ``random_bond_network`` family and writes
 the lineage artifact:
 
-    packages/catopt-torch/src/catopt_torch/artifacts/
+    packages/mlopt-torch/src/mlopt_torch/artifacts/
         contraction_policy_curriculum.pt
 
 **This is no longer the bundled default** —
@@ -18,7 +18,7 @@ policy (``lab/probes/contraction/contraction_distill.py --arms oe-all --save``) 
 this player stays >= 1.0x; the default artifact is
 ``contraction_policy_distilled.pt`` and this file remains bundled as an
 alternate.  The player machinery itself lives in the package
-(``catopt_torch.contraction_policy``); the trainer stays in tools
+(``mlopt_torch.contraction_policy``); the trainer stays in tools
 (``contraction_policy.train_rl``) because training is an experiment
 concern — only the weights ship.
 
@@ -45,7 +45,7 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from catopt_torch.contraction_policy import (
+from mlopt_torch.contraction_policy import (
     greedy,
     load_contraction_policy,
     random_bond_network,
@@ -61,9 +61,9 @@ __all__ = ["main"]
 _DEFAULT_OUT = (
     Path(__file__).resolve().parents[1]
     / "packages"
-    / "catopt-torch"
+    / "mlopt-torch"
     / "src"
-    / "catopt_torch"
+    / "mlopt_torch"
     / "artifacts"
     / "contraction_policy_curriculum.pt"
 )

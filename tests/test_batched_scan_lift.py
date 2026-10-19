@@ -27,24 +27,24 @@ Everything fp64: the reassociation is exact to ~1e-15.
 
 import math
 
-import catopt_carriers.trace_lift as TL
+import mlopt_carriers.trace_lift as TL
 import pytest
 import torch
 import torch.nn as nn
-from catopt_core.egraph import EGraph
-from catopt_core.ir import IR, Op, Param, TensorType, Var
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import IR, Op, Param, TensorType, Var
 
-from catopt_carriers.scan_lower import (
+from mlopt_carriers.scan_lower import (
     build_scan_plan,
     is_scan_apply_term,
     to_batched_scan_module,
 )
-from catopt_torch.torch_bridge import ir_to_torch_module
-from catopt_core.typing import _matmul_shape
-from catopt_orchestrator import Optimizer
+from mlopt_torch.torch_bridge import ir_to_torch_module
+from mlopt_core.typing import _matmul_shape
+from mlopt_orchestrator import Optimizer
 
 
-from catopt_torch.backend import TorchBackend
+from mlopt_torch.backend import TorchBackend
 
 
 @pytest.fixture(autouse=True)

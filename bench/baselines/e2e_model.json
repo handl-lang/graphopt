@@ -14,7 +14,7 @@
     "git_sha": "2c782dd",
     "git_dirty": true,
     "argv": [
-      "/home/luis/Desktop/catopt/bench/__main__.py",
+      "/home/luis/Desktop/mlopt/bench/__main__.py",
       "run",
       "e2e_model",
       "--pin"
@@ -28,10 +28,10 @@
   },
   "findings": [
     {
-      "claim": "the composed catopt+Inductor module beats plain Inductor end-to-end",
+      "claim": "the composed mlopt+Inductor module beats plain Inductor end-to-end",
       "verdict": "win",
       "headline": "best 1.06\u00d7 vs Inductor on tiny_llama@4x128",
-      "metric": "inductor / catopt+inductor",
+      "metric": "inductor / mlopt+inductor",
       "value": 1.0591762942495102,
       "evidence": {}
     },
@@ -64,12 +64,12 @@
           "note": ""
         },
         {
-          "name": "catopt",
+          "name": "mlopt",
           "flops": null,
           "note": ""
         },
         {
-          "name": "catopt+inductor",
+          "name": "mlopt+inductor",
           "flops": null,
           "note": ""
         }
@@ -77,8 +77,8 @@
       "median_s": {
         "eager": 0.017249228750006295,
         "inductor": 0.01584982399981527,
-        "catopt": 0.01868561459996272,
-        "catopt+inductor": 0.016807292000521556
+        "mlopt": 0.01868561459996272,
+        "mlopt+inductor": 0.016807292000521556
       },
       "aux": {
         "name": "tiny_llama@4x64",
@@ -93,7 +93,7 @@
         "n_blocks": 6,
         "n_optimized": 6,
         "n_failed": 0,
-        "catopt_e2e_rel": 4.899089864408092e-07,
+        "mlopt_e2e_rel": 4.899089864408092e-07,
         "blocks": {
           "tok_emb": {
             "status": "optimized",
@@ -221,9 +221,9 @@
           "gather_cat_in": 352,
           "index_select_id": 1264
         },
-        "catopt_rel": 4.899089864408092e-07,
-        "catopt_verified": true,
-        "catopt_fp64_rel": 8.295695093788756e-16,
+        "mlopt_rel": 4.899089864408092e-07,
+        "mlopt_verified": true,
+        "mlopt_fp64_rel": 8.295695093788756e-16,
         "opt64_s": 1.38,
         "n64_optimized": 6,
         "opt_full_s": 120.0,
@@ -231,13 +231,13 @@
         "inductor_status": "compiled in 1.6s",
         "inductor_rel": 4.899089864408092e-07,
         "inductor_verified": true,
-        "catopt_ind_status": "compiled in 0.7s",
-        "catopt_ind_rel": 4.453718058552811e-07,
-        "catopt_ind_verified": true,
+        "mlopt_ind_status": "compiled in 0.7s",
+        "mlopt_ind_rel": 4.453718058552811e-07,
+        "mlopt_ind_verified": true,
         "tok_s_eager": 14841.2,
         "tok_s_inductor": 16151.6,
-        "tok_s_catopt": 13700.4,
-        "tok_s_catopt+inductor": 15231.5
+        "tok_s_mlopt": 13700.4,
+        "tok_s_mlopt+inductor": 15231.5
       }
     },
     {
@@ -259,12 +259,12 @@
           "note": ""
         },
         {
-          "name": "catopt",
+          "name": "mlopt",
           "flops": null,
           "note": ""
         },
         {
-          "name": "catopt+inductor",
+          "name": "mlopt+inductor",
           "flops": null,
           "note": ""
         }
@@ -272,8 +272,8 @@
       "median_s": {
         "eager": 0.039558193000630126,
         "inductor": 0.03579200150034012,
-        "catopt": 0.038594443501096976,
-        "catopt+inductor": 0.0337922985008845
+        "mlopt": 0.038594443501096976,
+        "mlopt+inductor": 0.0337922985008845
       },
       "aux": {
         "name": "tiny_llama@4x128",
@@ -288,7 +288,7 @@
         "n_blocks": 6,
         "n_optimized": 6,
         "n_failed": 0,
-        "catopt_e2e_rel": 5.365598319266025e-07,
+        "mlopt_e2e_rel": 5.365598319266025e-07,
         "blocks": {
           "tok_emb": {
             "status": "optimized",
@@ -416,9 +416,9 @@
           "gather_cat_in": 352,
           "index_select_id": 1264
         },
-        "catopt_rel": 5.365598319266025e-07,
-        "catopt_verified": true,
-        "catopt_fp64_rel": 9.559680113133645e-16,
+        "mlopt_rel": 5.365598319266025e-07,
+        "mlopt_verified": true,
+        "mlopt_fp64_rel": 9.559680113133645e-16,
         "opt64_s": 1.59,
         "n64_optimized": 6,
         "opt_full_s": 120.0,
@@ -426,13 +426,13 @@
         "inductor_status": "compiled in 0.4s",
         "inductor_rel": 4.432450785480629e-07,
         "inductor_verified": true,
-        "catopt_ind_status": "compiled in 0.8s",
-        "catopt_ind_rel": 4.6657376689269785e-07,
-        "catopt_ind_verified": true,
+        "mlopt_ind_status": "compiled in 0.8s",
+        "mlopt_ind_rel": 4.6657376689269785e-07,
+        "mlopt_ind_verified": true,
         "tok_s_eager": 12943.0,
         "tok_s_inductor": 14304.9,
-        "tok_s_catopt": 13266.2,
-        "tok_s_catopt+inductor": 15151.4
+        "tok_s_mlopt": 13266.2,
+        "tok_s_mlopt+inductor": 15151.4
       }
     },
     {
@@ -454,12 +454,12 @@
           "note": ""
         },
         {
-          "name": "catopt",
+          "name": "mlopt",
           "flops": null,
           "note": ""
         },
         {
-          "name": "catopt+inductor",
+          "name": "mlopt+inductor",
           "flops": null,
           "note": ""
         }
@@ -467,8 +467,8 @@
       "median_s": {
         "eager": 0.08234358499976224,
         "inductor": 0.0819846989998041,
-        "catopt": 0.0852802490007889,
-        "catopt+inductor": 0.08184436499868752
+        "mlopt": 0.0852802490007889,
+        "mlopt+inductor": 0.08184436499868752
       },
       "aux": {
         "name": "tiny_llama@4x256",
@@ -483,7 +483,7 @@
         "n_blocks": 6,
         "n_optimized": 6,
         "n_failed": 0,
-        "catopt_e2e_rel": 4.115913248197901e-07,
+        "mlopt_e2e_rel": 4.115913248197901e-07,
         "blocks": {
           "tok_emb": {
             "status": "optimized",
@@ -611,9 +611,9 @@
           "gather_cat_in": 352,
           "index_select_id": 1264
         },
-        "catopt_rel": 4.115913248197901e-07,
-        "catopt_verified": true,
-        "catopt_fp64_rel": 9.370149251370024e-16,
+        "mlopt_rel": 4.115913248197901e-07,
+        "mlopt_verified": true,
+        "mlopt_fp64_rel": 9.370149251370024e-16,
         "opt64_s": 1.88,
         "n64_optimized": 6,
         "opt_full_s": 120.0,
@@ -621,13 +621,13 @@
         "inductor_status": "compiled in 6.7s",
         "inductor_rel": 5.487884330930535e-07,
         "inductor_verified": true,
-        "catopt_ind_status": "compiled in 2.7s",
-        "catopt_ind_rel": 5.487884330930535e-07,
-        "catopt_ind_verified": true,
+        "mlopt_ind_status": "compiled in 2.7s",
+        "mlopt_ind_rel": 5.487884330930535e-07,
+        "mlopt_ind_verified": true,
         "tok_s_eager": 12435.7,
         "tok_s_inductor": 12490.1,
-        "tok_s_catopt": 12007.5,
-        "tok_s_catopt+inductor": 12511.6
+        "tok_s_mlopt": 12007.5,
+        "tok_s_mlopt+inductor": 12511.6
       }
     },
     {
@@ -649,12 +649,12 @@
           "note": ""
         },
         {
-          "name": "catopt",
+          "name": "mlopt",
           "flops": null,
           "note": ""
         },
         {
-          "name": "catopt+inductor",
+          "name": "mlopt+inductor",
           "flops": null,
           "note": ""
         }
@@ -662,8 +662,8 @@
       "median_s": {
         "eager": 0.07028463299993745,
         "inductor": 0.06552188300065609,
-        "catopt": 0.0783255120004469,
-        "catopt+inductor": 0.06357476149969443
+        "mlopt": 0.0783255120004469,
+        "mlopt+inductor": 0.06357476149969443
       },
       "aux": {
         "name": "tiny_llama@8x128",
@@ -678,7 +678,7 @@
         "n_blocks": 6,
         "n_optimized": 6,
         "n_failed": 0,
-        "catopt_e2e_rel": 4.695128633555541e-07,
+        "mlopt_e2e_rel": 4.695128633555541e-07,
         "blocks": {
           "tok_emb": {
             "status": "optimized",
@@ -806,9 +806,9 @@
           "gather_cat_in": 352,
           "index_select_id": 1264
         },
-        "catopt_rel": 4.695128633555541e-07,
-        "catopt_verified": true,
-        "catopt_fp64_rel": 8.745359369862938e-16,
+        "mlopt_rel": 4.695128633555541e-07,
+        "mlopt_verified": true,
+        "mlopt_fp64_rel": 8.745359369862938e-16,
         "opt64_s": 1.76,
         "n64_optimized": 6,
         "opt_full_s": 120.0,
@@ -816,13 +816,13 @@
         "inductor_status": "compiled in 3.3s",
         "inductor_rel": 4.695128633555541e-07,
         "inductor_verified": true,
-        "catopt_ind_status": "compiled in 2.6s",
-        "catopt_ind_rel": 4.695128633555541e-07,
-        "catopt_ind_verified": true,
+        "mlopt_ind_status": "compiled in 2.6s",
+        "mlopt_ind_rel": 4.695128633555541e-07,
+        "mlopt_ind_verified": true,
         "tok_s_eager": 14569.3,
         "tok_s_inductor": 15628.4,
-        "tok_s_catopt": 13073.6,
-        "tok_s_catopt+inductor": 16107.0
+        "tok_s_mlopt": 13073.6,
+        "tok_s_mlopt+inductor": 16107.0
       }
     },
     {
@@ -845,22 +845,22 @@
           "note": ""
         },
         {
-          "name": "catopt",
+          "name": "mlopt",
           "flops": null,
           "note": ""
         },
         {
-          "name": "catopt+inductor",
+          "name": "mlopt+inductor",
           "flops": null,
           "note": ""
         },
         {
-          "name": "catopt_full",
+          "name": "mlopt_full",
           "flops": null,
           "note": ""
         },
         {
-          "name": "catopt_full+ind",
+          "name": "mlopt_full+ind",
           "flops": null,
           "note": ""
         }
@@ -868,10 +868,10 @@
       "median_s": {
         "eager": 0.005408862690001115,
         "inductor": 0.0054148569997778395,
-        "catopt": 0.005537559049935225,
-        "catopt+inductor": 0.005285284500132548,
-        "catopt_full": 0.005678959429988026,
-        "catopt_full+ind": 0.0053379185001176666
+        "mlopt": 0.005537559049935225,
+        "mlopt+inductor": 0.005285284500132548,
+        "mlopt_full": 0.005678959429988026,
+        "mlopt_full+ind": 0.0053379185001176666
       },
       "aux": {
         "name": "conv_attn@4x16",
@@ -887,7 +887,7 @@
         "n_blocks": 7,
         "n_optimized": 7,
         "n_failed": 0,
-        "catopt_e2e_rel": 1.4610119107366812e-07,
+        "mlopt_e2e_rel": 1.4610119107366812e-07,
         "blocks": {
           "stem.0": {
             "status": "optimized",
@@ -977,9 +977,9 @@
         "fires_total": {
           "silu_expand": 2
         },
-        "catopt_rel": 1.4610119107366812e-07,
-        "catopt_verified": true,
-        "catopt_fp64_rel": 4.0820199794939e-16,
+        "mlopt_rel": 1.4610119107366812e-07,
+        "mlopt_verified": true,
+        "mlopt_fp64_rel": 4.0820199794939e-16,
         "opt64_s": 0.4,
         "n64_optimized": 7,
         "opt_full_s": 0.15,
@@ -995,17 +995,17 @@
         "inductor_status": "compiled in 3.5s",
         "inductor_rel": 3.652529776841703e-07,
         "inductor_verified": true,
-        "catopt_ind_status": "compiled in 1.3s",
-        "catopt_ind_rel": 3.8522774990127334e-07,
-        "catopt_ind_verified": true,
+        "mlopt_ind_status": "compiled in 1.3s",
+        "mlopt_ind_rel": 3.8522774990127334e-07,
+        "mlopt_ind_verified": true,
         "full_ind_status": "compiled in 0.9s",
         "full_ind_rel": 3.8522774990127334e-07,
         "tok_s_eager": 189318.9,
         "tok_s_inductor": 189109.3,
-        "tok_s_catopt": 184919.0,
-        "tok_s_catopt+inductor": 193745.5,
-        "tok_s_catopt_full": 180314.7,
-        "tok_s_catopt_full+ind": 191835.1
+        "tok_s_mlopt": 184919.0,
+        "tok_s_mlopt+inductor": 193745.5,
+        "tok_s_mlopt_full": 180314.7,
+        "tok_s_mlopt_full+ind": 191835.1
       }
     }
   ]

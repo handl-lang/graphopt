@@ -1,7 +1,7 @@
 {
   "name": "engine",
   "version": "0.0.0",
-  "description": "The toy e-graph engine behind the catopt learning app.",
+  "description": "The toy e-graph engine behind the mlopt learning app.",
   "homepage": "https://github.com/author/library#readme",
   "bugs": {
     "url": "https://github.com/author/library/issues"

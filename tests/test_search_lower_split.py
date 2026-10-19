@@ -6,7 +6,7 @@ returns a :class:`LowerResult` (module + merged stats + verify
 report) that unpacks as the historical ``(module, stats)`` tuple.
 ``Optimizer`` is the configured entry object — required ``source`` /
 ``sink`` ports, no assumed backend — and ``optimize`` composes the
-phases through a :class:`~catopt_core.ports.Strategy`.
+phases through a :class:`~mlopt_core.ports.Strategy`.
 """
 
 from __future__ import annotations
@@ -15,15 +15,15 @@ import numpy as np
 import pytest
 import torch
 import torch.nn as nn
-from catopt_core.egraph import EGraph
-from catopt_core.ir import IR, Op, Param, TensorType, Var
-from catopt_core.laws import CATEGORICAL
-from catopt_core.pipeline import LowerResult, SearchResult
-from catopt_core.ports import Capabilities, Sink, Strategy
-from catopt_orchestrator.optimize import Autotuned
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import IR, Op, Param, TensorType, Var
+from mlopt_core.laws import CATEGORICAL
+from mlopt_core.pipeline import LowerResult, SearchResult
+from mlopt_core.ports import Capabilities, Sink, Strategy
+from mlopt_orchestrator.optimize import Autotuned
 
 
-from catopt_orchestrator import (
+from mlopt_orchestrator import (
     Compositional,
     LatencyCriterion,
     MemoryCriterion,
@@ -36,17 +36,17 @@ from catopt_orchestrator import (
 )
 
 
-from catopt_orchestrator.runners import ChainedRunner
+from mlopt_orchestrator.runners import ChainedRunner
 
 
-from catopt_cuda import CudaGraphRunner
-from catopt_torch.runners import TorchCompileRunner
+from mlopt_cuda import CudaGraphRunner
+from mlopt_torch.runners import TorchCompileRunner
 
-from catopt_torch.adapters import TorchSink, TorchSource
-from catopt_torch.backend import TorchBackend
+from mlopt_torch.adapters import TorchSink, TorchSource
+from mlopt_torch.backend import TorchBackend
 
 from tests.test_pluggable_sink import NumpySink
-from catopt_torch.autotune import TORCH_BUILDERS
+from mlopt_torch.autotune import TORCH_BUILDERS
 
 
 class _MLP(nn.Module):
@@ -82,7 +82,7 @@ def _make():
 
 def test_search_accepts_a_policy_and_records_it():
     """A policy reorders the schedule; the reach is unchanged."""
-    from catopt_core.policies import GreedyPolicy
+    from mlopt_core.policies import GreedyPolicy
 
     m, x = _make()
     plain = search(m, x, source=TorchSource(), max_iterations=3)
@@ -102,8 +102,8 @@ def test_search_accepts_a_policy_and_records_it():
 
 def test_search_result_frontier_is_non_dominated():
     """`frontier` keeps the landscape; `best` is the scalar view."""
-    from catopt_core.cost import flops_cost, param_bytes_cost
-    from catopt_core.pareto import best, dominates
+    from mlopt_core.cost import flops_cost, param_bytes_cost
+    from mlopt_core.pareto import best, dominates
 
     m, x = _make()
     res = search(m, x, source=TorchSource(), max_iterations=3)
@@ -138,8 +138,8 @@ class _OpaqueEngine:
 
 def test_policy_kwargs_go_only_to_engines_that_take_them():
     """A policy-less engine gets a clear error, not a bare TypeError."""
-    from catopt_core.policies import GreedyPolicy
-    from catopt_orchestrator.optimize import _policy_kwargs
+    from mlopt_core.policies import GreedyPolicy
+    from mlopt_orchestrator.optimize import _policy_kwargs
 
     policy = GreedyPolicy()
     # no policy asked for: no kwargs, whatever the engine
@@ -223,7 +223,7 @@ def test_search_without_capabilities_is_backend_agnostic():
 def test_specialize_causal_opt_out():
     """specialize_causal=False skips the fold even when the sdpa +
     causal-mask shape is present."""
-    from catopt_torch.models import EagerAttention
+    from mlopt_torch.models import EagerAttention
 
     torch.manual_seed(0)
     m = EagerAttention(dim=64, n_heads=2, block_size=16).eval()
@@ -274,7 +274,7 @@ def test_search_result_alternatives_and_certificate():
     for cost, term in alts:
         assert isinstance(cost, float) and term is not None
     # explicit cost_fn override
-    from catopt_core.cost import flops_cost
+    from mlopt_core.cost import flops_cost
 
     alts2 = res.alternatives(top_k=2, cost_fn=flops_cost)
     assert isinstance(alts2, list)
@@ -286,7 +286,7 @@ def test_search_result_alternatives_and_certificate():
 def test_search_result_flops_fallback():
     """A hand-built SearchResult with no cost_fn prices alternatives
     under flops_cost."""
-    from catopt_core.egraph import EGraph as _EG
+    from mlopt_core.egraph import EGraph as _EG
 
     x = Var("x", TensorType((3,)))
     w = Param(name="p_w", typ=TensorType((3,)))

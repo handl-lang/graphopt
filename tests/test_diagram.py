@@ -18,17 +18,17 @@ diagram object layer end to end:
   clone delivery, and the end-to-end verify.
 """
 
-import catopt_orchestrator.diagram as D
-import catopt_orchestrator.morphisms as M
+import mlopt_orchestrator.diagram as D
+import mlopt_orchestrator.morphisms as M
 import numpy as np
 import pytest
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from catopt_core.cost import flops_cost, launch_aware_cost
-from catopt_core.egraph import EGraph
-from catopt_core.ir import IR, Op, Param, TensorType, Var
-from catopt_orchestrator import (
+from mlopt_core.cost import flops_cost, launch_aware_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import IR, Op, Param, TensorType, Var
+from mlopt_orchestrator import (
     ContractionSearch,
     DiagramMove,
     MorphismMatch,
@@ -36,11 +36,11 @@ from catopt_orchestrator import (
     ReifySpec,
     optimize_diagram,
 )
-from catopt_torch.adapters import TorchSink, TorchSource
-from catopt_torch.backend import TorchBackend
-from catopt_torch.composer import TorchComposer
-from catopt_torch.models import ParallelLinear
-from catopt_torch.report import VerifyReport
+from mlopt_torch.adapters import TorchSink, TorchSource
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.composer import TorchComposer
+from mlopt_torch.models import ParallelLinear
+from mlopt_torch.report import VerifyReport
 
 # ---------------------------------------------------------------------------
 #  Fixtures
@@ -1985,7 +1985,7 @@ def test_driver_verbose(caplog):
 
     torch.manual_seed(0)
     model = _Parallel().eval().double()
-    with caplog.at_level(_logging.INFO, "catopt_orchestrator.diagram"):
+    with caplog.at_level(_logging.INFO, "mlopt_orchestrator.diagram"):
         Optimizer(backend=TorchBackend()).optimize(
             model,
             _x(),
@@ -2058,7 +2058,7 @@ def test_move_set_default_and_override():
 
 def test_public_exports():
     """The package __init__ exposes the diagram surface."""
-    import catopt_orchestrator as co
+    import mlopt_orchestrator as co
 
     for name in (
         "DEFAULT_MOVES",

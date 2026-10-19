@@ -60,7 +60,7 @@ alive at the enode layer.
 
 ## 4. Follow-ups / honest edges
 
-* **catopt-native parity gap.** `packages/catopt-native/src/attr.rs`
+* **mlopt-native parity gap.** `packages/mlopt-native/src/attr.rs`
   was written to *mirror* the Python semantics — `AttrVal`'s
   `Eq`/`Hash`/`Ord` still implement Python-numeric equality
   (`Int(1) == Float(1.0) == Bool(true)`).  Under `engine=` the Rust
@@ -68,7 +68,7 @@ alive at the enode layer.
   (type-tag the ordering/hash) the next time the native package
   builds; until then mixed-spelling workloads can extract different
   members under the two engines.
-* `catopt_discovery.census._attr_key` is a separate (raw-value) copy
+* `mlopt_discovery.census._attr_key` is a separate (raw-value) copy
   for census dedup — same latent conflation, lower stakes (a
   reporting key, not an intern table); aligned when it next matters.
 * Raw scalars in `Op.args` (off-contract: operands should be `Const`)

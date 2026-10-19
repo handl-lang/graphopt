@@ -10,16 +10,16 @@ is verified-with-tolerance, not unverified — and the graft record
 carries the bound into the match stats.
 """
 
-import catopt_orchestrator.morphisms as M
-import catopt_orchestrator.morphisms_kv as K
+import mlopt_orchestrator.morphisms as M
+import mlopt_orchestrator.morphisms_kv as K
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from catopt_core.ir import Op, Param, TensorType, Var
-from catopt_orchestrator import MorphismSearch, Optimizer
-from catopt_torch.adapters import TorchSink, TorchSource
-from catopt_torch.backend import TorchBackend
-from catopt_torch.composer import TorchComposer
+from mlopt_core.ir import Op, Param, TensorType, Var
+from mlopt_orchestrator import MorphismSearch, Optimizer
+from mlopt_torch.adapters import TorchSink, TorchSource
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.composer import TorchComposer
 
 # ---------------------------------------------------------------------------
 #  Fixtures — exact low-rank + small perturbation (the xKV case)

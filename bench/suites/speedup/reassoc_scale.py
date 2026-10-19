@@ -14,7 +14,7 @@ plus a one-time compile-time fold: O(R·d²) + O(k·d³).
 TorchInductor has no matmul-reassociation pass, so this transform is
 unreachable for it — the script *proves* that by capturing the
 post-grad FX graph and checking all k ``mm`` nodes still sit on the
-data spine (no weight×weight product).  CatOpt reaches it via
+data spine (no weight×weight product).  MLOpt reaches it via
 ``assoc_matmul`` / ``assoc_matmul_rev`` in the e-graph and folds the
 weight product at lowering time (``IRModule._fold_weight_chains``); the
 extracted term is asserted to nest weights-first.
@@ -22,8 +22,8 @@ extracted term is asserted to nest weights-first.
 Per cell (k, d, R):
 
 * eager fp32, Inductor-compiled original, a hand-built folded
-  reference (the reachable optimum), the catopt-orchestratord module, and
-  the catopt module compiled with the same Inductor backend — all
+  reference (the reachable optimum), the mlopt-orchestratord module, and
+  the mlopt module compiled with the same Inductor backend — all
   timed with ``torch.utils.benchmark`` (median via blocked_autorange).
 * correctness gate: ``torch.allclose`` fp32 vs the original eager
   output for every variant; a failed gate marks the cell FAIL.
@@ -43,7 +43,7 @@ Usage:
     python -m bench run reassoc_scale --device cpu --quick
 """
 # ruff: noqa: RUF001 RUF002 RUF003 -- ×, ·, −, ² in strings/docstrings
-# are deliberate math notation; same convention as catopt_core.laws.
+# are deliberate math notation; same convention as mlopt_core.laws.
 
 from __future__ import annotations
 
@@ -60,16 +60,16 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 import tyro
-from catopt_carriers.trace_lift import lift_scan_to_trace
-from catopt_carriers.xcarrier import (
+from mlopt_carriers.trace_lift import lift_scan_to_trace
+from mlopt_carriers.xcarrier import (
     gather_apply_stack,
     gather_applyd_stack,
     omd_tree_lift,
 )
-from catopt_core.cost import launch_aware_cost
-from catopt_core.egraph import EGraph
-from catopt_core.ir import Op, Param, Var, op_repr
-from catopt_core.laws import (
+from mlopt_core.cost import launch_aware_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import Op, Param, Var, op_repr
+from mlopt_core.laws import (
     FULL,
     pair_shared_input_convs,
     pair_shared_input_linears,
@@ -77,10 +77,10 @@ from catopt_core.laws import (
     share_duplicate_params,
     tags,
 )
-from catopt_core.typing import has_var_leaf
-from catopt_orchestrator import Optimizer
-from catopt_torch.backend import TorchBackend
-from catopt_torch.torch_bridge import export_to_ir
+from mlopt_core.typing import has_var_leaf
+from mlopt_orchestrator import Optimizer
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.torch_bridge import export_to_ir
 
 from bench.benchkit import (
     Case,
@@ -161,7 +161,7 @@ class FoldedChain(nn.Module):
 
 
 # ---------------------------------------------------------------------------
-#  CatOpt pipeline (proof artifact: the extracted term, pre-fold)
+#  MLOpt pipeline (proof artifact: the extracted term, pre-fold)
 # ---------------------------------------------------------------------------
 
 
@@ -600,7 +600,7 @@ def run_cell(
     # -- manual right-assoc reference (reachable optimum) ---------------
     ref = FoldedChain(m).to(dev).eval()
 
-    # -- catopt ----------------------------------------------------------
+    # -- mlopt ----------------------------------------------------------
     t0 = time.time()
     try:
         opt, stats = Optimizer(backend=TorchBackend()).optimize(
@@ -613,7 +613,7 @@ def run_cell(
         )
 
     except Exception as e:  # honest failure path — do not fake the win
-        print(f"  catopt FAILED: {type(e).__name__}: {e}")
+        print(f"  mlopt FAILED: {type(e).__name__}: {e}")
         cell["error"] = f"{type(e).__name__}: {e}"
         return cell, None
     opt = opt.to(dev).eval()
@@ -636,7 +636,7 @@ def run_cell(
     if verbose or not ok_term:
         print(f"  extracted term: {op_repr(term)[:400]}")
     print(
-        f"  catopt: extracted {'weights-FIRST ✓' if ok_term else 'UNEXPECTED — ' + term_msg}"
+        f"  mlopt: extracted {'weights-FIRST ✓' if ok_term else 'UNEXPECTED — ' + term_msg}"
         f" | lowered root: {op_repr(opt._root)[:80]}"
         f" | assoc fires: {fires}"
     )
@@ -661,9 +661,9 @@ def run_cell(
 
     copt, pg2 = compile_with_postgrad(opt, x)
     pa2 = analyze_postgrad(pg2, k, rows, d)
-    cell["catopt_inductor_mm"] = pa2["n_mm"]
+    cell["mlopt_inductor_mm"] = pa2["n_mm"]
     print(
-        f"  catopt+inductor post-grad: {pa2['n_mm']} mm nodes "
+        f"  mlopt+inductor post-grad: {pa2['n_mm']} mm nodes "
         f"(weight product folded into a param)"
     )
 
@@ -726,7 +726,7 @@ def run_cell(
                 ),
             ),
             Variant(
-                name="catopt",
+                name="mlopt",
                 stmt=_timed_stmt(opt, x),
                 flops=float(cell["flops_right_runtime"]),
                 note=(
@@ -735,10 +735,10 @@ def run_cell(
                 ),
             ),
             Variant(
-                name="catopt_inductor",
+                name="mlopt_inductor",
                 stmt=_timed_stmt(copt, x),
                 flops=float(cell["flops_right_runtime"]),
-                note="catopt module under the same Inductor backend",
+                note="mlopt module under the same Inductor backend",
             ),
         ],
         aux={
@@ -762,7 +762,7 @@ def run_cell(
                 ),
                 "mm_lines": [ln[:110] for ln in pa["mm_lines"][:k]],
             },
-            "catopt_extraction": {
+            "mlopt_extraction": {
                 "weights_first": ok_term,
                 "note": term_msg,
                 "assoc_rule_fires": fires,
@@ -790,13 +790,13 @@ def run_cell(
     cell["eager_ms"] = ms["eager"]
     cell["inductor_ms"] = ms["inductor"]
     cell["ref_ms"] = ms["manual_ref"]
-    cell["catopt_ms"] = ms["catopt"]
-    cell["catopt_inductor_ms"] = ms["catopt_inductor"]
+    cell["mlopt_ms"] = ms["mlopt"]
+    cell["mlopt_inductor_ms"] = ms["mlopt_inductor"]
     iqr = getattr(ran, "iqr", None) or {}
     cell["iqr_ms"] = {str(n): float(s) * 1e3 for n, s in iqr.items()}
-    cell["x_vs_eager"] = cell["eager_ms"] / cell["catopt_ms"]
+    cell["x_vs_eager"] = cell["eager_ms"] / cell["mlopt_ms"]
     cell["x_vs_inductor"] = (
-        cell["inductor_ms"] / cell["catopt_inductor_ms"]
+        cell["inductor_ms"] / cell["mlopt_inductor_ms"]
     )
     return cell, ran
 
@@ -815,15 +815,15 @@ _MS_KEY = {
     "eager": "eager_ms",
     "inductor": "inductor_ms",
     "manual_ref": "ref_ms",
-    "catopt": "catopt_ms",
-    "catopt_inductor": "catopt_inductor_ms",
+    "mlopt": "mlopt_ms",
+    "mlopt_inductor": "mlopt_inductor_ms",
 }
 _VARIANT_LABELS = {
     "eager": "eager",
     "inductor": "inductor",
     "manual_ref": "manual ref",
-    "catopt": "catopt",
-    "catopt_inductor": "catopt+inductor",
+    "mlopt": "mlopt",
+    "mlopt_inductor": "mlopt+inductor",
 }
 
 
@@ -895,7 +895,7 @@ def _emit_plots(
         ax.set_xlabel("chain depth k")
         ax.set_ylabel("speedup vs Inductor (×)")
         ax.set_title(
-            f"reassoc_scale — catopt+inductor speedup_vs_inductor, d={d}"
+            f"reassoc_scale — mlopt+inductor speedup_vs_inductor, d={d}"
         )
         ax.legend(fontsize=8)
         fig.tight_layout()
@@ -924,19 +924,19 @@ def _md_supplement(results: list[dict], best: dict | None) -> str:
             lines.append(
                 f"- {tag}: inductor post-grad = {c['inductor_mm']} "
                 f"left-assoc mms ({c['inductor_wx_w']} weight×weight) "
-                f"— transform unreached; catopt extracted "
+                f"— transform unreached; mlopt extracted "
                 f"`{c['term_msg']}`; verify max_abs="
                 f"{c['max_abs']:.2e} rel_to_max={c['max_rel']:.2e}"
             )
     lines += ["", "## Summary", ""]
     if best is not None:
         lines.append(
-            f"catopt finds a transform Inductor cannot express: "
+            f"mlopt finds a transform Inductor cannot express: "
             f"**{best['x_vs_inductor']:.2f}× vs Inductor** on "
             f"(k,d,B·T)=({best['k']},{best['d']},{best['rows']}) "
             f"({best['x_vs_eager']:.2f}× vs eager; Inductor emitted "
-            f"{best['inductor_mm']} left-assoc mms, catopt runs "
-            f"{best['catopt_inductor_mm']})."
+            f"{best['inductor_mm']} left-assoc mms, mlopt runs "
+            f"{best['mlopt_inductor_mm']})."
         )
     else:
         lines.append(
@@ -1039,12 +1039,12 @@ def run_bench(args) -> Report:
     hdr = (
         f"{'k':>3} {'d':>5} {'B·T':>6} | {'GF(L)':>7} {'GF(R)':>7} "
         f"{'GF(fold)':>8} | {'eager':>8} {'induct':>8} {'ref':>8} "
-        f"{'catopt':>8} {'cat+ind':>8} | {'xE':>5} {'xI':>5} | gate"
+        f"{'mlopt':>8} {'cat+ind':>8} | {'xE':>5} {'xI':>5} | gate"
     )
     print("\n" + "=" * 78)
     print(
         "  TIMING (median ms/call) — eager fp32 / inductor / manual "
-        "right-assoc / catopt / catopt+inductor"
+        "right-assoc / mlopt / mlopt+inductor"
     )
     print("=" * 78)
     print(hdr)
@@ -1066,8 +1066,8 @@ def run_bench(args) -> Report:
             f"{c['flops_right_runtime'] / 1e9:>7.2f} "
             f"{c['flops_right_fold'] / 1e9:>8.2f} | "
             f"{c['eager_ms']:>8.2f} {c['inductor_ms']:>8.2f} "
-            f"{c['ref_ms']:>8.2f} {c['catopt_ms']:>8.2f} "
-            f"{c['catopt_inductor_ms']:>8.2f} | "
+            f"{c['ref_ms']:>8.2f} {c['mlopt_ms']:>8.2f} "
+            f"{c['mlopt_inductor_ms']:>8.2f} | "
             f"{c['x_vs_eager']:>5.2f} {c['x_vs_inductor']:>5.2f} | "
             f"{'OK' if c['inductor_left_assoc'] else 'proof?'}"
         )
@@ -1084,12 +1084,12 @@ def run_bench(args) -> Report:
     print("-" * len(hdr))
     if best is not None:
         print(
-            f"\n  catopt finds a transform Inductor cannot express: "
+            f"\n  mlopt finds a transform Inductor cannot express: "
             f"{best['x_vs_inductor']:.2f}× vs Inductor on "
             f"(k,d,B·T)=({best['k']},{best['d']},{best['rows']}) "
             f"({best['x_vs_eager']:.2f}× vs eager; Inductor emitted "
-            f"{best['inductor_mm']} left-assoc mms, catopt runs "
-            f"{best['catopt_inductor_mm']})"
+            f"{best['inductor_mm']} left-assoc mms, mlopt runs "
+            f"{best['mlopt_inductor_mm']})"
         )
     else:
         print(
@@ -1102,7 +1102,7 @@ def run_bench(args) -> Report:
     if dev.type == "cpu":
         print(
             "  note: CPU cell — Inductor CPU compile+runtime overheads "
-            "are real; 'cat+ind' vs 'catopt' shows what the backend "
+            "are real; 'cat+ind' vs 'mlopt' shows what the backend "
             "adds to a single-GEMM module."
         )
     print(
@@ -1115,7 +1115,7 @@ def run_bench(args) -> Report:
     findings = [
         Finding(
             claim=(
-                "catopt reaches a weight-folded form Inductor's "
+                "mlopt reaches a weight-folded form Inductor's "
                 "post-grad graph cannot express"
             ),
             verdict=Verdict.WIN if best else Verdict.NEGATIVE,
@@ -1126,12 +1126,12 @@ def run_bench(args) -> Report:
                 if best
                 else "no verified cell where the proof held"
             ),
-            metric="catopt+inductor / inductor",
+            metric="mlopt+inductor / inductor",
             value=best["x_vs_inductor"] if best else None,
             evidence=(
                 {
                     "inductor_mm": best["inductor_mm"],
-                    "catopt_mm": best["catopt_inductor_mm"],
+                    "mlopt_mm": best["mlopt_inductor_mm"],
                     "x_vs_eager": best["x_vs_eager"],
                 }
                 if best

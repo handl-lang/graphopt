@@ -40,9 +40,9 @@ from typing import Any
 
 import torch
 import torch.nn as nn
-from catopt_core import meta
-from catopt_core.ir import op_repr
-from catopt_core.laws import (
+from mlopt_core import meta
+from mlopt_core.ir import op_repr
+from mlopt_core.laws import (
     ALL_RULES,
     BATCH_NORM_RULES,
     CONV_FOLD_RULES,
@@ -66,7 +66,7 @@ class ConvBN(nn.Module):
 
 def real_seed() -> tuple[Any, Any, dict[str, Any], Any]:
     """``(root, ir, source_tensors, input)`` for an eval-mode ConvBN."""
-    from catopt_torch.adapters import TorchSource
+    from mlopt_torch.adapters import TorchSource
 
     mod = ConvBN().eval().double()
     with torch.no_grad():
@@ -137,16 +137,16 @@ def _family(name: str) -> str:
 
 def main() -> int:
     """Run the bounded premise-pay measurement; print the account."""
-    from catopt_core.cost.params import dag_cost
-    from catopt_core.egraph import EGraph
-    from catopt_core.egraph.terms import _term_match
-    from catopt_core.laws.serialize import alpha_key
-    from catopt_discovery import evidence as ev
-    from catopt_discovery import pipeline as pl
-    from catopt_discovery.impact import TermCase, _cost_fn, _probe
-    from catopt_discovery.pipeline import _typed_probe
-    from catopt_discovery.shape_proposal import _sink
-    from catopt_discovery.verifier import verify_law
+    from mlopt_core.cost.params import dag_cost
+    from mlopt_core.egraph import EGraph
+    from mlopt_core.egraph.terms import _term_match
+    from mlopt_core.laws.serialize import alpha_key
+    from mlopt_discovery import evidence as ev
+    from mlopt_discovery import pipeline as pl
+    from mlopt_discovery.impact import TermCase, _cost_fn, _probe
+    from mlopt_discovery.pipeline import _typed_probe
+    from mlopt_discovery.shape_proposal import _sink
+    from mlopt_discovery.verifier import verify_law
 
     t0 = time.monotonic()
     seed, ir, tensors, x = real_seed()

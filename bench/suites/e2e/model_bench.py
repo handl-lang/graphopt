@@ -1,6 +1,6 @@
 """Whole-model benchmark — complete multi-block models, not cells.
 
-``real_win_hunt`` asks where catopt wins on *representative blocks*.
+``real_win_hunt`` asks where mlopt wins on *representative blocks*.
 This bench asks the deployment question: does the win survive when the
 block is embedded in a COMPLETE model — stacked residual blocks whose
 graphs share an accumulator, plus heads/stems — measured against eager
@@ -44,24 +44,24 @@ Protocol per model (same contract as ``real_win_hunt``):
 2. ``optimize_model_autotuned`` on the fp32 module — every lowering
    candidate (``eager,generic,batched,compiled,compiled_generic``,
    plus ``cuda_graph`` on CUDA) is rebuilt, ``sink.verify``-gated,
-   and timed; ``catopt_best`` is the measured winner.
+   and timed; ``mlopt_best`` is the measured winner.
 3. SIGALRM-guarded ``torch.compile`` baseline on a deepcopy (compile
    wall time recorded).
 4. benchkit ``Runner`` times ``eager`` / ``inductor`` /
-   ``catopt_best`` (median + IQR).  On CUDA each variant additionally
+   ``mlopt_best`` (median + IQR).  On CUDA each variant additionally
    gets a ``torch.cuda.max_memory_allocated`` peak after
    ``reset_peak_memory_stats``.
 
 Usage:
-    PYTHONPATH="packages/catopt-core/src:packages/catopt-torch/src:\
-packages/catopt-carriers/src:packages/catopt-orchestrator/src:." \
-        /tmp/catopt-cuda-venv/bin/python bench/suites/e2e/model_bench.py \
+    PYTHONPATH="packages/mlopt-core/src:packages/mlopt-torch/src:\
+packages/mlopt-carriers/src:packages/mlopt-orchestrator/src:." \
+        /tmp/mlopt-cuda-venv/bin/python bench/suites/e2e/model_bench.py \
         --device cuda
     .venv/bin/python bench/suites/e2e/model_bench.py --device cpu --quick
 """
 # ruff: noqa: E402 RUF001 RUF002 RUF003 -- ×, ·, Σ in
 # strings/docstrings are deliberate math notation; sys.path setup
-# must precede the benchkit/catopt imports (bench_omd2 convention).
+# must precede the benchkit/mlopt imports (bench_omd2 convention).
 
 from __future__ import annotations
 
@@ -77,14 +77,14 @@ sys.setrecursionlimit(400_000)
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from catopt_orchestrator import Optimizer
-from catopt_orchestrator.optimize import (
+from mlopt_orchestrator import Optimizer
+from mlopt_orchestrator.optimize import (
     Autotuned,
     OptimizationResourceError,
 )
-from catopt_torch.autotune import TORCH_BUILDERS
-from catopt_torch.backend import TorchBackend
-from catopt_torch.models import ParallelBlock, ParallelConv
+from mlopt_torch.autotune import TORCH_BUILDERS
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.models import ParallelBlock, ParallelConv
 
 from bench.benchkit import (
     Case,
@@ -570,14 +570,14 @@ def run_cell(
     # -- fp32 gates -----------------------------------------------------
     if best is not None:
         with torch.no_grad():
-            rec["catopt_fp32"] = _rel_diff(best(*args32), ref32)
+            rec["mlopt_fp32"] = _rel_diff(best(*args32), ref32)
 
     # -- peak memory (CUDA only), before Runner timing ------------------
     if dev.type == "cuda":
         for name, m in (
             ("eager", model32),
             ("inductor", cm),
-            ("catopt_best", best),
+            ("mlopt_best", best),
         ):
             if m is not None:
                 try:
@@ -600,7 +600,7 @@ def run_cell(
     if best is not None:
         variants.append(
             Variant(
-                "catopt_best",
+                "mlopt_best",
                 _fwd_stmt(best, args32),
                 note=f"pick={rec['pick']}",
             )
@@ -683,7 +683,7 @@ def run_bench(args) -> Report:
     # -- console table -------------------------------------------------
     hdr = (
         f"{'model':<14} | {'eager':>8} | {'inductor':>8} | "
-        f"{'catopt':>8} | {'pick':<10} | {'ver':>4} | {'xE':>5} | "
+        f"{'mlopt':>8} | {'pick':<10} | {'ver':>4} | {'xE':>5} | "
         f"{'xI':>5} | {'peakMB e/i/c':>14}"
     )
     print("\n" + hdr)
@@ -697,24 +697,24 @@ def run_bench(args) -> Report:
         e, i, b = (
             ms.get("eager"),
             ms.get("inductor"),
-            ms.get("catopt_best"),
+            ms.get("mlopt_best"),
         )
         xe = f"{e / b:>5.2f}" if e and b else f"{'—':>5}"
         xi = f"{i / b:>5.2f}" if i and b else f"{'—':>5}"
         peaks = "/".join(
             str(rec.get(f"peak_mb_{n}", "—"))
-            for n in ("eager", "inductor", "catopt_best")
+            for n in ("eager", "inductor", "mlopt_best")
         )
         print(
             f"{rec['name']:<14} | {g('eager')} | {g('inductor')} | "
-            f"{g('catopt_best')} | {rec.get('pick', '—')!s:<10} | "
+            f"{g('mlopt_best')} | {rec.get('pick', '—')!s:<10} | "
             f"{'yes' if rec.get('verified') else 'NO':>4} | {xe} | "
             f"{xi} | {peaks:>14}"
         )
     print("-" * len(hdr))
     print(
-        "  xE = catopt_best speedup vs eager · xI = vs inductor "
-        "(>1 = catopt wins)"
+        "  xE = mlopt_best speedup vs eager · xI = vs inductor "
+        "(>1 = mlopt wins)"
     )
     print(
         f"  total wall time {time.perf_counter() - t0:.1f}s", flush=True
@@ -723,11 +723,11 @@ def run_bench(args) -> Report:
     scored = [
         (
             c.case.name,
-            c.medians["inductor"] / c.medians["catopt_best"],
-            c.medians["eager"] / c.medians["catopt_best"],
+            c.medians["inductor"] / c.medians["mlopt_best"],
+            c.medians["eager"] / c.medians["mlopt_best"],
         )
         for c in cells
-        if c.medians.get("inductor") and c.medians.get("catopt_best")
+        if c.medians.get("inductor") and c.medians.get("mlopt_best")
     ]
     best = max(scored, key=lambda t: t[1], default=None)
     n_verified = sum(1 for r in recs if r.get("verified"))
@@ -748,7 +748,7 @@ def run_bench(args) -> Report:
                 if best
                 else "no model beats Inductor"
             ),
-            metric="catopt_best / inductor",
+            metric="mlopt_best / inductor",
             value=best[1] if best else None,
             evidence={
                 "picks": {r["name"]: r.get("pick") for r in recs}
@@ -771,7 +771,7 @@ def run_bench(args) -> Report:
         title="Whole-model optimize + verify",
         summary=(
             "Complete multi-block models: latency, peak memory and "
-            "compile time for eager / Inductor / the autotuned catopt "
+            "compile time for eager / Inductor / the autotuned mlopt "
             "lowering, verified per model."
         ),
         findings=findings,
@@ -795,7 +795,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(
         description=(
             "whole-model bench: complete multi-block models — "
-            "autotuned catopt vs eager/Inductor"
+            "autotuned mlopt vs eager/Inductor"
         )
     )
     ap.add_argument("--device", default="cpu", choices=["cpu", "cuda"])

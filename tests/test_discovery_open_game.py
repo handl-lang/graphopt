@@ -1,5 +1,5 @@
 """Tests for the open game — law-shape evaluation as a domain
-(:mod:`catopt_discovery.open_game`).
+(:mod:`mlopt_discovery.open_game`).
 
 The board turns ``enumerate_candidates``' stream into episodes: one
 ``evaluate`` move per pending candidate, ``stop`` to end early, and
@@ -14,10 +14,10 @@ registration in ``play.DOMAINS``.
 from __future__ import annotations
 
 import pytest
-from catopt_discovery import open_game as og
-from catopt_discovery.engine import run_episode, train_policy
-from catopt_discovery.meta_arena import Action
-from catopt_discovery.players import LinearPolicy
+from mlopt_discovery import open_game as og
+from mlopt_discovery.engine import run_episode, train_policy
+from mlopt_discovery.meta_arena import Action
+from mlopt_discovery.players import LinearPolicy
 
 
 def _board(page: int = 12) -> og.OpenArena:
@@ -154,7 +154,7 @@ class TestPolicy:
 
 class TestRegistry:
     def test_play_domain_registered(self):
-        from catopt_discovery.play import DOMAINS
+        from mlopt_discovery.play import DOMAINS
 
         d = DOMAINS["open"]
         assert d.board_of is og.OpenArena
@@ -164,7 +164,7 @@ class TestRegistry:
         assert d.scripted is None
 
     def test_play_episode_generic(self):
-        from catopt_discovery.play import play
+        from mlopt_discovery.play import play
 
         player = LinearPolicy(
             seed=0,

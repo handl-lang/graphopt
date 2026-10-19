@@ -1,6 +1,6 @@
 """The bundled contraction-policy artifacts — load, play, determinism.
 
-``catopt_torch.contraction_policy`` ships two pretrained weight
+``mlopt_torch.contraction_policy`` ships two pretrained weight
 artifacts under ``artifacts/``: ``contraction_policy_distilled.pt``
 (the default — the oe-all distilled player that beats
 ``opt_einsum``'s randomised greedy at equal wall-clock at n = 40;
@@ -21,10 +21,10 @@ import random
 from collections import Counter
 from importlib import resources
 
-import catopt_torch
+import mlopt_torch
 import pytest
 import torch
-from catopt_torch.contraction_policy import (
+from mlopt_torch.contraction_policy import (
     PAIR_DIM,
     SAMPLE_TEMP,
     STATE_DIM,
@@ -420,14 +420,14 @@ def test_load_missing_file(tmp_path):
 def test_load_rejects_wrong_format(tmp_path):
     out = tmp_path / "bad.pt"
     torch.save({"format": "something-else", "state_dict": {}}, out)
-    with pytest.raises(ValueError, match="not a catopt"):
+    with pytest.raises(ValueError, match="not a mlopt"):
         load_contraction_policy(out)
 
 
 def test_load_rejects_non_dict(tmp_path):
     out = tmp_path / "list.pt"
     torch.save([1, 2, 3], out)
-    with pytest.raises(ValueError, match="not a catopt"):
+    with pytest.raises(ValueError, match="not a mlopt"):
         load_contraction_policy(out)
 
 
@@ -435,7 +435,7 @@ def test_load_rejects_feature_drift(tmp_path):
     out = tmp_path / "drift.pt"
     torch.save(
         {
-            "format": "catopt-contraction-policy/1",
+            "format": "mlopt-contraction-policy/1",
             "state_dict": {},
             "meta": {
                 "hidden": 8,
@@ -454,7 +454,7 @@ def test_load_rejects_missing_hidden(tmp_path):
     out = tmp_path / "nohidden.pt"
     torch.save(
         {
-            "format": "catopt-contraction-policy/1",
+            "format": "mlopt-contraction-policy/1",
             "state_dict": {},
             "meta": {
                 "state_dim": STATE_DIM,
@@ -470,14 +470,14 @@ def test_load_rejects_missing_hidden(tmp_path):
 
 def test_loader_is_lazy(monkeypatch):
     """Resolving the name must not ``torch.load`` anything."""
-    import catopt_torch.contraction_policy as mod
+    import mlopt_torch.contraction_policy as mod
 
     def _boom(*_a, **_k):
         raise AssertionError("torch.load called at import/resolve")
 
     monkeypatch.setattr(mod.torch, "load", _boom)
-    assert catopt_torch.load_contraction_policy is not None
-    assert catopt_torch.ContractionPolicy is not None
+    assert mlopt_torch.load_contraction_policy is not None
+    assert mlopt_torch.ContractionPolicy is not None
 
 
 # ---------------------------------------------------------------------------
@@ -511,7 +511,7 @@ def test_rl_lineage_artifact_still_loads():
     packaged and passes the same format/feature-contract checks when
     loaded via an explicit resource path.
     """
-    res = resources.files("catopt_torch").joinpath(
+    res = resources.files("mlopt_torch").joinpath(
         "artifacts", "contraction_policy_curriculum.pt"
     )
     with resources.as_file(res) as p:
@@ -562,8 +562,8 @@ def test_bundled_beats_our_greedy(bundled):
 
 
 def test_bundled_via_lazy_surface():
-    """``catopt_torch.load_contraction_policy`` resolves to the module."""
+    """``mlopt_torch.load_contraction_policy`` resolves to the module."""
     assert (
-        catopt_torch.load_contraction_policy is load_contraction_policy
+        mlopt_torch.load_contraction_policy is load_contraction_policy
     )
-    assert catopt_torch.ContractionPolicy is ContractionPolicy
+    assert mlopt_torch.ContractionPolicy is ContractionPolicy

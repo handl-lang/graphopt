@@ -13,15 +13,15 @@ import time
 
 import pytest
 
-from catopt_core import laws as R
-from catopt_core.cost import count_cost
-from catopt_core.egraph import (
+from mlopt_core import laws as R
+from mlopt_core.cost import count_cost
+from mlopt_core.egraph import (
     CertificateVerificationError,
     EGraph,
     verify_certificate,
 )
-from catopt_core.ir import Const, Op, Param, TensorType, Var, op_repr
-from catopt_core.laws import pair_shared_input_linears
+from mlopt_core.ir import Const, Op, Param, TensorType, Var, op_repr
+from mlopt_core.laws import pair_shared_input_linears
 
 
 def _t(d=4):

@@ -1,4 +1,4 @@
-"""Tests for ``catopt_discovery.enumerate`` — the law-shape enumerator.
+"""Tests for ``mlopt_discovery.enumerate`` — the law-shape enumerator.
 
 The enumerator writes down every small *rewriting form* over the op
 grammar (comm/assoc/factor/homomorphism/annihilator families) instead
@@ -17,10 +17,10 @@ import itertools
 import json
 
 import pytest
-from catopt_core.ir import Const, Op, Var, op_repr
-from catopt_discovery import enumerate as en
-from catopt_discovery import proposal as lp
-from catopt_discovery.object_synthesis import term_from_spec
+from mlopt_core.ir import Const, Op, Var, op_repr
+from mlopt_discovery import enumerate as en
+from mlopt_discovery import proposal as lp
+from mlopt_discovery.object_synthesis import term_from_spec
 
 _OPS = ("add", "mul", "sub", "div", "neg", "exp", "square", "sqrt")
 _OPS_POW = (*_OPS, "pow")
@@ -321,7 +321,7 @@ def test_rule_carries_metavar_pattern_with_attr_metavars():
 
 
 def test_pattern_rule_fires_on_a_real_attr_bearing_term():
-    from catopt_core.egraph import EGraph
+    from mlopt_core.egraph import EGraph
 
     cands = _cands(("add", "select"), metas=("A", "B"), attr_keys=_ATTR_KEYS)
     rule = _hom_select(cands).as_rule()

@@ -6,7 +6,7 @@ Date: 2026-10.  The follow-up sweep the earlier retros left open:
 and `value-bank.md`'s four.  Each residual is either **closed**
 (declarative, minimal, equal-preserving) or **documented** with the
 precise reason it is not honestly closable inside the owned seams
-(`laws/tensor.py`, `laws/cond.py`, `catopt_core/typing.py`).
+(`laws/tensor.py`, `laws/cond.py`, `mlopt_core/typing.py`).
 
 Owned seams touched: `laws/tensor.py` (the mm guards + the two
 `linear`-scale guards).  `laws/cond.py` needed **no** new atom — every

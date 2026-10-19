@@ -16,7 +16,7 @@ only, so a golden reference carries exactly what it gates on: the
 median plus provenance and findings.  The spread stays in every live
 report (`bench/results/*.json`, the ledger), where the renderers show
 `median ± IQR`; it is left out of the pinned file so a later change to
-the timing contract (`catopt_core.timing`) cannot leave a frozen
+the timing contract (`mlopt_core.timing`) cannot leave a frozen
 baseline recording a number the harness no longer agrees with.
 
 Then a later run is compared against it:

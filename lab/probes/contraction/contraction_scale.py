@@ -18,7 +18,7 @@ scale, a ladder of players:
   greedy completion is cheapest);
 * **search** — a bounded best-first search over contraction states,
   the abstract analogue of
-  :func:`catopt_orchestrator.diagram_search.search_moves` (which needs
+  :func:`mlopt_orchestrator.diagram_search.search_moves` (which needs
   a diagram lifted from a torch model and so cannot be driven on a bare
   tensor network);
 * **restart** — best of many randomised-greedy episodes;
@@ -32,13 +32,13 @@ The gate: is there a scale where saturation *fails to finish* **and** a
 cheaper player is materially worse?  If so the domain is open; if
 saturation still nails it within budget, the domain is closed.
 
-The rule space is catopt's own e-graph: a binary ``contract`` op whose
+The rule space is mlopt's own e-graph: a binary ``contract`` op whose
 associativity + commutativity generate every binary contraction tree
 over a leaf multiset — the whole contraction-order space.  A structural
 cost function prices each ``contract`` node as the classic
 ``∏(sizes over the union of the two carried index sets)``; it is
 additive, so the e-graph extractor's DAG-aware billing recovers the
-exact pairwise cost.  (catopt ships no general-network contraction
+exact pairwise cost.  (mlopt ships no general-network contraction
 rule — only ``assoc_matmul`` for chains — so this is a faithful
 extension of its e-graph, not a shipped rule set.)
 
@@ -64,8 +64,8 @@ from collections.abc import Iterator
 from itertools import count
 from typing import Any
 
-from catopt_core.egraph import EGraph, Rewrite
-from catopt_core.ir import Op, TensorType, Var
+from mlopt_core.egraph import EGraph, Rewrite
+from mlopt_core.ir import Op, TensorType, Var
 
 __all__ = [
     "CONTROLS",

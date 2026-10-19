@@ -120,7 +120,7 @@ class DashboardConfig:
 
     results: Path = Path("bench/results")
     out: Path | None = None
-    title: str = "catopt benchmarks"
+    title: str = "mlopt benchmarks"
 
 
 @dataclass
@@ -288,7 +288,7 @@ def cmd_list(cfg: ListConfig) -> int:
             ]
         )
     _print_table(
-        "catopt bench suites (by intent)",
+        "mlopt bench suites (by intent)",
         ["intent", "suite", "tier", "status", "needs", "mechanisms"],
         rows,
     )

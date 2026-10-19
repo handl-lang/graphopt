@@ -15,10 +15,10 @@ import ast
 import logging
 from pathlib import Path
 
-from catopt_torch.calibrate import calibrate
-from catopt_core.egraph import EGraph
-from catopt_core.ir import Op, Param, TensorType, Var
-from catopt_core.laws import ASSOC_LINEAR_BIAS
+from mlopt_torch.calibrate import calibrate
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import Op, Param, TensorType, Var
+from mlopt_core.laws import ASSOC_LINEAR_BIAS
 
 _REPO = Path(__file__).resolve().parents[1]
 
@@ -81,7 +81,7 @@ def test_saturation_logs_iteration(caplog):
     hits = [
         r
         for r in caplog.records
-        if r.name.startswith("catopt")
+        if r.name.startswith("mlopt")
         and r.levelno == logging.INFO
         and "saturation at iteration" in r.getMessage()
     ]
@@ -93,7 +93,7 @@ def test_max_nodes_stop_logs_warning(caplog):
     with caplog.at_level(logging.WARNING):
         eg.run([ASSOC_LINEAR_BIAS], eid, max_nodes=1)
     assert any(
-        r.name.startswith("catopt")
+        r.name.startswith("mlopt")
         and r.levelno == logging.WARNING
         and "max_nodes" in r.getMessage()
         for r in caplog.records
@@ -104,15 +104,15 @@ def test_verbose_true_yields_debug(caplog):
     with caplog.at_level(logging.DEBUG):
         calibrate(device="cpu", quick=True, verbose=True)
     assert any(
-        r.name == "catopt_torch.calibrate" and r.levelno == logging.DEBUG
+        r.name == "mlopt_torch.calibrate" and r.levelno == logging.DEBUG
         for r in caplog.records
     )
 
 
 def test_verbose_restores_logger_level(caplog):
-    # `catopt_torch.calibrate` is the real logger home — name it
+    # `mlopt_torch.calibrate` is the real logger home — name it
     # directly (the façade's sys.modules alias layer is gone).
-    log = logging.getLogger("catopt_torch.calibrate")
+    log = logging.getLogger("mlopt_torch.calibrate")
     prev = log.level
     with caplog.at_level(logging.DEBUG):
         calibrate(device="cpu", quick=True, verbose=True)

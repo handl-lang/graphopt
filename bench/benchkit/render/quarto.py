@@ -24,7 +24,7 @@ def render_quarto(report: Report, figures: dict[str, str]) -> str:
     front = [
         "---",
         f'title: "{title}"',
-        f'subtitle: "catopt benchmark — git {report.env.get("git_sha", "?")}"',
+        f'subtitle: "mlopt benchmark — git {report.env.get("git_sha", "?")}"',
         "format:",
         "  html: { toc: true, embed-resources: true }",
         "  pdf: { toc: false, geometry: margin=2cm }",

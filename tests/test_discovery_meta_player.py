@@ -9,13 +9,13 @@ case corpus mixes paying and non-paying boards.
 
 import random
 
-from catopt_core.cost.basic import count_cost
-from catopt_core.ir import Const, Op, TensorType, Var
-from catopt_core.laws import DEFAULT
-from catopt_discovery import lawdata
-from catopt_discovery import meta_arena as ma
-from catopt_discovery import meta_player as mp
-from catopt_discovery import players
+from mlopt_core.cost.basic import count_cost
+from mlopt_core.ir import Const, Op, TensorType, Var
+from mlopt_core.laws import DEFAULT
+from mlopt_discovery import lawdata
+from mlopt_discovery import meta_arena as ma
+from mlopt_discovery import meta_player as mp
+from mlopt_discovery import players
 
 
 def _v(name: str, *shape: int) -> Var:
@@ -223,7 +223,7 @@ class TestImitate:
         assert a is not None and a.op == "saturate"
 
     def test_imitate_policy_counts(self):
-        from catopt_discovery import engine as eng
+        from mlopt_discovery import engine as eng
 
         p = mp.MetaLearnedPlayer(0)
         res = eng.imitate_policy(
@@ -288,7 +288,7 @@ class TestDriver:
         base = scripted.eg.extract_best(
             scripted.root, scripted.feasible_cost
         )
-        from catopt_core.cost.params import dag_cost
+        from mlopt_core.cost.params import dag_cost
 
         assert t.cost < dag_cost(base, scripted.feasible_cost)
 

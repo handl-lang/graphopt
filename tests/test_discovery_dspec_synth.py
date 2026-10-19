@@ -1,5 +1,5 @@
 """Tests for the declarative-derive synthesizer
-(:mod:`catopt_discovery.dspec_synth`).
+(:mod:`mlopt_discovery.dspec_synth`).
 
 ``synth_dspec`` closes the derive-as-data loop the way ``auto_cond``
 closes the guard loop: measure a procedural hook's outputs over a
@@ -13,8 +13,8 @@ shipping.
 
 from __future__ import annotations
 
-from catopt_core.laws.cond import eval_derive
-from catopt_discovery.dspec_synth import (
+from mlopt_core.laws.cond import eval_derive
+from mlopt_discovery.dspec_synth import (
     BINOPS,
     MIN_SAMPLES,
     UNOPS,
@@ -133,7 +133,7 @@ class TestNewOps:
 
     def test_finds_rank_offset(self):
         # ``max(rank q, rank k) - 1`` — the matmul_t_concat derive.
-        from catopt_core.ir import TensorType, Var
+        from mlopt_core.ir import TensorType, Var
 
         def var(name, shape):
             return Var(name, TensorType(tuple(shape)))
@@ -187,8 +187,8 @@ class TestValueShapeSource:
     )
 
     def _setup(self, monkeypatch, *, resolver):
-        import catopt_core.typing as ty
-        from catopt_core.ir import TensorType, Var
+        import mlopt_core.typing as ty
+        from mlopt_core.ir import TensorType, Var
 
         bounds = [
             {"t": Var("t", TensorType(tuple(cs)))}
@@ -244,11 +244,11 @@ class TestMigration:
     old hook stays as the oracle (``_derive_score_concat_dim``)."""
 
     def test_matmul_t_concat_dspec_matches_oracle(self):
-        from catopt_carriers.om import (
+        from mlopt_carriers.om import (
             MATMUL_T_CONCAT,
             _derive_score_concat_dim,
         )
-        from catopt_discovery import object_synthesis as osyn
+        from mlopt_discovery import object_synthesis as osyn
 
         rule = MATMUL_T_CONCAT
         assert rule.dspec is not None
@@ -274,7 +274,7 @@ class TestExtendedBank:
         # derive spells; the rank bank cannot express it without ``%``.
         # The divisor is the rank reader (the observed-value literals
         # carry no ``3``), exactly the ``dim % rank`` idiom.
-        from catopt_core.ir import TensorType, Var
+        from mlopt_core.ir import TensorType, Var
 
         bounds = [
             {"$attr:a": i, "t": Var("t", TensorType((2, 3, 5)))}
@@ -294,7 +294,7 @@ class TestExtendedBank:
     def test_finds_a_dim_reader(self):
         # ``("dim", ("shape", t), -1)`` — a concrete dim, not just the
         # rank the ``("len", ("shape", t))`` reader reaches.
-        from catopt_core.ir import TensorType, Var
+        from mlopt_core.ir import TensorType, Var
 
         bounds = [
             {"t": Var("t", TensorType((2, 3, i)))}
@@ -429,9 +429,9 @@ class TestOpTermBank:
     ``_vshape`` read diverges from the cost convention)."""
 
     def test_op_terms_differ_in_value_shape(self):
-        import catopt_carriers.xcarrier  # noqa: F401  registers _xshape
-        from catopt_core.typing import _shape_of, value_shape_of
-        from catopt_discovery import oracle as lvo
+        import mlopt_carriers.xcarrier  # noqa: F401  registers _xshape
+        from mlopt_core.typing import _shape_of, value_shape_of
+        from mlopt_discovery import oracle as lvo
 
         terms = lvo._op_terms("q")
         assert terms
@@ -439,7 +439,7 @@ class TestOpTermBank:
             assert _shape_of(t) != value_shape_of(t)
 
     def test_term_bindings_leads_with_the_op_terms(self):
-        from catopt_discovery import oracle as lvo
+        from mlopt_discovery import oracle as lvo
 
         op_terms = lvo._op_terms("q")
         bank = lvo._term_bindings("q", set(), ())
@@ -453,15 +453,15 @@ class TestDeepDomain:
     are.  It is opt-in: the leaf domain is the guard-synthesis default."""
 
     def _rule(self):
-        from catopt_carriers.om import MATMUL_T_CONCAT
+        from mlopt_carriers.om import MATMUL_T_CONCAT
 
         return MATMUL_T_CONCAT
 
     @staticmethod
     def _vshape_gap(dom):
         """Envs where some bound term's value shape differs."""
-        import catopt_carriers.xcarrier  # noqa: F401  registers _xshape
-        from catopt_core.typing import _shape_of, value_shape_of
+        import mlopt_carriers.xcarrier  # noqa: F401  registers _xshape
+        from mlopt_core.typing import _shape_of, value_shape_of
 
         return [
             env
@@ -474,20 +474,20 @@ class TestDeepDomain:
         ]
 
     def test_leaf_domain_has_no_vshape_gap(self):
-        from catopt_discovery import object_synthesis as osyn
+        from mlopt_discovery import object_synthesis as osyn
 
         dom = osyn._measure_domain(self._rule(), (), 60)
         assert dom
         assert self._vshape_gap(dom) == []
 
     def test_deep_domain_reaches_the_vshape_gap(self):
-        from catopt_discovery import object_synthesis as osyn
+        from mlopt_discovery import object_synthesis as osyn
 
         dom = osyn._measure_domain(self._rule(), (), 60, deep=True)
         assert self._vshape_gap(dom)
 
     def test_deep_domain_is_a_bounded_union(self):
-        from catopt_discovery import object_synthesis as osyn
+        from mlopt_discovery import object_synthesis as osyn
 
         limit = 60
         leaf = osyn._measure_domain(self._rule(), (), limit)
@@ -508,7 +508,7 @@ class TestShippedDspecFaithfulOnTheDeepDomain:
     agreement on both domains, vetoes included."""
 
     def _rule(self):
-        from catopt_carriers.om import MATMUL_T_CONCAT
+        from mlopt_carriers.om import MATMUL_T_CONCAT
 
         return MATMUL_T_CONCAT
 
@@ -520,8 +520,8 @@ class TestShippedDspecFaithfulOnTheDeepDomain:
         assert "('shape', 'q')" not in spec
 
     def test_agrees_on_the_leaf_domain(self):
-        from catopt_carriers.om import _derive_score_concat_dim
-        from catopt_discovery import object_synthesis as osyn
+        from mlopt_carriers.om import _derive_score_concat_dim
+        from mlopt_discovery import object_synthesis as osyn
 
         rule = self._rule()
         dom = osyn._measure_domain(rule, (), 60)
@@ -532,10 +532,10 @@ class TestShippedDspecFaithfulOnTheDeepDomain:
     def test_agrees_on_the_deep_domain(self):
         # carrier-member sites included — the window where ``shape``
         # and ``vshape`` disagree
-        import catopt_carriers.xcarrier  # noqa: F401  registers _xshape
-        from catopt_carriers.om import _derive_score_concat_dim
-        from catopt_core.typing import _shape_of, value_shape_of
-        from catopt_discovery import object_synthesis as osyn
+        import mlopt_carriers.xcarrier  # noqa: F401  registers _xshape
+        from mlopt_carriers.om import _derive_score_concat_dim
+        from mlopt_core.typing import _shape_of, value_shape_of
+        from mlopt_discovery import object_synthesis as osyn
 
         rule = self._rule()
         dom = osyn._measure_domain(rule, (), 60, deep=True)
@@ -575,7 +575,7 @@ class TestTensorDerives:
     @staticmethod
     def _alg(monkeypatch, *, key=True):
         """Register a numpy-backed tensor algebra for the test."""
-        import catopt_core.laws.cond as cond
+        import mlopt_core.laws.cond as cond
 
         def mint(v, hint):
             return f"{hint}__{v.size}", tuple(int(d) for d in v.shape)
@@ -633,8 +633,8 @@ class TestTensorDerives:
         )
 
     def test_tval_leaf_absent_without_a_source(self, monkeypatch):
-        import catopt_core.laws.cond as cond
-        from catopt_discovery import dspec_synth as dsp
+        import mlopt_core.laws.cond as cond
+        from mlopt_discovery import dspec_synth as dsp
 
         monkeypatch.setitem(cond._TENSOR_ALG, "source", None)
         leaves = dsp._leaves({"w": object()}, set())
@@ -644,9 +644,9 @@ class TestTensorDerives:
         assert ("tval", "w") in leaves
 
     def test_vkey_boxes_scalars_seqs_and_payloads(self, monkeypatch):
-        import catopt_core.laws.cond as cond
+        import mlopt_core.laws.cond as cond
         import numpy as np
-        from catopt_discovery import dspec_synth as dsp
+        from mlopt_discovery import dspec_synth as dsp
 
         assert dsp._vkey(3) == ("s", 3)
         assert dsp._vkey((1, 2)) == ("t", (("s", 1), ("s", 2)))

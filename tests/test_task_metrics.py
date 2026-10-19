@@ -2,7 +2,7 @@
 
 Pins the task-metric gate end to end:
 
-* ``catopt_core.metrics`` — the shipped :class:`TaskMetric`
+* ``mlopt_core.metrics`` — the shipped :class:`TaskMetric`
   implementations (``MaxRel`` / ``TopKAgreement`` / ``ArgmaxStability``
   / ``LogitKL`` / ``CosineRanking``) on plain lists, torch tensors and
   numpy arrays; the output-pytree pairing (``tuple``/``dict``) and the
@@ -28,10 +28,10 @@ from unittest import mock
 import pytest
 import torch
 import torch.nn as nn
-from catopt_core import metrics
-from catopt_core.cost import flops_cost
-from catopt_core.ir import op_repr
-from catopt_core.metrics import (
+from mlopt_core import metrics
+from mlopt_core.cost import flops_cost
+from mlopt_core.ir import op_repr
+from mlopt_core.metrics import (
     ArgmaxStability,
     CosineRanking,
     LogitKL,
@@ -39,15 +39,15 @@ from catopt_core.metrics import (
     TopKAgreement,
     _RowMetric,
 )
-from catopt_core.ports import TaskMetric
-from catopt_orchestrator import optimize as opt_mod
-from catopt_orchestrator.optimize import (
+from mlopt_core.ports import TaskMetric
+from mlopt_orchestrator import optimize as opt_mod
+from mlopt_orchestrator.optimize import (
     Compositional,
     Optimizer,
     _task_contract,
 )
-from catopt_torch.backend import TorchBackend
-from catopt_torch.export import export_optimized
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.export import export_optimized
 
 
 def _opt():

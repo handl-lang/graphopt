@@ -30,16 +30,16 @@ extraction picks the member only when honestly cheaper.
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from catopt_core.egraph import EGraph
-from catopt_core.ir import Op, Param, TensorType, Var
-from catopt_core.laws.pairing import (
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import Op, Param, TensorType, Var
+from mlopt_core.laws.pairing import (
     batch_tiled_expert_sums,
     pair_shared_input_linears,
 )
 
-from catopt_orchestrator import Optimizer
+from mlopt_orchestrator import Optimizer
 
-from catopt_torch.backend import TorchBackend
+from mlopt_torch.backend import TorchBackend
 
 
 def _v(name, *shape):
@@ -594,7 +594,7 @@ def test_batch_cyclic_sum_declines():
 def test_batch_leaf_classification_edges():
     """``_expert_leaf`` declines non-expert classes; ``_linear_tile``
     declines biased linears, non-tile weights, and non-rank-3 bases."""
-    from catopt_core.laws.pairing import _expert_leaf, _linear_tile
+    from mlopt_core.laws.pairing import _expert_leaf, _linear_tile
 
     eg = EGraph()
     x = eg.add_term(_v("x", 2, 16))

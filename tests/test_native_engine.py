@@ -4,18 +4,18 @@ Two halves:
 
 * **Engine seam** (always runs): the ``engine=`` plumbing —
   ``search``/``Optimizer`` take an explicit engine conforming to
-  :class:`catopt_core.ports.Engine`, ``stats["engine"]`` records which
+  :class:`mlopt_core.ports.Engine`, ``stats["engine"]`` records which
   ran, and non-local (proof-carrying) passes are skipped when the
   engine is not an ``EGraph``.  Exercised with a pure-Python engine
   double so the seam is tested even when the native wheel is absent.
-* **Differential oracle** (self-skips when ``catopt_native`` is not
+* **Differential oracle** (self-skips when ``mlopt_native`` is not
   built): native vs Python engine on a corpus of terms — identical
   e-class counts, identical live enodes, identical extracted terms and
   costs.  The term corpus mirrors ``tests/egglog_oracle.py`` (the
   SPIKE rule subset plus check/derive-heavy folds).
 
 Build the wheel with ``maturin develop --release`` from
-``packages/catopt-native`` (or ``pip install packages/catopt-native``).
+``packages/mlopt-native`` (or ``pip install packages/mlopt-native``).
 """
 
 from __future__ import annotations
@@ -23,10 +23,10 @@ from __future__ import annotations
 from typing import Any, ClassVar
 
 import pytest
-from catopt_core import laws
-from catopt_core.cost import dag_cost, flops_cost
-from catopt_core.egraph import EGraph, Rewrite
-from catopt_core.ir import (
+from mlopt_core import laws
+from mlopt_core.cost import dag_cost, flops_cost
+from mlopt_core.egraph import EGraph, Rewrite
+from mlopt_core.ir import (
     IR,
     Const,
     Op,
@@ -35,7 +35,7 @@ from catopt_core.ir import (
     Var,
     op_repr,
 )
-from catopt_core.laws.tensor import (
+from mlopt_core.laws.tensor import (
     ASSOC_ADD,
     ASSOC_LINEAR,
     ASSOC_LINEAR_BIAS,
@@ -50,15 +50,15 @@ from catopt_core.laws.tensor import (
     NATURALITY_SCALAR_REV,
     SDPA_FOLD_RULES,
 )
-from catopt_core.ports import Engine
-from catopt_orchestrator.optimize import (
+from mlopt_core.ports import Engine
+from mlopt_orchestrator.optimize import (
     Optimizer,
     _resolve_engine,
     search,
 )
 
 try:
-    from catopt_native import NativeEngine
+    from mlopt_native import NativeEngine
 
     _HAS_NATIVE = True
 except ModuleNotFoundError:  # pragma: no cover — wheel absent
@@ -67,7 +67,7 @@ except ModuleNotFoundError:  # pragma: no cover — wheel absent
 
 requires_native = pytest.mark.skipif(
     not _HAS_NATIVE,
-    reason="catopt_native not built (maturin develop in packages/catopt-native)",
+    reason="mlopt_native not built (maturin develop in packages/mlopt-native)",
 )
 
 #: The egglog-oracle rule subset — comm/assoc + matmul/linear algebra.
@@ -274,7 +274,7 @@ class _FakeSink:
 
     @property
     def ops(self) -> Any:
-        from catopt_core.ops import OpTable
+        from mlopt_core.ops import OpTable
 
         return OpTable.core()
 

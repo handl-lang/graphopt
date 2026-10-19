@@ -1,5 +1,5 @@
-- id: "transform.catopt.assoc_add"
-  pass: "catopt"
+- id: "transform.mlopt.assoc_add"
+  pass: "mlopt"
   node_kind: "add"
   rule:
     !Declarative
@@ -16,7 +16,7 @@
       - !KeepPath
         - 1
         - 1
-  catopt:
+  mlopt:
     law:
       version: 2
       kind: "law"

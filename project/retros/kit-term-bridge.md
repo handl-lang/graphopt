@@ -1,16 +1,16 @@
-# kit-term-bridge — catopt terms emitted as `.hnl`, evaluated through CatoptKit
+# kit-term-bridge — mlopt terms emitted as `.hnl`, evaluated through CatoptKit
 
-**Date:** 2026-10-20 · **Surface:** `packages/catopt-kit/src/bin/hnl-run.rs`
+**Date:** 2026-10-20 · **Surface:** `packages/mlopt-kit/src/bin/hnl-run.rs`
 (+ `tests/cli.rs`), `lab/kit/term_hnl.py`, `tests/test_kit_bridge.py` ·
-**Gates:** `cargo test -p catopt-kit` — **21/21 green**;
+**Gates:** `cargo test -p mlopt-kit` — **21/21 green**;
 `pytest tests/test_kit_bridge.py` — **8/8 green** (marked `e2e`: the
 suite crosses the external engine boundary).
 
 ## What landed
 
-The frontier after `catopt-kit` (retro `catopt-kit.md`) was the second
+The frontier after `mlopt-kit` (retro `mlopt-kit.md`) was the second
 half of "the e-graph's terms and the kit's runtime are the same program
-space": catopt's optimization machinery emitting/consuming programs
+space": mlopt's optimization machinery emitting/consuming programs
 through the kit, not just hand-written `.hnl`. Three pieces, each thin:
 
 - **`hnl-run`** — a subprocess door over `CatoptKit`: `.hnl` in on
@@ -53,7 +53,7 @@ through the kit, not just hand-written `.hnl`. Three pieces, each thin:
 3. **An optimization decision costed through the runtime.** The
    conv+BN fold as a decision: spelled
    `batch_norm(conv2d(x,W,b), g, be, m, v, eps)` vs deployed
-   `conv2d(x, W2, b2)` — where `W2`/`b2` are *catopt subterms*
+   `conv2d(x, W2, b2)` — where `W2`/`b2` are *mlopt subterms*
    (`mul(w, reshape(s,(C,1,1,1)))`, `add(mul(b,s), sub(be,mul(s,m)))`)
    materialized through the kit itself. Deployed ==
    unfolded (< 1e-12), and the measured per-call cost is
@@ -82,7 +82,7 @@ op addition (elementwise unaries), not bridge machinery.
 - **The handl lexer does not read scientific notation.** `1e-05`
   lexes as the token sequence `1` `e` `-05` — *silently* evaluating to
   `1` in statement position (measured: `e :: 1e-05` bound `e = 1`),
-  and failing inside a list. A catopt `eps=1e-05` emitted naively
+  and failing inside a list. A mlopt `eps=1e-05` emitted naively
   would silently become `eps=1`. `_num` expands every float through
   `Decimal` (`1e-05` → `0.00001`), and the emitted-source test pins
   the spelling. This is an upstream lexer gap worth a handl-side fix.
@@ -102,7 +102,7 @@ op addition (elementwise unaries), not bridge machinery.
   panics in `plugin-engine-typecheck-handl` on a trivial program and,
   more fundamentally, has no `host-tensor` `OpRegistry` linked — the
   `tensor.*` ops are Rust impls only `CatoptKit` wires. That is why
-  `hnl-run` lives in `catopt-kit`.
+  `hnl-run` lives in `mlopt-kit`.
 
 ## What remains open (named)
 

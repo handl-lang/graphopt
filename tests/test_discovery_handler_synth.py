@@ -1,4 +1,4 @@
-"""Tests for ``catopt_discovery.handler_synth`` — ADR-0007 layer 2.
+"""Tests for ``mlopt_discovery.handler_synth`` — ADR-0007 layer 2.
 
 Pins the descriptor interpreter (each grammar family's semantics),
 the verify-or-refuse gate (a wrong body refuses with a measured
@@ -15,11 +15,11 @@ import json
 import pytest
 import torch
 
-import catopt_torch.torch_bridge as tb
-from catopt_core.ir import IR, Op, TensorType, Var
-from catopt_discovery import handler_synth as hs
-from catopt_discovery.lawdata import HANDLERS
-from catopt_discovery.meta_arena import _canon_concrete
+import mlopt_torch.torch_bridge as tb
+from mlopt_core.ir import IR, Op, TensorType, Var
+from mlopt_discovery import handler_synth as hs
+from mlopt_discovery.lawdata import HANDLERS
+from mlopt_discovery.meta_arena import _canon_concrete
 
 BINDINGS = tb._IR_TO_TORCH
 
@@ -625,7 +625,7 @@ class TestDelivery:
 
     def test_handlers_fragment_accepts_minted(self):
         """Minted entries merge into a cellstore handler fragment."""
-        from catopt_discovery import cellstore
+        from mlopt_discovery import cellstore
 
         _spec, handlers = self._minted()
         frag = cellstore.handlers_fragment("minted", handlers)

@@ -1,4 +1,4 @@
-"""Property tests for the cost models (``catopt_core.cost``).
+"""Property tests for the cost models (``mlopt_core.cost``).
 
 Pins the algebraic invariants the extractor relies on: costs are
 finite and non-negative for arbitrary terms, and the commutative
@@ -11,14 +11,14 @@ from __future__ import annotations
 
 import math
 
-from catopt_core.cost import (
+from mlopt_core.cost import (
     _shape_of,
     count_cost,
     dag_cost,
     flops_cost,
     launch_aware_cost,
 )
-from catopt_core.ir import Const, Op, TensorType, Var
+from mlopt_core.ir import Const, Op, TensorType, Var
 from hypothesis import given
 
 from tests.test_property_strategies import terms, uniform_terms

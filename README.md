@@ -1,4 +1,4 @@
-# catopt — certified optimization of tensor programs, with machine-discovered laws
+# mlopt — certified optimization of tensor programs, with machine-discovered laws
 
 > **Research artifact — proposed, not accepted.**  This repository and
 > the accompanying draft in [`paper/`](paper/) are pre-review work:
@@ -9,7 +9,7 @@
 category's equations are rewrite laws; equality saturation closes the
 space of equivalent programs; cost-based extraction picks the cheapest
 member the backend can run; a replayable certificate proves the step.
-On top of that substrate, catopt *mints* new laws from measured need —
+On top of that substrate, mlopt *mints* new laws from measured need —
 guard synthesized, adversarially swept, admitted through a staged
 gauntlet — and ships them verbatim in the default rule set.
 
@@ -20,7 +20,7 @@ optimizer writes — as a composite over premise laws, transported its
 guard out of the evidence store, proved it premise-derivable with a
 replayable certificate, measured its pay, and shipped it.  The folded
 form then evaluates **bitwise-equal** to the spelled program through an
-independent runtime (the handl tree-walk engine, via `catopt-kit`) at
+independent runtime (the handl tree-walk engine, via `mlopt-kit`) at
 **≈−5 % per-call wall** in the deployed regime (fold amortized to
 load; the un-amortized/inline fold arm runs *slower* per call);
 the cost model agrees: `dag_cost` 36,864 vs 55,296).  Full account:
@@ -38,18 +38,18 @@ lift (export → IR)  →  e-graph + gauntlet  →  lower (verified module)
 ```
 
 - **Lift.**  Adapters export a model to the torch-free IR
-  (`catopt-core` imports no torch/numpy — enforced by import-linter).
+  (`mlopt-core` imports no torch/numpy — enforced by import-linter).
   Torch and ONNX backends exist; ONNX landed with zero core changes.
 - **E-graph + gauntlet.**  Saturation generates the equivalence class;
   extraction prices it.  Discovery runs *on the library itself*:
   census → propose → verify → measure → rank → emit → admit
-  (`catopt_discovery`), with per-artifact verification boundaries —
+  (`mlopt_discovery`), with per-artifact verification boundaries —
   numeric oracle, typed-pay gate, adversarial guard sweep, closure
   bound, certificate replay.
 - **Lower.**  The extracted program lowers through a `Sink` port and is
   numerically verified against the source (fp64).
-- **Handl composition.**  `packages/catopt-kit` assembles the
-  handl-language stack as dependencies — catopt terms emit as `.hnl`
+- **Handl composition.**  `packages/mlopt-kit` assembles the
+  handl-language stack as dependencies — mlopt terms emit as `.hnl`
   programs (`lab/kit/term_hnl.py`) and evaluate through the kit's
   `hnl-run` door, so an optimization *decision* is priced by the same
   runtime that executes the term.
@@ -62,7 +62,7 @@ uv sync                                                  # the dev environment
 # the flagship, three surfaces
 .venv/bin/python -m pytest tests/test_kit_bridge.py -q   # 8 e2e tests (~27 s; builds hnl-run if absent)
 .venv/bin/python lab/probes/conv_fold_premise_pay_probe.py   # mint → transport → truth → pay → gauntlet (~13 s)
-cargo test -p catopt-kit                                 # the Rust consumer, 21 tests
+cargo test -p mlopt-kit                                 # the Rust consumer, 21 tests
 
 # the day-to-day gate
 .venv/bin/python -m pytest -m "not slow"                 # dev lane, 6,353 tests

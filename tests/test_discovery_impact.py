@@ -1,4 +1,4 @@
-"""Tests for ``catopt_discovery.impact`` — the law-impact probe.
+"""Tests for ``mlopt_discovery.impact`` — the law-impact probe.
 
 ``impact`` measures whether the 11 ``cand_*`` laws actually pay:
 per-law firing probes (``_probe``/``_set_fires``), the relaxed-shape
@@ -17,12 +17,12 @@ import sys
 import pytest
 import torch
 import torch.nn as nn
-from catopt_core.ir import Const, Op, Param, TensorType, Var
-from catopt_core.laws import ALL_RULES
-from catopt_core.laws.base import R
-from catopt_discovery import impact as im
-from catopt_discovery.impact import TermCase
-from catopt_torch.adapters import TorchSink
+from mlopt_core.ir import Const, Op, Param, TensorType, Var
+from mlopt_core.laws import ALL_RULES
+from mlopt_core.laws.base import R
+from mlopt_discovery import impact as im
+from mlopt_discovery.impact import TermCase
+from mlopt_torch.adapters import TorchSink
 
 
 def _v(name: str, *shape: int) -> Var:
@@ -397,7 +397,7 @@ def test_relaxed_census_counts_shape_not_equality():
 
 
 def test_rule_budgets_only_expansive_shipped_rules():
-    from catopt_core.laws import tags
+    from mlopt_core.laws import tags
 
     extra = R("t_x", _p("mul", "a", "b"), "a", law="test")
     budgets = im._rule_budgets([*ALL_RULES, extra])

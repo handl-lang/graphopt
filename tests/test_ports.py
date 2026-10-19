@@ -1,4 +1,4 @@
-"""Runtime conformance for the ports layer (:mod:`catopt_core.ports`).
+"""Runtime conformance for the ports layer (:mod:`mlopt_core.ports`).
 
 The hexagonal boundary: real adapters must satisfy their port
 protocols (``isinstance`` on ``@runtime_checkable`` protocols checks
@@ -8,7 +8,7 @@ a ``CostFn``.
 """
 
 import torch
-from catopt_core.cost import (
+from mlopt_core.cost import (
     CostModel,
     count_cost,
     dag_cost,
@@ -17,15 +17,15 @@ from catopt_core.cost import (
     param_bytes_cost,
     param_bytes_cost_for,
 )
-from catopt_core.ir import IR, Op, TensorType, Var
-from catopt_carriers.om_lower import (
+from mlopt_core.ir import IR, Op, TensorType, Var
+from mlopt_carriers.om_lower import (
     StreamingOMModule,
     to_batched_om_module,
     to_streaming_om_module,
 )
-from catopt_carriers.omd_lower import to_batched_omd_module
-from catopt_core.ops import OpTable
-from catopt_core.ports import (
+from mlopt_carriers.omd_lower import to_batched_omd_module
+from mlopt_core.ops import OpTable
+from mlopt_core.ports import (
     BatchedExecutor,
     Binding,
     CostFn,
@@ -42,11 +42,11 @@ from catopt_core.ports import (
     Verifier,
     signature_conforms,
 )
-from catopt_torch.report import VerifyReport, verify_equiv
-from catopt_core.laws import CATEGORICAL, CATEGORICAL_RULES, all_rules
-from catopt_carriers.scan_lower import to_batched_scan_module
-from catopt_torch.torch_bridge import _IR_TO_TORCH, IRModule
-from catopt_core.typing import _SHAPE_RULES
+from mlopt_torch.report import VerifyReport, verify_equiv
+from mlopt_core.laws import CATEGORICAL, CATEGORICAL_RULES, all_rules
+from mlopt_carriers.scan_lower import to_batched_scan_module
+from mlopt_torch.torch_bridge import _IR_TO_TORCH, IRModule
+from mlopt_core.typing import _SHAPE_RULES
 
 # ---------------------------------------------------------------------------
 #  Fixtures — minimal real terms for each executor
@@ -204,7 +204,7 @@ def test_verify_result_is_core_owned_and_satisfied_by_verify_report():
     """Core's structural ``VerifyResult`` is what the ports return; the
     torch adapter's ``VerifyReport`` satisfies it without core naming
     that type (the decoupling Phase 1 pins)."""
-    from catopt_core.ports import VerifyResult
+    from mlopt_core.ports import VerifyResult
 
     rep = VerifyReport(0.0, 0.0, True)
     assert isinstance(rep, VerifyResult)
@@ -220,14 +220,14 @@ def test_verify_result_is_core_owned_and_satisfied_by_verify_report():
 
 
 def test_torch_source_is_source():
-    from catopt_torch.adapters import TorchSource
+    from mlopt_torch.adapters import TorchSource
 
     assert isinstance(TorchSource(), Source)
     assert not isinstance(object(), Source)
 
 
 def test_torch_sink_is_sink():
-    from catopt_torch.adapters import TorchSink
+    from mlopt_torch.adapters import TorchSink
 
     sink = TorchSink()
     assert isinstance(sink, Sink)

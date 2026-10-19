@@ -1,4 +1,4 @@
-"""Tests for ``catopt_discovery.meta_arena`` — the mixed-move board.
+"""Tests for ``mlopt_discovery.meta_arena`` — the mixed-move board.
 
 Plan 0021: one program under a live e-graph; the action space mixes
 search moves (``fire`` / ``saturate`` — the measured schedule
@@ -15,7 +15,7 @@ import random
 import sys
 
 import pytest
-from catopt_core.cost import (
+from mlopt_core.cost import (
     _INVALID_COST,
     backend_cost,
     count_cost,
@@ -23,13 +23,13 @@ from catopt_core.cost import (
     flops_cost,
     param_bytes_cost,
 )
-from catopt_core.egraph import CertificateVerificationError
-from catopt_core.ir import Const, Op, TensorType, Var, op_repr
-from catopt_core.laws import DEFAULT
-from catopt_core.laws.ruleset import FULL
-from catopt_discovery import lawdata
-from catopt_discovery import meta_arena as ma
-from catopt_discovery import object_synthesis as obs
+from mlopt_core.egraph import CertificateVerificationError
+from mlopt_core.ir import Const, Op, TensorType, Var, op_repr
+from mlopt_core.laws import DEFAULT
+from mlopt_core.laws.ruleset import FULL
+from mlopt_discovery import lawdata
+from mlopt_discovery import meta_arena as ma
+from mlopt_discovery import object_synthesis as obs
 
 
 def _p(op: str, *args, **attrs) -> Op:
@@ -440,9 +440,9 @@ class TestFeasibilityPricing:
         )
 
     def test_torch_supported_falls_back(self, monkeypatch):
-        # without catopt-torch the demo bound is None — the board
+        # without mlopt-torch the demo bound is None — the board
         # falls back to the ambient-vocabulary bound
-        monkeypatch.setitem(sys.modules, "catopt_torch.adapters", None)
+        monkeypatch.setitem(sys.modules, "mlopt_torch.adapters", None)
         assert ma._torch_supported() is None
 
     def test_feasible_cost_forwards_model_markers(self):
@@ -788,7 +788,7 @@ class TestHandleMove:
     """``handle`` — the scoped-interpretation move (Sanada-style)."""
 
     def _arena(self, cost_fn=None):
-        from catopt_core.cost.basic import count_cost
+        from mlopt_core.cost.basic import count_cost
 
         x = _v("x", 4, 4)
         c = _v("c", 4, 4)
@@ -911,7 +911,7 @@ class TestHandleMove:
         # the handled column prices the interpretation: a silu
         # fold over a silu-shaped site under count_cost reads 3
         # spelled / 2 handled — the fused premium as a column
-        from catopt_core.cost.basic import count_cost
+        from mlopt_core.cost.basic import count_cost
 
         x, c = _v("x", 4, 4), _v("c", 4, 4)
         term = _p("add", _p("mul", x, _p("sigmoid", x)), c)
@@ -935,7 +935,7 @@ class TestClaimMove:
     """``claim`` — the option move: declare + fire + handle, fused."""
 
     def _arena(self):
-        from catopt_core.cost.basic import count_cost
+        from mlopt_core.cost.basic import count_cost
 
         x = _v("x", 4, 4)
         term = _p("mul", x, _p("sigmoid", x))
@@ -976,7 +976,7 @@ class TestClaimMove:
         assert "unknown handler" in rep.note
 
     def test_claim_no_covered_spec_declines(self):
-        from catopt_core.cost.basic import count_cost
+        from mlopt_core.cost.basic import count_cost
 
         x = _v("x", 4, 4)
         arena = ma.MetaArena(
@@ -993,7 +993,7 @@ class TestClaimMove:
     def test_claim_unsupported_kernel_stays_parity(self):
         # claim mints and binds even when the kernel is unsupported —
         # feasibility pricing then keeps the spelled form honest
-        from catopt_core.cost.basic import count_cost
+        from mlopt_core.cost.basic import count_cost
 
         x = _v("x", 4, 4)
         arena = ma.MetaArena(
@@ -1049,7 +1049,7 @@ class TestClaimMove:
     def test_deliverable_realizes_handled_ops(self):
         # claim_silu_0 → silu (the kernel the sink lowers), while
         # unfold spells it back — the two honest views of one win
-        from catopt_core.ir import op_repr
+        from mlopt_core.ir import op_repr
 
         arena = self._arena()
         arena.step(ma.Action.claim("silu"))
@@ -1061,7 +1061,7 @@ class TestClaimMove:
     def test_deliverable_spells_unhandled(self):
         # declared but never handled: deliverable expands to the
         # spelled body — no fresh name reaches lowering
-        from catopt_core.ir import op_repr
+        from mlopt_core.ir import op_repr
 
         arena = self._arena()
         arena.step(
@@ -1092,7 +1092,7 @@ class TestClaimMove:
 
     def test_deliverable_plain_term_passthrough(self):
         # no declarations: deliverable rebuilds the term unchanged
-        from catopt_core.ir import op_repr
+        from mlopt_core.ir import op_repr
 
         arena = self._arena()
         t = _p("mul", _v("x", 4, 4), _p("sigmoid", _v("x", 4, 4)))

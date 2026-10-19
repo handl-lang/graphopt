@@ -1,12 +1,12 @@
 """Property tests for the evaluation dimension (ADR 0003)."""
 
-from catopt_core.features import compute_features
-from catopt_core.game import Action
-from catopt_core.ir import Op, TensorType, Var
-from catopt_core.laws import all_rules
-from catopt_core.pareto import CostVector, dominates, pareto_frontier
-from catopt_core.policies import GreedyPolicy
-from catopt_core.trajectories import RULE_VECTOR_LEN, rule_vector
+from mlopt_core.features import compute_features
+from mlopt_core.game import Action
+from mlopt_core.ir import Op, TensorType, Var
+from mlopt_core.laws import all_rules
+from mlopt_core.pareto import CostVector, dominates, pareto_frontier
+from mlopt_core.policies import GreedyPolicy
+from mlopt_core.trajectories import RULE_VECTOR_LEN, rule_vector
 from hypothesis import given, settings
 from hypothesis import strategies as st
 

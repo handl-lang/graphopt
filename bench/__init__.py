@@ -1,4 +1,4 @@
-"""catopt benchmarks — systematic, presentable measurement of the engine.
+"""mlopt benchmarks — systematic, presentable measurement of the engine.
 
 Layout:
 

@@ -1,7 +1,7 @@
 # Evaluation — the fourth dimension
 
-ADR 0003 splits catopt into four independent dimensions.  This page
-is the **evaluation** one: how catopt describes, ranks, and — when a
+ADR 0003 splits mlopt into four independent dimensions.  This page
+is the **evaluation** one: how mlopt describes, ranks, and — when a
 target is available — measures a program, without letting any of that
 change what is *equivalent*.
 
@@ -9,7 +9,7 @@ change what is *equivalent*.
 SEMANTICS ──▶ SEARCH ──▶ EVALUATION ──▶ EXECUTION
 ```
 
-## Static features — `catopt_core.features`
+## Static features — `mlopt_core.features`
 
 `ProgramFeatures` describes a program without running it: `flops`,
 `bytes_read` / `bytes_written`, `temporary_bytes`, `depth`,
@@ -17,17 +17,17 @@ SEMANTICS ──▶ SEARCH ──▶ EVALUATION ──▶ EXECUTION
 `parallelism` (average width).  Pure Python, torch-free.
 
 ```python
-from catopt_core.features import StaticProfiler
+from mlopt_core.features import StaticProfiler
 
 features = StaticProfiler().profile(term)   # a ProgramFeatures
 features.to_vector()                        # pin a model's input layout
 ```
 
 Features are **not** a "profile": a profile
-(`catopt_core.profile.TargetProfile`) is a *measured target*; features
+(`mlopt_core.profile.TargetProfile`) is a *measured target*; features
 describe a *program*.
 
-## Calibration — `catopt_torch.calibrate`, `scripts/calibrate_profile.py`
+## Calibration — `mlopt_torch.calibrate`, `scripts/calibrate_profile.py`
 
 The roofline/executor cost models price programs with *measured*
 constants: `calibrate()` micro-benchmarks the machine it runs on
@@ -46,9 +46,9 @@ rank by this machine's numbers, not the built-in constants:
 ```
 
 ```python
-from catopt_core.profile import TargetProfile
-from catopt_orchestrator import Optimizer, delivered_cost_for
-from catopt_torch.backend import TorchBackend
+from mlopt_core.profile import TargetProfile
+from mlopt_orchestrator import Optimizer, delivered_cost_for
+from mlopt_torch.backend import TorchBackend
 
 profile = TargetProfile.load("calibrated_profile.json")
 opt = Optimizer(backend=TorchBackend())
@@ -61,12 +61,12 @@ mod = opt.lower(res, x, verify=True).module
 Two consumption levels, both through the existing `cost_fn=` seam
 (no new pipeline parameter):
 
-* `catopt_core.cost.executor_cost_for(profile)` — measured
+* `mlopt_core.cost.executor_cost_for(profile)` — measured
   constants only: per-op prices calibrated, the `_carrier_upgrade`
   comparison corrected by the profile's `corrections`/`measured_ns`
   tables (the `profile` marker `backend_cost` forwards into
   `_select_best_term`).
-* `catopt_orchestrator.delivered_cost_for(profile=None, *, x=None,
+* `mlopt_orchestrator.delivered_cost_for(profile=None, *, x=None,
   bucket=None, compiled=False)` — additionally bills each term
   under the lowering it would actually be delivered by (batched
   carrier vs generic; `compiled=True` bills every term under the
@@ -88,32 +88,32 @@ device searches will run on (default `cpu`, the probe's convention —
 cross-device buckets never interpolate); `--dtype` (default
 `float64`), `--device`, `--name`, `--cases`, `--warmup`, `--iters`
 and `--quick` bound the sweeps.  `profile.save()` / `--save` persist
-under `profiles_dir()` (`$CATOPT_PROFILE_DIR`, else
-`$XDG_CACHE_HOME/catopt/profiles`, else `~/.cache/catopt/profiles`);
+under `profiles_dir()` (`$MLOPT_PROFILE_DIR`, else
+`$XDG_CACHE_HOME/mlopt/profiles`, else `~/.cache/mlopt/profiles`);
 `TargetProfile.load(name_or_path)` reads a profile name back from
 that dir or an explicit file path.
 
-## The frontier — `catopt_core.pareto`
+## The frontier — `mlopt_core.pareto`
 
 Keep the landscape; do not scalarize early.  `CostVector` names the
 dimensions, `pareto_frontier` keeps the non-dominated candidates, and
 `best` is the scalar *view* over them.
 
 ```python
-from catopt_core.pareto import CostVector, pareto_frontier, best
+from mlopt_core.pareto import CostVector, pareto_frontier, best
 
 frontier = pareto_frontier(candidates, key=vector_of)
 winner = best(candidates, key=vector_of, weights={"latency": 0.7, "memory": 0.3})
 ```
 
-## The game — `catopt_core.game`
+## The game — `mlopt_core.game`
 
 A thin formalization over the e-graph: state (`GameState`), action
 (`Action`), rule book (`RuleBook`), transition (`transition`),
 evaluator (`Evaluator`).  The **referee is not here** — legality is
 the laws and the certificate.
 
-## Policies — `catopt_core.policies`, `catopt_torch.learned_policy`
+## Policies — `mlopt_core.policies`, `mlopt_torch.learned_policy`
 
 A `Policy` only *orders* the legal moves, so it can never change what
 is certified.  `RandomPolicy` / `ExistingPolicy` / `GreedyPolicy` /
@@ -127,7 +127,7 @@ has never seen is still scored by its shape, not a vocabulary index
 (no retraining to add runtime rules).
 
 ```python
-from catopt_torch.learned_policy import LearnedPolicy, train_rule_value
+from mlopt_torch.learned_policy import LearnedPolicy, train_rule_value
 
 model = train_rule_value(samples, epochs=3000)     # GPU when available
 policy = LearnedPolicy(model, {r.name: r for r in rules})
@@ -138,7 +138,7 @@ Pretrain, post-train, and predict in one command — see
 `lab/train/train_search_policy.py` and the measured result in
 [`project/retros/stage7-learned-policy-results.md`](../project/retros/stage7-learned-policy-results.md).
 
-## Performance prediction — `catopt_core.perf_model`
+## Performance prediction — `mlopt_core.perf_model`
 
 `AnalyticalPerformanceModel` is the first `PerformanceModel`: a
 roofline prediction `max(compute, memory) + launch overhead` from
@@ -155,7 +155,7 @@ a different target changes the extracted program in **0/7** families.
 Use a `PerformanceModel` for post-hoc ranking; a dense (non-marginal)
 pricing path is the open fix.
 
-## Failures — `catopt_core.failures`
+## Failures — `mlopt_core.failures`
 
 `FailureClass` (`OK` / `OOM` / `TIMEOUT` / `KERNEL` / `NONFINITE` /
 `UNAVAILABLE` / `UNKNOWN`) and `classify(exc)` give measurement
@@ -173,12 +173,12 @@ The ports are not decoration; each is reached from a real call:
 | `pareto` | `SearchResult.frontier(cost_fns)` — the non-dominated set over named axes |
 
 ```python
-from catopt_core.cost import flops_cost, param_bytes_cost
-from catopt_core.perf_model import AnalyticalPerformanceModel
-from catopt_core.policies import GreedyPolicy
-from catopt_orchestrator import PredictedCriterion
-from catopt_orchestrator.optimize import search
-from catopt_torch.adapters import TorchSource
+from mlopt_core.cost import flops_cost, param_bytes_cost
+from mlopt_core.perf_model import AnalyticalPerformanceModel
+from mlopt_core.policies import GreedyPolicy
+from mlopt_orchestrator import PredictedCriterion
+from mlopt_orchestrator.optimize import search
+from mlopt_torch.adapters import TorchSource
 
 res = search(
     model, x,

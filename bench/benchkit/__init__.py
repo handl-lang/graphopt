@@ -1,4 +1,4 @@
-"""benchkit — the catopt benchmark harness.
+"""benchkit — the mlopt benchmark harness.
 
 Suites build ``Case`` objects (one per sweep cell) with ``Variant``
 callables, time them through ``Runner`` (torch ``Timer`` medians + IQR),

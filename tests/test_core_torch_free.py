@@ -1,23 +1,23 @@
-"""The torch-free invariant — catopt-core imports no backend.
+"""The torch-free invariant — mlopt-core imports no backend.
 
-``catopt-core`` is the declared zero-dependency engine: it must import
+``mlopt-core`` is the declared zero-dependency engine: it must import
 neither ``torch``/``numpy`` nor any sibling domain package
-(``catopt_torch``/``catopt_carriers``/``catopt_orchestrator``)
+(``mlopt_torch``/``mlopt_carriers``/``mlopt_orchestrator``)
 on ANY code path.  Two complementary proofs:
 
 * **static** — an AST walk over every ``.py`` under
-  ``packages/catopt-core/src`` rejects any ``import``/``from`` of a
+  ``packages/mlopt-core/src`` rejects any ``import``/``from`` of a
   forbidden root, at module level or inside a function body (the
   ``TYPE_CHECKING`` block included — a stronger reading than the
   runtime contract, and the reason core names no ``torch.Tensor``);
-* **runtime** — ``catopt_core`` is imported in a subprocess with
+* **runtime** — ``mlopt_core`` is imported in a subprocess with
   ``torch``/``numpy`` blocked by a meta-path finder, and every
   submodule is walked; the import succeeds and the adapter-injected
   hooks degrade cleanly.
 
 The wiring that keeps this true (core is a *sink* for adapter-pushed
-state, never a puller) is documented in :mod:`catopt_core.ops`
-(*Backend wiring*) and :mod:`catopt_core.meta`.
+state, never a puller) is documented in :mod:`mlopt_core.ops`
+(*Backend wiring*) and :mod:`mlopt_core.meta`.
 """
 
 from __future__ import annotations
@@ -27,15 +27,15 @@ import pathlib
 import subprocess
 import sys
 
-import catopt_core.meta as meta
-import catopt_core.ops as ops_mod
+import mlopt_core.meta as meta
+import mlopt_core.ops as ops_mod
 import pytest
-from catopt_core.ops import OpTable
+from mlopt_core.ops import OpTable
 
 _CORE_SRC = (
     pathlib.Path(__file__).resolve().parents[1]
     / "packages"
-    / "catopt-core"
+    / "mlopt-core"
     / "src"
 )
 
@@ -44,9 +44,9 @@ _FORBIDDEN = frozenset(
     {
         "torch",
         "numpy",
-        "catopt_torch",
-        "catopt_carriers",
-        "catopt_orchestrator",
+        "mlopt_torch",
+        "mlopt_carriers",
+        "mlopt_orchestrator",
     }
 )
 
@@ -80,13 +80,13 @@ def test_core_source_has_no_forbidden_imports():
                 rel = path.relative_to(_CORE_SRC)
                 offenders.append(f"{rel}:{lineno} imports {root}")
     assert offenders == [], (
-        "catopt-core must import no backend/tensor library; found:\n"
+        "mlopt-core must import no backend/tensor library; found:\n"
         + "\n".join(offenders)
     )
 
 
 # ---------------------------------------------------------------------------
-#  Runtime proof — import the whole of catopt_core with torch blocked
+#  Runtime proof — import the whole of mlopt_core with torch blocked
 # ---------------------------------------------------------------------------
 
 _BLOCKED_SCRIPT = r"""
@@ -107,12 +107,12 @@ sys.meta_path.insert(0, _Blocker())
 import importlib
 import pkgutil
 
-import catopt_core
-import catopt_core.meta as meta
-import catopt_core.ops as ops
+import mlopt_core
+import mlopt_core.meta as meta
+import mlopt_core.ops as ops
 
 # Walk EVERY core submodule — none may need a blocked package.
-for _info in pkgutil.walk_packages(catopt_core.__path__, "catopt_core."):
+for _info in pkgutil.walk_packages(mlopt_core.__path__, "mlopt_core."):
     importlib.import_module(_info.name)
 
 assert "torch" not in sys.modules, "torch was imported"
@@ -159,7 +159,7 @@ def test_core_imports_without_torch():
 
 def test_register_core_bindings_is_idempotent():
     """Re-registering the same table object does not duplicate it."""
-    from catopt_torch.torch_bridge import _CORE_TORCH_BINDINGS
+    from mlopt_torch.torch_bridge import _CORE_TORCH_BINDINGS
 
     before = len(ops_mod._CORE_BINDING_TABLES)
     ops_mod.register_core_bindings(_CORE_TORCH_BINDINGS)
@@ -169,7 +169,7 @@ def test_register_core_bindings_is_idempotent():
 
 
 def test_full_without_ambient_returns_private_table(monkeypatch):
-    """With no backend ambient dict registered (catopt-core alone)
+    """With no backend ambient dict registered (mlopt-core alone)
     ``full()`` returns a private composed table rather than raising."""
     monkeypatch.setattr(ops_mod, "_AMBIENT_BINDINGS", None)
     t = OpTable.full()
@@ -192,7 +192,7 @@ def test_meta_hooks_degrade_without_backend(monkeypatch):
 def test_concrete_eval_backend_is_registered():
     """Importing the torch adapter registers the backend; core reads it
     only through the injected object."""
-    import catopt_torch.meta_eval  # noqa: F401
+    import mlopt_torch.meta_eval  # noqa: F401
 
     assert meta._concrete_eval is not None
     assert hasattr(meta._concrete_eval, "eval_term")
@@ -203,7 +203,7 @@ def test_pairing_exact_equal_is_value_agnostic():
     never equal, and equal-shape values compare elementwise (NaN != NaN,
     -0.0 == +0.0 — ``torch.equal`` semantics, no torch import)."""
     import torch
-    from catopt_core.laws.pairing import _exact_equal, _is_tensor
+    from mlopt_core.laws.pairing import _exact_equal, _is_tensor
 
     a = torch.zeros(2, 3)
     assert _exact_equal(a, a.clone())

@@ -30,7 +30,7 @@ plus ``dag_cost`` on the same terms, which is box-independent.
 Run with
 ``.venv/bin/python lab/probes/conv_fold_wall_regimes_probe.py``
 (needs ``target/debug/hnl-run``, built by
-``cargo build -p catopt-kit --bin hnl-run``; ~4-6 min on this box —
+``cargo build -p mlopt-kit --bin hnl-run``; ~4-6 min on this box —
 five programs x 31 evals through a debug tree-walk).
 """
 
@@ -42,13 +42,13 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from catopt_core.cost.basic import flops_cost
-from catopt_core.cost.params import dag_cost
-from catopt_core.ir import Op, Param, TensorType, Var
+from mlopt_core.cost.basic import flops_cost
+from mlopt_core.cost.params import dag_cost
+from mlopt_core.ir import Op, Param, TensorType, Var
 
 _REPO = Path(__file__).resolve().parents[2]
 _BIN = _REPO / "target" / "debug" / "hnl-run"
-_PROJECT = _REPO / "packages" / "catopt-kit"
+_PROJECT = _REPO / "packages" / "mlopt-kit"
 _REPS = 30
 
 #: The same marshaled escape ``tests/test_kit_bridge.py`` feeds: the

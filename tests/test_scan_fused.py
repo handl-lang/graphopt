@@ -1,7 +1,7 @@
 """Fused level-step for the batched scan executor (fused=True).
 
 ``to_batched_scan_module(..., fused=...)`` selects the canonical
-adjacent-pair reduction from :mod:`catopt_carriers.scan_fused` — a
+adjacent-pair reduction from :mod:`mlopt_carriers.scan_fused` — a
 re-bracketed (association-invariant) schedule whose levels are pure
 strided pointwise/matmul steps on shrinking fresh tensors.  These
 tests pin numerical equivalence with the serial IRModule on the same
@@ -11,14 +11,14 @@ and the routing invariants (``is_batched``/``n_levels``/``_plan``).
 
 import pytest
 import torch
-from catopt_core.ir import IR, Op, Param, TensorType, Var
-from catopt_carriers.scan_lower import (
+from mlopt_core.ir import IR, Op, Param, TensorType, Var
+from mlopt_carriers.scan_lower import (
     BatchedScanModule,
     build_scan_plan,
     to_batched_scan_module,
 )
-from catopt_torch.torch_bridge import ir_to_torch_module
-from catopt_carriers.scan_fused import (
+from mlopt_torch.torch_bridge import ir_to_torch_module
+from mlopt_carriers.scan_fused import (
     fused_dense_levels,
     fused_diag_levels,
     occurrence_slots,

@@ -1,4 +1,4 @@
-"""Contract tests for :mod:`catopt_core.failures`.
+"""Contract tests for :mod:`mlopt_core.failures`.
 
 Plan 0016 stage 3: execution/measurement failures are *classified*
 (OOM / timeout / kernel / nonfinite / unavailable / unknown), not
@@ -12,7 +12,7 @@ from __future__ import annotations
 import math
 
 import pytest
-from catopt_core.failures import FailureClass, classify, is_nonfinite
+from mlopt_core.failures import FailureClass, classify, is_nonfinite
 
 # ---------------------------------------------------------------------------
 #  The taxonomy — membership and str-Enum identity

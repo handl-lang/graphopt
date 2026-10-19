@@ -14,7 +14,7 @@
     "git_sha": "2c782dd",
     "git_dirty": true,
     "argv": [
-      "/home/luis/Desktop/catopt/bench/__main__.py",
+      "/home/luis/Desktop/mlopt/bench/__main__.py",
       "run",
       "reassoc_scale",
       "--pin"
@@ -28,14 +28,14 @@
   },
   "findings": [
     {
-      "claim": "catopt reaches a weight-folded form Inductor's post-grad graph cannot express",
+      "claim": "mlopt reaches a weight-folded form Inductor's post-grad graph cannot express",
       "verdict": "win",
       "headline": "14.92\u00d7 vs Inductor at (k,d,B\u00b7T)=(16,512,4096) (17.40\u00d7 vs eager)",
-      "metric": "catopt+inductor / inductor",
+      "metric": "mlopt+inductor / inductor",
       "value": 14.92433267651564,
       "evidence": {
         "inductor_mm": 16,
-        "catopt_mm": 1,
+        "mlopt_mm": 1,
         "x_vs_eager": 17.40010466678885
       }
     },
@@ -73,22 +73,22 @@
           "note": "hand-folded W_eff \u2014 the reachable optimum (+0.27 GF fold paid once at construction)"
         },
         {
-          "name": "catopt",
+          "name": "mlopt",
           "flops": 2147483648.0,
           "note": "e-graph extraction matmul(x, W_q@W_kv1@\u2026@W_kv1) \u2014 weights-first \u2014 weight product folds to a fused param at lowering"
         },
         {
-          "name": "catopt_inductor",
+          "name": "mlopt_inductor",
           "flops": 2147483648.0,
-          "note": "catopt module under the same Inductor backend"
+          "note": "mlopt module under the same Inductor backend"
         }
       ],
       "median_s": {
         "eager": 0.04191115300000092,
         "inductor": 0.037885470999754034,
         "manual_ref": 0.019794281150052485,
-        "catopt": 0.019694835850032177,
-        "catopt_inductor": 0.020036604500091926
+        "mlopt": 0.019694835850032177,
+        "mlopt_inductor": 0.020036604500091926
       },
       "aux": {
         "verify": {
@@ -109,7 +109,7 @@
             "mm_1: \"f32[4096, 512][512, 1]cpu\" = torch.ops.aten.mm.default(mm, arg2_1);  mm = arg2_1 = None"
           ]
         },
-        "catopt_extraction": {
+        "mlopt_extraction": {
           "weights_first": true,
           "note": "matmul(x, W_q@W_kv1@\u2026@W_kv1) \u2014 weights-first",
           "assoc_rule_fires": {
@@ -150,22 +150,22 @@
           "note": "hand-folded W_eff \u2014 the reachable optimum (+0.27 GF fold paid once at construction)"
         },
         {
-          "name": "catopt",
+          "name": "mlopt",
           "flops": 8589934592.0,
           "note": "e-graph extraction matmul(x, W_q@W_kv1@\u2026@W_kv1) \u2014 weights-first \u2014 weight product folds to a fused param at lowering"
         },
         {
-          "name": "catopt_inductor",
+          "name": "mlopt_inductor",
           "flops": 8589934592.0,
-          "note": "catopt module under the same Inductor backend"
+          "note": "mlopt module under the same Inductor backend"
         }
       ],
       "median_s": {
         "eager": 0.17620957700000872,
         "inductor": 0.17525591400044505,
         "manual_ref": 0.09559224199983873,
-        "catopt": 0.09533747199930076,
-        "catopt_inductor": 0.09573269499924209
+        "mlopt": 0.09533747199930076,
+        "mlopt_inductor": 0.09573269499924209
       },
       "aux": {
         "verify": {
@@ -186,7 +186,7 @@
             "mm_1: \"f32[16384, 512][512, 1]cpu\" = torch.ops.aten.mm.default(mm, arg2_1);  mm = arg2_1 = None"
           ]
         },
-        "catopt_extraction": {
+        "mlopt_extraction": {
           "weights_first": true,
           "note": "matmul(x, W_q@W_kv1@\u2026@W_kv1) \u2014 weights-first",
           "assoc_rule_fires": {
@@ -227,22 +227,22 @@
           "note": "hand-folded W_eff \u2014 the reachable optimum (+0.27 GF fold paid once at construction)"
         },
         {
-          "name": "catopt",
+          "name": "mlopt",
           "flops": 34359738368.0,
           "note": "e-graph extraction matmul(x, W_q@W_kv1@\u2026@W_kv1) \u2014 weights-first \u2014 weight product folds to a fused param at lowering"
         },
         {
-          "name": "catopt_inductor",
+          "name": "mlopt_inductor",
           "flops": 34359738368.0,
-          "note": "catopt module under the same Inductor backend"
+          "note": "mlopt module under the same Inductor backend"
         }
       ],
       "median_s": {
         "eager": 0.7617955799996707,
         "inductor": 0.7663674659997923,
         "manual_ref": 0.36947552699984954,
-        "catopt": 0.36716335599976446,
-        "catopt_inductor": 0.35340636299952166
+        "mlopt": 0.36716335599976446,
+        "mlopt_inductor": 0.35340636299952166
       },
       "aux": {
         "verify": {
@@ -263,7 +263,7 @@
             "mm_1: \"f32[65536, 512][512, 1]cpu\" = torch.ops.aten.mm.default(mm, arg2_1);  mm = arg2_1 = None"
           ]
         },
-        "catopt_extraction": {
+        "mlopt_extraction": {
           "weights_first": true,
           "note": "matmul(x, W_q@W_kv1@\u2026@W_kv1) \u2014 weights-first",
           "assoc_rule_fires": {
@@ -304,22 +304,22 @@
           "note": "hand-folded W_eff \u2014 the reachable optimum (+0.81 GF fold paid once at construction)"
         },
         {
-          "name": "catopt",
+          "name": "mlopt",
           "flops": 2147483648.0,
           "note": "e-graph extraction matmul(x, W_q@W_kv1@\u2026@W_kv3) \u2014 weights-first \u2014 weight product folds to a fused param at lowering"
         },
         {
-          "name": "catopt_inductor",
+          "name": "mlopt_inductor",
           "flops": 2147483648.0,
-          "note": "catopt module under the same Inductor backend"
+          "note": "mlopt module under the same Inductor backend"
         }
       ],
       "median_s": {
         "eager": 0.08471033099976921,
         "inductor": 0.08219506800014642,
         "manual_ref": 0.019761021349995644,
-        "catopt": 0.01866391329999715,
-        "catopt_inductor": 0.019614267000179098
+        "mlopt": 0.01866391329999715,
+        "mlopt_inductor": 0.019614267000179098
       },
       "aux": {
         "verify": {
@@ -342,7 +342,7 @@
             "mm_3: \"f32[4096, 512][512, 1]cpu\" = torch.ops.aten.mm.default(mm_2, arg4_1);  mm_2 = arg4_1 = None"
           ]
         },
-        "catopt_extraction": {
+        "mlopt_extraction": {
           "weights_first": true,
           "note": "matmul(x, W_q@W_kv1@\u2026@W_kv3) \u2014 weights-first",
           "assoc_rule_fires": {
@@ -383,22 +383,22 @@
           "note": "hand-folded W_eff \u2014 the reachable optimum (+0.81 GF fold paid once at construction)"
         },
         {
-          "name": "catopt",
+          "name": "mlopt",
           "flops": 8589934592.0,
           "note": "e-graph extraction matmul(x, W_q@W_kv1@\u2026@W_kv3) \u2014 weights-first \u2014 weight product folds to a fused param at lowering"
         },
         {
-          "name": "catopt_inductor",
+          "name": "mlopt_inductor",
           "flops": 8589934592.0,
-          "note": "catopt module under the same Inductor backend"
+          "note": "mlopt module under the same Inductor backend"
         }
       ],
       "median_s": {
         "eager": 0.36815961799948127,
         "inductor": 0.326809952000076,
         "manual_ref": 0.08628627400048572,
-        "catopt": 0.08785325900043972,
-        "catopt_inductor": 0.08686131900049077
+        "mlopt": 0.08785325900043972,
+        "mlopt_inductor": 0.08686131900049077
       },
       "aux": {
         "verify": {
@@ -421,7 +421,7 @@
             "mm_3: \"f32[16384, 512][512, 1]cpu\" = torch.ops.aten.mm.default(mm_2, arg4_1);  mm_2 = arg4_1 = None"
           ]
         },
-        "catopt_extraction": {
+        "mlopt_extraction": {
           "weights_first": true,
           "note": "matmul(x, W_q@W_kv1@\u2026@W_kv3) \u2014 weights-first",
           "assoc_rule_fires": {
@@ -462,22 +462,22 @@
           "note": "hand-folded W_eff \u2014 the reachable optimum (+0.81 GF fold paid once at construction)"
         },
         {
-          "name": "catopt",
+          "name": "mlopt",
           "flops": 34359738368.0,
           "note": "e-graph extraction matmul(x, W_q@W_kv1@\u2026@W_kv3) \u2014 weights-first \u2014 weight product folds to a fused param at lowering"
         },
         {
-          "name": "catopt_inductor",
+          "name": "mlopt_inductor",
           "flops": 34359738368.0,
-          "note": "catopt module under the same Inductor backend"
+          "note": "mlopt module under the same Inductor backend"
         }
       ],
       "median_s": {
         "eager": 1.348530748000485,
         "inductor": 1.288736761999644,
         "manual_ref": 0.33904163999977754,
-        "catopt": 0.33864726000047085,
-        "catopt_inductor": 0.3559985229994709
+        "mlopt": 0.33864726000047085,
+        "mlopt_inductor": 0.3559985229994709
       },
       "aux": {
         "verify": {
@@ -500,7 +500,7 @@
             "mm_3: \"f32[65536, 512][512, 1]cpu\" = torch.ops.aten.mm.default(mm_2, arg4_1);  mm_2 = arg4_1 = None"
           ]
         },
-        "catopt_extraction": {
+        "mlopt_extraction": {
           "weights_first": true,
           "note": "matmul(x, W_q@W_kv1@\u2026@W_kv3) \u2014 weights-first",
           "assoc_rule_fires": {
@@ -541,22 +541,22 @@
           "note": "hand-folded W_eff \u2014 the reachable optimum (+1.88 GF fold paid once at construction)"
         },
         {
-          "name": "catopt",
+          "name": "mlopt",
           "flops": 2147483648.0,
           "note": "e-graph extraction matmul(x, W_q@W_kv1@\u2026@W_kv7) \u2014 weights-first \u2014 weight product folds to a fused param at lowering"
         },
         {
-          "name": "catopt_inductor",
+          "name": "mlopt_inductor",
           "flops": 2147483648.0,
-          "note": "catopt module under the same Inductor backend"
+          "note": "mlopt module under the same Inductor backend"
         }
       ],
       "median_s": {
         "eager": 0.1678666815005272,
         "inductor": 0.15777665149971654,
         "manual_ref": 0.01919954185004826,
-        "catopt": 0.018300536549986646,
-        "catopt_inductor": 0.019187754999620665
+        "mlopt": 0.018300536549986646,
+        "mlopt_inductor": 0.019187754999620665
       },
       "aux": {
         "verify": {
@@ -583,7 +583,7 @@
             "mm_7: \"f32[4096, 512][512, 1]cpu\" = torch.ops.aten.mm.default(mm_6, arg8_1);  mm_6 = arg8_1 = None"
           ]
         },
-        "catopt_extraction": {
+        "mlopt_extraction": {
           "weights_first": true,
           "note": "matmul(x, W_q@W_kv1@\u2026@W_kv7) \u2014 weights-first",
           "assoc_rule_fires": {
@@ -625,22 +625,22 @@
           "note": "hand-folded W_eff \u2014 the reachable optimum (+1.88 GF fold paid once at construction)"
         },
         {
-          "name": "catopt",
+          "name": "mlopt",
           "flops": 8589934592.0,
           "note": "e-graph extraction matmul(x, W_q@W_kv1@\u2026@W_kv7) \u2014 weights-first \u2014 weight product folds to a fused param at lowering"
         },
         {
-          "name": "catopt_inductor",
+          "name": "mlopt_inductor",
           "flops": 8589934592.0,
-          "note": "catopt module under the same Inductor backend"
+          "note": "mlopt module under the same Inductor backend"
         }
       ],
       "median_s": {
         "eager": 0.6777203729998291,
         "inductor": 0.6414631920006286,
         "manual_ref": 0.08543024400023569,
-        "catopt": 0.08660374000010052,
-        "catopt_inductor": 0.08538708400010364
+        "mlopt": 0.08660374000010052,
+        "mlopt_inductor": 0.08538708400010364
       },
       "aux": {
         "verify": {
@@ -667,7 +667,7 @@
             "mm_7: \"f32[16384, 512][512, 1]cpu\" = torch.ops.aten.mm.default(mm_6, arg8_1);  mm_6 = arg8_1 = None"
           ]
         },
-        "catopt_extraction": {
+        "mlopt_extraction": {
           "weights_first": true,
           "note": "matmul(x, W_q@W_kv1@\u2026@W_kv7) \u2014 weights-first",
           "assoc_rule_fires": {
@@ -709,22 +709,22 @@
           "note": "hand-folded W_eff \u2014 the reachable optimum (+1.88 GF fold paid once at construction)"
         },
         {
-          "name": "catopt",
+          "name": "mlopt",
           "flops": 34359738368.0,
           "note": "e-graph extraction matmul(x, W_q@W_kv1@\u2026@W_kv7) \u2014 weights-first \u2014 weight product folds to a fused param at lowering"
         },
         {
-          "name": "catopt_inductor",
+          "name": "mlopt_inductor",
           "flops": 34359738368.0,
-          "note": "catopt module under the same Inductor backend"
+          "note": "mlopt module under the same Inductor backend"
         }
       ],
       "median_s": {
         "eager": 2.736618380999971,
         "inductor": 2.507907418999821,
         "manual_ref": 0.3420353250003245,
-        "catopt": 0.339370288000282,
-        "catopt_inductor": 0.35137229899919475
+        "mlopt": 0.339370288000282,
+        "mlopt_inductor": 0.35137229899919475
       },
       "aux": {
         "verify": {
@@ -751,7 +751,7 @@
             "mm_7: \"f32[65536, 512][512, 1]cpu\" = torch.ops.aten.mm.default(mm_6, arg8_1);  mm_6 = arg8_1 = None"
           ]
         },
-        "catopt_extraction": {
+        "mlopt_extraction": {
           "weights_first": true,
           "note": "matmul(x, W_q@W_kv1@\u2026@W_kv7) \u2014 weights-first",
           "assoc_rule_fires": {
@@ -793,22 +793,22 @@
           "note": "hand-folded W_eff \u2014 the reachable optimum (+4.03 GF fold paid once at construction)"
         },
         {
-          "name": "catopt",
+          "name": "mlopt",
           "flops": 2147483648.0,
           "note": "e-graph extraction matmul(x, W_q@W_kv1@\u2026@W_kv15) \u2014 weights-first \u2014 weight product folds to a fused param at lowering"
         },
         {
-          "name": "catopt_inductor",
+          "name": "mlopt_inductor",
           "flops": 2147483648.0,
-          "note": "catopt module under the same Inductor backend"
+          "note": "mlopt module under the same Inductor backend"
         }
       ],
       "median_s": {
         "eager": 0.3333951570002682,
         "inductor": 0.31598574700001336,
         "manual_ref": 0.01928144820003581,
-        "catopt": 0.019160525949973816,
-        "catopt_inductor": 0.021172520999698463
+        "mlopt": 0.019160525949973816,
+        "mlopt_inductor": 0.021172520999698463
       },
       "aux": {
         "verify": {
@@ -843,7 +843,7 @@
             "mm_15: \"f32[4096, 512][512, 1]cpu\" = torch.ops.aten.mm.default(mm_14, arg16_1);  mm_14 = arg16_1 = None"
           ]
         },
-        "catopt_extraction": {
+        "mlopt_extraction": {
           "weights_first": true,
           "note": "matmul(x, W_q@W_kv1@\u2026@W_kv15) \u2014 weights-first",
           "assoc_rule_fires": {
@@ -885,22 +885,22 @@
           "note": "hand-folded W_eff \u2014 the reachable optimum (+4.03 GF fold paid once at construction)"
         },
         {
-          "name": "catopt",
+          "name": "mlopt",
           "flops": 8589934592.0,
           "note": "e-graph extraction matmul(x, W_q@W_kv1@\u2026@W_kv15) \u2014 weights-first \u2014 weight product folds to a fused param at lowering"
         },
         {
-          "name": "catopt_inductor",
+          "name": "mlopt_inductor",
           "flops": 8589934592.0,
-          "note": "catopt module under the same Inductor backend"
+          "note": "mlopt module under the same Inductor backend"
         }
       ],
       "median_s": {
         "eager": 1.3977742959996249,
         "inductor": 1.2893540149998444,
         "manual_ref": 0.08772641999985353,
-        "catopt": 0.0879496340003243,
-        "catopt_inductor": 0.08673843300039152
+        "mlopt": 0.0879496340003243,
+        "mlopt_inductor": 0.08673843300039152
       },
       "aux": {
         "verify": {
@@ -935,7 +935,7 @@
             "mm_15: \"f32[16384, 512][512, 1]cpu\" = torch.ops.aten.mm.default(mm_14, arg16_1);  mm_14 = arg16_1 = None"
           ]
         },
-        "catopt_extraction": {
+        "mlopt_extraction": {
           "weights_first": true,
           "note": "matmul(x, W_q@W_kv1@\u2026@W_kv15) \u2014 weights-first",
           "assoc_rule_fires": {
@@ -977,22 +977,22 @@
           "note": "hand-folded W_eff \u2014 the reachable optimum (+4.03 GF fold paid once at construction)"
         },
         {
-          "name": "catopt",
+          "name": "mlopt",
           "flops": 34359738368.0,
           "note": "e-graph extraction matmul(x, W_q@W_kv1@\u2026@W_kv15) \u2014 weights-first \u2014 weight product folds to a fused param at lowering"
         },
         {
-          "name": "catopt_inductor",
+          "name": "mlopt_inductor",
           "flops": 34359738368.0,
-          "note": "catopt module under the same Inductor backend"
+          "note": "mlopt module under the same Inductor backend"
         }
       ],
       "median_s": {
         "eager": 5.933644368999921,
         "inductor": 5.376209404000292,
         "manual_ref": 0.3613060880006742,
-        "catopt": 0.36228890500024136,
-        "catopt_inductor": 0.36137520800002676
+        "mlopt": 0.36228890500024136,
+        "mlopt_inductor": 0.36137520800002676
       },
       "aux": {
         "verify": {
@@ -1027,7 +1027,7 @@
             "mm_15: \"f32[65536, 512][512, 1]cpu\" = torch.ops.aten.mm.default(mm_14, arg16_1);  mm_14 = arg16_1 = None"
           ]
         },
-        "catopt_extraction": {
+        "mlopt_extraction": {
           "weights_first": true,
           "note": "matmul(x, W_q@W_kv1@\u2026@W_kv15) \u2014 weights-first",
           "assoc_rule_fires": {

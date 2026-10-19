@@ -92,8 +92,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from catopt_core.egraph.types import _member_key
-from catopt_core.ir import Const, Op, TensorType, Var
+from mlopt_core.egraph.types import _member_key
+from mlopt_core.ir import Const, Op, TensorType, Var
 
 from lab.bridge import combinator as cb
 from lab.bridge.index_abstract import _block_splits, block_outputs

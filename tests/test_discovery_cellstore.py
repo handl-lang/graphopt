@@ -1,6 +1,6 @@
 """Tests for the discovery-side cell adapters and board store.
 
-``catopt_discovery.cellstore`` turns the constructed-object,
+``mlopt_discovery.cellstore`` turns the constructed-object,
 handler-table, and evidence-row spellings into store fragments;
 ``MetaArena.cellstore`` exposes the board's live vocabulary as a
 merged :class:`CellStore`.  The tests cover provenance through
@@ -12,13 +12,13 @@ from __future__ import annotations
 import sqlite3
 
 import pytest
-from catopt_core.cells import merge_fragments
-from catopt_core.egraph import Rewrite
-from catopt_core.ir import Op, TensorType, Var
-from catopt_discovery import cellstore as cs
-from catopt_discovery import evidence as ev
-from catopt_discovery import meta_arena as ma
-from catopt_discovery import object_synthesis as obs
+from mlopt_core.cells import merge_fragments
+from mlopt_core.egraph import Rewrite
+from mlopt_core.ir import Op, TensorType, Var
+from mlopt_discovery import cellstore as cs
+from mlopt_discovery import evidence as ev
+from mlopt_discovery import meta_arena as ma
+from mlopt_discovery import object_synthesis as obs
 
 
 def _var(name: str, *shape: int) -> Var:
@@ -138,7 +138,7 @@ class TestMachineFragment:
         assert (
             store.handlers()
             == __import__(
-                "catopt_discovery.lawdata", fromlist=["HANDLERS"]
+                "mlopt_discovery.lawdata", fromlist=["HANDLERS"]
             ).HANDLERS
         )
 
@@ -245,8 +245,8 @@ class TestBoardCellStore:
         assert cell.provenance.origin == "constructed"
 
     def test_board_opened_on_a_store(self):
-        from catopt_core.laws import DEFAULT
-        from catopt_discovery import lawdata
+        from mlopt_core.laws import DEFAULT
+        from mlopt_discovery import lawdata
 
         base = cs.ambient_store(
             rules=list(DEFAULT)[:8], handlers=lawdata.HANDLERS

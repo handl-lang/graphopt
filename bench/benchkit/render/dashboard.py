@@ -40,7 +40,7 @@ def _intent_order() -> tuple[str, ...]:
 def build_dashboard(
     results_dir: str | Path,
     outdir: str | Path | None = None,
-    title: str = "catopt benchmarks",
+    title: str = "mlopt benchmarks",
 ) -> Path:
     """Build ``index.html`` from ``*.json`` reports in ``results_dir``."""
     results_dir = Path(results_dir)

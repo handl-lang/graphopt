@@ -1,8 +1,8 @@
-"""Fetch the llama2.c TinyStories checkpoints into the catopt cache.
+"""Fetch the llama2.c TinyStories checkpoints into the mlopt cache.
 
 Downloads ``stories15M.bin`` / ``stories110M.bin`` from Hugging Face
-(``karpathy/tinyllamas``) into ``$XDG_CACHE_HOME/catopt``
-(default ``~/.cache/catopt``), verifies the 7-int32 header and the
+(``karpathy/tinyllamas``) into ``$XDG_CACHE_HOME/mlopt``
+(default ``~/.cache/mlopt``), verifies the 7-int32 header and the
 file size, and skips files already present and valid.  A valid copy
 already sitting in ``/tmp`` (the path older runs of these benches
 used) is copied into the cache instead of re-downloaded.
@@ -32,11 +32,11 @@ CHUNK = 1 << 20  # 1 MiB
 
 
 def cache_dir() -> Path:
-    """$XDG_CACHE_HOME/catopt, falling back to ~/.cache/catopt."""
+    """$XDG_CACHE_HOME/mlopt, falling back to ~/.cache/mlopt."""
     root = os.environ.get("XDG_CACHE_HOME") or str(
         Path.home() / ".cache"
     )
-    return Path(root) / "catopt"
+    return Path(root) / "mlopt"
 
 
 def _core_floats(
@@ -96,7 +96,7 @@ def download(url: str, dest: Path) -> None:
     """Stream ``url`` to ``dest`` via a .part temp file, with progress."""
     tmp = dest.with_name(dest.name + ".part")
     req = urllib.request.Request(
-        url, headers={"User-Agent": "catopt-fetch"}
+        url, headers={"User-Agent": "mlopt-fetch"}
     )
     with (
         urllib.request.urlopen(req, timeout=60) as r,

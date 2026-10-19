@@ -2,7 +2,7 @@
 title: "Certified Rewrite Discovery for Tensor Programs:\\newline A Machine-Minted Conv+BN Fold from Minting to Runtime"
 subtitle: "Draft — proposed, not accepted"
 author:
-  - name: "catopt project"
+  - name: "mlopt project"
     affiliation: "handl-lang / research-mlopt"
 date: "2026-10-20"
 abstract: |
@@ -59,7 +59,7 @@ library-abstraction domains, but the synthesis story for *tensor
 programs with runtime-priced deployment* is thinner.
 
 This paper reports the machinery — and one complete measured traversal
-of it — in the catopt engine.  The claim is narrow and checkable:
+of it — in the mlopt engine.  The claim is narrow and checkable:
 
 > A rewrite a hand optimizer would write — the eval-mode conv+BN
 > weight fold — was **discovered, proven, priced, and shipped by the
@@ -86,7 +86,7 @@ represents the closure: all programs reachable by the laws, sharing
 subterms, until a fixed point [@tate2009].  Extraction then picks a
 cheapest member under a cost model.  The soundness boundary is the
 law bank: any unsound rule poisons every e-class it touches, so in
-catopt a rule's side conditions (`check`/`derive`/declarative `cond`)
+mlopt a rule's side conditions (`check`/`derive`/declarative `cond`)
 are the *only* layer that keeps a false member out — the certificate
 replay re-proves that a step is a valid application, not that the rule
 is true.
@@ -98,21 +98,21 @@ law as a 2-cell between programs, and a derivation — one law proven
 from premises — as a 3-cell.  The consequence that matters
 operationally: laws are **data rows** (an LHS/RHS pattern pair plus a
 guard spec), serializable, storable, composable.  The shipped bank
-(`catopt_core.laws.ALL_RULES`, 84 rules) mixes human-authored axioms
+(`mlopt_core.laws.ALL_RULES`, 84 rules) mixes human-authored axioms
 with twelve machine-admitted objects
-(`catopt_core.laws.provenance.MACHINE_SHIPPED`).
+(`mlopt_core.laws.provenance.MACHINE_SHIPPED`).
 
-## The handl substrate and catopt-kit
+## The handl substrate and mlopt-kit
 
 The same "one language, many interpretations" model is implemented by
 the handl platform: eval, typecheck and rewrite are interpretations of
-one language whose tables are data.  `packages/catopt-kit` — a plain
+one language whose tables are data.  `packages/mlopt-kit` — a plain
 Rust crate — composes handl's canonical `Language`, its
 lex/parse/tree-walk-exec engines, and `handl-host-tensor`'s 18-op
 `tensor.*` surface as dependencies (no forks).  `hnl-run` is a
 subprocess door: `.hnl` in, a JSON wire tensor out, `--repeat N`
 evaluating a source N times in one process — the measurement hook.
-`lab/kit/term_hnl.py` renders any catopt IR term as a `.hnl` program
+`lab/kit/term_hnl.py` renders any mlopt IR term as a `.hnl` program
 from a data table (per-op arg assembly, attr marshaling, leaf binding),
 so the *same object the e-graph rewrites* is what the runtime
 executes.
@@ -121,7 +121,7 @@ executes.
 
 ## The mint fixpoint
 
-`catopt_core.meta.synthesize_rules` runs a bounded fixpoint over the
+`mlopt_core.meta.synthesize_rules` runs a bounded fixpoint over the
 law bank on a seed term: each round applies rules, composes the pairs
 that chain, and emits `syn_*` composites with provenance — the names
 of the premise rules each composite was built from.  On the eval-mode
@@ -136,7 +136,7 @@ so the evidence store keeps them as *specs*, not code: each stored
 record carries a `"guard"` field — parent names plus re-expression
 maps — and `evidence.admit_object` rebuilds `check`/`derive` by
 resolving parents as store rows, transitively.  The shipped form
-(`catopt_core.laws.minted`) embeds the stored-closure records as data
+(`mlopt_core.laws.minted`) embeds the stored-closure records as data
 and replays the same rebuild semantics at import — louder than the
 store: a parent resolving short of declared strength raises rather
 than admitting a degraded rule.
@@ -216,14 +216,14 @@ own minted origin.
 lowered modules.
 
 **Ship.**  The composite is promoted *verbatim*: its stored records
-embed in `catopt_core.laws.minted`, its guard re-materializes at
+embed in `mlopt_core.laws.minted`, its guard re-materializes at
 import, `MACHINE_SHIPPED` grows to 12.  Re-running the gauntlet
 post-ship refuses at novelty with `relation=duplicate` — the
 documented signature of "already admitted."
 
 **Runtime-proven.**  Through the kit bridge (@sec-background), the
 spelled term `batch_norm(conv2d(x,W,b),…)` and the deployed term
-`conv2d(x,W2,b2)` — with `W2`,`b2` themselves catopt subterms
+`conv2d(x,W2,b2)` — with `W2`,`b2` themselves mlopt subterms
 materialized through the kit — evaluate to the same tensor
 (**bitwise-equal** on the seeded fixture; the full `torch.export` IR
 of the module evaluates at 6.7e-16 max abs diff), and per-call wall
@@ -259,11 +259,11 @@ saturation.
 **Rewrite-rule inference and library learning.**  Ruler
 [@nandi2021ruler] infers rewrite rules for scalar domains by
 enumeration + equality-saturation filtering — the direct ancestor of
-the mint-then-verify shape here, differing in that catopt mints
+the mint-then-verify shape here, differing in that mlopt mints
 *composites over tensor laws* with transported guards and credits
 derivability against an object's own premise closure.  Babble
 [@cao2023babble] learns library abstractions by anti-unification;
-catopt's definitional-atom layer is the same move and measured
+mlopt's definitional-atom layer is the same move and measured
 **null** on reach-expansion — the paying layer is above it.
 
 **Compilers.**  TVM [@chen2018tvm] autotunes schedules; TorchInductor
@@ -311,7 +311,7 @@ All numbers are reproducible from the committed tree at
 uv sync
 .venv/bin/python lab/probes/conv_fold_premise_pay_probe.py   # the admission account (~13 s)
 .venv/bin/python -m pytest tests/test_kit_bridge.py -q       # the runtime-priced decision (8 tests)
-cargo test -p catopt-kit                                     # the Rust consumer (21 tests)
+cargo test -p mlopt-kit                                     # the Rust consumer (21 tests)
 .venv/bin/python -m pytest -m "not slow"                     # the dev lane
 ```
 

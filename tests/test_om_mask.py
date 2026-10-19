@@ -3,7 +3,7 @@
 
 The online-softmax homomorphism (OM_SPLIT) needs the score operand to
 be a literal concat; a causal or additive mask wraps that concat and
-blocks the chain.  ``OM_MASK_LAWS`` (catopt/om.py) close the gap:
+blocks the chain.  ``OM_MASK_LAWS`` (mlopt/om.py) close the gap:
 
     mask(cat(s1, s2), M) = cat(mask(s1, M1), mask(s2, M2))
 
@@ -26,11 +26,11 @@ Covered here:
 
 import torch
 
-from catopt_core.cost import flops_cost
-from catopt_core.egraph import EGraph
-from catopt_core.ir import IR, Const, Op, TensorType, Var, op_repr
-from catopt_carriers.om import OM_LAWS, OM_MASK_LAWS
-from catopt_torch.torch_bridge import ir_to_torch_module
+from mlopt_core.cost import flops_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import IR, Const, Op, TensorType, Var, op_repr
+from mlopt_carriers.om import OM_LAWS, OM_MASK_LAWS
+from mlopt_torch.torch_bridge import ir_to_torch_module
 
 NEG_INF = Const(float("-inf"))
 

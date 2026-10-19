@@ -10,7 +10,7 @@ deployable as a first-class ruleset value.
 
 ## What shipped
 
-`catopt_discovery.machine_pack` — the loader and the wiring seam:
+`mlopt_discovery.machine_pack` — the loader and the wiring seam:
 
 * `load_pack(store, *, names=MACHINE_STORED, gauntlet_corpus=None)`
   reads a store's `lemmas` rows, keeps the admitted names, rebuilds
@@ -26,7 +26,7 @@ deployable as a first-class ruleset value.
   `machine_default(store)` → `default_rules() + pack` — the one-call
   opt-in spelling for `opt.search(model, x, rules=…)`.  The seam is
   the existing `rules=` parameter; the orchestrator cannot import the
-  discovery package (the layers contract pins `catopt_discovery`
+  discovery package (the layers contract pins `mlopt_discovery`
   above everything), so the composition helper lives on the discovery
   side and the orchestrator needed **no edits**.  Nothing lands in
   `DEFAULT` — the pack stays a distinct set and the provenance audit
@@ -37,7 +37,7 @@ verdict — `lemmas` rows are object records, `verdicts` rows are the
 pipeline's corpus-scoped measurements, and `Gauntlet.usable` is a
 runtime report.  The pack's admission filter is therefore the
 **provenance ledger**: `MACHINE_STORED`
-(`catopt_core.laws.provenance`) names exactly the objects the
+(`mlopt_core.laws.provenance`) names exactly the objects the
 committed tests pin `usable` plus the promotion audit's admitted set
 — sixteen unshipped names.  `names=None` trusts a store wholesale;
 `gauntlet_corpus=` re-runs `run_gauntlet` per row for a store the
@@ -151,7 +151,7 @@ human-bar retro flagged is now one `rules=machine_default(db)` call.
 
 ## Files
 
-- `packages/catopt-discovery/src/catopt_discovery/machine_pack.py` —
+- `packages/mlopt-discovery/src/mlopt_discovery/machine_pack.py` —
   the loader + `machine_default` wiring seam.
 - `tests/test_machine_pack.py` — 13 tests: load/exclude/skip
   honesty, full-data pin, gauntlet re-admission, the RuleSet

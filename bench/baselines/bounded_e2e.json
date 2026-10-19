@@ -14,7 +14,7 @@
     "git_sha": "2c782dd",
     "git_dirty": true,
     "argv": [
-      "/home/luis/Desktop/catopt/bench/__main__.py",
+      "/home/luis/Desktop/mlopt/bench/__main__.py",
       "run",
       "bounded_e2e",
       "--pin"
@@ -66,7 +66,7 @@
           "note": ""
         },
         {
-          "name": "catopt",
+          "name": "mlopt",
           "flops": null,
           "note": ""
         }
@@ -74,7 +74,7 @@
       "median_s": {
         "eager": 0.0413812209990283,
         "inductor": 0.039036663500155555,
-        "catopt": 0.04113580899866065
+        "mlopt": 0.04113580899866065
       },
       "aux": {
         "name": "budget=none",
@@ -201,7 +201,7 @@
         },
         "ms_eager": 0.0413812209990283,
         "ms_inductor": 0.039036663500155555,
-        "ms_catopt": 0.04113580899866065,
+        "ms_mlopt": 0.04113580899866065,
         "speedup_vs_eager": 1.0059658970211487,
         "speedup_vs_inductor": 0.9489703606273201,
         "verdict": "no bounded offer even qualified \u2014 no weight is within budget of a structural special"
@@ -225,7 +225,7 @@
           "note": ""
         },
         {
-          "name": "catopt",
+          "name": "mlopt",
           "flops": null,
           "note": ""
         }
@@ -233,7 +233,7 @@
       "median_s": {
         "eager": 0.04630026899940276,
         "inductor": 0.040158808000342106,
-        "catopt": 0.03458129250066122
+        "mlopt": 0.03458129250066122
       },
       "aux": {
         "name": "budget=1e-4",
@@ -375,7 +375,7 @@
         },
         "ms_eager": 0.04630026899940276,
         "ms_inductor": 0.040158808000342106,
-        "ms_catopt": 0.03458129250066122,
+        "ms_mlopt": 0.03458129250066122,
         "speedup_vs_eager": 1.3388819691605647,
         "speedup_vs_inductor": 1.1612870744948078,
         "verdict": "1 bounded members, bound 2.36e-05, speedup 1.339x, KL -1.08e-06"
@@ -399,7 +399,7 @@
           "note": ""
         },
         {
-          "name": "catopt",
+          "name": "mlopt",
           "flops": null,
           "note": ""
         }
@@ -407,7 +407,7 @@
       "median_s": {
         "eager": 0.041472091999821714,
         "inductor": 0.0392984363999858,
-        "catopt": 0.03305221399932634
+        "mlopt": 0.03305221399932634
       },
       "aux": {
         "name": "budget=1e-3",
@@ -549,7 +549,7 @@
         },
         "ms_eager": 0.041472091999821714,
         "ms_inductor": 0.0392984363999858,
-        "ms_catopt": 0.03305221399932634,
+        "ms_mlopt": 0.03305221399932634,
         "speedup_vs_eager": 1.25474475025083,
         "speedup_vs_inductor": 1.1889804537991546,
         "verdict": "1 bounded members, bound 1.00e-03, speedup 1.255x, KL 5.85e-06"
@@ -573,7 +573,7 @@
           "note": ""
         },
         {
-          "name": "catopt",
+          "name": "mlopt",
           "flops": null,
           "note": ""
         }
@@ -581,7 +581,7 @@
       "median_s": {
         "eager": 0.04265929800021695,
         "inductor": 0.039906721000079415,
-        "catopt": 0.031944913000188535
+        "mlopt": 0.031944913000188535
       },
       "aux": {
         "name": "budget=3e-3",
@@ -723,7 +723,7 @@
         },
         "ms_eager": 0.04265929800021695,
         "ms_inductor": 0.039906721000079415,
-        "ms_catopt": 0.031944913000188535,
+        "ms_mlopt": 0.031944913000188535,
         "speedup_vs_eager": 1.3354019151645578,
         "speedup_vs_inductor": 1.249235551207915,
         "verdict": "1 bounded members, bound 3.00e-03, speedup 1.335x, KL 6.50e-05"
@@ -747,7 +747,7 @@
           "note": ""
         },
         {
-          "name": "catopt",
+          "name": "mlopt",
           "flops": null,
           "note": ""
         }
@@ -755,7 +755,7 @@
       "median_s": {
         "eager": 0.04244444799951452,
         "inductor": 0.040424983999400865,
-        "catopt": 0.030104414001471014
+        "mlopt": 0.030104414001471014
       },
       "aux": {
         "name": "budget=1e-2",
@@ -897,7 +897,7 @@
         },
         "ms_eager": 0.04244444799951452,
         "ms_inductor": 0.040424983999400865,
-        "ms_catopt": 0.030104414001471014,
+        "ms_mlopt": 0.030104414001471014,
         "speedup_vs_eager": 1.4099077961604078,
         "speedup_vs_inductor": 1.342825806123499,
         "verdict": "1 bounded members, bound 1.00e-02, speedup 1.410x, KL 7.11e-04"

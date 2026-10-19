@@ -9,7 +9,7 @@ residual:
 > but the enumerator never mints it — `_attr_domains` reads each
 > view node's operand shape from the *pre-view* term.
 
-Owned seams: `catopt_discovery/oracle.py`,
+Owned seams: `mlopt_discovery/oracle.py`,
 `tests/test_discovery_oracle.py`, this file.  No law, `cond.py`,
 `evidence.py`, `intake.py`, or metadata file touched — the fix is
 purely in how the enumerator *enumerates*, not in what the laws

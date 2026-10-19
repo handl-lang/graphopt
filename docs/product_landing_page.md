@@ -1,4 +1,4 @@
-# catopt — landing page
+# mlopt — landing page
 
 **Catopt is a sound mathematical discovery and optimization engine,
 where search is a game that can be learned.**
@@ -111,15 +111,15 @@ it finds ~2× more useful laws per episode.
 ## Try it
 
 ```bash
-git clone https://github.com/luisfuturist/catopt && cd catopt
+git clone https://github.com/luisfuturist/mlopt && cd mlopt
 uv sync
 python examples/quickstart.py                    # ~15s, no GPU needed
 cd docs/tutorials/course && vp install && vp -C apps/learn dev  # the 28-level course
 ```
 
 ```python
-from catopt_orchestrator import Optimizer
-from catopt_torch import TorchBackend
+from mlopt_orchestrator import Optimizer
+from mlopt_torch import TorchBackend
 
 opt, stats = Optimizer(backend=TorchBackend()).optimize(model, x)
 out = opt(x)      # verified-equal to model(x)

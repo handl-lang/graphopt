@@ -1,17 +1,17 @@
-"""Wire a learned search policy into catopt's real pipeline, and measure.
+"""Wire a learned search policy into mlopt's real pipeline, and measure.
 
 Plan 0016 stage 7's last mile.  The ``Policy`` seam is already consumed
 by ``Optimizer.optimize`` / ``EGraph.run``, but the engine hands the
 policy a ``GameState`` with no features, so the base ``LearnedPolicy``
-cannot run there.  :class:`catopt_torch.graph_policy.GraphFeaturePolicy`
+cannot run there.  :class:`mlopt_torch.graph_policy.GraphFeaturePolicy`
 closes that gap.  This tool:
 
 1. builds supervised trajectories from **real models** (the
-   ``catopt_torch.models`` zoo) via
-   :func:`catopt_torch.model_trajectories.model_rule_samples`;
+   ``mlopt_torch.models`` zoo) via
+   :func:`mlopt_torch.model_trajectories.model_rule_samples`;
 2. trains a ``RuleValueNet`` on them (supervised — the retro's dense
    signal, see ``project/retros/stage7-multifamily-results.md``);
-3. runs the **real pipeline** (``catopt_orchestrator.optimize.search``)
+3. runs the **real pipeline** (``mlopt_orchestrator.optimize.search``)
    with the shipped ordering, the learned policy and a random policy on
    held-out models, reporting enodes / wall time / extracted cost;
 4. asserts the safety invariants: the certificate still replays, and a
@@ -29,17 +29,17 @@ import hashlib
 import time
 
 import torch
-from catopt_core.cost import flops_cost
-from catopt_core.egraph import EGraph
-from catopt_core.egraph.terms import verify_certificate
-from catopt_core.laws import all_rules
-from catopt_core.policies import RandomPolicy
-from catopt_orchestrator.optimize import search
-from catopt_torch.adapters import TorchSource
-from catopt_torch.graph_policy import GraphFeaturePolicy
-from catopt_torch.learned_policy import train_rule_value
-from catopt_torch.model_trajectories import model_rule_samples
-from catopt_torch.models import (
+from mlopt_core.cost import flops_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.egraph.terms import verify_certificate
+from mlopt_core.laws import all_rules
+from mlopt_core.policies import RandomPolicy
+from mlopt_orchestrator.optimize import search
+from mlopt_torch.adapters import TorchSource
+from mlopt_torch.graph_policy import GraphFeaturePolicy
+from mlopt_torch.learned_policy import train_rule_value
+from mlopt_torch.model_trajectories import model_rule_samples
+from mlopt_torch.models import (
     AttentionBlock,
     DeepParallel,
     GQAAttention,

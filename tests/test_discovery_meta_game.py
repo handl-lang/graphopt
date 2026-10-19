@@ -1,4 +1,4 @@
-"""Tests for the guide seam in ``catopt_discovery.meta_game``.
+"""Tests for the guide seam in ``mlopt_discovery.meta_game``.
 
 The guide is the meta-policy over the generator inventory: an
 ``Allocation`` chooses which generator draws the next proposals, and
@@ -14,17 +14,17 @@ import json
 import random
 
 import pytest
-from catopt_core.ir import Const, Op, Param, TensorType, Var
-from catopt_discovery import evidence as ev_store
-from catopt_discovery import meta_game as mg
-from catopt_discovery import pipeline as lpl
-from catopt_discovery import proposal as lp
-from catopt_discovery.census import (
+from mlopt_core.ir import Const, Op, Param, TensorType, Var
+from mlopt_discovery import evidence as ev_store
+from mlopt_discovery import meta_game as mg
+from mlopt_discovery import pipeline as lpl
+from mlopt_discovery import proposal as lp
+from mlopt_discovery.census import (
     CorpusTerm,
     op_tuple_census,
     shape_census,
 )
-from catopt_discovery.impact import TermCase
+from mlopt_discovery.impact import TermCase
 
 
 def _p(op: str, *args, **attrs) -> Op:
@@ -53,7 +53,7 @@ def _tiny_terms() -> list:
 
 def _tiny_cases() -> list[TermCase]:
     """The corpus as ``TermCase``s, so fired candidates pay."""
-    from catopt_discovery import workload_gen as wg
+    from mlopt_discovery import workload_gen as wg
 
     cases = []
     for i, t in enumerate(_tiny_terms()):
@@ -114,7 +114,7 @@ def test_generator_pools_are_the_propose_sources():
     assert pools["shape-aware"]
     assert pools["algebraic-grammar"]
     # de-dup across arms: no alpha-key repeats in any queue.
-    from catopt_discovery import proposal as lp
+    from mlopt_discovery import proposal as lp
 
     seen = set()
     for queue in pools.values():
@@ -258,8 +258,8 @@ def test_build_arm_mint_error_not_recorded(monkeypatch):
 
 def test_first_true_and_ship_marks():
     cases = _tiny_cases()
-    from catopt_discovery.impact import _cost_fn
-    from catopt_discovery.shape_proposal import _sink
+    from mlopt_discovery.impact import _cost_fn
+    from mlopt_discovery.shape_proposal import _sink
 
     sink = _sink()
     ref = mg.Referee(
@@ -706,8 +706,8 @@ def test_print_guide_report_branches(capsys):
 
 def _corpus_arena(cases=(), pools=None, **kw):
     """An arena with the corpus arms armed (real sink, real corpus)."""
-    from catopt_discovery.impact import _cost_fn
-    from catopt_discovery.shape_proposal import _sink
+    from mlopt_discovery.impact import _cost_fn
+    from mlopt_discovery.shape_proposal import _sink
 
     sink = _sink()
     ref = mg.Referee(
@@ -772,8 +772,8 @@ def test_workload_arm_ingests_and_rotates_scope():
 
 def test_workload_arm_mints_legal_terms():
     """Ingested terms are verified workloads, not raw samples."""
-    from catopt_core.typing import INVALID, _shape_of
-    from catopt_discovery import workload_gen as wg
+    from mlopt_core.typing import INVALID, _shape_of
+    from mlopt_discovery import workload_gen as wg
 
     arena = _corpus_arena(cases=_tiny_cases())
     arena.invest(mg.Allocation("workload_gen", 1))

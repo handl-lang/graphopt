@@ -8,7 +8,7 @@ floor).  **Commits**: `18e82dd` (the API + fixpoint tests), `62dce40`
 
 ## Item 1 — the fixpoint is a real API now
 
-`catopt_core.meta.synthesize_rules` gained three knobs; `rounds=1` is
+`mlopt_core.meta.synthesize_rules` gained three knobs; `rounds=1` is
 the unchanged single pass (the body moved verbatim to
 `_synthesize_once`):
 

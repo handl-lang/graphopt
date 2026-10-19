@@ -1,7 +1,7 @@
 """Tests for the square/rsqrt canonicalization bridge laws —
 ``mul_square`` and the three reciprocal-root folds
 ``div_sqrt_to_rsqrt`` / ``pow_to_rsqrt`` / ``recip_sqrt_to_rsqrt``
-(:data:`catopt_core.laws.tensor`).
+(:data:`mlopt_core.laws.tensor`).
 
     mul(u, u)                    -> square(u)
     div(1, sqrt(u))              -> rsqrt(u)
@@ -47,10 +47,10 @@ from __future__ import annotations
 
 import pytest
 import torch
-from catopt_core.cost import backend_cost, dag_cost, executor_cost_for
-from catopt_core.egraph import EGraph, verify_certificate
-from catopt_core.ir import Const, IR, Op, Param, TensorType, Var
-from catopt_core.laws import (
+from mlopt_core.cost import backend_cost, dag_cost, executor_cost_for
+from mlopt_core.egraph import EGraph, verify_certificate
+from mlopt_core.ir import Const, IR, Op, Param, TensorType, Var
+from mlopt_core.laws import (
     ALL_RULES,
     DEFAULT,
     DIV_SQRT_TO_RSQRT,
@@ -61,16 +61,16 @@ from catopt_core.laws import (
     SQUARE_EXPAND,
     tags,
 )
-from catopt_core.meta import (
+from mlopt_core.meta import (
     instantiate_pattern,
     match_pattern,
     pattern_metavars,
 )
-from catopt_orchestrator import Optimizer
-from catopt_orchestrator.optimize import _lower_extracted
-from catopt_torch.adapters import TorchSink
-from catopt_torch.backend import TorchBackend
-from catopt_torch.torch_bridge import export_to_ir
+from mlopt_orchestrator import Optimizer
+from mlopt_orchestrator.optimize import _lower_extracted
+from mlopt_torch.adapters import TorchSink
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.torch_bridge import export_to_ir
 
 _SINK = TorchSink()
 

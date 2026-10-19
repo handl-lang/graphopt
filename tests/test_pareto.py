@@ -1,6 +1,6 @@
 """Tests for the Pareto-frontier cost landscape.
 
-Exercises every line and branch of ``catopt_core.pareto``: vector
+Exercises every line and branch of ``mlopt_core.pareto``: vector
 construction and validation, dominance ordering, the non-dominated
 frontier, and the scalarized argmin.
 """
@@ -8,7 +8,7 @@ frontier, and the scalarized argmin.
 from __future__ import annotations
 
 import pytest
-from catopt_core.pareto import (
+from mlopt_core.pareto import (
     CostVector,
     best,
     dominates,

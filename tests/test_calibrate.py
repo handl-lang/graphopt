@@ -1,5 +1,5 @@
-"""Tests for catopt_torch.calibrate (TargetProfile + calibrate) and the
-profile-parameterised cost fns in catopt_core.cost."""
+"""Tests for mlopt_torch.calibrate (TargetProfile + calibrate) and the
+profile-parameterised cost fns in mlopt_core.cost."""
 
 import json
 import math
@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 
 import pytest
 import torch
-from catopt_torch.calibrate import (
+from mlopt_torch.calibrate import (
     PROFILE_DIR_ENV,
     TargetProfile,
     calibrate,
@@ -21,17 +21,17 @@ from catopt_torch.calibrate import (
     save_profile,
     shape_bucket,
 )
-from catopt_core.cost import (
+from mlopt_core.cost import (
     dag_cost,
     depth_cost_for,
     roofline_cost,
     roofline_cost_for,
 )
-from catopt_core.ir import Op, Param, TensorType, Var
-import catopt_torch.calibrate as cal_mod
+from mlopt_core.ir import Op, Param, TensorType, Var
+import mlopt_torch.calibrate as cal_mod
 
 
-# The constants hardcoded in catopt_core.cost — the dev RTX 2050 profile.
+# The constants hardcoded in mlopt_core.cost — the dev RTX 2050 profile.
 RTX2050 = TargetProfile(
     name="RTX 2050",
     tflops=2.5,

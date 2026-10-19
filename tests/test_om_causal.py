@@ -1,7 +1,7 @@
 """Causal sdpa chunking — ``is_causal`` is a flag, not a mask operand.
 
 ``sdpa(q, cat(k_i), cat(v_i), is_causal=True)`` has no materialised
-mask for OM_MASK_LAWS to slice.  SDPA_CAT_LAWS (catopt/om.py) chunk the
+mask for OM_MASK_LAWS to slice.  SDPA_CAT_LAWS (mlopt/om.py) chunk the
 flag itself: they unfold the implicit causal mask into a materialised
 ``cmask`` generator over the concatenated score matrix,
 
@@ -34,11 +34,11 @@ Covered here:
 import torch
 import torch.nn.functional as F
 
-from catopt_core.cost import flops_cost
-from catopt_core.egraph import EGraph
-from catopt_core.ir import IR, Op, TensorType, Var, op_repr
-from catopt_carriers.om import OM_LAWS
-from catopt_torch.torch_bridge import ir_to_torch_module
+from mlopt_core.cost import flops_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import IR, Op, TensorType, Var, op_repr
+from mlopt_carriers.om import OM_LAWS
+from mlopt_torch.torch_bridge import ir_to_torch_module
 
 # ---------------------------------------------------------------------------
 #  helpers

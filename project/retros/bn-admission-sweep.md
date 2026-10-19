@@ -2,7 +2,7 @@
 
 **Date**: 2026-10-18.  **Object**: the three eval-mode expansion laws
 (`batch_norm_expand`, `batch_norm_expand_nobias`,
-`batch_norm_expand_plain`, `catopt_core/laws/tensor.py`), held out of
+`batch_norm_expand_plain`, `mlopt_core/laws/tensor.py`), held out of
 `DEFAULT` pending the guarded sweep — the same gauntlet the promoted
 laws cleared (`admission-gauntlet.md`, `mul-unsq-nat.md`).
 
@@ -15,7 +15,7 @@ the sweep is the floor and it refused.
 The gauntlet operates on *stored* objects, so each rule was stored
 verbatim (`store_object`, `kind="law"`, `cert=None` — all three
 serialize fully: `missing_hooks` empty, `serializable: True`) into a
-scratch store `catopt_discovery.cache_dir()/bn_admission.db`, then
+scratch store `mlopt_discovery.cache_dir()/bn_admission.db`, then
 `run_gauntlet(key, corpus=default_gauntlet_corpus())`.  The real
 corpus assembled in 10.1 s (364 real terms / 245 probe cases / 83
 base rules); each gauntlet ran 0.6–9.9 s — the sweep is cheap on this

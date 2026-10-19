@@ -1,5 +1,5 @@
 # ruff: noqa: RUF002
-"""Persistent cache for synthesized rules — catopt_core.rulecache.
+"""Persistent cache for synthesized rules — mlopt_core.rulecache.
 
 ``synthesize_rules`` is the expensive phase of meta-optimization, but
 its output is pure data.  ``RuleCache`` serializes the structural part
@@ -28,12 +28,12 @@ import time
 import pytest
 import torch
 
-from catopt_core import meta
-from catopt_carriers import om as OM
-from catopt_core import laws as R
-from catopt_core.egraph import EGraph, Rewrite
-from catopt_core.ir import Const, Op, TensorType, Var, op_repr
-from catopt_core.rulecache import (
+from mlopt_core import meta
+from mlopt_carriers import om as OM
+from mlopt_core import laws as R
+from mlopt_core.egraph import EGraph, Rewrite
+from mlopt_core.ir import Const, Op, TensorType, Var, op_repr
+from mlopt_core.rulecache import (
     RuleCache,
     cache_key,
     synthesize_rules_cached,

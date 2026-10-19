@@ -1,7 +1,7 @@
 # ruff: noqa: RUF002
-"""Launch-bound regime benchmark: does catopt+Inductor beat Inductor?
+"""Launch-bound regime benchmark: does mlopt+Inductor beat Inductor?
 
-Hypothesis under test: catopt's pairing pass (shared-input linears →
+Hypothesis under test: mlopt's pairing pass (shared-input linears →
 one fused GEMM + split views) reduces GEMM *count*, which should pay
 off where kernel-launch overhead dominates — small batch, short
 sequences, decode-style.  Prior evidence is mixed: a toy ParallelBlock
@@ -17,13 +17,13 @@ Method per (B, T) cell, all on the SAME fixed input ``idx``:
      whose optimized module is wrong is marked SKIP, not timed.
   2. Four variants are timed with ``torch.utils.benchmark``
      ``Timer.blocked_autorange``: eager, inductor (``torch.compile`` of
-     the ORIGINAL module), catopt-uncompiled, catopt+inductor.
+     the ORIGINAL module), mlopt-uncompiled, mlopt+inductor.
      Compiled variants get >= 3 un-timed warmup calls so compilation is
      never inside the measurement.  Every timed call ends in
      ``torch.cuda.synchronize()`` on CUDA — wall time of an async
      launch stream is submission time, not execution time.
-  3. Verdict per cell: ratio = median(catopt+inductor)/median(inductor)
-       < 0.97  → WIN      (catopt+inductor meaningfully faster)
+  3. Verdict per cell: ratio = median(mlopt+inductor)/median(inductor)
+       < 0.97  → WIN      (mlopt+inductor meaningfully faster)
        ≤ 1.03  → parity
        > 1.03  → REGRESSION
      IQR is reported for every variant.
@@ -37,7 +37,7 @@ B=1 output is verified bitwise against the stock model at load time.
 
     python bench/suites/speedup/decode_bench.py --device cuda --quick
     python bench/suites/speedup/decode_bench.py --device cuda \
-        --ckpt ~/.cache/catopt/stories110M.bin
+        --ckpt ~/.cache/mlopt/stories110M.bin
 """
 
 from __future__ import annotations
@@ -50,9 +50,9 @@ import time
 import numpy as np
 import torch
 import torch.nn.functional as F
-from catopt_orchestrator import Compositional, Optimizer
-from catopt_torch.backend import TorchBackend
-from catopt_torch.report import CompositionalReport, verify_equiv
+from mlopt_orchestrator import Compositional, Optimizer
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.report import CompositionalReport, verify_equiv
 from torch.utils.benchmark import Timer
 
 from bench.common.llama2c import load_llama2c
@@ -200,15 +200,15 @@ def bench_cell(model, opt, idx, ref, device, min_run_time, warmup=3):
     variants = [
         ("eager", model),
         ("inductor", None),
-        ("catopt", opt),
-        ("catopt+inductor", None),
+        ("mlopt", opt),
+        ("mlopt+inductor", None),
     ]
     try:
         variants[1] = ("inductor", torch.compile(model))
-        variants[3] = ("catopt+inductor", torch.compile(opt))
+        variants[3] = ("mlopt+inductor", torch.compile(opt))
     except Exception as e:  # torch.compile itself raised
         variants[1] = ("inductor", e)
-        variants[3] = ("catopt+inductor", e)
+        variants[3] = ("mlopt+inductor", e)
 
     out = {}
     for tag, mod in variants:
@@ -245,7 +245,7 @@ def main():
         "--ckpt",
         default=None,
         help="checkpoint path — default resolves "
-        "$XDG_CACHE_HOME/catopt/stories15M.bin then "
+        "$XDG_CACHE_HOME/mlopt/stories15M.bin then "
         "/tmp/stories15M.bin (see bench/common/fetch.py)",
     )
     ap.add_argument(
@@ -404,7 +404,7 @@ def main():
     )
     hdr = (
         f"{'cell':<11} {'eager':>16} {'inductor':>16} "
-        f"{'catopt':>16} {'cat+ind':>16} {'c+i/ind':>8}  verdict"
+        f"{'mlopt':>16} {'cat+ind':>16} {'c+i/ind':>8}  verdict"
     )
     print(hdr)
     print("-" * len(hdr))
@@ -424,7 +424,7 @@ def main():
             return f"{e['median'] * 1e3:>8.3f} ±{e['iqr'] * 1e3:<6.3f}"
 
         mi = res.get("inductor") or {}
-        mc = res.get("catopt+inductor") or {}
+        mc = res.get("mlopt+inductor") or {}
         if "median" in mi and "median" in mc:
             ratio = mc["median"] / mi["median"]
             verdict = (
@@ -448,7 +448,7 @@ def main():
             skips += 1
         print(
             f"{tag:<11} {fmt('eager')} {fmt('inductor')} "
-            f"{fmt('catopt')} {fmt('catopt+inductor')} {rstr}  {vstr}"
+            f"{fmt('mlopt')} {fmt('mlopt+inductor')} {rstr}  {vstr}"
         )
         print(f"{'':<11} └ {note}")
 
@@ -467,7 +467,7 @@ def main():
                 f"{orig[1]:.0f} GEMM-family"
             )
             print(
-                f"catopt: {optd[0]:.0f} CUDA kernels/fwd, "
+                f"mlopt: {optd[0]:.0f} CUDA kernels/fwd, "
                 f"{optd[1]:.0f} GEMM-family"
             )
         else:

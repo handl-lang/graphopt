@@ -17,11 +17,11 @@ float` refused the per-channel *tensor* `scale` with a measured
 fingerprinting (gate 4).  This round lands the seam ADR 0012 chooses,
 nothing more:
 
-- **`catopt_core.laws.cond`** — a pushed **tensor algebra**,
+- **`mlopt_core.laws.cond`** — a pushed **tensor algebra**,
   `register_tensor_algebra(source=, mint=, ops=, key=)`: core imports
   no array library, so a tensor value is an *opaque payload* the
   adapter's registrations create, transform and name — the same sink
-  direction as `catopt_core.ops`' binding tables and
+  direction as `mlopt_core.ops`' binding tables and
   `register_value_shape`.  Two new expr ops: `("tval", T)` (a bound
   leaf's tensor value through `source`) and `("tapp", name, e…)` (the
   generic apply into the pushed `ops` table — `reshape`, `exp`, … —
@@ -42,11 +42,11 @@ nothing more:
   Term-level sites (`instantiate_pattern`, `_term_instantiate`,
   `apply_rewrite_at`) needed no change — `subst[name]` already drops
   a bound term in place.
-- **`catopt_core.cost.basic`** — `batch_norm` joins `_OP_FLOPS` at 4
+- **`mlopt_core.cost.basic`** — `batch_norm` joins `_OP_FLOPS` at 4
   (sub + mul + mul + add ≈ four elementwise passes over `n_out`; the
   measured gate-6 gap).  `group_norm`/`instance_norm` stay unpriced —
   unmeasured here.
-- **`catopt_discovery.dspec_synth`** — fingerprints box every value
+- **`mlopt_discovery.dspec_synth`** — fingerprints box every value
   through `_vkey` (scalars by value, sequences elementwise, payloads
   through the algebra's `key` — or by identity when none is
   registered, so a tensor fit without `key` refuses honestly rather

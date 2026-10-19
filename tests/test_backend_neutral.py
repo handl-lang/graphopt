@@ -2,27 +2,27 @@
 
 Two complements to :mod:`tests.test_core_torch_free` (the core half):
 
-* **static** — an AST walk over ``packages/catopt-orchestrator/src``
+* **static** — an AST walk over ``packages/mlopt-orchestrator/src``
   rejects any direct ``import``/``from`` of the backend roots
-  (``torch``, ``catopt_torch``, ``catopt_cuda``).  The
-  ``catopt_carriers`` imports the regime/carrier helpers defer to
+  (``torch``, ``mlopt_torch``, ``mlopt_cuda``).  The
+  ``mlopt_carriers`` imports the regime/carrier helpers defer to
   call time are *not* forbidden at the statement level — carriers
   are optional rewrite machinery — but the runtime proof below
   blocks them too and the whole package must still import.
-* **runtime** — ``catopt_orchestrator`` is imported in a subprocess with
-  ``torch``/``numpy``/``catopt_torch``/``catopt_carriers``/
-  ``catopt_cuda`` all blocked by a meta-path finder; every
+* **runtime** — ``mlopt_orchestrator`` is imported in a subprocess with
+  ``torch``/``numpy``/``mlopt_torch``/``mlopt_carriers``/
+  ``mlopt_cuda`` all blocked by a meta-path finder; every
   submodule walks, the lazy carrier fallbacks degrade cleanly, and
   a full ``Optimizer`` run on a *pure-Python* fake backend still
   optimizes end-to-end — search, lower, autotune — without a tensor
   library in ``sys.modules``.
 
 The fake backend exercises the plan-0007 port surface as a whole:
-:class:`~catopt_core.pipeline.Backend` is a plain value of four
-ports; :class:`~catopt_core.ports.Source` /
-:class:`~catopt_core.ports.Sink` (+ ``executors``) /
-:class:`~catopt_core.ports.Composer` /
-:class:`~catopt_core.ports.Meter` drive every phase.
+:class:`~mlopt_core.pipeline.Backend` is a plain value of four
+ports; :class:`~mlopt_core.ports.Source` /
+:class:`~mlopt_core.ports.Sink` (+ ``executors``) /
+:class:`~mlopt_core.ports.Composer` /
+:class:`~mlopt_core.ports.Meter` drive every phase.
 """
 
 from __future__ import annotations
@@ -37,10 +37,10 @@ from types import MappingProxyType
 from typing import NamedTuple
 
 import pytest
-from catopt_core.ir import IR, Op, Param, TensorType, Var
-from catopt_core.ops import OpTable
-from catopt_core.pipeline import Backend
-from catopt_core.ports import (
+from mlopt_core.ir import IR, Op, Param, TensorType, Var
+from mlopt_core.ops import OpTable
+from mlopt_core.pipeline import Backend
+from mlopt_core.ports import (
     Composer,
     ExecutorSpec,
     Meter,
@@ -48,28 +48,28 @@ from catopt_core.ports import (
     Source,
     TimingResult,
 )
-from catopt_orchestrator.optimize import Autotuned
+from mlopt_orchestrator.optimize import Autotuned
 
-from catopt_orchestrator import Compositional, Optimizer
+from mlopt_orchestrator import Compositional, Optimizer
 
 
-from catopt_orchestrator.optimize import _lower_extracted
+from mlopt_orchestrator.optimize import _lower_extracted
 
 
 
 _OPT_SRC = (
     pathlib.Path(__file__).resolve().parents[1]
     / "packages"
-    / "catopt-orchestrator"
+    / "mlopt-orchestrator"
     / "src"
 )
 
 #: Import roots the orchestrator must never name directly.
-_FORBIDDEN = frozenset({"torch", "catopt_torch", "catopt_cuda"})
+_FORBIDDEN = frozenset({"torch", "mlopt_torch", "mlopt_cuda"})
 
 
 # ---------------------------------------------------------------------------
-#  Static proof — no direct backend import statement in catopt_orchestrator
+#  Static proof — no direct backend import statement in mlopt_orchestrator
 # ---------------------------------------------------------------------------
 
 
@@ -97,7 +97,7 @@ def test_optimize_source_has_no_backend_imports():
                 rel = path.relative_to(_OPT_SRC)
                 offenders.append(f"{rel}:{lineno} imports {root}")
     assert offenders == [], (
-        "catopt-orchestrator must import no backend directly; found:\n"
+        "mlopt-orchestrator must import no backend directly; found:\n"
         + "\n".join(offenders)
     )
 
@@ -109,8 +109,8 @@ def test_optimize_source_has_no_backend_imports():
 _BLOCKED_SCRIPT = r"""
 import sys
 
-_BLOCKED = ("torch", "numpy", "catopt_torch", "catopt_carriers",
-            "catopt_cuda")
+_BLOCKED = ("torch", "numpy", "mlopt_torch", "mlopt_carriers",
+            "mlopt_cuda")
 
 
 class _Blocker:
@@ -125,28 +125,28 @@ sys.meta_path.insert(0, _Blocker())
 import importlib
 import pkgutil
 
-import catopt_orchestrator
+import mlopt_orchestrator
 
 # Walk EVERY orchestrator submodule — none may need a blocked package
 # at import time.
 for _info in pkgutil.walk_packages(
-    catopt_orchestrator.__path__, "catopt_orchestrator."
+    mlopt_orchestrator.__path__, "mlopt_orchestrator."
 ):
     importlib.import_module(_info.name)
 
 assert "torch" not in sys.modules
-assert "catopt_torch" not in sys.modules
-assert "catopt_carriers" not in sys.modules
+assert "mlopt_torch" not in sys.modules
+assert "mlopt_carriers" not in sys.modules
 
 # The lazy carrier fallbacks degrade to empty structures, never raise.
-import catopt_orchestrator.optimize as O
-import catopt_orchestrator.regime as R
+import mlopt_orchestrator.optimize as O
+import mlopt_orchestrator.regime as R
 
 assert O._carrier_plans() == {}
 assert O._carrier_lifts(object(), {}, {}, False) == []
 assert len(R._xc_rules()) == 0
 # Core scan laws compose in; blocked carriers contribute nothing.
-from catopt_core.laws import RuleSet
+from mlopt_core.laws import RuleSet
 assert isinstance(R.CARRIER_LAWS, RuleSet)
 assert len(R.CARRIER_LAWS) == len(R.core_laws.CARRIER_SEARCH)
 
@@ -483,7 +483,7 @@ def test_lower_extracted_routes_to_sink_executor():
 
 def test_optimize_module_has_no_compat_attrs():
     """Plan 0008: the torch-facing names moved to their real homes."""
-    import catopt_orchestrator.optimize as O
+    import mlopt_orchestrator.optimize as O
 
     for gone in (
         "optimize_model",
@@ -501,7 +501,7 @@ def test_optimize_module_has_no_compat_attrs():
 
 
 def test_orchestrator_package_surface_is_neutral():
-    import catopt_orchestrator as pkg
+    import mlopt_orchestrator as pkg
 
     assert pkg.Optimizer is not None
     assert pkg.Autotuned is not None
@@ -518,7 +518,7 @@ def test_orchestrator_package_surface_is_neutral():
 
 
 def test_runners_module_has_no_backend_names():
-    import catopt_orchestrator.runners as R
+    import mlopt_orchestrator.runners as R
 
     assert R.IdentityRunner is not None
     for gone in ("TorchCompileRunner", "CudaGraphRunner"):
@@ -527,7 +527,7 @@ def test_runners_module_has_no_backend_names():
 
 
 def test_regime_module_lazy_laws_only():
-    import catopt_orchestrator.regime as R
+    import mlopt_orchestrator.regime as R
 
     # CARRIER_LAWS / XC_LAWS materialise once, then cache.
     laws = R.CARRIER_LAWS
@@ -545,8 +545,8 @@ def test_shim_modules_are_gone():
     import importlib
 
     for mod in (
-        "catopt_orchestrator.calibrate",
-        "catopt_orchestrator.export",
+        "mlopt_orchestrator.calibrate",
+        "mlopt_orchestrator.export",
     ):
         sys.modules.pop(mod, None)
         with pytest.raises(ModuleNotFoundError):
@@ -554,23 +554,23 @@ def test_shim_modules_are_gone():
 
 
 def test_torch_package_delegations():
-    import catopt_torch
-    from catopt_torch.autotune import TORCH_BUILDERS
-    from catopt_torch.backend import TorchBackend
-    from catopt_torch.runners import TorchCompileRunner
+    import mlopt_torch
+    from mlopt_torch.autotune import TORCH_BUILDERS
+    from mlopt_torch.backend import TorchBackend
+    from mlopt_torch.runners import TorchCompileRunner
 
-    assert catopt_torch.TorchBackend is TorchBackend
-    assert catopt_torch.TorchCompileRunner is TorchCompileRunner
-    assert catopt_torch.TORCH_BUILDERS is TORCH_BUILDERS
+    assert mlopt_torch.TorchBackend is TorchBackend
+    assert mlopt_torch.TorchCompileRunner is TorchCompileRunner
+    assert mlopt_torch.TORCH_BUILDERS is TORCH_BUILDERS
     for gone in (
         "optimize_model",
         "optimize_compositional",
         "optimize_model_autotuned",
     ):
         with pytest.raises(AttributeError):
-            getattr(catopt_torch, gone)
+            getattr(mlopt_torch, gone)
     with pytest.raises(AttributeError):
-        _ = catopt_torch.bogus_name
+        _ = mlopt_torch.bogus_name
 
 
 # ---------------------------------------------------------------------------
@@ -579,7 +579,7 @@ def test_torch_package_delegations():
 
 
 def test_register_regime_backend_partial_args(monkeypatch):
-    import catopt_orchestrator.regime as R
+    import mlopt_orchestrator.regime as R
 
     sentinel = object()
     monkeypatch.setattr(R, "_DISPATCH_CLS", None)
@@ -589,7 +589,7 @@ def test_register_regime_backend_partial_args(monkeypatch):
 
 
 def test_frontier_build_without_dispatch(monkeypatch):
-    import catopt_orchestrator.regime as R
+    import mlopt_orchestrator.regime as R
 
     monkeypatch.setattr(R, "_DISPATCH_CLS", None)
     frontier = R.RegimeFrontier(
@@ -609,15 +609,15 @@ def test_torch_sink_executors_degrade_without_carriers(monkeypatch):
     """Blocked carrier imports leave the trace+generic routing table."""
     import sys as _sys
 
-    from catopt_torch.adapters import TorchSink
+    from mlopt_torch.adapters import TorchSink
 
     monkeypatch.setitem(
-        _sys.modules, "catopt_carriers.scan_lower", None
+        _sys.modules, "mlopt_carriers.scan_lower", None
     )
-    monkeypatch.setitem(_sys.modules, "catopt_carriers.om_lower", None)
-    monkeypatch.setitem(_sys.modules, "catopt_carriers.omd_lower", None)
+    monkeypatch.setitem(_sys.modules, "mlopt_carriers.om_lower", None)
+    monkeypatch.setitem(_sys.modules, "mlopt_carriers.omd_lower", None)
     monkeypatch.setitem(
-        _sys.modules, "catopt_carriers.om_streaming", None
+        _sys.modules, "mlopt_carriers.om_streaming", None
     )
     sink = TorchSink()
     sink._executors = None  # rebuild under the blocked names
@@ -628,8 +628,8 @@ def test_torch_sink_executors_degrade_without_carriers(monkeypatch):
 def test_build_egraph_accepts_explicit_source():
     import torch
     import torch.nn as nn
-    from catopt_torch.adapters import TorchSource
-    from catopt_torch.regime import build_egraph
+    from mlopt_torch.adapters import TorchSource
+    from mlopt_torch.regime import build_egraph
 
     m = nn.Linear(4, 4).eval()
     x = torch.randn(2, 4)
@@ -640,10 +640,10 @@ def test_build_egraph_accepts_explicit_source():
 
 
 def test_torch_builder_requires_ir():
-    from catopt_orchestrator.autotune import AutotuneContext, CandidateUnavailableError
+    from mlopt_orchestrator.autotune import AutotuneContext, CandidateUnavailableError
 
 
-    from catopt_torch.autotune import TORCH_BUILDERS
+    from mlopt_torch.autotune import TORCH_BUILDERS
 
     ctx = AutotuneContext(
         model=None,
@@ -661,10 +661,10 @@ def test_torch_builder_requires_ir():
 
 
 def test_runner_candidate_requires_ir():
-    from catopt_orchestrator.autotune import AutotuneContext, CandidateUnavailableError
+    from mlopt_orchestrator.autotune import AutotuneContext, CandidateUnavailableError
 
 
-    from catopt_orchestrator.runners import IdentityRunner, runner_candidate
+    from mlopt_orchestrator.runners import IdentityRunner, runner_candidate
 
 
 
@@ -686,16 +686,16 @@ def test_carrier_helpers_degrade_without_carriers(monkeypatch):
     """The lazy carrier fallbacks return empty in-process too."""
     import sys as _sys
 
-    import catopt_orchestrator.optimize as O
-    import catopt_orchestrator.regime as R
-    from catopt_core.egraph import EGraph
+    import mlopt_orchestrator.optimize as O
+    import mlopt_orchestrator.regime as R
+    from mlopt_core.egraph import EGraph
 
     for name in (
-        "catopt_carriers.om_lower",
-        "catopt_carriers.omd_lower",
-        "catopt_carriers.scan_lower",
-        "catopt_carriers.trace_lift",
-        "catopt_carriers.xcarrier",
+        "mlopt_carriers.om_lower",
+        "mlopt_carriers.omd_lower",
+        "mlopt_carriers.scan_lower",
+        "mlopt_carriers.trace_lift",
+        "mlopt_carriers.xcarrier",
     ):
         monkeypatch.setitem(_sys.modules, name, None)
     assert O._carrier_plans() == {}
@@ -712,15 +712,15 @@ def test_carrier_helpers_degrade_without_carriers(monkeypatch):
 def test_carrier_registry_absent_paths(monkeypatch):
     """The ``get_carriers() is None`` arms, exercised in-process.
 
-    ``catopt_carriers`` installs its machinery at import, so the
+    ``mlopt_carriers`` installs its machinery at import, so the
     carrier-free arms are otherwise reachable only in a backend-free
     process (the subprocess proof above).  Neutralising the registry
     directly drives the same arms here — real coverage of the
     fallbacks, not a spawned interpreter the tracer never sees.
     """
-    import catopt_orchestrator.carriers as C
-    import catopt_orchestrator.optimize as O
-    import catopt_orchestrator.regime as R
+    import mlopt_orchestrator.carriers as C
+    import mlopt_orchestrator.optimize as O
+    import mlopt_orchestrator.regime as R
 
     monkeypatch.setattr(C, "_MACHINERY", None)
 
@@ -741,7 +741,7 @@ def test_carrier_registry_absent_paths(monkeypatch):
 
 
 def test_register_regime_backend_executors_only():
-    import catopt_orchestrator.regime as R
+    import mlopt_orchestrator.regime as R
 
     R.register_regime_backend(executors={"_probe": object()})
     assert "_probe" in R.EXECUTORS
@@ -769,11 +769,11 @@ def test_lower_extracted_empty_executor_table():
 
 
 def test_torch_backend_value():
-    from catopt_torch.backend import TorchBackend
+    from mlopt_torch.backend import TorchBackend
 
     b = TorchBackend()
     assert isinstance(b, Backend)
-    from catopt_torch.adapters import TorchSink, TorchSource
+    from mlopt_torch.adapters import TorchSink, TorchSource
 
     assert isinstance(b.source, TorchSource)
     assert isinstance(b.sink, TorchSink)
@@ -784,7 +784,7 @@ def test_torch_backend_value():
 def test_torch_backend_optimizes_end_to_end():
     import torch
     import torch.nn as nn
-    from catopt_torch.backend import TorchBackend
+    from mlopt_torch.backend import TorchBackend
 
     torch.manual_seed(0)
 

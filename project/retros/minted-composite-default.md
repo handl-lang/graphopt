@@ -60,7 +60,7 @@ a depth-4 interleaved check+derive composition — a hand-flattened
 `cond` for it would be an *unmeasured twin*, not the admitted object.
 So `conv_bn_fold` introduces a second shipping class:
 
-**`catopt_core.laws.minted`** — the verbatim path.  The stored-closure
+**`mlopt_core.laws.minted`** — the verbatim path.  The stored-closure
 records (the four `syn_*` nodes' `law_json`, each carrying its
 `"guard"` spec: parent names + `guard_pats` re-expression maps) embed
 as data; `materialize()` replays `evidence._rebuild_stored`'s semantics

@@ -13,7 +13,7 @@
 #
 # Usage:
 #     scripts/gates.sh                    # default parallelism (see NP)
-#     CATOPT_GATES_NP=1 scripts/gates.sh  # force the suite serial
+#     MLOPT_GATES_NP=1 scripts/gates.sh  # force the suite serial
 #
 # Test lanes (the suite is tiered by kind — see AGENTS.md):
 #     smoke:  .venv/bin/python -m pytest tests/test_ir.py \
@@ -25,14 +25,14 @@
 #     gate:   this script (everything, once, under coverage)
 #
 # Env knobs:
-#     CATOPT_GATES_LANE
+#     MLOPT_GATES_LANE
 #         `dev` (default) — the day-to-day gate: static gates + the suite
 #         with `-m "not slow"` (the minutes-scale soak tests are excluded;
 #         coverage is not collected and the floors do not apply — both are
 #         full-suite properties).  `full` — everything, once, under
 #         coverage, both floors enforced.  CI/release runs should use
 #         `full`.
-#     CATOPT_GATES_NP
+#     MLOPT_GATES_NP
 #         xdist worker count for the suite stage.  Default 1 (serial) —
 #         see the measured serial-vs-parallel table in AGENTS.md.  Set to
 #         2 to opt into the parallel arm (with the inductor cap below).
@@ -53,10 +53,10 @@ PY=.venv/bin/python
 # finished inside a 30-min box — serial reached 36%, `-n 2` (inductor
 # cap 2) reached 98% (2.72x further, peak RSS 8,814 MB tree-summed).  A
 # *completed* wall-time win is required to flip the default and neither
-# arm completed, so it stays serial; opt in with CATOPT_GATES_NP=2.  See
+# arm completed, so it stays serial; opt in with MLOPT_GATES_NP=2.  See
 # AGENTS.md for the measured table and the tests that dominate the wall.
-NP="${CATOPT_GATES_NP:-1}"
-LANE="${CATOPT_GATES_LANE:-dev}"   # dev | full
+NP="${MLOPT_GATES_NP:-1}"
+LANE="${MLOPT_GATES_LANE:-dev}"   # dev | full
 
 # Keep Inductor's kernel cache pinned into the repo cache dir so repeat
 # runs reuse compiled kernels instead of recompiling from scratch (the
@@ -64,7 +64,7 @@ LANE="${CATOPT_GATES_LANE:-dev}"   # dev | full
 # the collection phase before conftest runs).
 if [[ -z "${TORCHINDUCTOR_CACHE_DIR:-}" ]]; then
     _base="${XDG_CACHE_HOME:-$HOME/.cache}"
-    export TORCHINDUCTOR_CACHE_DIR="${CATOPT_CACHE_DIR:-$_base/catopt}/inductor"
+    export TORCHINDUCTOR_CACHE_DIR="${MLOPT_CACHE_DIR:-$_base/mlopt}/inductor"
     mkdir -p "$TORCHINDUCTOR_CACHE_DIR"
 fi
 
@@ -104,7 +104,7 @@ if [[ "$LANE" == "full" ]]; then
         # pytest-cov combines xdist workers' coverage (a bare `coverage run`
         # does not measure the worker subprocesses).  Its own fail_under
         # check is disabled here: it would apply the config's 100% floor to
-        # the union *including* catopt_discovery, which sits on a 99%
+        # the union *including* mlopt_discovery, which sits on a 99%
         # ratchet — the two `coverage report` stages below own both floors.
         $PY -m pytest tests/ -q -n "$NP" --cov --cov-report= --cov-fail-under=0
     else
@@ -113,12 +113,12 @@ if [[ "$LANE" == "full" ]]; then
     printf '  [ok] %-26s %3ds\n' "suite (NP=$NP)" "$((SECONDS - suite_s))"
 
     echo "== coverage floors =="
-    # The six shipped packages + catopt_onnx: fail_under=100 (config).
+    # The six shipped packages + mlopt_onnx: fail_under=100 (config).
     stage "coverage (six, =100)" -- \
-        .venv/bin/coverage report -m --omit="*/catopt_discovery/*"
-    # catopt_discovery ratchet floor: --fail-under=99 (tighten, never lower).
+        .venv/bin/coverage report -m --omit="*/mlopt_discovery/*"
+    # mlopt_discovery ratchet floor: --fail-under=99 (tighten, never lower).
     stage "coverage (discovery)" -- \
-        .venv/bin/coverage report -m --include="*/catopt_discovery/*" --fail-under=99
+        .venv/bin/coverage report -m --include="*/mlopt_discovery/*" --fail-under=99
 else
     # dev lane — the day-to-day gate: suite minus the minutes-scale `slow`
     # tests, no coverage (floors are a full-suite property; see LANE doc).

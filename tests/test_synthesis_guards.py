@@ -29,11 +29,11 @@ Covered here:
 
 import torch
 
-from catopt_core import meta
-from catopt_carriers import om as OM
-from catopt_core import laws as R
-from catopt_core.egraph import EGraph, Rewrite
-from catopt_core.ir import Op, TensorType, Var, op_repr
+from mlopt_core import meta
+from mlopt_carriers import om as OM
+from mlopt_core import laws as R
+from mlopt_core.egraph import EGraph, Rewrite
+from mlopt_core.ir import Op, TensorType, Var, op_repr
 
 
 def _T(*shape):

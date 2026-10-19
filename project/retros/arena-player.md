@@ -2,14 +2,14 @@
 
 Plan 0020/0021's open question: can a *learned* player beat the
 authored `FixedRule` playbook on the construction board?
-`catopt_discovery.arena_player` is the first real attempt — a
+`mlopt_discovery.arena_player` is the first real attempt — a
 softmax linear policy over `arena.legal_actions`, trained by
 episode-return REINFORCE on the cheap board
 (`make_arena(max_cases=24, max_holdout=12)`).
 
 Reproduce (~NN min CPU):
 
-    .venv/bin/python -m catopt_discovery.arena_player \
+    .venv/bin/python -m mlopt_discovery.arena_player \
         --train-episodes 60 --episodes 10 --budget 40 \
         --max-cases 24 --max-holdout 12 --seed 0 \
         --json /tmp/arena_player_run.json

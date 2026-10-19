@@ -6,7 +6,7 @@ are applied during e-graph saturation + extraction** changes the
 extracted program — i.e. whether a learned law-order player has a
 real board.
 
-Instrument: `catopt_discovery.law_order` (new).  Each `(term,
+Instrument: `mlopt_discovery.law_order` (new).  Each `(term,
 regime)` cell runs `EGraph.run` under six orderings — `declared`
 (`policy=None`), `reversed`, `random:{0,7}` (`RandomPolicy`, seeded),
 `expansive_last` / `expansive_first` (`GreedyPolicy` on the
@@ -17,12 +17,12 @@ certificate replays under `verify_certificate`.
 
 Reproduce:
 
-    .venv/bin/python -m catopt_discovery.law_order --corpus models --regime all
-    .venv/bin/python -m catopt_discovery.law_order --corpus zoo --regime prod
+    .venv/bin/python -m mlopt_discovery.law_order --corpus models --regime all
+    .venv/bin/python -m mlopt_discovery.law_order --corpus zoo --regime prod
 
-Boards: `zoo` — the 22-model held-out set (`catopt_discovery.zoo`);
+Boards: `zoo` — the 22-model held-out set (`mlopt_discovery.zoo`);
 `models` — the 44-case real corpus (`impact.model_cases`, the same
-`catopt_torch` blocks the discovery pipeline measures against).
+`mlopt_torch` blocks the discovery pipeline measures against).
 Regimes: `prod` (the `search()` defaults — `EXPANSIVE` rules capped
 at 2048 new enodes each, `max_nodes=100k`), `tight` (128/20k),
 `improving` (`stop="improving"`, patience 3, 2048/60k).
@@ -161,7 +161,7 @@ mixed action space — not in law order.
 
 ## Gates
 
-- `packages/catopt-discovery/src/catopt_discovery/law_order.py` new;
+- `packages/mlopt-discovery/src/mlopt_discovery/law_order.py` new;
   `tests/test_law_order.py` new (17 tests, ~3 s).  No engine/laws/
   sibling-file edits.
 - `pytest tests/test_law_order.py` — pass.  `ty check`, `ruff check`,

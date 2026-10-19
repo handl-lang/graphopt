@@ -1,4 +1,4 @@
-"""Coverage tests for catopt_orchestrator.optimize — resource bounds, the OOM
+"""Coverage tests for mlopt_orchestrator.optimize — resource bounds, the OOM
 adapter, causal-mask specialization, the discovery entry point, the
 parameter-diff report, and the compositional driver."""
 # ruff: noqa: RUF059 — test-idiom unpacking
@@ -8,20 +8,20 @@ import types
 import pytest
 import torch
 import torch.nn as nn
-from catopt_torch.adapters import TorchSource
-from catopt_core import laws
-from catopt_core.cost import flops_cost, launch_aware_cost
-from catopt_core.ir import Const, Op, Param, TensorType, Var
-from catopt_orchestrator.optimize import OptimizationResourceError, _check_resources, _current_memory_mb, _looks_like_oom, _oom_to_resource_error, discover_alternatives, ir_to_string, term_cost
+from mlopt_torch.adapters import TorchSource
+from mlopt_core import laws
+from mlopt_core.cost import flops_cost, launch_aware_cost
+from mlopt_core.ir import Const, Op, Param, TensorType, Var
+from mlopt_orchestrator.optimize import OptimizationResourceError, _check_resources, _current_memory_mb, _looks_like_oom, _oom_to_resource_error, discover_alternatives, ir_to_string, term_cost
 
-from catopt_torch.folds import _eval_const, _is_causal_keep_mask, _specialize_causal
-from catopt_torch.composer import _select_blocks, param_report
-from catopt_torch.export import save_optimized_weights
+from mlopt_torch.folds import _eval_const, _is_causal_keep_mask, _specialize_causal
+from mlopt_torch.composer import _select_blocks, param_report
+from mlopt_torch.export import save_optimized_weights
 
-from catopt_core.pipeline import SearchResult
-from catopt_orchestrator import Compositional, Optimizer
+from mlopt_core.pipeline import SearchResult
+from mlopt_orchestrator import Compositional, Optimizer
 
-from catopt_torch.backend import TorchBackend
+from mlopt_torch.backend import TorchBackend
 
 
 def _T(*shape):

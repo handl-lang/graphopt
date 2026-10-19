@@ -1,4 +1,4 @@
-"""Coverage wave-2 tests for ``catopt_core.laws`` — the rewrite side
+"""Coverage wave-2 tests for ``mlopt_core.laws`` — the rewrite side
 conditions exercised in BOTH directions, and the non-local pairing
 passes over adversarial e-graph shapes.
 
@@ -13,15 +13,15 @@ unknown weight shapes)."""
 
 import torch
 
-from catopt_core.egraph import EGraph
-from catopt_core.ir import Const, Op, Param, TensorType, Var
-from catopt_core.laws.base import (
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import Const, Op, Param, TensorType, Var
+from mlopt_core.laws.base import (
     _is_channel_scale,
     _is_row_scale,
     _is_scalar,
     _shape_of,
 )
-from catopt_core.laws.pairing import (
+from mlopt_core.laws.pairing import (
     _pair_shared_input,
     _term_has_var,
     _wshape,
@@ -30,7 +30,7 @@ from catopt_core.laws.pairing import (
     share_duplicate_param_slices,
     share_duplicate_params,
 )
-from catopt_core.laws.tensor import (
+from mlopt_core.laws.tensor import (
     _QKV_CAT,
     _REPEAT_KV,
     _REPEAT_V,

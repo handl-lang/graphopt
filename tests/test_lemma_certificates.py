@@ -5,7 +5,7 @@ the shipped premises proving the law's instance.  These tests pin the
 upgrade that turns the annotation into a *certificate*: saturate the
 lemma's instance under the recorded premises alone, reconstruct the
 positional derivation, and replay it strictly on real terms.  The
-measured shape (``catopt_discovery.lemma_cert``): every derivation-carrying
+measured shape (``mlopt_discovery.lemma_cert``): every derivation-carrying
 rule gets a linear certificate — one step, the recorded premise — and
 the replayable direction is the one the *axiom* fires forward.
 
@@ -19,10 +19,10 @@ replayable proof).
 
 import json
 
-import catopt_core.laws.layout
+import mlopt_core.laws.layout
 import pytest
-from catopt_core import laws as R
-from catopt_core.egraph import (
+from mlopt_core import laws as R
+from mlopt_core.egraph import (
     Certificate,
     CertificateVerificationError,
     CertStep,
@@ -31,10 +31,10 @@ from catopt_core.egraph import (
     cert_to_data,
     verify_certificate,
 )
-from catopt_core.ir import Op, TensorType, Var, op_repr
+from mlopt_core.ir import Op, TensorType, Var, op_repr
 
-from catopt_discovery import evidence as le
-from catopt_discovery import lemma_cert as llc
+from mlopt_discovery import evidence as le
+from mlopt_discovery import lemma_cert as llc
 
 
 def _t(d=4):
@@ -213,8 +213,8 @@ def test_merge_without_connect_cert_enumerates_linear_proof():
     )
     rhs = Op.make("linear", Op.make("add", a, b), w)
     rules = [
-        catopt_core.laws.layout.LINEAR_TO_MM_T,
-        catopt_core.laws.layout.LINEAR_FROM_MM_T,
+        mlopt_core.laws.layout.LINEAR_TO_MM_T,
+        mlopt_core.laws.layout.LINEAR_FROM_MM_T,
         R.RIGHT_FACTOR,
     ]
     eg, r_lhs, r_rhs = _merged_pair(lhs, rhs, rules)

@@ -1,4 +1,4 @@
-"""Tests for ``catopt_discovery.forms`` — the form-level enumerator.
+"""Tests for ``mlopt_discovery.forms`` — the form-level enumerator.
 
 ``forms`` generates law *skeletons* over a meta-grammar (op-class slots
 at nodes, metavariables / a literal-class at leaves) instead of
@@ -16,10 +16,10 @@ import itertools
 import json
 
 import pytest
-from catopt_core.ir import Const, Op, Var
-from catopt_discovery import forms as fm
-from catopt_discovery import proposal as lp
-from catopt_discovery.enumerate import _FORMS, _form_pairs
+from mlopt_core.ir import Const, Op, Var
+from mlopt_discovery import forms as fm
+from mlopt_discovery import proposal as lp
+from mlopt_discovery.enumerate import _FORMS, _form_pairs
 
 #: A small vocabulary — 2 binary + 2 unary ops — so the op-class slot
 #: count stays at 2 and the superset scan stays bounded.

@@ -1,7 +1,7 @@
 """DECODE_GEOM_LAWS — decode-memory geometry rewrites.
 
 The head-packing / KV-layout slice (see the audit in
-``catopt_carriers.decode_geom``):
+``mlopt_carriers.decode_geom``):
 
 * ``cat_slice_merge`` / ``cat_narrow_merge`` — adjacent slices of
   one base re-join into the wider view; ``slice_full`` /
@@ -23,7 +23,7 @@ decline cases for each guard.
 
 import pytest
 import torch
-from catopt_carriers.decode_geom import (
+from mlopt_carriers.decode_geom import (
     DECODE_GEOM_LAWS,
     DECODE_GEOM_RULES,
     _check_binary_cat,
@@ -57,10 +57,10 @@ from catopt_carriers.decode_geom import (
     _derive_gather_stack_rev,
     _derive_narrow_merge,
 )
-from catopt_core.cost import flops_cost
-from catopt_core.egraph import EGraph
-from catopt_core.ir import IR, Op, Param, TensorType, Var
-from catopt_torch.torch_bridge import ir_to_torch_module
+from mlopt_core.cost import flops_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import IR, Op, Param, TensorType, Var
+from mlopt_torch.torch_bridge import ir_to_torch_module
 
 # ---------------------------------------------------------------------------
 #  helpers (same protocol as test_decode_laws)
@@ -1294,7 +1294,7 @@ def test_check_binary_cat_guards():
 
 def test_decode_geom_ruleset_composition():
     """The RuleSet carries the whole list, tagged CARRIER+DECODE."""
-    from catopt_core.laws import tags
+    from mlopt_core.laws import tags
 
     assert len(DECODE_GEOM_RULES) == len(DECODE_GEOM_LAWS)
     for r in DECODE_GEOM_RULES:
@@ -1307,15 +1307,15 @@ def test_decode_geom_ruleset_composition():
 
 def test_wired_into_carriers_and_default():
     """DECODE_GEOM_RULES composes into CARRIERS → pipeline default."""
-    import catopt_carriers
-    from catopt_orchestrator.optimize import default_rules
-    from catopt_orchestrator.regime import default_rules as reg_rules
+    import mlopt_carriers
+    from mlopt_orchestrator.optimize import default_rules
+    from mlopt_orchestrator.regime import default_rules as reg_rules
 
-    carriers = catopt_carriers.CARRIERS
+    carriers = mlopt_carriers.CARRIERS
     assert "cat_slice_merge" in carriers
-    assert "narrow_full" in catopt_carriers.DECODE_GEOM_RULES
+    assert "narrow_full" in mlopt_carriers.DECODE_GEOM_RULES
     with pytest.raises(AttributeError):
-        _ = catopt_carriers.NO_SUCH_RULES
+        _ = mlopt_carriers.NO_SUCH_RULES
     assert "gather_cat_batch" in carriers
     assert "binary_cat_mul" in default_rules()
     assert "gather_slice_out" in reg_rules()

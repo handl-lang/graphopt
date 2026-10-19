@@ -7,7 +7,7 @@ instantiation, not the elementwise numeric probe that reads a single
 real match.
 
 This retro records the oracle (`tools/law_view_oracle.py`), its
-wiring into `python -m catopt_discovery.pipeline`, and the run over the current
+wiring into `python -m mlopt_discovery.pipeline`, and the run over the current
 166-workload corpus.  Headline:
 
 * **Every view-family candidate now resolves** — the 35 candidates
@@ -48,9 +48,9 @@ wiring into `python -m catopt_discovery.pipeline`, and the run over the current
 Reproduce:
 
     .venv/bin/python tools/law_view_oracle.py --json /tmp/vo.json
-    .venv/bin/python python -m catopt_discovery.pipeline --vocab derived \
+    .venv/bin/python python -m mlopt_discovery.pipeline --vocab derived \
         --json /tmp/pipeline-view-oracle.json
-    .venv/bin/python python -m catopt_discovery.pipeline --vocab derived \
+    .venv/bin/python python -m mlopt_discovery.pipeline --vocab derived \
         --no-view-oracle        # pre-oracle behaviour
 
 CPU-only; the pipeline run is ~9 min (the oracle adds ~3 min of
@@ -289,7 +289,7 @@ disagree, and the oracle wins.
 ## 5. What changed
 
 * `tools/law_view_oracle.py` — new (oracle, CLI table/JSON driver).
-* `python -m catopt_discovery.pipeline` — `Evidence.{view_verdict,view_guard,
+* `python -m mlopt_discovery.pipeline` — `Evidence.{view_verdict,view_guard,
   view_note}`; oracle call in `measure`; `no_ship_reason` for
   `conditional`/`ill-formed`; report tally + guard list;
   `--no-view-oracle`; JSON dump fields; `view_oracle` param on

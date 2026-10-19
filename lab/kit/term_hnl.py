@@ -1,8 +1,8 @@
-"""catopt terms → `.hnl` programs → CatoptKit — the emit/eval bridge.
+"""mlopt terms → `.hnl` programs → CatoptKit — the emit/eval bridge.
 
-Why this exists: the e-graph's terms and `packages/catopt-kit`'s runtime
-are the same program space.  A catopt term is an op tree over
-:class:`~catopt_core.ir.Op`/:class:`Var`/:class:`Param`/:class:`Const`;
+Why this exists: the e-graph's terms and `packages/mlopt-kit`'s runtime
+are the same program space.  A mlopt term is an op tree over
+:class:`~mlopt_core.ir.Op`/:class:`Var`/:class:`Param`/:class:`Const`;
 a `.hnl` program over `host-tensor`'s 18-op surface is the same tree
 with its leaves bound.  This module is the honest bridge between them:
 
@@ -37,7 +37,7 @@ read scientific notation — ``1e-05`` lexes as the tokens
 ``1`` ``e`` ``-05`` (measured: it parses *silently* as ``1`` in
 statement position, and fails inside a list).  ``_num`` therefore
 expands every float through :class:`~decimal.Decimal` — ``1e-05`` →
-``0.00001`` — so a catopt ``eps`` can never silently change value
+``0.00001`` — so a mlopt ``eps`` can never silently change value
 across the boundary.
 """
 
@@ -52,7 +52,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
-from catopt_core.ir import Const, Op, Param, Var
+from mlopt_core.ir import Const, Op, Param, Var
 
 __all__ = [
     "KitEvalError",
@@ -81,7 +81,7 @@ class KitEvalError(RuntimeError):
 
 
 # ---------------------------------------------------------------------------
-#  The op table — catopt spelling → tensor.* call, as data
+#  The op table — mlopt spelling → tensor.* call, as data
 # ---------------------------------------------------------------------------
 
 #: Sentinel for "term arg at index i if present, else ``null``".
@@ -92,7 +92,7 @@ _ARGS = "args"
 
 @dataclass(frozen=True)
 class _OpSpec:
-    """How one catopt op lands on the ``tensor.*`` surface.
+    """How one mlopt op lands on the ``tensor.*`` surface.
 
     ``slots`` lists the emitted call arguments in order; each entry is
 
@@ -124,10 +124,10 @@ class _OpSpec:
     drop: frozenset[str] = frozenset()
 
 
-#: catopt op → surface spec.  Coverage is host-tensor's 18 ops minus the
+#: mlopt op → surface spec.  Coverage is host-tensor's 18 ops minus the
 #: marshaling-only four (``zeros``/``ones``/``from_list``/``to_list``,
 #: which the *emitter* uses, and ``shape``/``derive``/
-#: ``batch_norm_backward``, which have no catopt counterpart) — every
+#: ``batch_norm_backward``, which have no mlopt counterpart) — every
 #: op absent here fails loudly by name.
 _SPECS: dict[str, _OpSpec] = {
     "add": _OpSpec("add", (0, 1)),
@@ -249,7 +249,7 @@ def leaf_names(term: Any) -> list[str]:
 
 
 def _sanitize(name: str, taken: set[str]) -> str:
-    """Return a safe `.hnl` binding name for a catopt leaf.
+    """Return a safe `.hnl` binding name for a mlopt leaf.
 
     Export names are dotted (``conv.weight``) — dots are field access
     in handl.  And ``tensor`` itself is reserved: binding it would
@@ -329,7 +329,7 @@ def _slot(
 
 
 def emit(term: Any, bound: Mapping[str, str] | None = None) -> str:
-    """Render a catopt term as a `.hnl` expression over ``tensor.*``.
+    """Render a mlopt term as a `.hnl` expression over ``tensor.*``.
 
     ``Var``/``Param`` leaves emit sanitized binding names (use
     :func:`emit_program` to bind them — it passes its *bound* map in so
@@ -472,9 +472,9 @@ class KitRunner:
     """Run `.hnl` programs through the compiled ``hnl-run`` binary.
 
     The binary is ``target/debug/hnl-run`` (built by
-    ``cargo build -p catopt-kit --bin hnl-run``; override with the
-    *binary* arg or ``$CATOPT_HNL_RUN``).  Each call is one subprocess —
-    the same evaluation surface ``cargo test -p catopt-kit`` exercises.
+    ``cargo build -p mlopt-kit --bin hnl-run``; override with the
+    *binary* arg or ``$MLOPT_HNL_RUN``).  Each call is one subprocess —
+    the same evaluation surface ``cargo test -p mlopt-kit`` exercises.
     """
 
     def __init__(
@@ -484,13 +484,13 @@ class KitRunner:
     ) -> None:
         """Resolve the binary; raise if it is not built."""
         self.binary = Path(
-            binary or os.environ.get("CATOPT_HNL_RUN", _DEFAULT_BIN)
+            binary or os.environ.get("MLOPT_HNL_RUN", _DEFAULT_BIN)
         )
         self.project = Path(project) if project is not None else None
         if not self.binary.exists():
             raise FileNotFoundError(
                 f"hnl-run not built: {self.binary} — "
-                "cargo build -p catopt-kit --bin hnl-run "
+                "cargo build -p mlopt-kit --bin hnl-run "
                 "(source ~/.cache/devin/handl_deps.env first)"
             )
 

@@ -4,7 +4,7 @@
 # files, but three of them are marked `stages: [manual]` and therefore
 # never run automatically:
 #
-#   * typeguard runtime contracts (the curated catopt_core subset)
+#   * typeguard runtime contracts (the curated mlopt_core subset)
 #   * pip-audit                (needs network to reach the advisory DB)
 #   * semgrep registry rulesets (needs network to fetch p/* rulesets)
 #
@@ -25,7 +25,7 @@
 #   * ty check — the typecheck ratchet ([tool.ty.src] include/exclude in
 #     pyproject.toml scope it to packages/).  0 errors.
 #   * vulture — dead-code scan ([tool.vulture] paths + min-confidence).
-#   * lint-imports — the hexagonal boundary contract: catopt_core must
+#   * lint-imports — the hexagonal boundary contract: mlopt_core must
 #     not import the adapters or torch/numpy.
 #   * bandit -c .bandit.yaml -r packages — security SAST; the
 #     config carries the scoped excludes + justified rule skips.
@@ -99,7 +99,7 @@ jobs:
       - name: coverage run (full suite)
         run: >-
           .venv/bin/coverage run
-          --source=catopt_core,catopt_torch,catopt_carriers,catopt_orchestrator,catopt_cuda
+          --source=mlopt_core,mlopt_torch,mlopt_carriers,mlopt_orchestrator,mlopt_cuda
           -m pytest tests/ -q
 
       - name: coverage report (fail_under=100)

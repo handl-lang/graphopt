@@ -39,10 +39,10 @@ Covered surface:
 from __future__ import annotations
 
 import torch
-from catopt_core.cost import backend_cost, executor_cost_for
-from catopt_core.egraph import EGraph, verify_certificate
-from catopt_core.ir import Const, Op, Param, TensorType, Var
-from catopt_core.laws import (
+from mlopt_core.cost import backend_cost, executor_cost_for
+from mlopt_core.egraph import EGraph, verify_certificate
+from mlopt_core.ir import Const, Op, Param, TensorType, Var
+from mlopt_core.laws import (
     ALL_RULES,
     DISTRIBUTE_MUL,
     FACTOR_MUL,
@@ -56,13 +56,13 @@ from catopt_core.laws import (
     WEIGHT_FACTOR_LINEAR,
     tags,
 )
-from catopt_core.laws.tensor import (
+from mlopt_core.laws.tensor import (
     _check_fuse_pair,
     _check_mm_rhs_addends,
     _check_mm_rhs_weights,
 )
-from catopt_torch.adapters import TorchSink
-from catopt_torch.meta_eval import _eval_allclose, _eval_term
+from mlopt_torch.adapters import TorchSink
+from mlopt_torch.meta_eval import _eval_allclose, _eval_term
 
 _SINK = TorchSink()
 

@@ -1,4 +1,4 @@
-# Bandit configuration for catopt.
+# Bandit configuration for mlopt.
 #
 # Run: .venv/bin/bandit -c .bandit.yaml -r packages
 #
@@ -47,7 +47,7 @@ skips:
   - B603
   - B607
   # B105 hardcoded_password_string --------------------------------------
-  # handl.py emits `"pass": "catopt"` — the *pass name* field of a
+  # handl.py emits `"pass": "mlopt"` — the *pass name* field of a
   # handl `TransformDef` row (handl's own transforms.yaml spells the
   # same field for its "desugar" pass — see the Phase-3a schema
   # bridge).  B105 keys on the identifier `pass` holding a string

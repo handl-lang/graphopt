@@ -61,7 +61,7 @@ from collections import Counter, deque
 from dataclasses import dataclass, field
 from typing import Any
 
-from catopt_core.ir import Op, TensorType, Var
+from mlopt_core.ir import Op, TensorType, Var
 
 from lab.bridge import combinator as cb
 from lab.bridge.loop_propose import (

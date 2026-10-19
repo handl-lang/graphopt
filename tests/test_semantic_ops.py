@@ -26,16 +26,16 @@ import pytest
 import torch
 import torch.nn.functional as F
 
-from catopt_core.ir import Const, IR, Op, TensorType, Var
-from catopt_torch.torch_bridge import (
+from mlopt_core.ir import Const, IR, Op, TensorType, Var
+from mlopt_torch.torch_bridge import (
     _IR_TO_TORCH,
     export_to_ir,
     ir_to_torch_module,
 )
-from catopt_core.typing import _INVALID, _shape_of
-from catopt_orchestrator import Compositional, Optimizer
+from mlopt_core.typing import _INVALID, _shape_of
+from mlopt_orchestrator import Compositional, Optimizer
 
-from catopt_torch.backend import TorchBackend
+from mlopt_torch.backend import TorchBackend
 
 
 def _v(name: str, *shape: int) -> Var:
@@ -1190,7 +1190,7 @@ def test_arange_binding_const_operands():
 def test_scaled_extent_bool_guard():
     """``isinstance(True, int)`` is True — a bool dim/scale is not a
     concrete extent, and ``_scaled_extent`` declines it."""
-    from catopt_core.typing import _scaled_extent
+    from mlopt_core.typing import _scaled_extent
 
     assert _scaled_extent(8, True) is None
     assert _scaled_extent(True, 2.0) is None
@@ -1691,7 +1691,7 @@ def test_export_lstm_input(kw):
 def test_new_bindings_are_supported_ops():
     """supported_ops coverage — the three gap ops are bound, so the
     backend can lower them (extraction's hard feasibility set)."""
-    from catopt_torch.adapters import TorchSink
+    from mlopt_torch.adapters import TorchSink
 
     assert {
         "instance_norm",
@@ -1802,7 +1802,7 @@ def test_minted_index_put_without_layout():
 def test_handle_copy_early_returns():
     """``_handle_copy_`` no-ops on missing args, missing env entries,
     and a missing viewed base."""
-    from catopt_torch.torch_bridge import _handle_copy_
+    from mlopt_torch.torch_bridge import _handle_copy_
 
     class _N:
         def __init__(self, name, args=(), target=None):
@@ -1839,7 +1839,7 @@ def test_handle_copy_early_returns():
 def test_handle_copy_unrecognised_view_is_whole_tensor_copy():
     """A copy_ through a view we don't decompose (e.g. a transpose)
     rewrites the view's own readers to the ``copy`` op."""
-    from catopt_torch.torch_bridge import _handle_copy_
+    from mlopt_torch.torch_bridge import _handle_copy_
 
     class _N:
         def __init__(self, name, args=(), target=None):
@@ -1858,7 +1858,7 @@ def test_handle_copy_unrecognised_view_is_whole_tensor_copy():
 
 
 def test_resolve_attr_walks_dotted_names():
-    from catopt_torch.torch_bridge import _resolve_attr
+    from mlopt_torch.torch_bridge import _resolve_attr
 
     class Inner(torch.nn.Module):
         def __init__(self):

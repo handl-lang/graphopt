@@ -9,7 +9,7 @@ as data and run the gauntlet.  But both inhabitants
 census/proposal machinery had *found*.  The ADR's actual claim is
 stronger — the player's action space is **construction operations**,
 not rewrites the corpus coughs up.  This stage ships the seed of that
-space: `catopt_discovery.object_synthesis`, the constructor for
+space: `mlopt_discovery.object_synthesis`, the constructor for
 declared objects, plus the first objects the machinery *builds* —
 none of them a pipeline candidate.
 

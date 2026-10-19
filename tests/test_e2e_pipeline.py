@@ -9,23 +9,23 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from catopt_core.cost import flops_cost
-from catopt_core.egraph import EGraph, verify_certificate
-from catopt_core.ir import IR, Op, TensorType, Var
-from catopt_core.laws import all_rules
-from catopt_carriers.om_lower import (
+from mlopt_core.cost import flops_cost
+from mlopt_core.egraph import EGraph, verify_certificate
+from mlopt_core.ir import IR, Op, TensorType, Var
+from mlopt_core.laws import all_rules
+from mlopt_carriers.om_lower import (
     StreamingOMModule,
     om_apply_state,
     om_empty_state,
     om_step,
 )
-from catopt_core.ops import OpTable
+from mlopt_core.ops import OpTable
 
-from catopt_torch.torch_bridge import export_to_ir, ir_to_torch_module
-from catopt_orchestrator import Compositional, Optimizer
+from mlopt_torch.torch_bridge import export_to_ir, ir_to_torch_module
+from mlopt_orchestrator import Compositional, Optimizer
 
 
-from catopt_torch.backend import TorchBackend
+from mlopt_torch.backend import TorchBackend
 
 import pytest
 

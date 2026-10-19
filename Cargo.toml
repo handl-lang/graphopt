@@ -1,32 +1,32 @@
-# Root cargo workspace — created for `catopt-kit` (plan: the modular
+# Root cargo workspace — created for `mlopt-kit` (plan: the modular
 # handl-lang composition seam). The Python monorepo has no other cargo
 # workspace; the pre-existing Rust crates — and `experiments/`
 # (`mlopt-experiments`, the paper's evidence crate — see
 # `manifest/kit.toml`), which floats on the post-rename `hnl-engine-*`
-# stack catopt-kit can't yet share a lockfile with — keep their own
+# stack mlopt-kit can't yet share a lockfile with — keep their own
 # manifests and lockfiles and are listed in `exclude` so `cargo` inside
 # them still resolves them standalone.
 
 [workspace]
 resolver = "3"
-members = ["packages/catopt-kit"]
+members = ["packages/mlopt-kit"]
 
 exclude = [
     # the PyO3 search engine — built with maturin, own Cargo.lock
-    "packages/catopt-native",
+    "packages/mlopt-native",
     # the G0 boundary spike — standalone crate with absolute path deps
     "lab/handl-peer",
     # the paper's evidence crate (manifest/kit.toml) — deliberately
     # *not* a member: it keeps its own manifest + Cargo.lock so the
     # experiment arm stays a standalone composition (the same dep edges
-    # catopt-kit declares, duplicated for the standalone-checkout story).
+    # mlopt-kit declares, duplicated for the standalone-checkout story).
     "experiments",
 ]
 
 # ---------------------------------------------------------------------------
 # Local-override story (the handl-lang `[patch]` convention).
 #
-# `catopt-kit`'s handl deps are git deps floating on `main`
+# `mlopt-kit`'s handl deps are git deps floating on `main`
 # (`branch = "main"`). Local development resolves them to sibling-style
 # checkouts in exactly one of two ways:
 #
@@ -80,3 +80,6 @@ exclude = [
 # handl-lib-str-handl = { path = "/path/to/lib-str-handl" }
 # handl-lib-dedent = { path = "/path/to/lib-dedent" }
 # ---------------------------------------------------------------------------
+
+[patch."https://github.com/handl-lang/host-tensor"]
+handl-host-tensor = { path = "../host-tensor" }

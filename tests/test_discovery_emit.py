@@ -1,4 +1,4 @@
-"""Tests for ``catopt_discovery.emit`` — the admission-artifact emitter.
+"""Tests for ``mlopt_discovery.emit`` — the admission-artifact emitter.
 
 ``emit_admission`` turns a SHIP-verdict pipeline candidate into the
 review artifact: a standalone law module, a generated test file, a
@@ -20,17 +20,17 @@ from pathlib import Path
 
 import pytest
 import torch
-from catopt_core.egraph import EGraph
-from catopt_core.ir import Const, Op, Param, TensorType, Var
-from catopt_discovery import emit
-from catopt_discovery import intake as li
-from catopt_discovery import pipeline as pl
-from catopt_discovery.census import (
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import Const, Op, Param, TensorType, Var
+from mlopt_discovery import emit
+from mlopt_discovery import intake as li
+from mlopt_discovery import pipeline as pl
+from mlopt_discovery.census import (
     CorpusTerm,
     op_tuple_census,
     shape_census,
 )
-from catopt_discovery.impact import TermCase
+from mlopt_discovery.impact import TermCase
 
 _TENSOR_ABS = emit.REPO_ROOT / emit._TENSOR_REL
 
@@ -632,7 +632,7 @@ def test_mismatch_terms_repeated_attr_metavar():
         _p("select", u, dim=0, index=1),
         _p("select", w, dim=0, index=1),
     )
-    from catopt_core.egraph.terms import _term_match
+    from mlopt_core.egraph.terms import _term_match
 
     subst = _term_match(proposal.lhs, matched)
     assert subst is not None
@@ -769,7 +769,7 @@ def test_mismatch_terms_skips_unperturbable_and_single_position():
         _p("f", _v("a", 4), mode="x"),
         _p("f", _v("b", 4), mode="x"),
     )
-    from catopt_core.egraph.terms import _term_match
+    from mlopt_core.egraph.terms import _term_match
 
     subst1 = _term_match(p1.lhs, base1)
     assert subst1 is not None and "$attr:M" in subst1

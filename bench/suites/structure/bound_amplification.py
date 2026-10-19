@@ -52,7 +52,7 @@ from pathlib import Path
 import numpy as np
 import torch
 import torch.nn.functional as F
-from catopt_core.laws.specials import _bounded_elide as _ref_elide
+from mlopt_core.laws.specials import _bounded_elide as _ref_elide
 
 from bench.benchkit import collect_env
 from bench.common.llama2c import load_llama2c
@@ -205,7 +205,7 @@ def member_weight(wn: torch.Tensor, a: dict) -> torch.Tensor | None:
 
 
 # ---------------------------------------------------------------------------
-#  Validation — the replica must equal catopt_core's _bounded_elide.
+#  Validation — the replica must equal mlopt_core's _bounded_elide.
 # ---------------------------------------------------------------------------
 
 

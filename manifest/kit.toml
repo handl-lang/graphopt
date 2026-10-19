@@ -75,32 +75,32 @@ crates = ["handl-host-tensor"]
 role = "the 18-op `tensor.*` host surface — dense n-d f64 tensors over the {\"__tensor__\":…} wire form. The op vocabulary the lifted program spells and the folded program runs against."
 
 [[component]]
-name = "catopt-kit"
-repo = "handl-lang/catopt"
-path = "packages/catopt-kit"
+name = "mlopt-kit"
+repo = "handl-lang/mlopt"
+path = "packages/mlopt-kit"
 float = "main"
 kind = "cargo-git"
-crates = ["catopt-kit"]
-role = "catopt's composition seam — the intended direct dep (it assembles this same stack), an in-tree workspace member (packages/catopt-kit). Its deps float on the post-ADR-0128 `hnl-engine-*` crates at current main (the rename that briefly blocked it as a *git* dep is repointed). The artifact under measurement (hnl/conv_bn.hnl — the minted fold, evaluated) resolves in-tree at packages/catopt-kit/hnl/conv_bn.hnl and is exported over the crate API as `CONV_BN_HNL` / `hnl_module(\"conv_bn\")` (include_str! — part of the crate artifact)."
+crates = ["mlopt-kit"]
+role = "mlopt's composition seam — the intended direct dep (it assembles this same stack), an in-tree workspace member (packages/mlopt-kit). Its deps float on the post-ADR-0128 `hnl-engine-*` crates at current main (the rename that briefly blocked it as a *git* dep is repointed). The artifact under measurement (hnl/conv_bn.hnl — the minted fold, evaluated) resolves in-tree at packages/mlopt-kit/hnl/conv_bn.hnl and is exported over the crate API as `CONV_BN_HNL` / `hnl_module(\"conv_bn\")` (include_str! — part of the crate artifact)."
 
 # ---------------------------------------------------------------------------
 # Components — the Python arm (the discovery engine; env-level composition)
 # ---------------------------------------------------------------------------
 
 [[component]]
-name = "catopt"
-repo = "handl-lang/catopt"
+name = "mlopt"
+repo = "handl-lang/mlopt"
 path = "packages/"
 float = "main"
 kind = "python-git"
 packages = [
-    "catopt-core",
-    "catopt-torch",
-    "catopt-discovery",
-    "catopt-orchestrator",
-    "catopt-onnx",
+    "mlopt-core",
+    "mlopt-torch",
+    "mlopt-discovery",
+    "mlopt-orchestrator",
+    "mlopt-onnx",
 ]
-role = "the discovery + admission machinery — lift (TorchSource: torch IR → catopt calculus), laws-as-data minting, the admission gauntlet, deliver. Composed at the Python env level (uv/pip git deps), not vendored here."
+role = "the discovery + admission machinery — lift (TorchSource: torch IR → mlopt calculus), laws-as-data minting, the admission gauntlet, deliver. Composed at the Python env level (uv/pip git deps), not vendored here."
 
 # ---------------------------------------------------------------------------
 # Experiments — the runnable evidence
@@ -111,14 +111,14 @@ name = "conv-bn-fold"
 kind = "cargo"
 run = "cargo run --release --manifest-path experiments/Cargo.toml --bin conv-bn-fold -- --repeat 200"
 produces = "value-equality of spelled vs folded program through the composed kit + per-call wall of each arm (the runtime pay)"
-artifact = "catopt-kit's hnl/conv_bn.hnl — resolved in-tree (packages/catopt-kit/hnl/conv_bn.hnl; the sibling-checkout / pkg-cache-slot / fetch arms remain as fallbacks for a standalone research-mlopt checkout — never vendored); the same source is exported over the crate API as catopt_kit::CONV_BN_HNL for consumers that take the dep"
+artifact = "mlopt-kit's hnl/conv_bn.hnl — resolved in-tree (packages/mlopt-kit/hnl/conv_bn.hnl; the sibling-checkout / pkg-cache-slot / fetch arms remain as fallbacks for a standalone research-mlopt checkout — never vendored); the same source is exported over the crate API as mlopt_kit::CONV_BN_HNL for consumers that take the dep"
 
 [[experiment]]
 name = "conv-fold-premise-pay"
 kind = "python"
-run = "cd $CATOPT_DIR && .venv/bin/python lab/probes/conv_fold_premise_pay_probe.py"
+run = "cd $MLOPT_DIR && .venv/bin/python lab/probes/conv_fold_premise_pay_probe.py"
 produces = "the gauntlet account for the minted composite: guard transport, truth (guarded eval + premise-anchored derivability), typed pay, novelty"
-note = "runs inside a catopt checkout (CATOPT_DIR); the probe is catopt's own, invoked — not copied"
+note = "runs inside a mlopt checkout (MLOPT_DIR); the probe is mlopt's own, invoked — not copied"
 
 # ---------------------------------------------------------------------------
 # Gaps — surfaced, documented, not worked around by vendoring
@@ -127,10 +127,10 @@ note = "runs inside a catopt checkout (CATOPT_DIR); the probe is catopt's own, i
 [[gap]]
 what = ".handl.toml git deps resolve to a package-cache slot ($HANDL_PKG_DIR, else ~/.handl/pkg/<name>) that nothing yet populates"
 where = "platform's ModuleLoader / ADR-0010 fetch hook (upstream follow-up)"
-workaround = "a checkout or symlink at the slot is the stand-in (this machine: ~/.handl/pkg/{host-tensor,catopt-kit} are); `make artifact` fetches the file from the declared git source when no local arm resolves"
+workaround = "a checkout or symlink at the slot is the stand-in (this machine: ~/.handl/pkg/{host-tensor,mlopt-kit} are); `make artifact` fetches the file from the declared git source when no local arm resolves"
 closed = "platform 6ce0e125 — fetch-on-miss in resolve_dependencies clones the declared repo@selector into the slot (subdir names the package root); HANDL_PKG_FETCH=off disables"
 
 [[gap]]
-what = "catopt's Python packages are not cargo deps; the discovery arm composes at the Python env level"
+what = "mlopt's Python packages are not cargo deps; the discovery arm composes at the Python env level"
 where = "manifest's python-git component"
-workaround = "declared here for reproducibility; consumed as `git+https://github.com/handl-lang/catopt` uv/pip deps inside a catopt venv"
+workaround = "declared here for reproducibility; consumed as `git+https://github.com/handl-lang/mlopt` uv/pip deps inside a mlopt venv"

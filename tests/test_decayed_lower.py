@@ -1,4 +1,4 @@
-"""Coverage tests for catopt_carriers.decayed_lower.
+"""Coverage tests for mlopt_carriers.decayed_lower.
 
 The pairwise-batched chunked-``om_decayed`` executor: the plan
 parser (concat arms, summand peels, state-half decomposition,
@@ -13,7 +13,7 @@ CUDA-graph arm is marked ``requires_cuda``.
 
 import pytest
 import torch
-from catopt_carriers.decayed_lower import (
+from mlopt_carriers.decayed_lower import (
     ChunkedDecayModule,
     _classify_body,
     _decay_row,
@@ -28,9 +28,9 @@ from catopt_carriers.decayed_lower import (
     is_decayed_chunked_term,
     to_chunked_decayed_module,
 )
-from catopt_core.ir import IR, Const, Op, Param, TensorType, Var
-from catopt_torch.adapters import TorchSink
-from catopt_torch.torch_bridge import IRModule
+from mlopt_core.ir import IR, Const, Op, Param, TensorType, Var
+from mlopt_torch.adapters import TorchSink
+from mlopt_torch.torch_bridge import IRModule
 
 
 def _T(*shape):

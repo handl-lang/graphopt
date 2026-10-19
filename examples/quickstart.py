@@ -1,4 +1,4 @@
-"""catopt quickstart — categorical optimization of a real block, end to end.
+"""mlopt quickstart — categorical optimization of a real block, end to end.
 
 One command, five acts:
 
@@ -17,9 +17,9 @@ One command, five acts:
                    shared an input, one matmul where ten ran
                    left-associative.
     5. RACE        median wall time, CUDA-synchronised where
-                   applicable: eager vs torch.compile vs catopt.
+                   applicable: eager vs torch.compile vs mlopt.
 
-The model is chosen so catopt's structural win is honest on this
+The model is chosen so mlopt's structural win is honest on this
 box: Inductor cannot concatenate shared-input weights (they are
 runtime parameters, not constants) and has no matmul-
 reassociation pass, so both rewrites are unreachable for it.
@@ -54,14 +54,14 @@ from collections import Counter
 
 import torch
 import torch.nn as nn
-from catopt_core.egraph import verify_certificate
-from catopt_core.ir import Op, Param, Var, op_repr
-from catopt_core.laws import FULL
-from catopt_orchestrator import Optimizer
-from catopt_orchestrator.optimize import discover_alternatives
-from catopt_torch.adapters import TorchSink, TorchSource
-from catopt_torch.backend import TorchBackend
-from catopt_torch.composer import param_report
+from mlopt_core.egraph import verify_certificate
+from mlopt_core.ir import Op, Param, Var, op_repr
+from mlopt_core.laws import FULL
+from mlopt_orchestrator import Optimizer
+from mlopt_orchestrator.optimize import discover_alternatives
+from mlopt_torch.adapters import TorchSink, TorchSource
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.composer import param_report
 
 # ----------------------------------------------------------------------
 #  The model
@@ -299,7 +299,7 @@ def _stage(n: int, title: str) -> None:
 def main() -> int:
     """Run the five acts and return the exit status."""
     ap = argparse.ArgumentParser(
-        description="catopt quickstart — end to end"
+        description="mlopt quickstart — end to end"
     )
     ap.add_argument("--device", default="cpu", choices=["cpu", "cuda"])
     ap.add_argument(
@@ -315,7 +315,7 @@ def main() -> int:
     cuda = dev.type == "cuda"
     n_calls, warmup = (25, 6) if args.quick else (50, 10)
 
-    print("catopt quickstart — categorical optimization, end to end")
+    print("mlopt quickstart — categorical optimization, end to end")
     print(f"device: {dev} | torch {torch.__version__}")
     t_all = time.perf_counter()
 
@@ -478,9 +478,9 @@ def main() -> int:
         print(f"  torch.compile  {ind_ms:8.3f} ms")
     else:
         print(f"  torch.compile  {status}")
-    print(f"  catopt         {opt_ms:8.3f} ms")
+    print(f"  mlopt         {opt_ms:8.3f} ms")
     print(
-        f"  → catopt is {eager_ms / opt_ms:.2f}× faster than eager",
+        f"  → mlopt is {eager_ms / opt_ms:.2f}× faster than eager",
         end="",
     )
     if ind_ms:

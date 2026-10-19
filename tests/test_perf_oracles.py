@@ -23,12 +23,12 @@ replaced:
 from __future__ import annotations
 
 import pytest
-from catopt_core.cost import count_cost
-from catopt_core.egraph import EGraph
-from catopt_core.egraph.core import EGraph as CoreEG
-from catopt_core.egraph.types import ENode, _pattern_attrs
-from catopt_core.ir import Const, Op, Param, TensorType, Var
-from catopt_core.laws import (
+from mlopt_core.cost import count_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.egraph.core import EGraph as CoreEG
+from mlopt_core.egraph.types import ENode, _pattern_attrs
+from mlopt_core.ir import Const, Op, Param, TensorType, Var
+from mlopt_core.laws import (
     ALL_RULES,
     ASSOC_ADD,
     ASSOC_MATMUL,
@@ -568,8 +568,8 @@ def test_search_plumbs_stop_and_patience():
     """``search(..., stop="improving", patience=..)`` reaches eg.run."""
     import torch
     import torch.nn as nn
-    from catopt_orchestrator import search
-    from catopt_torch.adapters import TorchSource
+    from mlopt_orchestrator import search
+    from mlopt_torch.adapters import TorchSource
 
     torch.manual_seed(0)
     m = nn.Linear(8, 8, bias=False).double()

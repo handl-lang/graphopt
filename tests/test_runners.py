@@ -1,4 +1,4 @@
-"""Delivery runners — ``catopt_orchestrator.runners``.
+"""Delivery runners — ``mlopt_orchestrator.runners``.
 
 ``optimize_model``'s ``runner=`` parameter is the sole execution
 control: each runner class owns one delivery transform
@@ -12,23 +12,23 @@ import pytest
 pytestmark = pytest.mark.e2e  # boundary-purpose file: crosses an external engine boundary
 import torch
 import torch.nn as nn
-from catopt_orchestrator.autotune import AutotuneContext, CandidateUnavailableError
+from mlopt_orchestrator.autotune import AutotuneContext, CandidateUnavailableError
 
 
 
-from catopt_orchestrator.runners import ChainedRunner, IdentityRunner, Runner, runner_candidate
+from mlopt_orchestrator.runners import ChainedRunner, IdentityRunner, Runner, runner_candidate
 
-from catopt_cuda import CudaGraphRunner
-from catopt_cuda.runners import _capture_failure_class
-from catopt_core.failures import FailureClass
-from catopt_torch.runners import TorchCompileRunner
+from mlopt_cuda import CudaGraphRunner
+from mlopt_cuda.runners import _capture_failure_class
+from mlopt_core.failures import FailureClass
+from mlopt_torch.runners import TorchCompileRunner
 
-from catopt_torch.adapters import TorchSink
-from catopt_orchestrator.optimize import Autotuned
-from catopt_orchestrator import Optimizer
+from mlopt_torch.adapters import TorchSink
+from mlopt_orchestrator.optimize import Autotuned
+from mlopt_orchestrator import Optimizer
 
-from catopt_torch.autotune import TORCH_BUILDERS
-from catopt_torch.backend import TorchBackend
+from mlopt_torch.autotune import TORCH_BUILDERS
+from mlopt_torch.backend import TorchBackend
 
 
 class _MLP(nn.Module):
@@ -385,7 +385,7 @@ def test_runner_without_name_records_class_name():
 
 def _ctx(with_ir: bool = True) -> AutotuneContext:
     """An AutotuneContext over a trivial ``add(x, p_w)`` term."""
-    from catopt_core.ir import IR, Op, Param, TensorType, Var
+    from mlopt_core.ir import IR, Op, Param, TensorType, Var
 
     x = Var("x", TensorType((3,)))
     w = Param(name="p_w", typ=TensorType((3,)))

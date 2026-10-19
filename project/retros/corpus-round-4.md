@@ -15,7 +15,7 @@ The headline is not the guard count this time: the corpus growth
 intake corpus has ever pushed through the *whole* gate stack
 (conditional truth → view oracle → typed-pay → closure).
 
-Owned: `catopt_discovery/intake.py` (the workload registry + new
+Owned: `mlopt_discovery/intake.py` (the workload registry + new
 compound classes + the `_r()` scalar fix), `tests/test_intake_defects.py`
 (the round-4 regressions), this retro.  No `torch_bridge.py` change
 was needed — every new workload exported, bound and fp64-verified
@@ -143,7 +143,7 @@ kept firing and grew their match counts (`mul_unsqueeze_l_id` 10 → 12,
 
 ## Pipeline delta — 11 rules ship
 
-`python -m catopt_discovery.intake`:
+`python -m mlopt_discovery.intake`:
 
 ```
 corpus: 110 -> 364 terms, 211 -> 725 op-tuples
@@ -242,9 +242,9 @@ workloads and stays green.
 - **Measured, not proven.**  The grown corpus fires these guards on
   the sites it contains; a guard region outside both enumeration
   windows still stands until a wider sweep reaches it.
-- **The side-file is generated.**  `$XDG_CACHE_HOME/catopt/intake_corpus.json` +
+- **The side-file is generated.**  `$XDG_CACHE_HOME/mlopt/intake_corpus.json` +
   `intake_tensors.pt` are gitignored artifacts; the growth persists by
-  re-running `python -m catopt_discovery.intake`, not by committing a
+  re-running `python -m mlopt_discovery.intake`, not by committing a
   blob.
 - **Seven guards are boundary facts, not corpus gaps.**
   `mul_slice_l_id`/`_r_id`, the four `getitem` guards and

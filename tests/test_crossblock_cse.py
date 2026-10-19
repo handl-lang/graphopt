@@ -14,23 +14,23 @@ consumable at block j — no match is ever emitted there.
 
 import copy
 
-import catopt_orchestrator.crossblock_cse as C
-import catopt_orchestrator.morphisms as M
-import catopt_orchestrator.morphisms_kv as K
+import mlopt_orchestrator.crossblock_cse as C
+import mlopt_orchestrator.morphisms as M
+import mlopt_orchestrator.morphisms_kv as K
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from catopt_core.ir import IR, Op, Param, TensorType, Var
-from catopt_orchestrator import (
+from mlopt_core.ir import IR, Op, Param, TensorType, Var
+from mlopt_orchestrator import (
     MorphismLaw,
     MorphismSearch,
     Optimizer,
     optimize_morphisms,
 )
-from catopt_torch.adapters import TorchSink, TorchSource
-from catopt_torch.backend import TorchBackend
-from catopt_torch.composer import TorchComposer
+from mlopt_torch.adapters import TorchSink, TorchSource
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.composer import TorchComposer
 
 # ---------------------------------------------------------------------------
 #  Fixtures
@@ -684,7 +684,7 @@ def test_reify_decline_shape_guards():
 
 def test_reify_decline_verify_fail(monkeypatch):
     """A failing pair verify drops the rewrite — never grafts."""
-    import catopt_torch.adapters as A
+    import mlopt_torch.adapters as A
 
     def fail_verify(*_a, **_k):
         return A.VerifyReport(max_abs=1.0, max_rel=1.0, passed=False)
@@ -803,7 +803,7 @@ def test_optimize_morphisms_entry_cse():
 
 def test_exports():
     """The law re-exports through morphisms and the package surface."""
-    import catopt_orchestrator as O
+    import mlopt_orchestrator as O
 
     assert M.CrossBlockCSE is C.CrossBlockCSE
     assert O.CrossBlockCSE is C.CrossBlockCSE

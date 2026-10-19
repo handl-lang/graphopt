@@ -1,10 +1,10 @@
-"""Coverage-gap tests for catopt_torch.calibrate.
+"""Coverage-gap tests for mlopt_torch.calibrate.
 
 Beyond the behavioural tests (test_calibrate.py) this file covers:
 
 * ``TargetProfile.from_json`` type errors, and the ``save``/``load``/
   ``cost_fn`` convenience methods;
-* ``profiles_dir`` env precedence (``$CATOPT_PROFILE_DIR`` >
+* ``profiles_dir`` env precedence (``$MLOPT_PROFILE_DIR`` >
   ``$XDG_CACHE_HOME`` > ``~/.cache``) and ``_safe_name`` edges;
 * ``load_profile``'s directory-scan fallback — including the corrupt-
   file skip and the non-directory early FileNotFoundError — and the
@@ -36,8 +36,8 @@ from pathlib import Path
 import pytest
 import torch
 
-import catopt_torch.calibrate as C
-from catopt_torch.calibrate import (
+import mlopt_torch.calibrate as C
+from mlopt_torch.calibrate import (
     PROFILE_DIR_ENV,
     TargetProfile,
     calibrate,
@@ -46,8 +46,8 @@ from catopt_torch.calibrate import (
     profiles_dir,
     save_profile,
 )
-from catopt_core.cost import roofline_cost_for
-from catopt_core.ir import Op, Param, TensorType, Var
+from mlopt_core.cost import roofline_cost_for
+from mlopt_core.ir import Op, Param, TensorType, Var
 
 TOY = TargetProfile(
     "toy", tflops=1.5, gbps=20.0, launch_us=4.0, device="cpu",
@@ -94,14 +94,14 @@ def test_profile_method_helpers(tmp_path):
 def test_profiles_dir_env_precedence(monkeypatch, tmp_path):
     monkeypatch.delenv(PROFILE_DIR_ENV, raising=False)
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "xdg"))
-    assert profiles_dir() == tmp_path / "xdg" / "catopt" / "profiles"
-    # $CATOPT_PROFILE_DIR beats $XDG_CACHE_HOME
+    assert profiles_dir() == tmp_path / "xdg" / "mlopt" / "profiles"
+    # $MLOPT_PROFILE_DIR beats $XDG_CACHE_HOME
     monkeypatch.setenv(PROFILE_DIR_ENV, str(tmp_path / "explicit"))
     assert profiles_dir() == tmp_path / "explicit"
     # neither set → ~/.cache fallback
     monkeypatch.delenv(PROFILE_DIR_ENV)
     monkeypatch.delenv("XDG_CACHE_HOME")
-    assert profiles_dir() == Path.home() / ".cache" / "catopt" / "profiles"
+    assert profiles_dir() == Path.home() / ".cache" / "mlopt" / "profiles"
 
 
 def test_safe_name_edges():
@@ -295,7 +295,7 @@ def test_provenance_omits_git_sha_when_absent(monkeypatch):
 
 
 def test_verbose_ctx_restores_level(caplog):
-    log = logging.getLogger("catopt_torch.calibrate")
+    log = logging.getLogger("mlopt_torch.calibrate")
     prev = log.level
     # verbose=False touches nothing
     with C._verbose_ctx(log, False):
@@ -306,7 +306,7 @@ def test_verbose_ctx_restores_level(caplog):
         assert log.level == logging.DEBUG
     assert log.level == prev
     # and DEBUG records actually flow while the context is open
-    with caplog.at_level(logging.DEBUG, logger="catopt_torch.calibrate"):
+    with caplog.at_level(logging.DEBUG, logger="mlopt_torch.calibrate"):
         with C._verbose_ctx(log, True):
             log.debug("surfaced only when verbose")
         # restore honours whatever level was in place (here caplog's)
@@ -374,7 +374,7 @@ def test_calibrate_cuda_branch_monkeypatched(monkeypatch, caplog):
     prev = torch.backends.cuda.matmul.allow_tf32
     torch.backends.cuda.matmul.allow_tf32 = True
     try:
-        with caplog.at_level(logging.DEBUG, logger="catopt_torch.calibrate"):
+        with caplog.at_level(logging.DEBUG, logger="mlopt_torch.calibrate"):
             p = calibrate(device="cuda", quick=True, verbose=True)
         assert p.device == "cuda"
         assert p.name == "Fake GPU"

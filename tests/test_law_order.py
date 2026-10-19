@@ -1,4 +1,4 @@
-"""The law-order board probe (:mod:`catopt_discovery.law_order`).
+"""The law-order board probe (:mod:`mlopt_discovery.law_order`).
 
 Plan 0021 depth question 1 — measured in
 ``project/retros/law-order-board.md``.  The pins here are the probe's
@@ -17,11 +17,11 @@ from dataclasses import replace
 from types import SimpleNamespace
 
 import pytest
-from catopt_core.game import Action
-from catopt_core.ir import Op, TensorType, Var
-from catopt_core.laws import DEFAULT, tags
-from catopt_core.policies import GreedyPolicy, RandomPolicy
-from catopt_discovery import law_order as lo
+from mlopt_core.game import Action
+from mlopt_core.ir import Op, TensorType, Var
+from mlopt_core.laws import DEFAULT, tags
+from mlopt_core.policies import GreedyPolicy, RandomPolicy
+from mlopt_discovery import law_order as lo
 
 
 def _v(name: str, *shape: int) -> Var:
@@ -151,7 +151,7 @@ class TestBoardRun:
         assert not v.certificates_ok
 
     def test_failed_replay_marks_the_arm(self, monkeypatch):
-        from catopt_core.egraph import CertificateVerificationError
+        from mlopt_core.egraph import CertificateVerificationError
 
         def boom(*a, **k):
             raise CertificateVerificationError("synthetic")
@@ -267,8 +267,8 @@ class TestCorpusAndReport:
     def test_zoo_terms_via_stubbed_zoo(self, monkeypatch):
         """Corpus loading works through the real export boundary."""
         import torch
-        from catopt_discovery import zoo as zoo_mod
-        from catopt_discovery.intake import Workload
+        from mlopt_discovery import zoo as zoo_mod
+        from mlopt_discovery.intake import Workload
 
         def one():
             return [
@@ -288,8 +288,8 @@ class TestCorpusAndReport:
         assert [n for n, _ in terms] == ["Tiny"]
 
     def test_zoo_terms_reports_export_errors(self, monkeypatch):
-        from catopt_discovery import zoo as zoo_mod
-        from catopt_discovery.intake import Workload
+        from mlopt_discovery import zoo as zoo_mod
+        from mlopt_discovery.intake import Workload
 
         def one():
             return [
@@ -305,7 +305,7 @@ class TestCorpusAndReport:
         assert len(errors) == 1 and "Bad" in errors[0]
 
     def test_model_terms_via_stubbed_cases(self, monkeypatch):
-        from catopt_discovery import impact
+        from mlopt_discovery import impact
 
         cases = [
             SimpleNamespace(name="stub", term=_chain()),

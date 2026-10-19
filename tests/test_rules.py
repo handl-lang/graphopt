@@ -1,8 +1,8 @@
 """Tests for rewrite rules."""
 
-from catopt_core.egraph import EGraph
-from catopt_core.ir import Const, Op, Param, TensorType, Var
-from catopt_core.laws import (
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import Const, Op, Param, TensorType, Var
+from mlopt_core.laws import (
     ASSOC_MATMUL,
     ASSOC_MATMUL_REV,
     CATEGORICAL_RULES,
@@ -34,7 +34,7 @@ def test_all_rules_contains_all():
 
 def test_all_rules_with_layout_includes_layout():
     """ALL_RULES_WITH_LAYOUT: default + the opt-in layout laws."""
-    from catopt_core.laws import ALL_RULES_WITH_LAYOUT, LAYOUT_RULES
+    from mlopt_core.laws import ALL_RULES_WITH_LAYOUT, LAYOUT_RULES
 
     assert len(ALL_RULES_WITH_LAYOUT) == (
         len(all_rules()) + len(LAYOUT_RULES)
@@ -50,7 +50,7 @@ def test_id_add_simplifies():
     eid = eg.add_term(term)
     eg.run([ID_ADD], eid, max_iterations=5, max_nodes=100)
 
-    from catopt_core.cost import count_cost
+    from mlopt_core.cost import count_cost
 
     best = eg.extract_best(eid, count_cost)
     # The best should be just "x" (leaf, 0 cost)
@@ -67,7 +67,7 @@ def test_id_mul_simplifies():
     eid = eg.add_term(term)
     eg.run([ID_MUL], eid, max_iterations=5, max_nodes=100)
 
-    from catopt_core.cost import count_cost
+    from mlopt_core.cost import count_cost
 
     best = eg.extract_best(eid, count_cost)
     assert isinstance(best, Var) and best.name == "x"
@@ -172,7 +172,7 @@ def _forced_member_term(eg, eid, op_name):
     """Extract the offered (non-leaf) member of a class by forcing the
     override to the enode with the given op — the same coordinated-
     extraction mechanism the pipeline uses for pairing offers."""
-    from catopt_core.cost import count_cost
+    from mlopt_core.cost import count_cost
 
     cls = eg.get_class(eid)
     node = next(n for n in cls.nodes if n.op == op_name)
@@ -187,10 +187,10 @@ def test_share_duplicate_param_slices_offers_dedup_member():
     fp64-exact through ir_to_torch_module."""
     import torch
 
-    from catopt_core.egraph import EGraph
-    from catopt_core.ir import IR
-    from catopt_core.laws import share_duplicate_param_slices
-    from catopt_torch.torch_bridge import ir_to_torch_module
+    from mlopt_core.egraph import EGraph
+    from mlopt_core.ir import IR
+    from mlopt_core.laws import share_duplicate_param_slices
+    from mlopt_torch.torch_bridge import ir_to_torch_module
 
     torch.manual_seed(0)
     h, d, i = 4, 3, 5
@@ -248,7 +248,7 @@ def test_share_duplicate_param_slices_offers_dedup_member():
 
     # Under the storage cost model the member wins extraction on its
     # own — 45 stored values < 60 — no coordinated override needed.
-    from catopt_core.cost import param_bytes_cost_for
+    from mlopt_core.cost import param_bytes_cost_for
 
     best = eg.extract_best(w_eid, param_bytes_cost_for(source))
     assert best == member
@@ -259,8 +259,8 @@ def test_share_duplicate_param_slices_no_offer_when_all_distinct():
     registered, the class keeps only its leaf."""
     import torch
 
-    from catopt_core.egraph import EGraph
-    from catopt_core.laws import share_duplicate_param_slices
+    from mlopt_core.egraph import EGraph
+    from mlopt_core.laws import share_duplicate_param_slices
 
     torch.manual_seed(1)
     W = torch.randn(
@@ -282,8 +282,8 @@ def test_share_duplicate_param_slices_guards():
     considered; a dedup form must strictly shrink storage."""
     import torch
 
-    from catopt_core.egraph import EGraph
-    from catopt_core.laws import share_duplicate_param_slices
+    from mlopt_core.egraph import EGraph
+    from mlopt_core.laws import share_duplicate_param_slices
 
     torch.manual_seed(2)
     # A 1-D "weight" (bias-like) with a duplicated half — not 2-D, skip.

@@ -10,13 +10,13 @@ import random
 
 import pytest
 
-from catopt_core.cost.basic import count_cost
-from catopt_core.ir import Op, TensorType, Var
-from catopt_core.laws import DEFAULT
-from catopt_discovery import engine, meta_arena as ma
-from catopt_discovery import meta_player as mp
-from catopt_discovery import play, players
-from catopt_discovery.players import LinearPolicy
+from mlopt_core.cost.basic import count_cost
+from mlopt_core.ir import Op, TensorType, Var
+from mlopt_core.laws import DEFAULT
+from mlopt_discovery import engine, meta_arena as ma
+from mlopt_discovery import meta_player as mp
+from mlopt_discovery import play, players
+from mlopt_discovery.players import LinearPolicy
 
 
 def _v(name: str, *shape: int) -> Var:
@@ -443,7 +443,7 @@ class TestFusionSites:
                 best = board.eg.extract_best(
                     board.root, board.feasible_cost
                 )
-                from catopt_core.ir import op_repr
+                from mlopt_core.ir import op_repr
 
                 delivered = op_repr(board.deliverable(best))
                 assert delivered.startswith("(gen_0_k (matmul")
@@ -456,7 +456,7 @@ class TestZooProbe:
 
     def test_zoo_case_builds(self):
         pytest.importorskip("torch")
-        from catopt_discovery import zoo as _zoo
+        from mlopt_discovery import zoo as _zoo
 
         wl = _zoo.zoo()[0]
         case = play._zoo_case(wl)
@@ -473,8 +473,8 @@ class TestZooProbe:
         # eval-fail and silently skip — decline by measurement, not
         # by accident.
         pytest.importorskip("torch")
-        from catopt_discovery import genkernel as gk
-        from catopt_discovery import zoo as _zoo
+        from mlopt_discovery import genkernel as gk
+        from mlopt_discovery import zoo as _zoo
 
         seen: dict = {}
         real = gk.profitable
@@ -497,7 +497,7 @@ class TestZooProbe:
 
     def test_zoo_probe_records_declines(self, monkeypatch):
         pytest.importorskip("torch")
-        from catopt_discovery import intake
+        from mlopt_discovery import intake
 
         calls = []
 
@@ -515,7 +515,7 @@ class TestZooProbe:
             ).double()
 
         monkeypatch.setattr(
-            "catopt_discovery.zoo.zoo",
+            "mlopt_discovery.zoo.zoo",
             lambda *a: [_W("bad", _boom), _W("ok", _ok)],
         )
         monkeypatch.setattr(
@@ -533,7 +533,7 @@ class TestScanSites:
     """The scan tier's site collector — carriers post-saturation."""
 
     def _folded_term(self):
-        from catopt_core.ir import Op, TensorType, Var
+        from mlopt_core.ir import Op, TensorType, Var
 
         def v(n, *s):
             return Var(n, TensorType(s))
@@ -551,7 +551,7 @@ class TestScanSites:
         pytest.importorskip("torch")
         sites = play._scan_sites(self._folded_term())
         assert sites, "the fold should mint an applyd site"
-        from catopt_discovery import genkernel as gk
+        from mlopt_discovery import genkernel as gk
 
         for s in sites:
             spec = s["spec"]
@@ -569,9 +569,9 @@ class TestScanSites:
         # subterm; the spec spelled under it IS the member — which
         # saturation proved equal to the source term
         torch = pytest.importorskip("torch")
-        import catopt_torch.torch_bridge as tb
+        import mlopt_torch.torch_bridge as tb
 
-        from catopt_discovery import genkernel as gk
+        from mlopt_discovery import genkernel as gk
 
         sites = play._scan_sites(self._folded_term())
         assert sites
@@ -594,7 +594,7 @@ class TestScanSites:
 
     def test_scan_handlers_carry_leaf_env(self):
         pytest.importorskip("torch")
-        from catopt_discovery import genkernel as gk
+        from mlopt_discovery import genkernel as gk
 
         hs = gk.scan_handlers(play._scan_sites(self._folded_term()))
         assert hs
@@ -606,7 +606,7 @@ class TestScanSites:
         # post-saturation verifies against its spelled body, which
         # _site_env could never locate in the raw IR
         torch = pytest.importorskip("torch")
-        from catopt_discovery import genkernel as gk
+        from mlopt_discovery import genkernel as gk
 
         term = self._folded_term()
         hs = gk.scan_handlers(play._scan_sites(term))
@@ -632,9 +632,9 @@ class TestScanSites:
         pytest.importorskip("triton")
         if not torch.cuda.is_available():
             pytest.skip("needs cuda for triton")
-        from catopt_core.ir import Op, TensorType, Var
+        from mlopt_core.ir import Op, TensorType, Var
 
-        from catopt_discovery import genkernel as gk
+        from mlopt_discovery import genkernel as gk
 
         def v(n, *s):
             return Var(n, TensorType(s))
@@ -670,7 +670,7 @@ class TestScanSites:
 
     def test_scan_sites_empty_without_carriers(self):
         pytest.importorskip("torch")
-        from catopt_core.ir import Op, TensorType, Var
+        from mlopt_core.ir import Op, TensorType, Var
 
         term = Op.make(
             "mul", Var("a", TensorType((4,))), Var("b", TensorType((4,)))
@@ -679,7 +679,7 @@ class TestScanSites:
 
     def test_mint_tiers_includes_scan(self):
         """The registry walk reaches the scan tier's collector."""
-        import catopt_discovery.genkernel as gk
+        import mlopt_discovery.genkernel as gk
 
         assert "scan" in play.TIER_SITES
         assert play.TIER_SITES["scan"] is play._scan_sites
@@ -691,7 +691,7 @@ class TestDecayedMint:
 
     def test_decayed_sites_finds_spelled_and_lifted(self):
         pytest.importorskip("torch")
-        from catopt_core.ir import Op
+        from mlopt_core.ir import Op
 
         spelled = Op.make("matmul", Op.make("mul", "a", "b"), "c")
         lifted = Op.make("om_decayed", "a", "b", "c")
@@ -702,7 +702,7 @@ class TestDecayedMint:
 
     def test_decayed_sites_ignores_other_matmuls(self):
         pytest.importorskip("torch")
-        from catopt_core.ir import Op
+        from mlopt_core.ir import Op
 
         term = Op.make("matmul", Op.make("add", "a", "b"), "c")
         assert play._decayed_sites(term) == []
@@ -727,7 +727,7 @@ class TestDecayedMint:
 
         monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
         monkeypatch.setattr(play, "_has_triton", lambda: True)
-        from catopt_discovery import genkernel as gk
+        from mlopt_discovery import genkernel as gk
 
         monkeypatch.setattr(
             gk, "decayed_triton_bindings", lambda handlers: {}
@@ -743,10 +743,10 @@ class TestDecayedMint:
         pytest.importorskip("torch")
         import torch
 
-        from catopt_discovery import genkernel as gk
-        from catopt_core.ir import Op
+        from mlopt_discovery import genkernel as gk
+        from mlopt_core.ir import Op
 
-        from catopt_core.ir import TensorType, Var
+        from mlopt_core.ir import TensorType, Var
 
         site = Op.make(
             "matmul",
@@ -789,9 +789,9 @@ class TestDecayedMint:
         import torch
 
         monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
-        from catopt_discovery import genkernel as gk
-        from catopt_discovery.zoo import _ChunkedRetention
-        from catopt_discovery.intake import Workload
+        from mlopt_discovery import genkernel as gk
+        from mlopt_discovery.zoo import _ChunkedRetention
+        from mlopt_discovery.intake import Workload
 
         wl = Workload(
             "ChunkedRetention",

@@ -56,7 +56,7 @@ from typing import Any
 
 import numpy as np
 import torch
-from catopt_torch.contraction_policy import STATE_DIM
+from mlopt_torch.contraction_policy import STATE_DIM
 from tools.probes.contraction import contraction_einsum as ce
 from tools.probes.contraction import contraction_policy as cp
 from tools.probes.contraction import contraction_scale as cs

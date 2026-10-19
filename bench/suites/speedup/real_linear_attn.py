@@ -1,4 +1,4 @@
-"""Real linear attention — the CatOpt transform on an actual architecture.
+"""Real linear attention — the MLOpt transform on an actual architecture.
 
 ``reassoc_scale`` proved the mechanism on a synthetic weight chain.  This
 bench is the same question on a real model: a **gated linear-attention
@@ -61,14 +61,14 @@ Honest expectations (measured on this CPU, fp32):
   (~0.5–0.9× vs eager).
 * Inductor fuses the *pointwise* diagonal chain into ~one kernel and
   beats every variant on this device — its compile time grows
-  linearly with the unrolled horizon T (a cost catopt's linear IR
+  linearly with the unrolled horizon T (a cost mlopt's linear IR
   build does not pay).  On launch-bound devices the schedules
   invert: O(T) serial launches vs O(log T) batched ones.
 
 Baselines / variants per cell (benchkit ``Runner``, fp32 timing):
 ``eager`` · ``inductor`` (SIGALRM-guarded ``torch.compile``) ·
-``catopt_opt`` (``optimize_model`` output) · ``catopt_opt_ind`` ·
-``catopt_scan`` (the batched-scan module) · ``catopt_scan_ind`` ·
+``mlopt_opt`` (``optimize_model`` output) · ``mlopt_opt_ind`` ·
+``mlopt_scan`` (the batched-scan module) · ``mlopt_scan_ind`` ·
 ``manual_ref`` (``retnet`` only: the closed-form geometric-sum final
 state — the reachable floor, uncertified).
 
@@ -84,7 +84,7 @@ Usage:
 """
 # ruff: noqa: E402 RUF001 RUF002 RUF003 -- ×, ·, −, ², γ, β, ⊙ in
 # strings/docstrings are deliberate math notation; sys.path setup
-# must precede the benchkit/catopt imports (bench_omd2 convention).
+# must precede the benchkit/mlopt imports (bench_omd2 convention).
 
 from __future__ import annotations
 
@@ -100,23 +100,23 @@ sys.setrecursionlimit(400_000)
 
 import torch
 import torch.nn as nn
-from catopt_carriers.scan_lower import (
+from mlopt_carriers.scan_lower import (
     build_scan_plan,
     is_scan_apply_term,
     to_batched_scan_module,
 )
-from catopt_core.egraph import EGraph
-from catopt_core.egraph.types import _LeafRegistry
-from catopt_core.ir import IR, Op, op_repr
-from catopt_core.laws import SCAN_DIAG_LAWS, SCAN_LAWS
-from catopt_orchestrator import Optimizer
-from catopt_orchestrator.optimize import (
+from mlopt_core.egraph import EGraph
+from mlopt_core.egraph.types import _LeafRegistry
+from mlopt_core.ir import IR, Op, op_repr
+from mlopt_core.laws import SCAN_DIAG_LAWS, SCAN_LAWS
+from mlopt_orchestrator import Optimizer
+from mlopt_orchestrator.optimize import (
     OptimizationResourceError,
     _lower_extracted,
 )
-from catopt_torch.adapters import TorchSink
-from catopt_torch.backend import TorchBackend
-from catopt_torch.torch_bridge import export_to_ir
+from mlopt_torch.adapters import TorchSink
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.torch_bridge import export_to_ir
 
 from bench.benchkit import (
     Case,
@@ -1036,12 +1036,12 @@ def run_cell(
     checks: dict[str, bool] = {}
     if batched32 is not None:
         with torch.no_grad():
-            checks["catopt_scan"] = torch.allclose(
+            checks["mlopt_scan"] = torch.allclose(
                 batched32(x32), ref32, **gate_tol
             )
     if opt32 is not None:
         with torch.no_grad():
-            checks["catopt_opt"] = torch.allclose(
+            checks["mlopt_opt"] = torch.allclose(
                 opt32(x32), ref32, **gate_tol
             )
     if cm32 is not None:
@@ -1055,7 +1055,7 @@ def run_cell(
         with torch.no_grad():
             cbat32_out = cbat32(x32)
             cell["scan_ind_fp32"] = _rel_diff(cbat32_out, ref32)
-            checks["catopt_scan_ind"] = torch.allclose(
+            checks["mlopt_scan_ind"] = torch.allclose(
                 cbat32_out, ref32, **gate_tol
             )
     if closed is not None:
@@ -1103,7 +1103,7 @@ def run_cell(
     if opt32 is not None:
         variants.append(
             Variant(
-                name="catopt_opt",
+                name="mlopt_opt",
                 stmt=_timed_stmt(opt32, x32),
                 flops=float(fl["folded_chain"]),
                 note=(
@@ -1115,7 +1115,7 @@ def run_cell(
     if copt32 is not None:
         variants.append(
             Variant(
-                name="catopt_opt_ind",
+                name="mlopt_opt_ind",
                 stmt=_timed_stmt(copt32, x32),
                 flops=float(fl["folded_chain"]),
                 note="optimize_model module under Inductor",
@@ -1124,7 +1124,7 @@ def run_cell(
     if batched32 is not None:
         variants.append(
             Variant(
-                name="catopt_scan",
+                name="mlopt_scan",
                 stmt=_timed_stmt(batched32, x32),
                 flops=float(fl["batched_scan"]),
                 note=(
@@ -1137,7 +1137,7 @@ def run_cell(
     if cbat32 is not None:
         variants.append(
             Variant(
-                name="catopt_scan_ind",
+                name="mlopt_scan_ind",
                 stmt=_timed_stmt(cbat32, x32),
                 flops=float(fl["batched_scan"]),
                 note="batched-scan module under Inductor",
@@ -1211,10 +1211,10 @@ def run_cell(
     cell["ms"] = ms
     iqr = getattr(ran, "iqr", None) or {}
     cell["iqr_ms"] = {str(n): float(s) * 1e3 for n, s in iqr.items()}
-    if "inductor" in ms and "catopt_scan" in ms:
-        cell["x_vs_inductor"] = ms["inductor"] / ms["catopt_scan"]
+    if "inductor" in ms and "mlopt_scan" in ms:
+        cell["x_vs_inductor"] = ms["inductor"] / ms["mlopt_scan"]
     cell["x_vs_eager"] = (
-        ms["eager"] / ms["catopt_scan"] if "catopt_scan" in ms else None
+        ms["eager"] / ms["mlopt_scan"] if "mlopt_scan" in ms else None
     )
     return cell, ran
 
@@ -1306,7 +1306,7 @@ def _md_supplement(results: list[dict]) -> str:
         lines.append(
             f"Inductor compile timed out on {len(timeouts)} cell(s) "
             f"({ts}) — the O(T)-node unrolled graph scales poorly; "
-            "catopt's linear IR build does not."
+            "mlopt's linear IR build does not."
         )
     return "\n".join(lines) + "\n"
 
@@ -1489,7 +1489,7 @@ def run_bench(args: argparse.Namespace) -> Report:
     print("\n" + "=" * 78)
     print(
         "  TIMING (median ms/call) — eager / inductor / "
-        "catopt-opt / catopt-scan / catopt-scan+ind / manual-ref"
+        "mlopt-opt / mlopt-scan / mlopt-scan+ind / manual-ref"
     )
     print("=" * 78)
     print(hdr)
@@ -1511,13 +1511,13 @@ def run_bench(args: argparse.Namespace) -> Report:
         print(
             f"{c['mode']:<7} {c['T']:>5} {c['d']:>4} {c['B']:>3} "
             f"{c['k']:>2} {c['L']:>2} | {c.get('n_levels')!s:>4} | "
-            f"{g('eager')} {g('inductor')} {g('catopt_opt')} "
-            f"{g('catopt_scan')} {g('catopt_scan_ind')} {g('manual_ref')} | "
+            f"{g('eager')} {g('inductor')} {g('mlopt_opt')} "
+            f"{g('mlopt_scan')} {g('mlopt_scan_ind')} {g('manual_ref')} | "
             f"{c.get('x_vs_eager') or 0:>5.2f} {c.get('x_vs_inductor') or 0:>5.2f}"
         )
     print("-" * len(hdr))
     print(
-        "  lvl = batched compose levels (~log2 T); xE/xI = catopt_scan "
+        "  lvl = batched compose levels (~log2 T); xE/xI = mlopt_scan "
         "speedup vs eager / vs inductor"
     )
 
@@ -1553,7 +1553,7 @@ def run_bench(args: argparse.Namespace) -> Report:
                 if best
                 else "no cell beats eager on this device"
             ),
-            metric="catopt_scan / eager",
+            metric="mlopt_scan / eager",
             value=best["x_vs_eager"] if best else None,
             evidence={
                 "honest_negatives": len(losses),
@@ -1610,7 +1610,7 @@ def run_bench(args: argparse.Namespace) -> Report:
 def main() -> None:
     ap = argparse.ArgumentParser(
         description=(
-            "real linear-attention block: catopt scan batching + "
+            "real linear-attention block: mlopt scan batching + "
             "weight-chain fold vs eager / Inductor"
         )
     )

@@ -1,4 +1,4 @@
-"""Tests for ``catopt_discovery.intake`` — the real-workload intake.
+"""Tests for ``mlopt_discovery.intake`` — the real-workload intake.
 
 The intake feeds the census programs nobody wrote by hand: a
 ``torch.nn.Module`` + example input is pushed through the real export
@@ -23,14 +23,14 @@ import json
 import pytest
 import torch
 import torch.nn as nn
-from catopt_core.ir import Op, TensorType, Var, term_from_data
-from catopt_discovery import intake as li
-from catopt_discovery import pipeline as pl
-from catopt_discovery import workload_gen as lwg
-from catopt_discovery.impact import TermCase
-from catopt_torch.adapters import TorchSink
-from catopt_torch.report import VerifyReport
-from catopt_torch.torch_bridge import export_to_ir
+from mlopt_core.ir import Op, TensorType, Var, term_from_data
+from mlopt_discovery import intake as li
+from mlopt_discovery import pipeline as pl
+from mlopt_discovery import workload_gen as lwg
+from mlopt_discovery.impact import TermCase
+from mlopt_torch.adapters import TorchSink
+from mlopt_torch.report import VerifyReport
+from mlopt_torch.torch_bridge import export_to_ir
 
 
 def _v(name: str, *shape: int) -> Var:

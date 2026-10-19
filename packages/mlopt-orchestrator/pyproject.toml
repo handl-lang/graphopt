@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mlopt-orchestrator"
+version = "0.1.0dev"
+description = "Backend-neutral optimizer orchestrator for mlopt: pipeline verbs, strategies, regime frontier."
+requires-python = ">=3.11"
+dependencies = ["mlopt-core"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

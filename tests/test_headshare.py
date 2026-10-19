@@ -13,11 +13,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from catopt_core.cost import dag_cost, flops_cost
-from catopt_core.egraph import EGraph
-from catopt_core.egraph.types import ENode
-from catopt_core.ir import IR, Const, Op, Param, TensorType, Var
-from catopt_core.laws.headshare import (
+from mlopt_core.cost import dag_cost, flops_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.egraph.types import ENode
+from mlopt_core.ir import IR, Const, Op, Param, TensorType, Var
+from mlopt_core.laws.headshare import (
     _Ctx,
     _joint_sig,
     _piece,
@@ -25,14 +25,14 @@ from catopt_core.laws.headshare import (
     headshare_keys_hold,
     share_duplicate_attention_heads,
 )
-from catopt_orchestrator.optimize import (
+from mlopt_orchestrator.optimize import (
     Optimizer,
     _cache_replay,
     _term_param_names,
 )
-from catopt_orchestrator import SearchResult
-from catopt_torch.backend import TorchBackend
-from catopt_torch.torch_bridge import IRModule, export_to_ir
+from mlopt_orchestrator import SearchResult
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.torch_bridge import IRModule, export_to_ir
 
 B, T, H, D, I = 2, 5, 4, 4, 16  # batch, seq, heads, head-dim, model-dim
 
@@ -1127,7 +1127,7 @@ def test_cache_replay_headshare_gate():
         param_values=tensors,
         stats={"param_sharing": {"headshare": [recheck]}},
     )
-    from catopt_orchestrator.optimize import _cache_entry
+    from mlopt_orchestrator.optimize import _cache_entry
 
     entry = _cache_entry(res)
     assert entry["headshare"] == [recheck]
@@ -1184,7 +1184,7 @@ def test_optimizer_default_untouched_on_distinct_heads():
 #  Resolver/handler branch coverage — synthetic states and crafted terms
 # ---------------------------------------------------------------------------
 
-from catopt_core.laws.headshare import (  # noqa: E402
+from mlopt_core.laws.headshare import (  # noqa: E402
     _bias_sources,
     _bounds,
     _cls_shape,
@@ -1905,7 +1905,7 @@ def test_offer_joint_sig_failure():
     for c in sdpa_node[1].children:
         _resolve(ctx, c)
     del ctx.src["p_q"]
-    from catopt_core.laws.headshare import _offer_sdpa
+    from mlopt_core.laws.headshare import _offer_sdpa
 
     assert _offer_sdpa(ctx, eg.find(sdpa_node[0]), sdpa_node[1],
                      True) is None

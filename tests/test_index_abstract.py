@@ -11,7 +11,7 @@ negative).
 """
 
 import pytest
-from catopt_core.ir import Const, Op, TensorType, Var
+from mlopt_core.ir import Const, Op, TensorType, Var
 
 from lab.bridge import combinator as cb
 from lab.bridge import index_abstract as ia

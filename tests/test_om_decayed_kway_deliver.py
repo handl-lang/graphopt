@@ -27,11 +27,11 @@ from __future__ import annotations
 import pytest
 pytestmark = pytest.mark.e2e  # boundary-purpose file: crosses an external engine boundary
 import torch
-from catopt_carriers.om import OM_CHUNKIFY, OM_LAWS, om_kway_laws
-from catopt_core.cost import flops_cost
-from catopt_core.egraph import EGraph
-from catopt_core.ir import IR, Op
-from catopt_core.laws.tensor import (
+from mlopt_carriers.om import OM_CHUNKIFY, OM_LAWS, om_kway_laws
+from mlopt_core.cost import flops_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import IR, Op
+from mlopt_core.laws.tensor import (
     ASSOC_MATMUL_REV,
     DIV_ADD_FACTOR,
     FACTOR_MUL,
@@ -40,9 +40,9 @@ from catopt_core.laws.tensor import (
     MUL_DIV_SWAP,
     SPLIT_SCALAR_RULES,
 )
-from catopt_discovery.play import _time_module
-from catopt_discovery.zoo import _ChunkedRetention
-from catopt_torch.adapters import TorchSink, TorchSource
+from mlopt_discovery.play import _time_module
+from mlopt_discovery.zoo import _ChunkedRetention
+from mlopt_torch.adapters import TorchSink, TorchSource
 
 #: The naturality bridges the fold's last hops need (plan 0023) —
 #: load-bearing for the carrier preference.
@@ -124,7 +124,7 @@ class TestKwayCarrierDelivery:
         — see :mod:`tools.om_decayed_kway_deliver_probe` — but the
         delivery path itself is sound.)
         """
-        pytest.importorskip("catopt_torch")
+        pytest.importorskip("mlopt_torch")
         model, x, ir, leaves, best = _extract(512, 2)
         assert best.op == "concat"
         sink = TorchSink()
@@ -146,7 +146,7 @@ class TestKwayCarrierDelivery:
         host (at T=1024 the margin is ~2.2x, which a contended box
         can invert).
         """
-        pytest.importorskip("catopt_torch")
+        pytest.importorskip("mlopt_torch")
         t, k = 2048, 4
         model, x, ir, leaves, best = _extract(t, k)
         assert best.op == "concat"

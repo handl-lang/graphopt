@@ -7,7 +7,7 @@ and the spelled ``loop`` RetNet fold are the properties under test.
 
 import pytest
 import torch
-from catopt_core.ir import Const, Op, Param, TensorType, Var
+from mlopt_core.ir import Const, Op, Param, TensorType, Var
 
 from lab.bridge import combinator as cb
 
@@ -104,10 +104,10 @@ def test_retnet_fold_expands_and_chains():
 
 def test_retnet_fold_verifies_against_model():
     """End-to-end: the spelled loop IS chunked retention."""
-    import catopt_carriers  # noqa: F401 — carrier op bindings
-    from catopt_core.ir import IR
-    from catopt_discovery.zoo import _ChunkedRetention
-    from catopt_torch.adapters import TorchSink
+    import mlopt_carriers  # noqa: F401 — carrier op bindings
+    from mlopt_core.ir import IR
+    from mlopt_discovery.zoo import _ChunkedRetention
+    from mlopt_torch.adapters import TorchSink
 
     torch.manual_seed(0)
     t, k, d, b = 16, 2, 8, 1

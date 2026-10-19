@@ -22,17 +22,17 @@ from unittest import mock
 import pytest
 import torch
 import torch.nn as nn
-from catopt_core.cost import flops_cost
-from catopt_core.egraph import EGraph
-from catopt_core.ir import IR, Op, Param, TensorType, Var, op_repr
-from catopt_core.laws.specials import (
+from mlopt_core.cost import flops_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import IR, Op, Param, TensorType, Var, op_repr
+from mlopt_core.laws.specials import (
     _analyse,
     _bounded_elide,
     _m_elide_bounded,
     offer_weight_specials,
 )
-from catopt_orchestrator import optimize as opt_mod
-from catopt_orchestrator.optimize import (
+from mlopt_orchestrator import optimize as opt_mod
+from mlopt_orchestrator.optimize import (
     Compositional,
     OptimizationResourceError,
     Optimizer,
@@ -41,9 +41,9 @@ from catopt_orchestrator.optimize import (
     _bounded_term,
     _check_budget_engine,
 )
-from catopt_torch.backend import TorchBackend
-from catopt_torch.export import export_optimized
-from catopt_torch.torch_bridge import IRModule
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.export import export_optimized
+from mlopt_torch.torch_bridge import IRModule
 
 
 def _lower(term, x, tensors, xv):
@@ -747,7 +747,7 @@ def test_propagate_bounds_block_input_fallback():
     xv = torch.randn(8, 32, dtype=torch.float64)
 
     # (a) Non-projection LHS — no isolable site input.
-    from catopt_core.egraph.types import Rewrite
+    from mlopt_core.egraph.types import Rewrite
 
     eg._rule_objs["fake#0"] = Rewrite(
         name="fake#0",
@@ -1045,7 +1045,7 @@ def test_morphism_search_forwards_budget_kwargs():
     detect_specials=, detect_factors=)`` reaches
     ``_optimize_morphisms`` — forwarded to each per-block fallback
     search, which bound-gates on the propagated output bound."""
-    from catopt_orchestrator.morphisms import MorphismSearch
+    from mlopt_orchestrator.morphisms import MorphismSearch
 
     torch.manual_seed(16)
     model = _BoundStack().eval()
@@ -1072,7 +1072,7 @@ def test_morphism_search_forwards_budget_kwargs():
 
 def test_morphism_search_accepts_budget_without_blocks():
     """The kwarg is accepted even when nothing needs the fallback."""
-    from catopt_orchestrator.morphisms import MorphismSearch
+    from mlopt_orchestrator.morphisms import MorphismSearch
 
     torch.manual_seed(17)
     model = _BoundStack().eval()
@@ -1091,11 +1091,11 @@ def test_arm_law_budgets():
     """``error_budget`` arms budget-aware laws left at ``None`` —
     on a copy, never mutating the caller's law — and leaves
     explicitly-budgeted and budget-free laws alone."""
-    from catopt_orchestrator.morphisms import (
+    from mlopt_orchestrator.morphisms import (
         WeightTie,
         _arm_law_budgets,
     )
-    from catopt_orchestrator.morphisms_kv import KVLatentShare
+    from mlopt_orchestrator.morphisms_kv import KVLatentShare
 
     kv = KVLatentShare()
     (armed,) = _arm_law_budgets([kv], 1e-3)

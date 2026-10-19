@@ -41,7 +41,7 @@ _BADGES = {
 class Variant:
     """One timed implementation inside a ``Case`` cell."""
 
-    name: str  # "eager" | "inductor" | "catopt" | ...
+    name: str  # "eager" | "inductor" | "mlopt" | ...
     stmt: Callable[[], object]  # one forward call, CPU/GPU-synced
     flops: float | None = None  # analytic runtime-FLOPs, for report
     note: str = ""  # provenance notes (e.g. "weight-folded")

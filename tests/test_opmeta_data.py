@@ -1,7 +1,7 @@
-"""Tests for ``catopt_core.opdata`` — declaring an op as data.
+"""Tests for ``mlopt_core.opdata`` — declaring an op as data.
 
 Plan 0019: a view / relayout-class op is a *declaration* — an
-:class:`~catopt_core.opdata.OpDef` (name, arity, tags, attr schema, and
+:class:`~mlopt_core.opdata.OpDef` (name, arity, tags, attr schema, and
 a shape rule written in the existing shape-spec DSL).  These tests
 declare two real torch spellings absent from the registry
 (``view_as``, ``swapaxes``) and show they are first-class: registered,
@@ -12,12 +12,12 @@ additive (``reset_declarations`` restores the shipped state).
 import json
 
 import pytest
-from catopt_core import opdata
-from catopt_core import opmeta as om
-from catopt_core import typing as ty
-from catopt_core.attrs import ATTR_REQUIRED, ATTR_SCHEMA
-from catopt_core.ir import Op, TensorType, Var
-from catopt_core.meta import match_pattern
+from mlopt_core import opdata
+from mlopt_core import opmeta as om
+from mlopt_core import typing as ty
+from mlopt_core.attrs import ATTR_REQUIRED, ATTR_SCHEMA
+from mlopt_core.ir import Op, TensorType, Var
+from mlopt_core.meta import match_pattern
 
 #: A shape-preserving view: output is operand 0's shape.
 _VIEW_AS = opdata.OpDef(

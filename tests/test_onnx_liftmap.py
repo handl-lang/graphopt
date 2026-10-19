@@ -1,7 +1,7 @@
 """The ONNX -> IR op table — per-op lifting and its refusals.
 
 ``test_onnx_source.py`` exercises the port end to end; this file
-exercises :mod:`catopt_onnx.liftmap` itself: every mapped op's minted
+exercises :mod:`mlopt_onnx.liftmap` itself: every mapped op's minted
 spelling, the attr folds (constant inputs becoming IR attrs), the
 composed lifts (``Gemm``'s non-``linear`` spellings, the flag-driven
 activations) and each refusal the table declares.  Where the minted
@@ -25,8 +25,8 @@ pytestmark = pytest.mark.e2e  # boundary-purpose file: crosses an external engin
 pytest.importorskip("onnx")
 pytest.importorskip("onnxruntime")
 
-from catopt_core.ir import Op
-from catopt_onnx import (
+from mlopt_core.ir import Op
+from mlopt_onnx import (
     GraphLifter,
     OnnxImportError,
     OnnxSink,
@@ -1857,7 +1857,7 @@ def test_an_empty_bound_name_is_never_installed(monkeypatch):
     empty name (ONNX's optional-output hole spelled as a key) must
     not poison the environment.
     """
-    from catopt_onnx import ONNX_LIFTS
+    from mlopt_onnx import ONNX_LIFTS
 
     def weird(g, node):
         """Bind a term to the empty output name."""

@@ -1,7 +1,7 @@
 """The measured claim for the open game — does the learned arm beat
 random at finding useful-new laws per evaluation, on held-out pages?
 
-The open domain (:mod:`catopt_discovery.open_game`) plays the
+The open domain (:mod:`mlopt_discovery.open_game`) plays the
 enumerated candidate stream as pages: a move evaluates one candidate,
 the reward is its verdict tier.  This module *measures* the claim the
 game exists to support — that a learned ordering of the page raises
@@ -57,10 +57,10 @@ from __future__ import annotations
 
 import pytest
 import torch
-from catopt_discovery import engine, play
-from catopt_discovery import open_game as og
-from catopt_discovery import proposal as lp
-from catopt_discovery.meta_arena import Action
+from mlopt_discovery import engine, play
+from mlopt_discovery import open_game as og
+from mlopt_discovery import proposal as lp
+from mlopt_discovery.meta_arena import Action
 
 #: Page size — the episode horizon (budget = page + 1).
 PAGE = 16

@@ -1,10 +1,10 @@
 """Train the meta-arena policy and emit the baked prior.
 
 The sibling of ``lab/train/train_open_prior.py`` for the meta board:
-trains a *cold* :class:`catopt_discovery.meta_player.MetaLearnedPlayer`
+trains a *cold* :class:`mlopt_discovery.meta_player.MetaLearnedPlayer`
 over a fixed case stream and prints the trained weight table as the
 Python literal that bakes into
-:data:`catopt_discovery.lawdata.META_ARENA_PLAYER_WEIGHTS` (the
+:data:`mlopt_discovery.lawdata.META_ARENA_PLAYER_WEIGHTS` (the
 ``MetaLearnedPlayer`` default).
 
 The split is the registry's: train on ``meta_player.gen_cases(seed,
@@ -31,8 +31,8 @@ import random
 from typing import Any
 
 import torch
-from catopt_discovery import meta_arena as ma
-from catopt_discovery import meta_player as mp
+from mlopt_discovery import meta_arena as ma
+from mlopt_discovery import meta_player as mp
 
 #: Defaults — the case counts and horizon the meta driver uses.
 TRAIN_CASES = 40

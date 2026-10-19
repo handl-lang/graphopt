@@ -10,7 +10,7 @@ regions — 51 new `nn.*`/compound workloads targeting the transformer,
 normalisation, conv/attention, recurrent/scan and view-identity
 spellings the census lacked.
 
-Owned: `catopt_discovery/intake.py` (the workload registry + new
+Owned: `mlopt_discovery/intake.py` (the workload registry + new
 compound classes), `tests/test_intake_defects.py` (the round-3
 regressions), this retro.  No lowering defect needed a
 `torch_bridge.py` change this round — every new workload exported,
@@ -106,7 +106,7 @@ slice; that is a future corpus question, not a missing predicate.
 
 ## Pipeline delta
 
-`python -m catopt_discovery.intake` (writes the side-file census,
+`python -m mlopt_discovery.intake` (writes the side-file census,
 then the baseline-vs-enlarged mirror):
 
 ```
@@ -181,16 +181,16 @@ runs) now covers 217 workloads and stays green.
   the sites it contains; a guard region outside both enumeration
   windows still stands until a wider sweep reaches it — the same
   blind spot every guarded law carries.
-- **The side-file is generated.**  `$XDG_CACHE_HOME/catopt/intake_corpus.json` +
+- **The side-file is generated.**  `$XDG_CACHE_HOME/mlopt/intake_corpus.json` +
   `intake_tensors.pt` are gitignored artifacts; the corpus growth
-  persists by *re-running* `python -m catopt_discovery.intake`, not
+  persists by *re-running* `python -m mlopt_discovery.intake`, not
   by committing a blob.
 - **Two spellings declined to appear.**  `mul_slice_l_id` needs a
   surviving full-extent slice (export folds it to `alias`); the
   `_w` "wrap" guards need a third operand the round-3 models do not
   spell.  Both are corpus questions, listed for round 4.
 - **Concurrent edit.**  While this round ran, a parallel change was
-  editing `catopt_core.laws.cond` (new predicates: `axis-align-eq`,
+  editing `mlopt_core.laws.cond` (new predicates: `axis-align-eq`,
   `bcast-dim-inv`, `select-out`, `slice-out`, `chunk-out`,
   `transpose-out`) — additions only, no existing predicate changed,
   so the guard measurement above (which uses only pre-existing

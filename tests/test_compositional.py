@@ -13,11 +13,11 @@ import time
 import pytest
 import torch
 import torch.nn as nn
-from catopt_torch.models import DeepParallel, ParallelBlock, ParallelLinear
+from mlopt_torch.models import DeepParallel, ParallelBlock, ParallelLinear
 
-from catopt_orchestrator import Compositional, Optimizer
+from mlopt_orchestrator import Compositional, Optimizer
 
-from catopt_torch.backend import TorchBackend
+from mlopt_torch.backend import TorchBackend
 
 
 class MiniGPT(nn.Module):
@@ -195,7 +195,7 @@ def test_compositional_in_place_clone_failure_is_reported(monkeypatch):
     """When the recompose clone fails (e.g. an unpicklable non-tensor
     attr), the returned model is the INPUT unmodified — the report must
     say so, not run a degenerate self-comparison verify."""
-    import catopt_torch.composer as C
+    import mlopt_torch.composer as C
 
 
     torch.manual_seed(0)
@@ -270,7 +270,7 @@ def test_compositional_recompose_shares_tensor_storage():
 def test_shared_param_clone_preserves_structure_and_training():
     """Unit-level check of the clone helper: every module shell and
     dict is fresh, every tensor is aliased, non-tensor attrs copy."""
-    import catopt_torch.composer as O
+    import mlopt_torch.composer as O
 
     torch.manual_seed(0)
     model = MiniGPT(dim=32, n_heads=2, depth=2, hidden_mult=2)
@@ -302,7 +302,7 @@ def test_shared_param_clone_preserves_structure_and_training():
 def test_shared_param_clone_cuda_no_param_copy():
     """On GPU the clone allocates no second copy of the weights: device
     memory grows only by the (host-side) module shells."""
-    import catopt_torch.composer as O
+    import mlopt_torch.composer as O
 
     torch.manual_seed(0)
     model = MiniGPT(dim=512, n_heads=8, depth=4, hidden_mult=4)

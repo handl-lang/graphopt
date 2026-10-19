@@ -1,4 +1,4 @@
-"""Tests for the layout laws (:mod:`catopt_core.laws.layout`).
+"""Tests for the layout laws (:mod:`mlopt_core.laws.layout`).
 
 Every law is a pure re-layout — a stride permutation that evaluates to
 the same values — so verification is *bitwise* in float64
@@ -22,18 +22,18 @@ Covered surface:
 from __future__ import annotations
 
 import torch
-from catopt_core.cost import count_cost
-from catopt_core.egraph import EGraph
-from catopt_core.ir import IR, Const, Op, Param, TensorType, Var
-from catopt_core.laws import (
+from mlopt_core.cost import count_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import IR, Const, Op, Param, TensorType, Var
+from mlopt_core.laws import (
     LAYOUT_RULES,
     LINEAR_FROM_MM_T,
     LINEAR_FROM_MM_T_BARE,
     LINEAR_TO_MM_T,
 )
-from catopt_core.laws.layout import _matmul_rules
-from catopt_core.typing import _axis_pair
-from catopt_torch.torch_bridge import ir_to_torch_module
+from mlopt_core.laws.layout import _matmul_rules
+from mlopt_core.typing import _axis_pair
+from mlopt_torch.torch_bridge import ir_to_torch_module
 
 torch.manual_seed(0)
 
@@ -94,8 +94,8 @@ def _opt_with_layout(m, x, cost_fn):
     so the e2e law tests drive the real pipeline directly:
     export → e-graph → saturate(union) → extract → lower.
     """
-    from catopt_torch.torch_bridge import export_to_ir, ir_to_torch_module
-    from catopt_core.laws import all_rules
+    from mlopt_torch.torch_bridge import export_to_ir, ir_to_torch_module
+    from mlopt_core.laws import all_rules
 
     ir, source = export_to_ir(m, x)
     eg = EGraph()

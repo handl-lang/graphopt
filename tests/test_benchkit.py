@@ -36,26 +36,26 @@ def _report() -> Report:
         params={"k": 4},
         variants=[
             Variant("eager", lambda: None),
-            Variant("catopt", lambda: None),
+            Variant("mlopt", lambda: None),
         ],
         aux={"note": "weight-folded", "nested": {"a": 1, "b": [2, 3]}},
     )
     cell = Cell(
         case,
-        {"eager": 1e-3, "catopt": 2e-4},
-        {"eager": 1e-5, "catopt": 2e-6},
+        {"eager": 1e-3, "mlopt": 2e-4},
+        {"eager": 1e-5, "mlopt": 2e-6},
         case.aux,
     )
     return Report(
         suite="toy",
         title="toy suite",
-        summary="does catopt beat eager?",
+        summary="does mlopt beat eager?",
         findings=[
             Finding(
-                claim="catopt folds the chain",
+                claim="mlopt folds the chain",
                 verdict=Verdict.WIN,
                 headline="5.0x vs eager",
-                metric="catopt/eager",
+                metric="mlopt/eager",
                 value=5.0,
             )
         ],
@@ -71,7 +71,7 @@ def test_report_json_roundtrip(tmp_path: Path) -> None:
     assert payload["schema"] == 1
     assert payload["suite"] == "toy"
     assert payload["findings"][0]["verdict"] == "win"
-    assert payload["cells"][0]["median_s"]["catopt"] == 2e-4
+    assert payload["cells"][0]["median_s"]["mlopt"] == 2e-4
 
 
 def test_baseline_projection_drops_the_live_spread(
@@ -80,7 +80,7 @@ def test_baseline_projection_drops_the_live_spread(
     """A pinned baseline keeps the gated median, not the live spread.
 
     ``compare`` / ``gate`` read ``median_s`` only, and the timing
-    contract (``catopt_core.timing``) can move the IQR under a frozen
+    contract (``mlopt_core.timing``) can move the IQR under a frozen
     baseline — so a baseline records exactly what it gates on.  The
     spread stays in every live report.
     """

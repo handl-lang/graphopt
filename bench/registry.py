@@ -204,7 +204,7 @@ SUITES: list[SuiteSpec] = [
         "structure_census",
         "structure",
         "Weight-structure census",
-        "How much catopt-exploitable structure do real trained weights "
+        "How much mlopt-exploitable structure do real trained weights "
         "carry?",
         "Exact mode: ~zero bitwise structure on dense LLMs, real on "
         "structured ones.",
@@ -389,12 +389,12 @@ SUITES: list[SuiteSpec] = [
         "verified.",
         mechanisms=("bounded",),
     ),
-    # -- integration: catopt against an external stack ------------------
+    # -- integration: mlopt against an external stack ------------------
     _s(
         "vllm_compare",
         "integration",
-        "catopt vs vLLM and through it",
-        "Can vLLM serve a catopt-optimized model token-for-token?",
+        "mlopt vs vLLM and through it",
+        "Can vLLM serve a mlopt-optimized model token-for-token?",
         "WIN — token-for-token agreement; the wins are complementary, "
         "not competing.",
         tier="model",

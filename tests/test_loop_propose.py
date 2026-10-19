@@ -9,7 +9,7 @@ compilation (the gate-3 negative).
 """
 
 import pytest
-from catopt_core.ir import Const, Op, Param, TensorType, Var
+from mlopt_core.ir import Const, Op, Param, TensorType, Var
 
 from lab.bridge import combinator as cb
 from lab.bridge import loop_propose as lp

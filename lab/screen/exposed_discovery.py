@@ -46,20 +46,20 @@ import time
 from pathlib import Path
 from typing import Any
 
-import catopt_carriers  # noqa: F401 — registers the carrier machinery
+import mlopt_carriers  # noqa: F401 — registers the carrier machinery
 import torch
-from catopt_core.ir import Op, op_repr, term_to_data
-from catopt_core.laws import ALL_RULES
-from catopt_core.opmeta import arity as _op_arity
-from catopt_discovery import pipeline as pipe
-from catopt_discovery import proposal as lp
-from catopt_discovery.census import CorpusTerm, op_tuple_census
-from catopt_discovery.enumerate import (
+from mlopt_core.ir import Op, op_repr, term_to_data
+from mlopt_core.laws import ALL_RULES
+from mlopt_core.opmeta import arity as _op_arity
+from mlopt_discovery import pipeline as pipe
+from mlopt_discovery import proposal as lp
+from mlopt_discovery.census import CorpusTerm, op_tuple_census
+from mlopt_discovery.enumerate import (
     _ARITY_OVERRIDES,
     enumerate_candidates,
 )
-from catopt_discovery.grammar import _evaluate as _bounded_evaluate
-from catopt_discovery.impact import (
+from mlopt_discovery.grammar import _evaluate as _bounded_evaluate
+from mlopt_discovery.impact import (
     TermCase,
     _cost_fn,
     _iter_subterms,
@@ -67,7 +67,7 @@ from catopt_discovery.impact import (
     new_laws,
     reach_row,
 )
-from catopt_discovery.shape_proposal import _sink
+from mlopt_discovery.shape_proposal import _sink
 
 from lab.screen.exposure_screen import _export, _workloads
 

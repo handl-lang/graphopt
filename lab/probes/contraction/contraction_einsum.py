@@ -51,7 +51,7 @@ from typing import Any
 
 import numpy as np
 import torch
-from catopt_torch.contraction_policy import (
+from mlopt_torch.contraction_policy import (
     random_bond_network,
     rollout_orders,
 )
@@ -85,7 +85,7 @@ _HUGE = 10**9
 
 
 # ``random_bond_network`` is imported from the shipped
-# ``catopt_torch.contraction_policy`` (the bundled-weights player was
+# ``mlopt_torch.contraction_policy`` (the bundled-weights player was
 # trained on this family — it is the canonical generator).
 
 
@@ -277,7 +277,7 @@ def _policy_rollouts(
     The mirror of ``contraction_policy.run_policy_batch``, except it also
     records the contraction order each rollout chose, so the order can be
     re-scored with opt_einsum's independent cost model.  The driver is
-    the shipped ``catopt_torch.contraction_policy.rollout_orders``.
+    the shipped ``mlopt_torch.contraction_policy.rollout_orders``.
     """
     return rollout_orders(
         model, tensors, sizes, greedy_ref, samples, device, temperature

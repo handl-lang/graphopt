@@ -10,7 +10,7 @@ that sample each contraction pair from the policy's own softmax
 distribution — a temperature knob — and keep the best order so far.
 
 The shipped machinery already implements the move:
-:func:`catopt_torch.contraction_policy.rollout_orders` with
+:func:`mlopt_torch.contraction_policy.rollout_orders` with
 ``greedy=False`` samples from ``Categorical(logits / temperature)``,
 so a "policy-guided restart" is exactly best-of-N sampled rollouts.
 This tool adds what the earlier ladders did not isolate:
@@ -64,7 +64,7 @@ import time
 from typing import Any
 
 import torch
-from catopt_torch.contraction_policy import (
+from mlopt_torch.contraction_policy import (
     MAX_BATCH,
     load_contraction_policy,
     random_bond_network,

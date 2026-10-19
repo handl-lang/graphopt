@@ -32,10 +32,10 @@ import argparse
 import time
 
 import torch
-from catopt_carriers.om import OM_CHUNKIFY, OM_LAWS, om_kway_laws
-from catopt_core.cost import dag_cost, flops_cost
-from catopt_core.egraph import EGraph
-from catopt_core.laws.tensor import (
+from mlopt_carriers.om import OM_CHUNKIFY, OM_LAWS, om_kway_laws
+from mlopt_core.cost import dag_cost, flops_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.laws.tensor import (
     ASSOC_MATMUL_REV,
     DIV_ADD_FACTOR,
     FACTOR_MUL,
@@ -44,8 +44,8 @@ from catopt_core.laws.tensor import (
     MUL_DIV_SWAP,
     SPLIT_SCALAR_RULES,
 )
-from catopt_discovery.zoo import _ChunkedRetention
-from catopt_torch.adapters import TorchSource
+from mlopt_discovery.zoo import _ChunkedRetention
+from mlopt_torch.adapters import TorchSource
 
 #: The naturality bridges the fold's last hops need (plan 0023: the
 #: "fused still wins" reading used the limited set; these are

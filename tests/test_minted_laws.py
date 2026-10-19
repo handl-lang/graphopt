@@ -1,6 +1,6 @@
 """The shipped minted-composite class — ``conv_bn_fold``, verbatim.
 
-``catopt_core.laws.minted`` embeds the stored-closure records the
+``mlopt_core.laws.minted`` embeds the stored-closure records the
 conv+BN eval-mode fold minted as (the ``syn_*`` chain of
 ``lab/probes/conv_fold_premise_pay_probe.py``) and rebuilds the
 transported guard at import.  These tests pin that the *shipped*
@@ -12,11 +12,11 @@ into a weaker admit.
 from __future__ import annotations
 
 import pytest
-from catopt_core import meta
-from catopt_core.cost import count_cost, dag_cost
-from catopt_core.egraph import EGraph
-from catopt_core.ir import Op, Param, TensorType, Var, op_repr
-from catopt_core.laws import (
+from mlopt_core import meta
+from mlopt_core.cost import count_cost, dag_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import Op, Param, TensorType, Var, op_repr
+from mlopt_core.laws import (
     ALL_RULES,
     BATCH_NORM_RULES,
     CONV_BN_FOLD,
@@ -27,7 +27,7 @@ from catopt_core.laws import (
     law_provenance,
     minted,
 )
-from catopt_core.laws.serialize import alpha_key, missing_hooks
+from mlopt_core.laws.serialize import alpha_key, missing_hooks
 
 
 def _T(*shape: int) -> TensorType:
@@ -91,7 +91,7 @@ def test_shipped_pattern_is_the_embedded_record():
         "__conv_channel_scale_sp_48__conv_channel_scale_l_sp_209"
         "__conv_channel_shift_sp_896"
     ]
-    from catopt_core.laws.serialize import object_from_data
+    from mlopt_core.laws.serialize import object_from_data
 
     bare = object_from_data(root)
     assert alpha_key(CONV_BN_FOLD.lhs, CONV_BN_FOLD.rhs) == alpha_key(
@@ -204,8 +204,8 @@ def test_materialize_intermediate_rebuilds_with_guard():
 
 def test_shipped_object_restores_through_the_store():
     """store → admit rebuilds the transported hooks; fires identically."""
-    from catopt_core.laws.serialize import alpha_key
-    from catopt_discovery import evidence as ev
+    from mlopt_core.laws.serialize import alpha_key
+    from mlopt_discovery import evidence as ev
 
     lib = {
         r.name: r for r in [*BATCH_NORM_RULES, *CONV_FOLD_RULES]

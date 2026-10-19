@@ -14,24 +14,24 @@ Covers:
 import pytest
 import torch
 
-from catopt_core import laws as R
-from catopt_torch.calibrate import (
+from mlopt_core import laws as R
+from mlopt_torch.calibrate import (
     PROFILE_DIR_ENV,
     TargetProfile,
     save_profile,
 )
-from catopt_core.cost import (
+from mlopt_core.cost import (
     flops_cost,
     launch_aware_cost,
     roofline_cost,
     roofline_cost_for,
 )
-from catopt_core.egraph import EGraph, verify_certificate
-from catopt_core.ir import IR, Op, TensorType, Var, op_repr
-from catopt_torch.models.ssm import DiagonalSSM
-from catopt_carriers.om import OM_LAWS
-from catopt_carriers.om_lower import is_om_apply_term
-from catopt_torch.regime import (
+from mlopt_core.egraph import EGraph, verify_certificate
+from mlopt_core.ir import IR, Op, TensorType, Var, op_repr
+from mlopt_torch.models.ssm import DiagonalSSM
+from mlopt_carriers.om import OM_LAWS
+from mlopt_carriers.om_lower import is_om_apply_term
+from mlopt_torch.regime import (
     EXECUTORS,
     Regime,
     RegimeDispatch,
@@ -42,8 +42,8 @@ from catopt_torch.regime import (
     regime_dispatch,
     regime_frontier,
 )
-from catopt_carriers.scan_lower import is_scan_apply_term
-from catopt_torch.torch_bridge import export_to_ir, ir_to_torch_module
+from mlopt_carriers.scan_lower import is_scan_apply_term
+from mlopt_torch.torch_bridge import export_to_ir, ir_to_torch_module
 
 # ---------------------------------------------------------------------------
 # fixtures / helpers
@@ -412,7 +412,7 @@ class TestDegradation:
 
 
 # ---------------------------------------------------------------------------
-# target profiles (catopt_torch.calibrate) wired into regimes
+# target profiles (mlopt_torch.calibrate) wired into regimes
 # ---------------------------------------------------------------------------
 
 # Toy profiles spanning the roofline space.  GPUISH is a fat discrete

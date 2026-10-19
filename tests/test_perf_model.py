@@ -1,9 +1,9 @@
-"""Analytical performance model (:mod:`catopt_core.perf_model`)."""
+"""Analytical performance model (:mod:`mlopt_core.perf_model`)."""
 
 import pytest
-from catopt_core.features import ProgramFeatures
-from catopt_core.perf_model import AnalyticalPerformanceModel
-from catopt_core.ports import PerformanceModel
+from mlopt_core.features import ProgramFeatures
+from mlopt_core.perf_model import AnalyticalPerformanceModel
+from mlopt_core.ports import PerformanceModel
 
 
 def _f(

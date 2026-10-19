@@ -1,4 +1,4 @@
-"""Killer demo — measured autotuning over catopt lowering paths.
+"""Killer demo — measured autotuning over mlopt lowering paths.
 
 The pitch this bench backs: ``optimize_model`` picks ONE lowering up
 front (serial ``IRModule``, level-batched carrier executor, or
@@ -13,7 +13,7 @@ Per model cell, timed through the shared ``benchkit.Runner``:
 * ``eager``       — the original module;
 * ``inductor``    — ``torch.compile`` of the original module
   (SIGALRM-guarded; a timeout/failure is recorded, not hidden);
-* ``catopt_best`` — the autotuned winner, whichever lowering it is.
+* ``mlopt_best`` — the autotuned winner, whichever lowering it is.
 
 The autotune harness's own per-candidate medians land in the cell's
 ``aux`` (``autotune = generic:0.31ms · batched:0.12ms · …``), plus
@@ -25,11 +25,11 @@ Usage:
     python -m bench run killer_demo --device cuda
 
     # CUDA dev venv (see bench/README.md for the recipe):
-    PYTHONPATH="packages/catopt-core/src:packages/catopt-torch/src:\
-packages/catopt-carriers/src:packages/catopt-orchestrator/src:." \
+    PYTHONPATH="packages/mlopt-core/src:packages/mlopt-torch/src:\
+packages/mlopt-carriers/src:packages/mlopt-orchestrator/src:." \
         <cuda-venv>/bin/python -m bench run killer_demo --device cuda
 """
-# ruff: noqa: E402, RUF001 -- sys.path setup must precede the benchkit/catopt
+# ruff: noqa: E402, RUF001 -- sys.path setup must precede the benchkit/mlopt
 # imports (bench_omd2 / real_linear_attn convention).
 
 from __future__ import annotations
@@ -44,11 +44,11 @@ sys.setrecursionlimit(400_000)
 
 import torch
 import torch.nn as nn
-from catopt_orchestrator import Optimizer
-from catopt_orchestrator.optimize import Autotuned
-from catopt_torch.autotune import TORCH_BUILDERS
-from catopt_torch.backend import TorchBackend
-from catopt_torch.models import (
+from mlopt_orchestrator import Optimizer
+from mlopt_orchestrator.optimize import Autotuned
+from mlopt_torch.autotune import TORCH_BUILDERS
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.models import (
     LinearRecurrence,
     MatrixChain,
     ResidualMLP,
@@ -209,7 +209,7 @@ def run_cell(
         )
     variants.append(
         Variant(
-            name="catopt_best",
+            name="mlopt_best",
             stmt=_timed_stmt(opt_mod, x),
             note=f"pick={at['winner'] or 'pipeline fallback'}",
         )
@@ -301,12 +301,12 @@ def run_bench(args) -> Report:
     # -- console table ------------------------------------------------
     hdr = (
         f"{'model':<18} | {'eager':>8} | {'compile':>8} | "
-        f"{'catopt':>8} | {'pick':<12} | {'verif':>5} | {'xE':>6}"
+        f"{'mlopt':>8} | {'pick':<12} | {'verif':>5} | {'xE':>6}"
     )
     print("\n" + "=" * len(hdr))
     print(
-        "  model | eager ms | torch.compile ms | catopt best ms | "
-        "catopt pick | verified? | speedup-vs-eager"
+        "  model | eager ms | torch.compile ms | mlopt best ms | "
+        "mlopt pick | verified? | speedup-vs-eager"
     )
     print("=" * len(hdr))
     print(hdr)
@@ -314,7 +314,7 @@ def run_bench(args) -> Report:
     for res, cell in zip(results, cells, strict=True):
         ms = cell.medians
         eager = ms.get("eager")
-        best = ms.get("catopt_best")
+        best = ms.get("mlopt_best")
 
         def g(n, _ms=ms):
             return f"{_ms[n] * 1e3:>8.3f}" if n in _ms else f"{'—':>8}"
@@ -322,13 +322,13 @@ def run_bench(args) -> Report:
         speedup = f"{eager / best:>6.2f}" if eager and best else "—"
         print(
             f"{res['name']:<18} | {g('eager')} | {g('inductor')} | "
-            f"{g('catopt_best')} | {res['aux']['pick']:<12} | "
+            f"{g('mlopt_best')} | {res['aux']['pick']:<12} | "
             f"{'yes' if res['aux']['verified'] else 'NO':>5} | "
             f"{speedup}"
         )
     print("-" * len(hdr))
     print(
-        "  xE = catopt_best speedup vs eager; pick = the lowering "
+        "  xE = mlopt_best speedup vs eager; pick = the lowering "
         "autotune measured fastest"
     )
     print(
@@ -337,9 +337,9 @@ def run_bench(args) -> Report:
     )
 
     scored = [
-        (c.case.name, c.medians["eager"] / c.medians["catopt_best"])
+        (c.case.name, c.medians["eager"] / c.medians["mlopt_best"])
         for c in cells
-        if c.medians.get("eager") and c.medians.get("catopt_best")
+        if c.medians.get("eager") and c.medians.get("mlopt_best")
     ]
     best = max(scored, key=lambda t: t[1], default=None)
     n_verified = sum(1 for r in results if r["aux"]["verified"])
@@ -359,7 +359,7 @@ def run_bench(args) -> Report:
                 if best
                 else "no model beats eager"
             ),
-            metric="catopt_best / eager",
+            metric="mlopt_best / eager",
             value=best[1] if best else None,
             evidence={
                 "picks": {r["name"]: r["aux"]["pick"] for r in results}
@@ -417,7 +417,7 @@ def run_bench(args) -> Report:
 def main() -> None:
     ap = argparse.ArgumentParser(
         description=(
-            "killer demo: measured autotuning over catopt lowering "
+            "killer demo: measured autotuning over mlopt lowering "
             "paths vs eager / Inductor"
         )
     )

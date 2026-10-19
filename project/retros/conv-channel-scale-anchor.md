@@ -2,7 +2,7 @@
 
 **Date**: 2026-10-19.  **Follows**: `conv-bn-fold-synth.md` (named the
 missing `conv2d`-headed anchor, gate A).  **Commit**: `945733f`
-(`CONV_FOLD_RULES` in `catopt_core.laws.tensor`, opt-in with
+(`CONV_FOLD_RULES` in `mlopt_core.laws.tensor`, opt-in with
 `BATCH_NORM_RULES`).  **Probe**: `lab/probes/conv_bn_fold_synth_probe.py`
 — re-run, gates A/B/B3/C/D.
 
@@ -80,7 +80,7 @@ broadcast.
    `synthesize_rules` fixpoint knob — feed emitted composites back
    into `usable` until convergence or a round cap (the probe's gate-B3
    loop is the reference; a `rounds=` parameter or a driver in
-   `catopt_discovery`) — or the ADR-0008 anchored mint (antiunify over
+   `mlopt_discovery`) — or the ADR-0008 anchored mint (antiunify over
    a measured seed↔folded pair) which jumps the depth directly.
 2. **The emitted fold's guard content.**  The minted composite
    carries the transported conjunction of all five parents' conds;

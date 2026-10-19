@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mlopt-onnx"
+version = "0.1.0dev"
+description = "ONNX backend for mlopt (ADR 0006): mlopt IR <-> ONNX graph — OnnxSink exports, OnnxSource imports, both verified through onnxruntime."
+requires-python = ">=3.11"
+dependencies = [
+    "mlopt-core",
+    "onnx>=1.16",
+    "onnxruntime>=1.17",
+    "numpy>=1.24",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

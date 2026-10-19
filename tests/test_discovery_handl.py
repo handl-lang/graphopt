@@ -1,7 +1,7 @@
 """The handl-fragment schema bridge — cells as language data."""
 
 
-from catopt_core.cells import (
+from mlopt_core.cells import (
     Fragment,
     Provenance,
     handle_cell,
@@ -10,11 +10,11 @@ from catopt_core.cells import (
     object_cell,
     op_cell,
 )
-from catopt_core.ir import Op
-from catopt_core.laws.base import R
-from catopt_core.opdata import OpDef
-from catopt_discovery import handl
-from catopt_discovery.cellstore import ambient_store
+from mlopt_core.ir import Op
+from mlopt_core.laws.base import R
+from mlopt_core.opdata import OpDef
+from mlopt_discovery import handl
+from mlopt_discovery.cellstore import ambient_store
 
 OM_LIFT = R(
     "om_decayed_lift",
@@ -67,7 +67,7 @@ class TestLawToHandl:
 
     def test_metavar_paths_in_extension(self):
         row = handl.law_to_handl(OM_LIFT, "om_decayed_lift")
-        assert row["catopt"]["metavars"] == {
+        assert row["mlopt"]["metavars"] == {
             "s": [0, 0],
             "d": [0, 1],
             "v": [1],
@@ -102,7 +102,7 @@ class TestLawToHandl:
         }
 
     def test_rhs_const_and_var_leaves(self):
-        from catopt_core.ir import Const, TensorType, Var
+        from mlopt_core.ir import Const, TensorType, Var
 
         r = R(
             "x",
@@ -115,8 +115,8 @@ class TestLawToHandl:
         )
         row = handl.law_to_handl(r, "x")
         kids = row["rule"]["Declarative"]["children"]
-        assert kids[0] == {"Create": {"kind": "catopt:const", "payload": {"value": 2.0}, "children": []}}
-        assert kids[1] == {"Create": {"kind": "catopt:var", "payload": {"name": "w"}, "children": []}}
+        assert kids[0] == {"Create": {"kind": "mlopt:const", "payload": {"value": 2.0}, "children": []}}
+        assert kids[1] == {"Create": {"kind": "mlopt:var", "payload": {"name": "w"}, "children": []}}
 
     def test_when_condition_folds_for_handl(self):
         """0 clauses omit the field; 1 is bare; 2+ become And([...])."""
@@ -168,9 +168,9 @@ class TestLawToHandl:
         ``!Replace`` rule form (ADR-0127): the rewritten node IS the existing
         descendant at the metavar's bound path — no node is created.  Each
         keeps its dispatch ``node_kind`` and round-trips through the
-        ``catopt`` record.
+        ``mlopt`` record.
         """
-        from catopt_core.laws import ALL_RULES
+        from mlopt_core.laws import ALL_RULES
 
         eliminating = [r for r in ALL_RULES if isinstance(r.rhs, str)]
         assert len(eliminating) == 5, "bank root-eliminating set moved"
@@ -202,7 +202,7 @@ class TestLawToHandl:
         assert handl._op_parts(()) is None
 
     def test_var_leaf_in_lhs(self):
-        from catopt_core.ir import TensorType, Var
+        from mlopt_core.ir import TensorType, Var
 
         r = R(
             "x",
@@ -211,7 +211,7 @@ class TestLawToHandl:
         )
         row = handl.law_to_handl(r, "x")
         kids = row["rule"]["Declarative"]["children"]
-        assert kids[1] == {"Create": {"kind": "catopt:var", "payload": {"name": "w"}, "children": []}}
+        assert kids[1] == {"Create": {"kind": "mlopt:var", "payload": {"name": "w"}, "children": []}}
 
     def test_law_data_roundtrips(self):
         row = handl.law_to_handl(OM_LIFT, "om_decayed_lift")
@@ -253,7 +253,7 @@ class TestHandleToHandl:
                 "args": ("S", "D", "V"),
             },
         )
-        assert row["native"] == "catopt:decayed_0_k"
+        assert row["native"] == "mlopt:decayed_0_k"
         assert row["args"] == ["S", "D", "V"]
 
     def test_handler_roundtrip(self):
@@ -270,11 +270,11 @@ class TestStoreToHandl:
         frag = handl.store_to_handl(_store())
         assert len(frag["transforms"]) == 1
         # `ast` = the store's op cells + the minted leaf kinds the bridge
-        # declares (catopt:const / catopt:var / catopt:data).
+        # declares (mlopt:const / mlopt:var / mlopt:data).
         assert len(frag["ast"]) == 1 + len(handl._LEAF_SHAPES)
         assert len(frag["natives"]) == 1
-        assert frag["catopt"]["cells"] == 3
-        assert set(frag["catopt"]["provenance"]) <= {
+        assert frag["mlopt"]["cells"] == 3
+        assert set(frag["mlopt"]["provenance"]) <= {
             "declared",
             "minted",
             "shipped",
@@ -294,7 +294,7 @@ class TestStoreToHandl:
             )
         )
         frag = handl.store_to_handl(store)
-        assert frag["transforms"][0]["catopt"]["object"] is not None
+        assert frag["transforms"][0]["mlopt"]["object"] is not None
 
     def test_cell_from_handl_declines_pure_rows(self):
         assert handl.cell_from_handl({"id": "x", "kind": "y"}) is None
@@ -313,9 +313,9 @@ class TestShippedBankRoundTrip:
     def test_no_cell_is_silently_dropped(self):
         store = ambient_store()
         frag = handl.store_to_handl(store)
-        # `ast` also carries the minted leaf kinds (catopt:const/var/data),
+        # `ast` also carries the minted leaf kinds (mlopt:const/var/data),
         # which are bridge vocabulary, not store cells.
-        op_rows = [r for r in frag["ast"] if not r["node_kind"].startswith("catopt:")]
+        op_rows = [r for r in frag["ast"] if not r["node_kind"].startswith("mlopt:")]
         emitted = len(op_rows) + len(frag["transforms"]) + len(frag["natives"])
         assert emitted == len(list(store)), (
             f"store has {len(list(store))} cells, fragments emit {emitted} rows"
@@ -339,7 +339,7 @@ class TestShippedBankRoundTrip:
             # per-cell re-emission does not carry it.
             without_priority = {k: v for k, v in row.items() if k != "priority"}
             got = handl.cell_to_handl(cell)
-            law = row.get("catopt", {}).get("law") or {}
+            law = row.get("mlopt", {}).get("law") or {}
             if law.get("missing_hooks"):
                 # A record that declared dropped hooks (the transported
                 # composite `conv_bn_fold` — check/derive ride the
@@ -347,7 +347,7 @@ class TestShippedBankRoundTrip:
                 # them, so the honesty flags drift exactly as declared:
                 # serializable flips, missing_hooks empties.  Nothing
                 # else may drift.
-                gl = got["catopt"]["law"]
+                gl = got["mlopt"]["law"]
                 assert gl["serializable"] is True
                 assert gl["missing_hooks"] == []
                 assert law["serializable"] is False

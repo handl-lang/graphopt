@@ -1,0 +1,1722 @@
+# ruff: noqa: RUF002
+"""3-cells as computed intelligence: coherence + completion, never stored.
+
+Two meta-level pieces on top of the e-graph kernel:
+
+PART A — coherence stratification
+---------------------------------
+The rule set splits into *coherent* laws (commutativity, associativity,
+identity, involution — pure symmetry that generates every equivalent
+bracketing/permutation of the same computation) and *contentful* laws
+(distribute, factor, lift, fold, split — rules that change the
+computational structure).
+
+Storing coherent variants is what explodes equality saturation: each
+commutativity doubles a node's permutation class, each associativity
+multiplies bracketings, and the contentful rules then fire on every
+single one of them.  The alternative is to *compute* coherence instead
+of *storing* it:
+
+* :func:`canonicalize` eagerly rewrites a term into a canonical form —
+  commutative-associative chains (add, mul) are flattened, identity
+  elements dropped, children sorted by structural key and rebuilt
+  balanced; associative-only chains (matmul, aff_compose) are flattened
+  order-preservingly and rebuilt balanced (the Blelloch bracketing is a
+  *canonical form*, not a search result); double negation cancels.
+* :func:`stratified_run` canonicalizes the input and saturates with
+  contentful rules only — coherent variants never enter the e-graph.
+  On ``LinearRecurrence`` (T=6, d=8) this is the measured difference
+  between 100,353 e-nodes (all laws) and 178 (stratified) — ~560x —
+  with the extracted term verified numerically identical in fp64.
+
+PART B — rule synthesis via critical-pair completion
+----------------------------------------------------
+:func:`synthesize_rules` derives new rewrite rules by composing ordered
+pairs of existing rules, in two ways:
+
+* *Seed-guided composition* (preferred): apply ``r1`` to a concrete
+  seed term at position ``p``, then ``r2`` at position ``q``; the
+  composite rule is
+  ``abstract(subterm(s, lca(p,q))) -> abstract(subterm(result, lca(p,q)))``
+  where abstraction renames every metavariable-bound or untouched leaf
+  to a fresh metavariable but keeps leaves that were matched against
+  concrete pattern leaves.  The fired binding becomes the derived
+  rule's *witness* — validation is guaranteed an instance on which
+  both parents' guards actually hold.
+* *Symbolic composition*: instantiate ``r1``'s RHS pattern with its own
+  metavariables (as opaque symbolic leaves) and try to match ``r2``'s
+  LHS against the result.  A match at position ``q`` yields the derived
+  rule ``r1.lhs -> (r1.rhs with r2 applied at q)`` — fully general by
+  construction, but with no witness.  Guarded symbolic candidates are
+  validated against seed-derived instances first (see
+  :func:`_validate_candidate`), falling back to the bounded
+  instantiation pool.
+
+Guarded parents are handled soundly: a derived rule's ``check`` is the
+CONJUNCTION of both parents' checks, each evaluated on its own binding
+re-expressed through the intermediate substitution, and a parent's
+``derive``-produced attributes travel as namespaced placeholders the
+derived rule's own ``derive`` recomputes at fire time.  The same holds
+at the *term* level: a ``$leaf:`` output (ADR 0012 — a binding the LHS
+cannot produce) travels as a namespaced leaf metavar ``"@i:NAME"`` the
+composite ``derive`` refills from the parent's re-run spec, resolving
+through the pushed ``TensorAlgebra``'s ``mint``/``ops`` at instantiate
+time.  Compositions whose side conditions cannot be re-expressed — or
+cannot be satisfied on any validation instance — are rejected, never
+emitted.
+
+Every emitted rule is validated: rhs term metavars ⊆ lhs metavars up
+to ``@i:``-prefixed placeholders its own ``derive`` refills, the
+r1-then-r2 derivation is replayed on a fresh instantiation (or on
+the seed derivation's own witness binding), and (when every op has a
+torch binding) both sides are evaluated on random tensors and compared
+with ``allclose``.  Provenance — which parent pair a rule descends
+from — is recorded in ``law``, on ``rule.parents``, and in
+:data:`SYNTH_PARENTS`.
+
+Example finding: given ``SCAN_LAWS`` minus ``aff_lift_step`` and a
+two-step unrolled recurrence seed, synthesis emits the *unfolded
+equivalent* of ``aff_lift_step`` — the two-step fusion
+
+    add(mm(A2, add(mm(A1, h), u)), x)
+        -> apply(aff(A2, x), apply(aff(A1, u), h))
+
+which is ``aff_lift_step`` composed with ``aff_compose_unfold``.  The
+compose-headed form itself is unreachable by pair-composition because
+no rule in the set *introduces* ``aff_compose`` from non-compose
+structure — the nested-``apply`` form is the honest canonical
+representative of the same critical pair.
+"""
+
+from __future__ import annotations
+
+import math
+from collections.abc import Callable, Iterable
+from typing import Any, Protocol
+
+import mlopt_core.laws as R
+from mlopt_core import lawdata
+from mlopt_core.egraph import EGraph, Rewrite
+from mlopt_core.egraph.terms import (
+    _replace_subterm,
+    _term_paths,
+)
+from mlopt_core.egraph.terms import (
+    _subterm as _term_subterm,
+)
+from mlopt_core.ir import Const, Op, Param, Var, op_repr
+
+# ---------------------------------------------------------------------------
+#  Part A.1 — coherence classification
+# ---------------------------------------------------------------------------
+
+#: Rules that express pure coherence — the search-space the e-graph
+#: should never store.  The table lives in :mod:`mlopt_core.lawdata`
+#: (the law-vocabulary data home); this is the same object bound here
+#: so callers — and the tests that pin it — read it unchanged.
+COHERENT_RULE_NAMES: frozenset[str] = lawdata.COHERENT_RULE_NAMES
+
+
+def module_rules(mod=R) -> list[Rewrite]:
+    """Collect every Rewrite object defined in a rules module."""
+    return _iter_module_rules(mod)
+
+
+def _iter_module_rules(mod) -> list[Rewrite]:
+    """Collect every Rewrite object defined in a rules module."""
+    out: list[Rewrite] = []
+    for v in vars(mod).values():
+        if isinstance(v, Rewrite):
+            out.append(v)
+        elif isinstance(v, (list, tuple)):
+            out.extend(x for x in v if isinstance(x, Rewrite))
+    seen: set[int] = set()
+    uniq = []
+    for r in out:
+        if id(r) not in seen:
+            seen.add(id(r))
+            uniq.append(r)
+    return uniq
+
+
+def classify_rules(
+    rules: Iterable[Rewrite],
+) -> tuple[list[Rewrite], list[Rewrite]]:
+    """Split *rules* into ``(coherent, contentful)`` by name."""
+    coherent = [r for r in rules if r.name in COHERENT_RULE_NAMES]
+    contentful = [r for r in rules if r.name not in COHERENT_RULE_NAMES]
+    return coherent, contentful
+
+
+# ---------------------------------------------------------------------------
+#  Part A.2 — canonicalize: eager coherence normalization
+# ---------------------------------------------------------------------------
+
+#: The canonicalizer's monoid vocabulary — lawdata content bound to
+#: the private names the canonicalize pass reads.
+_AC_IDENTITY: dict[str, float] = lawdata.AC_IDENTITY
+
+#: Associative but NOT commutative ops (:data:`mlopt_core.lawdata.ASSOC_ONLY`).
+_ASSOC_ONLY: frozenset[str] = lawdata.ASSOC_ONLY
+
+
+def _sort_key(t: Any) -> str:
+    return op_repr(t)
+
+
+def _balanced(op: str, items: list[Any], attrs: dict) -> Any:
+    """Rebuild a flattened chain as a balanced binary tree."""
+    if len(items) == 1:
+        return items[0]
+    mid = len(items) // 2
+    return Op.make(
+        op,
+        _balanced(op, items[:mid], attrs),
+        _balanced(op, items[mid:], attrs),
+        **attrs,
+    )
+
+
+def _flatten_chain(term: Op) -> list[Any]:
+    """Collect the operands of a same-op/same-attrs chain."""
+    out: list[Any] = []
+
+    def go(t: Any) -> None:
+        if (
+            isinstance(t, Op)
+            and t.op == term.op
+            and dict(t.attrs) == dict(term.attrs)
+        ):
+            for a in t.args:
+                go(a)
+        else:
+            out.append(t)
+
+    go(term)
+    return out
+
+
+def _is_identity(value: Any, ident: float) -> bool:
+    """Whether *value* is the identity element, sign-aware.
+
+    ``-0.0 == 0`` in IEEE arithmetic, but ``-0.0`` is not the
+    additive identity (``-0.0 + -0.0 = -0.0``) — a bare ``==``
+    would drop it from an ``add`` chain and re-materialise ``+0.0``.
+    """
+    if value != ident:
+        return False
+    if ident == 0:
+        return math.copysign(1.0, value) > 0
+    return True
+
+
+def canonicalize(term: Any, memo: dict | None = None) -> Any:
+    """Return the coherence-canonical form of *term*.
+
+    * ``add``/``mul`` chains: flattened, identity elements (0 / 1)
+      dropped, remaining children sorted by ``op_repr`` and rebuilt
+      balanced.  Collapses every comm/assoc/id-equivalent form.
+    * ``matmul``/``aff_compose`` chains: flattened in order (they are
+      associative, not commutative) and rebuilt balanced — the
+      canonical log-depth bracketing.
+    * ``neg(neg(t))`` collapses to ``t``.
+
+    Memoised on the term itself (hash-consed terms are content-keyed)
+    so shared-subterm DAGs stay linear.  The function is idempotent
+    and semantics-preserving (all transforms are instances of the
+    coherent laws).
+    """
+    if memo is None:
+        memo = {}
+    key = term
+    if key in memo:
+        return memo[key]
+    if not isinstance(term, Op):
+        memo[key] = term
+        return term
+
+    args = tuple(canonicalize(a, memo) for a in term.args)
+    out = Op.make(term.op, *args, **dict(term.attrs))
+
+    if out.op == "neg":
+        inner = out.args[0]
+        if isinstance(inner, Op) and inner.op == "neg":
+            out = inner.args[0]
+    elif out.op in _AC_IDENTITY:
+        flat = _flatten_chain(out)
+        ident = _AC_IDENTITY[out.op]
+        flat = [
+            t
+            for t in flat
+            if not (
+                isinstance(t, Const) and _is_identity(t.value, ident)
+            )
+        ]
+        if not flat:
+            out = Const(ident)
+        elif len(flat) == 1:
+            out = flat[0]
+        else:
+            flat = sorted(flat, key=_sort_key)
+            out = _balanced(out.op, flat, dict(out.attrs))
+    elif out.op in _ASSOC_ONLY:
+        flat = _flatten_chain(out)
+        if (
+            len(flat) == 1
+        ):  # pragma: no cover — binary chains yield >=2 leaves
+            out = flat[0]
+        elif len(flat) != len(out.args):
+            out = _balanced(out.op, flat, dict(out.attrs))
+        # len==2 already binary: keep (canonical balanced form of 2)
+
+    memo[key] = out
+    return out
+
+
+# ---------------------------------------------------------------------------
+#  Part A.3 — stratified_run
+# ---------------------------------------------------------------------------
+
+
+def stratified_run(
+    eg: EGraph,
+    rules: Iterable[Rewrite],
+    term: Any,
+    *,
+    max_iterations: int = 100,
+    max_nodes: int = 100_000,
+    cost_fn=None,
+    extract: bool = True,
+    canonicalize_output: bool = True,
+    extract_fn=None,
+) -> dict:
+    """Canonicalize *term*, saturate with the CONTENTFUL rules only.
+
+    The coherent laws are never run: equivalent bracketings/permutations
+    are collapsed by :func:`canonicalize` before they can multiply in
+    the e-graph.  If ``cost_fn`` is given, the best term is extracted
+    and (with ``canonicalize_output``) re-canonicalized — post-hoc
+    normalization recovers the balanced coherent form of whatever the
+    contentful rules produced.
+
+    Returns a dict with ``root_eid``, ``stats`` (from ``eg.run``), the
+    canonicalized input, the dropped/used rule names, and (when
+    ``extract``) ``best``/``canonical_best``.
+    """
+    canon = canonicalize(term)
+    root = eg.add_term(canon)
+    coherent, contentful = classify_rules(rules)
+    stats = eg.run(
+        contentful,
+        root,
+        max_iterations=max_iterations,
+        max_nodes=max_nodes,
+    )
+    out = {
+        "root_eid": root,
+        "stats": stats,
+        "canonical_input": canon,
+        "coherent_dropped": [r.name for r in coherent],
+        "contentful_used": [r.name for r in contentful],
+    }
+    if extract and (cost_fn is not None or extract_fn is not None):
+        # Depth (and other max-composed measures) are not additive, so
+        # extract_best cannot rank them — pass extract_fn =
+        # eg.extract_min_depth for those objectives.
+        best = (
+            extract_fn(root)
+            if extract_fn is not None
+            else eg.extract_best(root, cost_fn)
+        )
+        out["best"] = best
+        out["canonical_best"] = (
+            canonicalize(best)
+            if canonicalize_output and best is not None
+            else best
+        )
+    return out
+
+
+# ---------------------------------------------------------------------------
+#  Part B — rule synthesis via critical-pair completion
+# ---------------------------------------------------------------------------
+
+
+#: ops with at least one string attr value carry *attribute*
+#: metavariables (bound into the substitution under "$attr:<name>").
+def _has_attr_metavars(pat: Any) -> bool:
+    if isinstance(pat, Op):
+        if any(isinstance(v, str) for v in pat.attrs.values()):
+            return True
+        return any(_has_attr_metavars(a) for a in pat.args)
+    return False
+
+
+def _synthesizable(r: Rewrite) -> bool:
+    """Return whether a rule participates in synthesis (*guarded-sound*).
+
+    Every metavariable in its RHS must be either bound by the LHS or
+    producible by ``derive`` — as an attribute (``$attr:`` keys) or as
+    a term binding (ADR 0012's ``$leaf:`` channel: bare metavar keys).
+
+    ``check``/``derive`` hooks and attribute metavars no longer exclude
+    a rule: parent side conditions are re-expressed on the derived
+    rule's own substitution (see :func:`_compose_guards`), and
+    derive-produced attributes are carried through the derivation as
+    namespaced placeholders (``"@1:SD"`` / ``"@2:SD"``) that the derived
+    rule's own ``derive`` fills at fire time.  Derive-produced *term*
+    bindings travel the same way as leaf placeholders (``"@1:wn"`` —
+    the ``$leaf:`` resolver seam).  A rule whose RHS needs a binding it
+    can neither match nor derive stays excluded — there is no sound
+    way to propagate it.
+    """
+    lhs_mv = pattern_metavars(r.lhs)
+    lhs_terms = {v for v in lhs_mv if not v.startswith("$attr:")}
+    lhs_attrs = lhs_mv - lhs_terms
+    for v in pattern_metavars(r.rhs):
+        if v.startswith("$attr:"):
+            if v not in lhs_attrs and r.derive is None:
+                return False
+        elif v not in lhs_terms and r.derive is None:
+            return False
+    return True
+
+
+def match_pattern(
+    pat: Any, term: Any, subst: dict | None = None
+) -> dict | None:
+    """One-sided match of pattern *pat* against a concrete *term*.
+
+    ``str`` leaves in the pattern are metavariables binding any subterm;
+    repeated metavars must bind equal subterms (structural equality).
+    String attr values are attribute metavariables bound under
+    ``"$attr:<name>"`` — mirroring :meth:`EGraph._match`.  Returns the
+    substitution dict or ``None``.
+
+    Concrete attr values compare numerically (``!=``), so a pattern
+    ``min=0`` still matches a term spelled ``min=0.0`` — deliberate
+    leniency at match time, mirroring :func:`_leaf_eq`; term/enode
+    *identity* is spelling-strict (see :class:`mlopt_core.ir.Op`).
+
+    Near-clone of :func:`mlopt_core.egraph.terms._term_match`, kept
+    separate because the leaf compare genuinely differs: this compares
+    ``Const`` leaves *numerically* on ``.value`` (``Const(0)`` matches
+    ``Const(0.0)``, which the identity rules rely on — ``Const``
+    itself is spelling-strict, see its docstring), while
+    ``_term_match`` compares ``repr`` — the e-graph's leaf-key
+    convention, where ``"0" != "0.0"`` and two same-named Vars are one
+    leaf regardless of type.
+    """
+    if subst is None:
+        subst = {}
+    if isinstance(pat, str):
+        if pat in subst:
+            return subst if subst[pat] == term else None
+        subst[pat] = term
+        return subst
+    if isinstance(pat, Op):
+        if (
+            not isinstance(term, Op)
+            or term.op != pat.op
+            or len(term.args) != len(pat.args)
+        ):
+            return None
+        if set(term.attrs) != set(pat.attrs):
+            return None
+        for k, pv in pat.attrs.items():
+            tv = term.attrs[k]
+            if isinstance(pv, str):
+                key = "$attr:" + pv
+                if key in subst:
+                    if subst[key] != tv:
+                        return None
+                else:
+                    subst[key] = tv
+            elif tv != pv:
+                return None
+        for pa, ta in zip(pat.args, term.args, strict=True):
+            subst = match_pattern(pa, ta, subst)
+            if subst is None:
+                return None
+        return subst
+    return subst if _leaf_eq(pat, term) else None
+
+
+def _leaf_eq(pat: Any, term: Any) -> bool:
+    """Leaf equality for :func:`match_pattern` — numeric on Const.
+
+    ``Const`` itself is spelling-strict (``Const(0) != Const(0.0)`` —
+    its ``__eq__`` is the e-graph's leaf-key identity); this matcher
+    keeps the numeric leniency the identity laws rely on by comparing
+    ``.value``.  Other leaves compare with ``==`` as before.
+    """
+    if isinstance(pat, Const) and isinstance(term, Const):
+        return pat.value == term.value
+    return pat == term
+
+
+def instantiate_pattern(pat: Any, subst: dict) -> Any:
+    """Instantiate a pattern term.
+
+    Str leaves and str attr values are looked up in *subst*; everything
+    else is rebuilt as-is.
+
+    Near-clone of :func:`mlopt_core.egraph.terms._term_instantiate`, kept
+    separate because the missing-binding contract differs: an unbound
+    ``$attr:`` metavar raises ``KeyError`` here (callers like
+    ``apply_rewrite_at``/``_fire_guarded`` treat it as a veto), while
+    ``_term_instantiate`` falls back to the literal metavar string —
+    which would mint a bogus ``attr="<name>"`` term instead of
+    vetoing.
+    """
+    if isinstance(pat, str):
+        return subst[pat]
+    if isinstance(pat, Op):
+        args = tuple(instantiate_pattern(a, subst) for a in pat.args)
+        attrs = {}
+        for k, v in pat.attrs.items():
+            attrs[k] = subst["$attr:" + v] if isinstance(v, str) else v
+        return Op.make(pat.op, *args, **attrs)
+    return pat
+
+
+def pattern_metavars(pat: Any) -> set[str]:
+    """All metavariables (str leaves + str attr values) in a pattern."""
+    out: set[str] = set()
+    if isinstance(pat, str):
+        out.add(pat)
+    elif isinstance(pat, Op):
+        for a in pat.args:
+            out |= pattern_metavars(a)
+        for v in pat.attrs.values():
+            if isinstance(v, str):
+                out.add("$attr:" + v)
+    return out
+
+
+def _positions(
+    term: Any,
+) -> Iterable[tuple[tuple, Any]]:
+    """Yield ``(path, subterm)`` for every position, DFS pre-order.
+
+    ``mlopt_core.egraph.terms._term_paths`` zipped with ``_subterm``.
+    """
+    for p in _term_paths(term):
+        yield p, _term_subterm(term, p)
+
+
+def _subterm(term: Any, path: tuple) -> Any:
+    """Return the subterm at *path*.
+
+    Delegates to :func:`mlopt_core.egraph.terms._subterm`, whose
+    bad-path contract is ``None`` rather than this module's old
+    ``IndexError``.  Every caller passes paths produced by
+    ``_positions``/user-supplied rewrite paths; a bad path now yields a
+    clean no-match.
+    """
+    return _term_subterm(term, path)
+
+
+def _replace(term: Any, path: tuple, new: Any) -> Any:
+    """Return *term* with the subterm at *path* replaced.
+
+    Delegates to :func:`mlopt_core.egraph.terms._replace_subterm`.  Bad
+    paths raise ``CertificateVerificationError`` there rather than the
+    old ``IndexError``; callers only ever pass valid ``_positions``
+    paths.
+    """
+    return _replace_subterm(term, path, new)
+
+
+def _common_prefix(p: tuple, q: tuple) -> tuple:
+    out = []
+    for a, b in zip(p, q, strict=False):
+        if a != b:
+            break
+        out.append(a)
+    return tuple(out)
+
+
+def _overlapping(p: tuple, q: tuple) -> bool:
+    """Return True if one path is a prefix of the other."""
+    lca = _common_prefix(p, q)
+    return lca in (p, q)
+
+
+def apply_rewrite_at(
+    rule: Rewrite, term: Any, path: tuple
+) -> Any | None:
+    """Apply *rule* to ``term`` at *path*.
+
+    Returns the rewritten term or ``None`` if the LHS doesn't match or a
+    guard vetoes the firing.
+
+    ``check``/``derive`` hooks ARE evaluated here: at the term level the
+    fired substitution already maps metavariables to terms, which is
+    exactly the ``bound`` convention the e-graph uses (``any_term``-
+    resolved bindings).  A raising hook counts as a veto — a side
+    condition that cannot be evaluated can never justify a rewrite.
+    """
+    subst = match_pattern(rule.lhs, _subterm(term, path), {})
+    if subst is None:
+        return None
+    if rule.check is not None:
+        try:
+            if not rule.check(subst):
+                return None
+        except Exception:
+            return None
+    if rule.derive is not None:
+        try:
+            extra = rule.derive(subst)
+        except Exception:
+            return None
+        if extra is None:
+            return None
+        subst = {**subst, **extra}
+    try:
+        rhs = instantiate_pattern(rule.rhs, subst)
+    except KeyError:
+        return None
+    return _replace(term, path, rhs)
+
+
+# ---------------------------------------------------------------------------
+#  Guarded composition — re-expressing parent side conditions
+# ---------------------------------------------------------------------------
+#
+#: Attribute metavariables produced by a parent's ``derive`` hook are
+#: carried through a derivation as *namespaced placeholders*: the
+#: string ``"@<i>:<name>"`` where ``i`` is 1 for the first parent and 2
+#: for the second.  A placeholder is an ordinary attr metavariable in
+#: the derived patterns; the derived rule's own ``derive`` (built by
+#: :func:`_compose_guards`) re-runs the parent hooks at fire time and
+#: fills ``"$attr:@i:name"`` in the substitution.  Namespacing keeps the
+#: parents' metavar namespaces disjoint — two parents may both derive a
+#: ``"SD"`` attr with different meanings.
+_DRV_PREFIX = ("@1:", "@2:")
+
+
+class _Unreexpressible(Exception):
+    """Signal that a parent binding cannot be re-expressed.
+
+    The derived rule's metavariables cannot express it — the composition
+    must be rejected, never guessed.
+    """
+
+
+#: Provenance of every emitted rule: name -> (first parent, second parent).
+SYNTH_PARENTS: dict[str, tuple[str, str]] = {}
+
+
+def provenance(rule: Rewrite) -> tuple[str, ...]:
+    """Return the parent rules a synthesized rule descends from.
+
+    ``()`` for a non-synthesized rule.  Recorded on the rule as
+    ``.parents`` and in :data:`SYNTH_PARENTS`.
+    """
+    return getattr(rule, "parents", SYNTH_PARENTS.get(rule.name, ()))
+
+
+def _fire_guarded(rule: Rewrite, term: Any, path: tuple, ns: str):
+    """Fire *rule* on a CONCRETE term like :func:`apply_rewrite_at`.
+
+    Keeps ``derive``-produced attributes symbolic under the *ns*
+    placeholder prefix — and ``derive``-produced *term* bindings (the
+    ``$leaf:`` channel) symbolic as namespaced leaf metavars.
+
+    Returns ``(subst, rewritten, concrete_attrs)`` where
+    ``concrete_attrs`` maps each placeholder name to the value the
+    parent actually derived on this instance — needed to evaluate a
+    second parent's guards on the intermediate term.  ``None`` on
+    no-match or guard veto.
+    """
+    subst = match_pattern(rule.lhs, _subterm(term, path), {})
+    if subst is None:
+        return None
+    try:
+        if rule.check is not None and not rule.check(subst):
+            return None
+    except Exception:
+        return None
+    inst = dict(subst)
+    conc: dict[str, Any] = {}
+    if rule.derive is not None:
+        try:
+            extra = rule.derive(subst)
+        except Exception:
+            return None
+        if extra is None:
+            return None
+        for k, v in extra.items():
+            # Every derive output stays a metavar in the derived rule:
+            # "$attr:" keys become "@i:" attr placeholders, bare keys
+            # (the "$leaf:" term channel) become "@i:" leaf
+            # placeholders.  conc records this instance's concrete
+            # value either way — a second parent's guards need it.
+            ph = ns + (
+                k[len("$attr:") :] if k.startswith("$attr:") else k
+            )
+            inst[k] = ph  # stays a metavar in the derived rule
+            conc[ph] = v  # but this instance's value is known
+    try:
+        rhs = instantiate_pattern(rule.rhs, inst)
+    except KeyError:
+        return None
+    return subst, _replace(term, path, rhs), conc
+
+
+def _concretize_attrs(t: Any, conc: dict) -> Any:
+    """Resolve placeholders inside a concrete term via the fired *conc*.
+
+    Placeholders travel in two positions: an ``Op``'s attr values (the
+    original ``@i:`` machinery) and *leaf* positions (the ``$leaf:``
+    term channel — a metavar that bound a placeholder resolves to the
+    concrete leaf the parent's derive minted).
+    """
+    if isinstance(t, str):
+        return conc.get(t, t)
+    if isinstance(t, Op):
+        attrs = {
+            k: (conc.get(v, v) if isinstance(v, str) else v)
+            for k, v in t.attrs.items()
+        }
+        return Op.make(
+            t.op, *(_concretize_attrs(a, conc) for a in t.args), **attrs
+        )
+    return t
+
+
+def _reexpress_term(t: Any, names: dict, keep: set) -> Any:
+    """Re-express a seed-guided binding as a metavariable pattern.
+
+    Region leaves become their ``names`` metavariable; leaves pinned by
+    a parent's concrete pattern (*keep*) and literal constants stay
+    concrete.  A metavar leaf (symbolic path) passes through.  Anything
+    else — a leaf the derived rule does not bind — is un-reexpressible.
+    """
+    if isinstance(t, Op):
+        return Op.make(
+            t.op,
+            *(_reexpress_term(a, names, keep) for a in t.args),
+            **dict(t.attrs),
+        )
+    if isinstance(t, str):
+        return t
+    if t in keep:
+        return t
+    if t in names:
+        return names[t]
+    if isinstance(t, Const):
+        return t
+    raise _Unreexpressible(t)
+
+
+def _reexpress_map(m: dict, names: dict, keep: set) -> dict:
+    """Re-express a whole fired binding.
+
+    Covers term metavars and ``$attr:`` entries.  ``$attr:`` values pass
+    through: concrete ones are baked in, string ones are metavar
+    references resolved at fire time.
+    """
+    out = {}
+    for k, v in m.items():
+        if k.startswith("$attr:"):
+            out[k] = v
+        else:
+            out[k] = _reexpress_term(v, names, keep)
+    return out
+
+
+def _reexpress_binding(pats: dict, subst: dict) -> dict | None:
+    """Instantiate a re-expressed binding against a fired substitution.
+
+    Term metavars instantiate as patterns; a ``$attr:`` entry that is a
+    string means "the attribute metavariable of that name" and is
+    resolved through ``subst`` — a missing key is an un-reexpressible
+    reference and rejects the composition (returns ``None``).
+    """
+    out = {}
+    for k, pat in pats.items():
+        if k.startswith("$attr:"):
+            if isinstance(pat, str):
+                key = "$attr:" + pat
+                if key not in subst:
+                    return None
+                out[k] = subst[key]
+            else:
+                out[k] = pat
+        else:
+            try:
+                out[k] = instantiate_pattern(pat, subst)
+            except (KeyError, Exception):
+                return None
+    return out
+
+
+def _compose_guards(r1: Rewrite, r2: Rewrite, pat1: dict, pat2: dict):
+    """Build the derived rule's ``(check, derive)`` from the parents'.
+
+    ``pat1``/``pat2`` map each parent's metavariables to patterns over
+    the DERIVED rule's metavariables (symbolic path: ``pat1`` is the
+    identity and ``pat2`` is r2's symbolic match; seed path: both are
+    the fired bindings re-abstracted through the region's leaf names).
+
+    The composite check on a fired binding ``bound`` is:
+
+        r1.check(bound1) ∧ r2.check(bound2)
+        where bound_i = instantiate(pat_i, bound ∪ parents' derives)
+
+    — i.e. each parent's side condition evaluated on ITS OWN binding,
+    re-expressed through the intermediate substitution.  ``derive``
+    hooks are also re-run (they can veto) and their outputs fill the
+    ``"@i:"`` placeholders the derived RHS carries.  Returns
+    ``(None, None)`` when neither parent is guarded.
+    """
+    if (
+        r1.check is None
+        and r1.derive is None
+        and r2.check is None
+        and r2.derive is None
+    ):
+        return None, None
+    ns1, ns2 = _DRV_PREFIX
+
+    def _eval(bound: dict):
+        """Evaluate both parents' guards on the derived binding.
+
+        Returns ``(bound1, extra1, bound2, extra2)`` or ``None`` if any
+        re-expression fails or any hook vetoes/raises.
+        """
+        b1 = _reexpress_binding(pat1, bound)
+        if b1 is None:
+            return None
+        try:
+            if r1.check is not None and not r1.check(b1):
+                return None
+        except Exception:
+            return None
+        # pat2 is instantiated over the DERIVED rule's metavars (bound),
+        # never r1's namespace — merging b1 here would clobber a derived
+        # metavar that happens to share a name with an r1 metavar (e.g.
+        # om_split binds "v1"/"v2", the same names leaf-generalization
+        # mints).  Only r1's derive outputs join, namespaced — term
+        # bindings under the "@i:" leaf-placeholder names a pat2 entry
+        # references.
+        eff1 = dict(bound)
+        e1 = None
+        if r1.derive is not None:
+            try:
+                e1 = r1.derive(b1)
+            except Exception:
+                return None
+            if e1 is None:
+                return None
+            for k, v in e1.items():
+                if k.startswith("$attr:"):
+                    eff1["$attr:" + ns1 + k[len("$attr:") :]] = v
+                else:
+                    eff1[ns1 + k] = v
+        b2 = _reexpress_binding(pat2, eff1)
+        if b2 is None:
+            return None
+        try:
+            if r2.check is not None and not r2.check(b2):
+                return None
+        except Exception:
+            return None
+        e2 = None
+        if r2.derive is not None:
+            try:
+                e2 = r2.derive(b2)
+            except Exception:
+                return None
+            if e2 is None:
+                return None
+        return b1, e1, b2, e2
+
+    def check(bound: dict) -> bool:
+        return _eval(bound) is not None
+
+    def derive(bound: dict) -> dict | None:
+        ctx = _eval(bound)
+        if ctx is None:
+            return None
+        _, e1, _, e2 = ctx
+        out: dict[str, Any] = {}
+        for e, ns in ((e1, ns1), (e2, ns2)):
+            if not e:
+                continue
+            for k, v in e.items():
+                if k.startswith("$attr:"):
+                    out["$attr:" + ns + k[len("$attr:") :]] = v
+                else:
+                    # "$leaf:"-channel outputs fill the "@i:" leaf
+                    # placeholders the derived RHS carries — resolved
+                    # from the pushed TensorAlgebra at instantiate
+                    # time, never baked in.
+                    out[ns + k] = v
+        return out
+
+    return check, derive
+
+
+def _rhs_derive_placeholders(rhs: Any) -> set[str]:
+    """Return the namespaced derive placeholders in a derived RHS.
+
+    Placeholders like ``"@1:X"`` / ``"@2:X"`` that appear as attribute
+    metavars — or as *leaf* metavars (the ``$leaf:`` term channel) —
+    the keys its composite ``derive`` must provide.
+    """
+    out: set[str] = set()
+    if isinstance(rhs, str):
+        if any(rhs.startswith(p) for p in _DRV_PREFIX):
+            out.add(rhs)
+    elif isinstance(rhs, Op):
+        for v in rhs.attrs.values():
+            if isinstance(v, str) and any(
+                v.startswith(p) for p in _DRV_PREFIX
+            ):
+                out.add(v)
+        for a in rhs.args:
+            out |= _rhs_derive_placeholders(a)
+    return out
+
+
+def _concrete_matched_leaves(
+    pat: Any, term: Any, out: set | None = None
+) -> set:
+    """Leaf values that a pattern pinned down with *concrete* leaves.
+
+    Those leaves may NOT be generalized to metavariables in a derived
+    rule: the parent rule only fires on that exact constant.
+    """
+    if out is None:
+        out = set()
+    if isinstance(pat, str):
+        return out  # metavar: bound subterm is free to generalize
+    if isinstance(pat, Op):
+        if isinstance(term, Op) and term.op == pat.op:
+            for pa, ta in zip(pat.args, term.args, strict=False):
+                _concrete_matched_leaves(pa, ta, out)
+        return out
+    out.add(term)  # concrete pattern leaf pinned this value
+    return out
+
+
+def _leaf_generalize(
+    region: Any,
+    names: dict,
+    keep: set,
+    counter: list[int],
+    assign_fresh: bool,
+) -> Any:
+    """Rename each leaf of *region* to a metavariable.
+
+    A shared ``names`` map keeps lhs/rhs consistent, except leaves in
+    *keep* which were concrete-matched and must stay literal.  With
+    ``assign_fresh=False`` (the RHS pass) an unseen leaf is a constant
+    introduced by a rule pattern — it stays concrete.
+    """
+    if isinstance(region, Op):
+        return Op.make(
+            region.op,
+            *(
+                _leaf_generalize(a, names, keep, counter, assign_fresh)
+                for a in region.args
+            ),
+            **dict(region.attrs),
+        )
+    if region in keep:
+        return region
+    if region in names:
+        return names[region]
+    if not assign_fresh:
+        return region
+    name = f"v{counter[0]}"
+    counter[0] += 1
+    names[region] = name
+    return name
+
+
+def _alpha_key(lhs: Any, rhs: Any) -> tuple[str, str]:
+    """Metavariable-renaming-invariant key for a (lhs, rhs) pair."""
+    names: list[str] = []
+
+    def norm(t: Any, table: list[str]) -> Any:
+        if isinstance(t, str):
+            for i, n in enumerate(table):
+                if n == t:
+                    return f"${i}"
+            table.append(t)
+            return f"${len(table) - 1}"
+        if isinstance(t, Op):
+            return Op.make(
+                t.op, *(norm(a, table) for a in t.args), **dict(t.attrs)
+            )
+        return t
+
+    return op_repr(norm(lhs, names)), op_repr(norm(rhs, names))
+
+
+class ConcreteEval(Protocol):
+    """Adapter-injected numeric evaluation for candidate validation.
+
+    ``synthesize_rules``' numeric check instantiates a candidate on
+    random fp64 tensors and compares both sides.  The tensor machinery
+    is backend-specific, so it is pushed in from an adapter
+    (``mlopt_torch.meta_eval`` implements this and registers it via
+    :func:`register_concrete_eval`); core imports no tensor library.
+    """
+
+    def make_env(self, leaf_shapes: dict) -> dict:
+        """Build a ``{leaf: random fp64 value}`` env.
+
+        Keyed by the given ``{leaf: shape}`` mapping (shapes are
+        all-int).
+        """
+        ...
+
+    def eval_term(self, term: Any, env: dict) -> Any:
+        """Evaluate *term* against *env* through the backend bindings.
+
+        Raises ``KeyError`` for an unbound op.
+        """
+        ...
+
+    def allclose(self, a: Any, b: Any, tol: float) -> bool:
+        """Compare two values with tolerance *tol*.
+
+        Structural/tensor comparison; values may be nested tuples.
+        """
+        ...
+
+
+#: Injected concrete-evaluation backend — see
+#: :func:`register_concrete_eval`.  ``None`` until an adapter registers
+#: (a mlopt-core-only environment), in which case the numeric check
+#: degrades to structural-only.
+_concrete_eval: ConcreteEval | None = None
+
+
+def register_concrete_eval(backend: ConcreteEval) -> None:
+    """Adapter hook: install the numeric-evaluation backend.
+
+    ``mlopt_torch.meta_eval`` calls this at import time.  With no
+    backend registered the numeric candidate check is skipped — the
+    same path taken when an op has no lowering binding.
+    """
+    global _concrete_eval
+    _concrete_eval = backend
+
+
+def _eval_term(term: Any, env: dict) -> Any:
+    """Evaluate a term with concrete leaves against ``env``.
+
+    ``env`` maps leaf -> value; evaluation goes through the injected
+    backend.  Returns a value or a nested tuple (aff/om carriers).
+    Raises ``RuntimeError`` when no backend is registered — the caller
+    treats that as "skip the numeric check".
+    """
+    if _concrete_eval is None:
+        raise RuntimeError("no concrete-eval backend registered")
+    return _concrete_eval.eval_term(term, env)
+
+
+def _eval_allclose(a: Any, b: Any, tol: float = 1e-6) -> bool:
+    if _concrete_eval is None:
+        return False
+    return _concrete_eval.allclose(a, b, tol)
+
+
+def _term_is_ground(t: Any) -> bool:
+    """No leftover str metavariables anywhere."""
+    if isinstance(t, str):
+        return False
+    if isinstance(t, Op):
+        if any(isinstance(v, str) for v in t.attrs.values()):
+            return False
+        return all(_term_is_ground(a) for a in t.args)
+    return True
+
+
+def _replays(
+    derived: Rewrite,
+    r1: Rewrite,
+    r2: Rewrite,
+    t0: Any,
+    target: Any,
+    fuel: int = 400,
+) -> bool:
+    """Check the derivation replays.
+
+    Some r1 application on *t0* followed by some r2 application reaches
+    *target*.
+    """
+    spent = 0
+    for p, _ in _positions(t0):
+        t1 = apply_rewrite_at(r1, t0, p)
+        if t1 is None:
+            continue
+        for q, _ in _positions(t1):
+            spent += 1
+            if spent > fuel:
+                return False
+            t2 = apply_rewrite_at(r2, t1, q)
+            if t2 is not None and t2 == target:
+                return True
+    return False
+
+
+def _fresh_leaves(n: int, shape: tuple = (4, 4)) -> list[Var]:
+    from mlopt_core.ir import TensorType
+
+    return [Var(f"_synth_{i}", TensorType(shape)) for i in range(n)]
+
+
+#: Leaf shapes tried when instantiating a candidate LHS for
+#: validation — the instantiation bank lives in
+#: :mod:`mlopt_core.lawdata` (:data:`INSTANTIATE_LEAF_SHAPES`); a
+#: candidate whose guards need a profile outside the bank is rejected
+#: — conservative, never unsound.
+_LEAF_SHAPES: tuple = lawdata.INSTANTIATE_LEAF_SHAPES
+
+#: Values enumerated for attribute metavariables in a candidate LHS
+#: (:data:`mlopt_core.lawdata.INSTANTIATE_ATTR_POOL`).
+_ATTR_POOL: tuple = lawdata.INSTANTIATE_ATTR_POOL
+
+#: Cap on LHS instantiations tried per leaf-shape profile.
+_MAX_INSTANTIATIONS: int = 400
+
+
+def _instantiation_stream(term_mvars: list[str], attr_mvars: list[str]):
+    """Yield candidate-LHS substitutions.
+
+    Fresh typed leaves (per :data:`_LEAF_SHAPES` profile) times a
+    bounded product of :data:`_ATTR_POOL` values for attribute
+    metavariables.
+    """
+    import itertools
+
+    for shape in _LEAF_SHAPES:
+        leaves = _fresh_leaves(len(term_mvars), shape)
+        base = dict(zip(term_mvars, leaves, strict=True))
+        for count, combo in enumerate(
+            itertools.product(*([_ATTR_POOL] * len(attr_mvars)))
+        ):
+            subst = dict(base)
+            for a, v in zip(attr_mvars, combo, strict=True):
+                subst["$attr:" + a] = v
+            yield subst
+            if count + 1 >= _MAX_INSTANTIATIONS:
+                break
+
+
+def _leaf_vars(t: Any, out: set | None = None) -> set:
+    """Var/Param leaves occurring anywhere inside a (sub)term."""
+    if out is None:
+        out = set()
+    if isinstance(t, (Var, Param)):
+        out.add(t)
+    elif isinstance(t, Op):
+        for a in t.args:
+            _leaf_vars(a, out)
+    return out
+
+
+def _tensor_env(subst: dict) -> dict:
+    """Random fp64 tensors for the typed leaves in a substitution.
+
+    Bound values may be whole subterms (witness bindings mined from
+    seeds), so Var/Param leaves are collected recursively — a scalar or
+    tensor needed only deep inside a bound mask still gets an entry.
+    Leaf/shape extraction is pure core; the tensors themselves are
+    built by the injected backend (``{}`` when none is registered).
+    """
+    if _concrete_eval is None:
+        return {}
+    leaf_shapes: dict[Any, tuple] = {}
+    for v in subst.values():
+        for leaf in _leaf_vars(v):
+            shape = getattr(getattr(leaf, "typ", None), "shape", None)
+            if shape is not None and all(
+                isinstance(d, int) for d in shape
+            ):
+                leaf_shapes[leaf] = tuple(shape)
+    return _concrete_eval.make_env(leaf_shapes)
+
+
+def _seed_witnesses(lhs: Any, seeds: Iterable[Any]):
+    """Yield substitutions from matching *lhs* against seed subterms.
+
+    These are the *real witnesses* a guarded candidate needs: concrete
+    bindings on which the composite side conditions demonstrably can
+    hold (Const-valued scales, broadcast-shaped masks, transpose dims
+    tied to an actual rank) — assignments the bounded leaf/attr pool
+    cannot produce.
+    """
+    for s in seeds or ():
+        for _, sub in _positions(s):
+            m = match_pattern(lhs, sub, {})
+            if m is not None:
+                yield m
+
+
+def _validate_candidate(
+    cand: Rewrite,
+    r1: Rewrite,
+    r2: Rewrite,
+    numeric: bool,
+    witness: dict | None = None,
+    seeds: Iterable[Any] = (),
+) -> bool:
+    """Well-formedness + derivation replay + (optional) numeric check.
+
+    *witness* (seed path) is the concrete binding the derivation
+    actually fired on — instantiating the LHS with it is guaranteed to
+    satisfy the composite guards.  Without a witness (symbolic path) a
+    GUARDED candidate first tries seed-mined bindings — its LHS matched
+    against every seed subterm — since tight side conditions are only
+    satisfiable on real instances; the bounded instantiation pool then
+    remains as a fallback.  A candidate whose guards are unsatisfiable
+    on every tried instance is rejected rather than trusted.
+    """
+    lhs_mv = pattern_metavars(cand.lhs)
+    rhs_mv = pattern_metavars(cand.rhs)
+    lhs_terms = {v for v in lhs_mv if not v.startswith("$attr:")}
+    # RHS term metavars must be LHS-bound — except the ``@i:`` leaf
+    # placeholders a ``$leaf:`` parent minted, which the candidate's
+    # own ``derive`` refills at fire time (the term-level twin of the
+    # attr-placeholder clause).  An unresolved one vetoes the firing,
+    # which the loop below measures as a refusal.
+    for v in rhs_mv:
+        if v.startswith("$attr:"):
+            if v not in lhs_mv and cand.derive is None:
+                return False
+        elif v not in lhs_terms and not (
+            cand.derive is not None
+            and any(v.startswith(p) for p in _DRV_PREFIX)
+        ):
+            return False
+    term_mvars = sorted(lhs_terms)
+    attr_mvars = sorted(
+        v[len("$attr:") :] for v in lhs_mv if v.startswith("$attr:")
+    )
+
+    def attempt(subst: dict, fatal_replay: bool):
+        """None: instance vetoed/skipped; False: reject; True: emit."""
+        try:
+            t0 = instantiate_pattern(cand.lhs, subst)
+        except KeyError:
+            return None
+        # Fire the derived rule itself — this runs the composite
+        # check/derive, so a guarded instantiation that vetoes simply
+        # moves the enumeration to the next assignment.
+        tout = apply_rewrite_at(cand, t0, ())
+        if tout is None:
+            return None
+        if not _term_is_ground(tout):
+            return None
+        # The claimed derivation r1-then-r2 must actually replay —
+        # parent guards are evaluated on this concrete instance too.  A
+        # firing instance the derivation cannot reproduce is a genuine
+        # counterexample (fatal); a seed-mined match may instead merely
+        # be too large for the replay fuel, so it only skips ahead.
+        if not _replays(cand, r1, r2, t0, tout):
+            return False if fatal_replay else None
+        if numeric:
+            try:
+                env = _tensor_env(subst)
+                a = _eval_term(t0, env)
+                b = _eval_term(tout, env)
+            except Exception:
+                return (
+                    True  # ops without torch bindings: structural only
+                )
+            return _eval_allclose(a, b)
+        return True
+
+    if witness is not None:
+        return attempt(dict(witness), fatal_replay=True) is True
+
+    # Materialise once: ``seeds`` is typed ``Iterable`` (a generator is
+    # always truthy), and the loop below may consult it twice.
+    seeds = tuple(seeds)
+    # Guarded candidates prefer real seed witnesses; a vetoed match is
+    # just an instance the side conditions exclude, a verified match is
+    # proof on a binding that actually arises.
+    if seeds and (cand.check is not None or cand.derive is not None):
+        for subst in _seed_witnesses(cand.lhs, seeds):
+            res = attempt(subst, fatal_replay=False)
+            if res is not None:
+                return res
+    for subst in _instantiation_stream(term_mvars, attr_mvars):
+        res = attempt(subst, fatal_replay=True)
+        if res is not None:
+            return res
+    return False
+
+
+def _is_tautology(lhs: Any, rhs: Any) -> bool:
+    lhs_key, rhs_key = _alpha_key(lhs, rhs)
+    return lhs_key == rhs_key
+
+
+def _subsumed(cand: Rewrite, existing: list[Rewrite]) -> bool:
+    """Return True if *cand* is just an instance of an existing rule.
+
+    Its lhs matches some rule's lhs and the corresponding rhs
+    instantiation alpha-equals cand.rhs.
+    """
+    for e in existing:
+        # A guarded rule cannot subsume: it only fires where its side
+        # conditions pass, so *cand* may cover instances it cannot.
+        if e.check is not None or e.derive is not None:
+            continue
+        subst = match_pattern(e.lhs, cand.lhs, {})
+        if subst is None:
+            continue
+        try:
+            inst = instantiate_pattern(e.rhs, subst)
+        except KeyError:
+            continue
+        if (
+            _alpha_key(inst, inst)[0]
+            == _alpha_key(cand.rhs, cand.rhs)[0]
+        ):
+            return True
+    return False
+
+
+def synthesize_rules(
+    rules: Iterable[Rewrite],
+    seed_terms: Iterable[Any] = (),
+    *,
+    fuel: int = 512,
+    numeric_check: bool = True,
+    require_overlap: bool = True,
+    emit_subsumed: bool = False,
+    rounds: int = 1,
+    max_emitted: int | None = None,
+    on_round: Callable[[int, list[Rewrite]], object] | None = None,
+) -> list[Rewrite]:
+    """Compose ordered pairs of rules into derived rewrite rules.
+
+    ``rounds`` iterates the composition toward a fixpoint: each round's
+    emitted composites feed back into the bank alongside the base rules
+    (``usable = base + latest stratum`` — generation *n*+1 mints pairs
+    over generation *n*), so a fold whose derivation needs *k* pairwise
+    steps mints within *k* strata.  Measured: the conv+BN weight fold —
+    ``batch_norm(conv2d(x,W,b),…) → conv2d(x,W′,b′)``, a depth-5 chain —
+    mints in 4 rounds over ``ALL_RULES`` + the BN/conv/pointwise
+    families (26→61→242→944 emitted;
+    ``lab/probes/conv_bn_fold_synth_probe.py`` gate B3).  The loop ends
+    early when a round emits nothing or *on_round* vetoes; ``rounds=1``
+    is exactly the single-pass behaviour every existing caller sees.
+
+    Growth is exponential — *fuel* bounds each round's rule-application
+    attempts (per stratum, matching the single-pass semantics), and
+    ``max_emitted`` caps the total minted across all rounds: a round
+    stops minting the moment the cap is hit, so the cap bounds
+    *validation* cost (the dominant spend — every candidate replays its
+    derivation and, under ``numeric_check``, evaluates fp64) as well as
+    list size.  ``on_round`` is an optional observer called once per
+    stratum as ``on_round(round_index, emitted)`` — 1-based, the raw
+    per-round mint — and returning ``False`` stops the fixpoint
+    (caller-defined convergence, e.g. a target composite minted).
+
+    A later stratum's bank re-tries every base×base pair, so earlier
+    composites re-mint inside later rounds — except while the previous
+    stratum is still in the bank, where ``_subsumed`` suppresses a
+    re-mint of any *unguarded* composite already present (a guarded
+    composite cannot subsume, so guarded strata keep re-minting).  The
+    *returned* list is deduplicated across rounds by alpha key (first
+    mint wins); the strata passed to *on_round* are not — they are
+    what each round actually minted.  ``rounds`` must be ≥ 1.
+
+    Two synthesis paths (seed-guided runs FIRST — it is the preferred
+    path for guarded pairs):
+
+    * **Seed-guided** — apply ``r1`` then ``r2`` on concrete seed terms;
+      the composite over the smallest region containing both rewrite
+      sites is re-abstracted leaf-by-leaf into a new pattern, and the
+      fired binding is carried into validation as the candidate's
+      *witness*.  A guarded pair's side conditions (Const-valued
+      scales, broadcast-shaped masks, rank-tied transpose dims) are in
+      general only satisfiable on real instances, so a pair where
+      either parent has ``check``/``derive`` needs this path — or a
+      seed-mined witness — to emit.  This path also captures
+      interactions that only appear in context (e.g. an ``apply`` node
+      produced inside a larger ``add(matmul(...), x)``).
+    * **Symbolic** — apply ``r1`` to its own LHS symbolically (its RHS
+      with metavariable leaves) and match ``r2``'s LHS on the result.
+      Produces fully general derived rules ``r1.lhs -> t2``.  Guarded
+      symbolic candidates are validated against seed-mined witnesses
+      first (the candidate LHS matched against every seed subterm),
+      then against the bounded instantiation pool as fallback.
+
+    Guarded parents compose too: the derived rule's ``check`` is the
+    CONJUNCTION of both parents' checks, each evaluated on its own
+    binding re-expressed through the intermediate substitution (see
+    :func:`_compose_guards`), and ``derive``-produced attributes are
+    carried as namespaced placeholders the derived rule refills at fire
+    time.  ``derive``-produced *term* bindings — ADR 0012's ``$leaf:``
+    channel — travel the same way as ``"@i:"`` leaf metavars: the
+    derived rule's composite ``derive`` re-runs the parent's spec and
+    resolves the leaf through the pushed ``TensorAlgebra`` at
+    instantiate time, so a ``$leaf:`` rule auto-composes.  A
+    composition whose side condition cannot be re-expressed is
+    rejected — never emitted unsound.
+
+    ``seed_terms`` supplies the concrete terms the seed-guided path
+    fires on (and that guarded symbolic candidates mine for witness
+    bindings); pass real terms on which the guarded parents actually
+    fire — e.g. a materialised attention term for the ``sdpa_fold``
+    family.  ``fuel`` bounds the number of rule-application attempts
+    *per round*.  ``require_overlap`` keeps only pairs whose rewrite
+    sites share an ancestor/descendant relation (true critical pairs —
+    disjoint pairs are just parallel application).  ``numeric_check``
+    evaluates each candidate on random fp64 tensors when its ops have
+    torch bindings.
+
+    Returns a list of :class:`Rewrite` objects named
+    ``syn_<r1>__<r2>_<i>`` with provenance recorded in ``law``, on
+    ``rule.parents``, and in :data:`SYNTH_PARENTS`.
+    """
+    if rounds < 1:
+        raise ValueError(f"rounds must be >= 1, got {rounds}")
+    base = list(rules)
+    seeds = tuple(seed_terms)
+    emitted: list[Rewrite] = []
+    usable = base
+    for rnd in range(1, rounds + 1):
+        cap = (
+            None if max_emitted is None else max_emitted - len(emitted)
+        )
+        if cap is not None and cap <= 0:
+            break
+        stratum = _synthesize_once(
+            usable,
+            seeds,
+            fuel=fuel,
+            numeric_check=numeric_check,
+            require_overlap=require_overlap,
+            emit_subsumed=emit_subsumed,
+            emitted_cap=cap,
+        )
+        emitted.extend(stratum)
+        if on_round is not None and on_round(rnd, stratum) is False:
+            break
+        if not stratum:
+            break
+        # Stratified feedback: generation n+1's bank is the base rules
+        # plus generation n's mint — pairs over older strata are
+        # already minted, so they need no re-entry.
+        usable = base + stratum
+    # Every round's bank re-tries the base-base pairs, so earlier
+    # composites re-mint inside later strata; the aggregate dedups by
+    # alpha key (first mint wins).  The strata reported to ``on_round``
+    # stay raw — the honest per-round mint.
+    seen_keys: set[tuple[str, str]] = set()
+    out: list[Rewrite] = []
+    for r in emitted:
+        key = _alpha_key(r.lhs, r.rhs)
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        out.append(r)
+    return out
+
+
+def _synthesize_once(
+    rules: Iterable[Rewrite],
+    seed_terms: Iterable[Any] = (),
+    *,
+    fuel: int = 512,
+    numeric_check: bool = True,
+    require_overlap: bool = True,
+    emit_subsumed: bool = False,
+    emitted_cap: int | None = None,
+) -> list[Rewrite]:
+    """One pair-composition pass over *rules* — a fixpoint stratum.
+
+    The ``rounds=1`` body of :func:`synthesize_rules` (see it for the
+    two paths, the guard-transport contract, and the validation story).
+    ``emitted_cap`` bounds how many rules this pass mints: the
+    enumeration stops the moment ``derived`` reaches it, so the cap
+    bounds validation spend, not just list length.
+    """
+    usable = [r for r in rules if _synthesizable(r)]
+    derived: list[Rewrite] = []
+    seen: set[tuple[str, str]] = set()
+    spent = 0
+    counter = [0]
+    ns1, ns2 = _DRV_PREFIX
+
+    def _stopped() -> bool:
+        """Fuel or the emitted cap is spent — unwind every loop level."""
+        return spent > fuel or (
+            emitted_cap is not None and len(derived) >= emitted_cap
+        )
+
+    def offer(
+        lhs: Any,
+        rhs: Any,
+        r1: Rewrite,
+        r2: Rewrite,
+        via: str,
+        check=None,
+        derive=None,
+        witness: dict | None = None,
+        pats: tuple[dict, dict] | None = None,
+    ) -> None:
+        if _is_tautology(lhs, rhs):
+            return
+        key = _alpha_key(lhs, rhs)
+        if key in seen:
+            return
+        seen.add(key)
+        # A composite derive is only attached when the RHS actually
+        # carries placeholders it must fill (the check alone already
+        # covers vetoing; extra derives would be dead weight).
+        placeholders = _rhs_derive_placeholders(rhs)
+        drv = derive if (derive is not None and placeholders) else None
+        # Not the pointwise-offer ritual (``EGraph._offer_witness``):
+        # this mints a *candidate rule* for the synthesiser —
+        # validated, subsumption-checked, collected — with no e-class
+        # union involved.
+        cand = Rewrite(
+            name=f"syn_{r1.name}__{r2.name}_{counter[0]}",
+            lhs=lhs,
+            rhs=rhs,
+            law=f"synthesized: {r1.name} then {r2.name} ({via})",
+            check=check,
+            derive=drv,
+        )
+        counter[0] += 1
+        # Frozen dataclass: provenance rides on the instance dict plus
+        # the module-level registry.
+        object.__setattr__(cand, "parents", (r1.name, r2.name))
+        SYNTH_PARENTS[cand.name] = (r1.name, r2.name)
+        # The guard re-expression maps (pat1, pat2) are pure data — kept
+        # on the rule so mlopt_core.rulecache can serialize them and rebuild
+        # the composite check/derive at load time via _compose_guards.
+        if (
+            pats is not None
+        ):  # pragma: no cover — every call site passes pats
+            object.__setattr__(cand, "guard_pats", pats)
+        if not emit_subsumed and _subsumed(cand, usable + derived):
+            return
+        if not _validate_candidate(
+            cand,
+            r1,
+            r2,
+            numeric_check,
+            witness=witness,
+            seeds=seed_terms,
+        ):
+            return
+        derived.append(cand)
+
+    # -- seed-guided path: r1 then r2 on concrete terms -------------------
+    # Seeds run FIRST: a guarded pair's side conditions (Const-valued
+    # scales, broadcast-shaped masks, rank-tied dims) are only
+    # satisfiable on real instances, and the fired binding rides into
+    # validation as the candidate's witness.  The symbolic path below
+    # stays as the fully-general fallback.
+    for s in seed_terms:
+        if _stopped():
+            break
+        for r1 in usable:
+            for p, _ in _positions(s):
+                if _stopped():
+                    break
+                f1 = _fire_guarded(r1, s, p, ns1)
+                if f1 is None:
+                    continue
+                m1, t1, conc1 = f1
+                spent += 1
+                keep = _concrete_matched_leaves(r1.lhs, _subterm(s, p))
+                for r2 in usable:
+                    for q, sub2 in _positions(t1):
+                        if _stopped():
+                            break
+                        if require_overlap and not _overlapping(p, q):
+                            continue
+                        m2 = match_pattern(r2.lhs, sub2, {})
+                        if m2 is None:
+                            continue
+                        spent += 1
+                        # r2's guards need the CONCRETE binding: resolve
+                        # placeholder attrs inside the matched terms and
+                        # in the "$attr:" entries via r1's derived values.
+                        m2e = {}
+                        bad = False
+                        for k, v in m2.items():
+                            if k.startswith("$attr:"):
+                                if isinstance(v, str):
+                                    if v in conc1:
+                                        v = conc1[v]
+                                    else:
+                                        bad = True
+                                        break
+                                m2e[k] = v
+                            else:
+                                m2e[k] = _concretize_attrs(v, conc1)
+                        if bad:
+                            continue
+                        try:
+                            if r2.check is not None and not r2.check(
+                                m2e
+                            ):
+                                continue
+                        except Exception:
+                            continue
+                        inst2 = dict(m2)
+                        if r2.derive is not None:
+                            try:
+                                e2 = r2.derive(m2e)
+                            except Exception:
+                                continue
+                            if e2 is None:
+                                continue
+                            for k, _v in e2.items():
+                                if k.startswith("$attr:"):
+                                    inst2[k] = ns2 + k[len("$attr:") :]
+                                else:
+                                    # "$leaf:"-channel outputs stay
+                                    # symbolic — "@2:" leaf
+                                    # placeholders the composite
+                                    # derive refills at fire time.
+                                    inst2[k] = ns2 + k
+                        try:
+                            rhs2 = instantiate_pattern(r2.rhs, inst2)
+                        except KeyError:  # pragma: no cover — _synthesizable guarantees a total subst
+                            continue
+                        t2 = _replace(t1, q, rhs2)
+                        keep2 = _concrete_matched_leaves(r2.lhs, sub2)
+                        lca = _common_prefix(p, q)
+                        names: dict = {}
+                        cnt = [0]
+                        lhs_pat = _leaf_generalize(
+                            _subterm(s, lca),
+                            names,
+                            keep | keep2,
+                            cnt,
+                            assign_fresh=True,
+                        )
+                        rhs_pat = _leaf_generalize(
+                            _subterm(t2, lca),
+                            names,
+                            keep | keep2,
+                            cnt,
+                            assign_fresh=False,
+                        )
+                        # Re-express both fired bindings over the derived
+                        # metavariables; an un-reexpressible binding
+                        # rejects the pair outright.
+                        try:
+                            pat1 = _reexpress_map(
+                                m1, names, keep | keep2
+                            )
+                            pat2 = _reexpress_map(
+                                m2, names, keep | keep2
+                            )
+                        except _Unreexpressible:
+                            continue
+                        chk, drv = _compose_guards(r1, r2, pat1, pat2)
+                        witness = {v: leaf for leaf, v in names.items()}
+                        offer(
+                            lhs_pat,
+                            rhs_pat,
+                            r1,
+                            r2,
+                            "seed",
+                            check=chk,
+                            derive=drv,
+                            witness=witness,
+                            pats=(pat1, pat2),
+                        )
+
+    # -- symbolic path: r1 applied to its own lhs -------------------------
+    for r1 in usable:
+        if _stopped():
+            break
+        # Identity instantiation: term metavars stay themselves, LHS
+        # attr metavars keep their names, and RHS metavars that only
+        # ``derive`` can produce become "@1:" placeholders — attr
+        # metavars as "@1:X" attr placeholders, term metavars (the
+        # "$leaf:" channel) as "@1:X" leaf placeholders.
+        subst = {}
+        for v in pattern_metavars(r1.lhs):
+            subst[v] = (
+                v[len("$attr:") :] if v.startswith("$attr:") else v
+            )
+        for v in pattern_metavars(r1.rhs):
+            if v not in subst:
+                subst[v] = (
+                    ns1 + v[len("$attr:") :]
+                    if v.startswith("$attr:")
+                    else ns1 + v
+                )
+        try:
+            t1 = instantiate_pattern(r1.rhs, subst)
+        except (
+            KeyError
+        ):  # pragma: no cover — _synthesizable guarantees a total subst
+            continue
+        # r1's binding on the derived rule's own subst is the identity.
+        pat1 = {
+            v: (v[len("$attr:") :] if v.startswith("$attr:") else v)
+            for v in pattern_metavars(r1.lhs)
+        }
+        for q, sub in _positions(t1):
+            for r2 in usable:
+                spent += 1
+                if _stopped():
+                    break
+                m2 = match_pattern(r2.lhs, sub, {})
+                if m2 is None:
+                    continue
+                # r2's RHS metavars not bound by its LHS need
+                # r2.derive — carried as "@2:" placeholders (attr
+                # metavars and "$leaf:"-channel term metavars alike).
+                inst2 = dict(m2)
+                ok = True
+                for v in pattern_metavars(r2.rhs):
+                    if v not in inst2:
+                        if (
+                            r2.derive is None
+                        ):  # pragma: no cover — filtered by _synthesizable
+                            ok = False
+                            break
+                        inst2[v] = (
+                            ns2 + v[len("$attr:") :]
+                            if v.startswith("$attr:")
+                            else ns2 + v
+                        )  # pragma: no cover — r2.derive + unbound metavar
+
+                if (
+                    not ok
+                ):  # pragma: no cover — filtered by _synthesizable
+                    continue
+                try:
+                    rhs2 = instantiate_pattern(r2.rhs, inst2)
+                except (
+                    KeyError
+                ):  # pragma: no cover — total subst guaranteed
+                    continue
+                t2 = _replace(t1, q, rhs2)
+                chk, drv = _compose_guards(r1, r2, pat1, m2)
+                offer(
+                    r1.lhs,
+                    t2,
+                    r1,
+                    r2,
+                    "symbolic",
+                    check=chk,
+                    derive=drv,
+                    pats=(pat1, m2),
+                )
+
+    return derived

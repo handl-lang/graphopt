@@ -1,4 +1,4 @@
-"""Tests for ``catopt_discovery.families`` — training-program families.
+"""Tests for ``mlopt_discovery.families`` — training-program families.
 
 The families build the small IR programs the learned/RL policies are
 trained on: right-seeded matmul chains (``k > m`` so ``assoc_matmul``
@@ -9,9 +9,9 @@ cost delta.
 """
 
 import pytest
-from catopt_core.ir import Op, Var, op_repr
-from catopt_core.laws import ALL_RULES
-from catopt_discovery import families as fam
+from mlopt_core.ir import Op, Var, op_repr
+from mlopt_core.laws import ALL_RULES
+from mlopt_discovery import families as fam
 
 _BY_NAME = {r.name: r for r in ALL_RULES}
 

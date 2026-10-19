@@ -1,6 +1,6 @@
-"""Differential oracle: catopt's e-graph vs the ``egglog`` engine.
+"""Differential oracle: mlopt's e-graph vs the ``egglog`` engine.
 
-OPT-IN and TEST-ONLY (Phase 4).  This test cross-checks catopt's
+OPT-IN and TEST-ONLY (Phase 4).  This test cross-checks mlopt's
 hand-rolled equality-saturation search against the Rust ``egglog``
 library on a small op/law subset — see ``tests/egglog_oracle.py`` for
 the ported prototype and its documented limitations.
@@ -23,20 +23,20 @@ import torch.nn as nn
 # Keep the suite green without the opt-in `oracle` dependency group.
 pytest.importorskip("egglog")
 
-from catopt_core.ir import (
+from mlopt_core.ir import (
     Op,
     Param,
     TensorType,
     Var,
     op_repr,
 )
-from catopt_torch.torch_bridge import export_to_ir
+from mlopt_torch.torch_bridge import export_to_ir
 
 from tests.egglog_oracle import (
     EgglogEngine,
     canon,
-    catopt_equivalent,
-    catopt_extract,
+    mlopt_equivalent,
+    mlopt_extract,
     evaluate,
     folded_flops,
 )
@@ -130,7 +130,7 @@ def _differential(term, inputs, params, vals_in, vals_p, ref=None):
     representative choice; (c) the folded (param-discounted) costs
     coincide.
     """
-    cat_best, cat_fires = catopt_extract(term)
+    cat_best, cat_fires = mlopt_extract(term)
 
     eng = EgglogEngine.from_term(term, inputs, params)
     egg_fires = eng.run(10)
@@ -141,7 +141,7 @@ def _differential(term, inputs, params, vals_in, vals_p, ref=None):
     )
     for label, t in (
         ("original", term),
-        ("catopt", cat_best),
+        ("mlopt", cat_best),
         ("egglog", egg_best),
     ):
         got = evaluate(t, vals_in, vals_p)
@@ -247,8 +247,8 @@ def test_equivalence_discovery_agrees():
     x = Var("x", TensorType((2, 4)))
     other = Op.make("matmul", Op.make("matmul", a, b), x)
 
-    # catopt: the two terms land in the same e-class.
-    assert catopt_equivalent(term, other)
+    # mlopt: the two terms land in the same e-class.
+    assert mlopt_equivalent(term, other)
 
     # egglog: prove the same equation after saturation.
     eng = EgglogEngine.from_term(term, inputs, params)

@@ -35,4 +35,4 @@ def test_quickstart_runs_end_to_end():
     # the five acts, in order — a cheap structural check of the output
     assert "THE RACE" in out
     assert "faster than eager" in out
-    assert "catopt" in out
+    assert "mlopt" in out

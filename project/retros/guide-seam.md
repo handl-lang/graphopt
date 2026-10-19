@@ -1,6 +1,6 @@
 # The guide seam — a policy over the generator inventory
 
-Plan 0017 stage 2.  ADR 0004 §3 assigns `catopt_discovery.meta_game`
+Plan 0017 stage 2.  ADR 0004 §3 assigns `mlopt_discovery.meta_game`
 its real role: the player does not pick rewrites, it picks **which
 generator invests compute where**.  This stage builds that seam —
 the action space, the observation source, three baselines — and
@@ -11,12 +11,12 @@ the winner).
 
 Reproduce (each run ~5 s CPU):
 
-    .venv/bin/python -m catopt_discovery.meta_game --guide \
+    .venv/bin/python -m mlopt_discovery.meta_game --guide \
         --budget 60 --guide-step 8 --seed 0
-    .venv/bin/python -m catopt_discovery.meta_game --guide \
+    .venv/bin/python -m mlopt_discovery.meta_game --guide \
         --budget 30 --guide-step 6 --seed 5
 
-Everything lives in `catopt_discovery/meta_game.py`; tests in
+Everything lives in `mlopt_discovery/meta_game.py`; tests in
 `tests/test_discovery_meta_game.py`.
 
 ## 1. The honest action space

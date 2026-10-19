@@ -1,4 +1,4 @@
-"""Tests for ``catopt_discovery.vocab`` — property-derived op classes.
+"""Tests for ``mlopt_discovery.vocab`` — property-derived op classes.
 
 The vocabulary is derived by *test*, not lookup: a view is arity-1,
 value-preserving and shape-changing; pointwise means shape-preserving
@@ -11,10 +11,10 @@ import json
 
 import pytest
 import torch
-from catopt_core.egraph import Rewrite
-from catopt_core.ir import Op, TensorType, Var
-from catopt_discovery import dspec_synth
-from catopt_discovery import vocab as vc
+from mlopt_core.egraph import Rewrite
+from mlopt_core.ir import Op, TensorType, Var
+from mlopt_discovery import dspec_synth
+from mlopt_discovery import vocab as vc
 
 
 def _p(op: str, *args, **attrs) -> Op:

@@ -1,4 +1,4 @@
-"""Tests for ``catopt_discovery.propose`` — the vocabulary proposal.
+"""Tests for ``mlopt_discovery.propose`` — the vocabulary proposal.
 
 ``propose`` extends the *proposal* side of ``vocab``'s need detection
 (plan 0024 part B): a complete, checkable ``declare`` proposal — the
@@ -15,8 +15,8 @@ import json
 
 import pytest
 
-from catopt_discovery import propose as pp
-from catopt_discovery import vocab as vc
+from mlopt_discovery import propose as pp
+from mlopt_discovery import vocab as vc
 
 
 def test_spelled_term_mod_is_bank_derivable():

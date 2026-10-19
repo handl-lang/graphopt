@@ -1,4 +1,4 @@
-"""Tests for ``catopt_discovery.verifier`` — the e-graph law oracle.
+"""Tests for ``mlopt_discovery.verifier`` — the e-graph law oracle.
 
 ``verify_law`` decides derivability by saturating both sides of a
 claimed equality under a rule universe; on a merge it replays a
@@ -10,10 +10,10 @@ relation classifier, and the three experiments riding on top.
 
 import json
 
-from catopt_core.egraph import Rewrite
-from catopt_core.ir import Const, Op, TensorType, Var, op_repr
-from catopt_core.laws import ALL_RULES
-from catopt_discovery import verifier as vf
+from mlopt_core.egraph import Rewrite
+from mlopt_core.ir import Const, Op, TensorType, Var, op_repr
+from mlopt_core.laws import ALL_RULES
+from mlopt_discovery import verifier as vf
 
 _BY_NAME = {r.name: r for r in ALL_RULES}
 _UNI = [
@@ -228,7 +228,7 @@ def test_instance_of_apply_veto_returns_none(monkeypatch):
 def test_law_cases_adds_repo_to_syspath(monkeypatch):
     import sys
 
-    from catopt_discovery import REPO_ROOT
+    from mlopt_discovery import REPO_ROOT
 
     kept = [p for p in sys.path if p != str(REPO_ROOT)]
     monkeypatch.setattr(sys, "path", kept)

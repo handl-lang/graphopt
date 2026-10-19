@@ -48,16 +48,16 @@ Covered:
 
 import time
 
-import catopt_carriers.om as OM
+import mlopt_carriers.om as OM
 import pytest
 import torch
-from catopt_core import meta
-from catopt_core.cost import flops_cost, launch_aware_cost
-from catopt_core.egraph import EGraph
-from catopt_core.ir import IR, Const, Op, TensorType, Var
-from catopt_core.typing import _INVALID, _shape_of
-from catopt_torch.adapters import TorchSink
-from catopt_torch.torch_bridge import _IR_TO_TORCH, ir_to_torch_module
+from mlopt_core import meta
+from mlopt_core.cost import flops_cost, launch_aware_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import IR, Const, Op, TensorType, Var
+from mlopt_core.typing import _INVALID, _shape_of
+from mlopt_torch.adapters import TorchSink
+from mlopt_torch.torch_bridge import _IR_TO_TORCH, ir_to_torch_module
 
 torch.manual_seed(0)
 
@@ -200,8 +200,8 @@ def test_decay_lift_fires_and_evals():
 
 def test_decay_lift_fires_on_export_spelling():
     """The zoo's ChunkedRetention decay folds on its real export."""
-    from catopt_discovery.zoo import _ChunkedRetention
-    from catopt_torch.torch_bridge import export_to_ir
+    from mlopt_discovery.zoo import _ChunkedRetention
+    from mlopt_torch.torch_bridge import export_to_ir
 
     torch.manual_seed(0)
     model = _ChunkedRetention(16).double()

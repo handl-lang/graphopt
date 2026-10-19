@@ -1,6 +1,6 @@
 /** The toy term language and its cost model.
  *
- * Mirrors `catopt_core.ir` + `catopt_core.cost` for a five-op algebra:
+ * Mirrors `mlopt_core.ir` + `mlopt_core.cost` for a five-op algebra:
  * `matmul`, `add`, `mul`, plus the `scale2` the CSE rule produces and
  * the `sq` / `sqq` pair the coherence level's laws work over.
  */

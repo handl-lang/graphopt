@@ -1,4 +1,4 @@
-"""Tests for ``catopt_discovery.pipeline`` — the end-to-end law loop.
+"""Tests for ``mlopt_discovery.pipeline`` — the end-to-end law loop.
 
 The pipeline composes census -> propose -> verify -> measure -> rank.
 These tests exercise it two ways:
@@ -24,19 +24,19 @@ import json
 
 import pytest
 import torch
-from catopt_core.ir import Const, Op, TensorType, Var
-from catopt_core.laws import ALL_RULES
-from catopt_discovery import evidence as ev_store
-from catopt_discovery import intake as li
-from catopt_discovery import pipeline as pl
-from catopt_discovery import proposal as lp
-from catopt_discovery.census import (
+from mlopt_core.ir import Const, Op, TensorType, Var
+from mlopt_core.laws import ALL_RULES
+from mlopt_discovery import evidence as ev_store
+from mlopt_discovery import intake as li
+from mlopt_discovery import pipeline as pl
+from mlopt_discovery import proposal as lp
+from mlopt_discovery.census import (
     CorpusTerm,
     op_tuple_census,
     shape_census,
 )
-from catopt_discovery.impact import TermCase, _cost_fn
-from catopt_discovery.shape_proposal import _sink
+from mlopt_discovery.impact import TermCase, _cost_fn
+from mlopt_discovery.shape_proposal import _sink
 
 # ---------------------------------------------------------------------------
 #  Tiny corpus — two/three well-typed terms standing in for the real one
@@ -215,7 +215,7 @@ def test_vocab_sets_hand_and_derived(monkeypatch):
         views = ("select",)
 
     monkeypatch.setattr(
-        "catopt_discovery.vocab.derive_vocabulary", lambda: _FakeVocab()
+        "mlopt_discovery.vocab.derive_vocabulary", lambda: _FakeVocab()
     )
     assert pl._vocab_sets("derived") == (("add",), ("select",))
 
@@ -1111,7 +1111,7 @@ def test_main_emit_admission_refusal_returns_1(
 
 def test_main_emit_admission_success(monkeypatch, tmp_path, capsys):
     _patch_tiny(monkeypatch)
-    from catopt_discovery import emit
+    from mlopt_discovery import emit
 
     monkeypatch.setattr(
         emit, "_TENSOR_REL", str(emit.REPO_ROOT / emit._TENSOR_REL)

@@ -1,8 +1,8 @@
 """Tests for the e-graph and equality saturation."""
 
-from catopt_core.egraph import EGraph, ENode, UnionFind
-from catopt_core.ir import Const, Op, Param, TensorType, Var, op_repr
-from catopt_core.laws import (
+from mlopt_core.egraph import EGraph, ENode, UnionFind
+from mlopt_core.ir import Const, Op, Param, TensorType, Var, op_repr
+from mlopt_core.laws import (
     CATEGORICAL_RULES,
 )
 
@@ -141,7 +141,7 @@ def test_extract_best():
     eid = eg.add_term(term)
 
     # Cost function: prefer fewer ops (count_cost)
-    from catopt_core.cost import count_cost
+    from mlopt_core.cost import count_cost
 
     best = eg.extract_best(eid, count_cost)
     # Should extract either add(x, 0) or x (they're in the same e-class
@@ -171,7 +171,7 @@ def test_associativity_rewriting():
     print(f"Stats: {stats}")
 
     # Extract the best (minimum FLOPs) form
-    from catopt_core.cost import flops_cost
+    from mlopt_core.cost import flops_cost
 
     best = eg.extract_best(eid, flops_cost)
     print(f"Best: {op_repr(best)}")
@@ -207,7 +207,7 @@ def test_naturality_rewriting():
     eid = eg.add_term(original)
     eg.run(CATEGORICAL_RULES, eid, max_iterations=5, max_nodes=1000)
 
-    from catopt_core.cost import count_cost
+    from mlopt_core.cost import count_cost
 
     _best = eg.extract_best(eid, count_cost)
 
@@ -216,7 +216,7 @@ def test_naturality_rewriting():
     assert len(root_class.nodes) >= 2
     eg.run(CATEGORICAL_RULES, eid, max_iterations=5, max_nodes=1000)
 
-    from catopt_core.cost import count_cost, flops_cost
+    from mlopt_core.cost import count_cost, flops_cost
 
     _best = eg.extract_best(eid, flops_cost)
 
@@ -267,7 +267,7 @@ def test_incremental_frontier_refires_at_dirtied_classes():
     term = Op.make("add", Op.make("add", x, y), z)
     eg = EGraph()
     eid = eg.add_term(term)
-    from catopt_core.laws import ASSOC_ADD, COMM_ADD
+    from mlopt_core.laws import ASSOC_ADD, COMM_ADD
 
     stats = eg.run([ASSOC_ADD, COMM_ADD], eid, max_iterations=20)
     _root = eg.get_class(eid)
@@ -301,7 +301,7 @@ def test_rule_budgets_bound_expansion():
         term = Op.make("add", term, y)
     eg = EGraph()
     eid = eg.add_term(term)
-    from catopt_core.laws import ASSOC_ADD, COMM_ADD
+    from mlopt_core.laws import ASSOC_ADD, COMM_ADD
 
     eg_full = EGraph()
     eid_full = eg_full.add_term(term)
@@ -320,7 +320,7 @@ def test_rule_budgets_bound_expansion():
     assert stats["rule_budgets"]["assoc_add"] >= 20
     assert "assoc_add" in stats["budget_suspended"]
     # Extraction still works and returns a valid member.
-    from catopt_core.cost import count_cost
+    from mlopt_core.cost import count_cost
 
     best = eg.extract_best(eid, count_cost)
     assert best is not None
@@ -335,7 +335,7 @@ def test_rule_budget_persists_across_run_calls():
         term = Op.make("add", term, v)
     eg = EGraph()
     eid = eg.add_term(term)
-    from catopt_core.laws import ASSOC_ADD, COMM_ADD
+    from mlopt_core.laws import ASSOC_ADD, COMM_ADD
 
     eg.run(
         [ASSOC_ADD, COMM_ADD],
@@ -365,7 +365,7 @@ def test_matches_max_results_cap():
     )
     eg = EGraph()
     eid = eg.add_term(term)
-    from catopt_core.laws import ASSOC_ADD, COMM_ADD
+    from mlopt_core.laws import ASSOC_ADD, COMM_ADD
 
     eg.run([ASSOC_ADD, COMM_ADD], eid, max_iterations=10)
     root = eg.find(eid)
@@ -387,7 +387,7 @@ def test_min_term_returns_smallest_member():
     zero = Const(0)
     eg = EGraph()
     eid = eg.add_term(Op.make("add", x, zero))
-    from catopt_core.laws import ID_ADD
+    from mlopt_core.laws import ID_ADD
 
     eg.run([ID_ADD], eid, max_iterations=5)
     _t, s = eg._min_term(eid, {})
@@ -409,7 +409,7 @@ def test_fresh_rule_full_scan_after_saturation():
     term = Op.make("add", x, Op.make("add", y, zero))
     eg = EGraph()
     eid = eg.add_term(term)
-    from catopt_core.laws import COMM_ADD, ID_ADD
+    from mlopt_core.laws import COMM_ADD, ID_ADD
 
     eg.run([ID_ADD], eid, max_iterations=5)
     assert not eg._dirty  # saturated: frontier is empty
@@ -434,7 +434,7 @@ def test_incremental_saturation_same_fixed_point():
     )
     eg = EGraph()
     eid = eg.add_term(term)
-    from catopt_core.laws import CATEGORICAL_RULES
+    from mlopt_core.laws import CATEGORICAL_RULES
 
     eg.run(CATEGORICAL_RULES, eid, max_iterations=10, max_nodes=10000)
     n1 = eg.n_enodes
@@ -443,7 +443,7 @@ def test_incremental_saturation_same_fixed_point():
     )
     assert stats2["iterations"] <= 1  # clean frontier: no work
     assert eg.n_enodes == n1
-    from catopt_core.cost import flops_cost
+    from mlopt_core.cost import flops_cost
 
     best = eg.extract_best(eid, flops_cost)
     assert best is not None

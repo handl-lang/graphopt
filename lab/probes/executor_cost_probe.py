@@ -68,12 +68,12 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from catopt_core.cost import dag_cost, executor_cost_for
-from catopt_core.cost.roofline import _LAUNCH_S, _PEAK_BW, _PEAK_FLOPS
-from catopt_core.ir import IR, Op
-from catopt_core.profile import TargetProfile, shape_bucket
-from catopt_orchestrator import Optimizer
-from catopt_orchestrator.optimize import (
+from mlopt_core.cost import dag_cost, executor_cost_for
+from mlopt_core.cost.roofline import _LAUNCH_S, _PEAK_BW, _PEAK_FLOPS
+from mlopt_core.ir import IR, Op
+from mlopt_core.profile import TargetProfile, shape_bucket
+from mlopt_orchestrator import Optimizer
+from mlopt_orchestrator.optimize import (
     Autotuned,
     _carrier_plans,
     _carrier_upgrade,
@@ -81,7 +81,7 @@ from catopt_orchestrator.optimize import (
     _route_spec,
     default_rules,
 )
-from catopt_torch.backend import TorchBackend
+from mlopt_torch.backend import TorchBackend
 
 # Reuse the wall-clock methodology verbatim: same cases, same timing.
 from lab.probes.law_wallclock import (
@@ -169,7 +169,7 @@ def _measured_profile(
     """Return the measured family factors as a ``TargetProfile``.
 
     Written under the ``corrections`` contract
-    ``catopt_core.profile.record_measured`` maintains —
+    ``mlopt_core.profile.record_measured`` maintains —
     ``{candidate: {bucket: {"factor", "n"}}}`` — keyed by the
     candidate names ``_delivered_cost`` bills its routed executor
     under and by this input's ``shape_bucket``, so the shipped

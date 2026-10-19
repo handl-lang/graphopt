@@ -22,7 +22,7 @@ kernel).
 The model (honest provenance — same family as real_linear_attn):
 
 * ``step(x_t, h) -> h'`` — one SSM state update, single output (the
-  catopt IR is single-rooted, so the carried state IS the output; a
+  mlopt IR is single-rooted, so the carried state IS the output; a
   separate readout ``y_t = r_t ⊙ h_t`` would add identical per-token
   pointwise work to every schedule — the readout gate is folded into
   the value path as ``u = σ(W_r x_t) ⊙ (x_t W_1 … W_k)`` instead,
@@ -41,19 +41,19 @@ the decode TPS number.  Variants per cell:
   compiles the step once; it cannot fuse across Python iterations).
 * ``inductor_ro`` — ``torch.compile(mode="reduce-overhead")`` —
   CUDA-graph-backed per-token calls (CUDA only).
-* ``catopt_step`` — ``optimize_model`` output on the single step
+* ``mlopt_step`` — ``optimize_model`` output on the single step
   (generic IRModule; the pairing pass may fuse the shared-input
   linears ``W_g``/``W_r``/``W_1`` into one GEMM).
-* ``catopt_step_ind`` — the optimized step under Inductor.
+* ``mlopt_step_ind`` — the optimized step under Inductor.
 * ``eager_chunk`` — unoptimized ``ChunkedStep`` (C-step Python
   unroll inside the module) called N/C times — isolates the
   "fewer Python calls" effect from the carrier lowering.
 * ``inductor_chunk`` — compiled unoptimized chunk.
-* ``catopt_chunk`` — ``optimize_model`` on the chunk: the carrier
+* ``mlopt_chunk`` — ``optimize_model`` on the chunk: the carrier
   lift fires (``stats["lowering"] == "batched"``), level-batched
   scan with ``h`` carried as an input, N/C calls.
-* ``catopt_chunk_ind`` — the batched carrier under Inductor.
-* ``catopt_chunk_graph`` — the batched carrier recorded into a
+* ``mlopt_chunk_ind`` — the batched carrier under Inductor.
+* ``mlopt_chunk_graph`` — the batched carrier recorded into a
   manual CUDA graph (``capture_cuda_graph``), one replay per chunk
   (CUDA only).
 
@@ -65,14 +65,14 @@ A cell whose optimized form fails the gate is reported, not timed.
 Usage:
     .venv/bin/python bench/suites/speedup/decode_scan_bench.py --device cpu --quick
     .venv/bin/python bench/suites/speedup/decode_scan_bench.py --device cpu
-    PYTHONPATH="packages/catopt-core/src:packages/catopt-torch/src:\
-packages/catopt-carriers/src:packages/catopt-orchestrator/src:." \
-        /tmp/catopt-cuda-venv/bin/python bench/suites/speedup/decode_scan_bench.py \
+    PYTHONPATH="packages/mlopt-core/src:packages/mlopt-torch/src:\
+packages/mlopt-carriers/src:packages/mlopt-orchestrator/src:." \
+        /tmp/mlopt-cuda-venv/bin/python bench/suites/speedup/decode_scan_bench.py \
         --device cuda
 """
 # ruff: noqa: E402 RUF001 RUF002 RUF003 — ×, ·, −, ⊙, σ, γ in
 # strings/docstrings are deliberate math notation; sys.path setup
-# must precede the benchkit/catopt imports (bench_omd2 convention).
+# must precede the benchkit/mlopt imports (bench_omd2 convention).
 
 from __future__ import annotations
 
@@ -88,12 +88,12 @@ sys.setrecursionlimit(400_000)
 
 import torch
 import torch.nn as nn
-from catopt_core.ir import IR
-from catopt_orchestrator import Optimizer
-from catopt_orchestrator.optimize import _lower_extracted
-from catopt_torch.adapters import TorchSink
-from catopt_torch.backend import TorchBackend
-from catopt_torch.torch_bridge import export_to_ir
+from mlopt_core.ir import IR
+from mlopt_orchestrator import Optimizer
+from mlopt_orchestrator.optimize import _lower_extracted
+from mlopt_torch.adapters import TorchSink
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.torch_bridge import export_to_ir
 
 from bench.benchkit import (
     Case,
@@ -124,7 +124,7 @@ class DecodeStep(nn.Module):
 
     The value path is the gated map ``u = σ(W_r x_t) ⊙ (x_t W_1…W_k)``
     — the output gate of GLA folded onto the injected value, which
-    keeps the emit work live inside a single-root graph (the catopt IR
+    keeps the emit work live inside a single-root graph (the mlopt IR
     cannot represent a ``(y_t, h')`` tuple output).  ``h'`` doubles as
     the per-token output a readout head would consume.
     """
@@ -609,13 +609,13 @@ def run_cell(
     with torch.no_grad():
         try:
             if step_opt32 is not None:
-                checks["catopt_step"] = _gate_step(step_opt32)
+                checks["mlopt_step"] = _gate_step(step_opt32)
         except Exception as e:
             step_opt32 = None
             cell["step_opt_error"] = f"fp32: {type(e).__name__}: {e}"
         try:
             if chunk_opt32 is not None:
-                checks["catopt_chunk"] = _gate_chunk_carrier(
+                checks["mlopt_chunk"] = _gate_chunk_carrier(
                     chunk_opt32
                 )
         except Exception as e:
@@ -627,9 +627,9 @@ def run_cell(
         for tag, fn, gate in (
             ("inductor", cstep32, _gate_step),
             ("inductor_ro", cstep_ro32, _gate_step_ro),
-            ("catopt_step_ind", copt_step32, _gate_step),
+            ("mlopt_step_ind", copt_step32, _gate_step),
             ("inductor_chunk", cchunk32, _gate_chunk),
-            ("catopt_chunk_ind", copt_chunk32, _gate_chunk_carrier),
+            ("mlopt_chunk_ind", copt_chunk32, _gate_chunk_carrier),
         ):
             if fn is None:
                 continue
@@ -641,11 +641,11 @@ def run_cell(
         if g_chunk32 is not None and g_chunk32.is_graph_captured:
             try:
                 if not _gate_chunk(g_chunk32):
-                    dropped["catopt_chunk_graph"] = (
+                    dropped["mlopt_chunk_graph"] = (
                         "fp32 decode mismatch"
                     )
             except Exception as e:
-                dropped["catopt_chunk_graph"] = (
+                dropped["mlopt_chunk_graph"] = (
                     f"{type(e).__name__}: {e}"
                 )
     for tag in dropped:
@@ -655,13 +655,13 @@ def run_cell(
             cstep32 = None
         elif tag == "inductor_ro":
             cstep_ro32 = None
-        elif tag == "catopt_step_ind":
+        elif tag == "mlopt_step_ind":
             copt_step32 = None
         elif tag == "inductor_chunk":
             cchunk32 = None
-        elif tag == "catopt_chunk_ind":
+        elif tag == "mlopt_chunk_ind":
             copt_chunk32 = None
-        elif tag == "catopt_chunk_graph":
+        elif tag == "mlopt_chunk_graph":
             g_chunk32 = None
     cell["dropped_variants"] = dropped
     cell["gate_checks"] = checks
@@ -736,7 +736,7 @@ def run_cell(
     if step_opt32 is not None:
         variants.append(
             Variant(
-                name="catopt_step",
+                name="mlopt_step",
                 stmt=dec_step(step_opt32),
                 note=(
                     f"optimize_model(step): lowering={cell['step_lowering']}, "
@@ -747,7 +747,7 @@ def run_cell(
     if copt_step32 is not None:
         variants.append(
             Variant(
-                name="catopt_step_ind",
+                name="mlopt_step_ind",
                 stmt=dec_step(copt_step32),
                 note="optimized step under Inductor, per-token",
             )
@@ -766,7 +766,7 @@ def run_cell(
     if chunk_opt32 is not None:
         variants.append(
             Variant(
-                name="catopt_chunk",
+                name="mlopt_chunk",
                 stmt=dec_chunk(chunk_opt32),
                 note=(
                     f"optimize_model(chunk): lowering={cell['chunk_lowering']}, "
@@ -778,7 +778,7 @@ def run_cell(
     if copt_chunk32 is not None:
         variants.append(
             Variant(
-                name="catopt_chunk_ind",
+                name="mlopt_chunk_ind",
                 stmt=dec_chunk(copt_chunk32),
                 note="batched carrier under Inductor",
             )
@@ -786,7 +786,7 @@ def run_cell(
     if g_chunk32 is not None and g_chunk32.is_graph_captured:
         variants.append(
             Variant(
-                name="catopt_chunk_graph",
+                name="mlopt_chunk_graph",
                 stmt=dec_chunk(g_chunk32),
                 note="batched carrier, manual CUDA graph replay",
             )
@@ -859,16 +859,16 @@ def run_cell(
 # count as "carrier" — inductor_chunk is the fused-unroll baseline
 # the carrier must beat, not evidence for it.
 _CARRIER_VARIANTS = (
-    "catopt_chunk",
-    "catopt_chunk_ind",
-    "catopt_chunk_graph",
+    "mlopt_chunk",
+    "mlopt_chunk_ind",
+    "mlopt_chunk_graph",
 )
 _NONCARRIER_VARIANTS = (
     "eager",
     "inductor",
     "inductor_ro",
-    "catopt_step",
-    "catopt_step_ind",
+    "mlopt_step",
+    "mlopt_step_ind",
     "eager_chunk",
     "inductor_chunk",
 )
@@ -1113,10 +1113,10 @@ def run_bench(args: argparse.Namespace) -> Report:
         cctps = c["tps"].get(bc) if bc else None
         print(
             f"{c['mode']:<7} {c['N']:>4} {c['k']:>2} {c['C']:>3} | "
-            f"{g('eager')} {g('inductor')} {g('catopt_step')} "
+            f"{g('eager')} {g('inductor')} {g('mlopt_step')} "
             f"{g('eager_chunk')} {g('inductor_chunk')} "
-            f"{g('catopt_chunk')} {g('catopt_chunk_ind')} "
-            f"{g('catopt_chunk_graph')} | "
+            f"{g('mlopt_chunk')} {g('mlopt_chunk_ind')} "
+            f"{g('mlopt_chunk_graph')} | "
             f"{cctok or 0:>7.2f} {cctps or 0:>7.0f}"
         )
         print(

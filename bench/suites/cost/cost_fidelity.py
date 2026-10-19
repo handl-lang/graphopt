@@ -53,7 +53,7 @@ Usage:
 """
 # ruff: noqa: E402 RUF001 RUF002 RUF003 — ρ, τ, ×, ≥, − in strings are
 # deliberate math notation; sys.path setup must precede the
-# benchkit/catopt imports (reassoc_scale / real_linear_attn convention).
+# benchkit/mlopt imports (reassoc_scale / real_linear_attn convention).
 
 from __future__ import annotations
 
@@ -69,12 +69,12 @@ from pathlib import Path
 sys.setrecursionlimit(400_000)
 
 import torch
-from catopt_carriers.scan_lower import (
+from mlopt_carriers.scan_lower import (
     is_scan_apply_term,
     to_batched_scan_module,
 )
-from catopt_core import laws
-from catopt_core.cost import (
+from mlopt_core import laws
+from mlopt_core.cost import (
     backend_cost,
     count_cost,
     dag_cost,
@@ -88,17 +88,17 @@ from catopt_core.cost import (
     roofline_cost,
     roofline_cost_for,
 )
-from catopt_core.ir import IR, op_repr
-from catopt_orchestrator import Optimizer
-from catopt_orchestrator.optimize import (
+from mlopt_core.ir import IR, op_repr
+from mlopt_orchestrator import Optimizer
+from mlopt_orchestrator.optimize import (
     OptimizationResourceError,
     discover_alternatives,
 )
-from catopt_torch.adapters import TorchSink, TorchSource
-from catopt_torch.backend import TorchBackend
-from catopt_torch.calibrate import calibrate
-from catopt_torch.models import AttentionBlock, SwiGLU
-from catopt_torch.torch_bridge import ir_to_torch_module
+from mlopt_torch.adapters import TorchSink, TorchSource
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.calibrate import calibrate
+from mlopt_torch.models import AttentionBlock, SwiGLU
+from mlopt_torch.torch_bridge import ir_to_torch_module
 
 from bench.benchkit import (
     Case,

@@ -1,4 +1,4 @@
-"""Tests for ``catopt_discovery.coherence`` and ``lemma_cert``.
+"""Tests for ``mlopt_discovery.coherence`` and ``lemma_cert``.
 
 ``coherence`` builds the pairwise 3-cell catalogue over a rule
 universe: direct derivations ``{A} => B``, whole-library derivability,
@@ -19,11 +19,11 @@ skeleton-overlap critical pairs, all in about a second.
 import json
 
 import pytest
-from catopt_core.egraph import Rewrite
-from catopt_core.ir import Const, Op, TensorType, Var
-from catopt_core.laws import ALL_RULES
-from catopt_discovery import coherence as lc
-from catopt_discovery import lemma_cert as llc
+from mlopt_core.egraph import Rewrite
+from mlopt_core.ir import Const, Op, TensorType, Var
+from mlopt_core.laws import ALL_RULES
+from mlopt_discovery import coherence as lc
+from mlopt_discovery import lemma_cert as llc
 
 
 def _p(op: str, *args, **attrs) -> Op:
@@ -583,7 +583,7 @@ def test_probe_right_factor_linear_enumerated():
     """The documented boundary: ``right_factor_linear`` merges under
     the layout universe but ``certificate()`` emits stubs — the
     ``all_proofs`` enumerator surfaces the real 4-step derivation."""
-    from catopt_core.laws import ALL_RULES_WITH_LAYOUT
+    from mlopt_core.laws import ALL_RULES_WITH_LAYOUT
 
     row, cert = llc.probe(
         "right_factor_linear", list(ALL_RULES_WITH_LAYOUT)
@@ -600,7 +600,7 @@ def test_probe_right_factor_linear_enumerated():
 def test_run_cert_saturation_only_under_tight_fuel(monkeypatch):
     """Merged but no linear derivation within fuel — the honest
     ``saturation-only`` verdict."""
-    from catopt_core.laws import ALL_RULES_WITH_LAYOUT
+    from mlopt_core.laws import ALL_RULES_WITH_LAYOUT
 
     monkeypatch.setattr(llc, "_PROOF_STEPS", 1)
     monkeypatch.setattr(llc, "_PROOF_FUEL", 200)

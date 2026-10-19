@@ -1,4 +1,4 @@
-"""Real-checkpoint benchmark: stories15M through catopt vs eager/Inductor.
+"""Real-checkpoint benchmark: stories15M through mlopt vs eager/Inductor.
 
 A real trained SLM (llama2.c checkpoint — see ``bench/common/fetch.py``)
 wrapped as an exportable nn.Module (sdpa attention, rmsnorm, swiglu),
@@ -21,19 +21,19 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from catopt_orchestrator import Compositional, Optimizer
-from catopt_torch.backend import TorchBackend
+from mlopt_orchestrator import Compositional, Optimizer
+from mlopt_torch.backend import TorchBackend
 from torch.utils.benchmark import Timer
 
 from bench.common.llama2c import load_llama2c
 
 
 def cache_dir() -> Path:
-    """$XDG_CACHE_HOME/catopt, falling back to ~/.cache/catopt."""
+    """$XDG_CACHE_HOME/mlopt, falling back to ~/.cache/mlopt."""
     root = os.environ.get("XDG_CACHE_HOME") or str(
         Path.home() / ".cache"
     )
-    return Path(root) / "catopt"
+    return Path(root) / "mlopt"
 
 
 def resolve_ckpt(arg: str | None, name: str = "stories15M.bin") -> str:
@@ -161,7 +161,7 @@ def main():
         "--ckpt",
         default=None,
         help="checkpoint path — default resolves "
-        "$XDG_CACHE_HOME/catopt/stories15M.bin then "
+        "$XDG_CACHE_HOME/mlopt/stories15M.bin then "
         "/tmp/stories15M.bin (see bench/common/fetch.py)",
     )
     args = ap.parse_args()
@@ -207,7 +207,7 @@ def main():
     with torch.no_grad():
         err = (opt(idx) - ref).abs().max().item()
     print(
-        f"catopt pipeline: {pipeline:.1f}s — "
+        f"mlopt pipeline: {pipeline:.1f}s — "
         f"blocks optimized {rep['n_optimized']}/{rep['n_blocks']} — "
         f"max|Δout| = {err:.2e}"
     )
@@ -220,7 +220,7 @@ def main():
         )
 
     results = []
-    variants = [("eager", m), ("catopt", opt)]
+    variants = [("eager", m), ("mlopt", opt)]
     try:
         cmp_ = torch.compile(m)
         opt_cmp = torch.compile(opt)
@@ -229,7 +229,7 @@ def main():
             opt_cmp(idx)
         variants += [
             ("inductor", cmp_),
-            ("catopt+inductor", opt_cmp),
+            ("mlopt+inductor", opt_cmp),
         ]
     except Exception as e:
         print(f"inductor skipped: {e}")

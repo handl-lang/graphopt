@@ -1,4 +1,4 @@
-"""Tests for ``catopt_discovery.arena_player`` — the learned player.
+"""Tests for ``mlopt_discovery.arena_player`` — the learned player.
 
 Plan 0021: a softmax linear policy over ``arena.legal_actions``,
 trained by episode-return REINFORCE on the cheap board.  These
@@ -10,11 +10,11 @@ train/eval seed split honesty (no eval board was a training board).
 
 
 import torch
-from catopt_core.ir import Op, TensorType, Var
-from catopt_discovery import arena as ar
-from catopt_discovery import arena_player as ap
-from catopt_discovery import lawdata
-from catopt_discovery.impact import TermCase
+from mlopt_core.ir import Op, TensorType, Var
+from mlopt_discovery import arena as ar
+from mlopt_discovery import arena_player as ap
+from mlopt_discovery import lawdata
+from mlopt_discovery.impact import TermCase
 
 
 def _p(op: str, *args, **attrs) -> Op:

@@ -1,29 +1,29 @@
-# Agent guide — catopt
+# Agent guide — mlopt
 
 Categorical optimization of neural-network computation graphs
 (Python 3.13, torch + numpy). Monorepo layout: the domain packages
-live under `packages/` (`catopt-core` — the torch-free engine;
-`catopt-torch` — PyTorch adapters; `catopt-carriers` — carrier
-laws/executors; `catopt-cuda` — the CUDA-graph runner;
-`catopt-orchestrator` — the backend-neutral pipeline;
-`catopt-onnx` — the ONNX backend (ADR 0006: `OnnxSink` lowers IR to
+live under `packages/` (`mlopt-core` — the torch-free engine;
+`mlopt-torch` — PyTorch adapters; `mlopt-carriers` — carrier
+laws/executors; `mlopt-cuda` — the CUDA-graph runner;
+`mlopt-orchestrator` — the backend-neutral pipeline;
+`mlopt-onnx` — the ONNX backend (ADR 0006: `OnnxSink` lowers IR to
 a checked ONNX artifact, `OnnxSource` lifts ONNX graphs back to IR;
 both verified through onnxruntime);
-`catopt-discovery` — the law-discovery engine, formerly
-`tools/law_*.py`; invoke as `python -m catopt_discovery.<mod>`;
+`mlopt-discovery` — the law-discovery engine, formerly
+`tools/law_*.py`; invoke as `python -m mlopt_discovery.<mod>`;
 the game layer is `engine` (the `Board` protocol + generic
 episode/train/eval drivers), `players` (`LinearPolicy`, the
 featurizer-injected learned arm), `play` (the domain registry +
-`python -m catopt_discovery.play --domain meta|joint|search|torch|gen`
+`python -m mlopt_discovery.play --domain meta|joint|search|torch|gen`
 CLI; `--deliver` lowers+verifies the winning extraction on domains
 that ship a deliver hook — torch does)).
 The optional
-`catopt-native` package — the PyO3/Rust search engine, excluded from
+`mlopt-native` package — the PyO3/Rust search engine, excluded from
 the uv workspace and built with maturin — is opt-in via `engine=`.
-The `catopt` façade is gone (plan 0008): `import catopt` fails and
-every name lives at its real package path — `catopt_core.egraph`,
-`catopt_torch.adapters`, `catopt_orchestrator.optimize`,
-`catopt_cuda.CudaGraphRunner`, … Tests in
+The `mlopt` façade is gone (plan 0008): `import mlopt` fails and
+every name lives at its real package path — `mlopt_core.egraph`,
+`mlopt_torch.adapters`, `mlopt_orchestrator.optimize`,
+`mlopt_cuda.CudaGraphRunner`, … Tests in
 `tests/`. The dev virtualenv is `.venv/` (uv-managed).
 
 **The experimental surface is `lab/`** (there is no `tools/`): the
@@ -42,14 +42,14 @@ lockfile: `birefnet_bounded_probe.py` wants
 **Dev gates and user-facing utilities live in `scripts/`**
 (`radon_ratchet.py` + `complexity_baseline.json`, `runtime_types.sh`,
 `mutmut.sh`, `calibrate_profile.py`).  **Regenerable artifacts live in
-the cache**, not the tree: `catopt_discovery.cache_dir()`
-(`$CATOPT_CACHE_DIR` → `$XDG_CACHE_HOME/catopt` → `~/.cache/catopt`)
+the cache**, not the tree: `mlopt_discovery.cache_dir()`
+(`$MLOPT_CACHE_DIR` → `$XDG_CACHE_HOME/mlopt` → `~/.cache/mlopt`)
 holds the intake census side-files (`intake_dir()`) and the evidence
 store — shared across worktrees.  The minting machinery itself is in
-`catopt_discovery` (`antiunify`, `handler_synth`) — ADR 0007/0008.
+`mlopt_discovery` (`antiunify`, `handler_synth`) — ADR 0007/0008.
 
 **Promotion rule.**  `lab/` is the promotion queue: a driver moves into
-`catopt_discovery` (its `lab/<sub>/` directory mirrors the package
+`mlopt_discovery` (its `lab/<sub>/` directory mirrors the package
 layout) when its tests clear the **99% coverage floor**.  Measured so
 far: `lab/bridge/combinator.py` sits at **92%** under
 `tests/test_combinator_bridge.py`; the other drivers have no tests yet.
@@ -57,10 +57,10 @@ Do not promote a module that would fail the floor — and never widen it.
 
 **Machine-admitted laws are in `DEFAULT`.**  `search(..., rules=DEFAULT)`
 ships **12 machine-admitted laws** alongside the hand-written kernel
-(`catopt_core.laws.provenance.MACHINE_SHIPPED` — the promoted set;
+(`mlopt_core.laws.provenance.MACHINE_SHIPPED` — the promoted set;
 `project/retros/promoted-laws.md`).  The newest is `conv_bn_fold` — the
 first *verbatim* composite: a depth-4 `syn_*` mint shipped through
-`catopt_core.laws.minted` (the embedded premise-closure records replay
+`mlopt_core.laws.minted` (the embedded premise-closure records replay
 `meta._compose_guards` at import; `missing_hooks` honestly reports the
 transported `check`/`derive` hooks).  Before it, `mul_unsq_nat` — the
 first law minted from a corpus op-tuple, guard resolved by the
@@ -77,10 +77,10 @@ Run these before finishing any change; all must pass.
 
 **One command instead of the list:** `scripts/gates.sh` runs the static
 gates cheap-first, then the suite.  It has two lanes:
-`CATOPT_GATES_LANE=dev` (default) runs `-m "not slow"` with no coverage —
+`MLOPT_GATES_LANE=dev` (default) runs `-m "not slow"` with no coverage —
 the day-to-day gate; `=full` runs **everything once under coverage** and
 enforces both floors (CI/release).  It defaults to a **serial** suite
-(`CATOPT_GATES_NP=1`): the full-suite `-n 2` arm was measured
+(`MLOPT_GATES_NP=1`): the full-suite `-n 2` arm was measured
 (2026-10-15) and **neither arm finished inside a 30-min box**, so the
 parallel arm is not a safe default on this 11 GB host — see the
 measured table below before raising it.
@@ -158,9 +158,9 @@ uv run pytest                 # 6,372 tests; does NOT finish in 30 min on
                               # either serial or `-n 2` (see the table
                               # below).  Iterate with `-m "not slow"`.
                               # Single-process: see the warning below.
-coverage run -m pytest tests/ -q   # source list includes catopt_discovery + catopt_onnx
-coverage report -m --omit="*/catopt_discovery/*"   # the six: fail_under=100
-coverage report -m --include="*/catopt_discovery/*" --fail-under=99   # ratchet floor — measured 99%; tighten, never lower
+coverage run -m pytest tests/ -q   # source list includes mlopt_discovery + mlopt_onnx
+coverage report -m --omit="*/mlopt_discovery/*"   # the six: fail_under=100
+coverage report -m --include="*/mlopt_discovery/*" --fail-under=99   # ratchet floor — measured 99%; tighten, never lower
 ```
 
 **Scope the ruff commands to the shipped source, as above.**  The bare
@@ -193,7 +193,7 @@ clean under both, and `scripts/gates.sh` checks exactly those.
 > So `-n 2` reaches **2.72× further in the same wall time** (98% vs
 > 36%) — a real speed-up — but **neither arm completed**, so the
 > *completed* wall-time win the default rule demands does not exist yet,
-> and `scripts/gates.sh` stays **serial** (`CATOPT_GATES_NP=2` is the
+> and `scripts/gates.sh` stays **serial** (`MLOPT_GATES_NP=2` is the
 > opt-in).  Caveat on the RSS column: the tree sum over-counts shared
 > pages — the serial peak is a ~14-process fan-out each `mmap`ing the
 > 419 MB `stories110M.bin`, so the real footprint is the `free` column,
@@ -247,7 +247,7 @@ Manual-stage gates (not run on every commit — network/slower):
 .venv/bin/pip-audit                                          # dependency CVEs (network)
 .venv/bin/semgrep --config p/python --config p/security-audit packages  # registry rules (network)
 sh scripts/runtime_types.sh                                    # typeguard runtime contracts
-MUTMUT_ONLY=catopt_core/ir.py MUTMUT_TESTS='tests/test_ir.py' scripts/mutmut.sh run  # mutation testing
+MUTMUT_ONLY=mlopt_core/ir.py MUTMUT_TESTS='tests/test_ir.py' scripts/mutmut.sh run  # mutation testing
 ```
 
 Pre-commit (`pre-commit install`) runs ruff check/format, **ty**,
@@ -288,11 +288,11 @@ configured in `pyproject.toml`):
   real finding, not noise.  Run `.venv/bin/vulture` (uses the
   configured `paths`); a non-zero exit (3) means dead code.
 - **import-linter** (`[tool.importlinter]`) pins the hexagonal boundary:
-  a `forbidden` contract makes `catopt_core` importing `catopt_torch` /
-  `catopt_carriers` / `catopt_orchestrator` — or the `torch`
+  a `forbidden` contract makes `mlopt_core` importing `mlopt_torch` /
+  `mlopt_carriers` / `mlopt_orchestrator` — or the `torch`
   / `numpy` external packages — a hard error.  Run
   `.venv/bin/lint-imports`.  Core is a *sink* for adapter-pushed state
-  (see `catopt_core.ops` *Backend wiring*), never a puller: the adapter
+  (see `mlopt_core.ops` *Backend wiring*), never a puller: the adapter
   registers its tables into core, core never imports the adapter.
 
 ## Property tests (Hypothesis)
@@ -319,7 +319,7 @@ enodes that become identical after child canonicalisation are unioned
 
 - **Bandit** (`.bandit.yaml`, dev dep): SAST over `packages`
   (tests/bench excluded).  The only finding is two `B112`
-  (try/except/continue) in `catopt_core.meta`'s rule matcher, where a
+  (try/except/continue) in `mlopt_core.meta`'s rule matcher, where a
   guard/derive raising is the *signal to reject a candidate* — a
   justified config-level skip.  Run `.venv/bin/bandit -c .bandit.yaml
   -r packages`.
@@ -361,7 +361,7 @@ error.  The gate applies to shipped code only — `tests/**` and
 
 `typeguard` (dev dep) enforces annotations at runtime.
 `scripts/runtime_types.sh` instruments all four packages
-(`--typeguard-packages=catopt_core,catopt_torch,catopt_carriers,catopt_orchestrator`)
+(`--typeguard-packages=mlopt_core,mlopt_torch,mlopt_carriers,mlopt_orchestrator`)
 and runs the curated (1372 tests) — a manual-stage gate that CI also
 runs (~11 min).  It caught several real annotation bugs, all fixed:
 `laws/tensor._head` was annotated `str` but takes an `Op`;
@@ -393,10 +393,10 @@ sandbox's mutated copies win over uv's editable install.
 
 ## Differential oracle (opt-in, test-only)
 
-`tests/test_egglog_oracle.py` cross-checks catopt's hand-rolled
+`tests/test_egglog_oracle.py` cross-checks mlopt's hand-rolled
 equality-saturation search against the Rust **egglog** library on a
 small op/law subset.  It is an **opt-in, test-only oracle** — not a
-production dependency and not an engine swap: `catopt-core` stays
+production dependency and not an engine swap: `mlopt-core` stays
 pure-Python / zero-dependency, and nothing under `packages/` or
 `packages/` imports `egglog`.  The ported prototype and its documented
 limitations (untyped-by-shape terms, unconditional `check` rewrites, no
@@ -415,7 +415,7 @@ uv sync --group oracle
 .venv/bin/python -m pytest tests/test_egglog_oracle.py
 ```
 
-It runs catopt's `EGraph` and egglog on the *same* law subset and
+It runs mlopt's `EGraph` and egglog on the *same* law subset and
 asserts they agree: the extracted lowest-FLOPs terms match up to
 commutative-operand *representative* choice, the folded (param-
 discounted) costs coincide, and the original plus both extracted terms
@@ -426,38 +426,38 @@ the workspace keeps `requires-python = ">=3.11"`.
 
 ## Ports (hexagonal boundary)
 
-`catopt_core.ports` names every adapter contract as a
+`mlopt_core.ports` names every adapter contract as a
 `@runtime_checkable` Protocol.  The whole-graph ends are `Source`
 (`model -> (IR, leaves)`) and `Sink` (`IR -> runnable`, plus its
 `supported_ops` set and the module-level equivalence gate); the per-op
 port is `Binding` (`TorchBinding` is an alias of the same object).
-`catopt_orchestrator.Optimizer` takes the ports as a
-`catopt_core.pipeline.Backend` value (torch:
+`mlopt_orchestrator.Optimizer` takes the ports as a
+`mlopt_core.pipeline.Backend` value (torch:
 `Optimizer(backend=TorchBackend())`, the
-`catopt_torch.backend.TorchBackend` bundle of
+`mlopt_torch.backend.TorchBackend` bundle of
 `TorchSource`/`TorchSink`/`TorchComposer`/`TorchMeter`) or explicitly
 (`source=`/`sink=`/…); `discover_alternatives` takes `source=`.
 There is no default backend.
 Extraction is priced through
-`catopt_core.cost.backend_cost(cost_fn, sink.supported_ops)`, so the
+`mlopt_core.cost.backend_cost(cost_fn, sink.supported_ops)`, so the
 search only selects forms the backend can lower.  A new backend
-implements `Sink`; nothing in `catopt-core` changes.
+implements `Sink`; nothing in `mlopt-core` changes.
 
 Carrier machinery is the second half of the boundary.  The
 orchestrator's carrier-aware passes (batched plan builders, non-local
 lifts, carrier rule sets, carrier-root probes) reach the torch-coupled
-`catopt_carriers` package through the `register_carriers` seam
-(`catopt_orchestrator.carriers`), never by importing it: the carrier
+`mlopt_carriers` package through the `register_carriers` seam
+(`mlopt_orchestrator.carriers`), never by importing it: the carrier
 package registers a `CarrierMachinery` value — all thunks, so
 registration loads no tensor library — when it is imported.  Without a
 registration the passes degrade to their carrier-free defaults.  The
 resulting package graph is pinned by the import-linter `dependency
-layers` contract: `catopt_cuda` above `catopt_torch`/`catopt_carriers`
+layers` contract: `mlopt_cuda` above `mlopt_torch`/`mlopt_carriers`
 (one mutually-dependent backend layer — the carriers' law modules
 carry `TORCH_BINDINGS`, and the torch sink builds its executor table
-from the carrier lowerings), above `catopt_orchestrator`, above
-`catopt_native`, above `catopt_core`.  `catopt_torch` does not depend
-on `catopt_cuda`; import `CudaGraphRunner` from `catopt_cuda`.
+from the carrier lowerings), above `mlopt_orchestrator`, above
+`mlopt_native`, above `mlopt_core`.  `mlopt_torch` does not depend
+on `mlopt_cuda`; import `CudaGraphRunner` from `mlopt_cuda`.
 
 ## Conventions
 
@@ -465,10 +465,10 @@ on `catopt_cuda`; import `CudaGraphRunner` from `catopt_cuda`.
   `[tool.ruff.lint]` for rationale.
 - Coverage floor: `fail_under = 100` in `[tool.coverage.report]` —
   the suite is pinned at 100% for the original packages plus
-  `catopt_onnx` (which climbed to the wall in
+  `mlopt_onnx` (which climbed to the wall in
   `project/retros/onnx-package.md`); new branches need tests (or a
   justified `pragma: no cover`).
-  `catopt_discovery` joined the source list after its staged climb
+  `mlopt_discovery` joined the source list after its staged climb
   and sits under a **pinned ratchet floor** (`--fail-under=99` at
   landing — tighten the number as the residual gaps close, never
   lower it; the unreachable-defensive arcs are documented in
@@ -496,19 +496,19 @@ on `catopt_cuda`; import `CudaGraphRunner` from `catopt_cuda`.
   (`supported_ops`, hard) and performance ranking (soft) stay
   distinct.
 - "Profile" means one thing: a measured target
-  (`catopt_core.profile.TargetProfile`).  Static characterization of
-  a *program* is `ProgramFeatures` (a future `catopt_core.features`),
+  (`mlopt_core.profile.TargetProfile`).  Static characterization of
+  a *program* is `ProgramFeatures` (a future `mlopt_core.features`),
   never called a "profile".
 
 ## Adding a rewrite law
 
-Laws live in `packages/catopt-core/src/catopt_core/laws/` — `tensor.py`
+Laws live in `packages/mlopt-core/src/mlopt_core/laws/` — `tensor.py`
 (tensor algebra), `scan.py` (scan monoids).  Shape (via `laws.base.R`):
 `R(name, lhs, rhs, law=..., check=..., derive=...)` — lhs/rhs are
 `Op.make` pattern trees; bare `str` leaves are metavariables, `Const`
 leaves are literals, and `str` attr values are attr metavariables bound
 under `"$attr:"` keys.  Prefer `cond=...` — a declarative side
-condition in `catopt_core.laws.cond` (pure data: `("and", ("rank-eq",
+condition in `mlopt_core.laws.cond` (pure data: `("and", ("rank-eq",
 "a", "b"), ("rank-ge", "a", 2))`, serializable via `cond_to_data`/
 `cond_from_data`; 45 of 71 laws use it) — over `check(bound) -> bool`,
 the escape hatch for conditions the DSL can't express: `bound` maps
@@ -516,7 +516,7 @@ each metavar to a resolved member term (use `laws.base._shape_of` for
 shape guards — the matcher cannot see types).
 `derive(bound) -> dict | None` computes RHS attrs absent from the LHS
 (`{"$attr:SZ": ...}`); `None` vetoes.  Prefer `dspec=...` — the twin
-declarative DSL in `catopt_core.laws.cond` (a `{NAME: expr}` map of
+declarative DSL in `mlopt_core.laws.cond` (a `{NAME: expr}` map of
 shape/attr expressions, serializable via `derive_to_data`/
 `derive_from_data` and folded into `rule.derive` at construction);
 18 of 71 laws use it, leaving **71 of 71 laws fully data-serializable**
@@ -526,17 +526,17 @@ witness
 the rule in a group list at the bottom of its module
 (`SIMPLIFICATION_RULES`, `CATEGORICAL_RULES`, `SDPA_FOLD_RULES`,
 `SCAN_LAWS`, `SCAN_DIAG_LAWS`; `ALL_RULES`/`all_rules()` is the union).
-Rules also carry tags from `catopt_core.laws.tags` (pass
+Rules also carry tags from `mlopt_core.laws.tags` (pass
 `R(..., tags=...)`); `EXPANSIVE` marks the closure-generating rules the
 pipeline budgets (`rules.tagged(EXPANSIVE)`).  Each rule's kernel kind
 lives on `Rewrite.derivation`/`rule.kind` — `R(..., derivation=(...))`
-names the axioms that prove a lemma (`catopt_discovery.coherence
+names the axioms that prove a lemma (`mlopt_discovery.coherence
 --emit-basis` emits the measured table; see
-`project/retros/axiom-lemma-split.md`).  `catopt_discovery.lemma_cert`
+`project/retros/axiom-lemma-split.md`).  `mlopt_discovery.lemma_cert`
 materializes each recorded derivation as a replayable `Certificate`
-(codec: `cert_to_data`/`cert_from_data` in `catopt_core.egraph.certs`;
+(codec: `cert_to_data`/`cert_from_data` in `mlopt_core.egraph.certs`;
 see `project/retros/lemma-certificates.md`).  The composable `RuleSet`
-presets live in `catopt_core.laws.ruleset`.
+presets live in `mlopt_core.laws.ruleset`.
 
 Measure it: `python -m bench.suites.correctness.law_bench --laws <name[,name|group]>`
 (`--sizes <d[,d]>` selects sizes; the suite's own CLI is the entry point) —

@@ -1,4 +1,4 @@
-# catopt — measured results
+# mlopt — measured results
 
 Generated from the pinned baselines in `bench/baselines/` —
 regenerate with `python -m bench results --out docs/results.md`.
@@ -28,7 +28,7 @@ Measured 2026-10-14T06:54:12+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git 
 
 | verdict | finding | headline |
 |---|---|---|
-| **WIN** | the composed catopt+Inductor module beats plain Inductor end-to-end | best 1.06× vs Inductor on tiny_llama@4x128 |
+| **WIN** | the composed mlopt+Inductor module beats plain Inductor end-to-end | best 1.06× vs Inductor on tiny_llama@4x128 |
 | **WIN** | the optimized module verifies against eager | 5/5 cells verified |
 
 Measured 2026-10-14T06:33:13+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git `2c782dd` (dirty)) — baseline [`bench/baselines/e2e_model.json`](../bench/baselines/e2e_model.json).
@@ -79,7 +79,7 @@ Measured 2026-10-14T06:17:47+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git 
 
 | verdict | finding | headline |
 |---|---|---|
-| **WIN** | catopt reaches a weight-folded form Inductor's post-grad graph cannot express | 14.92× vs Inductor at (k,d,B·T)=(16,512,4096) (17.40× vs eager) |
+| **WIN** | mlopt reaches a weight-folded form Inductor's post-grad graph cannot express | 14.92× vs Inductor at (k,d,B·T)=(16,512,4096) (17.40× vs eager) |
 | **WIN** | every timed cell passes the fp32 equivalence gate | 12/12 cells verified |
 
 Measured 2026-10-14T06:16:44+00:00 on 12th Gen Intel(R) Core(TM) i5-12500H (git `2c782dd` (dirty)) — baseline [`bench/baselines/reassoc_scale.json`](../bench/baselines/reassoc_scale.json).
@@ -102,25 +102,25 @@ datacenter hardware:
 | executor routing after measured pricing | **12/12 cases ship the measured-fastest member** (uncorrected picks ran 2–3× slower) | `lab/probes/executor_cost_probe.py` | [executor-pricing-fix](../project/retros/executor-pricing-fix.md) |
 | `silu_fold` on the bench case | **−53–55% modeled cost, 1.43–2.62× wall-clock** | `bench run law_bench` | [three-cell-mediator](../project/retros/three-cell-mediator.md) |
 | contraction player, n=40 vs `opt_einsum` | **0.89–1.01× of randomised greedy at equal wall-clock** (0.91–0.98 at T≤1, three seeds, fed budgets); **0.51–0.90× deterministic greedy** | `lab/probes/contraction/contraction_guided_restart.py` | [contraction-synthesis](../project/retros/contraction-synthesis.md), [contraction-player-shipped](../project/retros/contraction-player-shipped.md) |
-| pipeline held-out rediscovery | **winner re-ranks #1, SHIP, every run** | `catopt_discovery.pipeline --holdout` | [law-proposer-extensions](../project/retros/law-proposer-extensions.md), [groupnorm-convnext-corpus](../project/retros/groupnorm-convnext-corpus.md) |
-| coherence catalogue over `ALL_RULES` (84, re-run 2026-10-18) | **60 axioms / 22 lemmas / 2 redundant; 20 no-instance; divergence 1** (`rms_norm_fold` × `_nogain` — measured, unresolved) | `catopt_discovery.coherence --emit-basis` | [axiom-lemma-split](../project/retros/axiom-lemma-split.md) |
-| evidence store, second run | **50/50 verdicts cached; 128 s → 6.6 s (~19×)** | `catopt_discovery.pipeline --evidence-db` | [evidence-store](../project/retros/evidence-store.md) |
-| `chainfuse` — laws + `claim(gen_0)`, Triton-bound | synthetic composite (`x@A@B@C` + 6-op pointwise tail, 256×512): **2.94× vs `torch.compile`** (86µs vs 253µs), verified 1.7e-05; laws alone reach 181µs — the minted kernel is required for the full win | `python -m catopt_discovery.play --domain gen --probe` | [gen-kernels](../project/retros/gen-kernels.md) |
-| delivered module vs `torch.compile` (`gen` probe) | spelled matmul chain **3.96×** (22µs vs 87µs; Inductor keeps all three GEMMs even under `freezing`); swiglu **2.11×**; pointwise fusion **0.82–0.88× loss** | `python -m catopt_discovery.play --domain gen --probe` | [gen-kernels](../project/retros/gen-kernels.md) |
-| held-out zoo probe | **11/18 delivered verified modules beat `torch.compile`** — LoRAAdapter 2.18×, WaveNetGate 1.51×, DeepEquilibrium 1.35×; every winner ran `claims=[]` (the `gk.profitable` measured referee filtered unprofitable minted claims) | `python -m catopt_discovery.play --zoo` | [gen-kernels](../project/retros/gen-kernels.md) |
-| joint fwd+bwd step vs `torch.autograd` | **+13%** (68µs vs 78µs, verified 9.5e-07) — one shared memo across forward + derived VJP; unshared costs 197µs | `catopt_discovery.training.joint_step` | [joint-training-graph](../project/retros/joint-training-graph.md) |
-| machine law pack | **16/16 store objects deployable** as an opt-in `RuleSet`; machine-only arm wins 3/22 zoo models the human library misses (`linear_chain_t` owns LoRAAdapter's −20%) | `catopt_discovery.machine_pack` | [human-bar](../project/retros/human-bar.md) |
+| pipeline held-out rediscovery | **winner re-ranks #1, SHIP, every run** | `mlopt_discovery.pipeline --holdout` | [law-proposer-extensions](../project/retros/law-proposer-extensions.md), [groupnorm-convnext-corpus](../project/retros/groupnorm-convnext-corpus.md) |
+| coherence catalogue over `ALL_RULES` (84, re-run 2026-10-18) | **60 axioms / 22 lemmas / 2 redundant; 20 no-instance; divergence 1** (`rms_norm_fold` × `_nogain` — measured, unresolved) | `mlopt_discovery.coherence --emit-basis` | [axiom-lemma-split](../project/retros/axiom-lemma-split.md) |
+| evidence store, second run | **50/50 verdicts cached; 128 s → 6.6 s (~19×)** | `mlopt_discovery.pipeline --evidence-db` | [evidence-store](../project/retros/evidence-store.md) |
+| `chainfuse` — laws + `claim(gen_0)`, Triton-bound | synthetic composite (`x@A@B@C` + 6-op pointwise tail, 256×512): **2.94× vs `torch.compile`** (86µs vs 253µs), verified 1.7e-05; laws alone reach 181µs — the minted kernel is required for the full win | `python -m mlopt_discovery.play --domain gen --probe` | [gen-kernels](../project/retros/gen-kernels.md) |
+| delivered module vs `torch.compile` (`gen` probe) | spelled matmul chain **3.96×** (22µs vs 87µs; Inductor keeps all three GEMMs even under `freezing`); swiglu **2.11×**; pointwise fusion **0.82–0.88× loss** | `python -m mlopt_discovery.play --domain gen --probe` | [gen-kernels](../project/retros/gen-kernels.md) |
+| held-out zoo probe | **11/18 delivered verified modules beat `torch.compile`** — LoRAAdapter 2.18×, WaveNetGate 1.51×, DeepEquilibrium 1.35×; every winner ran `claims=[]` (the `gk.profitable` measured referee filtered unprofitable minted claims) | `python -m mlopt_discovery.play --zoo` | [gen-kernels](../project/retros/gen-kernels.md) |
+| joint fwd+bwd step vs `torch.autograd` | **+13%** (68µs vs 78µs, verified 9.5e-07) — one shared memo across forward + derived VJP; unshared costs 197µs | `mlopt_discovery.training.joint_step` | [joint-training-graph](../project/retros/joint-training-graph.md) |
+| machine law pack | **16/16 store objects deployable** as an opt-in `RuleSet`; machine-only arm wins 3/22 zoo models the human library misses (`linear_chain_t` owns LoRAAdapter's −20%) | `mlopt_discovery.machine_pack` | [human-bar](../project/retros/human-bar.md) |
 | `mul_unsq_nat` — first corpus-minted law, shipped in `DEFAULT` | **−12.27% on its source workload** (DeltaRuleBlock, 992496→870722), closure **+18 enodes**; exact `flat-map-unsq` guard after the naive broadcast guard was falsified (212 bad accepts); apparent sibling correctly rejected at admission | `lab/screen/exposed_discovery.py` + admission gate | [mul-unsq-nat](../project/retros/mul-unsq-nat.md) |
 | exposure screen (321 workloads) | **bimodal: 81 score 0% law-LHS coverage, 140 score ≥95%**; exposure predicts reachability, not payoff (100%-exposed models fire nothing) | `lab/screen/exposure_screen.py` | [exposed-math](../project/retros/exposed-math.md) |
 | corpus-wide discovery sweep (60 models) | **0 paying new laws beyond `mul_unsq_nat`**; fresh-paying yield ~1.5% of the exposed class; enum arm 0→198 fires after the attr-gap fix but 0 paying | `lab/screen/discovery_scale.py` | [discovery-scale](../project/retros/discovery-scale.md) |
-| handler synthesis (layer 2) | **machine-minted verified handler for the `om_decayed` element** (8.9e-16 fp64) — previously a hand-written executor; contraction/fold/fold_emit/fold_zip all verify in bounded search; reductions/softmax refuse (named grammar gaps) | `catopt_discovery.handler_synth` | [handler-proposals](../project/retros/handler-proposals.md) |
+| handler synthesis (layer 2) | **machine-minted verified handler for the `om_decayed` element** (8.9e-16 fp64) — previously a hand-written executor; contraction/fold/fold_emit/fold_zip all verify in bounded search; reductions/softmax refuse (named grammar gaps) | `mlopt_discovery.handler_synth` | [handler-proposals](../project/retros/handler-proposals.md) |
 | law synthesis per atom (layer 3) | **25 certified rows / 4 rejected / 0 refused** on the shipped carrier atoms; new primitives incl. `affd.compose` (slot-solved), `dv.merge`, `omd.absorb_score`; false twins all caught; found a real executor bug (`decay_vec` `sign=0` coercion) | `lab/mint/atom_law_loop.py` | [layer3-loop](../project/retros/layer3-loop.md) |
 | composed atom-synthesis loop | one atom minted through all four layers (`scan_fold`, 1.78e-15) + certified law sets for `cumsum`/`cumprod`/`logcumsumexp`; **0 certified laws fire on real terms** (the minted total vs the corpus's emitted sequence; the paying `fold_emit` sibling is enumeration-ordered >200k deep) | `lab/mint/atom_synth_loop.py` | [atom-synth-loop](../project/retros/atom-synth-loop.md) |
 | anti-unification compression (layer 1) | **NULL on reach-expansion** — identical cheapest extractable member with/without atoms on all 3 workloads; compression real (12 vs 26 ops), strict arm worse under tight `max_nodes` | `lab/probes/anti_unify_probe.py` | [ADR 0007](../project/adrs/0007-semantic-atom-minting.md) |
 | combinator bridge (ADR 0008) | **321/321 corpus workloads round-trip structurally exact**, zero ops refuse translation, mean blowup **2.61×**; RetNet shared-state fold spells as `loop` term and verifies at 1e-7–2.6e-7; extract projects round-trip-equal (92 Δ sites) | `lab/bridge/combinator_probe.py` | [ADR 0008](../project/adrs/0008-combinator-presentation.md) |
 | fused carrier lowering (`decayed_lower`) | **parity with the paper's own chunked impl** (2.08 vs 2.12 ms T=2048; 0.838 vs 0.822 ms T=1024 eager), **beats it under graph replay** (0.670 ms); fp64-exact 1.4e-16; FLA still ~7–11× ahead (kernel-level: fp64 GEMMs + materialized score tensor) | `lab/probes/retnet_baseline_probe.py` | [retnet-external-baselines](../project/retros/retnet-external-baselines.md) |
 | bounded lane on real BiRefNet (220M, HF weights) | **certified negative** — 20 offers at 1e-2, 56 at 3e-2, all correctly refused (thin dedup: bounded member prices 1.32× worse than dense); fp32 gate bitwise-clean; **BN census: 43 `BatchNorm2d`** (conv+BN targets exist) | `lab/probes/birefnet_bounded_probe.py` | [birefnet-bounded-lane](../project/retros/birefnet-bounded-lane.md) |
-| ONNX backend, both directions (ADR 0006) | **zero changes under `catopt-core`** for `OnnxSink` and `OnnxSource`; fp64 round-trip **1.11e-16** (machine eps) through `onnxruntime`; 107 op types / opsets 13–21 in, 169 ops out; package coverage 100% | `catopt_onnx` + `tests/test_onnx_*.py` | [onnx-package](../project/retros/onnx-package.md) |
+| ONNX backend, both directions (ADR 0006) | **zero changes under `mlopt-core`** for `OnnxSink` and `OnnxSource`; fp64 round-trip **1.11e-16** (machine eps) through `onnxruntime`; 107 op types / opsets 13–21 in, 169 ops out; package coverage 100% | `mlopt_onnx` + `tests/test_onnx_*.py` | [onnx-package](../project/retros/onnx-package.md) |
 
 Two reconciliation notes:
 
@@ -128,7 +128,7 @@ Two reconciliation notes:
   the learned policy at 1.54–1.78× of `opt_einsum`'s randomised
   greedy at n=40; the RL curriculum regime narrowed the gap to
   ~1.04×, and the oe-all **distilled** player that now ships as
-  `catopt_torch.load_contraction_policy()`'s default *beats* the
+  `mlopt_torch.load_contraction_policy()`'s default *beats* the
   teacher at equal wall-clock (the figure in the table above).  The
   curriculum-RL weights remain bundled as an alternate artifact.
 - **The `bounded_e2e` baseline's headline is vs eager** (best
@@ -256,7 +256,7 @@ eliminated (pinned by test).
 | handler synthesis (ADR 0007 layer 2) | machine-minted verified handler for the `om_decayed` element at **8.9e-16** — previously a hand-written executor; every named non-elementwise shape verifies in bounded search |
 | law synthesis per atom (layer 3) | **25 certified / 4 rejected / 0 refused** rows around shipped atoms; new primitives (`affd.compose` slot-solved, `dv.merge`, `omd.absorb_score`); found a real executor bug (`decay_vec` `sign=0`) by refusing to certify |
 | fused carrier lowering vs the paper's own chunked impl | **speed parity+** — 2.08 vs 2.12 ms (T=2048), **faster under graph replay** (0.670 vs 0.822 ms at T=1024); fp64 1.4e-16; FLA still ahead (kernel-level) |
-| ONNX backend, both directions | **zero edits under `catopt-core`**; fp64 round-trip **1.11e-16** via `onnxruntime`; 107 in-op types (opsets 13–21), 169 out-ops; package coverage 100% |
+| ONNX backend, both directions | **zero edits under `mlopt-core`**; fp64 round-trip **1.11e-16** via `onnxruntime`; 107 in-op types (opsets 13–21), 169 out-ops; package coverage 100% |
 | combinator bridge (ADR 0008 prototype) | **321/321** corpus workloads round-trip structurally exact, zero ops refuse translation, mean blowup 2.61×; the RetNet carrier spells as a `loop` term verified at 1e-7–2.6e-7 |
 
 ## 7. Retired: the weight-space / ε axis (from the retired REPORT)
@@ -321,7 +321,7 @@ Kronecker-structured 64×64 weight → K=4 terms, **32,768 → 4,096 bytes
 |---|---|---|---|
 | emb rank-2 / r19 / r64 / r128 / r192 | 2.5–1.2× | 6108 → 214 | **dead at every rank** |
 | Kronecker-sum (35% resid) | 1.1× | 143 | dead |
-| **int8 RTN quant (certified, catopt)** | **4.0×** | **5.16** | **works, bounded** |
+| **int8 RTN quant (certified, mlopt)** | **4.0×** | **5.16** | **works, bounded** |
 | int8 per-channel RTN (GPTQ-class baseline) | 4.0× | 5.00 | works, no bound |
 | int4 g128 RTN (GPTQ-class) | 8.0× | 7.01 | works, no bound |
 
@@ -443,7 +443,7 @@ named; where a pinned baseline supersedes a row, that is noted.
 | projection pairing (QKV, gate·up) on llama2.c | 1.24× vs Inductor | retired RESEARCH_WRITEUP §3 — rediscovers `MergedColumnParallelLinear`/`QKVParallelLinear` |
 | autotuned selection (`optimize_model_autotuned`) | matrix_chain 2.24× CPU | retired RESEARCH_WRITEUP §3 |
 | the carrier below the crossover | 0.184× at retnet T=128 (uncompiled) | retired RESEARCH_WRITEUP §4 — superseded by `docs/results.md`'s 0.51× at T=512 |
-| pipeline cost at T=2048 | CatOpt 215.8 s → 1.04 ms vs Inductor 45.4 s → 0.256 ms | retired RESEARCH_WRITEUP §4; also `project/plans/0005-cost-model-fidelity.md` — Inductor still faster at runtime |
+| pipeline cost at T=2048 | MLOpt 215.8 s → 1.04 ms vs Inductor 45.4 s → 0.256 ms | retired RESEARCH_WRITEUP §4; also `project/plans/0005-cost-model-fidelity.md` — Inductor still faster at runtime |
 | real checkpoints (stories15M/110M) | all blocks transform + verify (~2e-5); **−37% GEMM launches** profiler-verified; **parity** on wall time | retired RESEARCH_WRITEUP §4 |
 | cost-model fidelity, post-fix ρ | `lowering_min` 0.167→0.261, `exec_generic` 0.070→0.316 | retired RESEARCH_WRITEUP §3 — positive but not yet predictive (pre-fix: `project/plans/0005-cost-model-fidelity.md`) |
 

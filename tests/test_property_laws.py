@@ -14,9 +14,9 @@ Three axes, all on randomly generated terms:
 from __future__ import annotations
 
 import hypothesis.strategies as st
-from catopt_core.cost import flops_cost
-from catopt_core.ir import Const, Op
-from catopt_core.laws import (
+from mlopt_core.cost import flops_cost
+from mlopt_core.ir import Const, Op
+from mlopt_core.laws import (
     ALL_RULES,
     ASSOC_ADD,
     ASSOC_MUL,
@@ -26,7 +26,7 @@ from catopt_core.laws import (
     ID_ADD,
     ID_MUL,
 )
-from catopt_core.meta import (
+from mlopt_core.meta import (
     _positions,
     apply_rewrite_at,
     canonicalize,

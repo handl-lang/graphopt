@@ -1,27 +1,27 @@
-- id: "ast.catopt.const"
-  node_kind: "catopt:const"
+- id: "ast.mlopt.const"
+  node_kind: "mlopt:const"
   children: []
   payload_schema:
     type: "object"
     properties:
       value: {}
-  catopt:
+  mlopt:
     leaf: "const"
-- id: "ast.catopt.var"
-  node_kind: "catopt:var"
+- id: "ast.mlopt.var"
+  node_kind: "mlopt:var"
   children: []
   payload_schema:
     type: "object"
     properties:
       name: {}
-  catopt:
+  mlopt:
     leaf: "var"
-- id: "ast.catopt.data"
-  node_kind: "catopt:data"
+- id: "ast.mlopt.data"
+  node_kind: "mlopt:data"
   children: []
   payload_schema:
     type: "object"
     properties:
       repr: {}
-  catopt:
+  mlopt:
     leaf: "data"

@@ -26,26 +26,26 @@ Pins what ``x @ (A·B)`` does end to end:
   win; the guard is the verify, not the spelling).
 """
 
-import catopt_orchestrator.morphisms as M
-import catopt_orchestrator.morphisms_kv as K
+import mlopt_orchestrator.morphisms as M
+import mlopt_orchestrator.morphisms_kv as K
 import torch
 import torch.nn as nn
-from catopt_core.cost import (
+from mlopt_core.cost import (
     dag_cost,
     executor_cost_for,
     flops_cost,
     launch_aware_cost,
 )
-from catopt_core.egraph import EGraph
-from catopt_core.ir import IR, Op, Param, TensorType, Var, op_repr
-from catopt_core.laws import (
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import IR, Op, Param, TensorType, Var, op_repr
+from mlopt_core.laws import (
     ALL_RULES,
     ASSOC_LINEAR,
     ASSOC_LINEAR_REV,
     ASSOC_MATMUL,
     ASSOC_MATMUL_REV,
 )
-from catopt_core.laws.factored import (
+from mlopt_core.laws.factored import (
     _cls_has_var,
     _factor_cols,
     _factor_rows,
@@ -53,10 +53,10 @@ from catopt_core.laws.factored import (
     _leaf_params,
     offer_low_rank_factors,
 )
-from catopt_core.typing import has_var_leaf
-from catopt_orchestrator.optimize import Optimizer
-from catopt_torch.adapters import TorchSink
-from catopt_torch.backend import TorchBackend
+from mlopt_core.typing import has_var_leaf
+from mlopt_orchestrator.optimize import Optimizer
+from mlopt_torch.adapters import TorchSink
+from mlopt_torch.backend import TorchBackend
 
 from tests.test_morphism_kv import (
     _lift,
@@ -205,7 +205,7 @@ def test_executor_cost_launch_overhead_crossover():
 def test_fold_weight_chains_materialises_selected_form():
     """Lowering folds a *selected* param-only matmul to one stored
     weight — and leaves a selected factored chain as two GEMMs."""
-    from catopt_torch.torch_bridge import IRModule
+    from mlopt_torch.torch_bridge import IRModule
 
     x = Var("x", TensorType((8, 64)))
     a = Param("A", TensorType((64, 4)))

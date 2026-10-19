@@ -8,10 +8,10 @@ an op with no VJP row declines honestly.
 
 import pytest
 import torch
-from catopt_core.ir import Const, Op, TensorType, Var
-from catopt_discovery import meta_arena as ma
-from catopt_discovery import training
-from catopt_torch.meta_eval import _eval_allclose, _eval_term
+from mlopt_core.ir import Const, Op, TensorType, Var
+from mlopt_discovery import meta_arena as ma
+from mlopt_discovery import training
+from mlopt_torch.meta_eval import _eval_allclose, _eval_term
 
 
 def _v(name: str, *shape: int) -> Var:
@@ -106,7 +106,7 @@ class TestBackward:
             training.backward(term)
 
     def test_param_leaves_get_grads(self):
-        from catopt_core.ir import Param
+        from mlopt_core.ir import Param
 
         x = _v("x", 4, 4)
         p = Param("scale", TensorType((4, 4)))
@@ -117,7 +117,7 @@ class TestBackward:
     def test_backward_term_is_a_board_citizen(self):
         # the derived gradient program lives on the board: laws
         # fire, extraction certifies — no new semantics stack
-        from catopt_core.cost.basic import count_cost
+        from mlopt_core.cost.basic import count_cost
 
         x = _v("x", 4, 4)
         fwd = _p("mul", x, _p("sigmoid", x))
@@ -318,7 +318,7 @@ class TestRealModels:
 
     def test_linear_relu_backward_matches_autograd(self):
         import torch.nn as nn
-        from catopt_torch.adapters import TorchSource
+        from mlopt_torch.adapters import TorchSource
 
         torch.manual_seed(0)
 
@@ -405,9 +405,9 @@ class TestJointProbe:
     def test_joint_extraction_stays_correct(self):
         # the winning case end-to-end: extract grads THROUGH the
         # shared e-graph, still numerically equal to autograd
-        from catopt_core.cost.basic import count_cost
-        from catopt_core.egraph import EGraph
-        from catopt_core.laws import DEFAULT
+        from mlopt_core.cost.basic import count_cost
+        from mlopt_core.egraph import EGraph
+        from mlopt_core.laws import DEFAULT
 
         x, w, b = _v("x", 4, 4), _v("w", 4, 4), _v("b", 4, 4)
         fwd = _p("tanh", _p("add", _p("matmul", x, w), b))
@@ -449,7 +449,7 @@ class TestJointProbe:
         # the delivered joint artifact: fwd+grads under one memo —
         # grads verified vs autograd
         torch = pytest.importorskip("torch")
-        import catopt_torch.torch_bridge as tb
+        import mlopt_torch.torch_bridge as tb
 
         class T(torch.nn.Module):
             def __init__(self):
@@ -462,7 +462,7 @@ class TestJointProbe:
         torch.manual_seed(0)
         m = T().eval()
         x = torch.randn(4, 8, requires_grad=True)
-        from catopt_torch.adapters import TorchSource
+        from mlopt_torch.adapters import TorchSource
 
         ir, leaves = TorchSource().to_ir(m, x.detach())
         g0 = _p("broadcast_to", Const(1.0), shape=(4, 8))

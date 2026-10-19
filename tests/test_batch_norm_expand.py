@@ -18,10 +18,10 @@ machinery was attr-only).  Both are closed:
 """
 
 import torch
-from catopt_core import meta
-from catopt_core.egraph import EGraph, Rewrite
-from catopt_core.ir import Const, Op, Param, TensorType, Var, op_repr
-from catopt_core.laws import (
+from mlopt_core import meta
+from mlopt_core.egraph import EGraph, Rewrite
+from mlopt_core.ir import Const, Op, Param, TensorType, Var, op_repr
+from mlopt_core.laws import (
     BATCH_NORM_EXPAND,
     BATCH_NORM_EXPAND_NOBIAS,
     BATCH_NORM_EXPAND_PLAIN,
@@ -30,10 +30,10 @@ from catopt_core.laws import (
     _check_bn_eval,
     _derive_bn,
 )
-from catopt_core.laws.cond import derive_from_data, derive_to_data
+from mlopt_core.laws.cond import derive_from_data, derive_to_data
 
 # Registers the concrete-eval backend + op bindings for _eval_term.
-from catopt_torch.torch_bridge import export_to_ir  # noqa: F401
+from mlopt_torch.torch_bridge import export_to_ir  # noqa: F401
 
 
 def _T(*shape):
@@ -173,7 +173,7 @@ def test_batch_norm_expand_guard_vetoes():
 def test_batch_norm_expand_in_egraph_keeps_fused_cheapest():
     """The expansion adds a member; extraction still prefers fused
     (priced 4 < the ~7-pass spelled subgraph)."""
-    from catopt_core.cost.basic import flops_cost
+    from mlopt_core.cost.basic import flops_cost
 
     x, w, b, rm, rv = _leaves((1, 8, 8, 8), 8)
     term = _bn(x, w, b, rm, rv)

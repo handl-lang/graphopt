@@ -54,7 +54,7 @@ hidden):
 ## What changed
 
 One declarative table and a two-line splice, all in
-`catopt_discovery.oracle` (the leaf/value bank):
+`mlopt_discovery.oracle` (the leaf/value bank):
 
 1. **`oracle._CONST_DOMAIN`** — a small per-op table keyed by the
    metavariable's *parent op*:

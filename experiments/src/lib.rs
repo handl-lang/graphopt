@@ -1,10 +1,10 @@
 //! `mlopt-experiments` — the kit this repo's experiments run on.
 //!
 //! The smallest honest assembly of the modular handl-lang stack for the
-//! paper's measurements — the same component set catopt-kit composes
-//! (`packages/catopt-kit`, in-tree in this repo, is the precedent; this
+//! paper's measurements — the same component set mlopt-kit composes
+//! (`packages/mlopt-kit`, in-tree in this repo, is the precedent; this
 //! module is the post-ADR-0128 spelling over the renamed `hnl-engine-*`
-//! crates — the same edges catopt-kit's manifest now declares):
+//! crates — the same edges mlopt-kit's manifest now declares):
 //!
 //! 1. **Language** — the canonical `Language` assembled from data via
 //!    [`handl_kit_data_canonical::language_from_yaml`].

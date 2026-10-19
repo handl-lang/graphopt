@@ -13,10 +13,10 @@ the recursive evaluator on a realistic term.
 import pytest
 import torch
 
-import catopt_carriers.xcarrier  # noqa: F401 — carrier torch bindings
-from catopt_core.ir import IR, Const, Op, Param, TensorType, Var
-from catopt_core.ops import OpTable
-from catopt_torch.torch_bridge import _IR_TO_TORCH, ir_to_torch_module
+import mlopt_carriers.xcarrier  # noqa: F401 — carrier torch bindings
+from mlopt_core.ir import IR, Const, Op, Param, TensorType, Var
+from mlopt_core.ops import OpTable
+from mlopt_torch.torch_bridge import _IR_TO_TORCH, ir_to_torch_module
 
 torch.manual_seed(0)
 
@@ -361,8 +361,8 @@ def test_eval_fast_unplannable_raises():
 
 
 def _scan_mod():
-    import catopt_carriers.scan_lower as sl  # noqa: F401
-    from catopt_carriers.scan_lower import to_batched_scan_module
+    import mlopt_carriers.scan_lower as sl  # noqa: F401
+    from mlopt_carriers.scan_lower import to_batched_scan_module
 
     x = _v("x", 4, 3)
     leaves = [

@@ -1,6 +1,6 @@
 //! `conv-bn-fold` — the founding-result experiment.
 //!
-//! Runs catopt's conv+BN weight-space fold **end to end through the
+//! Runs mlopt's conv+BN weight-space fold **end to end through the
 //! handl runtime** and produces the two numbers the paper's headline
 //! section cites:
 //!
@@ -15,8 +15,8 @@
 //!    process): wall/N per arm, reported as the e2e delta.
 //!
 //! Nothing is vendored: the `.hnl` program under measurement is
-//! catopt-kit's own `hnl/conv_bn.hnl` — in this merged tree it resolves
-//! in-repo at `packages/catopt-kit/hnl/conv_bn.hnl`; see
+//! mlopt-kit's own `hnl/conv_bn.hnl` — in this merged tree it resolves
+//! in-repo at `packages/mlopt-kit/hnl/conv_bn.hnl`; see
 //! [`resolve_conv_bn`] for the full resolution ladder (the sibling /
 //! pkg-slot / fetched arms keep a standalone checkout working).
 
@@ -32,40 +32,40 @@ fn project_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
-/// Resolve catopt-kit's `hnl/conv_bn.hnl` — the artifact under
+/// Resolve mlopt-kit's `hnl/conv_bn.hnl` — the artifact under
 /// measurement — without copying it into this repo's tree.
 ///
 /// The ladder, first hit wins:
 ///
 /// 1. `--conv-bn <path>` flag / `CONV_BN_HNL` env — explicit override.
-/// 2. `experiments/../packages/catopt-kit/hnl/conv_bn.hnl` — in this
-///    merged tree catopt-kit is an in-repo workspace member, so the
+/// 2. `experiments/../packages/mlopt-kit/hnl/conv_bn.hnl` — in this
+///    merged tree mlopt-kit is an in-repo workspace member, so the
 ///    artifact is always present in-tree.
-/// 3. `$CATOPT_DIR/packages/catopt-kit/hnl/conv_bn.hnl` — a catopt
+/// 3. `$MLOPT_DIR/packages/mlopt-kit/hnl/conv_bn.hnl` — a mlopt
 ///    checkout the caller names (standalone-checkout arm).
 /// 4. The `.handl.toml` `[patch]` arm — the sibling-checkout dev-link:
-///    `<repo>/../catopt/packages/catopt-kit` (exists wherever catopt is
+///    `<repo>/../mlopt/packages/mlopt-kit` (exists wherever mlopt is
 ///    an org sibling of a standalone research-mlopt checkout).
 /// 5. The package-cache slot the `[dependencies]` git arm resolves to:
-///    `$HANDL_PKG_DIR/catopt-kit` else `~/.handl/pkg/catopt-kit` — the
+///    `$HANDL_PKG_DIR/mlopt-kit` else `~/.handl/pkg/mlopt-kit` — the
 ///    directory the ADR-0010 fetch hook will populate (a checkout or
 ///    symlink there is today's stand-in).
-/// 6. `experiments/.cache/catopt-kit/hnl/conv_bn.hnl` — the file
+/// 6. `experiments/.cache/mlopt-kit/hnl/conv_bn.hnl` — the file
 ///    `make artifact` fetches from the declared git source
-///    (`raw.githubusercontent.com/handl-lang/catopt/main/…`) when no
+///    (`raw.githubusercontent.com/handl-lang/mlopt/main/…`) when no
 ///    local arm resolves. `.cache/` is ignored — the file is a
 ///    *fetched dependency artifact*, not a committed copy.
 fn resolve_conv_bn(overrides: &cli::Args) -> Result<PathBuf, String> {
     let candidates: Vec<PathBuf> = [
         overrides.conv_bn.clone(),
         std::env::var("CONV_BN_HNL").ok().map(PathBuf::from),
-        Some(project_dir().join("../packages/catopt-kit/hnl/conv_bn.hnl")),
-        std::env::var("CATOPT_DIR")
+        Some(project_dir().join("../packages/mlopt-kit/hnl/conv_bn.hnl")),
+        std::env::var("MLOPT_DIR")
             .ok()
-            .map(|d| PathBuf::from(d).join("packages/catopt-kit/hnl/conv_bn.hnl")),
-        Some(project_dir().join("../../catopt/packages/catopt-kit/hnl/conv_bn.hnl")),
-        Some(pkg_dir().join("catopt-kit/hnl/conv_bn.hnl")),
-        Some(project_dir().join(".cache/catopt-kit/hnl/conv_bn.hnl")),
+            .map(|d| PathBuf::from(d).join("packages/mlopt-kit/hnl/conv_bn.hnl")),
+        Some(project_dir().join("../../mlopt/packages/mlopt-kit/hnl/conv_bn.hnl")),
+        Some(pkg_dir().join("mlopt-kit/hnl/conv_bn.hnl")),
+        Some(project_dir().join(".cache/mlopt-kit/hnl/conv_bn.hnl")),
     ]
     .into_iter()
     .flatten()
@@ -76,7 +76,7 @@ fn resolve_conv_bn(overrides: &cli::Args) -> Result<PathBuf, String> {
         }
     }
     Err(format!(
-        "could not resolve catopt-kit's hnl/conv_bn.hnl — tried:\n  {}\n\
+        "could not resolve mlopt-kit's hnl/conv_bn.hnl — tried:\n  {}\n\
          provide it explicitly with --conv-bn <path> or CONV_BN_HNL, or\n\
          fetch it from the declared source: make artifact\n\
          (Gap, documented in manifest/kit.toml: `.handl.toml` git deps \
@@ -119,7 +119,7 @@ mod hnl {
     }
 }
 
-/// The dyadic fixture — the same shape regime as catopt's
+/// The dyadic fixture — the same shape regime as mlopt's
 /// `ConvBN(cin=4, cout=6, k=3)` premise-pay seed, with every value a
 /// small integer so the fold agrees bitwise.
 ///
@@ -193,7 +193,7 @@ impl Fixture {
 }
 
 /// Build the evaluation program: import one export from the resolved
-/// catopt-kit module and apply it to the fixture. The import names an
+/// mlopt-kit module and apply it to the fixture. The import names an
 /// absolute path (the resolved artifact); the program's own
 /// `from "host-tensor" import tensor` resolves through the project
 /// `.handl.toml`.
@@ -235,7 +235,7 @@ fn usage() -> ExitCode {
     eprintln!(
         "usage: conv-bn-fold [--repeat <n>] [--conv-bn <path.hnl>] [--json]\n\
          \n\
-         evaluate catopt's conv_bn.hnl (spelled + folded arms) through\n\
+         evaluate mlopt's conv_bn.hnl (spelled + folded arms) through\n\
          the composed kit; verify value-equality, then time N calls per arm.\n\
          \n\
          --repeat <n>   timed evals per arm (default 200; 0 = verify only)\n\

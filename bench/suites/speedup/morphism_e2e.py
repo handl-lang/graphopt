@@ -49,7 +49,7 @@ Usage:
 """
 # ruff: noqa: E402, RUF001, RUF002, RUF003 -- ×, ·, →, − in
 # strings/docstrings are deliberate math notation; sys.path setup
-# must precede the benchkit/catopt imports (bench_omd2 convention).
+# must precede the benchkit/mlopt imports (bench_omd2 convention).
 
 from __future__ import annotations
 
@@ -62,15 +62,15 @@ from pathlib import Path
 
 sys.setrecursionlimit(400_000)
 
-import catopt_orchestrator.morphisms as M
-import catopt_orchestrator.morphisms_kv as K
+import mlopt_orchestrator.morphisms as M
+import mlopt_orchestrator.morphisms_kv as K
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from catopt_orchestrator import MorphismSearch, Optimizer
-from catopt_torch.backend import TorchBackend
-from catopt_torch.models import DeepParallel
-from catopt_torch.report import verify_equiv
+from mlopt_orchestrator import MorphismSearch, Optimizer
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.models import DeepParallel
+from mlopt_torch.report import verify_equiv
 
 from bench.benchkit import (
     Case,

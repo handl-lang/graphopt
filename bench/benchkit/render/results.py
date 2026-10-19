@@ -25,7 +25,7 @@ def _provenance(env: dict, name: str) -> str:
 
 def render_results_doc(
     baselines_dir: str | Path,
-    title: str = "catopt — measured results",
+    title: str = "mlopt — measured results",
 ) -> str:
     """Render every pinned baseline as one Markdown document.
 

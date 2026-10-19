@@ -1,7 +1,7 @@
-"""Contract tests for catopt_core.typing — the shape/type-inference layer.
+"""Contract tests for mlopt_core.typing — the shape/type-inference layer.
 
 Phase 1a extracted ``_shape_of`` / ``_infer_op_shape`` / ``_INVALID`` /
-``_broadcast`` / ``_numel`` out of catopt_core.cost and moved the carrier
+``_broadcast`` / ``_numel`` out of mlopt_core.cost and moved the carrier
 op cases into ``register_shape_rule`` handlers.  These tests pin the
 contract the layer publishes:
 
@@ -17,8 +17,8 @@ contract the layer publishes:
 
 import pytest
 
-from catopt_core.ir import Const, Op, Param, TensorType, Var
-from catopt_core.typing import (
+from mlopt_core.ir import Const, Op, Param, TensorType, Var
+from mlopt_core.typing import (
     _INVALID,
     _SHAPE_RULES,
     _broadcast,
@@ -305,7 +305,7 @@ def test_register_shape_rule_hook():
 def test_register_value_shape_hook():
     """The value-shape registry: a registered resolver is consulted by
     ``value_shape_of``; with none it falls back to ``_shape_of``."""
-    import catopt_core.typing as ty
+    import mlopt_core.typing as ty
 
     prev = ty._VALUE_SHAPE
     try:

@@ -1,6 +1,6 @@
 # Retro — the meta-arena (plan 0021 scaffold + Q2 probe)
 
-Landed: `catopt_discovery.meta_arena` — the mixed board from
+Landed: `mlopt_discovery.meta_arena` — the mixed board from
 `project/plans/0021-meta-arena.md`.  One program under a live
 `EGraph` at an enode budget; the action space mixes the two
 measured dimensions:
@@ -23,7 +23,7 @@ enumerates the saturate arms.  Players: `ScriptedPlayer`
 (saturate-then-extract — the baseline to beat), `GreedyPlayer`
 (cheapest immediate — takes the payout the moment the extraction
 beats baseline), `RandomPlayer`.  `python -m
-catopt_discovery.meta_arena` reproduces the table.
+mlopt_discovery.meta_arena` reproduces the table.
 
 ## Feasibility pricing (the artifact fix)
 

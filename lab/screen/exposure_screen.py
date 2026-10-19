@@ -49,28 +49,28 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-import catopt_carriers  # noqa: F401 — registers the carrier machinery
+import mlopt_carriers  # noqa: F401 — registers the carrier machinery
 import torch
-from catopt_core.cost.basic import _flops_of
-from catopt_core.egraph import EGraph
-from catopt_core.egraph.terms import _term_match
-from catopt_core.ir import Op
-from catopt_core.laws import (
+from mlopt_core.cost.basic import _flops_of
+from mlopt_core.egraph import EGraph
+from mlopt_core.egraph.terms import _term_match
+from mlopt_core.ir import Op
+from mlopt_core.laws import (
     ALL_RULES_WITH_LAYOUT,
     ATTENTION_RULES,
     SCAN_DIAG_LAWS,
     SCAN_LAWS,
 )
-from catopt_discovery import intake as li
-from catopt_discovery import zoo as zoo_mod
-from catopt_discovery.impact import (
+from mlopt_discovery import intake as li
+from mlopt_discovery import zoo as zoo_mod
+from mlopt_discovery.impact import (
     TermCase,
     _iter_subterms,
     _relax,
 )
-from catopt_orchestrator import DEFAULT_RULES
-from catopt_torch.adapters import TorchSink
-from catopt_torch.torch_bridge import export_to_ir
+from mlopt_orchestrator import DEFAULT_RULES
+from mlopt_torch.adapters import TorchSink
+from mlopt_torch.torch_bridge import export_to_ir
 
 #: Per-node FLOPs at/above this are the cost model's "cannot price"
 #: mark — excluded from the weights, counted honestly as unpriced.
@@ -277,7 +277,7 @@ def _workloads(which: str) -> list[tuple[str, Any]]:
     if which in ("intake", "all"):
         out += [("intake", w) for w in li.candidates()]
     if which in ("models", "all"):
-        from catopt_discovery.impact import _model_cases
+        from mlopt_discovery.impact import _model_cases
 
         class _WL:
             def __init__(self, name: str, m: Any, x: Any) -> None:
@@ -385,8 +385,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.fire:
         print()
         print(f"-- fire probe (top {args.fire} by exposure) --")
-        from catopt_core.cost import backend_cost, dag_cost
-        from catopt_core.cost.executor import executor_cost_for
+        from mlopt_core.cost import backend_cost, dag_cost
+        from mlopt_core.cost.executor import executor_cost_for
 
         cost_fn = backend_cost(
             executor_cost_for(lowering="generic"), supported

@@ -1,12 +1,12 @@
 /** Delivery artifacts — what "runnable" means.
  *
  * Plan 0028 §D3: a delivered term has to ship as something that runs.
- * `catopt_torch.export.export_optimized` / `load_optimized` write a
+ * `mlopt_torch.export.export_optimized` / `load_optimized` write a
  * `module` / `safetensors` / `state_dict` / `torchscript` artifact, and
- * a `.pt2` round-trips to a **standalone** program with no catopt at
+ * a `.pt2` round-trips to a **standalone** program with no mlopt at
  * inference.  Beyond a file, delivery is also a *runner* — the CUDA-graph
- * runner captures an executor into one replay (`catopt_cuda`), and the
- * opt-in `catopt-native` PyO3/Rust engine is a faster closure over the
+ * runner captures an executor into one replay (`mlopt_cuda`), and the
+ * opt-in `mlopt-native` PyO3/Rust engine is a faster closure over the
  * same IR.
  *
  * This level is the vocabulary of *what each artifact needs to run
@@ -32,7 +32,7 @@ export interface Artifact {
   ext: string;
   /** What it needs to run standalone. */
   needs: readonly string[];
-  /** Runs with no catopt at inference. */
+  /** Runs with no mlopt at inference. */
   standalone: boolean;
   /** Runs with no torch at all. */
   torchFree: boolean;
@@ -46,7 +46,7 @@ export const ARTIFACTS: readonly Artifact[] = [
     id: "module",
     label: "optimized module",
     ext: ".py",
-    needs: ["the catopt runtime", "torch"],
+    needs: ["the mlopt runtime", "torch"],
     standalone: false,
     torchFree: false,
     note: 'the optimized `nn.Module`, run in-process — the default `fmt="module"`',
@@ -89,7 +89,7 @@ export const ARTIFACTS: readonly Artifact[] = [
     needs: ["torch"],
     standalone: true,
     torchFree: false,
-    note: "round-trips standalone — no catopt at inference (docs/api.md)",
+    note: "round-trips standalone — no mlopt at inference (docs/api.md)",
     sourced: true,
   },
   {
@@ -109,7 +109,7 @@ export const ARTIFACTS: readonly Artifact[] = [
     needs: ["the PyO3/Rust extension"],
     standalone: false,
     torchFree: false,
-    note: "`catopt-native` — a faster closure over the same IR (~17× on match-bound closures)",
+    note: "`mlopt-native` — a faster closure over the same IR (~17× on match-bound closures)",
     sourced: true,
   },
 ];
@@ -135,7 +135,7 @@ export class Artifacts {
     return this.artifact.needs;
   }
 
-  /** Whether the selected artifact runs with no catopt at inference. */
+  /** Whether the selected artifact runs with no mlopt at inference. */
   get standalone(): boolean {
     return this.artifact.standalone;
   }
@@ -145,7 +145,7 @@ export class Artifacts {
     return ARTIFACTS.filter((a) => a.standalone).length;
   }
 
-  /** The artifact that round-trips with no catopt at inference. */
+  /** The artifact that round-trips with no mlopt at inference. */
   get portable(): Artifact {
     return ARTIFACTS.find((a) => a.id === "pt2")!;
   }

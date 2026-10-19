@@ -42,13 +42,13 @@ Models (``--models`` subset):
   input-dependent); the record shows which rules actually fired.
 
 Variants per cell: ``eager`` | ``inductor`` (torch.compile,
-SIGALRM-budgeted) | ``catopt`` (``optimize_compositional``, per-block
-e-graphs grafted back) | ``catopt+inductor`` (torch.compile over the
+SIGALRM-budgeted) | ``mlopt`` (``optimize_compositional``, per-block
+e-graphs grafted back) | ``mlopt+inductor`` (torch.compile over the
 recomposed module — the deployment path ``CompiledRunner`` encodes).
 
 Protocol per cell: build → eager reference → optimize_compositional
 (opt wall ``opt_s`` + per-block ledger: status/rel/pairing/fires/
-lowering) → e2e verify → inductor + catopt+inductor compiles (walls
+lowering) → e2e verify → inductor + mlopt+inductor compiles (walls
 recorded separately) with verifies → CUDA peak-mem per variant →
 benchkit timing (median + IQR, CUDA-synced).  Only verified variants
 are timed; failures land in the record as strings.
@@ -56,19 +56,19 @@ are timed; failures land in the record as strings.
 Honesty conventions (e2e_llm's): fp16 cells verify at rel < 2e-3,
 fp32 at 1e-4 (``--verify-tol`` overrides); the ``in_place`` graft
 fallback (deepcopy OOM → original returned) is detected and the
-catopt variants excluded rather than re-timing eager; throughput =
+mlopt variants excluded rather than re-timing eager; throughput =
 units/s (embeddings, images, or tokens) per variant.
 
 Usage:
-    PYTHONPATH="packages/catopt-core/src:packages/catopt-torch/src:\
-packages/catopt-carriers/src:packages/catopt-orchestrator/src:." \
-        /tmp/catopt-cuda-venv/bin/python bench/suites/e2e/e2e_models2.py \
+    PYTHONPATH="packages/mlopt-core/src:packages/mlopt-torch/src:\
+packages/mlopt-carriers/src:packages/mlopt-orchestrator/src:." \
+        /tmp/mlopt-cuda-venv/bin/python bench/suites/e2e/e2e_models2.py \
         --device cuda
     .venv/bin/python bench/suites/e2e/e2e_models2.py --device cpu --quick
 """
 # ruff: noqa: E402, RUF001, RUF002, RUF003 -- ×, ·, → in strings/docstrings
 # are deliberate math notation; sys.path setup must precede the
-# benchkit/catopt imports (bench_omd2 convention).
+# benchkit/mlopt imports (bench_omd2 convention).
 
 from __future__ import annotations
 
@@ -83,9 +83,9 @@ sys.setrecursionlimit(400_000)
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from catopt_orchestrator import Compositional, Optimizer
-from catopt_torch.backend import TorchBackend
-from catopt_torch.report import verify_equiv
+from mlopt_orchestrator import Compositional, Optimizer
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.report import verify_equiv
 
 from bench.benchkit import (
     Case,
@@ -592,7 +592,7 @@ def _peak_mem(mod, args: tuple, calls: int = 6) -> float | None:
     return torch.cuda.max_memory_allocated() / 2**20
 
 
-def _catopt(mod: nn.Module, example, args, rec: dict, tol: float):
+def _mlopt(mod: nn.Module, example, args, rec: dict, tol: float):
     """``optimize_compositional`` + mechanism ledger → recomposed module.
 
     Returns ``None`` when nothing was actually delivered: an exception,
@@ -621,7 +621,7 @@ def _catopt(mod: nn.Module, example, args, rec: dict, tol: float):
         rec["opt_error"] = (
             "oom" if _oom(e) else f"{type(e).__name__}: {e}"
         )
-        print(f"  catopt FAILED: {rec['opt_error']}", flush=True)
+        print(f"  mlopt FAILED: {rec['opt_error']}", flush=True)
         return None
     rec["opt_s"] = round(time.time() - t0, 2)
     rec["n_blocks"] = rep["n_blocks"]
@@ -659,17 +659,17 @@ def _catopt(mod: nn.Module, example, args, rec: dict, tol: float):
     rec["pairing_groups_total"] = groups
     rec["lowerings"] = lowerings or None
     e2e = rep.get("end_to_end") or {}
-    rec["catopt_driver_e2e_rel"] = e2e.get("max_rel_diff")
+    rec["mlopt_driver_e2e_rel"] = e2e.get("max_rel_diff")
     print(
-        f"  catopt: {rec['n_optimized']}/{rec['n_blocks']} blocks "
+        f"  mlopt: {rec['n_optimized']}/{rec['n_blocks']} blocks "
         f"in {rec['opt_s']:.1f}s  paired={paired} "
         f"groups={groups} in_place={rec['in_place']}",
         flush=True,
     )
     if rec["in_place"] or rec["n_optimized"] == 0:
-        rec["catopt_status"] = (
+        rec["mlopt_status"] = (
             "in_place fallback: graft deepcopy failed — returned "
-            "original; catopt variants excluded"
+            "original; mlopt variants excluded"
             if rec["in_place"]
             else "no blocks optimized — recomposed is the original"
         )
@@ -714,8 +714,8 @@ def run_cell(
     with torch.no_grad():
         ref = model(*args_t)
 
-    # -- catopt, block-wise --------------------------------------------
-    opt_c = _catopt(
+    # -- mlopt, block-wise --------------------------------------------
+    opt_c = _mlopt(
         model,
         args_t if len(args_t) > 1 else args_t[0],
         args,
@@ -726,13 +726,13 @@ def run_cell(
         try:
             with torch.no_grad():
                 vr = verify_equiv(ref, opt_c(*args_t), rtol=tol)
-            rec["catopt_rel"] = vr.max_rel
-            rec["catopt_verified"] = bool(vr.passed)
-            print(f"  catopt e2e rel={vr.max_rel:.2e}", flush=True)
+            rec["mlopt_rel"] = vr.max_rel
+            rec["mlopt_verified"] = bool(vr.passed)
+            print(f"  mlopt e2e rel={vr.max_rel:.2e}", flush=True)
             if not vr.passed:
                 opt_c = None
         except Exception as e:
-            rec["catopt_status"] = (
+            rec["mlopt_status"] = (
                 "oom" if _oom(e) else f"fwd:{type(e).__name__}: {e}"
             )
             opt_c = None
@@ -761,25 +761,25 @@ def run_cell(
                 cm = None
         if opt_c is not None:
             t0 = time.time()
-            oci, rec["catopt_ind_status"] = try_compile(
+            oci, rec["mlopt_ind_status"] = try_compile(
                 opt_c, args_t, cto
             )
-            rec["catopt_ind_compile_s"] = round(time.time() - t0, 2)
+            rec["mlopt_ind_compile_s"] = round(time.time() - t0, 2)
             print(
-                f"  catopt+inductor: {rec['catopt_ind_status']} "
-                f"({rec['catopt_ind_compile_s']:.1f}s)",
+                f"  mlopt+inductor: {rec['mlopt_ind_status']} "
+                f"({rec['mlopt_ind_compile_s']:.1f}s)",
                 flush=True,
             )
             if oci is not None:
                 try:
                     with torch.no_grad():
                         vr = verify_equiv(ref, oci(*args_t), rtol=tol)
-                    rec["catopt_ind_rel"] = vr.max_rel
-                    rec["catopt_ind_verified"] = bool(vr.passed)
+                    rec["mlopt_ind_rel"] = vr.max_rel
+                    rec["mlopt_ind_verified"] = bool(vr.passed)
                     if not vr.passed:
                         oci = None
                 except Exception as e:
-                    rec["catopt_ind_rel"] = f"err:{type(e).__name__}"
+                    rec["mlopt_ind_rel"] = f"err:{type(e).__name__}"
                     oci = None
     else:
         rec["inductor_status"] = "disabled (--compile-timeout 0)"
@@ -789,8 +789,8 @@ def run_cell(
         for vn, m in (
             ("eager", model),
             ("inductor", cm),
-            ("catopt", opt_c),
-            ("catopt+inductor", oci),
+            ("mlopt", opt_c),
+            ("mlopt+inductor", oci),
         ):
             if m is not None:
                 try:
@@ -804,16 +804,16 @@ def run_cell(
     ok = {
         "eager": True,
         "inductor": cm is not None and rec.get("inductor_verified"),
-        "catopt": opt_c is not None and rec.get("catopt_verified"),
-        "catopt+inductor": oci is not None
-        and rec.get("catopt_ind_verified"),
+        "mlopt": opt_c is not None and rec.get("mlopt_verified"),
+        "mlopt+inductor": oci is not None
+        and rec.get("mlopt_ind_verified"),
     }
     variants = []
     for vn, m in (
         ("eager", model),
         ("inductor", cm),
-        ("catopt", opt_c),
-        ("catopt+inductor", oci),
+        ("mlopt", opt_c),
+        ("mlopt+inductor", oci),
     ):
         if m is not None and ok.get(vn):
             variants.append(Variant(vn, _fwd_stmt(m, args_t)))
@@ -904,7 +904,7 @@ def run_bench(args) -> Report:
             cell.aux[f"{unit}_s_{vn}"] = round(n_units / med, 1)
 
     # -- console: per-model tables ---------------------------------------
-    names = ["eager", "inductor", "catopt", "catopt+inductor"]
+    names = ["eager", "inductor", "mlopt", "mlopt+inductor"]
     for name, _ in specs:
         mrecs = [
             (r, c)
@@ -936,18 +936,18 @@ def run_bench(args) -> Report:
                 )
                 for n in names
             )
-            mi, mc = ms.get("inductor"), ms.get("catopt+inductor")
+            mi, mc = ms.get("inductor"), ms.get("mlopt+inductor")
             ratio = mi / mc if mi and mc else None
             if ratio is not None:
                 ratios.append(ratio)
-            ver = "yes" if rec.get("catopt_verified") else "NO"
+            ver = "yes" if rec.get("mlopt_verified") else "NO"
             print(
                 f"{row} | {f'{ratio:.3f}' if ratio else '—':>7} | {ver:>3}"
             )
             unit = rec.get("unit", "unit")
             thr = "  ".join(
                 f"{n}={cell.aux.get(f'{unit}_s_{n}', '—')}"
-                for n in ("eager", "inductor", "catopt+inductor")
+                for n in ("eager", "inductor", "mlopt+inductor")
             )
             print(
                 f"{'':<18} | {unit}/s {thr}  "
@@ -973,7 +973,7 @@ def run_bench(args) -> Report:
     # -- console: compile/opt wall + memory + correctness ---------------
     print("\n--- wall clock (s) ---")
     print(
-        f"{'cell':<18} | {'catopt opt':>10} | {'inductor':>10} | "
+        f"{'cell':<18} | {'mlopt opt':>10} | {'inductor':>10} | "
         f"{'c+i comp':>10}"
     )
     for rec in recs:
@@ -981,7 +981,7 @@ def run_bench(args) -> Report:
             f"{rec['name']:<18} | "
             f"{rec.get('opt_s', '—')!s:>10} | "
             f"{rec.get('inductor_compile_s', '—')!s:>10} | "
-            f"{rec.get('catopt_ind_compile_s', '—')!s:>10}"
+            f"{rec.get('mlopt_ind_compile_s', '—')!s:>10}"
         )
     print("\n--- peak CUDA mem (MiB) ---")
     print(f"{'cell':<18} | " + " | ".join(f"{n:>10}" for n in names))
@@ -996,13 +996,13 @@ def run_bench(args) -> Report:
     for rec in recs:
         print(
             f"{rec['name']:<18} | "
-            f"catopt={_fmt_rel(rec.get('catopt_rel'))}  "
+            f"mlopt={_fmt_rel(rec.get('mlopt_rel'))}  "
             f"ind={_fmt_rel(rec.get('inductor_rel'))}  "
-            f"c+i={_fmt_rel(rec.get('catopt_ind_rel'))}  "
+            f"c+i={_fmt_rel(rec.get('mlopt_ind_rel'))}  "
             f"(tol {rec.get('verify_tol', '—')})"
         )
     print(
-        f"\n  c+i/ind = inductor_median / catopt+inductor_median "
+        f"\n  c+i/ind = inductor_median / mlopt+inductor_median "
         f"(>1 = composed wins).  total wall "
         f"{time.perf_counter() - t0:.1f}s",
         flush=True,
@@ -1015,31 +1015,31 @@ def run_bench(args) -> Report:
         "vit_ti ≈ deit-ti, conv_ti ≈ ConvNeXt-tiny stage stack, "
         "llama_mid ≈ stories-scale llama at d=512/L=8 fp16, "
         "moe_stack ≈ Mixtral-lite routed MoE (dense-eval gates).",
-        "catopt = optimize_compositional per-block; catopt+inductor "
+        "mlopt = optimize_compositional per-block; mlopt+inductor "
         "= torch.compile over the recomposed module (the "
         "CompiledRunner path).  opt_s and compile walls are reported "
         "separately from timed medians.",
         "verify gates: fp16 cells rel<2e-3, fp32 rel<1e-4; only "
         "verified variants are timed.  in_place=True records the "
-        "graft-deepcopy OOM fallback (catopt variants excluded).",
+        "graft-deepcopy OOM fallback (mlopt variants excluded).",
         "minilm mask: per-row lengths in [T//2, T] — a real padded "
         "serving batch, not all-ones.",
     ]
     scored = [
         (
             c.case.name,
-            c.medians["inductor"] / c.medians["catopt+inductor"],
+            c.medians["inductor"] / c.medians["mlopt+inductor"],
         )
         for c in cells
         if c.medians.get("inductor")
-        and c.medians.get("catopt+inductor")
+        and c.medians.get("mlopt+inductor")
     ]
     best = max(scored, key=lambda t: t[1], default=None)
-    n_verified = sum(1 for r in recs if r.get("catopt_verified"))
+    n_verified = sum(1 for r in recs if r.get("mlopt_verified"))
     findings = [
         Finding(
             claim=(
-                "the composed catopt+Inductor module beats plain "
+                "the composed mlopt+Inductor module beats plain "
                 "Inductor on in-repo architecture replicas"
             ),
             verdict=(
@@ -1056,7 +1056,7 @@ def run_bench(args) -> Report:
                 if best
                 else "no cell measured"
             ),
-            metric="inductor / catopt+inductor",
+            metric="inductor / mlopt+inductor",
             value=best[1] if best else None,
         ),
         Finding(
@@ -1101,7 +1101,7 @@ def main() -> None:
         description=(
             "e2e bench #2: minilm embedder / vit-ti / convnext-ti "
             "stack / mid llama / routed MoE — eager vs inductor vs "
-            "catopt vs catopt∘inductor"
+            "mlopt vs mlopt∘inductor"
         )
     )
     ap.add_argument("--device", default="cpu", choices=["cpu", "cuda"])

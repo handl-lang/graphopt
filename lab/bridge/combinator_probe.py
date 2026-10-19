@@ -38,8 +38,8 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from catopt_core.ir import Op
-from catopt_discovery.impact import _iter_subterms
+from mlopt_core.ir import Op
+from mlopt_discovery.impact import _iter_subterms
 
 from lab.bridge import combinator as cb
 from lab.probes import om_shared_state_probe as osp
@@ -157,8 +157,8 @@ def screen_case(source: str, name: str, term: Any) -> Row:
 
 def _verify_pair(case: Any, rt_term: Any) -> float:
     """End-to-end: lower both terms, run on feeds, return max|Δ|."""
-    from catopt_core.ir import IR
-    from catopt_torch.adapters import TorchSink
+    from mlopt_core.ir import IR
+    from mlopt_torch.adapters import TorchSink
 
     sink = TorchSink()
     ir_a = IR(
@@ -287,11 +287,11 @@ def gate2(
     form_propose: bool = False,
 ) -> None:
     """Spell the RetNet fold as ``loop (arr step)``; verify + project."""
-    import catopt_carriers  # noqa: F401 — carrier op bindings
-    from catopt_core.cost import dag_cost, flops_cost
-    from catopt_core.ir import IR, Const, Param, TensorType, Var
-    from catopt_discovery.zoo import _ChunkedRetention
-    from catopt_torch.adapters import TorchSink
+    import mlopt_carriers  # noqa: F401 — carrier op bindings
+    from mlopt_core.cost import dag_cost, flops_cost
+    from mlopt_core.ir import IR, Const, Param, TensorType, Var
+    from mlopt_discovery.zoo import _ChunkedRetention
+    from mlopt_torch.adapters import TorchSink
 
     torch.manual_seed(0)
     print("== gate 2: the shared-state carrier as a `loop` term ==")
@@ -378,12 +378,12 @@ def _gate2_projection(
     (``lab/bridge/sharing_extract.py``) instead of plain
     ``extract_best`` — the gate-3 fix arm.
     """
-    from catopt_carriers.om import (
+    from mlopt_carriers.om import (
         om_shared_state_budgets,
         om_shared_state_stages,
     )
-    from catopt_core.cost import flops_cost
-    from catopt_core.egraph import EGraph
+    from mlopt_core.cost import flops_cost
+    from mlopt_core.egraph import EGraph
 
     reach, reassoc = om_shared_state_stages(k)
     budgets = om_shared_state_budgets(k)
@@ -433,7 +433,7 @@ def _gate2_projection(
         f"extract={_fold_depth(best)}"
     )
     if propose_loop:
-        from catopt_core.ir import Const
+        from mlopt_core.ir import Const
 
         from lab.bridge import loop_propose as lp
 
@@ -483,11 +483,11 @@ def _gate2_projection(
 
 def _verify_winner_terms(t: int, a: Any, b: Any) -> float:
     """Lower two winner-shaped terms through TorchSink; return max|Δ|."""
-    import catopt_carriers  # noqa: F401
-    from catopt_core.ir import IR
-    from catopt_discovery.zoo import _ChunkedRetention
-    from catopt_torch.adapters import TorchSink
-    from catopt_torch.torch_bridge import export_to_ir
+    import mlopt_carriers  # noqa: F401
+    from mlopt_core.ir import IR
+    from mlopt_discovery.zoo import _ChunkedRetention
+    from mlopt_torch.adapters import TorchSink
+    from mlopt_torch.torch_bridge import export_to_ir
 
     torch.manual_seed(0)
     model = _ChunkedRetention(16).eval().double()
@@ -560,8 +560,8 @@ def _fold_depth(term: Any) -> int:
 
 def _expanded_fold_term(t: int, k: int) -> Any:
     """Expand the spelled ``loop`` program to a DAG at (t, k)."""
-    import catopt_carriers  # noqa: F401
-    from catopt_core.ir import Const, Param, TensorType, Var
+    import mlopt_carriers  # noqa: F401
+    from mlopt_core.ir import Const, Param, TensorType, Var
 
     d, b = 16, 2
     C = t // k

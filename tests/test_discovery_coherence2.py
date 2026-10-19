@@ -1,6 +1,6 @@
-"""Tests for ``catopt_discovery.coherence2`` — the depth-2 probes.
+"""Tests for ``mlopt_discovery.coherence2`` — the depth-2 probes.
 
-The pair catalogue (``catopt_discovery.coherence``) is covered by
+The pair catalogue (``mlopt_discovery.coherence``) is covered by
 ``test_discovery_coherence``; this file covers the layer above it on
 two hand-picked shrunk universes:
 
@@ -18,12 +18,12 @@ the sanity table, and a ``main`` smoke run over the shrunk universe.
 import json
 
 import pytest
-from catopt_core.egraph import Rewrite
-from catopt_core.ir import Op, TensorType, Var
-from catopt_core.laws import ALL_RULES
-from catopt_discovery import coherence as lc
-from catopt_discovery import coherence2 as c2
-from catopt_discovery import verifier as lv
+from mlopt_core.egraph import Rewrite
+from mlopt_core.ir import Op, TensorType, Var
+from mlopt_core.laws import ALL_RULES
+from mlopt_discovery import coherence as lc
+from mlopt_discovery import coherence2 as c2
+from mlopt_discovery import verifier as lv
 
 
 def _p(op: str, *args, **attrs) -> Op:
@@ -564,7 +564,7 @@ def test_sanity_section():
 
 def test_sanity_layout_rule_present():
     """With a layout rule in the universe the SKIP becomes a count."""
-    from catopt_core.laws import ALL_RULES_WITH_LAYOUT
+    from mlopt_core.laws import ALL_RULES_WITH_LAYOUT
 
     lm = [
         r

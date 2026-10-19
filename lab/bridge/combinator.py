@@ -60,7 +60,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from catopt_core.ir import Const, Op, Param, Var
+from mlopt_core.ir import Const, Op, Param, Var
 
 __all__ = [
     "BASIS",

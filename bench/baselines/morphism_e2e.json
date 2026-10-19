@@ -14,7 +14,7 @@
     "git_sha": "2c782dd",
     "git_dirty": true,
     "argv": [
-      "/home/luis/Desktop/catopt/bench/__main__.py",
+      "/home/luis/Desktop/mlopt/bench/__main__.py",
       "run",
       "morphism_e2e",
       "--pin"

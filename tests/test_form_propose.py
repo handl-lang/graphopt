@@ -14,9 +14,9 @@ factored read must name the obstruction, not fabricate.
 """
 
 import pytest
-from catopt_core.cost import count_cost
-from catopt_core.egraph import EGraph
-from catopt_core.ir import Const, Op, Param, TensorType, Var
+from mlopt_core.cost import count_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import Const, Op, Param, TensorType, Var
 
 from lab.bridge import form_propose as fp
 from lab.bridge.combinator import comb_to_dag
@@ -157,12 +157,12 @@ def test_irregular_family_reports_obstruction():
 @pytest.mark.slow
 def test_real_winner_gate3():
     """The actual gate-3 measurement: the extracted winner loops."""
-    import catopt_carriers  # noqa: F401
-    from catopt_carriers.om import (
+    import mlopt_carriers  # noqa: F401
+    from mlopt_carriers.om import (
         om_shared_state_budgets,
         om_shared_state_stages,
     )
-    from catopt_core.cost import flops_cost
+    from mlopt_core.cost import flops_cost
 
     from lab.probes import om_shared_state_probe as osp
 
@@ -209,17 +209,17 @@ def test_boundary_residual_is_a_value_mismatch():
     non-resident wire (block 4's read scale) plus one true reach gap
     (the steered block-5 state: same value, unmerged class).
     """
-    import catopt_carriers  # noqa: F401
+    import mlopt_carriers  # noqa: F401
     import torch
-    from catopt_carriers.om import (
+    from mlopt_carriers.om import (
         om_shared_state_budgets,
         om_shared_state_stages,
     )
-    from catopt_core.cost import flops_cost
-    from catopt_core.ir import IR
-    from catopt_discovery.zoo import _ChunkedRetention
-    from catopt_torch.adapters import TorchSink
-    from catopt_torch.torch_bridge import export_to_ir
+    from mlopt_core.cost import flops_cost
+    from mlopt_core.ir import IR
+    from mlopt_discovery.zoo import _ChunkedRetention
+    from mlopt_torch.adapters import TorchSink
+    from mlopt_torch.torch_bridge import export_to_ir
 
     from lab.bridge.index_abstract import block_outputs
     from lab.probes import om_shared_state_probe as osp
@@ -319,12 +319,12 @@ def test_state_reindex_closes_boundary():
     all six covered blocks verify, and the emitted single-loop program
     lowers into the winner's root class.
     """
-    import catopt_carriers  # noqa: F401
-    from catopt_carriers.om import (
+    import mlopt_carriers  # noqa: F401
+    from mlopt_carriers.om import (
         om_shared_state_budgets,
         om_shared_state_stages,
     )
-    from catopt_core.cost import flops_cost
+    from mlopt_core.cost import flops_cost
 
     from lab.bridge import state_reindex as sr
     from lab.bridge.combinator import Loop

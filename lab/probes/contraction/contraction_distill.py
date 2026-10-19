@@ -52,8 +52,8 @@ Usage::
 
 ``--save <stem>`` serialises each arm as ``<stem>-<arm>.pt`` in the
 shipped artifact format — the ``oe-all`` arm is what ships bundled as
-``catopt_torch/artifacts/contraction_policy_distilled.pt``, the default
-:func:`catopt_torch.load_contraction_policy` loads
+``mlopt_torch/artifacts/contraction_policy_distilled.pt``, the default
+:func:`mlopt_torch.load_contraction_policy` loads
 (``project/retros/contraction-synthesis.md``).
 """
 
@@ -70,8 +70,8 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from catopt_torch import contraction_policy as m
-from catopt_torch.contraction_policy import (
+from mlopt_torch import contraction_policy as m
+from mlopt_torch.contraction_policy import (
     PairPolicyNet,
     random_bond_network,
     rollout_orders,

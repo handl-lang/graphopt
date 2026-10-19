@@ -1,4 +1,4 @@
-"""Tests for the declarative derive DSL (``catopt_core.laws.cond``'s
+"""Tests for the declarative derive DSL (``mlopt_core.laws.cond``'s
 ``dspec`` half).
 
 A law's ``derive`` hook computes the RHS attributes the LHS cannot
@@ -29,10 +29,10 @@ import functools
 import json
 
 import pytest
-from catopt_core.egraph import EGraph, Rewrite
-from catopt_core.ir import Const, Op, Param, TensorType, Var
-from catopt_core.laws import ALL_RULES, SCAN_DIAG_LAWS
-from catopt_core.laws.cond import (
+from mlopt_core.egraph import EGraph, Rewrite
+from mlopt_core.ir import Const, Op, Param, TensorType, Var
+from mlopt_core.laws import ALL_RULES, SCAN_DIAG_LAWS
+from mlopt_core.laws.cond import (
     as_derive,
     compile_derive,
     derive_from_data,
@@ -40,12 +40,12 @@ from catopt_core.laws.cond import (
     eval_cond,
     eval_derive,
 )
-from catopt_core.laws.scan import (
+from mlopt_core.laws.scan import (
     AFFD_LIFT,
     AFFD_LIFT_UNIT,
     _derive_affd_unit,
 )
-from catopt_core.laws.tensor import (
+from mlopt_core.laws.tensor import (
     QKV_FUSE_ASYM,
     RMS_NORM_FOLD,
     SOFTMAX_FOLD,
@@ -56,7 +56,7 @@ from catopt_core.laws.tensor import (
     _derive_softmax_dim,
     _derive_split_sizes,
 )
-from catopt_core.rulecache import ruleset_fingerprint
+from mlopt_core.rulecache import ruleset_fingerprint
 
 
 def _v(name, *shape):
@@ -427,7 +427,7 @@ def test_rewrite_post_init_folds_and_recasts():
     r6 = Rewrite(name="t_other", lhs=lhs, rhs="a", derive=other)
     assert r6.dspec is None and r6.derive is other
     # eval_cond partials (a cond view) are likewise NOT recast
-    from catopt_core.laws.cond import eval_cond
+    from mlopt_core.laws.cond import eval_cond
 
     r7 = Rewrite(
         name="t_cond_partial",
@@ -590,8 +590,8 @@ def test_qkv_fuse_asym_mints_split_sizes_end_to_end():
     """The uneven (6,2,2) QKV match produces the split member — now
     through the spec, identically to the Python hook.  A rebuilt
     rule mints the same sizes."""
-    from catopt_core.laws.serialize import law_from_data, law_to_data
-    from catopt_core.laws.tensor import _head_v
+    from mlopt_core.laws.serialize import law_from_data, law_to_data
+    from mlopt_core.laws.tensor import _head_v
 
     x = _v("x", 2, 4)
     Q, K, V = _p("Q", 6, 4), _p("K", 2, 4), _p("V", 2, 4)
@@ -768,8 +768,8 @@ def test_migrated_carrier_rules_carry_dspec():
     is the spec-only closure — and the spec must survive the
     law-record JSON hop minting identical attrs.
     """
-    from catopt_carriers import decode_geom, decode_laws, om, trace
-    from catopt_core.laws.serialize import (
+    from mlopt_carriers import decode_geom, decode_laws, om, trace
+    from mlopt_core.laws.serialize import (
         law_from_data,
         law_to_data,
         missing_hooks,
@@ -803,7 +803,7 @@ def test_migrated_carrier_rules_carry_dspec():
 
 def test_migrated_carrier_derives_mint_identically():
     """The specs produce the same attr maps the Python hooks did."""
-    from catopt_carriers import decode_geom, decode_laws, om, trace
+    from mlopt_carriers import decode_geom, decode_laws, om, trace
 
     v = lambda n, *s: Var(n, TensorType(tuple(s)))  # noqa: E731
     # tr_vanish_split: usize (u,v) → two int dims
@@ -935,7 +935,7 @@ def _tensor_fixture(monkeypatch):
     """Register a ``_Arr`` algebra over a name -> value table."""
     import hashlib
 
-    import catopt_core.laws.cond as cond
+    import mlopt_core.laws.cond as cond
 
     table = {}
 
@@ -980,7 +980,7 @@ class TestTensorDerives:
     def test_tval_declines_unregistered_unbound_unresolvable(
         self, monkeypatch
     ):
-        import catopt_core.laws.cond as cond
+        import mlopt_core.laws.cond as cond
 
         # no source registered at all
         monkeypatch.setitem(cond._TENSOR_ALG, "source", None)
@@ -1005,7 +1005,7 @@ class TestTensorDerives:
         _tensor_fixture(monkeypatch)
         arr = _Arr([4.0, 9.0])
         b = {"w": _p("w", 2)}
-        import catopt_core.laws.cond as cond
+        import mlopt_core.laws.cond as cond
 
         cond._TENSOR_ALG["source"] = lambda t: arr
         # pushed sqrt wins on a non-scalar operand
@@ -1033,7 +1033,7 @@ class TestTensorDerives:
     def test_tapp_dispatches_registered_ops(self, monkeypatch):
         _tensor_fixture(monkeypatch)
         b = {"w": _p("w", 2)}
-        import catopt_core.laws.cond as cond
+        import mlopt_core.laws.cond as cond
 
         cond._TENSOR_ALG["source"] = lambda t: _Arr([4.0, 9.0])
         assert eval_derive(
@@ -1062,7 +1062,7 @@ class TestTensorDerives:
 
     def test_dollar_leaf_mints_const_and_param(self, monkeypatch):
         table = _tensor_fixture(monkeypatch)
-        import catopt_core.laws.cond as cond
+        import mlopt_core.laws.cond as cond
 
         cond._TENSOR_ALG["source"] = lambda t: _Arr([4.0, 9.0])
         b = {"w": _p("w", 2)}
@@ -1079,7 +1079,7 @@ class TestTensorDerives:
         assert table[leaf.name] == _Arr([2.0, 3.0])
 
     def test_dollar_leaf_declines(self, monkeypatch):
-        import catopt_core.laws.cond as cond
+        import mlopt_core.laws.cond as cond
 
         b = {"w": _p("w", 2)}
         # bool / str / None are not Const values
@@ -1120,7 +1120,7 @@ class TestTensorDerives:
 
     def test_dollar_leaf_fires_end_to_end(self, monkeypatch):
         table = _tensor_fixture(monkeypatch)
-        import catopt_core.laws.cond as cond
+        import mlopt_core.laws.cond as cond
 
         arr = _Arr([4.0, 9.0])
         cond._TENSOR_ALG["source"] = (
@@ -1145,8 +1145,8 @@ class TestTensorDerives:
         self, monkeypatch
     ):
         _tensor_fixture(monkeypatch)
-        import catopt_core.laws.cond as cond
-        from catopt_core.meta import apply_rewrite_at
+        import mlopt_core.laws.cond as cond
+        from mlopt_core.meta import apply_rewrite_at
 
         cond._TENSOR_ALG["source"] = lambda t: _Arr([4.0, 9.0])
         rule = Rewrite(
@@ -1166,7 +1166,7 @@ class TestTensorDerives:
         drv = compile_derive(
             {"$leaf:wn": ("tval", "w"), "EP": ("attr", "e")}, None
         )
-        import catopt_core.laws.cond as cond
+        import mlopt_core.laws.cond as cond
 
         cond._TENSOR_ALG["source"] = lambda t: _Arr([1.0])
         out = drv({"w": _p("w", 2), "$attr:e": 0.5})

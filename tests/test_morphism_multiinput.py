@@ -10,16 +10,16 @@ decline (multi-activation, mutation, opaque, unshared context).
 All grafted paths verify fp64 against the original model.
 """
 
-import catopt_orchestrator.morphisms as M
-import catopt_orchestrator.morphisms_kv as K
+import mlopt_orchestrator.morphisms as M
+import mlopt_orchestrator.morphisms_kv as K
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from catopt_core.ir import IR, Op, Param, TensorType, Var
-from catopt_orchestrator import MorphismSearch, Optimizer
-from catopt_torch.adapters import TorchSink, TorchSource
-from catopt_torch.backend import TorchBackend
-from catopt_torch.composer import TorchComposer
+from mlopt_core.ir import IR, Op, Param, TensorType, Var
+from mlopt_orchestrator import MorphismSearch, Optimizer
+from mlopt_torch.adapters import TorchSink, TorchSource
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.composer import TorchComposer
 
 # ---------------------------------------------------------------------------
 #  Fixtures

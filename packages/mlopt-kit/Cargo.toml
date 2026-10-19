@@ -1,0 +1,39 @@
+[package]
+name = "mlopt-kit"
+version = "0.1.0"
+edition = "2024"
+description = "mlopt's handl composition seam — assembles a minimal handl runtime (canonical language + tree-walk eval) and composes the host-tensor op surface"
+license = "MIT"
+
+# handl deps float on `main` (git). Local development resolves them to
+# checkouts via `source ~/.cache/devin/handl_deps.env` (git insteadOf) or
+# the `[patch]` tables documented in the root `Cargo.toml` — the
+# handl-lang convention.
+[dependencies]
+serde_json = "1"
+
+# kernel — Language data + the tagged value layer (incl. `TaggedValue::Tensor`)
+handl-language = { git = "https://github.com/handl-lang/kernel", branch = "main" }
+handl-value = { git = "https://github.com/handl-lang/kernel", branch = "main" }
+
+# lang — the canonical Language as data (YAML fragments → `Language`)
+handl-kit-data-canonical = { git = "https://github.com/handl-lang/kit-data-canonical", branch = "main" }
+
+# platform — the runtime + module bridge
+handl-platform = { git = "https://github.com/handl-lang/host", branch = "main" }
+handl-runtime = { git = "https://github.com/handl-lang/host", branch = "main" }
+handl-plugin-module = { git = "https://github.com/handl-lang/host", branch = "main" }
+handl-plugin-lib-handl = { git = "https://github.com/handl-lang/host", branch = "main" }
+
+# engines — the smallest honest set: data lexer, Pratt parser, tree-walk
+# eval (the `hnl-engine-*` crates in their own repos, post-ADR-0128 —
+# renamed from `handl-plugin-engine-*` and split out of platform at
+# platform 0ce78121)
+hnl-engine-exec = { git = "https://github.com/handl-lang/engine-exec", branch = "main" }
+hnl-engine-lex-pattern = { git = "https://github.com/handl-lang/engine-lex-pattern", branch = "main" }
+hnl-engine-parse-pratt = { git = "https://github.com/handl-lang/engine-parse-pratt", branch = "main" }
+hnl-engine-exec-tree-walk = { git = "https://github.com/handl-lang/engine-exec-tree-walk", branch = "main" }
+
+# host-tensor — the `tensor.*` host-function surface (18 ops: dense n-d
+# f64 tensors over the `{"__tensor__": …}` wire form → `TaggedValue::Tensor`)
+handl-host-tensor = { git = "https://github.com/handl-lang/host-tensor", branch = "main" }

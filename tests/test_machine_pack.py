@@ -1,9 +1,9 @@
 """The machine law pack — a store's admitted objects as a ruleset.
 
-``catopt_discovery.machine_pack`` turns the evidence store's
-``lemmas`` rows into a deployable :class:`~catopt_core.laws.RuleSet`:
+``mlopt_discovery.machine_pack`` turns the evidence store's
+``lemmas`` rows into a deployable :class:`~mlopt_core.laws.RuleSet`:
 the loader keeps the gauntlet-cleared objects the provenance ledger
-(:data:`~catopt_core.laws.provenance.MACHINE_STORED`) attests,
+(:data:`~mlopt_core.laws.provenance.MACHINE_STORED`) attests,
 requires every member to be full-data (``missing_hooks == ()``), and
 reports — never crashes on — rows that cannot reconstruct.  The
 behavioral pin is the human-bar measurement's headline
@@ -14,21 +14,21 @@ win, shipped through ``machine_default`` — the opt-in
 
 import json
 
-import catopt_carriers  # noqa: F401 — register carriers before rules
+import mlopt_carriers  # noqa: F401 — register carriers before rules
 import pytest
 import torch
-from catopt_core.cost import dag_cost
-from catopt_core.egraph import Rewrite
-from catopt_core.ir import Op, TensorType, Var
-from catopt_core.laws import ALL_RULES, serialize
-from catopt_discovery import evidence as ev
-from catopt_discovery import machine_pack as mp
-from catopt_discovery import object_synthesis as synth
-from catopt_discovery import zoo as zoo_mod
-from catopt_discovery.impact import TermCase, _cost_fn
-from catopt_discovery.shape_proposal import _sink
-from catopt_orchestrator.optimize import Optimizer, default_rules
-from catopt_torch.backend import TorchBackend
+from mlopt_core.cost import dag_cost
+from mlopt_core.egraph import Rewrite
+from mlopt_core.ir import Op, TensorType, Var
+from mlopt_core.laws import ALL_RULES, serialize
+from mlopt_discovery import evidence as ev
+from mlopt_discovery import machine_pack as mp
+from mlopt_discovery import object_synthesis as synth
+from mlopt_discovery import zoo as zoo_mod
+from mlopt_discovery.impact import TermCase, _cost_fn
+from mlopt_discovery.shape_proposal import _sink
+from mlopt_orchestrator.optimize import Optimizer, default_rules
+from mlopt_torch.backend import TorchBackend
 
 _ZOO = {w.name: w for w in zoo_mod.zoo()}
 
@@ -357,7 +357,7 @@ def test_machine_default_composes_with_default_rules(tmp_path):
 def test_machine_default_composes_onto_a_caller_base(tmp_path):
     """``base=`` swaps the union's left side — the pack composes onto
     whatever ruleset the caller ships."""
-    from catopt_core.laws import RuleSet
+    from mlopt_core.laws import RuleSet
 
     conn = ev.connect(str(tmp_path / "s.db"))
     _populate(conn)

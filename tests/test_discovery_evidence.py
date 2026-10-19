@@ -1,4 +1,4 @@
-"""Tests for ``catopt_discovery.evidence`` — the sqlite verdict store.
+"""Tests for ``mlopt_discovery.evidence`` — the sqlite verdict store.
 
 The store is a content-addressed cache: a verdict row is valid only
 under the ``(corpus_hash, rules_hash, code_rev)`` scope it was
@@ -19,17 +19,17 @@ law stored *as* an object record admits and fires identically.
 import json
 
 import pytest
-from catopt_core.egraph import EGraph
-from catopt_core.ir import Op, TensorType, Var
-from catopt_core.laws import ALL_RULES
-from catopt_core.laws.serialize import (
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import Op, TensorType, Var
+from mlopt_core.laws import ALL_RULES
+from mlopt_core.laws.serialize import (
     alpha_key,
     object_from_data,
     object_kind,
     object_to_data,
 )
-from catopt_discovery import evidence as ev
-from catopt_discovery.pipeline import Evidence, Proposal
+from mlopt_discovery import evidence as ev
+from mlopt_discovery.pipeline import Evidence, Proposal
 
 _BY_NAME = {r.name: r for r in ALL_RULES}
 

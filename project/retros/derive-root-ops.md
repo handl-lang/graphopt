@@ -1,7 +1,7 @@
 # Retro — derive-DSL root ops: closing the measured `sqrt`/`rsqrt` refusal
 
-**Date**: 2026-10-17.  **Scope**: `catopt_core/laws/cond.py` (the
-`dspec` expression bank), `catopt_discovery/dspec_synth.py` (the
+**Date**: 2026-10-17.  **Scope**: `mlopt_core/laws/cond.py` (the
+`dspec` expression bank), `mlopt_discovery/dspec_synth.py` (the
 synthesizer's search bank), `lab/probes/weightspace_fold_probe.py`,
 `tests/test_cond_laws.py`, `tests/test_discovery_dspec_synth.py`.
 
@@ -19,7 +19,7 @@ scale)`; `b'` at depth 3), so the missing piece was exactly
 `dsl_has_sqrt`/`dsl_has_rsqrt` were `False`; float `pow` declines).
 This round adds the measured ops, nothing more:
 
-- **`catopt_core.laws.cond`** — `_DUNOPS` gains `"sqrt": math.sqrt`
+- **`mlopt_core.laws.cond`** — `_DUNOPS` gains `"sqrt": math.sqrt`
   and `"rsqrt": λa. 1/√a`.  Both are float-valued and strict:
   `math.sqrt` raises `ValueError` on a negative operand, `rsqrt`'s
   reciprocal turns a zero operand into `ZeroDivisionError` — both land
@@ -28,7 +28,7 @@ This round adds the measured ops, nothing more:
   complex or `inf`) needs no bespoke handler.  Grammar doc updated
   (`("sqrt"|"rsqrt", e)`); both round-trip through
   `derive_to_data`/`derive_from_data` like every other op.
-- **`catopt_discovery.dspec_synth`** — the *search* bank widens to
+- **`mlopt_discovery.dspec_synth`** — the *search* bank widens to
   match: `UNOPS` gains `sqrt`/`rsqrt`, `BINOPS` gains `fdiv` (the
   true division the refusal formula spelled literally — `γ/√(σ²+ε)`.
   `fdiv` is load-bearing, not decorative: `g·rsqrt(·)` differs from

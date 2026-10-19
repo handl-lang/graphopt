@@ -35,13 +35,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from catopt_core.cost import _INVALID, _shape_of, flops_cost
-from catopt_core.egraph import EGraph
-from catopt_core.ir import Op, TensorType, Var
+from mlopt_core.cost import _INVALID, _shape_of, flops_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import Op, TensorType, Var
 
-from catopt_orchestrator import Compositional, Optimizer
+from mlopt_orchestrator import Compositional, Optimizer
 
-from catopt_torch.backend import TorchBackend
+from mlopt_torch.backend import TorchBackend
 
 # ---------------------------------------------------------------------------
 #  A batched rope-style block — mirrors bench/suites/speedup/decode_bench.py's BatchedBlock
@@ -176,8 +176,8 @@ def test_extract_best_never_picks_illtyped_reshape():
     reshape with a numel-mismatched attr must extract the good member:
     the ill-typed view would otherwise win on cost and crash eval."""
     torch.manual_seed(0)
-    from catopt_core.ir import IR
-    from catopt_torch.torch_bridge import ir_to_torch_module
+    from mlopt_core.ir import IR
+    from mlopt_torch.torch_bridge import ir_to_torch_module
 
     B, T, D = 16, 256, 768
     x = _V("x", (B, T, D))
@@ -212,8 +212,8 @@ def test_batched_rope_egraph_reshapes_welltyped():
     child class's inferred numel — the reported minted shape may never
     appear ill-typed."""
     torch.manual_seed(0)
-    from catopt_core.laws import DEFAULT, tags
-    from catopt_torch.torch_bridge import export_to_ir
+    from mlopt_core.laws import DEFAULT, tags
+    from mlopt_torch.torch_bridge import export_to_ir
 
     blk = RopeBlock().eval()
     B, T, D = 16, 128, 96
@@ -276,7 +276,7 @@ def test_compositional_inplace_fallback_preserves_model():
     IRModules into the caller's ``model`` — so the NEXT cell crashes
     on the previous cell's baked reshape attrs.
 
-    The fix (catopt/optimize.py ``optimize_compositional``): on
+    The fix (mlopt/optimize.py ``optimize_compositional``): on
     deepcopy failure do NOT graft into ``model`` — return it
     unmodified — so the caller's module is never corrupted.
     """

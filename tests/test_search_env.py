@@ -1,9 +1,9 @@
-"""The search environment (:mod:`catopt_core.search_env`)."""
+"""The search environment (:mod:`mlopt_core.search_env`)."""
 
 import pytest
-from catopt_core.ir import Op, TensorType, Var
-from catopt_core.laws import all_rules
-from catopt_core.search_env import SearchEnv, StepResult
+from mlopt_core.ir import Op, TensorType, Var
+from mlopt_core.laws import all_rules
+from mlopt_core.search_env import SearchEnv, StepResult
 
 
 def _v(name: str, *shape: int) -> Var:

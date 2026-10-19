@@ -15,22 +15,22 @@ import random
 from collections import Counter
 
 import pytest
-from catopt_core.egraph.terms import _term_match
-from catopt_core.ir import Const, Op, Param, TensorType, Var
-from catopt_core.laws import ALL_RULES
-from catopt_discovery import gap_gen as gg
-from catopt_discovery import grammar as gm
-from catopt_discovery import meta_game as mg
-from catopt_discovery import pipeline as lpipe
-from catopt_discovery import workload_gen as wg
-from catopt_discovery.census import (
+from mlopt_core.egraph.terms import _term_match
+from mlopt_core.ir import Const, Op, Param, TensorType, Var
+from mlopt_core.laws import ALL_RULES
+from mlopt_discovery import gap_gen as gg
+from mlopt_discovery import grammar as gm
+from mlopt_discovery import meta_game as mg
+from mlopt_discovery import pipeline as lpipe
+from mlopt_discovery import workload_gen as wg
+from mlopt_discovery.census import (
     CorpusTerm,
     op_tuple_census,
     shape_census,
     shape_key,
 )
-from catopt_discovery.impact import TermCase, _cost_fn
-from catopt_discovery.shape_proposal import _sink
+from mlopt_discovery.impact import TermCase, _cost_fn
+from mlopt_discovery.shape_proposal import _sink
 
 _BY_NAME = {r.name: r for r in ALL_RULES}
 

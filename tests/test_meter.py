@@ -1,11 +1,11 @@
-"""Tests for :mod:`catopt_torch.meter` and the ``TimingResult``
+"""Tests for :mod:`mlopt_torch.meter` and the ``TimingResult``
 provenance contract (plan 0016 stage 3).
 
 The torch ``Meter`` port measures a runnable's forward, and — since
 stage 3 — reports *provenance* (``device`` / ``warmup``) and a
 *classified* outcome: a raised call, or an expired ``timeout_s``
 budget, lands in ``TimingResult.failure`` as a
-:class:`~catopt_core.failures.FailureClass` with ``median_s`` set to
+:class:`~mlopt_core.failures.FailureClass` with ``median_s`` set to
 ``NaN`` rather than escaping as a bare traceback.
 """
 
@@ -16,9 +16,9 @@ import math
 import pytest
 import torch
 import torch.nn as nn
-from catopt_core.failures import FailureClass, is_nonfinite
-from catopt_core.ports import Meter, TimingResult
-from catopt_torch.meter import (
+from mlopt_core.failures import FailureClass, is_nonfinite
+from mlopt_core.ports import Meter, TimingResult
+from mlopt_torch.meter import (
     TorchMeter,
     _input_args,
     _input_device,

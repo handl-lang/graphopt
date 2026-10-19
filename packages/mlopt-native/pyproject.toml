@@ -1,0 +1,20 @@
+[build-system]
+requires = ["maturin>=1.5,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "mlopt-native"
+version = "0.1.0dev"
+description = "Optional native (Rust) search core for mlopt equality saturation — PyO3 bindings implementing union-find, enode storage, compiled matching, rebuild/congruence and the saturation loop behind the mlopt_core Engine protocol."
+requires-python = ">=3.11"
+dependencies = [
+    "mlopt-core",
+]
+
+[tool.maturin]
+# The compiled extension lands INSIDE the mlopt_native package as
+# ``mlopt_native._native``; the pure-Python adapter (serialization +
+# the Engine surface) lives next to it under ``python/``.
+python-source = "python"
+module-name = "mlopt_native._native"
+features = ["pyo3/extension-module"]

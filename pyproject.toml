@@ -3,19 +3,19 @@ requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "catopt"
+name = "mlopt"
 version = "0.1.0dev"
-description = "A sound mathematical discovery and optimization engine — categorical semantics, verified transformations, learned search; applications and backends are replaceable adapters (meta distribution over the domain packages in packages/; no importable `catopt` package)"
+description = "A sound mathematical discovery and optimization engine — categorical semantics, verified transformations, learned search; applications and backends are replaceable adapters (meta distribution over the domain packages in packages/; no importable `mlopt` package)"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "catopt-core",
-    "catopt-torch",
-    "catopt-carriers",
-    "catopt-orchestrator",
-    "catopt-cuda",
-    "catopt-discovery",
-    "catopt-onnx",
+    "mlopt-core",
+    "mlopt-torch",
+    "mlopt-carriers",
+    "mlopt-orchestrator",
+    "mlopt-cuda",
+    "mlopt-discovery",
+    "mlopt-onnx",
     "torch>=2.0",
     "numpy>=1.24",
 ]
@@ -54,7 +54,7 @@ bench = [
 ]
 # OPT-IN, TEST-ONLY differential oracle (Phase 4).  `egglog` drives a
 # second equality-saturation engine used *only* by
-# tests/test_egglog_oracle.py to cross-check catopt's search on a small
+# tests/test_egglog_oracle.py to cross-check mlopt's search on a small
 # op/law subset.  It is deliberately NOT in `dev`: the repo stays light
 # (egglog is a compiled Rust extension), the oracle test self-skips via
 # `pytest.importorskip("egglog")` when the group is absent, and nothing
@@ -100,30 +100,30 @@ dev = [
 ]
 
 # The root project is a pure meta distribution — plan 0008 removed the
-# ``catopt`` façade package, so nothing under the repo root is shipped.
+# ``mlopt`` façade package, so nothing under the repo root is shipped.
 [tool.setuptools]
 packages = []
 
 # --- uv workspace: the domain packages ---------------------------
 [tool.uv.workspace]
 members = ["packages/*"]
-# catopt-native is an OPTIONAL distribution built with maturin/cargo —
+# mlopt-native is an OPTIONAL distribution built with maturin/cargo —
 # excluded from the uv workspace so ``uv sync``/``uv lock`` never need
 # a Rust toolchain.  Build it explicitly:
-#   maturin develop --release   (from packages/catopt-native)
-# catopt-kit is a Rust-only crate (the handl composition seam) — no
+#   maturin develop --release   (from packages/mlopt-native)
+# mlopt-kit is a Rust-only crate (the handl composition seam) — no
 # pyproject.toml, so it is excluded from the uv workspace alongside
-# catopt-native.
-exclude = ["packages/catopt-native", "packages/catopt-kit"]
+# mlopt-native.
+exclude = ["packages/mlopt-native", "packages/mlopt-kit"]
 
 [tool.uv.sources]
-catopt-core = { workspace = true }
-catopt-torch = { workspace = true }
-catopt-carriers = { workspace = true }
-catopt-orchestrator = { workspace = true }
-catopt-cuda = { workspace = true }
-catopt-discovery = { workspace = true }
-catopt-onnx = { workspace = true }
+mlopt-core = { workspace = true }
+mlopt-torch = { workspace = true }
+mlopt-carriers = { workspace = true }
+mlopt-orchestrator = { workspace = true }
+mlopt-cuda = { workspace = true }
+mlopt-discovery = { workspace = true }
+mlopt-onnx = { workspace = true }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -146,20 +146,20 @@ min_confidence = 80
 paths = ["packages", "tests"]
 
 # import-linter: the hexagonal-boundary ratchet.  The key contract is
-# "core is torch-free" — catopt-core (the zero-dependency engine) must
+# "core is torch-free" — mlopt-core (the zero-dependency engine) must
 # never import the PyTorch adapter or any sibling domain package.  It
 # FAILS on the pre-decoupling tree and is the gate Phase 1 makes green.
 [tool.importlinter]
 root_packages = [
-    "catopt_core",
-    "catopt_torch",
-    "catopt_carriers",
-    "catopt_orchestrator",
-    "catopt_cuda",
-    "catopt_discovery",
-    "catopt_onnx",
+    "mlopt_core",
+    "mlopt_torch",
+    "mlopt_carriers",
+    "mlopt_orchestrator",
+    "mlopt_cuda",
+    "mlopt_discovery",
+    "mlopt_onnx",
 ]
-# `catopt_native` is deliberately NOT a root package: it is an optional
+# `mlopt_native` is deliberately NOT a root package: it is an optional
 # maturin/cargo build outside the uv workspace, so `uv sync` (and CI)
 # uninstall it — a missing root package is a hard import-linter error.
 # It is listed as an *optional* layer below, so it is checked when
@@ -171,67 +171,67 @@ include_external_packages = true
 [[tool.importlinter.contracts]]
 name = "core is torch-free (and carrier-free)"
 type = "forbidden"
-source_modules = ["catopt_core"]
+source_modules = ["mlopt_core"]
 forbidden_modules = [
-    "catopt_torch",
-    "catopt_carriers",
-    "catopt_orchestrator",
-    "catopt_cuda",
-    "catopt_discovery",
-    "catopt_onnx",
+    "mlopt_torch",
+    "mlopt_carriers",
+    "mlopt_orchestrator",
+    "mlopt_cuda",
+    "mlopt_discovery",
+    "mlopt_onnx",
 ]
 
 [[tool.importlinter.contracts]]
 name = "core imports no tensor library"
 type = "forbidden"
-source_modules = ["catopt_core"]
+source_modules = ["mlopt_core"]
 forbidden_modules = ["torch", "numpy"]
 
 [[tool.importlinter.contracts]]
 name = "orchestrator imports no backend"
 type = "forbidden"
-source_modules = ["catopt_orchestrator"]
-forbidden_modules = ["torch", "catopt_torch", "catopt_cuda"]
+source_modules = ["mlopt_orchestrator"]
+forbidden_modules = ["torch", "mlopt_torch", "mlopt_cuda"]
 # The backend packages may never be imported directly — backend
 # specifics live behind the Composer/Meter/Runner/ExecutorSpec ports.
 # Indirect reach is fine: the orchestrator lazily resolves carrier
-# machinery (catopt_carriers), which is what pulls torch — the runtime
+# machinery (mlopt_carriers), which is what pulls torch — the runtime
 # boundary test (sys.modules stays torch-free after
-# `import catopt_orchestrator`) is the gate that pins the laziness.
+# `import mlopt_orchestrator`) is the gate that pins the laziness.
 allow_indirect_imports = true
 
 # The dependency *layers*: the graph must be acyclic apart from the
 # backend family, which is a single mutually-dependent component.
-# `catopt_torch` and `catopt_carriers` are one layer: the carrier
+# `mlopt_torch` and `mlopt_carriers` are one layer: the carrier
 # package is a torch-backend extension (its law modules carry
 # `TORCH_BINDINGS`, and the torch sink builds its executor table from
 # the carrier lowerings), so the two are genuinely bidirectional and
-# must not be split across layers.  `catopt_cuda` sits above them (it
-# depends on `catopt_torch`).  `catopt_orchestrator` sits below the
+# must not be split across layers.  `mlopt_cuda` sits above them (it
+# depends on `mlopt_torch`).  `mlopt_orchestrator` sits below the
 # whole backend family: the backend packages depend on it, and it
 # reaches carrier machinery only through the `register_carriers` seam
-# (`catopt_orchestrator.carriers`), never by importing them.
-# `catopt_native` is a peer of core (it implements the Engine port
+# (`mlopt_orchestrator.carriers`), never by importing them.
+# `mlopt_native` is a peer of core (it implements the Engine port
 # over the same IR) and is checked to stay above core only.
-# `catopt_onnx` is the second backend (ADR 0006): it implements the
-# `Sink` port over `onnx`/`onnxruntime` and depends on `catopt_core`
-# alone — not on `catopt_orchestrator`, and not on the torch backend
-# family — so it is a peer of `catopt_native`, directly above core.
+# `mlopt_onnx` is the second backend (ADR 0006): it implements the
+# `Sink` port over `onnx`/`onnxruntime` and depends on `mlopt_core`
+# alone — not on `mlopt_orchestrator`, and not on the torch backend
+# family — so it is a peer of `mlopt_native`, directly above core.
 [[tool.importlinter.contracts]]
 name = "dependency layers"
 type = "layers"
 # `:` marks non-independent (mutually importable) siblings.
-# `catopt_discovery` is the meta-level law-discovery engine (formerly
+# `mlopt_discovery` is the meta-level law-discovery engine (formerly
 # ``tools/law_*.py``): it reads core/torch/orchestrator internals and
 # nothing may depend back on it, so it sits above the whole stack.
 layers = [
-    "catopt_discovery",
-    "catopt_cuda",
-    "catopt_torch : catopt_carriers",
-    "catopt_orchestrator",
-    "(catopt_native)",
-    "catopt_onnx",
-    "catopt_core",
+    "mlopt_discovery",
+    "mlopt_cuda",
+    "mlopt_torch : mlopt_carriers",
+    "mlopt_orchestrator",
+    "(mlopt_native)",
+    "mlopt_onnx",
+    "mlopt_core",
 ]
 
 [tool.ruff]
@@ -263,17 +263,17 @@ ignore = [
 [tool.ty.environment]
 python-version = "3.13"
 extra-paths = [
-    "packages/catopt-core/src",
-    "packages/catopt-torch/src",
-    "packages/catopt-carriers/src",
-    "packages/catopt-orchestrator/src",
-    "packages/catopt-cuda/src",
-    "packages/catopt-discovery/src",
-    "packages/catopt-onnx/src",
-    # catopt-native is optional (maturin-built); its `python/` source
+    "packages/mlopt-core/src",
+    "packages/mlopt-torch/src",
+    "packages/mlopt-carriers/src",
+    "packages/mlopt-orchestrator/src",
+    "packages/mlopt-cuda/src",
+    "packages/mlopt-discovery/src",
+    "packages/mlopt-onnx/src",
+    # mlopt-native is optional (maturin-built); its `python/` source
     # dir holds the adapter plus the `_native.pyi` stub ty resolves
     # against the compiled extension.
-    "packages/catopt-native/python",
+    "packages/mlopt-native/python",
 ]
 
 [tool.ty.src]
@@ -285,14 +285,14 @@ exclude = []
 error-on-warning = false
 
 [tool.coverage.run]
-# catopt_discovery is measured but NOT under the fail_under=100 floor
+# mlopt_discovery is measured but NOT under the fail_under=100 floor
 # yet — the move from tools/ staged its coverage climb (see
 # project/retros/discovery-package.md and the ratchet below); the
 # gate runs a second `coverage report` with the pinned discovery floor.
-# catopt_onnx joined the 100 wall after its own climb (see
+# mlopt_onnx joined the 100 wall after its own climb (see
 # project/retros/onnx-package.md) — it reports in the main wall, not
 # the discovery ratchet.
-source = ["catopt_core", "catopt_torch", "catopt_carriers", "catopt_orchestrator", "catopt_cuda", "catopt_discovery", "catopt_onnx"]
+source = ["mlopt_core", "mlopt_torch", "mlopt_carriers", "mlopt_orchestrator", "mlopt_cuda", "mlopt_discovery", "mlopt_onnx"]
 branch = true
 omit = ["*/tests/*"]
 
@@ -302,7 +302,7 @@ omit = ["*/tests/*"]
 # flat-layout sandbox mutmut needs (its keys are path-derived, but this
 # monorepo's per-package ``src/`` layout imports under a different dotted
 # name):
-#   MUTMUT_ONLY=catopt_core/ir.py MUTMUT_TESTS='tests/test_ir.py' \
+#   MUTMUT_ONLY=mlopt_core/ir.py MUTMUT_TESTS='tests/test_ir.py' \
 #       scripts/mutmut.sh run
 #   scripts/mutmut.sh results
 # There is intentionally no ``[tool.mutmut]`` table here: the wrapper

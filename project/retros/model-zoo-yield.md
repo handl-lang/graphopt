@@ -26,7 +26,7 @@ does not ship off-corpus.
 
 ## The zoo
 
-`catopt_discovery.zoo` — 22 `nn.Module` workloads, chosen by family
+`mlopt_discovery.zoo` — 22 `nn.Module` workloads, chosen by family
 coverage, none registered in `intake.candidates()` and none written
 to spell a law's region (`tests/test_discovery_zoo.py` pins the
 disjointness against the registry, the `_PURPOSE_BUILT` ledger, the
@@ -261,15 +261,15 @@ already shipped.
   pattern, so every number above is unaffected either way.
 - **Method.**  Probe scripts were ephemeral (`/tmp/zoo_probe.py`,
   `/tmp/zoo_pay_attrib.py`); every number above recomputes from the
-  committed tree with `catopt_discovery.zoo`, `intake.ingest`,
+  committed tree with `mlopt_discovery.zoo`, `intake.ingest`,
   `intake._run_delta`, `evidence._guarded_evals` and
   `impact._probe` — no engine internals were modified, and nothing
-  was written to `$XDG_CACHE_HOME/catopt/intake_corpus.json` (the holdout stays
+  was written to `$XDG_CACHE_HOME/mlopt/intake_corpus.json` (the holdout stays
   out of the census).
 
 ## Files
 
-- `packages/catopt-discovery/src/catopt_discovery/zoo.py` — the
+- `packages/mlopt-discovery/src/mlopt_discovery/zoo.py` — the
   22-workload holdout registry (`zoo() -> list[Workload]`).
 - `tests/test_discovery_zoo.py` — the holdout property (disjointness
   vs registry, `_PURPOSE_BUILT`, model/bench corpora, persisted

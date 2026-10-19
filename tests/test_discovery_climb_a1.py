@@ -12,11 +12,11 @@ search, oracles and reporting all run for real.
 
 import json
 
-from catopt_core.ir import Op, TensorType, Var
-from catopt_core.laws import ALL_RULES
-from catopt_discovery import proposal as pp
-from catopt_discovery import shape_proposal as sp
-from catopt_discovery.impact import TermCase
+from mlopt_core.ir import Op, TensorType, Var
+from mlopt_core.laws import ALL_RULES
+from mlopt_discovery import proposal as pp
+from mlopt_discovery import shape_proposal as sp
+from mlopt_discovery.impact import TermCase
 
 _BY_NAME = {r.name: r for r in ALL_RULES}
 _D = 4

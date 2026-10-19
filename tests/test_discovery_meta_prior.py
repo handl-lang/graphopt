@@ -1,7 +1,7 @@
 """The baked meta-arena prior — shipped, and measured on held-out cases.
 
 ``lawdata.META_ARENA_PLAYER_WEIGHTS`` is the trained preset
-:class:`catopt_discovery.meta_player.MetaLearnedPlayer` now defaults
+:class:`mlopt_discovery.meta_player.MetaLearnedPlayer` now defaults
 to.  This module measures that the bake is *earned*: on the held-out
 case stream (``gen_cases(7919, n)``, disjoint from the
 ``gen_cases(0, n)`` training stream) the trained prior beats the cold
@@ -22,9 +22,9 @@ import random
 
 import pytest
 import torch
-from catopt_discovery import lawdata
-from catopt_discovery import meta_arena as ma
-from catopt_discovery import meta_player as mp
+from mlopt_discovery import lawdata
+from mlopt_discovery import meta_arena as ma
+from mlopt_discovery import meta_player as mp
 
 #: Held-out case count and horizon (the driver's defaults).
 EVAL_CASES = 16

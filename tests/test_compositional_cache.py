@@ -12,13 +12,13 @@ and verifying numerically before grafting.
 import torch
 import torch.nn as nn
 
-from catopt_core.cost import param_bytes_cost_for
-from catopt_core.egraph import EGraph
-from catopt_core.ir import IR, Const, Op, Param, TensorType, Var
-from catopt_core.pipeline import SearchResult
+from mlopt_core.cost import param_bytes_cost_for
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import IR, Const, Op, Param, TensorType, Var
+from mlopt_core.pipeline import SearchResult
 
-from catopt_orchestrator import Compositional, Optimizer, structural_key
-from catopt_orchestrator.optimize import (
+from mlopt_orchestrator import Compositional, Optimizer, structural_key
+from mlopt_orchestrator.optimize import (
     _block_key,
     _cache_entry,
     _cache_replay,
@@ -30,8 +30,8 @@ from catopt_orchestrator.optimize import (
     _term_param_names,
 )
 
-from catopt_torch.backend import TorchBackend
-from catopt_torch.models import DeepParallel
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.models import DeepParallel
 
 
 def _t(*shape):

@@ -2,10 +2,10 @@
 
 Two things are under test here, and the second is the experiment:
 
-1. that :class:`catopt_onnx.OnnxSink` lowers catopt IR to a runnable
+1. that :class:`mlopt_onnx.OnnxSink` lowers mlopt IR to a runnable
    ONNX artifact whose numbers match the source program, and
 2. that it does so as a *port implementation* — the pipeline drives it
-   through ``catopt_core.ports`` exactly as it drives the torch sink,
+   through ``mlopt_core.ports`` exactly as it drives the torch sink,
    with no branch anywhere for "which backend".
 
 The op-coverage table is deliberately broad: every entry is a small
@@ -15,7 +15,7 @@ against torch's own result.  Ops outside the mapping are exercised by
 never drop* rule.
 
 ``onnx``/``onnxruntime`` are declared dependencies of the
-``catopt-onnx`` package; the module skips cleanly when they are
+``mlopt-onnx`` package; the module skips cleanly when they are
 absent from the environment so the rest of the suite stays green.
 """
 
@@ -35,7 +35,7 @@ pytest.importorskip("onnx")
 pytest.importorskip("onnxruntime")
 
 import onnx
-from catopt_core.ir import (
+from mlopt_core.ir import (
     IR,
     Const,
     Op,
@@ -43,13 +43,13 @@ from catopt_core.ir import (
     TensorType,
     Var,
 )
-from catopt_core.ports import (
+from mlopt_core.ports import (
     Capabilities,
     Executor,
     Sink,
     VerifyResult,
 )
-from catopt_onnx import (
+from mlopt_onnx import (
     ONNX_BINDINGS,
     OnnxExecutor,
     OnnxLoweringError,
@@ -57,9 +57,9 @@ from catopt_onnx import (
     UnsupportedOnnxOpError,
     verify_equiv,
 )
-from catopt_orchestrator.optimize import Optimizer
-from catopt_torch.adapters import TorchSource
-from catopt_torch.torch_bridge import export_to_ir
+from mlopt_orchestrator.optimize import Optimizer
+from mlopt_torch.adapters import TorchSource
+from mlopt_torch.torch_bridge import export_to_ir
 
 DT = torch.float32
 
@@ -174,8 +174,8 @@ import sys
 
 class _Blocker:
     def find_spec(self, name, path=None, target=None):
-        if name.split(".")[0] in ("torch", "catopt_torch",
-                                  "catopt_carriers", "catopt_cuda"):
+        if name.split(".")[0] in ("torch", "mlopt_torch",
+                                  "mlopt_carriers", "mlopt_cuda"):
             raise ModuleNotFoundError(f"blocked import: {name}")
         return None
 
@@ -185,32 +185,32 @@ sys.meta_path.insert(0, _Blocker())
 import importlib
 import pkgutil
 
-import catopt_onnx
+import mlopt_onnx
 
 # Every submodule of the ONNX backend must import with torch blocked —
-# the boundary claim is that it depends on catopt_core alone.
+# the boundary claim is that it depends on mlopt_core alone.
 for _info in pkgutil.walk_packages(
-    catopt_onnx.__path__, "catopt_onnx."
+    mlopt_onnx.__path__, "mlopt_onnx."
 ):
     importlib.import_module(_info.name)
 
 assert "torch" not in sys.modules, sorted(sys.modules)
-assert "catopt_torch" not in sys.modules
-assert "catopt_carriers" not in sys.modules
-assert "catopt_orchestrator" not in sys.modules
+assert "mlopt_torch" not in sys.modules
+assert "mlopt_carriers" not in sys.modules
+assert "mlopt_orchestrator" not in sys.modules
 
-from catopt_core.ports import Sink
-assert isinstance(catopt_onnx.OnnxSink(), Sink)
+from mlopt_core.ports import Sink
+assert isinstance(mlopt_onnx.OnnxSink(), Sink)
 print("onnx-imported-torch-free")
 """
 
 
 def test_the_onnx_backend_imports_without_torch():
-    """``catopt_onnx`` never pulls the torch backend family.
+    """``mlopt_onnx`` never pulls the torch backend family.
 
     This is the port-boundary claim in its strongest form: the second
     backend is a *peer* of the torch one, reachable through
-    ``catopt_core.ports`` and importing nothing from it.
+    ``mlopt_core.ports`` and importing nothing from it.
     """
     proc = subprocess.run(
         [sys.executable, "-c", _ONNX_ONLY_SCRIPT],
@@ -252,7 +252,7 @@ def test_lowered_model_is_a_checked_onnx_artifact():
     model = executor.model
     assert model.ir_version == OnnxSink().ir_version
     assert model.opset_import[0].version == 18
-    assert model.producer_name == "catopt-onnx"
+    assert model.producer_name == "mlopt-onnx"
     onnx.checker.check_model(model)
 
 

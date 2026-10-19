@@ -25,7 +25,7 @@ can explore aggressively because no move can make a program wrong.
 
 ## Pieces that already exist
 
-- `catopt_core.search_env` / `policies` — the move-ordering harness
+- `mlopt_core.search_env` / `policies` — the move-ordering harness
   (the apply-law board).
 - `object_synthesis` + `arena` (0020) — the abstraction moves.
 - `opdata` — the declaration seam: "introduce abstraction" mints a
@@ -74,7 +74,7 @@ case while `declare`-armed lines win 2–6× certified (softsign
 reaches — measured.
 
 **Q3 answered with a caveat.** `MetaLearnedPlayer`
-(`catopt_discovery.meta_player`, a preset of the generic
+(`mlopt_discovery.meta_player`, a preset of the generic
 `players.LinearPolicy`) trained cold over the mixed corpus:
 learned −0.03 vs scripted −0.10 mean reward on 40 held-out
 cases, *plus* 3 certified structural wins the scripted playbook
@@ -91,19 +91,19 @@ From `handl-lang/host/research/PAPER.md`:
 
 - `>>>[k]` axis composition: axis 0 = horizontal (cells across a
   shared object — program composition), axis 1 = vertical (cells
-  along a morphism — rewrite stacking).  CatOpt's `compose` is a
+  along a morphism — rewrite stacking).  MLOpt's `compose` is a
   horizontal 2-cell composite; `id₂ ∘₀ α` ("whiskering") — applying
   a 2-cell *inside* a context — is the apply-law-in-position move
   an e-graph move already performs implicitly; exposing it as a
   first-class move is the "apply law" action's real content.
 - HANDL resolves 2-cells as **weak** (proof-relevant) — matches
-  catopt's certificates: a derivation is data, replayed, not an
+  mlopt's certificates: a derivation is data, replayed, not an
   equality assertion.
 - `law_inference` is the strict fast-path "where a canonical form
-  suffices" — exactly catopt's oracle/verifier fast path vs the
+  suffices" — exactly mlopt's oracle/verifier fast path vs the
   e-graph's proof-relevant saturation.
 - Coherence questions ("do two derivations of the same 2-cell
-  commute") are 3-cell content — catopt's coherence catalogue
+  commute") are 3-cell content — mlopt's coherence catalogue
   (`divergent: 1` on the RMSNorm pair) is already that measurement.
 
 So the meta-arena's action table, one level more precise:

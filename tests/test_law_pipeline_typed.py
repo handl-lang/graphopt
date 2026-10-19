@@ -1,4 +1,4 @@
-"""Tests for the typed-pay gate in ``python -m catopt_discovery.pipeline``.
+"""Tests for the typed-pay gate in ``python -m mlopt_discovery.pipeline``.
 
 ``law_impact._probe`` counts a rule's e-graph fires and whether the
 extracted cost dropped — but never asked whether the instantiated
@@ -19,15 +19,15 @@ as a paying fire.  These tests pin the audit:
 * ``Evidence.no_ship_reason`` — surfaces "pays only on ill-typed
   sites" / "mints ill-typed members".
 
-The pipeline lives in ``catopt_discovery.pipeline`` (formerly
-``python -m catopt_discovery.pipeline``).
+The pipeline lives in ``mlopt_discovery.pipeline`` (formerly
+``python -m mlopt_discovery.pipeline``).
 """
 
 import torch
-from catopt_core.ir import Op, TensorType, Var
-from catopt_discovery import pipeline as pl
-from catopt_discovery.impact import TermCase, _cost_fn
-from catopt_torch.adapters import TorchSink
+from mlopt_core.ir import Op, TensorType, Var
+from mlopt_discovery import pipeline as pl
+from mlopt_discovery.impact import TermCase, _cost_fn
+from mlopt_torch.adapters import TorchSink
 
 
 def _p(op: str, *args, **attrs) -> Op:

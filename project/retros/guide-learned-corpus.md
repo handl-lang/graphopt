@@ -12,14 +12,14 @@ the stage-3 table itself*.
 
 Reproduce (each run ~3.5–4 min CPU; ~2.5 min is the training pass):
 
-    .venv/bin/python -m catopt_discovery.meta_game --guide \
+    .venv/bin/python -m mlopt_discovery.meta_game --guide \
         --guide-episodes 40 --budget 40 --guide-step 6 \
         --guide-corpus 6 --plays-cap 12 --seed 0
-    .venv/bin/python -m catopt_discovery.meta_game --guide \
+    .venv/bin/python -m mlopt_discovery.meta_game --guide \
         --guide-episodes 80 --budget 40 --guide-step 6 \
         --guide-corpus 6 --plays-cap 12 --seed 0   # diagnostic
 
-Everything lives in `catopt_discovery/meta_game.py`; tests in
+Everything lives in `mlopt_discovery/meta_game.py`; tests in
 `tests/test_discovery_meta_game.py`.
 
 ## 1. The training path — reuse, no new trainer
@@ -82,7 +82,7 @@ run aborts (a failed mint is a `gen-miss`, a failed synthesis a
   hit at seed 3).  Ingestion now gates on `GuideArena._stats_safe`
   (all subterm attr values hashable); the draw misses rather than
   the arm dying mid-game.
-- `catopt_core.typing._infer_op_shape` divides by conv `stride`
+- `mlopt_core.typing._infer_op_shape` divides by conv `stride`
   unguarded (`// st` — `ZeroDivisionError`) when
   `gap_gen.synthesize` instantiates a zero-stride RHS.
   Owners should fix at the source; containment is in meta_game.
@@ -172,5 +172,5 @@ Verification: `pytest tests/test_discovery_meta_game.py
 tests/test_discovery_experiments.py -q` → 128 passed; `ruff check`,
 `ruff format --check`, `ty check`, `radon_ratchet` clean on
 `meta_game.py` (radon also reports two over-baseline regressions in
-`catopt_core` `ir.py`/`egraph/types.py` — another agent's
+`mlopt_core` `ir.py`/`egraph/types.py` — another agent's
 uncommitted work, untouched here).

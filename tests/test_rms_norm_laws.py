@@ -1,8 +1,8 @@
 # ruff: noqa: RUF003 — ⁻¹, σ-style math in docstrings is
 # deliberate notation, per the laws-module convention.
 """Tests for the ``rms_norm_fold`` laws — the manual-RMSNorm folds
-(:data:`catopt_core.laws.tensor.RMS_NORM_FOLD` and
-:data:`catopt_core.laws.tensor.RMS_NORM_FOLD_NOGAIN`).
+(:data:`mlopt_core.laws.tensor.RMS_NORM_FOLD` and
+:data:`mlopt_core.laws.tensor.RMS_NORM_FOLD_NOGAIN`).
 
     mul(mul(u, rsqrt(add(mean(pow(u,2),MD,keepdim=MK),EPS))), w)
         -> rms_norm(u, w, dim=ND, eps=EP)
@@ -51,10 +51,10 @@ Covered surface:
 from __future__ import annotations
 
 import torch
-from catopt_core.cost import backend_cost, dag_cost, executor_cost_for
-from catopt_core.egraph import EGraph, verify_certificate
-from catopt_core.ir import IR, Const, Op, Param, TensorType, Var
-from catopt_core.laws import (
+from mlopt_core.cost import backend_cost, dag_cost, executor_cost_for
+from mlopt_core.egraph import EGraph, verify_certificate
+from mlopt_core.ir import IR, Const, Op, Param, TensorType, Var
+from mlopt_core.laws import (
     DEFAULT,
     RMS_NORM_FOLD,
     RMS_NORM_FOLD_NOGAIN,
@@ -65,23 +65,23 @@ from catopt_core.laws import (
     _derive_rms_norm,
     tags,
 )
-from catopt_core.laws.tensor import _rms_normalized_shape
-from catopt_core.meta import (
+from mlopt_core.laws.tensor import _rms_normalized_shape
+from mlopt_core.meta import (
     instantiate_pattern,
     match_pattern,
     pattern_metavars,
 )
-from catopt_orchestrator import Optimizer
-from catopt_orchestrator.optimize import _lower_extracted
-from catopt_torch.adapters import TorchSink
-from catopt_torch.backend import TorchBackend
-from catopt_torch.models import (
+from mlopt_orchestrator import Optimizer
+from mlopt_orchestrator.optimize import _lower_extracted
+from mlopt_torch.adapters import TorchSink
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.models import (
     NormLinear,
     ParallelBlock,
     RMSNorm,
     TransformerBlock,
 )
-from catopt_torch.torch_bridge import export_to_ir
+from mlopt_torch.torch_bridge import export_to_ir
 
 _SINK = TorchSink()
 

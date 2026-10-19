@@ -1,8 +1,8 @@
-# Retro — catopt-discovery: 12% → 99% coverage in one climb
+# Retro — mlopt-discovery: 12% → 99% coverage in one climb
 
 ## The arc
 
-The tools/ → packages/catopt-discovery move staged coverage as a
+The tools/ → packages/mlopt-discovery move staged coverage as a
 follow-on.  Measured honest gap at move time: ~12–20% statement
 coverage across 20k lines — 53% of the code was never imported by a
 single test.  The climb ran in four waves of new test files (all

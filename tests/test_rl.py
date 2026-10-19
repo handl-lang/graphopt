@@ -1,17 +1,17 @@
-"""Policy-gradient search policy (:mod:`catopt_torch.rl`)."""
+"""Policy-gradient search policy (:mod:`mlopt_torch.rl`)."""
 
 import logging
 
-import catopt_torch.rl as rl
+import mlopt_torch.rl as rl
 import torch
-from catopt_core.features import DIMENSIONS, compute_features
-from catopt_core.game import Action, GameState
-from catopt_core.ir import Op, TensorType, Var
-from catopt_core.laws import all_rules
-from catopt_core.ports import Policy
-from catopt_core.search_env import StepResult
-from catopt_core.trajectories import RULE_VECTOR_LEN, rule_vector
-from catopt_torch.rl import (
+from mlopt_core.features import DIMENSIONS, compute_features
+from mlopt_core.game import Action, GameState
+from mlopt_core.ir import Op, TensorType, Var
+from mlopt_core.laws import all_rules
+from mlopt_core.ports import Policy
+from mlopt_core.search_env import StepResult
+from mlopt_core.trajectories import RULE_VECTOR_LEN, rule_vector
+from mlopt_torch.rl import (
     PolicyNet,
     RLPolicy,
     _advantage,
@@ -71,7 +71,7 @@ def test_train_reinforce_runs_on_cpu():
 
 
 def test_train_reinforce_default_device_and_logging(caplog):
-    with caplog.at_level(logging.INFO, logger="catopt_torch.rl"):
+    with caplog.at_level(logging.INFO, logger="mlopt_torch.rl"):
         train_reinforce(
             [_chain()],
             all_rules(),

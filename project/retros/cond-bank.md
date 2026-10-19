@@ -11,7 +11,7 @@ declarable conjunction ≤ 3 clauses* — the constructor's honest refusal
 when the bank has no predicate separating the measured classes.  This
 change widens the bank where the measured gaps are: four new
 view-output shape specs and two broadcast-alignment atoms in
-`catopt_core.laws.cond`, plus the *commutation* predicate form the
+`mlopt_core.laws.cond`, plus the *commutation* predicate form the
 `f(view(u), v) -> view(f(u, v))` "wrap" candidates need.  Nothing else
 moved: `laws/tensor.py`, `evidence.py`, `meta_game.py` untouched.
 
@@ -73,7 +73,7 @@ could not name, because:
    counterexamples (e.g. `select(A=(4,), 0)` vs `select(B=(3,4), 0)`
    match in shape but not in values).
 
-## 3. The DSL additions (`packages/catopt-core/src/catopt_core/laws/cond.py`)
+## 3. The DSL additions (`packages/mlopt-core/src/mlopt_core/laws/cond.py`)
 
 All pure data — JSON-serializable tuple trees, no lambdas.  Every new
 atom mirrors the corresponding `_infer_op_shape` branch and declines

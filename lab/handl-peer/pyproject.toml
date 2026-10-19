@@ -3,11 +3,11 @@ requires = ["maturin>=1.5,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "catopt-handl-peer"
+name = "mlopt-handl-peer"
 version = "0.1.0"
-description = "Spike: catopt calls handl's language loader and rewrite engine"
+description = "Spike: mlopt calls handl's language loader and rewrite engine"
 requires-python = ">=3.11"
 
 [tool.maturin]
-module-name = "catopt_handl_peer"
+module-name = "mlopt_handl_peer"
 features = ["pyo3/extension-module"]

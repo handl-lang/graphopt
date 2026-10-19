@@ -1,6 +1,6 @@
 """lawdata consistency — the data home and its consumers stay pinned.
 
-``catopt_core.lawdata`` / ``catopt_discovery.lawdata`` are the single
+``mlopt_core.lawdata`` / ``mlopt_discovery.lawdata`` are the single
 home for the law-side / discovery content tables; consumers bind the
 *same object* under their own names (the ``opmeta`` projection idiom).
 These tests pin that relation — an unbound copy would silently drift
@@ -10,13 +10,13 @@ table they read.
 
 from __future__ import annotations
 
-import catopt_core.lawdata as core_data
-import catopt_discovery.lawdata as data
-from catopt_core import meta
-from catopt_core.attrs import ATTR_SCHEMA
-from catopt_core.ir import Const, Op, Param, TensorType, Var
-from catopt_core.laws import ALL_RULES
-from catopt_core.opmeta import COMMUTATIVE_OPS, REGISTRY
+import mlopt_core.lawdata as core_data
+import mlopt_discovery.lawdata as data
+from mlopt_core import meta
+from mlopt_core.attrs import ATTR_SCHEMA
+from mlopt_core.ir import Const, Op, Param, TensorType, Var
+from mlopt_core.laws import ALL_RULES
+from mlopt_core.opmeta import COMMUTATIVE_OPS, REGISTRY
 
 
 class TestCoreLawdata:
@@ -27,7 +27,7 @@ class TestCoreLawdata:
 
     def test_coherent_names_are_real_rules(self):
         """Every classified name resolves in the law universe."""
-        from catopt_core.laws import SCAN_DIAG_LAWS, SCAN_LAWS
+        from mlopt_core.laws import SCAN_DIAG_LAWS, SCAN_LAWS
 
         universe = {
             r.name for r in [*ALL_RULES, *SCAN_LAWS, *SCAN_DIAG_LAWS]
@@ -35,7 +35,7 @@ class TestCoreLawdata:
         # the carrier rules (om_assoc pair, …) live in the carrier
         # modules — enumerate them through the same seam the engine
         # registers, never a hand list.
-        from catopt_core.ops import _CARRIER_MODULES
+        from mlopt_core.ops import _CARRIER_MODULES
 
         for mod_name in _CARRIER_MODULES:
             mod = __import__(mod_name, fromlist=["*"])
@@ -62,7 +62,7 @@ class TestOracleBanks:
     """oracle.py binds every enumeration bank to the same object."""
 
     def test_shape_banks(self):
-        from catopt_discovery import oracle
+        from mlopt_discovery import oracle
 
         assert oracle._VIEWED_SHAPES is data.VIEWED_SHAPES
         assert oracle._CHAIN_VIEWED_SHAPES is data.CHAIN_VIEWED_SHAPES
@@ -72,7 +72,7 @@ class TestOracleBanks:
         assert oracle._CONST_DOMAIN is data.CONST_DOMAIN
 
     def test_attr_kind_tables(self):
-        from catopt_discovery import oracle
+        from mlopt_discovery import oracle
 
         assert oracle._ATTR_KINDS is data.ATTR_KINDS
         assert oracle._ATTR_KIND_OVERRIDES is data.ATTR_KIND_OVERRIDES
@@ -91,7 +91,7 @@ class TestOracleBanks:
 
     def test_tuple_sources_resolve(self):
         """Every tuple source is a registered op with valid attrs."""
-        from catopt_discovery import oracle
+        from mlopt_discovery import oracle
 
         srcs = oracle._tuple_sources("U")
         assert [t.op for t in srcs] == [
@@ -109,7 +109,7 @@ class TestVerifierDefaults:
     """verifier.py binds the instantiation defaults."""
 
     def test_tables_bound(self):
-        from catopt_discovery import verifier
+        from mlopt_discovery import verifier
 
         assert verifier._LEAF_SHAPES is data.INSTANCE_LEAF_SHAPES
         assert verifier._ATTR_DEFAULTS is data.INSTANCE_ATTR_DEFAULTS
@@ -120,33 +120,33 @@ class TestPoolTables:
     """The simple bank tables are bound under the consumers' names."""
 
     def test_gap_pools(self):
-        from catopt_discovery import gap_gen
+        from mlopt_discovery import gap_gen
 
         assert gap_gen._SHAPE_POOL is data.SHAPE_POOL
         assert gap_gen._BASE_SHAPES is data.BASE_SHAPES
 
     def test_grammar_alphabet(self):
-        from catopt_discovery import grammar
+        from mlopt_discovery import grammar
 
         assert grammar._BINARY_OPS is data.GRAMMAR_BINARY_OPS
         assert grammar._UNARY_OPS is data.GRAMMAR_UNARY_OPS
         assert grammar._LITERALS is data.GRAMMAR_LITERALS
 
     def test_families(self):
-        from catopt_discovery import families
+        from mlopt_discovery import families
 
         assert families.FAMILIES is data.FAMILIES
         assert families._LINEAR_TRAIN is data.LINEAR_TRAIN_SHAPES
         assert families._LINEAR_HELD is data.LINEAR_HELD_SHAPES
 
     def test_coherence_lists(self):
-        from catopt_discovery import coherence, coherence2
+        from mlopt_discovery import coherence, coherence2
 
         assert coherence._CLUSTER is data.COHERENCE_CLUSTER
         assert coherence2._CORPUS_MODELS is data.COHERENCE_CORPUS_MODELS
 
     def test_intake_ledger(self):
-        from catopt_discovery import intake
+        from mlopt_discovery import intake
 
         assert intake._PURPOSE_BUILT is data.PURPOSE_BUILT
         assert isinstance(data.PURPOSE_BUILT, frozenset)
@@ -156,7 +156,7 @@ class TestMetaGameData:
     """meta_game.py reads the arm inventory and weight tables."""
 
     def test_arm_inventory(self):
-        from catopt_discovery import meta_game
+        from mlopt_discovery import meta_game
 
         assert meta_game.ENUMERATION_ORDER is data.GENERATOR_ORDER
         assert meta_game.CORPUS_ARMS is data.CORPUS_ARMS
@@ -176,7 +176,7 @@ class TestMetaGameData:
         assert not set(data.GENERATOR_ORDER) & set(data.CORPUS_ARMS)
 
     def test_prior_weights_bound(self):
-        from catopt_discovery import meta_game
+        from mlopt_discovery import meta_game
 
         assert meta_game._PRIOR_CHILD == data.PRIOR_WEIGHTS["child"]
         assert meta_game._PRIOR_REUSE == data.PRIOR_WEIGHTS["reuse"]
@@ -226,7 +226,7 @@ class TestTermSpecCorpus:
     """The term-spec tables resolve through ``proposal._spec_term``."""
 
     def test_seed_terms_resolve(self):
-        from catopt_discovery import proposal
+        from mlopt_discovery import proposal
 
         seeds = proposal.seed_terms()
         assert len(seeds) == len(data.SEED_TERMS)
@@ -234,7 +234,7 @@ class TestTermSpecCorpus:
 
     def test_seed_term_shapes(self):
         """A spec leaf mints the typed Var the hand corpus carried."""
-        from catopt_discovery import proposal
+        from mlopt_discovery import proposal
 
         seed = proposal.seed_terms()[0]
         # matmul(a:(3,5), matmul(b:(5,2), c:(2,3)))
@@ -243,7 +243,7 @@ class TestTermSpecCorpus:
         assert isinstance(a, Var) and a.typ.shape == (3, 5)
 
     def test_grammar_schemas_resolve(self):
-        from catopt_discovery import proposal
+        from mlopt_discovery import proposal
 
         cands = proposal.schema_candidates()
         assert len(cands) == len(data.GRAMMAR_SCHEMAS)
@@ -257,7 +257,7 @@ class TestTermSpecCorpus:
         assert {v.typ.shape for v in leaves} == {(4, 4)}
 
     def test_shape_schemas_resolve(self):
-        from catopt_discovery import shape_proposal
+        from mlopt_discovery import shape_proposal
 
         sch = shape_proposal.schemas()
         assert len(sch) == len(data.SHAPE_SCHEMAS)
@@ -269,7 +269,7 @@ class TestTermSpecCorpus:
         }
 
     def test_candidate_laws_resolve(self):
-        from catopt_discovery import impact
+        from mlopt_discovery import impact
 
         laws = impact.new_laws()
         assert [r.name for r in laws] == [
@@ -280,7 +280,7 @@ class TestTermSpecCorpus:
         ]
 
     def test_synthetic_cases_resolve(self):
-        from catopt_discovery import impact
+        from mlopt_discovery import impact
 
         cases = impact.synthetic_cases()
         assert [c.name for c in cases] == [
@@ -294,7 +294,7 @@ class TestTermSpecCorpus:
 
     def test_spec_resolver(self):
         """The leaf forms mint typed leaves; dicts stay attr maps."""
-        from catopt_discovery import proposal
+        from mlopt_discovery import proposal
 
         spec = (
             "mul",

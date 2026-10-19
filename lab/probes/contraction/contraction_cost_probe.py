@@ -3,7 +3,7 @@
 Retro ``project/retros/contraction-precondition.md`` §3a claims the
 diagram contraction-move space carries **no cost signal** for a
 matrix-chain ordering, because the composed weight product is a
-*param-only* subtree and :func:`catopt_core.cost.dag_cost` discounts
+*param-only* subtree and :func:`mlopt_core.cost.dag_cost` discounts
 param-only subtrees that fold to a parameter ("compile-time work —
 charged 0").
 
@@ -19,7 +19,7 @@ and no diagram run:
 
 2. **The reified chain term.**  Wrap each bracketing in the
    activation ``linear(x, product)`` — the shape the diagram window
-   reify produces (:func:`catopt_orchestrator.morphisms.reify._reify`
+   reify produces (:func:`mlopt_orchestrator.morphisms.reify._reify`
    over ``linear`` blocks).  All bracketings price identically: the
    one activation GEMM.  The product's FLOPs are removed twice over —
    the subtractive DAG decomposition *and* the fold.
@@ -30,7 +30,7 @@ and no diagram run:
    the term, it is the fold-aware wrapper that erases it.
 
 4. **Expressible but not priceable.**  Saturate the product in an
-   :class:`~catopt_core.egraph.EGraph` with ``assoc_matmul`` /
+   :class:`~mlopt_core.egraph.EGraph` with ``assoc_matmul`` /
    ``assoc_matmul_rev`` — every bracketing lands in the root e-class
    (the space *can express* the order) — then show the shipped models'
    :meth:`extract_best` picks **arbitrarily** (the fold zeroes every
@@ -49,7 +49,7 @@ import random
 from collections.abc import Callable
 from typing import Any, cast
 
-from catopt_core.cost import (
+from mlopt_core.cost import (
     _CostMarkers,
     _folds_to_param,
     count_cost,
@@ -57,9 +57,9 @@ from catopt_core.cost import (
     flops_cost,
     launch_aware_cost,
 )
-from catopt_core.egraph import EGraph
-from catopt_core.ir import Op, Param, TensorType, Var
-from catopt_core.laws import FULL
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import Op, Param, TensorType, Var
+from mlopt_core.laws import FULL
 
 __all__ = [
     "MODELS",

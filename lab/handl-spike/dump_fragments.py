@@ -1,15 +1,15 @@
-"""Dump catopt's vocabulary as a handl fragment directory.
+"""Dump mlopt's vocabulary as a handl fragment directory.
 
-The bridge (`catopt_discovery.handl`) already emits handl-shaped rows;
+The bridge (`mlopt_discovery.handl`) already emits handl-shaped rows;
 this tool writes them into the *ten-file layout* `language_from_dir`
 reads (`handl-kit-data-canonical`), so a handl host can assemble a
-`Language` from catopt's vocabulary:
+`Language` from mlopt's vocabulary:
 
     tokens.yaml · grammar.yaml · eval.yaml · types.yaml · ast.yaml
     caps.yaml · options.yaml · lexer_rules.yaml
     transforms.yaml (optional) · lints.yaml / lsp.yaml (optional)
 
-The eight required files are written even when empty (`[]`) — catopt's
+The eight required files are written even when empty (`[]`) — mlopt's
 "syntax" is the IR, not a text language, so the shell files are stubs
 today; `ast.yaml` carries the op shapes and `transforms.yaml` the laws.
 
@@ -35,9 +35,9 @@ import json
 import sys
 from pathlib import Path
 
-from catopt_core.laws import ALL_RULES
-from catopt_discovery.cellstore import ambient_store
-from catopt_discovery.handl import store_to_handl
+from mlopt_core.laws import ALL_RULES
+from mlopt_discovery.cellstore import ambient_store
+from mlopt_discovery.handl import store_to_handl
 
 #: The shell files `language_from_dir` requires (empty is valid).
 _SHELL = (

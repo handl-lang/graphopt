@@ -1,4 +1,4 @@
-"""Coverage-gap tests for catopt_core.typing.
+"""Coverage-gap tests for mlopt_core.typing.
 
 ``tests/test_typing.py`` pins the layer's contract on the happy paths.
 This file drives the arms and edges it never reaches:
@@ -29,8 +29,8 @@ the match, so they can never observe one.
 
 import pytest
 
-from catopt_core.ir import Const, Op, Param, TensorType, Var
-from catopt_core.typing import (
+from mlopt_core.ir import Const, Op, Param, TensorType, Var
+from mlopt_core.typing import (
     _INVALID,
     _SHAPE_RULES,
     _broadcast,

@@ -1,7 +1,7 @@
 /** The cell store — one record per vocabulary item, merged from fragments.
  *
  * Plan 0028 §D4, implementing plan 0022.  The project spelled "a cell
- * as data" five ways; `catopt_core.cells` normalises them to one
+ * as data" five ways; `mlopt_core.cells` normalises them to one
  * record — `Cell{role, name, body, kind, provenance}` where role ∈
  * `op` / `law` / `object` / `handle`.  `merge_fragments(*Fragment)`
  * assembles a `CellStore`: a duplicate `(role, name)` **raises** by
@@ -9,7 +9,7 @@
  * 2-cells across fragments are a discovery fact, not an error.
  *
  * `Provenance.origin` ∈ `shipped` / `constructed` / `admitted` /
- * `minted` / `declared` / `imported`.  `catopt_discovery.handl` is the
+ * `minted` / `declared` / `imported`.  `mlopt_discovery.handl` is the
  * schema bridge: op cells → `AstShapeDef` rows, law/object cells →
  * `TransformDef` rows, handle cells → `!Native` records.
  */

@@ -1,6 +1,6 @@
 """Structurally-special weight offers — the exact-elision pass.
 
-Pins :func:`catopt_core.laws.specials.offer_weight_specials` — the
+Pins :func:`mlopt_core.laws.specials.offer_weight_specials` — the
 sibling of ``offer_low_rank_factors`` covering *structural* weight
 specials rather than numerical rank:
 
@@ -22,19 +22,19 @@ reference after lowering.
 
 import torch
 import torch.nn as nn
-from catopt_core.cost import dag_cost, flops_cost
-from catopt_core.egraph import EGraph
-from catopt_core.ir import IR, Op, Param, TensorType, Var, op_repr
-from catopt_core.laws.specials import (
+from mlopt_core.cost import dag_cost, flops_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import IR, Op, Param, TensorType, Var, op_repr
+from mlopt_core.laws.specials import (
     _analyse,
     _blocks,
     _dedup,
     _offer_one_site,
     offer_weight_specials,
 )
-from catopt_orchestrator.optimize import Optimizer
-from catopt_torch.backend import TorchBackend
-from catopt_torch.torch_bridge import IRModule
+from mlopt_orchestrator.optimize import Optimizer
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.torch_bridge import IRModule
 
 
 def _lower(term, x, tensors, xv):

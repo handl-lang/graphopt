@@ -8,21 +8,21 @@ reified programs — every grafted rewrite verified fp64 against the
 original.
 """
 
-import catopt_orchestrator.morphisms as M
-import catopt_orchestrator.morphisms_kv as K
+import mlopt_orchestrator.morphisms as M
+import mlopt_orchestrator.morphisms_kv as K
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from catopt_core.ir import IR, Op, Param, TensorType, Var
-from catopt_orchestrator import (
+from mlopt_core.ir import IR, Op, Param, TensorType, Var
+from mlopt_orchestrator import (
     MorphismLaw,
     MorphismSearch,
     Optimizer,
     optimize_morphisms,
 )
-from catopt_torch.adapters import TorchSink, TorchSource
-from catopt_torch.backend import TorchBackend
-from catopt_torch.composer import TorchComposer
+from mlopt_torch.adapters import TorchSink, TorchSource
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.composer import TorchComposer
 
 # ---------------------------------------------------------------------------
 #  Fixtures
@@ -1077,7 +1077,7 @@ def test_reify_decline_shape_guards():
 
 def test_reify_decline_verify_fail(monkeypatch):
     """A failing pair verify drops the rewrite — never grafts."""
-    import catopt_torch.adapters as A
+    import mlopt_torch.adapters as A
 
     def fail_verify(*_a, **_k):
         return A.VerifyReport(max_abs=1.0, max_rel=1.0, passed=False)
@@ -1241,7 +1241,7 @@ def test_morphism_graph_aux_io():
 
 def test_saturate_offer_kwargs():
     """The third offer element carries witness kwargs."""
-    from catopt_core.laws import RuleSet
+    from mlopt_core.laws import RuleSet
 
     x = Var("x", TensorType((8, 16)))
     w = Param("p_w", TensorType((16, 16)))
@@ -1267,7 +1267,7 @@ def test_morphisms_reexport():
 
 def test_package_getattr():
     """The package-level lazy export resolves the KV law."""
-    import catopt_orchestrator as O
+    import mlopt_orchestrator as O
 
     assert O.KVLatentShare is K.KVLatentShare
 

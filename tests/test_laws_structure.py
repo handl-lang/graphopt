@@ -1,18 +1,18 @@
-"""Structure tests for the ``catopt_core.laws`` rewrite surface.
+"""Structure tests for the ``mlopt_core.laws`` rewrite surface.
 
-``catopt_core.rules`` — and its ``catopt.rules`` façade alias — used
-to be a pure compatibility shim over the ``catopt_core.laws``
+``mlopt_core.rules`` — and its ``mlopt.rules`` façade alias — used
+to be a pure compatibility shim over the ``mlopt_core.laws``
 package.  That
-shim is gone; ``catopt_core.laws`` is now the canonical rewrite
+shim is gone; ``mlopt_core.laws`` is now the canonical rewrite
 surface.  These tests pin the contract:
 
 * every name that was previously importable from the shim — public
   rules, collections, pass functions, and the private check/memo
-  helpers — still resolves from ``catopt_core.laws``;
+  helpers — still resolves from ``mlopt_core.laws``;
 * ``all_rules()`` returns the same rule set as before;
 * the non-local pairing passes resolve identically from the package
-  and from ``catopt_core.laws.pairing``;
-* each ``catopt_core.laws`` submodule is self-contained — it never
+  and from ``mlopt_core.laws.pairing``;
+* each ``mlopt_core.laws`` submodule is self-contained — it never
   imports the removed shim.
 """
 
@@ -20,15 +20,15 @@ import importlib
 import re
 import sys
 
-import catopt_core.laws as laws
-import catopt_core.laws.layout
-import catopt_core.laws.pairing
-import catopt_core.laws.scan
-import catopt_core.laws.tensor
-from catopt_core.egraph import Rewrite
+import mlopt_core.laws as laws
+import mlopt_core.laws.layout
+import mlopt_core.laws.pairing
+import mlopt_core.laws.scan
+import mlopt_core.laws.tensor
+from mlopt_core.egraph import Rewrite
 
-#: Every public name the old ``catopt_core.rules`` shim exposed — the
-#: union of all ``from catopt_core.rules import ...`` sites across
+#: Every public name the old ``mlopt_core.rules`` shim exposed — the
+#: union of all ``from mlopt_core.rules import ...`` sites across
 #: packages/, the old façade, tests/, and bench/, plus the rule objects
 #: accessed as module attributes.
 PUBLIC_NAMES = [
@@ -193,7 +193,7 @@ def test_private_names_resolve():
 
 def test_laws_exports_every_rewrite():
     """meta._iter_module_rules over the package must see the full set."""
-    from catopt_core.meta import _iter_module_rules
+    from mlopt_core.meta import _iter_module_rules
 
     found = _iter_module_rules(laws)
     assert all(isinstance(r, Rewrite) for r in found)
@@ -213,7 +213,7 @@ def test_laws_exports_every_rewrite():
     # + 60 conv output-affine absorb rules (opt-in CONV_FOLD_RULES —
     # the conv_channel_scale/shift anchor family of the conv+BN fold)
     # + 1 machine-minted verbatim composite (conv_bn_fold — the
-    # conv+BN fold, shipped via catopt_core.laws.minted)
+    # conv+BN fold, shipped via mlopt_core.laws.minted)
     # rewrites.
     assert len(found) == 285
 
@@ -253,7 +253,7 @@ def test_collections_split_by_domain():
 def test_pairing_passes_resolve_from_both_paths():
     for name in PAIRING_PASSES:
         package = getattr(laws, name)
-        direct = getattr(catopt_core.laws.pairing, name)
+        direct = getattr(mlopt_core.laws.pairing, name)
         assert callable(package) and callable(direct)
         assert package is direct
 
@@ -261,15 +261,15 @@ def test_pairing_passes_resolve_from_both_paths():
 def test_laws_modules_are_self_contained():
     """No laws submodule may depend on the removed ``*.rules`` shim."""
     shim_import = re.compile(
-        r"(?:from|import)\s+catopt(?:_core)?\.rules\b"
-        r"|catopt(?:_core)?\.rules\."
+        r"(?:from|import)\s+mlopt(?:_core)?\.rules\b"
+        r"|mlopt(?:_core)?\.rules\."
     )
     for mod in (
-        catopt_core.laws.base,
-        catopt_core.laws.tensor,
-        catopt_core.laws.scan,
-        catopt_core.laws.layout,
-        catopt_core.laws.pairing,
+        mlopt_core.laws.base,
+        mlopt_core.laws.tensor,
+        mlopt_core.laws.scan,
+        mlopt_core.laws.layout,
+        mlopt_core.laws.pairing,
     ):
         with open(mod.__file__) as f:
             src = f.read()
@@ -279,18 +279,18 @@ def test_laws_modules_are_self_contained():
 def test_laws_modules_import_cleanly():
     """Each laws module resolves its own surface standalone."""
     expected = {
-        "catopt_core.laws.base": ["R", "_SHAPE_MEMO", "_shape_of"],
-        "catopt_core.laws.tensor": [
+        "mlopt_core.laws.base": ["R", "_SHAPE_MEMO", "_shape_of"],
+        "mlopt_core.laws.tensor": [
             "SIMPLIFICATION_RULES",
             "CATEGORICAL_RULES",
             "ALL_RULES",
             "all_rules",
         ],
-        "catopt_core.laws.scan": ["SCAN_LAWS", "SCAN_DIAG_LAWS"],
-        "catopt_core.laws.layout": ["LAYOUT_RULES"],
-        "catopt_core.laws.pairing": PAIRING_PASSES,
-        "catopt_core.laws.factored": ["offer_low_rank_factors"],
-        "catopt_core.laws.specials": ["offer_weight_specials"],
+        "mlopt_core.laws.scan": ["SCAN_LAWS", "SCAN_DIAG_LAWS"],
+        "mlopt_core.laws.layout": ["LAYOUT_RULES"],
+        "mlopt_core.laws.pairing": PAIRING_PASSES,
+        "mlopt_core.laws.factored": ["offer_low_rank_factors"],
+        "mlopt_core.laws.specials": ["offer_weight_specials"],
     }
     for modname, names in expected.items():
         mod = sys.modules.get(modname) or importlib.import_module(
@@ -299,9 +299,9 @@ def test_laws_modules_import_cleanly():
         for n in names:
             assert hasattr(mod, n), f"{modname}.{n}"
     # package-level re-export matches the submodules' surface
-    assert laws.all_rules() == catopt_core.laws.tensor.all_rules()
-    assert laws.SCAN_LAWS is catopt_core.laws.scan.SCAN_LAWS
-    assert laws.SCAN_DIAG_LAWS is catopt_core.laws.scan.SCAN_DIAG_LAWS
+    assert laws.all_rules() == mlopt_core.laws.tensor.all_rules()
+    assert laws.SCAN_LAWS is mlopt_core.laws.scan.SCAN_LAWS
+    assert laws.SCAN_DIAG_LAWS is mlopt_core.laws.scan.SCAN_DIAG_LAWS
 
 
 def test_laws_preserves_module_level_objects():
@@ -313,7 +313,7 @@ def test_laws_preserves_module_level_objects():
 def test_axiom_lemma_marker_covers_all_rules():
     """The axiom/lemma split — every shipped rule carries a kernel kind.
 
-    Measured by ``python -m catopt_discovery.coherence --emit-basis`` (see
+    Measured by ``python -m mlopt_discovery.coherence --emit-basis`` (see
     ``project/retros/axiom-lemma-split.md`` and, for the promoted
     conditionals, ``project/retros/promoted-laws.md``): the declared
     kernel is the primitives plus one designated member per

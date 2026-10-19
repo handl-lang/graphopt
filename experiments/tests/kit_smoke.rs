@@ -1,7 +1,7 @@
 //! Kit composition smoke — the assembled runtime evaluates real tensor
 //! work through the `data`/`pratt`/`tree-walk` pipeline, and the
 //! `experiments/.handl.toml` dep-name resolution is honored end to end
-//! (the same seams `conv-bn-fold` exercises, minus the catopt artifact).
+//! (the same seams `conv-bn-fold` exercises, minus the mlopt artifact).
 
 use std::path::PathBuf;
 

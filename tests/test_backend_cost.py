@@ -6,14 +6,14 @@ is bounded by the backend's semantic language rather than discovered
 and then rejected at lowering.
 """
 
-from catopt_core.cost import (
+from mlopt_core.cost import (
     backend_cost,
     flops_cost,
     param_bytes_cost_for,
     roofline_cost_for,
 )
-from catopt_core.ir import Op, Param, TensorType, Var
-from catopt_core.ports import CostFn, signature_conforms
+from mlopt_core.ir import Op, Param, TensorType, Var
+from mlopt_core.ports import CostFn, signature_conforms
 
 _X = Var("x", TensorType((2, 2)))
 _SUPPORTED = Op.make("matmul", _X, Op.make("add", _X, _X))

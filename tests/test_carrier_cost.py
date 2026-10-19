@@ -17,16 +17,16 @@ honest direction (no carrier discount is invented).
 """
 
 import pytest
-from catopt_core.cost.basic import (
+from mlopt_core.cost.basic import (
     _INVALID_COST,
     _flops_of,
     flops_cost,
     launch_aware_cost,
 )
-from catopt_core.cost.params import dag_cost
-from catopt_core.egraph import EGraph
-from catopt_core.ir import Op, TensorType, Var
-from catopt_core.typing import _shape_of
+from mlopt_core.cost.params import dag_cost
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import Op, TensorType, Var
+from mlopt_core.typing import _shape_of
 
 
 def _v(name, *shape):

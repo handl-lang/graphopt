@@ -14,7 +14,7 @@
     "git_sha": "2c782dd",
     "git_dirty": true,
     "argv": [
-      "/home/luis/Desktop/catopt/bench/__main__.py",
+      "/home/luis/Desktop/mlopt/bench/__main__.py",
       "run",
       "killer_demo",
       "--pin"
@@ -31,7 +31,7 @@
       "claim": "the Autotuned lowering beats eager on at least one model",
       "verdict": "win",
       "headline": "best 2.69\u00d7 vs eager on matrix_chain",
-      "metric": "catopt_best / eager",
+      "metric": "mlopt_best / eager",
       "value": 2.68929375222698,
       "evidence": {
         "picks": {
@@ -69,7 +69,7 @@
           "note": "torch.compile eager \u2014 compiled in 2.2s"
         },
         {
-          "name": "catopt_best",
+          "name": "mlopt_best",
           "flops": null,
           "note": "pick=eager"
         }
@@ -77,7 +77,7 @@
       "median_s": {
         "eager": 2.618153050025285e-05,
         "inductor": 2.3167000108514912e-05,
-        "catopt_best": 2.6355586000590847e-05
+        "mlopt_best": 2.6355586000590847e-05
       },
       "aux": {
         "pick": "eager",
@@ -105,7 +105,7 @@
           "note": "torch.compile eager \u2014 compiled in 1.4s"
         },
         {
-          "name": "catopt_best",
+          "name": "mlopt_best",
           "flops": null,
           "note": "pick=batched"
         }
@@ -113,7 +113,7 @@
       "median_s": {
         "eager": 3.2263470000543746e-05,
         "inductor": 5.415499981609173e-05,
-        "catopt_best": 3.070161100004043e-05
+        "mlopt_best": 3.070161100004043e-05
       },
       "aux": {
         "pick": "batched",
@@ -141,7 +141,7 @@
           "note": "torch.compile eager \u2014 compiled in 0.1s"
         },
         {
-          "name": "catopt_best",
+          "name": "mlopt_best",
           "flops": null,
           "note": "pick=batched"
         }
@@ -149,7 +149,7 @@
       "median_s": {
         "eager": 1.1455955449991963e-05,
         "inductor": 3.289500000391854e-05,
-        "catopt_best": 4.259837900008279e-06
+        "mlopt_best": 4.259837900008279e-06
       },
       "aux": {
         "pick": "batched",
@@ -177,7 +177,7 @@
           "note": "torch.compile eager \u2014 compiled in 2.3s"
         },
         {
-          "name": "catopt_best",
+          "name": "mlopt_best",
           "flops": null,
           "note": "pick=eager"
         }
@@ -185,7 +185,7 @@
       "median_s": {
         "eager": 0.0002895666899985372,
         "inductor": 6.039399977453286e-05,
-        "catopt_best": 0.00030897382000148353
+        "mlopt_best": 0.00030897382000148353
       },
       "aux": {
         "pick": "eager",

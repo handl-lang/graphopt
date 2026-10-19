@@ -18,15 +18,15 @@ import pytest
 import torch
 import torch.nn as nn
 
-from catopt_orchestrator import (
+from mlopt_orchestrator import (
     Compositional,
     ContractionSearch,
     MorphismSearch,
     Optimizer,
 )
-from catopt_torch.adapters import TorchSink, TorchSource
-from catopt_torch.backend import TorchBackend
-from catopt_torch.composer import TorchComposer
+from mlopt_torch.adapters import TorchSink, TorchSource
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.composer import TorchComposer
 
 
 class _BakedMask(nn.Module):

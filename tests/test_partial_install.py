@@ -1,11 +1,11 @@
 """Partial-install robustness — plan 0003 package split.
 
-A ``catopt-*`` distribution must degrade gracefully when sibling
+A ``mlopt-*`` distribution must degrade gracefully when sibling
 domain packages are absent:
 
 * ``OpTable.full()`` skips carrier modules that cannot be imported —
   a carrier's terms cannot exist without its package, so the skip is
-  semantically correct (e.g. a catopt-core + catopt-torch install);
+  semantically correct (e.g. a mlopt-core + mlopt-torch install);
 * the skip is NARROWED to the carrier module itself: an import error
   raised inside an installed carrier (a missing dependency, reported
   under a different module name) still propagates;
@@ -18,11 +18,11 @@ domain packages are absent:
 import importlib
 from types import SimpleNamespace
 
-import catopt_core.ops as ops_mod
+import mlopt_core.ops as ops_mod
 import pytest
 import torch
-from catopt_core.ops import OpTable
-from catopt_torch.torch_bridge import _IR_TO_TORCH
+from mlopt_core.ops import OpTable
+from mlopt_torch.torch_bridge import _IR_TO_TORCH
 
 _real_import_module = importlib.import_module
 
@@ -45,11 +45,11 @@ def _import_blocker(blocked: str, missing: str | None = None):
 
 
 def test_full_skips_uninstalled_carrier(monkeypatch):
-    """catopt-carriers.om absent → its ops absent from full(), other
+    """mlopt-carriers.om absent → its ops absent from full(), other
     carriers unaffected — and the ambient dict's lazy resolver is
     skipped by the same path."""
     monkeypatch.setattr(
-        ops_mod, "importlib", _import_blocker("catopt_carriers.om")
+        ops_mod, "importlib", _import_blocker("mlopt_carriers.om")
     )
     # A fresh merged dict — never ambient-seeded: om's ops are absent.
     fresh = ops_mod.carrier_torch_bindings()
@@ -75,7 +75,7 @@ def test_full_reraises_errors_inside_a_carrier(monkeypatch):
     monkeypatch.setattr(
         ops_mod,
         "importlib",
-        _import_blocker("catopt_carriers.om", missing="torch"),
+        _import_blocker("mlopt_carriers.om", missing="torch"),
     )
     with pytest.raises(ModuleNotFoundError, match="torch"):
         OpTable.full()

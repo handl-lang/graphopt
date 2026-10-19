@@ -1,4 +1,4 @@
-/** The toy e-graph engine behind the catopt learning app.
+/** The toy e-graph engine behind the mlopt learning app.
  *
  * A five-op algebra (`matmul` / `add` / `mul` / `sq` / `sqq`) with six
  * laws, a static cost model, a static feature profiler, and a numeric

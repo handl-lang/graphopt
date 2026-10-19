@@ -1,6 +1,6 @@
 """law_bench — per-rewrite-law value harness.
 
-Adding a rewrite law to ``catopt_core.laws`` is cheap; knowing
+Adding a rewrite law to ``mlopt_core.laws`` is cheap; knowing
 whether it *pays* is the part that used to be expensive.  This
 harness turns the value question into a one-command measurement.
 For each named law it
@@ -60,9 +60,9 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from catopt_core.cost import backend_cost, dag_cost, executor_cost_for
-from catopt_core.egraph import EGraph, Rewrite
-from catopt_core.ir import (
+from mlopt_core.cost import backend_cost, dag_cost, executor_cost_for
+from mlopt_core.egraph import EGraph, Rewrite
+from mlopt_core.ir import (
     IR,
     Const,
     Op,
@@ -71,7 +71,7 @@ from catopt_core.ir import (
     Var,
     op_repr,
 )
-from catopt_core.laws import (
+from mlopt_core.laws import (
     ALL_RULES,
     ATTENTION_RULES,
     CATEGORICAL_RULES,
@@ -80,9 +80,9 @@ from catopt_core.laws import (
     SDPA_FOLD_RULES,
     SIMPLIFICATION_RULES,
 )
-from catopt_orchestrator.optimize import _lower_extracted
-from catopt_torch.adapters import TorchSink
-from catopt_torch.torch_bridge import (
+from mlopt_orchestrator.optimize import _lower_extracted
+from mlopt_torch.adapters import TorchSink
+from mlopt_torch.torch_bridge import (
     IRModule,  # noqa: F401 — docstring ref
 )
 

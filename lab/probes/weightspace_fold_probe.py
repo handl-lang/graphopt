@@ -288,7 +288,7 @@ def gate_synth_fit(r: dict[str, Any]) -> dict[str, Any]:
     supplied ``scale``, needing only multiplication), which isolates
     whether a refusal is a missing-op gap or something else.
     """
-    from catopt_discovery import dspec_synth as dsp
+    from mlopt_discovery import dspec_synth as dsp
 
     rows = _scalar_samples(r)
     raw_bounds = [
@@ -330,7 +330,7 @@ def gate_prescaled_fit(r: dict[str, Any]) -> dict[str, Any]:
     tier refuses, the refusal is precisely the missing ``sqrt``/``fdiv``
     ops, not a structural mismatch.
     """
-    from catopt_discovery import dspec_synth as dsp
+    from mlopt_discovery import dspec_synth as dsp
 
     rows = _scalar_samples(r)
 
@@ -378,7 +378,7 @@ def gate_scale_fit(r: dict[str, Any]) -> dict[str, Any]:
     the statistic reads (``gamma``/``var``/``eps``), so the level
     product stays small enough for the streamed sweep to terminate.
     """
-    from catopt_discovery import dspec_synth as dsp
+    from mlopt_discovery import dspec_synth as dsp
 
     rows = _scalar_samples(r)
     bounds = [
@@ -416,7 +416,7 @@ def gate_dsl_expressibility() -> dict[str, Any]:
     declines (int-only exponent) but the DSL now carries ``sqrt`` /
     ``rsqrt`` directly — measured through ``eval_derive``.
     """
-    from catopt_core.laws.cond import _DOPS, eval_derive
+    from mlopt_core.laws.cond import _DOPS, eval_derive
 
     b = {"$attr:var": 4.0, "$attr:eps": 1e-5, "$attr:gamma": 2.0}
     fold = {
@@ -462,9 +462,9 @@ def gate_value_domain() -> dict[str, Any]:
     algebra — re-measured here: does the fold's ``scale`` mint as a
     tensor-valued derive, and does the synth survive tensor samples?
     """
-    import catopt_core.laws.cond as cond
-    from catopt_core.ir import Const, Param, TensorType
-    from catopt_discovery import dspec_synth as dsp
+    import mlopt_core.laws.cond as cond
+    from mlopt_core.ir import Const, Param, TensorType
+    from mlopt_discovery import dspec_synth as dsp
 
     table: dict[str, Any] = {}
 
@@ -573,9 +573,9 @@ def gate_egraph_visibility() -> dict[str, Any]:
     families in the IR; then check whether any shipped law's LHS
     mentions ``batch_norm`` (a fold needs the node to be matchable).
     """
-    from catopt_core.egraph import Rewrite
-    from catopt_torch.adapters import TorchSource
-    from catopt_torch.models import ResNetBlock
+    from mlopt_core.egraph import Rewrite
+    from mlopt_torch.adapters import TorchSource
+    from mlopt_torch.models import ResNetBlock
 
     mod = ResNetBlock(8)
     mod.eval()
@@ -626,8 +626,8 @@ def gate_cost_model() -> dict[str, Any]:
     model must price the BN node it would remove (and the folded conv
     it would keep).
     """
-    from catopt_core.cost.basic import _OP_FLOPS, _flops_of
-    from catopt_core.ir import Op, TensorType, Var
+    from mlopt_core.cost.basic import _OP_FLOPS, _flops_of
+    from mlopt_core.ir import Op, TensorType, Var
 
     x = Var("x", TensorType((1, 4, 8, 8)))
     w = Var("w", TensorType((6, 4, 3, 3)))
@@ -651,7 +651,7 @@ def gate_derived_leaf_seam() -> dict[str, Any]:
     ``source_tensors``.  Report whether that seam exists and is
     procedural (not a ``dspec``).
     """
-    from catopt_core.laws.specials import offer_weight_specials
+    from mlopt_core.laws.specials import offer_weight_specials
 
     doc = offer_weight_specials.__doc__ or ""
     return {

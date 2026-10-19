@@ -1,4 +1,4 @@
-"""Coverage tests for catopt_core.egraph internals.
+"""Coverage tests for mlopt_core.egraph internals.
 
 ``test_egraph.py`` / ``test_certificates.py`` / ``test_cert_nonlocal.py``
 pin the headline behaviour of the package; this file closes the residual
@@ -55,9 +55,9 @@ Everything is deterministic (small graphs, no RNG).
 
 import pytest
 
-from catopt_core import laws as R
-from catopt_core.cost import count_cost, dag_cost, executor_cost_for
-from catopt_core.egraph import (
+from mlopt_core import laws as R
+from mlopt_core.cost import count_cost, dag_cost, executor_cost_for
+from mlopt_core.egraph import (
     Certificate,
     CertificateVerificationError,
     CertStep,
@@ -68,7 +68,7 @@ from catopt_core.egraph import (
     _LeafRegistry,
     verify_certificate,
 )
-from catopt_core.egraph.terms import (
+from mlopt_core.egraph.terms import (
     _iter_ops,
     _replace_subterm,
     _subterm,
@@ -76,8 +76,8 @@ from catopt_core.egraph.terms import (
     _term_match,
     _term_paths,
 )
-from catopt_core.ir import Const, Op, Param, TensorType, Var, op_repr
-from catopt_core.laws import pair_shared_input_linears
+from mlopt_core.ir import Const, Op, Param, TensorType, Var, op_repr
+from mlopt_core.laws import pair_shared_input_linears
 
 
 def _t(d=4):
@@ -617,7 +617,7 @@ def test_extract_paired_greedy_fallback(monkeypatch):
     """Past the exhaustive cap the per-group decision degrades to the
     bounded drop-one-group pass (and keeps >=1 group)."""
     monkeypatch.setattr(
-        "catopt_core.egraph.extract._PAIRING_EXHAUSTIVE_MAX", 0
+        "mlopt_core.egraph.extract._PAIRING_EXHAUSTIVE_MAX", 0
     )
     # n=1: no non-empty removal -> the keep->=1 guard fires
     eg, _src, root, groups = _pairing_graph()
