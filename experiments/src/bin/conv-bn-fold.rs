@@ -24,7 +24,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::Instant;
 
-use mlopt_experiments::Kit;
+use mlopt_experiments::CatoptKit;
 
 /// The crate dir — `experiments/`, whose `.handl.toml` anchors
 /// `from "host-tensor" import tensor` inside the imported program.
@@ -284,7 +284,7 @@ mod cli {
 fn run() -> Result<(), String> {
     let args = cli::parse().map_err(|_| "bad arguments".to_string())?;
     let conv_bn_hnl = resolve_conv_bn(&args)?;
-    let kit = Kit::new_with_project(project_dir()).map_err(|e| format!("kit assembly: {e:?}"))?;
+    let kit = CatoptKit::new_with_project(project_dir()).map_err(|e| format!("kit assembly: {e:?}"))?;
     let f = Fixture::dyadic();
 
     let spelled = program(&conv_bn_hnl, "conv_bn", &f);

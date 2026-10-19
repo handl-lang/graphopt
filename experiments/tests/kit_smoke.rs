@@ -5,7 +5,7 @@
 
 use std::path::PathBuf;
 
-use mlopt_experiments::Kit;
+use mlopt_experiments::CatoptKit;
 
 fn project_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -16,7 +16,7 @@ fn project_dir() -> PathBuf {
 /// impl — returning the `{"__tensor__": …}` wire form.
 #[test]
 fn matmul_runs_through_the_composed_kit() {
-    let kit = Kit::new_with_project(project_dir()).unwrap();
+    let kit = CatoptKit::new_with_project(project_dir()).unwrap();
     let v = kit
         .run(
             "tensor.to_list(tensor.matmul(\
@@ -31,7 +31,7 @@ fn matmul_runs_through_the_composed_kit() {
 /// fallback a wire decode would produce.
 #[test]
 fn tensor_result_is_the_real_tagged_variant() {
-    let kit = Kit::new_with_project(project_dir()).unwrap();
+    let kit = CatoptKit::new_with_project(project_dir()).unwrap();
     let v = kit.run_tagged("tensor.ones([2, 2])").unwrap();
     assert!(
         matches!(v, handl_value::TaggedValue::Tensor(_)),
