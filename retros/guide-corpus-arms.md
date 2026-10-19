@@ -10,14 +10,14 @@ board as legal `Allocation` arms, and re-measures.
 
 Reproduce (each run ~1–3 min CPU):
 
-    .venv/bin/python -m catopt_discovery.meta_game --guide \
+    .venv/bin/python -m mlopt_discovery.meta_game --guide \
         --budget 40 --guide-step 6 --guide-corpus 6 \
         --plays-cap 12 --seed 0
-    .venv/bin/python -m catopt_discovery.meta_game --guide \
+    .venv/bin/python -m mlopt_discovery.meta_game --guide \
         --budget 70 --guide-step 8 --guide-corpus 8 \
         --plays-cap 12 --seed 0
 
-Everything lives in `catopt_discovery/meta_game.py`; tests in
+Everything lives in `mlopt_discovery/meta_game.py`; tests in
 `tests/test_discovery_meta_game.py`.
 
 ## 1. The scope-key fix — the store was already honest

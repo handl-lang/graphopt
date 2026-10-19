@@ -83,7 +83,7 @@ buried dimension is the leaf bank, not the attr base.  (See
 ## What changed
 
 One helper and a rewrite of `_synth_bases`'s nesting, all in
-`catopt_discovery.oracle`:
+`mlopt_discovery.oracle`:
 
 1. **`oracle._diag_groups`** — the ragged-product companion of
    `_diag_product`.  `groups[v]` is one viewed binding's list of

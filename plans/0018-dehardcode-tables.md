@@ -1,6 +1,6 @@
 # Plan 0018 — de-hardcoding the op tables
 
-Status: stages 0–4 landed — `catopt_core.opmeta` is the single source
+Status: stages 0–4 landed — `mlopt_core.opmeta` is the single source
 and the thirteen duplicated sets are projections of it; the carrier
 subsets and the evaluation-dimension tables stay code by design (see
 the boundary).  Retro: `project/retros/dehardcode.md`.  The
@@ -13,7 +13,7 @@ from it.
 
 Not every table is a leak.  Three kinds of table exist:
 
-1. **Single-source, already data.**  `catopt_core.attrs.ATTR_SCHEMA`
+1. **Single-source, already data.**  `mlopt_core.attrs.ATTR_SCHEMA`
    (the canonical positional-attr names), `cost.basic._OP_FLOPS` (the
    fallback FLOP weights), `typing._SHAPE_RULES` (the carrier shape
    registry), `_CARRIER_MODULES` (the carrier registration tuple).
@@ -34,24 +34,24 @@ Not every table is a leak.  Three kinds of table exist:
 
 ## Inventory (measured)
 
-Duplicated / hardcoded op sets found in `catopt-core`,
-`catopt-orchestrator`, `catopt-discovery`:
+Duplicated / hardcoded op sets found in `mlopt-core`,
+`mlopt-orchestrator`, `mlopt-discovery`:
 
 | # | Table | File:line | Kind | Disposition |
 |---|---|---|---|---|
-| 1 | `_VIEW_OPS` | `catopt_core/cost/basic.py:97` | zero-kernel cost views | → registry `cost-view` |
-| 2 | `_VIEW_OPS` | `catopt_orchestrator/morphisms/signature.py:134` | transparent relayout | → registry `relayout` |
-| 3 | `_VIEW_OPS` | `catopt_discovery/pipeline.py:213` | generator naturality alphabet | → registry `generator-view` |
-| 4 | `_VIEWISH` | `catopt_discovery/oracle.py:96` | oracle-instantiable views | → registry `viewish` |
-| 5 | `_REDUCTION_DIM_OPS` | `catopt_discovery/oracle.py:562` | axis-or-tuple reductions | → registry `reduce-dim` |
-| 6 | `_POINTWISE_OPS` | `catopt_orchestrator/morphisms/signature.py:179` | multi-operand pointwise | → registry `pointwise` |
-| 7 | `_ACT_OPS` | `catopt_orchestrator/morphisms/signature.py:62` | spine activations | → registry `activation` |
-| 8 | `_MUT_OPS` | `catopt_orchestrator/morphisms/signature.py:117` | arg0-mutating writes | → registry `write` |
-| 9 | `_TABLE_OPS` | `catopt_orchestrator/morphisms/signature.py:218` | lookup-table roles | → registry `table` |
-| 10 | `_POINTWISE_UNARY` | `catopt_core/laws/layout.py:249` | unary commutation family | → registry `pointwise-unary` |
-| 11 | `_POINTWISE_BINARY` | `catopt_core/laws/layout.py:265` | binary commutation family | → registry `pointwise-binary` |
-| 12 | `_POINTWISE` | `catopt_discovery/pipeline.py:210` | generator pointwise alphabet | → registry `pointwise-binary` |
-| 13 | `_COMMUTATIVE_BROADCAST` | `catopt_core/typing.py:117` | operand-symmetric ops | → registry `commutative` |
+| 1 | `_VIEW_OPS` | `mlopt_core/cost/basic.py:97` | zero-kernel cost views | → registry `cost-view` |
+| 2 | `_VIEW_OPS` | `mlopt_orchestrator/morphisms/signature.py:134` | transparent relayout | → registry `relayout` |
+| 3 | `_VIEW_OPS` | `mlopt_discovery/pipeline.py:213` | generator naturality alphabet | → registry `generator-view` |
+| 4 | `_VIEWISH` | `mlopt_discovery/oracle.py:96` | oracle-instantiable views | → registry `viewish` |
+| 5 | `_REDUCTION_DIM_OPS` | `mlopt_discovery/oracle.py:562` | axis-or-tuple reductions | → registry `reduce-dim` |
+| 6 | `_POINTWISE_OPS` | `mlopt_orchestrator/morphisms/signature.py:179` | multi-operand pointwise | → registry `pointwise` |
+| 7 | `_ACT_OPS` | `mlopt_orchestrator/morphisms/signature.py:62` | spine activations | → registry `activation` |
+| 8 | `_MUT_OPS` | `mlopt_orchestrator/morphisms/signature.py:117` | arg0-mutating writes | → registry `write` |
+| 9 | `_TABLE_OPS` | `mlopt_orchestrator/morphisms/signature.py:218` | lookup-table roles | → registry `table` |
+| 10 | `_POINTWISE_UNARY` | `mlopt_core/laws/layout.py:249` | unary commutation family | → registry `pointwise-unary` |
+| 11 | `_POINTWISE_BINARY` | `mlopt_core/laws/layout.py:265` | binary commutation family | → registry `pointwise-binary` |
+| 12 | `_POINTWISE` | `mlopt_discovery/pipeline.py:210` | generator pointwise alphabet | → registry `pointwise-binary` |
+| 13 | `_COMMUTATIVE_BROADCAST` | `mlopt_core/typing.py:117` | operand-symmetric ops | → registry `commutative` |
 
 Adjacent sets **deliberately left as code** (documented boundary —
 they are narrower *derivations* of a concept, or a different axis):
@@ -65,14 +65,14 @@ they are narrower *derivations* of a concept, or a different axis):
 | `_ELEMWISE`, `_DIM_OPS` | `laws/headshare.py:137` | a law module's local precondition set |
 | `_BASE_VIEW_OPS` | `carriers/trace_lift.py:149` | a *derived subset* of relayout (indexing ops removed) with documented rationale |
 | `scan_lower._VIEW_OPS` | `carriers/scan_lower.py:83` | relayout + the `t` spelling; carrier-local |
-| `_ATEN_TO_IR` / `_IR_TO_TORCH_EXTRA` | `catopt_torch/torch_bridge.py:28` | the aten→IR alias map; **validated against** the registry at the boundary, never moved into core (core is torch-free) |
-| `ATTR_SCHEMA` / `ATTR_REQUIRED` | `catopt_core/attrs.py:73` | already single-source; the registry *indexes* it |
+| `_ATEN_TO_IR` / `_IR_TO_TORCH_EXTRA` | `mlopt_torch/torch_bridge.py:28` | the aten→IR alias map; **validated against** the registry at the boundary, never moved into core (core is torch-free) |
+| `ATTR_SCHEMA` / `ATTR_REQUIRED` | `mlopt_core/attrs.py:73` | already single-source; the registry *indexes* it |
 | `_OP_FLOPS` | `cost/basic.py:48` | already single-source; evaluation-dimension data |
 | `_ARM_NAMES` / `ENUMERATION_ORDER` / `CORPUS_ARMS` | `discovery/meta_game.py:1407` | a *generator* inventory, not an op vocabulary |
 
 ## Target design
 
-`catopt_core.opmeta` — one declarative table keyed by op name:
+`mlopt_core.opmeta` — one declarative table keyed by op name:
 
 ```python
 @dataclass(frozen=True)
@@ -104,7 +104,7 @@ class OpMeta:
 
 | Step | What | Gate |
 |---|---|---|
-| 0 | `catopt_core/opmeta.py` — registry + tags + projections + `validate_aten_map` | unit tests |
+| 0 | `mlopt_core/opmeta.py` — registry + tags + projections + `validate_aten_map` | unit tests |
 | 1 | `cost/basic._VIEW_OPS` ← `COST_VIEW_OPS`; `typing._COMMUTATIVE_BROADCAST` ← `COMMUTATIVE_OPS`; `laws/layout._POINTWISE_*` ← projections | cost/typing/layout tests |
 | 2 | `orchestrator/morphisms/signature._VIEW_OPS` / `_POINTWISE_OPS` / `_ACT_OPS` / `_MUT_OPS` / `_TABLE_OPS` ← projections | morphisms tests |
 | 3 | `discovery/pipeline._VIEW_OPS` / `_POINTWISE`, `discovery/oracle._VIEWISH` / `_REDUCTION_DIM_OPS` ← projections | discovery tests |

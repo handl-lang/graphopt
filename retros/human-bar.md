@@ -15,13 +15,13 @@ cell-for-cell).
 
 ## The provenance mechanism
 
-`catopt_core.laws.provenance` (new, registry-level — no law bodies
+`mlopt_core.laws.provenance` (new, registry-level — no law bodies
 touched): `MACHINE_SHIPPED` names the ten promoted laws as they sit in
 `ALL_RULES`; `MACHINE_STORED` names the gauntlet-cleared store objects
 that stayed unshipped; `law_provenance(name_or_rule) -> "human" |
 "machine"` is total.  Two collisions the registry states honestly:
 `om_lift` names *both* a human carrier law
-(`catopt_carriers.om.OM_LIFT`, metavar-dim guard) *and* a constructed
+(`mlopt_carriers.om.OM_LIFT`, metavar-dim guard) *and* a constructed
 store object (literal `dim=-1`); and `softsign_fold` /
 `sdpa_fold_{,div_}nomask` exist as shipped laws *and* as same-named
 store spellings.  The registry resolves names; arm-level attribution
@@ -29,7 +29,7 @@ below compares **rule objects** (`id()` against the actual arm
 membership), so the collision cannot launder a human law into machine
 credit.
 
-The committed `$XDG_CACHE_HOME/catopt/evidence.db` holds no `lemmas` rows — admission
+The committed `$XDG_CACHE_HOME/mlopt/evidence.db` holds no `lemmas` rows — admission
 runs used ephemeral stores — so the store arm rebuilds the recorded
 objects verbatim: the eight guarded view strips
 (`{mul,sub,add}_unsqueeze_l_id`, `mul_unsqueeze_r_id`,
@@ -205,9 +205,9 @@ count, is the measure.
 
 ## Files
 
-- `packages/catopt-core/src/catopt_core/laws/provenance.py` —
+- `packages/mlopt-core/src/mlopt_core/laws/provenance.py` —
   `MACHINE_SHIPPED` / `MACHINE_STORED` / `MACHINE_LAWS` +
-  `law_provenance`; re-exported from `catopt_core.laws`.
+  `law_provenance`; re-exported from `mlopt_core.laws`.
 - `tests/test_law_provenance.py` — registry totality, the promotion
   table pin, arm partitioning, and the four behavioral ablation pins
   (TimeCondConv both directions, AdaLNBlock exclusivity, LoRAAdapter

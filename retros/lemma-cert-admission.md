@@ -13,9 +13,9 @@ Reproduce:
 
     .venv/bin/python -m pytest tests/test_lemma_certificates.py \
         tests/test_law_serialize.py tests/test_derive_laws.py -q
-    .venv/bin/python python -m catopt_discovery.evidence --report /tmp/l.db \
+    .venv/bin/python python -m mlopt_discovery.evidence --report /tmp/l.db \
         --add-lemma factor_matmul
-    .venv/bin/python python -m catopt_discovery.evidence --report /tmp/l.db \
+    .venv/bin/python python -m mlopt_discovery.evidence --report /tmp/l.db \
         --admit '<alpha_key printed above>'
 
 ## 1. What got wired — the existing seam, extended
@@ -26,7 +26,7 @@ itself — no new pipeline stage, no change to
 *source*, not yet a `Rewrite`; the cert attaches when the admitted
 law is stored):
 
-* `catopt_core.laws.serialize.law_to_data(rule, cert=None)` — the
+* `mlopt_core.laws.serialize.law_to_data(rule, cert=None)` — the
   record gains `"cert"`: `cert_to_data` output when a
   `Certificate` is supplied, `null` otherwise.  The caller builds the
   certificate (`tools/law_lemma_cert.materialize`); the codec only

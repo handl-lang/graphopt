@@ -6,7 +6,7 @@ still can't compose when the guard needs real shapes").  Date: 2026-10.
 ## The failure
 
 `compose_objects` fires each premise with
-`catopt_core.meta.apply_rewrite_at`, which evaluates the premise's guard
+`mlopt_core.meta.apply_rewrite_at`, which evaluates the premise's guard
 on the *symbolic* binding.  A guard that reads real tensor extents can't
 decide there.  Reproduced on `compose(om_lift, om_split)`:
 

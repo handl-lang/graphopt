@@ -18,8 +18,8 @@ Reproduce:
     .venv/bin/python -m pytest tests/test_derive_laws.py \
         tests/test_law_serialize.py tests/test_cond_laws.py -q
     .venv/bin/python -c "
-    from catopt_core.laws import ALL_RULES
-    from catopt_core.laws.serialize import missing_hooks
+    from mlopt_core.laws import ALL_RULES
+    from mlopt_core.laws.serialize import missing_hooks
     print(sum(not missing_hooks(r) for r in ALL_RULES), '/', len(ALL_RULES))"
 
 ## 1. The mechanism

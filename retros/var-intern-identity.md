@@ -29,7 +29,7 @@ Two independent facts compose:
    `select(x, dim=0, index=i)` enodes whose `x` args were `==`
    but not `is`.
 
-2. **The cost model tested identity.**  `catopt_core.cost.executor`'s
+2. **The cost model tested identity.**  `mlopt_core.cost.executor`'s
    `_leaf_gather_base` (mirroring `scan_lower._leaf_b_gather`) used
    `b.args[0] is not base`; `_leaf_shared_a` used `a is a0`.  With
    distinct-equal `x` objects the gather recognition returned

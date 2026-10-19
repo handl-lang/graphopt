@@ -1,22 +1,32 @@
 # Retro — gate 3: the mixed state spelling is an extraction tie, and the fix is real but does not close the gate
 
 **Date**: 2026-10-16.
-**Commit**: `aa56e55` (catopt `main`).
+**Commit**: `aa56e55` (mlopt `main`).
 **Decides**: ADR 0008 gate 3 → still **FAIL**; the third named cause
 (*extraction mixes two state spellings*) is **measured**, is a real
 extraction defect, and is **not sufficient** — fixing it recovers
 **1.01 %** FLOPs (~~5.06 %~~ — see the correction note) and leaves the
 gate negative.  ADR 0009 stage 4 stays unjustified.
 
+> **Status update 2026-10-16** (`project/retros/gate3-form-level-proposer.md`,
+> mlopt `9ad7c3f` + the follow-up boundary measurement): the "still
+> FAIL" verdict is **stale** — gate 3 was reached by the fifth move
+> (the form-level proposer: two verified `Loop` terms on the real
+> extracted winner, one per chunk-width family).  The surviving
+> residual `state-chain-broken:block3->block4` was itself re-measured
+> and corrected: the boundary states differ by γ^12 in *value*, so no
+> sound merge closes it.  This retro's extraction findings (cost tie,
+> sharing-aware fix, 1.01 %) stand unchanged.
+
 > **Superseded 2026-10-16** (`project/retros/gate3-form-level-proposer.md`,
-> catopt `9ad7c3f`): the *fifth* move (form-level proposer over the
+> mlopt `9ad7c3f`): the *fifth* move (form-level proposer over the
 > saturated e-graph) reached `loop` on the real winner — gate 3 passes
 > with the `state-chain-broken:block3→block4` residual (two `Loop`s, not
 > one).  This retro's negative stands as the fourth move's measurement,
 > not the gate's final verdict.
 
 > **Correction 2026-10-15** (`project/retros/saturation-determinism.md`,
-> catopt `abf6114`).  The sharing-aware recovery this retro reports
+> mlopt `abf6114`).  The sharing-aware recovery this retro reports
 > (**455,752 → 432,696, −5.06 %, 5 overrides**) is **superseded**.  The
 > staged gate-3 saturation and its sharing-aware optimum were
 > **hash-order dependent** — the matcher and the extraction scanned
@@ -70,7 +80,7 @@ did not already prefer — it only removes the arbitrary per-class choice.
 Wired into the gate-3 protocol as
 `lab/bridge/combinator_probe.py --sharing-extract`.
 
-**Why in `lab/` and not in `catopt_core.egraph.extract`**: the same
+**Why in `lab/` and not in `mlopt_core.egraph.extract`**: the same
 tie-break inside `extract_best` would change extraction for **every**
 caller, and the AGENTS rule is explicit that such a change requires the
 full suite (which this host's memory budget forbids).  The measured
@@ -166,7 +176,7 @@ applyd}`, as part of the artifact).
 per-class greedy extraction is **1.01 %** (~~5.06 %~~) off the cost its
 own model assigns, and a bounded, monotone coordination recovers it —
 though at ~1 % on a single workload the promotion of the tie-break into
-`catopt_core.egraph.extract` is a **judgement call**, not the obvious win
+`mlopt_core.egraph.extract` is a **judgement call**, not the obvious win
 the 5 % figure implied.  It is the same non-local blindness
 `extract_paired` exists for, here on the tie-break rather than on a group
 decision.
@@ -258,7 +268,7 @@ ties, and one of them is a genuine cost preference.
   (non-local) sharing signal; it is monotone, numerically verified
   equivalent (2.2e-16), and recovers **4,624** FLOPs (~~23,056~~).  At
   ~1 % on one workload, though, promoting the tie-break into
-  `catopt_core.egraph.extract` is a **judgement call**, not an obvious
+  `mlopt_core.egraph.extract` is a **judgement call**, not an obvious
   win.
 * **The fix does not close gate 3.**  The verdict is unchanged, and the
   remaining causes are named below.
@@ -269,7 +279,7 @@ ties, and one of them is a genuine cost preference.
   the *tie-break* class of fix — because the small-chunk family's
   preference for the unfactored spelling is a genuine cost difference,
   and because the residual differences are not spellings at all.
-* Anything about `catopt_core.egraph.extract` as shipped: the
+* Anything about `mlopt_core.egraph.extract` as shipped: the
   sharing-aware pass is a **lab prototype**.  Whether the same
   coordination belongs in the package (as an opt-in arm beside
   `fusion_epsilon` / `extract_paired`) is a separate decision needing
@@ -316,7 +326,7 @@ canonical reading.
 * New surface: one lab module (`lab/bridge/sharing_extract.py`,
   ~165 lines), one lab probe (`lab/probes/gate3_state_spelling_probe.py`,
   ~560 lines), ~30 lines of probe wiring.  **No shipped-package change**,
-  no law-bank change, no `catopt_core` change.
+  no law-bank change, no `mlopt_core` change.
 
 ## Gates run
 

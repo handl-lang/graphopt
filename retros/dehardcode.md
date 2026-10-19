@@ -4,7 +4,7 @@
 
 The op *vocabulary* was hand-listed in a dozen modules.  Thirteen
 duplicated sets became **named projections of one registry**
-(`catopt_core.opmeta`), and a consistency test now pins the
+(`mlopt_core.opmeta`), and a consistency test now pins the
 relationships that used to be folklore.  No engine behaviour changed:
 every projection is *byte-identical* to the literal it replaced
 (verified before the literals were removed).

@@ -6,7 +6,7 @@ Date: 2026-10.
 ## What landed
 
 The `lemmas` table of the evidence store
-(`catopt_discovery.evidence`) generalised from "verdicts + law
+(`mlopt_discovery.evidence`) generalised from "verdicts + law
 records" to the **declared-object store**: a row is a serialized
 *declaration* — data the referee can replay into a live object the
 same way `--admit` already reconstructs a stored lemma.

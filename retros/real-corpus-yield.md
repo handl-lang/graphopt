@@ -21,18 +21,18 @@ Two intake runs from the committed tree, same seed (0), same vocab
 (`derived`), no holdout:
 
 ```sh
-.venv/bin/python -m catopt_discovery.intake \
+.venv/bin/python -m mlopt_discovery.intake \
     --out /tmp/full_intake_corpus.json \
     --tensors /tmp/full_intake_tensors.pt \
     --json /tmp/full_results.json
-.venv/bin/python -m catopt_discovery.intake --real-only \
+.venv/bin/python -m mlopt_discovery.intake --real-only \
     --out /tmp/real_intake_corpus.json \
     --tensors /tmp/real_intake_tensors.pt \
     --json /tmp/real_results.json
 ```
 
 (`--out`/`--tensors` are redirected to `/tmp` so the gitignored
-`$XDG_CACHE_HOME/catopt/intake_corpus.json` stays as last generated — see *Caveats*.)
+`$XDG_CACHE_HOME/mlopt/intake_corpus.json` stays as last generated — see *Caveats*.)
 Both runs ingested, measured the census delta, and ran the full
 baseline-vs-enlarged pipeline delta.  A second probe loaded the two
 side-files, re-ran `workload_gen._run_pipeline` on each enlarged
@@ -231,7 +231,7 @@ refuting) those guards, not minting more spellings.
   `equal == 0` on real cases bounds the guarded region from above.
   (`other-err`/`rhs-err` sites were counted but are not firings.)
 - **`--real-only` writes the filtered census.**  Without `--out`, a
-  real-only run replaces `$XDG_CACHE_HOME/catopt/intake_corpus.json` with the
+  real-only run replaces `$XDG_CACHE_HOME/mlopt/intake_corpus.json` with the
   real-only subset — consistent with "the file IS what was ingested",
   but the full side-file is then gone until re-generated.  These
   runs redirected `--out`/`--tensors` to `/tmp`; the repo state is

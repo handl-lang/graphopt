@@ -15,7 +15,7 @@ object on `synth: 0 accepted`.  `meta_game.py`, `pipeline.py`,
 1. **Generic attr domains** (`oracle._attr_kind` / `_kind_domain` /
    `_generic_attr_options`).  `_attr_options`'s wildcard now types
    each metavar'd attr key: positional spellings canonicalize
-   through `catopt_core.attrs.ATTR_SCHEMA` (`sdpa.arg6` -> `scale`),
+   through `mlopt_core.attrs.ATTR_SCHEMA` (`sdpa.arg6` -> `scale`),
    `(op, name)` overrides beat the name table (`rms_norm.dim` is a
    normalized-shape tuple, not an axis; `eye.dim` is an int), and
    reduction ops' `dim` enumerates both the scalar and tuple

@@ -1,6 +1,6 @@
 # Retro — ops as data (plan 0019)
 
-**What landed.** `catopt_core.opdata` — the declaration seam for a
+**What landed.** `mlopt_core.opdata` — the declaration seam for a
 view/relayout-class op.  An `OpDef` (name, arity, tags, attr schema,
 shape spec in the existing `cond` DSL) serializes to JSON-safe data;
 `declare_op` registers it into the live `opmeta.REGISTRY`, the attr

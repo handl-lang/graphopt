@@ -14,13 +14,13 @@ how many *usable* objects does any guide actually produce?
 Reproduce (~40–55 min CPU per seed; ~35 min is the 60-episode training
 pass):
 
-    .venv/bin/python -m catopt_discovery.meta_game --guide \
+    .venv/bin/python -m mlopt_discovery.meta_game --guide \
         --guide-slice full --guide-episodes 60 --budget 90 \
         --guide-step 8 --guide-corpus 10 --plays-cap 8 \
         --guide-gauntlet --seed 0 --json /tmp/full_s0.json
     # seeds 0, 3, 5 at budget 90; seed 0 again at budget 80
 
-Everything lives in `catopt_discovery/meta_game.py`; tests in
+Everything lives in `mlopt_discovery/meta_game.py`; tests in
 `tests/test_discovery_meta_game.py`.
 
 ## 1. What this run needed — the honest extensions
@@ -256,5 +256,5 @@ Verification: `pytest tests/test_discovery_meta_game.py -q` →
 48 passed; `ruff check`, `ruff format --check`, `ty check` clean on
 `meta_game.py`.  Radon: the two functions the pass touches are back
 at their pre-change complexity (the ratchet still reports the
-pre-existing `catopt_core.typing._infer_op_shape` regression — a
+pre-existing `mlopt_core.typing._infer_op_shape` regression — a
 sibling agent's uncommitted work, untouched here).

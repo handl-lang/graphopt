@@ -11,8 +11,8 @@ the object is a law the library lacks, a respelling of one it has,
 or corpus-specific material that should not ship.  This retro records
 that call.
 
-Promoted code lives in `catopt_core.laws.tensor`; nothing under
-`catopt_discovery` changed (`oracle.py`/`evidence.py`/`intake.py`/
+Promoted code lives in `mlopt_core.laws.tensor`; nothing under
+`mlopt_discovery` changed (`oracle.py`/`evidence.py`/`intake.py`/
 `opmeta`/`opdata` untouched).
 
 ## The rule
@@ -39,7 +39,7 @@ worth shipping — corpus-specific, no pay, or no clean region.
 | `add_transpose_l_id` | **subsumed** | `transpose_noop` | same — the wrapped spellings stay store objects |
 | `mul_chunk_l_id` | **subsumed** | `chunk_single` | `chunk(u, chunks=1, d, i) → u` under `attr-eq(C, 1)` — the single-chunk partition IS the tensor; the mul-wrapped strip follows by congruence |
 | `linear_channel_scale_rev ∘ linear_row_scale` | **promoted** | `linear_channel_to_row_scale` | derivable composite, `derivation=("linear_channel_scale_rev", "linear_row_scale")`, kind `lemma`; both premises are SYMMETRY-gated (opt-in), so under `DEFAULT` this term-local edge is genuinely new reach; transported guard is the premises' conjunction over the shared `c`; paid 1 on corpus |
-| `om_lift` | **duplicate — rejected** | — | `catopt_carriers.om.OM_LIFT`/`om_lift_plain` already ship `matmul(softmax(s,d), v) → om_apply(om_elem(s,v))` with the metavar-dim guard; the constructed literal `dim=-1` pattern is a strict subset |
+| `om_lift` | **duplicate — rejected** | — | `mlopt_carriers.om.OM_LIFT`/`om_lift_plain` already ship `matmul(softmax(s,d), v) → om_apply(om_elem(s,v))` with the metavar-dim guard; the constructed literal `dim=-1` pattern is a strict subset |
 | `affd_step_lift` | **duplicate — rejected** | — | alpha-identical to the shipped `affd_lift` (`SCAN_DIAG_LAWS`): same `add(mul(a,h),x) → applyd(aff_diag(a,x),h)`, same `_COND_AFFD_STATE` |
 | `affd_scan2_lift` | **rejected — derivable unroll** | — | two `affd_lift` firings already produce exactly this member under `SCAN_DIAG_LAWS` saturation; a fixed-arity-2 shortcut is corpus-depth-shaped, not a law |
 | `affd_scan4_lift` | **rejected — derivable unroll** | — | same at arity 4 — the corpus's 4-deep `DiagonalSSM` spines are why it paid; arity-specific composites are not library axioms |

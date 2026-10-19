@@ -2,7 +2,7 @@
 
 Plan 0020 phase 2.  `legal_actions(state)` enumerates the live
 construction moves; `depth_probe` plays the three baseline players
-on the real board (`python -m catopt_discovery.arena`).
+on the real board (`python -m mlopt_discovery.arena`).
 
 ## The board is large
 

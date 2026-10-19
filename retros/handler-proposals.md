@@ -8,7 +8,7 @@ lands the generalisation the ADR asked for: a **structured handler
 grammar** whose candidate bodies are proposed for a measured
 subterm and verified numerically against the pre-mint term on the
 measured domain — the same bar as a law.  Files:
-`packages/catopt-discovery/src/catopt_discovery/handler_synth.py`
+`packages/mlopt-discovery/src/mlopt_discovery/handler_synth.py`
 (the whole mechanism), `tests/test_discovery_handler_synth.py`
 (37 tests, 100% module coverage).  Nothing else touched; core,
 carriers and the sink are unchanged.

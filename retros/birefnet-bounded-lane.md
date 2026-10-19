@@ -83,7 +83,7 @@ Evidence JSON: `bench/results/birefnet_bounded.json`,
 
 ## Per-budget results
 
-| budget | opt s | bounded offers | delivered | bound max | fresh rel | mask IoU | catopt µs | vs eager | vs inductor |
+| budget | opt s | bounded offers | delivered | bound max | fresh rel | mask IoU | mlopt µs | vs eager | vs inductor |
 |--------|-------|----------------|-----------|-----------|-----------|----------|-----------|----------|-------------|
 | none   | 38.6  | 0  | 0 | —      | 0.0 | 1.0000 | 277 948 | 0.999× | 0.862× |
 | 1e-4   | 205.6 | 0  | 0 | —      | 0.0 | 1.0000 | 277 005 | 0.997× | 0.865× |
@@ -139,7 +139,7 @@ bound machinery failed, but because the real structure is too thin
 to price.** The bounded offers exist (20–56 sites, certified bounds
 inside budget), the bound gate stayed honest, and the cost model
 correctly declined a 1.32×-more-expensive member. Combined with the
-earlier trial's FLOP-neutral exact lane, neither catopt lane buys
+earlier trial's FLOP-neutral exact lane, neither mlopt lane buys
 headroom on this architecture; `torch.compile` alone (1.16×) is the
 bigger lever. New findings beyond the budget question: `deform_conv2d`
 has no lowering binding (a real coverage gap — export emits it, the

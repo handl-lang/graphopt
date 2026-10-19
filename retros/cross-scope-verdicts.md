@@ -13,13 +13,13 @@ split written into the API rather than left to convention.
 
 Reproduce:
 
-    .venv/bin/python -m catopt_discovery.meta_game --guide \
+    .venv/bin/python -m mlopt_discovery.meta_game --guide \
         --budget 40 --guide-step 6 --guide-corpus 6 \
         --plays-cap 12 --seed 0
 
-Code in `catopt_discovery/evidence.py` (the new function sits next
+Code in `mlopt_discovery/evidence.py` (the new function sits next
 to `latest_verdicts`; nothing else in the file was restructured)
-and `catopt_discovery/meta_game.py`; tests in
+and `mlopt_discovery/meta_game.py`; tests in
 `tests/test_discovery_evidence.py` /
 `tests/test_discovery_meta_game.py`.
 

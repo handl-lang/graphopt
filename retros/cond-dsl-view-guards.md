@@ -5,7 +5,7 @@ Context: follow-up to `view-index-oracle.md`.  The view/oracle pass
 found 35 candidates — 1 unconditionally true (`reshape_reshape`, no
 real firing site), 5 genuinely false, and 29 conditional.  This task
 decodes the conditional guards the oracle named into the declarative
-condition DSL (`catopt_core.laws.cond`), verifies them against the
+condition DSL (`mlopt_core.laws.cond`), verifies them against the
 synthesized and real corpus bindings, and reports — it does **not**
 admit laws.  `tensor.py`, `scan.py`, `torch_bridge.py`,
 `law_pipeline.py` and `serialize.py` were not touched.
@@ -36,7 +36,7 @@ The oracle's features decompose as:
 ## DSL additions
 
 New shape specs resolvable anywhere a spec is accepted
-(`packages/catopt-core/src/catopt_core/laws/cond.py`):
+(`packages/mlopt-core/src/mlopt_core/laws/cond.py`):
 
 - `("bcast", T1, T2)` — `_broadcast` over two nested specs; an
   unresolvable side is a wildcard (`None`), matching `_broadcast`.

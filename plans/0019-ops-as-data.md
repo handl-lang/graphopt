@@ -1,10 +1,10 @@
 # Plan 0019 — ops as data (the structural slice)
 
-Status: prototype landed.  `catopt_core.opdata` declares a *view /
+Status: prototype landed.  `mlopt_core.opdata` declares a *view /
 relayout-class* op as data — name, arity, classification tags, attr
 schema and a shape rule written in the **existing** shape-spec DSL —
-and `declare_op` registers it into `catopt_core.opmeta`, the attr
-schema and `catopt_core.typing`'s shape-rule registry, so a declared
+and `declare_op` registers it into `mlopt_core.opmeta`, the attr
+schema and `mlopt_core.typing`'s shape-rule registry, so a declared
 op shapes, mints and matches through the same machinery a shipped op
 does.  Kernel bodies, torch/aten spellings and cost entries stay
 code, by design — this is the declaration seam for the structural
@@ -15,7 +15,7 @@ slice, not a general "define any op in JSON".  Retro:
 
 The architecture's claim is "the object language grows without
 growing Python".  Plan 0018 made an op's *metadata* data
-(`catopt_core.opmeta` — one classification table, 166 ops, named
+(`mlopt_core.opmeta` — one classification table, 166 ops, named
 projections).  But the op **set** and each op's **semantics** are
 still code: a new primitive needs a Python shape rule, a torch
 binding, a lowering.  This is the last hardcoded layer — the
@@ -43,7 +43,7 @@ each requirement: where it lives today, and whether it is data.
 | 4 | **attr schema** (`{argN: canonical}`) | `attrs.ATTR_SCHEMA` | **data** (indexed by opmeta) |
 | 5 | **required attrs** | `attrs.ATTR_REQUIRED` | **data** |
 | 6 | **shape rule** | `typing._infer_op_shape` match arms + `typing._SHAPE_RULES` | **code** — *except the structural slice* |
-| 7 | **torch/aten spelling** | `catopt_torch.torch_bridge._ATEN_TO_IR` | **code** (adapter boundary) |
+| 7 | **torch/aten spelling** | `mlopt_torch.torch_bridge._ATEN_TO_IR` | **code** (adapter boundary) |
 | 8 | **lowering** (kernel body) | `torch_bridge._CORE_TORCH_BINDINGS` / carrier `TORCH_BINDINGS` | **code** |
 | 9 | **cost entry** | `cost.basic._OP_FLOPS` (+ the `cost-view` tag) | **code** (FLOP formula) / **data** (the tag) |
 | 10 | **carrier hook** | `ops.register_carrier`, `_CARRIER_MODULES` | **code** (packaging ops) |
@@ -59,7 +59,7 @@ adds nothing new to the *model*, only to the *contents*.
 relayout-class ops.  The shape rules for
 `unsqueeze`/`squeeze`/`select`/`slice`/`chunk`/`transpose`/`reshape`/
 `getitem`/`bcast`/`mm-out`/`tail-block` **already exist as pure data**
-in `catopt_core.laws.cond` — the shape-spec DSL its `cond`
+in `mlopt_core.laws.cond` — the shape-spec DSL its `cond`
 predicates resolve (`("unsq-out", T, K)`, `("select-out", T, D)`,
 `("slice-out", T, D, S, E, STEP)`, `("chunk-out", T, C, D)`,
 `("transpose-out", T, D0, D1)`, `("reshape-out", T, NAME)`,
@@ -86,7 +86,7 @@ the factory ops (`shape` attr verbatim).  Those stay match arms.
 
 ## Target design
 
-`catopt_core.opdata` — an op *definition* as a value:
+`mlopt_core.opdata` — an op *definition* as a value:
 
 ```python
 @dataclass(frozen=True)
@@ -176,7 +176,7 @@ term), JSON round-trip, and clean teardown.
 
 * Make the tag projections live views (or refresh-on-declare) so a
   declaration reaches consumer sets without a recomposition.
-* A public shape-spec resolver in `catopt_core.laws.cond` — this
+* A public shape-spec resolver in `mlopt_core.laws.cond` — this
   prototype reuses its private `_shape`, which is the one coupling
   worth promoting to a seam.
 * Extend the DSL (or add a second spec family) to cover `matmul`/

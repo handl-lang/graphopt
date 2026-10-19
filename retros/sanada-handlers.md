@@ -1,4 +1,4 @@
-# Retro — Sanada's arrow handlers, mapped onto catopt
+# Retro — Sanada's arrow handlers, mapped onto mlopt
 
 Two papers by Takahiro Sanada that HANDL's GMSAC kernel builds on
 (`handl-lang/host/docs/explanation/graded-modal-sanada-arrow-calculus.md`):
@@ -15,7 +15,7 @@ Two papers by Takahiro Sanada that HANDL's GMSAC kernel builds on
 
 ## The mapping
 
-| Sanada / HANDL GMSAC | catopt |
+| Sanada / HANDL GMSAC | mlopt |
 |---|---|
 | `Op` — uninterpreted request (data) | a `declare`d object / unlowered op |
 | `handle p with H` — scoped interpretation | an **execution-strategy move**: handler choice is a first-class move, not a backend flag |
@@ -68,7 +68,7 @@ Two papers by Takahiro Sanada that HANDL's GMSAC kernel builds on
   kernel under the supported bound (measurably cheaper under
   op-count, honestly flat under flops).
 
-* **Reverse handlers** (`catopt_discovery.training` +
+* **Reverse handlers** (`mlopt_discovery.training` +
   `lawdata.REVERSE`): `backward(term)` derives the gradient
   program as an *interpretation of the forward term* — a data
   VJP table, not a second semantics stack.  The result is an
@@ -107,7 +107,7 @@ landed via ``$expdims`` (dims the target grew over the
 left-padded input) spelled as ``reshape(sum(g, dims,
 keepdim), shape=in)``; all checked against autograd.  And the
 domain claim is now a running probe — ``python -m
-catopt_discovery.training`` derives gradients for real-shaped
+mlopt_discovery.training`` derives gradients for real-shaped
 forwards (silu, keepdim softmax, matmul+bias+tanh) and
 saturate→extract→certifies each on the meta-arena board: all
 three certify, laws fire on the gradient programs (enodes grow
