@@ -449,7 +449,11 @@ named; where a pinned baseline supersedes a row, that is noted.
 
 ## Learned models (2026-10-15)
 
-*What the project trains, and how each performs.*  Separate from the
+*What the project trains, and how each performs.*  Controlled
+same-budget baseline + ablations (2026-10-19):
+[`docs/results_learned_baseline.md`](results_learned_baseline.md) /
+[`docs/results_learned_ablations.md`](results_learned_ablations.md)
+(`lab/policy_baseline.py`, `lab/policy_ablations.py`).  Separate from the
 architectures above: these **steer** the search; the models in §1 are
 what gets optimized.
 

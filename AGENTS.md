@@ -33,7 +33,7 @@ admission loop), `lab/bridge/` (`combinator.py` + `combinator_probe.py`
 — the ADR-0008 bridge), `lab/audit/` (`dspec_audit.py`,
 `grammar_probe.py`), `lab/screen/` (`exposure_screen.py`,
 `exposed_discovery.py`, `discovery_scale.py`), `lab/probes/` (the
-measurement probes, incl. `contraction/`), `lab/train/` (the six
+measurement probes, incl. Top-level policy drivers `lab/policy_baseline.py` + `lab/policy_ablations.py` run the controlled 4-arm baseline and the bootstrap/exploration/reward/capacity ablations (results in `docs/results_learned_*.md`). `contraction/`), `lab/train/` (the six
 `train_*.py`), `lab/kit/` (`term_hnl.py` — the mlopt-term → `.hnl`
 emit/eval bridge into `CatoptKit`), `lab/handl-spike/`
 (`dump_fragments.py` + the dumped `fragments/`/`fragments-all/`

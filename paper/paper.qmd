@@ -221,7 +221,8 @@ artifact.  Conversely, a neural rule-value policy *loses* to the
 heuristic (AP 0.023 corpus-trained; 0.041 ≈ parity when trained
 on-distribution — a data gap, not capacity), and two learned-policy axes (schedule guidance;
 direct law invention) were measured and falsified — the evidence for
-learned guidance is real but early: linear and distilled arms beat
+learned guidance is real but early (controlled baseline and ablations in
+`docs/results_learned_baseline.md` / `docs/results_learned_ablations.md`): linear and distilled arms beat
 baselines; neural methods do not yet.
 
 # Case study: the conv+BN fold {#sec-casestudy}
