@@ -4,7 +4,7 @@
 //! mlopt's use:
 //!
 //! 1. **Language** — the canonical `Language` assembled from data via
-//!    [`handl_kit_data_canonical::language_from_yaml`] (tokens, grammar,
+//!    [`handl_kit_data_prelude::language_from_yaml`] (tokens, grammar,
 //!    eval schemes, AST shapes — all YAML, no engine-specific code).
 //! 2. **Install** — [`handl_plugin_lib_handl::install_default_language`]
 //!    makes it the process-wide language that lazily-built `.hnl` module
@@ -200,7 +200,7 @@ impl CatoptKit {
         dependencies: HashMap<String, PathBuf>,
         registry: EngineRegistry,
     ) -> Result<Self, LangError> {
-        let lang = handl_kit_data_canonical::language_from_yaml()?;
+        let lang = handl_kit_data_prelude::language_from_yaml()?;
         // Install as the process-wide default language for `.hnl` module
         // bridge runtimes (ADR-0128 §0.8). First install wins — a
         // rejection just means another host installed first, so it is

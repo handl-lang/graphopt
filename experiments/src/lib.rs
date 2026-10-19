@@ -7,7 +7,7 @@
 //! crates — the same edges mlopt-kit's manifest now declares):
 //!
 //! 1. **Language** — the canonical `Language` assembled from data via
-//!    [`handl_kit_data_canonical::language_from_yaml`].
+//!    [`handl_kit_data_prelude::language_from_yaml`].
 //! 2. **Install** — [`handl_plugin_lib_handl::install_default_language`]
 //!    makes it the process-wide language that lazily-built `.hnl` module
 //!    bridge runtimes bind (ADR-0128 §"the 0.8 seam").
@@ -144,7 +144,7 @@ impl Kit {
         dependencies: HashMap<String, PathBuf>,
         registry: EngineRegistry,
     ) -> Result<Self, LangError> {
-        let lang = handl_kit_data_canonical::language_from_yaml()?;
+        let lang = handl_kit_data_prelude::language_from_yaml()?;
         // Install as the process-wide default language for `.hnl` module
         // bridge runtimes (ADR-0128 §0.8). First install wins — a
         // rejection just means another host installed first, so it is

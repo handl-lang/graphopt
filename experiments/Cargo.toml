@@ -26,7 +26,7 @@ handl-language = { git = "https://github.com/handl-lang/kernel", branch = "main"
 handl-value = { git = "https://github.com/handl-lang/kernel", branch = "main" }
 
 # lang — the canonical Language as data (YAML fragments → `Language`)
-handl-kit-data-canonical = { git = "https://github.com/handl-lang/kit-data-canonical", branch = "main" }
+handl-kit-data-prelude = { git = "https://github.com/handl-lang/kit-data-prelude", branch = "main" }
 
 # platform — the runtime + module bridge
 handl-platform = { git = "https://github.com/handl-lang/host", branch = "main" }

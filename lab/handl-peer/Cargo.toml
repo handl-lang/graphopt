@@ -12,5 +12,5 @@ crate-type = ["cdylib", "rlib"]
 pyo3 = { version = "0.26" }
 serde_json = "1"
 handl-language = { path = "/home/luis/GitHub/handl-lang/host/crates/handl-language" }
-handl-kit-data-canonical = { path = "/home/luis/GitHub/handl-lang/host/crates/handl-kit-data-canonical" }
+handl-kit-data-prelude = { path = "/home/luis/GitHub/handl-lang/host/crates/handl-kit-data-prelude" }
 handl-plugin-engine-transform-rewrite = { path = "/home/luis/GitHub/handl-lang/host/crates/plugin-engine-transform-rewrite" }
