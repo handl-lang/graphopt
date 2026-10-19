@@ -16,6 +16,7 @@ __all__ = [
     "META_ARENA_PLAYER_WEIGHTS",
     "META_ARENA_REWARD",
     "OPEN_GAME_PLAYER_WEIGHTS",
+    "PLAYER_ARENA_PLAYER_WEIGHTS",
     "PRIOR_WEIGHTS",
     "REFEREE_SCORE",
 ]
@@ -224,4 +225,60 @@ OPEN_GAME_PLAYER_WEIGHTS: dict[str, float] = {
     "a:form:bin-unary-right": -0.0055,
     "a:form:bin-unary-left": 0.0158,
     "a:form:unary-of-lit": -0.0108,
+}
+
+#: The player-domain learned prior — the meta-arm
+#: :data:`mlopt_discovery.player_arena.PLAYER_SPEC` now defaults to
+#: (the ``LearnedPlayer`` over spec records; pass ``weights={}`` for
+#: the uniform cold start the measurement keeps as a baseline).  A
+#: trained snapshot: ``lab/train/train_player_meta_arm.py`` (seed 0,
+#: 12 stub-oracle cases x 150 REINFORCE epochs on a 6-epoch
+#: ``GreedyEditor`` imitation warm start — the nested oracle stubbed
+#: through the board's ``score_fn`` seam, see the driver for the
+#: exact tier table) emits exactly this literal — reproducible, not
+#: hand-tuned.
+#:
+#: The bake is earned on the *real* oracle: frozen on fresh
+#: ``PlayerArena`` episodes under the canonical nested eval (3
+#: epochs x 36 even pages, odd-page held-out, memoized verdicts),
+#: the greedy decode emits ``['open:action']`` — GreedyEditor's own
+#: child, held-out 0.2827 vs parent 0.2301 (delta +0.0526) on seed 0
+#: and 0.3063 vs 0.3003 on seed 1; the sampled decode emits
+#: positive-or-zero deltas (never a worse child).  The learned line
+#: is legible: ``op:evaluate`` high (probe), ``a:dir:drop`` up with
+#: ``a:part:open:action`` the *least* dropped part — the editor's
+#: ablate-then-extract game, learned.  Regenerate with::
+#:
+#:     python lab/train/train_player_meta_arm.py
+#:
+#: Weights are rounded to 4 decimals and near-zero entries dropped —
+#: ``LinearPolicy`` reads a missing feature as ``0``.
+PLAYER_ARENA_PLAYER_WEIGHTS: dict[str, float] = {
+    "op:toggle_feature": 0.5881,
+    "op:edit_weight": -3.6214,
+    "op:set_lr": -2.2034,
+    "op:set_weights": -1.4736,
+    "op:evaluate": 5.2226,
+    "op:extract": 1.4877,
+    "a:delta": -0.0044,
+    "a:lr": -0.2332,
+    "a:k": 2.742,
+    "a:dir:add": -1.953,
+    "a:dir:drop": 2.541,
+    "a:part:bias": 1.313,
+    "a:part:open:action": -0.6754,
+    "a:part:open:hist": -0.0591,
+    "a:part:open:onehot": -0.4028,
+    "a:part:open:state": 0.4124,
+    "a:w:a:depth": -0.4003,
+    "a:w:a:metas": -0.4032,
+    "a:w:a:ops": -0.4014,
+    "a:w:a:score": -0.4001,
+    "a:w:bias": -0.4023,
+    "a:w:h:evaluate": -0.4063,
+    "a:w:op:evaluate": -0.4017,
+    "a:w:op:stop": -0.4037,
+    "a:w:st:useful_rate": -0.4024,
+    "a:table:baked": -0.7396,
+    "a:table:cold": -0.734,
 }

@@ -113,3 +113,80 @@ the trained prior on mean reward (+0.088 vs −0.056).
   never got declared), the macro scores 0 — the referee's honest
   refusal, no rollback needed because a declined sub-move leaves the
   board exactly as its refereed effects dictated.
+
+## Retraining the prior on the macro-extended board — does the learned arm pick macros?
+
+**Date:** 2026-10-20 · **Script:** `lab/train/train_meta_macro_prior.py`
+(mines off `gen_cases(0, 24)` train cases only, then retrains cold via
+`train_meta_prior`'s loop against `legal_with_macros(cap=8)` — the
+shipped prior's weights untouched during the run) · **Seed:** 0 ·
+**Runner:**
+
+```bash
+timeout 1800 .venv/bin/python lab/train/train_meta_macro_prior.py \
+    --json /tmp/meta_macro.json      # ~16 s at the stated budget
+```
+
+The follow-up the table above invites: `trained+macros` was blind
+because the *frozen* prior scores every macro on the same broadcast
+row.  A policy *trained* against the offers is a different question —
+and the answer is **yes, the trained arm picks macros**: 507/7,330
+train steps (rate 0.069), 6 picks in 6 of 16 held-out cases.  But at
+the prescribed budget it does **not** earn the bake:
+
+| arm | reward/ep | cost | steps | cert | decl | macro picks |
+|---|---|---|---|---|---|---|
+| random+macros | −0.532 | 3.00 | 11.12 | 4 | 1 | 1 |
+| cold+macros | −0.419 | 2.43 | 10.25 | 7 | 4 | 5 |
+| **v1-shipped** | **−0.056** | 2.94 | 1.12 | 16 | 0 | 0 |
+| v2-base *(V2 weights, base legal)* | −0.052 | 2.75 | 2.50 | 16 | 3 | — |
+| **v2+macros (sampled)** | **+0.045** | 2.56 | 2.00 | 16 | 6 | 6/6c |
+| v2+macros (greedy) | −0.050 | 2.94 | 1.00 | 16 | 0 | 0 |
+| scripted | −0.100 | 2.94 | 2.00 | 16 | 0 | 0 |
+| **scripted+macros** | **+0.088** | 2.50 | 1.56 | 16 | 7 | 7 |
+
+(30 epochs × 40 cases, cold start; block means `−0.432 → −0.051`.)
+
+**Verdict: the bake is not earned — `META_ARENA_PLAYER_WEIGHTS`
+stays.**  The trained arm *does* pick macros and its sampled decode
+clears the shipped prior (+0.045 vs −0.056 — the frozen-prior
+blindness is gone), but it does not reach scripted+macros (+0.088).
+The bar was ≥ both.  Per-case: the learned policy *out-picks* the
+scripted rank-1 on `gen7:swiglu` (+0.415 vs +0.283 — it plays
+`claim(swiglu)` to cost 1.0 where rank-1 `claim(silu)` stalls at
+2.0), but gives it back on `gen2:swiglu` (sampling missed every
+offer — greedy argmax never does, see below) and on control cases,
+where the sampled decode burns ~2 extra moves before extracting.
+
+**Why the gap is structural, not budgetary.**  Every macro row is
+the *same* broadcast row — no `op:macro` in the schema, no per-macro
+`a:*` identity — so the softmax must split its mass **uniformly**
+across however many viable offers sit in the legal set.  The policy
+can learn *when* a macro pays (the `st:*`/`h:*` context does that —
+it never fires one on `softsign`, where `viable` offers nothing it
+can bind) but it cannot learn *which* — rank preference among the
+offers is inexpressible.  Epoch sensitivity says the same thing:
+
+| epochs | v2+macros sampled | v2+macros greedy | v2-base |
+|---|---|---|---|
+| 30 | +0.045 | −0.050 | −0.052 |
+| 60 | +0.057 | +0.027 | −0.017 |
+| 120 | −0.040 | **+0.108** | −0.073 |
+
+At 4× the protocol budget the *greedy* arm does cross the bar
+(+0.108, 7/7 macro cases, decl=16 — it wins both swiglu cases
+outright at cost 1.0), while the sampled arm degrades (macro
+over-picks plus control churn) and `v2-base` regresses below V1
+(−0.073 vs −0.056).  So the crossing exists but does not survive a
+bake: the greedy-only gain at 120 ep ships a *worse* default to
+every caller that never offers macros, and the stated 30-epoch
+protocol's best decode is +0.045 either way.
+
+**What would earn it:** a macro-aware feature — `op:macro` in the
+schema, or a per-offer `a:*` identity (the mined `score`/`ops`
+rank as an action feature — rank-1-ness is legality-visible data)
+— so the policy can price offers against each other instead of
+splitting mass uniformly; then re-run this driver.  The
+`weights_dict()` → `spec.to_record()` → `spec_from_record` →
+`weights_dict()` round-trip was verified on the trained table, so
+the bake path itself is sound when the measurement earns it.

@@ -874,7 +874,9 @@ register_part("player:action", lambda: ActionFeats(_p_act))
 register_legal("player", legal_actions)
 
 #: The learned meta-arm's spec — a ``LearnedPlayer`` over the
-#: spec-record board, cold by default.
+#: spec-record board, defaulting to the baked prior
+#: :data:`lawdata.PLAYER_ARENA_PLAYER_WEIGHTS` (``weights={}`` for
+#: the cold start).
 PLAYER_SPEC = DomainSpec.build(
     features=PLAYER_FEATURES,
     legal=legal_actions,
@@ -885,6 +887,7 @@ PLAYER_SPEC = DomainSpec.build(
         OpOneHot(frozenset(PLAYER_FEATURES)),
         ActionFeats(_p_act),
     ),
+    weights=lawdata.PLAYER_ARENA_PLAYER_WEIGHTS,
 )
 
 #: The composed featurizer — public for tests.

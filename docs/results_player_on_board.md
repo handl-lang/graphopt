@@ -98,6 +98,11 @@ budget, under the same memoized verdicts.
   on (`play --domain player`), but each probe is seconds-to-minutes
   of nested train+eval — a trained meta-player is future work, not
   claimed here. The shipped demo is scripted.
+  **Update (same-day):** trained via the board's `score_fn` stub
+  seam — the greedy decode now emits the `['open:action']` child
+  (0.2827) and the prior is baked as
+  `lawdata.PLAYER_ARENA_PLAYER_WEIGHTS`; see
+  `docs/results_player_meta_arm.md`.
 
 ## Where it lives
 
