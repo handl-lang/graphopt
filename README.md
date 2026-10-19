@@ -113,6 +113,7 @@ harness.
 | the mechanism — syntax → structure → search → certificate | [`docs/mechanism.md`](docs/mechanism.md) |
 | the full results tables, wins *and* losses | [`docs/results.md`](docs/results.md) |
 | controlled learned-policy baseline + ablations | [`docs/results_learned_baseline.md`](docs/results_learned_baseline.md), [`docs/results_learned_ablations.md`](docs/results_learned_ablations.md) |
+| feature-schema leaderboard (representation vs weight search) | [`docs/results_schema_leaderboard.md`](docs/results_schema_leaderboard.md) |
 | the working paper draft with the evidence table | [`docs/paper_draft.md`](docs/paper_draft.md) |
 | decision records with falsification paths | [`project/adrs/`](project/adrs/) |
 | the measured retros each claim cites | [`project/retros/`](project/retros/) |

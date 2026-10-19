@@ -453,7 +453,11 @@ named; where a pinned baseline supersedes a row, that is noted.
 same-budget baseline + ablations (2026-10-19):
 [`docs/results_learned_baseline.md`](results_learned_baseline.md) /
 [`docs/results_learned_ablations.md`](results_learned_ablations.md)
-(`lab/policy_baseline.py`, `lab/policy_ablations.py`).  Separate from the
+(`lab/policy_baseline.py`, `lab/policy_ablations.py`); the
+feature-schema leaderboard — subsets × orderings of the shipped
+featurizer parts, cold-trained at equal budget —
+[`docs/results_schema_leaderboard.md`](results_schema_leaderboard.md)
+(`lab/schema_leaderboard.py`).  Separate from the
 architectures above: these **steer** the search; the models in §1 are
 what gets optimized.
 
