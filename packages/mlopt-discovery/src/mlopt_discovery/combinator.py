@@ -1,4 +1,4 @@
-"""ADR-0008 prototype — a minimal combinator presentation of the IR.
+"""ADR-0008 — a minimal combinator presentation of the IR.
 
 This is the *bridge only* — enough substrate to run the ADR's
 falsification gates 1 (round-trip on the corpus, Δ-expansion size) and
@@ -395,7 +395,10 @@ def dag_to_comb(root: Any) -> Any:
     slots = []
     for w in ctx:
         u = out_use.get(w, 0)
-        if u == 0:
+        if u == 0:  # pragma: no cover — every surviving ctx wire has
+            # a pending output use: a wire stays live only while
+            # ``remaining[w] > 0``, and at the close ``remaining``
+            # counts exactly the output uses, so ``u == 0`` never fires
             maps.append(Drop())
             continue
         maps.append(Dup(u) if u > 1 else Id(1))
@@ -651,7 +654,7 @@ def retnet_fold_program(
     def blk(m: Any, i: int) -> Op:
         return Op.make("split", m, sizes=sz, dim=-2, index=i)
 
-    wires = [s0]
+    wires: list[Any] = [s0]
     for i in range(k):
         wires += [blk(qf, i), blk(kf, i), blk(vf, i)]
     pre = dag_to_comb(Op.make("pack", *wires))

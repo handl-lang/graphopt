@@ -16,10 +16,19 @@ Protocol (mirrors ``scripts/train_meta_prior.py`` exactly — the
   ``gen_cases(seed + 7919)`` is never mined from); the minted set is
   reported alongside the shipped :data:`lawdata.MACROS` table (drift
   check — the two should coincide);
-* **train** — a *cold* ``MetaLearnedPlayer`` (``weights={}``) on the
-  shipped legal set — ``meta_arena.legal_actions`` already offers the
-  macros — 30 epochs x ``gen_cases(seed, 40)``, budget 12,
-  episode-return REINFORCE;
+* **train** — a ``MetaLearnedPlayer`` on the shipped legal set —
+  ``meta_arena.legal_actions`` already offers the macros — 30 epochs
+  x ``gen_cases(seed, 40)``, budget 12, episode-return REINFORCE.
+  ``--init cold|v1`` picks the start (uniform vs the shipped V1
+  prior), ``--lr`` overrides the spec's learning rate, and
+  ``--curriculum N`` enumerates ``_base_legal`` for the first N
+  epochs before the macro offers arrive — the re-run's protocol arms
+  (warm-start / lower-lr / curriculum), defaulting to the original
+  cold run.  ``--scale S`` multiplies the *trained* weight table by
+  S before eval and bake — a uniform logit sharpening (the sampled
+  decode softens toward argmax; the greedy decode is scale-invariant
+  under argmax, so a scale is a decode-sharpness knob carried in the
+  table itself — weights are all the bake ships);
 * **measure** — held-out ``gen_cases(seed + 7919, 16)`` budget 12: the
   new arm's sampled/greedy reward, its *macro pick rate* (applied
   ``op == "macro"`` steps), the shipped V1 prior for pairing, and the
@@ -52,7 +61,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import torch
 from mlopt_core.cost.basic import count_cost
 from mlopt_discovery import lawdata
-from mlopt_discovery import macro_moves as mm
 from mlopt_discovery import meta_arena as ma
 from mlopt_discovery import meta_player as mp
 from mlopt_discovery.macro_moves import Macro
@@ -70,13 +78,42 @@ from scripts.train_meta_prior import (
     baked_table,
 )
 
-__all__ = ["main", "run_eval", "train"]
+__all__ = ["CurriculumLegal", "main", "run_eval", "train"]
 
 TRAIN_CASES = 40
 EVAL_CASES = 16
 MINE_CASES = 24
 BUDGET = 12
 MACRO_CAP = 8
+
+
+class CurriculumLegal:
+    """Legal enumerator with a base-set warmup — offers arrive late.
+
+    For the first *warm_episodes* episodes the enumerated set is
+    :func:`meta_arena._base_legal` — the spelled, macro-free
+    vocabulary — then the shipped :func:`meta_arena.legal_actions`
+    (macro offers on) for the rest.  Episode boundaries are detected
+    the same way ``LinearPolicy._observe`` does: ``state.steps == 0``
+    after a progressed board.  A declined move still ticks ``steps``,
+    so ``steps == 0`` occurs exactly at the first call of each
+    episode — one boundary per ``legal`` call site.
+    """
+
+    def __init__(self, warm_episodes: int) -> None:
+        """Bind the warmup length (in episodes)."""
+        self._warm = warm_episodes
+        self._episodes = 0
+        self._prev = -1
+
+    def __call__(self, state: ma.MetaState) -> tuple:
+        """Enumerate base legals during warmup, else the full set."""
+        if state.steps == 0 and self._prev != 0:
+            self._episodes += 1
+        self._prev = state.steps
+        if self._episodes <= self._warm:
+            return ma._base_legal(state)
+        return ma.legal_actions(state)
 
 
 def mine_train_macros(
@@ -96,18 +133,51 @@ def train(
     train_cases: int = TRAIN_CASES,
     epochs: int = EPOCHS,
     budget: int = BUDGET,
+    init: str = "cold",
+    lr: float | None = None,
+    curriculum: int = 0,
 ) -> tuple[mp.MetaLearnedPlayer, list[float], dict]:
-    """Train a cold meta prior against the shipped macro legal set.
+    """Train a meta prior against the shipped macro legal set.
 
     Same loop as ``train_meta_prior.train`` — the player's default
     enumerator is ``meta_arena.legal_actions``, which now offers
     :data:`lawdata.MACROS` itself; the trajectory reports are kept so
     the macro pick rate *during training* is measurable, not just at
     eval.
+
+    Protocol knobs (the bake re-run's arms):
+
+    * *init* — ``"cold"`` (``weights={}``, the uniform start) or
+      ``"v1"`` (warm-start from the shipped
+      :data:`lawdata.META_ARENA_PLAYER_WEIGHTS`; the RL pass
+      fine-tunes a policy that already plays base well);
+    * *lr* — the player's REINFORCE learning rate (``None`` keeps
+      the spec's ``_LR``; a smaller step keeps a fine-tune from
+      overwriting base competence);
+    * *curriculum* — first this many *epochs* enumerate
+      ``_base_legal`` only (:class:`CurriculumLegal`); macro offers
+      arrive afterwards, so base play is learned before the
+      extension.
     """
     torch.manual_seed(seed)
-    player = mp.MetaLearnedPlayer(seed, weights={})
+    if init == "cold":
+        weights: dict = {}
+    elif init == "v1":
+        weights = dict(lawdata.META_ARENA_PLAYER_WEIGHTS)
+    else:
+        raise ValueError(f"unknown init {init!r} (cold|v1)")
     cases = mp.gen_cases(seed, train_cases)
+    legal: Any = (
+        CurriculumLegal(curriculum * len(cases))
+        if curriculum
+        else ma.legal_actions
+    )
+    player = mp.MetaLearnedPlayer(
+        seed,
+        weights=weights,
+        legal=legal,
+        **({"lr": lr} if lr is not None else {}),
+    )
     totals: list[float] = []
     macro_picks = steps = 0
     for _ in range(epochs):
@@ -277,6 +347,31 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--eval-cases", type=int, default=EVAL_CASES)
     ap.add_argument("--epochs", type=int, default=EPOCHS)
     ap.add_argument("--budget", type=int, default=BUDGET)
+    ap.add_argument(
+        "--init",
+        choices=("cold", "v1"),
+        default="cold",
+        help="weight init: cold start or warm from shipped V1 prior",
+    )
+    ap.add_argument(
+        "--lr",
+        type=float,
+        default=None,
+        help="REINFORCE learning rate (default: the spec's _LR)",
+    )
+    ap.add_argument(
+        "--curriculum",
+        type=int,
+        default=0,
+        help="epochs to enumerate _base_legal before macro offers",
+    )
+    ap.add_argument(
+        "--scale",
+        type=float,
+        default=1.0,
+        help="uniform logit scale applied to the trained table "
+        "(>1 sharpens the sampled decode toward argmax)",
+    )
     ap.add_argument("--blocks", type=int, default=6)
     ap.add_argument("--json", type=str, default=None)
     args = ap.parse_args(argv)
@@ -306,12 +401,33 @@ def main(argv: list[str] | None = None) -> int:
         train_cases=args.train_cases,
         epochs=args.epochs,
         budget=args.budget,
+        init=args.init,
+        lr=args.lr,
+        curriculum=args.curriculum,
     )
     curve = _block_means(totals, args.blocks)
+    if args.scale != 1.0:
+        # A positive scale is an exact decode-sharpness transform:
+        # argmax is invariant (greedy arms unchanged), the sampled
+        # softmax concentrates on the top logits.  Weights are all
+        # the bake ships — the table carries the sharpness.
+        player._w.update(  # bake-time transform — the trained table
+            (k, v * args.scale) for k, v in player._w.items()
+        )
+    proto = (
+        f"init={args.init}"
+        + (f" lr={args.lr}" if args.lr is not None else "")
+        + (
+            f" curriculum={args.curriculum}ep"
+            if args.curriculum
+            else ""
+        )
+        + (f" scale={args.scale}" if args.scale != 1.0 else "")
+    )
     print(  # stdout-compat
-        f"\n== train — cold MetaLearnedPlayer, shipped legal set"
-        f" (macros offered), {args.train_cases} cases x"
-        f" {args.epochs} ep, budget {args.budget} =="
+        f"\n== train — {args.init} MetaLearnedPlayer, shipped legal"
+        f" set (macros offered), {args.train_cases} cases x"
+        f" {args.epochs} ep, budget {args.budget} — {proto} =="
     )
     print(f"train block means: {curve}")  # stdout-compat
     print(  # stdout-compat
@@ -345,6 +461,10 @@ def main(argv: list[str] | None = None) -> int:
                 "eval_cases": args.eval_cases,
                 "budget": args.budget,
                 "macro_cap": MACRO_CAP,
+                "init": args.init,
+                "lr": args.lr,
+                "curriculum": args.curriculum,
+                "scale": args.scale,
                 "held_out": f"gen_cases(seed+{HELD_OUT_OFFSET})",
             },
             "minted": [

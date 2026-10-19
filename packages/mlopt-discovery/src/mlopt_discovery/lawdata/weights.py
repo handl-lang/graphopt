@@ -110,64 +110,90 @@ ARENA_PLAYER_WEIGHTS: dict[str, float] = {}
 #: gauntlet's pace rather than the scorer's.
 ARENA_PLAYER_CANDIDATES: int | None = 2048
 
-#: The shipped meta-arena prior —
+#: The shipped meta-arena prior — V2 (macro-aware, 2026-10-19).
 #: :class:`mlopt_discovery.meta_player.MetaLearnedPlayer` defaults to
 #: it (pass ``weights={}`` for the uniform cold start, the baseline
 #: the measurement keeps).  A trained snapshot:
-#: ``scripts/train_meta_prior.py`` (seed 0, 40 cases x 30 epochs, cold
-#: start) emits exactly this literal — reproducible, not hand-tuned.
+#: ``scripts/train_meta_macro_prior.py --init v1 --epochs 30 --scale
+#: 1.8`` — seed 0, 40 cases x 30 epochs of episode-return REINFORCE on
+#: the shipped macro-offering legal set, *warm-started* from the V1
+#: table (the cold-start retrain scrambled base competence —
+#: ``docs/results_macro_bake2.md``), then multiplied by a uniform
+#: 1.8 logit scale.  The scale is a decode-sharpness transform: the
+#: softmax's argmax is scale-invariant so the greedy decode is
+#: untouched, while the sampled decode concentrates on the learned
+#: ranking — the fix for the "which offer" mass-splitting the prior
+#: bake attempt could not cross.  Reproducible, not hand-tuned.
 #:
 #: The seeded held-out split (train ``gen_cases(0, 40)``, evaluate
-#: ``gen_cases(7919, 16)``) makes the bake earn its place: the trained
-#: prior scores -0.06 mean reward/episode against -0.49 for the cold
-#: start, -0.57 for random and -0.60 for the cold-greedy arm (the
-#: hand-written ``scripted`` playbook scores -0.10).  The learned
-#: line is legible — ``op:extract`` high, ``op:fire`` low: the board
-#: prices spend, so the paying move is the cheap extract.
+#: ``gen_cases(7919, 16)``, budget 12) earns the bake — the gate
+#: table (V1 = the pre-macro table this replaces):
+#:
+#: ======  ========  ====================  ======================
+#: arm     reward    bar                   verdict
+#: ======  ========  ====================  ======================
+#: greedy  +0.117    >= -0.056 & +0.088    clears both anchors
+#: sampled +0.101    >= +0.088             clears scripted+macros
+#: v2-base -0.032    >= V1 (-0.056)        macro-free caller ok
+#: ======  ========  ====================  ======================
+#:
+#: (context anchors: V1 -0.056 sampled on the same shipped legal
+#: set, scripted playbook -0.100, scripted+macros +0.088.)  Macro
+#: pick-rate held out: sampled 11 plays in 7 of 16 cases, greedy
+#: 7/7 — selective: zero picks where ``viable`` offers nothing
+#: bindable.  The learned line stays legible: ``op:extract`` and
+#: ``op:macro`` high, ``x:macro:certified``/``a:h:3`` up — the
+#: policy prices the miner's evidence.
 #: Regenerate with::
 #:
-#:     python scripts/train_meta_prior.py
+#:     python scripts/train_meta_macro_prior.py \
+#:         --init v1 --epochs 30 --scale 1.8
 #:
 #: Weights are rounded to 4 decimals and near-zero entries dropped —
 #: ``LinearPolicy`` reads a missing feature as ``0``.
 META_ARENA_PLAYER_WEIGHTS: dict[str, float] = {
-    "op:fire": -2.7853,
-    "op:saturate": -0.4063,
-    "op:declare": -0.2087,
-    "op:handle": -0.0149,
-    "op:claim": 0.2662,
-    "op:extract": 3.1491,
-    "a:budget": -0.0816,
-    "a:unbounded": -0.2431,
-    "a:spec_i": -0.0024,
-    "a:r:00": -0.3249,
-    "a:r:01": -0.1761,
-    "a:r:03": -0.1637,
-    "a:r:04": -0.2088,
-    "a:r:05": -0.265,
-    "a:r:06": -0.145,
-    "a:r:07": -0.1296,
-    "a:r:08": -0.2153,
-    "a:r:09": -0.1006,
-    "a:r:10": -0.2656,
-    "a:r:11": -0.0578,
-    "a:r:12": -0.2285,
-    "a:r:13": -0.1204,
-    "a:r:14": -0.0764,
-    "a:r:15": -0.3076,
-    "a:h:0": 0.1346,
-    "a:h:3": 0.1166,
-    "a:o:0": -0.023,
-    "a:o:2": 0.0081,
-    "x:extract:improve": 0.1599,
-    "x:late:extract": 0.1336,
-    "x:declared:handle": -0.006,
-    "x:unhandled:handle": -0.0028,
-    "x:specs:declare": -0.0125,
-    "x:handleable:declare": -0.0192,
-    "x:handleable:claim": 0.0551,
-    "x:claimable:declare": -0.0192,
-    "x:claimable:claim": 0.0551,
+    "op:fire": -5.5097,
+    "op:saturate": -0.9514,
+    "op:declare": -0.1926,
+    "op:handle": -0.0316,
+    "op:claim": 0.0281,
+    "op:extract": 4.1594,
+    "op:macro": 2.4981,
+    "a:budget": -0.2214,
+    "a:unbounded": -0.5086,
+    "a:spec_i": -0.0051,
+    "a:r:00": -0.6219,
+    "a:r:01": -0.4323,
+    "a:r:02": -0.0039,
+    "a:r:03": -0.3169,
+    "a:r:04": -0.5321,
+    "a:r:05": -0.51,
+    "a:r:06": -0.2971,
+    "a:r:07": -0.2612,
+    "a:r:08": -0.4722,
+    "a:r:09": -0.123,
+    "a:r:10": -0.5062,
+    "a:r:11": -0.1272,
+    "a:r:12": -0.3481,
+    "a:r:13": -0.2397,
+    "a:r:14": -0.117,
+    "a:r:15": -0.6008,
+    "a:h:0": 0.1714,
+    "a:h:3": 3.0383,
+    "a:o:0": -0.0181,
+    "a:o:2": -0.0135,
+    "x:extract:improve": 0.3224,
+    "x:late:extract": 0.2452,
+    "x:declared:handle": -0.0255,
+    "x:unhandled:handle": -0.0083,
+    "x:specs:declare": -0.0163,
+    "x:handleable:declare": -0.0489,
+    "x:handleable:claim": 0.5695,
+    "x:claimable:declare": -0.0489,
+    "x:claimable:claim": 0.5695,
+    "x:macro:len": 0.9288,
+    "x:macro:certified": 2.5054,
+    "x:macro:score": 1.3048,
 }
 
 #: The open-game learned prior — the shipped preset

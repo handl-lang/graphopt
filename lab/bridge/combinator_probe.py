@@ -39,9 +39,9 @@ from typing import Any
 
 import torch
 from mlopt_core.ir import Op
+from mlopt_discovery import combinator as cb
 from mlopt_discovery.impact import _iter_subterms
 
-from lab.bridge import combinator as cb
 from lab.probes import om_shared_state_probe as osp
 from lab.screen.exposure_screen import _export, _workloads
 

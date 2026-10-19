@@ -33,9 +33,10 @@ admission loop; `macro_miner.py` — the minted-macro research driver:
 mines + evals `lawdata.MACROS` candidate tables; the shipped replay
 machinery promoted to `mlopt_discovery.macro_moves` and the retrain
 driver to `scripts/train_meta_macro_prior.py`), `lab/bridge/`
-(`combinator.py` + `combinator_probe.py`,
+(`combinator_probe.py`,
 `loop_propose.py`, `index_abstract.py`, `form_propose.py`,
-`sharing_extract.py`, `state_reindex.py` — the ADR-0008 bridge),
+`sharing_extract.py`, `state_reindex.py` — the ADR-0008 bridge;
+the substrate itself promoted to `mlopt_discovery.combinator`),
 `lab/audit/` (`grammar_probe.py`, `handl_differential.py`,
 `egraph_differential.py` — the handl-side oracles), `lab/screen/`
 (`exposure_screen.py`, `exposed_discovery.py`, `discovery_scale.py`),
@@ -81,12 +82,13 @@ classification and ranked promote-candidates live in
 
 - **prod machinery → `mlopt_discovery`** — a module whose output is
   shipped behaviour promotes when its tests clear the **99% coverage
-  floor** (its `lab/<sub>/` mirrors the package layout).  Measured so
-  far: `lab/bridge/combinator.py` sits at **92%** under
-  `tests/test_combinator_bridge.py` — the closest; `form_propose.py`
-  84%, `state_reindex.py` 83%, `index_abstract.py` 81%,
-  `loop_propose.py` 80% under their dedicated files.  Do not promote
-  a module that would fail the floor — and never widen it.
+  floor** (its `lab/<sub>/` mirrors the package layout).  First
+  promotion: `lab/bridge/combinator.py` → `mlopt_discovery.combinator`
+  (**92% → 100%** under `tests/test_combinator_bridge.py`).  Still in
+  queue: `form_propose.py` 84%, `state_reindex.py` 83%,
+  `index_abstract.py` 81%, `loop_propose.py` 80% under their
+  dedicated files.  Do not promote a module that would fail the
+  floor — and never widen it.
 - **dev-facing tooling → `scripts/`** — drivers whose purpose is to
   *regenerate or audit a committed artifact* (the `train_*_prior`
   weight bakers, the `.pt` artifact trainers, `dump_fragments.py`,

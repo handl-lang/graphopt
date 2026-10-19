@@ -41,7 +41,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from lab.bridge.combinator import (
+from mlopt_discovery.combinator import (
     Id,
     Loop,
     Par,
@@ -75,7 +75,7 @@ def unroll(step: Any, n: int) -> Any:
     ``step : S ⊗ X → S ⊗ Y`` with arity ``(1 + nx, 1 + ny)``.  The
     unrolled term consumes ``S ⊗ X^n`` (``1 + n·nx`` wires) and produces
     ``S' ⊗ Y^n`` (``1 + n·ny`` wires) — the same morphism
-    :func:`~lab.bridge.combinator.comb_to_dag` builds by expanding
+    :func:`~mlopt_discovery.combinator.comb_to_dag` builds by expanding
     ``Loop``, but written as a ``seq`` of ``perm``/``step`` segments so
     the shared ``step`` stays ONE subterm (that sharing is exactly what
     the flat DAG compilation loses).

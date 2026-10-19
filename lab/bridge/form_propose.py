@@ -94,8 +94,8 @@ from typing import Any
 
 from mlopt_core.egraph.types import _member_key
 from mlopt_core.ir import Const, Op, TensorType, Var
+from mlopt_discovery import combinator as cb
 
-from lab.bridge import combinator as cb
 from lab.bridge.index_abstract import _block_splits, block_outputs
 from lab.bridge.loop_propose import (
     EXPAND_LOOP,

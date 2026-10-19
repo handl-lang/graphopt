@@ -62,8 +62,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from mlopt_core.ir import Op, TensorType, Var
+from mlopt_discovery import combinator as cb
 
-from lab.bridge import combinator as cb
 from lab.bridge.loop_propose import (
     EXPAND_LOOP,
     PROPOSE_LOOP,
@@ -570,7 +570,7 @@ def _param_values(t: Any) -> list[tuple[str, Any]]:
 def _compile_with_inputs(root: Any, inputs: list[Any]) -> Any:
     """Compile a DAG to a morphism that *consumes* ``inputs`` as wires.
 
-    The bridge's :func:`~lab.bridge.combinator.dag_to_comb` compiles
+    The bridge's :func:`~mlopt_discovery.combinator.dag_to_comb` compiles
     ``I → outputs`` (every leaf is a generator).  A ``Loop`` step needs
     ``S ⊗ X → S ⊗ Y``: the state and the block inputs arrive as *wires*.
     This is the same postorder/mux compilation with the context seeded by

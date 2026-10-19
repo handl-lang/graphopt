@@ -17,9 +17,9 @@ import pytest
 from mlopt_core.cost import count_cost
 from mlopt_core.egraph import EGraph
 from mlopt_core.ir import Const, Op, Param, TensorType, Var
+from mlopt_discovery.combinator import comb_to_dag
 
 from lab.bridge import form_propose as fp
-from lab.bridge.combinator import comb_to_dag
 from lab.bridge.loop_propose import loop_headed
 
 X = Var("x", TensorType((2, 64, 16)))
@@ -325,9 +325,9 @@ def test_state_reindex_closes_boundary():
         om_shared_state_stages,
     )
     from mlopt_core.cost import flops_cost
+    from mlopt_discovery.combinator import Loop
 
     from lab.bridge import state_reindex as sr
-    from lab.bridge.combinator import Loop
     from lab.probes import om_shared_state_probe as osp
 
     t, k = 64, 4

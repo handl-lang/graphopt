@@ -67,10 +67,10 @@ from mlopt_core.egraph import Rewrite
 from mlopt_core.ir import Op
 from mlopt_core.laws import R as _R
 from mlopt_core.laws.tensor import DISTRIBUTE_MUL_ADD
+from mlopt_discovery import combinator as cb
+from mlopt_discovery.combinator import comb_to_dag
 
-from lab.bridge import combinator as cb
 from lab.bridge import form_propose as fp
-from lab.bridge.combinator import comb_to_dag
 from lab.bridge.index_abstract import block_outputs
 from lab.bridge.loop_propose import (
     EXPAND_LOOP,

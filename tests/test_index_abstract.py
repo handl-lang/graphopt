@@ -12,8 +12,8 @@ negative).
 
 import pytest
 from mlopt_core.ir import Const, Op, TensorType, Var
+from mlopt_discovery import combinator as cb
 
-from lab.bridge import combinator as cb
 from lab.bridge import index_abstract as ia
 from lab.bridge import loop_propose as lp
 

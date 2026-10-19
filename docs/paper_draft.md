@@ -196,7 +196,7 @@ way to *say* things is §2.2.
 
 ### 2.2 The substrate beneath the syntax — a presentation, and a bounded search space (ADR 0008)
 
-A prototype combinator presentation (`lab/bridge/combinator.py`) re-expresses
+A prototype combinator presentation (`mlopt_discovery.combinator`) re-expresses
 the IR as morphisms of a monoidal category with explicit `dup` (Δ, sharing as a
 morphism) and `loop` (bounded trace).  Gates 1–2 pass: 321/321 corpus
 workloads round-trip structurally exact (zero ops refuse translation, mean

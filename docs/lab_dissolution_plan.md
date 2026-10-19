@@ -1,7 +1,9 @@
 # `lab/` dissolution plan
 
 **Status:** executed 2026-10-19 — the safe moves are landed; the rest is
-the classified queue below.
+the classified queue below.  **Update:** `combinator.py` promoted to
+`mlopt_discovery.combinator` at the 99% floor (92% → 100% under
+`tests/test_combinator_bridge.py`).
 
 **The rule.** `lab/` was the promotion queue with a single exit
 ("driver → `mlopt_discovery` at the 99% coverage floor").  The exit
@@ -99,18 +101,17 @@ Measured under `coverage run --source=lab -m pytest
 
 | module | coverage | test file | gap |
 |---|---|---|---|
-| `combinator.py` | **92%** | `test_combinator_bridge.py` | 23 stmts + 12 partial branches — all deterministic guards and edge cases (`raise`s on bad morphisms, `_par`/`_mux` edges, `morph_stats` Drop/Loop, the distinct-leaf helper): plausibly closes to 99% with ~15 targeted tests |
+| ~~`combinator.py`~~ → **`mlopt_discovery.combinator`** ✅ | **92% → 100%** | `test_combinator_bridge.py` | promoted: +9 targeted tests closed the guards (`arity`/`_apply`/`comb_to_dag` `raise`s, `_par`/`_mux` edges, `morph_stats` Drop/Loop/non-morphism, `dag_size`); the one residual — the closing-`Drop` in `dag_to_comb` — is provably unreachable (a ctx wire survives to the close only while `remaining[w] > 0`, and at the close `remaining` counts exactly the output uses), so it carries a documented `pragma: no cover` |
 | `form_propose.py` | 84% | `test_form_propose.py` | 71 stmts + 48 br — needs real test growth |
 | `state_reindex.py` | 83% | via `test_form_propose.py` | 25 + 22 |
 | `index_abstract.py` | 81% | `test_index_abstract.py` | 62 + 18 |
 | `loop_propose.py` | 80% | `test_loop_propose.py` | 24 + 4 |
 
-`combinator.py` is the promote-now candidate: its gaps are
-deterministic, no unreachable-defensive arcs that would need pragmas.
-Promotion cost is more than tests, though — the module then falls
-under the package-only gates (`ty`, vulture, the radon ratchet, the
-discovery 99% ratchet measured on the *union*), so it lands as its own
-change, not bundled with tooling moves.
+`combinator.py` was the promote-now candidate and landed: its gaps
+were deterministic guards, with the single pragma exception noted
+above.  The promoted module now falls under the package-only gates
+(`ty`, vulture, the radon ratchet, the discovery 99% ratchet measured
+on the *union*).
 
 `sharing_extract.py` and `combinator_probe.py` have no dedicated test
 file — they stay until the gate-3 line settles.
@@ -171,9 +172,8 @@ not piecemeal.
 
 ## Promote-candidate ranking (gap-to-99%)
 
-1. **`lab/bridge/combinator.py`** — 92% → 99% needs ~35 arcs of
-   deterministic-guard tests; then ty/vulture/radon + the discovery
-   ratchet.
+1. ~~**`lab/bridge/combinator.py`**~~ — **promoted** to
+   `mlopt_discovery.combinator` (92% → 100%).
 2. **`lab/bridge/form_propose.py`** — 84%; the ADR-0008 capstone, but
    119 missing arcs.
 3. **`lab/bridge/state_reindex.py`** — 83%; needs a dedicated file

@@ -12,7 +12,9 @@ evidence store (:mod:`.evidence`), the coherence catalogue
 (:mod:`.intake`, :mod:`.workload_gen`), and the emit/vocab/meta-game
 helpers, and the object constructor (:mod:`.object_synthesis` — the
 ADR-0004 "construction operations" that *build* declared objects for
-the evidence store to admit).  The game layer: boards
+the evidence store to admit), the ADR-0008 combinator substrate
+(:mod:`.combinator` — the IR-DAG ⇄ morphism-term bridge with the
+explicit-Δ sharing presentation and the ``loop`` trace).  The game layer: boards
 (:mod:`.arena`, :mod:`.meta_arena`), the generic driver
 (:mod:`.engine` — one ``Board`` protocol over all of them), the
 player/featurizer abstraction (:mod:`.players` — ``LinearPolicy``,

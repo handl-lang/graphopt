@@ -234,7 +234,7 @@ exposed class is ~1.5%, and it concentrates where a model's op-tuple
 is itself novel.
 
 **The substrate beneath the syntax (ADR 0008).**  A prototype
-combinator presentation (`lab/bridge/combinator.py`) re-expresses the IR
+combinator presentation (`mlopt_discovery.combinator`) re-expresses the IR
 as morphisms of a monoidal category with explicit `dup` (Δ, sharing
 as a morphism) and `loop` (bounded trace): 321/321 corpus workloads
 round-trip structurally exact, zero ops refuse translation, and the
@@ -337,7 +337,7 @@ record is `project/GOALS.md` §G0 and `lab/handl-peer/README.md`.)
 | Discover (meta) | `mlopt_discovery.pipeline` (census → propose → verify → measure → rank → emit) · `mlopt_discovery.vocab` (property-derived op alphabet) · `mlopt_discovery.gap_gen` (adversarial witnesses) · `mlopt_discovery.emit` (admission patch) |
 | Mint (meta) | `mlopt_discovery.antiunify` (layer 1 — definitional atoms) · `mlopt_discovery.handler_synth` (layer 2 — handler bodies) · `lab/mint/atom_law_loop.py` (layer 3 — law synthesis per atom) · `lab/mint/atom_synth_loop.py` (the composed loop) |
 | Screen / sweep | `lab/screen/exposure_screen.py` (law-LHS exposure census) · `lab/screen/discovery_scale.py` (budgeted corpus sweep + novelty pass) · `lab/screen/exposed_discovery.py` (per-model discovery driver) |
-| Substrate (prototype) | `lab/bridge/combinator.py` (`BASIS`, `dag_to_comb` / `comb_to_dag`) · `lab/bridge/combinator_probe.py` (round-trip + `loop`-spell gates) |
+| Substrate | `mlopt_discovery.combinator` (`BASIS`, `dag_to_comb` / `comb_to_dag`) · `lab/bridge/combinator_probe.py` (round-trip + `loop`-spell gates) |
 | Backends | `mlopt_torch` (`TorchSource`/`TorchSink`) · `mlopt_onnx` (`OnnxSource`/`OnnxSink`, ADR 0006) |
 | Coherence (meta) | `mlopt_discovery.coherence` (`--emit-basis`) · `mlopt_discovery.coherence2` (stratification / reach / mediators) · `mlopt_discovery.evidence` (sqlite verdict store) |
 

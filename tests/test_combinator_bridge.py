@@ -1,15 +1,15 @@
-"""Unit tests for the ADR-0008 combinator-bridge prototype.
+"""Unit tests for the ADR-0008 combinator bridge.
 
-The bridge lives in ``lab/bridge/combinator.py`` (a falsification
-prototype, not shipped source): sharing-compilation round-trips
-and the spelled ``loop`` RetNet fold are the properties under test.
+The bridge lives in ``mlopt_discovery.combinator`` (promoted out of
+``lab/bridge/`` at the 99% coverage floor): sharing-compilation
+round-trips and the spelled ``loop`` RetNet fold are the properties
+under test.
 """
 
 import pytest
 import torch
 from mlopt_core.ir import Const, Op, Param, TensorType, Var
-
-from lab.bridge import combinator as cb
+from mlopt_discovery import combinator as cb
 
 
 def _v(name, *shape):
@@ -74,6 +74,74 @@ def test_fanout_is_dup():
     assert st.dup_copies >= 2
 
 
+def test_arity_rejects_empty_seq():
+    """``seq()`` has no footprint — the arity guard fires."""
+    with pytest.raises(ValueError, match="empty seq"):
+        cb.arity(cb.Seq(()))
+
+
+def test_arity_rejects_non_morphism():
+    """``arity`` refuses anything outside the morphism grammar."""
+    with pytest.raises(TypeError, match="not a morphism"):
+        cb.arity(42)
+
+
+def test_comb_to_dag_rejects_non_morphism():
+    """``_apply`` refuses a term outside the morphism grammar."""
+    with pytest.raises(TypeError, match="not a morphism"):
+        cb.comb_to_dag(42)
+
+
+def test_comb_to_dag_rejects_underfed_arr():
+    """An ``arr`` whose arity exceeds the wire bundle starves."""
+    with pytest.raises(ValueError, match="needs 2 wires"):
+        cb.comb_to_dag(cb.Arr("mul", 2))
+
+
+def test_comb_to_dag_rejects_empty_program():
+    """A program that consumes every wire has no output to return."""
+    with pytest.raises(ValueError, match="no output wires"):
+        cb.comb_to_dag(cb.Drop())
+
+
+def test_dag_to_comb_refuses_non_term_arg():
+    """An op arg the basis cannot present is a named gap, not a term."""
+    bad = Op.make("f", 5, validate=False)
+    with pytest.raises(TypeError, match="no leaf/generator"):
+        cb.dag_to_comb(bad)
+
+
+def test_par_smart_constructor_edges():
+    """``_par`` flattens nested ``par`` and drops ``id(0)`` wires."""
+    # a nested Par flattens into the parent product
+    assert cb._par(cb.Par((cb.Id(1),)), cb.Id(1)) == cb.Id(2)
+    # Id(0) — the unit object — contributes no wires
+    assert cb._par(cb.Id(0), cb.Id(2)) == cb.Id(2)
+    # an empty (or all-unit) product is the unit map itself
+    assert cb._par() == cb.Id(0)
+    assert cb._par(cb.Id(0)) == cb.Id(0)
+
+
+def test_morph_stats_census():
+    """The census counts drop/loop/structural and ignores non-terms."""
+    assert cb.morph_stats(cb.Drop()).drop == 1
+    st = cb.morph_stats(cb.Loop(cb.Id(2), 3))
+    assert st.loop == 1
+    assert st.structural == 1  # the Id step body
+    # a non-morphism still counts as a visited node, nothing more
+    st = cb.morph_stats(42)
+    assert st.nodes == 1
+    assert st.arr == st.structural == 0
+
+
+def test_dag_size_counts_distinct_subterms():
+    """Shared children count once; leaves and ops both count."""
+    shared = Op.make("add", X, W)
+    root = Op.make("mul", shared, Op.make("matmul", shared, W))
+    assert cb.dag_size(root) == 5  # mul, matmul, add, x, w
+    assert cb.dag_size(X) == 1
+
+
 def test_retnet_step_arity():
     """The spelled step is ``S ⊗ (q,k,v) → S' ⊗ o``."""
     step = cb.retnet_step(Const(0.9), Const(0.9**4), 8.0, 4)
@@ -100,6 +168,11 @@ def test_retnet_fold_expands_and_chains():
     term = cb.comb_to_dag(prog)
     # the expanded DAG itself re-projects through the bridge
     assert cb.comb_to_dag(cb.dag_to_comb(term)) == term
+    # census: exactly one loop, one drop (the discarded final state)
+    st = cb.morph_stats(prog)
+    assert st.loop == 1
+    assert st.drop == 1
+    assert st.dup > 0
 
 
 def test_retnet_fold_verifies_against_model():
