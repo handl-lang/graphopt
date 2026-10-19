@@ -18,10 +18,10 @@
 #   * CPU torch — the lockfile resolves a CUDA wheel on Linux, but four
 #     tests assume a CPU build (and CUDA-graph capture is flaky on CI);
 #     force the CPU wheel before running anything.
-#   * ruff check packages tools bench — lint (line length 72, etc.).
-#     Shipped source plus the bench harness; tests/ still carries
-#     pre-existing isort drift under the pinned ruff.
-#   * ruff format --check packages tools bench — formatting.
+#   * ruff check packages lab scripts examples — lint (line length 72,
+#     etc.).  The shipped source scope; tests/ and bench/ still carry
+#     pre-existing isort/format drift under the pinned ruff.
+#   * ruff format --check packages lab scripts examples — formatting.
 #   * ty check — the typecheck ratchet ([tool.ty.src] include/exclude in
 #     pyproject.toml scope it to packages/).  0 errors.
 #   * vulture — dead-code scan ([tool.vulture] paths + min-confidence).
@@ -33,12 +33,15 @@
 #     --config p/security-audit packages — repo-local invariants
 #     plus the registry dataflow/security rulesets (network).
 #   * pip-audit — dependency-vulnerability audit (network).
-#   * python tools/radon_ratchet.py — cyclomatic-complexity ratchet:
+#   * python scripts/radon_ratchet.py — cyclomatic-complexity ratchet:
 #     no function may exceed its pinned baseline, new ones stay <= C.
 #   * typeguard runtime contracts — runtime enforcement of annotations
 #     over the torch-free core (curated green subset).
 #   * coverage run + coverage report -m — the full suite under the
-#     pinned 100% coverage floor ([tool.coverage.report] fail_under).
+#     pinned 100% coverage floor ([tool.coverage.report] fail_under),
+#     applied to the six shipped packages + mlopt_onnx; mlopt_discovery
+#     is measured under its own 99% ratchet floor (mirrors
+#     scripts/gates.sh's `full` lane).
 #
 # NOTE: `coverage` is invoked as `.venv/bin/coverage` because CI does
 # not activate the virtualenv between steps (uv sync only creates it).
@@ -65,10 +68,10 @@ jobs:
         run: uv pip install --torch-backend cpu --reinstall torch
 
       - name: ruff check
-        run: .venv/bin/ruff check packages tools bench
+        run: .venv/bin/ruff check packages lab scripts examples
 
       - name: ruff format --check
-        run: .venv/bin/ruff format --check packages tools bench
+        run: .venv/bin/ruff format --check packages lab scripts examples
 
       - name: ty check
         run: .venv/bin/ty check
@@ -91,16 +94,21 @@ jobs:
         run: .venv/bin/pip-audit
 
       - name: radon complexity ratchet
-        run: .venv/bin/python tools/radon_ratchet.py
+        run: .venv/bin/python scripts/radon_ratchet.py
 
       - name: typeguard runtime contracts
-        run: sh tools/runtime_types.sh
+        run: sh scripts/runtime_types.sh
 
       - name: coverage run (full suite)
         run: >-
           .venv/bin/coverage run
-          --source=mlopt_core,mlopt_torch,mlopt_carriers,mlopt_orchestrator,mlopt_cuda
+          --source=mlopt_core,mlopt_torch,mlopt_carriers,mlopt_orchestrator,mlopt_cuda,mlopt_discovery,mlopt_onnx
           -m pytest tests/ -q
 
-      - name: coverage report (fail_under=100)
-        run: .venv/bin/coverage report -m
+      - name: coverage report (fail_under=100, shipped packages)
+        run: .venv/bin/coverage report -m --omit="*/mlopt_discovery/*"
+
+      - name: coverage report (mlopt_discovery, fail_under=99)
+        run: >-
+          .venv/bin/coverage report -m
+          --include="*/mlopt_discovery/*" --fail-under=99

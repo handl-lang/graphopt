@@ -650,8 +650,8 @@ def _census_rows(which: str) -> tuple[list, list]:
     census).  Bounded to the *which* registry (``intake`` by default:
     the scan-family needs all live there and the set is small).
     """
-    from mlopt_core.cost.basic import _flops_of
     from exposure_screen import law_surface
+    from mlopt_core.cost.basic import _flops_of
 
     _rules, lhs_ops, _rhs = law_surface()
     cases = []

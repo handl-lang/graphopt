@@ -243,9 +243,7 @@ def collect_rules() -> dict[str, Any]:
         if m.name == "laws":
             continue
         try:
-            mods.append(
-                importlib.import_module(f"mlopt_core.{m.name}")
-            )
+            mods.append(importlib.import_module(f"mlopt_core.{m.name}"))
         except Exception:
             continue
     for mod in mods:

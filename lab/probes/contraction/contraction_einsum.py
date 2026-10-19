@@ -55,8 +55,9 @@ from mlopt_torch.contraction_policy import (
     random_bond_network,
     rollout_orders,
 )
-from tools.probes.contraction import contraction_policy as cp
-from tools.probes.contraction import contraction_scale as cs
+
+from lab.probes.contraction import contraction_policy as cp
+from lab.probes.contraction import contraction_scale as cs
 
 try:
     import opt_einsum as oe

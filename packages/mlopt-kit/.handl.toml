@@ -22,6 +22,6 @@ host-tensor = { git = "https://github.com/handl-lang/host-tensor", branch = "mai
 # A patch whose named directory exists wins over the `[dependencies]`
 # source; a missing dir is inert and the git source applies. This path is
 # the handl-lang sibling-checkout convention (`~/GitHub/handl-lang/*`
-# next to `~/Desktop/mlopt`) — the package dir is host-tensor's `src/`,
-# where its `index.hnl` lives.
-host-tensor = "../../../../GitHub/handl-lang/host-tensor/src"
+# next to `~/GitHub/handl-lang/research-mlopt`) — the package dir is
+# host-tensor's `src/`, where its `index.hnl` lives.
+host-tensor = "../../../host-tensor/src"

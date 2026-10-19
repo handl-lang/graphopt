@@ -96,7 +96,7 @@ uv sync                                                  # the dev environment
 cargo test -p mlopt-kit                                 # the Rust consumer, 21 tests
 
 # the day-to-day gate
-.venv/bin/python -m pytest -m "not slow"                 # dev lane, 6,353 tests
+.venv/bin/python -m pytest -m "not slow"                 # dev lane, 6,485 tests
 scripts/gates.sh                                         # static gates + suite
 ```
 

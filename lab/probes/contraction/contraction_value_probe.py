@@ -51,10 +51,11 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
-from tools.probes.contraction import contraction_az as az
-from tools.probes.contraction import contraction_einsum as ce
-from tools.probes.contraction import contraction_policy as cp
-from tools.probes.contraction import contraction_scale as cs
+
+from lab.probes.contraction import contraction_az as az
+from lab.probes.contraction import contraction_einsum as ce
+from lab.probes.contraction import contraction_policy as cp
+from lab.probes.contraction import contraction_scale as cs
 
 __all__ = ["main"]
 

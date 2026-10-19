@@ -75,6 +75,22 @@ crates = ["handl-host-tensor"]
 role = "the 18-op `tensor.*` host surface — dense n-d f64 tensors over the {\"__tensor__\":…} wire form. The op vocabulary the lifted program spells and the folded program runs against."
 
 [[component]]
+name = "egraph"
+repo = "handl-lang/egraph"
+float = "main"
+kind = "cargo-git"
+crates = ["handl-egraph"]
+role = "the equality-saturation substrate — the named Rust port of mlopt-core's `EGraph`/`Rewrite` spec (mlopt-kit's `src/egraph.rs` drives it over the discovery codec's JSON wire forms; `egraph-run` is the subprocess bin). A real mlopt-kit dep, mirrored from `packages/mlopt-kit/Cargo.toml`."
+
+[[component]]
+name = "discovery"
+repo = "handl-lang/discovery"
+float = "main"
+kind = "cargo-git"
+crates = ["handl-discovery"]
+role = "the ported domain-free half of `mlopt_discovery` — the `term_to_data`/`term_from_data` codec the egraph leg speaks, and the `GauntletLegs` trait surface `tests/gauntlet_stub.rs` injects into `run_gauntlet`. A real mlopt-kit dep, mirrored from `packages/mlopt-kit/Cargo.toml`."
+
+[[component]]
 name = "mlopt-kit"
 repo = "handl-lang/research-mlopt"
 path = "packages/mlopt-kit"

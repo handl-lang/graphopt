@@ -52,8 +52,9 @@ from mlopt_torch.contraction_policy import (
     rollout_orders,
     save_contraction_policy,
 )
-from tools.probes.contraction import contraction_policy as cp
-from tools.probes.contraction import contraction_scale as cs
+
+from lab.probes.contraction import contraction_policy as cp
+from lab.probes.contraction import contraction_scale as cs
 
 __all__ = ["main"]
 

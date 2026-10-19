@@ -42,16 +42,18 @@ committed `.handl.toml` that names the dep *portably* —
 
 ```toml
 [dependencies]
-host-tensor = { git = "https://github.com/handl-lang/host-tensor", branch = "main" }
+host-tensor = { git = "https://github.com/handl-lang/host-tensor", branch = "main", subdir = "src" }
 
 [patch]
-host-tensor = "../../../../GitHub/handl-lang/host-tensor/src"
+host-tensor = "../../../host-tensor/src"
 ```
 
-`[dependencies]` accepts `{ git = …, rev|branch|tag }` and resolves an
-unpatched git dep to its package-cache slot (`$HANDL_PKG_DIR`, else
-`~/.handl/pkg/host-tensor`) — the directory the ADR-0010 fetch hook will
-materialize (populate it with a checkout or symlink today).
+`[dependencies]` accepts `{ git = …, rev|branch|tag, subdir }` and
+resolves an unpatched git dep to its package-cache slot
+(`$HANDL_PKG_DIR`, else `~/.handl/pkg/host-tensor`) — the directory
+the ADR-0010 fetch hook will materialize, with `subdir` naming the
+package root inside the clone (host-tensor's `.hnl` sources live in
+`src/`). Populate the slot with a checkout or symlink today.
 `[patch]` is the consumer-side dev-link (the Cargo `[patch]` story): a
 patch whose named directory exists wins over the declared source, a
 missing dir is inert. The package dir is host-tensor's `src/` — where
@@ -81,9 +83,9 @@ evaluates identically.
 
 ## The e-graph leg — `egraph-run`
 
-`src/egraph.rs` (`catopt_kit::egraph`) is the kit's second leg: the
+`src/egraph.rs` (`mlopt_kit::egraph`) is the kit's second leg: the
 `handl-egraph` saturation substrate (the named Rust port of
-`catopt_core`'s `EGraph`/`Rewrite` spec) driven over the
+`mlopt_core`'s `EGraph`/`Rewrite` spec) driven over the
 `handl-discovery` codec's JSON wire forms
 (`{"mvar"}`/`{"leaf"}`/`{"op"}` — the scheme `ir.term_to_data`
 canonized). `src/bin/egraph-run.rs` is its subprocess door — the same
@@ -93,13 +95,13 @@ canonical run *report* on stdout. The report is engine-independent —
 classes compare by Weisfeiler-Lehman signature, never by internal id —
 because the consumer is `lab/audit/egraph_differential.py` /
 `tests/test_egraph_differential.py`: a Python↔Rust *differential*
-that runs the same fixtures through `catopt_core.egraph.EGraph` and
+that runs the same fixtures through `mlopt_core.egraph.EGraph` and
 `handl-egraph` and asserts identical structure, provenance, and
 extracted winners.
 
 ```sh
 source ~/.cache/devin/handl_deps.env
-cargo build -p catopt-kit --bin egraph-run
+cargo build -p mlopt-kit --bin egraph-run
 echo '{"terms":[{"leaf":"x"}]}' | target/debug/egraph-run -
 ```
 

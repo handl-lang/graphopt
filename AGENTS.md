@@ -14,7 +14,7 @@ both verified through onnxruntime);
 the game layer is `engine` (the `Board` protocol + generic
 episode/train/eval drivers), `players` (`LinearPolicy`, the
 featurizer-injected learned arm), `play` (the domain registry +
-`python -m mlopt_discovery.play --domain meta|joint|search|torch|gen`
+`python -m mlopt_discovery.play --domain meta|joint|search|torch|gen|open`
 CLI; `--deliver` lowers+verifies the winning extraction on domains
 that ship a deliver hook — torch does)).
 The optional
@@ -33,8 +33,13 @@ admission loop), `lab/bridge/` (`combinator.py` + `combinator_probe.py`
 — the ADR-0008 bridge), `lab/audit/` (`dspec_audit.py`,
 `grammar_probe.py`), `lab/screen/` (`exposure_screen.py`,
 `exposed_discovery.py`, `discovery_scale.py`), `lab/probes/` (the
-measurement probes, incl. `contraction/`) and `lab/train/` (the six
-`train_*.py`).  Run them with `.venv/bin/python lab/<sub>/<mod>.py`.
+measurement probes, incl. `contraction/`), `lab/train/` (the six
+`train_*.py`), `lab/kit/` (`term_hnl.py` — the mlopt-term → `.hnl`
+emit/eval bridge into `CatoptKit`), `lab/handl-spike/`
+(`dump_fragments.py` + the dumped `fragments/`/`fragments-all/`
+language YAML) and `lab/handl-peer/` (`mlopt-handl-peer` — the PyO3
+spike: Python calls handl's loader + rewrite engine directly).
+Run them with `.venv/bin/python lab/<sub>/<mod>.py`.
 Some probes need scratch deps installed `--no-deps` outside the
 lockfile: `birefnet_bounded_probe.py` wants
 `timm einops kornia transformers torchvision`;
@@ -136,7 +141,7 @@ runs everything.
 .venv/bin/python -m pytest -m "not e2e and not slow"     # 5,837 tests
 
 # dev lane: everything except the minutes-scale
-.venv/bin/python -m pytest -m "not slow"                 # 6,353 tests
+.venv/bin/python -m pytest -m "not slow"                 # 6,485 tests
 
 # gate: everything, once, under coverage
 scripts/gates.sh
@@ -257,8 +262,9 @@ import-linter, vulture, bandit, semgrep and the radon ratchet.  The
 
 Known drift: the installed ruff (0.16.9) still flags pre-existing
 isort / format differences across `tests/` and `bench/`, which are not
-format-checked.  The shipped source — `packages` and `tools` —
-is clean under both `ruff check` and `ruff format --check`.
+format-checked.  The shipped source — `packages`, `lab`, `scripts`
+and `examples` — is clean under both `ruff check` and
+`ruff format --check`.
 
 ## Typecheck (ty)
 
@@ -398,7 +404,7 @@ equality-saturation search against the Rust **egglog** library on a
 small op/law subset.  It is an **opt-in, test-only oracle** — not a
 production dependency and not an engine swap: `mlopt-core` stays
 pure-Python / zero-dependency, and nothing under `packages/` or
-`packages/` imports `egglog`.  The ported prototype and its documented
+`lab/` imports `egglog`.  The ported prototype and its documented
 limitations (untyped-by-shape terms, unconditional `check` rewrites, no
 proof replay) live in `tests/egglog_oracle.py`.
 
@@ -510,7 +516,7 @@ leaves are literals, and `str` attr values are attr metavariables bound
 under `"$attr:"` keys.  Prefer `cond=...` — a declarative side
 condition in `mlopt_core.laws.cond` (pure data: `("and", ("rank-eq",
 "a", "b"), ("rank-ge", "a", 2))`, serializable via `cond_to_data`/
-`cond_from_data`; 45 of 71 laws use it) — over `check(bound) -> bool`,
+`cond_from_data`; 56 of 84 laws use it) — over `check(bound) -> bool`,
 the escape hatch for conditions the DSL can't express: `bound` maps
 each metavar to a resolved member term (use `laws.base._shape_of` for
 shape guards — the matcher cannot see types).
@@ -519,8 +525,12 @@ shape guards — the matcher cannot see types).
 declarative DSL in `mlopt_core.laws.cond` (a `{NAME: expr}` map of
 shape/attr expressions, serializable via `derive_to_data`/
 `derive_from_data` and folded into `rule.derive` at construction);
-18 of 71 laws use it, leaving **71 of 71 laws fully data-serializable**
-(see `project/retros/derive-declarative.md`).  Every firing records a
+18 of 84 laws use it, leaving **83 of 84 laws fully
+data-serializable** — the 84th, `conv_bn_fold`, is a shipped
+machine-minted composite whose hooks are rebuilt deterministically
+from its stored data guard spec (the partition is pinned in
+`tests/test_law_serialize.py`; see
+`project/retros/derive-declarative.md`).  Every firing records a
 witness
 (proof edge + rule provenance) — no extra bookkeeping needed.  Register
 the rule in a group list at the bottom of its module

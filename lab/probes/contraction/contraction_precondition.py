@@ -482,9 +482,7 @@ def _net_section(n_rand: int, seed: int) -> dict[str, Any]:
 def _diagram_section() -> list[tuple[str, float, float, float]]:
     """Measure mlopt's diagram search vs greedy on chain models."""
     print()
-    print(
-        "== 3a. mlopt diagram search_moves vs greedy _apply_moves =="
-    )
+    print("== 3a. mlopt diagram search_moves vs greedy _apply_moves ==")
     print(
         f"  {'dims':<26} {'initial':>9} {'greedy':>9} "
         f"{'search':>9} {'search<greedy':>13}"

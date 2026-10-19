@@ -64,7 +64,7 @@ from bench.benchkit import (
     Verdict,
     collect_env,
 )
-from tools.probes.contraction.contraction_precondition import (
+from lab.probes.contraction.contraction_precondition import (
     _var_chain,
     chain_optimal,
     egraph_greedy,

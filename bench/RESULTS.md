@@ -106,11 +106,12 @@ to the torch-fp64 answer at **6.7e-16**.
 - Reproduce the five-arm decomposition (the table above):
   `.venv/bin/python lab/probes/conv_fold_wall_regimes_probe.py`
   (~5 min — five programs × 31 subprocess evals, debug build).
-- Reproduce the scaffold arm (sibling checkout):
-  `cd ~/GitHub/handl-lang/research-mlopt &&
-  cargo run -p mlopt-experiments --bin conv-bn-fold -- --repeat 100`
-  (source on `origin/parallel/scaffold`; resolves this repo's
-  `hnl/conv_bn.hnl` through its own ladder).
+- Reproduce the scaffold arm (the in-tree `experiments/` crate):
+  `cargo run --release --manifest-path experiments/Cargo.toml
+  --bin conv-bn-fold -- --repeat 100`
+  (resolves this repo's `hnl/conv_bn.hnl` through its own ladder;
+  `experiments/` is `exclude`d from the root workspace, so cargo
+  goes through `--manifest-path`).
 - Retro: `project/retros/kit-term-bridge.md`.
 
 ### The admission account, end to end
@@ -132,7 +133,7 @@ reproduces the whole arc on the real eval-mode ConvBN seed:
 - Retros: `project/retros/minted-composite-default.md`,
   `premise-anchored-derivability.md`, `fold-cost-single-source.md`.
 
-### The shipped consumer — `cargo test -p mlopt-kit` (21/21)
+### The shipped consumer — `cargo test -p mlopt-kit` (31/31)
 
 The Rust kit composes handl's language + engines + host-tensor op
 surface as dependencies; `hnl/conv_bn.hnl` carries both spellings of
@@ -162,15 +163,15 @@ the fold, value-equal on dyadic fixtures.  The bridge test suite is
 # the admission arc on the real seed
 .venv/bin/python lab/probes/conv_fold_premise_pay_probe.py      # ~13 s
 
-# the scaffold's three arms (sibling checkout; source on origin/parallel/scaffold)
-cd ~/GitHub/handl-lang/research-mlopt &&
-    cargo run -p mlopt-experiments --bin conv-bn-fold -- --repeat 100
+# the scaffold's three arms (the in-tree experiments/ crate)
+cargo run --release --manifest-path experiments/Cargo.toml \
+    --bin conv-bn-fold -- --repeat 100
 
 # the Rust consumer
-cargo test -p mlopt-kit                                        # 21 tests
+cargo test -p mlopt-kit                                        # 31 tests
 
 # the dev lane (everything except the minutes-scale marked `slow`)
-.venv/bin/python -m pytest -m "not slow"                        # 6,353 tests
+.venv/bin/python -m pytest -m "not slow"                        # 6,485 tests
 ```
 
 Wall-clock numbers move with the box, the build profile, and the

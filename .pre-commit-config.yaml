@@ -56,17 +56,17 @@ repos:
       - id: radon-ratchet
         name: radon complexity ratchet
         # No function may exceed its baseline in
-        # tools/complexity_baseline.json; new functions must stay <= C.
-        entry: .venv/bin/python tools/radon_ratchet.py
+        # scripts/complexity_baseline.json; new functions must stay <= C.
+        entry: .venv/bin/python scripts/radon_ratchet.py
         language: system
         pass_filenames: false
         always_run: true
       - id: runtime-types
         name: typeguard runtime contracts
         # Runtime enforcement of annotations over the torch-free core;
-        # the instrumented file list lives in tools/runtime_types.sh.
+        # the instrumented file list lives in scripts/runtime_types.sh.
         # Slow (~6 min), so it is a manual-stage gate (CI runs it).
-        entry: sh tools/runtime_types.sh
+        entry: sh scripts/runtime_types.sh
         language: system
         pass_filenames: false
         always_run: true

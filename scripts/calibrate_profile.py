@@ -67,9 +67,9 @@ from mlopt_torch.calibrate import calibrate
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import executor_cost_probe as ecp
+from law_wallclock import _cases
 from mlopt_orchestrator import Optimizer
 from mlopt_torch.backend import TorchBackend
-from law_wallclock import _cases
 
 
 def _patch_probe_timing(warmup: int | None, iters: int | None) -> None:

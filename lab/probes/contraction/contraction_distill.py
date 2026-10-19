@@ -79,11 +79,12 @@ from mlopt_torch.contraction_policy import (
 )
 from opt_einsum import paths as oe_paths
 from opt_einsum.path_random import RandomGreedy
-from tools.probes.contraction import contraction_einsum as ce
-from tools.probes.contraction import contraction_policy as cp
-from tools.probes.contraction import contraction_scale as cs
 from torch import nn
 from torch.nn import functional as F
+
+from lab.probes.contraction import contraction_einsum as ce
+from lab.probes.contraction import contraction_policy as cp
+from lab.probes.contraction import contraction_scale as cs
 
 __all__ = ["main"]
 

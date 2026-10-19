@@ -49,10 +49,11 @@ import time
 from typing import Any
 
 import torch
-from tools.probes.contraction import contraction_einsum as ce
-from tools.probes.contraction import contraction_policy as cp
-from tools.probes.contraction import contraction_scale as cs
 from torch.nn import functional as F
+
+from lab.probes.contraction import contraction_einsum as ce
+from lab.probes.contraction import contraction_policy as cp
+from lab.probes.contraction import contraction_scale as cs
 
 __all__ = ["main"]
 

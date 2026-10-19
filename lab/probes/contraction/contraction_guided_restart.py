@@ -70,8 +70,9 @@ from mlopt_torch.contraction_policy import (
     random_bond_network,
     rollout_orders,
 )
-from tools.probes.contraction import contraction_einsum as ce
-from tools.probes.contraction import contraction_scale as cs
+
+from lab.probes.contraction import contraction_einsum as ce
+from lab.probes.contraction import contraction_scale as cs
 
 __all__ = ["main"]
 

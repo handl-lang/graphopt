@@ -3,8 +3,10 @@
 `mlopt-experiments` is the evidence-generation crate: each bin is one
 experiment the paper cites. The handl stack is composed directly from
 declared git deps (`src/lib.rs` assembles the kit — the same component
-set mlopt-kit composes; see the `[[gap]]` row in `manifest/kit.toml`
-for why the direct `mlopt-kit` edge is currently blocked upstream).
+set mlopt-kit composes; the direct `mlopt-kit` cargo dep is unblocked
+now that its deps float on the post-ADR-0128 `hnl-engine-*` crates at
+current main — this crate keeps the composed form anyway, as evidence
+that the stack assembles from declared components alone).
 The `.hnl` artifact under measurement resolves in-tree — mlopt-kit is
 a workspace member of this repo (`packages/mlopt-kit`); the
 sibling-checkout / pkg-slot / fetched arms below keep a standalone
@@ -25,9 +27,10 @@ runtime and emits the two numbers the paper's §6 cites:
   process).
 
 `mlopt-experiments` is deliberately *not* a member of the root cargo
-workspace (see the `exclude` row in `Cargo.toml` — it floats on the
-post-rename `hnl-engine-*` stack mlopt-kit can't share a lockfile
-with), so cargo invocations go through `--manifest-path`:
+workspace (see the `exclude` row in `Cargo.toml` — it keeps its own
+manifest + Cargo.lock so the experiment arm stays a standalone
+composition of the same dep edges mlopt-kit declares), so cargo
+invocations go through `--manifest-path`:
 
 ```bash
 cargo run --release --manifest-path experiments/Cargo.toml --bin conv-bn-fold -- --repeat 200

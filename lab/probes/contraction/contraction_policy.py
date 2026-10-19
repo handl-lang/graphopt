@@ -92,10 +92,11 @@ from mlopt_torch.contraction_policy import (
 from mlopt_torch.contraction_policy import (
     pair_logits as _logits,
 )
-from tools.probes.contraction import contraction_scale as cs
 from torch import nn
 from torch.distributions import Categorical
 from torch.nn import functional as F
+
+from lab.probes.contraction import contraction_scale as cs
 
 __all__ = ["main"]
 

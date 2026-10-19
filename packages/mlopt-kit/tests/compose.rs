@@ -131,8 +131,14 @@ fn derive_returns_the_registered_adjoint_name() {
         kit.run("tensor.derive(\"batch_norm\")").unwrap(),
         json!("tensor.batch_norm_backward")
     );
+    // conv2d gained an adjoint upstream (host-tensor's remaining-
+    // adjoints change); the unpaired arm is a marshal op instead.
     assert_eq!(
         kit.run("tensor.derive(\"tensor.conv2d\")").unwrap(),
+        json!("tensor.conv2d_backward")
+    );
+    assert_eq!(
+        kit.run("tensor.derive(\"tensor.from_list\")").unwrap(),
         Value::Null
     );
 }

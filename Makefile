@@ -3,9 +3,10 @@
 # `make experiment` reproduces the paper's headline measurement.
 #
 # `mlopt-experiments` is deliberately *not* a member of the root cargo
-# workspace (see the `exclude` row in Cargo.toml — it floats on the
-# post-rename `hnl-engine-*` stack mlopt-kit can't share a lockfile
-# with), so every cargo invocation goes through --manifest-path.
+# workspace (see the `exclude` row in Cargo.toml — it keeps its own
+# manifest + Cargo.lock so the experiment arm stays a standalone
+# composition of the same dep edges mlopt-kit declares), so every cargo
+# invocation goes through --manifest-path.
 
 REPEAT ?= 200
 EXPERIMENTS = experiments/Cargo.toml
