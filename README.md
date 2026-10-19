@@ -28,6 +28,16 @@ the cost model agrees: `dag_cost` 36,864 vs 55,296).  Full account:
 is a kernel-scale result on fp64 fixtures — certified rewrite discovery
 and runtime-priced deployment, not a model-scale speedup claim.
 
+**Guidance, as a game.**  The same substrate that makes laws data also
+makes discovery a well-defined game: rule applications are well-formed
+moves, the gauntlet is the referee, cost is the score — so learned
+policies can play the search.  Two shipped linear priors already beat
+hand-tuned baselines on held-out boards: the open-game policy ranks
+law-shapes with ~3× the heuristic's average precision, and a distilled
+contraction policy beats `opt_einsum`'s randomized greedy (0.91× its
+cost).  Neural arms currently lose to the linear/distilled players —
+reported as measured, not tuned.
+
 ## Architecture
 
 ```text

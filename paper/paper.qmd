@@ -177,6 +177,34 @@ semantically unequal sites, four deliberate false twins
 (`project/retros/mul-unsq-nat.md`, `layer3-loop.md`,
 `typed-pay-gate.md`).
 
+## Learned guidance as a game {#sec-game}
+
+Because laws are data, discovery admits a well-defined game structure:
+rule applications and compositions are well-formed moves; the admission
+gauntlet is the referee — a move only scores if its artifact survives
+admission; the cost alphabet is the score.  This is implemented
+machinery, not aspiration: `engine` defines the `Board` protocol and
+episode/train/eval drivers, `players` a `LinearPolicy` arm over a
+domain-specified featurizer, and `play` a domain registry
+(`meta`, `joint`, `search`, `torch`, `gen`, `open`; `torch` and `gen`
+ship `deliver` hooks that lower the winning extraction to a verified
+module).  A domain is data — a case generator, a board factory, and a
+feature schema — not a subclass.
+
+Two linear priors ship with pinned held-out wins: the open-game policy
+ranks law candidates at ~3× the cost-delta heuristic's average
+precision (AP 0.133 vs 0.045) and ~2× useful laws per episode, and the
+meta-arena prior beats the scripted playbook (mean episode reward
+−0.06 vs −0.10) — the latter flagged by its own eval as possibly
+sampling-variance-riding, an honest negative kept in the record.  A
+distilled contraction policy (`PairPolicyNet`) beats `opt_einsum`'s
+randomized greedy (0.91× cost at n=40) and ships as a standalone
+artifact.  Conversely, a neural rule-value policy *loses* to the
+heuristic (AP 0.023), and two learned-policy axes (schedule guidance;
+direct law invention) were measured and falsified — the evidence for
+learned guidance is real but early: linear and distilled arms beat
+baselines; neural methods do not yet.
+
 # Case study: the conv+BN fold {#sec-casestudy}
 
 The rewrite is the standard eval-mode fold:
