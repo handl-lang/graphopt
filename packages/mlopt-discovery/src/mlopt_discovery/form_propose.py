@@ -94,7 +94,6 @@ from typing import Any
 
 from mlopt_core.egraph.types import _member_key
 from mlopt_core.ir import Const, Op, TensorType, Var
-from mlopt_discovery import combinator as cb
 
 from lab.bridge.index_abstract import _block_splits, block_outputs
 from lab.bridge.loop_propose import (
@@ -104,6 +103,7 @@ from lab.bridge.loop_propose import (
     saturate_comb,
     unroll,
 )
+from mlopt_discovery import combinator as cb
 
 __all__ = [
     "STEP_INPUTS",
@@ -306,7 +306,7 @@ def _find_subterm(block: Any, pred: Any) -> Any:
     return next((s for s in _subterms(block) if pred(s)), None)
 
 
-def _fill_wires(eg: Any, block: Any, wires: dict, own_ids: set) -> dict:
+def _fill_wires(eg: Any, block: Any, wires: dict) -> dict:
     """Fill missing wire roles with graph-resident terms.
 
     A block spelled without the factored read never *contains* the
@@ -779,7 +779,7 @@ def form_propose(
 
     own = _block_splits(blocks)
     raw_bindings = {
-        i: _fill_wires(eg, b, block_wires(b, own[i]), own[i])
+        i: _fill_wires(eg, b, block_wires(b, own[i]))
         for i, b in enumerate(blocks)
     }
     # a missing constant wire is borrowed from a sibling block of the
@@ -818,7 +818,13 @@ def form_propose(
         for i in ch:
             env = dict(rep.bindings.get(i, {}))
             missing = [v.name for v in STEP_INPUTS[1:] if v not in env]
-            if missing:
+            if missing:  # pragma: no cover
+                # Unreachable in this pipeline: ``rep.bindings[i]`` is
+                # built for every chain member over every
+                # ``STEP_INPUTS[1:]`` var (unbound roles land as
+                # ``None``, not a missing key), so ``env`` always
+                # carries all wire names.  The guard stays as a
+                # tripwire for a caller handing in partial bindings.
                 rep.obstructions.append(
                     f"unbound-wires:block{i} {missing}"
                 )
@@ -903,7 +909,11 @@ def form_propose(
         peeled_set = set(peeled)
         scan: list[int] = []
         for leaf_ in skel_leaves:
-            if isinstance(leaf_, tuple):
+            if isinstance(leaf_, tuple):  # pragma: no cover
+                # Unreachable in this pipeline: ``blocks`` is
+                # ``block_outputs(root_term)``, so every concat leaf is
+                # a block index — a ``("raw", …)`` skeleton leaf needs
+                # a caller passing a partial ``blocks`` list.
                 scan.append(
                     pos_of[("x", len(peeled) + raw_leaves.index(leaf_))]
                 )
@@ -940,7 +950,11 @@ def form_propose(
 
         # --- whole-term check: rebuilt concat must land in the root class --
         def _rebuild(t: Any) -> Any:
-            if isinstance(t, tuple) and t and t[0] == "raw":
+            if (  # pragma: no cover — same ``blocks`` coverage argument
+                # as the raw-leaf ``scan`` branch above: the skeleton's
+                # leaves are always block indices here.
+                isinstance(t, tuple) and t and t[0] == "raw"
+            ):
                 return t[1]
             if isinstance(t, tuple):
                 return Op.make(
@@ -1194,67 +1208,65 @@ def compensated_loop_check(
             v: t for v, t in env.items() if v is not S
         }
         # --- the update wire, steered into the next family's norm ----
-        if pos + 1 >= len(covered):
-            eg.add_term(s_cur)
-            if post_add is not None:
-                post_add()
-            break
-        j = covered[pos + 1]
-        env_j = rep.bindings.get(j, {})
-        span_j = _split_span(env_j)
-        cx_j = _dv_attrs(env_j.get(CX))
-        a_cw = _dv_attrs(env.get(CW))
-        a_ce = _dv_attrs(env.get(CE))
-        steered = False
-        if (
-            span is not None
-            and span_j is not None
-            and cbase is not None
-            and cx_j is not None
-            and off is not None
-        ):
-            phi_j = span_j[0] - cx_j.get("offset", 0)
-            need_cw = phi_j - off
-            need_ce = phi_j - span[0]
-            if (a_cw or {}).get("offset", 0) == need_cw and (
-                a_ce or {}
-            ).get("offset", 0) == need_ce:
-                s_cur = s_default  # the bound wires already steer
-                off = phi_j
-                steered = True
-            else:
-                cw = _usq_dv(cbase, t=1, offset=need_cw)
-                ce = _usq_dv(cbase, t=span[1], sign=-1, offset=need_ce)
-                r_cw, r_ce = eg._locate(cw)[0], eg._locate(ce)[0]
-                if r_cw is not None and r_ce is not None:
-                    env2 = dict(rep.bindings[i])
-                    env2[CW], env2[CE], env2[S] = cw, ce, s_cur
-                    s_cur = _subst(rep.step, env2).args[0]
+        if pos + 1 < len(covered):
+            j = covered[pos + 1]
+            env_j = rep.bindings.get(j, {})
+            span_j = _split_span(env_j)
+            cx_j = _dv_attrs(env_j.get(CX))
+            a_cw = _dv_attrs(env.get(CW))
+            a_ce = _dv_attrs(env.get(CE))
+            steered = False
+            if (
+                span is not None
+                and span_j is not None
+                and cbase is not None
+                and cx_j is not None
+                and off is not None
+            ):
+                phi_j = span_j[0] - cx_j.get("offset", 0)
+                need_cw = phi_j - off
+                need_ce = phi_j - span[0]
+                if (a_cw or {}).get("offset", 0) == need_cw and (
+                    a_ce or {}
+                ).get("offset", 0) == need_ce:
+                    s_cur = s_default  # the bound wires already steer
                     off = phi_j
                     steered = True
-                    env[CW], env[CE] = cw, ce
                 else:
-                    rep.obstructions.append(
-                        f"boundary-renorm-unbound:block{i}->block{j} "
-                        f"— the steering pair decay_vec(t=1, offset="
-                        f"{need_cw}) / decay_vec(t={span[1]}, sign=-1,"
-                        f" offset={need_ce}) is not in the e-graph"
+                    cw = _usq_dv(cbase, t=1, offset=need_cw)
+                    ce = _usq_dv(
+                        cbase, t=span[1], sign=-1, offset=need_ce
                     )
-                    rep.boundary.setdefault("missing_steer", {})[i] = {
-                        "cw": cw,
-                        "ce": ce,
-                    }
-        if not steered:
-            s_cur = s_default
-            off = (
-                off + (a_cw or {}).get("offset", 0)
-                if off is not None
-                else None
-            )
-        # re-record now that any steering overrides have landed in env
-        rep.single_envs[i] = {
-            v: t for v, t in env.items() if v is not S
-        }
+                    r_cw, r_ce = eg._locate(cw)[0], eg._locate(ce)[0]
+                    if r_cw is not None and r_ce is not None:
+                        env2 = dict(rep.bindings[i])
+                        env2[CW], env2[CE], env2[S] = cw, ce, s_cur
+                        s_cur = _subst(rep.step, env2).args[0]
+                        off = phi_j
+                        steered = True
+                        env[CW], env[CE] = cw, ce
+                    else:
+                        rep.obstructions.append(
+                            f"boundary-renorm-unbound:block{i}->block{j}"
+                            f" — the steering pair decay_vec(t=1, "
+                            f"offset={need_cw}) / decay_vec(t="
+                            f"{span[1]}, sign=-1, offset={need_ce}) is "
+                            "not in the e-graph"
+                        )
+                        rep.boundary.setdefault("missing_steer", {})[
+                            i
+                        ] = {"cw": cw, "ce": ce}
+            if not steered:
+                s_cur = s_default
+                off = (
+                    off + (a_cw or {}).get("offset", 0)
+                    if off is not None
+                    else None
+                )
+            # re-record now that any steering overrides landed in env
+            rep.single_envs[i] = {
+                v: t for v, t in env.items() if v is not S
+            }
         eg.add_term(s_cur)
         if post_add is not None:
             post_add()

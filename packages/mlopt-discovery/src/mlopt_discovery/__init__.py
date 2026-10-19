@@ -14,7 +14,12 @@ helpers, and the object constructor (:mod:`.object_synthesis` — the
 ADR-0004 "construction operations" that *build* declared objects for
 the evidence store to admit), the ADR-0008 combinator substrate
 (:mod:`.combinator` — the IR-DAG ⇄ morphism-term bridge with the
-explicit-Δ sharing presentation and the ``loop`` trace).  The game layer: boards
+explicit-Δ sharing presentation and the ``loop`` trace), the
+gate-3 proposers promoted out of ``lab/bridge/``
+(:mod:`.form_propose` — the e-graph-as-oracle anti-unification that
+synthesises ``unroll(step, n)`` per state chain, and
+:mod:`.state_reindex` — the law family closing the family boundary
+into one ``Loop``).  The game layer: boards
 (:mod:`.arena`, :mod:`.meta_arena`), the generic driver
 (:mod:`.engine` — one ``Board`` protocol over all of them), the
 player/featurizer abstraction (:mod:`.players` — ``LinearPolicy``,

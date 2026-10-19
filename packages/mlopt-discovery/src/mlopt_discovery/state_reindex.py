@@ -67,10 +67,7 @@ from mlopt_core.egraph import Rewrite
 from mlopt_core.ir import Op
 from mlopt_core.laws import R as _R
 from mlopt_core.laws.tensor import DISTRIBUTE_MUL_ADD
-from mlopt_discovery import combinator as cb
-from mlopt_discovery.combinator import comb_to_dag
 
-from lab.bridge import form_propose as fp
 from lab.bridge.index_abstract import block_outputs
 from lab.bridge.loop_propose import (
     EXPAND_LOOP,
@@ -79,6 +76,9 @@ from lab.bridge.loop_propose import (
     saturate_comb,
     unroll,
 )
+from mlopt_discovery import combinator as cb
+from mlopt_discovery import form_propose as fp
+from mlopt_discovery.combinator import comb_to_dag
 
 __all__ = [
     "DECAY_GATHER",
@@ -863,7 +863,11 @@ def _emit_single_loop(
     peeled_set = set(peeled)
     scan: list[int] = []
     for leaf_ in skel_leaves:
-        if isinstance(leaf_, tuple):
+        if isinstance(leaf_, tuple):  # pragma: no cover
+            # Unreachable in this pipeline: ``blocks`` is
+            # ``block_outputs(root_term)``, so every concat leaf is a
+            # block index — a ``("raw", …)`` skeleton leaf needs a
+            # caller passing a partial ``blocks`` list.
             scan.append(
                 pos_of[("x", len(peeled) + raw_leaves.index(leaf_))]
             )

@@ -102,8 +102,8 @@ Measured under `coverage run --source=lab -m pytest
 | module | coverage | test file | gap |
 |---|---|---|---|
 | ~~`combinator.py`~~ → **`mlopt_discovery.combinator`** ✅ | **92% → 100%** | `test_combinator_bridge.py` | promoted: +9 targeted tests closed the guards (`arity`/`_apply`/`comb_to_dag` `raise`s, `_par`/`_mux` edges, `morph_stats` Drop/Loop/non-morphism, `dag_size`); the one residual — the closing-`Drop` in `dag_to_comb` — is provably unreachable (a ctx wire survives to the close only while `remaining[w] > 0`, and at the close `remaining` counts exactly the output uses), so it carries a documented `pragma: no cover` |
-| `form_propose.py` | 84% | `test_form_propose.py` | 71 stmts + 48 br — needs real test growth |
-| `state_reindex.py` | 83% | via `test_form_propose.py` | 25 + 22 |
+| ~~`form_propose.py`~~ → **`mlopt_discovery.form_propose`** ✅ | **84% → 99%** | `test_form_propose.py` | promoted: targeted tests cover every statement and all-but-three arcs; the residuals are provably unreachable (the `m_eid is None` guard in `factored_states` — an extracted term is always graph-resident — and the `prog_stats`/`boundary` falsy arcs in the report, unreachable under the `ok`/`setdefault` invariants); the dead `unbound-wires` guard and the `("raw", …)` concat-skeleton arms carry documented `pragma: no cover`s |
+| ~~`state_reindex.py`~~ → **`mlopt_discovery.state_reindex`** ✅ | **83% → 100%** | `test_state_reindex.py` (new, dedicated) | promoted: law-guard/derive unit tests + a non-slow synthetic-fold `reindex_close` close cover everything; the `("raw", …)` scan arm carries the same documented pragma |
 | `index_abstract.py` | 81% | `test_index_abstract.py` | 62 + 18 |
 | `loop_propose.py` | 80% | `test_loop_propose.py` | 24 + 4 |
 
@@ -174,10 +174,12 @@ not piecemeal.
 
 1. ~~**`lab/bridge/combinator.py`**~~ — **promoted** to
    `mlopt_discovery.combinator` (92% → 100%).
-2. **`lab/bridge/form_propose.py`** — 84%; the ADR-0008 capstone, but
-   119 missing arcs.
-3. **`lab/bridge/state_reindex.py`** — 83%; needs a dedicated file
-   (currently rides `test_form_propose.py`).
+2. ~~**`lab/bridge/form_propose.py`**~~ — **promoted** to
+   `mlopt_discovery.form_propose` (84% → 99%).
+3. ~~**`lab/bridge/state_reindex.py`**~~ — **promoted** to
+   `mlopt_discovery.state_reindex` (83% → 100%); now has the
+   dedicated `tests/test_state_reindex.py` (the slow close test moved
+   out of `test_form_propose.py`).
 4. **`lab/bridge/index_abstract.py`** — 81%.
 5. **`lab/bridge/loop_propose.py`** — 80%; small module (138 stmts).
 6. **`lab/kit/term_hnl.py`** — e2e-tested; coverage unmeasured.

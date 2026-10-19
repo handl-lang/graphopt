@@ -463,7 +463,7 @@ def _gate2_projection(
             best, control=_expanded_fold_term(t, k)
         )
     if form_propose:
-        from lab.bridge import form_propose as fp
+        from mlopt_discovery import form_propose as fp
 
         print(
             "-- gate 3: form-level proposer (e-graph anti-unification) --"

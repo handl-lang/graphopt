@@ -34,9 +34,10 @@ mines + evals `lawdata.MACROS` candidate tables; the shipped replay
 machinery promoted to `mlopt_discovery.macro_moves` and the retrain
 driver to `scripts/train_meta_macro_prior.py`), `lab/bridge/`
 (`combinator_probe.py`,
-`loop_propose.py`, `index_abstract.py`, `form_propose.py`,
-`sharing_extract.py`, `state_reindex.py` — the ADR-0008 bridge;
-the substrate itself promoted to `mlopt_discovery.combinator`),
+`loop_propose.py`, `index_abstract.py`,
+`sharing_extract.py` — the ADR-0008 bridge;
+the substrate plus the two proposers promoted to
+`mlopt_discovery.combinator` / `.form_propose` / `.state_reindex`),
 `lab/audit/` (`grammar_probe.py`, `handl_differential.py`,
 `egraph_differential.py` — the handl-side oracles), `lab/screen/`
 (`exposure_screen.py`, `exposed_discovery.py`, `discovery_scale.py`),
@@ -84,8 +85,11 @@ classification and ranked promote-candidates live in
   shipped behaviour promotes when its tests clear the **99% coverage
   floor** (its `lab/<sub>/` mirrors the package layout).  First
   promotion: `lab/bridge/combinator.py` → `mlopt_discovery.combinator`
-  (**92% → 100%** under `tests/test_combinator_bridge.py`).  Still in
-  queue: `form_propose.py` 84%, `state_reindex.py` 83%,
+  (**92% → 100%** under `tests/test_combinator_bridge.py`), then
+  `form_propose.py` → `mlopt_discovery.form_propose` (**84% → 99%**)
+  and `state_reindex.py` → `mlopt_discovery.state_reindex`
+  (**83% → 100%**) under `tests/test_form_propose.py` /
+  `tests/test_state_reindex.py`.  Still in queue:
   `index_abstract.py` 81%, `loop_propose.py` 80% under their
   dedicated files.  Do not promote a module that would fail the
   floor — and never widen it.
