@@ -218,7 +218,8 @@ sampling-variance-riding, an honest negative kept in the record.  A
 distilled contraction policy (`PairPolicyNet`) beats `opt_einsum`'s
 randomized greedy (0.91× cost at n=40) and ships as a standalone
 artifact.  Conversely, a neural rule-value policy *loses* to the
-heuristic (AP 0.023), and two learned-policy axes (schedule guidance;
+heuristic (AP 0.023 corpus-trained; 0.041 ≈ parity when trained
+on-distribution — a data gap, not capacity), and two learned-policy axes (schedule guidance;
 direct law invention) were measured and falsified — the evidence for
 learned guidance is real but early: linear and distilled arms beat
 baselines; neural methods do not yet.

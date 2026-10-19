@@ -332,6 +332,8 @@ is brittle at n=40 for every arm (RL 4.15×).  Not wired into
 |---|---|---|---|---|
 | `RuleValueNet` (MLP 32) | ranking AP (`rank_pool`) | 0.023 | heuristic 0.045 | **loses** |
 
+> Re-measured 2026-10-19 trained on on-distribution held-out candidates: AP **0.041** — heuristic parity (0.045). The 0.023 pin trained on off-distribution corpus samples. See `docs/results_learned_baseline.md`.
+
 ### Linear — the discovery game (RL, baked presets)
 
 | model | metric | random | cold `{}` | trained | baseline |
