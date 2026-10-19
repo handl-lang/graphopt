@@ -47,9 +47,12 @@ is a kernel-scale result on fp64 fixtures — certified rewrite discovery
 and runtime-priced deployment, not a model-scale speedup claim.
 
 **Guidance, as a game.**  The same substrate that makes laws data also
-makes discovery a well-defined game: rule applications are well-formed
-moves, the gauntlet is the referee, cost is the score — so learned
-policies can play the search.  Two shipped linear priors already beat
+makes discovery a well-defined game — and the deeper property is the
+*closure*: programs, rules, and proofs are n-morphisms in one calculus,
+so the system produces the values it consumes (minted rules re-enter
+the bank; derivations replay as terms).  Rule applications are
+well-formed moves, the gauntlet is the referee, cost is the score — so
+learned policies can play the search.  Two shipped linear priors already beat
 hand-tuned baselines on held-out boards: the open-game policy ranks
 law-shapes with ~3× the heuristic's average precision, and a distilled
 contraction policy beats `opt_einsum`'s randomized greedy (0.91× its

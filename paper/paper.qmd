@@ -71,7 +71,13 @@ of it — in the mlopt engine.  The contribution is not any single
 mechanism but their composition: a categorical substrate makes rules
 data, derivations checkable, cost measurable, and provides the runtime
 world — which closes discovery into a well-defined game played by
-learned policies.  The claim is narrow and checkable:
+learned policies.  The enabling property is *self-containedness*:
+programs, rewrite laws, and derivations are n-morphisms in one calculus —
+executable values, not external metadata — so the system produces the
+values it consumes.  To our knowledge this is the first *operational*
+substrate of this kind; categorical languages prior to it are
+denotational or design-level, not working machines whose runtime
+executes the morphism hierarchy.  The claim is narrow and checkable:
 
 > A rewrite a hand optimizer would write — the eval-mode conv+BN
 > weight fold — was **discovered, proven, priced, and shipped by the
