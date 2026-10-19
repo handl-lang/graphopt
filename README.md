@@ -1,70 +1,63 @@
-# mlopt — certified optimization of tensor programs, with machine-discovered laws
+# mlopt — a machine that writes its own rules, certifies them, and learns to play the game they create
 
 > **Research artifact — proposed, not accepted.**  This repository and
 > the accompanying draft in [`paper/`](paper/) are pre-review work:
 > claims are measured and reproducible, but the manuscript has not had
 > human revision or external review.
 
-**The problem.**  Every optimization a compiler knows was written by
-a person — a hand-derived rule, encoded per framework.  The rule
-library is the bottleneck: humans are slow, and the pairings nobody
-names never get found.
+**Thesis.**  Compiler rule banks are *frozen*: every deployed rule was
+written by a person, and even machine-generated banks (TASO, Isaria)
+ship once and never re-enter.  mlopt is, to our knowledge, the first
+*operational* substrate where programs, rules, and derivations are all
+values in one calculus (n-morphisms) — so a minted rule re-enters the
+bank as a legal move, and discovery closes into a **self-modifying
+game** a learned policy can play under a certifying referee.
 
-**The idea.**  For a machine to *author* optimizations, four things
-must exist: rules it can write (data, not code), a referee to check
-them, a score to rank them, and a world — a runtime — that programs,
-rules, and derivations all live inside.  A categorical substrate delivers
-all four at once: a tensor program is a morphism of a category, the
-category's equations are rewrite laws as data, derivations are
-checkable certificates, and the handl runtime is the world the whole
-loop executes in.  The consequence: discovery closes into a
-well-defined *game* — moves, referee, score, board — and a game can be
-played by learned policies (the AlphaGo Zero lineage).  On top of that
-substrate, mlopt *mints* new laws from measured need — guard
-synthesized, adversarially swept, admitted through a staged gauntlet —
-and ships them verbatim in the default rule set.
+**The machine.**  Equality saturation over a torch-free IR + law
+minting from measured need + an admission gauntlet (numeric oracle →
+typed-pay gate → adversarial sweep of the guard's false region →
+replayable certificate) + pluggable players (random · playbook ·
+trained linear · neural).
 
-**The contribution is the connection.**  The pieces exist separately:
-systems that mint *and* verify rule banks (TASO's theorem-proved
-substitutions; Ruler/Enumo inference; Isaria's sound synthesized
-vectorizing rules — each grown offline, static once shipped); learned
-play over rewriting (CompilerGym; Omelette / MCTS-GEB / Aurora steering
-e-graph construction over a fixed bank); and learned play inside a
-certified loop (AlphaGeometry's proposer against a fixed deduction
-closure; AlphaTensor searching one fixed structure).  To our knowledge
-none makes the minted bank itself an object of play.  mlopt connects
-them: a machine that discovers, certifies, prices, and ships its own
-compiler rules — whose minted rules re-enter the bank — and can learn
-to play the discovery.
+**What it found.**
 
-The flagship result: **`conv_bn_fold`, a machine-minted composite, is a
-shipped law.**  The engine minted the eval-mode weight fold
-`batch_norm(conv2d(x,W,b),…) → conv2d(x,W′,b′)` — the rewrite a hand
-optimizer writes — as a composite over premise laws, transported its
-guard out of the evidence store, certified it premise-derivable with a
-replayable certificate, measured its pay, and shipped it.  The folded
-form then evaluates **bitwise-equal** to the spelled program through an
-independent runtime (the handl tree-walk engine, via `mlopt-kit`) at
-**≈−5 % per-call wall** in the deployed regime (fold amortized to
-load; the un-amortized/inline fold arm runs *slower* per call);
-the cost model agrees: `dag_cost` 36,864 vs 55,296).  Full account:
-[`bench/RESULTS.md`](bench/RESULTS.md).  **Scope, stated plainly:** this
-is a kernel-scale result on fp64 fixtures — certified rewrite discovery
-and runtime-priced deployment, not a model-scale speedup claim.
+- **`conv_bn_fold`** — the conv+BN weight fold every framework
+  hand-codes, *composed by the machine*, certified, shipped — one of
+  **12 machine-admitted laws** in the default bank.  Bitwise-equal
+  through an independent runtime (the handl tree-walk engine) at ≈−5 %
+  per-call wall in the deployed regime — a kernel-scale fp64 result,
+  not a model-scale speedup claim.  Full account:
+  [`bench/RESULTS.md`](bench/RESULTS.md).
+- **Rediscovered, not encoded:** Blelloch's O(log T) scan,
+  FlashAttention's combine, RetNet's chunkwise form — all fall out of
+  generic algebraic laws, not a pattern library.
+- **The referee has teeth:** 212 bad accepts refused, four false twins
+  rejected, a fabricated speedup caught — and a real lowering bug no
+  test covered.
 
-**Guidance, as a game.**  The same substrate that makes laws data also
-makes discovery a well-defined game — and the deeper property is the
-*closure*: programs, rules, and derivations are n-morphisms in one calculus,
-so the system produces the values it consumes (minted rules re-enter
-the bank; derivations replay as terms).  Rule applications are
-well-formed moves, the gauntlet is the referee, cost is the score — so
-learned policies can play the search.  Two shipped linear priors already beat
-hand-tuned baselines on held-out boards: the open-game policy ranks
-law-shapes with ~4.7× the heuristic's average precision (AP 0.210 vs
-0.045), and a distilled contraction policy beats `opt_einsum`'s
-randomized greedy (0.91× its cost).  Neural arms currently lose to
-the linear/distilled players —
-reported as measured, not tuned.
+**Learned play.**  A trained linear prior ranks law candidates at
+**~4.7×** the tuned heuristic's average precision (AP 0.210 vs 0.045,
+held-out); a distilled contraction policy beats `opt_einsum`'s
+randomized greedy (0.91×).  Neural arms lose to the linear/distilled
+players today — reported as measured, not tuned.
+
+**The novelty.**  TASO / Isaria / Ruler / Enumo mint + verify rules
+offline; CompilerGym / Omelette / MCTS-GEB / Aurora learn over fixed
+banks; AlphaGeometry plays a fixed certified closure.  To our
+knowledge none makes the minted bank itself an object of play — the
+contribution is the *connection*: a bank that grows under play.
+
+**Honest scope.**  Whole models ≈1× (parity); on strictly-real
+modules the yield is 0 so far — finds lean on purpose-built workloads;
+the machine bank alone wins 3/22 vs human 4/22 (the union wins 6/22 —
+complementary, not dominant); the learned arms cannot yet learn *when
+to quit* — the blocker is observability, not the reward's price.  Wins
+are structural and regime-bounded, inference-only, compile-time
+search.
+
+**Open.**  Unnamed structure on *real* corpora · new algorithms
+(Strassen-class) · multi-step credit across the gate · transformer
+scale · **can a player learn in a game that grows under it?**
 
 ## Architecture
 
@@ -125,18 +118,6 @@ harness.
 | decision records with falsification paths | [`project/adrs/`](project/adrs/) |
 | the measured retros each claim cites | [`project/retros/`](project/retros/) |
 | repo map + verification gates | [`AGENTS.md`](AGENTS.md) |
-
-## Honest scope
-
-- **Kernel-scale, not model-scale.**  Wins are structural (folds,
-  recurrences, carrier lifts) and regime-bounded; fused-op workloads
-  (`nn.Conv*`, `sdpa`) expose nothing and sit at parity.  Losses are
-  kept in the same tables as wins.
-- **Sparse discovery yield** — ~1.5 % of the exposed corpus class
-  carries fresh paying structure; 12 machine-admitted laws ship beside
-  the hand-written kernel.
-- **Inference only; compile-time search** — seconds per block, minutes
-  at large sequence lengths.
 
 ## License
 
