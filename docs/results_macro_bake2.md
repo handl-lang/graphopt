@@ -127,3 +127,64 @@ set but measure the shipped decode on the *base* set inside the
 loop (a `v2-base ≥ V1` gate in the driver's bake check), or
 bake only if a paired `v2-base` run is non-regressing; the feature
 layer this doc added is exactly what that next run needs.
+
+## Promoted: macros are the shipped legal set
+
+**Date:** 2026-10-19 · **Change:** the macro layer moved to prod —
+`mlopt_discovery/macro_moves.py` (the `"macro"` handler, `Macro`,
+`instantiate`/`viable`, `offered`, `legal_with_macros`), the minted
+8-row table baked as `lawdata.MACROS`
+(`packages/mlopt-discovery/src/mlopt_discovery/lawdata/macros.py`,
+regenerate with `lab/mint/macro_miner.py --emit`), and
+`meta_arena.legal_actions` itself offers the viable minted lines to
+**every** player — scripted, random, greedy, learned.  The lab-only
+`legal=` injection is gone: `v2-base`'s old failure mode ("the baked
+default is what macro-free callers get") can no longer ship a
+macro-blind policy by omission.  `legal_with_macros` survives as the
+wrapper for lab tables that differ from the shipped one (dedup keys
+on the seq, not the stat payload — a re-minted copy of a shipped
+line is the same move).  `tests/test_discovery_macro_moves.py`
+covers the promoted module at 100% (38 tests).
+
+Two prod-only fixes the lab context never exercised:
+
+* `viable`'s site set held `_canon_spec` outputs in a `set` — spec
+  attr dicts are unhashable; on joint-domain boards (`legal_actions`
+  is the joint domain's enumerator too) the offer crashed with
+  `TypeError`.  Now an equality-compared list.
+* A done board offered macros — `offered` early-returns `()`.
+
+**Gate rows, `mp.gen_cases(0+7919, 16)`, budget 12, cold retrain
+on the prod set** (`scripts/train_meta_macro_prior.py`; the mined
+table re-ran clean — same 8 ops-lines, `m1` stats drifted 15→14
+occurrences / score 4.333→4.133 because mining now plays the
+macro-offering legal set itself; the shipped table carries the
+fresh numbers):
+
+| gate | 30 ep | 120 ep | bar | verdict |
+|---|---|---|---|---|
+| v2+macros greedy | **+0.117** | **+0.117** | ≥ −0.056 & ≥ +0.088 | ✓ |
+| v2+macros sampled | −0.056 | +0.007 | ≥ −0.056 & ≥ +0.088 | ✗ sampled |
+| v2-base (`_base_legal`) | −0.348 | −0.072 | ≥ V1 (−0.056) | ✗ |
+| scripted+macros | +0.088 | +0.088 | context | — |
+
+**Verdict: the bake is still not earned — `META_ARENA_PLAYER_WEIGHTS`
+stays.**  Under the prod legal set the picture is unchanged in kind
+and gentler in degree: greedy clears both anchors at both budgets
+(+0.117, 7/7 macro cases, cert 16); the sampled decode never reaches
+scripted+macros (−0.056 → +0.007); and `v2-base` — the macro-free
+residual a suppressing caller gets — improved from −0.096 to −0.072
+but still trails V1's −0.056.  The sampled-decode gap is the same
+mass-splitting the blind doc diagnosed; the features told the policy
+*which* offer to take, not how often to commit under sampling.
+
+Macro pick-rate: train 0.129 (30 ep) / 0.168 (120 ep); held-out
+greedy 7 picks in 7 cases at both budgets, sampled 12 picks in 7 of
+16 cases — selective (0 picks where `viable` offers nothing
+bindable).
+
+**What would earn it now:** a decode-side answer to the split-mass
+failure — e.g. a `greedy`-default bake gated on the sampled arm, a
+higher-capacity policy class (the linear softmax splits uniformly
+over same-schema rows), or a distillation/imitation stage against
+the scripted+macros line.

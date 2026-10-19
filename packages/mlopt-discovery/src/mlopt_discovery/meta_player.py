@@ -199,7 +199,7 @@ def _macro_feats(
       spelled four-move line;
     * ``x:macro:certified`` / ``x:macro:score`` — the miner's ranking
       evidence the offer carries on ``params["macro"]`` (the stat
-      payload ``lab.mint.macro_moves.instantiate`` writes:
+      payload ``macro_moves.instantiate`` writes:
       ``certified`` = share of source episodes that certified;
       ``score`` = count x mean terminal reward, the miner's rank
       key, rescaled /8);
@@ -232,9 +232,7 @@ def _macro_feats(
             out["x:macro:certified"] = float(
                 getattr(m, "certified", 0.0)
             )
-            out["x:macro:score"] = (
-                float(getattr(m, "score", 0.0)) / 8.0
-            )
+            out["x:macro:score"] = float(getattr(m, "score", 0.0)) / 8.0
     has_claim = False
     for sub in seq:
         op, params = (

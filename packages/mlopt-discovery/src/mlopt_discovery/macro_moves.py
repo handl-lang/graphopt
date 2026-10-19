@@ -3,25 +3,27 @@
 ``claim`` fused one winning line by hand (declare → accept → fire →
 handle inside a single move); a *macro* fuses any mined sequence by
 data.  ``Action("macro", {"seq": [{"op": ..., "params": {...}}, ...]})``
-replays each sub-action through the same :data:`ACTIONS` dispatch
-inside one ``MetaArena.step``: every legality check, the two-phase
-declare accept, the feasibility bound and the terminal certificate
-see exactly what the spelled line would have seen.  A declined
-sub-move declines the whole macro; a terminal sub-move ends it.
+replays each sub-action through the same :data:`meta_arena.ACTIONS`
+dispatch inside one ``MetaArena.step``: every legality check, the
+two-phase declare accept, the feasibility bound and the terminal
+certificate see exactly what the spelled line would have seen.  A
+declined sub-move declines the whole macro; a terminal sub-move ends
+it.
 
 Soundness is the antiunify argument: a macro mints no behaviour a
 player could not already spell — it only compresses the line into
 one step (one ``step`` charge, one budget tick).  The handler keeps
 no global state; the minted sequences are data mined from
 :class:`~mlopt_discovery.meta_arena.Trajectory` reports by
-``lab/mint/macro_miner.py``.
+``lab/mint/macro_miner.py`` and shipped as
+:data:`~mlopt_discovery.lawdata.MACROS`.
 
-The offer seam is :func:`legal_with_macros` — a ``legal(state)``
-wrapper the players' ``legal=`` injection point already accepts —
-plus :func:`viable`, the cheap filter that keeps a minted line off
-cases where its recorded params cannot bind (a ``claim`` whose tag
-is absent, a ``declare`` whose spec does not occur, a ``fire`` of a
-rule nobody minted).
+The shipped offer seam is :func:`meta_arena.legal_actions` itself:
+every call folds the viable minted lines of :data:`lawdata.MACROS`
+into the enumerated set (:func:`offered`), so macros are offers for
+*every* player — scripted, random, greedy and learned alike.
+:func:`legal_with_macros` is the same offer layer as a ``legal=``
+wrapper for callers carrying a *different* (lab-mined) table.
 """
 
 from __future__ import annotations
@@ -29,13 +31,18 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from mlopt_discovery import lawdata
 from mlopt_discovery import meta_arena as ma
 from mlopt_discovery.meta_arena import Action, _Outcome
 
 __all__ = [
+    "DEFAULT_MACRO_CAP",
     "Macro",
     "instantiate",
     "legal_with_macros",
+    "macro_from_record",
+    "offered",
+    "shipped_macros",
     "viable",
 ]
 
@@ -113,7 +120,7 @@ def _macro(arena: ma.MetaArena, action: Action) -> _Outcome:
 
 @dataclass(frozen=True)
 class Macro:
-    """A minted move sequence — the template ``legal_with_macros`` offers.
+    """A minted move sequence — the template the offer seam replays.
 
     ``seq`` is recorded action data (``{"op", "params"}`` dicts) from a
     representative winning trace; the stats columns are the miner's
@@ -136,12 +143,28 @@ class Macro:
         return "→".join(ops)
 
 
-def _declared_name(sub_params: dict) -> str | None:
-    """Return the object name a ``declare`` step mints, when spelled."""
-    cons = sub_params.get("construction") or {}
-    cp = cons.get("params") or {}
-    name = cp.get("name")
-    return str(name) if name else None
+def macro_from_record(rec: Any) -> Macro:
+    """Reify one :data:`lawdata.MACROS` row into a :class:`Macro`.
+
+    The shipped table is plain data (dicts); the machinery reads the
+    record shape — a lab-mined ``Macro`` passes through unchanged.
+    """
+    if isinstance(rec, Macro):
+        return rec
+    return Macro(
+        name=str(rec["name"]),
+        seq=tuple(rec["seq"]),
+        count=int(rec.get("count", 0)),
+        certified=float(rec.get("certified", 0.0)),
+        mean_terminal=float(rec.get("mean_terminal", 0.0)),
+        score=float(rec.get("score", 0.0)),
+        ops=tuple(rec.get("ops", ())),
+    )
+
+
+def shipped_macros() -> tuple:
+    """Return the shipped offer set — :data:`lawdata.MACROS` reified."""
+    return tuple(macro_from_record(r) for r in lawdata.MACROS)
 
 
 def instantiate(macro: Macro) -> Action:
@@ -225,7 +248,8 @@ def viable(macro: Macro, state: ma.MetaState) -> bool:
     seq or already declared; ``fire``/``saturate`` need their named
     rules live or seq-declared.
     """
-    sites = {ma._canon_spec(state.specs[i]) for i in state.sites}
+    # canon specs can carry attr dicts — equality-compared, not hashed
+    sites = [ma._canon_spec(state.specs[i]) for i in state.sites]
     declared = {op for op, _body in state.declared_bodies}
     live = set(state.rules)
     seq_declared: set[str] = set()
@@ -262,6 +286,56 @@ def viable(macro: Macro, state: ma.MetaState) -> bool:
     return True
 
 
+def _offer_key(action: Action) -> Any:
+    """Dedup key for offers — a macro's *seq*, not its stat payload.
+
+    ``params["macro"]`` is metadata (which table minted the line, its
+    evidence); two offers carrying the same seq are the same move and
+    dedup regardless of their stats — a lab table re-minting a
+    shipped line must not double the offer.
+    """
+    if action.op == "macro":
+        return ("macro", ma._hashable_param(action.params.get("seq")))
+    return ma._action_key(action)
+
+
+def offered(
+    state: ma.MetaState,
+    macros: Any = None,
+    *,
+    cap: int = DEFAULT_MACRO_CAP,
+    base: Any = (),
+) -> tuple:
+    """Return the instantiated macro offers for *state*.
+
+    *macros* defaults to the shipped table (:func:`shipped_macros`);
+    rows may be ``Macro`` records or :data:`lawdata.MACROS` dicts.
+    Offers are viable-filtered (:func:`viable`), deduplicated against
+    each other and *base* by seq (:func:`_offer_key`), and capped
+    at *cap* — the enumeration's contract
+    :func:`meta_arena.legal_actions` calls on.  A done board offers
+    nothing.
+    """
+    if state.done:
+        return ()
+    ranked = shipped_macros() if macros is None else tuple(macros)
+    seen = {_offer_key(a) for a in base}
+    out: list[Action] = []
+    for m in ranked:
+        if len(out) >= cap:
+            break
+        m = macro_from_record(m)
+        if not viable(m, state):
+            continue
+        a = instantiate(m)
+        key = _offer_key(a)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(a)
+    return tuple(out)
+
+
 def legal_with_macros(
     macros: Any,
     *,
@@ -270,11 +344,14 @@ def legal_with_macros(
 ) -> Any:
     """Return a ``legal(state)`` enumerator offering minted macros.
 
-    *base* defaults to ``meta_arena.legal_actions``; macros come
-    ranked, filtered by :func:`viable`, deduplicated against each
-    other and the base set by the shared ``_action_key``, capped at
-    *cap* offers, and slotted before the terminal ``extract`` so the
-    enumeration's "extract last" convention holds.
+    *base* defaults to ``meta_arena.legal_actions`` — which already
+    offers the shipped table, so this wrapper exists for callers
+    carrying a *different* table (lab-mined candidate sets): its
+    offers are ranked, filtered by :func:`viable`, deduplicated
+    against each other and the base set by the shared
+    ``_action_key``, capped at *cap*, and slotted before the
+    terminal ``extract`` so the enumeration's "extract last"
+    convention holds.
     """
     base = ma.legal_actions if base is None else base
     ranked = tuple(macros)
@@ -284,20 +361,7 @@ def legal_with_macros(
         extract = (
             acts.pop() if acts and acts[-1].op == "extract" else None
         )
-        seen = {ma._action_key(a) for a in acts}
-        offered = 0
-        for m in ranked:
-            if offered >= cap:
-                break
-            if not viable(m, state):
-                continue
-            a = instantiate(m)
-            key = ma._action_key(a)
-            if key in seen:
-                continue
-            seen.add(key)
-            acts.append(a)
-            offered += 1
+        acts.extend(offered(state, ranked, cap=cap, base=acts))
         if extract is not None:
             acts.append(extract)
         return tuple(acts)

@@ -78,6 +78,9 @@ from .handlers import (
     HANDLERS,
     REVERSE,
 )
+from .macros import (
+    MACROS,
+)
 from .moves import (
     ARENA_MOVE_ORDER,
     CONST_LEAVES,
@@ -148,6 +151,7 @@ __all__ = [
     "JOINT_VIEW_SHAPES",
     "LINEAR_HELD_SHAPES",
     "LINEAR_TRAIN_SHAPES",
+    "MACROS",
     "META_ARENA_FEATURES",
     "META_ARENA_HASH_BUCKETS",
     "META_ARENA_PLAYER_WEIGHTS",

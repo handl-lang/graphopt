@@ -20,6 +20,10 @@ enode budget, and one action space mixes the levers:
   is a faithful abbreviation — a bare declared op over all of the
   LHS's metavariables — the definitional *unfold* pair rides along
   (the ``opdata`` semantics: a declared op *is* its expansion);
+* ``macro(seq)`` — a minted move sequence replayed as one refereed
+  step (:mod:`mlopt_discovery.macro_moves`, the shipped
+  :data:`lawdata.MACROS` table): each sub-action dispatches through
+  the same ``ACTIONS`` registry — compression, not new behaviour;
 * ``extract()`` — terminal: extract the cheapest member, build and
   replay its certificate, score the cost delta vs baseline.
 
@@ -1683,8 +1687,8 @@ def _claim_actions(state: MetaState) -> list[Action]:
     ]
 
 
-def legal_actions(state: MetaState) -> tuple[Action, ...]:
-    """Enumerate the moves *state* affords, deterministically.
+def _base_legal(state: MetaState) -> tuple[Action, ...]:
+    """Enumerate the macro-free legal set — the spelled vocabulary.
 
     ``fire`` once per live rule (the whole schedule dimension);
     ``saturate`` once per budget arm in
@@ -1706,6 +1710,29 @@ def legal_actions(state: MetaState) -> tuple[Action, ...]:
     out += _claim_actions(state)
     out.append(Action.extract())
     return tuple(out)
+
+
+def legal_actions(state: MetaState) -> tuple[Action, ...]:
+    """Enumerate the moves *state* affords, deterministically.
+
+    The shipped set: :func:`_base_legal`'s spelled vocabulary plus the
+    minted macro offers of :data:`lawdata.MACROS` (ranked,
+    ``viable``-filtered, deduplicated, capped — see
+    :func:`mlopt_discovery.macro_moves.offered`), slotted before the
+    terminal ``extract`` so the "extract last" convention holds.  A
+    macro mints no behaviour a player could not already spell — it
+    compresses a mined winning line into one refereed step — so it is
+    an offer to every player, not a lab seam.
+    """
+    if state.done:
+        return ()
+    from mlopt_discovery import macro_moves
+
+    acts = list(_base_legal(state))
+    extract = acts.pop()  # _base_legal always ends with extract
+    acts += macro_moves.offered(state, base=acts)
+    acts.append(extract)
+    return tuple(acts)
 
 
 def declare_candidates(

@@ -29,8 +29,11 @@ every name lives at its real package path — `mlopt_core.egraph`,
 **The experimental surface is `lab/`** (there is no `tools/`): the
 research drivers live in `lab/mint/` (`atom_law_loop.py` — ADR-0007
 layer 3; `atom_synth_loop.py` — the composed need → handler → laws →
-admission loop; `macro_miner.py` + `macro_moves.py` — minted macro
-actions), `lab/bridge/` (`combinator.py` + `combinator_probe.py`,
+admission loop; `macro_miner.py` — the minted-macro research driver:
+mines + evals `lawdata.MACROS` candidate tables; the shipped replay
+machinery promoted to `mlopt_discovery.macro_moves` and the retrain
+driver to `scripts/train_meta_macro_prior.py`), `lab/bridge/`
+(`combinator.py` + `combinator_probe.py`,
 `loop_propose.py`, `index_abstract.py`, `form_propose.py`,
 `sharing_extract.py`, `state_reindex.py` — the ADR-0008 bridge),
 `lab/audit/` (`grammar_probe.py`, `handl_differential.py`,

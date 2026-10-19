@@ -7,8 +7,8 @@ claim- and declare-line probes), count canonical action n-grams
 across episodes, rank by ``count x payoff`` (the mean terminal-step
 reward of the episodes the gram rode in — "did the subsequence
 precede a paying certified extract?"), and mint the top grams as
-:data:`lab.mint.macro_moves.Macro` templates — data replayed through
-the refereed ``macro`` handler, sound by construction.
+:data:`mlopt_discovery.macro_moves.Macro` templates — data replayed
+through the refereed ``macro`` handler, sound by construction.
 
 Smoke test: the minted table must surface the known winning line
 ``declare→saturate→handle→extract`` (or its ``claim``-fused form
@@ -23,6 +23,11 @@ Run::
 
     .venv/bin/python lab/mint/macro_miner.py
     .venv/bin/python lab/mint/macro_miner.py --mine-cases 24 --json /tmp/macro.json
+    .venv/bin/python lab/mint/macro_miner.py --emit   # MACROS literal
+
+``--emit`` prints the minted set as the ``lawdata.macros.MACROS``
+assignment literal — the bake path for the shipped offer set (same
+convention as the ``train_*_prior.py`` weight emits).
 """
 
 from __future__ import annotations
@@ -40,14 +45,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from mlopt_core.cost.basic import count_cost
 from mlopt_discovery import meta_arena as ma
 from mlopt_discovery import meta_player as mp
-from mlopt_discovery.meta_arena import Action
-
-from lab.mint.macro_moves import (
+from mlopt_discovery.macro_moves import (
     Macro,
+    _sub_parts,
     instantiate,
     legal_with_macros,
     viable,
 )
+from mlopt_discovery.meta_arena import Action
 
 __all__ = [
     "MacroScripted",
@@ -431,6 +436,52 @@ def _eval_table(means: dict[str, dict]) -> str:
     return "\n".join(lines)
 
 
+def _public_name(macro: Macro) -> str:
+    """Shippable name — ops plus the handler tag each leg carries.
+
+    ``claim(silu)→extract`` → ``claim_silu_extract``; the tags keep
+    same-op lines distinct (``saturate_handle_silu`` vs
+    ``saturate_handle_swiglu``).
+    """
+    parts: list[str] = []
+    for sub in macro.seq:
+        op, params = _sub_parts(sub)
+        tag = params.get("handler")
+        parts.append(f"{op}_{tag}" if tag else op)
+    return "_".join(parts)
+
+
+def _emit_literal(macros: list[Macro]) -> str:
+    """Render the minted set as the ``lawdata.macros.MACROS`` literal.
+
+    Same convention as ``train_*_prior.py``'s weight emits: the
+    printed assignment bakes verbatim into the data module.  Each
+    sub-action is one ``{"op", "params"}`` dict; spec tuples inside
+    repr to Python literals.
+    """
+    import pprint
+
+    lines = ["MACROS: tuple[dict, ...] = ("]
+    for m in macros:
+        lines.append(f"    {{  # {m.op_str()}")
+        lines.append(f'        "name": {_public_name(m)!r},')
+        lines.append('        "seq": (')
+        for sub in m.seq:
+            for sl in pprint.pformat(
+                dict(sub), width=66, sort_dicts=False
+            ).splitlines():
+                lines.append(f"            {sl}")
+            lines[-1] += ","
+        lines.append("        ),")
+        lines.append(f'        "count": {m.count!r},')
+        lines.append(f'        "certified": {m.certified!r},')
+        lines.append(f'        "mean_terminal": {m.mean_terminal!r},')
+        lines.append(f'        "score": {m.score!r},')
+        lines.append("    },")
+    lines.append(")")
+    return "\n".join(lines)
+
+
 def _rediscovery(macros: list[Macro]) -> dict:
     """Report the smoke test — was the known winning line minted."""
     spelled = ("declare", "saturate", "handle", "extract")
@@ -467,6 +518,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--offer-cap", type=int, default=TOP_MACROS)
     ap.add_argument("--declare-cap", type=int, default=DECLARE_CAP)
     ap.add_argument("--json", type=str, default=None)
+    ap.add_argument(
+        "--emit",
+        action="store_true",
+        help="print the MACROS bake literal instead of running the eval",
+    )
     args = ap.parse_args(argv)
     if sys.getrecursionlimit() < 40_000:
         sys.setrecursionlimit(40_000)
@@ -494,6 +550,10 @@ def main(argv: list[str] | None = None) -> int:
         f"rediscovery: spelled={hits['spelled']} fused={hits['fused']} "
         f"→ {'YES' if hits['rediscovered'] else 'NO'}"
     )
+    if args.emit:
+        print("\n== lawdata.macros literal ==")  # stdout-compat
+        print(_emit_literal(macros))  # stdout-compat
+        return 0
 
     res = run_eval(
         macros,

@@ -1,27 +1,31 @@
-"""Retrain the meta prior on the macro-extended move set.
+"""Retrain the meta prior on the shipped macro legal set.
 
-``docs/results_macro_moves.md``'s open loop: the minted macros pay the
-scripted arm (+0.088 held-out, 7W/0L) but are invisible to the *frozen*
-shipped prior (0 macro picks — a macro featurizes to the broadcast row
-while ``op:extract`` sits at +3.15).  This driver asks whether a prior
-*trained* against the macro-extended legal set learns to spend them.
+``docs/results_macro_moves.md``'s open loop, promoted: the minted
+macros pay the scripted arm (+0.088 held-out, 7W/0L) but were
+invisible to the *frozen* shipped prior, and a lab-only retrain
+regressed the base set.  Macros now ship — ``lawdata.MACROS`` rides
+``meta_arena.legal_actions`` — so this driver asks whether a prior
+*trained* against the shipped macro-offering set learns to spend
+them, and whether the bake gate is earned on the prod action space.
 
-Protocol (mirrors ``scripts/train_meta_prior.py`` exactly, plus the
-``legal=`` seam):
+Protocol (mirrors ``scripts/train_meta_prior.py`` exactly — the
+``legal=`` seam is gone because the seam shipped):
 
 * **mine** — ``macro_miner.collect_trajectories`` + ``mine_macros`` over
   ``mp.gen_cases(seed, 24)`` *train* cases only (the held-out stream
-  ``gen_cases(seed + 7919)`` is never mined from);
-* **extend** — ``legal_with_macros(macros, cap=8)`` as the player's
-  legal-move enumerator, so every train/eval episode offers the minted
-  lines alongside the base move set;
-* **train** — a *cold* ``MetaLearnedPlayer`` (``weights={}``), 30 epochs
-  x ``gen_cases(seed, 40)``, budget 12, episode-return REINFORCE;
+  ``gen_cases(seed + 7919)`` is never mined from); the minted set is
+  reported alongside the shipped :data:`lawdata.MACROS` table (drift
+  check — the two should coincide);
+* **train** — a *cold* ``MetaLearnedPlayer`` (``weights={}``) on the
+  shipped legal set — ``meta_arena.legal_actions`` already offers the
+  macros — 30 epochs x ``gen_cases(seed, 40)``, budget 12,
+  episode-return REINFORCE;
 * **measure** — held-out ``gen_cases(seed + 7919, 16)`` budget 12: the
   new arm's sampled/greedy reward, its *macro pick rate* (applied
   ``op == "macro"`` steps), the shipped V1 prior for pairing, and the
-  same V2 weights played on the *base* legal set (what a bake would
-  ship to callers that never offer macros).
+  same V2 weights played on the *macro-free* base set
+  (``v2-base`` — ``meta_arena._base_legal``; the regression clause:
+  a caller that suppresses the offers must not get a worse policy).
 
 Usage::
 
@@ -46,11 +50,12 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import torch
-from lab.mint.macro_moves import Macro, legal_with_macros
 from mlopt_core.cost.basic import count_cost
 from mlopt_discovery import lawdata
+from mlopt_discovery import macro_moves as mm
 from mlopt_discovery import meta_arena as ma
 from mlopt_discovery import meta_player as mp
+from mlopt_discovery.macro_moves import Macro
 
 from lab.mint.macro_miner import (
     MacroScripted,
@@ -86,22 +91,22 @@ def mine_train_macros(
 
 
 def train(
-    macros: list[Macro],
     *,
     seed: int = SEED,
     train_cases: int = TRAIN_CASES,
     epochs: int = EPOCHS,
     budget: int = BUDGET,
 ) -> tuple[mp.MetaLearnedPlayer, list[float], dict]:
-    """Train a cold meta prior against the macro-extended legal set.
+    """Train a cold meta prior against the shipped macro legal set.
 
-    Same loop as ``train_meta_prior.train`` with ``legal=`` bound to
-    ``legal_with_macros``; the trajectory reports are kept so the macro
-    pick rate *during training* is measurable, not just at eval.
+    Same loop as ``train_meta_prior.train`` — the player's default
+    enumerator is ``meta_arena.legal_actions``, which now offers
+    :data:`lawdata.MACROS` itself; the trajectory reports are kept so
+    the macro pick rate *during training* is measurable, not just at
+    eval.
     """
     torch.manual_seed(seed)
-    macro_legal = legal_with_macros(macros, cap=MACRO_CAP)
-    player = mp.MetaLearnedPlayer(seed, weights={}, legal=macro_legal)
+    player = mp.MetaLearnedPlayer(seed, weights={})
     cases = mp.gen_cases(seed, train_cases)
     totals: list[float] = []
     macro_picks = steps = 0
@@ -180,26 +185,28 @@ def run_eval(
     seed: int = SEED,
     eval_cases: int = EVAL_CASES,
     budget: int = BUDGET,
-    cap: int = MACRO_CAP,
 ) -> dict[str, Any]:
-    """Held-out arms: V2 on macros/base, shipped V1, scripted, baselines.
+    """Held-out arms: V2 sampled/greedy/base, shipped V1, baselines.
 
-    ``v2-base`` plays the *new* weights through the base legal set —
-    the behavior a bake ships to callers that never offer macros.
-    ``v1`` replays the shipped prior from its own captured table, so
-    the pairing survives the bake.
+    Every learned arm plays the *shipped* legal set — macros are prod
+    offers now.  ``v2-base`` is the regression clause: the *new*
+    weights through the macro-free :func:`meta_arena._base_legal`,
+    what a caller that suppresses the offers would get.  ``v1``
+    replays the shipped prior from its own captured table, so the
+    pairing survives the bake.
     """
     torch.manual_seed(seed)
     ev = mp.gen_cases(seed + HELD_OUT_OFFSET, eval_cases)
-    macro_legal = legal_with_macros(macros, cap=cap)
     v1 = mp.MetaLearnedPlayer(
         seed, weights=dict(lawdata.META_ARENA_PLAYER_WEIGHTS)
     )
-    v2_base = mp.MetaLearnedPlayer(seed, weights=player.weights_dict())
-    cold = mp.MetaLearnedPlayer(seed, weights={}, legal=macro_legal)
+    v2_base = mp.MetaLearnedPlayer(
+        seed, weights=player.weights_dict(), legal=ma._base_legal
+    )
+    cold = mp.MetaLearnedPlayer(seed, weights={})
     arms = {
-        "random+macros": _random_arm(seed, macro_legal),
-        "cold+macros": lambda i: cold.frozen(seed + 20_000 + i),
+        "random": _random_arm(seed, ma.legal_actions),
+        "cold": lambda i: cold.frozen(seed + 20_000 + i),
         "v1-shipped": lambda i: v1.frozen(seed + 40_000 + i),
         "v2-base": lambda i: v2_base.frozen(seed + 45_000 + i),
         "v2+macros": lambda i: player.frozen(seed + 50_000 + i),
@@ -279,17 +286,22 @@ def main(argv: list[str] | None = None) -> int:
     macros, _rows = mine_train_macros(
         seed=args.seed, mine_cases=args.mine_cases
     )
+    shipped = {
+        tuple(str(s["op"]) for s in r["seq"]) for r in lawdata.MACROS
+    }
     print(  # stdout-compat
         f"== minted {len(macros)} macros off gen_cases"
-        f"({args.seed}, {args.mine_cases}) — train stream only =="
+        f"({args.seed}, {args.mine_cases}) — train stream only; "
+        f"shipped table: {len(lawdata.MACROS)} rows =="
     )
     for m in macros:
+        ops = tuple(str(s["op"]) for s in m.seq)
+        flag = "" if ops in shipped else "  (not shipped)"
         print(  # stdout-compat
-            f"  {m.name} {m.op_str():<44} score={m.score:.3f}"
+            f"  {m.name} {m.op_str():<44} score={m.score:.3f}{flag}"
         )
 
     player, totals, tstats = train(
-        macros,
         seed=args.seed,
         train_cases=args.train_cases,
         epochs=args.epochs,
@@ -297,8 +309,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     curve = _block_means(totals, args.blocks)
     print(  # stdout-compat
-        f"\n== train — cold MetaLearnedPlayer, legal_with_macros"
-        f"(cap {MACRO_CAP}), {args.train_cases} cases x"
+        f"\n== train — cold MetaLearnedPlayer, shipped legal set"
+        f" (macros offered), {args.train_cases} cases x"
         f" {args.epochs} ep, budget {args.budget} =="
     )
     print(f"train block means: {curve}")  # stdout-compat
