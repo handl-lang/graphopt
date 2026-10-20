@@ -836,9 +836,7 @@ register_part(
 )
 register_part("open:useful-ct", lambda: StateBroadcast(_useful_ct_feat))
 register_part("open:stop", lambda: RelFeats(_stop_feats))
-register_part(
-    "open:next-value", lambda: RelFeats(_next_value_feats)
-)
+register_part("open:next-value", lambda: RelFeats(_next_value_feats))
 register_part("open:next-val", lambda: RelFeats(_next_val_feats))
 register_legal("open", legal_actions)
 register_rank("open", _cand_feats)
