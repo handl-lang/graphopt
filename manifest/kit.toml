@@ -34,10 +34,10 @@ role = "the arrow-calculus kernel — the Language data schema, the tagged Value
 
 [[component]]
 name = "lang"
-repo = "handl-lang/kit-data-prelude"
+repo = "handl-lang/kit-prelude-lang"
 float = "main"
 kind = "cargo-git"
-crates = ["handl-kit-data-prelude"]
+crates = ["handl-kit-prelude-lang"]
 role = "the canonical Language as data — YAML fragments → Language. A language is a data change, never an engine recompile (the same 'as data' thesis as this paper's)."
 
 [[component]]

@@ -11,7 +11,7 @@ forks, no vendoring.
 
 | layer | crate | piece |
 |---|---|---|
-| language | `handl-kit-data-prelude` | `language_from_yaml()` — the canonical `Language` as data |
+| language | `handl-kit-prelude-lang` | `language_from_yaml()` — the canonical eval-path `Language` as data |
 | value | `handl-value` | `TaggedValue` incl. `Tensor` (the real tensor variant) |
 | runtime | `handl-runtime` | `Runtime` + `EngineRegistry` + `RuntimeConfig` + `ModuleLoader` |
 | engines | `hnl-engine-{lex-pattern,parse-pratt,exec-tree-walk}` (+`hnl-engine-exec`) | `"data"`/`"pratt"`/`"tree-walk"` — the smallest honest set (no sdkgen/compile/lint/lsp); one crate per `engine-*` repo post-ADR-0128 |

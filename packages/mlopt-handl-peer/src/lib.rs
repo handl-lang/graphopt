@@ -14,7 +14,7 @@ use pyo3::prelude::*;
 use std::path::Path;
 
 use handl_language::{Ast, AstNode, AstRef};
-use handl_kit_data_prelude::language_from_dir;
+use handl_kit_prelude_lang::language_from_dir;
 use hnl_engine_transform_rewrite::RewriteEngine;
 
 /// Load `dir` as a handl language and return its transform ids.

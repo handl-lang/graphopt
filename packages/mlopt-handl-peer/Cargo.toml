@@ -12,7 +12,7 @@ crate-type = ["cdylib", "rlib"]
 pyo3 = { version = "0.26" }
 serde_json = "1"
 handl-language = { path = "../../../kernel/crates/handl-language" }
-handl-kit-data-prelude = { path = "../../../kit-data-prelude/crates/handl-kit-data-prelude" }
+handl-kit-prelude-lang = { path = "../../../kit-prelude-lang/crates/handl-kit-prelude-lang" }
 hnl-engine-transform-rewrite = { path = "../../../engine-transform-rewrite" }
 
 # ---------------------------------------------------------------------------
@@ -37,8 +37,8 @@ hnl-engine-transform = { path = "../../../engine-transform" }
 [patch."https://github.com/handl-lang/engine-transform-rewrite"]
 hnl-engine-transform-rewrite = { path = "../../../engine-transform-rewrite" }
 
-[patch."https://github.com/handl-lang/kit-data-prelude"]
-handl-kit-data-prelude = { path = "../../../kit-data-prelude/crates/handl-kit-data-prelude" }
+[patch."https://github.com/handl-lang/kit-prelude-lang"]
+handl-kit-prelude-lang = { path = "../../../kit-prelude-lang/crates/handl-kit-prelude-lang" }
 
 [patch."https://github.com/handl-lang/host"]
 handl-runtime = { path = "../../../host/crates/handl-runtime" }
