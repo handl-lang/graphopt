@@ -358,7 +358,7 @@ The `go (A)` direction ("mlopt embeds handl as an optional peer") gains
 its runtime seam: `packages/mlopt-kit/` — a plain Rust library crate in
 a new root cargo workspace (mlopt-native and lab/handl-peer excluded,
 standalone as before). It assembles the canonical `Language` via
-`handl-kit-data-prelude`, installs it process-wide, binds the smallest
+`handl-kit-data-canonical`, installs it process-wide, binds the smallest
 honest engine set (`data`/`pratt`/`tree-walk` — no sdkgen/compile/lint/
 lsp), and composes `host-tensor`'s 18-op surface as a `HandlModule` over
 `tensor_op_registry()` under the canonical fp host fns. A `ModuleLoader`
