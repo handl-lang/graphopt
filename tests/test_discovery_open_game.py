@@ -15,9 +15,9 @@ from __future__ import annotations
 
 import pytest
 from mlopt_discovery import open_game as og
-from mlopt_discovery.engine import run_episode, train_policy
+from gamekit.engine import run_episode, train_policy
 from mlopt_discovery.meta_arena import Action
-from mlopt_discovery.players import LinearPolicy
+from gamekit.players import LinearPolicy
 
 
 def _board(page: int = 12) -> og.OpenArena:

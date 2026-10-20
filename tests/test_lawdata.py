@@ -27,7 +27,7 @@ class TestLawdataSplit:
     """
 
     def test_game_half_reexports(self):
-        import mlopt_discovery.lawdata.game as game
+        import gamekit.gamedata as game
 
         for name in game.__all__:
             assert getattr(data, name) is getattr(game, name), name
@@ -39,7 +39,7 @@ class TestLawdataSplit:
             assert getattr(data, name) is getattr(laws, name), name
 
     def test_root_covers_both_halves(self):
-        import mlopt_discovery.lawdata.game as game
+        import gamekit.gamedata as game
         import mlopt_discovery.lawdata.laws as laws
 
         assert set(data.__all__) == (
@@ -48,18 +48,21 @@ class TestLawdataSplit:
 
     def test_halves_are_disjoint(self):
         """No table lives in both halves — the split is clean."""
-        import mlopt_discovery.lawdata.game as game
+        import gamekit.gamedata as game
         import mlopt_discovery.lawdata.laws as laws
 
         assert not (set(game.__all__) & set(laws.__all__))
 
     def test_feature_schema_reads_the_move_order_backedge(self):
-        """The one documented game→laws edge: ``features`` sizes
-        action-identity columns off ``laws.moves.ARENA_MOVE_ORDER``."""
-        import mlopt_discovery.lawdata.game.features as features
+        """The move-order edge, reversed at the gamekit extraction:
+        ``gamedata.moves`` is ``ARENA_MOVE_ORDER``'s single home and
+        ``laws.moves`` binds the same object."""
+        import gamekit.gamedata.features as features
+        import gamekit.gamedata.moves as gd_moves
         import mlopt_discovery.lawdata.laws.moves as moves
 
-        assert features.ARENA_MOVE_ORDER is moves.ARENA_MOVE_ORDER
+        assert features.ARENA_MOVE_ORDER is gd_moves.ARENA_MOVE_ORDER
+        assert moves.ARENA_MOVE_ORDER is gd_moves.ARENA_MOVE_ORDER
 
 
 class TestCoreLawdata:

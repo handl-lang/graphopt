@@ -77,12 +77,13 @@ from typing import Any
 import policy_baseline as pb
 import torch
 from mlopt_core.cost.basic import count_cost
-from mlopt_discovery import engine, play
+from gamekit import engine
+from mlopt_discovery import play
 from mlopt_discovery import meta_arena as ma
 from mlopt_discovery import meta_player as mp
 from mlopt_discovery import open_game as og
 from mlopt_discovery import proposal as lp
-from mlopt_discovery.players import DomainSpec
+from gamekit.players import DomainSpec
 
 #: Defaults — the reduced per-candidate budget (see module docstring).
 SEED = 0

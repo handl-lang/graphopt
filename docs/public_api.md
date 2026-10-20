@@ -47,13 +47,19 @@ layer, `graphopt` = the tensor-domain contents).
 
 ## Game contracts (→ `gamekit`)
 
+Plan 0032 lane A landed the in-repo extraction: these modules now
+live in `packages/gamekit` as `gamekit.*`, and the old
+`mlopt_discovery.{engine,scoring,advantage,players,lawdata.game}`
+paths are re-exporting shims (see `TestGamekitCompatShims` in
+`tests/test_public_api.py`).  Canonical paths are `gamekit.*`.
+
 | Contract | Canonical location | Frozen surface |
 |---|---|---|
-| `Board` protocol | `mlopt_discovery.engine` | `Board` (`observe() -> state` / `step(action) -> (state, report)`; `state.done` terminates), `Report` (floor: `reward`, `terminal`), `Trajectory` (`.reports`, `.total`, `.terminal`), `run_episode(board, player, budget)`, `evaluate(arms, cases, board_of, *, budget)`, `train_policy(player, cases, board_of, *, budget)` |
-| Player registry | `mlopt_discovery.players.registry` | `PlayerSpec` (`name`/`kind`/`boards`/`schema`/`train`/`artifact`/`record`/`variant`), `BOARDS`, `EPISODE_BOARDS`, `names()`, `spec(name)`, `specs()`, `for_board(board)`, `module(name)`, **`make(name, domain, *, seed=0, ctx=None) -> (i -> player)`** — `ValueError` on an unplayed board, never a silent run |
-| Player machinery | `mlopt_discovery.players` | `LinearPolicy`, `DomainSpec` (incl. `to_record`/`build_from_record`), `LearnedPlayer`, `PlayHist`, the feature parts `Bias`/`StateBroadcast`/`PlayRates`/`OpOneHot`/`ActionFeats`/`RelFeats`, `compose_featurizer`, `register_part`/`register_legal`/`register_rank`, `spec_from_record`, `PARTS`/`LEGALS`/`RANKS` |
-| Scoring spec | `mlopt_discovery.scoring` | `ScoreGate{axis, threshold, direction}`, `ScoringSpec{gates, weights, references}`, `GateVerdict`, `ScoreVerdict`, `score(spec, measured) -> ScoreVerdict`, `AXES` (`"speed"`, `"memory"`, `"launch"`, `"params"`), `DIRECTIONS` — the referee's value function **as data**; see below |
-| Substrate-free kernel | import-linter contract | `mlopt_discovery.engine`, `mlopt_discovery.scoring`, `mlopt_discovery.players._base`, `mlopt_discovery.players.registry` import nothing outside the stdlib — the `gamekit ⊥ eqsat` edge, enforced (see `pyproject.toml`) |
+| `Board` protocol | `gamekit.engine` | `Board` (`observe() -> state` / `step(action) -> (state, report)`; `state.done` terminates), `Report` (floor: `reward`, `terminal`), `Trajectory` (`.reports`, `.total`, `.terminal`), `run_episode(board, player, budget)`, `evaluate(arms, cases, board_of, *, budget)`, `train_policy(player, cases, board_of, *, budget)` |
+| Player registry | `gamekit.players.registry` | `PlayerSpec` (`name`/`kind`/`boards`/`schema`/`train`/`artifact`/`record`/`variant`), `BOARDS`, `EPISODE_BOARDS`, `names()`, `spec(name)`, `specs()`, `for_board(board)`, `module(name)`, **`make(name, domain, *, seed=0, ctx=None) -> (i -> player)`** — `ValueError` on an unplayed board, never a silent run |
+| Player machinery | `gamekit.players` | `LinearPolicy`, `DomainSpec` (incl. `to_record`/`build_from_record`), `LearnedPlayer`, `PlayHist`, the feature parts `Bias`/`StateBroadcast`/`PlayRates`/`OpOneHot`/`ActionFeats`/`RelFeats`, `compose_featurizer`, `register_part`/`register_legal`/`register_rank`, `spec_from_record`, `PARTS`/`LEGALS`/`RANKS` |
+| Scoring spec | `gamekit.scoring` | `ScoreGate{axis, threshold, direction}`, `ScoringSpec{gates, weights, references}`, `GateVerdict`, `ScoreVerdict`, `score(spec, measured) -> ScoreVerdict`, `AXES` (`"speed"`, `"memory"`, `"launch"`, `"params"`), `DIRECTIONS` — the referee's value function **as data**; see below |
+| Substrate-free kernel | import-linter contract | `gamekit.engine`, `gamekit.scoring`, `gamekit.calibrate`, `gamekit.advantage`, `gamekit.gamedata`, `gamekit.players._base`, `gamekit.players.registry` import nothing outside the stdlib — the `gamekit ⊥ eqsat` edge, enforced (see `pyproject.toml`) |
 
 ## Domain-side contracts (→ `graphopt`)
 
@@ -68,7 +74,7 @@ The plan's wording is the design: **the value spec is gamekit's; the
 measurement is the gauntlet's.**
 
 ```python
-from mlopt_discovery.scoring import ScoreGate, ScoringSpec, score
+from gamekit.scoring import ScoreGate, ScoringSpec, score
 
 spec = ScoringSpec(
     gates=(
@@ -98,7 +104,7 @@ Phase-2 lane B lands the referee registry
 
 ## Boundary notes — the honest seams
 
-* **`imitate_policy`** (`mlopt_discovery.engine`) is a documented
+* **`imitate_policy`** (`gamekit.engine`) is a documented
   driver that was never added to `__all__` — reachable but unlisted.
   It is **not** frozen; promote it deliberately or treat it as
   internal (phase-2 decision, recorded in the ADR entry).

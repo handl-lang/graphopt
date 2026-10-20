@@ -24,7 +24,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from mlopt_discovery.players.registry import PlayerSpec
+from gamekit.players.registry import PlayerSpec
 
 __all__ = ["SPECS", "make"]
 

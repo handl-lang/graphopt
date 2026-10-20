@@ -53,9 +53,10 @@ from collections.abc import Callable
 from statistics import fmean
 from typing import Any
 
+from gamekit.players import register_part
+
 from mlopt_discovery.meta_arena import Action
 from mlopt_discovery.open_game import _value as _cand_value
-from mlopt_discovery.players import register_part
 
 __all__ = [
     "SELF_FEATURES",

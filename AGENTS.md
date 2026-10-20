@@ -11,14 +11,21 @@ a checked ONNX artifact, `OnnxSource` lifts ONNX graphs back to IR;
 both verified through onnxruntime);
 `mlopt-discovery` — the law-discovery engine, formerly
 `tools/law_*.py`; invoke as `python -m mlopt_discovery.<mod>`;
-the game layer is `engine` (the `Board` protocol + generic
-episode/train/eval drivers), `players` — a package, not a module:
-`_base` holds the pre-package machinery (`LinearPolicy`, the
-featurizer-injected learned arm, re-exported at
-`mlopt_discovery.players`), `players/registry.py` is the
+the game layer is extracted to `packages/gamekit/` (plan 0032
+lane A): `gamekit.engine` (the `Board` protocol + generic
+episode/train/eval drivers), `gamekit.players` — a package:
+`_base` holds the machinery (`LinearPolicy`, the
+featurizer-injected learned arm), `players/registry.py` is the
 name→spec table, and each player is a folder
 (`random/ playbook/ linear/ neural/ distilled/` — its
-`PlayerSpec` + measured record + `make` arm factory), `play` (the
+`PlayerSpec` + measured record + `make` arm factory),
+plus `gamekit.scoring` (the referee's value spec),
+`gamekit.calibrate` (Platt/isotonic score calibration),
+`gamekit.advantage` (the actor-critic player) and
+`gamekit.gamedata` (the game weight/feature tables — the
+ex-`lawdata.game` half).  The old paths
+(`mlopt_discovery.engine`/`scoring`/`advantage`/`players`/
+`lawdata.game`) are re-exporting shims; `play` (the
 domain registry +
 `python -m mlopt_discovery.play --domain meta|joint|search|torch|gen|open`
 CLI; `--player <name>` runs a registered player eval-only, and

@@ -31,7 +31,8 @@ from __future__ import annotations
 
 import pytest
 import torch
-from mlopt_discovery import engine, lawdata, play
+from gamekit import engine
+from mlopt_discovery import lawdata, play
 from mlopt_discovery import open_game as og
 from mlopt_discovery import proposal as lp
 

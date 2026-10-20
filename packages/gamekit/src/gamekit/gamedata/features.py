@@ -5,18 +5,19 @@ are linear softmax policies over their boards' legal actions:
 ``score(move) = weight · feature``.  The *schema* — the feature names
 and the bucket widths the identity-flavoured features hash into — is
 content, so it lives here; the learned weights are the tables in
-:mod:`mlopt_discovery.lawdata.game.weights`.
+:mod:`gamekit.gamedata.weights`.
 """
 
 from __future__ import annotations
 
-# NOTE — the one back-edge across the seam: the feature schema sizes
-# its action-identity columns off ``ARENA_MOVE_ORDER``, which is move
-# vocabulary and so lives in the law half.  At gamekit extraction the
-# schema either re-derives the order from the board or the constant
-# travels as gamekit content; the edge is pinned by
-# ``tests/test_lawdata.py``.
-from ..laws.moves import ARENA_MOVE_ORDER
+# NOTE — the edge that used to reach back into the law half: the
+# feature schema sizes its action-identity columns off
+# ``ARENA_MOVE_ORDER``, the move vocabulary.  At the gamekit
+# extraction (plan 0032 lane A) the constant travelled as gamekit
+# content — ``gamedata.moves`` is its single home, and
+# ``mlopt_discovery.lawdata.laws.moves`` binds the same object
+# (pinned by ``tests/test_lawdata.py``).
+from .moves import ARENA_MOVE_ORDER
 
 __all__ = [
     "ARENA_FEATURES",

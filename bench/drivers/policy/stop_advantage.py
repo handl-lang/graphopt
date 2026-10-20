@@ -17,7 +17,7 @@ point).  This driver prices the two remaining levers, both new:
   logit, rank-1 posterior share, posterior-weighted logit and
   injected value, the above-uniform count); each ``evaluate`` row
   gets its posterior share and margin.
-* **per-step advantage** — :class:`mlopt_discovery.advantage.
+* **per-step advantage** — :class:`gamekit.advantage.
   AdvantagePlayer`: the REINFORCE EMA-total baseline becomes a
   learned ``V(s) = u·φ_stop(s)`` (delta-rule fit on the episode's
   own reward-to-go rows), so the ``stop`` action's credit isolates
@@ -72,13 +72,14 @@ import stop_policy as sp
 import torch
 from mlopt_core.features import compute_features
 from mlopt_core.trajectories import RuleSample, rule_vector
-from mlopt_discovery import advantage as adv
-from mlopt_discovery import engine, play
+from gamekit import advantage as adv
+from gamekit import engine
+from mlopt_discovery import play
 from mlopt_discovery import open_game as og
 from mlopt_discovery import open_self as oself
 from mlopt_discovery import proposal as lp
 from mlopt_discovery.meta_arena import Action
-from mlopt_discovery.players import PARTS, DomainSpec, _dot
+from gamekit.players import PARTS, DomainSpec, _dot
 from mlopt_torch.learned_policy import input_vector, train_rule_value
 
 #: Defaults — identical protocol to ``stop_policy.py``.

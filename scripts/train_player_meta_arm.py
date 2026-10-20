@@ -40,9 +40,9 @@ import argparse
 import json
 from typing import Any
 
-from mlopt_discovery import engine
+from gamekit import engine
+from gamekit.players import LearnedPlayer
 from mlopt_discovery import player_arena as pa
-from mlopt_discovery.players import LearnedPlayer
 
 __all__ = ["GREEDY_CHILD_SCORE", "distilled_open", "main", "train"]
 

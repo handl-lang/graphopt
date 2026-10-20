@@ -57,7 +57,8 @@ from __future__ import annotations
 
 import pytest
 import torch
-from mlopt_discovery import engine, play
+from gamekit import engine
+from mlopt_discovery import play
 from mlopt_discovery import open_game as og
 from mlopt_discovery import proposal as lp
 from mlopt_discovery.meta_arena import Action

@@ -13,9 +13,9 @@ threshold and not the features.
 
 This round prices exactly that: fit a calibrator on the predictor's
 scores — **Platt scaling** (logistic on the score's logit,
-``p̂ = sigmoid(a·logit(s) + b)``, :class:`bench.common.calibrate.PlattCal`)
+``p̂ = sigmoid(a·logit(s) + b)``, :class:`gamekit.calibrate.PlattCal`)
 and **isotonic regression** (pool-adjacent violators,
-:class:`~bench.common.calibrate.IsotonicCal`) — then re-run the
+:class:`~gamekit.calibrate.IsotonicCal`) — then re-run the
 break-even gates on ``p̂`` with κ unchanged, and re-run round 7's
 best prior arms (``head+vlabel``, ``ac+vlabel``) under the
 calibrated injection.
@@ -62,16 +62,17 @@ import schema_leaderboard as sl
 import stop_advantage as sa
 import stop_policy as sp
 import stop_valuelabel as svl
-from mlopt_discovery import advantage as adv
-from mlopt_discovery import engine, play
+from gamekit import advantage as adv
+from gamekit import engine
+from mlopt_discovery import play
 from mlopt_discovery import open_game as og
 from mlopt_discovery import open_self as osel
 from mlopt_discovery import open_vlabel as ovl
 from mlopt_discovery import proposal as lp
 from mlopt_discovery.meta_arena import Action
-from mlopt_discovery.players import DomainSpec, _dot
+from gamekit.players import DomainSpec, _dot
 
-from bench.common.calibrate import (
+from gamekit.calibrate import (
     IsotonicCal,
     PlattCal,
     calibration_metrics,

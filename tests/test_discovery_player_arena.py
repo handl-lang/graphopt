@@ -21,9 +21,9 @@ from mlopt_discovery import meta_player as mp
 from mlopt_discovery import open_game as og
 from mlopt_discovery import play
 from mlopt_discovery import player_arena as pa
-from mlopt_discovery.engine import run_episode
+from gamekit.engine import run_episode
 from mlopt_discovery.meta_arena import Action
-from mlopt_discovery.players import (
+from gamekit.players import (
     ActionFeats,
     Bias,
     DomainSpec,

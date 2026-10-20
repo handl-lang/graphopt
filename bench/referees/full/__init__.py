@@ -9,7 +9,7 @@ law cleared, applied to any claim a player produces.
 
 from __future__ import annotations
 
-from mlopt_discovery.scoring import ScoreGate, ScoringSpec
+from gamekit.scoring import ScoreGate, ScoringSpec
 
 from bench.referees.registry import RefereeSpec
 

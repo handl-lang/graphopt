@@ -1,7 +1,7 @@
 """``linear`` — the shipped trained prior (``LearnedPlayer`` + baked weights).
 
-The reusable :class:`~mlopt_discovery.players.LearnedPlayer` bound to
-the domain's own :class:`~mlopt_discovery.players.DomainSpec` — the
+The reusable :class:`~gamekit.players.LearnedPlayer` bound to
+the domain's own :class:`~gamekit.players.DomainSpec` — the
 feature schema, the composed featurizer and the legal-move enumerator
 come from ``play.DOMAINS[d].spec``, the weight table from
 ``lawdata`` — so the same module plays every episode domain that
@@ -25,7 +25,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from mlopt_discovery.players.registry import EPISODE_BOARDS, PlayerSpec
+from gamekit.players.registry import EPISODE_BOARDS, PlayerSpec
 
 __all__ = ["SPECS", "make"]
 
@@ -100,7 +100,8 @@ def make(
     candidate-only page ordering the leaderboard's AP column prices.
     """
     from mlopt_discovery.play import DOMAINS
-    from mlopt_discovery.players import LearnedPlayer
+
+    from gamekit.players import LearnedPlayer
 
     ctx = {} if ctx is None else ctx
     spec0 = DOMAINS[domain].spec

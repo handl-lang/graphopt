@@ -25,9 +25,9 @@ from pathlib import Path
 import pytest
 from mlopt_discovery import open_game as og
 from mlopt_discovery import open_vlabel as ovl
-from mlopt_discovery.engine import run_episode
+from gamekit.engine import run_episode
 from mlopt_discovery.meta_arena import Action
-from mlopt_discovery.players import PARTS, DomainSpec
+from gamekit.players import PARTS, DomainSpec
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "bench" / "drivers" / "policy"))

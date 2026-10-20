@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 from mlopt_discovery.play import DOMAINS
-from mlopt_discovery.players import registry
+from gamekit.players import registry
 
 from bench.benchkit import checkpoint as ckpt_mod
 from bench.players.leaderboard import write_outputs

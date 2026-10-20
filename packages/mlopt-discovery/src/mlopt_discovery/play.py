@@ -57,18 +57,8 @@ import sys
 from dataclasses import dataclass
 from typing import Any
 
-from mlopt_core.cost.basic import count_cost
-from mlopt_core.ir import Const, Op, TensorType, Var
-from mlopt_core.laws import DEFAULT as DEFAULT_SEARCH_RULES
-from mlopt_core.search_env import SearchEnv
-
-from . import engine, lawdata, training
-from . import meta_arena as ma
-from . import meta_player as mp
-from . import open_game as og
-from . import player_arena as pa
-from .meta_player import _bucket
-from .players import (
+from gamekit import engine
+from gamekit.players import (
     ActionFeats,
     Bias,
     DomainSpec,
@@ -77,6 +67,17 @@ from .players import (
     register_legal,
     register_part,
 )
+from mlopt_core.cost.basic import count_cost
+from mlopt_core.ir import Const, Op, TensorType, Var
+from mlopt_core.laws import DEFAULT as DEFAULT_SEARCH_RULES
+from mlopt_core.search_env import SearchEnv
+
+from . import lawdata, training
+from . import meta_arena as ma
+from . import meta_player as mp
+from . import open_game as og
+from . import player_arena as pa
+from .meta_player import _bucket
 
 __all__ = [
     "DOMAINS",
@@ -1700,7 +1701,7 @@ def main(argv: list[str] | None = None) -> int:
     train = d.cases(args.seed, args.train_cases)
     ev = d.cases(args.seed + 7919, args.eval_cases)
     if args.player is not None:
-        from .players import registry
+        from gamekit.players import registry
 
         try:
             mk = registry.make(

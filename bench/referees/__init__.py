@@ -15,7 +15,7 @@ certificate replay:
   (real matches + the synthesized binding window).
 * ``pay``    — + the typed-pay leg: the claim fires on real probe
   terms, every changed extraction verifies, and it strictly lowers
-  cost — plus the :class:`~mlopt_discovery.scoring.ScoringSpec`
+  cost — plus the :class:`~gamekit.scoring.ScoringSpec`
   gates on the measured axes.
 * ``sweep``  — + the adversarial sweep: the guarded region over the
   widened binding domain, the leg that caught the grid-eq guard's

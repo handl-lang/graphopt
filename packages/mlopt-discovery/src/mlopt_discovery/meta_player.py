@@ -36,13 +36,7 @@ import sys
 from collections.abc import Callable, Iterable
 from typing import Any
 
-from mlopt_core.cost.basic import count_cost
-from mlopt_core.ir import Const, Op, TensorType, Var
-from mlopt_core.laws import DEFAULT
-
-from . import lawdata
-from . import meta_arena as ma
-from .players import (
+from gamekit.players import (
     ActionFeats,
     Bias,
     DomainSpec,
@@ -54,6 +48,12 @@ from .players import (
     register_legal,
     register_part,
 )
+from mlopt_core.cost.basic import count_cost
+from mlopt_core.ir import Const, Op, TensorType, Var
+from mlopt_core.laws import DEFAULT
+
+from . import lawdata
+from . import meta_arena as ma
 
 __all__ = [
     "META_PART_TAGS",

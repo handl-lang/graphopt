@@ -13,10 +13,12 @@ import pytest
 from mlopt_core.cost.basic import count_cost
 from mlopt_core.ir import Op, TensorType, Var
 from mlopt_core.laws import DEFAULT
-from mlopt_discovery import engine, meta_arena as ma
+from gamekit import engine
+from mlopt_discovery import meta_arena as ma
 from mlopt_discovery import meta_player as mp
-from mlopt_discovery import play, players
-from mlopt_discovery.players import LinearPolicy
+from gamekit import players
+from mlopt_discovery import play
+from gamekit.players import LinearPolicy
 
 
 def _v(name: str, *shape: int) -> Var:

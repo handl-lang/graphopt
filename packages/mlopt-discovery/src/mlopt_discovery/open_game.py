@@ -51,13 +51,7 @@ from itertools import islice
 from statistics import fmean
 from typing import Any
 
-from mlopt_core.ir import Op, Var
-
-from mlopt_discovery import lawdata
-from mlopt_discovery import proposal as lp
-from mlopt_discovery.enumerate import enumerate_candidates
-from mlopt_discovery.meta_arena import Action
-from mlopt_discovery.players import (
+from gamekit.players import (
     ActionFeats,
     Bias,
     DomainSpec,
@@ -70,6 +64,12 @@ from mlopt_discovery.players import (
     register_part,
     register_rank,
 )
+from mlopt_core.ir import Op, Var
+
+from mlopt_discovery import lawdata
+from mlopt_discovery import proposal as lp
+from mlopt_discovery.enumerate import enumerate_candidates
+from mlopt_discovery.meta_arena import Action
 
 __all__ = [
     "OPEN_EXTRA_FEATURES",
@@ -692,7 +692,7 @@ class OpenArena:
 
     def step(self, action: Any) -> tuple[OpenState, Any]:
         """Evaluate one candidate (``evaluate``) or end (``stop``)."""
-        from mlopt_discovery.engine import Report
+        from gamekit.engine import Report
 
         if self.done:
             raise RuntimeError("episode finished")

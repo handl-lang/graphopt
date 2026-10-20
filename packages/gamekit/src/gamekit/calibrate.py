@@ -1,11 +1,13 @@
 """Score calibration — Platt scaling and isotonic regression.
 
 Shared machinery for the policy-measurement drivers
-(``bench/drivers/policy/stop_calibrated.py`` is the first consumer): a
-predictor's raw score is mapped to a calibrated probability.  The
+(``bench/drivers/policy/stop_calibrated.py`` is the first consumer):
+a predictor's raw score is mapped to a calibrated probability.  The
 calibrator is fit on a held-out-quality calibration sample (e.g.
 out-of-fold predictions on the *train* split) and applied to new
-scores — the fit never sees eval data.
+scores — the fit never sees eval data.  Moved from
+``bench/common/calibrate.py`` at the gamekit extraction (plan 0032
+lane A) — the calibrated-gate machinery is gamekit's.
 
 Two calibrators, one contract — ``fit(scores, labels) -> self``,
 ``predict(scores) -> list[float]``:
@@ -243,7 +245,7 @@ def brier(preds: Sequence[float], labels: Sequence[float]) -> float:
 def ece(
     preds: Sequence[float], labels: Sequence[float], bins: int = 10
 ) -> float:
-    """Expected calibration error — equal-width-bin |conf - acc| mean."""
+    """Compute expected calibration error — |conf - acc| over bins."""
     n = len(preds)
     if n == 0 or bins <= 0:
         return 0.0
@@ -282,7 +284,7 @@ def calibration_slope(
 def calibration_metrics(
     preds: Sequence[float], labels: Sequence[float], bins: int = 10
 ) -> dict[str, float | int | None]:
-    """The standard calibration report for one (preds, labels) pair."""
+    """Return the calibration report for one (preds, labels) pair."""
     n = len(preds)
     slope, intercept = calibration_slope(preds, labels)
     return {

@@ -377,7 +377,7 @@ def test_checkpoint_git_drift_warns_but_reuses(tmp_path):
 
 def test_episode_board_resume_is_idempotent(tmp_path, monkeypatch):
     """A second run replays rows verbatim and never rebuilds arms."""
-    from mlopt_discovery.players import registry as preg
+    from gamekit.players import registry as preg
 
     from bench.players.runner import run_episode_board
 
@@ -455,7 +455,7 @@ def test_contraction_resume_replays_instances(tmp_path, monkeypatch):
 
 def test_matrix_resume_replays_cells(tmp_path, monkeypatch):
     """Done cells skip the episode engine entirely on resume."""
-    from mlopt_discovery import engine
+    from gamekit import engine
 
     from bench.matrix.runner import run_matrix
 

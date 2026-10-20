@@ -51,10 +51,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from gamekit.players import RelFeats, register_part
+
 from mlopt_discovery.meta_arena import Action
 from mlopt_discovery.open_game import OPEN_GAME_REWARD
 from mlopt_discovery.open_game import _value as _cand_value
-from mlopt_discovery.players import RelFeats, register_part
 
 __all__ = [
     "EVAL_COST",

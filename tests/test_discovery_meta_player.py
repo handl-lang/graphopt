@@ -15,7 +15,7 @@ from mlopt_core.laws import DEFAULT
 from mlopt_discovery import lawdata
 from mlopt_discovery import meta_arena as ma
 from mlopt_discovery import meta_player as mp
-from mlopt_discovery import players
+from gamekit import players
 
 
 def _v(name: str, *shape: int) -> Var:
@@ -223,7 +223,7 @@ class TestImitate:
         assert a is not None and a.op == "saturate"
 
     def test_imitate_policy_counts(self):
-        from mlopt_discovery import engine as eng
+        from gamekit import engine as eng
 
         p = mp.MetaLearnedPlayer(0)
         res = eng.imitate_policy(

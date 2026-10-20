@@ -2,10 +2,10 @@
 
 Plan 0031 workstream 2 turned ``players.py`` into the ``players/``
 package: the base machinery moved to ``players/_base.py`` (the
-``mlopt_discovery.players`` surface is re-exported unchanged — the
+``gamekit.players`` surface is re-exported unchanged — the
 import-compat pins below are the point of the reorganization, not
 the internals), and every player is now a folder with a
-:class:`~mlopt_discovery.players.registry.PlayerSpec`, a measured
+:class:`~gamekit.players.registry.PlayerSpec`, a measured
 record, and a ``make`` arm factory the play CLI's ``--player`` flag
 and ``bench/players`` consume.
 """
@@ -18,12 +18,12 @@ from types import SimpleNamespace
 import pytest
 
 from mlopt_core.cost.basic import count_cost
-from mlopt_discovery import engine
+from gamekit import engine
 from mlopt_discovery import meta_player as mp
 from mlopt_discovery import open_game as og
 from mlopt_discovery import play
 from mlopt_discovery.enumerate import enumerate_candidates
-from mlopt_discovery.players import (
+from gamekit.players import (
     _action_key,
     _BASELINE_EMA,
     _dot,
@@ -42,7 +42,7 @@ from mlopt_discovery.players import (
 
 
 def test_base_surface_reexports():
-    """``from mlopt_discovery.players import …`` — old paths live."""
+    """``from gamekit.players import …`` — old paths live."""
     assert _dot({"a": 2.0}, {"a": 3.0}) == 6.0
     assert _action_key("plain") == ("call", "'plain'")
     phi, ephi = _grad_row([{"x": 1.0}, {"y": 2.0}], [1.0, 1.0], 0)
@@ -54,7 +54,7 @@ def test_base_surface_reexports():
 
 
 def test_torch_free_package_import():
-    """``import mlopt_discovery.players`` stays stdlib-only."""
+    """``import gamekit.players`` stays stdlib-only."""
     import subprocess
     import sys
 
@@ -62,7 +62,7 @@ def test_torch_free_package_import():
         [
             sys.executable,
             "-c",
-            "import sys; import mlopt_discovery.players; "
+            "import sys; import gamekit.players; "
             "assert 'torch' not in sys.modules, 'torch leaked'; "
             "print('players-torch-free')",
         ],

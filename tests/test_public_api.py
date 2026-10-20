@@ -147,7 +147,7 @@ _PUBLIC_SURFACE: dict[str, tuple[str, ...]] = {
         "delivered_cost_for",
         "structural_key",
     ),
-    "mlopt_discovery.engine": (
+    "gamekit.engine": (
         "Board",
         "Report",
         "Trajectory",
@@ -155,7 +155,7 @@ _PUBLIC_SURFACE: dict[str, tuple[str, ...]] = {
         "evaluate",
         "train_policy",
     ),
-    "mlopt_discovery.players": (
+    "gamekit.players": (
         "PlayerSpec",
         "LinearPolicy",
         "DomainSpec",
@@ -177,7 +177,7 @@ _PUBLIC_SURFACE: dict[str, tuple[str, ...]] = {
         "RANKS",
         "registry",
     ),
-    "mlopt_discovery.players.registry": (
+    "gamekit.players.registry": (
         "PlayerSpec",
         "BOARDS",
         "EPISODE_BOARDS",
@@ -188,7 +188,7 @@ _PUBLIC_SURFACE: dict[str, tuple[str, ...]] = {
         "module",
         "make",
     ),
-    "mlopt_discovery.scoring": (
+    "gamekit.scoring": (
         "AXES",
         "DIRECTIONS",
         "ScoreGate",
@@ -332,7 +332,7 @@ class TestSignaturePins:
             assert kw in params, f"verify_law lost {kw!r}"
 
     def test_registry_make_shape(self):
-        from mlopt_discovery.players import registry
+        from gamekit.players import registry
 
         params = inspect.signature(registry.make).parameters
         assert list(params)[:2] == ["name", "domain"]
@@ -356,7 +356,7 @@ class TestProtocols:
     """``Board``/``Sink``/``Engine`` stay runtime-checkable Protocols."""
 
     def test_board_runtime_checkable(self):
-        from mlopt_discovery.engine import Board
+        from gamekit.engine import Board
 
         class _B:
             def observe(self):
@@ -397,13 +397,13 @@ class TestScoringSpec:
     """``score(spec, measured)`` — the spec/measurement seam."""
 
     def test_axes_vocabulary(self):
-        from mlopt_discovery.scoring import AXES, DIRECTIONS
+        from gamekit.scoring import AXES, DIRECTIONS
 
         assert AXES == ("speed", "memory", "launch", "params")
         assert DIRECTIONS == ("at_most", "at_least")
 
     def test_gate_pass_and_margin(self):
-        from mlopt_discovery.scoring import ScoreGate
+        from gamekit.scoring import ScoreGate
 
         g = ScoreGate("speed", 0.95)
         assert g.passed(0.9) and not g.passed(1.0)
@@ -413,7 +413,7 @@ class TestScoringSpec:
         assert floor.margin(0.6) == pytest.approx(0.1)
 
     def test_gate_ratio_normalises_to_the_bar(self):
-        from mlopt_discovery.scoring import ScoreGate
+        from gamekit.scoring import ScoreGate
 
         g = ScoreGate("memory", 4.0)
         assert g.ratio(2.0) == pytest.approx(0.5)
@@ -425,7 +425,7 @@ class TestScoringSpec:
         assert math.isinf(zero.ratio(1.0))
 
     def test_gate_validation(self):
-        from mlopt_discovery.scoring import ScoreGate
+        from gamekit.scoring import ScoreGate
 
         with pytest.raises(ValueError, match="non-empty"):
             ScoreGate("", 1.0)
@@ -435,7 +435,7 @@ class TestScoringSpec:
             ScoreGate("speed", 1.0, direction="sideways")
 
     def test_score_pass_and_value(self):
-        from mlopt_discovery.scoring import ScoreGate, ScoringSpec, score
+        from gamekit.scoring import ScoreGate, ScoringSpec, score
 
         spec = ScoringSpec(gates=(ScoreGate("speed", 2.0),))
         v = score(spec, {"speed": 1.0})
@@ -444,7 +444,7 @@ class TestScoringSpec:
         assert not v.passed and v.value == pytest.approx(2.0)
 
     def test_score_blends_weighted_axes(self):
-        from mlopt_discovery.scoring import ScoreGate, ScoringSpec, score
+        from gamekit.scoring import ScoreGate, ScoringSpec, score
 
         spec = ScoringSpec(
             gates=(ScoreGate("speed", 2.0),),
@@ -457,7 +457,7 @@ class TestScoringSpec:
         assert v.value == pytest.approx(0.75)
 
     def test_score_missing_measurement_is_honest(self):
-        from mlopt_discovery.scoring import ScoreGate, ScoringSpec, score
+        from gamekit.scoring import ScoreGate, ScoringSpec, score
 
         spec = ScoringSpec(gates=(ScoreGate("speed", 2.0),))
         v = score(spec, {})
@@ -468,7 +468,7 @@ class TestScoringSpec:
         assert not g.passed and math.isnan(g.value)
 
     def test_score_at_least_axis_inverts_the_ratio(self):
-        from mlopt_discovery.scoring import ScoreGate, ScoringSpec, score
+        from gamekit.scoring import ScoreGate, ScoringSpec, score
 
         spec = ScoringSpec(
             gates=(ScoreGate("win", 0.5, direction="at_least"),),
@@ -480,7 +480,7 @@ class TestScoringSpec:
         assert not v.passed and math.isinf(v.value)
 
     def test_score_unpriced_when_weighted_axis_missing(self):
-        from mlopt_discovery.scoring import ScoringSpec, score
+        from gamekit.scoring import ScoringSpec, score
 
         spec = ScoringSpec(
             gates=(),
@@ -493,7 +493,7 @@ class TestScoringSpec:
         assert "memory" in v.missing
 
     def test_spec_rejects_unanchored_weight(self):
-        from mlopt_discovery.scoring import ScoreGate, ScoringSpec
+        from gamekit.scoring import ScoreGate, ScoringSpec
 
         with pytest.raises(ValueError, match="neither gated"):
             ScoringSpec(
@@ -511,7 +511,7 @@ class TestScoringSpec:
             ScoringSpec(gates=(), references={"memory": 0.0})
 
     def test_spec_normalises_gates_tuple(self):
-        from mlopt_discovery.scoring import ScoreGate, ScoringSpec
+        from gamekit.scoring import ScoreGate, ScoringSpec
 
         spec = ScoringSpec(gates=[ScoreGate("speed", 1.0)])
         assert isinstance(spec.gates, tuple)
@@ -548,8 +548,77 @@ class TestBoundaryNotes:
 
     def test_engine_report_floor(self):
         """``Report`` — the report floor the game contract names."""
-        from mlopt_discovery.engine import Report
+        from gamekit.engine import Report
 
         r = Report(action="x", reward=1.5)
         assert r.terminal is False and r.applied is True
         assert r.reward == 1.5
+
+
+# ---------------------------------------------------------------------------
+#  The lane-A compat shims — the old discovery paths bind the same objects
+# ---------------------------------------------------------------------------
+
+
+class TestGamekitCompatShims:
+    """``mlopt_discovery.{engine,scoring,advantage,players,lawdata.game}``
+    re-export the gamekit modules — same objects, one home (plan 0032
+    lane A)."""
+
+    def test_engine_shim(self):
+        import gamekit.engine
+        import gamekit.engine as shim
+
+        assert shim.Board is gamekit.engine.Board
+        assert shim.run_episode is gamekit.engine.run_episode
+        # reachable-but-unlisted stays reachable
+        assert shim.imitate_policy is gamekit.engine.imitate_policy
+        assert "imitate_policy" not in shim.__all__
+
+    def test_scoring_shim(self):
+        import gamekit.scoring
+        import gamekit.scoring as shim
+
+        assert shim.score is gamekit.scoring.score
+        assert shim.ScoringSpec is gamekit.scoring.ScoringSpec
+
+    def test_advantage_shim(self):
+        import gamekit.advantage
+        import gamekit.advantage as shim
+
+        assert shim.AdvantagePlayer is gamekit.advantage.AdvantagePlayer
+
+    def test_players_shim(self):
+        import gamekit.players
+        import gamekit.players as shim
+
+        assert shim.LinearPolicy is gamekit.players.LinearPolicy
+        assert shim._dot is gamekit.players._dot
+
+    def test_players_submodules_are_the_same_module_object(self):
+        """``gamekit.players.{registry,_base}`` alias — one
+        registry ``_INDEX``, never a forked copy."""
+        import gamekit.players._base
+        import gamekit.players.registry
+        import gamekit.players._base as pbase
+        import gamekit.players.registry as preg
+
+        assert preg is gamekit.players.registry
+        assert pbase is gamekit.players._base
+
+    def test_lawdata_game_alias(self):
+        """``gamekit.gamedata`` aliases ``gamekit.gamedata``."""
+        import gamekit.gamedata
+        import mlopt_discovery.lawdata as data
+        import gamekit.gamedata as game
+        import gamekit.gamedata.features as features
+        import gamekit.gamedata.weights as weights
+
+        assert game is gamekit.gamedata
+        assert data.game is gamekit.gamedata
+        assert features is gamekit.gamedata.features
+        assert weights is gamekit.gamedata.weights
+        assert (
+            data.ARENA_MOVE_ORDER
+            is gamekit.gamedata.moves.ARENA_MOVE_ORDER
+        )

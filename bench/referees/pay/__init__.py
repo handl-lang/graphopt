@@ -11,7 +11,7 @@ the cell's ``value``.
 
 from __future__ import annotations
 
-from mlopt_discovery.scoring import ScoreGate, ScoringSpec
+from gamekit.scoring import ScoreGate, ScoringSpec
 
 from bench.referees.registry import RefereeSpec
 

@@ -102,13 +102,15 @@ jobs:
       - name: coverage run (full suite)
         run: >-
           .venv/bin/coverage run
-          --source=mlopt_core,mlopt_torch,mlopt_carriers,mlopt_orchestrator,mlopt_cuda,mlopt_discovery,mlopt_onnx
+          --source=mlopt_core,mlopt_torch,mlopt_carriers,mlopt_orchestrator,mlopt_cuda,mlopt_discovery,mlopt_onnx,gamekit
           -m pytest tests/ -q
 
       - name: coverage report (fail_under=100, shipped packages)
-        run: .venv/bin/coverage report -m --omit="*/mlopt_discovery/*"
-
-      - name: coverage report (mlopt_discovery, fail_under=99)
         run: >-
           .venv/bin/coverage report -m
-          --include="*/mlopt_discovery/*" --fail-under=99
+          --omit="*/mlopt_discovery/*,*/gamekit/*"
+
+      - name: coverage report (mlopt_discovery+gamekit, fail_under=99)
+        run: >-
+          .venv/bin/coverage report -m
+          --include="*/mlopt_discovery/*,*/gamekit/*" --fail-under=99

@@ -68,7 +68,8 @@ from typing import Any
 import torch
 from mlopt_core.features import compute_features
 from mlopt_core.trajectories import RuleSample, rule_vector
-from mlopt_discovery import engine, play
+from gamekit import engine
+from mlopt_discovery import play
 from mlopt_discovery import meta_arena as ma
 from mlopt_discovery import meta_player as mp
 from mlopt_discovery import open_game as og

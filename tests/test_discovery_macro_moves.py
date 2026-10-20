@@ -588,7 +588,7 @@ class TestShippedLegalSet:
         assert any(a.op == "macro" for a in g._legal(st))
 
     def test_spec_record_roundtrip_carries_macro_offers(self):
-        from mlopt_discovery.players import spec_from_record
+        from gamekit.players import spec_from_record
 
         rec = mp.META_SPEC.to_record()
         assert rec["legal"] == "meta"

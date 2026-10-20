@@ -179,9 +179,9 @@ def _episode_cells(
     the moment it completes and reused verbatim on resume — a crash
     costs the in-flight player, nothing earlier.
     """
-    from mlopt_discovery import engine
+    from gamekit import engine
     from mlopt_discovery.play import DOMAINS
-    from mlopt_discovery.players import registry
+    from gamekit.players import registry
 
     d = DOMAINS[board]
     ev = d.cases(seed + HELD_OUT_OFFSET, cases)
@@ -283,10 +283,10 @@ def _open_cells(
     already done the shared pool measurement (the expensive prefix)
     is skipped entirely.
     """
-    from mlopt_discovery import engine
+    from gamekit import engine
     from mlopt_discovery import open_game as og
     from mlopt_discovery import proposal as lp
-    from mlopt_discovery.players import registry
+    from gamekit.players import registry
 
     from bench.players.runner import (
         _cand_key,
@@ -423,7 +423,7 @@ def coverage(
     produce no equality claims.
     """
     from mlopt_discovery.play import DOMAINS
-    from mlopt_discovery.players import registry
+    from gamekit.players import registry
 
     out: list[Cell] = []
     for board in boards:
@@ -474,7 +474,7 @@ def run_matrix(
             for p in players
             if board
             in __import__(
-                "mlopt_discovery.players.registry",
+                "gamekit.players.registry",
                 fromlist=["spec"],
             )
             .spec(p)

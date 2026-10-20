@@ -45,12 +45,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
-from . import engine, lawdata
-from . import meta_player as mp
-from . import open_game as og
-from . import proposal as lp
-from .meta_arena import Action
-from .players import (
+from gamekit import engine
+from gamekit.players import (
     ActionFeats,
     Bias,
     DomainSpec,
@@ -61,6 +57,12 @@ from .players import (
     register_part,
     spec_from_record,
 )
+
+from . import lawdata
+from . import meta_player as mp
+from . import open_game as og
+from . import proposal as lp
+from .meta_arena import Action
 
 __all__ = [
     "OBJECTIVES",

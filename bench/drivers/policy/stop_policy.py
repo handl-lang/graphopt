@@ -114,11 +114,12 @@ import schema_leaderboard as sl
 import torch
 from mlopt_core.features import compute_features
 from mlopt_core.trajectories import RuleSample, rule_vector
-from mlopt_discovery import engine, play
+from gamekit import engine
+from mlopt_discovery import play
 from mlopt_discovery import open_game as og
 from mlopt_discovery import proposal as lp
 from mlopt_discovery.meta_arena import Action
-from mlopt_discovery.players import PARTS, DomainSpec, PlayHist, _dot
+from gamekit.players import PARTS, DomainSpec, PlayHist, _dot
 from mlopt_torch.learned_policy import input_vector, train_rule_value
 
 #: Defaults — the shipped bake protocol under memoized verdicts.

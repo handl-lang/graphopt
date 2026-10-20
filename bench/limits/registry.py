@@ -6,7 +6,7 @@ folder in this package — one measured record in its docstring, its
 fixture into the callable a practitioner would ship.  The registry
 maps *name → spec* so the limits runner
 (:mod:`bench.limits.runner`) enumerates opponents from one table —
-the same shape :mod:`mlopt_discovery.players.registry` gives the
+the same shape :mod:`gamekit.players.registry` gives the
 player roster.
 
 A :class:`BaselineSpec` is *data*: which corpus cases the baseline

@@ -1,4 +1,4 @@
-"""Tests for :class:`mlopt_discovery.advantage.AdvantagePlayer`.
+"""Tests for :class:`gamekit.advantage.AdvantagePlayer`.
 
 The actor-critic variant of ``LearnedPlayer``: the REINFORCE baseline
 is a learned state value ``V(s) = u·φ_state`` instead of the EMA
@@ -16,10 +16,11 @@ copies, and the no-op paths (learn off, no state row injector).
 from __future__ import annotations
 
 import pytest
-from mlopt_discovery import engine, open_game as og
-from mlopt_discovery.advantage import AdvantagePlayer
+from gamekit import engine
+from mlopt_discovery import open_game as og
+from gamekit.advantage import AdvantagePlayer
 from mlopt_discovery.meta_arena import Action
-from mlopt_discovery.players import (
+from gamekit.players import (
     ActionFeats,
     Bias,
     DomainSpec,

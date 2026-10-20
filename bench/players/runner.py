@@ -33,10 +33,10 @@ from collections import Counter
 from dataclasses import dataclass
 from typing import Any
 
-from mlopt_discovery import engine
+from gamekit import engine
 from mlopt_discovery.play import DOMAINS
-from mlopt_discovery.players import registry
-from mlopt_discovery.players.registry import PlayerSpec
+from gamekit.players import registry
+from gamekit.players.registry import PlayerSpec
 
 #: ``play``'s held-out seed offset — the eval stream the shipped
 #: priors were never trained on.

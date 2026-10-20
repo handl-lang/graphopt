@@ -10,7 +10,7 @@ enumerates judges from one table — the same shape
 A :class:`RefereeSpec` is *data*: which gauntlet components the arm
 runs (a subset of :data:`COMPONENT_ORDER`, cumulative along the
 numeric-oracle → typed-pay → adversarial-sweep → cert-replay dial),
-the :class:`~mlopt_discovery.scoring.ScoringSpec` the measured axes
+the :class:`~gamekit.scoring.ScoringSpec` the measured axes
 are gated against (``None`` = no value function — the component
 verdicts alone decide), and the measured record that earned the arm
 its seat.  Loading is lazy — :func:`spec` imports the folders on
@@ -34,7 +34,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
-from mlopt_discovery.scoring import ScoringSpec, score
+from gamekit.scoring import ScoringSpec, score
 
 __all__ = [
     "COMPONENTS",

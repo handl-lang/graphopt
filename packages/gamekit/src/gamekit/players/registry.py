@@ -12,8 +12,9 @@ A :class:`PlayerSpec` is *data*: which boards the player can play, the
 feature schema it scores on, the entry point that trained its shipped
 weights, the artifact that carries them, and the measured record that
 earned it a seat.  Loading is lazy — :func:`spec` imports the folders
-on first touch, so ``import mlopt_discovery.players`` stays
-stdlib-only.
+on first touch, so ``import gamekit.players`` stays
+stdlib-only.  The old ``mlopt_discovery.players`` path is a
+re-exporting shim (plan 0032 lane A).
 
 The arm-factory contract: ``registry.make(name, domain, seed, ctx)``
 returns ``i -> player``.  On an *episode* board (the
@@ -93,11 +94,11 @@ class PlayerSpec:
 #: :func:`names` and error messages never pay an import beyond the
 #: cheap folder bodies.
 _MODULES: dict[str, str] = {
-    "random": "mlopt_discovery.players.random",
-    "playbook": "mlopt_discovery.players.playbook",
-    "linear": "mlopt_discovery.players.linear",
-    "neural": "mlopt_discovery.players.neural",
-    "distilled": "mlopt_discovery.players.distilled",
+    "random": "gamekit.players.random",
+    "playbook": "gamekit.players.playbook",
+    "linear": "gamekit.players.linear",
+    "neural": "gamekit.players.neural",
+    "distilled": "gamekit.players.distilled",
 }
 
 #: spec name → (module path, PlayerSpec) — built by :func:`specs`.

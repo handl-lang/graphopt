@@ -22,14 +22,17 @@ corpus registries (``impact._model_cases``, ``intake.candidates``,
 The two halves (plan 0032)
 --------------------------
 
-The package is already split along the repo-split seam — one table
-travels with the game layer, the other stays with the domain:
+The package is split along the repo-split seam — one table
+travelled with the game layer, the other stays with the domain:
 
-* :mod:`mlopt_discovery.lawdata.game` — **→ ``gamekit``**: the tables
-  a *player* is parameterized by.  ``game.features`` (the feature
-  schemas — names, hash buckets, history stats) and ``game.weights``
-  (priors, rewards, the referee's score composition, the trained
-  arena / meta-arena / open-game / player-arena weight tables).
+* ``lawdata.game`` — **moved to :mod:`gamekit.gamedata`** (lane A):
+  the tables a *player* is parameterized by — ``features`` (the
+  feature schemas — names, hash buckets, history stats),
+  ``weights`` (priors, rewards, the referee's score composition,
+  the trained arena / meta-arena / open-game / player-arena weight
+  tables) and ``moves`` (the shared move vocabulary).  The old
+  ``mlopt_discovery.lawdata.game`` path is a ``sys.modules`` alias
+  to :mod:`gamekit.gamedata` — one copy, bound here.
 * :mod:`mlopt_discovery.lawdata.laws` — **→ ``graphopt`` /
   ``lawmint``**: the *domain* content the boards and the mint
   machinery enumerate.  ``laws.banks`` (shape pools, attr kinds, the
@@ -42,10 +45,11 @@ travels with the game layer, the other stays with the domain:
 
 Both halves re-export through this package root, so existing
 ``lawdata.X`` bindings are unchanged; only the *storage* moved.  The
-one documented back-edge is ``lawdata.game.features`` reading
-``lawdata.laws.moves.ARENA_MOVE_ORDER`` (the feature schema sizes its
-action-identity columns off the move vocabulary — see the import
-site).
+documented back-edge reversed direction at the extraction:
+:data:`ARENA_MOVE_ORDER` is gamekit content now
+(:mod:`gamekit.gamedata.moves`) — the feature schema sizes its
+action-identity columns off it, and ``laws.moves`` binds the same
+object (single copy; the consumer binds, never forks).
 
 Term specs
 ----------
@@ -67,12 +71,14 @@ a Python edit — the shape a model would write a new entry in.
 
 from __future__ import annotations
 
-# The seam is inside the package: ``lawdata.game`` is the gamekit half,
-# ``lawdata.laws`` the graphopt/lawmint half; this root re-exports both
-# so ``lawdata.X`` bindings are unchanged.
-from . import game as game
-from . import laws as laws
-from .game import (
+import sys
+
+# The seam is inside the package: ``lawdata.game`` is the gamekit half
+# (moved to ``gamekit.gamedata`` — plan 0032 lane A), ``lawdata.laws``
+# the graphopt/lawmint half; this root re-exports both so
+# ``lawdata.X`` bindings are unchanged.
+import gamekit.gamedata as game
+from gamekit.gamedata import (
     ARENA_FEATURES,
     ARENA_HASH_BUCKETS,
     ARENA_HISTORY_STATS,
@@ -88,6 +94,8 @@ from .game import (
     PRIOR_WEIGHTS,
     REFEREE_SCORE,
 )
+
+from . import laws as laws
 from .laws import (
     ARENA_MOVE_ORDER,
     ATTR_KIND_OVERRIDES,
@@ -132,6 +140,14 @@ from .laws import (
     TUPLE_SOURCES,
     VIEWED_SHAPES,
 )
+
+#: The old ``mlopt_discovery.lawdata.game`` path is an alias to the
+#: gamekit package — ``import mlopt_discovery.lawdata.game`` and its
+#: ``.features``/``.weights`` children resolve to the same module
+#: objects (one table, one home).
+sys.modules[__name__ + ".game"] = game
+sys.modules[__name__ + ".game.features"] = game.features
+sys.modules[__name__ + ".game.weights"] = game.weights
 
 __all__ = [
     "ARENA_FEATURES",

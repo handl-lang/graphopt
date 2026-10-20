@@ -20,11 +20,14 @@ gate-3 proposers promoted out of ``bench/drivers/bridge/``
 synthesises ``unroll(step, n)`` per state chain, and
 :mod:`.state_reindex` — the law family closing the family boundary
 into one ``Loop``).  The game layer: boards
-(:mod:`.arena`, :mod:`.meta_arena`), the generic driver
-(:mod:`.engine` — one ``Board`` protocol over all of them), the
-player/featurizer abstraction (:mod:`.players` — ``LinearPolicy``,
-the one ``LearnedPlayer`` and the per-domain ``DomainSpec`` of
-composable feature parts), the meta preset (:mod:`.meta_player`),
+(:mod:`.arena`, :mod:`.meta_arena`), the meta preset
+(:mod:`.meta_player`), and — extracted at plan 0032 lane A — the
+game kernel in ``gamekit`` (the ``Board`` protocol +
+episode/train/eval drivers in :mod:`gamekit.engine`, the
+player/featurizer machinery in :mod:`gamekit.players`, the scoring
+spec in :mod:`gamekit.scoring`; the ``mlopt_discovery.engine`` /
+``.players`` / ``.scoring`` / ``.advantage`` / ``.lawdata.game``
+paths remain as re-exporting shims),
 the reverse handler (:mod:`.training`), the
 generated-kernel machinery (:mod:`.genkernel` — minted handlers +
 bindings + gen sink — the lowerings the search itself builds),

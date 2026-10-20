@@ -34,8 +34,9 @@ import json
 from typing import Any
 
 import torch
-from mlopt_discovery import engine, play
+from gamekit import engine
 from mlopt_discovery import open_game as og
+from mlopt_discovery import play
 
 #: Defaults — the held-out split's page size and the even-page count.
 PAGE = 16

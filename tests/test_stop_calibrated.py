@@ -1,4 +1,4 @@
-"""Tests for ``bench.common.calibrate`` and the round-8 split wall.
+"""Tests for ``gamekit.calibrate`` and the round-8 split wall.
 
 The calibrators back ``bench/drivers/policy/stop_calibrated.py`` — Platt
 scaling and isotonic regression fitted on the *train* pages'
@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from bench.common.calibrate import (
+from gamekit.calibrate import (
     IsotonicCal,
     PlattCal,
     brier,

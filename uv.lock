@@ -18,6 +18,7 @@ resolution-markers = [
 
 [manifest]
 members = [
+    "gamekit",
     "mlopt",
     "mlopt-carriers",
     "mlopt-core",
@@ -177,252 +178,6 @@ wheels = [
 [package.optional-dependencies]
 filecache = [
     { name = "filelock" },
-]
-
-[[package]]
-name = "mlopt"
-version = "0.1.0.dev0"
-source = { editable = "." }
-dependencies = [
-    { name = "mlopt-carriers" },
-    { name = "mlopt-core" },
-    { name = "mlopt-cuda" },
-    { name = "mlopt-discovery" },
-    { name = "mlopt-onnx" },
-    { name = "mlopt-orchestrator" },
-    { name = "mlopt-torch" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "torch" },
-]
-
-[package.optional-dependencies]
-dev = [
-    { name = "bandit" },
-    { name = "coverage" },
-    { name = "hypothesis" },
-    { name = "import-linter" },
-    { name = "mutmut" },
-    { name = "pip-audit" },
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "pytest-xdist" },
-    { name = "radon" },
-    { name = "ruff" },
-    { name = "semgrep" },
-    { name = "ty" },
-    { name = "typeguard" },
-    { name = "vulture" },
-]
-
-[package.dev-dependencies]
-bench = [
-    { name = "jinja2" },
-    { name = "kaleido" },
-    { name = "matplotlib" },
-    { name = "pandas" },
-    { name = "plotly" },
-    { name = "polars" },
-    { name = "rich" },
-    { name = "tabulate" },
-    { name = "tyro" },
-]
-dev = [
-    { name = "bandit" },
-    { name = "coverage" },
-    { name = "hypothesis" },
-    { name = "import-linter" },
-    { name = "mutmut" },
-    { name = "pip-audit" },
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "pytest-xdist" },
-    { name = "radon" },
-    { name = "ruff" },
-    { name = "semgrep" },
-    { name = "ty" },
-    { name = "typeguard" },
-    { name = "vulture" },
-]
-einsum = [
-    { name = "opt-einsum" },
-]
-oracle = [
-    { name = "egglog", marker = "python_full_version >= '3.12'" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.9.4" },
-    { name = "mlopt-carriers", editable = "packages/mlopt-carriers" },
-    { name = "mlopt-core", editable = "packages/mlopt-core" },
-    { name = "mlopt-cuda", editable = "packages/mlopt-cuda" },
-    { name = "mlopt-discovery", editable = "packages/mlopt-discovery" },
-    { name = "mlopt-onnx", editable = "packages/mlopt-onnx" },
-    { name = "mlopt-orchestrator", editable = "packages/mlopt-orchestrator" },
-    { name = "mlopt-torch", editable = "packages/mlopt-torch" },
-    { name = "coverage", marker = "extra == 'dev'", specifier = ">=7.0" },
-    { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.168.1" },
-    { name = "import-linter", marker = "extra == 'dev'", specifier = ">=2.15" },
-    { name = "mutmut", marker = "extra == 'dev'", specifier = ">=3.8.0" },
-    { name = "numpy", specifier = ">=1.24" },
-    { name = "pip-audit", marker = "extra == 'dev'", specifier = ">=2.10.1" },
-    { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0" },
-    { name = "pytest-xdist", marker = "extra == 'dev'", specifier = ">=3.0" },
-    { name = "radon", marker = "extra == 'dev'", specifier = ">=6.0.1" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6" },
-    { name = "semgrep", marker = "extra == 'dev'", specifier = ">=1.178.0" },
-    { name = "torch", specifier = ">=2.0" },
-    { name = "ty", marker = "extra == 'dev'", specifier = ">=0.0.84" },
-    { name = "typeguard", marker = "extra == 'dev'", specifier = ">=4.6.0" },
-    { name = "vulture", marker = "extra == 'dev'", specifier = ">=2.16" },
-]
-provides-extras = ["dev"]
-
-[package.metadata.requires-dev]
-bench = [
-    { name = "jinja2", specifier = ">=3.1.6" },
-    { name = "kaleido", specifier = ">=1.4.0" },
-    { name = "matplotlib", specifier = ">=3.8" },
-    { name = "pandas", specifier = ">=2.0" },
-    { name = "plotly", specifier = ">=7.1.0" },
-    { name = "polars", specifier = ">=1.44.2" },
-    { name = "rich", specifier = ">=15.0.0" },
-    { name = "tabulate", specifier = ">=0.10.0" },
-    { name = "tyro", specifier = ">=1.0.16" },
-]
-dev = [
-    { name = "bandit", specifier = ">=1.9.4" },
-    { name = "coverage", specifier = ">=7.0" },
-    { name = "hypothesis", specifier = ">=6.168.1" },
-    { name = "import-linter", specifier = ">=2.15" },
-    { name = "mutmut", specifier = ">=3.8.0" },
-    { name = "pip-audit", specifier = ">=2.10.1" },
-    { name = "pre-commit", specifier = ">=3.0" },
-    { name = "pytest", specifier = ">=7.0" },
-    { name = "pytest-cov", specifier = ">=5.0" },
-    { name = "pytest-xdist", specifier = ">=3.0" },
-    { name = "radon", specifier = ">=6.0.1" },
-    { name = "ruff", specifier = ">=0.6" },
-    { name = "semgrep", specifier = ">=1.178.0" },
-    { name = "ty", specifier = ">=0.0.84" },
-    { name = "typeguard", specifier = ">=4.6.0" },
-    { name = "vulture", specifier = ">=2.16" },
-]
-einsum = [{ name = "opt-einsum", specifier = ">=3.4.0,<4" }]
-oracle = [{ name = "egglog", marker = "python_full_version >= '3.12'", specifier = ">=14.0" }]
-
-[[package]]
-name = "mlopt-carriers"
-version = "0.1.0.dev0"
-source = { editable = "packages/mlopt-carriers" }
-dependencies = [
-    { name = "mlopt-core" },
-    { name = "mlopt-orchestrator" },
-    { name = "mlopt-torch" },
-    { name = "torch" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "mlopt-core", editable = "packages/mlopt-core" },
-    { name = "mlopt-orchestrator", editable = "packages/mlopt-orchestrator" },
-    { name = "mlopt-torch", editable = "packages/mlopt-torch" },
-    { name = "torch", specifier = ">=2.0" },
-]
-
-[[package]]
-name = "mlopt-core"
-version = "0.1.0.dev0"
-source = { editable = "packages/mlopt-core" }
-
-[[package]]
-name = "mlopt-cuda"
-version = "0.1.0.dev0"
-source = { editable = "packages/mlopt-cuda" }
-dependencies = [
-    { name = "mlopt-core" },
-    { name = "torch" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "mlopt-core", editable = "packages/mlopt-core" },
-    { name = "torch", specifier = ">=2.0" },
-]
-
-[[package]]
-name = "mlopt-discovery"
-version = "0.1.0.dev0"
-source = { editable = "packages/mlopt-discovery" }
-dependencies = [
-    { name = "mlopt-core" },
-    { name = "mlopt-orchestrator" },
-    { name = "mlopt-torch" },
-    { name = "torch" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "mlopt-core", editable = "packages/mlopt-core" },
-    { name = "mlopt-orchestrator", editable = "packages/mlopt-orchestrator" },
-    { name = "mlopt-torch", editable = "packages/mlopt-torch" },
-    { name = "torch", specifier = ">=2.0" },
-]
-
-[[package]]
-name = "mlopt-onnx"
-version = "0.1.0.dev0"
-source = { editable = "packages/mlopt-onnx" }
-dependencies = [
-    { name = "mlopt-core" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "onnx" },
-    { name = "onnxruntime" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "mlopt-core", editable = "packages/mlopt-core" },
-    { name = "numpy", specifier = ">=1.24" },
-    { name = "onnx", specifier = ">=1.16" },
-    { name = "onnxruntime", specifier = ">=1.17" },
-]
-
-[[package]]
-name = "mlopt-orchestrator"
-version = "0.1.0.dev0"
-source = { editable = "packages/mlopt-orchestrator" }
-dependencies = [
-    { name = "mlopt-core" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "mlopt-core", editable = "packages/mlopt-core" }]
-
-[[package]]
-name = "mlopt-torch"
-version = "0.1.0.dev0"
-source = { editable = "packages/mlopt-torch" }
-dependencies = [
-    { name = "mlopt-core" },
-    { name = "mlopt-orchestrator" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "torch" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "mlopt-core", editable = "packages/mlopt-core" },
-    { name = "mlopt-orchestrator", editable = "packages/mlopt-orchestrator" },
-    { name = "numpy", specifier = ">=1.24" },
-    { name = "torch", specifier = ">=2.0" },
 ]
 
 [[package]]
@@ -1402,6 +1157,11 @@ wheels = [
 ]
 
 [[package]]
+name = "gamekit"
+version = "0.1.0.dev0"
+source = { editable = "packages/gamekit" }
+
+[[package]]
 name = "glom"
 version = "25.12.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2353,6 +2113,256 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/59/8f/3298e3f334832bc28dd144af6b99cdc93502a8687e71922ea68b0a319929/ml_dtypes-0.6.0-cp315-cp315t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:e2d6149f3a57f405bcad5fb41e03218b8373936253f23e1ca84c0108abbc3392", size = 430823, upload-time = "2026-08-13T14:14:36.44Z" },
     { url = "https://files.pythonhosted.org/packages/93/d2/f2dbf118f42ce4c325a139c9236737f436b7f8e00cd18701c99ef2405e6f/ml_dtypes-0.6.0-cp315-cp315t-win_amd64.whl", hash = "sha256:ce7563e0b1a4482cbc1b4a6272145e54e4489e54fe7428f94908c3d87103abfa", size = 465119, upload-time = "2026-08-13T14:14:37.776Z" },
     { url = "https://files.pythonhosted.org/packages/5a/ff/bda40387b5c5c64254595f4d81a12351770856acc5de4e6d43606a31f161/ml_dtypes-0.6.0-cp315-cp315t-win_arm64.whl", hash = "sha256:f6cb525101b6b903779188c1e9e9490c343b455ab822883e02cf01e5547338d2", size = 572666, upload-time = "2026-08-13T14:14:38.993Z" },
+]
+
+[[package]]
+name = "mlopt"
+version = "0.1.0.dev0"
+source = { editable = "." }
+dependencies = [
+    { name = "gamekit" },
+    { name = "mlopt-carriers" },
+    { name = "mlopt-core" },
+    { name = "mlopt-cuda" },
+    { name = "mlopt-discovery" },
+    { name = "mlopt-onnx" },
+    { name = "mlopt-orchestrator" },
+    { name = "mlopt-torch" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "torch" },
+]
+
+[package.optional-dependencies]
+dev = [
+    { name = "bandit" },
+    { name = "coverage" },
+    { name = "hypothesis" },
+    { name = "import-linter" },
+    { name = "mutmut" },
+    { name = "pip-audit" },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "pytest-xdist" },
+    { name = "radon" },
+    { name = "ruff" },
+    { name = "semgrep" },
+    { name = "ty" },
+    { name = "typeguard" },
+    { name = "vulture" },
+]
+
+[package.dev-dependencies]
+bench = [
+    { name = "jinja2" },
+    { name = "kaleido" },
+    { name = "matplotlib" },
+    { name = "pandas" },
+    { name = "plotly" },
+    { name = "polars" },
+    { name = "rich" },
+    { name = "tabulate" },
+    { name = "tyro" },
+]
+dev = [
+    { name = "bandit" },
+    { name = "coverage" },
+    { name = "hypothesis" },
+    { name = "import-linter" },
+    { name = "mutmut" },
+    { name = "pip-audit" },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "pytest-xdist" },
+    { name = "radon" },
+    { name = "ruff" },
+    { name = "semgrep" },
+    { name = "ty" },
+    { name = "typeguard" },
+    { name = "vulture" },
+]
+einsum = [
+    { name = "opt-einsum" },
+]
+oracle = [
+    { name = "egglog", marker = "python_full_version >= '3.12'" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.9.4" },
+    { name = "coverage", marker = "extra == 'dev'", specifier = ">=7.0" },
+    { name = "gamekit", editable = "packages/gamekit" },
+    { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.168.1" },
+    { name = "import-linter", marker = "extra == 'dev'", specifier = ">=2.15" },
+    { name = "mlopt-carriers", editable = "packages/mlopt-carriers" },
+    { name = "mlopt-core", editable = "packages/mlopt-core" },
+    { name = "mlopt-cuda", editable = "packages/mlopt-cuda" },
+    { name = "mlopt-discovery", editable = "packages/mlopt-discovery" },
+    { name = "mlopt-onnx", editable = "packages/mlopt-onnx" },
+    { name = "mlopt-orchestrator", editable = "packages/mlopt-orchestrator" },
+    { name = "mlopt-torch", editable = "packages/mlopt-torch" },
+    { name = "mutmut", marker = "extra == 'dev'", specifier = ">=3.8.0" },
+    { name = "numpy", specifier = ">=1.24" },
+    { name = "pip-audit", marker = "extra == 'dev'", specifier = ">=2.10.1" },
+    { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.0" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0" },
+    { name = "pytest-xdist", marker = "extra == 'dev'", specifier = ">=3.0" },
+    { name = "radon", marker = "extra == 'dev'", specifier = ">=6.0.1" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6" },
+    { name = "semgrep", marker = "extra == 'dev'", specifier = ">=1.178.0" },
+    { name = "torch", specifier = ">=2.0" },
+    { name = "ty", marker = "extra == 'dev'", specifier = ">=0.0.84" },
+    { name = "typeguard", marker = "extra == 'dev'", specifier = ">=4.6.0" },
+    { name = "vulture", marker = "extra == 'dev'", specifier = ">=2.16" },
+]
+provides-extras = ["dev"]
+
+[package.metadata.requires-dev]
+bench = [
+    { name = "jinja2", specifier = ">=3.1.6" },
+    { name = "kaleido", specifier = ">=1.4.0" },
+    { name = "matplotlib", specifier = ">=3.8" },
+    { name = "pandas", specifier = ">=2.0" },
+    { name = "plotly", specifier = ">=7.1.0" },
+    { name = "polars", specifier = ">=1.44.2" },
+    { name = "rich", specifier = ">=15.0.0" },
+    { name = "tabulate", specifier = ">=0.10.0" },
+    { name = "tyro", specifier = ">=1.0.16" },
+]
+dev = [
+    { name = "bandit", specifier = ">=1.9.4" },
+    { name = "coverage", specifier = ">=7.0" },
+    { name = "hypothesis", specifier = ">=6.168.1" },
+    { name = "import-linter", specifier = ">=2.15" },
+    { name = "mutmut", specifier = ">=3.8.0" },
+    { name = "pip-audit", specifier = ">=2.10.1" },
+    { name = "pre-commit", specifier = ">=3.0" },
+    { name = "pytest", specifier = ">=7.0" },
+    { name = "pytest-cov", specifier = ">=5.0" },
+    { name = "pytest-xdist", specifier = ">=3.0" },
+    { name = "radon", specifier = ">=6.0.1" },
+    { name = "ruff", specifier = ">=0.6" },
+    { name = "semgrep", specifier = ">=1.178.0" },
+    { name = "ty", specifier = ">=0.0.84" },
+    { name = "typeguard", specifier = ">=4.6.0" },
+    { name = "vulture", specifier = ">=2.16" },
+]
+einsum = [{ name = "opt-einsum", specifier = ">=3.4.0,<4" }]
+oracle = [{ name = "egglog", marker = "python_full_version >= '3.12'", specifier = ">=14.0" }]
+
+[[package]]
+name = "mlopt-carriers"
+version = "0.1.0.dev0"
+source = { editable = "packages/mlopt-carriers" }
+dependencies = [
+    { name = "mlopt-core" },
+    { name = "mlopt-orchestrator" },
+    { name = "mlopt-torch" },
+    { name = "torch" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "mlopt-core", editable = "packages/mlopt-core" },
+    { name = "mlopt-orchestrator", editable = "packages/mlopt-orchestrator" },
+    { name = "mlopt-torch", editable = "packages/mlopt-torch" },
+    { name = "torch", specifier = ">=2.0" },
+]
+
+[[package]]
+name = "mlopt-core"
+version = "0.1.0.dev0"
+source = { editable = "packages/mlopt-core" }
+
+[[package]]
+name = "mlopt-cuda"
+version = "0.1.0.dev0"
+source = { editable = "packages/mlopt-cuda" }
+dependencies = [
+    { name = "mlopt-core" },
+    { name = "torch" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "mlopt-core", editable = "packages/mlopt-core" },
+    { name = "torch", specifier = ">=2.0" },
+]
+
+[[package]]
+name = "mlopt-discovery"
+version = "0.1.0.dev0"
+source = { editable = "packages/mlopt-discovery" }
+dependencies = [
+    { name = "gamekit" },
+    { name = "mlopt-core" },
+    { name = "mlopt-orchestrator" },
+    { name = "mlopt-torch" },
+    { name = "torch" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "gamekit", editable = "packages/gamekit" },
+    { name = "mlopt-core", editable = "packages/mlopt-core" },
+    { name = "mlopt-orchestrator", editable = "packages/mlopt-orchestrator" },
+    { name = "mlopt-torch", editable = "packages/mlopt-torch" },
+    { name = "torch", specifier = ">=2.0" },
+]
+
+[[package]]
+name = "mlopt-onnx"
+version = "0.1.0.dev0"
+source = { editable = "packages/mlopt-onnx" }
+dependencies = [
+    { name = "mlopt-core" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "onnx" },
+    { name = "onnxruntime" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "mlopt-core", editable = "packages/mlopt-core" },
+    { name = "numpy", specifier = ">=1.24" },
+    { name = "onnx", specifier = ">=1.16" },
+    { name = "onnxruntime", specifier = ">=1.17" },
+]
+
+[[package]]
+name = "mlopt-orchestrator"
+version = "0.1.0.dev0"
+source = { editable = "packages/mlopt-orchestrator" }
+dependencies = [
+    { name = "mlopt-core" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "mlopt-core", editable = "packages/mlopt-core" }]
+
+[[package]]
+name = "mlopt-torch"
+version = "0.1.0.dev0"
+source = { editable = "packages/mlopt-torch" }
+dependencies = [
+    { name = "mlopt-core" },
+    { name = "mlopt-orchestrator" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "torch" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "mlopt-core", editable = "packages/mlopt-core" },
+    { name = "mlopt-orchestrator", editable = "packages/mlopt-orchestrator" },
+    { name = "numpy", specifier = ">=1.24" },
+    { name = "torch", specifier = ">=2.0" },
 ]
 
 [[package]]

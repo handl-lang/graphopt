@@ -72,9 +72,10 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
+from gamekit.players import _dot
+
 from mlopt_discovery import arena as ar
 from mlopt_discovery import lawdata
-from mlopt_discovery.players import _dot
 
 __all__ = [
     "FEAT_IDX",

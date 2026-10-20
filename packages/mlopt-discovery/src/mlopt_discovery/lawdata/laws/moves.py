@@ -2,12 +2,19 @@
 
 The generator-arm inventory and its fixed enumeration order, the
 corpus-mutating arms, the construction metavariable pool and literal
-leaves, the heuristic player's move ranking, the ``saturate`` budget
-menu and the ``specialize`` move's scalar/axis pin banks.  A learned
-player chooses among these; the menu is data, not code.
+leaves, the ``saturate`` budget menu and the ``specialize`` move's
+scalar/axis pin banks.  A learned player chooses among these; the
+menu is data, not code.
+
+:data:`ARENA_MOVE_ORDER` moved out at the gamekit extraction (plan
+0032 lane A): it is the *player* move ranking — game-side content —
+so its single home is :mod:`gamekit.gamedata.moves` now and this
+module binds the same object (the consumer binds, never forks).
 """
 
 from __future__ import annotations
+
+from gamekit.gamedata.moves import ARENA_MOVE_ORDER
 
 __all__ = [
     "ARENA_MOVE_ORDER",
@@ -69,24 +76,3 @@ SPECIALIZE_AXES: tuple[int, ...] = (-2, -1, 0, 1)
 #: budget arm is the bounded variant.  A player that wants a
 #: different budget spells it on the action — the menu is data.
 META_SATURATE_BUDGETS: tuple = (None, 256)
-
-#: The heuristic player's move ranking — a hand-ordered policy over
-#: the construction vocabulary, in preference order.  ``auto_cond``
-#: first (the enumerator only offers it where a conditional verdict
-#: or an unguarded object makes it live — the cheapest rescue of
-#: already-measured constructions); ``compose`` next (premise-level
-#: structure is the highest-information move); ``relax_guard``
-#: widens a guarded region the sweeps re-referee; ``fold`` is the
-#: generic mint; ``ingest`` grows the evidence scope mid-game;
-#: ``specialize`` narrows a stored object; ``lift`` last — the most
-#: speculative construction.  The table is data, not code: a learned
-#: player must *beat* this ordering, and tuning it is a data edit.
-ARENA_MOVE_ORDER: tuple[str, ...] = (
-    "auto_cond",
-    "compose",
-    "relax_guard",
-    "fold",
-    "ingest",
-    "specialize",
-    "lift",
-)

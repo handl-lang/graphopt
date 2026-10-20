@@ -23,9 +23,9 @@ import math
 import pytest
 from mlopt_discovery import open_game as og
 from mlopt_discovery import open_self as oself
-from mlopt_discovery.engine import run_episode
+from gamekit.engine import run_episode
 from mlopt_discovery.meta_arena import Action
-from mlopt_discovery.players import PARTS, DomainSpec
+from gamekit.players import PARTS, DomainSpec
 
 
 def _spec() -> DomainSpec:

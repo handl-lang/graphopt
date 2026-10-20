@@ -64,7 +64,8 @@ from mlopt_core.trajectories import (
     rule_samples,
     rule_vector,
 )
-from mlopt_discovery import engine, families, play
+from gamekit import engine
+from mlopt_discovery import families, play
 from mlopt_discovery import open_game as og
 from mlopt_discovery import proposal as lp
 from mlopt_torch.learned_policy import input_vector, train_rule_value

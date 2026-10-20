@@ -155,7 +155,7 @@ def test_sweep_is_strict_superset():
 
 def test_scoring_spec_is_data():
     """``ScoringSpec`` gating makes "optimize X first" data."""
-    from mlopt_discovery.scoring import ScoreGate, ScoringSpec
+    from gamekit.scoring import ScoreGate, ScoringSpec
 
     x, y = _v("x", 4, 4), _v("y", 4, 4)
     # A launch-neutral true claim: swap is true and free.
@@ -177,7 +177,7 @@ def test_scoring_spec_is_data():
         _c.run_component("pay", claim, ctx, evd),
     ]
     del stages
-    from mlopt_discovery.scoring import score
+    from gamekit.scoring import score
 
     sv = score(strict.spec, {"launch": 0.9})
     assert not sv.passed and "memory" in sv.missing

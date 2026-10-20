@@ -64,14 +64,15 @@ import policy_baseline as pb
 import schema_leaderboard as sl
 import stop_advantage as sa
 import stop_policy as sp
-from mlopt_discovery import advantage as adv
-from mlopt_discovery import engine, play
+from gamekit import advantage as adv
+from gamekit import engine
+from mlopt_discovery import play
 from mlopt_discovery import open_game as og
 from mlopt_discovery import open_self as osel
 from mlopt_discovery import open_vlabel as ovl
 from mlopt_discovery import proposal as lp
 from mlopt_discovery.meta_arena import Action
-from mlopt_discovery.players import PARTS, DomainSpec, _dot
+from gamekit.players import PARTS, DomainSpec, _dot
 
 #: Defaults — identical protocol to ``stop_advantage.py``.
 SEED = 0

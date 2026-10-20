@@ -15,8 +15,11 @@ extraction this half stays with the domain code in ``graphopt`` (the
 * :mod:`mlopt_discovery.lawdata.laws.macros` — the shipped ``MACROS``
   minted-move table.
 * :mod:`mlopt_discovery.lawdata.laws.moves` — the move vocabulary:
-  generator/corpus arms, metavariable and literal pools, the arena
-  move order, saturate budgets, specialize pin banks.
+  generator/corpus arms, metavariable and literal pools, saturate
+  budgets, specialize pin banks — and the
+  :data:`ARENA_MOVE_ORDER` compat binding (the constant itself moved
+  to :mod:`gamekit.gamedata.moves` at the lane-A extraction: it is
+  the *player* move ranking — game-side content).
 * :mod:`mlopt_discovery.lawdata.laws.terms` — the proposal corpus:
   seed terms, schema libraries, candidate laws, synthetic cases.
 """
@@ -59,7 +62,12 @@ from .macros import (
     MACROS,
 )
 from .moves import (
-    ARENA_MOVE_ORDER,
+    # ``lawdata.laws.ARENA_MOVE_ORDER`` compat binding — its
+    # ``__all__`` seat moved to ``gamekit.gamedata`` (the
+    # gamekit-content row the laws half binds).
+    ARENA_MOVE_ORDER as ARENA_MOVE_ORDER,
+)
+from .moves import (
     CONST_LEAVES,
     CORPUS_ARMS,
     GENERATOR_ORDER,
@@ -77,7 +85,6 @@ from .terms import (
 )
 
 __all__ = [
-    "ARENA_MOVE_ORDER",
     "ATTR_KINDS",
     "ATTR_KIND_OVERRIDES",
     "BASE_SHAPES",

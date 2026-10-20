@@ -129,7 +129,7 @@ def main(argv: list[str] | None = None) -> int:
             f"registered: {', '.join(refs.names())}"
         )
         return 2
-    from mlopt_discovery.players import registry as players_reg
+    from gamekit.players import registry as players_reg
 
     try:
         for name in players:
