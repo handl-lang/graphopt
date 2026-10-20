@@ -1,0 +1,35 @@
+name = "zoo_lora_adapter"
+title = "Zoo LoRAAdapter — the assoc_linear win, replayed"
+category = "speed"
+citation = """
+The held-out zoo's own `LoRAAdapter` (Hu et al. 2021): the real
+`W x + alpha·(B (A x))` production spelling, imported verbatim from
+`mlopt_discovery.zoo` — not a purpose-built respelling.  `assoc_linear`
+folds the low-rank chain `up(down(x))` into one dense GEMM whose
+`B·A` weight product folds at compile time.  Replays the −19.985 %
+verified win of `project/retros/human-bar.md` — under the executor
+axis it measures −20.0 % here — the largest single-model yield the
+zoo retro recorded.
+"""
+source = "zoo_lora_adapter"
+size = 16
+rules = "default"
+cost = "exec"
+
+[expect]
+signals = ["law:assoc_linear"]
+ops = ["linear", "matmul"]  # fused branch: linear(x, B·A)
+max_ops = { linear = 2 }  # spelled form dispatches three projections
+
+[[baselines]]
+name = "eager three-GEMM"
+kind = "self"
+[[baselines]]
+name = "merged LoRA"
+kind = "ref"
+ref = "lora_merged"
+note = "peft.merge_and_unload-style — the branch pre-composed dense"
+[[baselines]]
+name = "inductor"
+kind = "compile"
+note = "no freeze — Inductor cannot fold the adapter weights"

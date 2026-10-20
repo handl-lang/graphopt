@@ -1,0 +1,39 @@
+name = "zoo_delta_rule"
+title = "Zoo DeltaRuleBlock — partial aff-carrier lift on the write"
+category = "memory"
+citation = """
+The held-out zoo's `DeltaRuleBlock` (Schlag et al. 2021, DeltaNet) —
+the unrolled matrix-state `S ← S + β·k·(v − kᵀS)` write the census
+minted `mul_unsq_nat` from.  The full chunked delta rule is honestly
+NOT in the library (the zoo's own docstring says so), but the
+diagonal-affine monoid still lifts the per-step write: `applyd` /
+`aff_diag` pairs absorb all fifteen spelled `add`s while
+`mul_unsq_nat` and `select_mul` fire on their source op-tuples —
+a partial carrier find measured −15.7 % launch / −16.1 % exec where
+the retro table recorded `—` under its pipeline axis.
+"""
+source = "zoo_delta_rule"
+size = 16
+rules = "default"
+cost = "exec"
+
+[expect]
+signals = [
+  "law:decay_state_lift_post",
+  "law:mul_unsq_nat",
+  "law:select_mul",
+  "op:applyd",
+]
+ops = ["applyd", "aff_diag"]
+absent_ops = ["add"]  # the whole sequential write folds into the carrier
+
+[[baselines]]
+name = "eager unrolled"
+kind = "self"
+[[baselines]]
+name = "inductor"
+kind = "compile"
+[[baselines]]
+name = "FLA chunk_delta_rule"
+kind = "external"
+note = "Triton WY-repr kernel — scratch dep; the impl the full rule targets"

@@ -1,0 +1,26 @@
+name = "zoo_time_cond_conv"
+title = "Zoo TimeCondConv — dead broadcast pads stripped"
+category = "speed"
+citation = """
+The held-out zoo's `TimeCondConv` — the DDPM diffusion residual block
+(Peebles-style sinusoidal time embedding broadcast into a conv block,
+`emb[:, :, None, None]`).  The machine-admitted pad strips
+`mul_unsq_pad_l` / `mul_unsq_pad_r` (provenance MACHINE_SHIPPED)
+remove the dead broadcast pads; `silu_expand` fires alongside.
+Replays the −4.996 % `human-bar.md` yield — the only machine-admitted
+win in that table — measured −7.7 % on the executor axis here.
+"""
+source = "zoo_time_cond_conv"
+size = 0
+rules = "default"
+cost = "exec"
+
+[expect]
+signals = ["law:mul_unsq_pad_l", "law:mul_unsq_pad_r"]
+
+[[baselines]]
+name = "eager"
+kind = "self"
+[[baselines]]
+name = "inductor"
+kind = "compile"

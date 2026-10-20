@@ -342,6 +342,41 @@ class _SelectMulFolded(nn.Module):
         return (a * b).select(1, 0)
 
 
+class _MergedLoRA(nn.Module):
+    """The merged-adapter form: ``base(x) + scale·(W_up·W_down)x``.
+
+    What ``peft.merge_and_unload`` / a LoRA-merge deployment step
+    ships — the low-rank branch pre-composed into one dense weight,
+    so the runtime pays one extra GEMM instead of two chained ones.
+    """
+
+    def __init__(self, src: nn.Module) -> None:
+        super().__init__()
+        self.base = src.base
+        self.scale = src.scale
+        d = src.base.weight.shape[1]
+        self.lora = nn.Linear(d, d, bias=False)
+        with torch.no_grad():
+            self.lora.weight.copy_(
+                src.up.weight.detach() @ src.down.weight.detach()
+            )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.base(x) + self.scale * self.lora(x)
+
+
+class _CumsumPrefix(nn.Module):
+    """``x.cumsum(dim)[:, -1]`` — the parallel-prefix impl of the unroll.
+
+    The unit-decay recurrence ``h_t = h_{t-1} + x_t`` *is* a prefix
+    sum; the practitioner's rewrite reads the whole sequence with one
+    scan primitive instead of T sequential adds.
+    """
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return x.cumsum(dim=1)[:, -1]
+
+
 def _conv_bn_folded(model: nn.Module, feed: object) -> nn.Module:
     return _FoldedConv(model[0], model[1]).eval().double()
 
@@ -420,6 +455,14 @@ def _select_mul_folded(model: nn.Module, feed: object) -> nn.Module:
     return _SelectMulFolded().eval().double()
 
 
+def _lora_merged(model: nn.Module, feed: object) -> nn.Module:
+    return _MergedLoRA(model).eval().double()
+
+
+def _cumsum_prefix(model: nn.Module, feed: object) -> nn.Module:
+    return _CumsumPrefix().eval().double()
+
+
 #: ``name -> builder(model, feed)`` — the case corpus's ``ref`` key.
 REFS: dict[str, Callable[[nn.Module, object], nn.Module]] = {
     "conv_bn_folded": _conv_bn_folded,
@@ -441,4 +484,6 @@ REFS: dict[str, Callable[[nn.Module, object], nn.Module]] = {
     "weight_merged": _weight_merged,
     "affine_chain_folded": _affine_chain_folded,
     "select_mul_folded": _select_mul_folded,
+    "lora_merged": _lora_merged,
+    "cumsum_prefix": _cumsum_prefix,
 }

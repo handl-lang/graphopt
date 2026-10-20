@@ -3,13 +3,14 @@
 Can the engine derive *named* optimizations from the literature and real compilers — and can it beat the registered floor?  Each row is one case in `bench/discovery/cases/`; **found** = the expect spec held (signal observed + extraction contract), **cert** = the proof-carrying certificate replays standalone, **beat** = the certified form is *strictly below* the best registered baseline on the case's axis (a tie is a rediscovery, not a find).
 
 - lane: `full` (measured wall + verify)
-- date: 2026-10-20T03:28:38+00:00 · git: `9104de4` (dirty) · torch 2.14.0+cu130 on cpu
+- date: 2026-10-20T04:01:22+00:00 · git: `141b5dc` (dirty) · torch 2.14.0+cu130 on cpu
 
 | case | category | found | cert | cost (axis) | before → after | best baseline | beat |
 |---|---|---|---|---|---|---|---|
 | `biased_chain_fold` | speed | yes | yes | launch | 4,098 → 2,114 (-48.4%) | pre-folded affine 2,049 | no |
 | `blelloch_scan` | speed | yes | yes | launch | 759 → 752 (-0.9%) | eager unrolled 759 | yes |
 | `conv_bn_fold` | speed | yes | yes | launch | 29,186 → 27,649 (-5.3%) | hand-folded conv 27,649 | no |
+| `cumsum_scan` | memory | yes | yes | exec | 1,115,257 → 1,402,358 (+25.7%) | cumsum prefix 34,940 | no |
 | `flash_attention` | memory | yes | yes | launch | 33,544 → 32,772 (-2.3%) | F.scaled_dot_product_attention 32,772 | no |
 | `glu_fold` | speed | yes | yes | launch | 98 → 33 (-66.3%) | F.glu 33 | no |
 | `gqa_absorb_repeat` | memory | yes | yes | launch | 199,688 → 196,610 (-1.5%) | F.sdpa enable_gqa 196,612 | yes |
@@ -27,24 +28,34 @@ Can the engine derive *named* optimizations from the literature and real compile
 | `swiglu_mlp` | speed | yes | yes | launch | 4,356 → 4,355 (-0.0%) | eager two-GEMM 4,356 | yes |
 | `weight_chain_fold` | speed | yes | yes | launch | 4,098 → 2,049 (-50.0%) | pre-folded Linear 2,049 | no |
 | `weight_merge` | speed | yes | yes | launch | 4,163 → 2,049 (-50.8%) | merged Linear 2,049 | no |
+| `zoo_adaln_affd` | structure | yes | yes | exec | 217,830 → 235,086 (+7.9%) | eager 217,830 | no |
+| `zoo_cosine_attention` | memory | yes | yes | exec | 348,463 → 348,440 (-0.0%) | eager spelled 348,463 | yes |
+| `zoo_delta_rule` | memory | yes | yes | exec | 975,073 → 818,073 (-16.1%) | eager unrolled 975,073 | yes |
+| `zoo_gau` | memory | yes | yes | exec | 182,973 → 165,561 (-9.5%) | eager quadratic 182,973 | yes |
+| `zoo_lora_adapter` | speed | yes | yes | exec | 87,045 → 69,650 (-20.0%) | merged LoRA 69,650 | no |
+| `zoo_lora_param` | memory | yes | yes | param_bytes | 400 → 528 (+32.0%) | eager low-rank 400 | no |
+| `zoo_mos_head` | structure | yes | yes | launch | 637 → 637 (+0.0%) | eager 637 | no |
+| `zoo_spline_kan` | speed | yes | yes | exec | 87,058 → 87,055 (-0.0%) | eager spelled 87,058 | yes |
+| `zoo_time_cond_conv` | speed | yes | yes | exec | 226,488 → 209,088 (-7.7%) | eager 226,488 | yes |
 
 ## Measured (full lane)
 
 | case | verified | max\|Δ\| | mlopt ms | best baseline ms | beat (measured) |
 |---|---|---|---|---|---|
-| `biased_chain_fold` | yes | 2.220446049250313e-16 | 0.009 | 0.006 | no |
-| `blelloch_scan` | yes | 8.881784197001252e-16 | 0.181 | 0.019 | no |
-| `conv_bn_fold` | yes | 1.6053824936079764e-13 | 0.010 | 0.010 | yes |
-| `flash_attention` | yes | 2.220446049250313e-16 | 0.031 | 0.032 | yes |
-| `glu_fold` | yes | 0.0 | 0.004 | 0.003 | no |
-| `gqa_absorb_repeat` | yes | 0.0 | 0.064 | 0.051 | no |
-| `mha_qkv_fuse` | yes | 0.0 | 0.053 | 0.034 | no |
-| `mul_unsq_nat` | yes | 0.0 | 0.004 | 0.003 | no |
-| `retnet_chunkwise` | yes | 0.0 | 0.068 | 0.123 | yes |
-| `rms_norm_bridge` | yes | 6.661338147750939e-15 | 0.012 | 0.010 | no |
-| `rms_norm_fold` | yes | 6.927791673660977e-13 | 0.013 | 0.010 | no |
-| `rms_norm_nogain` | yes | 3.432809592140984e-13 | 0.011 | 0.008 | no |
-| `sdpa_nomask` | yes | 2.220446049250313e-16 | 0.032 | 0.034 | yes |
+| `biased_chain_fold` | yes | 2.220446049250313e-16 | 0.009 | 0.007 | no |
+| `blelloch_scan` | yes | 8.881784197001252e-16 | 0.212 | 0.022 | no |
+| `conv_bn_fold` | yes | 1.6053824936079764e-13 | 0.011 | 0.012 | yes |
+| `cumsum_scan` | yes | 3.552713678800501e-15 | 0.290 | 0.004 | no |
+| `flash_attention` | yes | 2.220446049250313e-16 | 0.036 | 0.036 | yes |
+| `glu_fold` | yes | 0.0 | 0.005 | 0.004 | no |
+| `gqa_absorb_repeat` | yes | 0.0 | 0.080 | 0.055 | no |
+| `mha_qkv_fuse` | yes | 0.0 | 0.053 | 0.033 | no |
+| `mul_unsq_nat` | yes | 0.0 | 0.007 | 0.003 | no |
+| `retnet_chunkwise` | yes | 0.0 | 0.077 | 0.165 | yes |
+| `rms_norm_bridge` | yes | 6.661338147750939e-15 | 0.013 | 0.011 | no |
+| `rms_norm_fold` | yes | 6.927791673660977e-13 | 0.013 | 0.011 | no |
+| `rms_norm_nogain` | yes | 3.432809592140984e-13 | 0.011 | 0.009 | no |
+| `sdpa_nomask` | yes | 2.220446049250313e-16 | 0.031 | 0.034 | yes |
 | `select_mul` | yes | 0.0 | 0.005 | 0.003 | no |
 | `silu_fold` | yes | 4.440892098500626e-16 | 0.003 | 0.002 | no |
 | `softmax_fold` | yes | 5.551115123125783e-17 | 0.004 | 0.002 | no |
@@ -52,6 +63,15 @@ Can the engine derive *named* optimizations from the literature and real compile
 | `swiglu_mlp` | yes | 0.0 | 0.019 | 0.014 | no |
 | `weight_chain_fold` | yes | 2.220446049250313e-16 | 0.005 | 0.006 | yes |
 | `weight_merge` | yes | 7.771561172376096e-16 | 0.005 | 0.006 | yes |
+| `zoo_adaln_affd` | yes | 0.0 | 0.148 | 0.055 | no |
+| `zoo_cosine_attention` | yes | 1.1102230246251565e-16 | 0.157 | 0.105 | no |
+| `zoo_delta_rule` | yes | 0.0 | 0.411 | 0.090 | no |
+| `zoo_gau` | yes | 0.0 | 0.058 | 0.053 | no |
+| `zoo_lora_adapter` | yes | 2.220446049250313e-16 | 0.018 | 0.016 | no |
+| `zoo_lora_param` | yes | 2.220446049250313e-16 | 0.016 | 0.015 | no |
+| `zoo_mos_head` | yes | 0.0 | 0.046 | 0.038 | no |
+| `zoo_spline_kan` | yes | 0.0 | 0.027 | 0.023 | no |
+| `zoo_time_cond_conv` | yes | 0.0 | 0.054 | 0.068 | yes |
 
 ## Per-case detail
 
@@ -93,6 +113,21 @@ fixture is the eval-mode `BatchNorm2d(Conv2d(x))` site the mint saw
 
 - signals: law:conv_bn_fold
 - baselines: eager (self) 29,186; hand-folded conv (ref) 27,649 — PyTorch fold recipe — one conv, BN absorbed into W'/b'; inductor (compile) — measured-only (no symbolic form)
+
+### `cumsum_scan` — Unit-decay recurrence → aff carrier (cumsum association)
+
+The `a = 1` corner of the diagonal-affine monoid — `h_t = h_{t-1} +
+x_t` unrolled is a prefix sum, and `affd_lift_unit` /
+`affd_lift_unit_step` raise it to `applyd(aff_diag(h, x), 1)` under
+`carrier_search`.  Honest row at T=32: the carrier member *is*
+extracted (`aff_diag`/`affd_compose`/`applyd` in the term, certified)
+but the executor axis prices it +25.7 % over the unrolled adds —
+the scan association derives yet does not pay at benchmark scale, so
+the scorecard records `beat=no` rather than a wished-for win.
+
+
+- signals: law:affd_lift_unit, law:affd_lift_unit_step, op:applyd
+- baselines: eager unrolled (self) 1,115,257; cumsum prefix (ref) 34,940 — x.cumsum(1)[:, -1] — the practitioner's parallel-scan spelling; inductor (compile) — measured-only (no symbolic form)
 
 ### `flash_attention` — Hand-spelled softmax attention → fused SDPA
 
@@ -319,4 +354,137 @@ runtime drops a GEMM: the bias-free analogue of the biased chain's
 
 - signals: law:weight_factor_linear
 - baselines: eager two-GEMM (self) 4,163; merged Linear (ref) 2,049 — one Linear carrying A+B — the merged form; inductor (compile) — measured-only (no symbolic form)
+
+### `zoo_adaln_affd` — Zoo AdaLNBlock — the affd carrier lift, opt-in regime
+
+The held-out zoo's `AdaLNBlock` (Peebles & Xie 2022, DiT) —
+`LN(x)·(1+scale) + shift` modulation lifted by `affd_lift` /
+`affd_lift_unit` into `applyd(aff_diag(ln(x), shift), 1+scale)` under
+the `carrier_search` regime (`SCAN_DIAG_LAWS` is opt-in — DEFAULT
+never runs it; the store's `affd_step_lift` twin is admitted but
+unshipped).  Reachability row: the lift lands (two `applyd` pairs in
+the extraction) but the executor axis prices it +7.9 % — exactly the
+regression `human-bar.md` measured — so the scorecard records the
+honest `beat=no` on a derived form.
+
+
+- signals: law:affd_lift, op:applyd
+- baselines: eager (self) 217,830; inductor (compile) — measured-only (no symbolic form)
+
+### `zoo_cosine_attention` — Zoo CosineAttention — om_lift on the normalized-score map
+
+The held-out zoo's `CosineAttention` (SwinV2-style) — `softmax(τ·q̂k̂ᵀ)`
+with L2-normalized projections spelled `linalg_vector_norm`.
+`om_lift` (the carrier `OM_LIFT`, metavar-dim guard) raises the
+normalized outer-product map onto the `om_apply`/`om_elem` carrier.
+Replays the −0.006 % `human-bar.md` cell; honest on both axes —
+the executor reads −0.007 %, the launch axis reads a +2.9 %
+regression the scorecard records as `beat=no`.
+
+
+- signals: law:om_lift, op:om_apply
+- baselines: eager spelled (self) 348,463; inductor (compile) — measured-only (no symbolic form)
+
+### `zoo_delta_rule` — Zoo DeltaRuleBlock — partial aff-carrier lift on the write
+
+The held-out zoo's `DeltaRuleBlock` (Schlag et al. 2021, DeltaNet) —
+the unrolled matrix-state `S ← S + β·k·(v − kᵀS)` write the census
+minted `mul_unsq_nat` from.  The full chunked delta rule is honestly
+NOT in the library (the zoo's own docstring says so), but the
+diagonal-affine monoid still lifts the per-step write: `applyd` /
+`aff_diag` pairs absorb all fifteen spelled `add`s while
+`mul_unsq_nat` and `select_mul` fire on their source op-tuples —
+a partial carrier find measured −15.7 % launch / −16.1 % exec where
+the retro table recorded `—` under its pipeline axis.
+
+
+- signals: law:decay_state_lift_post, law:mul_unsq_nat, law:select_mul, op:applyd
+- baselines: eager unrolled (self) 975,073; inductor (compile) — measured-only (no symbolic form); FLA chunk_delta_rule (external) unavailable — Triton WY-repr kernel — scratch dep; the impl the full rule targets
+
+### `zoo_gau` — Zoo GatedAttentionUnit — quadratic gate lifts to om_decayed
+
+The held-out zoo's `GatedAttentionUnit` (Hua et al. 2022, FLASH) —
+softmax-free attention whose `relu(u uᵀ)²` self-similarity score is a
+quadratic (T,T) site.  `om_decayed_lift` raises the masked-score
+matmul onto the decayed-om carrier while the `mul_square` /
+`square_to_pow` spelling bridge canonicalises `a*a`; the extraction
+keeps one `om_decayed` node (the (T,T) score matrix never
+materialises).  Replays the −0.003 % `human-bar.md` cell — −9.5 %
+under the executor axis here.
+
+
+- signals: law:om_decayed_lift, law:mul_square, op:om_decayed
+- baselines: eager quadratic (self) 182,973; inductor (compile) — measured-only (no symbolic form); FLASH GAU kernel (external) unavailable — fla.layers.gau — scratch dep; the hand kernel this emulates
+
+### `zoo_lora_adapter` — Zoo LoRAAdapter — the assoc_linear win, replayed
+
+The held-out zoo's own `LoRAAdapter` (Hu et al. 2021): the real
+`W x + alpha·(B (A x))` production spelling, imported verbatim from
+`mlopt_discovery.zoo` — not a purpose-built respelling.  `assoc_linear`
+folds the low-rank chain `up(down(x))` into one dense GEMM whose
+`B·A` weight product folds at compile time.  Replays the −19.985 %
+verified win of `project/retros/human-bar.md` — under the executor
+axis it measures −20.0 % here — the largest single-model yield the
+zoo retro recorded.
+
+
+- signals: law:assoc_linear
+- baselines: eager three-GEMM (self) 87,045; merged LoRA (ref) 69,650 — peft.merge_and_unload-style — the branch pre-composed dense; inductor (compile) — no freeze — Inductor cannot fold the adapter weights
+
+### `zoo_lora_param` — Zoo LoRAAdapter on the storage axis — the fold's other side
+
+The same zoo `LoRAAdapter` site priced on `param_bytes` — the memory
+twin of `zoo_lora_adapter`.  Folding `up(down(x))` to one (d,d) GEMM
+buys the runtime win at a storage price the speed axis hides:
+`2·d·r` stored adapter values become `d²`.  Honest row — the scorecard
+records the +32 % storage regression, not a hoped-for reduction: the
+speed/memory tradeoff of every weight fold made visible on a real
+model.
+
+
+- signals: law:assoc_linear
+- baselines: eager low-rank (self) 400; merged LoRA (ref) 528 — same storage regression — the hand-merge pays it too; inductor (compile) — measured-only (no symbolic form)
+
+### `zoo_mos_head` — Zoo MoSHead — gather dedup reaches, cost-neutral
+
+The held-out zoo's `MoSHead` (Yang et al. 2018, mixture-of-softmaxes)
+— a pure reachability row: `index_select_dedup` (×5) and
+`index_select_id` (×4) fire on the einsum-expanded gather/index
+structure and the param-sharing lift offers the (3,d,n) component
+table a `heads3` share, yet the extraction stays byte-identical
+(cost-neutral, as `human-bar.md` recorded: fires, no win).  The row
+guards *derivability* — the day the dedup family turns paying on a
+real head, this case's cost columns move first.
+
+
+- signals: law:index_select_dedup, law:index_select_id, stat:param_sharing
+- baselines: eager (self) 637; inductor (compile) — measured-only (no symbolic form)
+
+### `zoo_spline_kan` — Zoo SplineKAN — the x·x spelling bridge, canonically
+
+The held-out zoo's `SplineKAN` edge layer (Liu et al. 2024, KAN) —
+`stack([x, x*x, sin x])` spells the quadratic basis element as a
+self-product, exactly the `x·x` normalizer-code spelling the
+canonicalizer bridge exists for.  `mul_square` → `square_to_pow`
+rewrite it to `square`; the extraction keeps the canonical op
+(`mul` gone).  Replays the −0.003 % `human-bar.md` cell — a small
+but real verified win on code nobody targeted.
+
+
+- signals: law:mul_square, law:square_to_pow
+- baselines: eager spelled (self) 87,058; inductor (compile) — measured-only (no symbolic form)
+
+### `zoo_time_cond_conv` — Zoo TimeCondConv — dead broadcast pads stripped
+
+The held-out zoo's `TimeCondConv` — the DDPM diffusion residual block
+(Peebles-style sinusoidal time embedding broadcast into a conv block,
+`emb[:, :, None, None]`).  The machine-admitted pad strips
+`mul_unsq_pad_l` / `mul_unsq_pad_r` (provenance MACHINE_SHIPPED)
+remove the dead broadcast pads; `silu_expand` fires alongside.
+Replays the −4.996 % `human-bar.md` yield — the only machine-admitted
+win in that table — measured −7.7 % on the executor axis here.
+
+
+- signals: law:mul_unsq_pad_l, law:mul_unsq_pad_r
+- baselines: eager (self) 226,488; inductor (compile) — measured-only (no symbolic form)
 

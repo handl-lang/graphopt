@@ -278,6 +278,29 @@ class _SelectMul(nn.Module):
         return a.select(1, 0) * b.select(1, 0)
 
 
+class _AdditiveRecurrence(nn.Module):
+    """``h_t = h_{t-1} + x_t`` unrolled T steps — the unit-decay corner.
+
+    The pure prefix-sum recurrence: the ``a = 1`` section of the
+    diagonal-affine monoid ``blelloch_scan`` exercises.  The spelled
+    program still reads the sequence one element at a time; the
+    ``affd_lift_unit`` family lifts it to the same
+    ``aff_diag``/``applyd`` carrier with a constant-one decay —
+    the scan/cumsum association in its cheapest spelling.
+    """
+
+    def __init__(self, d: int, t: int) -> None:
+        super().__init__()
+        self.t = t
+        self.d = d
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        h = torch.zeros(x.shape[0], self.d, dtype=x.dtype)
+        for i in range(self.t):
+            h = h + x[:, i]
+        return h
+
+
 # ---------------------------------------------------------------------------
 #  The source registry — ``size`` is each fixture's scale knob
 # ---------------------------------------------------------------------------
@@ -435,6 +458,90 @@ def _select_mul(size: int):
     return _SelectMul().eval().double(), (_r(4, d), _r(4, d))
 
 
+def _cumsum_scan(size: int):
+    """The unrolled unit-decay recurrence; ``size`` is the length T."""
+    t = max(4, size)
+    return _AdditiveRecurrence(16, t).eval().double(), _r(2, t, 16)
+
+
+# ---------------------------------------------------------------------------
+#  Real-corpus sources — the held-out zoo's own modules
+# ---------------------------------------------------------------------------
+#
+# These builders instantiate the *actual* ``mlopt_discovery.zoo``
+# workload classes — the architectures the model-zoo-yield /
+# human-bar retros measured — rather than a purpose-built respelling.
+# The case TOML then replays the recorded fire so the scorecard's
+# real-model yield is guarded by rows, not prose.
+
+
+def _zoo_lora_adapter(size: int):
+    """The zoo ``LoRAAdapter``; ``size`` is the model width d."""
+    from mlopt_discovery.zoo import _LoRAAdapter
+
+    d = max(8, size)
+    return _LoRAAdapter(d, 4).eval().double(), _r(4, d)
+
+
+def _zoo_time_cond_conv(size: int):
+    """The zoo ``TimeCondConv`` diffusion block (fixed channels)."""
+    from mlopt_discovery.zoo import _TimeCondConv
+
+    del size  # the zoo pins ch=8, temb=4 — the measured cell
+    return _TimeCondConv(8, 4).eval().double(), (_r(1, 8, 8, 8), _r(1))
+
+
+def _zoo_gau(size: int):
+    """The zoo ``GatedAttentionUnit``; ``size`` is the width d."""
+    from mlopt_discovery.zoo import _GatedAttentionUnit
+
+    d = max(8, size)
+    return _GatedAttentionUnit(d).eval().double(), _r(2, 8, d)
+
+
+def _zoo_spline_kan(size: int):
+    """The zoo ``SplineKAN`` edge layer; ``size`` is the input dim."""
+    from mlopt_discovery.zoo import _SplineKAN
+
+    d = max(8, size)
+    return _SplineKAN(d, 8).eval().double(), _r(4, d)
+
+
+def _zoo_cosine_attention(size: int):
+    """The zoo ``CosineAttention``; ``size`` is the width d."""
+    from mlopt_discovery.zoo import _CosineAttention
+
+    d = max(8, size)
+    return _CosineAttention(d, 4).eval().double(), _r(2, 8, d)
+
+
+def _zoo_mos_head(size: int):
+    """The zoo ``MoSHead``; ``size`` is the feature width d."""
+    from mlopt_discovery.zoo import _MoSHead
+
+    d = max(8, size)
+    return _MoSHead(d, 10, 3).eval().double(), _r(4, d)
+
+
+def _zoo_adaln_block(size: int):
+    """The zoo ``AdaLNBlock``; ``size`` is the width d."""
+    from mlopt_discovery.zoo import _AdaLNBlock
+
+    d = max(8, size)
+    return (
+        _AdaLNBlock(d, 8).eval().double(),
+        (_r(2, 8, d), _r(2, 8)),
+    )
+
+
+def _zoo_delta_rule(size: int):
+    """The zoo ``DeltaRuleBlock`` — the unrolled matrix-state write."""
+    from mlopt_discovery.zoo import _DeltaRuleBlock
+
+    d = max(8, size)
+    return _DeltaRuleBlock(d, d, 4).eval().double(), _r(2, 4, d)
+
+
 #: ``name -> builder(size)`` for the case corpus's ``source`` key.
 SOURCES: dict[str, Callable[[int], tuple[nn.Module, object]]] = {
     "conv_bn_eval": _conv_bn_eval,
@@ -457,4 +564,13 @@ SOURCES: dict[str, Callable[[int], tuple[nn.Module, object]]] = {
     "gqa_repeat_kv": _gqa_repeat_kv,
     "biased_chain": _biased_chain,
     "select_mul": _select_mul,
+    "cumsum_scan": _cumsum_scan,
+    "zoo_lora_adapter": _zoo_lora_adapter,
+    "zoo_time_cond_conv": _zoo_time_cond_conv,
+    "zoo_gau": _zoo_gau,
+    "zoo_spline_kan": _zoo_spline_kan,
+    "zoo_cosine_attention": _zoo_cosine_attention,
+    "zoo_mos_head": _zoo_mos_head,
+    "zoo_adaln_block": _zoo_adaln_block,
+    "zoo_delta_rule": _zoo_delta_rule,
 }

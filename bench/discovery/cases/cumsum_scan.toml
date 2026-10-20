@@ -1,0 +1,34 @@
+name = "cumsum_scan"
+title = "Unit-decay recurrence → aff carrier (cumsum association)"
+category = "memory"
+citation = """
+The `a = 1` corner of the diagonal-affine monoid — `h_t = h_{t-1} +
+x_t` unrolled is a prefix sum, and `affd_lift_unit` /
+`affd_lift_unit_step` raise it to `applyd(aff_diag(h, x), 1)` under
+`carrier_search`.  Honest row at T=32: the carrier member *is*
+extracted (`aff_diag`/`affd_compose`/`applyd` in the term, certified)
+but the executor axis prices it +25.7 % over the unrolled adds —
+the scan association derives yet does not pay at benchmark scale, so
+the scorecard records `beat=no` rather than a wished-for win.
+"""
+source = "cumsum_scan"
+size = 32
+rules = "carrier_search"
+cost = "exec"
+max_iterations = 16
+
+[expect]
+signals = ["law:affd_lift_unit", "law:affd_lift_unit_step", "op:applyd"]
+ops = ["applyd", "aff_diag"]
+
+[[baselines]]
+name = "eager unrolled"
+kind = "self"
+[[baselines]]
+name = "cumsum prefix"
+kind = "ref"
+ref = "cumsum_prefix"
+note = "x.cumsum(1)[:, -1] — the practitioner's parallel-scan spelling"
+[[baselines]]
+name = "inductor"
+kind = "compile"

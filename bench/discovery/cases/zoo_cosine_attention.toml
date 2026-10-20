@@ -1,0 +1,27 @@
+name = "zoo_cosine_attention"
+title = "Zoo CosineAttention — om_lift on the normalized-score map"
+category = "memory"
+citation = """
+The held-out zoo's `CosineAttention` (SwinV2-style) — `softmax(τ·q̂k̂ᵀ)`
+with L2-normalized projections spelled `linalg_vector_norm`.
+`om_lift` (the carrier `OM_LIFT`, metavar-dim guard) raises the
+normalized outer-product map onto the `om_apply`/`om_elem` carrier.
+Replays the −0.006 % `human-bar.md` cell; honest on both axes —
+the executor reads −0.007 %, the launch axis reads a +2.9 %
+regression the scorecard records as `beat=no`.
+"""
+source = "zoo_cosine_attention"
+size = 16
+rules = "default"
+cost = "exec"
+
+[expect]
+signals = ["law:om_lift", "op:om_apply"]
+ops = ["om_apply"]
+
+[[baselines]]
+name = "eager spelled"
+kind = "self"
+[[baselines]]
+name = "inductor"
+kind = "compile"

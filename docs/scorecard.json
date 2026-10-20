@@ -1,20 +1,22 @@
 {
   "schema": 1,
   "lane": "full",
-  "generated_utc": "2026-10-20T03:28:38+00:00",
+  "generated_utc": "2026-10-20T04:01:22+00:00",
   "env": {
-    "timestamp_utc": "2026-10-20T03:28:38+00:00",
+    "timestamp_utc": "2026-10-20T04:01:22+00:00",
     "python": "3.13.9",
     "torch": "2.14.0+cu130",
     "torch_cuda": "13.0",
     "device": "cpu",
     "device_name": "12th Gen Intel(R) Core(TM) i5-12500H",
     "cpu_count": 16,
-    "git_sha": "9104de4",
+    "git_sha": "141b5dc",
     "git_dirty": true,
     "argv": [
       "/home/luis/GitHub/handl-lang/research-mlopt/bench/discovery/run.py",
-      "--full"
+      "--full",
+      "--out",
+      "docs"
     ]
   },
   "cases": [
@@ -40,7 +42,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 1.008,
+        "search_s": 1.148,
         "n_enodes": 11,
         "iterations": 2,
         "extracted_ops": [
@@ -51,12 +53,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 9.107376700558235e-06,
-          "eager two-GEMM": 1.241667620051885e-05,
-          "pre-folded affine": 6.27834480110323e-06,
-          "inductor": 5.237500590737909e-05
+          "mlopt": 9.054870200634468e-06,
+          "eager two-GEMM": 1.2087455400615e-05,
+          "pre-folded affine": 6.957072799559683e-06,
+          "inductor": 6.222249794518575e-05
         },
-        "mlopt_ms": 0.009107376700558235
+        "mlopt_ms": 0.009054870200634469
       },
       "baselines": [
         {
@@ -64,7 +66,7 @@
           "kind": "self",
           "available": true,
           "cost": 4098.0,
-          "median_s": 1.241667620051885e-05,
+          "median_s": 1.2087455400615e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -75,7 +77,7 @@
           "kind": "ref",
           "available": true,
           "cost": 2049.0,
-          "median_s": 6.27834480110323e-06,
+          "median_s": 6.957072799559683e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 2.90149566040121e-08,
@@ -86,8 +88,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 5.237500590737909e-05,
-          "iqr_s": 1.6719932318665087e-06,
+          "median_s": 6.222249794518575e-05,
+          "iqr_s": 3.065506462007761e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "no freeze \u2014 Inductor cannot fold the weights"
@@ -117,7 +119,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.056,
+        "search_s": 0.084,
         "n_enodes": 43,
         "iterations": 2,
         "extracted_ops": [
@@ -131,12 +133,12 @@
         "cert_steps": 7,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 0.00018068140199466144,
-          "eager unrolled": 4.2168490501353517e-05,
-          "cumsum prefix": 1.938793429872021e-05,
-          "inductor": 4.05870086979121e-05
+          "mlopt": 0.00021219572699919808,
+          "eager unrolled": 4.669433100207243e-05,
+          "cumsum prefix": 2.2445054400304797e-05,
+          "inductor": 4.313349927542731e-05
         },
-        "mlopt_ms": 0.18068140199466143
+        "mlopt_ms": 0.2121957269991981
       },
       "baselines": [
         {
@@ -144,7 +146,7 @@
           "kind": "self",
           "available": true,
           "cost": 759.0,
-          "median_s": 4.2168490501353517e-05,
+          "median_s": 4.669433100207243e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -155,7 +157,7 @@
           "kind": "ref",
           "available": true,
           "cost": 1494.0,
-          "median_s": 1.938793429872021e-05,
+          "median_s": 2.2445054400304797e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 8.881784197001252e-16,
@@ -166,8 +168,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 4.05870086979121e-05,
-          "iqr_s": 1.3730168575420976e-06,
+          "median_s": 4.313349927542731e-05,
+          "iqr_s": 2.616510755615309e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -196,7 +198,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.041,
+        "search_s": 0.049,
         "n_enodes": 31,
         "iterations": 2,
         "extracted_ops": [
@@ -210,12 +212,12 @@
         "cert_steps": 9,
         "cert_egraph_dep": 6,
         "median_s": {
-          "mlopt": 1.0226020800473635e-05,
-          "eager": 1.744198100059293e-05,
-          "hand-folded conv": 1.0422227600065525e-05,
-          "inductor": 7.122200622688979e-05
+          "mlopt": 1.0979636599950027e-05,
+          "eager": 1.9161374002578668e-05,
+          "hand-folded conv": 1.1694295200868509e-05,
+          "inductor": 7.426550291711465e-05
         },
-        "mlopt_ms": 0.010226020800473634
+        "mlopt_ms": 0.010979636599950028
       },
       "baselines": [
         {
@@ -223,7 +225,7 @@
           "kind": "self",
           "available": true,
           "cost": 29186.0,
-          "median_s": 1.744198100059293e-05,
+          "median_s": 1.9161374002578668e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -234,7 +236,7 @@
           "kind": "ref",
           "available": true,
           "cost": 27649.0,
-          "median_s": 1.0422227600065525e-05,
+          "median_s": 1.1694295200868509e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 5.055496332673215e-08,
@@ -245,10 +247,92 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 7.122200622688979e-05,
-          "iqr_s": 2.490494807716459e-06,
+          "median_s": 7.426550291711465e-05,
+          "iqr_s": 3.8107573345769197e-06,
           "verify_passed": true,
           "verify_max_abs": 6.661338147750939e-16,
+          "note": "measured-only (no symbolic form)"
+        }
+      ]
+    },
+    {
+      "name": "cumsum_scan",
+      "title": "Unit-decay recurrence \u2192 aff carrier (cumsum association)",
+      "category": "memory",
+      "citation": "The `a = 1` corner of the diagonal-affine monoid \u2014 `h_t = h_{t-1} +\nx_t` unrolled is a prefix sum, and `affd_lift_unit` /\n`affd_lift_unit_step` raise it to `applyd(aff_diag(h, x), 1)` under\n`carrier_search`.  Honest row at T=32: the carrier member *is*\nextracted (`aff_diag`/`affd_compose`/`applyd` in the term, certified)\nbut the executor axis prices it +25.7 % over the unrolled adds \u2014\nthe scan association derives yet does not pay at benchmark scale, so\nthe scorecard records `beat=no` rather than a wished-for win.\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 3.552713678800501e-15,
+      "axis": "exec",
+      "cost_before": 1115256.8089887642,
+      "cost_after": 1402358.2921348296,
+      "best_baseline": "cumsum prefix",
+      "best_baseline_cost": 34939.50561797753,
+      "beat_best": false,
+      "beat_best_measured": false,
+      "signals_seen": [
+        "law:affd_lift_unit",
+        "law:affd_lift_unit_step",
+        "op:applyd"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 2.066,
+        "n_enodes": 5617,
+        "iterations": 2,
+        "extracted_ops": [
+          "add",
+          "aff_diag",
+          "affd_compose",
+          "applyd",
+          "expand",
+          "select",
+          "zeros"
+        ],
+        "cert_steps": 69,
+        "cert_egraph_dep": 0,
+        "median_s": {
+          "mlopt": 0.00029028340002696496,
+          "eager unrolled": 8.060765400296076e-05,
+          "cumsum prefix": 4.225909349770518e-06,
+          "inductor": 2.351900184294209e-05
+        },
+        "mlopt_ms": 0.29028340002696496
+      },
+      "baselines": [
+        {
+          "name": "eager unrolled",
+          "kind": "self",
+          "available": true,
+          "cost": 1115256.8089887642,
+          "median_s": 8.060765400296076e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "cumsum prefix",
+          "kind": "ref",
+          "available": true,
+          "cost": 34939.50561797753,
+          "median_s": 4.225909349770518e-06,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": "x.cumsum(1)[:, -1] \u2014 the practitioner's parallel-scan spelling"
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 2.351900184294209e-05,
+          "iqr_s": 1.4594952517654747e-06,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
         }
       ]
@@ -275,7 +359,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.043,
+        "search_s": 0.055,
         "n_enodes": 21,
         "iterations": 2,
         "extracted_ops": [
@@ -285,12 +369,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 1,
         "median_s": {
-          "mlopt": 3.1011872000817675e-05,
-          "eager spelled": 4.373170500184642e-05,
-          "F.scaled_dot_product_attention": 3.182181249576388e-05,
-          "inductor": 8.469849854009226e-05
+          "mlopt": 3.560919349984033e-05,
+          "eager spelled": 4.856129549443722e-05,
+          "F.scaled_dot_product_attention": 3.596189850213705e-05,
+          "inductor": 9.780698746908456e-05
         },
-        "mlopt_ms": 0.031011872000817675
+        "mlopt_ms": 0.035609193499840326
       },
       "baselines": [
         {
@@ -298,7 +382,7 @@
           "kind": "self",
           "available": true,
           "cost": 33544.0,
-          "median_s": 4.373170500184642e-05,
+          "median_s": 4.856129549443722e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -309,7 +393,7 @@
           "kind": "ref",
           "available": true,
           "cost": 32772.0,
-          "median_s": 3.182181249576388e-05,
+          "median_s": 3.596189850213705e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 2.220446049250313e-16,
@@ -320,8 +404,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 8.469849854009226e-05,
-          "iqr_s": 2.8919930628035218e-06,
+          "median_s": 9.780698746908456e-05,
+          "iqr_s": 6.8904992076568305e-06,
           "verify_passed": true,
           "verify_max_abs": 1.1102230246251565e-16,
           "note": "measured-only (no symbolic form)"
@@ -350,7 +434,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.019,
+        "search_s": 0.025,
         "n_enodes": 6,
         "iterations": 2,
         "extracted_ops": [
@@ -359,12 +443,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 4.449135348841082e-06,
-          "eager spelled": 5.271324499335605e-06,
-          "F.glu": 3.0626612999185452e-06,
-          "inductor": 1.9073995645157993e-05
+          "mlopt": 5.259155899693724e-06,
+          "eager spelled": 5.897801100218203e-06,
+          "F.glu": 3.583517800143454e-06,
+          "inductor": 2.2684005671180785e-05
         },
-        "mlopt_ms": 0.004449135348841082
+        "mlopt_ms": 0.005259155899693724
       },
       "baselines": [
         {
@@ -372,7 +456,7 @@
           "kind": "self",
           "available": true,
           "cost": 98.0,
-          "median_s": 5.271324499335605e-06,
+          "median_s": 5.897801100218203e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -383,7 +467,7 @@
           "kind": "ref",
           "available": true,
           "cost": 33.0,
-          "median_s": 3.0626612999185452e-06,
+          "median_s": 3.583517800143454e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -394,8 +478,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 1.9073995645157993e-05,
-          "iqr_s": 9.165087249130011e-07,
+          "median_s": 2.2684005671180785e-05,
+          "iqr_s": 1.405001967214048e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -424,7 +508,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.061,
+        "search_s": 0.066,
         "n_enodes": 59,
         "iterations": 8,
         "extracted_ops": [
@@ -438,12 +522,12 @@
         "cert_steps": 4,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 6.409480200090911e-05,
-          "eager spelled": 7.034027299960143e-05,
-          "F.sdpa enable_gqa": 5.144835100509226e-05,
-          "inductor": 0.00011449899466242641
+          "mlopt": 7.955614000093192e-05,
+          "eager spelled": 7.891603000462055e-05,
+          "F.sdpa enable_gqa": 5.478096099977847e-05,
+          "inductor": 0.00011952700151596218
         },
-        "mlopt_ms": 0.06409480200090911
+        "mlopt_ms": 0.07955614000093192
       },
       "baselines": [
         {
@@ -451,7 +535,7 @@
           "kind": "self",
           "available": true,
           "cost": 199688.0,
-          "median_s": 7.034027299960143e-05,
+          "median_s": 7.891603000462055e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -462,7 +546,7 @@
           "kind": "ref",
           "available": true,
           "cost": 196612.0,
-          "median_s": 5.144835100509226e-05,
+          "median_s": 5.478096099977847e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -473,8 +557,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 0.00011449899466242641,
-          "iqr_s": 3.6282435758039355e-06,
+          "median_s": 0.00011952700151596218,
+          "iqr_s": 6.1424943851307034e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -503,7 +587,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.035,
+        "search_s": 0.05,
         "n_enodes": 14,
         "iterations": 1,
         "extracted_ops": [
@@ -517,12 +601,12 @@
         "cert_steps": 3,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 5.3457173009519464e-05,
-          "eager three-GEMM": 4.2514594992098864e-05,
-          "merged QKV": 3.3790157496696335e-05,
-          "inductor": 8.751949644647539e-05
+          "mlopt": 5.286845599766821e-05,
+          "eager three-GEMM": 4.074429550382775e-05,
+          "merged QKV": 3.2970547006698324e-05,
+          "inductor": 0.00010756050323834643
         },
-        "mlopt_ms": 0.053457173009519465
+        "mlopt_ms": 0.05286845599766821
       },
       "baselines": [
         {
@@ -530,7 +614,7 @@
           "kind": "self",
           "available": true,
           "cost": 32772.0,
-          "median_s": 4.2514594992098864e-05,
+          "median_s": 4.074429550382775e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -541,7 +625,7 @@
           "kind": "ref",
           "available": true,
           "cost": 32770.0,
-          "median_s": 3.3790157496696335e-05,
+          "median_s": 3.2970547006698324e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -552,8 +636,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 8.751949644647539e-05,
-          "iqr_s": 2.741504431469366e-06,
+          "median_s": 0.00010756050323834643,
+          "iqr_s": 4.584500857163221e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -582,7 +666,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.019,
+        "search_s": 0.021,
         "n_enodes": 7,
         "iterations": 2,
         "extracted_ops": [
@@ -592,12 +676,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 4.229996950016357e-06,
-          "eager spelled": 3.3640992995060516e-06,
-          "mul-then-unsqueeze": 2.633685600449098e-06,
-          "inductor": 2.095900708809495e-05
+          "mlopt": 7.188631399185397e-06,
+          "eager spelled": 3.880616700189422e-06,
+          "mul-then-unsqueeze": 2.8799471503589305e-06,
+          "inductor": 2.2891006665304303e-05
         },
-        "mlopt_ms": 0.004229996950016357
+        "mlopt_ms": 0.007188631399185397
       },
       "baselines": [
         {
@@ -605,7 +689,7 @@
           "kind": "self",
           "available": true,
           "cost": 75.0,
-          "median_s": 3.3640992995060516e-06,
+          "median_s": 3.880616700189422e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -616,7 +700,7 @@
           "kind": "ref",
           "available": true,
           "cost": 50.0,
-          "median_s": 2.633685600449098e-06,
+          "median_s": 2.8799471503589305e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -627,8 +711,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 2.095900708809495e-05,
-          "iqr_s": 1.0560033842921257e-06,
+          "median_s": 2.2891006665304303e-05,
+          "iqr_s": 1.5959958545863628e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -658,7 +742,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.055,
+        "search_s": 0.069,
         "n_enodes": 28,
         "iterations": 2,
         "extracted_ops": [
@@ -679,12 +763,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 6.800654999096878e-05,
-          "eager quadratic": 0.00012329980099457316,
-          "paper chunkwise": 0.0002372602109971922,
-          "inductor": 0.00021422399731818587
+          "mlopt": 7.681863300967962e-05,
+          "eager quadratic": 0.00016535746899899097,
+          "paper chunkwise": 0.00025674317398807035,
+          "inductor": 0.00023562900605611503
         },
-        "mlopt_ms": 0.06800654999096878
+        "mlopt_ms": 0.07681863300967962
       },
       "baselines": [
         {
@@ -692,7 +776,7 @@
           "kind": "self",
           "available": true,
           "cost": 761863.0,
-          "median_s": 0.00012329980099457316,
+          "median_s": 0.00016535746899899097,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -703,7 +787,7 @@
           "kind": "ref",
           "available": true,
           "cost": 491656.0,
-          "median_s": 0.0002372602109971922,
+          "median_s": 0.00025674317398807035,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 3.3306690738754696e-16,
@@ -714,8 +798,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 0.00021422399731818587,
-          "iqr_s": 6.3140178099274635e-06,
+          "median_s": 0.00023562900605611503,
+          "iqr_s": 8.483999408781528e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -757,7 +841,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.025,
+        "search_s": 0.029,
         "n_enodes": 16,
         "iterations": 3,
         "extracted_ops": [
@@ -766,12 +850,12 @@
         "cert_steps": 4,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 1.2439666398859117e-05,
-          "eager spelled": 1.2478933499369304e-05,
-          "F.rms_norm": 1.0108731299987994e-05,
-          "inductor": 4.131700552534312e-05
+          "mlopt": 1.3248733700311277e-05,
+          "eager spelled": 1.3150912200217136e-05,
+          "F.rms_norm": 1.0924057199736125e-05,
+          "inductor": 4.6626999392174184e-05
         },
-        "mlopt_ms": 0.012439666398859116
+        "mlopt_ms": 0.013248733700311276
       },
       "baselines": [
         {
@@ -779,7 +863,7 @@
           "kind": "self",
           "available": true,
           "cost": 218.0,
-          "median_s": 1.2478933499369304e-05,
+          "median_s": 1.3150912200217136e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -790,7 +874,7 @@
           "kind": "ref",
           "available": true,
           "cost": 129.0,
-          "median_s": 1.0108731299987994e-05,
+          "median_s": 1.0924057199736125e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -801,8 +885,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 4.131700552534312e-05,
-          "iqr_s": 1.3469980331137776e-06,
+          "median_s": 4.6626999392174184e-05,
+          "iqr_s": 1.5709956642240286e-06,
           "verify_passed": true,
           "verify_max_abs": 4.440892098500626e-16,
           "note": "measured-only (no symbolic form)"
@@ -831,7 +915,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.021,
+        "search_s": 0.238,
         "n_enodes": 14,
         "iterations": 3,
         "extracted_ops": [
@@ -840,12 +924,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 1.2589853900135495e-05,
-          "eager spelled": 1.2536430300679057e-05,
-          "F.rms_norm": 1.0163654899224639e-05,
-          "inductor": 4.2134990508202463e-05
+          "mlopt": 1.3252433799789287e-05,
+          "eager spelled": 1.1897501100611407e-05,
+          "F.rms_norm": 1.0585784900467844e-05,
+          "inductor": 4.569700104184449e-05
         },
-        "mlopt_ms": 0.012589853900135495
+        "mlopt_ms": 0.013252433799789288
       },
       "baselines": [
         {
@@ -853,7 +937,7 @@
           "kind": "self",
           "available": true,
           "cost": 282.0,
-          "median_s": 1.2536430300679057e-05,
+          "median_s": 1.1897501100611407e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -864,7 +948,7 @@
           "kind": "ref",
           "available": true,
           "cost": 129.0,
-          "median_s": 1.0163654899224639e-05,
+          "median_s": 1.0585784900467844e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -875,8 +959,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 4.2134990508202463e-05,
-          "iqr_s": 1.4924989955034107e-06,
+          "median_s": 4.569700104184449e-05,
+          "iqr_s": 1.9500002963468432e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -905,7 +989,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.019,
+        "search_s": 0.02,
         "n_enodes": 11,
         "iterations": 3,
         "extracted_ops": [
@@ -914,12 +998,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 1.062431629979983e-05,
-          "eager spelled": 9.778249899682123e-06,
-          "F.rms_norm (no weight)": 8.460084200487473e-06,
-          "inductor": 2.019600651692599e-05
+          "mlopt": 1.1035233300935943e-05,
+          "eager spelled": 1.0270507400855422e-05,
+          "F.rms_norm (no weight)": 9.123031399212778e-06,
+          "inductor": 2.286300150444731e-05
         },
-        "mlopt_ms": 0.01062431629979983
+        "mlopt_ms": 0.011035233300935943
       },
       "baselines": [
         {
@@ -927,7 +1011,7 @@
           "kind": "self",
           "available": true,
           "cost": 217.0,
-          "median_s": 9.778249899682123e-06,
+          "median_s": 1.0270507400855422e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -938,7 +1022,7 @@
           "kind": "ref",
           "available": true,
           "cost": 65.0,
-          "median_s": 8.460084200487473e-06,
+          "median_s": 9.123031399212778e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -949,8 +1033,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 2.019600651692599e-05,
-          "iqr_s": 9.345021680928767e-07,
+          "median_s": 2.286300150444731e-05,
+          "iqr_s": 1.217496901517734e-06,
           "verify_passed": true,
           "verify_max_abs": 2.220446049250313e-16,
           "note": "measured-only (no symbolic form)"
@@ -979,7 +1063,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.031,
+        "search_s": 0.033,
         "n_enodes": 19,
         "iterations": 2,
         "extracted_ops": [
@@ -989,12 +1073,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 3.225086450402159e-05,
-          "eager spelled": 4.3336820002878085e-05,
-          "F.scaled_dot_product_attention": 3.401583350932924e-05,
-          "inductor": 9.49120003497228e-05
+          "mlopt": 3.1465877509617715e-05,
+          "eager spelled": 4.3949598009930924e-05,
+          "F.scaled_dot_product_attention": 3.372466750442982e-05,
+          "inductor": 0.00010201000259257853
         },
-        "mlopt_ms": 0.03225086450402159
+        "mlopt_ms": 0.03146587750961771
       },
       "baselines": [
         {
@@ -1002,7 +1086,7 @@
           "kind": "self",
           "available": true,
           "cost": 33415.0,
-          "median_s": 4.3336820002878085e-05,
+          "median_s": 4.3949598009930924e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1013,7 +1097,7 @@
           "kind": "ref",
           "available": true,
           "cost": 32772.0,
-          "median_s": 3.401583350932924e-05,
+          "median_s": 3.372466750442982e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 2.220446049250313e-16,
@@ -1024,8 +1108,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 9.49120003497228e-05,
-          "iqr_s": 2.639008016558364e-06,
+          "median_s": 0.00010201000259257853,
+          "iqr_s": 4.43200406152755e-06,
           "verify_passed": true,
           "verify_max_abs": 1.1102230246251565e-16,
           "note": "measured-only (no symbolic form)"
@@ -1054,7 +1138,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.02,
+        "search_s": 0.019,
         "n_enodes": 7,
         "iterations": 2,
         "extracted_ops": [
@@ -1064,12 +1148,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 5.336617300054059e-06,
-          "eager spelled": 4.409371050132905e-06,
-          "mul-then-select": 3.2035895004810297e-06,
-          "inductor": 2.129199856426567e-05
+          "mlopt": 5.379371700109914e-06,
+          "eager spelled": 4.360647550493013e-06,
+          "mul-then-select": 3.120013850275427e-06,
+          "inductor": 2.207199577242136e-05
         },
-        "mlopt_ms": 0.005336617300054059
+        "mlopt_ms": 0.0053793717001099145
       },
       "baselines": [
         {
@@ -1077,7 +1161,7 @@
           "kind": "self",
           "available": true,
           "cost": 15.0,
-          "median_s": 4.409371050132905e-06,
+          "median_s": 4.360647550493013e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1088,7 +1172,7 @@
           "kind": "ref",
           "available": true,
           "cost": 38.0,
-          "median_s": 3.2035895004810297e-06,
+          "median_s": 3.120013850275427e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1099,8 +1183,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 2.129199856426567e-05,
-          "iqr_s": 1.0209987522102892e-06,
+          "median_s": 2.207199577242136e-05,
+          "iqr_s": 1.0790099622681737e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -1138,12 +1222,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 2.8428252997400706e-06,
-          "eager spelled": 2.914799249265343e-06,
-          "F.silu": 1.872040059970459e-06,
-          "inductor": 1.9377999706193805e-05
+          "mlopt": 2.8584963899629657e-06,
+          "eager spelled": 2.858594709978206e-06,
+          "F.silu": 2.1044331800658257e-06,
+          "inductor": 2.239900641143322e-05
         },
-        "mlopt_ms": 0.0028428252997400707
+        "mlopt_ms": 0.002858496389962966
       },
       "baselines": [
         {
@@ -1151,7 +1235,7 @@
           "kind": "self",
           "available": true,
           "cost": 194.0,
-          "median_s": 2.914799249265343e-06,
+          "median_s": 2.858594709978206e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1162,7 +1246,7 @@
           "kind": "ref",
           "available": true,
           "cost": 193.0,
-          "median_s": 1.872040059970459e-06,
+          "median_s": 2.1044331800658257e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 4.440892098500626e-16,
@@ -1173,8 +1257,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 1.9377999706193805e-05,
-          "iqr_s": 8.700008038431406e-07,
+          "median_s": 2.239900641143322e-05,
+          "iqr_s": 1.1254960554651916e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -1203,7 +1287,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.016,
+        "search_s": 0.018,
         "n_enodes": 5,
         "iterations": 2,
         "extracted_ops": [
@@ -1212,12 +1296,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 3.963660649606026e-06,
-          "eager spelled": 5.012865299067926e-06,
-          "torch.softmax": 2.1027942100772634e-06,
-          "inductor": 2.0322506316006184e-05
+          "mlopt": 3.7894878994848113e-06,
+          "eager spelled": 4.786041699844645e-06,
+          "torch.softmax": 2.1928386800573205e-06,
+          "inductor": 2.2580003133043647e-05
         },
-        "mlopt_ms": 0.003963660649606026
+        "mlopt_ms": 0.0037894878994848115
       },
       "baselines": [
         {
@@ -1225,7 +1309,7 @@
           "kind": "self",
           "available": true,
           "cost": 327.0,
-          "median_s": 5.012865299067926e-06,
+          "median_s": 4.786041699844645e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1236,7 +1320,7 @@
           "kind": "ref",
           "available": true,
           "cost": 65.0,
-          "median_s": 2.1027942100772634e-06,
+          "median_s": 2.1928386800573205e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 5.551115123125783e-17,
@@ -1247,8 +1331,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 2.0322506316006184e-05,
-          "iqr_s": 7.984926924109459e-07,
+          "median_s": 2.2580003133043647e-05,
+          "iqr_s": 1.05875005829148e-06,
           "verify_passed": true,
           "verify_max_abs": 1.734723475976807e-18,
           "note": "measured-only (no symbolic form)"
@@ -1277,7 +1361,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.017,
+        "search_s": 0.016,
         "n_enodes": 6,
         "iterations": 2,
         "extracted_ops": [
@@ -1286,12 +1370,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 6.516474399541039e-06,
-          "eager spelled": 5.60546000051545e-06,
-          "F.softsign": 5.693569300638046e-06,
-          "inductor": 2.0292005501687527e-05
+          "mlopt": 6.867784999485593e-06,
+          "eager spelled": 5.556809100380633e-06,
+          "F.softsign": 5.772503001207951e-06,
+          "inductor": 2.116300311172381e-05
         },
-        "mlopt_ms": 0.006516474399541039
+        "mlopt_ms": 0.006867784999485593
       },
       "baselines": [
         {
@@ -1299,7 +1383,7 @@
           "kind": "self",
           "available": true,
           "cost": 387.0,
-          "median_s": 5.60546000051545e-06,
+          "median_s": 5.556809100380633e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1310,7 +1394,7 @@
           "kind": "ref",
           "available": true,
           "cost": 387.0,
-          "median_s": 5.693569300638046e-06,
+          "median_s": 5.772503001207951e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1321,8 +1405,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 2.0292005501687527e-05,
-          "iqr_s": 9.929935913532972e-07,
+          "median_s": 2.116300311172381e-05,
+          "iqr_s": 9.172508725896478e-07,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -1351,7 +1435,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.022,
+        "search_s": 0.023,
         "n_enodes": 9,
         "iterations": 2,
         "extracted_ops": [
@@ -1364,12 +1448,12 @@
         "cert_steps": 2,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 1.933029890060425e-05,
-          "eager two-GEMM": 1.4213389299402479e-05,
-          "fused SwiGLU": 1.4552280399948358e-05,
-          "inductor": 5.121000140206888e-05
+          "mlopt": 1.931437800085405e-05,
+          "eager two-GEMM": 1.4397809900401626e-05,
+          "fused SwiGLU": 1.5507118600362447e-05,
+          "inductor": 5.698750464944169e-05
         },
-        "mlopt_ms": 0.01933029890060425
+        "mlopt_ms": 0.01931437800085405
       },
       "baselines": [
         {
@@ -1377,7 +1461,7 @@
           "kind": "self",
           "available": true,
           "cost": 4356.0,
-          "median_s": 1.4213389299402479e-05,
+          "median_s": 1.4397809900401626e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1388,7 +1472,7 @@
           "kind": "ref",
           "available": true,
           "cost": 4485.0,
-          "median_s": 1.4552280399948358e-05,
+          "median_s": 1.5507118600362447e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1399,8 +1483,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 5.121000140206888e-05,
-          "iqr_s": 1.6982521628960967e-06,
+          "median_s": 5.698750464944169e-05,
+          "iqr_s": 2.4339969968423247e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -1429,7 +1513,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.02,
+        "search_s": 0.021,
         "n_enodes": 7,
         "iterations": 2,
         "extracted_ops": [
@@ -1439,12 +1523,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 5.058214000018779e-06,
-          "eager two-GEMM": 9.609089000150561e-06,
-          "pre-folded Linear": 5.50540580006782e-06,
-          "inductor": 5.4804499086458236e-05
+          "mlopt": 5.222422399674542e-06,
+          "eager two-GEMM": 1.0096321499440818e-05,
+          "pre-folded Linear": 5.8158218002063226e-06,
+          "inductor": 5.956499808235094e-05
         },
-        "mlopt_ms": 0.0050582140000187785
+        "mlopt_ms": 0.005222422399674542
       },
       "baselines": [
         {
@@ -1452,7 +1536,7 @@
           "kind": "self",
           "available": true,
           "cost": 4098.0,
-          "median_s": 9.609089000150561e-06,
+          "median_s": 1.0096321499440818e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1463,7 +1547,7 @@
           "kind": "ref",
           "available": true,
           "cost": 2049.0,
-          "median_s": 5.50540580006782e-06,
+          "median_s": 5.8158218002063226e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 2.823249983796572e-08,
@@ -1474,8 +1558,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 5.4804499086458236e-05,
-          "iqr_s": 2.362248778808862e-06,
+          "median_s": 5.956499808235094e-05,
+          "iqr_s": 2.0460029190871865e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "no freeze \u2014 Inductor cannot fold the weights"
@@ -1504,7 +1588,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.022,
+        "search_s": 0.023,
         "n_enodes": 8,
         "iterations": 2,
         "extracted_ops": [
@@ -1514,12 +1598,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 5.2738359998329545e-06,
-          "eager two-GEMM": 1.2360544300463517e-05,
-          "merged Linear": 5.829978300607764e-06,
-          "inductor": 5.240800237515941e-05
+          "mlopt": 5.189149099169299e-06,
+          "eager two-GEMM": 1.221470419986872e-05,
+          "merged Linear": 5.829667599755339e-06,
+          "inductor": 5.7743993238545954e-05
         },
-        "mlopt_ms": 0.005273835999832954
+        "mlopt_ms": 0.005189149099169299
       },
       "baselines": [
         {
@@ -1527,7 +1611,7 @@
           "kind": "self",
           "available": true,
           "cost": 4163.0,
-          "median_s": 1.2360544300463517e-05,
+          "median_s": 1.221470419986872e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1538,7 +1622,7 @@
           "kind": "ref",
           "available": true,
           "cost": 2049.0,
-          "median_s": 5.829978300607764e-06,
+          "median_s": 5.829667599755339e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 7.771561172376096e-16,
@@ -1549,10 +1633,695 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 5.240800237515941e-05,
-          "iqr_s": 2.1074993128422648e-06,
+          "median_s": 5.7743993238545954e-05,
+          "iqr_s": 1.917749614221975e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
+          "note": "measured-only (no symbolic form)"
+        }
+      ]
+    },
+    {
+      "name": "zoo_adaln_affd",
+      "title": "Zoo AdaLNBlock \u2014 the affd carrier lift, opt-in regime",
+      "category": "structure",
+      "citation": "The held-out zoo's `AdaLNBlock` (Peebles & Xie 2022, DiT) \u2014\n`LN(x)\u00b7(1+scale) + shift` modulation lifted by `affd_lift` /\n`affd_lift_unit` into `applyd(aff_diag(ln(x), shift), 1+scale)` under\nthe `carrier_search` regime (`SCAN_DIAG_LAWS` is opt-in \u2014 DEFAULT\nnever runs it; the store's `affd_step_lift` twin is admitted but\nunshipped).  Reachability row: the lift lands (two `applyd` pairs in\nthe extraction) but the executor axis prices it +7.9 % \u2014 exactly the\nregression `human-bar.md` measured \u2014 so the scorecard records the\nhonest `beat=no` on a derived form.\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 0.0,
+      "axis": "exec",
+      "cost_before": 217830.11235955052,
+      "cost_after": 235086.3370786517,
+      "best_baseline": "eager",
+      "best_baseline_cost": 217830.11235955052,
+      "beat_best": false,
+      "beat_best_measured": false,
+      "signals_seen": [
+        "law:affd_lift",
+        "op:applyd"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 0.062,
+        "n_enodes": 36,
+        "iterations": 3,
+        "extracted_ops": [
+          "add",
+          "aff_diag",
+          "applyd",
+          "chunk",
+          "expand",
+          "gelu",
+          "layer_norm",
+          "linear",
+          "mul",
+          "unsqueeze"
+        ],
+        "cert_steps": 2,
+        "cert_egraph_dep": 0,
+        "median_s": {
+          "mlopt": 0.00014831804299319628,
+          "eager": 5.465904501033947e-05,
+          "inductor": 8.094649820122868e-05
+        },
+        "mlopt_ms": 0.1483180429931963
+      },
+      "baselines": [
+        {
+          "name": "eager",
+          "kind": "self",
+          "available": true,
+          "cost": 217830.11235955052,
+          "median_s": 5.465904501033947e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 8.094649820122868e-05,
+          "iqr_s": 2.2845124476589262e-06,
+          "verify_passed": true,
+          "verify_max_abs": 4.440892098500626e-16,
+          "note": "measured-only (no symbolic form)"
+        }
+      ]
+    },
+    {
+      "name": "zoo_cosine_attention",
+      "title": "Zoo CosineAttention \u2014 om_lift on the normalized-score map",
+      "category": "memory",
+      "citation": "The held-out zoo's `CosineAttention` (SwinV2-style) \u2014 `softmax(\u03c4\u00b7q\u0302k\u0302\u1d40)`\nwith L2-normalized projections spelled `linalg_vector_norm`.\n`om_lift` (the carrier `OM_LIFT`, metavar-dim guard) raises the\nnormalized outer-product map onto the `om_apply`/`om_elem` carrier.\nReplays the \u22120.006 % `human-bar.md` cell; honest on both axes \u2014\nthe executor reads \u22120.007 %, the launch axis reads a +2.9 %\nregression the scorecard records as `beat=no`.\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 1.1102230246251565e-16,
+      "axis": "exec",
+      "cost_before": 348463.1460674157,
+      "cost_after": 348440.13483146066,
+      "best_baseline": "eager spelled",
+      "best_baseline_cost": 348463.1460674157,
+      "beat_best": true,
+      "beat_best_measured": false,
+      "signals_seen": [
+        "law:om_lift",
+        "op:om_apply"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 0.075,
+        "n_enodes": 35,
+        "iterations": 2,
+        "extracted_ops": [
+          "chunk",
+          "clamp",
+          "clamp_min",
+          "div",
+          "expand_as",
+          "linalg_vector_norm",
+          "linear",
+          "matmul",
+          "mul",
+          "om_apply",
+          "om_elem",
+          "reshape",
+          "transpose"
+        ],
+        "cert_steps": 1,
+        "cert_egraph_dep": 0,
+        "median_s": {
+          "mlopt": 0.0001568044900050154,
+          "eager spelled": 0.00011074071399343665,
+          "inductor": 0.00010450249828863889
+        },
+        "mlopt_ms": 0.1568044900050154
+      },
+      "baselines": [
+        {
+          "name": "eager spelled",
+          "kind": "self",
+          "available": true,
+          "cost": 348463.1460674157,
+          "median_s": 0.00011074071399343665,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 0.00010450249828863889,
+          "iqr_s": 3.0130031518638134e-06,
+          "verify_passed": true,
+          "verify_max_abs": 1.1102230246251565e-16,
+          "note": "measured-only (no symbolic form)"
+        }
+      ]
+    },
+    {
+      "name": "zoo_delta_rule",
+      "title": "Zoo DeltaRuleBlock \u2014 partial aff-carrier lift on the write",
+      "category": "memory",
+      "citation": "The held-out zoo's `DeltaRuleBlock` (Schlag et al. 2021, DeltaNet) \u2014\nthe unrolled matrix-state `S \u2190 S + \u03b2\u00b7k\u00b7(v \u2212 k\u1d40S)` write the census\nminted `mul_unsq_nat` from.  The full chunked delta rule is honestly\nNOT in the library (the zoo's own docstring says so), but the\ndiagonal-affine monoid still lifts the per-step write: `applyd` /\n`aff_diag` pairs absorb all fifteen spelled `add`s while\n`mul_unsq_nat` and `select_mul` fire on their source op-tuples \u2014\na partial carrier find measured \u221215.7 % launch / \u221216.1 % exec where\nthe retro table recorded `\u2014` under its pipeline axis.\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 0.0,
+      "axis": "exec",
+      "cost_before": 975073.483146068,
+      "cost_after": 818072.5842696623,
+      "best_baseline": "eager unrolled",
+      "best_baseline_cost": 975073.483146068,
+      "beat_best": true,
+      "beat_best_measured": false,
+      "signals_seen": [
+        "law:decay_state_lift_post",
+        "law:mul_unsq_nat",
+        "law:select_mul",
+        "op:applyd"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 0.176,
+        "n_enodes": 111,
+        "iterations": 3,
+        "extracted_ops": [
+          "aff_diag",
+          "applyd",
+          "linear",
+          "matmul",
+          "mul",
+          "select",
+          "sigmoid",
+          "squeeze",
+          "sub",
+          "unsqueeze",
+          "zeros"
+        ],
+        "cert_steps": 45,
+        "cert_egraph_dep": 0,
+        "median_s": {
+          "mlopt": 0.0004106596850033384,
+          "eager unrolled": 0.00014803987000777853,
+          "inductor": 8.984400483313948e-05
+        },
+        "mlopt_ms": 0.4106596850033384
+      },
+      "baselines": [
+        {
+          "name": "eager unrolled",
+          "kind": "self",
+          "available": true,
+          "cost": 975073.483146068,
+          "median_s": 0.00014803987000777853,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 8.984400483313948e-05,
+          "iqr_s": 3.6059936974197626e-06,
+          "verify_passed": true,
+          "verify_max_abs": 2.3592239273284576e-16,
+          "note": "measured-only (no symbolic form)"
+        },
+        {
+          "name": "FLA chunk_delta_rule",
+          "kind": "external",
+          "available": false,
+          "cost": null,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
+          "note": "Triton WY-repr kernel \u2014 scratch dep; the impl the full rule targets"
+        }
+      ]
+    },
+    {
+      "name": "zoo_gau",
+      "title": "Zoo GatedAttentionUnit \u2014 quadratic gate lifts to om_decayed",
+      "category": "memory",
+      "citation": "The held-out zoo's `GatedAttentionUnit` (Hua et al. 2022, FLASH) \u2014\nsoftmax-free attention whose `relu(u u\u1d40)\u00b2` self-similarity score is a\nquadratic (T,T) site.  `om_decayed_lift` raises the masked-score\nmatmul onto the decayed-om carrier while the `mul_square` /\n`square_to_pow` spelling bridge canonicalises `a*a`; the extraction\nkeeps one `om_decayed` node (the (T,T) score matrix never\nmaterialises).  Replays the \u22120.003 % `human-bar.md` cell \u2014 \u22129.5 %\nunder the executor axis here.\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 0.0,
+      "axis": "exec",
+      "cost_before": 182972.58426966294,
+      "cost_after": 165561.07865168535,
+      "best_baseline": "eager quadratic",
+      "best_baseline_cost": 182972.58426966294,
+      "beat_best": true,
+      "beat_best_measured": false,
+      "signals_seen": [
+        "law:om_decayed_lift",
+        "law:mul_square",
+        "op:om_decayed"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 0.043,
+        "n_enodes": 28,
+        "iterations": 3,
+        "extracted_ops": [
+          "div",
+          "linear",
+          "matmul",
+          "mul",
+          "om_decayed",
+          "relu",
+          "sigmoid",
+          "transpose"
+        ],
+        "cert_steps": 1,
+        "cert_egraph_dep": 0,
+        "median_s": {
+          "mlopt": 5.760776699753478e-05,
+          "eager quadratic": 5.2838366987998595e-05,
+          "inductor": 9.148350363830104e-05
+        },
+        "mlopt_ms": 0.05760776699753478
+      },
+      "baselines": [
+        {
+          "name": "eager quadratic",
+          "kind": "self",
+          "available": true,
+          "cost": 182972.58426966294,
+          "median_s": 5.2838366987998595e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 9.148350363830104e-05,
+          "iqr_s": 3.767498128581792e-06,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": "measured-only (no symbolic form)"
+        },
+        {
+          "name": "FLASH GAU kernel",
+          "kind": "external",
+          "available": false,
+          "cost": null,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
+          "note": "fla.layers.gau \u2014 scratch dep; the hand kernel this emulates"
+        }
+      ]
+    },
+    {
+      "name": "zoo_lora_adapter",
+      "title": "Zoo LoRAAdapter \u2014 the assoc_linear win, replayed",
+      "category": "speed",
+      "citation": "The held-out zoo's own `LoRAAdapter` (Hu et al. 2021): the real\n`W x + alpha\u00b7(B (A x))` production spelling, imported verbatim from\n`mlopt_discovery.zoo` \u2014 not a purpose-built respelling.  `assoc_linear`\nfolds the low-rank chain `up(down(x))` into one dense GEMM whose\n`B\u00b7A` weight product folds at compile time.  Replays the \u221219.985 %\nverified win of `project/retros/human-bar.md` \u2014 under the executor\naxis it measures \u221220.0 % here \u2014 the largest single-model yield the\nzoo retro recorded.\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 2.220446049250313e-16,
+      "axis": "exec",
+      "cost_before": 87045.34831460674,
+      "cost_after": 69649.66292134831,
+      "best_baseline": "merged LoRA",
+      "best_baseline_cost": 69649.66292134831,
+      "beat_best": false,
+      "beat_best_measured": false,
+      "signals_seen": [
+        "law:assoc_linear"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 0.033,
+        "n_enodes": 13,
+        "iterations": 2,
+        "extracted_ops": [
+          "add",
+          "linear",
+          "matmul",
+          "mul"
+        ],
+        "cert_steps": 1,
+        "cert_egraph_dep": 0,
+        "median_s": {
+          "mlopt": 1.831578989949776e-05,
+          "eager three-GEMM": 2.1469174799858592e-05,
+          "merged LoRA": 1.637701349973213e-05,
+          "inductor": 6.184949597809464e-05
+        },
+        "mlopt_ms": 0.01831578989949776
+      },
+      "baselines": [
+        {
+          "name": "eager three-GEMM",
+          "kind": "self",
+          "available": true,
+          "cost": 87045.34831460674,
+          "median_s": 2.1469174799858592e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "merged LoRA",
+          "kind": "ref",
+          "available": true,
+          "cost": 69649.66292134831,
+          "median_s": 1.637701349973213e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 1.2734057253105391e-08,
+          "note": "peft.merge_and_unload-style \u2014 the branch pre-composed dense"
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 6.184949597809464e-05,
+          "iqr_s": 2.0930019672960043e-06,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": "no freeze \u2014 Inductor cannot fold the adapter weights"
+        }
+      ]
+    },
+    {
+      "name": "zoo_lora_param",
+      "title": "Zoo LoRAAdapter on the storage axis \u2014 the fold's other side",
+      "category": "memory",
+      "citation": "The same zoo `LoRAAdapter` site priced on `param_bytes` \u2014 the memory\ntwin of `zoo_lora_adapter`.  Folding `up(down(x))` to one (d,d) GEMM\nbuys the runtime win at a storage price the speed axis hides:\n`2\u00b7d\u00b7r` stored adapter values become `d\u00b2`.  Honest row \u2014 the scorecard\nrecords the +32 % storage regression, not a hoped-for reduction: the\nspeed/memory tradeoff of every weight fold made visible on a real\nmodel.\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 2.220446049250313e-16,
+      "axis": "param_bytes",
+      "cost_before": 400.0,
+      "cost_after": 528.0,
+      "best_baseline": "eager low-rank",
+      "best_baseline_cost": 400.0,
+      "beat_best": false,
+      "beat_best_measured": false,
+      "signals_seen": [
+        "law:assoc_linear"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 0.026,
+        "n_enodes": 13,
+        "iterations": 2,
+        "extracted_ops": [
+          "add",
+          "linear",
+          "matmul",
+          "mul"
+        ],
+        "cert_steps": 1,
+        "cert_egraph_dep": 0,
+        "median_s": {
+          "mlopt": 1.6185423800197896e-05,
+          "eager low-rank": 1.94959326996468e-05,
+          "merged LoRA": 1.4752422300807666e-05,
+          "inductor": 5.105173100309912e-05
+        },
+        "mlopt_ms": 0.016185423800197895
+      },
+      "baselines": [
+        {
+          "name": "eager low-rank",
+          "kind": "self",
+          "available": true,
+          "cost": 400.0,
+          "median_s": 1.94959326996468e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "merged LoRA",
+          "kind": "ref",
+          "available": true,
+          "cost": 528.0,
+          "median_s": 1.4752422300807666e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 1.2734057253105391e-08,
+          "note": "same storage regression \u2014 the hand-merge pays it too"
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 5.105173100309912e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": "measured-only (no symbolic form)"
+        }
+      ]
+    },
+    {
+      "name": "zoo_mos_head",
+      "title": "Zoo MoSHead \u2014 gather dedup reaches, cost-neutral",
+      "category": "structure",
+      "citation": "The held-out zoo's `MoSHead` (Yang et al. 2018, mixture-of-softmaxes)\n\u2014 a pure reachability row: `index_select_dedup` (\u00d75) and\n`index_select_id` (\u00d74) fire on the einsum-expanded gather/index\nstructure and the param-sharing lift offers the (3,d,n) component\ntable a `heads3` share, yet the extraction stays byte-identical\n(cost-neutral, as `human-bar.md` recorded: fires, no win).  The row\nguards *derivability* \u2014 the day the dedup family turns paying on a\nreal head, this case's cost columns move first.\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 0.0,
+      "axis": "launch",
+      "cost_before": 637.0,
+      "cost_after": 637.0,
+      "best_baseline": "eager",
+      "best_baseline_cost": 637.0,
+      "beat_best": false,
+      "beat_best_measured": false,
+      "signals_seen": [
+        "law:index_select_dedup",
+        "law:index_select_id",
+        "stat:param_sharing"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 0.047,
+        "n_enodes": 13,
+        "iterations": 1,
+        "extracted_ops": [
+          "add",
+          "einsum",
+          "linear",
+          "mul",
+          "softmax",
+          "sum",
+          "unsqueeze"
+        ],
+        "cert_steps": 0,
+        "cert_egraph_dep": 0,
+        "median_s": {
+          "mlopt": 4.5663943499675956e-05,
+          "eager": 3.8366371998563414e-05,
+          "inductor": 7.363150507444516e-05
+        },
+        "mlopt_ms": 0.04566394349967596
+      },
+      "baselines": [
+        {
+          "name": "eager",
+          "kind": "self",
+          "available": true,
+          "cost": 637.0,
+          "median_s": 3.8366371998563414e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 7.363150507444516e-05,
+          "iqr_s": 3.2007446861825883e-06,
+          "verify_passed": true,
+          "verify_max_abs": 4.163336342344337e-17,
+          "note": "measured-only (no symbolic form)"
+        }
+      ]
+    },
+    {
+      "name": "zoo_spline_kan",
+      "title": "Zoo SplineKAN \u2014 the x\u00b7x spelling bridge, canonically",
+      "category": "speed",
+      "citation": "The held-out zoo's `SplineKAN` edge layer (Liu et al. 2024, KAN) \u2014\n`stack([x, x*x, sin x])` spells the quadratic basis element as a\nself-product, exactly the `x\u00b7x` normalizer-code spelling the\ncanonicalizer bridge exists for.  `mul_square` \u2192 `square_to_pow`\nrewrite it to `square`; the extraction keeps the canonical op\n(`mul` gone).  Replays the \u22120.003 % `human-bar.md` cell \u2014 a small\nbut real verified win on code nobody targeted.\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 0.0,
+      "axis": "exec",
+      "cost_before": 87058.33707865168,
+      "cost_after": 87055.46067415731,
+      "best_baseline": "eager spelled",
+      "best_baseline_cost": 87058.33707865168,
+      "beat_best": true,
+      "beat_best_measured": false,
+      "signals_seen": [
+        "law:mul_square",
+        "law:square_to_pow"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 0.034,
+        "n_enodes": 11,
+        "iterations": 3,
+        "extracted_ops": [
+          "add",
+          "einsum",
+          "sin",
+          "square",
+          "stack"
+        ],
+        "cert_steps": 1,
+        "cert_egraph_dep": 0,
+        "median_s": {
+          "mlopt": 2.6877306001551914e-05,
+          "eager spelled": 2.3242413999105338e-05,
+          "inductor": 5.698600580217317e-05
+        },
+        "mlopt_ms": 0.026877306001551915
+      },
+      "baselines": [
+        {
+          "name": "eager spelled",
+          "kind": "self",
+          "available": true,
+          "cost": 87058.33707865168,
+          "median_s": 2.3242413999105338e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 5.698600580217317e-05,
+          "iqr_s": 2.5404951884411275e-06,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": "measured-only (no symbolic form)"
+        }
+      ]
+    },
+    {
+      "name": "zoo_time_cond_conv",
+      "title": "Zoo TimeCondConv \u2014 dead broadcast pads stripped",
+      "category": "speed",
+      "citation": "The held-out zoo's `TimeCondConv` \u2014 the DDPM diffusion residual block\n(Peebles-style sinusoidal time embedding broadcast into a conv block,\n`emb[:, :, None, None]`).  The machine-admitted pad strips\n`mul_unsq_pad_l` / `mul_unsq_pad_r` (provenance MACHINE_SHIPPED)\nremove the dead broadcast pads; `silu_expand` fires alongside.\nReplays the \u22124.996 % `human-bar.md` yield \u2014 the only machine-admitted\nwin in that table \u2014 measured \u22127.7 % on the executor axis here.\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 0.0,
+      "axis": "exec",
+      "cost_before": 226487.7752808989,
+      "cost_after": 209087.68539325843,
+      "best_baseline": "eager",
+      "best_baseline_cost": 226487.7752808989,
+      "beat_best": true,
+      "beat_best_measured": true,
+      "signals_seen": [
+        "law:mul_unsq_pad_l",
+        "law:mul_unsq_pad_r"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 0.058,
+        "n_enodes": 36,
+        "iterations": 2,
+        "extracted_ops": [
+          "add",
+          "arange",
+          "concat",
+          "contiguous",
+          "conv2d",
+          "cos",
+          "detach_",
+          "div",
+          "exp",
+          "group_norm",
+          "linear",
+          "log",
+          "mul",
+          "neg",
+          "silu",
+          "sin",
+          "unsqueeze"
+        ],
+        "cert_steps": 2,
+        "cert_egraph_dep": 0,
+        "median_s": {
+          "mlopt": 5.382234499847982e-05,
+          "eager": 6.784975600021426e-05,
+          "inductor": 9.427400073036551e-05
+        },
+        "mlopt_ms": 0.05382234499847982
+      },
+      "baselines": [
+        {
+          "name": "eager",
+          "kind": "self",
+          "available": true,
+          "cost": 226487.7752808989,
+          "median_s": 6.784975600021426e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 9.427400073036551e-05,
+          "iqr_s": 2.2849926608614624e-06,
+          "verify_passed": true,
+          "verify_max_abs": 4.440892098500626e-16,
           "note": "measured-only (no symbolic form)"
         }
       ]

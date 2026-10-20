@@ -1,0 +1,30 @@
+name = "zoo_adaln_affd"
+title = "Zoo AdaLNBlock — the affd carrier lift, opt-in regime"
+category = "structure"
+citation = """
+The held-out zoo's `AdaLNBlock` (Peebles & Xie 2022, DiT) —
+`LN(x)·(1+scale) + shift` modulation lifted by `affd_lift` /
+`affd_lift_unit` into `applyd(aff_diag(ln(x), shift), 1+scale)` under
+the `carrier_search` regime (`SCAN_DIAG_LAWS` is opt-in — DEFAULT
+never runs it; the store's `affd_step_lift` twin is admitted but
+unshipped).  Reachability row: the lift lands (two `applyd` pairs in
+the extraction) but the executor axis prices it +7.9 % — exactly the
+regression `human-bar.md` measured — so the scorecard records the
+honest `beat=no` on a derived form.
+"""
+source = "zoo_adaln_block"
+size = 16
+rules = "carrier_search"
+cost = "exec"
+max_iterations = 16
+
+[expect]
+signals = ["law:affd_lift", "op:applyd"]
+ops = ["applyd", "aff_diag"]
+
+[[baselines]]
+name = "eager"
+kind = "self"
+[[baselines]]
+name = "inductor"
+kind = "compile"

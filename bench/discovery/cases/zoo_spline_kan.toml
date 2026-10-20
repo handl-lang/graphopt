@@ -1,0 +1,28 @@
+name = "zoo_spline_kan"
+title = "Zoo SplineKAN — the x·x spelling bridge, canonically"
+category = "speed"
+citation = """
+The held-out zoo's `SplineKAN` edge layer (Liu et al. 2024, KAN) —
+`stack([x, x*x, sin x])` spells the quadratic basis element as a
+self-product, exactly the `x·x` normalizer-code spelling the
+canonicalizer bridge exists for.  `mul_square` → `square_to_pow`
+rewrite it to `square`; the extraction keeps the canonical op
+(`mul` gone).  Replays the −0.003 % `human-bar.md` cell — a small
+but real verified win on code nobody targeted.
+"""
+source = "zoo_spline_kan"
+size = 16
+rules = "default"
+cost = "exec"
+
+[expect]
+signals = ["law:mul_square", "law:square_to_pow"]
+ops = ["square"]
+absent_ops = ["mul"]
+
+[[baselines]]
+name = "eager spelled"
+kind = "self"
+[[baselines]]
+name = "inductor"
+kind = "compile"

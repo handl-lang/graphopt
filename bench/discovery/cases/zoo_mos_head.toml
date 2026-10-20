@@ -1,0 +1,27 @@
+name = "zoo_mos_head"
+title = "Zoo MoSHead — gather dedup reaches, cost-neutral"
+category = "structure"
+citation = """
+The held-out zoo's `MoSHead` (Yang et al. 2018, mixture-of-softmaxes)
+— a pure reachability row: `index_select_dedup` (×5) and
+`index_select_id` (×4) fire on the einsum-expanded gather/index
+structure and the param-sharing lift offers the (3,d,n) component
+table a `heads3` share, yet the extraction stays byte-identical
+(cost-neutral, as `human-bar.md` recorded: fires, no win).  The row
+guards *derivability* — the day the dedup family turns paying on a
+real head, this case's cost columns move first.
+"""
+source = "zoo_mos_head"
+size = 16
+rules = "default"
+cost = "launch"
+
+[expect]
+signals = ["law:index_select_dedup", "law:index_select_id", "stat:param_sharing"]
+
+[[baselines]]
+name = "eager"
+kind = "self"
+[[baselines]]
+name = "inductor"
+kind = "compile"

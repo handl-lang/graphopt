@@ -1,0 +1,33 @@
+name = "zoo_gau"
+title = "Zoo GatedAttentionUnit — quadratic gate lifts to om_decayed"
+category = "memory"
+citation = """
+The held-out zoo's `GatedAttentionUnit` (Hua et al. 2022, FLASH) —
+softmax-free attention whose `relu(u uᵀ)²` self-similarity score is a
+quadratic (T,T) site.  `om_decayed_lift` raises the masked-score
+matmul onto the decayed-om carrier while the `mul_square` /
+`square_to_pow` spelling bridge canonicalises `a*a`; the extraction
+keeps one `om_decayed` node (the (T,T) score matrix never
+materialises).  Replays the −0.003 % `human-bar.md` cell — −9.5 %
+under the executor axis here.
+"""
+source = "zoo_gau"
+size = 16
+rules = "default"
+cost = "exec"
+
+[expect]
+signals = ["law:om_decayed_lift", "law:mul_square", "op:om_decayed"]
+ops = ["om_decayed"]
+max_ops = { matmul = 2 }  # the (u uᵀ) contraction is carried, not spelled
+
+[[baselines]]
+name = "eager quadratic"
+kind = "self"
+[[baselines]]
+name = "inductor"
+kind = "compile"
+[[baselines]]
+name = "FLASH GAU kernel"
+kind = "external"
+note = "fla.layers.gau — scratch dep; the hand kernel this emulates"

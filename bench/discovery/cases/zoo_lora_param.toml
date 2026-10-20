@@ -1,0 +1,33 @@
+name = "zoo_lora_param"
+title = "Zoo LoRAAdapter on the storage axis — the fold's other side"
+category = "memory"
+citation = """
+The same zoo `LoRAAdapter` site priced on `param_bytes` — the memory
+twin of `zoo_lora_adapter`.  Folding `up(down(x))` to one (d,d) GEMM
+buys the runtime win at a storage price the speed axis hides:
+`2·d·r` stored adapter values become `d²`.  Honest row — the scorecard
+records the +32 % storage regression, not a hoped-for reduction: the
+speed/memory tradeoff of every weight fold made visible on a real
+model.
+"""
+source = "zoo_lora_adapter"
+size = 16
+rules = "default"
+cost = "param_bytes"
+
+[expect]
+signals = ["law:assoc_linear"]
+ops = ["linear", "matmul"]
+max_ops = { linear = 2 }
+
+[[baselines]]
+name = "eager low-rank"
+kind = "self"
+[[baselines]]
+name = "merged LoRA"
+kind = "ref"
+ref = "lora_merged"
+note = "same storage regression — the hand-merge pays it too"
+[[baselines]]
+name = "inductor"
+kind = "compile"
