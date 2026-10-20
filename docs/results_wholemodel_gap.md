@@ -199,6 +199,60 @@ and the claim is now honest).  The uncaptured fp32 row drifted up
 from the first run's 2.917 to 3.726 ms — dispatch-side noise on a
 shared box — which only widens the gap the graph removes.
 
+### Shipped since — the dtype contract (re-run, same box)
+
+The fp64 above came from two places.  The big one is the *intake
+convention*: the verify harness feeds fp64 (`model.double()` + fp64
+feeds), so params and the lifted-tensor constants
+(`c_lifted_tensor_*`) are fp64 — every GEMM inherits it.  That half
+is a delivery choice, not a bug: lower with fp32 params and the
+module runs fp32.
+
+The second was a real bug: a `Const` leaf materialised as
+`torch.tensor(value)` at the **ambient default dtype**
+(`eval_term` + the `_EvalPlan` tape in `torch_bridge`, and
+`meta_eval._eval_term` — the law-premise/lp evaluator).  Under an
+fp64 process default (`set_default_dtype(float64)` — the verify
+convention) an fp32 delivery minted fp64 constants.  A 0-dim const
+is a weak scalar — `s / Const(√T)` never promotes — but a Const
+feeding a *generator* binding does: `decay`/`decay_vec` mint
+`torch.arange(dtype=g.dtype)`, so an fp64-minted γ yields an fp64
+(T,T) mask that promotes `s·d` — and then `matmul` meets
+`double != float`:
+
+| term `(s32 * decay(Const(0.9))) @ v32`, ambient fp64 | result |
+|---|---|
+| pre-fix mint (`torch.tensor(v)` at ambient) | **`RuntimeError: expected m1 and m2 to have the same dtype, but got: double != float`** |
+| post-fix mint (operand dtype) | `torch.float32` |
+| post-fix, ambient fp32 + fp64 operands | `torch.float64` — no narrowing |
+
+The reverse direction was silent, and the earlier tables carry the
+evidence: ambient fp32 + an fp64 delivery minted fp32 consts.  A
+0-dim const stays weak — no dtype promotion — but its *fp32-rounded
+value* perturbs the fp64 compute (`s64 / f32(√T)` is ~3e-10 off
+per element, accumulating through the GEMMs): the pre-fix carrier's
+`9.8e-9` verify floor (vs the spelled fp64 reference, above) *was*
+this narrowing — reproduced directly: the same carrier + inputs with
+the mint patched back to ambient reads `max_abs 9.77e-9`, vs
+`1.67e-16` post-fix.  The float `Const` now mints at the
+computation's dtype: the input first, then the var/param env, then
+the first floating `Param`,
+ambient default only when no tensor context exists.  Ints keep
+`torch.tensor(v)` (weak-int semantics — `x % 2` stays integer), and
+`sink.verify` / lp-evaluate keep their exactness — the fp64 premise
+env in `meta_eval` still mints fp64 consts.
+
+Probe arms re-run post-fix (T=2048, K=8, C=256 — same saturation,
+same box):
+
+| arm | med ms | note |
+|---|---|---|
+| fused32+graph | **0.454** | unchanged — the fix doesn't move the normal-ambient table (the carrier's only `Const`, `/√T`, is a weak scalar; its fp64 wall was fp64 *params*) |
+| carrier32+graph(run) | 1.150 | runner generic capture, unchanged |
+| carrier32 ambient-fp64 check | 2.861, out `torch.float32` | `set_default_dtype(float64)` during the call — the delivery stays fp32 and times like it |
+| `verify32` (fp32 spelled ref vs fp32 delivery) | — | **passed**: `max_abs 7.45e-08`, `rel 1.30e-07` < rtol 1e-4 — the fp32 arm is now a *verified* delivery, not a speed baseline |
+| chainfuse delivered(gen)32 | 0.170 | unchanged (spelled-eager32 0.281) |
+
 ## What closing this takes (honest answer)
 
 Ordered by measured payoff per unit of machinery:
@@ -206,7 +260,13 @@ Ordered by measured payoff per unit of machinery:
 1. **fp32 delivery where the verify contract allows** — removes ~55%
    of the gap on this GPU class.  Not kernel work: it's a
    dtype/tolerance-contract decision (the fp64 gate is the verify
-   default, not a semantic requirement).
+   default, not a semantic requirement).  **Shipped**: `Const`s now
+   mint at operand/param dtype (`torch_bridge._mint_const`), the
+   fp32 delivery verifies against the fp32 reference at the same
+   rtol (`verify32` passed, `rel 1.30e-07`), and the fp64 delivery is
+   *more* exact than before (`1.67e-16`, was `9.8e-9` — the ambient
+   mint had been silently narrowing the masks).  Remaining decision
+   is only which dtype to *request* at lowering.
 2. **Graph-capture generic `IRModule`s** — **shipped**: the
    `CudaGraphRunner` generic path (the re-run table above); measured
    3.73→**1.15 ms** on the fp32 carrier, matching the manual-capture
@@ -233,8 +293,9 @@ table vs Inductor.
 
 ## Caveats
 
-- fp32 arms are speed baselines; no fp32-tolerance verify was run —
-  the shipped verify gate is fp64.
+- fp32 arms were speed baselines at first measurement; the dtype-fix
+  re-run adds `verify32` (fp32 spelled ref vs fp32 delivery,
+  rtol 1e-4) — **passed** on carrier and executor.
 - FLA rows are the 2026-10-14 retro's (same box); not re-measured
   (scratch deps absent).
 - `bench/drivers/probes/retnet_baseline_probe.py` currently has a
