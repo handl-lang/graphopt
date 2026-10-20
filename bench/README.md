@@ -45,12 +45,28 @@ bench/
   limits/                              # baselines registry + limits-table CLI
   baselines/                           # committed golden results
   results/                             # working output (gitignored)
+  probes/                              # measurement probes (ex-`lab/`):
+                                       #   per-question instruments whose
+                                       #   output is a docs/results_*
+                                       #   document, incl. contraction/
+  screen/                              # discovery drivers (exposure census,
+                                       #   per-model + corpus sweeps)
+  mint/                                # the ADR-0007 atom/synth loops
+  bridge/                              # ADR-0008 probes + sharing extract
+  audit/                               # the handl-side oracles
+  kit/                                 # the mlopt-term → .hnl emit/eval bridge
+  train/                               # measurement-only policy trainers
+  policy/                              # the controlled-protocol policy drivers
+                                       #   (results in docs/results_*.md)
 ```
 
 Suites live under `suites/<intent>/` (the directory is the intent)
 and expose `run_bench(args) -> Report`.  They never time anything
 themselves — they describe `Case`/`Variant` data and hand it to
-`Runner`.
+`Runner`.  The bottom block (`probes/` … `policy/`) is the dissolved
+`lab/` — research drivers rather than `Report`-style suites: they run
+standalone (`.venv/bin/python bench/<sub>/<mod>.py`) and write result
+documents, not `baselines/` rows.
 
 ## The Report model
 

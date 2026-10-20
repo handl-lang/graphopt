@@ -1,11 +1,11 @@
 # The stopping policy — can the learned arm learn *when to quit*
 
-**Date:** 2026-10-19 · **Script:** `lab/stop_policy.py` (new —
-same memoized-verdict protocol as `lab/richer_features.py`) ·
+**Date:** 2026-10-19 · **Script:** `bench/policy/stop_policy.py` (new —
+same memoized-verdict protocol as `bench/policy/richer_features.py`) ·
 **Seed:** 0 · **Runner:**
 
 ```bash
-timeout 1800 .venv/bin/python lab/stop_policy.py \
+timeout 1800 .venv/bin/python bench/policy/stop_policy.py \
     --json /tmp/stop.json            # ~4 min
 ```
 
@@ -86,7 +86,7 @@ second head is the next arm, not more columns.
 # Round 2 — the explicit stop head (same script, extended)
 
 **Date:** 2026-10-19 (same day, second run) · **Runner:** identical —
-`timeout 1800 .venv/bin/python lab/stop_policy.py --json /tmp/stop.json`
+`timeout 1800 .venv/bin/python bench/policy/stop_policy.py --json /tmp/stop.json`
 (~5 min).
 
 ## Mechanisms priced
@@ -231,7 +231,7 @@ Until then the game's economics rationally say keep spending.
 # Round 3 — the next-candidate-value features (the missing variable, built)
 
 **Date:** 2026-10-19 (same day, third run) · **Runner:** identical —
-`timeout 1800 .venv/bin/python lab/stop_policy.py --json /tmp/stop.json`
+`timeout 1800 .venv/bin/python bench/policy/stop_policy.py --json /tmp/stop.json`
 (~3.5 min: 148 s pool memoization + 12 arms).
 
 Round 2's closing diagnosis named the missing variable: nothing
@@ -368,7 +368,7 @@ is only the linear-score proxy).
 # Round 4 — the learned value signal + a gate correction that reopens the head
 
 **Date:** 2026-10-19 (same day, fourth run) · **Runner:** identical —
-`timeout 1800 .venv/bin/python lab/stop_policy.py --json /tmp/stop.json`
+`timeout 1800 .venv/bin/python bench/policy/stop_policy.py --json /tmp/stop.json`
 (~4 min: 148 s pool memoization + 3 s net + 18 arms).
 
 Round 3 closed on the missing variable: nothing predicts *which*
@@ -399,7 +399,7 @@ in their own sections remain as recorded under the inverted gate.)
 
 `train_rule_value` on `RuleSample` rows built from the 576 even-page
 candidates' **memoized** verdicts (BCE `delta_cost > 0`, 300 epochs,
-hidden 32 — the `lab/policy_baseline.py` neural path), sigmoid
+hidden 32 — the `bench/policy/policy_baseline.py` neural path), sigmoid
 predictions injected into the new `open:next-val` part's lookup
 (`og.set_value_preds` — keyed by the same structural
 `(label, repr(lhs), repr(rhs))` identity the verdict memo uses, so
@@ -506,3 +506,159 @@ labels, not `delta > 0` — the net nails its own label at 0.93 and
 still misses `useful` at 0.03, so the label gap is the binding
 constraint); (b) a serializable gate — e.g. the head folded as a
 *pairwise* stop-vs-top-eval comparison the softmax can express.
+
+---
+
+# Round 5 — the `useful`-label predictor, honest calibration, and the serializable fold
+
+**Date:** 2026-10-19 (same day, fifth run) · **Runner:** identical —
+`timeout 1800 .venv/bin/python bench/policy/stop_policy.py
+--json /tmp/stop5_<label>.json --value-label <label>` (~5 min:
+173 s pool memoization + ~25 s nets + 18 arms with folds).  Three
+runs, one per injected label.
+
+Round 4's open thread (a) is tested directly: the identical
+`RuleValueNet` retrained on the *verdict* label — **`useful`** (truth
+∧ strictly-cost-lower ∧ novelty, the real verdict — 7/576 train
+positives, 1.2%) with the balanced `pos_weight` (81.3) added as a
+`train_rule_value(labels=…, pos_weight=…)` seam for exactly this
+rare-positive regime — plus **`pays`** (useful|true — the tiers the
+stop decision actually prices, 26 positives) and **`delta`** kept as
+the round-4 control.  Two protocol fixes land with it: (i) train-page
+preds are now **out-of-fold** (6 folds — every page's preds come from
+a net that never saw it), removing the in-sample optimism round 4
+priced (`head+nv` over-stopped at 10.78 evals); (ii) every head arm
+ships a **fold** variant — the head's stop-only `x:stop:*` columns
+plus a calibrated `op:stop` intercept as an ordinary weight table,
+the only delivery of the gate's timing that
+`OPEN_GAME_PLAYER_WEIGHTS` could serialize (its stop logit is
+`w_rank·φ_stop − w_head[x:stop:*]·φ + c` — a *relative* threshold,
+not the gate's absolute one).
+
+## The predictor — the label was *not* the constraint
+
+Held-out AP per trained net vs each label (identical across the
+three runs — same nets):
+
+| net | pos | pos_w | AP vs `useful` sigmoid | AP vs `useful` logit | AP vs `delta` logit | AP vs `pays` logit | AP in-sample |
+|---|---|---|---|---|---|---|---|
+| `delta` (round-4 control) | 271 | — | 0.0284 | 0.0432 | **0.9313** | 0.0440 | 1.0000 |
+| **`useful`** | 7 | 81.3 | 0.0162 | 0.0167 | 0.4647 | **0.0959** | 1.0000 |
+| `pays` | 26 | 21.1 | 0.0173 | 0.0168 | 0.4103 | 0.0643 | 1.0000 |
+
+**The label-swap hypothesis fails.**  The `useful`-label net does
+not beat the round-4 net on `useful` — 0.0167 logit AP vs 0.0432,
+worse than the heuristic's 0.045 too.  Its in-sample AP is 1.0000
+within ~20 epochs at every recipe tried (pos_weight 1–162, hidden
+8–32, epochs 20–300, seeds 0–2): with 7 positives the MLP *memorizes*
+them and the residual — `useful` additionally requires *truth* of an
+unproven candidate and *novelty* against the library — is not in the
+(program features ⊕ rule shape) vocabulary at all.  `delta > 0`
+(pure cost-movement) is learnable at AP 0.93; the truth+novelty
+conjunction is not.  The round-4 read stands, sharper: the predictor
+class is fine and the label was wrong — *and the new label is not
+learnable either*, so the gap is evidence, not targets.
+
+One genuine inversion worth reporting: on the *decision rows* the
+`useful` net is the best signal — `x:stop:next_value` solo AP vs the
+oracle continue-labels is **0.3818** under the useful-label
+injection (delta 0.3217, `pays` 0.1706 — the nominally-right label
+is worst).  Pool aggregation (max/Σ over 16 pending preds) forgives
+per-candidate noise: the worst ranker produces the best stop-state
+feature.
+
+## Results (`head` arms under OOF calibration; fold variants new)
+
+| arm | mechanism | reward/ep | greedy | use/eval | evals/ep | stops | AP |
+|---|---|---|---|---|---|---|---|
+| incumbent | rl 5ep | 0.2728 | 0.3590 | 0.0115 | 14.44 | 19 | 0.2101 |
+| `head+nv` **delta** | gate, OOF cal | **0.2866** | 0.3504 | 0.0106 | 15.67 | 18/20 | 0.2101 |
+| `head+nv` **useful** | gate, OOF cal | **0.2850** | 0.3591 | 0.0104 | 16.00 | 1/— | 0.2101 |
+| `head+nv` **pays** | gate, OOF cal | 0.2413 | 0.3611 | 0.0146 | 9.50 | 31/29 | 0.2101 |
+| `head+stop+nv` **pays** | gate, OOF cal | **0.2735** | 0.3629 | 0.0121 | 13.72 | 12/8 | 0.2101 |
+| `head+stop+nv` **delta** | gate, OOF cal | 0.2726 | 0.3465 | 0.0115 | 14.50 | 24/17 | 0.2101 |
+| `head+stop+nv` **useful** | gate, OOF cal | 0.2425 | 0.3087 | 0.0151 | 9.22 | 31/— | 0.2101 |
+| `head+nv-fold` **delta** | weight table | 0.2726 | 0.3601 | 0.0114 | 14.67 | 22/13 | 0.2101 |
+| `head+nv-fold` **useful** | weight table | **0.2850** | 0.3590 | 0.0104 | 16.00 | 0/0 | 0.2101 |
+| `head+nv-fold` **pays** | weight table | 0.2558 | 0.3607 | 0.0116 | 14.33 | 16/3 | 0.2101 |
+| `head+stop+nv-fold` **delta** | weight table | 0.2640 | 0.3486 | 0.0106 | 15.50 | 4/1 | 0.2101 |
+| `inc+nv` **delta** | rl 5ep | **0.3008** | 0.3810 | 0.0109 | 15.31 | 16 | **0.1042** |
+| `inc+nv` **useful** | rl 5ep | 0.2594 | 0.3484 | 0.0094 | 14.81 | 18 | 0.0650 |
+| `imitate-nv` **pays** | rl + imitate | 0.1809 | 0.0454 | 0.0412 | 2.69 | 36 | 0.0314 |
+| `head` / `head-fold` | no value signal | 0.2878 / 0.2850 | 0.3508 / 0.3590 | | 15.31 / 16.00 | 26 / 0 | 0.2101 |
+
+(Non-nv arms replicate round 4 bit-identically; `head+nvh`/`head+nvh-fold`
+and the `nextval` family are unchanged and omitted for space —
+`head+nvh` still 0.2835 @ 36 stops.)
+
+## What the corrected calibration shows
+
+* **The over-stop was optimism, and it is fixed.**  Under in-sample
+  train preds round 4's `head+nv` calibrated to a τ that stops at
+  10.78 evals held-out (−0.028).  Under out-of-fold train preds the
+  same arm lands τ mid-grid and stops at 15.67 evals for **0.2866**
+  — +0.014 over incumbent, the first value-fed gate that both earns
+  *and* still stops (18/36 episodes).  The signal is real but thin:
+  the gate mostly declines to stop early because the predictor
+  cannot certify an empty pool — honest calibration now prices that
+  honestly instead of being fooled by memorized train preds.
+* **The injected label decides *which* degenerate point.**  `useful`
+  preds → τ at the drain end (1 stop, 0.2850 — the never-stop
+  confound); `pays` preds → over-stop (9.5–9.2 evals, 0.2413/0.2425 —
+  the pos_weight-inflated probs keep expected yield high everywhere,
+  so `pool_value` drains slowly and the head quits early); `delta`
+  preds → the only profitable mid-point.  `head+stop+nv` under
+  `pays` is the second honest clear (0.2735, 12 real stops — the
+  stop-schema columns discipline where the `pays` signal is used).
+* **The fold comes within 0.0004 — and still misses.**  The
+  serializable `head+nv-fold` under `delta` preds plays a *real*
+  stopping policy in pure weight-table form: 22 sampled stops at
+  14.67 evals, reward **0.2726** — below the 0.273 bar by four
+  ten-thousandths, and its `op:stop` intercept calibration is a
+  knife-edge (the train-reward landscape is flat: neighbouring c
+  cells range 0.264–0.285 and the best cells are the never-stop
+  end).  The fold variants that *do* clear reward (`head+nv-fold`
+  under `useful`, 0.2850) stop **zero times** — the documented
+  confound, not a stopping policy.  The structural reason stands:
+  the gate's rule is an *absolute* threshold on the continue-score;
+  the softmax fold can only express "stop beats the best eval
+  logit", so the threshold drifts with eval-logit scale — the
+  relative-vs-absolute gap the fold's docstring prices.
+* **The RL deliveries still collapse.**  `inc+nv` under `delta`
+  posts the best sampled reward in the whole run (0.3008) at AP
+  0.1042 — the shared-softmax corruption, a fourth time; `inc+nv`
+  under `useful` AP 0.0650.  `imitate-nv` under `pays` finally moves
+  off the floor (0.1809, 2.69 evals — stops on average, finds
+  nothing transferable, AP 0.0314).
+
+## Verdict (round 5): not earned — `OPEN_GAME_PLAYER_WEIGHTS` stays
+
+Gate: held-out reward ≥ 0.273 **and** AP ≥ 0.210, honestly —
+never-stop or AP-collapse is an honest negative.  Two *gated* arms
+clear both bars with real stopping (`head+nv` under `delta`
+0.2866 @ 18 stops; `head+stop+nv` under `pays` 0.2735 @ 12 stops),
+but a gate ships a second scorer + calibrated τ — not a weight
+table.  Every *serializable* arm either misses (`head+nv-fold`
+0.2726 — 0.0004 short), clears by never stopping (`head+nv-fold`
+`useful`, 0.2850 @ 0 stops), or collapses the ranking (`inc+nv`,
+AP 0.1042).  And a fold bake would still be dishonest in a second
+way: its stop behavior depends on `set_value_preds` being fed at
+runtime — unfed, the `x:stop:*` columns are zeros and the fold
+degenerates to a constant `op:stop` propensity, so it is not a pure
+weights table regardless.  **No bake.**
+
+The five-round arc closes: the stop axis's ~+0.026 headroom is real
+(oracle 0.3877), the gate mechanism works (corrected comparison,
+reward-calibrated τ), the calibration is now honest (OOF preds), and
+a per-candidate value signal helps the *decision rows* even at
+candidate-AP 0.02 (solo 0.38) — but the two missing pieces are
+structural: (a) a predictor for `useful` cannot exist on these
+features (7 positives memorize; truth ∧ novelty is invisible to
+program-shape ⊕ rule-shape), so signal quality caps the attainable
+τ; (b) the gate's absolute threshold does not survive serialization
+into a softmax weight table, and every weight-typed delivery tested
+— RL columns ×4 feature families, CE imitation, and now the
+head-fold — lands one of the two degenerate points.  A bakeable
+stop policy needs either a fundamentally better usefulness signal
+(verdict-conditioned features the verifier can see, not just term
+shape) or a stop decision outside the shared softmax entirely.

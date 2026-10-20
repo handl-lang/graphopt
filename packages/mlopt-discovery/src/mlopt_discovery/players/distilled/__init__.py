@@ -42,7 +42,7 @@ SPECS: tuple[PlayerSpec, ...] = (
             "scale-free-v1 — state 7 + pair 9 "
             "(mlopt_torch.contraction_policy)"
         ),
-        train="lab/probes/contraction/contraction_distill.py --save",
+        train="bench/probes/contraction/contraction_distill.py --save",
         artifact=_ARTIFACT,
         record=(
             "beats oe RandomGreedy at equal wall-clock, n=40: "
@@ -55,7 +55,7 @@ SPECS: tuple[PlayerSpec, ...] = (
         kind="distilled",
         boards=("contraction",),
         schema="same as ``distilled`` — single argmax pass",
-        train="lab/probes/contraction/contraction_distill.py --save",
+        train="bench/probes/contraction/contraction_distill.py --save",
         artifact=_ARTIFACT,
         record=(
             "0.9-1.3x oe-greedy — the plausible fallback, brittle "

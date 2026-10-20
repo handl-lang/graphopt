@@ -161,7 +161,6 @@ _VERDICT_COLS = (
 #: flip it.
 _CODE_PATHS = (
     "packages",
-    "lab",
     "scripts",
     "bench",
     "pyproject.toml",

@@ -104,7 +104,7 @@ to the torch-fp64 answer at **6.7e-16**.
   26.7 s on this box; needs `target/debug/hnl-run`, built by
   `cargo build -p mlopt-kit --bin hnl-run`).
 - Reproduce the five-arm decomposition (the table above):
-  `.venv/bin/python lab/probes/conv_fold_wall_regimes_probe.py`
+  `.venv/bin/python bench/probes/conv_fold_wall_regimes_probe.py`
   (~5 min — five programs × 31 subprocess evals, debug build).
 - Reproduce the scaffold arm (the in-tree `experiments/` crate):
   `cargo run --release --manifest-path experiments/Cargo.toml
@@ -116,7 +116,7 @@ to the torch-fp64 answer at **6.7e-16**.
 
 ### The admission account, end to end
 
-`lab/probes/conv_fold_premise_pay_probe.py` (~13 s on this box)
+`bench/probes/conv_fold_premise_pay_probe.py` (~13 s on this box)
 reproduces the whole arc on the real eval-mode ConvBN seed:
 
 | leg | measured |
@@ -129,7 +129,7 @@ reproduces the whole arc on the real eval-mode ConvBN seed:
 | pay | fires=1, `dag_cost` **34,874.3 → 17,438.7** on the 8×8 site, `verified=pass`, `typed=1/0` |
 | gauntlet | refuses at **novelty** (`relation=duplicate`) in 0.4 s — the documented signature of "already admitted", not a regression |
 
-- Reproduce: `.venv/bin/python lab/probes/conv_fold_premise_pay_probe.py`
+- Reproduce: `.venv/bin/python bench/probes/conv_fold_premise_pay_probe.py`
 - Retros: `project/retros/minted-composite-default.md`,
   `premise-anchored-derivability.md`, `fold-cost-single-source.md`.
 
@@ -158,10 +158,10 @@ the fold, value-equal on dyadic fixtures.  The bridge test suite is
 .venv/bin/python -m pytest tests/test_kit_bridge.py -q          # 8 tests, ~27 s
 
 # the fold's wall-clock regimes, decomposed (all five arms, one binary/fixture)
-.venv/bin/python lab/probes/conv_fold_wall_regimes_probe.py     # ~5 min
+.venv/bin/python bench/probes/conv_fold_wall_regimes_probe.py     # ~5 min
 
 # the admission arc on the real seed
-.venv/bin/python lab/probes/conv_fold_premise_pay_probe.py      # ~13 s
+.venv/bin/python bench/probes/conv_fold_premise_pay_probe.py      # ~13 s
 
 # the scaffold's three arms (the in-tree experiments/ crate)
 cargo run --release --manifest-path experiments/Cargo.toml \

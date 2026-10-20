@@ -69,14 +69,14 @@ oracle = [
 ]
 # OPT-IN field-baseline group.  `opt_einsum` ships the *standard*
 # contraction-ordering players (`greedy`, the exact `optimal` DP) used
-# by lab/probes/contraction/contraction_einsum.py to falsify the learned policy against a
+# by bench/probes/contraction/contraction_einsum.py to falsify the learned policy against a
 # third-party yardstick instead of our own hand-built baselines.  It is
 # deliberately NOT in `dev`: nothing under packages/ imports it, the
 # tool self-skips (a `SystemExit` with a `uv sync --group einsum` hint)
 # when the group is absent, and the default env stays unchanged.  Pinned
 # to a release published > 7 days before this change (3.4.0, 2024-09-26),
 # bounded below 4 so the lockfile cannot drift to an untested major.
-#   uv sync --group einsum && .venv/bin/python lab/probes/contraction/contraction_einsum.py
+#   uv sync --group einsum && .venv/bin/python bench/probes/contraction/contraction_einsum.py
 einsum = [
     "opt_einsum>=3.4.0,<4",
 ]
@@ -111,10 +111,17 @@ members = ["packages/*"]
 # excluded from the uv workspace so ``uv sync``/``uv lock`` never need
 # a Rust toolchain.  Build it explicitly:
 #   maturin develop --release   (from packages/mlopt-native)
-# mlopt-kit is a Rust-only crate (the handl composition seam) — no
-# pyproject.toml, so it is excluded from the uv workspace alongside
-# mlopt-native.
-exclude = ["packages/mlopt-native", "packages/mlopt-kit"]
+# mlopt-kit and mlopt-experiments are Rust-only crates (the handl
+# composition seam + the paper's evidence crate) — no pyproject.toml,
+# so they are excluded from the uv workspace alongside mlopt-native.
+# mlopt-handl-peer is the maturin/PyO3 handl spike — excluded for the
+# same reason as mlopt-native.
+exclude = [
+    "packages/mlopt-native",
+    "packages/mlopt-kit",
+    "packages/mlopt-experiments",
+    "packages/mlopt-handl-peer",
+]
 
 [tool.uv.sources]
 mlopt-core = { workspace = true }

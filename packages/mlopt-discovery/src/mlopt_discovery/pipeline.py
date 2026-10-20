@@ -1847,7 +1847,7 @@ def main(argv: list[str] | None = None) -> int:
         metavar="PATH",
         help="sqlite evidence store (mlopt_discovery.evidence): upsert "
         "candidates + verdicts after the run, keyed by corpus/rule/"
-        "code content hashes.  Keep PATH outside lab/ and scripts/ — "
+        "code content hashes.  Keep PATH outside bench/ and scripts/ — "
         "untracked "
         "code-path files are hashed into the cache key",
     )

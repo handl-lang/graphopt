@@ -6,7 +6,7 @@ Three board families, three honest protocols:
   ``gen``, ``player``) — every arm plays the same held-out cases
   (``d.cases(seed + 7919, n)``) under ``engine.evaluate``; the row is
   reward/ep, evals/ep (steps), terminal cost, wall time.
-* **``open``** — the ``lab/policy_baseline.py`` protocol, reproduced:
+* **``open``** — the ``bench/policy/policy_baseline.py`` protocol, reproduced:
   every candidate in every held-out pool is measured *once* under a
   per-candidate ``torch.manual_seed``, the verdicts memoized, and
   every arm's episodes run under a patched ``lp.evaluate`` replaying

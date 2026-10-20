@@ -1,0 +1,38 @@
+# packages/mlopt-experiments/.handl.toml — the `.hnl`-level dependency manifest.
+#
+# `CatoptKit::new_with_project(<this dir>)` reads this table into the
+# ModuleLoader's import-name → package-directory map, so `.hnl` sources
+# resolve `from "<name>" import …` by *dependency name*, not `../` path.
+#
+# Two deps are declared:
+#
+#   host-tensor — the `tensor.*` op interface every program here runs
+#     against. mlopt's `hnl/conv_bn.hnl` itself does
+#     `from "host-tensor" import tensor` — this manifest is what that
+#     nested import resolves through.
+#
+#   mlopt-kit — mlopt's composition-seam package, declared as a git
+#     source so `import "mlopt-kit/hnl/conv_bn.hnl"` resolves the
+#     folded program *by name*. In this merged tree the package is
+#     in-repo, so the [patch] row below points at it directly
+#     (`../mlopt-kit`) — always present, no stand-in needed.
+#     In a standalone research-mlopt checkout the patch is inert and
+#     the git arm resolves to the package-cache slot (`$HANDL_PKG_DIR`,
+#     else `~/.handl/pkg/mlopt-kit`), which the ADR-0010 fetch-on-miss
+#     hook clones into place; `subdir` names the package root inside
+#     the clone so the git source and the patch dir resolve the same
+#     tree.
+#
+# [patch] is the consumer-side dev-link (the Cargo `[patch]` story): a
+# patch whose named directory exists wins over the declared source; a
+# missing dir is inert. Paths are relative to this manifest's
+# directory — `../mlopt-kit` is in-tree, `../../../<repo>` is
+# the sibling-checkout convention.
+
+[dependencies]
+host-tensor = { git = "https://github.com/handl-lang/host-tensor", branch = "main", subdir = "src" }
+mlopt-kit  = { git = "https://github.com/handl-lang/research-mlopt", branch = "main", subdir = "packages/mlopt-kit" }
+
+[patch]
+host-tensor = "../../../host-tensor/src"
+mlopt-kit  = "../mlopt-kit"

@@ -2266,6 +2266,8 @@
   "packages/mlopt-discovery/src/mlopt_discovery/impact.py::run_impact": 8,
   "packages/mlopt-discovery/src/mlopt_discovery/impact.py::synthetic_cases": 1,
   "packages/mlopt-discovery/src/mlopt_discovery/impact.py::walk": 5,
+  "packages/mlopt-discovery/src/mlopt_discovery/index_abstract.py::_compile_with_inputs": 37,
+  "packages/mlopt-discovery/src/mlopt_discovery/index_abstract.py::_first_diff_mod": 13,
   "packages/mlopt-discovery/src/mlopt_discovery/intake/__init__.py::_report_pipeline": 5,
   "packages/mlopt-discovery/src/mlopt_discovery/intake/__init__.py::ingest": 5,
   "packages/mlopt-discovery/src/mlopt_discovery/intake/__init__.py::main": 14,

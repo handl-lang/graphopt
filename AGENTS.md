@@ -33,36 +33,42 @@ every name lives at its real package path — `mlopt_core.egraph`,
 `mlopt_cuda.CudaGraphRunner`, … Tests in
 `tests/`. The dev virtualenv is `.venv/` (uv-managed).
 
-**The experimental surface is `lab/`** (there is no `tools/`): the
-research drivers live in `lab/mint/` (`atom_law_loop.py` — ADR-0007
-layer 3; `atom_synth_loop.py` — the composed need → handler → laws →
-admission loop; `macro_miner.py` — the minted-macro research driver:
-mines + evals `lawdata.MACROS` candidate tables; the shipped replay
-machinery promoted to `mlopt_discovery.macro_moves` and the retrain
-driver to `scripts/train_meta_macro_prior.py`), `lab/bridge/`
-(`combinator_probe.py`,
-`loop_propose.py`, `index_abstract.py`,
-`sharing_extract.py` — the ADR-0008 bridge;
-the substrate plus the two proposers promoted to
-`mlopt_discovery.combinator` / `.form_propose` / `.state_reindex`),
-`lab/audit/` (`grammar_probe.py`, `handl_differential.py`,
-`egraph_differential.py` — the handl-side oracles), `lab/screen/`
-(`exposure_screen.py`, `exposed_discovery.py`, `discovery_scale.py`),
-`lab/probes/` (the measurement probes, incl. `contraction/` — whose
-`contraction_distill.py --save` also mints the shipped
-`contraction_policy_distilled.pt`), the top-level policy drivers
-`lab/policy_baseline.py` + `lab/policy_ablations.py` +
-`lab/policy_rl_arms.py` + `lab/schema_leaderboard.py` +
-`lab/stop_policy.py` + `lab/richer_features.py` (results in
-`docs/results_*.md`), `lab/train/` (the three measurement-only
-drivers `train_graph_policy.py`, `train_rl_policy.py`,
-`train_search_policy.py`), `lab/kit/` (`term_hnl.py` — the mlopt-term →
-`.hnl` emit/eval bridge into `CatoptKit`), `lab/handl-spike/` (the
-dumped `fragments/`/`fragments-all/` language YAML the peer tests
-consume — regenerate with `scripts/dump_fragments.py`) and
-`lab/handl-peer/` (`mlopt-handl-peer` — the PyO3
-spike: Python calls handl's loader + rewrite engine directly).
-Run them with `.venv/bin/python lab/<sub>/<mod>.py`.
+**The research/measurement surface is `bench/`** — the dissolved
+`lab/` lives there now, beside the harnessed benchmark package
+(`python -m bench`; `bench/suites/`, `bench/discovery`,
+`bench/players`, `bench/limits` — see `bench/README.md`).  The
+ex-`lab/` drivers run standalone —
+`.venv/bin/python bench/<sub>/<mod>.py` — and write result documents,
+not `baselines/` rows:
+
+- `bench/mint/` — `atom_law_loop.py` (ADR-0007 layer 3),
+  `atom_synth_loop.py` (the composed need → handler → laws →
+  admission loop).  The minted-macro miner is tooling:
+  `scripts/macro_miner.py` mines + evals `lawdata.MACROS` candidate
+  tables; the shipped replay machinery is
+  `mlopt_discovery.macro_moves` and the retrain driver is
+  `scripts/train_meta_macro_prior.py`.
+- `bench/bridge/` — `combinator_probe.py`, `sharing_extract.py`
+  (the ADR-0008 bridge).  The substrate and all four proposers
+  promoted to `mlopt_discovery.combinator` / `.form_propose` /
+  `.state_reindex` / `.index_abstract` / `.loop_propose`.
+- `bench/audit/` — `grammar_probe.py`, `handl_differential.py`,
+  `egraph_differential.py` (the handl-side oracles).
+- `bench/screen/` — `exposure_screen.py`, `exposed_discovery.py`,
+  `discovery_scale.py`.
+- `bench/probes/` — the measurement probes, incl. `contraction/`
+  (whose `contraction_distill.py --save` also mints the shipped
+  `contraction_policy_distilled.pt`).
+- `bench/policy/` — the controlled-protocol drivers
+  `policy_baseline.py` + `policy_ablations.py` + `policy_rl_arms.py` +
+  `schema_leaderboard.py` + `stop_policy.py` + `richer_features.py`
+  (results in `docs/results_*.md`).
+- `bench/train/` — the three measurement-only drivers
+  `train_graph_policy.py`, `train_rl_policy.py`,
+  `train_search_policy.py`.
+- `bench/kit/` — `term_hnl.py`, the mlopt-term → `.hnl` emit/eval
+  bridge into `CatoptKit`.
+
 Some probes need scratch deps installed `--no-deps` outside the
 lockfile: `birefnet_bounded_probe.py` wants
 `timm einops kornia transformers torchvision`;
@@ -74,6 +80,7 @@ shipped-artifact bakers promoted out of `lab/`: `train_meta_prior.py`,
 `train_open_prior.py`, `train_player_meta_arm.py`,
 `train_meta_macro_prior.py` — the `lawdata` weight-table literals;
 `train_contraction_artifact.py` — the curriculum `.pt`;
+`macro_miner.py` — the `lawdata.MACROS` table emit;
 `dump_fragments.py` — the handl-spike fragment dirs; and
 `dspec_audit.py` — the shipped-`dspec` audit).
 **Regenerable artifacts live in the cache**, not the tree:
@@ -83,33 +90,40 @@ holds the intake census side-files (`intake_dir()`) and the evidence
 store — shared across worktrees.  The minting machinery itself is in
 `mlopt_discovery` (`antiunify`, `handler_synth`) — ADR 0007/0008.
 
-**Promotion rule — `lab/` dissolves by destination, not by move.**
-Every lab file has one of three exits (the full inventory, per-file
-classification and ranked promote-candidates live in
+**The handl bridge.**  `tests/fixtures/handl-spike/` holds the dumped
+`fragments/`/`fragments-all/` language YAML the peer tests consume —
+regenerate with `scripts/dump_fragments.py`.
+`packages/mlopt-handl-peer/` is the PyO3 spike (Python calls handl's
+loader + rewrite engine directly; excluded from the uv workspace,
+built with maturin).  `packages/mlopt-experiments/` is the paper's
+evidence crate (was root `experiments/`; a standalone cargo crate —
+see `manifest/kit.toml` and the `Makefile`).
+
+**The `lab/` dissolution is complete** — `lab/` is gone, dissolved by
+destination (the per-file inventory and history live in
 `docs/lab_dissolution_plan.md`):
 
-- **prod machinery → `mlopt_discovery`** — a module whose output is
-  shipped behaviour promotes when its tests clear the **99% coverage
-  floor** (its `lab/<sub>/` mirrors the package layout).  First
-  promotion: `lab/bridge/combinator.py` → `mlopt_discovery.combinator`
-  (**92% → 100%** under `tests/test_combinator_bridge.py`), then
-  `form_propose.py` → `mlopt_discovery.form_propose` (**84% → 99%**)
-  and `state_reindex.py` → `mlopt_discovery.state_reindex`
-  (**83% → 100%**) under `tests/test_form_propose.py` /
-  `tests/test_state_reindex.py`.  Still in queue:
-  `index_abstract.py` 81%, `loop_propose.py` 80% under their
-  dedicated files.  Do not promote a module that would fail the
-  floor — and never widen it.
-- **dev-facing tooling → `scripts/`** — drivers whose purpose is to
-  *regenerate or audit a committed artifact* (the `train_*_prior`
-  weight bakers, the `.pt` artifact trainers, `dump_fragments.py`,
-  `dspec_audit.py`) are tooling, not research: they moved.  A lab
-  driver that graduates to routine tooling moves the same way.
-- **research drivers stay** — measurement scripts whose output is a
-  result document (`docs/results_*.md`, `project/retros/`) rather
-  than a committed artifact keep living in `lab/` until their line
-  of work settles; nothing dead is archived yet (every file was
-  touched within the last week).
+- **prod machinery → `mlopt_discovery`** — code shipped modules
+  depend on.  `combinator` / `form_propose` / `state_reindex`
+  promoted at the 99% floor earlier; `index_abstract` /
+  `loop_propose` followed at dissolution (shipped modules
+  `form_propose` / `state_reindex` import them — they were already
+  de-facto prod).  The discovery **99% ratchet** is a union
+  property — tighten, never lower.
+- **dev-facing tooling → `scripts/`** — drivers that *regenerate or
+  audit a committed artifact* (the `train_*_prior` weight bakers,
+  the `.pt` artifact trainers, `macro_miner.py`, `dump_fragments.py`,
+  `dspec_audit.py`).
+- **research drivers → `bench/`** — measurement drivers whose output
+  is a result document (`docs/results_*.md`, `project/retros/`).
+- **fixtures → `tests/fixtures/`** — the handl-spike fragment dirs.
+- **Rust crates → `packages/`** — `mlopt-handl-peer`,
+  `mlopt-experiments` (the paper's evidence crate).
+
+New work lands by the same rule: a driver that starts emitting a
+committed artifact graduates to `scripts/`; machinery shipped modules
+depend on graduates to `mlopt_discovery` (the 99% ratchet applies to
+the package union).
 
 **Machine-admitted laws are in `DEFAULT`.**  `search(..., rules=DEFAULT)`
 ships **12 machine-admitted laws** alongside the hand-written kernel
@@ -199,10 +213,10 @@ scripts/gates.sh
 ```
 
 ```sh
-# The shipped source: packages/ + lab/ + scripts/ + examples/.
+# The shipped source: packages/ + scripts/ + examples/.
 .venv/bin/ty check            # typecheck — 0 errors required (warnings OK)
-.venv/bin/ruff check packages lab scripts examples   # lint
-.venv/bin/ruff format --check packages lab scripts examples   # formatting
+.venv/bin/ruff check packages scripts examples   # lint
+.venv/bin/ruff format --check packages scripts examples   # formatting
 .venv/bin/vulture             # dead code (uses [tool.vulture] paths)
 .venv/bin/lint-imports        # hexagonal boundary contracts
 .venv/bin/bandit -c .bandit.yaml -r packages   # security SAST
@@ -224,7 +238,7 @@ coverage report -m --include="*/mlopt_discovery/*" --fail-under=99   # ratchet f
 cannot be: they include the documented drift class — `tests/**` and
 `bench/**` (pre-existing isort/format differences under the pinned ruff
 0.16.9) and markdown code blocks in `README.md` and friends, which the
-formatter would rewrap.  `packages`, `lab`, `scripts` and `examples` are
+formatter would rewrap.  `packages`, `scripts` and `examples` are
 clean under both, and `scripts/gates.sh` checks exactly those.
 
 > **Parallel-warning (measured, not theoretical).**  Do *not* run this
@@ -313,7 +327,7 @@ import-linter, vulture, bandit, semgrep and the radon ratchet.  The
 
 Known drift: the installed ruff (0.16.9) still flags pre-existing
 isort / format differences across `tests/` and `bench/`, which are not
-format-checked.  The shipped source — `packages`, `lab`, `scripts`
+format-checked.  The shipped source — `packages`, `scripts`
 and `examples` — is clean under both `ruff check` and
 `ruff format --check`.
 
@@ -455,7 +469,7 @@ equality-saturation search against the Rust **egglog** library on a
 small op/law subset.  It is an **opt-in, test-only oracle** — not a
 production dependency and not an engine swap: `mlopt-core` stays
 pure-Python / zero-dependency, and nothing under `packages/` or
-`lab/` imports `egglog`.  The ported prototype and its documented
+`bench/` imports `egglog`.  The ported prototype and its documented
 limitations (untyped-by-shape terms, unconditional `check` rewrites, no
 proof replay) live in `tests/egglog_oracle.py`.
 
@@ -625,6 +639,6 @@ grouping are generated from it, so they cannot drift.  Details in
 `discovery` suite) and emits `docs/scorecard.md` + `.json`.
 The player comparison lives in `bench/players/` — `python -m
 bench.players.run --players … --boards meta,open,contraction`
-(`--smoke` is the seconds lane) replays `lab/policy_baseline.py`'s
+(`--smoke` is the seconds lane) replays `bench/policy/policy_baseline.py`'s
 memoized-verdict protocol over the `players/` registry and emits
 `docs/leaderboard_players.md` + `.json`.

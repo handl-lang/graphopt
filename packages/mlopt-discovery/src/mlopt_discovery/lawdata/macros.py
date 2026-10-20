@@ -1,7 +1,7 @@
 """The shipped macro table — minted move sequences as baked data.
 
 Like the learned-prior tables in :mod:`.weights`, this is *content*:
-the 8-macro set ``lab/mint/macro_miner.py`` mints off the train
+the 8-macro set ``scripts/macro_miner.py`` mints off the train
 stream (``meta_player.gen_cases(0, 24)`` — 206 trajectories, mined
 n-grams ranked by ``count x mean terminal reward``), serialized as
 plain records and replayed by :mod:`mlopt_discovery.macro_moves`
@@ -17,7 +17,7 @@ miner's evidence — ``count`` occurrences, ``certified`` share in
 certificate-passing episodes, ``mean_terminal`` reward, ``score``
 the rank key.  Regenerate with::
 
-    .venv/bin/python lab/mint/macro_miner.py --emit
+    .venv/bin/python scripts/macro_miner.py --emit
 """
 
 from __future__ import annotations

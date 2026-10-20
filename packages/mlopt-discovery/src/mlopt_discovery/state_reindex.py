@@ -68,17 +68,17 @@ from mlopt_core.ir import Op
 from mlopt_core.laws import R as _R
 from mlopt_core.laws.tensor import DISTRIBUTE_MUL_ADD
 
-from lab.bridge.index_abstract import block_outputs
-from lab.bridge.loop_propose import (
+from mlopt_discovery import combinator as cb
+from mlopt_discovery import form_propose as fp
+from mlopt_discovery.combinator import comb_to_dag
+from mlopt_discovery.index_abstract import block_outputs
+from mlopt_discovery.loop_propose import (
     EXPAND_LOOP,
     PROPOSE_LOOP,
     loop_headed,
     saturate_comb,
     unroll,
 )
-from mlopt_discovery import combinator as cb
-from mlopt_discovery import form_propose as fp
-from mlopt_discovery.combinator import comb_to_dag
 
 __all__ = [
     "DECAY_GATHER",

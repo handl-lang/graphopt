@@ -402,7 +402,7 @@ def test_state_reindex_closes_boundary():
     )
     from mlopt_core.cost import flops_cost
 
-    from lab.probes import om_shared_state_probe as osp
+    from bench.probes import om_shared_state_probe as osp
 
     t, k = 64, 4
     reach, reassoc = om_shared_state_stages(k)

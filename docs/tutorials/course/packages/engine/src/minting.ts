@@ -1,6 +1,6 @@
 /** The minting funnel — ADR 0007's four layers over a measured need bank.
  *
- * Mirrors `lab/mint/atom_synth_loop.py`: a measured need → a candidate
+ * Mirrors `bench/mint/atom_synth_loop.py`: a measured need → a candidate
  * signature → a verified handler → synthesized laws → certified
  * admission → a pay probe.  The bank's stage outcomes, law counts and
  * pay verdicts are the measured ones (`project/retros/atom-synth-loop.md`,

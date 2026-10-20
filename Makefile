@@ -9,9 +9,9 @@
 # invocation goes through --manifest-path.
 
 REPEAT ?= 200
-EXPERIMENTS = experiments/Cargo.toml
+EXPERIMENTS = packages/mlopt-experiments/Cargo.toml
 MLOPT_RAW = https://raw.githubusercontent.com/handl-lang/research-mlopt/main
-ARTIFACT = experiments/.cache/mlopt-kit/hnl/conv_bn.hnl
+ARTIFACT = packages/mlopt-experiments/.cache/mlopt-kit/hnl/conv_bn.hnl
 
 .PHONY: experiment verify build test artifact
 

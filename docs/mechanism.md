@@ -194,7 +194,7 @@ plain data, interpreted, never `eval`'d) proposes handler bodies and
 verifies each fp64 against the spelled spec; the machine minted a
 verified handler for the `om_decayed` element itself (8.9e-16) —
 a pattern that previously required a hand-written executor.
-**Layer 3 — law-theoretic atoms** (`lab/mint/atom_law_loop.py`): for an
+**Layer 3 — law-theoretic atoms** (`bench/mint/atom_law_loop.py`): for an
 atom, enumerate measured binding environments, run `auto_cond` /
 `dspec_synth` to synthesize the laws it satisfies, certify via
 `verify_law` — 25 certified rows on the shipped carrier atoms,
@@ -202,7 +202,7 @@ deliberate false twins rejected.  **Layer 4 — induced atoms**
 (bounded-error lane, fenced: an approximate atom may never appear on
 an exact law's RHS).
 
-The composed loop (`lab/mint/atom_synth_loop.py`) runs need → handler →
+The composed loop (`bench/mint/atom_synth_loop.py`) runs need → handler →
 laws → admission → pay probe end to end; on the corpus it minted
 `scan_fold` (the selective-scan recurrence, 1.78e-15) with a
 certified law set, and measured the honest null that the minted
@@ -223,7 +223,7 @@ sweep found) was **correctly rejected at admission** — its real
 sites are semantically unequal, and the guard declines all of them.
 
 **Exposure — where discovery can pay at all.**  The screen
-(`lab/screen/exposure_screen.py`) scores every corpus workload by the
+(`bench/screen/exposure_screen.py`) scores every corpus workload by the
 FLOPs-weighted share of ops any law's LHS can name: the distribution
 is **bimodal** — 81/321 workloads expose literally nothing (the
 fused-op class: `nn.Conv*`, `nn.*Pool*`, `sdpa` spellings) and 140
@@ -298,7 +298,7 @@ the relationship is not "mlopt emits data handl can read" — handl runs
 mlopt's laws.
 
 **What this is not (yet).**  Two of the spike's "not yet"s have since
-closed.  The peer *is* built: `lab/handl-peer` — plan 0030 step 2 in
+closed.  The peer *is* built: `packages/mlopt-handl-peer` — plan 0030 step 2 in
 its cheapest form — is a PyO3 extension (`import mlopt_handl_peer`:
 `language_transform_ids`, `apply_rule`) over handl's crates, with a CLI
 fallback; `tests/test_handl_peer.py` drives it from Python and checks
@@ -321,7 +321,7 @@ coverage floor, not promoted to `packages/` — and it touches only
 load+rewrite; nothing calls handl's exec engines from Python
 in-process.  (Plan 0030's writeup lives in the `catopt/` checkout —
 `catopt/project/plans/0030-handl-peer-integration.md`; the in-repo
-record is `project/GOALS.md` §G0 and `lab/handl-peer/README.md`.)
+record is `project/GOALS.md` §G0 and `packages/mlopt-handl-peer/README.md`.)
 
 ## Where this lives in the code
 
@@ -335,9 +335,9 @@ record is `project/GOALS.md` §G0 and `lab/handl-peer/README.md`.)
 | Certify | `verify_certificate` |
 | Evaluate | `mlopt_core.features` (`ProgramFeatures`, `StaticProfiler`) · `SearchResult.frontier` · `PredictedCriterion`; `Meter` / `TargetProfile` for measurements (`scripts/calibrate_profile.py`) |
 | Discover (meta) | `mlopt_discovery.pipeline` (census → propose → verify → measure → rank → emit) · `mlopt_discovery.vocab` (property-derived op alphabet) · `mlopt_discovery.gap_gen` (adversarial witnesses) · `mlopt_discovery.emit` (admission patch) |
-| Mint (meta) | `mlopt_discovery.antiunify` (layer 1 — definitional atoms) · `mlopt_discovery.handler_synth` (layer 2 — handler bodies) · `lab/mint/atom_law_loop.py` (layer 3 — law synthesis per atom) · `lab/mint/atom_synth_loop.py` (the composed loop) |
-| Screen / sweep | `lab/screen/exposure_screen.py` (law-LHS exposure census) · `lab/screen/discovery_scale.py` (budgeted corpus sweep + novelty pass) · `lab/screen/exposed_discovery.py` (per-model discovery driver) |
-| Substrate | `mlopt_discovery.combinator` (`BASIS`, `dag_to_comb` / `comb_to_dag`) · `lab/bridge/combinator_probe.py` (round-trip + `loop`-spell gates) |
+| Mint (meta) | `mlopt_discovery.antiunify` (layer 1 — definitional atoms) · `mlopt_discovery.handler_synth` (layer 2 — handler bodies) · `bench/mint/atom_law_loop.py` (layer 3 — law synthesis per atom) · `bench/mint/atom_synth_loop.py` (the composed loop) |
+| Screen / sweep | `bench/screen/exposure_screen.py` (law-LHS exposure census) · `bench/screen/discovery_scale.py` (budgeted corpus sweep + novelty pass) · `bench/screen/exposed_discovery.py` (per-model discovery driver) |
+| Substrate | `mlopt_discovery.combinator` (`BASIS`, `dag_to_comb` / `comb_to_dag`) · `bench/bridge/combinator_probe.py` (round-trip + `loop`-spell gates) |
 | Backends | `mlopt_torch` (`TorchSource`/`TorchSink`) · `mlopt_onnx` (`OnnxSource`/`OnnxSink`, ADR 0006) |
 | Coherence (meta) | `mlopt_discovery.coherence` (`--emit-basis`) · `mlopt_discovery.coherence2` (stratification / reach / mediators) · `mlopt_discovery.evidence` (sqlite verdict store) |
 

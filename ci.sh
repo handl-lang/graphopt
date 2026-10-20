@@ -14,7 +14,7 @@ fi
 
 # mlopt-experiments is excluded from the root workspace (own lockfile —
 # see the `exclude` row in Cargo.toml).
-cargo test --manifest-path experiments/Cargo.toml
+cargo test --manifest-path packages/mlopt-experiments/Cargo.toml
 
 # The certification leg — value-equality through the real runtime.
-cargo run --release --manifest-path experiments/Cargo.toml --bin conv-bn-fold -- --repeat 0
+cargo run --release --manifest-path packages/mlopt-experiments/Cargo.toml --bin conv-bn-fold -- --repeat 0

@@ -1,6 +1,6 @@
 """Tests for the ADR-0008 gate-3 parametric-abstraction move.
 
-``lab/bridge/index_abstract.py`` supplies the *abstraction over the step*
+``mlopt_discovery.index_abstract`` supplies the *abstraction over the step*
 the gate-3 retro named as the missing move: it binds the per-block index
 (and the recurrence state) as **parameters**, turning ``K`` distinct block
 subterms into **one shared step** — the ``unroll(step, K)`` spelling the
@@ -14,8 +14,8 @@ import pytest
 from mlopt_core.ir import Const, Op, TensorType, Var
 from mlopt_discovery import combinator as cb
 
-from lab.bridge import index_abstract as ia
-from lab.bridge import loop_propose as lp
+from mlopt_discovery import index_abstract as ia
+from mlopt_discovery import loop_propose as lp
 
 
 def _v(name, *shape):

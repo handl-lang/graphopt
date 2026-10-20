@@ -36,7 +36,7 @@
 
 /// The equality-saturation leg — `handl-egraph` driven over the
 /// discovery codec's JSON wire forms (`egraph-run` is the bin; the
-/// differential driver `lab/audit/egraph_differential.py` is the
+/// differential driver `bench/audit/egraph_differential.py` is the
 /// consumer).
 pub mod egraph;
 

@@ -86,9 +86,9 @@ stage() {  # stage <name> -- <cmd...>
 echo "== static gates =="
 # Shipped source only.  tests/ and bench/ carry pre-existing ruff drift
 # under the pinned ruff 0.16.9 (see AGENTS.md "Known drift"); packages,
-# lab, scripts and examples are clean and are what the repo ships.
-stage "ruff check"      -- .venv/bin/ruff check packages lab scripts examples
-stage "ruff format"     -- .venv/bin/ruff format --check packages lab scripts examples
+# scripts and examples are clean and are what the repo ships.
+stage "ruff check"      -- .venv/bin/ruff check packages scripts examples
+stage "ruff format"     -- .venv/bin/ruff format --check packages scripts examples
 stage "ty check"        -- .venv/bin/ty check
 stage "vulture"         -- .venv/bin/vulture
 stage "import-linter"   -- .venv/bin/lint-imports

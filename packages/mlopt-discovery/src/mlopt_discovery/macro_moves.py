@@ -15,7 +15,7 @@ player could not already spell — it only compresses the line into
 one step (one ``step`` charge, one budget tick).  The handler keeps
 no global state; the minted sequences are data mined from
 :class:`~mlopt_discovery.meta_arena.Trajectory` reports by
-``lab/mint/macro_miner.py`` and shipped as
+``scripts/macro_miner.py`` and shipped as
 :data:`~mlopt_discovery.lawdata.MACROS`.
 
 The shipped offer seam is :func:`meta_arena.legal_actions` itself:

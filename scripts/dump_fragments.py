@@ -27,7 +27,7 @@ Usage:
 ``--all`` emits the whole shipped bank; the default emits a small,
 deliberate slice (one structural law plus the op shapes it needs) so the
 spike fixture stays reviewable.  With no ``outdir`` the default writes
-into ``lab/handl-spike/fragments/`` — the committed fixture dir the
+into ``tests/fixtures/handl-spike/fragments/`` — the committed fixture dir the
 handl-peer spike and ``tests/test_handl_peer.py`` consume (``--all``
 output conventionally goes to the sibling ``fragments-all/``).
 """
@@ -149,7 +149,7 @@ def main(argv: list[str] | None = None) -> int:
     out = (
         Path(args[0])
         if args
-        else _REPO / "lab" / "handl-spike" / "fragments"
+        else _REPO / "tests" / "fixtures" / "handl-spike" / "fragments"
     )
     out.mkdir(parents=True, exist_ok=True)
 

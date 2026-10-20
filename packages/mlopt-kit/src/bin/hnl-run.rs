@@ -1,6 +1,6 @@
 //! `hnl-run` — run a `.hnl` program through [`CatoptKit`]; print the value.
 //!
-//! The subprocess seam the Python bridge (`lab/kit/term_hnl.py`)
+//! The subprocess seam the Python bridge (`bench/kit/term_hnl.py`)
 //! drives: a `.hnl` source goes in on stdin (or a file path), the
 //! `serde_json::Value` boundary form comes out on stdout —
 //! `{"__tensor__": …}` for a tensor result. Nothing mlopt-term-aware:

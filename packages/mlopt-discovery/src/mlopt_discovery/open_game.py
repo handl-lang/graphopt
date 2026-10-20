@@ -167,7 +167,7 @@ FORMS: tuple[str, ...] = (
 #: ``a:*`` the candidate's own shape (rewriting-form one-hot, op
 #: count, depth, meta count, heuristic score).  The trailing
 #: ``a:score_*``/``x:score:*`` entries are the richer-vocabulary
-#: extension (``lab/richer_features.py`` measured AP 0.210 vs the
+#: extension (``bench/policy/richer_features.py`` measured AP 0.210 vs the
 #: incumbent schema's 0.133 — earned the schema and the bake).
 OPEN_GAME_FEATURES: tuple[str, ...] = (
     "bias",
@@ -228,7 +228,7 @@ def _score(cand: lp.Candidate) -> float:
 #: part's evidence.  The stop-policy loop's missing variable is a
 #: per-candidate answer to "will this pending member still pay": the
 #: heuristic's view tops out at AP ~0.045, so the signal is injected
-#: from a trained ``RuleValueNet`` (``lab/stop_policy.py`` round 4)
+#: from a trained ``RuleValueNet`` (``bench/policy/stop_policy.py`` round 4)
 #: rather than derived from the board.  The seam mirrors the
 #: verdicts' memoization: keys are the *structural* candidate
 #: identity ``(label, repr(lhs), repr(rhs))`` — the same key
@@ -356,7 +356,7 @@ def _act_feats(
 #  registered part — a spec record names them by tag
 #  (:data:`OPEN_EXTRA_PART_TAGS`); they join ``OPEN_PARTS``/``OPEN_
 #  GAME_FEATURES`` only if the richer-features measurement
-#  (``lab/richer_features.py``) earns it.
+#  (``bench/policy/richer_features.py``) earns it.
 
 
 def _pending_scores(state: OpenState) -> list[float]:
@@ -778,7 +778,7 @@ OPEN_PART_TAGS: tuple[str, ...] = (
 #: name emitted per registered part tag.  Four of them earned the
 #: schema (``a:score_rank``/``a:score_rel``/``x:score:depth``/
 #: ``x:score:ops`` are in ``OPEN_GAME_FEATURES``); the ``st:*``
-#: pool-stat parts measured dead weight (``lab/richer_features.py``)
+#: pool-stat parts measured dead weight (``bench/policy/richer_features.py``)
 #: and stay registered-but-unshipped.  ``DomainSpec.build`` for a
 #: richer candidate spec dedupes names already in the schema.
 OPEN_EXTRA_FEATURES: dict[str, tuple[str, ...]] = {

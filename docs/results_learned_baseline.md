@@ -1,10 +1,10 @@
 # Controlled learned-policy baseline
 
-**Date:** 2026-10-19 · **Script:** `lab/policy_baseline.py` · **Seed:** 0
+**Date:** 2026-10-19 · **Script:** `bench/policy/policy_baseline.py` · **Seed:** 0
 throughout · **Runner:**
 
 ```bash
-.venv/bin/python lab/policy_baseline.py --json /tmp/policy_baseline.json
+.venv/bin/python bench/policy/policy_baseline.py --json /tmp/policy_baseline.json
 ```
 
 The question under measurement is `docs/results.md`'s honest note:

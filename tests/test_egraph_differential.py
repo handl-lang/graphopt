@@ -6,7 +6,7 @@ single ``apply_rule`` firings through the peer; these tests drive
 the Rust port's ``EGraph::run``/``extract_best``, over the same
 fixtures, through the compiled ``egraph-run`` subprocess door
 (``packages/mlopt-kit/src/bin/egraph-run.rs``).  The fixture set and
-the comparison live in ``lab/audit/egraph_differential.py`` — this file
+the comparison live in ``bench/audit/egraph_differential.py`` — this file
 is the suite-facing wrapper.
 
 What is asserted: identical e-graph structure (Weisfeiler-Lehman class
@@ -28,7 +28,7 @@ from pathlib import Path
 
 import pytest
 
-from lab.audit import egraph_differential as ed
+from bench.audit import egraph_differential as ed
 
 pytestmark = pytest.mark.e2e
 

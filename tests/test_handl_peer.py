@@ -1,10 +1,10 @@
 """The handl peer's call path — mlopt drives handl's rewrite engine.
 
-This is plan 0030 step 2's proof.  The peer (`lab/handl-peer`) is a PyO3
+This is plan 0030 step 2's proof.  The peer (`packages/mlopt-handl-peer`) is a PyO3
 extension, `mlopt_handl_peer`, built with maturin; these tests drive it
 through the **extension** when it is importable:
 
-    cd lab/handl-peer
+    cd packages/mlopt-handl-peer
     VIRTUAL_ENV=../../.venv maturin develop \\
         --target-dir ~/GitHub/handl-lang/host/target
 
@@ -13,7 +13,7 @@ The same crate also builds a CLI over the same library code
 with no maturin build (and no `mlopt_handl_peer` on `sys.path`) still
 exercises the call path through the binary:
 
-    cd lab/handl-peer
+    cd packages/mlopt-handl-peer
     PYO3_PYTHON=$(git rev-parse --show-toplevel)/.venv/bin/python \\
         CARGO_TARGET_DIR=~/GitHub/handl-lang/host/target \\
         cargo build --bin rewrite
@@ -54,7 +54,7 @@ _BIN = Path(
         Path.home() / "GitHub/handl-lang/host/target/debug/rewrite",
     )
 )
-_FRAGMENTS = _REPO / "lab" / "handl-spike" / "fragments"
+_FRAGMENTS = _REPO / "tests" / "fixtures" / "handl-spike" / "fragments"
 
 try:  # the shipping surface — absent until maturin builds it
     import mlopt_handl_peer as _ext
@@ -147,7 +147,7 @@ def test_the_peer_agrees_with_mlopts_own_engine() -> None:
 def test_the_differential_reports_no_disagreement() -> None:
     """mlopt's engine and handl's agree wherever both fire.
 
-    The probe (`lab/audit/handl_differential.py`) synthesizes one term per
+    The probe (`bench/audit/handl_differential.py`) synthesizes one term per
     law, rewrites it with both engines and compares the results.  This
     pins the *measured* state: 24 laws comparable, 24 agreeing, 0
     disagreements.  The laws it cannot compare are reported by the probe
@@ -162,7 +162,8 @@ def test_the_differential_reports_no_disagreement() -> None:
     import importlib.util
 
     spec = importlib.util.spec_from_file_location(
-        "handl_differential", _REPO / "lab" / "audit" / "handl_differential.py"
+        "handl_differential",
+        _REPO / "bench" / "audit" / "handl_differential.py",
     )
     assert spec and spec.loader
     mod = importlib.util.module_from_spec(spec)
@@ -193,7 +194,7 @@ def test_root_eliminating_laws_agree_on_satisfying_terms() -> None:
     from mlopt_core.egraph import EGraph
     from mlopt_core.ir import Op, TensorType, Var
 
-    fragments_all = _REPO / "lab" / "handl-spike" / "fragments-all"
+    fragments_all = _REPO / "tests" / "fixtures" / "handl-spike" / "fragments-all"
     assert fragments_all.is_dir(), "the full bank fragment dir is required"
 
     cases = {

@@ -283,14 +283,14 @@ non-local saving the per-class greedy pass cannot see.  So on this workload the
 greedy per-class extraction is off the cost its own model assigns: a
 sharing-aware pass reaches **451,128 FLOPs against the greedy 455,752**
 (Δ = −4,624; **−1.01 %**), numerically equivalent at **2.2e-16**.  The fix is
-small and lives in `lab/` (`extract_sharing_aware`,
-`lab/bridge/sharing_extract.py`): a bounded, *monotone* coordinate descent that
+small and lives in `bench/` (`extract_sharing_aware`,
+`bench/bridge/sharing_extract.py`): a bounded, *monotone* coordinate descent that
 begins at `extract_best` and keeps only per-class overrides that strictly lower
 the whole term's `dag_cost`.  Monotone means it can never manufacture a form
 the model did not already prefer — it removes the arbitrary per-class choice
 and adds the sharing signal.  It is the same non-local blindness
 `extract_paired` exists for, here on the tie-break rather than on a group
-decision; it is a `lab/` prototype rather than a change to
+decision; it is a `bench/` prototype rather than a change to
 `mlopt_core.egraph.extract` because the same tie-break would change extraction
 for every caller, a change the full suite must land.
 
@@ -404,7 +404,7 @@ shipped carrier atoms derived and certified **25 law rows / 4 rejected /
 spelled; `dv.merge`; `omd.absorb_score`) (`project/retros/layer3-loop.md`).
 
 **But the honest number is the yield.**  A 60-model sweep of the exposed
-class (`lab/screen/discovery_scale.py`) minted 2,101 pipeline proposals, measured
+class (`bench/screen/discovery_scale.py`) minted 2,101 pipeline proposals, measured
 527 new-and-true candidates, and fired on 44 models — and found **0 paying
 new laws beyond `mul_unsq_nat`**.  All four paying rows landed on
 *purpose-built* intake probes (re-derivations of two already-banked unshipped
@@ -655,7 +655,7 @@ saturation is not idiosyncratic.
   (a reach gap, `state-chain-broken:block3→block4`).  The gate work also
   exposed an extraction defect — greedy per-class extraction is **1.01 %** off
   its own cost model on that workload (~~5.06 %~~; corrected by the
-  determinism fix, `abf6114`; fix in `lab/`, pending the full suite — at ~1 %
+  determinism fix, `abf6114`; fix in `bench/`, pending the full suite — at ~1 %
   the promotion is a judgement call).
 
 ## 7. What would falsify each pillar
@@ -716,7 +716,7 @@ venue paper needs the scale validation and the executor work named in §6.
 | A handler for a previously hand-written executor is machine-minted | `om_decayed` element at 8.9e-16 fp64 | `project/retros/handler-proposals.md`; ADR 0007 |
 | An atom's law set is synthesized and certified | 25 certified / 4 rejected / 0 refused | `project/retros/layer3-loop.md` |
 | Fresh paying structure is sparse | 60-model sweep: 0 paying new laws beyond `mul_unsq_nat`; ~1.5 % | `project/retros/discovery-scale.md` |
-| Exposure is bimodal | 81/321 expose 0 %; 140 ≥95 % | `project/retros/exposed-math.md`; `lab/screen/exposure_screen.py` |
+| Exposure is bimodal | 81/321 expose 0 %; 140 ≥95 % | `project/retros/exposed-math.md`; `bench/screen/exposure_screen.py` |
 | A major win is a *rediscovery* | carrier ≡ the paper's chunkwise duality at 9.8e-9 fp64 | `project/retros/retnet-external-baselines.md` |
 | **Soundness.** A naive guard was falsified by the adversarial sweep | 212 bad accepts | `project/retros/mul-unsq-nat.md` |
 | The synthesized exact guard is clean | `flat-map-unsq`: 0 bad / 0 miss | `mul-unsq-nat.md` |

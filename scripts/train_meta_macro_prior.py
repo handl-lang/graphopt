@@ -52,10 +52,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
-# ``lab/`` and ``scripts/`` are not installed packages — the repo root
-# goes on ``sys.path`` so ``lab.mint.*`` / ``scripts.*`` imports resolve
+# ``bench/`` and ``scripts/`` are not installed packages — the repo root
+# goes on ``sys.path`` so ``bench.*`` / ``scripts.*`` imports resolve
 # under the documented ``python scripts/…`` invocation (the sanctioned
-# shim shape; cf. ``lab/probes/conv_fold_wall_regimes_probe.py``).
+# shim shape; cf. ``bench/probes/conv_fold_wall_regimes_probe.py``).
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import torch
@@ -65,7 +65,7 @@ from mlopt_discovery import meta_arena as ma
 from mlopt_discovery import meta_player as mp
 from mlopt_discovery.macro_moves import Macro
 
-from lab.mint.macro_miner import (
+from scripts.macro_miner import (
     MacroScripted,
     collect_trajectories,
     mine_macros,

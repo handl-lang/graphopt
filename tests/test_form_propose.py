@@ -20,8 +20,8 @@ from mlopt_core.ir import Const, Op, Param, TensorType, Var
 from mlopt_discovery import form_propose as fp
 from mlopt_discovery.combinator import comb_to_dag
 
-from lab.bridge.index_abstract import block_outputs
-from lab.bridge.loop_propose import loop_headed
+from mlopt_discovery.index_abstract import block_outputs
+from mlopt_discovery.loop_propose import loop_headed
 
 X = Var("x", TensorType((2, 64, 16)))
 CB = Op.make(
@@ -163,7 +163,7 @@ def test_real_winner_gate3():
     )
     from mlopt_core.cost import flops_cost
 
-    from lab.probes import om_shared_state_probe as osp
+    from bench.probes import om_shared_state_probe as osp
 
     t, k = 64, 4
     reach, reassoc = om_shared_state_stages(k)
@@ -220,8 +220,8 @@ def test_boundary_residual_is_a_value_mismatch():
     from mlopt_torch.adapters import TorchSink
     from mlopt_torch.torch_bridge import export_to_ir
 
-    from lab.bridge.index_abstract import block_outputs
-    from lab.probes import om_shared_state_probe as osp
+    from mlopt_discovery.index_abstract import block_outputs
+    from bench.probes import om_shared_state_probe as osp
 
     t, k = 64, 4
     reach, reassoc = om_shared_state_stages(k)

@@ -4,7 +4,7 @@
 component the research composes is a declared row — repo, float policy
 (`branch = "main"`, no rev pins), the crates/packages consumed, and the
 role it plays in the lift → discover+admit → lower arc. The Rust arm is
-*enforced*: `experiments/Cargo.toml`'s dep edges are these rows, so a
+*enforced*: `packages/mlopt-experiments/Cargo.toml`'s dep edges are these rows, so a
 drift between the manifest and the build is a visible diff, not a
 silent fork.
 

@@ -1,10 +1,10 @@
 # Richer open-domain features — which new features move AP
 
-**Date:** 2026-10-19 · **Script:** `lab/richer_features.py` · **Seed:** 0
+**Date:** 2026-10-19 · **Script:** `bench/policy/richer_features.py` · **Seed:** 0
 throughout · **Hardware:** the 11 GB CPU box · **Runner:**
 
 ```bash
-timeout 1800 .venv/bin/python lab/richer_features.py \
+timeout 1800 .venv/bin/python bench/policy/richer_features.py \
     --json /tmp/richer.json          # ~10 min
 ```
 
@@ -113,7 +113,7 @@ schemas it prices the pool context the new features add.
 metric (AP 0.2101, +0.077 over the 0.1332 anchor, ~7.7σ of the ±0.01
 noise band) with the fewest schema additions.  The four parts joined
 `OPEN_PARTS`/`OPEN_GAME_FEATURES`/`OPEN_PART_TAGS`; the baked prior
-was regenerated with `lab/train/train_open_prior.py` (same shipped
+was regenerated with `bench/train/train_open_prior.py` (same shipped
 recipe, unmemoized draws — train block means
 `[0.333, 0.341, 0.355, 0.289, 0.151, 0.192]`; its own held-out read:
 reward 0.285 vs cold 0.143, use/eval 0.0121).  The new weights:
@@ -136,7 +136,7 @@ the pool — the page-aware probe is the honest AP.
 
 ## Neural retest on the enriched rows — does a net exploit the pool-relative info better?
 
-**Date:** 2026-10-19 · `lab/policy_rl_arms.py --only open` re-run
+**Date:** 2026-10-19 · `bench/policy/policy_rl_arms.py --only open` re-run
 on the post-`a:score_rank` schema (same protocol, seed 0) plus a
 new supervised arm `ruleval+a*`: the `RuleValueNet` BCE recipe
 (`delta > 0`, standardized inputs, MLP 32) fed

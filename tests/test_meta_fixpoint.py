@@ -1,7 +1,7 @@
 """``synthesize_rules`` fixpoint driver — ``rounds`` / ``max_emitted`` / ``on_round``.
 
 The pairwise composer mints depth-2 composites over a fixed bank; the
-fold families (conv+BN is the measured one — ``lab/probes/
+fold families (conv+BN is the measured one — ``bench/probes/
 conv_bn_fold_synth_probe.py`` gate B3, 26→61→242→944 over 4 rounds)
 need iterated composition, where each round's emitted set re-enters
 the bank.  These tests pin the fixpoint's contract on a synthetic

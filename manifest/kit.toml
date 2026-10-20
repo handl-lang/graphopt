@@ -8,8 +8,8 @@
 # the role it plays in the story.
 #
 # Consumers of this file: the reader (the composition map == the paper's
-# §2), `experiments/` (the Rust arm is *enforced* by Cargo — these rows
-# mirror `experiments/Cargo.toml`'s dep edges), and any future kit tool
+# §2), `packages/mlopt-experiments/` (the Rust arm is *enforced* by Cargo — these rows
+# mirror `packages/mlopt-experiments/Cargo.toml`'s dep edges), and any future kit tool
 # that wants to materialize the stack from a manifest.
 
 schema = "handl-lang/research-kit@1"
@@ -21,7 +21,7 @@ claim = "certified optimization of ML models/tensor programs — machinery compo
 founding_result = "conv_bn_fold"
 
 # ---------------------------------------------------------------------------
-# Components — the Rust arm (enforced by cargo via experiments/Cargo.toml)
+# Components — the Rust arm (enforced by cargo via packages/mlopt-experiments/Cargo.toml)
 # ---------------------------------------------------------------------------
 
 [[component]]
@@ -125,14 +125,14 @@ role = "the discovery + admission machinery — lift (TorchSource: torch IR → 
 [[experiment]]
 name = "conv-bn-fold"
 kind = "cargo"
-run = "cargo run --release --manifest-path experiments/Cargo.toml --bin conv-bn-fold -- --repeat 200"
+run = "cargo run --release --manifest-path packages/mlopt-experiments/Cargo.toml --bin conv-bn-fold -- --repeat 200"
 produces = "value-equality of spelled vs folded program through the composed kit + per-call wall of each arm (the runtime pay)"
 artifact = "mlopt-kit's hnl/conv_bn.hnl — resolved in-tree (packages/mlopt-kit/hnl/conv_bn.hnl; the sibling-checkout / pkg-cache-slot / fetch arms remain as fallbacks for a standalone research-mlopt checkout — never vendored); the same source is exported over the crate API as mlopt_kit::CONV_BN_HNL for consumers that take the dep"
 
 [[experiment]]
 name = "conv-fold-premise-pay"
 kind = "python"
-run = "cd $MLOPT_DIR && .venv/bin/python lab/probes/conv_fold_premise_pay_probe.py"
+run = "cd $MLOPT_DIR && .venv/bin/python bench/probes/conv_fold_premise_pay_probe.py"
 produces = "the gauntlet account for the minted composite: guard transport, truth (guarded eval + premise-anchored derivability), typed pay, novelty"
 note = "runs inside a mlopt checkout (MLOPT_DIR); the probe is mlopt's own, invoked — not copied"
 

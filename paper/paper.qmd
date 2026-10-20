@@ -130,7 +130,7 @@ lex/parse/tree-walk-exec engines, and `handl-host-tensor`'s 18-op
 `tensor.*` surface as dependencies (no forks).  `hnl-run` is a
 subprocess door: `.hnl` in, a JSON wire tensor out, `--repeat N`
 evaluating a source N times in one process — the measurement hook.
-`lab/kit/term_hnl.py` renders any mlopt IR term as a `.hnl` program
+`bench/kit/term_hnl.py` renders any mlopt IR term as a `.hnl` program
 from a data table (per-op arg assembly, attr marshaling, leaf binding),
 so the *same object the e-graph rewrites* is what the runtime
 executes.
@@ -236,7 +236,7 @@ $$
 $$
 
 The account below is the probe's own output
-(`lab/probes/conv_fold_premise_pay_probe.py`, ~13 s).
+(`bench/probes/conv_fold_premise_pay_probe.py`, ~13 s).
 
 **Anchor.**  `CONV_FOLD_RULES` provides the channel-scale and
 channel-shift anchors (`mul(conv2d(x,W,b),ŝ)`-shaped single-step
@@ -281,7 +281,7 @@ arm that recomputes the fold per call runs *slower* (+22–33 %); and a
 subprocess-arm −16 % figure conflates the prelude's unused fold-marshal
 work into the baseline.  `dag_cost` is the stable headline:
 55,296 → 36,864 (−33 %).  Full reconciliation:
-`bench/RESULTS.md` + `lab/probes/conv_fold_wall_regimes_probe.py`.
+`bench/RESULTS.md` + `bench/probes/conv_fold_wall_regimes_probe.py`.
 
 : The fold decision, priced by the runtime itself — honest regime-split.
 {#tbl-decision}
@@ -387,7 +387,7 @@ All numbers are reproducible from the committed tree at
 
 ```sh
 uv sync
-.venv/bin/python lab/probes/conv_fold_premise_pay_probe.py   # the admission account (~13 s)
+.venv/bin/python bench/probes/conv_fold_premise_pay_probe.py   # the admission account (~13 s)
 .venv/bin/python -m pytest tests/test_kit_bridge.py -q       # the runtime-priced decision (8 tests)
 cargo test -p mlopt-kit                                     # the Rust consumer (21 tests)
 .venv/bin/python -m pytest -m "not slow"                     # the dev lane

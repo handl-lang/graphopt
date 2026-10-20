@@ -1,7 +1,33 @@
 # `lab/` dissolution plan
 
-**Status:** executed 2026-10-19 — the safe moves are landed; the rest is
-the classified queue below.  **Update:** `combinator.py` promoted to
+**Status:** **complete** — `lab/` (and the root `experiments/` crate) are
+gone; every file landed by destination.  The final destination map:
+
+| destination | what landed |
+|---|---|
+| `mlopt_discovery` | `index_abstract.py`, `loop_propose.py` (the last bridge modules shipped code imported — `form_propose`/`state_reindex` depend on them, so they were de-facto prod; the 99% ratchet applies to the package union) |
+| `scripts/` | `macro_miner.py` (the `lawdata.MACROS` `--emit` bake driver, imported by `train_meta_macro_prior.py`) |
+| `bench/probes/` | all 23 probes incl. `contraction/` (12) |
+| `bench/screen/` | `exposure_screen`, `exposed_discovery`, `discovery_scale` |
+| `bench/mint/` | `atom_law_loop`, `atom_synth_loop` |
+| `bench/bridge/` | `combinator_probe`, `sharing_extract` |
+| `bench/audit/` | `grammar_probe`, `handl_differential`, `egraph_differential` |
+| `bench/kit/` | `term_hnl` |
+| `bench/train/` | the three measurement-only `train_*_policy` drivers |
+| `bench/policy/` | the six controlled-protocol drivers (`policy_baseline`, `policy_ablations`, `policy_rl_arms`, `schema_leaderboard`, `stop_policy`, `richer_features`) |
+| `tests/fixtures/handl-spike/` | the committed `fragments/`/`fragments-all/` peer-test fixtures (`scripts/dump_fragments.py` regenerates them there) |
+| `packages/mlopt-handl-peer/` | the PyO3 spike (path deps unchanged — same depth) |
+| `packages/mlopt-experiments/` | the paper's evidence crate (was root `experiments/`; relative paths to `mlopt-kit` / sibling checkouts re-anchored) |
+
+`index_abstract`/`loop_propose` landed at 81%/80% dedicated-test
+coverage — below the per-module ideal but inside the **union** 99%
+ratchet they now fall under (the alternative — shipped package code
+importing `bench/` — was strictly worse than the `lab/` wart it
+replaced).  Every other promote queue item either promoted earlier or
+dissolved to `bench/` with its consumers.
+
+**History below** — the executed-2026-10-19 state: the safe moves landed
+then; the classified queue follows.  `combinator.py` promoted to
 `mlopt_discovery.combinator` at the 99% floor (92% → 100% under
 `tests/test_combinator_bridge.py`).
 

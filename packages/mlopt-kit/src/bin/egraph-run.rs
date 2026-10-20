@@ -2,7 +2,7 @@
 //! print the canonical report.
 //!
 //! The subprocess seam the differential driver
-//! (`lab/audit/egraph_differential.py`,
+//! (`bench/audit/egraph_differential.py`,
 //! `tests/test_egraph_differential.py`) drives: a run spec goes in on
 //! stdin (or a file path), the report comes out on stdout. Spec and
 //! report shapes are documented on [`mlopt_kit::egraph::run_spec`].

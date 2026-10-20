@@ -39,7 +39,7 @@ serialization census (``tests/test_law_serialize.py``) records this
 
 The embedded records below are the verbatim ``law_json`` rows
 ``store_object`` wrote for the conv+BN fold's premise closure of minted
-intermediates (``lab/probes/conv_fold_premise_pay_probe.py`` mint;
+intermediates (``bench/probes/conv_fold_premise_pay_probe.py`` mint;
 ``project/retros/minted-composite-default.md`` records the admission
 account).  They are frozen artifacts: the composite's guard names them
 by minted name, and they are scaffolding — they do not ship as rules.

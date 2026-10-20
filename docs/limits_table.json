@@ -390,7 +390,7 @@
       "name": "retnet_chunkwise",
       "title": "RetNet chunkwise retention carrier",
       "category": "memory",
-      "citation": "Sun et al. 2023, \"Retentive Network\" \u2014 the chunkwise-recurrent form of\nretention trades the (T,T) decay-masked score matrix for a decayed\ncross-chunk state.  The spelled fixture is the intake zoo's\n`_ChunkedRetention` (`(QK\u1d40 \u2299 D)V`, decay built in-graph); the engine\nlifts it to the `om_decayed` carrier \u2014 measured parity with the\npaper's own chunked impl, faster under graph replay\n(lab/probes/retnet_baseline_probe.py).\n",
+      "citation": "Sun et al. 2023, \"Retentive Network\" \u2014 the chunkwise-recurrent form of\nretention trades the (T,T) decay-masked score matrix for a decayed\ncross-chunk state.  The spelled fixture is the intake zoo's\n`_ChunkedRetention` (`(QK\u1d40 \u2299 D)V`, decay built in-graph); the engine\nlifts it to the `om_decayed` carrier \u2014 measured parity with the\npaper's own chunked impl, faster under graph replay\n(bench/probes/retnet_baseline_probe.py).\n",
       "axis": "launch",
       "cost_before": 761863.0,
       "cost_after": 761862.0,

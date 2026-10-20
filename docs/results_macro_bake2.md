@@ -1,15 +1,15 @@
 # Macro-aware features — the bake re-run the blindness doc prescribed
 
-**Date:** 2026-10-19 · **Scripts:** `lab/mint/macro_moves.py`
+**Date:** 2026-10-19 · **Scripts:** `bench/mint/macro_moves.py`
 (`instantiate` now carries the miner's evidence on
 `params["macro"]`), `mlopt_discovery/meta_player.py` (the new
-`meta:macro` featurizer part), `lab/train/train_meta_macro_prior.py`
+`meta:macro` featurizer part), `bench/train/train_meta_macro_prior.py`
 · **Seed:** 0 throughout · **Runner:**
 
 ```bash
-timeout 1800 .venv/bin/python lab/train/train_meta_macro_prior.py \
+timeout 1800 .venv/bin/python bench/train/train_meta_macro_prior.py \
     --epochs 30 --json /tmp/meta_macro_30.json   # ~25 s
-timeout 1800 .venv/bin/python lab/train/train_meta_macro_prior.py \
+timeout 1800 .venv/bin/python bench/train/train_meta_macro_prior.py \
     --epochs 120 --json /tmp/meta_macro_120.json # ~90 s
 ```
 
@@ -109,7 +109,7 @@ crossing.  Two things still block the bake:
   120 ep vs V1's −0.056.  Retraining against the extended legal set
   scrambles the base-op weights (`op:extract` collapses +3.15 →
   +0.74 at 120 ep; `a:h:3` inflates to +2.66 because claim-tags now
-  arrive via macros too).  `legal_with_macros` lives in `lab/` —
+  arrive via macros too).  `legal_with_macros` lives in `bench/` —
   no shipped caller injects offers, so the baked default *is*
   `v2-base`, and it is worse than V1 at every budget tried.
 
@@ -135,7 +135,7 @@ layer this doc added is exactly what that next run needs.
 `instantiate`/`viable`, `offered`, `legal_with_macros`), the minted
 8-row table baked as `lawdata.MACROS`
 (`packages/mlopt-discovery/src/mlopt_discovery/lawdata/macros.py`,
-regenerate with `lab/mint/macro_miner.py --emit`), and
+regenerate with `scripts/macro_miner.py --emit`), and
 `meta_arena.legal_actions` itself offers the viable minted lines to
 **every** player — scripted, random, greedy, learned.  The lab-only
 `legal=` injection is gone: `v2-base`'s old failure mode ("the baked

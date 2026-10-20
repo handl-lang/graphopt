@@ -30,7 +30,7 @@ SPEC = BaselineSpec(
     record=(
         "paper chunkwise ties the fused carrier (2.08 vs 2.12 ms "
         "T=2048; faster under graph replay) — "
-        "lab/probes/retnet_baseline_probe.py"
+        "bench/probes/retnet_baseline_probe.py"
     ),
 )
 

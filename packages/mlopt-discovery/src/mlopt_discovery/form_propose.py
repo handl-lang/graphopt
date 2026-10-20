@@ -54,7 +54,7 @@ PROTOCOL
        obstruction (the e-graph never merged the two spellings of the
        boundary state — a saturation-reach gap, not a fold defect).
 
-The measurement lives in ``lab/bridge/combinator_probe.py``
+The measurement lives in ``bench/bridge/combinator_probe.py``
 (``--form-propose``); the reading is in
 ``project/retros/gate3-form-level-proposer.md``.
 
@@ -95,15 +95,15 @@ from typing import Any
 from mlopt_core.egraph.types import _member_key
 from mlopt_core.ir import Const, Op, TensorType, Var
 
-from lab.bridge.index_abstract import _block_splits, block_outputs
-from lab.bridge.loop_propose import (
+from mlopt_discovery import combinator as cb
+from mlopt_discovery.index_abstract import _block_splits, block_outputs
+from mlopt_discovery.loop_propose import (
     EXPAND_LOOP,
     PROPOSE_LOOP,
     loop_headed,
     saturate_comb,
     unroll,
 )
-from mlopt_discovery import combinator as cb
 
 __all__ = [
     "STEP_INPUTS",
@@ -852,7 +852,7 @@ def form_propose(
     covered = {i for res, ch, _c in ok_chains for i in ch}
     peeled = [i for i in range(rep.n_blocks) if i not in covered]
     if ok_chains:
-        from lab.bridge.index_abstract import _compile_with_inputs
+        from mlopt_discovery.index_abstract import _compile_with_inputs
 
         step_morph = _compile_with_inputs(rep.step, list(STEP_INPUTS))
         rep.step_morph = step_morph

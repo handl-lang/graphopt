@@ -1,6 +1,6 @@
 """Tests for the ADR-0008 gate-3 loop-proposing rule.
 
-``lab/bridge/loop_propose.py`` supplies the rewrite
+``mlopt_discovery.loop_propose`` supplies the rewrite
 ``unroll(step, n) -> Loop(step, n)`` over the combinator presentation and
 the smallest search that can carry it.  The properties under test:
 ``unroll`` and ``Loop`` denote the same morphism, the rule fires on the
@@ -12,7 +12,7 @@ import pytest
 from mlopt_core.ir import Const, Op, Param, TensorType, Var
 from mlopt_discovery import combinator as cb
 
-from lab.bridge import loop_propose as lp
+from mlopt_discovery import loop_propose as lp
 
 
 def _v(name, *shape):

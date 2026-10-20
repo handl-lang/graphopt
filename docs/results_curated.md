@@ -313,11 +313,11 @@ named; where a pinned baseline supersedes a row, that is noted.
 same-budget baseline + ablations (2026-10-19):
 [`docs/results_learned_baseline.md`](results_learned_baseline.md) /
 [`docs/results_learned_ablations.md`](results_learned_ablations.md)
-(`lab/policy_baseline.py`, `lab/policy_ablations.py`); the
+(`bench/policy/policy_baseline.py`, `bench/policy/policy_ablations.py`); the
 feature-schema leaderboard — subsets × orderings of the shipped
 featurizer parts, cold-trained at equal budget —
 [`docs/results_schema_leaderboard.md`](results_schema_leaderboard.md)
-(`lab/schema_leaderboard.py`).  Separate from the
+(`bench/policy/schema_leaderboard.py`).  Separate from the
 architectures above: these **steer** the search; the models in §1 are
 what gets optimized.
 
@@ -355,7 +355,7 @@ Regenerate with `scripts/train_open_prior.py` / `scripts/train_meta_prior.py`.
 
 Macro-action minting over `Trajectory` sequences (2026-10-19):
 [`docs/results_macro_moves.md`](results_macro_moves.md)
-(`lab/mint/macro_miner.py`) — mined `claim→extract` /
+(`scripts/macro_miner.py`) — mined `claim→extract` /
 `declare→saturate→handle→extract` replayed as single refereed moves;
 scripted+macros beats the base move set +0.19 reward/ep on the
 held-out meta stream. **Shipped:** the 8-macro table is

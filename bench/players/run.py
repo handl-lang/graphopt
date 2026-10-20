@@ -7,7 +7,7 @@
 
 Writes ``<out>/leaderboard_players.md`` + ``<out>/leaderboard_players
 .json`` — default ``docs/`` (the committed, versioned leaderboard).
-The protocol is ``lab/policy_baseline.py``'s: paired boards, held-out
+The protocol is ``bench/policy/policy_baseline.py``'s: paired boards, held-out
 case streams, and on ``open`` memoized per-candidate oracle verdicts
 so every arm sees literally identical draws.
 """
