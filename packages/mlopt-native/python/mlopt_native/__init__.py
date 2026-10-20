@@ -8,6 +8,6 @@ See ``mlopt_native.engine.NativeEngine`` — an
 """
 
 from mlopt_native._native import __version__
-from mlopt_native.engine import NativeEngine
+from mlopt_native.engine import NativeEngine, dag_cost
 
-__all__ = ["NativeEngine", "__version__"]
+__all__ = ["NativeEngine", "__version__", "dag_cost"]

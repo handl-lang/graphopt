@@ -28,9 +28,18 @@ certificate uses the Python engine.
 
 from __future__ import annotations
 
+import logging
 import sys
-from typing import Any
+from typing import Any, cast
 
+from mlopt_core.cost import (
+    _SOLVER_FACTOR,
+    _SOLVER_OPS,
+    _local_roofline,
+    _memo_dispatch,
+    _profile_constants,
+    fusion_member_key,
+)
 from mlopt_core.egraph.extract import _ExtractMixin
 from mlopt_core.egraph.types import (
     EClass,
@@ -38,11 +47,15 @@ from mlopt_core.egraph.types import (
     _LeafRegistry,
     _norm_attr_value,
 )
-from mlopt_core.ir import Op
+from mlopt_core.ir import Const, Op, Param, Var
+from mlopt_core.opmeta import FOLD_OPS
 
 from mlopt_native._native import NativeEGraph as _RustEGraph
+from mlopt_native._native import dag_cost as _rust_dag_cost
 
-__all__ = ["NativeEngine"]
+logger = logging.getLogger("mlopt_core.egraph.extract")
+
+__all__ = ["NativeEngine", "dag_cost"]
 
 
 def _flatten(term: Any, nodes: list, memo: dict) -> int:
@@ -67,6 +80,78 @@ def _flatten(term: Any, nodes: list, memo: dict) -> int:
         nodes.append(("leaf", repr(term)))
     memo[term] = len(nodes) - 1
     return memo[term]
+
+
+def _leaf_kind(term: Any) -> int:
+    """Classification bits for ``dag_cost``'s flat leaf nodes."""
+    if isinstance(term, Var):
+        return 1
+    if isinstance(term, Param):
+        return 2
+    if isinstance(term, Const):
+        return 4
+    return 0
+
+
+def _flatten_dag(
+    term: Any, nodes: list, terms: list, memo: dict
+) -> int:
+    """``dag_cost``'s flat serialization: post-order, terms alongside.
+
+    Leaf nodes are ``("leaf", key, kind)`` — ``kind`` is
+    :func:`_leaf_kind`'s Var/Param/Const bitfield — and op nodes
+    ``("op", name, (child idxs), attrs)``.  ``terms[i]`` is the
+    original Python object for node ``i`` — the pricer calls
+    ``cfn(terms[i])``, the same ``c(t)`` calls the reference walk
+    issues (interned terms hit the shared cost memo).
+    """
+    if term in memo:
+        return memo[term]
+    if isinstance(term, Op):
+        idxs = tuple(
+            _flatten_dag(a, nodes, terms, memo) for a in term.args
+        )
+        attrs = tuple(
+            sorted(
+                (k, _norm_attr_value(v)) for k, v in term.attrs.items()
+            )
+        )
+        nodes.append(("op", term.op, idxs, attrs))
+    else:
+        _LeafRegistry.register(term)
+        nodes.append(("leaf", repr(term), _leaf_kind(term)))
+    terms.append(term)
+    memo[term] = len(nodes) - 1
+    return memo[term]
+
+
+def dag_cost(
+    term: Any, cost_fn: Any, memo: dict | None = None
+) -> float:
+    """Return the true-DAG cost of an extracted term — the walk in Rust.
+
+    Identical contract to :func:`mlopt_core.cost.dag_cost`: each
+    distinct node bills ``c(t) - Σ c(children)`` once, param-only
+    foldable subtrees price at zero unless the model sets
+    ``charges_param_only``, and ``dag_exact`` models return ``c(root)``
+    verbatim.  ``cost_fn`` stays a plain Python callable — the Rust
+    core drives the structural walk (``has_var_leaf`` /
+    ``_folds_to_param`` / reachability) and calls back once per priced
+    node.
+    """
+    unwrapped = getattr(cost_fn, "func", cost_fn)
+    c = _memo_dispatch(cost_fn, memo)
+    if getattr(unwrapped, "dag_exact", False):
+        return c(term)
+    nodes: list = []
+    terms: list = []
+    _flatten_dag(term, nodes, terms, {})
+    return _rust_dag_cost(
+        nodes,
+        lambda i: c(terms[i]),
+        getattr(unwrapped, "charges_param_only", False),
+        FOLD_OPS,
+    )
 
 
 def _ser_pattern(p: Any) -> tuple:
@@ -363,6 +448,181 @@ class NativeEngine(_ExtractMixin):
             improved,
             stop == "improving",
         )
+
+    # -- extraction ---------------------------------------------------------
+
+    @staticmethod
+    def _ser_enode(n: Any) -> tuple:
+        """Serialize an ``ENode`` to the ``(op, children, attrs)`` form."""
+        return (
+            n.op,
+            tuple(int(c) for c in n.children),
+            tuple((k, v) for k, v in n.attrs),
+        )
+
+    def _native_pricer(
+        self, cfn: Any, m: dict, rc_parts: tuple | None
+    ) -> Any:
+        """Build the per-candidate pricing callback the Rust walk drives.
+
+        ``table`` maps each ``term_id`` the walk hands out to
+        ``(term, cost, eo, rc)`` — the same values the reference
+        extractor's cache probes read out of the shared memo, plus the
+        same ``("eo","generic",term)`` / ``("rc",...)`` pre-seeding, so
+        ``cfn`` stays O(arity) per candidate for the additive
+        sub-models.  Returns ``(term_id, cost, flags)``; leaf flags
+        bit0 marks ``Var`` leaves.
+        """
+        table: list = []
+        rc_pf = rc_bw = rc_ls = None
+        if rc_parts is not None:
+            rc_pf, rc_bw, rc_ls = rc_parts
+
+        def price(tag: str, x: Any, children: tuple, attrs: tuple):
+            if tag == "leaf":
+                term = _LeafRegistry.decode(x)
+                tid = len(table)
+                ct = cfn(term)
+                table.append(
+                    (
+                        term,
+                        ct,
+                        m.get(("eo", "generic", term)),
+                        m.get(("rc", rc_pf, rc_bw, rc_ls, term))
+                        if rc_parts is not None
+                        else None,
+                    )
+                )
+                return tid, ct, 1 if isinstance(term, Var) else 0
+            kids = [table[i][0] for i in children]
+            term = Op.make(x, *kids, **dict(attrs))
+            eo_vals = [table[i][2] for i in children]
+            if all(v is not None for v in eo_vals):
+                ek = ("eo", "generic", term)
+                if ek not in m:
+                    m[ek] = sum(eo_vals) + (
+                        _SOLVER_FACTOR if x in _SOLVER_OPS else 1.0
+                    )
+            if rc_parts is not None:
+                rc_vals = [table[i][3] for i in children]
+                if all(v is not None for v in rc_vals):
+                    rk = ("rc", rc_pf, rc_bw, rc_ls, term)
+                    if rk not in m:
+                        rc = _local_roofline(
+                            term,
+                            m,
+                            peak_flops=cast("float", rc_pf),
+                            peak_bw=cast("float", rc_bw),
+                            launch_s=cast("float", rc_ls),
+                        )
+                        for v in rc_vals:
+                            rc += v
+                        m[rk] = rc
+            tid = len(table)
+            ct = cfn(term)
+            table.append(
+                (
+                    term,
+                    ct,
+                    m.get(("eo", "generic", term)),
+                    m.get(("rc", rc_pf, rc_bw, rc_ls, term))
+                    if rc_parts is not None
+                    else None,
+                )
+            )
+            return tid, ct, 0
+
+        return price, table
+
+    def extract_best(
+        self,
+        eid: int,
+        cost_fn: Any,
+        overrides: dict[int, Any] | None = None,
+        bans: dict[int, set] | None = None,
+        _cache_out: dict | None = None,
+        fusion_epsilon: float = 0.0,
+    ) -> Any:
+        """Extract the minimum-cost term — the walk runs in Rust.
+
+        Same semantics as the reference mixin (member order, DAG-once
+        billing, param-only discount, the ``(total, nops)`` tie-break
+        and the ``fusion_epsilon`` band): the Rust core drives the
+        per-class DP and calls the ``price`` callback once per
+        candidate term, so ``cost_fn`` stays a plain Python callable.
+        ``overrides``/``bans``/``_cache_out`` carry the same contract —
+        enodes cross serialized, cache entries come back per class.
+        """
+        root = self.find(eid)
+        m = self._cost_memo_for(cost_fn)
+        cfn = _memo_dispatch(cost_fn, m)
+        unwrapped = getattr(cost_fn, "func", cost_fn)
+        bill_params = getattr(unwrapped, "charges_param_only", False)
+        rc_parts: tuple | None = None
+        if hasattr(unwrapped, "profile"):
+            try:
+                rc_parts = _profile_constants(
+                    getattr(unwrapped, "profile", None)
+                )
+            except (AttributeError, TypeError, KeyError):
+                rc_parts = None
+        price, table = self._native_pricer(cfn, m, rc_parts)
+
+        def fuser(tid: int) -> tuple:
+            return fusion_member_key(table[tid][0], m)
+
+        over = (
+            None
+            if overrides is None
+            else {
+                self.find(k): self._ser_enode(v)
+                for k, v in overrides.items()
+            }
+        )
+        ban_map = (
+            None
+            if bans is None
+            else {
+                self.find(k): [self._ser_enode(n) for n in s]
+                for k, s in bans.items()
+            }
+        )
+        total, term_id, nops, dump = self._g.extract(
+            root,
+            price,
+            fuser=fuser if fusion_epsilon else None,
+            bill_params=bill_params,
+            foldable=FOLD_OPS,
+            fusion_epsilon=fusion_epsilon,
+            overrides=over,
+            bans=ban_map,
+        )
+        term = table[term_id][0] if term_id is not None else None
+        if _cache_out is not None:
+            for ceid, ctot, ctid, cused, cpo, cnops, cct in dump:
+                ent = table[ctid] if ctid is not None else None
+                _cache_out[ceid] = (
+                    ctot,
+                    ent[0] if ent is not None else None,
+                    frozenset(cused),
+                    cpo,
+                    cnops,
+                    cct,
+                    ent[2] if ent is not None else None,
+                    ent[3] if ent is not None else None,
+                )
+        if term is None:
+            logger.warning(
+                "extract_best: no extractable term in eclass %d", root
+            )
+        else:
+            logger.info(
+                "extract_best: eclass %d -> cost %.4g",
+                root,
+                total,
+                extra={"cost": total, "nops": nops},
+            )
+        return term
 
     # -- the _classes view -------------------------------------------------
 

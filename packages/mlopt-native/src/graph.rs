@@ -81,11 +81,7 @@ pub struct Prog {
 
 pub fn compile_pattern(root: PNode) -> Prog {
     match &root {
-        PNode::Op {
-            op,
-            children,
-            ..
-        } => {
+        PNode::Op { op, children, .. } => {
             let reqs = children
                 .iter()
                 .enumerate()
@@ -163,26 +159,18 @@ impl SerTerm {
     /// ``("leaf", key)`` | ``("op", name, children, attrs)``.
     pub fn to_py(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         match self {
-            SerTerm::Leaf(key) => Ok(PyTuple::new(
-                py,
-                vec![py_str(py, "leaf"), py_str(py, key)],
-            )?
-            .unbind()
-            .into()),
+            SerTerm::Leaf(key) => Ok(PyTuple::new(py, vec![py_str(py, "leaf"), py_str(py, key)])?
+                .unbind()
+                .into()),
             SerTerm::Op { op, args, attrs } => {
-                let kids: Vec<Py<PyAny>> = args
-                    .iter()
-                    .map(|a| a.to_py(py))
-                    .collect::<PyResult<_>>()?;
+                let kids: Vec<Py<PyAny>> =
+                    args.iter().map(|a| a.to_py(py)).collect::<PyResult<_>>()?;
                 let attr_pairs: Vec<Py<PyAny>> = attrs
                     .iter()
                     .map(|(k, v)| -> PyResult<Py<PyAny>> {
-                        Ok(PyTuple::new(
-                            py,
-                            vec![py_str(py, k), v.to_py(py)?],
-                        )?
-                        .unbind()
-                        .into())
+                        Ok(PyTuple::new(py, vec![py_str(py, k), v.to_py(py)?])?
+                            .unbind()
+                            .into())
                     })
                     .collect::<PyResult<_>>()?;
                 Ok(PyTuple::new(
@@ -210,7 +198,7 @@ pub struct NativeCore {
     rank: Vec<u32>,
     /// Canonical id -> class.  BTreeMap keeps the deterministic
     /// ascending-id iteration Python gets from dict insertion order.
-    classes: BTreeMap<ClassId, EClass>,
+    pub(crate) classes: BTreeMap<ClassId, EClass>,
     node_to_class: HashMap<ENode, ClassId>,
     next_id: ClassId,
     pub rule_fires: HashMap<String, u64>,
@@ -315,8 +303,7 @@ impl NativeCore {
         children: Vec<ClassId>,
         attrs: Vec<(String, AttrVal)>,
     ) -> ClassId {
-        let canon: Vec<ClassId> =
-            children.iter().map(|&c| self.find(c)).collect();
+        let canon: Vec<ClassId> = children.iter().map(|&c| self.find(c)).collect();
         let enode = ENode {
             op: op.to_string(),
             children: canon,
@@ -352,13 +339,12 @@ impl NativeCore {
         let old_canon = if new_canon == rb { ra } else { rb };
         // Move members.
         let mut source = self.classes.remove(&old_canon).unwrap();
-        let moved: Vec<ENode> =
-            source.nodes.iter().cloned().collect();
+        let moved: Vec<ENode> = source.nodes.iter().cloned().collect();
         let target = self.classes.get_mut(&new_canon).unwrap();
         target.nodes.append(&mut source.nodes);
         target.by_op = None;
         target.min_term = None; // cache cleared on merge (Python: cache.clear())
-        // -- incremental bookkeeping (mirrors EGraph.union) --
+                                // -- incremental bookkeeping (mirrors EGraph.union) --
         self.dirty.insert(new_canon);
         if let Some(p_old) = self.parents.remove(&old_canon) {
             let ent = self.parents.entry(new_canon).or_default();
@@ -371,9 +357,7 @@ impl NativeCore {
                 oc.remove(&old_canon);
                 oc.insert(new_canon);
             }
-            if let Some(ok) =
-                self.opk.get_mut(&(n.op.clone(), n.children.len()))
-            {
+            if let Some(ok) = self.opk.get_mut(&(n.op.clone(), n.children.len())) {
                 ok.remove(&old_canon);
                 ok.insert(new_canon);
             }
@@ -404,18 +388,11 @@ impl NativeCore {
     /// Rc-shared so repeat calls don't re-copy the member list).
     fn nodes_of(&mut self, eid: ClassId, op: &str) -> Rc<Vec<ENode>> {
         let ec = self.classes.get_mut(&eid).unwrap();
-        if let Some(lst) =
-            ec.by_op.as_ref().and_then(|bo| bo.get(op))
-        {
+        if let Some(lst) = ec.by_op.as_ref().and_then(|bo| bo.get(op)) {
             return lst.clone();
         }
-        let lst: Rc<Vec<ENode>> = Rc::new(
-            ec.nodes
-                .iter()
-                .filter(|n| n.op == op)
-                .cloned()
-                .collect(),
-        );
+        let lst: Rc<Vec<ENode>> =
+            Rc::new(ec.nodes.iter().filter(|n| n.op == op).cloned().collect());
         ec.by_op
             .get_or_insert_with(HashMap::new)
             .insert(op.to_string(), lst.clone());
@@ -463,12 +440,9 @@ impl NativeCore {
                     if node.children.len() != children.len() {
                         continue;
                     }
-                    let node_keyset: HashSet<&String> =
-                        node.attrs.iter().map(|(k, _)| k).collect();
+                    let node_keyset: HashSet<&String> = node.attrs.iter().map(|(k, _)| k).collect();
                     if node_keyset.len() != keyset.len()
-                        || !node_keyset
-                            .iter()
-                            .all(|k| keyset.contains(*k))
+                        || !node_keyset.iter().all(|k| keyset.contains(*k))
                     {
                         continue;
                     }
@@ -477,12 +451,7 @@ impl NativeCore {
                     let mut attr_substs: Vec<Subst> = vec![subst.clone()];
                     let mut attr_ok = true;
                     for (k, pv) in attrs {
-                        let nv = &node
-                            .attrs
-                            .iter()
-                            .find(|(nk, _)| nk == k)
-                            .unwrap()
-                            .1;
+                        let nv = &node.attrs.iter().find(|(nk, _)| nk == k).unwrap().1;
                         match pv {
                             PAttr::Mvar(mv) => {
                                 let key = format!("$attr:{}", mv);
@@ -492,19 +461,14 @@ impl NativeCore {
                                         // lenient: the matcher accepts
                                         // 0 for 0.0 — strict eq would
                                         // break consistent-binding
-                                        Some(SVal::Attr(av))
-                                            if av.loose_eq(nv) =>
-                                        {
+                                        Some(SVal::Attr(av)) if av.loose_eq(nv) => {
                                             nxt.push(cs.clone())
                                         }
                                         Some(SVal::Attr(_)) => {}
                                         Some(SVal::Cls(_)) => {}
                                         None => {
                                             let mut cc = cs.clone();
-                                            cc.insert(
-                                                key.clone(),
-                                                SVal::Attr(nv.clone()),
-                                            );
+                                            cc.insert(key.clone(), SVal::Attr(nv.clone()));
                                             nxt.push(cc);
                                         }
                                     }
@@ -540,13 +504,7 @@ impl NativeCore {
                                 break;
                             }
                             let mut child_results: Vec<Subst> = Vec::new();
-                            self.m_bounded(
-                                cp,
-                                node.children[i],
-                                cs,
-                                &mut child_results,
-                                limit,
-                            );
+                            self.m_bounded(cp, node.children[i], cs, &mut child_results, limit);
                             new_substs.extend(child_results);
                         }
                         if new_substs.is_empty() {
@@ -557,8 +515,7 @@ impl NativeCore {
                     }
                     if ok {
                         let room = limit - results.len();
-                        results
-                            .extend(child_substs.into_iter().take(room));
+                        results.extend(child_substs.into_iter().take(room));
                         if results.len() >= limit {
                             return;
                         }
@@ -569,10 +526,7 @@ impl NativeCore {
                 let enode = ENode {
                     op: "leaf".to_string(),
                     children: Vec::new(),
-                    attrs: vec![(
-                        "key".to_string(),
-                        AttrVal::Str(key.clone()),
-                    )],
+                    attrs: vec![("key".to_string(), AttrVal::Str(key.clone()))],
                 };
                 if let Some(&nid) = self.node_to_class.get(&enode) {
                     if self.find(nid) == eid {
@@ -608,23 +562,17 @@ impl NativeCore {
                         PAttr::Mvar(mv) => {
                             let key = format!("$attr:{}", mv);
                             match subst.get(&key) {
-                                Some(SVal::Attr(av)) => {
-                                    attr_map.push((k.clone(), av.clone()))
-                                }
+                                Some(SVal::Attr(av)) => attr_map.push((k.clone(), av.clone())),
                                 // Python parity: unbound attr metavars
                                 // instantiate as the metavar string.
-                                _ => attr_map.push((
-                                    k.clone(),
-                                    AttrVal::Str(mv.clone()),
-                                )),
+                                _ => attr_map.push((k.clone(), AttrVal::Str(mv.clone()))),
                             }
                         }
                         PAttr::Lit(v) => attr_map.push((k.clone(), v.clone())),
                     }
                 }
                 attr_map.sort_by(|a, b| a.0.cmp(&b.0));
-                let canon: Vec<ClassId> =
-                    child_eids.iter().map(|&c| self.find(c)).collect();
+                let canon: Vec<ClassId> = child_eids.iter().map(|&c| self.find(c)).collect();
                 let enode = ENode {
                     op: op.clone(),
                     children: canon,
@@ -755,8 +703,7 @@ impl NativeCore {
                     match t {
                         Some(tt) => {
                             let ser = tt.to_py(py)?;
-                            let term =
-                                self.build_term.call1(py, (ser,))?;
+                            let term = self.build_term.call1(py, (ser,))?;
                             d.set_item(k, term)?;
                         }
                         None => return Ok(None),
@@ -803,8 +750,7 @@ impl NativeCore {
         prog: &Prog,
         search: Option<&BTreeSet<ClassId>>,
     ) -> Vec<ClassId> {
-        let eligible: Option<HashSet<ClassId>> = if let Some(hop) = &prog.head_op
-        {
+        let eligible: Option<HashSet<ClassId>> = if let Some(hop) = &prog.head_op {
             let key = (hop.clone(), prog.head_arity);
             let raw: Vec<ClassId> = self
                 .opk
@@ -869,10 +815,8 @@ impl NativeCore {
         }
         let mut changed = false;
         let n_start = self.n_enodes();
-        let mut anyterm_memo: HashMap<ClassId, (Rc<SerTerm>, usize)> =
-            HashMap::new();
-        let candidates =
-            self.candidate_classes(&self.rules[ri].lhs.clone(), search);
+        let mut anyterm_memo: HashMap<ClassId, (Rc<SerTerm>, usize)> = HashMap::new();
+        let candidates = self.candidate_classes(&self.rules[ri].lhs.clone(), search);
         for eid in candidates {
             let match_cap: usize = match enode_budget {
                 Some(budget) => {
@@ -899,8 +843,7 @@ impl NativeCore {
                         continue;
                     };
                     if let Some(chk) = &self.rules[ri].check {
-                        let ok: bool =
-                            chk.call1(py, (&bound,))?.extract(py)?;
+                        let ok: bool = chk.call1(py, (&bound,))?.extract(py)?;
                         if !ok {
                             continue;
                         }
@@ -914,15 +857,9 @@ impl NativeCore {
                         for (k, v) in d.iter() {
                             let key: String = k.extract()?;
                             if key.starts_with("$attr:") {
-                                subst.insert(
-                                    key.clone(),
-                                    SVal::Attr(AttrVal::from_py(&v)?),
-                                );
+                                subst.insert(key.clone(), SVal::Attr(AttrVal::from_py(&v)?));
                             } else if let Ok(ci) = v.extract::<i64>() {
-                                subst.insert(
-                                    key,
-                                    SVal::Cls(ci as ClassId),
-                                );
+                                subst.insert(key, SVal::Cls(ci as ClassId));
                             } else {
                                 return Err(pyo3::exceptions::PyTypeError::new_err(format!(
                                     "derive returned non-attr key {key:?} with non-class value"
@@ -946,8 +883,7 @@ impl NativeCore {
     // -- rebuild / congruence -------------------------------------------------
 
     fn cong_canon(&mut self, node: &ENode) -> ENode {
-        let canon: Vec<ClassId> =
-            node.children.iter().map(|&c| self.find(c)).collect();
+        let canon: Vec<ClassId> = node.children.iter().map(|&c| self.find(c)).collect();
         if canon == node.children {
             node.clone()
         } else {
@@ -977,8 +913,7 @@ impl NativeCore {
                     new_nodes.insert(node);
                     continue;
                 }
-                let canon: Vec<ClassId> =
-                    node.children.iter().map(|&c| self.find(c)).collect();
+                let canon: Vec<ClassId> = node.children.iter().map(|&c| self.find(c)).collect();
                 if canon == node.children {
                     new_nodes.insert(node);
                     continue;
@@ -1017,9 +952,7 @@ impl NativeCore {
             let pend: Vec<(ClassId, ENode)> = self
                 .classes
                 .iter()
-                .flat_map(|(&eid, c)| {
-                    c.nodes.iter().cloned().map(move |n| (eid, n))
-                })
+                .flat_map(|(&eid, c)| c.nodes.iter().cloned().map(move |n| (eid, n)))
                 .collect();
             let mut owner: HashMap<ENode, ClassId> = HashMap::new();
             let mut merges: Vec<(ClassId, ClassId)> = Vec::new();
@@ -1037,14 +970,9 @@ impl NativeCore {
                         ec.by_op = None;
                         for &c in &nn.children {
                             let cc = self.find(c);
-                            self.parents
-                                .entry(cc)
-                                .or_default()
-                                .insert(eid);
+                            self.parents.entry(cc).or_default().insert(eid);
                         }
-                        self.node_to_class
-                            .entry(nn.clone())
-                            .or_insert(eid);
+                        self.node_to_class.entry(nn.clone()).or_insert(eid);
                     }
                     if !self.classes[&eid].nodes.contains(&nn) {
                         continue;
@@ -1083,8 +1011,7 @@ impl NativeCore {
         match classes {
             Some(ids) => self.canonicalise(&ids),
             None => {
-                let ids: Vec<ClassId> =
-                    self.classes.keys().copied().collect();
+                let ids: Vec<ClassId> = self.classes.keys().copied().collect();
                 let changed = self.canonicalise(&ids);
                 self.close_congruence() || changed
             }
@@ -1144,8 +1071,7 @@ impl NativeCore {
         }
         let n_before = self.n_enodes();
         // Snapshot the frontier once per iteration.
-        let dirty_ids: Vec<ClassId> =
-            self.dirty.iter().copied().collect();
+        let dirty_ids: Vec<ClassId> = self.dirty.iter().copied().collect();
         let mut search: BTreeSet<ClassId> = BTreeSet::new();
         for e in dirty_ids {
             search.insert(self.find(e));
@@ -1215,12 +1141,7 @@ impl NativeCore {
         let mut iterations = 0usize;
         for it in 0..max_iterations {
             iterations = it + 1;
-            let r = self.run_iteration(
-                py,
-                rule_names,
-                max_nodes,
-                rule_budgets,
-            )?;
+            let r = self.run_iteration(py, rule_names, max_nodes, rule_budgets)?;
             if r != "continue" {
                 stop_reason = r;
                 break;
@@ -1238,17 +1159,12 @@ impl NativeCore {
         stats.set_item("truncation_level", 1usize)?;
         let budgets = PyDict::new(py);
         for name in rule_budgets.keys() {
-            budgets.set_item(
-                name,
-                *self.budget_spent.get(name).unwrap_or(&0),
-            )?;
+            budgets.set_item(name, *self.budget_spent.get(name).unwrap_or(&0))?;
         }
         stats.set_item("rule_budgets", budgets)?;
         let suspended: Vec<&String> = rule_budgets
             .iter()
-            .filter(|(n, b)| {
-                *self.budget_spent.get(*n).unwrap_or(&0) >= **b
-            })
+            .filter(|(n, b)| *self.budget_spent.get(*n).unwrap_or(&0) >= **b)
             .map(|(n, _)| n)
             .collect();
         stats.set_item("budget_suspended", suspended)?;
@@ -1264,27 +1180,28 @@ impl NativeCore {
     pub fn dump_classes(
         &mut self,
         py: Python<'_>,
-    ) -> PyResult<Vec<(ClassId, Vec<(String, Vec<ClassId>, Vec<(String, Py<PyAny>)>)>)>>
-    {
+    ) -> PyResult<
+        Vec<(
+            ClassId,
+            Vec<(String, Vec<ClassId>, Vec<(String, Py<PyAny>)>)>,
+        )>,
+    > {
         let ids: Vec<ClassId> = self.classes.keys().copied().collect();
         let mut out = Vec::with_capacity(ids.len());
         for eid in ids {
             let canon = self.find(eid);
-            let nodes: Vec<(String, Vec<ClassId>, Vec<(String, Py<PyAny>)>)> =
-                self.classes[&canon]
-                    .nodes
-                    .iter()
-                    .map(|n| {
-                        let attrs: Vec<(String, Py<PyAny>)> = n
-                            .attrs
-                            .iter()
-                            .map(|(k, v)| {
-                                Ok((k.clone(), v.to_py(py)?))
-                            })
-                            .collect::<PyResult<_>>()?;
-                        Ok((n.op.clone(), n.children.clone(), attrs))
-                    })
-                    .collect::<PyResult<_>>()?;
+            let nodes: Vec<(String, Vec<ClassId>, Vec<(String, Py<PyAny>)>)> = self.classes[&canon]
+                .nodes
+                .iter()
+                .map(|n| {
+                    let attrs: Vec<(String, Py<PyAny>)> = n
+                        .attrs
+                        .iter()
+                        .map(|(k, v)| Ok((k.clone(), v.to_py(py)?)))
+                        .collect::<PyResult<_>>()?;
+                    Ok((n.op.clone(), n.children.clone(), attrs))
+                })
+                .collect::<PyResult<_>>()?;
             out.push((canon, nodes));
         }
         Ok(out)
@@ -1415,18 +1332,14 @@ mod tests {
         let names = vec!["assoc_add".to_string()];
         let budgets = HashMap::new();
         Python::attach(|py| {
-            let r = g
-                .run_iteration(py, &names, usize::MAX, &budgets)
-                .unwrap();
+            let r = g.run_iteration(py, &names, usize::MAX, &budgets).unwrap();
             // First pass: the rule fires, work continues.
             assert_eq!(r, "continue");
             // The right-associated member landed in the root class.
             let canon = g.find(root);
             assert!(g.classes[&canon].nodes.len() >= 2);
             // Second iteration reaches the fixed point.
-            let r2 = g
-                .run_iteration(py, &names, usize::MAX, &budgets)
-                .unwrap();
+            let r2 = g.run_iteration(py, &names, usize::MAX, &budgets).unwrap();
             assert_eq!(r2, "fixed_point");
             assert_eq!(g.rule_fires["assoc_add"], 1);
         });

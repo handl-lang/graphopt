@@ -61,6 +61,11 @@ import torch
 from torch import nn
 from torch.distributions import Categorical
 
+try:  # Optional native core — built with maturin, never a hard dep.
+    from mlopt_native import contraction as _ncon
+except ImportError:  # pragma: no cover — wheel absent
+    _ncon = None
+
 __all__ = [
     "MAX_BATCH",
     "PAIR_DIM",
@@ -130,6 +135,8 @@ def pair_cost(
     x: frozenset[int], y: frozenset[int], sizes: dict[int, int]
 ) -> float:
     """Scalar multiplies to contract two tensors over index sets."""
+    if _ncon is not None:
+        return _ncon.pair_cost(x, y, sizes)
     c = 1.0
     for i in x | y:
         c *= sizes[i]
@@ -147,6 +154,8 @@ def merge_tensors(
     ts: list[frozenset[int]], a: int, b: int
 ) -> list[frozenset[int]]:
     """Replace tensors ``a``/``b`` by their contraction (xor of sets)."""
+    if _ncon is not None:
+        return _ncon.merge_tensors(ts, a, b)
     merged = ts[a] ^ ts[b]
     return [t for k, t in enumerate(ts) if k not in (a, b)] + [merged]
 
@@ -159,6 +168,8 @@ def greedy(
     top_k: int = 1,
 ) -> float:
     """Contract the cheapest pair; ``rng`` randomises among the top-k."""
+    if _ncon is not None:
+        return _ncon.greedy(tensors, sizes, rng=rng, top_k=top_k)
     ts = [frozenset(t) for t in tensors]
     total = 0.0
     while len(ts) > 1:
@@ -179,6 +190,8 @@ def cost_of_order(
     tensors: Any, sizes: dict[int, int], order: list[tuple[int, int]]
 ) -> float:
     """Replay an index-pair order and sum the pairwise cost."""
+    if _ncon is not None:
+        return _ncon.cost_of_order(tensors, sizes, order)
     ts = [frozenset(t) for t in tensors]
     total = 0.0
     for a, b in order:
