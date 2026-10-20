@@ -415,6 +415,20 @@ SUITES: list[SuiteSpec] = [
         tier="micro",
         mechanisms=("egraph", "laws", "carriers"),
     ),
+    _s(
+        "limits",
+        "discovery",
+        "Registered-baseline limits table",
+        "How does the delivered form measure against every registered "
+        "opponent — eager / Inductor / opt_einsum / the known-good "
+        "impl / the carrier under its generic lowering — on the "
+        "corpus, and where are the honest losses?",
+        "Generated ratio table (baseline ÷ mlopt): wins where "
+        "structure exists, honest losses (<1×) on the compiler's "
+        "home turf; unavailable baselines report their reason.",
+        tier="micro",
+        mechanisms=("egraph", "laws", "carriers"),
+    ),
 ]
 
 _BY_NAME = {s.name: s for s in SUITES}

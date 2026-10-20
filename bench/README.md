@@ -38,8 +38,11 @@ bench/
     compare.py    # regression + expectation comparison
     render/       # markdown · html · plots · quarto · slidev · dashboard · catalog
     templates/    # jinja2 sources for the HTML surfaces
-  suites/{correctness,search,cost,structure,speedup,e2e,bounded,integration}/
+  suites/{correctness,search,cost,evaluation,structure,speedup,e2e,bounded,integration,discovery}/
   common/                              # llama2c.py loader, fetch.py
+  discovery/                           # named-optimization corpus + scorecard CLI
+  players/                             # player-comparison runner + leaderboard CLI
+  limits/                              # baselines registry + limits-table CLI
   baselines/                           # committed golden results
   results/                             # working output (gitignored)
 ```
@@ -205,20 +208,21 @@ below; `python -m bench catalog --check` fails if it drifts (and
 | suite | tier | question | expected |
 |---|---|---|---|
 | `discovery` | micro | Can the engine derive each named optimization from the literature, certify it, and beat the best registered baseline (eager / inductor / known-good impl)? | All cases found + certified; ties with the registered floor are rediscoveries — only a strictly-below form reports WIN. |
+| `limits` | micro | How does the delivered form measure against every registered opponent — eager / Inductor / opt_einsum / the known-good impl / the carrier under its generic lowering — on the corpus, and where are the honest losses? | Generated ratio table (baseline ÷ mlopt): wins where structure exists, honest losses (<1×) on the compiler's home turf; unavailable baselines report their reason. |
 
 ## By mechanism
 
 | mechanism | suites |
 |---|---|
-| laws | `law_bench`, `laws_effect`, `discovery` |
-| egraph | `search_efficiency`, `contraction_ladder`, `reassoc_scale`, `discovery` |
+| laws | `law_bench`, `laws_effect`, `discovery`, `limits` |
+| egraph | `search_efficiency`, `contraction_ladder`, `reassoc_scale`, `discovery`, `limits` |
 | cost | `cost_fidelity`, `eval_axis`, `contraction_ladder` |
 | policy | `policy_value` |
 | pairing | `reassoc_scale`, `real_win_hunt`, `killer_demo`, `model_bench`, `e2e_model`, `e2e_models2`, `e2e_llm`, `stories15m_bench`, `bench_e2e` |
 | autotune | `real_win_hunt`, `killer_demo`, `model_bench` |
 | morphism | `morphism_coverage`, `morphism_e2e` |
 | scan | `real_linear_attn` |
-| carriers | `real_linear_attn`, `decode_scan_bench`, `bench_omd2`, `discovery` |
+| carriers | `real_linear_attn`, `decode_scan_bench`, `bench_omd2`, `discovery`, `limits` |
 | decode | `decode_scan_bench`, `decode_bench` |
 | cuda-graph | `decode_scan_bench` |
 | omd | `bench_omd2` |
