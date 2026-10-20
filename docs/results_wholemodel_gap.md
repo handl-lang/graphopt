@@ -144,22 +144,60 @@ Reads:
 
 ## Does the shipped CUDA-graph lane recover dispatch? — measured
 
-`CudaGraphRunner` (`mlopt_cuda`) only claims modules exposing
-`capture_cuda_graph` — the batched carrier executors.  Measured:
+As committed (`206afc1`), `CudaGraphRunner` (`mlopt_cuda`) claimed
+only modules exposing `capture_cuda_graph` — the batched carrier
+executors.  Measured then:
 
 | module | runner result | effect |
 |---|---|---|
 | generic `IRModule` (carrier, retnet; delivered, chainfuse) | `stats["cuda_graph"]=False` — **degrades quietly, no recovery** | — |
 | `ChunkedDecayModule` (executor-routed, retnet) | captures, `cuda_graph=True` | fused64: 2.679→**2.078 ms**; fused32: 0.951→**0.454 ms** |
 | generic `IRModule`, *manual* `torch.cuda.CUDAGraph` | capturable — the tape is a fixed op sequence (replay is bit-identical by construction; the underlying carrier verified at 9.8e-9) | carrier64: 3.209→2.964; **carrier32: 2.917→1.142 ms** |
-| delivered chainfuse via runner | captures (executor wrapper) | **no effect** — 2.129 ≈ 2.129; dispatch already hidden |
+| delivered chainfuse via runner | claims `cuda_graph=True` but the declined executor's `capture_cuda_graph` **silently no-ops** (`_plan is None`) | **no effect** — 2.129 ≈ 2.129; dispatch already hidden |
 
 So: **the cheap lane exists and works where a carrier executor claims
 the term** (worth ~0.5–0.6 ms at fp64, ~0.5 ms at fp32 on the
-carrier).  It does **not** reach generic lowerings — a one-method gap:
+carrier).  It did **not** reach generic lowerings — a one-method gap:
 the tape *is* capturable (manual capture works, verified-identical
 output), and a graph-capable generic runner would recover the full
 ~1.8 ms dispatch share the fp32 carrier pays.
+
+### Shipped since — the generic-graph lane (re-run, same box)
+
+That gap is now closed in `mlopt_cuda.runners`: a module without a
+working `capture_cuda_graph` is captured *generically* — the
+forward's dispatch sequence is recorded once over static input
+buffers into a `torch.cuda.CUDAGraph` and replayed by a
+`_GraphReplayModule` wrapper.  Same contract as the executors:
+shape/dtype/device baked at capture, mismatched calls fall back to
+the wrapped module's eager forward, the returned value is the static
+output buffer.  An executor that *declines* its own capture
+(`is_graph_captured` stays False — the routed-but-unbatched chainfuse
+module) falls through to the generic path too, so
+`stats["cuda_graph"]=True` now always means a real graph — the last
+table's quietly-no-op row is the case that fixed.
+
+Re-measured (`carrier*+graph(run)` = the shipped runner's return —
+the probe times it beside the manual-capture cross-check):
+
+| arm | med ms | kern µs | dispatch µs |
+|---|---|---|---|
+| carrier(gen)32 uncaptured | 3.726 | 1422 | 2303 |
+| carrier32+graph(run) | **1.151** | 1104 | 47 |
+| carrier32+graph(man) cross-check | 1.147 | 1103 | 44 |
+| carrier64+graph(run) | 2.986 | 2959 | 27 |
+| generic64+graph(run) (chainfuse IRModule) | 2.147 | 2136 | 11 |
+| delivered64+graph(run) (declined executor → generic) | 2.145 | 2136 | 10 |
+
+The runner arm lands within noise of the hand-rolled capture
+(**1.151 vs 1.147 ms**, dispatch 47 vs 44 µs) — the ~60%-of-wall
+dispatch share the fp32 carrier pays is recovered by the shipped
+lane, under the same verify contract (carrier verified at 9.8e-9).
+At fp64 it stays second-order (3.858→2.986 carrier; no change on the
+chainfuse, where dispatch was already hidden — 2.145 ≈ 2.154 eager,
+and the claim is now honest).  The uncaptured fp32 row drifted up
+from the first run's 2.917 to 3.726 ms — dispatch-side noise on a
+shared box — which only widens the gap the graph removes.
 
 ## What closing this takes (honest answer)
 
@@ -169,9 +207,10 @@ Ordered by measured payoff per unit of machinery:
    of the gap on this GPU class.  Not kernel work: it's a
    dtype/tolerance-contract decision (the fp64 gate is the verify
    default, not a semantic requirement).
-2. **Graph-capture generic `IRModule`s** — trivial runner extension
-   (the probe demonstrates capturability); buys ~8% at fp64, **~60%
-   at fp32** on per-leaf lowerings.
+2. **Graph-capture generic `IRModule`s** — **shipped**: the
+   `CudaGraphRunner` generic path (the re-run table above); measured
+   3.73→**1.15 ms** on the fp32 carrier, matching the manual-capture
+   cross-check within noise.
 3. **Pointwise/tail fusion at lowering** — `TorchCompileRunner`
    already recovers it where dynamo can trace (chainfuse delivered:
    −9%); the minted-kernel gen tier does it without dynamo

@@ -233,6 +233,78 @@ def test_cuda_graph_runner_drops_on_failed_capture():
     assert stats["cuda_graph_failure"] is FailureClass.UNKNOWN
 
 
+@pytest.mark.requires_cuda
+def test_cuda_graph_runner_captures_generic_irmodule():
+    """A lowered IRModule has no ``capture_cuda_graph`` — the runner's
+    generic path records the plan tape itself: stats True, replay
+    equals eager on fresh inputs, a shape mismatch falls back, and
+    introspection attrs delegate to the wrapped module."""
+    from mlopt_core.ir import IR, Op, Param, TensorType, Var
+    from mlopt_torch.torch_bridge import ir_to_torch_module
+
+    torch.manual_seed(0)
+    x = Var("x", TensorType((4, 8)))
+    w = Param(name="p_w", typ=TensorType((8, 8)))
+    ir = IR(
+        root=Op.make("matmul", x, w),
+        inputs=[x],
+        input_names=["x"],
+        params={"p_w": TensorType((8, 8))},
+    )
+    mod = ir_to_torch_module(
+        ir, {"p_w": torch.randn(8, 8, device="cuda")}
+    ).eval()
+    assert not hasattr(mod, "capture_cuda_graph")
+    xin = torch.randn(4, 8, device="cuda")
+    stats: dict = {}
+    out = CudaGraphRunner().apply(mod, xin, stats)
+    assert stats["cuda_graph"] is True
+    assert out is not mod  # a replay wrapper, not the module itself
+    with torch.no_grad():
+        assert torch.allclose(out(xin), mod(xin))
+        x2 = torch.randn(4, 8, device="cuda")
+        assert torch.allclose(out(x2), mod(x2))
+        # shape is baked at capture — a mismatched call falls back
+        # to the wrapped module's eager forward.
+        x3 = torch.randn(2, 8, device="cuda")
+        assert torch.allclose(out(x3), mod(x3))
+    # _root &c. resolve on the wrapped IRModule.
+    assert out._root is mod._root
+
+
+@pytest.mark.requires_cuda
+def test_cuda_graph_runner_generic_refuses_mixed_inputs():
+    """A non-tensor positional arg can't be refreshed per call — the
+    generic path refuses rather than bake a stale constant in."""
+    mod = nn.Linear(4, 4).cuda()
+    stats: dict = {}
+    x = torch.randn(2, 4, device="cuda")
+    out = CudaGraphRunner().apply(mod, (x, 3), stats)
+    assert out is mod
+    assert stats["cuda_graph"] is False
+    assert "cuda_graph_failure" not in stats
+
+
+@pytest.mark.requires_cuda
+def test_cuda_graph_runner_generic_failure_recorded():
+    """A module whose forward raises during generic capture degrades
+    gracefully — the original module returns and the reason is
+    classified (the generic path mutates nothing, so there is no
+    drop step)."""
+
+    class Boom(nn.Module):
+        def forward(self, x: torch.Tensor) -> torch.Tensor:
+            raise RuntimeError("capture broke")
+
+    mod = Boom()
+    stats: dict = {}
+    x = torch.randn(2, 4, device="cuda")
+    out = CudaGraphRunner().apply(mod, x, stats)
+    assert out is mod
+    assert stats["cuda_graph"] is False
+    assert stats["cuda_graph_failure"] is FailureClass.UNKNOWN
+
+
 def test_capture_failure_class_classifies():
     """The capture-failure classifier buckets by exception type/text
     without needing a CUDA device."""

@@ -29,12 +29,14 @@ This probe decomposes the measured gap on the two strongest cases:
 The CUDA-graph lane is measured two ways:
 
 1. ``CudaGraphRunner().apply(module, x, stats)`` — the shipped cheap
-   lane.  It only reaches modules exposing ``capture_cuda_graph``
-   (batched carrier executors); generic ``IRModule``s degrade quietly
-   (``stats["cuda_graph"]`` stays False).  Both outcomes are printed.
+   lane.  Executor modules expose ``capture_cuda_graph`` and capture
+   themselves; generic ``IRModule``s are captured through the runner's
+   generic path (a ``torch.cuda.CUDAGraph`` replay wrapper — the gap
+   this doc scoped, now shipped).  Both outcomes are printed and the
+   returned module is timed.
 2. A manual ``torch.cuda.CUDAGraph`` capture of the generic module —
-   what a graph-capable generic runner *would* recover, if the tape
-   is capturable at all.
+   the cross-check that the runner's generic path recovers exactly
+   what a hand-rolled capture does.
 
 The FLA/Triton rows are NOT re-run here (scratch deps — ``fla-core``,
 ``torchscale`` — are not installed); the retro's numbers are carried
@@ -444,17 +446,31 @@ def _retnet_case(
     }
 
     # Lane 2a — the shipped cheap lane on the generic lowering:
-    # CudaGraphRunner only claims batched executors; record the
-    # degrade honestly, then measure a manual capture anyway.
+    # CudaGraphRunner's generic path now claims the IRModule tape;
+    # record the outcome honestly and time the returned module, then
+    # cross-check with a manual capture anyway.
     from mlopt_cuda import CudaGraphRunner
 
     stats_generic: dict = {}
-    CudaGraphRunner().apply(carrier, (x64,), stats_generic)
+    carrier_run = CudaGraphRunner().apply(carrier, (x64,), stats_generic)
     print(
         f"  CudaGraphRunner on generic carrier: "
         f"cuda_graph={stats_generic.get('cuda_graph')} "
         f"failure={stats_generic.get('cuda_graph_failure')}"
     )
+    if stats_generic.get("cuda_graph"):
+        arms["carrier64+graph(run)"] = lambda: carrier_run(x64)
+    stats_generic32: dict = {}
+    carrier32_run = CudaGraphRunner().apply(
+        carrier32, (x32,), stats_generic32
+    )
+    print(
+        f"  CudaGraphRunner on generic carrier32: "
+        f"cuda_graph={stats_generic32.get('cuda_graph')} "
+        f"failure={stats_generic32.get('cuda_graph_failure')}"
+    )
+    if stats_generic32.get("cuda_graph"):
+        arms["carrier32+graph(run)"] = lambda: carrier32_run(x32)
     try:
         carrier_g = _capture_manual(lambda t_: carrier(t_), x64)
         arms["carrier64+graph(man)"] = lambda: carrier_g(x64)
@@ -513,6 +529,35 @@ def _retnet_case(
         f"  verify: carrier max_abs {rep.max_abs:.2e} "
         f"| fused max_abs {rep_f.max_abs:.2e} "
         f"| executor batched={getattr(fused, 'is_batched', False)}"
+    )
+    # fp32 delivery + verify — the dtype-contract arm: the delivered
+    # module must pass the SAME numerical gate against the fp32
+    # spelled reference (no fp64 anywhere in the loop).
+    base32 = copy.deepcopy(base).float()
+    rep32 = sink.verify(base32, carrier32, (x32,))
+    rep_f32 = sink.verify(base32, fused32, (x32,))
+    print(
+        f"  verify32: carrier max_abs {rep32.max_abs:.2e} "
+        f"rel {rep32.max_rel:.2e} passed={rep32.passed} "
+        f"| fused max_abs {rep_f32.max_abs:.2e} "
+        f"rel {rep_f32.max_rel:.2e} passed={rep_f32.passed}"
+    )
+    # The ambient-dtype promotion check: under an fp64 process default
+    # (the verify convention), a Const scalar (``s / √T`` here) used
+    # to mint fp64 and silently promote the whole fp32 delivery.
+    # Post-fix it must stay fp32 — and time like it.
+    prev_dt = torch.get_default_dtype()
+    torch.set_default_dtype(torch.float64)
+    try:
+        out_dt = carrier32(x32).dtype
+        amb64_ms = (
+            _time_module(lambda *_: carrier32(x32), (x32,), reps) / 1e3
+        )
+    finally:
+        torch.set_default_dtype(prev_dt)
+    print(
+        f"  ambient-fp64 const check: carrier32 out {out_dt}, "
+        f"{amb64_ms:.3f} ms (pre-fix: float64, fp64-class wall)"
     )
     rows = _measure_arms(arms, x64, reps)
     _print_table(rows)
@@ -627,16 +672,19 @@ def _mlp_case(reps: int) -> None:
     }
 
     # Lane 2a — the shipped cheap lane on a generic IRModule:
-    # degrade-quietly or capture?  Recorded honestly.
+    # the runner's generic path captures the tape; record honestly
+    # and time the returned replay wrapper.
     from mlopt_cuda import CudaGraphRunner
 
     stats_g: dict = {}
-    CudaGraphRunner().apply(generic, (x64,), stats_g)
+    generic_run = CudaGraphRunner().apply(generic, (x64,), stats_g)
     print(
         f"  CudaGraphRunner on generic IRModule: "
         f"cuda_graph={stats_g.get('cuda_graph')} "
         f"failure={stats_g.get('cuda_graph_failure')}"
     )
+    if stats_g.get("cuda_graph"):
+        arms["generic64+graph(run)"] = lambda: generic_run(x64)
     # ...and on the delivery-routed module (a fresh lowering — capture
     # mutates the module into replay mode).
     del_r = opt.lower(res, x64, runner=CudaGraphRunner(), verify=False)
