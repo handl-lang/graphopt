@@ -171,7 +171,9 @@ _CODE_PATHS = (
 _REPO = REPO_ROOT
 
 
-def _journal_wal(conn: sqlite3.Connection, busy_timeout_s: float) -> None:
+def _journal_wal(
+    conn: sqlite3.Connection, busy_timeout_s: float
+) -> None:
     """Best-effort ``journal_mode=WAL`` — retries a held exclusive lock.
 
     The WAL transition needs an exclusive lock that does *not* honour
