@@ -85,6 +85,8 @@ harness port is exact.
 | head+self-fold | weight table | 0.2671 | 0.3558 | 0.0112 | 14.86 | 30/36 | 0.2101 |
 | head+self+nv | gate over both | **0.2813** | 0.3553 | 0.0104 | 15.97 | 33/36 | 0.2101 |
 | head+self+nv-fold | weight table | 0.2650 | 0.3554 | 0.0108 | 15.50 | 23/36 | 0.2101 |
+| head+self+stop | gate over `open:self`+`open:stop` | 0.2698 | 0.3366 | 0.0124 | 13.47 | 36/36 | 0.2101 |
+| head+self+stop-fold | weight table | 0.2630 | 0.2836 | 0.0111 | 15.03 | 30/36 | 0.2101 |
 | — anchors — ||||||||
 | oracle-stop ceiling* | best-prefix under the oracle | 0.3877 | — | 0.0444 | 3.75 | 36 | — |
 | baked-prior | | 0.2758 | — | 0.0106 | 13.06 | — | 0.2101 |
@@ -145,15 +147,79 @@ harness port is exact.
   fixed point (stop-early episodes → V sees ~0 returns → flat
   credit forever), and `ac+stop` still lands nearest it.
 
+## Round 6b — the missing head arm + the unfed replay
+
+Two additions (same script, same protocol, re-run — every pre-existing
+row reproduces bit-identically):
+
+* **`head+self+stop`** — the third head arm the round skipped: the
+  corrected gate over `open:self`+`open:stop`.  It is the *only*
+  self-schema gate that actually moves the operating point early —
+  13.47 evals/ep and the best learned yield-per-eval of any head arm
+  (0.0124) — but it prices that placement wrong: reward 0.2698,
+  −0.003 below the bar.  The head's biggest weight is
+  `x:stop:finds` −80 ("stop once finds are banked") with the
+  self-posterior block carrying the rest (`self_best` +20,
+  `self_topk`/`self_ev` −17); head eval AP 0.4006 — same ~0.40
+  discrimination the self columns gave `head+self`, the
+  `open:stop` columns add nothing the progress features did not
+  already carry.
+* **the unfed replay** — every row above was measured with the
+  injected seams *bound* (`set_self_scores`, `set_value_preds`).
+  `OPEN_GAME_PLAYER_WEIGHTS` serializes only the `{feature: weight}`
+  table — a baked injected-schema arm deploys today with the seam
+  unfed and its columns emitting zeros, a *different function* than
+  the measured one.  Each weights-table candidate is therefore
+  replayed exactly as the bake would run it:
+
+| candidate | bound → unfed reward | bound → unfed AP | stops bound → unfed |
+|---|---|---|---|
+| self | 0.2299 → 0.2301 | 0.0538 → 0.0536 | 18 → 18 |
+| ac+self | 0.3009 → **0.3013** | 0.1166 → 0.1086 | 17 → 17 |
+| nv | 0.3008 → 0.3023 | 0.1042 → 0.1042 | 16 → 18 |
+| **ac+nv** | 0.2764 → **0.2772** | 0.2074 → 0.2074 | 12 → 17 |
+| self+nv | 0.2834 → 0.2856 | 0.1453 → 0.1406 | 11 → 16 |
+| ac+self+nv | 0.2954 → 0.2978 | 0.1174 → 0.1095 | 17 → 19 |
+| head+self-fold | 0.2671 → 0.2691 | 0.2101 → 0.2101 | 30 → 5 |
+| head+self+nv-fold | 0.2650 → 0.2694 | 0.2101 → 0.2101 | 23 → 7 |
+| head+self+stop-fold | 0.2630 → 0.2585 | 0.2101 → 0.2101 | 30 → 4 |
+
+**The injected columns are a training-time teacher, not a decode-time
+signal.**  Bound-vs-unfed deltas are ≤0.003 reward and ≤0.008 AP on
+every RL/AC arm — and on `nv`/`self+nv`/`ac+self+nv` the unfed table
+is *better* (the injected features' weights carry a small wrong-signed
+residue the zeros remove).  At the drain operating point (~15
+evals/ep) the `x:stop:*` columns move the stop logit against 16
+dwarfing eval logits and change ~nothing; the `x:self:*` eval-row
+columns move the page AP slightly (0.117→0.109).  Two consequences,
+one good and one bad:
+
+* *good* — `ac+nv`'s near-miss is **intrinsic**, not a seam
+  artifact: as a pure `{feature: weight}` table over an extended
+  schema it posts 0.2772/0.2074 unfed, the closest honest
+  serializable result in six rounds — and it still misses the AP
+  bar by 0.003.
+* *bad* — the folds' stopping *was* the seam: `head+self-fold`
+  bound stops 30×; unfed it stops 5×.  The fold's `x:stop:self_*`
+  weights are inert without the scorer, so its only live stop
+  signal is the `op:stop` constant — the round-5 "unfed fold is a
+  constant propensity" warning, now measured: the timing a baked
+  self-schema fold would ship is not the timing the bound run
+  earned.
+
 ## Verdict: not earned — `OPEN_GAME_PLAYER_WEIGHTS` stays
 
 Gate: held-out reward ≥ 0.273 **and** AP ≥ 0.210, honestly — the
 never-stop confound or an AP collapse is an honest negative.  No
-weights-table arm clears both: `ac+nv` misses AP by 0.003
-(0.2074); `ac`/`ac+self`/`ac+self+nv` clear reward on collapsed
-rankings; both folds miss.  The two *gated* arms clear both bars
-but are gates (a second scorer + τ — not `OPEN_GAME_PLAYER_WEIGHTS`
-shape).  **No bake.**
+weights-table arm clears both, bound *or* unfed: `ac+nv` misses AP
+by 0.003 either way (0.2764 bound / 0.2772 unfed, AP 0.2074);
+`ac`/`ac+self`/`ac+self+nv` clear reward on collapsed rankings; all
+three folds miss, and the self folds lose their stopping unfed.
+The two earning *gated* arms (`head+self` 0.2816, `head+self+nv`
+0.2813) clear both bars but are gates — a second scorer + τ, not
+`OPEN_GAME_PLAYER_WEIGHTS` shape — and `head+self+stop` joins the
+family with the round's best placement (13.47 evals, yield 0.0124)
+at a reward miss (0.2698).  **No bake.**
 
 The honest six-round summary: the blocker narrowed on both axes
 but closed on neither.

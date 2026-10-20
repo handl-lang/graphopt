@@ -37,12 +37,20 @@ gate machinery under the round-4 protocol (``rank_tags=()`` — the
 ranker is the incumbent schema, so the stop decision is measured
 apart from the ranking).
 
+Round-6b adds the delivery check the arms above were missing:
+every injected-schema weights table is also replayed **unfed** —
+``set_self_scores(None)`` + ``set_value_preds(None)``, the state
+``OPEN_GAME_PLAYER_WEIGHTS`` would deploy it in — so a row that
+clears the gate *bound* but collapses unfed is priced as the
+non-serializable delivery it is.  ``head+self+stop`` (gate over
+``open:self`` + ``open:stop``) joins the head family.
+
 Bake rule (unchanged): a delivery joins
 ``OPEN_GAME_PLAYER_WEIGHTS`` only if held-out reward/ep AND
 page-aware AP both clear the incumbent bake (0.273 / 0.210) —
 never-stop or AP-collapse is an honest negative.
 
-Runtime: ~150 s one-time pool memoization, ~10–90 s per arm.
+Runtime: ~150 s one-time pool memoization, ~10-90 s per arm.
 
 Usage::
 
@@ -65,9 +73,9 @@ import torch
 from mlopt_core.features import compute_features
 from mlopt_core.trajectories import RuleSample, rule_vector
 from mlopt_discovery import advantage as adv
-from mlopt_discovery import engine, open_self as oself
+from mlopt_discovery import engine, play
 from mlopt_discovery import open_game as og
-from mlopt_discovery import play
+from mlopt_discovery import open_self as oself
 from mlopt_discovery import proposal as lp
 from mlopt_discovery.meta_arena import Action
 from mlopt_discovery.players import PARTS, DomainSpec, _dot
@@ -129,6 +137,13 @@ ARMS: tuple[
     (
         "head+self+nv",
         ("open:self", "open:next-val"),
+        "head",
+        EPOCHS,
+        (),
+    ),
+    (
+        "head+self+stop",
+        ("open:self", "open:stop"),
         "head",
         EPOCHS,
         (),
@@ -359,6 +374,7 @@ def run(
     weights: dict[str, dict] = {}
     heads: dict[str, dict] = {}
     vdiag: dict[str, dict] = {}
+    specs: dict[str, tuple[DomainSpec, DomainSpec]] = {}
     orig_evaluate = lp.evaluate
     lp.evaluate = pb._patched_evaluate(by_key)
     try:
@@ -421,6 +437,7 @@ def run(
             rank_spec = (
                 _spec_for(rank_tags) if kind == "head" else spec
             )
+            specs[arm_id] = (spec, rank_spec)
             if kind == "ac":
                 player = adv.AdvantagePlayer(
                     seed=seed,
@@ -687,6 +704,93 @@ def run(
                 f"evals={sampled['evals_per_ep']:>5.2f} "
                 f"ap={ap:.4f} ({time.time() - t1:.0f}s)"
             )
+
+        # Delivery honesty — the *unfed replay*.  Every row above is
+        # measured with the injected seams bound (``set_self_scores``
+        # for ``open:self`` arms, ``set_value_preds`` for
+        # ``open:next-val``).  ``OPEN_GAME_PLAYER_WEIGHTS`` serializes
+        # only the ``{feature: weight}`` table — a bake of any arm
+        # whose schema carries an injected part deploys today with the
+        # seam unfed, its columns emitting zeros, so the shipped
+        # function is *not* the measured one.  This replays each
+        # weights-table candidate exactly as the bake would run it
+        # (the rounded near-zero-dropped table ``weights`` stores is
+        # what ``train_open_prior.py`` serializes): the ``-unfed``
+        # rows are the honest serializable numbers.  The seams stay
+        # cleared for the whole pass — a column family not in the
+        # arm's schema cannot be emitted anyway, so clearing both is
+        # the same replay as clearing the arm's own seam.
+        oself.set_self_scores(None)
+        og.set_value_preds(None)
+        for arm_id, tags, kind, _e, _rt in ARMS:
+            if not ({"open:self", "open:next-val"} & set(tags)):
+                continue
+            spec, _rank_spec = specs[arm_id]
+            candidates = (
+                []
+                if kind == "head"  # the ranker alone is no delivery
+                else [(arm_id, weights[arm_id])]
+            )
+            if arm_id + "-fold" in weights:
+                candidates.append(
+                    (arm_id + "-fold", weights[arm_id + "-fold"])
+                )
+            for cand_id, w in candidates:
+                usampled = sp._play_pools(
+                    lambda i, s=spec, wf=w: og.OpenLearnedPlayer(
+                        seed=seed + _SAMPLED_SEED + i,
+                        spec=s,
+                        weights=wf,
+                        learn=False,
+                    ),
+                    ev_pools,
+                    budget,
+                )
+                ugreedy = sp._play_pools(
+                    lambda i, s=spec, wf=w: og.OpenLearnedPlayer(
+                        seed=seed + _GREEDY_SEED + i,
+                        spec=s,
+                        weights=wf,
+                        learn=False,
+                        greedy=True,
+                    ),
+                    ev_pools,
+                    budget,
+                )
+                uap = round(
+                    pb._ap(
+                        sp._page_scores(spec, w, ev_pools),
+                        flat_outcomes,
+                    ),
+                    4,
+                )
+                rows_out.append(
+                    {
+                        "id": cand_id + "-unfed",
+                        "kind": "unfed",
+                        "extra_parts": list(tags),
+                        "rank_parts": (
+                            list(_rt) if kind == "head" else list(tags)
+                        ),
+                        "rl_epochs": n_epochs,
+                        "n_features": len(spec.features),
+                        "reward_ep": usampled["reward"],
+                        "reward_greedy_ep": ugreedy["reward"],
+                        "useful_ep": usampled["useful_per_ep"],
+                        "useful_eval": usampled["useful_per_eval"],
+                        "evals_ep": usampled["evals_per_ep"],
+                        "stops": usampled["stops"],
+                        "stops_greedy": ugreedy["stops"],
+                        "ap": uap,
+                    }
+                )
+                print(  # stdout-compat
+                    f"  [unfed] {cand_id:<19} "
+                    f"reward={usampled['reward']:>8.4f} "
+                    f"greedy={ugreedy['reward']:>8.4f} "
+                    f"evals={usampled['evals_per_ep']:>5.2f} "
+                    f"ap={uap:.4f}"
+                )
     finally:
         lp.evaluate = orig_evaluate
         og.set_value_preds(None)

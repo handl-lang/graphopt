@@ -662,3 +662,105 @@ head-fold — lands one of the two degenerate points.  A bakeable
 stop policy needs either a fundamentally better usefulness signal
 (verdict-conditioned features the verifier can see, not just term
 shape) or a stop decision outside the shared softmax entirely.
+
+---
+
+# Round 6 — the self-posterior + per-step advantage (appendix; full doc `results_stop_advantage.md`)
+
+**Date:** 2026-10-19 · **Script:** `bench/policy/stop_advantage.py`
+(new — same protocol, reuses this driver's gate machinery) ·
+**Runner:** `timeout 1800 .venv/bin/python
+bench/policy/stop_advantage.py --json /tmp/adv6.json` (~3.5 min:
+12 arms + 9 unfed replays; re-run reproduced every committed row
+bit-identically).
+
+Round 5 closed on two missing pieces — *evidence* (no feature
+prices the pending pool) and *delivery* (every weights-table stop
+delivery lands degenerate).  Round 6 prices both new levers:
+**`open:self`** (`mlopt_discovery/open_self` — the policy's own
+softmax over pending evaluates injected as `x:stop:self_*` /
+`x:self:*` columns via `set_self_scores`) and **per-step
+advantage** (`mlopt_discovery/advantage.AdvantagePlayer` — a
+learned `V(s)=u·φ_stop` NLMS critic, so `stop`'s credit isolates
+to `−V(s)` instead of the episode total).
+
+## Feature power — self-posterior solo APs vs the oracle continue-labels
+
+Held-out decision-row probe (`head+self`, base rate 0.155):
+
+| column | solo AP | | reference columns | solo AP |
+|---|---|---|---|---|
+| `x:stop:self_topk` | **0.3335** | | `x:stop:remaining_frac` (r3 best) | 0.3287 |
+| `x:stop:self_best` | 0.3312 | | `x:stop:next_value` (r4, delta net) | 0.3217 |
+| `x:stop:self_ev` | 0.3309 | | `x:stop:next_value` (r5, useful net) | **0.3818** |
+| `x:stop:self_above` | 0.2802 | | `x:stop:best_score` (heuristic) | 0.2007 |
+| `x:stop:self_pay` | 0.1245 | | `x:stop:rank1_pred` (heuristic) | 0.1492 |
+| `x:stop:self_p1` | 0.1110 | | | |
+
+The self-posterior is a real pool-priced signal at **zero
+predictor cost** — it matches the progress counter and the
+delta-net injection and decisively beats the heuristic columns,
+but does **not** out-score the useful-label preds (0.38), and its
+LOO deltas are ≈0 (collinear with what exists; combined head eval
+AP 0.40 < round-3's 0.55).  It is a *ranking* signal, still not a
+*will-it-pay* one.
+
+## Results (held-out odd pages, budget 17, `delta`-label injection)
+
+| arm | mechanism | reward/ep | greedy | evals/ep | stops | AP |
+|---|---|---|---|---|---|---|
+| incumbent | rl 5ep | 0.2728 | 0.3590 | 14.44 | 19 | 0.2101 |
+| ac | actor-critic | 0.2761 | 0.3659 | 14.44 | 20 | 0.1098 |
+| ac+self | ac + `open:self` | **0.3009** | 0.3856 | 15.28 | 17 | 0.1166 |
+| nv (r5 control) | rl + `open:next-val` | 0.3008 | 0.3810 | 15.31 | 16 | 0.1042 |
+| **ac+nv** | ac + `open:next-val` | **0.2764** | 0.3555 | 15.36 | 12 | **0.2074** |
+| head+self | gate over `open:self` | **0.2816** | 0.3559 | 15.89 | 36 | 0.2101 |
+| head+self+nv | gate over both | **0.2813** | 0.3553 | 15.97 | 33 | 0.2101 |
+| head+self+stop | gate + `open:stop` | 0.2698 | 0.3366 | 13.47 | 36 | 0.2101 |
+| head+self-fold / +nv / +stop | weight tables | 0.2671 / 0.2650 / 0.2630 | | ~15 | 30/23/30 | 0.2101 |
+
+## The unfed replay — delivery checked as `OPEN_GAME_PLAYER_WEIGHTS` would run it
+
+Every row above was measured with the injected seams bound; the
+weights table serializes without them, so each candidate is also
+replayed with `set_self_scores(None)` + `set_value_preds(None)`:
+
+| candidate | bound → unfed reward | bound → unfed AP |
+|---|---|---|
+| **ac+nv** | 0.2764 → **0.2772** | 0.2074 → 0.2074 |
+| ac+self | 0.3009 → 0.3013 | 0.1166 → 0.1086 |
+| self+nv / ac+self+nv | 0.2834 / 0.2954 → 0.2856 / 0.2978 | 0.1453 / 0.1174 → 0.1406 / 0.1095 |
+| head+self-fold | 0.2671 → 0.2691 (stops 30→5) | 0.2101 → 0.2101 |
+| head+self+nv-fold | 0.2650 → 0.2694 (stops 23→7) | 0.2101 → 0.2101 |
+| head+self+stop-fold | 0.2630 → 0.2585 (stops 30→4) | 0.2101 → 0.2101 |
+
+The injected columns are a *training-time teacher*: at the drain
+operating point they change ~nothing at decode (≤0.003 reward),
+so `ac+nv`'s near-miss is intrinsic — but the folds' stopping
+*was* the seam (bound 23-30 stops → unfed 4-7).
+
+## Bake gate — round 6
+
+| candidate | reward ≥ 0.273 | AP ≥ 0.210 | serializable | verdict |
+|---|---|---|---|---|
+| `ac+nv` (bound or unfed) | ✓ 0.2764/0.2772 | ✗ 0.2074 (−0.003) | ✓ pure table + schema ext | **miss** |
+| `ac+self` | ✓ 0.3009 | ✗ 0.1166 | ✓ modulo seam | AP collapse |
+| `head+self` / `head+self+nv` | ✓ | ✓ | ✗ gate (scorer + τ) | not a weight table |
+| `head+self+stop` | ✗ 0.2698 | ✓ | ✗ gate | miss |
+| all `-fold` tables | ✗ ≤0.2694 | ✓ | ~ (unfed: stops vanish) | miss |
+
+**Gate: not passed — `OPEN_GAME_PLAYER_WEIGHTS` stays.**  Honest
+verdict on `open_self`: it is *not* the same confounds under a new
+name — the evidence half genuinely moved (the first zero-cost
+pending-pool view, matching the best injected columns) and the
+per-step advantage is a real credit mechanism (`ac+nv` posts the
+closest serializable result in six rounds, bound *or* unfed).  But
+the gate is unforgiving in the same place: the posterior ranks the
+pool, it cannot certify it, so reward-clearing weight tables still
+ride collapsed rankings (AP ≤0.12), the earning deliveries are
+still gates (non-serializable second scorer + τ), and the serial
+folds still miss — `ac+nv` by 0.003 on AP, exactly where round 5's
+`head+nv-fold` missed by 0.0004 on reward.  The remaining blocker
+is unchanged: nothing in the state certifies "pending is duds"
+better than ~0.4 decision-row AP, and the game's economics keep
+rationally resolving that uncertainty to "drain".
