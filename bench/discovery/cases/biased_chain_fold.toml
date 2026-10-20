@@ -1,0 +1,33 @@
+name = "biased_chain_fold"
+title = "Two-layer biased Linear chain → affine compose"
+category = "speed"
+citation = """
+`linear(linear(x,A,b1),B,b2) → (BA)x + (B·b1+b2)` — the affine-map
+composition `assoc_linear_bias`, the biased sibling of
+`weight_chain_fold`'s `assoc_linear`.  The composed member spells the
+fused bias `linear(x, BA, B·b1) + b2` so both B-products stay
+well-typed for every hidden width and fold at compile time — one
+GEMM plus one broadcast add at runtime.
+"""
+source = "biased_chain"
+size = 16
+rules = "default"
+cost = "launch"
+
+[expect]
+signals = ["law:assoc_linear_bias"]
+ops = ["linear"]
+max_ops = { linear = 1 }  # spelled form dispatches two GEMMs
+
+[[baselines]]
+name = "eager two-GEMM"
+kind = "self"
+[[baselines]]
+name = "pre-folded affine"
+kind = "ref"
+ref = "affine_chain_folded"
+note = "one Linear carrying W=B·A, b=B·b1+b2"
+[[baselines]]
+name = "inductor"
+kind = "compile"
+note = "no freeze — Inductor cannot fold the weights"

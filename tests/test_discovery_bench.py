@@ -38,7 +38,7 @@ def _case(name: str) -> DiscoveryCase:
 
 def test_corpus_loads_and_validates():
     cases = load_cases()
-    assert len(cases) >= 7
+    assert len(cases) >= 19
     names = {c.name for c in cases}
     # the plan-0031 seed set
     assert {
@@ -49,6 +49,22 @@ def test_corpus_loads_and_validates():
         "mul_unsq_nat",
         "weight_chain_fold",
         "swiglu_mlp",
+    } <= names
+    # the compiler-transform expansion (kernel folds, scale
+    # commutation, weight-space merges, the pairing pass)
+    assert {
+        "rms_norm_fold",
+        "rms_norm_nogain",
+        "rms_norm_bridge",
+        "softmax_fold",
+        "silu_fold",
+        "softsign_fold",
+        "glu_fold",
+        "sdpa_nomask",
+        "mha_qkv_fuse",
+        "weight_merge",
+        "biased_chain_fold",
+        "select_mul",
     } <= names
     for c in cases:
         assert c.source in SOURCES, c.name
@@ -135,6 +151,139 @@ def test_swiglu_pairing_is_a_find():
     assert res.found and res.certified
     assert res.signals_seen  # stat:paired_extract or law:swiglu_fuse
     assert res.beat_best is True
+
+
+def _ref(res: object, kind: str = "ref"):
+    return next(a for a in res.baselines if a.kind == kind)
+
+
+def test_rms_norm_fold_reaches_the_kernel():
+    """The gained manual RMSNorm folds to ``rms_norm`` — the
+    reduction/gain chain gone — and ties the shipped ``F.rms_norm``
+    floor (a rediscovery, not a find)."""
+    res = run_case(_case("rms_norm_fold"), lane="fast")
+    assert res.error == ""
+    assert res.found and res.certified
+    assert "law:rms_norm_fold" in res.signals_seen
+    assert res.detail["extracted_ops"] == ["rms_norm"]
+    assert res.cost_after < res.cost_before
+    assert res.cost_after == pytest.approx(_ref(res).cost, rel=1e-6)
+    assert res.beat_best is False
+
+
+def test_rms_norm_nogain_fold():
+    res = run_case(_case("rms_norm_nogain"), lane="fast")
+    assert res.error == ""
+    assert res.found and res.certified
+    assert "law:rms_norm_fold_nogain" in res.signals_seen
+    assert res.detail["extracted_ops"] == ["rms_norm"]
+    assert res.beat_best is False
+
+
+def test_rms_norm_misspellings_fold_via_bridges():
+    """``x·x`` + ``pow(-0.5)`` — the recorded-miss spelling — folds
+    only because the canonicalizer bridges mint the fold's redex
+    first.  The bridge fires are part of the derivation."""
+    res = run_case(_case("rms_norm_bridge"), lane="fast")
+    assert res.error == ""
+    assert res.found and res.certified
+    assert "law:rms_norm_fold" in res.signals_seen
+    assert res.detail["extracted_ops"] == ["rms_norm"]
+
+
+def test_softmax_fold_reaches_the_kernel():
+    res = run_case(_case("softmax_fold"), lane="fast")
+    assert res.error == ""
+    assert res.found and res.certified
+    assert "law:softmax_fold" in res.signals_seen
+    assert res.detail["extracted_ops"] == ["softmax"]
+    assert res.cost_after == pytest.approx(_ref(res).cost, rel=1e-6)
+    assert res.beat_best is False
+
+
+def test_silu_fold_reaches_the_kernel():
+    res = run_case(_case("silu_fold"), lane="fast")
+    assert res.error == ""
+    assert res.found and res.certified
+    assert "law:silu_fold" in res.signals_seen
+    assert res.detail["extracted_ops"] == ["silu"]
+    assert res.beat_best is False
+
+
+def test_softsign_fold_beats_the_torch_spelling():
+    """``F.softsign`` itself exports decomposed (div/abs/add — aten
+    has no softsign primitive), so the folded ``softsign`` op is
+    strictly below the floor torch's own functional API registers."""
+    res = run_case(_case("softsign_fold"), lane="fast")
+    assert res.error == ""
+    assert res.found and res.certified
+    assert "law:softsign_fold" in res.signals_seen
+    assert res.detail["extracted_ops"] == ["softsign"]
+    assert res.beat_best is True
+
+
+def test_glu_fold_reaches_the_kernel():
+    res = run_case(_case("glu_fold"), lane="fast")
+    assert res.error == ""
+    assert res.found and res.certified
+    assert "law:glu_fold" in res.signals_seen
+    assert res.detail["extracted_ops"] == ["glu"]
+    assert res.beat_best is False
+
+
+def test_sdpa_nomask_fold():
+    """The mask-free spelled attention — MultiheadAttention's default
+    path — folds to ``sdpa``; no ``softmax``/``matmul`` survives."""
+    res = run_case(_case("sdpa_nomask"), lane="fast")
+    assert res.error == ""
+    assert res.found and res.certified
+    assert "sdpa" in res.detail["extracted_ops"]
+    assert "softmax" not in res.detail["extracted_ops"]
+    assert res.beat_best is False
+
+
+def test_mha_qkv_pairing_fuses_the_gemms():
+    """Three split projections of one input extract through the
+    forced shared-GEMM member — the paired term won, hence
+    ``stat:paired_extract`` (``qkv_fuse`` itself is SUBSUMED and
+    cannot fire; the signal names the pass that did the work)."""
+    res = run_case(_case("mha_qkv_fuse"), lane="fast")
+    assert res.error == ""
+    assert res.found and res.certified
+    assert "stat:paired_extract" in res.signals_seen
+    ops = res.detail["extracted_ops"]
+    assert "sdpa" in ops and "split" in ops
+
+
+def test_weight_merge_factors_the_weights():
+    res = run_case(_case("weight_merge"), lane="fast")
+    assert res.error == ""
+    assert res.found and res.certified
+    assert "law:weight_factor_linear" in res.signals_seen
+    assert "add" in res.detail["extracted_ops"]  # the (A+B) weight add
+    assert res.cost_after < res.cost_before
+    assert res.beat_best is False
+
+
+def test_biased_chain_compose():
+    res = run_case(_case("biased_chain_fold"), lane="fast")
+    assert res.error == ""
+    assert res.found and res.certified
+    assert "law:assoc_linear_bias" in res.signals_seen
+    assert res.cost_after < res.cost_before
+
+
+def test_select_mul_folds_but_costs_more_standalone():
+    """Honest row: ``select_mul`` fires and the one-select fused
+    member is picked, but standalone the fold multiplies the full
+    tensors then slices — strictly costlier than multiplying two
+    slices.  The row records the measured regression."""
+    res = run_case(_case("select_mul"), lane="fast")
+    assert res.error == ""
+    assert res.found and res.certified
+    assert "law:select_mul" in res.signals_seen
+    assert res.cost_after > res.cost_before
+    assert res.beat_best is False
 
 
 def test_run_suite_preserves_order():

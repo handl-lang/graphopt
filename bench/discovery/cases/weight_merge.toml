@@ -1,0 +1,32 @@
+name = "weight_merge"
+title = "linear(x,A)+linear(x,B) → linear(x, A+B)"
+category = "speed"
+citation = """
+The LoRA-apply / model-soup merge deployment tooling performs by
+hand: two parallel projections of the same input sum into one GEMM
+on the summed weight — `weight_factor_linear` (transpose
+distributes over +).  The parameter add is compile-time work, so
+runtime drops a GEMM: the bias-free analogue of the biased chain's
+`assoc_linear_bias`.
+"""
+source = "weight_merge"
+size = 16
+rules = "default"
+cost = "launch"
+
+[expect]
+signals = ["law:weight_factor_linear"]
+ops = ["linear"]
+max_ops = { linear = 1 }  # spelled form dispatches two GEMMs
+
+[[baselines]]
+name = "eager two-GEMM"
+kind = "self"
+[[baselines]]
+name = "merged Linear"
+kind = "ref"
+ref = "weight_merged"
+note = "one Linear carrying A+B — the merged form"
+[[baselines]]
+name = "inductor"
+kind = "compile"

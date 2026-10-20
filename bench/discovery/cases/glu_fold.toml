@@ -1,0 +1,32 @@
+name = "glu_fold"
+title = "chunk·σ(chunk) manual GLU → fused glu kernel"
+category = "speed"
+citation = """
+Dauphin et al. 2017, "Language Modeling with Gated Convolutional
+Networks" — `a ⊗ σ(b)` over the two halves of the last dim IS
+`F.glu`.  The corpus carried the kernel image but no manual spelling
+until `ManualGluMLP` closed the pair (`glu_fold`,
+corpus-expansion-r2.md §6); the parity-of-split-axis guard keeps the
+odd-extent corner from minting an `glu` that cannot denote.
+"""
+source = "manual_glu"
+size = 16
+rules = "default"
+cost = "launch"
+
+[expect]
+signals = ["law:glu_fold"]
+ops = ["glu"]
+absent_ops = ["chunk", "sigmoid", "mul"]
+
+[[baselines]]
+name = "eager spelled"
+kind = "self"
+[[baselines]]
+name = "F.glu"
+kind = "ref"
+ref = "glu_known"
+note = "the fused kernel"
+[[baselines]]
+name = "inductor"
+kind = "compile"

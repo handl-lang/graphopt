@@ -1,0 +1,33 @@
+name = "sdpa_nomask"
+title = "No-mask spelled attention → fused SDPA"
+category = "memory"
+citation = """
+`softmax(q@kᵀ/√d) @ v` with no mask — `nn.MultiheadAttention`'s
+default path, and the spelling encoder stacks (BERT-style
+bidirectional attention) export verbatim.  The add/masked_fill fold
+family cannot see it; `sdpa_fold_div_nomask` is its row — minted by
+`fold_object` + guarded-compose and promoted after the sweep
+(project/retros/promoted-laws.md).  The fold removes the materialised
+(T,T) score matrix, same transform as the masked row.
+"""
+source = "sdpa_nomask"
+size = 8
+rules = "default"
+cost = "launch"
+
+[expect]
+signals = ["law:sdpa_fold_div_nomask", "law:sdpa_fold_nomask"]
+ops = ["sdpa"]
+absent_ops = ["softmax", "matmul"]
+
+[[baselines]]
+name = "eager spelled"
+kind = "self"
+[[baselines]]
+name = "F.scaled_dot_product_attention"
+kind = "ref"
+ref = "sdpa_nomask_known"
+note = "the fused kernel, explicit scale=1/√d"
+[[baselines]]
+name = "inductor"
+kind = "compile"

@@ -1,0 +1,33 @@
+name = "rms_norm_fold"
+title = "Manual RMSNorm → fused rms_norm kernel"
+category = "speed"
+citation = """
+Zhang & Sennrich 2019 RMSNorm, popularised by LLaMA (Touvron 2023):
+`x·rsqrt(mean(x²)+eps)·w` IS `F.rms_norm` spelled by hand.  In mlopt it
+is `rms_norm_fold`, the fourth machine-discovered law admitted to the
+bank — measured −83% on RMSNorm / −31% on TransformerBlock extracted
+cost (project/retros/rms-norm-law.md).  XLA/TFLite and Transformer
+Engine ship the fused kernel as a named primitive; Inductor does not
+pattern the whole reduce-scale chain back to it.
+"""
+source = "rms_norm_gained"
+size = 16
+rules = "default"
+cost = "launch"
+
+[expect]
+signals = ["law:rms_norm_fold"]
+ops = ["rms_norm"]
+absent_ops = ["mean", "rsqrt", "pow", "mul"]
+
+[[baselines]]
+name = "eager spelled"
+kind = "self"
+[[baselines]]
+name = "F.rms_norm"
+kind = "ref"
+ref = "rms_norm_known"
+note = "the fused kernel PyTorch ships"
+[[baselines]]
+name = "inductor"
+kind = "compile"

@@ -1,0 +1,38 @@
+name = "rms_norm_bridge"
+title = "Misspelled RMSNorm → fold via canonicalizer bridges"
+category = "speed"
+citation = """
+The recorded-miss spellings of `rms-norm-law.md`, folded: the corpus
+spells x² as `mul(x, x)` and the reciprocal root as `pow(·, -0.5)`
+— `rms_norm_fold` pins `pow(u, 2)` and `rsqrt(·)` literally, so the
+fold only reaches this graph through the canonicalizer bridges
+`mul_square` → `square_to_pow` and `pow_to_rsqrt`
+(tests/test_square_rsqrt_laws.py).  A real corpus fragment reads
+exactly this way — normalizer code is written `x*x` + `**-0.5` far
+more often than `pow(2)` + `rsqrt`.
+"""
+source = "rms_norm_misspelled"
+size = 16
+rules = "default"
+cost = "launch"
+
+[expect]
+signals = [
+  "law:rms_norm_fold",
+  "law:mul_square",
+  "law:pow_to_rsqrt",
+]
+ops = ["rms_norm"]
+absent_ops = ["mean", "rsqrt", "pow", "mul"]
+
+[[baselines]]
+name = "eager spelled"
+kind = "self"
+[[baselines]]
+name = "F.rms_norm"
+kind = "ref"
+ref = "rms_norm_known"
+note = "the fused kernel PyTorch ships"
+[[baselines]]
+name = "inductor"
+kind = "compile"

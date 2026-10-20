@@ -1,0 +1,34 @@
+name = "softmax_fold"
+title = "exp/Σexp manual softmax → fused softmax kernel"
+category = "speed"
+citation = """
+`exp(u) / Σ exp(u)` is softmax by definition — the composed-then-
+reduced chain the law pipeline's pattern-recognition pass recognised
+in the model census (the second machine-discovered law admitted;
+project/retros/law-proposer-extensions.md,
+project/retros/law-softmax-fold-shipped.md).  Every graph compiler
+performs this fold (XLA's softmax rewriter, TFLite's
+`IdentifySoftmax`); here it lands as one dispatched op with a
+certificate.
+"""
+source = "manual_softmax"
+size = 16
+rules = "default"
+cost = "launch"
+
+[expect]
+signals = ["law:softmax_fold"]
+ops = ["softmax"]
+absent_ops = ["exp", "sum", "div"]
+
+[[baselines]]
+name = "eager spelled"
+kind = "self"
+[[baselines]]
+name = "torch.softmax"
+kind = "ref"
+ref = "softmax_known"
+note = "the fused kernel"
+[[baselines]]
+name = "inductor"
+kind = "compile"

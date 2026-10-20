@@ -10,6 +10,9 @@ equivalence gate applies unchanged.
 ``TorchSource`` / ``sink.verify`` convention.
 """
 
+# ruff: noqa: RUF002, RUF003 — math notation (·, σ, ⊗, ᵀ) in docstrings
+# is deliberate, per bench convention (mirrors refs/__init__.py).
+
 from __future__ import annotations
 
 import math
@@ -102,6 +105,179 @@ class _MulUnsq(nn.Module):
         return a.unsqueeze(-1) * b.unsqueeze(-1)
 
 
+class _ManualRMSNorm(nn.Module):
+    """LLaMA-style RMSNorm spelled by hand: ``x·rsqrt(mean(x²)+eps)·w``.
+
+    The canonical spelling the ``rms_norm_fold`` LHS pins — ``pow``
+    for the square, ``rsqrt`` for the reciprocal root, the
+    ``(x·rms)·w`` association the exporter writes.
+    """
+
+    def __init__(self, d: int, eps: float = 1e-5) -> None:
+        super().__init__()
+        self.w = nn.Parameter(torch.randn(d, dtype=_T64))
+        self.eps = eps
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        rms = torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
+        return x * rms * self.w
+
+
+class _ManualRMSNormNoGain(nn.Module):
+    """``x·rsqrt(mean(x²)+eps)`` — the weight-free RMSNorm spelling.
+
+    ``rms_norm_fold_nogain``'s own redex (and the gained fold's inner
+    ``mul``): ``F.rms_norm`` with ``weight=None``.
+    """
+
+    def __init__(self, eps: float = 1e-5) -> None:
+        super().__init__()
+        self.eps = eps
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        rms = torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
+        return x * rms
+
+
+class _ManualRMSNormMisspelled(nn.Module):
+    """The doubly-missed RMSNorm spelling: ``x·x`` and ``(·)^{-1/2}``.
+
+    Both halves of the fold's pattern arrive non-canonical — the
+    square as ``mul(x, x)`` and the reciprocal root as ``pow(m, -0.5)``
+    — so ``rms_norm_fold`` can only reach it through the canonicalizer
+    bridges ``mul_square → square_to_pow`` and ``pow_to_rsqrt`` (the
+    recorded-miss spellings of ``rms-norm-law.md`` /
+    ``test_square_rsqrt_laws``).
+    """
+
+    def __init__(self, d: int, eps: float = 1e-6) -> None:
+        super().__init__()
+        self.w = nn.Parameter(torch.randn(d, dtype=_T64))
+        self.eps = eps
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        m = (x * x).mean(-1, keepdim=True)
+        return x * (m + self.eps).pow(-0.5) * self.w
+
+
+class _ManualSoftmax(nn.Module):
+    """``exp(u) / Σ exp(u)`` — softmax spelled as a composed-then-
+    reduced chain, exactly what ``softmax_fold``'s pattern-recognition
+    mint saw in the census."""
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        e = x.exp()
+        return e / e.sum(-1, keepdim=True)
+
+
+class _ManualSiLU(nn.Module):
+    """``x · σ(x)`` — SiLU spelled from its definition; ``silu_fold``
+    (the definitional inverse of ``silu_expand``) folds it to the one
+    kernel."""
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return x * torch.sigmoid(x)
+
+
+class _ManualSoftsign(nn.Module):
+    """``x / (|x| + 1)`` — softsign spelled in decomposed div/abs/add
+    form; the minted ``softsign_fold`` collapses three ops to one."""
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return x / (x.abs() + 1)
+
+
+class _ManualGLU(nn.Module):
+    """``a ⊗ σ(b)`` over the two halves of ``x`` — the manual GLU.
+
+    ``F.glu`` IS this composition; ``glu_fold`` recognises the
+    chunk-indexed gate spelling (``corpus-expansion-r2.md`` §6).
+    """
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        a, b = x.chunk(2, dim=-1)
+        return a * torch.sigmoid(b)
+
+
+class _EncoderAttention(nn.Module):
+    """``softmax(q@kᵀ/√d) @ v`` with no mask — encoder attention.
+
+    ``nn.MultiheadAttention``'s default path exports exactly this
+    spelling, which the add/masked_fill fold family cannot see;
+    ``sdpa_fold_div_nomask`` is its row (promoted-laws).
+    """
+
+    def __init__(self, d: int) -> None:
+        super().__init__()
+        self.d = d
+        self.q = nn.Linear(d, d)
+        self.k = nn.Linear(d, d)
+        self.v = nn.Linear(d, d)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        q, k, v = self.q(x), self.k(x), self.v(x)
+        s = q @ k.transpose(-1, -2) / math.sqrt(self.d)
+        return torch.softmax(s, dim=-1) @ v
+
+
+class _SplitQKV(nn.Module):
+    """MHA with three separate projections — the fused-QKV site.
+
+    ``<q,k,v> : X -> V³`` is one map into the product space: the
+    pairing pass offers each projection its section of a single
+    widened GEMM (the ``MergedColumnParallelLinear`` /
+    ``qkv_fuse``-subsumed transform).
+    """
+
+    def __init__(self, d: int, h: int) -> None:
+        super().__init__()
+        self.d = d
+        self.h = h
+        self.q = nn.Linear(d, d, bias=False)
+        self.k = nn.Linear(d, d, bias=False)
+        self.v = nn.Linear(d, d, bias=False)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        b, t, d = x.shape
+
+        def head(y: torch.Tensor) -> torch.Tensor:
+            return y.view(b, t, self.h, d // self.h).transpose(1, 2)
+
+        return F.scaled_dot_product_attention(
+            head(self.q(x)), head(self.k(x)), head(self.v(x))
+        )
+
+
+class _ParallelLinearSum(nn.Module):
+    """``linear(x, A) + linear(x, B)`` — the weight-merge site.
+
+    Two parallel projections of the same input summed: the LoRA /
+    model-soup merge ``weight_factor_linear`` performs —
+    ``linear(x, A+B)`` with the parameter add folding at compile
+    time.
+    """
+
+    def __init__(self, d: int) -> None:
+        super().__init__()
+        self.a = nn.Linear(d, d, bias=False)
+        self.b = nn.Linear(d, d, bias=False)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.a(x) + self.b(x)
+
+
+class _SelectMul(nn.Module):
+    """``select(a, d, i) ⊙ select(b, d, i)`` — the slice product.
+
+    ``select_mul`` commutes the elementwise product past the select
+    view (``sel(u) ⊙ sel(v) = sel(u ⊙ v)`` — one ``select`` instead
+    of two).
+    """
+
+    def forward(self, a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+        return a.select(1, 0) * b.select(1, 0)
+
+
 # ---------------------------------------------------------------------------
 #  The source registry — ``size`` is each fixture's scale knob
 # ---------------------------------------------------------------------------
@@ -166,6 +342,81 @@ def _swiglu_mlp(size: int):
     return _SwiGLU(d).eval().double(), _r(4, d)
 
 
+def _rms_norm_gained(size: int):
+    """The gained manual RMSNorm; ``size`` is the normalized width d."""
+    d = max(4, size)
+    return _ManualRMSNorm(d).eval().double(), _r(4, d)
+
+
+def _rms_norm_nogain(size: int):
+    """The weight-free manual RMSNorm; ``size`` is the width d."""
+    d = max(4, size)
+    return _ManualRMSNormNoGain().eval().double(), _r(4, d)
+
+
+def _rms_norm_misspelled(size: int):
+    """The ``x·x`` / ``pow(-0.5)`` RMSNorm; ``size`` is the width d."""
+    d = max(4, size)
+    return _ManualRMSNormMisspelled(d).eval().double(), _r(4, d)
+
+
+def _manual_softmax(size: int):
+    """``exp/Σexp`` softmax over the last dim; ``size`` is the width."""
+    d = max(4, size)
+    return _ManualSoftmax().eval().double(), _r(4, d)
+
+
+def _manual_silu(size: int):
+    """``x·σ(x)`` on a (4, d) block; ``size`` is the width d."""
+    d = max(4, size)
+    return _ManualSiLU().eval().double(), _r(4, d)
+
+
+def _manual_softsign(size: int):
+    """``x/(|x|+1)`` on a (4, d) block; ``size`` is the width d."""
+    d = max(4, size)
+    return _ManualSoftsign().eval().double(), _r(4, d)
+
+
+def _manual_glu(size: int):
+    """``a ⊗ σ(b)`` on an even last dim; ``size`` is the width d."""
+    d = max(4, size)
+    if d % 2:
+        d += 1
+    return _ManualGLU().eval().double(), _r(4, d)
+
+
+def _sdpa_nomask(size: int):
+    """No-mask spelled attention; ``size`` is the length T."""
+    t = max(4, size)
+    return _EncoderAttention(16).eval().double(), _r(2, t, 16)
+
+
+def _mha_qkv(size: int):
+    """Split-QKV multi-head attention; ``size`` is the length T."""
+    t = max(4, size)
+    return _SplitQKV(16, 4).eval().double(), _r(2, t, 16)
+
+
+def _weight_merge(size: int):
+    """``linear(x,A) + linear(x,B)``; ``size`` is the width d."""
+    d = max(4, size)
+    return _ParallelLinearSum(d).eval().double(), _r(4, d)
+
+
+def _biased_chain(size: int):
+    """Two biased ``Linear``s back to back — the affine compose site."""
+    d = max(4, size)
+    model = nn.Sequential(nn.Linear(d, d), nn.Linear(d, d))
+    return model.eval().double(), _r(4, d)
+
+
+def _select_mul(size: int):
+    """``select(a,1,0) * select(b,1,0)``; ``size`` is the selected dim."""
+    d = max(2, size)
+    return _SelectMul().eval().double(), (_r(4, d), _r(4, d))
+
+
 #: ``name -> builder(size)`` for the case corpus's ``source`` key.
 SOURCES: dict[str, Callable[[int], tuple[nn.Module, object]]] = {
     "conv_bn_eval": _conv_bn_eval,
@@ -175,4 +426,16 @@ SOURCES: dict[str, Callable[[int], tuple[nn.Module, object]]] = {
     "mul_unsq_nat": _mul_unsq_nat,
     "weight_chain": _weight_chain,
     "swiglu_mlp": _swiglu_mlp,
+    "rms_norm_gained": _rms_norm_gained,
+    "rms_norm_nogain": _rms_norm_nogain,
+    "rms_norm_misspelled": _rms_norm_misspelled,
+    "manual_softmax": _manual_softmax,
+    "manual_silu": _manual_silu,
+    "manual_softsign": _manual_softsign,
+    "manual_glu": _manual_glu,
+    "sdpa_nomask": _sdpa_nomask,
+    "mha_qkv": _mha_qkv,
+    "weight_merge": _weight_merge,
+    "biased_chain": _biased_chain,
+    "select_mul": _select_mul,
 }

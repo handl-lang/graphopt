@@ -1,0 +1,33 @@
+name = "select_mul"
+title = "select(a)⊙select(b) → select(a⊙b) commutation"
+category = "speed"
+citation = """
+`sel(u) ⊙ sel(v) = sel(u ⊙ v)` — the elementwise product commutes
+with the select view (`select_mul`, census-minted on
+`DeltaRuleBlock`-class slices; project/retros/select-mul-broadcast.md;
+the first machine-discovered law admitted, human-integrated).
+Honest row: standalone, the fused form pays for the product over the
+full tensor then slices — costlier than multiplying two slices — so
+the fold's win needs shared-slice consumers; the scorecard records
+the standalone regression, not a hoped-for one.
+"""
+source = "select_mul"
+size = 8
+rules = "default"
+cost = "launch"
+
+[expect]
+signals = ["law:select_mul"]
+ops = ["mul", "select"]
+max_ops = { select = 1 }  # two spelled selects fuse to one
+
+[[baselines]]
+name = "eager spelled"
+kind = "self"
+[[baselines]]
+name = "mul-then-select"
+kind = "ref"
+ref = "select_mul_folded"
+[[baselines]]
+name = "inductor"
+kind = "compile"

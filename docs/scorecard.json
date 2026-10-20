@@ -1,16 +1,16 @@
 {
   "schema": 1,
   "lane": "full",
-  "generated_utc": "2026-10-19T23:41:07+00:00",
+  "generated_utc": "2026-10-20T01:24:16+00:00",
   "env": {
-    "timestamp_utc": "2026-10-19T23:41:07+00:00",
+    "timestamp_utc": "2026-10-20T01:24:16+00:00",
     "python": "3.13.9",
     "torch": "2.14.0+cu130",
     "torch_cuda": "13.0",
     "device": "cpu",
     "device_name": "12th Gen Intel(R) Core(TM) i5-12500H",
     "cpu_count": 16,
-    "git_sha": "712c292",
+    "git_sha": "646beab",
     "git_dirty": true,
     "argv": [
       "/home/luis/GitHub/handl-lang/research-mlopt/bench/discovery/run.py",
@@ -22,6 +22,82 @@
     ]
   },
   "cases": [
+    {
+      "name": "biased_chain_fold",
+      "title": "Two-layer biased Linear chain \u2192 affine compose",
+      "category": "speed",
+      "citation": "`linear(linear(x,A,b1),B,b2) \u2192 (BA)x + (B\u00b7b1+b2)` \u2014 the affine-map\ncomposition `assoc_linear_bias`, the biased sibling of\n`weight_chain_fold`'s `assoc_linear`.  The composed member spells the\nfused bias `linear(x, BA, B\u00b7b1) + b2` so both B-products stay\nwell-typed for every hidden width and fold at compile time \u2014 one\nGEMM plus one broadcast add at runtime.\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 2.220446049250313e-16,
+      "axis": "launch",
+      "cost_before": 4098.0,
+      "cost_after": 2114.0,
+      "best_baseline": "pre-folded affine",
+      "best_baseline_cost": 2049.0,
+      "beat_best": false,
+      "beat_best_measured": false,
+      "signals_seen": [
+        "law:assoc_linear_bias"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 3.013,
+        "n_enodes": 11,
+        "iterations": 2,
+        "extracted_ops": [
+          "add",
+          "linear",
+          "matmul"
+        ],
+        "cert_steps": 1,
+        "cert_egraph_dep": 0,
+        "median_s": {
+          "mlopt": 9.391926400712692e-06,
+          "eager two-GEMM": 1.2807900999905541e-05,
+          "pre-folded affine": 7.233388700115029e-06,
+          "inductor": 6.829199264757335e-05
+        },
+        "mlopt_ms": 0.009391926400712692
+      },
+      "baselines": [
+        {
+          "name": "eager two-GEMM",
+          "kind": "self",
+          "available": true,
+          "cost": 4098.0,
+          "median_s": 1.2807900999905541e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "pre-folded affine",
+          "kind": "ref",
+          "available": true,
+          "cost": 2049.0,
+          "median_s": 7.233388700115029e-06,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 2.90149566040121e-08,
+          "note": "one Linear carrying W=B\u00b7A, b=B\u00b7b1+b2"
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 6.829199264757335e-05,
+          "iqr_s": 6.998001481406391e-06,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": "no freeze \u2014 Inductor cannot fold the weights"
+        }
+      ]
+    },
     {
       "name": "blelloch_scan",
       "title": "Unrolled first-order recurrence \u2192 parallel scan",
@@ -45,7 +121,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.959,
+        "search_s": 0.071,
         "n_enodes": 43,
         "iterations": 2,
         "extracted_ops": [
@@ -59,12 +135,12 @@
         "cert_steps": 7,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 0.00020730855001602322,
-          "eager unrolled": 4.823796400160063e-05,
-          "cumsum prefix": 2.2026216000085696e-05,
-          "inductor": 3.864699829136953e-05
+          "mlopt": 0.00022597754999878817,
+          "eager unrolled": 5.3781403999892065e-05,
+          "cumsum prefix": 2.3777591995894908e-05,
+          "inductor": 4.7783993068151176e-05
         },
-        "mlopt_ms": 0.20730855001602322
+        "mlopt_ms": 0.22597754999878816
       },
       "baselines": [
         {
@@ -72,7 +148,7 @@
           "kind": "self",
           "available": true,
           "cost": 759.0,
-          "median_s": 4.823796400160063e-05,
+          "median_s": 5.3781403999892065e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -83,7 +159,7 @@
           "kind": "ref",
           "available": true,
           "cost": 1494.0,
-          "median_s": 2.2026216000085696e-05,
+          "median_s": 2.3777591995894908e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 8.881784197001252e-16,
@@ -94,8 +170,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 3.864699829136953e-05,
-          "iqr_s": 1.3092358130961657e-06,
+          "median_s": 4.7783993068151176e-05,
+          "iqr_s": 2.3650063667446375e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -124,7 +200,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.04,
+        "search_s": 0.051,
         "n_enodes": 31,
         "iterations": 2,
         "extracted_ops": [
@@ -138,12 +214,12 @@
         "cert_steps": 9,
         "cert_egraph_dep": 6,
         "median_s": {
-          "mlopt": 1.2139923099311999e-05,
-          "eager": 2.0923720992868767e-05,
-          "hand-folded conv": 1.2517814600141719e-05,
-          "inductor": 7.355499838013202e-05
+          "mlopt": 1.2045284500345588e-05,
+          "eager": 2.0324263998190873e-05,
+          "hand-folded conv": 1.3223486300557852e-05,
+          "inductor": 0.0002335265016881749
         },
-        "mlopt_ms": 0.012139923099312
+        "mlopt_ms": 0.012045284500345588
       },
       "baselines": [
         {
@@ -151,7 +227,7 @@
           "kind": "self",
           "available": true,
           "cost": 29186.0,
-          "median_s": 2.0923720992868767e-05,
+          "median_s": 2.0324263998190873e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -162,7 +238,7 @@
           "kind": "ref",
           "available": true,
           "cost": 27649.0,
-          "median_s": 1.2517814600141719e-05,
+          "median_s": 1.3223486300557852e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 5.055496332673215e-08,
@@ -173,8 +249,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 7.355499838013202e-05,
-          "iqr_s": 4.011002602055669e-06,
+          "median_s": 0.0002335265016881749,
+          "iqr_s": 2.6946490834234282e-05,
           "verify_passed": true,
           "verify_max_abs": 6.661338147750939e-16,
           "note": "measured-only (no symbolic form)"
@@ -203,7 +279,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.049,
+        "search_s": 0.068,
         "n_enodes": 21,
         "iterations": 2,
         "extracted_ops": [
@@ -213,12 +289,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 1,
         "median_s": {
-          "mlopt": 3.351596499851439e-05,
-          "eager spelled": 4.485657099576201e-05,
-          "F.scaled_dot_product_attention": 3.577583699370734e-05,
-          "inductor": 0.00010062400542665273
+          "mlopt": 3.270055500615854e-05,
+          "eager spelled": 5.4572711000218985e-05,
+          "F.scaled_dot_product_attention": 3.569494199473411e-05,
+          "inductor": 0.00010466099774930626
         },
-        "mlopt_ms": 0.03351596499851439
+        "mlopt_ms": 0.03270055500615854
       },
       "baselines": [
         {
@@ -226,7 +302,7 @@
           "kind": "self",
           "available": true,
           "cost": 33544.0,
-          "median_s": 4.485657099576201e-05,
+          "median_s": 5.4572711000218985e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -237,7 +313,7 @@
           "kind": "ref",
           "available": true,
           "cost": 32772.0,
-          "median_s": 3.577583699370734e-05,
+          "median_s": 3.569494199473411e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 2.220446049250313e-16,
@@ -248,10 +324,163 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 0.00010062400542665273,
-          "iqr_s": 4.968504072166979e-06,
+          "median_s": 0.00010466099774930626,
+          "iqr_s": 3.956745786126703e-06,
           "verify_passed": true,
           "verify_max_abs": 1.1102230246251565e-16,
+          "note": "measured-only (no symbolic form)"
+        }
+      ]
+    },
+    {
+      "name": "glu_fold",
+      "title": "chunk\u00b7\u03c3(chunk) manual GLU \u2192 fused glu kernel",
+      "category": "speed",
+      "citation": "Dauphin et al. 2017, \"Language Modeling with Gated Convolutional\nNetworks\" \u2014 `a \u2297 \u03c3(b)` over the two halves of the last dim IS\n`F.glu`.  The corpus carried the kernel image but no manual spelling\nuntil `ManualGluMLP` closed the pair (`glu_fold`,\ncorpus-expansion-r2.md \u00a76); the parity-of-split-axis guard keeps the\nodd-extent corner from minting an `glu` that cannot denote.\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 0.0,
+      "axis": "launch",
+      "cost_before": 98.0,
+      "cost_after": 33.0,
+      "best_baseline": "F.glu",
+      "best_baseline_cost": 33.0,
+      "beat_best": false,
+      "beat_best_measured": false,
+      "signals_seen": [
+        "law:glu_fold"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 0.028,
+        "n_enodes": 6,
+        "iterations": 2,
+        "extracted_ops": [
+          "glu"
+        ],
+        "cert_steps": 1,
+        "cert_egraph_dep": 0,
+        "median_s": {
+          "mlopt": 5.5151248001493515e-06,
+          "eager spelled": 6.719569201231934e-06,
+          "F.glu": 3.833043399208691e-06,
+          "inductor": 2.5453999114688486e-05
+        },
+        "mlopt_ms": 0.005515124800149352
+      },
+      "baselines": [
+        {
+          "name": "eager spelled",
+          "kind": "self",
+          "available": true,
+          "cost": 98.0,
+          "median_s": 6.719569201231934e-06,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "F.glu",
+          "kind": "ref",
+          "available": true,
+          "cost": 33.0,
+          "median_s": 3.833043399208691e-06,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": "the fused kernel"
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 2.5453999114688486e-05,
+          "iqr_s": 1.338758011115715e-06,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": "measured-only (no symbolic form)"
+        }
+      ]
+    },
+    {
+      "name": "mha_qkv_fuse",
+      "title": "Split QKV projections \u2192 one widened GEMM",
+      "category": "speed",
+      "citation": "The fused-QKV transform Megatron-LM's `MergedColumnParallelLinear`\nperforms by hand and TFLite's `fuse_qkv` pass does structurally:\n`<q,k,v> : X -> V\u00b3` is ONE map into the product space \u2014 three\nbias-free projections of one input concat into a single (3d,d) GEMM\nplus three free split views.  `qkv_fuse`/`qkv_fuse_asym` are\npairing-subsumed in the bank (tags SUBSUMED, kept for the cache);\nthe shipped reach is the non-local pairing pass \u2014 `paired_extract`\nis the honest signal that the forced shared-GEMM term won.\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 0.0,
+      "axis": "launch",
+      "cost_before": 32772.0,
+      "cost_after": 32770.0,
+      "best_baseline": "merged QKV",
+      "best_baseline_cost": 32770.0,
+      "beat_best": false,
+      "beat_best_measured": false,
+      "signals_seen": [
+        "stat:paired_extract"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 0.042,
+        "n_enodes": 14,
+        "iterations": 1,
+        "extracted_ops": [
+          "concat",
+          "linear",
+          "reshape",
+          "sdpa",
+          "split",
+          "transpose"
+        ],
+        "cert_steps": 3,
+        "cert_egraph_dep": 0,
+        "median_s": {
+          "mlopt": 6.323602900374681e-05,
+          "eager three-GEMM": 4.939457600994501e-05,
+          "merged QKV": 3.8536035004653966e-05,
+          "inductor": 9.830949420575052e-05
+        },
+        "mlopt_ms": 0.06323602900374681
+      },
+      "baselines": [
+        {
+          "name": "eager three-GEMM",
+          "kind": "self",
+          "available": true,
+          "cost": 32772.0,
+          "median_s": 4.939457600994501e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "merged QKV",
+          "kind": "ref",
+          "available": true,
+          "cost": 32770.0,
+          "median_s": 3.8536035004653966e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": "one (3d,d) Linear + chunk \u2014 the hand-fused impl"
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 9.830949420575052e-05,
+          "iqr_s": 6.610753189306706e-06,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
         }
       ]
@@ -278,7 +507,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.022,
+        "search_s": 0.03,
         "n_enodes": 7,
         "iterations": 2,
         "extracted_ops": [
@@ -288,12 +517,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 5.3192713996395465e-06,
-          "eager spelled": 4.048326300107874e-06,
-          "mul-then-unsqueeze": 3.109276300529018e-06,
-          "inductor": 2.2487001842819154e-05
+          "mlopt": 5.1632660994073374e-06,
+          "eager spelled": 4.107810198911466e-06,
+          "mul-then-unsqueeze": 3.173965000314638e-06,
+          "inductor": 2.4620996555313468e-05
         },
-        "mlopt_ms": 0.005319271399639547
+        "mlopt_ms": 0.005163266099407337
       },
       "baselines": [
         {
@@ -301,7 +530,7 @@
           "kind": "self",
           "available": true,
           "cost": 75.0,
-          "median_s": 4.048326300107874e-06,
+          "median_s": 4.107810198911466e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -312,7 +541,7 @@
           "kind": "ref",
           "available": true,
           "cost": 50.0,
-          "median_s": 3.109276300529018e-06,
+          "median_s": 3.173965000314638e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -323,8 +552,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 2.2487001842819154e-05,
-          "iqr_s": 1.1627416824921966e-06,
+          "median_s": 2.4620996555313468e-05,
+          "iqr_s": 1.230990164913237e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -354,7 +583,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.064,
+        "search_s": 0.062,
         "n_enodes": 28,
         "iterations": 2,
         "extracted_ops": [
@@ -375,12 +604,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 7.883914599369746e-05,
-          "eager quadratic": 0.00013709141498839016,
-          "paper chunkwise": 0.0002462138498958666,
-          "inductor": 0.0002347510016988963
+          "mlopt": 8.065651600190904e-05,
+          "eager quadratic": 0.00013972497500071767,
+          "paper chunkwise": 0.0002769833400088828,
+          "inductor": 0.0002516425010981038
         },
-        "mlopt_ms": 0.07883914599369746
+        "mlopt_ms": 0.08065651600190904
       },
       "baselines": [
         {
@@ -388,7 +617,7 @@
           "kind": "self",
           "available": true,
           "cost": 761863.0,
-          "median_s": 0.00013709141498839016,
+          "median_s": 0.00013972497500071767,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -399,7 +628,7 @@
           "kind": "ref",
           "available": true,
           "cost": 491656.0,
-          "median_s": 0.0002462138498958666,
+          "median_s": 0.0002769833400088828,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 3.3306690738754696e-16,
@@ -410,8 +639,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 0.0002347510016988963,
-          "iqr_s": 8.018498192541301e-06,
+          "median_s": 0.0002516425010981038,
+          "iqr_s": 1.1749751138268039e-05,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -426,6 +655,602 @@
           "verify_passed": null,
           "verify_max_abs": null,
           "note": "Triton kernel \u2014 scratch dep; measured ~7-11x ahead of the carrier"
+        }
+      ]
+    },
+    {
+      "name": "rms_norm_bridge",
+      "title": "Misspelled RMSNorm \u2192 fold via canonicalizer bridges",
+      "category": "speed",
+      "citation": "The recorded-miss spellings of `rms-norm-law.md`, folded: the corpus\nspells x\u00b2 as `mul(x, x)` and the reciprocal root as `pow(\u00b7, -0.5)`\n\u2014 `rms_norm_fold` pins `pow(u, 2)` and `rsqrt(\u00b7)` literally, so the\nfold only reaches this graph through the canonicalizer bridges\n`mul_square` \u2192 `square_to_pow` and `pow_to_rsqrt`\n(tests/test_square_rsqrt_laws.py).  A real corpus fragment reads\nexactly this way \u2014 normalizer code is written `x*x` + `**-0.5` far\nmore often than `pow(2)` + `rsqrt`.\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 6.661338147750939e-15,
+      "axis": "launch",
+      "cost_before": 218.0,
+      "cost_after": 129.0,
+      "best_baseline": "F.rms_norm",
+      "best_baseline_cost": 129.0,
+      "beat_best": false,
+      "beat_best_measured": false,
+      "signals_seen": [
+        "law:rms_norm_fold",
+        "law:mul_square",
+        "law:pow_to_rsqrt"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 0.032,
+        "n_enodes": 16,
+        "iterations": 3,
+        "extracted_ops": [
+          "rms_norm"
+        ],
+        "cert_steps": 4,
+        "cert_egraph_dep": 0,
+        "median_s": {
+          "mlopt": 1.4722498899209312e-05,
+          "eager spelled": 1.4720250200480222e-05,
+          "F.rms_norm": 1.1959178400866222e-05,
+          "inductor": 4.395999712869525e-05
+        },
+        "mlopt_ms": 0.014722498899209312
+      },
+      "baselines": [
+        {
+          "name": "eager spelled",
+          "kind": "self",
+          "available": true,
+          "cost": 218.0,
+          "median_s": 1.4720250200480222e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "F.rms_norm",
+          "kind": "ref",
+          "available": true,
+          "cost": 129.0,
+          "median_s": 1.1959178400866222e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": "the fused kernel PyTorch ships"
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 4.395999712869525e-05,
+          "iqr_s": 3.3149990485981107e-06,
+          "verify_passed": true,
+          "verify_max_abs": 4.440892098500626e-16,
+          "note": "measured-only (no symbolic form)"
+        }
+      ]
+    },
+    {
+      "name": "rms_norm_fold",
+      "title": "Manual RMSNorm \u2192 fused rms_norm kernel",
+      "category": "speed",
+      "citation": "Zhang & Sennrich 2019 RMSNorm, popularised by LLaMA (Touvron 2023):\n`x\u00b7rsqrt(mean(x\u00b2)+eps)\u00b7w` IS `F.rms_norm` spelled by hand.  In mlopt it\nis `rms_norm_fold`, the fourth machine-discovered law admitted to the\nbank \u2014 measured \u221283% on RMSNorm / \u221231% on TransformerBlock extracted\ncost (project/retros/rms-norm-law.md).  XLA/TFLite and Transformer\nEngine ship the fused kernel as a named primitive; Inductor does not\npattern the whole reduce-scale chain back to it.\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 6.927791673660977e-13,
+      "axis": "launch",
+      "cost_before": 282.0,
+      "cost_after": 129.0,
+      "best_baseline": "F.rms_norm",
+      "best_baseline_cost": 129.0,
+      "beat_best": false,
+      "beat_best_measured": false,
+      "signals_seen": [
+        "law:rms_norm_fold"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 0.024,
+        "n_enodes": 14,
+        "iterations": 3,
+        "extracted_ops": [
+          "rms_norm"
+        ],
+        "cert_steps": 1,
+        "cert_egraph_dep": 0,
+        "median_s": {
+          "mlopt": 1.4703182599623687e-05,
+          "eager spelled": 1.3737748099083546e-05,
+          "F.rms_norm": 1.1824661699938588e-05,
+          "inductor": 4.8491492634639144e-05
+        },
+        "mlopt_ms": 0.014703182599623688
+      },
+      "baselines": [
+        {
+          "name": "eager spelled",
+          "kind": "self",
+          "available": true,
+          "cost": 282.0,
+          "median_s": 1.3737748099083546e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "F.rms_norm",
+          "kind": "ref",
+          "available": true,
+          "cost": 129.0,
+          "median_s": 1.1824661699938588e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": "the fused kernel PyTorch ships"
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 4.8491492634639144e-05,
+          "iqr_s": 2.1032537915743887e-06,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": "measured-only (no symbolic form)"
+        }
+      ]
+    },
+    {
+      "name": "rms_norm_nogain",
+      "title": "Gain-free manual RMSNorm \u2192 fused rms_norm",
+      "category": "speed",
+      "citation": "The weight-free twin of the RMSNorm fold \u2014 `x\u00b7rsqrt(mean(x\u00b2)+eps)`\nwith no channel gain is `F.rms_norm(x, ns, weight=None)`.  It is the\ngained fold's inner `mul`, so `rms_norm_fold_nogain` fires inside\nevery gained site too (the cost model picks the fused member either\nway; project/retros/rms-norm-law.md).\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 3.432809592140984e-13,
+      "axis": "launch",
+      "cost_before": 217.0,
+      "cost_after": 65.0,
+      "best_baseline": "F.rms_norm (no weight)",
+      "best_baseline_cost": 65.0,
+      "beat_best": false,
+      "beat_best_measured": false,
+      "signals_seen": [
+        "law:rms_norm_fold_nogain"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 0.022,
+        "n_enodes": 11,
+        "iterations": 3,
+        "extracted_ops": [
+          "rms_norm"
+        ],
+        "cert_steps": 1,
+        "cert_egraph_dep": 0,
+        "median_s": {
+          "mlopt": 1.2533833099587355e-05,
+          "eager spelled": 1.12226159995771e-05,
+          "F.rms_norm (no weight)": 1.0307836900756229e-05,
+          "inductor": 2.4541994207538664e-05
+        },
+        "mlopt_ms": 0.012533833099587355
+      },
+      "baselines": [
+        {
+          "name": "eager spelled",
+          "kind": "self",
+          "available": true,
+          "cost": 217.0,
+          "median_s": 1.12226159995771e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "F.rms_norm (no weight)",
+          "kind": "ref",
+          "available": true,
+          "cost": 65.0,
+          "median_s": 1.0307836900756229e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": "the fused kernel, weight=None"
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 2.4541994207538664e-05,
+          "iqr_s": 1.3399985618889332e-06,
+          "verify_passed": true,
+          "verify_max_abs": 2.220446049250313e-16,
+          "note": "measured-only (no symbolic form)"
+        }
+      ]
+    },
+    {
+      "name": "sdpa_nomask",
+      "title": "No-mask spelled attention \u2192 fused SDPA",
+      "category": "memory",
+      "citation": "`softmax(q@k\u1d40/\u221ad) @ v` with no mask \u2014 `nn.MultiheadAttention`'s\ndefault path, and the spelling encoder stacks (BERT-style\nbidirectional attention) export verbatim.  The add/masked_fill fold\nfamily cannot see it; `sdpa_fold_div_nomask` is its row \u2014 minted by\n`fold_object` + guarded-compose and promoted after the sweep\n(project/retros/promoted-laws.md).  The fold removes the materialised\n(T,T) score matrix, same transform as the masked row.\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 2.220446049250313e-16,
+      "axis": "launch",
+      "cost_before": 33415.0,
+      "cost_after": 32772.0,
+      "best_baseline": "F.scaled_dot_product_attention",
+      "best_baseline_cost": 32772.0,
+      "beat_best": false,
+      "beat_best_measured": false,
+      "signals_seen": [
+        "law:sdpa_fold_div_nomask"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 0.039,
+        "n_enodes": 19,
+        "iterations": 2,
+        "extracted_ops": [
+          "linear",
+          "sdpa"
+        ],
+        "cert_steps": 1,
+        "cert_egraph_dep": 0,
+        "median_s": {
+          "mlopt": 3.846623600111343e-05,
+          "eager spelled": 4.939717799425125e-05,
+          "F.scaled_dot_product_attention": 3.8351648996467704e-05,
+          "inductor": 0.0001108150026993826
+        },
+        "mlopt_ms": 0.03846623600111343
+      },
+      "baselines": [
+        {
+          "name": "eager spelled",
+          "kind": "self",
+          "available": true,
+          "cost": 33415.0,
+          "median_s": 4.939717799425125e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "F.scaled_dot_product_attention",
+          "kind": "ref",
+          "available": true,
+          "cost": 32772.0,
+          "median_s": 3.8351648996467704e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 2.220446049250313e-16,
+          "note": "the fused kernel, explicit scale=1/\u221ad"
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 0.0001108150026993826,
+          "iqr_s": 4.701247235061601e-06,
+          "verify_passed": true,
+          "verify_max_abs": 1.1102230246251565e-16,
+          "note": "measured-only (no symbolic form)"
+        }
+      ]
+    },
+    {
+      "name": "select_mul",
+      "title": "select(a)\u2299select(b) \u2192 select(a\u2299b) commutation",
+      "category": "speed",
+      "citation": "`sel(u) \u2299 sel(v) = sel(u \u2299 v)` \u2014 the elementwise product commutes\nwith the select view (`select_mul`, census-minted on\n`DeltaRuleBlock`-class slices; project/retros/select-mul-broadcast.md;\nthe first machine-discovered law admitted, human-integrated).\nHonest row: standalone, the fused form pays for the product over the\nfull tensor then slices \u2014 costlier than multiplying two slices \u2014 so\nthe fold's win needs shared-slice consumers; the scorecard records\nthe standalone regression, not a hoped-for one.\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 0.0,
+      "axis": "launch",
+      "cost_before": 15.0,
+      "cost_after": 38.0,
+      "best_baseline": "eager spelled",
+      "best_baseline_cost": 15.0,
+      "beat_best": false,
+      "beat_best_measured": false,
+      "signals_seen": [
+        "law:select_mul"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 0.031,
+        "n_enodes": 7,
+        "iterations": 2,
+        "extracted_ops": [
+          "mul",
+          "select"
+        ],
+        "cert_steps": 1,
+        "cert_egraph_dep": 0,
+        "median_s": {
+          "mlopt": 6.159259600099176e-06,
+          "eager spelled": 5.091844899288845e-06,
+          "mul-then-select": 3.7360707006882877e-06,
+          "inductor": 2.4537992430850863e-05
+        },
+        "mlopt_ms": 0.006159259600099176
+      },
+      "baselines": [
+        {
+          "name": "eager spelled",
+          "kind": "self",
+          "available": true,
+          "cost": 15.0,
+          "median_s": 5.091844899288845e-06,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "mul-then-select",
+          "kind": "ref",
+          "available": true,
+          "cost": 38.0,
+          "median_s": 3.7360707006882877e-06,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 2.4537992430850863e-05,
+          "iqr_s": 1.3509998098015785e-06,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": "measured-only (no symbolic form)"
+        }
+      ]
+    },
+    {
+      "name": "silu_fold",
+      "title": "x\u00b7\u03c3(x) spelled by hand \u2192 fused silu kernel",
+      "category": "speed",
+      "citation": "SiLU (Elfwing et al. 2018; Ramachandran et al. 2017 \"swish\") spelled\n`x\u00b7\u03c3(x)` folds to the one kernel \u2014 `silu_fold`, the definitional\ninverse of `silu_expand` and the mediating 3-cell of the\n`silu_expand \u00d7 swiglu_fuse` critical pair\n(project/retros/law-coherence-catalogue.md \u00a74).  Inductor's\npointwise-pattern tables carry the same identity\n(`mul(x, sigmoid(x)) \u2192 silu`).\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 4.440892098500626e-16,
+      "axis": "launch",
+      "cost_before": 194.0,
+      "cost_after": 193.0,
+      "best_baseline": "F.silu",
+      "best_baseline_cost": 193.0,
+      "beat_best": false,
+      "beat_best_measured": false,
+      "signals_seen": [
+        "law:silu_fold"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 0.027,
+        "n_enodes": 4,
+        "iterations": 2,
+        "extracted_ops": [
+          "silu"
+        ],
+        "cert_steps": 1,
+        "cert_egraph_dep": 0,
+        "median_s": {
+          "mlopt": 3.215815100702457e-06,
+          "eager spelled": 3.32584759889869e-06,
+          "F.silu": 2.3434382004779764e-06,
+          "inductor": 2.6718502340372652e-05
+        },
+        "mlopt_ms": 0.003215815100702457
+      },
+      "baselines": [
+        {
+          "name": "eager spelled",
+          "kind": "self",
+          "available": true,
+          "cost": 194.0,
+          "median_s": 3.32584759889869e-06,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "F.silu",
+          "kind": "ref",
+          "available": true,
+          "cost": 193.0,
+          "median_s": 2.3434382004779764e-06,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 4.440892098500626e-16,
+          "note": "the fused kernel"
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 2.6718502340372652e-05,
+          "iqr_s": 3.8032594602555037e-06,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": "measured-only (no symbolic form)"
+        }
+      ]
+    },
+    {
+      "name": "softmax_fold",
+      "title": "exp/\u03a3exp manual softmax \u2192 fused softmax kernel",
+      "category": "speed",
+      "citation": "`exp(u) / \u03a3 exp(u)` is softmax by definition \u2014 the composed-then-\nreduced chain the law pipeline's pattern-recognition pass recognised\nin the model census (the second machine-discovered law admitted;\nproject/retros/law-proposer-extensions.md,\nproject/retros/law-softmax-fold-shipped.md).  Every graph compiler\nperforms this fold (XLA's softmax rewriter, TFLite's\n`IdentifySoftmax`); here it lands as one dispatched op with a\ncertificate.\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 5.551115123125783e-17,
+      "axis": "launch",
+      "cost_before": 327.0,
+      "cost_after": 65.0,
+      "best_baseline": "torch.softmax",
+      "best_baseline_cost": 65.0,
+      "beat_best": false,
+      "beat_best_measured": false,
+      "signals_seen": [
+        "law:softmax_fold"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 0.023,
+        "n_enodes": 5,
+        "iterations": 2,
+        "extracted_ops": [
+          "softmax"
+        ],
+        "cert_steps": 1,
+        "cert_egraph_dep": 0,
+        "median_s": {
+          "mlopt": 4.321470699505881e-06,
+          "eager spelled": 5.725328699918464e-06,
+          "torch.softmax": 2.346132299862802e-06,
+          "inductor": 2.695299917832017e-05
+        },
+        "mlopt_ms": 0.004321470699505881
+      },
+      "baselines": [
+        {
+          "name": "eager spelled",
+          "kind": "self",
+          "available": true,
+          "cost": 327.0,
+          "median_s": 5.725328699918464e-06,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "torch.softmax",
+          "kind": "ref",
+          "available": true,
+          "cost": 65.0,
+          "median_s": 2.346132299862802e-06,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 5.551115123125783e-17,
+          "note": "the fused kernel"
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 2.695299917832017e-05,
+          "iqr_s": 1.2575037544593215e-06,
+          "verify_passed": true,
+          "verify_max_abs": 1.734723475976807e-18,
+          "note": "measured-only (no symbolic form)"
+        }
+      ]
+    },
+    {
+      "name": "softsign_fold",
+      "title": "x/(|x|+1) spelled by hand \u2192 fused softsign kernel",
+      "category": "speed",
+      "citation": "`x / (|x| + 1)` is softsign (Bergstra et al. 2009, the bounded\nrational activation) spelled in decomposed div/abs/add form \u2014\n`softsign_fold` mints the one fused kernel, discovered by\n`fold_object` and promoted after the guarded sweep measured the\nregion unguarded-clean (project/retros/promoted-laws.md).\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 0.0,
+      "axis": "launch",
+      "cost_before": 387.0,
+      "cost_after": 65.0,
+      "best_baseline": "eager spelled",
+      "best_baseline_cost": 387.0,
+      "beat_best": true,
+      "beat_best_measured": false,
+      "signals_seen": [
+        "law:softsign_fold"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 0.02,
+        "n_enodes": 6,
+        "iterations": 2,
+        "extracted_ops": [
+          "softsign"
+        ],
+        "cert_steps": 1,
+        "cert_egraph_dep": 0,
+        "median_s": {
+          "mlopt": 8.522165700560436e-06,
+          "eager spelled": 6.961529300315306e-06,
+          "F.softsign": 1.3646203100506681e-05,
+          "inductor": 2.3649001377634704e-05
+        },
+        "mlopt_ms": 0.008522165700560436
+      },
+      "baselines": [
+        {
+          "name": "eager spelled",
+          "kind": "self",
+          "available": true,
+          "cost": 387.0,
+          "median_s": 6.961529300315306e-06,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "F.softsign",
+          "kind": "ref",
+          "available": true,
+          "cost": 387.0,
+          "median_s": 1.3646203100506681e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": "the fused kernel"
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 2.3649001377634704e-05,
+          "iqr_s": 1.25050064525567e-06,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": "measured-only (no symbolic form)"
         }
       ]
     },
@@ -451,7 +1276,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.028,
+        "search_s": 0.039,
         "n_enodes": 9,
         "iterations": 2,
         "extracted_ops": [
@@ -464,12 +1289,12 @@
         "cert_steps": 2,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 2.221014200767968e-05,
-          "eager two-GEMM": 1.5697737799200694e-05,
-          "fused SwiGLU": 1.5146849599841516e-05,
-          "inductor": 5.440400855150074e-05
+          "mlopt": 7.64591199986171e-05,
+          "eager two-GEMM": 6.150246600736863e-05,
+          "fused SwiGLU": 6.247548099781852e-05,
+          "inductor": 0.00016896901070140302
         },
-        "mlopt_ms": 0.02221014200767968
+        "mlopt_ms": 0.0764591199986171
       },
       "baselines": [
         {
@@ -477,7 +1302,7 @@
           "kind": "self",
           "available": true,
           "cost": 4356.0,
-          "median_s": 1.5697737799200694e-05,
+          "median_s": 6.150246600736863e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -488,7 +1313,7 @@
           "kind": "ref",
           "available": true,
           "cost": 4485.0,
-          "median_s": 1.5146849599841516e-05,
+          "median_s": 6.247548099781852e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -499,8 +1324,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 5.440400855150074e-05,
-          "iqr_s": 2.8885006031487137e-06,
+          "median_s": 0.00016896901070140302,
+          "iqr_s": 1.0786985512822866e-05,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -523,13 +1348,13 @@
       "best_baseline": "pre-folded Linear",
       "best_baseline_cost": 2049.0,
       "beat_best": false,
-      "beat_best_measured": true,
+      "beat_best_measured": false,
       "signals_seen": [
         "law:assoc_linear"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.019,
+        "search_s": 0.038,
         "n_enodes": 7,
         "iterations": 2,
         "extracted_ops": [
@@ -539,12 +1364,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 5.140445800498128e-06,
-          "eager two-GEMM": 9.940823900979013e-06,
-          "pre-folded Linear": 5.641874099092092e-06,
-          "inductor": 5.7689991081133485e-05
+          "mlopt": 2.2143508002045565e-05,
+          "eager two-GEMM": 4.0189456994994545e-05,
+          "pre-folded Linear": 2.1098992991028352e-05,
+          "inductor": 0.00017249600205104798
         },
-        "mlopt_ms": 0.005140445800498128
+        "mlopt_ms": 0.022143508002045564
       },
       "baselines": [
         {
@@ -552,7 +1377,7 @@
           "kind": "self",
           "available": true,
           "cost": 4098.0,
-          "median_s": 9.940823900979013e-06,
+          "median_s": 4.0189456994994545e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -563,7 +1388,7 @@
           "kind": "ref",
           "available": true,
           "cost": 2049.0,
-          "median_s": 5.641874099092092e-06,
+          "median_s": 2.1098992991028352e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 2.823249983796572e-08,
@@ -574,11 +1399,86 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 5.7689991081133485e-05,
-          "iqr_s": 2.6205016183666885e-06,
+          "median_s": 0.00017249600205104798,
+          "iqr_s": 1.4182500308379531e-05,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "no freeze \u2014 Inductor cannot fold the weights"
+        }
+      ]
+    },
+    {
+      "name": "weight_merge",
+      "title": "linear(x,A)+linear(x,B) \u2192 linear(x, A+B)",
+      "category": "speed",
+      "citation": "The LoRA-apply / model-soup merge deployment tooling performs by\nhand: two parallel projections of the same input sum into one GEMM\non the summed weight \u2014 `weight_factor_linear` (transpose\ndistributes over +).  The parameter add is compile-time work, so\nruntime drops a GEMM: the bias-free analogue of the biased chain's\n`assoc_linear_bias`.\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 7.771561172376096e-16,
+      "axis": "launch",
+      "cost_before": 4163.0,
+      "cost_after": 2049.0,
+      "best_baseline": "merged Linear",
+      "best_baseline_cost": 2049.0,
+      "beat_best": false,
+      "beat_best_measured": true,
+      "signals_seen": [
+        "law:weight_factor_linear"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 0.044,
+        "n_enodes": 8,
+        "iterations": 2,
+        "extracted_ops": [
+          "add",
+          "linear"
+        ],
+        "cert_steps": 1,
+        "cert_egraph_dep": 0,
+        "median_s": {
+          "mlopt": 2.050586800032761e-05,
+          "eager two-GEMM": 4.3507189999218096e-05,
+          "merged Linear": 2.1068428992293775e-05,
+          "inductor": 6.0407997807487845e-05
+        },
+        "mlopt_ms": 0.02050586800032761
+      },
+      "baselines": [
+        {
+          "name": "eager two-GEMM",
+          "kind": "self",
+          "available": true,
+          "cost": 4163.0,
+          "median_s": 4.3507189999218096e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "merged Linear",
+          "kind": "ref",
+          "available": true,
+          "cost": 2049.0,
+          "median_s": 2.1068428992293775e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 7.771561172376096e-16,
+          "note": "one Linear carrying A+B \u2014 the merged form"
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 6.0407997807487845e-05,
+          "iqr_s": 2.721004420891404e-06,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": "measured-only (no symbolic form)"
         }
       ]
     }

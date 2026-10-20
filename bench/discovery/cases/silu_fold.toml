@@ -1,0 +1,33 @@
+name = "silu_fold"
+title = "x·σ(x) spelled by hand → fused silu kernel"
+category = "speed"
+citation = """
+SiLU (Elfwing et al. 2018; Ramachandran et al. 2017 "swish") spelled
+`x·σ(x)` folds to the one kernel — `silu_fold`, the definitional
+inverse of `silu_expand` and the mediating 3-cell of the
+`silu_expand × swiglu_fuse` critical pair
+(project/retros/law-coherence-catalogue.md §4).  Inductor's
+pointwise-pattern tables carry the same identity
+(`mul(x, sigmoid(x)) → silu`).
+"""
+source = "manual_silu"
+size = 16
+rules = "default"
+cost = "launch"
+
+[expect]
+signals = ["law:silu_fold"]
+ops = ["silu"]
+absent_ops = ["sigmoid"]
+
+[[baselines]]
+name = "eager spelled"
+kind = "self"
+[[baselines]]
+name = "F.silu"
+kind = "ref"
+ref = "silu_known"
+note = "the fused kernel"
+[[baselines]]
+name = "inductor"
+kind = "compile"

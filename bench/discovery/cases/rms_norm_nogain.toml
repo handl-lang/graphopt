@@ -1,0 +1,31 @@
+name = "rms_norm_nogain"
+title = "Gain-free manual RMSNorm → fused rms_norm"
+category = "speed"
+citation = """
+The weight-free twin of the RMSNorm fold — `x·rsqrt(mean(x²)+eps)`
+with no channel gain is `F.rms_norm(x, ns, weight=None)`.  It is the
+gained fold's inner `mul`, so `rms_norm_fold_nogain` fires inside
+every gained site too (the cost model picks the fused member either
+way; project/retros/rms-norm-law.md).
+"""
+source = "rms_norm_nogain"
+size = 16
+rules = "default"
+cost = "launch"
+
+[expect]
+signals = ["law:rms_norm_fold_nogain"]
+ops = ["rms_norm"]
+absent_ops = ["mean", "rsqrt", "pow", "mul"]
+
+[[baselines]]
+name = "eager spelled"
+kind = "self"
+[[baselines]]
+name = "F.rms_norm (no weight)"
+kind = "ref"
+ref = "rms_norm_nogain_known"
+note = "the fused kernel, weight=None"
+[[baselines]]
+name = "inductor"
+kind = "compile"

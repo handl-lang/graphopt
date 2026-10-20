@@ -179,6 +179,146 @@ class _UnsqFolded(nn.Module):
         return (a * b).unsqueeze(-1)
 
 
+class _KnownRMSNorm(nn.Module):
+    """``F.rms_norm`` — the fused kernel, carrying the spelled gain."""
+
+    def __init__(self, src: nn.Module) -> None:
+        super().__init__()
+        self.w = src.w
+        self.eps = src.eps
+        self.d = src.w.shape[0]
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return F.rms_norm(x, (self.d,), self.w, self.eps)
+
+
+class _KnownRMSNormNoGain(nn.Module):
+    """``F.rms_norm`` with ``weight=None`` — the gain-free kernel."""
+
+    def __init__(self, d: int, eps: float) -> None:
+        super().__init__()
+        self.d = d
+        self.eps = eps
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return F.rms_norm(x, (self.d,), weight=None, eps=self.eps)
+
+
+class _KnownSoftmax(nn.Module):
+    """``torch.softmax`` — the fused normalization kernel."""
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return torch.softmax(x, dim=-1)
+
+
+class _KnownSiLU(nn.Module):
+    """``F.silu`` — the gated activation as one kernel."""
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return F.silu(x)
+
+
+class _KnownSoftsign(nn.Module):
+    """``F.softsign`` — the bounded rational activation as one kernel."""
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return F.softsign(x)
+
+
+class _KnownGLU(nn.Module):
+    """``F.glu`` — ``a ⊗ σ(b)`` over the halves, as one kernel."""
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return F.glu(x, dim=-1)
+
+
+class _KnownSDPANoMask(nn.Module):
+    """``F.scaled_dot_product_attention``, no mask, explicit scale."""
+
+    def __init__(self, src: nn.Module) -> None:
+        super().__init__()
+        self.q = src.q
+        self.k = src.k
+        self.v = src.v
+        self.d = src.d
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return F.scaled_dot_product_attention(
+            self.q(x), self.k(x), self.v(x), scale=1 / math.sqrt(self.d)
+        )
+
+
+class _MergedQKV(nn.Module):
+    """The fused-QKV form: one ``(3d, d)`` GEMM, three free splits."""
+
+    def __init__(self, src: nn.Module) -> None:
+        super().__init__()
+        self.d = src.d
+        self.h = src.h
+        self.qkv = nn.Linear(src.d, 3 * src.d, bias=False)
+        with torch.no_grad():
+            self.qkv.weight.copy_(
+                torch.cat(
+                    [
+                        src.q.weight.detach(),
+                        src.k.weight.detach(),
+                        src.v.weight.detach(),
+                    ],
+                    dim=0,
+                )
+            )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        b, t, d = x.shape
+        q, k, v = self.qkv(x).chunk(3, dim=-1)
+
+        def head(y: torch.Tensor) -> torch.Tensor:
+            return y.view(b, t, self.h, d // self.h).transpose(1, 2)
+
+        return F.scaled_dot_product_attention(head(q), head(k), head(v))
+
+
+class _MergedWeights(nn.Module):
+    """``linear(x, A + B)`` — the two projections merged weights-first."""
+
+    def __init__(self, src: nn.Module) -> None:
+        super().__init__()
+        d = src.a.weight.shape[1]
+        self.lin = nn.Linear(d, d, bias=False)
+        with torch.no_grad():
+            self.lin.weight.copy_(
+                src.a.weight.detach() + src.b.weight.detach()
+            )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.lin(x)
+
+
+class _FoldedAffineChain(nn.Module):
+    """The affine compose folded by hand: ``W = B·A``, ``b = B·b1+b2``."""
+
+    def __init__(self, src: nn.Module) -> None:
+        super().__init__()
+        a, b = src[0], src[1]
+        d = a.weight.shape[1]
+        self.lin = nn.Linear(d, d)
+        with torch.no_grad():
+            self.lin.weight.copy_(b.weight.detach() @ a.weight.detach())
+            self.lin.bias.copy_(
+                b.weight.detach() @ a.bias.detach() + b.bias.detach()
+            )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.lin(x)
+
+
+class _SelectMulFolded(nn.Module):
+    """``(a ⊙ b).select(d, i)`` — product first, select once."""
+
+    def forward(self, a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+        return (a * b).select(1, 0)
+
+
 def _conv_bn_folded(model: nn.Module, feed: object) -> nn.Module:
     return _FoldedConv(model[0], model[1]).eval().double()
 
@@ -207,6 +347,52 @@ def _mul_unsq_folded(model: nn.Module, feed: object) -> nn.Module:
     return _UnsqFolded().eval().double()
 
 
+def _rms_norm_known(model: nn.Module, feed: object) -> nn.Module:
+    return _KnownRMSNorm(model).eval().double()
+
+
+def _rms_norm_nogain_known(model: nn.Module, feed: object) -> nn.Module:
+    return (
+        _KnownRMSNormNoGain(feed.shape[-1], model.eps).eval().double()
+    )
+
+
+def _softmax_known(model: nn.Module, feed: object) -> nn.Module:
+    return _KnownSoftmax().eval().double()
+
+
+def _silu_known(model: nn.Module, feed: object) -> nn.Module:
+    return _KnownSiLU().eval().double()
+
+
+def _softsign_known(model: nn.Module, feed: object) -> nn.Module:
+    return _KnownSoftsign().eval().double()
+
+
+def _glu_known(model: nn.Module, feed: object) -> nn.Module:
+    return _KnownGLU().eval().double()
+
+
+def _sdpa_nomask_known(model: nn.Module, feed: object) -> nn.Module:
+    return _KnownSDPANoMask(model).eval().double()
+
+
+def _qkv_merged(model: nn.Module, feed: object) -> nn.Module:
+    return _MergedQKV(model).eval().double()
+
+
+def _weight_merged(model: nn.Module, feed: object) -> nn.Module:
+    return _MergedWeights(model).eval().double()
+
+
+def _affine_chain_folded(model: nn.Module, feed: object) -> nn.Module:
+    return _FoldedAffineChain(model).eval().double()
+
+
+def _select_mul_folded(model: nn.Module, feed: object) -> nn.Module:
+    return _SelectMulFolded().eval().double()
+
+
 #: ``name -> builder(model, feed)`` — the case corpus's ``ref`` key.
 REFS: dict[str, Callable[[nn.Module, object], nn.Module]] = {
     "conv_bn_folded": _conv_bn_folded,
@@ -216,4 +402,15 @@ REFS: dict[str, Callable[[nn.Module, object], nn.Module]] = {
     "weight_chain_fused": _weight_chain_fused,
     "swiglu_fused": _swiglu_fused,
     "mul_unsq_folded": _mul_unsq_folded,
+    "rms_norm_known": _rms_norm_known,
+    "rms_norm_nogain_known": _rms_norm_nogain_known,
+    "softmax_known": _softmax_known,
+    "silu_known": _silu_known,
+    "softsign_known": _softsign_known,
+    "glu_known": _glu_known,
+    "sdpa_nomask_known": _sdpa_nomask_known,
+    "qkv_merged": _qkv_merged,
+    "weight_merged": _weight_merged,
+    "affine_chain_folded": _affine_chain_folded,
+    "select_mul_folded": _select_mul_folded,
 }

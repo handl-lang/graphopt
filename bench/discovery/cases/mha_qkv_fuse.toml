@@ -1,0 +1,34 @@
+name = "mha_qkv_fuse"
+title = "Split QKV projections → one widened GEMM"
+category = "speed"
+citation = """
+The fused-QKV transform Megatron-LM's `MergedColumnParallelLinear`
+performs by hand and TFLite's `fuse_qkv` pass does structurally:
+`<q,k,v> : X -> V³` is ONE map into the product space — three
+bias-free projections of one input concat into a single (3d,d) GEMM
+plus three free split views.  `qkv_fuse`/`qkv_fuse_asym` are
+pairing-subsumed in the bank (tags SUBSUMED, kept for the cache);
+the shipped reach is the non-local pairing pass — `paired_extract`
+is the honest signal that the forced shared-GEMM term won.
+"""
+source = "mha_qkv"
+size = 8
+rules = "default"
+cost = "launch"
+
+[expect]
+signals = ["stat:paired_extract", "law:qkv_fuse"]
+ops = ["sdpa", "split"]
+max_ops = { linear = 3 }  # the fused GEMM appears once per split arg
+
+[[baselines]]
+name = "eager three-GEMM"
+kind = "self"
+[[baselines]]
+name = "merged QKV"
+kind = "ref"
+ref = "qkv_merged"
+note = "one (3d,d) Linear + chunk — the hand-fused impl"
+[[baselines]]
+name = "inductor"
+kind = "compile"

@@ -1,0 +1,31 @@
+name = "softsign_fold"
+title = "x/(|x|+1) spelled by hand → fused softsign kernel"
+category = "speed"
+citation = """
+`x / (|x| + 1)` is softsign (Bergstra et al. 2009, the bounded
+rational activation) spelled in decomposed div/abs/add form —
+`softsign_fold` mints the one fused kernel, discovered by
+`fold_object` and promoted after the guarded sweep measured the
+region unguarded-clean (project/retros/promoted-laws.md).
+"""
+source = "manual_softsign"
+size = 16
+rules = "default"
+cost = "launch"
+
+[expect]
+signals = ["law:softsign_fold"]
+ops = ["softsign"]
+absent_ops = ["abs", "div"]
+
+[[baselines]]
+name = "eager spelled"
+kind = "self"
+[[baselines]]
+name = "F.softsign"
+kind = "ref"
+ref = "softsign_known"
+note = "the fused kernel"
+[[baselines]]
+name = "inductor"
+kind = "compile"
