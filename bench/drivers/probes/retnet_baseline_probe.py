@@ -58,9 +58,7 @@ from mlopt_discovery.zoo import _ChunkedRetention
 from mlopt_orchestrator.optimize import _lower_extracted
 from mlopt_torch.adapters import TorchSink
 
-from bench.drivers.probes.om_decayed_kway_deliver_probe import (
-    om_decayed_kway_deliver_probe as P,
-)
+from bench.drivers.probes import om_decayed_kway_deliver_probe as P
 
 GAMMA = 0.9
 
