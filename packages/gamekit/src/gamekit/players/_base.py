@@ -457,8 +457,17 @@ class LinearPolicy:
         self._prev_steps = -1
 
     def fresh_hist(self) -> Any:
-        """Return the domain's empty history object (overridable)."""
-        return None
+        """Return a fresh play-rate history (overridable).
+
+        The default is the shared :class:`PlayHist` — a spec-less
+        policy still gets within-episode play counts for the
+        ``PlayRates`` parts and the post-play ``record`` hook.  A
+        bound domain specializes it (``LearnedPlayer`` →
+        ``spec.new_hist()``); returning ``None`` stays legal — the
+        featurizer contract tolerates it — and must not disable the
+        played mask (see :meth:`_observe`).
+        """
+        return PlayHist()
 
     def frozen(self, seed: int = 0, *, greedy: bool = False) -> Any:
         """Return a non-learning copy sharing the trained weights."""
@@ -480,8 +489,18 @@ class LinearPolicy:
         return {n: self._w.get(n, 0.0) for n in self.FEATURES}
 
     def _observe(self, state: Any) -> None:
-        """Detect the episode boundary — a fresh board resets state."""
-        if self._hist is None or (
+        """Detect the episode boundary — a fresh board resets state.
+
+        The first observation (``_prev_steps < 0`` — states count
+        steps from 0) and every ``steps == 0`` after a progressed
+        board clear the played mask and refresh the history.  The
+        mask is episode bookkeeping of its own: it must not hinge on
+        the hist channel — a ``fresh_hist`` returning ``None`` left
+        ``_hist`` ``None`` forever, read every call as a new episode
+        and cleared ``_played`` each step, so a spec-less policy
+        could re-play moves it already played.
+        """
+        if self._prev_steps < 0 or (
             state.steps == 0 and self._prev_steps > 0
         ):
             self._played.clear()

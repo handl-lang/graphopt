@@ -48,6 +48,24 @@ class _ToyBoard:
         )
 
 
+class _DrainBoard:
+    """A non-terminating Board: steps count, nothing ends it."""
+
+    def __init__(self):
+        self.n = 0
+
+    def observe(self):
+        return type(
+            "S",
+            (),
+            {"steps": self.n, "done": False},
+        )()
+
+    def step(self, action):
+        self.n += 1
+        return self.observe(), engine.Report(action, reward=0.0)
+
+
 def _toy_legal(state):
     return ("go", "go2", "stop") if not state.done else ()
 
@@ -128,6 +146,31 @@ class TestLinearPolicy:
         )
         w = p.weights_dict()
         assert any(v != 0.0 for v in w.values())
+
+    def test_specless_policy_masks_played_moves(self):
+        # regression: fresh_hist() returned None for a spec-less
+        # LinearPolicy, and _observe read "no hist" as "new episode"
+        # — _played.clear() ran on every call and the played mask
+        # never engaged (play.main's learned arm, every domain)
+        scored = []
+        p = LinearPolicy(
+            0,
+            legal=_toy_legal,
+            featurizer=lambda s, a, h: (
+                scored.append(a) or {"bias": 1.0}
+            ),
+            features=("bias",),
+            learn=False,
+        )
+        traj = engine.run_episode(_DrainBoard(), p, 10)
+        keys = [players._action_key(r.action) for r in traj.reports]
+        # the 3-move set drains to None — no replays within an episode
+        assert len(keys) == len(set(keys)) == 3
+        # 3+2+1 featurizations — a played move is never re-scored
+        assert len(scored) == 6
+        # a fresh board (steps back to 0) is a new episode — reset
+        traj2 = engine.run_episode(_DrainBoard(), p, 10)
+        assert len(traj2.reports) == 3
 
     def test_action_key_nonparams(self):
         assert players._action_key("plain") == ("call", "'plain'")
