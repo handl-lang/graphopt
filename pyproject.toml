@@ -16,6 +16,7 @@ dependencies = [
     "mlopt-cuda",
     "mlopt-discovery",
     "mlopt-onnx",
+    "mlopt-kernel",
     "gamekit",
     "torch>=2.0",
     "numpy>=1.24",
@@ -133,6 +134,7 @@ mlopt-orchestrator = { workspace = true }
 mlopt-cuda = { workspace = true }
 mlopt-discovery = { workspace = true }
 mlopt-onnx = { workspace = true }
+mlopt-kernel = { workspace = true }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -167,6 +169,7 @@ root_packages = [
     "mlopt_cuda",
     "mlopt_discovery",
     "mlopt_onnx",
+    "mlopt_kernel",
     "gamekit",
 ]
 # `mlopt_native` is deliberately NOT a root package: it is an optional
@@ -189,6 +192,7 @@ forbidden_modules = [
     "mlopt_cuda",
     "mlopt_discovery",
     "mlopt_onnx",
+    "mlopt_kernel",
     "gamekit",
 ]
 
@@ -242,6 +246,7 @@ forbidden_modules = [
     "mlopt_orchestrator",
     "mlopt_cuda",
     "mlopt_onnx",
+    "mlopt_kernel",
     "mlopt_discovery",
     "torch",
     "numpy",
@@ -264,6 +269,9 @@ forbidden_modules = [
 # `Sink` port over `onnx`/`onnxruntime` and depends on `mlopt_core`
 # alone — not on `mlopt_orchestrator`, and not on the torch backend
 # family — so it is a peer of `mlopt_native`, directly above core.
+# `mlopt_kernel` is the kernelopt spike's sink+laws+board (plan 0032
+# phase 3): same peer shape — `mlopt_core` alone, torch reached
+# lazily inside its binding table.
 [[tool.importlinter.contracts]]
 name = "dependency layers"
 type = "layers"
@@ -284,7 +292,7 @@ layers = [
     "mlopt_torch : mlopt_carriers",
     "mlopt_orchestrator",
     "(mlopt_native)",
-    "mlopt_onnx",
+    "mlopt_onnx : mlopt_kernel",
     "mlopt_core",
 ]
 
@@ -324,6 +332,7 @@ extra-paths = [
     "packages/mlopt-cuda/src",
     "packages/mlopt-discovery/src",
     "packages/mlopt-onnx/src",
+    "packages/mlopt-kernel/src",
     "packages/gamekit/src",
     # mlopt-native is optional (maturin-built); its `python/` source
     # dir holds the adapter plus the `_native.pyi` stub ty resolves
@@ -347,7 +356,7 @@ error-on-warning = false
 # mlopt_onnx joined the 100 wall after its own climb (see
 # project/retros/onnx-package.md) — it reports in the main wall, not
 # the discovery ratchet.
-source = ["mlopt_core", "mlopt_torch", "mlopt_carriers", "mlopt_orchestrator", "mlopt_cuda", "mlopt_discovery", "mlopt_onnx", "gamekit"]
+source = ["mlopt_core", "mlopt_torch", "mlopt_carriers", "mlopt_orchestrator", "mlopt_cuda", "mlopt_discovery", "mlopt_onnx", "mlopt_kernel", "gamekit"]
 branch = true
 omit = ["*/tests/*"]
 

@@ -312,3 +312,19 @@ PLAYER_ARENA_PLAYER_WEIGHTS: dict[str, float] = {
     "a:table:baked": -0.7396,
     "a:table:cold": -0.734,
 }
+
+#: The kernel board's player prior (plan 0032 phase 3) — trained by
+#: imitating the match-then-stop oracle (``state.matches`` rules,
+#: then ``stop``) and REINFORCE on 400 kernel cases; eval (32
+#: held-out): learned-greedy 0.511 > scripted 0.333 > random ~0.1.
+KERNEL_PLAYER_WEIGHTS: dict[str, float] = {
+    "a:r:01": -0.5934,
+    "a:r:02": 0.7242,
+    "a:r:03": 0.8729,
+    "a:r:06": -0.8594,
+    "a:r:07": 0.2601,
+    "a:r:15": -0.4043,
+    "x:m": 5.5346,
+    "x:stop": 0.7242,
+    "x:stop:imp": 1.5544,
+}

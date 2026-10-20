@@ -27,7 +27,7 @@ ex-`lawdata.game` half).  The old paths
 (`mlopt_discovery.engine`/`scoring`/`advantage`/`players`/
 `lawdata.game`) are re-exporting shims; `play` (the
 domain registry +
-`python -m mlopt_discovery.play --domain meta|joint|search|torch|gen|open`
+`python -m mlopt_discovery.play --domain meta|joint|search|torch|gen|open|kernel`
 CLI; `--player <name>` runs a registered player eval-only, and
 `--deliver` lowers+verifies the winning extraction on domains
 that ship a deliver hook — torch does)).

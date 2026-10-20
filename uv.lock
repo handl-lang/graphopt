@@ -24,6 +24,7 @@ members = [
     "mlopt-core",
     "mlopt-cuda",
     "mlopt-discovery",
+    "mlopt-kernel",
     "mlopt-onnx",
     "mlopt-orchestrator",
     "mlopt-torch",
@@ -2125,6 +2126,7 @@ dependencies = [
     { name = "mlopt-core" },
     { name = "mlopt-cuda" },
     { name = "mlopt-discovery" },
+    { name = "mlopt-kernel" },
     { name = "mlopt-onnx" },
     { name = "mlopt-orchestrator" },
     { name = "mlopt-torch" },
@@ -2201,6 +2203,7 @@ requires-dist = [
     { name = "mlopt-core", editable = "packages/mlopt-core" },
     { name = "mlopt-cuda", editable = "packages/mlopt-cuda" },
     { name = "mlopt-discovery", editable = "packages/mlopt-discovery" },
+    { name = "mlopt-kernel", editable = "packages/mlopt-kernel" },
     { name = "mlopt-onnx", editable = "packages/mlopt-onnx" },
     { name = "mlopt-orchestrator", editable = "packages/mlopt-orchestrator" },
     { name = "mlopt-torch", editable = "packages/mlopt-torch" },
@@ -2313,6 +2316,17 @@ requires-dist = [
     { name = "mlopt-torch", editable = "packages/mlopt-torch" },
     { name = "torch", specifier = ">=2.0" },
 ]
+
+[[package]]
+name = "mlopt-kernel"
+version = "0.1.0.dev0"
+source = { editable = "packages/mlopt-kernel" }
+dependencies = [
+    { name = "mlopt-core" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "mlopt-core", editable = "packages/mlopt-core" }]
 
 [[package]]
 name = "mlopt-onnx"

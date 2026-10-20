@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mlopt-kernel"
+version = "0.1.0dev"
+description = "The kernelopt spike (plan 0032 phase 3): a small codegen law bank (fusion-region schedule markers + arithmetic strength reductions), KernelSink — a torch-composite backend implementing the mlopt_core.ports.Sink contract (lower + numeric verify), and the kernel Board — one mlopt-core dependency, no third-party imports outside the lazy torch binding table."
+requires-python = ">=3.11"
+dependencies = ["mlopt-core"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

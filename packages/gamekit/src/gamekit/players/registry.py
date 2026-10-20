@@ -54,6 +54,7 @@ EPISODE_BOARDS: tuple[str, ...] = (
     "torch",
     "search",
     "gen",
+    "kernel",
     "open",
     "player",
 )

@@ -100,6 +100,7 @@ class BaselineCtx:
 _MODULES: dict[str, str] = {
     "eager": "bench.limits.eager",
     "torch_compile": "bench.limits.torch_compile",
+    "triton": "bench.limits.triton",
     "opt_einsum": "bench.limits.opt_einsum",
     "fla": "bench.limits.fla",
     "paper_impl": "bench.limits.paper_impl",

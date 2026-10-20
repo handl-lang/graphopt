@@ -141,6 +141,7 @@ class TestDomains:
             "search",
             "torch",
             "gen",
+            "kernel",
             "open",
             "player",
         }
