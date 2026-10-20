@@ -119,6 +119,7 @@ def main(argv: list[str] | None = None) -> int:
         md_path=args.out / "scorecard.md",
         json_path=args.out / "scorecard.json",
         device=args.device,
+        seed=args.seed,
     )
     n_found = sum(r.found for r in rows)
     n_cert = sum(r.certified for r in rows)
@@ -155,6 +156,8 @@ def main(argv: list[str] | None = None) -> int:
             }
         ],
         provenance={"quick": lane_name == "fast"},
+        seed=args.seed,
+        device=args.device,
     )
     if not args.no_ledger:
         _t.append_record(record)

@@ -18,11 +18,10 @@ convention this mirrors.
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from bench.benchkit.env import collect_env
+from bench.benchkit.provenance import with_provenance
 from bench.limits import registry
 from bench.limits.runner import CaseLimits, LimitRow, _verdict
 
@@ -166,18 +165,19 @@ def write_outputs(
     md_path: Path,
     json_path: Path,
     device: str = "cpu",
+    seed: Any = None,
 ) -> dict[str, Any]:
     """Write the Markdown + JSON limits table; return the payload."""
-    env = collect_env(device)
-    payload = {
-        "schema": SCHEMA,
-        "lane": lane,
-        "generated_utc": datetime.now(UTC).isoformat(
-            timespec="seconds"
-        ),
-        "env": env,
-        "cases": [_case_record(cl) for cl in out],
-    }
+    payload = with_provenance(
+        {
+            "schema": SCHEMA,
+            "lane": lane,
+            "cases": [_case_record(cl) for cl in out],
+        },
+        seed=seed,
+        device=device,
+    )
+    env = payload["env"]
     md_path = Path(md_path)
     md_path.parent.mkdir(parents=True, exist_ok=True)
     md_path.write_text(render_markdown(out, lane=lane, env=env))

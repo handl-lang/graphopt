@@ -13,6 +13,8 @@ itself lives in the package ``__init__`` (it drives ``candidates`` /
 from __future__ import annotations
 
 import json
+import os
+import uuid
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -161,6 +163,19 @@ def _ingest_one(
 # ---------------------------------------------------------------------------
 
 
+def _tmp_for(path: Path) -> Path:
+    """Return a per-writer tmp sibling of *path* — parallel-safe staging.
+
+    Two ``write_intake`` processes targeting the same side-files never
+    share a staging name, and the ``os.replace`` publish is atomic, so
+    a concurrent reader sees the old file or the new one — never a
+    torn write (plan 0032 phase 2b).
+    """
+    return path.with_name(
+        f".{path.name}.tmp-{os.getpid()}-{uuid.uuid4().hex[:8]}"
+    )
+
+
 def write_intake(
     records: list[dict],
     rejections: list[Rejection],
@@ -182,8 +197,12 @@ def write_intake(
         "workloads": records,
         "rejections": [asdict(r) for r in rejections],
     }
-    path.write_text(json.dumps(payload, indent=2) + "\n")
-    torch.save(tensors_of, tensors_path)
+    tmp = _tmp_for(path)
+    tmp.write_text(json.dumps(payload, indent=2) + "\n")
+    os.replace(tmp, path)
+    ttmp = _tmp_for(tensors_path)
+    torch.save(tensors_of, ttmp)
+    os.replace(ttmp, tensors_path)
 
 
 def load_records(path: Path = _DEFAULT_JSON) -> list[dict]:

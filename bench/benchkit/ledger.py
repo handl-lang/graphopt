@@ -11,19 +11,20 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from bench.benchkit.jsonl import append_jsonl
 from bench.benchkit.report import Report
 
 DEFAULT_LEDGER = Path("bench/results/ledger.jsonl")
 
 
 def append(report: Report, path: str | Path = DEFAULT_LEDGER) -> Path:
-    """Append a report to the ledger; returns the ledger path."""
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    record = report.to_dict()
-    with path.open("a") as fh:
-        fh.write(json.dumps(record, default=str) + "\n")
-    return path
+    """Append a report to the ledger; returns the ledger path.
+
+    The append is one ``O_APPEND`` ``os.write``
+    (:func:`bench.benchkit.jsonl.append_jsonl`) — atomic under
+    parallel appends, no lockfile needed.
+    """
+    return append_jsonl(path, report.to_dict())
 
 
 def load(path: str | Path = DEFAULT_LEDGER) -> list[dict]:

@@ -74,6 +74,44 @@ class Cell:
             return None
         return self.admitted / self.claims
 
+    def as_record(self) -> dict[str, Any]:
+        """The cell as a JSON-able record (table + checkpoint share it)."""
+        return {
+            "board": self.board,
+            "player": self.player,
+            "referee": self.referee,
+            "run": self.run,
+            "reason": self.reason,
+            "claims": self.claims,
+            "admitted": self.admitted,
+            "admit_rate": self.admit_rate,
+            "refuted": self.refuted,
+            "value": self.value,
+            "reward_ep": self.reward_ep,
+            "evals_ep": self.evals_ep,
+            "wall_s": self.wall_s,
+            "notes": self.notes,
+        }
+
+    @classmethod
+    def from_record(cls, rec: dict) -> Cell:
+        """Rebuild a cell from its record — the resume seam."""
+        return cls(
+            board=rec["board"],
+            player=rec["player"],
+            referee=rec["referee"],
+            run=rec["run"],
+            reason=rec.get("reason", ""),
+            claims=rec.get("claims", 0),
+            admitted=rec.get("admitted", 0),
+            refuted=rec.get("refuted", 0),
+            value=rec.get("value"),
+            reward_ep=rec.get("reward_ep"),
+            evals_ep=rec.get("evals_ep"),
+            wall_s=rec.get("wall_s", 0.0),
+            notes=rec.get("notes", ""),
+        )
+
 
 def _extracted_pair(board: Any, domain: str) -> tuple[Any, Any] | None:
     """The ``(input, extracted)`` term pair a finished board delivers."""
@@ -133,8 +171,14 @@ def _episode_cells(
     cases: int,
     budget: int,
     ctx: refs.RefereeCtx,
+    checkpoint: Any = None,
 ) -> list[Cell]:
-    """Play each player on held-out cases; referee the extractions."""
+    """Play each player on held-out cases; referee the extractions.
+
+    With *checkpoint*, a ``(board, player, referee)`` cell is recorded
+    the moment it completes and reused verbatim on resume — a crash
+    costs the in-flight player, nothing earlier.
+    """
     from mlopt_discovery import engine
     from mlopt_discovery.play import DOMAINS
     from mlopt_discovery.players import registry
@@ -143,20 +187,31 @@ def _episode_cells(
     ev = d.cases(seed + HELD_OUT_OFFSET, cases)
     rows: list[Cell] = []
     for pname in players:
+        keys = [(domain, pname, rname) for rname in referees]
+        if checkpoint is not None and all(
+            checkpoint.done(k) for k in keys
+        ):
+            rows.extend(
+                Cell.from_record(checkpoint.get(k)) for k in keys
+            )
+            continue
         t0 = time.perf_counter()
         try:
             mk = registry.make(pname, board, seed=seed, ctx={})
         except Exception as e:
             for rname in referees:
-                rows.append(
-                    Cell(
-                        board,
-                        pname,
-                        rname,
-                        run=False,
-                        reason=f"make: {e}",
-                    )
+                c = Cell(
+                    board,
+                    pname,
+                    rname,
+                    run=False,
+                    reason=f"make: {e}",
                 )
+                rows.append(c)
+                if checkpoint is not None:
+                    checkpoint.record(
+                        (domain, pname, rname), c.as_record()
+                    )
             continue
         claims: dict[tuple, Rewrite] = {}
         rewards: list[float] = []
@@ -200,6 +255,8 @@ def _episode_cells(
             elif _r and admitted == n:
                 c.notes = f"skipped: {_r[0]}"
             rows.append(c)
+            if checkpoint is not None:
+                checkpoint.record((domain, pname, rname), c.as_record())
     return rows
 
 
@@ -212,6 +269,7 @@ def _open_cells(
     page: int,
     budget: int,
     ctx: refs.RefereeCtx,
+    checkpoint: Any = None,
 ) -> list[Cell]:
     """Play each player on the open board; referee its chosen claims.
 
@@ -219,6 +277,11 @@ def _open_cells(
     member measured once, the draws replayed to every arm — and adds
     the referee layer on top: the candidates a player *chose* are the
     claims its cell answers for.
+
+    With *checkpoint*: a ``("open", player, referee)`` cell is
+    recorded when complete and reused on resume; when every cell is
+    already done the shared pool measurement (the expensive prefix)
+    is skipped entirely.
     """
     from mlopt_discovery import engine
     from mlopt_discovery import open_game as og
@@ -231,6 +294,16 @@ def _open_cells(
         _patched_evaluate,
     )
 
+    all_keys = [
+        ("open", pname, rname)
+        for pname in players
+        for rname in referees
+    ]
+    if checkpoint is not None and all(
+        checkpoint.done(k) for k in all_keys
+    ):
+        return [Cell.from_record(checkpoint.get(k)) for k in all_keys]
+
     ev = og.gen_cases(seed, pages, page=page, start=1, step=2)
     ev_pools = [list(og.OpenArena(c).pool) for c in ev]
     _outcomes, by_key = _measure_pools(ev_pools, seed + HELD_OUT_OFFSET)
@@ -242,20 +315,31 @@ def _open_cells(
     rows: list[Cell] = []
     try:
         for pname in players:
+            keys = [("open", pname, rname) for rname in referees]
+            if checkpoint is not None and all(
+                checkpoint.done(k) for k in keys
+            ):
+                rows.extend(
+                    Cell.from_record(checkpoint.get(k)) for k in keys
+                )
+                continue
             t0 = time.perf_counter()
             try:
                 mk = registry.make(pname, "open", seed=seed, ctx={})
             except Exception as e:
                 for rname in referees:
-                    rows.append(
-                        Cell(
-                            "open",
-                            pname,
-                            rname,
-                            run=False,
-                            reason=f"make: {e}",
-                        )
+                    c = Cell(
+                        "open",
+                        pname,
+                        rname,
+                        run=False,
+                        reason=f"make: {e}",
                     )
+                    rows.append(c)
+                    if checkpoint is not None:
+                        checkpoint.record(
+                            ("open", pname, rname), c.as_record()
+                        )
                 continue
             chosen: dict[tuple, Rewrite] = {}
             rewards: list[float] = []
@@ -318,6 +402,10 @@ def _open_cells(
                 elif not n:
                     c.notes = "no claims chosen"
                 rows.append(c)
+                if checkpoint is not None:
+                    checkpoint.record(
+                        ("open", pname, rname), c.as_record()
+                    )
     finally:
         lp.evaluate = orig_evaluate
     return rows
@@ -370,8 +458,14 @@ def run_matrix(
     open_page: int = 8,
     open_budget: int = 9,
     ctx: refs.RefereeCtx | None = None,
+    checkpoint: Any = None,
 ) -> list[Cell]:
-    """Run the designed subset; return cells in request order."""
+    """Run the designed subset; return cells in request order.
+
+    *checkpoint* is a ``bench.benchkit.checkpoint.Checkpoint`` — cells
+    already recorded for this protocol are reused, each new cell is
+    persisted as it lands.
+    """
     ctx = ctx or refs.RefereeCtx()
     out: list[Cell] = []
     for board in boards:
@@ -409,6 +503,7 @@ def run_matrix(
                     page=open_page,
                     budget=open_budget,
                     ctx=ctx,
+                    checkpoint=checkpoint,
                 )
             )
             continue
@@ -422,6 +517,7 @@ def run_matrix(
                 cases=meta_cases,
                 budget=meta_budget,
                 ctx=ctx,
+                checkpoint=checkpoint,
             )
         )
     return out

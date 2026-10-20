@@ -45,11 +45,14 @@ silently loading rules derived under different assumptions.
 
 from __future__ import annotations
 
+import contextlib
 import functools
 import hashlib
 import inspect
 import json
 import os
+import time
+import uuid
 from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Any
@@ -327,7 +330,21 @@ def _default_cache_dir() -> Path:
 
 
 class RuleCache:
-    """Filesystem cache of synthesized rule sets, one JSON file per key."""
+    """Filesystem cache of synthesized rule sets, one JSON file per key.
+
+    Parallel safety (plan 0032 phase 2b): keys are content-addressed,
+    so two workers computing the same problem write the *same* bytes —
+    ``store`` writes to a per-process ``.tmp-<pid>-<uuid>`` name and
+    ``os.replace``es it into place, making each commit atomic and the
+    last-writer-wins race harmless.  No lockfile is needed; a lock
+    would only serialize identical work.  ``store`` also sweeps stale
+    ``.tmp-*`` siblings a crashed writer left behind — but only ones
+    older than :data:`_TMP_MIN_AGE_S`, so a live writer's in-flight
+    tmp file is never swept out from under it.
+    """
+
+    #: Tmp files younger than this are in-flight writes, not orphans.
+    _TMP_MIN_AGE_S = 60.0
 
     def __init__(self, cache_dir: Any):
         """Initialise the cache directory."""
@@ -337,6 +354,14 @@ class RuleCache:
         """Return the cache file path for ``key``."""
         return self.dir / f"rules-{key}.json"
 
+    def _sweep_tmp(self) -> None:
+        """Remove old tmp files a crashed writer left in the cache dir."""
+        now = time.time()
+        for tmp in self.dir.glob(".rules-*.tmp-*"):
+            with contextlib.suppress(OSError):
+                if now - tmp.stat().st_mtime > self._TMP_MIN_AGE_S:
+                    tmp.unlink()
+
     def store(self, key: str, rules: Iterable[Rewrite]) -> Path:
         """Persist *rules* under *key*.
 
@@ -345,14 +370,20 @@ class RuleCache:
         silently dropping its side conditions.
         """
         self.dir.mkdir(parents=True, exist_ok=True)
+        self._sweep_tmp()
         payload = {
             "version": CACHE_VERSION,
             "key": key,
             "rules": [_enc_rule(r) for r in rules],
         }
-        tmp = self.dir / f".rules-{key}.tmp"
+        # Per-writer tmp name: two parallel workers never share the
+        # buffer file, and the rename publishes a complete file.
+        tmp = (
+            self.dir
+            / f".rules-{key}.tmp-{os.getpid()}-{uuid.uuid4().hex[:8]}"
+        )
         tmp.write_text(json.dumps(payload, sort_keys=True))
-        tmp.replace(self.path(key))
+        os.replace(tmp, self.path(key))
         return self.path(key)
 
     def load(

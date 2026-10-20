@@ -21,6 +21,7 @@ from pathlib import Path
 from mlopt_discovery.play import DOMAINS
 from mlopt_discovery.players import registry
 
+from bench.benchkit import checkpoint as ckpt_mod
 from bench.players.leaderboard import write_outputs
 from bench.players.runner import run_board
 
@@ -127,6 +128,16 @@ def main(argv: list[str] | None = None) -> int:
         help="skip the ledger append (bench/results/ledger.jsonl)",
     )
     p.add_argument(
+        "--resume",
+        nargs="?",
+        const=str(ckpt_mod.DEFAULT_DIR / "leaderboard.jsonl"),
+        default=None,
+        metavar="PATH",
+        help="resume from the row checkpoint "
+        "(default: bench/results/checkpoints/leaderboard.jsonl); "
+        "recorded rows are reused, a crash costs a cell",
+    )
+    p.add_argument(
         "--out",
         type=Path,
         default=Path("docs"),
@@ -192,6 +203,20 @@ def main(argv: list[str] | None = None) -> int:
         "contraction_samples": args.samples,
     }
 
+    ckpt = None
+    if args.resume is not None:
+        manifest = ckpt_mod.new_manifest(
+            "leaderboard",
+            {**protocol, "boards": boards},
+            device=args.device,
+        )
+        ckpt = ckpt_mod.Checkpoint.open(args.resume, manifest)
+        print(
+            f"resume: {len(ckpt.entries)} cells already done "
+            f"({args.resume})",
+            flush=True,
+        )
+
     rows = []
     board_meta: dict = {}
     for board in boards:
@@ -212,6 +237,7 @@ def main(argv: list[str] | None = None) -> int:
                 instances=args.instances,
                 samples=args.samples,
                 device=args.device,
+                checkpoint=ckpt,
             )
         except ValueError as e:
             print(f"  skipped — {e}", flush=True)
@@ -230,6 +256,7 @@ def main(argv: list[str] | None = None) -> int:
         protocol=protocol,
         meta=board_meta,
         device=args.device,
+        seed=args.seed,
     )
     from bench.benchkit import table as _t
 
@@ -252,6 +279,8 @@ def main(argv: list[str] | None = None) -> int:
             }
         ],
         provenance={"quick": bool(args.smoke)},
+        seed=args.seed,
+        device=args.device,
     )
     if not args.no_ledger:
         _t.append_record(record)

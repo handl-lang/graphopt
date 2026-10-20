@@ -18,12 +18,12 @@ from __future__ import annotations
 
 import math
 from collections.abc import Iterable, Mapping
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from bench.benchkit.env import collect_env
+from bench.benchkit.jsonl import append_jsonl
 from bench.benchkit.ledger import DEFAULT_LEDGER
+from bench.benchkit.provenance import with_provenance
 
 #: Table-record payload version — bump on a schema break.
 SCHEMA = 1
@@ -40,6 +40,8 @@ def table_record(
     findings: Iterable[Mapping[str, Any]] = (),
     env: dict | None = None,
     provenance: dict | None = None,
+    seed: Any = None,
+    device: str | None = None,
 ) -> dict:
     """Build the pinnable table record — ledger and baseline share it.
 
@@ -50,7 +52,9 @@ def table_record(
     which way is bad; a metric missing from it compares as ``"up"``.
     *findings* are the same ``{claim, verdict, headline, ...}`` dicts
     a ``Report`` emits — the pinned-baseline contract requires a
-    stated verdict.
+    stated verdict.  The record is stamped through
+    :func:`bench.benchkit.provenance.with_provenance`, so the
+    date/sha/device/seed contract is enforced, not conventional.
     """
     for m, d in directions.items():
         if d not in DIRECTIONS:
@@ -69,32 +73,27 @@ def table_record(
             out_cells.append(
                 {"name": str(cell["name"]), "metrics": metrics}
             )
-    return {
-        "schema": SCHEMA,
-        "kind": "table",
-        "suite": suite,
-        "generated_utc": datetime.now(UTC).isoformat(
-            timespec="seconds"
-        ),
-        "env": env or collect_env(),
-        "provenance": provenance or {},
-        "directions": dict(directions),
-        "findings": [dict(f) for f in findings],
-        "cells": out_cells,
-    }
+    return with_provenance(
+        {
+            "schema": SCHEMA,
+            "kind": "table",
+            "suite": suite,
+            "provenance": provenance or {},
+            "directions": dict(directions),
+            "findings": [dict(f) for f in findings],
+            "cells": out_cells,
+        },
+        seed=seed,
+        device=device,
+        env=env,
+    )
 
 
 def append_record(
     record: dict, path: str | Path = DEFAULT_LEDGER
 ) -> Path:
     """Append a table record to the ledger; returns the ledger path."""
-    import json
-
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a") as fh:
-        fh.write(json.dumps(record, default=str) + "\n")
-    return path
+    return append_jsonl(path, record)
 
 
 def write_table_baseline(record: dict, outdir: str | Path) -> Path:

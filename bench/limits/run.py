@@ -86,9 +86,11 @@ def main(argv: list[str] | None = None) -> int:
         help="pin the table as bench/baselines/limits_table.json",
     )
     p.add_argument(
-        "--baselines",
+        "--baselines-dir",
+        dest="baselines_dir",
         type=Path,
         default=Path("bench/baselines"),
+        help="the pinned-baseline directory for --pin",
     )
     p.add_argument(
         "--no-ledger",
@@ -159,6 +161,7 @@ def main(argv: list[str] | None = None) -> int:
         md_path=args.out / "limits_table.md",
         json_path=args.out / "limits_table.json",
         device=args.device,
+        seed=args.seed,
     )
     flat = [r for cl in rows for r in cl.rows]
     ran = [r for r in flat if r.available]
@@ -188,12 +191,14 @@ def main(argv: list[str] | None = None) -> int:
             }
         ],
         provenance={"quick": lane_name == "fast"},
+        seed=args.seed,
+        device=args.device,
     )
     if not args.no_ledger:
         _t.append_record(record)
     if args.pin:
         print(
-            f"  -> pinned {_t.write_table_baseline(record, args.baselines)}"
+            f"  -> pinned {_t.write_table_baseline(record, args.baselines_dir)}"
         )
     print(
         f"limits: {len(flat)} rows over {len(rows)} case(s) "

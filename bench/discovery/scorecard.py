@@ -9,11 +9,10 @@ context that produced it.  Both render from one ``list[CaseResult]``.
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from bench.benchkit.env import collect_env
+from bench.benchkit.provenance import with_provenance
 from bench.discovery.runner import CaseResult
 
 #: Scorecard payload version — bump on a schema break.
@@ -195,18 +194,19 @@ def write_outputs(
     md_path: Path,
     json_path: Path,
     device: str = "cpu",
+    seed: Any = None,
 ) -> dict[str, Any]:
     """Write the Markdown + JSON scorecard; return the payload."""
-    env = collect_env(device)
-    payload = {
-        "schema": SCHEMA,
-        "lane": lane,
-        "generated_utc": datetime.now(UTC).isoformat(
-            timespec="seconds"
-        ),
-        "env": env,
-        "cases": [_row_record(r) for r in rows],
-    }
+    payload = with_provenance(
+        {
+            "schema": SCHEMA,
+            "lane": lane,
+            "cases": [_row_record(r) for r in rows],
+        },
+        seed=seed,
+        device=device,
+    )
+    env = payload["env"]
     md_path = Path(md_path)
     md_path.parent.mkdir(parents=True, exist_ok=True)
     md_path.write_text(render_markdown(rows, lane=lane, env=env))

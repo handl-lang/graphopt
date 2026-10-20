@@ -13,11 +13,10 @@ for the convention this mirrors.
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from bench.benchkit.env import collect_env
+from bench.benchkit.provenance import with_provenance
 from bench.players.runner import Row
 
 #: Leaderboard payload version — bump on a schema break.
@@ -31,20 +30,7 @@ def _f(v: float | None, fmt: str = "{:.4f}") -> str:
 
 def _row_record(row: Row) -> dict[str, Any]:
     """One row as a JSON-able record."""
-    return {
-        "board": row.board,
-        "player": row.player,
-        "kind": row.kind,
-        "reward_ep": row.reward_ep,
-        "evals_ep": row.evals_ep,
-        "useful_per_eval": row.useful_per_eval,
-        "ap": row.ap,
-        "cost": row.cost,
-        "ratio": row.ratio,
-        "wall_s": row.wall_s,
-        "n": row.n,
-        "notes": row.notes,
-    }
+    return row.as_record()
 
 
 def _board_table(board: str, rows: list[Row]) -> list[str]:
@@ -125,19 +111,22 @@ def write_outputs(
     protocol: dict | None = None,
     meta: dict | None = None,
     device: str = "cpu",
+    seed: Any = None,
 ) -> dict[str, Any]:
     """Write the Markdown + JSON leaderboard; return the payload."""
-    env = collect_env(device)
-    payload = {
-        "schema": SCHEMA,
-        "generated_utc": datetime.now(UTC).isoformat(
-            timespec="seconds"
-        ),
-        "env": env,
-        "protocol": protocol or {},
-        "meta": meta or {},
-        "rows": [_row_record(r) for r in rows],
-    }
+    if seed is None:
+        seed = (protocol or {}).get("seed")
+    payload = with_provenance(
+        {
+            "schema": SCHEMA,
+            "protocol": protocol or {},
+            "meta": meta or {},
+            "rows": [_row_record(r) for r in rows],
+        },
+        seed=seed,
+        device=device,
+    )
+    env = payload["env"]
     md_path = Path(md_path)
     md_path.parent.mkdir(parents=True, exist_ok=True)
     md_path.write_text(

@@ -130,6 +130,7 @@ def run_bench(args) -> Report:
             md_path=out / "scorecard.md",
             json_path=out / "scorecard.json",
             device=getattr(args, "device", None) or "cpu",
+            seed=getattr(args, "seed", None),
         )
     n_found = sum(r.found for r in rows)
     n_cert = sum(r.certified for r in rows)

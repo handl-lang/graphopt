@@ -63,6 +63,41 @@ class Row:
     n: int = 0
     notes: str = ""
 
+    def as_record(self) -> dict[str, Any]:
+        """The row as a JSON-able record (leaderboard + checkpoint)."""
+        return {
+            "board": self.board,
+            "player": self.player,
+            "kind": self.kind,
+            "reward_ep": self.reward_ep,
+            "evals_ep": self.evals_ep,
+            "useful_per_eval": self.useful_per_eval,
+            "ap": self.ap,
+            "cost": self.cost,
+            "ratio": self.ratio,
+            "wall_s": self.wall_s,
+            "n": self.n,
+            "notes": self.notes,
+        }
+
+    @classmethod
+    def from_record(cls, rec: dict) -> Row:
+        """Rebuild a row from its record — the resume seam."""
+        return cls(
+            board=rec["board"],
+            player=rec["player"],
+            kind=rec.get("kind", ""),
+            reward_ep=rec.get("reward_ep"),
+            evals_ep=rec.get("evals_ep"),
+            useful_per_eval=rec.get("useful_per_eval"),
+            ap=rec.get("ap"),
+            cost=rec.get("cost"),
+            ratio=rec.get("ratio"),
+            wall_s=rec.get("wall_s", 0.0),
+            n=rec.get("n", 0),
+            notes=rec.get("notes", ""),
+        )
+
 
 def _requested(
     board: str, players: list[str] | None
@@ -104,16 +139,27 @@ def run_episode_board(
     seed: int,
     cases: int,
     budget: int,
+    checkpoint: Any = None,
 ) -> list[Row]:
-    """Play every requested arm on the held-out cases of *board*."""
+    """Play every requested arm on the held-out cases of *board*.
+
+    With *checkpoint*, the ``(board, player)`` row is persisted the
+    moment it completes and reused on resume — a crash costs the
+    in-flight player's row, nothing earlier.
+    """
     d = DOMAINS[board]
     ev = d.cases(seed + HELD_OUT_OFFSET, cases)
     rows: list[Row] = []
     for s in _requested(board, players):
+        key = (board, s.name)
+        if checkpoint is not None and checkpoint.done(key):
+            rows.append(Row.from_record(checkpoint.get(key)))
+            continue
         row = Row(board=board, player=s.name, kind=s.kind)
         if board not in s.boards:
             row.notes = "does not play this board"
             rows.append(row)
+            _record(checkpoint, key, row.as_record())
             continue
         ctx: dict = {}
         try:
@@ -121,6 +167,7 @@ def run_episode_board(
         except Exception as e:  # factory declined — honest row
             row.notes = f"make: {e}"
             rows.append(row)
+            _record(checkpoint, key, row.as_record())
             continue
         t0 = time.perf_counter()
         table = engine.evaluate(
@@ -136,7 +183,14 @@ def run_episode_board(
         row.cost = round(statistics.fmean(costs), 2) if costs else None
         row.notes = _episode_notes(rws, budget)
         rows.append(row)
+        _record(checkpoint, key, row.as_record())
     return rows
+
+
+def _record(checkpoint: Any, key: tuple, payload: dict) -> None:
+    """Persist a record under *key* when a checkpoint is active."""
+    if checkpoint is not None:
+        checkpoint.record(key, payload)
 
 
 # ---------------------------------------------------------------------------
@@ -234,17 +288,32 @@ def run_open(
     neural_epochs: int,
     neural_hidden: int,
     device: str,
+    checkpoint: Any = None,
 ) -> tuple[list[Row], dict]:
     """Play the requested arms on odd pages; rank the held-out pool.
 
     Returns ``(rows, meta)`` — *meta* carries the pool/useful counts
     and whether the neural train pools were measured (the expensive
     half of the protocol, skipped when ``neural`` is not requested).
+
+    With *checkpoint*: each ``("open", player)`` row and the meta
+    record persist as they complete; when every row and the meta are
+    already stored, the shared pool measurement is skipped whole.
     """
     from mlopt_discovery import open_game as og
     from mlopt_discovery import proposal as lp
 
     specs = _requested("open", players)
+    meta_key = ("open", "__meta__")
+    if (
+        checkpoint is not None
+        and checkpoint.done(meta_key)
+        and all(checkpoint.done(("open", s.name)) for s in specs)
+    ):
+        return [
+            Row.from_record(checkpoint.get(("open", s.name)))
+            for s in specs
+        ], checkpoint.get(meta_key)
     want_neural = any(s.name == "neural" for s in specs)
 
     train_cases = og.gen_cases(seed, pages, page=page, start=0, step=2)
@@ -289,10 +358,15 @@ def run_open(
     lp.evaluate = _patched_evaluate(by_key)
     try:
         for s in specs:
+            key = ("open", s.name)
+            if checkpoint is not None and checkpoint.done(key):
+                rows.append(Row.from_record(checkpoint.get(key)))
+                continue
             row = Row(board="open", player=s.name, kind=s.kind)
             if "open" not in s.boards:
                 row.notes = "does not play this board"
                 rows.append(row)
+                _record(checkpoint, key, row.as_record())
                 continue
             ctx: dict = {
                 "train": train_pairs,
@@ -305,6 +379,7 @@ def run_open(
             except Exception as e:
                 row.notes = f"make: {e}"
                 rows.append(row)
+                _record(checkpoint, key, row.as_record())
                 continue
             t0 = time.perf_counter()
             stats = _open_episode_stats(mk, ev, budget)
@@ -323,8 +398,10 @@ def run_open(
                 row.ap = meta["random_ap"]
             row.notes = _open_notes(stats, page)
             rows.append(row)
+            _record(checkpoint, key, row.as_record())
     finally:
         lp.evaluate = orig_evaluate
+    _record(checkpoint, meta_key, meta)
     return rows, meta
 
 
@@ -411,6 +488,7 @@ def run_contraction(
     instances: int,
     samples: int,
     device: str,
+    checkpoint: Any = None,
 ) -> list[Row]:
     """Score every arm's contraction order vs the oe-greedy floor.
 
@@ -419,6 +497,16 @@ def run_contraction(
     pairwise model, and ``ratio`` is cost / oe-greedy-cost (or
     / cheapest-pair-greedy when ``opt_einsum`` is absent — the row's
     notes say which floor priced it).
+
+    With *checkpoint* two record kinds persist progress:
+
+    * ``("contraction", "spec", player)`` — the arm-factory outcome
+      (``ok`` / ``unsupported`` / ``error``), so a resume never
+      silently re-loads an arm and never drops a failed factory.
+    * ``("contraction", n, i)`` — one instance's full per-arm results
+      ``{arm: {cost, wall, note}}`` plus the floor — the memoized
+      verdict boundary: a crash mid-board costs only the in-flight
+      instance.
     """
     from mlopt_torch.contraction_policy import (
         cost_of_order,
@@ -426,31 +514,80 @@ def run_contraction(
         random_bond_network,
     )
 
+    def ikey(n: int, i: int) -> tuple:
+        return ("contraction", n, i)
+
     specs = _requested("contraction", players)
+    pending = [
+        (n, i)
+        for n in scales
+        for i in range(instances)
+        if not (checkpoint is not None and checkpoint.done(ikey(n, i)))
+    ]
     # One factory per player, built once — ``distilled`` loads its
-    # artifact here, not per instance.
+    # artifact here, not per instance.  Arms are only needed when a
+    # run has un-measured instances left.
     arms: dict[str, Any] = {}
     per_arm: dict[str, dict] = {}
     for s in specs:
+        skey = ("contraction", "spec", s.name)
         if "contraction" not in s.boards:
             per_arm[s.name] = {"unsupported": True}
+            _record(checkpoint, skey, {"status": "unsupported"})
+            continue
+        if checkpoint is not None and checkpoint.done(skey):
+            rec = checkpoint.get(skey)
+            if rec.get("status") == "error":
+                per_arm[s.name] = {"make_error": rec["error"]}
+            elif pending:
+                ctx = {
+                    "samples": samples,
+                    "device": device,
+                    "seed": seed,
+                }
+                try:
+                    arms[s.name] = registry.make(
+                        s.name, "contraction", seed=seed, ctx=ctx
+                    )
+                except Exception as e:
+                    per_arm[s.name] = {"make_error": str(e)}
             continue
         ctx = {"samples": samples, "device": device, "seed": seed}
         try:
             arms[s.name] = registry.make(
                 s.name, "contraction", seed=seed, ctx=ctx
             )
+            _record(checkpoint, skey, {"status": "ok"})
         except Exception as e:
             per_arm[s.name] = {"make_error": str(e)}
+            _record(
+                checkpoint, skey, {"status": "error", "error": str(e)}
+            )
 
     floors: dict[tuple, float] = {}
     floor_name = "our-greedy"
     for n in scales:
         for i in range(instances):
+            key = (n, i)
+            if checkpoint is not None and checkpoint.done(ikey(n, i)):
+                rec = checkpoint.get(ikey(n, i))
+                floors[key] = rec["floor"]
+                floor_name = rec["floor_name"]
+                for name, res in rec["results"].items():
+                    acc = per_arm.setdefault(
+                        name,
+                        {"costs": [], "floors": [], "wall": 0.0},
+                    )
+                    acc["costs"].append(res["cost"])
+                    acc["floors"].append(rec["floor"])
+                    acc["wall"] += res["wall"]
+                    if res["note"]:
+                        acc.setdefault("errors", []).append(res["note"])
+                continue
             tensors, sizes = random_bond_network(n, seed + i)
             e = _to_einsum(tensors, sizes)
             base_orders = _oe_orders(e, samples)
-            key = (n, i)
+            results: dict[str, dict] = {}
             if "oe-greedy" in base_orders:
                 floors[key] = cost_of_order(
                     tensors, sizes, base_orders["oe-greedy"]
@@ -469,6 +606,7 @@ def run_contraction(
                 acc["costs"].append(c)
                 acc["floors"].append(floors[key])
                 acc["wall"] += secs
+                results[name] = {"cost": c, "wall": secs, "note": ""}
 
             for name, mk in arms.items():
                 play = mk(i)
@@ -490,6 +628,20 @@ def run_contraction(
                 acc["wall"] += secs
                 if note:
                     acc.setdefault("errors", []).append(note.strip())
+                results[name] = {
+                    "cost": c,
+                    "wall": secs,
+                    "note": note.strip(),
+                }
+            _record(
+                checkpoint,
+                ikey(n, i),
+                {
+                    "floor": floors[key],
+                    "floor_name": floor_name,
+                    "results": results,
+                },
+            )
 
     rows: list[Row] = []
     kind_of = {s.name: s.kind for s in registry.specs().values()}
@@ -558,8 +710,14 @@ def run_board(
     instances: int,
     samples: int,
     device: str,
+    checkpoint: Any = None,
 ) -> tuple[list[Row], dict]:
-    """Run one board; return ``(rows, meta)``."""
+    """Run one board; return ``(rows, meta)``.
+
+    *checkpoint* is a ``bench.benchkit.checkpoint.Checkpoint`` shared
+    across boards (keys are board-namespaced) — recorded rows replay
+    verbatim on resume.
+    """
     if board == "contraction":
         return (
             run_contraction(
@@ -569,6 +727,7 @@ def run_board(
                 instances=instances,
                 samples=samples,
                 device=device,
+                checkpoint=checkpoint,
             ),
             {"scales": list(scales), "instances": instances},
         )
@@ -582,6 +741,7 @@ def run_board(
             neural_epochs=neural_epochs,
             neural_hidden=neural_hidden,
             device=device,
+            checkpoint=checkpoint,
         )
     if board not in DOMAINS:
         raise ValueError(
@@ -595,6 +755,7 @@ def run_board(
             seed=seed,
             cases=meta_cases,
             budget=meta_budget,
+            checkpoint=checkpoint,
         ),
         {"cases": meta_cases, "budget": meta_budget},
     )

@@ -81,6 +81,7 @@ import json
 import sqlite3
 import subprocess
 import sys
+import time
 import uuid
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, replace
@@ -170,10 +171,41 @@ _CODE_PATHS = (
 _REPO = REPO_ROOT
 
 
-def connect(path: str) -> sqlite3.Connection:
-    """Open (creating if needed) the evidence store at *path*."""
-    conn = sqlite3.connect(path)
+def _journal_wal(conn: sqlite3.Connection, busy_timeout_s: float) -> None:
+    """Best-effort ``journal_mode=WAL`` — retries a held exclusive lock.
+
+    The WAL transition needs an exclusive lock that does *not* honour
+    the busy handler, so a parallel writer forces ``SQLITE_BUSY`` here
+    even under a busy timeout.  Retry until the deadline; past it, stay
+    in rollback-journal mode — the busy timeout still serializes
+    writers, only concurrent readers lose their overlap.
+    """
+    deadline = time.monotonic() + busy_timeout_s
+    while True:
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+            return
+        except sqlite3.OperationalError as e:
+            if "locked" not in str(e) or time.monotonic() >= deadline:
+                return
+            time.sleep(0.01)
+
+
+def connect(
+    path: str, *, busy_timeout_s: float = 30.0
+) -> sqlite3.Connection:
+    """Open (creating if needed) the evidence store at *path*.
+
+    Parallel safety (plan 0032 phase 2b): the store is shared across
+    worker processes, so connections run under WAL — readers never
+    block on a writer — and with a ``busy_timeout`` so a second writer
+    queues instead of failing with ``SQLITE_BUSY``.  Both are stdlib
+    ``sqlite3`` knobs; no lockfile is needed because SQLite serializes
+    commits itself.
+    """
+    conn = sqlite3.connect(path, timeout=busy_timeout_s)
     conn.row_factory = sqlite3.Row
+    _journal_wal(conn, busy_timeout_s)
     conn.executescript(_SCHEMA)
     return conn
 

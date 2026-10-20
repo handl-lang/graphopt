@@ -20,6 +20,7 @@ from pathlib import Path
 
 from mlopt_discovery.play import DOMAINS
 
+from bench.benchkit import checkpoint as checkpoint_mod
 from bench.matrix import table
 from bench.matrix.runner import coverage, run_matrix
 from bench.referees import registry as refs
@@ -92,6 +93,16 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="skip the ledger append (bench/results/ledger.jsonl)",
     )
+    p.add_argument(
+        "--resume",
+        nargs="?",
+        const=str(checkpoint_mod.DEFAULT_DIR / "matrix.jsonl"),
+        default=None,
+        metavar="PATH",
+        help="resume from the cell checkpoint "
+        "(default: bench/results/checkpoints/matrix.jsonl); "
+        "recorded cells are reused, a crash costs a cell",
+    )
     args = p.parse_args(argv)
     if sys.getrecursionlimit() < 40_000:
         sys.setrecursionlimit(40_000)
@@ -137,17 +148,6 @@ def main(argv: list[str] | None = None) -> int:
             )
         return 0
 
-    cells = run_matrix(
-        boards,
-        players,
-        referees,
-        seed=args.seed,
-        meta_cases=args.meta_cases,
-        meta_budget=args.meta_budget,
-        open_pages=args.open_pages,
-        open_page=args.open_page,
-        open_budget=args.open_budget,
-    )
     protocol = {
         "seed": args.seed,
         "meta_cases": args.meta_cases,
@@ -158,6 +158,36 @@ def main(argv: list[str] | None = None) -> int:
         "open_budget": args.open_budget,
         "oracle_pairing": "memoized per-candidate-seeded verdicts",
     }
+    ckpt = None
+    if args.resume is not None:
+        manifest = checkpoint_mod.new_manifest(
+            "matrix",
+            {
+                **protocol,
+                "players": players,
+                "referees": referees,
+                "boards": boards,
+            },
+            device=args.device,
+        )
+        ckpt = checkpoint_mod.Checkpoint.open(args.resume, manifest)
+        print(
+            f"resume: {len(ckpt.entries)} cells already done "
+            f"({args.resume})",
+            flush=True,
+        )
+    cells = run_matrix(
+        boards,
+        players,
+        referees,
+        seed=args.seed,
+        meta_cases=args.meta_cases,
+        meta_budget=args.meta_budget,
+        open_pages=args.open_pages,
+        open_page=args.open_page,
+        open_budget=args.open_budget,
+        checkpoint=ckpt,
+    )
     table.write_outputs(
         cells,
         coverage=cov,
@@ -165,6 +195,7 @@ def main(argv: list[str] | None = None) -> int:
         json_path=args.out / "matrix.json",
         protocol=protocol,
         device=args.device,
+        seed=args.seed,
     )
     from bench.benchkit import table as bktable
 
@@ -194,6 +225,8 @@ def main(argv: list[str] | None = None) -> int:
             }
         ],
         provenance={"quick": bool(args.smoke)},
+        seed=args.seed,
+        device=args.device,
     )
     if not args.no_ledger:
         bktable.append_record(record)

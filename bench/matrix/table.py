@@ -14,11 +14,10 @@ scorecard/leaderboard convention.
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from bench.benchkit.env import collect_env
+from bench.benchkit.provenance import with_provenance
 from bench.matrix.runner import Cell
 
 #: Matrix payload version — bump on a schema break.
@@ -34,22 +33,7 @@ _OBJECTIVES: tuple[tuple[str, bool], ...] = (
 
 def _cell_record(c: Cell) -> dict[str, Any]:
     """One cell as a JSON-able record."""
-    return {
-        "board": c.board,
-        "player": c.player,
-        "referee": c.referee,
-        "run": c.run,
-        "reason": c.reason,
-        "claims": c.claims,
-        "admitted": c.admitted,
-        "admit_rate": c.admit_rate,
-        "refuted": c.refuted,
-        "value": c.value,
-        "reward_ep": c.reward_ep,
-        "evals_ep": c.evals_ep,
-        "wall_s": c.wall_s,
-        "notes": c.notes,
-    }
+    return c.as_record()
 
 
 def pareto_front(cells: list[Cell]) -> list[Cell]:
@@ -177,19 +161,22 @@ def write_outputs(
     json_path: Path,
     protocol: dict | None = None,
     device: str = "cpu",
+    seed: Any = None,
 ) -> dict[str, Any]:
     """Write the Markdown + JSON matrix; return the payload."""
-    env = collect_env(device)
-    payload = {
-        "schema": SCHEMA,
-        "generated_utc": datetime.now(UTC).isoformat(
-            timespec="seconds"
-        ),
-        "env": env,
-        "protocol": protocol or {},
-        "cells": [_cell_record(c) for c in cells],
-        "coverage": [_cell_record(c) for c in coverage],
-    }
+    if seed is None:
+        seed = (protocol or {}).get("seed")
+    payload = with_provenance(
+        {
+            "schema": SCHEMA,
+            "protocol": protocol or {},
+            "cells": [_cell_record(c) for c in cells],
+            "coverage": [_cell_record(c) for c in coverage],
+        },
+        seed=seed,
+        device=device,
+    )
+    env = payload["env"]
     md_path = Path(md_path)
     md_path.parent.mkdir(parents=True, exist_ok=True)
     md_path.write_text(

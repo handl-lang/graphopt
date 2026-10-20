@@ -142,6 +142,7 @@ def run_bench(args) -> Report:
             md_path=out_dir / "limits_table.md",
             json_path=out_dir / "limits_table.json",
             device=getattr(args, "device", None) or "cpu",
+            seed=getattr(args, "seed", None),
         )
     flat = [r for cl in rows for r in cl.rows]
     ran = [r for r in flat if r.available]
