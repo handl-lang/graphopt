@@ -157,6 +157,46 @@ class LearnedPolicy:
         return acts[best_i]
 
 
+def _rule_value_target(
+    samples: Any,
+    *,
+    binary: bool,
+    labels: Any,
+    pos_weight: float | None,
+) -> tuple[torch.Tensor, nn.Module]:
+    """Build ``train_rule_value``'s ``(target, loss)`` pair.
+
+    Explicit *labels* win over the derived target and are fit under
+    BCE (the verdict-label seam); otherwise *binary* selects the
+    ``delta_cost > 0`` BCE or the raw-delta MSE.
+    """
+    if labels is not None:
+        y = torch.tensor(
+            [float(v) for v in labels], dtype=torch.float32
+        )
+        return y, nn.BCEWithLogitsLoss(
+            pos_weight=(
+                torch.tensor([pos_weight], dtype=torch.float32)
+                if pos_weight is not None
+                else None
+            )
+        )
+    if binary:
+        return (
+            torch.tensor(
+                [1.0 if s.delta_cost > 0 else 0.0 for s in samples],
+                dtype=torch.float32,
+            ),
+            nn.BCEWithLogitsLoss(),
+        )
+    return (
+        torch.tensor(
+            [s.delta_cost for s in samples], dtype=torch.float32
+        ),
+        nn.MSELoss(),
+    )
+
+
 def train_rule_value(
     samples: Any,
     *,
@@ -166,6 +206,8 @@ def train_rule_value(
     device: str | None = None,
     seed: int = 0,
     binary: bool = True,
+    labels: Any = None,
+    pos_weight: float | None = None,
 ) -> nn.Module:
     """Fit a :class:`RuleValueNet` to ``samples``; return the model.
 
@@ -177,6 +219,15 @@ def train_rule_value(
     regression collapses to the mean.  With ``binary=False`` the target
     is the raw delta under MSE.
 
+    *labels* overrides the derived target with an explicit per-sample
+    float vector (aligned with ``samples``) — e.g. a verdict label the
+    ``RuleSample`` row does not carry, like the open game's ``useful``
+    tier (``bench/policy/stop_policy.py`` round 5).  Explicit labels are fit
+    under BCE regardless of *binary*.  *pos_weight* is the
+    ``BCEWithLogitsLoss`` positive-class weight — the standard
+    ``neg/pos`` rebalance for a rare-positive label (a ~1% base rate
+    otherwise collapses the fit to all-zero).
+
     The device defaults to CUDA when available, else CPU.
     """
     dev = device or ("cuda" if torch.cuda.is_available() else "cpu")
@@ -185,17 +236,9 @@ def train_rule_value(
         [input_vector(s.features, s.rule_vector) for s in samples],
         dtype=torch.float32,
     )
-    if binary:
-        y = torch.tensor(
-            [1.0 if s.delta_cost > 0 else 0.0 for s in samples],
-            dtype=torch.float32,
-        )
-        loss_fn: nn.Module = nn.BCEWithLogitsLoss()
-    else:
-        y = torch.tensor(
-            [s.delta_cost for s in samples], dtype=torch.float32
-        )
-        loss_fn = nn.MSELoss()
+    y, loss_fn = _rule_value_target(
+        samples, binary=binary, labels=labels, pos_weight=pos_weight
+    )
     model = RuleValueNet(hidden).to(dev)
     with torch.no_grad():
         model.mean.copy_(x.mean(0))
