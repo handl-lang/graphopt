@@ -8,8 +8,11 @@ with the select view (`select_mul`, census-minted on
 the first machine-discovered law admitted, human-integrated).
 Honest row: standalone, the fused form pays for the product over the
 full tensor then slices — costlier than multiplying two slices — so
-the fold's win needs shared-slice consumers; the scorecard records
-the standalone regression, not a hoped-for one.
+the fold's win needs shared-slice consumers.  With the search priced
+on the case's own `launch` axis the law still fires (the derivation
+is the signal) but extraction correctly DECLINES the fused member —
+the old +153 % row judged an exec-model pick on an axis it was never
+asked to optimize.
 """
 source = "select_mul"
 size = 8
@@ -18,8 +21,11 @@ cost = "launch"
 
 [expect]
 signals = ["law:select_mul"]
+# The extraction contract asserts presence only: under the launch
+# axis the axis-optimal member is the spelled `select×2 + mul` form —
+# the fold derives (signal) but is correctly declined standalone, so
+# the select-count cap from the fused-form days cannot hold.
 ops = ["mul", "select"]
-max_ops = { select = 1 }  # two spelled selects fuse to one
 
 [[baselines]]
 name = "eager spelled"

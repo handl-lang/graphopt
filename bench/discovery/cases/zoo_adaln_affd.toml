@@ -7,10 +7,15 @@ The held-out zoo's `AdaLNBlock` (Peebles & Xie 2022, DiT) —
 `affd_lift_unit` into `applyd(aff_diag(ln(x), shift), 1+scale)` under
 the `carrier_search` regime (`SCAN_DIAG_LAWS` is opt-in — DEFAULT
 never runs it; the store's `affd_step_lift` twin is admitted but
-unshipped).  Reachability row: the lift lands (two `applyd` pairs in
-the extraction) but the executor axis prices it +7.9 % — exactly the
-regression `human-bar.md` measured — so the scorecard records the
-honest `beat=no` on a derived form.
+unshipped).  The lift lands AND pays: −8.1 % on the exec axis, below
+the eager floor.  The former +7.9 % was a selection artifact, not the
+lift's price — `_carrier_upgrade` moved extraction to a fully-lifted
+member whose single-leaf "batched" plan priced below generic in the
+executor model, though a 0-level plan is pure gather/stack machinery
+(the `human-bar.md` regression).  `build_scan_plan` now declines
+spines with no compose levels — nothing to level-schedule — so the
+genuinely cheaper lifted member stands: the same verdict the store
+arm's −4.07 % hinted at, now reached through the shipped opt-in laws.
 """
 source = "zoo_adaln_block"
 size = 16

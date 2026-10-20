@@ -3,7 +3,7 @@
 Can the engine derive *named* optimizations from the literature and real compilers — and can it beat the registered floor?  Each row is one case in `bench/discovery/cases/`; **found** = the expect spec held (signal observed + extraction contract), **cert** = the proof-carrying certificate replays standalone, **beat** = the certified form is *strictly below* the best registered baseline on the case's axis (a tie is a rediscovery, not a find).
 
 - lane: `full` (measured wall + verify)
-- date: 2026-10-20T04:01:22+00:00 · git: `141b5dc` (dirty) · torch 2.14.0+cu130 on cpu
+- date: 2026-10-20T04:46:31+00:00 · git: `e104d90` (dirty) · torch 2.14.0+cu130 on cpu
 
 | case | category | found | cert | cost (axis) | before → after | best baseline | beat |
 |---|---|---|---|---|---|---|---|
@@ -21,19 +21,19 @@ Can the engine derive *named* optimizations from the literature and real compile
 | `rms_norm_fold` | speed | yes | yes | launch | 282 → 129 (-54.3%) | F.rms_norm 129 | no |
 | `rms_norm_nogain` | speed | yes | yes | launch | 217 → 65 (-70.0%) | F.rms_norm (no weight) 65 | no |
 | `sdpa_nomask` | memory | yes | yes | launch | 33,415 → 32,772 (-1.9%) | F.scaled_dot_product_attention 32,772 | no |
-| `select_mul` | speed | yes | yes | launch | 15 → 38 (+153.3%) | eager spelled 15 | no |
+| `select_mul` | speed | yes | yes | launch | 15 → 15 (+0.0%) | eager spelled 15 | no |
 | `silu_fold` | speed | yes | yes | launch | 194 → 193 (-0.5%) | F.silu 193 | no |
 | `softmax_fold` | speed | yes | yes | launch | 327 → 65 (-80.1%) | torch.softmax 65 | no |
 | `softsign_fold` | speed | yes | yes | launch | 387 → 65 (-83.2%) | eager spelled 387 | yes |
 | `swiglu_mlp` | speed | yes | yes | launch | 4,356 → 4,355 (-0.0%) | eager two-GEMM 4,356 | yes |
 | `weight_chain_fold` | speed | yes | yes | launch | 4,098 → 2,049 (-50.0%) | pre-folded Linear 2,049 | no |
 | `weight_merge` | speed | yes | yes | launch | 4,163 → 2,049 (-50.8%) | merged Linear 2,049 | no |
-| `zoo_adaln_affd` | structure | yes | yes | exec | 217,830 → 235,086 (+7.9%) | eager 217,830 | no |
+| `zoo_adaln_affd` | structure | yes | yes | exec | 217,830 → 200,240 (-8.1%) | eager 217,830 | yes |
 | `zoo_cosine_attention` | memory | yes | yes | exec | 348,463 → 348,440 (-0.0%) | eager spelled 348,463 | yes |
 | `zoo_delta_rule` | memory | yes | yes | exec | 975,073 → 818,073 (-16.1%) | eager unrolled 975,073 | yes |
 | `zoo_gau` | memory | yes | yes | exec | 182,973 → 165,561 (-9.5%) | eager quadratic 182,973 | yes |
 | `zoo_lora_adapter` | speed | yes | yes | exec | 87,045 → 69,650 (-20.0%) | merged LoRA 69,650 | no |
-| `zoo_lora_param` | memory | yes | yes | param_bytes | 400 → 528 (+32.0%) | eager low-rank 400 | no |
+| `zoo_lora_param` | memory | yes | yes | param_bytes | 400 → 400 (+0.0%) | eager low-rank 400 | no |
 | `zoo_mos_head` | structure | yes | yes | launch | 637 → 637 (+0.0%) | eager 637 | no |
 | `zoo_spline_kan` | speed | yes | yes | exec | 87,058 → 87,055 (-0.0%) | eager spelled 87,058 | yes |
 | `zoo_time_cond_conv` | speed | yes | yes | exec | 226,488 → 209,088 (-7.7%) | eager 226,488 | yes |
@@ -42,36 +42,36 @@ Can the engine derive *named* optimizations from the literature and real compile
 
 | case | verified | max\|Δ\| | mlopt ms | best baseline ms | beat (measured) |
 |---|---|---|---|---|---|
-| `biased_chain_fold` | yes | 2.220446049250313e-16 | 0.009 | 0.007 | no |
-| `blelloch_scan` | yes | 8.881784197001252e-16 | 0.212 | 0.022 | no |
-| `conv_bn_fold` | yes | 1.6053824936079764e-13 | 0.011 | 0.012 | yes |
-| `cumsum_scan` | yes | 3.552713678800501e-15 | 0.290 | 0.004 | no |
-| `flash_attention` | yes | 2.220446049250313e-16 | 0.036 | 0.036 | yes |
-| `glu_fold` | yes | 0.0 | 0.005 | 0.004 | no |
-| `gqa_absorb_repeat` | yes | 0.0 | 0.080 | 0.055 | no |
-| `mha_qkv_fuse` | yes | 0.0 | 0.053 | 0.033 | no |
-| `mul_unsq_nat` | yes | 0.0 | 0.007 | 0.003 | no |
-| `retnet_chunkwise` | yes | 0.0 | 0.077 | 0.165 | yes |
-| `rms_norm_bridge` | yes | 6.661338147750939e-15 | 0.013 | 0.011 | no |
+| `biased_chain_fold` | yes | 2.220446049250313e-16 | 0.009 | 0.008 | no |
+| `blelloch_scan` | yes | 8.881784197001252e-16 | 0.203 | 0.021 | no |
+| `conv_bn_fold` | yes | 1.6053824936079764e-13 | 0.011 | 0.011 | yes |
+| `cumsum_scan` | yes | 3.552713678800501e-15 | 0.328 | 0.005 | no |
+| `flash_attention` | yes | 2.220446049250313e-16 | 0.036 | 0.034 | no |
+| `glu_fold` | yes | 0.0 | 0.012 | 0.004 | no |
+| `gqa_absorb_repeat` | yes | 0.0 | 0.085 | 0.062 | no |
+| `mha_qkv_fuse` | yes | 0.0 | 0.064 | 0.037 | no |
+| `mul_unsq_nat` | yes | 0.0 | 0.005 | 0.003 | no |
+| `retnet_chunkwise` | yes | 0.0 | 0.070 | 0.122 | yes |
+| `rms_norm_bridge` | yes | 6.661338147750939e-15 | 0.014 | 0.011 | no |
 | `rms_norm_fold` | yes | 6.927791673660977e-13 | 0.013 | 0.011 | no |
-| `rms_norm_nogain` | yes | 3.432809592140984e-13 | 0.011 | 0.009 | no |
-| `sdpa_nomask` | yes | 2.220446049250313e-16 | 0.031 | 0.034 | yes |
-| `select_mul` | yes | 0.0 | 0.005 | 0.003 | no |
+| `rms_norm_nogain` | yes | 3.432809592140984e-13 | 0.012 | 0.010 | no |
+| `sdpa_nomask` | yes | 2.220446049250313e-16 | 0.036 | 0.038 | yes |
+| `select_mul` | yes | 0.0 | 0.008 | 0.003 | no |
 | `silu_fold` | yes | 4.440892098500626e-16 | 0.003 | 0.002 | no |
 | `softmax_fold` | yes | 5.551115123125783e-17 | 0.004 | 0.002 | no |
 | `softsign_fold` | yes | 0.0 | 0.007 | 0.006 | no |
-| `swiglu_mlp` | yes | 0.0 | 0.019 | 0.014 | no |
-| `weight_chain_fold` | yes | 2.220446049250313e-16 | 0.005 | 0.006 | yes |
+| `swiglu_mlp` | yes | 0.0 | 0.020 | 0.015 | no |
+| `weight_chain_fold` | yes | 2.220446049250313e-16 | 0.006 | 0.006 | yes |
 | `weight_merge` | yes | 7.771561172376096e-16 | 0.005 | 0.006 | yes |
-| `zoo_adaln_affd` | yes | 0.0 | 0.148 | 0.055 | no |
-| `zoo_cosine_attention` | yes | 1.1102230246251565e-16 | 0.157 | 0.105 | no |
-| `zoo_delta_rule` | yes | 0.0 | 0.411 | 0.090 | no |
-| `zoo_gau` | yes | 0.0 | 0.058 | 0.053 | no |
-| `zoo_lora_adapter` | yes | 2.220446049250313e-16 | 0.018 | 0.016 | no |
-| `zoo_lora_param` | yes | 2.220446049250313e-16 | 0.016 | 0.015 | no |
-| `zoo_mos_head` | yes | 0.0 | 0.046 | 0.038 | no |
-| `zoo_spline_kan` | yes | 0.0 | 0.027 | 0.023 | no |
-| `zoo_time_cond_conv` | yes | 0.0 | 0.054 | 0.068 | yes |
+| `zoo_adaln_affd` | yes | 0.0 | 0.070 | 0.052 | no |
+| `zoo_cosine_attention` | yes | 1.1102230246251565e-16 | 0.147 | 0.106 | no |
+| `zoo_delta_rule` | yes | 0.0 | 0.181 | 0.087 | no |
+| `zoo_gau` | yes | 0.0 | 0.056 | 0.052 | no |
+| `zoo_lora_adapter` | yes | 2.220446049250313e-16 | 0.018 | 0.017 | no |
+| `zoo_lora_param` | yes | 0.0 | 0.023 | 0.017 | no |
+| `zoo_mos_head` | yes | 0.0 | 0.043 | 0.039 | no |
+| `zoo_spline_kan` | yes | 0.0 | 0.029 | 0.025 | no |
+| `zoo_time_cond_conv` | yes | 0.0 | 0.052 | 0.063 | yes |
 
 ## Per-case detail
 
@@ -119,11 +119,19 @@ fixture is the eval-mode `BatchNorm2d(Conv2d(x))` site the mint saw
 The `a = 1` corner of the diagonal-affine monoid — `h_t = h_{t-1} +
 x_t` unrolled is a prefix sum, and `affd_lift_unit` /
 `affd_lift_unit_step` raise it to `applyd(aff_diag(h, x), 1)` under
-`carrier_search`.  Honest row at T=32: the carrier member *is*
-extracted (`aff_diag`/`affd_compose`/`applyd` in the term, certified)
-but the executor axis prices it +25.7 % over the unrolled adds —
-the scan association derives yet does not pay at benchmark scale, so
-the scorecard records `beat=no` rather than a wished-for win.
+`carrier_search`.  Derives-but-loses at benchmark scale, recorded
+honestly.  The lift itself is sound and extraction works as designed:
+`_carrier_upgrade` selects the fully-carried member because the
+delivered-batched model prices it below generic — a win the
+uncalibrated constants promise but the wall clock denies (full lane:
+the batched delivery runs ~3× slower than the unrolled adds; at
+T=32 the level machinery's per-call cost outweighs 31 serial
+dispatches — a cost-model fidelity gap, and `delivered_cost_for`
+with a measured `TargetProfile` is the correction channel).  The
+`exec` axis reports the uniform generic-model price (+25.7 %); the
+member ships `batched`, a whole-spine property `dag_cost` cannot
+express.  The `cumsum` ref floor (34,940) stays unreachable — no law
+produces the `cumsum` op, a coverage gap, not a bad law.
 
 
 - signals: law:affd_lift_unit, law:affd_lift_unit_step, op:applyd
@@ -271,8 +279,11 @@ with the select view (`select_mul`, census-minted on
 the first machine-discovered law admitted, human-integrated).
 Honest row: standalone, the fused form pays for the product over the
 full tensor then slices — costlier than multiplying two slices — so
-the fold's win needs shared-slice consumers; the scorecard records
-the standalone regression, not a hoped-for one.
+the fold's win needs shared-slice consumers.  With the search priced
+on the case's own `launch` axis the law still fires (the derivation
+is the signal) but extraction correctly DECLINES the fused member —
+the old +153 % row judged an exec-model pick on an axis it was never
+asked to optimize.
 
 
 - signals: law:select_mul
@@ -362,10 +373,15 @@ The held-out zoo's `AdaLNBlock` (Peebles & Xie 2022, DiT) —
 `affd_lift_unit` into `applyd(aff_diag(ln(x), shift), 1+scale)` under
 the `carrier_search` regime (`SCAN_DIAG_LAWS` is opt-in — DEFAULT
 never runs it; the store's `affd_step_lift` twin is admitted but
-unshipped).  Reachability row: the lift lands (two `applyd` pairs in
-the extraction) but the executor axis prices it +7.9 % — exactly the
-regression `human-bar.md` measured — so the scorecard records the
-honest `beat=no` on a derived form.
+unshipped).  The lift lands AND pays: −8.1 % on the exec axis, below
+the eager floor.  The former +7.9 % was a selection artifact, not the
+lift's price — `_carrier_upgrade` moved extraction to a fully-lifted
+member whose single-leaf "batched" plan priced below generic in the
+executor model, though a 0-level plan is pure gather/stack machinery
+(the `human-bar.md` regression).  `build_scan_plan` now declines
+spines with no compose levels — nothing to level-schedule — so the
+genuinely cheaper lifted member stands: the same verdict the store
+arm's −4.07 % hinted at, now reached through the shipped opt-in laws.
 
 
 - signals: law:affd_lift, op:applyd
@@ -436,10 +452,14 @@ zoo retro recorded.
 The same zoo `LoRAAdapter` site priced on `param_bytes` — the memory
 twin of `zoo_lora_adapter`.  Folding `up(down(x))` to one (d,d) GEMM
 buys the runtime win at a storage price the speed axis hides:
-`2·d·r` stored adapter values become `d²`.  Honest row — the scorecard
-records the +32 % storage regression, not a hoped-for reduction: the
-speed/memory tradeoff of every weight fold made visible on a real
-model.
+`2·d·r` stored adapter values become `d²` — profitable only when
+`r > d/2`.  With the search priced on the case's own axis the
+derivation still fires (`law:assoc_linear`) but extraction correctly
+DECLINES the merge: the factorized `2·d·r` member is cheaper to
+store.  The honest verdict flips from a recorded +32 % regression —
+the old row judged an exec-optimal pick on an axis it was never
+asked to optimize — to a rediscovery: the fold derives, and the
+engine declines it exactly where it does not pay.
 
 
 - signals: law:assoc_linear

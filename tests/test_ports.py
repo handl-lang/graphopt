@@ -73,7 +73,10 @@ def _neg_ir() -> IR:
 
 def _scan_ir() -> IR:
     a, b, h = _v("A", 3, 3), _v("b", 3), _v("h", 3)
-    return _ir(Op.make("apply", Op.make("aff", a, b), h), [a, b, h])
+    f = Op.make(
+        "aff_compose", Op.make("aff", a, b), Op.make("aff", a, b)
+    )
+    return _ir(Op.make("apply", f, h), [a, b, h])
 
 
 def _om_ir() -> IR:
@@ -109,7 +112,19 @@ def test_batched_scan_module_is_batched_executor():
     assert isinstance(mod, BatchedExecutor)
     assert mod.is_batched
     eye, b, h = torch.eye(3), torch.ones(3), torch.zeros(3)
-    assert torch.allclose(mod(eye, b, h), eye @ h + b)
+    # apply(aff∘aff, h) = A·(A·h + b) + b.
+    assert torch.allclose(mod(eye, b, h), eye @ (eye @ h + b) + b)
+
+
+def test_batched_scan_module_lone_leaf_is_not_batched():
+    """A bare ``aff`` leaf has no compose spine — no plan, serial eval."""
+    a, b, h = _v("A", 3, 3), _v("b", 3), _v("h", 3)
+    mod = to_batched_scan_module(
+        _ir(Op.make("apply", Op.make("aff", a, b), h), [a, b, h])
+    )
+    assert not mod.is_batched
+    eye, bv, hv = torch.eye(3), torch.ones(3), torch.zeros(3)
+    assert torch.allclose(mod(eye, bv, hv), eye @ hv + bv)
 
 
 def test_batched_om_module_is_batched_executor():

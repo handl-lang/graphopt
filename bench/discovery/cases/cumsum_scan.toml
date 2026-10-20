@@ -5,11 +5,19 @@ citation = """
 The `a = 1` corner of the diagonal-affine monoid — `h_t = h_{t-1} +
 x_t` unrolled is a prefix sum, and `affd_lift_unit` /
 `affd_lift_unit_step` raise it to `applyd(aff_diag(h, x), 1)` under
-`carrier_search`.  Honest row at T=32: the carrier member *is*
-extracted (`aff_diag`/`affd_compose`/`applyd` in the term, certified)
-but the executor axis prices it +25.7 % over the unrolled adds —
-the scan association derives yet does not pay at benchmark scale, so
-the scorecard records `beat=no` rather than a wished-for win.
+`carrier_search`.  Derives-but-loses at benchmark scale, recorded
+honestly.  The lift itself is sound and extraction works as designed:
+`_carrier_upgrade` selects the fully-carried member because the
+delivered-batched model prices it below generic — a win the
+uncalibrated constants promise but the wall clock denies (full lane:
+the batched delivery runs ~3× slower than the unrolled adds; at
+T=32 the level machinery's per-call cost outweighs 31 serial
+dispatches — a cost-model fidelity gap, and `delivered_cost_for`
+with a measured `TargetProfile` is the correction channel).  The
+`exec` axis reports the uniform generic-model price (+25.7 %); the
+member ships `batched`, a whole-spine property `dag_cost` cannot
+express.  The `cumsum` ref floor (34,940) stays unreachable — no law
+produces the `cumsum` op, a coverage gap, not a bad law.
 """
 source = "cumsum_scan"
 size = 32

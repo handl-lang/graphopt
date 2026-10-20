@@ -339,8 +339,11 @@ def _leaf_b_gather(leaves: list[Op]):
 def build_scan_plan(root: Any) -> dict | None:
     """Analyse ``apply(aff-tree, h)`` into a level-batched schedule.
 
-    Returns ``None`` when the term is not a scan application (or the
-    leaf shapes are non-uniform).  Otherwise a dict:
+    Returns ``None`` when the term is not a scan application, when
+    the leaf shapes are non-uniform, or when the spine carries no
+    ``aff_compose``/``affd_compose`` levels — a single bare leaf has
+    no batched work to schedule, so routing it to the level executor
+    would only add plan and gather machinery.  Otherwise a dict:
 
     * ``"leaves"`` — the ``aff`` nodes, in first-encounter order.
     * ``"levels"`` — ``levels[k]`` lists the ``aff_compose`` nodes whose
@@ -382,7 +385,21 @@ def build_scan_plan(root: Any) -> dict | None:
         lambda t: t.op == leaf_op,
         key=id,
     )
-    if not _leaf_shapes_consistent(leaves):
+    if not levels or not _leaf_shapes_consistent(leaves):
+        # Two distinct declines in one gate:
+        # * ``not levels`` — no compose spine: the spine is a single
+        #   bare leaf, so a "batched" schedule would be one leaf
+        #   materialisation plus the plan/env/gather machinery and
+        #   zero batched levels — strictly more dispatched work than
+        #   the generic evaluator's direct ``f0⊙h + f1``.  Declining
+        #   keeps such terms on the serial fallback in delivery AND
+        #   keeps ``_delivered_cost`` from crediting a batched win
+        #   that cannot exist — the zoo_adaln_affd regression, where
+        #   the carrier upgrade moved extraction to a unit-lift
+        #   member only because the batched model priced its
+        #   single-leaf plan below the generic route.
+        # * inconsistent leaf shapes — no uniform leaf family to
+        #   stack (``_leaf_shapes_consistent``).
         return None
 
     # Slot assignment: leaves occupy 0..n-1, then each level appends its

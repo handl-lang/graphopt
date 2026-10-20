@@ -5,10 +5,14 @@ citation = """
 The same zoo `LoRAAdapter` site priced on `param_bytes` — the memory
 twin of `zoo_lora_adapter`.  Folding `up(down(x))` to one (d,d) GEMM
 buys the runtime win at a storage price the speed axis hides:
-`2·d·r` stored adapter values become `d²`.  Honest row — the scorecard
-records the +32 % storage regression, not a hoped-for reduction: the
-speed/memory tradeoff of every weight fold made visible on a real
-model.
+`2·d·r` stored adapter values become `d²` — profitable only when
+`r > d/2`.  With the search priced on the case's own axis the
+derivation still fires (`law:assoc_linear`) but extraction correctly
+DECLINES the merge: the factorized `2·d·r` member is cheaper to
+store.  The honest verdict flips from a recorded +32 % regression —
+the old row judged an exec-optimal pick on an axis it was never
+asked to optimize — to a rediscovery: the fold derives, and the
+engine declines it exactly where it does not pay.
 """
 source = "zoo_lora_adapter"
 size = 16
@@ -17,8 +21,8 @@ cost = "param_bytes"
 
 [expect]
 signals = ["law:assoc_linear"]
-ops = ["linear", "matmul"]
-max_ops = { linear = 2 }
+ops = ["linear"]
+absent_ops = ["matmul"]
 
 [[baselines]]
 name = "eager low-rank"

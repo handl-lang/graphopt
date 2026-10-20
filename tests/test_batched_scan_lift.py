@@ -976,6 +976,34 @@ class TestLeafShapeConsistency:
         )
         assert build_scan_plan(t2) is None
 
+    def test_lone_leaf_declines(self):
+        """A bare leaf spine has no batched work — the plan declines.
+
+        ``applyd(aff_diag(a, b), h)`` is one elementwise map
+        application: the level executor would add plan/gather/stack
+        machinery for zero batched levels.  ``None`` keeps such roots
+        on the serial fallback — and keeps ``_delivered_cost`` from
+        crediting a batched win that cannot exist.
+        """
+        t = Op.make(
+            "applyd",
+            Op.make("aff_diag", _P("a", 4), _P("b", 4)),
+            _v("h", 4),
+        )
+        assert build_scan_plan(t) is None
+        t2 = Op.make(
+            "apply", Op.make("aff", _P("A", 4, 4), _P("b", 4)),
+            _v("h", 4),
+        )
+        assert build_scan_plan(t2) is None
+        # Two leaves → one real compose level → still plans.
+        t3 = self._applyd(
+            Op.make("aff_diag", _P("a", 4), _P("b", 4)),
+            Op.make("aff_diag", _P("a2", 4), _P("b2", 4)),
+        )
+        plan = build_scan_plan(t3)
+        assert plan is not None and len(plan["levels"]) == 1
+
 
 class TestChainBase:
     def test_view_wrapped_leaf_is_base(self):

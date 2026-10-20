@@ -1,16 +1,16 @@
 {
   "schema": 1,
   "lane": "full",
-  "generated_utc": "2026-10-20T04:01:22+00:00",
+  "generated_utc": "2026-10-20T04:46:31+00:00",
   "env": {
-    "timestamp_utc": "2026-10-20T04:01:22+00:00",
+    "timestamp_utc": "2026-10-20T04:46:31+00:00",
     "python": "3.13.9",
     "torch": "2.14.0+cu130",
     "torch_cuda": "13.0",
     "device": "cpu",
     "device_name": "12th Gen Intel(R) Core(TM) i5-12500H",
     "cpu_count": 16,
-    "git_sha": "141b5dc",
+    "git_sha": "e104d90",
     "git_dirty": true,
     "argv": [
       "/home/luis/GitHub/handl-lang/research-mlopt/bench/discovery/run.py",
@@ -42,7 +42,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 1.148,
+        "search_s": 0.968,
         "n_enodes": 11,
         "iterations": 2,
         "extracted_ops": [
@@ -53,12 +53,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 9.054870200634468e-06,
-          "eager two-GEMM": 1.2087455400615e-05,
-          "pre-folded affine": 6.957072799559683e-06,
-          "inductor": 6.222249794518575e-05
+          "mlopt": 9.228545699443202e-06,
+          "eager two-GEMM": 1.264482910046354e-05,
+          "pre-folded affine": 7.517301000189036e-06,
+          "inductor": 6.107300578150898e-05
         },
-        "mlopt_ms": 0.009054870200634469
+        "mlopt_ms": 0.009228545699443202
       },
       "baselines": [
         {
@@ -66,7 +66,7 @@
           "kind": "self",
           "available": true,
           "cost": 4098.0,
-          "median_s": 1.2087455400615e-05,
+          "median_s": 1.264482910046354e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -77,7 +77,7 @@
           "kind": "ref",
           "available": true,
           "cost": 2049.0,
-          "median_s": 6.957072799559683e-06,
+          "median_s": 7.517301000189036e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 2.90149566040121e-08,
@@ -88,8 +88,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 6.222249794518575e-05,
-          "iqr_s": 3.065506462007761e-06,
+          "median_s": 6.107300578150898e-05,
+          "iqr_s": 2.967997716041282e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "no freeze \u2014 Inductor cannot fold the weights"
@@ -119,7 +119,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.084,
+        "search_s": 0.06,
         "n_enodes": 43,
         "iterations": 2,
         "extracted_ops": [
@@ -133,12 +133,12 @@
         "cert_steps": 7,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 0.00021219572699919808,
-          "eager unrolled": 4.669433100207243e-05,
-          "cumsum prefix": 2.2445054400304797e-05,
-          "inductor": 4.313349927542731e-05
+          "mlopt": 0.00020310172300378327,
+          "eager unrolled": 4.6525643003406006e-05,
+          "cumsum prefix": 2.130331450025551e-05,
+          "inductor": 3.959400055464357e-05
         },
-        "mlopt_ms": 0.2121957269991981
+        "mlopt_ms": 0.20310172300378326
       },
       "baselines": [
         {
@@ -146,7 +146,7 @@
           "kind": "self",
           "available": true,
           "cost": 759.0,
-          "median_s": 4.669433100207243e-05,
+          "median_s": 4.6525643003406006e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -157,7 +157,7 @@
           "kind": "ref",
           "available": true,
           "cost": 1494.0,
-          "median_s": 2.2445054400304797e-05,
+          "median_s": 2.130331450025551e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 8.881784197001252e-16,
@@ -168,8 +168,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 4.313349927542731e-05,
-          "iqr_s": 2.616510755615309e-06,
+          "median_s": 3.959400055464357e-05,
+          "iqr_s": 2.076005330309272e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -198,7 +198,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.049,
+        "search_s": 0.039,
         "n_enodes": 31,
         "iterations": 2,
         "extracted_ops": [
@@ -212,12 +212,12 @@
         "cert_steps": 9,
         "cert_egraph_dep": 6,
         "median_s": {
-          "mlopt": 1.0979636599950027e-05,
-          "eager": 1.9161374002578668e-05,
-          "hand-folded conv": 1.1694295200868509e-05,
-          "inductor": 7.426550291711465e-05
+          "mlopt": 1.1092567299783696e-05,
+          "eager": 1.8214732001069933e-05,
+          "hand-folded conv": 1.1214995900809299e-05,
+          "inductor": 7.731200457783416e-05
         },
-        "mlopt_ms": 0.010979636599950028
+        "mlopt_ms": 0.011092567299783695
       },
       "baselines": [
         {
@@ -225,7 +225,7 @@
           "kind": "self",
           "available": true,
           "cost": 29186.0,
-          "median_s": 1.9161374002578668e-05,
+          "median_s": 1.8214732001069933e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -236,7 +236,7 @@
           "kind": "ref",
           "available": true,
           "cost": 27649.0,
-          "median_s": 1.1694295200868509e-05,
+          "median_s": 1.1214995900809299e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 5.055496332673215e-08,
@@ -247,8 +247,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 7.426550291711465e-05,
-          "iqr_s": 3.8107573345769197e-06,
+          "median_s": 7.731200457783416e-05,
+          "iqr_s": 4.009740223409608e-06,
           "verify_passed": true,
           "verify_max_abs": 6.661338147750939e-16,
           "note": "measured-only (no symbolic form)"
@@ -259,7 +259,7 @@
       "name": "cumsum_scan",
       "title": "Unit-decay recurrence \u2192 aff carrier (cumsum association)",
       "category": "memory",
-      "citation": "The `a = 1` corner of the diagonal-affine monoid \u2014 `h_t = h_{t-1} +\nx_t` unrolled is a prefix sum, and `affd_lift_unit` /\n`affd_lift_unit_step` raise it to `applyd(aff_diag(h, x), 1)` under\n`carrier_search`.  Honest row at T=32: the carrier member *is*\nextracted (`aff_diag`/`affd_compose`/`applyd` in the term, certified)\nbut the executor axis prices it +25.7 % over the unrolled adds \u2014\nthe scan association derives yet does not pay at benchmark scale, so\nthe scorecard records `beat=no` rather than a wished-for win.\n",
+      "citation": "The `a = 1` corner of the diagonal-affine monoid \u2014 `h_t = h_{t-1} +\nx_t` unrolled is a prefix sum, and `affd_lift_unit` /\n`affd_lift_unit_step` raise it to `applyd(aff_diag(h, x), 1)` under\n`carrier_search`.  Derives-but-loses at benchmark scale, recorded\nhonestly.  The lift itself is sound and extraction works as designed:\n`_carrier_upgrade` selects the fully-carried member because the\ndelivered-batched model prices it below generic \u2014 a win the\nuncalibrated constants promise but the wall clock denies (full lane:\nthe batched delivery runs ~3\u00d7 slower than the unrolled adds; at\nT=32 the level machinery's per-call cost outweighs 31 serial\ndispatches \u2014 a cost-model fidelity gap, and `delivered_cost_for`\nwith a measured `TargetProfile` is the correction channel).  The\n`exec` axis reports the uniform generic-model price (+25.7 %); the\nmember ships `batched`, a whole-spine property `dag_cost` cannot\nexpress.  The `cumsum` ref floor (34,940) stays unreachable \u2014 no law\nproduces the `cumsum` op, a coverage gap, not a bad law.\n",
       "found": true,
       "picked": true,
       "certified": true,
@@ -279,7 +279,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 2.066,
+        "search_s": 2.132,
         "n_enodes": 5617,
         "iterations": 2,
         "extracted_ops": [
@@ -294,12 +294,12 @@
         "cert_steps": 69,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 0.00029028340002696496,
-          "eager unrolled": 8.060765400296076e-05,
-          "cumsum prefix": 4.225909349770518e-06,
-          "inductor": 2.351900184294209e-05
+          "mlopt": 0.00032844127497810404,
+          "eager unrolled": 9.319426500587724e-05,
+          "cumsum prefix": 4.890839799918467e-06,
+          "inductor": 2.2375999833457172e-05
         },
-        "mlopt_ms": 0.29028340002696496
+        "mlopt_ms": 0.32844127497810405
       },
       "baselines": [
         {
@@ -307,7 +307,7 @@
           "kind": "self",
           "available": true,
           "cost": 1115256.8089887642,
-          "median_s": 8.060765400296076e-05,
+          "median_s": 9.319426500587724e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -318,7 +318,7 @@
           "kind": "ref",
           "available": true,
           "cost": 34939.50561797753,
-          "median_s": 4.225909349770518e-06,
+          "median_s": 4.890839799918467e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -329,8 +329,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 2.351900184294209e-05,
-          "iqr_s": 1.4594952517654747e-06,
+          "median_s": 2.2375999833457172e-05,
+          "iqr_s": 1.2189993867650628e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -353,13 +353,13 @@
       "best_baseline": "F.scaled_dot_product_attention",
       "best_baseline_cost": 32772.0,
       "beat_best": false,
-      "beat_best_measured": true,
+      "beat_best_measured": false,
       "signals_seen": [
         "law:sdpa_fold_adddiv"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.055,
+        "search_s": 0.048,
         "n_enodes": 21,
         "iterations": 2,
         "extracted_ops": [
@@ -369,12 +369,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 1,
         "median_s": {
-          "mlopt": 3.560919349984033e-05,
-          "eager spelled": 4.856129549443722e-05,
-          "F.scaled_dot_product_attention": 3.596189850213705e-05,
-          "inductor": 9.780698746908456e-05
+          "mlopt": 3.5838418299681505e-05,
+          "eager spelled": 4.9007166504452465e-05,
+          "F.scaled_dot_product_attention": 3.417225449811667e-05,
+          "inductor": 0.00012648600386455655
         },
-        "mlopt_ms": 0.035609193499840326
+        "mlopt_ms": 0.035838418299681506
       },
       "baselines": [
         {
@@ -382,7 +382,7 @@
           "kind": "self",
           "available": true,
           "cost": 33544.0,
-          "median_s": 4.856129549443722e-05,
+          "median_s": 4.9007166504452465e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -393,7 +393,7 @@
           "kind": "ref",
           "available": true,
           "cost": 32772.0,
-          "median_s": 3.596189850213705e-05,
+          "median_s": 3.417225449811667e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 2.220446049250313e-16,
@@ -404,8 +404,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 9.780698746908456e-05,
-          "iqr_s": 6.8904992076568305e-06,
+          "median_s": 0.00012648600386455655,
+          "iqr_s": 0.00014947000454412773,
           "verify_passed": true,
           "verify_max_abs": 1.1102230246251565e-16,
           "note": "measured-only (no symbolic form)"
@@ -434,7 +434,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.025,
+        "search_s": 0.032,
         "n_enodes": 6,
         "iterations": 2,
         "extracted_ops": [
@@ -443,12 +443,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 5.259155899693724e-06,
-          "eager spelled": 5.897801100218203e-06,
-          "F.glu": 3.583517800143454e-06,
-          "inductor": 2.2684005671180785e-05
+          "mlopt": 1.1799297700054012e-05,
+          "eager spelled": 6.151974099338986e-06,
+          "F.glu": 3.5724055509490427e-06,
+          "inductor": 2.2096006432548165e-05
         },
-        "mlopt_ms": 0.005259155899693724
+        "mlopt_ms": 0.011799297700054012
       },
       "baselines": [
         {
@@ -456,7 +456,7 @@
           "kind": "self",
           "available": true,
           "cost": 98.0,
-          "median_s": 5.897801100218203e-06,
+          "median_s": 6.151974099338986e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -467,7 +467,7 @@
           "kind": "ref",
           "available": true,
           "cost": 33.0,
-          "median_s": 3.583517800143454e-06,
+          "median_s": 3.5724055509490427e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -478,8 +478,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 2.2684005671180785e-05,
-          "iqr_s": 1.405001967214048e-06,
+          "median_s": 2.2096006432548165e-05,
+          "iqr_s": 1.2379969120956957e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -508,7 +508,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.066,
+        "search_s": 0.071,
         "n_enodes": 59,
         "iterations": 8,
         "extracted_ops": [
@@ -522,12 +522,12 @@
         "cert_steps": 4,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 7.955614000093192e-05,
-          "eager spelled": 7.891603000462055e-05,
-          "F.sdpa enable_gqa": 5.478096099977847e-05,
-          "inductor": 0.00011952700151596218
+          "mlopt": 8.53938649961492e-05,
+          "eager spelled": 8.339861099375412e-05,
+          "F.sdpa enable_gqa": 6.224825099343433e-05,
+          "inductor": 0.0001230864945682697
         },
-        "mlopt_ms": 0.07955614000093192
+        "mlopt_ms": 0.0853938649961492
       },
       "baselines": [
         {
@@ -535,7 +535,7 @@
           "kind": "self",
           "available": true,
           "cost": 199688.0,
-          "median_s": 7.891603000462055e-05,
+          "median_s": 8.339861099375412e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -546,7 +546,7 @@
           "kind": "ref",
           "available": true,
           "cost": 196612.0,
-          "median_s": 5.478096099977847e-05,
+          "median_s": 6.224825099343433e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -557,8 +557,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 0.00011952700151596218,
-          "iqr_s": 6.1424943851307034e-06,
+          "median_s": 0.0001230864945682697,
+          "iqr_s": 3.7735044315923005e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -587,7 +587,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.05,
+        "search_s": 0.041,
         "n_enodes": 14,
         "iterations": 1,
         "extracted_ops": [
@@ -601,12 +601,12 @@
         "cert_steps": 3,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 5.286845599766821e-05,
-          "eager three-GEMM": 4.074429550382775e-05,
-          "merged QKV": 3.2970547006698324e-05,
-          "inductor": 0.00010756050323834643
+          "mlopt": 6.420386501122267e-05,
+          "eager three-GEMM": 4.5929746505862565e-05,
+          "merged QKV": 3.6622981699474624e-05,
+          "inductor": 8.76300036907196e-05
         },
-        "mlopt_ms": 0.05286845599766821
+        "mlopt_ms": 0.06420386501122266
       },
       "baselines": [
         {
@@ -614,7 +614,7 @@
           "kind": "self",
           "available": true,
           "cost": 32772.0,
-          "median_s": 4.074429550382775e-05,
+          "median_s": 4.5929746505862565e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -625,7 +625,7 @@
           "kind": "ref",
           "available": true,
           "cost": 32770.0,
-          "median_s": 3.2970547006698324e-05,
+          "median_s": 3.6622981699474624e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -636,8 +636,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 0.00010756050323834643,
-          "iqr_s": 4.584500857163221e-06,
+          "median_s": 8.76300036907196e-05,
+          "iqr_s": 5.70250631426461e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -666,7 +666,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.021,
+        "search_s": 0.023,
         "n_enodes": 7,
         "iterations": 2,
         "extracted_ops": [
@@ -676,12 +676,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 7.188631399185397e-06,
-          "eager spelled": 3.880616700189422e-06,
-          "mul-then-unsqueeze": 2.8799471503589305e-06,
-          "inductor": 2.2891006665304303e-05
+          "mlopt": 4.941277250327403e-06,
+          "eager spelled": 4.074789199512451e-06,
+          "mul-then-unsqueeze": 3.117775500140851e-06,
+          "inductor": 1.9822997273877263e-05
         },
-        "mlopt_ms": 0.007188631399185397
+        "mlopt_ms": 0.004941277250327403
       },
       "baselines": [
         {
@@ -689,7 +689,7 @@
           "kind": "self",
           "available": true,
           "cost": 75.0,
-          "median_s": 3.880616700189422e-06,
+          "median_s": 4.074789199512451e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -700,7 +700,7 @@
           "kind": "ref",
           "available": true,
           "cost": 50.0,
-          "median_s": 2.8799471503589305e-06,
+          "median_s": 3.117775500140851e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -711,8 +711,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 2.2891006665304303e-05,
-          "iqr_s": 1.5959958545863628e-06,
+          "median_s": 1.9822997273877263e-05,
+          "iqr_s": 9.157593012787402e-07,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -742,7 +742,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.069,
+        "search_s": 0.054,
         "n_enodes": 28,
         "iterations": 2,
         "extracted_ops": [
@@ -763,12 +763,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 7.681863300967962e-05,
-          "eager quadratic": 0.00016535746899899097,
-          "paper chunkwise": 0.00025674317398807035,
-          "inductor": 0.00023562900605611503
+          "mlopt": 7.006081800500396e-05,
+          "eager quadratic": 0.00012208154800464398,
+          "paper chunkwise": 0.00033755661398754454,
+          "inductor": 0.00023369900736724958
         },
-        "mlopt_ms": 0.07681863300967962
+        "mlopt_ms": 0.07006081800500397
       },
       "baselines": [
         {
@@ -776,7 +776,7 @@
           "kind": "self",
           "available": true,
           "cost": 761863.0,
-          "median_s": 0.00016535746899899097,
+          "median_s": 0.00012208154800464398,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -787,7 +787,7 @@
           "kind": "ref",
           "available": true,
           "cost": 491656.0,
-          "median_s": 0.00025674317398807035,
+          "median_s": 0.00033755661398754454,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 3.3306690738754696e-16,
@@ -798,8 +798,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 0.00023562900605611503,
-          "iqr_s": 8.483999408781528e-06,
+          "median_s": 0.00023369900736724958,
+          "iqr_s": 9.182003850582987e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -850,12 +850,12 @@
         "cert_steps": 4,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 1.3248733700311277e-05,
-          "eager spelled": 1.3150912200217136e-05,
-          "F.rms_norm": 1.0924057199736125e-05,
-          "inductor": 4.6626999392174184e-05
+          "mlopt": 1.4132728599361145e-05,
+          "eager spelled": 1.4019276500039269e-05,
+          "F.rms_norm": 1.123954860086087e-05,
+          "inductor": 4.733649984700605e-05
         },
-        "mlopt_ms": 0.013248733700311276
+        "mlopt_ms": 0.014132728599361145
       },
       "baselines": [
         {
@@ -863,7 +863,7 @@
           "kind": "self",
           "available": true,
           "cost": 218.0,
-          "median_s": 1.3150912200217136e-05,
+          "median_s": 1.4019276500039269e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -874,7 +874,7 @@
           "kind": "ref",
           "available": true,
           "cost": 129.0,
-          "median_s": 1.0924057199736125e-05,
+          "median_s": 1.123954860086087e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -885,8 +885,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 4.6626999392174184e-05,
-          "iqr_s": 1.5709956642240286e-06,
+          "median_s": 4.733649984700605e-05,
+          "iqr_s": 2.244749339297414e-06,
           "verify_passed": true,
           "verify_max_abs": 4.440892098500626e-16,
           "note": "measured-only (no symbolic form)"
@@ -915,7 +915,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.238,
+        "search_s": 0.024,
         "n_enodes": 14,
         "iterations": 3,
         "extracted_ops": [
@@ -924,12 +924,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 1.3252433799789287e-05,
-          "eager spelled": 1.1897501100611407e-05,
-          "F.rms_norm": 1.0585784900467844e-05,
-          "inductor": 4.569700104184449e-05
+          "mlopt": 1.3315585600503255e-05,
+          "eager spelled": 1.2847454599977937e-05,
+          "F.rms_norm": 1.0940324098919518e-05,
+          "inductor": 4.580600216286257e-05
         },
-        "mlopt_ms": 0.013252433799789288
+        "mlopt_ms": 0.013315585600503254
       },
       "baselines": [
         {
@@ -937,7 +937,7 @@
           "kind": "self",
           "available": true,
           "cost": 282.0,
-          "median_s": 1.1897501100611407e-05,
+          "median_s": 1.2847454599977937e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -948,7 +948,7 @@
           "kind": "ref",
           "available": true,
           "cost": 129.0,
-          "median_s": 1.0585784900467844e-05,
+          "median_s": 1.0940324098919518e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -959,8 +959,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 4.569700104184449e-05,
-          "iqr_s": 1.9500002963468432e-06,
+          "median_s": 4.580600216286257e-05,
+          "iqr_s": 1.7597558326087892e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -998,12 +998,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 1.1035233300935943e-05,
-          "eager spelled": 1.0270507400855422e-05,
-          "F.rms_norm (no weight)": 9.123031399212778e-06,
-          "inductor": 2.286300150444731e-05
+          "mlopt": 1.2121808399388101e-05,
+          "eager spelled": 1.0858349200861995e-05,
+          "F.rms_norm (no weight)": 9.741640801075846e-06,
+          "inductor": 2.366800617892295e-05
         },
-        "mlopt_ms": 0.011035233300935943
+        "mlopt_ms": 0.012121808399388102
       },
       "baselines": [
         {
@@ -1011,7 +1011,7 @@
           "kind": "self",
           "available": true,
           "cost": 217.0,
-          "median_s": 1.0270507400855422e-05,
+          "median_s": 1.0858349200861995e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1022,7 +1022,7 @@
           "kind": "ref",
           "available": true,
           "cost": 65.0,
-          "median_s": 9.123031399212778e-06,
+          "median_s": 9.741640801075846e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1033,8 +1033,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 2.286300150444731e-05,
-          "iqr_s": 1.217496901517734e-06,
+          "median_s": 2.366800617892295e-05,
+          "iqr_s": 1.0400108294561505e-06,
           "verify_passed": true,
           "verify_max_abs": 2.220446049250313e-16,
           "note": "measured-only (no symbolic form)"
@@ -1063,7 +1063,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.033,
+        "search_s": 0.036,
         "n_enodes": 19,
         "iterations": 2,
         "extracted_ops": [
@@ -1073,12 +1073,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 3.1465877509617715e-05,
-          "eager spelled": 4.3949598009930924e-05,
-          "F.scaled_dot_product_attention": 3.372466750442982e-05,
-          "inductor": 0.00010201000259257853
+          "mlopt": 3.594623549724929e-05,
+          "eager spelled": 4.991279649402714e-05,
+          "F.scaled_dot_product_attention": 3.83248684956925e-05,
+          "inductor": 0.00010530249710427597
         },
-        "mlopt_ms": 0.03146587750961771
+        "mlopt_ms": 0.03594623549724929
       },
       "baselines": [
         {
@@ -1086,7 +1086,7 @@
           "kind": "self",
           "available": true,
           "cost": 33415.0,
-          "median_s": 4.3949598009930924e-05,
+          "median_s": 4.991279649402714e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1097,7 +1097,7 @@
           "kind": "ref",
           "available": true,
           "cost": 32772.0,
-          "median_s": 3.372466750442982e-05,
+          "median_s": 3.83248684956925e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 2.220446049250313e-16,
@@ -1108,8 +1108,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 0.00010201000259257853,
-          "iqr_s": 4.43200406152755e-06,
+          "median_s": 0.00010530249710427597,
+          "iqr_s": 5.212012183619663e-06,
           "verify_passed": true,
           "verify_max_abs": 1.1102230246251565e-16,
           "note": "measured-only (no symbolic form)"
@@ -1120,7 +1120,7 @@
       "name": "select_mul",
       "title": "select(a)\u2299select(b) \u2192 select(a\u2299b) commutation",
       "category": "speed",
-      "citation": "`sel(u) \u2299 sel(v) = sel(u \u2299 v)` \u2014 the elementwise product commutes\nwith the select view (`select_mul`, census-minted on\n`DeltaRuleBlock`-class slices; project/retros/select-mul-broadcast.md;\nthe first machine-discovered law admitted, human-integrated).\nHonest row: standalone, the fused form pays for the product over the\nfull tensor then slices \u2014 costlier than multiplying two slices \u2014 so\nthe fold's win needs shared-slice consumers; the scorecard records\nthe standalone regression, not a hoped-for one.\n",
+      "citation": "`sel(u) \u2299 sel(v) = sel(u \u2299 v)` \u2014 the elementwise product commutes\nwith the select view (`select_mul`, census-minted on\n`DeltaRuleBlock`-class slices; project/retros/select-mul-broadcast.md;\nthe first machine-discovered law admitted, human-integrated).\nHonest row: standalone, the fused form pays for the product over the\nfull tensor then slices \u2014 costlier than multiplying two slices \u2014 so\nthe fold's win needs shared-slice consumers.  With the search priced\non the case's own `launch` axis the law still fires (the derivation\nis the signal) but extraction correctly DECLINES the fused member \u2014\nthe old +153 % row judged an exec-model pick on an axis it was never\nasked to optimize.\n",
       "found": true,
       "picked": true,
       "certified": true,
@@ -1128,7 +1128,7 @@
       "verify_max_abs": 0.0,
       "axis": "launch",
       "cost_before": 15.0,
-      "cost_after": 38.0,
+      "cost_after": 15.0,
       "best_baseline": "eager spelled",
       "best_baseline_cost": 15.0,
       "beat_best": false,
@@ -1138,22 +1138,22 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.019,
+        "search_s": 0.02,
         "n_enodes": 7,
         "iterations": 2,
         "extracted_ops": [
           "mul",
           "select"
         ],
-        "cert_steps": 1,
+        "cert_steps": 0,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 5.379371700109914e-06,
-          "eager spelled": 4.360647550493013e-06,
-          "mul-then-select": 3.120013850275427e-06,
-          "inductor": 2.207199577242136e-05
+          "mlopt": 8.16647410101723e-06,
+          "eager spelled": 4.680849400028819e-06,
+          "mul-then-select": 3.3050731501134577e-06,
+          "inductor": 2.1251500584185123e-05
         },
-        "mlopt_ms": 0.0053793717001099145
+        "mlopt_ms": 0.00816647410101723
       },
       "baselines": [
         {
@@ -1161,7 +1161,7 @@
           "kind": "self",
           "available": true,
           "cost": 15.0,
-          "median_s": 4.360647550493013e-06,
+          "median_s": 4.680849400028819e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1172,7 +1172,7 @@
           "kind": "ref",
           "available": true,
           "cost": 38.0,
-          "median_s": 3.120013850275427e-06,
+          "median_s": 3.3050731501134577e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1183,8 +1183,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 2.207199577242136e-05,
-          "iqr_s": 1.0790099622681737e-06,
+          "median_s": 2.1251500584185123e-05,
+          "iqr_s": 9.577524906489998e-07,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -1213,7 +1213,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.016,
+        "search_s": 0.181,
         "n_enodes": 4,
         "iterations": 2,
         "extracted_ops": [
@@ -1222,12 +1222,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 2.8584963899629657e-06,
-          "eager spelled": 2.858594709978206e-06,
-          "F.silu": 2.1044331800658257e-06,
-          "inductor": 2.239900641143322e-05
+          "mlopt": 2.837743049894925e-06,
+          "eager spelled": 2.9594410996651276e-06,
+          "F.silu": 2.003499249985907e-06,
+          "inductor": 2.1284999093040824e-05
         },
-        "mlopt_ms": 0.002858496389962966
+        "mlopt_ms": 0.002837743049894925
       },
       "baselines": [
         {
@@ -1235,7 +1235,7 @@
           "kind": "self",
           "available": true,
           "cost": 194.0,
-          "median_s": 2.858594709978206e-06,
+          "median_s": 2.9594410996651276e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1246,7 +1246,7 @@
           "kind": "ref",
           "available": true,
           "cost": 193.0,
-          "median_s": 2.1044331800658257e-06,
+          "median_s": 2.003499249985907e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 4.440892098500626e-16,
@@ -1257,8 +1257,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 2.239900641143322e-05,
-          "iqr_s": 1.1254960554651916e-06,
+          "median_s": 2.1284999093040824e-05,
+          "iqr_s": 1.1499942047521472e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -1287,7 +1287,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.018,
+        "search_s": 0.02,
         "n_enodes": 5,
         "iterations": 2,
         "extracted_ops": [
@@ -1296,12 +1296,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 3.7894878994848113e-06,
-          "eager spelled": 4.786041699844645e-06,
-          "torch.softmax": 2.1928386800573205e-06,
-          "inductor": 2.2580003133043647e-05
+          "mlopt": 3.7324052200710867e-06,
+          "eager spelled": 4.7143925003183535e-06,
+          "torch.softmax": 2.230448210029863e-06,
+          "inductor": 2.2029511455912143e-05
         },
-        "mlopt_ms": 0.0037894878994848115
+        "mlopt_ms": 0.0037324052200710866
       },
       "baselines": [
         {
@@ -1309,7 +1309,7 @@
           "kind": "self",
           "available": true,
           "cost": 327.0,
-          "median_s": 4.786041699844645e-06,
+          "median_s": 4.7143925003183535e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1320,7 +1320,7 @@
           "kind": "ref",
           "available": true,
           "cost": 65.0,
-          "median_s": 2.1928386800573205e-06,
+          "median_s": 2.230448210029863e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 5.551115123125783e-17,
@@ -1331,8 +1331,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 2.2580003133043647e-05,
-          "iqr_s": 1.05875005829148e-06,
+          "median_s": 2.2029511455912143e-05,
+          "iqr_s": 1.0972544259857386e-06,
           "verify_passed": true,
           "verify_max_abs": 1.734723475976807e-18,
           "note": "measured-only (no symbolic form)"
@@ -1361,7 +1361,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.016,
+        "search_s": 0.018,
         "n_enodes": 6,
         "iterations": 2,
         "extracted_ops": [
@@ -1370,12 +1370,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 6.867784999485593e-06,
-          "eager spelled": 5.556809100380633e-06,
-          "F.softsign": 5.772503001207951e-06,
-          "inductor": 2.116300311172381e-05
+          "mlopt": 6.721181799366604e-06,
+          "eager spelled": 5.768558499403298e-06,
+          "F.softsign": 5.844095900829416e-06,
+          "inductor": 2.0306004444137216e-05
         },
-        "mlopt_ms": 0.006867784999485593
+        "mlopt_ms": 0.006721181799366604
       },
       "baselines": [
         {
@@ -1383,7 +1383,7 @@
           "kind": "self",
           "available": true,
           "cost": 387.0,
-          "median_s": 5.556809100380633e-06,
+          "median_s": 5.768558499403298e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1394,7 +1394,7 @@
           "kind": "ref",
           "available": true,
           "cost": 387.0,
-          "median_s": 5.772503001207951e-06,
+          "median_s": 5.844095900829416e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1405,8 +1405,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 2.116300311172381e-05,
-          "iqr_s": 9.172508725896478e-07,
+          "median_s": 2.0306004444137216e-05,
+          "iqr_s": 9.930081432685256e-07,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -1435,7 +1435,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.023,
+        "search_s": 0.022,
         "n_enodes": 9,
         "iterations": 2,
         "extracted_ops": [
@@ -1448,12 +1448,12 @@
         "cert_steps": 2,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 1.931437800085405e-05,
-          "eager two-GEMM": 1.4397809900401626e-05,
-          "fused SwiGLU": 1.5507118600362447e-05,
-          "inductor": 5.698750464944169e-05
+          "mlopt": 1.986362149909837e-05,
+          "eager two-GEMM": 1.473976529960055e-05,
+          "fused SwiGLU": 1.5129346800677013e-05,
+          "inductor": 5.53639983991161e-05
         },
-        "mlopt_ms": 0.01931437800085405
+        "mlopt_ms": 0.01986362149909837
       },
       "baselines": [
         {
@@ -1461,7 +1461,7 @@
           "kind": "self",
           "available": true,
           "cost": 4356.0,
-          "median_s": 1.4397809900401626e-05,
+          "median_s": 1.473976529960055e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1472,7 +1472,7 @@
           "kind": "ref",
           "available": true,
           "cost": 4485.0,
-          "median_s": 1.5507118600362447e-05,
+          "median_s": 1.5129346800677013e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1483,8 +1483,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 5.698750464944169e-05,
-          "iqr_s": 2.4339969968423247e-06,
+          "median_s": 5.53639983991161e-05,
+          "iqr_s": 1.9500002963468432e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -1523,12 +1523,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 5.222422399674542e-06,
-          "eager two-GEMM": 1.0096321499440818e-05,
-          "pre-folded Linear": 5.8158218002063226e-06,
-          "inductor": 5.956499808235094e-05
+          "mlopt": 5.540274899976794e-06,
+          "eager two-GEMM": 1.0532365700055379e-05,
+          "pre-folded Linear": 6.179559699376114e-06,
+          "inductor": 5.845950363436714e-05
         },
-        "mlopt_ms": 0.005222422399674542
+        "mlopt_ms": 0.005540274899976794
       },
       "baselines": [
         {
@@ -1536,7 +1536,7 @@
           "kind": "self",
           "available": true,
           "cost": 4098.0,
-          "median_s": 1.0096321499440818e-05,
+          "median_s": 1.0532365700055379e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1547,7 +1547,7 @@
           "kind": "ref",
           "available": true,
           "cost": 2049.0,
-          "median_s": 5.8158218002063226e-06,
+          "median_s": 6.179559699376114e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 2.823249983796572e-08,
@@ -1558,8 +1558,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 5.956499808235094e-05,
-          "iqr_s": 2.0460029190871865e-06,
+          "median_s": 5.845950363436714e-05,
+          "iqr_s": 1.5102523320820183e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "no freeze \u2014 Inductor cannot fold the weights"
@@ -1598,12 +1598,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 5.189149099169299e-06,
-          "eager two-GEMM": 1.221470419986872e-05,
-          "merged Linear": 5.829667599755339e-06,
-          "inductor": 5.7743993238545954e-05
+          "mlopt": 5.3143518001888875e-06,
+          "eager two-GEMM": 1.2150608100637328e-05,
+          "merged Linear": 5.95959959900938e-06,
+          "inductor": 5.401700036600232e-05
         },
-        "mlopt_ms": 0.005189149099169299
+        "mlopt_ms": 0.0053143518001888875
       },
       "baselines": [
         {
@@ -1611,7 +1611,7 @@
           "kind": "self",
           "available": true,
           "cost": 4163.0,
-          "median_s": 1.221470419986872e-05,
+          "median_s": 1.2150608100637328e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1622,7 +1622,7 @@
           "kind": "ref",
           "available": true,
           "cost": 2049.0,
-          "median_s": 5.829667599755339e-06,
+          "median_s": 5.95959959900938e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 7.771561172376096e-16,
@@ -1633,8 +1633,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 5.7743993238545954e-05,
-          "iqr_s": 1.917749614221975e-06,
+          "median_s": 5.401700036600232e-05,
+          "iqr_s": 2.0934967324137688e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -1645,7 +1645,7 @@
       "name": "zoo_adaln_affd",
       "title": "Zoo AdaLNBlock \u2014 the affd carrier lift, opt-in regime",
       "category": "structure",
-      "citation": "The held-out zoo's `AdaLNBlock` (Peebles & Xie 2022, DiT) \u2014\n`LN(x)\u00b7(1+scale) + shift` modulation lifted by `affd_lift` /\n`affd_lift_unit` into `applyd(aff_diag(ln(x), shift), 1+scale)` under\nthe `carrier_search` regime (`SCAN_DIAG_LAWS` is opt-in \u2014 DEFAULT\nnever runs it; the store's `affd_step_lift` twin is admitted but\nunshipped).  Reachability row: the lift lands (two `applyd` pairs in\nthe extraction) but the executor axis prices it +7.9 % \u2014 exactly the\nregression `human-bar.md` measured \u2014 so the scorecard records the\nhonest `beat=no` on a derived form.\n",
+      "citation": "The held-out zoo's `AdaLNBlock` (Peebles & Xie 2022, DiT) \u2014\n`LN(x)\u00b7(1+scale) + shift` modulation lifted by `affd_lift` /\n`affd_lift_unit` into `applyd(aff_diag(ln(x), shift), 1+scale)` under\nthe `carrier_search` regime (`SCAN_DIAG_LAWS` is opt-in \u2014 DEFAULT\nnever runs it; the store's `affd_step_lift` twin is admitted but\nunshipped).  The lift lands AND pays: \u22128.1 % on the exec axis, below\nthe eager floor.  The former +7.9 % was a selection artifact, not the\nlift's price \u2014 `_carrier_upgrade` moved extraction to a fully-lifted\nmember whose single-leaf \"batched\" plan priced below generic in the\nexecutor model, though a 0-level plan is pure gather/stack machinery\n(the `human-bar.md` regression).  `build_scan_plan` now declines\nspines with no compose levels \u2014 nothing to level-schedule \u2014 so the\ngenuinely cheaper lifted member stands: the same verdict the store\narm's \u22124.07 % hinted at, now reached through the shipped opt-in laws.\n",
       "found": true,
       "picked": true,
       "certified": true,
@@ -1653,10 +1653,10 @@
       "verify_max_abs": 0.0,
       "axis": "exec",
       "cost_before": 217830.11235955052,
-      "cost_after": 235086.3370786517,
+      "cost_after": 200240.26966292132,
       "best_baseline": "eager",
       "best_baseline_cost": 217830.11235955052,
-      "beat_best": false,
+      "beat_best": true,
       "beat_best_measured": false,
       "signals_seen": [
         "law:affd_lift",
@@ -1664,7 +1664,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.062,
+        "search_s": 0.06,
         "n_enodes": 36,
         "iterations": 3,
         "extracted_ops": [
@@ -1672,21 +1672,19 @@
           "aff_diag",
           "applyd",
           "chunk",
-          "expand",
           "gelu",
           "layer_norm",
           "linear",
-          "mul",
           "unsqueeze"
         ],
         "cert_steps": 2,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 0.00014831804299319628,
-          "eager": 5.465904501033947e-05,
-          "inductor": 8.094649820122868e-05
+          "mlopt": 7.041581800149289e-05,
+          "eager": 5.243740099831484e-05,
+          "inductor": 8.434899791609496e-05
         },
-        "mlopt_ms": 0.1483180429931963
+        "mlopt_ms": 0.07041581800149288
       },
       "baselines": [
         {
@@ -1694,7 +1692,7 @@
           "kind": "self",
           "available": true,
           "cost": 217830.11235955052,
-          "median_s": 5.465904501033947e-05,
+          "median_s": 5.243740099831484e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1705,8 +1703,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 8.094649820122868e-05,
-          "iqr_s": 2.2845124476589262e-06,
+          "median_s": 8.434899791609496e-05,
+          "iqr_s": 4.651239578379318e-06,
           "verify_passed": true,
           "verify_max_abs": 4.440892098500626e-16,
           "note": "measured-only (no symbolic form)"
@@ -1736,7 +1734,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.075,
+        "search_s": 0.07,
         "n_enodes": 35,
         "iterations": 2,
         "extracted_ops": [
@@ -1757,11 +1755,11 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 0.0001568044900050154,
-          "eager spelled": 0.00011074071399343665,
-          "inductor": 0.00010450249828863889
+          "mlopt": 0.00014704891300061719,
+          "eager spelled": 0.00010571282700402663,
+          "inductor": 0.00010605100396787748
         },
-        "mlopt_ms": 0.1568044900050154
+        "mlopt_ms": 0.14704891300061718
       },
       "baselines": [
         {
@@ -1769,7 +1767,7 @@
           "kind": "self",
           "available": true,
           "cost": 348463.1460674157,
-          "median_s": 0.00011074071399343665,
+          "median_s": 0.00010571282700402663,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1780,8 +1778,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 0.00010450249828863889,
-          "iqr_s": 3.0130031518638134e-06,
+          "median_s": 0.00010605100396787748,
+          "iqr_s": 9.475756087340415e-06,
           "verify_passed": true,
           "verify_max_abs": 1.1102230246251565e-16,
           "note": "measured-only (no symbolic form)"
@@ -1813,7 +1811,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.176,
+        "search_s": 0.168,
         "n_enodes": 111,
         "iterations": 3,
         "extracted_ops": [
@@ -1832,11 +1830,11 @@
         "cert_steps": 45,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 0.0004106596850033384,
-          "eager unrolled": 0.00014803987000777853,
-          "inductor": 8.984400483313948e-05
+          "mlopt": 0.00018062008000561036,
+          "eager unrolled": 0.0001468596239865292,
+          "inductor": 8.672150579513982e-05
         },
-        "mlopt_ms": 0.4106596850033384
+        "mlopt_ms": 0.18062008000561036
       },
       "baselines": [
         {
@@ -1844,7 +1842,7 @@
           "kind": "self",
           "available": true,
           "cost": 975073.483146068,
-          "median_s": 0.00014803987000777853,
+          "median_s": 0.0001468596239865292,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1855,8 +1853,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 8.984400483313948e-05,
-          "iqr_s": 3.6059936974197626e-06,
+          "median_s": 8.672150579513982e-05,
+          "iqr_s": 3.1022536859381944e-06,
           "verify_passed": true,
           "verify_max_abs": 2.3592239273284576e-16,
           "note": "measured-only (no symbolic form)"
@@ -1898,7 +1896,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.043,
+        "search_s": 0.041,
         "n_enodes": 28,
         "iterations": 3,
         "extracted_ops": [
@@ -1914,11 +1912,11 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 5.760776699753478e-05,
-          "eager quadratic": 5.2838366987998595e-05,
-          "inductor": 9.148350363830104e-05
+          "mlopt": 5.552884899952915e-05,
+          "eager quadratic": 5.178388000058476e-05,
+          "inductor": 8.303500362671912e-05
         },
-        "mlopt_ms": 0.05760776699753478
+        "mlopt_ms": 0.055528848999529146
       },
       "baselines": [
         {
@@ -1926,7 +1924,7 @@
           "kind": "self",
           "available": true,
           "cost": 182972.58426966294,
-          "median_s": 5.2838366987998595e-05,
+          "median_s": 5.178388000058476e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1937,8 +1935,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 9.148350363830104e-05,
-          "iqr_s": 3.767498128581792e-06,
+          "median_s": 8.303500362671912e-05,
+          "iqr_s": 2.784989192150533e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -1978,7 +1976,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.033,
+        "search_s": 0.031,
         "n_enodes": 13,
         "iterations": 2,
         "extracted_ops": [
@@ -1990,12 +1988,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 1.831578989949776e-05,
-          "eager three-GEMM": 2.1469174799858592e-05,
-          "merged LoRA": 1.637701349973213e-05,
-          "inductor": 6.184949597809464e-05
+          "mlopt": 1.7719037500501146e-05,
+          "eager three-GEMM": 2.1400579399778506e-05,
+          "merged LoRA": 1.679855989932548e-05,
+          "inductor": 6.485300400527194e-05
         },
-        "mlopt_ms": 0.01831578989949776
+        "mlopt_ms": 0.017719037500501144
       },
       "baselines": [
         {
@@ -2003,7 +2001,7 @@
           "kind": "self",
           "available": true,
           "cost": 87045.34831460674,
-          "median_s": 2.1469174799858592e-05,
+          "median_s": 2.1400579399778506e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -2014,7 +2012,7 @@
           "kind": "ref",
           "available": true,
           "cost": 69649.66292134831,
-          "median_s": 1.637701349973213e-05,
+          "median_s": 1.679855989932548e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 1.2734057253105391e-08,
@@ -2025,8 +2023,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 6.184949597809464e-05,
-          "iqr_s": 2.0930019672960043e-06,
+          "median_s": 6.485300400527194e-05,
+          "iqr_s": 1.9039980543311685e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "no freeze \u2014 Inductor cannot fold the adapter weights"
@@ -2037,15 +2035,15 @@
       "name": "zoo_lora_param",
       "title": "Zoo LoRAAdapter on the storage axis \u2014 the fold's other side",
       "category": "memory",
-      "citation": "The same zoo `LoRAAdapter` site priced on `param_bytes` \u2014 the memory\ntwin of `zoo_lora_adapter`.  Folding `up(down(x))` to one (d,d) GEMM\nbuys the runtime win at a storage price the speed axis hides:\n`2\u00b7d\u00b7r` stored adapter values become `d\u00b2`.  Honest row \u2014 the scorecard\nrecords the +32 % storage regression, not a hoped-for reduction: the\nspeed/memory tradeoff of every weight fold made visible on a real\nmodel.\n",
+      "citation": "The same zoo `LoRAAdapter` site priced on `param_bytes` \u2014 the memory\ntwin of `zoo_lora_adapter`.  Folding `up(down(x))` to one (d,d) GEMM\nbuys the runtime win at a storage price the speed axis hides:\n`2\u00b7d\u00b7r` stored adapter values become `d\u00b2` \u2014 profitable only when\n`r > d/2`.  With the search priced on the case's own axis the\nderivation still fires (`law:assoc_linear`) but extraction correctly\nDECLINES the merge: the factorized `2\u00b7d\u00b7r` member is cheaper to\nstore.  The honest verdict flips from a recorded +32 % regression \u2014\nthe old row judged an exec-optimal pick on an axis it was never\nasked to optimize \u2014 to a rediscovery: the fold derives, and the\nengine declines it exactly where it does not pay.\n",
       "found": true,
       "picked": true,
       "certified": true,
       "verified": true,
-      "verify_max_abs": 2.220446049250313e-16,
+      "verify_max_abs": 0.0,
       "axis": "param_bytes",
       "cost_before": 400.0,
-      "cost_after": 528.0,
+      "cost_after": 400.0,
       "best_baseline": "eager low-rank",
       "best_baseline_cost": 400.0,
       "beat_best": false,
@@ -2061,18 +2059,17 @@
         "extracted_ops": [
           "add",
           "linear",
-          "matmul",
           "mul"
         ],
-        "cert_steps": 1,
+        "cert_steps": 0,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 1.6185423800197896e-05,
-          "eager low-rank": 1.94959326996468e-05,
-          "merged LoRA": 1.4752422300807666e-05,
-          "inductor": 5.105173100309912e-05
+          "mlopt": 2.2600484600116034e-05,
+          "eager low-rank": 2.205800009978702e-05,
+          "merged LoRA": 1.6667786698963028e-05,
+          "inductor": 5.4022212993004356e-05
         },
-        "mlopt_ms": 0.016185423800197895
+        "mlopt_ms": 0.022600484600116034
       },
       "baselines": [
         {
@@ -2080,7 +2077,7 @@
           "kind": "self",
           "available": true,
           "cost": 400.0,
-          "median_s": 1.94959326996468e-05,
+          "median_s": 2.205800009978702e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -2091,7 +2088,7 @@
           "kind": "ref",
           "available": true,
           "cost": 528.0,
-          "median_s": 1.4752422300807666e-05,
+          "median_s": 1.6667786698963028e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 1.2734057253105391e-08,
@@ -2102,7 +2099,7 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 5.105173100309912e-05,
+          "median_s": 5.4022212993004356e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -2134,7 +2131,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.047,
+        "search_s": 0.049,
         "n_enodes": 13,
         "iterations": 1,
         "extracted_ops": [
@@ -2149,11 +2146,11 @@
         "cert_steps": 0,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 4.5663943499675956e-05,
-          "eager": 3.8366371998563414e-05,
-          "inductor": 7.363150507444516e-05
+          "mlopt": 4.2932578500767704e-05,
+          "eager": 3.889051851001568e-05,
+          "inductor": 6.872299127280712e-05
         },
-        "mlopt_ms": 0.04566394349967596
+        "mlopt_ms": 0.042932578500767704
       },
       "baselines": [
         {
@@ -2161,7 +2158,7 @@
           "kind": "self",
           "available": true,
           "cost": 637.0,
-          "median_s": 3.8366371998563414e-05,
+          "median_s": 3.889051851001568e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -2172,8 +2169,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 7.363150507444516e-05,
-          "iqr_s": 3.2007446861825883e-06,
+          "median_s": 6.872299127280712e-05,
+          "iqr_s": 1.8559949239715934e-06,
           "verify_passed": true,
           "verify_max_abs": 4.163336342344337e-17,
           "note": "measured-only (no symbolic form)"
@@ -2203,7 +2200,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.034,
+        "search_s": 0.035,
         "n_enodes": 11,
         "iterations": 3,
         "extracted_ops": [
@@ -2216,11 +2213,11 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 2.6877306001551914e-05,
-          "eager spelled": 2.3242413999105338e-05,
-          "inductor": 5.698600580217317e-05
+          "mlopt": 2.8798286002711393e-05,
+          "eager spelled": 2.5445976700575558e-05,
+          "inductor": 5.4865493439137936e-05
         },
-        "mlopt_ms": 0.026877306001551915
+        "mlopt_ms": 0.028798286002711393
       },
       "baselines": [
         {
@@ -2228,7 +2225,7 @@
           "kind": "self",
           "available": true,
           "cost": 87058.33707865168,
-          "median_s": 2.3242413999105338e-05,
+          "median_s": 2.5445976700575558e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -2239,8 +2236,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 5.698600580217317e-05,
-          "iqr_s": 2.5404951884411275e-06,
+          "median_s": 5.4865493439137936e-05,
+          "iqr_s": 1.9035069271922112e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -2295,11 +2292,11 @@
         "cert_steps": 2,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 5.382234499847982e-05,
-          "eager": 6.784975600021426e-05,
-          "inductor": 9.427400073036551e-05
+          "mlopt": 5.190381901047658e-05,
+          "eager": 6.255537600372918e-05,
+          "inductor": 8.519300899934024e-05
         },
-        "mlopt_ms": 0.05382234499847982
+        "mlopt_ms": 0.05190381901047658
       },
       "baselines": [
         {
@@ -2307,7 +2304,7 @@
           "kind": "self",
           "available": true,
           "cost": 226487.7752808989,
-          "median_s": 6.784975600021426e-05,
+          "median_s": 6.255537600372918e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -2318,8 +2315,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 9.427400073036551e-05,
-          "iqr_s": 2.2849926608614624e-06,
+          "median_s": 8.519300899934024e-05,
+          "iqr_s": 2.75400816462934e-06,
           "verify_passed": true,
           "verify_max_abs": 4.440892098500626e-16,
           "note": "measured-only (no symbolic form)"

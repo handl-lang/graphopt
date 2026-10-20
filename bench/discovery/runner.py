@@ -38,7 +38,7 @@ from mlopt_core.cost import (
     executor_cost_for,
     flops_cost,
     launch_aware_cost,
-    param_bytes_cost,
+    param_bytes_cost_for,
 )
 from mlopt_core.egraph import verify_certificate
 from mlopt_core.ir import Op
@@ -50,12 +50,17 @@ from bench.discovery.fixtures import SOURCES
 from bench.discovery.refs import REFS
 
 #: The symbolic cost axes a case may name — ``dag_cost(term, fn)``.
+#: ``param_bytes`` binds the ``*_for`` closure: it carries the
+#: ``(term, memo)`` CostFn signature (the raw model's second
+#: parameter is ``source_tensors``, which ``backend_cost``'s
+#: positional ``cost_fn(term, memo)`` call would capture), so the
+#: same table doubles as the search's extraction model below.
 COST_FNS: dict[str, Callable] = {
     "launch": launch_aware_cost,
     "flops": flops_cost,
     "count": count_cost,
     "exec": executor_cost_for(lowering="generic"),
-    "param_bytes": param_bytes_cost,
+    "param_bytes": param_bytes_cost_for(),
 }
 
 #: ``search()`` rules presets the corpus uses — ``"default"`` is the
@@ -279,6 +284,7 @@ def run_case(
             feed,
             source=source,
             capabilities=sink,
+            cost_fn=cost_fn,
             rules=rules,
             max_iterations=case.max_iterations,
             max_enodes=case.max_enodes,

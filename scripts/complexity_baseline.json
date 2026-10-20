@@ -318,7 +318,7 @@
   "packages/mlopt-carriers/src/mlopt_carriers/scan_lower.py::_select_index": 8,
   "packages/mlopt-carriers/src/mlopt_carriers/scan_lower.py::_slot_expand": 3,
   "packages/mlopt-carriers/src/mlopt_carriers/scan_lower.py::_strip_output_views": 4,
-  "packages/mlopt-carriers/src/mlopt_carriers/scan_lower.py::build_scan_plan": 12,
+  "packages/mlopt-carriers/src/mlopt_carriers/scan_lower.py::build_scan_plan": 13,
   "packages/mlopt-carriers/src/mlopt_carriers/scan_lower.py::evf": 5,
   "packages/mlopt-carriers/src/mlopt_carriers/scan_lower.py::go": 9,
   "packages/mlopt-carriers/src/mlopt_carriers/scan_lower.py::is_scan_apply_term": 5,

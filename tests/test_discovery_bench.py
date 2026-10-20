@@ -287,16 +287,16 @@ def test_biased_chain_compose():
     assert res.cost_after < res.cost_before
 
 
-def test_select_mul_folds_but_costs_more_standalone():
-    """Honest row: ``select_mul`` fires and the one-select fused
-    member is picked, but standalone the fold multiplies the full
-    tensors then slices — strictly costlier than multiplying two
-    slices.  The row records the measured regression."""
+def test_select_mul_derives_but_is_declined_on_axis():
+    """Honest row: ``select_mul`` fires, but standalone the fold
+    multiplies the full tensors then slices — strictly costlier than
+    multiplying two slices — so under the case's own ``launch`` axis
+    extraction correctly declines it and keeps the spelled form."""
     res = run_case(_case("select_mul"), lane="fast")
     assert res.error == ""
     assert res.found and res.certified
     assert "law:select_mul" in res.signals_seen
-    assert res.cost_after > res.cost_before
+    assert res.cost_after == res.cost_before
     assert res.beat_best is False
 
 
@@ -319,14 +319,17 @@ def test_zoo_lora_adapter_replays_the_retro_win():
     assert res.beat_best is False
 
 
-def test_zoo_lora_param_records_the_storage_regression():
-    """Same site on ``param_bytes``: the fold buys the runtime win with
-    ``d²`` stored values over ``2dr`` — the honest +32 % the speed
-    axis hides."""
+def test_zoo_lora_param_declines_the_fold_on_storage():
+    """Same site on ``param_bytes``: ``assoc_linear`` still derives the
+    merge, but priced on the storage axis extraction correctly
+    declines it — ``2dr`` factorized storage beats ``d²``, so the
+    fused-weight ``matmul`` member stays unpicked."""
     res = run_case(_case("zoo_lora_param"), lane="fast")
     assert res.error == ""
     assert res.found and res.certified
-    assert res.cost_after > res.cost_before
+    assert "law:assoc_linear" in res.signals_seen
+    assert "matmul" not in res.detail["extracted_ops"]
+    assert res.cost_after == res.cost_before
     assert res.beat_best is False
 
 
@@ -376,18 +379,20 @@ def test_zoo_mos_head_reachability_cost_neutral():
     assert res.beat_best is False
 
 
-def test_zoo_adaln_affd_derives_but_loses_on_exec():
+def test_zoo_adaln_affd_derives_and_beats_the_floor():
     """The opt-in affd lift lands on the real DiT block (``applyd`` in
-    the term, certified) yet prices +7.9 % under the executor axis —
-    exactly the regression ``human-bar.md`` measured."""
+    the term, certified) and prices *below* the eager floor — the old
+    +7.9 % was ``_carrier_upgrade`` chasing a phantom single-leaf
+    ``batched`` plan (the ``human-bar.md`` regression), which
+    ``build_scan_plan`` now declines."""
     res = run_case(_case("zoo_adaln_affd"), lane="fast")
     assert res.error == ""
     assert res.found and res.certified
     assert "law:affd_lift" in res.signals_seen
     ops = res.detail["extracted_ops"]
     assert "applyd" in ops and "aff_diag" in ops
-    assert res.cost_after > res.cost_before
-    assert res.beat_best is False
+    assert res.cost_after < res.cost_before
+    assert res.beat_best is True
 
 
 def test_zoo_delta_rule_partial_carrier_find():
