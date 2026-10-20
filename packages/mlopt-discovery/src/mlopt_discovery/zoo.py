@@ -44,7 +44,7 @@ import torch.nn.functional as F
 
 from mlopt_discovery.intake import Workload
 
-__all__ = ["zoo"]
+__all__ = ["zoo", "zoo_variants"]
 
 
 # ---------------------------------------------------------------------------
@@ -835,6 +835,150 @@ def zoo(d: int = 16, t: int = 8, b: int = 2) -> list[Workload]:
         Workload(
             "HighwayGate",
             lambda: (_HighwayGate(d), _r(4, d)),
+            kind="zoo",
+        ),
+    ]
+
+
+def zoo_variants(d: int = 16, t: int = 8, b: int = 2) -> list[Workload]:
+    """Return a second draw of the registry — same families, re-parametrized.
+
+    Corpus-expansion siblings, NOT members of :func:`zoo`: the
+    22-entry holdout registry the retros measure is unchanged, and
+    every name here carries a ``*V2`` suffix so no provenance or
+    disjointness check can confuse the two draws.  Each entry is one
+    of the registry's architecture families at a shifted
+    configuration — wider width, a different head/expert/slot/unroll
+    count — so the exported terms exercise the same module code with
+    new leaf shapes and repetition depths.  That is the diversity a
+    downstream miner (e.g. ``bench/drivers/policy/neural_corpus.py``) can
+    actually use: fresh sites in known families rather than a
+    re-measurement of the same trees.
+    """
+    d2 = 2 * d
+    return [
+        # --- attention variants ----------------------------------
+        Workload(
+            "GatedAttentionUnitV2",
+            lambda: (_GatedAttentionUnit(d2), _r(b, t, d2)),
+            kind="zoo",
+        ),
+        Workload(
+            "AdditiveAttentionV2",
+            lambda: (
+                _AdditiveAttention(d2),
+                (_r(b, 5, d2), _r(b, t, d2), _r(b, t, d2)),
+            ),
+            kind="zoo",
+        ),
+        Workload(
+            "TalkingHeadsAttentionV2",
+            lambda: (_TalkingHeadsAttention(d, 2), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "CosineAttentionV2",
+            lambda: (_CosineAttention(d, 8), _r(b, t, d)),
+            kind="zoo",
+        ),
+        # --- conditioning ----------------------------------------
+        Workload(
+            "FiLMHeadV2",
+            lambda: (_FiLMHead(d, 4), (_r(b, t, d), _r(b, 4))),
+            kind="zoo",
+        ),
+        Workload(
+            "AdaLNBlockV2",
+            lambda: (_AdaLNBlock(d, 4), (_r(b, t, d), _r(b, 4))),
+            kind="zoo",
+        ),
+        Workload(
+            "LoRAAdapterV2",
+            lambda: (_LoRAAdapter(d, 8), _r(4, d)),
+            kind="zoo",
+        ),
+        # --- token mixers / spectral / graphs --------------------
+        Workload(
+            "MLPMixerBlockV2",
+            lambda: (_MLPMixerBlock(d, 6), _r(b, 6, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "FNOBlockV2",
+            lambda: (_FNOBlock(4, 2), _r(1, 4, 8, 8)),
+            kind="zoo",
+        ),
+        Workload(
+            "GCNLayerV2",
+            lambda: (_GCNLayer(d2), (_r(b, 6, d2), _rand(2, 6, 6))),
+            kind="zoo",
+        ),
+        Workload(
+            "AffineCouplingV2",
+            lambda: (_AffineCoupling(d2), _r(4, d2)),
+            kind="zoo",
+        ),
+        # --- routing / gating ------------------------------------
+        Workload(
+            "SoftSlotMoEV2",
+            lambda: (_SoftSlotMoE(d, 6), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "ExpertChoiceMoEV2",
+            lambda: (_ExpertChoiceMoE(d, 6, 2), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "CapsuleRoutingV2",
+            lambda: (_CapsuleRouting(d, 6, 6), _r(b, t, d)),
+            kind="zoo",
+        ),
+        # --- recurrence / scan / conv ----------------------------
+        Workload(
+            "ChunkedRetentionV2",
+            lambda: (_ChunkedRetention(d2), _r(b, t, d2)),
+            kind="zoo",
+        ),
+        Workload(
+            "DeepEquilibriumV2",
+            lambda: (_DeepEquilibrium(d, 5), _r(4, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "DeltaRuleBlockV2",
+            lambda: (_DeltaRuleBlock(d, d // 2, 6), _r(b, 6, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "WaveNetGateV2",
+            lambda: (_WaveNetGate(6), _r(1, 6, 16)),
+            kind="zoo",
+        ),
+        Workload(
+            "TimeCondConvV2",
+            lambda: (_TimeCondConv(8, 6), (_r(1, 8, 8, 8), _r(1))),
+            kind="zoo",
+        ),
+        # --- heads / objectives ----------------------------------
+        Workload(
+            "MoSHeadV2",
+            lambda: (_MoSHead(d, 12, 4), _r(4, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "CovarianceHeadV2",
+            lambda: (_CovarianceHead(), _r(6, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "SplineKANV2",
+            lambda: (_SplineKAN(d, 6), _r(4, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "HighwayGateV2",
+            lambda: (_HighwayGate(d2), _r(4, d2)),
             kind="zoo",
         ),
     ]

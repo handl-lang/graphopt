@@ -34,6 +34,39 @@ def test_zoo_is_nonempty_and_wellformed():
     assert all(not w.purpose_built for w in _ZOO)
 
 
+def test_zoo_variants_wellformed():
+    """The second draw mirrors the registry, disjointly named."""
+    variants = zoo_mod.zoo_variants()
+    names = [w.name for w in variants]
+    assert len(names) == len(set(names)) == len(_ZOO)
+    assert all(w.kind == "zoo" for w in variants)
+    assert all(not w.purpose_built for w in variants)
+    # The "V2" suffix is the disjointness mechanism — a variant that
+    # dropped it would collide with its holdout-registry namesake.
+    assert all(n.endswith("V2") for n in names)
+    zoo_names = {w.name for w in _ZOO}
+    assert zoo_names.isdisjoint(names)
+    intake_names = {w.name for w in li.candidates()}
+    assert set(names).isdisjoint(intake_names)
+    assert set(names).isdisjoint(li._PURPOSE_BUILT)
+
+
+@pytest.mark.parametrize(
+    "w",
+    zoo_mod.zoo_variants(),
+    ids=[w.name for w in zoo_mod.zoo_variants()],
+)
+def test_zoo_variant_runs_fp64(w):
+    """Every variant builds and produces a finite fp64 output."""
+    torch.manual_seed(0)
+    model, x = w.build()
+    feed = x if isinstance(x, tuple) else (x,)
+    model = model.eval().double()
+    with torch.no_grad():
+        out = model(*feed)
+    assert torch.isfinite(out).all()
+
+
 def test_zoo_disjoint_from_intake_registry():
     """The holdout property: the intake has never seen these names."""
     zoo_names = {w.name for w in _ZOO}
