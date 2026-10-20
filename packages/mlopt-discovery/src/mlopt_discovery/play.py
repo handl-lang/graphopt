@@ -1587,12 +1587,10 @@ def _table(table: dict[str, list[dict]]) -> str:
     return "\n".join(lines)
 
 
-def _extras(args: Any, d: Any, ev: list, player: Any) -> None:
+def _extras(args: Any, d: Any, ev: list, fallback: Any) -> None:
     """Run the ``--*probe`` / ``--deliver`` / ``--zoo`` report arms."""
     if args.deliver:
-        arm = (
-            d.scripted() if d.scripted is not None else player.frozen(0)
-        )
+        arm = d.scripted() if d.scripted is not None else fallback
         res = deliver(args.domain, ev[0], arm, budget=args.budget)
         shown = {k: v for k, v in res.items() if k != "module"}
         print(f"deliver[{ev[0][0]}]: {shown}")  # stdout-compat
@@ -1683,6 +1681,16 @@ def main(argv: list[str] | None = None) -> int:
             "eager, torch.compile, and the om_decayed executor (CUDA)"
         ),
     )
+    ap.add_argument(
+        "--player",
+        default=None,
+        metavar="NAME",
+        help=(
+            "evaluate a registered players/ module by name instead of "
+            "training the learned arm — eval-only, paired against "
+            "``random`` (see players.registry.names())"
+        ),
+    )
     ap.add_argument("--json", type=str, default=None)
     args = ap.parse_args(argv)
     if sys.getrecursionlimit() < 40_000:
@@ -1691,29 +1699,52 @@ def main(argv: list[str] | None = None) -> int:
     d = DOMAINS[args.domain]
     train = d.cases(args.seed, args.train_cases)
     ev = d.cases(args.seed + 7919, args.eval_cases)
-    player = LinearPolicy(
-        seed=args.seed,
-        legal=d.legal,
-        featurizer=d.featurizer,
-        features=d.features,
-        temperature=args.temperature,
-        epsilon=args.epsilon,
-    )
-    totals = engine.train_policy(
-        player, train, d.board_of, budget=args.budget
-    )
-    table = engine.evaluate(
-        _arms(d, player, args.seed), ev, d.board_of, budget=args.budget
-    )
+    if args.player is not None:
+        from .players import registry
+
+        try:
+            mk = registry.make(
+                args.player, args.domain, seed=args.seed, ctx={}
+            )
+        except ValueError as e:
+            print(f"--player: {e}")  # stdout-compat
+            return 2
+        rnd = _random_policy(d.legal)
+        arms = {
+            args.player: mk,
+            "random": lambda i: rnd(args.seed + 10_000 + i),
+        }
+        fallback = mk(0)
+        totals: list = []
+    else:
+        player = LinearPolicy(
+            seed=args.seed,
+            legal=d.legal,
+            featurizer=d.featurizer,
+            features=d.features,
+            temperature=args.temperature,
+            epsilon=args.epsilon,
+        )
+        totals = engine.train_policy(
+            player, train, d.board_of, budget=args.budget
+        )
+        arms = _arms(d, player, args.seed)
+        fallback = player.frozen(0)
+    table = engine.evaluate(arms, ev, d.board_of, budget=args.budget)
     print(f"== play — domain {args.domain} ==")  # stdout-compat
     print(_table(table))  # stdout-compat
-    decade = max(len(totals) // 10, 1)
-    means = [
-        round(sum(totals[i : i + decade]) / decade, 2)
-        for i in range(0, len(totals) - decade + 1, decade)
-    ]
-    print(f"train decade means: {means}")  # stdout-compat
-    _extras(args, d, ev, player)
+    if args.player is not None:
+        print(  # stdout-compat
+            f"eval-only — registered player {args.player!r}"
+        )
+    else:
+        decade = max(len(totals) // 10, 1)
+        means = [
+            round(sum(totals[i : i + decade]) / decade, 2)
+            for i in range(0, len(totals) - decade + 1, decade)
+        ]
+        print(f"train decade means: {means}")  # stdout-compat
+    _extras(args, d, ev, fallback)
     if args.json:
         import json
 

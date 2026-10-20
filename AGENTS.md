@@ -12,10 +12,17 @@ both verified through onnxruntime);
 `mlopt-discovery` — the law-discovery engine, formerly
 `tools/law_*.py`; invoke as `python -m mlopt_discovery.<mod>`;
 the game layer is `engine` (the `Board` protocol + generic
-episode/train/eval drivers), `players` (`LinearPolicy`, the
-featurizer-injected learned arm), `play` (the domain registry +
+episode/train/eval drivers), `players` — a package, not a module:
+`_base` holds the pre-package machinery (`LinearPolicy`, the
+featurizer-injected learned arm, re-exported at
+`mlopt_discovery.players`), `players/registry.py` is the
+name→spec table, and each player is a folder
+(`random/ playbook/ linear/ neural/ distilled/` — its
+`PlayerSpec` + measured record + `make` arm factory), `play` (the
+domain registry +
 `python -m mlopt_discovery.play --domain meta|joint|search|torch|gen|open`
-CLI; `--deliver` lowers+verifies the winning extraction on domains
+CLI; `--player <name>` runs a registered player eval-only, and
+`--deliver` lowers+verifies the winning extraction on domains
 that ship a deliver hook — torch does)).
 The optional
 `mlopt-native` package — the PyO3/Rust search engine, excluded from
@@ -616,3 +623,8 @@ grouping are generated from it, so they cannot drift.  Details in
 `bench/discovery/` (TOML `cases/` + known-good `refs/`); its runner is
 `python -m bench.discovery.run --fast|--full` (registered as the
 `discovery` suite) and emits `docs/scorecard.md` + `.json`.
+The player comparison lives in `bench/players/` — `python -m
+bench.players.run --players … --boards meta,open,contraction`
+(`--smoke` is the seconds lane) replays `lab/policy_baseline.py`'s
+memoized-verdict protocol over the `players/` registry and emits
+`docs/leaderboard_players.md` + `.json`.
