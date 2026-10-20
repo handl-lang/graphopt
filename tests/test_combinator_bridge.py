@@ -1,7 +1,7 @@
 """Unit tests for the ADR-0008 combinator bridge.
 
 The bridge lives in ``mlopt_discovery.combinator`` (promoted out of
-``bench/bridge/`` at the 99% coverage floor): sharing-compilation
+``bench/drivers/bridge/`` at the 99% coverage floor): sharing-compilation
 round-trips and the spelled ``loop`` RetNet fold are the properties
 under test.
 """

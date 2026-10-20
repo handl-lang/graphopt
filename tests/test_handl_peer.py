@@ -147,7 +147,7 @@ def test_the_peer_agrees_with_mlopts_own_engine() -> None:
 def test_the_differential_reports_no_disagreement() -> None:
     """mlopt's engine and handl's agree wherever both fire.
 
-    The probe (`bench/audit/handl_differential.py`) synthesizes one term per
+    The probe (`bench/drivers/audit/handl_differential.py`) synthesizes one term per
     law, rewrites it with both engines and compares the results.  This
     pins the *measured* state: 24 laws comparable, 24 agreeing, 0
     disagreements.  The laws it cannot compare are reported by the probe
@@ -163,7 +163,7 @@ def test_the_differential_reports_no_disagreement() -> None:
 
     spec = importlib.util.spec_from_file_location(
         "handl_differential",
-        _REPO / "bench" / "audit" / "handl_differential.py",
+        _REPO / "bench" / "drivers" / "audit" / "handl_differential.py",
     )
     assert spec and spec.loader
     mod = importlib.util.module_from_spec(spec)

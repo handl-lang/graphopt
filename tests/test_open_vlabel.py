@@ -1,6 +1,6 @@
 """Tests for the expected-yield feature part
 (:mod:`mlopt_discovery.open_vlabel`) and the round-7 driver's
-break-even gate (``bench/policy/stop_valuelabel.py``).
+break-even gate (``bench/drivers/policy/stop_valuelabel.py``).
 
 The ``open:vlabel`` part turns the injected per-candidate *expected
 payoff* table (``open_game.set_value_preds`` — the same seam
@@ -30,7 +30,7 @@ from mlopt_discovery.meta_arena import Action
 from mlopt_discovery.players import PARTS, DomainSpec
 
 REPO = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO / "bench" / "policy"))
+sys.path.insert(0, str(REPO / "bench" / "drivers" / "policy"))
 
 import stop_valuelabel as svl  # noqa: E402
 

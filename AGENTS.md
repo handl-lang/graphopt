@@ -37,36 +37,36 @@ every name lives at its real package path — `mlopt_core.egraph`,
 `lab/` lives there now, beside the harnessed benchmark package
 (`python -m bench`; `bench/suites/`, `bench/discovery`,
 `bench/players`, `bench/limits` — see `bench/README.md`).  The
-ex-`lab/` drivers run standalone —
-`.venv/bin/python bench/<sub>/<mod>.py` — and write result documents,
+ex-`lab/` drivers live under `bench/drivers/` and run standalone —
+`.venv/bin/python bench/drivers/<sub>/<mod>.py` — and write result documents,
 not `baselines/` rows:
 
-- `bench/mint/` — `atom_law_loop.py` (ADR-0007 layer 3),
+- `bench/drivers/mint/` — `atom_law_loop.py` (ADR-0007 layer 3),
   `atom_synth_loop.py` (the composed need → handler → laws →
   admission loop).  The minted-macro miner is tooling:
   `scripts/macro_miner.py` mines + evals `lawdata.MACROS` candidate
   tables; the shipped replay machinery is
   `mlopt_discovery.macro_moves` and the retrain driver is
   `scripts/train_meta_macro_prior.py`.
-- `bench/bridge/` — `combinator_probe.py`, `sharing_extract.py`
+- `bench/drivers/bridge/` — `combinator_probe.py`, `sharing_extract.py`
   (the ADR-0008 bridge).  The substrate and all four proposers
   promoted to `mlopt_discovery.combinator` / `.form_propose` /
   `.state_reindex` / `.index_abstract` / `.loop_propose`.
-- `bench/audit/` — `grammar_probe.py`, `handl_differential.py`,
+- `bench/drivers/audit/` — `grammar_probe.py`, `handl_differential.py`,
   `egraph_differential.py` (the handl-side oracles).
-- `bench/screen/` — `exposure_screen.py`, `exposed_discovery.py`,
+- `bench/drivers/screen/` — `exposure_screen.py`, `exposed_discovery.py`,
   `discovery_scale.py`.
-- `bench/probes/` — the measurement probes, incl. `contraction/`
+- `bench/drivers/probes/` — the measurement probes, incl. `contraction/`
   (whose `contraction_distill.py --save` also mints the shipped
   `contraction_policy_distilled.pt`).
-- `bench/policy/` — the controlled-protocol drivers
+- `bench/drivers/policy/` — the controlled-protocol drivers
   `policy_baseline.py` + `policy_ablations.py` + `policy_rl_arms.py` +
   `schema_leaderboard.py` + `stop_policy.py` + `richer_features.py`
   (results in `docs/results_*.md`).
-- `bench/train/` — the three measurement-only drivers
+- `bench/drivers/train/` — the three measurement-only drivers
   `train_graph_policy.py`, `train_rl_policy.py`,
   `train_search_policy.py`.
-- `bench/kit/` — `term_hnl.py`, the mlopt-term → `.hnl` emit/eval
+- `bench/drivers/kit/` — `term_hnl.py`, the mlopt-term → `.hnl` emit/eval
   bridge into `CatoptKit`.
 
 Some probes need scratch deps installed `--no-deps` outside the
@@ -114,8 +114,8 @@ destination (the per-file inventory and history live in
   audit a committed artifact* (the `train_*_prior` weight bakers,
   the `.pt` artifact trainers, `macro_miner.py`, `dump_fragments.py`,
   `dspec_audit.py`).
-- **research drivers → `bench/`** — measurement drivers whose output
-  is a result document (`docs/results_*.md`, `project/retros/`).
+- **research drivers → `bench/drivers/`** — measurement drivers whose
+  output is a result document (`docs/results_*.md`, `project/retros/`).
 - **fixtures → `tests/fixtures/`** — the handl-spike fragment dirs.
 - **Rust crates → `packages/`** — `mlopt-handl-peer`,
   `mlopt-experiments` (the paper's evidence crate).
@@ -639,6 +639,6 @@ grouping are generated from it, so they cannot drift.  Details in
 `discovery` suite) and emits `docs/scorecard.md` + `.json`.
 The player comparison lives in `bench/players/` — `python -m
 bench.players.run --players … --boards meta,open,contraction`
-(`--smoke` is the seconds lane) replays `bench/policy/policy_baseline.py`'s
+(`--smoke` is the seconds lane) replays `bench/drivers/policy/policy_baseline.py`'s
 memoized-verdict protocol over the `players/` registry and emits
 `docs/leaderboard_players.md` + `.json`.

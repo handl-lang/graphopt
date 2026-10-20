@@ -13,7 +13,7 @@ the lineage artifact:
 
 **This is no longer the bundled default** —
 ``project/retros/contraction-synthesis.md`` showed the oe-all distilled
-policy (``bench/probes/contraction/contraction_distill.py --arms oe-all --save``) beats
+policy (``bench/drivers/probes/contraction/contraction_distill.py --arms oe-all --save``) beats
 ``opt_einsum``'s randomised greedy at equal wall-clock at n = 40, where
 this player stays >= 1.0x; the default artifact is
 ``contraction_policy_distilled.pt`` and this file remains bundled as an
@@ -56,11 +56,11 @@ from mlopt_torch.contraction_policy import (
 # ``bench/`` is not an installed package — the repo root goes on
 # ``sys.path`` so the probe imports below resolve under the documented
 # ``python scripts/…`` invocation (the sanctioned shim shape; cf.
-# ``bench/probes/conv_fold_wall_regimes_probe.py``).
+# ``bench/drivers/probes/conv_fold_wall_regimes_probe.py``).
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from bench.probes.contraction import contraction_policy as cp
-from bench.probes.contraction import contraction_scale as cs
+from bench.drivers.probes.contraction import contraction_policy as cp
+from bench.drivers.probes.contraction import contraction_scale as cs
 
 __all__ = ["main"]
 

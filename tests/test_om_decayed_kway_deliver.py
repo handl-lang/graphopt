@@ -18,7 +18,7 @@ per-block matmuls) and the fused quadratic is too small to hide that
 launch overhead, so the carrier *loses* there.  The timing test
 therefore uses T=1024 (measured ~2.2x over eager, ~2.8x over
 compiled); the companion probe
-``bench/probes/om_decayed_kway_deliver_probe.py`` prints the full T x k
+``bench/drivers/probes/om_decayed_kway_deliver_probe.py`` prints the full T x k
 sweep, both regimes included.
 """
 

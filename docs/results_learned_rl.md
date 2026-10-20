@@ -1,14 +1,14 @@
 # Dedicated RL policy arms
 
-**Date:** 2026-10-19 · **Script:** `bench/policy/policy_rl_arms.py` · **Seed:** 0
+**Date:** 2026-10-19 · **Script:** `bench/drivers/policy/policy_rl_arms.py` · **Seed:** 0
 throughout · **Hardware:** the 11 GB CPU box (no CUDA) · **Runners:**
 
 ```bash
-timeout 1800 .venv/bin/python bench/policy/policy_rl_arms.py --only open \
+timeout 1800 .venv/bin/python bench/drivers/policy/policy_rl_arms.py --only open \
     --json /tmp/rl_open.json          # ~6 min
-timeout 1800 .venv/bin/python bench/policy/policy_rl_arms.py --only contraction \
+timeout 1800 .venv/bin/python bench/drivers/policy/policy_rl_arms.py --only contraction \
     --json /tmp/rl_contraction.json   # ~3.5 min
-timeout 1800 .venv/bin/python bench/policy/policy_rl_arms.py --only az \
+timeout 1800 .venv/bin/python bench/drivers/policy/policy_rl_arms.py --only az \
     --json /tmp/rl_az.json            # ~5 min
 ```
 
@@ -231,7 +231,7 @@ search in the loop did not beat more rollouts on this box.
 
 ## Post-fix re-measurement — EMA baseline is now the shipped recipe
 
-**Date:** 2026-10-19 · same protocol, seed 0, `bench/policy/policy_rl_arms.py
+**Date:** 2026-10-19 · same protocol, seed 0, `bench/drivers/policy/policy_rl_arms.py
 --only open` re-run after the `train_reinforce` fix.
 
 The collapse diagnosed above was a *recipe* bug, so the recipe was
@@ -279,7 +279,7 @@ features), not the update rule.
 
 ## Post-encoding-fix re-measurement — rl-net gets the `a:*` block
 
-**Date:** 2026-10-19 · same protocol, seed 0, `bench/policy/policy_rl_arms.py
+**Date:** 2026-10-19 · same protocol, seed 0, `bench/drivers/policy/policy_rl_arms.py
 --only open` re-run after the `policynet` input-encoding fix *and*
 the richer-schema bake (`docs/results_richer_features.md`).
 

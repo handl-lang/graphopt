@@ -1,7 +1,7 @@
 """Score calibration — Platt scaling and isotonic regression.
 
 Shared machinery for the policy-measurement drivers
-(``bench/policy/stop_calibrated.py`` is the first consumer): a
+(``bench/drivers/policy/stop_calibrated.py`` is the first consumer): a
 predictor's raw score is mapped to a calibrated probability.  The
 calibrator is fit on a held-out-quality calibration sample (e.g.
 out-of-fold predictions on the *train* split) and applied to new

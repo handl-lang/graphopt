@@ -89,7 +89,7 @@ def render_markdown(
         "play, under one paired protocol: identical held-out cases, "
         "identical memoized oracle verdicts on `open` (per-candidate "
         "seeds replayed to every arm — see "
-        "`bench/policy/policy_baseline.py`), identical contraction instances "
+        "`bench/drivers/policy/policy_baseline.py`), identical contraction instances "
         "scored by one cost model.  **ratio** is the contraction "
         "board's cost/baseline figure; the *notes* column carries "
         "the qualitative flags (drain artifacts, premature stops, "

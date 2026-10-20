@@ -1,10 +1,10 @@
 # Learned meta-arm on the `player` domain — trained, and it earns a bake
 
-**Date:** 2026-10-19 · **Script:** `bench/train/train_player_meta_arm.py` ·
+**Date:** 2026-10-19 · **Script:** `bench/drivers/train/train_player_meta_arm.py` ·
 **Seed:** 0 · **Runner:**
 
 ```bash
-timeout 1800 .venv/bin/python bench/train/train_player_meta_arm.py \
+timeout 1800 .venv/bin/python bench/drivers/train/train_player_meta_arm.py \
     --json /tmp/player_arm.json     # ~23 min (real-oracle memo warm-up dominates)
 ```
 
@@ -98,10 +98,10 @@ record carries the table by name, like the other baked specs).
 
 ## Where it lives
 
-* `bench/train/train_player_meta_arm.py` — the driver: stub oracle,
+* `bench/drivers/train/train_player_meta_arm.py` — the driver: stub oracle,
   `imitate_policy` warm start, REINFORCE loop, real-oracle held-out
   phase (`--skip-real` for the curve only).
-* `mlopt_discovery/lawdata/weights.py` —
+* `mlopt_discovery/lawdata/game/weights.py` —
   `PLAYER_ARENA_PLAYER_WEIGHTS`; `player_arena.PLAYER_SPEC` binds
   it (`weights={}` still reaches the cold start).
 * `docs/results_player_on_board.md` — the board's design doc;

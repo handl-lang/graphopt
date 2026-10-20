@@ -19,6 +19,49 @@ from mlopt_core.laws import ALL_RULES
 from mlopt_core.opmeta import COMMUTATIVE_OPS, REGISTRY
 
 
+class TestLawdataSplit:
+    """The plan-0032 seam: ``lawdata.game`` vs ``lawdata.laws``.
+
+    Every root-level binding must be the *same object* the owning
+    subpackage exports — a copy would silently drift the halves.
+    """
+
+    def test_game_half_reexports(self):
+        import mlopt_discovery.lawdata.game as game
+
+        for name in game.__all__:
+            assert getattr(data, name) is getattr(game, name), name
+
+    def test_laws_half_reexports(self):
+        import mlopt_discovery.lawdata.laws as laws
+
+        for name in laws.__all__:
+            assert getattr(data, name) is getattr(laws, name), name
+
+    def test_root_covers_both_halves(self):
+        import mlopt_discovery.lawdata.game as game
+        import mlopt_discovery.lawdata.laws as laws
+
+        assert set(data.__all__) == (
+            set(game.__all__) | set(laws.__all__) | {"game", "laws"}
+        )
+
+    def test_halves_are_disjoint(self):
+        """No table lives in both halves — the split is clean."""
+        import mlopt_discovery.lawdata.game as game
+        import mlopt_discovery.lawdata.laws as laws
+
+        assert not (set(game.__all__) & set(laws.__all__))
+
+    def test_feature_schema_reads_the_move_order_backedge(self):
+        """The one documented game→laws edge: ``features`` sizes
+        action-identity columns off ``laws.moves.ARENA_MOVE_ORDER``."""
+        import mlopt_discovery.lawdata.game.features as features
+        import mlopt_discovery.lawdata.laws.moves as moves
+
+        assert features.ARENA_MOVE_ORDER is moves.ARENA_MOVE_ORDER
+
+
 class TestCoreLawdata:
     """Core content tables — same-object bindings in ``meta``."""
 

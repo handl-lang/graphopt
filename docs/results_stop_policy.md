@@ -1,11 +1,11 @@
 # The stopping policy — can the learned arm learn *when to quit*
 
-**Date:** 2026-10-19 · **Script:** `bench/policy/stop_policy.py` (new —
-same memoized-verdict protocol as `bench/policy/richer_features.py`) ·
+**Date:** 2026-10-19 · **Script:** `bench/drivers/policy/stop_policy.py` (new —
+same memoized-verdict protocol as `bench/drivers/policy/richer_features.py`) ·
 **Seed:** 0 · **Runner:**
 
 ```bash
-timeout 1800 .venv/bin/python bench/policy/stop_policy.py \
+timeout 1800 .venv/bin/python bench/drivers/policy/stop_policy.py \
     --json /tmp/stop.json            # ~4 min
 ```
 
@@ -86,7 +86,7 @@ second head is the next arm, not more columns.
 # Round 2 — the explicit stop head (same script, extended)
 
 **Date:** 2026-10-19 (same day, second run) · **Runner:** identical —
-`timeout 1800 .venv/bin/python bench/policy/stop_policy.py --json /tmp/stop.json`
+`timeout 1800 .venv/bin/python bench/drivers/policy/stop_policy.py --json /tmp/stop.json`
 (~5 min).
 
 ## Mechanisms priced
@@ -231,7 +231,7 @@ Until then the game's economics rationally say keep spending.
 # Round 3 — the next-candidate-value features (the missing variable, built)
 
 **Date:** 2026-10-19 (same day, third run) · **Runner:** identical —
-`timeout 1800 .venv/bin/python bench/policy/stop_policy.py --json /tmp/stop.json`
+`timeout 1800 .venv/bin/python bench/drivers/policy/stop_policy.py --json /tmp/stop.json`
 (~3.5 min: 148 s pool memoization + 12 arms).
 
 Round 2's closing diagnosis named the missing variable: nothing
@@ -368,7 +368,7 @@ is only the linear-score proxy).
 # Round 4 — the learned value signal + a gate correction that reopens the head
 
 **Date:** 2026-10-19 (same day, fourth run) · **Runner:** identical —
-`timeout 1800 .venv/bin/python bench/policy/stop_policy.py --json /tmp/stop.json`
+`timeout 1800 .venv/bin/python bench/drivers/policy/stop_policy.py --json /tmp/stop.json`
 (~4 min: 148 s pool memoization + 3 s net + 18 arms).
 
 Round 3 closed on the missing variable: nothing predicts *which*
@@ -399,7 +399,7 @@ in their own sections remain as recorded under the inverted gate.)
 
 `train_rule_value` on `RuleSample` rows built from the 576 even-page
 candidates' **memoized** verdicts (BCE `delta_cost > 0`, 300 epochs,
-hidden 32 — the `bench/policy/policy_baseline.py` neural path), sigmoid
+hidden 32 — the `bench/drivers/policy/policy_baseline.py` neural path), sigmoid
 predictions injected into the new `open:next-val` part's lookup
 (`og.set_value_preds` — keyed by the same structural
 `(label, repr(lhs), repr(rhs))` identity the verdict memo uses, so
@@ -512,7 +512,7 @@ constraint); (b) a serializable gate — e.g. the head folded as a
 # Round 5 — the `useful`-label predictor, honest calibration, and the serializable fold
 
 **Date:** 2026-10-19 (same day, fifth run) · **Runner:** identical —
-`timeout 1800 .venv/bin/python bench/policy/stop_policy.py
+`timeout 1800 .venv/bin/python bench/drivers/policy/stop_policy.py
 --json /tmp/stop5_<label>.json --value-label <label>` (~5 min:
 173 s pool memoization + ~25 s nets + 18 arms with folds).  Three
 runs, one per injected label.
@@ -667,10 +667,10 @@ shape) or a stop decision outside the shared softmax entirely.
 
 # Round 6 — the self-posterior + per-step advantage (appendix; full doc `results_stop_advantage.md`)
 
-**Date:** 2026-10-19 · **Script:** `bench/policy/stop_advantage.py`
+**Date:** 2026-10-19 · **Script:** `bench/drivers/policy/stop_advantage.py`
 (new — same protocol, reuses this driver's gate machinery) ·
 **Runner:** `timeout 1800 .venv/bin/python
-bench/policy/stop_advantage.py --json /tmp/adv6.json` (~3.5 min:
+bench/drivers/policy/stop_advantage.py --json /tmp/adv6.json` (~3.5 min:
 12 arms + 9 unfed replays; re-run reproduced every committed row
 bit-identically).
 

@@ -1,11 +1,11 @@
 # The stopping policy, round 6 — the observability attack on both axes
 
-**Date:** 2026-10-19 · **Script:** `bench/policy/stop_advantage.py` (new
-— same memoized-verdict protocol as `bench/policy/stop_policy.py`,
+**Date:** 2026-10-19 · **Script:** `bench/drivers/policy/stop_advantage.py` (new
+— same memoized-verdict protocol as `bench/drivers/policy/stop_policy.py`,
 whose gate machinery it reuses) · **Seed:** 0 · **Runner:**
 
 ```bash
-timeout 1800 .venv/bin/python bench/policy/stop_advantage.py \
+timeout 1800 .venv/bin/python bench/drivers/policy/stop_advantage.py \
     --json /tmp/adv.json            # ~6 min (148 s pool memoization)
 ```
 

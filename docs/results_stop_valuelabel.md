@@ -1,13 +1,13 @@
 # The stopping policy, round 7 — candidate value *labels* priced as yield
 
-**Date:** 2026-10-19 · **Script:** `bench/policy/stop_valuelabel.py`
+**Date:** 2026-10-19 · **Script:** `bench/drivers/policy/stop_valuelabel.py`
 (new — the `stop_advantage.py` harness with the label→payoff
 injection, the `open:vlabel` part, and two analytic break-even
 gates) · **Part:** `mlopt_discovery.open_vlabel` (registered as
 `open:vlabel`, unshipped) · **Seed:** 0 · **Runner:**
 
 ```bash
-timeout 1800 .venv/bin/python bench/policy/stop_valuelabel.py \
+timeout 1800 .venv/bin/python bench/drivers/policy/stop_valuelabel.py \
     --value-label ev --json /tmp/vl_ev.json        # ~3.5 min each mode
                                                  # (~150-175 s memoization)
 # and --value-label useful|pays|delta

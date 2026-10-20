@@ -55,7 +55,7 @@ from typing import Any
 # ``bench/`` and ``scripts/`` are not installed packages — the repo root
 # goes on ``sys.path`` so ``bench.*`` / ``scripts.*`` imports resolve
 # under the documented ``python scripts/…`` invocation (the sanctioned
-# shim shape; cf. ``bench/probes/conv_fold_wall_regimes_probe.py``).
+# shim shape; cf. ``bench/drivers/probes/conv_fold_wall_regimes_probe.py``).
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import torch

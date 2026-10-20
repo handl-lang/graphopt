@@ -7,14 +7,14 @@ gone; every file landed by destination.  The final destination map:
 |---|---|
 | `mlopt_discovery` | `index_abstract.py`, `loop_propose.py` (the last bridge modules shipped code imported — `form_propose`/`state_reindex` depend on them, so they were de-facto prod; the 99% ratchet applies to the package union) |
 | `scripts/` | `macro_miner.py` (the `lawdata.MACROS` `--emit` bake driver, imported by `train_meta_macro_prior.py`) |
-| `bench/probes/` | all 23 probes incl. `contraction/` (12) |
-| `bench/screen/` | `exposure_screen`, `exposed_discovery`, `discovery_scale` |
-| `bench/mint/` | `atom_law_loop`, `atom_synth_loop` |
-| `bench/bridge/` | `combinator_probe`, `sharing_extract` |
-| `bench/audit/` | `grammar_probe`, `handl_differential`, `egraph_differential` |
-| `bench/kit/` | `term_hnl` |
-| `bench/train/` | the three measurement-only `train_*_policy` drivers |
-| `bench/policy/` | the six controlled-protocol drivers (`policy_baseline`, `policy_ablations`, `policy_rl_arms`, `schema_leaderboard`, `stop_policy`, `richer_features`) |
+| `bench/drivers/probes/` | all 23 probes incl. `contraction/` (12) |
+| `bench/drivers/screen/` | `exposure_screen`, `exposed_discovery`, `discovery_scale` |
+| `bench/drivers/mint/` | `atom_law_loop`, `atom_synth_loop` |
+| `bench/drivers/bridge/` | `combinator_probe`, `sharing_extract` |
+| `bench/drivers/audit/` | `grammar_probe`, `handl_differential`, `egraph_differential` |
+| `bench/drivers/kit/` | `term_hnl` |
+| `bench/drivers/train/` | the three measurement-only `train_*_policy` drivers |
+| `bench/drivers/policy/` | the six controlled-protocol drivers (`policy_baseline`, `policy_ablations`, `policy_rl_arms`, `schema_leaderboard`, `stop_policy`, `richer_features`) |
 | `tests/fixtures/handl-spike/` | the committed `fragments/`/`fragments-all/` peer-test fixtures (`scripts/dump_fragments.py` regenerates them there) |
 | `packages/mlopt-handl-peer/` | the PyO3 spike (path deps unchanged — same depth) |
 | `packages/mlopt-experiments/` | the paper's evidence crate (was root `experiments/`; relative paths to `mlopt-kit` / sibling checkouts re-anchored) |
@@ -80,7 +80,7 @@ Reference updates landed with the moves:
 - `lab/probes/weightspace_fold_probe.py`,
   `lab/probes/conv_bn_fold_synth_probe.py` — the by-path
   `importlib` loaders repointed `lab/audit/` → `scripts/`.
-- Doc references: `lawdata/weights.py` (6 sites), `open_game.py` (2),
+- Doc references: `lawdata/game/weights.py` (6 sites), `open_game.py` (2),
   `mlopt_torch/contraction_policy.py` (2 — incl. a stale `tools/`
   ref), `tests/test_discovery_{meta,open}_prior.py`, `AGENTS.md`.
 - `scripts/dump_fragments.py` still defaults its output into
@@ -110,7 +110,7 @@ admission loop) are active research with no shipped artifact yet.
 **`macro_miner.py` + `macro_moves.py` are owned by a concurrent
 promotion** — classified only here: `macro_moves.py` is the `Macro`/
 `legal_with_macros` machinery (prod machinery — a promote candidate;
-a `mlopt_discovery.macro_moves` module + `lawdata/macros.py` were
+a `mlopt_discovery.macro_moves` module + `lawdata/laws/macros.py` were
 already in flight in the working tree when this landed), and
 `macro_miner.py` is its minting driver (prod-generating — the minted
 macros feed the macro prior bake).  `scripts/train_meta_macro_prior.py`

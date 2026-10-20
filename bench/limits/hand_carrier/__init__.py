@@ -7,7 +7,7 @@ claims (``applyd``/``apply`` → ``scan``, ``om_apply`` →
 path routes it to the batched executor and the "mlopt" arm *is*
 that schedule.  This baseline prices the same extracted term
 lowered through ``sink.lower`` — the generic evaluator, leaves
-one-by-one — the arm ``bench/probes/retnet_baseline_probe.py``
+one-by-one — the arm ``bench/drivers/probes/retnet_baseline_probe.py``
 reports as ``carrier``.  The gap between this arm and the
 delivered one is what the executor routing buys; the arm is also
 the honest loss column — **0.51× vs eager at T=512**, below the

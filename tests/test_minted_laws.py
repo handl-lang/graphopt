@@ -2,7 +2,7 @@
 
 ``mlopt_core.laws.minted`` embeds the stored-closure records the
 conv+BN eval-mode fold minted as (the ``syn_*`` chain of
-``bench/probes/conv_fold_premise_pay_probe.py``) and rebuilds the
+``bench/drivers/probes/conv_fold_premise_pay_probe.py``) and rebuilds the
 transported guard at import.  These tests pin that the *shipped*
 object is the measured one — same guarded region, same fired instance,
 same extraction delta — and that the materializer refuses to degrade

@@ -1,6 +1,6 @@
 """Tests for ``bench.common.calibrate`` and the round-8 split wall.
 
-The calibrators back ``bench/policy/stop_calibrated.py`` — Platt
+The calibrators back ``bench/drivers/policy/stop_calibrated.py`` — Platt
 scaling and isotonic regression fitted on the *train* pages'
 out-of-fold predictions, applied to held-out scores.  These cover
 the fit/predict contract, the isotonic monotone property, and the
@@ -209,7 +209,7 @@ def test_calibration_metrics_keys():
 
 
 # ---------------------------------------------------------------------------
-#  The no-peek split seam in bench/policy/stop_calibrated.py
+#  The no-peek split seam in bench/drivers/policy/stop_calibrated.py
 # ---------------------------------------------------------------------------
 
 
@@ -220,11 +220,11 @@ def test_scores_for_reads_only_the_given_candidates():
     a spy dict proves no held-out key is ever read, so the train /
     held-out wall holds at the fit, not just by convention.
     """
-    sys.path.insert(0, str(_REPO / "bench" / "policy"))
+    sys.path.insert(0, str(_REPO / "bench" / "drivers" / "policy"))
     try:
         import stop_calibrated as sc
     finally:
-        sys.path.remove(str(_REPO / "bench" / "policy"))
+        sys.path.remove(str(_REPO / "bench" / "drivers" / "policy"))
 
     class _Cand:  # ``og._value_key`` reads label + repr(lhs/rhs)
         def __init__(self, label, lhs, rhs):
@@ -252,11 +252,11 @@ def test_scores_for_reads_only_the_given_candidates():
 
 def test_fit_calibrators_ignores_extra_scores():
     """The fit is a pure function of the train arrays it is given."""
-    sys.path.insert(0, str(_REPO / "bench" / "policy"))
+    sys.path.insert(0, str(_REPO / "bench" / "drivers" / "policy"))
     try:
         import stop_calibrated as sc
     finally:
-        sys.path.remove(str(_REPO / "bench" / "policy"))
+        sys.path.remove(str(_REPO / "bench" / "drivers" / "policy"))
 
     scores = {"useful": [0.1, 0.2, 0.7, 0.9], "pays": [0.2] * 4}
     labels = {"useful": [0.0, 0.0, 1.0, 1.0], "pays": [0.0] * 4}

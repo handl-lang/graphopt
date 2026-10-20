@@ -1,6 +1,6 @@
 # Macro-action minting — new *moves* the way laws are minted
 
-**Date:** 2026-10-19 · **Scripts:** `bench/mint/macro_moves.py` (the
+**Date:** 2026-10-19 · **Scripts:** `bench/drivers/mint/macro_moves.py` (the
 `"macro"` handler + offer seam), `scripts/macro_miner.py` (miner +
 eval) · **Seed:** 0 throughout · **Runner:**
 
@@ -116,14 +116,14 @@ the trained prior on mean reward (+0.088 vs −0.056).
 
 ## Retraining the prior on the macro-extended board — does the learned arm pick macros?
 
-**Date:** 2026-10-19 · **Script:** `bench/train/train_meta_macro_prior.py`
+**Date:** 2026-10-19 · **Script:** `bench/drivers/train/train_meta_macro_prior.py`
 (mines off `gen_cases(0, 24)` train cases only, then retrains cold via
 `train_meta_prior`'s loop against `legal_with_macros(cap=8)` — the
 shipped prior's weights untouched during the run) · **Seed:** 0 ·
 **Runner:**
 
 ```bash
-timeout 1800 .venv/bin/python bench/train/train_meta_macro_prior.py \
+timeout 1800 .venv/bin/python bench/drivers/train/train_meta_macro_prior.py \
     --json /tmp/meta_macro.json      # ~16 s at the stated budget
 ```
 

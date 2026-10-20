@@ -1,6 +1,6 @@
 # Player leaderboard
 
-Every registered `players/` module on every board it can play, under one paired protocol: identical held-out cases, identical memoized oracle verdicts on `open` (per-candidate seeds replayed to every arm — see `bench/policy/policy_baseline.py`), identical contraction instances scored by one cost model.  **ratio** is the contraction board's cost/baseline figure; the *notes* column carries the qualitative flags (drain artifacts, premature stops, unsupported boards) that the numbers alone hide.
+Every registered `players/` module on every board it can play, under one paired protocol: identical held-out cases, identical memoized oracle verdicts on `open` (per-candidate seeds replayed to every arm — see `bench/drivers/policy/policy_baseline.py`), identical contraction instances scored by one cost model.  **ratio** is the contraction board's cost/baseline figure; the *notes* column carries the qualitative flags (drain artifacts, premature stops, unsupported boards) that the numbers alone hide.
 
 - date: 2026-10-20T00:00:14+00:00 · git: `2d6e5e8` (dirty) · torch 2.14.0+cu130 on cpu · seed 0
 - players: `all-registered`

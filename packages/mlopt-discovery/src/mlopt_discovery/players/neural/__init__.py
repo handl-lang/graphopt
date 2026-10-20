@@ -37,7 +37,7 @@ SPECS: tuple[PlayerSpec, ...] = (
         train=(
             "trained in the run — train_rule_value(BCE) on the "
             "held-in pages' memoized verdicts "
-            "(bench/policy/policy_baseline.py protocol)"
+            "(bench/drivers/policy/policy_baseline.py protocol)"
         ),
         artifact="— (no shipped weights; trained per comparison)",
         record=(

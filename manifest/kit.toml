@@ -132,7 +132,7 @@ artifact = "mlopt-kit's hnl/conv_bn.hnl — resolved in-tree (packages/mlopt-kit
 [[experiment]]
 name = "conv-fold-premise-pay"
 kind = "python"
-run = "cd $MLOPT_DIR && .venv/bin/python bench/probes/conv_fold_premise_pay_probe.py"
+run = "cd $MLOPT_DIR && .venv/bin/python bench/drivers/probes/conv_fold_premise_pay_probe.py"
 produces = "the gauntlet account for the minted composite: guard transport, truth (guarded eval + premise-anchored derivability), typed pay, novelty"
 note = "runs inside a mlopt checkout (MLOPT_DIR); the probe is mlopt's own, invoked — not copied"
 

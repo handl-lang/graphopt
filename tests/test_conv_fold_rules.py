@@ -4,7 +4,7 @@
 The conv twin of ``linear_channel_scale`` (and its shift sibling): the
 ``conv2d``-headed anchors ``synthesize_rules`` was structurally unable
 to mint while no bank rule named the op — gate A of
-``bench/probes/conv_bn_fold_synth_probe.py`` /
+``bench/drivers/probes/conv_bn_fold_synth_probe.py`` /
 ``project/retros/conv-bn-fold-synth.md``.
 
     conv2d(x, W, b) · ŝ  =  conv2d(x, W∘ŝ′, b∘s)     ŝ ~ (1, C, 1, 1)

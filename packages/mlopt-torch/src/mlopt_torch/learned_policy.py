@@ -222,7 +222,7 @@ def train_rule_value(
     *labels* overrides the derived target with an explicit per-sample
     float vector (aligned with ``samples``) — e.g. a verdict label the
     ``RuleSample`` row does not carry, like the open game's ``useful``
-    tier (``bench/policy/stop_policy.py`` round 5).  Explicit labels are fit
+    tier (``bench/drivers/policy/stop_policy.py`` round 5).  Explicit labels are fit
     under BCE regardless of *binary*.  *pos_weight* is the
     ``BCEWithLogitsLoss`` positive-class weight — the standard
     ``neg/pos`` rebalance for a rare-positive label (a ~1% base rate

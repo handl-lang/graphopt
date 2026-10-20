@@ -14,7 +14,7 @@ branches in the split modules:
   non-memo cost functions) and its per-group fuse/decline decision
   (exhaustive ``{0,1}^G`` subsets, the unextractable-subset + bounded
   drop-one-group fallback arms, and the four suboptimal draws of
-  ``bench/probes/coordination_probe.py``).
+  ``bench/drivers/probes/coordination_probe.py``).
 - ``proof.py`` — ``_oldest_term``/``_app_for_member``/``_resolve_subst``
   failure arms, ``_connect`` budget stubs + expansion fallbacks +
   congruence/edge/stub strategy, ``_edge_path`` exhaustion and
@@ -471,7 +471,7 @@ def test_extract_paired_unextractable_subset_returns_none():
     assert eg.extract_paired(cid, count_cost, [{cid: node}]) is None
 
 
-# --- per-group coordination (bench/probes/coordination_probe.py) ----------------
+# --- per-group coordination (bench/drivers/probes/coordination_probe.py) ----------------
 
 
 def _lin(x: str, w: str) -> Op:

@@ -50,7 +50,7 @@ binds a constant as a **parameter wire**, so **no new IR node kind** is
 needed (the presentation already has first-class wires and the ``Loop``
 combinator; a parameter is just a wire).
 
-The measurement lives in ``bench/bridge/combinator_probe.py``
+The measurement lives in ``bench/drivers/bridge/combinator_probe.py``
 (``--abstract-index``); the reading is in
 ``project/retros/gate3-parametric-abstraction.md``.
 """

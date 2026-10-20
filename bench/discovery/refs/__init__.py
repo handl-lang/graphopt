@@ -78,7 +78,7 @@ class _ChunkedRetentionRef(nn.Module):
     Intra-chunk ``(QKᵀ ⊙ D)V`` plus a decayed cross-chunk state
     recurrence — the known-good chunked impl the carrier is measured
     against (fp64; no stability rescale, same as the probe's
-    ``paper-eqn`` arm in ``bench/probes/retnet_baseline_probe.py``).
+    ``paper-eqn`` arm in ``bench/drivers/probes/retnet_baseline_probe.py``).
     """
 
     def __init__(self, src: nn.Module, chunk: int = 16) -> None:

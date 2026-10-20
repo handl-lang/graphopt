@@ -2,7 +2,7 @@
 
 The frontier the kit existed for: a mlopt *term* — the same object the
 e-graph rewrites — emitted as a `.hnl` program and evaluated through
-the assembled runtime by ``bench/kit/term_hnl.py``, over the compiled
+the assembled runtime by ``bench/drivers/kit/term_hnl.py``, over the compiled
 ``hnl-run`` subprocess door (``packages/mlopt-kit/src/bin/hnl-run.rs``).
 
 What this proves:
@@ -46,7 +46,7 @@ from mlopt_core.cost.params import dag_cost
 from mlopt_core.ir import Op, Param, TensorType, Var
 from mlopt_core.laws import CONV_FOLD_RULES
 
-from bench.kit import term_hnl as kh
+from bench.drivers.kit import term_hnl as kh
 
 pytestmark = pytest.mark.e2e
 

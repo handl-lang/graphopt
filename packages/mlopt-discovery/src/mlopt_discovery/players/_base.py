@@ -678,7 +678,7 @@ class LearnedPlayer(LinearPolicy):
         *pool* (``RelFeats`` — ``a:score_rank``/``a:score_rel``) or
         emit terms outside the ranker's vocabulary (``x:score:*``) do
         not figure here — the in-episode ordering uses them; the
-        page-aware AP probe in ``bench/policy/richer_features.py`` prices them.
+        page-aware AP probe in ``bench/drivers/policy/richer_features.py`` prices them.
         """
         if self._spec.rank is None:
             raise ValueError("this domain ships no candidate ranker")

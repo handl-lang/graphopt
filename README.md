@@ -81,7 +81,7 @@ lift (export → IR)  →  e-graph + gauntlet  →  lower (verified module)
   numerically verified against the source (fp64).
 - **Handl composition.**  `packages/mlopt-kit` assembles the
   handl-language stack as dependencies — mlopt terms emit as `.hnl`
-  programs (`bench/kit/term_hnl.py`) and evaluate through the kit's
+  programs (`bench/drivers/kit/term_hnl.py`) and evaluate through the kit's
   `hnl-run` door, so an optimization *decision* is priced by the same
   runtime that executes the term.
 
@@ -92,7 +92,7 @@ uv sync                                                  # the dev environment
 
 # the flagship, three surfaces
 .venv/bin/python -m pytest tests/test_kit_bridge.py -q   # 8 e2e tests (~27 s; builds hnl-run if absent)
-.venv/bin/python bench/probes/conv_fold_premise_pay_probe.py   # mint → transport → truth → pay → gauntlet (~13 s)
+.venv/bin/python bench/drivers/probes/conv_fold_premise_pay_probe.py   # mint → transport → truth → pay → gauntlet (~13 s)
 cargo test -p mlopt-kit                                 # the Rust consumer, 21 tests
 
 # the day-to-day gate

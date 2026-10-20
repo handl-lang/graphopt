@@ -9,6 +9,10 @@ Layout:
   intent).
 * ``bench.registry`` — the suite catalog the CLI drives.
 * ``bench.cli`` — ``python -m bench``.
+* ``bench.drivers`` — the dissolved ``lab/``: research drivers
+  (``probes`` / ``policy`` / ``screen`` / ``mint`` / ``bridge`` /
+  ``audit`` / ``kit`` / ``train``) that run standalone and write
+  result documents, not ``baselines/`` rows (plan 0032 lane C).
 
 Run ``python -m bench list`` to see the catalog.
 """

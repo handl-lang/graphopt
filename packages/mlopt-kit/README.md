@@ -93,7 +93,7 @@ shape as `hnl-run`: a JSON run *spec* (terms, declarative rules, run
 options, a per-op cost table, optional `check_terms`) on stdin, a
 canonical run *report* on stdout. The report is engine-independent —
 classes compare by Weisfeiler-Lehman signature, never by internal id —
-because the consumer is `bench/audit/egraph_differential.py` /
+because the consumer is `bench/drivers/audit/egraph_differential.py` /
 `tests/test_egraph_differential.py`: a Python↔Rust *differential*
 that runs the same fixtures through `mlopt_core.egraph.EGraph` and
 `handl-egraph` and asserts identical structure, provenance, and
@@ -115,7 +115,7 @@ echo '{"terms":[{"leaf":"x"}]}' | target/debug/egraph-run -
 (or a file path) evaluates through `CatoptKit` and the
 `serde_json::Value` boundary form prints on stdout
 (`{"__tensor__": …}` for a tensor). It is deliberately program-generic
-— the emitted-terms path (`bench/kit/term_hnl.py`, which renders mlopt
+— the emitted-terms path (`bench/drivers/kit/term_hnl.py`, which renders mlopt
 e-graph terms as `.hnl` and shells this binary) and the hand-written
 `hnl/` modules go through the same door. `--repeat N` evaluates the
 source N times inside one kit so a per-call cost is measurable —

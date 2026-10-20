@@ -70,5 +70,5 @@ transport, premise-anchored truth, typed pay, novelty) lives in mlopt
 and is *invoked*, not copied:
 
 ```bash
-cd "$MLOPT_DIR" && .venv/bin/python bench/probes/conv_fold_premise_pay_probe.py
+cd "$MLOPT_DIR" && .venv/bin/python bench/drivers/probes/conv_fold_premise_pay_probe.py
 ```

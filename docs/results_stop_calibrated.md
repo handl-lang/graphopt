@@ -1,13 +1,13 @@
 # The stopping policy, round 8 — calibrate the predictor first
 
-**Date:** 2026-10-20 · **Script:** `bench/policy/stop_calibrated.py`
+**Date:** 2026-10-20 · **Script:** `bench/drivers/policy/stop_calibrated.py`
 (new — the `stop_valuelabel.py` harness with a calibration stage:
 `bench/common/calibrate.py` `PlattCal` / `IsotonicCal`, fit on the
 train pages' OOF predictions, judged on held-out) · **Seed:** 0 ·
 **Runner:**
 
 ```bash
-timeout 1800 .venv/bin/python bench/policy/stop_calibrated.py \
+timeout 1800 .venv/bin/python bench/drivers/policy/stop_calibrated.py \
     --json /tmp/cal.json            # ~5.5 min (155 s memoization,
                                     #  5.7 s predictors, <0.1 s fits)
 ```

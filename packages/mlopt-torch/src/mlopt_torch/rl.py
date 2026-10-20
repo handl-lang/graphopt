@@ -167,7 +167,7 @@ def _advantage(returns: torch.Tensor) -> torch.Tensor:
     """Return the per-episode standardized advantage — *legacy*.
 
     Retained as a reference for the lab's regression-control arm
-    (``bench/policy/policy_rl_arms.py``, ``adv_mode="per-ep"``); the shipped
+    (``bench/drivers/policy/policy_rl_arms.py``, ``adv_mode="per-ep"``); the shipped
     recipe no longer uses it.  Centering each episode's own returns
     discards the cross-episode reward *level*: on sparse-reward boards
     a zero-return absorbing action (``stop``) sits *above* the episode
@@ -199,7 +199,7 @@ class EmaBaseline:
 
     This is domain-agnostic: it reads only the returns tensor, so the
     same object serves ``SearchEnv`` training and the open-domain
-    ``OpenArena`` port in ``bench/policy/policy_rl_arms.py``.
+    ``OpenArena`` port in ``bench/drivers/policy/policy_rl_arms.py``.
     """
 
     def __init__(

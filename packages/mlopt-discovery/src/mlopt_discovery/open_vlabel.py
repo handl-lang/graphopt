@@ -13,7 +13,7 @@ one step further: the injected per-candidate value ``v(c)`` is an
 *expected payoff in reward units* (the driver feeds
 ``p(label)·payoff`` — e.g. ``p_useful·1.0``, or the two-net
 ``p_useful·1.0 + max(p_pays - p_useful, 0)·0.2`` expected-tier
-composite ``bench/policy/stop_valuelabel.py`` builds), and the stop
+composite ``bench/drivers/policy/stop_valuelabel.py`` builds), and the stop
 row wants that expectation *net of the evals it would cost*:
 
 * ``x:stop:vl_best`` — ``max_pending v(c)``: the expected payoff of

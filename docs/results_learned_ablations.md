@@ -1,10 +1,10 @@
 # Learned-policy ablations
 
-**Date:** 2026-10-19 · **Script:** `bench/policy/policy_ablations.py` · **Seed:** 0
+**Date:** 2026-10-19 · **Script:** `bench/drivers/policy/policy_ablations.py` · **Seed:** 0
 throughout · **Runner:**
 
 ```bash
-timeout 1800 .venv/bin/python bench/policy/policy_ablations.py \
+timeout 1800 .venv/bin/python bench/drivers/policy/policy_ablations.py \
     --json /tmp/policy_ablations.json
 ```
 

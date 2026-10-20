@@ -20,7 +20,7 @@ it:
   held-out **delta vs the parent spec** it started from.
 
 The nested evaluation is the leaderboard's own protocol
-(``bench/policy/schema_leaderboard.py`` — equal small budget, cold prior,
+(``bench/drivers/policy/schema_leaderboard.py`` — equal small budget, cold prior,
 paired draws): the ``meta`` objective trains on
 ``meta_player.gen_cases(seed)`` and scores on ``gen_cases(seed +
 7919)``; the ``open`` objective trains on even pages and scores on

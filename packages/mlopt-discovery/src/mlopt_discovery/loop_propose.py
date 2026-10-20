@@ -30,7 +30,7 @@ THE SEARCH
     ADR-0009 stage-4 work — this module measures whether that work has
     a target at all.
 
-The measurement lives in ``bench/bridge/combinator_probe.py``
+The measurement lives in ``bench/drivers/bridge/combinator_probe.py``
 (``--propose-loop``); the honest reading of the gate-3 numbers is in
 ``project/adrs/0008-combinator-presentation.md``.
 """

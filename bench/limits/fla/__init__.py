@@ -2,7 +2,7 @@
 
 fla-org's ``chunk_retention`` is the kernel-level floor the RetNet
 carrier is honestly measured against: **~7–11× ahead** of the fused
-carrier in ``bench/probes/retnet_baseline_probe.py`` — the gap the
+carrier in ``bench/drivers/probes/retnet_baseline_probe.py`` — the gap the
 "limits" table exists to keep visible.  The kernels are fp32 Triton
 (no fp64, per-head decay and ``1/√d`` scaling baked in), so this is
 a *speed/memory* baseline — numerics intentionally differ from the
@@ -36,7 +36,7 @@ SPEC = BaselineSpec(
     record=(
         "~7–11× ahead of the fused carrier — kernel-level: fp64 "
         "GEMMs + a materialized score tensor on our side "
-        "(bench/probes/retnet_baseline_probe.py)"
+        "(bench/drivers/probes/retnet_baseline_probe.py)"
     ),
 )
 

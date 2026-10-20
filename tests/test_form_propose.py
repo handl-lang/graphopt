@@ -163,7 +163,7 @@ def test_real_winner_gate3():
     )
     from mlopt_core.cost import flops_cost
 
-    from bench.probes import om_shared_state_probe as osp
+    from bench.drivers.probes import om_shared_state_probe as osp
 
     t, k = 64, 4
     reach, reassoc = om_shared_state_stages(k)
@@ -221,7 +221,7 @@ def test_boundary_residual_is_a_value_mismatch():
     from mlopt_torch.torch_bridge import export_to_ir
 
     from mlopt_discovery.index_abstract import block_outputs
-    from bench.probes import om_shared_state_probe as osp
+    from bench.drivers.probes import om_shared_state_probe as osp
 
     t, k = 64, 4
     reach, reassoc = om_shared_state_stages(k)

@@ -486,7 +486,7 @@ def _profile_with(corrections=None, measured_ns=None):
     ``tflops``/``gbps``/``launch_us``/``dispatch_us``/``leaf_eval_us``
     match the built-in fallbacks exactly, so the only delta vs a
     ``None`` profile is the measured-feedback table — the same
-    isolation ``bench/probes/executor_cost_probe.py``'s emitted profile uses.
+    isolation ``bench/drivers/probes/executor_cost_probe.py``'s emitted profile uses.
     """
     from mlopt_core.profile import TargetProfile
 
@@ -596,7 +596,7 @@ def test_search_profile_marker_reaches_carrier_upgrade(monkeypatch):
     ``shape_bucket`` into ``_delivered_cost``, and
     LinearRecurrence's batched apply member — which the uncalibrated
     comparison swaps IN over the delivered-aware greedy ``add`` pick
-    (the SSM inversion ``bench/probes/executor_cost_probe.py`` measures) —
+    (the SSM inversion ``bench/drivers/probes/executor_cost_probe.py`` measures) —
     is declined once the profile prices the carrier delivery slower.
     """
     import mlopt_orchestrator.optimize as O

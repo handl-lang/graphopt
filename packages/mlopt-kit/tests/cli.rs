@@ -1,5 +1,5 @@
 //! The `hnl-run` subprocess surface — the seam the Python bridge
-//! (`bench/kit/term_hnl.py`) drives. The binary evaluates a `.hnl`
+//! (`bench/drivers/kit/term_hnl.py`) drives. The binary evaluates a `.hnl`
 //! program through the assembled kit and prints the
 //! `serde_json::Value` boundary form (`{"__tensor__": …}` for a
 //! tensor) on stdout; failures exit non-zero with the engine error on

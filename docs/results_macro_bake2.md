@@ -1,15 +1,15 @@
 # Macro-aware features — the bake re-run the blindness doc prescribed
 
-**Date:** 2026-10-19 · **Scripts:** `bench/mint/macro_moves.py`
+**Date:** 2026-10-19 · **Scripts:** `bench/drivers/mint/macro_moves.py`
 (`instantiate` now carries the miner's evidence on
 `params["macro"]`), `mlopt_discovery/meta_player.py` (the new
-`meta:macro` featurizer part), `bench/train/train_meta_macro_prior.py`
+`meta:macro` featurizer part), `bench/drivers/train/train_meta_macro_prior.py`
 · **Seed:** 0 throughout · **Runner:**
 
 ```bash
-timeout 1800 .venv/bin/python bench/train/train_meta_macro_prior.py \
+timeout 1800 .venv/bin/python bench/drivers/train/train_meta_macro_prior.py \
     --epochs 30 --json /tmp/meta_macro_30.json   # ~25 s
-timeout 1800 .venv/bin/python bench/train/train_meta_macro_prior.py \
+timeout 1800 .venv/bin/python bench/drivers/train/train_meta_macro_prior.py \
     --epochs 120 --json /tmp/meta_macro_120.json # ~90 s
 ```
 
@@ -134,7 +134,7 @@ layer this doc added is exactly what that next run needs.
 `mlopt_discovery/macro_moves.py` (the `"macro"` handler, `Macro`,
 `instantiate`/`viable`, `offered`, `legal_with_macros`), the minted
 8-row table baked as `lawdata.MACROS`
-(`packages/mlopt-discovery/src/mlopt_discovery/lawdata/macros.py`,
+(`packages/mlopt-discovery/src/mlopt_discovery/lawdata/laws/macros.py`,
 regenerate with `scripts/macro_miner.py --emit`), and
 `meta_arena.legal_actions` itself offers the viable minted lines to
 **every** player — scripted, random, greedy, learned.  The lab-only

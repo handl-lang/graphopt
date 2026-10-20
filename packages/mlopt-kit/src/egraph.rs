@@ -8,7 +8,7 @@
 //! (`term_from_data`/`term_to_data` — `{"mvar"}`/`{"leaf"}`/`{"op"}`),
 //! the same scheme `mlopt_core.ir.term_to_data` canonized.
 //!
-//! The consumer is the differential driver `bench/audit/egraph_differential.py`
+//! The consumer is the differential driver `bench/drivers/audit/egraph_differential.py`
 //! (and `tests/test_egraph_differential.py`): it hands the same
 //! fixture — terms, declarative rules, run options, cost table — to the
 //! Python `EGraph` and to `egraph-run`, then compares the reports

@@ -210,7 +210,7 @@ cross-chunk state.  The spelled fixture is the intake zoo's
 `_ChunkedRetention` (`(QKᵀ ⊙ D)V`, decay built in-graph); the engine
 lifts it to the `om_decayed` carrier — measured parity with the
 paper's own chunked impl, faster under graph replay
-(bench/probes/retnet_baseline_probe.py).
+(bench/drivers/probes/retnet_baseline_probe.py).
 
 
 - signals: law:om_decayed_lift, op:om_decayed

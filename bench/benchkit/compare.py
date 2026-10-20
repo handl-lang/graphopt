@@ -32,6 +32,48 @@ def _cells_by_name(payload: dict) -> dict[str, dict]:
     return {c["name"]: c for c in payload.get("cells", [])}
 
 
+def _compare_table(
+    record: dict, baseline: dict, threshold: float
+) -> list[Regression]:
+    """Compare a ``kind: "table"`` record against its pinned baseline.
+
+    Table cells carry ``metrics`` (``{metric: value}``) rather than
+    ``median_s``, and a regression is direction-aware: the baseline's
+    ``directions`` table says which way each metric is *bad* —
+    ``"up"`` (a rise regresses: costs, error rates) or ``"down"`` (a
+    drop regresses: ratios, rewards).  A metric missing from the
+    table compares as ``"up"`` — a rise is the suspicious move.
+    """
+    directions = baseline.get("directions", {})
+    base_cells = _cells_by_name(baseline)
+    regressions: list[Regression] = []
+    for cell in record.get("cells", []):
+        base = base_cells.get(cell["name"])
+        if base is None:
+            continue
+        for metric, now_v in cell.get("metrics", {}).items():
+            base_v = base["metrics"].get(metric)
+            if not base_v or not now_v:
+                continue
+            ratio = now_v / base_v
+            bad = (
+                ratio < 1 - threshold
+                if directions.get(metric, "up") == "down"
+                else ratio > 1 + threshold
+            )
+            if bad:
+                regressions.append(
+                    Regression(
+                        case=cell["name"],
+                        variant=metric,
+                        base_ms=base_v,
+                        now_ms=now_v,
+                        ratio=ratio,
+                    )
+                )
+    return regressions
+
+
 def compare_baseline(
     record: dict, baseline_path: str | Path, threshold: float = 0.05
 ) -> list[Regression]:
@@ -40,8 +82,12 @@ def compare_baseline(
     Cells are matched by ``case`` name; variants by name.  A cell
     present in the baseline but missing from the run is ignored (a
     suite may legitimately shrink its sweep under ``--quick``).
+    ``kind: "table"`` baselines (the pinned docs tables) compare on
+    their ``metrics`` under the recorded directions instead.
     """
     baseline = json.loads(Path(baseline_path).read_text())
+    if baseline.get("kind") == "table":
+        return _compare_table(record, baseline, threshold)
     base_cells = _cells_by_name(baseline)
     regressions: list[Regression] = []
     for cell in record.get("cells", []):
@@ -91,12 +137,16 @@ def expectation_gaps(baselines_dir: str | Path) -> list[str]:
 
     gaps: list[str] = []
     for path in sorted(Path(baselines_dir).glob("*.json")):
+        payload = json.loads(path.read_text())
+        if payload.get("kind") == "table":
+            # Pinned docs tables are not registry suites — the
+            # expectation check does not apply to them.
+            continue
         try:
             spec = registry.get(path.stem)
         except KeyError:
             gaps.append(f"{path.stem}: not in the registry")
             continue
-        payload = json.loads(path.read_text())
         present = {
             f["verdict"].upper() for f in payload.get("findings", [])
         }

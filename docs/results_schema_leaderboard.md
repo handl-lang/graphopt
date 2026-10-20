@@ -1,12 +1,12 @@
 # Feature-schema leaderboard
 
-**Date:** 2026-10-19 · **Script:** `bench/policy/schema_leaderboard.py` · **Seed:** 0
+**Date:** 2026-10-19 · **Script:** `bench/drivers/policy/schema_leaderboard.py` · **Seed:** 0
 throughout · **Runner:**
 
 ```bash
-timeout 1800 .venv/bin/python bench/policy/schema_leaderboard.py --domain meta \
+timeout 1800 .venv/bin/python bench/drivers/policy/schema_leaderboard.py --domain meta \
     --json /tmp/schema_meta.json    # ~161 s
-timeout 1800 .venv/bin/python bench/policy/schema_leaderboard.py --domain open \
+timeout 1800 .venv/bin/python bench/drivers/policy/schema_leaderboard.py --domain open \
     --json /tmp/schema_open.json    # ~167 s
 ```
 

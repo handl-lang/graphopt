@@ -25,7 +25,7 @@ Run::
     .venv/bin/python scripts/macro_miner.py --mine-cases 24 --json /tmp/macro.json
     .venv/bin/python scripts/macro_miner.py --emit   # MACROS literal
 
-``--emit`` prints the minted set as the ``lawdata.macros.MACROS``
+``--emit`` prints the minted set as the ``lawdata.laws.macros.MACROS``
 assignment literal — the bake path for the shipped offer set (same
 convention as the ``train_*_prior.py`` weight emits).
 """
@@ -452,7 +452,7 @@ def _public_name(macro: Macro) -> str:
 
 
 def _emit_literal(macros: list[Macro]) -> str:
-    """Render the minted set as the ``lawdata.macros.MACROS`` literal.
+    """Render the minted set as the ``lawdata.laws.macros.MACROS`` literal.
 
     Same convention as ``train_*_prior.py``'s weight emits: the
     printed assignment bakes verbatim into the data module.  Each
@@ -551,7 +551,7 @@ def main(argv: list[str] | None = None) -> int:
         f"→ {'YES' if hits['rediscovered'] else 'NO'}"
     )
     if args.emit:
-        print("\n== lawdata.macros literal ==")  # stdout-compat
+        print("\n== lawdata.laws.macros literal ==")  # stdout-compat
         print(_emit_literal(macros))  # stdout-compat
         return 0
 

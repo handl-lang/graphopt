@@ -15,7 +15,7 @@ ADR-0004 "construction operations" that *build* declared objects for
 the evidence store to admit), the ADR-0008 combinator substrate
 (:mod:`.combinator` — the IR-DAG ⇄ morphism-term bridge with the
 explicit-Δ sharing presentation and the ``loop`` trace), the
-gate-3 proposers promoted out of ``bench/bridge/``
+gate-3 proposers promoted out of ``bench/drivers/bridge/``
 (:mod:`.form_propose` — the e-graph-as-oracle anti-unification that
 synthesises ``unroll(step, n)`` per state chain, and
 :mod:`.state_reindex` — the law family closing the family boundary

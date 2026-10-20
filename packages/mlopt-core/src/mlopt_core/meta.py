@@ -1310,7 +1310,7 @@ def synthesize_rules(
     ``batch_norm(conv2d(x,W,b),…) → conv2d(x,W′,b′)``, a depth-5 chain —
     mints in 4 rounds over ``ALL_RULES`` + the BN/conv/pointwise
     families (26→61→242→944 emitted;
-    ``bench/probes/conv_bn_fold_synth_probe.py`` gate B3).  The loop ends
+    ``bench/drivers/probes/conv_bn_fold_synth_probe.py`` gate B3).  The loop ends
     early when a round emits nothing or *on_round* vetoes; ``rounds=1``
     is exactly the single-pass behaviour every existing caller sees.
 

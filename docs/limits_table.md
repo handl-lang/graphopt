@@ -41,8 +41,8 @@ Every registered opponent in `bench/limits/` crossed with the named-optimization
 ## The registered roster
 
 - `eager` (eager) — PyTorch eager — the spelled module, as written · all cases · record: launch-bound crossover: carriers lose to eager below ~T=512 (0.51×, docs/results.md)
-- `fla` (kernel) — FLA chunk_retention — the Triton-kernel floor · cases: retnet_chunkwise · record: ~7–11× ahead of the fused carrier — kernel-level: fp64 GEMMs + a materialized score tensor on our side (bench/probes/retnet_baseline_probe.py)
+- `fla` (kernel) — FLA chunk_retention — the Triton-kernel floor · cases: retnet_chunkwise · record: ~7–11× ahead of the fused carrier — kernel-level: fp64 GEMMs + a materialized score tensor on our side (bench/drivers/probes/retnet_baseline_probe.py)
 - `hand_carrier` (carrier) — carrier term, generic lowering (no batched schedule) · all cases · record: 0.51× vs eager below the T=512 crossover — the carrier without its level-batched schedule (docs/results.md)
 - `opt_einsum` (order) — opt_einsum greedy — the contraction-ordering baseline · cases: weight_chain_fold · record: oe-greedy is the contraction board's floor — the engine's ordering players tie its cost under the shared pair model (bench/players leaderboard)
-- `paper_impl` (impl) — known-good impl — the case's registered ref · all cases · record: paper chunkwise ties the fused carrier (2.08 vs 2.12 ms T=2048; faster under graph replay) — bench/probes/retnet_baseline_probe.py
+- `paper_impl` (impl) — known-good impl — the case's registered ref · all cases · record: paper chunkwise ties the fused carrier (2.08 vs 2.12 ms T=2048; faster under graph replay) — bench/drivers/probes/retnet_baseline_probe.py
 - `torch_compile` (compile) — torch.compile — the Inductor pipeline · all cases · record: pointwise fusion 0.82–0.88× loss (Inductor wins); weight chain 3.96× mlopt (no fold without freezing) — docs/results.md

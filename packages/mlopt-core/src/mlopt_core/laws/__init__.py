@@ -1,5 +1,13 @@
 """mlopt_core.laws — rewrite laws and graph passes, split by domain.
 
+The machinery ↔ bank seam (plan 0032)
+------------------------------------
+
+This package holds two things that the repo split sends to *different*
+repos — the machinery is substrate, the bank is domain content:
+
+**Machinery → ``eqsat``** (the gauntlet-facing substrate; domain-free):
+
 * :mod:`mlopt_core.laws.base` — the ``R`` rewrite constructor plus the
   shared check-hook machinery (``_SHAPE_MEMO``, ``_shape_of``, small
   term predicates).
@@ -15,9 +23,29 @@
   ``law_from_data``), the ``missing_hooks`` honesty flag for
   procedural ``check``/``derive`` remainders, and ``alpha_key``, the
   structural identity the lemma store keys rows by.
+* :mod:`mlopt_core.laws.tags` — the rule-tag constants
+  (``SYMMETRY`` / ``EXPANSIVE`` / ``SUBSUMED`` / ``FUSION`` / …).
+* :mod:`mlopt_core.laws.ruleset` — :class:`RuleSet`, the composable
+  rule-set value (+/-/& algebra, ``named``/``tagged`` subsets, the
+  ``priorities`` scheduling map with ``EARLY``/``NORMAL``/``LATE``).
+  The machinery stays; the named *presets* (``SIMPLIFICATION`` /
+  ``CATEGORICAL`` / ``FUSION`` / ``SYMMETRY`` / ``CARRIERS`` /
+  ``WITH_LAYOUT`` / ``DEFAULT`` / ``FULL``) are compositions over bank
+  rows and travel with the bank.
+* :mod:`mlopt_core.laws.provenance` — the authorship registry
+  machinery: :func:`law_provenance` classifies every law as
+  human-authored or machine-admitted, registry-level rather than a
+  per-law field.  The registry travels; the *rows*
+  (``MACHINE_SHIPPED`` / ``MACHINE_STORED`` contents) name bank laws
+  and travel with the bank.
+
+**Bank → ``graphopt``** (the tensor-domain contents):
+
 * :mod:`mlopt_core.laws.tensor` — the tensor-algebra laws:
   ``SIMPLIFICATION_RULES``, ``CATEGORICAL_RULES``, ``SDPA_FOLD_RULES``,
   ``ALL_RULES`` / ``all_rules()``.
+* :mod:`mlopt_core.laws.minted` — the machine-admitted laws replayed
+  from embedded premise-closure records.
 * :mod:`mlopt_core.laws.scan` — the scan-monoid law sets: ``SCAN_LAWS``
   (dense affine carrier) and ``SCAN_DIAG_LAWS`` (diagonal-affine).
 * :mod:`mlopt_core.laws.attention` — the attention-path laws:
@@ -30,11 +58,7 @@
   into ``ALL_RULES``.
 * :mod:`mlopt_core.laws.pairing` — the non-local passes over the whole
   e-graph (pairing, weight sharing).  These are diagram-level passes,
-  not equational laws.
-* :mod:`mlopt_core.laws.provenance` — the authorship registry:
-  :func:`law_provenance` classifies every law as human-authored or
-  machine-admitted (the promoted objects and the unshipped store
-  population), registry-level rather than a per-law field.
+  not equational laws — domain heuristics, bank side.
 * :mod:`mlopt_core.laws.factored` — the factored-parameter path:
   ``offer_low_rank_factors`` detects numerically low-rank weight
   values and offers the ``(x@A)@B`` / ``linear(linear(x,A),B)``
@@ -48,14 +72,11 @@
   the compute-level fold for bitwise-equal attention heads — an
   ``sdpa`` over provably-identical heads runs on the ``k`` unique
   ones and re-expands by gather (exact, witnessed).
-* :mod:`mlopt_core.laws.tags` — the rule-tag constants
-  (``SYMMETRY`` / ``EXPANSIVE`` / ``SUBSUMED`` / ``FUSION`` / …).
-* :mod:`mlopt_core.laws.ruleset` — :class:`RuleSet`, the composable
-  rule-set value (+/-/& algebra, ``named``/``tagged`` subsets, the
-  ``priorities`` scheduling map with ``EARLY``/``NORMAL``/``LATE``),
-  and the named presets (``SIMPLIFICATION`` / ``CATEGORICAL`` /
-  ``FUSION`` / ``SYMMETRY`` / ``CARRIERS`` / ``WITH_LAYOUT`` /
-  ``DEFAULT`` / ``FULL``).
+
+The seam is documentary for now — extraction moves the bank modules
+physically (``laws/bank/`` or a sibling bank package); every name
+below stays re-exported at this root until then, so callers bind
+``mlopt_core.laws.X`` unchanged.
 
 This package is the canonical rewrite surface — the historical
 ``mlopt_core.rules`` module (and its ``mlopt.rules`` façade alias)

@@ -54,7 +54,7 @@ PROTOCOL
        obstruction (the e-graph never merged the two spellings of the
        boundary state — a saturation-reach gap, not a fold defect).
 
-The measurement lives in ``bench/bridge/combinator_probe.py``
+The measurement lives in ``bench/drivers/bridge/combinator_probe.py``
 (``--form-propose``); the reading is in
 ``project/retros/gate3-form-level-proposer.md``.
 
