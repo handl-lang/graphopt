@@ -207,6 +207,33 @@ forbidden_modules = ["torch", "mlopt_torch", "mlopt_cuda"]
 # `import mlopt_orchestrator`) is the gate that pins the laziness.
 allow_indirect_imports = true
 
+# Plan 0032 phase 1 (the API freeze): the future `gamekit` kernel —
+# the Board protocol, the player registry machinery and the scoring
+# spec — is substrate-free by design (`gamekit ⊥ eqsat`).  These leaf
+# modules may import nothing outside the stdlib: no core, no backend,
+# and not the gauntlet (`mlopt_discovery.evidence` — the measurement
+# side of the scoring seam).  The player *folders* are deliberately
+# excluded: their `make` factories bind domain machinery lazily, which
+# is the registry contract working as intended.
+[[tool.importlinter.contracts]]
+name = "the game kernel is substrate-free"
+type = "forbidden"
+source_modules = [
+    "mlopt_discovery.engine",
+    "mlopt_discovery.scoring",
+    "mlopt_discovery.players._base",
+    "mlopt_discovery.players.registry",
+]
+forbidden_modules = [
+    "mlopt_core",
+    "mlopt_torch",
+    "mlopt_carriers",
+    "mlopt_orchestrator",
+    "mlopt_cuda",
+    "mlopt_onnx",
+    "mlopt_discovery.evidence",
+]
+
 # The dependency *layers*: the graph must be acyclic apart from the
 # backend family, which is a single mutually-dependent component.
 # `mlopt_torch` and `mlopt_carriers` are one layer: the carrier

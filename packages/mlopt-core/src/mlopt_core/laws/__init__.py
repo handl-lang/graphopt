@@ -69,6 +69,7 @@ first-class values are the ``RuleSet`` presets.
 # ``mlopt_core.rules`` shim (and its ``mlopt.rules`` alias).  The
 # private names are re-exported (hence ``noqa: F401``) so
 # ``mlopt_core.laws._x`` keeps resolving, but stay out of ``__all__``.
+from mlopt_core.laws import provenance as provenance
 from mlopt_core.laws import tags as tags
 from mlopt_core.laws.attention import (  # noqa: F401
     ATTENTION_RULES,
@@ -458,6 +459,7 @@ __all__ = [
     "pair_shared_input_convs",
     "pair_shared_input_linears",
     "preset",
+    "provenance",
     "share_duplicate_attention_heads",
     "share_duplicate_param_slices",
     "share_duplicate_params",

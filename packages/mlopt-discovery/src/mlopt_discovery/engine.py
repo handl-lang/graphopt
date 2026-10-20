@@ -25,6 +25,7 @@ from typing import Any, Protocol, runtime_checkable
 __all__ = [
     "Board",
     "Report",
+    "Trajectory",
     "evaluate",
     "run_episode",
     "train_policy",
