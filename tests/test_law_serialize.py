@@ -159,7 +159,7 @@ def test_alpha_key_canonicalizer_branches():
 
 
 def test_serializability_census_of_shipped_library():
-    """Pin the honest partition of the 84 shipped laws."""
+    """Pin the honest partition of the 85 shipped laws."""
     full, need_derive, need_check, transported = [], [], [], []
     for rule in ALL_RULES:
         missing = missing_hooks(rule)
@@ -175,7 +175,7 @@ def test_serializability_census_of_shipped_library():
             need_derive.append(rule.name)
         else:
             need_check.append((rule.name, missing))
-    assert len(ALL_RULES) == 84
+    assert len(ALL_RULES) == 85
     # the authored library stays full-data: the four stragglers went
     # declarative in stage 0 of plan 0017 — glu_fold's parity on a
     # dim-mod predicate, the rms pair's trailing block on the
@@ -186,7 +186,7 @@ def test_serializability_census_of_shipped_library():
     # of the transported-composite class: ``missing_hooks`` flags what
     # the *bare* record cannot carry; the stored guard spec carries it
     # (project/retros/minted-composite-default.md).
-    assert len(full) == 83
+    assert len(full) == 84
     assert transported == ["conv_bn_fold"]
     assert need_derive == []
     assert need_check == []

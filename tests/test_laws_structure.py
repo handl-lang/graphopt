@@ -197,17 +197,20 @@ def test_laws_exports_every_rewrite():
 
     found = _iter_module_rules(laws)
     assert all(isinstance(r, Rewrite) for r in found)
-    # 80 tensor (62 + the promoted discovery set: softsign_fold, the
+    # 81 tensor (62 + the promoted discovery set: softsign_fold, the
     # transpose_noop/chunk_single view identities, the five broadcast-
     # pad/reshape/unsqueeze strips — mul_unsq_pad_l/r, sub_unsq_pad_l,
     # mul_reshape_inert_l, and the machine-admitted mul_unsq_nat
-    # (commit 9dce25e, project/retros/mul-unsq-nat.md) — the two
+    # (commit 9dce25e, project/retros/mul-unsq-nat.md) — the three
     # mask-free sdpa folds, the channel->row scale composite, and the
     # div_add_factor shared-denominator naturality —
     # project/retros/promoted-laws.md)
     # + 8 split_scalar pointwise-split rules + the opt-in
     # pointwise factor/distribute pair
     # + 6 dense-scan + 16 diagonal-scan + 77 layout + 37 attention
+    # + 8 sdpa_expand decompose rules (opt-in SDPA_EXPAND_RULES —
+    # the fused-op decompose direction, composed into the
+    # ``attention`` preset, held out of the default set)
     # + 3 batch_norm_expand family rules (opt-in BATCH_NORM_RULES —
     # ADR 0012's named content gap, held out of the default set)
     # + 60 conv output-affine absorb rules (opt-in CONV_FOLD_RULES —
@@ -215,21 +218,23 @@ def test_laws_exports_every_rewrite():
     # + 1 machine-minted verbatim composite (conv_bn_fold — the
     # conv+BN fold, shipped via mlopt_core.laws.minted)
     # rewrites.
-    assert len(found) == 285
+    assert len(found) == 294
 
 
 def test_all_rules_count_unchanged():
     # The default set excludes LAYOUT_RULES (opt-in — closure-cost
     # regression documented in laws.tensor); WITH_LAYOUT = default + 77.
-    # 84 = the verbatim-minted ``conv_bn_fold`` composite
+    # 85 = the verbatim-minted ``conv_bn_fold`` composite
     # (MACHINE_SHIPPED 11->12, project/retros/minted-composite-default.md)
-    # on top of the previous 83.
-    assert len(laws.all_rules()) == 84
+    # on top of the previous 83, plus ``sdpa_fold_mul_nomask`` — the
+    # mask-free fold family's third scale row and the mediating
+    # refold of the opt-in ``sdpa_expand`` family.
+    assert len(laws.all_rules()) == 85
     assert laws.all_rules() == laws.ALL_RULES
     assert len(laws.ALL_RULES) == (
         len(laws.SIMPLIFICATION_RULES) + len(laws.CATEGORICAL_RULES)
     )
-    assert len(laws.ALL_RULES_WITH_LAYOUT) == 161
+    assert len(laws.ALL_RULES_WITH_LAYOUT) == 162
     # each call returns a fresh list, not the shared ALL_RULES object
     assert laws.all_rules() is not laws.ALL_RULES
 
@@ -239,9 +244,10 @@ def test_collections_split_by_domain():
     # project/retros/mul-unsq-nat.md) — it ships in the default
     # SIMPLIFICATION_RULES.
     assert len(laws.SIMPLIFICATION_RULES) == 34
-    # 50 = 49 + the machine-minted ``conv_bn_fold`` composite
-    # (MINTED_RULES — project/retros/minted-composite-default.md).
-    assert len(laws.CATEGORICAL_RULES) == 50
+    # 51 = 49 + the machine-minted ``conv_bn_fold`` composite
+    # (MINTED_RULES — project/retros/minted-composite-default.md)
+    # + ``sdpa_fold_mul_nomask`` (the sdpa_expand pair's refold).
+    assert len(laws.CATEGORICAL_RULES) == 51
     assert len(laws.SCAN_LAWS) == 6
     assert len(laws.SCAN_DIAG_LAWS) == 16
     # layout: 12 unary + 4 binary pointwise commutations x 2 spellings
@@ -356,17 +362,18 @@ def test_axiom_lemma_marker_covers_all_rules():
                     r.name,
                     premise,
                 )
-    # 60 = 59 + ``conv_bn_fold``: the minted composite is an axiom by
+    # 61 = 59 + ``conv_bn_fold``: the minted composite is an axiom by
     # annotation — its derivation runs through unshipped ``syn_*``
     # intermediates the shipped-names field cannot express (the
     # premise check above requires every recorded name to resolve
     # inside ALL_RULES); the honest lineage rides ``rule.parents``.
-    assert len(kinds["axiom"]) == 60
+    # + ``sdpa_fold_mul_nomask``: the mask-free fold family's third
+    # scale row — an axiom like its siblings (its inverse,
+    # ``sdpa_expand*``, is opt-in and cannot be named a premise here).
+    assert len(kinds["axiom"]) == 61
     assert len(kinds["lemma"]) == 22
     assert len(kinds["redundant"]) == 2
     # the redundant kind rides on the tags.REDUNDANT constant
     assert {
-        r.name
-        for r in laws.ALL_RULES
-        if laws.tags.REDUNDANT in r.tags
+        r.name for r in laws.ALL_RULES if laws.tags.REDUNDANT in r.tags
     } == {"weight_distribute_matmul", "weight_factor_matmul"}

@@ -68,6 +68,22 @@ COST_FNS: dict[str, Callable] = {
 _RULE_PRESETS = {"default": None, "carrier_search": "carrier_search"}
 
 
+def _case_rules(name: str):
+    """Resolve a case's ``rules`` field to a ``search()`` argument.
+
+    ``"default_attention"`` is the composed opt-in set —
+    ``default_rules() + ATTENTION`` — the decompose-then-refuse lane:
+    the ``sdpa_expand`` family + the score-scale migration rides on
+    top of the default bank (the refold lives in DEFAULT already).
+    """
+    if name == "default_attention":
+        from mlopt_core.laws import preset as _preset
+        from mlopt_orchestrator.optimize import default_rules
+
+        return default_rules() + _preset("attention")
+    return _RULE_PRESETS.get(name, name)
+
+
 @dataclass
 class ArmResult:
     """One baseline arm's outcome for a case."""
@@ -275,7 +291,7 @@ def run_case(
     sink = TorchSink()
     source = TorchSource()
     cost_fn = COST_FNS[case.cost]
-    rules = _RULE_PRESETS.get(case.rules, case.rules)
+    rules = _case_rules(case.rules)
 
     t0 = time.time()
     try:

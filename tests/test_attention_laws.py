@@ -49,6 +49,7 @@ from mlopt_core.laws.attention import (
     _to_end,
 )
 from mlopt_core.laws.ruleset import ATTENTION, DEFAULT, PRESETS
+from mlopt_core.laws.tensor import SDPA_EXPAND_RULES
 from mlopt_torch.torch_bridge import ir_to_torch_module
 
 torch.manual_seed(0)
@@ -965,15 +966,23 @@ def test_score_scale_can_fold_into_wk_via_existing_law():
 def test_attention_preset_wiring():
     assert PRESETS["attention"] is ATTENTION
     assert preset("attention") is ATTENTION
-    assert set(ATTENTION.rules) == set(ATTENTION_RULES)
+    # the preset is the attention-path laws plus the sdpa_expand
+    # decompose family (defined beside its fold siblings in
+    # laws.tensor — the tag, not the module, marks it opt-in)
+    assert set(ATTENTION.rules) == {
+        *ATTENTION_RULES,
+        *SDPA_EXPAND_RULES,
+    }
     # opt-in only: nothing leaks into DEFAULT
     assert not (set(ATTENTION.rules) & set(DEFAULT.rules))
     # composes by name with the default set
     both = DEFAULT + ATTENTION
     assert "rope_cat_compose" in both
     assert "sdpa_fold_addmul" in both
+    assert "sdpa_expand" in both
     # every rule carries the ATTENTION tag
     assert all("attention" in r.tags for r in ATTENTION_RULES)
+    assert all("attention" in r.tags for r in SDPA_EXPAND_RULES)
 
 
 def test_attention_preset_through_optimizer():

@@ -2503,7 +2503,188 @@ SDPA_FOLD_DIV_NOMASK = R(
     tags=_FUS,
 )
 
-SDPA_FOLD_RULES += [SDPA_FOLD_NOMASK, SDPA_FOLD_DIV_NOMASK]
+#: ``+ the scale is a Const leaf (the ``S`` the mul form binds).``
+_COND_SDPA_MUL_NOMASK = ("and", _COND_SDPA_SCALED, _COND_SDPA_QV_RANK)
+
+# The mask-free fold's third scale row — ``softmax(q kᵀ · s) v`` —
+# the family gap the ``sdpa_expand`` mint lands on: ``torch`` scales
+# attention scores by *multiplication* (``q@kᵀ * s``), so the decomposed
+# form the expansion produces is the ``mul`` spelling, and no mask-free
+# fold recognised it (the ``mul`` rows existed only inside the
+# add/masked_fill family).  This is the definitional inverse of the
+# expansion and its re-fusion path: ``s`` lands in the kernel's
+# ``scale`` attr at zero runtime cost.  Same guard as
+# ``sdpa_fold_div_nomask`` (Const scale + the rank floor); the dspec
+# mints ``scale=s`` directly (mul, not the reciprocal div takes).
+SDPA_FOLD_MUL_NOMASK = R(
+    "sdpa_fold_mul_nomask",
+    Op.make(
+        "matmul",
+        Op.make("softmax", Op.make("mul", _QK_SCORES, "S"), dim="SD"),
+        "V",
+    ),
+    Op.make("sdpa", "Q", "K", "V", scale="SC"),
+    law="softmax(q kᵀ · s) v is sdpa(q, k, v, scale=s) — the mul "
+    "spelling of the mask-free scaled fold, and the re-fusion "
+    "half of the sdpa_expand pair (the mediating inverse for the "
+    "expand/fold critical pair, the silu_fold analogue).",
+    cond=_COND_SDPA_MUL_NOMASK,
+    dspec=_DSPEC_SCALE_MUL,
+    tags=_FUS,
+)
+
+SDPA_FOLD_RULES += [
+    SDPA_FOLD_NOMASK,
+    SDPA_FOLD_DIV_NOMASK,
+    SDPA_FOLD_MUL_NOMASK,
+]
+
+
+# ---------------------------------------------------------------------------
+#  SDPA expansion — the decompose direction (opt-in).
+#
+#  ``sdpa`` is opaque to the e-graph: no law can reach inside the fused
+#  call, so scale migrations, head-splitting and every spelled-attention
+#  law stop at its boundary (the measured fused-op blindness —
+#  ``docs/results.md``, BiRefNet/pointwise-fusion rows).  The expansion
+#  mints the kernel's own definition — ``softmax(q@kᵀ·s)@v`` with the
+#  ``mul`` scale spelling ``sdpa_fold_mul_nomask`` refolds — so the
+#  interior becomes an ordinary redex for the naturality/scale-migration
+#  and layout laws.
+#
+#  Soundness is the attr key-set: exact-keyset matching means the
+#  patterns below enumerate only the *benign* spellings — the no-mask,
+#  non-causal, eval-mode, non-GQA rows torch.export can emit:
+#
+#  * ``{}`` — ``F.sdpa(q, k, v)`` (defaults elided; the canonical
+#    export); implicit ``scale = 1/√d_head`` minted as a ``Const`` via
+#    the ``$leaf:`` channel (declines honestly when ``q``'s head dim
+#    is unknown — a law never mints an attr it cannot verify);
+#  * ``{scale: s}`` — the explicit-scale spelling; ``s`` is lifted
+#    verbatim into the minted ``mul`` leaf;
+#  * the retained-default tails — ``{dropout_p: 0.0}``,
+#    ``{dropout_p: 0.0, is_causal: False}``, ``{…, enable_gqa: False}``
+#    — the literal-attr values do the guarding: ``is_causal=True`` or
+#    ``dropout_p > 0`` simply never matches.
+#
+#  The 4-operand masked form and ``is_causal=True`` deliberately do not
+#  expand: a bool keep-mask vs a float additive mask is a *dtype* fact
+#  the shape-only IR cannot read, and a causal mask would have to be
+#  minted as a fresh (T,T) term — a synthesis, not a rewrite.
+#
+#  Held out of ``ALL_RULES`` — opt-in through the ``attention`` preset
+#  (the ``BATCH_NORM_RULES`` posture): the fused member is cheaper on
+#  every cost axis — one kernel vs ~5 ops over a materialised (T,T)
+#  score — so the expansion only buys *reach*, and its payoff laws
+#  (score-scale migration into a projection weight) are opt-in too.
+#  The expand/fold pair is a kept inverse pair — both directions stay
+#  reachable, extraction weighs them (``three-cell-mediator.md``).
+# ---------------------------------------------------------------------------
+
+#: The expansion's minted interior: ``softmax(q @ transpose(k,-2,-1)
+#: · SC0) @ v`` — the canonical ``(-2,-1)`` last-axes transpose and
+#: ``dim=-1`` softmax the fold family matches; ``SC0`` is the
+#: ``$leaf:``-minted scale ``Const``.
+_SDPA_EXPANDED = Op.make(
+    "matmul",
+    Op.make(
+        "softmax",
+        Op.make(
+            "mul",
+            Op.make(
+                "matmul",
+                "Q",
+                Op.make("transpose", "K", dim0=-2, dim1=-1),
+            ),
+            "SC0",
+        ),
+        dim=-1,
+    ),
+    "V",
+)
+
+#: The implicit-scale mint: ``scale = 1/√(q[-1])`` — the fused
+#: kernel's default.  ``("dim", "Q", -1)`` declines on unshaped ``q``.
+_DSPEC_SDPA_EXPAND = {
+    "$leaf:SC0": ("rsqrt", ("dim", "Q", -1)),
+}
+
+#: The explicit-scale mint: the bound ``scale`` attr verbatim.
+_DSPEC_SDPA_EXPAND_SCALE = {
+    "$leaf:SC0": ("attr", "SC"),
+}
+
+#: The benign attr key-sets the expansion covers — literal values are
+#: the guard (exact-keyset matching): each tuple is the attr dict the
+#: pattern spells.  ``torch.export`` elides trailing defaults, so the
+#: reachable non-empty key-sets are these prefixes/kwarg spellings.
+_SDPA_EXPAND_KEYSETS: tuple[tuple[str, dict], ...] = (
+    ("", {}),
+    ("_d", {"dropout_p": 0.0}),
+    ("_dc", {"dropout_p": 0.0, "is_causal": False}),
+    (
+        "_dcg",
+        {"dropout_p": 0.0, "is_causal": False, "enable_gqa": False},
+    ),
+    ("_s", {"scale": "SC"}),
+    ("_ds", {"dropout_p": 0.0, "scale": "SC"}),
+    ("_dcs", {"dropout_p": 0.0, "is_causal": False, "scale": "SC"}),
+    (
+        "_dcgs",
+        {
+            "dropout_p": 0.0,
+            "is_causal": False,
+            "enable_gqa": False,
+            "scale": "SC",
+        },
+    ),
+)
+
+
+def _make_sdpa_expand_rules() -> list:
+    """Build the sdpa → spelled-attention expansion family, one per key-set."""
+    out = []
+    for suffix, attrs in _SDPA_EXPAND_KEYSETS:
+        scaled = "scale" in attrs
+        out.append(
+            R(
+                f"sdpa_expand{suffix}",
+                Op.make("sdpa", "Q", "K", "V", **attrs),
+                _SDPA_EXPANDED,
+                law=(
+                    "sdpa(q, k, v, scale=s) IS "
+                    "matmul(softmax(mul(q @ kᵀ, s), dim=-1), v) — the "
+                    "kernel's definition, expanded so the interior "
+                    "becomes a redex for the scale-migration and "
+                    "spelled-attention laws (the decompose half of "
+                    "the expand/fold pair; refolds through "
+                    "sdpa_fold_mul_nomask / sdpa_fold_nomask)."
+                    if scaled
+                    else "sdpa(q, k, v) IS softmax(q@kᵀ/√d)@v with the "
+                    "implicit scale minted as mul(q@kᵀ, 1/√d_head) — "
+                    "the fused op's decomposed form, exposed for the "
+                    "interior laws (refolds through "
+                    "sdpa_fold_mul_nomask / sdpa_fold_nomask)."
+                ),
+                dspec=(
+                    _DSPEC_SDPA_EXPAND_SCALE
+                    if scaled
+                    else _DSPEC_SDPA_EXPAND
+                ),
+                # The same 2-cell as ``sdpa_fold_mul_nomask`` carried
+                # the other way — a lemma by inversion, like
+                # ``silu_expand``'s documented inverse pair.
+                derivation=("sdpa_fold_mul_nomask",),
+                tags=(tags.ATTENTION,),
+            )
+        )
+    return out
+
+
+#: The sdpa expansion family — opt-in (the ``attention`` preset
+#: composes it; see the section header for the honest accounting).
+SDPA_EXPAND_RULES: list = _make_sdpa_expand_rules()
+
 
 #: Scalar factor as data — the bound term's shape is ``()``.  (Same
 #: verdict as ``base._is_scalar``.)

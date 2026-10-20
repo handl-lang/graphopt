@@ -1,0 +1,34 @@
+name = "sdpa_decomposed"
+title = "Fused SDPA — decompose, migrate the scale, refold"
+category = "structure"
+citation = """
+The fused-op blindness: `F.scaled_dot_product_attention` is opaque to
+the e-graph — no law can reach inside the kernel (the measured
+0.80–0.88× vs compiled on BiRefNet/pointwise-fusion rows,
+docs/results.md).  `sdpa_expand_s` mints the kernel's own spelled
+form `softmax(q@kᵀ·s)@v`; inside, the score-scale migration
+(`naturality_scalar_left_rev` → `scale_in_{transpose,reshape}` →
+`linear_out_scale`) pushes the runtime (T,T) scale into a
+compile-time weight mul, and `sdpa_fold_mul_nomask` refolds.  Opt-in:
+`default_attention` = DEFAULT + ATTENTION.
+"""
+source = "sdpa_decomposed"
+size = 8
+rules = "default_attention"
+cost = "launch"
+
+[expect]
+signals = [
+  "law:sdpa_expand_s",
+  "law:naturality_scalar_left_rev",
+  "law:linear_out_scale",
+]
+ops = ["sdpa"]
+absent_ops = ["softmax"]
+
+[[baselines]]
+name = "eager spelled"
+kind = "self"
+[[baselines]]
+name = "inductor"
+kind = "compile"

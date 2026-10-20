@@ -248,6 +248,43 @@ class _SplitQKV(nn.Module):
         )
 
 
+class _ScaledSDPA(nn.Module):
+    """``F.sdpa(head(q), head(k), head(v), scale=s)`` — fused MHA with
+    an explicit score scale.
+
+    The fused call is opaque to the e-graph — the measured fused-op
+    blindness.  ``sdpa_expand_s`` decomposes it to
+    ``softmax(q@kᵀ·s)@v`` in-graph, where the score-scale migration
+    (``naturality_scalar_left_rev`` → view commutations →
+    ``linear_out_scale``) pushes ``s`` into the compile-time weight —
+    an internal structure the fused boundary hid — and the
+    ``sdpa_fold_*_nomask`` family refolds.  The decompose-then-refuse
+    row: the fused member stays the extraction pick.
+    """
+
+    def __init__(self, d: int, h: int, scale: float = 0.5) -> None:
+        super().__init__()
+        self.d = d
+        self.h = h
+        self.scale = scale
+        self.q = nn.Linear(d, d, bias=False)
+        self.k = nn.Linear(d, d, bias=False)
+        self.v = nn.Linear(d, d, bias=False)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        b, t, d = x.shape
+
+        def head(y: torch.Tensor) -> torch.Tensor:
+            return y.view(b, t, self.h, d // self.h).transpose(1, 2)
+
+        return F.scaled_dot_product_attention(
+            head(self.q(x)),
+            head(self.k(x)),
+            head(self.v(x)),
+            scale=self.scale,
+        )
+
+
 class _ParallelLinearSum(nn.Module):
     """``linear(x, A) + linear(x, B)`` — the weight-merge site.
 
@@ -421,6 +458,12 @@ def _mha_qkv(size: int):
     return _SplitQKV(16, 4).eval().double(), _r(2, t, 16)
 
 
+def _sdpa_decomposed(size: int):
+    """Fused MHA with an explicit scale; ``size`` is the length T."""
+    t = max(4, size)
+    return _ScaledSDPA(16, 4, scale=0.5).eval().double(), _r(2, t, 16)
+
+
 def _weight_merge(size: int):
     """``linear(x,A) + linear(x,B)``; ``size`` is the width d."""
     d = max(4, size)
@@ -559,6 +602,7 @@ SOURCES: dict[str, Callable[[int], tuple[nn.Module, object]]] = {
     "manual_softsign": _manual_softsign,
     "manual_glu": _manual_glu,
     "sdpa_nomask": _sdpa_nomask,
+    "sdpa_decomposed": _sdpa_decomposed,
     "mha_qkv": _mha_qkv,
     "weight_merge": _weight_merge,
     "gqa_repeat_kv": _gqa_repeat_kv,

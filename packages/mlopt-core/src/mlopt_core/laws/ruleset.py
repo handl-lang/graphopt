@@ -39,6 +39,7 @@ from mlopt_core.laws.scan import SCAN_DIAG_LAWS, SCAN_LAWS
 from mlopt_core.laws.tensor import (
     ALL_RULES_WITH_LAYOUT,
     CATEGORICAL_RULES,
+    SDPA_EXPAND_RULES,
     SIMPLIFICATION_RULES,
 )
 
@@ -312,17 +313,21 @@ FUSION = RuleSet(
 )
 
 #: The attention-path laws — rotary composition and scale
-#: commutation, the right-multiply absorb, and the score-scale
-#: migration.  Opt-in: the uniform-scale/view commutation pairs are
-#: closure-generating on any graph with view ops, and the rotary
-#: folds pay only where the exported spellings occur — see
-#: :mod:`mlopt_core.laws.attention` for the applicability class.
+#: commutation, the right-multiply absorb, the score-scale
+#: migration, and the ``sdpa_expand`` family (the fused attention
+#: op's opt-in decompose direction — its payoff laws live here).
+#: Opt-in: the uniform-scale/view commutation pairs are
+#: closure-generating on any graph with view ops, the rotary
+#: folds pay only where the exported spellings occur, and the
+#: expansion buys reach the fused member's cost already beats —
+#: see :mod:`mlopt_core.laws.attention` for the applicability class.
 ATTENTION = RuleSet(
     "attention",
-    tuple(ATTENTION_RULES),
+    tuple(ATTENTION_RULES) + tuple(SDPA_EXPAND_RULES),
     description=(
         "the attention-path laws — rope composition/commutation, "
-        "right-multiply absorb, score-scale migration (opt-in; the "
+        "right-multiply absorb, score-scale migration, and the "
+        "sdpa_expand decompose family (opt-in; the "
         "uniform-scale/view pairs are closure-generating)"
     ),
 )

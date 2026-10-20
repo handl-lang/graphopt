@@ -829,7 +829,8 @@ def test_every_shipped_cond_roundtrips_through_json():
         assert rebuilt.cond == rule.cond
     # 53 + the div-naturality pair (div_add_factor,
     # matmul_div_distribute) added by ``da917b1``, + mul_unsq_nat
-    assert seen == 56
+    # + sdpa_fold_mul_nomask (the sdpa_expand pair's refold)
+    assert seen == 57
 
 
 def test_rebuilt_rule_fires_identically_in_egraph():
@@ -893,12 +894,11 @@ def test_fingerprint_covers_cond_data():
 
 
 def test_migrated_rules_carry_cond_and_folded_check():
-    migrated = [
-        r for r in all_rules() if r.cond is not None
-    ]
-    # 53 + the div-naturality pair (``da917b1``) + mul_unsq_nat —
-    # the cond-as-data count, repinned honestly
-    assert len(migrated) == 56
+    migrated = [r for r in all_rules() if r.cond is not None]
+    # 53 + the div-naturality pair (``da917b1``) + mul_unsq_nat
+    # + sdpa_fold_mul_nomask — the cond-as-data count, repinned
+    # honestly
+    assert len(migrated) == 57
     for r in migrated:
         assert callable(r.check), r.name
     # every shipped guard is data now — the once-procedural laws all
