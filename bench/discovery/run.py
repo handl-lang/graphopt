@@ -66,6 +66,21 @@ def main(argv: list[str] | None = None) -> int:
         default=Path("docs"),
         help="scorecard output directory (default docs/)",
     )
+    p.add_argument(
+        "--pin",
+        action="store_true",
+        help="pin the table as bench/baselines/scorecard.json",
+    )
+    p.add_argument(
+        "--baselines",
+        type=Path,
+        default=Path("bench/baselines"),
+    )
+    p.add_argument(
+        "--no-ledger",
+        action="store_true",
+        help="skip the ledger append (bench/results/ledger.jsonl)",
+    )
     p.add_argument("--device", default="cpu")
     p.add_argument("--seed", type=int, default=None)
     p.add_argument("--min-run-time", type=float, default=0.05)
@@ -108,6 +123,45 @@ def main(argv: list[str] | None = None) -> int:
     n_found = sum(r.found for r in rows)
     n_cert = sum(r.certified for r in rows)
     n_beat = sum(1 for r in rows if r.beat_best)
+    from bench.benchkit import table as _t
+
+    record = _t.table_record(
+        "scorecard",
+        (
+            {
+                "name": r.name,
+                "metrics": {
+                    "cost_after": r.cost_after,
+                    "found": 1.0 if r.found else 0.0,
+                    "certified": 1.0 if r.certified else 0.0,
+                },
+            }
+            for r in rows
+            if not r.error
+        ),
+        directions={
+            "cost_after": "up",
+            "found": "down",
+            "certified": "down",
+        },
+        findings=[
+            {
+                "claim": "named optimizations derive, certify, beat "
+                "the floor",
+                "verdict": "win"
+                if n_found == len(rows)
+                else "negative",
+                "headline": f"{n_found}/{len(rows)} found, {n_beat} beat",
+            }
+        ],
+        provenance={"quick": lane_name == "fast"},
+    )
+    if not args.no_ledger:
+        _t.append_record(record)
+    if args.pin:
+        print(
+            f"  -> pinned {_t.write_table_baseline(record, args.baselines)}"
+        )
     print(
         f"scorecard: {n_found}/{len(rows)} found, "
         f"{n_cert}/{len(rows)} certified, "

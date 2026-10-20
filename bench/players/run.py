@@ -112,6 +112,21 @@ def main(argv: list[str] | None = None) -> int:
         help="shrink every knob — the seconds-scale lane",
     )
     p.add_argument(
+        "--pin",
+        action="store_true",
+        help="pin the table as bench/baselines/leaderboard_players.json",
+    )
+    p.add_argument(
+        "--baselines",
+        type=Path,
+        default=Path("bench/baselines"),
+    )
+    p.add_argument(
+        "--no-ledger",
+        action="store_true",
+        help="skip the ledger append (bench/results/ledger.jsonl)",
+    )
+    p.add_argument(
         "--out",
         type=Path,
         default=Path("docs"),
@@ -216,6 +231,34 @@ def main(argv: list[str] | None = None) -> int:
         meta=board_meta,
         device=args.device,
     )
+    from bench.benchkit import table as _t
+
+    record = _t.table_record(
+        "leaderboard_players",
+        (
+            {
+                "name": f"{r.board}/{r.player}",
+                "metrics": {"reward_ep": r.reward_ep, "ap": r.ap},
+            }
+            for r in rows
+        ),
+        directions={"reward_ep": "down", "ap": "down"},
+        findings=[
+            {
+                "claim": "registered players compared under one "
+                "paired protocol",
+                "verdict": "parity",
+                "headline": f"{len(rows)} rows",
+            }
+        ],
+        provenance={"quick": bool(args.smoke)},
+    )
+    if not args.no_ledger:
+        _t.append_record(record)
+    if args.pin:
+        print(
+            f"  -> pinned {_t.write_table_baseline(record, args.baselines)}"
+        )
     print(f"leaderboard: {len(rows)} rows", flush=True)
     print(f"  -> {md_path}")
     print(f"  -> {json_path}")

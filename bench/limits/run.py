@@ -80,6 +80,21 @@ def main(argv: list[str] | None = None) -> int:
         default=Path("docs"),
         help="limits-table output directory (default docs/)",
     )
+    p.add_argument(
+        "--pin",
+        action="store_true",
+        help="pin the table as bench/baselines/limits_table.json",
+    )
+    p.add_argument(
+        "--baselines",
+        type=Path,
+        default=Path("bench/baselines"),
+    )
+    p.add_argument(
+        "--no-ledger",
+        action="store_true",
+        help="skip the ledger append (bench/results/ledger.jsonl)",
+    )
     p.add_argument("--device", default="cpu")
     p.add_argument("--seed", type=int, default=None)
     p.add_argument("--min-run-time", type=float, default=0.05)
@@ -148,6 +163,38 @@ def main(argv: list[str] | None = None) -> int:
     flat = [r for cl in rows for r in cl.rows]
     ran = [r for r in flat if r.available]
     skipped = len(flat) - len(ran)
+    from bench.benchkit import table as _t
+
+    n_win = sum(
+        1 for r in ran if (r.measured_ratio or r.ratio or 0) > 1.02
+    )
+    record = _t.table_record(
+        "limits_table",
+        (
+            {
+                "name": f"{r.case}/{r.baseline}",
+                "metrics": {"ratio": r.measured_ratio or r.ratio},
+            }
+            for r in flat
+            if r.available
+        ),
+        directions={"ratio": "down"},
+        findings=[
+            {
+                "claim": "the delivered form beats the registered "
+                "floor where structure exists",
+                "verdict": "win" if n_win else "parity",
+                "headline": f"{n_win}/{len(ran)} rows ahead",
+            }
+        ],
+        provenance={"quick": lane_name == "fast"},
+    )
+    if not args.no_ledger:
+        _t.append_record(record)
+    if args.pin:
+        print(
+            f"  -> pinned {_t.write_table_baseline(record, args.baselines)}"
+        )
     print(
         f"limits: {len(flat)} rows over {len(rows)} case(s) "
         f"({skipped} skipped with reasons)",
