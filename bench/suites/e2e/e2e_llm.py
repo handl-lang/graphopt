@@ -879,9 +879,7 @@ def run_decode_cell(
             f"({rec['mlopt+inductor_compile_s']:.1f}s)",
             flush=True,
         )
-        if oci is not None and not verify_decode(
-            oci, "mlopt+inductor"
-        ):
+        if oci is not None and not verify_decode(oci, "mlopt+inductor"):
             oci = None
 
     # -- peak memory + timing: full N-token loop per variant ----------
@@ -1181,8 +1179,7 @@ def run_bench(args) -> Report:
             c.medians["inductor"] / c.medians["mlopt+inductor"],
         )
         for c in cells
-        if c.medians.get("inductor")
-        and c.medians.get("mlopt+inductor")
+        if c.medians.get("inductor") and c.medians.get("mlopt+inductor")
     ]
     best = max(scored, key=lambda t: t[1], default=None)
     n_verified = sum(1 for c in cells if c.aux.get("mlopt_verified"))

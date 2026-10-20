@@ -66,7 +66,9 @@ _BIN = Path(
         Path.home() / "GitHub/handl-lang/host/target/debug/rewrite",
     )
 )
-_FRAGMENTS = _REPO / "tests" / "fixtures" / "handl-spike" / "fragments-all"
+_FRAGMENTS = (
+    _REPO / "tests" / "fixtures" / "handl-spike" / "fragments-all"
+)
 
 try:  # the shipping surface — absent until maturin builds it
     import mlopt_handl_peer as _ext

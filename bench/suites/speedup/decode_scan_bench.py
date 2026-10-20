@@ -615,9 +615,7 @@ def run_cell(
             cell["step_opt_error"] = f"fp32: {type(e).__name__}: {e}"
         try:
             if chunk_opt32 is not None:
-                checks["mlopt_chunk"] = _gate_chunk_carrier(
-                    chunk_opt32
-                )
+                checks["mlopt_chunk"] = _gate_chunk_carrier(chunk_opt32)
         except Exception as e:
             chunk_opt32 = None
             cell["chunk_opt_error"] = f"fp32: {type(e).__name__}: {e}"

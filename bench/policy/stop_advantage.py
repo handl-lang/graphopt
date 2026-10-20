@@ -239,9 +239,7 @@ def _fit_preds(
     n_pos = int(sum(ys))
     pw = (len(ys) - n_pos) / max(n_pos, 1)
     kw: dict[str, Any] = (
-        {}
-        if label == "delta"
-        else {"labels": ys, "pos_weight": pw}
+        {} if label == "delta" else {"labels": ys, "pos_weight": pw}
     )
     net = train_rule_value(
         samples,
@@ -262,9 +260,7 @@ def _fit_preds(
             s for i, s in enumerate(samples) if _fold_of(i) != f
         ]
         fys = [y for i, y in enumerate(ys) if _fold_of(i) != f]
-        held = [
-            c for i, c in enumerate(flat_train) if _fold_of(i) == f
-        ]
+        held = [c for i, c in enumerate(flat_train) if _fold_of(i) == f]
         fkw: dict[str, Any] = (
             {}
             if label == "delta"
@@ -434,9 +430,7 @@ def run(
         ) in enumerate(ARMS):
             t1 = time.time()
             spec = _spec_for(tags)
-            rank_spec = (
-                _spec_for(rank_tags) if kind == "head" else spec
-            )
+            rank_spec = _spec_for(rank_tags) if kind == "head" else spec
             specs[arm_id] = (spec, rank_spec)
             if kind == "ac":
                 player = adv.AdvantagePlayer(
@@ -508,9 +502,7 @@ def run(
                         hrows,
                         hlabels,
                         seed,
-                        names=tuple(
-                            n for n in spec.features if n != f
-                        ),
+                        names=tuple(n for n in spec.features if n != f),
                     )
                     loo = sp._ap_binary(
                         [_dot(wl, r) for r in erows], elabels

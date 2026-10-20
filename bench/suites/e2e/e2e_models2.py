@@ -1031,8 +1031,7 @@ def run_bench(args) -> Report:
             c.medians["inductor"] / c.medians["mlopt+inductor"],
         )
         for c in cells
-        if c.medians.get("inductor")
-        and c.medians.get("mlopt+inductor")
+        if c.medians.get("inductor") and c.medians.get("mlopt+inductor")
     ]
     best = max(scored, key=lambda t: t[1], default=None)
     n_verified = sum(1 for r in recs if r.get("mlopt_verified"))

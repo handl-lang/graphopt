@@ -177,9 +177,7 @@ def _c_softmax_fold(d: int, dev: torch.device):
     u = _v("u", b, d)
     env = {"u": _r(dev, b, d)}
     e = Op.make("exp", u)
-    term = Op.make(
-        "div", e, Op.make("sum", e, dim=(-1,), keepdim=True)
-    )
+    term = Op.make("div", e, Op.make("sum", e, dim=(-1,), keepdim=True))
     return term, env, [u]
 
 
