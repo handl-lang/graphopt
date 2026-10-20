@@ -152,6 +152,25 @@ def test_fast_lane_mul_unsq_rows():
     assert not hc.available and "no carrier" in hc.caveat
 
 
+def test_fast_lane_retnet_carrier_skip_is_honest():
+    """``hand_carrier`` declines retnet_chunkwise — a real routing truth.
+
+    ``carrier_search`` extracts the bare ``om_decayed`` root, which no
+    executor spec accepts (only the K-way chunked ``concat`` form
+    routes to ``om_decayed_chunked``, and producing it needs the
+    opt-in ``om_kway_laws``/``OM_CHUNKIFY`` set).  The delivered arm
+    is already the generic lowering, so the row would duplicate mlopt.
+    """
+    res = run_case(
+        _case("retnet_chunkwise"),
+        lane="fast",
+        baselines=["hand_carrier"],
+    )
+    assert res.error == ""
+    (row,) = res.rows
+    assert not row.available and "no carrier" in row.caveat
+
+
 def test_fast_lane_preserves_case_order_and_covers():
     cases = [_case(n) for n in ("mul_unsq_nat", "conv_bn_fold")]
     out = run_suite(cases, lane="fast")

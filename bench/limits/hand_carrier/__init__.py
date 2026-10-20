@@ -1,20 +1,30 @@
 """``hand_carrier`` — the carrier term under the generic evaluator.
 
-When the extraction lands on a carrier term (``om_decayed``,
-``applyd`` — the hand-written scan/carrier laws), the delivery path
-routes it to the batched executor and the "mlopt" arm *is* that
-schedule.  This baseline prices the same extracted term lowered
-through ``sink.lower`` — the generic evaluator, leaves one-by-one —
-the arm ``lab/probes/retnet_baseline_probe.py`` reports as
-``carrier``.  The gap between this arm and the delivered one is
-what the executor routing buys; the arm is also the honest loss
-column — **0.51× vs eager at T=512**, below the launch-overhead
-crossover (``docs/results.md``).
+When the extraction lands on a carrier term the executor table
+claims (``applyd``/``apply`` → ``scan``, ``om_apply`` →
+``om_batched``/``om_streaming``, the chunked ``concat``-rooted
+``om_decayed`` expansion → ``om_decayed_chunked``), the delivery
+path routes it to the batched executor and the "mlopt" arm *is*
+that schedule.  This baseline prices the same extracted term
+lowered through ``sink.lower`` — the generic evaluator, leaves
+one-by-one — the arm ``lab/probes/retnet_baseline_probe.py``
+reports as ``carrier``.  The gap between this arm and the
+delivered one is what the executor routing buys; the arm is also
+the honest loss column — **0.51× vs eager at T=512**, below the
+launch-overhead crossover (``docs/results.md``).
 
 On a case whose extraction no carrier executor claims, the generic
 lowering is the delivered module — the arm would be a duplicate, so
 the baseline declines: ``_route_spec`` returning ``None`` is the
-honest "no carrier here" signal.
+honest "no carrier here" signal.  That is exactly what happens on
+``retnet_chunkwise``: ``carrier_search`` extracts the *bare*
+``om_decayed(s, d, v)`` root — a value-level carrier op with its own
+torch binding (``(s ⊙ d) @ v``, verbatim) — and no executor accepts
+it.  Only the K-way chunked ``concat`` form does, and producing it
+needs the opt-in ``om_kway_laws``/``OM_CHUNKIFY`` set the case does
+not saturate with.  ``lower()`` therefore ships a plain ``IRModule``
+(``stats["lowering"] == "generic"``) — the delivered arm already IS
+the generic lowering, so the skip is the routing truth, not a miss.
 """
 
 # ruff: noqa: RUF001, RUF002 — math notation in prose.

@@ -309,7 +309,15 @@ named; where a pinned baseline supersedes a row, that is noted.
 
 ## Learned models (2026-10-15)
 
-*What the project trains, and how each performs.*  Separate from the
+*What the project trains, and how each performs.*  Controlled
+same-budget baseline + ablations (2026-10-19):
+[`docs/results_learned_baseline.md`](results_learned_baseline.md) /
+[`docs/results_learned_ablations.md`](results_learned_ablations.md)
+(`lab/policy_baseline.py`, `lab/policy_ablations.py`); the
+feature-schema leaderboard — subsets × orderings of the shipped
+featurizer parts, cold-trained at equal budget —
+[`docs/results_schema_leaderboard.md`](results_schema_leaderboard.md)
+(`lab/schema_leaderboard.py`).  Separate from the
 architectures above: these **steer** the search; the models in §1 are
 what gets optimized.
 
@@ -343,7 +351,19 @@ is brittle at n=40 for every arm (RL 4.15×).  Not wired into
 | | ranking AP | 0.012 | 0.012 | **0.133** | heuristic 0.045 |
 | **meta-arena prior** (`META_ARENA_PLAYER_WEIGHTS`) | reward / episode | −0.57 | −0.49 | **−0.06** | scripted −0.10 |
 
-Regenerate with `lab/train/train_open_prior.py` / `lab/train/train_meta_prior.py`.
+Regenerate with `scripts/train_open_prior.py` / `scripts/train_meta_prior.py`.
+
+Macro-action minting over `Trajectory` sequences (2026-10-19):
+[`docs/results_macro_moves.md`](results_macro_moves.md)
+(`lab/mint/macro_miner.py`) — mined `claim→extract` /
+`declare→saturate→handle→extract` replayed as single refereed moves;
+scripted+macros beats the base move set +0.19 reward/ep on the
+held-out meta stream. **Shipped:** the 8-macro table is
+`lawdata.MACROS` and `meta_arena.legal_actions` offers it to every
+player (`mlopt_discovery.macro_moves`); the macro-trained prior's
+bake gate is still unearned — sampled decode +0.007 < +0.088,
+`v2-base` −0.072 < −0.056
+([`docs/results_macro_bake2.md`](results_macro_bake2.md)).
 
 **Honest note:** in *both* families the best result is not the neural
 one — distillation beats neural RL at n=40, and the linear prior beats

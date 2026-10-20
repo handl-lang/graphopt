@@ -119,6 +119,11 @@ def test_markdown_is_readable(tmp_path: Path) -> None:
 
 
 def test_html_dashboard(tmp_path: Path) -> None:
+    # jinja2 + plotly ship in the opt-in ``bench`` dependency group —
+    # the renderer lazy-imports them, so the test self-skips when the
+    # group is absent (same convention as tests/test_egglog_oracle.py).
+    pytest.importorskip("jinja2")
+    pytest.importorskip("plotly")
     path = tmp_path / "toy.html"
     _report().to_html(path)
     text = path.read_text()
@@ -128,6 +133,7 @@ def test_html_dashboard(tmp_path: Path) -> None:
 
 
 def test_plots_writes_interactive_html(tmp_path: Path) -> None:
+    pytest.importorskip("plotly")  # opt-in ``bench`` dependency group
     paths = _report().to_plots(
         tmp_path, x_param="k", speedup_vs="eager", static=False
     )
