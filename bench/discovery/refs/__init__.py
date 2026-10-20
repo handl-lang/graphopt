@@ -278,6 +278,29 @@ class _MergedQKV(nn.Module):
         return F.scaled_dot_product_attention(head(q), head(k), head(v))
 
 
+class _KnownGQA(nn.Module):
+    """``F.scaled_dot_product_attention`` with ``enable_gqa=True``.
+
+    The kernel-side head broadcast — same projections, no
+    materialised repeat chain.
+    """
+
+    def __init__(self, src: nn.Module) -> None:
+        super().__init__()
+        self.h, self.hk, self.dh = src.h, src.hk, src.dh
+        self.wq, self.wk, self.wv = src.wq, src.wk, src.wv
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        b, t, _ = x.shape
+        q = self.wq(x).view(b, t, self.h, self.dh).transpose(1, 2)
+        k = self.wk(x).view(b, t, self.hk, self.dh).transpose(1, 2)
+        v = self.wv(x).view(b, t, self.hk, self.dh).transpose(1, 2)
+        o = F.scaled_dot_product_attention(
+            q, k, v, is_causal=True, enable_gqa=True
+        )
+        return o.transpose(1, 2).reshape(b, t, -1)
+
+
 class _MergedWeights(nn.Module):
     """``linear(x, A + B)`` — the two projections merged weights-first."""
 
@@ -381,6 +404,10 @@ def _qkv_merged(model: nn.Module, feed: object) -> nn.Module:
     return _MergedQKV(model).eval().double()
 
 
+def _gqa_enable_gqa(model: nn.Module, feed: object) -> nn.Module:
+    return _KnownGQA(model).eval().double()
+
+
 def _weight_merged(model: nn.Module, feed: object) -> nn.Module:
     return _MergedWeights(model).eval().double()
 
@@ -410,6 +437,7 @@ REFS: dict[str, Callable[[nn.Module, object], nn.Module]] = {
     "glu_known": _glu_known,
     "sdpa_nomask_known": _sdpa_nomask_known,
     "qkv_merged": _qkv_merged,
+    "gqa_enable_gqa": _gqa_enable_gqa,
     "weight_merged": _weight_merged,
     "affine_chain_folded": _affine_chain_folded,
     "select_mul_folded": _select_mul_folded,

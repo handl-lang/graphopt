@@ -2270,17 +2270,17 @@ GQA_ABSORB = R(
         Op.make("transpose", "q", dim0=1, dim1=2),
         _REPEAT_KV,
         _REPEAT_V,
-        arg4="D",
-        arg5="C",
+        dropout_p="D",
+        is_causal="C",
     ),
     Op.make(
         "sdpa",
         Op.make("transpose", "q", dim0=1, dim1=2),
         Op.make("transpose", "k", dim0=1, dim1=2),
         Op.make("transpose", "v", dim0=1, dim1=2),
-        arg4="D",
-        arg5="C",
-        arg7=True,
+        dropout_p="D",
+        is_causal="C",
+        enable_gqa=True,
     ),
     law="The diagonal is natural: unsqueeze->expand->reshape copies each "
     "kv head r times (repeat_kv).  SDPA implements that copy inside "

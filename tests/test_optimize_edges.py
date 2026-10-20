@@ -166,7 +166,10 @@ def test_specialize_causal_drops_param_tril_mask():
     env = {"mask": tril}
     sdpa = Op.make("sdpa", q, k, v, mp)
     out = _specialize_causal(sdpa, env)
-    assert out.attrs.get("arg5") is True
+    # the patch lands under the canonical spelling — a literal ``arg5``
+    # would read as absent to every canonical reader / pattern matcher
+    assert out.attrs.get("is_causal") is True
+    assert "arg5" not in out.attrs
     assert len(out.args) == 3
     # already-causal → unchanged arg count
     sdpa2 = Op.make("sdpa", q, k, v, mp, arg5=True)

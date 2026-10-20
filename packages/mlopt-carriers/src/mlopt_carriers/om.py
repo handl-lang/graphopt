@@ -1251,9 +1251,12 @@ def _sdpa_cat(
     )
 
 
-#: torch.export emits sdpa positionally: arg4 = dropout_p,
-#: arg5 = is_causal, arg6 = scale; hand-built terms use the kwarg
-#: spellings is_causal=/scale=.  A literal ``True``/``False`` in the
+#: Spelling coverage: the export boundary emits the canonical
+#: ``ATTR_SCHEMA`` names (dropout_p=, is_causal=, scale=); the argN
+#: variants cover terms hand-minted with the positional spellings
+#: (``Op.make`` preserves declared-position ``argN``), which nothing
+#: in the current pipeline emits — they are dormant but legal matches.
+#: A literal ``True``/``False`` in the
 #: pattern is an exact attr match — the flag, chunked.
 _SDPA_CAUSAL_ATTRS: tuple[dict, ...] = (
     {"is_causal": True},

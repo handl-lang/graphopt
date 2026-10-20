@@ -404,6 +404,24 @@ def _weight_merge(size: int):
     return _ParallelLinearSum(d).eval().double(), _r(4, d)
 
 
+def _gqa_repeat_kv(size: int):
+    """GQA attention with materialised ``repeat_kv``; ``size`` is T.
+
+    The llama2.c spelling — ``unsqueeze→expand→reshape`` duplicates
+    each kv head in-graph before ``F.sdpa``; ``gqa_absorb_repeat``
+    pushes the copy into the kernel's ``enable_gqa`` flag.
+    """
+    from mlopt_torch.models import RepeatKVAttention
+
+    t = max(4, size)
+    return (
+        RepeatKVAttention(dim=32, n_heads=4, n_kv_heads=2)
+        .eval()
+        .double(),
+        _r(2, t, 32),
+    )
+
+
 def _biased_chain(size: int):
     """Two biased ``Linear``s back to back — the affine compose site."""
     d = max(4, size)
@@ -436,6 +454,7 @@ SOURCES: dict[str, Callable[[int], tuple[nn.Module, object]]] = {
     "sdpa_nomask": _sdpa_nomask,
     "mha_qkv": _mha_qkv,
     "weight_merge": _weight_merge,
+    "gqa_repeat_kv": _gqa_repeat_kv,
     "biased_chain": _biased_chain,
     "select_mul": _select_mul,
 }

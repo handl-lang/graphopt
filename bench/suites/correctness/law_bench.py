@@ -547,8 +547,8 @@ def _c_gqa_absorb(d: int, dev: torch.device):
         Op.make("transpose", q, dim0=1, dim1=2),
         rep(k),
         rep(v),
-        arg4=0.0,
-        arg5=False,
+        dropout_p=0.0,
+        is_causal=False,
     )
     return t, env, [q, k, v]
 

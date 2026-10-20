@@ -103,11 +103,20 @@ def _specialize_causal(
         _specialize_causal(a, params, memo, ops) for a in term.args
     )
     attrs = dict(term.attrs)
-    if term.op == "sdpa" and len(args) >= 4 and not attrs.get("arg5"):
+    if (
+        term.op == "sdpa"
+        and len(args) >= 4
+        and not attrs.get("is_causal", attrs.get("arg5"))
+    ):
         mv = _eval_const(args[3], params, ops)
         if mv is not None and _is_causal_keep_mask(mv, _so(args[0])):
             args = args[:3]
-            attrs["arg5"] = True
+            # Canonical spelling — a bare ``arg5`` on an
+            # ``is_causal``-free term would survive ``validate_attrs``
+            # as a literal positional and read as absent to every
+            # canonical reader / pattern matcher.
+            attrs.pop("arg5", None)
+            attrs["is_causal"] = True
             memo["_hit"] = True
     out = Op.make(term.op, *args, **attrs)
     memo[key] = out

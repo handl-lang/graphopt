@@ -327,14 +327,14 @@ def test_gqa_absorb_declines_a_rank3_term():
         Op.make("transpose", q, dim0=1, dim1=2),
         rep3(k),
         rep3(v),
-        arg4=0.0,
-        arg5=False,
+        dropout_p=0.0,
+        is_causal=False,
     )
     eg = EGraph()
     root = eg.add_term(term)
     assert not eg.apply_rule(GQA_ABSORB, root)
     assert all(
-        dict(n.attrs).get("arg7") is not True
+        dict(n.attrs).get("enable_gqa") is not True
         for n in eg.get_class(root).nodes
     )
 
@@ -366,14 +366,14 @@ def test_gqa_absorb_real_firing_and_veto():
         Op.make("transpose", q, dim0=1, dim1=2),
         rep(k),
         rep(v),
-        arg4=0.0,
-        arg5=False,
+        dropout_p=0.0,
+        is_causal=False,
     )
     eg = EGraph()
     root = eg.add_term(term)
     assert eg.apply_rule(GQA_ABSORB, root)
     assert any(
-        dict(n.attrs).get("arg7") is True
+        dict(n.attrs).get("enable_gqa") is True
         for n in eg.get_class(root).nodes
     )
 
@@ -383,16 +383,57 @@ def test_gqa_absorb_real_firing_and_veto():
         Op.make("transpose", _p("qb", 1, 4, 7, 3), dim0=1, dim1=2),
         rep(k),
         rep(v),
-        arg4=0.0,
-        arg5=False,
+        dropout_p=0.0,
+        is_causal=False,
     )
     eg2 = EGraph()
     root2 = eg2.add_term(bad)
     assert not eg2.apply_rule(GQA_ABSORB, root2)
     assert all(
-        dict(n.attrs).get("arg7") is not True
+        dict(n.attrs).get("enable_gqa") is not True
         for n in eg2.get_class(root2).nodes
     )
+
+
+def test_gqa_absorb_legacy_argn_spelling_cannot_bind():
+    """The pre-fix LHS pinned ``arg4``/``arg5`` metavars; the export
+    boundary only emits the canonical ``dropout_p``/``is_causal``
+    spellings (``ATTR_SCHEMA["sdpa"]``), so the metas could never bind
+    and the law was latent-unreachable.  A term still minted with the
+    literal positional spellings behaves as if those attrs were absent
+    (``attrs.py`` — readers consume the canonical name only), so the
+    argN term must NOT fire the canonicalised rule."""
+    q = _p("q", 1, 4, 8, 3)
+    k, v = _p("k", 1, 4, 2, 3), _p("v", 1, 4, 2, 3)
+
+    def rep(t):
+        return Op.make(
+            "transpose",
+            Op.make(
+                "reshape",
+                Op.make(
+                    "expand",
+                    Op.make("unsqueeze", t, dim=3),
+                    shape=(1, 4, 2, 4, 3),
+                ),
+                shape=(1, 4, 8, 3),
+            ),
+            dim0=1,
+            dim1=2,
+        )
+
+    legacy = Op.make(
+        "sdpa",
+        Op.make("transpose", q, dim0=1, dim1=2),
+        rep(k),
+        rep(v),
+        arg4=0.0,
+        arg5=False,
+    )
+    assert dict(legacy.attrs) == {"arg4": 0.0, "arg5": False}
+    eg = EGraph()
+    root = eg.add_term(legacy)
+    assert not eg.apply_rule(GQA_ABSORB, root)
 
 
 # ---------------------------------------------------------------------------

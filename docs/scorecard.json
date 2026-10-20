@@ -1,24 +1,20 @@
 {
   "schema": 1,
   "lane": "full",
-  "generated_utc": "2026-10-20T01:24:16+00:00",
+  "generated_utc": "2026-10-20T03:28:38+00:00",
   "env": {
-    "timestamp_utc": "2026-10-20T01:24:16+00:00",
+    "timestamp_utc": "2026-10-20T03:28:38+00:00",
     "python": "3.13.9",
     "torch": "2.14.0+cu130",
     "torch_cuda": "13.0",
     "device": "cpu",
     "device_name": "12th Gen Intel(R) Core(TM) i5-12500H",
     "cpu_count": 16,
-    "git_sha": "646beab",
+    "git_sha": "9104de4",
     "git_dirty": true,
     "argv": [
       "/home/luis/GitHub/handl-lang/research-mlopt/bench/discovery/run.py",
-      "--full",
-      "--min-run-time",
-      "0.02",
-      "--out",
-      "docs"
+      "--full"
     ]
   },
   "cases": [
@@ -44,7 +40,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 3.013,
+        "search_s": 1.008,
         "n_enodes": 11,
         "iterations": 2,
         "extracted_ops": [
@@ -55,12 +51,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 9.391926400712692e-06,
-          "eager two-GEMM": 1.2807900999905541e-05,
-          "pre-folded affine": 7.233388700115029e-06,
-          "inductor": 6.829199264757335e-05
+          "mlopt": 9.107376700558235e-06,
+          "eager two-GEMM": 1.241667620051885e-05,
+          "pre-folded affine": 6.27834480110323e-06,
+          "inductor": 5.237500590737909e-05
         },
-        "mlopt_ms": 0.009391926400712692
+        "mlopt_ms": 0.009107376700558235
       },
       "baselines": [
         {
@@ -68,7 +64,7 @@
           "kind": "self",
           "available": true,
           "cost": 4098.0,
-          "median_s": 1.2807900999905541e-05,
+          "median_s": 1.241667620051885e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -79,7 +75,7 @@
           "kind": "ref",
           "available": true,
           "cost": 2049.0,
-          "median_s": 7.233388700115029e-06,
+          "median_s": 6.27834480110323e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 2.90149566040121e-08,
@@ -90,8 +86,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 6.829199264757335e-05,
-          "iqr_s": 6.998001481406391e-06,
+          "median_s": 5.237500590737909e-05,
+          "iqr_s": 1.6719932318665087e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "no freeze \u2014 Inductor cannot fold the weights"
@@ -121,7 +117,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.071,
+        "search_s": 0.056,
         "n_enodes": 43,
         "iterations": 2,
         "extracted_ops": [
@@ -135,12 +131,12 @@
         "cert_steps": 7,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 0.00022597754999878817,
-          "eager unrolled": 5.3781403999892065e-05,
-          "cumsum prefix": 2.3777591995894908e-05,
-          "inductor": 4.7783993068151176e-05
+          "mlopt": 0.00018068140199466144,
+          "eager unrolled": 4.2168490501353517e-05,
+          "cumsum prefix": 1.938793429872021e-05,
+          "inductor": 4.05870086979121e-05
         },
-        "mlopt_ms": 0.22597754999878816
+        "mlopt_ms": 0.18068140199466143
       },
       "baselines": [
         {
@@ -148,7 +144,7 @@
           "kind": "self",
           "available": true,
           "cost": 759.0,
-          "median_s": 5.3781403999892065e-05,
+          "median_s": 4.2168490501353517e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -159,7 +155,7 @@
           "kind": "ref",
           "available": true,
           "cost": 1494.0,
-          "median_s": 2.3777591995894908e-05,
+          "median_s": 1.938793429872021e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 8.881784197001252e-16,
@@ -170,8 +166,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 4.7783993068151176e-05,
-          "iqr_s": 2.3650063667446375e-06,
+          "median_s": 4.05870086979121e-05,
+          "iqr_s": 1.3730168575420976e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -200,7 +196,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.051,
+        "search_s": 0.041,
         "n_enodes": 31,
         "iterations": 2,
         "extracted_ops": [
@@ -214,12 +210,12 @@
         "cert_steps": 9,
         "cert_egraph_dep": 6,
         "median_s": {
-          "mlopt": 1.2045284500345588e-05,
-          "eager": 2.0324263998190873e-05,
-          "hand-folded conv": 1.3223486300557852e-05,
-          "inductor": 0.0002335265016881749
+          "mlopt": 1.0226020800473635e-05,
+          "eager": 1.744198100059293e-05,
+          "hand-folded conv": 1.0422227600065525e-05,
+          "inductor": 7.122200622688979e-05
         },
-        "mlopt_ms": 0.012045284500345588
+        "mlopt_ms": 0.010226020800473634
       },
       "baselines": [
         {
@@ -227,7 +223,7 @@
           "kind": "self",
           "available": true,
           "cost": 29186.0,
-          "median_s": 2.0324263998190873e-05,
+          "median_s": 1.744198100059293e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -238,7 +234,7 @@
           "kind": "ref",
           "available": true,
           "cost": 27649.0,
-          "median_s": 1.3223486300557852e-05,
+          "median_s": 1.0422227600065525e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 5.055496332673215e-08,
@@ -249,8 +245,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 0.0002335265016881749,
-          "iqr_s": 2.6946490834234282e-05,
+          "median_s": 7.122200622688979e-05,
+          "iqr_s": 2.490494807716459e-06,
           "verify_passed": true,
           "verify_max_abs": 6.661338147750939e-16,
           "note": "measured-only (no symbolic form)"
@@ -279,7 +275,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.068,
+        "search_s": 0.043,
         "n_enodes": 21,
         "iterations": 2,
         "extracted_ops": [
@@ -289,12 +285,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 1,
         "median_s": {
-          "mlopt": 3.270055500615854e-05,
-          "eager spelled": 5.4572711000218985e-05,
-          "F.scaled_dot_product_attention": 3.569494199473411e-05,
-          "inductor": 0.00010466099774930626
+          "mlopt": 3.1011872000817675e-05,
+          "eager spelled": 4.373170500184642e-05,
+          "F.scaled_dot_product_attention": 3.182181249576388e-05,
+          "inductor": 8.469849854009226e-05
         },
-        "mlopt_ms": 0.03270055500615854
+        "mlopt_ms": 0.031011872000817675
       },
       "baselines": [
         {
@@ -302,7 +298,7 @@
           "kind": "self",
           "available": true,
           "cost": 33544.0,
-          "median_s": 5.4572711000218985e-05,
+          "median_s": 4.373170500184642e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -313,7 +309,7 @@
           "kind": "ref",
           "available": true,
           "cost": 32772.0,
-          "median_s": 3.569494199473411e-05,
+          "median_s": 3.182181249576388e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 2.220446049250313e-16,
@@ -324,8 +320,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 0.00010466099774930626,
-          "iqr_s": 3.956745786126703e-06,
+          "median_s": 8.469849854009226e-05,
+          "iqr_s": 2.8919930628035218e-06,
           "verify_passed": true,
           "verify_max_abs": 1.1102230246251565e-16,
           "note": "measured-only (no symbolic form)"
@@ -354,7 +350,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.028,
+        "search_s": 0.019,
         "n_enodes": 6,
         "iterations": 2,
         "extracted_ops": [
@@ -363,12 +359,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 5.5151248001493515e-06,
-          "eager spelled": 6.719569201231934e-06,
-          "F.glu": 3.833043399208691e-06,
-          "inductor": 2.5453999114688486e-05
+          "mlopt": 4.449135348841082e-06,
+          "eager spelled": 5.271324499335605e-06,
+          "F.glu": 3.0626612999185452e-06,
+          "inductor": 1.9073995645157993e-05
         },
-        "mlopt_ms": 0.005515124800149352
+        "mlopt_ms": 0.004449135348841082
       },
       "baselines": [
         {
@@ -376,7 +372,7 @@
           "kind": "self",
           "available": true,
           "cost": 98.0,
-          "median_s": 6.719569201231934e-06,
+          "median_s": 5.271324499335605e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -387,7 +383,7 @@
           "kind": "ref",
           "available": true,
           "cost": 33.0,
-          "median_s": 3.833043399208691e-06,
+          "median_s": 3.0626612999185452e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -398,8 +394,87 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 2.5453999114688486e-05,
-          "iqr_s": 1.338758011115715e-06,
+          "median_s": 1.9073995645157993e-05,
+          "iqr_s": 9.165087249130011e-07,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": "measured-only (no symbolic form)"
+        }
+      ]
+    },
+    {
+      "name": "gqa_absorb_repeat",
+      "title": "Materialised repeat_kv \u2192 sdpa enable_gqa",
+      "category": "memory",
+      "citation": "The llama2.c GQA spelling: `unsqueeze\u2192expand\u2192reshape` copies each kv\nhead r times before `F.sdpa` \u2014 a materialised copy diagonal.  SDPA's\n`enable_gqa` flag implements the same broadcast inside the kernel, and\n`gqa_absorb_repeat` pushes the copy into the consumer: the duplicated\nheads are never materialised.  (Regression: the law's LHS pinned legacy\n`arg4`/`arg5` attr metavars the canonical `ATTR_SCHEMA` boundary never\nemits \u2014 zero fires until the pattern read `dropout_p`/`is_causal`.)\n",
+      "found": true,
+      "picked": true,
+      "certified": true,
+      "verified": true,
+      "verify_max_abs": 0.0,
+      "axis": "launch",
+      "cost_before": 199688.0,
+      "cost_after": 196610.0,
+      "best_baseline": "F.sdpa enable_gqa",
+      "best_baseline_cost": 196612.0,
+      "beat_best": true,
+      "beat_best_measured": false,
+      "signals_seen": [
+        "law:gqa_absorb_repeat"
+      ],
+      "error": "",
+      "detail": {
+        "search_s": 0.061,
+        "n_enodes": 59,
+        "iterations": 8,
+        "extracted_ops": [
+          "concat",
+          "linear",
+          "reshape",
+          "sdpa",
+          "split",
+          "transpose"
+        ],
+        "cert_steps": 4,
+        "cert_egraph_dep": 0,
+        "median_s": {
+          "mlopt": 6.409480200090911e-05,
+          "eager spelled": 7.034027299960143e-05,
+          "F.sdpa enable_gqa": 5.144835100509226e-05,
+          "inductor": 0.00011449899466242641
+        },
+        "mlopt_ms": 0.06409480200090911
+      },
+      "baselines": [
+        {
+          "name": "eager spelled",
+          "kind": "self",
+          "available": true,
+          "cost": 199688.0,
+          "median_s": 7.034027299960143e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": ""
+        },
+        {
+          "name": "F.sdpa enable_gqa",
+          "kind": "ref",
+          "available": true,
+          "cost": 196612.0,
+          "median_s": 5.144835100509226e-05,
+          "iqr_s": 0.0,
+          "verify_passed": true,
+          "verify_max_abs": 0.0,
+          "note": "the kernel-side head broadcast PyTorch ships"
+        },
+        {
+          "name": "inductor",
+          "kind": "compile",
+          "available": true,
+          "cost": null,
+          "median_s": 0.00011449899466242641,
+          "iqr_s": 3.6282435758039355e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -428,7 +503,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.042,
+        "search_s": 0.035,
         "n_enodes": 14,
         "iterations": 1,
         "extracted_ops": [
@@ -442,12 +517,12 @@
         "cert_steps": 3,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 6.323602900374681e-05,
-          "eager three-GEMM": 4.939457600994501e-05,
-          "merged QKV": 3.8536035004653966e-05,
-          "inductor": 9.830949420575052e-05
+          "mlopt": 5.3457173009519464e-05,
+          "eager three-GEMM": 4.2514594992098864e-05,
+          "merged QKV": 3.3790157496696335e-05,
+          "inductor": 8.751949644647539e-05
         },
-        "mlopt_ms": 0.06323602900374681
+        "mlopt_ms": 0.053457173009519465
       },
       "baselines": [
         {
@@ -455,7 +530,7 @@
           "kind": "self",
           "available": true,
           "cost": 32772.0,
-          "median_s": 4.939457600994501e-05,
+          "median_s": 4.2514594992098864e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -466,7 +541,7 @@
           "kind": "ref",
           "available": true,
           "cost": 32770.0,
-          "median_s": 3.8536035004653966e-05,
+          "median_s": 3.3790157496696335e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -477,8 +552,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 9.830949420575052e-05,
-          "iqr_s": 6.610753189306706e-06,
+          "median_s": 8.751949644647539e-05,
+          "iqr_s": 2.741504431469366e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -507,7 +582,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.03,
+        "search_s": 0.019,
         "n_enodes": 7,
         "iterations": 2,
         "extracted_ops": [
@@ -517,12 +592,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 5.1632660994073374e-06,
-          "eager spelled": 4.107810198911466e-06,
-          "mul-then-unsqueeze": 3.173965000314638e-06,
-          "inductor": 2.4620996555313468e-05
+          "mlopt": 4.229996950016357e-06,
+          "eager spelled": 3.3640992995060516e-06,
+          "mul-then-unsqueeze": 2.633685600449098e-06,
+          "inductor": 2.095900708809495e-05
         },
-        "mlopt_ms": 0.005163266099407337
+        "mlopt_ms": 0.004229996950016357
       },
       "baselines": [
         {
@@ -530,7 +605,7 @@
           "kind": "self",
           "available": true,
           "cost": 75.0,
-          "median_s": 4.107810198911466e-06,
+          "median_s": 3.3640992995060516e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -541,7 +616,7 @@
           "kind": "ref",
           "available": true,
           "cost": 50.0,
-          "median_s": 3.173965000314638e-06,
+          "median_s": 2.633685600449098e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -552,8 +627,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 2.4620996555313468e-05,
-          "iqr_s": 1.230990164913237e-06,
+          "median_s": 2.095900708809495e-05,
+          "iqr_s": 1.0560033842921257e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -583,7 +658,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.062,
+        "search_s": 0.055,
         "n_enodes": 28,
         "iterations": 2,
         "extracted_ops": [
@@ -604,12 +679,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 8.065651600190904e-05,
-          "eager quadratic": 0.00013972497500071767,
-          "paper chunkwise": 0.0002769833400088828,
-          "inductor": 0.0002516425010981038
+          "mlopt": 6.800654999096878e-05,
+          "eager quadratic": 0.00012329980099457316,
+          "paper chunkwise": 0.0002372602109971922,
+          "inductor": 0.00021422399731818587
         },
-        "mlopt_ms": 0.08065651600190904
+        "mlopt_ms": 0.06800654999096878
       },
       "baselines": [
         {
@@ -617,7 +692,7 @@
           "kind": "self",
           "available": true,
           "cost": 761863.0,
-          "median_s": 0.00013972497500071767,
+          "median_s": 0.00012329980099457316,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -628,7 +703,7 @@
           "kind": "ref",
           "available": true,
           "cost": 491656.0,
-          "median_s": 0.0002769833400088828,
+          "median_s": 0.0002372602109971922,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 3.3306690738754696e-16,
@@ -639,8 +714,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 0.0002516425010981038,
-          "iqr_s": 1.1749751138268039e-05,
+          "median_s": 0.00021422399731818587,
+          "iqr_s": 6.3140178099274635e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -682,7 +757,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.032,
+        "search_s": 0.025,
         "n_enodes": 16,
         "iterations": 3,
         "extracted_ops": [
@@ -691,12 +766,12 @@
         "cert_steps": 4,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 1.4722498899209312e-05,
-          "eager spelled": 1.4720250200480222e-05,
-          "F.rms_norm": 1.1959178400866222e-05,
-          "inductor": 4.395999712869525e-05
+          "mlopt": 1.2439666398859117e-05,
+          "eager spelled": 1.2478933499369304e-05,
+          "F.rms_norm": 1.0108731299987994e-05,
+          "inductor": 4.131700552534312e-05
         },
-        "mlopt_ms": 0.014722498899209312
+        "mlopt_ms": 0.012439666398859116
       },
       "baselines": [
         {
@@ -704,7 +779,7 @@
           "kind": "self",
           "available": true,
           "cost": 218.0,
-          "median_s": 1.4720250200480222e-05,
+          "median_s": 1.2478933499369304e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -715,7 +790,7 @@
           "kind": "ref",
           "available": true,
           "cost": 129.0,
-          "median_s": 1.1959178400866222e-05,
+          "median_s": 1.0108731299987994e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -726,8 +801,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 4.395999712869525e-05,
-          "iqr_s": 3.3149990485981107e-06,
+          "median_s": 4.131700552534312e-05,
+          "iqr_s": 1.3469980331137776e-06,
           "verify_passed": true,
           "verify_max_abs": 4.440892098500626e-16,
           "note": "measured-only (no symbolic form)"
@@ -756,7 +831,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.024,
+        "search_s": 0.021,
         "n_enodes": 14,
         "iterations": 3,
         "extracted_ops": [
@@ -765,12 +840,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 1.4703182599623687e-05,
-          "eager spelled": 1.3737748099083546e-05,
-          "F.rms_norm": 1.1824661699938588e-05,
-          "inductor": 4.8491492634639144e-05
+          "mlopt": 1.2589853900135495e-05,
+          "eager spelled": 1.2536430300679057e-05,
+          "F.rms_norm": 1.0163654899224639e-05,
+          "inductor": 4.2134990508202463e-05
         },
-        "mlopt_ms": 0.014703182599623688
+        "mlopt_ms": 0.012589853900135495
       },
       "baselines": [
         {
@@ -778,7 +853,7 @@
           "kind": "self",
           "available": true,
           "cost": 282.0,
-          "median_s": 1.3737748099083546e-05,
+          "median_s": 1.2536430300679057e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -789,7 +864,7 @@
           "kind": "ref",
           "available": true,
           "cost": 129.0,
-          "median_s": 1.1824661699938588e-05,
+          "median_s": 1.0163654899224639e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -800,8 +875,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 4.8491492634639144e-05,
-          "iqr_s": 2.1032537915743887e-06,
+          "median_s": 4.2134990508202463e-05,
+          "iqr_s": 1.4924989955034107e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -830,7 +905,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.022,
+        "search_s": 0.019,
         "n_enodes": 11,
         "iterations": 3,
         "extracted_ops": [
@@ -839,12 +914,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 1.2533833099587355e-05,
-          "eager spelled": 1.12226159995771e-05,
-          "F.rms_norm (no weight)": 1.0307836900756229e-05,
-          "inductor": 2.4541994207538664e-05
+          "mlopt": 1.062431629979983e-05,
+          "eager spelled": 9.778249899682123e-06,
+          "F.rms_norm (no weight)": 8.460084200487473e-06,
+          "inductor": 2.019600651692599e-05
         },
-        "mlopt_ms": 0.012533833099587355
+        "mlopt_ms": 0.01062431629979983
       },
       "baselines": [
         {
@@ -852,7 +927,7 @@
           "kind": "self",
           "available": true,
           "cost": 217.0,
-          "median_s": 1.12226159995771e-05,
+          "median_s": 9.778249899682123e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -863,7 +938,7 @@
           "kind": "ref",
           "available": true,
           "cost": 65.0,
-          "median_s": 1.0307836900756229e-05,
+          "median_s": 8.460084200487473e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -874,8 +949,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 2.4541994207538664e-05,
-          "iqr_s": 1.3399985618889332e-06,
+          "median_s": 2.019600651692599e-05,
+          "iqr_s": 9.345021680928767e-07,
           "verify_passed": true,
           "verify_max_abs": 2.220446049250313e-16,
           "note": "measured-only (no symbolic form)"
@@ -898,13 +973,13 @@
       "best_baseline": "F.scaled_dot_product_attention",
       "best_baseline_cost": 32772.0,
       "beat_best": false,
-      "beat_best_measured": false,
+      "beat_best_measured": true,
       "signals_seen": [
         "law:sdpa_fold_div_nomask"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.039,
+        "search_s": 0.031,
         "n_enodes": 19,
         "iterations": 2,
         "extracted_ops": [
@@ -914,12 +989,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 3.846623600111343e-05,
-          "eager spelled": 4.939717799425125e-05,
-          "F.scaled_dot_product_attention": 3.8351648996467704e-05,
-          "inductor": 0.0001108150026993826
+          "mlopt": 3.225086450402159e-05,
+          "eager spelled": 4.3336820002878085e-05,
+          "F.scaled_dot_product_attention": 3.401583350932924e-05,
+          "inductor": 9.49120003497228e-05
         },
-        "mlopt_ms": 0.03846623600111343
+        "mlopt_ms": 0.03225086450402159
       },
       "baselines": [
         {
@@ -927,7 +1002,7 @@
           "kind": "self",
           "available": true,
           "cost": 33415.0,
-          "median_s": 4.939717799425125e-05,
+          "median_s": 4.3336820002878085e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -938,7 +1013,7 @@
           "kind": "ref",
           "available": true,
           "cost": 32772.0,
-          "median_s": 3.8351648996467704e-05,
+          "median_s": 3.401583350932924e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 2.220446049250313e-16,
@@ -949,8 +1024,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 0.0001108150026993826,
-          "iqr_s": 4.701247235061601e-06,
+          "median_s": 9.49120003497228e-05,
+          "iqr_s": 2.639008016558364e-06,
           "verify_passed": true,
           "verify_max_abs": 1.1102230246251565e-16,
           "note": "measured-only (no symbolic form)"
@@ -979,7 +1054,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.031,
+        "search_s": 0.02,
         "n_enodes": 7,
         "iterations": 2,
         "extracted_ops": [
@@ -989,12 +1064,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 6.159259600099176e-06,
-          "eager spelled": 5.091844899288845e-06,
-          "mul-then-select": 3.7360707006882877e-06,
-          "inductor": 2.4537992430850863e-05
+          "mlopt": 5.336617300054059e-06,
+          "eager spelled": 4.409371050132905e-06,
+          "mul-then-select": 3.2035895004810297e-06,
+          "inductor": 2.129199856426567e-05
         },
-        "mlopt_ms": 0.006159259600099176
+        "mlopt_ms": 0.005336617300054059
       },
       "baselines": [
         {
@@ -1002,7 +1077,7 @@
           "kind": "self",
           "available": true,
           "cost": 15.0,
-          "median_s": 5.091844899288845e-06,
+          "median_s": 4.409371050132905e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1013,7 +1088,7 @@
           "kind": "ref",
           "available": true,
           "cost": 38.0,
-          "median_s": 3.7360707006882877e-06,
+          "median_s": 3.2035895004810297e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1024,8 +1099,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 2.4537992430850863e-05,
-          "iqr_s": 1.3509998098015785e-06,
+          "median_s": 2.129199856426567e-05,
+          "iqr_s": 1.0209987522102892e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -1054,7 +1129,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.027,
+        "search_s": 0.016,
         "n_enodes": 4,
         "iterations": 2,
         "extracted_ops": [
@@ -1063,12 +1138,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 3.215815100702457e-06,
-          "eager spelled": 3.32584759889869e-06,
-          "F.silu": 2.3434382004779764e-06,
-          "inductor": 2.6718502340372652e-05
+          "mlopt": 2.8428252997400706e-06,
+          "eager spelled": 2.914799249265343e-06,
+          "F.silu": 1.872040059970459e-06,
+          "inductor": 1.9377999706193805e-05
         },
-        "mlopt_ms": 0.003215815100702457
+        "mlopt_ms": 0.0028428252997400707
       },
       "baselines": [
         {
@@ -1076,7 +1151,7 @@
           "kind": "self",
           "available": true,
           "cost": 194.0,
-          "median_s": 3.32584759889869e-06,
+          "median_s": 2.914799249265343e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1087,7 +1162,7 @@
           "kind": "ref",
           "available": true,
           "cost": 193.0,
-          "median_s": 2.3434382004779764e-06,
+          "median_s": 1.872040059970459e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 4.440892098500626e-16,
@@ -1098,8 +1173,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 2.6718502340372652e-05,
-          "iqr_s": 3.8032594602555037e-06,
+          "median_s": 1.9377999706193805e-05,
+          "iqr_s": 8.700008038431406e-07,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -1128,7 +1203,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.023,
+        "search_s": 0.016,
         "n_enodes": 5,
         "iterations": 2,
         "extracted_ops": [
@@ -1137,12 +1212,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 4.321470699505881e-06,
-          "eager spelled": 5.725328699918464e-06,
-          "torch.softmax": 2.346132299862802e-06,
-          "inductor": 2.695299917832017e-05
+          "mlopt": 3.963660649606026e-06,
+          "eager spelled": 5.012865299067926e-06,
+          "torch.softmax": 2.1027942100772634e-06,
+          "inductor": 2.0322506316006184e-05
         },
-        "mlopt_ms": 0.004321470699505881
+        "mlopt_ms": 0.003963660649606026
       },
       "baselines": [
         {
@@ -1150,7 +1225,7 @@
           "kind": "self",
           "available": true,
           "cost": 327.0,
-          "median_s": 5.725328699918464e-06,
+          "median_s": 5.012865299067926e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1161,7 +1236,7 @@
           "kind": "ref",
           "available": true,
           "cost": 65.0,
-          "median_s": 2.346132299862802e-06,
+          "median_s": 2.1027942100772634e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 5.551115123125783e-17,
@@ -1172,8 +1247,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 2.695299917832017e-05,
-          "iqr_s": 1.2575037544593215e-06,
+          "median_s": 2.0322506316006184e-05,
+          "iqr_s": 7.984926924109459e-07,
           "verify_passed": true,
           "verify_max_abs": 1.734723475976807e-18,
           "note": "measured-only (no symbolic form)"
@@ -1202,7 +1277,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.02,
+        "search_s": 0.017,
         "n_enodes": 6,
         "iterations": 2,
         "extracted_ops": [
@@ -1211,12 +1286,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 8.522165700560436e-06,
-          "eager spelled": 6.961529300315306e-06,
-          "F.softsign": 1.3646203100506681e-05,
-          "inductor": 2.3649001377634704e-05
+          "mlopt": 6.516474399541039e-06,
+          "eager spelled": 5.60546000051545e-06,
+          "F.softsign": 5.693569300638046e-06,
+          "inductor": 2.0292005501687527e-05
         },
-        "mlopt_ms": 0.008522165700560436
+        "mlopt_ms": 0.006516474399541039
       },
       "baselines": [
         {
@@ -1224,7 +1299,7 @@
           "kind": "self",
           "available": true,
           "cost": 387.0,
-          "median_s": 6.961529300315306e-06,
+          "median_s": 5.60546000051545e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1235,7 +1310,7 @@
           "kind": "ref",
           "available": true,
           "cost": 387.0,
-          "median_s": 1.3646203100506681e-05,
+          "median_s": 5.693569300638046e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1246,8 +1321,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 2.3649001377634704e-05,
-          "iqr_s": 1.25050064525567e-06,
+          "median_s": 2.0292005501687527e-05,
+          "iqr_s": 9.929935913532972e-07,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -1276,7 +1351,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.039,
+        "search_s": 0.022,
         "n_enodes": 9,
         "iterations": 2,
         "extracted_ops": [
@@ -1289,12 +1364,12 @@
         "cert_steps": 2,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 7.64591199986171e-05,
-          "eager two-GEMM": 6.150246600736863e-05,
-          "fused SwiGLU": 6.247548099781852e-05,
-          "inductor": 0.00016896901070140302
+          "mlopt": 1.933029890060425e-05,
+          "eager two-GEMM": 1.4213389299402479e-05,
+          "fused SwiGLU": 1.4552280399948358e-05,
+          "inductor": 5.121000140206888e-05
         },
-        "mlopt_ms": 0.0764591199986171
+        "mlopt_ms": 0.01933029890060425
       },
       "baselines": [
         {
@@ -1302,7 +1377,7 @@
           "kind": "self",
           "available": true,
           "cost": 4356.0,
-          "median_s": 6.150246600736863e-05,
+          "median_s": 1.4213389299402479e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1313,7 +1388,7 @@
           "kind": "ref",
           "available": true,
           "cost": 4485.0,
-          "median_s": 6.247548099781852e-05,
+          "median_s": 1.4552280399948358e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1324,8 +1399,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 0.00016896901070140302,
-          "iqr_s": 1.0786985512822866e-05,
+          "median_s": 5.121000140206888e-05,
+          "iqr_s": 1.6982521628960967e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"
@@ -1348,13 +1423,13 @@
       "best_baseline": "pre-folded Linear",
       "best_baseline_cost": 2049.0,
       "beat_best": false,
-      "beat_best_measured": false,
+      "beat_best_measured": true,
       "signals_seen": [
         "law:assoc_linear"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.038,
+        "search_s": 0.02,
         "n_enodes": 7,
         "iterations": 2,
         "extracted_ops": [
@@ -1364,12 +1439,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 2.2143508002045565e-05,
-          "eager two-GEMM": 4.0189456994994545e-05,
-          "pre-folded Linear": 2.1098992991028352e-05,
-          "inductor": 0.00017249600205104798
+          "mlopt": 5.058214000018779e-06,
+          "eager two-GEMM": 9.609089000150561e-06,
+          "pre-folded Linear": 5.50540580006782e-06,
+          "inductor": 5.4804499086458236e-05
         },
-        "mlopt_ms": 0.022143508002045564
+        "mlopt_ms": 0.0050582140000187785
       },
       "baselines": [
         {
@@ -1377,7 +1452,7 @@
           "kind": "self",
           "available": true,
           "cost": 4098.0,
-          "median_s": 4.0189456994994545e-05,
+          "median_s": 9.609089000150561e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1388,7 +1463,7 @@
           "kind": "ref",
           "available": true,
           "cost": 2049.0,
-          "median_s": 2.1098992991028352e-05,
+          "median_s": 5.50540580006782e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 2.823249983796572e-08,
@@ -1399,8 +1474,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 0.00017249600205104798,
-          "iqr_s": 1.4182500308379531e-05,
+          "median_s": 5.4804499086458236e-05,
+          "iqr_s": 2.362248778808862e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "no freeze \u2014 Inductor cannot fold the weights"
@@ -1429,7 +1504,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.044,
+        "search_s": 0.022,
         "n_enodes": 8,
         "iterations": 2,
         "extracted_ops": [
@@ -1439,12 +1514,12 @@
         "cert_steps": 1,
         "cert_egraph_dep": 0,
         "median_s": {
-          "mlopt": 2.050586800032761e-05,
-          "eager two-GEMM": 4.3507189999218096e-05,
-          "merged Linear": 2.1068428992293775e-05,
-          "inductor": 6.0407997807487845e-05
+          "mlopt": 5.2738359998329545e-06,
+          "eager two-GEMM": 1.2360544300463517e-05,
+          "merged Linear": 5.829978300607764e-06,
+          "inductor": 5.240800237515941e-05
         },
-        "mlopt_ms": 0.02050586800032761
+        "mlopt_ms": 0.005273835999832954
       },
       "baselines": [
         {
@@ -1452,7 +1527,7 @@
           "kind": "self",
           "available": true,
           "cost": 4163.0,
-          "median_s": 4.3507189999218096e-05,
+          "median_s": 1.2360544300463517e-05,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 0.0,
@@ -1463,7 +1538,7 @@
           "kind": "ref",
           "available": true,
           "cost": 2049.0,
-          "median_s": 2.1068428992293775e-05,
+          "median_s": 5.829978300607764e-06,
           "iqr_s": 0.0,
           "verify_passed": true,
           "verify_max_abs": 7.771561172376096e-16,
@@ -1474,8 +1549,8 @@
           "kind": "compile",
           "available": true,
           "cost": null,
-          "median_s": 6.0407997807487845e-05,
-          "iqr_s": 2.721004420891404e-06,
+          "median_s": 5.240800237515941e-05,
+          "iqr_s": 2.1074993128422648e-06,
           "verify_passed": true,
           "verify_max_abs": 0.0,
           "note": "measured-only (no symbolic form)"

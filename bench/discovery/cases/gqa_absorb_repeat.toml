@@ -1,0 +1,33 @@
+name = "gqa_absorb_repeat"
+title = "Materialised repeat_kv → sdpa enable_gqa"
+category = "memory"
+citation = """
+The llama2.c GQA spelling: `unsqueeze→expand→reshape` copies each kv
+head r times before `F.sdpa` — a materialised copy diagonal.  SDPA's
+`enable_gqa` flag implements the same broadcast inside the kernel, and
+`gqa_absorb_repeat` pushes the copy into the consumer: the duplicated
+heads are never materialised.  (Regression: the law's LHS pinned legacy
+`arg4`/`arg5` attr metavars the canonical `ATTR_SCHEMA` boundary never
+emits — zero fires until the pattern read `dropout_p`/`is_causal`.)
+"""
+source = "gqa_repeat_kv"
+size = 16
+rules = "default"
+cost = "launch"
+
+[expect]
+signals = ["law:gqa_absorb_repeat"]
+ops = ["sdpa"]
+absent_ops = ["expand", "unsqueeze"]
+
+[[baselines]]
+name = "eager spelled"
+kind = "self"
+[[baselines]]
+name = "F.sdpa enable_gqa"
+kind = "ref"
+ref = "gqa_enable_gqa"
+note = "the kernel-side head broadcast PyTorch ships"
+[[baselines]]
+name = "inductor"
+kind = "compile"

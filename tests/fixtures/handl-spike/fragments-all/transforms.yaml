@@ -5807,8 +5807,8 @@
               dim0: 1
               dim1: 2
         attrs:
-          arg4: "D"
-          arg5: "C"
+          dropout_p: "D"
+          is_causal: "C"
       rhs:
         op: "sdpa"
         args:
@@ -5831,9 +5831,9 @@
               dim0: 1
               dim1: 2
         attrs:
-          arg4: "D"
-          arg5: "C"
-          arg7: true
+          dropout_p: "D"
+          is_causal: "C"
+          enable_gqa: true
       cond:
         - "and"
         - - "rank"
@@ -7858,3 +7858,269 @@
       kind: "softmax"
     - !ChildCount 2
   priority: 21
+- id: "transform.mlopt.conv_bn_fold"
+  pass: "mlopt"
+  node_kind: "batch_norm"
+  rule:
+    !Declarative
+    target_kind: "conv2d"
+    children:
+      - !KeepPath
+        - 0
+        - 0
+      - !Create
+        kind: "mul"
+        children:
+          - !Create
+            kind: "mul"
+            children:
+              - !KeepPath
+                - 0
+                - 1
+              - !Create
+                kind: "reshape"
+                children:
+                  - !Create
+                    kind: "rsqrt"
+                    children:
+                      - !Create
+                        kind: "add"
+                        children:
+                          - !Create
+                            kind: "reshape"
+                            children:
+                              - !KeepPath
+                                - 4
+                          - !Fresh "@1:@1:@1:@1:EPS"
+          - !Create
+            kind: "reshape"
+            children:
+              - !Create
+                kind: "reshape"
+                children:
+                  - !KeepPath
+                    - 1
+      - !Create
+        kind: "add"
+        children:
+          - !Create
+            kind: "mul"
+            children:
+              - !Create
+                kind: "mul"
+                children:
+                  - !Create
+                    kind: "sub"
+                    children:
+                      - !KeepPath
+                        - 0
+                        - 2
+                      - !Create
+                        kind: "reshape"
+                        children:
+                          - !Create
+                            kind: "reshape"
+                            children:
+                              - !KeepPath
+                                - 3
+                  - !Create
+                    kind: "reshape"
+                    children:
+                      - !Create
+                        kind: "rsqrt"
+                        children:
+                          - !Create
+                            kind: "add"
+                            children:
+                              - !Create
+                                kind: "reshape"
+                                children:
+                                  - !KeepPath
+                                    - 4
+                              - !Fresh "@1:@1:@1:@1:EPS"
+              - !Create
+                kind: "reshape"
+                children:
+                  - !Create
+                    kind: "reshape"
+                    children:
+                      - !KeepPath
+                        - 1
+          - !Create
+            kind: "reshape"
+            children:
+              - !Create
+                kind: "reshape"
+                children:
+                  - !KeepPath
+                    - 2
+  mlopt:
+    law:
+      version: 2
+      kind: "law"
+      name: "conv_bn_fold"
+      law: "batch_norm(conv2d(x, W, b), \u03b3, \u03b2, \u03bc, \u03c3\u00b2, training=False) folds to conv2d(x, W\u00b7\u015d, (b\u2212\u03bc\u0302)\u00b7\u015d+\u03b2\u0302) with \u015d = \u03b3/\u221a(\u03c3\u00b2+\u03b5) \u2014 the eval-mode weight fold, minted as the premise-composed composite over batch_norm_expand and the conv channel-scale/shift anchors.  Machine-minted (admitted by the full gauntlet; project/retros/minted-composite-default.md); the LHS attrs are the seed's spelling \u2014 the law's region is the default-attr eval-mode fold."
+      lhs:
+        op: "batch_norm"
+        args:
+          - op: "conv2d"
+            args:
+              - mvar: "v0"
+              - mvar: "v1"
+              - mvar: "v2"
+            attrs:
+              padding:
+                __tuple__:
+                  - 1
+                  - 1
+              stride:
+                __tuple__:
+                  - 1
+                  - 1
+          - mvar: "v3"
+          - mvar: "v4"
+          - mvar: "v5"
+          - mvar: "v6"
+        attrs:
+          cudnn_enabled: false
+          eps: 1e-05
+          momentum: 0.1
+          training: false
+      rhs:
+        op: "conv2d"
+        args:
+          - mvar: "v0"
+          - op: "mul"
+            args:
+              - op: "mul"
+                args:
+                  - mvar: "v1"
+                  - op: "reshape"
+                    args:
+                      - op: "rsqrt"
+                        args:
+                          - op: "add"
+                            args:
+                              - op: "reshape"
+                                args:
+                                  - mvar: "v6"
+                                attrs:
+                                  shape: "@1:@1:@1:@1:CH"
+                              - mvar: "@1:@1:@1:@1:EPS"
+                            attrs: {}
+                        attrs: {}
+                    attrs:
+                      shape: "@1:@1:@2:WV"
+                attrs: {}
+              - op: "reshape"
+                args:
+                  - op: "reshape"
+                    args:
+                      - mvar: "v3"
+                    attrs:
+                      shape: "@1:@1:@1:@1:CH"
+                attrs:
+                  shape: "@1:@2:WV"
+            attrs: {}
+          - op: "add"
+            args:
+              - op: "mul"
+                args:
+                  - op: "mul"
+                    args:
+                      - op: "sub"
+                        args:
+                          - mvar: "v2"
+                          - op: "reshape"
+                            args:
+                              - op: "reshape"
+                                args:
+                                  - mvar: "v5"
+                                attrs:
+                                  shape: "@1:@1:@1:@1:CH"
+                            attrs:
+                              shape: "@1:@1:@1:@2:SV"
+                        attrs: {}
+                      - op: "reshape"
+                        args:
+                          - op: "rsqrt"
+                            args:
+                              - op: "add"
+                                args:
+                                  - op: "reshape"
+                                    args:
+                                      - mvar: "v6"
+                                    attrs:
+                                      shape: "@1:@1:@1:@1:CH"
+                                  - mvar: "@1:@1:@1:@1:EPS"
+                                attrs: {}
+                            attrs: {}
+                        attrs:
+                          shape: "@1:@1:@2:SV"
+                    attrs: {}
+                  - op: "reshape"
+                    args:
+                      - op: "reshape"
+                        args:
+                          - mvar: "v3"
+                        attrs:
+                          shape: "@1:@1:@1:@1:CH"
+                    attrs:
+                      shape: "@1:@2:SV"
+                attrs: {}
+              - op: "reshape"
+                args:
+                  - op: "reshape"
+                    args:
+                      - mvar: "v4"
+                    attrs:
+                      shape: "@1:@1:@1:@1:CH"
+                attrs:
+                  shape: "@2:SV"
+            attrs: {}
+        attrs:
+          padding:
+            __tuple__:
+              - 1
+              - 1
+          stride:
+            __tuple__:
+              - 1
+              - 1
+      cond: null
+      dspec: null
+      tags:
+        - "fusion"
+      derivation: []
+      cert: null
+      error_bound: null
+      bound_norm: "spectral"
+      serializable: false
+      missing_hooks:
+        - "check"
+        - "derive"
+    metavars:
+      v0:
+        - 0
+        - 0
+      v1:
+        - 0
+        - 1
+      v2:
+        - 0
+        - 2
+      v3:
+        - 1
+      v4:
+        - 2
+      v5:
+        - 3
+      v6:
+        - 4
+  when:
+    !And
+    - !KindAt
+      index: 0
+      kind: "conv2d"
+    - !ChildCount 5
+  priority: 1

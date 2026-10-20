@@ -3,7 +3,7 @@
 Can the engine derive *named* optimizations from the literature and real compilers — and can it beat the registered floor?  Each row is one case in `bench/discovery/cases/`; **found** = the expect spec held (signal observed + extraction contract), **cert** = the proof-carrying certificate replays standalone, **beat** = the certified form is *strictly below* the best registered baseline on the case's axis (a tie is a rediscovery, not a find).
 
 - lane: `full` (measured wall + verify)
-- date: 2026-10-20T01:24:16+00:00 · git: `646beab` (dirty) · torch 2.14.0+cu130 on cpu
+- date: 2026-10-20T03:28:38+00:00 · git: `9104de4` (dirty) · torch 2.14.0+cu130 on cpu
 
 | case | category | found | cert | cost (axis) | before → after | best baseline | beat |
 |---|---|---|---|---|---|---|---|
@@ -12,6 +12,7 @@ Can the engine derive *named* optimizations from the literature and real compile
 | `conv_bn_fold` | speed | yes | yes | launch | 29,186 → 27,649 (-5.3%) | hand-folded conv 27,649 | no |
 | `flash_attention` | memory | yes | yes | launch | 33,544 → 32,772 (-2.3%) | F.scaled_dot_product_attention 32,772 | no |
 | `glu_fold` | speed | yes | yes | launch | 98 → 33 (-66.3%) | F.glu 33 | no |
+| `gqa_absorb_repeat` | memory | yes | yes | launch | 199,688 → 196,610 (-1.5%) | F.sdpa enable_gqa 196,612 | yes |
 | `mha_qkv_fuse` | speed | yes | yes | launch | 32,772 → 32,770 (-0.0%) | merged QKV 32,770 | no |
 | `mul_unsq_nat` | speed | yes | yes | launch | 75 → 50 (-33.3%) | mul-then-unsqueeze 50 | no |
 | `retnet_chunkwise` | memory | yes | yes | launch | 761,863 → 761,862 (-0.0%) | paper chunkwise 491,656 | no |
@@ -31,25 +32,26 @@ Can the engine derive *named* optimizations from the literature and real compile
 
 | case | verified | max\|Δ\| | mlopt ms | best baseline ms | beat (measured) |
 |---|---|---|---|---|---|
-| `biased_chain_fold` | yes | 2.220446049250313e-16 | 0.009 | 0.007 | no |
-| `blelloch_scan` | yes | 8.881784197001252e-16 | 0.226 | 0.024 | no |
-| `conv_bn_fold` | yes | 1.6053824936079764e-13 | 0.012 | 0.013 | yes |
-| `flash_attention` | yes | 2.220446049250313e-16 | 0.033 | 0.036 | yes |
-| `glu_fold` | yes | 0.0 | 0.006 | 0.004 | no |
-| `mha_qkv_fuse` | yes | 0.0 | 0.063 | 0.039 | no |
-| `mul_unsq_nat` | yes | 0.0 | 0.005 | 0.003 | no |
-| `retnet_chunkwise` | yes | 0.0 | 0.081 | 0.140 | yes |
-| `rms_norm_bridge` | yes | 6.661338147750939e-15 | 0.015 | 0.012 | no |
-| `rms_norm_fold` | yes | 6.927791673660977e-13 | 0.015 | 0.012 | no |
-| `rms_norm_nogain` | yes | 3.432809592140984e-13 | 0.013 | 0.010 | no |
-| `sdpa_nomask` | yes | 2.220446049250313e-16 | 0.038 | 0.038 | no |
-| `select_mul` | yes | 0.0 | 0.006 | 0.004 | no |
+| `biased_chain_fold` | yes | 2.220446049250313e-16 | 0.009 | 0.006 | no |
+| `blelloch_scan` | yes | 8.881784197001252e-16 | 0.181 | 0.019 | no |
+| `conv_bn_fold` | yes | 1.6053824936079764e-13 | 0.010 | 0.010 | yes |
+| `flash_attention` | yes | 2.220446049250313e-16 | 0.031 | 0.032 | yes |
+| `glu_fold` | yes | 0.0 | 0.004 | 0.003 | no |
+| `gqa_absorb_repeat` | yes | 0.0 | 0.064 | 0.051 | no |
+| `mha_qkv_fuse` | yes | 0.0 | 0.053 | 0.034 | no |
+| `mul_unsq_nat` | yes | 0.0 | 0.004 | 0.003 | no |
+| `retnet_chunkwise` | yes | 0.0 | 0.068 | 0.123 | yes |
+| `rms_norm_bridge` | yes | 6.661338147750939e-15 | 0.012 | 0.010 | no |
+| `rms_norm_fold` | yes | 6.927791673660977e-13 | 0.013 | 0.010 | no |
+| `rms_norm_nogain` | yes | 3.432809592140984e-13 | 0.011 | 0.008 | no |
+| `sdpa_nomask` | yes | 2.220446049250313e-16 | 0.032 | 0.034 | yes |
+| `select_mul` | yes | 0.0 | 0.005 | 0.003 | no |
 | `silu_fold` | yes | 4.440892098500626e-16 | 0.003 | 0.002 | no |
 | `softmax_fold` | yes | 5.551115123125783e-17 | 0.004 | 0.002 | no |
-| `softsign_fold` | yes | 0.0 | 0.009 | 0.007 | no |
-| `swiglu_mlp` | yes | 0.0 | 0.076 | 0.062 | no |
-| `weight_chain_fold` | yes | 2.220446049250313e-16 | 0.022 | 0.021 | no |
-| `weight_merge` | yes | 7.771561172376096e-16 | 0.021 | 0.021 | yes |
+| `softsign_fold` | yes | 0.0 | 0.007 | 0.006 | no |
+| `swiglu_mlp` | yes | 0.0 | 0.019 | 0.014 | no |
+| `weight_chain_fold` | yes | 2.220446049250313e-16 | 0.005 | 0.006 | yes |
+| `weight_merge` | yes | 7.771561172376096e-16 | 0.005 | 0.006 | yes |
 
 ## Per-case detail
 
@@ -116,6 +118,20 @@ odd-extent corner from minting an `glu` that cannot denote.
 
 - signals: law:glu_fold
 - baselines: eager spelled (self) 98; F.glu (ref) 33 — the fused kernel; inductor (compile) — measured-only (no symbolic form)
+
+### `gqa_absorb_repeat` — Materialised repeat_kv → sdpa enable_gqa
+
+The llama2.c GQA spelling: `unsqueeze→expand→reshape` copies each kv
+head r times before `F.sdpa` — a materialised copy diagonal.  SDPA's
+`enable_gqa` flag implements the same broadcast inside the kernel, and
+`gqa_absorb_repeat` pushes the copy into the consumer: the duplicated
+heads are never materialised.  (Regression: the law's LHS pinned legacy
+`arg4`/`arg5` attr metavars the canonical `ATTR_SCHEMA` boundary never
+emits — zero fires until the pattern read `dropout_p`/`is_causal`.)
+
+
+- signals: law:gqa_absorb_repeat
+- baselines: eager spelled (self) 199,688; F.sdpa enable_gqa (ref) 196,612 — the kernel-side head broadcast PyTorch ships; inductor (compile) — measured-only (no symbolic form)
 
 ### `mha_qkv_fuse` — Split QKV projections → one widened GEMM
 

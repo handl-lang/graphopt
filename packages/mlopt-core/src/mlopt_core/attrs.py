@@ -38,9 +38,9 @@ The contract has two halves:
   consumes.
 
   When BOTH spellings arrive (``attrs["arg5"] = True`` patched onto a
-  term already carrying ``is_causal`` — ``optimize._specialize_causal``
-  does this), the positional write wins and lands under the canonical
-  name: imperative attr patches must take effect.
+  term already carrying ``is_causal``), the positional write wins and
+  lands under the canonical name: imperative attr patches must take
+  effect.
 
 ``ATTR_REQUIRED`` marks canonical names a *fully-attributed* term must
 supply: enforced only when the term carries at least one
