@@ -15,34 +15,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "00d174d5400e5e8fd687ad1049e2f578285fa914201b1af7e8b112a4546bd826"
 
 [[package]]
-name = "handl-kit-arrow-lower"
+name = "handl-kit-prelude-lang"
 version = "0.1.0"
 dependencies = [
- "handl-language",
- "serde_json",
-]
-
-[[package]]
-name = "handl-kit-data"
-version = "0.1.0"
-dependencies = [
- "handl-language",
- "handl-platform",
- "handl-runtime",
- "serde",
- "serde_json",
- "serde_yaml",
- "toml",
-]
-
-[[package]]
-name = "handl-kit-data-prelude"
-version = "0.1.0"
-dependencies = [
- "handl-kit-data",
  "handl-language",
  "handl-plugin-ext-diag",
- "handl-runtime",
  "hnl-engine-transform",
  "serde_json",
  "serde_yaml",
@@ -73,30 +50,10 @@ dependencies = [
 name = "handl-plugin-ext-diag"
 version = "0.1.0"
 dependencies = [
- "handl-language",
  "handl-platform",
  "serde",
  "serde_json",
  "thiserror",
-]
-
-[[package]]
-name = "handl-runtime"
-version = "0.1.0"
-dependencies = [
- "handl-kit-arrow-lower",
- "handl-language",
- "handl-platform",
- "handl-value",
- "hnl-engine",
- "hnl-engine-exec",
- "hnl-engine-lex",
- "hnl-engine-parse",
- "hnl-engine-transform-rewrite",
- "hnl-engine-typecheck",
- "rustc-hash",
- "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -122,59 +79,10 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 [[package]]
 name = "hnl-engine"
 version = "0.1.0"
-source = "git+https://github.com/handl-lang/engine?branch=main#68446aef714e01e633804b2a80cdba315e273817"
+source = "git+https://github.com/handl-lang/engine?branch=main#c0b9c8f70a768a1c2fda5670ea17477f4ce6d6dc"
 dependencies = [
  "handl-value",
  "serde",
- "serde_json",
-]
-
-[[package]]
-name = "hnl-engine-exec"
-version = "0.1.0"
-source = "git+https://github.com/handl-lang/engine-exec?branch=main#48fc199e0ec404b7d5891e51fb8402563ca9b795"
-dependencies = [
- "handl-language",
- "handl-platform",
- "handl-value",
- "rustc-hash",
- "serde_json",
-]
-
-[[package]]
-name = "hnl-engine-lex"
-version = "0.1.0"
-source = "git+https://github.com/handl-lang/engine-lex?branch=main#0560545cf9803cc9db8f767fa5c34c4ce8188ed7"
-dependencies = [
- "handl-language",
- "serde_json",
-]
-
-[[package]]
-name = "hnl-engine-lex-pattern"
-version = "0.1.0"
-source = "git+https://github.com/handl-lang/engine-lex-pattern?branch=main#4d1525995bebcfcba0a95f9187888bbe366b3ff3"
-dependencies = [
- "handl-language",
- "hnl-engine-lex",
-]
-
-[[package]]
-name = "hnl-engine-parse"
-version = "0.1.0"
-source = "git+https://github.com/handl-lang/engine-parse?branch=main#fb7ceb1d387511a6fb1cdc19e26bcf582d764722"
-dependencies = [
- "handl-language",
- "serde_json",
-]
-
-[[package]]
-name = "hnl-engine-parse-pratt"
-version = "0.1.0"
-source = "git+https://github.com/handl-lang/engine-parse-pratt?branch=main#e534e8bc3288408209cef6bb2e344a10be26a9ac"
-dependencies = [
- "handl-language",
- "hnl-engine-parse",
  "serde_json",
 ]
 
@@ -193,20 +101,6 @@ version = "0.1.0"
 dependencies = [
  "handl-language",
  "hnl-engine-transform",
- "serde_json",
-]
-
-[[package]]
-name = "hnl-engine-typecheck"
-version = "0.1.0"
-source = "git+https://github.com/handl-lang/engine-typecheck?branch=main#0e8113f852a65da54c5a1c6cbe3d722b6b5780f0"
-dependencies = [
- "handl-language",
- "handl-platform",
- "handl-plugin-ext-diag",
- "hnl-engine-lex-pattern",
- "hnl-engine-parse",
- "hnl-engine-parse-pratt",
  "serde_json",
 ]
 
@@ -260,7 +154,7 @@ dependencies = [
 name = "mlopt-handl-peer"
 version = "0.1.0"
 dependencies = [
- "handl-kit-data-prelude",
+ "handl-kit-prelude-lang",
  "handl-language",
  "hnl-engine-transform-rewrite",
  "pyo3",
@@ -570,18 +464,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
 
 [[patch.unused]]
-name = "handl-plugin-lib-handl"
-version = "0.1.0"
-
-[[patch.unused]]
-name = "handl-plugin-lib-tag"
-version = "0.1.0"
-
-[[patch.unused]]
-name = "handl-plugin-module"
-version = "0.1.0"
-
-[[patch.unused]]
 name = "sepia-acp"
 version = "0.0.0"
 
@@ -624,3 +506,23 @@ version = "0.0.0"
 [[patch.unused]]
 name = "sepia-testkit"
 version = "0.0.0"
+
+[[patch.unused]]
+name = "handl-kit-data"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "handl-plugin-lib-handl"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "handl-plugin-lib-tag"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "handl-plugin-module"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "handl-runtime"
+version = "0.1.0"
