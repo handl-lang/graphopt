@@ -3,7 +3,7 @@
 Can the engine derive *named* optimizations from the literature and real compilers — and can it beat the registered floor?  Each row is one case in `bench/discovery/cases/`; **found** = the expect spec held (signal observed + extraction contract), **cert** = the proof-carrying certificate replays standalone, **beat** = the certified form is *strictly below* the best registered baseline on the case's axis (a tie is a rediscovery, not a find).
 
 - lane: `full` (measured wall + verify)
-- date: 2026-10-20T04:46:31+00:00 · git: `e104d90` (dirty) · torch 2.14.0+cu130 on cpu
+- date: 2026-10-21T00:53:41+00:00 · git: `eea02f6` (dirty) · torch 2.14.0+cu130 on cpu
 
 | case | category | found | cert | cost (axis) | before → after | best baseline | beat |
 |---|---|---|---|---|---|---|---|
@@ -20,6 +20,7 @@ Can the engine derive *named* optimizations from the literature and real compile
 | `rms_norm_bridge` | speed | yes | yes | launch | 218 → 129 (-40.8%) | F.rms_norm 129 | no |
 | `rms_norm_fold` | speed | yes | yes | launch | 282 → 129 (-54.3%) | F.rms_norm 129 | no |
 | `rms_norm_nogain` | speed | yes | yes | launch | 217 → 65 (-70.0%) | F.rms_norm (no weight) 65 | no |
+| `sdpa_decomposed` | structure | yes | yes | launch | 32,772 → 32,772 (+0.0%) | eager spelled 32,772 | no |
 | `sdpa_nomask` | memory | yes | yes | launch | 33,415 → 32,772 (-1.9%) | F.scaled_dot_product_attention 32,772 | no |
 | `select_mul` | speed | yes | yes | launch | 15 → 15 (+0.0%) | eager spelled 15 | no |
 | `silu_fold` | speed | yes | yes | launch | 194 → 193 (-0.5%) | F.silu 193 | no |
@@ -42,36 +43,37 @@ Can the engine derive *named* optimizations from the literature and real compile
 
 | case | verified | max\|Δ\| | mlopt ms | best baseline ms | beat (measured) |
 |---|---|---|---|---|---|
-| `biased_chain_fold` | yes | 2.220446049250313e-16 | 0.009 | 0.008 | no |
-| `blelloch_scan` | yes | 8.881784197001252e-16 | 0.203 | 0.021 | no |
-| `conv_bn_fold` | yes | 1.6053824936079764e-13 | 0.011 | 0.011 | yes |
-| `cumsum_scan` | yes | 3.552713678800501e-15 | 0.328 | 0.005 | no |
-| `flash_attention` | yes | 2.220446049250313e-16 | 0.036 | 0.034 | no |
-| `glu_fold` | yes | 0.0 | 0.012 | 0.004 | no |
-| `gqa_absorb_repeat` | yes | 0.0 | 0.085 | 0.062 | no |
-| `mha_qkv_fuse` | yes | 0.0 | 0.064 | 0.037 | no |
+| `biased_chain_fold` | yes | 2.220446049250313e-16 | 0.008 | 0.006 | no |
+| `blelloch_scan` | yes | 8.881784197001252e-16 | 0.165 | 0.018 | no |
+| `conv_bn_fold` | yes | 8.881784197001252e-16 | 0.010 | 0.010 | no |
+| `cumsum_scan` | yes | 3.552713678800501e-15 | 0.261 | 0.004 | no |
+| `flash_attention` | yes | 2.220446049250313e-16 | 0.029 | 0.029 | yes |
+| `glu_fold` | yes | 0.0 | 0.004 | 0.003 | no |
+| `gqa_absorb_repeat` | yes | 0.0 | 0.062 | 0.048 | no |
+| `mha_qkv_fuse` | yes | 0.0 | 0.048 | 0.030 | no |
 | `mul_unsq_nat` | yes | 0.0 | 0.005 | 0.003 | no |
-| `retnet_chunkwise` | yes | 0.0 | 0.070 | 0.122 | yes |
-| `rms_norm_bridge` | yes | 6.661338147750939e-15 | 0.014 | 0.011 | no |
-| `rms_norm_fold` | yes | 6.927791673660977e-13 | 0.013 | 0.011 | no |
-| `rms_norm_nogain` | yes | 3.432809592140984e-13 | 0.012 | 0.010 | no |
-| `sdpa_nomask` | yes | 2.220446049250313e-16 | 0.036 | 0.038 | yes |
+| `retnet_chunkwise` | yes | 0.0 | 0.072 | 0.127 | yes |
+| `rms_norm_bridge` | yes | 4.440892098500626e-16 | 0.013 | 0.010 | no |
+| `rms_norm_fold` | yes | 0.0 | 0.014 | 0.009 | no |
+| `rms_norm_nogain` | yes | 0.0 | 0.011 | 0.008 | no |
+| `sdpa_decomposed` | yes | 0.0 | 0.041 | 0.040 | no |
+| `sdpa_nomask` | yes | 2.220446049250313e-16 | 0.031 | 0.037 | yes |
 | `select_mul` | yes | 0.0 | 0.008 | 0.003 | no |
 | `silu_fold` | yes | 4.440892098500626e-16 | 0.003 | 0.002 | no |
-| `softmax_fold` | yes | 5.551115123125783e-17 | 0.004 | 0.002 | no |
+| `softmax_fold` | yes | 5.551115123125783e-17 | 0.005 | 0.002 | no |
 | `softsign_fold` | yes | 0.0 | 0.007 | 0.006 | no |
 | `swiglu_mlp` | yes | 0.0 | 0.020 | 0.015 | no |
 | `weight_chain_fold` | yes | 2.220446049250313e-16 | 0.006 | 0.006 | yes |
-| `weight_merge` | yes | 7.771561172376096e-16 | 0.005 | 0.006 | yes |
-| `zoo_adaln_affd` | yes | 0.0 | 0.070 | 0.052 | no |
-| `zoo_cosine_attention` | yes | 1.1102230246251565e-16 | 0.147 | 0.106 | no |
-| `zoo_delta_rule` | yes | 0.0 | 0.181 | 0.087 | no |
-| `zoo_gau` | yes | 0.0 | 0.056 | 0.052 | no |
-| `zoo_lora_adapter` | yes | 2.220446049250313e-16 | 0.018 | 0.017 | no |
-| `zoo_lora_param` | yes | 0.0 | 0.023 | 0.017 | no |
-| `zoo_mos_head` | yes | 0.0 | 0.043 | 0.039 | no |
-| `zoo_spline_kan` | yes | 0.0 | 0.029 | 0.025 | no |
-| `zoo_time_cond_conv` | yes | 0.0 | 0.052 | 0.063 | yes |
+| `weight_merge` | yes | 7.771561172376096e-16 | 0.006 | 0.006 | yes |
+| `zoo_adaln_affd` | yes | 0.0 | 0.071 | 0.054 | no |
+| `zoo_cosine_attention` | yes | 1.1102230246251565e-16 | 0.136 | 0.103 | no |
+| `zoo_delta_rule` | yes | 0.0 | 0.149 | 0.083 | no |
+| `zoo_gau` | yes | 0.0 | 0.051 | 0.048 | no |
+| `zoo_lora_adapter` | yes | 2.220446049250313e-16 | 0.016 | 0.015 | no |
+| `zoo_lora_param` | yes | 0.0 | 0.021 | 0.016 | no |
+| `zoo_mos_head` | yes | 0.0 | 0.044 | 0.034 | no |
+| `zoo_spline_kan` | yes | 0.0 | 0.028 | 0.024 | no |
+| `zoo_time_cond_conv` | yes | 0.0 | 0.052 | 0.059 | yes |
 
 ## Per-case detail
 
@@ -256,6 +258,22 @@ way; project/retros/rms-norm-law.md).
 
 - signals: law:rms_norm_fold_nogain
 - baselines: eager spelled (self) 217; F.rms_norm (no weight) (ref) 65 — the fused kernel, weight=None; inductor (compile) — measured-only (no symbolic form)
+
+### `sdpa_decomposed` — Fused SDPA — decompose, migrate the scale, refold
+
+The fused-op blindness: `F.scaled_dot_product_attention` is opaque to
+the e-graph — no law can reach inside the kernel (the measured
+0.80–0.88× vs compiled on BiRefNet/pointwise-fusion rows,
+docs/results.md).  `sdpa_expand_s` mints the kernel's own spelled
+form `softmax(q@kᵀ·s)@v`; inside, the score-scale migration
+(`naturality_scalar_left_rev` → `scale_in_{transpose,reshape}` →
+`linear_out_scale`) pushes the runtime (T,T) scale into a
+compile-time weight mul, and `sdpa_fold_mul_nomask` refolds.  Opt-in:
+`default_attention` = DEFAULT + ATTENTION.
+
+
+- signals: law:sdpa_expand_s, law:naturality_scalar_left_rev, law:linear_out_scale
+- baselines: eager spelled (self) 32,772; inductor (compile) — measured-only (no symbolic form)
 
 ### `sdpa_nomask` — No-mask spelled attention → fused SDPA
 
