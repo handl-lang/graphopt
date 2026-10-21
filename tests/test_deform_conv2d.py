@@ -15,15 +15,17 @@ either).  These tests pin the closed gap:
 """
 
 import sys
+from types import ModuleType, SimpleNamespace
 
+import mlopt_torch.torch_bridge as tb
 import pytest
 import torch
 import torch.nn as nn
-
 from mlopt_core.attrs import ATTR_SCHEMA
 from mlopt_torch.torch_bridge import (
     _ATEN_TO_IR,
     _IR_TO_TORCH,
+    _deform_conv2d_torch,
     _torchvision_deform_conv2d,
     export_to_ir,
 )
@@ -61,6 +63,89 @@ def test_deform_conv2d_lowering_requires_torchvision(monkeypatch):
     monkeypatch.setitem(sys.modules, "torchvision", None)
     with pytest.raises(RuntimeError, match="torchvision"):
         _torchvision_deform_conv2d()
+
+
+def test_torchvision_deform_conv2d_returns_the_registered_op(
+    monkeypatch,
+):
+    """The resolver's happy path — with torchvision importable it
+    returns the bound kernel, not the ImportError guard."""
+    monkeypatch.setitem(
+        sys.modules, "torchvision", ModuleType("torchvision")
+    )
+    sentinel = object()
+    monkeypatch.setattr(
+        torch.ops,
+        "torchvision",
+        SimpleNamespace(deform_conv2d=sentinel),
+    )
+    assert _torchvision_deform_conv2d() is sentinel
+
+
+def test_deform_conv2d_torch_fills_absent_mask_and_bias(monkeypatch):
+    """A hand-minted term without mask/bias operands mints the same
+    zero fills torchvision's export wrapper supplies — the kernel sees
+    the same call either way."""
+    seen: dict[str, tuple] = {}
+
+    def _kernel(*args):
+        seen["args"] = args
+        return "lowered"
+
+    monkeypatch.setattr(
+        tb, "_torchvision_deform_conv2d", lambda: _kernel
+    )
+    x = torch.randn(2, 6, 8, 8)
+    w = torch.randn(4, 3, 3, 3)
+    offset = torch.randn(2, 18, 8, 8)
+    out = _deform_conv2d_torch(
+        x,
+        w,
+        offset,
+        stride_h=2,
+        stride_w=2,
+        pad_h=1,
+        pad_w=1,
+        groups=2,
+        use_mask=True,
+    )
+    assert out == "lowered"
+    kx, kw_, koffset, kmask, kbias, *tail = seen["args"]
+    assert kx is x and kw_ is w and koffset is offset
+    # The mask fill is (batch, 1); the bias fill is one scalar per
+    # output channel — both zeros at the input's dtype/device.
+    assert kmask.shape == (x.shape[0], 1)
+    assert kmask.dtype == x.dtype
+    assert torch.equal(kmask, torch.zeros(2, 1))
+    assert kbias.shape == (w.shape[0],)
+    assert torch.equal(kbias, torch.zeros(4))
+    # The canonical attrs landed positionally, int/bool-cast in the
+    # aten order: stride_h/w, pad_h/w, dilation_h/w, groups,
+    # offset_groups, use_mask.
+    assert tail == [2, 2, 1, 1, 1, 1, 2, 1, True]
+
+
+def test_deform_conv2d_torch_passes_given_mask_and_bias(monkeypatch):
+    """The export-time spelling — real mask and bias operands — goes
+    through untouched: no zero fill shadows them."""
+    seen: dict[str, tuple] = {}
+
+    def _kernel(*args):
+        seen["args"] = args
+        return "lowered"
+
+    monkeypatch.setattr(
+        tb, "_torchvision_deform_conv2d", lambda: _kernel
+    )
+    x = torch.randn(2, 6, 8, 8)
+    w = torch.randn(4, 3, 3, 3)
+    offset = torch.randn(2, 18, 8, 8)
+    mask = torch.rand(2, 2 * 3 * 3, 8, 8)
+    bias = torch.randn(4)
+    assert _deform_conv2d_torch(x, w, offset, mask, bias) == "lowered"
+    args = seen["args"]
+    assert args[3] is mask
+    assert args[4] is bias
 
 
 @pytest.mark.parametrize("masked", [False, True])

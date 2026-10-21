@@ -33,10 +33,11 @@ Defensive branches believed unreachable by construction are listed in
 ``test_defensive_branch_inventory``.
 """
 
+from types import SimpleNamespace
+
 import pytest
 import torch
 import torch.nn.functional as F
-
 from mlopt_core.ir import (
     IR,
     Const,
@@ -52,6 +53,8 @@ from mlopt_torch.torch_bridge import (
     _aten_name,
     _canon_aten_name,
     _dim_args,
+    _graph_outputs,
+    _handle_copy_,
     _infer_shape,
     export_to_ir,
     ir_to_torch_module,
@@ -692,6 +695,48 @@ def test_dim_args_helper():
 
 
 # ---------------------------------------------------------------------------
+#  _graph_outputs / _handle_copy_ — output scan and write threading
+# ---------------------------------------------------------------------------
+
+
+def test_graph_outputs_scans_past_a_trailing_non_output_node():
+    """The reversed scan tolerates a node after ``output`` — the
+    ``node.op == "output"`` check fails on it and the loop iterates on
+    to the real output rather than stopping at index -1."""
+    leaf = SimpleNamespace(name="x")
+    term = Var("x", TensorType((2, 2)))
+    graph = SimpleNamespace(
+        nodes=[
+            SimpleNamespace(op="output", args=([leaf],)),
+            SimpleNamespace(op="call_function", args=()),
+        ]
+    )
+    outputs, unresolved = _graph_outputs(graph, {"x": term})
+    assert outputs == [term]
+    assert unresolved == 0
+
+
+def test_handle_copy_declines_on_an_unminted_intermediate_view():
+    """A write whose view chain's middle step never minted a binding
+    aborts — the scatter fold reads each step's base, and a missing
+    one returns without touching the root's binding."""
+    x = Var("x", TensorType((4, 4)))
+    y = SimpleNamespace(name="y", target=None)
+    v1 = SimpleNamespace(name="v1", target="slice", args=(y, 1, 0, 3))
+    v2 = SimpleNamespace(name="v2", target="slice", args=(v1, 2, 0, 2))
+    node = SimpleNamespace(
+        name="w", target="copy_", args=(v2, SimpleNamespace(name="s"))
+    )
+    env = {"y": x, "v2": x, "s": x}  # "v1" deliberately unminted
+    _handle_copy_(node, env)
+    # The write was declined: the root kept its pre-write binding and
+    # the node itself minted nothing.
+    assert env["y"] is x
+    assert env["v2"] is x
+    assert "w" not in env
+
+
+# ---------------------------------------------------------------------------
 #  defensive branches believed unreachable — pragma candidates
 # ---------------------------------------------------------------------------
 
@@ -795,6 +840,43 @@ class TestConvNetOps:
         from mlopt_core.attrs import ATTR_SCHEMA
 
         assert ATTR_SCHEMA["upsample_bilinear2d"][2] == "align_corners"
+
+    def test_upsample_bilinear2d_scalar_size_and_scale_broadcast(self):
+        """Scalar ``size``/``scale`` spellings — what the canonical
+        attrs of a hand-minted term can carry — broadcast to pairs."""
+        import torch
+        from mlopt_torch.torch_bridge import _CORE_TORCH_BINDINGS as B
+
+        x = torch.randn(1, 1, 4, 4)
+        out = B["upsample_bilinear2d"](x, size=8)
+        assert tuple(out.shape) == (1, 1, 8, 8)
+        out = B["upsample_bilinear2d"](x, scale=2.0)
+        assert tuple(out.shape) == (1, 1, 8, 8)
+        assert torch.allclose(
+            out,
+            torch.nn.functional.interpolate(
+                x,
+                scale_factor=(2.0, 2.0),
+                mode="bilinear",
+                align_corners=False,
+            ),
+        )
+
+    def test_adaptive_avg_pool2d_list_and_scalar_size(self):
+        """The export's ``[H, W]`` list canonicalises to a tuple; a
+        bare int stays a valid square output size (``1`` pools to 1x1
+        — BiRefNet's global-average branch)."""
+        import torch
+        from mlopt_torch.torch_bridge import _CORE_TORCH_BINDINGS as B
+
+        x = torch.randn(1, 3, 8, 8)
+        out = B["adaptive_avg_pool2d"](x, [1, 1])
+        assert tuple(out.shape) == (1, 3, 1, 1)
+        assert torch.equal(
+            out, torch.nn.functional.adaptive_avg_pool2d(x, (1, 1))
+        )
+        out = B["adaptive_avg_pool2d"](x, 2)
+        assert tuple(out.shape) == (1, 3, 2, 2)
 
 
 # ---------------------------------------------------------------------------

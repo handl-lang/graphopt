@@ -363,3 +363,42 @@ def test_train_reinforce_gradient_is_the_explicitly_paired_sum(monkeypatch):
     assert len(got) == len(expected)
     for g, e in zip(got, expected, strict=True):
         assert torch.allclose(g, e, atol=1e-6)
+
+
+def test_train_reinforce_zero_step_episode_skips_the_update(
+    monkeypatch,
+):
+    """A zero-step episode carries no signal — the update is skipped.
+
+    ``horizon=0`` makes ``_rollout`` return empty ``logps`` (pinned by
+    ``test_rollout_empty_horizon_yields_no_steps``); without the guard
+    ``torch.stack([])`` would raise and the baseline would ingest an
+    empty episode, so the loop ``continue``s before the update block.
+    """
+    spies: list[_SpyOptim] = []
+    seen_sizes: list[int] = []
+
+    def _opt_factory(params, **kw):
+        spies.append(_SpyOptim(params, **kw))
+        return spies[-1]
+
+    class _SpyBaseline(EmaBaseline):
+        def advantage(self, returns):
+            seen_sizes.append(returns.numel())
+            return super().advantage(returns)
+
+    monkeypatch.setattr(rl, "EmaBaseline", _SpyBaseline)
+    monkeypatch.setattr(torch.optim, "Adam", _opt_factory)
+    model = train_reinforce(
+        [_chain()],
+        all_rules(),
+        episodes=2,
+        horizon=0,
+        hidden=8,
+        device="cpu",
+    )
+    assert isinstance(model, PolicyNet)
+    # Every episode was zero-step: the baseline was never consulted
+    # and the optimizer never stepped.
+    assert seen_sizes == []
+    assert spies[0].grads == []
