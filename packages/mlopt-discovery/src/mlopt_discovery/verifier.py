@@ -204,7 +204,7 @@ def _rule_budgets(
 
 
 def _refusal(stats: dict) -> LawResult:
-    """The REFUSE row for a non-merge — naming any suspended rules.
+    """Build the REFUSE row for a non-merge — naming any suspended rules.
 
     A bound hit is reported, never hidden: a refusal caused by budget
     exhaustion carries the suspended rule names in ``note``, so it is
