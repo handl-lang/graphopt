@@ -32,7 +32,7 @@ from mlopt_discovery.census import (
 )
 from mlopt_discovery.impact import TermCase
 
-_TENSOR_ABS = emit.REPO_ROOT / emit._TENSOR_REL
+_TENSOR_ABS = emit._tensor_src()
 
 
 def _v(name: str, *shape: int) -> Var:
