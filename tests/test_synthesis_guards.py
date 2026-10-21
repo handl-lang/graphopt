@@ -112,9 +112,19 @@ def test_guarded_rule_families_now_synthesizable():
         "concat_binarize_3_dim",
     ):
         assert name in syn, name
-    # and nothing is left gated on the full ruleset: every rule's RHS
-    # metavariables are LHS-bound or derive-produced.
-    assert all(meta._synthesizable(r) for r in rules)
+    # and nothing else is left gated on the full ruleset: every rule's
+    # RHS metavariables are LHS-bound or derive-produced.  The one
+    # honest exception is the prior-art bank's free-attr triple —
+    # ``mm_splitk_rev`` / ``linear_concat_w`` / ``linear_concat_w_rev``
+    # each emit a concat-dim attr metavar (``CD``/``AD``) in the RHS
+    # that the LHS never binds and no ``derive`` produces, so
+    # ``_synthesizable`` excludes them: there is no sound way to
+    # propagate the binding.
+    assert {r.name for r in rules if not meta._synthesizable(r)} == {
+        "mm_splitk_rev",
+        "linear_concat_w",
+        "linear_concat_w_rev",
+    }
 
 
 # ---------------------------------------------------------------------------

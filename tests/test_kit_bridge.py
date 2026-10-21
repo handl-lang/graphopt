@@ -35,6 +35,7 @@ import os
 import shutil
 import subprocess
 import time
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -51,40 +52,102 @@ from bench.drivers.kit import term_hnl as kh
 pytestmark = pytest.mark.e2e
 
 _REPO = Path(__file__).resolve().parents[1]
-_BIN = Path(
-    os.environ.get(
-        "MLOPT_HNL_RUN", _REPO / "target" / "debug" / "hnl-run"
+
+
+def _config_target_dir(cfg: Path) -> Path | None:
+    """``build.target-dir`` from one cargo config file, if it sets one.
+
+    Relative paths resolve against the directory *containing* the
+    ``.cargo/`` dir, per cargo's config rules.
+    """
+    if not cfg.exists():
+        return None
+    try:
+        data = tomllib.loads(cfg.read_text())
+    except (OSError, tomllib.TOMLDecodeError):
+        return None
+    td = data.get("build", {}).get("target-dir")
+    if td is None:
+        return None
+    p = Path(td).expanduser()
+    return p if p.is_absolute() else (cfg.parent.parent / p).resolve()
+
+
+def _target_dirs() -> list[Path]:
+    """Candidate cargo target dirs, in cargo's resolution order.
+
+    ``cargo build`` honors ``$CARGO_TARGET_DIR`` first, then
+    ``[build] target-dir`` from the applicable configs — the repo's
+    ``.cargo/config.toml`` outranks ``$CARGO_HOME/config.toml`` — and
+    falls back to ``<repo>/target``.  Dev hosts may redirect the dir
+    globally (e.g. a shared ``~/.cargo/shared-target``), so the
+    repo-local path alone is not the truth.
+    """
+    env_dir = os.environ.get("CARGO_TARGET_DIR")
+    if env_dir:
+        return [Path(env_dir)]
+    cargo_home = Path(
+        os.environ.get("CARGO_HOME", Path.home() / ".cargo")
     )
-)
+    dirs = [
+        d
+        for cfg in (
+            _REPO / ".cargo" / "config.toml",
+            cargo_home / "config.toml",
+        )
+        if (d := _config_target_dir(cfg)) is not None
+    ]
+    dirs.append(_REPO / "target")
+    return dirs
+
+
+def _find_bin() -> Path | None:
+    """The compiled ``hnl-run``, wherever cargo put it — or ``None``."""
+    env_bin = os.environ.get("MLOPT_HNL_RUN")
+    if env_bin:
+        p = Path(env_bin)
+        return p if p.exists() else None
+    for td in _target_dirs():
+        p = td / "debug" / "hnl-run"
+        if p.exists():
+            return p
+    return None
 
 
 def _build_bin() -> Path:
     """The compiled ``hnl-run``, building it if absent."""
-    if _BIN.exists():
-        return _BIN
+    found = _find_bin()
+    if found is not None:
+        return found
     cargo = shutil.which("cargo")
     if cargo is None:
         pytest.skip("cargo not on PATH — hnl-run unavailable")
     env = dict(os.environ, CARGO_PROFILE_DEV_DEBUG="0")
-    out = subprocess.run(
-        [
-            cargo,
-            "build",
-            "-p",
-            "mlopt-kit",
-            "--bin",
-            "hnl-run",
-            "--locked",
-        ],
-        cwd=_REPO,
-        env=env,
-        capture_output=True,
-        text=True,
-        timeout=600,
-    )
-    if out.returncode != 0 or not _BIN.exists():
+    try:
+        out = subprocess.run(
+            [
+                cargo,
+                "build",
+                "-p",
+                "mlopt-kit",
+                "--bin",
+                "hnl-run",
+                "--locked",
+            ],
+            cwd=_REPO,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=600,
+        )
+    except subprocess.TimeoutExpired:
+        pytest.skip(
+            "hnl-run build timed out (cargo build serialized/blocked)"
+        )
+    found = _find_bin()
+    if out.returncode != 0 or found is None:
         pytest.skip(f"hnl-run build failed: {out.stderr[-400:]}")
-    return _BIN
+    return found
 
 
 @pytest.fixture(scope="module")

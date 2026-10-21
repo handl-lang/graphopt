@@ -16,6 +16,7 @@ engine — so no ``e2e`` mark.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 from pathlib import Path
 
@@ -109,8 +110,14 @@ def test_availability_reports_reasons():
     # the always-on baselines never need an excuse
     assert registry.availability("eager") is None
     assert registry.availability("paper_impl") is None
-    # opt_einsum is installed (the contraction board's floor)
-    assert registry.availability("opt_einsum") is None
+    # opt_einsum lives in the opt-in ``einsum`` dep group: installed it
+    # needs no excuse; absent it reports its reason, same convention as
+    # ``fla`` (``uv sync --group einsum`` to seat it).
+    oe_reason = registry.availability("opt_einsum")
+    if importlib.util.find_spec("opt_einsum") is None:
+        assert oe_reason is not None and "opt_einsum" in oe_reason
+    else:
+        assert oe_reason is None
 
 
 def test_build_declines_a_case_it_does_not_price():
@@ -182,6 +189,8 @@ def test_fast_lane_preserves_case_order_and_covers():
 
 def test_opt_einsum_arm_computes_the_chain():
     """The oe-greedy arm runs the chain correctly (fp64)."""
+    # opt-in ``einsum`` dependency group (uv sync --group einsum)
+    pytest.importorskip("opt_einsum")
     case = _case("weight_chain_fold")
     res = run_case(case, lane="fast", baselines=["opt_einsum", "eager"])
     by_name = {r.baseline: r for r in res.rows}

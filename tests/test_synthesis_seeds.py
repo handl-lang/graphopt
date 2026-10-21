@@ -375,9 +375,17 @@ def test_seed_witness_rescues_symbolic_guarded_candidate():
 def test_bounded_instantiation_remains_fallback():
     """An unseeded guarded pair whose side conditions ARE reachable in
     the bounded pool still emits — seeds are preferred, not required.
-    Also guards the 109/109 synthesizable census."""
+    Also guards the synthesizable census: the whole ruleset minus the
+    prior-art free-attr triple (``mm_splitk_rev`` /
+    ``linear_concat_w`` / ``linear_concat_w_rev`` — each emits a
+    concat-dim attr metavar in the RHS that the LHS never binds and no
+    ``derive`` produces)."""
     rules = meta.module_rules(R) + meta.module_rules(OM)
-    assert all(meta._synthesizable(r) for r in rules)
+    assert {r.name for r in rules if not meta._synthesizable(r)} == {
+        "mm_splitk_rev",
+        "linear_concat_w",
+        "linear_concat_w_rev",
+    }
 
     derived = meta.synthesize_rules(
         [OM.OM_LIFT, OM.OM_UNLIFT], fuel=1000
