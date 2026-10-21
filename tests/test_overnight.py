@@ -182,6 +182,79 @@ class TestCorpusZoo:
         assert man["protocol"]["corpus"] == "grammar"
 
 
+class TestCorpusZooReal:
+    """``--corpus zoo-real`` — candidates minted from the module's own term."""
+
+    def test_real_arena_pool_is_corpus_minted(self):
+        """The pool is ``pipeline.propose``'s mint, not the stream."""
+        case = {"zoo": "AdditiveAttention", "wseed": 0, "page": 48}
+        arena = on._RealArena(case)
+        assert not arena.error
+        assert arena.pool, "no proposal minted from the module"
+        for i, cand in enumerate(arena.pool):
+            # the pool rides the Candidate contract (as_rule/label)
+            # so step()/evaluate/the mint loop see the same shapes;
+            # meta carries the proposer's family for the ledger.
+            assert cand.strategy == "corpus"
+            assert cand.as_rule().lhs is not None
+            assert arena.meta[i]["family"]
+        # the census proposers saw this module's op-tuples —
+        # AdditiveAttention spells mul(unsq, unsq) so the census
+        # naturality family minted it (the mul_unsq_nat path).
+        assert "census:mul_unsqueeze" in [c.label for c in arena.pool]
+
+    def test_real_ctx_binds_subterm_matches(self):
+        """``real_terms`` is the subterm domain — the arm's premise.
+
+        A corpus mint whose LHS spells a real op-tuple binds real
+        sites through the referee context — the ``0 envs`` hole the
+        grammar/zoo arms measured cannot occur for a binding mint.
+        """
+        from mlopt_core.egraph.terms import _term_match
+
+        import bench.referees as referees
+
+        env = on._zoo_export_env(
+            [{"zoo": "TalkingHeadsAttention", "wseed": 0, "page": 6}]
+        )
+        ctx = on._real_referee_ctx(env, referees)
+        # subterm granularity: strictly more terms than module roots
+        assert len(ctx.real_terms) > len(env)
+        assert ctx.probe and ctx.sink is not None
+        arena = on._RealArena(
+            {"zoo": "TalkingHeadsAttention", "wseed": 0, "page": 48}
+        )
+        bound = [
+            c.label
+            for c in arena.pool
+            if any(
+                _term_match(c.as_rule().lhs, m) is not None
+                for m in ctx.real_terms
+            )
+        ]
+        assert bound, "no minted candidate binds a real site"
+
+    def test_zoo_real_dry_completes_and_records_corpus(self, tmp_path):
+        """The zoo-real arm end-to-end: pool minted from real terms."""
+        t0 = time.time()
+        assert (
+            on.main(_argv(tmp_path, "--dry", "--corpus", "zoo-real"))
+            == 0
+        )
+        assert time.time() - t0 < 240  # exports + mint + referee
+        man, cells = _records(tmp_path / "ck.jsonl")
+        assert man["protocol"]["corpus"] == "zoo-real"
+        episodes = _cells(cells, "episode")
+        assert len(episodes) == 2
+        for e in episodes:
+            assert "zoo" in e["record"]["case"]
+        for c in _cells(cells, "candidate"):
+            assert c["record"]["family"]  # the proposer is recorded
+        payload = json.loads((tmp_path / "out.json").read_text())
+        assert payload["corpus"] == "zoo-real"
+        assert "corpus: `zoo-real`" in (tmp_path / "out.md").read_text()
+
+
 class TestResume:
     """A protocol-matched resume replays cells, never re-measures."""
 

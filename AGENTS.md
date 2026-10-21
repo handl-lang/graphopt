@@ -100,7 +100,13 @@ not `baselines/` rows:
 - `bench/drivers/overnight.py` — the overnight discovery loop:
   episodes → mint → `verify_law` gauntlet admission → prior-art-bank
   novelty classification → resumable JSONL ledger →
-  `docs/results_overnight.md`.  A flat-file driver (no `<sub>/`),
+  `docs/results_overnight.md`.  `--corpus` picks the episode corpus:
+  `grammar` (stream pages), `zoo` (stream filtered to real-matching
+  claims per held-out zoo module), `zoo-real` (the corpus-driven
+  mint — each episode's pool is `pipeline.propose`'s candidates over
+  the module's own op-tuple census, judged against the corpus's
+  distinct real subterms → `docs/results_overnight_real.md`).
+  A flat-file driver (no `<sub>/`),
   standalone only — deliberately no `bench.suites` adapter
   (`bench/drivers/` is not a package; see the doc's suite-status
   note).

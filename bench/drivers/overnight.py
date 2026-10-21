@@ -60,10 +60,28 @@ classify sees the modules as ``corpus:<name>`` instances.  The arm is
 recorded in the ledger manifest's protocol (and the emitted document)
 so a resumed or resumed-against run can never silently mix corpora.
 
+``zoo-real`` is the **corpus-driven mint**: the enumerated stream is
+dropped as the hypothesis generator and each episode's pool is minted
+*from* the module's own term — ``census.op_tuple_census`` over the
+exported graph feeding ``pipeline.propose`` (census-naturality +
+mixed-view + pattern-recognition + shape-aware + grammar — the same
+mint path that produced ``mul_unsq_nat``, ``census:mul_unsqueeze``
+from DeltaRuleBlock's ``β·k`` op-tuple).  The grammar arm's
+diagnostic — grammar mints binding no real site (``real: 0 eq/0 envs``
+for 232/248 candidates in ``docs/results_overnight.md``) — is the arm
+this one answers: candidates minted on real subterms, judged against
+a ``real_terms`` domain that *is* the corpus's distinct real subterms
+(``shape_proposal.real_matches``' own matching granularity — the zoo
+arm's root-only domain could never see a subterm binding), unioned
+with the intake side-file census (``intake_dir()``) when it exists.
+Same gauntlet, same ledger, same doc shape — the document lands at
+``docs/results_overnight_real.md``.
+
 Run::
 
     .venv/bin/python bench/drivers/overnight.py --dry
     .venv/bin/python bench/drivers/overnight.py --dry --corpus zoo
+    .venv/bin/python bench/drivers/overnight.py --dry --corpus zoo-real
     .venv/bin/python bench/drivers/overnight.py --episodes 48 \
         --player playbook --referee full --resume
 """
@@ -123,15 +141,31 @@ DRY: dict[str, Any] = {
 
 #: The corpus arms — ``grammar`` pages the enumerated candidate
 #: stream; ``zoo`` pages the held-out ``mlopt_discovery.zoo`` module
-#: registry, the same stream filtered to real-matching claims.
-CORPORA: tuple[str, ...] = ("grammar", "zoo")
+#: registry, the same stream filtered to real-matching claims;
+#: ``zoo-real`` drops the stream entirely and mints each episode's
+#: pool from the module's own term (the ``pipeline.propose`` census
+#: mint — the ``mul_unsq_nat`` path).
+CORPORA: tuple[str, ...] = ("grammar", "zoo", "zoo-real")
 
 #: Where the documents land.
 DOC_PATH = _REPO / "docs" / "results_overnight.md"
 
+#: The zoo-real arm's own document — a different measurement than the
+#: stream-filtered arms, so it does not overwrite their ledger/doc.
+DOC_PATH_REAL = _REPO / "docs" / "results_overnight_real.md"
+
 #: The default ledger — ``benchkit.checkpoint.DEFAULT_DIR``'s lane
 #: file, spelled out so the constant needs no ``bench.*`` import.
 CKPT_PATH = Path("bench/results/checkpoints/overnight.jsonl")
+
+#: The zoo-real lane file — a non-``--resume`` run truncates its
+#: ledger, so the corpus arms never share a default path.
+CKPT_PATH_REAL = Path("bench/results/checkpoints/overnight_real.jsonl")
+
+#: The op vocabulary the corpus mint enumerates laws over —
+#: ``"derived"`` classifies every corpus op by property
+#: (``vocab.derive_vocabulary``); ``"hand"`` is the fixed projection.
+_MINT_VOCAB = "derived"
 
 _NOVELTY_ORDER = ("machine-original", "known-art", "vacuous")
 
@@ -261,24 +295,15 @@ def _zoo_export_env(cases: list) -> dict:
     return env
 
 
-def _zoo_referee_ctx(env: dict, referees: Any) -> Any:
-    """The zoo arm's ``RefereeCtx`` — real terms + a lowering sink.
-
-    ``real_terms`` are the covered modules' exported roots (the
-    oracle/sweep real-match domain); ``probe`` is the same modules as
-    ``TermCase``s (the pay leg's firing domain), verified through a
-    real ``TorchSink`` — the context the grammar arm's docstring
-    notes it lacks.
-    """
+def _zoo_probe(env: dict) -> list:
+    """The covered modules as ``TermCase``s — the pay leg's domain."""
     from mlopt_discovery.impact import TermCase
-    from mlopt_torch.adapters import TorchSink
 
-    real_terms, probe = [], []
+    probe = []
     for name, rec in env.items():
         if rec is None:
             continue
         ir, tensors, feeds = rec
-        real_terms.append(ir.root)
         probe.append(
             TermCase(
                 source="zoo",
@@ -289,9 +314,25 @@ def _zoo_referee_ctx(env: dict, referees: Any) -> Any:
                 param_vals=tensors,
             )
         )
+    return probe
+
+
+def _zoo_referee_ctx(env: dict, referees: Any) -> Any:
+    """The zoo arm's ``RefereeCtx`` — real terms + a lowering sink.
+
+    ``real_terms`` are the covered modules' exported roots (the
+    oracle/sweep real-match domain); ``probe`` is the same modules as
+    ``TermCase``s (the pay leg's firing domain), verified through a
+    real ``TorchSink`` — the context the grammar arm's docstring
+    notes it lacks.
+    """
+    from mlopt_torch.adapters import TorchSink
+
     return referees.RefereeCtx(
-        real_terms=tuple(real_terms),
-        probe=tuple(probe),
+        real_terms=tuple(
+            rec[0].root for rec in env.values() if rec is not None
+        ),
+        probe=tuple(_zoo_probe(env)),
         sink=TorchSink(),
     )
 
@@ -318,11 +359,176 @@ def _zoo_case_ctxs(env: dict) -> list:
     ]
 
 
+# ---------------------------------------------------------------------------
+#  the zoo-real corpus arm — candidates minted FROM the module's term
+# ---------------------------------------------------------------------------
+
+
+class _RealArena(og.OpenArena):
+    """An ``OpenArena`` whose pool is the corpus-minted candidate set.
+
+    The enumerated stream never enters this arm: each episode runs
+    ``census.op_tuple_census`` on the case module's exported term and
+    feeds the counts to ``pipeline.propose`` — the census-naturality /
+    mixed-view / pattern-recognition / shape-aware / grammar proposers,
+    the same machinery that minted ``mul_unsq_nat`` from DeltaRuleBlock's
+    ``β·k`` op-tuple (``exposed_discovery``'s pipeline arm).  Every
+    minted :class:`~mlopt_discovery.pipeline.Proposal` becomes a
+    :class:`~mlopt_discovery.proposal.Candidate` carrying the proposal's
+    own ``Rewrite`` (``check``/``derive`` hooks intact) — the oracle
+    verdict in the episode still measures the bare pair, while the
+    gauntlet judges the side-conditioned rule.
+
+    ``meta[i]`` records the proposal's ``family``/``sources`` beside
+    the pool so the candidate cell can name which proposer minted it —
+    rebuilt deterministically on resume with the pool itself.  An
+    export failure lands in ``self.error`` like the zoo arm's; an
+    empty mint is the honest done state.
+    """
+
+    def __init__(self, case: dict) -> None:
+        import mlopt_carriers  # noqa: F401 — carrier op bindings
+        from mlopt_discovery import pipeline as pipe
+        from mlopt_discovery.census import CorpusTerm, op_tuple_census
+        from mlopt_discovery.proposal import Candidate
+
+        self.pool: list = []
+        self.meta: dict[int, dict] = {}
+        self.verdicts: dict[int, str] = {}
+        self.steps = 0
+        self.done = True
+        self._n_true = 0
+        self._n_useful = 0
+        self.error = ""
+        try:
+            ir, _tensors, _feeds = _zoo_export(case)
+        except Exception as e:
+            self.error = f"export: {type(e).__name__}: {e}"
+            return
+        counts, _terms_of = op_tuple_census(
+            [CorpusTerm("zoo", case["zoo"], ir.root)]
+        )
+        page = case.get("page", 48)
+        for i, p in enumerate(
+            pipe.propose(dict(counts), [ir.root], _MINT_VOCAB)
+        ):
+            if i >= page:
+                break
+            self.pool.append(
+                Candidate(
+                    strategy="corpus",
+                    label=p.name,
+                    lhs=p.lhs,
+                    rhs=p.rhs,
+                    note=", ".join(p.sources),
+                    rule=p.as_rule(),
+                )
+            )
+            self.meta[i] = {
+                "family": p.family,
+                "sources": list(p.sources),
+            }
+        self.done = not self.pool
+
+
+def _intake_cases() -> list:
+    """The intake side-file census as ``TermCase``s ([] when absent).
+
+    ``intake_dir()`` is a shared, regenerable cache: when a
+    ``mlopt_discovery.intake`` run has populated it, its ingested
+    terms join the zoo-real arm's real-match domain and firing probe.
+    """
+    from mlopt_discovery.intake import load_cases
+
+    try:
+        return load_cases()
+    except Exception:
+        return []
+
+
+def _real_subterms(roots: list) -> list:
+    """Every distinct ``Op`` subterm across *roots*, repr-deduped.
+
+    The zoo-real arm's ``real_terms``: the corpus's real subterms at
+    ``shape_proposal.real_matches``' own granularity — the zoo arm's
+    root-only domain cannot see a subterm binding, which is exactly
+    why stream-minted claims measured ``0 envs``.  Dedup is by
+    ``op_repr`` so two structurally identical sites (same binding,
+    same eval) count once — ``_iter_subterms``'s id-dedup keeps
+    shared nodes but not equal spellings.
+    """
+    from mlopt_core.ir import Op, op_repr
+    from mlopt_discovery.census import _iter_subterms
+
+    seen: set[str] = set()
+    out: list = []
+    for root in roots:
+        for s in _iter_subterms(root):
+            if not isinstance(s, Op):
+                continue
+            k = op_repr(s)
+            if k in seen:
+                continue
+            seen.add(k)
+            out.append(s)
+    return out
+
+
+def _real_referee_ctx(env: dict, referees: Any) -> Any:
+    """The zoo-real arm's ``RefereeCtx`` — subterm real domain.
+
+    ``real_terms`` is every distinct ``Op`` subterm of the covered
+    modules' roots (plus the intake census's when the side-file
+    exists) — the domain a corpus-minted claim binds on, matching the
+    sites the mint itself read.  ``probe`` stays at module granularity
+    (the e-graph finds the subterm firings itself), unioned with
+    intake cases that carry a feed; ``sink`` is the same
+    ``TorchSink`` the zoo arm verifies through.
+    """
+    import mlopt_carriers  # noqa: F401 — carrier op bindings
+    from mlopt_torch.adapters import TorchSink
+
+    intake = _intake_cases()
+    roots = [rec[0].root for rec in env.values() if rec is not None]
+    roots += [c.term for c in intake if c.term is not None]
+    real_terms = _real_subterms(roots)
+    probe = _zoo_probe(env)
+    probe += [c for c in intake if c.term is not None and c.feed]
+    return referees.RefereeCtx(
+        real_terms=tuple(real_terms),
+        probe=tuple(probe),
+        sink=TorchSink(),
+    )
+
+
+def _real_case_ctxs(env: dict) -> list:
+    """``novelty_sieve._CaseCtx``s over zoo + intake corpus terms."""
+    from mlopt_discovery.intake.ledger import _DEFAULT_JSON
+
+    from bench.drivers.screen import novelty_sieve as ns
+
+    ctxs = _zoo_case_ctxs(env)
+    if _DEFAULT_JSON.exists():
+        for c in _intake_cases():
+            if c.term is None:
+                continue
+            ctxs.append(
+                ns._CaseCtx(
+                    case=SimpleNamespace(name=c.name),
+                    model=None,
+                    feed=None,
+                    term=c.term,
+                    ops=ns._ops_of(c.term),
+                )
+            )
+    return ctxs
+
+
 def _gen_cases(
     corpus: str, seed: int, episodes: int, **kw: Any
 ) -> list:
     """The corpus arm's case list — stream pages or zoo workloads."""
-    if corpus == "zoo":
+    if corpus in ("zoo", "zoo-real"):
         return _zoo_cases(
             seed, episodes, page=kw["page"], scan=kw.get("scan") or 0
         )
@@ -331,7 +537,11 @@ def _gen_cases(
 
 def _arena_for(case: dict, corpus: str) -> Any:
     """The episode board for *case* on *corpus*."""
-    return _ZooArena(case) if corpus == "zoo" else og.OpenArena(case)
+    if corpus == "zoo":
+        return _ZooArena(case)
+    if corpus == "zoo-real":
+        return _RealArena(case)
+    return og.OpenArena(case)
 
 
 # ---------------------------------------------------------------------------
@@ -480,9 +690,11 @@ def run(
     inject players through it; production callers leave it ``None``
     and the named registered player is built.  ``cases`` overrides
     the generated case list — each is an arena case dict (a stream
-    page on ``grammar``, ``{"zoo": name, ...}`` on ``zoo``).
+    page on ``grammar``, ``{"zoo": name, ...}`` on the zoo arms).
     ``corpus`` picks the arm; ``scan`` bounds the zoo arm's
-    per-module stream read (``<= 0`` scans the whole stream).
+    per-module stream read (``<= 0`` scans the whole stream; unused
+    on ``zoo-real`` — the mint reads the module's own term, not the
+    stream).
     """
     import torch
 
@@ -492,10 +704,14 @@ def run(
     if cases is None:
         cases = _gen_cases(corpus, seed, episodes, page=page, scan=scan)
     zenv: dict | None = None
-    if corpus == "zoo":
+    if corpus in ("zoo", "zoo-real"):
         zenv = _zoo_export_env(cases)
         if ctx is None:
-            ctx = _zoo_referee_ctx(zenv, referees)
+            ctx = (
+                _real_referee_ctx(zenv, referees)
+                if corpus == "zoo-real"
+                else _zoo_referee_ctx(zenv, referees)
+            )
     ctx = referees.RefereeCtx() if ctx is None else ctx
     arm = arm_factory or players.make(player, "open", seed=seed, ctx={})
     bank: list | None = None
@@ -542,6 +758,10 @@ def run(
             cand = pool[ev["i"]]
             rule = cand.as_rule()
             rec = _admit(rule, referee, ctx)
+            meta = getattr(arena, "meta", {}).get(ev["i"])
+            if meta is not None:
+                rec["family"] = meta["family"]
+                rec["sources"] = meta["sources"]
             rec["label"] = ev["label"]
             rec["episode"] = i
             rec["arena"] = {
@@ -569,8 +789,12 @@ def run(
                 from bench.drivers.screen import novelty_sieve as ns
 
                 bank = ns.known_bank()
-            if corpus == "zoo" and zctxs is None:
-                zctxs = _zoo_case_ctxs(zenv or {})
+            if corpus in ("zoo", "zoo-real") and zctxs is None:
+                zctxs = (
+                    _real_case_ctxs(zenv or {})
+                    if corpus == "zoo-real"
+                    else _zoo_case_ctxs(zenv or {})
+                )
             rule = law_from_data(crec["law"])
             cres = _classify(rule, bank, ctxs=zctxs)
             ckpt.record(ckey, cres)
@@ -638,6 +862,7 @@ def run(
         "candidates": [
             {
                 "name": r["name"],
+                "family": r.get("family", ""),
                 "arena": r["arena"],
                 "admitted": r["admitted"],
                 "skipped": r["skipped"],
@@ -692,9 +917,18 @@ def render_markdown(summary: dict, *, env: dict | None = None) -> str:
         f"- protocol: `{json.dumps(summary['protocol'], sort_keys=True)}`",
         f"- corpus: `{summary.get('corpus', 'grammar')}`"
         + (
-            " — held-out zoo modules (mlopt_discovery.zoo)"
-            if summary.get("corpus") == "zoo"
-            else " — the enumerated grammar stream"
+            {
+                "zoo": " — held-out zoo modules "
+                "(mlopt_discovery.zoo), the stream filtered to "
+                "real-matching claims",
+                "zoo-real": " — held-out zoo modules "
+                "(mlopt_discovery.zoo), candidates minted from each "
+                "module's own op-tuple census (pipeline.propose); "
+                "real_terms are the corpus's distinct subterms",
+            }.get(
+                summary.get("corpus", "grammar"),
+                " — the enumerated grammar stream",
+            )
         ),
         f"- episodes: {summary['episodes']} · "
         f"evaluated: {summary['evaluated']} · "
@@ -811,14 +1045,19 @@ def main(argv: list[str] | None = None) -> int:
         help="the episode corpus — 'grammar' pages the enumerated "
         "candidate stream; 'zoo' pages the held-out model zoo "
         "(mlopt_discovery.zoo), each module's exported term "
-        "filtering the stream to claims that fire on real structure",
+        "filtering the stream to claims that fire on real structure; "
+        "'zoo-real' drops the stream: each episode's pool is minted "
+        "from the module's own op-tuple census (pipeline.propose — "
+        "the mul_unsq_nat path) and judged against the corpus's "
+        "distinct real subterms",
     )
     ap.add_argument(
         "--scan",
         type=int,
         default=DEFAULTS["scan"],
         help="zoo arm: stream candidates scanned per module "
-        "(<=0 unbounded; the stream is ~1.1k)",
+        "(<=0 unbounded; the stream is ~1.1k).  Unused on zoo-real — "
+        "the mint reads the module's term, not the stream",
     )
     ap.add_argument(
         "--dry",
@@ -828,8 +1067,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--ckpt",
         type=Path,
-        default=CKPT_PATH,
-        help=f"append-only ledger (default {CKPT_PATH})",
+        default=None,
+        help=f"append-only ledger (default {CKPT_PATH}; "
+        f"{CKPT_PATH_REAL} on --corpus zoo-real)",
     )
     ap.add_argument(
         "--resume",
@@ -840,14 +1080,23 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--out",
         type=Path,
-        default=DOC_PATH,
-        help=f"markdown output (default {DOC_PATH}); the .json "
+        default=None,
+        help=f"markdown output (default {DOC_PATH}; "
+        f"{DOC_PATH_REAL} on --corpus zoo-real); the .json "
         "lands beside it",
     )
     args = ap.parse_args(argv)
     if args.dry:
         for k, v in DRY.items():
             setattr(args, k, v)
+    if args.ckpt is None:
+        args.ckpt = (
+            CKPT_PATH_REAL if args.corpus == "zoo-real" else CKPT_PATH
+        )
+    if args.out is None:
+        args.out = (
+            DOC_PATH_REAL if args.corpus == "zoo-real" else DOC_PATH
+        )
 
     #  Standalone runs put ``bench/drivers`` on sys.path — the root
     #  must be present before the ``bench.*`` imports below.
