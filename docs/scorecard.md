@@ -2,8 +2,8 @@
 
 Can the engine derive *named* optimizations from the literature and real compilers — and can it beat the registered floor?  Each row is one case in `bench/discovery/cases/`; **found** = the expect spec held (signal observed + extraction contract), **cert** = the proof-carrying certificate replays standalone, **beat** = the certified form is *strictly below* the best registered baseline on the case's axis (a tie is a rediscovery, not a find).
 
-- lane: `fast` (symbolic dag_cost)
-- date: 2026-10-21T03:31:01+00:00 · git: `ee89e13` (dirty) · torch 2.14.0+cu130 on cpu
+- lane: `full` (measured wall + verify)
+- date: 2026-10-21T07:23:07+00:00 · git: `975501c` · torch 2.14.0+cu130 on cpu
 
 | case | category | found | cert | cost (axis) | before → after | best baseline | beat |
 |---|---|---|---|---|---|---|---|
@@ -39,6 +39,42 @@ Can the engine derive *named* optimizations from the literature and real compile
 | `zoo_spline_kan` | speed | yes | yes | exec | 87,058 → 87,055 (-0.0%) | eager spelled 87,058 | yes |
 | `zoo_time_cond_conv` | speed | yes | yes | exec | 226,488 → 209,088 (-7.7%) | eager 226,488 | yes |
 
+## Measured (full lane)
+
+| case | verified | max\|Δ\| | mlopt ms | best baseline ms | beat (measured) |
+|---|---|---|---|---|---|
+| `biased_chain_fold` | yes | 2.220446049250313e-16 | 0.007 | 0.006 | no |
+| `blelloch_scan` | yes | 8.881784197001252e-16 | 0.149 | 0.016 | no |
+| `conv_bn_fold` | yes | 8.881784197001252e-16 | 0.009 | 0.009 | no |
+| `cumsum_scan` | yes | 3.552713678800501e-15 | 0.231 | 0.004 | no |
+| `flash_attention` | yes | 2.220446049250313e-16 | 0.027 | 0.027 | no |
+| `glu_fold` | yes | 0.0 | 0.004 | 0.003 | no |
+| `gqa_absorb_repeat` | yes | 0.0 | 0.060 | 0.046 | no |
+| `mha_qkv_fuse` | yes | 0.0 | 0.047 | 0.028 | no |
+| `mul_unsq_nat` | yes | 0.0 | 0.004 | 0.002 | no |
+| `retnet_chunkwise` | yes | 0.0 | 0.064 | 0.112 | yes |
+| `rms_norm_bridge` | yes | 4.440892098500626e-16 | 0.011 | 0.009 | no |
+| `rms_norm_fold` | yes | 0.0 | 0.010 | 0.007 | no |
+| `rms_norm_nogain` | yes | 0.0 | 0.009 | 0.007 | no |
+| `sdpa_decomposed` | yes | 0.0 | 0.038 | 0.034 | no |
+| `sdpa_nomask` | yes | 2.220446049250313e-16 | 0.026 | 0.027 | yes |
+| `select_mul` | yes | 0.0 | 0.007 | 0.002 | no |
+| `silu_fold` | yes | 4.440892098500626e-16 | 0.003 | 0.002 | no |
+| `softmax_fold` | yes | 5.551115123125783e-17 | 0.004 | 0.002 | no |
+| `softsign_fold` | yes | 0.0 | 0.006 | 0.005 | no |
+| `swiglu_mlp` | yes | 0.0 | 0.016 | 0.011 | no |
+| `weight_chain_fold` | yes | 2.220446049250313e-16 | 0.004 | 0.005 | yes |
+| `weight_merge` | yes | 7.771561172376096e-16 | 0.004 | 0.005 | yes |
+| `zoo_adaln_affd` | yes | 0.0 | 0.055 | 0.042 | no |
+| `zoo_cosine_attention` | yes | 1.1102230246251565e-16 | 0.116 | 0.081 | no |
+| `zoo_delta_rule` | yes | 0.0 | 0.123 | 0.069 | no |
+| `zoo_gau` | yes | 0.0 | 0.040 | 0.037 | no |
+| `zoo_lora_adapter` | yes | 2.220446049250313e-16 | 0.012 | 0.012 | no |
+| `zoo_lora_param` | yes | 0.0 | 0.017 | 0.013 | no |
+| `zoo_mos_head` | yes | 0.0 | 0.034 | 0.028 | no |
+| `zoo_spline_kan` | yes | 0.0 | 0.025 | 0.021 | no |
+| `zoo_time_cond_conv` | yes | 0.0 | 0.045 | 0.052 | yes |
+
 ## Per-case detail
 
 ### `biased_chain_fold` — Two-layer biased Linear chain → affine compose
@@ -52,7 +88,7 @@ GEMM plus one broadcast add at runtime.
 
 
 - signals: law:assoc_linear_bias
-- baselines: eager two-GEMM (self) 4,098; pre-folded affine (ref) 2,049 — one Linear carrying W=B·A, b=B·b1+b2; inductor (compile) unavailable — no freeze — Inductor cannot fold the weights
+- baselines: eager two-GEMM (self) 4,098; pre-folded affine (ref) 2,049 — one Linear carrying W=B·A, b=B·b1+b2; inductor (compile) — no freeze — Inductor cannot fold the weights
 
 ### `blelloch_scan` — Unrolled first-order recurrence → parallel scan
 
@@ -65,7 +101,7 @@ same monoid RetNet's chunked scan runs on.
 
 
 - signals: law:decay_state_lift, op:applyd
-- baselines: eager unrolled (self) 759; cumsum prefix (ref) 1,494 — h_t = P_t · cumsum(x_t/P_t) — the closed-form parallel scan; inductor (compile) unavailable — measured-only (no symbolic form)
+- baselines: eager unrolled (self) 759; cumsum prefix (ref) 1,494 — h_t = P_t · cumsum(x_t/P_t) — the closed-form parallel scan; inductor (compile) — measured-only (no symbolic form)
 
 ### `conv_bn_fold` — Conv2d + eval BatchNorm2d fold
 
@@ -78,7 +114,7 @@ fixture is the eval-mode `BatchNorm2d(Conv2d(x))` site the mint saw
 
 
 - signals: law:conv_bn_fold
-- baselines: eager (self) 29,186; hand-folded conv (ref) 27,649 — PyTorch fold recipe — one conv, BN absorbed into W'/b'; inductor (compile) unavailable — measured-only (no symbolic form)
+- baselines: eager (self) 29,186; hand-folded conv (ref) 27,649 — PyTorch fold recipe — one conv, BN absorbed into W'/b'; inductor (compile) — measured-only (no symbolic form)
 
 ### `cumsum_scan` — Unit-decay recurrence → aff carrier (cumsum association)
 
@@ -101,7 +137,7 @@ produces the `cumsum` op, a coverage gap, not a bad law.
 
 
 - signals: law:affd_lift_unit, law:affd_lift_unit_step, op:applyd
-- baselines: eager unrolled (self) 1,115,257; cumsum prefix (ref) 34,940 — x.cumsum(1)[:, -1] — the practitioner's parallel-scan spelling; inductor (compile) unavailable — measured-only (no symbolic form)
+- baselines: eager unrolled (self) 1,115,257; cumsum prefix (ref) 34,940 — x.cumsum(1)[:, -1] — the practitioner's parallel-scan spelling; inductor (compile) — measured-only (no symbolic form)
 
 ### `flash_attention` — Hand-spelled softmax attention → fused SDPA
 
@@ -113,7 +149,7 @@ closes it to `is_causal` (DEFAULT rules).
 
 
 - signals: law:sdpa_fold_adddiv
-- baselines: eager spelled (self) 33,544; F.scaled_dot_product_attention (ref) 32,772 — the fused kernel PyTorch ships; inductor (compile) unavailable — measured-only (no symbolic form)
+- baselines: eager spelled (self) 33,544; F.scaled_dot_product_attention (ref) 32,772 — the fused kernel PyTorch ships; inductor (compile) — measured-only (no symbolic form)
 
 ### `glu_fold` — chunk·σ(chunk) manual GLU → fused glu kernel
 
@@ -126,7 +162,7 @@ odd-extent corner from minting an `glu` that cannot denote.
 
 
 - signals: law:glu_fold
-- baselines: eager spelled (self) 98; F.glu (ref) 33 — the fused kernel; inductor (compile) unavailable — measured-only (no symbolic form)
+- baselines: eager spelled (self) 98; F.glu (ref) 33 — the fused kernel; inductor (compile) — measured-only (no symbolic form)
 
 ### `gqa_absorb_repeat` — Materialised repeat_kv → sdpa enable_gqa
 
@@ -140,7 +176,7 @@ emits — zero fires until the pattern read `dropout_p`/`is_causal`.)
 
 
 - signals: law:gqa_absorb_repeat
-- baselines: eager spelled (self) 199,688; F.sdpa enable_gqa (ref) 196,612 — the kernel-side head broadcast PyTorch ships; inductor (compile) unavailable — measured-only (no symbolic form)
+- baselines: eager spelled (self) 199,688; F.sdpa enable_gqa (ref) 196,612 — the kernel-side head broadcast PyTorch ships; inductor (compile) — measured-only (no symbolic form)
 
 ### `mha_qkv_fuse` — Split QKV projections → one widened GEMM
 
@@ -155,7 +191,7 @@ is the honest signal that the forced shared-GEMM term won.
 
 
 - signals: stat:paired_extract
-- baselines: eager three-GEMM (self) 32,772; merged QKV (ref) 32,770 — one (3d,d) Linear + chunk — the hand-fused impl; inductor (compile) unavailable — measured-only (no symbolic form)
+- baselines: eager three-GEMM (self) 32,772; merged QKV (ref) 32,770 — one (3d,d) Linear + chunk — the hand-fused impl; inductor (compile) — measured-only (no symbolic form)
 
 ### `mul_unsq_nat` — Two-sided unsqueeze naturality
 
@@ -166,7 +202,7 @@ provenance MACHINE_SHIPPED).  Measured −12.27% on its source workload.
 
 
 - signals: law:mul_unsq_nat
-- baselines: eager spelled (self) 75; mul-then-unsqueeze (ref) 50; inductor (compile) unavailable — measured-only (no symbolic form)
+- baselines: eager spelled (self) 75; mul-then-unsqueeze (ref) 50; inductor (compile) — measured-only (no symbolic form)
 
 ### `retnet_chunkwise` — RetNet chunkwise retention carrier
 
@@ -180,7 +216,7 @@ paper's own chunked impl, faster under graph replay
 
 
 - signals: law:om_decayed_lift, op:om_decayed
-- baselines: eager quadratic (self) 761,863; paper chunkwise (ref) 491,656 — Sun et al. 2023 chunkwise recurrence, reimplemented; inductor (compile) unavailable — measured-only (no symbolic form); FLA chunk_retention (external) unavailable — Triton kernel — scratch dep; measured ~7-11x ahead of the carrier
+- baselines: eager quadratic (self) 761,863; paper chunkwise (ref) 491,656 — Sun et al. 2023 chunkwise recurrence, reimplemented; inductor (compile) — measured-only (no symbolic form); FLA chunk_retention (external) unavailable — Triton kernel — scratch dep; measured ~7-11x ahead of the carrier
 
 ### `rms_norm_bridge` — Misspelled RMSNorm → fold via canonicalizer bridges
 
@@ -195,7 +231,7 @@ more often than `pow(2)` + `rsqrt`.
 
 
 - signals: law:rms_norm_fold, law:mul_square, law:pow_to_rsqrt
-- baselines: eager spelled (self) 218; F.rms_norm (ref) 129 — the fused kernel PyTorch ships; inductor (compile) unavailable — measured-only (no symbolic form)
+- baselines: eager spelled (self) 218; F.rms_norm (ref) 129 — the fused kernel PyTorch ships; inductor (compile) — measured-only (no symbolic form)
 
 ### `rms_norm_fold` — Manual RMSNorm → fused rms_norm kernel
 
@@ -209,7 +245,7 @@ pattern the whole reduce-scale chain back to it.
 
 
 - signals: law:rms_norm_fold
-- baselines: eager spelled (self) 282; F.rms_norm (ref) 129 — the fused kernel PyTorch ships; inductor (compile) unavailable — measured-only (no symbolic form)
+- baselines: eager spelled (self) 282; F.rms_norm (ref) 129 — the fused kernel PyTorch ships; inductor (compile) — measured-only (no symbolic form)
 
 ### `rms_norm_nogain` — Gain-free manual RMSNorm → fused rms_norm
 
@@ -221,7 +257,7 @@ way; project/retros/rms-norm-law.md).
 
 
 - signals: law:rms_norm_fold_nogain
-- baselines: eager spelled (self) 217; F.rms_norm (no weight) (ref) 65 — the fused kernel, weight=None; inductor (compile) unavailable — measured-only (no symbolic form)
+- baselines: eager spelled (self) 217; F.rms_norm (no weight) (ref) 65 — the fused kernel, weight=None; inductor (compile) — measured-only (no symbolic form)
 
 ### `sdpa_decomposed` — Fused SDPA — decompose, migrate the scale, refold
 
@@ -237,7 +273,7 @@ compile-time weight mul, and `sdpa_fold_mul_nomask` refolds.  Opt-in:
 
 
 - signals: law:sdpa_expand_s, law:naturality_scalar_left_rev, law:linear_out_scale
-- baselines: eager spelled (self) 32,772; inductor (compile) unavailable — measured-only (no symbolic form)
+- baselines: eager spelled (self) 32,772; inductor (compile) — measured-only (no symbolic form)
 
 ### `sdpa_nomask` — No-mask spelled attention → fused SDPA
 
@@ -251,7 +287,7 @@ family cannot see it; `sdpa_fold_div_nomask` is its row — minted by
 
 
 - signals: law:sdpa_fold_div_nomask
-- baselines: eager spelled (self) 33,415; F.scaled_dot_product_attention (ref) 32,772 — the fused kernel, explicit scale=1/√d; inductor (compile) unavailable — measured-only (no symbolic form)
+- baselines: eager spelled (self) 33,415; F.scaled_dot_product_attention (ref) 32,772 — the fused kernel, explicit scale=1/√d; inductor (compile) — measured-only (no symbolic form)
 
 ### `select_mul` — select(a)⊙select(b) → select(a⊙b) commutation
 
@@ -269,7 +305,7 @@ asked to optimize.
 
 
 - signals: law:select_mul
-- baselines: eager spelled (self) 15; mul-then-select (ref) 38; inductor (compile) unavailable — measured-only (no symbolic form)
+- baselines: eager spelled (self) 15; mul-then-select (ref) 38; inductor (compile) — measured-only (no symbolic form)
 
 ### `silu_fold` — x·σ(x) spelled by hand → fused silu kernel
 
@@ -283,7 +319,7 @@ pointwise-pattern tables carry the same identity
 
 
 - signals: law:silu_fold
-- baselines: eager spelled (self) 194; F.silu (ref) 193 — the fused kernel; inductor (compile) unavailable — measured-only (no symbolic form)
+- baselines: eager spelled (self) 194; F.silu (ref) 193 — the fused kernel; inductor (compile) — measured-only (no symbolic form)
 
 ### `softmax_fold` — exp/Σexp manual softmax → fused softmax kernel
 
@@ -298,7 +334,7 @@ certificate.
 
 
 - signals: law:softmax_fold
-- baselines: eager spelled (self) 327; torch.softmax (ref) 65 — the fused kernel; inductor (compile) unavailable — measured-only (no symbolic form)
+- baselines: eager spelled (self) 327; torch.softmax (ref) 65 — the fused kernel; inductor (compile) — measured-only (no symbolic form)
 
 ### `softsign_fold` — x/(|x|+1) spelled by hand → fused softsign kernel
 
@@ -310,7 +346,7 @@ region unguarded-clean (project/retros/promoted-laws.md).
 
 
 - signals: law:softsign_fold
-- baselines: eager spelled (self) 387; F.softsign (ref) 387 — the fused kernel; inductor (compile) unavailable — measured-only (no symbolic form)
+- baselines: eager spelled (self) 387; F.softsign (ref) 387 — the fused kernel; inductor (compile) — measured-only (no symbolic form)
 
 ### `swiglu_mlp` — Two-projection SwiGLU → widened-GEMM fuse
 
@@ -321,7 +357,7 @@ torch.compile on the delivered artifact (docs/results.md).
 
 
 - signals: stat:paired_extract
-- baselines: eager two-GEMM (self) 4,356; fused SwiGLU (ref) 4,485 — one widened Linear + split — the hand-fused impl; inductor (compile) unavailable — measured-only (no symbolic form)
+- baselines: eager two-GEMM (self) 4,356; fused SwiGLU (ref) 4,485 — one widened Linear + split — the hand-fused impl; inductor (compile) — measured-only (no symbolic form)
 
 ### `weight_chain_fold` — Two-layer Linear chain → weights-first fold
 
@@ -333,7 +369,7 @@ Inductor's post-grad graph cannot express (no weight folding without
 
 
 - signals: law:assoc_linear
-- baselines: eager two-GEMM (self) 4,098; pre-folded Linear (ref) 2,049 — one Linear carrying W2@W1 — what weight folding ships; inductor (compile) unavailable — no freeze — Inductor cannot fold the weights
+- baselines: eager two-GEMM (self) 4,098; pre-folded Linear (ref) 2,049 — one Linear carrying W2@W1 — what weight folding ships; inductor (compile) — no freeze — Inductor cannot fold the weights
 
 ### `weight_merge` — linear(x,A)+linear(x,B) → linear(x, A+B)
 
@@ -346,7 +382,7 @@ runtime drops a GEMM: the bias-free analogue of the biased chain's
 
 
 - signals: law:weight_factor_linear
-- baselines: eager two-GEMM (self) 4,163; merged Linear (ref) 2,049 — one Linear carrying A+B — the merged form; inductor (compile) unavailable — measured-only (no symbolic form)
+- baselines: eager two-GEMM (self) 4,163; merged Linear (ref) 2,049 — one Linear carrying A+B — the merged form; inductor (compile) — measured-only (no symbolic form)
 
 ### `zoo_adaln_affd` — Zoo AdaLNBlock — the affd carrier lift, opt-in regime
 
@@ -367,7 +403,7 @@ arm's −4.07 % hinted at, now reached through the shipped opt-in laws.
 
 
 - signals: law:affd_lift, op:applyd
-- baselines: eager (self) 217,830; inductor (compile) unavailable — measured-only (no symbolic form)
+- baselines: eager (self) 217,830; inductor (compile) — measured-only (no symbolic form)
 
 ### `zoo_cosine_attention` — Zoo CosineAttention — om_lift on the normalized-score map
 
@@ -381,7 +417,7 @@ regression the scorecard records as `beat=no`.
 
 
 - signals: law:om_lift, op:om_apply
-- baselines: eager spelled (self) 348,463; inductor (compile) unavailable — measured-only (no symbolic form)
+- baselines: eager spelled (self) 348,463; inductor (compile) — measured-only (no symbolic form)
 
 ### `zoo_delta_rule` — Zoo DeltaRuleBlock — partial aff-carrier lift on the write
 
@@ -397,7 +433,7 @@ the retro table recorded `—` under its pipeline axis.
 
 
 - signals: law:decay_state_lift_post, law:mul_unsq_nat, law:select_mul, op:applyd
-- baselines: eager unrolled (self) 975,073; inductor (compile) unavailable — measured-only (no symbolic form); FLA chunk_delta_rule (external) unavailable — Triton WY-repr kernel — scratch dep; the impl the full rule targets
+- baselines: eager unrolled (self) 975,073; inductor (compile) — measured-only (no symbolic form); FLA chunk_delta_rule (external) unavailable — Triton WY-repr kernel — scratch dep; the impl the full rule targets
 
 ### `zoo_gau` — Zoo GatedAttentionUnit — quadratic gate lifts to om_decayed
 
@@ -412,7 +448,7 @@ under the executor axis here.
 
 
 - signals: law:om_decayed_lift, law:mul_square, op:om_decayed
-- baselines: eager quadratic (self) 182,973; inductor (compile) unavailable — measured-only (no symbolic form); FLASH GAU kernel (external) unavailable — fla.layers.gau — scratch dep; the hand kernel this emulates
+- baselines: eager quadratic (self) 182,973; inductor (compile) — measured-only (no symbolic form); FLASH GAU kernel (external) unavailable — fla.layers.gau — scratch dep; the hand kernel this emulates
 
 ### `zoo_lora_adapter` — Zoo LoRAAdapter — the assoc_linear win, replayed
 
@@ -427,7 +463,7 @@ zoo retro recorded.
 
 
 - signals: law:assoc_linear
-- baselines: eager three-GEMM (self) 87,045; merged LoRA (ref) 69,650 — peft.merge_and_unload-style — the branch pre-composed dense; inductor (compile) unavailable — no freeze — Inductor cannot fold the adapter weights
+- baselines: eager three-GEMM (self) 87,045; merged LoRA (ref) 69,650 — peft.merge_and_unload-style — the branch pre-composed dense; inductor (compile) — no freeze — Inductor cannot fold the adapter weights
 
 ### `zoo_lora_param` — Zoo LoRAAdapter on the storage axis — the fold's other side
 
@@ -445,7 +481,7 @@ engine declines it exactly where it does not pay.
 
 
 - signals: law:assoc_linear
-- baselines: eager low-rank (self) 400; merged LoRA (ref) 528 — same storage regression — the hand-merge pays it too; inductor (compile) unavailable — measured-only (no symbolic form)
+- baselines: eager low-rank (self) 400; merged LoRA (ref) 528 — same storage regression — the hand-merge pays it too; inductor (compile) — measured-only (no symbolic form)
 
 ### `zoo_mos_head` — Zoo MoSHead — gather dedup reaches, cost-neutral
 
@@ -460,7 +496,7 @@ real head, this case's cost columns move first.
 
 
 - signals: law:index_select_dedup, law:index_select_id, stat:param_sharing
-- baselines: eager (self) 637; inductor (compile) unavailable — measured-only (no symbolic form)
+- baselines: eager (self) 637; inductor (compile) — measured-only (no symbolic form)
 
 ### `zoo_spline_kan` — Zoo SplineKAN — the x·x spelling bridge, canonically
 
@@ -474,7 +510,7 @@ but real verified win on code nobody targeted.
 
 
 - signals: law:mul_square, law:square_to_pow
-- baselines: eager spelled (self) 87,058; inductor (compile) unavailable — measured-only (no symbolic form)
+- baselines: eager spelled (self) 87,058; inductor (compile) — measured-only (no symbolic form)
 
 ### `zoo_time_cond_conv` — Zoo TimeCondConv — dead broadcast pads stripped
 
@@ -488,5 +524,5 @@ win in that table — measured −7.7 % on the executor axis here.
 
 
 - signals: law:mul_unsq_pad_l, law:mul_unsq_pad_r
-- baselines: eager (self) 226,488; inductor (compile) unavailable — measured-only (no symbolic form)
+- baselines: eager (self) 226,488; inductor (compile) — measured-only (no symbolic form)
 
