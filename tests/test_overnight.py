@@ -285,6 +285,114 @@ class TestCorpusZooReal:
         assert "corpus: `zoo-real`" in (tmp_path / "out.md").read_text()
 
 
+class TestCorpusZooRealCompose:
+    """``--corpus zoo-real --compose`` — the composition arm."""
+
+    def _case(self, **kw):
+        return {
+            "zoo": "AdditiveAttention",
+            "wseed": 0,
+            "page": 48,
+            "compose": 2,
+            **kw,
+        }
+
+    def _composites(self, arena):
+        return [
+            (i, c)
+            for i, c in enumerate(arena.pool)
+            if arena.meta.get(i, {}).get("family") == on._COMPOSE_FAMILY
+        ]
+
+    def test_compose_mints_bound_composites(self):
+        """The syn_* fixpoint extends the pool, bind-gated like the rest."""
+        from mlopt_core.egraph.terms import _term_match
+        from mlopt_core.ir import Op
+        from mlopt_core.meta import provenance
+        from mlopt_discovery.census import _iter_subterms
+
+        arena = on._RealArena(self._case())
+        assert not arena.error
+        comps = self._composites(arena)
+        singles = len(arena.pool) - len(comps)
+        assert singles, "single-step pool unexpectedly empty"
+        assert comps, "no composite minted from a bindable pool"
+        # singles keep their indices — composites append behind them
+        assert min(i for i, _c in comps) == singles
+        ir, _t, _f = on._zoo_export(self._case())
+        subs = [s for s in _iter_subterms(ir.root) if isinstance(s, Op)]
+        for i, cand in comps:
+            rule = cand.as_rule()
+            # the premise-closure record rides the mint — the
+            # conv_bn_fold shape: two named parents, guard pats.
+            parents = provenance(rule)
+            assert len(parents) == 2
+            assert arena.meta[i]["family"] == on._COMPOSE_FAMILY
+            assert arena.meta[i]["sources"] == list(parents)
+            assert getattr(rule, "guard_pats", None) is not None
+            # the same require_bind gate the singles met
+            assert any(
+                _term_match(rule.lhs, s) is not None for s in subs
+            ), f"{rule.name}: composite binds no real subterm"
+            # the syn_* counter restarts per module — the name is
+            # namespaced so a same-named pair elsewhere never collides
+            assert rule.name.endswith("@AdditiveAttention")
+
+    def test_compose_admit_serializes_guard_spec(self):
+        """A composite's cell carries the premise-closure spec."""
+        arena = on._RealArena(self._case())
+        _i, comp = self._composites(arena)[0]
+        rec = on._admit(
+            comp.as_rule(), "naive", bench.referees.RefereeCtx()
+        )
+        guard = rec["law"].get("guard")
+        assert guard is not None, "no guard spec on a syn_* composite"
+        assert len(guard["parents"]) == 2
+        assert guard["pat1"] and guard["pat2"]
+        # the honesty boundary — procedural hooks are flagged, the
+        # spec says which parents they transport from
+        assert "missing_hooks" in rec["law"]
+        assert rec["law"]["kind"] == "law"
+
+    def test_zoo_real_compose_dry_records_mint_tag(self, tmp_path):
+        """The arm is protocol-pinned — ledgers restart loudly."""
+        t0 = time.time()
+        argv = _argv(
+            tmp_path, "--dry", "--corpus", "zoo-real", "--compose"
+        )
+        assert on.main(argv) == 0
+        assert time.time() - t0 < 300  # exports + synth + referee
+        man, cells = _records(tmp_path / "ck.jsonl")
+        assert man["protocol"]["corpus"] == "zoo-real"
+        assert man["protocol"]["mint"] == "corpus-bind-compose"
+        assert man["protocol"]["compose"] == 2
+        payload = json.loads((tmp_path / "out.json").read_text())
+        assert payload["corpus"] == "zoo-real"
+        assert "composed" in payload
+        # a composite candidate cell, if any evaluated, carries the
+        # guard spec the admit path serializes
+        for c in _cells(cells, "candidate"):
+            if c["record"].get("family") == on._COMPOSE_FAMILY:
+                assert c["record"]["law"]["guard"]["parents"]
+
+    def test_compose_off_zoo_real_refused(self, tmp_path):
+        """--compose on a non-zoo-real corpus is a loud refusal."""
+        with pytest.raises(SystemExit):
+            on.main(
+                _argv(tmp_path, "--dry", "--corpus", "zoo", "--compose")
+            )
+
+    def test_compose_ledger_restarts_on_mint_change(self, tmp_path):
+        """A --compose resume over a bind-only ledger cannot merge."""
+        argv = _argv(tmp_path, "--dry", "--corpus", "zoo-real")
+        assert on.main(argv) == 0
+        man1, _cells1 = _records(tmp_path / "ck.jsonl")
+        assert man1["protocol"]["mint"] == "corpus-bind"
+        assert on.main([*argv, "--compose", "--resume"]) == 0
+        man2, _cells2 = _records(tmp_path / "ck.jsonl")
+        assert man2["protocol"]["mint"] == "corpus-bind-compose"
+
+
 class TestResume:
     """A protocol-matched resume replays cells, never re-measures."""
 

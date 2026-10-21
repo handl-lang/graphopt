@@ -80,11 +80,28 @@ with the intake side-file census (``intake_dir()``) when it exists.
 Same gauntlet, same ledger, same doc shape — the document lands at
 ``docs/results_overnight_real.md``.
 
+``--compose [ROUNDS]`` adds the **composition arm** on ``zoo-real``:
+after the single-step pool binds, ``meta.synthesize_rules`` — the
+``syn_*`` mint fixpoint that produced the shipped ``conv_bn_fold``
+(ADR-0007) — pair-composes the bound candidates with the module's own
+term as the seed, iterating *ROUNDS* strata toward a fixpoint
+(default 2).  Every emitted composite then faces the arm's own gate:
+it is kept only when its LHS binds a real subterm, and it enters the
+pool with its transported premise closure — ``_compose_guards``
+check/derive hooks plus the ``parents`` / ``guard_pats`` record —
+serialized into its candidate cell's ``law["guard"]`` like the
+``mlopt_core.laws.minted`` rows.  Machine-originals live here: a
+composite the prior-art bank cannot derive is the sieve's target
+verdict.  The arm is protocol-pinned as ``mint:
+corpus-bind-compose``, so a ledger written without it restarts
+loudly.
+
 Run::
 
     .venv/bin/python bench/drivers/overnight.py --dry
     .venv/bin/python bench/drivers/overnight.py --dry --corpus zoo
     .venv/bin/python bench/drivers/overnight.py --dry --corpus zoo-real
+    .venv/bin/python bench/drivers/overnight.py --dry --corpus zoo-real --compose
     .venv/bin/python bench/drivers/overnight.py --episodes 48 \
         --player playbook --referee full --resume
 """
@@ -131,6 +148,7 @@ DEFAULTS: dict[str, Any] = {
     "referee": "full",
     "corpus": "grammar",
     "scan": 2048,
+    "compose": 0,
 }
 
 #: ``--dry`` — seconds-scale smoke: two episodes, a tiny pool, a
@@ -170,6 +188,16 @@ CKPT_PATH_REAL = Path("bench/results/checkpoints/overnight_real.jsonl")
 #: (``vocab.derive_vocabulary``); ``"hand"`` is the fixed projection.
 _MINT_VOCAB = "derived"
 
+#: The composition arm's per-stratum fuel — bounds each
+#: ``synthesize_rules`` round's rule-application attempts, matching
+#: the single-pass semantics the ``syn_*`` mints were measured under.
+_COMPOSE_FUEL = 256
+
+#: The ``meta.family`` a synthesized composite records — the ledger
+#: distinguishes the composition arm's ``syn_*`` pairs from the
+#: single-step proposers' families.
+_COMPOSE_FAMILY = "synth-composite"
+
 _NOVELTY_ORDER = ("machine-original", "known-art", "vacuous")
 
 
@@ -192,14 +220,17 @@ def _zoo_registry() -> dict[str, Any]:
 
 
 def _zoo_cases(
-    seed: int, episodes: int, *, page: int, scan: int
+    seed: int, episodes: int, *, page: int, scan: int, compose: int = 0
 ) -> list:
     """One case per covered zoo workload — registry order, JSON-safe.
 
     ``wseed`` pins the workload's build draws so the episode board —
     and a resume's rebuild of it — is deterministic regardless of how
     much RNG the rest of the run consumed first.  ``episodes`` beyond
-    the registry size simply covers the whole zoo.
+    the registry size simply covers the whole zoo.  ``compose`` is the
+    zoo-real composition arm's stratum count (0 = off — see
+    ``_RealArena``); it travels in the case record so a rebuilt pool
+    reproduces its composites verbatim.
     """
     names = list(_zoo_registry())[:episodes]
     return [
@@ -208,6 +239,7 @@ def _zoo_cases(
             "wseed": seed * 100_003 + i,
             "page": page,
             "scan": scan,
+            "compose": compose,
         }
         for i, name in enumerate(names)
     ]
@@ -391,6 +423,21 @@ class _RealArena(og.OpenArena):
     rebuilt deterministically on resume with the pool itself.  An
     export failure lands in ``self.error`` like the zoo arm's; an
     empty mint is the honest done state.
+
+    ``case["compose"] > 0`` seats the **composition arm**: the bound
+    single-step pool is pair-composed by
+    ``mlopt_core.meta.synthesize_rules`` — the ``syn_*`` fixpoint
+    ``conv_bn_fold`` minted through — with the module's own term as
+    the seed, for ``case["compose"]`` strata.  Emitted composites are
+    held to the arm's own gate (the LHS must bind a real subterm —
+    the ``require_bind`` contract, applied a second time since the
+    symbolic path can mint a pair that never fired on the seed) and
+    appended after the singles, each carrying its transported premise
+    closure: the ``_compose_guards`` check/derive hooks and the
+    ``parents`` / ``guard_pats`` record ``_admit`` serializes into the
+    cell's ``law["guard"]``.  The composite slice is bounded by
+    ``page`` like the single-step mint it sits beside — the pool can
+    reach two pages under ``--compose``.
     """
 
     def __init__(self, case: dict) -> None:
@@ -437,7 +484,68 @@ class _RealArena(og.OpenArena):
                 "family": p.family,
                 "sources": list(p.sources),
             }
+        if case.get("compose") and self.pool:
+            self._mint_composites(ir.root, case)
         self.done = not self.pool
+
+    def _mint_composites(self, root: Any, case: dict) -> None:
+        """Pair-compose the bound pool over the module's own term.
+
+        The seed-guided path fires each parent on ``root``'s real
+        subterms, so an emitted composite is a chain that actually
+        rewrote the module; the symbolic path (unguarded pairs) emits
+        fully general derived rules and is then held to the same
+        ``require_bind`` gate the singles met.  Composites keep the
+        ``syn_*`` name, namespaced by ``@<module>`` — the
+        ``synthesize_rules`` counter restarts per module, so a
+        same-named pair minted on a different seed can be a different
+        rule, and the ledger keys candidates by name.
+        ``max_emitted`` bounds validation spend; the appended slice is
+        further capped at ``page`` after the bind gate.
+        """
+        from mlopt_core import meta as meta_mod
+        from mlopt_core.egraph.terms import _term_match
+        from mlopt_core.ir import Op
+        from mlopt_discovery.census import _iter_subterms
+        from mlopt_discovery.proposal import Candidate
+
+        page = case.get("page", 48)
+        emitted = meta_mod.synthesize_rules(
+            [c.as_rule() for c in self.pool],
+            [root],
+            fuel=_COMPOSE_FUEL,
+            numeric_check=True,
+            rounds=int(case["compose"]),
+            max_emitted=page,
+        )
+        subs = [s for s in _iter_subterms(root) if isinstance(s, Op)]
+        kept = 0
+        for rule in emitted:
+            if kept >= page:
+                break
+            if not any(
+                _term_match(rule.lhs, s) is not None for s in subs
+            ):
+                continue
+            parents = meta_mod.provenance(rule)
+            name = f"{rule.name}@{case['zoo']}"
+            object.__setattr__(rule, "name", name)
+            meta_mod.SYNTH_PARENTS[name] = parents
+            self.pool.append(
+                Candidate(
+                    strategy="corpus",
+                    label=name,
+                    lhs=rule.lhs,
+                    rhs=rule.rhs,
+                    note=f"composite: {' then '.join(parents)}",
+                    rule=rule,
+                )
+            )
+            self.meta[len(self.pool) - 1] = {
+                "family": _COMPOSE_FAMILY,
+                "sources": list(parents),
+            }
+            kept += 1
 
 
 def _intake_cases() -> list:
@@ -539,7 +647,14 @@ def _gen_cases(
     """The corpus arm's case list — stream pages or zoo workloads."""
     if corpus in ("zoo", "zoo-real"):
         return _zoo_cases(
-            seed, episodes, page=kw["page"], scan=kw.get("scan") or 0
+            seed,
+            episodes,
+            page=kw["page"],
+            scan=kw.get("scan") or 0,
+            # the composition arm is zoo-real only — a ``compose``
+            # value on any other corpus is a protocol lie, zeroed here
+            # and refused loudly at the CLI.
+            compose=kw.get("compose", 0) if corpus == "zoo-real" else 0,
         )
     return og.gen_cases(seed, episodes, page=kw["page"])
 
@@ -581,13 +696,29 @@ def _eval_records(traj: Any) -> list[dict]:
 
 
 def _admit(rule: Any, referee: str, ctx: Any) -> dict:
-    """Run the referee gauntlet; return the candidate-cell payload."""
+    """Run the referee gauntlet; return the candidate-cell payload.
+
+    A synthesized composite's law record additionally carries the
+    ``"guard"`` premise-closure spec — ``parents`` plus the ``pat1`` /
+    ``pat2`` re-expression maps (``evidence._guard_transport_spec``,
+    the same shape ``mlopt_core.laws.minted`` embeds): the procedural
+    ``check``/``derive`` stay honestly listed in ``missing_hooks``,
+    and the spec records exactly which parent objects the transported
+    hooks close over.
+    """
+    from mlopt_discovery.evidence import _guard_transport_spec
+
     from bench import referees
+
+    law = law_to_data(rule)
+    guard = _guard_transport_spec(rule)
+    if guard is not None:
+        law["guard"] = guard
 
     rec: dict[str, Any] = {
         "name": rule.name,
         "provenance": law_provenance(rule),
-        "law": law_to_data(rule),
+        "law": law,
         "alpha": alpha_key(rule.lhs, rule.rhs),
         "referee": referee,
         "skipped": "",
@@ -687,6 +818,7 @@ def run(
     referee: str,
     corpus: str = "grammar",
     scan: int = 0,
+    compose: int = 0,
     ckpt: Any,
     ctx: Any = None,
     arm_factory: Any = None,
@@ -703,7 +835,9 @@ def run(
     ``corpus`` picks the arm; ``scan`` bounds the zoo arm's
     per-module stream read (``<= 0`` scans the whole stream; unused
     on ``zoo-real`` — the mint reads the module's own term, not the
-    stream).
+    stream).  ``compose`` is the zoo-real composition arm's stratum
+    count — ``meta.synthesize_rules`` rounds over the bound pool,
+    seeded on each module's term (0 = off; ignored on other corpora).
     """
     import torch
 
@@ -711,7 +845,14 @@ def run(
 
     torch.manual_seed(seed)
     if cases is None:
-        cases = _gen_cases(corpus, seed, episodes, page=page, scan=scan)
+        cases = _gen_cases(
+            corpus,
+            seed,
+            episodes,
+            page=page,
+            scan=scan,
+            compose=compose,
+        )
     zenv: dict | None = None
     if corpus in ("zoo", "zoo-real"):
         zenv = _zoo_export_env(cases)
@@ -805,6 +946,22 @@ def run(
                     else _zoo_case_ctxs(zenv or {})
                 )
             rule = law_from_data(crec["law"])
+            if (crec["law"] or {}).get("guard"):
+                # A composite's transported check/derive are code the
+                # record cannot carry — ``missing_hooks`` says so.
+                # The pool rebuilds deterministically, so the live
+                # mint is recovered by index and the sieve judges the
+                # guarded rule, not the bare pattern: ``instance_of``
+                # and the derivability gate both consult the hooks.
+                if pool is None:
+                    if arena is None:
+                        arena = _arena_for(case, corpus)
+                    pool = arena.pool
+                if (
+                    ev["i"] < len(pool)
+                    and pool[ev["i"]].as_rule().name == crec["name"]
+                ):
+                    rule = pool[ev["i"]].as_rule()
             cres = _classify(rule, bank, ctxs=zctxs)
             ckpt.record(ckey, cres)
             log(
@@ -863,6 +1020,9 @@ def run(
         "evaluated": sum(arena.values()),
         "arena_verdicts": dict(arena),
         "minted": len(cands),
+        "composed": sum(
+            1 for r in cands if r.get("family") == _COMPOSE_FAMILY
+        ),
         "admitted": sum(1 for r in cands if r["admitted"]),
         "skipped": sum(1 for r in cands if r["skipped"]),
         "leg_refusals": dict(leg_deaths),
@@ -941,8 +1101,13 @@ def render_markdown(summary: dict, *, env: dict | None = None) -> str:
         ),
         f"- episodes: {summary['episodes']} · "
         f"evaluated: {summary['evaluated']} · "
-        f"minted: {summary['minted']} · "
-        f"admitted: {summary['admitted']} · "
+        f"minted: {summary['minted']}"
+        + (
+            f" ({summary['composed']} composites)"
+            if summary.get("composed")
+            else ""
+        )
+        + f" · admitted: {summary['admitted']} · "
         f"wall: {summary['wall_s']}s",
         "- arena verdicts: "
         + (
@@ -1062,6 +1227,21 @@ def main(argv: list[str] | None = None) -> int:
         "and judged against the corpus's distinct real subterms",
     )
     ap.add_argument(
+        "--compose",
+        type=int,
+        nargs="?",
+        const=2,
+        default=DEFAULTS["compose"],
+        metavar="ROUNDS",
+        help="zoo-real only: after the single-step pool binds, "
+        "pair-compose it through meta.synthesize_rules — the syn_* "
+        "mint fixpoint conv_bn_fold shipped through — seeded on each "
+        "module's own term, for ROUNDS strata (default 2).  Emitted "
+        "composites face the same bind gate and the same gauntlet, "
+        "and carry their premise-closure guard spec into the ledger "
+        "(mint: corpus-bind-compose — ledgers restart loudly)",
+    )
+    ap.add_argument(
         "--scan",
         type=int,
         default=DEFAULTS["scan"],
@@ -1096,6 +1276,10 @@ def main(argv: list[str] | None = None) -> int:
         "lands beside it",
     )
     args = ap.parse_args(argv)
+    if args.compose and args.corpus != "zoo-real":
+        ap.error("--compose requires --corpus zoo-real")
+    if args.compose < 0:
+        ap.error("--compose ROUNDS must be >= 1 (omit to disable)")
     if args.dry:
         for k, v in DRY.items():
             setattr(args, k, v)
@@ -1127,10 +1311,16 @@ def main(argv: list[str] | None = None) -> int:
         "dry": bool(args.dry),
         # the mint semantics — a ledger written before the zoo-real
         # arm went binding-first (require_bind) must restart loudly
-        # rather than replay ungated pools.
-        "mint": "corpus-bind"
-        if args.corpus == "zoo-real"
-        else "stream",
+        # rather than replay ungated pools; likewise a ledger minted
+        # without the composition arm never replays under it.
+        "mint": (
+            "corpus-bind-compose"
+            if args.corpus == "zoo-real" and args.compose
+            else "corpus-bind"
+            if args.corpus == "zoo-real"
+            else "stream"
+        ),
+        "compose": args.compose if args.corpus == "zoo-real" else 0,
     }
     if not args.resume and args.ckpt.exists():
         args.ckpt.unlink()
@@ -1157,6 +1347,7 @@ def main(argv: list[str] | None = None) -> int:
         referee=args.referee,
         corpus=args.corpus,
         scan=args.scan,
+        compose=args.compose if args.corpus == "zoo-real" else 0,
         ckpt=ckpt,
     )
 
