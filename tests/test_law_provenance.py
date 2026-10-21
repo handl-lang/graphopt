@@ -35,7 +35,6 @@ from mlopt_core.laws import (
 )
 from mlopt_discovery import object_synthesis as synth
 from mlopt_discovery import zoo as zoo_mod
-from mlopt_orchestrator.optimize import Optimizer, default_rules
 from mlopt_torch.backend import TorchBackend
 
 _ZOO = {w.name: w for w in zoo_mod.zoo()}

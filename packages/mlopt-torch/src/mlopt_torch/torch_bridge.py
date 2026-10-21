@@ -2095,9 +2095,13 @@ class _EvalPlan:
       ``"self"``); ``param_fills`` re-read ``param_map.get(name)``
       EVERY call (``load_state_dict`` visibility) with the
       ``_randn_param`` fallback for unregistered Params;
-      ``const_fills`` re-mint ``torch.tensor(value)`` per call so the
-      ambient default dtype at CALL time applies — caching the tensor
-      would freeze the build-time dtype.
+      ``const_fills`` re-mint per call — float values at the call's
+      operand dtype (the input, else a floating Param, else
+      the ambient default) so a Const stays a weak scalar: an
+      ambient-fp64 process default must not promote an fp32
+      delivery.  Caching the tensor would freeze the build-time
+      dtype; minting at the operand dtype keeps it a no-promotion
+      scalar like spelled torch.
     * **Steps** — ``(out_slot, op_idx, arg_slots, attrs)``; ``op_idx``
       indexes ``op_names``, whose bindings are resolved through the
       module's op table per call — post-construction
@@ -2218,7 +2222,8 @@ class _EvalPlan:
         x = xs[0] if n else None
         for s, _name, pos in self.var_fills:
             v[s] = xs[pos] if 0 <= pos < n else x
-        return self._run_tail(v, pmap_get, bget)
+        like = _sibling_like(list(xs))
+        return self._run_tail(v, pmap_get, bget, like)
 
     def run_env(
         self, env: Any, x: Any, pmap_get: Any, bget: Any
@@ -2228,15 +2233,25 @@ class _EvalPlan:
         eget = (env or {}).get
         for s, name, _pos in self.var_fills:
             v[s] = eget(name, x)
-        return self._run_tail(v, pmap_get, bget)
+        like = _const_like(x, env, None)
+        return self._run_tail(v, pmap_get, bget, like)
 
-    def _run_tail(self, v: list, pmap_get: Any, bget: Any) -> Any:
+    def _run_tail(
+        self, v: list, pmap_get: Any, bget: Any, like: Any = None
+    ) -> Any:
         """Fill param/const slots, resolve bindings, run the tape."""
         for s, name, t in self.param_fills:
             p = pmap_get(name)
             v[s] = p if p is not None else _randn_param(t)
+        if like is None:
+            # No tensor input context (param-only root): a floating
+            # Param supplies the const dtype — the same no-promotion
+            # contract ``_const_like`` gives env callers.
+            like = _sibling_like(
+                [v[s] for s, _n, _t in self.param_fills]
+            )
         for s, c in self.const_fills:
-            v[s] = torch.tensor(c)
+            v[s] = _mint_const(c, like)
         fns: list = []
         for nm in self.op_names:
             f = bget(nm)
@@ -2270,6 +2285,63 @@ class _EvalPlan:
         return v[self.root_slot]
 
 
+def _const_like(
+    var_default: Any, var_env: dict | None, param_env: dict | None
+) -> Any:
+    """The floating/complex tensor a float ``Const`` mints against.
+
+    A ``Const`` is a weak scalar operand (``x / 45.25``, ``pow(x, 2)``,
+    a law-minted rate) — spelled torch never promotes it, so the
+    materialised tensor must take the *computation's* dtype and
+    device: the input (``var_default``/x) first, then the first
+    floating tensor in the var/param envs.  ``None`` when no tensor
+    context exists — the ambient default dtype is then the only
+    honest fallback.  Minting at the ambient default unconditionally
+    silently promoted fp32 deliveries to fp64 whenever the process
+    default was flipped (``set_default_dtype(float64)`` — the verify
+    convention) while the operands stayed fp32.
+    """
+    if isinstance(var_default, torch.Tensor) and (
+        var_default.is_floating_point() or var_default.is_complex()
+    ):
+        return var_default
+    for env in (var_env, param_env):
+        for v in (env or {}).values():
+            if isinstance(v, torch.Tensor) and (
+                v.is_floating_point() or v.is_complex()
+            ):
+                return v
+    return None
+
+
+def _mint_const(value: Any, like: Any) -> torch.Tensor:
+    """Materialise a ``Const`` — float scalars at *like*'s dtype.
+
+    Int (and bool) values keep ``torch.tensor(v)`` — weak-int
+    semantics (``x % 2`` must stay an integer operand).  A float with
+    no tensor context falls back to the ambient default dtype.
+
+    The mint stays on CPU even when *like* is a device tensor: a
+    0-dim CPU scalar is legal against device operands (weak-scalar
+    broadcast) AND survives CUDA-graph capture, while an on-device
+    ``torch.tensor`` mint does a pageable H2D copy that capture
+    rejects.
+    """
+    if isinstance(value, float) and like is not None:
+        return torch.tensor(value, dtype=like.dtype)
+    return torch.tensor(value)
+
+
+def _sibling_like(args: list) -> Any:
+    """First floating/complex tensor among evaluated op args."""
+    for a in args:
+        if isinstance(a, torch.Tensor) and (
+            a.is_floating_point() or a.is_complex()
+        ):
+            return a
+    return None
+
+
 def eval_term(
     term: Any,
     *,
@@ -2299,7 +2371,12 @@ def eval_term(
       ``param_default(term)`` when given (``IRModule`` passes
       :func:`_randn_param` — the unshaped-Param fallback), else
       failure.
-    * ``Const`` → ``torch.tensor(value)``.
+    * ``Const`` → ``_mint_const(value, like)``: float values mint at
+      the eval-context dtype (the operand sibling when one is a
+      floating tensor, else :func:`_const_like`'s input/env pick,
+      else the ambient default); ints stay ``torch.tensor(value)``.
+      This keeps a Const a *weak* scalar — it never promotes its
+      operands the way an ambient-fp64 mint would.
     * ``Op``    → ``bindings[op](*args, **attrs)``; ``memo_env`` (when
       given) dedups DAG-shared subtrees — interned terms are content
       keys.
@@ -2316,6 +2393,8 @@ def eval_term(
     filter.  The two env-miss raises under ``strict`` are nominal —
     every strict caller passes both defaults.
     """
+
+    like = _const_like(var_default, var_env, param_env)
 
     def go(t: Any, rec: Callable[..., Any]) -> Any:
         # Recursion goes through the explicit ``rec`` parameter, not
@@ -2334,7 +2413,7 @@ def eval_term(
                 return None
             return v
         if isinstance(t, Const):
-            return torch.tensor(t.value)
+            return _mint_const(t.value, like)
         if isinstance(t, Param):
             v = (param_env or {}).get(t.name)
             if v is None:
@@ -2359,6 +2438,19 @@ def eval_term(
             args = [rec(a, rec) for a in t.args]
             if not strict and any(a is None for a in args):
                 return None
+            if any(isinstance(a, Const) for a in t.args):
+                # A Const operand takes its *sibling*'s dtype — the
+                # weak-scalar semantics the spelled ``x * 0.9`` has.
+                # Matters when the env-wide ``like`` is absent or a
+                # param-only fold mixes dtypes (``div(p_f32, c)``).
+                ref = _sibling_like(args)
+                if ref is not None:
+                    args = [
+                        _mint_const(t.args[i].value, ref)
+                        if isinstance(t.args[i], Const)
+                        else a
+                        for i, a in enumerate(args)
+                    ]
             if strict:
                 out = fn(*args, **dict(t.attrs))
             else:

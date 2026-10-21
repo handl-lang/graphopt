@@ -447,12 +447,14 @@ class ChunkedDecayModule(BatchedExecutorBase, torch.nn.Module):
     # -- eval helpers -------------------------------------------------
 
     def _const(self, term: Any, like: torch.Tensor) -> torch.Tensor:
-        """Evaluate a const term once per (device, ambient dtype).
+        """Evaluate a const term once per (device, operand dtype).
 
         ``decay``/``decay_vec``/``unsqueeze`` wrappers carry only
-        Param/Const leaves; the evaluated tensor's own dtype is kept
-        (a Const leaf may legitimately evaluate narrower than *like* —
-        promotion happens at the mul, as in generic eval).
+        Param/Const leaves; ``eval_term`` mints Const scalars at the
+        ``var_env={"self": like}`` context, so the cached tensor's
+        dtype IS ``like.dtype`` — the ``("const", term, like.dtype)``
+        key is exact, and a Const never silently promotes the compute
+        (or narrows it) relative to the operand it gates.
         """
         key = ("const", term, like.dtype)
         t = self._const_cache.get(key)

@@ -11,7 +11,6 @@ parity contract: ``DEFAULT`` reproduces the retired
 import pytest
 import torch
 import torch.nn as nn
-
 from mlopt_core import laws
 from mlopt_core.egraph import Rewrite
 from mlopt_core.ir import Op
@@ -24,13 +23,12 @@ from mlopt_core.laws import (
     GQA_ABSORB,
     ID_ADD,
     LAYOUT_RULES,
-    QKV_FUSE,
-    R,
     SCAN_DIAG_LAWS,
     SCAN_LAWS,
     SDPA_FOLD_RULES,
     SIMPLIFICATION_RULES,
     SWIGLU_FUSE,
+    R,
     RuleSet,
     all_rules,
     preset,
@@ -191,9 +189,7 @@ def test_tag_assignments():
     assert SWIGLU_FUSE.tags == {tags.FUSION, tags.SUBSUMED}
     assert ID_ADD.tags == {tags.SIMPLIFICATION}
     assert DISTRIBUTE_MUL.tags == {tags.CATEGORICAL, tags.EXPANSIVE}
-    assert all(
-        tags.FUSION in r.tags for r in SDPA_FOLD_RULES
-    )
+    assert all(tags.FUSION in r.tags for r in SDPA_FOLD_RULES)
     assert GQA_ABSORB.tags == {tags.FUSION}
     assert all(tags.LAYOUT in r.tags for r in LAYOUT_RULES)
     assert all(r.tags == {tags.SCAN} for r in SCAN_LAWS)
@@ -278,8 +274,11 @@ def test_simplification_plus_categorical_is_legacy_all():
     legacy = {
         r.name for r in all_rules() if r.name not in SUBSUMED_NAMES
     }
-    assert laws.SIMPLIFICATION + laws.CATEGORICAL == RuleSet(
-        "legacy", tuple(r for r in all_rules() if r.name in legacy)
+    assert (
+        RuleSet(
+            "legacy", tuple(r for r in all_rules() if r.name in legacy)
+        )
+        == laws.SIMPLIFICATION + laws.CATEGORICAL
     )
 
 
@@ -309,9 +308,7 @@ def test_resolve_rules_variants():
     assert _resolve_rules("default_rules") is default_rules()
     # orchestrator-level names resolve to the regime rule sets.
     cs = _resolve_rules("carrier_search")
-    assert {r.name for r in laws.CARRIER_SEARCH} <= {
-        r.name for r in cs
-    }
+    assert {r.name for r in laws.CARRIER_SEARCH} <= {r.name for r in cs}
     assert _resolve_rules("xc") == _resolve_rules("xc")
     custom = _resolve_rules([COMM_ADD, ID_ADD])
     assert isinstance(custom, RuleSet) and len(custom) == 2
@@ -355,7 +352,7 @@ def test_regime_rule_sets():
     assert {r.name for r in laws.CARRIER_SEARCH} <= {
         r.name for r in search
     }
-    assert regime.CARRIER_LAWS == search
+    assert search == regime.CARRIER_LAWS
     assert isinstance(regime.XC_LAWS, RuleSet)
 
 
@@ -377,9 +374,7 @@ def test_composer_joint_rules():
     # a caller-chosen set is honoured as-is.
     assert _joint_rules(laws.CATEGORICAL) is laws.CATEGORICAL
     assert set(_JOINT_DEFAULT) >= set(laws.WITH_LAYOUT) - {
-        r
-        for r in laws.WITH_LAYOUT
-        if tags.SUBSUMED in r.tags
+        r for r in laws.WITH_LAYOUT if tags.SUBSUMED in r.tags
     }
 
 
@@ -414,10 +409,10 @@ def test_default_parity_with_legacy_all():
     the same fires for every rule the two sets share — so the preset
     change cannot silently alter a default-pipeline result.
     """
+    from mlopt_core.ir import op_repr
     from mlopt_orchestrator import search
     from mlopt_torch.adapters import TorchSource
     from mlopt_torch.torch_bridge import ir_to_torch_module
-    from mlopt_core.ir import op_repr
 
     torch.manual_seed(0)
     m = _PairMLP().eval().double()
@@ -425,9 +420,7 @@ def test_default_parity_with_legacy_all():
 
     legacy = RuleSet(
         "legacy-all",
-        tuple(
-            r for r in all_rules() if r.name not in SUBSUMED_NAMES
-        ),
+        tuple(r for r in all_rules() if r.name not in SUBSUMED_NAMES),
     )
     new = RuleSet(
         "new-default",

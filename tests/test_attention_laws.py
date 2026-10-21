@@ -915,13 +915,12 @@ def test_score_scale_folds_into_wq():
     torch.testing.assert_close(
         _eval(best, feeds, params), ref, rtol=0, atol=1e-12
     )
+
     # a member carrying the weight-folded Wq exists in the class —
     # linear(x, mul(Wq, s)) nested inside the scores structure.
     def _contains(t, pred):
         if isinstance(t, Op):
-            return pred(t) or any(
-                _contains(a, pred) for a in t.args
-            )
+            return pred(t) or any(_contains(a, pred) for a in t.args)
         return pred(t)
 
     def _weight_folded(t):
@@ -932,9 +931,7 @@ def test_score_scale_folds_into_wq():
             and t.args[1].op == "mul"
         )
 
-    assert any(
-        _contains(m, _weight_folded) for m in _members(eg, eid)
-    )
+    assert any(_contains(m, _weight_folded) for m in _members(eg, eid))
 
 
 def test_score_scale_can_fold_into_wk_via_existing_law():

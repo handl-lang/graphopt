@@ -183,9 +183,7 @@ def test_materialize_refuses_partial_lib():
 
 
 def test_materialize_intermediate_rebuilds_with_guard():
-    lib = {
-        r.name: r for r in [*BATCH_NORM_RULES, *CONV_FOLD_RULES]
-    }
+    lib = {r.name: r for r in [*BATCH_NORM_RULES, *CONV_FOLD_RULES]}
     inner = minted.materialize(
         "syn_batch_norm_expand__conv_channel_shift_sub_sp_6", lib
     )
@@ -193,7 +191,10 @@ def test_materialize_intermediate_rebuilds_with_guard():
         "syn_batch_norm_expand__conv_channel_shift_sub_sp_6"
     )
     assert inner.check is not None
-    assert inner.parents == ("batch_norm_expand", "conv_channel_shift_sub_sp")
+    assert inner.parents == (
+        "batch_norm_expand",
+        "conv_channel_shift_sub_sp",
+    )
     assert meta.provenance(inner) == inner.parents
 
 
@@ -207,16 +208,18 @@ def test_shipped_object_restores_through_the_store():
     from mlopt_core.laws.serialize import alpha_key
     from mlopt_discovery import evidence as ev
 
-    lib = {
-        r.name: r for r in [*BATCH_NORM_RULES, *CONV_FOLD_RULES]
-    }
+    lib = {r.name: r for r in [*BATCH_NORM_RULES, *CONV_FOLD_RULES]}
     conn = ev.connect(":memory:")
     try:
         # the full premise closure as store rows — leaf parents plus
         # each materialized ``syn_*`` intermediate
-        for nm in ("batch_norm_expand", "conv_channel_shift_sub_sp",
-                   "conv_channel_scale_sp", "conv_channel_scale_l_sp",
-                   "conv_channel_shift_sp"):
+        for nm in (
+            "batch_norm_expand",
+            "conv_channel_shift_sub_sp",
+            "conv_channel_scale_sp",
+            "conv_channel_scale_l_sp",
+            "conv_channel_shift_sp",
+        ):
             ev.store_object(conn, lib[nm], kind="law", cert=None)
         for nm in minted._RECORDS:
             ev.store_object(

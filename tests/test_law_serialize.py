@@ -51,7 +51,6 @@ from mlopt_core.laws.tensor import (
     FACTOR_MUL,
     SOFTMAX_FOLD,
 )
-
 from mlopt_discovery import evidence as le
 
 

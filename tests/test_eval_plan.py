@@ -113,9 +113,10 @@ def test_plan_leaf_kinds_const_var_param():
     assert torch.equal(mod(xv), xv.pow(2.0) + 1)
 
 
-def test_plan_const_uses_calltime_default_dtype():
-    """``const_fills`` re-mints ``torch.tensor(v)`` per call — flipping
-    the default dtype between build and eval must show through."""
+def test_plan_const_mints_at_input_dtype_not_ambient():
+    """``const_fills`` re-mints per call at the *operand* dtype — a
+    Const is a weak scalar, so flipping the ambient default must NOT
+    promote an fp32 input to fp64 (nor narrow an fp64 one)."""
     x = _v("x", 4)
     mod = _mod(Op.make("mul", x, Const(0.5)), inputs=[x])
     xv = torch.randn(4)
@@ -123,6 +124,9 @@ def test_plan_const_uses_calltime_default_dtype():
     prev = torch.get_default_dtype()
     torch.set_default_dtype(torch.float64)
     try:
+        # Ambient fp64 + fp32 input: pre-fix the const minted fp64 and
+        # silently promoted the mul; post-fix it follows the operand.
+        assert mod(xv).dtype == torch.float32
         assert mod(xv.double()).dtype == torch.float64
     finally:
         torch.set_default_dtype(prev)

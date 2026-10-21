@@ -25,12 +25,19 @@ def _eval_term(term: Any, env: dict) -> Any:
     """Evaluate *term* against *env* (leaf -> tensor).
 
     Evaluation goes through the ``_IR_TO_TORCH`` bindings.  Returns a
-    tensor or a nested tuple (aff/om carriers).
+    tensor or a nested tuple (aff/om carriers).  Float ``Const``s mint
+    at the env dtype (fp64) — the weak-scalar contract
+    ``torch_bridge._mint_const`` gives deliveries; an ambient mint
+    would silently narrow the exactness check.
     """
-    from mlopt_torch.torch_bridge import _IR_TO_TORCH
+    from mlopt_torch.torch_bridge import (
+        _IR_TO_TORCH,
+        _const_like,
+        _mint_const,
+    )
 
     if isinstance(term, Const):
-        return torch.tensor(term.value)
+        return _mint_const(term.value, _const_like(None, env, None))
     if isinstance(term, (Var, Param)):
         return env[term]
     if isinstance(term, Op):
