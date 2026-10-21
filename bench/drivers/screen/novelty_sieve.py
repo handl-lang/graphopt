@@ -68,6 +68,7 @@ from mlopt_core.ir import Const, Op, TensorType, Var, op_repr
 from mlopt_core.laws import (
     ALL_RULES_WITH_LAYOUT,
     ATTENTION_RULES,
+    PRIOR_ART,
     SCAN_DIAG_LAWS,
     SCAN_LAWS,
 )
@@ -131,6 +132,7 @@ def known_bank() -> list:
         ATTENTION_RULES,
         SCAN_LAWS,
         SCAN_DIAG_LAWS,
+        PRIOR_ART,
     ):
         for r in group:
             seen.setdefault(r.name, r)
