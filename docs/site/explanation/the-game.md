@@ -1,6 +1,6 @@
 # The game — boards, players, and the learned-policy loop
 
-<!-- provenance: graphopt:gamekit.engine + docs/results_player_on_board.md@eea02f6 -->
+<!-- provenance: gamekit:packages/gamekit/src/gamekit/engine.py + graphopt:docs/results_player_on_board.md@eea02f6 -->
 
 Because programs, rules, and derivations are all values in one
 calculus, *discovery itself* is a game: observe a state, play a move,
@@ -23,8 +23,10 @@ One contract, every domain. Three drivers ride on it:
 
 A new domain is data + a small adapter: a `case -> Board` factory and
 a featurizer. The domain registry (`mlopt_discovery.play.DOMAINS`)
-holds the boards — `meta`/`joint`/`search`/`torch`/`gen`/`open`/`kernel` —
-played through one CLI:
+holds the boards — `meta`/`joint`/`search`/`torch`/`gen`/`open`/`player` —
+played through one CLI (the `kernel` domain moved out to
+`handl-lang/kernelopt`, which seats itself into `DOMAINS` at
+`mlopt_kernel.play` import):
 
 ```sh
 python -m mlopt_discovery.play --domain meta --player linear   # eval-only

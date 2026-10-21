@@ -50,9 +50,9 @@ every name lives at its real package path — `mlopt_core.egraph`,
 `tests/`. The dev virtualenv is `.venv/` (uv-managed).
 
 **Repo split (plan 0032 phase 4, landed).**  The substrate packages
-moved to `handl-lang/eqsat` (private): `mlopt-core`,
+moved to `handl-lang/eqsat`: `mlopt-core`,
 `mlopt-orchestrator`, `mlopt-native`; the game layer moved to
-`handl-lang/gamekit` (private): `packages/gamekit`.  Both are pinned
+`handl-lang/gamekit`: `packages/gamekit`.  Both are pinned
 git+ssh deps on `packages/` subdirs (see `[tool.uv.sources]`); the
 package/import names are unchanged.  The substrate-only test files
 travelled with them — domain-bound test functions carved out live in

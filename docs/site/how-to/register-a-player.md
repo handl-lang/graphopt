@@ -1,8 +1,8 @@
 # Register a player
 
-<!-- provenance: graphopt:gamekit/players/registry.py@bac1a61 -->
+<!-- provenance: gamekit:packages/gamekit/src/gamekit/players/registry.py@bac1a61 -->
 
-A player is a folder in `packages/gamekit/src/gamekit/players/` — a
+A player is a folder in `gamekit`'s `packages/gamekit/src/gamekit/players/` — a
 docstring carrying the measured record, a `SPECS` tuple of `PlayerSpec`
 rows, and a `make` arm factory. The registry maps name → spec so
 `--player <name>` on `mlopt_discovery.play` and the comparison runner

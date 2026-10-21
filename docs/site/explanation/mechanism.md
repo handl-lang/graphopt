@@ -88,10 +88,12 @@ representations from drifting silently.
 
 ## Where this lives
 
-`mlopt_core` (IR, `EGraph`, laws, `verify_certificate`, cost models) ·
-`mlopt_orchestrator` (`Optimizer`, `search`, `lower`) · `mlopt_torch` /
-`mlopt_onnx` (the `Source`/`Sink` ports) · `mlopt_discovery` (the
-meta-layer) · `bench/drivers/` (measurement probes).
+In [`eqsat`](https://github.com/handl-lang/eqsat): `mlopt_core` (IR,
+`EGraph`, laws, `verify_certificate`, cost models) ·
+`mlopt_orchestrator` (`Optimizer`, `search`, `lower`) — pinned here as
+git deps. In this repo: `mlopt_torch` / `mlopt_onnx` (the
+`Source`/`Sink` ports) · `mlopt_discovery` (the meta-layer) ·
+`bench/drivers/` (measurement probes).
 
 The full account — with the measured asides — is
 [`docs/mechanism.md`](https://github.com/handl-lang/graphopt/blob/main/docs/mechanism.md)

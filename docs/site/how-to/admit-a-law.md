@@ -1,6 +1,6 @@
 # Admit a law
 
-<!-- provenance: graphopt:mlopt_discovery/{pipeline,verifier,emit}.py + mlopt_core.laws.provenance@bac1a61 -->
+<!-- provenance: graphopt:mlopt_discovery/{pipeline,verifier,emit}.py + eqsat:packages/mlopt-core/src/mlopt_core/laws/provenance.py@bac1a61 -->
 
 Move a candidate equality through [the gauntlet](../explanation/the-gauntlet)
 into `DEFAULT` with `MACHINE_SHIPPED` provenance. The discovery pipeline

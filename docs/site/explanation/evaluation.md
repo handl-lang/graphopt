@@ -10,6 +10,11 @@ mlopt splits into four independent dimensions; this page is the
 SEMANTICS ──▶ SEARCH ──▶ EVALUATION ──▶ EXECUTION
 ```
 
+The `mlopt_core.*` modules named below ship in the
+[`eqsat`](https://github.com/handl-lang/eqsat) substrate repo, pinned
+here as a git dep; `mlopt_torch`, `mlopt_discovery`, `scripts/`, and
+`bench/` are this repo's.
+
 ## The pieces
 
 - **Static features** (`mlopt_core.features`) — `ProgramFeatures`

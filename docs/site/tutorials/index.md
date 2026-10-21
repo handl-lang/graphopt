@@ -4,10 +4,11 @@
 
 ::: info Rename note
 The research stack lives in the **`graphopt`** repository — renamed
-from `research-mlopt` ahead of the repo split (the `eqsat`/`gamekit`
-carve-outs of phase 4 are still ahead). The `research/` paths in this
-section already swept their provenance to `graphopt:` — the rename was
-a sweep, not a rewrite.
+from `research-mlopt` for the repo split, which has landed: the `eqsat`
+substrate and the `gamekit` game layer are their own repositories now,
+pinned here as git deps (import names unchanged). The `research/` paths
+in this section already swept their provenance to `graphopt:` — the
+rename was a sweep, not a rewrite.
 :::
 
 This track is the learn-by-doing path for **mlopt** — the categorical

@@ -1,9 +1,9 @@
 ::: warning Vendored — do not edit here
 Synced from `graphopt:docs/public_api.md` @ `eea02f6` — the
 phase-1 frozen manifest (`API_VERSION = "0.1.0"`). Edit upstream and
-re-vendor; this copy drifts on purpose only at the repo split. The
-`research-mlopt` → `graphopt` rename has landed; the `eqsat`/`gamekit`
-carve-outs land at phase 4 — each row tags its destination repo.
+re-vendor. The `research-mlopt` → `graphopt` rename and the phase-4
+`eqsat`/`gamekit` carve-outs have landed — each row tags the repo it
+now lives in.
 :::
 
 # The frozen public API — plan 0032 phase 1
@@ -14,15 +14,17 @@ carve-outs land at phase 4 — each row tags its destination repo.
 > constant.  Bump the **MINOR** digit for additive surface changes
 > (a new frozen name, a new optional kwarg), the **MAJOR** digit for
 > any change to a frozen name's signature or meaning.  The version
-> stays `0.x` until the phase-4 repo extraction, when each new repo
-> versions its own slice.
+> stayed `0.x` through the phase-4 repo extraction;
+> `mlopt_core.API_VERSION` (in `eqsat`) remains the single constant
+> downstream repos declare against.
 
-This file is the manifest of the contracts a later repo split must
+This file is the manifest of the contracts the landed repo split must
 not break.  Everything below is **frozen**: names, canonical import
 paths, and the signature pins the contract tests carry
 (`tests/test_public_api.py`).  Each row names its destination repo
 per the plan's cut map (`eqsat` = substrate, `gamekit` = the game
-layer, `graphopt` = the tensor-domain contents).
+layer, `graphopt` = the tensor-domain contents) — all landed at
+phase 4.
 
 ## What "frozen" means
 
@@ -55,8 +57,9 @@ layer, `graphopt` = the tensor-domain contents).
 
 ## Game contracts (→ `gamekit`)
 
-Plan 0032 lane A landed the in-repo extraction: these modules now
-live in `packages/gamekit` as `gamekit.*`, and the old
+Plan 0032 landed the extraction in two steps (lane A in-repo, phase 4
+to the `gamekit` repo): these modules now live in `gamekit`'s
+`packages/gamekit` as `gamekit.*`, and the old
 `mlopt_discovery.{engine,scoring,advantage,players,lawdata.game}`
 paths are re-exporting shims (see `TestGamekitCompatShims` in
 `tests/test_public_api.py`).  Canonical paths are `gamekit.*`.

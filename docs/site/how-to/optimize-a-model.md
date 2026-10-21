@@ -1,6 +1,6 @@
 # Optimize a model
 
-<!-- provenance: graphopt:docs/api.md@bac1a61 + mlopt_orchestrator.optimize + mlopt_torch.export -->
+<!-- provenance: graphopt:docs/api.md@bac1a61 + mlopt_torch.export + eqsat:packages/mlopt-orchestrator/src/mlopt_orchestrator/optimize.py -->
 
 Take a `torch.nn.Module` and an example input to a verified, delivered
 optimized module. Assumes [the dev environment is set up](../tutorials/setup);
