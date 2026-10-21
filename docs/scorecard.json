@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "lane": "full",
+  "lane": "fast",
   "cases": [
     {
       "name": "biased_chain_fold",
@@ -10,21 +10,21 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 2.220446049250313e-16,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "launch",
       "cost_before": 4098.0,
       "cost_after": 2114.0,
       "best_baseline": "pre-folded affine",
       "best_baseline_cost": 2049.0,
       "beat_best": false,
-      "beat_best_measured": false,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:assoc_linear_bias"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.865,
+        "search_s": 3.479,
         "n_enodes": 11,
         "iterations": 2,
         "extracted_ops": [
@@ -33,14 +33,7 @@
           "matmul"
         ],
         "cert_steps": 1,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 7.635820099949343e-06,
-          "eager two-GEMM": 1.0095208099937736e-05,
-          "pre-folded affine": 5.959230300049967e-06,
-          "inductor": 4.730849968836992e-05
-        },
-        "mlopt_ms": 0.007635820099949343
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -48,10 +41,10 @@
           "kind": "self",
           "available": true,
           "cost": 4098.0,
-          "median_s": 1.0095208099937736e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
@@ -59,21 +52,21 @@
           "kind": "ref",
           "available": true,
           "cost": 2049.0,
-          "median_s": 5.959230300049967e-06,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 2.90149566040121e-08,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "one Linear carrying W=B\u00b7A, b=B\u00b7b1+b2"
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 4.730849968836992e-05,
-          "iqr_s": 1.5707494185335236e-06,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "no freeze \u2014 Inductor cannot fold the weights"
         }
       ]
@@ -86,22 +79,22 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 8.881784197001252e-16,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "launch",
       "cost_before": 759.0,
       "cost_after": 752.0,
       "best_baseline": "eager unrolled",
       "best_baseline_cost": 759.0,
       "beat_best": true,
-      "beat_best_measured": false,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:decay_state_lift",
         "op:applyd"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.052,
+        "search_s": 0.119,
         "n_enodes": 43,
         "iterations": 2,
         "extracted_ops": [
@@ -113,14 +106,7 @@
           "zeros"
         ],
         "cert_steps": 7,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 0.00016515773399987664,
-          "eager unrolled": 3.814120349943551e-05,
-          "cumsum prefix": 1.762617809999938e-05,
-          "inductor": 3.410800036363071e-05
-        },
-        "mlopt_ms": 0.16515773399987665
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -128,10 +114,10 @@
           "kind": "self",
           "available": true,
           "cost": 759.0,
-          "median_s": 3.814120349943551e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
@@ -139,21 +125,21 @@
           "kind": "ref",
           "available": true,
           "cost": 1494.0,
-          "median_s": 1.762617809999938e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 8.881784197001252e-16,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "h_t = P_t \u00b7 cumsum(x_t/P_t) \u2014 the closed-form parallel scan"
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 3.410800036363071e-05,
-          "iqr_s": 1.2389996300044004e-06,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "measured-only (no symbolic form)"
         }
       ]
@@ -166,21 +152,21 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 8.881784197001252e-16,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "launch",
       "cost_before": 29186.0,
       "cost_after": 27649.0,
       "best_baseline": "hand-folded conv",
       "best_baseline_cost": 27649.0,
       "beat_best": false,
-      "beat_best_measured": false,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:conv_bn_fold"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.036,
+        "search_s": 0.055,
         "n_enodes": 31,
         "iterations": 2,
         "extracted_ops": [
@@ -192,14 +178,7 @@
           "sub"
         ],
         "cert_steps": 9,
-        "cert_egraph_dep": 6,
-        "median_s": {
-          "mlopt": 9.939873600069404e-06,
-          "eager": 1.559073870002976e-05,
-          "hand-folded conv": 9.5246708000559e-06,
-          "inductor": 6.223000036698068e-05
-        },
-        "mlopt_ms": 0.009939873600069404
+        "cert_egraph_dep": 6
       },
       "baselines": [
         {
@@ -207,10 +186,10 @@
           "kind": "self",
           "available": true,
           "cost": 29186.0,
-          "median_s": 1.559073870002976e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
@@ -218,21 +197,21 @@
           "kind": "ref",
           "available": true,
           "cost": 27649.0,
-          "median_s": 9.5246708000559e-06,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 5.055496332673215e-08,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "PyTorch fold recipe \u2014 one conv, BN absorbed into W'/b'"
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 6.223000036698068e-05,
-          "iqr_s": 2.5200006348313764e-06,
-          "verify_passed": true,
-          "verify_max_abs": 6.661338147750939e-16,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "measured-only (no symbolic form)"
         }
       ]
@@ -245,15 +224,15 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 3.552713678800501e-15,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "exec",
       "cost_before": 1115256.8089887642,
       "cost_after": 1402358.2921348296,
       "best_baseline": "cumsum prefix",
       "best_baseline_cost": 34939.50561797753,
       "beat_best": false,
-      "beat_best_measured": false,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:affd_lift_unit",
         "law:affd_lift_unit_step",
@@ -261,7 +240,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 1.813,
+        "search_s": 2.04,
         "n_enodes": 5617,
         "iterations": 2,
         "extracted_ops": [
@@ -274,14 +253,7 @@
           "zeros"
         ],
         "cert_steps": 69,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 0.00026079706000018636,
-          "eager unrolled": 7.911550399967381e-05,
-          "cumsum prefix": 4.192023899986452e-06,
-          "inductor": 1.985100061574485e-05
-        },
-        "mlopt_ms": 0.2607970600001864
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -289,10 +261,10 @@
           "kind": "self",
           "available": true,
           "cost": 1115256.8089887642,
-          "median_s": 7.911550399967381e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
@@ -300,21 +272,21 @@
           "kind": "ref",
           "available": true,
           "cost": 34939.50561797753,
-          "median_s": 4.192023899986452e-06,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "x.cumsum(1)[:, -1] \u2014 the practitioner's parallel-scan spelling"
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 1.985100061574485e-05,
-          "iqr_s": 8.59000465425197e-07,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "measured-only (no symbolic form)"
         }
       ]
@@ -327,21 +299,21 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 2.220446049250313e-16,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "launch",
       "cost_before": 33544.0,
       "cost_after": 32772.0,
       "best_baseline": "F.scaled_dot_product_attention",
       "best_baseline_cost": 32772.0,
       "beat_best": false,
-      "beat_best_measured": true,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:sdpa_fold_adddiv"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.04,
+        "search_s": 0.16,
         "n_enodes": 21,
         "iterations": 2,
         "extracted_ops": [
@@ -349,14 +321,7 @@
           "sdpa"
         ],
         "cert_steps": 1,
-        "cert_egraph_dep": 1,
-        "median_s": {
-          "mlopt": 2.8567414999997708e-05,
-          "eager spelled": 3.928838949968849e-05,
-          "F.scaled_dot_product_attention": 2.8910197999721276e-05,
-          "inductor": 7.664099985049688e-05
-        },
-        "mlopt_ms": 0.02856741499999771
+        "cert_egraph_dep": 1
       },
       "baselines": [
         {
@@ -364,10 +329,10 @@
           "kind": "self",
           "available": true,
           "cost": 33544.0,
-          "median_s": 3.928838949968849e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
@@ -375,21 +340,21 @@
           "kind": "ref",
           "available": true,
           "cost": 32772.0,
-          "median_s": 2.8910197999721276e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 2.220446049250313e-16,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "the fused kernel PyTorch ships"
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 7.664099985049688e-05,
-          "iqr_s": 2.2392503069568193e-06,
-          "verify_passed": true,
-          "verify_max_abs": 1.1102230246251565e-16,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "measured-only (no symbolic form)"
         }
       ]
@@ -402,35 +367,28 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 0.0,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "launch",
       "cost_before": 98.0,
       "cost_after": 33.0,
       "best_baseline": "F.glu",
       "best_baseline_cost": 33.0,
       "beat_best": false,
-      "beat_best_measured": false,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:glu_fold"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.016,
+        "search_s": 0.018,
         "n_enodes": 6,
         "iterations": 2,
         "extracted_ops": [
           "glu"
         ],
         "cert_steps": 1,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 4.457880599966302e-06,
-          "eager spelled": 4.682578550000471e-06,
-          "F.glu": 2.881316299954051e-06,
-          "inductor": 1.3683165499969619e-05
-        },
-        "mlopt_ms": 0.0044578805999663015
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -438,10 +396,10 @@
           "kind": "self",
           "available": true,
           "cost": 98.0,
-          "median_s": 4.682578550000471e-06,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
@@ -449,21 +407,21 @@
           "kind": "ref",
           "available": true,
           "cost": 33.0,
-          "median_s": 2.881316299954051e-06,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "the fused kernel"
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 1.3683165499969619e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "measured-only (no symbolic form)"
         }
       ]
@@ -476,21 +434,21 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 0.0,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "launch",
       "cost_before": 199688.0,
       "cost_after": 196610.0,
       "best_baseline": "F.sdpa enable_gqa",
       "best_baseline_cost": 196612.0,
       "beat_best": true,
-      "beat_best_measured": false,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:gqa_absorb_repeat"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.056,
+        "search_s": 0.062,
         "n_enodes": 59,
         "iterations": 8,
         "extracted_ops": [
@@ -502,14 +460,7 @@
           "transpose"
         ],
         "cert_steps": 4,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 6.194541299919365e-05,
-          "eager spelled": 6.608584599962341e-05,
-          "F.sdpa enable_gqa": 4.83464065005137e-05,
-          "inductor": 0.00013962149978397065
-        },
-        "mlopt_ms": 0.06194541299919364
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -517,10 +468,10 @@
           "kind": "self",
           "available": true,
           "cost": 199688.0,
-          "median_s": 6.608584599962341e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
@@ -528,21 +479,21 @@
           "kind": "ref",
           "available": true,
           "cost": 196612.0,
-          "median_s": 4.83464065005137e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "the kernel-side head broadcast PyTorch ships"
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 0.00013962149978397065,
-          "iqr_s": 1.9192999843653524e-05,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "measured-only (no symbolic form)"
         }
       ]
@@ -555,21 +506,21 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 0.0,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "launch",
       "cost_before": 32772.0,
       "cost_after": 32770.0,
       "best_baseline": "merged QKV",
       "best_baseline_cost": 32770.0,
       "beat_best": false,
-      "beat_best_measured": false,
+      "beat_best_measured": null,
       "signals_seen": [
         "stat:paired_extract"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.031,
+        "search_s": 0.032,
         "n_enodes": 14,
         "iterations": 1,
         "extracted_ops": [
@@ -581,14 +532,7 @@
           "transpose"
         ],
         "cert_steps": 3,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 4.8124362499947894e-05,
-          "eager three-GEMM": 3.935791800040533e-05,
-          "merged QKV": 3.0245519500567753e-05,
-          "inductor": 8.171650006261189e-05
-        },
-        "mlopt_ms": 0.04812436249994789
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -596,10 +540,10 @@
           "kind": "self",
           "available": true,
           "cost": 32772.0,
-          "median_s": 3.935791800040533e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
@@ -607,21 +551,21 @@
           "kind": "ref",
           "available": true,
           "cost": 32770.0,
-          "median_s": 3.0245519500567753e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "one (3d,d) Linear + chunk \u2014 the hand-fused impl"
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 8.171650006261189e-05,
-          "iqr_s": 1.978249429157586e-06,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "measured-only (no symbolic form)"
         }
       ]
@@ -634,21 +578,21 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 0.0,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "launch",
       "cost_before": 75.0,
       "cost_after": 50.0,
       "best_baseline": "mul-then-unsqueeze",
       "best_baseline_cost": 50.0,
       "beat_best": false,
-      "beat_best_measured": false,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:mul_unsq_nat"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.018,
+        "search_s": 0.021,
         "n_enodes": 7,
         "iterations": 2,
         "extracted_ops": [
@@ -656,14 +600,7 @@
           "unsqueeze"
         ],
         "cert_steps": 1,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 4.65231285002119e-06,
-          "eager spelled": 3.4650616999442716e-06,
-          "mul-then-unsqueeze": 2.6223235499855945e-06,
-          "inductor": 2.01235002350586e-05
-        },
-        "mlopt_ms": 0.00465231285002119
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -671,10 +608,10 @@
           "kind": "self",
           "available": true,
           "cost": 75.0,
-          "median_s": 3.4650616999442716e-06,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
@@ -682,21 +619,21 @@
           "kind": "ref",
           "available": true,
           "cost": 50.0,
-          "median_s": 2.6223235499855945e-06,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 2.01235002350586e-05,
-          "iqr_s": 9.5075029094005e-07,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "measured-only (no symbolic form)"
         }
       ]
@@ -709,22 +646,22 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 0.0,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "launch",
       "cost_before": 761863.0,
       "cost_after": 761862.0,
       "best_baseline": "paper chunkwise",
       "best_baseline_cost": 491656.0,
       "beat_best": false,
-      "beat_best_measured": true,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:om_decayed_lift",
         "op:om_decayed"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.05,
+        "search_s": 0.06,
         "n_enodes": 28,
         "iterations": 2,
         "extracted_ops": [
@@ -743,14 +680,7 @@
           "unsqueeze"
         ],
         "cert_steps": 1,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 7.170653800039873e-05,
-          "eager quadratic": 0.00012717114099996253,
-          "paper chunkwise": 0.0002390476070004297,
-          "inductor": 0.00021223100020506536
-        },
-        "mlopt_ms": 0.07170653800039872
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -758,10 +688,10 @@
           "kind": "self",
           "available": true,
           "cost": 761863.0,
-          "median_s": 0.00012717114099996253,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
@@ -769,21 +699,21 @@
           "kind": "ref",
           "available": true,
           "cost": 491656.0,
-          "median_s": 0.0002390476070004297,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 3.3306690738754696e-16,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "Sun et al. 2023 chunkwise recurrence, reimplemented"
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 0.00021223100020506536,
-          "iqr_s": 1.0871250424315804e-05,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "measured-only (no symbolic form)"
         },
         {
@@ -807,15 +737,15 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 4.440892098500626e-16,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "launch",
       "cost_before": 218.0,
       "cost_after": 129.0,
       "best_baseline": "F.rms_norm",
       "best_baseline_cost": 129.0,
       "beat_best": false,
-      "beat_best_measured": false,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:rms_norm_fold",
         "law:mul_square",
@@ -823,21 +753,14 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.032,
+        "search_s": 0.027,
         "n_enodes": 16,
         "iterations": 3,
         "extracted_ops": [
           "rms_norm"
         ],
         "cert_steps": 4,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 1.296284630006994e-05,
-          "eager spelled": 1.4147586599938222e-05,
-          "F.rms_norm": 9.903465000024881e-06,
-          "inductor": 4.302000070310896e-05
-        },
-        "mlopt_ms": 0.012962846300069941
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -845,10 +768,10 @@
           "kind": "self",
           "available": true,
           "cost": 218.0,
-          "median_s": 1.4147586599938222e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
@@ -856,21 +779,21 @@
           "kind": "ref",
           "available": true,
           "cost": 129.0,
-          "median_s": 9.903465000024881e-06,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "the fused kernel PyTorch ships"
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 4.302000070310896e-05,
-          "iqr_s": 1.0535999535932206e-05,
-          "verify_passed": true,
-          "verify_max_abs": 4.440892098500626e-16,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "measured-only (no symbolic form)"
         }
       ]
@@ -883,35 +806,28 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 0.0,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "launch",
       "cost_before": 282.0,
       "cost_after": 129.0,
       "best_baseline": "F.rms_norm",
       "best_baseline_cost": 129.0,
       "beat_best": false,
-      "beat_best_measured": false,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:rms_norm_fold"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.021,
+        "search_s": 0.031,
         "n_enodes": 14,
         "iterations": 3,
         "extracted_ops": [
           "rms_norm"
         ],
         "cert_steps": 1,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 1.3812019800025154e-05,
-          "eager spelled": 1.1428398499992908e-05,
-          "F.rms_norm": 9.467128199958097e-06,
-          "inductor": 3.961750007874798e-05
-        },
-        "mlopt_ms": 0.013812019800025154
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -919,10 +835,10 @@
           "kind": "self",
           "available": true,
           "cost": 282.0,
-          "median_s": 1.1428398499992908e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
@@ -930,21 +846,21 @@
           "kind": "ref",
           "available": true,
           "cost": 129.0,
-          "median_s": 9.467128199958097e-06,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "the fused kernel PyTorch ships"
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 3.961750007874798e-05,
-          "iqr_s": 1.705000158835901e-06,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "measured-only (no symbolic form)"
         }
       ]
@@ -957,35 +873,28 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 0.0,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "launch",
       "cost_before": 217.0,
       "cost_after": 65.0,
       "best_baseline": "F.rms_norm (no weight)",
       "best_baseline_cost": 65.0,
       "beat_best": false,
-      "beat_best_measured": false,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:rms_norm_fold_nogain"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.019,
+        "search_s": 0.018,
         "n_enodes": 11,
         "iterations": 3,
         "extracted_ops": [
           "rms_norm"
         ],
         "cert_steps": 1,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 1.1287079799967614e-05,
-          "eager spelled": 9.472748600001068e-06,
-          "F.rms_norm (no weight)": 8.45124739998937e-06,
-          "inductor": 2.065700027742423e-05
-        },
-        "mlopt_ms": 0.011287079799967613
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -993,10 +902,10 @@
           "kind": "self",
           "available": true,
           "cost": 217.0,
-          "median_s": 9.472748600001068e-06,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
@@ -1004,21 +913,21 @@
           "kind": "ref",
           "available": true,
           "cost": 65.0,
-          "median_s": 8.45124739998937e-06,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "the fused kernel, weight=None"
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 2.065700027742423e-05,
-          "iqr_s": 1.2225004866195377e-06,
-          "verify_passed": true,
-          "verify_max_abs": 2.220446049250313e-16,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "measured-only (no symbolic form)"
         }
       ]
@@ -1031,15 +940,15 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 0.0,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "launch",
       "cost_before": 32772.0,
       "cost_after": 32772.0,
       "best_baseline": "eager spelled",
       "best_baseline_cost": 32772.0,
       "beat_best": false,
-      "beat_best_measured": false,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:sdpa_expand_s",
         "law:naturality_scalar_left_rev",
@@ -1047,7 +956,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 1.051,
+        "search_s": 0.987,
         "n_enodes": 372,
         "iterations": 8,
         "extracted_ops": [
@@ -1057,13 +966,7 @@
           "transpose"
         ],
         "cert_steps": 0,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 4.1402652299984766e-05,
-          "eager spelled": 4.0184393999879834e-05,
-          "inductor": 8.00950001575984e-05
-        },
-        "mlopt_ms": 0.041402652299984764
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -1071,21 +974,21 @@
           "kind": "self",
           "available": true,
           "cost": 32772.0,
-          "median_s": 4.0184393999879834e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 8.00950001575984e-05,
-          "iqr_s": 3.2280004234053195e-06,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "measured-only (no symbolic form)"
         }
       ]
@@ -1098,21 +1001,21 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 2.220446049250313e-16,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "launch",
       "cost_before": 33415.0,
       "cost_after": 32772.0,
       "best_baseline": "F.scaled_dot_product_attention",
       "best_baseline_cost": 32772.0,
       "beat_best": false,
-      "beat_best_measured": true,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:sdpa_fold_div_nomask"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.038,
+        "search_s": 0.033,
         "n_enodes": 19,
         "iterations": 2,
         "extracted_ops": [
@@ -1120,14 +1023,7 @@
           "sdpa"
         ],
         "cert_steps": 1,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 3.1302692499593835e-05,
-          "eager spelled": 3.799382500028514e-05,
-          "F.scaled_dot_product_attention": 3.675782729997081e-05,
-          "inductor": 8.813449949229835e-05
-        },
-        "mlopt_ms": 0.03130269249959383
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -1135,10 +1031,10 @@
           "kind": "self",
           "available": true,
           "cost": 33415.0,
-          "median_s": 3.799382500028514e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
@@ -1146,21 +1042,21 @@
           "kind": "ref",
           "available": true,
           "cost": 32772.0,
-          "median_s": 3.675782729997081e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 2.220446049250313e-16,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "the fused kernel, explicit scale=1/\u221ad"
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 8.813449949229835e-05,
-          "iqr_s": 2.2889992123964475e-06,
-          "verify_passed": true,
-          "verify_max_abs": 1.1102230246251565e-16,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "measured-only (no symbolic form)"
         }
       ]
@@ -1173,21 +1069,21 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 0.0,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "launch",
       "cost_before": 15.0,
       "cost_after": 15.0,
       "best_baseline": "eager spelled",
       "best_baseline_cost": 15.0,
       "beat_best": false,
-      "beat_best_measured": false,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:select_mul"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.019,
+        "search_s": 0.022,
         "n_enodes": 7,
         "iterations": 2,
         "extracted_ops": [
@@ -1195,14 +1091,7 @@
           "select"
         ],
         "cert_steps": 0,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 7.973012100046616e-06,
-          "eager spelled": 4.281827849990804e-06,
-          "mul-then-select": 2.998284399973272e-06,
-          "inductor": 1.528257850004593e-05
-        },
-        "mlopt_ms": 0.007973012100046617
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -1210,10 +1099,10 @@
           "kind": "self",
           "available": true,
           "cost": 15.0,
-          "median_s": 4.281827849990804e-06,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
@@ -1221,21 +1110,21 @@
           "kind": "ref",
           "available": true,
           "cost": 38.0,
-          "median_s": 2.998284399973272e-06,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 1.528257850004593e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "measured-only (no symbolic form)"
         }
       ]
@@ -1248,35 +1137,28 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 4.440892098500626e-16,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "launch",
       "cost_before": 194.0,
       "cost_after": 193.0,
       "best_baseline": "F.silu",
       "best_baseline_cost": 193.0,
       "beat_best": false,
-      "beat_best_measured": false,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:silu_fold"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.014,
+        "search_s": 0.017,
         "n_enodes": 4,
         "iterations": 2,
         "extracted_ops": [
           "silu"
         ],
         "cert_steps": 1,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 3.1191005999517072e-06,
-          "eager spelled": 2.820423849971121e-06,
-          "F.silu": 1.9849964199966053e-06,
-          "inductor": 1.556688979999308e-05
-        },
-        "mlopt_ms": 0.0031191005999517073
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -1284,10 +1166,10 @@
           "kind": "self",
           "available": true,
           "cost": 194.0,
-          "median_s": 2.820423849971121e-06,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
@@ -1295,21 +1177,21 @@
           "kind": "ref",
           "available": true,
           "cost": 193.0,
-          "median_s": 1.9849964199966053e-06,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 4.440892098500626e-16,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "the fused kernel"
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 1.556688979999308e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "measured-only (no symbolic form)"
         }
       ]
@@ -1322,35 +1204,28 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 5.551115123125783e-17,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "launch",
       "cost_before": 327.0,
       "cost_after": 65.0,
       "best_baseline": "torch.softmax",
       "best_baseline_cost": 65.0,
       "beat_best": false,
-      "beat_best_measured": false,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:softmax_fold"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.018,
+        "search_s": 0.022,
         "n_enodes": 5,
         "iterations": 2,
         "extracted_ops": [
           "softmax"
         ],
         "cert_steps": 1,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 5.0180303000161075e-06,
-          "eager spelled": 4.620659400006844e-06,
-          "torch.softmax": 2.122983050003313e-06,
-          "inductor": 2.1656999706465285e-05
-        },
-        "mlopt_ms": 0.005018030300016107
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -1358,10 +1233,10 @@
           "kind": "self",
           "available": true,
           "cost": 327.0,
-          "median_s": 4.620659400006844e-06,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
@@ -1369,21 +1244,21 @@
           "kind": "ref",
           "available": true,
           "cost": 65.0,
-          "median_s": 2.122983050003313e-06,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 5.551115123125783e-17,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "the fused kernel"
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 2.1656999706465285e-05,
-          "iqr_s": 1.258999873243738e-06,
-          "verify_passed": true,
-          "verify_max_abs": 1.734723475976807e-18,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "measured-only (no symbolic form)"
         }
       ]
@@ -1396,35 +1271,28 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 0.0,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "launch",
       "cost_before": 387.0,
       "cost_after": 65.0,
       "best_baseline": "eager spelled",
       "best_baseline_cost": 387.0,
       "beat_best": true,
-      "beat_best_measured": false,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:softsign_fold"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.017,
+        "search_s": 0.021,
         "n_enodes": 6,
         "iterations": 2,
         "extracted_ops": [
           "softsign"
         ],
         "cert_steps": 1,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 7.239885899980436e-06,
-          "eager spelled": 5.695475999982591e-06,
-          "F.softsign": 5.80796599997484e-06,
-          "inductor": 2.0784999833267648e-05
-        },
-        "mlopt_ms": 0.007239885899980436
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -1432,10 +1300,10 @@
           "kind": "self",
           "available": true,
           "cost": 387.0,
-          "median_s": 5.695475999982591e-06,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
@@ -1443,21 +1311,21 @@
           "kind": "ref",
           "available": true,
           "cost": 387.0,
-          "median_s": 5.80796599997484e-06,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "the fused kernel"
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 2.0784999833267648e-05,
-          "iqr_s": 1.3045009836787358e-06,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "measured-only (no symbolic form)"
         }
       ]
@@ -1470,21 +1338,21 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 0.0,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "launch",
       "cost_before": 4356.0,
       "cost_after": 4355.0,
       "best_baseline": "eager two-GEMM",
       "best_baseline_cost": 4356.0,
       "beat_best": true,
-      "beat_best_measured": false,
+      "beat_best_measured": null,
       "signals_seen": [
         "stat:paired_extract"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.022,
+        "search_s": 0.026,
         "n_enodes": 9,
         "iterations": 2,
         "extracted_ops": [
@@ -1495,14 +1363,7 @@
           "split"
         ],
         "cert_steps": 2,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 2.038882629994987e-05,
-          "eager two-GEMM": 1.453229509997982e-05,
-          "fused SwiGLU": 1.48982977999367e-05,
-          "inductor": 5.274399973131949e-05
-        },
-        "mlopt_ms": 0.02038882629994987
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -1510,10 +1371,10 @@
           "kind": "self",
           "available": true,
           "cost": 4356.0,
-          "median_s": 1.453229509997982e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
@@ -1521,21 +1382,21 @@
           "kind": "ref",
           "available": true,
           "cost": 4485.0,
-          "median_s": 1.48982977999367e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "one widened Linear + split \u2014 the hand-fused impl"
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 5.274399973131949e-05,
-          "iqr_s": 1.6484996194776613e-06,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "measured-only (no symbolic form)"
         }
       ]
@@ -1548,21 +1409,21 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 2.220446049250313e-16,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "launch",
       "cost_before": 4098.0,
       "cost_after": 2049.0,
       "best_baseline": "pre-folded Linear",
       "best_baseline_cost": 2049.0,
       "beat_best": false,
-      "beat_best_measured": true,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:assoc_linear"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.02,
+        "search_s": 0.021,
         "n_enodes": 7,
         "iterations": 2,
         "extracted_ops": [
@@ -1570,14 +1431,7 @@
           "matmul"
         ],
         "cert_steps": 1,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 5.607688599957328e-06,
-          "eager two-GEMM": 1.0123047200067959e-05,
-          "pre-folded Linear": 5.961914799991064e-06,
-          "inductor": 5.579000026045833e-05
-        },
-        "mlopt_ms": 0.005607688599957328
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -1585,10 +1439,10 @@
           "kind": "self",
           "available": true,
           "cost": 4098.0,
-          "median_s": 1.0123047200067959e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
@@ -1596,21 +1450,21 @@
           "kind": "ref",
           "available": true,
           "cost": 2049.0,
-          "median_s": 5.961914799991064e-06,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 2.823249983796572e-08,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "one Linear carrying W2@W1 \u2014 what weight folding ships"
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 5.579000026045833e-05,
-          "iqr_s": 1.8605001059768256e-06,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "no freeze \u2014 Inductor cannot fold the weights"
         }
       ]
@@ -1623,21 +1477,21 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 7.771561172376096e-16,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "launch",
       "cost_before": 4163.0,
       "cost_after": 2049.0,
       "best_baseline": "merged Linear",
       "best_baseline_cost": 2049.0,
       "beat_best": false,
-      "beat_best_measured": true,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:weight_factor_linear"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.022,
+        "search_s": 0.023,
         "n_enodes": 8,
         "iterations": 2,
         "extracted_ops": [
@@ -1645,14 +1499,7 @@
           "linear"
         ],
         "cert_steps": 1,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 5.573209900012444e-06,
-          "eager two-GEMM": 1.1936342300032266e-05,
-          "merged Linear": 5.9900545999880705e-06,
-          "inductor": 5.367400035538594e-05
-        },
-        "mlopt_ms": 0.005573209900012444
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -1660,10 +1507,10 @@
           "kind": "self",
           "available": true,
           "cost": 4163.0,
-          "median_s": 1.1936342300032266e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
@@ -1671,21 +1518,21 @@
           "kind": "ref",
           "available": true,
           "cost": 2049.0,
-          "median_s": 5.9900545999880705e-06,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 7.771561172376096e-16,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "one Linear carrying A+B \u2014 the merged form"
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 5.367400035538594e-05,
-          "iqr_s": 2.233749910374172e-06,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "measured-only (no symbolic form)"
         }
       ]
@@ -1698,22 +1545,22 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 0.0,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "exec",
       "cost_before": 217830.11235955052,
       "cost_after": 200240.26966292132,
       "best_baseline": "eager",
       "best_baseline_cost": 217830.11235955052,
       "beat_best": true,
-      "beat_best_measured": false,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:affd_lift",
         "op:applyd"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.062,
+        "search_s": 0.07,
         "n_enodes": 36,
         "iterations": 3,
         "extracted_ops": [
@@ -1727,13 +1574,7 @@
           "unsqueeze"
         ],
         "cert_steps": 2,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 7.081845699940459e-05,
-          "eager": 5.378555200059054e-05,
-          "inductor": 8.42525000734895e-05
-        },
-        "mlopt_ms": 0.07081845699940459
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -1741,21 +1582,21 @@
           "kind": "self",
           "available": true,
           "cost": 217830.11235955052,
-          "median_s": 5.378555200059054e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 8.42525000734895e-05,
-          "iqr_s": 2.466999831085559e-06,
-          "verify_passed": true,
-          "verify_max_abs": 4.440892098500626e-16,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "measured-only (no symbolic form)"
         }
       ]
@@ -1768,22 +1609,22 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 1.1102230246251565e-16,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "exec",
       "cost_before": 348463.1460674157,
       "cost_after": 348440.13483146066,
       "best_baseline": "eager spelled",
       "best_baseline_cost": 348463.1460674157,
       "beat_best": true,
-      "beat_best_measured": false,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:om_lift",
         "op:om_apply"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.071,
+        "search_s": 0.09,
         "n_enodes": 35,
         "iterations": 2,
         "extracted_ops": [
@@ -1802,13 +1643,7 @@
           "transpose"
         ],
         "cert_steps": 1,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 0.00013604995100013185,
-          "eager spelled": 0.0001036643899997216,
-          "inductor": 0.00010301550037183915
-        },
-        "mlopt_ms": 0.13604995100013184
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -1816,21 +1651,21 @@
           "kind": "self",
           "available": true,
           "cost": 348463.1460674157,
-          "median_s": 0.0001036643899997216,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 0.00010301550037183915,
-          "iqr_s": 3.758249931706814e-06,
-          "verify_passed": true,
-          "verify_max_abs": 1.1102230246251565e-16,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "measured-only (no symbolic form)"
         }
       ]
@@ -1843,15 +1678,15 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 0.0,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "exec",
       "cost_before": 975073.483146068,
       "cost_after": 818072.5842696623,
       "best_baseline": "eager unrolled",
       "best_baseline_cost": 975073.483146068,
       "beat_best": true,
-      "beat_best_measured": false,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:decay_state_lift_post",
         "law:mul_unsq_nat",
@@ -1860,7 +1695,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.34,
+        "search_s": 0.192,
         "n_enodes": 111,
         "iterations": 3,
         "extracted_ops": [
@@ -1877,13 +1712,7 @@
           "zeros"
         ],
         "cert_steps": 45,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 0.00014948497400018822,
-          "eager unrolled": 0.00012690462600039608,
-          "inductor": 8.322499934365624e-05
-        },
-        "mlopt_ms": 0.14948497400018823
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -1891,21 +1720,21 @@
           "kind": "self",
           "available": true,
           "cost": 975073.483146068,
-          "median_s": 0.00012690462600039608,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 8.322499934365624e-05,
-          "iqr_s": 2.975000143123907e-06,
-          "verify_passed": true,
-          "verify_max_abs": 2.3592239273284576e-16,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "measured-only (no symbolic form)"
         },
         {
@@ -1929,15 +1758,15 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 0.0,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "exec",
       "cost_before": 182972.58426966294,
       "cost_after": 165561.07865168535,
       "best_baseline": "eager quadratic",
       "best_baseline_cost": 182972.58426966294,
       "beat_best": true,
-      "beat_best_measured": false,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:om_decayed_lift",
         "law:mul_square",
@@ -1945,7 +1774,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.038,
+        "search_s": 0.053,
         "n_enodes": 28,
         "iterations": 3,
         "extracted_ops": [
@@ -1959,13 +1788,7 @@
           "transpose"
         ],
         "cert_steps": 1,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 5.1151799999388456e-05,
-          "eager quadratic": 4.795483099997e-05,
-          "inductor": 7.95559999460238e-05
-        },
-        "mlopt_ms": 0.05115179999938846
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -1973,21 +1796,21 @@
           "kind": "self",
           "available": true,
           "cost": 182972.58426966294,
-          "median_s": 4.795483099997e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 7.95559999460238e-05,
-          "iqr_s": 2.4659998416609596e-06,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "measured-only (no symbolic form)"
         },
         {
@@ -2011,21 +1834,21 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 2.220446049250313e-16,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "exec",
       "cost_before": 87045.34831460674,
       "cost_after": 69649.66292134831,
       "best_baseline": "merged LoRA",
       "best_baseline_cost": 69649.66292134831,
       "beat_best": false,
-      "beat_best_measured": false,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:assoc_linear"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.029,
+        "search_s": 0.034,
         "n_enodes": 13,
         "iterations": 2,
         "extracted_ops": [
@@ -2035,14 +1858,7 @@
           "mul"
         ],
         "cert_steps": 1,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 1.6316002999974442e-05,
-          "eager three-GEMM": 1.8984807499964518e-05,
-          "merged LoRA": 1.533372160001818e-05,
-          "inductor": 6.291400040936423e-05
-        },
-        "mlopt_ms": 0.016316002999974443
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -2050,10 +1866,10 @@
           "kind": "self",
           "available": true,
           "cost": 87045.34831460674,
-          "median_s": 1.8984807499964518e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
@@ -2061,21 +1877,21 @@
           "kind": "ref",
           "available": true,
           "cost": 69649.66292134831,
-          "median_s": 1.533372160001818e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 1.2734057253105391e-08,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "peft.merge_and_unload-style \u2014 the branch pre-composed dense"
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 6.291400040936423e-05,
-          "iqr_s": 2.6500001695239916e-06,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "no freeze \u2014 Inductor cannot fold the adapter weights"
         }
       ]
@@ -2088,21 +1904,21 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 0.0,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "param_bytes",
       "cost_before": 400.0,
       "cost_after": 400.0,
       "best_baseline": "eager low-rank",
       "best_baseline_cost": 400.0,
       "beat_best": false,
-      "beat_best_measured": false,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:assoc_linear"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.025,
+        "search_s": 0.031,
         "n_enodes": 13,
         "iterations": 2,
         "extracted_ops": [
@@ -2111,14 +1927,7 @@
           "mul"
         ],
         "cert_steps": 0,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 2.1224762200017723e-05,
-          "eager low-rank": 2.1127600299951156e-05,
-          "merged LoRA": 1.6323965299943666e-05,
-          "inductor": 5.0671900000452294e-05
-        },
-        "mlopt_ms": 0.021224762200017722
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -2126,10 +1935,10 @@
           "kind": "self",
           "available": true,
           "cost": 400.0,
-          "median_s": 2.1127600299951156e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
@@ -2137,21 +1946,21 @@
           "kind": "ref",
           "available": true,
           "cost": 528.0,
-          "median_s": 1.6323965299943666e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 1.2734057253105391e-08,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "same storage regression \u2014 the hand-merge pays it too"
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 5.0671900000452294e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "measured-only (no symbolic form)"
         }
       ]
@@ -2164,15 +1973,15 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 0.0,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "launch",
       "cost_before": 637.0,
       "cost_after": 637.0,
       "best_baseline": "eager",
       "best_baseline_cost": 637.0,
       "beat_best": false,
-      "beat_best_measured": false,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:index_select_dedup",
         "law:index_select_id",
@@ -2180,7 +1989,7 @@
       ],
       "error": "",
       "detail": {
-        "search_s": 0.047,
+        "search_s": 0.059,
         "n_enodes": 13,
         "iterations": 1,
         "extracted_ops": [
@@ -2193,13 +2002,7 @@
           "unsqueeze"
         ],
         "cert_steps": 0,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 4.3907188499815676e-05,
-          "eager": 3.3902023499649656e-05,
-          "inductor": 6.2189999880502e-05
-        },
-        "mlopt_ms": 0.043907188499815675
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -2207,21 +2010,21 @@
           "kind": "self",
           "available": true,
           "cost": 637.0,
-          "median_s": 3.3902023499649656e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 6.2189999880502e-05,
-          "iqr_s": 2.336999841645593e-06,
-          "verify_passed": true,
-          "verify_max_abs": 4.163336342344337e-17,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "measured-only (no symbolic form)"
         }
       ]
@@ -2234,22 +2037,22 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 0.0,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "exec",
       "cost_before": 87058.33707865168,
       "cost_after": 87055.46067415731,
       "best_baseline": "eager spelled",
       "best_baseline_cost": 87058.33707865168,
       "beat_best": true,
-      "beat_best_measured": false,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:mul_square",
         "law:square_to_pow"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.032,
+        "search_s": 0.039,
         "n_enodes": 11,
         "iterations": 3,
         "extracted_ops": [
@@ -2260,13 +2063,7 @@
           "stack"
         ],
         "cert_steps": 1,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 2.8413870999884238e-05,
-          "eager spelled": 2.4464409899974272e-05,
-          "inductor": 5.3221000598568935e-05
-        },
-        "mlopt_ms": 0.02841387099988424
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -2274,21 +2071,21 @@
           "kind": "self",
           "available": true,
           "cost": 87058.33707865168,
-          "median_s": 2.4464409899974272e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 5.3221000598568935e-05,
-          "iqr_s": 1.840499862737488e-06,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "measured-only (no symbolic form)"
         }
       ]
@@ -2301,22 +2098,22 @@
       "found": true,
       "picked": true,
       "certified": true,
-      "verified": true,
-      "verify_max_abs": 0.0,
+      "verified": null,
+      "verify_max_abs": null,
       "axis": "exec",
       "cost_before": 226487.7752808989,
       "cost_after": 209087.68539325843,
       "best_baseline": "eager",
       "best_baseline_cost": 226487.7752808989,
       "beat_best": true,
-      "beat_best_measured": true,
+      "beat_best_measured": null,
       "signals_seen": [
         "law:mul_unsq_pad_l",
         "law:mul_unsq_pad_r"
       ],
       "error": "",
       "detail": {
-        "search_s": 0.055,
+        "search_s": 0.069,
         "n_enodes": 36,
         "iterations": 2,
         "extracted_ops": [
@@ -2339,13 +2136,7 @@
           "unsqueeze"
         ],
         "cert_steps": 2,
-        "cert_egraph_dep": 0,
-        "median_s": {
-          "mlopt": 5.20308360000854e-05,
-          "eager": 5.895144800069829e-05,
-          "inductor": 8.16609999674256e-05
-        },
-        "mlopt_ms": 0.0520308360000854
+        "cert_egraph_dep": 0
       },
       "baselines": [
         {
@@ -2353,41 +2144,41 @@
           "kind": "self",
           "available": true,
           "cost": 226487.7752808989,
-          "median_s": 5.895144800069829e-05,
-          "iqr_s": 0.0,
-          "verify_passed": true,
-          "verify_max_abs": 0.0,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": ""
         },
         {
           "name": "inductor",
           "kind": "compile",
-          "available": true,
+          "available": false,
           "cost": null,
-          "median_s": 8.16609999674256e-05,
-          "iqr_s": 2.4380001377721783e-06,
-          "verify_passed": true,
-          "verify_max_abs": 4.440892098500626e-16,
+          "median_s": null,
+          "iqr_s": null,
+          "verify_passed": null,
+          "verify_max_abs": null,
           "note": "measured-only (no symbolic form)"
         }
       ]
     }
   ],
   "env": {
-    "timestamp_utc": "2026-10-21T00:53:41+00:00",
+    "timestamp_utc": "2026-10-21T03:31:01+00:00",
     "python": "3.13.9",
     "torch": "2.14.0+cu130",
     "torch_cuda": "13.0",
     "device": "cpu",
     "device_name": "12th Gen Intel(R) Core(TM) i5-12500H",
     "cpu_count": 16,
-    "git_sha": "eea02f6",
+    "git_sha": "ee89e13",
     "git_dirty": true,
     "argv": [
       "/home/luis/GitHub/handl-lang/graphopt/bench/discovery/run.py",
-      "--full"
+      "--fast"
     ]
   },
-  "generated_utc": "2026-10-21T00:53:41+00:00",
+  "generated_utc": "2026-10-21T03:31:01+00:00",
   "seed": null
 }

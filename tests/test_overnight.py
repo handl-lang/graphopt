@@ -140,27 +140,29 @@ class TestCorpusZoo:
     def test_zoo_arena_pool_is_real_matched(self):
         """Every pooled candidate's pattern LHS binds the module."""
         from mlopt_core.egraph.terms import _term_match
-        from mlopt_core.ir import Op
         from mlopt_core.meta import _positions
 
-        case = {"zoo": "LoRAAdapter", "wseed": 0, "page": 6, "scan": 384}
+        case = {
+            "zoo": "LoRAAdapter",
+            "wseed": 0,
+            "page": 6,
+            "scan": 384,
+        }
         arena = on._ZooArena(case)
         assert not arena.error
         assert arena.pool, "no stream candidate matched the module"
         ir, _t, _f = on._zoo_export(case)
-        subs = [s for _p, s in _positions(ir.root) if isinstance(s, Op)]
+        subs = [s for _p, s in _positions(ir.root)]
         for cand in arena.pool:
             pat = cand.as_rule().lhs
-            assert any(
-                _term_match(pat, s) is not None for s in subs
-            ), f"{cand.label}: not a real match"
+            assert any(_term_match(pat, s) is not None for s in subs), (
+                f"{cand.label}: not a real match"
+            )
 
     def test_zoo_dry_completes_and_records_corpus(self, tmp_path):
         """The zoo arm end-to-end: episodes are real modules."""
         t0 = time.time()
-        assert (
-            on.main(_argv(tmp_path, "--dry", "--corpus", "zoo")) == 0
-        )
+        assert on.main(_argv(tmp_path, "--dry", "--corpus", "zoo")) == 0
         assert time.time() - t0 < 180  # exports + referee, seconds
         man, cells = _records(tmp_path / "ck.jsonl")
         # the corpus arm is protocol-pinned — resume can't mix arms

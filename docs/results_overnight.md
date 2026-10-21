@@ -6,7 +6,7 @@
 ```bash
 .venv/bin/python bench/drivers/overnight.py \
     --episodes <N> --budget <seconds> --seed 0 \
-    --player <name> --referee <name> \
+    --player <name> --referee <name> --corpus <grammar|zoo> \
     --resume --out docs/results_overnight.md
 ```
 
@@ -30,7 +30,10 @@ partial night is not lost work.
 Per iteration:
 
 1. **episodes** — `--episodes` games under `--player` / `--referee`,
-   seeded by `--seed`.
+   seeded by `--seed`, over the `--corpus` arm: `grammar` pages the
+   enumerated candidate stream (default); `zoo` pages the held-out
+   `mlopt_discovery.zoo` module registry, each module's exported term
+   filtering the stream to candidates that fire on real structure.
 2. **mint** — candidate laws synthesized from the episode trace.
 3. **admit** — each candidate runs the `verify_law` gauntlet.
 4. **classify** — admitted candidates are scored for novelty against

@@ -47,9 +47,23 @@ has no module corpus, so ``probe``/``real_terms`` are empty and the
 gauntlet measures on its own synthesized binding domain — the same
 domain that admitted (and refuted) the shipped ``syn_*`` mints.
 
+**Corpora** (``--corpus``).  ``grammar`` (default) is the arm above:
+episodes page the enumerated candidate stream.  ``zoo`` targets real
+structure: each episode is one held-out ``mlopt_discovery.zoo``
+module, exported through ``export_to_ir``, and the episode's pool is
+the stream's candidates whose pattern LHS strictly binds a subterm of
+that real term — the claims that would actually fire on the module.
+The referee context is populated honestly on this arm: ``real_terms``
+and ``probe`` carry the covered workloads' exported terms (with a
+``TorchSink`` so the pay leg lowers and verifies), and the novelty
+classify sees the modules as ``corpus:<name>`` instances.  The arm is
+recorded in the ledger manifest's protocol (and the emitted document)
+so a resumed or resumed-against run can never silently mix corpora.
+
 Run::
 
     .venv/bin/python bench/drivers/overnight.py --dry
+    .venv/bin/python bench/drivers/overnight.py --dry --corpus zoo
     .venv/bin/python bench/drivers/overnight.py --episodes 48 \
         --player playbook --referee full --resume
 """
@@ -57,11 +71,13 @@ Run::
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import sys
 import time
 from collections import Counter
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 from gamekit import engine
@@ -92,10 +108,23 @@ DEFAULTS: dict[str, Any] = {
     "seed": 0,
     "player": "playbook",
     "referee": "full",
+    "corpus": "grammar",
+    "scan": 2048,
 }
 
-#: ``--dry`` — seconds-scale smoke: two episodes, a tiny pool.
-DRY: dict[str, Any] = {"episodes": 2, "page": 6, "budget": 4}
+#: ``--dry`` — seconds-scale smoke: two episodes, a tiny pool, a
+#: shallow stream scan on the zoo arm.
+DRY: dict[str, Any] = {
+    "episodes": 2,
+    "page": 6,
+    "budget": 4,
+    "scan": 384,
+}
+
+#: The corpus arms — ``grammar`` pages the enumerated candidate
+#: stream; ``zoo`` pages the held-out ``mlopt_discovery.zoo`` module
+#: registry, the same stream filtered to real-matching claims.
+CORPORA: tuple[str, ...] = ("grammar", "zoo")
 
 #: Where the documents land.
 DOC_PATH = _REPO / "docs" / "results_overnight.md"
@@ -105,6 +134,204 @@ DOC_PATH = _REPO / "docs" / "results_overnight.md"
 CKPT_PATH = Path("bench/results/checkpoints/overnight.jsonl")
 
 _NOVELTY_ORDER = ("machine-original", "known-art", "vacuous")
+
+
+# ---------------------------------------------------------------------------
+#  the zoo corpus arm — real modules as the episode boards
+# ---------------------------------------------------------------------------
+
+#: Exported-workload cache — ``(name, wseed) -> (ir, tensors, feeds)``.
+#: The pool filter, the referee context and the resume rebuild all
+#: need the same module's term; each build is seed-pinned so a
+#: rebuild is byte-identical.
+_EXPORT_CACHE: dict[tuple, tuple] = {}
+
+
+def _zoo_registry() -> dict[str, Any]:
+    """``name -> Workload`` over the held-out zoo registry."""
+    from mlopt_discovery import zoo as zoo_mod
+
+    return {w.name: w for w in zoo_mod.zoo()}
+
+
+def _zoo_cases(
+    seed: int, episodes: int, *, page: int, scan: int
+) -> list:
+    """One case per covered zoo workload — registry order, JSON-safe.
+
+    ``wseed`` pins the workload's build draws so the episode board —
+    and a resume's rebuild of it — is deterministic regardless of how
+    much RNG the rest of the run consumed first.  ``episodes`` beyond
+    the registry size simply covers the whole zoo.
+    """
+    names = list(_zoo_registry())[:episodes]
+    return [
+        {
+            "zoo": name,
+            "wseed": seed * 100_003 + i,
+            "page": page,
+            "scan": scan,
+        }
+        for i, name in enumerate(names)
+    ]
+
+
+def _zoo_export(case: dict) -> tuple:
+    """Build + export the case's workload; ``(ir, tensors, feeds)``.
+
+    The build is seed-pinned (``wseed``) so pool rebuilds and the
+    referee context see the identical module.  Export failures
+    propagate — the caller decides whether they are an empty pool
+    (arena) or a dropped context entry (referee ctx).
+    """
+    import torch
+    from mlopt_torch.torch_bridge import export_to_ir
+
+    key = (case["zoo"], case.get("wseed", 0))
+    if key not in _EXPORT_CACHE:
+        torch.manual_seed(key[1])
+        model, feed = _zoo_registry()[case["zoo"]].build()
+        feeds = feed if isinstance(feed, tuple) else (feed,)
+        ir, tensors = export_to_ir(model.eval().double(), feeds)
+        _EXPORT_CACHE[key] = (ir, dict(tensors), feeds)
+    return _EXPORT_CACHE[key]
+
+
+class _ZooArena(og.OpenArena):
+    """An ``OpenArena`` whose pool is the real-match slice.
+
+    The enumerated grammar remains the hypothesis generator; the zoo
+    module's exported term is the corpus.  The pool is the stream's
+    first ``page`` candidates whose pattern LHS strictly binds a
+    subterm of the module — the claims an e-graph would actually fire
+    on this architecture.  ``scan`` bounds how much of the ~1.1k-
+    candidate stream one module reads (``<= 0`` scans it all).  A
+    module that exports nothing or matches nothing is a done state —
+    the honest empty pool — and an export failure is recorded in
+    ``self.error``, never silently zeroed.
+    """
+
+    def __init__(self, case: dict) -> None:
+        from mlopt_core.egraph.terms import _term_match
+        from mlopt_core.ir import Op
+        from mlopt_core.meta import _positions
+        from mlopt_discovery.enumerate import enumerate_candidates
+
+        self.pool: list = []
+        self.verdicts: dict[int, str] = {}
+        self.steps = 0
+        self.done = True
+        self._n_true = 0
+        self._n_useful = 0
+        self.error = ""
+        try:
+            ir, _tensors, _feeds = _zoo_export(case)
+        except Exception as e:
+            self.error = f"export: {type(e).__name__}: {e}"
+            return
+        subs: dict[str, list] = {}
+        flat: list = []
+        for _p, s in _positions(ir.root):
+            flat.append(s)
+            if isinstance(s, Op):
+                subs.setdefault(s.op, []).append(s)
+        scan = case.get("scan") or None
+        for cand in itertools.islice(enumerate_candidates(None), scan):
+            pat = cand.as_rule().lhs
+            tries = (
+                subs.get(pat.op, ()) if isinstance(pat, Op) else flat
+            )
+            if any(_term_match(pat, s) is not None for s in tries):
+                self.pool.append(cand)
+                if len(self.pool) >= case.get("page", 48):
+                    break
+        self.done = not self.pool
+
+
+def _zoo_export_env(cases: list) -> dict:
+    """``name -> (ir, tensors, feeds) | None`` for the covered zoo."""
+    env: dict[str, Any] = {}
+    for case in cases:
+        if case["zoo"] in env:
+            continue
+        try:
+            env[case["zoo"]] = _zoo_export(case)
+        except Exception:
+            env[case["zoo"]] = None
+    return env
+
+
+def _zoo_referee_ctx(env: dict, referees: Any) -> Any:
+    """The zoo arm's ``RefereeCtx`` — real terms + a lowering sink.
+
+    ``real_terms`` are the covered modules' exported roots (the
+    oracle/sweep real-match domain); ``probe`` is the same modules as
+    ``TermCase``s (the pay leg's firing domain), verified through a
+    real ``TorchSink`` — the context the grammar arm's docstring
+    notes it lacks.
+    """
+    from mlopt_discovery.impact import TermCase
+    from mlopt_torch.adapters import TorchSink
+
+    real_terms, probe = [], []
+    for name, rec in env.items():
+        if rec is None:
+            continue
+        ir, tensors, feeds = rec
+        real_terms.append(ir.root)
+        probe.append(
+            TermCase(
+                source="zoo",
+                name=name,
+                term=ir.root,
+                inputs=tuple(ir.inputs),
+                feed=tuple(feeds),
+                param_vals=tensors,
+            )
+        )
+    return referees.RefereeCtx(
+        real_terms=tuple(real_terms),
+        probe=tuple(probe),
+        sink=TorchSink(),
+    )
+
+
+def _zoo_case_ctxs(env: dict) -> list:
+    """``novelty_sieve._CaseCtx``s over the covered zoo terms.
+
+    Fed to ``instance_of`` at classify time so an admitted law's
+    firing site is named ``corpus:<module>`` — the real-structure
+    provenance the grammar arm cannot produce.
+    """
+    from bench.drivers.screen import novelty_sieve as ns
+
+    return [
+        ns._CaseCtx(
+            case=SimpleNamespace(name=name),
+            model=None,
+            feed=None,
+            term=rec[0].root,
+            ops=ns._ops_of(rec[0].root),
+        )
+        for name, rec in env.items()
+        if rec is not None
+    ]
+
+
+def _gen_cases(
+    corpus: str, seed: int, episodes: int, **kw: Any
+) -> list:
+    """The corpus arm's case list — stream pages or zoo workloads."""
+    if corpus == "zoo":
+        return _zoo_cases(
+            seed, episodes, page=kw["page"], scan=kw.get("scan") or 0
+        )
+    return og.gen_cases(seed, episodes, page=kw["page"])
+
+
+def _arena_for(case: dict, corpus: str) -> Any:
+    """The episode board for *case* on *corpus*."""
+    return _ZooArena(case) if corpus == "zoo" else og.OpenArena(case)
 
 
 # ---------------------------------------------------------------------------
@@ -174,18 +401,22 @@ def _admit(rule: Any, referee: str, ctx: Any) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def _classify(rule: Any, bank: list) -> dict:
+def _classify(rule: Any, bank: list, ctxs: list | None = None) -> dict:
     """``machine-original`` / ``known-art`` / ``vacuous`` for *rule*.
 
     The bank is the novelty sieve's widest shipped surface; the
     alpha-sibling check additionally scans the raw
     ``PRIOR_ART_RULES`` so a verbatim rediscovery of known art is
-    named even when the derivability slice dropped it.
+    named even when the derivability slice dropped it.  *ctxs* is the
+    corpus ``instance_of`` searches for a real firing site — empty on
+    the grammar arm, the covered zoo modules' ``_CaseCtx``s on the
+    zoo arm (an instance then lands ``corpus:<module>`` provenance).
     """
     from mlopt_core.laws.priorart import PRIOR_ART_RULES
 
     from bench.drivers.screen import novelty_sieve as ns
 
+    ctxs = ctxs or []
     key = alpha_key(rule.lhs, rule.rhs)
     sibs = sorted(
         {
@@ -205,7 +436,7 @@ def _classify(rule: Any, bank: list) -> dict:
     if sibs:
         rec.update(verdict="known-art", via="alpha-match")
         return rec
-    got = ns.instance_of(rule, [])
+    got = ns.instance_of(rule, ctxs)
     if got is None:
         rec.update(verdict="vacuous", via="no-instance")
         return rec
@@ -235,6 +466,8 @@ def run(
     seed: int,
     player: str,
     referee: str,
+    corpus: str = "grammar",
+    scan: int = 0,
     ckpt: Any,
     ctx: Any = None,
     arm_factory: Any = None,
@@ -246,38 +479,47 @@ def run(
     ``arm_factory`` is the registry's ``i -> player`` seam — tests
     inject players through it; production callers leave it ``None``
     and the named registered player is built.  ``cases`` overrides
-    the generated page list — each is an ``OpenArena`` case dict.
+    the generated case list — each is an arena case dict (a stream
+    page on ``grammar``, ``{"zoo": name, ...}`` on ``zoo``).
+    ``corpus`` picks the arm; ``scan`` bounds the zoo arm's
+    per-module stream read (``<= 0`` scans the whole stream).
     """
     import torch
 
     from bench import referees
 
     torch.manual_seed(seed)
+    if cases is None:
+        cases = _gen_cases(corpus, seed, episodes, page=page, scan=scan)
+    zenv: dict | None = None
+    if corpus == "zoo":
+        zenv = _zoo_export_env(cases)
+        if ctx is None:
+            ctx = _zoo_referee_ctx(zenv, referees)
     ctx = referees.RefereeCtx() if ctx is None else ctx
     arm = arm_factory or players.make(player, "open", seed=seed, ctx={})
-    if cases is None:
-        cases = og.gen_cases(seed, episodes, page=page)
     bank: list | None = None
+    zctxs: list | None = None
     t0 = time.time()
 
     for i, case in enumerate(cases):
         ekey = ("episode", i)
+        arena = None
         if ckpt.done(ekey):
             evals = ckpt.get(ekey)["evals"]
         else:
-            traj = engine.run_episode(
-                og.OpenArena(case), arm(i), budget
-            )
+            arena = _arena_for(case, corpus)
+            traj = engine.run_episode(arena, arm(i), budget)
             evals = _eval_records(traj)
-            ckpt.record(
-                ekey,
-                {
-                    "case": case,
-                    "steps": len(traj.reports),
-                    "reward": round(traj.total, 6),
-                    "evals": evals,
-                },
-            )
+            payload: dict[str, Any] = {
+                "case": case,
+                "steps": len(traj.reports),
+                "reward": round(traj.total, 6),
+                "evals": evals,
+            }
+            if getattr(arena, "error", ""):
+                payload["error"] = arena.error
+            ckpt.record(ekey, payload)
             log(
                 f"  episode {i:>3}: {len(evals)} evals "
                 f"reward={traj.total:+.3f}",
@@ -294,7 +536,9 @@ def run(
             if pool is None:
                 # the arena pool is deterministic — resume recovers
                 # the candidate by index, no episode re-run.
-                pool = og.OpenArena(case).pool
+                if arena is None:
+                    arena = _arena_for(case, corpus)
+                pool = arena.pool
             cand = pool[ev["i"]]
             rule = cand.as_rule()
             rec = _admit(rule, referee, ctx)
@@ -325,8 +569,10 @@ def run(
                 from bench.drivers.screen import novelty_sieve as ns
 
                 bank = ns.known_bank()
+            if corpus == "zoo" and zctxs is None:
+                zctxs = _zoo_case_ctxs(zenv or {})
             rule = law_from_data(crec["law"])
-            cres = _classify(rule, bank)
+            cres = _classify(rule, bank, ctxs=zctxs)
             ckpt.record(ckey, cres)
             log(
                 f"    classify {ev['name']:<26} "
@@ -379,6 +625,7 @@ def run(
     return {
         "schema": 1,
         "protocol": dict(ckpt.manifest.get("protocol", {})),
+        "corpus": corpus,
         "episodes": len(cases),
         "evaluated": sum(arena.values()),
         "arena_verdicts": dict(arena),
@@ -443,6 +690,12 @@ def render_markdown(summary: dict, *, env: dict | None = None) -> str:
         f"{' (dirty)' if env.get('git_dirty') else ''} · "
         f"device {env.get('device', '?')}",
         f"- protocol: `{json.dumps(summary['protocol'], sort_keys=True)}`",
+        f"- corpus: `{summary.get('corpus', 'grammar')}`"
+        + (
+            " — held-out zoo modules (mlopt_discovery.zoo)"
+            if summary.get("corpus") == "zoo"
+            else " — the enumerated grammar stream"
+        ),
         f"- episodes: {summary['episodes']} · "
         f"evaluated: {summary['evaluated']} · "
         f"minted: {summary['minted']} · "
@@ -552,6 +805,22 @@ def main(argv: list[str] | None = None) -> int:
         help="a registered bench/referees arm (default full)",
     )
     ap.add_argument(
+        "--corpus",
+        choices=CORPORA,
+        default=DEFAULTS["corpus"],
+        help="the episode corpus — 'grammar' pages the enumerated "
+        "candidate stream; 'zoo' pages the held-out model zoo "
+        "(mlopt_discovery.zoo), each module's exported term "
+        "filtering the stream to claims that fire on real structure",
+    )
+    ap.add_argument(
+        "--scan",
+        type=int,
+        default=DEFAULTS["scan"],
+        help="zoo arm: stream candidates scanned per module "
+        "(<=0 unbounded; the stream is ~1.1k)",
+    )
+    ap.add_argument(
         "--dry",
         action="store_true",
         help="seconds-scale smoke: 2 episodes, page 6, budget 4",
@@ -594,6 +863,8 @@ def main(argv: list[str] | None = None) -> int:
         "seed": args.seed,
         "player": args.player,
         "referee": args.referee,
+        "corpus": args.corpus,
+        "scan": args.scan,
         "dry": bool(args.dry),
     }
     if not args.resume and args.ckpt.exists():
@@ -609,7 +880,8 @@ def main(argv: list[str] | None = None) -> int:
 
     print(  # stdout-compat
         f"== overnight — {args.episodes} episodes, page {args.page}, "
-        f"player {args.player}, referee {args.referee} =="
+        f"player {args.player}, referee {args.referee}, "
+        f"corpus {args.corpus} =="
     )
     summary = run(
         episodes=args.episodes,
@@ -618,6 +890,8 @@ def main(argv: list[str] | None = None) -> int:
         seed=args.seed,
         player=args.player,
         referee=args.referee,
+        corpus=args.corpus,
+        scan=args.scan,
         ckpt=ckpt,
     )
 
