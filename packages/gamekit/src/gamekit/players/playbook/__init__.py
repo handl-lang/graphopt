@@ -37,7 +37,6 @@ _SPELLED_BOARDS: tuple[str, ...] = (
     "torch",
     "gen",
     "search",
-    "kernel",
     "open",
     "player",
 )
@@ -132,10 +131,6 @@ def make(
         from mlopt_discovery.play import _scripted_search
 
         return lambda i: _scripted_search()
-    if domain == "kernel":
-        from mlopt_discovery.play import _scripted_kernel
-
-        return lambda i: _scripted_kernel()
     if domain == "player":
         from mlopt_discovery import player_arena as pa
 

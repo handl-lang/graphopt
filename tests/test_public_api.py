@@ -182,6 +182,7 @@ _PUBLIC_SURFACE: dict[str, tuple[str, ...]] = {
         "BOARDS",
         "EPISODE_BOARDS",
         "names",
+        "register_player",
         "spec",
         "specs",
         "for_board",
@@ -198,7 +199,12 @@ _PUBLIC_SURFACE: dict[str, tuple[str, ...]] = {
         "score",
     ),
     "mlopt_discovery.verifier": ("verify_law", "LawResult"),
-    "mlopt_discovery.play": ("DOMAINS", "Domain", "play"),
+    "mlopt_discovery.play": (
+        "DOMAINS",
+        "Domain",
+        "play",
+        "spec_domain",
+    ),
 }
 
 

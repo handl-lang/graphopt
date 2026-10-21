@@ -294,3 +294,90 @@ def test_play_player_flag_rejects_unsupported(capsys):
     )
     assert rc == 2
     assert "does not play board" in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------------------
+#  The plugin seam — ``register_player`` (plan 0032 phase 4)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def _external_seat():
+    """Register-then-clean — the extension table is module state."""
+    added = []
+    yield added
+    for name in added:
+        registry._EXTERNAL.pop(name, None)
+
+
+def test_register_fresh_player_needs_make(_external_seat):
+    """A fresh name without a ``make`` refuses — no silent seat."""
+    with pytest.raises(ValueError, match="must supply its own make"):
+        registry.register_player(
+            PlayerSpec(name="x-plug", kind="scripted", boards=("xb",))
+        )
+
+
+def test_register_fresh_player_round_trip(_external_seat):
+    """A fresh name + make seats: roster, spec, for_board, make."""
+    seen = []
+
+    def mk(domain, *, spec, seed=0, ctx=None):
+        seen.append((domain, spec.name, seed))
+        return lambda i: f"player:{domain}:{i}"
+
+    registry.register_player(
+        PlayerSpec(name="x-plug", kind="scripted", boards=("xb",)),
+        make=mk,
+    )
+    _external_seat.append("x-plug")
+    assert "x-plug" in registry.names()
+    s = registry.spec("x-plug")
+    assert s.boards == ("xb",) and s.kind == "scripted"
+    assert "x-plug" in registry.specs()
+    assert [s.name for s in registry.for_board("xb")] == ["x-plug"]
+    arm = registry.make("x-plug", "xb", seed=7, ctx=None)
+    assert arm(3) == "player:xb:3"
+    assert seen == [("xb", "x-plug", 7)]
+    with pytest.raises(ValueError, match="does not play board"):
+        registry.make("x-plug", "meta")
+
+
+def test_register_extends_shipped_boards(_external_seat):
+    """A same-name spec unions boards; the shipped make still binds."""
+    registry.register_player(
+        PlayerSpec(name="random", kind="chance", boards=("xb",))
+    )
+    _external_seat.append("random")
+    s = registry.spec("random")
+    assert "xb" in s.boards and "meta" in s.boards
+    # the shipped folder keeps its own boards — same module, spec now
+    # merged; make dispatches to the shipped (module) make for both
+    mk = registry.make("random", "meta", seed=0, ctx={})
+    assert mk(0) is not None
+    # re-registering replaces the seat (idempotent plugin import)
+    registry.register_player(
+        PlayerSpec(name="random", kind="chance", boards=("xb2",))
+    )
+    s2 = registry.spec("random")
+    assert "xb2" in s2.boards and "xb" not in s2.boards
+
+
+def test_register_external_make_claims_new_board(_external_seat):
+    """An explicit external make claims only the unplayed boards."""
+    calls = []
+
+    def mk(domain, *, spec, seed=0, ctx=None):
+        calls.append(domain)
+        return lambda i: f"ext:{i}"
+
+    registry.register_player(
+        PlayerSpec(name="playbook", kind="scripted", boards=("xb",)),
+        make=mk,
+    )
+    _external_seat.append("playbook")
+    arm = registry.make("playbook", "xb", seed=0, ctx={})
+    assert arm(0) == "ext:0" and calls == ["xb"]
+    # a shipped board still dispatches to the shipped folder's make
+    meta_arm = registry.make("playbook", "meta", seed=0, ctx={})
+    assert calls == ["xb"] and meta_arm(0) is not None

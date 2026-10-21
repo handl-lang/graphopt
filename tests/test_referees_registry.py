@@ -287,29 +287,6 @@ def test_matrix_cli_unknown_board(tmp_path):
     assert main(["--boards", "nope", "--out", str(tmp_path)]) == 2
 
 
-def test_matrix_kernel_extraction():
-    """``kernel`` cells deliver claims — ``KernelBoard`` has no
-    ``feasible_cost``; its pair comes off its own ``extract_best``.
-    """
-    from mlopt_discovery.play import DOMAINS
-
-    from bench.matrix.runner import _extracted_pair, run_matrix
-
-    d = DOMAINS["kernel"]
-    board = d.board_of(d.cases(0, 1)[0])
-    pair = _extracted_pair(board, "kernel")
-    assert pair is not None and pair[0] == board.term
-    cells = run_matrix(
-        ["kernel"],
-        ["playbook"],
-        ["naive"],
-        meta_cases=1,
-        meta_budget=3,
-    )
-    assert len(cells) == 1 and cells[0].run
-    assert cells[0].admitted == cells[0].claims
-
-
 def test_matrix_open_neural_trains():
     """``neural`` on ``open`` gets its held-in train ctx — the cell
     runs, it does not skip on ``ctx['train']``.

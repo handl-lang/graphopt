@@ -279,8 +279,9 @@ Ordered by measured payoff per unit of machinery:
 4. **The last ~1.6× to FLA** (0.454 vs 0.28 ms fp32) is genuinely
    kernel-level: fused scan kernels, no materialized `s⊙d`, plus
    possibly a recurrent-state schedule choice at extraction time.
-   That's the kernel-engineer board —
-   `project/notes/kernel-engineer-board.md` — i.e. a *new game on the
+   That's the kernel-engineer board — the
+   `kernel-engineer-board` note now lives in the private
+   `handl-lang/kernelopt` repo (`notes/`) — i.e. a *new game on the
    same machinery*, not a fix inside this one.
 
 Bottom line: ~7× of the measured ~11.5× carrier→FLA gap is reachable

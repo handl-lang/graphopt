@@ -42,19 +42,24 @@ __all__ = [
     "make",
     "module",
     "names",
+    "register_player",
     "spec",
     "specs",
 ]
 
-#: The episode boards — ``play.DOMAINS`` keys (declared here so the
-#: player modules stay importable without pulling the domain layer).
+#: The episode boards this repo ships — ``play.DOMAINS`` keys
+#: (declared here so the player modules stay importable without
+#: pulling the domain layer).  Downstream domain repos seat their
+#: own boards through :func:`register_player` (plan 0032 phase 4 —
+#: kernelopt's ``kernel`` registers from ``mlopt_kernel.play``); a
+#: registered board is not an ``EPISODE_BOARDS`` member, it is an
+#: extension seat on the named players.
 EPISODE_BOARDS: tuple[str, ...] = (
     "meta",
     "joint",
     "torch",
     "search",
     "gen",
-    "kernel",
     "open",
     "player",
 )
@@ -106,6 +111,15 @@ _MODULES: dict[str, str] = {
 #: spec name → (module path, PlayerSpec) — built by :func:`specs`.
 _INDEX: dict[str, tuple[str, PlayerSpec]] = {}
 
+#: External seats — downstream domain repos (kernelopt's ``kernel``
+#: board) register players the folder roster cannot know about:
+#: name → (PlayerSpec, make | None).  A *fresh* name must supply its
+#: own ``make`` (same signature the folder makes use); a name that
+#: matches the shipped roster unions its ``boards`` into the shipped
+#: spec, and an explicit ``make`` claims exactly the boards the
+#: shipped spec didn't — the shipped folder keeps its own domains.
+_EXTERNAL: dict[str, tuple[PlayerSpec, Callable | None]] = {}
+
 
 def _load_specs() -> None:
     """Import every player folder once; index its ``SPECS`` by name."""
@@ -115,17 +129,77 @@ def _load_specs() -> None:
             _INDEX[s.name] = (mod_name, s)
 
 
+def _merged(name: str) -> PlayerSpec | None:
+    """Return the shipped spec with any external boards unioned in."""
+    shipped = _INDEX.get(name)
+    ext = _EXTERNAL.get(name)
+    if shipped is None:
+        return ext[0] if ext is not None else None
+    s = shipped[1]
+    if ext is None:
+        return s
+    boards = tuple(dict.fromkeys((*s.boards, *ext[0].boards)))
+    return PlayerSpec(
+        name=s.name,
+        kind=s.kind,
+        boards=boards,
+        schema=s.schema,
+        train=s.train,
+        artifact=s.artifact,
+        record=s.record,
+        variant=s.variant,
+    )
+
+
+def register_player(
+    spec: PlayerSpec, make: Callable | None = None
+) -> None:
+    """Seat a downstream player — the domain-repo plugin seam.
+
+    Domain packages outside this repo (plan 0032 phase 4 — the
+    kernelopt split seats ``kernel`` from ``mlopt_kernel.play``)
+    ship players the folder roster cannot know about.  Two shapes:
+
+    * *spec.name* matches a shipped player — the external spec's
+      ``boards`` union into the shipped seat.  Spec-driven
+      factories (``linear`` reads ``play.DOMAINS[domain].spec``,
+      ``random`` is uniform) then bind the new board with no code
+      here.  An explicit *make* claims exactly the boards the
+      shipped spec did not already play — a scripted line lives
+      where the domain lives (the kernel playbook).
+    * *spec.name* is fresh — the spec registers outright and
+      *make* is required; :func:`make` calls it with the
+      folder-make signature
+      ``(domain, *, spec=..., seed=..., ctx=...)``.
+
+    Re-registering a name replaces its external seat — plugin
+    imports stay idempotent.
+    """
+    specs()
+    if make is None and spec.name not in _INDEX:
+        raise ValueError(
+            f"external player {spec.name!r} is not on the shipped "
+            "roster — it must supply its own make"
+        )
+    _EXTERNAL[spec.name] = (spec, make)
+
+
 def specs() -> dict[str, PlayerSpec]:
     """Return ``{name: PlayerSpec}`` over the whole registered roster."""
     if not _INDEX:
         _load_specs()
-    return {name: s for name, (_m, s) in _INDEX.items()}
+    out = {name: s for name, (_m, s) in _INDEX.items()}
+    for name in _EXTERNAL:
+        merged = _merged(name)
+        if merged is not None:
+            out[name] = merged
+    return out
 
 
 def names() -> tuple[str, ...]:
     """Return the registered player names, sorted."""
     specs()
-    return tuple(sorted(_INDEX))
+    return tuple(sorted(set(_INDEX) | set(_EXTERNAL)))
 
 
 def _known(name: str) -> ValueError:
@@ -148,9 +222,10 @@ def module(name: str) -> ModuleType:
 def spec(name: str) -> PlayerSpec:
     """Return the named player's spec; raise ``ValueError`` if absent."""
     specs()
-    if name not in _INDEX:
+    s = _merged(name)
+    if s is None:
         raise _known(name)
-    return _INDEX[name][1]
+    return s
 
 
 def for_board(board: str) -> list[PlayerSpec]:
@@ -176,6 +251,16 @@ def make(
             f"player {name!r} does not play board {domain!r} "
             f"(boards: {', '.join(s.boards)})"
         )
+    ext = _EXTERNAL.get(name)
+    if ext is not None and ext[1] is not None:
+        shipped = _INDEX.get(name)
+        if shipped is None or domain not in shipped[1].boards:
+            return ext[1](
+                domain,
+                spec=s,
+                seed=seed,
+                ctx={} if ctx is None else ctx,
+            )
     return module(name).make(
         domain, spec=s, seed=seed, ctx={} if ctx is None else ctx
     )

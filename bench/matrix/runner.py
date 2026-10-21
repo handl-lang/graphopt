@@ -7,7 +7,7 @@ produces on this board — which survive this referee?*  The boards
 supply two claim kinds:
 
 * **extraction claims** (the episode boards — ``meta``, ``search``,
-  ``torch``, ``joint``, ``gen``, ``kernel``): the episode's terminal
+  ``torch``, ``joint``, ``gen``): the episode's terminal
   artifact
   ``(input term, extracted term)`` wrapped as a concrete
   ``Rewrite``.  The referee re-judges the delivered equality —
@@ -50,7 +50,6 @@ _EXTRACTION_BOARDS = (
     "torch",
     "search",
     "gen",
-    "kernel",
 )
 
 #: Boards that produce no equality claims — coverage marks them unrun.
@@ -126,12 +125,6 @@ def _extracted_pair(board: Any, domain: str) -> tuple[Any, Any] | None:
     if domain == "search":
         best = board.env._extract()
         return (board.env.term, best) if best is not None else None
-    if domain == "kernel":
-        # ``KernelBoard`` exposes a zero-arg extraction of its own —
-        # its e-graph lives behind ``env`` and prices on the kernel
-        # cost model, not an arena ``feasible_cost``.
-        best = board.extract_best()
-        return (board.term, best) if best is not None else None
     # MetaArena-family boards (meta/joint/torch/gen).
     best = board.eg.extract_best(board.root, board.feasible_cost)
     return (board.term, best) if best is not None else None

@@ -34,7 +34,6 @@ SPECS: tuple[PlayerSpec, ...] = (
             "torch",
             "search",
             "gen",
-            "kernel",
             "open",
             "player",
             "contraction",

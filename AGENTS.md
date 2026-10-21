@@ -27,10 +27,15 @@ ex-`lawdata.game` half).  The old paths
 (`mlopt_discovery.engine`/`scoring`/`advantage`/`players`/
 `lawdata.game`) are re-exporting shims; `play` (the
 domain registry +
-`python -m mlopt_discovery.play --domain meta|joint|search|torch|gen|open|kernel`
+`python -m mlopt_discovery.play --domain meta|joint|search|torch|gen|open|player`
 CLI; `--player <name>` runs a registered player eval-only, and
 `--deliver` lowers+verifies the winning extraction on domains
-that ship a deliver hook — torch does)).
+that ship a deliver hook — torch does)).  The `kernel` domain
+moved out with the kernelopt split (plan 0032 phase 4): it lives
+in the private `handl-lang/kernelopt` repo, which seats it into
+`DOMAINS` + the player registry at `mlopt_kernel.play` import —
+the plugin seam is `play.spec_domain` +
+`gamekit.players.registry.register_player`.
 The optional
 `mlopt-native` package — the PyO3/Rust search engine, excluded from
 the uv workspace and built with maturin — is opt-in via `engine=`.
