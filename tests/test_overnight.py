@@ -305,13 +305,19 @@ class TestCorpusZooRealCompose:
         ]
 
     def test_compose_mints_bound_composites(self):
-        """The syn_* fixpoint extends the pool, bind-gated like the rest."""
+        """The syn_* fixpoint extends the pool, seed-gated like the rest.
+
+        ChunkedRetention is the positive control: its bound singles
+        pair-compose into composites whose minted RHS denotes under
+        the seed binding, so they survive the emit gate.
+        """
         from mlopt_core.egraph.terms import _term_match
         from mlopt_core.ir import Op
         from mlopt_core.meta import provenance
         from mlopt_discovery.census import _iter_subterms
 
-        arena = on._RealArena(self._case())
+        case = self._case(zoo="ChunkedRetention")
+        arena = on._RealArena(case)
         assert not arena.error
         comps = self._composites(arena)
         singles = len(arena.pool) - len(comps)
@@ -319,7 +325,7 @@ class TestCorpusZooRealCompose:
         assert comps, "no composite minted from a bindable pool"
         # singles keep their indices — composites append behind them
         assert min(i for i, _c in comps) == singles
-        ir, _t, _f = on._zoo_export(self._case())
+        ir, _t, _f = on._zoo_export(case)
         subs = [s for s in _iter_subterms(ir.root) if isinstance(s, Op)]
         for i, cand in comps:
             rule = cand.as_rule()
@@ -336,11 +342,95 @@ class TestCorpusZooRealCompose:
             ), f"{rule.name}: composite binds no real subterm"
             # the syn_* counter restarts per module — the name is
             # namespaced so a same-named pair elsewhere never collides
-            assert rule.name.endswith("@AdditiveAttention")
+            assert rule.name.endswith("@ChunkedRetention")
+
+    def test_compose_drops_ill_typed_composites(self):
+        """A composite whose RHS errors on the bound env never pools.
+
+        AdditiveAttention is the measured negative case: its
+        ``mixed:*`` parents compose into rules like
+        ``mul(unsq(U), unsq(V)) -> mul(U, V)`` whose RHS cannot denote
+        under the real binding (the oracle's ``rhs_err`` signal —
+        ~100% of composites pre-gate).  The emit gate drops them all:
+        no composite enters the pool, while the singles mint
+        unaffected.
+        """
+        from mlopt_core.egraph.terms import _term_match
+        from mlopt_core.ir import Op
+        from mlopt_discovery.census import _iter_subterms
+        from mlopt_discovery.evidence import _site_outcome
+
+        case = self._case()  # AdditiveAttention — the rerr module
+        arena = on._RealArena(case)
+        assert not arena.error
+        assert arena.pool, "single-step pool unexpectedly empty"
+        # every emitted composite failed the seed-eval gate — nothing
+        # ill-typed rides into the pool
+        assert self._composites(arena) == []
+        # …and it was the rhs_err leg, not the bind gate, that refused
+        # them: synthesizing the same pool emits bound composites
+        # whose RHS provably errors on the seed env (a substrate that
+        # already refuses them at emit time simply leaves nothing to
+        # check — the pool contract holds either way).
+        from mlopt_core import meta as meta_mod
+
+        ir, _t, _f = on._zoo_export(case)
+        subs = [s for s in _iter_subterms(ir.root) if isinstance(s, Op)]
+        emitted = meta_mod.synthesize_rules(
+            [c.as_rule() for c in arena.pool],
+            [ir.root],
+            fuel=on._COMPOSE_FUEL,
+            numeric_check=True,
+            rounds=int(case["compose"]),
+            max_emitted=case["page"],
+        )
+        for r in emitted:
+            sites = [
+                (m, s)
+                for s in subs
+                if (m := _term_match(r.lhs, s)) is not None
+            ]
+            if not sites or any(r is c.as_rule() for c in arena.pool):
+                continue
+            # dropped by the gate → the RHS must error on some bound
+            # site, i.e. the drop is the measured rhs_err refusal
+            # arriving at emit time instead of at the oracle
+            assert any(
+                _site_outcome(r, m, s) == "rhs-err" for m, s in sites
+            ), f"{r.name}: dropped but no rhs-err site found"
+
+    def test_compose_viable_composites_denote_on_seed(self):
+        """Every pooled composite's RHS denotes on all bound sites.
+
+        The gate's contract is the oracle leg's own measurement: no
+        bound site may come back ``rhs-err``.
+        """
+        from mlopt_core.egraph.terms import _term_match
+        from mlopt_core.ir import Op
+        from mlopt_discovery.census import _iter_subterms
+        from mlopt_discovery.evidence import _site_outcome
+
+        case = self._case(zoo="ChunkedRetention")
+        arena = on._RealArena(case)
+        comps = self._composites(arena)
+        assert comps, "positive control minted nothing"
+        ir, _t, _f = on._zoo_export(case)
+        subs = [s for s in _iter_subterms(ir.root) if isinstance(s, Op)]
+        for _i, cand in comps:
+            rule = cand.as_rule()
+            sites = [
+                (m, s)
+                for s in subs
+                if (m := _term_match(rule.lhs, s)) is not None
+            ]
+            assert sites, f"{rule.name}: no bound site"
+            assert all(
+                _site_outcome(rule, m, s) != "rhs-err" for m, s in sites
+            ), f"{rule.name}: RHS errors on a bound env"
 
     def test_compose_admit_serializes_guard_spec(self):
         """A composite's cell carries the premise-closure spec."""
-        arena = on._RealArena(self._case())
+        arena = on._RealArena(self._case(zoo="ChunkedRetention"))
         _i, comp = self._composites(arena)[0]
         rec = on._admit(
             comp.as_rule(), "naive", bench.referees.RefereeCtx()
@@ -364,7 +454,7 @@ class TestCorpusZooRealCompose:
         assert time.time() - t0 < 300  # exports + synth + referee
         man, cells = _records(tmp_path / "ck.jsonl")
         assert man["protocol"]["corpus"] == "zoo-real"
-        assert man["protocol"]["mint"] == "corpus-bind-compose"
+        assert man["protocol"]["mint"] == "corpus-bind-compose-viable"
         assert man["protocol"]["compose"] == 2
         payload = json.loads((tmp_path / "out.json").read_text())
         assert payload["corpus"] == "zoo-real"
@@ -390,7 +480,7 @@ class TestCorpusZooRealCompose:
         assert man1["protocol"]["mint"] == "corpus-bind"
         assert on.main([*argv, "--compose", "--resume"]) == 0
         man2, _cells2 = _records(tmp_path / "ck.jsonl")
-        assert man2["protocol"]["mint"] == "corpus-bind-compose"
+        assert man2["protocol"]["mint"] == "corpus-bind-compose-viable"
 
 
 class TestResume:

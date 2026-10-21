@@ -86,15 +86,18 @@ after the single-step pool binds, ``meta.synthesize_rules`` — the
 (ADR-0007) — pair-composes the bound candidates with the module's own
 term as the seed, iterating *ROUNDS* strata toward a fixpoint
 (default 2).  Every emitted composite then faces the arm's own gate:
-it is kept only when its LHS binds a real subterm, and it enters the
-pool with its transported premise closure — ``_compose_guards``
+it is kept only when its LHS binds a real subterm *and* its
+instantiated RHS denotes under every such binding — an ill-typed
+composite (the oracle's ``rhs_err`` signal) is dropped at emit, never
+spending an episode slot or the gauntlet.  Survivors enter the pool
+with their transported premise closure — ``_compose_guards``
 check/derive hooks plus the ``parents`` / ``guard_pats`` record —
-serialized into its candidate cell's ``law["guard"]`` like the
+serialized into the candidate cell's ``law["guard"]`` like the
 ``mlopt_core.laws.minted`` rows.  Machine-originals live here: a
 composite the prior-art bank cannot derive is the sieve's target
 verdict.  The arm is protocol-pinned as ``mint:
-corpus-bind-compose``, so a ledger written without it restarts
-loudly.
+corpus-bind-compose-viable``, so a ledger written before the
+seed-eval gate (or without the arm at all) restarts loudly.
 
 Run::
 
@@ -429,15 +432,20 @@ class _RealArena(og.OpenArena):
     ``mlopt_core.meta.synthesize_rules`` — the ``syn_*`` fixpoint
     ``conv_bn_fold`` minted through — with the module's own term as
     the seed, for ``case["compose"]`` strata.  Emitted composites are
-    held to the arm's own gate (the LHS must bind a real subterm —
-    the ``require_bind`` contract, applied a second time since the
-    symbolic path can mint a pair that never fired on the seed) and
-    appended after the singles, each carrying its transported premise
-    closure: the ``_compose_guards`` check/derive hooks and the
-    ``parents`` / ``guard_pats`` record ``_admit`` serializes into the
-    cell's ``law["guard"]``.  The composite slice is bounded by
-    ``page`` like the single-step mint it sits beside — the pool can
-    reach two pages under ``--compose``.
+    held to the arm's own gate — the LHS must bind a real subterm
+    (the ``require_bind`` contract, applied a second time since the
+    symbolic path can mint a pair that never fired on the seed) *and*
+    the instantiated RHS must denote under every such binding: a
+    composite whose rhs errors on the bound env is ill-typed — the
+    oracle leg measures it as ``rhs_err``, a refusal it could never
+    survive — so the emit gate drops it before it can spend mint or
+    gauntlet effort.  Survivors append after the singles, each
+    carrying its transported premise closure: the ``_compose_guards``
+    check/derive hooks and the ``parents`` / ``guard_pats`` record
+    ``_admit`` serializes into the cell's ``law["guard"]``.  The
+    composite slice is bounded by ``page`` like the single-step mint
+    it sits beside — the pool can reach two pages under
+    ``--compose``.
     """
 
     def __init__(self, case: dict) -> None:
@@ -507,6 +515,7 @@ class _RealArena(og.OpenArena):
         from mlopt_core.egraph.terms import _term_match
         from mlopt_core.ir import Op
         from mlopt_discovery.census import _iter_subterms
+        from mlopt_discovery.evidence import _site_outcome
         from mlopt_discovery.proposal import Candidate
 
         page = case.get("page", 48)
@@ -523,8 +532,21 @@ class _RealArena(og.OpenArena):
         for rule in emitted:
             if kept >= page:
                 break
-            if not any(
-                _term_match(rule.lhs, s) is not None for s in subs
+            sites = [
+                (m, s)
+                for s in subs
+                if (m := _term_match(rule.lhs, s)) is not None
+            ]
+            if not sites:
+                continue
+            # Seed-eval sanity — the minted RHS must denote under the
+            # seed's own binding.  A composite whose rhs errors on a
+            # bound env is ill-typed: the oracle leg would measure it
+            # as ``rhs_err`` (the ``_site_outcome`` tag), a refusal it
+            # can never survive, so it is dropped here rather than
+            # spending an episode slot and the full gauntlet on it.
+            if any(
+                _site_outcome(rule, m, s) == "rhs-err" for m, s in sites
             ):
                 continue
             parents = meta_mod.provenance(rule)
@@ -1237,9 +1259,11 @@ def main(argv: list[str] | None = None) -> int:
         "pair-compose it through meta.synthesize_rules — the syn_* "
         "mint fixpoint conv_bn_fold shipped through — seeded on each "
         "module's own term, for ROUNDS strata (default 2).  Emitted "
-        "composites face the same bind gate and the same gauntlet, "
-        "and carry their premise-closure guard spec into the ledger "
-        "(mint: corpus-bind-compose — ledgers restart loudly)",
+        "composites face the same bind gate plus a seed-eval gate "
+        "(the instantiated RHS must denote under the bound env — an "
+        "ill-typed composite is dropped before the gauntlet) and "
+        "carry their premise-closure guard spec into the ledger "
+        "(mint: corpus-bind-compose-viable — ledgers restart loudly)",
     )
     ap.add_argument(
         "--scan",
@@ -1312,9 +1336,10 @@ def main(argv: list[str] | None = None) -> int:
         # the mint semantics — a ledger written before the zoo-real
         # arm went binding-first (require_bind) must restart loudly
         # rather than replay ungated pools; likewise a ledger minted
-        # without the composition arm never replays under it.
+        # without the composition arm — or before composites had to
+        # denote under the seed binding — never replays under it.
         "mint": (
-            "corpus-bind-compose"
+            "corpus-bind-compose-viable"
             if args.corpus == "zoo-real" and args.compose
             else "corpus-bind"
             if args.corpus == "zoo-real"
