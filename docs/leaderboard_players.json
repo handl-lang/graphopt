@@ -12,7 +12,7 @@
     "git_sha": "2d6e5e8",
     "git_dirty": true,
     "argv": [
-      "/home/luis/GitHub/handl-lang/research-mlopt/bench/players/run.py",
+      "/home/luis/GitHub/handl-lang/graphopt/bench/players/run.py",
       "--out",
       "docs"
     ]

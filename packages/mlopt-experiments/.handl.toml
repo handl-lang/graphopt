@@ -16,7 +16,7 @@
 #     folded program *by name*. In this merged tree the package is
 #     in-repo, so the [patch] row below points at it directly
 #     (`../mlopt-kit`) — always present, no stand-in needed.
-#     In a standalone research-mlopt checkout the patch is inert and
+#     In a standalone graphopt checkout the patch is inert and
 #     the git arm resolves to the package-cache slot (`$HANDL_PKG_DIR`,
 #     else `~/.handl/pkg/mlopt-kit`), which the ADR-0010 fetch-on-miss
 #     hook clones into place; `subdir` names the package root inside
@@ -31,7 +31,7 @@
 
 [dependencies]
 host-tensor = { git = "https://github.com/handl-lang/host-tensor", branch = "main", subdir = "src" }
-mlopt-kit  = { git = "https://github.com/handl-lang/research-mlopt", branch = "main", subdir = "packages/mlopt-kit" }
+mlopt-kit  = { git = "https://github.com/handl-lang/graphopt", branch = "main", subdir = "packages/mlopt-kit" }
 
 [patch]
 host-tensor = "../../../host-tensor/src"

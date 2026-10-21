@@ -3,7 +3,7 @@ title: "Certified Rewrite Discovery for Tensor Programs:\\newline A Machine-Mint
 subtitle: "Draft — proposed, not accepted"
 author:
   - name: "mlopt project"
-    affiliation: "handl-lang / research-mlopt"
+    affiliation: "handl-lang / graphopt"
 date: "2026-10-20"
 abstract: |
   Compilers choose better implementations only from transformations a
@@ -92,7 +92,7 @@ establishes is the *pipeline*: that a law can travel from measured
 need to a shipped, certified, runtime-priced rule without a human
 writing it.
 
-The repository is `handl-lang/research-mlopt`; every number below
+The repository is `handl-lang/graphopt`; every number below
 cites the artifact that produced it (§@sec-repro).
 
 # Background {#sec-background}
@@ -383,7 +383,7 @@ minted guards).
 # Reproduction {#sec-repro}
 
 All numbers are reproducible from the committed tree at
-`handl-lang/research-mlopt`:
+`handl-lang/graphopt`:
 
 ```sh
 uv sync

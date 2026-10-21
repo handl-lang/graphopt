@@ -3,7 +3,7 @@
 ``bench/RESULTS.md`` cites three different pay numbers for the same
 fold: -16 % via ``hnl-run --repeat`` (``tests/test_kit_bridge.py``),
 -5 % deployed / +33 % folded-inline via the scaffold's
-``conv-bn-fold --repeat`` bin (``research-mlopt``'s ``experiments/``
+``conv-bn-fold --repeat`` bin (``graphopt``'s ``experiments/``
 crate, in-tree on ``main``), and the stable ``dag_cost``
 halving.  They are not in disagreement — ``--repeat`` re-evaluates the
 *whole program* per call, so each number prices the fold math

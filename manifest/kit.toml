@@ -15,7 +15,7 @@
 schema = "handl-lang/research-kit@1"
 
 [meta]
-name = "research-mlopt"
+name = "graphopt"
 paper = "paper/paper.qmd"
 claim = "certified optimization of ML models/tensor programs — machinery composed as data on handl infra"
 founding_result = "conv_bn_fold"
@@ -92,7 +92,7 @@ role = "the ported domain-free half of `mlopt_discovery` — the `term_to_data`/
 
 [[component]]
 name = "mlopt-kit"
-repo = "handl-lang/research-mlopt"
+repo = "handl-lang/graphopt"
 path = "packages/mlopt-kit"
 float = "main"
 kind = "cargo-git"
@@ -105,7 +105,7 @@ role = "mlopt's composition seam — the intended direct dep (it assembles this 
 
 [[component]]
 name = "mlopt"
-repo = "handl-lang/research-mlopt"
+repo = "handl-lang/graphopt"
 path = "packages/"
 float = "main"
 kind = "python-git"
@@ -127,7 +127,7 @@ name = "conv-bn-fold"
 kind = "cargo"
 run = "cargo run --release --manifest-path packages/mlopt-experiments/Cargo.toml --bin conv-bn-fold -- --repeat 200"
 produces = "value-equality of spelled vs folded program through the composed kit + per-call wall of each arm (the runtime pay)"
-artifact = "mlopt-kit's hnl/conv_bn.hnl — resolved in-tree (packages/mlopt-kit/hnl/conv_bn.hnl; the sibling-checkout / pkg-cache-slot / fetch arms remain as fallbacks for a standalone research-mlopt checkout — never vendored); the same source is exported over the crate API as mlopt_kit::CONV_BN_HNL for consumers that take the dep"
+artifact = "mlopt-kit's hnl/conv_bn.hnl — resolved in-tree (packages/mlopt-kit/hnl/conv_bn.hnl; the sibling-checkout / pkg-cache-slot / fetch arms remain as fallbacks for a standalone graphopt checkout — never vendored); the same source is exported over the crate API as mlopt_kit::CONV_BN_HNL for consumers that take the dep"
 
 [[experiment]]
 name = "conv-fold-premise-pay"
@@ -149,4 +149,4 @@ closed = "platform 6ce0e125 — fetch-on-miss in resolve_dependencies clones the
 [[gap]]
 what = "mlopt's Python packages are not cargo deps; the discovery arm composes at the Python env level"
 where = "manifest's python-git component"
-workaround = "declared here for reproducibility; consumed as `git+https://github.com/handl-lang/research-mlopt` uv/pip deps inside a mlopt venv"
+workaround = "declared here for reproducibility; consumed as `git+https://github.com/handl-lang/graphopt` uv/pip deps inside a mlopt venv"

@@ -53,7 +53,7 @@ fn call_export(export: &str, args: &str) -> String {
 fn manifest_git_dep_resolves_through_patch_or_cache_slot() {
     let deps = handl_platform::resolve_dependencies(&crate_root())
         .expect("the committed .handl.toml must parse");
-    // research-mlopt sits inside the handl-lang checkout, so the
+    // graphopt sits inside the handl-lang checkout, so the
     // sibling convention is `../../../<repo>` — the same relative path
     // the committed `.handl.toml`'s [patch] declares.
     let sibling = crate_root().join("../../../host-tensor/src");

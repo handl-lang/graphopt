@@ -45,14 +45,14 @@ fn project_dir() -> PathBuf {
 ///    checkout the caller names (standalone-checkout arm).
 /// 4. The `.handl.toml` `[patch]` arm — the sibling-checkout dev-link:
 ///    `<repo>/../mlopt/packages/mlopt-kit` (exists wherever mlopt is
-///    an org sibling of a standalone research-mlopt checkout).
+///    an org sibling of a standalone graphopt checkout).
 /// 5. The package-cache slot the `[dependencies]` git arm resolves to:
 ///    `$HANDL_PKG_DIR/mlopt-kit` else `~/.handl/pkg/mlopt-kit` — the
 ///    directory the ADR-0010 fetch hook will populate (a checkout or
 ///    symlink there is today's stand-in).
 /// 6. `packages/mlopt-experiments/.cache/mlopt-kit/hnl/conv_bn.hnl` — the file
 ///    `make artifact` fetches from the declared git source
-///    (`raw.githubusercontent.com/handl-lang/research-mlopt/main/…`) when no
+///    (`raw.githubusercontent.com/handl-lang/graphopt/main/…`) when no
 ///    local arm resolves. `.cache/` is ignored — the file is a
 ///    *fetched dependency artifact*, not a committed copy.
 fn resolve_conv_bn(overrides: &cli::Args) -> Result<PathBuf, String> {

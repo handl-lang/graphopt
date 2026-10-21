@@ -11148,7 +11148,7 @@
     "git_sha": "adef366",
     "git_dirty": true,
     "argv": [
-      "/home/luis/GitHub/handl-lang/research-mlopt/bench/matrix/__main__.py",
+      "/home/luis/GitHub/handl-lang/graphopt/bench/matrix/__main__.py",
       "--players",
       "random,playbook,linear,linear-cold,linear-greedy,neural,distilled,distilled-argmax,greedy",
       "--referees",

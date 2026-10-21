@@ -13,7 +13,7 @@
     "git_sha": "e7dc703",
     "git_dirty": true,
     "argv": [
-      "/home/luis/GitHub/handl-lang/research-mlopt/bench/limits/run.py",
+      "/home/luis/GitHub/handl-lang/graphopt/bench/limits/run.py",
       "--fast"
     ]
   },

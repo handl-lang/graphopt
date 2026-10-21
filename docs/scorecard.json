@@ -2384,7 +2384,7 @@
     "git_sha": "eea02f6",
     "git_dirty": true,
     "argv": [
-      "/home/luis/GitHub/handl-lang/research-mlopt/bench/discovery/run.py",
+      "/home/luis/GitHub/handl-lang/graphopt/bench/discovery/run.py",
       "--full"
     ]
   },

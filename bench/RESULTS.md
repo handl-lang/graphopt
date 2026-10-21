@@ -58,7 +58,7 @@ baseline's prelude:
 | deployed vs module `conv_bn` | ±7 % (noise) | **−5 %** | the deployed regime through the module path — prelude-dominated, inside run noise here |
 | `conv_bn_fold` vs `conv_bn` | +7 to +10 % | **+33 %** | the un-amortized regime — fold math per call is a net *loss* |
 
-The scaffold's independent run (`handl-lang/research-mlopt`
+The scaffold's independent run (`handl-lang/graphopt`
 `experiments/`, `conv-bn-fold --repeat 100`, in-process kit, its own
 6×4×3×3-on-8×8 dyadic fixture) lands the same two regimes and confirms
 `hnl-run` exercises the identical path — the scaffold composes the

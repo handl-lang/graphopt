@@ -10,7 +10,7 @@ that the stack assembles from declared components alone).
 The `.hnl` artifact under measurement resolves in-tree — mlopt-kit is
 a workspace member of this repo (`packages/mlopt-kit`); the
 sibling-checkout / pkg-slot / fetched arms below keep a standalone
-`research-mlopt` checkout working. Never vendored.
+`graphopt` checkout working. Never vendored.
 
 ## `conv-bn-fold` — the founding result
 
@@ -55,7 +55,7 @@ bin resolves it by this ladder, first hit wins:
    stand-in);
 6. `packages/mlopt-experiments/.cache/mlopt-kit/hnl/conv_bn.hnl` — `make artifact`
    fetches it from the declared git source
-   (`raw.githubusercontent.com/handl-lang/research-mlopt/main/…`) when no local
+   (`raw.githubusercontent.com/handl-lang/graphopt/main/…`) when no local
    arm resolves.
 
 The imported program's own `from "host-tensor" import tensor` resolves

@@ -1,4 +1,4 @@
-# mlopt / research-mlopt — evidence generation (the Rust arm; the
+# mlopt / graphopt — evidence generation (the Rust arm; the
 # Python gates live in scripts/gates.sh).
 # `make experiment` reproduces the paper's headline measurement.
 #
@@ -10,7 +10,7 @@
 
 REPEAT ?= 200
 EXPERIMENTS = packages/mlopt-experiments/Cargo.toml
-MLOPT_RAW = https://raw.githubusercontent.com/handl-lang/research-mlopt/main
+MLOPT_RAW = https://raw.githubusercontent.com/handl-lang/graphopt/main
 ARTIFACT = packages/mlopt-experiments/.cache/mlopt-kit/hnl/conv_bn.hnl
 
 .PHONY: experiment verify build test artifact
