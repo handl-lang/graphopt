@@ -194,7 +194,8 @@ def kernel_ops() -> frozenset[str]:
 def _table() -> dict[str, Any]:
     """Return the shared binding dict — one build, every consumer."""
     kernel_ops()
-    assert _BINDINGS is not None
+    if _BINDINGS is None:
+        raise RuntimeError("binding table not built")
     return _BINDINGS
 
 
