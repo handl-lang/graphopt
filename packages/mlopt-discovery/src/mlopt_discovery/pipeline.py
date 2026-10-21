@@ -440,9 +440,20 @@ def _census_mixed_naturality(
     frequent shape is asymmetric: ``mul(slice, ·)``, ``mul(select,
     add)``, ``add(matmul, select)``, ``mul(unsqueeze, stack)`` — the
     retro's MoE-dispatch lead.  For every census tuple ``f(g, h)``
-    with distinct children where at least one is a view this emits a
-    small family of ``f(g(u, A), h(v, B)) -> w(f(u, v))`` candidates
-    (``w`` over the views present, plus the identity).  The numeric
+    where at least one child is a view this emits a small family of
+    ``f(g(u, A), h(v, B)) -> w(f(u, v))`` candidates (``w`` over the
+    views present, plus the identity).
+
+    A *same-view* tuple ``f(g, g)`` gets the two-view treatment too:
+    :func:`_census_naturality` shares one attr-metavariable namespace
+    across both children, so its candidate only binds sites whose two
+    ``g`` nodes spell identical attrs — the ``mul(unsq, unsq)`` case
+    the zoo-real corpus measured (``docs/results_overnight_real.md``),
+    where the real site carries *different* dims and the shared-attr
+    precondition never fires.  Emitting the family with independent
+    namespaces (``A_*`` / ``B_*``) proposes over the spelling the
+    module actually wrote; whether ``wl``/``wr``/``id`` is a true
+    equality on that spelling is again the oracles' call.  The numeric
     oracle and the measurement gates — not this generator — decide
     truth and worth; a false or worthless variant is an honest
     rejection, not a generator bug.
@@ -453,7 +464,9 @@ def _census_mixed_naturality(
             continue
         g, h = kids
         if g == h:
-            continue  # same-view tuples are census-naturality's job
+            if g in views:
+                out.extend(_two_view_family(op, g, g, terms))
+            continue
         gl, hl = g in views, h in views
         if gl and hl:
             out.extend(_two_view_family(op, g, h, terms))
@@ -560,13 +573,41 @@ def _pattern_recognition(census_op: dict) -> list[Proposal]:
     return out
 
 
+def _binds_any(lhs: Any, subterms: list[Any]) -> bool:
+    """Return whether *lhs* binds at least one of the *subterms*.
+
+    The binding is ``_term_match`` — the same match the referee
+    context's ``real_terms`` domain measures (one accepted-or-declined
+    site is already ``envs >= 1``).  A proposal that binds nothing
+    among the census's own terms is a candidate whose whole real
+    region is empty: it can still be judged on the synthesized domain,
+    but it is not a claim about *this* corpus.
+    """
+    return any(_term_match(lhs, s) is not None for s in subterms)
+
+
+def _binding_filter(
+    proposals: list[Proposal], terms: list[Any]
+) -> list[Proposal]:
+    """Keep only *proposals* whose LHS binds a subterm of *terms*."""
+    subterms = [
+        s for t in terms for s in _iter_subterms(t) if isinstance(s, Op)
+    ]
+    return [p for p in proposals if _binds_any(p.lhs, subterms)]
+
+
 def propose(
-    census_op: dict, terms: list[Any], vocab: str = "derived"
+    census_op: dict,
+    terms: list[Any],
+    vocab: str = "derived",
+    *,
+    require_bind: bool = False,
 ) -> list[Proposal]:
     """Collect, unify and de-duplicate every proposer's candidates.
 
     Five sources feed the pool: the **census** generators (same-view
-    naturality and the mixed-view family, both over the frequent
+    naturality and the mixed-view family — including the
+    attr-independent same-view variants — both over the frequent
     op-tuples and the requested op *vocab*), **pattern recognition**
     (composed-then-reduced chains like the ``exp/sum`` softmax fold),
     the shape-aware schemas (``mlopt_discovery.shape_proposal.schemas``), and the
@@ -575,6 +616,17 @@ def propose(
     De-dup is by ``mlopt_discovery.proposal._key`` — the alpha-normal equality —
     and a duplicate's provenance is merged into ``sources``, so a
     candidate reachable from the census generator is recorded as such.
+
+    ``require_bind`` is the binding-first gate: keep only proposals
+    whose LHS pattern matches at least one ``Op`` subterm of *terms*
+    — the corpus the census was read from.  Callers whose downstream
+    domain *is* the corpus (the ``zoo-real`` overnight arm mints from
+    a module's own term and judges against real subterm matches) opt
+    in so minting effort is spent only on claims that can fire there;
+    the gauntlet itself is untouched — a bound-but-false claim is
+    still refused.  The default ``False`` keeps the historical pool
+    for the grammar-driven callers, whose oracle domain is
+    synthesized rather than the census corpus.
     """
     pointwise, views = _vocab_sets(vocab)
     by_key: dict = {}
@@ -595,7 +647,10 @@ def propose(
                 cur,
                 sources=tuple(dict.fromkeys(cur.sources + p.sources)),
             )
-    return list(by_key.values())
+    out = list(by_key.values())
+    if require_bind:
+        out = _binding_filter(out, terms)
+    return out
 
 
 # ---------------------------------------------------------------------------

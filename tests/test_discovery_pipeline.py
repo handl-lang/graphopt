@@ -24,6 +24,7 @@ import json
 
 import pytest
 import torch
+from mlopt_core.egraph.terms import _term_match
 from mlopt_core.ir import Const, Op, TensorType, Var
 from mlopt_core.laws import ALL_RULES
 from mlopt_discovery import evidence as ev_store
@@ -285,6 +286,47 @@ def test_census_mixed_one_view_family_both_sides():
     assert rw.lhs.args[1].op == "select"
 
 
+def test_census_mixed_same_view_family_binds_relaxed_attrs():
+    """``f(g, g)`` also mints the attr-*independent* two-view family.
+
+    The shared-attr naturality (``census:mul_select``) binds only
+    sites whose two view nodes spell identical attrs; real modules
+    write e.g. ``mul(unsq(u, 1), unsq(v, 2))`` — the ``A_*`` / ``B_*``
+    namespaces bind that observed spelling, and the oracles judge
+    whether any wrap variant is true on it.
+    """
+    site = _p(
+        "mul",
+        _p("select", _v("x", 4, 4), dim=0, index=1),
+        _p("select", _v("y", 4, 4), dim=1, index=2),
+    )
+    terms = [site]
+    out = pl._census_mixed_naturality(
+        {("mul", ("select", "select")): 2}, terms
+    )
+    names = sorted(p.name for p in out)
+    assert names == [
+        "mixed:mul_select_select_id",
+        "mixed:mul_select_select_wl",
+        "mixed:mul_select_select_wr",
+    ]
+    # The attr-relaxed LHS binds where the shared-attr one cannot.
+    wl = next(p for p in out if p.name.endswith("_wl"))
+    subst = _term_match(wl.lhs, site)
+    assert subst is not None
+    assert subst["$attr:A_dim"] == 0 and subst["$attr:B_dim"] == 1
+    # …while the shared-namespace naturality refuses this spelling.
+    shared = pl._census_naturality(
+        {("mul", ("select", "select")): 2}, terms
+    )
+    assert _term_match(shared[0].lhs, site) is None
+    # A non-view same-op tuple still mints nothing.
+    assert (
+        pl._census_mixed_naturality({("add", ("mul", "mul")): 3}, terms)
+        == []
+    )
+
+
 def test_reduce_chains_and_pattern_recognition():
     census_op = {
         ("div", ("exp", "sum")): 4,
@@ -537,6 +579,47 @@ def test_propose_mixed_family_on_asymmetric_tuple():
     names = {p.name for p in pl.propose(census_op, terms, "hand")}
     assert "mixed:mul_select_l_w" in names
     assert "mixed:mul_select_l_id" in names
+
+
+def test_propose_require_bind_filters_unbound():
+    """``require_bind`` keeps only proposals that bind a real subterm.
+
+    The tiny corpus spells ``add(mul, mul)`` with a shared operand,
+    ``mul(select, select)`` and the softmax ``div(exp, sum)`` — so
+    ``factor_left`` / ``census:mul_select`` / ``recognize:softmax``
+    stay, while grammar claims like ``grammar:div_self`` (a
+    ``div(M, M)`` spelling the corpus never writes) drop out.  The
+    default is the unfiltered pool.
+    """
+    cases = _tiny_cases(with_softmax=True)
+    census_op = {
+        (e["op"], tuple(e["children"])): e["count"]
+        for e in _tiny_census(cases)["op_tuples"]
+    }
+    terms = [c.term for c in cases]
+    full = pl.propose(census_op, terms, "hand")
+    gated = pl.propose(census_op, terms, "hand", require_bind=True)
+    full_names = {p.name for p in full}
+    gated_names = {p.name for p in gated}
+    assert gated_names < full_names
+    # binding candidates survive the gate …
+    assert "factor_left" in gated_names
+    assert "census:mul_select" in gated_names
+    assert "recognize:softmax" in gated_names
+    # …and every survivor genuinely binds a real subterm.
+    subs = [
+        s
+        for t in terms
+        for s in pl._iter_subterms(t)
+        if isinstance(s, Op)
+    ]
+    for p in gated:
+        assert any(_term_match(p.lhs, s) is not None for s in subs), (
+            p.name
+        )
+    # a grammar claim whose shape is absent is the dropped kind.
+    assert "grammar:div_self" in full_names
+    assert "grammar:div_self" not in gated_names
 
 
 # ---------------------------------------------------------------------------

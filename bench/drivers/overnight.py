@@ -66,7 +66,10 @@ dropped as the hypothesis generator and each episode's pool is minted
 exported graph feeding ``pipeline.propose`` (census-naturality +
 mixed-view + pattern-recognition + shape-aware + grammar — the same
 mint path that produced ``mul_unsq_nat``, ``census:mul_unsqueeze``
-from DeltaRuleBlock's ``β·k`` op-tuple).  The grammar arm's
+from DeltaRuleBlock's ``β·k`` op-tuple), gated binding-first —
+``require_bind=True`` keeps only proposals whose LHS matches a real
+subterm of the module, so a claim that cannot fire on the corpus
+never spends mint or gauntlet effort.  The grammar arm's
 diagnostic — grammar mints binding no real site (``real: 0 eq/0 envs``
 for 232/248 candidates in ``docs/results_overnight.md``) — is the arm
 this one answers: candidates minted on real subterms, judged against
@@ -372,8 +375,12 @@ class _RealArena(og.OpenArena):
     feeds the counts to ``pipeline.propose`` — the census-naturality /
     mixed-view / pattern-recognition / shape-aware / grammar proposers,
     the same machinery that minted ``mul_unsq_nat`` from DeltaRuleBlock's
-    ``β·k`` op-tuple (``exposed_discovery``'s pipeline arm).  Every
-    minted :class:`~mlopt_discovery.pipeline.Proposal` becomes a
+    ``β·k`` op-tuple (``exposed_discovery``'s pipeline arm) — under
+    ``require_bind=True``: the mint keeps only proposals whose LHS
+    binds a real subterm of the module, so the pool never spends an
+    episode slot on a claim whose real region is empty by
+    construction.  Every minted
+    :class:`~mlopt_discovery.pipeline.Proposal` becomes a
     :class:`~mlopt_discovery.proposal.Candidate` carrying the proposal's
     own ``Rewrite`` (``check``/``derive`` hooks intact) — the oracle
     verdict in the episode still measures the bare pair, while the
@@ -410,7 +417,9 @@ class _RealArena(og.OpenArena):
         )
         page = case.get("page", 48)
         for i, p in enumerate(
-            pipe.propose(dict(counts), [ir.root], _MINT_VOCAB)
+            pipe.propose(
+                dict(counts), [ir.root], _MINT_VOCAB, require_bind=True
+            )
         ):
             if i >= page:
                 break
@@ -1048,8 +1057,9 @@ def main(argv: list[str] | None = None) -> int:
         "filtering the stream to claims that fire on real structure; "
         "'zoo-real' drops the stream: each episode's pool is minted "
         "from the module's own op-tuple census (pipeline.propose — "
-        "the mul_unsq_nat path) and judged against the corpus's "
-        "distinct real subterms",
+        "the mul_unsq_nat path), binding-first (require_bind — a "
+        "candidate that matches no real subterm is never minted), "
+        "and judged against the corpus's distinct real subterms",
     )
     ap.add_argument(
         "--scan",
@@ -1115,6 +1125,12 @@ def main(argv: list[str] | None = None) -> int:
         "corpus": args.corpus,
         "scan": args.scan,
         "dry": bool(args.dry),
+        # the mint semantics — a ledger written before the zoo-real
+        # arm went binding-first (require_bind) must restart loudly
+        # rather than replay ungated pools.
+        "mint": "corpus-bind"
+        if args.corpus == "zoo-real"
+        else "stream",
     }
     if not args.resume and args.ckpt.exists():
         args.ckpt.unlink()

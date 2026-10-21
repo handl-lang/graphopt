@@ -199,9 +199,36 @@ class TestCorpusZooReal:
             assert cand.as_rule().lhs is not None
             assert arena.meta[i]["family"]
         # the census proposers saw this module's op-tuples —
-        # AdditiveAttention spells mul(unsq, unsq) so the census
-        # naturality family minted it (the mul_unsq_nat path).
-        assert "census:mul_unsqueeze" in [c.label for c in arena.pool]
+        # AdditiveAttention spells mul(unsq, unsq) with *different*
+        # dims, so the shared-attr census:mul_unsqueeze mint cannot
+        # bind it; the attr-relaxed same-view family can and does.
+        labels = [c.label for c in arena.pool]
+        assert "mixed:mul_unsqueeze_unsqueeze_id" in labels
+        assert "census:mul_unsqueeze" not in labels
+
+    def test_real_arena_pool_is_binding_first(self):
+        """Every pooled candidate's LHS binds a module subterm.
+
+        ``require_bind`` is the arm's premise: a claim that matches
+        no real subterm is never minted — the ``0 envs`` hole the
+        ungated mint measured is closed at proposal time, not at the
+        gauntlet (which still refuses bound-but-false claims).
+        """
+        from mlopt_core.egraph.terms import _term_match
+        from mlopt_core.ir import Op
+        from mlopt_discovery.census import _iter_subterms
+
+        case = {"zoo": "AdditiveAttention", "wseed": 0, "page": 48}
+        arena = on._RealArena(case)
+        assert not arena.error
+        assert arena.pool
+        ir, _t, _f = on._zoo_export(case)
+        subs = [s for s in _iter_subterms(ir.root) if isinstance(s, Op)]
+        for cand in arena.pool:
+            pat = cand.as_rule().lhs
+            assert any(_term_match(pat, s) is not None for s in subs), (
+                f"{cand.label}: binds no real subterm"
+            )
 
     def test_real_ctx_binds_subterm_matches(self):
         """``real_terms`` is the subterm domain — the arm's premise.
@@ -244,6 +271,9 @@ class TestCorpusZooReal:
         assert time.time() - t0 < 240  # exports + mint + referee
         man, cells = _records(tmp_path / "ck.jsonl")
         assert man["protocol"]["corpus"] == "zoo-real"
+        # the binding-first mint is protocol-pinned — a resume over a
+        # pre-gate ledger restarts loudly rather than mixing pools
+        assert man["protocol"]["mint"] == "corpus-bind"
         episodes = _cells(cells, "episode")
         assert len(episodes) == 2
         for e in episodes:
