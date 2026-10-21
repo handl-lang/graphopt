@@ -1,11 +1,15 @@
 """The kernelopt spike's bench cases — measured codegen pay.
 
-Five kernel cases (category ``speed``): a spelled pointwise program,
-a codegen-law candidate, and the honest row — lower both through
+Eleven kernel cases: a spelled program, a codegen-law candidate, and
+the honest row — lower both through
 :class:`mlopt_kernel.KernelSink`, verify numerically (verify-first),
-then time spelled vs scheduled.  This is the spike's measured half
-of the go/no-go: does the engine emit a verified-equal kernel at
-lower measured cost than the spelled baseline.
+then time spelled vs scheduled.  Where the case has a registered
+hand-Triton kernel (``bench.limits.triton``), the row times and
+verifies that arm too — the practitioner's kernel is the field
+baseline the fused composite is measured against.  This is the
+spike's measured half of the go/no-go: does the engine emit a
+verified-equal kernel at lower measured cost than the spelled
+baseline.
 
 Run::
 
@@ -14,6 +18,7 @@ Run::
 
 from __future__ import annotations
 
+import importlib.util
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -33,11 +38,16 @@ def _v(name, shape):
 def _mk():
     x = _v("x", (4096, 512))
     y = _v("y", (4096, 512))
-    return x, y
+    w = _v("w", (512, 512))
+    b = _v("b", (512,))
+    return x, y, w, b
 
 
 def _cases():
-    x, y = _mk()
+    x, y, w, b = _mk()
+    ln_center = Op.make(
+        "sub", x, Op.make("mean", x, dim=-1, keepdim=True)
+    )
     return (
         (
             "kernel_silu",
@@ -60,6 +70,64 @@ def _cases():
             ("kern_fuse_addmul",),
         ),
         (
+            "kernel_swiglu",
+            "speed",
+            Op.make(
+                "mul", Op.make("mul", x, Op.make("sigmoid", x)), y
+            ),
+            ("kern_fuse_silu", "kern_fuse_swiglu"),
+        ),
+        (
+            "kernel_softmax",
+            "speed",
+            Op.make(
+                "div",
+                Op.make("exp", x),
+                Op.make(
+                    "sum", Op.make("exp", x), dim=-1, keepdim=True
+                ),
+            ),
+            ("kern_fuse_softmax",),
+        ),
+        (
+            "kernel_layernorm",
+            "speed",
+            Op.make(
+                "mul",
+                ln_center,
+                Op.make(
+                    "rsqrt",
+                    Op.make(
+                        "add",
+                        Op.make(
+                            "mean",
+                            Op.make("pow", ln_center, Const(2)),
+                            dim=-1,
+                            keepdim=True,
+                        ),
+                        Const(1e-5),
+                    ),
+                ),
+            ),
+            ("kern_fuse_layernorm",),
+        ),
+        (
+            "kernel_mm_bias",
+            "speed",
+            Op.make("add", Op.make("matmul", x, w), b),
+            ("kern_fuse_mm_bias",),
+        ),
+        (
+            "kernel_mm_scale_bias",
+            "speed",
+            Op.make(
+                "add",
+                Op.make("mul", Op.make("matmul", x, w), Const(0.5)),
+                b,
+            ),
+            ("kern_fuse_mm_scale_bias", "kern_fuse_addmul"),
+        ),
+        (
             "kernel_strength",
             "speed",
             Op.make(
@@ -79,6 +147,12 @@ def _cases():
             ),
             ("kern_fuse_silu",),
         ),
+        (
+            "kernel_flat",
+            "speed",
+            Op.make("add", Op.make("tanh", x), Op.make("cos", y)),
+            (),
+        ),
     )
 
 
@@ -96,6 +170,9 @@ class KernelRow:
     spelled_us: float = 0.0
     scheduled_us: float = 0.0
     speedup: float | None = None
+    triton_us: float | None = None
+    triton_verified: bool | None = None
+    triton_note: str = ""
     detail: dict = field(default_factory=dict)
 
 
@@ -131,6 +208,27 @@ def _vars_of(t):
 
     walk(t)
     return out
+
+
+def _triton_arm(name):
+    """Return ``(callable, None)`` for case *name*'s hand Triton kernel.
+
+    The honest skip cases: triton not installed, no CUDA, or no
+    kernel registered — the row records the reason, never a silent
+    drop.
+    """
+    if importlib.util.find_spec("triton") is None:
+        return None, "triton not installed"
+    import torch
+
+    if not torch.cuda.is_available():
+        return None, "needs CUDA"
+    from bench.limits.triton import kernel_builder
+
+    mk = kernel_builder(name)
+    if mk is None:
+        return None, f"no triton kernel registered for {name!r}"
+    return mk(), None
 
 
 def run_case(
@@ -173,6 +271,18 @@ def run_case(
     row.scheduled_us = _time(sched, feeds, reps, device)
     if row.scheduled_us:
         row.speedup = round(row.spelled_us / row.scheduled_us, 3)
+
+    arm, why = _triton_arm(name)
+    if arm is None:
+        row.triton_note = why or "unavailable"
+    else:
+        try:
+            feeds_dev = tuple(a.to(device) for a in feeds)
+            rep_t = sink.verify(spelled, arm, feeds_dev)
+            row.triton_verified = bool(rep_t.passed)
+            row.triton_us = _time(arm, feeds_dev, reps, device)
+        except Exception as e:  # kernel failed — honest row
+            row.triton_note = f"triton arm: {e}"
     return row
 
 
@@ -185,11 +295,16 @@ def main() -> list[KernelRow]:
     for name, cat, term, fires in _cases():
         row = run_case(name, cat, term, fires, device=device)
         rows.append(row)
+        tri = (
+            f"triton {row.triton_us:.1f}us (verified={row.triton_verified})"
+            if row.triton_us is not None
+            else f"triton — ({row.triton_note})"
+        )
         print(  # stdout-compat
             f"{name}: verified={row.verified} "
             f"cost {row.cost_before:.2f}->{row.cost_after:.2f} "
             f"{row.spelled_us:.1f}us -> {row.scheduled_us:.1f}us "
-            f"({row.speedup}x, {device})"
+            f"({row.speedup}x), {tri} [{device}]"
         )
     return rows
 

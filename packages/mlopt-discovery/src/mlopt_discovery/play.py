@@ -1493,6 +1493,10 @@ def _kernel_cases(seed: int, n: int) -> list:
     x = Var("x", TensorType((4, 8)))
     y = Var("y", TensorType((4, 8)))
     w = Var("w", TensorType((8, 4)))
+    b = Var("b", TensorType((4,)))
+    ln_center = Op.make(
+        "sub", x, Op.make("mean", x, dim=-1, keepdim=True)
+    )
     pool = [
         ("silu", Op.make("mul", x, Op.make("sigmoid", x))),
         (
@@ -1510,6 +1514,50 @@ def _kernel_cases(seed: int, n: int) -> list:
         (
             "fma",
             Op.make("add", Op.make("mul", x, y), Op.make("tanh", y)),
+        ),
+        (
+            "swiglu",
+            Op.make("mul", Op.make("mul", x, Op.make("sigmoid", x)), y),
+        ),
+        (
+            "softmax",
+            Op.make(
+                "div",
+                Op.make("exp", x),
+                Op.make("sum", Op.make("exp", x), dim=-1, keepdim=True),
+            ),
+        ),
+        (
+            "layernorm",
+            Op.make(
+                "mul",
+                ln_center,
+                Op.make(
+                    "rsqrt",
+                    Op.make(
+                        "add",
+                        Op.make(
+                            "mean",
+                            Op.make("pow", ln_center, Const(2)),
+                            dim=-1,
+                            keepdim=True,
+                        ),
+                        Const(1e-5),
+                    ),
+                ),
+            ),
+        ),
+        (
+            "mm_bias",
+            Op.make("add", Op.make("matmul", x, w), b),
+        ),
+        (
+            "mm_sb",
+            Op.make(
+                "add",
+                Op.make("mul", Op.make("matmul", x, w), Const(0.5)),
+                b,
+            ),
         ),
         ("square", Op.make("pow", x, Const(2))),
         ("recip", Op.make("div", x, Const(4.0))),
@@ -1530,7 +1578,7 @@ def _kernel_cases(seed: int, n: int) -> list:
     for i in range(n):
         kind, term = pool[rng.randrange(len(pool))]
         names = {v.name for v in _vars_of(term)}
-        vars_in = [v for v in (x, y, w) if v.name in names]
+        vars_in = [v for v in (x, y, w, b) if v.name in names]
         out.append(
             (
                 f"kernel{i}:{kind}",
@@ -1588,6 +1636,9 @@ _KERNEL_OP_FEATURES: tuple[str, ...] = (
     "matmul",
     "exp",
     "relu",
+    "mean",
+    "sum",
+    "rsqrt",
 )
 
 

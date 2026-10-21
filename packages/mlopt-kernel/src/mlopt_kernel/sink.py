@@ -47,6 +47,20 @@ def _torch() -> Any:
     return torch
 
 
+def _kf_layernorm(u: Any, dim: Any, eps: float) -> Any:
+    """``(u−μ)·rsqrt(mean((u−μ)²)+eps)`` — the fused-layernorm body.
+
+    ``dim`` is the LHS ``mean``'s reduce spec verbatim (int or tuple)
+    — the composite is *defined* as the spelled math, so whatever
+    axes the site reduces, this body recomputes.
+    """
+    torch = _torch()
+    c = u - torch.mean(u, dim=dim, keepdim=True)
+    return c * torch.rsqrt(
+        torch.mean(c.pow(2), dim=dim, keepdim=True) + eps
+    )
+
+
 def _bindings() -> dict[str, Any]:
     """Build the kernel op table — a small torch composite vocabulary.
 
@@ -133,6 +147,11 @@ def _bindings() -> dict[str, Any]:
         "kf_silu": lambda a, b: a * torch.sigmoid(b),
         "kf_softsign": lambda a, b, c: a / (b.abs() + c),
         "kf_addmul": lambda a, b, c: a * b + c,
+        "kf_swiglu": lambda a, b: a * torch.sigmoid(a) * b,
+        "kf_softmax": lambda u, dim: torch.softmax(u, dim=dim),
+        "kf_layernorm": _kf_layernorm,
+        "kf_mm_bias": lambda a, w, b: torch.matmul(a, w) + b,
+        "kf_mm_sb": lambda a, w, s, b: torch.matmul(a, w) * s + b,
     }
 
 

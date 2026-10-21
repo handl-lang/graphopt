@@ -26,13 +26,47 @@ def _silu_term():
     return Op.make("mul", X, Op.make("sigmoid", X))
 
 
+def _softmax_term(keepdim=True):
+    return Op.make(
+        "div",
+        Op.make("exp", X),
+        Op.make("sum", Op.make("exp", X), dim=-1, keepdim=keepdim),
+    )
+
+
+def _layernorm_term(eps=Const(1e-5), power=Const(2)):
+    c = Op.make("sub", X, Op.make("mean", X, dim=-1, keepdim=True))
+    return Op.make(
+        "mul",
+        c,
+        Op.make(
+            "rsqrt",
+            Op.make(
+                "add",
+                Op.make(
+                    "mean",
+                    Op.make("pow", c, power),
+                    dim=-1,
+                    keepdim=True,
+                ),
+                eps,
+            ),
+        ),
+    )
+
+
 class TestLaws:
     def test_bank_shape(self):
-        """Five codegen laws; the fused ops take leaf children."""
+        """Ten codegen laws; the fused ops take leaf children."""
         assert [r.name for r in KERNEL_RULES] == [
             "kern_fuse_silu",
             "kern_fuse_softsign",
             "kern_fuse_addmul",
+            "kern_fuse_swiglu",
+            "kern_fuse_softmax",
+            "kern_fuse_layernorm",
+            "kern_fuse_mm_bias",
+            "kern_fuse_mm_scale_bias",
             "kern_square_strength",
             "kern_div_recip",
         ]
@@ -66,14 +100,14 @@ class TestLaws:
         """pow(x,2) → x·x and x/c → x·(1/c) both fire and verify."""
         eg = EGraph()
         root = eg.add_term(Op.make("pow", X, Const(2)))
-        assert eg.apply_rule(KERNEL_RULES[3], root)
+        assert eg.apply_rule(KERNEL_RULES[8], root)
         assert eg.extract_best(root, kernel_cost) == Op.make(
             "mul", X, X
         )
         eg2 = EGraph()
         t = Op.make("div", X, Const(4.0))
         root2 = eg2.add_term(t)
-        assert eg2.apply_rule(KERNEL_RULES[4], root2)
+        assert eg2.apply_rule(KERNEL_RULES[9], root2)
         best = eg2.extract_best(root2, kernel_cost)
         assert best == Op.make("mul", X, Const(0.25))
         cert = eg2.certificate(t, best)
@@ -83,7 +117,76 @@ class TestLaws:
         """The recip fold needs a numeric Const divisor."""
         eg = EGraph()
         root = eg.add_term(Op.make("div", X, Y))
+        assert not eg.apply_rule(KERNEL_RULES[9], root)
+
+    def test_swiglu_beats_shallow_silu(self):
+        """``(x·σ(x))·y`` extracts the one-launch kf_swiglu."""
+        eg = EGraph()
+        t = Op.make("mul", Op.make("mul", X, Op.make("sigmoid", X)), Y)
+        root = eg.add_term(t)
+        eg.apply_rule(KERNEL_RULES[0], root)  # silu fires inside too
+        eg.apply_rule(KERNEL_RULES[3], root)
+        best = eg.extract_best(root, kernel_cost)
+        assert best is not None and best.op == "kf_swiglu"
+
+    def test_softmax_fires_and_derives_dim(self):
+        """``exp(u)/Σexp(u)`` folds to ``kf_softmax`` with the dim."""
+        eg = EGraph()
+        root = eg.add_term(_softmax_term())
+        assert eg.apply_rule(KERNEL_RULES[4], root)
+        best = eg.extract_best(root, kernel_cost)
+        assert best == Op.make("kf_softmax", X, dim=-1)
+
+    def test_softmax_declines_dropped_dim(self):
+        """``keepdim=False`` broadcasts wrongly — the site declines."""
+        eg = EGraph()
+        root = eg.add_term(_softmax_term(keepdim=False))
         assert not eg.apply_rule(KERNEL_RULES[4], root)
+
+    def test_layernorm_fires_and_derives_eps(self):
+        """The mean/var/rsqrt block folds to ``kf_layernorm``."""
+        eg = EGraph()
+        t = _layernorm_term()
+        root = eg.add_term(t)
+        assert eg.apply_rule(KERNEL_RULES[5], root)
+        best = eg.extract_best(root, kernel_cost)
+        assert best == Op.make("kf_layernorm", X, dim=-1, eps=1e-05)
+        cert = eg.certificate(t, best)
+        verify_certificate(t, cert)
+
+    def test_layernorm_declines_bad_site(self):
+        """A non-numeric eps or a non-square power vetoes the fold."""
+        eg = EGraph()
+        root = eg.add_term(_layernorm_term(eps=X))
+        assert not eg.apply_rule(KERNEL_RULES[5], root)
+        eg2 = EGraph()
+        root2 = eg2.add_term(_layernorm_term(power=Const(3)))
+        assert not eg2.apply_rule(KERNEL_RULES[5], root2)
+
+    def test_mm_epilogues_fire(self):
+        """mm+b and mm·s+b fold to their one-launch epilogue ops."""
+        w = Var("w", TensorType((8, 8)))
+        b = Var("b", TensorType((8,)))
+        eg = EGraph()
+        root = eg.add_term(Op.make("add", Op.make("matmul", X, w), b))
+        assert eg.apply_rule(KERNEL_RULES[6], root)
+        assert (
+            eg.extract_best(root, kernel_cost).op == "kf_mm_bias"
+        )
+        eg2 = EGraph()
+        t = Op.make(
+            "add",
+            Op.make("mul", Op.make("matmul", X, w), Const(0.5)),
+            b,
+        )
+        root2 = eg2.add_term(t)
+        # both the addmul and the scale-bias epilogue match; the
+        # deeper fusion wins on cost.
+        eg2.apply_rule(KERNEL_RULES[2], root2)
+        eg2.apply_rule(KERNEL_RULES[7], root2)
+        assert (
+            eg2.extract_best(root2, kernel_cost).op == "kf_mm_sb"
+        )
 
 
 class TestCost:
@@ -123,6 +226,73 @@ class TestSink:
         ref = sink.lower(spelled)
         opt = sink.lower(fused)
         rep = sink.verify(ref, opt, (x,))
+        assert rep.passed and rep.max_abs == 0.0
+
+    @pytest.mark.parametrize(
+        "spelled,fused",
+        [
+            (
+                _softmax_term(),
+                Op.make("kf_softmax", X, dim=-1),
+            ),
+            (
+                _layernorm_term(),
+                Op.make("kf_layernorm", X, dim=-1, eps=1e-05),
+            ),
+            (
+                Op.make(
+                    "mul",
+                    Op.make("mul", X, Op.make("sigmoid", X)),
+                    Y,
+                ),
+                Op.make("kf_swiglu", X, Y),
+            ),
+        ],
+        ids=["softmax", "layernorm", "swiglu"],
+    )
+    def test_new_fused_ops_verify(self, spelled, fused):
+        """Each new kf_* composite is numerically equal to its site."""
+        sink = KernelSink()
+        x = torch.randn(4, 8, dtype=torch.float64)
+        y = torch.randn(4, 8, dtype=torch.float64)
+        inputs = [v for v in (X, Y) if repr(v) in repr(spelled)]
+        ir_s = IR(
+            root=spelled,
+            inputs=inputs,
+            input_names={v.name for v in inputs},
+        )
+        ir_f = IR(
+            root=fused, inputs=inputs, input_names=ir_s.input_names
+        )
+        rep = sink.verify(
+            sink.lower(ir_s),
+            sink.lower(ir_f),
+            (x, y)[: len(inputs)],
+        )
+        assert rep.passed and rep.max_abs < 1e-9
+
+    def test_mm_epilogues_verify(self):
+        """The mm epilogue composites verify against spelled mm+b."""
+        sink = KernelSink()
+        w = Var("w", TensorType((8, 8)))
+        b = Var("b", TensorType((8,)))
+        x = torch.randn(4, 8, dtype=torch.float64)
+        wv = torch.randn(8, 8, dtype=torch.float64)
+        bv = torch.randn(8, dtype=torch.float64)
+        inputs = [X, w, b]
+        ir_s = IR(
+            root=Op.make("add", Op.make("matmul", X, w), b),
+            inputs=inputs,
+            input_names={"x", "w", "b"},
+        )
+        ir_f = IR(
+            root=Op.make("kf_mm_bias", X, w, b),
+            inputs=inputs,
+            input_names=ir_s.input_names,
+        )
+        rep = sink.verify(
+            sink.lower(ir_s), sink.lower(ir_f), (x, wv, bv)
+        )
         assert rep.passed and rep.max_abs == 0.0
 
     def test_compile_fused_off_runs_eager(self):
