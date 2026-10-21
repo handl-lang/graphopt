@@ -393,16 +393,18 @@ def test_yield_table_aggregates():
 
 
 def _unsq_candidate() -> pp.Candidate:
-    """The conditional ``add(unsq(u,d),v) = add(u,v)`` proposal.
+    """The conditional ``div(unsq(u,d),v) = div(u,v)`` proposal.
 
     Holds exactly where the unsqueeze inserts a broadcast pad the
     ``u ⊙ v`` grid already had — the region auto-cond separates.
+    (Spelled ``div`` — the ``add`` twin is now shipped as
+    ``add_unsq_pad_r``, so the add fixture mints a duplicate.)
     """
     return pp.Candidate(
         "schema",
-        "add_unsq",
-        _p("add", _p("unsqueeze", "U", dim="D"), "V"),
-        _p("add", "U", "V"),
+        "div_unsq",
+        _p("div", _p("unsqueeze", "U", dim="D"), "V"),
+        _p("div", "U", "V"),
     )
 
 
@@ -425,7 +427,7 @@ def test_propose_guarded_declines_a_false_candidate():
 
 
 def test_propose_guarded_mints_a_guard_and_pays():
-    """The undecidable ``add_unsq`` pattern mints a guard; the guarded
+    """The undecidable ``div_unsq`` pattern mints a guard; the guarded
     rule re-evaluates true (clean accepted region) and paying (the
     dead pad node drops the extracted cost)."""
     torch.manual_seed(0)
