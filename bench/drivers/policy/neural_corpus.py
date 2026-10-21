@@ -119,11 +119,12 @@ SITE_MAX_SIZE = 12
 SITE_MAX_PAIRS = 600
 
 #: Per-candidate evaluation guard.  ``lp.evaluate`` -> ``verify_law``
-#: saturates a fresh e-graph under ``ALL_RULES`` with
-#: ``max_nodes=200_000`` and no expansive-rule budgets; the
-#: default-ops stream never trips it, but the widened vocabulary does
-#: — ``lit-self:1907 matmul(A,A) => add(A,0)`` was measured OOM-killing
-#: an 11 GB box at ~9.3 GB anon RSS (2026-10-20).  An in-process
+#: saturates a fresh e-graph under ``ALL_RULES``.  ``verify_law`` is
+#: bounded-saturation now (EXPANSIVE/non-library per-rule e-node
+#: budgets + a 30k node ceiling — ``verifier._EXPANSIVE_BUDGET``), but
+#: before the bound existed ``lit-self:1907 matmul(A,A) => add(A,0)``
+#: was measured OOM-killing an 11 GB box at ~9.3 GB anon RSS
+#: (2026-10-20), and an in-process
 #: ``MemoryError`` catch is NOT survivable — once the rlimit bites,
 #: pymalloc arenas stay mapped and even the except-handler's
 #: allocations fail (observed: cascading MemoryError past the catch).

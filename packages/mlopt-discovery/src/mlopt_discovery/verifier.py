@@ -10,8 +10,16 @@ the decision procedure for e-class membership.
 
 Why this is cheap where full-program saturation is not: the
 saturation wall (~n=12, Catalan e-class growth) is about saturating a
-whole *program*.  A law's two sides are tiny, so the check reaches a
-fixed point in milliseconds.
+whole *program*.  A law's two sides are tiny, so the check usually
+reaches a fixed point in milliseconds — *usually*, because two tiny
+sides can still feed the comm/assoc x distribute/factor closure
+without bound (``matmul(A,A)`` vs ``add(A,0)`` OOM-killed an 11 GB
+box under the old unbounded defaults; see
+``docs/results_neural_corpus.md``).  :func:`verify_law` therefore
+saturates *bounded* by default: every ``EXPANSIVE``-tagged and
+non-library rule gets a per-rule e-node budget
+(:func:`_rule_budgets`), and resource exhaustion REFUSES —
+``derivable=False`` — it can never silently accept.
 
 The verifier :func:`verify_law` reuses the shipped machinery only —
 ``EGraph``, ``find``, and the proof-carrying ``certificate`` /
@@ -51,6 +59,7 @@ from typing import Any
 from mlopt_core.egraph import EGraph, verify_certificate
 from mlopt_core.ir import Const, Op, TensorType, Var, op_repr
 from mlopt_core.laws import ALL_RULES
+from mlopt_core.laws import tags as _tags
 from mlopt_core.meta import (
     _positions,
     _subterm,
@@ -78,10 +87,28 @@ __all__ = [
     "verify_law",
 ]
 
-#: Saturation budget for a single law check.  Law sides are tiny, so
-#: these are generous — every measured case stops at a fixed point.
+#: Saturation budget for a single law check.  Law sides are tiny and
+#: every shipped verification saturates far below this (the whole
+#: 85-rule rediscovery sweep peaks at 77 e-nodes per check; the
+#: pathological ``matmul(A,A)`` vs ``add(A,0)`` pair reaches its
+#: bounded fixed point at ~1.5k), so the caps are generous headroom,
+#: not the mechanism that keeps the check cheap — that is
+#: :data:`_EXPANSIVE_BUDGET` below.
 _MAX_ITERATIONS = 30
-_MAX_NODES = 200_000
+_MAX_NODES = 30_000
+
+#: Per-rule e-node budget for the EXPANSIVE closure generators
+#: (comm/assoc, the matmul/linear distribute-factor pairs, the
+#: scale-hoist naturality rules) — the same bounded-saturation policy
+#: as ``proposal._rule_budgets`` / ``impact._rule_budgets``.  This is
+#: the load-bearing bound: ``EGraph.run`` checks ``max_nodes`` only
+#: *between* iterations, so an uncapped expansive rule grows the graph
+#: (and its match space) without limit inside a single
+#: ``apply_rule`` — measured on the neural-corpus run, where
+#: ``matmul(A,A) ↔ add(A,0)`` under ``ALL_RULES`` climbed to ~9.3 GB
+#: anon RSS and OOM-killed an 11 GB box before the 200k-node cap was
+#: ever consulted (``docs/results_neural_corpus.md``).
+_EXPANSIVE_BUDGET = 600
 
 #: Feature dim used to build the per-law synthetic instances.
 _SIZE = 16
@@ -140,6 +167,65 @@ class ProposalRow:
     ok: bool = False
 
 
+def _stable(rules: Any) -> Any:
+    """Materialize a one-shot iterable; keep re-iterable rule sets.
+
+    ``EGraph.run`` reads ``priority_of`` off the object it is given,
+    so a :class:`~mlopt_core.laws.RuleSet` must reach it intact — only
+    a single-pass iterator (``iter(rules) is rules``) needs the list.
+    """
+    return list(rules) if iter(rules) is rules else rules
+
+
+def _rule_budgets(
+    rules: Any, given: dict[str, int] | None
+) -> dict[str, int]:
+    """Resolve the per-rule e-node budgets for a verification run.
+
+    An explicit *given* map is honoured verbatim — ``{}`` disables
+    bounding entirely (the pre-bounding behaviour).  ``None`` selects
+    the bounded-saturation policy: every rule tagged ``EXPANSIVE`` in
+    the shipped bank (the closure generators whose Catalan blow-up
+    makes raw ``ALL_RULES`` saturation run away on a two-term graph)
+    and every rule *outside* the bank — a candidate or a minted
+    premise is unbounded-blast-radius by definition — is capped at
+    :data:`_EXPANSIVE_BUDGET` new e-nodes over the run.  Unbudgeted
+    rules still reach the exact fixed point.  Mirrors
+    ``proposal._rule_budgets`` / ``impact._rule_budgets``.
+    """
+    if given is not None:
+        return given
+    lib = {r.name: r for r in ALL_RULES}
+    return {
+        r.name: _EXPANSIVE_BUDGET
+        for r in rules
+        if r.name not in lib or _tags.EXPANSIVE in lib[r.name].tags
+    }
+
+
+def _refusal(stats: dict) -> LawResult:
+    """The REFUSE row for a non-merge — naming any suspended rules.
+
+    A bound hit is reported, never hidden: a refusal caused by budget
+    exhaustion carries the suspended rule names in ``note``, so it is
+    distinguishable from an exhaustive disproof.
+    """
+    suspended = stats["budget_suspended"]
+    note = ""
+    if suspended:
+        note = (
+            "resource-bound refusal; budget-suspended rules: "
+            + ", ".join(suspended)
+        )
+    return LawResult(
+        derivable=False,
+        stop=stats["stop"],
+        n_enodes=stats["n_enodes"],
+        n_classes=stats["n_classes"],
+        note=note,
+    )
+
+
 # ---------------------------------------------------------------------------
 #  The verifier
 # ---------------------------------------------------------------------------
@@ -161,7 +247,22 @@ def verify_law(
     On a merge it builds a positional certificate through the shipped
     proof machinery and replays it with :func:`verify_certificate`,
     trying both directions and reporting the replayable one.
+
+    ``rule_budgets`` defaults to the bounded-saturation policy
+    (:func:`_rule_budgets`): every ``EXPANSIVE``-tagged library rule
+    and every non-library rule is capped at :data:`_EXPANSIVE_BUDGET`
+    new e-nodes over the run — the bound that keeps a combinatorial
+    closure from OOM-killing the host before ``max_nodes`` (an
+    inter-iteration check) is ever consulted.  Pass an explicit map
+    to override, or ``{}`` for the pre-bounding unbounded behaviour.
+
+    A bound can only ever *suppress* a merge, never fabricate one:
+    ``derivable=True`` still requires the two roots to share an
+    e-class and the certificate to replay, while resource exhaustion
+    reports ``derivable=False`` — the verdict REFUSES on budget
+    exhaustion, and names the suspended rules in ``note``.
     """
+    rules = _stable(rules)
     eg = EGraph()
     r_lhs = eg.add_term(lhs)
     r_rhs = eg.add_term(rhs)
@@ -170,7 +271,7 @@ def verify_law(
         r_lhs,
         max_iterations=max_iterations,
         max_nodes=max_nodes,
-        rule_budgets=rule_budgets,
+        rule_budgets=_rule_budgets(rules, rule_budgets),
     )
     base = {
         "stop": stats["stop"],
@@ -178,7 +279,7 @@ def verify_law(
         "n_classes": stats["n_classes"],
     }
     if eg.find(r_lhs) != eg.find(r_rhs):
-        return LawResult(derivable=False, **base)
+        return _refusal(stats)
     # Equality is symmetric, so either direction witnesses the merge.
     # Prefer the one whose steps replay standalone; a rule only present
     # as its reverse makes the opposite direction an e-graph-dependent

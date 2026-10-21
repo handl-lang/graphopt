@@ -89,6 +89,87 @@ def test_verify_law_node_budget_reports_stop():
     assert res.n_enodes <= 16
 
 
+def test_verify_law_bounds_expansive_closure():
+    """Regression for the neural-corpus OOM: ``matmul(A,A)`` vs
+    ``add(A,0)`` under ``ALL_RULES`` feeds the distribute/factor ×
+    comm/assoc closure without bound — measured at ~9.3 GB anon RSS
+    on an 11 GB box when ``verify_law`` saturated unbounded, because
+    ``max_nodes`` is only checked *between* iterations and a single
+    ``apply_rule`` call grows without limit
+    (``docs/results_neural_corpus.md``).
+
+    The default per-rule budgets must now terminate the check at a
+    small bounded fixed point and REFUSE honestly — never hang,
+    never OOM, never accept a merge that did not happen.
+    """
+    a = _v("a", 4, 4)
+    res = vf.verify_law(
+        _p("matmul", a, a), _p("add", a, Const(0)), ALL_RULES
+    )
+    assert res.derivable is False
+    # The bounded run saturates: every expansive rule reaches its
+    # fixed point inside the 600-e-node budget (no suspensions), so
+    # the refusal is an exhaustive negative, not a truncated one.
+    assert res.stop == "fixed_point"
+    assert res.n_enodes <= vf._MAX_NODES
+
+
+def test_verify_law_budget_exhaustion_refuses_with_note():
+    # A non-library rule is auto-budgeted under the default policy
+    # (unbounded blast radius by definition) — it still derives when
+    # its few fires fit the budget…
+    a = _v("a", 4, 4)
+    cand = Rewrite("cand:echo", _p("add", "x", Const(0)), "x")
+    assert vf.verify_law(_p("add", a, Const(0)), a, [cand]).derivable
+    # …but starving it must REFUSE — and the note must name the
+    # suspension so an exhausted bound is never mistaken for an
+    # exhaustive disproof.
+    res = vf.verify_law(
+        _p("add", a, Const(0)), a, [cand], rule_budgets={"cand:echo": 0}
+    )
+    assert res.derivable is False
+    assert "cand:echo" in res.note
+    assert "budget-suspended" in res.note
+
+
+def test_verify_law_budget_override_and_optout():
+    # ``rule_budgets`` is honoured verbatim when given: a zero budget
+    # suspends the one rule that could merge the sides.
+    a, b = _v("a", 4, 4), _v("b", 4, 4)
+    comm = _BY_NAME["comm_add"]
+    res = vf.verify_law(
+        _p("add", a, b),
+        _p("add", b, a),
+        [comm],
+        rule_budgets={"comm_add": 0},
+    )
+    assert res.derivable is False
+    assert "comm_add" in res.note
+    # The default policy budgets comm_add at _EXPANSIVE_BUDGET — far
+    # more than the handful of fires this merge needs.
+    assert vf.verify_law(
+        _p("add", a, b), _p("add", b, a), [comm]
+    ).derivable
+    # ``{}`` opts out of the auto-budget entirely (the pre-bounding
+    # unbounded behaviour) — still derives, just uncapped.
+    assert vf.verify_law(
+        _p("add", a, b), _p("add", b, a), [comm], rule_budgets={}
+    ).derivable
+
+
+def test_verify_law_accepts_one_shot_rule_iterable():
+    # A generator is materialized once by _stable so the budget pass
+    # and EGraph.run both see it; a RuleSet/list passes through
+    # untouched (run() reads priority_of off the object).
+    a, b = _v("a", 4, 4), _v("b", 4, 4)
+    res = vf.verify_law(
+        _p("add", a, b),
+        _p("add", b, a),
+        iter([_BY_NAME["comm_add"]]),
+    )
+    assert res.derivable is True
+
+
 def test_verify_law_replay_failure_is_reported(monkeypatch):
     # A merge is still reported honestly when neither direction's
     # certificate replays — derivable with a "replay failed" note.

@@ -123,8 +123,8 @@ def _counted_verify(
     rhs: Any,
     rules: Any,
     *,
-    max_iterations: int = 30,
-    max_nodes: int = 200000,
+    max_iterations: int = lv._MAX_ITERATIONS,
+    max_nodes: int = lv._MAX_NODES,
     rule_budgets: dict[str, int] | None = None,
 ) -> lv.LawResult:
     """Wrap ``lv.verify_law``; record one call + wall-time per phase."""

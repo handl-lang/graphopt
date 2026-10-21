@@ -142,3 +142,9 @@ credit: equal finds, worse order.
   under `verify_law`'s 200k-node saturation; the skip is honest and
   reported, but if such candidates matter, `evaluate` needs a bounded
   `verify_law` path like `_cost_delta`'s.
+  **Update (fixed):** `verify_law` now saturates bounded by default —
+  every `EXPANSIVE`-tagged and non-library rule is capped at
+  `verifier._EXPANSIVE_BUDGET` (600) new e-nodes and the node ceiling
+  is 30,000, so this exact pair terminates at a ~1.5k-e-node fixed
+  point in ~3 s and refuses. The worker guard above stays as
+  defence-in-depth for any *other* unbounded caller.

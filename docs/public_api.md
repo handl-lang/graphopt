@@ -65,7 +65,7 @@ paths are re-exporting shims (see `TestGamekitCompatShims` in
 
 | Contract | Canonical location | Frozen surface |
 |---|---|---|
-| Law verification | `mlopt_discovery.verifier` | **`verify_law(lhs, rhs, rules, *, max_iterations=30, max_nodes=200_000, rule_budgets=None) -> LawResult`**, `LawResult` (`derivable`, `direction`, `witness_rules`, `replayable`, `cert`) — the admission side the phase-2 referees consume |
+| Law verification | `mlopt_discovery.verifier` | **`verify_law(lhs, rhs, rules, *, max_iterations=30, max_nodes=30_000, rule_budgets=None) -> LawResult`**, `LawResult` (`derivable`, `direction`, `witness_rules`, `replayable`, `cert`) — the admission side the phase-2 referees consume; saturation is bounded by default (`rule_budgets=None` applies the EXPANSIVE/non-library per-rule caps — `verifier._EXPANSIVE_BUDGET`) and a bound can only *refuse*, never accept |
 | Domain registry | `mlopt_discovery.play` | `DOMAINS`, `Domain` (`cases`/`board_of`/`legal`/`featurizer`/`features`/`scripted`/`deliver`/`spec`), `play(domain, case, player, *, budget)` — the `Domain` *shape* is the contract; the `DOMAINS` *contents* are domain data |
 
 ## The scoring spec — the referee seam
