@@ -1,0 +1,5367 @@
+{
+  "schema": 1,
+  "protocol": {
+    "episodes": 48,
+    "page": 48,
+    "budget": 48,
+    "seed": 0,
+    "player": "playbook",
+    "referee": "full",
+    "corpus": "zoo",
+    "scan": 2048,
+    "dry": false
+  },
+  "corpus": "zoo",
+  "episodes": 36,
+  "evaluated": 1600,
+  "arena_verdicts": {
+    "false": 1497,
+    "known": 69,
+    "true": 34
+  },
+  "minted": 248,
+  "admitted": 1,
+  "skipped": 0,
+  "leg_refusals": {
+    "oracle": 232,
+    "pay": 14,
+    "admitted": 1,
+    "error": 1
+  },
+  "novelty": {
+    "known-art": 1
+  },
+  "finds": [],
+  "candidates": [
+    {
+      "name": "enumerate:factor-left:284",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 144.0,
+        "cand_cost": 80.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 118eq/242ne/0rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 118eq/242ne/0rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:factor-right:286",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 144.0,
+        "cand_cost": 80.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 145eq/215ne/0rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 145eq/215ne/0rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:rekey:283",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 80.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 80eq/276ne/0rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 80eq/276ne/0rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:idempotent:61",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 0.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:cancel-self:160",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 0.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:cancel-self:198",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 0.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:cancel-self:229",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 0.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:comm:36",
+      "arena": {
+        "verdict": "known",
+        "relation": "duplicate",
+        "num_true": true,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "pay: fires=102 changed=9 paid=0 verify_fail=0 cases=40 | count=1.000x exec=1.000x flops=1.000x launch=1.000x params=1.000x",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 2eq/0ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 135eq/0ne/0rerr (225 acc, 0 dec, 225 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": false,
+          "detail": "fires=102 changed=9 paid=0 verify_fail=0 cases=40 | count=1.000x exec=1.000x flops=1.000x launch=1.000x params=1.000x"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:comm:126",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 64.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 3eq/196ne/0rerr (289 acc, 0 dec, 289 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 3eq/196ne/0rerr (289 acc, 0 dec, 289 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:self-op:188",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:self-op:219",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:self-op:259",
+      "arena": {
+        "verdict": "known",
+        "relation": "inverse",
+        "num_true": true,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "pay: fires=6 changed=1 paid=0 verify_fail=0 cases=40 | count=1.000x exec=1.000x flops=1.000x launch=1.000x params=1.000x",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 15eq/0ne/0rerr (15 acc, 0 dec, 15 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": false,
+          "detail": "fires=6 changed=1 paid=0 verify_fail=0 cases=40 | count=1.000x exec=1.000x flops=1.000x launch=1.000x params=1.000x"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:rotate:280",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 80.0,
+        "cand_cost": 80.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 76eq/276ne/0rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 76eq/276ne/0rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:lit-self:486",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 0.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:rotate:501",
+      "arena": {
+        "verdict": "true",
+        "relation": "new",
+        "num_true": true,
+        "base_cost": 80.0,
+        "cand_cost": 80.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "pay: fires=6 changed=5 paid=0 verify_fail=0 cases=40 | count=1.000x exec=1.000x flops=1.000x launch=1.000x params=1.000x",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 356eq/0ne/0rerr (360 acc, 0 dec, 360 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": false,
+          "detail": "fires=6 changed=5 paid=0 verify_fail=0 cases=40 | count=1.000x exec=1.000x flops=1.000x launch=1.000x params=1.000x"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:lit-self:519",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:lit-self:554",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:lit-self:584",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:lit-self:600",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 0.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:lit-self:616",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:lit-self:630",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:lit-self:646",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:lit-self:662",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:self-op:299",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:factor-left:505",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 80.0,
+        "cand_cost": 80.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 54eq/302ne/0rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 54eq/302ne/0rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:factor-right:507",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 80.0,
+        "cand_cost": 80.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 54eq/302ne/0rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 54eq/302ne/0rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:610",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:612",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:624",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:626",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:640",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:642",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:672",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:674",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:686",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:688",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:702",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:704",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:734",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:736",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:748",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:656",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:658",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:718",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:720",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:lit-self:678",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/17ne/0rerr (17 acc, 0 dec, 17 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/17ne/0rerr (17 acc, 0 dec, 17 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:lit-self:692",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 2eq/15ne/0rerr (17 acc, 0 dec, 17 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 2eq/15ne/0rerr (17 acc, 0 dec, 17 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:lit-self:708",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 2eq/15ne/0rerr (17 acc, 0 dec, 17 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 2eq/15ne/0rerr (17 acc, 0 dec, 17 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:comm:0",
+      "arena": {
+        "verdict": "known",
+        "relation": "duplicate",
+        "num_true": true,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "pay: fires=61 changed=2 paid=0 verify_fail=0 cases=40 | count=1.000x exec=1.000x flops=1.000x launch=1.000x params=1.000x",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 15eq/0ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 135eq/0ne/0rerr (225 acc, 0 dec, 225 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": false,
+          "detail": "fires=61 changed=2 paid=0 verify_fail=0 cases=40 | count=1.000x exec=1.000x flops=1.000x launch=1.000x params=1.000x"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:30",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:32",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:75",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:77",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:120",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:122",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:201",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:203",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:234",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:236",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:274",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:276",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:350",
+      "arena": {
+        "verdict": "true",
+        "relation": "new",
+        "num_true": true,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": true,
+      "skipped": "",
+      "reason": "cleared",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 15eq/0ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 135eq/0ne/0rerr (225 acc, 0 dec, 225 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": true,
+          "detail": "fires=62 changed=2 paid=2 verify_fail=0 cases=40 | count=1.000x exec=1.000x flops=0.829x launch=0.831x params=1.000x"
+        },
+        {
+          "name": "sweep",
+          "passed": true,
+          "detail": "synth: 1109eq/0ne/0rerr (2000 acc, 0 dec, 2000 envs) | real: 15eq/0ne/0rerr (16 acc, 0 dec, 16 envs)"
+        },
+        {
+          "name": "cert",
+          "passed": true,
+          "detail": "rhs->lhs 2 steps (double_neg, sub_to_add)"
+        }
+      ],
+      "novelty": "known-art"
+    },
+    {
+      "name": "enumerate:bin-unary-left:352",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:388",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:390",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:421",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:423",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:165",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:167",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:314",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:316",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:461",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:463",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:494",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:496",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:529",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:531",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:564",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:566",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/15ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:594",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:596",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 1eq/14ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:1074",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/199ne/0rerr (289 acc, 0 dec, 289 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/199ne/0rerr (289 acc, 0 dec, 289 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:1076",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 1eq/198ne/0rerr (289 acc, 0 dec, 289 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 1eq/198ne/0rerr (289 acc, 0 dec, 289 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:1080",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/199ne/0rerr (289 acc, 0 dec, 289 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/199ne/0rerr (289 acc, 0 dec, 289 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:1082",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/199ne/0rerr (289 acc, 0 dec, 289 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/199ne/0rerr (289 acc, 0 dec, 289 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:1086",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/199ne/0rerr (289 acc, 0 dec, 289 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/199ne/0rerr (289 acc, 0 dec, 289 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:1088",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/199ne/0rerr (289 acc, 0 dec, 289 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/199ne/0rerr (289 acc, 0 dec, 289 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:1096",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 16eq/183ne/0rerr (289 acc, 0 dec, 289 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 16eq/183ne/0rerr (289 acc, 0 dec, 289 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:1098",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 16eq/183ne/0rerr (289 acc, 0 dec, 289 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 16eq/183ne/0rerr (289 acc, 0 dec, 289 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:1102",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 16eq/183ne/0rerr (289 acc, 0 dec, 289 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 16eq/183ne/0rerr (289 acc, 0 dec, 289 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:1104",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/199ne/0rerr (289 acc, 0 dec, 289 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/199ne/0rerr (289 acc, 0 dec, 289 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:1108",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 32eq/167ne/0rerr (289 acc, 0 dec, 289 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 32eq/167ne/0rerr (289 acc, 0 dec, 289 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:1110",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 17eq/182ne/0rerr (289 acc, 0 dec, 289 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 17eq/182ne/0rerr (289 acc, 0 dec, 289 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:1118",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 1eq/198ne/0rerr (289 acc, 0 dec, 289 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 1eq/198ne/0rerr (289 acc, 0 dec, 289 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:1120",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/199ne/0rerr (289 acc, 0 dec, 289 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/199ne/0rerr (289 acc, 0 dec, 289 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:1124",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/199ne/0rerr (289 acc, 0 dec, 289 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/199ne/0rerr (289 acc, 0 dec, 289 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:1126",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 1eq/198ne/0rerr (289 acc, 0 dec, 289 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 1eq/198ne/0rerr (289 acc, 0 dec, 289 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:1130",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/199ne/0rerr (289 acc, 0 dec, 289 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/199ne/0rerr (289 acc, 0 dec, 289 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:1132",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/199ne/0rerr (289 acc, 0 dec, 289 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/199ne/0rerr (289 acc, 0 dec, 289 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:1090",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 48.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/199ne/0rerr (289 acc, 0 dec, 289 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/199ne/0rerr (289 acc, 0 dec, 289 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:1092",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 48.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/199ne/0rerr (289 acc, 0 dec, 289 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/199ne/0rerr (289 acc, 0 dec, 289 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:1112",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 48.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 18eq/181ne/0rerr (289 acc, 0 dec, 289 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 18eq/181ne/0rerr (289 acc, 0 dec, 289 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:1114",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 48.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 17eq/182ne/0rerr (289 acc, 0 dec, 289 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 17eq/182ne/0rerr (289 acc, 0 dec, 289 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:1134",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 48.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/199ne/0rerr (289 acc, 0 dec, 289 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/199ne/0rerr (289 acc, 0 dec, 289 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:1136",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 48.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/199ne/0rerr (289 acc, 0 dec, 289 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/199ne/0rerr (289 acc, 0 dec, 289 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:1140",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 64.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 33eq/166ne/0rerr (289 acc, 0 dec, 289 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 33eq/166ne/0rerr (289 acc, 0 dec, 289 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:1142",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 64.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 17eq/182ne/0rerr (289 acc, 0 dec, 289 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 17eq/182ne/0rerr (289 acc, 0 dec, 289 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:1146",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 64.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 16eq/183ne/0rerr (289 acc, 0 dec, 289 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 16eq/183ne/0rerr (289 acc, 0 dec, 289 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:1148",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 64.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 4eq/195ne/0rerr (289 acc, 0 dec, 289 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 4eq/195ne/0rerr (289 acc, 0 dec, 289 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:1152",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 64.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 49eq/150ne/0rerr (289 acc, 0 dec, 289 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 49eq/150ne/0rerr (289 acc, 0 dec, 289 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:1154",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 64.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 37eq/162ne/0rerr (289 acc, 0 dec, 289 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 37eq/162ne/0rerr (289 acc, 0 dec, 289 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:1156",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 64.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 37eq/162ne/0rerr (289 acc, 0 dec, 289 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 37eq/162ne/0rerr (289 acc, 0 dec, 289 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:1158",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 64.0,
+        "cand_cost": 64.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 37eq/162ne/0rerr (289 acc, 0 dec, 289 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 37eq/162ne/0rerr (289 acc, 0 dec, 289 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:750",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:764",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 1eq/134ne/0rerr (225 acc, 0 dec, 225 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 1eq/134ne/0rerr (225 acc, 0 dec, 225 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:766",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:780",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:782",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:796",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 15eq/150ne/0rerr (255 acc, 0 dec, 255 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 15eq/150ne/0rerr (255 acc, 0 dec, 255 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:798",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:810",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 15eq/150ne/0rerr (255 acc, 0 dec, 255 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 15eq/150ne/0rerr (255 acc, 0 dec, 255 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:812",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:826",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 15eq/150ne/0rerr (255 acc, 0 dec, 255 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 15eq/150ne/0rerr (255 acc, 0 dec, 255 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:828",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:842",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 1eq/164ne/0rerr (255 acc, 0 dec, 255 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 1eq/164ne/0rerr (255 acc, 0 dec, 255 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:844",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:rotate:39",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:factor-right:178",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:rotate:40",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:rekey:42",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/7ne/0rerr (7 acc, 0 dec, 7 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/7ne/0rerr (7 acc, 0 dec, 7 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:rotate:172",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/7ne/0rerr (7 acc, 0 dec, 7 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/7ne/0rerr (7 acc, 0 dec, 7 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:rekey:174",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:factor-left:44",
+      "arena": {
+        "verdict": "true",
+        "relation": "new",
+        "num_true": true,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "pay: fires=49 changed=0 paid=0 verify_fail=0 cases=40",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 299eq/0ne/0rerr (360 acc, 0 dec, 360 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": false,
+          "detail": "fires=49 changed=0 paid=0 verify_fail=0 cases=40"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:factor-left:176",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/7ne/0rerr (7 acc, 0 dec, 7 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/7ne/0rerr (7 acc, 0 dec, 7 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:assoc:1",
+      "arena": {
+        "verdict": "known",
+        "relation": "inverse",
+        "num_true": true,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "pay: fires=24 changed=5 paid=0 verify_fail=0 cases=40 | count=1.000x exec=1.000x flops=1.000x launch=1.000x params=1.000x",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 5eq/0ne/0rerr (5 acc, 0 dec, 5 envs) | synth: 299eq/0ne/0rerr (360 acc, 0 dec, 360 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": false,
+          "detail": "fires=24 changed=5 paid=0 verify_fail=0 cases=40 | count=1.000x exec=1.000x flops=1.000x launch=1.000x params=1.000x"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:rekey:41",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/5ne/0rerr (5 acc, 0 dec, 5 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/5ne/0rerr (5 acc, 0 dec, 5 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:rekey:86",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/5ne/0rerr (5 acc, 0 dec, 5 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/5ne/0rerr (5 acc, 0 dec, 5 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:factor-right:6",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 1eq/4ne/0rerr (5 acc, 0 dec, 5 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 1eq/4ne/0rerr (5 acc, 0 dec, 5 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:rekey:131",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/5ne/0rerr (5 acc, 0 dec, 5 envs) | synth: 10eq/346ne/0rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/5ne/0rerr (5 acc, 0 dec, 5 envs) | synth: 10eq/346ne/0rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:assoc:37",
+      "arena": {
+        "verdict": "known",
+        "relation": "inverse",
+        "num_true": true,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "cleared",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 299eq/0ne/0rerr (360 acc, 0 dec, 360 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": true,
+          "detail": "fires=11 changed=7 paid=1 verify_fail=0 cases=40 | count=0.995x exec=0.995x flops=1.003x launch=1.003x params=1.000x"
+        },
+        {
+          "name": "sweep",
+          "passed": true,
+          "detail": "synth: 1015eq/0ne/0rerr (2000 acc, 0 dec, 2000 envs) | real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+        },
+        {
+          "name": "cert",
+          "passed": true,
+          "detail": "lhs->rhs 5 steps (assoc_mul, comm_mul)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:rekey:173",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:rekey:242",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:factor-right:210",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:rekey:282",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 80eq/276ne/0rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 80eq/276ne/0rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:235",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:self-op:60",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:const-op:65",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 0.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:pull-right:216",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:self-op:220",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:const-op:224",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:self-op:374",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:const-op:378",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:unary-of-lit:498",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 0.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:const-op:522",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:unary-of-lit:533",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:unary-absorb:187",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:unary-absorb:218",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:unary-absorb:258",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:unary-absorb:298",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:self-op:518",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/17ne/0rerr (17 acc, 0 dec, 17 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/17ne/0rerr (17 acc, 0 dec, 17 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:self-op:150",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:const-op:155",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 0.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:self-op:300",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:const-op:304",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:self-op:447",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:const-op:451",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:self-op:105",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:const-op:110",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 0.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:rotate:171",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:self-op:260",
+      "arena": {
+        "verdict": "known",
+        "relation": "duplicate",
+        "num_true": true,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "pay: fires=6 changed=4 paid=0 verify_fail=0 cases=40 | count=1.000x exec=1.000x flops=1.000x launch=1.000x params=1.000x",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 15eq/0ne/0rerr (15 acc, 0 dec, 15 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": false,
+          "detail": "fires=6 changed=4 paid=0 verify_fail=0 cases=40 | count=1.000x exec=1.000x flops=1.000x launch=1.000x params=1.000x"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:const-op:264",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:rotate:281",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 80.0,
+        "cand_cost": 80.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/1ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 76eq/276ne/0rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/1ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 76eq/276ne/0rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:self-op:407",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:const-op:411",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:factor-right:46",
+      "arena": {
+        "verdict": "true",
+        "relation": "new",
+        "num_true": true,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "pay: fires=7 changed=0 paid=0 verify_fail=0 cases=40",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 299eq/0ne/0rerr (360 acc, 0 dec, 360 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": false,
+          "detail": "fires=7 changed=0 paid=0 verify_fail=0 cases=40"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:unary-absorb:336",
+      "arena": {
+        "verdict": "true",
+        "relation": "new",
+        "num_true": true,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "pay: fires=24 changed=0 paid=0 verify_fail=0 cases=40",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 15eq/0ne/0rerr (15 acc, 0 dec, 15 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": false,
+          "detail": "fires=24 changed=0 paid=0 verify_fail=0 cases=40"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:unary-absorb:372",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:unary-absorb:405",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:unary-absorb:445",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:factor-left:285",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 80.0,
+        "cand_cost": 80.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/1ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 118eq/242ne/0rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/1ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 118eq/242ne/0rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:factor-right:287",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 80.0,
+        "cand_cost": 80.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/1ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 145eq/215ne/0rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/1ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 145eq/215ne/0rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:comm:81",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 1eq/134ne/0rerr (225 acc, 0 dec, 225 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 1eq/134ne/0rerr (225 acc, 0 dec, 225 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:858",
+      "arena": {
+        "verdict": "known",
+        "relation": "duplicate",
+        "num_true": true,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "pay: fires=15 changed=0 paid=0 verify_fail=0 cases=40",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 135eq/0ne/0rerr (225 acc, 0 dec, 225 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": false,
+          "detail": "fires=15 changed=0 paid=0 verify_fail=0 cases=40"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:860",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 1eq/134ne/0rerr (225 acc, 0 dec, 225 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 1eq/134ne/0rerr (225 acc, 0 dec, 225 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:874",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:876",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:888",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:890",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:918",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:920",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:932",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:904",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:906",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:self-op:17",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:const-op:22",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 0.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:unary-of-lit:34",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 0.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:unary-of-lit:79",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:unary-of-lit:124",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:pull-left:140",
+      "arena": {
+        "verdict": "true",
+        "relation": "new",
+        "num_true": true,
+        "base_cost": 80.0,
+        "cand_cost": 80.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "pay: fires=6 changed=0 paid=0 verify_fail=0 cases=40",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 199eq/0ne/0rerr (289 acc, 0 dec, 289 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": false,
+          "detail": "fires=6 changed=0 paid=0 verify_fail=0 cases=40"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:unary-of-lit:169",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:self-op:189",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:const-op:193",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:unary-of-lit:205",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 0.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:pull-left:213",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:pull-right:215",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:unary-of-lit:238",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:unary-absorb:15",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 0.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:unary-absorb:58",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:unary-absorb:103",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:unary-hom:211",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:hom-cross:233",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:unary-absorb:148",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:934",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:944",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:946",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:972",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:974",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:986",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:988",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:998",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:1000",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:958",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:960",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:1012",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:1014",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:1026",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:1028",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 1eq/164ne/0rerr (255 acc, 0 dec, 255 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 1eq/164ne/0rerr (255 acc, 0 dec, 255 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:1040",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:1042",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:1052",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:1054",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:1066",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:1068",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/165ne/0rerr (255 acc, 0 dec, 255 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-left:204",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:pull-left:50",
+      "arena": {
+        "verdict": "true",
+        "relation": "new",
+        "num_true": true,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "pay: fires=5 changed=0 paid=0 verify_fail=0 cases=40",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 135eq/0ne/0rerr (225 acc, 0 dec, 225 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": false,
+          "detail": "fires=5 changed=0 paid=0 verify_fail=0 cases=40"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:bin-unary-right:202",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:pull-right:52",
+      "arena": {
+        "verdict": "true",
+        "relation": "new",
+        "num_true": true,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "pay: fires=5 changed=0 paid=0 verify_fail=0 cases=40",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 135eq/0ne/0rerr (225 acc, 0 dec, 225 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": false,
+          "detail": "fires=5 changed=0 paid=0 verify_fail=0 cases=40"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:pull-left:181",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:pull-right:183",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:unary-hom:179",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/135ne/0rerr (225 acc, 0 dec, 225 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:rotate:356",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:factor-right:247",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:rotate:241",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:unary-of-lit:278",
+      "arena": {
+        "verdict": "true",
+        "relation": "new",
+        "num_true": true,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "pay: fires=8 changed=0 paid=0 verify_fail=0 cases=40",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 15eq/0ne/0rerr (15 acc, 0 dec, 15 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": false,
+          "detail": "fires=8 changed=0 paid=0 verify_fail=0 cases=40"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:unary-of-lit:318",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:self-op:338",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:const-op:342",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 16.0,
+        "cand_cost": 16.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/15ne/0rerr (15 acc, 0 dec, 15 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "enumerate:factor-left:245",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": false,
+        "base_cost": 32.0,
+        "cand_cost": 32.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 0eq/299ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    }
+  ],
+  "wall_s": 63.3,
+  "env": {
+    "timestamp_utc": "2026-10-21T07:12:21+00:00",
+    "python": "3.13.9",
+    "torch": "2.14.0+cu130",
+    "torch_cuda": "13.0",
+    "device": "cpu",
+    "device_name": "12th Gen Intel(R) Core(TM) i5-12500H",
+    "cpu_count": 16,
+    "git_sha": "3324191",
+    "git_dirty": false,
+    "argv": [
+      "/home/luis/GitHub/handl-lang/graphopt/bench/drivers/overnight.py",
+      "--episodes",
+      "48",
+      "--resume",
+      "--corpus",
+      "zoo"
+    ]
+  },
+  "generated_utc": "2026-10-21T07:12:21+00:00",
+  "seed": 0
+}
