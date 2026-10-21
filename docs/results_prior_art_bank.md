@@ -28,6 +28,15 @@ under the rule itself and replay a standalone certificate.
 accepted site, zero unequal or rhs-err sites inside its guard
 region, and a replayable certificate.
 
+**Sieve scope note.**  `known_bank()` folds in only the prior-art
+``FUSION``/``CATEGORICAL`` rules (the 32 structural transforms).
+The full 185-rule bank in the derivable premises hangs
+``verify_law``'s bounded e-graph (the pointwise-identity and
+decomp-direction rules cycle on neg/add/sub/mul — the composite
+demotion test exceeded a 200 s box vs 0.6 s with the scoped slice).
+``EXPANSIVE``-tagged rules are doubly excluded — the same class
+``DEFAULT`` keeps out on saturation cost.
+
 ## Counts by source
 
 | source | laws |

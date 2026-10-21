@@ -71,6 +71,7 @@ from mlopt_core.laws import (
     PRIOR_ART,
     SCAN_DIAG_LAWS,
     SCAN_LAWS,
+    tags,
 )
 from mlopt_core.laws.provenance import MACHINE_SHIPPED, law_provenance
 from mlopt_core.laws.serialize import alpha_key
@@ -124,7 +125,20 @@ _LOOSE_ATTR_DOM = (-1, -2, 0, 1, 2)
 
 
 def known_bank() -> list:
-    """Return the widest shipped law surface, deduplicated by name."""
+    """Return the widest shipped law surface, deduplicated by name.
+
+    ``PRIOR_ART`` contributes only its ``FUSION``/``CATEGORICAL``
+    rules — the structural transforms (the TASO merges, rope/STE/
+    quant migrations) that are the actual novelty-floor content.
+    ``verify_law``'s bounded e-graph applies every premise at every
+    step: the prior-art ``SIMPLIFICATION``/``EXPANSIVE`` families —
+    the pointwise-identity and decomp-direction rules that cycle on
+    neg/add/sub/mul — explode its node budget and turn the
+    derivable-positive gate into a hang (measured: the composite
+    demotion test exceeds a 200 s box vs ~2 s without them).  Those
+    rules remain in the ``prior_art`` preset itself; the sieve's
+    known floor is the slice it can saturate against.
+    """
     seen: dict[str, Any] = {}
     for group in (
         default_rules(),
@@ -132,9 +146,13 @@ def known_bank() -> list:
         ATTENTION_RULES,
         SCAN_LAWS,
         SCAN_DIAG_LAWS,
-        PRIOR_ART,
     ):
         for r in group:
+            seen.setdefault(r.name, r)
+    for r in PRIOR_ART:
+        if tags.EXPANSIVE in r.tags:
+            continue
+        if tags.FUSION in r.tags or tags.CATEGORICAL in r.tags:
             seen.setdefault(r.name, r)
     return list(seen.values())
 
