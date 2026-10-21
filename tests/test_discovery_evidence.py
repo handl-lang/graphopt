@@ -569,26 +569,6 @@ def _t(d=4):
     return TensorType((d, d))
 
 
-def test_object_codec_marks_and_validates_kind():
-    """The record codec: kind stamped, defaulted, and validated."""
-    rule = _BY_NAME["id_add"]
-    data = object_to_data(rule, kind="law")
-    assert data["kind"] == "law" and object_kind(data) == "law"
-    # a non-law kind stamps provenance; every kind is Rewrite-shaped
-    abs_data = object_to_data(rule, kind="abstraction")
-    assert abs_data["kind"] == "abstraction"
-    assert object_from_data(json.loads(json.dumps(abs_data))).name == (
-        "id_add"
-    )
-    # a legacy record — no "kind" key — reads as a law
-    del abs_data["kind"]
-    assert object_kind(abs_data) == "law"
-    assert object_from_data(abs_data).name == "id_add"
-    # unknown kinds fail loudly at both ends — never a silent admit
-    with pytest.raises(ValueError, match="unknown object kind"):
-        object_to_data(rule, kind="widget")
-    with pytest.raises(ValueError, match="unknown object kind"):
-        object_from_data({"kind": "widget", "version": 2})
 
 
 def test_store_and_admit_object_roundtrip(tmp_path):

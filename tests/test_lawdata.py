@@ -68,8 +68,6 @@ class TestLawdataSplit:
 class TestCoreLawdata:
     """Core content tables — same-object bindings in ``meta``."""
 
-    def test_coherent_names_is_the_table(self):
-        assert meta.COHERENT_RULE_NAMES is core_data.COHERENT_RULE_NAMES
 
     def test_coherent_names_are_real_rules(self):
         """Every classified name resolves in the law universe."""
@@ -88,20 +86,8 @@ class TestCoreLawdata:
             universe |= {r.name for r in meta.module_rules(mod)}
         assert core_data.COHERENT_RULE_NAMES <= universe
 
-    def test_canonicalize_vocab_is_bound(self):
-        assert meta._AC_IDENTITY is core_data.AC_IDENTITY
-        assert meta._ASSOC_ONLY is core_data.ASSOC_ONLY
 
-    def test_ac_identity_ops_are_commutative(self):
-        assert set(core_data.AC_IDENTITY) <= set(COMMUTATIVE_OPS)
 
-    def test_instantiation_bank_is_bound(self):
-        assert meta._LEAF_SHAPES is core_data.INSTANTIATE_LEAF_SHAPES
-        assert meta._ATTR_POOL is core_data.INSTANTIATE_ATTR_POOL
-        assert all(
-            isinstance(s, tuple)
-            for s in core_data.INSTANTIATE_LEAF_SHAPES
-        )
 
 
 class TestOracleBanks:

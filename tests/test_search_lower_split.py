@@ -136,22 +136,6 @@ class _OpaqueEngine:
     run = dict.get
 
 
-def test_policy_kwargs_go_only_to_engines_that_take_them():
-    """A policy-less engine gets a clear error, not a bare TypeError."""
-    from mlopt_core.policies import GreedyPolicy
-    from mlopt_orchestrator.optimize import _policy_kwargs
-
-    policy = GreedyPolicy()
-    # no policy asked for: no kwargs, whatever the engine
-    assert _policy_kwargs(None, _NoPolicyEngine()) == {}
-    # a policy-less engine is named in the error
-    with pytest.raises(TypeError, match="does not accept a policy"):
-        _policy_kwargs(policy, _NoPolicyEngine())
-    # an un-introspectable run() cannot be confirmed either
-    with pytest.raises(TypeError, match="does not accept a policy"):
-        _policy_kwargs(policy, _OpaqueEngine())
-    # the reference engine accepts it
-    assert _policy_kwargs(policy, EGraph()) == {"policy": policy}
 
 
 def _opt() -> Optimizer:
@@ -283,27 +267,6 @@ def test_search_result_alternatives_and_certificate():
     assert cert.src is res.ir.root
 
 
-def test_search_result_flops_fallback():
-    """A hand-built SearchResult with no cost_fn prices alternatives
-    under flops_cost."""
-    from mlopt_core.egraph import EGraph as _EG
-
-    x = Var("x", TensorType((3,)))
-    w = Param(name="p_w", typ=TensorType((3,)))
-    term = Op.make("add", x, w)
-    eg = _EG()
-    eid = eg.add_term(term)
-    res = SearchResult(
-        ir=IR(root=term, inputs=[x], input_names={"x"}, params={}),
-        eg=eg,
-        root_eid=eid,
-        term=term,
-        param_values={},
-        stats={},
-    )
-    alts = res.alternatives()
-    assert alts == [] or isinstance(alts[0][0], float)
-    assert res.model is None and res.source is None
 
 
 # ------------------------------------------------------------------

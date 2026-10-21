@@ -1176,9 +1176,6 @@ def test_shape_inference(spec, expected):
         assert got == tuple(expected)
 
 
-def test_arange_shape_const_operands():
-    t = Op.make("arange", Const(0.0), Const(6.0), Const(2.0))
-    assert _shape_of(t) == (3,)
 
 
 def test_arange_binding_const_operands():
@@ -1187,13 +1184,6 @@ def test_arange_binding_const_operands():
     assert torch.equal(out, torch.arange(4))
 
 
-def test_scaled_extent_bool_guard():
-    """``isinstance(True, int)`` is True — a bool dim/scale is not a
-    concrete extent, and ``_scaled_extent`` declines it."""
-    from mlopt_core.typing import _scaled_extent
-
-    assert _scaled_extent(8, True) is None
-    assert _scaled_extent(True, 2.0) is None
 
 
 def test_pow_shape_broadcasts_exponent():

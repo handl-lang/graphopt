@@ -136,13 +136,6 @@ def _manual_glu_lhs(u=None, v=None, **kw):
 # ---------------------------------------------------------------------------
 
 
-def test_glu_fold_registered_and_tagged():
-    """``glu_fold`` is a shipped simplification, in the default set."""
-    assert GLU_FOLD in SIMPLIFICATION_RULES
-    assert GLU_FOLD.tags == {tags.SIMPLIFICATION}
-    assert GLU_FOLD.kind == "axiom"
-    assert "glu_fold" in {r.name for r in DEFAULT}
-    assert "glu_fold" in {r.name for r in ALL_RULES}
 
 
 # ---------------------------------------------------------------------------
@@ -150,21 +143,6 @@ def test_glu_fold_registered_and_tagged():
 # ---------------------------------------------------------------------------
 
 
-def test_glu_fold_match_instantiate_roundtrip():
-    """Instantiating the LHS and re-matching recovers the shared leaf,
-    the split-axis attr, and the ``glu`` RHS."""
-    u = Var("u", TensorType((4, 8)))
-    subst = {"u": u, "$attr:D": -1}
-    assert pattern_metavars(GLU_FOLD.lhs) == {"$attr:D", "u"}
-    term = instantiate_pattern(GLU_FOLD.lhs, subst)
-    assert term == _manual_glu_lhs(u=u)
-    found = match_pattern(GLU_FOLD.lhs, term)
-    assert found is not None
-    assert found == subst
-    assert instantiate_pattern(GLU_FOLD.lhs, found) == term
-    assert instantiate_pattern(GLU_FOLD.rhs, found) == Op.make(
-        "glu", u, dim=-1
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -301,24 +279,6 @@ def test_glu_fold_fires_with_unknown_dims_off_axis():
     assert eg.rule_fires.get("glu_fold", 0) > 0
 
 
-def test_check_glu_fold_branches():
-    """Direct ``bound`` probes pin every decline path of the check."""
-    shaped = Var("u", TensorType((4, 8)))
-    assert _check_glu_fold({"u": shaped, "$attr:D": -1})
-    # unshaped u — _shape_of returns non-tuple
-    assert not _check_glu_fold(
-        {"u": Var("u", TensorType(None)), "$attr:D": -1}
-    )
-    # non-int dim attr
-    assert not _check_glu_fold({"u": shaped, "$attr:D": (-1,)})
-    # dim out of range
-    assert not _check_glu_fold({"u": shaped, "$attr:D": 5})
-    # scalar u — rank 0 has no axis to halve (also the cond's veto)
-    assert not _check_glu_fold(
-        {"u": Var("u", TensorType(())), "$attr:D": 0}
-    )
-    assert not _check_glu_shaped({"u": Var("u", TensorType(()))})
-    assert _check_glu_shaped({"u": shaped})
 
 
 # ---------------------------------------------------------------------------

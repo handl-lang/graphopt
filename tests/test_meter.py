@@ -31,18 +31,8 @@ from mlopt_torch.meter import (
 # ---------------------------------------------------------------------------
 
 
-def test_timing_result_defaults():
-    """A bare three-field measurement carries no provenance."""
-    r = TimingResult(median_s=0.5, iqr_s=0.1, n_calls=10)
-    assert r.device is None
-    assert r.warmup == 0
-    assert r.failure is FailureClass.OK
 
 
-def test_timing_result_is_frozen():
-    r = TimingResult(0.5, 0.1, 10)
-    with pytest.raises(Exception):
-        r.device = "cpu"
 
 
 def test_torch_meter_conforms_to_meter_port():

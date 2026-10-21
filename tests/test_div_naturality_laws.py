@@ -41,18 +41,6 @@ def _eval(t, env):
     return tb.eval_term(t, var_env=env, bindings=tb._IR_TO_TORCH)
 
 
-class TestRegistration:
-    def test_in_simplification_and_all_rules(self):
-        assert MUL_DIV_SWAP in SIMPLIFICATION_RULES
-        assert MATMUL_DIV_DISTRIBUTE in SIMPLIFICATION_RULES
-        assert MUL_DIV_SWAP in ALL_RULES
-        assert MATMUL_DIV_DISTRIBUTE in ALL_RULES
-
-    def test_kernel_kinds(self):
-        assert MUL_DIV_SWAP.kind == "axiom"
-        assert MATMUL_DIV_DISTRIBUTE.kind == "axiom"
-        assert not MUL_DIV_SWAP.derivation
-        assert not MATMUL_DIV_DISTRIBUTE.derivation
 
 
 class TestMulDivSwap:

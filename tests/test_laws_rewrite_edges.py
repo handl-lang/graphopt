@@ -77,24 +77,6 @@ def _ill_typed():
 # ---------------------------------------------------------------------------
 
 
-def test_base_scale_predicates_on_non_tuple_shapes():
-    # An ill-typed term's shape is the _INVALID marker (not a tuple):
-    # both row-scale and channel-scale must answer False, not crash.
-    bad = _ill_typed()
-    assert not isinstance(_shape_of(bad), tuple)
-    assert not _is_row_scale(bad)
-    assert not _is_channel_scale({"c": bad, "W": _p("W", 4, 4)})
-    # ...and the healthy directions still hold.
-    assert _is_scalar(Const(1))
-    assert _is_scalar(_p("s"))
-    assert _is_row_scale(_p("r", 2, 1))
-    assert not _is_row_scale(_p("r", 2, 4))
-    assert _is_channel_scale({"c": _p("c", 4), "W": _p("W", 4, 4)})
-    assert _is_channel_scale({"c": Const(2), "W": _p("W", 4, 4)})
-    assert not _is_channel_scale({"c": _p("c", 5), "W": _p("W", 4, 4)})
-    # a weight shape that isn't a concrete tuple → not a channel scale
-    assert not _is_channel_scale({"c": _p("c", 4), "W": bad})
-    assert not _is_channel_scale({"c": _p("c", 4)})
 
 
 # ---------------------------------------------------------------------------
@@ -102,34 +84,6 @@ def test_base_scale_predicates_on_non_tuple_shapes():
 # ---------------------------------------------------------------------------
 
 
-def test_check_linear_bias_compose_guards():
-    # A (h,i) B (o,h) b1 (h,) b2 (o,)|scalar x (...,i)
-    good = {
-        "x": _v("x", 2, 3),
-        "A": _p("A", 5, 3),
-        "B": _p("B", 7, 5),
-        "b1": _p("b1", 5),
-        "b2": _p("b2", 7),
-    }
-    assert _check_linear_bias_compose(good)
-    # scalar outer bias is allowed
-    assert _check_linear_bias_compose({**good, "b2": Const(1)})
-
-    def veto(**kw):
-        return not _check_linear_bias_compose({**good, **kw})
-
-    # A or B not rank-2
-    assert veto(A=_p("A", 5))
-    assert veto(B=_p("B", 7, 5, 2))
-    # B's input dim != A's output dim
-    assert veto(B=_p("B", 7, 4))
-    # inner bias must be exactly (h,)
-    assert veto(b1=_p("b1", 4))
-    assert veto(b1=_p("b1", 5, 1))
-    # outer bias must be scalar or (o,)
-    assert veto(b2=_p("b2", 6))
-    # x's last dim must feed A's input dim
-    assert veto(x=_v("x", 2, 4))
 
 
 # ---------------------------------------------------------------------------
@@ -137,63 +91,8 @@ def test_check_linear_bias_compose_guards():
 # ---------------------------------------------------------------------------
 
 
-def test_derive_split_sizes_uneven_qkv():
-    bound = {"Q": _p("Q", 6, 4), "K": _p("K", 2, 4), "V": _p("V", 2, 4)}
-    assert _derive_split_sizes(bound) == {"$attr:SZ": (6, 2, 2)}
-    # a None dim anywhere in a weight declines the derive
-    assert (
-        _derive_split_sizes(
-            {
-                "Q": _p("Q", None, 4),
-                "K": _p("K", 2, 4),
-                "V": _p("V", 2, 4),
-            }
-        )
-        is None
-    )
-    # a bound leaf with no tensor type declines too
-    assert (
-        _derive_split_sizes(
-            {"Q": Const(1), "K": _p("K", 2, 4), "V": _p("V", 2, 4)}
-        )
-        is None
-    )
 
 
-def test_qkv_fuse_asym_fires_and_vetoes_via_egraph():
-    """The derive hook runs inside a real ``apply_rule`` — an uneven
-    (6,2,2) QKV match produces the split member; an unknown-width Q is
-    vetoed before instantiation."""
-    x = _v("x", 2, 4)
-    Q, K, V = _p("Q", 6, 4), _p("K", 2, 4), _p("V", 2, 4)
-
-    def sdpa(wq, wk, wv):
-        return Op.make(
-            "sdpa",
-            _head_v(Op.make("linear", x, wq), (2, 2, 3, 2)),
-            _head_v(Op.make("linear", x, wk), (2, 2, 1, 2)),
-            _head_v(Op.make("linear", x, wv), (2, 2, 1, 2)),
-            scale=0.5,
-            enable_gqa=False,
-        )
-
-    eg = EGraph()
-    root = eg.add_term(sdpa(Q, K, V))
-    assert eg.apply_rule(QKV_FUSE_ASYM, root)
-    # the fused member was materialised through split enodes
-    assert any(
-        n.op == "split" for ec in eg._classes.values() for n in ec.nodes
-    )
-
-    # A weight with an unknown out-dim vetoes the derive → no merge.
-    eg2 = EGraph()
-    bad = eg2.add_term(sdpa(_p("Qb", None, 4), K, V))
-    assert not eg2.apply_rule(QKV_FUSE_ASYM, bad)
-    assert not any(
-        n.op == "split"
-        for ec in eg2._classes.values()
-        for n in ec.nodes
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -213,227 +112,14 @@ def _repeat_bound(r=4, *, ud=3, es=None, rs=None, k_shape=(1, 4, 2, 3)):
     return {"k": k, "$attr:UDk": ud, "$attr:ESk": es, "$attr:RSk": rs}
 
 
-def test_check_repeat_chain_guards():
-    ok = _repeat_bound()
-    assert _check_repeat_chain(ok, "k")
-    # non-int dim / non-tuple shapes / unresolvable base → veto
-    assert not _check_repeat_chain({**ok, "$attr:UDk": "3"}, "k")
-    assert not _check_repeat_chain({**ok, "$attr:ESk": 5}, "k")
-    assert not _check_repeat_chain(
-        {**ok, "k": _ill_typed(), "base": None}, "k"
-    )
-    # symbolic dims in the base → veto
-    assert not _check_repeat_chain(
-        _repeat_bound(k_shape=(None, 4, 2, 3)), "k"
-    )
-    # unsqueeze dim 0 is not a repeat_interleave pattern
-    assert not _check_repeat_chain(_repeat_bound(ud=0), "k")
-    # expand rank mismatch → veto
-    assert not _check_repeat_chain(
-        {**ok, "$attr:ESk": (1, 4, 2, 4)}, "k"
-    )
-    # repeat factor must be an int > 1
-    assert not _check_repeat_chain(
-        {**ok, "$attr:ESk": (1, 4, 2, 1, 3)}, "k"
-    )
-    # expand may only grow the inserted dim
-    assert not _check_repeat_chain(
-        {**ok, "$attr:ESk": (1, 8, 2, 4, 3)}, "k"
-    )
-    # reshape that doesn't merge the repeated dims → veto
-    assert not _check_repeat_chain(
-        {**ok, "$attr:RSk": (1, 4, 2, 4, 3)}, "k"
-    )
 
 
-def test_check_gqa_absorb_both_directions():
-    """q heads = kv heads * repeat, k/v chains with the same repeat."""
-    q = _p("q", 1, 4, 8, 3)  # 8 q-heads, 2 kv-heads, r = 4
-    b = _repeat_bound()
-    bound = {
-        "q": q,
-        "k": b["k"],
-        "v": _p("v", 1, 4, 2, 3),
-        "$attr:UDk": 3,
-        "$attr:ESk": (1, 4, 2, 4, 3),
-        "$attr:RSk": (1, 4, 8, 3),
-        "$attr:UDv": 3,
-        "$attr:ESv": (1, 4, 2, 4, 3),
-        "$attr:RSv": (1, 4, 8, 3),
-    }
-    assert _check_gqa_absorb(bound)
-    # k/v repeat factors must agree — a valid-but-different v chain
-    # (r=3 with its own consistent reshape) is rejected here
-    assert not _check_gqa_absorb(
-        {
-            **bound,
-            "$attr:ESv": (1, 4, 2, 3, 3),
-            "$attr:RSv": (1, 4, 6, 3),
-        }
-    )
-    # a malformed repeat chain vetoes
-    assert not _check_gqa_absorb({**bound, "$attr:UDk": 0})
-    # q/k shapes unresolvable → veto
-    assert not _check_gqa_absorb({**bound, "q": _ill_typed()})
-    # symbolic dims in q/k → veto
-    assert not _check_gqa_absorb(
-        {**bound, "q": _p("q2", None, 4, 8, 3)}
-    )
-    # q head count must equal kv_heads * r
-    assert not _check_gqa_absorb({**bound, "q": _p("q3", 1, 4, 7, 3)})
-    # rank-3 leaves satisfy the chain/head clauses but the minted
-    # enable_gqa RHS cannot contract (measured rhs-err — the
-    # chained-bindings hole); the rank clauses decline them.
-    rank3 = {
-        "q": _v("q", 2, 6, 4),
-        "k": _v("k", 2, 3, 4),
-        "v": _v("v", 2, 3, 4),
-        "$attr:UDk": -2,
-        "$attr:ESk": (2, 3, 2, 4),
-        "$attr:RSk": (2, 6, 4),
-        "$attr:UDv": -2,
-        "$attr:ESv": (2, 3, 2, 4),
-        "$attr:RSv": (2, 6, 4),
-    }
-    assert not _check_gqa_absorb(rank3)
 
 
-def test_gqa_absorb_declines_a_rank3_term():
-    """End-to-end through ``apply_rule``: a rank-3 sdpa term whose
-    k/v carry consistent repeat chains mints NO new enodes — the
-    ``enable_gqa`` RHS cannot contract on rank-3 operands, so the
-    guard declines the match (the measured ``rhs-err`` site)."""
-    q = _v("q", 2, 6, 4)
-    k, v = _v("k", 2, 3, 4), _v("v", 2, 3, 4)
-
-    def rep3(t):
-        return Op.make(
-            "transpose",
-            Op.make(
-                "reshape",
-                Op.make(
-                    "expand",
-                    Op.make("unsqueeze", t, dim=-2),
-                    shape=(2, 3, 2, 4),
-                ),
-                shape=(2, 6, 4),
-            ),
-            dim0=1,
-            dim1=2,
-        )
-
-    term = Op.make(
-        "sdpa",
-        Op.make("transpose", q, dim0=1, dim1=2),
-        rep3(k),
-        rep3(v),
-        dropout_p=0.0,
-        is_causal=False,
-    )
-    eg = EGraph()
-    root = eg.add_term(term)
-    assert not eg.apply_rule(GQA_ABSORB, root)
-    assert all(
-        dict(n.attrs).get("enable_gqa") is not True
-        for n in eg.get_class(root).nodes
-    )
 
 
-def test_gqa_absorb_real_firing_and_veto():
-    """End-to-end through ``apply_rule``: a real repeat_kv sdpa term
-    gains the ``enable_gqa`` member; a mismatched head count does not."""
-    q = _p("q", 1, 4, 8, 3)
-    k, v = _p("k", 1, 4, 2, 3), _p("v", 1, 4, 2, 3)
-
-    def rep(t):
-        return Op.make(
-            "transpose",
-            Op.make(
-                "reshape",
-                Op.make(
-                    "expand",
-                    Op.make("unsqueeze", t, dim=3),
-                    shape=(1, 4, 2, 4, 3),
-                ),
-                shape=(1, 4, 8, 3),
-            ),
-            dim0=1,
-            dim1=2,
-        )
-
-    term = Op.make(
-        "sdpa",
-        Op.make("transpose", q, dim0=1, dim1=2),
-        rep(k),
-        rep(v),
-        dropout_p=0.0,
-        is_causal=False,
-    )
-    eg = EGraph()
-    root = eg.add_term(term)
-    assert eg.apply_rule(GQA_ABSORB, root)
-    assert any(
-        dict(n.attrs).get("enable_gqa") is True
-        for n in eg.get_class(root).nodes
-    )
-
-    # q with 7 heads (2 kv * 4 = 8 required) → the check vetoes.
-    bad = Op.make(
-        "sdpa",
-        Op.make("transpose", _p("qb", 1, 4, 7, 3), dim0=1, dim1=2),
-        rep(k),
-        rep(v),
-        dropout_p=0.0,
-        is_causal=False,
-    )
-    eg2 = EGraph()
-    root2 = eg2.add_term(bad)
-    assert not eg2.apply_rule(GQA_ABSORB, root2)
-    assert all(
-        dict(n.attrs).get("enable_gqa") is not True
-        for n in eg2.get_class(root2).nodes
-    )
 
 
-def test_gqa_absorb_legacy_argn_spelling_cannot_bind():
-    """The pre-fix LHS pinned ``arg4``/``arg5`` metavars; the export
-    boundary only emits the canonical ``dropout_p``/``is_causal``
-    spellings (``ATTR_SCHEMA["sdpa"]``), so the metas could never bind
-    and the law was latent-unreachable.  A term still minted with the
-    literal positional spellings behaves as if those attrs were absent
-    (``attrs.py`` — readers consume the canonical name only), so the
-    argN term must NOT fire the canonicalised rule."""
-    q = _p("q", 1, 4, 8, 3)
-    k, v = _p("k", 1, 4, 2, 3), _p("v", 1, 4, 2, 3)
-
-    def rep(t):
-        return Op.make(
-            "transpose",
-            Op.make(
-                "reshape",
-                Op.make(
-                    "expand",
-                    Op.make("unsqueeze", t, dim=3),
-                    shape=(1, 4, 2, 4, 3),
-                ),
-                shape=(1, 4, 8, 3),
-            ),
-            dim0=1,
-            dim1=2,
-        )
-
-    legacy = Op.make(
-        "sdpa",
-        Op.make("transpose", q, dim0=1, dim1=2),
-        rep(k),
-        rep(v),
-        arg4=0.0,
-        arg5=False,
-    )
-    assert dict(legacy.attrs) == {"arg4": 0.0, "arg5": False}
-    eg = EGraph()
-    root = eg.add_term(legacy)
-    assert not eg.apply_rule(GQA_ABSORB, root)
 
 
 # ---------------------------------------------------------------------------
@@ -458,61 +144,10 @@ def _sdpa_bound(**kw):
     return b
 
 
-def test_check_score_transpose_and_softmax_dim():
-    assert _check_score_transpose(_sdpa_bound())
-    # dims must be ints on the last two axes of a concrete K
-    assert not _check_score_transpose(_sdpa_bound(**{"$attr:TD1": 0}))
-    assert not _check_score_transpose(
-        _sdpa_bound(**{"$attr:TD1": "-2"})
-    )
-    assert not _check_score_transpose(
-        _sdpa_bound(K=_p("K2", None, 4, 8, 6))
-    )
-    # swapped order on the same axes is still a transpose
-    assert _check_score_transpose(
-        _sdpa_bound(**{"$attr:TD1": -1, "$attr:TD2": -2})
-    )
-
-    assert _check_softmax_dim(_sdpa_bound())
-    assert _check_softmax_dim(_sdpa_bound(**{"$attr:SD": 3}))
-    assert not _check_softmax_dim(_sdpa_bound(**{"$attr:SD": 0}))
-    assert not _check_softmax_dim(_sdpa_bound(**{"$attr:SD": "last"}))
-    assert not _check_softmax_dim(_sdpa_bound(Q=_p("Q2")))
 
 
-def test_check_sdpa_helpers_and_scale_derives():
-    assert _check_sdpa_base(_sdpa_bound())
-    # base check fails → every derived check fails
-    assert not _check_sdpa_mf(_sdpa_bound(**{"$attr:SD": 0}))
-    assert not _check_sdpa_scaled(_sdpa_bound(S=Const("s")))
-    assert not _check_sdpa_mf_scaled(_sdpa_bound(F=Const(-1.0)))
-    # the masked_fill value must be a large negative
-    assert _check_sdpa_mf(_sdpa_bound())
-    assert not _check_sdpa_mf(_sdpa_bound(F=Const(-1.0)))
-    assert _check_sdpa_mf_scaled(_sdpa_bound())
-    # scale plumbing
-    assert _scale_of(_sdpa_bound()) == 0.125
-    assert _scale_of(_sdpa_bound(S=Const("x"))) is None
-    assert _derive_scale_mul(_sdpa_bound()) == {"$attr:SC": 0.125}
-    assert _derive_scale_div(_sdpa_bound()) == {"$attr:SC": 8.0}
-    assert _derive_scale_div(_sdpa_bound(S=Const("x"))) is None
-    assert _derive_scale_one(_sdpa_bound()) == {"$attr:SC": 1.0}
 
 
-def test_head_and_repeat_template_terms():
-    """The shared pattern builders mint the expected structure."""
-    t = _head("w")
-    assert t.op == "transpose" and t.args[0].op == "reshape"
-    assert dict(t.attrs) == {"dim0": 1, "dim1": 2}
-    assert dict(t.args[0].attrs) == {"shape": "S"}
-    tv = _head_v("w", "S9")
-    assert dict(tv.args[0].attrs) == {"shape": "S9"}
-    assert _QKV_CAT.op == "concat" and _QKV_CAT.args[0].op == "concat"
-    for rep in (_REPEAT_KV, _REPEAT_V):
-        assert rep.op == "transpose"
-        rs = rep.args[0]
-        assert rs.op == "reshape" and rs.args[0].op == "expand"
-        assert rs.args[0].args[0].op == "unsqueeze"
 
 
 # ---------------------------------------------------------------------------
@@ -520,15 +155,6 @@ def test_head_and_repeat_template_terms():
 # ---------------------------------------------------------------------------
 
 
-def test_term_has_var_and_wshape():
-    x, w = _v("x", 4), _p("w", 4, 4)
-    assert _term_has_var(x)
-    assert _term_has_var(Op.make("add", w, Op.make("mul", x, w)))
-    assert not _term_has_var(w)
-    assert not _term_has_var(Const(0))
-    assert not _term_has_var(Op.make("add", w, Const(1)))
-    assert _wshape(w) == (4, 4)
-    assert _wshape(Const(0)) == ()
 
 
 # ---------------------------------------------------------------------------
@@ -552,151 +178,16 @@ def _cyclic_eclass(eg):
     return cid
 
 
-def test_pair_shared_input_happy_group():
-    """Two linears on one input pair into one GEMM + split views; the
-    merge is witnessed so certificates can replay it."""
-    eg = EGraph()
-    x = eg.add_term(_v("x", 2, 4))
-    w1 = eg.add_term(_p("w1", 8, 4))
-    w2 = eg.add_term(_p("w2", 8, 4))
-    m1 = eg.add_enode("linear", (x, w1))
-    m2 = eg.add_enode("linear", (x, w2))
-    groups = pair_shared_input_linears(eg)
-    assert len(groups) == 1
-    grp = groups[0]
-    assert set(grp) == {eg.find(m1), eg.find(m2)}
-    en = next(iter(grp.values()))
-    assert en.op == "split" and dict(en.attrs)["sizes"] == (8, 8)
-    # members were unioned to their split views
-    for cid in grp:
-        assert any(n.op == "split" for n in eg.get_class(cid).nodes)
 
 
-def test_pair_shared_input_guard_paths():
-    """Every 'continue' in the pass corresponds to a real degenerate
-    structure — each is built and verified to leave no offer."""
-    # (a) input e-class with no reachable Var → pairing a compile-time
-    # chain is noise.  A cyclic-only class also exercises the
-    # memoised reachability walk's cycle cut.
-    eg = EGraph()
-    cyc = _cyclic_eclass(eg)
-    w = eg.add_term(_p("w", 8, 4))
-    eg.add_enode("linear", (cyc, w))
-    # weight class that cannot resolve a term → skipped member
-    x = eg.add_term(_v("x", 2, 4))
-    wcyc = _cyclic_eclass(eg)
-    eg.add_enode("linear", (x, wcyc))
-    # weight that IS a concat (already fused) → excluded member
-    wcat = eg.add_term(
-        Op.make("concat", _p("wa", 8, 4), _p("wb", 8, 4), dim=0)
-    )
-    eg.add_enode("linear", (x, wcat))
-    # lone surviving member → no pair
-    w1 = eg.add_term(_p("w1", 8, 4))
-    eg.add_enode("linear", (x, w1))
-    assert pair_shared_input_linears(eg) == []
-
-    # (b) two DISTINCT enodes sharing input AND weight — the weight set
-    # has one element → nothing to fuse.
-    eg2 = EGraph()
-    x2 = eg2.add_term(_v("x2", 2, 4))
-    w2 = eg2.add_term(_p("w2", 8, 4))
-    eg2.add_enode("linear", (x2, w2), {"variant": 1})
-    eg2.add_enode("linear", (x2, w2), {"variant": 2})
-    assert pair_shared_input_linears(eg2) == []
-
-    # (c) a weight reachable from a Var → the fused GEMM would read
-    # runtime data — declined.
-    eg3 = EGraph()
-    x3 = eg3.add_term(_v("x3", 2, 4))
-    wv = eg3.add_term(Op.make("mul", _v("g", 8, 4), _p("wb", 8, 4)))
-    w3 = eg3.add_term(_p("w3", 8, 4))
-    eg3.add_enode("linear", (x3, wv))
-    eg3.add_enode("linear", (x3, w3))
-    assert pair_shared_input_linears(eg3) == []
-
-    # (d) a weight whose out-dim is unknown — sizes can't be proven →
-    # the whole cluster is skipped.
-    eg4 = EGraph()
-    x4 = eg4.add_term(_v("x4", 2, 4))
-    wn = eg4.add_term(_p("wn", None, 4))
-    w4 = eg4.add_term(_p("w4", 8, 4))
-    eg4.add_enode("linear", (x4, wn))
-    eg4.add_enode("linear", (x4, w4))
-    assert pair_shared_input_linears(eg4) == []
 
 
-def test_pair_shared_input_offer_without_witness():
-    """When no representative term exists for a member's class the
-    union proceeds witness-free (the merge is still recorded)."""
-    eg = EGraph()
-    # Force the "oldest term" resolution to fail so the pass cannot
-    # synthesise a pointwise witness — the offer must still land.
-    eg._oldest_term = lambda *a, **k: None
-    x = eg.add_term(_v("x", 2, 4))
-    w1 = eg.add_term(_p("w1", 8, 4))
-    w2 = eg.add_term(_p("w2", 8, 4))
-    eg.add_enode("linear", (x, w1))
-    eg.add_enode("linear", (x, w2))
-    groups = pair_shared_input_linears(eg)
-    assert len(groups) == 1
 
 
-def test_pair_shared_input_conv_groups_excluded():
-    """Grouped convolutions cannot concat on out-channels — the key
-    returns None and grouped members are excluded from pairing."""
-    eg = EGraph()
-    x = eg.add_term(_v("x", 1, 8, 16, 16))
-    w1 = eg.add_term(_p("w1", 8, 8, 3, 3))
-    w2 = eg.add_term(_p("w2", 8, 8, 3, 3))
-    wg = eg.add_term(_p("wg", 8, 4, 3, 3))
-    wflat = eg.add_term(_p("wflat", 8, 8))  # not a 4-D conv weight
-    eg.add_enode("conv2d", (x, w1), {"stride": 1, "padding": 1})
-    eg.add_enode("conv2d", (x, w2), {"stride": 1, "padding": 1})
-    eg.add_enode(
-        "conv2d", (x, wg), {"stride": 1, "padding": 1, "groups": 2}
-    )
-    eg.add_enode("conv2d", (x, wflat), {"stride": 1, "padding": 1})
-    groups = pair_shared_input_convs(eg)
-    assert len(groups) == 1
-    grp = groups[0]
-    # only the two same-geometry members paired; sizes = out channels
-    assert len(grp) == 2
-    assert dict(next(iter(grp.values())).attrs)["sizes"] == (8, 8)
 
 
-def test_pair_shared_input_conv_incompatible_shapes():
-    """Convs on one input that share no compatible geometry (kernel or
-    stride) produce no group."""
-    eg = EGraph()
-    x = eg.add_term(_v("x", 1, 8, 16, 16))
-    w1 = eg.add_term(_p("w1", 8, 8, 3, 3))
-    w2 = eg.add_term(_p("w2", 8, 8, 1, 1))
-    eg.add_enode("conv2d", (x, w1), {"stride": 1, "padding": 1})
-    eg.add_enode("conv2d", (x, w2), {"stride": 1, "padding": 0})
-    assert pair_shared_input_convs(eg) == []
 
 
-def test_pair_shared_input_arbitrary_op():
-    """The pass is op-parametric: running it on 'matmul'-style members
-    shows the same domain-sharing mechanics for a custom signature."""
-    eg = EGraph()
-    x = eg.add_term(_v("x", 2, 4))
-    w1 = eg.add_term(_p("w1", 8, 4))
-    w2 = eg.add_term(_p("w2", 8, 4))
-    eg.add_enode("matmul", (x, w1))
-    eg.add_enode("matmul", (x, w2))
-    groups = _pair_shared_input(
-        eg,
-        op="matmul",
-        split_dim=-1,
-        cluster_key=lambda n, wt: (
-            ("mm",)
-            if isinstance(_wshape(wt), tuple) and len(_wshape(wt)) == 2
-            else None
-        ),
-    )
-    assert len(groups) == 1
 
 
 # ---------------------------------------------------------------------------

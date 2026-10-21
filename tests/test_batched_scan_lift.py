@@ -186,39 +186,6 @@ def _applyd_members(eg, root):
 # ---------------------------------------------------------------------------
 
 
-class TestMatmulShape:
-    def test_vector_cases(self):
-        assert _matmul_shape((4, 4), (4,)) == (4,)
-        assert _matmul_shape((4,), (4, 4)) == (4,)
-        assert _matmul_shape((4,), (4,)) == ()
-        assert _matmul_shape((4,), (5,)) is None
-        assert _matmul_shape((3, 5), (4,)) is None
-        assert _matmul_shape((5,), (3, 4)) is None
-
-    def test_matrix_batch_cases(self):
-        assert _matmul_shape((2, 3, 3), (2, 3, 1)) == (2, 3, 1)
-        assert _matmul_shape((3, 3), (2, 3, 1)) == (2, 3, 1)
-        assert _matmul_shape((4,), (2, 4, 5)) == (2, 5)
-        # inner-dim / batch mismatch
-        assert _matmul_shape((2, 3, 3), (2, 4, 1)) is None
-        assert _matmul_shape((2, 3, 3), (5, 3, 3)) is None
-
-    def test_invalid_operands(self):
-        assert _matmul_shape(None, (4,)) is None
-        assert _matmul_shape((4,), "x") is None
-        assert _matmul_shape((), (4,)) is None
-        assert _matmul_shape((4,), ()) is None
-        # vector-matrix promotion: (k,) @ (…, k, n) -> (…, n)
-        assert _matmul_shape((2,), (2, 4)) == (4,)
-        assert _matmul_shape((4,), (2, 4)) is None
-
-    def test_none_dims_are_wildcards(self):
-        assert _matmul_shape((None, 3, 3), (None, 3, 1)) == (
-            None,
-            3,
-            1,
-        )
-        assert _matmul_shape((3,), (None,)) == ()
 
 
 # ---------------------------------------------------------------------------

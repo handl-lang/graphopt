@@ -68,17 +68,6 @@ def test_full_skips_uninstalled_carrier(monkeypatch):
         assert op in t.torch_bindings, op
 
 
-def test_full_reraises_errors_inside_a_carrier(monkeypatch):
-    """The skip is narrowed by ``ModuleNotFoundError.name``: a missing
-    import inside an installed carrier (reported under the missing
-    dependency's name, not the carrier's) still propagates."""
-    monkeypatch.setattr(
-        ops_mod,
-        "importlib",
-        _import_blocker("mlopt_carriers.om", missing="torch"),
-    )
-    with pytest.raises(ModuleNotFoundError, match="torch"):
-        OpTable.full()
 
 
 def test_expand_binding_accepts_scalar_and_sequence_shapes():

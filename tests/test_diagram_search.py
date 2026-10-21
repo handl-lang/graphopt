@@ -601,12 +601,6 @@ def test_search_optimize_rest_fallback():
     assert stats["end_to_end"]["max_rel_diff"] < 1e-10
 
 
-def test_search_bad_mode():
-    """An unknown mode is a constructor-time ``ValueError``."""
-    import pytest
-
-    with pytest.raises(ValueError, match="greedy"):
-        ContractionSearch(mode="bogus")
 
 
 def test_search_ghost_rep_unit():

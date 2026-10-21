@@ -134,6 +134,52 @@ class TestDryRun:
             )
 
 
+class TestCorpusZoo:
+    """``--corpus zoo`` — real modules as the episode boards."""
+
+    def test_zoo_arena_pool_is_real_matched(self):
+        """Every pooled candidate's pattern LHS binds the module."""
+        from mlopt_core.egraph.terms import _term_match
+        from mlopt_core.ir import Op
+        from mlopt_core.meta import _positions
+
+        case = {"zoo": "LoRAAdapter", "wseed": 0, "page": 6, "scan": 384}
+        arena = on._ZooArena(case)
+        assert not arena.error
+        assert arena.pool, "no stream candidate matched the module"
+        ir, _t, _f = on._zoo_export(case)
+        subs = [s for _p, s in _positions(ir.root) if isinstance(s, Op)]
+        for cand in arena.pool:
+            pat = cand.as_rule().lhs
+            assert any(
+                _term_match(pat, s) is not None for s in subs
+            ), f"{cand.label}: not a real match"
+
+    def test_zoo_dry_completes_and_records_corpus(self, tmp_path):
+        """The zoo arm end-to-end: episodes are real modules."""
+        t0 = time.time()
+        assert (
+            on.main(_argv(tmp_path, "--dry", "--corpus", "zoo")) == 0
+        )
+        assert time.time() - t0 < 180  # exports + referee, seconds
+        man, cells = _records(tmp_path / "ck.jsonl")
+        # the corpus arm is protocol-pinned — resume can't mix arms
+        assert man["protocol"]["corpus"] == "zoo"
+        episodes = _cells(cells, "episode")
+        assert len(episodes) == 2
+        for e in episodes:
+            assert "zoo" in e["record"]["case"]
+        payload = json.loads((tmp_path / "out.json").read_text())
+        assert payload["corpus"] == "zoo"
+        assert "corpus: `zoo`" in (tmp_path / "out.md").read_text()
+
+    def test_grammar_is_the_default_corpus(self, tmp_path):
+        """Back-compat: a bare ``--dry`` runs the grammar arm."""
+        assert on.main(_argv(tmp_path, "--dry")) == 0
+        man, _cells = _records(tmp_path / "ck.jsonl")
+        assert man["protocol"]["corpus"] == "grammar"
+
+
 class TestResume:
     """A protocol-matched resume replays cells, never re-measures."""
 

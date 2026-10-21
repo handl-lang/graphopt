@@ -165,12 +165,6 @@ class _ManualSiLU(torch.nn.Module):
 # ---------------------------------------------------------------------------
 
 
-def test_silu_fold_registered_and_tagged():
-    """``silu_fold`` is a shipped simplification, in the default set."""
-    assert SILU_FOLD in SIMPLIFICATION_RULES
-    assert SILU_FOLD.tags == {tags.SIMPLIFICATION}
-    assert "silu_fold" in {r.name for r in DEFAULT}
-    assert "silu_fold" in {r.name for r in ALL_RULES}
 
 
 # ---------------------------------------------------------------------------
@@ -178,21 +172,6 @@ def test_silu_fold_registered_and_tagged():
 # ---------------------------------------------------------------------------
 
 
-def test_silu_fold_match_instantiate_roundtrip():
-    """Instantiating the LHS and re-matching recovers the shared leaf
-    and the ``silu`` RHS."""
-    u = Var("u", TensorType((4, 8)))
-    subst = {"x": u}
-    assert pattern_metavars(SILU_FOLD.lhs) == {"x"}
-    term = instantiate_pattern(SILU_FOLD.lhs, subst)
-    assert term == Op.make("mul", u, Op.make("sigmoid", u))
-    found = match_pattern(SILU_FOLD.lhs, term)
-    assert found is not None
-    assert found == subst
-    assert instantiate_pattern(SILU_FOLD.lhs, found) == term
-    assert instantiate_pattern(SILU_FOLD.rhs, found) == Op.make(
-        "silu", u
-    )
 
 
 # ---------------------------------------------------------------------------

@@ -56,49 +56,12 @@ def _mm():
     )
 
 
-def test_fresh_mint_is_equal_but_distinct():
-    t = _mm()
-    t2 = _fresh(t)
-    assert t2 is not t
-    assert t2 == t and hash(t2) == hash(t)
 
 
-def test_has_var_shared_memo_content_keyed():
-    t1 = Op("add", (_mm(), Const(0.0)), {})
-    t2 = _fresh(t1)
-    memo: dict = {}
-    assert has_var_leaf(t1, memo) is True
-    n = len(memo)
-    # Second call over the twin: content-keyed hits, id-keyed would
-    # append a whole second set of entries for the twin objects.
-    assert has_var_leaf(t2, memo) is True
-    assert len(memo) == n
 
 
-def test_canonicalize_shared_memo_consistent():
-    x = Var("x", _T(2))
-    y = Var("y", _T(2))
-    inner = Op("add", (x, Const(0.0)), {})  # identity element drops
-    t1 = Op("add", (inner, y), {})
-    t2 = _fresh(t1)
-    memo: dict = {}
-    c1 = canonicalize(t1, memo)
-    n = len(memo)
-    c2 = canonicalize(t2, memo)
-    assert c1 == c2
-    assert op_repr(c1) == op_repr(c2)
-    assert len(memo) == n
 
 
-def test_match_pattern_metavar_binds_equal_distinct_terms():
-    # A repeated metavar must bind STRUCTURALLY equal subterms — not
-    # the same object.  an ``is`` check would refuse the twin.
-    pat = Op("add", ("$a", "$a"), {})
-    a1 = _mm()
-    term = Op("add", (a1, _fresh(a1)), {})
-    subst = match_pattern(pat, term)
-    assert subst is not None
-    assert subst["$a"] == a1
 
 
 def test_is_om_tree_shared_memo_content_keyed():

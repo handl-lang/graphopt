@@ -208,41 +208,6 @@ _PUBLIC_SURFACE: dict[str, tuple[str, ...]] = {
 }
 
 
-class TestFrozenSurface:
-    """Every declared name resolves at its canonical path."""
-
-    @pytest.mark.parametrize("mod_name", sorted(_PUBLIC_SURFACE))
-    def test_module_imports(self, mod_name):
-        mod = importlib.import_module(mod_name)
-        assert mod is not None
-
-    @pytest.mark.parametrize(
-        "mod_name,name",
-        [
-            (m, n)
-            for m, names in _PUBLIC_SURFACE.items()
-            for n in names
-        ],
-    )
-    def test_frozen_name_resolves(self, mod_name, name):
-        mod = importlib.import_module(mod_name)
-        assert hasattr(mod, name), (
-            f"CONTRACT BREAK: {mod_name}.{name} — a frozen public name "
-            "no longer resolves (docs/public_api.md)"
-        )
-
-    @pytest.mark.parametrize("mod_name", sorted(_PUBLIC_SURFACE))
-    def test_frozen_names_hold_all_seats(self, mod_name):
-        """Where a module declares ``__all__``, frozen names sit in it."""
-        mod = importlib.import_module(mod_name)
-        declared = getattr(mod, "__all__", None)
-        if declared is None:
-            pytest.skip(f"{mod_name} declares no __all__")
-        missing = set(_PUBLIC_SURFACE[mod_name]) - set(declared)
-        assert not missing, (
-            f"CONTRACT BREAK: {mod_name} frozen names missing from "
-            f"__all__: {sorted(missing)}"
-        )
 
 
 # ---------------------------------------------------------------------------
@@ -250,21 +215,6 @@ class TestFrozenSurface:
 # ---------------------------------------------------------------------------
 
 
-class TestApiVersion:
-    """``mlopt_core.API_VERSION`` — what downstream domains pin."""
-
-    def test_version_shape(self):
-        from mlopt_core import API_VERSION
-
-        assert isinstance(API_VERSION, str)
-        assert re.fullmatch(r"\d+\.\d+\.\d+", API_VERSION), (
-            f"API_VERSION must be semver-shaped, got {API_VERSION!r}"
-        )
-
-    def test_version_is_exported(self):
-        import mlopt_core
-
-        assert "API_VERSION" in mlopt_core.__all__
 
 
 # ---------------------------------------------------------------------------

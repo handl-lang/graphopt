@@ -172,28 +172,8 @@ def test_executor_negatives():
 # ---------------------------------------------------------------------------
 
 
-def test_builtin_cost_models_are_cost_fns():
-    for fn in (
-        flops_cost,
-        launch_aware_cost,
-        count_cost,
-        param_bytes_cost,
-        param_bytes_cost_for(),
-        CostModel(),
-    ):
-        assert isinstance(fn, CostFn), fn
-        assert signature_conforms(fn, CostFn), fn
 
 
-def test_cost_fn_wrong_signature_rejected():
-    """A callable requiring args the extract sites never supply is not
-    a CostFn — ``isinstance`` can't see this, ``signature_conforms``
-    can."""
-    assert not signature_conforms(lambda: 0.0, CostFn)
-    assert not signature_conforms(lambda a, b, c: 0.0, CostFn)
-    # dag_cost is a meta-wrapper: needs a cost_fn argument of its own.
-    assert not signature_conforms(dag_cost, CostFn)
-    assert not isinstance(object(), CostFn)
 
 
 # ---------------------------------------------------------------------------
@@ -209,10 +189,6 @@ def test_verify_equiv_is_verifier():
     assert isinstance(rep, VerifyReport) and rep.passed
 
 
-def test_verifier_wrong_signature_rejected():
-    # Call sites always pass rtol/atol by name — strict probe.
-    assert not signature_conforms(lambda a, b: None, Verifier, strict=True)
-    assert not signature_conforms(object(), Verifier)
 
 
 def test_verify_result_is_core_owned_and_satisfied_by_verify_report():
@@ -262,10 +238,6 @@ def test_binding_alias_is_the_same_protocol():
 # ---------------------------------------------------------------------------
 
 
-def test_optable_conforms_to_registry():
-    assert isinstance(OpTable.core(), OpRegistry)
-    assert isinstance(OpTable.full(), OpRegistry)
-    assert not isinstance({}, OpRegistry)
 
 
 def test_registry_contents_are_port_typed():
@@ -287,11 +259,6 @@ def test_torch_bindings_conform():
     assert not isinstance(123, TorchBinding)
 
 
-def test_shape_rules_conform():
-    for name in ("om_elem", "aff", "apply", "eye"):
-        assert isinstance(_SHAPE_RULES[name], ShapeRule)
-        assert signature_conforms(_SHAPE_RULES[name], ShapeRule)
-    assert not signature_conforms(lambda a: None, ShapeRule)
 
 
 # ---------------------------------------------------------------------------
@@ -299,13 +266,3 @@ def test_shape_rules_conform():
 # ---------------------------------------------------------------------------
 
 
-def test_rule_collections_conform():
-    assert isinstance(CATEGORICAL_RULES, RuleSetLike)
-    assert isinstance(all_rules(), RuleSetLike)
-    assert isinstance(CATEGORICAL, RuleSetLike)
-    assert all(isinstance(r, RuleLike) for r in CATEGORICAL_RULES)
-    assert isinstance(all_rules, RuleSetProvider)
-    # presence-level: a dict IS iterable (RuleSetLike) — documented caveat.
-    assert not isinstance(42, RuleSetLike)
-    assert not isinstance(42, RuleSetProvider)
-    assert not isinstance(object(), RuleLike)

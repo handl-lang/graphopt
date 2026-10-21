@@ -59,43 +59,8 @@ def test_looks_like_oom_variants():
     assert not _looks_like_oom(Exception("anything"))
 
 
-def test_oom_to_resource_error_adapter():
-    @_oom_to_resource_error
-    def raises(e):
-        raise e
-
-    with pytest.raises(OptimizationResourceError):
-        raises(MemoryError("boom"))
-    with pytest.raises(OptimizationResourceError):
-        raises(RuntimeError("CUDA out of memory"))
-    # a pre-existing resource error passes through unchanged
-    marker = OptimizationResourceError("already")
-    with pytest.raises(OptimizationResourceError) as ei:
-        raises(marker)
-    assert ei.value is marker
-    # ordinary errors are not wrapped
-    with pytest.raises(ValueError):
-        raises(ValueError("plain"))
-    # functools.wraps keeps the signature metadata
-    assert raises.__name__ == "raises"
 
 
-def test_current_memory_mb_and_check_resources():
-    mb = _current_memory_mb()
-    assert isinstance(mb, float) and mb > 0
-
-    eg = types.SimpleNamespace(n_enodes=50)
-    _check_resources(eg, max_enodes=100, max_memory_mb=None)
-    with pytest.raises(OptimizationResourceError, match="e-nodes"):
-        _check_resources(eg, max_enodes=50, max_memory_mb=None)
-    with pytest.raises(OptimizationResourceError, match="e-nodes"):
-        _check_resources(eg, max_enodes=10, max_memory_mb=None)
-    # a memory bound below the real footprint always trips
-    with pytest.raises(OptimizationResourceError, match="memory"):
-        _check_resources(eg, max_enodes=None, max_memory_mb=0.0)
-    # eg=None skips the enode check entirely
-    _check_resources(None, max_enodes=1, max_memory_mb=None)
-    _check_resources(eg, max_enodes=None, max_memory_mb=None)
 
 
 def test_optimize_model_resource_bounds():

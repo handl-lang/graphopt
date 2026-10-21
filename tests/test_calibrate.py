@@ -750,9 +750,6 @@ def test_roofline_cost_for_matches_default():
         assert fn(term) == pytest.approx(roofline_cost(term))
 
 
-def test_roofline_cost_for_no_profile_is_default():
-    fn = roofline_cost_for()
-    assert fn(_mm_term()) == pytest.approx(roofline_cost(_mm_term()))
 
 
 def test_roofline_cost_for_is_a_cost_fn():

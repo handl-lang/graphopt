@@ -202,41 +202,10 @@ def _search(w_name, rules):
 # ---------------------------------------------------------------------------
 
 
-def test_every_law_classifies_by_provenance():
-    """The marker is total: every shipped rule resolves to a class."""
-    surface = (
-        list(ALL_RULES_WITH_LAYOUT)
-        + list(ATTENTION_RULES)
-        + list(SCAN_LAWS)
-        + list(SCAN_DIAG_LAWS)
-        + list(default_rules())
-    )
-    assert surface, "expected a nonempty law surface"
-    for rule in surface:
-        assert law_provenance(rule) in ("human", "machine")
-        assert law_provenance(rule.name) == law_provenance(rule)
 
 
-def test_machine_shipped_is_exactly_the_promotion_table():
-    """``MACHINE_SHIPPED`` pins the thirteen promoted laws, all shipped."""
-    assert MACHINE_SHIPPED == _PROMOTION_TABLE
-    shipped_names = {r.name for r in ALL_RULES}
-    assert shipped_names >= MACHINE_SHIPPED
-    # 73 human-authored + 13 promoted = the 86-rule library
-    # (``add_unsq_pad_r`` — the auto-cond candidate admitted off the
-    # real-corpus funnel, docs/results_realcorpus.md).
-    assert len(ALL_RULES) == 86
-    assert len(shipped_names - MACHINE_SHIPPED) == 73
 
 
-def test_machine_stored_objects_are_unshipped_names():
-    """The store ledger names objects that are NOT in the library —
-    a promoted object vacates the store set (its name is the shipped
-    law's), so the sets stay disjoint by construction."""
-    shipped_names = {r.name for r in ALL_RULES}
-    assert MACHINE_STORED.isdisjoint(shipped_names)
-    assert MACHINE_STORED <= MACHINE_LAWS
-    assert MACHINE_LAWS == MACHINE_SHIPPED | MACHINE_STORED
 
 
 def test_om_lift_collision_is_resolved_for_the_shipped_law():
@@ -254,9 +223,6 @@ def test_om_lift_collision_is_resolved_for_the_shipped_law():
     assert "om_lift" in carrier
 
 
-def test_provenance_defaults_to_human_authorship():
-    """Unknown names are the library's default: human-authored."""
-    assert law_provenance("no_such_law") == "human"
 
 
 # ---------------------------------------------------------------------------

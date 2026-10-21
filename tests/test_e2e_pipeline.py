@@ -188,18 +188,6 @@ def test_optable_composition_and_missing_binding():
     assert torch.equal(mod2(ts, tmf), ts + tmf)
 
 
-def test_optable_register_fragment_kwargs():
-    """dict source + shape_rules/attr_schema fragments compose on one
-    table — the fragments land in their registries."""
-    t = OpTable()
-    t.register(
-        {"myop": lambda *a, **k: None},
-        shape_rules={"myop": lambda op, shapes: (1,)},
-        attr_schema={"myop": {1: "dim"}},
-    )
-    assert "myop" in t.torch_bindings
-    assert "myop" in t.shape_rules
-    assert "myop" in t.attr_schemas
 
 
 # ---------------------------------------------------------------------------

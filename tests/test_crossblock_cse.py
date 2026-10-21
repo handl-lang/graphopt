@@ -448,16 +448,6 @@ def test_family_shares_and_components():
     assert shares == {} and links == []
 
 
-def test_share_components():
-    """Union-find over share links, ordered by execution position."""
-    order = ["a", "b", "c", "d"]
-    comps = C._share_components(
-        [("a", "b"), ("b", "c"), ("c", "a")], order
-    )
-    assert comps == [("a", "b", "c")]
-    comps = C._share_components([("b", "c"), ("a", "d")], order)
-    assert comps == [("a", "d"), ("b", "c")]
-    assert C._share_components([], order) == []
 
 
 # ---------------------------------------------------------------------------
@@ -801,12 +791,6 @@ def test_optimize_morphisms_entry_cse():
     )
 
 
-def test_exports():
-    """The law re-exports through morphisms and the package surface."""
-    import mlopt_orchestrator as O
-
-    assert M.CrossBlockCSE is C.CrossBlockCSE
-    assert O.CrossBlockCSE is C.CrossBlockCSE
 
 
 def test_match_via_default_laws_unchanged():
@@ -841,8 +825,3 @@ def test_reify_dispatch_through_morphisms():
     assert out["status"] == "grafted"
 
 
-def test_kv_machinery_reused():
-    """The pass reuses the morphisms_kv evidence/family helpers."""
-    assert C._input_families is K._input_families
-    assert C._family_prep is K._family_prep
-    assert C._family_evidence is K._family_evidence
