@@ -113,18 +113,17 @@ if [[ "$LANE" == "full" ]]; then
     printf '  [ok] %-26s %3ds\n' "suite (NP=$NP)" "$((SECONDS - suite_s))"
 
     echo "== coverage floors =="
-    # The six shipped packages + mlopt_onnx: fail_under=100 (config).
-    # gamekit is on the discovery-side ratchet, not the 100 wall —
-    # it extracted out of mlopt_discovery (plan 0032 lane A).
-    stage "coverage (six, =100)" -- \
+    # The shipped domain packages: fail_under=100 (config).
+    # (mlopt_core/-orchestrator/gamekit left at the phase-4 split —
+    # their floors live in the eqsat/gamekit repos.)
+    stage "coverage (domain wall, =100)" -- \
         .venv/bin/coverage report -m \
-        --omit="*/mlopt_discovery/*,*/gamekit/*"
-    # mlopt_discovery + gamekit ratchet floor: --fail-under=99
-    # (the ratchet is a union property — tighten, never lower;
-    # re-measure the gamekit share once a full covered run is possible).
-    stage "coverage (discovery+gamekit)" -- \
+        --omit="*/mlopt_discovery/*"
+    # mlopt_discovery ratchet floor: --fail-under=99
+    # (tighten, never lower).
+    stage "coverage (discovery)" -- \
         .venv/bin/coverage report -m \
-        --include="*/mlopt_discovery/*,*/gamekit/*" --fail-under=99
+        --include="*/mlopt_discovery/*" --fail-under=99
 else
     # dev lane — the day-to-day gate: suite minus the minutes-scale `slow`
     # tests, no coverage (floors are a full-suite property; see LANE doc).

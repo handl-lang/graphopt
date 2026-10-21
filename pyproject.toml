@@ -108,28 +108,28 @@ packages = []
 # --- uv workspace: the domain packages ---------------------------
 [tool.uv.workspace]
 members = ["packages/*"]
-# mlopt-native is an OPTIONAL distribution built with maturin/cargo —
-# excluded from the uv workspace so ``uv sync``/``uv lock`` never need
-# a Rust toolchain.  Build it explicitly:
-#   maturin develop --release   (from packages/mlopt-native)
 # mlopt-kit and mlopt-experiments are Rust-only crates (the handl
 # composition seam + the paper's evidence crate) — no pyproject.toml,
-# so they are excluded from the uv workspace alongside mlopt-native.
-# mlopt-handl-peer is the maturin/PyO3 handl spike — excluded for the
-# same reason as mlopt-native.
+# so they are excluded from the uv workspace.  mlopt-handl-peer is the
+# maturin/PyO3 handl spike — excluded for the same reason.
+# (mlopt-native moved to handl-lang/eqsat — plan 0032 phase 4.)
 exclude = [
-    "packages/mlopt-native",
     "packages/mlopt-kit",
     "packages/mlopt-experiments",
     "packages/mlopt-handl-peer",
 ]
 
 [tool.uv.sources]
-gamekit = { workspace = true }
-mlopt-core = { workspace = true }
+# Extracted packages (plan 0032 phase 4): the substrate lives in
+# handl-lang/eqsat, the game layer in handl-lang/gamekit — consumed as
+# pinned git+ssh deps on ``packages/`` subdirectories, the same recipe
+# kernelopt uses.  Bump the pin deliberately (branch for now; move to
+# a tag/rev once the upstream surface settles).
+mlopt-core = { git = "ssh://git@github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-core", branch = "main" }
+mlopt-orchestrator = { git = "ssh://git@github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-orchestrator", branch = "main" }
+gamekit = { git = "ssh://git@github.com/handl-lang/gamekit.git", subdirectory = "packages/gamekit", branch = "main" }
 mlopt-torch = { workspace = true }
 mlopt-carriers = { workspace = true }
-mlopt-orchestrator = { workspace = true }
 mlopt-cuda = { workspace = true }
 mlopt-discovery = { workspace = true }
 mlopt-onnx = { workspace = true }
@@ -154,140 +154,40 @@ markers = [
 min_confidence = 80
 paths = ["packages", "tests"]
 
-# import-linter: the hexagonal-boundary ratchet.  The key contract is
-# "core is torch-free" — mlopt-core (the zero-dependency engine) must
-# never import the PyTorch adapter or any sibling domain package.  It
-# FAILS on the pre-decoupling tree and is the gate Phase 1 makes green.
+# import-linter: the hexagonal-boundary ratchet, pruned to the
+# intra-repo contracts (plan 0032 phase 4): "core is torch-free" and
+# "orchestrator imports no backend" moved to handl-lang/eqsat, "the
+# game kernel is substrate-free" to handl-lang/gamekit.  What stays:
+# the domain stack's own layering — discovery sits above the backend
+# family; onnx is a self-contained backend over the (external) core.
 [tool.importlinter]
 root_packages = [
-    "mlopt_core",
     "mlopt_torch",
     "mlopt_carriers",
-    "mlopt_orchestrator",
     "mlopt_cuda",
     "mlopt_discovery",
     "mlopt_onnx",
-    "gamekit",
 ]
-# `mlopt_native` is deliberately NOT a root package: it is an optional
-# maturin/cargo build outside the uv workspace, so `uv sync` (and CI)
-# uninstall it — a missing root package is a hard import-linter error.
-# It is listed as an *optional* layer below, so it is checked when
-# present and skipped when absent.
-# Required so the "core imports no tensor library" contract can forbid
-# the external torch/numpy packages.
 include_external_packages = true
 
-[[tool.importlinter.contracts]]
-name = "core is torch-free (and carrier-free)"
-type = "forbidden"
-source_modules = ["mlopt_core"]
-forbidden_modules = [
-    "mlopt_torch",
-    "mlopt_carriers",
-    "mlopt_orchestrator",
-    "mlopt_cuda",
-    "mlopt_discovery",
-    "mlopt_onnx",
-    "gamekit",
-]
-
-[[tool.importlinter.contracts]]
-name = "core imports no tensor library"
-type = "forbidden"
-source_modules = ["mlopt_core"]
-forbidden_modules = ["torch", "numpy"]
-
-[[tool.importlinter.contracts]]
-name = "orchestrator imports no backend"
-type = "forbidden"
-source_modules = ["mlopt_orchestrator"]
-forbidden_modules = ["torch", "mlopt_torch", "mlopt_cuda"]
-# The backend packages may never be imported directly — backend
-# specifics live behind the Composer/Meter/Runner/ExecutorSpec ports.
-# Indirect reach is fine: the orchestrator lazily resolves carrier
-# machinery (mlopt_carriers), which is what pulls torch — the runtime
-# boundary test (sys.modules stays torch-free after
-# `import mlopt_orchestrator`) is the gate that pins the laziness.
-allow_indirect_imports = true
-
-# Plan 0032 phase 1 (the API freeze) / lane A (the gamekit
-# extraction): the game kernel — the Board protocol, the player
-# registry machinery, the scoring spec, score calibration, the
-# advantage player and the game content tables — is substrate-free
-# by design (`gamekit ⊥ eqsat`).  These leaf modules may import
-# nothing outside the stdlib: no core, no backend, no domain package
-# (not even `mlopt_discovery` — the boards stay behind the lazy
-# `make` seam, so the kernel never reaches back), and not the
-# gauntlet (`mlopt_discovery.evidence` — the measurement side of the
-# scoring seam).  The player *folders* are deliberately excluded:
-# their `make` factories bind domain machinery lazily, which is the
-# registry contract working as intended.
-[[tool.importlinter.contracts]]
-name = "the game kernel is substrate-free"
-type = "forbidden"
-source_modules = [
-    "gamekit.engine",
-    "gamekit.scoring",
-    "gamekit.calibrate",
-    "gamekit.advantage",
-    "gamekit.gamedata",
-    "gamekit.players._base",
-    "gamekit.players.registry",
-]
-forbidden_modules = [
-    "mlopt_core",
-    "mlopt_torch",
-    "mlopt_carriers",
-    "mlopt_orchestrator",
-    "mlopt_cuda",
-    "mlopt_onnx",
-    "mlopt_discovery",
-    "torch",
-    "numpy",
-]
-
-# The dependency *layers*: the graph must be acyclic apart from the
-# backend family, which is a single mutually-dependent component.
 # `mlopt_torch` and `mlopt_carriers` are one layer: the carrier
 # package is a torch-backend extension (its law modules carry
 # `TORCH_BINDINGS`, and the torch sink builds its executor table from
 # the carrier lowerings), so the two are genuinely bidirectional and
 # must not be split across layers.  `mlopt_cuda` sits above them (it
-# depends on `mlopt_torch`).  `mlopt_orchestrator` sits below the
-# whole backend family: the backend packages depend on it, and it
-# reaches carrier machinery only through the `register_carriers` seam
-# (`mlopt_orchestrator.carriers`), never by importing them.
-# `mlopt_native` is a peer of core (it implements the Engine port
-# over the same IR) and is checked to stay above core only.
-# `mlopt_onnx` is the second backend (ADR 0006): it implements the
-# `Sink` port over `onnx`/`onnxruntime` and depends on `mlopt_core`
-# alone — not on `mlopt_orchestrator`, and not on the torch backend
-# family — so it is a peer of `mlopt_native`, directly above core.
-# (`mlopt_kernel` was the same peer shape until plan 0032 phase 4
-# extracted it into the private kernelopt repo.)
+# depends on `mlopt_torch`).  `mlopt_onnx` is the second backend (ADR
+# 0006): it implements the `Sink` port over `onnx`/`onnxruntime` and
+# depends on (external) `mlopt_core` alone, so it sits at the bottom.
+# `mlopt_discovery` reads everything and nothing may depend back on
+# it, so it sits above the whole stack.
 [[tool.importlinter.contracts]]
 name = "dependency layers"
 type = "layers"
-# `:` marks non-independent (mutually importable) siblings.
-# `mlopt_discovery` is the meta-level law-discovery engine (formerly
-# ``tools/law_*.py``): it reads core/torch/orchestrator internals and
-# nothing may depend back on it, so it sits above the whole stack.
-# `gamekit` shares the top layer: the extracted game kernel is
-# substrate-free, but the player *folders* bind domain machinery
-# (``mlopt_discovery.play``, ``mlopt_torch.contraction_policy``)
-# lazily inside ``make``, while ``mlopt_discovery`` binds the kernel
-# (its boards import ``gamekit.players``/``gamekit.engine``) — one
-# mutually-dependent component until the phase-4 split resolves the
-# folders' domain bindings.
 layers = [
-    "mlopt_discovery : gamekit",
+    "mlopt_discovery",
     "mlopt_cuda",
     "mlopt_torch : mlopt_carriers",
-    "mlopt_orchestrator",
-    "(mlopt_native)",
     "mlopt_onnx",
-    "mlopt_core",
 ]
 
 [tool.ruff]
@@ -319,18 +219,13 @@ ignore = [
 [tool.ty.environment]
 python-version = "3.13"
 extra-paths = [
-    "packages/mlopt-core/src",
     "packages/mlopt-torch/src",
     "packages/mlopt-carriers/src",
-    "packages/mlopt-orchestrator/src",
     "packages/mlopt-cuda/src",
     "packages/mlopt-discovery/src",
     "packages/mlopt-onnx/src",
-    "packages/gamekit/src",
-    # mlopt-native is optional (maturin-built); its `python/` source
-    # dir holds the adapter plus the `_native.pyi` stub ty resolves
-    # against the compiled extension.
-    "packages/mlopt-native/python",
+    # mlopt-core/-orchestrator (eqsat) and gamekit resolve through the
+    # installed git deps — no src path needed.
 ]
 
 [tool.ty.src]
@@ -349,7 +244,7 @@ error-on-warning = false
 # mlopt_onnx joined the 100 wall after its own climb (see
 # project/retros/onnx-package.md) — it reports in the main wall, not
 # the discovery ratchet.
-source = ["mlopt_core", "mlopt_torch", "mlopt_carriers", "mlopt_orchestrator", "mlopt_cuda", "mlopt_discovery", "mlopt_onnx", "gamekit"]
+source = ["mlopt_torch", "mlopt_carriers", "mlopt_cuda", "mlopt_discovery", "mlopt_onnx"]
 branch = true
 omit = ["*/tests/*"]
 

@@ -1,9 +1,9 @@
 #!/bin/sh
 # Runtime-contract gate (typeguard).
 #
-# Instruments the torch-free core (``mlopt_core``) plus the three
-# adapter/orchestrator packages (``mlopt_torch``, ``mlopt_carriers``,
-# ``mlopt_orchestrator``) and runs the typeguard-clean test files, so
+# Instruments the shipped domain packages (``mlopt_torch``,
+# ``mlopt_carriers``) — the substrate's own instrumentation moved to
+# eqsat with it (plan 0032 phase 4). and runs the typeguard-clean test files, so
 # annotation drift surfaces as a runtime ``TypeCheckError`` rather than
 # silent ``Any``.  After the ty burn-down emptied ``[tool.ty.src]
 # exclude`` these tests pass under full instrumentation; grow the list
@@ -16,25 +16,11 @@
 # ``runtime-types`` hook / the CI workflow.
 set -eu
 exec .venv/bin/python -m pytest -q -p no:cacheprovider \
-    --typeguard-packages=mlopt_core,mlopt_torch,mlopt_carriers,mlopt_orchestrator \
-    tests/test_ir.py \
-    tests/test_egraph.py \
-    tests/test_laws_structure.py \
-    tests/test_cost.py \
-    tests/test_interning.py \
+    --typeguard-packages=mlopt_torch,mlopt_carriers \
     tests/test_attrs.py \
-    tests/test_typing.py \
-    tests/test_typing_edges.py \
     tests/test_cost_edge_cases.py \
-    tests/test_egraph_internals.py \
     tests/test_meta_edges.py \
     tests/test_meta.py \
-    tests/test_rules.py \
-    tests/test_property_ir.py \
-    tests/test_property_egraph.py \
-    tests/test_property_cost.py \
-    tests/test_property_laws.py \
-    tests/test_certificates.py \
     tests/test_cert_nonlocal.py \
     tests/test_memo_safety.py \
     tests/test_adapters.py \
@@ -53,18 +39,15 @@ exec .venv/bin/python -m pytest -q -p no:cacheprovider \
     tests/test_om_guard_branches.py \
     tests/test_xcarrier_guards.py \
     tests/test_scan_batched.py \
-    tests/test_backend_cost.py \
     tests/test_registries.py \
     tests/test_partial_install.py \
     tests/test_logging.py \
     tests/test_torch_bridge_edges.py \
     tests/test_optimize_compositional_edges.py \
-    tests/test_truncation.py \
     tests/test_unit_lift.py \
     tests/test_exact_corner.py \
     tests/test_falsified_pins.py \
     tests/test_batched_verify.py \
-    tests/test_core_torch_free.py \
     tests/test_calibrate.py \
     tests/test_synthesis_guards.py \
     tests/test_synthesis_seeds.py \
