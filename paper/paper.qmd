@@ -419,7 +419,9 @@ minted guards).
   *machine-original against catalogued knowledge* — the decidable
   cert $\wedge$ beat $\wedge$ $\neg$derivable predicate the platform paper defines
   [@eqsat2026substrate], evaluated against `known_bank()` — the
-  shipped rules plus the prior-art preset — minus alpha-siblings.
+  shipped rules plus the `prior_art` preset's `FUSION`/`CATEGORICAL`
+  rows (the slice the bounded prover can saturate against) — minus
+  alpha-siblings.
   The sieve (`bench/drivers/screen/novelty_sieve.py`, results in
   `docs/results_novelty_sieve.md`) ran 24 candidates: two in the
   review queue (`mul_unsq_nat`, `softsign_fold`), four derivable,
