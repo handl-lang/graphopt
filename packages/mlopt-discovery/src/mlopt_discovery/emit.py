@@ -69,16 +69,20 @@ _TENSOR_REL = "packages/mlopt-core/src/mlopt_core/laws/tensor.py"
 
 
 def _tensor_src() -> Path:
-    """Resolve the law-bank source — the in-repo checkout when present,
-    else the installed module's real path (post-split: ``mlopt_core``
-    ships in the ``eqsat`` repo and installs under site-packages; the
-    emitted patch still names ``a/<_TENSOR_REL>`` so it applies there)."""
+    """Resolve the law-bank source.
+
+    The in-repo checkout when present, else the installed module's real
+    path (post-split: ``mlopt_core`` ships in the ``eqsat`` repo and
+    installs under site-packages; the emitted patch still names
+    ``a/<_TENSOR_REL>`` so it applies there).
+    """
     rel = Path(REPO_ROOT) / _TENSOR_REL
     if rel.exists():
         return rel
     import mlopt_core.laws.tensor as _tensor_mod
 
     return Path(_tensor_mod.__file__).resolve()
+
 
 #: Saturation budget for the emit-time decline/variant probes.
 _PROBE_ITERS = 4
