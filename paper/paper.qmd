@@ -99,25 +99,28 @@ cites the artifact that produced it (§@sec-repro).
 
 ## Equality saturation
 
-Given a term and a set of rewrite laws, an e-graph compactly
-represents the closure: all programs reachable by the laws, sharing
-subterms, until a fixed point [@tate2009].  Extraction then picks a
-cheapest member under a cost model.  The soundness boundary is the
-law bank: any unsound rule poisons every e-class it touches, so in
-mlopt a rule's side conditions (`check`/`derive`/declarative `cond`)
-are the *only* layer that keeps a false member out — the certificate
-replay re-proves that a step is a valid application, not that the rule
-is true.
+An e-graph compactly represents the closure of a term under a law
+bank — all reachable spellings, sharing subterms, to a fixed point
+[@tate2009] — and extraction picks the cheapest member under a cost
+model.  The machinery lives in `handl-lang/eqsat` and the platform
+paper [@eqsat2026substrate] describes it once: the term IR, the
+bounded saturation, the certificate and cost algebra.  This paper
+recounts only what the discovery story uses.  One piece does carry
+over verbatim: the soundness boundary is the law bank — a rule's
+side conditions are the *only* layer that keeps a false member out,
+and the certificate replay re-proves that a step is a valid
+application, not that the rule is true.
 
 ## Laws as data on a categorical substrate
 
 Catopt reads a program as a 1-morphism between tensor types, a rewrite
 law as a 2-cell between programs, and a derivation — one law proven
-from premises — as a 3-cell.  The consequence that matters
-operationally: laws are **data rows** (an LHS/RHS pattern pair plus a
-guard spec), serializable, storable, composable.  The shipped bank
-(`mlopt_core.laws.ALL_RULES`, 84 rules) mixes human-authored axioms
-with thirteen machine-admitted objects
+from premises — as a 3-cell; the platform paper develops the
+consequence [@eqsat2026substrate]: laws are **data rows** (a pattern
+pair plus a `cond`/`check`/`derive` guard spec), serializable,
+storable, composable.  What matters here is the bank this paper
+mutates: `mlopt_core.laws.ALL_RULES` mixes human-authored axioms with
+thirteen machine-admitted objects
 (`mlopt_core.laws.provenance.MACHINE_SHIPPED`).
 
 ## The handl substrate and mlopt-kit
@@ -139,75 +142,71 @@ executes.
 
 ## The mint fixpoint
 
-`mlopt_core.meta.synthesize_rules` runs a bounded fixpoint over the
-law bank on a seed term: each round applies rules, composes the pairs
-that chain, and emits `syn_*` composites with provenance — the names
-of the premise rules each composite was built from.  On the eval-mode
-ConvBN seed it emits 974 rules in ≈12 s (fuel 30,000, 4 rounds);
+`mlopt_core.meta.synthesize_rules` runs the substrate's bounded mint
+fixpoint [@eqsat2026substrate] over the law bank on a seed term —
+apply the rules, compose the pairs that chain, emit `syn_*`
+composites carrying premise provenance.  On the eval-mode
+ConvBN seed it emits 974 rules in $\approx$ 12 s (fuel 30,000, 4 rounds);
 the fold composite mints deterministically (identical names across
 runs).
 
 ## Guard transport
 
 A minted rule's side conditions are closures over its premise objects,
-so the evidence store keeps them as *specs*, not code: each stored
-record carries a `"guard"` field — parent names plus re-expression
-maps — and `evidence.admit_object` rebuilds `check`/`derive` by
-resolving parents as store rows, transitively.  The shipped form
-(`mlopt_core.laws.minted`) embeds the stored-closure records as data
-and replays the same rebuild semantics at import — louder than the
-store: a parent resolving short of declared strength raises rather
-than admitting a degraded rule.
+so the evidence store keeps them as *specs*, not code — parent names
+plus re-expression maps — and `evidence.admit_object` rebuilds
+`check`/`derive` by resolving parents transitively; the substrate's
+shipped form (`mlopt_core.laws.minted`) embeds the records and
+replays the rebuild at import, refusing a degraded parent
+[@eqsat2026substrate].
 
 ## Premise-anchored derivability
 
 `verify_law` answers "is this instance derivable under a rule bank?"
-with a replayable witness.  For a stored composite the honest question
-is *"derivable under the premises it was minted from"* — so the
-derivability leg evaluates against `base_rules` plus the object's
-transitive premise closure, with an anti-gaming bar: the certificate
-must be standalone-replayable and every step naming a non-axiom rule
-must *site-verify* under the fp64 numeric oracle.  A premise false at
-its applied site revokes the credit and the verdict falls back to the
-axioms-only answer.
+with a replayable witness, and for a stored composite the honest
+question — derivability under the premises it was minted from — is
+the substrate's anti-gaming discipline [@eqsat2026substrate]: the
+certificate must be standalone-replayable and every step naming a
+non-axiom rule must *site-verify* under the fp64 numeric oracle.  A
+premise false at its applied site revokes the credit and the verdict
+falls back to the axioms-only answer.
 
 ## One cost alphabet
 
-The cost model credits compile-time work structurally: a subtree
-closed over `Param`/`Const` leaves whose root op is in `FOLD_OPS` —
-the 161-op fold-at-lowering alphabet, single-sourced between the
-lowerer, the cost predicate and the extractor — is priced at ~0
-marginal.  This is what lets a fold's pay leg measure what it should:
-the fold's `mul`/`reshape`/`rsqrt` chain is once-per-deployment work,
-not per-call work, and `dag_cost` prices it that way.
+The substrate's cost model credits compile-time work structurally
+[@eqsat2026substrate]: a subtree closed over `Param`/`Const` leaves
+whose root op is in `FOLD_OPS` — the 161-op fold-at-lowering
+alphabet — is priced at ~0 marginal.  This is what lets a fold's
+pay leg measure what it should: the fold's
+`mul`/`reshape`/`rsqrt` chain is once-per-deployment work, not
+per-call work, and `dag_cost` prices it that way.
 
 ## The admission gauntlet
 
-`evidence.run_gauntlet` stages the verdict: reconstruct → full-data →
-measure → truth → novelty → typed-pay → closure → certificate.
-Truth is two legs — the numeric oracle over the guarded region *and*
-premise-anchored derivability; novelty refuses re-spellings of shipped
-laws (`relation=duplicate`); typed-pay suppresses cost drops that mint
-ill-typed members; closure bounds the firing footprint.  The gauntlet
-has repeatedly falsified the engine's own candidates — a naive
-broadcast guard with 212 bad accepts, an apparent paying sibling with
-semantically unequal sites, four deliberate false twins
-(`project/retros/mul-unsq-nat.md`, `layer3-loop.md`,
-`typed-pay-gate.md`).
+`evidence.run_gauntlet` is the domain-side staging of the substrate's
+admission protocol [@eqsat2026substrate]: reconstruct → full-data →
+measure → truth → novelty → typed-pay → closure → certificate, with
+truth the two-legged numeric-oracle-plus-derivability check and
+novelty refusing re-spellings of shipped laws
+(`relation=duplicate`).  What this paper adds is the record of it
+biting: the gauntlet has repeatedly falsified the engine's own
+candidates — a naive broadcast guard with 212 bad accepts, an
+apparent paying sibling with semantically unequal sites, four
+deliberate false twins (`project/retros/mul-unsq-nat.md`,
+`layer3-loop.md`, `typed-pay-gate.md`).
 
 ## Learned guidance as a game {#sec-game}
 
-Because laws are data, discovery admits a well-defined game structure:
-rule applications and compositions are well-formed moves; the admission
-gauntlet is the referee — a move only scores if its artifact survives
-admission; the cost alphabet is the score.  This is implemented
-machinery, not aspiration: `engine` defines the `Board` protocol and
-episode/train/eval drivers, `players` a `LinearPolicy` arm over a
-domain-specified featurizer, and `play` a domain registry
-(`meta`, `joint`, `search`, `torch`, `gen`, `open`; `torch` and `gen`
-ship `deliver` hooks that lower the winning extraction to a verified
-module).  A domain is data — a case generator, a board factory, and a
-feature schema — not a subclass.
+Because laws are data, discovery admits a well-defined game structure
+— moves are rule applications, the admission gauntlet is the
+referee, the cost alphabet is the score [@eqsat2026substrate].  This
+is implemented machinery, not aspiration: `engine` defines the
+`Board` protocol and episode/train/eval drivers, `players` a
+`LinearPolicy` arm over a domain-specified featurizer, and `play` a
+domain registry (`meta`, `joint`, `search`, `torch`, `gen`, `open`;
+`torch` and `gen` ship `deliver` hooks that lower the winning
+extraction to a verified module).  A domain is data — a case
+generator, a board factory, and a feature schema — not a subclass.
 
 Two linear priors ship with pinned held-out wins: the open-game policy
 ranks law candidates at ~4.7× the cost-delta heuristic's average
@@ -382,7 +381,7 @@ minted guards).
   fresh paying structure) is honest that this is not yet a general
   speedup.
 - **Move alphabet bound.**  The kit surface is 18 `tensor.*` ops; the
-  fold's own `s = γ·rsqrt(σ²+ε)` is outside it (no elementwise
+  fold's own $s = \gamma \cdot \mathrm{rsqrt}(\sigma^2 + \varepsilon)$ is outside it (no elementwise
   `rsqrt`) and rides a marshaling channel.  Emitted terms are confined
   to what the surface spells; outside-surface ops refuse by name.
 - **Tree-walk runtime.**  `hnl-run --repeat` timings are wall-clock on
@@ -398,14 +397,11 @@ minted guards).
   `training=False`): its region is the default-attr eval-mode fold —
   honest, narrow, the common spelling.
 - **Novelty is closed-world.**  "Novel" in this draft means
-  *machine-original against catalogued knowledge* — decidable, not
-  aspirational: a candidate is a novelty iff its certificate replays
-  standalone (cert), its certified extraction strictly beats a
-  registered `bench/discovery` baseline on a derivation that invokes
-  the candidate (beat), and its instance is underivable from
-  `known_bank()` — the shipped rules plus the prior-art preset —
-  minus alpha-siblings (¬derivable).  The sieve
-  (`bench/drivers/screen/novelty_sieve.py`, results in
+  *machine-original against catalogued knowledge* — the decidable
+  cert $\wedge$ beat $\wedge$ $\neg$derivable predicate the platform paper defines
+  [@eqsat2026substrate], evaluated against `known_bank()` — the
+  shipped rules plus the prior-art preset — minus alpha-siblings.
+  The sieve (`bench/drivers/screen/novelty_sieve.py`, results in
   `docs/results_novelty_sieve.md`) ran 24 candidates: two in the
   review queue (`mul_unsq_nat`, `softsign_fold`), four derivable,
   six unpaid, twelve unmeasured.  "Novel to humanity" remains an
