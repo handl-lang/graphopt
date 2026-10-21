@@ -103,3 +103,19 @@ def test_train_regression_head():
         samples, epochs=1, binary=False, device="cpu"
     )
     assert isinstance(model, RuleValueNet)
+
+
+def test_train_labels_and_pos_weight():
+    """Explicit labels + the rare-positive reweight fit under BCE —
+    the verdict-label seam the stop-policy rounds use."""
+    samples = rule_samples(_chain(), all_rules())
+    labels = [1.0] * len(samples)
+    model = train_rule_value(
+        samples,
+        epochs=1,
+        binary=False,
+        labels=labels,
+        pos_weight=3.0,
+        device="cpu",
+    )
+    assert isinstance(model, RuleValueNet)
