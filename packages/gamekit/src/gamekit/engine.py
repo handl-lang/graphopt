@@ -109,13 +109,27 @@ def run_episode(
 
     A player is any callable ``state -> action | None`` — ``None``
     ends the episode early, as does ``state.done``.
+
+    A player may also carry a *side channel*: a
+    ``forced_action(state) -> action | None`` method the engine
+    consults *before* the policy's own pick each step.  A
+    non-``None`` return is the move played — the delivery a decision
+    that must never share the ranking softmax rides (the isolated
+    stop head of ``docs/results_stop_isolated.md``: the quit call is
+    computed independently and the engine plays the board's own stop
+    move).  ``None`` abstains and the pick is the policy's, exactly as
+    before.  The hook is optional — a plain callable player is
+    untouched.
     """
     reports: list = []
     for _ in range(budget):
         state = board.observe()
         if _done(state):
             break
-        action = player(state)
+        force = getattr(player, "forced_action", None)
+        action = force(state) if force is not None else None
+        if action is None:
+            action = player(state)
         if action is None:
             break
         _state, rep = board.step(action)

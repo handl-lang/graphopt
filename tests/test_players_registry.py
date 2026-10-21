@@ -105,6 +105,7 @@ def test_registry_roster():
             "linear",
             "neural",
             "distilled",
+            "gated",
         }
         assert s.record, name  # the measured record is not empty
 

@@ -31,6 +31,7 @@ __all__ = [
     "ActionFeats",
     "Bias",
     "DomainSpec",
+    "GatedPlayer",
     "LearnedPlayer",
     "LinearPolicy",
     "OpOneHot",
@@ -702,3 +703,136 @@ class LearnedPlayer(LinearPolicy):
         if self._spec.rank is None:
             raise ValueError("this domain ships no candidate ranker")
         return _dot(self._w, self._spec.rank(cand))
+
+
+class GatedPlayer:
+    """A ranker plus an isolated stop channel — the non-softmax delivery.
+
+    Eight rounds of the open-game stop-policy loop
+    (``docs/results_stop_policy.md`` … ``results_stop_calibrated.md``)
+    measured the recurring corruption channel: the ``stop`` action
+    shares the ranking softmax, so every feature family that makes the
+    quit decision state-dependent also feeds noise into the ``a:*``
+    ranking weights (the measured AP collapses), while every
+    weight-table *fold* of a working gate lands a degenerate point.
+    :class:`GatedPlayer` moves the decision out of the softmax
+    entirely:
+
+    * *inner* proposes the move over its own legal set — bind an
+      eval-only enumerator so ``stop`` is never a softmax row;
+    * :meth:`forced_action` — the :func:`engine.run_episode` side
+      channel — scores the state independently and returns the
+      domain's *stop* move (the ``stop_op`` entry of *legal*) when
+      the continue-score drops to *kappa*, or when no non-stop move
+      remains; ``None`` abstains and the inner pick is played.
+
+    The score is *score(state, hist)* when given — a calibrated
+    probability, an expected-yield figure, any state-level quantity —
+    or the linear head ``_dot(w_stop, stop_feats(state, hist))``
+    (``stop_feats`` is the ``(state, hist) -> dict`` featurizer the
+    caller closes over, e.g. ``spec.featurize`` evaluated on the stop
+    action).  With neither bound the channel never fires early: the
+    player drains and takes the terminal move when the inner policy
+    runs out — the honest never-stop default.
+    """
+
+    def __init__(
+        self,
+        inner: Any,
+        *,
+        legal: Any,
+        stop_op: str = "stop",
+        stop_feats: Any = None,
+        w_stop: dict | None = None,
+        kappa: float = 0.0,
+        score: Any = None,
+    ) -> None:
+        """Bind the ranker, the enumerator, and the stop scorer.
+
+        *inner* is the ``state -> action | None`` ranking policy.
+        *legal* is the domain's *full* move enumerator (the channel
+        finds the ``stop_op`` move in it).  *score* is the optional
+        ``(state, hist) -> float`` side-channel scorer; absent, the
+        linear head ``w_stop · stop_feats`` scores; both absent, the
+        channel is inert and the arm drains (never-stop).  *kappa* is
+        the continue-threshold: force ``stop`` when the score is
+        ``<= kappa``.
+        """
+        self._inner = inner
+        self._legal = legal
+        self._op = stop_op
+        self._feats = stop_feats
+        self._w = w_stop
+        self._k = kappa
+        self._score = score
+        self._hist = PlayHist()
+        self._prev_steps = -1
+
+    def _observe(self, state: Any) -> None:
+        """Detect the episode boundary — the LinearPolicy convention."""
+        steps = getattr(state, "steps", 0)
+        if self._prev_steps < 0 or (
+            steps == 0 and self._prev_steps > 0
+        ):
+            self._hist = PlayHist()
+        self._prev_steps = steps
+
+    def _moves(self, state: Any) -> tuple[Any, list]:
+        """Split *legal(state)* into ``(the stop move, other moves)``."""
+        stop = None
+        others: list = []
+        for a in self._legal(state):
+            if getattr(a, "op", None) == self._op:
+                stop = a
+            else:
+                others.append(a)
+        return stop, others
+
+    def _continue_score(self, state: Any) -> float:
+        """Return the side channel's continue-value estimate."""
+        if self._score is not None:
+            return float(self._score(state, self._hist))
+        if self._w is None or self._feats is None:
+            return math.inf  # no scorer bound — never stop early
+        return _dot(self._w, self._feats(state, self._hist))
+
+    def forced_action(self, state: Any) -> Any | None:
+        """Return the forced stop move, or ``None`` to abstain.
+
+        The ``run_episode`` hook fires the domain's stop move when no
+        non-stop move remains (the pool is drained — the same terminal
+        move a gate plays), or when the continue-score drops to
+        *kappa*.  ``None`` delegates the step to the inner policy
+        untouched.
+        """
+        self._observe(state)
+        stop, others = self._moves(state)
+        if stop is None:
+            return None  # the domain has no stop move — abstain
+        if not others or self._continue_score(state) <= self._k:
+            self._hist.record(self._op)
+            return stop
+        return None
+
+    def __call__(self, state: Any) -> Any | None:
+        """Ask the ranker; on no pick, take the domain's stop move."""
+        self._observe(state)
+        act = self._inner(state)
+        if act is None:
+            stop, _others = self._moves(state)
+            return stop
+        self._hist.record(getattr(act, "op", "?"))
+        return act
+
+    def finish_episode(
+        self, total: float, rewards: Iterable[float] | None = None
+    ) -> None:
+        """Delegate the learner hook to the inner policy, if it has one."""
+        fin = getattr(self._inner, "finish_episode", None)
+        if fin is not None:
+            fin(total, rewards=rewards)
+
+    def imitate(self, state: Any, action: Any) -> bool:
+        """Delegate demonstration credit to the inner policy."""
+        im = getattr(self._inner, "imitate", None)
+        return bool(im(state, action)) if im is not None else False

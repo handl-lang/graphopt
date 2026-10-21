@@ -100,6 +100,7 @@ _MODULES: dict[str, str] = {
     "linear": "gamekit.players.linear",
     "neural": "gamekit.players.neural",
     "distilled": "gamekit.players.distilled",
+    "gated": "gamekit.players.gated",
 }
 
 #: spec name → (module path, PlayerSpec) — built by :func:`specs`.
