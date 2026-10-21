@@ -17,11 +17,15 @@ abstract: |
   batch-norm weight fold a hand optimizer writes — minted, admitted,
   and shipped verbatim as a machine-authored law in the default rule
   set.  The deployed program evaluates bitwise-equal to the spelled
-  one through an independent runtime and is 16% cheaper per call
-  (72.8 vs 87.0 ms), with the term-level cost model agreeing
-  in direction.  All reported numbers are reproducible from the
-  committed tree.  The scope is deliberately honest: a kernel-scale,
-  certified-rewrite result, not a model-scale speedup claim.
+  one through an independent runtime and is ~5% cheaper per call in
+  the honest deployed regime — a −16% subprocess arm conflates unused
+  marshal work into the spelled baseline and is quoted only in the
+  regime split — while the term-level cost model prices the fold at
+  −33% on the shipped term (−50% on the probe site).  All reported
+  numbers are reproducible across the `handl-lang` trees at the
+  locked revisions (§@sec-repro).  The scope is deliberately honest:
+  a kernel-scale, certified-rewrite result, not a model-scale speedup
+  claim.
 format:
   pdf:
     documentclass: article
@@ -86,8 +90,8 @@ executes the morphism hierarchy.  The claim is narrow and checkable:
 
 No model-scale speedup is claimed.  The result is kernel-scale
 (one op pair, fp64 fixtures), the runtime is a tree-walk interpreter
-(debug build), and the move alphabet is bounded by an 18-op host-tensor
-surface — all named in @sec-limitations.  What the case study
+(debug build), and the move alphabet is bounded by the 28-op
+host-tensor surface — all named in @sec-limitations.  What the case study
 establishes is the *pipeline*: that a law can travel from measured
 need to a shipped, certified, runtime-priced rule without a human
 writing it.
@@ -115,21 +119,24 @@ application, not that the rule is true.
 
 Catopt reads a program as a 1-morphism between tensor types, a rewrite
 law as a 2-cell between programs, and a derivation — one law proven
-from premises — as a 3-cell; the platform paper develops the
-consequence [@eqsat2026substrate]: laws are **data rows** (a pattern
-pair plus a `cond`/`check`/`derive` guard spec), serializable,
-storable, composable.  What matters here is the bank this paper
-mutates: `mlopt_core.laws.ALL_RULES` mixes human-authored axioms with
-thirteen machine-admitted objects
+from premises — as a 3-cell: the cells-as-data pattern the kernel
+calculus defines [@kernel2026] and the eqsat paper operationalises
+[@eqsat2026substrate].  The consequence is that laws
+are **data rows** (a pattern pair plus a `cond`/`check`/`derive`
+guard spec), serializable, storable, composable — and what this paper
+mutates is the bank: `mlopt_core.laws.ALL_RULES` mixes human-authored
+axioms with thirteen machine-admitted objects
 (`mlopt_core.laws.provenance.MACHINE_SHIPPED`).
 
 ## The handl substrate and mlopt-kit
 
 The same "one language, many interpretations" model is implemented by
-the handl platform: eval, typecheck and rewrite are interpretations of
-one language whose tables are data.  `packages/mlopt-kit` — a plain
+the handl platform — the closed arrow calculus and `Language` schema
+are the kernel paper's subject [@kernel2026]: eval, typecheck and
+rewrite are interpretations of one language whose tables are data.
+`packages/mlopt-kit` — a plain
 Rust crate — composes handl's canonical `Language`, its
-lex/parse/tree-walk-exec engines, and `handl-host-tensor`'s 18-op
+lex/parse/tree-walk-exec engines, and `handl-host-tensor`'s 28-op
 `tensor.*` surface as dependencies (no forks).  `hnl-run` is a
 subprocess door: `.hnl` in, a JSON wire tensor out, `--repeat N`
 evaluating a source N times in one process — the measurement hook.
@@ -200,12 +207,15 @@ deliberate false twins (`project/retros/mul-unsq-nat.md`,
 Because laws are data, discovery admits a well-defined game structure
 — moves are rule applications, the admission gauntlet is the
 referee, the cost alphabet is the score [@eqsat2026substrate].  This
-is implemented machinery, not aspiration: `engine` defines the
-`Board` protocol and episode/train/eval drivers, `players` a
-`LinearPolicy` arm over a domain-specified featurizer, and `play` a
-domain registry (`meta`, `joint`, `search`, `torch`, `gen`, `open`;
-`torch` and `gen` ship `deliver` hooks that lower the winning
-extraction to a verified module).  A domain is data — a case
+is implemented machinery, not aspiration, and it lives in
+`handl-lang/gamekit`: `gamekit.engine` defines the `Board` protocol
+and the episode/train/eval drivers, and `gamekit.players` provides
+the `LinearPolicy` arm over a domain-specified featurizer —
+`mlopt_discovery.engine`/`players` are compatibility re-export shims
+over those modules.  `mlopt_discovery.play` carries the domain
+registry (`meta`, `joint`, `torch`, `search`, `gen`, `open`,
+`player`; `torch` and `gen` ship `deliver` hooks that lower the
+winning extraction to a verified module).  A domain is data — a case
 generator, a board factory, and a feature schema — not a subclass.
 
 Two linear priors ship with pinned held-out wins: the open-game policy
@@ -221,10 +231,15 @@ coverage: a pairwise RankNet objective on the reward's own label
 reaches AP 0.1941 — above the trained-linear anchor (0.128), under
 the page-aware linear (0.210) — and a ListNet-graded drain earns
 heuristic-parity episode reward (0.3549 vs 0.3595, inside seed
-noise) without beating it (`docs/results_neural_rank.md`).  Two learned-policy axes (schedule guidance;
-direct law invention) were measured and falsified — the evidence for
+noise) without beating it (`docs/results_neural_rank.md`).  Two
+learned-policy axes were measured and falsified: learned *schedule
+guidance* over the generator arms (`project/retros/guide-real-run.md`,
+`guide-learned-corpus.md` — the optimal schedule reduces to a rule),
+and *direct law invention* by a learned policy (~10× worse than
+structured construction; ADR 0004).  The evidence for
 learned guidance is real but early (controlled baseline and ablations in
-`docs/results_learned_baseline.md` / `docs/results_learned_ablations.md`): linear and distilled arms beat
+`docs/results_learned_baseline.md` / `docs/results_learned_ablations.md`;
+dedicated RL arms in `docs/results_learned_rl.md`): linear and distilled arms beat
 baselines; neural methods reach parity, not wins.
 
 # Case study: the conv+BN fold {#sec-casestudy}
@@ -250,8 +265,9 @@ refuse at truth-starvation, the expand at typed-pay — their value is
 **Mint.**  `synthesize_rules` over the bank minus the already-shipped
 composite emits 974 rules; the fold composite —
 `batch_norm(conv2d(·),…)` → `conv2d(·)` — mints as a depth-4
-`syn_*` chain over an 8-rule transitive premise closure (five shipped
-anchors + three intermediates).
+`syn_*` chain over an 8-rule transitive premise closure (the
+`batch_norm_expand` expansion + four `conv_channel_*` anchors +
+three `syn_*` intermediates).
 
 **Transport and truth.**  Stored with its closure, `admit_object`
 rebuilds both hooks from guard records (`missing=('check','derive')`
@@ -357,8 +373,10 @@ fool both.  *Laws as first-class values*: minting constructs a
 `Value` in the same calculus the engine executes — a data row, not
 generated code — so admission is a runtime decision, not a build
 step.  *Language-agnostic exits*: the `Sink` port lowers one extracted
-graph to torch, ONNX, or handl `.hnl`
-(`bench/drivers/kit/term_hnl.py`), so a certified result is not
+graph to torch (`mlopt_torch.TorchSink`) or ONNX
+(`mlopt_onnx.OnnxSink`), and a separate bench driver
+(`bench/drivers/kit/term_hnl.py`) renders the same term as handl
+`.hnl` — so a certified result is not
 married to the backend that priced it.
 
 **Compilers.**  TVM [@chen2018tvm] autotunes schedules; TorchInductor
@@ -380,7 +398,8 @@ minted guards).
   wider-corpus evidence in the repo (bimodal exposure, ~1.5% yield of
   fresh paying structure) is honest that this is not yet a general
   speedup.
-- **Move alphabet bound.**  The kit surface is 18 `tensor.*` ops; the
+- **Move alphabet bound.**  The kit surface is 28 `tensor.*` ops (16
+  forwards + 11 `*_backward` adjoints + `derive`); the
   fold's own $s = \gamma \cdot \mathrm{rsqrt}(\sigma^2 + \varepsilon)$ is outside it (no elementwise
   `rsqrt`) and rides a marshaling channel.  Emitted terms are confined
   to what the surface spells; outside-surface ops refuse by name.
@@ -409,20 +428,31 @@ minted guards).
 
 # Reproduction {#sec-repro}
 
-All numbers are reproducible from the committed tree at
-`handl-lang/graphopt`:
+Reproducibility is org-scoped, stated honestly.  The flagship
+artifacts — the `conv_bn_fold` shipped law, `MACHINE_SHIPPED`
+provenance, the `dag_cost` alphabet — live in `mlopt_core` in
+`handl-lang/eqsat`, and the game layer in `handl-lang/gamekit`; both
+resolve as private `git+ssh` dependencies pinned in `uv.lock`
+(eqsat `b0cb5cd…`, gamekit `97c1faa…`).  The measured retros each
+claim cites live under `project/retros/`, which is gitignored on
+`main` — they are committed on the repo's `project` branch, not in a
+`main` clone.  So: reproducible across the
+`handl-lang/{graphopt,eqsat,gamekit}` trees at the locked revisions,
+requiring org access — not from this repo alone.
+
+Within that scope:
 
 ```sh
 uv sync
 .venv/bin/python bench/drivers/probes/conv_fold_premise_pay_probe.py   # the admission account (~13 s)
 .venv/bin/python -m pytest tests/test_kit_bridge.py -q       # the runtime-priced decision (8 tests)
-cargo test -p mlopt-kit                                     # the Rust consumer (21 tests)
+cargo test -p mlopt-kit                                     # the Rust consumer (31 tests)
 .venv/bin/python -m pytest -m "not slow"                     # the dev lane
 ```
 
 The evidence ledger is `bench/RESULTS.md`; the measured retros each
-claim cites are under `project/retros/` (notably
-`minted-composite-default.md`, `kit-term-bridge.md`,
+claim cites are under `project/retros/` on the `project` branch
+(notably `minted-composite-default.md`, `kit-term-bridge.md`,
 `premise-anchored-derivability.md`, `fold-cost-single-source.md`);
 the extended working draft with the full win/loss tables is
 `docs/paper_draft.md`.
