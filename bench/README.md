@@ -61,6 +61,12 @@ bench/
     train/                             # measurement-only policy trainers
     policy/                            # the controlled-protocol policy drivers
                                        #   (results in docs/results_*.md)
+    overnight.py                       # the overnight discovery loop —
+                                       #   episodes → mint → verify_law
+                                       #   gauntlet admission → prior-art
+                                       #   novelty → resumable JSONL ledger
+                                       #   → docs/results_overnight.md
+                                       #   (flat file, no <sub>/)
 ```
 
 Suites live under `suites/<intent>/` (the directory is the intent)
@@ -68,8 +74,9 @@ and expose `run_bench(args) -> Report`.  They never time anything
 themselves — they describe `Case`/`Variant` data and hand it to
 `Runner`.  `drivers/` is the dissolved `lab/` — research drivers
 rather than `Report`-style suites: they run standalone
-(`.venv/bin/python bench/drivers/<sub>/<mod>.py`) and write result
-documents, not `baselines/` rows.
+(`.venv/bin/python bench/drivers/<sub>/<mod>.py`; `overnight.py` is a
+flat file at the `drivers/` root) and write result documents, not
+`baselines/` rows.
 
 ## The Report model
 

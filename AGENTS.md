@@ -97,6 +97,13 @@ not `baselines/` rows:
   `train_search_policy.py`.
 - `bench/drivers/kit/` — `term_hnl.py`, the mlopt-term → `.hnl` emit/eval
   bridge into `CatoptKit`.
+- `bench/drivers/overnight.py` — the overnight discovery loop:
+  episodes → mint → `verify_law` gauntlet admission → prior-art-bank
+  novelty classification → resumable JSONL ledger →
+  `docs/results_overnight.md`.  A flat-file driver (no `<sub>/`),
+  standalone only — deliberately no `bench.suites` adapter
+  (`bench/drivers/` is not a package; see the doc's suite-status
+  note).
 
 Some probes need scratch deps installed `--no-deps` outside the
 lockfile: `birefnet_bounded_probe.py` wants
