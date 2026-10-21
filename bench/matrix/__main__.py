@@ -34,6 +34,7 @@ SMOKE = {
     "open_pages": 2,
     "open_page": 6,
     "open_budget": 7,
+    "neural_epochs": 20,
 }
 
 
@@ -61,6 +62,15 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--open-pages", type=int, default=4)
     p.add_argument("--open-page", type=int, default=8)
     p.add_argument("--open-budget", type=int, default=9)
+    p.add_argument(
+        "--neural-epochs",
+        type=int,
+        default=300,
+        help="RuleValueNet epochs for the neural arm on open "
+        "(its held-in train split is measured only when neural "
+        "is among --players)",
+    )
+    p.add_argument("--neural-hidden", type=int, default=32)
     p.add_argument("--device", default="cpu")
     p.add_argument(
         "--smoke",
@@ -156,6 +166,9 @@ def main(argv: list[str] | None = None) -> int:
         "open_pages": args.open_pages,
         "open_page": args.open_page,
         "open_budget": args.open_budget,
+        "open_split": "odd pages eval / even pages train (neural)",
+        "neural_epochs": args.neural_epochs,
+        "neural_hidden": args.neural_hidden,
         "oracle_pairing": "memoized per-candidate-seeded verdicts",
     }
     ckpt = None
@@ -186,6 +199,9 @@ def main(argv: list[str] | None = None) -> int:
         open_pages=args.open_pages,
         open_page=args.open_page,
         open_budget=args.open_budget,
+        neural_epochs=args.neural_epochs,
+        neural_hidden=args.neural_hidden,
+        ctx=refs.RefereeCtx(device=args.device),
         checkpoint=ckpt,
     )
     table.write_outputs(

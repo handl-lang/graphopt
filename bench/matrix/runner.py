@@ -7,7 +7,8 @@ produces on this board — which survive this referee?*  The boards
 supply two claim kinds:
 
 * **extraction claims** (the episode boards — ``meta``, ``search``,
-  ``torch``, ``joint``, ``gen``): the episode's terminal artifact
+  ``torch``, ``joint``, ``gen``, ``kernel``): the episode's terminal
+  artifact
   ``(input term, extracted term)`` wrapped as a concrete
   ``Rewrite``.  The referee re-judges the delivered equality —
   ``naive`` trusts it, ``oracle`` evals it, ``pay`` prices it on
@@ -43,7 +44,14 @@ from bench.referees import registry as refs
 HELD_OUT_OFFSET = 7919
 
 #: Boards whose terminal artifact is an extraction claim.
-_EXTRACTION_BOARDS = ("meta", "joint", "torch", "search", "gen")
+_EXTRACTION_BOARDS = (
+    "meta",
+    "joint",
+    "torch",
+    "search",
+    "gen",
+    "kernel",
+)
 
 #: Boards that produce no equality claims — coverage marks them unrun.
 _NO_CLAIM_BOARDS = ("contraction", "player")
@@ -118,6 +126,12 @@ def _extracted_pair(board: Any, domain: str) -> tuple[Any, Any] | None:
     if domain == "search":
         best = board.env._extract()
         return (board.env.term, best) if best is not None else None
+    if domain == "kernel":
+        # ``KernelBoard`` exposes a zero-arg extraction of its own —
+        # its e-graph lives behind ``env`` and prices on the kernel
+        # cost model, not an arena ``feasible_cost``.
+        best = board.extract_best()
+        return (board.term, best) if best is not None else None
     # MetaArena-family boards (meta/joint/torch/gen).
     best = board.eg.extract_best(board.root, board.feasible_cost)
     return (board.term, best) if best is not None else None
@@ -269,6 +283,8 @@ def _open_cells(
     page: int,
     budget: int,
     ctx: refs.RefereeCtx,
+    neural_epochs: int = 300,
+    neural_hidden: int = 32,
     checkpoint: Any = None,
 ) -> list[Cell]:
     """Play each player on the open board; referee its chosen claims.
@@ -276,7 +292,9 @@ def _open_cells(
     Reuses the leaderboard's memoized-verdict protocol — every pool
     member measured once, the draws replayed to every arm — and adds
     the referee layer on top: the candidates a player *chose* are the
-    claims its cell answers for.
+    claims its cell answers for.  When ``neural`` is among the arms
+    the held-in (even) pages are measured too — the same train split
+    ``bench.players.run`` feeds it — so its ``ctx["train"]`` is real.
 
     With *checkpoint*: a ``("open", player, referee)`` cell is
     recorded when complete and reused on resume; when every cell is
@@ -311,6 +329,27 @@ def _open_cells(
     useful = {
         k for k, o in by_key.items() if getattr(o, "useful", False)
     }
+    train_pairs: list[tuple] = []
+    if "neural" in players:
+        # The held-in half of the protocol — even pages train, odd
+        # pages evaluate (``bench.players.run``'s split).
+        train_pools = [
+            list(og.OpenArena(c).pool)
+            for c in og.gen_cases(
+                seed, pages, page=page, start=0, step=2
+            )
+        ]
+        train_outcomes, tk = _measure_pools(
+            train_pools, seed + 1_000_003
+        )
+        by_key.update(tk)
+        train_pairs = [
+            (c, o)
+            for pool, outs in zip(
+                train_pools, train_outcomes, strict=True
+            )
+            for c, o in zip(pool, outs, strict=True)
+        ]
     orig_evaluate = lp.evaluate
     rows: list[Cell] = []
     try:
@@ -324,8 +363,16 @@ def _open_cells(
                 )
                 continue
             t0 = time.perf_counter()
+            pctx: dict = {}
+            if pname == "neural":
+                pctx = {
+                    "train": train_pairs,
+                    "epochs": neural_epochs,
+                    "hidden": neural_hidden,
+                    "device": ctx.device,
+                }
             try:
-                mk = registry.make(pname, "open", seed=seed, ctx={})
+                mk = registry.make(pname, "open", seed=seed, ctx=pctx)
             except Exception as e:
                 for rname in referees:
                     c = Cell(
@@ -457,6 +504,8 @@ def run_matrix(
     open_pages: int = 2,
     open_page: int = 8,
     open_budget: int = 9,
+    neural_epochs: int = 300,
+    neural_hidden: int = 32,
     ctx: refs.RefereeCtx | None = None,
     checkpoint: Any = None,
 ) -> list[Cell]:
@@ -503,6 +552,8 @@ def run_matrix(
                     page=open_page,
                     budget=open_budget,
                     ctx=ctx,
+                    neural_epochs=neural_epochs,
+                    neural_hidden=neural_hidden,
                     checkpoint=checkpoint,
                 )
             )

@@ -205,6 +205,22 @@ def test_component_verdict_order():
     assert not v.passed  # mul != add on a concrete pair
 
 
+def test_cert_replays_a_derivable_claim():
+    """The cert leg on a derivable concrete pair — ``instances``
+    returns ``(lhs, rhs)`` pairs, so the leg unpacks one instance
+    before ``verify_law`` (the ``inst[1]`` IndexError regression).
+    """
+    from mlopt_core.ir import Const
+
+    from bench.referees import components as _c
+
+    x = _v("x", 4, 4)
+    claim = Rewrite("id", _p("add", x, Const(0)), x)
+    evd = _c.ClaimEvidence(claim, _ctx())
+    v = _c.run_component("cert", claim, _ctx(), evd)
+    assert v.name == "cert" and v.passed
+
+
 # ---------------------------------------------------------------------------
 #  matrix — coverage audit + a seconds-scale smoke
 # ---------------------------------------------------------------------------
@@ -269,6 +285,50 @@ def test_matrix_cli_unknown_board(tmp_path):
     from bench.matrix.__main__ import main
 
     assert main(["--boards", "nope", "--out", str(tmp_path)]) == 2
+
+
+def test_matrix_kernel_extraction():
+    """``kernel`` cells deliver claims — ``KernelBoard`` has no
+    ``feasible_cost``; its pair comes off its own ``extract_best``.
+    """
+    from mlopt_discovery.play import DOMAINS
+
+    from bench.matrix.runner import _extracted_pair, run_matrix
+
+    d = DOMAINS["kernel"]
+    board = d.board_of(d.cases(0, 1)[0])
+    pair = _extracted_pair(board, "kernel")
+    assert pair is not None and pair[0] == board.term
+    cells = run_matrix(
+        ["kernel"],
+        ["playbook"],
+        ["naive"],
+        meta_cases=1,
+        meta_budget=3,
+    )
+    assert len(cells) == 1 and cells[0].run
+    assert cells[0].admitted == cells[0].claims
+
+
+def test_matrix_open_neural_trains():
+    """``neural`` on ``open`` gets its held-in train ctx — the cell
+    runs, it does not skip on ``ctx['train']``.
+    """
+    from bench.matrix.runner import run_matrix
+
+    cells = run_matrix(
+        ["open"],
+        ["neural"],
+        ["naive"],
+        open_pages=1,
+        open_page=4,
+        open_budget=5,
+        neural_epochs=5,
+    )
+    assert len(cells) == 1
+    c = cells[0]
+    assert c.run and not c.reason
+    assert c.admitted == c.claims
 
 
 # ---------------------------------------------------------------------------

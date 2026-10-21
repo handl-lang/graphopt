@@ -574,7 +574,8 @@ def _cert(claim: Any, ctx: RefereeCtx, evd: ClaimEvidence) -> Any:
         from mlopt_core.laws import ALL_RULES
 
         rules = tuple(ALL_RULES)
-    res = verify_law(inst[0], inst[1], list(rules))
+    lhs_i, rhs_i = inst[0]
+    res = verify_law(lhs_i, rhs_i, list(rules))
     ok = res.derivable and res.replayable
     if ok:
         detail = (
