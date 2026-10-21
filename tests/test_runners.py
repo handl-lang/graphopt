@@ -19,7 +19,11 @@ from mlopt_orchestrator.autotune import AutotuneContext, CandidateUnavailableErr
 from mlopt_orchestrator.runners import ChainedRunner, IdentityRunner, Runner, runner_candidate
 
 from mlopt_cuda import CudaGraphRunner
-from mlopt_cuda.runners import _capture_failure_class
+from mlopt_cuda.runners import (
+    _capture_executor,
+    _capture_failure_class,
+    _GraphReplayModule,
+)
 from mlopt_core.failures import FailureClass
 from mlopt_torch.runners import TorchCompileRunner
 
@@ -303,6 +307,40 @@ def test_cuda_graph_runner_generic_failure_recorded():
     assert out is mod
     assert stats["cuda_graph"] is False
     assert stats["cuda_graph_failure"] is FailureClass.UNKNOWN
+
+
+def test_capture_executor_declined_returns_none():
+    """An executor whose ``capture_cuda_graph`` no-ops — its plan
+    didn't match, ``is_graph_captured`` stays False — declines:
+    ``None`` lets ``apply`` fall through to the generic path instead
+    of claiming ``cuda_graph=True`` on an uncaptured module."""
+
+    class Declining(nn.Module):
+        is_graph_captured = False
+
+        def capture_cuda_graph(self, *xs: torch.Tensor) -> None:
+            pass
+
+        def forward(self, x: torch.Tensor) -> torch.Tensor:
+            return x
+
+    stats: dict = {}
+    out = _capture_executor(Declining(), (torch.randn(2, 4),), stats)
+    assert out is None
+    assert "cuda_graph" not in stats
+
+
+def test_graph_replay_getattr_reraises_without_inner():
+    """``_GraphReplayModule.__getattr__`` delegates to ``inner`` — but
+    only while it is a registered submodule.  Once ``inner`` is gone
+    the original AttributeError propagates rather than a delegated
+    miss (the early-construction/copy path the ``_modules`` guard
+    exists for)."""
+    mod = _GraphReplayModule(nn.Linear(4, 4), None, [], None)
+    assert mod.inner is not None
+    del mod.inner  # strip the registered submodule
+    with pytest.raises(AttributeError):
+        _ = mod.bogus_attr
 
 
 def test_capture_failure_class_classifies():

@@ -655,6 +655,36 @@ def test_native_contraction_shipped_fns() -> None:
     assert cp.merge_tensors(ts, 0, 1) == _ncon.merge_tensors(ts, 0, 1)
 
 
+def test_native_contraction_delegation_contract(monkeypatch) -> None:
+    """The four hot fns forward to ``_ncon`` whenever it is bound —
+    pinned with a stub so the delegation is covered where the
+    maturin wheel is absent (real parity lives in the two
+    ``test_native_contraction_*`` tests above)."""
+    from mlopt_torch import contraction_policy as cp
+
+    class _StubNcon:
+        def pair_cost(self, x, y, sizes):
+            return ("pc", x, y, sizes)
+
+        def merge_tensors(self, ts, a, b):
+            return ["merged"]
+
+        def greedy(self, tensors, sizes, rng=None, top_k=1):
+            return 0.5
+
+        def cost_of_order(self, tensors, sizes, order):
+            return 1.25
+
+    stub = _StubNcon()
+    monkeypatch.setattr(cp, "_ncon", stub)
+    ts = [frozenset({0, 1}), frozenset({1, 2})]
+    sizes = {0: 4, 1: 4, 2: 4}
+    assert cp.pair_cost(ts[0], ts[1], sizes) == ("pc", ts[0], ts[1], sizes)
+    assert cp.merge_tensors(ts, 0, 1) == ["merged"]
+    assert cp.greedy([(0, 1), (1, 2)], sizes, rng=None, top_k=2) == 0.5
+    assert cp.cost_of_order([(0, 1)], sizes, [(0, 1)]) == 1.25
+
+
 # --- from eqsat tests/test_backend_neutral.py -------------------------
 
 

@@ -414,6 +414,17 @@ def test_matmul_t_concat_derive():
     assert _derive(OM.MATMUL_T_CONCAT, {**good, "q": RAW}) is None
 
 
+def test_score_concat_dim_hook_declines_unshaped():
+    """The procedural oracle the shipped ``dspec`` replaced: an
+    unshapeable ``q``/``k1`` declines to ``None`` — the same veto the
+    spec's ``("vshape", T)`` rank readers produce."""
+    good = _mtc_bound(_v("q", 4, 6), _v("k1", 3, 6), _v("k2", 5, 6))
+    assert OM._derive_score_concat_dim(good) == {"$attr:SD": 1}
+    # non-tuple value shapes → line 420
+    assert OM._derive_score_concat_dim({**good, "q": RAW}) is None
+    assert OM._derive_score_concat_dim({**good, "k1": _ill()}) is None
+
+
 # ---------------------------------------------------------------------------
 #  _cat_axis_plan — the mask-distribution planner behind every
 #  masked_fill/add/where-over-concat law

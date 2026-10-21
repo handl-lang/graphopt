@@ -27,6 +27,7 @@ from mlopt_carriers.om import (  # noqa: E402
     OM_DECAYED_CROSS,
     OM_DECAYED_CROSS_GEN,
     OM_LAWS,
+    SHARED_STATE_MAT_REASSOC,
     SPLIT_COMMUTE,
     SPLIT_FLATTEN,
     SPLIT_MATMUL_COLS,
@@ -397,6 +398,42 @@ class TestDecayBlockCrossFlat:
         assert subst is not None
         assert not DECAY_BLOCK_CROSS_FLAT.check(subst)
 
+    def test_non_int_dims_decline(self):
+        """Non-int DR/DC attrs veto before the axis alignment check."""
+        bound = {
+            "g": _v("g", 8),
+            "$attr:T": 8,
+            "$attr:SZR": (4, 2, 2),
+            "$attr:SZC": (4, 4),
+            "$attr:DR": "x",
+            "$attr:DC": -1,
+            "$attr:I": 1,
+            "$attr:J": 0,
+        }
+        assert not DECAY_BLOCK_CROSS_FLAT.check(bound)
+
+    def test_unshaped_decay_falls_back_to_axis_defaults(self):
+        """An unshapeable ``g`` can't read its rank — the check falls
+        back to the canonical ``-2``/``-1`` split axes."""
+        bound = {
+            # no "g" — _vshape declines to a shape
+            "$attr:T": 8,
+            "$attr:SZR": (4, 2, 2),
+            "$attr:SZC": (4, 4),
+            "$attr:I": 1,
+            "$attr:J": 0,
+        }
+        assert DECAY_BLOCK_CROSS_FLAT.check(
+            {**bound, "$attr:DR": -2, "$attr:DC": -1}
+        )
+        assert not DECAY_BLOCK_CROSS_FLAT.check(
+            {**bound, "$attr:DR": -2, "$attr:DC": 0}
+        )
+
+    def test_derive_none_without_partition(self):
+        """No resolvable partitions → nothing for derive to mint."""
+        assert DECAY_BLOCK_CROSS_FLAT.derive({}) is None
+
     def test_numerically_equals_sliced_block(self):
         """The mixed-partition factored block IS the slice."""
         pos = torch.arange(self.T, dtype=torch.float64)
@@ -471,6 +508,11 @@ class TestSplitFlatten:
         )
         assert subst is not None
         assert not SPLIT_FLATTEN.check(subst)
+        # and the failed check leaves derive nothing to mint
+        assert SPLIT_FLATTEN.derive(subst) is None
+
+    def test_derive_none_without_attrs(self):
+        assert SPLIT_FLATTEN.derive({}) is None
 
     def test_mismatched_dims_decline(self):
         subst = match_pattern(
@@ -534,6 +576,17 @@ class TestStateWeightLaws:
         }
         assert not DECAY_STATE_WEIGHT_SINK.check(bound)
 
+    def test_sink_declines_unshapeable_factor(self):
+        """An unbound (shapeless) factor can't prove contraction
+        constancy — the guard declines rather than guess."""
+        bound = {
+            # no "a" — _vshape declines to a shape
+            "b": _v("b", 5, 1),
+            "q": _v("q", 5, 3),
+            "B": _v("B", 3, 6),
+        }
+        assert not DECAY_STATE_WEIGHT_SINK.check(bound)
+
     def test_exit_fires_scalar(self):
         lhs = Op.make(
             "matmul",
@@ -565,6 +618,14 @@ class TestStateWeightLaws:
         bound = {
             "a": _v("a"),
             "q": _v("q", 5, 5),
+            "B": _v("B", 3, 6),
+        }
+        assert not DECAY_STATE_WEIGHT_EXIT.check(bound)
+
+    def test_exit_declines_unshapeable_factor(self):
+        bound = {
+            # no "a" — _vshape declines to a shape
+            "q": _v("q", 5, 3),
             "B": _v("B", 3, 6),
         }
         assert not DECAY_STATE_WEIGHT_EXIT.check(bound)
@@ -1003,6 +1064,16 @@ class TestStateFoldLaws:
                 "b": _v("b", 3, 6),
             }
         )
+        # c TALLER than b: broadcasts against both b and the product,
+        # but a rank-3 scale over a rank-2 contraction is not a
+        # scalar factor — the len(broadcast) > len(b) arm declines.
+        assert not MATMUL_SCALAR_FACTOR.check(
+            {
+                "c": _v("c", 1, 5, 1),
+                "q": _v("q", 5, 5),
+                "b": _v("b", 5, 5),
+            }
+        )
         # c varying along b's contracted rows — the unsound corner:
         # c[r]⊙(q@B) ≠ q@(c[k]⊙B).  Square operands broadcast fine;
         # the contraction-constancy arm is what declines.
@@ -1437,6 +1508,21 @@ class TestScoreSplit:
         assert not SPLIT_COMMUTE.check(
             {**b, "t": _v("t", 8, 8), "$attr:DA": -2, "$attr:DB": -1,
              "$attr:I": 5}
+        )
+
+    def test_split_commute_unshaped_distinct_dims(self):
+        """An unshapeable ``t`` with distinct raw dims skips the
+        mod-rank equality test — the per-split attrs decide."""
+        assert SPLIT_COMMUTE.check(
+            {
+                # no "t" — _vshape declines to a shape
+                "$attr:DA": -1,
+                "$attr:DB": 0,
+                "$attr:SA": (4, 4),
+                "$attr:I": 0,
+                "$attr:SB": (4, 4),
+                "$attr:J": 0,
+            }
         )
 
 
@@ -2166,6 +2252,34 @@ class TestSharedStateReassoc:
             "Y": _v("Y", 3, 4),  # rows disagree → no broadcast
         }
         assert not law.check(bound)
+
+    def test_mat_declines_unshapeable_operands(self):
+        """``om_shared_mat_reassoc`` needs resolvable value shapes on
+        all three contraction operands before typing the pair."""
+        base = {
+            "$attr:O1": 2,
+            "$attr:O2": 1,
+            "Q": _v("Q", 3, 4),
+            "A": _v("A", 4, 4),
+            "B": _v("B", 4, 4),
+        }
+        assert SHARED_STATE_MAT_REASSOC.check(base)
+        for key in ("Q", "A", "B"):
+            bound = {k: v for k, v in base.items() if k != key}
+            assert not SHARED_STATE_MAT_REASSOC.check(bound), key
+
+    def test_mat_declines_rank1_contractand(self):
+        """A vector A/B isn't a matrix state contraction."""
+        bound = {
+            "$attr:O1": 2,
+            "$attr:O2": 1,
+            "Q": _v("Q", 3, 4),
+            "A": _v("A", 4),   # rank < 2
+            "B": _v("B", 4, 4),
+        }
+        assert not SHARED_STATE_MAT_REASSOC.check(bound)
+        bound["A"], bound["B"] = _v("A", 4, 4), _v("B", 4)
+        assert not SHARED_STATE_MAT_REASSOC.check(bound)
 
     def test_laws_are_opt_in(self):
         laws = om_shared_state_laws()

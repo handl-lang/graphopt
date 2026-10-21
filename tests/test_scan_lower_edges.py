@@ -127,6 +127,13 @@ def test_leaf_shapes_consistent_and_select_index():
     bad_d = Op.make("aff_diag", _p("a", 4), _p("bb", 3))
     assert _leaf_shapes_consistent([good_d])
     assert not _leaf_shapes_consistent([bad_d])
+    # a second diag leaf whose a-part can't join the running
+    # broadcast (eff=(4,) vs a=(3,)) → the per-leaf veto
+    clash_a = Op.make("aff_diag", _p("a2", 3), _p("bb2", 4))
+    assert not _leaf_shapes_consistent([good_d, clash_a])
+    # and the mirror: a joins but the leaf's b-part misbroadcasts
+    clash_b = Op.make("aff_diag", _p("a3", 4), _p("bb3", 3))
+    assert not _leaf_shapes_consistent([good_d, clash_b])
     # dense leaf needs b == A[:-1]
     bad_dense = Op.make("aff", A, _p("b", 3))
     assert not _leaf_shapes_consistent([bad_dense])

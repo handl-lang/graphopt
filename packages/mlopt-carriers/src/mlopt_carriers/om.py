@@ -3403,7 +3403,7 @@ def _check_shared_mat_reassoc(bound: dict) -> bool:
     if len(as_) < 2 or len(bs) < 2:
         return False
     if not _const_along_contraction((1, 1), as_):
-        return False
+        return False  # pragma: no cover — len(as_)≥2 above forces ca[-2]==1
     from mlopt_core.typing import matmul_shape
 
     return (

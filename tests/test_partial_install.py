@@ -67,6 +67,31 @@ def test_full_skips_uninstalled_carrier(monkeypatch):
         assert op in t.torch_bindings, op
 
 
+def test_machinery_thunks_default_on_missing_carrier(monkeypatch):
+    """``machinery._optional``: a carrier module absent *at call
+    time* — ModuleNotFoundError raised inside the thunk — degrades to
+    the carrier-free default rather than propagating.  That is the
+    contract ``build_machinery`` registers with the orchestrator: a
+    partial install (or a torch-free process) still answers, just
+    with the empty routing table / no plan."""
+    import builtins
+
+    from mlopt_carriers import machinery
+
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == "mlopt_carriers.om_lower":
+            raise ModuleNotFoundError(
+                f"No module named {name!r}", name=name
+            )
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+    # _plans' first import is om_lower → the empty routing table.
+    assert machinery._plans() == {}
+    # _om_plan defers to the same module → declines to plan.
+    assert machinery._om_plan(None) is None
 
 
 def test_expand_binding_accepts_scalar_and_sequence_shapes():
