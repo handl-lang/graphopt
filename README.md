@@ -19,6 +19,13 @@ typed-pay gate → adversarial sweep of the guard's false region →
 replayable certificate) + pluggable players (random · playbook ·
 trained linear · neural).
 
+**The claim is the loop.**  E-graphs (egg/TENSAT), replayable
+derivations (CVC4/Lean), laws-as-values (Lisp) each exist elsewhere;
+*mint → certify → re-enter as a legal move → learned play over the
+growing bank* does not.  It buys **two-engine certification** (a wrong
+law must fool e-graph *and* handl engine), **laws as values** (`Value`
+construction, no codegen), **agnostic exits** (`Sink` → torch/ONNX/`.hnl`).
+
 **What it found.**
 
 - **`conv_bn_fold`** — the conv+BN weight fold every framework

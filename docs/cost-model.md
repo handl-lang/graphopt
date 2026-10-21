@@ -27,7 +27,7 @@ until measured at real sites.
 **Why it can still lie:** fixtures are small, seeded, one GPU box —
 hence "regime-bounded" in the honest scope.
 
-## 3. Numerical verify — the *proof of equality*
+## 3. Numerical verify — the *certified equality*
 
 After lowering, the produced module executes and its outputs are
 compared against the source's, fp64-exact where stated. Verification

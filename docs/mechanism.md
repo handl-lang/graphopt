@@ -2,7 +2,7 @@
 
 The model graph is **syntax**; a category-theoretic **structure**
 interprets it; the structure's **axioms** generate rewrites; **search**
-picks the cheapest; the **certificate** proves it.
+picks the cheapest; the **certificate** certifies it.
 
 This is the conceptual pipeline behind ADR 0002.  It is deliberately
 separate from the code walkthrough — it answers *why* the machinery

@@ -4,7 +4,7 @@
 where search is a game that can be learned.**
 
 It does not just apply the transformations someone already wrote down.
-It **finds new ones, proves them, and ships them** — then uses learned
+It **finds new ones, certifies them, and ships them** — then uses learned
 policies to search the space of equivalent programs faster than a
 hand-tuned heuristic.
 
@@ -140,5 +140,5 @@ out = opt(x)      # verified-equal to model(x)
 
 Most optimizers are libraries of known tricks applied in better
 orders.  Catopt is an attempt to build the other thing: a machine that
-**proposes mathematics, proves it, and then learns how to search with
+**proposes mathematics, certifies it, and then learns how to search with
 it** — with every claim, including the failures, measured and kept.

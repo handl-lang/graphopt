@@ -348,6 +348,20 @@ itself an object of play: in mlopt a law minted during discovery
 re-enters as a move inside the learned game (@sec-game).  The
 differentiation is that closure, not any single leg.
 
+Three capabilities fall out of the closure and belong to no single
+neighbor.  *Two-engine certification*: a certified law must execute
+identically through mlopt's e-graph *and* through handl's
+independently-implemented rewrite engine (`packages/mlopt-handl-peer`;
+the audit driver `bench/drivers/audit/handl_differential.py` fires the
+structural bank on both and reports disagreement) — a wrong law must
+fool both.  *Laws as first-class values*: minting constructs a
+`Value` in the same calculus the engine executes — a data row, not
+generated code — so admission is a runtime decision, not a build
+step.  *Language-agnostic exits*: the `Sink` port lowers one extracted
+graph to torch, ONNX, or handl `.hnl`
+(`bench/drivers/kit/term_hnl.py`), so a certified result is not
+married to the backend that priced it.
+
 **Compilers.**  TVM [@chen2018tvm] autotunes schedules; TorchInductor
 [@ansel2024pytorch2] fuses pointwise ops and codegen's the graph a
 human optimizer could reach.  Both are incumbents in the repo's

@@ -4,7 +4,7 @@
 
 The model graph is **syntax**; a category-theoretic **structure**
 interprets it; the structure's **axioms** generate rewrites; **search**
-picks the cheapest; the **certificate** proves it.
+picks the cheapest; the **certificate** certifies it.
 
 ## The tower
 

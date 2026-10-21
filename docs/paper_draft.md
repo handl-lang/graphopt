@@ -12,7 +12,7 @@ treats optimization as a game over a structured space of *equivalent*
 solutions: a tensor program is a morphism of a category, the category's
 equations are rewrite laws, equality saturation closes the space of
 programs equivalent to the input, cost-based extraction picks the cheapest
-member the target can run, and a replayable certificate proves the step.
+member the target can run, and a replayable certificate certifies the step.
 Reinforcement learning navigates the space; the formal layer fixes what is
 *admissible*, which is what lets the learner explore aggressively.
 
@@ -78,7 +78,7 @@ them.
    transformations and preserved semantics.  A program is a 1-morphism; a
    rewrite law is a 2-morphism between programs; a `derivation` — one law
    proven from premises — is a 3-morphism (a coherence).  The structure's
-   axioms *generate* rewrites; the certificate *proves* the step.  This is
+   axioms *generate* rewrites; the certificate *certifies* the step.  This is
    what makes the search space a space of *equivalent* programs rather than a
    space of guesses.
 3. **Learned search.**  Optimization is a game over the space of *valid*
@@ -597,7 +597,15 @@ verified loop, over a fixed deduction closure (AlphaTensor, Fawzi et al.,
 Nature 2022, similarly searches one fixed structure).  Each neighbor holds
 pieces of the loop; to our knowledge none makes the minted bank itself an
 object of play — rules re-entering as moves inside the learned game is the
-differentiation (§4.4).
+differentiation (§4.4).  The closure buys three capabilities the neighbors
+lack: **two-engine certification** — a certified law must execute
+identically through mlopt's e-graph *and* handl's independent rewrite
+engine (`packages/mlopt-handl-peer`,
+`bench/drivers/audit/handl_differential.py`); **laws as first-class
+values** — minting constructs a `Value` in the same calculus, no codegen
+step; and **language-agnostic exits** — one `Sink` port lowers the same
+extracted graph to torch, ONNX, or `.hnl`
+(`bench/drivers/kit/term_hnl.py`).
 
 **Program synthesis / library learning.**  Anti-unification library learning
 (the Babble line) is the direct ancestor of ADR 0007 layer 1: anti-unify
@@ -628,7 +636,11 @@ hand-rolled equality saturation against the Rust **egglog** library on a
 small op/law subset (opt-in, test-only; core stays pure-Python).  It asserts
 the extracted lowest-FLOPs terms match up to commutative-representative
 choice and that the folded costs coincide — an independent check that the
-saturation is not idiosyncratic.
+saturation is not idiosyncratic.  The second, stronger oracle is the handl
+peer (`packages/mlopt-handl-peer`): the structural bank fires through
+handl's own rewrite engine and must produce the term mlopt's
+`EGraph.apply_rule` produces (`bench/drivers/audit/handl_differential.py`)
+— a wrong law must fool two implementations of the calculus, not one.
 
 ## 6. Limitations
 
@@ -702,7 +714,7 @@ class is the open work.
 ## 8. Verdict
 
 Publishable as a **discovery + verification** contribution, not as a speedup
-paper.  What is proven and verified: the loop *mints content that ships* (a
+paper.  What is certified and verified: the loop *mints content that ships* (a
 law derived from a model's own op-tuple is in the default rule set with a
 synthesized guard that survived an adversarial sweep; a handler grammar
 re-minted a previously hand-written carrier executor), while the same
@@ -712,7 +724,7 @@ boundaries are per-artifact and the adversarial layer keeps catching
 would-be false claims.  The performance story is real but narrow, and the
 losses are kept in the same table as the wins.  Framed as "verified
 discovery with a regime-bounded performance win, and a loop that ships what
-it proves," this is a solid systems/PL workshop or short-paper result; a full
+it certifies," this is a solid systems/PL workshop or short-paper result; a full
 venue paper needs the scale validation and the executor work named in §6.
 
 ---
