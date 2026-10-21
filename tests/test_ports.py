@@ -8,15 +8,6 @@ a ``CostFn``.
 """
 
 import torch
-from mlopt_core.cost import (
-    CostModel,
-    count_cost,
-    dag_cost,
-    flops_cost,
-    launch_aware_cost,
-    param_bytes_cost,
-    param_bytes_cost_for,
-)
 from mlopt_core.ir import IR, Op, TensorType, Var
 from mlopt_carriers.om_lower import (
     StreamingOMModule,
@@ -28,13 +19,9 @@ from mlopt_core.ops import OpTable
 from mlopt_core.ports import (
     BatchedExecutor,
     Binding,
-    CostFn,
     Executor,
     OpRegistry,
     PlannedExecutor,
-    RuleLike,
-    RuleSetLike,
-    RuleSetProvider,
     ShapeRule,
     Sink,
     Source,
@@ -43,10 +30,8 @@ from mlopt_core.ports import (
     signature_conforms,
 )
 from mlopt_torch.report import VerifyReport, verify_equiv
-from mlopt_core.laws import CATEGORICAL, CATEGORICAL_RULES, all_rules
 from mlopt_carriers.scan_lower import to_batched_scan_module
 from mlopt_torch.torch_bridge import _IR_TO_TORCH, IRModule
-from mlopt_core.typing import _SHAPE_RULES
 
 # ---------------------------------------------------------------------------
 #  Fixtures — minimal real terms for each executor

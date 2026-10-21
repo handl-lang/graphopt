@@ -12,29 +12,14 @@ import pytest
 import torch
 import torch.nn as nn
 from mlopt_core import laws
-from mlopt_core.egraph import Rewrite
-from mlopt_core.ir import Op
 from mlopt_core.laws import (
-    ALL_RULES,
-    ALL_RULES_WITH_LAYOUT,
-    CATEGORICAL_RULES,
     COMM_ADD,
     DISTRIBUTE_MUL,
-    GQA_ABSORB,
     ID_ADD,
-    LAYOUT_RULES,
-    SCAN_DIAG_LAWS,
-    SCAN_LAWS,
-    SDPA_FOLD_RULES,
-    SIMPLIFICATION_RULES,
-    SWIGLU_FUSE,
-    R,
     RuleSet,
     all_rules,
-    preset,
     tags,
 )
-from mlopt_core.ports import RuleLike, RuleSetLike
 
 SUBSUMED_NAMES = {
     "swiglu_fuse",

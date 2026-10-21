@@ -38,9 +38,9 @@ import torch
 
 import mlopt_carriers.om as OM  # registers cmask/fill/attnbias
 import mlopt_carriers.xcarrier as XC  # registers omd/affd bindings
-from mlopt_core.cost import _infer_op_shape, _shape_of, flops_cost
+from mlopt_core.cost import _shape_of, flops_cost
 from mlopt_core.egraph import EGraph
-from mlopt_core.ir import IR, Const, Op, Param, TensorType
+from mlopt_core.ir import IR, Op
 from mlopt_torch.regime import default_rules
 from mlopt_torch.torch_bridge import export_to_ir, ir_to_torch_module
 

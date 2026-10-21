@@ -9,33 +9,19 @@ below check that contract, the selection flip when two axes
 disagree, the validation surface, and the stats record.
 """
 
-import math
 
 import pytest
 import torch
 from mlopt_core.cost import (
-    _LAUNCH_S,
-    _local_roofline,
-    dag_cost,
-    executor_cost_for,
     flops_cost,
-    param_bytes_cost_for,
 )
 from mlopt_core.egraph import EGraph
 from mlopt_core.ir import Op, Param, TensorType, Var
-from mlopt_core.ports import CostFn, signature_conforms
 from mlopt_orchestrator.criteria import (
-    AXES,
-    Blend,
-    CompiledCriterion,
-    Criteria,
-    Criterion,
     DepthCriterion,
     FlopsCriterion,
     LatencyCriterion,
     MemoryCriterion,
-    criteria_cost,
-    peak_bytes_cost,
 )
 from mlopt_orchestrator import Optimizer
 

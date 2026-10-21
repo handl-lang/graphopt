@@ -4,7 +4,6 @@ over the lowering paths."""
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass
 
 import mlopt_orchestrator.autotune as at_mod
 import mlopt_torch.calibrate as cal_mod

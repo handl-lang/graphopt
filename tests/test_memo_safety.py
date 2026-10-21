@@ -15,11 +15,9 @@ results either way.
 
 import torch
 
-from mlopt_core.ir import Const, Op, Param, TensorType, Var, op_repr
-from mlopt_core.meta import canonicalize, match_pattern
+from mlopt_core.ir import Const, Op, Param, TensorType, Var
 from mlopt_carriers.om_lower import _is_om_tree, build_om_plan
 from mlopt_carriers.omd_lower import _is_omd_tree, build_omd_plan
-from mlopt_core.typing import has_var_leaf
 
 
 def _T(*shape):

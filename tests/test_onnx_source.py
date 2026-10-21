@@ -28,7 +28,7 @@ pytest.importorskip("onnx")
 pytest.importorskip("onnxruntime")
 
 import onnx
-from mlopt_core.ir import Const, Op
+from mlopt_core.ir import Op
 from mlopt_core.ports import Source
 from mlopt_onnx import (
     ONNX_LIFTS,

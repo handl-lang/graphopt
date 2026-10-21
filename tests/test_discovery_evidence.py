@@ -24,9 +24,6 @@ from mlopt_core.ir import Op, TensorType, Var
 from mlopt_core.laws import ALL_RULES
 from mlopt_core.laws.serialize import (
     alpha_key,
-    object_from_data,
-    object_kind,
-    object_to_data,
 )
 from mlopt_discovery import evidence as ev
 from mlopt_discovery.pipeline import Evidence, Proposal

@@ -43,7 +43,7 @@ from mlopt_core.egraph import (
     _term_match,
     verify_certificate,
 )
-from mlopt_core.ir import IR, Const, Op, Param, TensorType, Var, op_repr
+from mlopt_core.ir import IR, Op, Param, TensorType, Var, op_repr
 from mlopt_torch.torch_bridge import ir_to_torch_module
 from mlopt_carriers.trace_lift import lift_scan_to_trace
 

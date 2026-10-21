@@ -46,18 +46,8 @@ from mlopt_core.cost import backend_cost, dag_cost, executor_cost_for
 from mlopt_core.egraph import EGraph, verify_certificate
 from mlopt_core.ir import IR, Op, Param, TensorType, Var
 from mlopt_core.laws import (
-    ALL_RULES,
     DEFAULT,
     GLU_FOLD,
-    SIMPLIFICATION_RULES,
-    _check_glu_fold,
-    _check_glu_shaped,
-    tags,
-)
-from mlopt_core.meta import (
-    instantiate_pattern,
-    match_pattern,
-    pattern_metavars,
 )
 from mlopt_orchestrator import Optimizer
 from mlopt_orchestrator.optimize import _lower_extracted

@@ -31,25 +31,10 @@ from mlopt_core.ir import IR, Const, Op, Param, TensorType, Var
 from mlopt_core.laws import (
     ATTENTION_RULES,
     NATURALITY_SCALAR_REV,
-    preset,
 )
 from mlopt_core.laws.attention import (
-    _check_left_scale,
-    _check_linear_mm_absorb,
-    _check_linear_mm_absorb_bias,
-    _check_linear_out_scale,
-    _check_rope_cat_compose,
-    _check_rope_scale,
-    _check_uniform,
-    _half_bounds,
-    _is_uniform,
-    _rope_axis,
     _rope_cat,
-    _rope_rh,
-    _to_end,
 )
-from mlopt_core.laws.ruleset import ATTENTION, DEFAULT, PRESETS
-from mlopt_core.laws.tensor import SDPA_EXPAND_RULES
 from mlopt_torch.torch_bridge import ir_to_torch_module
 
 torch.manual_seed(0)

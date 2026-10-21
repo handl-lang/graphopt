@@ -15,43 +15,9 @@ import torch
 
 from mlopt_core.egraph import EGraph
 from mlopt_core.ir import Const, Op, Param, TensorType, Var
-from mlopt_core.laws.base import (
-    _is_channel_scale,
-    _is_row_scale,
-    _is_scalar,
-    _shape_of,
-)
 from mlopt_core.laws.pairing import (
-    _pair_shared_input,
-    _term_has_var,
-    _wshape,
-    pair_shared_input_convs,
-    pair_shared_input_linears,
     share_duplicate_param_slices,
     share_duplicate_params,
-)
-from mlopt_core.laws.tensor import (
-    _QKV_CAT,
-    _REPEAT_KV,
-    _REPEAT_V,
-    GQA_ABSORB,
-    QKV_FUSE_ASYM,
-    _check_gqa_absorb,
-    _check_linear_bias_compose,
-    _check_repeat_chain,
-    _check_score_transpose,
-    _check_sdpa_base,
-    _check_sdpa_mf,
-    _check_sdpa_mf_scaled,
-    _check_sdpa_scaled,
-    _check_softmax_dim,
-    _derive_scale_div,
-    _derive_scale_mul,
-    _derive_scale_one,
-    _derive_split_sizes,
-    _head,
-    _head_v,
-    _scale_of,
 )
 
 

@@ -11,12 +11,7 @@ and reuse of the shared cost memo for the region probes.
 """
 
 from mlopt_core.egraph import EGraph
-from mlopt_core.ir import Const, Op, Param, TensorType, Var, op_repr
-from mlopt_core.cost import (
-    count_cost,
-    fusion_member_key,
-    fusion_regions,
-)
+from mlopt_core.ir import Param, TensorType, Var
 from mlopt_orchestrator import Optimizer
 
 from mlopt_torch.backend import TorchBackend

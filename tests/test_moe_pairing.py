@@ -32,10 +32,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from mlopt_core.egraph import EGraph
 from mlopt_core.ir import Op, Param, TensorType, Var
-from mlopt_core.laws.pairing import (
-    batch_tiled_expert_sums,
-    pair_shared_input_linears,
-)
 
 from mlopt_orchestrator import Optimizer
 

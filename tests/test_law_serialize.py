@@ -27,25 +27,13 @@ from __future__ import annotations
 
 import json
 
-import pytest
 from mlopt_core.egraph import Certificate, EGraph, Rewrite
 from mlopt_core.egraph.certs import CERT_FORMAT
 from mlopt_core.ir import (
-    Const,
     Op,
     Param,
     TensorType,
     Var,
-    term_from_data,
-    term_to_data,
-)
-from mlopt_core.laws import ALL_RULES
-from mlopt_core.laws.serialize import (
-    LAW_FORMAT,
-    alpha_key,
-    law_from_data,
-    law_to_data,
-    missing_hooks,
 )
 from mlopt_core.laws.tensor import (
     FACTOR_MUL,

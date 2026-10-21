@@ -37,7 +37,6 @@ from mlopt_orchestrator.optimize import (
     OptimizationResourceError,
     Optimizer,
     _ban_bound_members,
-    _bounded_gate,
     _bounded_term,
     _check_budget_engine,
 )

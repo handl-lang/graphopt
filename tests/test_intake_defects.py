@@ -25,7 +25,7 @@ Each case exports + lowers + verifies through the same
 import pytest
 import torch
 from mlopt_core.egraph import Rewrite
-from mlopt_core.ir import IR, Const, Op, TensorType, Var
+from mlopt_core.ir import IR, Const, Op
 from mlopt_discovery import intake as li
 from mlopt_torch.adapters import TorchSink
 from mlopt_torch.torch_bridge import export_to_ir, ir_to_torch_module

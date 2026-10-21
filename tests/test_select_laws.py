@@ -36,13 +36,6 @@ from mlopt_core.ir import IR, Op, Param, TensorType, Var
 from mlopt_core.laws import (
     DEFAULT,
     SELECT_MUL,
-    SIMPLIFICATION_RULES,
-    tags,
-)
-from mlopt_core.meta import (
-    instantiate_pattern,
-    match_pattern,
-    pattern_metavars,
 )
 from mlopt_orchestrator import Optimizer
 from mlopt_orchestrator.optimize import _lower_extracted

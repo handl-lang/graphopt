@@ -38,28 +38,13 @@ import pytest
 import torch
 
 from mlopt_core.cost import (
-    _INVALID_COST,
-    _LAUNCH_S,
-    CostModel,
-    _flops_of,
     _fold_ewidth,
-    _folds_to_param,
-    _is_strided,
-    _local_roofline,
-    _param_index,
-    count_cost,
     dag_cost,
-    depth_cost,
-    depth_cost_for,
-    flops_cost,
-    launch_aware_cost,
     param_bytes_cost,
     param_bytes_cost_for,
-    roofline_cost,
-    roofline_cost_for,
 )
 from mlopt_core.ir import Const, Op, Param, TensorType, Var
-from mlopt_core.typing import _INVALID, _shape_of
+from mlopt_core.typing import _shape_of
 
 
 def _v(name: str, *shape) -> Var:

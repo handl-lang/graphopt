@@ -39,18 +39,7 @@ from mlopt_core.egraph import EGraph, verify_certificate
 from mlopt_core.ir import IR, Op, Param, TensorType, Var
 from mlopt_core.laws import (
     DEFAULT,
-    SIMPLIFICATION_RULES,
     SOFTMAX_FOLD,
-    tags,
-)
-from mlopt_core.laws.tensor import (
-    _check_sum_keepdim,
-    _derive_softmax_dim,
-)
-from mlopt_core.meta import (
-    instantiate_pattern,
-    match_pattern,
-    pattern_metavars,
 )
 from mlopt_orchestrator import Optimizer
 from mlopt_orchestrator.optimize import _lower_extracted

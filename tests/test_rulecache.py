@@ -25,7 +25,6 @@ Covered here:
 
 import time
 
-import pytest
 import torch
 
 from mlopt_core import meta

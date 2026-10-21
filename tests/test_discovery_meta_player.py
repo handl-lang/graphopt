@@ -7,10 +7,9 @@ under REINFORCE reward-to-go), freezes for eval; the driver's
 case corpus mixes paying and non-paying boards.
 """
 
-import random
 
 from mlopt_core.cost.basic import count_cost
-from mlopt_core.ir import Const, Op, TensorType, Var
+from mlopt_core.ir import Op, TensorType, Var
 from mlopt_core.laws import DEFAULT
 from mlopt_discovery import lawdata
 from mlopt_discovery import meta_arena as ma

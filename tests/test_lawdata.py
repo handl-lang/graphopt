@@ -13,10 +13,9 @@ from __future__ import annotations
 import mlopt_core.lawdata as core_data
 import mlopt_discovery.lawdata as data
 from mlopt_core import meta
-from mlopt_core.attrs import ATTR_SCHEMA
 from mlopt_core.ir import Const, Op, Param, TensorType, Var
 from mlopt_core.laws import ALL_RULES
-from mlopt_core.opmeta import COMMUTATIVE_OPS, REGISTRY
+from mlopt_core.opmeta import REGISTRY
 
 
 class TestLawdataSplit:

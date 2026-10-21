@@ -24,7 +24,7 @@ from __future__ import annotations
 import torch
 from mlopt_core.cost import count_cost
 from mlopt_core.egraph import EGraph
-from mlopt_core.ir import IR, Const, Op, Param, TensorType, Var
+from mlopt_core.ir import IR, Op, Param, TensorType, Var
 from mlopt_core.laws import (
     LAYOUT_RULES,
     LINEAR_FROM_MM_T,
@@ -32,7 +32,6 @@ from mlopt_core.laws import (
     LINEAR_TO_MM_T,
 )
 from mlopt_core.laws.layout import _matmul_rules
-from mlopt_core.typing import _axis_pair
 from mlopt_torch.torch_bridge import ir_to_torch_module
 
 torch.manual_seed(0)

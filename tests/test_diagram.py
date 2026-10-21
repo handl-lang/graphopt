@@ -27,10 +27,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from mlopt_core.cost import flops_cost, launch_aware_cost
 from mlopt_core.egraph import EGraph
-from mlopt_core.ir import IR, Op, Param, TensorType, Var
+from mlopt_core.ir import IR, Op, Param, TensorType
 from mlopt_orchestrator import (
     ContractionSearch,
-    DiagramMove,
     MorphismMatch,
     Optimizer,
     ReifySpec,

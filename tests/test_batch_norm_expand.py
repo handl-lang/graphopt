@@ -19,18 +19,13 @@ machinery was attr-only).  Both are closed:
 
 import torch
 from mlopt_core import meta
-from mlopt_core.egraph import EGraph, Rewrite
-from mlopt_core.ir import Const, Op, Param, TensorType, Var, op_repr
+from mlopt_core.egraph import Rewrite
+from mlopt_core.ir import Op, Param, TensorType, Var
 from mlopt_core.laws import (
     BATCH_NORM_EXPAND,
     BATCH_NORM_EXPAND_NOBIAS,
     BATCH_NORM_EXPAND_PLAIN,
-    BATCH_NORM_RULES,
-    DEFAULT,
-    _check_bn_eval,
-    _derive_bn,
 )
-from mlopt_core.laws.cond import derive_from_data, derive_to_data
 
 # Registers the concrete-eval backend + op bindings for _eval_term.
 from mlopt_torch.torch_bridge import export_to_ir  # noqa: F401

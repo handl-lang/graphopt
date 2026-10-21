@@ -24,7 +24,7 @@ Covered here:
 
 import torch
 
-from mlopt_core.cost import dag_cost, flops_cost
+from mlopt_core.cost import flops_cost
 from mlopt_core.egraph import EGraph
 from mlopt_core.ir import IR, Op, TensorType, Var, op_repr
 from mlopt_carriers.om import (

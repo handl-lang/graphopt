@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import torch
 from mlopt_core.egraph import EGraph
-from mlopt_core.ir import Const, Op, TensorType, Var
+from mlopt_core.ir import Op, TensorType, Var
 from mlopt_core.laws import (
     ALL_RULES,
     DIV_ADD_FACTOR,

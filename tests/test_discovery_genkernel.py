@@ -10,7 +10,6 @@ import pytest
 import torch
 
 from mlopt_core.ir import Op, TensorType, Var
-from mlopt_core.laws import DEFAULT
 from mlopt_core.cost.basic import count_cost
 from mlopt_discovery import genkernel as gk
 from mlopt_discovery import meta_arena as ma
@@ -160,7 +159,6 @@ class TestGenDomain:
         assert gk._spec_metas(("mul", "X1", 2.0)) == ["X1"]
 
     def test_eval_spec_const_leaf(self):
-        from mlopt_core.ops import OpTable
 
         import mlopt_torch.torch_bridge as tb
 

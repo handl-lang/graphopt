@@ -28,7 +28,6 @@ from mlopt_core.laws.headshare import (
 from mlopt_orchestrator.optimize import (
     Optimizer,
     _cache_replay,
-    _term_param_names,
 )
 from mlopt_orchestrator import SearchResult
 from mlopt_torch.backend import TorchBackend
@@ -1181,8 +1180,6 @@ def test_optimizer_default_untouched_on_distinct_heads():
 
 from mlopt_core.laws.headshare import (  # noqa: E402
     _bias_sources,
-    _bounds,
-    _cls_shape,
     _const_along,
     _h_concat,
     _h_cut,
@@ -1198,12 +1195,7 @@ from mlopt_core.laws.headshare import (  # noqa: E402
     _heads_regroup,
     _interpret,
     _merge_one,
-    _merge_sites,
     _piece_select,
-    _prod,
-    _site_regroup,
-    _site_to_heads,
-    _skel,
 )
 
 

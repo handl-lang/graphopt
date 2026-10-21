@@ -3,7 +3,6 @@ adapter, causal-mask specialization, the discovery entry point, the
 parameter-diff report, and the compositional driver."""
 # ruff: noqa: RUF059 — test-idiom unpacking
 
-import types
 
 import pytest
 import torch
@@ -12,7 +11,7 @@ from mlopt_torch.adapters import TorchSource
 from mlopt_core import laws
 from mlopt_core.cost import flops_cost, launch_aware_cost
 from mlopt_core.ir import Const, Op, Param, TensorType, Var
-from mlopt_orchestrator.optimize import OptimizationResourceError, _check_resources, _current_memory_mb, _looks_like_oom, _oom_to_resource_error, discover_alternatives, ir_to_string, term_cost
+from mlopt_orchestrator.optimize import OptimizationResourceError, _looks_like_oom, discover_alternatives, ir_to_string, term_cost
 
 from mlopt_torch.folds import _eval_const, _is_causal_keep_mask, _specialize_causal
 from mlopt_torch.composer import _select_blocks, param_report

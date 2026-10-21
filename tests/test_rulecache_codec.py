@@ -5,32 +5,15 @@ derivation.  Real codec paths only; the synthesis itself is stubbed
 where the cache mechanics are what's under test."""
 # ruff: noqa: E741 — test-idiom unpacking
 
-import functools
-import json
 
 import pytest
 import torch
 
-import mlopt_core.meta as meta
 from mlopt_core.egraph import Rewrite
-from mlopt_core.ir import Const, Op, Param, TensorType, Var
+from mlopt_core.ir import Param, TensorType, Var
 from mlopt_core.rulecache import (
-    CACHE_VERSION,
-    RuleCache,
     _dec_attr,
-    _dec_binding,
-    _dec_rule,
-    _dec_term,
     _enc_attr,
-    _enc_binding,
-    _enc_rule,
-    _enc_term,
-    _hook_sig,
-    _sha,
-    cache_key,
-    ruleset_fingerprint,
-    seed_fingerprint,
-    synthesize_rules_cached,
 )
 
 

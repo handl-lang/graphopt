@@ -40,7 +40,6 @@ from mlopt_carriers.scan_lower import (
     to_batched_scan_module,
 )
 from mlopt_torch.torch_bridge import ir_to_torch_module
-from mlopt_core.typing import _matmul_shape
 from mlopt_orchestrator import Optimizer
 
 

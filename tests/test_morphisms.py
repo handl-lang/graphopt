@@ -12,7 +12,6 @@ import mlopt_orchestrator.morphisms as M
 import torch
 import torch.nn as nn
 from mlopt_core.ir import IR, Op, Param, TensorType, Var
-from mlopt_core.laws import RuleSet
 from mlopt_orchestrator import (
     MorphismLaw,
     MorphismSearch,

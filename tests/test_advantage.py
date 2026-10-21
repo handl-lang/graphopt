@@ -15,7 +15,6 @@ copies, and the no-op paths (learn off, no state row injector).
 
 from __future__ import annotations
 
-import pytest
 from gamekit import engine
 from mlopt_discovery import open_game as og
 from gamekit.advantage import AdvantagePlayer

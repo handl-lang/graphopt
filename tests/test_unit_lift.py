@@ -51,7 +51,7 @@ from mlopt_core import meta
 from mlopt_core import laws as R
 from mlopt_carriers import trace_lift as TL
 from mlopt_core.egraph import EGraph
-from mlopt_core.ir import IR, Const, Op, Param, TensorType, Var, op_repr
+from mlopt_core.ir import IR, Op, Param, TensorType, Var, op_repr
 from mlopt_carriers.scan_lower import is_scan_apply_term, to_batched_scan_module
 from mlopt_torch.torch_bridge import (
     _IR_TO_TORCH,

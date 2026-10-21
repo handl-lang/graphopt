@@ -34,8 +34,6 @@ def test_submodules_import():
     import mlopt_core.ir
     import mlopt_core.laws
     import mlopt_orchestrator.optimize
-    import mlopt_torch.models
-    import mlopt_torch.torch_bridge
 
     assert mlopt_core.egraph.ENode
     assert mlopt_orchestrator.optimize.Optimizer

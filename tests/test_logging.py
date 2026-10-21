@@ -18,7 +18,6 @@ from pathlib import Path
 from mlopt_torch.calibrate import calibrate
 from mlopt_core.egraph import EGraph
 from mlopt_core.ir import Op, Param, TensorType, Var
-from mlopt_core.laws import ASSOC_LINEAR_BIAS
 
 _REPO = Path(__file__).resolve().parents[1]
 

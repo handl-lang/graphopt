@@ -19,17 +19,9 @@ with ``BATCH_NORM_RULES`` pending the admission floor.
 
 import torch
 from mlopt_core import meta
-from mlopt_core.ir import Op, Param, TensorType, Var, op_repr
+from mlopt_core.ir import Op, Param, TensorType, Var
 from mlopt_core.laws import (
-    ALL_RULES,
     CONV_FOLD_RULES,
-    DEFAULT,
-)
-from mlopt_core.laws.cond import (
-    cond_from_data,
-    cond_to_data,
-    derive_from_data,
-    derive_to_data,
 )
 
 # Registers the concrete-eval backend + op bindings for _eval_term.

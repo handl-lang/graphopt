@@ -25,9 +25,7 @@ import torch
 import torch.nn.functional as F
 
 from mlopt_core.attrs import (
-    ATTR_REQUIRED,
     ATTR_SCHEMA,
-    attr_of,
 )
 from mlopt_core.ir import Op, TensorType, Var
 from mlopt_torch.torch_bridge import export_to_ir, ir_to_torch_module

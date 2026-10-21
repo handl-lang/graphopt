@@ -28,7 +28,7 @@ import math
 import pytest
 import torch
 from mlopt_core.cost import count_cost, flops_cost
-from mlopt_core.egraph import EGraph, verify_certificate
+from mlopt_core.egraph import EGraph
 from mlopt_core.ir import IR, Const, Op, Param, TensorType, Var
 from mlopt_core.laws.ruleset import ATTENTION, DEFAULT
 from mlopt_core.laws.tensor import (

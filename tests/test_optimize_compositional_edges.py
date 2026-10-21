@@ -6,14 +6,12 @@ rulecache env, ports signature internals, compositional e2e arms."""
 import pytest
 import torch
 import torch.nn as nn
-from mlopt_core.attrs import is_positional_attr
 from mlopt_core.ir import Const, Op, Param, TensorType, Var
 from mlopt_orchestrator.optimize import OptimizationResourceError
 
 
 from mlopt_torch.folds import _eval_const
 
-from mlopt_core.ports import CostFn, Verifier, signature_conforms
 from mlopt_orchestrator import Compositional, Optimizer
 
 

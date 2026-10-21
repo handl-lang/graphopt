@@ -167,7 +167,6 @@ def test_optimize_model_compile_delivers_fused_module():
 def test_optimize_model_compile_failure_falls_back(monkeypatch):
     """A compile failure keeps the uncompiled module — the optimized
     term still ships."""
-    import mlopt_orchestrator.optimize as O
 
     torch.manual_seed(0)
     m = torch.nn.Sequential(

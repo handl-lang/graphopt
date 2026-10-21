@@ -45,26 +45,17 @@ Covered surface:
 
 from __future__ import annotations
 
-import pytest
 import torch
 from mlopt_core.cost import backend_cost, dag_cost, executor_cost_for
 from mlopt_core.egraph import EGraph, verify_certificate
 from mlopt_core.ir import Const, IR, Op, Param, TensorType, Var
 from mlopt_core.laws import (
     ALL_RULES,
-    DEFAULT,
     DIV_SQRT_TO_RSQRT,
     MUL_SQUARE,
     POW_TO_RSQRT,
     RECIP_SQRT_TO_RSQRT,
-    SIMPLIFICATION_RULES,
     SQUARE_EXPAND,
-    tags,
-)
-from mlopt_core.meta import (
-    instantiate_pattern,
-    match_pattern,
-    pattern_metavars,
 )
 from mlopt_orchestrator import Optimizer
 from mlopt_orchestrator.optimize import _lower_extracted

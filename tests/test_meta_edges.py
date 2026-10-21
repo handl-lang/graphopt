@@ -25,14 +25,13 @@ Defensive branches believed unreachable by construction (flagged for
 ``test_defensive_branch_inventory`` at the bottom.
 """
 
-import types
 
 import pytest
 import torch
 
 from mlopt_core import meta
-from mlopt_core.egraph import EGraph, Rewrite
-from mlopt_core.ir import Const, Op, Param, TensorType, Var
+from mlopt_core.egraph import Rewrite
+from mlopt_core.ir import Const, Op, TensorType, Var
 
 
 def _T(*shape):

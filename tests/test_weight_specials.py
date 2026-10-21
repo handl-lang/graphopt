@@ -27,9 +27,6 @@ from mlopt_core.egraph import EGraph
 from mlopt_core.ir import IR, Op, Param, TensorType, Var, op_repr
 from mlopt_core.laws.specials import (
     _analyse,
-    _blocks,
-    _dedup,
-    _offer_one_site,
     offer_weight_specials,
 )
 from mlopt_orchestrator.optimize import Optimizer

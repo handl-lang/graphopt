@@ -58,18 +58,6 @@ from mlopt_core.laws import (
     DEFAULT,
     RMS_NORM_FOLD,
     RMS_NORM_FOLD_NOGAIN,
-    SIMPLIFICATION_RULES,
-    _check_rms_consts,
-    _check_rms_fold,
-    _check_rms_fold_nogain,
-    _derive_rms_norm,
-    tags,
-)
-from mlopt_core.laws.tensor import _rms_normalized_shape
-from mlopt_core.meta import (
-    instantiate_pattern,
-    match_pattern,
-    pattern_metavars,
 )
 from mlopt_orchestrator import Optimizer
 from mlopt_orchestrator.optimize import _lower_extracted

@@ -52,10 +52,9 @@ import mlopt_carriers.om as OM
 import pytest
 import torch
 from mlopt_core import meta
-from mlopt_core.cost import flops_cost, launch_aware_cost
+from mlopt_core.cost import launch_aware_cost
 from mlopt_core.egraph import EGraph
 from mlopt_core.ir import IR, Const, Op, TensorType, Var
-from mlopt_core.typing import _INVALID, _shape_of
 from mlopt_torch.adapters import TorchSink
 from mlopt_torch.torch_bridge import _IR_TO_TORCH, ir_to_torch_module
 

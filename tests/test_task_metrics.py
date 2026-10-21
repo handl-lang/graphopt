@@ -37,14 +37,11 @@ from mlopt_core.metrics import (
     LogitKL,
     MaxRel,
     TopKAgreement,
-    _RowMetric,
 )
-from mlopt_core.ports import TaskMetric
 from mlopt_orchestrator import optimize as opt_mod
 from mlopt_orchestrator.optimize import (
     Compositional,
     Optimizer,
-    _task_contract,
 )
 from mlopt_torch.backend import TorchBackend
 from mlopt_torch.export import export_optimized

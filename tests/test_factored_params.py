@@ -31,26 +31,21 @@ import mlopt_orchestrator.morphisms_kv as K
 import torch
 import torch.nn as nn
 from mlopt_core.cost import (
-    dag_cost,
     executor_cost_for,
     flops_cost,
-    launch_aware_cost,
 )
 from mlopt_core.egraph import EGraph
-from mlopt_core.ir import IR, Op, Param, TensorType, Var, op_repr
+from mlopt_core.ir import IR, Op, Param, TensorType, Var
 from mlopt_core.laws import (
-    ALL_RULES,
     ASSOC_LINEAR,
     ASSOC_LINEAR_REV,
     ASSOC_MATMUL,
     ASSOC_MATMUL_REV,
 )
 from mlopt_core.laws.factored import (
-    _cls_has_var,
     _factor_cols,
     _factor_rows,
     _fresh_name,
-    _leaf_params,
     offer_low_rank_factors,
 )
 from mlopt_core.typing import has_var_leaf

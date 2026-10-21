@@ -19,7 +19,6 @@ import importlib
 from types import SimpleNamespace
 
 import mlopt_core.ops as ops_mod
-import pytest
 import torch
 from mlopt_core.ops import OpTable
 from mlopt_torch.torch_bridge import _IR_TO_TORCH

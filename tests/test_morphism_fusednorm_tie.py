@@ -23,7 +23,6 @@ import mlopt_orchestrator.morphisms as M
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from mlopt_core.ir import IR, Op, Param, TensorType, Var
 from mlopt_orchestrator import MorphismSearch, Optimizer
 from mlopt_torch.adapters import TorchSource
 from mlopt_torch.backend import TorchBackend

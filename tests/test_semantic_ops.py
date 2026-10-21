@@ -26,7 +26,7 @@ import pytest
 import torch
 import torch.nn.functional as F
 
-from mlopt_core.ir import Const, IR, Op, TensorType, Var
+from mlopt_core.ir import Const, Op, TensorType, Var
 from mlopt_torch.torch_bridge import (
     _IR_TO_TORCH,
     export_to_ir,

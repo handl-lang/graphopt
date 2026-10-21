@@ -43,7 +43,7 @@ import pytest
 import torch
 import torch.nn.functional as F
 
-from mlopt_core.cost import _INVALID, _shape_of
+from mlopt_core.cost import _shape_of
 from mlopt_core.egraph import _term_instantiate
 from mlopt_core.ir import Const, Op, Param, TensorType, Var
 from mlopt_core.laws import CATEGORICAL_RULES, SIMPLIFICATION_RULES

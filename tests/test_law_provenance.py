@@ -23,13 +23,9 @@ from mlopt_core.egraph import Rewrite
 from mlopt_core.ir import Op
 from mlopt_core.laws import (
     ALL_RULES,
-    ALL_RULES_WITH_LAYOUT,
-    ATTENTION_RULES,
     MACHINE_LAWS,
     MACHINE_SHIPPED,
     MACHINE_STORED,
-    SCAN_DIAG_LAWS,
-    SCAN_LAWS,
     RuleSet,
     law_provenance,
 )

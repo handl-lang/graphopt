@@ -19,19 +19,12 @@ replayable proof).
 
 import json
 
-import mlopt_core.laws.layout
-import pytest
 from mlopt_core import laws as R
 from mlopt_core.egraph import (
-    Certificate,
-    CertificateVerificationError,
-    CertStep,
     EGraph,
-    cert_from_data,
-    cert_to_data,
     verify_certificate,
 )
-from mlopt_core.ir import Op, TensorType, Var, op_repr
+from mlopt_core.ir import TensorType, op_repr
 
 from mlopt_discovery import evidence as le
 from mlopt_discovery import lemma_cert as llc

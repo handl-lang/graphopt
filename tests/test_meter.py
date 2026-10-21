@@ -13,11 +13,10 @@ from __future__ import annotations
 
 import math
 
-import pytest
 import torch
 import torch.nn as nn
 from mlopt_core.failures import FailureClass, is_nonfinite
-from mlopt_core.ports import Meter, TimingResult
+from mlopt_core.ports import Meter
 from mlopt_torch.meter import (
     TorchMeter,
     _input_args,
