@@ -1,8 +1,8 @@
 # ruff: noqa: RUF001, RUF003 — math notation (≡, σ, −, ·) in docstrings.
 """The codegen law bank — schedule-level rewrites over the IR.
 
-Not a language: ten laws.  Eight fold spelled op-compositions into
-*named fused-kernel ops* (``kf_*`` — the kernel vocabulary the
+Not a language: sixteen laws.  Fourteen fold spelled op-compositions
+into *named fused-kernel ops* (``kf_*`` — the kernel vocabulary the
 :class:`~mlopt_kernel.sink.KernelSink` lowers as one compiled
 composite, in the repo's ``silu``/``sdpa``/``rms_norm`` fold-op
 tradition); two are arithmetic strength reductions — the codegen
@@ -13,13 +13,20 @@ The fusion arm mirrors what Inductor actually emits: elementwise
 gate fusions (``kf_silu``, ``kf_softsign``, ``kf_addmul``,
 ``kf_swiglu``), the exp/sum normalization a softmax really is
 (``kf_softmax`` — the kernel twin of ``mlopt_core.laws``'
-``softmax_fold``), the mean/var/rsqrt composition a layernorm
-block fuses into one pass (``kf_layernorm``), and the matmul
+``softmax_fold``), the mean/var/rsqrt compositions the norm blocks
+fuse into one pass (``kf_layernorm``, ``kf_rmsnorm`` — the gain-free
+spelling of ``rms_norm_fold_nogain``'s site), and the matmul
 epilogues a template kernel absorbs (``kf_mm_bias``,
-``kf_mm_sb``).  Side conditions are *data* where the repo's
-``cond``/``dspec`` DSL reaches (attr metavariables, numeric consts)
-— the same posture the default bank took when ``softmax_fold`` /
-``rms_norm_fold`` went declarative.
+``kf_mm_scale``, ``kf_mm_sb``, ``kf_mm_gelu``).  Two deeper folds
+reach toward real-module chains — ``kf_softmax_mm`` (the
+``softmax(qk)·v`` two-step attention chain) — and the
+second-generation residue family the measured triton gap named:
+``kf_addmul_tanh`` and ``kf_silu_sigmoid`` fold the pointwise op a
+first-generation fusion *left surviving* into the fused op itself.
+Side conditions are *data* where the repo's ``cond``/``dspec`` DSL
+reaches (attr metavariables, numeric consts) — the same posture the
+default bank took when ``softmax_fold`` / ``rms_norm_fold`` went
+declarative.
 
 A design note the e-graph forces: a *wrapper* marker
 (``k_fused(X)``) merges into ``X``'s own e-class and points back at
@@ -46,11 +53,17 @@ __all__ = [
     "KERNEL_RULES",
     "kern_div_recip",
     "kern_fuse_addmul",
+    "kern_fuse_addmul_tanh",
     "kern_fuse_layernorm",
     "kern_fuse_mm_bias",
+    "kern_fuse_mm_gelu",
+    "kern_fuse_mm_scale",
     "kern_fuse_mm_scale_bias",
+    "kern_fuse_rmsnorm",
     "kern_fuse_silu",
+    "kern_fuse_silu_sigmoid",
     "kern_fuse_softmax",
+    "kern_fuse_softmax_mm",
     "kern_fuse_softsign",
     "kern_fuse_swiglu",
     "kern_square_strength",
@@ -65,10 +78,16 @@ FUSED_KERNEL_OPS = frozenset(
         "kf_softsign",
         "kf_addmul",
         "kf_swiglu",
+        "kf_silu_sigmoid",
+        "kf_addmul_tanh",
         "kf_softmax",
+        "kf_softmax_mm",
         "kf_layernorm",
+        "kf_rmsnorm",
         "kf_mm_bias",
+        "kf_mm_scale",
         "kf_mm_sb",
+        "kf_mm_gelu",
     }
 )
 
@@ -106,6 +125,34 @@ kern_fuse_swiglu = R(
     "beats mul(kf_silu, b) under the launch-dominated cost).",
 )
 
+# The gen-2 residue folds — a first-generation ``kf_*`` fusion leaves
+# the pointwise op *next to* it spelled (``add(kf_addmul, tanh(c))``,
+# ``mul(kf_silu, sigmoid(b))``), so the fused op absorbs the survivor
+# too.  These mint the one-launch composite the measured triton arm
+# already writes by hand.
+kern_fuse_addmul_tanh = R(
+    "kern_fuse_addmul_tanh",
+    Op.make("add", Op.make("mul", "a", "b"), Op.make("tanh", "c")),
+    Op.make("kf_addmul_tanh", "a", "b", "c"),
+    law="Residue fusion: a·b + tanh(c) lowers as one fused kernel — "
+    "the survivor tanh kern_fuse_addmul left spelled, absorbed into "
+    "the epilogue (the measured fma-case gap).",
+)
+
+kern_fuse_silu_sigmoid = R(
+    "kern_fuse_silu_sigmoid",
+    Op.make(
+        "mul",
+        Op.make("mul", "a", Op.make("sigmoid", "a")),
+        Op.make("sigmoid", "b"),
+    ),
+    Op.make("kf_silu_sigmoid", "a", "b"),
+    law="Residue fusion: (a·σ(a))·σ(b) lowers as one fused kernel — "
+    "the double-gate the swiglu fold reaches as "
+    "``kf_swiglu(a, σ(b))`` (one fused op plus a spelled σ), folded "
+    "whole (the measured mixed-case gap).",
+)
+
 # The softmax fold, kernel-side — ``div(exp(u), Σexp(u))`` lowers as
 # one fused normalization kernel.  The side condition is the shipped
 # ``softmax_fold``'s verbatim: ``keepdim`` must be True (a dropped
@@ -139,6 +186,27 @@ kern_fuse_softmax = R(
     law="Softmax normalization: exp(u)/Σexp(u) lowers as one fused "
     "kernel — a two-pass reduction the spelled div+exp+sum launches "
     "as three.  (The kernel twin of the library's softmax_fold.)",
+)
+
+
+kern_fuse_softmax_mm = R(
+    "kern_fuse_softmax_mm",
+    Op.make(
+        "matmul",
+        Op.make(
+            "div",
+            Op.make("exp", "u"),
+            Op.make("sum", Op.make("exp", "u"), dim="RD", keepdim="RK"),
+        ),
+        "v",
+    ),
+    Op.make("kf_softmax_mm", "u", "v", dim="SD"),
+    cond=_COND_SOFTMAX_SITE,
+    dspec={"SD": ("attr0", "RD")},
+    law="Attention chain: softmax(u)·v lowers as one fused kernel — "
+    "the post-softmax value matmul a spelled attention block "
+    "launches separately (``softmax(qk)`` gains a ``kf_softmax`` "
+    "member too; the deeper fold wins on launch count).",
 )
 
 
@@ -193,6 +261,38 @@ kern_fuse_layernorm = R(
     "single pass over the row.",
 )
 
+# The gain-free RMSNorm block — ``x·rsqrt(mean(x²)+eps)`` — the
+# spelled twin of the library's ``rms_norm_fold_nogain`` site.  Same
+# front guards as layernorm (keepdim for the broadcast back, eps a
+# numeric Const, the square literal); ``dim`` carries the mean's
+# reduce spec verbatim — the fused op is *defined* as the composite.
+kern_fuse_rmsnorm = R(
+    "kern_fuse_rmsnorm",
+    Op.make(
+        "mul",
+        "u",
+        Op.make(
+            "rsqrt",
+            Op.make(
+                "add",
+                Op.make(
+                    "mean",
+                    Op.make("pow", "u", "P"),
+                    dim="MD",
+                    keepdim="MK",
+                ),
+                "EPS",
+            ),
+        ),
+    ),
+    Op.make("kf_rmsnorm", "u", dim="MD", eps="EP"),
+    cond=_COND_LN_SITE,
+    dspec={"EP": ("float", ("const", "EPS"))},
+    law="RMSNorm fusion: x·rsqrt(mean(x²)+eps) lowers as one fused "
+    "kernel — mul, mean, pow, add and rsqrt in a single pass over "
+    "the row (the kernel twin of rms_norm_fold_nogain's site).",
+)
+
 kern_fuse_mm_bias = R(
     "kern_fuse_mm_bias",
     Op.make("add", Op.make("matmul", "a", "w"), "b"),
@@ -213,6 +313,24 @@ kern_fuse_mm_scale_bias = R(
     law="Scale+bias epilogue: matmul(a,w)·s+b lowers as one fused "
     "kernel — the attention-scale spelling (QKᵀ·(1/√d)+bias) the "
     "template epilogue absorbs; beats kf_addmul's two launches.",
+)
+
+kern_fuse_mm_scale = R(
+    "kern_fuse_mm_scale",
+    Op.make("mul", Op.make("matmul", "a", "w"), "s"),
+    Op.make("kf_mm_scale", "a", "w", "s"),
+    law="Scale epilogue: matmul(a,w)·s lowers as one fused kernel — "
+    "the bias-free attention-scale spelling (QKᵀ·(1/√d), no mask "
+    "term) the template epilogue absorbs.",
+)
+
+kern_fuse_mm_gelu = R(
+    "kern_fuse_mm_gelu",
+    Op.make("gelu", Op.make("matmul", "a", "w")),
+    Op.make("kf_mm_gelu", "a", "w"),
+    law="Activation epilogue: gelu(matmul(a,w)) lowers as one fused "
+    "kernel — the transformer-MLP activation a template kernel "
+    "absorbs into the mm epilogue.",
 )
 
 kern_square_strength = R(
@@ -253,17 +371,24 @@ kern_div_recip = R(
 )
 
 #: The bank, in budget order — the board's action set.  The deeper
-#: fusions (swiglu, the norm/epilogue folds) sit ahead of the
-#: strength reductions: they remove more launches per fire.
+#: fusions (swiglu, the norm/epilogue/chain folds, the gen-2
+#: residue ops) sit ahead of the strength reductions: they remove
+#: more launches per fire.
 KERNEL_RULES: tuple[Rewrite, ...] = (
     kern_fuse_silu,
     kern_fuse_softsign,
     kern_fuse_addmul,
     kern_fuse_swiglu,
+    kern_fuse_silu_sigmoid,
+    kern_fuse_addmul_tanh,
     kern_fuse_softmax,
+    kern_fuse_softmax_mm,
     kern_fuse_layernorm,
+    kern_fuse_rmsnorm,
     kern_fuse_mm_bias,
+    kern_fuse_mm_scale,
     kern_fuse_mm_scale_bias,
+    kern_fuse_mm_gelu,
     kern_square_strength,
     kern_div_recip,
 )

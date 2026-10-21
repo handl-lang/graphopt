@@ -1493,10 +1493,12 @@ def _kernel_cases(seed: int, n: int) -> list:
     x = Var("x", TensorType((4, 8)))
     y = Var("y", TensorType((4, 8)))
     w = Var("w", TensorType((8, 4)))
+    v = Var("v", TensorType((4, 4)))
     b = Var("b", TensorType((4,)))
     ln_center = Op.make(
         "sub", x, Op.make("mean", x, dim=-1, keepdim=True)
     )
+    qk = Op.make("matmul", x, w)
     pool = [
         ("silu", Op.make("mul", x, Op.make("sigmoid", x))),
         (
@@ -1559,6 +1561,80 @@ def _kernel_cases(seed: int, n: int) -> list:
                 b,
             ),
         ),
+        (
+            "mm_scale",
+            Op.make("mul", qk, Const(0.125)),
+        ),
+        (
+            "mm_gelu",
+            Op.make("gelu", qk),
+        ),
+        (
+            "rmsnorm",
+            Op.make(
+                "mul",
+                x,
+                Op.make(
+                    "rsqrt",
+                    Op.make(
+                        "add",
+                        Op.make(
+                            "mean",
+                            Op.make("pow", x, Const(2)),
+                            dim=-1,
+                            keepdim=True,
+                        ),
+                        Const(1e-6),
+                    ),
+                ),
+            ),
+        ),
+        (
+            "softmax_mm",
+            Op.make(
+                "matmul",
+                Op.make(
+                    "div",
+                    Op.make("exp", qk),
+                    Op.make(
+                        "sum",
+                        Op.make("exp", qk),
+                        dim=-1,
+                        keepdim=True,
+                    ),
+                ),
+                v,
+            ),
+        ),
+        (
+            "sdpa_chain",
+            Op.make(
+                "matmul",
+                Op.make(
+                    "div",
+                    Op.make("exp", Op.make("mul", qk, Const(0.5))),
+                    Op.make(
+                        "sum",
+                        Op.make("exp", Op.make("mul", qk, Const(0.5))),
+                        dim=-1,
+                        keepdim=True,
+                    ),
+                ),
+                v,
+            ),
+        ),
+        (
+            "fma_tanh",
+            Op.make("add", Op.make("mul", x, y), Op.make("tanh", y)),
+        ),
+        (
+            "double_gate",
+            Op.make(
+                "mul",
+                Op.make("mul", x, Op.make("sigmoid", x)),
+                Op.make("sigmoid", y),
+            ),
+        ),
         ("square", Op.make("pow", x, Const(2))),
         ("recip", Op.make("div", x, Const(4.0))),
         (
@@ -1578,7 +1654,7 @@ def _kernel_cases(seed: int, n: int) -> list:
     for i in range(n):
         kind, term = pool[rng.randrange(len(pool))]
         names = {v.name for v in _vars_of(term)}
-        vars_in = [v for v in (x, y, w, b) if v.name in names]
+        vars_in = [var for var in (x, y, w, v, b) if var.name in names]
         out.append(
             (
                 f"kernel{i}:{kind}",
@@ -1639,6 +1715,8 @@ _KERNEL_OP_FEATURES: tuple[str, ...] = (
     "mean",
     "sum",
     "rsqrt",
+    "gelu",
+    "erf",
 )
 
 

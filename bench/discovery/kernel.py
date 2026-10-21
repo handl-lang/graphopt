@@ -1,6 +1,6 @@
 """The kernelopt spike's bench cases — measured codegen pay.
 
-Eleven kernel cases: a spelled program, a codegen-law candidate, and
+Sixteen kernel cases: a spelled program, a codegen-law candidate, and
 the honest row — lower both through
 :class:`mlopt_kernel.KernelSink`, verify numerically (verify-first),
 then time spelled vs scheduled.  Where the case has a registered
@@ -67,7 +67,7 @@ def _cases():
             "kernel_fma",
             "speed",
             Op.make("add", Op.make("mul", x, y), Op.make("tanh", y)),
-            ("kern_fuse_addmul",),
+            ("kern_fuse_addmul", "kern_fuse_addmul_tanh"),
         ),
         (
             "kernel_swiglu",
@@ -128,6 +128,112 @@ def _cases():
             ("kern_fuse_mm_scale_bias", "kern_fuse_addmul"),
         ),
         (
+            "kernel_mm_scale",
+            "speed",
+            Op.make(
+                "mul", Op.make("matmul", x, w), Const(0.125)
+            ),
+            ("kern_fuse_mm_scale",),
+        ),
+        (
+            "kernel_mm_gelu",
+            "speed",
+            Op.make("gelu", Op.make("matmul", x, w)),
+            ("kern_fuse_mm_gelu",),
+        ),
+        (
+            "kernel_rmsnorm",
+            "speed",
+            Op.make(
+                "mul",
+                x,
+                Op.make(
+                    "rsqrt",
+                    Op.make(
+                        "add",
+                        Op.make(
+                            "mean",
+                            Op.make("pow", x, Const(2)),
+                            dim=-1,
+                            keepdim=True,
+                        ),
+                        Const(1e-6),
+                    ),
+                ),
+            ),
+            ("kern_fuse_rmsnorm",),
+        ),
+        # The bounded-logit attention chain — ``softmax(tanh(qk))·v``,
+        # the soft-cap spelling.  The un-capped ``softmax(qk)`` spelled
+        # site overflows fp32 at bench scale (exp(qk) → inf where the
+        # fused max-shifted softmax stays finite) — a documented
+        # *stability* win for the fused op, kept out of the timed row
+        # so the verify gate compares finite references.
+        (
+            "kernel_softmax_mm",
+            "speed",
+            Op.make(
+                "matmul",
+                Op.make(
+                    "div",
+                    Op.make(
+                        "exp",
+                        Op.make("tanh", Op.make("matmul", x, w)),
+                    ),
+                    Op.make(
+                        "sum",
+                        Op.make(
+                            "exp",
+                            Op.make(
+                                "tanh", Op.make("matmul", x, w)
+                            ),
+                        ),
+                        dim=-1,
+                        keepdim=True,
+                    ),
+                ),
+                w,
+            ),
+            ("kern_fuse_softmax", "kern_fuse_softmax_mm"),
+        ),
+        (
+            "kernel_sdpa",
+            "speed",
+            Op.make(
+                "matmul",
+                Op.make(
+                    "div",
+                    Op.make(
+                        "exp",
+                        Op.make(
+                            "mul",
+                            Op.make("matmul", x, w),
+                            Const(0.25),
+                        ),
+                    ),
+                    Op.make(
+                        "sum",
+                        Op.make(
+                            "exp",
+                            Op.make(
+                                "mul",
+                                Op.make("matmul", x, w),
+                                Const(0.25),
+                            ),
+                        ),
+                        dim=-1,
+                        keepdim=True,
+                    ),
+                ),
+                w,
+            ),
+            (
+                "kern_fuse_mm_scale",
+                "kern_fuse_softmax",
+                "kern_fuse_softmax_mm",
+            ),
+        ),
+        (
             "kernel_strength",
             "speed",
             Op.make(
@@ -135,7 +241,11 @@ def _cases():
                 Op.make("pow", x, Const(2)),
                 Op.make("div", y, Const(4.0)),
             ),
-            ("kern_square_strength", "kern_div_recip"),
+            (
+                "kern_square_strength",
+                "kern_div_recip",
+                "kern_fuse_addmul",
+            ),
         ),
         (
             "kernel_mixed",
@@ -145,7 +255,11 @@ def _cases():
                 Op.make("mul", x, Op.make("sigmoid", x)),
                 Op.make("sigmoid", y),
             ),
-            ("kern_fuse_silu",),
+            (
+                "kern_fuse_silu",
+                "kern_fuse_swiglu",
+                "kern_fuse_silu_sigmoid",
+            ),
         ),
         (
             "kernel_flat",

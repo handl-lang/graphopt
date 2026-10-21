@@ -61,6 +61,18 @@ def _kf_layernorm(u: Any, dim: Any, eps: float) -> Any:
     )
 
 
+def _kf_rmsnorm(u: Any, dim: Any, eps: float) -> Any:
+    """``u·rsqrt(mean(u²)+eps)`` — the gain-free fused-rmsnorm body.
+
+    Same contract as ``_kf_layernorm``: ``dim`` is the site's
+    ``mean`` reduce spec verbatim.
+    """
+    torch = _torch()
+    return u * torch.rsqrt(
+        torch.mean(u.pow(2), dim=dim, keepdim=True) + eps
+    )
+
+
 def _bindings() -> dict[str, Any]:
     """Build the kernel op table — a small torch composite vocabulary.
 
@@ -148,10 +160,22 @@ def _bindings() -> dict[str, Any]:
         "kf_softsign": lambda a, b, c: a / (b.abs() + c),
         "kf_addmul": lambda a, b, c: a * b + c,
         "kf_swiglu": lambda a, b: a * torch.sigmoid(a) * b,
+        "kf_silu_sigmoid": lambda a, b: (
+            a * torch.sigmoid(a) * torch.sigmoid(b)
+        ),
+        "kf_addmul_tanh": lambda a, b, c: a * b + torch.tanh(c),
         "kf_softmax": lambda u, dim: torch.softmax(u, dim=dim),
+        "kf_softmax_mm": lambda u, v, dim: torch.matmul(
+            torch.softmax(u, dim=dim), v
+        ),
         "kf_layernorm": _kf_layernorm,
+        "kf_rmsnorm": _kf_rmsnorm,
         "kf_mm_bias": lambda a, w, b: torch.matmul(a, w) + b,
+        "kf_mm_scale": lambda a, w, s: torch.matmul(a, w) * s,
         "kf_mm_sb": lambda a, w, s, b: torch.matmul(a, w) * s + b,
+        "kf_mm_gelu": lambda a, w: torch.nn.functional.gelu(
+            torch.matmul(a, w)
+        ),
     }
 
 
