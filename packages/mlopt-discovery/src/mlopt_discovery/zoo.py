@@ -25,8 +25,19 @@ truth region — the selection criterion was *family coverage*:
   unrolled matrix-state recurrence (DeltaNet — its chunked form
   is not in the law library), a deep-equilibrium unroll, WaveNet
   gated dilated conv;
+* SSM/linear-attention — the unrolled Mamba selective scan
+  (diagonal decay + selective rank-1 write), GLA gated linear
+  attention, an RWKV-ish token-shift/wkv block, and a Hyena
+  generated-kernel long conv;
 * adapters/heads — LoRA, mixture-of-softmaxes, a VICReg-style
-  covariance head, a KAN basis layer, Highway gates, RealNVP.
+  covariance head, a KAN basis layer, Highway gates, RealNVP;
+* deployment spellings — a top-k router MoE with the load-balance
+  aux folded in, a sigmoid-routed shared+routed bank, STE
+  fake-quant and per-channel dequant matmuls, the KV-cache
+  decode step;
+* modern block details — GEGLU (the gated-MLP sibling the intake
+  lacks), SkipInit scalar-gated residuals, the soft-capped logit
+  head, and the interleaved-pair (GPT-J) RoPE spelling.
 
 The registry reuses :class:`mlopt_discovery.intake.Workload` so
 :func:`mlopt_discovery.intake.ingest` consumes it unchanged — the
@@ -686,6 +697,459 @@ class _HighwayGate(nn.Module):
 
 
 # ---------------------------------------------------------------------------
+#  SSM / linear-attention / long-conv — the under-catalogued scans
+# ---------------------------------------------------------------------------
+
+
+class _MambaSelectiveScan(nn.Module):
+    """Mamba S6 block — diagonal-decay state, selective write/read.
+
+    Gu & Dao 2023: each channel carries an ``n``-dimensional state
+    updated ``h ← exp(-softplus(Δ_t)·A) ⊙ h + x_t ⊗ B_t`` and read as
+    ``y_t = C_tᵀ h_t`` — a *data-dependent* decay, spelled here as an
+    unrolled loop over ``select`` slices with an outer-product rank-1
+    write.  The intake's ``SelectiveScan`` is the parallel
+    cumprod/cumsum spelling of a *static* elementwise gate; this is
+    the matrix-state selectivity the shipped scan monoids don't
+    reach.
+    """
+
+    def __init__(self, d: int, n: int, steps: int) -> None:
+        """Build the Δ/B/C projections and the decay table."""
+        super().__init__()
+        self.d = d
+        self.n = n
+        self.steps = steps
+        self.dt = nn.Linear(d, d)
+        self.b = nn.Linear(d, n)
+        self.c = nn.Linear(d, n)
+        self.a_log = nn.Parameter(torch.randn(d, n) * 0.1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Unroll the selective scan; return every step's read-out."""
+        b = x.shape[0]
+        dt = F.softplus(self.dt(x))  # (B, T, d)
+        dec = torch.exp(
+            -dt.unsqueeze(-1) * torch.exp(self.a_log)
+        )  # (B, T, d, n)
+        bb = self.b(x)  # (B, T, n)
+        cc = self.c(x)  # (B, T, n)
+        h = torch.zeros(b, self.d, self.n, dtype=x.dtype)
+        outs = []
+        for t in range(self.steps):
+            h = dec[:, t] * h + x[:, t].unsqueeze(-1) * bb[
+                :, t
+            ].unsqueeze(1)
+            outs.append(torch.einsum("bdn,bn->bd", h, cc[:, t]))
+        return torch.stack(outs, dim=1)
+
+
+class _GatedLinearAttention(nn.Module):
+    """GLA — gated linear attention, vector-gated matrix state.
+
+    Yang et al. 2024: ``S ← diag(g_t) S + k_t v_tᵀ``,
+    ``o_t = q_tᵀ S`` — the halfway point between the intake's cumsum
+    ``LinearAttention`` and the zoo's ``DeltaRuleBlock``: the decay is
+    a data-dependent per-channel gate rather than a rank-1 erase, and
+    the unrolled ``mul`` + ``outer`` scan is a third distinct
+    spelling of the same state-update family.
+    """
+
+    def __init__(self, d: int, steps: int) -> None:
+        """Build the q/k/v projections and the gate map."""
+        super().__init__()
+        self.steps = steps
+        self.d = d
+        self.q = nn.Linear(d, d)
+        self.k = nn.Linear(d, d)
+        self.v = nn.Linear(d, d)
+        self.g = nn.Linear(d, d)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Unroll the gated state update; return every read-out."""
+        b = x.shape[0]
+        qq = self.q(x)
+        kk = self.k(x)
+        vv = self.v(x)
+        gg = torch.sigmoid(self.g(x))
+        s = torch.zeros(b, self.d, self.d, dtype=x.dtype)
+        outs = []
+        for t in range(self.steps):
+            write = kk[:, t].unsqueeze(-1) * vv[:, t].unsqueeze(-2)
+            s = gg[:, t].unsqueeze(-1) * s + write
+            outs.append(torch.einsum("bdv,bd->bv", s, qq[:, t]))
+        return torch.stack(outs, dim=1)
+
+
+class _RWKVMixBlock(nn.Module):
+    """RWKV-ish block — token-shift, wkv attention, channel mix.
+
+    Peng et al. 2023 (RWKV-4): the time-mix interpolates each token
+    with its shifted predecessor (``x·μ + shift(x)·(1-μ)`` — the
+    ``cat`` + ``slice`` token-shift spelling), then applies a
+    softmax-free attention whose weights are
+    ``exp((i - t)·w + k_i + [i = t]·u)`` — an in-graph
+    data-dependent decay bias.  The channel-mix is the squared-relu
+    MLP under a receptance gate.
+    """
+
+    def __init__(self, d: int) -> None:
+        """Build the shift mixes, the wkv maps and the channel MLP."""
+        super().__init__()
+        self.mu_t = nn.Parameter(torch.rand(d))
+        self.mu_c = nn.Parameter(torch.rand(d))
+        self.decay = nn.Parameter(torch.rand(d))
+        self.first = nn.Parameter(torch.rand(d))
+        self.r_t = nn.Linear(d, d)
+        self.k_t = nn.Linear(d, d)
+        self.v_t = nn.Linear(d, d)
+        self.o_t = nn.Linear(d, d)
+        self.r_c = nn.Linear(d, d)
+        self.k_c = nn.Linear(d, 2 * d)
+        self.v_c = nn.Linear(2 * d, d)
+
+    @staticmethod
+    def _shift(x: torch.Tensor) -> torch.Tensor:
+        """Prepend a zero token and drop the last — the causal shift."""
+        zero = torch.zeros_like(x[:, :1])
+        return torch.cat([zero, x[:, :-1]], dim=1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Apply the receptance-gated wkv mix then the channel mix."""
+        t = x.shape[-2]
+        sx = self._shift(x)
+        mix = x * self.mu_t + sx * (1.0 - self.mu_t)
+        k = self.k_t(mix)
+        v = self.v_t(mix)
+        pos = torch.arange(t, dtype=x.dtype, device=x.device)
+        rel = pos[None, :] - pos[:, None]  # (T, T): i - t
+        diag = (pos[:, None] == pos[None, :]).to(x.dtype)
+        w = -F.softplus(self.decay)
+        bias = rel.unsqueeze(-1) * w + diag.unsqueeze(-1) * self.first
+        tri = torch.tril(torch.ones(t, t, dtype=x.dtype))
+        att = torch.exp(bias.unsqueeze(0) + k.unsqueeze(1))
+        att = att * tri.unsqueeze(0).unsqueeze(-1)  # (B, T, T, d)
+        num = (att * v.unsqueeze(1)).sum(2)
+        den = att.sum(2).clamp_min(1e-6)
+        x = x + torch.sigmoid(self.r_t(mix)) * self.o_t(num / den)
+        sx2 = self._shift(x)
+        mixc = x * self.mu_c + sx2 * (1.0 - self.mu_c)
+        sq = torch.relu(self.k_c(mixc)) ** 2
+        return x + torch.sigmoid(self.r_c(mixc)) * self.v_c(sq)
+
+
+class _HyenaLongConv(nn.Module):
+    """Hyena operator — positional-MLP kernel + data-gated long conv.
+
+    Poli et al. 2023: the convolution kernel is *generated* by a
+    positional MLP evaluated at the filter taps rather than stored —
+    a parameter-free-shape site — then applied depthwise between two
+    elementwise data gates: ``u(x) ⊙ (h * (v(x) ⊙ x))``.
+    """
+
+    def __init__(self, d: int, ksize: int) -> None:
+        """Build the kernel generator and the gate/output maps."""
+        super().__init__()
+        self.d = d
+        self.ksize = ksize
+        self.gen = nn.Sequential(
+            nn.Linear(1, d), nn.SiLU(), nn.Linear(d, d)
+        )
+        self.uv = nn.Linear(d, 2 * d)
+        self.out = nn.Linear(d, d)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Generate the depthwise kernel, convolve, gate, project."""
+        t = x.shape[-2]
+        taps = (
+            torch.arange(self.ksize, dtype=x.dtype, device=x.device)
+            / self.ksize
+        ).unsqueeze(-1)
+        ker = (
+            self.gen(taps)
+            .transpose(0, 1)
+            .reshape(self.d, 1, self.ksize)
+        )
+        u, v = self.uv(x).chunk(2, dim=-1)
+        z = (v * x).transpose(1, 2)
+        y = F.conv1d(z, ker, padding=self.ksize - 1, groups=self.d)[
+            ..., :t
+        ]
+        return self.out(u * y.transpose(1, 2))
+
+
+# ---------------------------------------------------------------------------
+#  Routing — deployment-shape dispatch spellings
+# ---------------------------------------------------------------------------
+
+
+class _TopKRouterMoE(nn.Module):
+    """Top-k router MoE with the load-balance aux term folded in.
+
+    The decoder-LLM dispatch (Switch/Mixtral family): a softmax
+    router, top-k selection over a stacked expert bank, weighted
+    recombination — plus the ``aux = E·Σ_e f_e·P_e`` load-balance
+    objective folded into the output so the whole graph is one
+    tensor.  Neither intake MoE spells the aux head or the
+    ``one_hot`` top-k mask.
+    """
+
+    def __init__(self, d: int, n_exp: int, k: int) -> None:
+        """Build the router and the stacked expert weight bank."""
+        super().__init__()
+        self.k = k
+        self.router = nn.Linear(d, n_exp)
+        self.w = nn.Parameter(torch.randn(n_exp, d, d) / d)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Route top-k, recombine, add the load-balance penalty."""
+        p = torch.softmax(self.router(x), dim=-1)
+        _topv, topi = torch.topk(p, self.k, dim=-1)
+        mask = F.one_hot(topi, p.shape[-1]).to(x.dtype).amax(dim=-2)
+        w = p * mask
+        h = torch.einsum("btd,edf->betf", x, self.w)
+        out = torch.einsum("bte,betf->btf", w, h)
+        frac = mask.mean(dim=(0, 1))
+        aux = p.shape[-1] * (frac * p.mean(dim=(0, 1))).sum()
+        return out + 0.01 * aux
+
+
+class _DeepSeekSigMoE(nn.Module):
+    """DeepSeekMoE-style routing — sigmoid gate over a fine-grained bank.
+
+    DeepSeek-AI 2024: routing is *sigmoid* top-k (not softmax) over
+    many small experts spelled as a stacked ``(E, d, f)`` weight bank
+    and a single ``einsum`` contraction, plus the always-on shared
+    expert.  The intake's ``SharedExpertMoE`` spells the softmax-gate
+    ``ModuleList`` form — this is the banked-sigmoid sibling.
+    """
+
+    def __init__(self, d: int, n_exp: int, k: int) -> None:
+        """Build the sigmoid gate, shared expert and expert bank."""
+        super().__init__()
+        self.k = k
+        self.gate = nn.Linear(d, n_exp)
+        self.shared = nn.Linear(d, d)
+        self.w = nn.Parameter(torch.randn(n_exp, d, d) / d)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Route by sigmoid top-k, add the shared expert output."""
+        s = torch.sigmoid(self.gate(x))
+        _topv, topi = torch.topk(s, self.k, dim=-1)
+        mask = F.one_hot(topi, s.shape[-1]).to(x.dtype).amax(dim=-2)
+        w = s * mask
+        h = torch.einsum("btd,edf->betf", x, self.w)
+        return self.shared(x) + torch.einsum("bte,betf->btf", w, h)
+
+
+# ---------------------------------------------------------------------------
+#  Quantization / cache — deployment-precision spellings
+# ---------------------------------------------------------------------------
+
+
+class _STEQuantLinear(nn.Module):
+    """Straight-through fake-quant linear — round/clamp + detach.
+
+    The QAT spelling: weights and activations are quantized by
+    ``scale·clamp(round(x/scale))`` and the straight-through
+    estimator is spelled ``x + (q - x).detach()`` — the
+    ``detach`` + ``round`` pair the intake's ``FakeQuant`` never
+    wrote (it quantizes activations per-tensor, no STE path, no
+    weight quantization).
+    """
+
+    def __init__(self, d: int) -> None:
+        """Build the dense map and the two quantization scales."""
+        super().__init__()
+        self.w = nn.Linear(d, d)
+        self.w_scale = nn.Parameter(torch.ones(d, 1))
+        self.x_scale = nn.Parameter(torch.ones(1))
+
+    @staticmethod
+    def _ste(t: torch.Tensor, scale: torch.Tensor) -> torch.Tensor:
+        """Quantize-dequantize *t* with a straight-through gradient."""
+        q = torch.round(t / scale).clamp(-7.0, 7.0) * scale
+        return t + (q - t).detach()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Apply the linear map through STE-quantized operands."""
+        wq = self._ste(self.w.weight, self.w_scale)
+        xq = self._ste(x, self.x_scale)
+        return F.linear(xq, wq, self.w.bias)
+
+
+class _PerChannelQuantMatmul(nn.Module):
+    """Per-channel-scale dequant matmul — ``x @ (s ⊙ W_q)ᵀ`` head.
+
+    The W8A16 inference spelling: the stored weight is already
+    integer-valued (rounded at build) and each output channel carries
+    its own scale — the broadcast-``mul`` + ``matmul`` dequant site.
+    ``FakeQuant`` scales per-tensor and ``LoRAAdapter`` factors but
+    never dequantizes; nothing else spells per-channel weight scales.
+    """
+
+    def __init__(self, d: int) -> None:
+        """Build the rounded weight, its per-channel scale, the bias."""
+        super().__init__()
+        w = torch.randn(d, d)
+        s = (w.abs().amax(dim=0, keepdim=True) / 7.0).clamp_min(1e-3)
+        self.w_q = nn.Parameter(torch.round(w / s))
+        self.scale = nn.Parameter(s)
+        self.bias = nn.Parameter(torch.zeros(d))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Dequantize the weight per channel and apply the head."""
+        return x @ (self.scale * self.w_q).transpose(0, 1) + self.bias
+
+
+class _KVCacheAttention(nn.Module):
+    """KV-cache decode step — append, window-truncate, attend.
+
+    The incremental-decoding spelling: past keys/values arrive as
+    inputs, the new token's k/v are ``cat``'ed on, and only the last
+    ``window`` entries feed the attention — the ``cat`` +
+    ``narrow`` cache-update pair plus the length-mismatched
+    ``(1, T)`` score site a streaming decoder actually emits.
+    """
+
+    def __init__(self, d: int, window: int) -> None:
+        """Build the q/kv/out projections and record the window."""
+        super().__init__()
+        self.q = nn.Linear(d, d)
+        self.kv = nn.Linear(d, 2 * d)
+        self.out = nn.Linear(d, d)
+        self.window = window
+
+    def forward(
+        self,
+        x: torch.Tensor,
+        kc: torch.Tensor,
+        vc: torch.Tensor,
+    ) -> torch.Tensor:
+        """Append the new k/v to the cache, attend over the window."""
+        k_new, v_new = self.kv(x).chunk(2, dim=-1)
+        k = torch.cat([kc, k_new], dim=1)[:, -self.window :]
+        v = torch.cat([vc, v_new], dim=1)[:, -self.window :]
+        s = self.q(x) @ k.transpose(-1, -2) / (x.shape[-1] ** 0.5)
+        return self.out(torch.softmax(s, dim=-1) @ v)
+
+
+# ---------------------------------------------------------------------------
+#  Modern block details — the variants the intake banks miss
+# ---------------------------------------------------------------------------
+
+
+class _GEGLUBlock(nn.Module):
+    """GEGLU feed-forward block — the third gated-MLP sibling.
+
+    Shazeer 2020's GLU variants: the intake banks hold ReGLU
+    (``relu``) and SwiGLU (``silu``) at MLP and block scale; GEGLU —
+    ``GELU(Wx) ⊙ Vx`` — is the uncovered member, spelled here at
+    block scale with the pre-norm residual.
+    """
+
+    def __init__(self, d: int) -> None:
+        """Build the norm, the packed gate map and the projection."""
+        super().__init__()
+        self.norm = nn.LayerNorm(d)
+        self.w = nn.Linear(d, 2 * d)
+        self.v = nn.Linear(d, d)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Apply the gelu-gated feed-forward under a residual."""
+        a, b = self.w(self.norm(x)).chunk(2, dim=-1)
+        return x + self.v(F.gelu(a) * b)
+
+
+class _SkipInitNet(nn.Module):
+    """SkipInit/Fixup residual — learnable scalar gates, no norms.
+
+    De & Smith 2020: batch-norm-free residual nets replace the norm
+    with a per-branch learnable scalar multiplier initialized at
+    zero — ``x + a·block(x)`` stacked twice, the scalar-gated
+    residual family the norm-centric corpus never wrote.
+    """
+
+    def __init__(self, d: int) -> None:
+        """Build both branch MLPs and their scalar residual gates."""
+        super().__init__()
+        self.a1 = nn.Parameter(torch.zeros(1))
+        self.a2 = nn.Parameter(torch.zeros(1))
+        self.m1 = nn.Sequential(
+            nn.Linear(d, 2 * d), nn.ReLU(), nn.Linear(2 * d, d)
+        )
+        self.m2 = nn.Sequential(
+            nn.Linear(d, 2 * d), nn.ReLU(), nn.Linear(2 * d, d)
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Apply both scalar-gated residual branches."""
+        x = x + self.a1 * self.m1(x)
+        return x + self.a2 * self.m2(x)
+
+
+class _SoftcapLogitHead(nn.Module):
+    """Logit soft-cap head — ``cap·tanh(logits/cap)`` (Gemma-2).
+
+    The bounded-logit spelling Gemma-2/Grok use on the classifier
+    output: ``div`` + ``tanh`` + ``mul`` with the cap a graph
+    literal — a saturated head the transform lists never catalogued.
+    """
+
+    def __init__(self, d: int, ncls: int) -> None:
+        """Build the classifier head and record the cap."""
+        super().__init__()
+        self.head = nn.Linear(d, ncls)
+        self.cap = 15.0
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Return the soft-capped logits."""
+        logits = self.head(x)
+        return self.cap * torch.tanh(logits / self.cap)
+
+
+class _RotaryPair(nn.Module):
+    """Interleaved-pair rotary — the GPT-J RoPE spelling on (q, k).
+
+    The intake's RoPE workloads spell the rotate-half (GPT-NeoX)
+    form ``cat(-x₂, x₁)``.  This is the pairwise-interleaved form —
+    ``unflatten`` to (…, d/2, 2), two real multiplies against the
+    (cos, sin) tables, ``flatten`` back — a different shape-juggling
+    site for the same rotation, scored through ``q·kᵀ``.
+    """
+
+    def __init__(self, d: int) -> None:
+        """Build the q and k projections."""
+        super().__init__()
+        self.q = nn.Linear(d, d)
+        self.k = nn.Linear(d, d)
+
+    @staticmethod
+    def _rope(z: torch.Tensor) -> torch.Tensor:
+        """Rotate the interleaved pairs of *z* by their positions."""
+        t, d = z.shape[-2], z.shape[-1]
+        inv = torch.pow(
+            torch.tensor(10000.0, dtype=z.dtype, device=z.device),
+            -torch.arange(0, d, 2, dtype=z.dtype, device=z.device) / d,
+        )
+        ang = torch.outer(
+            torch.arange(t, dtype=z.dtype, device=z.device), inv
+        )
+        cos, sin = ang.cos(), ang.sin()  # (T, d/2)
+        z1, z2 = z.unflatten(-1, (d // 2, 2)).unbind(-1)
+        rot = torch.stack(
+            [z1 * cos - z2 * sin, z1 * sin + z2 * cos], dim=-1
+        )
+        return rot.flatten(-2)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Rotate q and k pairwise; return their score matrix."""
+        q = self._rope(self.q(x))
+        k = self._rope(self.k(x))
+        return q @ k.transpose(-1, -2)
+
+
+# ---------------------------------------------------------------------------
 #  The registry — same Workload thunks as intake, disjoint names
 # ---------------------------------------------------------------------------
 
@@ -837,16 +1301,89 @@ def zoo(d: int = 16, t: int = 8, b: int = 2) -> list[Workload]:
             lambda: (_HighwayGate(d), _r(4, d)),
             kind="zoo",
         ),
+        # --- SSM / linear-attention / long-conv --------------------
+        Workload(
+            "MambaSelectiveScan",
+            lambda: (_MambaSelectiveScan(d, 4, t), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "GatedLinearAttention",
+            lambda: (_GatedLinearAttention(d, t), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "RWKVMixBlock",
+            lambda: (_RWKVMixBlock(d), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "HyenaLongConv",
+            lambda: (_HyenaLongConv(d, 4), _r(b, t, d)),
+            kind="zoo",
+        ),
+        # --- routing: deployment-shape dispatch --------------------
+        Workload(
+            "TopKRouterMoE",
+            lambda: (_TopKRouterMoE(d, 4, 2), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "DeepSeekSigMoE",
+            lambda: (_DeepSeekSigMoE(d, 4, 2), _r(b, t, d)),
+            kind="zoo",
+        ),
+        # --- quantization / cache ----------------------------------
+        Workload(
+            "STEQuantLinear",
+            lambda: (_STEQuantLinear(d), _r(4, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "PerChannelQuantMatmul",
+            lambda: (_PerChannelQuantMatmul(d), _r(4, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "KVCacheAttention",
+            lambda: (
+                _KVCacheAttention(d, 4),
+                (_r(b, 1, d), _r(b, 5, d), _r(b, 5, d)),
+            ),
+            kind="zoo",
+        ),
+        # --- modern block details ----------------------------------
+        Workload(
+            "GEGLUBlock",
+            lambda: (_GEGLUBlock(d), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "SkipInitNet",
+            lambda: (_SkipInitNet(d), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "SoftcapLogitHead",
+            lambda: (_SoftcapLogitHead(d, 10), _r(4, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "RotaryPair",
+            lambda: (_RotaryPair(d), _r(b, t, d)),
+            kind="zoo",
+        ),
     ]
 
 
 def zoo_variants(d: int = 16, t: int = 8, b: int = 2) -> list[Workload]:
     """Return a second draw of the registry — same families, re-parametrized.
 
-    Corpus-expansion siblings, NOT members of :func:`zoo`: the
-    22-entry holdout registry the retros measure is unchanged, and
-    every name here carries a ``*V2`` suffix so no provenance or
-    disjointness check can confuse the two draws.  Each entry is one
+    Corpus-expansion siblings, NOT members of :func:`zoo`: every
+    name here carries a ``*V2`` suffix so no provenance or
+    disjointness check can confuse the two draws, and the draw
+    mirrors ``zoo()`` one-for-one — a registry entry added there
+    needs its re-parametrized sibling here.  Each entry is one
     of the registry's architecture families at a shifted
     configuration — wider width, a different head/expert/slot/unroll
     count — so the exported terms exercise the same module code with
@@ -979,6 +1516,78 @@ def zoo_variants(d: int = 16, t: int = 8, b: int = 2) -> list[Workload]:
         Workload(
             "HighwayGateV2",
             lambda: (_HighwayGate(d2), _r(4, d2)),
+            kind="zoo",
+        ),
+        # --- SSM / linear-attention / long-conv --------------------
+        Workload(
+            "MambaSelectiveScanV2",
+            lambda: (_MambaSelectiveScan(d, 3, 6), _r(b, 6, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "GatedLinearAttentionV2",
+            lambda: (_GatedLinearAttention(d, 6), _r(b, 6, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "RWKVMixBlockV2",
+            lambda: (_RWKVMixBlock(d2), _r(b, t, d2)),
+            kind="zoo",
+        ),
+        Workload(
+            "HyenaLongConvV2",
+            lambda: (_HyenaLongConv(d, 5), _r(b, 10, d)),
+            kind="zoo",
+        ),
+        # --- routing: deployment-shape dispatch --------------------
+        Workload(
+            "TopKRouterMoEV2",
+            lambda: (_TopKRouterMoE(d, 6, 3), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "DeepSeekSigMoEV2",
+            lambda: (_DeepSeekSigMoE(d, 6, 3), _r(b, t, d)),
+            kind="zoo",
+        ),
+        # --- quantization / cache ----------------------------------
+        Workload(
+            "STEQuantLinearV2",
+            lambda: (_STEQuantLinear(d2), _r(4, d2)),
+            kind="zoo",
+        ),
+        Workload(
+            "PerChannelQuantMatmulV2",
+            lambda: (_PerChannelQuantMatmul(d2), _r(4, d2)),
+            kind="zoo",
+        ),
+        Workload(
+            "KVCacheAttentionV2",
+            lambda: (
+                _KVCacheAttention(d, 3),
+                (_r(b, 1, d), _r(b, 4, d), _r(b, 4, d)),
+            ),
+            kind="zoo",
+        ),
+        # --- modern block details ----------------------------------
+        Workload(
+            "GEGLUBlockV2",
+            lambda: (_GEGLUBlock(d2), _r(b, t, d2)),
+            kind="zoo",
+        ),
+        Workload(
+            "SkipInitNetV2",
+            lambda: (_SkipInitNet(d2), _r(b, t, d2)),
+            kind="zoo",
+        ),
+        Workload(
+            "SoftcapLogitHeadV2",
+            lambda: (_SoftcapLogitHead(d, 12), _r(4, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "RotaryPairV2",
+            lambda: (_RotaryPair(d2), _r(b, 6, d2)),
             kind="zoo",
         ),
     ]

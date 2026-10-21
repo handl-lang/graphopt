@@ -21,7 +21,7 @@ side of the baseline protocol untouched:
   so the protocol's candidates recur inside it.
 * **sites** — real ``nn.Module``-derived candidates: the zoo
   (``mlopt_discovery.zoo.zoo()``) plus the new variant draw
-  (:func:`mlopt_discovery.zoo.zoo_variants` — the same 23
+  (:func:`mlopt_discovery.zoo.zoo_variants` — the same
   architectures re-parametrized) plus a capped prefix of the intake's
   ``real_workloads()`` are exported through the intake boundary, and
   ``lp.near_miss_candidates`` mines each saturated e-graph for

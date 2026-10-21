@@ -253,7 +253,7 @@ def compare_runs(runs: tuple[BoardRun, ...]) -> BoardVerdict:
 
 
 def zoo_terms(seed: int = 0) -> tuple[list[tuple[str, Any]], list[str]]:
-    """Export the 22-model held-out zoo to terms; returns (terms, errors).
+    """Export the held-out model zoo to terms; returns (terms, errors).
 
     Torch is imported lazily — the probe harness itself is torch-free;
     only corpus construction needs the export boundary.
@@ -392,7 +392,7 @@ def main(argv: list[str] | None = None) -> int:
         "--corpus",
         choices=("zoo", "models"),
         default="models",
-        help="'zoo' is the 22-model holdout; 'models' the real "
+        help="'zoo' is the held-out model zoo; 'models' the real "
         "corpus where the shipped laws actually fire",
     )
     p.add_argument(

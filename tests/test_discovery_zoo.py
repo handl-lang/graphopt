@@ -125,3 +125,67 @@ def test_zoo_ingests_through_the_real_boundary(name):
     assert not rejections
     assert [r["status"] for r in records] == ["ingested"]
     assert cases and cases[0].source == "intake"
+
+
+#: The under-catalogued families the corpus expansion added — the
+#: SSM/linear-attention scans, deployment-shape routing, quantization
+#: and cache spellings, and the modern block details.  Pinned as an
+#: explicit list so a registry reorder cannot silently drop one from
+#: the ingestion contract below.
+_EXPANSION_FAMILIES = [
+    "MambaSelectiveScan",
+    "GatedLinearAttention",
+    "RWKVMixBlock",
+    "HyenaLongConv",
+    "TopKRouterMoE",
+    "DeepSeekSigMoE",
+    "STEQuantLinear",
+    "PerChannelQuantMatmul",
+    "KVCacheAttention",
+    "GEGLUBlock",
+    "SkipInitNet",
+    "SoftcapLogitHead",
+    "RotaryPair",
+]
+
+
+def test_zoo_expansion_families_registered():
+    """Every expansion family sits in BOTH draws — ``zoo()`` and the
+    ``*V2`` mirror — so the enumeration paths pick them up together."""
+    zoo_names = {w.name for w in _ZOO}
+    variant_names = {w.name for w in zoo_mod.zoo_variants()}
+    assert set(_EXPANSION_FAMILIES) <= zoo_names
+    assert {n + "V2" for n in _EXPANSION_FAMILIES} <= variant_names
+
+
+@pytest.mark.parametrize("name", _EXPANSION_FAMILIES)
+def test_zoo_expansion_family_produces_candidates(name):
+    """Each new family exports through the real boundary and yields a
+    candidate term with at least one op node — no rejection, and the
+    lowered module verifies fp64 (status ``ingested``)."""
+    torch.manual_seed(0)
+    picked = [w for w in _ZOO if w.name == name]
+    cases, records, rejections = li.ingest(
+        cands=picked, sink=TorchSink()
+    )
+    assert not rejections
+    assert [r["status"] for r in records] == ["ingested"]
+    assert len(cases) == 1
+    assert li._n_nodes(cases[0].term) >= 1
+
+
+@pytest.mark.parametrize("name", _EXPANSION_FAMILIES)
+def test_zoo_expansion_family_deterministic_shapes(name):
+    """Two seeded builds of the same workload produce identical
+    output shapes and values — the census never sees a flaky feed."""
+    w = next(w for w in _ZOO if w.name == name)
+    outs = []
+    for _ in range(2):
+        torch.manual_seed(0)
+        model, x = w.build()
+        feed = x if isinstance(x, tuple) else (x,)
+        model = model.eval().double()
+        with torch.no_grad():
+            outs.append(model(*feed))
+    assert outs[0].shape == outs[1].shape
+    assert torch.equal(outs[0], outs[1])
