@@ -25,7 +25,17 @@ measurable.  On *novelty*: the engine mints laws, handler bodies and atoms
 from measured need, and the first law minted from a model's own operation
 tuple now ships in the default rule set (`mul_unsq_nat`, −12.27 % on its
 source workload); the yield of fresh paying structure in the exposed corpus
-is, honestly, ~1.5 %.  On *soundness*: every move carries a replayable
+is, honestly, ~1.5 %.  The claim is decidable, not aspirational: *novel*
+here means **machine-original against catalogued knowledge** — a candidate
+qualifies iff its certificate replays standalone, its certified extraction
+strictly beats a registered `bench/discovery` baseline on a derivation that
+invokes it, and its instance is underivable from `known_bank()` (the shipped
+rules plus the prior-art preset) minus alpha-siblings.  The sieve
+(`bench/drivers/screen/novelty_sieve.py`, results in
+`docs/results_novelty_sieve.md`) ran 24 candidates over the 222-rule bank:
+two in the review queue (`mul_unsq_nat`, `softsign_fold`), four derivable,
+six unpaid, twelve unmeasured.  "Novel to humanity" stays an open-world
+literature claim this draft does not make.  On *soundness*: every move carries a replayable
 certificate, candidates clear a numeric oracle, a typed-pay gate, an
 adversarial sweep and a measured-pay gate before shipping, and the
 adversarial sweep has repeatedly falsified the engine's own candidates — a
@@ -500,7 +510,7 @@ value claim without its losses is not a measurement.
 
 | Loss | Measurement | Artifact |
 |---|---|---|
-| Fused-op vision model (BiRefNet Swin block) | **0.80× vs compiled** — the e-graph cannot see inside `sdpa` | `docs/results.md` |
+| Fused-op vision model (BiRefNet Swin block) | **0.80× vs compiled** — the e-graph could not see inside `sdpa` when measured; the opt-in `sdpa_expand` family (`sdpa_decomposed` scorecard row) has since made it reachable — honest parity, not a speedup | `docs/results.md` |
 | The carrier below the crossover | **0.51× vs eager at T=512** (wins asymptotically) | `docs/results.md` |
 | Pure pointwise fusion (Inductor's home turf) | **0.82–0.88× loss** | `gen-kernels.md` |
 | Precision (bounded) lane on real BiRefNet (220 M) | **certified negative** — 20 offers at 1e-2, 56 at 3e-2, **0 delivered** (bounded member prices 1.32× worse than dense; 18/2304 rows dedup) | `project/retros/birefnet-bounded-lane.md` |
@@ -712,7 +722,7 @@ venue paper needs the scale validation and the executor work named in §6.
 | Claim | Measurement | Artifact |
 |---|---|---|
 | **Novelty.** A corpus-minted law ships in the default rule set | `mul_unsq_nat`, `MACHINE_SHIPPED`, −12.27 % on DeltaRuleBlock, +18 enodes | `project/retros/mul-unsq-nat.md`; `mlopt_core.laws.provenance.MACHINE_SHIPPED` |
-| 12 machine-admitted laws ship beside the hand-written kernel | `MACHINE_SHIPPED` (12) | `docs/api.md`; `project/retros/promoted-laws.md` |
+| 13 machine-admitted laws ship beside the hand-written kernel | `MACHINE_SHIPPED` (13) | `docs/api.md`; `project/retros/promoted-laws.md` |
 | A handler for a previously hand-written executor is machine-minted | `om_decayed` element at 8.9e-16 fp64 | `project/retros/handler-proposals.md`; ADR 0007 |
 | An atom's law set is synthesized and certified | 25 certified / 4 rejected / 0 refused | `project/retros/layer3-loop.md` |
 | Fresh paying structure is sparse | 60-model sweep: 0 paying new laws beyond `mul_unsq_nat`; ~1.5 % | `project/retros/discovery-scale.md` |

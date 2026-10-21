@@ -481,6 +481,8 @@ is brittle at n=40 for every arm (RL 4.15×).  Not wired into
 | `RuleValueNet` (MLP 32) | ranking AP (`rank_pool`) | 0.023 | heuristic 0.045 | **loses** |
 
 > Re-measured 2026-10-19 trained on on-distribution held-out candidates: AP **0.041** — heuristic parity (0.045). The 0.023 pin trained on off-distribution corpus samples. See `docs/results_learned_baseline.md`.
+>
+> Later still: the loss-form probe (`docs/results_neural_rank.md`) shows the residual gap was ordering credit — a pairwise RankNet objective on the reward's label reaches AP **0.1941** (above the trained-linear anchor 0.128, under the page-aware 0.210), and a ListNet-graded arm earns heuristic-parity episode reward **0.3549** vs 0.3595. Parity, not a win.
 
 ### Linear — the discovery game (RL, baked presets)
 

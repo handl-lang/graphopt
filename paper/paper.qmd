@@ -117,7 +117,7 @@ from premises — as a 3-cell.  The consequence that matters
 operationally: laws are **data rows** (an LHS/RHS pattern pair plus a
 guard spec), serializable, storable, composable.  The shipped bank
 (`mlopt_core.laws.ALL_RULES`, 84 rules) mixes human-authored axioms
-with twelve machine-admitted objects
+with thirteen machine-admitted objects
 (`mlopt_core.laws.provenance.MACHINE_SHIPPED`).
 
 ## The handl substrate and mlopt-kit
@@ -217,13 +217,16 @@ meta-arena prior beats the scripted playbook (mean episode reward
 sampling-variance-riding, an honest negative kept in the record.  A
 distilled contraction policy (`PairPolicyNet`) beats `opt_einsum`'s
 randomized greedy (0.91× cost at n=40) and ships as a standalone
-artifact.  Conversely, a neural rule-value policy *loses* to the
-heuristic (AP 0.023 corpus-trained; 0.041 ≈ parity when trained
-on-distribution — a data gap, not capacity), and two learned-policy axes (schedule guidance;
+artifact.  The neural arm's residual gap is ordering credit, not
+coverage: a pairwise RankNet objective on the reward's own label
+reaches AP 0.1941 — above the trained-linear anchor (0.128), under
+the page-aware linear (0.210) — and a ListNet-graded drain earns
+heuristic-parity episode reward (0.3549 vs 0.3595, inside seed
+noise) without beating it (`docs/results_neural_rank.md`).  Two learned-policy axes (schedule guidance;
 direct law invention) were measured and falsified — the evidence for
 learned guidance is real but early (controlled baseline and ablations in
 `docs/results_learned_baseline.md` / `docs/results_learned_ablations.md`): linear and distilled arms beat
-baselines; neural methods do not yet.
+baselines; neural methods reach parity, not wins.
 
 # Case study: the conv+BN fold {#sec-casestudy}
 
@@ -265,7 +268,8 @@ lowered modules.
 
 **Ship.**  The composite is promoted *verbatim*: its stored records
 embed in `mlopt_core.laws.minted`, its guard re-materializes at
-import, `MACHINE_SHIPPED` grows to 12.  Re-running the gauntlet
+import, `MACHINE_SHIPPED` grows to 12 (13 today — `add_unsq_pad_r`
+followed).  Re-running the gauntlet
 post-ship refuses at novelty with `relation=duplicate` — the
 documented signature of "already admitted."
 
@@ -379,6 +383,19 @@ minted guards).
   literal attrs (`stride=(1,1)`, `padding=(1,1)`, `eps=1e-05`,
   `training=False`): its region is the default-attr eval-mode fold —
   honest, narrow, the common spelling.
+- **Novelty is closed-world.**  "Novel" in this draft means
+  *machine-original against catalogued knowledge* — decidable, not
+  aspirational: a candidate is a novelty iff its certificate replays
+  standalone (cert), its certified extraction strictly beats a
+  registered `bench/discovery` baseline on a derivation that invokes
+  the candidate (beat), and its instance is underivable from
+  `known_bank()` — the shipped rules plus the prior-art preset —
+  minus alpha-siblings (¬derivable).  The sieve
+  (`bench/drivers/screen/novelty_sieve.py`, results in
+  `docs/results_novelty_sieve.md`) ran 24 candidates: two in the
+  review queue (`mul_unsq_nat`, `softsign_fold`), four derivable,
+  six unpaid, twelve unmeasured.  "Novel to humanity" remains an
+  open-world literature claim this draft does not make.
 
 # Reproduction {#sec-repro}
 
