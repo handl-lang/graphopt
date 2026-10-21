@@ -62,7 +62,11 @@ from torch import nn
 from torch.distributions import Categorical
 
 try:  # Optional native core — built with maturin, never a hard dep.
-    from mlopt_native import contraction as _ncon
+    # mlopt_native lives in handl-lang/eqsat (packages/mlopt-native) and is
+    # not installed in the dev venv, so ty cannot resolve it statically.
+    from mlopt_native import (  # ty: ignore[unresolved-import]
+        contraction as _ncon,
+    )
 except ImportError:  # pragma: no cover — wheel absent
     _ncon = None
 
