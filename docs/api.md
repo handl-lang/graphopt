@@ -1,5 +1,10 @@
 # API surface
 
+> For the **frozen** public surface — the contract the repo split must
+> not break — see [`public_api.md`](public_api.md) (`API_VERSION =
+> "0.1.0"`).  This page is the working walkthrough; that one is the
+> contract.
+
 The orchestration surface lives in `mlopt_orchestrator`
 (backend-neutral — it imports no torch); the torch ports, runners and
 autotune candidate builders live in `mlopt_torch` / `mlopt_cuda`;

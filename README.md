@@ -115,6 +115,10 @@ harness.
 | controlled learned-policy baseline + ablations | [`docs/results_learned_baseline.md`](docs/results_learned_baseline.md), [`docs/results_learned_ablations.md`](docs/results_learned_ablations.md) |
 | feature-schema leaderboard (representation vs weight search) | [`docs/results_schema_leaderboard.md`](docs/results_schema_leaderboard.md) |
 | the working paper draft with the evidence table | [`docs/paper_draft.md`](docs/paper_draft.md) |
+| the three costs — how the engine knows a form is *better* | [`docs/cost-model.md`](docs/cost-model.md) |
+| the API walkthrough + the frozen public surface | [`docs/api.md`](docs/api.md), [`docs/public_api.md`](docs/public_api.md) |
+| the evaluation dimension (fourth axis of ADR 0003) | [`docs/evaluation.md`](docs/evaluation.md) |
+| discovery scorecard / player leaderboard / limits table | [`docs/scorecard.md`](docs/scorecard.md), [`docs/leaderboard_players.md`](docs/leaderboard_players.md), [`docs/limits_table.md`](docs/limits_table.md) |
 | decision records with falsification paths | [`project/adrs/`](project/adrs/) |
 | the measured retros each claim cites | [`project/retros/`](project/retros/) |
 | repo map + verification gates | [`AGENTS.md`](AGENTS.md) |
