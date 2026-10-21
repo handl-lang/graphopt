@@ -38,7 +38,10 @@ never replayed inside episodes in this driver).  Every arm trains
 ``RuleValueNet`` (``train_rule_value``, BCE on ``delta > 0``, 300
 epochs full-batch CPU, hidden 32) on a ``RuleSample`` per candidate
 exactly as ``policy_ablations._ablation_capacity`` builds them; AP is
-scored on the same 576-candidate held-out pool.
+scored on the same 576-candidate held-out pool.  Two episode rows
+(``neural-ondist-576`` / ``neural-ondist+all``) replay the trained
+nets as drain-rankers — argmax over pending, drain, ``stop`` — so
+reward/episode is comparable to the heuristic drain anchor.
 
 Also measured, for the honest comparison: the off-distribution
 ``corpus`` arm (``rule_samples`` over ``families.mixture_programs`` —
@@ -56,7 +59,11 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import contextlib
 import math
+import multiprocessing as mp
+import os
+import resource
 import sys
 import time
 from itertools import islice
@@ -81,6 +88,7 @@ from mlopt_discovery.enumerate import (
     DEFAULT_OPS,
     enumerate_candidates,
 )
+from mlopt_discovery.meta_arena import Action
 from mlopt_torch.adapters import TorchSink
 from mlopt_torch.learned_policy import input_vector, train_rule_value
 
@@ -109,6 +117,143 @@ WIDE_OPS: tuple = lawdata.GRAMMAR_BINARY_OPS + lawdata.GRAMMAR_UNARY_OPS
 SITE_MAX_DIST = 3
 SITE_MAX_SIZE = 12
 SITE_MAX_PAIRS = 600
+
+#: Per-candidate evaluation guard.  ``lp.evaluate`` -> ``verify_law``
+#: saturates a fresh e-graph under ``ALL_RULES`` with
+#: ``max_nodes=200_000`` and no expansive-rule budgets; the
+#: default-ops stream never trips it, but the widened vocabulary does
+#: — ``lit-self:1907 matmul(A,A) => add(A,0)`` was measured OOM-killing
+#: an 11 GB box at ~9.3 GB anon RSS (2026-10-20).  An in-process
+#: ``MemoryError`` catch is NOT survivable — once the rlimit bites,
+#: pymalloc arenas stay mapped and even the except-handler's
+#: allocations fail (observed: cascading MemoryError past the catch).
+#: Every ``lp.evaluate`` therefore runs in a spawned worker under an
+#: address-space rlimit; a candidate that kills the worker (twice on a
+#: fresh worker — a single death could be accumulated heap, not the
+#: candidate) or stalls past :data:`EVAL_TIMEOUT_S` is recorded as
+#: ``None``, dropped from its pool, reported as ``skipped`` — never
+#: labeled, never trained on.  Every measured verdict is the
+#: protocol's exact verdict: same call, same per-candidate seed.
+EVAL_TIMEOUT_S = 180.0
+EVAL_RLIMIT_AS = 6 * 1024**3  # ~6 GiB — baseline RSS is ~0.6 GB
+
+
+def _eval_worker_main(conn: Any) -> None:
+    """Worker loop: recv ``(seed, cand)`` -> send ``("ok", outcome)``.
+
+    Death is the honest report for the unbounded-saturation case —
+    after MemoryError the allocator cannot be trusted to even format
+    an error, so the child exits without one.  A *regular* eval
+    exception is reported before dying (it would have crashed the
+    unguarded run; here it is a skipped row with a note).
+    """
+    while True:
+        try:
+            msg = conn.recv()
+        except (EOFError, OSError):
+            return
+        if msg is None:
+            return
+        seed, cand = msg
+        torch.manual_seed(seed)
+        try:
+            outcome = lp.evaluate([cand])[0]
+        except MemoryError:
+            os._exit(2)  # allocator wedged — do not allocate to report
+        except BaseException as exc:
+            with contextlib.suppress(Exception):
+                conn.send(("err", f"{type(exc).__name__}: {exc}"[:300]))
+            os._exit(3)
+        try:
+            conn.send(("ok", outcome))
+        except Exception:
+            os._exit(4)
+
+
+class _EvalWorker:
+    """One spawned ``lp.evaluate`` subprocess; respawned on death."""
+
+    def __init__(self) -> None:
+        self._ctx = mp.get_context("spawn")
+        self._proc: Any = None
+        self._conn: Any = None
+        self.evals = 0
+
+    def _alive(self) -> bool:
+        return self._proc is not None and self._proc.is_alive()
+
+    def _spawn(self) -> None:
+        self._conn, child = self._ctx.Pipe()
+        self._proc = self._ctx.Process(
+            target=_eval_worker_main, args=(child,), daemon=True
+        )
+        self._proc.start()
+        child.close()
+        self.evals = 0
+
+    def kill(self) -> None:
+        if self._proc is not None:
+            self._proc.kill()
+            self._proc.join()
+            self._proc = None
+            self._conn = None
+
+    def evaluate(self, seed: int, cand: Any) -> tuple[Any, str]:
+        """Send one candidate; ``(outcome, "ok")`` or ``(None, why)``.
+
+        ``why`` is ``"died"`` (EOF/timeout — the bomb case) or
+        ``"err:<detail>"`` (a reported eval exception).
+        """
+        if not self._alive():
+            self._spawn()
+        try:
+            self._conn.send((seed, cand))
+        except (BrokenPipeError, OSError):
+            return None, "died"
+        except Exception as exc:
+            # Pickling failure — e.g. a candidate rule carrying a
+            # lambda check.  Not a heap death: report, don't retry.
+            return None, f"err:send:{type(exc).__name__}"
+        if not self._conn.poll(EVAL_TIMEOUT_S):
+            # Still busy — kill it, or every later eval queues behind
+            # the stuck one and times out in turn.
+            self.kill()
+            return None, "timeout"
+        try:
+            status, payload = self._conn.recv()
+        except (EOFError, OSError):
+            self.kill()
+            return None, "died"
+        self.evals += 1
+        if status == "ok":
+            return payload, "ok"
+        self.kill()
+        return None, f"err:{payload}"
+
+    def close(self) -> None:
+        """Shut the worker down."""
+        if self._alive():
+            with contextlib.suppress(BrokenPipeError, OSError):
+                self._conn.send(None)
+        self.kill()
+
+
+def _install_eval_limit() -> None:
+    """Cap address space at ``EVAL_RLIMIT_AS`` (workers inherit it).
+
+    A failed set is non-fatal (the guard degrades to a box-level OOM)
+    so it is logged, not raised.
+    """
+    try:
+        _, hard = resource.getrlimit(resource.RLIMIT_AS)
+        lim = (
+            EVAL_RLIMIT_AS
+            if hard == resource.RLIM_INFINITY
+            else min(hard, EVAL_RLIMIT_AS)
+        )
+        resource.setrlimit(resource.RLIMIT_AS, (lim, hard))
+    except (ValueError, OSError) as exc:
+        _log(f"rlimit not installed: {exc!r}")
 
 
 # ---------------------------------------------------------------------------
@@ -149,19 +294,54 @@ def _measure(
     ``lp.evaluate`` pass is the run's dominant cost and the box's
     OOM killer does not wait for the table to print — a restart
     replays measured rows instead of re-paying them.
+
+    A candidate whose isolated evaluation kills the worker twice or
+    stalls past :data:`EVAL_TIMEOUT_S` is recorded as ``None`` —
+    checkpointed like a verdict, so a restart never re-pays the
+    blow-up.  ``None`` rows are dropped by :func:`_kept` downstream.
     """
     outs = []
-    for i, cand in enumerate(cands):
-        k = (tag, i)
-        if k in store:
-            outs.append(store[k])
-            continue
-        torch.manual_seed(seed + i)
-        o = lp.evaluate([cand])[0]
-        store[k] = o
-        _save_store(store, path)  # per-candidate: a kill loses one row
-        outs.append(o)
+    skipped = 0
+    worker = _EvalWorker()
+    try:
+        for i, cand in enumerate(cands):
+            k = (tag, i)
+            if k in store:
+                outs.append(store[k])
+                continue
+            o, why = worker.evaluate(seed + i, cand)
+            if why in ("died", "timeout"):
+                # A death mid-eval may be the candidate's bomb or the
+                # worker's accumulated heap — retry once on a fresh
+                # worker; two deaths on one candidate = unmeasurable.
+                worker.kill()
+                o, why = worker.evaluate(seed + i, cand)
+            if why != "ok":
+                skipped += 1
+                _log(f"{tag}[{i}] skipped ({why}): {cand.label}")
+                o = None
+            store[k] = o
+            _save_store(store, path)  # a kill loses at most one row
+            outs.append(o)
+    finally:
+        worker.close()
+    if skipped:
+        _log(f"{tag}: {skipped}/{len(cands)} candidates unmeasurable")
     return outs
+
+
+def _kept(cands: list, outcomes: list) -> tuple[list, list, int]:
+    """Drop candidates whose evaluation was skipped (``None``)."""
+    pairs = [
+        (c, o)
+        for c, o in zip(cands, outcomes, strict=True)
+        if o is not None
+    ]
+    return (
+        [c for c, _ in pairs],
+        [o for _, o in pairs],
+        len(cands) - len(pairs),
+    )
 
 
 def _stream_pool(cases: list[dict]) -> list:
@@ -296,6 +476,40 @@ def _ap_of(
     return round(pb._ap(scores, flat_outcomes), 4)
 
 
+def _neural_ranker_arm(model: Any) -> Any:
+    """Episode arm: evaluate the net's top pending candidate; drain.
+
+    The ``RuleValueNet`` analogue of ``pb._heuristic_arm`` — same
+    drain-then-stop behavior, so ``evals_per_ep`` is comparable.
+    """
+
+    def make(i: int) -> Any:
+        del i
+
+        def player(state: Any) -> Any:
+            if not state.pending:
+                return Action("stop", {})
+            x = torch.tensor(
+                [
+                    input_vector(
+                        compute_features(state.pool[j].lhs),
+                        rule_vector(state.pool[j].as_rule()),
+                    )
+                    for j in state.pending
+                ],
+                dtype=torch.float32,
+            )
+            with torch.no_grad():
+                scores = model(x)
+            best = int(torch.argmax(scores).item())
+            j = state.pending[best]
+            return Action("evaluate", {"i": j, "cand": state.pool[j]})
+
+        return player
+
+    return make
+
+
 def _pool_stats(cands: list, outcomes: list) -> dict[str, Any]:
     """Size/label census of one measured pool."""
     return {
@@ -340,50 +554,63 @@ def run(
     """Measure every pool once, then train each arm and score AP."""
     t0 = time.time()
     store = _load_store(cache)
+    _install_eval_limit()
     # --- the held-out pool: odd pages, memoized verdicts (baseline) --
     ev = og.gen_cases(seed, half, page=page, start=1, step=2)
     ev_pools = _stream_pool(ev)
-    flat_pool = [c for pool in ev_pools for c in pool]
+    raw_pool = [c for pool in ev_pools for c in pool]
+    # Ban every held-out instance — measured or not — from training
+    # pools; an unmeasurable verdict still marks the pair as held out.
+    banned = {_instance_key(c) for c in raw_pool}
     _log("measuring held-out pool")
-    flat_eval = _measure(
-        flat_pool, seed + pb.HELD_OUT_OFFSET, store, "heldout", cache
+    flat_eval_raw = _measure(
+        raw_pool, seed + pb.HELD_OUT_OFFSET, store, "heldout", cache
     )
-    eval_outcomes: list[list] = []
+    flat_pool, flat_eval, heldout_skipped = _kept(
+        raw_pool, flat_eval_raw
+    )
     by_key: dict = {}
-    pos = 0
-    for pool in ev_pools:
-        eval_outcomes.append(flat_eval[pos : pos + len(pool)])
-        pos += len(pool)
     flat_outcomes = {i: o for i, o in enumerate(flat_eval)}
     for c, o in zip(flat_pool, flat_eval, strict=True):
         by_key.setdefault(pb._cand_key(c), o)
-    banned = {_instance_key(c) for c in flat_pool}
     n_useful = sum(1 for o in flat_outcomes.values() if o.useful)
 
     # --- the on-distribution base: even pages -----------------------
     _log("measuring even-page train pool")
     train_cases = og.gen_cases(seed, half, page=page, start=0, step=2)
     train_pools = _stream_pool(train_cases)
-    train_out = _measure(
-        [c for pool in train_pools for c in pool],
+    raw_train = [c for pool in train_pools for c in pool]
+    train_out_raw = _measure(
+        raw_train,
         seed + TRAIN_SEED_OFFSET,
         store,
         "train",
         cache,
     )
-    base_cands = [c for pool in train_pools for c in pool]
-    banned |= {_instance_key(c) for c in base_cands}
+    banned |= {_instance_key(c) for c in raw_train}
+    base_cands, train_out, train_skipped = _kept(
+        raw_train, train_out_raw
+    )
     base_samples = _samples(base_cands, train_out)
 
     pools: dict[str, dict[str, Any]] = {
-        "even-pages": _pool_stats(base_cands, train_out)
+        "even-pages": {
+            **_pool_stats(base_cands, train_out),
+            "skipped": train_skipped,
+        }
     }
 
     # --- tail: the default stream's uncovered offsets ---------------
     tail = _tail_candidates()
-    tail_out = _measure(tail, seed + 2_000_003, store, "tail", cache)
+    tail_out_raw = _measure(
+        tail, seed + 2_000_003, store, "tail", cache
+    )
     banned |= {_instance_key(c) for c in tail}
-    pools["stream-tail"] = _pool_stats(tail, tail_out)
+    tail, tail_out, tail_skipped = _kept(tail, tail_out_raw)
+    pools["stream-tail"] = {
+        **_pool_stats(tail, tail_out),
+        "skipped": tail_skipped,
+    }
 
     # --- wide: the full-grammar stream ------------------------------
     wide_cands: list = []
@@ -392,12 +619,16 @@ def run(
         t = time.time()
         _log(f"enumerating + measuring {wide} wide-grammar candidates")
         wide_cands = _wide_candidates(wide, banned)
-        wide_out = _measure(
+        wide_out_raw = _measure(
             wide_cands, seed + 2_100_001, store, "wide", cache
         )
         banned |= {_instance_key(c) for c in wide_cands}
+        wide_cands, wide_out, wide_skipped = _kept(
+            wide_cands, wide_out_raw
+        )
         pools["wide-grammar"] = {
             **_pool_stats(wide_cands, wide_out),
+            "skipped": wide_skipped,
             "ops": len(WIDE_OPS),
             "gen_s": round(time.time() - t, 1),
         }
@@ -414,12 +645,16 @@ def run(
         if site_max_pairs:
             _log("mining + measuring real-program candidates")
             site_cands = _site_candidates(terms, site_max_pairs, banned)
-            site_out = _measure(
+            site_out_raw = _measure(
                 site_cands, seed + 2_200_001, store, "sites", cache
+            )
+            site_cands, site_out, site_skipped = _kept(
+                site_cands, site_out_raw
             )
             pools["zoo-sites"] = {
                 **meta,
                 **_pool_stats(site_cands, site_out),
+                "skipped": site_skipped,
             }
         else:
             pools["zoo-sites"] = meta
@@ -524,6 +759,31 @@ def run(
                 ev,
                 OPEN_BUDGET,
             )
+            # Neural rankers as episode arms — the same seeded
+            # ``train_rule_value`` calls as the AP rows above, so the
+            # weights are identical to the ``ondist-576`` /
+            # ``ondist+all`` rows.
+            net = train_rule_value(
+                base_samples,
+                epochs=neural_epochs,
+                hidden=hidden,
+                device="cpu",
+                seed=seed,
+            )
+            episodes["neural-ondist-576"] = pb._play_open(
+                _neural_ranker_arm(net), ev, OPEN_BUDGET
+            )
+            if all_on_dist:
+                net_all = train_rule_value(
+                    all_on_dist,
+                    epochs=neural_epochs,
+                    hidden=hidden,
+                    device="cpu",
+                    seed=seed,
+                )
+                episodes["neural-ondist+all"] = pb._play_open(
+                    _neural_ranker_arm(net_all), ev, OPEN_BUDGET
+                )
         finally:
             lp.evaluate = orig_evaluate
 
@@ -531,6 +791,7 @@ def run(
         "held_out": {
             "pool": len(flat_pool),
             "useful": n_useful,
+            "skipped": heldout_skipped,
         },
         "pools": pools,
         "ap": aps,
@@ -546,9 +807,10 @@ def _print(res: dict[str, Any]) -> None:
     print("== pools ==")  # stdout-compat
     for name, st in res["pools"].items():
         pos = st.get("positives", "—")
+        skipped = st.get("skipped", 0)
         print(  # stdout-compat
             f"  {name:<14} n={st.get('n', '—'):>6} pos={pos:>5} "
-            f"useful={st.get('useful', '—')}"
+            f"useful={st.get('useful', '—')} skipped={skipped}"
         )
     print(  # stdout-compat
         f"== held-out AP (pool={res['held_out']['pool']}, "
