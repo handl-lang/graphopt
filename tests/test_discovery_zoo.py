@@ -146,6 +146,30 @@ _EXPANSION_FAMILIES = [
     "SkipInitNet",
     "SoftcapLogitHead",
     "RotaryPair",
+    # --- second expansion — wider mint surface -------------------
+    # patterned attention: in-graph masks, strided + gathered keys
+    "SlidingWindowAttention",
+    "DilatedBlockAttention",
+    "BlockSparseAttention",
+    # depthwise-conv stack: channels-last blocks, pooled gates
+    "ConvNeXtStage",
+    "SqueezeExcite",
+    "MBConvSEBlock",
+    # fused-projection gates: same-view chunk tuples
+    "GRUFusedGate",
+    "GatedConvUnit",
+    # manual norm spellings + the norm-free dynamic tanh
+    "ManualGroupNorm",
+    "InstanceNormBroadcast",
+    "RMSNormPerHead",
+    "DynamicTanhBlock",
+    # positional/table ops: in-graph bias construction
+    "ALiBiSlopeAttention",
+    "RelPosTableAttention",
+    "LearnedPosSlice",
+    # second quant/kv shapes: grouped scales, paged cache
+    "GroupedQuantLinear",
+    "PagedKVAttention",
 ]
 
 

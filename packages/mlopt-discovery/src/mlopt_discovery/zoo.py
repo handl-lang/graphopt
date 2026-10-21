@@ -37,7 +37,17 @@ truth region — the selection criterion was *family coverage*:
   decode step;
 * modern block details — GEGLU (the gated-MLP sibling the intake
   lacks), SkipInit scalar-gated residuals, the soft-capped logit
-  head, and the interleaved-pair (GPT-J) RoPE spelling.
+  head, and the interleaved-pair (GPT-J) RoPE spelling;
+* the second expansion — patterned attention (sliding-window band,
+  dilated selection, block-sparse top-k), the depthwise-conv
+  stack (ConvNeXt, squeeze-excite, inverted-bottleneck MBConv),
+  fused-projection gates (GRU cell, conv GLU), manual norm
+  spellings (GroupNorm, InstanceNorm, per-head RMSNorm) plus the
+  norm-free dynamic tanh, positional-table ops (ALiBi slope grid,
+  clamped relative-position gather, learned abs-emb slice-add),
+  and the grouped-quant / paged-KV deployment shapes — picked
+  because their exported graphs carry the pointwise-over-view and
+  same-view op-tuples the ``zoo-real`` mint reads.
 
 The registry reuses :class:`mlopt_discovery.intake.Workload` so
 :func:`mlopt_discovery.intake.ingest` consumes it unchanged — the
@@ -1150,6 +1160,530 @@ class _RotaryPair(nn.Module):
 
 
 # ---------------------------------------------------------------------------
+#  Sparse / patterned attention — masks and gathers as in-graph tensors
+# ---------------------------------------------------------------------------
+
+
+class _SlidingWindowAttention(nn.Module):
+    """Sliding-window attention — a band mask built in-graph.
+
+    The longformer/Mistral local window: full quadratic scores
+    masked to a causal band of width ``w``.  The band itself is a
+    graph term (``tril - tril``), applied by a broadcast ``mul``
+    over an ``unsqueeze`` — the pointwise-over-view spelling the
+    global-mask attention workloads never wrote.
+    """
+
+    def __init__(self, d: int, window: int) -> None:
+        """Build the q/k/v/out projections and record the window."""
+        super().__init__()
+        self.q = nn.Linear(d, d)
+        self.k = nn.Linear(d, d)
+        self.v = nn.Linear(d, d)
+        self.out = nn.Linear(d, d)
+        self.window = window
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Attend inside the causal band; zero-scored keys fall off."""
+        t, d = x.shape[-2], x.shape[-1]
+        s = (self.q(x) @ self.k(x).transpose(-1, -2)) * (d**-0.5)
+        ones = torch.ones(t, t, dtype=x.dtype, device=x.device)
+        band = torch.tril(ones) - torch.tril(ones, -1 - self.window)
+        s = s * band.unsqueeze(0) + (band.unsqueeze(0) - 1.0) * 1e4
+        return self.out(torch.softmax(s, dim=-1) @ self.v(x))
+
+
+class _DilatedBlockAttention(nn.Module):
+    """Dilated attention — strided key/value selection with a gate.
+
+    LongNet-style dilated attention: every ``r``-th key/value row
+    feeds the score — the ``slice``-with-stride spelling of a sparse
+    pattern — while a learned per-position mix gate blends the
+    dilated read against the local window's ``slice``.
+    """
+
+    def __init__(self, d: int, dil: int, window: int) -> None:
+        """Build the projections, the mix gate and the window."""
+        super().__init__()
+        self.q = nn.Linear(d, d)
+        self.k = nn.Linear(d, d)
+        self.v = nn.Linear(d, d)
+        self.out = nn.Linear(d, d)
+        self.mix = nn.Linear(d, 1)
+        self.dil = dil
+        self.window = window
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Read dilated keys, blend the local tail, project."""
+        d = x.shape[-1]
+        w = self.window
+        kd = self.k(x)[:, :: self.dil]
+        vd = self.v(x)[:, :: self.dil]
+        s = (self.q(x) @ kd.transpose(-1, -2)) * (d**-0.5)
+        far = torch.softmax(s, dim=-1) @ vd
+        g = torch.sigmoid(self.mix(x))
+        head = far[:, :-w] * g[:, :-w]
+        tail = far[:, -w:] * g[:, -w:] + x[:, -w:] * (1.0 - g[:, -w:])
+        return self.out(torch.cat([head, tail], dim=1))
+
+
+class _BlockSparseAttention(nn.Module):
+    """Block-sparse attention — per-query top-k over key blocks.
+
+    The block-sparse dispatch spelling: keys are reshaped into a
+    ``(blocks, block_size)`` grid, per-block scores are reduced to
+    one number per block, top-k selects the live blocks, and the
+    ``one_hot`` mask is broadcast back over the score tensor —
+    ``mul(·, unsqueeze)`` over a gathered mask.
+    """
+
+    def __init__(
+        self, d: int, blocks: int, bsize: int, ktop: int
+    ) -> None:
+        """Build the projections; record the block grid and top-k."""
+        super().__init__()
+        self.q = nn.Linear(d, d)
+        self.k = nn.Linear(d, d)
+        self.v = nn.Linear(d, d)
+        self.out = nn.Linear(d, d)
+        self.blocks = blocks
+        self.bsize = bsize
+        self.ktop = ktop
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Score key blocks, keep each query's top-k, attend."""
+        b, _t, d = x.shape
+        nb, bs = self.blocks, self.bsize
+        kb = self.k(x).reshape(b, nb, bs, d)
+        vb = self.v(x).reshape(b, nb, bs, d)
+        s = torch.einsum("btd,bnsd->btns", self.q(x), kb) * (d**-0.5)
+        blk = s.amax(-1)
+        _topv, idx = torch.topk(blk, self.ktop, dim=-1)
+        keep = F.one_hot(idx, nb).to(x.dtype).amax(-2).unsqueeze(-1)
+        att = torch.softmax(s * keep + (keep - 1.0) * 1e4, dim=-1)
+        o = torch.einsum("btns,bnsd->btd", att, vb)
+        return self.out(o)
+
+
+# ---------------------------------------------------------------------------
+#  Depthwise-conv blocks — ConvNeXt, squeeze-excite, MBConv
+# ---------------------------------------------------------------------------
+
+
+class _ConvNeXtBlock(nn.Module):
+    """ConvNeXt block — depthwise conv, channels-last LN, layer scale.
+
+    Liu et al. 2022: a 7x7 depthwise conv, then the whole block runs
+    channels-last (``permute`` in, ``permute`` out) with a per-channel
+    learnable scale on the residual branch — the
+    ``add(·, transpose)`` + ``mul(·, reshape)`` pair.
+    """
+
+    def __init__(self, ch: int) -> None:
+        """Build the depthwise conv, LN, pointwise pair and scale."""
+        super().__init__()
+        self.dw = nn.Conv2d(ch, ch, 7, padding=3, groups=ch)
+        self.norm = nn.LayerNorm(ch)
+        self.pw1 = nn.Linear(ch, 2 * ch)
+        self.pw2 = nn.Linear(2 * ch, ch)
+        self.gamma = nn.Parameter(0.1 * torch.ones(ch))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Run the channels-last block; add the scaled residual."""
+        y = self.dw(x).permute(0, 2, 3, 1)
+        y = self.pw2(F.gelu(self.pw1(self.norm(y))))
+        y = y * self.gamma.reshape(1, 1, 1, -1)
+        return x + y.permute(0, 3, 1, 2)
+
+
+class _SqueezeExcite(nn.Module):
+    """Squeeze-excitation block — pooled gate broadcast back over space.
+
+    Hu et al. 2018: global-average-pool to ``(b, c)``, a two-layer
+    bottleneck, sigmoid, then ``reshape(b, c, 1, 1)`` broadcast over
+    the feature map — the ``mul(·, reshape)`` channel-gate site.
+    """
+
+    def __init__(self, ch: int, r: int) -> None:
+        """Build the squeeze/excite bottleneck pair."""
+        super().__init__()
+        self.fc1 = nn.Linear(ch, ch // r)
+        self.fc2 = nn.Linear(ch // r, ch)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Pool, gate and scale the feature map channel-wise."""
+        b, c = x.shape[0], x.shape[1]
+        s = torch.sigmoid(self.fc2(F.relu(self.fc1(x.mean((2, 3))))))
+        return x * s.reshape(b, c, 1, 1)
+
+
+class _MBConvBlock(nn.Module):
+    """Inverted-bottleneck MBConv — expand, depthwise, SE, project.
+
+    Sandler et al. 2018 (MobileNetV2) with the EfficientNet SE
+    insert: a pointwise expansion, a depthwise spatial conv, the
+    pooled channel gate, and a projection back to the residual —
+    ``mul(conv, reshape)`` inside a depthwise sandwich.
+    """
+
+    def __init__(self, ch: int, ex: int) -> None:
+        """Build the expand/depthwise/project convs and the SE pair."""
+        super().__init__()
+        self.expand = nn.Conv2d(ch, ex, 1)
+        self.dw = nn.Conv2d(ex, ex, 3, padding=1, groups=ex)
+        self.se1 = nn.Linear(ex, ex // 2)
+        self.se2 = nn.Linear(ex // 2, ex)
+        self.project = nn.Conv2d(ex, ch, 1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Expand, depthwise, gate by the pooled excite, project."""
+        b = x.shape[0]
+        h = F.silu(self.dw(F.silu(self.expand(x))))
+        s = torch.sigmoid(self.se2(F.relu(self.se1(h.mean((2, 3))))))
+        h = h * s.reshape(b, -1, 1, 1)
+        return x + self.project(h)
+
+
+# ---------------------------------------------------------------------------
+#  Gated residuals — fused projections and conv gates
+# ---------------------------------------------------------------------------
+
+
+class _GRUFusedGate(nn.Module):
+    """GRU update gate — a fused-projection cell step.
+
+    Cho et al. 2014 spelled the deployment way: both input and
+    hidden projections run as single fused linears and ``chunk``ed
+    into (z, r, n) — so the gate arithmetic is ``add(chunk, chunk)``
+    twice plus ``mul(sigmoid, chunk)``, the same-view two-operand
+    tuple the scan workloads produce only via ``select``.
+    """
+
+    def __init__(self, d: int) -> None:
+        """Build the fused input and hidden projections."""
+        super().__init__()
+        self.w = nn.Linear(d, 3 * d)
+        self.u = nn.Linear(d, 3 * d)
+
+    def forward(self, x: torch.Tensor, h: torch.Tensor) -> torch.Tensor:
+        """One GRU step: fused projections chunked into the gates."""
+        xz, xr, xn = self.w(x).chunk(3, dim=-1)
+        hz, hr, hn = self.u(h).chunk(3, dim=-1)
+        z = torch.sigmoid(xz + hz)
+        r = torch.sigmoid(xr + hr)
+        n = torch.tanh(xn + r * hn)
+        return (1.0 - z) * n + z * h
+
+
+class _GatedConvUnit(nn.Module):
+    """Gated linear unit over conv features — ``a ⊙ sigmoid(b)``.
+
+    Dauphin et al. 2017 (the conv-seq2seq GLU): one conv produces
+    both halves, ``chunk`` splits channels, and the sigmoid half
+    gates the linear half — ``mul(chunk, sigmoid)`` under a residual.
+    """
+
+    def __init__(self, ch: int) -> None:
+        """Build the doubled conv and the residual projection."""
+        super().__init__()
+        self.conv = nn.Conv1d(ch, 2 * ch, 3, padding=1)
+        self.proj = nn.Conv1d(ch, ch, 1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Split the conv output; gate the first half, project."""
+        a, b = self.conv(x).chunk(2, dim=1)
+        return x + self.proj(a * torch.sigmoid(b))
+
+
+# ---------------------------------------------------------------------------
+#  Normalization variants — manual spellings and the norm-free tanh
+# ---------------------------------------------------------------------------
+
+
+class _ManualGroupNorm(nn.Module):
+    """GroupNorm spelled by hand — group-reshape, center, scale.
+
+    The ``nn.GroupNorm`` op as a program: reshape the channel axis
+    into ``(groups, c·h·w/g)``, subtract the per-group mean, scale by
+    the per-group rsqrt-variance, reshape back, apply the affine —
+    ``sub(reshape, ·)``, ``mul(sub, rsqrt)`` and the
+    ``mul(reshape, reshape)`` affine-broadcast triple.
+    """
+
+    def __init__(self, ch: int, groups: int) -> None:
+        """Build the affine pair; record the group count."""
+        super().__init__()
+        self.groups = groups
+        self.w = nn.Parameter(torch.ones(ch))
+        self.b = nn.Parameter(torch.zeros(ch))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Normalize within channel groups, then apply the affine."""
+        b, c, hh, ww = x.shape
+        xg = x.reshape(b, self.groups, c * hh * ww // self.groups)
+        m = xg.mean(-1, keepdim=True)
+        c0 = xg - m
+        v = (c0 * c0).mean(-1, keepdim=True)
+        y = (c0 * torch.rsqrt(v + 1e-5)).reshape(b, c, hh, ww)
+        return y * self.w.reshape(1, c, 1, 1) + self.b.reshape(
+            1, c, 1, 1
+        )
+
+
+class _InstanceNormBroadcast(nn.Module):
+    """InstanceNorm spelled by hand — unsqueeze-broadcast statistics.
+
+    The per-sample per-channel spelling: ``mean((2,3))`` drops the
+    spatial axes so centering is ``x - m.unsqueeze(-1).unsqueeze(-1)``
+    — two stacked ``unsqueeze`` broadcasts feeding a ``sub``, then
+    the same double-``unsqueeze`` on the variance and the affine.
+    """
+
+    def __init__(self, ch: int) -> None:
+        """Build the affine pair and record epsilon."""
+        super().__init__()
+        self.w = nn.Parameter(torch.ones(ch))
+        self.b = nn.Parameter(torch.zeros(ch))
+        self.eps = 1e-5
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Center and scale each sample-channel map, then affine."""
+        c = x.shape[1]
+        m = x.mean(dim=(2, 3))
+        c0 = x - m.unsqueeze(-1).unsqueeze(-1)
+        v = (c0 * c0).mean(dim=(2, 3))
+        y = c0 * torch.rsqrt(v.unsqueeze(-1).unsqueeze(-1) + self.eps)
+        return y * self.w.reshape(1, c, 1, 1) + self.b.reshape(
+            1, c, 1, 1
+        )
+
+
+class _RMSNormPerHead(nn.Module):
+    """Per-head RMSNorm — reshape into heads, normalize each.
+
+    The multi-head norm variant (QK-norm family): features are
+    reshaped to ``(b, t, h, d/h)`` and the root-mean-square is taken
+    per head — ``pow(reshape, ·)``, ``mul(reshape, rsqrt)`` and a
+    ``mul(·, reshape)`` per-head gain, then ``reshape`` back.
+    """
+
+    def __init__(self, d: int, heads: int) -> None:
+        """Record the head count and build the per-head gain."""
+        super().__init__()
+        self.heads = heads
+        self.w = nn.Parameter(torch.ones(heads, d // heads))
+        self.eps = 1e-6
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Normalize each head's features by its RMS, regroup."""
+        b, t, d = x.shape
+        h = self.heads
+        xh = x.reshape(b, t, h, d // h)
+        ms = xh.pow(2).mean(-1, keepdim=True)
+        xn = xh * torch.rsqrt(ms + self.eps)
+        xn = xn * self.w.reshape(1, 1, h, d // h)
+        return xn.reshape(b, t, d)
+
+
+class _DynamicTanhBlock(nn.Module):
+    """Dynamic tanh — the norm-free ``alpha·tanh`` activation block.
+
+    Zhu et al. 2025 (Transformers without normalization): the
+    elementwise ``tanh(alpha·x) · gamma + beta`` replaces the norm
+    entirely — ``mul(tanh, reshape)`` and ``add(mul, reshape)``
+    where the norm-family workloads wrote ``div``/``sub`` chains.
+    """
+
+    def __init__(self, d: int) -> None:
+        """Build the alpha/gamma/beta tables and the residual MLP."""
+        super().__init__()
+        self.alpha = nn.Parameter(torch.tensor(0.5))
+        self.gamma = nn.Parameter(torch.ones(d))
+        self.beta = nn.Parameter(torch.zeros(d))
+        self.mlp = nn.Sequential(
+            nn.Linear(d, 2 * d), nn.GELU(), nn.Linear(2 * d, d)
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Apply the dynamic tanh in place of a norm, then the MLP."""
+        y = torch.tanh(self.alpha * x) * self.gamma.reshape(
+            1, 1, -1
+        ) + self.beta.reshape(1, 1, -1)
+        return x + self.mlp(y)
+
+
+# ---------------------------------------------------------------------------
+#  Positional / table ops — bias construction as graph terms
+# ---------------------------------------------------------------------------
+
+
+class _ALiBiAttention(nn.Module):
+    """ALiBi attention — per-head slope times in-graph distance.
+
+    Press et al. 2022: the bias is ``-slope_h · |i - j|`` built from
+    a broadcast position difference and a per-head slope table —
+    ``sub(unsqueeze, unsqueeze)`` for the distance matrix and
+    ``mul(reshape, unsqueeze)`` for the slope grid, then
+    ``add(·, unsqueeze)`` onto the scores.
+    """
+
+    def __init__(self, d: int, heads: int) -> None:
+        """Build the projections and the per-head slope table."""
+        super().__init__()
+        self.heads = heads
+        self.qkv = nn.Linear(d, 3 * d)
+        self.out = nn.Linear(d, d)
+        self.slopes = nn.Parameter(torch.rand(heads))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Attend with the slope-scaled distance bias added."""
+        b, t, d = x.shape
+        h = self.heads
+        q, k, v = self.qkv(x).chunk(3, dim=-1)
+        q = q.reshape(b, t, h, d // h).transpose(1, 2)
+        k = k.reshape(b, t, h, d // h).transpose(1, 2)
+        v = v.reshape(b, t, h, d // h).transpose(1, 2)
+        pos = torch.arange(t, dtype=x.dtype, device=x.device)
+        rel = pos.unsqueeze(0) - pos.unsqueeze(1)
+        bias = self.slopes.reshape(h, 1, 1) * rel.unsqueeze(0)
+        s = q @ k.transpose(-1, -2) * ((d // h) ** -0.5)
+        s = s + bias.unsqueeze(0)
+        o = torch.softmax(s, dim=-1) @ v
+        return self.out(o.transpose(1, 2).reshape(b, t, d))
+
+
+class _RelPosTableAttention(nn.Module):
+    """Relative-position table attention — clamped index gather.
+
+    The T5/Shaw relative-position spelling: the in-graph distance
+    matrix is clamped to ``[-m, m]``, shifted to table indices, and
+    the learned scalar table is gathered — ``sub(unsqueeze,
+    unsqueeze)`` feeding an ``index`` op, then ``add(·, unsqueeze)``
+    onto the logits.
+    """
+
+    def __init__(self, d: int, span: int) -> None:
+        """Build the projections and the relative-position table."""
+        super().__init__()
+        self.span = span
+        self.q = nn.Linear(d, d)
+        self.k = nn.Linear(d, d)
+        self.v = nn.Linear(d, d)
+        self.out = nn.Linear(d, d)
+        self.table = nn.Parameter(torch.randn(2 * span + 1) * 0.1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Gather the clamped relative bias and add it to scores."""
+        t, d = x.shape[-2], x.shape[-1]
+        pos = torch.arange(t, dtype=x.dtype, device=x.device)
+        rel = pos.unsqueeze(1) - pos.unsqueeze(0)
+        idx = (rel.clamp(-self.span, self.span) + self.span).long()
+        bias = self.table[idx]
+        s = self.q(x) @ self.k(x).transpose(-1, -2) * (d**-0.5)
+        s = s + bias.unsqueeze(0)
+        return self.out(torch.softmax(s, dim=-1) @ self.v(x))
+
+
+class _LearnedPosSlice(nn.Module):
+    """Learned absolute embedding — ``x + pe[:, :t]`` slice-add.
+
+    The ViT/GPT positional spelling at its minimal real form: a
+    stored ``(max_t, d)`` table sliced to the incoming length and
+    added — the ``add(·, slice)`` tuple, then normed and projected
+    like every real embedding block.
+    """
+
+    def __init__(self, d: int, max_t: int) -> None:
+        """Build the position table, the norm and the projection."""
+        super().__init__()
+        self.pe = nn.Parameter(torch.randn(max_t, d) * 0.02)
+        self.norm = nn.LayerNorm(d)
+        self.out = nn.Linear(d, d)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Add the sliced positional table, norm, project."""
+        return self.out(self.norm(x + self.pe[: x.shape[-2]]))
+
+
+# ---------------------------------------------------------------------------
+#  Second quant/kv shapes — grouped scales and paged cache
+# ---------------------------------------------------------------------------
+
+
+class _GroupedQuantLinear(nn.Module):
+    """Grouped-quant dequant linear — per-group scales over input.
+
+    The GPTQ/AWP deployment spelling: the stored weight is
+    integer-valued per ``(out, group)`` tile and each group carries a
+    scale broadcast along the group — ``mul(param, unsqueeze)`` then
+    ``reshape`` back to the dense weight before the matmul.
+    ``PerChannelQuantMatmul`` scales whole output rows; this is the
+    finer input-group grid real W4 kernels use.
+    """
+
+    def __init__(self, d: int, groups: int) -> None:
+        """Build the quantized weight tiles and their group scales."""
+        super().__init__()
+        self.d = d
+        self.groups = groups
+        w = torch.randn(d, d).reshape(d, groups, d // groups)
+        s = (w.abs().amax(-1) / 7.0).clamp_min(1e-3)
+        self.w_q = nn.Parameter(torch.round(w / s.unsqueeze(-1)))
+        self.scale = nn.Parameter(s)
+        self.bias = nn.Parameter(torch.zeros(d))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Dequantize per group and apply the linear map."""
+        w = (self.w_q * self.scale.unsqueeze(-1)).reshape(
+            self.d, self.d
+        )
+        return x @ w.transpose(0, 1) + self.bias
+
+
+class _PagedKVAttention(nn.Module):
+    """Paged-KV decode step — page-flatten, append, slice, scale.
+
+    The vLLM paged-attention spelling at probe scale: keys/values
+    live in fixed-size pages flattened to a flat cache, the new
+    token's k/v are concatenated on, the cache is truncated to
+    capacity by ``slice``, and a per-slot scale table weights the
+    logits — ``mul(matmul, reshape)`` over the paged layout.
+    """
+
+    def __init__(self, d: int, cap: int) -> None:
+        """Build the projections and the per-slot logit scales."""
+        super().__init__()
+        self.q = nn.Linear(d, d)
+        self.kv = nn.Linear(d, 2 * d)
+        self.out = nn.Linear(d, d)
+        self.cap = cap
+        self.slot_scale = nn.Parameter(torch.ones(cap))
+
+    def forward(
+        self,
+        x: torch.Tensor,
+        kp: torch.Tensor,
+        vp: torch.Tensor,
+    ) -> torch.Tensor:
+        """Flatten the pages, append the new k/v, attend the window."""
+        b = x.shape[0]
+        k_new, v_new = self.kv(x).chunk(2, dim=-1)
+        k = torch.cat([kp.reshape(b, -1, x.shape[-1]), k_new], dim=1)[
+            :, : self.cap
+        ]
+        v = torch.cat([vp.reshape(b, -1, x.shape[-1]), v_new], dim=1)[
+            :, : self.cap
+        ]
+        s = (
+            self.q(x)
+            @ k.transpose(-1, -2)
+            * (x.shape[-1] ** -0.5)
+            * self.slot_scale.reshape(1, 1, -1)
+        )
+        return self.out(torch.softmax(s, dim=-1) @ v)
+
+
+# ---------------------------------------------------------------------------
 #  The registry — same Workload thunks as intake, disjoint names
 # ---------------------------------------------------------------------------
 
@@ -1373,6 +1907,100 @@ def zoo(d: int = 16, t: int = 8, b: int = 2) -> list[Workload]:
             lambda: (_RotaryPair(d), _r(b, t, d)),
             kind="zoo",
         ),
+        # --- sparse / patterned attention --------------------------
+        Workload(
+            "SlidingWindowAttention",
+            lambda: (_SlidingWindowAttention(d, 3), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "DilatedBlockAttention",
+            lambda: (_DilatedBlockAttention(d, 2, 4), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "BlockSparseAttention",
+            lambda: (_BlockSparseAttention(d, 4, 2, 2), _r(b, t, d)),
+            kind="zoo",
+        ),
+        # --- depthwise-conv blocks -----------------------------------
+        Workload(
+            "ConvNeXtStage",
+            lambda: (_ConvNeXtBlock(8), _r(1, 8, 8, 8)),
+            kind="zoo",
+        ),
+        Workload(
+            "SqueezeExcite",
+            lambda: (_SqueezeExcite(8, 2), _r(1, 8, 8, 8)),
+            kind="zoo",
+        ),
+        Workload(
+            "MBConvSEBlock",
+            lambda: (_MBConvBlock(8, 16), _r(1, 8, 8, 8)),
+            kind="zoo",
+        ),
+        # --- gated residuals -----------------------------------------
+        Workload(
+            "GRUFusedGate",
+            lambda: (_GRUFusedGate(d), (_r(4, d), _r(4, d))),
+            kind="zoo",
+        ),
+        Workload(
+            "GatedConvUnit",
+            lambda: (_GatedConvUnit(8), _r(1, 8, 16)),
+            kind="zoo",
+        ),
+        # --- normalization variants -----------------------------------
+        Workload(
+            "ManualGroupNorm",
+            lambda: (_ManualGroupNorm(8, 4), _r(1, 8, 8, 8)),
+            kind="zoo",
+        ),
+        Workload(
+            "InstanceNormBroadcast",
+            lambda: (_InstanceNormBroadcast(8), _r(1, 8, 8, 8)),
+            kind="zoo",
+        ),
+        Workload(
+            "RMSNormPerHead",
+            lambda: (_RMSNormPerHead(d, 4), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "DynamicTanhBlock",
+            lambda: (_DynamicTanhBlock(d), _r(b, t, d)),
+            kind="zoo",
+        ),
+        # --- positional / table ops -----------------------------------
+        Workload(
+            "ALiBiSlopeAttention",
+            lambda: (_ALiBiAttention(d, 4), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "RelPosTableAttention",
+            lambda: (_RelPosTableAttention(d, 3), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "LearnedPosSlice",
+            lambda: (_LearnedPosSlice(d, 16), _r(b, t, d)),
+            kind="zoo",
+        ),
+        # --- second quant/kv shapes -----------------------------------
+        Workload(
+            "GroupedQuantLinear",
+            lambda: (_GroupedQuantLinear(d, 4), _r(4, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "PagedKVAttention",
+            lambda: (
+                _PagedKVAttention(d, 4),
+                (_r(b, 1, d), _r(b, 2, 3, d), _r(b, 2, 3, d)),
+            ),
+            kind="zoo",
+        ),
     ]
 
 
@@ -1588,6 +2216,103 @@ def zoo_variants(d: int = 16, t: int = 8, b: int = 2) -> list[Workload]:
         Workload(
             "RotaryPairV2",
             lambda: (_RotaryPair(d2), _r(b, 6, d2)),
+            kind="zoo",
+        ),
+        # --- sparse / patterned attention --------------------------
+        Workload(
+            "SlidingWindowAttentionV2",
+            lambda: (_SlidingWindowAttention(d2, 2), _r(b, t, d2)),
+            kind="zoo",
+        ),
+        Workload(
+            "DilatedBlockAttentionV2",
+            lambda: (_DilatedBlockAttention(d, 3, 3), _r(b, 9, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "BlockSparseAttentionV2",
+            lambda: (
+                _BlockSparseAttention(d2, 2, 3, 1),
+                _r(b, 6, d2),
+            ),
+            kind="zoo",
+        ),
+        # --- depthwise-conv blocks -----------------------------------
+        Workload(
+            "ConvNeXtStageV2",
+            lambda: (_ConvNeXtBlock(6), _r(1, 6, 8, 8)),
+            kind="zoo",
+        ),
+        Workload(
+            "SqueezeExciteV2",
+            lambda: (_SqueezeExcite(8, 4), _r(1, 8, 6, 6)),
+            kind="zoo",
+        ),
+        Workload(
+            "MBConvSEBlockV2",
+            lambda: (_MBConvBlock(6, 12), _r(1, 6, 8, 8)),
+            kind="zoo",
+        ),
+        # --- gated residuals -----------------------------------------
+        Workload(
+            "GRUFusedGateV2",
+            lambda: (_GRUFusedGate(d2), (_r(4, d2), _r(4, d2))),
+            kind="zoo",
+        ),
+        Workload(
+            "GatedConvUnitV2",
+            lambda: (_GatedConvUnit(6), _r(1, 6, 12)),
+            kind="zoo",
+        ),
+        # --- normalization variants -----------------------------------
+        Workload(
+            "ManualGroupNormV2",
+            lambda: (_ManualGroupNorm(8, 2), _r(1, 8, 6, 6)),
+            kind="zoo",
+        ),
+        Workload(
+            "InstanceNormBroadcastV2",
+            lambda: (_InstanceNormBroadcast(6), _r(1, 6, 8, 8)),
+            kind="zoo",
+        ),
+        Workload(
+            "RMSNormPerHeadV2",
+            lambda: (_RMSNormPerHead(d, 2), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "DynamicTanhBlockV2",
+            lambda: (_DynamicTanhBlock(d2), _r(b, t, d2)),
+            kind="zoo",
+        ),
+        # --- positional / table ops -----------------------------------
+        Workload(
+            "ALiBiSlopeAttentionV2",
+            lambda: (_ALiBiAttention(d, 8), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "RelPosTableAttentionV2",
+            lambda: (_RelPosTableAttention(d2, 5), _r(b, t, d2)),
+            kind="zoo",
+        ),
+        Workload(
+            "LearnedPosSliceV2",
+            lambda: (_LearnedPosSlice(d, 12), _r(b, 6, d)),
+            kind="zoo",
+        ),
+        # --- second quant/kv shapes -----------------------------------
+        Workload(
+            "GroupedQuantLinearV2",
+            lambda: (_GroupedQuantLinear(d, 8), _r(4, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "PagedKVAttentionV2",
+            lambda: (
+                _PagedKVAttention(d2, 6),
+                (_r(b, 1, d2), _r(b, 3, 2, d2), _r(b, 3, 2, d2)),
+            ),
             kind="zoo",
         ),
     ]
