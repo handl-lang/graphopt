@@ -724,7 +724,8 @@ def render_markdown(
         "a standalone-replayable certificate on its instance "
         "(`verify_law` + `verify_certificate`); **derivable** = the "
         "widest shipped bank (`default_rules` + `ALL_RULES_WITH_LAYOUT` "
-        "+ `ATTENTION` + scan monoids), minus the candidate and its "
+        "+ `ATTENTION` + scan monoids + the prior-art FUSION/"
+        "CATEGORICAL slice — `known_bank`), minus the candidate and its "
         "alpha-siblings, already proves the instance — derivable laws "
         "are theorems of known rules, demoted silently; **beat** = on "
         "some `bench/discovery` case the certified extraction (run "
@@ -738,7 +739,8 @@ def render_markdown(
         f"- date: {env.get('timestamp_utc', '—')} · "
         f"git: `{env.get('git_sha', 'unknown')}`"
         f"{' (dirty)' if env.get('git_dirty') else ''} · "
-        f"torch {env.get('torch', '?')} on {env.get('device', '?')}",
+        f"torch {env.get('torch', '?')} on {env.get('device', '?')} · "
+        f"bank {env.get('bank_size', '?')} rules",
         "- verdicts: "
         + ", ".join(f"{k}={v}" for k, v in sorted(counts.items())),
         "",
@@ -875,6 +877,7 @@ def main(argv: list[str] | None = None) -> int:
     from bench.benchkit.provenance import with_provenance
 
     env = collect_env("cpu")
+    env["bank_size"] = len(bank)
     md = render_markdown(rows, env=env)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)

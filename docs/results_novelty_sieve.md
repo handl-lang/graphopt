@@ -1,8 +1,8 @@
 # Novelty sieve
 
-Automatic three-gate filter between a minted law and the human-review queue.  **cert** = the law's own rewrite carries a standalone-replayable certificate on its instance (`verify_law` + `verify_certificate`); **derivable** = the widest shipped bank (`default_rules` + `ALL_RULES_WITH_LAYOUT` + `ATTENTION` + scan monoids), minus the candidate and its alpha-siblings, already proves the instance — derivable laws are theorems of known rules, demoted silently; **beat** = on some `bench/discovery` case the certified extraction (run with the candidate in the rules) lands strictly below the best registered baseline AND the derivation certificate invokes the candidate (the `beat_best` floor plus attribution).  A candidate is a novelty iff cert ∧ beat ∧ ¬derivable.  `truth` is the fp64 oracle's numeric verdict on the instance — an `unequal` refutes outright.
+Automatic three-gate filter between a minted law and the human-review queue.  **cert** = the law's own rewrite carries a standalone-replayable certificate on its instance (`verify_law` + `verify_certificate`); **derivable** = the widest shipped bank (`default_rules` + `ALL_RULES_WITH_LAYOUT` + `ATTENTION` + scan monoids + the prior-art FUSION/CATEGORICAL slice — `known_bank`), minus the candidate and its alpha-siblings, already proves the instance — derivable laws are theorems of known rules, demoted silently; **beat** = on some `bench/discovery` case the certified extraction (run with the candidate in the rules) lands strictly below the best registered baseline AND the derivation certificate invokes the candidate (the `beat_best` floor plus attribution).  A candidate is a novelty iff cert ∧ beat ∧ ¬derivable.  `truth` is the fp64 oracle's numeric verdict on the instance — an `unequal` refutes outright.
 
-- date: 2026-10-21T02:23:20+00:00 · git: `9bb8e7a` (dirty) · torch 2.14.0+cu130 on cpu
+- date: 2026-10-21T21:31:37+00:00 · git: `f2f5571` (dirty) · torch 2.14.0+cu130 on cpu · bank 238 rules
 - verdicts: known=4, review=2, unmeasured=12, unpaid=6
 
 | law | prov | instance | truth | cert | derivable | beat | verdict |
