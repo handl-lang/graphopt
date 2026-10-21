@@ -2288,7 +2288,7 @@ class _EvalPlan:
 def _const_like(
     var_default: Any, var_env: dict | None, param_env: dict | None
 ) -> Any:
-    """The floating/complex tensor a float ``Const`` mints against.
+    """Return the floating/complex tensor a float ``Const`` mints against.
 
     A ``Const`` is a weak scalar operand (``x / 45.25``, ``pow(x, 2)``,
     a law-minted rate) — spelled torch never promotes it, so the
@@ -2393,7 +2393,6 @@ def eval_term(
     filter.  The two env-miss raises under ``strict`` are nominal —
     every strict caller passes both defaults.
     """
-
     like = _const_like(var_default, var_env, param_env)
 
     def go(t: Any, rec: Callable[..., Any]) -> Any:
