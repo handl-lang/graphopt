@@ -409,6 +409,32 @@ SUB_UNSQ_PAD_L = R(
     tags=_SIM,
 )
 
+#: Minted verbatim by the auto-cond retry measured in
+#: ``docs/results_realcorpus.md``: the intake-corpus candidate
+#: ``mixed:add_unsqueeze_r_id`` (``add(v, unsqueeze(u, d)) -> add(u, v)``
+#: up to commutativity) minted exactly ``_COND_UNSQ_PAD_R`` and passed
+#: the full admission gauntlet — **usable** — on a gauntlet corpus
+#: whose probe contains the real intake modules.  Its one paying site
+#: is ``intake:RelativePositionBias`` (``x + bias.unsqueeze(0)``, the
+#: T5/Swin relative-position-bias spelling): the leading axis the
+#: unsqueeze inserts is a pure broadcast pad, so the strip drops the
+#: dispatched view op and the fp64-lowered pair agrees.  The first
+#: machine-admitted law whose measured pay lives on a strictly-real
+#: (non-purpose-built) workload.
+ADD_UNSQ_PAD_R = R(
+    "add_unsq_pad_r",
+    Op.make("add", "u", Op.make("unsqueeze", "v", dim="UD")),
+    Op.make("add", "u", "v"),
+    law="u + unsqueeze(v, d) = u + v under the broadcast-pad grid "
+    "guard — the add sibling of mul_unsq_pad_r: the lifted operand's "
+    "pad view is dead when the broadcast grids coincide.  Minted by "
+    "auto-cond from the intake census's ``mixed:add_unsqueeze_r_id`` "
+    "candidate and admitted off a strictly-real paying site "
+    "(``RelativePositionBias`` — see docs/results_realcorpus.md).",
+    cond=_COND_UNSQ_PAD_R,
+    tags=_SIM,
+)
+
 MUL_RESHAPE_INERT_L = R(
     "mul_reshape_inert_l",
     Op.make("mul", Op.make("reshape", "u", shape="RS"), "v"),
@@ -2825,6 +2851,7 @@ SIMPLIFICATION_RULES: list[Rewrite] = [
     MUL_UNSQ_PAD_L,
     MUL_UNSQ_PAD_R,
     SUB_UNSQ_PAD_L,
+    ADD_UNSQ_PAD_R,
     MUL_UNSQ_NAT,
     MUL_RESHAPE_INERT_L,
     SOFTMAX_FOLD,

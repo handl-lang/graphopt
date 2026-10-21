@@ -45,13 +45,17 @@ __all__ = [
     "law_provenance",
 ]
 
-#: The twelve machine-admitted objects promoted into the shipped
+#: The thirteen machine-admitted objects promoted into the shipped
 #: ``ALL_RULES`` (``promoted-laws.md`` — the promotion table's shipped
 #: names, including the two objects that shipped as the strictly more
 #: general view identities ``transpose_noop`` / ``chunk_single``, and
 #: ``mul_unsq_nat`` — the census-minted two-sided unsqueeze naturality
 #: whose guard was resolved by the adversarial sweep, see
-#: ``project/retros/mul-unsq-nat.md``).  ``conv_bn_fold`` is the first
+#: ``project/retros/mul-unsq-nat.md``).  ``add_unsq_pad_r`` is the
+#: first promotion whose paying site is a strictly-real (non
+#: purpose-built) intake workload — ``RelativePositionBias`` — measured
+#: through the auto-cond → gauntlet retry (``docs/results_realcorpus.md``).
+#: ``conv_bn_fold`` is the first
 #: of a second shipping class: a ``syn_*`` composite promoted *verbatim*
 #: — its stored-closure records embed in
 #: :mod:`mlopt_core.laws.minted` and its transported guard rebuilds at
@@ -66,6 +70,7 @@ MACHINE_SHIPPED: frozenset[str] = frozenset(
         "mul_unsq_pad_l",
         "mul_unsq_pad_r",
         "sub_unsq_pad_l",
+        "add_unsq_pad_r",
         "mul_reshape_inert_l",
         "transpose_noop",
         "chunk_single",

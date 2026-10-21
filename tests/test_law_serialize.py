@@ -174,18 +174,18 @@ def test_serializability_census_of_shipped_library():
             need_derive.append(rule.name)
         else:
             need_check.append((rule.name, missing))
-    assert len(ALL_RULES) == 85
+    assert len(ALL_RULES) == 86
     # the authored library stays full-data: the four stragglers went
     # declarative in stage 0 of plan 0017 — glu_fold's parity on a
     # dim-mod predicate, the rms pair's trailing block on the
     # tail-block spec, and gqa_absorb_repeat's repeat-chain /
-    # attr-eq-attr / repeat-heads triple — and the eleven promoted
+    # attr-eq-attr / repeat-heads triple — and the twelve promoted
     # discovery laws carry pure-data cond/dspec/derivation
     # (project/retros/promoted-laws.md).  ``conv_bn_fold`` is the first
     # of the transported-composite class: ``missing_hooks`` flags what
     # the *bare* record cannot carry; the stored guard spec carries it
     # (project/retros/minted-composite-default.md).
-    assert len(full) == 84
+    assert len(full) == 85
     assert transported == ["conv_bn_fold"]
     assert need_derive == []
     assert need_check == []

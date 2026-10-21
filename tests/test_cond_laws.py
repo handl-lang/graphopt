@@ -52,6 +52,7 @@ from mlopt_core.laws.serialize import (
     missing_hooks,
 )
 from mlopt_core.laws.tensor import (
+    ADD_UNSQ_PAD_R,
     CHUNK_SINGLE,
     DISTRIBUTE_MUL,
     FACTOR_MUL,
@@ -848,7 +849,8 @@ def test_every_shipped_cond_roundtrips_through_json():
     # 53 + the div-naturality pair (div_add_factor,
     # matmul_div_distribute) added by ``da917b1``, + mul_unsq_nat
     # + sdpa_fold_mul_nomask (the sdpa_expand pair's refold)
-    assert seen == 57
+    # + add_unsq_pad_r (the real-corpus auto-cond admission)
+    assert seen == 58
 
 
 def test_rebuilt_rule_fires_identically_in_egraph():
@@ -920,9 +922,9 @@ def test_fingerprint_covers_cond_data():
 def test_migrated_rules_carry_cond_and_folded_check():
     migrated = [r for r in all_rules() if r.cond is not None]
     # 53 + the div-naturality pair (``da917b1``) + mul_unsq_nat
-    # + sdpa_fold_mul_nomask — the cond-as-data count, repinned
-    # honestly
-    assert len(migrated) == 57
+    # + sdpa_fold_mul_nomask + add_unsq_pad_r — the cond-as-data
+    # count, repinned honestly
+    assert len(migrated) == 58
     for r in migrated:
         assert callable(r.check), r.name
     # every shipped guard is data now — the once-procedural laws all
@@ -1948,6 +1950,7 @@ PROMOTED_LAWS = (
     MUL_UNSQ_PAD_L,
     MUL_UNSQ_PAD_R,
     SUB_UNSQ_PAD_L,
+    ADD_UNSQ_PAD_R,
     MUL_UNSQ_NAT,
     MUL_RESHAPE_INERT_L,
     SDPA_FOLD_NOMASK,
@@ -2030,6 +2033,32 @@ def test_promoted_unsq_pad_right():
     u2, v2 = _v("u2", 8, 8), _v("v2", 1, 1, 1)
     bad = Op.make("mul", u2, Op.make("unsqueeze", v2, dim=0))
     assert not _merged(MUL_UNSQ_PAD_R, bad, Op.make("mul", u2, v2))
+
+
+def test_promoted_add_unsq_pad_right():
+    """The add sibling — the first law admitted off a strictly-real site.
+
+    Minted by auto-cond from ``mixed:add_unsqueeze_r_id`` and passed
+    the full gauntlet on a corpus carrying the real intake modules
+    (``docs/results_realcorpus.md``).  The paying spelling is
+    ``RelativePositionBias``: ``x + bias.unsqueeze(0)`` with
+    ``x=(2,4,8,8)``, ``bias=(4,8,8)`` — the inserted leading axis is a
+    pure broadcast pad, so the strip is exact and drops the view op.
+    """
+    u, v = _v("u", 2, 4, 8, 8), _v("v", 4, 8, 8)
+    src = Op.make("add", u, Op.make("unsqueeze", v, dim=0))
+    assert _merged(ADD_UNSQ_PAD_R, src, Op.make("add", u, v))
+    assert _merged(_rt(ADD_UNSQ_PAD_R), src, Op.make("add", u, v))
+    assert ADD_UNSQ_PAD_R in all_rules()
+    # a non-pad insertion: unsqueeze at a mid axis changes the
+    # broadcast grid — the guard declines and nothing merges.
+    u2, v2 = _v("u2", 8, 8), _v("v2", 8, 8)
+    bad = Op.make("add", u2, Op.make("unsqueeze", v2, dim=1))
+    assert not _merged(ADD_UNSQ_PAD_R, bad, Op.make("add", u2, v2))
+    # u not broadcastable onto the padded grid also declines.
+    u3, v3 = _v("u3", 4), _v("v3", 3, 3)
+    bad2 = Op.make("add", u3, Op.make("unsqueeze", v3, dim=0))
+    assert not _merged(ADD_UNSQ_PAD_R, bad2, Op.make("add", u3, v3))
 
 
 def test_promoted_mul_unsq_nat():

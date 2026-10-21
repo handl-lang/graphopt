@@ -35,6 +35,7 @@ from mlopt_core.laws import (
 )
 from mlopt_discovery import object_synthesis as synth
 from mlopt_discovery import zoo as zoo_mod
+from mlopt_orchestrator.optimize import Optimizer, default_rules
 from mlopt_torch.backend import TorchBackend
 
 _ZOO = {w.name: w for w in zoo_mod.zoo()}
@@ -54,6 +55,7 @@ _PROMOTION_TABLE = frozenset(
         "mul_unsq_pad_l",
         "mul_unsq_pad_r",
         "sub_unsq_pad_l",
+        "add_unsq_pad_r",
         "mul_reshape_inert_l",
         "transpose_noop",
         "chunk_single",
@@ -216,12 +218,14 @@ def test_every_law_classifies_by_provenance():
 
 
 def test_machine_shipped_is_exactly_the_promotion_table():
-    """``MACHINE_SHIPPED`` pins the twelve promoted laws, all shipped."""
+    """``MACHINE_SHIPPED`` pins the thirteen promoted laws, all shipped."""
     assert MACHINE_SHIPPED == _PROMOTION_TABLE
     shipped_names = {r.name for r in ALL_RULES}
     assert shipped_names >= MACHINE_SHIPPED
-    # 73 human-authored + 12 promoted = the 85-rule library.
-    assert len(ALL_RULES) == 85
+    # 73 human-authored + 13 promoted = the 86-rule library
+    # (``add_unsq_pad_r`` — the auto-cond candidate admitted off the
+    # real-corpus funnel, docs/results_realcorpus.md).
+    assert len(ALL_RULES) == 86
     assert len(shipped_names - MACHINE_SHIPPED) == 73
 
 

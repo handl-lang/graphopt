@@ -91,6 +91,20 @@ def _guarded_add_case() -> TermCase:
     )
 
 
+def _guarded_div_case() -> TermCase:
+    """The pad site under ``div`` — the still-unshipped variant.
+
+    ``add(unsq(u,d), v) -> add(u,v)`` is now derivable in the shipped
+    bank (``comm_add`` + ``add_unsq_pad_r`` —
+    ``docs/results_realcorpus.md``), so a bare ``add`` strip is no
+    longer the honest "unshipped sibling" fixture: ``div`` is.
+    """
+    u, v = _v("u", 8, 8), _v("v", 1, 1, 1)
+    return _case(
+        "unsq_pad_div", _p("div", _p("unsqueeze", u, dim=0), v), u, v
+    )
+
+
 def _accepted_region(rule: Rewrite, limit: int = 360) -> ev.GuardedRegion:
     """The minted guard's sweep over the synthesized sites."""
     sites = list(ev._synth_sites(rule.lhs, rule.rhs, limit=limit))
@@ -237,17 +251,20 @@ def test_auto_cond_refuses_an_unenumerable_domain() -> None:
 def test_gauntlet_auto_cond_rewrites_and_admits() -> None:
     """The additive hook: refusal -> mint -> rewritten record -> admit.
 
-    Runs the unshipped ``add`` spelling — the ``mul`` variant is a
-    shipped law now, so the store's novelty gate would read it
-    ``duplicate`` after the mint."""
+    Runs the unshipped ``div`` spelling — the ``mul`` and ``add``
+    variants are shipped law now (``mul_unsq_pad_l``, and
+    ``add_unsq_pad_r`` which makes the ``add`` left-strip derivable
+    through ``comm_add``), so the store's novelty gate would read a
+    minted twin of either ``duplicate``.
+    """
     torch.manual_seed(0)
     conn = ev.connect(":memory:")
     key = ev.store_object(
         conn,
-        _unsq_bare(name="add_unsqueeze_l_id", op="add"),
+        _unsq_bare(name="div_unsqueeze_l_id", op="div"),
         kind="abstraction",
     )
-    corpus = _corpus(_guarded_add_case())
+    corpus = _corpus(_guarded_div_case())
     rep = ev.run_gauntlet(conn, key, corpus=corpus)
     assert not rep.usable
     assert rep.stages[-1].name == "truth"

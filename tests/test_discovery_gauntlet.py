@@ -129,12 +129,18 @@ def _guarded_case() -> TermCase:
     )
 
 
-def _guarded_add_case() -> TermCase:
-    """The pad site under ``add`` — the unshipped sibling's region."""
+def _guarded_div_case() -> TermCase:
+    """The pad site under ``div`` — the unshipped sibling's region.
+
+    The ``add`` spelling is no longer unshipped: ``add_unsq_pad_r``
+    plus ``comm_add`` derive the left-operand strip on pad sites
+    (``docs/results_realcorpus.md``).  ``div`` is the still-unshipped
+    member of the same strip family.
+    """
     u, v = _v("u", 8, 8), _v("v", 1, 1, 1)
     return _case(
-        "add_unsq_pad",
-        _p("add", _p("unsqueeze", u, dim=0), v),
+        "div_unsq_pad",
+        _p("div", _p("unsqueeze", u, dim=0), v),
         u,
         v,
     )
@@ -302,16 +308,17 @@ def test_unguarded_conditional_object_fails_truth(tmp_path):
     the plain verdict is 'conditional' and the object is unusable.
     (The ``mul`` spelling shipped as ``mul_unsq_pad_l`` — its bare
     twin would now read *derivable* on the pad instance and refuse at
-    novelty instead — so this pin runs the still-unshipped ``add``
-    variant.)"""
+    novelty instead; the ``add`` left-strip went the same way when
+    ``add_unsq_pad_r`` shipped — so this pin runs the still-unshipped
+    ``div`` variant.)"""
     conn = ev.connect(str(tmp_path / "s.db"))
     bare = Rewrite(
-        name="add_unsqueeze_l_id_bare",
-        lhs=_p("add", _p("unsqueeze", "U", dim="A_dim"), "V"),
-        rhs=_p("add", "U", "V"),
+        name="div_unsqueeze_l_id_bare",
+        lhs=_p("div", _p("unsqueeze", "U", dim="A_dim"), "V"),
+        rhs=_p("div", "U", "V"),
     )
     key = ev.store_object(conn, bare, kind="abstraction")
-    rep = ev.run_gauntlet(conn, key, corpus=_corpus(_guarded_add_case()))
+    rep = ev.run_gauntlet(conn, key, corpus=_corpus(_guarded_div_case()))
     conn.close()
     assert not rep.usable
     assert rep.reason.startswith("truth:")
