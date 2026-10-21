@@ -1,0 +1,636 @@
+"""The overnight discovery loop — episodes -> mint -> admit -> classify -> ledger.
+
+The loop the resumable infra was built for: run open-domain episodes
+with a registered player, mint every evaluated candidate into a
+``Rewrite``, push each through the admission gauntlet (the
+``bench/referees`` legs — oracle -> pay -> sweep -> cert), classify
+the admitted survivors against the prior-art bank, and persist every
+outcome to an append-only, protocol-gated JSONL cell store.
+
+Stages:
+
+1. ``episodes`` — one ``OpenArena`` page per case
+   (:func:`mlopt_discovery.open_game.gen_cases` — disjoint slices of
+   the deterministic enumerated stream), played by a registered
+   player (``--player``, default ``playbook``) under
+   :func:`gamekit.engine.run_episode`.  Every ``evaluate`` report
+   lands in the ``("episode", i)`` cell: candidate name, arena
+   verdict, measured cost delta.
+2. ``mint`` — each evaluated candidate's ``as_rule()`` — a bare
+   pattern claim ``lhs -> rhs`` — is serialized into its
+   ``("candidate", name)`` cell (``laws.serialize.law_to_data``), so
+   a resumed run never re-derives the rule.
+3. ``admit`` — the referee arm (``--referee``, default ``full``)
+   judges each minted claim via
+   :func:`bench.referees.judge`; the per-leg ``ComponentVerdict``s
+   are stored verbatim (first-failed-leg accounting comes free).
+   ``SkipReferee`` and component exceptions are recorded honestly —
+   never a silent drop, never a crash.
+4. ``classify`` — admitted laws get a novelty verdict:
+   ``known-art`` (an alpha-sibling sits in
+   ``mlopt_core.laws.priorart.PRIOR_ART_RULES`` or the widest shipped
+   bank already derives the instance — the novelty-sieve gates,
+   reused), ``vacuous`` (no binding produced a site — the gates are
+   unevaluable), ``machine-original`` (certified, admitted, and the
+   bank cannot prove it).
+5. ``ledger`` — :class:`bench.benchkit.checkpoint.Checkpoint`: an
+   append-only JSONL file whose manifest pins the protocol
+   (episodes/page/budget/seed/player/referee) and provenance
+   (git sha/dirty, device).  ``--resume`` reopens it: done cells
+   replay verbatim, a crash costs one cell, a protocol mismatch
+   restarts loudly.
+6. ``emit`` — ``docs/results_overnight.md`` (the funnel table + the
+   machine-original finds) and a provenance-stamped ``.json``.
+
+The referee context is the honest one for this domain: the open game
+has no module corpus, so ``probe``/``real_terms`` are empty and the
+gauntlet measures on its own synthesized binding domain — the same
+domain that admitted (and refuted) the shipped ``syn_*`` mints.
+
+Run::
+
+    .venv/bin/python bench/drivers/overnight.py --dry
+    .venv/bin/python bench/drivers/overnight.py --episodes 48 \
+        --player playbook --referee full --resume
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+import time
+from collections import Counter
+from pathlib import Path
+from typing import Any
+
+from gamekit import engine
+from gamekit.players import registry as players
+from mlopt_core.laws.provenance import law_provenance
+from mlopt_core.laws.serialize import (
+    alpha_key,
+    law_from_data,
+    law_to_data,
+)
+from mlopt_discovery import open_game as og
+from mlopt_discovery.verifier import verify_law
+
+__all__ = ["DEFAULTS", "DRY", "main", "render_markdown", "run"]
+
+#: The repo root — ``bench.*`` imports are function-level (the
+#: novelty_sieve convention): standalone runs put ``bench/drivers``
+#: on ``sys.path``, and :func:`main` inserts the root first.
+_REPO = Path(__file__).resolve().parents[2]
+
+#: The full-run defaults — page/budget follow the open game's own
+#: episode horizon; 24 episodes of 48 cover the ~1.1k-candidate
+#: enumerated stream once.
+DEFAULTS: dict[str, Any] = {
+    "episodes": 24,
+    "page": 48,
+    "budget": 48,
+    "seed": 0,
+    "player": "playbook",
+    "referee": "full",
+}
+
+#: ``--dry`` — seconds-scale smoke: two episodes, a tiny pool.
+DRY: dict[str, Any] = {"episodes": 2, "page": 6, "budget": 4}
+
+#: Where the documents land.
+DOC_PATH = _REPO / "docs" / "results_overnight.md"
+
+#: The default ledger — ``benchkit.checkpoint.DEFAULT_DIR``'s lane
+#: file, spelled out so the constant needs no ``bench.*`` import.
+CKPT_PATH = Path("bench/results/checkpoints/overnight.jsonl")
+
+_NOVELTY_ORDER = ("machine-original", "known-art", "vacuous")
+
+
+# ---------------------------------------------------------------------------
+#  mint + admit
+# ---------------------------------------------------------------------------
+
+
+def _eval_records(traj: Any) -> list[dict]:
+    """One ledger row per ``evaluate`` step of the trajectory."""
+    out = []
+    for rep in traj.reports:
+        if rep.action.op != "evaluate":
+            continue
+        cand = rep.action.params["cand"]
+        out.append(
+            {
+                "i": rep.action.params["i"],
+                "name": cand.as_rule().name,
+                "label": rep.detail.get("label", cand.label),
+                "verdict": rep.detail.get("verdict", ""),
+                "relation": rep.detail.get("relation", ""),
+                "num_true": rep.detail.get("num_true"),
+                "base_cost": rep.detail.get("base_cost"),
+                "cand_cost": rep.detail.get("cand_cost"),
+            }
+        )
+    return out
+
+
+def _admit(rule: Any, referee: str, ctx: Any) -> dict:
+    """Run the referee gauntlet; return the candidate-cell payload."""
+    from bench import referees
+
+    rec: dict[str, Any] = {
+        "name": rule.name,
+        "provenance": law_provenance(rule),
+        "law": law_to_data(rule),
+        "alpha": alpha_key(rule.lhs, rule.rhs),
+        "referee": referee,
+        "skipped": "",
+        "admitted": False,
+        "stages": [],
+        "measured": {},
+        "reason": "",
+    }
+    try:
+        verdict = referees.judge(referee, rule, ctx)
+    except referees.SkipReferee as e:
+        rec["skipped"] = str(e)
+        rec["reason"] = f"skipped: {e}"
+        return rec
+    except Exception as e:  # a component that throws is a refusal
+        rec["reason"] = f"{type(e).__name__}: {e}"
+        return rec
+    rec["admitted"] = bool(verdict.passed)
+    rec["stages"] = [
+        {"name": s.name, "passed": bool(s.passed), "detail": s.detail}
+        for s in verdict.stages
+    ]
+    rec["measured"] = dict(verdict.measured)
+    rec["reason"] = verdict.reason
+    return rec
+
+
+# ---------------------------------------------------------------------------
+#  classify — the novelty verdict against the prior-art bank
+# ---------------------------------------------------------------------------
+
+
+def _classify(rule: Any, bank: list) -> dict:
+    """``machine-original`` / ``known-art`` / ``vacuous`` for *rule*.
+
+    The bank is the novelty sieve's widest shipped surface; the
+    alpha-sibling check additionally scans the raw
+    ``PRIOR_ART_RULES`` so a verbatim rediscovery of known art is
+    named even when the derivability slice dropped it.
+    """
+    from mlopt_core.laws.priorart import PRIOR_ART_RULES
+
+    from bench.drivers.screen import novelty_sieve as ns
+
+    key = alpha_key(rule.lhs, rule.rhs)
+    sibs = sorted(
+        {
+            r.name
+            for r in [*bank, *PRIOR_ART_RULES]
+            if alpha_key(r.lhs, r.rhs) == key
+        }
+    )
+    rec: dict[str, Any] = {
+        "verdict": "",
+        "via": "",
+        "siblings": sibs,
+        "derivable": None,
+        "witness_rules": [],
+        "instance_src": "",
+    }
+    if sibs:
+        rec.update(verdict="known-art", via="alpha-match")
+        return rec
+    got = ns.instance_of(rule, [])
+    if got is None:
+        rec.update(verdict="vacuous", via="no-instance")
+        return rec
+    src, (lhs_i, rhs_i) = got
+    rec["instance_src"] = src
+    premises, _s = ns._premises(rule, bank)
+    res = verify_law(lhs_i, rhs_i, premises)
+    rec["derivable"] = bool(res.derivable)
+    rec["witness_rules"] = list(res.witness_rules)
+    rec.update(
+        verdict="known-art" if res.derivable else "machine-original",
+        via="derivable" if res.derivable else "underivable",
+    )
+    return rec
+
+
+# ---------------------------------------------------------------------------
+#  the loop
+# ---------------------------------------------------------------------------
+
+
+def run(
+    *,
+    episodes: int,
+    page: int,
+    budget: int,
+    seed: int,
+    player: str,
+    referee: str,
+    ckpt: Any,
+    ctx: Any = None,
+    arm_factory: Any = None,
+    cases: list | None = None,
+    log: Any = print,
+) -> dict:
+    """Run the loop against *ckpt* (an open ``Checkpoint``); summarize.
+
+    ``arm_factory`` is the registry's ``i -> player`` seam — tests
+    inject players through it; production callers leave it ``None``
+    and the named registered player is built.  ``cases`` overrides
+    the generated page list — each is an ``OpenArena`` case dict.
+    """
+    import torch
+
+    from bench import referees
+
+    torch.manual_seed(seed)
+    ctx = referees.RefereeCtx() if ctx is None else ctx
+    arm = arm_factory or players.make(player, "open", seed=seed, ctx={})
+    if cases is None:
+        cases = og.gen_cases(seed, episodes, page=page)
+    bank: list | None = None
+    t0 = time.time()
+
+    for i, case in enumerate(cases):
+        ekey = ("episode", i)
+        if ckpt.done(ekey):
+            evals = ckpt.get(ekey)["evals"]
+        else:
+            traj = engine.run_episode(
+                og.OpenArena(case), arm(i), budget
+            )
+            evals = _eval_records(traj)
+            ckpt.record(
+                ekey,
+                {
+                    "case": case,
+                    "steps": len(traj.reports),
+                    "reward": round(traj.total, 6),
+                    "evals": evals,
+                },
+            )
+            log(
+                f"  episode {i:>3}: {len(evals)} evals "
+                f"reward={traj.total:+.3f}",
+            )
+
+        # -- mint + admit: one cell per distinct minted rule --------
+        missing = [
+            ev
+            for ev in evals
+            if not ckpt.done(("candidate", ev["name"]))
+        ]
+        pool = None
+        for ev in missing:
+            if pool is None:
+                # the arena pool is deterministic — resume recovers
+                # the candidate by index, no episode re-run.
+                pool = og.OpenArena(case).pool
+            cand = pool[ev["i"]]
+            rule = cand.as_rule()
+            rec = _admit(rule, referee, ctx)
+            rec["label"] = ev["label"]
+            rec["episode"] = i
+            rec["arena"] = {
+                "verdict": ev["verdict"],
+                "relation": ev["relation"],
+                "num_true": ev["num_true"],
+                "base_cost": ev["base_cost"],
+                "cand_cost": ev["cand_cost"],
+            }
+            ckpt.record(("candidate", ev["name"]), rec)
+            log(
+                f"    candidate {ev['name']:<28} "
+                f"admitted={rec['admitted']} ({rec['reason'][:60]})",
+            )
+
+        # -- classify: one cell per admitted law --------------------
+        for ev in evals:
+            ckey = ("classify", ev["name"])
+            if ckpt.done(ckey):
+                continue
+            crec = ckpt.get(("candidate", ev["name"]))
+            if not crec["admitted"]:
+                continue
+            if bank is None:
+                from bench.drivers.screen import novelty_sieve as ns
+
+                bank = ns.known_bank()
+            rule = law_from_data(crec["law"])
+            cres = _classify(rule, bank)
+            ckpt.record(ckey, cres)
+            log(
+                f"    classify {ev['name']:<26} "
+                f"{cres['verdict']} ({cres['via']})",
+            )
+
+    # -- the ledger summary -----------------------------------------
+    names: list[str] = []
+    for i in range(len(cases)):
+        for ev in ckpt.get(("episode", i))["evals"]:
+            if ev["name"] not in names:
+                names.append(ev["name"])
+    cands = [ckpt.get(("candidate", n)) for n in names]
+    leg_deaths: Counter = Counter()
+    for rec in cands:
+        if rec["skipped"]:
+            leg_deaths["skipped"] += 1
+            continue
+        if rec["admitted"]:
+            leg_deaths["admitted"] += 1
+            continue
+        first = next(
+            (s["name"] for s in rec["stages"] if not s["passed"]),
+            "error",
+        )
+        leg_deaths[first] += 1
+    novelty: Counter = Counter()
+    finds: list[dict] = []
+    for rec in cands:
+        if not rec["admitted"]:
+            continue
+        cres = ckpt.get(("classify", rec["name"]))
+        if cres is None:
+            continue
+        novelty[cres["verdict"]] += 1
+        if cres["verdict"] == "machine-original":
+            finds.append(
+                {
+                    "name": rec["name"],
+                    "instance_src": cres["instance_src"],
+                    "arena_verdict": rec["arena"]["verdict"],
+                    "provenance": rec["provenance"],
+                }
+            )
+    arena = Counter(
+        ev["verdict"]
+        for i in range(len(cases))
+        for ev in ckpt.get(("episode", i))["evals"]
+    )
+    return {
+        "schema": 1,
+        "protocol": dict(ckpt.manifest.get("protocol", {})),
+        "episodes": len(cases),
+        "evaluated": sum(arena.values()),
+        "arena_verdicts": dict(arena),
+        "minted": len(cands),
+        "admitted": sum(1 for r in cands if r["admitted"]),
+        "skipped": sum(1 for r in cands if r["skipped"]),
+        "leg_refusals": dict(leg_deaths),
+        "novelty": dict(novelty),
+        "finds": finds,
+        "candidates": [
+            {
+                "name": r["name"],
+                "arena": r["arena"],
+                "admitted": r["admitted"],
+                "skipped": r["skipped"],
+                "reason": r["reason"],
+                "stages": r["stages"],
+                "novelty": (
+                    ckpt.get(("classify", r["name"])) or {}
+                ).get("verdict", ""),
+            }
+            for r in cands
+        ],
+        "wall_s": round(time.time() - t0, 1),
+    }
+
+
+# ---------------------------------------------------------------------------
+#  emit
+# ---------------------------------------------------------------------------
+
+
+def _json_path(out: Path) -> Path:
+    return (
+        out.with_suffix(".json")
+        if out.suffix
+        else out.parent / f"{out.name}.json"
+    )
+
+
+def render_markdown(summary: dict, *, env: dict | None = None) -> str:
+    """The human document — the funnel, the novelty split, the finds."""
+    from bench import referees
+
+    env = env or {}
+    legs = summary["leg_refusals"]
+    nov = summary["novelty"]
+    lines = [
+        "# Overnight discovery run",
+        "",
+        "Episodes -> mint -> admit -> classify.  Open-game episodes "
+        "mint candidate rewrites; each minted claim is judged by the "
+        "``bench/referees`` gauntlet (oracle -> pay -> sweep -> "
+        "cert); admitted laws are classified against the prior-art "
+        "bank: **machine-original** (the widest shipped bank cannot "
+        "derive it), **known-art** (an alpha-sibling exists or the "
+        "bank proves it), **vacuous** (no binding produced a site — "
+        "unevaluable).",
+        "",
+        f"- date: {env.get('timestamp_utc', '—')} · "
+        f"git: `{env.get('git_sha', 'unknown')}`"
+        f"{' (dirty)' if env.get('git_dirty') else ''} · "
+        f"device {env.get('device', '?')}",
+        f"- protocol: `{json.dumps(summary['protocol'], sort_keys=True)}`",
+        f"- episodes: {summary['episodes']} · "
+        f"evaluated: {summary['evaluated']} · "
+        f"minted: {summary['minted']} · "
+        f"admitted: {summary['admitted']} · "
+        f"wall: {summary['wall_s']}s",
+        "- arena verdicts: "
+        + (
+            ", ".join(
+                f"{k}={v}"
+                for k, v in sorted(summary["arena_verdicts"].items())
+            )
+            or "—"
+        ),
+        "",
+        "## Admission funnel",
+        "",
+        "| first-failed leg | count |",
+        "|---|---|",
+    ]
+    for leg in (*referees.COMPONENT_ORDER, "skipped", "error"):
+        if legs.get(leg):
+            lines.append(f"| {leg} | {legs[leg]} |")
+    lines.append(f"| **admitted** | {legs.get('admitted', 0)} |")
+    lines += [
+        "",
+        "## Novelty",
+        "",
+        "| verdict | count |",
+        "|---|---|",
+    ]
+    for v in _NOVELTY_ORDER:
+        lines.append(f"| {v} | {nov.get(v, 0)} |")
+    lines += ["", "## Machine-original finds", ""]
+    if summary["finds"]:
+        for f in summary["finds"]:
+            lines.append(
+                f"- `{f['name']}` — arena `{f['arena_verdict']}`, "
+                f"instance {f['instance_src'] or '—'}"
+            )
+    else:
+        lines.append(
+            "**None.** Every admitted law was already a theorem of "
+            "the shipped bank — or nothing survived the gauntlet."
+        )
+    lines += [
+        "",
+        "## Candidates",
+        "",
+        "| candidate | arena | admitted | reason | novelty |",
+        "|---|---|---|---|---|",
+    ]
+    for c in summary["candidates"]:
+        reason = (c["reason"] or "—").replace("|", "\\|")
+        lines.append(
+            f"| `{c['name']}` | {c['arena'].get('verdict', '—')} "
+            f"| {'yes' if c['admitted'] else 'no'} "
+            f"| {reason} | {c['novelty'] or '—'} |"
+        )
+    return "\n".join(lines) + "\n"
+
+
+def emit(summary: dict, out: Path, *, env: dict, seed: Any) -> Path:
+    """Write ``out`` (.md) and the sibling .json, provenance-stamped."""
+    from bench.benchkit.provenance import with_provenance
+
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(render_markdown(summary, env=env))
+    payload = with_provenance(summary, seed=seed, device="cpu", env=env)
+    _json_path(out).write_text(
+        json.dumps(payload, indent=2, default=str) + "\n"
+    )
+    return out
+
+
+# ---------------------------------------------------------------------------
+#  CLI
+# ---------------------------------------------------------------------------
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Run the overnight loop; emit the result documents."""
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument(
+        "--episodes",
+        type=int,
+        default=DEFAULTS["episodes"],
+        help="episode count — 24 pages of 48 covers the stream once",
+    )
+    ap.add_argument(
+        "--page", type=int, default=DEFAULTS["page"], help="page size"
+    )
+    ap.add_argument(
+        "--budget",
+        type=int,
+        default=DEFAULTS["budget"],
+        help="per-episode action budget",
+    )
+    ap.add_argument("--seed", type=int, default=DEFAULTS["seed"])
+    ap.add_argument(
+        "--player",
+        default=DEFAULTS["player"],
+        help="a registered players/ name (default playbook)",
+    )
+    ap.add_argument(
+        "--referee",
+        default=DEFAULTS["referee"],
+        help="a registered bench/referees arm (default full)",
+    )
+    ap.add_argument(
+        "--dry",
+        action="store_true",
+        help="seconds-scale smoke: 2 episodes, page 6, budget 4",
+    )
+    ap.add_argument(
+        "--ckpt",
+        type=Path,
+        default=CKPT_PATH,
+        help=f"append-only ledger (default {CKPT_PATH})",
+    )
+    ap.add_argument(
+        "--resume",
+        action="store_true",
+        help="reuse the ledger's done cells (protocol-verified); "
+        "without it the ledger restarts fresh",
+    )
+    ap.add_argument(
+        "--out",
+        type=Path,
+        default=DOC_PATH,
+        help=f"markdown output (default {DOC_PATH}); the .json "
+        "lands beside it",
+    )
+    args = ap.parse_args(argv)
+    if args.dry:
+        for k, v in DRY.items():
+            setattr(args, k, v)
+
+    #  Standalone runs put ``bench/drivers`` on sys.path — the root
+    #  must be present before the ``bench.*`` imports below.
+    if str(_REPO) not in sys.path:
+        sys.path.insert(0, str(_REPO))
+    from bench.benchkit import checkpoint as ck_mod
+    from bench.benchkit.env import collect_env
+
+    protocol = {
+        "episodes": args.episodes,
+        "page": args.page,
+        "budget": args.budget,
+        "seed": args.seed,
+        "player": args.player,
+        "referee": args.referee,
+        "dry": bool(args.dry),
+    }
+    if not args.resume and args.ckpt.exists():
+        args.ckpt.unlink()
+    manifest = ck_mod.new_manifest("overnight", protocol, device="cpu")
+    ckpt = ck_mod.Checkpoint.open(args.ckpt, manifest)
+    if ckpt.entries:
+        print(  # stdout-compat
+            f"resume: {len(ckpt.entries)} cells already done "
+            f"({args.ckpt})",
+            flush=True,
+        )
+
+    print(  # stdout-compat
+        f"== overnight — {args.episodes} episodes, page {args.page}, "
+        f"player {args.player}, referee {args.referee} =="
+    )
+    summary = run(
+        episodes=args.episodes,
+        page=args.page,
+        budget=args.budget,
+        seed=args.seed,
+        player=args.player,
+        referee=args.referee,
+        ckpt=ckpt,
+    )
+
+    env = collect_env("cpu")
+    out = emit(summary, args.out, env=env, seed=args.seed)
+    print(f"wrote {out} (+ {_json_path(out).name})")  # stdout-compat
+    print(  # stdout-compat
+        f"episodes={summary['episodes']} evaluated={summary['evaluated']} "
+        f"minted={summary['minted']} admitted={summary['admitted']} "
+        f"novelty={summary['novelty']} wall={summary['wall_s']}s"
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
