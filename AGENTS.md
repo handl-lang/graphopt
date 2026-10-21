@@ -49,6 +49,19 @@ every name lives at its real package path — `mlopt_core.egraph`,
 `mlopt_cuda.CudaGraphRunner`, … Tests in
 `tests/`. The dev virtualenv is `.venv/` (uv-managed).
 
+**Repo split (plan 0032 phase 4, landed).**  The substrate packages
+moved to `handl-lang/eqsat` (private): `mlopt-core`,
+`mlopt-orchestrator`, `mlopt-native`; the game layer moved to
+`handl-lang/gamekit` (private): `packages/gamekit`.  Both are pinned
+git+ssh deps on `packages/` subdirs (see `[tool.uv.sources]`); the
+package/import names are unchanged.  The substrate-only test files
+travelled with them — domain-bound test functions carved out live in
+`tests/test_substrate_domain_edges.py`.  Coverage floors now apply
+per-repo: this repo's wall is the domain packages
+(`fail_under=100` on `mlopt_torch`/`mlopt_carriers`/`mlopt_cuda`/
+`mlopt_onnx` + the 99% `mlopt_discovery` ratchet); the substrate and
+game floors were re-measured in their own repos (56% / 98%).
+
 **The research/measurement surface is `bench/`** — the dissolved
 `lab/` lives there now, beside the harnessed benchmark package
 (`python -m bench`; `bench/suites/`, `bench/discovery`,
