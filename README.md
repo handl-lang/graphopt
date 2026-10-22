@@ -56,7 +56,7 @@ ListNet-graded drain earns heuristic-parity reward (0.3549 vs 0.3595)
 cert ✓ + beats a registered baseline + underivable from
 `known_bank()` (which now includes the prior-art preset) — *not*
 "novel to humanity", which stays an open-world lit-review.  The sieve
-ran 24 candidates over the 222-rule bank (the 31-case scorecard is
+ran 24 candidates over the 238-rule bank (the 31-case scorecard is
 31/31 found+cert): **2 in review**
 (`mul_unsq_nat`, `softsign_fold`), 4 derivable, 6 unpaid, 12
 unmeasured — [`docs/results_novelty_sieve.md`](docs/results_novelty_sieve.md).
@@ -68,14 +68,29 @@ banks — none makes the minted bank itself an object of play.
 modules the yield is 0 so far — finds lean on purpose-built workloads;
 the machine bank alone wins 3/22 vs human 4/22 (the union wins 6/22 —
 complementary, not dominant; that bar measured the 22-model corpus —
-the held-out zoo has since grown to ~107 workloads); the learned arms cannot yet learn *when
+the held-out zoo has since grown to 53 workloads); the learned arms cannot yet learn *when
 to quit* — the blocker is observability, not the reward's price.  Wins
 are structural and regime-bounded, inference-only, compile-time
 search.
 
-**Open.**  Unnamed structure on *real* corpora · new algorithms
-(Strassen-class) · multi-step credit across the gate · transformer
-scale · **can a player learn in a game that grows under it?**
+**Open — now measured (the Q-series).**  Unnamed structure on real
+corpora: **honest zero** — 53 held-out zoo modules → 87 viable mints,
+**0 machine-originals**; shallow single-step mints are all bank
+theorems, so the next lever is guarded composites
+([`docs/reports/results_overnight_real_v2.md`](docs/reports/results_overnight_real_v2.md);
+the run also surfaced and fixed an emit-time RHS-sanity substrate bug,
+eqsat `2d6e4eb`).  New algorithms: **Strassen NO-GO** — the board
+proves rank-7, every player stalls at 8
+([`docs/results_strassen.md`](docs/results_strassen.md)).  Multi-step
+credit: **yes, where chain density permits** — learned arms close
+mint→apply chains until spontaneous chains thin out
+([`docs/results_credit_chain.md`](docs/results_credit_chain.md)).
+Transformer scale: **walls mapped** — matcher ~11k nodes,
+verify-forward RAM, fp64 overflow
+([`docs/reports/results_scale_ladder.md`](docs/reports/results_scale_ladder.md)).
+Strassen fails where chains succeed → the frontier is **search depth
+and density**, not machinery.  Still open: **can a player learn in a
+game that grows under it?**
 
 ## Architecture
 

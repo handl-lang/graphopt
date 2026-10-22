@@ -4,7 +4,7 @@ subtitle: "Draft — proposed, not accepted"
 author:
   - name: "mlopt project"
     affiliation: "handl-lang / graphopt"
-date: "2026-10-20"
+date: "2026-10-21"
 abstract: |
   Compilers choose better implementations only from transformations a
   human already wrote.  We describe a pipeline in which the rewrite
@@ -312,6 +312,37 @@ run-every-call (the deployed conv).  The cost model and the wall
 agree in direction; the wall numbers are debug-build timings —
 directional, not a benchmark rig.
 
+# Frontier measurements {#sec-frontier}
+
+The discovery loop's own frontier was measured this cycle as a
+pre-registered question series (`project/TODO.md`).  The verdicts
+sharpen where the open work lives — and it is not where the case
+study would suggest.
+
+| arm | question | measured verdict |
+|---|---|---|
+| Q1 | unnamed structure on *real* corpora | **honest zero** — the corpus-driven mint over 53 held-out zoo modules produced 87 viable mints (13 composites); the gauntlet admitted none and the sieve classed none machine-original: every shallow single-step mint was already a bank theorem (`docs/reports/results_overnight_real_v2.md`) |
+| Q2 | rediscovery of a Strassen-class algorithm | **NO-GO** — the 2×2×2 bilinear board provably expresses rank 7 (a scripted 29-move line verifies 10/10), yet random, greedy-repair, and cold-linear players stalled at rank 8 over 200+ episodes at budgets 48 and 96 (`docs/results_strassen.md`) |
+| Q3 | multi-step credit — mint a premise, cash it later | **YES, where chains are dense** — the trained linear arm argmaxes the enabling chain on 100% of held-out boards and the neural arm converges to the scripted ceiling; at sparser chain density (more decoys, fewer episodes) linear REINFORCE degrades to the myopic arm (`docs/results_credit_chain.md`) |
+| Q4 | scale | **three distinct walls** — matcher time on unrolled terms (~11k IR nodes exceeds the 480 s rung budget), verify-forward RAM on the *spelled* program (a ~17 GB fp64 attention tensor at T=4096), and spelled-program numerics (fp64 overflow; verify honestly refuses at T≥1024) (`docs/reports/results_scale_ladder.md`) |
+| Q5 | prior transfer to a second domain | **null** — a private codegen-domain measurement, cited here without numbers |
+
+One substrate bug surfaced en route and is fixed: emit-time RHS
+sanity conflated *cannot-evaluate* with *evaluated-and-false* through
+a bare exception catch, so non-denoting composites were being minted
+as candidates (eqsat `2d6e4eb`).  The mint now emits only viable
+objects — the 87-mint funnel above is the post-fix count.
+
+**The pair that teaches.**  Q2 fails where Q3 succeeds, and the
+difference is not the machinery — the same board protocol, players,
+and certifying referee appear in both.  It is the shape of the
+productive trajectory: an enabling chain is a short mint → apply pair
+the episode stream generates often enough to learn from, while the
+naive → Strassen path is a ~15-move coordinated sequence through
+invalid-space intermediates with no positive prefix.  **Search depth
+and chain density — not expressibility, not the referee — are the
+frontier.**
+
 # Related work {#sec-related}
 
 **Equality saturation and e-graph superoptimization.**  Tate et
@@ -423,10 +454,26 @@ minted guards).
   rows (the slice the bounded prover can saturate against) — minus
   alpha-siblings.
   The sieve (`bench/drivers/screen/novelty_sieve.py`, results in
-  `docs/results_novelty_sieve.md`) ran 24 candidates: two in the
+  `docs/results_novelty_sieve.md`) ran 24 candidates over a 238-rule
+  bank: two in the
   review queue (`mul_unsq_nat`, `softsign_fold`), four derivable,
   six unpaid, twelve unmeasured.  "Novel to humanity" remains an
   open-world literature claim this draft does not make.
+- **Scale walls are measured, not hypothetical.**  Saturation is
+  T-invariant on symbolic attention terms ($\lesssim$ 0.3 s through
+  T=4096), but unrolled spellings hit a matcher wall around ~11k IR
+  nodes (T=1024 exceeds a 480 s budget), the memory wall is the
+  referee's verify-forward of the spelled program (~17 GB at
+  T=4096 — the e-graph had saturated that term in 0.2 s), and an
+  unscaled `exp` attention overflows fp64 at T $\geq$ 1024 — verify
+  correctly refuses rather than certify a NaN
+  (`docs/reports/results_scale_ladder.md`).
+- **Discovery yield on real corpora is zero at this depth.**  The
+  real-corpus funnel minted 87 viable candidates across 53 held-out
+  zoo modules and admitted none; Strassen-class rediscovery is out
+  of reach of per-step play (@sec-frontier).  The shipped
+  machine-originals remain the earlier corpus-minted laws — deeper
+  search, not more machinery, is the open lever.
 
 # Reproduction {#sec-repro}
 

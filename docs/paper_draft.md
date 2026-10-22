@@ -32,7 +32,7 @@ strictly beats a registered `bench/discovery` baseline on a derivation that
 invokes it, and its instance is underivable from `known_bank()` (the shipped
 rules plus the prior-art preset) minus alpha-siblings.  The sieve
 (`bench/drivers/screen/novelty_sieve.py`, results in
-`docs/results_novelty_sieve.md`) ran 24 candidates over the 222-rule bank:
+`docs/results_novelty_sieve.md`) ran 24 candidates over the 238-rule bank:
 two in the review queue (`mul_unsq_nat`, `softsign_fold`), four derivable,
 six unpaid, twelve unmeasured.  "Novel to humanity" stays an open-world
 literature claim this draft does not make.  On *soundness*: every move carries a replayable
@@ -425,6 +425,22 @@ exposed models).  Exposure itself is **bimodal**: of 321 exported workloads,
 `nn.Conv*`, `nn.*Pool*`, `sdpa` spellings) while 140 score ≥95 %
 (`project/retros/exposed-math.md`, `project/retros/discovery-scale.md`).
 
+**The real-corpus mint funnel ran to an honest zero (Q1).**  The
+corpus-driven overnight mint (`bench/drivers/overnight.py --corpus
+zoo-real --compose`) paged all **53 held-out zoo modules**, minting
+candidates from each module's own op-tuple census: **87 viable mints
+(13 composites), 187 evaluated, 0 admitted, 0 machine-originals** —
+every shallow single-step mint was already a theorem of the shipped
+bank, and the deepest compose attempt reached the pay gate once
+(fires=5, changed=5, paid=4) before failing `sink.verify` on its own
+sites (`docs/reports/results_overnight_real_v2.md`,
+`docs/results_realcorpus_v2.md`).  The run also surfaced a real
+substrate bug — emit-time RHS sanity caught a bare `Exception`,
+conflating *cannot-evaluate* with *evaluated-and-false* so
+non-denoting composites were minted as candidates; fixed in the
+substrate (eqsat `2d6e4eb`), the mint now emits only viable objects
+and the 87-mint funnel is the post-fix count.
+
 **Rediscoveries, said plainly.**  The largest structural wins are *not*
 discoveries.  The RetNet carrier the machine extracts is numerically
 identical (**9.8e-9 fp64**) to the paper's published chunkwise duality — "the
@@ -552,6 +568,31 @@ already-structured space, and it may only reorder (ADR 0003, amending ADR
 * **The learned prior.**  The shipped prior ranks held-out law candidates at
   AP 0.210 vs 0.045 for the heuristic (~4.7×) and finds ~2× more useful laws
   per episode (`docs/results_richer_features.md`; ADR 0005).
+* **Enabling chains are learnable — where chain density permits (Q3).**  On a
+  curriculum board whose bank is deliberately incomplete (the win needs
+  `mint` the premise at −0.05, then `apply` it for +1.0), the trained linear
+  arm argmaxes the two-step chain on **100 % of held-out boards** and the
+  neural PolicyNet converges to the scripted ceiling (1.15/1.00 win both
+  conditions).  The binding constraint is *density*, not the credit
+  mechanism: at k = 16 decoys and 200 training episodes, spontaneous chains
+  thin below what linear REINFORCE can lift out of the noise and it degrades
+  to exactly the myopic arm's signature (`docs/results_credit_chain.md`).
+* **Strassen-class rediscovery is a NO-GO (Q2).**  The 2×2×2 bilinear board
+  provably expresses rank 7 — the scripted line verifies 10/10 in exactly 29
+  moves, on the canonical board and every scrambled case — so the move
+  vocabulary is not the blocker.  Yet across 200+ episodes at budgets 48 and
+  96, random, greedy-repair, and cold-linear players all stall at **rank 8**:
+  greedy repair rediscovers the *naive* scheme every episode, and the
+  productive path is a ~15-move coordinated sequence through invalid-space
+  intermediates with no positive prefix.  Doubling the budget bought more
+  valley, not more depth (`docs/results_strassen.md`).
+
+The pair teaches where the frontier sits: Q2 fails where Q3 succeeds, on the
+same board protocol, players and referee — an enabling chain is a short
+mint → apply pair the episode stream generates often enough to learn from,
+while the naive → Strassen path rewards nothing until it is nearly complete.
+**Search depth and chain density, not expressibility and not the referee,
+are the frontier.**
 
 Two honest warnings the game layer produced.  First, **a policy is coupled to
 the semantics of its features**: a correctness fix in `mlopt_core.features`
@@ -657,7 +698,26 @@ handl's own rewrite engine and must produce the term mlopt's
   is the wall (215–262 s at T=2048, vs Inductor's 45 s compile where it
   succeeds).
 * **Discovery yield is sparse (~1.5 %)** and exposure is bimodal — 81/321
-  workloads expose nothing at all.
+  workloads expose nothing at all.  On the real held-out corpus the
+  corpus-driven mint is an **honest zero**: 53 zoo modules → 87 viable mints,
+  0 admitted, 0 machine-originals (§4.1); shallow single-step mints are
+  exhausted — guarded composites are the open lever.
+* **Strassen-class rediscovery is out of reach of per-step play.**  The
+  bilinear board expresses rank 7 (verified scripted witness) but no player
+  crosses the invalid-space valley in 200+ episodes — the blocker is a
+  ~15-move coordinated trajectory with no positive prefix, i.e. search
+  depth, not vocabulary or machinery (§4.4; `docs/results_strassen.md`).
+* **The scale walls are now mapped (Q4).**  Saturation is T-invariant on
+  symbolic attention terms (≲ 0.3 s through T=4096) but unrolled spellings
+  hit a matcher wall at ~11k IR nodes (T=1024 exceeds a 480 s budget, still
+  ~1.3 GB); the memory wall is the referee's verify-forward of the spelled
+  program (a ~17 GB fp64 attention tensor kernel-OOM'd at T=4096 — the
+  e-graph had saturated the same term in 0.2 s); and an unscaled `exp`
+  attention overflows fp64 at T≥1024, which verify honestly refuses rather
+  than certify (`docs/reports/results_scale_ladder.md`).
+* **Cross-domain prior transfer measured null (Q5)** on a private
+  codegen-domain measurement — cited here without numbers; whether a learned
+  prior survives a minted move-set remains open.
 * **Enumeration ordering is a measured blocker.**  The paying `fold_emit`
   descriptor sits >200 k deep in the round-robin; it verifies at 6.7e-16
   when reached directly, so the pay-null is *ordering*, not expressiveness.
@@ -765,6 +825,12 @@ venue paper needs the scale validation and the executor work named in §6.
 | The minted atom pays nothing | 0 certified laws fire on real terms | `atom-synth-loop.md` |
 | Anti-unification reach-expansion | null on all 3 workloads | ADR 0007 |
 | FLA vs the delivered carrier | ~3× memory, ~11× speed (lowering gap) | `retnet-external-baselines.md` |
+| **Frontier.** Real-corpus mint funnel (Q1) | 53 zoo modules → 87 viable mints (13 composites), 187 evaluated → 0 admitted / 0 machine-originals | `docs/reports/results_overnight_real_v2.md`; `docs/results_realcorpus_v2.md` |
+| Emit-time RHS-sanity substrate fix | bare-`Exception` catch conflated can't-eval with eval-false; mint now emits only viable candidates | eqsat `2d6e4eb` |
+| Strassen rediscovery board (Q2) | NO-GO: scripted witness verifies rank 7 (29 moves, 10/10); all players 0 wins in 200+ episodes, stall at rank 8 | `docs/results_strassen.md` |
+| Enabling-chain credit (Q3) | learned arms close mint → apply chains (linear-greedy 100 % held-out; neural at the scripted ceiling); density-bound at k=16 | `docs/results_credit_chain.md` |
+| Scale ladder (Q4) | symbolic terms T-invariant ≲ 0.3 s; unrolled matcher wall ~11k nodes (480 s budget); verify-forward OOM ~17 GB at T=4096; fp64 overflow at T≥1024 | `docs/reports/results_scale_ladder.md` |
+| Cross-domain prior transfer (Q5) | null — a private codegen-domain measurement, no numbers | (private) |
 
 ## Appendix B — reproduction
 
