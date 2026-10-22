@@ -552,6 +552,92 @@ class TestCorpusZooRealCompose:
         assert rule.check is not None or rule.derive is not None
         assert arena.meta[0]["guarded"] is True
 
+    def test_compose_strata_chain_viable_parents(self):
+        """A stratum-k composite becomes a stratum-(k+1) parent.
+
+        InstanceNormBroadcast is the positive control: its stratum-1
+        mints survive the bind + seed-eval gate and re-seat as
+        parents, so stratum 2 mints ``syn_syn_*`` pairs whose
+        provenance names a pooled stratum-1 composite (the
+        ``@<module>`` label) and stratum 3 chains off stratum 2 the
+        same way.  Before the per-stratum feedback the arm minted
+        pair-depth only — ``--compose 4`` measured identically to
+        ``--compose 2``.
+        """
+        from mlopt_core.meta import provenance
+
+        arena = on._RealArena(
+            self._case(zoo="InstanceNormBroadcast", compose=4)
+        )
+        assert not arena.error
+        comps = [
+            (i, c)
+            for i, c in enumerate(arena.pool)
+            if arena.meta.get(i, {}).get("family") == on._COMPOSE_FAMILY
+        ]
+        by_stratum: dict[int, list] = {}
+        for i, c in comps:
+            by_stratum.setdefault(arena.meta[i]["stratum"], []).append(
+                (i, c)
+            )
+        assert 2 in by_stratum and 3 in by_stratum, by_stratum.keys()
+        comp_labels = {c.label for _i, c in comps}
+        chained = [
+            (depth, cand)
+            for depth, cs in by_stratum.items()
+            if depth >= 2
+            for _i, cand in cs
+            if set(provenance(cand.as_rule())) & comp_labels
+        ]
+        assert chained, "no stratum->stratum parent link"
+        for depth, cand in chained:
+            parents = set(provenance(cand.as_rule()))
+            prior = parents & comp_labels
+            assert prior, f"{cand.label}: no pooled-composite parent"
+            # the named parent is itself a pooled composite minted
+            # exactly one stratum up — the feedback contract
+            for pname in prior:
+                pi = next(
+                    i
+                    for i, c in enumerate(arena.pool)
+                    if c.label == pname
+                )
+                assert arena.meta[pi]["stratum"] == depth - 1
+
+    def test_compose_ends_at_fixpoint_not_round_cap(self, monkeypatch):
+        """The stratum loop stops on an empty-viable round, not ROUNDS.
+
+        InstanceNormBroadcast's strata saturate below 8: a
+        ``compose=8`` mint must not keep re-scanning a dead bank —
+        the synthesizer is consulted only until the first round that
+        emits no new viable parent, and the pool is identical to
+        ``compose=4`` (which itself ends at the same fixpoint).
+        """
+        from mlopt_core import meta as meta_mod
+
+        calls = []
+        real = meta_mod.synthesize_rules
+
+        def spy(rules, seed_terms, **kw):
+            calls.append(list(rules))
+            return real(rules, seed_terms, **kw)
+
+        monkeypatch.setattr(meta_mod, "synthesize_rules", spy)
+        a8 = on._RealArena(
+            self._case(zoo="InstanceNormBroadcast", compose=8)
+        )
+        assert not a8.error
+        assert 1 < len(calls) < 8, f"ran {len(calls)} strata"
+        # round 2's bank leads with round 1's viable survivors —
+        # stratum-first ordering so the fuel reaches them
+        first = calls[1][0].name
+        assert first.endswith("@InstanceNormBroadcast")
+        assert any(c.label == first for c in a8.pool)
+        a4 = on._RealArena(
+            self._case(zoo="InstanceNormBroadcast", compose=4)
+        )
+        assert [c.label for c in a8.pool] == [c.label for c in a4.pool]
+
     def test_zoo_real_compose_dry_records_mint_tag(self, tmp_path):
         """The arm is protocol-pinned — ledgers restart loudly."""
         t0 = time.time()
@@ -562,7 +648,7 @@ class TestCorpusZooRealCompose:
         assert time.time() - t0 < 300  # exports + synth + referee
         man, cells = _records(tmp_path / "ck.jsonl")
         assert man["protocol"]["corpus"] == "zoo-real"
-        assert man["protocol"]["mint"] == "corpus-bind-compose-guarded"
+        assert man["protocol"]["mint"] == "corpus-bind-compose-strata"
         assert man["protocol"]["compose"] == 2
         payload = json.loads((tmp_path / "out.json").read_text())
         assert payload["corpus"] == "zoo-real"
@@ -588,7 +674,7 @@ class TestCorpusZooRealCompose:
         assert man1["protocol"]["mint"] == "corpus-bind"
         assert on.main([*argv, "--compose", "--resume"]) == 0
         man2, _cells2 = _records(tmp_path / "ck.jsonl")
-        assert man2["protocol"]["mint"] == "corpus-bind-compose-guarded"
+        assert man2["protocol"]["mint"] == "corpus-bind-compose-strata"
 
 
 class TestResume:

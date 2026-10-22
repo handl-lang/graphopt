@@ -104,9 +104,14 @@ check/derive hooks plus the ``parents`` / ``guard_pats`` record —
 serialized into the candidate cell's ``law["guard"]`` like the
 ``mlopt_core.laws.minted`` rows.  Machine-originals live here: a
 composite the prior-art bank cannot derive is the sieve's target
-verdict.  The arm is protocol-pinned as ``mint:
-corpus-bind-compose-guarded``, so a ledger written before the
-guarded-bank change (or without the arm at all) restarts loudly.
+verdict.  Each *gated* stratum feeds the next: the mint loops
+``synthesize_rules`` a round at a time and re-seats only
+gate-surviving composites as parents — enumerated ahead of the
+base bank so the round's fuel reaches the pairs that involve them
+— until a stratum emits no new viable parent (the fixpoint) or
+*ROUNDS* strata have run.  The arm is protocol-pinned as ``mint:
+corpus-bind-compose-strata``, so a ledger written before the
+strata-chaining fix (or without the arm at all) restarts loudly.
 
 Run::
 
@@ -477,7 +482,9 @@ class _RealArena(og.OpenArena):
     single-step pool is pair-composed by
     ``mlopt_core.meta.synthesize_rules`` — the ``syn_*`` fixpoint
     ``conv_bn_fold`` minted through — with the module's own term as
-    the seed, for ``case["compose"]`` strata.  The bank pairs the
+    the seed, for up to ``case["compose"]`` strata (the loop ends
+    early at the fixpoint: a stratum emitting no new viable parent).
+    The bank pairs the
     bound singles with the module's **guarded parents**
     (:func:`_guarded_parents` — shipped ``check``/``derive`` laws that
     fire on this term), so a composite can inherit a transported side
@@ -564,13 +571,36 @@ class _RealArena(og.OpenArena):
         subterms, so an emitted composite is a chain that actually
         rewrote the module; the symbolic path (unguarded pairs) emits
         fully general derived rules and is then held to the same
-        ``require_bind`` gate the singles met.  Composites keep the
-        ``syn_*`` name, namespaced by ``@<module>`` — the
-        ``synthesize_rules`` counter restarts per module, so a
-        same-named pair minted on a different seed can be a different
-        rule, and the ledger keys candidates by name.
-        ``max_emitted`` bounds validation spend; the appended slice is
-        further capped at ``page`` after the bind gate.
+        ``require_bind`` gate the singles met.
+
+        Strata chain *through the emit gate*: the mint runs
+        ``synthesize_rules`` one stratum at a time and feeds back
+        only the composites that survived the gate — a mint that
+        binds no real subterm or whose RHS cannot denote on the
+        bound env never spawns deeper pairs, so deeper strata stay
+        viable-only by construction.  The fresh stratum enumerates
+        *ahead* of the base bank so the round's fuel reaches pairs
+        that involve it: the pair space is scanned in bank order and
+        fuel is spent on successful applications, so a stratum
+        appended behind the base rules waits behind every base-pair
+        re-mint — the reason ``--compose 4`` measured identically to
+        ``--compose 2`` under the single-call ``rounds=`` loop (whose
+        ``max_emitted`` is also a cross-round total: a bank that
+        fills the cap in stratum 2 never runs stratum 3).  The loop
+        ends at the fixpoint — a stratum emitting no new viable
+        parent — not at a fixed count; ``case["compose"]`` bounds
+        the strata attempted, ``max_emitted`` each round's
+        validation spend, and alpha-equivalent re-mints across
+        strata are deduplicated by pattern key.
+
+        Composites keep the ``syn_*`` name, namespaced by
+        ``@<module>`` — the ``synthesize_rules`` counter restarts
+        per stratum as well as per module, so a same-named pair
+        minted in a different stratum can be a different rule, and
+        the ledger keys candidates by name (a cross-stratum name
+        collision on a distinct rule is disambiguated with a
+        ``~r<stratum>`` tag).  The appended slice is capped at
+        ``page`` after the bind gate.
         """
         from mlopt_core import meta as meta_mod
         from mlopt_core.egraph.terms import _term_match
@@ -580,63 +610,87 @@ class _RealArena(og.OpenArena):
         from mlopt_discovery.proposal import Candidate
 
         page = case.get("page", 48)
-        emitted = meta_mod.synthesize_rules(
-            [
-                *_guarded_parents(root),
-                *(c.as_rule() for c in self.pool),
-            ],
-            [root],
-            fuel=_COMPOSE_FUEL,
-            numeric_check=True,
-            rounds=int(case["compose"]),
-            max_emitted=page,
-        )
+        bank = [
+            *_guarded_parents(root),
+            *(c.as_rule() for c in self.pool),
+        ]
         subs = [s for s in _iter_subterms(root) if isinstance(s, Op)]
+        seen: set = set()
+        named: set = set()
+        parents: list = []
         kept = 0
-        for rule in emitted:
-            if kept >= page:
-                break
-            sites = [
-                (m, s)
-                for s in subs
-                if (m := _term_match(rule.lhs, s)) is not None
-            ]
-            if not sites:
-                continue
-            # Seed-eval sanity — the minted RHS must denote under the
-            # seed's own binding.  A composite whose rhs errors on a
-            # bound env is ill-typed: the oracle leg would measure it
-            # as ``rhs_err`` (the ``_site_outcome`` tag), a refusal it
-            # can never survive, so it is dropped here rather than
-            # spending an episode slot and the full gauntlet on it.
-            if any(
-                _site_outcome(rule, m, s) == "rhs-err" for m, s in sites
-            ):
-                continue
-            parents = meta_mod.provenance(rule)
-            name = f"{rule.name}@{case['zoo']}"
-            object.__setattr__(rule, "name", name)
-            meta_mod.SYNTH_PARENTS[name] = parents
-            self.pool.append(
-                Candidate(
-                    strategy="corpus",
-                    label=name,
-                    lhs=rule.lhs,
-                    rhs=rule.rhs,
-                    note=f"composite: {' then '.join(parents)}",
-                    rule=rule,
-                )
+        for rnd in range(1, int(case["compose"]) + 1):
+            emitted = meta_mod.synthesize_rules(
+                [*parents, *bank],
+                [root],
+                fuel=_COMPOSE_FUEL,
+                numeric_check=True,
+                max_emitted=page,
             )
-            self.meta[len(self.pool) - 1] = {
-                "family": _COMPOSE_FAMILY,
-                "sources": list(parents),
-                # a transported premise closure — the composite's
-                # check/derive re-express the guarded parents' hooks.
-                "guarded": bool(
-                    rule.check is not None or rule.derive is not None
-                ),
-            }
-            kept += 1
+            viable: list = []
+            for rule in emitted:
+                if kept >= page:
+                    break
+                key = meta_mod._alpha_key(rule.lhs, rule.rhs)
+                if key in seen:
+                    continue
+                sites = [
+                    (m, s)
+                    for s in subs
+                    if (m := _term_match(rule.lhs, s)) is not None
+                ]
+                if not sites:
+                    continue
+                # Seed-eval sanity — the minted RHS must denote under
+                # the seed's own binding.  A composite whose rhs
+                # errors on a bound env is ill-typed: the oracle leg
+                # would measure it as ``rhs_err`` (the
+                # ``_site_outcome`` tag), a refusal it can never
+                # survive, so it is dropped here rather than
+                # spending an episode slot and the full gauntlet —
+                # or a parent slot in the next stratum — on it.
+                if any(
+                    _site_outcome(rule, m, s) == "rhs-err"
+                    for m, s in sites
+                ):
+                    continue
+                prov = meta_mod.provenance(rule)
+                name = f"{rule.name}@{case['zoo']}"
+                if name in named:
+                    name = f"{rule.name}~r{rnd}@{case['zoo']}"
+                object.__setattr__(rule, "name", name)
+                meta_mod.SYNTH_PARENTS[name] = prov
+                self.pool.append(
+                    Candidate(
+                        strategy="corpus",
+                        label=name,
+                        lhs=rule.lhs,
+                        rhs=rule.rhs,
+                        note=f"composite: {' then '.join(prov)}",
+                        rule=rule,
+                    )
+                )
+                self.meta[len(self.pool) - 1] = {
+                    "family": _COMPOSE_FAMILY,
+                    "sources": list(prov),
+                    "stratum": rnd,
+                    # a transported premise closure — the composite's
+                    # check/derive re-express the guarded parents'
+                    # hooks.
+                    "guarded": bool(
+                        rule.check is not None
+                        or rule.derive is not None
+                    ),
+                }
+                seen.add(key)
+                named.add(name)
+                viable.append(rule)
+                kept += 1
+            if not viable:
+                break  # the fixpoint — nothing viable left to chain on
+            if kept >= page:
+                break  # the pool slice is full — deeper mints can't append
+            parents = viable
 
 
 def _intake_cases() -> list:
@@ -1348,9 +1402,12 @@ def main(argv: list[str] | None = None) -> int:
         "composites face the same bind gate plus a seed-eval gate "
         "(the instantiated RHS must denote under the bound env — an "
         "ill-typed composite is dropped before the gauntlet) and "
-        "carry their premise-closure guard spec into the ledger "
-        "(mint: corpus-bind-compose-guarded — ledgers restart "
-        "loudly)",
+        "carry their premise-closure guard spec into the ledger.  "
+        "Gated strata chain: each round's viable composites re-seat "
+        "as parents for the next, enumerated ahead of the base bank "
+        "so the fuel reaches them, until a round mints no new viable "
+        "parent — the fixpoint (mint: corpus-bind-compose-strata — "
+        "ledgers restart loudly)",
     )
     ap.add_argument(
         "--scan",
@@ -1427,7 +1484,7 @@ def main(argv: list[str] | None = None) -> int:
         # denote under the seed binding, or before the synthesis bank
         # carried guarded parents — never replays under it.
         "mint": (
-            "corpus-bind-compose-guarded"
+            "corpus-bind-compose-strata"
             if args.corpus == "zoo-real" and args.compose
             else "corpus-bind"
             if args.corpus == "zoo-real"
