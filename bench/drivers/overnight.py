@@ -64,7 +64,8 @@ so a resumed or resumed-against run can never silently mix corpora.
 dropped as the hypothesis generator and each episode's pool is minted
 *from* the module's own term — ``census.op_tuple_census`` over the
 exported graph feeding ``pipeline.propose`` (census-naturality +
-mixed-view + pattern-recognition + shape-aware + grammar — the same
+mixed-view + pattern-recognition + fusion-schema + shape-aware +
+grammar — the same
 mint path that produced ``mul_unsq_nat``, ``census:mul_unsqueeze``
 from DeltaRuleBlock's ``β·k`` op-tuple), gated binding-first —
 ``require_bind=True`` keeps only proposals whose LHS matches a real
@@ -1433,6 +1434,10 @@ def main(argv: list[str] | None = None) -> int:
             else "stream"
         ),
         "compose": args.compose if args.corpus == "zoo-real" else 0,
+        # the fusion-schema arm joined ``pipeline.propose`` — a ledger
+        # minted before the family existed must restart loudly rather
+        # than replay a pool the new arm would now grow.
+        "fusion": args.corpus == "zoo-real",
     }
     if not args.resume and args.ckpt.exists():
         args.ckpt.unlink()

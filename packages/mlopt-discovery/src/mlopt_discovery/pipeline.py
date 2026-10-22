@@ -179,6 +179,13 @@ class Proposal:
     derived from ``sum``'s ``dim`` tuple.  They pass through to
     :meth:`as_rule`, so firing, certificate replay and the oracles all
     see the same side condition.
+
+    ``cond`` / ``dspec`` are the *declarative* twins (pure data per
+    ``mlopt_core.laws.cond``): :meth:`as_rule` hands them to
+    ``Rewrite``, which folds them into the same ``check``/``derive``
+    hooks — so a proposal minted from a shipped fold keeps the law's
+    side condition *and* serializes as data (the admission ledger's
+    ``missing_hooks`` stays empty where the DSL covers the guard).
     """
 
     name: str
@@ -189,6 +196,8 @@ class Proposal:
     instance: tuple[Any, Any] | None = None
     check: Any = None
     derive: Any = None
+    cond: Any = None
+    dspec: Any = None
 
     def as_rule(self) -> Rewrite:
         """Return the proposal as a fireable pattern ``Rewrite``."""
@@ -198,6 +207,8 @@ class Proposal:
             self.rhs,
             check=self.check,
             derive=self.derive,
+            cond=self.cond,
+            dspec=self.dspec,
         )
 
 
@@ -573,6 +584,285 @@ def _pattern_recognition(census_op: dict) -> list[Proposal]:
     return out
 
 
+# ---------------------------------------------------------------------------
+#  Fusion schemas — fold-class recognizers beyond the view grammar
+# ---------------------------------------------------------------------------
+#
+# The ``zoo-real`` mint (``docs/reports/results_overnight_real_v2.md``)
+# is dominated by ``mixed:``/view naturality candidates while the real
+# exports carry recurring *fusion-class* spellings the view grammar
+# cannot see: the manual silu/glu/sdpa/rms chains the shipped fold
+# laws exist for, plus kernel-fold classes the bank lacks entirely
+# (the quant modules' matmul-bias epilogues, the manual norm chains).
+# This arm mints on those: every shipped fold/fuse law is a schema —
+# its LHS pattern is the recognizer, its ``cond``/``dspec`` the
+# transported side condition — and the ``_FUSION_SCHEMAS`` table adds
+# the measured-but-unshipped classes.  A schema mints only when a real
+# subterm *satisfies* it (lhs match + side condition + denoteable
+# instantiated RHS): the candidate's claim is module-bound — the
+# ``instance`` pair carries the seed site's own attrs/terms to the
+# oracles.
+
+
+def _fusion_laws() -> list[Rewrite]:
+    """Return the shipped fold/fuse laws — the fusion-class schemas.
+
+    The schema bank is the law bank: every shipped ``*_fold*`` (silu,
+    glu, softmax, softsign, rms-norm, conv-bn, the sdpa family) and
+    ``*_fuse`` (swiglu, parallel-mul) rule, plus the two fusion laws
+    whose names carry neither suffix (``qkv_fuse_asym``,
+    ``gqa_absorb_repeat``).  Reading ``ALL_RULES`` — not a parallel
+    name list — keeps the schema table honest: a shipped fold is a
+    schema by construction.
+    """
+    return [
+        r
+        for r in ALL_RULES
+        if r.name.endswith(("_fold", "_fuse"))
+        or "_fold_" in r.name
+        or r.name in ("qkv_fuse_asym", "gqa_absorb_repeat")
+    ]
+
+
+def _inorm_spelling() -> tuple[Any, Any]:
+    """``(x-μ)·rsqrt(σ²+ε)·w+b`` — the manual instance-norm chain.
+
+    Per-(n, c) statistics broadcast by ``unsqueeze`` rather than
+    ``keepdim`` (``dim=MD`` shared between the mean/var branches, the
+    broadcast dims ``K1``/``K2`` likewise), ``σ² = E[(x-μ)²]``, the
+    channel affine spelled ``reshape``-broadcast — the
+    ``InstanceNormBroadcast`` export verbatim.  ``W``/``B`` bind the
+    raw affine leaves, so the RHS is the fused op directly.
+    """
+    d = Op.make(
+        "sub",
+        "U",
+        Op.make(
+            "unsqueeze",
+            Op.make(
+                "unsqueeze", Op.make("mean", "U", dim="MD"), dim="K1"
+            ),
+            dim="K2",
+        ),
+    )
+    v = Op.make(
+        "unsqueeze",
+        Op.make(
+            "unsqueeze",
+            Op.make("mean", Op.make("mul", d, d), dim="MD"),
+            dim="K1",
+        ),
+        dim="K2",
+    )
+    lhs = Op.make(
+        "add",
+        Op.make(
+            "mul",
+            Op.make(
+                "mul",
+                d,
+                Op.make("rsqrt", Op.make("add", v, "EPS")),
+            ),
+            Op.make("reshape", "W", shape="WS"),
+        ),
+        Op.make("reshape", "B", shape="BS"),
+    )
+    rhs = Op.make("instance_norm", "U", "W", "B", eps="EP")
+    return lhs, rhs
+
+
+def _gnorm_spelling() -> tuple[Any, Any]:
+    """``reshape((x'-μ)·rsqrt(E[(x'-μ)²]+ε))·w+b`` — manual group-norm.
+
+    The group fold: ``x' = reshape(x, (1, G, ·))`` so the per-(n, g)
+    reduce is a plain trailing ``mean`` — the ``ManualGroupNorm``
+    export's spelling.  ``num_groups`` is the reshape target's second
+    dim (``("nth", ("attr", "US"), 1)``); the affine is again the
+    broadcast-``reshape`` form with ``W``/``B`` the raw leaves.
+    """
+    ru = Op.make("reshape", "U", shape="US")
+    d = Op.make("sub", ru, Op.make("mean", ru, dim="MD", keepdim="MK"))
+    v = Op.make("mean", Op.make("mul", d, d), dim="MD", keepdim="MK")
+    lhs = Op.make(
+        "add",
+        Op.make(
+            "mul",
+            Op.make(
+                "reshape",
+                Op.make(
+                    "mul", d, Op.make("rsqrt", Op.make("add", v, "EPS"))
+                ),
+                shape="RS",
+            ),
+            Op.make("reshape", "W", shape="WS"),
+        ),
+        Op.make("reshape", "B", shape="BS"),
+    )
+    rhs = Op.make("group_norm", "U", "W", "B", num_groups="G", eps="EP")
+    return lhs, rhs
+
+
+_INORM_LHS, _INORM_RHS = _inorm_spelling()
+_GNORM_LHS, _GNORM_RHS = _gnorm_spelling()
+
+#: Kernel-fold classes the shipped bank lacks — measured true on the
+#: zoo-real corpus before entering the table.  Each entry is a
+#: ``Rewrite`` built at import: ``(lhs, rhs, cond, dspec)`` follows the
+#: same declarative posture as ``tensor.py``, so the minted candidate
+#: serializes side-condition and all.
+_FUSION_SCHEMAS: tuple[Rewrite, ...] = (
+    # add(mm(A, Bᵀ), C) IS linear(A, B, C) — the matmul-bias epilogue
+    # the quant modules spell by hand.  axes-last2 guards the transpose
+    # to the last-two swap (linear's weight convention); a transpose on
+    # any other axis pair declines.
+    Rewrite(
+        "fold:addmm_linear",
+        Op.make(
+            "add",
+            Op.make(
+                "matmul",
+                "A",
+                Op.make("transpose", "B", dim0="T0", dim1="T1"),
+            ),
+            "C",
+        ),
+        Op.make("linear", "A", "B", "C"),
+        cond=("axes-last2", "B", "T0", "T1"),
+    ),
+    # (x-μ)·rsqrt(E[(x-μ)²]+ε)·w+b IS instance_norm(x, w, b): the
+    # unsqueeze-broadcast per-channel norm chain.  eps must be a
+    # numeric Const leaf (the kernel's float attr); the affine
+    # reshapes pin the (1, C, 1, 1) broadcast spelling.
+    Rewrite(
+        "fold:instance_norm",
+        _INORM_LHS,
+        _INORM_RHS,
+        cond=(
+            "and",
+            ("const-num", "EPS"),
+            ("attr-len", "WS", "==", 4),
+            ("attr-len", "BS", "==", 4),
+        ),
+        dspec={"EP": ("float", ("const", "EPS"))},
+    ),
+    # reshape((x'-μ)·rsqrt(E[(x'-μ)²]+ε))·w+b IS group_norm(x, w, b, G):
+    # the reshape-to-(1, G, ·) group fold.  keepdim must hold (a
+    # dropped reduce axis cannot broadcast back), the reduce must be
+    # the reshape target's last axis, and ``num_groups`` derives from
+    # the target's second dim.
+    Rewrite(
+        "fold:group_norm",
+        _GNORM_LHS,
+        _GNORM_RHS,
+        cond=(
+            "and",
+            ("const-num", "EPS"),
+            ("attr-is", "MK", True),
+            ("attr-eq", "MD", (-1,)),
+            ("attr-len", "US", "==", 3),
+            ("attr-len", "WS", "==", 4),
+            ("attr-len", "BS", "==", 4),
+        ),
+        dspec={
+            "G": ("nth", ("attr", "US"), 1),
+            "EP": ("float", ("const", "EPS")),
+        },
+    ),
+    # mul(sigmoid(u), u) IS silu(u) — the commuted spelling ``silu_fold``
+    # pins only in its operand order.  No side condition: the op tree
+    # is the whole claim.
+    Rewrite(
+        "fold:silu_comm",
+        Op.make("mul", Op.make("sigmoid", "u"), "u"),
+        Op.make("silu", "u"),
+    ),
+    # u/sqrt(mean(u^2)+eps) IS rms_norm(u): the div/sqrt spelling of the
+    # shipped pow-mean-rsqrt fold — same guard shape (keepdim,
+    # numeric eps, literal square, trailing reduce block).
+    Rewrite(
+        "fold:rms_div",
+        Op.make(
+            "div",
+            "u",
+            Op.make(
+                "sqrt",
+                Op.make(
+                    "add",
+                    Op.make(
+                        "mean",
+                        Op.make("pow", "u", "P"),
+                        dim="MD",
+                        keepdim="MK",
+                    ),
+                    "EPS",
+                ),
+            ),
+        ),
+        Op.make("rms_norm", "u", dim="ND", eps="EP"),
+        cond=(
+            "and",
+            ("attr-is", "MK", True),
+            ("const-num", "EPS"),
+            ("const-cmp", "P", "==", 2),
+            ("shaped", ("tail-block", "u", "MD")),
+        ),
+        dspec={
+            "ND": ("shape", ("tail-block", "u", "MD")),
+            "EP": ("float", ("const", "EPS")),
+        },
+    ),
+)
+
+
+def _schema_proposal(rule: Rewrite) -> Proposal:
+    """Mint one fusion-schema candidate from a binding rule.
+
+    ``rule`` is the schema — a shipped fold/fuse law or a
+    ``_FUSION_SCHEMAS`` entry.  The declarative ``cond``/``dspec`` pass
+    through verbatim (the minted rule serializes like the shipped
+    one); a *procedural* check/derive (``conv_bn_fold``'s transported
+    hooks) passes through too — the ledger's ``missing_hooks`` then
+    reports them honestly.
+    """
+    from mlopt_core.laws.serialize import _proc_check, _proc_derive
+
+    return Proposal(
+        name=f"fold:{rule.name.removeprefix('fold:')}",
+        lhs=rule.lhs,
+        rhs=rule.rhs,
+        family="fusion-schema",
+        sources=("fusion-schema", rule.name),
+        cond=rule.cond,
+        dspec=rule.dspec,
+        check=rule.check if _proc_check(rule) else None,
+        derive=rule.derive if _proc_derive(rule) else None,
+    )
+
+
+def _fusion_schemas(terms: list[Any]) -> list[Proposal]:
+    """Mint fusion-class candidates bound to real subterms.
+
+    Every shipped fold/fuse law plus the ``_FUSION_SCHEMAS`` classes
+    is tried as a recognizer over *terms*: a schema mints only when a
+    subterm satisfies its full side condition (the rule's own
+    ``check``/``derive``, exercised through the same
+    ``_instance_from_match`` path the oracles use) — so the pool
+    carries no fold-class claim whose real region is dead by its own
+    guard, and the recorded ``instance`` is the module's own spelling.
+    """
+    subs = [
+        s for t in terms for s in _iter_subterms(t) if isinstance(s, Op)
+    ]
+    out: list[Proposal] = []
+    for rule in [*_fusion_laws(), *_FUSION_SCHEMAS]:
+        p = _schema_proposal(rule)
+        inst = _instance_from_match(p, subs)
+        if inst is None:
+            continue
+        out.append(replace(p, instance=inst))
+    return out
+
+
 def _binds_any(lhs: Any, subterms: list[Any]) -> bool:
     """Return whether *lhs* binds at least one of the *subterms*.
 
@@ -605,12 +895,16 @@ def propose(
 ) -> list[Proposal]:
     """Collect, unify and de-duplicate every proposer's candidates.
 
-    Five sources feed the pool: the **census** generators (same-view
+    Six sources feed the pool: the **census** generators (same-view
     naturality and the mixed-view family — including the
     attr-independent same-view variants — both over the frequent
     op-tuples and the requested op *vocab*), **pattern recognition**
     (composed-then-reduced chains like the ``exp/sum`` softmax fold),
-    the shape-aware schemas (``mlopt_discovery.shape_proposal.schemas``), and the
+    the **fusion schemas** (shipped fold/fuse laws plus the
+    ``_FUSION_SCHEMAS`` kernel-fold classes, minted only where a real
+    subterm satisfies the schema's side condition — the
+    module-bound-instance mint), the shape-aware schemas
+    (``mlopt_discovery.shape_proposal.schemas``), and the
     algebraic grammar (``mlopt_discovery.proposal.schema_candidates``, abstracted
     to patterns with its concrete instance retained for the oracles).
     De-dup is by ``mlopt_discovery.proposal._key`` — the alpha-normal equality —
@@ -634,6 +928,7 @@ def propose(
         *_census_naturality(census_op, terms, pointwise, views),
         *_census_mixed_naturality(census_op, terms, pointwise, views),
         *_pattern_recognition(census_op),
+        *_fusion_schemas(terms),
         *_shape_aware(),
         *_grammar(),
     ]
@@ -1138,22 +1433,25 @@ def _instance_from_match(
     Applies the proposal's ``check`` / ``derive`` hooks (when present)
     to each match's substitution — a check veto or a ``None`` derive
     skips that match, exactly as an e-graph firing would — so the
-    oracles see the same instance the rule would produce.
+    oracles see the same instance the rule would produce.  The hooks
+    are read off the materialized ``as_rule()`` so a declarative
+    ``cond``/``dspec`` gates the same way the procedural hooks do.
     """
+    rule = proposal.as_rule()
     for sub in matches:
         subst = _term_match(proposal.lhs, sub)
         if subst is None:
             continue
-        if proposal.check is not None:
+        if rule.check is not None:
             try:
-                if not proposal.check(subst):
+                if not rule.check(subst):
                     continue
             except Exception:
                 continue
         inst = dict(subst)
-        if proposal.derive is not None:
+        if rule.derive is not None:
             try:
-                extra = proposal.derive(subst)
+                extra = rule.derive(subst)
             except Exception:
                 continue
             if extra is None:

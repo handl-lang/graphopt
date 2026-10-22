@@ -1,0 +1,1007 @@
+{
+  "schema": 1,
+  "protocol": {
+    "episodes": 10,
+    "page": 48,
+    "budget": 48,
+    "seed": 0,
+    "player": "playbook",
+    "referee": "full",
+    "corpus": "zoo-real",
+    "scan": 0,
+    "dry": false,
+    "mint": "corpus-bind",
+    "compose": 0,
+    "fusion": true
+  },
+  "corpus": "zoo-real",
+  "episodes": 10,
+  "evaluated": 55,
+  "arena_verdicts": {
+    "false": 44,
+    "known": 11
+  },
+  "minted": 40,
+  "composed": 0,
+  "guarded": 0,
+  "admitted": 3,
+  "skipped": 0,
+  "leg_refusals": {
+    "oracle": 32,
+    "pay": 5,
+    "admitted": 3
+  },
+  "novelty": {
+    "known-art": 3
+  },
+  "finds": [],
+  "candidates": [
+    {
+      "name": "fold:addmm_linear",
+      "family": "fusion-schema",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 3.0,
+        "cand_cost": 3.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 2eq/0ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 47eq/0ne/20rerr (218 acc, 142 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 2eq/0ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 47eq/0ne/20rerr (218 acc, 142 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "fold:sdpa_fold_div_nomask",
+      "family": "fusion-schema",
+      "arena": {
+        "verdict": "known",
+        "relation": "duplicate",
+        "num_true": null,
+        "base_cost": 9.0,
+        "cand_cost": 9.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "pay: fires=5 changed=5 paid=5 verify_fail=1 cases=14 | count=0.435x exec=0.417x flops=0.493x launch=0.491x params=1.000x",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 1eq/0ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 3eq/0ne/0rerr (3 acc, 357 dec, 360 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": false,
+          "detail": "fires=5 changed=5 paid=5 verify_fail=1 cases=14 | count=0.435x exec=0.417x flops=0.493x launch=0.491x params=1.000x"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "fold:sdpa_fold_mul_nomask",
+      "family": "fusion-schema",
+      "arena": {
+        "verdict": "known",
+        "relation": "duplicate",
+        "num_true": null,
+        "base_cost": 6.0,
+        "cand_cost": 6.0
+      },
+      "admitted": true,
+      "skipped": "",
+      "reason": "cleared",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 1eq/0ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 3eq/0ne/0rerr (3 acc, 357 dec, 360 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": true,
+          "detail": "fires=5 changed=3 paid=3 verify_fail=0 cases=14 | count=0.250x exec=0.222x flops=0.375x launch=0.366x"
+        },
+        {
+          "name": "sweep",
+          "passed": true,
+          "detail": "synth: 16eq/0ne/0rerr (19 acc, 1981 dec, 2000 envs) | real: 1eq/0ne/0rerr (1 acc, 0 dec, 1 envs)"
+        },
+        {
+          "name": "cert",
+          "passed": true,
+          "detail": "lhs->rhs 1 steps (sdpa_fold_mul_nomask)"
+        }
+      ],
+      "novelty": "known-art"
+    },
+    {
+      "name": "slice_mul",
+      "family": "slice-naturality",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 3.0,
+        "cand_cost": 2.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 2eq/0ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 80eq/38ne/39rerr (294 acc, 0 dec, 294 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 2eq/0ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 80eq/38ne/39rerr (294 acc, 0 dec, 294 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "fold:glu_fold",
+      "family": "fusion-schema",
+      "arena": {
+        "verdict": "known",
+        "relation": "duplicate",
+        "num_true": null,
+        "base_cost": 3.0,
+        "cand_cost": 3.0
+      },
+      "admitted": true,
+      "skipped": "",
+      "reason": "cleared",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 1eq/0ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 9eq/0ne/0rerr (9 acc, 3 dec, 12 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": true,
+          "detail": "fires=5 changed=5 paid=5 verify_fail=0 cases=14 | count=0.560x exec=0.400x flops=0.410x launch=0.441x params=1.000x"
+        },
+        {
+          "name": "sweep",
+          "passed": true,
+          "detail": "synth: 27eq/0ne/0rerr (27 acc, 53 dec, 80 envs) | real: 1eq/0ne/0rerr (1 acc, 0 dec, 1 envs)"
+        },
+        {
+          "name": "cert",
+          "passed": true,
+          "detail": "lhs->rhs 1 steps (glu_fold)"
+        }
+      ],
+      "novelty": "known-art"
+    },
+    {
+      "name": "mixed:mul_chunk_l_w",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 1.0,
+        "cand_cost": 1.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/1rerr (1 acc, 0 dec, 1 envs) | synth: 173eq/27ne/20rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/1rerr (1 acc, 0 dec, 1 envs) | synth: 173eq/27ne/20rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "mixed:mul_chunk_l_id",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 1.0,
+        "cand_cost": 1.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/1rerr (1 acc, 0 dec, 1 envs) | synth: 98eq/102ne/20rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/1rerr (1 acc, 0 dec, 1 envs) | synth: 98eq/102ne/20rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "fold:group_norm",
+      "family": "fusion-schema",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": Infinity,
+        "cand_cost": Infinity
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "pay: fires=2 changed=2 paid=2 verify_fail=1 cases=11 | count=0.111x exec=0.100x flops=0.198x launch=0.198x params=1.000x",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 1eq/0ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 0eq/0ne/0rerr (0 acc, 360 dec, 360 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": false,
+          "detail": "fires=2 changed=2 paid=2 verify_fail=1 cases=11 | count=0.111x exec=0.100x flops=0.198x launch=0.198x params=1.000x"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "mixed:add_reshape_r_w",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 1.0,
+        "cand_cost": 1.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/2rerr (2 acc, 0 dec, 2 envs) | synth: 95eq/15ne/97rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/2rerr (2 acc, 0 dec, 2 envs) | synth: 95eq/15ne/97rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "mixed:add_reshape_r_id",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 1.0,
+        "cand_cost": 1.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 60eq/84ne/63rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 60eq/84ne/63rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "mixed:mul_reshape_reshape_wl",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 1.0,
+        "cand_cost": 1.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/1rerr (1 acc, 0 dec, 1 envs) | synth: 22eq/24ne/86rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/1rerr (1 acc, 0 dec, 1 envs) | synth: 22eq/24ne/86rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "mixed:mul_reshape_reshape_wr",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 1.0,
+        "cand_cost": 1.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/1rerr (1 acc, 0 dec, 1 envs) | synth: 24eq/24ne/84rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/1rerr (1 acc, 0 dec, 1 envs) | synth: 24eq/24ne/84rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "mixed:mul_reshape_reshape_id",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 1.0,
+        "cand_cost": 1.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/1rerr (1 acc, 0 dec, 1 envs) | synth: 19eq/56ne/57rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/1rerr (1 acc, 0 dec, 1 envs) | synth: 19eq/56ne/57rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "mixed:sub_reshape_l_w",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 1.0,
+        "cand_cost": 1.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/1rerr (1 acc, 0 dec, 1 envs) | synth: 95eq/15ne/97rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/1rerr (1 acc, 0 dec, 1 envs) | synth: 95eq/15ne/97rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "mixed:sub_reshape_l_id",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 1.0,
+        "cand_cost": 1.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/1rerr (1 acc, 0 dec, 1 envs) | synth: 60eq/84ne/63rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/1rerr (1 acc, 0 dec, 1 envs) | synth: 60eq/84ne/63rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "grammar:sub_to_add_dup",
+      "family": "algebraic-grammar",
+      "arena": {
+        "verdict": "known",
+        "relation": "duplicate",
+        "num_true": null,
+        "base_cost": 1.0,
+        "cand_cost": 1.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "pay: fires=8 changed=0 paid=0 verify_fail=0 cases=14",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 4eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 135eq/0ne/0rerr (225 acc, 0 dec, 225 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": false,
+          "detail": "fires=8 changed=0 paid=0 verify_fail=0 cases=14"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "fold:instance_norm",
+      "family": "fusion-schema",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": Infinity,
+        "cand_cost": Infinity
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "pay: fires=2 changed=2 paid=2 verify_fail=1 cases=11 | count=0.077x exec=0.077x flops=0.193x launch=0.193x params=1.000x",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 1eq/0ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 0eq/0ne/0rerr (0 acc, 360 dec, 360 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": false,
+          "detail": "fires=2 changed=2 paid=2 verify_fail=1 cases=11 | count=0.077x exec=0.077x flops=0.193x launch=0.193x params=1.000x"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "mixed:add_unsqueeze_l_id",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 2.0,
+        "cand_cost": 1.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/1ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 23eq/155ne/39rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/1ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 23eq/155ne/39rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "mixed:sub_unsqueeze_r_id",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 2.0,
+        "cand_cost": 1.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/3ne/0rerr (3 acc, 0 dec, 3 envs) | synth: 0eq/178ne/39rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/3ne/0rerr (3 acc, 0 dec, 3 envs) | synth: 0eq/178ne/39rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "mixed:mul_reshape_r_w",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 1.0,
+        "cand_cost": 1.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/3rerr (3 acc, 0 dec, 3 envs) | synth: 95eq/15ne/97rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/3rerr (3 acc, 0 dec, 3 envs) | synth: 95eq/15ne/97rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "mixed:mul_reshape_r_id",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 1.0,
+        "cand_cost": 1.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 1eq/2ne/0rerr (3 acc, 0 dec, 3 envs) | synth: 60eq/84ne/63rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 1eq/2ne/0rerr (3 acc, 0 dec, 3 envs) | synth: 60eq/84ne/63rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "mixed:add_unsqueeze_l_w",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 2.0,
+        "cand_cost": 2.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 1eq/0ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 100eq/78ne/39rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 1eq/0ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 100eq/78ne/39rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "mixed:sub_unsqueeze_r_w",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 2.0,
+        "cand_cost": 2.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/3ne/0rerr (3 acc, 0 dec, 3 envs) | synth: 0eq/178ne/39rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/3ne/0rerr (3 acc, 0 dec, 3 envs) | synth: 0eq/178ne/39rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "fold:rms_norm_fold_nogain",
+      "family": "fusion-schema",
+      "arena": {
+        "verdict": "known",
+        "relation": "duplicate",
+        "num_true": null,
+        "base_cost": 8.0,
+        "cand_cost": 8.0
+      },
+      "admitted": true,
+      "skipped": "",
+      "reason": "cleared",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 1eq/0ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 0eq/0ne/0rerr (0 acc, 360 dec, 360 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": true,
+          "detail": "fires=2 changed=2 paid=2 verify_fail=0 cases=11 | count=0.267x exec=0.351x flops=0.308x launch=0.308x params=1.000x"
+        },
+        {
+          "name": "sweep",
+          "passed": true,
+          "detail": "synth: 0eq/0ne/0rerr (0 acc, 2000 dec, 2000 envs) | real: 1eq/0ne/0rerr (1 acc, 0 dec, 1 envs)"
+        },
+        {
+          "name": "cert",
+          "passed": true,
+          "detail": "lhs->rhs 1 steps (rms_norm_fold_nogain)"
+        }
+      ],
+      "novelty": "known-art"
+    },
+    {
+      "name": "mixed:mul_reshape_l_w",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 1.0,
+        "cand_cost": 1.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/3rerr (3 acc, 0 dec, 3 envs) | synth: 95eq/15ne/97rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/3rerr (3 acc, 0 dec, 3 envs) | synth: 95eq/15ne/97rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "mixed:mul_reshape_l_id",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "known",
+        "relation": "duplicate",
+        "num_true": null,
+        "base_cost": 1.0,
+        "cand_cost": 1.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/1ne/2rerr (3 acc, 0 dec, 3 envs) | synth: 60eq/84ne/63rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/1ne/2rerr (3 acc, 0 dec, 3 envs) | synth: 60eq/84ne/63rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "mixed:pow_reshape_l_w",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 2.0,
+        "cand_cost": 2.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 1eq/0ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 155eq/14ne/73rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 1eq/0ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 155eq/14ne/73rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "mixed:pow_reshape_l_id",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 2.0,
+        "cand_cost": 2.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/1ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 73eq/126ne/43rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/1ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 73eq/126ne/43rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "fold:sdpa_fold_addmul",
+      "family": "fusion-schema",
+      "arena": {
+        "verdict": "known",
+        "relation": "duplicate",
+        "num_true": null,
+        "base_cost": 7.0,
+        "cand_cost": 7.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "pay: fires=6 changed=6 paid=6 verify_fail=4 cases=14 | count=0.311x exec=0.210x flops=0.326x launch=0.326x params=1.000x",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 2eq/0ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 2eq/0ne/0rerr (6 acc, 354 dec, 360 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": false,
+          "detail": "fires=6 changed=6 paid=6 verify_fail=4 cases=14 | count=0.311x exec=0.210x flops=0.326x launch=0.326x params=1.000x"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "mixed:sub_unsqueeze_unsqueeze_id",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 3.0,
+        "cand_cost": 1.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/142ne/51rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 0eq/142ne/51rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "mixed:add_unsqueeze_r_id",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 2.0,
+        "cand_cost": 1.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 2eq/0ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 23eq/155ne/39rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 2eq/0ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 23eq/155ne/39rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "mixed:mul_reshape_unsqueeze_wl",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 2.0,
+        "cand_cost": 1.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/1rerr (1 acc, 0 dec, 1 envs) | synth: 8eq/45ne/125rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/1rerr (1 acc, 0 dec, 1 envs) | synth: 8eq/45ne/125rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "mixed:mul_reshape_unsqueeze_id",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 2.0,
+        "cand_cost": 1.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/1rerr (1 acc, 0 dec, 1 envs) | synth: 6eq/96ne/76rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/1rerr (1 acc, 0 dec, 1 envs) | synth: 6eq/96ne/76rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "mixed:sub_unsqueeze_unsqueeze_wl",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 3.0,
+        "cand_cost": 2.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 63eq/79ne/51rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 63eq/79ne/51rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "mixed:sub_unsqueeze_unsqueeze_wr",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 3.0,
+        "cand_cost": 2.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 65eq/77ne/51rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 65eq/77ne/51rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "mixed:add_unsqueeze_r_w",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 2.0,
+        "cand_cost": 2.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 100eq/78ne/39rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/2ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 100eq/78ne/39rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "mixed:mul_reshape_unsqueeze_wr",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 2.0,
+        "cand_cost": 2.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/0ne/1rerr (1 acc, 0 dec, 1 envs) | synth: 33eq/69ne/76rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/0ne/1rerr (1 acc, 0 dec, 1 envs) | synth: 33eq/69ne/76rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "reshape_transpose",
+      "family": "layout",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 0.0,
+        "cand_cost": 0.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/4ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 61eq/100ne/0rerr (161 acc, 0 dec, 161 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/4ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 61eq/100ne/0rerr (161 acc, 0 dec, 161 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "mixed:mul_unsqueeze_r_id",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 2.0,
+        "cand_cost": 1.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 1eq/0ne/1rerr (2 acc, 0 dec, 2 envs) | synth: 23eq/155ne/39rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 1eq/0ne/1rerr (2 acc, 0 dec, 2 envs) | synth: 23eq/155ne/39rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "mixed:mul_unsqueeze_r_w",
+      "family": "census-mixed-view",
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 2.0,
+        "cand_cost": 2.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "oracle: real: 0eq/1ne/1rerr (2 acc, 0 dec, 2 envs) | synth: 100eq/78ne/39rerr (360 acc, 0 dec, 360 envs)",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": false,
+          "detail": "real: 0eq/1ne/1rerr (2 acc, 0 dec, 2 envs) | synth: 100eq/78ne/39rerr (360 acc, 0 dec, 360 envs)"
+        }
+      ],
+      "novelty": ""
+    }
+  ],
+  "wall_s": 18.2,
+  "env": {
+    "timestamp_utc": "2026-10-22T04:14:49+00:00",
+    "python": "3.13.9",
+    "torch": "2.14.0+cu130",
+    "torch_cuda": "13.0",
+    "device": "cpu",
+    "device_name": "12th Gen Intel(R) Core(TM) i5-12500H",
+    "cpu_count": 16,
+    "git_sha": "40463d3",
+    "git_dirty": true,
+    "argv": [
+      "-"
+    ]
+  },
+  "generated_utc": "2026-10-22T04:14:49+00:00",
+  "seed": 0
+}

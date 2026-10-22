@@ -355,6 +355,295 @@ def test_pattern_recognition_dedup_and_unrecognized():
     assert [p.name for p in props] == ["recognize:softmax"]
 
 
+def test_fusion_schemas_mint_on_silu_spelling():
+    """``mul(x, sigmoid(x))`` mints the silu fold — instance-bound."""
+    x = _v("x", 4, 4)
+    term = _p("mul", x, _p("sigmoid", x))
+    props = pl._fusion_schemas([term])
+    names = [p.name for p in props]
+    assert "fold:silu_fold" in names
+    p = next(p for p in props if p.name == "fold:silu_fold")
+    assert p.family == "fusion-schema"
+    assert "silu_fold" in p.sources
+    # The module-bound instance is the seed's own spelling.
+    assert p.instance is not None
+    lhs_i, rhs_i = p.instance
+    assert lhs_i is term
+    assert rhs_i.op == "silu"
+
+
+def test_fusion_schemas_mint_commuted_silu_spelling():
+    """``mul(sigmoid(x), x)`` mints ``fold:silu_comm`` — the swapped sibling."""
+    x = _v("x", 4, 4)
+    term = _p("mul", _p("sigmoid", x), x)
+    names = [p.name for p in pl._fusion_schemas([term])]
+    assert "fold:silu_comm" in names
+    assert "fold:silu_fold" not in names
+
+
+def test_fusion_schemas_skip_unbound_classes():
+    """No fold-class site -> no mint (the pool stays honest)."""
+    x, y = _v("x", 4, 4), _v("y", 4, 4)
+    term = _p("add", _p("mul", x, y), _p("mul", x, y))
+    assert pl._fusion_schemas([term]) == []
+
+
+def test_fusion_schemas_require_viable_instance():
+    """A lhs-shape match that fails the schema's cond does not mint.
+
+    The ``fold:instance_norm`` schema needs the eps leaf to be a
+    numeric Const; a site spelling it with a tensor eps matches the
+    pattern but declines the guard — the mint is skipped rather than
+    proposing a claim whose real region is dead by its own guard.
+    """
+    x, w, b = _v("x", 2, 8, 8, 8), _v("w", 8), _v("b", 8)
+    eps = _v("eps", 1)  # tensor eps — not a Const
+    d = _p(
+        "sub",
+        x,
+        _p(
+            "unsqueeze",
+            _p("unsqueeze", _p("mean", x, dim=(2, 3)), dim=-1),
+            dim=-1,
+        ),
+    )
+    v = _p(
+        "unsqueeze",
+        _p(
+            "unsqueeze", _p("mean", _p("mul", d, d), dim=(2, 3)), dim=-1
+        ),
+        dim=-1,
+    )
+    term = _p(
+        "add",
+        _p(
+            "mul",
+            _p("mul", d, _p("rsqrt", _p("add", v, eps))),
+            _p("reshape", w, shape=(1, 8, 1, 1)),
+        ),
+        _p("reshape", b, shape=(1, 8, 1, 1)),
+    )
+    assert "fold:instance_norm" not in [
+        p.name for p in pl._fusion_schemas([term])
+    ]
+
+
+def _inorm_term(x, w, b):
+    """The InstanceNormBroadcast spelling with a Const eps."""
+    d = _p(
+        "sub",
+        x,
+        _p(
+            "unsqueeze",
+            _p("unsqueeze", _p("mean", x, dim=(2, 3)), dim=-1),
+            dim=-1,
+        ),
+    )
+    v = _p(
+        "unsqueeze",
+        _p(
+            "unsqueeze", _p("mean", _p("mul", d, d), dim=(2, 3)), dim=-1
+        ),
+        dim=-1,
+    )
+    return _p(
+        "add",
+        _p(
+            "mul",
+            _p("mul", d, _p("rsqrt", _p("add", v, Const(1e-5)))),
+            _p("reshape", w, shape=(1, 8, 1, 1)),
+        ),
+        _p("reshape", b, shape=(1, 8, 1, 1)),
+    )
+
+
+def test_fusion_schemas_mint_instance_norm():
+    """The manual per-channel norm chain folds to ``instance_norm``."""
+    x, w, b = _v("x", 2, 8, 8, 8), _v("w", 8), _v("b", 8)
+    term = _inorm_term(x, w, b)
+    props = pl._fusion_schemas([term])
+    names = [p.name for p in props]
+    assert "fold:instance_norm" in names
+    p = next(p for p in props if p.name == "fold:instance_norm")
+    _lhs_i, rhs_i = p.instance
+    assert rhs_i.op == "instance_norm"
+    assert rhs_i.attrs.get("eps") == 1e-5
+
+
+def test_fusion_schemas_mint_group_norm():
+    """The reshape-to-(1,G,·) norm chain folds to ``group_norm``."""
+    x, w, b = _v("x", 2, 8, 8, 8), _v("w", 8), _v("b", 8)
+    ru = _p("reshape", x, shape=(1, 4, 128))
+    d = _p("sub", ru, _p("mean", ru, dim=(-1,), keepdim=True))
+    v = _p("mean", _p("mul", d, d), dim=(-1,), keepdim=True)
+    term = _p(
+        "add",
+        _p(
+            "mul",
+            _p(
+                "reshape",
+                _p("mul", d, _p("rsqrt", _p("add", v, Const(1e-5)))),
+                shape=(1, 8, 8, 8),
+            ),
+            _p("reshape", w, shape=(1, 8, 1, 1)),
+        ),
+        _p("reshape", b, shape=(1, 8, 1, 1)),
+    )
+    props = pl._fusion_schemas([term])
+    names = [p.name for p in props]
+    assert "fold:group_norm" in names
+    p = next(p for p in props if p.name == "fold:group_norm")
+    _lhs_i, rhs_i = p.instance
+    assert rhs_i.op == "group_norm"
+    # num_groups derives from the inner reshape's second dim.
+    assert rhs_i.attrs.get("num_groups") == 4
+
+
+def test_fusion_schemas_mint_addmm_linear():
+    """``mm(x, wᵀ) + b`` — the matmul-bias epilogue — folds to linear."""
+    x, w, b = _v("x", 4, 16), _v("w", 16, 16), _v("b", 16)
+    term = _p(
+        "add", _p("matmul", x, _p("transpose", w, dim0=0, dim1=1)), b
+    )
+    props = pl._fusion_schemas([term])
+    names = [p.name for p in props]
+    assert "fold:addmm_linear" in names
+    p = next(p for p in props if p.name == "fold:addmm_linear")
+    assert p.instance[1].op == "linear"
+
+
+def test_fusion_addmm_transpose_guard():
+    """A non-last-two transpose declines — not a linear spelling."""
+    x, w, b = _v("x", 4, 4, 4), _v("w", 4, 4, 4), _v("b", 4)
+    term = _p(
+        "add",
+        _p("matmul", x, _p("transpose", w, dim0=0, dim1=1)),
+        b,
+    )
+    # rank-3 B: transpose(0,1) is NOT the last-two swap.
+    assert "fold:addmm_linear" not in [
+        p.name for p in pl._fusion_schemas([term])
+    ]
+
+
+def test_fusion_proposal_as_rule_carries_cond():
+    """The minted rule keeps the schema's declarative side condition."""
+    props = pl._fusion_schemas(
+        [
+            _p(
+                "add",
+                _p(
+                    "matmul",
+                    _v("x", 4, 16),
+                    _p("transpose", _v("w", 16, 16), dim0=0, dim1=1),
+                ),
+                _v("b", 16),
+            )
+        ]
+    )
+    p = next(p for p in props if p.name == "fold:addmm_linear")
+    rule = p.as_rule()
+    assert rule.cond == ("axes-last2", "B", "T0", "T1")
+    # The compiled check gates a bad binding even though proposal.check
+    # stays None — the cond is folded in by Rewrite.
+    assert rule.check is not None
+
+
+def test_fusion_schemas_shipped_rule_hooks_transport():
+    """``fold:rms_norm_fold_nogain`` carries the shipped cond+dspec."""
+    x = _v("x", 4, 8)
+    reduce_ = _p(
+        "rsqrt",
+        _p(
+            "add",
+            _p("mean", _p("pow", x, Const(2)), dim=(-1,), keepdim=True),
+            Const(1e-6),
+        ),
+    )
+    term = _p("mul", x, reduce_)
+    props = pl._fusion_schemas([term])
+    names = [p.name for p in props]
+    assert "fold:rms_norm_fold_nogain" in names
+    p = next(p for p in props if p.name == "fold:rms_norm_fold_nogain")
+    assert p.cond is not None and p.dspec is not None
+    rhs_i = p.instance[1]
+    assert rhs_i.op == "rms_norm"
+    # dim derives the normalized shape — the reduce block of x.
+    assert rhs_i.attrs.get("dim") == (8,)
+
+
+def test_instance_from_match_honors_cond_only_proposal():
+    """``_instance_from_match`` gates on the folded cond, not just check.
+
+    A proposal carrying only ``cond`` (no procedural ``check``) must
+    still skip matches the cond vetoes — the hooks come off the
+    materialized rule.
+    """
+    x = _v("x", 4, 8)
+    bad_reduce = _p(
+        "rsqrt",
+        _p(
+            "add",
+            _p(
+                "mean",
+                _p("pow", x, Const(2)),
+                dim=(-1,),
+                keepdim=False,  # violates the rms cond's keepdim pin
+            ),
+            Const(1e-6),
+        ),
+    )
+    term = _p("mul", x, bad_reduce)
+    p = pl.Proposal(
+        name="t:rms",
+        lhs=_p(
+            "mul",
+            "u",
+            _p(
+                "rsqrt",
+                _p(
+                    "add",
+                    _p(
+                        "mean",
+                        _p("pow", "u", "P"),
+                        dim="MD",
+                        keepdim="MK",
+                    ),
+                    "EPS",
+                ),
+            ),
+        ),
+        rhs=_p("rms_norm", "u", dim="ND", eps="EP"),
+        family="t",
+        cond=(
+            "and",
+            ("attr-is", "MK", True),
+            ("const-num", "EPS"),
+            ("const-cmp", "P", "==", 2),
+        ),
+        dspec={
+            "ND": ("shape", ("tail-block", "u", "MD")),
+            "EP": ("float", ("const", "EPS")),
+        },
+    )
+    # lhs matches the site; the cond declines -> no instance.
+    assert _term_match(p.lhs, term) is not None
+    assert pl._instance_from_match(p, [term]) is None
+
+
+def test_propose_pool_gains_fusion_family():
+    """``propose`` surfaces the fusion arm under ``require_bind``."""
+    x = _v("x", 4, 4)
+    term = _p("mul", x, _p("sigmoid", x))
+    cts = [CorpusTerm("test", "silu", term)]
+    counts, _ = op_tuple_census(cts)
+    props = pl.propose(dict(counts), [term], "hand", require_bind=True)
+    fam = {p.family for p in props}
+    assert "fusion-schema" in fam
+    names = [p.name for p in props]
+    assert "fold:silu_fold" in names
+
+
 def test_check_sum_keepdim_guard():
     assert pl._check_sum_keepdim({"$attr:RK": True, "$attr:RD": (-1,)})
     assert pl._check_sum_keepdim({"$attr:RK": True, "$attr:RD": -1})
