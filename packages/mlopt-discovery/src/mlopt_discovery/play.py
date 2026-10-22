@@ -41,7 +41,11 @@ Shipped domains:
 * ``player`` — the two-tier meta-game (:mod:`player_arena`): the
   state is an object-level *player spec record* under rewrite, and
   ``evaluate`` runs a nested train+held-out-eval on the ``meta`` or
-  ``open`` board — the player itself is the term being rewritten.
+  ``open`` board — the player itself is the term being rewritten;
+* ``bilinear`` — the ``<2,2,2>`` matmul tensor's decomposition
+  space (:mod:`bilinear_game`): cut/pick/flip/drop over a
+  rank-decomposition, cost = multiplication count — the Strassen
+  rediscovery spike (Q2).
 
 Downstream domain repos add their own: importing the domain module
 registers its :class:`Domain` into ``DOMAINS`` (kernelopt's
@@ -76,6 +80,7 @@ from mlopt_core.ir import Const, Op, TensorType, Var
 from mlopt_core.laws import DEFAULT as DEFAULT_SEARCH_RULES
 from mlopt_core.search_env import SearchEnv
 
+from . import bilinear_game as bg
 from . import lawdata, training
 from . import meta_arena as ma
 from . import meta_player as mp
@@ -1557,6 +1562,12 @@ DOMAINS: dict[str, Domain] = {
         pa.PlayerArena,
         pa.PLAYER_SPEC,
         scripted=pa.GreedyEditor,
+    ),
+    "bilinear": spec_domain(
+        bg.gen_cases,
+        bg.BilinearBoard,
+        bg.BILINEAR_SPEC,
+        scripted=bg.strassen_line,
     ),
 }
 

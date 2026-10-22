@@ -183,6 +183,7 @@ class TestDomains:
             "gen",
             "open",
             "player",
+            "bilinear",
         }
 
     def test_torch_domain(self):
