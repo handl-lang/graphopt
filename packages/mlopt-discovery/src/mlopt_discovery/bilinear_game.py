@@ -132,11 +132,6 @@ T_SUPPORT: tuple[tuple[int, int, int], ...] = (
 )
 
 
-def _flat(x: int, y: int, z: int) -> int:
-    """Flatten the 4x4x4 tensor index."""
-    return x * 16 + y * 4 + z
-
-
 #: ``T`` as a flat 64-vector of exact coefficients.
 TENSOR: tuple = tuple(
     F(1) if (x, y, z) in T_SUPPORT else F(0)
@@ -800,7 +795,7 @@ class _GreedyRepair:
             cand = (FACTORS[iu], FACTORS[iv], FACTORS[iw])
             if cand not in self._cut:
                 return [Action("pick", {"k": k}) for k in (iu, iv, iw)]
-        return []
+        return []  # pragma: no cover — every candidate excluded
 
 
 def _playbook_make(

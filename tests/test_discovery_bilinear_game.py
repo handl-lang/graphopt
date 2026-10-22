@@ -229,3 +229,113 @@ class TestMoves:
         st, _ = b.step(Action("pick", {"k": 3}))
         st, _ = b.step(Action("abort", {}))
         assert not st.pending and st.rank == 8 and st.valid
+
+
+_ZEROS = tuple(F(0) for _ in range(64))
+
+
+def _state(**kw):
+    """Fabricate a BilinearState for direct player calls."""
+    base = {
+        "terms": (),
+        "residual": _ZEROS,
+        "pending": (),
+        "steps": 0,
+        "done": False,
+        "best_rank": 8,
+    }
+    base.update(kw)
+    return bg.BilinearState(**base)
+
+
+class TestEdges:
+    def test_done_board_rejects_and_empties(self):
+        b = bg.BilinearBoard()
+        b.done = True
+        assert bg.legal_actions(b.observe()) == ()
+        with pytest.raises(RuntimeError):
+            b.step(Action("stop", {}))
+
+    def test_stop_ends_episode(self):
+        b = bg.BilinearBoard()
+        st, rep = b.step(Action("stop", {}))
+        assert st.done and rep.terminal and rep.reward == 0.0
+
+    def test_illegal_rescale(self):
+        b = bg.BilinearBoard()
+        with pytest.raises(ValueError):
+            b.step(
+                Action("rescale", {"i": 0, "m": 0, "n": 0, "lam": F(2)})
+            )
+        with pytest.raises(ValueError):
+            b.step(
+                Action(
+                    "rescale", {"i": 0, "m": 0, "n": 1, "lam": F(0)}
+                )
+            )
+
+    def test_norm_property(self):
+        b = bg.BilinearBoard()
+        st, _ = b.step(Action("cut", {"i": 0, "tnnz": 1}))
+        assert st.norm == 1 and not st.valid
+
+    def test_flip_none_on_zero_factor(self):
+        # the zero-factor side is drop's business, not flip's
+        z = (bg._u(0, 0, 0, 0), bg._u(1, 0, 0, 0), bg._u(1, 0, 0, 0))
+        assert bg._flip(z, bg.NAIVE_TERMS[1], 0, 1, F(1)) is None
+
+    def test_scripted_stops_on_valid_empty(self):
+        go = bg.strassen_line()
+        assert go(_state()).op == "stop"
+
+    def test_greedy_stops_under_rank_7(self):
+        p = bg._GreedyRepair()
+        assert p(_state()).op == "stop"
+
+    def test_greedy_aborts_when_plan_drained(self):
+        p = bg._GreedyRepair()
+        st = _state(pending=(bg.FACTORS[0],), steps=1)
+        assert p(st).op == "abort"
+
+    def test_greedy_repairs_residual(self):
+        # residual = the whole tensor → the repair plan patches it
+        p = bg._GreedyRepair()
+        st = _state(residual=bg.TENSOR, steps=3)
+        a = p(st)
+        assert a.op == "pick" and len(p._plan) == 2
+
+    def test_greedy_resets_between_episodes(self):
+        p = bg._GreedyRepair()
+        p(_state(terms=bg.NAIVE_TERMS, steps=5))
+        # a fresh episode (steps back to 0) clears cut-exclusions
+        a = p(_state(terms=bg.NAIVE_TERMS, steps=0))
+        assert a.op == "cut" and p._cut == {bg.NAIVE_TERMS[0]}
+
+    def test_greedy_drops_zero_terms(self):
+        p = bg._GreedyRepair()
+        z = (bg._u(0, 0, 0, 0), bg._u(1, 0, 0, 0), bg._u(1, 0, 0, 0))
+        a = p(_state(terms=(*bg.NAIVE_TERMS, z), steps=2))
+        assert a.op == "drop" and a.params["i"] == 8
+
+    def test_greedy_pops_queued_plan(self):
+        # a populated repair plan is consumed before re-planning
+        p = bg._GreedyRepair()
+        st = _state(residual=bg.TENSOR, steps=3)
+        p(st)
+        a = p(st)
+        assert a.op == "pick" and len(p._plan) == 1
+
+    def test_featurizer_pick_row(self):
+        b = bg.BilinearBoard()
+        st, _ = b.step(Action("pick", {"k": 0}))
+        pick = next(a for a in bg.legal_actions(st) if a.op == "pick")
+        row = bg.featurize(st, pick, None)
+        assert row["a:stage"] > 0 and set(row) <= set(
+            bg.BILINEAR_FEATURES
+        )
+
+    def test_gen_cases_scramble_zero(self):
+        # scramble=0 deals the canonical board; seeds vary the rest
+        cases = bg.gen_cases(0, 3, scramble=0)
+        assert all(terms == bg.NAIVE_TERMS for _n, terms in cases)
+        bg.gen_cases(5, 12, scramble=6)  # exercise the rescale arm
