@@ -4,7 +4,7 @@ Episodes -> mint -> admit -> classify.  Open-game episodes mint candidate rewrit
 
 - date: 2026-10-21T07:12:21+00:00 · git: `3324191` · device cpu
 - protocol: `{"budget": 48, "corpus": "zoo", "dry": false, "episodes": 48, "page": 48, "player": "playbook", "referee": "full", "scan": 2048, "seed": 0}`
-- corpus: `zoo` — held-out zoo modules (mlopt_discovery.zoo)
+- corpus: `zoo` — held-out zoo modules (mlopt_discovery.zoo), the stream filtered to real-matching claims
 - episodes: 36 · evaluated: 1600 · minted: 248 · admitted: 1 · wall: 63.3s
 - arena verdicts: false=1497, known=69, true=34
 
