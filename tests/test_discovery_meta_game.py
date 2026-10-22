@@ -1247,3 +1247,29 @@ def test_prior_aware_matches_enumeration_on_fresh_store():
             break
         assert a.generator == b.generator
         arena.invest(a)
+
+
+def test_print_admissions_arms(capsys):
+    """The admission printer: no admissions block is silent; usable
+    objects are named and refused ones censused by failing stage."""
+    mg._print_admissions({}, "g")  # no admissions -> early return
+    assert capsys.readouterr().out == ""
+    mg._print_admissions(
+        {
+            "admissions": {
+                "g": {
+                    "tested": 3,
+                    "usable": 1,
+                    "objects": [
+                        {"name": "o1", "usable": True},
+                        {"name": "o2", "usable": False, "reason": "t:no"},
+                        {"name": "o3", "usable": False, "reason": "t:no"},
+                    ],
+                }
+            }
+        },
+        "g",
+    )
+    out = capsys.readouterr().out
+    assert "gauntlet: usable 1/3 tested — o1" in out
+    assert "refused at: t x2" in out

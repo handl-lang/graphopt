@@ -1036,7 +1036,7 @@ def _time_module(model: Any, x: Any, reps: int) -> float:
     dev = args[0].device
     for _ in range(10):
         model(*args)
-    if dev.type == "cuda":
+    if dev.type == "cuda":  # pragma: no cover — CUDA-only host path
         torch.cuda.synchronize()
     import time
 
@@ -1044,7 +1044,7 @@ def _time_module(model: Any, x: Any, reps: int) -> float:
     for _ in range(reps):
         t0 = time.perf_counter()
         model(*args)
-        if dev.type == "cuda":
+        if dev.type == "cuda":  # pragma: no cover — CUDA-only host path
             torch.cuda.synchronize()
         ts.append((time.perf_counter() - t0) * 1e6)
     ts.sort()

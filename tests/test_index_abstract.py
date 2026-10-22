@@ -270,3 +270,85 @@ def test_templates_agree_mod_implies_templates_agree_is_weaker():
         _fold_widths((4, 16, 16, 4), surviving=True)
     )
     assert mod.agree_mod and not mod.agree
+
+
+def _report_ns(**kw):
+    """An ``abstract_index``-shaped namespace for the report printer."""
+    from types import SimpleNamespace
+
+    base = dict(
+        n_blocks=3,
+        families={("8", "1"): [0, 1, 2]},
+        verdict="irregular",
+        step=cb.Id(1),
+        morph=cb.Id(1),
+        n_inputs=4,
+        roundtrip=False,
+        agree=False,
+        diff="block0/block1: op add vs mul",
+        agree_mod=False,
+        diff_mod="block0/block1: op add vs mul",
+        param_families={(("width", 8),): [0, 1, 2]},
+    )
+    base.update(kw)
+    return SimpleNamespace(**base)
+
+
+def test_abstract_index_report_regular_with_control(
+    capsys, monkeypatch
+):
+    """The regular verdict prints the collapse + the closure stats,
+    and the control line recomputes the fold's own saturation."""
+    rep = _report_ns(verdict="regular", roundtrip=True)
+    monkeypatch.setattr(ia, "abstract_index", lambda root: rep)
+    ia.abstract_index_report(object(), control=object())
+    out = capsys.readouterr().out
+    assert "verdict=REGULAR" in out
+    assert "control (regular fold)" in out
+    assert "best_cost=" in out
+
+
+@pytest.mark.parametrize(
+    "agree,agree_mod", [(True, False), (False, True)]
+)
+def test_abstract_index_report_irregular_branches(
+    capsys, monkeypatch, agree, agree_mod
+):
+    """The irregular verdict names its own cause — the agree /
+    agree-modulo messages and the param-value families."""
+    rep = _report_ns(agree=agree, agree_mod=agree_mod)
+    monkeypatch.setattr(ia, "abstract_index", lambda root: rep)
+    ia.abstract_index_report(object())
+    out = capsys.readouterr().out
+    assert "verdict=IRREGULAR" in out
+    if agree:
+        assert "not the recurrence state" in out
+    if agree_mod:
+        assert "the width is a parameter" in out
+    else:
+        assert "the difference is structural" in out
+    assert "param values blocks=" in out
+
+
+def test_abstract_index_report_control_irregular(
+    capsys, monkeypatch
+):
+    """An irregular control prints the plain verdict line — no
+    closure stats are recomputed for a fold that is not regular."""
+    rep = _report_ns(verdict="irregular")
+    monkeypatch.setattr(ia, "abstract_index", lambda root: rep)
+    ia.abstract_index_report(object(), control=object())
+    out = capsys.readouterr().out
+    assert "control (regular fold): blocks=3 verdict=irregular" in out
+
+
+def test_roundtrips_reports_apply_failure_as_false(monkeypatch):
+    """A fold whose ``unroll`` cannot consume the recovered wires
+    reports False — the exception is the mismatch verdict, not an
+    error."""
+
+    def _boom(morph, wires):
+        raise ValueError("arity mismatch")
+
+    monkeypatch.setattr(ia.cb, "_apply", _boom)
+    assert ia._roundtrips(cb.Id(2), [Const(1.0)], Const(0.0), [{}]) is False

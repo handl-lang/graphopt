@@ -16,6 +16,8 @@ exercised by the headline run documented in
 
 from __future__ import annotations
 
+import json
+
 import pytest
 from mlopt_discovery import meta_player as mp
 from mlopt_discovery import open_game as og
@@ -357,3 +359,247 @@ def lawdata_open_weights():
     from mlopt_discovery import lawdata
 
     return lawdata.OPEN_GAME_PLAYER_WEIGHTS
+
+
+class TestNestedScorersReal:
+    """The real nested scorers, at probe scale.
+
+    The headline runs (``docs/results_player_on_board.md``) measure
+    these at the leaderboard protocol; here they run at epochs=0 over
+    single cases — same code path, test budget.  What is pinned: the
+    scorer returns the ``{score, greedy, evals_ep}`` triple the board
+    consumes, and the open scorer's memoized verdicts land in the
+    shared memo.
+    """
+
+    def test_score_meta_smoke(self):
+        out = pa._score_meta(
+            pa._meta_parent(),
+            seed=0,
+            cfg={
+                "epochs": 1,
+                "train_cases": 1,
+                "eval_cases": 1,
+                "budget": 2,
+            },
+        )
+        assert set(out) == {"score", "greedy", "evals_ep"}
+        assert out["evals_ep"] > 0
+
+    def test_score_open_smoke(self):
+        memo: dict = {}
+        out = pa._score_open(
+            pa._open_parent(),
+            seed=0,
+            cfg={"epochs": 1, "pages": 2, "page": 4, "memo": memo},
+        )
+        assert set(out) == {"score", "greedy", "evals_ep"}
+        # the patched, memoized lp.evaluate recorded the verdicts the
+        # episode drew — parent and children share them verbatim
+        assert memo
+
+
+class TestOracleHelpers:
+    def test_mean_empty_and_rows(self):
+        assert pa._mean([], "x") == 0.0
+        assert pa._mean([{"x": 2.0}, {"x": 4.0}], "x") == 3.0
+
+    def test_cand_key_stable_identity(self):
+        from types import SimpleNamespace
+
+        cand = SimpleNamespace(label="a:1", lhs="L", rhs="R")
+        assert pa._cand_key(cand) == pa._cand_key(cand)
+        assert pa._cand_key(cand) == ("a:1", "'L'", "'R'")
+
+    def test_memoized_evaluate_measures_once(self, monkeypatch):
+        from types import SimpleNamespace
+
+        calls: list[int] = []
+        sentinel = object()
+
+        def fake_evaluate(cands, **kw):
+            calls.append(len(cands))
+            return [sentinel for _ in cands]
+
+        monkeypatch.setattr(pa.lp, "evaluate", fake_evaluate)
+        memo: dict = {}
+        evaluate = pa._memoized_evaluate(memo)
+        cand = SimpleNamespace(label="a", lhs="L", rhs="R")
+        assert evaluate([cand]) == [sentinel]
+        assert calls == [1] and pa._cand_key(cand) in memo
+        # the replay hits the memo — no second oracle draw
+        assert evaluate([cand]) == [sentinel]
+        assert calls == [1]
+
+    def test_forked_rng_restores_torch_rng(self):
+        import torch
+
+        torch.manual_seed(1234)
+        with pa._forked_rng():
+            torch.manual_seed(99)
+            torch.rand(4)
+        after = torch.rand(1)
+        torch.manual_seed(1234)
+        expected = torch.rand(1)
+        assert torch.equal(after, expected)
+
+
+class TestScoreMemoization:
+    def test_objective_score_measures_parent_once(self, monkeypatch):
+        """The non-override ``_score`` path: the parent is measured
+        once alongside the first probe, and repeat signatures replay
+        the memo without a second oracle call."""
+        calls: list = []
+
+        def fake_score(record, *, seed, cfg):
+            calls.append(tuple(record["parts"]))
+            return {"score": 1.0, "greedy": 0.0, "evals_ep": 0.0}
+
+        monkeypatch.setitem(
+            pa.OBJECTIVES,
+            "fake",
+            pa.Objective(
+                vocab=(),
+                requires=(),
+                parent=lambda: {"parts": [], "legal": "fake"},
+                tables={},
+                weight_names=(),
+                score=fake_score,
+            ),
+        )
+        board = pa.PlayerArena({"objective": "fake", "seed": 0})
+        out = board._score({"parts": ["x"], "legal": "fake"})
+        assert out["score"] == 1.0
+        # parent + record measured, parent score banked
+        assert calls == [(), ("x",)]
+        assert board.parent_score == 1.0
+        again = board._score({"parts": ["x"], "legal": "fake"})
+        assert again is out and calls == [(), ("x",)]
+
+
+class TestMoveRefusals:
+    def test_toggle_add_blocked_by_requires(self):
+        """``requires:<tag>`` — a part whose writer prerequisite is
+        missing cannot be re-added (meta's ``action`` needs ``state``)."""
+        board = pa.PlayerArena(
+            _toy_case(objective="meta", score_fn=_smaller_is_better)
+        )
+        # drop both readers first, then the writer — only then is the
+        # re-add of a reader legitimately refused
+        board.step(Action("toggle_feature", {"part": "meta:action"}))
+        board.step(Action("toggle_feature", {"part": "meta:macro"}))
+        board.step(Action("toggle_feature", {"part": "meta:state"}))
+        _, rep = board.step(
+            Action("toggle_feature", {"part": "meta:action"})
+        )
+        assert not rep.applied and rep.note == "requires:meta:action"
+
+    def test_toggle_unknown_part_declines(self):
+        board = pa.PlayerArena(_toy_case(score_fn=_smaller_is_better))
+        _, rep = board.step(
+            Action("toggle_feature", {"part": "not-a-part"})
+        )
+        assert not rep.applied and rep.note == "unknown-part:not-a-part"
+
+    def test_set_weights_unknown_table_declines(self):
+        board = pa.PlayerArena(_toy_case(score_fn=_smaller_is_better))
+        _, rep = board.step(
+            Action("set_weights", {"table": "not-a-table"})
+        )
+        assert not rep.applied and rep.note == "unknown-table:not-a-table"
+
+    def test_legal_actions_empty_when_done(self):
+        board = pa.PlayerArena(_toy_case(score_fn=_smaller_is_better))
+        st, _ = board.step(Action("extract", {}))
+        assert st.done and pa.legal_actions(st) == ()
+
+    def test_greedy_editor_stands_down_when_done(self):
+        board = pa.PlayerArena(_toy_case(score_fn=_smaller_is_better))
+        st, _ = board.step(Action("extract", {}))
+        assert pa.GreedyEditor()(st) is None
+
+    def test_greedy_editor_reverts_armed_drop_at_budget(self):
+        """``_resolve`` with the eval budget spent re-adds the armed
+        drop rather than probing it — the decline-and-restore path."""
+        board = pa.PlayerArena(
+            _toy_case(score_fn=_smaller_is_better, max_evals=0)
+        )
+        st = board.observe()
+        ed = pa.GreedyEditor()
+        ed._awaiting = "open:bias"
+        move = ed(st)
+        assert move == Action(
+            "toggle_feature", {"part": "open:bias", "add": True}
+        )
+        assert ed._awaiting is None
+
+
+class TestMainDriver:
+    def _episode(self, terminal: bool) -> "object":
+        from gamekit import engine as ge
+
+        reports = [
+            ge.Report(
+                action=Action("toggle_feature", {"part": "open:bias"}),
+                reward=-0.002,
+            ),
+            ge.Report(
+                action=Action("extract", {}),
+                reward=0.4,
+                terminal=terminal,
+                note="child:0.5000 vs parent:0.1000",
+                detail={
+                    "child": {"parts": ["open:bias"]},
+                    "child_score": 0.5,
+                    "parent_score": 0.1,
+                    "delta": 0.4,
+                    "probes": [],
+                },
+            ),
+        ]
+        return ge.Trajectory(reports=reports)
+
+    def test_report_table_renders_moves(self):
+        table = pa._report_table(self._episode(True).reports)
+        assert "toggle_feature" in table and "part=open:bias" in table
+        assert "extract" in table
+
+    def test_main_success_writes_json(self, monkeypatch, tmp_path, capsys):
+        monkeypatch.setattr(
+            pa.engine, "run_episode", lambda b, p, n: self._episode(True)
+        )
+        out = tmp_path / "child.json"
+        rc = pa.main(
+            [
+                "--objective",
+                "open",
+                "--pages",
+                "2",
+                "--epochs",
+                "1",
+                "--json",
+                str(out),
+            ]
+        )
+        assert rc == 0
+        blob = json.loads(out.read_text())
+        assert blob["objective"] == "open" and blob["delta"] == 0.4
+        assert "child:  score=0.5000" in capsys.readouterr().out
+
+    def test_main_success_without_json(self, monkeypatch, capsys):
+        monkeypatch.setattr(
+            pa.engine, "run_episode", lambda b, p, n: self._episode(True)
+        )
+        assert pa.main(["--objective", "open"]) == 0
+        assert "player arena" in capsys.readouterr().out
+
+    def test_main_reports_an_unfinished_episode(
+        self, monkeypatch, capsys
+    ):
+        monkeypatch.setattr(
+            pa.engine,
+            "run_episode",
+            lambda b, p, n: self._episode(False),
+        )
+        assert pa.main(["--objective", "meta"]) == 1
+        assert "without extract" in capsys.readouterr().out

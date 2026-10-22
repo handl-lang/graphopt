@@ -643,7 +643,7 @@ class PlayerArena:
             res = self._score(self.record)
             self._apply_probe(res)
         best = self.best
-        if best is None:  # _apply_probe sets it; defensive under -O
+        if best is None:  # pragma: no cover — defensive under -O
             raise RuntimeError("extract: no probe score recorded")
         delta = best["delta"]
         return {

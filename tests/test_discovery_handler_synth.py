@@ -645,3 +645,72 @@ class TestDelivery:
         )
         assert "minted" in capsys.readouterr().out
         assert hs.main([]) == 0  # print-only path, no --json
+
+
+class TestNormFamilyEdges:
+    """The ``norm`` family's walk columns and the spec introspection
+    helpers — the grammar edges the mint battery's ``families``
+    restrictions never iterated."""
+
+    def test_spec_dims_reads_and_dedupes_dim_attrs(self):
+        """``dim`` attrs inside a spec join the axis pool — ints
+        dedupe, sequences contribute each entry, bools are skipped."""
+        assert hs._spec_dims(("mean", "X", {"dim": True})) == []
+        assert hs._spec_dims(("mean", "X", {"dim": 1})) == [1]
+        assert hs._spec_dims(("mean", "X", {"dim": [1, -1]})) == [
+            1,
+            -1,
+        ]
+        assert hs._spec_dims(
+            ("mean", "X", {"dim": 1}, {"dim": 1, "keepdim": True})
+        ) == [1]
+        # a dict attr with no ``dim`` key contributes nothing
+        assert hs._spec_dims(("mean", "X", {"keepdim": True})) == []
+
+    def test_top_op_reads_the_outermost_op(self):
+        assert hs._top_op(("div", "X", "Y")) == "div"
+        assert hs._top_op("X") is None
+        assert hs._top_op(()) is None
+
+    def test_norm_family_gens_emit_norm_columns(self):
+        """``_family_gens`` admits ``norm`` on any non-empty meta set
+        and the column generator spells ``(op, lhs, red_op, rhs,
+        axis, keepdim)`` candidates."""
+        gens = hs._family_gens(
+            ("norm",), ["X"], (), 2, (-1,), True
+        )
+        assert len(gens) == 1
+        first = next(gens[0])
+        assert first[0] == "norm"
+        assert first[1] in hs.NORM_OPS
+        assert first[3] in hs.REDUCE_OPS
+        assert first[-2:] == (-1, True)
+
+    def test_norm_column_exhausts_operand_pairs(self):
+        """One column generator walks the full lhs x rhs operand
+        grid, then ends."""
+        subs = ["X", ("neg", "X")]
+        col = list(hs._norm_column("div", "sum", subs, -1, True))
+        assert len(col) == 4
+        assert col[0] == ("norm", "div", "X", "sum", "X", -1, True)
+        assert col[-1] == (
+            "norm",
+            "div",
+            ("neg", "X"),
+            "sum",
+            ("neg", "X"),
+            -1,
+            True,
+        )
+
+    def test_propose_bodies_reaches_the_norm_walk(self):
+        """On a norm-shaped spec the full generator reaches past the
+        canonical seeds into the ``norm`` walk columns."""
+        spec = ("div", "X", ("sum", "X", {"dim": -1}))
+        bodies = []
+        for b in hs.propose_bodies(spec, families=("norm",)):
+            bodies.append(b)
+            if len(bodies) >= 200:
+                break
+        tags = {b[0] for b in bodies}
+        assert "norm" in tags

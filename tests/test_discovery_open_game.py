@@ -13,7 +13,10 @@ registration in ``play.DOMAINS``.
 
 from __future__ import annotations
 
+import dataclasses
+
 import pytest
+from mlopt_core.ir import Const, Op, TensorType, Var
 from mlopt_discovery import open_game as og
 from gamekit.engine import run_episode, train_policy
 from mlopt_discovery.meta_arena import Action
@@ -176,3 +179,86 @@ class TestRegistry:
             "open", og.gen_cases(0, 1, page=6)[0], player, budget=8
         )
         assert len(traj.reports) >= 1
+
+
+class TestPoolRelativeParts:
+    """The pool-conditioned schema parts — registered in the parts
+    vocabulary but not in the shipped spec's parts list — featurized
+    directly against a real board state."""
+
+    def test_pending_broadcasts(self):
+        st = _board(page=6).observe()
+        assert og._pending_top_feat(st)["st:pending_top"] >= 0.0
+        assert og._pending_mean_feat(st)["st:pending_mean"] >= 0.0
+        assert og._useful_ct_feat(st)["st:useful_ct"] == 0.0
+        drained = dataclasses.replace(st, pending=())
+        assert og._pending_top_feat(drained)["st:pending_top"] == 0.0
+        assert og._pending_mean_feat(drained)["st:pending_mean"] == 0.0
+
+    def test_stop_feats_rows(self):
+        st = _board(page=6).observe()
+        row = og._stop_feats(st, Action("stop", {}), {})
+        assert set(row) == {
+            "x:stop:marginal",
+            "x:stop:evals_left",
+            "x:stop:finds",
+        }
+        # a non-stop, non-evaluate action declines — nothing to price
+        assert og._stop_feats(st, Action("noop", {}), {}) == {}
+        cand = st.pool[st.pending[0]]
+        row = og._stop_feats(
+            st, Action("evaluate", {"cand": cand}), {}
+        )
+        assert "x:marginal" in row
+        # …but a drained pending set has no quantile to place it in
+        drained = dataclasses.replace(st, pending=())
+        assert (
+            og._stop_feats(
+                drained, Action("evaluate", {"cand": cand}), {}
+            )
+            == {}
+        )
+
+    def test_next_value_feats(self):
+        st = _board(page=6).observe()
+        assert og._next_value_feats(st, Action("evaluate", {}), {}) == {}
+        row = og._next_value_feats(st, Action("stop", {}), {})
+        assert row["x:stop:remaining_frac"] == 1.0
+        assert row["x:stop:best_score"] > 0.0
+        drained = dataclasses.replace(st, pending=())
+        row = og._next_value_feats(drained, Action("stop", {}), {})
+        assert row == {
+            "x:stop:best_score": 0.0,
+            "x:stop:topk_score": 0.0,
+            "x:stop:rank1_pred": 0.0,
+            "x:stop:remaining_frac": 0.0,
+            "x:stop:decay": 0.0,
+        }
+
+    def test_next_val_feats_injected_and_unfed(self):
+        st = _board(page=6).observe()
+        stop = Action("stop", {})
+        assert og._next_val_feats(st, Action("evaluate", {}), {}) == {}
+        try:
+            og.set_value_preds(lambda _c: 2.0)
+            row = og._next_val_feats(st, stop, {})
+            assert row["x:stop:next_value"] == 2.0
+            assert row["x:stop:value_frac"] == 1.0
+        finally:
+            og.set_value_preds(None)
+        row = og._next_val_feats(st, stop, {})
+        assert row["x:stop:next_value"] == 0.0
+
+    def test_cand_feats_unknown_form_and_leaf_kinds(self):
+        """An unregistered form emits no ``a:form:*`` one-hot; the
+        walk counts Op nodes, collects Var metas and skips Const."""
+        lhs = Op.make(
+            "add", Var("x", TensorType((2, 4))), Const(1.0)
+        )
+        cand = og.lp.Candidate(
+            strategy="synth", label="zzz:9", lhs=lhs, rhs=Const(0.0)
+        )
+        feats = og._cand_feats(cand)
+        assert feats["a:metas"] == 1.0
+        assert feats["a:ops"] == 1.0
+        assert not any(k.startswith("a:form:") for k in feats)

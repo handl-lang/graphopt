@@ -429,3 +429,30 @@ def test_main_smoke(tmp_path, capsys, monkeypatch):
     assert "learned-player comparison" in text
     assert "stage failures" in text
     assert "table" in json.loads(out.read_text())
+
+
+def test_main_quiet_arms(capsys, monkeypatch):
+    """The no-train, no-failures, no-json path — the optional blocks
+    (curve, per-player stage lines, json write) all stay off."""
+    monkeypatch.setattr(ap, "train_player", lambda *a, **k: [])
+    monkeypatch.setattr(
+        ap,
+        "evaluate",
+        lambda *a, **k: {
+            "fixed": [
+                {
+                    "usable": 1.0,
+                    "holdout_fires": 0.0,
+                    "holdout_paid": 0.0,
+                    "reward": 0.0,
+                    "steps": 1,
+                    "failed": {},
+                }
+            ]
+        },
+    )
+    rc = ap.main(["--train-episodes", "0", "--episodes", "1"])
+    assert rc == 0
+    text = capsys.readouterr().out
+    assert "train curve" not in text
+    assert "fixed" in text  # the _fmt_eval row still prints

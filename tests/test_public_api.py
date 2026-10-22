@@ -522,7 +522,7 @@ class TestGamekitCompatShims:
 
     def test_engine_shim(self):
         import gamekit.engine
-        import gamekit.engine as shim
+        import mlopt_discovery.engine as shim
 
         assert shim.Board is gamekit.engine.Board
         assert shim.run_episode is gamekit.engine.run_episode
@@ -532,37 +532,37 @@ class TestGamekitCompatShims:
 
     def test_scoring_shim(self):
         import gamekit.scoring
-        import gamekit.scoring as shim
+        import mlopt_discovery.scoring as shim
 
         assert shim.score is gamekit.scoring.score
         assert shim.ScoringSpec is gamekit.scoring.ScoringSpec
 
     def test_advantage_shim(self):
         import gamekit.advantage
-        import gamekit.advantage as shim
+        import mlopt_discovery.advantage as shim
 
         assert shim.AdvantagePlayer is gamekit.advantage.AdvantagePlayer
 
     def test_players_shim(self):
         import gamekit.players
-        import gamekit.players as shim
+        import mlopt_discovery.players as shim
 
         assert shim.LinearPolicy is gamekit.players.LinearPolicy
         assert shim._dot is gamekit.players._dot
 
     def test_players_submodules_are_the_same_module_object(self):
-        """``gamekit.players.{registry,_base}`` alias — one
+        """``mlopt_discovery.players.{registry,_base}`` alias — one
         registry ``_INDEX``, never a forked copy."""
         import gamekit.players._base
         import gamekit.players.registry
-        import gamekit.players._base as pbase
-        import gamekit.players.registry as preg
+        import mlopt_discovery.players._base as pbase
+        import mlopt_discovery.players.registry as preg
 
         assert preg is gamekit.players.registry
         assert pbase is gamekit.players._base
 
     def test_lawdata_game_alias(self):
-        """``gamekit.gamedata`` aliases ``gamekit.gamedata``."""
+        """``mlopt_discovery.lawdata.game`` aliases ``gamekit.gamedata``."""
         import gamekit.gamedata
         import mlopt_discovery.lawdata as data
         import gamekit.gamedata as game

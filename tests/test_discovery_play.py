@@ -855,3 +855,36 @@ class TestDecayedMint:
             ("mul", "S", "D"),
             "V",
         )
+
+
+class TestExtrasArms:
+    """The ``--zoo``/``--scan-probe``/``--decay-probe`` report arms —
+    printing drivers over the probe generators."""
+
+    def test_zoo_rows_prints_each_probe_row(
+        self, capsys, monkeypatch
+    ):
+        from types import SimpleNamespace
+
+        monkeypatch.setattr(
+            play,
+            "zoo_probe",
+            lambda d, t, b: iter([{"case": "c0", "ok": True}]),
+        )
+        play._zoo_rows(SimpleNamespace(zoo_d=16, zoo_t=8, zoo_b=2))
+        assert "zoo[c0]:" in capsys.readouterr().out
+
+    def test_kernel_probes_flag_arms(self, capsys, monkeypatch):
+        from types import SimpleNamespace
+
+        monkeypatch.setattr(
+            play, "scan_probe", lambda: iter([{"shape": (4, 4)}])
+        )
+        monkeypatch.setattr(
+            play, "decay_probe", lambda: iter([{"shape": (2, 2)}])
+        )
+        play._kernel_probes(
+            SimpleNamespace(scan_probe=True, decay_probe=True)
+        )
+        out = capsys.readouterr().out
+        assert "scan[(4, 4)]:" in out and "decay[(2, 2)]:" in out

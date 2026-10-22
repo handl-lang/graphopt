@@ -481,3 +481,67 @@ class TestJointProbe:
         }
         for name, gv in g.items():
             torch.testing.assert_close(gv, refs[name], atol=1e-5, rtol=1e-4)
+
+
+class TestNodeEnvEdges:
+    """``_node_env``'s shape-splice edges — unshapeable args, the
+    permute/expand splices, and the custom-table decline paths."""
+
+    def test_unshapeable_args_skip_the_splices(self):
+        mystery = _p("mystery", Const(1.0))  # no inferable shape
+        env = training._node_env(
+            _p("add", mystery, _v("x", 2, 4)), Const(1.0), {}
+        )
+        assert "$shape:0" not in env and "$shape:1" in env
+        assert "$rcount" not in env
+        env2 = training._node_env(mystery, Const(1.0), {})
+        assert "$batchsum" not in env2 and "$expdims" not in env2
+
+    def test_permute_and_expand_splices(self):
+        env = training._node_env(
+            _p("permute", _v("x", 2, 4), dims=(1, 0)), Const(1.0), {}
+        )
+        assert env["$invdims"] == (1, 0)
+        env = training._node_env(
+            _p("expand", _v("x", 4, 1), shape=(4, 8)), Const(1.0), {}
+        )
+        assert env["$expdims"] == (1,)
+        # a scalar (non-sequence) target spells no grown dims
+        assert (
+            training._expanded_dims(_p("expand", _v("x", 4), dim=4), (4,))
+            == ()
+        )
+
+    def test_custom_table_drops_a_childs_grad(self):
+        """A VJP row with a ``None`` spec declines that arg — the
+        dropped subtree gets no cotangent and its leaf is skipped."""
+        x, y = _v("x", 2, 4), _v("y", 2, 4)
+        term = _p("add", x, _p("sigmoid", y))
+        grads = training.backward(term, table={"add": ("$g", None)})
+        assert "x" in grads and "y" not in grads
+
+    def test_grad_program_names_subset(self):
+        term = _p("mul", _v("x", 2, 4), _v("y", 2, 4))
+        all_g = training.grad_program(term)
+        assert set(all_g) == {"x", "y"}
+        sub = training.grad_program(term, names=["x", "missing"])
+        assert set(sub) == {"x"}
+
+
+class TestProbeDeclinedRows:
+    def test_phantom_leaf_declines(self, monkeypatch):
+        """A demo forward whose named leaf is not in the term
+        produces the ``declined`` row — the probe's honest skip."""
+        x = _v("x", 2, 4)
+        monkeypatch.setattr(
+            training,
+            "_demo_forwards",
+            lambda: [("phantom", _p("relu", x), "w")],
+        )
+        rows = training.training_probe()
+        assert rows == [
+            {"name": "phantom", "declined": "no grad for leaf"}
+        ]
+        assert "declined: no grad for leaf" in training.training_table(
+            rows
+        )
