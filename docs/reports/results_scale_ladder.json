@@ -1,0 +1,1324 @@
+{
+  "schema": 1,
+  "protocol": {
+    "d": 16,
+    "b": 2,
+    "ts": [
+      512,
+      1024,
+      2048,
+      4096
+    ],
+    "seed": 0,
+    "per_case_s": 480.0,
+    "min_avail_gb": 2.5,
+    "max_enodes": 100000,
+    "max_memory_mb": 6144.0,
+    "max_iterations": 100,
+    "rules": "default_rules()",
+    "n_rules": 273
+  },
+  "rows": [
+    {
+      "workload": "GatedLinearAttention",
+      "t": 512,
+      "status": "ok",
+      "note": "",
+      "term_nodes": 5648,
+      "claim": "decay_state_lift",
+      "stages": {
+        "build": {
+          "s": 0.001,
+          "hwm_mb": 511.2,
+          "status": "ok"
+        },
+        "export": {
+          "s": 14.756,
+          "hwm_mb": 793.9,
+          "status": "ok"
+        },
+        "search": {
+          "s": 134.153,
+          "hwm_mb": 992.7,
+          "status": "ok"
+        },
+        "extract": {
+          "s": 0.903,
+          "hwm_mb": 1207.1,
+          "status": "ok"
+        },
+        "lower": {
+          "s": 0.125,
+          "hwm_mb": 1210.6,
+          "status": "ok"
+        },
+        "verify": {
+          "s": 0.128,
+          "hwm_mb": 1222.9,
+          "status": "ok"
+        },
+        "gauntlet:oracle": {
+          "s": 0.039,
+          "hwm_mb": 1227.0,
+          "status": "ok"
+        },
+        "gauntlet:pay": {
+          "s": 42.281,
+          "hwm_mb": 1233.9,
+          "status": "ok"
+        },
+        "gauntlet:sweep": {
+          "s": 0.12,
+          "hwm_mb": 1233.9,
+          "status": "ok"
+        },
+        "gauntlet:cert": {
+          "s": 0.002,
+          "hwm_mb": 1233.9,
+          "status": "refused"
+        }
+      },
+      "stats": {
+        "iterations": 2,
+        "n_enodes": 7696,
+        "n_classes": 6672,
+        "n_proof_edges": 1024,
+        "stop": "fixed_point",
+        "engine": "python",
+        "budget_suspended": [],
+        "rule_fires": {
+          "decay_state_lift": 512,
+          "decay_state_lift_post": 512
+        },
+        "cost_before": 99709504.22471938,
+        "cost_after": 95186644.3595488,
+        "verify_passed": true,
+        "verify_max_rel": 0.0
+      },
+      "legs": {
+        "oracle": {
+          "passed": true,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 88eq/0ne/0rerr (107 acc, 253 dec, 360 envs)"
+        },
+        "pay": {
+          "passed": true,
+          "detail": "fires=516 changed=5 paid=5 verify_fail=0 cases=5 | count=0.582x exec=0.791x flops=1.000x launch=0.920x params=1.000x"
+        },
+        "sweep": {
+          "passed": true,
+          "detail": "synth: 405eq/0ne/0rerr (676 acc, 1324 dec, 2000 envs) | real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+        },
+        "cert": {
+          "passed": false,
+          "detail": "not derivable (fixed_point)"
+        }
+      }
+    },
+    {
+      "workload": "GatedLinearAttention",
+      "t": 1024,
+      "status": "timeout",
+      "note": "wall clock exceeded the per-rung alarm",
+      "term_nodes": 11280,
+      "claim": "",
+      "stages": {
+        "build": {
+          "s": 0.001,
+          "hwm_mb": 1233.9,
+          "status": "ok"
+        },
+        "export": {
+          "s": 25.722,
+          "hwm_mb": 1275.4,
+          "status": "ok"
+        },
+        "search": {
+          "s": 454.494,
+          "hwm_mb": 1301.7,
+          "status": "timeout",
+          "note": "wall clock exceeded the per-rung alarm"
+        }
+      },
+      "stats": {},
+      "legs": {}
+    },
+    {
+      "workload": "MambaSelectiveScan",
+      "t": 512,
+      "status": "ok",
+      "note": "",
+      "term_nodes": 5139,
+      "claim": "decay_state_lift",
+      "stages": {
+        "build": {
+          "s": 0.001,
+          "hwm_mb": 1301.7,
+          "status": "ok"
+        },
+        "export": {
+          "s": 9.574,
+          "hwm_mb": 1301.7,
+          "status": "ok"
+        },
+        "search": {
+          "s": 124.88,
+          "hwm_mb": 1301.7,
+          "status": "ok"
+        },
+        "extract": {
+          "s": 0.529,
+          "hwm_mb": 1301.7,
+          "status": "ok"
+        },
+        "lower": {
+          "s": 0.143,
+          "hwm_mb": 1301.7,
+          "status": "ok"
+        },
+        "verify": {
+          "s": 0.481,
+          "hwm_mb": 1301.7,
+          "status": "ok"
+        },
+        "gauntlet:oracle": {
+          "s": 0.021,
+          "hwm_mb": 1301.7,
+          "status": "ok"
+        },
+        "gauntlet:pay": {
+          "s": 41.055,
+          "hwm_mb": 1301.7,
+          "status": "ok"
+        },
+        "gauntlet:sweep": {
+          "s": 0.66,
+          "hwm_mb": 1301.7,
+          "status": "ok"
+        },
+        "gauntlet:cert": {
+          "s": 0.003,
+          "hwm_mb": 1301.7,
+          "status": "refused"
+        }
+      },
+      "stats": {
+        "iterations": 2,
+        "n_enodes": 7187,
+        "n_classes": 6163,
+        "n_proof_edges": 1024,
+        "stop": "fixed_point",
+        "engine": "python",
+        "budget_suspended": [],
+        "rule_fires": {
+          "decay_state_lift": 512,
+          "decay_state_lift_post": 512
+        },
+        "cost_before": 91366119.14610171,
+        "cost_after": 86894604.17976935,
+        "verify_passed": true,
+        "verify_max_rel": 0.0
+      },
+      "legs": {
+        "oracle": {
+          "passed": true,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 88eq/0ne/0rerr (107 acc, 253 dec, 360 envs)"
+        },
+        "pay": {
+          "passed": true,
+          "detail": "fires=516 changed=5 paid=5 verify_fail=0 cases=5 | count=0.580x exec=0.790x flops=1.000x launch=0.920x params=1.000x"
+        },
+        "sweep": {
+          "passed": true,
+          "detail": "synth: 405eq/0ne/0rerr (676 acc, 1324 dec, 2000 envs) | real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+        },
+        "cert": {
+          "passed": false,
+          "detail": "not derivable (fixed_point)"
+        }
+      }
+    },
+    {
+      "workload": "MambaSelectiveScan",
+      "t": 1024,
+      "status": "timeout",
+      "note": "wall clock exceeded the per-rung alarm",
+      "term_nodes": 10259,
+      "claim": "",
+      "stages": {
+        "build": {
+          "s": 0.002,
+          "hwm_mb": 1301.7,
+          "status": "ok"
+        },
+        "export": {
+          "s": 34.409,
+          "hwm_mb": 1317.1,
+          "status": "ok"
+        },
+        "search": {
+          "s": 445.578,
+          "hwm_mb": 1333.1,
+          "status": "timeout",
+          "note": "wall clock exceeded the per-rung alarm"
+        }
+      },
+      "stats": {},
+      "legs": {}
+    },
+    {
+      "workload": "ChunkedRetention",
+      "t": 512,
+      "status": "ok",
+      "note": "",
+      "term_nodes": 27,
+      "claim": "om_decayed_lift",
+      "stages": {
+        "build": {
+          "s": 0.001,
+          "hwm_mb": 1333.1,
+          "status": "ok"
+        },
+        "export": {
+          "s": 0.053,
+          "hwm_mb": 1333.1,
+          "status": "ok"
+        },
+        "search": {
+          "s": 0.056,
+          "hwm_mb": 1333.1,
+          "status": "ok"
+        },
+        "extract": {
+          "s": 0.0,
+          "hwm_mb": 1333.1,
+          "status": "ok"
+        },
+        "lower": {
+          "s": 0.027,
+          "hwm_mb": 1333.1,
+          "status": "ok"
+        },
+        "verify": {
+          "s": 0.094,
+          "hwm_mb": 1333.1,
+          "status": "ok"
+        },
+        "gauntlet:oracle": {
+          "s": 0.124,
+          "hwm_mb": 1333.1,
+          "status": "ok"
+        },
+        "gauntlet:pay": {
+          "s": 0.179,
+          "hwm_mb": 1333.1,
+          "status": "ok"
+        },
+        "gauntlet:sweep": {
+          "s": 0.47,
+          "hwm_mb": 1333.1,
+          "status": "ok"
+        },
+        "gauntlet:cert": {
+          "s": 0.002,
+          "hwm_mb": 1333.1,
+          "status": "refused"
+        }
+      },
+      "stats": {
+        "iterations": 2,
+        "n_enodes": 35,
+        "n_classes": 29,
+        "n_proof_edges": 6,
+        "stop": "fixed_point",
+        "engine": "python",
+        "budget_suspended": [],
+        "rule_fires": {
+          "sub_to_add": 1,
+          "mul_div_swap": 1,
+          "matmul_div_distribute": 1,
+          "om_decayed_lift": 2,
+          "decay_lift": 1
+        },
+        "cost_before": 291063.1011235955,
+        "cost_after": 180881.79775280895,
+        "verify_passed": true,
+        "verify_max_rel": 3.000584081436659e-16
+      },
+      "legs": {
+        "oracle": {
+          "passed": true,
+          "detail": "real: 1eq/0ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 52eq/0ne/0rerr (52 acc, 308 dec, 360 envs)"
+        },
+        "pay": {
+          "passed": true,
+          "detail": "fires=5 changed=5 paid=5 verify_fail=0 cases=5 | count=0.571x exec=0.556x flops=1.000x launch=0.840x params=1.000x"
+        },
+        "sweep": {
+          "passed": true,
+          "detail": "synth: 246eq/0ne/0rerr (246 acc, 1754 dec, 2000 envs) | real: 1eq/0ne/0rerr (1 acc, 0 dec, 1 envs)"
+        },
+        "cert": {
+          "passed": false,
+          "detail": "not derivable (fixed_point)"
+        }
+      }
+    },
+    {
+      "workload": "ChunkedRetention",
+      "t": 1024,
+      "status": "ok",
+      "note": "",
+      "term_nodes": 27,
+      "claim": "om_decayed_lift",
+      "stages": {
+        "build": {
+          "s": 0.001,
+          "hwm_mb": 1333.1,
+          "status": "ok"
+        },
+        "export": {
+          "s": 0.049,
+          "hwm_mb": 1333.1,
+          "status": "ok"
+        },
+        "search": {
+          "s": 0.053,
+          "hwm_mb": 1333.1,
+          "status": "ok"
+        },
+        "extract": {
+          "s": 0.0,
+          "hwm_mb": 1333.1,
+          "status": "ok"
+        },
+        "lower": {
+          "s": 0.01,
+          "hwm_mb": 1333.1,
+          "status": "ok"
+        },
+        "verify": {
+          "s": 0.037,
+          "hwm_mb": 1345.5,
+          "status": "ok"
+        },
+        "gauntlet:oracle": {
+          "s": 0.061,
+          "hwm_mb": 1345.5,
+          "status": "ok"
+        },
+        "gauntlet:pay": {
+          "s": 0.099,
+          "hwm_mb": 1345.5,
+          "status": "ok"
+        },
+        "gauntlet:sweep": {
+          "s": 0.096,
+          "hwm_mb": 1345.5,
+          "status": "ok"
+        },
+        "gauntlet:cert": {
+          "s": 0.002,
+          "hwm_mb": 1345.5,
+          "status": "refused"
+        }
+      },
+      "stats": {
+        "iterations": 2,
+        "n_enodes": 35,
+        "n_classes": 29,
+        "n_proof_edges": 6,
+        "stop": "fixed_point",
+        "engine": "python",
+        "budget_suspended": [],
+        "rule_fires": {
+          "sub_to_add": 1,
+          "mul_div_swap": 1,
+          "matmul_div_distribute": 1,
+          "om_decayed_lift": 2,
+          "decay_lift": 1
+        },
+        "cost_before": 757915.0561797754,
+        "cost_after": 366444.40449438186,
+        "verify_passed": true,
+        "verify_max_rel": 0.0
+      },
+      "legs": {
+        "oracle": {
+          "passed": true,
+          "detail": "real: 1eq/0ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 52eq/0ne/0rerr (52 acc, 308 dec, 360 envs)"
+        },
+        "pay": {
+          "passed": true,
+          "detail": "fires=5 changed=5 paid=5 verify_fail=0 cases=5 | count=0.571x exec=0.546x flops=1.000x launch=0.840x params=1.000x"
+        },
+        "sweep": {
+          "passed": true,
+          "detail": "synth: 246eq/0ne/0rerr (246 acc, 1754 dec, 2000 envs) | real: 1eq/0ne/0rerr (1 acc, 0 dec, 1 envs)"
+        },
+        "cert": {
+          "passed": false,
+          "detail": "not derivable (fixed_point)"
+        }
+      }
+    },
+    {
+      "workload": "ChunkedRetention",
+      "t": 2048,
+      "status": "ok",
+      "note": "",
+      "term_nodes": 26,
+      "claim": "om_decayed_lift",
+      "stages": {
+        "build": {
+          "s": 0.002,
+          "hwm_mb": 1345.5,
+          "status": "ok"
+        },
+        "export": {
+          "s": 0.056,
+          "hwm_mb": 1345.5,
+          "status": "ok"
+        },
+        "search": {
+          "s": 0.054,
+          "hwm_mb": 1345.5,
+          "status": "ok"
+        },
+        "extract": {
+          "s": 0.0,
+          "hwm_mb": 1345.5,
+          "status": "ok"
+        },
+        "lower": {
+          "s": 0.063,
+          "hwm_mb": 1345.5,
+          "status": "ok"
+        },
+        "verify": {
+          "s": 0.253,
+          "hwm_mb": 1634.7,
+          "status": "ok"
+        },
+        "gauntlet:oracle": {
+          "s": 0.417,
+          "hwm_mb": 1634.7,
+          "status": "ok"
+        },
+        "gauntlet:pay": {
+          "s": 0.371,
+          "hwm_mb": 1794.7,
+          "status": "ok"
+        },
+        "gauntlet:sweep": {
+          "s": 0.094,
+          "hwm_mb": 1794.7,
+          "status": "ok"
+        },
+        "gauntlet:cert": {
+          "s": 0.002,
+          "hwm_mb": 1794.7,
+          "status": "refused"
+        }
+      },
+      "stats": {
+        "iterations": 2,
+        "n_enodes": 35,
+        "n_classes": 29,
+        "n_proof_edges": 6,
+        "stop": "fixed_point",
+        "engine": "python",
+        "budget_suspended": [],
+        "rule_fires": {
+          "sub_to_add": 1,
+          "mul_div_swap": 1,
+          "matmul_div_distribute": 1,
+          "om_decayed_lift": 2,
+          "decay_lift": 1
+        },
+        "cost_before": 2610595.6853932585,
+        "cost_after": 1091022.2022471912,
+        "verify_passed": true,
+        "verify_max_rel": 1.5718496550934938e-16
+      },
+      "legs": {
+        "oracle": {
+          "passed": true,
+          "detail": "real: 1eq/0ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 52eq/0ne/0rerr (52 acc, 308 dec, 360 envs)"
+        },
+        "pay": {
+          "passed": true,
+          "detail": "fires=5 changed=5 paid=5 verify_fail=0 cases=5 | count=0.571x exec=0.541x flops=1.000x launch=0.840x params=1.000x"
+        },
+        "sweep": {
+          "passed": true,
+          "detail": "synth: 246eq/0ne/0rerr (246 acc, 1754 dec, 2000 envs) | real: 1eq/0ne/0rerr (1 acc, 0 dec, 1 envs)"
+        },
+        "cert": {
+          "passed": false,
+          "detail": "not derivable (fixed_point)"
+        }
+      }
+    },
+    {
+      "workload": "ChunkedRetention",
+      "t": 4096,
+      "status": "ok",
+      "note": "",
+      "term_nodes": 26,
+      "claim": "om_decayed_lift",
+      "stages": {
+        "build": {
+          "s": 0.003,
+          "hwm_mb": 1794.7,
+          "status": "ok"
+        },
+        "export": {
+          "s": 0.055,
+          "hwm_mb": 1794.7,
+          "status": "ok"
+        },
+        "search": {
+          "s": 0.055,
+          "hwm_mb": 1794.7,
+          "status": "ok"
+        },
+        "extract": {
+          "s": 0.0,
+          "hwm_mb": 1794.7,
+          "status": "ok"
+        },
+        "lower": {
+          "s": 0.251,
+          "hwm_mb": 1858.5,
+          "status": "ok"
+        },
+        "verify": {
+          "s": 0.728,
+          "hwm_mb": 3271.0,
+          "status": "ok"
+        },
+        "gauntlet:oracle": {
+          "s": 1.014,
+          "hwm_mb": 3271.0,
+          "status": "ok"
+        },
+        "gauntlet:pay": {
+          "s": 1.197,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "gauntlet:sweep": {
+          "s": 0.1,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "gauntlet:cert": {
+          "s": 0.002,
+          "hwm_mb": 3911.2,
+          "status": "refused"
+        }
+      },
+      "stats": {
+        "iterations": 2,
+        "n_enodes": 35,
+        "n_classes": 29,
+        "n_proof_edges": 6,
+        "stop": "fixed_point",
+        "engine": "python",
+        "budget_suspended": [],
+        "rule_fires": {
+          "sub_to_add": 1,
+          "mul_div_swap": 1,
+          "matmul_div_distribute": 1,
+          "om_decayed_lift": 2,
+          "decay_lift": 1
+        },
+        "cost_before": 9991863.82022472,
+        "cost_after": 3953988.1348314607,
+        "verify_passed": true,
+        "verify_max_rel": 0.0
+      },
+      "legs": {
+        "oracle": {
+          "passed": true,
+          "detail": "real: 1eq/0ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 52eq/0ne/0rerr (52 acc, 308 dec, 360 envs)"
+        },
+        "pay": {
+          "passed": true,
+          "detail": "fires=5 changed=5 paid=5 verify_fail=0 cases=5 | count=0.571x exec=0.539x flops=1.000x launch=0.840x params=1.000x"
+        },
+        "sweep": {
+          "passed": true,
+          "detail": "synth: 246eq/0ne/0rerr (246 acc, 1754 dec, 2000 envs) | real: 1eq/0ne/0rerr (1 acc, 0 dec, 1 envs)"
+        },
+        "cert": {
+          "passed": false,
+          "detail": "not derivable (fixed_point)"
+        }
+      }
+    },
+    {
+      "workload": "ALiBiSlopeAttention",
+      "t": 512,
+      "status": "ok",
+      "note": "",
+      "term_nodes": 34,
+      "claim": "decay_state_lift_post",
+      "stages": {
+        "build": {
+          "s": 0.001,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "export": {
+          "s": 0.085,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "search": {
+          "s": 0.082,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "extract": {
+          "s": 0.001,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "lower": {
+          "s": 0.005,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "verify": {
+          "s": 0.057,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "gauntlet:oracle": {
+          "s": 0.026,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "gauntlet:pay": {
+          "s": 0.014,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "gauntlet:sweep": {
+          "s": 0.11,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "gauntlet:cert": {
+          "s": 0.002,
+          "hwm_mb": 3911.2,
+          "status": "refused"
+        }
+      },
+      "stats": {
+        "iterations": 3,
+        "n_enodes": 57,
+        "n_classes": 41,
+        "n_proof_edges": 16,
+        "stop": "fixed_point",
+        "engine": "python",
+        "budget_suspended": [],
+        "rule_fires": {
+          "naturality_scalar_rev": 1,
+          "sdpa_fold_addmul": 2,
+          "sub_to_add": 2,
+          "mul_unsq_pad_r": 2,
+          "sub_unsq_pad_l": 1,
+          "add_unsq_pad_r": 1,
+          "om_lift": 1,
+          "unsq_mul": 2,
+          "decay_state_lift_post": 3,
+          "mul_unsq_pad_l": 1
+        },
+        "cost_before": 1034771.7303370785,
+        "cost_after": 202439.50561797753,
+        "verify_passed": true,
+        "verify_max_rel": 1.0803590427383294e-14
+      },
+      "legs": {
+        "oracle": {
+          "passed": true,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 88eq/0ne/0rerr (107 acc, 253 dec, 360 envs)"
+        },
+        "pay": {
+          "passed": true,
+          "detail": "fires=4 changed=4 paid=4 verify_fail=0 cases=5 | count=0.500x exec=0.750x flops=1.000x launch=0.900x"
+        },
+        "sweep": {
+          "passed": true,
+          "detail": "synth: 405eq/0ne/0rerr (676 acc, 1324 dec, 2000 envs) | real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+        },
+        "cert": {
+          "passed": false,
+          "detail": "not derivable (fixed_point)"
+        }
+      }
+    },
+    {
+      "workload": "ALiBiSlopeAttention",
+      "t": 1024,
+      "status": "ok",
+      "note": "",
+      "term_nodes": 34,
+      "claim": "decay_state_lift_post",
+      "stages": {
+        "build": {
+          "s": 0.001,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "export": {
+          "s": 0.071,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "search": {
+          "s": 0.083,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "extract": {
+          "s": 0.001,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "lower": {
+          "s": 0.023,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "verify": {
+          "s": 0.203,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "gauntlet:oracle": {
+          "s": 0.02,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "gauntlet:pay": {
+          "s": 0.014,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "gauntlet:sweep": {
+          "s": 0.111,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "gauntlet:cert": {
+          "s": 0.002,
+          "hwm_mb": 3911.2,
+          "status": "refused"
+        }
+      },
+      "stats": {
+        "iterations": 3,
+        "n_enodes": 57,
+        "n_classes": 41,
+        "n_proof_edges": 16,
+        "stop": "fixed_point",
+        "engine": "python",
+        "budget_suspended": [],
+        "rule_fires": {
+          "naturality_scalar_rev": 1,
+          "sdpa_fold_addmul": 2,
+          "sub_to_add": 2,
+          "mul_unsq_pad_r": 2,
+          "sub_unsq_pad_l": 1,
+          "add_unsq_pad_r": 1,
+          "om_lift": 1,
+          "unsq_mul": 2,
+          "decay_state_lift_post": 3,
+          "mul_unsq_pad_l": 1
+        },
+        "cost_before": 3445612.8988764044,
+        "cost_after": 351184.13483146066,
+        "verify_passed": true,
+        "verify_max_rel": 7.74438772750424e-15
+      },
+      "legs": {
+        "oracle": {
+          "passed": true,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 88eq/0ne/0rerr (107 acc, 253 dec, 360 envs)"
+        },
+        "pay": {
+          "passed": true,
+          "detail": "fires=4 changed=4 paid=4 verify_fail=0 cases=5 | count=0.500x exec=0.750x flops=1.000x launch=0.900x"
+        },
+        "sweep": {
+          "passed": true,
+          "detail": "synth: 405eq/0ne/0rerr (676 acc, 1324 dec, 2000 envs) | real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+        },
+        "cert": {
+          "passed": false,
+          "detail": "not derivable (fixed_point)"
+        }
+      }
+    },
+    {
+      "workload": "ALiBiSlopeAttention",
+      "t": 2048,
+      "status": "ok",
+      "note": "",
+      "term_nodes": 34,
+      "claim": "decay_state_lift_post",
+      "stages": {
+        "build": {
+          "s": 0.002,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "export": {
+          "s": 0.069,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "search": {
+          "s": 0.115,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "extract": {
+          "s": 0.001,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "lower": {
+          "s": 0.09,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "verify": {
+          "s": 0.863,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "gauntlet:oracle": {
+          "s": 0.017,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "gauntlet:pay": {
+          "s": 0.014,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "gauntlet:sweep": {
+          "s": 0.122,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "gauntlet:cert": {
+          "s": 0.002,
+          "hwm_mb": 3911.2,
+          "status": "refused"
+        }
+      },
+      "stats": {
+        "iterations": 3,
+        "n_enodes": 57,
+        "n_classes": 41,
+        "n_proof_edges": 16,
+        "stop": "fixed_point",
+        "engine": "python",
+        "budget_suspended": [],
+        "rule_fires": {
+          "naturality_scalar_rev": 1,
+          "sdpa_fold_addmul": 2,
+          "sub_to_add": 2,
+          "mul_unsq_pad_r": 2,
+          "sub_unsq_pad_l": 1,
+          "add_unsq_pad_r": 1,
+          "om_lift": 1,
+          "unsq_mul": 2,
+          "decay_state_lift_post": 3,
+          "mul_unsq_pad_l": 1
+        },
+        "cost_before": 13074250.382022472,
+        "cost_after": 931435.4606741574,
+        "verify_passed": true,
+        "verify_max_rel": 1.113376081936562e-14
+      },
+      "legs": {
+        "oracle": {
+          "passed": true,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 88eq/0ne/0rerr (107 acc, 253 dec, 360 envs)"
+        },
+        "pay": {
+          "passed": true,
+          "detail": "fires=4 changed=4 paid=4 verify_fail=0 cases=5 | count=0.500x exec=0.750x flops=1.000x launch=0.900x"
+        },
+        "sweep": {
+          "passed": true,
+          "detail": "synth: 405eq/0ne/0rerr (676 acc, 1324 dec, 2000 envs) | real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+        },
+        "cert": {
+          "passed": false,
+          "detail": "not derivable (fixed_point)"
+        }
+      }
+    },
+    {
+      "workload": "ALiBiSlopeAttention",
+      "t": 4096,
+      "status": "ok",
+      "note": "",
+      "term_nodes": 34,
+      "claim": "decay_state_lift_post",
+      "stages": {
+        "build": {
+          "s": 0.003,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "export": {
+          "s": 0.074,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "search": {
+          "s": 0.292,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "extract": {
+          "s": 0.001,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "lower": {
+          "s": 0.348,
+          "hwm_mb": 3911.2,
+          "status": "ok"
+        },
+        "verify": {
+          "s": 6.572,
+          "hwm_mb": 7032.8,
+          "status": "ok"
+        },
+        "gauntlet:oracle": {
+          "s": 0.047,
+          "hwm_mb": 7032.8,
+          "status": "ok"
+        },
+        "gauntlet:pay": {
+          "s": 0.018,
+          "hwm_mb": 7032.8,
+          "status": "ok"
+        },
+        "gauntlet:sweep": {
+          "s": 0.135,
+          "hwm_mb": 7032.8,
+          "status": "ok"
+        },
+        "gauntlet:cert": {
+          "s": 0.003,
+          "hwm_mb": 7032.8,
+          "status": "refused"
+        }
+      },
+      "stats": {
+        "iterations": 3,
+        "n_enodes": 57,
+        "n_classes": 41,
+        "n_proof_edges": 16,
+        "stop": "fixed_point",
+        "engine": "python",
+        "budget_suspended": [],
+        "rule_fires": {
+          "naturality_scalar_rev": 1,
+          "sdpa_fold_addmul": 2,
+          "sub_to_add": 2,
+          "mul_unsq_pad_r": 2,
+          "sub_unsq_pad_l": 1,
+          "add_unsq_pad_r": 1,
+          "om_lift": 1,
+          "unsq_mul": 2,
+          "decay_state_lift_post": 3,
+          "mul_unsq_pad_l": 1
+        },
+        "cost_before": 51559345.93258426,
+        "cost_after": 3222986.382022472,
+        "verify_passed": true,
+        "verify_max_rel": 5.1405122882851946e-14
+      },
+      "legs": {
+        "oracle": {
+          "passed": true,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 88eq/0ne/0rerr (107 acc, 253 dec, 360 envs)"
+        },
+        "pay": {
+          "passed": true,
+          "detail": "fires=4 changed=4 paid=4 verify_fail=0 cases=5 | count=0.500x exec=0.750x flops=1.000x launch=0.900x"
+        },
+        "sweep": {
+          "passed": true,
+          "detail": "synth: 405eq/0ne/0rerr (676 acc, 1324 dec, 2000 envs) | real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+        },
+        "cert": {
+          "passed": false,
+          "detail": "not derivable (fixed_point)"
+        }
+      }
+    },
+    {
+      "workload": "RWKVMixBlock",
+      "t": 512,
+      "status": "ok",
+      "note": "",
+      "term_nodes": 81,
+      "claim": "sub_to_add",
+      "stages": {
+        "build": {
+          "s": 0.002,
+          "hwm_mb": 7032.8,
+          "status": "ok"
+        },
+        "export": {
+          "s": 0.186,
+          "hwm_mb": 7032.8,
+          "status": "ok"
+        },
+        "search": {
+          "s": 0.197,
+          "hwm_mb": 7032.8,
+          "status": "ok"
+        },
+        "extract": {
+          "s": 0.002,
+          "hwm_mb": 7032.8,
+          "status": "ok"
+        },
+        "lower": {
+          "s": 0.032,
+          "hwm_mb": 7032.8,
+          "status": "ok"
+        },
+        "verify": {
+          "s": 0.262,
+          "hwm_mb": 7032.8,
+          "status": "ok"
+        },
+        "gauntlet:oracle": {
+          "s": 0.045,
+          "hwm_mb": 7032.8,
+          "status": "ok"
+        },
+        "gauntlet:pay": {
+          "s": 0.009,
+          "hwm_mb": 7032.8,
+          "status": "refused"
+        }
+      },
+      "stats": {
+        "iterations": 3,
+        "n_enodes": 90,
+        "n_classes": 83,
+        "n_proof_edges": 7,
+        "stop": "fixed_point",
+        "engine": "python",
+        "budget_suspended": [],
+        "rule_fires": {
+          "sub_to_add": 2,
+          "pow_to_square": 1,
+          "sub_unsq_pad_l": 1,
+          "decay_state_lift_post": 2,
+          "square_expand": 1
+        },
+        "cost_before": 5661021.707865159,
+        "cost_after": 5639203.5056179715,
+        "verify_passed": true,
+        "verify_max_rel": 5.579769729885086e-17
+      },
+      "legs": {
+        "oracle": {
+          "passed": true,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 135eq/0ne/0rerr (225 acc, 0 dec, 225 envs)"
+        },
+        "pay": {
+          "passed": false,
+          "detail": "fires=5 changed=0 paid=0 verify_fail=0 cases=5"
+        }
+      }
+    },
+    {
+      "workload": "RWKVMixBlock",
+      "t": 1024,
+      "status": "ok",
+      "note": "",
+      "term_nodes": 82,
+      "claim": "sub_to_add",
+      "stages": {
+        "build": {
+          "s": 0.001,
+          "hwm_mb": 7032.8,
+          "status": "ok"
+        },
+        "export": {
+          "s": 0.141,
+          "hwm_mb": 7032.8,
+          "status": "ok"
+        },
+        "search": {
+          "s": 0.23,
+          "hwm_mb": 7032.8,
+          "status": "ok"
+        },
+        "extract": {
+          "s": 0.002,
+          "hwm_mb": 7032.8,
+          "status": "ok"
+        },
+        "lower": {
+          "s": 0.112,
+          "hwm_mb": 7032.8,
+          "status": "ok"
+        },
+        "verify": {
+          "s": 0.866,
+          "hwm_mb": 7032.8,
+          "status": "ok"
+        },
+        "gauntlet:oracle": {
+          "s": 0.022,
+          "hwm_mb": 7032.8,
+          "status": "ok"
+        },
+        "gauntlet:pay": {
+          "s": 0.009,
+          "hwm_mb": 7032.8,
+          "status": "refused"
+        }
+      },
+      "stats": {
+        "iterations": 3,
+        "n_enodes": 90,
+        "n_classes": 83,
+        "n_proof_edges": 7,
+        "stop": "fixed_point",
+        "engine": "python",
+        "budget_suspended": [],
+        "rule_fires": {
+          "sub_to_add": 2,
+          "pow_to_square": 1,
+          "sub_unsq_pad_l": 1,
+          "decay_state_lift_post": 2,
+          "square_expand": 1
+        },
+        "cost_before": 20094451.280898903,
+        "cost_after": 20068214.921348315,
+        "verify_passed": false,
+        "verify_max_rel": NaN
+      },
+      "legs": {
+        "oracle": {
+          "passed": true,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 135eq/0ne/0rerr (225 acc, 0 dec, 225 envs)"
+        },
+        "pay": {
+          "passed": false,
+          "detail": "fires=5 changed=0 paid=0 verify_fail=0 cases=5"
+        }
+      }
+    },
+    {
+      "workload": "RWKVMixBlock",
+      "t": 2048,
+      "status": "ok",
+      "note": "",
+      "term_nodes": 83,
+      "claim": "sub_to_add",
+      "stages": {
+        "build": {
+          "s": 0.002,
+          "hwm_mb": 7032.8,
+          "status": "ok"
+        },
+        "export": {
+          "s": 0.14,
+          "hwm_mb": 7032.8,
+          "status": "ok"
+        },
+        "search": {
+          "s": 0.169,
+          "hwm_mb": 7032.8,
+          "status": "ok"
+        },
+        "extract": {
+          "s": 0.001,
+          "hwm_mb": 7032.8,
+          "status": "ok"
+        },
+        "lower": {
+          "s": 0.412,
+          "hwm_mb": 7032.8,
+          "status": "ok"
+        },
+        "verify": {
+          "s": 34.778,
+          "hwm_mb": 7736.7,
+          "status": "ok"
+        },
+        "gauntlet:oracle": {
+          "s": 0.066,
+          "hwm_mb": 7736.7,
+          "status": "ok"
+        },
+        "gauntlet:pay": {
+          "s": 0.013,
+          "hwm_mb": 7736.7,
+          "status": "refused"
+        }
+      },
+      "stats": {
+        "iterations": 3,
+        "n_enodes": 90,
+        "n_classes": 83,
+        "n_proof_edges": 7,
+        "stop": "fixed_point",
+        "engine": "python",
+        "budget_suspended": [],
+        "rule_fires": {
+          "sub_to_add": 2,
+          "pow_to_square": 1,
+          "sub_unsq_pad_l": 1,
+          "decay_state_lift_post": 2,
+          "square_expand": 1
+        },
+        "cost_before": 77732350.78651696,
+        "cost_after": 77697278.11235958,
+        "verify_passed": false,
+        "verify_max_rel": NaN
+      },
+      "legs": {
+        "oracle": {
+          "passed": true,
+          "detail": "real: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | synth: 135eq/0ne/0rerr (225 acc, 0 dec, 225 envs)"
+        },
+        "pay": {
+          "passed": false,
+          "detail": "fires=5 changed=0 paid=0 verify_fail=0 cases=5"
+        }
+      }
+    },
+    {
+      "workload": "RWKVMixBlock",
+      "t": 4096,
+      "status": "killed",
+      "note": "kernel OOM-killed (SIGKILL) mid-rung \u2014 no flush survived; forensically isolated to the verify leg's first real forward: export is symbolic (re-run: 1.8 s), the lowered module's forward materializes a (2,4096,4096,16) fp64 attention tensor ~= 17.2 GB plus intermediates vs ~5-8 GiB MemAvailable",
+      "term_nodes": 0,
+      "claim": "",
+      "stages": {},
+      "stats": {},
+      "legs": {}
+    }
+  ]
+}
