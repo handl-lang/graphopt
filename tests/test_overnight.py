@@ -444,6 +444,114 @@ class TestCorpusZooRealCompose:
         assert "missing_hooks" in rec["law"]
         assert rec["law"]["kind"] == "law"
 
+    def test_guarded_parents_seed_the_bank(self):
+        """Shipped hook-carrying laws that fire join the mint.
+
+        RMSNormPerHead spells an RMSNorm whose gain-free shape
+        ``rms_norm_fold_nogain`` fires on — the guarded single the
+        ``_compose_guards`` transport composes from.  AdditiveAttention
+        is the negative control: no shipped guarded law fires, so the
+        bank is the bound singles alone (the all-unguarded mint the
+        arm measured before this change).
+        """
+        from mlopt_core.meta import _positions, apply_rewrite_at
+
+        ir, _t, _f = on._zoo_export(self._case(zoo="RMSNormPerHead"))
+        parents = on._guarded_parents(ir.root)
+        names = {r.name for r in parents}
+        assert "rms_norm_fold_nogain" in names
+        for r in parents:
+            # every parent is a guarded single that fires on the term
+            assert r.check is not None or r.derive is not None
+            assert any(
+                apply_rewrite_at(r, ir.root, p) is not None
+                for p, _ in _positions(ir.root)
+            )
+        ir2, _t2, _f2 = on._zoo_export(self._case())
+        assert on._guarded_parents(ir2.root) == []
+
+    def test_compose_mints_guarded_composites(self):
+        """A guarded-parent pair emits a composite with live hooks.
+
+        ``rms_norm_fold_nogain`` x the bound ``mixed:`` single
+        transports the fold's premise through ``_compose_guards``:
+        the composite carries a ``check`` (and the derive that fills
+        its placeholders), names both parents, and serializes with
+        ``missing_hooks`` populated — the class the arm exists to
+        mint, where an all-unguarded pool could only yield bare
+        patterns.
+        """
+        from mlopt_core.laws.serialize import law_to_data
+        from mlopt_core.meta import provenance
+
+        arena = on._RealArena(self._case(zoo="RMSNormPerHead"))
+        assert not arena.error
+        guarded = [
+            (i, c)
+            for i, c in self._composites(arena)
+            if c.as_rule().check is not None
+            or c.as_rule().derive is not None
+        ]
+        assert guarded, "no guarded composite minted"
+        assert any(
+            "rms_norm_fold_nogain" in provenance(c.as_rule())
+            for _i, c in guarded
+        )
+        for i, cand in guarded:
+            rule = cand.as_rule()
+            assert arena.meta[i]["guarded"] is True
+            assert getattr(rule, "guard_pats", None) is not None
+            data = law_to_data(rule)
+            assert data["missing_hooks"], (
+                f"{rule.name}: transported hooks not flagged"
+            )
+            assert "check" in data["missing_hooks"]
+
+    def test_compose_guarded_check_runs_in_gauntlet(self):
+        """The transported check vetoes bindings — the gauntlet sees it.
+
+        An unguarded composite's guarded-region row always reports
+        ``0 dec`` (nothing declines what no guard evaluates).  The
+        guarded composite's oracle-leg detail must show declines —
+        the parent's premise re-expressed on the derived binding,
+        vetoing the synthesized sites it was minted to exclude.
+        """
+        import re
+
+        from mlopt_core.ir import Op
+        from mlopt_discovery.census import _iter_subterms
+
+        case = self._case(zoo="RMSNormPerHead")
+        arena = on._RealArena(case)
+        _i, cand = next(
+            (i, c)
+            for i, c in self._composites(arena)
+            if c.as_rule().check is not None
+        )
+        ir, _t, _f = on._zoo_export(case)
+        subs = [s for s in _iter_subterms(ir.root) if isinstance(s, Op)]
+        ctx = bench.referees.RefereeCtx(real_terms=tuple(subs))
+        verdict = bench.referees.judge("oracle", cand.as_rule(), ctx)
+        detail = verdict.stages[0].detail
+        declined = sum(int(n) for n in re.findall(r"(\d+) dec", detail))
+        assert declined > 0, f"transported check never vetoed: {detail}"
+
+    def test_compose_runs_on_empty_single_pool(self):
+        """The guarded bank mints even when no single binds.
+
+        LoRAAdapter binds no ``pipeline.propose`` single, but
+        ``linear_row_scale_rev`` fires on its term — the guarded bank
+        alone pairs it with itself and emits a guarded composite, so
+        the episode still has a candidate to judge.
+        """
+        arena = on._RealArena(self._case(zoo="LoRAAdapter"))
+        assert not arena.error
+        comps = self._composites(arena)
+        assert len(arena.pool) == len(comps) == 1
+        rule = comps[0][1].as_rule()
+        assert rule.check is not None or rule.derive is not None
+        assert arena.meta[0]["guarded"] is True
+
     def test_zoo_real_compose_dry_records_mint_tag(self, tmp_path):
         """The arm is protocol-pinned — ledgers restart loudly."""
         t0 = time.time()
@@ -454,7 +562,7 @@ class TestCorpusZooRealCompose:
         assert time.time() - t0 < 300  # exports + synth + referee
         man, cells = _records(tmp_path / "ck.jsonl")
         assert man["protocol"]["corpus"] == "zoo-real"
-        assert man["protocol"]["mint"] == "corpus-bind-compose-viable"
+        assert man["protocol"]["mint"] == "corpus-bind-compose-guarded"
         assert man["protocol"]["compose"] == 2
         payload = json.loads((tmp_path / "out.json").read_text())
         assert payload["corpus"] == "zoo-real"
@@ -480,7 +588,7 @@ class TestCorpusZooRealCompose:
         assert man1["protocol"]["mint"] == "corpus-bind"
         assert on.main([*argv, "--compose", "--resume"]) == 0
         man2, _cells2 = _records(tmp_path / "ck.jsonl")
-        assert man2["protocol"]["mint"] == "corpus-bind-compose-viable"
+        assert man2["protocol"]["mint"] == "corpus-bind-compose-guarded"
 
 
 class TestResume:
@@ -492,7 +600,7 @@ class TestResume:
         _man1, cells1 = _records(tmp_path / "ck.jsonl")
         summary1 = json.loads((tmp_path / "out.json").read_text())
 
-        def boom(*a, **k):
+        def boom(*_a, **_k):
             raise AssertionError("recompute on resume")
 
         monkeypatch.setattr(on.engine, "run_episode", boom)

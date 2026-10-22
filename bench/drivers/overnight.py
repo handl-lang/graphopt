@@ -85,7 +85,15 @@ after the single-step pool binds, ``meta.synthesize_rules`` — the
 ``syn_*`` mint fixpoint that produced the shipped ``conv_bn_fold``
 (ADR-0007) — pair-composes the bound candidates with the module's own
 term as the seed, iterating *ROUNDS* strata toward a fixpoint
-(default 2).  Every emitted composite then faces the arm's own gate:
+(default 2).  The synthesis bank also carries the arm's **guarded
+parents** (:func:`_guarded_parents`): every shipped law whose
+``check``/``derive`` hooks actually fire on the module's term — the
+premise-bearing singles the ``_compose_guards`` transport was built
+for.  Without them the measured mint was all-unguarded (``mixed:``
+singles carry no hooks, so the transport never engaged and
+``missing_hooks`` stayed empty); with them an emitted composite can
+inherit a live side condition — ``missing_hooks`` honestly non-empty.
+Every emitted composite then faces the arm's own gate:
 it is kept only when its LHS binds a real subterm *and* its
 instantiated RHS denotes under every such binding — an ill-typed
 composite (the oracle's ``rhs_err`` signal) is dropped at emit, never
@@ -96,8 +104,8 @@ serialized into the candidate cell's ``law["guard"]`` like the
 ``mlopt_core.laws.minted`` rows.  Machine-originals live here: a
 composite the prior-art bank cannot derive is the sieve's target
 verdict.  The arm is protocol-pinned as ``mint:
-corpus-bind-compose-viable``, so a ledger written before the
-seed-eval gate (or without the arm at all) restarts loudly.
+corpus-bind-compose-guarded``, so a ledger written before the
+guarded-bank change (or without the arm at all) restarts loudly.
 
 Run::
 
@@ -402,6 +410,43 @@ def _zoo_case_ctxs(env: dict) -> list:
 # ---------------------------------------------------------------------------
 
 
+def _guarded_parents(root: Any) -> list:
+    """Shipped guarded laws that fire on *root* — the premise parents.
+
+    The composition arm's guarded bank: every ``_synthesizable``
+    member of ``ALL_RULES`` carrying ``check``/``derive`` hooks that
+    actually fires somewhere on the module's term (``apply_rewrite_at``
+    — the seed path's own firing semantics, so a parent in the bank
+    is a parent the mint can spend fuel on productively).  A guarded
+    law that cannot fire here contributes nothing a guarded
+    composite could descend from: the seed path needs a real firing
+    and the emit gate would drop a composite whose side condition
+    declines every real binding.  These are the *guarded singles*
+    ``_compose_guards`` was built to transport — ``mul_unsq_nat`` on
+    DeltaRuleBlock, ``rms_norm_fold_nogain`` on RMSNormPerHead,
+    ``glu_fold`` on GatedConvUnit — whose premise closures make a
+    ``syn_*`` pair a guarded composite instead of another bare
+    pattern.
+    """
+    from mlopt_core.laws import ALL_RULES
+    from mlopt_core.meta import (
+        _positions,
+        _synthesizable,
+        apply_rewrite_at,
+    )
+
+    return [
+        r
+        for r in ALL_RULES
+        if (r.check is not None or r.derive is not None)
+        and _synthesizable(r)
+        and any(
+            apply_rewrite_at(r, root, p) is not None
+            for p, _ in _positions(root)
+        )
+    ]
+
+
 class _RealArena(og.OpenArena):
     """An ``OpenArena`` whose pool is the corpus-minted candidate set.
 
@@ -431,15 +476,23 @@ class _RealArena(og.OpenArena):
     single-step pool is pair-composed by
     ``mlopt_core.meta.synthesize_rules`` — the ``syn_*`` fixpoint
     ``conv_bn_fold`` minted through — with the module's own term as
-    the seed, for ``case["compose"]`` strata.  Emitted composites are
-    held to the arm's own gate — the LHS must bind a real subterm
-    (the ``require_bind`` contract, applied a second time since the
-    symbolic path can mint a pair that never fired on the seed) *and*
-    the instantiated RHS must denote under every such binding: a
-    composite whose rhs errors on the bound env is ill-typed — the
-    oracle leg measures it as ``rhs_err``, a refusal it could never
-    survive — so the emit gate drops it before it can spend mint or
-    gauntlet effort.  Survivors append after the singles, each
+    the seed, for ``case["compose"]`` strata.  The bank pairs the
+    bound singles with the module's **guarded parents**
+    (:func:`_guarded_parents` — shipped ``check``/``derive`` laws that
+    fire on this term), so a composite can inherit a transported side
+    condition through ``_compose_guards`` instead of minting bare
+    patterns only; the guarded bank also runs when the single-step
+    mint bound nothing (shipped-guarded pairs are corpus-driven —
+    they fire on the module — even with no bound singles).  Emitted
+    composites are held to the arm's own gate — the LHS must bind a
+    real subterm (the ``require_bind`` contract, applied a second
+    time since the symbolic path can mint a pair that never fired on
+    the seed) *and* the instantiated RHS must denote under every such
+    binding: a composite whose rhs errors on the bound env is
+    ill-typed — the oracle leg measures it as ``rhs_err``, a refusal
+    it could never survive — so the emit gate drops it before it can
+    spend mint or gauntlet effort.  Survivors append after the
+    singles, each
     carrying its transported premise closure: the ``_compose_guards``
     check/derive hooks and the ``parents`` / ``guard_pats`` record
     ``_admit`` serializes into the cell's ``law["guard"]``.  The
@@ -492,14 +545,21 @@ class _RealArena(og.OpenArena):
                 "family": p.family,
                 "sources": list(p.sources),
             }
-        if case.get("compose") and self.pool:
+        if case.get("compose"):
             self._mint_composites(ir.root, case)
         self.done = not self.pool
 
     def _mint_composites(self, root: Any, case: dict) -> None:
-        """Pair-compose the bound pool over the module's own term.
+        """Pair-compose the guarded bank over the module's own term.
 
-        The seed-guided path fires each parent on ``root``'s real
+        The synthesis bank is the module's guarded parents
+        (:func:`_guarded_parents`) ahead of the bound singles — the
+        premise-bearing rules take enumeration priority under
+        ``fuel`` since they are what makes a composite *guarded*:
+        ``_compose_guards`` returns ``(None, None)`` for an unguarded
+        pair, so without a hooked parent every minted composite is a
+        bare pattern.  The seed-guided path fires each parent on
+        ``root``'s real
         subterms, so an emitted composite is a chain that actually
         rewrote the module; the symbolic path (unguarded pairs) emits
         fully general derived rules and is then held to the same
@@ -520,7 +580,10 @@ class _RealArena(og.OpenArena):
 
         page = case.get("page", 48)
         emitted = meta_mod.synthesize_rules(
-            [c.as_rule() for c in self.pool],
+            [
+                *_guarded_parents(root),
+                *(c.as_rule() for c in self.pool),
+            ],
             [root],
             fuel=_COMPOSE_FUEL,
             numeric_check=True,
@@ -566,6 +629,11 @@ class _RealArena(og.OpenArena):
             self.meta[len(self.pool) - 1] = {
                 "family": _COMPOSE_FAMILY,
                 "sources": list(parents),
+                # a transported premise closure — the composite's
+                # check/derive re-express the guarded parents' hooks.
+                "guarded": bool(
+                    rule.check is not None or rule.derive is not None
+                ),
             }
             kept += 1
 
@@ -858,8 +926,9 @@ def run(
     per-module stream read (``<= 0`` scans the whole stream; unused
     on ``zoo-real`` — the mint reads the module's own term, not the
     stream).  ``compose`` is the zoo-real composition arm's stratum
-    count — ``meta.synthesize_rules`` rounds over the bound pool,
-    seeded on each module's term (0 = off; ignored on other corpora).
+    count — ``meta.synthesize_rules`` rounds over the guarded bank
+    (the module's guarded parents plus the bound pool), seeded on
+    each module's term (0 = off; ignored on other corpora).
     """
     import torch
 
@@ -1045,6 +1114,12 @@ def run(
         "composed": sum(
             1 for r in cands if r.get("family") == _COMPOSE_FAMILY
         ),
+        "guarded": sum(
+            1
+            for r in cands
+            if r.get("family") == _COMPOSE_FAMILY
+            and (r.get("law") or {}).get("missing_hooks")
+        ),
         "admitted": sum(1 for r in cands if r["admitted"]),
         "skipped": sum(1 for r in cands if r["skipped"]),
         "leg_refusals": dict(leg_deaths),
@@ -1125,7 +1200,13 @@ def render_markdown(summary: dict, *, env: dict | None = None) -> str:
         f"evaluated: {summary['evaluated']} · "
         f"minted: {summary['minted']}"
         + (
-            f" ({summary['composed']} composites)"
+            f" ({summary['composed']} composites"
+            + (
+                f", {summary['guarded']} guarded"
+                if summary.get("guarded")
+                else ""
+            )
+            + ")"
             if summary.get("composed")
             else ""
         )
@@ -1258,12 +1339,17 @@ def main(argv: list[str] | None = None) -> int:
         help="zoo-real only: after the single-step pool binds, "
         "pair-compose it through meta.synthesize_rules — the syn_* "
         "mint fixpoint conv_bn_fold shipped through — seeded on each "
-        "module's own term, for ROUNDS strata (default 2).  Emitted "
+        "module's own term, for ROUNDS strata (default 2), over a "
+        "bank that also carries the module's guarded parents "
+        "(shipped check/derive laws that fire on the term, so a "
+        "composite can inherit a transported side condition).  "
+        "Emitted "
         "composites face the same bind gate plus a seed-eval gate "
         "(the instantiated RHS must denote under the bound env — an "
         "ill-typed composite is dropped before the gauntlet) and "
         "carry their premise-closure guard spec into the ledger "
-        "(mint: corpus-bind-compose-viable — ledgers restart loudly)",
+        "(mint: corpus-bind-compose-guarded — ledgers restart "
+        "loudly)",
     )
     ap.add_argument(
         "--scan",
@@ -1337,9 +1423,10 @@ def main(argv: list[str] | None = None) -> int:
         # arm went binding-first (require_bind) must restart loudly
         # rather than replay ungated pools; likewise a ledger minted
         # without the composition arm — or before composites had to
-        # denote under the seed binding — never replays under it.
+        # denote under the seed binding, or before the synthesis bank
+        # carried guarded parents — never replays under it.
         "mint": (
-            "corpus-bind-compose-viable"
+            "corpus-bind-compose-guarded"
             if args.corpus == "zoo-real" and args.compose
             else "corpus-bind"
             if args.corpus == "zoo-real"

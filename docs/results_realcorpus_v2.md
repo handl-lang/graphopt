@@ -164,6 +164,21 @@ landed:
 | preview | `863825c` | corpus-bind | 65 | 2 — `sub_neg`, `id_mul_lit`, **both known-art** | 107-scheduled/36-ran episodes |
 | full | `04201f2` (dirty) | corpus-bind-compose | 318 (244 composites) | **0** | 310 oracle refusals — composites' RHS can't denote under the bound env (rhs_err) |
 | v2 | `1000ffd` (dirty) | corpus-bind-compose-viable | 87 (13 composites) | **0** | seed-eval gate dropped non-denoting composites at emit; oracle 79 / pay 7 / cert 1 |
+| guarded | `81cf176` (dirty) | corpus-bind-compose-guarded | 19 (1 composite, **1 guarded**) | **0** | 8-episode bound; the guarded bank minted `syn_linear_row_scale_rev__linear_row_scale_rev_0@LoRAAdapter` — `missing_hooks=["check"]`, oracle `359 dec` (the transported premise vetoing), refused at `pay` (fires 3, changed 3, paid 0, verify_fail 2) |
+
+The guarded arm (this change) wires the transport the compose arm
+was built for: the synthesis bank now pairs the bound singles with
+`_guarded_parents` — shipped `check`/`derive` laws that fire on the
+module's own term (`mul_unsq_nat` on DeltaRuleBlock,
+`rms_norm_fold_nogain` on RMSNormPerHead, `linear_row_scale_rev` on
+LoRAAdapter, …).  Every prior run's composites were unguarded pairs
+(`missing_hooks` empty) because no pool single carried hooks; with a
+premise-bearing parent in the bank `_compose_guards` re-expresses
+the side condition and the composite's transported `check` actually
+runs — the LoRAAdapter mint's oracle row declines 359/360
+synthesized bindings, the guard doing measurable work inside the
+gauntlet.  Admission is still 0: the minted composite is true and
+guarded but does not pay on its module.
 
 The compose arm's closest approach post-gate:
 `syn_mixed:mul_reshape_r_id__mixed:pow_reshape_l_w_6@RMSNormPerHead`
