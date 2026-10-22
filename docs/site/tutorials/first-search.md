@@ -12,18 +12,19 @@ equivalent spelling of your model's graph.
 from mlopt_orchestrator import Optimizer
 from mlopt_torch import TorchBackend
 
-opt, stats = Optimizer(backend=TorchBackend()).optimize(model, x)
+opt_mod, stats = Optimizer(backend=TorchBackend()).optimize(model, x)
 ```
 
 `optimize(model, x)` runs the full pipeline — **search** (saturate +
 extract under a cost model) then **lower** (emit a module through the
-backend's sink, numerically verified against the source). `stats`
-carries `rule_fires`, `lowering`, `runner`, and the strategy's own
-keys.
+backend's sink, numerically verified against the source). It returns a
+`LowerResult` that unpacks as `(module, stats)`; `stats` carries
+`rule_fires`, `lowering`, `runner`, and the strategy's own keys.
 
 ## The two phase verbs
 
 ```python
+opt = Optimizer(backend=TorchBackend())
 res = opt.search(model, x)                 # SearchResult — the extracted term
 mod = opt.lower(res, x, verify=True)       # LowerResult — verified module
 ```

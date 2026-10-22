@@ -24,9 +24,9 @@ One contract, every domain. Three drivers ride on it:
 A new domain is data + a small adapter: a `case -> Board` factory and
 a featurizer. The domain registry (`mlopt_discovery.play.DOMAINS`)
 holds the boards — `meta`/`joint`/`search`/`torch`/`gen`/`open`/`player` —
-played through one CLI (the `kernel` domain moved out to
-`handl-lang/kernelopt`, which seats itself into `DOMAINS` at
-`mlopt_kernel.play` import):
+played through one CLI (the registry is open: downstream domain repos
+seat their own boards into `DOMAINS` through `play.spec_domain` at
+import):
 
 ```sh
 python -m mlopt_discovery.play --domain meta --player linear   # eval-only
@@ -36,13 +36,15 @@ python -m mlopt_discovery.play --domain torch --deliver        # lower + verify 
 ## The players
 
 The registry (`gamekit.players.registry`) names every playable arm —
-`random` (chance), `playbook` (scripted), `linear` (the trained linear
-prior), `neural`, `distilled` — each as a `PlayerSpec` (`name`/`kind`/
-`boards`/`schema`/`train`/`artifact`/`record`/`variant`) with a
-`make(name, domain)` factory that raises `ValueError` on an unplayed
-board rather than silently running. The learned arm is a
-featurizer-injected `LinearPolicy`: state features + action features →
-a score per legal move.
+`random` (chance), `playbook`/`greedy` (scripted), `linear` (the
+trained linear prior, plus `-greedy`/`-cold` variants), `neural`,
+`distilled` (the contraction player), `gated` (the isolated stop
+channel) — each as a `PlayerSpec` (`name`/`kind`/`boards`/`schema`/
+`train`/`artifact`/`record`/`variant`) with a `make(name, domain)`
+factory that raises `ValueError` on an unplayed board rather than
+silently running. The learned arm is a featurizer-injected
+`LinearPolicy`: state features + action features → a score per legal
+move.
 
 The two-tier meta-game goes one level up: `PlayerArena` is a board
 whose *state is a player spec* — moves toggle feature parts, edit

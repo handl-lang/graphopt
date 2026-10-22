@@ -11,7 +11,7 @@ the Rust crates) a Rust toolchain — the Python path needs no Rust.
 ```sh
 git clone https://github.com/handl-lang/graphopt
 cd graphopt
-uv sync                    # creates .venv/ — the dev environment
+uv sync --group bench      # creates .venv/ — dev env + the bench CLI deps
 ```
 
 There is no `mlopt` facade package: import the domain packages
@@ -20,6 +20,19 @@ directly (`mlopt_core`, `mlopt_torch`, `mlopt_orchestrator`,
 interpreter every command in this track uses. `uv sync` pulls the
 substrate and game-kernel packages in as pinned git deps on the
 `eqsat`/`gamekit` repos — the import names are unchanged.
+
+::: warning git+ssh pins
+The pins fetch over `ssh://git@github.com/…` — `uv sync` needs GitHub
+SSH credentials (a key in your agent). If you authenticate over HTTPS
+instead, rewrite the scheme once:
+
+```sh
+git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
+```
+
+The `--group bench` flag adds the benchmark CLI's deps (`tyro`,
+`rich`, …); the `dev` group is always on by default.
+:::
 
 ## 2. Smoke-test it
 

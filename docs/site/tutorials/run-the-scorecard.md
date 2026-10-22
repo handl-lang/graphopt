@@ -18,7 +18,7 @@ derive it, certify it, and *beat the registered floor* for that case.
 
 It writes `docs/scorecard.md` + `docs/scorecard.json` in the repo
 (commit only when you mean to refresh the published table — the
-rendered copy lives at [reference/research/scorecard](../reference/scorecard)).
+rendered copy lives at [reference/scorecard](../reference/scorecard)).
 
 ## 2. Read a row
 

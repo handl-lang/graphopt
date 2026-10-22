@@ -1,5 +1,5 @@
 ::: warning Vendored — do not edit here
-Synced from `graphopt:docs/public_api.md` @ `eea02f6` — the
+Synced from `graphopt:docs/public_api.md` @ `ed89ead` — the
 phase-1 frozen manifest (`API_VERSION = "0.1.0"`). Edit upstream and
 re-vendor. The `research-mlopt` → `graphopt` rename and the phase-4
 `eqsat`/`gamekit` carve-outs have landed — each row tags the repo it
@@ -76,8 +76,8 @@ paths are re-exporting shims (see `TestGamekitCompatShims` in
 
 | Contract | Canonical location | Frozen surface |
 |---|---|---|
-| Law verification | `mlopt_discovery.verifier` | **`verify_law(lhs, rhs, rules, *, max_iterations=30, max_nodes=200_000, rule_budgets=None) -> LawResult`**, `LawResult` (`derivable`, `direction`, `witness_rules`, `replayable`, `cert`) — the admission side the phase-2 referees consume |
-| Domain registry | `mlopt_discovery.play` | `DOMAINS`, `Domain` (`cases`/`board_of`/`legal`/`featurizer`/`features`/`scripted`/`deliver`/`spec`), `play(domain, case, player, *, budget)` — the `Domain` *shape* is the contract; the `DOMAINS` *contents* are domain data |
+| Law verification | `mlopt_discovery.verifier` | **`verify_law(lhs, rhs, rules, *, max_iterations=30, max_nodes=30_000, rule_budgets=None) -> LawResult`**, `LawResult` (`derivable`, `direction`, `witness_rules`, `replayable`, `cert`) — the admission side the phase-2 referees consume; saturation is bounded by default (`rule_budgets=None` applies the EXPANSIVE/non-library per-rule caps — `verifier._EXPANSIVE_BUDGET`) and a bound can only *refuse*, never accept |
+| Domain registry | `mlopt_discovery.play` | `DOMAINS`, `Domain` (`cases`/`board_of`/`legal`/`featurizer`/`features`/`scripted`/`deliver`/`spec`), `play(domain, case, player, *, budget)`, `spec_domain(cases, board_of, spec, *, scripted, deliver) -> Domain` — the `Domain` *shape* is the contract; the `DOMAINS` *contents* are domain data, and downstream repos seat their own (`spec_domain` + `register_player` are the plugin seams — plan 0032 phase 4) |
 
 ## The scoring spec — the referee seam
 
