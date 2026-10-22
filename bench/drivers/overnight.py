@@ -113,12 +113,38 @@ base bank so the round's fuel reaches the pairs that involve them
 corpus-bind-compose-strata``, so a ledger written before the
 strata-chaining fix (or without the arm at all) restarts loudly.
 
+``zoo-xmodule`` is the **cross-module mint** — the same corpus-driven
+arm turned inside out.  Where ``zoo-real`` mints each episode's pool
+from one module's own census, ``zoo-xmodule`` anti-unifies over the
+WHOLE corpus: every zoo module's exported term is collected, the
+op-patterns recurring across ``--xbind`` (default 2) or more
+*distinct* modules seed ``pipeline.propose``'s generalized candidates
+(the census-naturality / mixed-view / pattern-recognition /
+fusion-schema / shape-aware / grammar families — the same mint), and
+``antiunify.mine_candidates`` over the merged corpus e-graph mines
+the deep shared subgraphs no 1-level op-tuple expresses, each minting
+the mechanical view-transform family over its own shape.  Every
+candidate then faces the arm's **K-bind gate**: a rule must bind
+real subterms in at least *K* distinct modules — a claim that binds
+exactly one is the old per-module surface, *K* = 2+ is the new one
+(a law true on 10 real modules is likelier a real transform than a
+one-module coincidence).  The minted antiunified variants also face
+the same emit-sanity gate the composition arm applies — the
+instantiated RHS must denote under every bound binding — before a
+candidate can spend an episode slot.  One shared pool is minted once
+and episodes page it (each case is a ``page``-sized slice of the
+corpus-level pool, as ``grammar`` pages the stream).  Same gauntlet,
+same ledger, same doc shape — the document lands at
+``docs/results_overnight_xmodule.md`` and the mint is
+protocol-pinned as ``corpus-xbind``.
+
 Run::
 
     .venv/bin/python bench/drivers/overnight.py --dry
     .venv/bin/python bench/drivers/overnight.py --dry --corpus zoo
     .venv/bin/python bench/drivers/overnight.py --dry --corpus zoo-real
     .venv/bin/python bench/drivers/overnight.py --dry --corpus zoo-real --compose
+    .venv/bin/python bench/drivers/overnight.py --dry --corpus zoo-xmodule
     .venv/bin/python bench/drivers/overnight.py --episodes 48 \
         --player playbook --referee full --resume
 """
@@ -131,6 +157,7 @@ import json
 import sys
 import time
 from collections import Counter
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -166,6 +193,7 @@ DEFAULTS: dict[str, Any] = {
     "corpus": "grammar",
     "scan": 2048,
     "compose": 0,
+    "xbind": 2,
 }
 
 #: ``--dry`` — seconds-scale smoke: two episodes, a tiny pool, a
@@ -182,8 +210,11 @@ DRY: dict[str, Any] = {
 #: registry, the same stream filtered to real-matching claims;
 #: ``zoo-real`` drops the stream entirely and mints each episode's
 #: pool from the module's own term (the ``pipeline.propose`` census
-#: mint — the ``mul_unsq_nat`` path).
-CORPORA: tuple[str, ...] = ("grammar", "zoo", "zoo-real")
+#: mint — the ``mul_unsq_nat`` path); ``zoo-xmodule`` anti-unifies
+#: over the WHOLE corpus — one shared pool minted from the
+#: op-patterns and deep subgraphs recurring across >= ``--xbind``
+#: distinct modules, episodes paging it like the stream arm.
+CORPORA: tuple[str, ...] = ("grammar", "zoo", "zoo-real", "zoo-xmodule")
 
 #: Where the documents land.
 DOC_PATH = _REPO / "docs" / "results_overnight.md"
@@ -192,6 +223,10 @@ DOC_PATH = _REPO / "docs" / "results_overnight.md"
 #: stream-filtered arms, so it does not overwrite their ledger/doc.
 DOC_PATH_REAL = _REPO / "docs" / "results_overnight_real.md"
 
+#: The zoo-xmodule arm's own document — one corpus-level pool, not a
+#: per-module mint.
+DOC_PATH_XMODULE = _REPO / "docs" / "results_overnight_xmodule.md"
+
 #: The default ledger — ``benchkit.checkpoint.DEFAULT_DIR``'s lane
 #: file, spelled out so the constant needs no ``bench.*`` import.
 CKPT_PATH = Path("bench/results/checkpoints/overnight.jsonl")
@@ -199,6 +234,11 @@ CKPT_PATH = Path("bench/results/checkpoints/overnight.jsonl")
 #: The zoo-real lane file — a non-``--resume`` run truncates its
 #: ledger, so the corpus arms never share a default path.
 CKPT_PATH_REAL = Path("bench/results/checkpoints/overnight_real.jsonl")
+
+#: The zoo-xmodule lane file.
+CKPT_PATH_XMODULE = Path(
+    "bench/results/checkpoints/overnight_xmodule.jsonl"
+)
 
 #: The op vocabulary the corpus mint enumerates laws over —
 #: ``"derived"`` classifies every corpus op by property
@@ -214,6 +254,20 @@ _COMPOSE_FUEL = 256
 #: distinguishes the composition arm's ``syn_*`` pairs from the
 #: single-step proposers' families.
 _COMPOSE_FAMILY = "synth-composite"
+
+#: The ``meta.family`` an antiunified cross-module mint records — the
+#: ledger distinguishes the ``xanti:*`` generalized-shape rules from
+#: the ``pipeline.propose`` census mints they sit beside.
+_XANTI_FAMILY = "xanti-view"
+
+#: Cap on antiunified patterns taken through the xmodule mint — the
+#: top-``gain`` slice, so the corpus pool stays bounded like a page.
+_XANTI_CAP = 48
+
+#: Bound on bound sites an xanti variant's emit-sanity gate walks —
+#: the same ``rhs-err`` gate the composition arm applies, over a
+#: capped cross-corpus site set.
+_XANTI_SITES = 64
 
 _NOVELTY_ORDER = ("machine-original", "known-art", "vacuous")
 
@@ -786,10 +840,383 @@ def _real_case_ctxs(env: dict) -> list:
     return ctxs
 
 
+# ---------------------------------------------------------------------------
+#  the zoo-xmodule corpus arm — one pool anti-unified over the WHOLE corpus
+# ---------------------------------------------------------------------------
+
+#: Corpus-level pool cache — ``(wseed0, xbind) -> (cands, meta,
+#: stats)``.  Every episode's arena slices the same mint, so the
+#: whole-corpus export + antiunify pass is paid once per run (and a
+#: resume's rebuild reproduces the pool verbatim — the exports are
+#: seed-pinned, the mining deterministic).
+_XPOOL: dict = {}
+
+
+def _xmodule_cases(
+    seed: int, episodes: int, *, page: int, xbind: int
+) -> list:
+    """One case per pool page — the corpus-level mint, paged.
+
+    Unlike ``zoo``/``zoo-real`` there is no per-module board: the
+    episode boards are ``page``-sized slices of the one shared pool,
+    exactly as ``grammar`` pages the enumerated stream.
+    ``wseed0`` pins the workload-build draws for the whole-registry
+    export so a resume's pool rebuild is byte-identical.
+    """
+    return [
+        {
+            "xpage": i,
+            "page": page,
+            "xbind": xbind,
+            "wseed0": seed,
+        }
+        for i in range(episodes)
+    ]
+
+
+def _xmodule_env(seed: int) -> dict:
+    """``name -> (ir, tensors, feeds) | None`` over the WHOLE registry.
+
+    The cross-module corpus is indivisible — the mint reads every
+    exported term, so every zoo module is built here (seed-pinned
+    per module, matching ``_zoo_cases``' ``wseed`` draws).
+    """
+    env: dict[str, Any] = {}
+    for i, name in enumerate(_zoo_registry()):
+        try:
+            env[name] = _zoo_export(
+                {"zoo": name, "wseed": seed * 100_003 + i}
+            )
+        except Exception:
+            env[name] = None
+    return env
+
+
+def _op_subterms(roots: dict) -> dict:
+    """``name -> [Op subterm]`` — each module's bind domain."""
+    from mlopt_core.ir import Op
+    from mlopt_discovery.census import _iter_subterms
+
+    return {
+        n: [s for s in _iter_subterms(r) if isinstance(s, Op)]
+        for n, r in roots.items()
+    }
+
+
+def _modules_bound(pat: Any, subs_by_mod: dict) -> set:
+    """Module names holding at least one subterm *pat* binds.
+
+    The arm's binding granularity: ``_term_match`` — the same match
+    ``require_bind`` and the referee's ``real_terms`` domain use —
+    counted per module, so a pattern covering five sites inside one
+    module still counts once.
+    """
+    from mlopt_core.egraph.terms import _term_match
+
+    return {
+        n
+        for n, subs in subs_by_mod.items()
+        if any(_term_match(pat, s) is not None for s in subs)
+    }
+
+
+def _xanti_variants(pat: Any, views: tuple) -> list:
+    """The mechanical view-transform family over a mined shared shape.
+
+    For a mined pattern ``f(A, B)`` the plausible equalities are the
+    same family ``_two_view_family`` / ``_one_view_family`` emit over
+    census op-tuples — pushed through to *this* shape's own structure:
+    when a child is a unary view ``g(u)`` the candidates are the
+    push-through ``g(f(u, ·))`` (re-wrap under the child's own attrs —
+    ``wl``/``wr`` pick which side's when both are views, ``w`` when
+    one is) and the strip ``f(u, ·)`` (``id``).  A mined pattern is
+    deeper than the census's 1-level tuple, so these are claims the
+    census families cannot spell; the oracles — not the mint — decide
+    truth, exactly as on the shallow family.
+    """
+    from mlopt_core.ir import Op
+
+    if not isinstance(pat, Op) or len(pat.args) != 2:
+        return []
+    f = pat.op
+    a, b = pat.args
+    av = isinstance(a, Op) and a.op in views and len(a.args) == 1
+    bv = isinstance(b, Op) and b.op in views and len(b.args) == 1
+    inner = Op.make(f, a.args[0] if av else a, b.args[0] if bv else b)
+    if av and bv:
+        return [
+            ("wl", Op.make(a.op, inner, **dict(a.attrs))),
+            ("wr", Op.make(b.op, inner, **dict(b.attrs))),
+            ("id", inner),
+        ]
+    if av:
+        return [
+            ("w", Op.make(a.op, inner, **dict(a.attrs))),
+            ("id", inner),
+        ]
+    if bv:
+        return [
+            ("w", Op.make(b.op, inner, **dict(b.attrs))),
+            ("id", inner),
+        ]
+    return []
+
+
+def _xanti_proposals(roots: dict, k: int) -> list:
+    """Antiunify cross-module shared subgraphs into candidate rules.
+
+    The whole corpus merges into one e-graph — congruence puts every
+    structurally-equal subterm in one e-class regardless of which
+    module wrote it — and ``antiunify.mine_candidates`` mines the
+    recurring patterns over it (leaves become ``v*`` metavars,
+    differing attr values ``a*`` attr metavars: the least-general
+    generalisation of the shape's instances).  A pattern is kept when
+    its LHS binds real subterms in at least *k* DISTINCT modules —
+    site-recurrence inside one module is the old arm's surface.
+    Each surviving shape mints the mechanical view-transform family
+    (:func:`_xanti_variants`), then faces the composition arm's own
+    emit-sanity gate: the instantiated RHS must denote under every
+    bound binding — an ``rhs-err`` site drops the variant before it
+    can spend an episode slot or the gauntlet.
+    """
+    import mlopt_carriers  # noqa: F401 — carrier op bindings for eval
+    from mlopt_core.egraph import EGraph
+    from mlopt_core.egraph.terms import _term_match
+    from mlopt_core.ir import Op
+    from mlopt_discovery import pipeline as pipe
+    from mlopt_discovery.antiunify import mine_candidates
+    from mlopt_discovery.evidence import _site_outcome
+    from mlopt_discovery.pipeline import Proposal
+
+    subs_by_mod = _op_subterms(roots)
+    all_subs = [s for subs in subs_by_mod.values() for s in subs]
+    eg = EGraph()
+    for r in roots.values():
+        eg.add_term(r)
+    _pointwise, views = pipe._vocab_sets(_MINT_VOCAB)
+    out: list = []
+    dropped = 0
+    named: set = set()
+    for cand in mine_candidates(eg, min_uses=k, min_ops=2, max_ops=6):
+        if len(out) >= _XANTI_CAP:
+            break
+        pat = cand.pattern
+        if not isinstance(pat, Op) or len(pat.args) != 2:
+            continue  # the variant family is binary-shaped
+        mods = _modules_bound(pat, subs_by_mod)
+        if len(mods) < k:
+            continue
+        g = pat.args[0].op if isinstance(pat.args[0], Op) else "x"
+        h = pat.args[1].op if isinstance(pat.args[1], Op) else "x"
+        sites = [
+            (m, s)
+            for s in all_subs
+            if (m := _term_match(pat, s)) is not None
+        ][:_XANTI_SITES]
+        for tag, rhs in _xanti_variants(pat, views):
+            name = f"xanti:{pat.op}_{g}_{h}_{tag}"
+            if name in named:
+                name = f"{name}~{len(named)}"
+            rule = Proposal(
+                name=name,
+                lhs=pat,
+                rhs=rhs,
+                family=_XANTI_FAMILY,
+                sources=(
+                    "antiunify",
+                    f"mods:{len(mods)}",
+                    f"inst:{cand.n_instances}",
+                ),
+            ).as_rule()
+            # emit-sanity — the composition arm's own gate: an
+            # ill-typed mint (the oracle's ``rhs_err``) is dropped
+            # at emit, never spending mint or gauntlet effort.
+            if any(
+                _site_outcome(rule, m, s) == "rhs-err" for m, s in sites
+            ):
+                dropped += 1
+                continue
+            named.add(name)
+            out.append(
+                Proposal(
+                    name=name,
+                    lhs=pat,
+                    rhs=rhs,
+                    family=_XANTI_FAMILY,
+                    sources=(
+                        "antiunify",
+                        f"mods:{len(mods)}",
+                        f"inst:{cand.n_instances}",
+                    ),
+                )
+            )
+    return out, dropped
+
+
+def _xmodule_pool(roots: dict, k: int) -> tuple:
+    """The cross-module pool: ``(candidates, meta, stats)``.
+
+    Two recurring-pattern sources feed the pool, both read over the
+    WHOLE corpus:
+
+    * ``census.op_tuple_census`` — op-patterns recurring across >=
+      *k* distinct modules (``terms_of`` counts module names, not
+      sites) seed ``pipeline.propose`` — the same census-naturality /
+      mixed-view / pattern-recognition / fusion-schema / shape-aware /
+      grammar mint ``zoo-real`` runs per module, here sourced only
+      from structure the modules share;
+    * ``antiunify.mine_candidates`` over the merged corpus e-graph —
+      deep shared subgraphs no 1-level op-tuple expresses, each
+      minting the view-transform family over its own shape
+      (:func:`_xanti_proposals`).
+
+    Both are unified and alpha-deduplicated (a shape both sources
+    mint merges its provenance), then every candidate faces the
+    **K-bind gate**: the LHS must ``_term_match`` a real subterm in
+    at least *k* distinct modules — a law that binds exactly one is
+    the per-module arm's surface, not this one's.  ``meta[i]``
+    records the proposer family, sources and the measured module
+    count; ``stats`` is the pool-level accounting (proposal count,
+    the pre-gate bind histogram, cross-tuple and xanti counts).
+    """
+    from mlopt_discovery import pipeline as pipe
+    from mlopt_discovery.census import CorpusTerm, op_tuple_census
+    from mlopt_discovery.proposal import Candidate
+
+    terms = [CorpusTerm("zoo", n, r) for n, r in roots.items()]
+    counts, terms_of = op_tuple_census(terms)
+    cross = {
+        key: n
+        for key, n in counts.items()
+        if len({m for _, m in terms_of[key]}) >= k
+    }
+    all_roots = list(roots.values())
+    subs_by_mod = _op_subterms(roots)
+    proposals = list(pipe.propose(dict(cross), all_roots, _MINT_VOCAB))
+    xprops, xanti_dropped = _xanti_proposals(roots, k)
+    by_key: dict = {}
+    for p in [*proposals, *xprops]:
+        key = alpha_key(p.lhs, p.rhs)
+        cur = by_key.get(key)
+        if cur is None:
+            by_key[key] = p
+        else:
+            merged = tuple(dict.fromkeys(cur.sources + p.sources))
+            if cur.family == _XANTI_FAMILY and p.family != cur.family:
+                # the census mint's name/family is the informative
+                # one — the xanti variant reports through it.
+                cur = replace(p, sources=merged)
+            else:
+                cur = replace(cur, sources=merged)
+            by_key[key] = cur
+    cands: list = []
+    meta: dict[int, dict] = {}
+    bind_hist: Counter = Counter()
+    named: set = set()
+    for p in by_key.values():
+        mods = _modules_bound(p.lhs, subs_by_mod)
+        bind_hist[len(mods)] += 1
+        if len(mods) < k:
+            continue
+        name = p.name
+        if name in named:
+            name = f"{name}~{len(named)}"
+        named.add(name)
+        rule = (
+            replace(p, name=name).as_rule()
+            if name != p.name
+            else p.as_rule()
+        )
+        cands.append(
+            Candidate(
+                strategy="xmodule",
+                label=name,
+                lhs=p.lhs,
+                rhs=p.rhs,
+                note=", ".join(p.sources),
+                rule=rule,
+            )
+        )
+        meta[len(cands) - 1] = {
+            "family": p.family,
+            "sources": list(p.sources),
+            "mods": len(mods),
+        }
+    stats = {
+        "k": k,
+        "cross_tuples": len(cross),
+        "proposals": len(by_key),
+        "xanti": len(xprops),
+        "xanti_dropped": xanti_dropped,
+        "bind_hist": {str(n): c for n, c in sorted(bind_hist.items())},
+        "pool": len(cands),
+    }
+    return cands, meta, stats
+
+
+def _xmodule_pool_cached(seed: int, k: int) -> tuple:
+    """The run's shared pool — minted once, sliced per episode."""
+    key = (seed, k)
+    if key not in _XPOOL:
+        env = _xmodule_env(seed)
+        roots = {n: rec[0].root for n, rec in env.items() if rec}
+        _XPOOL[key] = _xmodule_pool(roots, k)
+    return _XPOOL[key]
+
+
+class _XModuleArena(og.OpenArena):
+    """An ``OpenArena`` whose pool is one page of the corpus-level mint.
+
+    The whole-corpus anti-unified pool (:func:`_xmodule_pool`) is
+    built once per ``(wseed0, xbind)`` — every episode slices a
+    ``page`` off it, so the export + mining spend is paid once and a
+    resume's arena rebuild re-reads the identical pool.  ``meta[i]``
+    carries the proposer family, sources and measured module count
+    beside each pooled candidate — rebuilt deterministically with
+    the pool itself.  A mint failure lands in ``self.error`` like
+    the zoo arms'; an empty slice is the honest done state.
+    """
+
+    def __init__(self, case: dict) -> None:
+        self.pool: list = []
+        self.meta: dict[int, dict] = {}
+        self.verdicts: dict[int, str] = {}
+        self.steps = 0
+        self.done = True
+        self._n_true = 0
+        self._n_useful = 0
+        self.error = ""
+        self.pool_total = 0
+        try:
+            cands, meta, _stats = _xmodule_pool_cached(
+                case.get("wseed0", 0), case.get("xbind", 2)
+            )
+        except Exception as e:
+            self.error = f"mint: {type(e).__name__}: {e}"
+            return
+        page = case.get("page", 48)
+        lo = case.get("xpage", 0) * page
+        self.pool_total = len(cands)
+        self.pool = cands[lo : lo + page]
+        self.meta = {
+            i: meta[lo + i]
+            for i in range(len(self.pool))
+            if lo + i in meta
+        }
+        self.done = not self.pool
+
+
 def _gen_cases(
     corpus: str, seed: int, episodes: int, **kw: Any
 ) -> list:
     """The corpus arm's case list — stream pages or zoo workloads."""
+    if corpus == "zoo-xmodule":
+        return _xmodule_cases(
+            seed,
+            episodes,
+            page=kw["page"],
+            xbind=kw.get("xbind", 2),
+        )
     if corpus in ("zoo", "zoo-real"):
         return _zoo_cases(
             seed,
@@ -810,6 +1237,8 @@ def _arena_for(case: dict, corpus: str) -> Any:
         return _ZooArena(case)
     if corpus == "zoo-real":
         return _RealArena(case)
+    if corpus == "zoo-xmodule":
+        return _XModuleArena(case)
     return og.OpenArena(case)
 
 
@@ -964,6 +1393,7 @@ def run(
     corpus: str = "grammar",
     scan: int = 0,
     compose: int = 0,
+    xbind: int = 2,
     ckpt: Any,
     ctx: Any = None,
     arm_factory: Any = None,
@@ -984,6 +1414,9 @@ def run(
     count — ``meta.synthesize_rules`` rounds over the guarded bank
     (the module's guarded parents plus the bound pool), seeded on
     each module's term (0 = off; ignored on other corpora).
+    ``xbind`` is the zoo-xmodule arm's K — the distinct-module count
+    a minted claim's LHS must bind to pool (2+ is the cross-module
+    surface; ignored on other corpora).
     """
     import torch
 
@@ -998,9 +1431,20 @@ def run(
             page=page,
             scan=scan,
             compose=compose,
+            xbind=xbind,
         )
     zenv: dict | None = None
-    if corpus in ("zoo", "zoo-real"):
+    xstats: dict | None = None
+    if corpus == "zoo-xmodule":
+        wseed0 = cases[0].get("wseed0", seed) if cases else seed
+        xk = cases[0].get("xbind", xbind) if cases else xbind
+        zenv = _xmodule_env(wseed0)
+        # the shared pool is minted once here — the arenas slice
+        # the same cached build, never re-exporting per episode.
+        xstats = _xmodule_pool_cached(wseed0, xk)[2]
+        if ctx is None:
+            ctx = _real_referee_ctx(zenv, referees)
+    elif corpus in ("zoo", "zoo-real"):
         zenv = _zoo_export_env(cases)
         if ctx is None:
             ctx = (
@@ -1058,6 +1502,10 @@ def run(
             if meta is not None:
                 rec["family"] = meta["family"]
                 rec["sources"] = meta["sources"]
+                if "mods" in meta:
+                    # zoo-xmodule — how many distinct modules the
+                    # minted LHS binds (the arm's own measurement).
+                    rec["mods"] = meta["mods"]
             rec["label"] = ev["label"]
             rec["episode"] = i
             rec["arena"] = {
@@ -1085,11 +1533,14 @@ def run(
                 from bench.drivers.screen import novelty_sieve as ns
 
                 bank = ns.known_bank()
-            if corpus in ("zoo", "zoo-real") and zctxs is None:
+            if (
+                corpus in ("zoo", "zoo-real", "zoo-xmodule")
+                and zctxs is None
+            ):
                 zctxs = (
-                    _real_case_ctxs(zenv or {})
-                    if corpus == "zoo-real"
-                    else _zoo_case_ctxs(zenv or {})
+                    _zoo_case_ctxs(zenv or {})
+                    if corpus == "zoo"
+                    else _real_case_ctxs(zenv or {})
                 )
             rule = law_from_data(crec["law"])
             if (crec["law"] or {}).get("guard"):
@@ -1158,7 +1609,7 @@ def run(
         for i in range(len(cases))
         for ev in ckpt.get(("episode", i))["evals"]
     )
-    return {
+    out: dict[str, Any] = {
         "schema": 1,
         "protocol": dict(ckpt.manifest.get("protocol", {})),
         "corpus": corpus,
@@ -1184,6 +1635,7 @@ def run(
             {
                 "name": r["name"],
                 "family": r.get("family", ""),
+                "mods": r.get("mods"),
                 "arena": r["arena"],
                 "admitted": r["admitted"],
                 "skipped": r["skipped"],
@@ -1197,6 +1649,16 @@ def run(
         ],
         "wall_s": round(time.time() - t0, 1),
     }
+    if corpus == "zoo-xmodule" and xstats is not None:
+        # the arm's own accounting: pool shape, the pre-gate bind
+        # histogram, and the minted candidates' distinct-module counts
+        out["xmodule"] = xstats
+        out["bind_dist"] = dict(
+            sorted(
+                Counter(r["mods"] for r in cands if "mods" in r).items()
+            )
+        )
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -1246,6 +1708,11 @@ def render_markdown(summary: dict, *, env: dict | None = None) -> str:
                 "(mlopt_discovery.zoo), candidates minted from each "
                 "module's own op-tuple census (pipeline.propose); "
                 "real_terms are the corpus's distinct subterms",
+                "zoo-xmodule": " — one corpus-level mint: "
+                "op-patterns and antiunified deep shapes recurring "
+                "across >= --xbind distinct modules seed "
+                "pipeline.propose + the xanti family; every claim "
+                "must bind >= K real modules to pool",
             }.get(
                 summary.get("corpus", "grammar"),
                 " — the enumerated grammar stream",
@@ -1275,6 +1742,26 @@ def render_markdown(summary: dict, *, env: dict | None = None) -> str:
             )
             or "—"
         ),
+    ]
+    if summary.get("xmodule") is not None:
+        x = summary["xmodule"]
+        lines.append(
+            f"- cross-module mint: k={x['k']} · "
+            f"cross-tuples={x['cross_tuples']} · "
+            f"proposals={x['proposals']} · "
+            f"xanti={x['xanti']} (+{x['xanti_dropped']} emit-gated) · "
+            f"pool={x['pool']} · "
+            f"bind histogram (pre-gate): {x['bind_hist']}"
+        )
+        if summary.get("bind_dist"):
+            lines.append(
+                "- minted candidates' module-bind counts: "
+                + ", ".join(
+                    f"{n} mods x{c}"
+                    for n, c in summary["bind_dist"].items()
+                )
+            )
+    lines += [
         "",
         "## Admission funnel",
         "",
@@ -1382,7 +1869,11 @@ def main(argv: list[str] | None = None) -> int:
         "from the module's own op-tuple census (pipeline.propose — "
         "the mul_unsq_nat path), binding-first (require_bind — a "
         "candidate that matches no real subterm is never minted), "
-        "and judged against the corpus's distinct real subterms",
+        "and judged against the corpus's distinct real subterms; "
+        "'zoo-xmodule' anti-unifies over the WHOLE corpus — one "
+        "shared pool minted from the op-patterns and deep shapes "
+        "recurring across >= --xbind distinct modules, episodes "
+        "paging it like the stream arm",
     )
     ap.add_argument(
         "--compose",
@@ -1408,6 +1899,16 @@ def main(argv: list[str] | None = None) -> int:
         "so the fuel reaches them, until a round mints no new viable "
         "parent — the fixpoint (mint: corpus-bind-compose-strata — "
         "ledgers restart loudly)",
+    )
+    ap.add_argument(
+        "--xbind",
+        type=int,
+        default=DEFAULTS["xbind"],
+        metavar="K",
+        help="zoo-xmodule only: the distinct-module bind threshold — "
+        "a minted claim pools only when its LHS binds real subterms "
+        "in >= K different modules (K=1 is the per-module arm's "
+        "surface; K=2+ is the cross-module one; default 2)",
     )
     ap.add_argument(
         "--scan",
@@ -1448,17 +1949,21 @@ def main(argv: list[str] | None = None) -> int:
         ap.error("--compose requires --corpus zoo-real")
     if args.compose < 0:
         ap.error("--compose ROUNDS must be >= 1 (omit to disable)")
+    if args.xbind < 1:
+        ap.error("--xbind K must be >= 1")
     if args.dry:
         for k, v in DRY.items():
             setattr(args, k, v)
     if args.ckpt is None:
-        args.ckpt = (
-            CKPT_PATH_REAL if args.corpus == "zoo-real" else CKPT_PATH
-        )
+        args.ckpt = {
+            "zoo-real": CKPT_PATH_REAL,
+            "zoo-xmodule": CKPT_PATH_XMODULE,
+        }.get(args.corpus, CKPT_PATH)
     if args.out is None:
-        args.out = (
-            DOC_PATH_REAL if args.corpus == "zoo-real" else DOC_PATH
-        )
+        args.out = {
+            "zoo-real": DOC_PATH_REAL,
+            "zoo-xmodule": DOC_PATH_XMODULE,
+        }.get(args.corpus, DOC_PATH)
 
     #  Standalone runs put ``bench/drivers`` on sys.path — the root
     #  must be present before the ``bench.*`` imports below.
@@ -1484,17 +1989,23 @@ def main(argv: list[str] | None = None) -> int:
         # denote under the seed binding, or before the synthesis bank
         # carried guarded parents — never replays under it.
         "mint": (
-            "corpus-bind-compose-strata"
+            "corpus-xbind"
+            if args.corpus == "zoo-xmodule"
+            else "corpus-bind-compose-strata"
             if args.corpus == "zoo-real" and args.compose
             else "corpus-bind"
             if args.corpus == "zoo-real"
             else "stream"
         ),
         "compose": args.compose if args.corpus == "zoo-real" else 0,
+        # the K-bind threshold is part of the mint — a ledger pooled
+        # under a different module-count gate restarts loudly rather
+        # than replay a pool this arm would gate differently.
+        "xbind": args.xbind if args.corpus == "zoo-xmodule" else 0,
         # the fusion-schema arm joined ``pipeline.propose`` — a ledger
         # minted before the family existed must restart loudly rather
         # than replay a pool the new arm would now grow.
-        "fusion": args.corpus == "zoo-real",
+        "fusion": args.corpus in ("zoo-real", "zoo-xmodule"),
     }
     if not args.resume and args.ckpt.exists():
         args.ckpt.unlink()
@@ -1522,6 +2033,7 @@ def main(argv: list[str] | None = None) -> int:
         corpus=args.corpus,
         scan=args.scan,
         compose=args.compose if args.corpus == "zoo-real" else 0,
+        xbind=args.xbind if args.corpus == "zoo-xmodule" else 0,
         ckpt=ckpt,
     )
 

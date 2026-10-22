@@ -105,7 +105,12 @@ not `baselines/` rows:
   claims per held-out zoo module), `zoo-real` (the corpus-driven
   mint — each episode's pool is `pipeline.propose`'s candidates over
   the module's own op-tuple census, judged against the corpus's
-  distinct real subterms → `docs/results_overnight_real.md`).
+  distinct real subterms → `docs/results_overnight_real.md`),
+  `zoo-xmodule` (the cross-module mint — one shared pool
+  anti-unified over the WHOLE corpus: `op_tuple_census` op-patterns
+  and `antiunify.mine_candidates` deep shapes recurring across
+  ≥`--xbind` distinct modules, every claim K-bind gated to binding
+  ≥K real modules → `docs/results_overnight_xmodule.md`).
   A flat-file driver (no `<sub>/`),
   standalone only — deliberately no `bench.suites` adapter
   (`bench/drivers/` is not a package; see the doc's suite-status

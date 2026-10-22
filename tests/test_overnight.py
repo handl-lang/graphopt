@@ -677,6 +677,128 @@ class TestCorpusZooRealCompose:
         assert man2["protocol"]["mint"] == "corpus-bind-compose-strata"
 
 
+class TestCorpusXModule:
+    """``--corpus zoo-xmodule`` — one pool anti-unified over the corpus.
+
+    The mint source is structure shared across DISTINCT modules:
+    ``op_tuple_census`` counts the modules an op-tuple spans,
+    ``antiunify.mine_candidates`` mines the deep shared subgraphs of
+    the merged corpus e-graph, and the K-bind gate keeps only claims
+    whose LHS binds >= K different modules' terms.
+    """
+
+    def _roots(self):
+        """A synthetic corpus: m1/m2 share mul(unsq,unsq); m3 unique."""
+        from mlopt_core.ir import Op, TensorType, Var
+
+        def v(n):
+            return Var(n, TensorType((2, 4)))
+
+        m1 = Op.make(
+            "mul",
+            Op.make("unsqueeze", v("x"), dim=0),
+            Op.make("unsqueeze", v("y"), dim=0),
+        )
+        m2 = Op.make(
+            "mul",
+            Op.make("unsqueeze", v("p"), dim=2),
+            Op.make("unsqueeze", v("q"), dim=2),
+        )
+        # the manual-softmax spelling — a fold-class shape no other
+        # synthetic module contains (the module-unique control).
+        e = Op.make("exp", v("z"))
+        m3 = Op.make("div", e, Op.make("sum", e, dim=-1, keepdim=True))
+        return {"m1": m1, "m2": m2, "m3": m3}
+
+    def test_shared_shape_mints_one_generalized_law(self):
+        """The two modules' shared shape folds into ONE minted claim.
+
+        ``mul(unsq(u), unsq(v))`` spelled by m1 and m2 is one
+        recurring cross-module pattern: the generalized naturality
+        law pools once (alpha-deduped across both proposer sources),
+        carrying its measured cross-module bind count.
+        """
+        cands, meta, stats = on._xmodule_pool(self._roots(), 2)
+        labels = [c.label for c in cands]
+        # the generalized law over the shared shape — minted ONCE,
+        # not once per module (the arm's whole premise).
+        assert labels.count("census:mul_unsqueeze") == 1
+        i = labels.index("census:mul_unsqueeze")
+        assert meta[i]["mods"] == 2  # binds m1 and m2 — the new surface
+        assert meta[i]["family"]
+        # every pooled claim crosses the K-bind bar — module-unique
+        # bindings are the old arm's surface, not this one's.
+        assert all(m["mods"] >= 2 for m in meta.values())
+        assert stats["pool"] == len(cands)
+
+    def test_module_unique_shape_does_not_mint(self):
+        """m3's softmax fold — bound by one module — never pools.
+
+        The ``fold:softmax``/``recognize:softmax`` mints would fire on
+        m3's manual-softmax spelling, but a claim binding exactly one
+        module is the per-module arm's surface: the K-bind gate drops
+        it, and m3's unique op-tuples never reach the proposers
+        either (the census is filtered to >= K-module patterns).
+        """
+        cands, meta, _stats = on._xmodule_pool(self._roots(), 2)
+        labels = [c.label for c in cands]
+        assert "fold:softmax" not in labels
+        assert "recognize:softmax" not in labels
+        # every minted claim binds at least two of {m1, m2, m3}
+        assert all(m["mods"] >= 2 for m in meta.values())
+
+    def test_k_threshold_gates_the_pool(self):
+        """K=3 over a 2-of-3 shared shape pools nothing for it."""
+        cands, meta, stats = on._xmodule_pool(self._roots(), 3)
+        labels = [c.label for c in cands]
+        assert "census:mul_unsqueeze" not in labels
+        assert all(m["mods"] >= 3 for m in meta.values())
+        assert stats["k"] == 3
+
+    def test_xmodule_arena_pages_the_shared_pool(self):
+        """Each episode slices ``page`` candidates off the one mint."""
+        case0 = {"xpage": 0, "page": 4, "xbind": 2, "wseed0": 0}
+        case1 = {"xpage": 1, "page": 4, "xbind": 2, "wseed0": 0}
+        a0, a1 = on._XModuleArena(case0), on._XModuleArena(case1)
+        assert not a0.error and not a1.error
+        assert a0.pool_total == a1.pool_total
+        assert len(a0.pool) <= 4
+        # disjoint slices of the same minted pool
+        names0 = {c.label for c in a0.pool}
+        names1 = {c.label for c in a1.pool}
+        assert not (names0 & names1)
+        for i, _c in enumerate(a0.pool):
+            assert a0.meta[i]["family"]
+
+    def test_xmodule_dry_completes_and_records_corpus(self, tmp_path):
+        """The xmodule arm end-to-end: corpus-level mint, K-bound."""
+        t0 = time.time()
+        assert (
+            on.main(_argv(tmp_path, "--dry", "--corpus", "zoo-xmodule"))
+            == 0
+        )
+        assert (
+            time.time() - t0 < 300
+        )  # whole-zoo export + mint + referee
+        man, cells = _records(tmp_path / "ck.jsonl")
+        assert man["protocol"]["corpus"] == "zoo-xmodule"
+        assert man["protocol"]["mint"] == "corpus-xbind"
+        assert man["protocol"]["xbind"] == 2
+        episodes = _cells(cells, "episode")
+        assert len(episodes) == 2
+        for e in episodes:
+            assert "xpage" in e["record"]["case"]
+        for c in _cells(cells, "candidate"):
+            assert c["record"]["family"]  # the proposer is recorded
+            assert c["record"]["mods"] >= 2  # the K-bind surface
+        payload = json.loads((tmp_path / "out.json").read_text())
+        assert payload["corpus"] == "zoo-xmodule"
+        assert payload["xmodule"]["k"] == 2
+        assert (
+            "corpus: `zoo-xmodule`" in (tmp_path / "out.md").read_text()
+        )
+
+
 class TestResume:
     """A protocol-matched resume replays cells, never re-measures."""
 
