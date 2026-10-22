@@ -42,7 +42,7 @@ from mlopt_core.cost import (
     param_bytes_cost_for,
 )
 from mlopt_core.egraph.terms import _term_instantiate, _term_match
-from mlopt_core.ir import Const, TensorType, Var
+from mlopt_core.ir import Const, Param, TensorType, Var
 from mlopt_core.meta import pattern_metavars
 
 from bench.referees.registry import ComponentVerdict, RefereeCtx
@@ -112,11 +112,19 @@ def _instance_case(name: str, lhs_i: Any) -> Any:
     Mirrors ``impact._synthetic_case``: the claim's own site is the
     term it *should* fire on; the ``+1.0`` offset keeps zeros out of
     the feed so a law whose truth is multiplicative still evaluates.
+    A real-match site carries ``Param`` leaves (the module's weights)
+    — they are *not* data inputs: they feed through ``param_vals`` as
+    one shared fp64 draw.  Left empty, each lowered side's
+    ``_build_params`` fallback mints an independent ambient-dtype
+    ``randn·0.02`` — fp32 weights against an fp64 feed error at the
+    first mixed op, and the two sides would disagree on their own
+    parameters even at matching dtype: a guaranteed verify artifact,
+    never a claim result.
     """
     import torch
     from mlopt_discovery.impact import TermCase
 
-    inps = tuple(_leaves_of(lhs_i))
+    inps = tuple(v for v in _leaves_of(lhs_i) if isinstance(v, Var))
     return TermCase(
         source="referee",
         name=name,
@@ -126,7 +134,17 @@ def _instance_case(name: str, lhs_i: Any) -> Any:
             torch.randn(tuple(v.typ.shape), dtype=torch.float64) + 1.0
             for v in inps
         ),
-        param_vals={},
+        param_vals={
+            p.name: torch.randn(
+                tuple(
+                    d if isinstance(d, int) else 1 for d in p.typ.shape
+                ),
+                dtype=torch.float64,
+            )
+            + 1.0
+            for p in _leaves_of(lhs_i)
+            if isinstance(p, Param)
+        },
     )
 
 
@@ -267,16 +285,20 @@ class ClaimEvidence:
         return self._synth_regions[key]
 
     def instances(self, cap: int) -> list[tuple[Any, Any]]:
-        """Concrete ``(lhs_i, rhs_i)`` pairs at accepted sites.
+        """Concrete ``(lhs_i, rhs_i)`` pairs at denoting accepted sites.
 
         The accepted region of the stock-window synth sweep plus the
         real matches — the sites the claim's own guard admits, each
-        instantiated both ways.  Capped; the pay/cert legs probe a
-        prefix.
+        instantiated both ways, filtered to sites whose pair actually
+        denotes under the declared leaf shapes (an ``*-err`` eval is
+        a malformed probe case, not evidence).  Capped; the pay/cert
+        legs probe a prefix.
         """
 
         if self._instances is not None:
             return self._instances[:cap]
+        from mlopt_discovery import oracle as lvo
+
         out: list[tuple[Any, Any]] = []
         if not self.pattern:
             out.append((self.claim.lhs, self.claim.rhs))
@@ -298,8 +320,18 @@ class ClaimEvidence:
                 if not ok:
                     continue
                 rhs_i = _rhs_inst(self.claim, subst)
-                if rhs_i is not None:
-                    out.append((lhs_i, rhs_i))
+                if rhs_i is None:
+                    continue
+                # Only a site whose instantiated pair *denotes* under
+                # the declared leaf shapes can be probed: an ``*-err``
+                # outcome mints a TermCase whose own ``before`` side
+                # cannot eval — the pay leg's lowering RuntimeError is
+                # a malformed-case artifact, never evidence against
+                # the claim.  ``unequal`` stays: a disagreeing site
+                # the guard admits is honest sink evidence.
+                if lvo.eval_instance(lhs_i, rhs_i)[0].endswith("-err"):
+                    continue
+                out.append((lhs_i, rhs_i))
                 if len(out) >= cap:
                     break
             # Fall back to the generic-instance path for claims the

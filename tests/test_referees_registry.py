@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 
 import pytest
-import torch  # noqa: F401 — importorskip equivalent: torch ships
+import torch
 from mlopt_core.egraph import Rewrite
 from mlopt_core.ir import Op, TensorType, Var
 
@@ -219,6 +219,54 @@ def test_cert_replays_a_derivable_claim():
     evd = _c.ClaimEvidence(claim, _ctx())
     v = _c.run_component("cert", claim, _ctx(), evd)
     assert v.name == "cert" and v.passed
+
+
+def test_instance_case_feeds_params_via_param_vals():
+    """Real-match sites carry ``Param`` leaves — the module's weights.
+
+    They lower through ``param_vals`` (one shared fp64 draw), not the
+    input feed: an empty ``param_vals`` makes each lowered side mint
+    an independent ambient-dtype ``randn·0.02`` — fp32 weights
+    against an fp64 feed error at the first mixed op, and the two
+    sides would disagree on their own parameters even at matching
+    dtype.  The ``fold:instance_norm``/``fold:group_norm`` /
+    ``sdpa_fold_*`` ``verify_fail`` rows were this artifact.
+    """
+    from mlopt_core.ir import Param
+
+    from bench.referees import components as _c
+
+    lhs_i = _p("mul", _v("x", 2, 3), Param("w", TensorType((2, 3))))
+    case = _c._instance_case("c#0", lhs_i)
+    assert [type(v) for v in case.inputs] == [Var]
+    assert len(case.feed) == len(case.inputs)
+    assert case.param_vals["w"].dtype == torch.float64
+    assert tuple(case.param_vals["w"].shape) == (2, 3)
+
+
+def test_instances_skip_non_denoting_sites():
+    """A check-passing site whose pair cannot eval is not a probe.
+
+    The ``matmul(a, b) + c`` binding space mixes shapes the stock
+    bank draws independently — an ``a(2, 3) @ b(2, 3)`` env makes the
+    instantiated lhs error — and a TermCase minted on one fails to
+    lower *before* the claim is tested: the malformed-case artifact
+    behind the ``sdpa_fold_addmul`` ``verify_fail=4`` row.
+    """
+    from mlopt_discovery import oracle as lvo
+
+    from bench.referees import components as _c
+
+    claim = Rewrite(
+        "mm+c",
+        _p("add", _p("matmul", "a", "b"), "c"),
+        _p("add", _p("matmul", "a", "b"), "c"),
+    )
+    evd = _c.ClaimEvidence(claim, _ctx())
+    insts = evd.instances(8)
+    assert insts  # denoting sites exist — the claim is honest
+    for lhs_i, rhs_i in insts:
+        assert not lvo.eval_instance(lhs_i, rhs_i)[0].endswith("-err")
 
 
 # ---------------------------------------------------------------------------
