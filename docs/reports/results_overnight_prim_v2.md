@@ -102,3 +102,56 @@ Episodes -> mint -> admit -> classify.  Open-game episodes mint candidate rewrit
 | `prim:synop_93e57c595e` | false | yes | cleared | machine-original |
 | `prim:synop_336e34145b` | false | no | cleared | — |
 | `prim:synop_bb8c54c201` | false | yes | cleared | machine-original |
+
+## Shipped
+
+The 21 admitted folds were runtime-minted — they died with the driver
+process.  They now ship in
+:mod:`mlopt_discovery.shipped_primitives` (graphopt-side, not the
+eqsat substrate): each ``synop_<sha256[:10]>`` op registers via
+``op_def`` plus an ambient ``_IR_TO_TORCH`` denotation (the binding
+replays the spelled subgraph — the op IS its denotation, so the fold
+is sound by construction), the ``prim:synop_*`` folds materialize from
+verbatim embedded ``law_to_data`` records, and each carries its
+``synop_*.expand`` definitional premise as ``rule.premises`` for the
+cert leg's anchored derivation.
+
+Home choice: the substrate (``mlopt_core``) is torch-free, but a
+``synop_*`` op's *meaning* is its torch binding — shipping the laws
+in ``mlopt_core.laws.minted`` (the ``conv_bn_fold`` channel) would
+register generator entries whose denotations only this repo can
+evaluate, and pushing the folds into core ``DEFAULT`` would change
+extraction for every downstream consumer (including non-torch sinks,
+which can never lower a ``synop_*`` term).  So the family ships
+domain-side as an opt-in set — the ``machine_pack`` discipline:
+
+```python
+from mlopt_discovery import shipped_primitives as sp
+sp.register()                        # op_def + torch denotations
+res = search(m, x, source=TorchSource(), rules=sp.prim_default())
+out = lower(res, x, sink=TorchSink(), verify=True)
+```
+
+Provenance: ``prov=machine`` — the domain-side ledger is
+``shipped_primitives.MACHINE_MINTED`` (fold + ``.expand`` + op names);
+core's ``law_provenance`` is registry-level over the core library and
+does not see this set, so ``shipped_primitives.law_provenance`` is the
+classifier across both.
+
+Deliverability (re-measured at ship time, ``tests/``
+``test_shipped_primitives.py`` + the interactive sweep): every fold
+fires on a real bound module and wins its e-class under
+backend-relative extraction; every bound site re-verifies ``equal``
+(the mint's own ``eval_instance`` gate); end-to-end
+``search``/``lower``/``verify`` on bound zoo modules extracts the
+``synop_*`` forms and verifies exact (max_rel 0.0) — e.g.
+``RealGatedLRU`` extracts ``synop_5e58f26875`` + ``synop_bb8c54c201``,
+``HighwayGate``/``RotaryPair``/``GRUFusedGate`` extract
+``synop_bb8c54c201``.  Node-count extraction beats per fold on
+``GatedLinearAttention``/``RealGatedLRU``: best single fold
+``synop_4c657cb2c0`` 94→61 (0.649x); folds whose sites sit in
+param-only subtrees fold but tie the priced cost (compile-time work
+is charged at zero — still extracted and verified).  The three
+cleared-but-not-admitted mints (``synop_5f1bba5798``,
+``synop_00cd48d9a2``, ``synop_336e34145b``) are **not** shipped —
+admission, not minting, is the shipping bar.

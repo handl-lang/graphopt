@@ -33,7 +33,10 @@ generated-kernel machinery (:mod:`.genkernel` — minted handlers +
 bindings + gen sink — the lowerings the search itself builds),
 the handler-grammar minter (:mod:`.handler_synth` — ADR 0007
 layer 2: structured loop/fold/contraction handler bodies verified
-against the pre-mint subterm),
+against the pre-mint subterm), the shipped machine-minted
+primitives (:mod:`.shipped_primitives` — the ``zoo-prim`` mint's
+admitted ``synop_*`` ops, torch denotations and ``prim:synop_*``
+fold laws as an opt-in ``rules=`` set),
 and the domain registry + CLI (:mod:`.play` —
 ``python -m mlopt_discovery.play --domain meta|joint|search|torch|gen``).
 Formerly the ``tools/law_*.py``

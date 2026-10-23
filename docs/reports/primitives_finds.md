@@ -57,3 +57,19 @@ patterns, bind counts across distinct zoo modules):
   `mods` lists above are the real cross-module counts).
 - Arena verdict `false` for all folds: the arena cannot eval unbound patterns;
   the gauntlet is the judge (documented in the driver).
+
+## Shipped
+
+The 21 admitted folds are no longer process-local: they ship in
+`mlopt_discovery.shipped_primitives` — the verbatim mint records
+materialize the `prim:synop_*` fold laws (each carrying its
+`synop_*.expand` definitional premise), `register()` seats the op
+definitions and the torch denotations (the binding replays the spelled
+subgraph — sound by construction), and `prim_default()` deploys the
+set through `search`'s `rules=` seam.  They stay **opt-in** — never
+in core `DEFAULT` — because a `synop_*`'s meaning is a torch binding
+and pushing them into the torch-free substrate (or `DEFAULT`) would
+change extraction for consumers that can never lower the ops.
+Domain-side provenance ledger: `shipped_primitives.MACHINE_MINTED`
+(prov=machine).  See the "Shipped" note in
+`results_overnight_prim_v2.md` for the re-measured deliverability.
