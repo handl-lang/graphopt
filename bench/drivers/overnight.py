@@ -138,6 +138,36 @@ same ledger, same doc shape — the document lands at
 ``docs/results_overnight_xmodule.md`` and the mint is
 protocol-pinned as ``corpus-xbind``.
 
+``zoo-prim`` is the **primitive-minting arm** — the cross-module mint
+carried to its conclusion.  The shared shapes ``zoo-xmodule`` mines
+are laws over *existing* ops: every claim it pools is a rewrite the
+bank could in principle already name.  This arm names the shape
+itself: a mined pattern recurring across >= ``--xbind`` distinct
+modules and *not denoted by any bank op* (:func:`_denoted_shapes` —
+the spelled side of every shipped fold/expansion and the
+``lawdata.HANDLERS`` inventory) mints a NEW primitive op
+``synop_<hash>`` whose *denotation is the manual subgraph*: the op is
+registered (:func:`mlopt_core.ir.op_def`) and bound into the ambient
+torch table (``_IR_TO_TORCH``) evaluating the spelled spec — so the
+op verifies fp64 on every bound site *by construction*, and it lowers
+through the same ``TorchSink`` the pay leg probes.  The minted claim
+is the fold ``manual_spelling -> synop_*(args)`` — **novel by
+construction**: no catalog contains laws about an op that did not
+exist at ship time, so the prior-art sieve cannot derive it.  The
+fold still faces the same emit gate (its denotation must equal the
+pattern on every bound site — measured, not assumed), the same
+gauntlet (the ``synop_*.expand`` definitional premise rides
+``rule.premises`` so the cert leg anchors a derivation — the
+mechanism the fusion-schema mint uses for denotations the bank
+lacks), and the same sieve.  ``handler_synth.mint_handlers`` runs on
+each shape as the synthesis measurement: a grammar body verified on
+the bound-site domain rides the record as provenance (the machine
+found a compressed semantics); a refusal keeps the definitional op
+and records the measured gap.  One shared pool, paged like
+``zoo-xmodule``; the document lands at
+``docs/reports/results_overnight_prim.md`` and the mint is
+protocol-pinned as ``corpus-prim``.
+
 Run::
 
     .venv/bin/python bench/drivers/overnight.py --dry
@@ -145,6 +175,7 @@ Run::
     .venv/bin/python bench/drivers/overnight.py --dry --corpus zoo-real
     .venv/bin/python bench/drivers/overnight.py --dry --corpus zoo-real --compose
     .venv/bin/python bench/drivers/overnight.py --dry --corpus zoo-xmodule
+    .venv/bin/python bench/drivers/overnight.py --dry --corpus zoo-prim
     .venv/bin/python bench/drivers/overnight.py --episodes 48 \
         --player playbook --referee full --resume
 """
@@ -213,8 +244,17 @@ DRY: dict[str, Any] = {
 #: mint — the ``mul_unsq_nat`` path); ``zoo-xmodule`` anti-unifies
 #: over the WHOLE corpus — one shared pool minted from the
 #: op-patterns and deep subgraphs recurring across >= ``--xbind``
-#: distinct modules, episodes paging it like the stream arm.
-CORPORA: tuple[str, ...] = ("grammar", "zoo", "zoo-real", "zoo-xmodule")
+#: distinct modules, episodes paging it like the stream arm;
+#: ``zoo-prim`` mints NEW primitive ops (``synop_*``) for the
+#: recurring manual subgraphs no bank op denotes and folds them —
+#: laws novel by construction.
+CORPORA: tuple[str, ...] = (
+    "grammar",
+    "zoo",
+    "zoo-real",
+    "zoo-xmodule",
+    "zoo-prim",
+)
 
 #: Where the documents land.
 DOC_PATH = _REPO / "docs" / "results_overnight.md"
@@ -226,6 +266,10 @@ DOC_PATH_REAL = _REPO / "docs" / "results_overnight_real.md"
 #: The zoo-xmodule arm's own document — one corpus-level pool, not a
 #: per-module mint.
 DOC_PATH_XMODULE = _REPO / "docs" / "results_overnight_xmodule.md"
+
+#: The zoo-prim arm's own document — the primitive-mint measurement,
+#: filed with the bounded-run reports.
+DOC_PATH_PRIM = _REPO / "docs" / "reports" / "results_overnight_prim.md"
 
 #: The default ledger — ``benchkit.checkpoint.DEFAULT_DIR``'s lane
 #: file, spelled out so the constant needs no ``bench.*`` import.
@@ -239,6 +283,9 @@ CKPT_PATH_REAL = Path("bench/results/checkpoints/overnight_real.jsonl")
 CKPT_PATH_XMODULE = Path(
     "bench/results/checkpoints/overnight_xmodule.jsonl"
 )
+
+#: The zoo-prim lane file.
+CKPT_PATH_PRIM = Path("bench/results/checkpoints/overnight_prim.jsonl")
 
 #: The op vocabulary the corpus mint enumerates laws over —
 #: ``"derived"`` classifies every corpus op by property
@@ -268,6 +315,29 @@ _XANTI_CAP = 48
 #: the same ``rhs-err`` gate the composition arm applies, over a
 #: capped cross-corpus site set.
 _XANTI_SITES = 64
+
+#: The ``meta.family`` a primitive-minted fold records — the ledger
+#: distinguishes the ``prim:synop_*`` folds from the rewrite mints.
+_PRIM_FAMILY = "prim-fold"
+
+#: Cap on mined shapes taken through the prim mint — the top-``gain``
+#: slice, so the corpus pool stays bounded like a page.
+_PRIM_CAP = 24
+
+#: ``mine_candidates`` size window for the prim arm — the same deep-
+#: shape bounds the xmodule mint reads.
+_PRIM_MIN_OPS = 2
+_PRIM_MAX_OPS = 6
+
+#: Bound on bound sites a candidate's verify/domain stage walks.
+_PRIM_SITES = 16
+
+#: Bound on bound sites sampled into the handler-verify domain.
+_PRIM_DOMAIN = 4
+
+#: ``mint_handlers`` candidate cap per shape — the bounded grammar
+#: search the synthesis measurement spends (refusals quote it).
+_PRIM_BUDGET = 256
 
 _NOVELTY_ORDER = ("machine-original", "known-art", "vacuous")
 
@@ -1206,11 +1276,482 @@ class _XModuleArena(og.OpenArena):
         self.done = not self.pool
 
 
+# ---------------------------------------------------------------------------
+#  the zoo-prim corpus arm — primitives minted for repeated manual shapes
+# ---------------------------------------------------------------------------
+
+#: Corpus-level pool cache — ``(wseed0, xbind) -> (cands, meta,
+#: stats)``, the same resume-determinism contract as ``_XPOOL``.
+_PPOOL: dict = {}
+
+
+def _pat_spec(pat: Any) -> Any:
+    """Render an ``Op`` pattern as a genkernel spec tuple.
+
+    ``(op, *child_specs[, attrs])`` with metavar leaves *kept by
+    name* (``meta_arena._spec_of`` would re-canonicalize them to
+    ``X1``… — the mint needs the pattern's own names so the bound
+    sites' subst keys line up) and attr metavariables kept as their
+    string names inside the attr dict.
+    """
+    from mlopt_core.ir import Const, Op
+
+    if isinstance(pat, Op):
+        parts = [_pat_spec(a) for a in pat.args]
+        if pat.attrs:
+            parts.append(dict(pat.attrs))
+        return (pat.op, *parts)
+    if isinstance(pat, Const):
+        return pat.value
+    return pat  # metavar leaf — the name IS the binding key
+
+
+def _pat_ops(pat: Any) -> set:
+    """Op names inside a pattern."""
+    from mlopt_core.ir import Op
+
+    if not isinstance(pat, Op):
+        return set()
+    return {pat.op} | set().union(*(_pat_ops(a) for a in pat.args))
+
+
+def _spec_bind(spec: Any, attrs: dict, attr_mvars: tuple) -> Any:
+    """Instantiate a spec's attr-metavar dict values under *attrs*.
+
+    The minted op call carries its attr metavariables as real op
+    attrs (``synop_*(v0, a0=<bound>)``); at eval time the spelled
+    denotation needs those values back inside the spec's attr dicts —
+    a dict value equal to an attr-mvar name resolves through the
+    call's attrs, everything else passes through literal.
+    """
+    if isinstance(spec, (tuple, list)):
+        out = []
+        for e in spec:
+            if isinstance(e, dict):
+                out.append(
+                    {
+                        k: (
+                            attrs.get(v, v)
+                            if isinstance(v, str) and v in attr_mvars
+                            else v
+                        )
+                        for k, v in e.items()
+                    }
+                )
+            else:
+                out.append(_spec_bind(e, attrs, attr_mvars))
+        return tuple(out) if isinstance(spec, tuple) else out
+    return spec
+
+
+def _prim_binding(
+    spec: Any, leaf_mvars: tuple, attr_mvars: tuple
+) -> Any:
+    """The minted op's torch binding — its denotation, spelled out.
+
+    ``fn(*args, **attrs) = eval(spec, {mvar: arg}, ambient)`` — the
+    op IS the manual subgraph: equal to the fold's LHS at every bound
+    site by construction, so the oracle/sweep/cert legs all measure
+    the definitional truth.  Attr metavariables ride the call's own
+    attrs back into the spec.
+    """
+    import mlopt_torch.torch_bridge as tb
+    from mlopt_discovery.genkernel import _eval_spec
+
+    bindings = tb._IR_TO_TORCH
+
+    def fn(*args: Any, **attrs: Any) -> Any:
+        env = dict(zip(leaf_mvars, args, strict=True))
+        return _eval_spec(
+            _spec_bind(spec, attrs, attr_mvars), env, bindings
+        )
+
+    return fn
+
+
+def _bare_call(t: Any) -> bool:
+    """Whether *t* is a fused call ``f(v0, …)`` over metavar args."""
+    from mlopt_core.ir import Op
+
+    return (
+        isinstance(t, Op)
+        and bool(t.args)
+        and all(isinstance(a, str) for a in t.args)
+    )
+
+
+def _denoted_shapes() -> frozenset:
+    """Alpha-normal keys of spellings a bank op already denotes.
+
+    For every shipped rule with a bare fused call on one side —
+    ``manual -> f(v*)`` folds and ``f(v*) -> manual`` expansions
+    alike — the *other* side is that op's spelled denotation.
+    ``lawdata.HANDLERS`` rows contribute their patterns (the
+    handler-table ops' own declared bodies), and the pipeline's
+    ``_FUSION_SCHEMAS`` their manual sides.  A mined shape in this
+    set is already *named* — minting ``synop_*`` for it would be a
+    second name for an existing fused op, not a new primitive, so the
+    mint skips it and the funnel records the exclusion.
+    """
+    from mlopt_core.laws.priorart import PRIOR_ART_RULES
+    from mlopt_discovery.antiunify import _alpha_norm
+    from mlopt_discovery.lawdata import HANDLERS
+    from mlopt_discovery.object_synthesis import term_from_spec
+    from mlopt_discovery.pipeline import _FUSION_SCHEMAS
+
+    from bench.drivers.screen import novelty_sieve as ns
+
+    denoted: set[str] = set()
+    for r in [*ns.known_bank(), *PRIOR_ART_RULES, *_FUSION_SCHEMAS]:
+        if _bare_call(r.lhs):
+            denoted.add(_alpha_norm(r.rhs))
+        if _bare_call(r.rhs):
+            denoted.add(_alpha_norm(r.lhs))
+    for h in HANDLERS.values():
+        denoted.add(_alpha_norm(term_from_spec(h["pattern"])))
+    return frozenset(denoted)
+
+
+def _prim_domain(sites: list, cap: int) -> list:
+    """``{meta: shape}`` dicts read off bound sites' inferred shapes.
+
+    The handler-verify domain is the *bound* domain — each site's
+    metavar bindings carry real terms whose shapes ``_shape_of``
+    infers (composite bound values included).  A site whose bound
+    terms leave any dim undecidable is skipped — never a guessed
+    shape.  Attr-mvar keys (``$attr:``) are not domain entries.
+    """
+    from mlopt_core.typing import _INVALID, _shape_of
+
+    out: list = []
+    for m, _s in sites:
+        shapes: dict[str, Any] = {}
+        ok = True
+        for mv, t in m.items():
+            if mv.startswith("$attr:"):
+                continue
+            sh = _shape_of(t)
+            if (
+                sh is _INVALID
+                or not isinstance(sh, tuple)
+                or any(not isinstance(d, int) for d in sh)
+            ):
+                ok = False
+                break
+            shapes[mv] = sh
+        if ok and shapes:
+            out.append(shapes)
+        if len(out) >= cap:
+            break
+    return out
+
+
+def _freeze_spec(spec: Any, subst: dict, attr_mvars: tuple) -> Any:
+    """Instantiate a spec's attr metavars under one bound *subst*.
+
+    ``mint_handlers`` needs a concrete spec — the representative
+    bound site's ``$attr:`` values freeze the metavar attr slots
+    (leaf metavars stay names — only the attr dicts concretize).
+    The runtime binding keeps substituting per call, so the op's
+    denotation never depends on the frozen choice; the frozen body is
+    the grammar's provenance measurement only.
+    """
+    attrs = {
+        k[len("$attr:") :]: v
+        for k, v in subst.items()
+        if k.startswith("$attr:")
+    }
+    return _spec_bind(spec, attrs, attr_mvars)
+
+
+def _prim_pool(
+    roots: dict,
+    k: int,
+    *,
+    cap: int = _PRIM_CAP,
+    budget: int = _PRIM_BUDGET,
+    site_cap: int = _PRIM_SITES,
+) -> tuple:
+    """The primitive-mint pool: ``(candidates, meta, stats)``.
+
+    For every mined shape binding >= *k* distinct modules and not
+    denoted by a bank op (:func:`_denoted_shapes`), mint
+    ``synop_<hash>`` — a NEW op whose denotation is the manual
+    subgraph itself — plus the fold ``pattern -> synop_*(args)``,
+    carrying the ``synop_*.expand`` definitional premise so the cert
+    leg's anchored derivation has the axiom the bare bank lacks.
+
+    Per-shape funnel, each refusal recorded:
+
+    * ``kbound`` — shapes binding >= k modules (the mint's surface);
+    * ``denoted`` — skipped as already-named (a shipped fold or
+      handler op spells the same denotation);
+    * ``unevaluable`` — an op in the pattern has no torch binding,
+      so the spelled denotation can never run;
+    * ``gate_failed`` — the emit gate: no bound site evaluated
+      ``equal`` (or a measured ``unequal``/``rhs-err``) — the verify
+      requirement from the arm's contract;
+    * ``no_domain`` — every bound site left a dim undecidable, so the
+      handler stage had no measured domain (the op still mints on the
+      definitional denotation — the fold's soundness never depends
+      on the grammar);
+    * ``minted`` / ``refused`` — ``handler_synth.mint_handlers``'
+      grammar verdict on the bound-site domain (a verified body
+      rides the record as provenance; a refusal keeps the
+      definitional op and names the measured gap).
+    """
+    import hashlib
+
+    import mlopt_carriers  # noqa: F401 — carrier op bindings
+    import mlopt_torch.torch_bridge as tb
+    from mlopt_core.egraph import EGraph, Rewrite
+    from mlopt_core.egraph.terms import _term_match
+    from mlopt_core.ir import Op, op_def
+    from mlopt_core.meta import instantiate_pattern
+    from mlopt_discovery.antiunify import _alpha_norm, mine_candidates
+    from mlopt_discovery.handler_synth import (
+        handler_record,
+        mint_handlers,
+    )
+    from mlopt_discovery.oracle import eval_instance
+    from mlopt_discovery.pipeline import Proposal
+    from mlopt_discovery.proposal import Candidate
+
+    subs_by_mod = _op_subterms(roots)
+    all_subs = [s for subs in subs_by_mod.values() for s in subs]
+    eg = EGraph()
+    for r in roots.values():
+        eg.add_term(r)
+    denoted = _denoted_shapes()
+    stats: dict[str, Any] = {
+        "k": k,
+        "mined": 0,
+        "kbound": 0,
+        "denoted": 0,
+        "unevaluable": 0,
+        "gate_failed": 0,
+        "no_domain": 0,
+        "minted": 0,
+        "refused": 0,
+        "pool": 0,
+    }
+    cands: list = []
+    meta: dict[int, dict] = {}
+    for cand in mine_candidates(
+        eg,
+        min_uses=k,
+        min_ops=_PRIM_MIN_OPS,
+        max_ops=_PRIM_MAX_OPS,
+    ):
+        if len(cands) >= cap:
+            break
+        stats["mined"] += 1
+        pat = cand.pattern
+        if not isinstance(pat, Op) or not cand.leaf_mvars:
+            continue
+        mods = _modules_bound(pat, subs_by_mod)
+        if len(mods) < k:
+            continue
+        stats["kbound"] += 1
+        norm = _alpha_norm(pat)
+        if norm in denoted:
+            stats["denoted"] += 1
+            continue
+        if any(tb._IR_TO_TORCH.get(op) is None for op in _pat_ops(pat)):
+            stats["unevaluable"] += 1
+            continue
+        # the honest name: the shape's own hash, not a coined label
+        h = hashlib.sha256(norm.encode()).hexdigest()[:10]
+        name = f"synop_{h}"
+        call_attrs: dict[str, Any] = {a: a for a in cand.attr_mvars}
+        call = Op.make(name, *cand.leaf_mvars, **call_attrs)
+        spec = _pat_spec(pat)
+        op_def(
+            name,
+            len(cand.leaf_mvars),
+            1,
+            law=f"synthesized primitive — denotation is the mined "
+            f"manual subgraph {norm}",
+        )
+        # denotation = the spelled spec — the ambient binding table is
+        # the op's semantics (ADR 0007: the executor table IS the
+        # meaning); post-hoc registration reaches every sink seated on
+        # the shared ambient dict.
+        tb._IR_TO_TORCH[name] = _prim_binding(
+            spec, cand.leaf_mvars, cand.attr_mvars
+        )
+        sites = [
+            (m, s)
+            for s in all_subs
+            if (m := _term_match(pat, s)) is not None
+        ][:site_cap]
+        # verify — the arm's honesty gate: the op's denotation must
+        # equal the spelled pattern fp64 on bound sites.  By
+        # construction it does (the binding IS the spelling) — the
+        # measurement is still run, never assumed.
+        equal = bad = 0
+        for m, _s in sites:
+            outcome, _n = eval_instance(
+                instantiate_pattern(pat, m),
+                instantiate_pattern(call, m),
+            )
+            equal += outcome == "equal"
+            bad += outcome in ("unequal", "rhs-err")
+        if not equal or bad:
+            stats["gate_failed"] += 1
+            continue
+        domain = _prim_domain(sites, _PRIM_DOMAIN)
+        hrow: dict[str, Any] = {"verdict": "skipped-no-domain"}
+        if not domain:
+            stats["no_domain"] += 1
+        else:
+            _handlers, report = mint_handlers(
+                [
+                    {
+                        "spec": _freeze_spec(
+                            spec, sites[0][0], cand.attr_mvars
+                        ),
+                        "domain": domain,
+                    }
+                ],
+                budget=budget,
+            )
+            rep = report[0]
+            if rep["verdict"] == "minted":
+                stats["minted"] += 1
+                tag = rep["tag"]
+                hrow = {
+                    "verdict": "minted",
+                    "family": rep["family"],
+                    "tried": rep["tried"],
+                    "max_err": rep["max_err"],
+                    "record": handler_record(tag, _handlers[tag]),
+                }
+            else:
+                stats["refused"] += 1
+                hrow = {
+                    "verdict": "refused",
+                    "tried": rep.get("tried"),
+                    "note": rep.get("note"),
+                }
+        # the definitional premise: the cert leg's anchored axiom set
+        # unions it when the bare bank cannot derive the fold — the
+        # fusion-schema mint's own channel for a denotation the bank
+        # lacks.  The novelty sieve never sees it (its premise bank
+        # is the shipped surface minus alpha-siblings), so the fold
+        # stays underivable there BY CONSTRUCTION.
+        expand = Rewrite(
+            f"{name}.expand",
+            call,
+            pat,
+            law=f"{name} unfolds to its mined denotation — the "
+            "definitional premise the cert leg anchors on",
+        )
+        prop = Proposal(
+            name=f"prim:{name}",
+            lhs=pat,
+            rhs=call,
+            family=_PRIM_FAMILY,
+            sources=(
+                "prim-mint",
+                f"mods:{len(mods)}",
+                f"inst:{cand.n_instances}",
+                f"gain:{cand.gain}",
+                f"handler:{hrow['verdict']}",
+            ),
+            premises=(expand,),
+        )
+        i = len(cands)
+        cands.append(
+            Candidate(
+                strategy="prim",
+                label=prop.name,
+                lhs=pat,
+                rhs=call,
+                note=(
+                    f"primitive {name} — a manual shape shared by "
+                    f"{len(mods)} modules, undenoted in the bank"
+                ),
+                rule=prop.as_rule(),
+            )
+        )
+        meta[i] = {
+            "family": _PRIM_FAMILY,
+            "sources": list(prop.sources),
+            "mods": len(mods),
+            "prim": {
+                "synop": name,
+                "alpha": norm,
+                "mods": sorted(mods),
+                "sites": len(sites),
+                "equal_sites": equal,
+                "handler": hrow,
+            },
+        }
+    stats["pool"] = len(cands)
+    return cands, meta, stats
+
+
+def _prim_pool_cached(seed: int, k: int) -> tuple:
+    """The run's shared prim pool — minted once, sliced per episode.
+
+    Minting registers the ``synop_*`` ops + bindings, so calling this
+    before the episode loop is also what makes a resume's rebuilt
+    candidate cells evaluable again (names are content-hashed — a
+    rebuild re-registers byte-identical bindings).
+    """
+    key = (seed, k)
+    if key not in _PPOOL:
+        env = _xmodule_env(seed)
+        roots = {n: rec[0].root for n, rec in env.items() if rec}
+        _PPOOL[key] = _prim_pool(roots, k)
+    return _PPOOL[key]
+
+
+class _PrimArena(og.OpenArena):
+    """An ``OpenArena`` whose pool is one page of the prim mint.
+
+    Same contract as :class:`_XModuleArena`: the corpus-level pool is
+    built once per ``(wseed0, xbind)`` and episodes slice ``page``
+    candidates off it; ``meta[i]`` rides the ledger with the
+    primitive's own provenance (the minted ``synop_*`` name, the
+    module set, the site-verify counts and the handler verdict).
+    """
+
+    def __init__(self, case: dict) -> None:
+        self.pool: list = []
+        self.meta: dict[int, dict] = {}
+        self.verdicts: dict[int, str] = {}
+        self.steps = 0
+        self.done = True
+        self._n_true = 0
+        self._n_useful = 0
+        self.error = ""
+        self.pool_total = 0
+        try:
+            cands, meta, _stats = _prim_pool_cached(
+                case.get("wseed0", 0), case.get("xbind", 2)
+            )
+        except Exception as e:
+            self.error = f"mint: {type(e).__name__}: {e}"
+            return
+        page = case.get("page", 48)
+        lo = case.get("xpage", 0) * page
+        self.pool_total = len(cands)
+        self.pool = cands[lo : lo + page]
+        self.meta = {
+            i: meta[lo + i]
+            for i in range(len(self.pool))
+            if lo + i in meta
+        }
+        self.done = not self.pool
+
+
 def _gen_cases(
     corpus: str, seed: int, episodes: int, **kw: Any
 ) -> list:
     """The corpus arm's case list — stream pages or zoo workloads."""
-    if corpus == "zoo-xmodule":
+    if corpus in ("zoo-xmodule", "zoo-prim"):
         return _xmodule_cases(
             seed,
             episodes,
@@ -1239,6 +1780,8 @@ def _arena_for(case: dict, corpus: str) -> Any:
         return _RealArena(case)
     if corpus == "zoo-xmodule":
         return _XModuleArena(case)
+    if corpus == "zoo-prim":
+        return _PrimArena(case)
     return og.OpenArena(case)
 
 
@@ -1444,6 +1987,7 @@ def run(
         )
     zenv: dict | None = None
     xstats: dict | None = None
+    pstats: dict | None = None
     if corpus == "zoo-xmodule":
         wseed0 = cases[0].get("wseed0", seed) if cases else seed
         xk = cases[0].get("xbind", xbind) if cases else xbind
@@ -1451,6 +1995,17 @@ def run(
         # the shared pool is minted once here — the arenas slice
         # the same cached build, never re-exporting per episode.
         xstats = _xmodule_pool_cached(wseed0, xk)[2]
+        if ctx is None:
+            ctx = _real_referee_ctx(zenv, referees)
+    elif corpus == "zoo-prim":
+        wseed0 = cases[0].get("wseed0", seed) if cases else seed
+        xk = cases[0].get("xbind", xbind) if cases else xbind
+        zenv = _xmodule_env(wseed0)
+        # the shared pool mints once here — registering the synop_*
+        # ops + bindings before any episode, admit or classify leg
+        # touches them (a resume's pool rebuild reproduces the
+        # registrations verbatim — names are content-hashed).
+        pstats = _prim_pool_cached(wseed0, xk)[2]
         if ctx is None:
             ctx = _real_referee_ctx(zenv, referees)
     elif corpus in ("zoo", "zoo-real"):
@@ -1512,9 +2067,14 @@ def run(
                 rec["family"] = meta["family"]
                 rec["sources"] = meta["sources"]
                 if "mods" in meta:
-                    # zoo-xmodule — how many distinct modules the
-                    # minted LHS binds (the arm's own measurement).
+                    # zoo-xmodule / zoo-prim — how many distinct
+                    # modules the minted LHS binds (the arms' own
+                    # measurement).
                     rec["mods"] = meta["mods"]
+                if "prim" in meta:
+                    # zoo-prim — the minted op's own record: name,
+                    # site-verify counts, handler verdict + record.
+                    rec["prim"] = meta["prim"]
             rec["label"] = ev["label"]
             rec["episode"] = i
             rec["arena"] = {
@@ -1543,7 +2103,7 @@ def run(
 
                 bank = ns.known_bank()
             if (
-                corpus in ("zoo", "zoo-real", "zoo-xmodule")
+                corpus in ("zoo", "zoo-real", "zoo-xmodule", "zoo-prim")
                 and zctxs is None
             ):
                 zctxs = (
@@ -1667,6 +2227,21 @@ def run(
                 Counter(r["mods"] for r in cands if "mods" in r).items()
             )
         )
+    if corpus == "zoo-prim" and pstats is not None:
+        # the arm's own accounting: the shape funnel — mined, K-bound,
+        # denoted/unevaluable/gate/no-domain exclusions, grammar
+        # verdicts, pool size — plus the minted ops' records.
+        out["prim"] = pstats
+        out["prim_ops"] = {
+            r["name"]: r["prim"]
+            for r in cands
+            if r.get("prim") is not None
+        }
+        out["bind_dist"] = dict(
+            sorted(
+                Counter(r["mods"] for r in cands if "mods" in r).items()
+            )
+        )
     return out
 
 
@@ -1722,6 +2297,11 @@ def render_markdown(summary: dict, *, env: dict | None = None) -> str:
                 "across >= --xbind distinct modules seed "
                 "pipeline.propose + the xanti family; every claim "
                 "must bind >= K real modules to pool",
+                "zoo-prim": " — the primitive mint: manual shapes "
+                "recurring across >= --xbind distinct modules and "
+                "denoted by no bank op mint NEW synop_* primitives "
+                "(denotation = the subgraph; the fold is "
+                "novel-by-construction)",
             }.get(
                 summary.get("corpus", "grammar"),
                 " — the enumerated grammar stream",
@@ -1770,6 +2350,42 @@ def render_markdown(summary: dict, *, env: dict | None = None) -> str:
                     for n, c in summary["bind_dist"].items()
                 )
             )
+    if summary.get("prim") is not None:
+        p = summary["prim"]
+        lines.append(
+            f"- primitive mint: k={p['k']} · "
+            f"mined={p['mined']} · "
+            f"k-bound={p['kbound']} · "
+            f"denoted={p['denoted']} · "
+            f"unevaluable={p['unevaluable']} · "
+            f"gate-failed={p['gate_failed']} · "
+            f"no-domain={p['no_domain']} · "
+            f"handler minted={p['minted']} refused={p['refused']} · "
+            f"pool={p['pool']}"
+        )
+        if summary.get("bind_dist"):
+            lines.append(
+                "- minted folds' module-bind counts: "
+                + ", ".join(
+                    f"{n} mods x{c}"
+                    for n, c in summary["bind_dist"].items()
+                )
+            )
+        if summary.get("prim_ops"):
+            lines.append("- minted primitives:")
+            for cname, rec in summary["prim_ops"].items():
+                h = rec["handler"]
+                lines.append(
+                    f"  - `{rec['synop']}` ({cname}) — "
+                    f"{len(rec['mods'])} mods, "
+                    f"{rec['equal_sites']}/{rec['sites']} equal sites, "
+                    f"handler={h['verdict']}"
+                    + (
+                        f" ({h['family']}, err={h['max_err']:.3g})"
+                        if h["verdict"] == "minted"
+                        else ""
+                    )
+                )
     lines += [
         "",
         "## Admission funnel",
@@ -1882,7 +2498,10 @@ def main(argv: list[str] | None = None) -> int:
         "'zoo-xmodule' anti-unifies over the WHOLE corpus — one "
         "shared pool minted from the op-patterns and deep shapes "
         "recurring across >= --xbind distinct modules, episodes "
-        "paging it like the stream arm",
+        "paging it like the stream arm; "
+        "'zoo-prim' mints NEW synop_* primitive ops for the "
+        "recurring manual shapes no bank op denotes and folds them "
+        "(manual -> synop_*), laws novel by construction",
     )
     ap.add_argument(
         "--compose",
@@ -1914,10 +2533,11 @@ def main(argv: list[str] | None = None) -> int:
         type=int,
         default=DEFAULTS["xbind"],
         metavar="K",
-        help="zoo-xmodule only: the distinct-module bind threshold — "
-        "a minted claim pools only when its LHS binds real subterms "
-        "in >= K different modules (K=1 is the per-module arm's "
-        "surface; K=2+ is the cross-module one; default 2)",
+        help="zoo-xmodule / zoo-prim only: the distinct-module bind "
+        "threshold — a minted claim pools only when its LHS binds "
+        "real subterms in >= K different modules (K=1 is the "
+        "per-module arm's surface; K=2+ is the cross-module one; "
+        "default 2)",
     )
     ap.add_argument(
         "--scan",
@@ -1967,11 +2587,13 @@ def main(argv: list[str] | None = None) -> int:
         args.ckpt = {
             "zoo-real": CKPT_PATH_REAL,
             "zoo-xmodule": CKPT_PATH_XMODULE,
+            "zoo-prim": CKPT_PATH_PRIM,
         }.get(args.corpus, CKPT_PATH)
     if args.out is None:
         args.out = {
             "zoo-real": DOC_PATH_REAL,
             "zoo-xmodule": DOC_PATH_XMODULE,
+            "zoo-prim": DOC_PATH_PRIM,
         }.get(args.corpus, DOC_PATH)
 
     #  Standalone runs put ``bench/drivers`` on sys.path — the root
@@ -2000,6 +2622,8 @@ def main(argv: list[str] | None = None) -> int:
         "mint": (
             "corpus-xbind"
             if args.corpus == "zoo-xmodule"
+            else "corpus-prim"
+            if args.corpus == "zoo-prim"
             else "corpus-bind-compose-strata"
             if args.corpus == "zoo-real" and args.compose
             else "corpus-bind"
@@ -2010,7 +2634,11 @@ def main(argv: list[str] | None = None) -> int:
         # the K-bind threshold is part of the mint — a ledger pooled
         # under a different module-count gate restarts loudly rather
         # than replay a pool this arm would gate differently.
-        "xbind": args.xbind if args.corpus == "zoo-xmodule" else 0,
+        "xbind": (
+            args.xbind
+            if args.corpus in ("zoo-xmodule", "zoo-prim")
+            else 0
+        ),
         # the fusion-schema arm joined ``pipeline.propose`` — a ledger
         # minted before the family existed must restart loudly rather
         # than replay a pool the new arm would now grow.
@@ -2042,7 +2670,11 @@ def main(argv: list[str] | None = None) -> int:
         corpus=args.corpus,
         scan=args.scan,
         compose=args.compose if args.corpus == "zoo-real" else 0,
-        xbind=args.xbind if args.corpus == "zoo-xmodule" else 0,
+        xbind=(
+            args.xbind
+            if args.corpus in ("zoo-xmodule", "zoo-prim")
+            else 0
+        ),
         ckpt=ckpt,
     )
 

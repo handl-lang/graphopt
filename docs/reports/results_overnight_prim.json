@@ -1,0 +1,2146 @@
+{
+  "schema": 1,
+  "protocol": {
+    "episodes": 2,
+    "page": 6,
+    "budget": 4,
+    "seed": 0,
+    "player": "playbook",
+    "referee": "full",
+    "corpus": "zoo-prim",
+    "scan": 384,
+    "dry": true,
+    "mint": "corpus-prim",
+    "compose": 0,
+    "xbind": 2,
+    "fusion": false
+  },
+  "corpus": "zoo-prim",
+  "episodes": 2,
+  "evaluated": 8,
+  "arena_verdicts": {
+    "false": 8
+  },
+  "minted": 8,
+  "composed": 0,
+  "guarded": 0,
+  "admitted": 7,
+  "skipped": 0,
+  "leg_refusals": {
+    "admitted": 7,
+    "error": 1
+  },
+  "novelty": {
+    "machine-original": 7
+  },
+  "finds": [
+    {
+      "name": "prim:synop_5e58f26875",
+      "instance_src": "corpus:MambaSelectiveScan",
+      "arena_verdict": "false",
+      "provenance": "human"
+    },
+    {
+      "name": "prim:synop_4f8fefdd38",
+      "instance_src": "corpus:MambaSelectiveScan",
+      "arena_verdict": "false",
+      "provenance": "human"
+    },
+    {
+      "name": "prim:synop_5147826430",
+      "instance_src": "corpus:MambaSelectiveScan",
+      "arena_verdict": "false",
+      "provenance": "human"
+    },
+    {
+      "name": "prim:synop_d5b128282a",
+      "instance_src": "corpus:MambaSelectiveScan",
+      "arena_verdict": "false",
+      "provenance": "human"
+    },
+    {
+      "name": "prim:synop_62d36aefdb",
+      "instance_src": "corpus:MambaSelectiveScan",
+      "arena_verdict": "false",
+      "provenance": "human"
+    },
+    {
+      "name": "prim:synop_629f9ef13b",
+      "instance_src": "corpus:MambaSelectiveScan",
+      "arena_verdict": "false",
+      "provenance": "human"
+    },
+    {
+      "name": "prim:synop_2b8cfd1c90",
+      "instance_src": "corpus:MambaSelectiveScan",
+      "arena_verdict": "false",
+      "provenance": "human"
+    }
+  ],
+  "candidates": [
+    {
+      "name": "prim:synop_5e58f26875",
+      "family": "prim-fold",
+      "mods": 4,
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 6.0,
+        "cand_cost": 6.0
+      },
+      "admitted": true,
+      "skipped": "",
+      "reason": "cleared",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 24eq/0ne/0rerr (24 acc, 0 dec, 24 envs) | synth: 360eq/0ne/0rerr (360 acc, 0 dec, 360 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": true,
+          "detail": "fires=28 changed=8 paid=8 verify_fail=0 cases=72 | count=0.540x exec=0.540x flops=0.514x launch=0.515x params=1.000x"
+        },
+        {
+          "name": "sweep",
+          "passed": true,
+          "detail": "synth: 2000eq/0ne/0rerr (2000 acc, 0 dec, 2000 envs) | real: 24eq/0ne/0rerr (24 acc, 0 dec, 24 envs)"
+        },
+        {
+          "name": "cert",
+          "passed": true,
+          "detail": "rhs->lhs 1 steps (synop_5e58f26875.expand) \u2014 premise-anchored: synop_5e58f26875.expand"
+        }
+      ],
+      "novelty": "machine-original"
+    },
+    {
+      "name": "prim:synop_4f8fefdd38",
+      "family": "prim-fold",
+      "mods": 4,
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 6.0,
+        "cand_cost": 6.0
+      },
+      "admitted": true,
+      "skipped": "",
+      "reason": "cleared",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 20eq/0ne/0rerr (20 acc, 0 dec, 20 envs) | synth: 360eq/0ne/0rerr (360 acc, 0 dec, 360 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": true,
+          "detail": "fires=24 changed=8 paid=8 verify_fail=0 cases=72 | count=0.562x exec=0.562x flops=0.547x launch=0.547x params=1.000x"
+        },
+        {
+          "name": "sweep",
+          "passed": true,
+          "detail": "synth: 2000eq/0ne/0rerr (2000 acc, 0 dec, 2000 envs) | real: 20eq/0ne/0rerr (20 acc, 0 dec, 20 envs)"
+        },
+        {
+          "name": "cert",
+          "passed": true,
+          "detail": "rhs->lhs 1 steps (synop_4f8fefdd38.expand) \u2014 premise-anchored: synop_4f8fefdd38.expand"
+        }
+      ],
+      "novelty": "machine-original"
+    },
+    {
+      "name": "prim:synop_5147826430",
+      "family": "prim-fold",
+      "mods": 4,
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 6.0,
+        "cand_cost": 6.0
+      },
+      "admitted": true,
+      "skipped": "",
+      "reason": "cleared",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 20eq/0ne/0rerr (20 acc, 0 dec, 20 envs) | synth: 360eq/0ne/0rerr (360 acc, 0 dec, 360 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": true,
+          "detail": "fires=24 changed=8 paid=8 verify_fail=0 cases=72 | count=0.572x exec=0.572x flops=0.554x launch=0.554x params=1.000x"
+        },
+        {
+          "name": "sweep",
+          "passed": true,
+          "detail": "synth: 2000eq/0ne/0rerr (2000 acc, 0 dec, 2000 envs) | real: 20eq/0ne/0rerr (20 acc, 0 dec, 20 envs)"
+        },
+        {
+          "name": "cert",
+          "passed": true,
+          "detail": "rhs->lhs 1 steps (synop_5147826430.expand) \u2014 premise-anchored: synop_5147826430.expand"
+        }
+      ],
+      "novelty": "machine-original"
+    },
+    {
+      "name": "prim:synop_d5b128282a",
+      "family": "prim-fold",
+      "mods": 4,
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 6.0,
+        "cand_cost": 6.0
+      },
+      "admitted": true,
+      "skipped": "",
+      "reason": "cleared",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 20eq/0ne/0rerr (20 acc, 0 dec, 20 envs) | synth: 360eq/0ne/0rerr (360 acc, 0 dec, 360 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": true,
+          "detail": "fires=24 changed=8 paid=8 verify_fail=0 cases=72 | count=0.572x exec=0.572x flops=0.554x launch=0.554x params=1.000x"
+        },
+        {
+          "name": "sweep",
+          "passed": true,
+          "detail": "synth: 2000eq/0ne/0rerr (2000 acc, 0 dec, 2000 envs) | real: 20eq/0ne/0rerr (20 acc, 0 dec, 20 envs)"
+        },
+        {
+          "name": "cert",
+          "passed": true,
+          "detail": "rhs->lhs 1 steps (synop_d5b128282a.expand) \u2014 premise-anchored: synop_d5b128282a.expand"
+        }
+      ],
+      "novelty": "machine-original"
+    },
+    {
+      "name": "prim:synop_5f1bba5798",
+      "family": "prim-fold",
+      "mods": 4,
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 7.0,
+        "cand_cost": 1.0
+      },
+      "admitted": false,
+      "skipped": "",
+      "reason": "cleared",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 20eq/0ne/0rerr (20 acc, 0 dec, 20 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": true,
+          "detail": "fires=28 changed=8 paid=4 verify_fail=0 cases=72 | count=0.551x exec=8564874851.570x flops=503147464363.711x launch=501346599434.153x params=1.000x"
+        },
+        {
+          "name": "sweep",
+          "passed": true,
+          "detail": "synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | real: 20eq/0ne/0rerr (20 acc, 0 dec, 20 envs)"
+        },
+        {
+          "name": "cert",
+          "passed": true,
+          "detail": "rhs->lhs 1 steps (synop_5f1bba5798.expand) \u2014 premise-anchored: synop_5f1bba5798.expand"
+        }
+      ],
+      "novelty": ""
+    },
+    {
+      "name": "prim:synop_62d36aefdb",
+      "family": "prim-fold",
+      "mods": 4,
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 6.0,
+        "cand_cost": 6.0
+      },
+      "admitted": true,
+      "skipped": "",
+      "reason": "cleared",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 20eq/0ne/0rerr (20 acc, 0 dec, 20 envs) | synth: 360eq/0ne/0rerr (360 acc, 0 dec, 360 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": true,
+          "detail": "fires=24 changed=8 paid=6 verify_fail=0 cases=72 | count=0.583x exec=0.583x flops=0.574x launch=0.575x params=1.000x"
+        },
+        {
+          "name": "sweep",
+          "passed": true,
+          "detail": "synth: 2000eq/0ne/0rerr (2000 acc, 0 dec, 2000 envs) | real: 20eq/0ne/0rerr (20 acc, 0 dec, 20 envs)"
+        },
+        {
+          "name": "cert",
+          "passed": true,
+          "detail": "rhs->lhs 1 steps (synop_62d36aefdb.expand) \u2014 premise-anchored: synop_62d36aefdb.expand"
+        }
+      ],
+      "novelty": "machine-original"
+    },
+    {
+      "name": "prim:synop_629f9ef13b",
+      "family": "prim-fold",
+      "mods": 4,
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 6.0,
+        "cand_cost": 6.0
+      },
+      "admitted": true,
+      "skipped": "",
+      "reason": "cleared",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 20eq/0ne/0rerr (20 acc, 0 dec, 20 envs) | synth: 360eq/0ne/0rerr (360 acc, 0 dec, 360 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": true,
+          "detail": "fires=24 changed=8 paid=6 verify_fail=0 cases=72 | count=0.583x exec=0.583x flops=0.574x launch=0.575x params=1.000x"
+        },
+        {
+          "name": "sweep",
+          "passed": true,
+          "detail": "synth: 2000eq/0ne/0rerr (2000 acc, 0 dec, 2000 envs) | real: 20eq/0ne/0rerr (20 acc, 0 dec, 20 envs)"
+        },
+        {
+          "name": "cert",
+          "passed": true,
+          "detail": "rhs->lhs 1 steps (synop_629f9ef13b.expand) \u2014 premise-anchored: synop_629f9ef13b.expand"
+        }
+      ],
+      "novelty": "machine-original"
+    },
+    {
+      "name": "prim:synop_2b8cfd1c90",
+      "family": "prim-fold",
+      "mods": 4,
+      "arena": {
+        "verdict": "false",
+        "relation": "new",
+        "num_true": null,
+        "base_cost": 5.0,
+        "cand_cost": 5.0
+      },
+      "admitted": true,
+      "skipped": "",
+      "reason": "cleared",
+      "stages": [
+        {
+          "name": "oracle",
+          "passed": true,
+          "detail": "real: 24eq/0ne/0rerr (24 acc, 0 dec, 24 envs) | synth: 360eq/0ne/0rerr (360 acc, 0 dec, 360 envs)"
+        },
+        {
+          "name": "pay",
+          "passed": true,
+          "detail": "fires=28 changed=8 paid=8 verify_fail=0 cases=72 | count=0.560x exec=0.560x flops=0.534x launch=0.534x params=1.000x"
+        },
+        {
+          "name": "sweep",
+          "passed": true,
+          "detail": "synth: 2000eq/0ne/0rerr (2000 acc, 0 dec, 2000 envs) | real: 24eq/0ne/0rerr (24 acc, 0 dec, 24 envs)"
+        },
+        {
+          "name": "cert",
+          "passed": true,
+          "detail": "rhs->lhs 1 steps (synop_2b8cfd1c90.expand) \u2014 premise-anchored: synop_2b8cfd1c90.expand"
+        }
+      ],
+      "novelty": "machine-original"
+    }
+  ],
+  "wall_s": 4.5,
+  "prim": {
+    "k": 2,
+    "mined": 24,
+    "kbound": 24,
+    "denoted": 0,
+    "unevaluable": 0,
+    "gate_failed": 0,
+    "no_domain": 0,
+    "minted": 16,
+    "refused": 8,
+    "pool": 24
+  },
+  "prim_ops": {
+    "prim:synop_5e58f26875": {
+      "synop": "synop_5e58f26875",
+      "alpha": "(add (mul 'v0', (add (mul 'v1', 'v2'), (mul 'v3', 'v4'))), (mul 'v5', 'v6'))",
+      "mods": [
+        "GatedDeltaRule",
+        "GatedLinearAttention",
+        "MambaSelectiveScan",
+        "RealGatedLRU"
+      ],
+      "sites": 16,
+      "equal_sites": 16,
+      "handler": {
+        "verdict": "minted",
+        "family": "ew",
+        "tried": 1,
+        "max_err": 0.0,
+        "record": {
+          "tag": "minted_0",
+          "kind": "handler",
+          "pattern": [
+            "add",
+            [
+              "mul",
+              "v223",
+              [
+                "add",
+                [
+                  "mul",
+                  "v345",
+                  "v346"
+                ],
+                [
+                  "mul",
+                  "v358",
+                  "v359"
+                ]
+              ]
+            ],
+            [
+              "mul",
+              "v215",
+              "v216"
+            ]
+          ],
+          "kernel": "minted_0_k",
+          "args": [
+            "v223",
+            "v345",
+            "v346",
+            "v358",
+            "v359",
+            "v215",
+            "v216"
+          ],
+          "handler_body": [
+            "ew",
+            [
+              "add",
+              [
+                "mul",
+                "v223",
+                [
+                  "add",
+                  [
+                    "mul",
+                    "v345",
+                    "v346"
+                  ],
+                  [
+                    "mul",
+                    "v358",
+                    "v359"
+                  ]
+                ]
+              ],
+              [
+                "mul",
+                "v215",
+                "v216"
+              ]
+            ]
+          ],
+          "provenance": {
+            "origin": "minted",
+            "grammar": "handler-grammar-v2",
+            "family": "ew",
+            "seed": 0,
+            "budget": 256,
+            "tried": 1,
+            "domain": [
+              {
+                "v223": [
+                  2,
+                  16,
+                  4
+                ],
+                "v345": [
+                  2,
+                  16,
+                  4
+                ],
+                "v346": [
+                  2,
+                  16,
+                  4
+                ],
+                "v358": [
+                  2,
+                  16,
+                  1
+                ],
+                "v359": [
+                  2,
+                  1,
+                  4
+                ],
+                "v215": [
+                  2,
+                  16,
+                  1
+                ],
+                "v216": [
+                  2,
+                  1,
+                  4
+                ]
+              },
+              {
+                "v223": [
+                  2,
+                  16,
+                  4
+                ],
+                "v345": [
+                  2,
+                  16,
+                  4
+                ],
+                "v346": [
+                  2,
+                  16,
+                  4
+                ],
+                "v358": [
+                  2,
+                  16,
+                  1
+                ],
+                "v359": [
+                  2,
+                  1,
+                  4
+                ],
+                "v215": [
+                  2,
+                  16,
+                  1
+                ],
+                "v216": [
+                  2,
+                  1,
+                  4
+                ]
+              },
+              {
+                "v223": [
+                  2,
+                  16,
+                  4
+                ],
+                "v345": [
+                  2,
+                  16,
+                  4
+                ],
+                "v346": [
+                  2,
+                  16,
+                  4
+                ],
+                "v358": [
+                  2,
+                  16,
+                  1
+                ],
+                "v359": [
+                  2,
+                  1,
+                  4
+                ],
+                "v215": [
+                  2,
+                  16,
+                  1
+                ],
+                "v216": [
+                  2,
+                  1,
+                  4
+                ]
+              },
+              {
+                "v223": [
+                  2,
+                  16,
+                  4
+                ],
+                "v345": [
+                  2,
+                  16,
+                  4
+                ],
+                "v346": [
+                  2,
+                  16,
+                  4
+                ],
+                "v358": [
+                  2,
+                  16,
+                  1
+                ],
+                "v359": [
+                  2,
+                  1,
+                  4
+                ],
+                "v215": [
+                  2,
+                  16,
+                  1
+                ],
+                "v216": [
+                  2,
+                  1,
+                  4
+                ]
+              }
+            ],
+            "n_samples": 8,
+            "max_err": 0.0,
+            "rtol": 1e-09,
+            "atol": 1e-12
+          }
+        }
+      }
+    },
+    "prim:synop_4f8fefdd38": {
+      "synop": "synop_4f8fefdd38",
+      "alpha": "(add (mul 'v0', (add (mul 'v1', (add 'v2', 'v3')), 'v4')), (mul 'v5', 'v6'))",
+      "mods": [
+        "GatedDeltaRule",
+        "GatedLinearAttention",
+        "MambaSelectiveScan",
+        "RealGatedLRU"
+      ],
+      "sites": 16,
+      "equal_sites": 16,
+      "handler": {
+        "verdict": "minted",
+        "family": "ew",
+        "tried": 1,
+        "max_err": 0.0,
+        "record": {
+          "tag": "minted_0",
+          "kind": "handler",
+          "pattern": [
+            "add",
+            [
+              "mul",
+              "v223",
+              [
+                "add",
+                [
+                  "mul",
+                  "v345",
+                  [
+                    "add",
+                    "v362",
+                    "v363"
+                  ]
+                ],
+                "v268"
+              ]
+            ],
+            [
+              "mul",
+              "v215",
+              "v216"
+            ]
+          ],
+          "kernel": "minted_0_k",
+          "args": [
+            "v223",
+            "v345",
+            "v362",
+            "v363",
+            "v268",
+            "v215",
+            "v216"
+          ],
+          "handler_body": [
+            "ew",
+            [
+              "add",
+              [
+                "mul",
+                "v223",
+                [
+                  "add",
+                  [
+                    "mul",
+                    "v345",
+                    [
+                      "add",
+                      "v362",
+                      "v363"
+                    ]
+                  ],
+                  "v268"
+                ]
+              ],
+              [
+                "mul",
+                "v215",
+                "v216"
+              ]
+            ]
+          ],
+          "provenance": {
+            "origin": "minted",
+            "grammar": "handler-grammar-v2",
+            "family": "ew",
+            "seed": 0,
+            "budget": 256,
+            "tried": 1,
+            "domain": [
+              {
+                "v223": [
+                  2,
+                  16,
+                  4
+                ],
+                "v345": [
+                  2,
+                  16,
+                  4
+                ],
+                "v362": [
+                  2,
+                  16,
+                  4
+                ],
+                "v363": [
+                  2,
+                  16,
+                  4
+                ],
+                "v268": [
+                  2,
+                  16,
+                  4
+                ],
+                "v215": [
+                  2,
+                  16,
+                  1
+                ],
+                "v216": [
+                  2,
+                  1,
+                  4
+                ]
+              },
+              {
+                "v223": [
+                  2,
+                  16,
+                  4
+                ],
+                "v345": [
+                  2,
+                  16,
+                  4
+                ],
+                "v362": [
+                  2,
+                  16,
+                  4
+                ],
+                "v363": [
+                  2,
+                  16,
+                  4
+                ],
+                "v268": [
+                  2,
+                  16,
+                  4
+                ],
+                "v215": [
+                  2,
+                  16,
+                  1
+                ],
+                "v216": [
+                  2,
+                  1,
+                  4
+                ]
+              },
+              {
+                "v223": [
+                  2,
+                  16,
+                  4
+                ],
+                "v345": [
+                  2,
+                  16,
+                  4
+                ],
+                "v362": [
+                  2,
+                  16,
+                  4
+                ],
+                "v363": [
+                  2,
+                  16,
+                  4
+                ],
+                "v268": [
+                  2,
+                  16,
+                  4
+                ],
+                "v215": [
+                  2,
+                  16,
+                  1
+                ],
+                "v216": [
+                  2,
+                  1,
+                  4
+                ]
+              },
+              {
+                "v223": [
+                  2,
+                  16,
+                  4
+                ],
+                "v345": [
+                  2,
+                  16,
+                  4
+                ],
+                "v362": [
+                  2,
+                  16,
+                  4
+                ],
+                "v363": [
+                  2,
+                  16,
+                  4
+                ],
+                "v268": [
+                  2,
+                  16,
+                  4
+                ],
+                "v215": [
+                  2,
+                  16,
+                  1
+                ],
+                "v216": [
+                  2,
+                  1,
+                  4
+                ]
+              }
+            ],
+            "n_samples": 8,
+            "max_err": 0.0,
+            "rtol": 1e-09,
+            "atol": 1e-12
+          }
+        }
+      }
+    },
+    "prim:synop_5147826430": {
+      "synop": "synop_5147826430",
+      "alpha": "(add (mul 'v0', (add (mul 'v1', (add 'v2', 'v3')), (mul 'v4', 'v5'))), 'v6')",
+      "mods": [
+        "GatedDeltaRule",
+        "GatedLinearAttention",
+        "MambaSelectiveScan",
+        "RealGatedLRU"
+      ],
+      "sites": 16,
+      "equal_sites": 16,
+      "handler": {
+        "verdict": "minted",
+        "family": "ew",
+        "tried": 1,
+        "max_err": 0.0,
+        "record": {
+          "tag": "minted_0",
+          "kind": "handler",
+          "pattern": [
+            "add",
+            [
+              "mul",
+              "v201",
+              [
+                "add",
+                [
+                  "mul",
+                  "v472",
+                  [
+                    "add",
+                    "v492",
+                    "v493"
+                  ]
+                ],
+                [
+                  "mul",
+                  "v480",
+                  "v481"
+                ]
+              ]
+            ],
+            "v14"
+          ],
+          "kernel": "minted_0_k",
+          "args": [
+            "v201",
+            "v472",
+            "v492",
+            "v493",
+            "v480",
+            "v481",
+            "v14"
+          ],
+          "handler_body": [
+            "ew",
+            [
+              "add",
+              [
+                "mul",
+                "v201",
+                [
+                  "add",
+                  [
+                    "mul",
+                    "v472",
+                    [
+                      "add",
+                      "v492",
+                      "v493"
+                    ]
+                  ],
+                  [
+                    "mul",
+                    "v480",
+                    "v481"
+                  ]
+                ]
+              ],
+              "v14"
+            ]
+          ],
+          "provenance": {
+            "origin": "minted",
+            "grammar": "handler-grammar-v2",
+            "family": "ew",
+            "seed": 0,
+            "budget": 256,
+            "tried": 1,
+            "domain": [
+              {
+                "v201": [
+                  2,
+                  16,
+                  4
+                ],
+                "v472": [
+                  2,
+                  16,
+                  4
+                ],
+                "v492": [
+                  2,
+                  16,
+                  4
+                ],
+                "v493": [
+                  2,
+                  16,
+                  4
+                ],
+                "v480": [
+                  2,
+                  16,
+                  1
+                ],
+                "v481": [
+                  2,
+                  1,
+                  4
+                ],
+                "v14": [
+                  2,
+                  16,
+                  4
+                ]
+              },
+              {
+                "v201": [
+                  2,
+                  16,
+                  4
+                ],
+                "v472": [
+                  2,
+                  16,
+                  4
+                ],
+                "v492": [
+                  2,
+                  16,
+                  4
+                ],
+                "v493": [
+                  2,
+                  16,
+                  4
+                ],
+                "v480": [
+                  2,
+                  16,
+                  1
+                ],
+                "v481": [
+                  2,
+                  1,
+                  4
+                ],
+                "v14": [
+                  2,
+                  16,
+                  4
+                ]
+              },
+              {
+                "v201": [
+                  2,
+                  16,
+                  4
+                ],
+                "v472": [
+                  2,
+                  16,
+                  4
+                ],
+                "v492": [
+                  2,
+                  16,
+                  4
+                ],
+                "v493": [
+                  2,
+                  16,
+                  4
+                ],
+                "v480": [
+                  2,
+                  16,
+                  1
+                ],
+                "v481": [
+                  2,
+                  1,
+                  4
+                ],
+                "v14": [
+                  2,
+                  16,
+                  4
+                ]
+              },
+              {
+                "v201": [
+                  2,
+                  16,
+                  4
+                ],
+                "v472": [
+                  2,
+                  16,
+                  4
+                ],
+                "v492": [
+                  2,
+                  16,
+                  4
+                ],
+                "v493": [
+                  2,
+                  16,
+                  4
+                ],
+                "v480": [
+                  2,
+                  16,
+                  1
+                ],
+                "v481": [
+                  2,
+                  1,
+                  4
+                ],
+                "v14": [
+                  2,
+                  16,
+                  4
+                ]
+              }
+            ],
+            "n_samples": 8,
+            "max_err": 0.0,
+            "rtol": 1e-09,
+            "atol": 1e-12
+          }
+        }
+      }
+    },
+    "prim:synop_d5b128282a": {
+      "synop": "synop_d5b128282a",
+      "alpha": "(add (mul 'v0', (add (mul 'v1', (add 'v2', (mul 'v3', 'v4'))), 'v5')), 'v6')",
+      "mods": [
+        "GatedDeltaRule",
+        "GatedLinearAttention",
+        "MambaSelectiveScan",
+        "RealGatedLRU"
+      ],
+      "sites": 16,
+      "equal_sites": 16,
+      "handler": {
+        "verdict": "minted",
+        "family": "ew",
+        "tried": 1,
+        "max_err": 0.0,
+        "record": {
+          "tag": "minted_0",
+          "kind": "handler",
+          "pattern": [
+            "add",
+            [
+              "mul",
+              "v201",
+              [
+                "add",
+                [
+                  "mul",
+                  "v472",
+                  [
+                    "add",
+                    "v484",
+                    [
+                      "mul",
+                      "v511",
+                      "v512"
+                    ]
+                  ]
+                ],
+                "v307"
+              ]
+            ],
+            "v14"
+          ],
+          "kernel": "minted_0_k",
+          "args": [
+            "v201",
+            "v472",
+            "v484",
+            "v511",
+            "v512",
+            "v307",
+            "v14"
+          ],
+          "handler_body": [
+            "ew",
+            [
+              "add",
+              [
+                "mul",
+                "v201",
+                [
+                  "add",
+                  [
+                    "mul",
+                    "v472",
+                    [
+                      "add",
+                      "v484",
+                      [
+                        "mul",
+                        "v511",
+                        "v512"
+                      ]
+                    ]
+                  ],
+                  "v307"
+                ]
+              ],
+              "v14"
+            ]
+          ],
+          "provenance": {
+            "origin": "minted",
+            "grammar": "handler-grammar-v2",
+            "family": "ew",
+            "seed": 0,
+            "budget": 256,
+            "tried": 1,
+            "domain": [
+              {
+                "v201": [
+                  2,
+                  16,
+                  4
+                ],
+                "v472": [
+                  2,
+                  16,
+                  4
+                ],
+                "v484": [
+                  2,
+                  16,
+                  4
+                ],
+                "v511": [
+                  2,
+                  16,
+                  1
+                ],
+                "v512": [
+                  2,
+                  1,
+                  4
+                ],
+                "v307": [
+                  2,
+                  16,
+                  4
+                ],
+                "v14": [
+                  2,
+                  16,
+                  4
+                ]
+              },
+              {
+                "v201": [
+                  2,
+                  16,
+                  4
+                ],
+                "v472": [
+                  2,
+                  16,
+                  4
+                ],
+                "v484": [
+                  2,
+                  16,
+                  4
+                ],
+                "v511": [
+                  2,
+                  16,
+                  1
+                ],
+                "v512": [
+                  2,
+                  1,
+                  4
+                ],
+                "v307": [
+                  2,
+                  16,
+                  4
+                ],
+                "v14": [
+                  2,
+                  16,
+                  4
+                ]
+              },
+              {
+                "v201": [
+                  2,
+                  16,
+                  4
+                ],
+                "v472": [
+                  2,
+                  16,
+                  4
+                ],
+                "v484": [
+                  2,
+                  16,
+                  4
+                ],
+                "v511": [
+                  2,
+                  16,
+                  1
+                ],
+                "v512": [
+                  2,
+                  1,
+                  4
+                ],
+                "v307": [
+                  2,
+                  16,
+                  4
+                ],
+                "v14": [
+                  2,
+                  16,
+                  4
+                ]
+              },
+              {
+                "v201": [
+                  2,
+                  16,
+                  4
+                ],
+                "v472": [
+                  2,
+                  16,
+                  4
+                ],
+                "v484": [
+                  2,
+                  16,
+                  4
+                ],
+                "v511": [
+                  2,
+                  16,
+                  1
+                ],
+                "v512": [
+                  2,
+                  1,
+                  4
+                ],
+                "v307": [
+                  2,
+                  16,
+                  4
+                ],
+                "v14": [
+                  2,
+                  16,
+                  4
+                ]
+              }
+            ],
+            "n_samples": 8,
+            "max_err": 0.0,
+            "rtol": 1e-09,
+            "atol": 1e-12
+          }
+        }
+      }
+    },
+    "prim:synop_5f1bba5798": {
+      "synop": "synop_5f1bba5798",
+      "alpha": "(mul (unsqueeze (select 'v0', dim=1, index=a0), dim=-1), (unsqueeze (select (linear 'v1', 'v2', 'v3'), dim=1, index=a0), dim=a1))",
+      "mods": [
+        "DeltaRuleBlock",
+        "GatedDeltaRule",
+        "GatedLinearAttention",
+        "MambaSelectiveScan"
+      ],
+      "sites": 16,
+      "equal_sites": 16,
+      "handler": {
+        "verdict": "refused",
+        "tried": 256,
+        "note": "no candidate verified within budget=256"
+      }
+    },
+    "prim:synop_62d36aefdb": {
+      "synop": "synop_62d36aefdb",
+      "alpha": "(mul 'v0', (add (mul 'v1', (add (mul 'v2', 'v3'), 'v4')), (mul 'v5', 'v6')))",
+      "mods": [
+        "GatedDeltaRule",
+        "GatedLinearAttention",
+        "MambaSelectiveScan",
+        "RealGatedLRU"
+      ],
+      "sites": 16,
+      "equal_sites": 16,
+      "handler": {
+        "verdict": "minted",
+        "family": "ew",
+        "tried": 1,
+        "max_err": 0.0,
+        "record": {
+          "tag": "minted_0",
+          "kind": "handler",
+          "pattern": [
+            "mul",
+            "v10",
+            [
+              "add",
+              [
+                "mul",
+                "v733",
+                [
+                  "add",
+                  [
+                    "mul",
+                    "v769",
+                    "v770"
+                  ],
+                  "v750"
+                ]
+              ],
+              [
+                "mul",
+                "v739",
+                "v740"
+              ]
+            ]
+          ],
+          "kernel": "minted_0_k",
+          "args": [
+            "v10",
+            "v733",
+            "v769",
+            "v770",
+            "v750",
+            "v739",
+            "v740"
+          ],
+          "handler_body": [
+            "ew",
+            [
+              "mul",
+              "v10",
+              [
+                "add",
+                [
+                  "mul",
+                  "v733",
+                  [
+                    "add",
+                    [
+                      "mul",
+                      "v769",
+                      "v770"
+                    ],
+                    "v750"
+                  ]
+                ],
+                [
+                  "mul",
+                  "v739",
+                  "v740"
+                ]
+              ]
+            ]
+          ],
+          "provenance": {
+            "origin": "minted",
+            "grammar": "handler-grammar-v2",
+            "family": "ew",
+            "seed": 0,
+            "budget": 256,
+            "tried": 1,
+            "domain": [
+              {
+                "v10": [
+                  2,
+                  16,
+                  4
+                ],
+                "v733": [
+                  2,
+                  16,
+                  4
+                ],
+                "v769": [
+                  2,
+                  16,
+                  4
+                ],
+                "v770": [
+                  2,
+                  16,
+                  4
+                ],
+                "v750": [
+                  2,
+                  16,
+                  4
+                ],
+                "v739": [
+                  2,
+                  16,
+                  1
+                ],
+                "v740": [
+                  2,
+                  1,
+                  4
+                ]
+              },
+              {
+                "v10": [
+                  2,
+                  16,
+                  4
+                ],
+                "v733": [
+                  2,
+                  16,
+                  4
+                ],
+                "v769": [
+                  2,
+                  16,
+                  4
+                ],
+                "v770": [
+                  2,
+                  16,
+                  4
+                ],
+                "v750": [
+                  2,
+                  16,
+                  4
+                ],
+                "v739": [
+                  2,
+                  16,
+                  1
+                ],
+                "v740": [
+                  2,
+                  1,
+                  4
+                ]
+              },
+              {
+                "v10": [
+                  2,
+                  16,
+                  4
+                ],
+                "v733": [
+                  2,
+                  16,
+                  4
+                ],
+                "v769": [
+                  2,
+                  16,
+                  4
+                ],
+                "v770": [
+                  2,
+                  16,
+                  4
+                ],
+                "v750": [
+                  2,
+                  16,
+                  4
+                ],
+                "v739": [
+                  2,
+                  16,
+                  1
+                ],
+                "v740": [
+                  2,
+                  1,
+                  4
+                ]
+              },
+              {
+                "v10": [
+                  2,
+                  16,
+                  4
+                ],
+                "v733": [
+                  2,
+                  16,
+                  4
+                ],
+                "v769": [
+                  2,
+                  16,
+                  4
+                ],
+                "v770": [
+                  2,
+                  16,
+                  4
+                ],
+                "v750": [
+                  2,
+                  16,
+                  4
+                ],
+                "v739": [
+                  2,
+                  16,
+                  1
+                ],
+                "v740": [
+                  2,
+                  1,
+                  4
+                ]
+              }
+            ],
+            "n_samples": 8,
+            "max_err": 0.0,
+            "rtol": 1e-09,
+            "atol": 1e-12
+          }
+        }
+      }
+    },
+    "prim:synop_629f9ef13b": {
+      "synop": "synop_629f9ef13b",
+      "alpha": "(mul 'v0', (add (mul 'v1', (add (mul 'v2', 'v3'), (mul 'v4', 'v5'))), 'v6'))",
+      "mods": [
+        "GatedDeltaRule",
+        "GatedLinearAttention",
+        "MambaSelectiveScan",
+        "RealGatedLRU"
+      ],
+      "sites": 16,
+      "equal_sites": 16,
+      "handler": {
+        "verdict": "minted",
+        "family": "ew",
+        "tried": 1,
+        "max_err": 0.0,
+        "record": {
+          "tag": "minted_0",
+          "kind": "handler",
+          "pattern": [
+            "mul",
+            "v10",
+            [
+              "add",
+              [
+                "mul",
+                "v733",
+                [
+                  "add",
+                  [
+                    "mul",
+                    "v791",
+                    "v792"
+                  ],
+                  [
+                    "mul",
+                    "v801",
+                    "v802"
+                  ]
+                ]
+              ],
+              "v138"
+            ]
+          ],
+          "kernel": "minted_0_k",
+          "args": [
+            "v10",
+            "v733",
+            "v791",
+            "v792",
+            "v801",
+            "v802",
+            "v138"
+          ],
+          "handler_body": [
+            "ew",
+            [
+              "mul",
+              "v10",
+              [
+                "add",
+                [
+                  "mul",
+                  "v733",
+                  [
+                    "add",
+                    [
+                      "mul",
+                      "v791",
+                      "v792"
+                    ],
+                    [
+                      "mul",
+                      "v801",
+                      "v802"
+                    ]
+                  ]
+                ],
+                "v138"
+              ]
+            ]
+          ],
+          "provenance": {
+            "origin": "minted",
+            "grammar": "handler-grammar-v2",
+            "family": "ew",
+            "seed": 0,
+            "budget": 256,
+            "tried": 1,
+            "domain": [
+              {
+                "v10": [
+                  2,
+                  16,
+                  4
+                ],
+                "v733": [
+                  2,
+                  16,
+                  4
+                ],
+                "v791": [
+                  2,
+                  16,
+                  4
+                ],
+                "v792": [
+                  2,
+                  16,
+                  4
+                ],
+                "v801": [
+                  2,
+                  16,
+                  1
+                ],
+                "v802": [
+                  2,
+                  1,
+                  4
+                ],
+                "v138": [
+                  2,
+                  16,
+                  4
+                ]
+              },
+              {
+                "v10": [
+                  2,
+                  16,
+                  4
+                ],
+                "v733": [
+                  2,
+                  16,
+                  4
+                ],
+                "v791": [
+                  2,
+                  16,
+                  4
+                ],
+                "v792": [
+                  2,
+                  16,
+                  4
+                ],
+                "v801": [
+                  2,
+                  16,
+                  1
+                ],
+                "v802": [
+                  2,
+                  1,
+                  4
+                ],
+                "v138": [
+                  2,
+                  16,
+                  4
+                ]
+              },
+              {
+                "v10": [
+                  2,
+                  16,
+                  4
+                ],
+                "v733": [
+                  2,
+                  16,
+                  4
+                ],
+                "v791": [
+                  2,
+                  16,
+                  4
+                ],
+                "v792": [
+                  2,
+                  16,
+                  4
+                ],
+                "v801": [
+                  2,
+                  16,
+                  1
+                ],
+                "v802": [
+                  2,
+                  1,
+                  4
+                ],
+                "v138": [
+                  2,
+                  16,
+                  4
+                ]
+              },
+              {
+                "v10": [
+                  2,
+                  16,
+                  4
+                ],
+                "v733": [
+                  2,
+                  16,
+                  4
+                ],
+                "v791": [
+                  2,
+                  16,
+                  4
+                ],
+                "v792": [
+                  2,
+                  16,
+                  4
+                ],
+                "v801": [
+                  2,
+                  16,
+                  1
+                ],
+                "v802": [
+                  2,
+                  1,
+                  4
+                ],
+                "v138": [
+                  2,
+                  16,
+                  4
+                ]
+              }
+            ],
+            "n_samples": 8,
+            "max_err": 0.0,
+            "rtol": 1e-09,
+            "atol": 1e-12
+          }
+        }
+      }
+    },
+    "prim:synop_2b8cfd1c90": {
+      "synop": "synop_2b8cfd1c90",
+      "alpha": "(add (mul 'v0', (add 'v1', (mul 'v2', 'v3'))), (mul 'v4', 'v5'))",
+      "mods": [
+        "GatedDeltaRule",
+        "GatedLinearAttention",
+        "MambaSelectiveScan",
+        "RealGatedLRU"
+      ],
+      "sites": 16,
+      "equal_sites": 16,
+      "handler": {
+        "verdict": "minted",
+        "family": "ew",
+        "tried": 1,
+        "max_err": 0.0,
+        "record": {
+          "tag": "minted_0",
+          "kind": "handler",
+          "pattern": [
+            "add",
+            [
+              "mul",
+              "v223",
+              [
+                "add",
+                "v267",
+                [
+                  "mul",
+                  "v347",
+                  "v348"
+                ]
+              ]
+            ],
+            [
+              "mul",
+              "v215",
+              "v216"
+            ]
+          ],
+          "kernel": "minted_0_k",
+          "args": [
+            "v223",
+            "v267",
+            "v347",
+            "v348",
+            "v215",
+            "v216"
+          ],
+          "handler_body": [
+            "ew",
+            [
+              "add",
+              [
+                "mul",
+                "v223",
+                [
+                  "add",
+                  "v267",
+                  [
+                    "mul",
+                    "v347",
+                    "v348"
+                  ]
+                ]
+              ],
+              [
+                "mul",
+                "v215",
+                "v216"
+              ]
+            ]
+          ],
+          "provenance": {
+            "origin": "minted",
+            "grammar": "handler-grammar-v2",
+            "family": "ew",
+            "seed": 0,
+            "budget": 256,
+            "tried": 1,
+            "domain": [
+              {
+                "v223": [
+                  2,
+                  16,
+                  4
+                ],
+                "v267": [
+                  2,
+                  16,
+                  4
+                ],
+                "v347": [
+                  2,
+                  16,
+                  1
+                ],
+                "v348": [
+                  2,
+                  1,
+                  4
+                ],
+                "v215": [
+                  2,
+                  16,
+                  1
+                ],
+                "v216": [
+                  2,
+                  1,
+                  4
+                ]
+              },
+              {
+                "v223": [
+                  2,
+                  16,
+                  4
+                ],
+                "v267": [
+                  2,
+                  16,
+                  4
+                ],
+                "v347": [
+                  2,
+                  16,
+                  1
+                ],
+                "v348": [
+                  2,
+                  1,
+                  4
+                ],
+                "v215": [
+                  2,
+                  16,
+                  1
+                ],
+                "v216": [
+                  2,
+                  1,
+                  4
+                ]
+              },
+              {
+                "v223": [
+                  2,
+                  16,
+                  4
+                ],
+                "v267": [
+                  2,
+                  16,
+                  4
+                ],
+                "v347": [
+                  2,
+                  16,
+                  1
+                ],
+                "v348": [
+                  2,
+                  1,
+                  4
+                ],
+                "v215": [
+                  2,
+                  16,
+                  1
+                ],
+                "v216": [
+                  2,
+                  1,
+                  4
+                ]
+              },
+              {
+                "v223": [
+                  2,
+                  16,
+                  4
+                ],
+                "v267": [
+                  2,
+                  16,
+                  4
+                ],
+                "v347": [
+                  2,
+                  16,
+                  1
+                ],
+                "v348": [
+                  2,
+                  1,
+                  4
+                ],
+                "v215": [
+                  2,
+                  16,
+                  1
+                ],
+                "v216": [
+                  2,
+                  1,
+                  4
+                ]
+              }
+            ],
+            "n_samples": 8,
+            "max_err": 0.0,
+            "rtol": 1e-09,
+            "atol": 1e-12
+          }
+        }
+      }
+    }
+  },
+  "bind_dist": {
+    "4": 8
+  },
+  "env": {
+    "timestamp_utc": "2026-10-23T05:38:33+00:00",
+    "python": "3.13.9",
+    "torch": "2.14.0+cu130",
+    "torch_cuda": "13.0",
+    "device": "cpu",
+    "device_name": "12th Gen Intel(R) Core(TM) i5-12500H",
+    "cpu_count": 16,
+    "git_sha": "e70c191",
+    "git_dirty": true,
+    "argv": [
+      "bench/drivers/overnight.py",
+      "--dry",
+      "--corpus",
+      "zoo-prim",
+      "--episodes",
+      "4",
+      "--page",
+      "8",
+      "--budget",
+      "6"
+    ]
+  },
+  "generated_utc": "2026-10-23T05:38:33+00:00",
+  "seed": 0
+}

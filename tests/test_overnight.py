@@ -799,6 +799,195 @@ class TestCorpusXModule:
         )
 
 
+class TestCorpusZooPrim:
+    """``--corpus zoo-prim`` — primitives minted for shared manual shapes.
+
+    The mint anti-unifies the corpus for recurring manual subgraphs
+    that no bank op denotes, registers each as a NEW ``synop_*``
+    primitive whose denotation IS the subgraph (spelled-eval binding
+    in ``_IR_TO_TORCH``), and folds ``manual -> synop_*`` — a claim
+    the prior-art sieve cannot derive by construction.
+    """
+
+    def _roots(self):
+        """m1/m2 share ``sub(x, mul(x, sigmoid(y)))`` — undenoted."""
+        from mlopt_core.ir import Op, TensorType, Var
+
+        def v(n):
+            return Var(n, TensorType((2, 4)))
+
+        shape = lambda a, b: Op.make(  # noqa: E731
+            "sub", a, Op.make("mul", a, Op.make("sigmoid", b))
+        )
+        return {
+            "m1": shape(v("x"), v("y")),
+            "m2": shape(v("p"), v("q")),
+        }
+
+    def test_prim_mints_fold_for_undenoted_shape(self):
+        """The shared manual shape mints a synop_* fold binding >=K mods."""
+        cands, meta, stats = on._prim_pool(self._roots(), 2)
+        labels = [c.label for c in cands]
+        assert labels and all(
+            lbl.startswith("prim:synop_") for lbl in labels
+        )
+        i = labels.index(cands[0].label)
+        assert meta[i]["mods"] >= 2
+        rec = meta[i]["prim"]
+        assert rec["synop"].startswith("synop_")
+        assert rec["equal_sites"] >= 1
+        assert stats["pool"] == len(cands)
+
+    def test_prim_denotation_verifies_on_bound_sites(self):
+        """eval_instance(manual, synop) is equal at every bound site."""
+        from mlopt_core.egraph.terms import (
+            _term_instantiate,
+            _term_match,
+        )
+        from mlopt_core.ir import Op
+        from mlopt_discovery.census import _iter_subterms
+        from mlopt_discovery.oracle import eval_instance
+
+        cands, _meta, _stats = on._prim_pool(self._roots(), 2)
+        assert cands
+        subs = [
+            s
+            for r in self._roots().values()
+            for s in _iter_subterms(r)
+            if isinstance(s, Op)
+        ]
+        for cand in cands:
+            rule = cand.as_rule()
+            sites = [m for s in subs if (m := _term_match(rule.lhs, s))]
+            assert sites
+            for m in sites:
+                out, _n = eval_instance(
+                    _term_instantiate(rule.lhs, m),
+                    _term_instantiate(rule.rhs, m),
+                )
+                assert out == "equal", f"{rule.name}: {out}"
+
+    def test_prim_fold_survives_full_gauntlet(self):
+        """The minted fold is admitted under referee 'full'.
+
+        The cert leg anchors on the declared ``synop_*.expand``
+        premise — the definitional axiom the bare bank lacks by
+        construction (novel-by-construction cuts both ways: the fold
+        is underivable, so its admission must be anchored).
+        """
+        import bench.referees
+
+        cands, _meta, _stats = on._prim_pool(self._roots(), 2)
+        cand = cands[0]
+        rule = cand.as_rule()
+        assert "expand" in getattr(rule, "premises", ())[0].name
+        subs = tuple(
+            s
+            for r in self._roots().values()
+            for s in on._op_subterms({"x": r})["x"]
+        )
+        rec = on._admit(
+            rule, "full", bench.referees.RefereeCtx(real_terms=subs)
+        )
+        assert rec["admitted"], rec["reason"]
+        names = [s["name"] for s in rec["stages"]]
+        assert names == ["oracle", "pay", "sweep", "cert"]
+
+    def test_prim_fold_is_machine_original(self):
+        """The sieve cannot derive a law about an op that did not exist."""
+        from types import SimpleNamespace
+
+        from bench.drivers.screen import novelty_sieve as ns
+
+        roots = self._roots()
+        cands, _meta, _stats = on._prim_pool(roots, 2)
+        ctxs = [
+            ns._CaseCtx(
+                case=SimpleNamespace(name=n),
+                model=None,
+                feed=None,
+                term=r,
+                ops=ns._ops_of(r),
+            )
+            for n, r in roots.items()
+        ]
+        for cand in cands:
+            res = on._classify(
+                cand.as_rule(), ns.known_bank(), ctxs=ctxs
+            )
+            assert res["verdict"] == "machine-original", res
+            assert res["via"] == "underivable"
+
+    def test_prim_denoted_shape_does_not_mint(self):
+        """A shape a bank op already denotes mints no synop_*.
+
+        Two modules spelling ``mul(u, sigmoid(u))`` manually — the
+        ``silu`` denotation in ``lawdata.HANDLERS`` — are excluded at
+        the denoted gate: a second name for an existing fused op is
+        not a new primitive.
+        """
+        from mlopt_core.ir import Op, TensorType, Var
+
+        def v(n):
+            return Var(n, TensorType((2, 4)))
+
+        silu = lambda a: Op.make(  # noqa: E731
+            "mul", a, Op.make("sigmoid", a)
+        )
+        _cands, _meta, stats = on._prim_pool(
+            {"m1": silu(v("x")), "m2": silu(v("y"))}, 2
+        )
+        assert stats["denoted"] >= 1
+        assert stats["pool"] == 0
+
+    def test_prim_arena_pages_the_shared_pool(self):
+        """Each episode slices ``page`` folds off the one mint."""
+        case0 = {"xpage": 0, "page": 4, "xbind": 2, "wseed0": 0}
+        case1 = {"xpage": 1, "page": 4, "xbind": 2, "wseed0": 0}
+        a0, a1 = on._PrimArena(case0), on._PrimArena(case1)
+        assert not a0.error and not a1.error
+        assert a0.pool_total == a1.pool_total
+        names0 = {c.label for c in a0.pool}
+        names1 = {c.label for c in a1.pool}
+        assert not (names0 & names1)
+
+    def test_prim_dry_completes_and_records_corpus(self, tmp_path):
+        """The zoo-prim arm end-to-end: mint, fold, gauntlet, sieve."""
+        t0 = time.time()
+        assert (
+            on.main(_argv(tmp_path, "--dry", "--corpus", "zoo-prim"))
+            == 0
+        )
+        assert (
+            time.time() - t0 < 300
+        )  # whole-zoo export + mint + referee
+        man, cells = _records(tmp_path / "ck.jsonl")
+        assert man["protocol"]["corpus"] == "zoo-prim"
+        assert man["protocol"]["mint"] == "corpus-prim"
+        assert man["protocol"]["xbind"] == 2
+        episodes = _cells(cells, "episode")
+        assert len(episodes) == 2
+        for e in episodes:
+            assert "xpage" in e["record"]["case"]
+        for c in _cells(cells, "candidate"):
+            rec = c["record"]
+            assert rec["family"] == on._PRIM_FAMILY
+            assert rec["mods"] >= 2
+            # the minted op's own record: name + handler verdict
+            assert rec["prim"]["synop"].startswith("synop_")
+            assert rec["prim"]["handler"]["verdict"] in (
+                "minted",
+                "refused",
+                "skipped-no-domain",
+            )
+            # the definitional premise is recorded for audit
+            assert rec["law"]["premises"]
+        payload = json.loads((tmp_path / "out.json").read_text())
+        assert payload["corpus"] == "zoo-prim"
+        assert payload["prim"]["k"] == 2
+        assert "corpus: `zoo-prim`" in (tmp_path / "out.md").read_text()
+
+
 class TestResume:
     """A protocol-matched resume replays cells, never re-measures."""
 
