@@ -1,7 +1,7 @@
 # Prior-art law bank — results
 
 A **scoped** prior-art bank: known compiler transforms encoded as
-certified laws — 187 rules in `mlopt_core.laws.priorart.PRIOR_ART_RULES`,
+certified laws — 189 rules in `mlopt_core.laws.priorart.PRIOR_ART_RULES`,
 behind the opt-in `prior_art` preset (`mlopt_core.laws.PRIOR_ART`,
 registered in `PRESETS`, **not** in `DEFAULT`).  The novelty sieve's
 `known_bank()` folds the preset in, so a minted candidate re-deriving
@@ -24,16 +24,20 @@ Each accepted site is evaluated fp64 through
 `verify_law(lhs, rhs, [rule])` — the e-graph must merge the sides
 under the rule itself and replay a standalone certificate.
 
-**Result: 187/187 certified** — every encoded rule has >=1 equal
+**Result: 189/189 certified** — every encoded rule has >=1 equal
 accepted site, zero unequal or rhs-err sites inside its guard
 region, and a replayable certificate.
 
 **Sieve scope note.**  `known_bank()` folds in only the prior-art
-``FUSION``/``CATEGORICAL`` rules (the 18 structural transforms —
+``FUSION``/``CATEGORICAL`` rules (the 20 structural transforms —
 including the norm-kernel denotations `instance_norm_expand` /
 `group_norm_expand`, which is what demotes a minted
-`fold:instance_norm` / `fold:group_norm` to `known`).
-The full 187-rule bank in the derivable premises hangs
+`fold:instance_norm` / `fold:group_norm` to `known`; the newest
+two demotions: `softsign_expand` — the composite-free ATen kernel's
+denotation — demotes shipped `softsign_fold`, and `mul_unsq_rev` —
+XLA's broadcast-sink direction under the shipped `flat-map-unsq`
+guard plus literal-range clauses — demotes shipped `mul_unsq_nat`).
+The full 189-rule bank in the derivable premises hangs
 ``verify_law``'s bounded e-graph (the pointwise-identity and
 decomp-direction rules cycle on neg/add/sub/mul — the composite
 demotion test exceeded a 200 s box vs 0.6 s with the scoped slice).
@@ -45,11 +49,11 @@ demotion test exceeded a 200 s box vs 0.6 s with the scoped slice).
 | source | laws |
 |---|---|
 | TASO (SOSP'19) — concat structure, matmul/linear/conv merges, index bridges | 44 |
-| Inductor/XLA — no-op strips, scalar/const algebra, activations, reductions, pointwise identities | 127 |
+| Inductor/XLA — no-op strips, scalar/const algebra, activations, reductions, pointwise identities, broadcast-sink naturality | 129 |
 | Zoo-corpus — rope/STE/quant/AdaLN/dropout/one-hot/addcmul-lerp/norm-kernel denotations | 16 |
-| **total** | **187** |
+| **total** | **189** |
 
-## Families (187 encoded)
+## Families (189 encoded)
 
 - **TASO concat (20):** single-strip, l/r flattens, chunk2/chunk3 and
   uneven-split merges, stack⇄unsqueeze+concat, unary pointwise pulls
@@ -62,6 +66,14 @@ demotion test exceeded a 200 s box vs 0.6 s with the scoped slice).
 - **TASO index/view bridges (6):** `select_{add,sub,div}`,
   `unbind_select`, `select_to_slice`/`slice_to_select` (the
   squeeze/unsqueeze bridge — select drops the axis).
+- **Broadcast-sink naturality (1):** `mul_unsq_rev` — XLA's
+  `TryToSinkBroadcastAfterElementwiseOps` (multiply of two
+  broadcasts → broadcast of the multiply), the push-in direction
+  of shipped `mul_unsq_nat`, guarded to the same `flat-map-unsq`
+  region plus `UD` literal-in-range for both operand unsqs (the
+  pull direction gets the range for free — an ill-typed LHS can
+  never be an e-graph member; the verify sweep caught the
+  divergence as a rhs-err site, `u=(3,), v=(2,3), d=2`).
 - **Inductor no-op strips (34):** contiguous/clone/alias/detach(+_),
   4 cast idempotences, unsqueeze/squeeze pairs + noop squeezes,
   reshape noop+compose, expand/broadcast_to noop+bridge, slice noop
@@ -70,9 +82,14 @@ demotion test exceeded a 200 s box vs 0.6 s with the scoped slice).
 - **Inductor reductions (20):** dim-1 reduce identities (sum/mean/
   prod/amax/amin × keep/drop), std⇄var (4), linalg L2 (2),
   mean_expand/fold, log_softmax pair.
-- **Inductor activations (23):** sigmoid/tanh/gelu(erf)/mish/
+- **Inductor activations (24):** sigmoid/tanh/gelu(erf)/mish/
   hardsigmoid/hardswish/softplus/elu/leaky decomps + folds;
-  relu family (7: max/clamp/idem/relu6).
+  relu family (7: max/clamp/idem/relu6); `softsign_expand`
+  (`softsign(x) = x/(|x|+1)` — softsign is composite-free in
+  ATen, no registered decomp: the fused kernel computes the
+  manual spelling directly, so the expand is a kernel
+  denotation FUSION-tagged like the norm expands, not
+  EXPANSIVE like its pointwise-decomp neighbours).
 - **Pointwise identities/parity (17):** abs/square/sqrt/rsqrt
   idempotences, where/max/min monoid folds, odd-even pairs
   (tanh/sigmoid/softsign/erf/sin/cos), exp/log identities.
@@ -154,5 +171,5 @@ only demote candidates toward `known` (no verdict-can-upgrade path).
 
 Every rule carries the `prior_art` tag (`tags.PRIOR_ART`), no name
 joins `MACHINE_SHIPPED`/`MACHINE_STORED`, and
-`law_provenance(rule) == "human"` for all 187 — prior art is
+`law_provenance(rule) == "human"` for all 189 — prior art is
 human-authored by construction, never machine-admitted.

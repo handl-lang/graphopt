@@ -2,8 +2,8 @@
 
 Automatic three-gate filter between a minted law and the human-review queue.  **cert** = the law's own rewrite carries a standalone-replayable certificate on its instance (`verify_law` + `verify_certificate`); **derivable** = the widest shipped bank (`default_rules` + `ALL_RULES_WITH_LAYOUT` + `ATTENTION` + scan monoids + the prior-art FUSION/CATEGORICAL slice — `known_bank`), minus the candidate and its alpha-siblings, already proves the instance — derivable laws are theorems of known rules, demoted silently; **beat** = on some `bench/discovery` case the certified extraction (run with the candidate in the rules) lands strictly below the best registered baseline AND the derivation certificate invokes the candidate (the `beat_best` floor plus attribution).  A candidate is a novelty iff cert ∧ beat ∧ ¬derivable.  `truth` is the fp64 oracle's numeric verdict on the instance — an `unequal` refutes outright.
 
-- date: 2026-10-23T03:14:06+00:00 · git: `30f10ad` (dirty) · torch 2.14.0+cu130 on cpu · bank 240 rules
-- verdicts: known=4, review=2, unmeasured=12, unpaid=6
+- date: 2026-10-23T04:05:52+00:00 · git: `47aa8ee` (dirty) · torch 2.14.0+cu130 on cpu · bank 242 rules
+- verdicts: known=6, unmeasured=12, unpaid=6
 
 | law | prov | instance | truth | cert | derivable | beat | verdict |
 |---|---|---|---|---|---|---|---|
@@ -12,12 +12,12 @@ Automatic three-gate filter between a minted law and the human-review queue.  **
 | `conv_bn_fold` | machine | corpus:conv_bn_fold | equal | yes | no | no | **unpaid** |
 | `linear_channel_to_row_scale` | machine | synth | equal | yes | yes (linear_channel_scale_rev, linear_row_scale) | — | **known** |
 | `mul_reshape_inert_l` | machine | synth | equal | yes | no | — | **unmeasured** |
-| `mul_unsq_nat` | machine | corpus:mul_unsq_nat | equal | yes | no | yes | **review** |
+| `mul_unsq_nat` | machine | corpus:mul_unsq_nat | equal | yes | yes (mul_unsq_rev) | — | **known** |
 | `mul_unsq_pad_l` | machine | corpus:zoo_time_cond_conv | equal | yes | yes (comm_mul, mul_unsq_pad_r) | — | **known** |
 | `mul_unsq_pad_r` | machine | corpus:zoo_time_cond_conv | equal | yes | yes (comm_mul, mul_unsq_pad_l) | — | **known** |
 | `sdpa_fold_div_nomask` | machine | registry | equal | yes | no | no | **unpaid** |
 | `sdpa_fold_nomask` | machine | registry | equal | yes | no | no | **unpaid** |
-| `softsign_fold` | machine | corpus:softsign_fold | equal | yes | no | yes | **review** |
+| `softsign_fold` | machine | corpus:softsign_fold | equal | yes | yes (softsign_expand) | — | **known** |
 | `sub_unsq_pad_l` | machine | synth | equal | yes | yes | — | **known** |
 | `transpose_noop` | machine | synth | equal | yes | no | no | **unpaid** |
 | `cand_mul_factor` | human | synth | equal | yes | no | — | **unmeasured** |
@@ -34,10 +34,7 @@ Automatic three-gate filter between a minted law and the human-review queue.  **
 
 ## Review queue
 
-Certified, measured-paying, and underivable from the known bank — these are for a human to look at:
-
-- `mul_unsq_nat` — zoo_delta_rule (975073 → 853300 vs floor 975073)
-- `softsign_fold` — softsign_fold (387 → 65 vs floor 387)
+**Empty.** Every candidate either fails a gate or is a theorem of the bank — nothing currently needs a reviewer's eyes.
 
 ## Per-law detail
 
@@ -86,15 +83,13 @@ Certified, measured-paying, and underivable from the known bank — these are fo
 - siblings excluded: mul_reshape_inert_l
 - beat: — — no case exercises this law
 
-### `mul_unsq_nat` — review
+### `mul_unsq_nat` — known
 
 - instance (corpus:mul_unsq_nat): `(mul (unsqueeze a, dim=-1), (unsqueeze b, dim=-1))` → `(unsqueeze (mul a, b), dim=-1)`
 - truth: equal · cert: yes
-- derivable: no — fixed_point
+- derivable: yes via mul_unsq_rev — fixed_point
 - siblings excluded: mul_unsq_nat
-- beat: yes — 2 case(s) run
-  - `mul_unsq_nat`: cert yes, fired 1, in-deriv yes, cost 75 → 50 vs floor 50 → beat no
-  - `zoo_delta_rule`: cert yes, fired 4, in-deriv yes, cost 975073 → 853300 vs floor 975073 → beat yes
+- beat: — — —
 
 ### `mul_unsq_pad_l` — known
 
@@ -130,14 +125,13 @@ Certified, measured-paying, and underivable from the known bank — these are fo
 - beat: no — 1 case(s) run
   - `sdpa_nomask`: cert yes, fired 0, in-deriv no, cost 33415 → 32772 vs floor 32772 → beat no
 
-### `softsign_fold` — review
+### `softsign_fold` — known
 
 - instance (corpus:softsign_fold): `(div x, (add (abs x), 1))` → `(softsign x)`
 - truth: equal · cert: yes
-- derivable: no — fixed_point
+- derivable: yes via softsign_expand — fixed_point
 - siblings excluded: softsign_fold
-- beat: yes — 1 case(s) run
-  - `softsign_fold`: cert yes, fired 1, in-deriv yes, cost 387 → 65 vs floor 387 → beat yes
+- beat: — — —
 
 ### `sub_unsq_pad_l` — known
 
