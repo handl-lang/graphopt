@@ -321,7 +321,7 @@ study would suggest.
 
 | arm | question | measured verdict |
 |---|---|---|
-| Q1 | unnamed structure on *real* corpora | **honest zero on originality** — the corpus-driven mint over 53 held-out zoo modules produced 101 viable mints (19 composites, 10 guarded) and the gauntlet *did* admit 8 paying folds — but every one classified **known-art** once checked against the prior-art bank (the norm kernels and sdpa/glu folds were already catalogued transforms): **0 confirmed machine-originals** (`docs/reports/results_overnight_real_v5.md`) |
+| Q1 | unnamed structure on *real* corpora | **rewrites saturate at known-art; primitives break it** — the rewrite mint over 68 held-out zoo modules admitted 8 paying folds, all **known-art** (already catalogued); the *primitive* arm, which mints new `synop_*` ops for recurring manual shapes no bank op denotes, produced **21/24 admitted machine-original folds** — certified, paying (launch 0.36–0.80x), novel by construction.  The honest content: it recovered the shared gated-accumulator skeleton of the SSM family (DeltaNet/GLA/Mamba/RG-LRU) — real cross-architecture structure, not unknown-to-humanity transforms (`docs/reports/primitives_finds.md`) |
 | Q2 | rediscovery of a Strassen-class algorithm | **NO-GO** — the 2×2×2 bilinear board provably expresses rank 7 (a scripted 29-move line verifies 10/10), yet random, greedy-repair, and cold-linear players stalled at rank 8 over 200+ episodes at budgets 48 and 96 (`docs/results_strassen.md`) |
 | Q3 | multi-step credit — mint a premise, cash it later | **YES, where chains are dense** — the trained linear arm argmaxes the enabling chain on 100% of held-out boards and the neural arm converges to the scripted ceiling; at sparser chain density (more decoys, fewer episodes) linear REINFORCE degrades to the myopic arm (`docs/results_credit_chain.md`) |
 | Q4 | scale | **three distinct walls** — matcher time on unrolled terms (~11k IR nodes exceeds the 480 s rung budget), verify-forward RAM on the *spelled* program (a ~17 GB fp64 attention tensor at T=4096), and spelled-program numerics (fp64 overflow; verify honestly refuses at T≥1024) (`docs/reports/results_scale_ladder.md`) |
@@ -470,14 +470,18 @@ minted guards).
   unscaled `exp` attention overflows fp64 at T $\geq$ 1024 — verify
   correctly refuses rather than certify a NaN
   (`docs/reports/results_scale_ladder.md`).
-- **Discovery originality on real corpora is unconfirmed at this
-  depth.**  The real-corpus funnel minted 101 viable candidates across
-  53 held-out zoo modules and admitted 8 paying folds — every one
-  already a theorem of the registered prior-art bank (known-art), so
-  **no confirmed machine-originals**; Strassen-class rediscovery is out
-  of reach of per-step play (@sec-frontier).  The shipped
-  machine-admitted laws remain the earlier corpus mints — deeper
-  search, not more machinery, is the open lever.
+- **Rewrite-space originality on real corpora is closed; primitive
+  space is open.**  The rewrite mint admitted 8 paying folds — every
+  one already a theorem of the registered prior-art bank (known-art).
+  The primitive arm's 21 machine-original folds are novel *by
+  construction* (the `synop_*` op did not exist), which is exactly the
+  falsifiable claim — but the minted shapes are recognizable structure
+  (mul-add trees, broadcast select-gates), not transforms a compiler
+  engineer would call new.  The open question is whether a minted
+  primitive can acquire a fused *implementation* the machine also
+  found — today 8/24 handlers refused within budget
+  (`docs/reports/primitives_finds.md`); Strassen-class rediscovery
+  remains out of reach of per-step play (@sec-frontier).
 
 # Reproduction {#sec-repro}
 

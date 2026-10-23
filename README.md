@@ -75,12 +75,23 @@ are structural and regime-bounded, inference-only, compile-time
 search.
 
 **Open — now measured (the Q-series).**  Unnamed structure on real
-corpora: **honest zero on originality** — 53 held-out zoo modules →
-101 viable mints (19 composites, 10 guarded) → **8 admitted, every one
-classified known-art post-registration** (the paying folds it found —
-the norm kernels, the sdpa/glu folds — were already catalogued),
-**0 confirmed machine-originals**
-([`docs/reports/results_overnight_real_v5.md`](docs/reports/results_overnight_real_v5.md);
+corpora: the rewrite-only mint saturates at **known-art** — 53
+held-out zoo modules → 101 viable mints → **8 admitted, every one
+classified known-art** (the paying folds it found — the norm kernels,
+the sdpa/glu folds — were already catalogued)
+([`docs/reports/results_overnight_real_v6.md`](docs/reports/results_overnight_real_v6.md)).
+The **primitive arm breaks the ceiling**: `--corpus zoo-prim` mints
+new `synop_*` ops for recurring manual shapes no bank op denotes, so
+the fold is novel *by construction* — **21/24 admitted, all 21
+classified machine-original**: certified, paying (launch 0.36–0.80x),
+underivable.  What it found is honest: the shared
+"sum-of-gated-products" skeleton of the SSM family (DeltaNet / GLA /
+Mamba / RG-LRU — four published architectures, one discovered core)
+plus the 14-module `a*b+c*d` shape — real cross-architecture
+structure, named by the machine.  **Not** "novel to humanity":
+elementwise fusers do this implicitly; what's new is the named
+primitive + certified law
+([`docs/reports/primitives_finds.md`](docs/reports/primitives_finds.md);
 an earlier run surfaced and fixed an emit-time RHS-sanity substrate
 bug, eqsat `2d6e4eb`).  New algorithms: **Strassen NO-GO** — the board
 proves rank-7, every player stalls at 8
