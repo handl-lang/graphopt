@@ -30,7 +30,8 @@ bank.  The measured gate is exercised through the ``measurer`` seam
 from __future__ import annotations
 
 import pytest
-from mlopt_core.ir import Op
+from mlopt_core.cost import count_cost
+from mlopt_core.ir import Op, TensorType, Var
 from mlopt_core.laws import R
 from mlopt_core.laws.serialize import alpha_key
 
@@ -229,3 +230,102 @@ class TestMeasureGateStructure:
     def test_beatrow_defaults(self):
         r = ns.BeatRow(case="c")
         assert not r.beat and not r.certified and r.floor is None
+
+
+def _toy_zoo():
+    """A one-module zoo corpus: ``abs(abs(abs(abs(x))))`` spelled.
+
+    Four ``abs`` ops collapse to one under the candidate — a 3-unit
+    win that clears the zoo arm's extraction-noise margin
+    (:data:`ns._ZOO_BEAT_EPS`), which a bare 1-unit save cannot.
+    """
+    v = Var("x", TensorType((4,)))
+    t = v
+    for _ in range(4):
+        t = Op.make("abs", t)
+    return [ns._ZooCtx("Toy", t)]
+
+
+class TestZooArm:
+    """The held-out zoo fallback — real spelled modules, real floors.
+
+    ``abs(abs(x)) -> abs(x)`` is the controlled law: underivable from
+    the shipped bank (no ``abs`` rule exists), so on a zoo module that
+    spells it the candidate arm must beat the premise bank's own
+    extraction — the strictly-stronger zoo floor.
+    """
+
+    def test_zoo_instance_source(self):
+        """A spelled zoo site that applies beats the synth source."""
+        got = ns.instance_of(ABS_ABS, [], zoo=_toy_zoo())
+        assert got is not None
+        src, _pair = got
+        assert src == "zoo:Toy"
+
+    def test_zoo_site_pays_when_bank_cannot(self):
+        """Premises=[] → floor is the spelled cost; the law wins."""
+        beat, rows = ns.measure_gate(
+            ABS_ABS, [], zoo=_toy_zoo(), premises=[], cost_fn=count_cost
+        )
+        assert beat is True
+        (r,) = rows
+        assert r.case == "zoo:Toy"
+        assert r.certified and r.used and r.fired >= 1
+        assert r.cost_after is not None and r.floor is not None
+        assert r.cost_after < r.floor
+
+    def test_zoo_site_unpaid_when_bank_ties(self):
+        """A premise bank that already reaches ``abs(x)`` leaves no
+        win — the zoo floor includes the bank's own extraction."""
+        beat, rows = ns.measure_gate(
+            ABS_ABS,
+            [],
+            zoo=_toy_zoo(),
+            premises=[ABS_ABS],
+            cost_fn=count_cost,
+        )
+        assert beat is False
+        (r,) = rows
+        assert r.used and not r.beat
+        assert r.cost_after == r.floor
+
+    def test_zoo_no_match_stays_unmeasured(self):
+        """A zoo whose terms never LHS-match cannot measure."""
+        other = [
+            ns._ZooCtx(
+                "NoMatch",
+                Op.make("sigmoid", Var("x", TensorType((4,)))),
+            )
+        ]
+        beat, rows = ns.measure_gate(
+            ABS_ABS, [], zoo=other, premises=[], cost_fn=count_cost
+        )
+        assert beat is None
+        assert rows == []
+
+    def test_zoo_win_reaches_review(self, bank):
+        """End-to-end on the real machinery: instance, cert,
+        underivable, and a zoo-attributed win → ``review``."""
+        row = ns.sieve(
+            ABS_ABS, bank, ctxs=[], measure=True, zoo_ctxs=_toy_zoo()
+        )
+        assert row.instance_src == "zoo:Toy"
+        assert row.cert
+        assert row.derivable is False
+        assert row.beat is True
+        assert row.verdict == "review"
+        assert "zoo site(s)" in row.measure_note
+
+    def test_unmeasured_note_names_zoo(self, bank):
+        """With the zoo swept and still no site, the note says so."""
+        other = [
+            ns._ZooCtx(
+                "NoMatch",
+                Op.make("sigmoid", Var("x", TensorType((4,)))),
+            )
+        ]
+        row = ns.sieve(
+            ABS_ABS, bank, ctxs=[], measure=True, zoo_ctxs=other
+        )
+        assert row.verdict == "unmeasured"
+        assert "zoo" in row.measure_note

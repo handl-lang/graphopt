@@ -16,7 +16,17 @@ gates —
    registered baseline (the ``beat_best`` floor — a tie with the
    hand-known impl is a rediscovery, not a find), AND the derivation
    certificate actually invokes the candidate (a win the rule never
-   touched is not the rule's win).
+   touched is not the rule's win).  When no registered case exercises
+   the law, the gate falls back to the **held-out zoo**
+   (``mlopt_discovery.law_order.zoo_terms`` — the 53-module registry
+   the ``zoo_*`` cases sample): every spelled zoo term the LHS
+   strictly matches is measured as a two-arm e-graph site — the floor
+   is the spelled cost *and the bank's own extraction under the same
+   premise set* (``_premises`` — the widest surface minus the
+   candidate's alpha-siblings), a strictly stronger bar than the
+   case arm's registered baselines: the candidate must pay beyond
+   everything else the library knows, with the same certificate
+   attribution.
 3. **derivable** — the law is NOT a theorem of the known bank: the
    candidate's instance is saturated under the bank with the candidate
    — and every alpha-sibling (the same ``(lhs, rhs)`` law under
@@ -35,17 +45,20 @@ criterion, the fewest false novelty claims.
 Verdicts: ``review`` (all three gates — enqueued for a human),
 ``known`` (bank-derivable), ``refuted`` (the fp64 oracle measured the
 instance unequal), ``uncertified``, ``unpaid`` (underivable but no
-case win), ``unmeasured`` (underivable but no case exercises it),
-``no-instance`` (no binding produced a site — untestable, reported
-honestly).
+site win), ``unmeasured`` (underivable but neither a registered case
+nor a spelled zoo module exercises it — the synthesized instance is
+the only known firing), ``no-instance`` (no binding produced a site —
+untestable, reported honestly).
 
 Instance sources, in order: the ``law_bench`` registry /
 ``generic_instance`` tables (:func:`verifier.instance_of`), a strict
-LHS match inside a spelled discovery-corpus module, the gauntlet's
-own synthesized binding domain (``evidence._synth_sites`` +
-``apply_rewrite_at`` — the enumeration that admitted the unsq-pad
-family), and finally a small uniform-shape metavariable binding for
-patterns outside every registered domain.
+LHS match inside a spelled discovery-corpus module, a strict LHS
+match that actually *applies* inside a spelled held-out zoo module
+(``zoo:<module>``), the gauntlet's own synthesized binding domain
+(``evidence._synth_sites`` + ``apply_rewrite_at`` — the enumeration
+that admitted the unsq-pad family), and finally a small
+uniform-shape metavariable binding for patterns outside every
+registered domain.
 
 Run::
 
@@ -99,6 +112,7 @@ __all__ = [
     "shipped_candidates",
     "sieve",
     "sieve_all",
+    "zoo_contexts",
 ]
 
 #: Where the review-queue document lands.
@@ -113,6 +127,30 @@ _SYNTH_LIMIT = 400
 #: signal-named cases are tried first, then strict-match cases in name
 #: order.
 _MAX_CASES = 8
+
+#: Per-candidate cap on measured held-out-zoo sites — the fallback
+#: corpus probed only when no registered case exercises the law.
+_MAX_ZOO_SITES = 6
+
+#: Saturation bounds for the zoo arm's two e-graph runs — the same
+#: budget ``DiscoveryCase`` declares (and ``search`` applies) so the
+#: zoo floor is measured in the same regime as the case arm: a
+#: convergence-speed artifact at a tighter budget is not a find.
+#: ``max_nodes`` is a hard stop, so a candidate whose rules explode
+#: a recurrent-scan module degrades to a capped run, not a hang.
+_ZOO_MAX_ITERS = 8
+_ZOO_MAX_NODES = 100_000
+
+#: Extraction-noise margin for the zoo ``beat`` — unlike the case
+#: arm's floors (module costs, exact), the zoo floor is itself an
+#: e-graph extraction, and greedy ``extract_best`` on a cyclic graph
+#: lands on different local optima across process states: measured,
+#: ``mul_reshape_inert_l`` on ManualGroupNorm flips between floor
+#: 2060 and 2061 under identical inputs.  A strict ``<`` inside that
+#: band is a coin flip, not a pay — so a zoo win must clear
+#: ``floor - max(1, 1e-3·floor)``.  Sub-noise wins are reported as
+#: ties (``beat`` no) with the numbers left visible.
+_ZOO_BEAT_EPS = 1e-3
 
 #: Uniform-shape fallbacks for patterns no registered domain binds.
 _LOOSE_SHAPES = ((4, 4), (2, 4), (4,), (1, 4), (4, 1), (2, 2, 4))
@@ -196,6 +234,25 @@ def _corpus_instance(
     return None
 
 
+def _zoo_instance(
+    rule: Any, zctxs: list[_ZooCtx]
+) -> tuple[str, tuple[Any, Any]] | None:
+    """First strict LHS match that applies inside a spelled zoo term.
+
+    Same criterion as :func:`_corpus_instance` — a ``match_pattern``
+    hit alone is not enough: the rule's ``check``/``derive`` must let
+    it fire, so the site is a real firing, not a shape coincidence.
+    """
+    for zc in zctxs:
+        for path, sub in _positions(zc.term):
+            if match_pattern(rule.lhs, sub) is None:
+                continue
+            out = apply_rewrite_at(rule, zc.term, path)
+            if out is not None:
+                return zc.name, (sub, _subterm(out, path))
+    return None
+
+
 def _synth_instance(rule: Any, limit: int) -> tuple[Any, Any] | None:
     """A guard-accepted site from the gauntlet's binding enumeration."""
     from mlopt_discovery.evidence import _synth_sites
@@ -263,15 +320,17 @@ def instance_of(
     ctxs: list[_CaseCtx],
     *,
     synth_limit: int = _SYNTH_LIMIT,
+    zoo: list[_ZooCtx] | None = None,
 ) -> tuple[str, tuple[Any, Any]] | None:
     """Return ``(source, (lhs, rhs))`` — a real firing site of *rule*.
 
     Sources in order: ``registry`` (``verifier.instance_of`` — the
     law_bench synthetic registry plus the pattern-driven generic
     tables), ``corpus:<case>`` (a strict match inside a spelled
-    discovery module), ``synth`` (the gauntlet's binding enumeration),
-    ``loose`` (uniform-shape binding).  ``None`` when no source
-    produces a site.
+    discovery module), ``zoo:<module>`` (a strict match that applies
+    inside a spelled held-out zoo module), ``synth`` (the gauntlet's
+    binding enumeration), ``loose`` (uniform-shape binding).  ``None``
+    when no source produces a site.
     """
     inst = verifier.instance_of(rule)
     if inst is not None:
@@ -280,6 +339,11 @@ def instance_of(
     if got is not None:
         cname, inst = got
         return f"corpus:{cname}", inst
+    if zoo:
+        got = _zoo_instance(rule, zoo)
+        if got is not None:
+            zname, inst = got
+            return f"zoo:{zname}", inst
     inst = _synth_instance(rule, synth_limit)
     if inst is not None:
         return "synth", inst
@@ -326,6 +390,20 @@ class _CaseCtx:
     feed: Any
     term: Any  # spelled IR root (None when fixture/export failed)
     ops: frozenset = frozenset()
+
+
+@dataclass(frozen=True)
+class _ZooCtx:
+    """A held-out zoo module's spelled IR — the fallback corpus.
+
+    Only the exported term is needed: the measured arm saturates the
+    e-graph directly (``EGraph.run`` + ``extract_best``), so no torch
+    module survives past export — the same term-only probe the
+    exposure screen runs.
+    """
+
+    name: str
+    term: Any
 
 
 @dataclass(frozen=True)
@@ -384,6 +462,28 @@ def case_contexts(cases: list | None = None) -> list[_CaseCtx]:
     return ctxs
 
 
+def zoo_contexts() -> list[_ZooCtx]:
+    """Export the held-out zoo once — ``(module name, spelled term)``.
+
+    Reuses ``law_order.zoo_terms``: the same 53-module registry the
+    ``zoo_*`` discovery cases sample, spelled through the same torch
+    export boundary.  Modules that fail to export are honestly
+    absent (``zoo_terms`` reports them; they simply never match).
+    """
+    from mlopt_discovery import law_order
+
+    terms, _errors = law_order.zoo_terms()
+    return [_ZooCtx(name, term) for name, term in terms]
+
+
+def _lhs_matches(candidate: Any, term: Any) -> bool:
+    """Strict LHS match anywhere in *term* — the spelled-site test."""
+    for _path, sub in _positions(term):
+        if match_pattern(candidate.lhs, sub) is not None:
+            return True
+    return False
+
+
 def _relevant(candidate: Any, ctx: _CaseCtx) -> bool:
     """Whether *ctx* can exercise *candidate*.
 
@@ -395,10 +495,7 @@ def _relevant(candidate: Any, ctx: _CaseCtx) -> bool:
         return False
     if f"law:{candidate.name}" in ctx.case.expect.signals:
         return True
-    for _path, sub in _positions(ctx.term):
-        if match_pattern(candidate.lhs, sub) is not None:
-            return True
-    return False
+    return _lhs_matches(candidate, ctx.term)
 
 
 def _measure_case(candidate: Any, ctx: _CaseCtx) -> BeatRow:
@@ -478,11 +575,111 @@ def _measure_case(candidate: Any, ctx: _CaseCtx) -> BeatRow:
     )
 
 
+def _saturate(term: Any, rules: Any) -> tuple[Any, int]:
+    """``add_term`` + bounded ``EGraph.run`` — one zoo-arm saturation.
+
+    The caps are the exposure screen's probe bounds
+    (:data:`_ZOO_MAX_ITERS` / :data:`_ZOO_MAX_NODES`): the node cap is
+    a hard stop, so a candidate whose rules explode a recurrent-scan
+    module degrades to a capped run, not a hang.
+    """
+    from mlopt_core.egraph import EGraph
+
+    eg = EGraph()
+    root = eg.add_term(term)
+    eg.run(
+        rules,
+        root,
+        max_iterations=_ZOO_MAX_ITERS,
+        max_nodes=_ZOO_MAX_NODES,
+    )
+    return eg, root
+
+
+def _measure_zoo_site(
+    candidate: Any,
+    zc: _ZooCtx,
+    premises: list,
+    cost_fn: Any,
+) -> BeatRow:
+    """Two-arm e-graph measure of *candidate* on one zoo module.
+
+    The zoo has no registered baselines, so the floor is the honest
+    one a novel law must clear: the spelled cost **and the bank's own
+    extraction under the same premise set** (the widest bank minus the
+    candidate's alpha-siblings — exactly the derivability gate's
+    premises).  ``beat`` then means the candidate-attributed
+    extraction pays strictly beyond everything else the library knows
+    on a real module — a stronger bar than the case arm's
+    ``beat_best`` floor — and by more than the extraction-noise
+    margin :data:`_ZOO_BEAT_EPS` (the floor arm is itself a greedy
+    extraction whose ±1-unit flips across process states are not
+    wins).  The floor arm is skipped when the candidate never fired
+    and sits in no certificate step — the site could not have
+    attributed a win anyway.
+    """
+    from mlopt_core.egraph import verify_certificate
+
+    from bench.discovery import runner as dr
+
+    name = f"zoo:{zc.name}"
+    try:
+        cost_before = dr._term_cost(zc.term, cost_fn)
+    except Exception as e:
+        return BeatRow(case=name, error=f"cost: {e}")
+    try:
+        eg, root = _saturate(zc.term, [*premises, candidate])
+        best = eg.extract_best(root, cost_fn)
+    except Exception as e:
+        return BeatRow(
+            case=name, cost_before=cost_before, error=f"search: {e}"
+        )
+    cost_after = dr._term_cost(best, cost_fn)
+    try:
+        cert = eg.certificate(zc.term, best, root_eid=root)
+        verify_certificate(zc.term, cert)
+        certified = True
+        used = any(s.rule == candidate.name for s in cert.steps)
+    except Exception:
+        certified, used = False, False
+    fired = int(eg.rule_fires.get(candidate.name, 0))
+    floor = None
+    if fired or used:
+        floors = [cost_before]
+        try:
+            eg0, root0 = _saturate(zc.term, premises)
+            base = eg0.extract_best(root0, cost_fn)
+            c0 = dr._term_cost(base, cost_fn)
+            if c0 is not None:
+                floors.append(c0)
+        except Exception:
+            pass
+        floor = min(floors)
+    margin = 1.0 if floor is None else max(1.0, floor * _ZOO_BEAT_EPS)
+    beat_best = (
+        certified and floor is not None and cost_after < floor - margin
+    )
+    return BeatRow(
+        case=name,
+        certified=certified,
+        fired=fired,
+        used=used,
+        cost_before=cost_before,
+        cost_after=cost_after,
+        floor=floor,
+        beat_best=bool(beat_best),
+        beat=bool(beat_best and used),
+    )
+
+
 def measure_gate(
     candidate: Any,
     ctxs: list[_CaseCtx],
     *,
     max_cases: int = _MAX_CASES,
+    zoo: list[_ZooCtx] | None = None,
+    premises: list | None = None,
+    cost_fn: Any = None,
 ) -> tuple[bool | None, list[BeatRow]]:
     """The measured gate: ``(beat, per-case rows)``.
 
@@ -491,6 +688,14 @@ def measure_gate(
     candidate-attributed extraction lands strictly below the best
     registered baseline floor; ``None`` when no case exercises the
     candidate at all (the gate is unevaluable, not failed).
+
+    When no case exercises the candidate, *zoo* supplies the fallback
+    corpus: every held-out zoo module whose spelled IR strictly
+    LHS-matches (name order, capped by :data:`_MAX_ZOO_SITES`) is
+    measured by :func:`_measure_zoo_site` against *premises* — the
+    derivability gate's own premise bank, so a zoo win beats
+    everything else the library knows.  ``None`` premises resolve to
+    :func:`known_bank` minus the candidate's alpha-siblings.
     """
     named = [c for c in ctxs if c.term is not None]
     signal = [
@@ -506,6 +711,20 @@ def measure_gate(
     ]
     todo = (signal + rest)[:max_cases]
     rows = [_measure_case(candidate, c) for c in todo]
+    if (not rows or all(r.error for r in rows)) and zoo:
+        if premises is None:
+            premises = _premises(candidate, known_bank())[0]
+        if cost_fn is None:
+            from bench.discovery import runner as dr
+
+            cost_fn = dr.COST_FNS["launch"]
+        sites = [zc for zc in zoo if _lhs_matches(candidate, zc.term)][
+            :_MAX_ZOO_SITES
+        ]
+        rows = [
+            _measure_zoo_site(candidate, zc, premises, cost_fn)
+            for zc in sites
+        ]
     if not rows or all(r.error for r in rows):
         return None, rows
     return bool(any(r.beat for r in rows)), rows
@@ -580,15 +799,20 @@ def sieve(
     measure: bool = True,
     max_cases: int = _MAX_CASES,
     measurer: Any = None,
+    zoo_ctxs: list[_ZooCtx] | None = None,
 ) -> SieveRow:
     """Run the three gates on *candidate* against *bank*.
 
     ``bank`` defaults to :func:`known_bank` — the widest shipped
     surface.  ``ctxs`` defaults to :func:`case_contexts` when the
     measured gate is on; pass ``[]`` (and/or ``measure=False``) for a
-    corpus-free check.  ``measurer`` overrides the measured gate's
-    callable ``(candidate, ctxs) -> (beat, rows)`` — the seam the test
-    suite stubs; production callers leave it ``None``.
+    corpus-free check.  ``zoo_ctxs`` is the held-out fallback corpus —
+    both an instance source (``zoo:<module>``) and the measured
+    gate's last resort when no registered case exercises the law;
+    ``None`` keeps the case corpus only.  ``measurer`` overrides the
+    measured gate's callable ``(candidate, ctxs, **kw) -> (beat,
+    rows)`` — the seam the test suite stubs; production callers leave
+    it ``None``.
     """
     bank = known_bank() if bank is None else list(bank)
     if ctxs is None:
@@ -598,7 +822,7 @@ def sieve(
         "name": candidate.name,
         "provenance": law_provenance(candidate),
     }
-    got = instance_of(candidate, ctxs)
+    got = instance_of(candidate, ctxs, zoo=zoo_ctxs)
     if got is None:
         return SieveRow(
             verdict="no-instance",
@@ -638,16 +862,30 @@ def sieve(
     if dres.derivable:
         return SieveRow(verdict="known", **row_kw)
 
-    # -- gate 2: measured pay on the discovery corpus
+    # -- gate 2: measured pay — discovery cases first, the held-out
+    #    zoo as the fallback corpus when no case exercises the law
     if measure:
-        beat, beats = measure_fn(candidate, ctxs, max_cases=max_cases)
+        beat, beats = measure_fn(
+            candidate,
+            ctxs,
+            max_cases=max_cases,
+            zoo=zoo_ctxs,
+            premises=premises,
+        )
         row_kw["beat"] = beat
         row_kw["beats"] = tuple(beats)
-        row_kw["measure_note"] = (
-            f"{len(beats)} case(s) run"
-            if beats
-            else "no case exercises this law"
-        )
+        if beats:
+            n_zoo = sum(1 for b in beats if b.case.startswith("zoo:"))
+            row_kw["measure_note"] = (
+                f"{len(beats) - n_zoo} case(s) run"
+                + (f", {n_zoo} zoo site(s) run" if n_zoo else "")
+            )
+        else:
+            row_kw["measure_note"] = (
+                "no case or zoo module exercises this law"
+                if zoo_ctxs is not None
+                else "no case exercises this law"
+            )
     else:
         row_kw["beat"] = None
         row_kw["measure_note"] = "measurement skipped"
@@ -668,16 +906,21 @@ def sieve_all(
     measure: bool = True,
     max_cases: int = _MAX_CASES,
     measurer: Any = None,
+    zoo_ctxs: Any = None,
     progress: Any = None,
 ) -> list[SieveRow]:
     """Batch mode: sieve every candidate against *bank*.
 
-    Case contexts (fixture + spelled IR per discovery case) are built
-    once and shared across candidates.
+    Case contexts (fixture + spelled IR per discovery case) and the
+    held-out zoo contexts are built once and shared across
+    candidates.  ``zoo_ctxs=None`` builds the real zoo when
+    *measure* is on; pass ``[]`` to keep the case corpus only.
     """
     bank = known_bank() if bank is None else list(bank)
     laws = shipped_candidates() if candidates is None else candidates
     ctxs = case_contexts() if measure else []
+    if zoo_ctxs is None:
+        zoo_ctxs = zoo_contexts() if measure else []
     rows = []
     for c in laws:
         row = sieve(
@@ -687,6 +930,7 @@ def sieve_all(
             measure=measure,
             max_cases=max_cases,
             measurer=measurer,
+            zoo_ctxs=zoo_ctxs,
         )
         rows.append(row)
         if progress is not None:
@@ -732,7 +976,15 @@ def render_markdown(
         "with the candidate in the rules) lands strictly below the "
         "best registered baseline AND the derivation certificate "
         "invokes the candidate (the `beat_best` floor plus "
-        "attribution).  A candidate is a novelty iff cert ∧ beat ∧ "
+        "attribution).  When no registered case exercises the law the "
+        "gate falls back to the held-out `mlopt_discovery.zoo` "
+        "registry: every spelled zoo term the LHS strictly matches "
+        "(`zoo:`-prefixed rows) is measured as a two-arm e-graph site "
+        "whose floor is the spelled cost AND the bank's own "
+        "extraction under the same premise bank — a strictly "
+        "stronger bar than the case arm's registered baselines, since "
+        "the candidate must pay beyond everything else the library "
+        "knows.  A candidate is a novelty iff cert ∧ beat ∧ "
         "¬derivable.  `truth` is the fp64 oracle's numeric verdict on "
         "the instance — an `unequal` refutes outright.",
         "",
