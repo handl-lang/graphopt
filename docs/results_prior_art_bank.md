@@ -1,7 +1,7 @@
 # Prior-art law bank — results
 
 A **scoped** prior-art bank: known compiler transforms encoded as
-certified laws — 185 rules in `mlopt_core.laws.priorart.PRIOR_ART_RULES`,
+certified laws — 187 rules in `mlopt_core.laws.priorart.PRIOR_ART_RULES`,
 behind the opt-in `prior_art` preset (`mlopt_core.laws.PRIOR_ART`,
 registered in `PRESETS`, **not** in `DEFAULT`).  The novelty sieve's
 `known_bank()` folds the preset in, so a minted candidate re-deriving
@@ -24,13 +24,16 @@ Each accepted site is evaluated fp64 through
 `verify_law(lhs, rhs, [rule])` — the e-graph must merge the sides
 under the rule itself and replay a standalone certificate.
 
-**Result: 185/185 certified** — every encoded rule has >=1 equal
+**Result: 187/187 certified** — every encoded rule has >=1 equal
 accepted site, zero unequal or rhs-err sites inside its guard
 region, and a replayable certificate.
 
 **Sieve scope note.**  `known_bank()` folds in only the prior-art
-``FUSION``/``CATEGORICAL`` rules (the 32 structural transforms).
-The full 185-rule bank in the derivable premises hangs
+``FUSION``/``CATEGORICAL`` rules (the 18 structural transforms —
+including the norm-kernel denotations `instance_norm_expand` /
+`group_norm_expand`, which is what demotes a minted
+`fold:instance_norm` / `fold:group_norm` to `known`).
+The full 187-rule bank in the derivable premises hangs
 ``verify_law``'s bounded e-graph (the pointwise-identity and
 decomp-direction rules cycle on neg/add/sub/mul — the composite
 demotion test exceeded a 200 s box vs 0.6 s with the scoped slice).
@@ -43,10 +46,10 @@ demotion test exceeded a 200 s box vs 0.6 s with the scoped slice).
 |---|---|
 | TASO (SOSP'19) — concat structure, matmul/linear/conv merges, index bridges | 44 |
 | Inductor/XLA — no-op strips, scalar/const algebra, activations, reductions, pointwise identities | 127 |
-| Zoo-corpus — rope/STE/quant/AdaLN/dropout/one-hot/addcmul-lerp/layer_norm | 14 |
-| **total** | **185** |
+| Zoo-corpus — rope/STE/quant/AdaLN/dropout/one-hot/addcmul-lerp/norm-kernel denotations | 16 |
+| **total** | **187** |
 
-## Families (185 encoded)
+## Families (187 encoded)
 
 - **TASO concat (20):** single-strip, l/r flattens, chunk2/chunk3 and
   uneven-split merges, stack⇄unsqueeze+concat, unary pointwise pulls
@@ -77,13 +80,17 @@ demotion test exceeded a 200 s box vs 0.6 s with the scoped slice).
   sqrt↔pow), reciprocal spells, sub/neg canonicals, the const-fold
   family (mul/add/sub/div × orderings), `div_const_to_mul` (the
   softcap/quant strength reduction), zeros/ones_like units.
-- **Zoo-corpus (14):** `rope_rh_to_cat` (HF rotate-half ↔ Llama
+- **Zoo-corpus (16):** `rope_rh_to_cat` (HF rotate-half ↔ Llama
   cat-pair), `ste_fold`(±l — the quant STE value idiom),
   `linear_out_channel`(+rev — per-channel dequant scale migration),
   `adaln_one_plus`, `dropout_eval`/`dropout_zero`,
   `onehot_matmul_embed`, `addcmul/addcdiv/lerp` decomps,
   `layer_norm_expand` (plain + affine — correction=0 var + trailing
-  dims).
+  dims), `instance_norm_expand`/`group_norm_expand` (the fused norm
+  ops' manual spellings — oneDNN's `_MklFusedInstanceNorm`,
+  Inductor's group_norm decomp; the reshape target is attr-derived
+  off the bound leaves, FUSION-tagged like the kernel bank's
+  denotations).
 
 ## Dropped (honest misses)
 
@@ -102,8 +109,10 @@ demotion test exceeded a 200 s box vs 0.6 s with the scoped slice).
 - `xlogy(x,y)=x·log(y)` — unsound at x=0 (xlogy pins 0, product NaNs).
 - `view`-headed laws — no eval binding.  `max`/`min` dim-forms —
   tuple-valued (different typing class).  `narrow` — binding is
-  broken upstream.  `group_norm` decomp and grouped-`conv_out_merge`
-  — need a reshape/interleave the pattern language can't mint.
+  broken upstream.  grouped-`conv_out_merge` — needs a
+  reshape/interleave the pattern language can't mint (the
+  `group_norm` decomp *is* carried — its reshape target is
+  attr-derived, not pattern-minted).
 - `x − y ≠ 0`-class reductions over concat — non-distributive.
 
 ## Findings worth keeping
@@ -145,5 +154,5 @@ only demote candidates toward `known` (no verdict-can-upgrade path).
 
 Every rule carries the `prior_art` tag (`tags.PRIOR_ART`), no name
 joins `MACHINE_SHIPPED`/`MACHINE_STORED`, and
-`law_provenance(rule) == "human"` for all 185 — prior art is
+`law_provenance(rule) == "human"` for all 187 — prior art is
 human-authored by construction, never machine-admitted.

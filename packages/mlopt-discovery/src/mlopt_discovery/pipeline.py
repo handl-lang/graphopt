@@ -76,7 +76,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass, replace
@@ -88,6 +87,10 @@ from mlopt_core.egraph import EGraph, Rewrite
 from mlopt_core.egraph.terms import _term_instantiate, _term_match
 from mlopt_core.ir import Const, Op, op_repr
 from mlopt_core.laws import ALL_RULES
+from mlopt_core.laws.priorart import (
+    GROUP_NORM_EXPAND,
+    INSTANCE_NORM_EXPAND,
+)
 from mlopt_core.opmeta import (
     GENERATOR_VIEW_OPS,
     POINTWISE_BINARY_OPS,
@@ -722,112 +725,32 @@ _INORM_LHS, _INORM_RHS = _inorm_spelling()
 _GNORM_LHS, _GNORM_RHS = _gnorm_spelling()
 
 
-def _check_norm_affine(bound: dict) -> bool:
-    """Require the affine pair rank-1 per-channel — the fused ops' only form.
-
-    Guards the expand premises so the definitional spelling mints
-    only where ``W``/``B`` are ``(C,)`` vectors over ``U``'s channel
-    axis (and ``U`` has a channel axis at all).
-    """
-    try:
-        us = tuple(bound["U"].typ.shape)
-        ws = tuple(bound["W"].typ.shape)
-        bs = tuple(bound["B"].typ.shape)
-    except (AttributeError, TypeError):
-        return False
-    return len(us) >= 3 and ws == bs == (us[1],)
-
-
-def _derive_inorm_expand(bound: dict) -> dict | None:
-    """Instance-norm's manual spelling, computed off the bound leaves.
-
-    ``MD`` reduces every axis past ``(n, c)`` — the per-sample-channel
-    statistics; ``K1``/``K2`` are the two ``unsqueeze`` re-broadcasts;
-    ``WS``/``BS`` spell the ``(1, C, 1, 1, …)`` affine reshapes;
-    ``EPS`` mints the ``Const`` leaf the fused op carries as a float
-    attr.
-    """
-    try:
-        us = tuple(bound["U"].typ.shape)
-        eps = float(bound["$attr:EP"])
-    except (AttributeError, TypeError, KeyError, ValueError):
-        return None
-    if len(us) < 3:
-        return None
-    pad = (1,) * (len(us) - 2)
-    return {
-        "EPS": Const(eps),
-        "$attr:MD": tuple(range(2, len(us))),
-        "$attr:K1": -1,
-        "$attr:K2": -1,
-        "$attr:WS": (1, us[1], *pad),
-        "$attr:BS": (1, us[1], *pad),
-    }
-
-
-def _derive_gnorm_expand(bound: dict) -> dict | None:
-    """Group-norm's manual spelling — the reshape-to-``(n, G, ·)`` fold.
-
-    ``US`` is the group-view target; the reduce is its trailing axis
-    (``MD=(-1,)``, ``MK=True``); ``RS`` restores the input shape and
-    ``WS``/``BS`` spell the affine broadcast.  A channel block not
-    divisible by the group count has no group fold — vetoed, never
-    approximated.
-    """
-    try:
-        us = tuple(bound["U"].typ.shape)
-        g = int(bound["$attr:G"])
-        eps = float(bound["$attr:EP"])
-    except (AttributeError, TypeError, KeyError, ValueError):
-        return None
-    if len(us) < 3:
-        return None
-    n, c, rest = us[0], us[1], us[2:]
-    inner = c * math.prod(rest)
-    if g <= 0 or inner % g:
-        return None
-    pad = (1,) * len(rest)
-    return {
-        "EPS": Const(eps),
-        "$attr:US": (n, g, inner // g),
-        "$attr:MD": (-1,),
-        "$attr:MK": True,
-        "$attr:RS": us,
-        "$attr:WS": (1, c, *pad),
-        "$attr:BS": (1, c, *pad),
-    }
-
-
-#: The *definitional* bridges the kernel-fold schemas prove against:
-#: the fused op spelled as its manual decomposition.  These are
-#: axioms — the ops' semantics — the same role
-#: ``layer_norm_expand_plain`` / ``layer_norm_expand_affine`` play
-#: for ``layer_norm`` in the shipped prior-art bank, which carries no
-#: ``instance_norm`` / ``group_norm`` member (the derivability hole
-#: ``fold:instance_norm`` / ``fold:group_norm`` measured: a paying,
+#: The *definitional* bridges the kernel-fold schemas prove against —
+#: now shipped substrate-side in the prior-art bank
+#: (``mlopt_core.laws.priorart.INSTANCE_NORM_EXPAND`` /
+#: ``GROUP_NORM_EXPAND``), the same axiomatic role
+#: ``layer_norm_expand_plain`` / ``layer_norm_expand_affine`` play for
+#: ``layer_norm``.  They closed the derivability hole
+#: ``fold:instance_norm`` / ``fold:group_norm`` measured (a paying,
 #: verifying fold whose cert saturated to a 30-50-enode fixed point
-#: without ever touching the fused op).  The cert leg unions a
-#: claim's premise closure into its axiom set and site-verifies every
+#: without ever touching the fused op) — and, being ``FUSION``-tagged
+#: prior art, they now sit in the sieve's ``known_bank`` floor, so the
+#: folds classify ``known`` outright rather than machine-original
+#: under the bare bank.  The premise channel still matters for folds
+#: whose denotation the bank lacks: the cert leg unions a claim's
+#: premise closure into its axiom set and site-verifies every
 #: non-axiom step — an anchored derivation credits only premises
-#: measured true at the applied site.
-_INORM_EXPAND = Rewrite(
-    "instance_norm_expand",
-    Op.make("instance_norm", "U", "W", "B", eps="EP"),
-    _INORM_LHS,
-    check=_check_norm_affine,
-    derive=_derive_inorm_expand,
-)
-_GNORM_EXPAND = Rewrite(
-    "group_norm_expand",
-    Op.make("group_norm", "U", "W", "B", num_groups="G", eps="EP"),
-    _GNORM_LHS,
-    check=_check_norm_affine,
-    derive=_derive_gnorm_expand,
-)
+#: measured true at the applied site.  The private aliases keep
+#: ``pipeline._INORM_EXPAND`` naming the declared premise the referee
+#: tests reach for.
+_INORM_EXPAND = INSTANCE_NORM_EXPAND
+_GNORM_EXPAND = GROUP_NORM_EXPAND
 
 #: Schema name → its declared premise closure.  ``_schema_proposal``
 #: carries it onto the minted claim as ``rule.premises`` — the cert
-#: leg's anchored axiom set.
+#: leg's anchored axiom set.  Both members are shipped prior-art laws
+#: now; the mechanism stays for the next fold whose denotation the
+#: bank lacks.
 _FUSION_PREMISES: dict[str, tuple[Rewrite, ...]] = {
     "fold:instance_norm": (_INORM_EXPAND,),
     "fold:group_norm": (_GNORM_EXPAND,),

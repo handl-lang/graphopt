@@ -155,6 +155,30 @@ CASES: dict[str, list[dict]] = {
             "$attr:ND": (4,), "$attr:E": 1e-5,
         }
     ],
+    # the norm denotations — W/B must be (C,) vectors over U's channel
+    # axis; the independent-binding enum almost never correlates them.
+    "instance_norm_expand": [
+        {
+            "U": _v("u", 2, 4, 3, 3), "W": _v("w", 4), "B": _v("b", 4),
+            "$attr:EP": 1e-5,
+        }
+    ],
+    "group_norm_expand": [
+        {
+            "U": _v("u", 2, 4, 3, 3), "W": _v("w", 4), "B": _v("b", 4),
+            "$attr:G": 2, "$attr:EP": 1e-5,
+        },
+        # rank-3 site + a non-divisible group count (the derive veto:
+        # 48 inner elements split by 5 groups leaves a remainder).
+        {
+            "U": _v("u", 1, 6, 8), "W": _v("w", 6), "B": _v("b", 6),
+            "$attr:G": 3, "$attr:EP": 1e-5,
+        },
+        {
+            "U": _v("u", 1, 6, 8), "W": _v("w", 6), "B": _v("b", 6),
+            "$attr:G": 5, "$attr:EP": 1e-5,
+        },
+    ],
     # one_hot's index is int-typed — bind it to a Const.
     "onehot_matmul_embed": [
         {"i": Const(1), "W": _v("W", 4, 3), "$attr:N": 4}
