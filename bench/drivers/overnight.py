@@ -1288,6 +1288,15 @@ def _admit(rule: Any, referee: str, ctx: Any) -> dict:
     guard = _guard_transport_spec(rule)
     if guard is not None:
         law["guard"] = guard
+    premises = getattr(rule, "premises", None)
+    if premises:
+        # the cert leg's premise-anchored axiom names — the same
+        # honesty posture as ``law["guard"]``: record what the
+        # closure adds so an audit sees the anchor.  The premise
+        # objects themselves re-attach on the deterministic re-mint
+        # (``Proposal.premises`` → ``as_rule``), like the composite
+        # hooks the pool rebuild restores.
+        law["premises"] = [r.name for r in premises]
 
     rec: dict[str, Any] = {
         "name": rule.name,

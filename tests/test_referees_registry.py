@@ -221,6 +221,79 @@ def test_cert_replays_a_derivable_claim():
     assert v.name == "cert" and v.passed
 
 
+def test_cert_premise_anchor_closes_a_definitional_gap():
+    """A paying/verifying fold the bank cannot derive proves under
+    its declared premise closure.
+
+    ``fold:instance_norm`` measured exactly this refusal in the
+    overnight zoo-real run: the bank holds *no* rule touching the
+    ``instance_norm`` op, so the concrete pair saturated to a fixed
+    point unmerged.  The schema mint declares the fused op's
+    definitional expansion as the claim's premise — the
+    ``layer_norm_expand_*`` role — and the cert leg unions it in,
+    site-verifying the non-axiom step.
+    """
+    from mlopt_core.egraph.terms import _term_instantiate
+    from mlopt_core.ir import Const, Param
+    from mlopt_discovery import pipeline as pipe
+
+    from bench.referees import components as _c
+
+    x = _v("x", 1, 4, 2, 2)
+    w, b = Param("w", TensorType((4,))), Param("b", TensorType((4,)))
+    subst = {
+        "U": x,
+        "W": w,
+        "B": b,
+        "EPS": Const(1e-5),
+        "$attr:MD": (2, 3),
+        "$attr:K1": -1,
+        "$attr:K2": -1,
+        "$attr:WS": (1, 4, 1, 1),
+        "$attr:BS": (1, 4, 1, 1),
+    }
+    lhs = _term_instantiate(pipe._INORM_LHS, subst)
+    rhs = _p("instance_norm", x, w, b, eps=1e-5)
+
+    # Bare claim: the bank has no bridge — the honest refusal stands.
+    bare = Rewrite("manual:inorm", lhs, rhs)
+    evd = _c.ClaimEvidence(bare, _ctx())
+    v0 = _c.run_component("cert", bare, _ctx(), evd)
+    assert not v0.passed and "not derivable" in v0.detail
+
+    # With the schema's premise closure the anchored derivation lands
+    # — one definitional step, site-verified and named.
+    claim = Rewrite("manual:inorm", lhs, rhs)
+    object.__setattr__(claim, "premises", (pipe._INORM_EXPAND,))
+    evd = _c.ClaimEvidence(claim, _ctx())
+    v1 = _c.run_component("cert", claim, _ctx(), evd)
+    assert v1.passed
+    assert "instance_norm_expand" in v1.detail
+    assert "premise-anchored" in v1.detail
+
+
+def test_cert_premise_wrong_spelling_still_refuses():
+    """A premise that produces the wrong term cannot merge — the
+    anchored run fails derivability outright (the site-verify bar
+    is not even reached), so a misfitting bridge changes nothing.
+    """
+    from mlopt_core.ir import Const
+
+    from bench.referees import components as _c
+
+    x = _v("x", 4, 4)
+    claim = Rewrite("mul_sq", _p("mul", x, x), _p("add", x, Const(0)))
+    # premise is true on its own (square expands) but irrelevant to
+    # the claim — no bridge exists, so still not derivable.
+    premise = Rewrite(
+        "sq_expand", _p("square", "u"), _p("mul", "u", "u")
+    )
+    object.__setattr__(claim, "premises", (premise,))
+    evd = _c.ClaimEvidence(claim, _ctx())
+    v = _c.run_component("cert", claim, _ctx(), evd)
+    assert not v.passed and "not derivable" in v.detail
+
+
 def test_instance_case_feeds_params_via_param_vals():
     """Real-match sites carry ``Param`` leaves — the module's weights.
 

@@ -593,6 +593,19 @@ def _cert(claim: Any, ctx: RefereeCtx, evd: ClaimEvidence) -> Any:
     the first accepted instance (the same witness ``verify_law``
     would mint).  Passes only on ``derivable`` *and* ``replayable``
     — an e-graph-dependent witness is not a rule derivation.
+
+    **Premise-anchored derivability.**  A claim may carry a declared
+    premise closure (``claim.premises`` — the fusion-schema mint
+    attaches the fused op's definitional expansion, the same
+    axiomatic role the bank's ``layer_norm_expand_*`` rules play for
+    ``layer_norm``).  On a base-bank miss the leg re-saturates under
+    ``rules + premises`` — the ``pipeline._derivable_result``
+    channel — and the anchored verdict then stands only when every
+    non-axiom certificate step site-verifies under the fp64 oracle
+    (``evidence._premise_steps_verify``, the admission gauntlet's own
+    anti-circularity bar).  A premise alpha-equal to the claim is
+    excluded — a sibling would self-derive (the novelty sieve's own
+    discipline).  The anchor is named in the detail.
     """
     from mlopt_discovery.verifier import verify_law
 
@@ -606,18 +619,47 @@ def _cert(claim: Any, ctx: RefereeCtx, evd: ClaimEvidence) -> Any:
         from mlopt_core.laws import ALL_RULES
 
         rules = tuple(ALL_RULES)
+    rules = list(rules)
     lhs_i, rhs_i = inst[0]
-    res = verify_law(lhs_i, rhs_i, list(rules))
+    res = verify_law(lhs_i, rhs_i, rules)
+    anchor = ""
+    declared = getattr(claim, "premises", None) or ()
+    if not res.derivable and declared:
+        from mlopt_core.laws.serialize import alpha_key
+        from mlopt_discovery.evidence import _premise_steps_verify
+
+        key = alpha_key(claim.lhs, claim.rhs)
+        base_names = {r.name for r in rules}
+        premises = [
+            r
+            for r in declared
+            if r.name not in base_names
+            and alpha_key(r.lhs, r.rhs) != key
+        ]
+        if premises:
+            anchored = verify_law(lhs_i, rhs_i, [*rules, *premises])
+            if anchored.derivable:
+                ok_, note = _premise_steps_verify(
+                    anchored.cert, base_names
+                )
+                if not ok_:
+                    return ComponentVerdict(
+                        "cert",
+                        False,
+                        "premise-anchored derivation refused: " + note,
+                    )
+                res = anchored
+                anchor = f" — {note}"
     ok = res.derivable and res.replayable
     if ok:
         detail = (
             f"{res.direction} {res.witness_steps} steps "
             f"({', '.join(res.witness_rules[:4])})"
-        )
+        ) + anchor
     elif res.derivable:
         detail = (
             f"{res.direction}: {res.note or 'witness not replayable'}"
-        )
+        ) + anchor
     else:
         detail = f"not derivable ({res.stop})"
     return ComponentVerdict("cert", ok, detail)
