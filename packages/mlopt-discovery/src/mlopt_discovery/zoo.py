@@ -48,6 +48,16 @@ truth region — the selection criterion was *family coverage*:
   and the grouped-quant / paged-KV deployment shapes — picked
   because their exported graphs carry the pointwise-over-view and
   same-view op-tuples the ``zoo-real`` mint reads.
+* the third expansion — post-2024 structures the rewrite catalogs
+  (TASO/Inductor/XLA fusion banks) have not caught: the gated
+  delta rule and the chunked SSD scan (the Mamba-2 dual form),
+  decoupled-rope MLA and partial rotary, sigmoid and
+  differential attention, the Griffin RG-LRU recurrence, FiLM'd
+  conv conditioning, a banked SwiGLU MoE under a shared expert,
+  attention- and final-logit soft-capping, the squared-relu FFN,
+  Taylor-feature linear attention, ternary-weight dequant, and
+  sink+window masking — the substrate where originals could
+  live precisely because no prior-art bank covers them.
 
 The registry reuses :class:`mlopt_discovery.intake.Workload` so
 :func:`mlopt_discovery.intake.ingest` consumes it unchanged — the
@@ -1684,6 +1694,620 @@ class _PagedKVAttention(nn.Module):
 
 
 # ---------------------------------------------------------------------------
+#  Third expansion — the 2024-25 structures the rewrite catalogs miss
+# ---------------------------------------------------------------------------
+
+
+class _GatedDeltaRule(nn.Module):
+    """Gated delta rule — the DeltaNet recurrence under a forget gate.
+
+    Yang et al. 2024 (Gated DeltaNet): ``S ← alpha_t·(I - β_t k kᵀ)·S +
+    β_t k vᵀ``, spelled elementwise as
+    ``S ← alpha·S + β·k·(v - alpha·kᵀS)ᵀ`` — ``_DeltaRuleBlock``'s rank-1
+    erase/write with a per-step scalar decay ``alpha_t`` multiplying the
+    whole previous state.  The gate makes the update a
+    ``mul(param-broadcast, sub)`` + ``mul(param-broadcast, outer)``
+    pattern the shipped scan monoids (affine ``a·h + b``, diagonal
+    ``affd``) cannot lift: the coefficient is a data-dependent
+    *matrix*, not a scalar map.
+    """
+
+    def __init__(self, dk: int, dv: int, steps: int) -> None:
+        """Build the k/v/β/alpha projections and record the unroll count."""
+        super().__init__()
+        self.steps = steps
+        self.dk = dk
+        self.k = nn.Linear(dk, dk)
+        self.v = nn.Linear(dk, dv)
+        self.beta = nn.Linear(dk, 1)
+        self.dec = nn.Linear(dk, 1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Unroll the gated delta rule; return the final state."""
+        b = x.shape[0]
+        kk = self.k(x)  # (B, T, dk)
+        vv = self.v(x)  # (B, T, dv)
+        bb = torch.sigmoid(self.beta(x))  # (B, T, 1)
+        aa = torch.exp(-F.softplus(self.dec(x)))  # (B, T, 1)
+        s = torch.zeros(
+            b, self.dk, vv.shape[-1], dtype=x.dtype, device=x.device
+        )
+        for t in range(self.steps):
+            k_t = kk[:, t]  # (B, dk)
+            v_t = vv[:, t]  # (B, dv)
+            a_row = aa[:, t]  # (B, 1)
+            a_cell = a_row.unsqueeze(-1)  # (B, 1, 1)
+            b_cell = bb[:, t].unsqueeze(-1)  # (B, 1, 1)
+            # gated residual read: v_t - alpha·kᵀS  →  (B, dv)
+            read = v_t - a_row * (k_t.unsqueeze(1) @ s).squeeze(1)
+            # decayed state + rank-1 write: S ← alphaS + β·k⊗read
+            s = a_cell * s + b_cell * k_t.unsqueeze(
+                -1
+            ) * read.unsqueeze(-2)
+        return s
+
+
+class _ChunkedSSD(nn.Module):
+    """Mamba-2 chunked SSD — intra-chunk masked attention + state pass.
+
+    Dao & Gu 2024 (the SSD layer): the scalar-decay scan
+    ``S_t = a_t·S + k_t ⊗ v_t`` in its chunked dual form — inside a
+    chunk it is quadratic attention masked by the in-graph segment
+    decay ``exp(cs_i - cs_j)`` (``cs`` the cumsum of the log-decays),
+    across chunks the state ``S`` (an ``(n, p)`` matrix) carries
+    ``Σ_j exp(cs_end - cs_j)·k_j ⊗ v_j`` and reads as
+    ``exp(cs_i - cs_prev)·(q_i·S)``.  The ``cumsum`` → ``sub`` →
+    ``exp`` → ``tril`` decay-mask chain plus the three einsum sites
+    are the real chunked-scan spelling — not the unrolled
+    ``select`` loop of ``_MambaSelectiveScan``.
+    """
+
+    def __init__(self, d: int, heads: int, n: int, chunk: int) -> None:
+        """Build the q/k/v/decay projections and the output map."""
+        super().__init__()
+        self.h = heads
+        self.n = n
+        self.chunk = chunk
+        self.q = nn.Linear(d, heads * n)
+        self.k = nn.Linear(d, heads * n)
+        self.v = nn.Linear(d, heads * (d // heads))
+        self.dec = nn.Linear(d, heads)
+        self.out = nn.Linear(d, d)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Scan chunk-by-chunk: masked intra-chunk + decayed state."""
+        b, t, d = x.shape
+        h, n, c = self.h, self.n, self.chunk
+        q = self.q(x).reshape(b, t, h, n).transpose(1, 2)  # (b,h,t,n)
+        k = self.k(x).reshape(b, t, h, n).transpose(1, 2)
+        v = self.v(x).reshape(b, t, h, d // h).transpose(1, 2)
+        a = -F.softplus(self.dec(x))  # (b,t,h) — log-decay per step
+        cs = a.cumsum(1).transpose(1, 2)  # (b,h,t) — prefix sums
+        csp = torch.cat(
+            [torch.zeros(b, h, 1, dtype=x.dtype, device=x.device), cs],
+            dim=2,
+        )
+        tri = torch.tril(
+            torch.ones(c, c, dtype=x.dtype, device=x.device)
+        )
+        s_state = torch.zeros(
+            b, h, n, d // h, dtype=x.dtype, device=x.device
+        )
+        outs = []
+        for c0 in range(0, t, c):
+            cq = q[:, :, c0 : c0 + c]  # (b,h,c,n)
+            ck = k[:, :, c0 : c0 + c]
+            cv = v[:, :, c0 : c0 + c]  # (b,h,c,p)
+            seg = cs[:, :, c0 : c0 + c]  # (b,h,c)
+            cprev = csp[:, :, c0]  # (b,h) — cumsum at chunk start
+            cend = cs[:, :, c0 + c - 1]  # (b,h) — cumsum at chunk end
+            # intra-chunk decay mask: exp(cs_i - cs_j), i ≥ j
+            dmat = seg.unsqueeze(-1) - seg.unsqueeze(-2)
+            dec_intra = torch.exp(dmat) * tri
+            scores = (cq @ ck.transpose(-1, -2)) / (n**0.5)
+            y = (scores * dec_intra) @ cv  # (b,h,c,p)
+            # inter-chunk read: decay from chunk start times q·S
+            dec_q = torch.exp(seg - cprev.unsqueeze(-1))  # (b,h,c)
+            y = y + (cq @ s_state) * dec_q.unsqueeze(-1)
+            outs.append(y)
+            # state update: decay old S to the chunk end, add the
+            # decay-weighted rank-1 writes of this chunk's keys
+            dec_k = torch.exp(cend.unsqueeze(-1) - seg)  # (b,h,c)
+            dec_s = torch.exp(cend - cprev)  # (b,h)
+            s_state = dec_s.unsqueeze(-1).unsqueeze(
+                -1
+            ) * s_state + torch.einsum(
+                "bhcn,bhcp->bhnp", ck * dec_k.unsqueeze(-1), cv
+            )
+        y = torch.cat(outs, dim=2)  # (b,h,t,p)
+        return self.out(y.transpose(1, 2).reshape(b, t, d))
+
+
+class _DecoupledMLA(nn.Module):
+    """MLA with a decoupled rope key — the DeepSeek/Kimi spelling.
+
+    DeepSeek-V2/V3 (and Kimi k2): queries and the kv stream both pass
+    through a low-rank latent (``W_dq``/``W_dkv`` down, ``W_uq``/
+    ``W_uk``/``W_uv`` up), and the rotary component lives on a
+    *decoupled* per-head pair — a shared ``k_r`` broadcast across
+    heads — concatenated after the compressed dims.  The intake's
+    ``MultiLatentAttention`` compresses then up-projects through
+    ``sdpa`` with no rotary anywhere; this is the production
+    spelling: ``cat`` of compressed + roped slices, broadcast
+    ``expand`` of the shared rope key, manual softmax over the
+    widened head dim.
+    """
+
+    def __init__(self, d: int, heads: int, rank: int, rpe: int) -> None:
+        """Build the latent down/up maps and the decoupled rope key."""
+        super().__init__()
+        self.heads = heads
+        self.rpe = rpe
+        dn = d // heads - rpe
+        self.dq = nn.Linear(d, rank)
+        self.uq = nn.Linear(rank, heads * dn)
+        self.qr = nn.Linear(rank, heads * rpe)
+        self.dkv = nn.Linear(d, rank)
+        self.uk = nn.Linear(rank, heads * dn)
+        self.kr = nn.Linear(d, rpe)
+        self.uv = nn.Linear(rank, d)
+        self.out = nn.Linear(d, d)
+
+    @staticmethod
+    def _rope_tables(
+        t: int, r: int, dtype: torch.dtype, device: torch.device
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Return the ``(t, r/2)`` cosine/sine tables for rotate-half."""
+        inv = torch.pow(
+            torch.tensor(10000.0, dtype=dtype, device=device),
+            -torch.arange(0, r, 2, dtype=dtype, device=device) / r,
+        )
+        ang = torch.outer(
+            torch.arange(t, dtype=dtype, device=device), inv
+        )
+        return ang.cos(), ang.sin()
+
+    @staticmethod
+    def _rot(
+        z: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor
+    ) -> torch.Tensor:
+        """Rotate-half *z* ``(b, t, h, r)`` by the ``(t, r/2)`` tables."""
+        z1, z2 = z.chunk(2, dim=-1)
+        c = cos.unsqueeze(1)  # (t, 1, r/2)
+        s = sin.unsqueeze(1)
+        return torch.cat([z1 * c - z2 * s, z1 * s + z2 * c], dim=-1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Attend with compressed q/kv plus the decoupled rope dims."""
+        b, t, d = x.shape
+        h, r = self.heads, self.rpe
+        dn = d // h - r
+        cos, sin = self._rope_tables(t, r, x.dtype, x.device)
+        qc = self.dq(x)
+        qn = self.uq(qc).reshape(b, t, h, dn)
+        qp = self._rot(self.qr(qc).reshape(b, t, h, r), cos, sin)
+        q = torch.cat([qn, qp], dim=-1).transpose(1, 2)  # (b,h,t,dh)
+        c = self.dkv(x)
+        kn = self.uk(c).reshape(b, t, h, dn)
+        kr = self._rot(self.kr(x).reshape(b, t, 1, r), cos, sin)
+        k = torch.cat([kn, kr.expand(b, t, h, r)], dim=-1).transpose(
+            1, 2
+        )
+        v = self.uv(c).reshape(b, t, h, d // h).transpose(1, 2)
+        s = q @ k.transpose(-1, -2) / ((d // h) ** 0.5)
+        o = torch.softmax(s, dim=-1) @ v
+        return self.out(o.transpose(1, 2).reshape(b, t, d))
+
+
+class _PartialRotary(nn.Module):
+    """Partial rotary — rope on a head-dim slice, pass-through tail.
+
+    The GPT-NeoX / Qwen ``rotary_pct < 1`` spelling: only the first
+    ``rdim`` channels of q and k rotate (rotate-half, not the
+    interleaved pairs of ``_RotaryPair``); the remainder passes
+    through untouched and the halves re-join by ``cat`` — the
+    ``slice`` + ``cat`` boundary the rope-family banks never wrote.
+    """
+
+    def __init__(self, d: int, rdim: int) -> None:
+        """Build the q/k/v/out projections; record the rotary width."""
+        super().__init__()
+        self.rdim = rdim
+        self.q = nn.Linear(d, d)
+        self.k = nn.Linear(d, d)
+        self.v = nn.Linear(d, d)
+        self.out = nn.Linear(d, d)
+
+    @staticmethod
+    def _rot(z: torch.Tensor) -> torch.Tensor:
+        """Rotate-half the last ``r`` dims of *z* ``(b, t, r)``."""
+        t, r = z.shape[-2], z.shape[-1]
+        inv = torch.pow(
+            torch.tensor(10000.0, dtype=z.dtype, device=z.device),
+            -torch.arange(0, r, 2, dtype=z.dtype, device=z.device) / r,
+        )
+        ang = torch.outer(
+            torch.arange(t, dtype=z.dtype, device=z.device), inv
+        )
+        z1, z2 = z.chunk(2, dim=-1)
+        cos, sin = ang.cos(), ang.sin()  # (t, r/2)
+        return torch.cat(
+            [z1 * cos - z2 * sin, z1 * sin + z2 * cos], dim=-1
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Rotate the rotary slice of q and k; attend; project."""
+        r = self.rdim
+        q = torch.cat(
+            [self._rot(self.q(x)[..., :r]), self.q(x)[..., r:]], dim=-1
+        )
+        k = torch.cat(
+            [self._rot(self.k(x)[..., :r]), self.k(x)[..., r:]], dim=-1
+        )
+        s = q @ k.transpose(-1, -2) / (x.shape[-1] ** 0.5)
+        return self.out(torch.softmax(s, dim=-1) @ self.v(x))
+
+
+class _SigmoidAttention(nn.Module):
+    """Sigmoid attention — ``sig(QKᵀ/√d + b)·V``, softmax-free scoring.
+
+    Ramapuram et al. 2024 (Sigmoid Self-Attention; the SigLIP-style
+    nonlinearity applied to scores): the attention matrix is a
+    per-pair sigmoid with a learned bias, NOT a normalized convex
+    combination — the denominator softmax spends is dropped.  The
+    ``sigmoid(matmul)`` → ``matmul`` spine is a scoring rule the
+    softmax-centric fusion banks have no rule for.
+    """
+
+    def __init__(self, d: int, heads: int) -> None:
+        """Build the packed qkv/out maps and the score bias."""
+        super().__init__()
+        self.heads = heads
+        self.qkv = nn.Linear(d, 3 * d)
+        self.out = nn.Linear(d, d)
+        self.bias = nn.Parameter(torch.tensor(-2.0))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Score by sigmoid (unnormalized), mix values, project."""
+        b, t, d = x.shape
+        h = self.heads
+        q, k, v = self.qkv(x).chunk(3, dim=-1)
+        q = q.reshape(b, t, h, d // h).transpose(1, 2)
+        k = k.reshape(b, t, h, d // h).transpose(1, 2)
+        v = v.reshape(b, t, h, d // h).transpose(1, 2)
+        s = q @ k.transpose(-1, -2) / ((d // h) ** 0.5) + self.bias
+        o = torch.sigmoid(s) @ v
+        return self.out(o.transpose(1, 2).reshape(b, t, d))
+
+
+class _RealGatedLRU(nn.Module):
+    """RG-LRU — the Hawk/Griffin real-gated linear recurrence.
+
+    De et al. 2024 (Griffin/Hawk): ``h_t = a_t ⊙ h_{t-1} +
+    √(1 - a_t²) ⊙ (i_t ⊙ x_t)`` where
+    ``a_t = exp(-c·softplus(Λ)·r_t)`` with ``r_t``/``i_t`` sigmoid
+    recurrence and input gates — a *vector* data-dependent decay
+    whose magnitude is restored by the ``sqrt(1 - a²)`` normalization
+    term.  Unrolled over ``select`` slices it is the third distinct
+    elementwise-recurrence spelling in the zoo (Mamba's rank-1 write,
+    GLA's matrix gate, this one's magnitude-corrected gate) — and
+    none of them is a carrier lift the banks own.
+    """
+
+    def __init__(self, d: int) -> None:
+        """Build the input/gate/output maps and the log-rate table."""
+        super().__init__()
+        self.inp = nn.Linear(d, d)
+        self.r = nn.Linear(d, d)
+        self.i = nn.Linear(d, d)
+        self.out = nn.Linear(d, d)
+        self.lam = nn.Parameter(torch.randn(d) * 0.1)
+        self.c = 8.0
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Unroll the gated recurrence; add the projected read-out."""
+        b, t, d = x.shape
+        u = self.inp(x)
+        r = torch.sigmoid(self.r(x))
+        i = torch.sigmoid(self.i(x))
+        lam = F.softplus(self.lam)  # (d,) positive decay rate
+        a = torch.exp(-self.c * lam * r)  # (b,t,d) in (0, 1]
+        h = torch.zeros(b, d, dtype=x.dtype, device=x.device)
+        outs = []
+        for tt in range(t):
+            h = a[:, tt] * h + torch.sqrt(1.0 - a[:, tt].square()) * (
+                i[:, tt] * u[:, tt]
+            )
+            outs.append(h)
+        return x + self.out(torch.stack(outs, dim=1))
+
+
+class _AdaGNConv(nn.Module):
+    """AdaGN conv block — FiLM scale+shift on a group-normed map.
+
+    The DiT/SiT UNet conditioning at conv scale: a conditioning
+    vector produces per-channel ``(scale, shift, gate)``, the
+    affine-free GroupNorm output is modulated ``y·(1+s)+b``, and the
+    conv branch re-enters through the gate — three
+    ``mul/add(·, unsqueeze(unsqueeze))`` broadcast sites on a 4-D
+    map, where ``_TimeCondConv`` only adds a bias.
+    """
+
+    def __init__(self, ch: int, cdim: int, groups: int) -> None:
+        """Build the affine-free norm, the conv and the cond table."""
+        super().__init__()
+        self.norm = nn.GroupNorm(groups, ch, affine=False)
+        self.conv = nn.Conv2d(ch, ch, 3, padding=1)
+        self.cond = nn.Linear(cdim, 3 * ch)
+
+    def forward(self, x: torch.Tensor, c: torch.Tensor) -> torch.Tensor:
+        """Scale+shift the norm by the conditioning, gate the conv."""
+        scale, shift, gate = self.cond(c)[:, :, None, None].chunk(
+            3, dim=1
+        )
+        h = self.norm(x) * (1.0 + scale) + shift
+        return x + gate * self.conv(F.silu(h))
+
+
+class _SharedSwiGLUMoE(nn.Module):
+    """Banked-SwiGLU MoE — softmax top-k over two-layer experts.
+
+    The production decoder-MoE shape (Mixtral/DeepSeek block MLPs):
+    each routed expert is a *two-layer* SwiGLU banked as
+    ``(E, d, 2f)`` / ``(E, f, d)`` weight tensors (the ``silu(a)·b``
+    gate inside a 4-D ``einsum`` site), the router is softmax top-k
+    with the ``one_hot`` mask, and an always-on shared expert adds
+    in parallel.  ``TopKRouterMoE`` is single-layer with no shared
+    arm; ``DeepSeekSigMoE`` is sigmoid-routed and single-layer.
+    """
+
+    def __init__(self, d: int, n_exp: int, k: int, f: int) -> None:
+        """Build the router, the banked expert pair and the shared arm."""
+        super().__init__()
+        self.k = k
+        self.router = nn.Linear(d, n_exp)
+        self.w1 = nn.Parameter(torch.randn(n_exp, d, 2 * f) / (d**0.5))
+        self.w2 = nn.Parameter(torch.randn(n_exp, f, d) / (f**0.5))
+        self.shared = nn.Sequential(
+            nn.Linear(d, 2 * d), nn.SiLU(), nn.Linear(2 * d, d)
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Route top-k through the SwiGLU bank; add the shared arm."""
+        p = torch.softmax(self.router(x), dim=-1)
+        _topv, topi = torch.topk(p, self.k, dim=-1)
+        mask = F.one_hot(topi, p.shape[-1]).to(x.dtype).amax(dim=-2)
+        w = p * mask
+        h = torch.einsum("btd,edg->bteg", x, self.w1)  # g = 2f
+        a, b2 = h.chunk(2, dim=-1)
+        act = F.silu(a) * b2  # (b,t,e,f)
+        y = torch.einsum("btef,efg->bteg", act, self.w2)
+        return self.shared(x) + torch.einsum("bte,bteg->btg", w, y)
+
+
+class _AttnLogitSoftcap(nn.Module):
+    """Attention logit soft-capping — Gemma-2's ``cap·tanh(s/cap)``.
+
+    The bounded-logit trick applied *inside* the attention scores
+    (Gemma-2 uses a 50.0 cap on logits): ``tanh`` saturates the
+    ``(t, t)`` score grid before the softmax — a
+    ``tanh(div(matmul))`` → ``softmax`` chain the fusion banks and
+    the zoo's own head-level ``SoftcapLogitHead`` don't spell.
+    """
+
+    def __init__(self, d: int, cap: float) -> None:
+        """Build the q/k/v/out projections and record the cap."""
+        super().__init__()
+        self.q = nn.Linear(d, d)
+        self.k = nn.Linear(d, d)
+        self.v = nn.Linear(d, d)
+        self.out = nn.Linear(d, d)
+        self.cap = cap
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Softcap the logits, softmax, mix values, project."""
+        d = x.shape[-1]
+        s = self.q(x) @ self.k(x).transpose(-1, -2) * (d**-0.5)
+        s = self.cap * torch.tanh(s / self.cap)
+        return self.out(torch.softmax(s, dim=-1) @ self.v(x))
+
+
+class _NormedSoftcapHead(nn.Module):
+    """Final-norm + softcapped logits — the Gemma-2 output head.
+
+    The classifier's real tail: a manual RMS norm (``pow``/``mean``/
+    ``rsqrt``/``mul``) feeds the head and the logits are soft-capped
+    at 30 — the norm → linear → cap chain as one term, not the bare
+    ``cap·tanh`` of ``SoftcapLogitHead``.
+    """
+
+    def __init__(self, d: int, ncls: int) -> None:
+        """Build the gain, the head, record cap and eps."""
+        super().__init__()
+        self.g = nn.Parameter(torch.ones(d))
+        self.head = nn.Linear(d, ncls)
+        self.cap = 30.0
+        self.eps = 1e-6
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """RMS-norm, project, softcap the logits."""
+        ms = x.pow(2).mean(-1, keepdim=True)
+        xn = x * torch.rsqrt(ms + self.eps) * self.g
+        return self.cap * torch.tanh(self.head(xn) / self.cap)
+
+
+class _SquaredReluFFN(nn.Module):
+    """Squared-ReLU FFN — the Primer ``relu(Wx)²`` block.
+
+    So et al. 2021 (Primer): the activation is ``relu(·)`` squared —
+    ``pow(relu(linear))`` — inside the usual pre-norm residual MLP.
+    A two-op chain no fusion bank owns (ReGLU gates a *product*,
+    this is a pointwise power of a rectifier).
+    """
+
+    def __init__(self, d: int) -> None:
+        """Build the norm and the up/down maps."""
+        super().__init__()
+        self.norm = nn.LayerNorm(d)
+        self.up = nn.Linear(d, 2 * d)
+        self.down = nn.Linear(2 * d, d)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Apply the squared-relu MLP under a residual."""
+        h = torch.relu(self.up(self.norm(x))).square()
+        return x + self.down(h)
+
+
+class _DiffAttention(nn.Module):
+    """Differential attention — two softmaxes, subtracted.
+
+    Ye et al. 2024 (DIFF Transformer): each head's q/k split into
+    two sub-groups and the attention is
+    ``softmax(s₁) - λ·softmax(s₂)`` with
+    ``λ = e^{λ₁}e^{λ₂} - e^{λ₃}e^{λ₄}`` a per-head learned constant —
+    the ``sub(softmax, mul(param, softmax))`` noise-cancellation
+    spelling.  Every softmax rule in the banks targets ONE softmax;
+    a difference of two is uncatalogued.
+    """
+
+    def __init__(self, d: int, heads: int) -> None:
+        """Build the split q/k, shared v, out map and the λ params."""
+        super().__init__()
+        self.heads = heads
+        self.q = nn.Linear(d, d)
+        self.k = nn.Linear(d, d)
+        self.v = nn.Linear(d, d // 2)
+        self.out = nn.Linear(d // 2, d)
+        self.l1 = nn.Parameter(torch.randn(heads) * 0.1)
+        self.l2 = nn.Parameter(torch.randn(heads) * 0.1)
+        self.l3 = nn.Parameter(torch.randn(heads) * 0.1)
+        self.l4 = nn.Parameter(torch.randn(heads) * 0.1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Attend by the difference of two softmaxes per head."""
+        b, t, d = x.shape
+        h = self.heads
+        dh = d // (2 * h)
+        q = self.q(x).reshape(b, t, 2, h, dh)
+        k = self.k(x).reshape(b, t, 2, h, dh)
+        q1, q2 = q.unbind(2)
+        k1, k2 = k.unbind(2)
+        v = self.v(x).reshape(b, t, h, dh).transpose(1, 2)
+        s1 = q1.transpose(1, 2) @ k1.transpose(1, 2).transpose(-1, -2)
+        s2 = q2.transpose(1, 2) @ k2.transpose(1, 2).transpose(-1, -2)
+        s1 = s1 / (dh**0.5)
+        s2 = s2 / (dh**0.5)
+        lam = (
+            torch.exp(self.l1) * torch.exp(self.l2)
+            - torch.exp(self.l3) * torch.exp(self.l4)
+        ).reshape(1, h, 1, 1)
+        att = torch.softmax(s1, dim=-1) - lam * torch.softmax(
+            s2, dim=-1
+        )
+        o = att @ v
+        return self.out(o.transpose(1, 2).reshape(b, t, h * dh))
+
+
+class _TaylorLinearAttention(nn.Module):
+    """Taylor-feature linear attention — the "Based" kernel trick.
+
+    Arora et al. 2024: the softmax kernel is approximated by a
+    feature map ``φ(x) = cat(1, x, x²/2)`` and causality is kept by
+    prefix-summing the outer products — ``cumsum`` over an
+    ``einsum``-built ``(t, n, p)`` accumulator, normalized by the
+    running feature mass.  Neither the intake's cumsum
+    ``LinearAttention`` (elementwise feature map only) nor the zoo's
+    matrix-state scans spell the ``(φq)·(Σ φk⊗v) / (φq)·(Σ φk)``
+    quotient.
+    """
+
+    def __init__(self, d: int) -> None:
+        """Build the q/k/v projections and the output map."""
+        super().__init__()
+        self.q = nn.Linear(d, d)
+        self.k = nn.Linear(d, d)
+        self.v = nn.Linear(d, d)
+        self.out = nn.Linear(d, d)
+
+    @staticmethod
+    def _feat(z: torch.Tensor) -> torch.Tensor:
+        """Return ``φ(z) = cat(1, z, z²/2)`` — the 2nd-order map."""
+        one = torch.ones(
+            *z.shape[:-1], 1, dtype=z.dtype, device=z.device
+        )
+        return torch.cat([one, z, z * z / 2.0], dim=-1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Causal prefix-sum attention under the Taylor feature map."""
+        fq = self._feat(self.q(x))  # (b,t,2d+1)
+        fk = self._feat(self.k(x))
+        v = self.v(x)  # (b,t,d)
+        kv = torch.einsum("btn,btp->btnp", fk, v)
+        acc = kv.cumsum(1)  # (b,t,n,p) running key-value state
+        num = torch.einsum("btn,btnp->btp", fq, acc)
+        den = torch.einsum("btn,btn->bt", fq, fk.cumsum(1))
+        return self.out(num / den.unsqueeze(-1).clamp_min(1e-3))
+
+
+class _TernaryWeightLinear(nn.Module):
+    """Ternary-weight linear — the BitNet b1.58 dequant spelling.
+
+    Ma et al. 2024: weights are quantized to ``{-1, 0, +1}`` by
+    ``round(clamp(W/gamma))`` with ``gamma = mean|W|`` a per-tensor absmean
+    scale, then the matmul runs on the dequantized ``gamma·W_q`` —
+    ``round`` + ``clamp`` + the absmean-``div`` without the STE
+    detach path ``STEQuantLinear`` spells (here the quantized weight
+    IS the forward weight, no gradient fiction needed).
+    """
+
+    def __init__(self, d: int) -> None:
+        """Build the dense map whose weight is quantized in-graph."""
+        super().__init__()
+        self.lin = nn.Linear(d, d)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Quantize the weight ternary-wise and apply the map."""
+        g = self.lin.weight.abs().mean()
+        wq = torch.round((self.lin.weight / g).clamp(-1.0, 1.0))
+        return F.linear(x, wq * g, self.lin.bias)
+
+
+class _SinkWindowAttention(nn.Module):
+    """Attention-sink + sliding window — the StreamingLLM mask.
+
+    Xiao et al. 2023: keep the band of the last ``window`` keys AND
+    the first ``sinks`` columns (the attention sinks) — the keep
+    mask is the union ``band + sink`` built in-graph as
+    ``clamp_max(tril - tril + lt(arange))``, then the usual
+    ``mul + (keep-1)·1e4`` masking.  ``SlidingWindowAttention``
+    spells the band alone; the sink prefix is a different mask
+    grammar (a column stripe, not a diagonal).
+    """
+
+    def __init__(self, d: int, window: int, sinks: int) -> None:
+        """Build the projections; record window and sink counts."""
+        super().__init__()
+        self.q = nn.Linear(d, d)
+        self.k = nn.Linear(d, d)
+        self.v = nn.Linear(d, d)
+        self.out = nn.Linear(d, d)
+        self.window = window
+        self.sinks = sinks
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Attend inside band + sink-columns."""
+        t, d = x.shape[-2], x.shape[-1]
+        s = (self.q(x) @ self.k(x).transpose(-1, -2)) * (d**-0.5)
+        ones = torch.ones(t, t, dtype=x.dtype, device=x.device)
+        band = torch.tril(ones) - torch.tril(ones, -1 - self.window)
+        pos = torch.arange(t, dtype=x.dtype, device=x.device)
+        sink = (pos.unsqueeze(0) < self.sinks).to(x.dtype)  # (1,t)
+        keep = (band + sink).clamp_max(1.0)
+        s = s * keep + (keep - 1.0) * 1e4
+        return self.out(torch.softmax(s, dim=-1) @ self.v(x))
+
+
+# ---------------------------------------------------------------------------
 #  The registry — same Workload thunks as intake, disjoint names
 # ---------------------------------------------------------------------------
 
@@ -2001,6 +2625,85 @@ def zoo(d: int = 16, t: int = 8, b: int = 2) -> list[Workload]:
             ),
             kind="zoo",
         ),
+        # --- third expansion: uncatalogued 2024-25 structures ---------
+        # gated/matrix-state scans and chunked dual forms
+        Workload(
+            "GatedDeltaRule",
+            lambda: (_GatedDeltaRule(d, d, 4), _r(b, 4, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "ChunkedSSD",
+            lambda: (_ChunkedSSD(d, 4, 4, 4), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "RealGatedLRU",
+            lambda: (_RealGatedLRU(d), _r(b, t, d)),
+            kind="zoo",
+        ),
+        # compressed-latent + partial-rope attention spellings
+        Workload(
+            "DecoupledMLA",
+            lambda: (_DecoupledMLA(d, 4, 8, 2), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "PartialRotary",
+            lambda: (_PartialRotary(d, d // 4), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "SigmoidAttention",
+            lambda: (_SigmoidAttention(d, 4), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "DiffAttention",
+            lambda: (_DiffAttention(d, 4), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "AttnLogitSoftcap",
+            lambda: (_AttnLogitSoftcap(d, 50.0), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "SinkWindowAttention",
+            lambda: (_SinkWindowAttention(d, 3, 1), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "TaylorLinearAttention",
+            lambda: (_TaylorLinearAttention(d), _r(b, t, d)),
+            kind="zoo",
+        ),
+        # conditioned conv / routing / head details
+        Workload(
+            "AdaGNConv",
+            lambda: (_AdaGNConv(8, 4, 4), (_r(1, 8, 8, 8), _r(1, 4))),
+            kind="zoo",
+        ),
+        Workload(
+            "SharedSwiGLUMoE",
+            lambda: (_SharedSwiGLUMoE(d, 4, 2, 8), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "NormedSoftcapHead",
+            lambda: (_NormedSoftcapHead(d, 10), _r(4, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "SquaredReluFFN",
+            lambda: (_SquaredReluFFN(d), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "TernaryWeightLinear",
+            lambda: (_TernaryWeightLinear(d), _r(4, d)),
+            kind="zoo",
+        ),
     ]
 
 
@@ -2313,6 +3016,82 @@ def zoo_variants(d: int = 16, t: int = 8, b: int = 2) -> list[Workload]:
                 _PagedKVAttention(d2, 6),
                 (_r(b, 1, d2), _r(b, 3, 2, d2), _r(b, 3, 2, d2)),
             ),
+            kind="zoo",
+        ),
+        # --- third expansion: uncatalogued 2024-25 structures ---------
+        Workload(
+            "GatedDeltaRuleV2",
+            lambda: (_GatedDeltaRule(d, d // 2, 6), _r(b, 6, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "ChunkedSSDV2",
+            lambda: (_ChunkedSSD(d, 2, 8, 2), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "RealGatedLRUV2",
+            lambda: (_RealGatedLRU(d2), _r(b, t, d2)),
+            kind="zoo",
+        ),
+        Workload(
+            "DecoupledMLAV2",
+            lambda: (_DecoupledMLA(d2, 4, 8, 4), _r(b, t, d2)),
+            kind="zoo",
+        ),
+        Workload(
+            "PartialRotaryV2",
+            lambda: (_PartialRotary(d2, d2 // 4), _r(b, t, d2)),
+            kind="zoo",
+        ),
+        Workload(
+            "SigmoidAttentionV2",
+            lambda: (_SigmoidAttention(d, 2), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "DiffAttentionV2",
+            lambda: (_DiffAttention(d, 2), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "AttnLogitSoftcapV2",
+            lambda: (_AttnLogitSoftcap(d2, 30.0), _r(b, t, d2)),
+            kind="zoo",
+        ),
+        Workload(
+            "SinkWindowAttentionV2",
+            lambda: (_SinkWindowAttention(d2, 2, 2), _r(b, t, d2)),
+            kind="zoo",
+        ),
+        Workload(
+            "TaylorLinearAttentionV2",
+            lambda: (_TaylorLinearAttention(d2), _r(b, t, d2)),
+            kind="zoo",
+        ),
+        Workload(
+            "AdaGNConvV2",
+            lambda: (_AdaGNConv(6, 8, 3), (_r(1, 6, 8, 8), _r(1, 8))),
+            kind="zoo",
+        ),
+        Workload(
+            "SharedSwiGLUMoEV2",
+            lambda: (_SharedSwiGLUMoE(d, 6, 3, 4), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "NormedSoftcapHeadV2",
+            lambda: (_NormedSoftcapHead(d, 12), _r(4, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "SquaredReluFFNV2",
+            lambda: (_SquaredReluFFN(d2), _r(b, t, d2)),
+            kind="zoo",
+        ),
+        Workload(
+            "TernaryWeightLinearV2",
+            lambda: (_TernaryWeightLinear(d2), _r(4, d2)),
             kind="zoo",
         ),
     ]

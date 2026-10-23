@@ -170,6 +170,25 @@ _EXPANSION_FAMILIES = [
     # second quant/kv shapes: grouped scales, paged cache
     "GroupedQuantLinear",
     "PagedKVAttention",
+    # --- third expansion — uncatalogued 2024-25 structures ------
+    # gated/matrix-state scans and the chunked SSD dual form
+    "GatedDeltaRule",
+    "ChunkedSSD",
+    "RealGatedLRU",
+    # compressed-latent + partial-rope attention spellings
+    "DecoupledMLA",
+    "PartialRotary",
+    "SigmoidAttention",
+    "DiffAttention",
+    "AttnLogitSoftcap",
+    "SinkWindowAttention",
+    "TaylorLinearAttention",
+    # conditioned conv / routing / head details
+    "AdaGNConv",
+    "SharedSwiGLUMoE",
+    "NormedSoftcapHead",
+    "SquaredReluFFN",
+    "TernaryWeightLinear",
 ]
 
 
