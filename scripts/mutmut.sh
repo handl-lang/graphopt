@@ -18,8 +18,8 @@
 #
 # Scope a fast loop with the env vars (globs/paths relative to the
 # sandbox, where the package root is top-level):
-#   MUTMUT_ONLY='mlopt_core/egraph/terms.py' \
-#   MUTMUT_TESTS='tests/test_certificates.py tests/test_cert_nonlocal.py' \
+#   MUTMUT_ONLY='mlopt_discovery/antiunify.py' \
+#   MUTMUT_TESTS='tests/test_antiunify.py' \
 #     scripts/mutmut.sh run
 #
 # Without MUTMUT_ONLY every source file is mutated; without MUTMUT_TESTS
@@ -33,11 +33,11 @@ sandbox="$root/.mutmut-sandbox"
 mkdir -p "$sandbox"
 
 for spec in \
-    mlopt-core:mlopt_core \
     mlopt-torch:mlopt_torch \
     mlopt-carriers:mlopt_carriers \
     mlopt-cuda:mlopt_cuda \
-    mlopt-orchestrator:mlopt_orchestrator
+    mlopt-onnx:mlopt_onnx \
+    mlopt-discovery:mlopt_discovery
 do
     dir=${spec%%:*}
     mod=${spec##*:}
@@ -52,7 +52,7 @@ sel=$(printf '%s' "$tests" | sed 's/ /", "/g')
 
 {
     echo '[tool.mutmut]'
-    echo 'source_paths = ["mlopt_core", "mlopt_torch", "mlopt_carriers", "mlopt_orchestrator", "mlopt_cuda"]'
+    echo 'source_paths = ["mlopt_torch", "mlopt_carriers", "mlopt_cuda", "mlopt_onnx", "mlopt_discovery"]'
     echo 'pytest_add_cli_args = ["-p", "no:cacheprovider", "-q"]'
     echo "pytest_add_cli_args_test_selection = [\"$sel\"]"
     [ -n "$only" ] && echo "only_mutate = [\"$only\"]"

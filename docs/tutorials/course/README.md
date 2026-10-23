@@ -188,13 +188,13 @@ of measured stage outcomes; the negatives (level 23) are a gallery of
 measured refusals.
 
 The **measured numbers in the prose callouts** come from the real Python
-system (`project/retros/`): the **12 machine-admitted laws** the library
-ships (`mlopt_core.laws.provenance.MACHINE_SHIPPED`; the newest is
-`mul_unsq_nat` −12.3 % on its source workload — the first minted from a
-corpus op-tuple, with four further laws machine-_assisted_ but
+system (`project/retros/`): the **13 machine-admitted laws** the library
+ships (`mlopt_core.laws.provenance.MACHINE_SHIPPED`; the first minted
+from a corpus op-tuple is `mul_unsq_nat` −12.3 % on its source workload,
+with four further laws machine-_assisted_ but
 hand-integrated: `select_mul`, `softmax_fold`, `glu_fold`,
 `rms_norm_fold`), the false-but-cost-lowering
-candidate the oracle rejected, the **84-rule** basis catalogue (60 axioms
+candidate the oracle rejected, the **86-rule** basis catalogue (62 axioms
 / 22 lemmas / 2 redundant) whose one divergence `silu_fold` closed, the
 exposure screen's bimodality (**81 of 321** workloads at exactly 0 %,
 **140 at ≥95 %**) and its ~1.5 % corpus discovery yield, the fused

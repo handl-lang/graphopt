@@ -16,10 +16,8 @@
 #     MLOPT_GATES_NP=1 scripts/gates.sh  # force the suite serial
 #
 # Test lanes (the suite is tiered by kind — see AGENTS.md):
-#     smoke:  .venv/bin/python -m pytest tests/test_ir.py \
-#               tests/test_laws_structure.py tests/test_egraph_internals.py \
-#               tests/test_property_ir.py tests/test_property_laws.py \
-#               tests/test_cond_laws.py -q          # 230 tests, ~6 s
+#     smoke:  .venv/bin/python -m pytest tests/test_law_order.py \
+#               tests/test_law_provenance.py tests/test_decode_geom.py -q   # 81 tests, ~5 s
 #     core:   -m "not e2e and not slow"             # unit/integration only
 #     dev:    -m "not slow"                         # drops the minutes-scale
 #     gate:   this script (everything, once, under coverage)

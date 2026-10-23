@@ -32,8 +32,10 @@ strictly beats a registered `bench/discovery` baseline on a derivation that
 invokes it, and its instance is underivable from `known_bank()` (the shipped
 rules plus the prior-art preset) minus alpha-siblings.  The sieve
 (`bench/drivers/screen/novelty_sieve.py`, results in
-`docs/results_novelty_sieve.md`) ran 24 candidates over the 238-rule bank:
-two in the review queue (`mul_unsq_nat`, `softsign_fold`), four derivable,
+`docs/results_novelty_sieve.md`) ran 24 candidates over the 242-rule bank:
+the review queue is **empty** — the two earlier review items
+(`mul_unsq_nat`, `softsign_fold`) demoted to derivable once their
+catalogued duals were registered as prior art — six derivable,
 six unpaid, twelve unmeasured.  "Novel to humanity" stays an open-world
 literature claim this draft does not make.  On *soundness*: every move carries a replayable
 certificate, candidates clear a numeric oracle, a typed-pay gate, an
@@ -425,21 +427,21 @@ exposed models).  Exposure itself is **bimodal**: of 321 exported workloads,
 `nn.Conv*`, `nn.*Pool*`, `sdpa` spellings) while 140 score ≥95 %
 (`project/retros/exposed-math.md`, `project/retros/discovery-scale.md`).
 
-**The real-corpus mint funnel ran to an honest zero (Q1).**  The
-corpus-driven overnight mint (`bench/drivers/overnight.py --corpus
+**The real-corpus mint funnel admits paying folds — all known-art (Q1).**
+The corpus-driven overnight mint (`bench/drivers/overnight.py --corpus
 zoo-real --compose`) paged all **53 held-out zoo modules**, minting
-candidates from each module's own op-tuple census: **87 viable mints
-(13 composites), 187 evaluated, 0 admitted, 0 machine-originals** —
-every shallow single-step mint was already a theorem of the shipped
-bank, and the deepest compose attempt reached the pay gate once
-(fires=5, changed=5, paid=4) before failing `sink.verify` on its own
-sites (`docs/reports/results_overnight_real_v2.md`,
-`docs/results_realcorpus_v2.md`).  The run also surfaced a real
+candidates from each module's own op-tuple census: **101 viable mints
+(19 composites, 10 guarded), 203 evaluated, 8 admitted** — and every
+admitted law classified **known-art** post-registration: the funnel's
+paying finds (the `instance_norm`/`group_norm`/`rms_norm` denotations,
+the sdpa/glu folds) were already catalogued transforms, so the count of
+confirmed machine-originals is **0**
+(`docs/reports/results_overnight_real_v5.md`,
+`docs/results_realcorpus_v2.md`).  The run series also surfaced a real
 substrate bug — emit-time RHS sanity caught a bare `Exception`,
 conflating *cannot-evaluate* with *evaluated-and-false* so
 non-denoting composites were minted as candidates; fixed in the
-substrate (eqsat `2d6e4eb`), the mint now emits only viable objects
-and the 87-mint funnel is the post-fix count.
+substrate (eqsat `2d6e4eb`), the mint now emits only viable objects.
 
 **Rediscoveries, said plainly.**  The largest structural wins are *not*
 discoveries.  The RetNet carrier the machine extracts is numerically
@@ -699,9 +701,10 @@ handl's own rewrite engine and must produce the term mlopt's
   succeeds).
 * **Discovery yield is sparse (~1.5 %)** and exposure is bimodal — 81/321
   workloads expose nothing at all.  On the real held-out corpus the
-  corpus-driven mint is an **honest zero**: 53 zoo modules → 87 viable mints,
-  0 admitted, 0 machine-originals (§4.1); shallow single-step mints are
-  exhausted — guarded composites are the open lever.
+  corpus-driven mint admits real paying folds but every one classifies
+  **known-art** post-registration: 53 zoo modules → 101 viable mints,
+  8 admitted, **0 confirmed machine-originals** (§4.1); shallow
+  single-step mints are exhausted — guarded composites are the open lever.
 * **Strassen-class rediscovery is out of reach of per-step play.**  The
   bilinear board expresses rank 7 (verified scripted witness) but no player
   crosses the invalid-space valley in 200+ episodes — the blocker is a
@@ -825,7 +828,7 @@ venue paper needs the scale validation and the executor work named in §6.
 | The minted atom pays nothing | 0 certified laws fire on real terms | `atom-synth-loop.md` |
 | Anti-unification reach-expansion | null on all 3 workloads | ADR 0007 |
 | FLA vs the delivered carrier | ~3× memory, ~11× speed (lowering gap) | `retnet-external-baselines.md` |
-| **Frontier.** Real-corpus mint funnel (Q1) | 53 zoo modules → 87 viable mints (13 composites), 187 evaluated → 0 admitted / 0 machine-originals | `docs/reports/results_overnight_real_v2.md`; `docs/results_realcorpus_v2.md` |
+| **Frontier.** Real-corpus mint funnel (Q1) | 53 zoo modules → 101 viable mints (19 composites, 10 guarded), 203 evaluated → 8 admitted, all known-art post-registration / 0 machine-originals | `docs/reports/results_overnight_real_v5.md`; `docs/results_realcorpus_v2.md` |
 | Emit-time RHS-sanity substrate fix | bare-`Exception` catch conflated can't-eval with eval-false; mint now emits only viable candidates | eqsat `2d6e4eb` |
 | Strassen rediscovery board (Q2) | NO-GO: scripted witness verifies rank 7 (29 moves, 10/10); all players 0 wins in 200+ episodes, stall at rank 8 | `docs/results_strassen.md` |
 | Enabling-chain credit (Q3) | learned arms close mint → apply chains (linear-greedy 100 % held-out; neural at the scripted ceiling); density-bound at k=16 | `docs/results_credit_chain.md` |

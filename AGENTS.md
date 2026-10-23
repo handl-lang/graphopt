@@ -173,13 +173,17 @@ depend on graduates to `mlopt_discovery` (the 99% ratchet applies to
 the package union).
 
 **Machine-admitted laws are in `DEFAULT`.**  `search(..., rules=DEFAULT)`
-ships **12 machine-admitted laws** alongside the hand-written kernel
+ships **13 machine-admitted laws** alongside the hand-written kernel
 (`mlopt_core.laws.provenance.MACHINE_SHIPPED` — the promoted set;
-`project/retros/promoted-laws.md`).  The newest is `conv_bn_fold` — the
-first *verbatim* composite: a depth-4 `syn_*` mint shipped through
+`project/retros/promoted-laws.md`).  The newest is `add_unsq_pad_r` —
+the first promotion whose paying site is a strictly-real intake
+workload (`RelativePositionBias`), admitted through the auto-cond →
+gauntlet retry (`docs/results_realcorpus.md`).  Before it,
+`conv_bn_fold` — the first *verbatim* composite: a depth-4 `syn_*`
+mint shipped through
 `mlopt_core.laws.minted` (the embedded premise-closure records replay
 `meta._compose_guards` at import; `missing_hooks` honestly reports the
-transported `check`/`derive` hooks).  Before it, `mul_unsq_nat` — the
+transported `check`/`derive` hooks).  And `mul_unsq_nat` — the
 first law minted from a corpus op-tuple, guard resolved by the
 adversarial sweep.  Note the authorship split in `provenance.py`:
 `select_mul` / `softmax_fold` / `glu_fold` / `rms_norm_fold` had
@@ -203,7 +207,7 @@ parallel arm is not a safe default on this 11 GB host — see the
 measured table below before raising it.
 
 **Iterate with `-m "not slow"`.**  The minutes-scale work is marked
-`slow` from measured durations.  There are **30** such tests:
+`slow` from measured durations.  There are **31** such tests:
 
 - the six `torch.compile` tests (`test_torch_integration`,
   `test_om_decayed_cross`) — the 176-test slice runs **370.8 s**,
@@ -234,26 +238,26 @@ runs everything.
   pipeline).  Module-level on boundary-purpose files only:
   `test_e2e_pipeline`, `test_onnx_{sink,source,liftmap,opmap}`,
   `test_om_decayed_kway_deliver`, `test_runners`, `test_autotune`,
-  `test_torch_integration`, `test_handl_peer` (**517 tests**).
+  `test_torch_integration`, `test_handl_peer` (**547 tests**).
   Torch-*eager* adapter
   tests are *not* e2e — they exercise the boundary shim, not the engine
   behind it.  Mixed files are deliberately left unmarked for now.
 - `slow` — minutes-scale by construction (RL-training fixtures,
-  60k-node saturation, compile sweeps): **30 tests**, orthogonal to
+  60k-node saturation, compile sweeps): **31 tests**, orthogonal to
   `e2e`.
 - `requires_cuda` — hardware gate, unchanged.
 
 ```sh
-# smoke (~6 s): fast core sanity — 230 tests
-.venv/bin/python -m pytest tests/test_ir.py tests/test_laws_structure.py \
-    tests/test_egraph_internals.py tests/test_property_ir.py \
-    tests/test_property_laws.py tests/test_cond_laws.py -q
+# smoke (~5 s): fast core sanity — 81 tests (the substrate smoke files
+# moved to eqsat with the split; these are the domain-side pins)
+.venv/bin/python -m pytest tests/test_law_order.py \
+    tests/test_law_provenance.py tests/test_decode_geom.py -q
 
 # core lane: unit/integration only — no external engines, no soaks
-.venv/bin/python -m pytest -m "not e2e and not slow"     # 5,837 tests
+.venv/bin/python -m pytest -m "not e2e and not slow"     # 5,257 tests
 
 # dev lane: everything except the minutes-scale
-.venv/bin/python -m pytest -m "not slow"                 # 6,485 tests
+.venv/bin/python -m pytest -m "not slow"                 # 5,803 tests
 
 # gate: everything, once, under coverage
 scripts/gates.sh
@@ -271,7 +275,7 @@ scripts/gates.sh
 .venv/bin/python scripts/radon_ratchet.py   # complexity ratchet
 
 # The suite, once, under coverage (both floors below).
-uv run pytest                 # 6,372 tests; does NOT finish in 30 min on
+uv run pytest                 # 5,834 tests; does NOT finish in 30 min on
                               # either serial or `-n 2` (see the table
                               # below).  Iterate with `-m "not slow"`.
                               # Single-process: see the warning below.
@@ -340,9 +344,10 @@ clean under both, and `scripts/gates.sh` checks exactly those.
 > `test_discovery_open_game` fixtures are **not** marked — they measured
 > cheap (0.6 s / <2 s), as are the other `max_nodes=60_000` tests in the
 > file (`test_real_export_spellings_fold_and_verify` 2.8 s,
-> `test_bridges_fire_in_default_pipeline` 0.9 s).  The suite is
-> **6,372 tests** (the old "~7.5 min" and "~28 min" figures are both
-> stale).
+> `test_bridges_fire_in_default_pipeline` 0.9 s).  The suite was
+> **6,372 tests** at that measurement; it now collects **5,834**
+> (the substrate files moved to `eqsat` at the phase-4 split).  The old
+> "~7.5 min" and "~28 min" figures are both stale.
 >
 > **The slice comparison is the only *completed* measurement.**  On the
 > heaviest slice (`test_torch_integration` + `test_om_decayed_cross`, 176
@@ -364,7 +369,7 @@ Manual-stage gates (not run on every commit — network/slower):
 .venv/bin/pip-audit                                          # dependency CVEs (network)
 .venv/bin/semgrep --config p/python --config p/security-audit packages  # registry rules (network)
 sh scripts/runtime_types.sh                                    # typeguard runtime contracts
-MUTMUT_ONLY=mlopt_core/ir.py MUTMUT_TESTS='tests/test_ir.py' scripts/mutmut.sh run  # mutation testing
+MUTMUT_ONLY=mlopt_discovery/antiunify.py MUTMUT_TESTS='tests/test_antiunify.py' scripts/mutmut.sh run  # mutation testing
 ```
 
 Pre-commit (`pre-commit install`) runs ruff check/format, **ty**,
@@ -415,23 +420,10 @@ configured in `pyproject.toml`):
 
 ## Property tests (Hypothesis)
 
-`tests/test_property_*.py` are property-based tests over the torch-free
-core: IR/`Op` interning, e-graph congruence + extraction cost bounds,
-cost-model monotonicity, and law match/instantiate round-trips across
-all `ALL_RULES` patterns.  The shared strategies live in
-`tests/test_property_strategies.py` (not collected).  They are fast
-(<~10 s, no CUDA/network) and run as part of the normal suite:
-
-```sh
-.venv/bin/python -m pytest tests/test_property_ir.py tests/test_property_egraph.py \
-    tests/test_property_cost.py tests/test_property_laws.py
-```
-
-No properties are xfailed: both former xfails are fixed.  The
-commutative unknown-shape cost fallback in `_infer_op_shape` is
-symmetric, and `EGraph.rebuild` now closes congruence across classes —
-enodes that become identical after child canonicalisation are unioned
-(see `_close_congruence`), to a fixed point.
+The `test_property_*.py` hypothesis suite moved to `handl-lang/eqsat`
+with the substrate at the phase-4 split — it exercises
+`mlopt_core`'s IR interning, e-graph congruence, cost-model
+monotonicity and law round-trips, and runs in that repo's suite.
 
 ## Static analysis & security
 
@@ -628,7 +620,7 @@ leaves are literals, and `str` attr values are attr metavariables bound
 under `"$attr:"` keys.  Prefer `cond=...` — a declarative side
 condition in `mlopt_core.laws.cond` (pure data: `("and", ("rank-eq",
 "a", "b"), ("rank-ge", "a", 2))`, serializable via `cond_to_data`/
-`cond_from_data`; 56 of 84 laws use it) — over `check(bound) -> bool`,
+`cond_from_data`; 58 of 86 laws use it) — over `check(bound) -> bool`,
 the escape hatch for conditions the DSL can't express: `bound` maps
 each metavar to a resolved member term (use `laws.base._shape_of` for
 shape guards — the matcher cannot see types).
@@ -637,8 +629,8 @@ shape guards — the matcher cannot see types).
 declarative DSL in `mlopt_core.laws.cond` (a `{NAME: expr}` map of
 shape/attr expressions, serializable via `derive_to_data`/
 `derive_from_data` and folded into `rule.derive` at construction);
-18 of 84 laws use it, leaving **83 of 84 laws fully
-data-serializable** — the 84th, `conv_bn_fold`, is a shipped
+19 of 86 laws use it, leaving **85 of 86 laws fully
+data-serializable** — the 86th, `conv_bn_fold`, is a shipped
 machine-minted composite whose hooks are rebuilt deterministically
 from its stored data guard spec (the partition is pinned in
 `tests/test_law_serialize.py`; see

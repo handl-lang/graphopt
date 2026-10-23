@@ -254,7 +254,7 @@ omit = ["*/tests/*"]
 # flat-layout sandbox mutmut needs (its keys are path-derived, but this
 # monorepo's per-package ``src/`` layout imports under a different dotted
 # name):
-#   MUTMUT_ONLY=mlopt_core/ir.py MUTMUT_TESTS='tests/test_ir.py' \
+#   MUTMUT_ONLY=mlopt_discovery/antiunify.py MUTMUT_TESTS='tests/test_antiunify.py' \
 #       scripts/mutmut.sh run
 #   scripts/mutmut.sh results
 # There is intentionally no ``[tool.mutmut]`` table here: the wrapper

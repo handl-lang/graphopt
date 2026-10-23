@@ -56,10 +56,11 @@ ListNet-graded drain earns heuristic-parity reward (0.3549 vs 0.3595)
 cert ✓ + beats a registered baseline + underivable from
 `known_bank()` (which now includes the prior-art preset) — *not*
 "novel to humanity", which stays an open-world lit-review.  The sieve
-ran 24 candidates over the 238-rule bank (the 31-case scorecard is
-31/31 found+cert): **2 in review**
-(`mul_unsq_nat`, `softsign_fold`), 4 derivable, 6 unpaid, 12
-unmeasured — [`docs/results_novelty_sieve.md`](docs/results_novelty_sieve.md).
+ran 24 candidates over the 242-rule bank (the 31-case scorecard is
+31/31 found+cert): **review queue empty** — the two prior review items
+(`mul_unsq_nat`, `softsign_fold`) demoted to derivable once their
+catalogued duals were registered as prior art; 6 derivable, 6 unpaid,
+12 unmeasured — [`docs/results_novelty_sieve.md`](docs/results_novelty_sieve.md).
 On the substrate side: TASO / Isaria / Ruler / Enumo mint + verify
 offline; CompilerGym / Omelette / MCTS-GEB / Aurora learn over fixed
 banks — none makes the minted bank itself an object of play.
@@ -74,12 +75,14 @@ are structural and regime-bounded, inference-only, compile-time
 search.
 
 **Open — now measured (the Q-series).**  Unnamed structure on real
-corpora: **honest zero** — 53 held-out zoo modules → 87 viable mints,
-**0 machine-originals**; shallow single-step mints are all bank
-theorems, so the next lever is guarded composites
-([`docs/reports/results_overnight_real_v2.md`](docs/reports/results_overnight_real_v2.md);
-the run also surfaced and fixed an emit-time RHS-sanity substrate bug,
-eqsat `2d6e4eb`).  New algorithms: **Strassen NO-GO** — the board
+corpora: **honest zero on originality** — 53 held-out zoo modules →
+101 viable mints (19 composites, 10 guarded) → **8 admitted, every one
+classified known-art post-registration** (the paying folds it found —
+the norm kernels, the sdpa/glu folds — were already catalogued),
+**0 confirmed machine-originals**
+([`docs/reports/results_overnight_real_v5.md`](docs/reports/results_overnight_real_v5.md);
+an earlier run surfaced and fixed an emit-time RHS-sanity substrate
+bug, eqsat `2d6e4eb`).  New algorithms: **Strassen NO-GO** — the board
 proves rank-7, every player stalls at 8
 ([`docs/results_strassen.md`](docs/results_strassen.md)).  Multi-step
 credit: **yes, where chain density permits** — learned arms close
@@ -126,7 +129,7 @@ uv sync                                                  # the dev environment
 # the flagship, three surfaces
 .venv/bin/python -m pytest tests/test_kit_bridge.py -q   # 8 e2e tests (~27 s; builds hnl-run if absent)
 .venv/bin/python bench/drivers/probes/conv_fold_premise_pay_probe.py   # mint → transport → truth → pay → gauntlet (~13 s)
-cargo test -p mlopt-kit                                 # the Rust consumer, 21 tests
+cargo test -p mlopt-kit                                 # the Rust consumer, 31 tests
 
 # the day-to-day gate
 .venv/bin/python -m pytest -m "not slow"                 # dev lane, 6,485 tests
