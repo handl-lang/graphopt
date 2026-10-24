@@ -1179,6 +1179,7 @@ class TestCorpusZooPrim:
             "bootstrap": False,
             "family_mint": True,
             "depth": on._PRIM_DEPTH,
+            "vocab": True,
         }
         for e in _cells(cells, "episode"):
             assert e["record"]["case"]["prim"]["max_ops"] == 4
@@ -1535,21 +1536,22 @@ class TestCorpusZooPrimDepth3:
             )
             assert out == "equal", f"{rule.name}: {out}"
 
-    def test_prim_depth3_derivable_but_cert_replay_refuses(self):
-        """anchored-derivable, machine-original — cert refuses replay.
+    def test_prim_depth3_derivable_and_cert_replay_admits(self):
+        """anchored-derivable, machine-original — cert replays, admits.
 
         The anchored ``verify_law`` derivation exists (``derivable``)
         — ``synop3.expand`` unfolds the call, the shipped
         ``prim:synop2_*``/``prim:synop_*`` tiers re-fold the manual
-        denotation — but the certificate's connecting merge is a
-        congruence merge: the explainer cannot rebuild it as
-        standalone steps (replaying ``prim:synop2_*`` on the den's
-        manual spelling fails — the rule's LHS needs the ``synop_*``
-        enode), so the witness is honestly ``egraph_dependent`` and
-        the cert leg's replay bar refuses admission.  The refusal is
-        pinned, not papered over: it is the substrate's proof-
-        reconstruction reach, not a truth failure — and the sieve
-        still cannot derive a law about an op that did not exist.
+        denotation — and the certificate replays the chain standalone:
+        the explainer expands the ``synop2_*`` member through the
+        fold application that re-realised it in-graph (the substrate
+        tags a rule application's RHS-root enode even when it
+        hash-consed onto a pre-existing member, so the congruence
+        merge ``den == synop2_*(v)`` reconstructs as
+        ``expand -> prim:synop_* -> prim:synop2_*`` positional
+        steps).  The standalone-replay bar then ADMITS the fold, and
+        the sieve still cannot derive a law about an op that did not
+        exist.
         """
         import bench.referees
         from bench.drivers.screen import novelty_sieve as ns
@@ -1579,13 +1581,12 @@ class TestCorpusZooPrimDepth3:
             instantiate_pattern(rule.rhs, m),
             [*ALL_RULES, *rule.premises],
         )
-        assert res.derivable and not res.replayable
-        # … but the standalone-replay bar refuses the witness.
+        assert res.derivable and res.replayable
+        # … and the standalone-replay bar admits the witness.
         rec = on._admit(
             rule, "full", bench.referees.RefereeCtx(real_terms=subs)
         )
-        assert not rec["admitted"]
-        assert "standalone-replayable" in rec["reason"]
+        assert rec["admitted"], rec["reason"]
         res = on._classify(rule, ns.known_bank(), ctxs=[])
         assert res["verdict"] == "machine-original", res
 
@@ -1646,6 +1647,100 @@ class TestCorpusZooPrimDepth3:
             assert e["record"]["case"]["prim"]["depth"] == 3
         payload = json.loads((tmp_path / "out.json").read_text())
         assert payload["prim"]["prim_depth"] == 3
+
+    def test_synop_vocab_prices_denotations(self):
+        """``_synop_vocab`` weights each shipped op at its denotation.
+
+        The weight is ``_n_ops(synop*.expand.rhs)`` — the manual
+        spelling's op count — so ``synop2_*``'s deeper denotation
+        out-prices ``synop_*``'s.
+        """
+        from mlopt_core.laws import minted
+        from mlopt_discovery.antiunify import _n_ops
+
+        vocab = on._synop_vocab()
+        assert set(vocab) == minted.SYNOP_SHIPPED
+        for name, w in vocab.items():
+            assert w == _n_ops(minted.prim_fold(name)[1].rhs)
+        assert minted.SYNOP2_SHIPPED
+        assert min(vocab[n] for n in minted.SYNOP2_SHIPPED) > max(
+            vocab[n] for n in vocab if n not in minted.SYNOP2_SHIPPED
+        )
+
+    def test_prim_vocab_knob_resolves(self):
+        """``vocab`` defaults on; ``--no-prim-vocab`` reverts."""
+        assert on._prim_knobs()["vocab"] is True
+        assert on._prim_knobs({"vocab": False})["vocab"] is False
+
+    def test_prim_stratified_cap_slices_per_tier(self):
+        """``cap`` bounds each tier's own top-gain slice under vocab.
+
+        ``cap=1`` on the shared slice admits exactly one shape — the
+        top gain overall.  Stratified, each tier keeps its own top
+        gain: one depth-1, one depth-2 and one depth-3 mint pool, and
+        the 95 skipped shapes record ``tier_capped``.
+        """
+        _name2, roots = self._boot3()
+        cands, meta, stats = on._prim_pool(
+            roots,
+            2,
+            bootstrap=True,
+            **{**_BOOT3_WINDOW, "cap": 1},
+        )
+        assert stats["vocab"] is True
+        assert stats["pool"] == 3 == len(cands)
+        assert stats["depth_counts"] == {"1": 1, "2": 1, "3": 1}
+        assert {m["prim"]["depth"] for m in meta.values()} == {1, 2, 3}
+        assert stats["tier_capped"] == 95
+        # the pre-fix reproduction: one shared top-gain slice.
+        _c, _m, s0 = on._prim_pool(
+            roots,
+            2,
+            bootstrap=True,
+            vocab=False,
+            **{**_BOOT3_WINDOW, "cap": 1},
+        )
+        assert s0["pool"] == 1
+        assert s0["tier_capped"] == 0
+
+    def test_prim_vocab_flag_requires_zoo_prim(self, tmp_path):
+        """``--prim-vocab`` on a non-prim corpus errors loudly."""
+        for flag in ("--prim-vocab", "--no-prim-vocab"):
+            with pytest.raises(SystemExit):
+                on.main(
+                    _argv(
+                        tmp_path,
+                        "--dry",
+                        "--corpus",
+                        "grammar",
+                        flag,
+                    )
+                )
+
+    def test_prim_vocab_is_protocol_pinned(self, tmp_path):
+        """``--no-prim-vocab`` lands in ``protocol["prim"]["vocab"]``
+        and the case records — a resume under a different frontier
+        pricing restarts loudly."""
+        assert (
+            on.main(
+                _argv(
+                    tmp_path,
+                    "--dry",
+                    "--corpus",
+                    "zoo-prim",
+                    "--prim-bootstrap",
+                    "--no-prim-vocab",
+                )
+            )
+            == 0
+        )
+        man, cells = _records(tmp_path / "ck.jsonl")
+        assert man["protocol"]["prim"]["vocab"] is False
+        for e in _cells(cells, "episode"):
+            assert e["record"]["case"]["prim"]["vocab"] is False
+        payload = json.loads((tmp_path / "out.json").read_text())
+        assert payload["prim"]["vocab"] is False
+        assert payload["prim"]["tier_capped"] == 0
 
 
 class TestResume:

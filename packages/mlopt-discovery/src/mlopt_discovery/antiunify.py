@@ -41,7 +41,7 @@ import heapq
 import itertools
 import sqlite3
 from collections import Counter
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -102,8 +102,12 @@ class AtomCandidate:
     least-general generalisation of every instance.  ``sites`` is the
     e-class id of each observed occurrence's root — the provenance the
     minted atom carries.  ``gain`` is the description-length estimate
-    ``uses * (op_count - 1) - op_count``: positive means naming the
-    pattern compresses the term bank it was mined from.
+    ``uses * (ops - 1) - ops``: positive means naming the pattern
+    compresses the term bank it was mined from.  ``ops`` is the
+    *spelled* :attr:`op_count` — or, when ``mine_candidates`` was
+    called with ``vocab``, the *denoted* count pricing each vocab op
+    at its expansion's size (:func:`_eff_ops`), so a shape carrying a
+    named subgraph scores by what it denotes, not what it spells.
     """
 
     pattern: Any
@@ -138,6 +142,22 @@ def _n_ops(pat: Any) -> int:
     if not isinstance(pat, Op):
         return 0
     return 1 + sum(_n_ops(a) for a in pat.args)
+
+
+def _eff_ops(pat: Any, vocab: Mapping[str, int] | None) -> int:
+    """Denoted op-count: *vocab* ops price at their expansion's size.
+
+    The frontier score's honest op cost — a carried ``synop*``/named
+    leaf abbreviates a subgraph, so it contributes its *denoted* op
+    count (``vocab[op]``), not 1: the score a shape earns is then the
+    score it would have earned had the corpus spelled the shape out
+    before the vocabulary compressed it.  ``vocab=None`` prices every
+    op at 1 — the spelled count :func:`_n_ops` returns.
+    """
+    if not isinstance(pat, Op):
+        return 0
+    w = vocab.get(pat.op, 1) if vocab else 1
+    return w + sum(_eff_ops(a, vocab) for a in pat.args)
 
 
 def _leaf_mvars(pat: Any) -> tuple[str, ...]:
@@ -438,12 +458,23 @@ def _grow_all(
     return _grow(cand, mvar, sig, support, members, vctr, actr)
 
 
-def _score(cand: _Cand) -> int:
-    """Heap ordering key — larger is more promising."""
-    return len(cand.rows) * _n_ops(cand.pat)
+def _score(cand: _Cand, vocab: Mapping[str, int] | None = None) -> int:
+    """Heap ordering key — larger is more promising.
+
+    ``rows * denoted_ops`` — under *vocab* a carried named leaf
+    contributes its expansion's op-count, so a shape compressed by
+    the vocabulary competes at the score its spelled denotation would
+    have earned instead of truncating at the bottom of the frontier.
+    """
+    return len(cand.rows) * _eff_ops(cand.pat, vocab)
 
 
-def _emit(eg: EGraph, cand: _Cand, site_cap: int) -> AtomCandidate:
+def _emit(
+    eg: EGraph,
+    cand: _Cand,
+    site_cap: int,
+    vocab: Mapping[str, int] | None = None,
+) -> AtomCandidate:
     """Freeze a candidate, re-deriving its true instance set.
 
     The mining row set is a lower bound — the pattern's real coverage
@@ -451,7 +482,10 @@ def _emit(eg: EGraph, cand: _Cand, site_cap: int) -> AtomCandidate:
     emit keeps provenance exact and removes row-subset artifacts of
     the greedy refinement order.  Sites and counts are capped by
     *site_cap* (provenance completeness, not correctness — ``intro``
-    re-matches exhaustively at admit time).
+    re-matches exhaustively at admit time).  ``op_count`` stays the
+    *spelled* count; ``gain`` prices ops through *vocab* like the
+    frontier score, so the emitted ordering and the ``min_gain`` bar
+    see the same denoted sizes the heap did.
     """
     sites: list[int] = []
     n = 0
@@ -468,7 +502,8 @@ def _emit(eg: EGraph, cand: _Cand, site_cap: int) -> AtomCandidate:
         sites=tuple(sites),
         n_instances=n,
         op_count=ops,
-        gain=n * (ops - 1) - ops,
+        gain=n * (_eff_ops(cand.pat, vocab) - 1)
+        - _eff_ops(cand.pat, vocab),
     )
 
 
@@ -483,6 +518,7 @@ def mine_candidates(
     max_expand: int = 2000,
     skip_ops: Iterable[str] = (),
     site_cap: int = _SITE_CAP,
+    vocab: Mapping[str, int] | None = None,
 ) -> list[AtomCandidate]:
     """Anti-unify recurring subgraph patterns over *eg*'s classes.
 
@@ -495,6 +531,17 @@ def mine_candidates(
     result; *skip_ops* excludes op names from seeding AND refinement
     (already-minted atoms stay minable for iterated rounds — pass
     ``skip_ops`` to exclude them explicitly).
+
+    ``vocab`` prices ops the pattern *carries* — e.g. named
+    primitives seated into the e-graph by a vocabulary bootstrap —
+    at their *denoted* op-count for the frontier score and the
+    emitted ``gain`` (:func:`_eff_ops`).  A named leaf abbreviates a
+    subgraph: without the map its carriers score ``rows * 1-op``
+    deeper and the beam cut discards them before the heap reaches
+    them; with it they compete at the score their spelled denotation
+    would have earned.  ``min_ops``/``max_ops``/``op_count`` stay
+    spelled counts — the window bounds the pattern's spelling, not
+    what it denotes.  ``vocab=None`` is the shipped ordering.
 
     ``attr_mvars=False`` is structure-only mode: enodes differing in
     any attr value never share a pattern.
@@ -512,13 +559,13 @@ def mine_candidates(
         # Distinct seed groups differ in (op, arity, key-set), so their
         # alpha-normal seeds can never collide — push unconditionally.
         pushed.add(_alpha_norm(c.pat))
-        heapq.heappush(work, (-_score(c), next(seq), c))
+        heapq.heappush(work, (-_score(c, vocab), next(seq), c))
     out: dict[str, AtomCandidate] = {}
     pops = 0
     while work and pops < max_expand:
         _ns, _q, cand = heapq.heappop(work)
         pops += 1
-        _maybe_emit(eg, out, cand, min_ops, min_uses, site_cap)
+        _maybe_emit(eg, out, cand, min_ops, min_uses, site_cap, vocab)
         _grow_children(
             cand,
             _n_ops(cand.pat),
@@ -531,6 +578,7 @@ def mine_candidates(
             attr_mvars,
             min_uses,
             max_ops,
+            vocab,
         )
         if len(work) > beam:
             work = heapq.nsmallest(beam, work)
@@ -548,6 +596,7 @@ def _maybe_emit(
     min_ops: int,
     min_uses: int,
     site_cap: int,
+    vocab: Mapping[str, int] | None = None,
 ) -> None:
     """Freeze *cand* into *out* when it clears the mint bar."""
     key = _alpha_norm(cand.pat)
@@ -556,7 +605,7 @@ def _maybe_emit(
         and len(cand.rows) >= min_uses
         and key not in out
     ):
-        out[key] = _emit(eg, cand, site_cap)
+        out[key] = _emit(eg, cand, site_cap, vocab)
 
 
 def _grow_children(
@@ -571,6 +620,7 @@ def _grow_children(
     attr_mvars: bool,
     min_uses: int,
     max_ops: int,
+    vocab: Mapping[str, int] | None = None,
 ) -> None:
     """Push every deduped refinement of *cand* onto the worklist."""
     if ops >= max_ops:
@@ -594,7 +644,9 @@ def _grow_children(
             if ckey in pushed:
                 continue
             pushed.add(ckey)
-            heapq.heappush(work, (-_score(child), next(seq), child))
+            heapq.heappush(
+                work, (-_score(child, vocab), next(seq), child)
+            )
 
 
 def _seed_groups(

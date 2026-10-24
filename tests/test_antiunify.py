@@ -167,6 +167,109 @@ def _ops(t):
             yield from _ops(a)
 
 
+class TestVocabFrontier:
+    """``vocab=`` — carried named leaves price at denoted size.
+
+    A ``big`` op stands in for a seated primitive (a ``synop*``
+    bootstrap): a two-site ``sub(big(v0, v1), v2)`` skeleton scores
+    ``rows * 2`` spelled, so a crowded beam cut drops it before the
+    heap reaches it — the frontier failure the real corpus showed.
+    Pricing ``big`` at its denotation's op-count restores the score
+    the spelled shape would have earned.
+    """
+
+    def _corpus(self):
+        """``(eg, carrying-pred)`` — a ``big``-carrying shape plus
+        enough recurring manual motifs to crowd a small beam."""
+        eg = EGraph()
+
+        def v(n):
+            return _v(n, 2, 2)
+
+        terms = [
+            Op.make("sub", Op.make("big", v("x1"), v("w1")), v("g1")),
+            Op.make("sub", Op.make("big", v("x2"), v("w2")), v("g2")),
+        ]
+        for i, (o1, o2) in enumerate(
+            [
+                ("add", "mul"),
+                ("add", "div"),
+                ("neg", "mul"),
+                ("sqrt", "add"),
+                ("sigmoid", "mul"),
+                ("tanh", "add"),
+                ("exp", "mul"),
+                ("relu", "add"),
+            ]
+        ):
+            terms += [
+                Op.make(o1, Op.make(o2, v(f"a{i}"), v(f"b{i}")), v(f"c{i}")),
+                Op.make(o1, Op.make(o2, v(f"d{i}"), v(f"e{i}")), v(f"f{i}")),
+            ]
+        eg.add_term(Op.make("pack", *terms))
+        return eg, lambda c: "big" in set(_ops(c.pattern))
+
+    def test_eff_ops_prices_vocab_at_denoted_size(self):
+        from mlopt_discovery.antiunify import _eff_ops, _n_ops
+
+        pat = Op.make("sub", Op.make("big", "v0", "v1"), "v2")
+        assert _n_ops(pat) == 2
+        assert _eff_ops(pat, None) == 2
+        assert _eff_ops(pat, {"big": 9}) == 10  # 1 sub + 9 denoted
+        assert _eff_ops(pat, {"big": 9, "sub": 4}) == 13
+        # non-Op leaves contribute nothing either way.
+        assert _eff_ops("v0", {"big": 9}) == 0
+
+    def test_vocab_rescues_carrier_from_beam_truncation(self):
+        """beam=4 truncates the carrier spelled-priced, not denoted."""
+        eg, carries = self._corpus()
+        plain = mine_candidates(
+            eg, min_ops=2, min_uses=2, max_ops=3, beam=4
+        )
+        assert not any(carries(c) for c in plain)
+        priced = mine_candidates(
+            eg,
+            min_ops=2,
+            min_uses=2,
+            max_ops=3,
+            beam=4,
+            vocab={"big": 9},
+        )
+        carriers = [c for c in priced if carries(c)]
+        assert carriers, "denoted pricing must keep the carrier alive"
+        (car,) = carriers
+        # ``op_count`` stays the spelled count; ``gain`` prices the
+        # denoted size — the mint's own honest accounting.
+        assert car.op_count == 2
+        assert car.n_instances == 2
+        assert car.gain == 2 * (10 - 1) - 10
+
+    def test_vocab_none_is_the_shipped_ordering(self):
+        """``vocab=None`` (the default) replays the bare hunt exactly."""
+        eg, _carries = self._corpus()
+        a = mine_candidates(eg, min_ops=2, min_uses=2, max_ops=3, beam=4)
+        b = mine_candidates(
+            eg, min_ops=2, min_uses=2, max_ops=3, beam=4, vocab=None
+        )
+        assert [c.pattern for c in a] == [c.pattern for c in b]
+        assert [c.gain for c in a] == [c.gain for c in b]
+
+    def test_vocab_gain_reflects_denoted_size(self):
+        """The same emitted carrier gains more once priced."""
+        eg, carries = self._corpus()
+        kw = dict(min_ops=2, min_uses=2, max_ops=3, beam=8)
+        plain = next(
+            c for c in mine_candidates(eg, **kw) if carries(c)
+        )
+        priced = next(
+            c
+            for c in mine_candidates(eg, vocab={"big": 9}, **kw)
+            if carries(c)
+        )
+        assert plain.op_count == priced.op_count
+        assert priced.gain > plain.gain
+
+
 def _ops_args(t):
     if isinstance(t, Op):
         yield t

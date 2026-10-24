@@ -191,7 +191,19 @@ re-expanded to manual ops by structural recursion, so
 ``eval_instance`` verifies end-to-end fp64 and the
 ``synop{d+1}_*.expand`` premise states the full denotation).
 ``--prim-depth N`` caps the deepest mintable tier (default 3 —
-one past the shipped vocabulary's deepest tier).  One shared pool,
+one past the shipped vocabulary's deepest tier).
+``--prim-vocab`` / ``--no-prim-vocab`` (on by default) is the
+frontier pricing fix: ``mine_candidates`` scores ``rows * ops`` on
+the spelled pattern, so a skeleton carrying a seated ``synop*``
+leaf — an abbreviation of a multi-op denotation — scores at the
+bottom and the beam cut drops every synop-carrying child before the
+heap reaches it (measured on this corpus at the deep window: 196
+``synop2_*``-carrying children pushed, all truncated, 0 emitted —
+no ``synop3_*`` could mint).  With the vocab map the miner prices a
+carried op at its denotation's op-count
+(:func:`_synop_vocab` — the ``synop*.expand`` premise's manual
+size), so the compressed shape competes at the score its spelled
+denotation would have earned.  One shared pool,
 paged like ``zoo-xmodule``; the document lands at
 ``docs/reports/results_overnight_prim.md`` and the mint is
 protocol-pinned as ``corpus-prim``.
@@ -1557,7 +1569,12 @@ def _prim_knobs(prim: dict | None = None) -> dict:
     the minted descriptors) and ``depth`` (``--prim-depth`` — the
     deepest composition tier a bootstrap mint may reach; the seating
     loop applies only folds whose synop is strictly below it and
-    runs to fixpoint); the resolved dict is
+    runs to fixpoint) and ``vocab`` (``--prim-vocab`` /
+    ``--no-prim-vocab`` — the frontier pricing fix: a carried
+    ``synop*`` leaf scores at its denotation's op-count
+    (:func:`_synop_vocab`), so synop-carrying skeletons survive the
+    beam cut — ``--no-prim-vocab`` reproduces the pre-fix ordering);
+    the resolved dict is
     protocol-pinned (``protocol["prim"]``) and rides the case record,
     so a resume's pool rebuild replays the identical hunt.
     """
@@ -1570,6 +1587,7 @@ def _prim_knobs(prim: dict | None = None) -> dict:
         "bootstrap": False,
         "family_mint": True,
         "depth": _PRIM_DEPTH,
+        "vocab": True,
     }
     if prim:
         out.update({k: v for k, v in prim.items() if v is not None})
@@ -1640,6 +1658,29 @@ def _synop_ops(pat: Any) -> set:
     return _pat_ops(pat) & minted.SYNOP_SHIPPED
 
 
+def _synop_vocab() -> dict[str, int]:
+    """``{synop op: denoted op-count}`` — the frontier's vocab weights.
+
+    A seated ``synop*`` enode abbreviates the manual subgraph its
+    ``expand`` premise spells: pricing the op at that denotation's
+    op-count (``_n_ops(expand.rhs)`` — the manual spelling, already
+    re-expanded through the deeper tiers for ``synopN_*``) restores
+    the frontier score the shape would have earned unseated.  Without
+    the map a ``OP(synop2_*, v)`` skeleton scores ``rows * 2`` — the
+    bottom of ``rows * ops`` — and the beam cut drops every
+    synop-carrying candidate before the heap reaches it (measured:
+    196 pushed / 198 truncated / 0 emitted at the deep window on the
+    real corpus, while 178 depth-1 carriers did emit).
+    """
+    from mlopt_core.laws import minted
+    from mlopt_discovery.antiunify import _n_ops
+
+    return {
+        name: _n_ops(minted.prim_fold(name)[1].rhs)
+        for name in minted.SYNOP_SHIPPED
+    }
+
+
 def _sub_alphas(pat: Any) -> set:
     """Alpha-normal keys of *pat*'s proper (non-root) Op subterms.
 
@@ -1678,6 +1719,7 @@ def _prim_pool(
     bootstrap: bool = False,
     family_mint: bool = True,
     depth: int = _PRIM_DEPTH,
+    vocab: bool = True,
 ) -> tuple:
     """The primitive-mint pool: ``(candidates, meta, stats)``.
 
@@ -1690,7 +1732,9 @@ def _prim_pool(
 
     ``min_ops``/``max_ops``/``beam``/``max_expand`` bound the
     ``mine_candidates`` hunt (the ``--prim-*`` knobs); ``cap`` bounds
-    the pool to its top-``gain`` slice.  A deeper window re-finds the
+    the pool — under ``--no-prim-vocab`` its top-``gain`` slice,
+    under ``--prim-vocab`` each composition tier's own top-``gain``
+    slice (the stratified pool, below).  A deeper window re-finds the
     same skeleton under different bracketings — the alpha-dedup
     inside ``mine_candidates`` plus the denoted gate keep one name
     per distinct shape.
@@ -1720,6 +1764,27 @@ def _prim_pool(
     (``--prim-depth``) caps the deepest mintable tier — the seating
     loop applies only folds minting a synop strictly below it.
 
+    ``vocab`` (``--prim-vocab`` / ``--no-prim-vocab``, on by default)
+    is the frontier fix: ``mine_candidates`` scores ``rows * ops`` on
+    the *spelled* pattern, so a skeleton carrying a seated ``synop*``
+    leaf — which abbreviates a multi-op denotation — ranks at the
+    bottom of the heap and the beam cut discards every such child
+    before it is ever popped (on the real corpus at the deep window:
+    196 ``synop2_*``-carrying children pushed, 0 emitted — while 178
+    ``synop_*`` carriers survived).  With *vocab* the miner prices a
+    carried op at its denotation's op-count (:func:`_synop_vocab`),
+    so the compressed shape competes at the score its spelled
+    denotation would have earned — both in the beam and in the
+    emitted gain ordering the *cap* slices.  Under *vocab* the cap
+    is also **stratified by composition tier**: each depth keeps its
+    own top-gain slice of *cap*, so the depth-2 surface — which the
+    repriced frontier emits far ahead of the rarer/shorter
+    ``synop2_*``-carrying shapes — cannot crowd the deeper tier out
+    of the pool (measured: 48/48 depth-2 mints, 0 scanned
+    ``synop2_*``-carriers at cap=48 unstratified).  A shape skipped
+    by its tier's slice records ``tier_capped``; ``--no-prim-vocab``
+    keeps the single shared top-gain slice (the pre-fix pool).
+
     Per-shape funnel, each refusal recorded:
 
     * ``kbound`` — shapes binding >= k modules (the mint's surface);
@@ -1727,6 +1792,9 @@ def _prim_pool(
     * ``over_depth`` — skipped by the ``--prim-depth`` cap (defensive:
       with seating gated a tier below the cap it counts zero unless
       the corpus itself carries a deeper ``synop*`` op);
+    * ``tier_capped`` — skipped because its composition tier's own
+      top-gain slice of *cap* was already full (``--prim-vocab``'s
+      stratified pool; always 0 under ``--no-prim-vocab``);
     * ``denoted`` — skipped as already-named (a shipped fold or
       handler op spells the same denotation);
     * ``unevaluable`` — an op in the pattern has no torch binding,
@@ -1833,6 +1901,7 @@ def _prim_pool(
         max_ops=max_ops,
         beam=beam,
         max_expand=max_expand,
+        vocab=_synop_vocab() if vocab else None,
     )
     stats: dict[str, Any] = {
         "k": k,
@@ -1871,26 +1940,34 @@ def _prim_pool(
         "synop_folds": len(synop_fires),
         "synop_fires": sum(synop_fires.values()),
         "synop_passes": synop_passes,
+        # the frontier pricing fix (``--prim-vocab``): carried
+        # ``synop*`` leaves score at their denotation's op-count, so
+        # synop-carrying skeletons survive the beam cut instead of
+        # truncating at the bottom of ``rows * spelled_ops``.
+        "vocab": bool(vocab),
         # pooled primitives by composition depth — the loop-closure
         # count (``depth2`` kept as the depth-2 slice).
         "depth2": 0,
         "depth_counts": {},
+        # the stratified pool (``--prim-vocab``): shapes skipped
+        # because their composition tier's own top-gain slice of
+        # ``cap`` was already full.  Without the slice the deeper
+        # tiers — rarer, shorter-denoted — never reach the gates:
+        # the depth-2 surface fills the shared slice first.
+        "tier_capped": 0,
     }
     op_counts: Counter = Counter()
     cands: list = []
     meta: dict[int, dict] = {}
+    tier_minted: Counter = Counter()
     for cand in mined_all:
-        if len(cands) >= cap:
+        if not vocab and len(cands) >= cap:
             stats["scan_capped"] = True
             break
         stats["mined"] += 1
         pat = cand.pattern
         if not isinstance(pat, Op) or not cand.leaf_mvars:
             continue
-        # the denotation spelling: shipped synops re-expanded to
-        # manual ops — what the op means, what real subterms bind,
-        # what the denoted gate names.
-        xpat = _expand_synops(pat)
         embeds_shipped = sorted(_synop_ops(pat))
         # the minted op's composition depth: 1 + the deepest shipped
         # synop the skeleton carries (``synop_`` = depth 1,
@@ -1905,6 +1982,15 @@ def _prim_pool(
             # way.
             stats["over_depth"] += 1
             continue
+        if vocab and tier_minted[d] >= cap:
+            # the tier's own top-gain slice is full — skipped before
+            # the bind/eval gates, honestly recorded.
+            stats["tier_capped"] += 1
+            continue
+        # the denotation spelling: shipped synops re-expanded to
+        # manual ops — what the op means, what real subterms bind,
+        # what the denoted gate names.
+        xpat = _expand_synops(pat)
         mods = _modules_bound(xpat, subs_by_mod)
         if len(mods) < k:
             continue
@@ -2092,6 +2178,7 @@ def _prim_pool(
             premises=(expand,),
         )
         i = len(cands)
+        tier_minted[d] += 1
         cands.append(
             Candidate(
                 strategy="prim",
@@ -2139,6 +2226,10 @@ def _prim_pool(
         if d == 2:
             stats["depth2"] += 1
     stats["pool"] = len(cands)
+    if vocab and stats["tier_capped"]:
+        # a tier's slice truncated candidates the scan never reached —
+        # the stratified analogue of ``scan_capped``.
+        stats["scan_capped"] = True
     stats["depth_dist"] = {
         str(n): c for n, c in sorted(op_counts.items())
     }
@@ -2877,8 +2968,13 @@ def render_markdown(summary: dict, *, env: dict | None = None) -> str:
             + (
                 f" · bootstrap: {p['synop_folds']} shipped folds "
                 f"fired (+{p['synop_fires']} enodes, "
-                f"{p.get('synop_passes', 1)} passes) · "
-                f"mints by depth: "
+                f"{p.get('synop_passes', 1)} passes)"
+                + (
+                    " · vocab-priced frontier"
+                    if p.get("vocab")
+                    else " · unpriced frontier (--no-prim-vocab)"
+                )
+                + " · mints by depth: "
                 + ", ".join(
                     f"{d}={c}"
                     for d, c in sorted(
@@ -3137,7 +3233,10 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         metavar="N",
         help=f"zoo-prim only: pool bound — the top-gain slice of "
-        f"qualified shapes (default {_PRIM_CAP})",
+        f"qualified shapes (default {_PRIM_CAP}; under --prim-vocab "
+        "the slice is per composition tier, so a deeper mint's own "
+        "top-gain slice can't be crowded out by the depth-2 "
+        "surface)",
     )
     ap.add_argument(
         "--prim-beam",
@@ -3205,6 +3304,24 @@ def main(argv: list[str] | None = None) -> int:
         "window",
     )
     ap.add_argument(
+        "--prim-vocab",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="zoo-prim only: the frontier pricing fix — "
+        "mine_candidates scores a pattern carrying a shipped "
+        "synop* leaf at the leaf's DENOTED op-count "
+        "(_synop_vocab: the synop*.expand premise's manual size), "
+        "so synop-carrying skeletons compete at the score their "
+        "spelled denotation would have earned instead of truncating "
+        "at the bottom of rows*spelled_ops (on the real corpus the "
+        "synop2_*-carrying shapes never reached the frontier: 196 "
+        "pushed / 0 emitted at the deep window); --prim-cap also "
+        "slices per composition tier, so the depth-2 surface can't "
+        "crowd a deeper mint out of the pool.  Default on; "
+        "--no-prim-vocab reproduces the pre-fix ordering + shared "
+        "cap.  Protocol-pinned like the rest of the prim window",
+    )
+    ap.add_argument(
         "--scan",
         type=int,
         default=DEFAULTS["scan"],
@@ -3261,6 +3378,7 @@ def main(argv: list[str] | None = None) -> int:
         or args.prim_deep
         or args.prim_bootstrap
         or args.prim_family_mint is not None
+        or args.prim_vocab is not None
     ):
         ap.error("--prim-* knobs require --corpus zoo-prim")
     # resolve the mining window: explicit flag > --prim-deep preset >
@@ -3271,6 +3389,8 @@ def main(argv: list[str] | None = None) -> int:
         window["bootstrap"] = True
     if args.prim_family_mint is not None:
         window["family_mint"] = args.prim_family_mint
+    if args.prim_vocab is not None:
+        window["vocab"] = args.prim_vocab
     window.update(
         {
             k: v
