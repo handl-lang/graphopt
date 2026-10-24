@@ -343,6 +343,18 @@ def _print(res: dict[str, Any]) -> None:
             f"{r['evals_ep']:>8.3f} {r['ap']:>7.4f} "
             f"{r['n_features']:>6}"
         )
+    # AP / useful-per-eval are the headline metrics; raw reward masks
+    # ranking quality (heuristic banks marginal tiers slowly).
+    print("== headline — AP / useful-per-eval (reward secondary) ==")  # stdout-compat
+    for r in res["rows"]:
+        upe = r["useful_ep"] / max(r["evals_ep"], 1e-9)
+        print(  # stdout-compat
+            f"  {r['id']:<22} AP={r['ap']:.4f} use/eval={upe:.4f} "
+            f"reward={r['reward_ep']:.4f}"
+        )
+    best = max(res["rows"], key=lambda r: r["ap"], default=None)
+    if best is not None:
+        print(f"  leads on AP: {best['id']} ({best['ap']:.4f})")  # stdout-compat
     print("-- anchors --")  # stdout-compat
     for name, a in res["anchors"].items():
         g = a.get("greedy")

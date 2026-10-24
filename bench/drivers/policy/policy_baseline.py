@@ -449,6 +449,20 @@ def _print_open(res: dict) -> None:
     )
     for key in sorted(k for k in r if k.endswith("_ap")):
         print(f"  {key:<20} {r[key]:.4f}")  # stdout-compat
+    # AP / useful-per-eval are the headline metrics; raw reward masks
+    # ranking quality (heuristic banks marginal tiers slowly).
+    print("== headline — AP / useful-per-eval (reward secondary) ==")  # stdout-compat
+    for key in sorted(k for k in r if k.endswith("_ap")):
+        arm = key[: -len("_ap")]
+        row = t.get(arm, {})
+        print(  # stdout-compat
+            f"  {arm:<20} AP={r[key]:.4f} "
+            f"use/eval={row.get('useful_per_eval', 0.0):.4f} "
+            f"reward={row.get('reward', 0.0):.4f}"
+        )
+    best = max((k for k in r if k.endswith("_ap")), key=lambda k: r[k], default=None)
+    if best is not None:
+        print(f"  leads on AP: {best[: -len('_ap')]}")  # stdout-compat
 
 
 def main(argv: list[str] | None = None) -> int:

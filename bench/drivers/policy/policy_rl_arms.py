@@ -1057,6 +1057,20 @@ def _print_open(res: dict[str, Any]) -> None:
         f"  pool={r['held_out']} useful={r['useful']} "
         f"(random AP = {r['useful'] / r['held_out']:.4f})"
     )
+    # AP / useful-per-eval are the headline metrics; raw reward masks
+    # ranking quality (heuristic banks marginal tiers slowly).
+    print("== headline — AP / useful-per-eval (reward secondary) ==")  # stdout-compat
+    for arm, r in res["episodes_table"].items():
+        stem = arm[:-7] if arm.endswith("-greedy") else arm
+        ap = res["ap"].get(stem)
+        ap_s = f"{ap:.4f}" if ap is not None else "—"
+        print(  # stdout-compat
+            f"  {arm:<24} AP={ap_s} use/eval={r['useful_per_eval']:.4f} "
+            f"reward={r['reward']:.4f}"
+        )
+    best = max(res["ap"].items(), key=lambda kv: kv[1], default=None)
+    if best is not None:
+        print(f"  leads on AP: {best[0]} ({best[1]:.4f})")  # stdout-compat
 
 
 def _print_contraction(res: dict[str, Any]) -> None:
