@@ -1178,6 +1178,7 @@ class TestCorpusZooPrim:
             "max_expand": 2000,
             "bootstrap": False,
             "family_mint": True,
+            "depth": on._PRIM_DEPTH,
         }
         for e in _cells(cells, "episode"):
             assert e["record"]["case"]["prim"]["max_ops"] == 4
@@ -1379,6 +1380,272 @@ class TestCorpusZooPrimBootstrap:
             assert e["record"]["case"]["prim"]["bootstrap"] is True
         payload = json.loads((tmp_path / "out.json").read_text())
         assert payload["prim"]["bootstrap"] is True
+
+
+#: The hunt that reaches the compressed ``OP(synop2_*, v)`` shapes:
+#: a 2-op skeleton carrying a shipped ``synop2_*`` op scores at the
+#: bottom of the miner's gain ordering (the manual denotation spans
+#: 13+ ops), so the depth-3 tests widen the beam/frontier while
+#: ``max_ops=2`` keeps the pooled set seconds-scale.
+_BOOT3_WINDOW = {
+    "max_ops": 2,
+    "beam": 2048,
+    "max_expand": 200000,
+    "cap": 512,
+}
+
+
+class TestCorpusZooPrimDepth3:
+    """``--prim-bootstrap`` at depth 3 — mining over the depth-2 ops.
+
+    The seating loop applies the shipped fold tiers to fixpoint — a
+    depth-2 ``prim:synop2_*`` fold's skeleton LHS only matches once
+    the depth-1 pass seated the ``synop_*`` enode inside it — so a
+    mined pattern carrying a ``synop2_*`` op mints a depth-3
+    primitive (``synop3_*``) whose denotation re-expands through
+    both tiers to pure manual ops.
+    """
+
+    def _boot3(self):
+        """``(synop2_name, roots)`` — two modules sharing
+        ``sub(<a shipped synop2's manual denotation>, w)``.
+
+        The shared subterm is a spelled instance of a shipped
+        ``synop2_*``'s expanded denotation (the ``synop2_*.expand``
+        premise's RHS — manual ops only): the fixpoint seating folds
+        its inner shape to a ``synop_*`` enode and the skeleton to
+        ``synop2_*``, and the mint finds ``sub(synop2_*(v*), w)`` —
+        depth-3 by construction.
+        """
+        from mlopt_core.ir import Op, TensorType, Var
+        from mlopt_core.laws import minted
+        from mlopt_core.meta import (
+            instantiate_pattern,
+            pattern_metavars,
+        )
+
+        def v(n):
+            return Var(n, TensorType((2, 4)))
+
+        name = next(
+            n
+            for n in sorted(minted.SYNOP2_SHIPPED)
+            if not minted.prim_fold(n)[0].rhs.attrs
+        )
+        # the depth-2 op's definitional premise RHS IS its manual
+        # denotation — the spelling a corpus term would carry.
+        den = minted.prim_fold(name)[1].rhs
+        leaves = sorted(pattern_metavars(den))
+
+        def inst(pre):
+            return instantiate_pattern(
+                den, {m: v(f"{pre}_{m}") for m in leaves}
+            )
+
+        return name, {
+            "m1": Op.make("sub", inst("x"), v("g")),
+            "m2": Op.make("sub", inst("p"), v("w")),
+        }
+
+    def test_expand_synops_recurses_through_synop2(self):
+        """A ``synop2_*`` call unfolds to pure manual ops — no fixpoint.
+
+        The expansion is structural recursion: the ``synop2_*``
+        node's fold LHS reintroduces a ``synop_*`` leaf, which the
+        recursive re-expansion of the instantiated LHS unfolds in
+        turn — one pass through the term reaches every tier.
+        """
+        from mlopt_core.laws import minted
+
+        name = next(
+            n
+            for n in sorted(minted.SYNOP2_SHIPPED)
+            if not minted.prim_fold(n)[0].rhs.attrs
+        )
+        fold, expand = minted.prim_fold(name)
+        x = on._expand_synops(fold.rhs)
+        # one shot: call -> synop-carrying skeleton -> manual, and the
+        # result equals the shipped premise's recorded denotation.
+        assert x == expand.rhs
+        assert not (on._pat_ops(x) & minted.SYNOP_SHIPPED)
+
+    def test_prim_depth3_mints_synop_over_synop2(self):
+        """The shared synop2-denotation shape mints a ``synop3_*`` fold."""
+        name2, roots = self._boot3()
+        cands, meta, stats = on._prim_pool(
+            roots, 2, bootstrap=True, **_BOOT3_WINDOW
+        )
+        assert stats["bootstrap"] is True
+        assert stats["synop_fires"] >= 1
+        assert stats["synop_passes"] >= 2  # depth-1, then depth-2
+        d3 = {
+            i: m["prim"]
+            for i, m in meta.items()
+            if m["prim"]["depth"] == 3
+        }
+        assert d3 and stats["depth_counts"].get("3") == len(d3)
+        i, rec = next(iter(d3.items()))
+        assert rec["synop"].startswith("synop3_")
+        assert cands[i].label == f"prim:{rec['synop']}"
+        assert name2 in rec["embeds_shipped"]
+        # the fold's own LHS spells through the shipped synop2 …
+        assert name2 in rec["alpha_fold"]
+        # … its denotation re-expands through both tiers to manual …
+        assert "synop" not in rec["alpha"]
+        # … and every bound site still verified fp64.
+        assert rec["equal_sites"] == rec["sites"] >= 1
+        assert rec["mods"] == ["m1", "m2"]
+
+    def test_prim_depth_cap_gates_the_seating(self):
+        """``depth=2`` seats only depth-1 folds — no ``synop3_*`` mints."""
+        _name2, roots = self._boot3()
+        _c, meta, stats = on._prim_pool(
+            roots, 2, bootstrap=True, depth=2, **_BOOT3_WINDOW
+        )
+        assert stats["prim_depth"] == 2
+        assert "3" not in stats["depth_counts"]
+        assert all(m["prim"]["depth"] <= 2 for m in meta.values())
+
+    def test_prim_depth3_denotation_verifies_end_to_end(self):
+        """eval_instance(LHS-with-synop2, synop3-call) is fp64-equal."""
+        from mlopt_core.egraph.terms import _term_match
+        from mlopt_core.meta import instantiate_pattern
+        from mlopt_discovery.oracle import eval_instance
+
+        _name2, roots = self._boot3()
+        cands, meta, _stats = on._prim_pool(
+            roots, 2, bootstrap=True, **_BOOT3_WINDOW
+        )
+        i = next(i for i, m in meta.items() if m["prim"]["depth"] == 3)
+        rule = cands[i].as_rule()
+        xpat = on._expand_synops(rule.lhs)
+        subs = [
+            s
+            for r in roots.values()
+            for s in on._op_subterms({"x": r})["x"]
+        ]
+        sites = [
+            m for s in subs if (m := _term_match(xpat, s)) is not None
+        ]
+        assert sites
+        for m in sites:
+            out, _n = eval_instance(
+                instantiate_pattern(rule.lhs, m),
+                instantiate_pattern(rule.rhs, m),
+            )
+            assert out == "equal", f"{rule.name}: {out}"
+
+    def test_prim_depth3_derivable_but_cert_replay_refuses(self):
+        """anchored-derivable, machine-original — cert refuses replay.
+
+        The anchored ``verify_law`` derivation exists (``derivable``)
+        — ``synop3.expand`` unfolds the call, the shipped
+        ``prim:synop2_*``/``prim:synop_*`` tiers re-fold the manual
+        denotation — but the certificate's connecting merge is a
+        congruence merge: the explainer cannot rebuild it as
+        standalone steps (replaying ``prim:synop2_*`` on the den's
+        manual spelling fails — the rule's LHS needs the ``synop_*``
+        enode), so the witness is honestly ``egraph_dependent`` and
+        the cert leg's replay bar refuses admission.  The refusal is
+        pinned, not papered over: it is the substrate's proof-
+        reconstruction reach, not a truth failure — and the sieve
+        still cannot derive a law about an op that did not exist.
+        """
+        import bench.referees
+        from bench.drivers.screen import novelty_sieve as ns
+        from mlopt_core.egraph.terms import _term_match
+        from mlopt_core.laws import ALL_RULES
+        from mlopt_core.meta import instantiate_pattern
+        from mlopt_discovery.verifier import verify_law
+
+        _name2, roots = self._boot3()
+        cands, meta, _stats = on._prim_pool(
+            roots, 2, bootstrap=True, **_BOOT3_WINDOW
+        )
+        i = next(i for i, m in meta.items() if m["prim"]["depth"] == 3)
+        rule = cands[i].as_rule()
+        subs = tuple(
+            s
+            for r in roots.values()
+            for s in on._op_subterms({"x": r})["x"]
+        )
+        # the anchored derivation exists — equality is real …
+        xpat = on._expand_synops(rule.lhs)
+        m = next(
+            m for s in subs if (m := _term_match(xpat, s)) is not None
+        )
+        res = verify_law(
+            instantiate_pattern(rule.lhs, m),
+            instantiate_pattern(rule.rhs, m),
+            [*ALL_RULES, *rule.premises],
+        )
+        assert res.derivable and not res.replayable
+        # … but the standalone-replay bar refuses the witness.
+        rec = on._admit(
+            rule, "full", bench.referees.RefereeCtx(real_terms=subs)
+        )
+        assert not rec["admitted"]
+        assert "standalone-replayable" in rec["reason"]
+        res = on._classify(rule, ns.known_bank(), ctxs=[])
+        assert res["verdict"] == "machine-original", res
+
+    def test_prim_depth_knob_resolves(self):
+        """``depth`` defaults to the shipped tier + 1; overrides pin."""
+        assert on._prim_knobs()["depth"] == on._PRIM_DEPTH == 3
+        assert on._prim_knobs({"depth": 2})["depth"] == 2
+
+    def test_prim_depth_flag_requires_zoo_prim(self, tmp_path):
+        """``--prim-depth`` on a non-prim corpus errors loudly."""
+        with pytest.raises(SystemExit):
+            on.main(
+                _argv(
+                    tmp_path,
+                    "--dry",
+                    "--corpus",
+                    "grammar",
+                    "--prim-depth",
+                    "3",
+                )
+            )
+
+    def test_prim_depth_must_be_positive(self, tmp_path):
+        """``--prim-depth 0`` is rejected, not silently clamped."""
+        with pytest.raises(SystemExit):
+            on.main(
+                _argv(
+                    tmp_path,
+                    "--dry",
+                    "--corpus",
+                    "zoo-prim",
+                    "--prim-depth",
+                    "0",
+                )
+            )
+
+    def test_prim_depth_is_protocol_pinned(self, tmp_path):
+        """``--prim-depth`` lands in ``protocol["prim"]["depth"]`` and
+        the case records — a resume under a different cap restarts
+        loudly."""
+        assert (
+            on.main(
+                _argv(
+                    tmp_path,
+                    "--dry",
+                    "--corpus",
+                    "zoo-prim",
+                    "--prim-bootstrap",
+                    "--prim-depth",
+                    "3",
+                )
+            )
+            == 0
+        )
+        man, cells = _records(tmp_path / "ck.jsonl")
+        assert man["protocol"]["prim"]["depth"] == 3
+        for e in _cells(cells, "episode"):
+            assert e["record"]["case"]["prim"]["depth"] == 3
+        payload = json.loads((tmp_path / "out.json").read_text())
+        assert payload["prim"]["prim_depth"] == 3
 
 
 class TestResume:
