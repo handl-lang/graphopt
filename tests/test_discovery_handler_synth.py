@@ -178,6 +178,43 @@ class TestProposal:
         spelled = ("matmul", "X", "Y")
         assert ("ew", spelled) not in list(hs.propose_bodies(spelled))
 
+    def test_ew_replay_admits_broadcast_views(self):
+        """``unsqueeze``/``squeeze`` are size-1-axis views — a spec
+        mixing them with the pointwise vocabulary is still one fused
+        elementwise kernel, so the ``ew`` replay proposes."""
+        spec = (
+            "add",
+            ("mul", "A", "B"),
+            ("unsqueeze", "C", {"dim": 1}),
+        )
+        bodies = list(hs.propose_bodies(spec))
+        assert bodies[0] == ("ew", spec)
+        assert hs._replayable_spec(spec)
+        assert hs._replayable_spec(
+            ("mul", "X", ("squeeze", "Y", {"dim": 0}))
+        )
+
+    def test_ew_replay_excludes_index_and_contraction(self):
+        """``select``/``slice``/``matmul``/``linear`` move or contract
+        data — the replay gate stays closed (a minted replay there
+        would be the spelled site itself, a tautology)."""
+        for spec in (
+            ("mul", "X", ("select", "Y", {"dim": 1, "index": 0})),
+            ("mul", "X", ("slice", "Y", {"dim": 0, "start": 0})),
+            ("matmul", "X", "Y"),
+            ("mul", "X", ("linear", "A", "B", "C")),
+        ):
+            assert not hs._replayable_spec(spec)
+            assert ("ew", spec) not in [
+                b for _, b in zip(range(40), hs.propose_bodies(spec))
+            ]
+
+    def test_replayable_spec_edges(self):
+        """The gate needs at least one op, all inside the union."""
+        assert not hs._replayable_spec("X")
+        assert not hs._replayable_spec(2.0)
+        assert hs._replayable_spec(("unsqueeze", "X", {"dim": -1}))
+
     def test_families_restriction(self):
         spec = ("matmul", ("mul", "S", "D"), "V")
         bodies = list(
@@ -229,7 +266,7 @@ class TestMint:
         h = handlers[report[0]["tag"]]
         assert h["handler_body"][0] == "contract"
         assert h["provenance"]["family"] == "contract"
-        assert h["provenance"]["grammar"] == "handler-grammar-v2"
+        assert h["provenance"]["grammar"] == "handler-grammar-v3"
         assert h["provenance"]["max_err"] < 1e-12
 
     def test_masked_contract_mints(self):
@@ -337,6 +374,44 @@ class TestMint:
             "H",
         )
         assert h["provenance"]["max_err"] == 0.0
+
+    def test_broadcast_ew_mints(self):
+        """The ``zoo-prim`` refusal shape: an ``add``/``mul`` tree
+        over an ``unsqueeze`` leaf mints the ``ew`` replay — one
+        fused elementwise kernel with broadcasting, verified fp64."""
+        spec = (
+            "add",
+            ("mul", "A", ("add", "B", ("mul", "C", "D"))),
+            ("mul", "E", ("unsqueeze", "F", {"dim": 1})),
+        )
+        domain = [
+            {
+                "A": (2, 16, 4),
+                "B": (2, 16, 4),
+                "C": (2, 16, 1),
+                "D": (2, 1, 4),
+                "E": (2, 16, 1),
+                "F": (2, 4),
+            }
+        ]
+        handlers, report = hs.mint_handlers([spec], domain=domain)
+        assert report[0]["verdict"] == "minted"
+        assert report[0]["family"] == "ew"
+        assert report[0]["tried"] == 1
+        h = handlers[report[0]["tag"]]
+        assert h["handler_body"] == ("ew", spec)
+        assert h["provenance"]["grammar"] == "handler-grammar-v3"
+        # and the delivered binding runs the broadcast body
+        env = _env(domain[0])
+        b = hs.minted_bindings(handlers)
+        out = b[h["kernel"]](
+            env["A"], env["B"], env["C"], env["D"], env["E"], env["F"]
+        )
+        torch.testing.assert_close(
+            out,
+            env["A"] * (env["B"] + env["C"] * env["D"])
+            + env["E"] * env["F"].unsqueeze(1),
+        )
 
     def test_reduction_now_in_grammar(self):
         """The reduce family closes the former reduction gap.

@@ -46,9 +46,10 @@ patterns, bind counts across distinct zoo modules):
   fuser does implicitly; the 14-module `a*b+c*d` is FMA-pair-shaped. What is
   new is the *named primitive + certified law* form, not the semantic.
 - **Open**: whether any `synop_*` corresponds to something a fused-kernel
-  engineer would call a real new kernel. The 8 handler-refused cases (no
-  `ew`-family implementation verified within budget) are the honest frontier —
-  a minted primitive with a working fused body is the claim to chase next.
+  engineer would call a real new kernel. Post-v3-grammar: 20/24 have
+  verified `ew` bodies; the 4 remaining refusals are select/linear-bearing
+  shapes (the SSM select-gate×projection step) — an index-family wall, not
+  a budget cap (`docs/reports/prim_handlers.md`).
 
 ## Caveats
 

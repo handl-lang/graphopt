@@ -61,6 +61,18 @@ THE GRAMMAR (descriptors are plain data — tuples, strings, numbers):
   the ``x - log(sum(exp x))`` spelling the bare ``norm`` template
   cannot reach (``log·sum·exp`` is not ``sum·log·exp``).
 
+The ``ew`` replay is proposed not only for strictly elementwise
+specs but for *broadcast-elementwise* ones — specs whose ops are the
+pointwise vocabulary plus :data:`BROADCAST_OPS` (size-1-axis view
+ops: ``unsqueeze``/``squeeze``).  A size-1-axis view moves no data —
+it broadcasts its operand into the tree's shared shape — so the body
+still names one fused elementwise kernel, the class ``ew`` claims.
+Anything that indexes (``select``, ``slice``), permutes, or
+contracts keeps the gate closed: proposing the replay for a spec the
+grammar cannot re-express would verify by construction (the
+descriptor IS the spelled site) and mint a tautology, not a
+handler.
+
 A fold side or carry may be a *constant*: the a-side ``1.0`` (the
 multiplicative identity) and the b-side ``0.0`` (the additive
 identity) are proposed for an empty partition, and the carry may be
@@ -88,12 +100,14 @@ from itertools import combinations, permutations, product
 from typing import Any, NamedTuple
 
 from mlopt_discovery.genkernel import (
+    ELEMENTWISE,
     _eval_spec,
     _spec_metas,
-    elementwise_spec,
+    _spec_ops,
 )
 
 __all__ = [
+    "BROADCAST_OPS",
     "CONTRACT_EQS",
     "FOLD_AXES",
     "FOLD_CARRIES",
@@ -189,6 +203,17 @@ NORM_OPS: tuple[str, ...] = ("div", "sub")
 #: extension, not a candidate.
 POST_UNARY: tuple[str, ...] = ("log",)
 
+#: Broadcast-view ops the ``ew`` replay may interleave with the
+#: pointwise vocabulary — pure size-1-axis insertions/removals.
+#: ``unsqueeze``/``squeeze`` move no data; they broadcast an operand
+#: into the body tree's shared shape, so a spec mixing them with the
+#: elementwise vocabulary still lowers as one fused elementwise
+#: kernel — the class ``ew`` names (measured: the ``zoo-prim``
+#: mint's refused ``add``/``mul``-over-``unsqueeze`` shapes).  Ops
+#: that index (``select``, ``slice``), permute, or contract stay
+#: outside — the replay cannot claim another family's semantics.
+BROADCAST_OPS: frozenset = frozenset({"unsqueeze", "squeeze"})
+
 #: The template families, in proposal order.
 _FAMILIES: tuple[str, ...] = (
     "ew",
@@ -212,8 +237,9 @@ _VERIFY_ATOL = 1e-12
 _BUDGET = 2048
 
 #: Grammar version stamped into provenance — a minted record names
-#: the vocabulary it was verified under.
-_GRAMMAR_VERSION = "handler-grammar-v2"
+#: the vocabulary it was verified under.  v3 admits broadcast views
+#: (:data:`BROADCAST_OPS`) inside the ``ew`` replay.
+_GRAMMAR_VERSION = "handler-grammar-v3"
 
 
 # ---------------------------------------------------------------------------
@@ -978,6 +1004,21 @@ def _top_op(spec: Any) -> Any:
     return None
 
 
+def _replayable_spec(spec: Any) -> bool:
+    """Whether the ``ew`` replay may be proposed for *spec*.
+
+    The replay claims "the semantics is the pattern itself" — honest
+    only for a spec one fused elementwise kernel could implement:
+    the pointwise vocabulary plus broadcast views
+    (:data:`BROADCAST_OPS`).  A spec carrying any other op keeps the
+    gate closed — proposing the replay there would verify by
+    construction (the descriptor IS the spelled site) and mint a
+    tautology, not a measured handler.
+    """
+    ops = _spec_ops(spec)
+    return bool(ops) and ops <= ELEMENTWISE | BROADCAST_OPS
+
+
 def _canonical_norm_seeds(
     metas: list, consts: tuple, axes: tuple, keepdim: bool
 ) -> list:
@@ -1151,7 +1192,7 @@ def propose_bodies(
     # the same shape with a wrapped reduction result.
     if _top_op(spec) not in NORM_OPS:
         fams = tuple(f for f in fams if f not in ("norm", "postnorm"))
-    if "ew" in fams and elementwise_spec(spec):
+    if "ew" in fams and _replayable_spec(spec):
         yield ("ew", spec)
     if "fold_emit" in fams and metas:
         yield from _canonical_emit_seeds(metas)

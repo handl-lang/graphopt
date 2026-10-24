@@ -336,8 +336,15 @@ _PRIM_SITES = 16
 _PRIM_DOMAIN = 4
 
 #: ``mint_handlers`` candidate cap per shape — the bounded grammar
-#: search the synthesis measurement spends (refusals quote it).
-_PRIM_BUDGET = 256
+#: search the synthesis measurement spends (refusals quote it).  The
+#: grammar's own declared bound (``handler_synth._BUDGET``), so a
+#: recorded refusal quotes the full declared search, not a
+#: shallower screen — measured on the v2 corpus's 8 refusals: four
+#: minted once the ``ew`` gate admitted broadcast views
+#: (``docs/reports/prim_handlers.md``), and four stayed refused at
+#: this bound with every tried candidate raising — a grammar/family
+#: wall, not a budget cap.
+_PRIM_BUDGET = 2048
 
 _NOVELTY_ORDER = ("machine-original", "known-art", "vacuous")
 
@@ -1633,6 +1640,18 @@ def _prim_pool(
                     "verdict": "refused",
                     "tried": rep.get("tried"),
                     "note": rep.get("note"),
+                    # inf means every tried candidate raised or
+                    # shape-mismatched — serialized as a string so the
+                    # report JSON stays strict.
+                    "best_err": (
+                        rep.get("best_err")
+                        if rep.get("best_err") != float("inf")
+                        else "inf"
+                    ),
+                    # the frozen body + bound-site domain the refusal
+                    # measured against — the row reproduces offline.
+                    "spec": rep.get("spec"),
+                    "domain": domain,
                 }
         # the definitional premise: the cert leg's anchored axiom set
         # unions it when the bare bank cannot derive the fold — the
