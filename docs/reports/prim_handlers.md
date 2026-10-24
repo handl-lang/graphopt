@@ -57,14 +57,41 @@ All four carry `select` or `linear` — indexing/contraction semantics
 the `ew` grammar correctly refuses to claim. A handler for these needs
 a gather/index or fused-linear family the grammar does not yet ship.
 
+## Grammar v4 — the `gather` family (v3→v4)
+
+The 4 refusals all carried `select`/`linear` — an index family was the
+honest missing piece, and it landed:
+
+- `("at", src, {dim,index})` — an index-read leaf (the fused kernel's
+  gathered operand fetch);
+- `("aff", x, w, b)` — a per-position affine leaf (the ambient
+  `linear` re-seated under the family's own name);
+- `_gather_view` translates a select/linear-bearing spec into that
+  vocabulary — leading with the **fused read-then-map** order
+  `aff(at(x),w,b)` (project only the gathered slice) over the
+  denotation-equal `at(aff(x,w,b))`; `_gather_marked` keeps the gate
+  closed on specs with no index-read (no tautologies — same
+  discipline as `_replayable_spec`).
+
+### v4 measurement (68-module corpus, k=2)
+
+| verdict | v3 | v4 |
+|---|---|---|
+| minted | 20 | **24/24** |
+| refused | 4 | **0** |
+
+All four previously-refused primitives mint `gather` bodies at
+tried=1, fp64 err 0.0–5.3e-15: `synop_5f1bba5798` (the SSM
+select-gate×projection step), `synop_00cd48d9a2`, `synop_336e34145b`
+(select×select), `synop_4c657cb2c0` (residual + broadcast linear).
+
 ## The claim boundary
 
-- A minted `ew` body is a verified fused elementwise kernel
-  (fp64 `max_err = 0.0` on every bound-site domain) — the primitive
-  is a real kernel, not a label.
-- The 4 remaining refusals are the honest frontier for "a transform a
-  human hasn't written": the *select-gate×linear* shape
-  (`synop_5f1bba5798`/`00cd48d9a2`) is the SSM recurrence step — a
-  fused gather-project op nobody ships as a named kernel today. If a
-  handler family mints it, the find graduates from
-  novel-by-construction to plausibly novel-by-semantics.
+- A minted `ew`/`gather` body is a verified fused kernel
+  (fp64 `max_err` at the verify gate on every bound-site domain) —
+  the primitive is a real kernel, not a label.
+- The select-gate×linear `synop_5f1bba5798` — the SSM recurrence step
+  shared by DeltaNet/GLA/Mamba/RG-LRU — now has a machine-minted fused
+  gather+affine body. Whether a fused-kernel engineer calls that a
+  *new* kernel stays a literature question; the machine can now name
+  and implement it.

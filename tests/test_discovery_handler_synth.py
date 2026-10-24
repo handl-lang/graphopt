@@ -266,7 +266,7 @@ class TestMint:
         h = handlers[report[0]["tag"]]
         assert h["handler_body"][0] == "contract"
         assert h["provenance"]["family"] == "contract"
-        assert h["provenance"]["grammar"] == "handler-grammar-v3"
+        assert h["provenance"]["grammar"] == "handler-grammar-v4"
         assert h["provenance"]["max_err"] < 1e-12
 
     def test_masked_contract_mints(self):
@@ -400,7 +400,7 @@ class TestMint:
         assert report[0]["tried"] == 1
         h = handlers[report[0]["tag"]]
         assert h["handler_body"] == ("ew", spec)
-        assert h["provenance"]["grammar"] == "handler-grammar-v3"
+        assert h["provenance"]["grammar"] == "handler-grammar-v4"
         # and the delivered binding runs the broadcast body
         env = _env(domain[0])
         b = hs.minted_bindings(handlers)
@@ -789,3 +789,258 @@ class TestNormFamilyEdges:
                 break
         tags = {b[0] for b in bodies}
         assert "norm" in tags
+
+
+class TestGatherFamily:
+    """The ``gather`` family — index-reads + per-position affines as
+    view leaves under a pointwise tree (grammar v4).
+
+    Pins the descriptor interpreter (``at`` reads, ``aff`` affines,
+    the read-then-map fused order), the seed translation (read off
+    the spec's own ``select``/``linear`` structure — at most two
+    candidates), the mint on the ``zoo-prim`` v3 refusal rows, and
+    the gate exclusions that keep the family honest.
+    """
+
+    def test_gather_eval_body(self):
+        """``at`` reads, ``aff`` affines, broadcast views, pointwise."""
+        env = _env({"G": (2, 4, 1), "X": (2, 4, 16), "W": (16, 16), "B": (16,)})
+        body = (
+            "gather",
+            (
+                "mul",
+                ("unsqueeze", ("at", "G", {"dim": 1, "index": 0}), {"dim": -1}),
+                (
+                    "unsqueeze",
+                    ("aff", ("at", "X", {"dim": 1, "index": 0}), "W", "B"),
+                    {"dim": -1},
+                ),
+            ),
+        )
+        out = hs.eval_body(body, env, BINDINGS)
+        want = env["G"].select(1, 0).unsqueeze(-1) * torch.nn.functional.linear(
+            env["X"].select(1, 0), env["W"], env["B"]
+        ).unsqueeze(-1)
+        torch.testing.assert_close(out, want)
+
+    def test_gather_seed_select_select(self):
+        """The select×select shape translates to ``at`` leaves — one
+        candidate (no select-of-affine, so no order variant)."""
+        spec = (
+            "mul",
+            ("unsqueeze", ("select", "G", {"dim": 1, "index": 0}), {"dim": -1}),
+            ("unsqueeze", ("select", "H", {"dim": 1, "index": 0}), {"dim": -1}),
+        )
+        seeds = hs._gather_seeds(spec)
+        assert seeds == [
+            (
+                "gather",
+                (
+                    "mul",
+                    ("unsqueeze", ("at", "G", {"dim": 1, "index": 0}), {"dim": -1}),
+                    ("unsqueeze", ("at", "H", {"dim": 1, "index": 0}), {"dim": -1}),
+                ),
+            )
+        ]
+        # and it leads the proposal stream (``ew`` is gated out)
+        assert next(hs.propose_bodies(spec)) == seeds[0]
+
+    def test_gather_seed_select_affine_fused_first(self):
+        """select-of-linear emits read-then-map first — the fused
+        kernel projects only the gathered slice."""
+        spec = (
+            "mul",
+            "A",
+            ("unsqueeze", ("select", ("linear", "X", "W", "B"), {"dim": 1, "index": 7}), {"dim": 1}),
+        )
+        seeds = hs._gather_seeds(spec)
+        assert len(seeds) == 2
+        assert seeds[0][1] == (
+            "mul",
+            "A",
+            ("unsqueeze", ("aff", ("at", "X", {"dim": 1, "index": 7}), "W", "B"), {"dim": 1}),
+        )
+        assert seeds[1][1] == (
+            "mul",
+            "A",
+            ("unsqueeze", ("at", ("aff", "X", "W", "B"), {"dim": 1, "index": 7}), {"dim": 1}),
+        )
+
+    # the four ``zoo-prim`` v3 refusal rows — frozen spec/domain from
+    # ``docs/reports/results_overnight_prim_v3.json``; each minted a
+    # ``gather`` body at tried=1 under grammar v4.
+
+    def test_gather_mints_select_gate_times_projection(self):
+        """``synop_5f1bba5798`` — the SSM select-gate × projection."""
+        spec = (
+            "mul",
+            ("unsqueeze", ("select", "v430", {"dim": 1, "index": 0}), {"dim": -1}),
+            (
+                "unsqueeze",
+                ("select", ("linear", "v463", "v464", "v465"), {"dim": 1, "index": 0}),
+                {"dim": -1},
+            ),
+        )
+        domain = [
+            {"v430": (2, 4, 1), "v463": (2, 4, 16), "v464": (16, 16), "v465": (16,)}
+        ]
+        handlers, report = hs.mint_handlers([spec], domain=domain)
+        assert report[0]["verdict"] == "minted"
+        assert report[0]["family"] == "gather"
+        assert report[0]["tried"] == 1
+        assert report[0]["max_err"] < 1e-9
+        # the fused order won: read the slice, then project it
+        assert hs._gather_view(spec, True) == handlers[report[0]["tag"]]["handler_body"][1]
+        # and the delivered binding runs the gather body
+        h = handlers[report[0]["tag"]]
+        env = _env(domain[0])
+        out = hs.minted_bindings(handlers)[h["kernel"]](
+            env["v430"], env["v463"], env["v464"], env["v465"]
+        )
+        want = env["v430"].select(1, 0).unsqueeze(-1) * torch.nn.functional.linear(
+            env["v463"], env["v464"], env["v465"]
+        ).select(1, 0).unsqueeze(-1)
+        torch.testing.assert_close(out, want)
+
+    def test_gather_mints_residual_broadcast_linear(self):
+        """``synop_4c657cb2c0`` — residual + broadcast linear read."""
+        spec = (
+            "add",
+            "v13",
+            (
+                "mul",
+                ("unsqueeze", "v419", {"dim": -1}),
+                (
+                    "unsqueeze",
+                    ("select", ("linear", "v633", "v634", "v635"), {"dim": 1, "index": 7}),
+                    {"dim": 1},
+                ),
+            ),
+        )
+        domain = [
+            {"v13": (2, 16, 4), "v419": (2, 16), "v633": (2, 8, 16), "v634": (4, 16), "v635": (4,)}
+        ]
+        _handlers, report = hs.mint_handlers([spec], domain=domain)
+        assert report[0]["verdict"] == "minted"
+        assert report[0]["family"] == "gather"
+        assert report[0]["tried"] == 1
+
+    def test_gather_mints_gate_times_linear(self):
+        """``synop_00cd48d9a2`` — plain gate × select-linear."""
+        spec = (
+            "mul",
+            ("unsqueeze", "v319", {"dim": -1}),
+            (
+                "unsqueeze",
+                ("select", ("linear", "v605", "v606", "v607"), {"dim": 1, "index": 0}),
+                {"dim": -1},
+            ),
+        )
+        domain = [
+            {"v319": (2, 1), "v605": (2, 4, 16), "v606": (16, 16), "v607": (16,)}
+        ]
+        _handlers, report = hs.mint_handlers([spec], domain=domain)
+        assert report[0]["verdict"] == "minted"
+        assert report[0]["family"] == "gather"
+        assert report[0]["tried"] == 1
+
+    def test_gather_mints_select_times_select(self):
+        """``synop_336e34145b`` — select × select, no affine."""
+        spec = (
+            "mul",
+            ("unsqueeze", ("select", "v430", {"dim": 1, "index": 0}), {"dim": -1}),
+            ("unsqueeze", ("select", "v458", {"dim": 1, "index": 0}), {"dim": -1}),
+        )
+        domain = [{"v430": (2, 4, 1), "v458": (2, 4, 16)}]
+        handlers, report = hs.mint_handlers([spec], domain=domain)
+        assert report[0]["verdict"] == "minted"
+        assert report[0]["family"] == "gather"
+        assert report[0]["tried"] == 1
+        assert report[0]["max_err"] == 0.0
+
+    def test_gather_record_round_trips(self):
+        """A minted gather body is JSON-able provenance data."""
+        spec = (
+            "mul",
+            ("unsqueeze", ("select", "G", {"dim": 1, "index": 0}), {"dim": -1}),
+            ("unsqueeze", ("select", "H", {"dim": 1, "index": 0}), {"dim": -1}),
+        )
+        handlers, report = hs.mint_handlers(
+            [spec], domain=[{"G": (2, 4, 1), "H": (2, 4, 16)}]
+        )
+        tag = report[0]["tag"]
+        rec = json.loads(json.dumps(hs.handler_record(tag, handlers[tag])))
+        assert rec["handler_body"][0] == "gather"
+        rebuilt = hs.handler_from_record(rec)
+        assert rebuilt["handler_body"] == handlers[tag]["handler_body"]
+        # the rebuilt handler's binding evaluates the gather body
+        env = _env({"G": (2, 4, 1), "H": (2, 4, 16)})
+        out = hs.minted_bindings({"x": rebuilt})[rec["kernel"]](
+            env["G"], env["H"]
+        )
+        torch.testing.assert_close(
+            out,
+            env["G"].select(1, 0).unsqueeze(-1)
+            * env["H"].select(1, 0).unsqueeze(-1),
+        )
+
+    # ---- the gate exclusions — honest walls, not silent claims ----
+
+    def test_gather_gate_no_index_read(self):
+        """No ``select`` anywhere → not a gather (``ew`` or affine-only
+        is another family's claim)."""
+        assert hs._gather_seeds(("mul", "A", ("unsqueeze", "B", {"dim": -1}))) == []
+        assert hs._gather_seeds(
+            ("mul", "A", ("linear", "X", "W", "B"))
+        ) == []  # affine-only: gate closed, honest wall
+        assert hs._gather_seeds("X") == []
+
+    def test_gather_gate_select_of_composite(self):
+        """``select`` over a pointwise composite is the declared gap —
+        pushing the read inward is a different translation."""
+        spec = ("select", ("mul", "A", "B"), {"dim": 0, "index": 1})
+        assert hs._gather_seeds(spec) == []
+
+    def test_gather_gate_select_missing_index(self):
+        """A ``select`` without literal ``dim``/``index`` is not
+        translatable — a read the family cannot name."""
+        spec = ("mul", "A", ("select", "B", {"dim": 0}))
+        assert hs._gather_seeds(spec) == []
+        spec2 = ("mul", "A", ("select", "B", 0, 1))  # positional attrs
+        assert hs._gather_seeds(spec2) == []
+
+    def test_gather_gate_linear_composite_args(self):
+        """A ``linear`` over non-meta args is contract-family
+        semantics, not a per-position affine leaf."""
+        spec = ("select", ("linear", ("mul", "X", "Y"), "W", "B"), {"dim": 0, "index": 0})
+        assert hs._gather_seeds(spec) == []
+
+    def test_gather_gate_indexed_contraction(self):
+        """``matmul(select x, w)`` — an index-read feeding a real
+        contraction conflates two families; both stay closed."""
+        spec = ("matmul", ("select", "X", {"dim": 0, "index": 0}), "W")
+        assert hs._gather_seeds(spec) == []
+        handlers, report = hs.mint_handlers(
+            [spec],
+            domain=[{"X": (3, 4), "W": (4, 5)}],
+            families=("gather", "contract"),
+            budget=200,
+        )
+        assert handlers == {}
+        assert report[0]["verdict"] == "refused"
+
+    def test_gather_gate_slice_and_gather_ops(self):
+        """``slice``/``gather``-shaped indexing outside ``select`` is
+        not the family's vocabulary."""
+        spec = ("mul", "A", ("slice", "B", {"dim": 0, "start": 0, "end": 2}))
+        assert hs._gather_seeds(spec) == []
+
+    def test_gather_seed_record_is_plain_data(self):
+        """The descriptor round-trips through the body's data codec."""
+        spec = (
+            "mul",
+            "A",
+            ("select", ("linear", "X", "W", "B"), {"dim": 1, "index": 0}),
+        )
+        for seed in hs._gather_seeds(spec):
+            assert hs.body_from_data(hs.body_to_data(seed)) == seed

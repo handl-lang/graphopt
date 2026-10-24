@@ -60,6 +60,23 @@ THE GRAMMAR (descriptors are plain data — tuples, strings, numbers):
   ``("postnorm", "sub", "X", "log", "sum", ("exp","X"), -1, True)`` —
   the ``x - log(sum(exp x))`` spelling the bare ``norm`` template
   cannot reach (``log·sum·exp`` is not ``sum·log·exp``).
+* ``("gather", sub)`` — the index/gather family: a pointwise tree
+  whose leaves are operand *views* — ``("at", src, {"dim": d,
+  "index": i})`` reads *src* at a fixed index along *dim* (the fused
+  kernel's gathered operand fetch), ``("aff", x, w[, b])`` applies a
+  per-position affine map (the ambient ``linear``), and broadcast
+  views (:data:`BROADCAST_OPS`) align the leaves into the tree's
+  shared shape.  One kernel doing index-select + affine + broadcast
+  + elementwise in a single pass — the honest semantics of the
+  ``select``/``unsqueeze``/``mul`` shapes the ``ew`` replay rightly
+  refuses (an ``ew`` replay there would be the spelled site itself —
+  a label, not a handler).  The SSM select-gate x projection step
+  ``mul(unsq(select g d i), unsq(select (linear x w b) d i))`` is
+  ``("gather", ("mul", ("unsq", ("at","G",...),...), ("unsq",
+  ("aff", ("at","X",...), "W", "B"),...)))`` — note the
+  read-then-map order: the fused kernel projects only the gathered
+  slice, equal to select-of-linear exactly when the read axis is not
+  the contracted feature axis, which the verifier measures.
 
 The ``ew`` replay is proposed not only for strictly elementwise
 specs but for *broadcast-elementwise* ones — specs whose ops are the
@@ -71,7 +88,9 @@ Anything that indexes (``select``, ``slice``), permutes, or
 contracts keeps the gate closed: proposing the replay for a spec the
 grammar cannot re-express would verify by construction (the
 descriptor IS the spelled site) and mint a tautology, not a
-handler.
+handler.  Index-bearing specs are the ``gather`` family's claim —
+its descriptor re-expresses the site in the view-leaf vocabulary
+(index-reads, per-position affines), never replays it.
 
 A fold side or carry may be a *constant*: the a-side ``1.0`` (the
 multiplicative identity) and the b-side ``0.0`` (the additive
@@ -217,6 +236,7 @@ BROADCAST_OPS: frozenset = frozenset({"unsqueeze", "squeeze"})
 #: The template families, in proposal order.
 _FAMILIES: tuple[str, ...] = (
     "ew",
+    "gather",
     "contract",
     "fold",
     "fold_emit",
@@ -238,8 +258,10 @@ _BUDGET = 2048
 
 #: Grammar version stamped into provenance — a minted record names
 #: the vocabulary it was verified under.  v3 admits broadcast views
-#: (:data:`BROADCAST_OPS`) inside the ``ew`` replay.
-_GRAMMAR_VERSION = "handler-grammar-v3"
+#: (:data:`BROADCAST_OPS`) inside the ``ew`` replay; v4 adds the
+#: ``gather`` family — index-reads (``at``) and per-position affines
+#: (``aff``) as view leaves under a pointwise tree.
+_GRAMMAR_VERSION = "handler-grammar-v4"
 
 
 # ---------------------------------------------------------------------------
@@ -261,6 +283,8 @@ def eval_body(body: Any, env: dict, bindings: dict) -> Any:
     kind = body[0] if isinstance(body, (tuple, list)) else None
     if kind == "ew":
         return _eval_spec(body[1], env, bindings)
+    if kind == "gather":
+        return _eval_spec(body[1], env, _gather_bindings(bindings))
     if kind == "contract":
         _, eq, lhs, rhs = body
         return torch.einsum(
@@ -304,6 +328,26 @@ def eval_body(body: Any, env: dict, bindings: dict) -> Any:
             ),
         )
     raise ValueError(f"unknown handler-body tag: {kind!r}")
+
+
+def _gather_bindings(bindings: dict) -> dict:
+    """The ambient table plus the ``gather`` body's own leaf ops.
+
+    ``at`` is the index-read leaf — ``t.select(dim, index)``, the
+    fused kernel's gathered operand fetch.  ``aff`` is the
+    per-position affine map — the ambient ``linear`` binding re-seated
+    under the family's own leaf name, so the descriptor's vocabulary
+    stays the family's (``select``/``linear`` are spelled-graph ops;
+    a gather body never replays them).  Both keys resolve through the
+    same ``bindings``-dispatch machinery as every other descriptor.
+    """
+    return {
+        **bindings,
+        "at": lambda t, *a, **kw: t.select(
+            int(kw["dim"]), int(kw["index"])
+        ),
+        "aff": bindings["linear"],
+    }
 
 
 def _carry_value(env: dict, state: Any) -> Any:
@@ -1019,6 +1063,120 @@ def _replayable_spec(spec: Any) -> bool:
     return bool(ops) and ops <= ELEMENTWISE | BROADCAST_OPS
 
 
+def _gather_leaf(s: Any) -> bool:
+    """Whether *s* is a legal index-read source — a gather view leaf.
+
+    A metavar, an ``at`` read (nested index), an ``aff`` affine, or a
+    broadcast view of one of those.  Anything deeper — a composite
+    elementwise tree under the ``select`` — is the family's declared
+    gap: pushing the read inward over pointwise ops is a different
+    translation, not this family's vocabulary.
+    """
+    if isinstance(s, str):
+        return True
+    if isinstance(s, (tuple, list)) and s:
+        if s[0] in ("at", "aff"):
+            return True
+        if s[0] in BROADCAST_OPS:
+            inner = [e for e in s[1:] if not isinstance(e, dict)]
+            return len(inner) == 1 and _gather_leaf(inner[0])
+    return False
+
+
+def _gather_view(s: Any, fused: bool) -> Any:
+    """Translate *s* into the ``gather`` leaf vocabulary, or ``None``.
+
+    Pointwise ops and broadcast views keep their spelled shape;
+    ``select`` becomes an ``at`` index-read whose source must be a
+    view leaf (:func:`_gather_leaf`), and a ``linear`` of metavar
+    args becomes an ``aff`` affine leaf.  With *fused* a
+    select-of-affine is emitted read-then-map —
+    ``aff(at(x), w, b)``, the fused kernel's own order (it projects
+    only the gathered slice); otherwise read-of-map —
+    ``at(aff(x, w, b))``, the denotation-equal fallback.  ``None``
+    means the spec sits outside the family: an op outside the
+    pointwise/broadcast/select/linear vocabulary, a ``select``
+    without literal ``dim``/``index``, or a read whose source is a
+    composite — each a measured refusal, never a silent re-spelling.
+    """
+    if isinstance(s, str):
+        return s
+    if not isinstance(s, (tuple, list)) or not s:
+        return s  # const leaf — a gather tree may carry spec consts
+    op = s[0]
+    args = [e for e in s[1:] if not isinstance(e, dict)]
+    attrs = [e for e in s[1:] if isinstance(e, dict)]
+    if op in BROADCAST_OPS and len(args) == 1:
+        inner = _gather_view(args[0], fused)
+        return None if inner is None else (op, inner, *attrs)
+    if op == "select":
+        if len(args) != 1 or len(attrs) != 1:
+            return None
+        a = attrs[0]
+        if "dim" not in a or "index" not in a:
+            return None
+        inner = _gather_view(args[0], fused)
+        if not _gather_leaf(inner):
+            return None
+        idx = {"dim": a["dim"], "index": a["index"]}
+        if (
+            fused
+            and isinstance(inner, (tuple, list))
+            and inner
+            and inner[0] == "aff"
+        ):
+            return ("aff", ("at", inner[1], idx), *inner[2:])
+        return ("at", inner, idx)
+    if op == "linear":
+        # the per-position affine leaf — metavar args only; a linear
+        # over composite operands is the contract family's claim.
+        if args and all(isinstance(e, str) for e in args) and not attrs:
+            return ("aff", *args)
+        return None
+    if op in ELEMENTWISE:
+        subs = [_gather_view(e, fused) for e in args]
+        if any(e is None for e in subs):
+            return None
+        return (op, *subs, *attrs)
+    return None
+
+
+def _gather_marked(s: Any) -> bool:
+    """Whether *s* names at least one ``at`` index-read leaf.
+
+    The ``gather`` tag claims an indexed view; a translated tree with
+    no index-read is either pure ``ew`` (which the replay claims) or
+    affine-only — a different family, so the gate keeps it closed.
+    """
+    if isinstance(s, (tuple, list)) and s:
+        if s[0] == "at":
+            return True
+        return any(
+            _gather_marked(e) for e in s[1:] if not isinstance(e, dict)
+        )
+    return False
+
+
+def _gather_seeds(spec: Any) -> list:
+    """The ``gather`` candidates for *spec* — at most two.
+
+    The index coordinates and affine triples are *read off the spec*
+    (its own ``select`` ``dim``/``index`` attrs and ``linear``
+    leaves), the same discipline ``keepdim`` and ``REDUCE_AXES``
+    already apply — the grammar translates the structure, the
+    verifier decides.  The fused read-then-map order leads; the
+    read-of-map order follows when a select-of-affine exists (equal
+    denotation, a different fusion story — the verifier picks the
+    first that reproduces the spelled site fp64).
+    """
+    subs: list = []
+    for fused in (True, False):
+        sub = _gather_view(spec, fused)
+        if sub is not None and _gather_marked(sub) and sub not in subs:
+            subs.append(sub)
+    return [("gather", s) for s in subs]
+
+
 def _canonical_norm_seeds(
     metas: list, consts: tuple, axes: tuple, keepdim: bool
 ) -> list:
@@ -1104,10 +1262,10 @@ def _admitted_families(n: int) -> set:
     recurrence is reached through the ``fold_emit`` seed
     (:func:`_canonical_emit_seeds`) instead, so the floor is not a
     reach limit.  The contraction needs two factors; ``fold_zip`` an
-    even non-state count; the ``reduce``/``norm`` families any
-    non-empty meta set.
+    even non-state count; the ``gather``/``reduce``/``norm``
+    families any non-empty meta set.
     """
-    out = {"reduce", "norm", "postnorm"} if n else set()
+    out = {"gather", "reduce", "norm", "postnorm"} if n else set()
     if n >= 2:
         out.add("contract")
     if n >= 3:
@@ -1158,7 +1316,9 @@ def _family_gens(
         gens.append(_norm_bodies(metas, consts, axes, keepdim))
     # ``postnorm`` has no full-walk generator — the family exists as
     # the canonical seed (``_canonical_postnorm_seeds``), a deliberate
-    # bound: one measured need, not a widened space.
+    # bound: one measured need, not a widened space.  ``gather`` is
+    # likewise seed-only — its candidates are the spec's own
+    # structure re-expressed (:func:`_gather_seeds`), not a search.
     return gens
 
 
@@ -1172,6 +1332,8 @@ def propose_bodies(
 
     Deterministic and simplest-first: the ``ew`` replay (elementwise
     specs only — the ``genkernel`` baseline) leads, then the
+    ``gather`` translations for index-bearing specs
+    (:func:`_gather_seeds`), then the
     ``fold_emit`` canonical emitted-scan forms (:func:`_canonical_emit_seeds`
     — the ordering gap the round-robin walk left) and the ``norm``
     canonical normalization forms (:func:`_canonical_norm_seeds`),
@@ -1194,6 +1356,8 @@ def propose_bodies(
         fams = tuple(f for f in fams if f not in ("norm", "postnorm"))
     if "ew" in fams and _replayable_spec(spec):
         yield ("ew", spec)
+    if "gather" in fams and metas:
+        yield from _gather_seeds(spec)
     if "fold_emit" in fams and metas:
         yield from _canonical_emit_seeds(metas)
     if "norm" in fams and metas:
