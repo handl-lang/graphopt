@@ -1223,7 +1223,7 @@ class TestCorpusZooPrimBootstrap:
 
         name = next(
             n
-            for n in sorted(minted.SYNOP_SHIPPED)
+            for n in sorted(minted.SYNOP_SHIPPED - minted.SYNOP2_SHIPPED)
             if not minted.prim_fold(n)[0].rhs.attrs
         )
         lhs = minted.prim_fold(name)[0].lhs
@@ -1246,7 +1246,7 @@ class TestCorpusZooPrimBootstrap:
 
         name = next(
             n
-            for n in sorted(minted.SYNOP_SHIPPED)
+            for n in sorted(minted.SYNOP_SHIPPED - minted.SYNOP2_SHIPPED)
             if not minted.prim_fold(n)[0].rhs.attrs
         )
         fold = minted.prim_fold(name)[0]

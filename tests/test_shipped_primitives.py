@@ -3,7 +3,10 @@
 ``bench/drivers/overnight.py --corpus zoo-prim`` minted ``synop_*``
 primitive ops for manual subgraph shapes recurring across the held-out
 zoo — 21 folds admitted by the full gauntlet
-(``docs/reports/results_overnight_prim_v2.json``).  The laws are
+(``docs/reports/results_overnight_prim_v2.json``), plus the 2 depth-2
+``synop2_*`` folds of the ``--prim-bootstrap`` arm — synop-carrying
+skeletons composed over the shipped vocabulary
+(``docs/reports/results_overnight_prim_bootstrap.json``).  The laws are
 core-shipped, default-on: the verbatim records embed in
 ``mlopt_core.laws.minted`` and the folds ride ``MINTED_RULES`` into
 ``DEFAULT``.  :mod:`mlopt_discovery.shipped_primitives` is the
@@ -33,10 +36,11 @@ from mlopt_core.ir import Const, Op, generator
 from mlopt_core.laws import DEFAULT, tags
 from mlopt_discovery import shipped_primitives as sp
 
-_N_PRIM = 21  # the admitted folds (the pool minted 24; 3 declined)
+_N_PRIM = 23  # 21 depth-1 + 2 depth-2 admitted folds (the depth-1
+# pool minted 24; 3 declined)
 
 #: One bound module per prim family — GatedLinearAttention binds all
-#: 21 admitted folds (the report's ``mods`` lists); it exports once
+#: 23 admitted folds (the reports' ``mods`` lists); it exports once
 #: per session here and every per-fold pin runs against its term.
 _GLA = "GatedLinearAttention"
 
@@ -82,13 +86,19 @@ def _ops_of(term):
 class TestRecords:
     """The embedded mint artifacts — frozen, complete, honest."""
 
-    def test_twenty_one_records_named_by_content_hash(self):
+    def test_records_named_by_content_hash(self):
         recs = sp.records()
         assert len(recs) == _N_PRIM
         assert set(recs) == set(sp.SYNOP_SHIPPED)
         for name, rec in recs.items():
-            assert name.startswith("synop_")
+            assert name.startswith(("synop_", "synop2_"))
             assert rec["fold"]["name"] == f"prim:{name}"
+            if name in sp.SYNOP2_SHIPPED:
+                # a depth-2 record: skeleton alpha vs expanded alpha,
+                # the composition provenance, the embedded premise
+                assert rec["alpha_fold"] != rec["alpha"]
+                assert rec["embeds_shipped"]
+                assert rec["expand"]["name"] == f"{name}.expand"
 
     def test_every_record_carries_its_mint_measurements(self):
         for rec in sp.records().values():
@@ -120,7 +130,7 @@ class TestMaterialize:
         folds = sp.folds()
         assert len(folds) == _N_PRIM
         for f in folds:
-            assert f.name.startswith("prim:synop_")
+            assert f.name.startswith("prim:synop")
             assert isinstance(f.rhs, Op)
             assert f.rhs.op == sp.synop_name(f.name)
             # every rhs arg is a metavar leaf; attr metavars ride the
@@ -137,7 +147,15 @@ class TestMaterialize:
         for p in sp.premises():
             assert p.name.endswith(".expand")
             fold = by_synop[p.name[: -len(".expand")]]
-            assert p.lhs == fold.rhs and p.rhs == fold.lhs
+            assert p.lhs == fold.rhs
+            if fold.rhs.op in sp.SYNOP2_SHIPPED:
+                # depth-2: the premise unfolds the call to the FULL
+                # manual denotation — the skeleton re-expanded, not
+                # the synop-carrying LHS itself.
+                assert p.rhs != fold.lhs
+                assert "synop" not in _ops_of(p.rhs)
+            else:
+                assert p.rhs == fold.lhs
 
     def test_folds_are_fully_serializable(self):
         from mlopt_core.laws.serialize import missing_hooks
@@ -282,7 +300,20 @@ class TestDeliver:
         for fold in sp.folds():
             eg = EGraph()
             eid = eg.add_term(gla_term)
-            eg.run([fold], eid, max_iterations=5)
+            # depth-2: the LHS is a synop-carrying skeleton — a real
+            # term only matches it where the embedded depth-1 folds
+            # (``embeds_shipped``) have already seated their synop
+            # enodes (the bootstrap mint's own corpus seating).  Only
+            # those fold — running the whole family would seat ~14
+            # tied 1-cost synops in the same class and the extracted
+            # winner stops being this fold's op.
+            rules = [
+                f
+                for f in sp.folds()
+                if f.rhs.op
+                in sp.records()[fold.rhs.op].get("embeds_shipped", ())
+            ] + [fold]
+            eg.run(rules, eid, max_iterations=6)
             assert any(
                 n.op == fold.rhs.op
                 for ec in eg._classes.values()
@@ -299,10 +330,16 @@ class TestDeliver:
 
         sp.register()
         for fold in sp.folds():
+            # the site pattern is the definitional premise's RHS —
+            # the manual denotation spelling: identical to the fold
+            # LHS at depth-1, its expansion at depth-2 (real subterms
+            # never carry a synop node — only an already-folded
+            # skeleton does).
+            pat = fold.premises[0].rhs
             sites = [
                 m
                 for s in gla_subterms
-                if (m := _term_match(fold.lhs, s)) is not None
+                if (m := _term_match(pat, s)) is not None
             ][:4]
             assert sites, fold.name
             for m in sites:
@@ -349,6 +386,47 @@ class TestDeliver:
             max_iterations=20,
         )
         assert "synop_bb8c54c201" in _ops_of(res.term)
+        lr = lower(res, feeds, sink=TorchSink(), verify=True)
+        assert lr.verified is not None and lr.verified.passed
+
+    @pytest.mark.parametrize(
+        "mod", ["GatedDeltaRule", "RealGatedLRU"]
+    )
+    def test_search_lower_verify_depth2_end_to_end(self, mod):
+        """The depth-2 folds fire + deliver on shipped DEFAULT.
+
+        Saturation seats ``synop_bb8c54c201`` enodes through the
+        depth-1 fold, then the synop-carrying skeleton folds to
+        ``synop2_*`` — the composition the bootstrap mint measured,
+        now default-on.  The enode joins a class full of 1-cost synop
+        alternatives, so which fused member extraction commits is a
+        tie — the pin is the *fire* (``rule_fires`` + the enode in
+        ``res.eg``), and the lowered module verifies either way.
+        """
+        from mlopt_discovery import zoo as zoo_mod
+        from mlopt_orchestrator.optimize import lower, search
+        from mlopt_torch.adapters import TorchSink, TorchSource
+
+        sp.register()
+        w = {w_.name: w_ for w_ in zoo_mod.zoo()}[mod]
+        torch.manual_seed(0)
+        model, feed = w.build()
+        feeds = feed if isinstance(feed, tuple) else (feed,)
+        res = search(
+            model.eval().double(),
+            feeds,
+            source=TorchSource(),
+            max_iterations=20,
+        )
+        fired = res.stats.get("rule_fires", {})
+        assert any(
+            fired.get(f"prim:{n}") for n in sp.SYNOP2_SHIPPED
+        ), (mod, fired)
+        assert any(
+            n.op in sp.SYNOP2_SHIPPED
+            for ec in res.eg._classes.values()
+            for n in ec.nodes
+        ), mod
         lr = lower(res, feeds, sink=TorchSink(), verify=True)
         assert lr.verified is not None and lr.verified.passed
 
