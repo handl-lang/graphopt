@@ -479,8 +479,10 @@ minted guards).
   (mul-add trees, broadcast select-gates), not transforms a compiler
   engineer would call new.  The open question is whether a minted
   primitive can acquire a fused *implementation* the machine also
-  found — today 8/24 handlers refused within budget
-  (`docs/reports/primitives_finds.md`); Strassen-class rediscovery
+  found — the v3 handler grammar (broadcast views admitted into `ew`)
+  now mints verified bodies for 20/24; the 4 refusals are
+  select/linear-bearing shapes — an index-family wall, not budget
+  (`docs/reports/prim_handlers.md`); Strassen-class rediscovery
   remains out of reach of per-step play (@sec-frontier).
 
 # Reproduction {#sec-repro}
