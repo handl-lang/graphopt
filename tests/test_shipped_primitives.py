@@ -3,21 +3,21 @@
 ``bench/drivers/overnight.py --corpus zoo-prim`` minted ``synop_*``
 primitive ops for manual subgraph shapes recurring across the held-out
 zoo — 21 folds admitted by the full gauntlet
-(``docs/reports/results_overnight_prim_v2.json``).  They were
-runtime-minted and died with the driver;
-:mod:`mlopt_discovery.shipped_primitives` is their shipped home: the
-verbatim records materialize into the same objects, ``register()``
-seats the op definitions and their torch denotations on the ambient
-binding table, and the folds deploy through the ``rules=`` seam as an
-opt-in set — never folded into ``DEFAULT``.
+(``docs/reports/results_overnight_prim_v2.json``).  The laws are
+core-shipped, default-on: the verbatim records embed in
+``mlopt_core.laws.minted`` and the folds ride ``MINTED_RULES`` into
+``DEFAULT``.  :mod:`mlopt_discovery.shipped_primitives` is the
+denotation registry — ``register()`` seats the torch bindings on the
+ambient table so every ``TorchSink`` can lower a folded ``synop_*``.
 
 The pins here cover the shipping contract end to end: records are
 frozen and honest (the mint's own site-check measurements ride each
-record), materialization reproduces the minted objects, registration
-is idempotent and reaches already-built sinks, each fold fires and
-wins extraction on a real bound module, the denotation verifies
-``equal`` at every bound site (the mint's own gate), and the
-search → lower → verify path delivers an equivalent module.
+record), the folds are the same objects the mint admitted and live
+in core ``DEFAULT``, registration is idempotent and reaches
+already-built sinks, each fold fires and wins extraction on a real
+bound module, the denotation verifies ``equal`` at every bound site
+(the mint's own gate), and the search → lower → verify path delivers
+an equivalent module on shipped defaults — no opt-in.
 """
 
 from __future__ import annotations
@@ -101,11 +101,16 @@ class TestRecords:
             # way; the verdict is provenance, not a gate)
             assert rec["handler"]["verdict"] in ("minted", "refused")
 
-    def test_machine_minted_ledger_covers_all_three_name_kinds(self):
+    def test_machine_minted_ledger_covers_the_shipped_ops(self):
+        # the domain-side ledger is the op names this module
+        # denotation-registers; the fold/premise names classify
+        # through core's MACHINE_SHIPPED
         for synop in sp.SYNOP_SHIPPED:
-            assert f"prim:{synop}" in sp.MACHINE_MINTED
-            assert f"{synop}.expand" in sp.MACHINE_MINTED
             assert synop in sp.MACHINE_MINTED
+            from mlopt_core.laws.provenance import MACHINE_SHIPPED
+
+            assert f"prim:{synop}" in MACHINE_SHIPPED
+            assert f"{synop}.expand" in MACHINE_SHIPPED
 
 
 class TestMaterialize:
@@ -327,7 +332,7 @@ class TestDeliver:
         assert got < base
 
     def test_search_lower_verify_end_to_end(self):
-        """HighwayGate + prim_default: the fold ships through the API."""
+        """HighwayGate on shipped DEFAULT: the fold delivers, no opt-in."""
         from mlopt_discovery import zoo as zoo_mod
         from mlopt_orchestrator.optimize import lower, search
         from mlopt_torch.adapters import TorchSink, TorchSource
@@ -341,7 +346,6 @@ class TestDeliver:
             model.eval().double(),
             feeds,
             source=TorchSource(),
-            rules=sp.prim_default(),
             max_iterations=20,
         )
         assert "synop_bb8c54c201" in _ops_of(res.term)
@@ -358,13 +362,15 @@ class TestDeployment:
         assert len(rs.rules) == _N_PRIM
         assert all(isinstance(r, Rewrite) for r in rs)
 
-    def test_folds_never_in_core_default(self):
-        # the human-bar provenance boundary: domain-side machine laws
-        # stay out of DEFAULT — the pack discipline
-        assert not ({r.name for r in DEFAULT} & set(sp.MACHINE_MINTED))
-        assert not (
-            {r.name for r in DEFAULT} & {p.name for p in sp.premises()}
-        )
+    def test_folds_in_core_default_premises_never(self):
+        # the promotion contract: the folds ARE core DEFAULT — the
+        # default-on ship — while the definitional premises stay out
+        # of every saturation set (expanding synop_* re-adds the
+        # unfolded spelling); the op names are denotations, not laws
+        names = {r.name for r in DEFAULT}
+        assert {f.name for f in sp.folds()} <= names
+        assert names.isdisjoint({p.name for p in sp.premises()})
+        assert names.isdisjoint(sp.MACHINE_MINTED)
 
     def test_prim_default_unions_onto_default(self):
         rs = sp.prim_default()

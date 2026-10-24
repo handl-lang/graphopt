@@ -240,7 +240,11 @@ def test_ablated_arms_partition_the_default_ruleset():
     full = default_rules()
     promoted = _promoted_ruleset()
     human = full - promoted
-    assert len(promoted.rules) == len(MACHINE_SHIPPED)
+    # the promoted *rules* — MACHINE_SHIPPED also names the 21
+    # synop_*.expand premise axioms, which ship attached to the
+    # prim folds but never as saturation rules
+    shipped_rule_names = MACHINE_SHIPPED & {r.name for r in ALL_RULES}
+    assert len(promoted.rules) == len(shipped_rule_names) == 34
     assert len(human.rules) + len(promoted.rules) == len(full.rules)
     assert {r.name for r in human.rules}.isdisjoint(MACHINE_SHIPPED)
     # machine-arm rules all classify machine under the registry.
