@@ -1177,6 +1177,7 @@ class TestCorpusZooPrim:
             "beam": 32,
             "max_expand": 2000,
             "bootstrap": False,
+            "family_mint": True,
         }
         for e in _cells(cells, "episode"):
             assert e["record"]["case"]["prim"]["max_ops"] == 4
