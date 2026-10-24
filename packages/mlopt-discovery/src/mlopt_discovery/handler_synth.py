@@ -77,6 +77,17 @@ THE GRAMMAR (descriptors are plain data — tuples, strings, numbers):
   read-then-map order: the fused kernel projects only the gathered
   slice, equal to select-of-linear exactly when the read axis is not
   the contracted feature axis, which the verifier measures.
+* ``("family", desc, sub)`` — the minted-family arm: *desc* is a
+  plain-data family descriptor (``{gate, leaves, broadcast,
+  requires, orders}`` — what :mod:`mlopt_discovery.family_synth`
+  mints) and *sub* a pointwise tree over its leaf vocabulary.  The
+  descriptor's ``leaves`` resolve through the ambient bindings table
+  (:func:`_family_bindings` — the generalised
+  :func:`_gather_bindings`): each leaf names the ambient op it
+  re-seats, so the body's vocabulary is the family's own, never the
+  spelled ops'.  ``gather`` is the hand-written instance of this
+  shape; a minted descriptor serves the specs the shipped families
+  refuse through the ``extra_families`` injection seam.
 
 The ``ew`` replay is proposed not only for strictly elementwise
 specs but for *broadcast-elementwise* ones — specs whose ops are the
@@ -260,7 +271,12 @@ _BUDGET = 2048
 #: the vocabulary it was verified under.  v3 admits broadcast views
 #: (:data:`BROADCAST_OPS`) inside the ``ew`` replay; v4 adds the
 #: ``gather`` family — index-reads (``at``) and per-position affines
-#: (``aff``) as view leaves under a pointwise tree.
+#: (``aff``) as view leaves under a pointwise tree, plus (later in
+#: the same grammar epoch) the generic ``("family", descriptor,
+#: sub)`` arm: the ``extra_families`` injection seam serves minted
+#: descriptors (:mod:`mlopt_discovery.family_synth`), whose own
+#: ``minted-family`` provenance records the descriptor — the body
+#: vocabulary itself is unchanged.
 _GRAMMAR_VERSION = "handler-grammar-v4"
 
 
@@ -285,6 +301,9 @@ def eval_body(body: Any, env: dict, bindings: dict) -> Any:
         return _eval_spec(body[1], env, bindings)
     if kind == "gather":
         return _eval_spec(body[1], env, _gather_bindings(bindings))
+    if kind == "family":
+        _, desc, sub = body
+        return _eval_spec(sub, env, _family_bindings(bindings, desc))
     if kind == "contract":
         _, eq, lhs, rhs = body
         return torch.einsum(
@@ -331,7 +350,7 @@ def eval_body(body: Any, env: dict, bindings: dict) -> Any:
 
 
 def _gather_bindings(bindings: dict) -> dict:
-    """The ambient table plus the ``gather`` body's own leaf ops.
+    """Return the ambient table plus the ``gather`` body's leaf ops.
 
     ``at`` is the index-read leaf — ``t.select(dim, index)``, the
     fused kernel's gathered operand fetch.  ``aff`` is the
@@ -347,6 +366,29 @@ def _gather_bindings(bindings: dict) -> dict:
             int(kw["dim"]), int(kw["index"])
         ),
         "aff": bindings["linear"],
+    }
+
+
+def _family_bindings(bindings: dict, desc: dict) -> dict:
+    """Return the ambient table plus a descriptor's own leaf ops.
+
+    The generalised :func:`_gather_bindings`: the descriptor's
+    ``leaves`` map each family leaf name to the ambient op it
+    re-seats (``binds``) — ``gather``'s ``at``/``aff`` are the
+    hand-written instance (``at`` re-seats ``select``, ``aff``
+    ``linear``).  The leaf vocabulary stays the family's own — a
+    body over it is a re-expression of the site, not a replay — and
+    every leaf resolves through the same ``bindings`` dispatch as
+    any other descriptor.  A leaf naming an ambient op the table
+    lacks raises ``KeyError`` at eval: a malformed descriptor fails
+    loudly.
+    """
+    return {
+        **bindings,
+        **{
+            name: bindings[rule["binds"]]
+            for name, rule in desc["leaves"].items()
+        },
     }
 
 
@@ -1158,7 +1200,7 @@ def _gather_marked(s: Any) -> bool:
 
 
 def _gather_seeds(spec: Any) -> list:
-    """The ``gather`` candidates for *spec* — at most two.
+    """Return the ``gather`` candidates for *spec* — at most two.
 
     The index coordinates and affine triples are *read off the spec*
     (its own ``select`` ``dim``/``index`` attrs and ``linear``
@@ -1175,6 +1217,163 @@ def _gather_seeds(spec: Any) -> list:
         if sub is not None and _gather_marked(sub) and sub not in subs:
             subs.append(sub)
     return [("gather", s) for s in subs]
+
+
+# ---------------------------------------------------------------------------
+#  Minted-family descriptors — the generic ("family", desc, sub) arm
+# ---------------------------------------------------------------------------
+#
+# A family descriptor is plain data — ``{gate, leaves, broadcast,
+# requires, orders}`` — parameterising the same translation
+# discipline ``gather`` hand-codes above.  ``gate`` names the spec
+# ops the family re-expresses; ``leaves`` maps each leaf name to its
+# rule ``{kind, from, binds}`` (``kind: "read"`` — an index-read
+# carrying literal ``dim``/``index`` attrs, or ``kind: "map"`` — a
+# metavar-args map); ``broadcast`` the view ops its trees may
+# interleave; ``requires`` the marker leaf a translated tree must
+# carry (``"*"`` = any leaf) — the no-tautology gate; ``orders`` the
+# read/map composition orders its seeds try
+# (:data:`family_synth.ORDERS` — ``read_then_map`` the fused
+# ``aff(at(x))`` first, ``map_then_read`` the denotation-equal
+# ``at(aff(x))`` fallback).  ``_family_translate`` is
+# :func:`_gather_view` with the descriptor in place of the hard-coded
+# vocabulary; the parity is a test, not an assumption.
+
+
+def _family_leaf(s: Any, desc: dict) -> bool:
+    """Whether *s* is a legal leaf under *desc* — a view-leaf.
+
+    ``_gather_leaf`` parameterised by the descriptor: a metavar, a
+    leaf read/map, or a broadcast view of one of those.  Anything
+    deeper — a composite elementwise tree under an index-read — is
+    the family's declared gap, not a hidden rewrite.
+    """
+    if isinstance(s, str):
+        return True
+    if isinstance(s, (tuple, list)) and s:
+        if s[0] in desc["leaves"]:
+            return True
+        if s[0] in tuple(desc["broadcast"]):
+            inner = [e for e in s[1:] if not isinstance(e, dict)]
+            return len(inner) == 1 and _family_leaf(inner[0], desc)
+    return False
+
+
+def _leaf_rule_for(desc: dict, op: str) -> tuple | None:
+    """Return the ``(leaf_name, rule)`` translating op *op*, if any."""
+    if op not in set(desc["gate"]):
+        return None
+    for name, rule in desc["leaves"].items():
+        if rule["from"] == op:
+            return name, rule
+    return None
+
+
+def _family_translate(s: Any, desc: dict, order: str) -> Any:
+    """Translate *s* into *desc*'s leaf vocabulary, or ``None``.
+
+    :func:`_gather_view` with the descriptor supplying the
+    vocabulary: pointwise ops and admitted broadcast views keep their
+    spelled shape; a gated op becomes its leaf — a ``read`` rule
+    carries the spec's literal attrs, a ``map`` rule metavar args
+    only.  Under ``order="read_then_map"`` a read-of-map composes
+    fused — ``map(read(x), w, b)``, the fused kernel's own order;
+    otherwise read-of-map — ``read(map(x,w,b))``, the
+    denotation-equal fallback.  ``None`` means the spec sits outside
+    the family: an op outside the union vocabulary, a read without
+    its literal attrs, a map over composite args, or a read whose
+    source is a composite — each a measured refusal, never a silent
+    re-spelling.
+    """
+    if isinstance(s, str):
+        return s
+    if not isinstance(s, (tuple, list)) or not s:
+        return s  # const leaf — a family tree may carry spec consts
+    op = s[0]
+    args = [e for e in s[1:] if not isinstance(e, dict)]
+    attrs = [e for e in s[1:] if isinstance(e, dict)]
+    if op in tuple(desc["broadcast"]) and len(args) == 1:
+        inner = _family_translate(args[0], desc, order)
+        return None if inner is None else (op, inner, *attrs)
+    leaf = _leaf_rule_for(desc, op)
+    if leaf is not None:
+        name, rule = leaf
+        if rule["kind"] == "read":
+            if len(args) != 1 or len(attrs) != 1:
+                return None
+            a = attrs[0]
+            if any(k not in a for k in rule["attrs"]):
+                return None
+            inner = _family_translate(args[0], desc, order)
+            if not _family_leaf(inner, desc):
+                return None
+            idx = {k: a[k] for k in rule["attrs"]}
+            if (
+                order == "read_then_map"
+                and isinstance(inner, (tuple, list))
+                and inner
+                and inner[0] in desc["leaves"]
+                and desc["leaves"][inner[0]]["kind"] == "map"
+            ):
+                return (inner[0], (name, inner[1], idx), *inner[2:])
+            return (name, inner, idx)
+        if rule["kind"] == "map":
+            # the map leaf — metavar args only; a map over composite
+            # operands is the contract family's claim.
+            if (
+                args
+                and all(isinstance(e, str) for e in args)
+                and not attrs
+            ):
+                return (name, *args)
+            return None
+    if op in ELEMENTWISE:
+        subs = [_family_translate(e, desc, order) for e in args]
+        if any(e is None for e in subs):
+            return None
+        return (op, *subs, *attrs)
+    return None
+
+
+def _family_marked(s: Any, desc: dict) -> bool:
+    """Whether *s* names the marker leaf the descriptor requires.
+
+    ``_gather_marked`` parameterised: ``requires`` names the one leaf
+    a translated tree must carry (``"*"`` — any leaf).  A translated
+    tree with no leaf is either pure ``ew`` (which the replay claims)
+    or a tautology in the family's name — the gate keeps it closed.
+    """
+    if isinstance(s, (tuple, list)) and s:
+        req = desc["requires"]
+        if s[0] in desc["leaves"] and (req == "*" or s[0] == req):
+            return True
+        return any(
+            _family_marked(e, desc)
+            for e in s[1:]
+            if not isinstance(e, dict)
+        )
+    return False
+
+
+def _family_seeds(spec: Any, desc: dict) -> list:
+    """Return the descriptor's candidates for *spec* — ≤ ``len(orders)``.
+
+    The leaf rules, attrs and read coordinates are *read off the
+    spec* (the same discipline ``keepdim`` and ``REDUCE_AXES``
+    apply), the marker gate keeps the no-tautology bar, and the
+    orders try the fused read-then-map composition first — the
+    grammar translates the structure, the verifier decides.
+    """
+    subs: list = []
+    for order in desc["orders"]:
+        sub = _family_translate(spec, desc, order)
+        if (
+            sub is not None
+            and _family_marked(sub, desc)
+            and sub not in subs
+        ):
+            subs.append(sub)
+    return [("family", desc, s) for s in subs]
 
 
 def _canonical_norm_seeds(
@@ -1326,6 +1525,7 @@ def propose_bodies(
     spec: Any,
     *,
     families: tuple | None = None,
+    extra_families: tuple | None = None,
     max_ops: int = _MAX_EW_OPS,
 ) -> Any:
     """Enumerate candidate handler bodies for *spec*, lazily.
@@ -1340,6 +1540,12 @@ def propose_bodies(
     then every admitted family's columns interleave round-robin.
     *families* restricts the template vocabulary; *max_ops* bounds
     each elementwise factor's depth (``_MAX_EW_OPS`` tops the grammar).
+
+    *extra_families* is the injection seam for minted family
+    descriptors (:mod:`mlopt_discovery.family_synth`): each
+    descriptor's translated seeds (:func:`_family_seeds`) are
+    proposed ahead of the column walk, so a minted family serves the
+    specs the shipped families refuse with no new machinery.
     """
     fams = families if families is not None else _FAMILIES
     metas = _spec_metas(spec)
@@ -1366,6 +1572,9 @@ def propose_bodies(
         yield from _canonical_postnorm_seeds(
             metas, consts, axes, keepdim
         )
+    if extra_families and metas:
+        for desc in extra_families:
+            yield from _family_seeds(spec, desc)
     gens = _family_gens(fams, metas, consts, max_ops, axes, keepdim)
     yield from _round_robin(gens)
 
@@ -1525,6 +1734,22 @@ def _refusal_note(tried: int, budget: int) -> str:
     return f"grammar exhausted: none of {tried} candidates verified"
 
 
+def _body_family(body: Any) -> str:
+    """Return the report's family name for one minted body.
+
+    Built-in bodies report their tag (``gather``); a ``("family",
+    desc, sub)`` body reports ``family:<desc name>`` so the verdict
+    row distinguishes which minted descriptor carried the spec.
+    """
+    if (
+        body[0] == "family"
+        and len(body) > 1
+        and isinstance(body[1], dict)
+    ):
+        return f"family:{body[1].get('name', 'anon')}"
+    return body[0]
+
+
 def _provenance(
     body: Any,
     dom: list,
@@ -1540,7 +1765,7 @@ def _provenance(
     return {
         "origin": "minted",
         "grammar": _GRAMMAR_VERSION,
-        "family": body[0],
+        "family": _body_family(body),
         "seed": seed,
         "budget": budget,
         "tried": tried,
@@ -1559,6 +1784,7 @@ def mint_handlers(
     *,
     domain: Any = None,
     families: tuple | None = None,
+    extra_families: tuple | None = None,
     covered: set | None = None,
     seed: int = 0,
     budget: int = _BUDGET,
@@ -1602,7 +1828,9 @@ def mint_handlers(
             spec, dom, seed, bindings, adversarial
         )
         verdict, tried, best = None, 0, float("inf")
-        for body in propose_bodies(spec, families=families):
+        for body in propose_bodies(
+            spec, families=families, extra_families=extra_families
+        ):
             if tried >= budget:
                 break
             res = _verify_envs(body, envs, refs, bindings, rtol, atol)
@@ -1644,7 +1872,7 @@ def mint_handlers(
             {
                 "verdict": "minted",
                 "tag": tag,
-                "family": body[0],
+                "family": _body_family(body),
                 "tried": tried,
                 "max_err": res.max_err,
             }
