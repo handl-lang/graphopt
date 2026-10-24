@@ -987,6 +987,165 @@ class TestCorpusZooPrim:
         assert payload["prim"]["k"] == 2
         assert "corpus: `zoo-prim`" in (tmp_path / "out.md").read_text()
 
+    def test_prim_window_bounds_mined_depth(self):
+        """``max_ops`` caps the mined shape's op-count.
+
+        A shared 4-op skeleton (``tanh(sub(a, mul(a, sigmoid(b))))``)
+        qualifies under the default window and is excluded at
+        ``max_ops=3`` — its 3-op subshapes still mine and mint, so
+        the pool is never empty; only the depth ceiling moves.
+        """
+        from mlopt_core.ir import Op, TensorType, Var
+
+        def v(n):
+            return Var(n, TensorType((2, 4)))
+
+        deep = lambda a, b: Op.make(  # noqa: E731
+            "tanh",
+            Op.make("sub", a, Op.make("mul", a, Op.make("sigmoid", b))),
+        )
+        roots = {"m1": deep(v("x"), v("y")), "m2": deep(v("p"), v("q"))}
+        _c, _m, s3 = on._prim_pool(roots, 2, max_ops=3)
+        assert s3["max_ops"] == 3
+        assert s3["pool"] >= 1
+        assert all(int(ops) <= 3 for ops in s3["depth_dist"])
+        _c, meta, s6 = on._prim_pool(roots, 2, max_ops=6)
+        assert s6["depth_dist"].get("4", 0) == 1
+        assert any(m["prim"]["ops"] == 4 for m in meta.values())
+
+    def test_prim_depth_dist_counts_qualified(self):
+        """``depth_dist`` is the K-bound set's op-count histogram."""
+        _cands, _meta, stats = on._prim_pool(self._roots(), 2)
+        assert sum(stats["depth_dist"].values()) == stats["kbound"]
+        # sub(a, mul(a, sigmoid(b))) is 3 ops; mul(a, sigmoid(b)) is 2
+        assert stats["depth_dist"].get("3", 0) >= 1
+        assert stats["depth_dist"].get("2", 0) >= 1
+
+    def test_prim_cap_bounds_the_pool(self):
+        """``cap`` keeps the pool to the top-gain slice, flagged."""
+        cands, _meta, stats = on._prim_pool(self._roots(), 2, cap=1)
+        assert len(cands) == 1
+        assert stats["pool"] == 1
+        assert stats["cap"] == 1
+        # more shapes qualified than the cap admitted — the
+        # truncation is recorded, not hidden in the funnel.
+        assert stats["scan_capped"] is True
+        assert stats["mined_total"] >= stats["mined"]
+
+    def test_prim_nested_records_synop_bootstrap(self):
+        """A pooled deeper shape embedding a minted synop is recorded.
+
+        ``sub(a, mul(a, sigmoid(b)))`` mined from m1/m2 (and inside
+        m3/m4's ``mul(c, .)`` wrapper) is a minted synop; the deeper
+        shape's own proper subterm alpha-matches it — the cheap
+        vocabulary-bootstrap measurement (the corpus itself never
+        contains synop ops, so the match means the deeper mint could
+        compose over the shipped primitive).
+        """
+        from mlopt_core.ir import Op, TensorType, Var
+
+        def v(n):
+            return Var(n, TensorType((2, 4)))
+
+        shared = lambda a, b: Op.make(  # noqa: E731
+            "sub", a, Op.make("mul", a, Op.make("sigmoid", b))
+        )
+        roots = {
+            "m1": shared(v("x"), v("y")),
+            "m2": shared(v("p"), v("q")),
+            "m3": Op.make("mul", v("c"), shared(v("x"), v("y"))),
+            "m4": Op.make("mul", v("d"), shared(v("p"), v("q"))),
+        }
+        _cands, meta, stats = on._prim_pool(roots, 2)
+        synops = {m["prim"]["synop"] for m in meta.values()}
+        assert stats["nested"]
+        for n in stats["nested"]:
+            assert n["outer"] in synops
+            assert all(m in synops for m in n["inner"])
+        embedders = {
+            m["prim"]["synop"]: m["prim"]["embeds"]
+            for m in meta.values()
+            if m["prim"].get("embeds")
+        }
+        assert embedders
+
+    def test_prim_knobs_resolves_defaults_preset_overrides(self):
+        """explicit flag > --prim-deep preset > shipped defaults."""
+        base = on._prim_knobs(None)
+        assert base["cap"] == on._PRIM_CAP
+        assert base["max_ops"] == on._PRIM_MAX_OPS
+        deep = on._prim_knobs(dict(on._PRIM_DEEP))
+        assert deep["max_ops"] == on._PRIM_DEEP["max_ops"]
+        assert deep["cap"] == on._PRIM_DEEP["cap"]
+        assert deep["cap"] > base["cap"]
+        over = on._prim_knobs({**on._PRIM_DEEP, "cap": 8})
+        assert over["cap"] == 8
+        assert over["max_ops"] == on._PRIM_DEEP["max_ops"]
+
+    def test_prim_knob_flags_rejected_off_corpus(self, tmp_path):
+        """``--prim-*`` on a non-prim corpus errors, not ignores."""
+        with pytest.raises(SystemExit):
+            on.main(
+                _argv(
+                    tmp_path,
+                    "--dry",
+                    "--corpus",
+                    "grammar",
+                    "--prim-cap",
+                    "48",
+                )
+            )
+        with pytest.raises(SystemExit):
+            on.main(
+                _argv(
+                    tmp_path,
+                    "--dry",
+                    "--corpus",
+                    "zoo-xmodule",
+                    "--prim-deep",
+                )
+            )
+
+    def test_prim_window_is_protocol_pinned(self, tmp_path):
+        """A narrowed window rides the protocol + the case records.
+
+        ``--prim-max-ops 4 --prim-cap 8`` lands in the manifest — a
+        resume under a different window restarts loudly — and in each
+        paged case so an arena rebuild replays the identical hunt.
+        """
+        assert (
+            on.main(
+                _argv(
+                    tmp_path,
+                    "--dry",
+                    "--corpus",
+                    "zoo-prim",
+                    "--prim-max-ops",
+                    "4",
+                    "--prim-cap",
+                    "8",
+                )
+            )
+            == 0
+        )
+        man, cells = _records(tmp_path / "ck.jsonl")
+        assert man["protocol"]["prim"] == {
+            "min_ops": 2,
+            "max_ops": 4,
+            "cap": 8,
+            "beam": 32,
+            "max_expand": 2000,
+        }
+        for e in _cells(cells, "episode"):
+            assert e["record"]["case"]["prim"]["max_ops"] == 4
+            assert e["record"]["case"]["prim"]["cap"] == 8
+        payload = json.loads((tmp_path / "out.json").read_text())
+        assert payload["prim"]["max_ops"] == 4
+        assert payload["prim"]["cap"] == 8
+        assert all(
+            int(ops) <= 4 for ops in payload["prim"]["depth_dist"]
+        )
+
 
 class TestResume:
     """A protocol-matched resume replays cells, never re-measures."""

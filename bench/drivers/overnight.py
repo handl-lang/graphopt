@@ -163,7 +163,15 @@ lacks), and the same sieve.  ``handler_synth.mint_handlers`` runs on
 each shape as the synthesis measurement: a grammar body verified on
 the bound-site domain rides the record as provenance (the machine
 found a compressed semantics); a refusal keeps the definitional op
-and records the measured gap.  One shared pool, paged like
+and records the measured gap.  The hunt itself is windowed:
+``--prim-min-ops`` / ``--prim-max-ops`` bound the mined shape's
+op-count (deeper windows re-find skeletons under different
+bracketings — the alpha-dedup + denoted gate keep one name per
+distinct shape, and ``depth_dist`` in the report records the
+qualified set's op-count histogram), ``--prim-cap`` bounds the pool,
+``--prim-beam`` / ``--prim-max-expand`` bound the mining frontier,
+and ``--prim-deep`` presets the widened hunt (12 ops, 48-fold pool);
+the resolved window is protocol-pinned.  One shared pool, paged like
 ``zoo-xmodule``; the document lands at
 ``docs/reports/results_overnight_prim.md`` and the mint is
 protocol-pinned as ``corpus-prim``.
@@ -176,6 +184,8 @@ Run::
     .venv/bin/python bench/drivers/overnight.py --dry --corpus zoo-real --compose
     .venv/bin/python bench/drivers/overnight.py --dry --corpus zoo-xmodule
     .venv/bin/python bench/drivers/overnight.py --dry --corpus zoo-prim
+    .venv/bin/python bench/drivers/overnight.py --corpus zoo-prim \
+        --prim-deep --out docs/reports/results_overnight_prim_deep.md
     .venv/bin/python bench/drivers/overnight.py --episodes 48 \
         --player playbook --referee full --resume
 """
@@ -325,9 +335,29 @@ _PRIM_FAMILY = "prim-fold"
 _PRIM_CAP = 24
 
 #: ``mine_candidates`` size window for the prim arm — the same deep-
-#: shape bounds the xmodule mint reads.
+#: shape bounds the xmodule mint reads.  ``--prim-min-ops`` /
+#: ``--prim-max-ops`` / ``--prim-cap`` widen it (the ``--prim-deep``
+#: preset below); the resolved window is protocol-pinned so a ledger
+#: minted under a different hunt restarts loudly.
 _PRIM_MIN_OPS = 2
 _PRIM_MAX_OPS = 6
+
+#: The mining beam / pop bound — ``mine_candidates``' own defaults.
+#: Deeper windows need the wider frontier the deep preset carries.
+_PRIM_BEAM = 32
+_PRIM_MAX_EXPAND = 2000
+
+#: ``--prim-deep`` — the widened hunt: shapes up to 12 ops, a 48-fold
+#: pool, and a mining frontier wide/deep enough to reach them.  An
+#: explicit ``--prim-*`` flag overrides the preset's value for that
+#: knob.
+_PRIM_DEEP: dict[str, int] = {
+    "min_ops": _PRIM_MIN_OPS,
+    "max_ops": 12,
+    "cap": 48,
+    "beam": 64,
+    "max_expand": 8000,
+}
 
 #: Bound on bound sites a candidate's verify/domain stage walks.
 _PRIM_SITES = 16
@@ -930,7 +960,12 @@ _XPOOL: dict = {}
 
 
 def _xmodule_cases(
-    seed: int, episodes: int, *, page: int, xbind: int
+    seed: int,
+    episodes: int,
+    *,
+    page: int,
+    xbind: int,
+    prim: dict | None = None,
 ) -> list:
     """One case per pool page — the corpus-level mint, paged.
 
@@ -938,7 +973,10 @@ def _xmodule_cases(
     episode boards are ``page``-sized slices of the one shared pool,
     exactly as ``grammar`` pages the enumerated stream.
     ``wseed0`` pins the workload-build draws for the whole-registry
-    export so a resume's pool rebuild is byte-identical.
+    export so a resume's pool rebuild is byte-identical.  ``prim``
+    (zoo-prim only) is the resolved mining window
+    (:func:`_prim_knobs`) — it rides the case record so a rebuild
+    re-mints under the same hunt.
     """
     return [
         {
@@ -946,6 +984,7 @@ def _xmodule_cases(
             "page": page,
             "xbind": xbind,
             "wseed0": seed,
+            **({"prim": dict(prim)} if prim else {}),
         }
         for i in range(episodes)
     ]
@@ -1471,6 +1510,51 @@ def _freeze_spec(spec: Any, subst: dict, attr_mvars: tuple) -> Any:
     return _spec_bind(spec, attrs, attr_mvars)
 
 
+def _prim_knobs(prim: dict | None = None) -> dict:
+    """The resolved mining window — defaults overridden by *prim*.
+
+    The ``min_ops``/``max_ops``/``cap``/``beam``/``max_expand`` knobs
+    the ``--prim-*`` flags and the ``--prim-deep`` preset write; the
+    resolved dict is protocol-pinned (``protocol["prim"]``) and rides
+    the case record, so a resume's pool rebuild replays the identical
+    hunt.
+    """
+    out = {
+        "min_ops": _PRIM_MIN_OPS,
+        "max_ops": _PRIM_MAX_OPS,
+        "cap": _PRIM_CAP,
+        "beam": _PRIM_BEAM,
+        "max_expand": _PRIM_MAX_EXPAND,
+    }
+    if prim:
+        out.update({k: v for k, v in prim.items() if v is not None})
+    return out
+
+
+def _sub_alphas(pat: Any) -> set:
+    """Alpha-normal keys of *pat*'s proper (non-root) Op subterms.
+
+    The loop-closure probe's vocabulary: a deeper mined shape whose
+    proper subterm alpha-matches a minted ``synop_*``'s denotation
+    could be spelled *through* that synop — the composition the
+    mint-over-minted phase would exploit (measured here, not wired).
+    """
+    from mlopt_core.ir import Op
+    from mlopt_discovery.antiunify import _alpha_norm
+
+    out: set[str] = set()
+
+    def go(t: Any) -> None:
+        for a in t.args:
+            if isinstance(a, Op):
+                out.add(_alpha_norm(a))
+                go(a)
+
+    if isinstance(pat, Op):
+        go(pat)
+    return out
+
+
 def _prim_pool(
     roots: dict,
     k: int,
@@ -1478,6 +1562,10 @@ def _prim_pool(
     cap: int = _PRIM_CAP,
     budget: int = _PRIM_BUDGET,
     site_cap: int = _PRIM_SITES,
+    min_ops: int = _PRIM_MIN_OPS,
+    max_ops: int = _PRIM_MAX_OPS,
+    beam: int = _PRIM_BEAM,
+    max_expand: int = _PRIM_MAX_EXPAND,
 ) -> tuple:
     """The primitive-mint pool: ``(candidates, meta, stats)``.
 
@@ -1488,9 +1576,17 @@ def _prim_pool(
     carrying the ``synop_*.expand`` definitional premise so the cert
     leg's anchored derivation has the axiom the bare bank lacks.
 
+    ``min_ops``/``max_ops``/``beam``/``max_expand`` bound the
+    ``mine_candidates`` hunt (the ``--prim-*`` knobs); ``cap`` bounds
+    the pool to its top-``gain`` slice.  A deeper window re-finds the
+    same skeleton under different bracketings — the alpha-dedup
+    inside ``mine_candidates`` plus the denoted gate keep one name
+    per distinct shape.
+
     Per-shape funnel, each refusal recorded:
 
     * ``kbound`` — shapes binding >= k modules (the mint's surface);
+      ``depth_dist`` is the qualified set's op-count histogram;
     * ``denoted`` — skipped as already-named (a shipped fold or
       handler op spells the same denotation);
     * ``unevaluable`` — an op in the pattern has no torch binding,
@@ -1505,7 +1601,15 @@ def _prim_pool(
     * ``minted`` / ``refused`` — ``handler_synth.mint_handlers``'
       grammar verdict on the bound-site domain (a verified body
       rides the record as provenance; a refusal keeps the
-      definitional op and names the measured gap).
+      definitional op and names the measured gap — a shape carrying
+      ops no grammar family claims is a recorded family wall, not a
+      silent drop).
+
+    Post-mint, ``nested`` records the loop-closure measurement: every
+    pooled shape whose own proper subterm alpha-matches another
+    minted synop's denotation — the cheap read on whether mining over
+    a synop-aware corpus would compose (ADR-0157's mint-over-minted
+    phase is measured here, not wired).
     """
     import hashlib
 
@@ -1530,10 +1634,25 @@ def _prim_pool(
     for r in roots.values():
         eg.add_term(r)
     denoted = _denoted_shapes()
+    mined_all = mine_candidates(
+        eg,
+        min_uses=k,
+        min_ops=min_ops,
+        max_ops=max_ops,
+        beam=beam,
+        max_expand=max_expand,
+    )
     stats: dict[str, Any] = {
         "k": k,
+        "min_ops": min_ops,
+        "max_ops": max_ops,
+        "cap": cap,
+        "beam": beam,
+        "max_expand": max_expand,
+        "mined_total": len(mined_all),
         "mined": 0,
         "kbound": 0,
+        "depth_dist": {},
         "denoted": 0,
         "unevaluable": 0,
         "gate_failed": 0,
@@ -1541,16 +1660,15 @@ def _prim_pool(
         "minted": 0,
         "refused": 0,
         "pool": 0,
+        "scan_capped": False,
+        "nested": [],
     }
+    depth: Counter = Counter()
     cands: list = []
     meta: dict[int, dict] = {}
-    for cand in mine_candidates(
-        eg,
-        min_uses=k,
-        min_ops=_PRIM_MIN_OPS,
-        max_ops=_PRIM_MAX_OPS,
-    ):
+    for cand in mined_all:
         if len(cands) >= cap:
+            stats["scan_capped"] = True
             break
         stats["mined"] += 1
         pat = cand.pattern
@@ -1560,6 +1678,7 @@ def _prim_pool(
         if len(mods) < k:
             continue
         stats["kbound"] += 1
+        depth[cand.op_count] += 1
         norm = _alpha_norm(pat)
         if norm in denoted:
             stats["denoted"] += 1
@@ -1701,6 +1820,8 @@ def _prim_pool(
             "prim": {
                 "synop": name,
                 "alpha": norm,
+                "ops": cand.op_count,
+                "opset": sorted(_pat_ops(pat)),
                 "mods": sorted(mods),
                 "sites": len(sites),
                 "equal_sites": equal,
@@ -1708,22 +1829,52 @@ def _prim_pool(
             },
         }
     stats["pool"] = len(cands)
+    stats["depth_dist"] = {str(n): c for n, c in sorted(depth.items())}
+    # Loop-closure probe (cheap version): which pooled shapes carry a
+    # *minted synop's denotation* as a proper subterm.  The corpus
+    # e-graph never contains the synop ops themselves — they were
+    # minted here — so a match means the deeper shape would compose
+    # over the shipped vocabulary were it seated.  Measured over the
+    # pooled set only; the scan may be cap-truncated above.
+    alpha_name = {
+        meta[i]["prim"]["alpha"]: meta[i]["prim"]["synop"] for i in meta
+    }
+    for i, rec in meta.items():
+        p = rec["prim"]
+        embeds = sorted(
+            {
+                alpha_name[a]
+                for a in _sub_alphas(cands[i].lhs)
+                if a in alpha_name
+            }
+            - {p["synop"]}
+        )
+        if embeds:
+            p["embeds"] = embeds
+            stats["nested"].append(
+                {"outer": p["synop"], "inner": embeds}
+            )
     return cands, meta, stats
 
 
-def _prim_pool_cached(seed: int, k: int) -> tuple:
+def _prim_pool_cached(
+    seed: int, k: int, prim: dict | None = None
+) -> tuple:
     """The run's shared prim pool — minted once, sliced per episode.
 
     Minting registers the ``synop_*`` ops + bindings, so calling this
     before the episode loop is also what makes a resume's rebuilt
     candidate cells evaluable again (names are content-hashed — a
-    rebuild re-registers byte-identical bindings).
+    rebuild re-registers byte-identical bindings).  ``prim`` is the
+    resolved mining window (:func:`_prim_knobs`) — part of the cache
+    key so two hunts in one process never share a pool.
     """
-    key = (seed, k)
+    knobs = _prim_knobs(prim)
+    key = (seed, k, tuple(sorted(knobs.items())))
     if key not in _PPOOL:
         env = _xmodule_env(seed)
         roots = {n: rec[0].root for n, rec in env.items() if rec}
-        _PPOOL[key] = _prim_pool(roots, k)
+        _PPOOL[key] = _prim_pool(roots, k, **knobs)
     return _PPOOL[key]
 
 
@@ -1749,7 +1900,9 @@ class _PrimArena(og.OpenArena):
         self.pool_total = 0
         try:
             cands, meta, _stats = _prim_pool_cached(
-                case.get("wseed0", 0), case.get("xbind", 2)
+                case.get("wseed0", 0),
+                case.get("xbind", 2),
+                case.get("prim"),
             )
         except Exception as e:
             self.error = f"mint: {type(e).__name__}: {e}"
@@ -1776,6 +1929,9 @@ def _gen_cases(
             episodes,
             page=kw["page"],
             xbind=kw.get("xbind", 2),
+            # the prim mining window rides the case record so a
+            # resume's arena rebuild replays the identical hunt.
+            prim=kw.get("prim") if corpus == "zoo-prim" else None,
         )
     if corpus in ("zoo", "zoo-real"):
         return _zoo_cases(
@@ -1965,6 +2121,7 @@ def run(
     scan: int = 0,
     compose: int = 0,
     xbind: int = 2,
+    prim: dict | None = None,
     ckpt: Any,
     ctx: Any = None,
     arm_factory: Any = None,
@@ -1987,7 +2144,11 @@ def run(
     each module's term (0 = off; ignored on other corpora).
     ``xbind`` is the zoo-xmodule arm's K — the distinct-module count
     a minted claim's LHS must bind to pool (2+ is the cross-module
-    surface; ignored on other corpora).
+    surface; ignored on other corpora).  ``prim`` is the zoo-prim
+    arm's mining window (:func:`_prim_knobs` —
+    ``min_ops``/``max_ops``/``cap``/``beam``/``max_expand``; the
+    ``--prim-*`` flags / ``--prim-deep`` preset), ignored on other
+    corpora.
     """
     import torch
 
@@ -2003,6 +2164,7 @@ def run(
             scan=scan,
             compose=compose,
             xbind=xbind,
+            prim=prim,
         )
     zenv: dict | None = None
     xstats: dict | None = None
@@ -2019,12 +2181,16 @@ def run(
     elif corpus == "zoo-prim":
         wseed0 = cases[0].get("wseed0", seed) if cases else seed
         xk = cases[0].get("xbind", xbind) if cases else xbind
+        # the mining window rides the case record like ``xbind`` — a
+        # rebuilt pool (resume, arena slice) re-mints under the same
+        # hunt.
+        pk = cases[0].get("prim", prim) if cases else prim
         zenv = _xmodule_env(wseed0)
         # the shared pool mints once here — registering the synop_*
         # ops + bindings before any episode, admit or classify leg
         # touches them (a resume's pool rebuild reproduces the
         # registrations verbatim — names are content-hashed).
-        pstats = _prim_pool_cached(wseed0, xk)[2]
+        pstats = _prim_pool_cached(wseed0, xk, pk)[2]
         if ctx is None:
             ctx = _real_referee_ctx(zenv, referees)
     elif corpus in ("zoo", "zoo-real"):
@@ -2373,8 +2539,16 @@ def render_markdown(summary: dict, *, env: dict | None = None) -> str:
         p = summary["prim"]
         lines.append(
             f"- primitive mint: k={p['k']} · "
-            f"mined={p['mined']} · "
-            f"k-bound={p['kbound']} · "
+            f"window={p.get('min_ops', '?')}..{p.get('max_ops', '?')} "
+            f"ops · cap={p.get('cap', '?')} · "
+            f"mined={p['mined']}"
+            + (
+                f"/{p['mined_total']} total"
+                if p.get("mined_total") is not None
+                else ""
+            )
+            + (" (scan capped at pool)" if p.get("scan_capped") else "")
+            + f" · k-bound={p['kbound']} · "
             f"denoted={p['denoted']} · "
             f"unevaluable={p['unevaluable']} · "
             f"gate-failed={p['gate_failed']} · "
@@ -2382,6 +2556,14 @@ def render_markdown(summary: dict, *, env: dict | None = None) -> str:
             f"handler minted={p['minted']} refused={p['refused']} · "
             f"pool={p['pool']}"
         )
+        if p.get("depth_dist"):
+            lines.append(
+                "- qualified shapes by op-count: "
+                + ", ".join(
+                    f"{ops} ops x{c}"
+                    for ops, c in p["depth_dist"].items()
+                )
+            )
         if summary.get("bind_dist"):
             lines.append(
                 "- minted folds' module-bind counts: "
@@ -2390,18 +2572,37 @@ def render_markdown(summary: dict, *, env: dict | None = None) -> str:
                     for n, c in summary["bind_dist"].items()
                 )
             )
+        if p.get("nested"):
+            # loop-closure evidence: pooled shapes that embed a minted
+            # synop's denotation — composition-ready if the mining
+            # re-ran over the synop-seated corpus (ADR-0157 phase 3).
+            lines.append(
+                "- synop-in-shape (vocabulary bootstrap): "
+                + "; ".join(
+                    f"`{n['outer']}` embeds "
+                    + "/".join(f"`{m}`" for m in n["inner"])
+                    for n in p["nested"]
+                )
+            )
         if summary.get("prim_ops"):
             lines.append("- minted primitives:")
             for cname, rec in summary["prim_ops"].items():
                 h = rec["handler"]
                 lines.append(
                     f"  - `{rec['synop']}` ({cname}) — "
+                    f"{rec.get('ops', '?')} ops "
+                    f"{{{','.join(rec.get('opset') or ['?'])}}}, "
                     f"{len(rec['mods'])} mods, "
                     f"{rec['equal_sites']}/{rec['sites']} equal sites, "
                     f"handler={h['verdict']}"
                     + (
                         f" ({h['family']}, err={h['max_err']:.3g})"
                         if h["verdict"] == "minted"
+                        else ""
+                    )
+                    + (
+                        f" — embeds {'/'.join(rec['embeds'])}"
+                        if rec.get("embeds")
                         else ""
                     )
                 )
@@ -2559,6 +2760,56 @@ def main(argv: list[str] | None = None) -> int:
         "default 2)",
     )
     ap.add_argument(
+        "--prim-min-ops",
+        type=int,
+        default=None,
+        metavar="N",
+        help=f"zoo-prim only: smallest mined shape taken through the "
+        f"prim mint (default {_PRIM_MIN_OPS})",
+    )
+    ap.add_argument(
+        "--prim-max-ops",
+        type=int,
+        default=None,
+        metavar="N",
+        help=f"zoo-prim only: largest mined shape taken through the "
+        f"prim mint (default {_PRIM_MAX_OPS}; deeper windows re-find "
+        "bracketing variants — the alpha-dedup + denoted gate keep "
+        "one name per distinct skeleton)",
+    )
+    ap.add_argument(
+        "--prim-cap",
+        type=int,
+        default=None,
+        metavar="N",
+        help=f"zoo-prim only: pool bound — the top-gain slice of "
+        f"qualified shapes (default {_PRIM_CAP})",
+    )
+    ap.add_argument(
+        "--prim-beam",
+        type=int,
+        default=None,
+        metavar="N",
+        help=f"zoo-prim only: the mining beam width (default "
+        f"{_PRIM_BEAM}; deeper windows need the wider frontier)",
+    )
+    ap.add_argument(
+        "--prim-max-expand",
+        type=int,
+        default=None,
+        metavar="N",
+        help=f"zoo-prim only: the mining pop bound (default "
+        f"{_PRIM_MAX_EXPAND})",
+    )
+    ap.add_argument(
+        "--prim-deep",
+        action="store_true",
+        help="zoo-prim only: the widened hunt preset — "
+        + ", ".join(f"{k}={v}" for k, v in _PRIM_DEEP.items())
+        + ". An explicit --prim-* flag overrides the preset's value "
+        "for that knob",
+    )
+    ap.add_argument(
         "--scan",
         type=int,
         default=DEFAULTS["scan"],
@@ -2599,6 +2850,42 @@ def main(argv: list[str] | None = None) -> int:
         ap.error("--compose ROUNDS must be >= 1 (omit to disable)")
     if args.xbind < 1:
         ap.error("--xbind K must be >= 1")
+    prim_set = any(
+        v is not None
+        for v in (
+            args.prim_min_ops,
+            args.prim_max_ops,
+            args.prim_cap,
+            args.prim_beam,
+            args.prim_max_expand,
+        )
+    )
+    if args.corpus != "zoo-prim" and (prim_set or args.prim_deep):
+        ap.error("--prim-* knobs require --corpus zoo-prim")
+    # resolve the mining window: explicit flag > --prim-deep preset >
+    # the shipped defaults.  The resolved dict is protocol-pinned
+    # below — a ledger minted under a different hunt restarts loudly.
+    window = dict(_PRIM_DEEP) if args.prim_deep else {}
+    window.update(
+        {
+            k: v
+            for k, v in {
+                "min_ops": args.prim_min_ops,
+                "max_ops": args.prim_max_ops,
+                "cap": args.prim_cap,
+                "beam": args.prim_beam,
+                "max_expand": args.prim_max_expand,
+            }.items()
+            if v is not None
+        }
+    )
+    prim = _prim_knobs(window)
+    if prim["min_ops"] < 1 or prim["max_ops"] < prim["min_ops"]:
+        ap.error("prim window must satisfy 1 <= min_ops <= max_ops")
+    if prim["cap"] < 1 or prim["beam"] < 1 or prim["max_expand"] < 1:
+        ap.error(
+            "--prim-cap/--prim-beam/--prim-max-expand must be >= 1"
+        )
     if args.dry:
         for k, v in DRY.items():
             setattr(args, k, v)
@@ -2658,6 +2945,11 @@ def main(argv: list[str] | None = None) -> int:
             if args.corpus in ("zoo-xmodule", "zoo-prim")
             else 0
         ),
+        # the mining window is part of the mint — a ledger pooled
+        # under a different depth window / cap / frontier restarts
+        # loudly rather than replay a pool this arm would mint
+        # differently.
+        "prim": prim if args.corpus == "zoo-prim" else None,
         # the fusion-schema arm joined ``pipeline.propose`` — a ledger
         # minted before the family existed must restart loudly rather
         # than replay a pool the new arm would now grow.
@@ -2694,6 +2986,7 @@ def main(argv: list[str] | None = None) -> int:
             if args.corpus in ("zoo-xmodule", "zoo-prim")
             else 0
         ),
+        prim=prim if args.corpus == "zoo-prim" else None,
         ckpt=ckpt,
     )
 
