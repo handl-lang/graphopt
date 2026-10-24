@@ -838,6 +838,47 @@ class TestCorpusZooPrim:
         assert rec["equal_sites"] >= 1
         assert stats["pool"] == len(cands)
 
+    def test_prim_family_mint_closes_refusals(self):
+        """A refused spec class mints its own family, then a body.
+
+        ``family_mint`` (default on) feeds refused (spec, domain)
+        pairs to ``family_synth.mint_families`` and retries
+        ``mint_handlers`` with the survivors — the refused→family→
+        body meta-loop.  Verified on a select-bearing spec the shipped
+        ``gather`` family already covers: restricting the grammar to
+        ``ew`` refuses, the minted descriptor covers it.
+        """
+        from mlopt_discovery import family_synth as _fs
+        from mlopt_discovery.handler_synth import mint_handlers
+
+        spec = (
+            "mul",
+            ("unsqueeze", ("select", "G", {"dim": 1, "index": 0}), {"dim": -1}),
+            ("unsqueeze", ("select", "H", {"dim": 1, "index": 0}), {"dim": -1}),
+        )
+        item = {
+            "spec": spec,
+            "domain": [{"G": (2, 4, 8), "H": (2, 4, 8)}],
+        }
+        _, rep0 = mint_handlers([item], budget=256, families=("ew",))
+        assert rep0[0]["verdict"] == "refused"
+        fams, _frep = _fs.mint_families([item])
+        assert fams
+        _, rep2 = mint_handlers(
+            [item],
+            budget=2048,
+            families=("ew",),
+            extra_families=tuple(fams),
+        )
+        assert rep2[0]["verdict"] == "minted"
+        assert rep2[0]["family"].startswith("family:fam_")
+
+    def test_prim_family_mint_knob_protocol_pinned(self):
+        """``family_mint`` resolves True by default and rides the
+        protocol-pinned prim knob dict like the window knobs."""
+        assert on._prim_knobs()["family_mint"] is True
+        assert on._prim_knobs({"family_mint": False})["family_mint"] is False
+
     def test_prim_denotation_verifies_on_bound_sites(self):
         """eval_instance(manual, synop) is equal at every bound site."""
         from mlopt_core.egraph.terms import (

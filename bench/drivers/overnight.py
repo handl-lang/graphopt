@@ -163,7 +163,12 @@ lacks), and the same sieve.  ``handler_synth.mint_handlers`` runs on
 each shape as the synthesis measurement: a grammar body verified on
 the bound-site domain rides the record as provenance (the machine
 found a compressed semantics); a refusal keeps the definitional op
-and records the measured gap.  The hunt itself is windowed:
+and records the measured gap — and (``--prim-family-mint``, on by
+default) the refused ``(spec, domain)`` pair closes the meta-loop:
+``family_synth.mint_families`` mints a verified family descriptor
+for the spec class and the body mint retries under it, so a refused
+shape is only a wall when the meta-grammar also refuses.  The hunt
+itself is windowed:
 ``--prim-min-ops`` / ``--prim-max-ops`` bound the mined shape's
 op-count (deeper windows re-find skeletons under different
 bracketings — the alpha-dedup + denoted gate keep one name per
@@ -1531,7 +1536,11 @@ def _prim_knobs(prim: dict | None = None) -> dict:
     the ``--prim-*`` flags and the ``--prim-deep`` preset write, plus
     ``bootstrap`` (``--prim-bootstrap`` — the corpus e-graph is seated
     with the shipped ``prim:synop_*`` folds before mining, so shapes
-    compose over machine-minted primitives); the resolved dict is
+    compose over machine-minted primitives) and ``family_mint``
+    (``--prim-family-mint`` / ``--no-prim-family-mint`` — the
+    refused-spec meta-loop: a shape ``mint_handlers`` refuses is
+    re-minted through ``family_synth.mint_families`` and retried under
+    the minted descriptors); the resolved dict is
     protocol-pinned (``protocol["prim"]``) and rides the case record,
     so a resume's pool rebuild replays the identical hunt.
     """
@@ -1542,6 +1551,7 @@ def _prim_knobs(prim: dict | None = None) -> dict:
         "beam": _PRIM_BEAM,
         "max_expand": _PRIM_MAX_EXPAND,
         "bootstrap": False,
+        "family_mint": True,
     }
     if prim:
         out.update({k: v for k, v in prim.items() if v is not None})
@@ -1625,6 +1635,7 @@ def _prim_pool(
     beam: int = _PRIM_BEAM,
     max_expand: int = _PRIM_MAX_EXPAND,
     bootstrap: bool = False,
+    family_mint: bool = True,
 ) -> tuple:
     """The primitive-mint pool: ``(candidates, meta, stats)``.
 
@@ -1682,6 +1693,18 @@ def _prim_pool(
       definitional op and names the measured gap — a shape carrying
       ops no grammar family claims is a recorded family wall, not a
       silent drop).
+
+    ``family_mint`` (``--prim-family-mint``, on by default) closes
+    the meta-loop on the refusal: the refused ``(spec, domain)``
+    pair feeds ``family_synth.mint_families`` — the spec class
+    mints its own family descriptor, fp64-verified on the same
+    bound-site domain — and the body mint retries with the
+    survivors injected as ``extra_families``.  Per shape the record
+    carries ``family_minted: <fam_name>`` (a descriptor minted; the
+    retry's verdict decides the row) or ``family_refused`` (no
+    descriptor reproduced the spec — the honest meta-grammar wall);
+    ``families_minted`` / ``families_refused`` count the stage in
+    the pool funnel.
 
     Post-mint, ``nested`` records the loop-closure measurement: every
     pooled shape whose own proper subterm alpha-matches another
@@ -1758,6 +1781,12 @@ def _prim_pool(
         "scan_capped": False,
         "nested": [],
         "bootstrap": bool(bootstrap),
+        # the refused-spec meta-loop: ``--prim-family-mint`` —
+        # refused shapes whose spec class minted a family
+        # descriptor vs those the meta-grammar refused too.
+        "family_mint": bool(family_mint),
+        "families_minted": 0,
+        "families_refused": 0,
         # the bootstrap seating: shipped folds that fired on the
         # corpus and the enode merges they contributed.
         "synop_folds": len(synop_fires),
@@ -1843,18 +1872,44 @@ def _prim_pool(
         if not domain:
             stats["no_domain"] += 1
         else:
-            _handlers, report = mint_handlers(
-                [
-                    {
-                        "spec": _freeze_spec(
-                            spec, sites[0][0], cand.attr_mvars
-                        ),
-                        "domain": domain,
-                    }
-                ],
-                budget=budget,
-            )
+            item = {
+                "spec": _freeze_spec(
+                    spec, sites[0][0], cand.attr_mvars
+                ),
+                "domain": domain,
+            }
+            _handlers, report = mint_handlers([item], budget=budget)
             rep = report[0]
+            fam_names: list[str] = []
+            fam_retry: dict | None = None
+            if rep["verdict"] == "refused" and family_mint:
+                # the meta-loop: the refused spec class mints its
+                # own family — mint_families enumerates the
+                # descriptor space over the spec's movable ops and
+                # fp64-verifies on the same bound-site domain, then
+                # the body mint retries with the survivors injected
+                # as extra_families.
+                from mlopt_discovery import family_synth as _fs
+
+                fams, frep = _fs.mint_families([item])
+                fam_names = [f["name"] for f in fams]
+                if fams:
+                    stats["families_minted"] += 1
+                    _h2, rep2 = mint_handlers(
+                        [item],
+                        budget=budget,
+                        extra_families=tuple(fams),
+                    )
+                    fam_retry = rep2[0]
+                    if fam_retry["verdict"] == "minted":
+                        rep, _handlers = fam_retry, _h2
+                else:
+                    stats["families_refused"] += 1
+                    fam_retry = {
+                        "verdict": "no-family",
+                        "searched": frep["searched"],
+                        "budget": frep["budget"],
+                    }
             if rep["verdict"] == "minted":
                 stats["minted"] += 1
                 tag = rep["tag"]
@@ -1865,6 +1920,15 @@ def _prim_pool(
                     "max_err": rep["max_err"],
                     "record": handler_record(tag, _handlers[tag]),
                 }
+                if fam_names:
+                    # the meta-loop carried this shape: the minted
+                    # descriptor that won the retry (a shipped body
+                    # winning instead is recorded, not credited).
+                    hrow["family_minted"] = (
+                        rep["family"].split(":", 1)[1]
+                        if rep["family"].startswith("family:")
+                        else ",".join(fam_names)
+                    )
             else:
                 stats["refused"] += 1
                 hrow = {
@@ -1884,6 +1948,22 @@ def _prim_pool(
                     "spec": rep.get("spec"),
                     "domain": domain,
                 }
+                if fam_names:
+                    # descriptors minted but no injected body
+                    # verified — the family exists, the body wall
+                    # stands; the retry's own refusal rides along.
+                    hrow["family_minted"] = ",".join(fam_names)
+                    hrow["retry"] = {
+                        "verdict": fam_retry["verdict"],
+                        "tried": fam_retry.get("tried"),
+                        "note": fam_retry.get("note"),
+                    }
+                elif fam_retry is not None:
+                    hrow["family_refused"] = (
+                        "no family verified within "
+                        f"budget={fam_retry['budget']} "
+                        f"(searched {fam_retry['searched']})"
+                    )
         # the definitional premise: the cert leg's anchored axiom set
         # unions it when the bare bank cannot derive the fold — the
         # fusion-schema mint's own channel for a denotation the bank
@@ -2278,9 +2358,9 @@ def run(
     a minted claim's LHS must bind to pool (2+ is the cross-module
     surface; ignored on other corpora).  ``prim`` is the zoo-prim
     arm's mining window (:func:`_prim_knobs` —
-    ``min_ops``/``max_ops``/``cap``/``beam``/``max_expand``; the
-    ``--prim-*`` flags / ``--prim-deep`` preset), ignored on other
-    corpora.
+    ``min_ops``/``max_ops``/``cap``/``beam``/``max_expand`` plus
+    ``bootstrap``/``family_mint``; the ``--prim-*`` flags /
+    ``--prim-deep`` preset), ignored on other corpora.
     """
     import torch
 
@@ -2685,8 +2765,14 @@ def render_markdown(summary: dict, *, env: dict | None = None) -> str:
             f"unevaluable={p['unevaluable']} · "
             f"gate-failed={p['gate_failed']} · "
             f"no-domain={p['no_domain']} · "
-            f"handler minted={p['minted']} refused={p['refused']} · "
-            f"pool={p['pool']}"
+            f"handler minted={p['minted']} refused={p['refused']}"
+            + (
+                f" · families minted={p['families_minted']} "
+                f"refused={p['families_refused']}"
+                if p.get("family_mint")
+                else ""
+            )
+            + f" · pool={p['pool']}"
             + (
                 f" · bootstrap: {p['synop_folds']} shipped folds "
                 f"fired (+{p['synop_fires']} enodes) · "
@@ -2738,6 +2824,18 @@ def render_markdown(summary: dict, *, env: dict | None = None) -> str:
                         f" ({h['family']}, err={h['max_err']:.3g})"
                         if h["verdict"] == "minted"
                         else ""
+                    )
+                    + (
+                        f" — family {h['family_minted']} minted, "
+                        "no body verified"
+                        if h["verdict"] == "refused"
+                        and h.get("family_minted")
+                        else (
+                            f" — {h['family_refused']}"
+                            if h["verdict"] == "refused"
+                            and h.get("family_refused")
+                            else ""
+                        )
                     )
                     + (
                         " — depth-2 over "
@@ -2970,6 +3068,19 @@ def main(argv: list[str] | None = None) -> int:
         "protocol-pinned like the rest of the prim window",
     )
     ap.add_argument(
+        "--prim-family-mint",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="zoo-prim only: the refused-spec meta-loop — when "
+        "mint_handlers refuses a shape, the refused (spec, domain) "
+        "pair feeds family_synth.mint_families, which mints a "
+        "verified family descriptor for the spec class, and the "
+        "body mint retries with it injected as extra_families "
+        "(default on; --no-prim-family-mint reverts to the bare "
+        "grammar mint).  Protocol-pinned like the rest of the prim "
+        "window",
+    )
+    ap.add_argument(
         "--scan",
         type=int,
         default=DEFAULTS["scan"],
@@ -3021,7 +3132,10 @@ def main(argv: list[str] | None = None) -> int:
         )
     )
     if args.corpus != "zoo-prim" and (
-        prim_set or args.prim_deep or args.prim_bootstrap
+        prim_set
+        or args.prim_deep
+        or args.prim_bootstrap
+        or args.prim_family_mint is not None
     ):
         ap.error("--prim-* knobs require --corpus zoo-prim")
     # resolve the mining window: explicit flag > --prim-deep preset >
@@ -3030,6 +3144,8 @@ def main(argv: list[str] | None = None) -> int:
     window = dict(_PRIM_DEEP) if args.prim_deep else {}
     if args.prim_bootstrap:
         window["bootstrap"] = True
+    if args.prim_family_mint is not None:
+        window["family_mint"] = args.prim_family_mint
     window.update(
         {
             k: v
