@@ -171,7 +171,18 @@ distinct shape, and ``depth_dist`` in the report records the
 qualified set's op-count histogram), ``--prim-cap`` bounds the pool,
 ``--prim-beam`` / ``--prim-max-expand`` bound the mining frontier,
 and ``--prim-deep`` presets the widened hunt (12 ops, 48-fold pool);
-the resolved window is protocol-pinned.  One shared pool, paged like
+the resolved window is protocol-pinned.  ``--prim-bootstrap`` is the
+vocabulary bootstrap — ADR-0157 phase 3's loop-closure test wired:
+the shipped ``prim:synop_*`` folds are applied to the corpus e-graph
+once (targeted ``apply_rule``, then congruence-closed), so
+``mine_candidates`` grows shapes *through* the minted vocabulary —
+a pooled pattern carrying a ``synop_*`` op mints a depth-2 primitive
+``synop2_<hash>`` (fold LHS = the synop-carrying skeleton, so it
+fires in a search only where the shipped folds already did —
+composition, not a second spelling; denotation = the shape
+re-expanded to manual ops, so ``eval_instance`` verifies end-to-end
+fp64 and the ``synop2_*.expand`` premise states the full
+denotation).  One shared pool, paged like
 ``zoo-xmodule``; the document lands at
 ``docs/reports/results_overnight_prim.md`` and the mint is
 protocol-pinned as ``corpus-prim``.
@@ -186,6 +197,9 @@ Run::
     .venv/bin/python bench/drivers/overnight.py --dry --corpus zoo-prim
     .venv/bin/python bench/drivers/overnight.py --corpus zoo-prim \
         --prim-deep --out docs/reports/results_overnight_prim_deep.md
+    .venv/bin/python bench/drivers/overnight.py --corpus zoo-prim \
+        --prim-deep --prim-bootstrap \
+        --out docs/reports/results_overnight_prim_bootstrap.md
     .venv/bin/python bench/drivers/overnight.py --episodes 48 \
         --player playbook --referee full --resume
 """
@@ -1514,10 +1528,12 @@ def _prim_knobs(prim: dict | None = None) -> dict:
     """The resolved mining window — defaults overridden by *prim*.
 
     The ``min_ops``/``max_ops``/``cap``/``beam``/``max_expand`` knobs
-    the ``--prim-*`` flags and the ``--prim-deep`` preset write; the
-    resolved dict is protocol-pinned (``protocol["prim"]``) and rides
-    the case record, so a resume's pool rebuild replays the identical
-    hunt.
+    the ``--prim-*`` flags and the ``--prim-deep`` preset write, plus
+    ``bootstrap`` (``--prim-bootstrap`` — the corpus e-graph is seated
+    with the shipped ``prim:synop_*`` folds before mining, so shapes
+    compose over machine-minted primitives); the resolved dict is
+    protocol-pinned (``protocol["prim"]``) and rides the case record,
+    so a resume's pool rebuild replays the identical hunt.
     """
     out = {
         "min_ops": _PRIM_MIN_OPS,
@@ -1525,10 +1541,52 @@ def _prim_knobs(prim: dict | None = None) -> dict:
         "cap": _PRIM_CAP,
         "beam": _PRIM_BEAM,
         "max_expand": _PRIM_MAX_EXPAND,
+        "bootstrap": False,
     }
     if prim:
         out.update({k: v for k, v in prim.items() if v is not None})
     return out
+
+
+def _expand_synops(pat: Any) -> Any:
+    """Re-expand shipped ``synop_*`` nodes in *pat* to manual ops.
+
+    A bootstrap-mined pattern carries ``synop_*`` ops as leaves of its
+    skeleton — each node's denotation is the fold's LHS re-instantiated
+    under the call's own bindings (``synop_*(v*)`` → the spelled manual
+    subgraph over ``v*``, attr metavars carried through ``$attr:`` —
+    the ``synop_*.expand`` premises give the definition).  The result
+    is the shape's *denotation spelling*: the manual subgraph the
+    minted op evaluates, the spelling ``_modules_bound``/sites match
+    (real corpus terms never contain a ``synop_*`` op) and the shape
+    the denoted gate compares against the bank.
+    """
+    from mlopt_core.egraph.terms import _term_match
+    from mlopt_core.ir import Op
+    from mlopt_core.laws import minted
+    from mlopt_core.meta import instantiate_pattern
+
+    if not isinstance(pat, Op):
+        return pat
+    args = tuple(_expand_synops(a) for a in pat.args)
+    node = (
+        Op.make(pat.op, *args, **dict(pat.attrs))
+        if args != pat.args
+        else pat
+    )
+    if node.op in minted.SYNOP_SHIPPED:
+        fold = minted.prim_fold(node.op)[0]
+        subst = _term_match(fold.rhs, node)
+        if subst is not None:
+            return _expand_synops(instantiate_pattern(fold.lhs, subst))
+    return node
+
+
+def _synop_ops(pat: Any) -> set:
+    """Shipped ``synop_*`` op names a pattern composes over."""
+    from mlopt_core.laws import minted
+
+    return _pat_ops(pat) & minted.SYNOP_SHIPPED
 
 
 def _sub_alphas(pat: Any) -> set:
@@ -1566,6 +1624,7 @@ def _prim_pool(
     max_ops: int = _PRIM_MAX_OPS,
     beam: int = _PRIM_BEAM,
     max_expand: int = _PRIM_MAX_EXPAND,
+    bootstrap: bool = False,
 ) -> tuple:
     """The primitive-mint pool: ``(candidates, meta, stats)``.
 
@@ -1582,6 +1641,25 @@ def _prim_pool(
     same skeleton under different bracketings — the alpha-dedup
     inside ``mine_candidates`` plus the denoted gate keep one name
     per distinct shape.
+
+    ``bootstrap`` (``--prim-bootstrap``) is the vocabulary bootstrap —
+    ADR-0157 phase 3's loop-closure test wired, not just measured:
+    the corpus e-graph is congruence-closed, then every shipped
+    ``prim:synop_*`` fold is applied once (targeted ``apply_rule`` —
+    a fold's LHS is manual-only, so one pass seats every denotation;
+    no saturation needed) and the graph re-closed.  ``synop_*``
+    enodes now sit in the e-classes of the manual shapes they name,
+    so ``mine_candidates`` grows skeletons *through* them: a pooled
+    pattern carrying a shipped ``synop_*`` op is a **depth-2**
+    primitive — ``synop2_<hash>`` — a synop composed over synops.
+    Its fold ``pattern -> synop2_*(args)`` fires only where the
+    shipped folds already did (composition, honestly recorded), while
+    its *denotation* — binding, ``synop2_*.expand`` premise, frozen
+    handler spec, module-binding and denoted gates — is the shape
+    re-expanded to manual ops (:func:`_expand_synops`), so
+    ``eval_instance`` verifies the whole composition end-to-end fp64
+    and the emit gate measures the real bound sites.  The emitted op
+    is again new — the fold is underivable by construction.
 
     Per-shape funnel, each refusal recorded:
 
@@ -1633,6 +1711,23 @@ def _prim_pool(
     eg = EGraph()
     for r in roots.values():
         eg.add_term(r)
+    synop_fires: dict[str, int] = {}
+    if bootstrap:
+        from mlopt_core.laws import minted as _minted
+        from mlopt_discovery import shipped_primitives as _sp
+
+        # the vocabulary bootstrap: seat the shipped fold set so the
+        # mined shapes compose over machine-minted primitives.  The
+        # torch denotations register too — the emit gate's eval and
+        # every sink reading the ambient table see the composed
+        # spelling end-to-end.
+        _sp.register()
+        eg.rebuild()
+        for f in _minted.prim_folds():
+            eg.apply_rule(f, 0)
+            if n := eg.rule_fires.get(f.name, 0):
+                synop_fires[f.name] = n
+        eg.rebuild()
     denoted = _denoted_shapes()
     mined_all = mine_candidates(
         eg,
@@ -1662,6 +1757,13 @@ def _prim_pool(
         "pool": 0,
         "scan_capped": False,
         "nested": [],
+        "bootstrap": bool(bootstrap),
+        # the bootstrap seating: shipped folds that fired on the
+        # corpus and the enode merges they contributed.
+        "synop_folds": len(synop_fires),
+        "synop_fires": sum(synop_fires.values()),
+        # pooled depth-2 primitives — the loop-closure count.
+        "depth2": 0,
     }
     depth: Counter = Counter()
     cands: list = []
@@ -1674,30 +1776,40 @@ def _prim_pool(
         pat = cand.pattern
         if not isinstance(pat, Op) or not cand.leaf_mvars:
             continue
-        mods = _modules_bound(pat, subs_by_mod)
+        # the denotation spelling: shipped synops re-expanded to
+        # manual ops — what the op means, what real subterms bind,
+        # what the denoted gate names.
+        xpat = _expand_synops(pat)
+        embeds_shipped = sorted(_synop_ops(pat))
+        mods = _modules_bound(xpat, subs_by_mod)
         if len(mods) < k:
             continue
         stats["kbound"] += 1
         depth[cand.op_count] += 1
-        norm = _alpha_norm(pat)
-        if norm in denoted:
+        xnorm = _alpha_norm(xpat)
+        if xnorm in denoted:
             stats["denoted"] += 1
             continue
-        if any(tb._IR_TO_TORCH.get(op) is None for op in _pat_ops(pat)):
+        if any(
+            tb._IR_TO_TORCH.get(op) is None
+            for op in _pat_ops(pat) | _pat_ops(xpat)
+        ):
             stats["unevaluable"] += 1
             continue
-        # the honest name: the shape's own hash, not a coined label
+        # the honest name: the shape's own hash, not a coined label —
+        # ``synop2_*`` when the fold composes over shipped synops.
+        norm = _alpha_norm(pat)
         h = hashlib.sha256(norm.encode()).hexdigest()[:10]
-        name = f"synop_{h}"
+        name = f"synop2_{h}" if embeds_shipped else f"synop_{h}"
         call_attrs: dict[str, Any] = {a: a for a in cand.attr_mvars}
         call = Op.make(name, *cand.leaf_mvars, **call_attrs)
-        spec = _pat_spec(pat)
+        spec = _pat_spec(xpat)
         op_def(
             name,
             len(cand.leaf_mvars),
             1,
             law=f"synthesized primitive — denotation is the mined "
-            f"manual subgraph {norm}",
+            f"manual subgraph {xnorm}",
         )
         # denotation = the spelled spec — the ambient binding table is
         # the op's semantics (ADR 0007: the executor table IS the
@@ -1709,7 +1821,7 @@ def _prim_pool(
         sites = [
             (m, s)
             for s in all_subs
-            if (m := _term_match(pat, s)) is not None
+            if (m := _term_match(xpat, s)) is not None
         ][:site_cap]
         # verify — the arm's honesty gate: the op's denotation must
         # equal the spelled pattern fp64 on bound sites.  By
@@ -1777,11 +1889,14 @@ def _prim_pool(
         # fusion-schema mint's own channel for a denotation the bank
         # lacks.  The novelty sieve never sees it (its premise bank
         # is the shipped surface minus alpha-siblings), so the fold
-        # stays underivable there BY CONSTRUCTION.
+        # stays underivable there BY CONSTRUCTION.  The premise
+        # unfolds to the FULL denotation — for a depth-2 mint the
+        # synop-carrying LHS re-connects through the shipped folds'
+        # own expansions.
         expand = Rewrite(
             f"{name}.expand",
             call,
-            pat,
+            xpat,
             law=f"{name} unfolds to its mined denotation — the "
             "definitional premise the cert leg anchors on",
         )
@@ -1796,6 +1911,7 @@ def _prim_pool(
                 f"inst:{cand.n_instances}",
                 f"gain:{cand.gain}",
                 f"handler:{hrow['verdict']}",
+                *(("depth:2",) if embeds_shipped else ()),
             ),
             premises=(expand,),
         )
@@ -1809,32 +1925,48 @@ def _prim_pool(
                 note=(
                     f"primitive {name} — a manual shape shared by "
                     f"{len(mods)} modules, undenoted in the bank"
+                    + (
+                        f"; composes over shipped "
+                        f"{'/'.join(embeds_shipped)}"
+                        if embeds_shipped
+                        else ""
+                    )
                 ),
                 rule=prop.as_rule(),
             )
         )
+        prim_rec: dict[str, Any] = {
+            "synop": name,
+            "alpha": xnorm,
+            "depth": 2 if embeds_shipped else 1,
+            "ops": cand.op_count,
+            "opset": sorted(_pat_ops(pat)),
+            "mods": sorted(mods),
+            "sites": len(sites),
+            "equal_sites": equal,
+            "handler": hrow,
+        }
+        if norm != xnorm:
+            # the fold's own LHS spelling — the synop-carrying
+            # skeleton the minted op compresses.
+            prim_rec["alpha_fold"] = norm
+            prim_rec["embeds_shipped"] = embeds_shipped
         meta[i] = {
             "family": _PRIM_FAMILY,
             "sources": list(prop.sources),
             "mods": len(mods),
-            "prim": {
-                "synop": name,
-                "alpha": norm,
-                "ops": cand.op_count,
-                "opset": sorted(_pat_ops(pat)),
-                "mods": sorted(mods),
-                "sites": len(sites),
-                "equal_sites": equal,
-                "handler": hrow,
-            },
+            "prim": prim_rec,
         }
+        if embeds_shipped:
+            stats["depth2"] += 1
     stats["pool"] = len(cands)
     stats["depth_dist"] = {str(n): c for n, c in sorted(depth.items())}
-    # Loop-closure probe (cheap version): which pooled shapes carry a
-    # *minted synop's denotation* as a proper subterm.  The corpus
-    # e-graph never contains the synop ops themselves — they were
-    # minted here — so a match means the deeper shape would compose
-    # over the shipped vocabulary were it seated.  Measured over the
+    # Loop-closure probe: which pooled shapes' *denotations* carry a
+    # same-run minted synop's denotation as a proper subterm —
+    # measured on the expanded spelling so a depth-2 fold's embedded
+    # inner mint still registers.  (The ``depth2`` count /
+    # ``embeds_shipped`` record the composition over *shipped*
+    # synops — the bootstrap's own surface.)  Measured over the
     # pooled set only; the scan may be cap-truncated above.
     alpha_name = {
         meta[i]["prim"]["alpha"]: meta[i]["prim"]["synop"] for i in meta
@@ -1844,7 +1976,7 @@ def _prim_pool(
         embeds = sorted(
             {
                 alpha_name[a]
-                for a in _sub_alphas(cands[i].lhs)
+                for a in _sub_alphas(_expand_synops(cands[i].lhs))
                 if a in alpha_name
             }
             - {p["synop"]}
@@ -2555,6 +2687,13 @@ def render_markdown(summary: dict, *, env: dict | None = None) -> str:
             f"no-domain={p['no_domain']} · "
             f"handler minted={p['minted']} refused={p['refused']} · "
             f"pool={p['pool']}"
+            + (
+                f" · bootstrap: {p['synop_folds']} shipped folds "
+                f"fired (+{p['synop_fires']} enodes) · "
+                f"depth-2 mints={p['depth2']}"
+                if p.get("bootstrap")
+                else ""
+            )
         )
         if p.get("depth_dist"):
             lines.append(
@@ -2598,6 +2737,14 @@ def render_markdown(summary: dict, *, env: dict | None = None) -> str:
                     + (
                         f" ({h['family']}, err={h['max_err']:.3g})"
                         if h["verdict"] == "minted"
+                        else ""
+                    )
+                    + (
+                        " — depth-2 over "
+                        + "/".join(
+                            f"`{s}`" for s in rec["embeds_shipped"]
+                        )
+                        if rec.get("embeds_shipped")
                         else ""
                     )
                     + (
@@ -2810,6 +2957,19 @@ def main(argv: list[str] | None = None) -> int:
         "for that knob",
     )
     ap.add_argument(
+        "--prim-bootstrap",
+        action="store_true",
+        help="zoo-prim only: the vocabulary bootstrap — seat the "
+        "shipped prim:synop_* folds into the corpus e-graph before "
+        "mining (each fold applied once, then congruence-closed), so "
+        "mined shapes compose over the minted vocabulary: a pooled "
+        "pattern carrying a shipped synop_* op mints a depth-2 "
+        "primitive synop2_<hash> whose denotation re-expands to the "
+        "manual spelling (ADR-0157 phase 3's loop-closure test).  "
+        "Composes with --prim-deep and the --prim-* window knobs; "
+        "protocol-pinned like the rest of the prim window",
+    )
+    ap.add_argument(
         "--scan",
         type=int,
         default=DEFAULTS["scan"],
@@ -2860,12 +3020,16 @@ def main(argv: list[str] | None = None) -> int:
             args.prim_max_expand,
         )
     )
-    if args.corpus != "zoo-prim" and (prim_set or args.prim_deep):
+    if args.corpus != "zoo-prim" and (
+        prim_set or args.prim_deep or args.prim_bootstrap
+    ):
         ap.error("--prim-* knobs require --corpus zoo-prim")
     # resolve the mining window: explicit flag > --prim-deep preset >
     # the shipped defaults.  The resolved dict is protocol-pinned
     # below — a ledger minted under a different hunt restarts loudly.
     window = dict(_PRIM_DEEP) if args.prim_deep else {}
+    if args.prim_bootstrap:
+        window["bootstrap"] = True
     window.update(
         {
             k: v

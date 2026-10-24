@@ -1135,6 +1135,7 @@ class TestCorpusZooPrim:
             "cap": 8,
             "beam": 32,
             "max_expand": 2000,
+            "bootstrap": False,
         }
         for e in _cells(cells, "episode"):
             assert e["record"]["case"]["prim"]["max_ops"] == 4
@@ -1145,6 +1146,197 @@ class TestCorpusZooPrim:
         assert all(
             int(ops) <= 4 for ops in payload["prim"]["depth_dist"]
         )
+
+
+class TestCorpusZooPrimBootstrap:
+    """``--corpus zoo-prim --prim-bootstrap`` — mining over minted ops.
+
+    The vocabulary bootstrap seats the shipped ``prim:synop_*`` folds
+    into the corpus e-graph before mining, so ``mine_candidates``
+    grows shapes through the minted vocabulary: a pooled pattern
+    carrying a shipped ``synop_*`` op mints a depth-2 primitive
+    (``synop2_*`` — a synop composed over a synop) whose denotation
+    re-expands to the manual spelling.
+    """
+
+    def _boot(self):
+        """``(synop_name, roots)`` — two modules sharing
+        ``sub(<a shipped synop's denotation>, w)``.
+
+        The shared subterm is a spelled instance of a shipped
+        ``synop_*``'s own manual denotation — so the bootstrap's fold
+        seating puts a ``synop_*`` enode in its e-class and the mint
+        finds ``sub(synop_*(v*), w)``: depth-2 by construction.  An
+        attr-free fold is picked so the spelled instance needs no
+        attr bindings.
+        """
+        from mlopt_core.ir import Op, TensorType, Var
+        from mlopt_core.laws import minted
+        from mlopt_core.meta import (
+            instantiate_pattern,
+            pattern_metavars,
+        )
+
+        def v(n):
+            return Var(n, TensorType((2, 4)))
+
+        name = next(
+            n
+            for n in sorted(minted.SYNOP_SHIPPED)
+            if not minted.prim_fold(n)[0].rhs.attrs
+        )
+        lhs = minted.prim_fold(name)[0].lhs
+        leaves = sorted(pattern_metavars(lhs))
+
+        def inst(pre):
+            return instantiate_pattern(
+                lhs, {m: v(f"{pre}_{m}") for m in leaves}
+            )
+
+        return name, {
+            "m1": Op.make("sub", inst("x"), v("g")),
+            "m2": Op.make("sub", inst("p"), v("w")),
+        }
+
+    def test_expand_synops_reexpands_shipped_ops(self):
+        """``call -> fold.lhs`` — the premise's definitional expansion."""
+        from mlopt_core.ir import Op
+        from mlopt_core.laws import minted
+
+        name = next(
+            n
+            for n in sorted(minted.SYNOP_SHIPPED)
+            if not minted.prim_fold(n)[0].rhs.attrs
+        )
+        fold = minted.prim_fold(name)[0]
+        # the bare call expands to the fold's own denotation …
+        assert on._expand_synops(fold.rhs) == fold.lhs
+        # … inside a larger skeleton, metavar names intact.
+        wrapped = Op.make("sub", fold.rhs, "w")
+        assert on._expand_synops(wrapped) == Op.make(
+            "sub", fold.lhs, "w"
+        )
+        # a manual pattern is its own denotation.
+        assert on._expand_synops(fold.lhs) == fold.lhs
+
+    def test_prim_bootstrap_mints_synop_over_synop(self):
+        """The shared synop-denotation shape mints a ``synop2_*`` fold."""
+        name, roots = self._boot()
+        cands, meta, stats = on._prim_pool(roots, 2, bootstrap=True)
+        assert stats["bootstrap"] is True
+        assert stats["synop_folds"] >= 1
+        assert stats["synop_fires"] >= 1
+        d2 = {
+            i: m["prim"]
+            for i, m in meta.items()
+            if m["prim"]["depth"] == 2
+        }
+        assert d2 and stats["depth2"] == len(d2)
+        i, rec = next(iter(d2.items()))
+        assert rec["synop"].startswith("synop2_")
+        assert cands[i].label == f"prim:{rec['synop']}"
+        assert name in rec["embeds_shipped"]
+        # the fold's own LHS spells through the shipped synop …
+        assert name in rec["alpha_fold"]
+        # … its denotation re-expands to the manual subgraph …
+        assert "synop" not in rec["alpha"]
+        # … and every bound site still verified fp64.
+        assert rec["equal_sites"] == rec["sites"] >= 1
+        assert rec["mods"] == ["m1", "m2"]
+
+    def test_prim_bootstrap_denotation_verifies_end_to_end(self):
+        """eval_instance(LHS-with-synop, synop2-call) is fp64-equal."""
+        from mlopt_core.egraph.terms import _term_match
+        from mlopt_core.meta import instantiate_pattern
+        from mlopt_discovery.oracle import eval_instance
+
+        _name, roots = self._boot()
+        cands, meta, _stats = on._prim_pool(roots, 2, bootstrap=True)
+        i = next(i for i, m in meta.items() if m["prim"]["depth"] == 2)
+        rule = cands[i].as_rule()
+        xpat = on._expand_synops(rule.lhs)
+        subs = [
+            s
+            for r in roots.values()
+            for s in on._op_subterms({"x": r})["x"]
+        ]
+        sites = [
+            m for s in subs if (m := _term_match(xpat, s)) is not None
+        ]
+        assert sites
+        for m in sites:
+            out, _n = eval_instance(
+                instantiate_pattern(rule.lhs, m),
+                instantiate_pattern(rule.rhs, m),
+            )
+            assert out == "equal", f"{rule.name}: {out}"
+
+    def test_prim_bootstrap_depth2_survives_gauntlet_and_sieve(self):
+        """admit under 'full'; classify machine-original.
+
+        The cert leg's anchored derivation walks ``synop2.expand``
+        (the new definitional premise) and re-folds through the
+        shipped ``prim:synop_*`` — the composition the loop-closure
+        phase asks for; the sieve still cannot derive a law about an
+        op that did not exist at ship time.
+        """
+        import bench.referees
+        from bench.drivers.screen import novelty_sieve as ns
+
+        _name, roots = self._boot()
+        cands, meta, _stats = on._prim_pool(roots, 2, bootstrap=True)
+        i = next(i for i, m in meta.items() if m["prim"]["depth"] == 2)
+        rule = cands[i].as_rule()
+        subs = tuple(
+            s
+            for r in roots.values()
+            for s in on._op_subterms({"x": r})["x"]
+        )
+        rec = on._admit(
+            rule, "full", bench.referees.RefereeCtx(real_terms=subs)
+        )
+        assert rec["admitted"], rec["reason"]
+        names = [s["name"] for s in rec["stages"]]
+        assert names == ["oracle", "pay", "sweep", "cert"]
+        res = on._classify(rule, ns.known_bank(), ctxs=[])
+        assert res["verdict"] == "machine-original", res
+
+    def test_prim_bootstrap_flag_requires_zoo_prim(self, tmp_path):
+        """``--prim-bootstrap`` on a non-prim corpus errors loudly."""
+        with pytest.raises(SystemExit):
+            on.main(
+                _argv(
+                    tmp_path,
+                    "--dry",
+                    "--corpus",
+                    "grammar",
+                    "--prim-bootstrap",
+                )
+            )
+
+    def test_prim_bootstrap_is_protocol_pinned(self, tmp_path):
+        """The flag lands in ``protocol["prim"]["bootstrap"]`` and the
+        case records — a resume under a different bootstrap restarts
+        loudly.
+        """
+        assert (
+            on.main(
+                _argv(
+                    tmp_path,
+                    "--dry",
+                    "--corpus",
+                    "zoo-prim",
+                    "--prim-bootstrap",
+                )
+            )
+            == 0
+        )
+        man, cells = _records(tmp_path / "ck.jsonl")
+        assert man["protocol"]["prim"]["bootstrap"] is True
+        for e in _cells(cells, "episode"):
+            assert e["record"]["case"]["prim"]["bootstrap"] is True
+        payload = json.loads((tmp_path / "out.json").read_text())
+        assert payload["prim"]["bootstrap"] is True
 
 
 class TestResume:
