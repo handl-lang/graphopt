@@ -6,7 +6,10 @@ zoo — 21 folds admitted by the full gauntlet
 (``docs/reports/results_overnight_prim_v2.json``), plus the 2 depth-2
 ``synop2_*`` folds of the ``--prim-bootstrap`` arm — synop-carrying
 skeletons composed over the shipped vocabulary
-(``docs/reports/results_overnight_prim_bootstrap.json``).  The laws are
+(``docs/reports/results_overnight_prim_bootstrap.json``), plus the 34
+depth-3 ``synop3_*`` folds of the ``--prim-vocab`` run — skeletons
+composed over both shipped tiers under the repriced frontier
+(``docs/reports/results_overnight_prim_vocab.json``).  The laws are
 core-shipped, default-on: the verbatim records embed in
 ``mlopt_core.laws.minted`` and the folds ride ``MINTED_RULES`` into
 ``DEFAULT``.  :mod:`mlopt_discovery.shipped_primitives` is the
@@ -36,11 +39,11 @@ from mlopt_core.ir import Const, Op, generator
 from mlopt_core.laws import DEFAULT, tags
 from mlopt_discovery import shipped_primitives as sp
 
-_N_PRIM = 23  # 21 depth-1 + 2 depth-2 admitted folds (the depth-1
-# pool minted 24; 3 declined)
+_N_PRIM = 57  # 21 depth-1 + 2 depth-2 + 34 depth-3 admitted folds
+# (the depth-1 pool minted 24; 3 declined)
 
 #: One bound module per prim family — GatedLinearAttention binds all
-#: 23 admitted folds (the reports' ``mods`` lists); it exports once
+#: 57 admitted folds (the reports' ``mods`` lists); it exports once
 #: per session here and every per-fold pin runs against its term.
 _GLA = "GatedLinearAttention"
 
@@ -91,11 +94,12 @@ class TestRecords:
         assert len(recs) == _N_PRIM
         assert set(recs) == set(sp.SYNOP_SHIPPED)
         for name, rec in recs.items():
-            assert name.startswith(("synop_", "synop2_"))
+            assert name.startswith(("synop_", "synop2_", "synop3_"))
             assert rec["fold"]["name"] == f"prim:{name}"
-            if name in sp.SYNOP2_SHIPPED:
-                # a depth-2 record: skeleton alpha vs expanded alpha,
-                # the composition provenance, the embedded premise
+            if name in sp.SYNOP2_SHIPPED | sp.SYNOP3_SHIPPED:
+                # a deeper-tier record: skeleton alpha vs expanded
+                # alpha, the composition provenance, the embedded
+                # premise
                 assert rec["alpha_fold"] != rec["alpha"]
                 assert rec["embeds_shipped"]
                 assert rec["expand"]["name"] == f"{name}.expand"
@@ -148,10 +152,10 @@ class TestMaterialize:
             assert p.name.endswith(".expand")
             fold = by_synop[p.name[: -len(".expand")]]
             assert p.lhs == fold.rhs
-            if fold.rhs.op in sp.SYNOP2_SHIPPED:
-                # depth-2: the premise unfolds the call to the FULL
-                # manual denotation — the skeleton re-expanded, not
-                # the synop-carrying LHS itself.
+            if fold.rhs.op in sp.SYNOP2_SHIPPED | sp.SYNOP3_SHIPPED:
+                # deeper tiers: the premise unfolds the call to the
+                # FULL manual denotation — the skeleton re-expanded,
+                # not the synop-carrying LHS itself.
                 assert p.rhs != fold.lhs
                 assert "synop" not in _ops_of(p.rhs)
             else:
@@ -297,28 +301,46 @@ class TestDeliver:
         sp.register()
         supported = set(tb._IR_TO_TORCH)
         priced = backend_cost(count_cost, supported)
+        by_op = {f.rhs.op: f for f in sp.folds()}
+        recs = sp.records()
         for fold in sp.folds():
             eg = EGraph()
             eid = eg.add_term(gla_term)
-            # depth-2: the LHS is a synop-carrying skeleton — a real
-            # term only matches it where the embedded depth-1 folds
-            # (``embeds_shipped``) have already seated their synop
-            # enodes (the bootstrap mint's own corpus seating).  Only
-            # those fold — running the whole family would seat ~14
-            # tied 1-cost synops in the same class and the extracted
-            # winner stops being this fold's op.
-            rules = [
-                f
-                for f in sp.folds()
-                if f.rhs.op
-                in sp.records()[fold.rhs.op].get("embeds_shipped", ())
-            ] + [fold]
-            eg.run(rules, eid, max_iterations=6)
+            # deeper tiers: the LHS is a synop-carrying skeleton — a
+            # real term only matches it where the embedded lower-tier
+            # folds (``embeds_shipped``, transitively) have already
+            # seated their synop enodes (the bootstrap mint's own
+            # corpus seating).  Only those fold — running the whole
+            # family would seat ~14 tied 1-cost synops in the same
+            # class and the extracted winner stops being this fold's
+            # op.
+            rules = [fold]
+            frontier = list(recs[fold.rhs.op].get("embeds_shipped", ()))
+            seen: set[str] = set()
+            while frontier:
+                op = frontier.pop()
+                if op in seen:
+                    continue
+                seen.add(op)
+                rules.append(by_op[op])
+                frontier.extend(recs[op].get("embeds_shipped", ()))
+            eg.run(rules, eid, max_iterations=8)
             assert any(
                 n.op == fold.rhs.op
                 for ec in eg._classes.values()
                 for n in ec.nodes
             ), fold.name
+            if fold.rhs.op in sp.SYNOP3_SHIPPED:
+                # depth-3: the enode seats into a class that already
+                # holds lower-tier spellings of the SAME value — every
+                # fused member prices as one kernel, and the
+                # DAG-shared billing favours the spelling seated
+                # first (or a coarser lower-tier coverage of the
+                # region that keeps the class off the extraction
+                # spine entirely).  The fold's pin is the *fire* —
+                # asserted above — not which tied member extraction
+                # commits.
+                continue
             term = eg.extract_best(eid, priced)
             assert fold.rhs.op in _ops_of(term), fold.name
 
@@ -389,9 +411,7 @@ class TestDeliver:
         lr = lower(res, feeds, sink=TorchSink(), verify=True)
         assert lr.verified is not None and lr.verified.passed
 
-    @pytest.mark.parametrize(
-        "mod", ["GatedDeltaRule", "RealGatedLRU"]
-    )
+    @pytest.mark.parametrize("mod", ["GatedDeltaRule", "RealGatedLRU"])
     def test_search_lower_verify_depth2_end_to_end(self, mod):
         """The depth-2 folds fire + deliver on shipped DEFAULT.
 
@@ -419,14 +439,54 @@ class TestDeliver:
             max_iterations=20,
         )
         fired = res.stats.get("rule_fires", {})
-        assert any(
-            fired.get(f"prim:{n}") for n in sp.SYNOP2_SHIPPED
-        ), (mod, fired)
+        assert any(fired.get(f"prim:{n}") for n in sp.SYNOP2_SHIPPED), (
+            mod,
+            fired,
+        )
         assert any(
             n.op in sp.SYNOP2_SHIPPED
             for ec in res.eg._classes.values()
             for n in ec.nodes
         ), mod
+        lr = lower(res, feeds, sink=TorchSink(), verify=True)
+        assert lr.verified is not None and lr.verified.passed
+
+    def test_search_lower_verify_depth3_end_to_end(self):
+        """A depth-3 fold fires + delivers on shipped DEFAULT.
+
+        Saturation seats the depth-1/depth-2 tiers first, then a
+        skeleton over the shipped vocabulary folds to ``synop3_*`` —
+        the vocab-priced mint's composition, now default-on.  Same
+        pin shape as the depth-2 test: the *fire* plus a verified
+        lowering (which fused member extraction commits among tied
+        1-cost synops is a tie, either way it verifies).
+        """
+        from mlopt_discovery import zoo as zoo_mod
+        from mlopt_orchestrator.optimize import lower, search
+        from mlopt_torch.adapters import TorchSink, TorchSource
+
+        sp.register()
+        w = {w_.name: w_ for w_ in zoo_mod.zoo()}[
+            "GatedLinearAttention"
+        ]
+        torch.manual_seed(0)
+        model, feed = w.build()
+        feeds = feed if isinstance(feed, tuple) else (feed,)
+        res = search(
+            model.eval().double(),
+            feeds,
+            source=TorchSource(),
+            max_iterations=20,
+        )
+        fired = res.stats.get("rule_fires", {})
+        assert any(fired.get(f"prim:{n}") for n in sp.SYNOP3_SHIPPED), (
+            fired
+        )
+        assert any(
+            n.op in sp.SYNOP3_SHIPPED
+            for ec in res.eg._classes.values()
+            for n in ec.nodes
+        )
         lr = lower(res, feeds, sink=TorchSink(), verify=True)
         assert lr.verified is not None and lr.verified.passed
 

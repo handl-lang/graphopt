@@ -1226,7 +1226,11 @@ class TestCorpusZooPrimBootstrap:
 
         name = next(
             n
-            for n in sorted(minted.SYNOP_SHIPPED - minted.SYNOP2_SHIPPED)
+            for n in sorted(
+                minted.SYNOP_SHIPPED
+                - minted.SYNOP2_SHIPPED
+                - minted.SYNOP3_SHIPPED
+            )
             if not minted.prim_fold(n)[0].rhs.attrs
         )
         lhs = minted.prim_fold(name)[0].lhs
@@ -1249,7 +1253,11 @@ class TestCorpusZooPrimBootstrap:
 
         name = next(
             n
-            for n in sorted(minted.SYNOP_SHIPPED - minted.SYNOP2_SHIPPED)
+            for n in sorted(
+                minted.SYNOP_SHIPPED
+                - minted.SYNOP2_SHIPPED
+                - minted.SYNOP3_SHIPPED
+            )
             if not minted.prim_fold(n)[0].rhs.attrs
         )
         fold = minted.prim_fold(name)[0]
@@ -1662,9 +1670,17 @@ class TestCorpusZooPrimDepth3:
         assert set(vocab) == minted.SYNOP_SHIPPED
         for name, w in vocab.items():
             assert w == _n_ops(minted.prim_fold(name)[1].rhs)
-        assert minted.SYNOP2_SHIPPED
+        d1 = minted.SYNOP_SHIPPED - minted.SYNOP2_SHIPPED - (
+            minted.SYNOP3_SHIPPED
+        )
+        assert minted.SYNOP2_SHIPPED and minted.SYNOP3_SHIPPED
+        # strict tier ordering: each deeper tier's expanded denotation
+        # out-prices the tier below's.
         assert min(vocab[n] for n in minted.SYNOP2_SHIPPED) > max(
-            vocab[n] for n in vocab if n not in minted.SYNOP2_SHIPPED
+            vocab[n] for n in d1
+        )
+        assert min(vocab[n] for n in minted.SYNOP3_SHIPPED) > max(
+            vocab[n] for n in minted.SYNOP2_SHIPPED
         )
 
     def test_prim_vocab_knob_resolves(self):

@@ -30,9 +30,9 @@ construction, no codegen), **agnostic exits** (`Sink` → torch/ONNX/`.hnl`).
 
 - **`conv_bn_fold`** — the conv+BN weight fold every framework
   hand-codes, *composed by the machine*, certified, shipped — one of
-  **59 machine-admitted rules** on the `MACHINE_SHIPPED` ledger (the
-  13 promoted laws, the 23 minted `prim:synop_*`/`synop2_*` folds now
-  seated in `DEFAULT`, and their 23 `.expand` definitional premises).
+  **127 machine-admitted rules** on the `MACHINE_SHIPPED` ledger (the
+  13 promoted laws, the 57 minted `prim:synop_*`/`synopN_*` folds now
+  seated in `DEFAULT`, and their 57 `.expand` definitional premises).
   Bitwise-equal
   through an independent runtime (the handl tree-walk engine) at ≈−5 %
   per-call wall in the deployed regime — a kernel-scale fp64 result,

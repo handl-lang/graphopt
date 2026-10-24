@@ -73,14 +73,16 @@ patterns, bind counts across distinct zoo modules):
 ## Shipped
 
 The admitted folds are no longer process-local — they ship
-**default-on**: the 23 fold laws (21 `prim:synop_*` + 2
-`prim:synop2_*`) and their 23 `.expand` definitional premises embed
+**default-on**: the 57 fold laws (21 `prim:synop_*` + 2
+`prim:synop2_*` + 34 `prim:synop3_*`) and their 57 `.expand`
+definitional premises embed
 verbatim in `mlopt_core.laws.minted` (`_PRIM_RECORDS` +
-`_PRIM2_RECORDS` — torch-free pattern data, the laws not the
+`_PRIM2_RECORDS` + `_PRIM3_RECORDS` — torch-free pattern data, the
+laws not the
 semantics) and ride `MINTED_RULES` into `ALL_RULES` / `DEFAULT`, so
 `search(rules=DEFAULT)` fires them with no opt-in.  The
-`MACHINE_SHIPPED` provenance ledger counts **59 rows** (13 laws + 23
-folds + 23 premises); the `.expand` premises stay off the saturation
+`MACHINE_SHIPPED` provenance ledger counts **127 rows** (13 laws + 57
+folds + 57 premises); the `.expand` premises stay off the saturation
 lists — they are the cert leg's anchored-derivation axioms, carried on
 `rule.premises` (re-expanding a `synop_*` re-adds the unfolded
 spelling the fold collapses).

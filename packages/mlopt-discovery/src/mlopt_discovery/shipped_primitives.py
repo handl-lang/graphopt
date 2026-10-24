@@ -8,7 +8,12 @@ all ``machine-original``).  The ``--prim-bootstrap`` arm then minted
 one loop deeper: 2 depth-2 ``synop2_*`` primitives whose fold LHS is
 a synop-carrying skeleton — a manual shape spelled *through* a
 shipped ``synop_*`` op — admitted the same way
-(``docs/reports/results_overnight_prim_bootstrap.json``).  The minted
+(``docs/reports/results_overnight_prim_bootstrap.json``).  The
+``--prim-vocab`` run then repriced the frontier — a carried
+``synop*`` leaf scores at its denotation's op-count — and minted a
+third tier: 34 depth-3 ``synop3_*`` folds whose skeletons compose
+over BOTH shipped vocabularies
+(``docs/reports/results_overnight_prim_vocab.json``).  The minted
 objects were runtime-only — the ``synop_*`` op registration, the
 torch denotation and the ``prim:synop_*`` fold law all died with the
 driver process.
@@ -16,10 +21,11 @@ driver process.
 Where the family lives now
 --------------------------
 
-The 23 fold laws and their definitional ``synop_*``/``synop2_*``
-``.expand`` premises are **core-shipped, default-on**: the verbatim
-records embed in :mod:`mlopt_core.laws.minted` (``_PRIM_RECORDS`` +
-``_PRIM2_RECORDS`` — laws, not semantics; the patterns are torch-free
+The 57 fold laws and their definitional ``synop_*``/``synop2_*``/
+``synop3_*`` ``.expand`` premises are **core-shipped, default-on**:
+the verbatim records embed in :mod:`mlopt_core.laws.minted`
+(``_PRIM_RECORDS`` + ``_PRIM2_RECORDS`` + ``_PRIM3_RECORDS`` — laws,
+not semantics; the patterns are torch-free
 data) and ride ``MINTED_RULES`` into ``ALL_RULES`` / ``DEFAULT`` — so
 ``search(rules=DEFAULT)`` fires them with no opt-in.  This module is
 what remains domain-side, exactly the piece a torch-free core cannot
@@ -31,13 +37,13 @@ the ambient ``mlopt_torch.torch_bridge._IR_TO_TORCH`` table, so every
 — the table IS the ambient dict) can lower it.  The mint's fp64 site
 checks all measured ``equal`` — the fold is sound by construction.
 
-The depth-2 ops' denotation is the skeleton **fully re-expanded to
-manual ops** — the embedded ``synop2_*.expand`` premise's RHS is the
-mint's recorded ``xpat`` (``_expand_synops`` over the fold LHS), so
-the binding spells ``add``/``mul`` alone and stands even where the
-embedded depth-1 op is unbound.  (The uniform rule: an op's
+The deeper-tier ops' denotation is the skeleton **fully re-expanded
+to manual ops** — the embedded ``synopN_*.expand`` premise's RHS is
+the mint's recorded ``xpat`` (``_expand_synops`` over the fold LHS),
+so the binding spells ``add``/``mul`` alone and stands even where the
+embedded lower-tier ops are unbound.  (The uniform rule: an op's
 denotation spec is its premise's RHS — depth-1 premises end at the
-fold LHS, depth-2 premises end at the expansion.)
+fold LHS, depth-2+ premises end at the expansion.)
 
 What ships per primitive:
 
@@ -48,18 +54,18 @@ What ships per primitive:
   hash);
 * the **denotation** — this module's :func:`register`: one ambient
   torch binding per op, evaluating the spelled pattern itself;
-* the **fold law** — ``prim:synop_<hash>`` / ``prim:synop2_<hash>`` —
+* the **fold law** — ``prim:synop_<hash>`` / ``prim:synopN_<hash>`` —
   materialized by :func:`mlopt_core.laws.minted.prim_folds`; in
   ``DEFAULT``;
 * the **definitional premise** — ``synop_<hash>.expand`` /
-  ``synop2_<hash>.expand`` (``synop_call -> denotation``), the axiom
+  ``synopN_<hash>.expand`` (``synop_call -> denotation``), the axiom
   the cert leg's anchored derivation unions in when the bare bank
   cannot derive the fold — materialized by ``minted.prim_premises``
   and attached to each fold as ``rule.premises`` (the convention
-  ``pipeline.Proposal.as_rule`` mints).  For a depth-2 fold the
+  ``pipeline.Proposal.as_rule`` mints).  For a depth-N fold the
   premise RHS is the *expanded* manual denotation: the anchored
-  ``rhs -> lhs`` derivation is 2 steps — the premise, then the
-  shipped depth-1 fold re-folding the embedded shape.
+  ``rhs -> lhs`` derivation is N steps — the premise, then the
+  shipped lower-tier folds re-folding the embedded shapes.
 
 Deployment contract
 -------------------
@@ -77,7 +83,8 @@ Deployment contract
 ``register()`` is the deliverability half — without it saturation
 still fires the folds (pattern matching needs no op table) but
 extraction's ``supported_ops`` bound correctly refuses a form no
-sink can lower.  An unbound ``synop_*`` prices like any unknown op
+sink can lower.  An unbound ``synop*_`` op prices like any unknown
+op
 (the elementwise FLOP default plus launch — a fusion-region
 boundary, never 0, never ``+inf`` by default), so a sink with the
 bindings sees the honest win: one fused primitive vs the manual
@@ -89,8 +96,8 @@ Provenance
 ----------
 
 Core's ``mlopt_core.laws.provenance.MACHINE_SHIPPED`` covers the
-fold (``prim:synop_*`` / ``prim:synop2_*``) and premise
-(``synop_*.expand`` / ``synop2_*.expand``) names.
+fold (``prim:synop_*`` / ``prim:synopN_*``) and premise
+(``synop_*.expand`` / ``synopN_*.expand``) names.
 :data:`MACHINE_MINTED` here is the domain-side ledger for what
 *this* module ships — the ``synop_*`` op names whose torch
 denotations it registers.  :func:`law_provenance` unions the two.
@@ -99,7 +106,7 @@ also carries the mint's own measurements — ``mods`` (the bound
 modules), ``sites``/``equal_sites`` (the fp64 denotation check) and
 ``handler`` (the grammar minter's verdict — ``"minted"`` where a
 handler body verified, ``"refused"`` where the primitive ships on
-its definitional denotation alone); the depth-2 records add
+its definitional denotation alone); the deeper-tier records add
 ``alpha_fold``/``embeds_shipped``/``embeds`` — the skeleton's
 spelling and the shipped ops it composes over.
 """
@@ -117,6 +124,7 @@ __all__ = [
     "FOLD_LAW",
     "MACHINE_MINTED",
     "SYNOP2_SHIPPED",
+    "SYNOP3_SHIPPED",
     "SYNOP_SHIPPED",
     "declare",
     "expand_name",
@@ -132,13 +140,17 @@ __all__ = [
 ]
 
 #: The minted op names the family ships — ``synop_<sha256[:10]>``
-#: (depth-1) plus the depth-2 ``synop2_<sha256[:10]>`` — the
+#: (depth-1) plus the depth-N ``synopN_<sha256[:10]>`` — the
 #: core-side table, bound here.
 SYNOP_SHIPPED: frozenset[str] = minted.SYNOP_SHIPPED
 
 #: The depth-2 subset — the ``--prim-bootstrap`` mint's ``synop2_*``
 #: ops (folds over the shipped ``synop_*`` vocabulary).
 SYNOP2_SHIPPED: frozenset[str] = minted.SYNOP2_SHIPPED
+
+#: The depth-3 subset — the ``--prim-vocab`` run's ``synop3_*`` ops
+#: (skeletons spelled through both shipped tiers).
+SYNOP3_SHIPPED: frozenset[str] = minted.SYNOP3_SHIPPED
 
 #: The domain-side provenance ledger: the ``synop_*`` op names this
 #: module ships torch denotations for.  The fold (``prim:synop_*``)
@@ -180,7 +192,7 @@ def spec(synop: str) -> Any:
     positional args bind them) and attr metavars stay their names
     inside the attr dicts (the call's attrs carry the bound values
     back in at eval time).  Depth-1 premises end at the fold LHS;
-    depth-2 premises end at the skeleton's *expanded* manual
+    deeper-tier premises end at the skeleton's *expanded* manual
     denotation, so the spec is manual-ops-only for every op.
     """
     return _spec_of(minted.prim_fold(synop_name(synop))[1].rhs)
@@ -256,7 +268,7 @@ def declare() -> None:
 
     The op *declarations* travel with the laws: importing
     ``mlopt_core.laws`` materializes the folds (``MINTED_RULES``),
-    which registers each ``synop_*``/``synop2_*``
+    which registers each ``synop_*``/``synopN_*``
     :class:`~mlopt_core.ir.GenDef` so ``generator(name)`` resolves.
     Idempotent — kept as the explicit spelling for callers that want
     the ops declared without the torch bindings.
@@ -272,8 +284,8 @@ def register() -> int:
     subgraph through the same ambient table — so nested ``synop``
     denotations and post-hoc overrides compose.  The spec is the
     definitional premise's RHS (see :func:`spec`): manual ops only
-    at both depths, so a ``synop2_*`` binding stands self-contained
-    even where its embedded ``synop_*`` is unbound.  Seating on the
+    at every depth, so a ``synopN_*`` binding stands self-contained
+    even where its embedded lower-tier ops are unbound.  Seating on the
     ambient dict reaches every ``OpTable.full()``-backed sink,
     including already-constructed ``TorchSink`` instances
     (``supported_ops`` is the table's live key set).  Idempotent —
@@ -315,9 +327,10 @@ def ruleset(name: str = "prim_folds") -> RuleSet:
         folds(),
         description=(
             "the shipped machine-minted primitive folds — "
-            f"{len(SYNOP_SHIPPED)} synop_*/synop2_* ops from the "
+            f"{len(SYNOP_SHIPPED)} synop_*/synopN_* ops from the "
             "zoo-prim mints (docs/reports/results_overnight_prim_v2"
-            ".json + results_overnight_prim_bootstrap.json); "
+            ".json + results_overnight_prim_bootstrap.json + "
+            "results_overnight_prim_vocab.json); "
             "denotations register via shipped_primitives.register()"
         ),
     )

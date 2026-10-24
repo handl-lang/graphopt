@@ -823,7 +823,7 @@ venue paper needs the scale validation and the executor work named in §6.
 | Claim | Measurement | Artifact |
 |---|---|---|
 | **Novelty.** A corpus-minted law ships in the default rule set | `mul_unsq_nat`, `MACHINE_SHIPPED`, −12.27 % on DeltaRuleBlock, +18 enodes | `project/retros/mul-unsq-nat.md`; `mlopt_core.laws.provenance.MACHINE_SHIPPED` |
-| machine-admitted laws ship beside the hand-written kernel | `MACHINE_SHIPPED` (59 rows — 13 laws + 23 minted `prim:synop*` folds + 23 `.expand` premises; 36 seated in `DEFAULT`) | `docs/api.md`; `project/retros/promoted-laws.md`; `docs/reports/primitives_finds.md` |
+| machine-admitted laws ship beside the hand-written kernel | `MACHINE_SHIPPED` (127 rows — 13 laws + 57 minted `prim:synop*` folds + 57 `.expand` premises; 70 seated in `DEFAULT`) | `docs/api.md`; `project/retros/promoted-laws.md`; `docs/reports/primitives_finds.md` |
 | A handler for a previously hand-written executor is machine-minted | `om_decayed` element at 8.9e-16 fp64 | `project/retros/handler-proposals.md`; ADR 0007 |
 | An atom's law set is synthesized and certified | 25 certified / 4 rejected / 0 refused | `project/retros/layer3-loop.md` |
 | Fresh paying structure is sparse | 60-model sweep: 0 paying new laws beyond `mul_unsq_nat`; ~1.5 % | `project/retros/discovery-scale.md` |
