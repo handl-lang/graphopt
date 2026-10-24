@@ -3,9 +3,18 @@
 `overnight.py --corpus zoo-prim` (68-module corpus, 2026-10-23) mined recurring
 manual subgraphs, synthesized a new `synop_*` primitive for each, and minted the
 fold `manual_spelling -> synop_*`. All 21 admitted folds classify
-**machine-original**: certified, measured paying, underivable from the 242-rule
-bank — novel by construction, since no catalog contains laws about an op that
-did not exist.
+**machine-original**: certified, measured paying, underivable from the then
+242-rule bank (`known_bank()` now counts 265 — the folds below seated) — novel
+by construction, since no catalog contains laws about an op that did not exist.
+
+*Since this file was written* (the depth-1 run, `results_overnight_prim_v2`/`v4`):
+the widened `--prim-deep` hunt admitted **48/48** deeper shapes — all
+machine-original, disjoint names — and `--prim-bootstrap`, which seats the
+shipped folds in the corpus e-graph as vocabulary, admitted **2 depth-2
+`synop2_*` folds** (`results_overnight_prim_deep.md`,
+`results_overnight_prim_bootstrap.md`; the bootstrap run's other 46 re-admit the
+deep set — **71 distinct folds across runs**).  23 folds (21 + 2) ship in
+`DEFAULT`.
 
 ## What the primitives are
 
@@ -46,10 +55,12 @@ patterns, bind counts across distinct zoo modules):
   fuser does implicitly; the 14-module `a*b+c*d` is FMA-pair-shaped. What is
   new is the *named primitive + certified law* form, not the semantic.
 - **Open**: whether any `synop_*` corresponds to something a fused-kernel
-  engineer would call a real new kernel. Post-v3-grammar: 20/24 have
-  verified `ew` bodies; the 4 remaining refusals are select/linear-bearing
-  shapes (the SSM select-gate×projection step) — an index-family wall, not
-  a budget cap (`docs/reports/prim_handlers.md`).
+  engineer would call a real new kernel.  The index-family wall this used to
+  name has fallen — twice: the v4 `gather` handler family mints verified
+  bodies for **24/24** (the 4 select/linear refusals included), and
+  `family_synth.mint_families` then recovered `gather` *itself* as a minted
+  descriptor (`fam_8c9a7ed8`, parity-verified)
+  (`docs/reports/prim_handlers.md`, `docs/reports/family_synth.md`).
 
 ## Caveats
 
@@ -61,16 +72,26 @@ patterns, bind counts across distinct zoo modules):
 
 ## Shipped
 
-The 21 admitted folds are no longer process-local: they ship in
-`mlopt_discovery.shipped_primitives` — the verbatim mint records
-materialize the `prim:synop_*` fold laws (each carrying its
-`synop_*.expand` definitional premise), `register()` seats the op
-definitions and the torch denotations (the binding replays the spelled
-subgraph — sound by construction), and `prim_default()` deploys the
-set through `search`'s `rules=` seam.  They stay **opt-in** — never
-in core `DEFAULT` — because a `synop_*`'s meaning is a torch binding
-and pushing them into the torch-free substrate (or `DEFAULT`) would
-change extraction for consumers that can never lower the ops.
-Domain-side provenance ledger: `shipped_primitives.MACHINE_MINTED`
-(prov=machine).  See the "Shipped" note in
+The admitted folds are no longer process-local — they ship
+**default-on**: the 23 fold laws (21 `prim:synop_*` + 2
+`prim:synop2_*`) and their 23 `.expand` definitional premises embed
+verbatim in `mlopt_core.laws.minted` (`_PRIM_RECORDS` +
+`_PRIM2_RECORDS` — torch-free pattern data, the laws not the
+semantics) and ride `MINTED_RULES` into `ALL_RULES` / `DEFAULT`, so
+`search(rules=DEFAULT)` fires them with no opt-in.  The
+`MACHINE_SHIPPED` provenance ledger counts **59 rows** (13 laws + 23
+folds + 23 premises); the `.expand` premises stay off the saturation
+lists — they are the cert leg's anchored-derivation axioms, carried on
+`rule.premises` (re-expanding a `synop_*` re-adds the unfolded
+spelling the fold collapses).
+
+What stays domain-side is exactly the piece a torch-free core cannot
+ship — the **denotation**: `mlopt_discovery.shipped_primitives`'s
+`register()` seats one torch binding per op on the ambient
+`torch_bridge._IR_TO_TORCH` table (the binding replays the spelled
+subgraph — sound by construction; a `synop2_*` binding spells the
+fully re-expanded manual form), so every `OpTable.full()`-backed
+`TorchSink` lowers them.  Domain-side ledger:
+`shipped_primitives.MACHINE_MINTED` (prov=machine).  See the "Shipped"
+note in
 `results_overnight_prim_v2.md` for the re-measured deliverability.

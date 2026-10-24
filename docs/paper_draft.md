@@ -32,7 +32,8 @@ strictly beats a registered `bench/discovery` baseline on a derivation that
 invokes it, and its instance is underivable from `known_bank()` (the shipped
 rules plus the prior-art preset) minus alpha-siblings.  The sieve
 (`bench/drivers/screen/novelty_sieve.py`, results in
-`docs/results_novelty_sieve.md`) ran 24 candidates over the 242-rule bank:
+`docs/results_novelty_sieve.md`) ran 24 candidates over the then-242-rule bank
+(`known_bank()` now counts 265 — the shipped `prim:synop*` folds seated since):
 the review queue is **empty** — the two earlier review items
 (`mul_unsq_nat`, `softsign_fold`) demoted to derivable once their
 catalogued duals were registered as prior art — six derivable,
@@ -430,18 +431,41 @@ exposed models).  Exposure itself is **bimodal**: of 321 exported workloads,
 **The real-corpus mint funnel admits paying folds — all known-art (Q1).**
 The corpus-driven overnight mint (`bench/drivers/overnight.py --corpus
 zoo-real --compose`) paged all **53 held-out zoo modules**, minting
-candidates from each module's own op-tuple census: **101 viable mints
-(19 composites, 10 guarded), 203 evaluated, 8 admitted** — and every
+candidates from each module's own op-tuple census: **102 viable mints
+(20 composites, 10 guarded), 204 evaluated, 8 admitted** — and every
 admitted law classified **known-art** post-registration: the funnel's
 paying finds (the `instance_norm`/`group_norm`/`rms_norm` denotations,
 the sdpa/glu folds) were already catalogued transforms, so the count of
 confirmed machine-originals is **0**
-(`docs/reports/results_overnight_real_v5.md`,
+(`docs/reports/results_overnight_real_v6.md`,
 `docs/results_realcorpus_v2.md`).  The run series also surfaced a real
 substrate bug — emit-time RHS sanity caught a bare `Exception`,
 conflating *cannot-evaluate* with *evaluated-and-false* so
 non-denoting composites were minted as candidates; fixed in the
 substrate (eqsat `2d6e4eb`), the mint now emits only viable objects.
+
+**The primitive arm breaks the known-art ceiling (Q1, continued).**  The
+`zoo-prim` mint (`bench/drivers/overnight.py --corpus zoo-prim`, 68-module
+corpus) synthesizes a new `synop_*` op for each manual subgraph shape
+recurring across ≥2 held-out modules and denoted by no bank op — the fold
+is novel *by construction*.  The depth-1 run admitted **21/24 folds, all
+machine-original** — certified, paying (launch 0.36–0.80x), underivable —
+and they now ship in `DEFAULT`; the widened `--prim-deep` hunt admitted
+**48/48** deeper shapes (all machine-original, disjoint names); and
+`--prim-bootstrap`, which seats the shipped folds in the corpus e-graph as
+vocabulary, admitted **2 depth-2 `synop2_*` folds** — **71 distinct
+machine-original folds across the runs** (`docs/reports/primitives_finds.md`,
+`docs/reports/results_overnight_prim_deep.md`,
+`docs/reports/results_overnight_prim_bootstrap.md`).  The honest content:
+the shared "sum-of-gated-products" skeleton of the SSM family (DeltaNet /
+GLA / Mamba / RG-LRU) plus the 14-module `a*b+c*d` shape — real
+cross-architecture structure, named by the machine, **not** "unknown to
+humanity" (elementwise fusers do this implicitly; what is new is the named
+primitive + certified law).  The handler layer is meta-circular: refused
+specs mint their own handler *family* (`--prim-family-mint`, default on —
+`family_synth.mint_families`), `gather` itself was recovered as descriptor
+`fam_8c9a7ed8` (parity-verified), and all **24/24 handler bodies** mint
+(`docs/reports/prim_handlers.md`, `docs/reports/family_synth.md`).
 
 **Rediscoveries, said plainly.**  The largest structural wins are *not*
 discoveries.  The RetNet carrier the machine extracts is numerically
@@ -702,8 +726,10 @@ handl's own rewrite engine and must produce the term mlopt's
 * **Discovery yield is sparse (~1.5 %)** and exposure is bimodal — 81/321
   workloads expose nothing at all.  On the real held-out corpus the
   corpus-driven mint admits real paying folds but every one classifies
-  **known-art** post-registration: 53 zoo modules → 101 viable mints,
-  8 admitted, **0 confirmed machine-originals** (§4.1); shallow
+  **known-art** post-registration: 53 zoo modules → 102 viable mints,
+  8 admitted, **0 confirmed machine-originals** in the rewrite arm (§4.1 —
+  the primitive arm breaks that ceiling: 71 distinct machine-original
+  `prim:synop*` folds across the prim runs); shallow
   single-step mints are exhausted — guarded composites are the open lever.
 * **Strassen-class rediscovery is out of reach of per-step play.**  The
   bilinear board expresses rank 7 (verified scripted witness) but no player
@@ -797,7 +823,7 @@ venue paper needs the scale validation and the executor work named in §6.
 | Claim | Measurement | Artifact |
 |---|---|---|
 | **Novelty.** A corpus-minted law ships in the default rule set | `mul_unsq_nat`, `MACHINE_SHIPPED`, −12.27 % on DeltaRuleBlock, +18 enodes | `project/retros/mul-unsq-nat.md`; `mlopt_core.laws.provenance.MACHINE_SHIPPED` |
-| 13 machine-admitted laws ship beside the hand-written kernel | `MACHINE_SHIPPED` (13) | `docs/api.md`; `project/retros/promoted-laws.md` |
+| machine-admitted laws ship beside the hand-written kernel | `MACHINE_SHIPPED` (59 rows — 13 laws + 23 minted `prim:synop*` folds + 23 `.expand` premises; 36 seated in `DEFAULT`) | `docs/api.md`; `project/retros/promoted-laws.md`; `docs/reports/primitives_finds.md` |
 | A handler for a previously hand-written executor is machine-minted | `om_decayed` element at 8.9e-16 fp64 | `project/retros/handler-proposals.md`; ADR 0007 |
 | An atom's law set is synthesized and certified | 25 certified / 4 rejected / 0 refused | `project/retros/layer3-loop.md` |
 | Fresh paying structure is sparse | 60-model sweep: 0 paying new laws beyond `mul_unsq_nat`; ~1.5 % | `project/retros/discovery-scale.md` |
@@ -828,7 +854,8 @@ venue paper needs the scale validation and the executor work named in §6.
 | The minted atom pays nothing | 0 certified laws fire on real terms | `atom-synth-loop.md` |
 | Anti-unification reach-expansion | null on all 3 workloads | ADR 0007 |
 | FLA vs the delivered carrier | ~3× memory, ~11× speed (lowering gap) | `retnet-external-baselines.md` |
-| **Frontier.** Real-corpus mint funnel (Q1) | 53 zoo modules → 101 viable mints (19 composites, 10 guarded), 203 evaluated → 8 admitted, all known-art post-registration / 0 machine-originals | `docs/reports/results_overnight_real_v5.md`; `docs/results_realcorpus_v2.md` |
+| **Frontier.** Real-corpus mint funnel (Q1) | 53 zoo modules → 102 viable mints (20 composites, 10 guarded), 204 evaluated → 8 admitted, all known-art post-registration / 0 machine-originals | `docs/reports/results_overnight_real_v6.md`; `docs/results_realcorpus_v2.md` |
+| Primitive arm (Q1) | 21/24 depth-1 + 48/48 `--prim-deep` + 2 depth-2 `synop2_*` under `--prim-bootstrap` admitted, all machine-original (71 distinct); 23 folds seated in `DEFAULT`; 24/24 handler bodies minted, `gather` recovered as descriptor `fam_8c9a7ed8` | `docs/reports/primitives_finds.md`; `docs/reports/results_overnight_prim_deep.md`; `docs/reports/results_overnight_prim_bootstrap.md`; `docs/reports/family_synth.md` |
 | Emit-time RHS-sanity substrate fix | bare-`Exception` catch conflated can't-eval with eval-false; mint now emits only viable candidates | eqsat `2d6e4eb` |
 | Strassen rediscovery board (Q2) | NO-GO: scripted witness verifies rank 7 (29 moves, 10/10); all players 0 wins in 200+ episodes, stall at rank 8 | `docs/results_strassen.md` |
 | Enabling-chain credit (Q3) | learned arms close mint → apply chains (linear-greedy 100 % held-out; neural at the scripted ceiling); density-bound at k=16 | `docs/results_credit_chain.md` |

@@ -64,9 +64,12 @@ vocabulary itself:
 - `bench/drivers/probes/conv_fold_premise_pay_probe.py` — the flagship:
   mint → transport → truth → pay → gauntlet (~13 s).
 
-The shipped result: **13 machine-admitted laws** in `DEFAULT`
-(`mlopt_core.laws.provenance.MACHINE_SHIPPED`), the newest being
-`add_unsq_pad_r` — the first promotion whose paying site is a
+The shipped result: **36 machine-admitted laws** in `DEFAULT` — the
+13 promoted laws plus 23 minted `prim:synop_*`/`synop2_*` folds — on a
+**59-row** `MACHINE_SHIPPED` ledger once each fold's `.expand`
+definitional premise is counted
+(`mlopt_core.laws.provenance.MACHINE_SHIPPED`).  `add_unsq_pad_r` is
+the first promotion whose paying site is a
 strictly-real intake workload; `conv_bn_fold` before it is a depth-4
 minted composite replayed at import and verified bitwise through an
 independent runtime.

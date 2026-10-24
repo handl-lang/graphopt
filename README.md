@@ -30,7 +30,10 @@ construction, no codegen), **agnostic exits** (`Sink` → torch/ONNX/`.hnl`).
 
 - **`conv_bn_fold`** — the conv+BN weight fold every framework
   hand-codes, *composed by the machine*, certified, shipped — one of
-  **13 machine-admitted laws** in the default bank.  Bitwise-equal
+  **59 machine-admitted rules** on the `MACHINE_SHIPPED` ledger (the
+  13 promoted laws, the 23 minted `prim:synop_*`/`synop2_*` folds now
+  seated in `DEFAULT`, and their 23 `.expand` definitional premises).
+  Bitwise-equal
   through an independent runtime (the handl tree-walk engine) at ≈−5 %
   per-call wall in the deployed regime — a kernel-scale fp64 result,
   not a model-scale speedup claim.  Full account:
@@ -56,8 +59,10 @@ ListNet-graded drain earns heuristic-parity reward (0.3549 vs 0.3595)
 cert ✓ + beats a registered baseline + underivable from
 `known_bank()` (which now includes the prior-art preset) — *not*
 "novel to humanity", which stays an open-world lit-review.  The sieve
-ran 24 candidates over the 242-rule bank (the 31-case scorecard is
-31/31 found+cert): **review queue empty** — the two prior review items
+ran 24 candidates over the then-242-rule bank — `known_bank()` now
+counts **265**, the shipped `prim:synop*` folds seated since — and
+the 31-case scorecard is
+31/31 found+cert: **review queue empty** — the two prior review items
 (`mul_unsq_nat`, `softsign_fold`) demoted to derivable once their
 catalogued duals were registered as prior art; 6 derivable, 6 unpaid,
 12 unmeasured — [`docs/results_novelty_sieve.md`](docs/results_novelty_sieve.md).
@@ -76,15 +81,32 @@ search.
 
 **Open — now measured (the Q-series).**  Unnamed structure on real
 corpora: the rewrite-only mint saturates at **known-art** — 53
-held-out zoo modules → 101 viable mints → **8 admitted, every one
+held-out zoo modules → 102 viable mints → **8 admitted, every one
 classified known-art** (the paying folds it found — the norm kernels,
 the sdpa/glu folds — were already catalogued)
 ([`docs/reports/results_overnight_real_v6.md`](docs/reports/results_overnight_real_v6.md)).
 The **primitive arm breaks the ceiling**: `--corpus zoo-prim` mints
 new `synop_*` ops for recurring manual shapes no bank op denotes, so
-the fold is novel *by construction* — **21/24 admitted, all 21
-classified machine-original**: certified, paying (launch 0.36–0.80x),
-underivable.  What it found is honest: the shared
+the fold is novel *by construction*.  Three runs deep: the depth-1
+arm admitted **21/24, all classified machine-original** — certified,
+paying (launch 0.36–0.80x), underivable, now shipped in `DEFAULT`
+([`docs/reports/results_overnight_prim_v4.md`](docs/reports/results_overnight_prim_v4.md));
+the widened `--prim-deep` hunt admitted **48/48** deeper shapes (8–12
+ops, some nesting earlier synops — all machine-original)
+([`docs/reports/results_overnight_prim_deep.md`](docs/reports/results_overnight_prim_deep.md));
+and `--prim-bootstrap` — which seats the shipped folds *in the corpus
+e-graph* as vocabulary — admitted **2 depth-2 `synop2_*` folds**
+whose LHS is spelled through a shipped `synop_*` (verified, paying,
+shipped)
+([`docs/reports/results_overnight_prim_bootstrap.md`](docs/reports/results_overnight_prim_bootstrap.md)).
+**71 distinct machine-original folds** across the runs (the bootstrap
+run's other 46 re-admit the deep set).  The mint is meta-circular
+too: refused specs mint their own handler *family*
+(`--prim-family-mint`, on by default — `family_synth.mint_families`),
+and `gather` itself was recovered as a minted descriptor
+(`fam_8c9a7ed8`, parity-verified); **24/24 handler bodies minted**
+([`docs/reports/family_synth.md`](docs/reports/family_synth.md)).
+What it found is honest: the shared
 "sum-of-gated-products" skeleton of the SSM family (DeltaNet / GLA /
 Mamba / RG-LRU — four published architectures, one discovered core)
 plus the 14-module `a*b+c*d` shape — real cross-architecture
@@ -104,7 +126,10 @@ verify-forward RAM, fp64 overflow
 ([`docs/reports/results_scale_ladder.md`](docs/reports/results_scale_ladder.md)).
 Strassen fails where chains succeed → the frontier is **search depth
 and density**, not machinery.  Still open: **can a player learn in a
-game that grows under it?**
+game that grows under it?**  The next move is the fragment tower —
+the vocabularies themselves become `Language` data
+([`project/plans/0033-fragment-tower.md`](project/plans/0033-fragment-tower.md);
+ADR-0157 in `handl-lang/host`).
 
 ## Architecture
 

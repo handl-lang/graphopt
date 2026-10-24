@@ -125,8 +125,10 @@ calculus defines [@kernel2026] and the eqsat paper operationalises
 are **data rows** (a pattern pair plus a `cond`/`check`/`derive`
 guard spec), serializable, storable, composable — and what this paper
 mutates is the bank: `mlopt_core.laws.ALL_RULES` mixes human-authored
-axioms with thirteen machine-admitted objects
-(`mlopt_core.laws.provenance.MACHINE_SHIPPED`).
+axioms with 59 machine-admitted objects
+(`mlopt_core.laws.provenance.MACHINE_SHIPPED` — 13 promoted laws, the
+23 minted `prim:synop_*`/`synop2_*` folds seated in `DEFAULT`, and
+their 23 `.expand` definitional premises).
 
 ## The handl substrate and mlopt-kit
 
@@ -283,7 +285,8 @@ lowered modules.
 
 **Ship.**  The composite is promoted *verbatim*: its stored records
 embed in `mlopt_core.laws.minted`, its guard re-materializes at
-import, `MACHINE_SHIPPED` grows to 12 (13 today — `add_unsq_pad_r`
+import, `MACHINE_SHIPPED` grows to 12 (59 today — `add_unsq_pad_r`,
+then the primitive arm's 23 folds and 23 `.expand` premises
 followed).  Re-running the gauntlet
 post-ship refuses at novelty with `relation=duplicate` — the
 documented signature of "already admitted."
@@ -321,7 +324,7 @@ study would suggest.
 
 | arm | question | measured verdict |
 |---|---|---|
-| Q1 | unnamed structure on *real* corpora | **rewrites saturate at known-art; primitives break it** — the rewrite mint over 68 held-out zoo modules admitted 8 paying folds, all **known-art** (already catalogued); the *primitive* arm, which mints new `synop_*` ops for recurring manual shapes no bank op denotes, produced **21/24 admitted machine-original folds** — certified, paying (launch 0.36–0.80x), novel by construction.  The honest content: it recovered the shared gated-accumulator skeleton of the SSM family (DeltaNet/GLA/Mamba/RG-LRU) — real cross-architecture structure, not unknown-to-humanity transforms (`docs/reports/primitives_finds.md`) |
+| Q1 | unnamed structure on *real* corpora | **rewrites saturate at known-art; primitives break it** — the rewrite mint over 53 held-out zoo modules minted 102 viable candidates and admitted 8 paying folds, all **known-art** (already catalogued); the *primitive* arm, which mints new `synop_*` ops for recurring manual shapes no bank op denotes, produced on the 68-module corpus **21/24 admitted machine-original folds** at depth 1 — certified, paying (launch 0.36–0.80x), novel by construction, now seated in `DEFAULT` — then **48/48** on the widened `--prim-deep` hunt and **2 depth-2 `synop2_*` folds** under `--prim-bootstrap` (shipped folds seated as vocabulary); **71 distinct machine-originals across runs**.  The honest content: it recovered the shared gated-accumulator skeleton of the SSM family (DeltaNet/GLA/Mamba/RG-LRU) — real cross-architecture structure, not unknown-to-humanity transforms (`docs/reports/primitives_finds.md`) |
 | Q2 | rediscovery of a Strassen-class algorithm | **NO-GO** — the 2×2×2 bilinear board provably expresses rank 7 (a scripted 29-move line verifies 10/10), yet random, greedy-repair, and cold-linear players stalled at rank 8 over 200+ episodes at budgets 48 and 96 (`docs/results_strassen.md`) |
 | Q3 | multi-step credit — mint a premise, cash it later | **YES, where chains are dense** — the trained linear arm argmaxes the enabling chain on 100% of held-out boards and the neural arm converges to the scripted ceiling; at sparser chain density (more decoys, fewer episodes) linear REINFORCE degrades to the myopic arm (`docs/results_credit_chain.md`) |
 | Q4 | scale | **three distinct walls** — matcher time on unrolled terms (~11k IR nodes exceeds the 480 s rung budget), verify-forward RAM on the *spelled* program (a ~17 GB fp64 attention tensor at T=4096), and spelled-program numerics (fp64 overflow; verify honestly refuses at T≥1024) (`docs/reports/results_scale_ladder.md`) |
@@ -331,7 +334,7 @@ One substrate bug surfaced en route and is fixed: emit-time RHS
 sanity conflated *cannot-evaluate* with *evaluated-and-false* through
 a bare exception catch, so non-denoting composites were being minted
 as candidates (eqsat `2d6e4eb`).  The mint now emits only viable
-objects — the 101-mint funnel above is the post-fix count.
+objects — the 102-mint funnel above is the post-fix count.
 
 **The pair that teaches.**  Q2 fails where Q3 succeeds, and the
 difference is not the machinery — the same board protocol, players,
@@ -454,8 +457,9 @@ minted guards).
   rows (the slice the bounded prover can saturate against) — minus
   alpha-siblings.
   The sieve (`bench/drivers/screen/novelty_sieve.py`, results in
-  `docs/results_novelty_sieve.md`) ran 24 candidates over a 242-rule
-  bank: the review queue is **empty** — the two earlier review items
+  `docs/results_novelty_sieve.md`) ran 24 candidates over the
+  then-242-rule bank (`known_bank()` now counts 265 — the shipped
+  `prim:synop*` folds seated since): the review queue is **empty** — the two earlier review items
   (`mul_unsq_nat`, `softsign_fold`) demoted to derivable once their
   catalogued duals (`mul_unsq_rev`, `softsign_expand`) were registered
   as prior art — six derivable, six unpaid, twelve unmeasured.
@@ -473,16 +477,21 @@ minted guards).
 - **Rewrite-space originality on real corpora is closed; primitive
   space is open.**  The rewrite mint admitted 8 paying folds — every
   one already a theorem of the registered prior-art bank (known-art).
-  The primitive arm's 21 machine-original folds are novel *by
+  The primitive arm's machine-original folds (21 at depth 1, 48 in the
+  widened `--prim-deep` run, 2 at depth 2 under `--prim-bootstrap` —
+  71 distinct across runs) are novel *by
   construction* (the `synop_*` op did not exist), which is exactly the
   falsifiable claim — but the minted shapes are recognizable structure
   (mul-add trees, broadcast select-gates), not transforms a compiler
-  engineer would call new.  The open question is whether a minted
-  primitive can acquire a fused *implementation* the machine also
-  found — the v3 handler grammar (broadcast views admitted into `ew`)
-  now mints verified bodies for 20/24; the 4 refusals are
-  select/linear-bearing shapes — an index-family wall, not budget
-  (`docs/reports/prim_handlers.md`); Strassen-class rediscovery
+  engineer would call new.  Whether a minted
+  primitive could acquire a fused *implementation* the machine also
+  found is answered, twice over: the v4 `gather` handler family mints
+  verified bodies for **24/24** (`docs/reports/prim_handlers.md`), and
+  `family_synth.mint_families` recovered `gather` itself as a minted
+  descriptor (`fam_8c9a7ed8`, parity-verified — the family vocabulary
+  is now an object of the mint, `docs/reports/family_synth.md`);
+  the residual open question is whether a minted body is a kernel a
+  fused-kernel engineer would call *new*.  Strassen-class rediscovery
   remains out of reach of per-step play (@sec-frontier).
 
 # Reproduction {#sec-repro}
@@ -492,7 +501,7 @@ artifacts — the `conv_bn_fold` shipped law, `MACHINE_SHIPPED`
 provenance, the `dag_cost` alphabet — live in `mlopt_core` in
 `handl-lang/eqsat`, and the game layer in `handl-lang/gamekit`; both
 resolve as private `git+ssh` dependencies pinned in `uv.lock`
-(eqsat `2ff6fa5…`, gamekit `450731f…`).  The measured retros each
+(eqsat `194b305e…`, gamekit `450731f…`).  The measured retros each
 claim cites live under `project/retros/`, which is gitignored on
 `main` — they are committed on the repo's `project` branch, not in a
 `main` clone.  So: reproducible across the

@@ -188,8 +188,10 @@ of measured stage outcomes; the negatives (level 23) are a gallery of
 measured refusals.
 
 The **measured numbers in the prose callouts** come from the real Python
-system (`project/retros/`): the **13 machine-admitted laws** the library
-ships (`mlopt_core.laws.provenance.MACHINE_SHIPPED`; the first minted
+system (`project/retros/`): the **59 machine-admitted rules** the library
+ships on the `MACHINE_SHIPPED` ledger — 36 seated in `DEFAULT` (13
+laws + 23 minted `prim:synop*` folds), plus the folds' 23 `.expand`
+premises (`mlopt_core.laws.provenance.MACHINE_SHIPPED`; the first minted
 from a corpus op-tuple is `mul_unsq_nat` −12.3 % on its source workload,
 with four further laws machine-_assisted_ but
 hand-integrated: `select_mul`, `softmax_fold`, `glu_fold`,
