@@ -94,6 +94,34 @@ number. A demotion to `MACHINE_STORED` is a policy call, not a
 measurement; the numbers to make it are in
 `docs/reports/pay_measured.json`.
 
+## G2b — a real fused body *does* beat Inductor (different mechanism)
+
+The `synop` family cannot be fixed by re-binding it: the loss is the
+spec-walk, and the probe's compiled twins already lose.  But the *other*
+minting channel — `genkernel`, which emits `triton.jit` for a claimed
+handler — answers the question the family raises.  Same box, same day:
+
+```bash
+.venv/bin/python -m mlopt_discovery.play --domain gen --probe \
+    --train-cases 4 --eval-cases 2 --budget 8 --seed 0
+```
+
+| case | eager µs | `torch.compile` µs | generated kernel µs | vs eager | **vs compiled** | verified |
+|---|---|---|---|---|---|---|
+| `gen0:chainfuse` (6-op chain) | 317.3 | 244.7 | **85.2** | 3.72× | **2.87×** | yes (1.7e-5) |
+| `gen1:mulsoftplus` (2-op) | 29.6 | 38.3 | **20.0** | 1.48× | **1.92×** | yes (9.5e-7) |
+
+So the answer is not "folds don't pay" — it is **"a spec-walk doesn't
+pay; a generated kernel does, by 2.87× over Inductor on a 6-op chain."**
+The two arms are different mechanisms and must not be quoted as one:
+`synop_*` is a *vocabulary* result (originality), `gen_*` is a
+*delivery* result (speed).
+
+Caveats, stated: 2 cases, `--train-cases 4 --eval-cases 2 --budget 8`,
+one device (RTX 2050), `cost: nan` in the probe record.  The 2-op case
+wins here where the earlier TODO note measured ~0.86× for 2-op
+fusions — the probe's own `compiled_us` baseline is what moved.
+
 ## Recording the numbers beside the records
 
 ```bash

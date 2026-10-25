@@ -176,6 +176,49 @@ def _fmt(value: float | None) -> str:
     return "—" if value is None else f"{value:.2f}"
 
 
+def coverage(
+    payload_path: str = "docs/reports/pay_measured.json",
+) -> str:
+    """Render every shipped fold's pay coverage — measured or not.
+
+    The gate only measures folds that fire on the corpus.  This is the
+    other half of the honest ledger: which of the shipped ops have a
+    measured number at all.  Unmeasured is not "pays" — it is
+    *unmeasured*, and the table says so.
+    """
+    import json as _json
+
+    from mlopt_core.laws import minted
+
+    try:
+        measured = _json.loads(
+            Path(payload_path).read_text(encoding="utf-8")
+        )
+        folds = measured.get("folds", {})
+    except FileNotFoundError:
+        folds = {}
+    rows = sorted(minted.SYNOP_SHIPPED)
+    lines = [
+        f"shipped folds: {len(rows)} · measured: {len(folds)} · "
+        f"unmeasured: {len(rows) - len(folds)}",
+        "",
+        "| fold op | pay status | worst marginal | modules |",
+        "|---|---|---|---|",
+    ]
+    for op in rows:
+        agg = folds.get(op)
+        if agg is None:
+            lines.append(f"| `{op}` | **unmeasured** | — | — |")
+            continue
+        mods = ", ".join(
+            f"{m['module']}@{m['size']}" for m in agg["modules"]
+        )
+        lines.append(
+            f"| `{op}` | {agg['verdict']} | {_fmt(agg['worst'])} | {mods} |"
+        )
+    return "\n".join(lines)
+
+
 def summary(result: dict[str, Any]) -> str:
     """Render the run as a short table."""
     counts: dict[str, int] = {}
@@ -245,7 +288,16 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--run", default=None, help="run tag stored with each number"
     )
+    ap.add_argument(
+        "--coverage",
+        action="store_true",
+        help="print every shipped fold's pay status and exit",
+    )
     args = ap.parse_args(argv)
+
+    if args.coverage:
+        print(coverage(args.json or "docs/reports/pay_measured.json"))
+        return 0
 
     result = run(
         modules=tuple(args.modules),
