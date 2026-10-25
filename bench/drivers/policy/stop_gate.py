@@ -455,15 +455,35 @@ def _measure_cand_chunk(args: tuple) -> list:
     egraph for ~30-90 s under the grown law bank, and a per-pool
     shard strands one worker on ~16 of them serially.  Returns
     ``[(global_idx, key, outcome)]``.
+
+    ``cand_timeout`` (0 = off) SIGALRM-boxes each ``lp.evaluate``:
+    candidates whose post-merge certificate path runs unbounded come
+    back ``relation="censored"`` — verify_law's own refusal class
+    (resource exhaustion → derivable=False), counted in the report.
     """
+    import signal
+
     import torch
 
     torch.set_num_threads(1)
-    seed, cands = args
+    seed, cands, cand_timeout = args
+
+    def _alrm(_sig, _frame):
+        raise TimeoutError
+
+    if cand_timeout:
+        signal.signal(signal.SIGALRM, _alrm)
     out = []
     for idx, cand in cands:
         torch.manual_seed(seed + idx)
-        out.append((idx, pb._cand_key(cand), lp.evaluate([cand])[0]))
+        try:
+            signal.alarm(cand_timeout)
+            res = lp.evaluate([cand])[0]
+        except TimeoutError:
+            res = lp.Outcome(candidate=cand, relation="censored")
+        finally:
+            signal.alarm(0)
+        out.append((idx, pb._cand_key(cand), res))
     return out
 
 
@@ -472,6 +492,7 @@ def _measure_pools_par(
     seed: int,
     workers: int,
     part_cache: str | None = None,
+    cand_timeout: int = 0,
 ) -> tuple[list[list], dict]:
     """``pb._measure_pools`` sharded over a process pool — same memo.
 
@@ -500,11 +521,14 @@ def _measure_pools_par(
             by_idx.update(pickle.load(f))
     todo = [(g, c) for g, c in jobs if g not in by_idx]
     if todo:
-        tasks = [(seed, [j]) for j in todo]
+        tasks = [(seed, [j], cand_timeout) for j in todo]
         done = 0
         with ProcessPoolExecutor(max_workers=workers) as ex:
-            for part in ex.map(_measure_cand_chunk, tasks):
-                for idx, k, o in part:
+            from concurrent.futures import as_completed
+
+            futs = [ex.submit(_measure_cand_chunk, t) for t in tasks]
+            for fut in as_completed(futs):
+                for idx, k, o in fut.result():
                     by_idx[idx] = (k, o)
                 done += 1
                 if cpath and done % 64 == 0:
@@ -535,6 +559,7 @@ def run(
     epochs: int,
     cache: str | None = None,
     workers: int = 1,
+    cand_timeout: int = 0,
 ) -> dict[str, Any]:
     """Measure pools once; fit κ/heads on train; eval held-out.
 
@@ -567,12 +592,14 @@ def run(
                 seed + pb.HELD_OUT_OFFSET,
                 workers,
                 None if cache is None else cache + ".ev",
+                cand_timeout,
             )
             train_outcomes, train_keys = measure(
                 train_pools,
                 seed + 1_000_003,
                 workers,
                 None if cache is None else cache + ".tr",
+                cand_timeout,
             )
         else:
             eval_outcomes, by_key = measure(
@@ -591,10 +618,15 @@ def run(
     flat_pool = [c for pool in ev_pools for c in pool]
     flat_outcomes: dict[int, Any] = {}
     pos = 0
+    n_censored = 0
     for outs in eval_outcomes:
         for o in outs:
             flat_outcomes[pos] = o
+            n_censored += o.relation == "censored"
             pos += 1
+    for outs in train_outcomes:
+        for o in outs:
+            n_censored += o.relation == "censored"
     measure_s = time.time() - t0
 
     # The baselines' predictors — ``delta`` (the round-7 gate signal)
@@ -1252,9 +1284,14 @@ def run(
         "heads": heads,
         "train_curve": curves,
         "predictor": predictor,
-        "pool": {"held_out": len(flat_pool), "useful": n_useful},
+        "pool": {
+            "held_out": len(flat_pool),
+            "useful": n_useful,
+            "censored": n_censored,
+        },
         "meta": {
             "measure_seconds": round(measure_s, 1),
+            "cand_timeout_s": cand_timeout,
             "epochs": epochs,
             "kappa_grid": _KAPPA_GRID,
             "elapsed_s": round(time.time() - t0, 1),
@@ -1305,6 +1342,12 @@ def _print(res: dict[str, Any]) -> None:
             f"-- seat {aid}: reward={s['reward']} "
             f"stops={s['stops']} (registry.make path) --"
         )
+    if res["pool"].get("censored"):
+        print(  # stdout-compat
+            f"-- censored: {res['pool']['censored']} candidates "
+            f"hit the {res['meta'].get('cand_timeout_s')}s eval cap "
+            f"(relation='censored', derivable=False) --"
+        )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -1328,6 +1371,15 @@ def main(argv: list[str] | None = None) -> int:
         help="process-pool workers for the verdict memoization "
         "(identical outcomes — the seeds are per-candidate)",
     )
+    ap.add_argument(
+        "--cand-timeout",
+        type=int,
+        default=0,
+        help="per-candidate eval cap in seconds; timed-out "
+        "candidates report relation='censored' (derivable=False "
+        "— the machinery's own resource-refusal class) and are "
+        "counted under pool.censored",
+    )
     args = ap.parse_args(argv)
     if sys.getrecursionlimit() < 40_000:
         sys.setrecursionlimit(40_000)
@@ -1340,6 +1392,7 @@ def main(argv: list[str] | None = None) -> int:
         args.epochs,
         cache=args.cache,
         workers=args.workers,
+        cand_timeout=args.cand_timeout,
     )
     _print(res)
     payload = {
