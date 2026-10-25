@@ -99,7 +99,7 @@ per-candidate tasks preserve the seeded order bit-for-bit (verified
 identical to `pb._measure_pools` on a 4-pool slice) and a partial
 pickle survives a killed run.
 
-## What the run priced (18 held-out episodes, 576 candidates)
+## What the run priced (36 held-out episodes, 576 candidates)
 
 * Port controls — incumbent / ac / oracle-chan / iso-drain / anchors.
 * Non-serializable baselines — `ev-margin`/`ev-pool` on raw `delta`
