@@ -1,0 +1,588 @@
+{
+ "rows": [
+  {
+   "module": "GatedDeltaRule",
+   "size": "small",
+   "ms": {
+    "spelled": 0.09094300185097381,
+    "tape": 0.1156604994321242,
+    "noprim": 0.3634409986261744,
+    "synop": 0.12850750135839917
+   },
+   "marginal": 0.3535855939317911,
+   "e2e": 1.4130554165012215,
+   "verdict": "confounded",
+   "synops": [
+    "synop_bb8c54c201"
+   ],
+   "executors": {
+    "spelled": "_GatedDeltaRule",
+    "tape": "IRModule",
+    "noprim": "BatchedScanModule",
+    "synop": "IRModule"
+   },
+   "verified": true,
+   "note": "executor confound: synop routes to IRModule, noprim to BatchedScanModule \u2014 the marginal compares different executors, not just the fold."
+  },
+  {
+   "module": "GatedDeltaRule",
+   "size": "large",
+   "ms": {
+    "spelled": 0.2706045015656855,
+    "tape": 0.484440999571234,
+    "noprim": 1.5582289997837506,
+    "synop": 0.30545999834430404
+   },
+   "marginal": 0.19603023585538162,
+   "e2e": 1.128806049333802,
+   "verdict": "confounded",
+   "synops": [
+    "synop_bb8c54c201"
+   ],
+   "executors": {
+    "spelled": "_GatedDeltaRule",
+    "tape": "IRModule",
+    "noprim": "BatchedScanModule",
+    "synop": "IRModule"
+   },
+   "verified": true,
+   "note": "executor confound: synop routes to IRModule, noprim to BatchedScanModule \u2014 the marginal compares different executors, not just the fold."
+  },
+  {
+   "module": "GatedLinearAttention",
+   "size": "small",
+   "ms": {
+    "spelled": 0.14981749700382352,
+    "tape": 0.18657450345926918,
+    "noprim": 0.18572200133348815,
+    "synop": 0.27651149866869673
+   },
+   "marginal": 1.488846214682902,
+   "e2e": 1.8456555756076998,
+   "verdict": "loses",
+   "synops": [
+    "synop_4c657cb2c0"
+   ],
+   "executors": {
+    "spelled": "_GatedLinearAttention",
+    "tape": "IRModule",
+    "noprim": "IRModule",
+    "synop": "IRModule"
+   },
+   "verified": true,
+   "note": ""
+  },
+  {
+   "module": "GatedLinearAttention",
+   "size": "large",
+   "ms": {
+    "spelled": 2.038611000898527,
+    "tape": 6.298128497292055,
+    "noprim": 6.105334497988224,
+    "synop": 6.061614501959411
+   },
+   "marginal": 0.9928390498435067,
+   "e2e": 2.9734041949581003,
+   "verdict": "ties",
+   "synops": [
+    "synop_4c657cb2c0"
+   ],
+   "executors": {
+    "spelled": "_GatedLinearAttention",
+    "tape": "IRModule",
+    "noprim": "IRModule",
+    "synop": "IRModule"
+   },
+   "verified": true,
+   "note": ""
+  },
+  {
+   "module": "MambaSelectiveScan",
+   "size": "small",
+   "ms": {
+    "spelled": 0.15190250269370154,
+    "tape": 0.18852799985324964,
+    "noprim": 0.18846899911295623,
+    "synop": 0.2790635007841047
+   },
+   "marginal": 1.4806864900728418,
+   "e2e": 1.8371224689221382,
+   "verdict": "loses",
+   "synops": [
+    "synop_4c657cb2c0"
+   ],
+   "executors": {
+    "spelled": "_MambaSelectiveScan",
+    "tape": "IRModule",
+    "noprim": "IRModule",
+    "synop": "IRModule"
+   },
+   "verified": true,
+   "note": ""
+  },
+  {
+   "module": "MambaSelectiveScan",
+   "size": "large",
+   "ms": {
+    "spelled": 1.1936650007555727,
+    "tape": 1.5563685010420159,
+    "noprim": 1.7171395011246204,
+    "synop": 1.9771424995269626
+   },
+   "marginal": 1.1514163515730995,
+   "e2e": 1.6563629647141032,
+   "verdict": "loses",
+   "synops": [
+    "synop_4c657cb2c0"
+   ],
+   "executors": {
+    "spelled": "_MambaSelectiveScan",
+    "tape": "IRModule",
+    "noprim": "IRModule",
+    "synop": "IRModule"
+   },
+   "verified": true,
+   "note": ""
+  },
+  {
+   "module": "RealGatedLRU",
+   "size": "small",
+   "ms": {
+    "spelled": 0.13365500126383267,
+    "tape": 0.13583899999503046,
+    "noprim": 0.11512700075400062,
+    "synop": 0.22739500127499923
+   },
+   "marginal": 1.9751665533343388,
+   "e2e": 1.7013579673395491,
+   "verdict": "loses",
+   "synops": [
+    "synop2_35bbd03301",
+    "synop3_0fa19d1ff8",
+    "synop3_21b9729f32",
+    "synop_5e58f26875",
+    "synop_bb8c54c201"
+   ],
+   "executors": {
+    "spelled": "_RealGatedLRU",
+    "tape": "IRModule",
+    "noprim": "IRModule",
+    "synop": "IRModule"
+   },
+   "verified": true,
+   "note": ""
+  },
+  {
+   "module": "RealGatedLRU",
+   "size": "large",
+   "ms": {
+    "spelled": 2.3800324997864664,
+    "tape": 2.2694729996146634,
+    "noprim": 1.9868769995809998,
+    "synop": 5.293992500810418
+   },
+   "marginal": 2.664479231440515,
+   "e2e": 2.2243362228395576,
+   "verdict": "loses",
+   "synops": [
+    "synop2_35bbd03301",
+    "synop3_0ca31bf1e5",
+    "synop3_0fa19d1ff8",
+    "synop3_21b9729f32",
+    "synop3_24c5153e5e",
+    "synop3_4cdc06b88f",
+    "synop_5e58f26875",
+    "synop_bb8c54c201"
+   ],
+   "executors": {
+    "spelled": "_RealGatedLRU",
+    "tape": "IRModule",
+    "noprim": "IRModule",
+    "synop": "IRModule"
+   },
+   "verified": true,
+   "note": ""
+  },
+  {
+   "module": "HighwayGate",
+   "size": "small",
+   "ms": {
+    "spelled": 0.018151000404031947,
+    "tape": 0.018339502275921404,
+    "noprim": 0.01980149681912735,
+    "synop": 0.022991502191871405
+   },
+   "marginal": 1.161099203857289,
+   "e2e": 1.266679614351406,
+   "verdict": "confounded",
+   "synops": [
+    "synop_bb8c54c201"
+   ],
+   "executors": {
+    "spelled": "_HighwayGate",
+    "tape": "IRModule",
+    "noprim": "BatchedScanModule",
+    "synop": "IRModule"
+   },
+   "verified": true,
+   "note": "executor confound: synop routes to IRModule, noprim to BatchedScanModule \u2014 the marginal compares different executors, not just the fold."
+  },
+  {
+   "module": "HighwayGate",
+   "size": "large",
+   "ms": {
+    "spelled": 0.020256004063412547,
+    "tape": 0.02053350181085989,
+    "noprim": 0.02210150341852568,
+    "synop": 0.025174998881993815
+   },
+   "marginal": 1.1390627327592522,
+   "e2e": 1.2428413226607815,
+   "verdict": "confounded",
+   "synops": [
+    "synop_bb8c54c201"
+   ],
+   "executors": {
+    "spelled": "_HighwayGate",
+    "tape": "IRModule",
+    "noprim": "BatchedScanModule",
+    "synop": "IRModule"
+   },
+   "verified": true,
+   "note": "executor confound: synop routes to IRModule, noprim to BatchedScanModule \u2014 the marginal compares different executors, not just the fold."
+  },
+  {
+   "module": "RotaryPair",
+   "size": "small",
+   "ms": {
+    "spelled": 0.08255499778897502,
+    "tape": 0.06311200195341371,
+    "noprim": 0.061575501604238525,
+    "synop": 0.07420149631798267
+   },
+   "marginal": 1.2050489948891467,
+   "e2e": 0.898812892075349,
+   "verdict": "loses",
+   "synops": [
+    "synop_bb8c54c201"
+   ],
+   "executors": {
+    "spelled": "_RotaryPair",
+    "tape": "IRModule",
+    "noprim": "IRModule",
+    "synop": "IRModule"
+   },
+   "verified": true,
+   "note": ""
+  },
+  {
+   "module": "RotaryPair",
+   "size": "large",
+   "ms": {
+    "spelled": 0.22766649999539368,
+    "tape": 0.19910499759134836,
+    "noprim": 0.19504750525811687,
+    "synop": 0.20721449982374907
+   },
+   "marginal": 1.0623796472020033,
+   "e2e": 0.9101668441687363,
+   "verdict": "loses",
+   "synops": [
+    "synop_bb8c54c201"
+   ],
+   "executors": {
+    "spelled": "_RotaryPair",
+    "tape": "IRModule",
+    "noprim": "IRModule",
+    "synop": "IRModule"
+   },
+   "verified": true,
+   "note": ""
+  },
+  {
+   "module": "GRUFusedGate",
+   "size": "small",
+   "ms": {
+    "spelled": 0.026963996788254008,
+    "tape": 0.043905001803068444,
+    "noprim": 0.045624499762197956,
+    "synop": 0.04862349669565447
+   },
+   "marginal": 1.0657321603324474,
+   "e2e": 1.8032748289317302,
+   "verdict": "confounded",
+   "synops": [
+    "synop_bb8c54c201"
+   ],
+   "executors": {
+    "spelled": "_GRUFusedGate",
+    "tape": "IRModule",
+    "noprim": "BatchedScanModule",
+    "synop": "IRModule"
+   },
+   "verified": true,
+   "note": "executor confound: synop routes to IRModule, noprim to BatchedScanModule \u2014 the marginal compares different executors, not just the fold."
+  },
+  {
+   "module": "GRUFusedGate",
+   "size": "large",
+   "ms": {
+    "spelled": 0.03649999780463986,
+    "tape": 0.05324800076778047,
+    "noprim": 0.05456399958347902,
+    "synop": 0.0581599997531157
+   },
+   "marginal": 1.0659042628305695,
+   "e2e": 1.5934247466097773,
+   "verdict": "confounded",
+   "synops": [
+    "synop_bb8c54c201"
+   ],
+   "executors": {
+    "spelled": "_GRUFusedGate",
+    "tape": "IRModule",
+    "noprim": "BatchedScanModule",
+    "synop": "IRModule"
+   },
+   "verified": true,
+   "note": "executor confound: synop routes to IRModule, noprim to BatchedScanModule \u2014 the marginal compares different executors, not just the fold."
+  }
+ ],
+ "folds": {
+  "synop2_35bbd03301": {
+   "modules": [
+    {
+     "module": "RealGatedLRU",
+     "size": "small",
+     "marginal": 1.9751665533343388,
+     "verdict": "loses"
+    },
+    {
+     "module": "RealGatedLRU",
+     "size": "large",
+     "marginal": 2.664479231440515,
+     "verdict": "loses"
+    }
+   ],
+   "worst": 2.664479231440515,
+   "best": 1.9751665533343388,
+   "mean": 2.319822892387427,
+   "verdict": "loses"
+  },
+  "synop3_0ca31bf1e5": {
+   "modules": [
+    {
+     "module": "RealGatedLRU",
+     "size": "large",
+     "marginal": 2.664479231440515,
+     "verdict": "loses"
+    }
+   ],
+   "worst": 2.664479231440515,
+   "best": 2.664479231440515,
+   "mean": 2.664479231440515,
+   "verdict": "loses"
+  },
+  "synop3_0fa19d1ff8": {
+   "modules": [
+    {
+     "module": "RealGatedLRU",
+     "size": "small",
+     "marginal": 1.9751665533343388,
+     "verdict": "loses"
+    },
+    {
+     "module": "RealGatedLRU",
+     "size": "large",
+     "marginal": 2.664479231440515,
+     "verdict": "loses"
+    }
+   ],
+   "worst": 2.664479231440515,
+   "best": 1.9751665533343388,
+   "mean": 2.319822892387427,
+   "verdict": "loses"
+  },
+  "synop3_21b9729f32": {
+   "modules": [
+    {
+     "module": "RealGatedLRU",
+     "size": "small",
+     "marginal": 1.9751665533343388,
+     "verdict": "loses"
+    },
+    {
+     "module": "RealGatedLRU",
+     "size": "large",
+     "marginal": 2.664479231440515,
+     "verdict": "loses"
+    }
+   ],
+   "worst": 2.664479231440515,
+   "best": 1.9751665533343388,
+   "mean": 2.319822892387427,
+   "verdict": "loses"
+  },
+  "synop3_24c5153e5e": {
+   "modules": [
+    {
+     "module": "RealGatedLRU",
+     "size": "large",
+     "marginal": 2.664479231440515,
+     "verdict": "loses"
+    }
+   ],
+   "worst": 2.664479231440515,
+   "best": 2.664479231440515,
+   "mean": 2.664479231440515,
+   "verdict": "loses"
+  },
+  "synop3_4cdc06b88f": {
+   "modules": [
+    {
+     "module": "RealGatedLRU",
+     "size": "large",
+     "marginal": 2.664479231440515,
+     "verdict": "loses"
+    }
+   ],
+   "worst": 2.664479231440515,
+   "best": 2.664479231440515,
+   "mean": 2.664479231440515,
+   "verdict": "loses"
+  },
+  "synop_4c657cb2c0": {
+   "modules": [
+    {
+     "module": "GatedLinearAttention",
+     "size": "small",
+     "marginal": 1.488846214682902,
+     "verdict": "loses"
+    },
+    {
+     "module": "GatedLinearAttention",
+     "size": "large",
+     "marginal": 0.9928390498435067,
+     "verdict": "ties"
+    },
+    {
+     "module": "MambaSelectiveScan",
+     "size": "small",
+     "marginal": 1.4806864900728418,
+     "verdict": "loses"
+    },
+    {
+     "module": "MambaSelectiveScan",
+     "size": "large",
+     "marginal": 1.1514163515730995,
+     "verdict": "loses"
+    }
+   ],
+   "worst": 1.488846214682902,
+   "best": 0.9928390498435067,
+   "mean": 1.2784470265430876,
+   "verdict": "loses"
+  },
+  "synop_5e58f26875": {
+   "modules": [
+    {
+     "module": "RealGatedLRU",
+     "size": "small",
+     "marginal": 1.9751665533343388,
+     "verdict": "loses"
+    },
+    {
+     "module": "RealGatedLRU",
+     "size": "large",
+     "marginal": 2.664479231440515,
+     "verdict": "loses"
+    }
+   ],
+   "worst": 2.664479231440515,
+   "best": 1.9751665533343388,
+   "mean": 2.319822892387427,
+   "verdict": "loses"
+  },
+  "synop_bb8c54c201": {
+   "modules": [
+    {
+     "module": "GatedDeltaRule",
+     "size": "small",
+     "marginal": 0.3535855939317911,
+     "verdict": "confounded"
+    },
+    {
+     "module": "GatedDeltaRule",
+     "size": "large",
+     "marginal": 0.19603023585538162,
+     "verdict": "confounded"
+    },
+    {
+     "module": "RealGatedLRU",
+     "size": "small",
+     "marginal": 1.9751665533343388,
+     "verdict": "loses"
+    },
+    {
+     "module": "RealGatedLRU",
+     "size": "large",
+     "marginal": 2.664479231440515,
+     "verdict": "loses"
+    },
+    {
+     "module": "HighwayGate",
+     "size": "small",
+     "marginal": 1.161099203857289,
+     "verdict": "confounded"
+    },
+    {
+     "module": "HighwayGate",
+     "size": "large",
+     "marginal": 1.1390627327592522,
+     "verdict": "confounded"
+    },
+    {
+     "module": "RotaryPair",
+     "size": "small",
+     "marginal": 1.2050489948891467,
+     "verdict": "loses"
+    },
+    {
+     "module": "RotaryPair",
+     "size": "large",
+     "marginal": 1.0623796472020033,
+     "verdict": "loses"
+    },
+    {
+     "module": "GRUFusedGate",
+     "size": "small",
+     "marginal": 1.0657321603324474,
+     "verdict": "confounded"
+    },
+    {
+     "module": "GRUFusedGate",
+     "size": "large",
+     "marginal": 1.0659042628305695,
+     "verdict": "confounded"
+    }
+   ],
+   "worst": 2.664479231440515,
+   "best": 1.0623796472020033,
+   "mean": 1.726768606716501,
+   "verdict": "loses"
+  }
+ },
+ "modules": [
+  "GatedDeltaRule",
+  "GatedLinearAttention",
+  "MambaSelectiveScan",
+  "RealGatedLRU",
+  "HighwayGate",
+  "RotaryPair",
+  "GRUFusedGate"
+ ],
+ "sizes": [
+  "small",
+  "large"
+ ]
+}
