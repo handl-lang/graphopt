@@ -80,7 +80,36 @@ than `train-v0` on v0 in Result A (0.075 vs 0.104): even a player that
 has seen the 57 folds cannot profit from them, because they do not reduce
 cost on this corpus.
 
-## Limits, stated
+## Step 3 — minting *during play* on this board admits nothing
+
+The G\* loop's middle step is "play mints rules". Run on the board's own
+corpus (`bench/drivers/policy/play_mint.py`: compose pairs of the shipped
+bank over the case terms, then pay → novel → fires):
+
+```bash
+.venv/bin/python -m bench.drivers.policy.play_mint \
+    --cases 32 --fuel 600 --cap 120 --json /tmp/play_minted.json
+```
+
+| minted | admitted | rejects |
+|---|---|---|
+| 1 | **0** | 1 — `syn_mul_square__square_to_pow_0`, *no pay* |
+
+The board's pool has **7 distinct terms**, so 32 cases are repeats: there
+is almost nothing left to compose, and the single composite found
+(`x·x → x²`) does not lower cost. So on this corpus the loop is:
+
+1. **mint during play** — works mechanically, admits nothing that pays;
+2. **grow the bank anyway** (the 57 shipped folds) — frozen player
+   **−0.023**;
+3. **grow with rules that pay** (the control) — frozen player **+0.066**.
+
+Which is the same conclusion from three directions: **the loop's growth
+is real, its benefit is conditional on pay, and the current mint product
+does not pay.** The next run that can move this needs a corpus with real
+composable structure *and* a delivery path that pays for it — the `gen`
+domain's 2.87× is the only measured example we have.
+
 
 - One board family (`search`), one policy class (linear), 24-step budget,
   5 seeds; rewards are small (0.0–0.14 per episode), so treat ±0.03 as
