@@ -198,3 +198,14 @@ harness.
 ## License
 
 MIT.
+
+## Documentation
+
+Published site (Diátaxis): <https://handl-lang.github.io/docs/graphopt/>
+
+- [Reference](https://handl-lang.github.io/docs/graphopt/reference/) — API and schemas
+- [How-to](https://handl-lang.github.io/docs/graphopt/how-to/) — task recipes
+- [Explanation](https://handl-lang.github.io/docs/graphopt/explanation/) — design and rationale
+
+Project docs (ADRs, backlog, design notes) ship on the `project` branch and are
+published under [`/graphopt/project/`](https://handl-lang.github.io/docs/graphopt/project/).
