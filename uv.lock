@@ -1156,7 +1156,7 @@ wheels = [
 [[package]]
 name = "gamekit"
 version = "0.1.0.dev0"
-source = { git = "ssh://git@github.com/handl-lang/gamekit.git?subdirectory=packages%2Fgamekit&branch=main#450731f7f41ce8525494ca45f805e746825e32b3" }
+source = { git = "ssh://git@github.com/handl-lang/gamekit.git?subdirectory=packages%2Fgamekit&branch=main#fd9137f1de643c528a458a31caa7048c55697ef9" }
 
 [[package]]
 name = "glom"
@@ -2273,7 +2273,7 @@ requires-dist = [
 [[package]]
 name = "mlopt-core"
 version = "0.1.0.dev0"
-source = { git = "ssh://git@github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&branch=main#fdec87f242e963255d1e5a78b31edd8eb8103a84" }
+source = { git = "ssh://git@github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&branch=main#0b7c8a4c89d4689778c8e7667e333f97adb7e43a" }
 
 [[package]]
 name = "mlopt-cuda"
@@ -2334,7 +2334,7 @@ requires-dist = [
 [[package]]
 name = "mlopt-orchestrator"
 version = "0.1.0.dev0"
-source = { git = "ssh://git@github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-orchestrator&branch=main#fdec87f242e963255d1e5a78b31edd8eb8103a84" }
+source = { git = "ssh://git@github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-orchestrator&branch=main#0b7c8a4c89d4689778c8e7667e333f97adb7e43a" }
 dependencies = [
     { name = "mlopt-core" },
 ]
