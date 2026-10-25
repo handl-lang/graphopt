@@ -1791,6 +1791,7 @@ def mint_handlers(
     rtol: float = _VERIFY_RTOL,
     atol: float = _VERIFY_ATOL,
     adversarial: int = 1,
+    bindings: dict | None = None,
 ) -> tuple:
     """Mint verified handler entries for measured subterm specs.
 
@@ -1805,14 +1806,22 @@ def mint_handlers(
     grammar — without a verify is a measured refusal, recorded
     with the best (lowest) error seen.
 
+    *bindings* is the op table the spec eval and the candidate
+    bodies evaluate under — the ambient torch table by default
+    (``family_synth.mint_families``'s seam, one level down); a
+    domain whose sink owns a different table passes it so the
+    handler grammar is measured against the ops it can actually
+    emit.
+
     Returns ``(handlers, report)``: the handler table plus one
     verdict row per item — the falsification data.
     """
-    import mlopt_torch.torch_bridge as tb
-
     from mlopt_discovery.genkernel import _canon_taken
 
-    bindings = tb._IR_TO_TORCH
+    if bindings is None:
+        import mlopt_torch.torch_bridge as tb
+
+        bindings = tb._IR_TO_TORCH
     skip = covered if covered is not None else set()
     handlers: dict[str, dict] = {}
     report: list[dict] = []

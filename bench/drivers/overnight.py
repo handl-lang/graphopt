@@ -247,6 +247,7 @@ from mlopt_core.laws.serialize import (
     law_to_data,
 )
 from mlopt_discovery import open_game as og
+from mlopt_discovery import prim_mint as _pm
 from mlopt_discovery.verifier import verify_law
 
 __all__ = ["DEFAULTS", "DRY", "main", "render_markdown", "run"]
@@ -1054,31 +1055,22 @@ def _xmodule_env(seed: int) -> dict:
 
 
 def _op_subterms(roots: dict) -> dict:
-    """``name -> [Op subterm]`` — each module's bind domain."""
-    from mlopt_core.ir import Op
-    from mlopt_discovery.census import _iter_subterms
+    """``name -> [Op subterm]`` — each module's bind domain.
 
-    return {
-        n: [s for s in _iter_subterms(r) if isinstance(s, Op)]
-        for n, r in roots.items()
-    }
+    Delegates to :func:`mlopt_discovery.prim_mint.op_subterms` — the
+    shared corpus helper the prim mint promoted with the pool.
+    """
+    return _pm.op_subterms(roots)
 
 
 def _modules_bound(pat: Any, subs_by_mod: dict) -> set:
     """Module names holding at least one subterm *pat* binds.
 
-    The arm's binding granularity: ``_term_match`` — the same match
-    ``require_bind`` and the referee's ``real_terms`` domain use —
-    counted per module, so a pattern covering five sites inside one
-    module still counts once.
+    Delegates to :func:`mlopt_discovery.prim_mint.modules_bound` —
+    the arm's binding granularity (``_term_match`` counted per
+    module) lives with the pool machinery now.
     """
-    from mlopt_core.egraph.terms import _term_match
-
-    return {
-        n
-        for n, subs in subs_by_mod.items()
-        if any(_term_match(pat, s) is not None for s in subs)
-    }
+    return _pm.modules_bound(pat, subs_by_mod)
 
 
 def _xanti_variants(pat: Any, views: tuple) -> list:
@@ -1377,62 +1369,18 @@ _PPOOL: dict = {}
 
 
 def _pat_spec(pat: Any) -> Any:
-    """Render an ``Op`` pattern as a genkernel spec tuple.
-
-    ``(op, *child_specs[, attrs])`` with metavar leaves *kept by
-    name* (``meta_arena._spec_of`` would re-canonicalize them to
-    ``X1``… — the mint needs the pattern's own names so the bound
-    sites' subst keys line up) and attr metavariables kept as their
-    string names inside the attr dict.
-    """
-    from mlopt_core.ir import Const, Op
-
-    if isinstance(pat, Op):
-        parts = [_pat_spec(a) for a in pat.args]
-        if pat.attrs:
-            parts.append(dict(pat.attrs))
-        return (pat.op, *parts)
-    if isinstance(pat, Const):
-        return pat.value
-    return pat  # metavar leaf — the name IS the binding key
+    """Delegate to :func:`mlopt_discovery.prim_mint.pat_spec`."""
+    return _pm.pat_spec(pat)
 
 
 def _pat_ops(pat: Any) -> set:
-    """Op names inside a pattern."""
-    from mlopt_core.ir import Op
-
-    if not isinstance(pat, Op):
-        return set()
-    return {pat.op} | set().union(*(_pat_ops(a) for a in pat.args))
+    """Delegate to :func:`mlopt_discovery.prim_mint.pat_ops`."""
+    return _pm.pat_ops(pat)
 
 
 def _spec_bind(spec: Any, attrs: dict, attr_mvars: tuple) -> Any:
-    """Instantiate a spec's attr-metavar dict values under *attrs*.
-
-    The minted op call carries its attr metavariables as real op
-    attrs (``synop_*(v0, a0=<bound>)``); at eval time the spelled
-    denotation needs those values back inside the spec's attr dicts —
-    a dict value equal to an attr-mvar name resolves through the
-    call's attrs, everything else passes through literal.
-    """
-    if isinstance(spec, (tuple, list)):
-        out = []
-        for e in spec:
-            if isinstance(e, dict):
-                out.append(
-                    {
-                        k: (
-                            attrs.get(v, v)
-                            if isinstance(v, str) and v in attr_mvars
-                            else v
-                        )
-                        for k, v in e.items()
-                    }
-                )
-            else:
-                out.append(_spec_bind(e, attrs, attr_mvars))
-        return tuple(out) if isinstance(spec, tuple) else out
-    return spec
+    """Delegate to :func:`mlopt_discovery.prim_mint.spec_bind`."""
+    return _pm.spec_bind(spec, attrs, attr_mvars)
 
 
 def _prim_binding(
@@ -1440,49 +1388,32 @@ def _prim_binding(
 ) -> Any:
     """The minted op's torch binding — its denotation, spelled out.
 
-    ``fn(*args, **attrs) = eval(spec, {mvar: arg}, ambient)`` — the
-    op IS the manual subgraph: equal to the fold's LHS at every bound
-    site by construction, so the oracle/sweep/cert legs all measure
-    the definitional truth.  Attr metavariables ride the call's own
-    attrs back into the spec.
+    The graphopt hook body of :func:`prim_mint.make_denotation`:
+    the ambient ``_IR_TO_TORCH`` table is this domain's op semantics.
     """
     import mlopt_torch.torch_bridge as tb
-    from mlopt_discovery.genkernel import _eval_spec
 
-    bindings = tb._IR_TO_TORCH
-
-    def fn(*args: Any, **attrs: Any) -> Any:
-        env = dict(zip(leaf_mvars, args, strict=True))
-        return _eval_spec(
-            _spec_bind(spec, attrs, attr_mvars), env, bindings
-        )
-
-    return fn
+    return _pm.make_denotation(
+        spec, leaf_mvars, attr_mvars, tb._IR_TO_TORCH
+    )
 
 
 def _bare_call(t: Any) -> bool:
-    """Whether *t* is a fused call ``f(v0, …)`` over metavar args."""
-    from mlopt_core.ir import Op
-
-    return (
-        isinstance(t, Op)
-        and bool(t.args)
-        and all(isinstance(a, str) for a in t.args)
-    )
+    """Delegate to :func:`mlopt_discovery.prim_mint.bare_call`."""
+    return _pm.bare_call(t)
 
 
 def _denoted_shapes() -> frozenset:
     """Alpha-normal keys of spellings a bank op already denotes.
 
-    For every shipped rule with a bare fused call on one side —
-    ``manual -> f(v*)`` folds and ``f(v*) -> manual`` expansions
-    alike — the *other* side is that op's spelled denotation.
-    ``lawdata.HANDLERS`` rows contribute their patterns (the
-    handler-table ops' own declared bodies), and the pipeline's
-    ``_FUSION_SCHEMAS`` their manual sides.  A mined shape in this
-    set is already *named* — minting ``synop_*`` for it would be a
-    second name for an existing fused op, not a new primitive, so the
-    mint skips it and the funnel records the exclusion.
+    The graphopt *denoted* hook for :func:`prim_mint.prim_pool`: the
+    known bank plus the prior-art rules plus the pipeline's
+    ``_FUSION_SCHEMAS`` contribute their bare-call sides; the
+    ``lawdata.HANDLERS`` rows contribute their declared patterns.  A
+    mined shape in this set is already *named* — minting
+    ``synop_*`` for it would be a second name for an existing fused
+    op, not a new primitive, so the mint skips it and the funnel
+    records the exclusion.
     """
     from mlopt_core.laws.priorart import PRIOR_ART_RULES
     from mlopt_discovery.antiunify import _alpha_norm
@@ -1492,67 +1423,23 @@ def _denoted_shapes() -> frozenset:
 
     from bench.drivers.screen import novelty_sieve as ns
 
-    denoted: set[str] = set()
-    for r in [*ns.known_bank(), *PRIOR_ART_RULES, *_FUSION_SCHEMAS]:
-        if _bare_call(r.lhs):
-            denoted.add(_alpha_norm(r.rhs))
-        if _bare_call(r.rhs):
-            denoted.add(_alpha_norm(r.lhs))
-    for h in HANDLERS.values():
-        denoted.add(_alpha_norm(term_from_spec(h["pattern"])))
-    return frozenset(denoted)
+    return _pm.denoted_alphas(
+        [*ns.known_bank(), *PRIOR_ART_RULES, *_FUSION_SCHEMAS],
+        extra_alphas={
+            _alpha_norm(term_from_spec(h["pattern"]))
+            for h in HANDLERS.values()
+        },
+    )
 
 
 def _prim_domain(sites: list, cap: int) -> list:
-    """``{meta: shape}`` dicts read off bound sites' inferred shapes.
-
-    The handler-verify domain is the *bound* domain — each site's
-    metavar bindings carry real terms whose shapes ``_shape_of``
-    infers (composite bound values included).  A site whose bound
-    terms leave any dim undecidable is skipped — never a guessed
-    shape.  Attr-mvar keys (``$attr:``) are not domain entries.
-    """
-    from mlopt_core.typing import _INVALID, _shape_of
-
-    out: list = []
-    for m, _s in sites:
-        shapes: dict[str, Any] = {}
-        ok = True
-        for mv, t in m.items():
-            if mv.startswith("$attr:"):
-                continue
-            sh = _shape_of(t)
-            if (
-                sh is _INVALID
-                or not isinstance(sh, tuple)
-                or any(not isinstance(d, int) for d in sh)
-            ):
-                ok = False
-                break
-            shapes[mv] = sh
-        if ok and shapes:
-            out.append(shapes)
-        if len(out) >= cap:
-            break
-    return out
+    """Delegate to :func:`mlopt_discovery.prim_mint.prim_domain`."""
+    return _pm.prim_domain(sites, cap)
 
 
 def _freeze_spec(spec: Any, subst: dict, attr_mvars: tuple) -> Any:
-    """Instantiate a spec's attr metavars under one bound *subst*.
-
-    ``mint_handlers`` needs a concrete spec — the representative
-    bound site's ``$attr:`` values freeze the metavar attr slots
-    (leaf metavars stay names — only the attr dicts concretize).
-    The runtime binding keeps substituting per call, so the op's
-    denotation never depends on the frozen choice; the frozen body is
-    the grammar's provenance measurement only.
-    """
-    attrs = {
-        k[len("$attr:") :]: v
-        for k, v in subst.items()
-        if k.startswith("$attr:")
-    }
-    return _spec_bind(spec, attrs, attr_mvars)
+    """Delegate to :func:`mlopt_discovery.prim_mint.freeze_spec`."""
+    return _pm.freeze_spec(spec, subst, attr_mvars)
 
 
 def _prim_knobs(prim: dict | None = None) -> dict:
@@ -1595,114 +1482,28 @@ def _prim_knobs(prim: dict | None = None) -> dict:
 
 
 def _synop_depth(op: str) -> int:
-    """A ``synop*`` op's composition depth — ``synop_``=1, ``synopN_``=N.
-
-    The mint names honestly: ``synop_<hash>`` composes over manual
-    ops alone (depth 1), ``synopN_<hash>`` over depth-(``N-1``)
-    synops (depth N).
-    """
-    if not op.startswith("synop"):
-        return 0
-    digits = ""
-    for ch in op[5:]:
-        if not ch.isdigit():
-            break
-        digits += ch
-    return int(digits) if digits else 1
+    """Delegate to :func:`mlopt_discovery.prim_mint.synop_depth`."""
+    return _pm.synop_depth(op)
 
 
 def _expand_synops(pat: Any) -> Any:
-    """Re-expand shipped ``synop*`` nodes in *pat* to manual ops.
-
-    A bootstrap-mined pattern carries ``synop*`` ops as leaves of its
-    skeleton — each node's denotation is the fold's LHS re-instantiated
-    under the call's own bindings (``synop*(v*)`` → the spelled
-    subgraph over ``v*``, attr metavars carried through ``$attr:`` —
-    the ``synop*.expand`` premises give the definition).  The result
-    is the shape's *denotation spelling*: the manual subgraph the
-    minted op evaluates, the spelling ``_modules_bound``/sites match
-    (real corpus terms never contain a ``synop*`` op) and the shape
-    the denoted gate compares against the bank.
-
-    The expansion is *structural recursion*, not a pass — a
-    ``synopN_*`` node's fold LHS reintroduces ``synop(N-1)_*`` leaves,
-    which the recursive re-expansion of the instantiated LHS unfolds
-    in turn, so depth-3+ patterns bottom out at pure manual ops with
-    no fixpoint driver needed.
-    """
-    from mlopt_core.egraph.terms import _term_match
-    from mlopt_core.ir import Op
-    from mlopt_core.laws import minted
-    from mlopt_core.meta import instantiate_pattern
-
-    if not isinstance(pat, Op):
-        return pat
-    args = tuple(_expand_synops(a) for a in pat.args)
-    node = (
-        Op.make(pat.op, *args, **dict(pat.attrs))
-        if args != pat.args
-        else pat
-    )
-    if node.op in minted.SYNOP_SHIPPED:
-        fold = minted.prim_fold(node.op)[0]
-        subst = _term_match(fold.rhs, node)
-        if subst is not None:
-            return _expand_synops(instantiate_pattern(fold.lhs, subst))
-    return node
+    """Delegate to :func:`mlopt_discovery.prim_mint.expand_synops`."""
+    return _pm.expand_synops(pat)
 
 
 def _synop_ops(pat: Any) -> set:
-    """Shipped ``synop_*`` op names a pattern composes over."""
-    from mlopt_core.laws import minted
-
-    return _pat_ops(pat) & minted.SYNOP_SHIPPED
+    """Delegate to :func:`mlopt_discovery.prim_mint.synop_ops`."""
+    return _pm.synop_ops(pat)
 
 
 def _synop_vocab() -> dict[str, int]:
-    """``{synop op: denoted op-count}`` — the frontier's vocab weights.
-
-    A seated ``synop*`` enode abbreviates the manual subgraph its
-    ``expand`` premise spells: pricing the op at that denotation's
-    op-count (``_n_ops(expand.rhs)`` — the manual spelling, already
-    re-expanded through the deeper tiers for ``synopN_*``) restores
-    the frontier score the shape would have earned unseated.  Without
-    the map a ``OP(synop2_*, v)`` skeleton scores ``rows * 2`` — the
-    bottom of ``rows * ops`` — and the beam cut drops every
-    synop-carrying candidate before the heap reaches it (measured:
-    196 pushed / 198 truncated / 0 emitted at the deep window on the
-    real corpus, while 178 depth-1 carriers did emit).
-    """
-    from mlopt_core.laws import minted
-    from mlopt_discovery.antiunify import _n_ops
-
-    return {
-        name: _n_ops(minted.prim_fold(name)[1].rhs)
-        for name in minted.SYNOP_SHIPPED
-    }
+    """Delegate to :func:`mlopt_discovery.prim_mint.synop_vocab`."""
+    return _pm.synop_vocab()
 
 
 def _sub_alphas(pat: Any) -> set:
-    """Alpha-normal keys of *pat*'s proper (non-root) Op subterms.
-
-    The loop-closure probe's vocabulary: a deeper mined shape whose
-    proper subterm alpha-matches a minted ``synop_*``'s denotation
-    could be spelled *through* that synop — the composition the
-    mint-over-minted phase would exploit (measured here, not wired).
-    """
-    from mlopt_core.ir import Op
-    from mlopt_discovery.antiunify import _alpha_norm
-
-    out: set[str] = set()
-
-    def go(t: Any) -> None:
-        for a in t.args:
-            if isinstance(a, Op):
-                out.add(_alpha_norm(a))
-                go(a)
-
-    if isinstance(pat, Op):
-        go(pat)
-    return out
+    """Delegate to :func:`mlopt_discovery.prim_mint.sub_alphas`."""
+    return _pm.sub_alphas(pat)
 
 
 def _prim_pool(
@@ -1721,544 +1522,51 @@ def _prim_pool(
     depth: int = _PRIM_DEPTH,
     vocab: bool = True,
 ) -> tuple:
-    """The primitive-mint pool: ``(candidates, meta, stats)``.
+    """The graphopt prim-mint pool — the torch-domain hook wiring.
 
-    For every mined shape binding >= *k* distinct modules and not
-    denoted by a bank op (:func:`_denoted_shapes`), mint
-    ``synop_<hash>`` — a NEW op whose denotation is the manual
-    subgraph itself — plus the fold ``pattern -> synop_*(args)``,
-    carrying the ``synop_*.expand`` definitional premise so the cert
-    leg's anchored derivation has the axiom the bare bank lacks.
+    The machinery itself lives in
+    :func:`mlopt_discovery.prim_mint.prim_pool` (promoted out of this
+    driver — the domain repos share one implementation); this
+    wrapper supplies the graphopt hooks: the ambient
+    ``_IR_TO_TORCH`` binding table (plus the carrier registrations),
+    ``oracle.eval_instance`` as the emit gate's fp64 truth, the
+    substrate bank's denoted set (:func:`_denoted_shapes`),
+    ``shipped_primitives.register`` as the bootstrap's denotation
+    seater, and the ``synop`` prefix.  The knobs are unchanged —
+    see :func:`_prim_knobs` for the flag semantics and
+    :func:`prim_mint.prim_pool` for the per-shape funnel.
 
-    ``min_ops``/``max_ops``/``beam``/``max_expand`` bound the
-    ``mine_candidates`` hunt (the ``--prim-*`` knobs); ``cap`` bounds
-    the pool — under ``--no-prim-vocab`` its top-``gain`` slice,
-    under ``--prim-vocab`` each composition tier's own top-``gain``
-    slice (the stratified pool, below).  A deeper window re-finds the
-    same skeleton under different bracketings — the alpha-dedup
-    inside ``mine_candidates`` plus the denoted gate keep one name
-    per distinct shape.
-
-    ``bootstrap`` (``--prim-bootstrap``) is the vocabulary bootstrap —
-    ADR-0157 phase 3's loop-closure test wired, not just measured:
-    the corpus e-graph is congruence-closed, then the shipped
-    ``prim:synop*`` folds are seated in a fixpoint loop (targeted
-    ``apply_rule`` passes, each followed by congruence closure, until
-    a pass fires nothing or ``depth`` passes run).  A deeper tier's
-    fold LHS is a ``synop(N-1)_*``-carrying skeleton, so it can only
-    match once the tier below seated — pass *n* enables depth *n*.
-    ``synop*`` enodes now sit in the e-classes of the manual shapes
-    they name, so ``mine_candidates`` grows skeletons *through* them:
-    a pooled pattern carrying a shipped depth-``d`` ``synop*`` op is
-    a **depth-(d+1)** primitive — ``synop{d+1}_<hash>`` — a synop
-    composed over synops.  Its fold ``pattern -> synop{d+1}_*(args)``
-    fires only where the shipped folds already did (composition,
-    honestly recorded), while its *denotation* — binding,
-    ``synop{d+1}_*.expand`` premise, frozen handler spec,
-    module-binding and denoted gates — is the shape re-expanded to
-    manual ops (:func:`_expand_synops`, structural recursion that
-    bottoms out at pure manual ops at any depth), so
-    ``eval_instance`` verifies the whole composition end-to-end fp64
-    and the emit gate measures the real bound sites.  The emitted op
-    is again new — the fold is underivable by construction.  ``depth``
-    (``--prim-depth``) caps the deepest mintable tier — the seating
-    loop applies only folds minting a synop strictly below it.
-
-    ``vocab`` (``--prim-vocab`` / ``--no-prim-vocab``, on by default)
-    is the frontier fix: ``mine_candidates`` scores ``rows * ops`` on
-    the *spelled* pattern, so a skeleton carrying a seated ``synop*``
-    leaf — which abbreviates a multi-op denotation — ranks at the
-    bottom of the heap and the beam cut discards every such child
-    before it is ever popped (on the real corpus at the deep window:
-    196 ``synop2_*``-carrying children pushed, 0 emitted — while 178
-    ``synop_*`` carriers survived).  With *vocab* the miner prices a
-    carried op at its denotation's op-count (:func:`_synop_vocab`),
-    so the compressed shape competes at the score its spelled
-    denotation would have earned — both in the beam and in the
-    emitted gain ordering the *cap* slices.  Under *vocab* the cap
-    is also **stratified by composition tier**: each depth keeps its
-    own top-gain slice of *cap*, so the depth-2 surface — which the
-    repriced frontier emits far ahead of the rarer/shorter
-    ``synop2_*``-carrying shapes — cannot crowd the deeper tier out
-    of the pool (measured: 48/48 depth-2 mints, 0 scanned
-    ``synop2_*``-carriers at cap=48 unstratified).  A shape skipped
-    by its tier's slice records ``tier_capped``; ``--no-prim-vocab``
-    keeps the single shared top-gain slice (the pre-fix pool).
-
-    Per-shape funnel, each refusal recorded:
-
-    * ``kbound`` — shapes binding >= k modules (the mint's surface);
-      ``depth_dist`` is the qualified set's op-count histogram;
-    * ``over_depth`` — skipped by the ``--prim-depth`` cap (defensive:
-      with seating gated a tier below the cap it counts zero unless
-      the corpus itself carries a deeper ``synop*`` op);
-    * ``tier_capped`` — skipped because its composition tier's own
-      top-gain slice of *cap* was already full (``--prim-vocab``'s
-      stratified pool; always 0 under ``--no-prim-vocab``);
-    * ``denoted`` — skipped as already-named (a shipped fold or
-      handler op spells the same denotation);
-    * ``unevaluable`` — an op in the pattern has no torch binding,
-      so the spelled denotation can never run;
-    * ``gate_failed`` — the emit gate: no bound site evaluated
-      ``equal`` (or a measured ``unequal``/``rhs-err``) — the verify
-      requirement from the arm's contract;
-    * ``no_domain`` — every bound site left a dim undecidable, so the
-      handler stage had no measured domain (the op still mints on the
-      definitional denotation — the fold's soundness never depends
-      on the grammar);
-    * ``minted`` / ``refused`` — ``handler_synth.mint_handlers``'
-      grammar verdict on the bound-site domain (a verified body
-      rides the record as provenance; a refusal keeps the
-      definitional op and names the measured gap — a shape carrying
-      ops no grammar family claims is a recorded family wall, not a
-      silent drop).
-
-    ``family_mint`` (``--prim-family-mint``, on by default) closes
-    the meta-loop on the refusal: the refused ``(spec, domain)``
-    pair feeds ``family_synth.mint_families`` — the spec class
-    mints its own family descriptor, fp64-verified on the same
-    bound-site domain — and the body mint retries with the
-    survivors injected as ``extra_families``.  Per shape the record
-    carries ``family_minted: <fam_name>`` (a descriptor minted; the
-    retry's verdict decides the row) or ``family_refused`` (no
-    descriptor reproduced the spec — the honest meta-grammar wall);
-    ``families_minted`` / ``families_refused`` count the stage in
-    the pool funnel.
-
-    Post-mint, ``nested`` records the loop-closure measurement: every
-    pooled shape whose own proper subterm alpha-matches another
-    minted synop's denotation — the cheap read on whether mining over
-    a synop-aware corpus would compose (ADR-0157's mint-over-minted
-    phase is measured here, not wired).
+    Returns ``(candidates, meta, stats)`` exactly as before the
+    promotion.
     """
-    import hashlib
-
     import mlopt_carriers  # noqa: F401 — carrier op bindings
     import mlopt_torch.torch_bridge as tb
-    from mlopt_core.egraph import EGraph, Rewrite
-    from mlopt_core.egraph.terms import _term_match
-    from mlopt_core.ir import Op, op_def
-    from mlopt_core.meta import instantiate_pattern
-    from mlopt_discovery.antiunify import _alpha_norm, mine_candidates
-    from mlopt_discovery.handler_synth import (
-        handler_record,
-        mint_handlers,
-    )
+    from mlopt_discovery import shipped_primitives as _sp
     from mlopt_discovery.oracle import eval_instance
-    from mlopt_discovery.pipeline import Proposal
-    from mlopt_discovery.proposal import Candidate
 
-    subs_by_mod = _op_subterms(roots)
-    all_subs = [s for subs in subs_by_mod.values() for s in subs]
-    eg = EGraph()
-    for r in roots.values():
-        eg.add_term(r)
-    synop_fires: dict[str, int] = {}
-    synop_passes = 0
-    if bootstrap:
-        from mlopt_core.laws import minted as _minted
-        from mlopt_discovery import shipped_primitives as _sp
-
-        # the vocabulary bootstrap: seat the shipped fold set so the
-        # mined shapes compose over machine-minted primitives.  The
-        # torch denotations register too — the emit gate's eval and
-        # every sink reading the ambient table see the composed
-        # spelling end-to-end.
-        _sp.register()
-        eg.rebuild()
-        # A deeper tier's fold LHS is a skeleton over ``synop(N-1)_*``
-        # enodes — it can only match once the tier below seated — so
-        # the seating loops: one targeted ``apply_rule`` pass per
-        # tier, congruence-closed between passes, until a pass fires
-        # nothing (fixpoint) or ``depth`` passes ran (each pass can
-        # seat at most one deeper tier).  Folds minting a synop of
-        # depth >= the cap are skipped outright — a ``synopN_*``
-        # enode could only be embedded by a depth-(N+1) mint, which
-        # the cap already rules out.
-        seatable = [
-            f
-            for f in _minted.prim_folds()
-            if _synop_depth(_minted.synop_name(f.name)) < depth
-        ]
-        while synop_passes < depth:
-            synop_passes += 1
-            fired = 0
-            for f in seatable:
-                before = eg.rule_fires.get(f.name, 0)
-                eg.apply_rule(f, 0)
-                n = eg.rule_fires.get(f.name, 0) - before
-                if n:
-                    synop_fires[f.name] = synop_fires.get(f.name, 0) + n
-                    fired += n
-            eg.rebuild()
-            if not fired:
-                break
-    denoted = _denoted_shapes()
-    mined_all = mine_candidates(
-        eg,
-        min_uses=k,
+    return _pm.prim_pool(
+        roots,
+        k,
+        bindings=tb._IR_TO_TORCH,
+        # the emit gate wants the bare verdict — eval_instance's
+        # second slot is the site note.
+        eval_pair=lambda a, b: eval_instance(a, b)[0],
+        denoted=_denoted_shapes(),
+        prefix="synop",
+        handler_bindings=tb._IR_TO_TORCH,
+        register_shipped=_sp.register,
+        cap=cap,
+        budget=budget,
+        site_cap=site_cap,
         min_ops=min_ops,
         max_ops=max_ops,
         beam=beam,
         max_expand=max_expand,
-        vocab=_synop_vocab() if vocab else None,
+        bootstrap=bootstrap,
+        family_mint=family_mint,
+        depth=depth,
+        vocab=vocab,
     )
-    stats: dict[str, Any] = {
-        "k": k,
-        "min_ops": min_ops,
-        "max_ops": max_ops,
-        "cap": cap,
-        "beam": beam,
-        "max_expand": max_expand,
-        "mined_total": len(mined_all),
-        "mined": 0,
-        "kbound": 0,
-        "depth_dist": {},
-        "denoted": 0,
-        "unevaluable": 0,
-        "gate_failed": 0,
-        "no_domain": 0,
-        "minted": 0,
-        "refused": 0,
-        "pool": 0,
-        "scan_capped": False,
-        "nested": [],
-        "bootstrap": bool(bootstrap),
-        # the minted-depth cap (``--prim-depth``) and the shapes the
-        # cap excluded.
-        "prim_depth": depth,
-        "over_depth": 0,
-        # the refused-spec meta-loop: ``--prim-family-mint`` —
-        # refused shapes whose spec class minted a family
-        # descriptor vs those the meta-grammar refused too.
-        "family_mint": bool(family_mint),
-        "families_minted": 0,
-        "families_refused": 0,
-        # the bootstrap seating: shipped folds that fired on the
-        # corpus, the enode merges they contributed, and how many
-        # fixpoint passes the seating loop ran.
-        "synop_folds": len(synop_fires),
-        "synop_fires": sum(synop_fires.values()),
-        "synop_passes": synop_passes,
-        # the frontier pricing fix (``--prim-vocab``): carried
-        # ``synop*`` leaves score at their denotation's op-count, so
-        # synop-carrying skeletons survive the beam cut instead of
-        # truncating at the bottom of ``rows * spelled_ops``.
-        "vocab": bool(vocab),
-        # pooled primitives by composition depth — the loop-closure
-        # count (``depth2`` kept as the depth-2 slice).
-        "depth2": 0,
-        "depth_counts": {},
-        # the stratified pool (``--prim-vocab``): shapes skipped
-        # because their composition tier's own top-gain slice of
-        # ``cap`` was already full.  Without the slice the deeper
-        # tiers — rarer, shorter-denoted — never reach the gates:
-        # the depth-2 surface fills the shared slice first.
-        "tier_capped": 0,
-    }
-    op_counts: Counter = Counter()
-    cands: list = []
-    meta: dict[int, dict] = {}
-    tier_minted: Counter = Counter()
-    for cand in mined_all:
-        if not vocab and len(cands) >= cap:
-            stats["scan_capped"] = True
-            break
-        stats["mined"] += 1
-        pat = cand.pattern
-        if not isinstance(pat, Op) or not cand.leaf_mvars:
-            continue
-        embeds_shipped = sorted(_synop_ops(pat))
-        # the minted op's composition depth: 1 + the deepest shipped
-        # synop the skeleton carries (``synop_`` = depth 1,
-        # ``synopN_`` = depth N).
-        d = 1 + max(
-            (_synop_depth(o) for o in embeds_shipped), default=0
-        )
-        if d > depth:
-            # the ``--prim-depth`` cap — unreachable under the gated
-            # seating (no deep synop enodes exist to embed) unless
-            # the corpus itself spells a deeper op; recorded either
-            # way.
-            stats["over_depth"] += 1
-            continue
-        if vocab and tier_minted[d] >= cap:
-            # the tier's own top-gain slice is full — skipped before
-            # the bind/eval gates, honestly recorded.
-            stats["tier_capped"] += 1
-            continue
-        # the denotation spelling: shipped synops re-expanded to
-        # manual ops — what the op means, what real subterms bind,
-        # what the denoted gate names.
-        xpat = _expand_synops(pat)
-        mods = _modules_bound(xpat, subs_by_mod)
-        if len(mods) < k:
-            continue
-        stats["kbound"] += 1
-        op_counts[cand.op_count] += 1
-        xnorm = _alpha_norm(xpat)
-        if xnorm in denoted:
-            stats["denoted"] += 1
-            continue
-        if any(
-            tb._IR_TO_TORCH.get(op) is None
-            for op in _pat_ops(pat) | _pat_ops(xpat)
-        ):
-            stats["unevaluable"] += 1
-            continue
-        # the honest name: the shape's own hash, not a coined label —
-        # ``synop{d}_*`` when the fold composes over a depth-(d-1)
-        # shipped synop.
-        norm = _alpha_norm(pat)
-        h = hashlib.sha256(norm.encode()).hexdigest()[:10]
-        name = f"synop_{h}" if d == 1 else f"synop{d}_{h}"
-        call_attrs: dict[str, Any] = {a: a for a in cand.attr_mvars}
-        call = Op.make(name, *cand.leaf_mvars, **call_attrs)
-        spec = _pat_spec(xpat)
-        op_def(
-            name,
-            len(cand.leaf_mvars),
-            1,
-            law=f"synthesized primitive — denotation is the mined "
-            f"manual subgraph {xnorm}",
-        )
-        # denotation = the spelled spec — the ambient binding table is
-        # the op's semantics (ADR 0007: the executor table IS the
-        # meaning); post-hoc registration reaches every sink seated on
-        # the shared ambient dict.
-        tb._IR_TO_TORCH[name] = _prim_binding(
-            spec, cand.leaf_mvars, cand.attr_mvars
-        )
-        sites = [
-            (m, s)
-            for s in all_subs
-            if (m := _term_match(xpat, s)) is not None
-        ][:site_cap]
-        # verify — the arm's honesty gate: the op's denotation must
-        # equal the spelled pattern fp64 on bound sites.  By
-        # construction it does (the binding IS the spelling) — the
-        # measurement is still run, never assumed.
-        equal = bad = 0
-        for m, _s in sites:
-            outcome, _n = eval_instance(
-                instantiate_pattern(pat, m),
-                instantiate_pattern(call, m),
-            )
-            equal += outcome == "equal"
-            bad += outcome in ("unequal", "rhs-err")
-        if not equal or bad:
-            stats["gate_failed"] += 1
-            continue
-        domain = _prim_domain(sites, _PRIM_DOMAIN)
-        hrow: dict[str, Any] = {"verdict": "skipped-no-domain"}
-        if not domain:
-            stats["no_domain"] += 1
-        else:
-            item = {
-                "spec": _freeze_spec(
-                    spec, sites[0][0], cand.attr_mvars
-                ),
-                "domain": domain,
-            }
-            _handlers, report = mint_handlers([item], budget=budget)
-            rep = report[0]
-            fam_names: list[str] = []
-            fam_retry: dict | None = None
-            if rep["verdict"] == "refused" and family_mint:
-                # the meta-loop: the refused spec class mints its
-                # own family — mint_families enumerates the
-                # descriptor space over the spec's movable ops and
-                # fp64-verifies on the same bound-site domain, then
-                # the body mint retries with the survivors injected
-                # as extra_families.
-                from mlopt_discovery import family_synth as _fs
-
-                fams, frep = _fs.mint_families([item])
-                fam_names = [f["name"] for f in fams]
-                if fams:
-                    stats["families_minted"] += 1
-                    _h2, rep2 = mint_handlers(
-                        [item],
-                        budget=budget,
-                        extra_families=tuple(fams),
-                    )
-                    fam_retry = rep2[0]
-                    if fam_retry["verdict"] == "minted":
-                        rep, _handlers = fam_retry, _h2
-                else:
-                    stats["families_refused"] += 1
-                    fam_retry = {
-                        "verdict": "no-family",
-                        "searched": frep["searched"],
-                        "budget": frep["budget"],
-                    }
-            if rep["verdict"] == "minted":
-                stats["minted"] += 1
-                tag = rep["tag"]
-                hrow = {
-                    "verdict": "minted",
-                    "family": rep["family"],
-                    "tried": rep["tried"],
-                    "max_err": rep["max_err"],
-                    "record": handler_record(tag, _handlers[tag]),
-                }
-                if fam_names:
-                    # the meta-loop carried this shape: the minted
-                    # descriptor that won the retry (a shipped body
-                    # winning instead is recorded, not credited).
-                    hrow["family_minted"] = (
-                        rep["family"].split(":", 1)[1]
-                        if rep["family"].startswith("family:")
-                        else ",".join(fam_names)
-                    )
-            else:
-                stats["refused"] += 1
-                hrow = {
-                    "verdict": "refused",
-                    "tried": rep.get("tried"),
-                    "note": rep.get("note"),
-                    # inf means every tried candidate raised or
-                    # shape-mismatched — serialized as a string so the
-                    # report JSON stays strict.
-                    "best_err": (
-                        rep.get("best_err")
-                        if rep.get("best_err") != float("inf")
-                        else "inf"
-                    ),
-                    # the frozen body + bound-site domain the refusal
-                    # measured against — the row reproduces offline.
-                    "spec": rep.get("spec"),
-                    "domain": domain,
-                }
-                if fam_names:
-                    # descriptors minted but no injected body
-                    # verified — the family exists, the body wall
-                    # stands; the retry's own refusal rides along.
-                    hrow["family_minted"] = ",".join(fam_names)
-                    hrow["retry"] = {
-                        "verdict": fam_retry["verdict"],
-                        "tried": fam_retry.get("tried"),
-                        "note": fam_retry.get("note"),
-                    }
-                elif fam_retry is not None:
-                    hrow["family_refused"] = (
-                        "no family verified within "
-                        f"budget={fam_retry['budget']} "
-                        f"(searched {fam_retry['searched']})"
-                    )
-        # the definitional premise: the cert leg's anchored axiom set
-        # unions it when the bare bank cannot derive the fold — the
-        # fusion-schema mint's own channel for a denotation the bank
-        # lacks.  The novelty sieve never sees it (its premise bank
-        # is the shipped surface minus alpha-siblings), so the fold
-        # stays underivable there BY CONSTRUCTION.  The premise
-        # unfolds to the FULL denotation — for a depth-N mint the
-        # synop-carrying LHS re-connects through the shipped folds'
-        # own expansions (an N-step anchored derivation).
-        expand = Rewrite(
-            f"{name}.expand",
-            call,
-            xpat,
-            law=f"{name} unfolds to its mined denotation — the "
-            "definitional premise the cert leg anchors on",
-        )
-        prop = Proposal(
-            name=f"prim:{name}",
-            lhs=pat,
-            rhs=call,
-            family=_PRIM_FAMILY,
-            sources=(
-                "prim-mint",
-                f"mods:{len(mods)}",
-                f"inst:{cand.n_instances}",
-                f"gain:{cand.gain}",
-                f"handler:{hrow['verdict']}",
-                *((f"depth:{d}",) if d > 1 else ()),
-            ),
-            premises=(expand,),
-        )
-        i = len(cands)
-        tier_minted[d] += 1
-        cands.append(
-            Candidate(
-                strategy="prim",
-                label=prop.name,
-                lhs=pat,
-                rhs=call,
-                note=(
-                    f"primitive {name} — a manual shape shared by "
-                    f"{len(mods)} modules, undenoted in the bank"
-                    + (
-                        f"; composes over shipped "
-                        f"{'/'.join(embeds_shipped)}"
-                        if embeds_shipped
-                        else ""
-                    )
-                ),
-                rule=prop.as_rule(),
-            )
-        )
-        prim_rec: dict[str, Any] = {
-            "synop": name,
-            "alpha": xnorm,
-            "depth": d,
-            "ops": cand.op_count,
-            "opset": sorted(_pat_ops(pat)),
-            "mods": sorted(mods),
-            "sites": len(sites),
-            "equal_sites": equal,
-            "handler": hrow,
-        }
-        if norm != xnorm:
-            # the fold's own LHS spelling — the synop-carrying
-            # skeleton the minted op compresses.
-            prim_rec["alpha_fold"] = norm
-            prim_rec["embeds_shipped"] = embeds_shipped
-        meta[i] = {
-            "family": _PRIM_FAMILY,
-            "sources": list(prop.sources),
-            "mods": len(mods),
-            "prim": prim_rec,
-        }
-        stats["depth_counts"][str(d)] = (
-            stats["depth_counts"].get(str(d), 0) + 1
-        )
-        if d == 2:
-            stats["depth2"] += 1
-    stats["pool"] = len(cands)
-    if vocab and stats["tier_capped"]:
-        # a tier's slice truncated candidates the scan never reached —
-        # the stratified analogue of ``scan_capped``.
-        stats["scan_capped"] = True
-    stats["depth_dist"] = {
-        str(n): c for n, c in sorted(op_counts.items())
-    }
-    # Loop-closure probe: which pooled shapes' *denotations* carry a
-    # same-run minted synop's denotation as a proper subterm —
-    # measured on the expanded spelling so a deeper fold's embedded
-    # inner mints still register.  (The ``depth_counts`` /
-    # ``embeds_shipped`` record the composition over *shipped*
-    # synops — the bootstrap's own surface.)  Measured over the
-    # pooled set only; the scan may be cap-truncated above.
-    alpha_name = {
-        meta[i]["prim"]["alpha"]: meta[i]["prim"]["synop"] for i in meta
-    }
-    for i, rec in meta.items():
-        p = rec["prim"]
-        embeds = sorted(
-            {
-                alpha_name[a]
-                for a in _sub_alphas(_expand_synops(cands[i].lhs))
-                if a in alpha_name
-            }
-            - {p["synop"]}
-        )
-        if embeds:
-            p["embeds"] = embeds
-            stats["nested"].append(
-                {"outer": p["synop"], "inner": embeds}
-            )
-    return cands, meta, stats
 
 
 def _prim_pool_cached(
