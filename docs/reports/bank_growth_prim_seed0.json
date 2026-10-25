@@ -1,0 +1,66 @@
+{
+ "seed": 0,
+ "cases": {
+  "train": 32,
+  "eval": 64
+ },
+ "budget": 24,
+ "epochs": 4,
+ "bank_sizes": {
+  "v0": 74,
+  "v1": 131
+ },
+ "cells": {
+  "v0": {
+   "train-v0": {
+    "reward": 0.1094,
+    "steps": 12,
+    "n": 64
+   },
+   "train-v1": {
+    "reward": 0.1094,
+    "steps": 12,
+    "n": 64
+   },
+   "random": {
+    "reward": 0.099,
+    "steps": 12,
+    "n": 64
+   }
+  },
+  "v1": {
+   "train-v0": {
+    "reward": 0.0703,
+    "steps": 12,
+    "n": 64
+   },
+   "train-v1": {
+    "reward": 0.0625,
+    "steps": 12,
+    "n": 64
+   },
+   "random": {
+    "reward": 0.0677,
+    "steps": 12,
+    "n": 64
+   }
+  }
+ },
+ "gstar_delta": -0.0391,
+ "train_decade_means": {
+  "v0": [
+   0.067,
+   0.067,
+   0.107,
+   0.04,
+   0.06
+  ],
+  "v1": [
+   0.02,
+   0.04,
+   0.06,
+   0.107,
+   0.08
+  ]
+ }
+}
