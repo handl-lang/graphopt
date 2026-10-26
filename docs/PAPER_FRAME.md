@@ -116,8 +116,10 @@ module-level ratio from a single round is no longer publishable.
 So the 2.87× stands for what it is — a whole-chain kernel over a synthetic
 tape — and the opening claim is bounded by measurement rather than assertion:
 a generated kernel pays **as an op** (2.6×), as the **whole chain** (2.87× on
-a synthetic tape), or where the delivered module is **dispatch-bound**
-(1.2–1.3×), and not as a step inside a module that is already kernel-bound.
+a synthetic tape), or where the delivered module **launches fewer kernels than
+eager** (15 of 65 zoo modules, 1.04–1.94×, win rate 41 % on launch-heavy rows
+vs 10–17 % on kernel-heavy ones), and not as a step inside a module that is
+already kernel-bound.
 
 ## Section skeleton
 
