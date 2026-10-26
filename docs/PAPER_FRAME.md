@@ -81,9 +81,20 @@ RuntimeError: a and b must have same reduction dim,
               but got [512, 32] X [8, 8]
 ```
 
-A workload builds an inner matmul at `d=8` while the feed carries the
-requested width, so the zoo probe cannot run until that workload's shape
-is fixed. The `--probe` path (fixed `chainfuse` / `mulsoftplus` cases) is
+Three workloads hardcode auxiliary shapes instead of deriving them from
+`(b, t, d)`, so at `d=64 t=32 b=8` they cannot run at all (found by
+running each workload at those dims, 2026-10-25):
+
+| workload | symptom | cause |
+|---|---|---|
+| `MLPMixerBlock` | `mat1 and mat2 shapes cannot be multiplied (512x32 and 8x8)` | mixer linear sized to a hardcoded 8 tokens, not `t`/`d` |
+| `GCNLayer` | `size of tensor a (2) must match b (8)` at `zoo.py:357` | adjacency built at a fixed 2 nodes while the batch is 8 |
+| `BlockSparseAttention` | `shape '[8, 4, 2, 64]' invalid for input of size 16384` | hardcoded heads/seq in the reshape |
+
+None of these is in the discovery path — they are sample architectures
+used by the zoo probe — but the chain-level measurement needs all of them
+at wide shapes. The fix is to derive each auxiliary tensor from `(b, t,
+d)`; the `--probe` path (fixed `chainfuse` / `mulsoftplus` cases) is
 unaffected and is what the 2.87× / 1.92× numbers come from.
 
 ## Section skeleton
