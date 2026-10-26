@@ -19,6 +19,12 @@ shape the module probe uses.
 costs tens of seconds at wide shapes and a handful time out on this box.
 Select workloads with ``--only``; a partial table is reported as partial.
 
+**Rounds, not one shot.**  Each row is the median of ``--rounds`` (default 3)
+independent rounds, with the spread kept.  Timing an op-level ratio to two
+decimals is fine; timing two *modules* at different moments is not — an
+unrelated process on the box moved one workload's ratio from 0.42x to 1.44x
+without touching a line of code.  Run this on an idle machine.
+
 Run::
 
     .venv/bin/python -m bench.drivers.probes.zoo_chain \\
@@ -29,6 +35,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import statistics
 import sys
 from pathlib import Path
 
@@ -39,9 +46,23 @@ DEFAULT_ONLY = "GatedAttentionUnit,MLPMixerBlock,BlockSparseAttention,TimeCondCo
 
 
 def measure(
-    *, d: int, t: int, b: int, only: tuple[str, ...], reps: int
+    *,
+    d: int,
+    t: int,
+    b: int,
+    only: tuple[str, ...],
+    reps: int,
+    rounds: int = 3,
 ) -> list[dict]:
-    """Run the shipped gen path over the named zoo workloads."""
+    """Run the shipped gen path over the named zoo workloads.
+
+    Each workload is measured ``rounds`` times and reported by the
+    **median** ratio plus its spread.  One round is not evidence: the
+    two arms are timed at different moments, so a clock or load
+    excursion during either arm moves the ratio by tens of percent with
+    no code change (measured: one workload read 0.42x and 1.44x across
+    runs that differed only in what else the box was running).
+    """
     want = set(only)
     rows: list[dict] = []
     for wl in zoo_mod.zoo(d, t, b):
@@ -59,7 +80,33 @@ def measure(
             )
             print(f"zoo[{wl.name}]: export declined: {exc}", flush=True)
             continue
-        row = gen_probe(case, reps=reps)
+        got = [gen_probe(case, reps=reps) for _ in range(rounds)]
+        ok = [r for r in got if r.get("delivered")]
+        if not ok:
+            rows.append(got[0])
+            print(f"zoo[{wl.name}]: undeliverable", flush=True)
+            continue
+        speeds = sorted(round(float(r["speedup"]), 3) for r in ok)
+        row = dict(ok[0])
+        # Every ratio keeps the pair it was computed from: rounds are
+        # timed at different moments, so a ratio and a µs figure taken
+        # from different rounds is not a measurement, it is an average
+        # of two mistakes.
+        row["runs"] = [
+            {
+                "speedup": round(float(r["speedup"]), 3),
+                "eager_us": round(r["baseline_us"], 1),
+                "compiled_us": round(r["compiled_us"], 1),
+                "gen_us": round(r["gen_us"], 1),
+            }
+            for r in ok
+        ]
+        row["speedup"] = round(statistics.median(speeds), 3)
+        row["spread"] = [speeds[0], speeds[-1]]
+        for stale in ("baseline_us", "compiled_us", "gen_us", "vs_compiled"):
+            row.pop(stale, None)
+        row["verified"] = all(r.get("verified") for r in ok)
+        row["max_abs"] = max(r.get("max_abs") or 0 for r in ok)
         rows.append(row)
         print(f"zoo[{row['case']}]: {row}", flush=True)  # stdout-compat
     return rows
@@ -73,6 +120,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--b", type=int, default=8)
     ap.add_argument("--reps", type=int, default=100)
     ap.add_argument(
+        "--rounds",
+        type=int,
+        default=3,
+        help="timing rounds per workload; the row reports the median ratio",
+    )
+    ap.add_argument(
         "--only",
         default=DEFAULT_ONLY,
         help="comma-separated workload names; empty string = every workload",
@@ -82,7 +135,12 @@ def main(argv: list[str] | None = None) -> int:
 
     only = tuple(x for x in args.only.split(",") if x)
     rows = measure(
-        d=args.d, t=args.t, b=args.b, only=only, reps=args.reps
+        d=args.d,
+        t=args.t,
+        b=args.b,
+        only=only,
+        reps=args.reps,
+        rounds=args.rounds,
     )
     won = [
         r
