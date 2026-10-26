@@ -69,7 +69,30 @@ walk as the cause. This closes the loop on that diagnosis:
   **"invented operations are slow only when delivered by the
   interpreter"**.
 
-## Limits, stated
+## The module-level gap — the delivery path is CPU-pinned
+
+The obvious next measurement is the same comparison one level up: a real
+module, `spelled` vs `noprim` vs `synop`, with the kernel body bound.
+`prim_kernel_module` is written for exactly that, and **it cannot run yet**:
+
+```
+RuntimeError: Expected all tensors to be on the same device,
+              but found at least two devices, cuda:0 and cpu!
+              (torch_bridge.Plan.run_xs → _run_tail → linear)
+```
+
+`measure_module` now carries `device`/`dtype` and moves the feeds and the
+exported parameters — but `torch_bridge.Plan.run_xs` allocates its
+intermediates from a **CPU `like` tensor**, so the plan is pinned to CPU
+by construction. Kernels need CUDA; the delivery path refuses to leave the
+CPU.
+
+That is the finding, not a bug in the probe: **the shipped delivery path
+cannot host a generated kernel at all.** Fixing it is a `torch_bridge`
+change — `run_xs` should take device/dtype from its inputs — and until
+then the module-level number does not exist, while the op-level 2.6×
+does.
+
 
 - op level, not module level: this times the denotation alone (one
   broadcast + one kernel launch vs one interpreter pass). The module-level

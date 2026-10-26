@@ -260,15 +260,27 @@ def measure_module(
     compile_arms: bool = True,
     warmup: int = _WARMUP,
     iters: int = _ITERS,
+    device: str = "cpu",
+    dtype: torch.dtype = torch.float64,
 ) -> CaseResult:
-    """Build the four arms for *name* at *size* and time them."""
+    """Build the four arms for *name* at *size* and time them.
+
+    *device* / *dtype* default to the historical fp64-on-CPU contract (the
+    verify dtype).  They move the feeds and the exported parameters, but
+    **not yet the plan executor**: ``torch_bridge.Plan.run_xs`` allocates
+    its intermediates from a CPU ``like`` tensor, so a CUDA run raises
+    "Expected all tensors to be on the same device".  That is the open gap
+    (`docs/reports/prim_kernel.md`) — the delivery path is CPU-pinned, so a
+    generated kernel cannot be measured end to end yet.
+    """
     zkws = SIZES[size]
     sp.register()
     w = _workload(name, zkws)
     torch.manual_seed(0)
     model, feed = w.build()
     feeds = feed if isinstance(feed, tuple) else (feed,)
-    spelled = model.eval().double()
+    feeds = tuple(f.to(device=device, dtype=dtype) for f in feeds)
+    spelled = model.eval().to(device=device, dtype=dtype)
 
     row = CaseResult(
         module=name,
@@ -280,6 +292,12 @@ def measure_module(
 
     # -- arm 1: identity tape (export + lower, no search) ----------------
     ir, params = export_to_ir(spelled, feeds)
+    # parameters leave the exporter on CPU — move them with the feeds so
+    # the tape arm (and every lowered arm) runs on one device/dtype
+    params = {
+        k: (v.to(device=device, dtype=dtype) if hasattr(v, "to") else v)
+        for k, v in params.items()
+    }
     tape = ir_to_torch_module(ir, param_values=params)
     row.n_ops_tape = sum(_ops_of(ir.root).values())
 
