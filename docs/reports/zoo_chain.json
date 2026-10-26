@@ -1,0 +1,69 @@
+[
+ {
+  "case": "zoo:GatedAttentionUnit",
+  "claims": [
+   "decayed_0",
+   "square"
+  ],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0.0,
+  "cost": NaN,
+  "baseline_us": 280.4350001497369,
+  "compiled_us": 320.23100015976524,
+  "gen_us": 299.3579998928908,
+  "speedup": 0.937,
+  "vs_compiled": 1.07,
+  "device": "cuda"
+ },
+ {
+  "case": "zoo:MLPMixerBlock",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0.0,
+  "cost": NaN,
+  "baseline_us": 405.31600006943336,
+  "compiled_us": 354.2310000739235,
+  "gen_us": 410.69400003834744,
+  "speedup": 0.987,
+  "vs_compiled": 0.863,
+  "device": "cuda"
+ },
+ {
+  "case": "zoo:FNOBlock",
+  "claims": [],
+  "delivered": false,
+  "note": "deliver failed: ValueError: No torch binding for op 'fft_rfft2'",
+  "baseline_us": 96.5379999797733,
+  "compiled_us": 210.25099999860686
+ },
+ {
+  "case": "zoo:TimeCondConv",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0.0,
+  "cost": NaN,
+  "baseline_us": 187.23800008046965,
+  "compiled_us": 117.96600006164226,
+  "gen_us": 130.2800001212745,
+  "speedup": 1.437,
+  "vs_compiled": 0.905,
+  "device": "cuda"
+ },
+ {
+  "case": "zoo:BlockSparseAttention",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0.0,
+  "cost": NaN,
+  "baseline_us": 394.2280000046594,
+  "compiled_us": 401.4219998680346,
+  "gen_us": 412.5970001496171,
+  "speedup": 0.955,
+  "vs_compiled": 0.973,
+  "device": "cuda"
+ }
+]

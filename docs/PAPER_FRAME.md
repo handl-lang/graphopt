@@ -69,33 +69,39 @@ A corpus whose folds bind ≥1 M elements **and** a delivery path that
 emits one kernel per chain. Everything needed exists (`gen` codegen,
 `genkernel.triton_bindings`, the gauntlet, the frozen-player harness);
 what is missing is the mint producing *chain-level* kernel claims instead
-of rule folds. That is the follow-up paper's result, and it is the
-recommendation this one ends on.
+of rule folds. That is the follow-up paper's experiment — run once here, on
+the corpus's own modules, and it returned a negative with a shape: see the
+result below. The recommendation this paper ends on is therefore the
+conditional form, not the hope.
 
-**Blocker, measured 2026-10-25:** `play --domain gen --zoo` — the path that
-would produce chain-level numbers on real modules — fails on this tree,
-at every zoo scaling tried:
+**Blocker, measured 2026-10-25 — fixed 2026-10-26.** `play --domain gen --zoo`
+(the path that produces chain-level numbers on real modules) failed at every
+zoo scaling. Four sample workloads baked auxiliary shapes sized for the
+`d16 t8 b2` default; each now derives them from `(b, t, d)`, and the default
+shapes are reproduced exactly, so no published number moves:
 
-```
-RuntimeError: a and b must have same reduction dim,
-              but got [512, 32] X [8, 8]
-```
-
-Three workloads hardcode auxiliary shapes instead of deriving them from
-`(b, t, d)`, so at `d=64 t=32 b=8` they cannot run at all (found by
-running each workload at those dims, 2026-10-25):
-
-| workload | symptom | cause |
+| workload | what was baked | now |
 |---|---|---|
-| `MLPMixerBlock` | `mat1 and mat2 shapes cannot be multiplied (512x32 and 8x8)` | mixer linear sized to a hardcoded 8 tokens, not `t`/`d` |
-| `GCNLayer` | `size of tensor a (2) must match b (8)` at `zoo.py:357` | adjacency built at a fixed 2 nodes while the batch is 8 |
-| `BlockSparseAttention` | `shape '[8, 4, 2, 64]' invalid for input of size 16384` | hardcoded heads/seq in the reshape |
+| `MLPMixerBlock` | token-mix linear at 8 tokens | `t` |
+| `GCNLayer` | adjacency `(2, 6, 6)` — the default batch, by accident | `(b, 6, 6)` |
+| `BlockSparseAttention` | `blocks = 4`, so `t = 8` | `t // 2` |
+| `LearnedPosSlice` | table at 16 positions | `max(t, 16)` |
 
-None of these is in the discovery path — they are sample architectures
-used by the zoo probe — but the chain-level measurement needs all of them
-at wide shapes. The fix is to derive each auxiliary tensor from `(b, t,
-d)`; the `--probe` path (fixed `chainfuse` / `mulsoftplus` cases) is
-unaffected and is what the 2.87× / 1.92× numbers come from.
+68/68 workloads now run at `(16, 8, 2)` **and** `(64, 32, 8)` (was 64/68
+at wide).
+
+**Result, measured 2026-10-26.** With the corpus unblocked the chain-level
+question is answerable, and the answer is not the one the follow-up hoped
+for: on real zoo modules at `d64 t32 b8`, gen delivery is **0.94 / 0.99 /
+0.96× eager** on the three stable workloads, one is undeliverable (no
+`fft_rfft2` binding), and one (`TimeCondConv`) is **unusable** — 130–431 µs
+across five identical runs while eager holds ±3 %. Detail and the five-run
+table: `docs/reports/zoo_chain.md`, claim 9 in `EVIDENCE.md`.
+
+So the 2.87× stands for what it is — a whole-chain kernel over a synthetic
+tape — and the follow-up paper's opening claim is now **precisely bounded**
+instead of assumed: chain-level kernels pay when the chain *is* the module,
+not when it is a step inside one.
 
 ## Section skeleton
 
