@@ -1,0 +1,66 @@
+{
+ "device": "cuda",
+ "elements": 1048576,
+ "rows": [
+  {
+   "op": "synop2_35bbd03301",
+   "status": "measured",
+   "ms": {
+    "binding": 1.69598,
+    "kernel": 0.66354
+   },
+   "kernel_matches_binding": true,
+   "kernel_over_binding": 0.391
+  },
+  {
+   "op": "synop2_d46808a970",
+   "status": "measured",
+   "ms": {
+    "binding": 1.69455,
+    "kernel": 0.6645
+   },
+   "kernel_matches_binding": true,
+   "kernel_over_binding": 0.392
+  },
+  {
+   "op": "synop3_04df5fd446",
+   "status": "measured",
+   "ms": {
+    "binding": 2.39381,
+    "kernel": 0.89596
+   },
+   "kernel_matches_binding": true,
+   "kernel_over_binding": 0.374
+  },
+  {
+   "op": "synop3_083e9c241f",
+   "status": "measured",
+   "ms": {
+    "binding": 1.83228,
+    "kernel": 0.70799
+   },
+   "kernel_matches_binding": true,
+   "kernel_over_binding": 0.386
+  },
+  {
+   "op": "synop3_0ca31bf1e5",
+   "status": "measured",
+   "ms": {
+    "binding": 2.3947,
+    "kernel": 0.89812
+   },
+   "kernel_matches_binding": true,
+   "kernel_over_binding": 0.375
+  },
+  {
+   "op": "synop3_0fa19d1ff8",
+   "status": "measured",
+   "ms": {
+    "binding": 2.53425,
+    "kernel": 0.94046
+   },
+   "kernel_matches_binding": true,
+   "kernel_over_binding": 0.371
+  }
+ ]
+}
