@@ -509,6 +509,25 @@ class TestZooProbe:
             and case[5]["gen_handlers"] is not None
         )
 
+    def test_zoo_case_intake_dtype_is_a_knob(self):
+        # fp64 is the convention, fp32 is what a caller ships; the IR is
+        # the same either way, so only leaves and feeds may move.
+        pytest.importorskip("torch")
+        import torch
+
+        from mlopt_discovery import zoo as _zoo
+
+        wl = _zoo.zoo()[0]
+        d64 = play._zoo_case(wl)
+        d32 = play._zoo_case(wl, dtype="fp32")
+        assert d64[5]["model"] is not d32[5]["model"]
+        leaves64 = next(iter(d64[5]["leaves"].values()))
+        leaves32 = next(iter(d32[5]["leaves"].values()))
+        assert leaves64.dtype is torch.float64
+        assert leaves32.dtype is torch.float32
+        assert d32[5]["input"].dtype is torch.float32
+        assert d32[1] == d64[1]  # same IR root, same structure
+
     def test_zoo_case_binds_input_vars_for_profitable(
         self, monkeypatch
     ):

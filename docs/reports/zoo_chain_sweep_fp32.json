@@ -1,0 +1,2312 @@
+[
+ {
+  "case": "zoo:GatedAttentionUnit",
+  "claims": [
+   "decayed_0",
+   "square"
+  ],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.757,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.682,
+    "eager_us": 123.8,
+    "compiled_us": 145.5,
+    "gen_us": 181.6
+   },
+   {
+    "speedup": 0.757,
+    "eager_us": 142.2,
+    "compiled_us": 139.8,
+    "gen_us": 187.8
+   },
+   {
+    "speedup": 0.773,
+    "eager_us": 142.8,
+    "compiled_us": 192.8,
+    "gen_us": 184.9
+   }
+  ],
+  "spread": [
+   0.682,
+   0.773
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:AdditiveAttention",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.868,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.849,
+    "eager_us": 123.5,
+    "compiled_us": 174.7,
+    "gen_us": 145.5
+   },
+   {
+    "speedup": 0.982,
+    "eager_us": 128.4,
+    "compiled_us": 166.1,
+    "gen_us": 130.8
+   },
+   {
+    "speedup": 0.868,
+    "eager_us": 123.7,
+    "compiled_us": 181.4,
+    "gen_us": 142.5
+   }
+  ],
+  "spread": [
+   0.849,
+   0.982
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:TalkingHeadsAttention",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.817,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.873,
+    "eager_us": 227.9,
+    "compiled_us": 190.2,
+    "gen_us": 261.1
+   },
+   {
+    "speedup": 0.817,
+    "eager_us": 198.9,
+    "compiled_us": 154.0,
+    "gen_us": 243.3
+   },
+   {
+    "speedup": 0.797,
+    "eager_us": 203.5,
+    "compiled_us": 175.5,
+    "gen_us": 255.2
+   }
+  ],
+  "spread": [
+   0.797,
+   0.873
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:CosineAttention",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.838,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.838,
+    "eager_us": 238.8,
+    "compiled_us": 495.0,
+    "gen_us": 285.0
+   },
+   {
+    "speedup": 0.83,
+    "eager_us": 231.5,
+    "compiled_us": 165.7,
+    "gen_us": 279.0
+   },
+   {
+    "speedup": 0.906,
+    "eager_us": 238.3,
+    "compiled_us": 164.7,
+    "gen_us": 263.2
+   }
+  ],
+  "spread": [
+   0.83,
+   0.906
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:FiLMHead",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.754,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.604,
+    "eager_us": 45.2,
+    "compiled_us": 107.8,
+    "gen_us": 74.9
+   },
+   {
+    "speedup": 0.754,
+    "eager_us": 52.8,
+    "compiled_us": 93.6,
+    "gen_us": 70.0
+   },
+   {
+    "speedup": 0.852,
+    "eager_us": 52.5,
+    "compiled_us": 93.0,
+    "gen_us": 61.6
+   }
+  ],
+  "spread": [
+   0.604,
+   0.852
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:AdaLNBlock",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.851,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.731,
+    "eager_us": 87.6,
+    "compiled_us": 113.7,
+    "gen_us": 119.7
+   },
+   {
+    "speedup": 0.851,
+    "eager_us": 107.2,
+    "compiled_us": 127.4,
+    "gen_us": 126.1
+   },
+   {
+    "speedup": 0.851,
+    "eager_us": 107.6,
+    "compiled_us": 127.3,
+    "gen_us": 126.5
+   }
+  ],
+  "spread": [
+   0.731,
+   0.851
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:LoRAAdapter",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 1.1920928955078125e-07,
+  "cost": NaN,
+  "speedup": 1.183,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.183,
+    "eager_us": 53.2,
+    "compiled_us": 95.4,
+    "gen_us": 44.9
+   },
+   {
+    "speedup": 1.179,
+    "eager_us": 54.3,
+    "compiled_us": 104.5,
+    "gen_us": 46.0
+   },
+   {
+    "speedup": 1.252,
+    "eager_us": 54.7,
+    "compiled_us": 102.6,
+    "gen_us": 43.7
+   }
+  ],
+  "spread": [
+   1.179,
+   1.252
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:MLPMixerBlock",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 1.048,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.492,
+    "eager_us": 150.8,
+    "compiled_us": 136.4,
+    "gen_us": 101.0
+   },
+   {
+    "speedup": 1.048,
+    "eager_us": 113.3,
+    "compiled_us": 140.0,
+    "gen_us": 108.1
+   },
+   {
+    "speedup": 1.041,
+    "eager_us": 110.2,
+    "compiled_us": 133.6,
+    "gen_us": 105.8
+   }
+  ],
+  "spread": [
+   1.041,
+   1.492
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:FNOBlock",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.895,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.739,
+    "eager_us": 88.0,
+    "compiled_us": 224.5,
+    "gen_us": 119.0
+   },
+   {
+    "speedup": 0.905,
+    "eager_us": 103.0,
+    "compiled_us": 201.8,
+    "gen_us": 113.8
+   },
+   {
+    "speedup": 0.895,
+    "eager_us": 97.0,
+    "compiled_us": 211.5,
+    "gen_us": 108.4
+   }
+  ],
+  "spread": [
+   0.739,
+   0.905
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:GCNLayer",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.999,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.77,
+    "eager_us": 106.4,
+    "compiled_us": 138.8,
+    "gen_us": 138.2
+   },
+   {
+    "speedup": 0.999,
+    "eager_us": 134.5,
+    "compiled_us": 138.2,
+    "gen_us": 134.7
+   },
+   {
+    "speedup": 1.061,
+    "eager_us": 144.4,
+    "compiled_us": 142.2,
+    "gen_us": 136.1
+   }
+  ],
+  "spread": [
+   0.77,
+   1.061
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:AffineCoupling",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.806,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.861,
+    "eager_us": 78.3,
+    "compiled_us": 272.7,
+    "gen_us": 91.0
+   },
+   {
+    "speedup": 0.7,
+    "eager_us": 82.4,
+    "compiled_us": 102.7,
+    "gen_us": 117.6
+   },
+   {
+    "speedup": 0.806,
+    "eager_us": 80.6,
+    "compiled_us": 105.8,
+    "gen_us": 100.0
+   }
+  ],
+  "spread": [
+   0.7,
+   0.861
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:SoftSlotMoE",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.911,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.866,
+    "eager_us": 143.7,
+    "compiled_us": 153.1,
+    "gen_us": 166.0
+   },
+   {
+    "speedup": 0.911,
+    "eager_us": 146.3,
+    "compiled_us": 148.9,
+    "gen_us": 160.6
+   },
+   {
+    "speedup": 0.928,
+    "eager_us": 148.0,
+    "compiled_us": 146.5,
+    "gen_us": 159.5
+   }
+  ],
+  "spread": [
+   0.866,
+   0.928
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:ExpertChoiceMoE",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.863,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.807,
+    "eager_us": 172.0,
+    "compiled_us": 225.3,
+    "gen_us": 213.2
+   },
+   {
+    "speedup": 0.863,
+    "eager_us": 185.8,
+    "compiled_us": 160.0,
+    "gen_us": 215.3
+   },
+   {
+    "speedup": 0.889,
+    "eager_us": 178.1,
+    "compiled_us": 167.7,
+    "gen_us": 200.4
+   }
+  ],
+  "spread": [
+   0.807,
+   0.889
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:CapsuleRouting",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.989,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.98,
+    "eager_us": 227.2,
+    "compiled_us": 97.3,
+    "gen_us": 231.8
+   },
+   {
+    "speedup": 0.994,
+    "eager_us": 238.5,
+    "compiled_us": 93.8,
+    "gen_us": 239.9
+   },
+   {
+    "speedup": 0.989,
+    "eager_us": 238.0,
+    "compiled_us": 93.1,
+    "gen_us": 240.7
+   }
+  ],
+  "spread": [
+   0.98,
+   0.994
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:ChunkedRetention",
+  "claims": [
+   "decayed_0"
+  ],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 5.960464477539063e-08,
+  "cost": NaN,
+  "speedup": 1.069,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.069,
+    "eager_us": 158.4,
+    "compiled_us": 153.4,
+    "gen_us": 148.1
+   },
+   {
+    "speedup": 1.141,
+    "eager_us": 184.7,
+    "compiled_us": 144.0,
+    "gen_us": 161.9
+   },
+   {
+    "speedup": 1.045,
+    "eager_us": 181.5,
+    "compiled_us": 143.8,
+    "gen_us": 173.7
+   }
+  ],
+  "spread": [
+   1.045,
+   1.141
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:DeepEquilibrium",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 1.277,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.231,
+    "eager_us": 122.5,
+    "compiled_us": 132.3,
+    "gen_us": 99.6
+   },
+   {
+    "speedup": 1.294,
+    "eager_us": 130.1,
+    "compiled_us": 133.7,
+    "gen_us": 100.6
+   },
+   {
+    "speedup": 1.277,
+    "eager_us": 132.2,
+    "compiled_us": 137.4,
+    "gen_us": 103.5
+   }
+  ],
+  "spread": [
+   1.231,
+   1.294
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:DeltaRuleBlock",
+  "claims": [
+   "gen_0"
+  ],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 1.032,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.062,
+    "eager_us": 338.3,
+    "compiled_us": 204.8,
+    "gen_us": 318.4
+   },
+   {
+    "speedup": 1.032,
+    "eager_us": 328.2,
+    "compiled_us": 199.2,
+    "gen_us": 318.1
+   },
+   {
+    "speedup": 1.009,
+    "eager_us": 316.5,
+    "compiled_us": 175.9,
+    "gen_us": 313.6
+   }
+  ],
+  "spread": [
+   1.009,
+   1.062
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:WaveNetGate",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 1.047,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.952,
+    "eager_us": 70.1,
+    "compiled_us": 107.9,
+    "gen_us": 73.6
+   },
+   {
+    "speedup": 1.094,
+    "eager_us": 89.0,
+    "compiled_us": 118.5,
+    "gen_us": 81.4
+   },
+   {
+    "speedup": 1.047,
+    "eager_us": 85.1,
+    "compiled_us": 116.1,
+    "gen_us": 81.3
+   }
+  ],
+  "spread": [
+   0.952,
+   1.094
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:TimeCondConv",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 1.1920928955078125e-07,
+  "cost": NaN,
+  "speedup": 1.357,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.084,
+    "eager_us": 165.3,
+    "compiled_us": 133.6,
+    "gen_us": 152.5
+   },
+   {
+    "speedup": 1.457,
+    "eager_us": 221.3,
+    "compiled_us": 149.6,
+    "gen_us": 151.9
+   },
+   {
+    "speedup": 1.357,
+    "eager_us": 199.8,
+    "compiled_us": 127.2,
+    "gen_us": 147.2
+   }
+  ],
+  "spread": [
+   1.084,
+   1.457
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:MoSHead",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.883,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.741,
+    "eager_us": 83.1,
+    "compiled_us": 108.5,
+    "gen_us": 112.2
+   },
+   {
+    "speedup": 0.896,
+    "eager_us": 99.2,
+    "compiled_us": 107.1,
+    "gen_us": 110.7
+   },
+   {
+    "speedup": 0.883,
+    "eager_us": 98.5,
+    "compiled_us": 107.1,
+    "gen_us": 111.6
+   }
+  ],
+  "spread": [
+   0.741,
+   0.896
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:CovarianceHead",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.795,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.665,
+    "eager_us": 26.0,
+    "compiled_us": 48.2,
+    "gen_us": 39.0
+   },
+   {
+    "speedup": 0.795,
+    "eager_us": 31.9,
+    "compiled_us": 48.5,
+    "gen_us": 40.1
+   },
+   {
+    "speedup": 0.825,
+    "eager_us": 31.9,
+    "compiled_us": 46.7,
+    "gen_us": 38.7
+   }
+  ],
+  "spread": [
+   0.665,
+   0.825
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:SplineKAN",
+  "claims": [
+   "square"
+  ],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.838,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.829,
+    "eager_us": 65.1,
+    "compiled_us": 80.6,
+    "gen_us": 78.5
+   },
+   {
+    "speedup": 0.838,
+    "eager_us": 67.6,
+    "compiled_us": 79.2,
+    "gen_us": 80.7
+   },
+   {
+    "speedup": 0.914,
+    "eager_us": 70.6,
+    "compiled_us": 76.5,
+    "gen_us": 77.3
+   }
+  ],
+  "spread": [
+   0.829,
+   0.914
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:HighwayGate",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.97,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.815,
+    "eager_us": 55.9,
+    "compiled_us": 89.8,
+    "gen_us": 68.6
+   },
+   {
+    "speedup": 0.989,
+    "eager_us": 68.9,
+    "compiled_us": 93.8,
+    "gen_us": 69.6
+   },
+   {
+    "speedup": 0.97,
+    "eager_us": 66.4,
+    "compiled_us": 91.4,
+    "gen_us": 68.5
+   }
+  ],
+  "spread": [
+   0.815,
+   0.989
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:MambaSelectiveScan",
+  "delivered": false,
+  "note": "over budget: killed after 150s"
+ },
+ {
+  "case": "zoo:GatedLinearAttention",
+  "delivered": false,
+  "note": "over budget: killed after 150s"
+ },
+ {
+  "case": "zoo:RWKVMixBlock",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 4.76837158203125e-07,
+  "cost": NaN,
+  "speedup": 1.041,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.042,
+    "eager_us": 481.1,
+    "compiled_us": 193.2,
+    "gen_us": 461.5
+   },
+   {
+    "speedup": 1.034,
+    "eager_us": 476.7,
+    "compiled_us": 191.9,
+    "gen_us": 461.2
+   },
+   {
+    "speedup": 1.041,
+    "eager_us": 485.8,
+    "compiled_us": 194.8,
+    "gen_us": 466.9
+   }
+  ],
+  "spread": [
+   1.034,
+   1.042
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:HyenaLongConv",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 1.09,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.926,
+    "eager_us": 124.1,
+    "compiled_us": 160.7,
+    "gen_us": 134.0
+   },
+   {
+    "speedup": 1.103,
+    "eager_us": 146.5,
+    "compiled_us": 157.4,
+    "gen_us": 132.9
+   },
+   {
+    "speedup": 1.09,
+    "eager_us": 146.8,
+    "compiled_us": 159.6,
+    "gen_us": 134.7
+   }
+  ],
+  "spread": [
+   0.926,
+   1.103
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:TopKRouterMoE",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.854,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.818,
+    "eager_us": 214.1,
+    "compiled_us": 179.4,
+    "gen_us": 261.8
+   },
+   {
+    "speedup": 0.854,
+    "eager_us": 209.9,
+    "compiled_us": 167.2,
+    "gen_us": 245.9
+   },
+   {
+    "speedup": 0.877,
+    "eager_us": 216.2,
+    "compiled_us": 168.8,
+    "gen_us": 246.6
+   }
+  ],
+  "spread": [
+   0.818,
+   0.877
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:DeepSeekSigMoE",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.908,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.867,
+    "eager_us": 184.2,
+    "compiled_us": 168.0,
+    "gen_us": 212.4
+   },
+   {
+    "speedup": 0.912,
+    "eager_us": 180.9,
+    "compiled_us": 161.1,
+    "gen_us": 198.3
+   },
+   {
+    "speedup": 0.908,
+    "eager_us": 185.3,
+    "compiled_us": 162.8,
+    "gen_us": 204.1
+   }
+  ],
+  "spread": [
+   0.867,
+   0.912
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:STEQuantLinear",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 1.682,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.289,
+    "eager_us": 84.3,
+    "compiled_us": 95.5,
+    "gen_us": 65.4
+   },
+   {
+    "speedup": 1.682,
+    "eager_us": 99.3,
+    "compiled_us": 93.2,
+    "gen_us": 59.1
+   },
+   {
+    "speedup": 1.701,
+    "eager_us": 102.3,
+    "compiled_us": 94.2,
+    "gen_us": 60.1
+   }
+  ],
+  "spread": [
+   1.289,
+   1.701
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:PerChannelQuantMatmul",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 1.338,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.21,
+    "eager_us": 24.1,
+    "compiled_us": 67.9,
+    "gen_us": 19.9
+   },
+   {
+    "speedup": 1.354,
+    "eager_us": 27.9,
+    "compiled_us": 69.0,
+    "gen_us": 20.6
+   },
+   {
+    "speedup": 1.338,
+    "eager_us": 27.6,
+    "compiled_us": 70.1,
+    "gen_us": 20.7
+   }
+  ],
+  "spread": [
+   1.21,
+   1.354
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:KVCacheAttention",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 2.384185791015625e-07,
+  "cost": NaN,
+  "speedup": 1.06,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.024,
+    "eager_us": 117.4,
+    "compiled_us": 155.0,
+    "gen_us": 114.6
+   },
+   {
+    "speedup": 1.06,
+    "eager_us": 149.9,
+    "compiled_us": 196.7,
+    "gen_us": 141.4
+   },
+   {
+    "speedup": 1.248,
+    "eager_us": 143.9,
+    "compiled_us": 171.5,
+    "gen_us": 115.3
+   }
+  ],
+  "spread": [
+   1.024,
+   1.248
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:GEGLUBlock",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.986,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.834,
+    "eager_us": 68.3,
+    "compiled_us": 124.3,
+    "gen_us": 81.9
+   },
+   {
+    "speedup": 0.986,
+    "eager_us": 80.0,
+    "compiled_us": 121.1,
+    "gen_us": 81.1
+   },
+   {
+    "speedup": 1.01,
+    "eager_us": 82.1,
+    "compiled_us": 121.2,
+    "gen_us": 81.3
+   }
+  ],
+  "spread": [
+   0.834,
+   1.01
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:SkipInitNet",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 1.156,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.989,
+    "eager_us": 108.5,
+    "compiled_us": 171.6,
+    "gen_us": 109.7
+   },
+   {
+    "speedup": 1.372,
+    "eager_us": 150.4,
+    "compiled_us": 175.4,
+    "gen_us": 109.6
+   },
+   {
+    "speedup": 1.156,
+    "eager_us": 126.2,
+    "compiled_us": 171.7,
+    "gen_us": 109.2
+   }
+  ],
+  "spread": [
+   0.989,
+   1.372
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:SoftcapLogitHead",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.897,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.789,
+    "eager_us": 34.3,
+    "compiled_us": 84.9,
+    "gen_us": 43.5
+   },
+   {
+    "speedup": 0.903,
+    "eager_us": 39.7,
+    "compiled_us": 86.6,
+    "gen_us": 43.9
+   },
+   {
+    "speedup": 0.897,
+    "eager_us": 41.1,
+    "compiled_us": 84.4,
+    "gen_us": 45.8
+   }
+  ],
+  "spread": [
+   0.789,
+   0.903
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:RotaryPair",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 9.5367431640625e-07,
+  "cost": NaN,
+  "speedup": 1.225,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.442,
+    "eager_us": 323.4,
+    "compiled_us": 128.7,
+    "gen_us": 224.3
+   },
+   {
+    "speedup": 1.225,
+    "eager_us": 349.9,
+    "compiled_us": 130.1,
+    "gen_us": 285.6
+   },
+   {
+    "speedup": 1.209,
+    "eager_us": 351.3,
+    "compiled_us": 128.3,
+    "gen_us": 290.4
+   }
+  ],
+  "spread": [
+   1.209,
+   1.442
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:SlidingWindowAttention",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.971,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.16,
+    "eager_us": 190.1,
+    "compiled_us": 175.3,
+    "gen_us": 163.9
+   },
+   {
+    "speedup": 0.392,
+    "eager_us": 201.7,
+    "compiled_us": 177.0,
+    "gen_us": 514.3
+   },
+   {
+    "speedup": 0.971,
+    "eager_us": 212.0,
+    "compiled_us": 184.6,
+    "gen_us": 218.4
+   }
+  ],
+  "spread": [
+   0.392,
+   1.16
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:DilatedBlockAttention",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 1.1920928955078125e-07,
+  "cost": NaN,
+  "speedup": 1.084,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.957,
+    "eager_us": 230.5,
+    "compiled_us": 209.0,
+    "gen_us": 240.9
+   },
+   {
+    "speedup": 1.084,
+    "eager_us": 244.4,
+    "compiled_us": 182.7,
+    "gen_us": 225.4
+   },
+   {
+    "speedup": 1.134,
+    "eager_us": 252.4,
+    "compiled_us": 188.1,
+    "gen_us": 222.6
+   }
+  ],
+  "spread": [
+   0.957,
+   1.134
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:BlockSparseAttention",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.863,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.802,
+    "eager_us": 220.9,
+    "compiled_us": 183.8,
+    "gen_us": 275.3
+   },
+   {
+    "speedup": 0.863,
+    "eager_us": 244.0,
+    "compiled_us": 182.1,
+    "gen_us": 282.7
+   },
+   {
+    "speedup": 0.909,
+    "eager_us": 247.7,
+    "compiled_us": 179.6,
+    "gen_us": 272.6
+   }
+  ],
+  "spread": [
+   0.802,
+   0.909
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:ConvNeXtStage",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 1.0,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.939,
+    "eager_us": 89.7,
+    "compiled_us": 130.1,
+    "gen_us": 95.5
+   },
+   {
+    "speedup": 1.0,
+    "eager_us": 96.4,
+    "compiled_us": 128.7,
+    "gen_us": 96.4
+   },
+   {
+    "speedup": 1.065,
+    "eager_us": 101.1,
+    "compiled_us": 128.8,
+    "gen_us": 95.0
+   }
+  ],
+  "spread": [
+   0.939,
+   1.065
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:SqueezeExcite",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.86,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.846,
+    "eager_us": 56.5,
+    "compiled_us": 112.7,
+    "gen_us": 66.7
+   },
+   {
+    "speedup": 0.86,
+    "eager_us": 57.2,
+    "compiled_us": 109.3,
+    "gen_us": 66.6
+   },
+   {
+    "speedup": 0.879,
+    "eager_us": 63.0,
+    "compiled_us": 124.2,
+    "gen_us": 71.7
+   }
+  ],
+  "spread": [
+   0.846,
+   0.879
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:MBConvSEBlock",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.957,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.841,
+    "eager_us": 130.8,
+    "compiled_us": 185.2,
+    "gen_us": 155.5
+   },
+   {
+    "speedup": 0.957,
+    "eager_us": 167.7,
+    "compiled_us": 202.1,
+    "gen_us": 175.3
+   },
+   {
+    "speedup": 0.987,
+    "eager_us": 143.3,
+    "compiled_us": 175.5,
+    "gen_us": 145.2
+   }
+  ],
+  "spread": [
+   0.841,
+   0.987
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:GRUFusedGate",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.815,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.765,
+    "eager_us": 103.6,
+    "compiled_us": 97.0,
+    "gen_us": 135.5
+   },
+   {
+    "speedup": 0.815,
+    "eager_us": 111.1,
+    "compiled_us": 101.1,
+    "gen_us": 136.2
+   },
+   {
+    "speedup": 0.821,
+    "eager_us": 111.0,
+    "compiled_us": 98.8,
+    "gen_us": 135.2
+   }
+  ],
+  "spread": [
+   0.765,
+   0.821
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:GatedConvUnit",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 1.156,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.061,
+    "eager_us": 58.0,
+    "compiled_us": 100.2,
+    "gen_us": 54.6
+   },
+   {
+    "speedup": 1.156,
+    "eager_us": 63.3,
+    "compiled_us": 104.5,
+    "gen_us": 54.8
+   },
+   {
+    "speedup": 1.168,
+    "eager_us": 65.5,
+    "compiled_us": 105.7,
+    "gen_us": 56.1
+   }
+  ],
+  "spread": [
+   1.061,
+   1.168
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:ManualGroupNorm",
+  "claims": [
+   "square"
+  ],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 1.3,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.268,
+    "eager_us": 57.4,
+    "compiled_us": 57.1,
+    "gen_us": 45.3
+   },
+   {
+    "speedup": 1.3,
+    "eager_us": 63.1,
+    "compiled_us": 62.7,
+    "gen_us": 48.6
+   },
+   {
+    "speedup": 1.374,
+    "eager_us": 68.0,
+    "compiled_us": 66.2,
+    "gen_us": 49.5
+   }
+  ],
+  "spread": [
+   1.268,
+   1.374
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:InstanceNormBroadcast",
+  "claims": [
+   "square"
+  ],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.861,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.804,
+    "eager_us": 61.8,
+    "compiled_us": 64.9,
+    "gen_us": 76.9
+   },
+   {
+    "speedup": 0.861,
+    "eager_us": 67.7,
+    "compiled_us": 64.8,
+    "gen_us": 78.7
+   },
+   {
+    "speedup": 0.896,
+    "eager_us": 69.4,
+    "compiled_us": 66.6,
+    "gen_us": 77.5
+   }
+  ],
+  "spread": [
+   0.804,
+   0.896
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:RMSNormPerHead",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 4.76837158203125e-07,
+  "cost": NaN,
+  "speedup": 1.531,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.531,
+    "eager_us": 46.3,
+    "compiled_us": 69.7,
+    "gen_us": 30.3
+   },
+   {
+    "speedup": 1.536,
+    "eager_us": 46.5,
+    "compiled_us": 71.5,
+    "gen_us": 30.2
+   },
+   {
+    "speedup": 1.331,
+    "eager_us": 63.8,
+    "compiled_us": 99.4,
+    "gen_us": 48.0
+   }
+  ],
+  "spread": [
+   1.331,
+   1.536
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:DynamicTanhBlock",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 1.133,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.006,
+    "eager_us": 81.4,
+    "compiled_us": 128.6,
+    "gen_us": 80.8
+   },
+   {
+    "speedup": 1.133,
+    "eager_us": 92.0,
+    "compiled_us": 132.2,
+    "gen_us": 81.2
+   },
+   {
+    "speedup": 1.143,
+    "eager_us": 92.1,
+    "compiled_us": 134.3,
+    "gen_us": 80.6
+   }
+  ],
+  "spread": [
+   1.006,
+   1.143
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:ALiBiSlopeAttention",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 3.5762786865234375e-07,
+  "cost": NaN,
+  "speedup": 1.635,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.536,
+    "eager_us": 185.0,
+    "compiled_us": 182.3,
+    "gen_us": 120.4
+   },
+   {
+    "speedup": 1.644,
+    "eager_us": 201.6,
+    "compiled_us": 153.7,
+    "gen_us": 122.6
+   },
+   {
+    "speedup": 1.635,
+    "eager_us": 202.4,
+    "compiled_us": 157.4,
+    "gen_us": 123.8
+   }
+  ],
+  "spread": [
+   1.536,
+   1.644
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:RelPosTableAttention",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 1.4901161193847656e-07,
+  "cost": NaN,
+  "speedup": 1.581,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.478,
+    "eager_us": 219.6,
+    "compiled_us": 183.6,
+    "gen_us": 148.6
+   },
+   {
+    "speedup": 1.581,
+    "eager_us": 219.6,
+    "compiled_us": 184.1,
+    "gen_us": 138.9
+   },
+   {
+    "speedup": 1.644,
+    "eager_us": 206.7,
+    "compiled_us": 166.0,
+    "gen_us": 125.7
+   }
+  ],
+  "spread": [
+   1.478,
+   1.644
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:LearnedPosSlice",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.954,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.924,
+    "eager_us": 46.9,
+    "compiled_us": 112.1,
+    "gen_us": 50.8
+   },
+   {
+    "speedup": 1.075,
+    "eager_us": 48.6,
+    "compiled_us": 105.4,
+    "gen_us": 45.2
+   },
+   {
+    "speedup": 0.954,
+    "eager_us": 42.2,
+    "compiled_us": 98.7,
+    "gen_us": 44.2
+   }
+  ],
+  "spread": [
+   0.924,
+   1.075
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:GroupedQuantLinear",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 1.52,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.241,
+    "eager_us": 28.6,
+    "compiled_us": 79.8,
+    "gen_us": 23.1
+   },
+   {
+    "speedup": 1.562,
+    "eager_us": 32.2,
+    "compiled_us": 71.9,
+    "gen_us": 20.6
+   },
+   {
+    "speedup": 1.52,
+    "eager_us": 32.1,
+    "compiled_us": 71.0,
+    "gen_us": 21.1
+   }
+  ],
+  "spread": [
+   1.241,
+   1.562
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:PagedKVAttention",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.853,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.628,
+    "eager_us": 138.9,
+    "compiled_us": 176.9,
+    "gen_us": 221.1
+   },
+   {
+    "speedup": 0.911,
+    "eager_us": 175.4,
+    "compiled_us": 175.1,
+    "gen_us": 192.6
+   },
+   {
+    "speedup": 0.853,
+    "eager_us": 172.5,
+    "compiled_us": 167.9,
+    "gen_us": 202.3
+   }
+  ],
+  "spread": [
+   0.628,
+   0.911
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:GatedDeltaRule",
+  "claims": [
+   "gen_0",
+   "gen_1"
+  ],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.932,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.912,
+    "eager_us": 448.7,
+    "compiled_us": 223.1,
+    "gen_us": 491.8
+   },
+   {
+    "speedup": 0.979,
+    "eager_us": 449.7,
+    "compiled_us": 187.6,
+    "gen_us": 459.1
+   },
+   {
+    "speedup": 0.932,
+    "eager_us": 427.5,
+    "compiled_us": 184.5,
+    "gen_us": 458.7
+   }
+  ],
+  "spread": [
+   0.912,
+   0.979
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:ChunkedSSD",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.937,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.937,
+    "eager_us": 2786.9,
+    "compiled_us": 863.9,
+    "gen_us": 2974.4
+   },
+   {
+    "speedup": 0.967,
+    "eager_us": 2566.7,
+    "compiled_us": 772.8,
+    "gen_us": 2654.9
+   },
+   {
+    "speedup": 0.933,
+    "eager_us": 2946.5,
+    "compiled_us": 865.9,
+    "gen_us": 3159.0
+   }
+  ],
+  "spread": [
+   0.933,
+   0.967
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:RealGatedLRU",
+  "delivered": false,
+  "note": "over budget: killed after 150s"
+ },
+ {
+  "case": "zoo:DecoupledMLA",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 2.384185791015625e-07,
+  "cost": NaN,
+  "speedup": 1.281,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.354,
+    "eager_us": 409.7,
+    "compiled_us": 216.7,
+    "gen_us": 302.6
+   },
+   {
+    "speedup": 1.281,
+    "eager_us": 418.9,
+    "compiled_us": 208.4,
+    "gen_us": 327.1
+   },
+   {
+    "speedup": 1.223,
+    "eager_us": 410.3,
+    "compiled_us": 210.3,
+    "gen_us": 335.5
+   }
+  ],
+  "spread": [
+   1.223,
+   1.354
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:PartialRotary",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 1.7881393432617188e-07,
+  "cost": NaN,
+  "speedup": 1.322,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.584,
+    "eager_us": 421.5,
+    "compiled_us": 165.1,
+    "gen_us": 266.1
+   },
+   {
+    "speedup": 1.273,
+    "eager_us": 426.9,
+    "compiled_us": 159.5,
+    "gen_us": 335.4
+   },
+   {
+    "speedup": 1.322,
+    "eager_us": 433.3,
+    "compiled_us": 158.4,
+    "gen_us": 327.6
+   }
+  ],
+  "spread": [
+   1.273,
+   1.584
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:SigmoidAttention",
+  "claims": [
+   "gen_0"
+  ],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 2.384185791015625e-07,
+  "cost": NaN,
+  "speedup": 0.72,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.673,
+    "eager_us": 131.8,
+    "compiled_us": 167.6,
+    "gen_us": 196.0
+   },
+   {
+    "speedup": 0.72,
+    "eager_us": 143.7,
+    "compiled_us": 138.9,
+    "gen_us": 199.7
+   },
+   {
+    "speedup": 0.756,
+    "eager_us": 148.8,
+    "compiled_us": 139.4,
+    "gen_us": 196.9
+   }
+  ],
+  "spread": [
+   0.673,
+   0.756
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:DiffAttention",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 2.2351741790771484e-07,
+  "cost": NaN,
+  "speedup": 1.059,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.024,
+    "eager_us": 250.4,
+    "compiled_us": 187.8,
+    "gen_us": 244.4
+   },
+   {
+    "speedup": 1.059,
+    "eager_us": 265.9,
+    "compiled_us": 183.0,
+    "gen_us": 251.1
+   },
+   {
+    "speedup": 1.067,
+    "eager_us": 263.3,
+    "compiled_us": 179.9,
+    "gen_us": 246.7
+   }
+  ],
+  "spread": [
+   1.024,
+   1.067
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:AttnLogitSoftcap",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.982,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.847,
+    "eager_us": 136.2,
+    "compiled_us": 165.6,
+    "gen_us": 160.8
+   },
+   {
+    "speedup": 0.984,
+    "eager_us": 158.7,
+    "compiled_us": 160.3,
+    "gen_us": 161.3
+   },
+   {
+    "speedup": 0.982,
+    "eager_us": 159.6,
+    "compiled_us": 154.5,
+    "gen_us": 162.6
+   }
+  ],
+  "spread": [
+   0.847,
+   0.984
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:SinkWindowAttention",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.979,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.883,
+    "eager_us": 208.7,
+    "compiled_us": 177.1,
+    "gen_us": 236.4
+   },
+   {
+    "speedup": 1.093,
+    "eager_us": 235.4,
+    "compiled_us": 156.4,
+    "gen_us": 215.4
+   },
+   {
+    "speedup": 0.979,
+    "eager_us": 221.8,
+    "compiled_us": 159.0,
+    "gen_us": 226.7
+   }
+  ],
+  "spread": [
+   0.883,
+   1.093
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:TaylorLinearAttention",
+  "claims": [
+   "square"
+  ],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.934,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.978,
+    "eager_us": 554.9,
+    "compiled_us": 323.9,
+    "gen_us": 567.4
+   },
+   {
+    "speedup": 0.934,
+    "eager_us": 532.6,
+    "compiled_us": 317.1,
+    "gen_us": 570.1
+   },
+   {
+    "speedup": 0.882,
+    "eager_us": 528.8,
+    "compiled_us": 327.8,
+    "gen_us": 599.8
+   }
+  ],
+  "spread": [
+   0.882,
+   0.978
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:AdaGNConv",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.771,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.703,
+    "eager_us": 113.9,
+    "compiled_us": 136.6,
+    "gen_us": 162.0
+   },
+   {
+    "speedup": 0.794,
+    "eager_us": 126.7,
+    "compiled_us": 134.0,
+    "gen_us": 159.5
+   },
+   {
+    "speedup": 0.771,
+    "eager_us": 124.2,
+    "compiled_us": 135.0,
+    "gen_us": 161.2
+   }
+  ],
+  "spread": [
+   0.703,
+   0.794
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:SharedSwiGLUMoE",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.9,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.838,
+    "eager_us": 275.9,
+    "compiled_us": 233.8,
+    "gen_us": 329.3
+   },
+   {
+    "speedup": 0.952,
+    "eager_us": 305.0,
+    "compiled_us": 228.1,
+    "gen_us": 320.5
+   },
+   {
+    "speedup": 0.9,
+    "eager_us": 294.9,
+    "compiled_us": 228.3,
+    "gen_us": 327.8
+   }
+  ],
+  "spread": [
+   0.838,
+   0.952
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:NormedSoftcapHead",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 1.281,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.156,
+    "eager_us": 70.7,
+    "compiled_us": 95.8,
+    "gen_us": 61.2
+   },
+   {
+    "speedup": 1.315,
+    "eager_us": 75.6,
+    "compiled_us": 94.1,
+    "gen_us": 57.5
+   },
+   {
+    "speedup": 1.281,
+    "eager_us": 75.8,
+    "compiled_us": 98.7,
+    "gen_us": 59.2
+   }
+  ],
+  "spread": [
+   1.156,
+   1.315
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:SquaredReluFFN",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.884,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.686,
+    "eager_us": 55.2,
+    "compiled_us": 113.0,
+    "gen_us": 80.5
+   },
+   {
+    "speedup": 0.943,
+    "eager_us": 75.2,
+    "compiled_us": 130.7,
+    "gen_us": 79.7
+   },
+   {
+    "speedup": 0.884,
+    "eager_us": 73.0,
+    "compiled_us": 128.8,
+    "gen_us": 82.6
+   }
+  ],
+  "spread": [
+   0.686,
+   0.943
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:TernaryWeightLinear",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 2.384185791015625e-07,
+  "cost": NaN,
+  "speedup": 3.048,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 2.72,
+    "eager_us": 46.5,
+    "compiled_us": 70.9,
+    "gen_us": 17.1
+   },
+   {
+    "speedup": 3.048,
+    "eager_us": 53.2,
+    "compiled_us": 77.4,
+    "gen_us": 17.4
+   },
+   {
+    "speedup": 3.461,
+    "eager_us": 58.6,
+    "compiled_us": 74.4,
+    "gen_us": 16.9
+   }
+  ],
+  "spread": [
+   2.72,
+   3.461
+  ],
+  "dtype": "fp32"
+ }
+]

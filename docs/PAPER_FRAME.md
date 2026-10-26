@@ -94,21 +94,23 @@ at wide).
 is answerable and the answer is narrower than the follow-up hoped: over **all
 68 zoo workloads** at `d64 t32 b8`, three rounds each (six rows re-measured at
 5), **65 deliver and verify bit-equal** (`max_abs 0.0`) and **17 are faster
-than eager in every round** — `TernaryWeightLinear` 1.94×, `RotaryPair` 1.52×,
-`PartialRotary` 1.47×, `GroupedQuantLinear` 1.43×, `DeepEquilibrium` 1.30×,
-`LoRAAdapter` 1.28×, `TimeCondConv` 1.24×, … — while 46 lose, median **0.969×**
-(33 by <10 %). `FNOBlock` is **1.77× `torch.compile`**. The mechanism is
+than eager in every round** in fp64 — `TernaryWeightLinear` 1.94×, `RotaryPair`
+1.52×, `PartialRotary` 1.47×, `GroupedQuantLinear` 1.43× …; **23** in fp32,
+the dtype a caller ships (`TernaryWeightLinear` 3.05×, `STEQuantLinear` 1.68×,
+`ALiBiSlopeAttention` 1.64×, `RMSNormPerHead` 1.53×), while 38 lose, median
+**0.979×**. `FNOBlock` is **1.77× `torch.compile`**. The mechanism is
 dispatch: the delivered form launches 22 kernels where eager launches 34, and
 the win rate is 47 % where eager leaves more than half its wall time in
 dispatch against 10–17 % where the kernels already dominate
 (`zoo_kcount.py`). Kernel count itself does **not** predict the sign (r = 0.01)
 — the delivered body's own cost does, which is the referee's job, and the
-referee only prices *claims*: no win in the corpus comes from a minted kernel.
-The single largest loss, `RMSNormPerHead` at 0.208×, turned out to be the
-**intake dtype** rather than a defect — the same IR is 1.38× in fp32, because
-PyTorch's fused `rms_norm` is slow in double precision. Full tables, profiler
-evidence and the timing correction: `docs/reports/zoo_chain.md`, claim 9 in
-`EVIDENCE.md`.
+referee only prices *claims*: no win in either corpus comes from a minted
+kernel. The single largest loss, `RMSNormPerHead` at 0.208×, turned out to be
+the **intake dtype** rather than a defect — the same IR is 1.53× in fp32,
+because PyTorch's fused `rms_norm` is slow in double precision; 9 of 65 modules
+flip sign between the two sweeps, all of them toward fp32 except three that sit
+on top of 1. Full tables, profiler evidence and the timing correction:
+`docs/reports/zoo_chain.md`, claim 9 in `EVIDENCE.md`.
 
 A note on the timing, because it cost a wrong verdict: an earlier revision of
 that report called `TimeCondConv` **unusable** (gen 130–431 µs across five
@@ -121,9 +123,9 @@ So the 2.87× stands for what it is — a whole-chain kernel over a synthetic
 tape — and the opening claim is bounded by measurement rather than assertion:
 a generated kernel pays **as an op** (2.6×), as the **whole chain** (2.87× on
 a synthetic tape), or where the delivered module **launches fewer kernels than
-eager** (17 of 65 zoo modules, 1.03–1.94×, win rate 47 % on launch-heavy rows
-vs 10–17 % on kernel-heavy ones), and not as a step inside a module that is
-already kernel-bound.
+eager** (23 of 65 zoo modules in fp32, 17 in fp64; 1.03–3.05×, win rate 47 % on
+launch-heavy rows vs 10–17 % on kernel-heavy ones), and not as a step inside a
+module that is already kernel-bound.
 
 ## Section skeleton
 

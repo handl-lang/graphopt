@@ -937,15 +937,40 @@ def _probe_delivery(
     return rep, _time_module(module, xin, reps)
 
 
-def _zoo_case(wl: Any) -> Any:
-    """Build a held-out zoo workload as a gen-domain case tuple."""
+def _as_dtype(obj: Any, td: Any) -> Any:
+    """Cast a feed (tensor, or a tuple/list of them) to ``td``.
+
+    Feeds carry ints next to tensors, so a blind ``.to`` raises; only
+    tensors move, everything else passes through untouched.
+    """
+    import torch
+
+    if torch.is_tensor(obj):
+        return obj.to(td)
+    if isinstance(obj, (tuple, list)):
+        return type(obj)(_as_dtype(x, td) for x in obj)
+    return obj
+
+
+def _zoo_case(wl: Any, *, dtype: str = "fp64") -> Any:
+    """Build a held-out zoo workload as a gen-domain case tuple.
+
+    ``dtype`` is the **intake** dtype.  ``fp64`` is the convention every
+    earlier table was measured at; ``fp32`` is what a caller ships, and
+    the two disagree on 12 of 65 zoo modules — a folded body's sign is
+    the backend kernel's, not the IR's.  The IR is the same either way;
+    only the leaves, the feeds and the refinery's measurements move.
+    """
+    import torch
     from mlopt_torch.adapters import TorchSource
 
     from mlopt_discovery import genkernel as gk
     from mlopt_discovery.meta_arena import _canon_concrete
 
+    td = {"fp32": torch.float32, "fp64": torch.float64}[dtype]
     model, feed = wl.build()
-    model = model.double()  # the intake convention is fp64 feeds
+    model = model.to(td)  # the intake convention is fp64 feeds
+    feed = _as_dtype(feed, td)
     ir, leaves = TorchSource().to_ir(model, feed)
     covered = {
         _canon_concrete(h["pattern"]) for h in lawdata.HANDLERS.values()

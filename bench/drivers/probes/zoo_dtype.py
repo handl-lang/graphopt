@@ -1,10 +1,11 @@
 """Does the intake dtype change the sign of a delivered module?
 
-`zoo_chain` sweeps the zoo in **fp64** — the intake convention, and the only
-dtype where Triton cannot bind — so its ratios say nothing about the dtype a
-user ships.  `RMSNormPerHead` is why that matters: worst row in the sweep at
-**0.208x**, delivered body is a law fold to `aten::rms_norm`, whose fp64
-kernel is pathological at head-width 16.  Same IR, fp32: a win.
+`zoo_chain` sweeps the zoo in **fp64** — the intake convention — and its ratios
+are not the ones a caller sees.  `RMSNormPerHead` is why that matters: worst row
+in the fp64 sweep at **0.208x**, delivered body is a law fold to
+`aten::rms_norm`, whose fp64 kernel is pathological at head-width 16.  Same IR,
+fp32: a win.  (Triton itself runs fp64 fine; the dtype that costs is the
+backend's.)
 
 This driver runs one workload through the **same arena and delivery path** as
 `zoo_chain` (`_gen_board` → `_probe_play` → `board.deliverable` →

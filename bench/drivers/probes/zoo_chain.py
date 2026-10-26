@@ -5,11 +5,19 @@
 The question this driver answers is whether the same machinery pays on the
 held-out model zoo, at wide shapes, on real module boundaries.
 
-Each workload goes through the shipped path unchanged: build -> fp64 ->
-`TorchSource.to_ir` -> mint tiers -> `genkernel.profitable` (the measured
-cost referee) -> `gen_sink` -> `play.gen_probe` (deliver, verify, time vs
-eager and `torch.compile`).  No special casing, so the row is the number a
-caller would get.
+Each workload goes through the shipped path unchanged: build -> intake
+dtype -> `TorchSource.to_ir` -> mint tiers -> `genkernel.profitable` (the
+measured cost referee) -> `gen_sink` -> `play.gen_probe` (deliver, verify,
+time vs eager and `torch.compile`).  No special casing, so the row is the
+number a caller would get.
+
+**Dtype is a variable, and it moves the answer.**  ``--dtype fp64`` (the
+default, the intake convention every earlier table used) and ``--dtype fp32``
+(what a caller ships) disagree on 12 of 65 modules: 23 beat eager in every
+round in fp32, 17 in fp64.  The same IR folds the same way in both and a fold's
+sign is set by the backend kernel at that width — `RMSNormPerHead` is 1.5x in
+fp32 and 0.21x in fp64 on identical delivered structure
+(`bench/drivers/probes/zoo_dtype.py`).
 
 Wide shapes matter: the zoo's default is ``d16 t8 b2``, where the kernels
 are too small for the launcher to matter.  ``--d 64 --t 32 --b 8`` is the
@@ -32,6 +40,11 @@ Run::
 
     .venv/bin/python -m bench.drivers.probes.zoo_chain \\
         --only GatedAttentionUnit,MLPMixerBlock
+
+    # the sweep a caller would see (fp32), isolated, one round per row
+    .venv/bin/python -m bench.drivers.probes.zoo_chain \\
+        --only '' --isolate --dtype fp32 \\
+        --out docs/reports/zoo_chain_sweep_fp32.json
 """
 
 from __future__ import annotations
@@ -87,6 +100,7 @@ def measure(
     reps: int,
     rounds: int = 3,
     budget: float = DEFAULT_BUDGET,
+    dtype: str = "fp64",
 ) -> list[dict]:
     """Run the shipped gen path over the named zoo workloads.
 
@@ -112,7 +126,9 @@ def measure(
             continue
         try:
             with _budget(budget):
-                row = _measure_one(wl, reps=reps, rounds=rounds)
+                row = _measure_one(
+                    wl, reps=reps, rounds=rounds, dtype=dtype
+                )
         except _OverBudget:
             rows.append(
                 {
@@ -145,13 +161,15 @@ def measure(
     return rows
 
 
-def _measure_one(wl, *, reps: int, rounds: int) -> dict:
+def _measure_one(
+    wl, *, reps: int, rounds: int, dtype: str = "fp64"
+) -> dict:
     """Time one workload ``rounds`` times; the row is the median ratio."""
-    case = _zoo_case(wl)
+    case = _zoo_case(wl, dtype=dtype)
     got = [gen_probe(case, reps=reps) for _ in range(rounds)]
     ok = [r for r in got if r.get("delivered")]
     if not ok:
-        return dict(got[0])
+        return dict(got[0], dtype=dtype)
     speeds = sorted(round(float(r["speedup"]), 3) for r in ok)
     row = dict(ok[0])
     # Every ratio keeps the pair it was computed from: rounds are
@@ -176,6 +194,7 @@ def _measure_one(wl, *, reps: int, rounds: int) -> dict:
         "vs_compiled",
     ):
         row.pop(stale, None)
+    row["dtype"] = dtype
     row["verified"] = all(r.get("verified") for r in ok)
     row["max_abs"] = max(r.get("max_abs") or 0 for r in ok)
     return row
@@ -190,6 +209,7 @@ def _measure_isolated(
     reps: int,
     rounds: int,
     budget: float,
+    dtype: str = "fp64",
 ) -> list[dict]:
     """Measure each workload in its own process, killing it if it overruns.
 
@@ -223,6 +243,8 @@ def _measure_isolated(
             str(reps),
             "--rounds",
             str(rounds),
+            "--dtype",
+            dtype,
             "--only",
             name,
             "--budget",
@@ -254,6 +276,7 @@ def _measure_isolated(
             row = {
                 "case": f"zoo:{name}",
                 "delivered": False,
+                "dtype": dtype,
                 "note": f"over budget: killed after {budget:g}s",
             }
             print(f"zoo[{name}]: over budget ({budget:g}s)", flush=True)
@@ -293,6 +316,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     ap.add_argument("--out", default="", help="optional JSON path")
     ap.add_argument(
+        "--dtype",
+        default="fp64",
+        choices=("fp64", "fp32"),
+        help="intake dtype: fp64 is the convention, fp32 is what a caller "
+        "ships (they disagree on 12 of 65 modules)",
+    )
+    ap.add_argument(
         "--isolate",
         action="store_true",
         help="measure each workload in its own process so a hung compile costs one row, not the table",
@@ -314,6 +344,7 @@ def main(argv: list[str] | None = None) -> int:
             reps=args.reps,
             rounds=args.rounds,
             budget=args.budget,
+            dtype=args.dtype,
         )
     else:
         rows = measure(
@@ -324,6 +355,7 @@ def main(argv: list[str] | None = None) -> int:
             reps=args.reps,
             rounds=args.rounds,
             budget=args.budget,
+            dtype=args.dtype,
         )
     won = [
         r
