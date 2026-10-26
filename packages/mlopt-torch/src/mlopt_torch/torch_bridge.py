@@ -2059,13 +2059,24 @@ def _dim_args(args: tuple, kwargs: dict) -> tuple:
 _MISS: Any = object()
 
 
-def _randn_param(term: Param) -> torch.Tensor:
+def _randn_param(
+    term: Param, like: torch.Tensor | None = None
+) -> torch.Tensor:
     """``IRModule._eval``'s unregistered-Param fallback.
 
     A fresh randn of the declared shape (``None`` dims materialise as
     extent 1).
     """
     shape = tuple(d if d is not None else 1 for d in term.typ.shape)
+    # A fallback param is a real operand: mint it where the computation
+    # runs.  A 0-dim CPU scalar is not a device context (it is the
+    # weak-scalar mint), so it is ignored on purpose.
+    if (
+        isinstance(like, torch.Tensor)
+        and like.is_floating_point()
+        and like.dim() > 0
+    ):
+        return torch.randn(*shape, dtype=like.dtype, device=like.device)
     return torch.randn(*shape)
 
 
@@ -2327,6 +2338,12 @@ def _mint_const(value: Any, like: Any) -> torch.Tensor:
     ``torch.tensor`` mint does a pageable H2D copy that capture
     rejects.
     """
+    if isinstance(value, torch.Tensor):
+        # A tensor-valued Const is a real operand (a baked weight), not a
+        # weak scalar: it follows the computation's device and dtype.
+        if like is not None and value.is_floating_point():
+            return value.to(device=like.device, dtype=like.dtype)
+        return value
     if isinstance(value, float) and like is not None:
         return torch.tensor(value, dtype=like.dtype)
     return torch.tensor(value)
