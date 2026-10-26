@@ -648,6 +648,12 @@ def export_to_ir(
                         attrs["sizes"] = tuple(
                             arg_node
                         )  # pragma: no cover — schema covers all real positions
+                    elif ir_op in _FFT_SHAPE_OPS:
+                        # torch.fft.irfft2(x, s=(h, w)) — the positional
+                        # tuple is the output SHAPE, not a dim list.
+                        # Recorded as ``dim`` it would be read as axis
+                        # indices and raise for any real rank.
+                        attrs["s"] = tuple(arg_node)
                     else:
                         attrs["dim"] = tuple(arg_node)
                 elif isinstance(arg_node, bool):
@@ -1138,6 +1144,43 @@ def _deform_conv2d_torch(
     )
 
 
+#: fft ops whose positional tuple is an output SHAPE (``s``), not a dim
+#: list.  The generic tuple branch would record it as ``dim`` and the
+#: binding would then ask torch to transform axis 8 of a 4-D tensor.
+_FFT_SHAPE_OPS = frozenset(
+    {
+        "fft_irfft2",
+        "fft_ifft2",
+        "fft_irfft",
+        "fft_ifft",
+    }
+)
+
+
+def _fft_kw(kw: dict) -> dict:
+    """Pick the semantic fft kwargs out of an op's attrs.
+
+    Only ``s``/``dim``/``norm`` reach ``torch.fft``; the exporter's other
+    attrs (``arg0`` spillover and friends) must not — torch raises on an
+    unexpected keyword, which would turn a delivered module into a crash
+    rather than a slow one.
+    """
+    out: dict[str, Any] = {}
+    for key in ("s", "dim"):
+        val = kw.get(key)
+        if val is None:
+            continue
+        out[key] = (
+            tuple(int(v) for v in val)
+            if isinstance(val, (list, tuple))
+            else int(val)
+        )
+    norm = kw.get("norm")
+    if norm is not None:
+        out["norm"] = str(norm)
+    return out
+
+
 #: Core torch lowering bindings — the base ``OpTable``'s table (plan
 #: 0001 phase 2c).  Carrier ops (``trace``/``omd_*``/``cmask``...)
 #: are deliberately ABSENT: they live in each carrier
@@ -1172,6 +1215,23 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
     "square": torch.square,
     "sqrt": torch.sqrt,
     "rsqrt": torch.rsqrt,
+    # --- spectral ops -------------------------------------------------
+    # The FNO family (rfft2/irfft2 with a real bypass) is the zoo's
+    # binding-gap probe: without these the block traces but cannot be
+    # delivered.  ``s`` is the output shape and ``dim`` the transformed
+    # axes — kept apart because torch rejects one for the other.
+    "fft_rfft2": lambda x, *a, **kw: torch.fft.rfft2(x, **_fft_kw(kw)),
+    "fft_irfft2": lambda x, *a, **kw: torch.fft.irfft2(x, **_fft_kw(kw)),
+    "fft_fft2": lambda x, *a, **kw: torch.fft.fft2(x, **_fft_kw(kw)),
+    "fft_ifft2": lambda x, *a, **kw: torch.fft.ifft2(x, **_fft_kw(kw)),
+    "fft_rfft": lambda x, *a, **kw: torch.fft.rfft(x, **_fft_kw(kw)),
+    "fft_irfft": lambda x, *a, **kw: torch.fft.irfft(x, **_fft_kw(kw)),
+    "fft_fft": lambda x, *a, **kw: torch.fft.fft(x, **_fft_kw(kw)),
+    "fft_ifft": lambda x, *a, **kw: torch.fft.ifft(x, **_fft_kw(kw)),
+    # ``aten.real``/``aten.imag`` on a real tensor are the identity/zeros
+    # views; on a complex one they are the halves torch returns.
+    "real": lambda x, *a, **kw: x.real,
+    "imag": lambda x, *a, **kw: x.imag,
     "sum": lambda x, *a, **kw: x.sum(*_dim_args(a, kw)),
     "mean": lambda x, *a, **kw: x.mean(*_dim_args(a, kw)),
     "amax": lambda x, *a, **kw: x.amax(*_dim_args(a, kw)),
