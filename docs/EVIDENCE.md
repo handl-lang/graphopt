@@ -19,16 +19,16 @@ seeds recorded per artifact.
 | 6 | **growth helps the same player, but only if it pays** | paying growth **+0.066** (5/5 seeds ≥ +0.036); unpaid growth **−0.023** (5/5 ≤ +0.008) | `docs/results_bank_growth.md` | `.venv/bin/python -m bench.drivers.policy.bank_growth --drop ...` |
 | 7 | **minting during play on the toy board yields nothing** | 1 minted, **0 admitted** (no pay) | `docs/results_bank_growth.md` §Step 3 | `.venv/bin/python -m bench.drivers.policy.play_mint` |
 | 8 | **the referee has teeth** | 212 bad accepts refused, 4 false twins rejected, 1 fabricated speedup caught, 1 real bug found | `README.md`, `docs/mechanism.md` | `docs/results_*` |
-| 9 | **a chain-level kernel pays in a real module only where the module is dispatch-bound** | 5 zoo workloads at d64 t32 b8, 3 rounds each: `TimeCondConv` **1.34× eager** (1.328–1.341, 22 vs 34 kernels), `FNOBlock` **1.77× `torch.compile`**, `GatedAttentionUnit` **0.95×**, `MLPMixerBlock` **0.98×**, `BlockSparseAttention` **0.96×** — all `max_abs 0.0` | `docs/reports/zoo_chain.md` (+ `zoo_chain.json`) | `.venv/bin/python -m bench.drivers.probes.zoo_chain --rounds 3` |
+| 9 | **a chain-level kernel pays in a real module only where the module is dispatch-bound** | 5 zoo workloads at d64 t32 b8, 3 rounds each: `TimeCondConv` **1.2×–1.3× eager** (18 rounds, 1.15–1.42, never below 1; 22 vs 34 kernels), `FNOBlock` **1.77× `torch.compile`**, `GatedAttentionUnit` **0.95×**, `MLPMixerBlock` **0.98×**, `BlockSparseAttention` **0.96×** — all `max_abs 0.0` | `docs/reports/zoo_chain.md` (+ `zoo_chain.json`) | `.venv/bin/python -m bench.drivers.probes.zoo_chain --rounds 3` |
 
 ## The one gap, stated
 
 | gap | state | why it matters |
 |---|---|---|
-| kernel win at module scale | **measured: yes, once, and narrowly** — `TimeCondConv` 1.34× eager (dispatch-bound: 22 vs 34 kernels), `FNOBlock` 1.77× `torch.compile`. Elsewhere 0.95–0.98× eager; the folds stay a per-module loss (2.67 marginal at ~1 M elements, best case). | the win appears where the module is **dispatch-bound**, not where it is kernel-bound — which is also why the fp64 folds lose |
+| kernel win at module scale | **measured: yes, once, and narrowly** — `TimeCondConv` 1.2–1.3× eager (dispatch-bound: 22 vs 34 kernels), `FNOBlock` 1.77× `torch.compile`. Elsewhere 0.95–0.98× eager; the folds stay a per-module loss (2.67 marginal at ~1 M elements, best case). | the win appears where the module is **dispatch-bound**, not where it is kernel-bound — which is also why the fp64 folds lose |
 | compile twins on CUDA | **unblocked 2026-10-26** — the cause was four zoo workloads minting a CPU tensor in `forward`, not the bridge. `GatedLinearAttention` and `MambaSelectiveScan` now measure at `large` fp32 CUDA: marginal **1.37–1.38×** (fold loses), verified equal | the family verdict now rests on three module families with kernels bound, not one |
 | corpus coverage | **5 of 68 zoo workloads** at wide shapes — `torch.compile` as baseline makes each row cost tens of seconds, and `ConvNeXtStage` / `MBConvSEBlock` did not finish in budget | the table is a sample; say so |
-| module-level timing protocol | **fixed** — one round is not evidence: a single sample of `TimeCondConv` read 0.42× while sixteen clean round-readings of the same code read 1.19–1.42×. The driver now runs 3 rounds and reports the median plus spread. | a ratio computed from two differently-timed arms can be wrong by 3×, in the direction that flatters whichever arm was measured first |
+| module-level timing protocol | **fixed** — one round is not evidence: a single sample of `TimeCondConv` read 0.42× while eighteen clean round-readings of the same code read 1.15–1.42×. The driver now runs 3 rounds and reports the median plus spread. | a ratio computed from two differently-timed arms can be wrong by 3×, in the direction that flatters whichever arm was measured first |
 
 ## What is deliberately *not* claimed
 

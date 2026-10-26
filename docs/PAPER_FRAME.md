@@ -94,17 +94,18 @@ at wide).
 question is answerable, and the answer is narrower than the follow-up hoped
 and sharper than "no": on real zoo modules at `d64 t32 b8`, three rounds each,
 gen delivery is **0.95 / 0.98 / 0.96× eager** on the three attention/mixer
-workloads, **1.34× eager** on `TimeCondConv` (1.328–1.341 across rounds — a
-dispatch-bound module: the delivered form launches 22 kernels where eager
-launches 34), and **1.77× `torch.compile`** on `FNOBlock`, which is now
-deliverable at all because the bridge binds the fft family. Every row verifies
-at `max_abs 0.0`. Full table, profiler evidence and the timing correction:
-`docs/reports/zoo_chain.md`, claim 9 in `EVIDENCE.md`.
+workloads, **1.2–1.3× eager** on `TimeCondConv` (18 clean rounds across
+sessions, 1.15–1.42, never below 1 — a dispatch-bound module: the delivered
+form launches 22 kernels where eager launches 34), and **1.77×
+`torch.compile`** on `FNOBlock`, which is now deliverable at all because the
+bridge binds the fft family. Every row verifies at `max_abs 0.0`. Full table,
+profiler evidence and the timing correction: `docs/reports/zoo_chain.md`,
+claim 9 in `EVIDENCE.md`.
 
 A note on the timing, because it cost a wrong verdict: an earlier revision of
 that report called `TimeCondConv` **unusable** (gen 130–431 µs across five
 identical runs). The swings were mine — samples taken while other jobs shared
-the box. Sixteen clean round-readings sit in 1.19–1.42×. The driver now takes
+the box. Eighteen clean round-readings sit in 1.15–1.42×, none below 1. The driver now takes
 `--rounds` (default 3), reports the median and keeps the spread, and a
 module-level ratio from a single round is no longer publishable.
 
@@ -112,7 +113,7 @@ So the 2.87× stands for what it is — a whole-chain kernel over a synthetic
 tape — and the opening claim is bounded by measurement rather than assertion:
 a generated kernel pays **as an op** (2.6×), as the **whole chain** (2.87× on
 a synthetic tape), or where the delivered module is **dispatch-bound**
-(1.34×), and not as a step inside a module that is already kernel-bound.
+(1.2–1.3×), and not as a step inside a module that is already kernel-bound.
 
 ## Section skeleton
 

@@ -5,12 +5,13 @@ synthetic 6-op chain. Does the same machinery pay when it has to deliver a
 **real module**, at wide shapes, through the shipped path?
 
 **Answer: on 1 of 5 workloads, for a different reason than the 2.87×.** A
-delivered `TimeCondConv` runs **1.34× eager** (3/3 rounds, `max_abs 0.0`) by
-launching **22 kernels instead of 34**; a delivered `FNOBlock` runs **1.77×
-`torch.compile`** (now that `fft_*` has a binding) while tying eager. Neither
-win comes from a *minted* claim — the one workload whose search found claims
-(`GatedAttentionUnit`, 2) is 0.95× eager. Whole-chain supremacy does not
-transfer; a narrower per-workload effect does.
+delivered `TimeCondConv` runs **1.2–1.3× eager** (18 rounds across sessions,
+1.15–1.42, never below 1, `max_abs 0.0`) by launching **22 kernels instead of
+34**; a delivered `FNOBlock` runs **1.77× `torch.compile`** (now that `fft_*`
+has a binding) while tying eager. Neither win comes from a *minted* claim —
+the one workload whose search found claims (`GatedAttentionUnit`, 2) is 0.95×
+eager. Whole-chain supremacy does not transfer; a narrower per-workload effect
+does.
 
 ## Setup
 
@@ -43,9 +44,12 @@ same function as the source module.
 
 Read it as two rows, not five:
 
-- **`TimeCondConv` pays against eager, loses to `torch.compile`.** Three rounds
-  agree to 1 % (1.328–1.341): a real, reproducible win over the framework's own
-  dispatch — and inductor still does better.
+- **`TimeCondConv` pays against eager, loses to `torch.compile`.** Every round
+  in every session lands above 1 (18 clean rounds, **1.15–1.42**, session
+  medians 1.18–1.34): a real, reproducible win over the framework's own
+  dispatch — and inductor still does better. The absolute µs drift between
+  sessions (eager 164 µs in the table above, 190–205 µs in a later run) moves
+  the ratio more than anything in the delivered module does.
 - **`FNOBlock` pays against `torch.compile`, ties eager.** 1.77× on all three
   rounds: `torch.compile` regresses the fft chain to ~190 µs where eager holds
   ~100 µs, and the delivered module holds eager's cost.
@@ -63,8 +67,8 @@ Torch profiler, per forward, same process:
 | delivered module | **22** | **146 µs** |
 
 The delivered module drops 12 small elementwise kernels — the fold replaces
-them with fewer, wider ones — and device time falls 15 %, which is the 1.34×
-wall-clock once eager's 34-way dispatch is added on top. The win is
+them with fewer, wider ones — and device time falls 15 %, which is the same
+~1.3× once dispatch is counted once eager's 34-way dispatch is added on top. The win is
 **kernel-count reduction** reaching module scale because this module is
 dispatch-bound, not kernel-bound.
 
@@ -81,13 +85,14 @@ conclusion does not survive a controlled repeat:
 | 6 consecutive rounds, nothing else running | 1.281, 1.271, 1.235, 1.192, 1.230, 1.299 |
 | 3-round driver run | 1.264, 1.272, 1.419 |
 | 3-round driver run (table above) | 1.341, 1.340, 1.328 |
+| 3-round driver run, later session | 1.230, 1.184, 1.154 |
 
-Sixteen clean round-readings land in **1.19–1.42**. The single 0.42× came from
-a sample taken while other jobs shared the box, and two attempts to reproduce
-it deliberately failed: four CPU spinners left both arms unchanged (eager
-224 µs, gen 167 µs), and it never recurred in any isolated run. The cause of
-that one outlier is therefore **unidentified**, and it is recorded that way
-rather than as a property of the code.
+Eighteen clean round-readings land in **1.15–1.42**, every one above 1. The
+single 0.42× came from a sample taken while other jobs shared the box, and two
+attempts to reproduce it deliberately failed: four CPU spinners left both arms
+unchanged (eager 224 µs, gen 167 µs), and it never recurred in any isolated
+run. The cause of that one outlier is therefore **unidentified**, and it is
+recorded that way rather than as a property of the code.
 
 What survives is a methodological rule, now enforced by the driver: **a
 module-level ratio needs repeated rounds on an idle box**, because the two
@@ -98,7 +103,7 @@ and keeps the spread; a single round is no longer publishable.
 
 The 2.87× is real, but it is a **whole-chain kernel launched once** over a
 synthetic tape. Delivered into a real module, the same machinery gives a
-2–5 % loss on four workloads and a 1.34× win on the one that was
+2–5 % loss on four workloads and a 1.2–1.3× win on the one that was
 dispatch-bound. Combined with `prim_kernel.md` §module level (folds 3.17 → 3.34
 at `large`, 3.23 → 2.67 at `wide`), the pattern across both delivery
 mechanisms is now precise:
@@ -128,7 +133,7 @@ mechanisms is now precise:
 ## Next
 
 1. Sweep the remaining 63 workloads overnight — per-row cost is now
-   predictable (3 rounds ≈ 20 s), and a 1.34× here suggests a family
+   predictable (3 rounds ≈ 20 s), and a win here suggests a family
    (`TimeCondConv` is conditioning-heavy and dispatch-bound) rather than a
    single hit.
 2. Test the dispatch-bound hypothesis directly: pick a workload whose eager
