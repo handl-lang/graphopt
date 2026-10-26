@@ -72,6 +72,20 @@ what is missing is the mint producing *chain-level* kernel claims instead
 of rule folds. That is the follow-up paper's result, and it is the
 recommendation this one ends on.
 
+**Blocker, measured 2026-10-25:** `play --domain gen --zoo` — the path that
+would produce chain-level numbers on real modules — fails on this tree,
+at every zoo scaling tried:
+
+```
+RuntimeError: a and b must have same reduction dim,
+              but got [512, 32] X [8, 8]
+```
+
+A workload builds an inner matmul at `d=8` while the feed carries the
+requested width, so the zoo probe cannot run until that workload's shape
+is fixed. The `--probe` path (fixed `chainfuse` / `mulsoftplus` cases) is
+unaffected and is what the 2.87× / 1.92× numbers come from.
+
 ## Section skeleton
 
 | § | content | artifact |
