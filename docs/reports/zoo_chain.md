@@ -246,7 +246,7 @@ The 23 fp32 winners, µs from the round whose ratio is the median:
 | `RotaryPair` | 350 | 286 | 1.44 / 1.23 / 1.21 | **1.23×** | 1.52× |
 | `LoRAAdapter` | 53 | 45 | 1.18 / 1.18 / 1.25 | **1.18×** | 1.28× |
 | `GatedConvUnit` | 63 | 55 | 1.06 / 1.16 / 1.17 | **1.16×** | 1.21× |
-| `DynamicTanhBlock` | 92 | 81 | 1.01 / 1.13 / 1.14 | **1.13×** | 1.02 (fp64 excluded) |
+| `DynamicTanhBlock` | 92 | 81 | 1.01 / 1.13 / 1.14 | **1.13×** | 1.02 (straddled 1) |
 | `ChunkedRetention` | 158 | 148 | 1.07 / 1.14 / 1.04 | **1.07×** | 1.14× |
 | `KVCacheAttention` | 150 | 141 | 1.02 / 1.06 / 1.25 | **1.06×** | 0.76× |
 | `DiffAttention` | 266 | 251 | 1.02 / 1.06 / 1.07 | **1.06×** | 0.87× |
@@ -274,10 +274,10 @@ Two things this settles, and one it does not:
   site without asking.
 - **The referee is not the thing that changes with dtype.** fp64 admitted
   *more* minted claims than fp32 on this corpus (`DeltaRuleBlock` 2 vs 1,
-  `GatedDeltaRule` 4 vs 2, `RWKVMixBlock` 2 vs 0, `GEGLUBlock` 1 vs 0). The
-  reason is the baseline it must beat: PyTorch's fp64 kernels are slower, so
-  more generated kernels clear the bar. Claims are not the dtype story; folds
-  are.
+  `GatedDeltaRule` 4 vs 2, `RWKVMixBlock` 2 vs 0, `GEGLUBlock` 1 vs 0). It
+  compares a compiled body against the spelled site *at the same dtype*, so
+  both sides move together and the two sweeps do not explain the direction —
+  only that claims are not where the dtype story lives. Folds are.
 - **Not a general "fp32 is faster" claim.** `TernaryWeightLinear` gains most
   (1.94× → 3.05×) and the biggest drops are `RotaryPair` (1.52× → 1.23×) and
   `SigmoidAttention` (1.05× → 0.72×) — same machinery, different backend
