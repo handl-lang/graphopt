@@ -12,11 +12,13 @@ the prim folds), ``synop`` (with them).  The number that matters is
 ``synop / noprim`` — the fold's own effect on one executor — and
 ``synop / spelled`` for what a caller receives.
 
-**Blocked (2026-10-25):** the plan executor allocates its intermediates
-from a CPU ``like`` tensor, so a CUDA run raises "Expected all tensors to
-be on the same device".  This driver is the harness for the fix; it will
-run as written once ``torch_bridge.Plan.run_xs`` inherits the input's
-device/dtype.
+**Blocked (2026-10-25):** a parameter or baked weight still materializes
+in a CPU context inside ``Plan.run_xs``, so a CUDA run raises "Expected
+all tensors to be on the same device".  Diagnosis narrowed: ``_align``
+moves feeds, ``_param_values``, ``_param_map`` and built modules; the
+remaining CPU tensor comes from a param/baked-weight mint inside the plan.
+Fixing it is a `torch_bridge` change (a device-aware fallback mint), not a
+probe change — attempted and reverted rather than shipped unverified.
 
 Run::
 

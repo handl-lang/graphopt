@@ -253,6 +253,32 @@ def _feed_shapes(feed: Any) -> list[tuple[int, ...]]:
     return [tuple(f.shape) for f in feeds]
 
 
+def _align(mod: Any, device: str, dtype: torch.dtype) -> Any:
+    """Move a built module's weights and baked params to one device.
+
+    The exporter can leave folded/baked param tensors on CPU; a caller
+    that asked for CUDA must not inherit that, or the first op mixing a
+    real input with a baked weight dies.  Harness-side normalization —
+    it changes no graph.
+    """
+    mod = mod.to(device=device, dtype=dtype)
+    for attr in ("_param_values", "_param_map"):
+        table = getattr(mod, attr, None)
+        if isinstance(table, dict):
+            for k, v in list(table.items()):
+                if (
+                    isinstance(v, torch.Tensor)
+                    and v.is_floating_point()
+                ):
+                    moved = v.detach().to(device=device, dtype=dtype)
+                    table[k] = (
+                        torch.nn.Parameter(moved)
+                        if isinstance(v, torch.nn.Parameter)
+                        else moved
+                    )
+    return mod
+
+
 def measure_module(
     name: str,
     size: str = "small",
@@ -266,12 +292,13 @@ def measure_module(
     """Build the four arms for *name* at *size* and time them.
 
     *device* / *dtype* default to the historical fp64-on-CPU contract (the
-    verify dtype).  They move the feeds and the exported parameters, but
-    **not yet the plan executor**: ``torch_bridge.Plan.run_xs`` allocates
-    its intermediates from a CPU ``like`` tensor, so a CUDA run raises
-    "Expected all tensors to be on the same device".  That is the open gap
-    (`docs/reports/prim_kernel.md`) — the delivery path is CPU-pinned, so a
-    generated kernel cannot be measured end to end yet.
+    verify dtype).  A non-default pair is **not fully supported yet**:
+    feeds, exported params and built modules are aligned by :func:`_align`,
+    but a parameter or baked weight still materializes in a CPU context
+    inside ``Plan.run_xs``, so a CUDA run raises "Expected all tensors to
+    be on the same device".  See `docs/reports/prim_kernel.md` — the
+    delivery path is CPU-pinned, so a generated kernel cannot be measured
+    end to end yet.
     """
     zkws = SIZES[size]
     sp.register()
@@ -298,7 +325,9 @@ def measure_module(
         k: (v.to(device=device, dtype=dtype) if hasattr(v, "to") else v)
         for k, v in params.items()
     }
-    tape = ir_to_torch_module(ir, param_values=params)
+    tape = _align(
+        ir_to_torch_module(ir, param_values=params), device, dtype
+    )
     row.n_ops_tape = sum(_ops_of(ir.root).values())
 
     # -- arm 2: shipped DEFAULT minus the prim folds ---------------------
@@ -310,6 +339,7 @@ def measure_module(
         max_iterations=_MAX_ITERS,
     )
     lr_np = lower(res_np, feeds, sink=TorchSink(), verify=True)
+    lr_np.module = _align(lr_np.module, device, dtype)
     row.n_ops_noprim = sum(_ops_of(res_np.term).values())
     row.verified["noprim"] = (
         "pass" if (lr_np.verified and lr_np.verified.passed) else "FAIL"
@@ -325,6 +355,7 @@ def measure_module(
     )
     row.search_s = time.perf_counter() - t0
     lr_syn = lower(res_syn, feeds, sink=TorchSink(), verify=True)
+    lr_syn.module = _align(lr_syn.module, device, dtype)
     ops = _ops_of(res_syn.term)
     row.n_ops_synop = sum(ops.values())
     row.synops = sorted(o for o in ops if "synop" in o)

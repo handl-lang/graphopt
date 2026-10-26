@@ -87,11 +87,20 @@ intermediates from a **CPU `like` tensor**, so the plan is pinned to CPU
 by construction. Kernels need CUDA; the delivery path refuses to leave the
 CPU.
 
-That is the finding, not a bug in the probe: **the shipped delivery path
-cannot host a generated kernel at all.** Fixing it is a `torch_bridge`
-change — `run_xs` should take device/dtype from its inputs — and until
-then the module-level number does not exist, while the op-level 2.6×
-does.
+The diagnosis, narrowed by instrumenting every binding: with feeds,
+`_param_values`, `_param_map` and built modules all moved to CUDA, one
+tensor still arrives on CPU at a two-operand op — a parameter or baked
+weight **minted inside the plan** in a CPU context (`_randn_param`'s
+fallback and `_mint_const`'s weak-scalar mint both default to CPU by
+design). Aligning at the probe boundary cannot fix that; the mint has to
+become device-aware.
+
+So: **the shipped delivery path cannot host a generated kernel at all.**
+The fix is a `torch_bridge` change (a device-aware fallback/baked-weight
+mint inside the plan). I attempted it and **reverted it rather than ship
+it unverified** — it touches the fp64 verify path, and a half-tested
+device change there is worse than the documented gap. Until then the
+module-level number does not exist, while the op-level 2.6–2.7× does.
 
 
 - op level, not module level: this times the denotation alone (one
