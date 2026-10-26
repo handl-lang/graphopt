@@ -69,7 +69,36 @@ walk as the cause. This closes the loop on that diagnosis:
   **"invented operations are slow only when delivered by the
   interpreter"**.
 
-## The module-level gap — the delivery path is CPU-pinned
+## Module level — measured, and the win is *not* there
+
+The gap below is now closed far enough to run: `IRModule.forward` aligns
+baked tensors to the inputs' device/dtype once per pair, so a CUDA
+delivery no longer dies on a CPU-baked weight. RealGatedLRU @ large, fp32
+CUDA, 30 interleaved samples:
+
+| body | spelled ms | noprim ms | synop ms | marginal | e2e | verified | equal |
+|---|---|---|---|---|---|---|---|
+| spec-walk | 1.26 | 1.03 | 3.27 | **3.17** | 2.59 | pass | yes |
+| kernel | 1.31 | 1.08 | 3.60 | **3.34** | 2.74 | pass | yes |
+
+**The kernel body does not help at module level** — not because it is
+wrong (equality holds), but because these modules bind the folds on
+*small* tensors: one launcher per `synop` call replaces a handful of tiny
+dispatches that were nearly free. The op-level win needs ~1 M elements;
+this module's tensors are two orders of magnitude smaller.
+
+| level | shape | result |
+|---|---|---|
+| op | 1 048 576 elements | **0.37–0.39× — 2.6× faster** |
+| module | RealGatedLRU @ large | **3.34× marginal — no win** |
+
+GatedLinearAttention and MambaSelectiveScan still raise
+`FakeTensorDeviceMismatchError` while `torch.compile` traces a lowered
+arm (a CUDA tensor meets a CPU one under dynamo) — the same bug class one
+layer out, and the next blocker rather than a refutation.
+
+## The gap that remains — compile twins
+
 
 The obvious next measurement is the same comparison one level up: a real
 module, `spelled` vs `noprim` vs `synop`, with the kernel body bound.
