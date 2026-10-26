@@ -90,17 +90,21 @@ shapes are reproduced exactly, so no published number moves:
 68/68 workloads now run at `(16, 8, 2)` **and** `(64, 32, 8)` (was 64/68
 at wide).
 
-**Result, measured 2026-10-26.** With the corpus unblocked the chain-level
-question is answerable, and the answer is narrower than the follow-up hoped
-and sharper than "no": on real zoo modules at `d64 t32 b8`, three rounds each,
-gen delivery is **0.95 / 0.98 / 0.96× eager** on the three attention/mixer
-workloads, **1.2–1.3× eager** on `TimeCondConv` (18 clean rounds across
-sessions, 1.15–1.42, never below 1 — a dispatch-bound module: the delivered
-form launches 22 kernels where eager launches 34), and **1.77×
-`torch.compile`** on `FNOBlock`, which is now deliverable at all because the
-bridge binds the fft family. Every row verifies at `max_abs 0.0`. Full table,
-profiler evidence and the timing correction: `docs/reports/zoo_chain.md`,
-claim 9 in `EVIDENCE.md`.
+**Result, measured 2026-10-26, on the whole corpus.** The chain-level question
+is answerable and the answer is narrower than the follow-up hoped: over **all
+68 zoo workloads** at `d64 t32 b8`, three rounds each, **65 deliver and verify
+bit-equal** (`max_abs 0.0`) and **15 are faster than eager in every round** —
+`TernaryWeightLinear` 1.94×, `RotaryPair` 1.52×, `PartialRotary` 1.47×,
+`GroupedQuantLinear` 1.43×, `DeepEquilibrium` 1.30×, `LoRAAdapter` 1.28×,
+`TimeCondConv` 1.24×, … — while 44 lose, median **0.972×** (31 by <10 %).
+`FNOBlock` is **1.77× `torch.compile`**. The mechanism is dispatch: the
+delivered form launches 22 kernels where eager launches 34, and the win rate
+is 41 % where eager leaves more than half its wall time in dispatch against
+10–17 % where the kernels already dominate (`zoo_kcount.py`). Kernel count
+itself does **not** predict the sign (r = 0.01) — the delivered body's own
+cost does, which is the referee's job and it misses at least once
+(`RMSNormPerHead`, 0.208×). Full tables, profiler evidence and the timing
+correction: `docs/reports/zoo_chain.md`, claim 9 in `EVIDENCE.md`.
 
 A note on the timing, because it cost a wrong verdict: an earlier revision of
 that report called `TimeCondConv` **unusable** (gen 130–431 µs across five

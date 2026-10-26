@@ -1,0 +1,546 @@
+[
+ {
+  "case": "zoo:GatedAttentionUnit",
+  "kernels": 7,
+  "device_us": 258.2,
+  "wall_us": 264.46,
+  "device_share": 0.976,
+  "us_per_kernel": 36.89
+ },
+ {
+  "case": "zoo:AdditiveAttention",
+  "kernels": 9,
+  "device_us": 308.22,
+  "wall_us": 315.04,
+  "device_share": 0.978,
+  "us_per_kernel": 34.25
+ },
+ {
+  "case": "zoo:TalkingHeadsAttention",
+  "kernels": 5,
+  "device_us": 574.29,
+  "wall_us": 583.32,
+  "device_share": 0.985,
+  "us_per_kernel": 114.86
+ },
+ {
+  "case": "zoo:CosineAttention",
+  "kernels": 8,
+  "device_us": 325.5,
+  "wall_us": 336.06,
+  "device_share": 0.969,
+  "us_per_kernel": 40.69
+ },
+ {
+  "case": "zoo:FiLMHead",
+  "kernels": 5,
+  "device_us": 100.75,
+  "wall_us": 103.75,
+  "device_share": 0.971,
+  "us_per_kernel": 20.15
+ },
+ {
+  "case": "zoo:AdaLNBlock",
+  "kernels": 8,
+  "device_us": 278.29,
+  "wall_us": 285.12,
+  "device_share": 0.976,
+  "us_per_kernel": 34.79
+ },
+ {
+  "case": "zoo:LoRAAdapter",
+  "kernels": 4,
+  "device_us": 75.08,
+  "wall_us": 78.21,
+  "device_share": 0.96,
+  "us_per_kernel": 18.77
+ },
+ {
+  "case": "zoo:MLPMixerBlock",
+  "kernels": 8,
+  "device_us": 385.92,
+  "wall_us": 391.67,
+  "device_share": 0.985,
+  "us_per_kernel": 48.24
+ },
+ {
+  "case": "zoo:FNOBlock",
+  "kernels": 11,
+  "device_us": 34.49,
+  "wall_us": 205.68,
+  "device_share": 0.168,
+  "us_per_kernel": 3.14
+ },
+ {
+  "case": "zoo:GCNLayer",
+  "kernels": 6,
+  "device_us": 88.78,
+  "wall_us": 113.83,
+  "device_share": 0.78,
+  "us_per_kernel": 14.8
+ },
+ {
+  "case": "zoo:AffineCoupling",
+  "kernels": 7,
+  "device_us": 63.61,
+  "wall_us": 77.17,
+  "device_share": 0.824,
+  "us_per_kernel": 9.09
+ },
+ {
+  "case": "zoo:SoftSlotMoE",
+  "kernels": 7,
+  "device_us": 172.38,
+  "wall_us": 177.54,
+  "device_share": 0.971,
+  "us_per_kernel": 24.63
+ },
+ {
+  "case": "zoo:ExpertChoiceMoE",
+  "kernels": 11,
+  "device_us": 108.84,
+  "wall_us": 147.52,
+  "device_share": 0.738,
+  "us_per_kernel": 9.89
+ },
+ {
+  "case": "zoo:CapsuleRouting",
+  "kernels": 13,
+  "device_us": 126.55,
+  "wall_us": 255.01,
+  "device_share": 0.496,
+  "us_per_kernel": 9.73
+ },
+ {
+  "case": "zoo:ChunkedRetention",
+  "kernels": 11,
+  "device_us": 262.14,
+  "wall_us": 300.58,
+  "device_share": 0.872,
+  "us_per_kernel": 23.83
+ },
+ {
+  "case": "zoo:DeepEquilibrium",
+  "kernels": 3,
+  "device_us": 257.06,
+  "wall_us": 264.97,
+  "device_share": 0.97,
+  "us_per_kernel": 85.69
+ },
+ {
+  "case": "zoo:DeltaRuleBlock",
+  "kernels": 9,
+  "device_us": 134.99,
+  "wall_us": 286.21,
+  "device_share": 0.472,
+  "us_per_kernel": 15.0
+ },
+ {
+  "case": "zoo:WaveNetGate",
+  "kernels": 7,
+  "device_us": 49.13,
+  "wall_us": 84.58,
+  "device_share": 0.581,
+  "us_per_kernel": 7.02
+ },
+ {
+  "case": "zoo:TimeCondConv",
+  "kernels": 18,
+  "device_us": 85.39,
+  "wall_us": 198.68,
+  "device_share": 0.43,
+  "us_per_kernel": 4.74
+ },
+ {
+  "case": "zoo:MoSHead",
+  "kernels": 8,
+  "device_us": 84.05,
+  "wall_us": 93.97,
+  "device_share": 0.894,
+  "us_per_kernel": 10.51
+ },
+ {
+  "case": "zoo:CovarianceHead",
+  "kernels": 4,
+  "device_us": 18.05,
+  "wall_us": 34.18,
+  "device_share": 0.528,
+  "us_per_kernel": 4.51
+ },
+ {
+  "case": "zoo:SplineKAN",
+  "kernels": 6,
+  "device_us": 103.21,
+  "wall_us": 108.27,
+  "device_share": 0.953,
+  "us_per_kernel": 17.2
+ },
+ {
+  "case": "zoo:HighwayGate",
+  "kernels": 6,
+  "device_us": 79.48,
+  "wall_us": 84.19,
+  "device_share": 0.944,
+  "us_per_kernel": 13.25
+ },
+ {
+  "case": "zoo:MambaSelectiveScan",
+  "kernels": 10,
+  "device_us": 491.02,
+  "wall_us": 2126.8,
+  "device_share": 0.231,
+  "us_per_kernel": 49.1
+ },
+ {
+  "case": "zoo:GatedLinearAttention",
+  "kernels": 7,
+  "device_us": 756.65,
+  "wall_us": 1824.98,
+  "device_share": 0.415,
+  "us_per_kernel": 108.09
+ },
+ {
+  "case": "zoo:RWKVMixBlock",
+  "kernels": 21,
+  "device_us": 1179.16,
+  "wall_us": 1208.16,
+  "device_share": 0.976,
+  "us_per_kernel": 56.15
+ },
+ {
+  "case": "zoo:HyenaLongConv",
+  "kernels": 9,
+  "device_us": 144.56,
+  "wall_us": 152.12,
+  "device_share": 0.95,
+  "us_per_kernel": 16.06
+ },
+ {
+  "case": "zoo:TopKRouterMoE",
+  "kernels": 16,
+  "device_us": 175.53,
+  "wall_us": 232.48,
+  "device_share": 0.755,
+  "us_per_kernel": 10.97
+ },
+ {
+  "case": "zoo:DeepSeekSigMoE",
+  "kernels": 14,
+  "device_us": 212.25,
+  "wall_us": 222.37,
+  "device_share": 0.954,
+  "us_per_kernel": 15.16
+ },
+ {
+  "case": "zoo:STEQuantLinear",
+  "kernels": 6,
+  "device_us": 44.76,
+  "wall_us": 109.01,
+  "device_share": 0.411,
+  "us_per_kernel": 7.46
+ },
+ {
+  "case": "zoo:PerChannelQuantMatmul",
+  "kernels": 3,
+  "device_us": 8.99,
+  "wall_us": 39.68,
+  "device_share": 0.227,
+  "us_per_kernel": 3.0
+ },
+ {
+  "case": "zoo:KVCacheAttention",
+  "kernels": 6,
+  "device_us": 87.03,
+  "wall_us": 136.78,
+  "device_share": 0.636,
+  "us_per_kernel": 14.51
+ },
+ {
+  "case": "zoo:GEGLUBlock",
+  "kernels": 7,
+  "device_us": 179.82,
+  "wall_us": 182.85,
+  "device_share": 0.983,
+  "us_per_kernel": 25.69
+ },
+ {
+  "case": "zoo:SkipInitNet",
+  "kernels": 4,
+  "device_us": 200.91,
+  "wall_us": 205.8,
+  "device_share": 0.976,
+  "us_per_kernel": 50.23
+ },
+ {
+  "case": "zoo:SoftcapLogitHead",
+  "kernels": 4,
+  "device_us": 28.67,
+  "wall_us": 36.09,
+  "device_share": 0.794,
+  "us_per_kernel": 7.17
+ },
+ {
+  "case": "zoo:RotaryPair",
+  "kernels": 12,
+  "device_us": 192.55,
+  "wall_us": 413.42,
+  "device_share": 0.466,
+  "us_per_kernel": 16.05
+ },
+ {
+  "case": "zoo:SlidingWindowAttention",
+  "kernels": 11,
+  "device_us": 248.81,
+  "wall_us": 256.28,
+  "device_share": 0.971,
+  "us_per_kernel": 22.62
+ },
+ {
+  "case": "zoo:DilatedBlockAttention",
+  "kernels": 12,
+  "device_us": 247.56,
+  "wall_us": 257.28,
+  "device_share": 0.962,
+  "us_per_kernel": 20.63
+ },
+ {
+  "case": "zoo:BlockSparseAttention",
+  "kernels": 15,
+  "device_us": 273.69,
+  "wall_us": 284.16,
+  "device_share": 0.963,
+  "us_per_kernel": 18.25
+ },
+ {
+  "case": "zoo:ConvNeXtStage",
+  "kernels": 8,
+  "device_us": 62.94,
+  "wall_us": 93.6,
+  "device_share": 0.672,
+  "us_per_kernel": 7.87
+ },
+ {
+  "case": "zoo:SqueezeExcite",
+  "kernels": 5,
+  "device_us": 14.12,
+  "wall_us": 58.21,
+  "device_share": 0.243,
+  "us_per_kernel": 2.82
+ },
+ {
+  "case": "zoo:MBConvSEBlock",
+  "kernels": 10,
+  "device_us": 57.71,
+  "wall_us": 128.84,
+  "device_share": 0.448,
+  "us_per_kernel": 5.77
+ },
+ {
+  "case": "zoo:GRUFusedGate",
+  "kernels": 8,
+  "device_us": 72.03,
+  "wall_us": 105.74,
+  "device_share": 0.681,
+  "us_per_kernel": 9.0
+ },
+ {
+  "case": "zoo:GatedConvUnit",
+  "kernels": 5,
+  "device_us": 22.68,
+  "wall_us": 64.6,
+  "device_share": 0.351,
+  "us_per_kernel": 4.54
+ },
+ {
+  "case": "zoo:ManualGroupNorm",
+  "kernels": 6,
+  "device_us": 15.33,
+  "wall_us": 68.49,
+  "device_share": 0.224,
+  "us_per_kernel": 2.56
+ },
+ {
+  "case": "zoo:InstanceNormBroadcast",
+  "kernels": 6,
+  "device_us": 18.12,
+  "wall_us": 70.48,
+  "device_share": 0.257,
+  "us_per_kernel": 3.02
+ },
+ {
+  "case": "zoo:RMSNormPerHead",
+  "kernels": 5,
+  "device_us": 14.67,
+  "wall_us": 48.97,
+  "device_share": 0.3,
+  "us_per_kernel": 2.93
+ },
+ {
+  "case": "zoo:DynamicTanhBlock",
+  "kernels": 6,
+  "device_us": 150.85,
+  "wall_us": 155.07,
+  "device_share": 0.973,
+  "us_per_kernel": 25.14
+ },
+ {
+  "case": "zoo:ALiBiSlopeAttention",
+  "kernels": 8,
+  "device_us": 221.29,
+  "wall_us": 229.02,
+  "device_share": 0.966,
+  "us_per_kernel": 27.66
+ },
+ {
+  "case": "zoo:RelPosTableAttention",
+  "kernels": 11,
+  "device_us": 247.83,
+  "wall_us": 256.38,
+  "device_share": 0.967,
+  "us_per_kernel": 22.53
+ },
+ {
+  "case": "zoo:LearnedPosSlice",
+  "kernels": 4,
+  "device_us": 112.51,
+  "wall_us": 114.38,
+  "device_share": 0.984,
+  "us_per_kernel": 28.13
+ },
+ {
+  "case": "zoo:GroupedQuantLinear",
+  "kernels": 3,
+  "device_us": 8.96,
+  "wall_us": 36.94,
+  "device_share": 0.243,
+  "us_per_kernel": 2.99
+ },
+ {
+  "case": "zoo:PagedKVAttention",
+  "kernels": 7,
+  "device_us": 107.51,
+  "wall_us": 135.46,
+  "device_share": 0.794,
+  "us_per_kernel": 15.36
+ },
+ {
+  "case": "zoo:GatedDeltaRule",
+  "kernels": 12,
+  "device_us": 160.35,
+  "wall_us": 406.34,
+  "device_share": 0.395,
+  "us_per_kernel": 13.36
+ },
+ {
+  "case": "zoo:ChunkedSSD",
+  "kernels": 16,
+  "device_us": 786.72,
+  "wall_us": 2379.9,
+  "device_share": 0.331,
+  "us_per_kernel": 49.17
+ },
+ {
+  "case": "zoo:RealGatedLRU",
+  "kernels": 13,
+  "device_us": 823.57,
+  "wall_us": 1904.87,
+  "device_share": 0.432,
+  "us_per_kernel": 63.35
+ },
+ {
+  "case": "zoo:DecoupledMLA",
+  "kernels": 17,
+  "device_us": 359.33,
+  "wall_us": 499.0,
+  "device_share": 0.72,
+  "us_per_kernel": 21.14
+ },
+ {
+  "case": "zoo:PartialRotary",
+  "kernels": 15,
+  "device_us": 475.74,
+  "wall_us": 742.25,
+  "device_share": 0.641,
+  "us_per_kernel": 31.72
+ },
+ {
+  "case": "zoo:SigmoidAttention",
+  "kernels": 6,
+  "device_us": 252.64,
+  "wall_us": 259.21,
+  "device_share": 0.975,
+  "us_per_kernel": 42.11
+ },
+ {
+  "case": "zoo:DiffAttention",
+  "kernels": 10,
+  "device_us": 344.6,
+  "wall_us": 360.02,
+  "device_share": 0.957,
+  "us_per_kernel": 34.46
+ },
+ {
+  "case": "zoo:AttnLogitSoftcap",
+  "kernels": 7,
+  "device_us": 296.55,
+  "wall_us": 303.17,
+  "device_share": 0.978,
+  "us_per_kernel": 42.36
+ },
+ {
+  "case": "zoo:SinkWindowAttention",
+  "kernels": 15,
+  "device_us": 313.85,
+  "wall_us": 325.97,
+  "device_share": 0.963,
+  "us_per_kernel": 20.92
+ },
+ {
+  "case": "zoo:TaylorLinearAttention",
+  "kernels": 11,
+  "device_us": 1053.44,
+  "wall_us": 1064.26,
+  "device_share": 0.99,
+  "us_per_kernel": 95.77
+ },
+ {
+  "case": "zoo:AdaGNConv",
+  "kernels": 9,
+  "device_us": 61.81,
+  "wall_us": 116.99,
+  "device_share": 0.528,
+  "us_per_kernel": 6.87
+ },
+ {
+  "case": "zoo:SharedSwiGLUMoE",
+  "kernels": 17,
+  "device_us": 244.72,
+  "wall_us": 285.55,
+  "device_share": 0.857,
+  "us_per_kernel": 14.4
+ },
+ {
+  "case": "zoo:NormedSoftcapHead",
+  "kernels": 9,
+  "device_us": 38.84,
+  "wall_us": 86.72,
+  "device_share": 0.448,
+  "us_per_kernel": 4.32
+ },
+ {
+  "case": "zoo:SquaredReluFFN",
+  "kernels": 6,
+  "device_us": 163.66,
+  "wall_us": 166.83,
+  "device_share": 0.981,
+  "us_per_kernel": 27.28
+ },
+ {
+  "case": "zoo:TernaryWeightLinear",
+  "kernels": 7,
+  "device_us": 38.32,
+  "wall_us": 64.39,
+  "device_share": 0.595,
+  "us_per_kernel": 5.47
+ }
+]
