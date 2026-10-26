@@ -90,7 +90,19 @@ this module's tensors are two orders of magnitude smaller.
 | level | shape | result |
 |---|---|---|
 | op | 1 048 576 elements | **0.37–0.39× — 2.6× faster** |
-| module | RealGatedLRU @ large | **3.34× marginal — no win** |
+| module | RealGatedLRU @ large (d64 t32 b8) | **3.34× marginal — no win** |
+| module | RealGatedLRU @ wide (d256 t256 b16) | **2.67× marginal — no win, ~17 % better than the spec-walk** |
+
+The `wide` arm is the corpus question answered: at shapes where the folds
+bind ~1 M elements, the kernel body does help — marginal **3.23 → 2.67**,
+e2e **3.25 → 2.69** — but the fold still *loses* to not folding. The saved
+dispatches are cheap and asynchronous on a GPU; the fold buys one launcher
+and pays an indirection, and the arithmetic does not close at module level.
+
+That is the final word on this family as a *move*: `synop` pays as an
+isolated denotation (2.6×) and never as a step inside a delivered module.
+The `gen` domain's 2.87× is a different animal — there the claim replaces a
+whole chain with a hand-launched kernel, not a step inside a tape.
 
 GatedLinearAttention and MambaSelectiveScan still raise
 `FakeTensorDeviceMismatchError` while `torch.compile` traces a lowered

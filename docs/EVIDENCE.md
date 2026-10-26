@@ -14,7 +14,7 @@ seeds recorded per artifact.
 | 2 | **composition inside a fixed bank is not original** | **0** of 97 admitted codegen rules were machine-original | `kernelopt/docs/results_overnight_kernel_v2.md` (private) | kernelopt `bench/discovery/kernel.py` |
 | 3 | **delivered as an interpreter, the invented rules lose** | 14 cells: **7 lose · 1 tie · 6 confounded · 0 wins**; worst **2.66×**; 48 folds unmeasured | `docs/reports/pay_measured.md` + `pay_coverage.md` | `.venv/bin/python -m bench.referees.pay_wall` |
 | 4 | **a kernel body wins at op scale** | **0.365–0.392× the spec-walk — 2.6× faster**, fp32 *and* fp64, 6 ops verified, at **1 M elements** | `docs/reports/prim_kernel.md` (+ `prim_kernel_fp64.json`) | `.venv/bin/python -m bench.drivers.probes.prim_kernel_probe --dtype float64` |
-| 4b | **and does not win at module scale** | RealGatedLRU @ large: marginal **3.17** (spec-walk) vs **3.34** (kernel) — launch-bound on small tensors | `docs/reports/prim_kernel.md` §module level | `.venv/bin/python -m bench.drivers.probes.prim_kernel_module` |
+| 4b | **and does not win at module scale, in any shape** | large (d64 t32 b8): **3.17** spec-walk vs **3.34** kernel; wide (d256 t256 b16, ~1 M elements): **3.23** vs **2.67** — the kernel body helps ~17 %, the fold still loses | `docs/reports/prim_kernel.md` §module level | `.venv/bin/python -m bench.drivers.probes.prim_kernel_module --size wide` |
 | 5 | **a generated kernel beats `torch.compile`** | 6-op chain **85 µs vs 245 µs (2.87×)**, 2-op 1.92× | `docs/reports/pay_measured.md` §G2b | `python -m mlopt_discovery.play --domain gen --probe` |
 | 6 | **growth helps the same player, but only if it pays** | paying growth **+0.066** (5/5 seeds ≥ +0.036); unpaid growth **−0.023** (5/5 ≤ +0.008) | `docs/results_bank_growth.md` | `.venv/bin/python -m bench.drivers.policy.bank_growth --drop ...` |
 | 7 | **minting during play on the toy board yields nothing** | 1 minted, **0 admitted** (no pay) | `docs/results_bank_growth.md` §Step 3 | `.venv/bin/python -m bench.drivers.policy.play_mint` |
@@ -24,7 +24,7 @@ seeds recorded per artifact.
 
 | gap | state | why it matters |
 |---|---|---|
-| kernel win at module scale | **measured: none** (3.34 marginal). The op-level 2.6× needs ~1 M elements; the corpus binds the folds on tensors two orders smaller. | the honest claim is shape-dependent, and the paying shape is not the delivering shape |
+| kernel win at module scale | **measured: none** (2.67 marginal at ~1 M-element shapes, best case). A kernel body cuts the loss ~17 %; the fold itself never pays inside a module. | the fold is a per-op win and a per-module loss — the `gen` path (whole-chain kernel, launched once) is the one that delivers |
 | compile twins on CUDA | **blocked** — `FakeTensorDeviceMismatchError` while dynamo traces a lowered arm | one layer out from the fixed alignment; same bug class |
 
 ## What is deliberately *not* claimed

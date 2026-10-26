@@ -118,6 +118,12 @@ BOUND_MODULES: tuple[str, ...] = (
 SIZES: dict[str, dict[str, int]] = {
     "small": {"d": 16, "t": 8, "b": 2},
     "large": {"d": 64, "t": 32, "b": 8},
+    # ``wide`` exists for the shape-dependence question: at ``large`` the
+    # prim folds bind tensors of a few hundred elements, where a kernel
+    # launch cannot amortize.  ``wide`` puts the same modules on ~1M
+    # element sites, so a kernel body can be judged where it can win
+    # (`docs/reports/prim_kernel.md`).
+    "wide": {"d": 256, "t": 256, "b": 16},
 }
 
 #: Search budget — mirrors the shipped-pipeline pins
