@@ -452,7 +452,9 @@ def _retnet_case(
     from mlopt_cuda import CudaGraphRunner
 
     stats_generic: dict = {}
-    carrier_run = CudaGraphRunner().apply(carrier, (x64,), stats_generic)
+    carrier_run = CudaGraphRunner().apply(
+        carrier, (x64,), stats_generic
+    )
     print(
         f"  CudaGraphRunner on generic carrier: "
         f"cuda_graph={stats_generic.get('cuda_graph')} "

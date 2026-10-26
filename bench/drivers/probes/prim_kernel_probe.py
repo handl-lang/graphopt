@@ -70,6 +70,33 @@ def elementwise_ops(limit: int = 6) -> list[str]:
     return out
 
 
+def kernels_for(
+    ops: list[str],
+) -> tuple[dict[str, Any], list[dict[str, str]]]:
+    """Return ``{op: callable}`` for the ops a Triton body can cover.
+
+    The callable is the generated kernel; ops the codegen does not model
+    come back as notes, not as binds, so a caller can bind the rest
+    without pretending coverage.
+    """
+    binds: dict[str, Any] = {}
+    notes: list[dict[str, str]] = []
+    for op in ops:
+        arms, why = _arms(op)
+        if why or "kernel" not in arms:
+            notes.append(
+                {
+                    "op": op,
+                    "status": "declined",
+                    "why": why or "no codegen",
+                }
+            )
+            continue
+        binds[op] = arms["kernel"]
+        notes.append({"op": op, "status": "bound", "why": "generated"})
+    return binds, notes
+
+
 def _arms(op: str) -> tuple[dict[str, Any], str | None]:
     """Build the three arms for *op*; return (arms, decline reason)."""
 
@@ -98,10 +125,14 @@ def _arms(op: str) -> tuple[dict[str, Any], str | None]:
     return arms, None
 
 
-def _inputs(n_args: int, device: torch.device) -> tuple[Any, ...]:
-    """Realistic fp32 inputs — the kernel tier is CUDA-only."""
+def _inputs(
+    n_args: int,
+    device: torch.device,
+    dtype: torch.dtype = torch.float32,
+) -> tuple[Any, ...]:
+    """Realistic inputs — the kernel tier is CUDA-only."""
     g = torch.Generator(device="cpu").manual_seed(0)
-    base = torch.rand(ELEMS, generator=g) + 0.5
+    base = (torch.rand(ELEMS, generator=g) + 0.5).to(dtype)
     return tuple(
         (base if i % 2 == 0 else base * 2.0)
         .reshape(2048, 512)
@@ -126,14 +157,16 @@ def _time(fn: Any, args: tuple[Any, ...], iters: int = 200) -> float:
     return statistics.median(samples)
 
 
-def measure(op: str, device: torch.device) -> dict[str, Any]:
-    """Time the three arms for one op and report the ratios."""
+def measure(
+    op: str, device: torch.device, dtype: torch.dtype = torch.float32
+) -> dict[str, Any]:
+    """Time the arms for one op and report the ratios."""
     arms, why = _arms(op)
     if why:
         return {"op": op, "status": "declined", "why": why}
     fold, _ = minted.prim_fold(op)
     try:
-        args = _inputs(len(fold.rhs.args), device)
+        args = _inputs(len(fold.rhs.args), device, dtype)
     except Exception as exc:
         return {
             "op": op,
@@ -172,13 +205,21 @@ def measure(op: str, device: torch.device) -> dict[str, Any]:
     return row
 
 
-def run(ops: list[str], device: str = "cuda") -> dict[str, Any]:
+def run(
+    ops: list[str], device: str = "cuda", dtype: str = "float32"
+) -> dict[str, Any]:
     """Measure every requested op."""
     dev = torch.device(device)
     if dev.type == "cuda" and not torch.cuda.is_available():
         dev = torch.device("cpu")
-    rows = [measure(op, dev) for op in ops]
-    return {"device": str(dev), "elements": ELEMS, "rows": rows}
+    dt = torch.float64 if dtype == "float64" else torch.float32
+    rows = [measure(op, dev, dt) for op in ops]
+    return {
+        "device": str(dev),
+        "dtype": dtype,
+        "elements": ELEMS,
+        "rows": rows,
+    }
 
 
 def _fmt(value: Any) -> str:
@@ -189,7 +230,7 @@ def summary(result: dict[str, Any]) -> str:
     """Render the per-op arms and ratios."""
     lines = [
         f"device {result['device']} · {result['elements']} elements · "
-        "fp32",
+        f"{result.get('dtype', 'float32')}",
         "",
         "| op | status | binding ms | kernel ms | kernel/binding |",
         "|---|---|---|---|---|",
@@ -218,10 +259,13 @@ def main(argv: list[str] | None = None) -> int:
         help="default: the shipped pointwise prims",
     )
     ap.add_argument("--device", default="cuda")
+    ap.add_argument(
+        "--dtype", default="float32", choices=["float32", "float64"]
+    )
     ap.add_argument("--json", help="write the full result here")
     args = ap.parse_args(argv)
     ops = args.ops if args.ops else elementwise_ops()
-    result = run(ops, args.device)
+    result = run(ops, args.device, args.dtype)
     print(summary(result))
     if args.json:
         path = Path(args.json)

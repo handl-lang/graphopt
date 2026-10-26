@@ -35,6 +35,22 @@ model)
 | `synop3_0ca31bf1e5` | 2.395 | 0.898 | **0.375** |
 | `synop3_0fa19d1ff8` | 2.534 | 0.940 | **0.371** |
 
+**fp64 — the dtype the family is verified in** (`--dtype float64`): the
+win holds, at the same ratio.
+
+| op | binding ms | kernel ms | kernel / binding |
+|---|---|---|---|
+| `synop2_35bbd03301` | 3.368 | 1.295 | **0.384** |
+| `synop2_d46808a970` | 3.366 | 1.294 | **0.384** |
+| `synop3_04df5fd446` | 4.768 | 1.750 | **0.367** |
+| `synop3_083e9c241f` | 3.647 | 1.384 | **0.379** |
+| `synop3_0ca31bf1e5` | 4.768 | 1.751 | **0.367** |
+| `synop3_0fa19d1ff8` | 5.048 | 1.841 | **0.365** |
+
+So the fp32 and fp64 legs agree: **2.60–2.74× vs the spec-walk, at the
+precision the certification uses.** The earlier caveat ("a fp64 kernel may
+not keep the 2.6×") is retired — it does.
+
 Every kernel passed the fp64-argument / fp32-run equality check against
 the binding (`rtol 1e-3`), and the codegen *declined* every spec it does
 not model (non-pointwise bodies such as the `linear`-bearing prims) —

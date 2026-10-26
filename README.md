@@ -44,6 +44,13 @@ construction, no codegen), **agnostic exits** (`Sink` → torch/ONNX/`.hnl`).
 - **The referee has teeth:** 212 bad accepts refused, four false twins
   rejected, a fabricated speedup caught — and a real lowering bug no
   test covered.
+- **Pay is now measured, not priced.** The shipped `synop*` folds lose on
+  a delivered module (14 cells: 7 lose, 1 tie, 6 confounded, **0 wins**;
+  `docs/reports/pay_measured.md`), 48 more are unmeasured
+  (`pay_status()` in the ledger), and **the same folds run 2.6× faster
+  once their body is a generated Triton kernel** — in fp32 *and* fp64
+  (`docs/reports/prim_kernel.md`). The rule was never slow; the
+  interpreter was.
 
 **Learned play.**  A trained linear prior ranks law candidates at
 **~4.7×** the tuned heuristic's average precision (AP 0.210 vs 0.045,

@@ -190,7 +190,9 @@ def _mine_instrumented(
                     stats["push_carry2"] = stats.get(
                         "push_carry2", 0
                     ) + _carries(child.pat, synop2)
-                    heapq.heappush(work, (-_score(child, vocab), next(seq), child))
+                    heapq.heappush(
+                        work, (-_score(child, vocab), next(seq), child)
+                    )
         if len(work) > beam:
             keep = hq.nsmallest(beam, work)
             keep_ids = {id(t) for t in keep}
@@ -266,13 +268,13 @@ def main() -> int:
         import pickle
 
         cache.write_bytes(pickle.dumps(roots))
-    print(f"env: {len(roots)} roots in {time.time()-t0:.1f}s")
+    print(f"env: {len(roots)} roots in {time.time() - t0:.1f}s")
 
     t0 = time.time()
     eg, fires, passes = _seated_graph(roots)
     print(
         f"seated: {len(eg._classes)} classes, {sum(fires.values())} "
-        f"fold fires over {passes} passes ({time.time()-t0:.1f}s)"
+        f"fold fires over {passes} passes ({time.time() - t0:.1f}s)"
     )
     synops = set(minted.SYNOP_SHIPPED)
     synop2 = set(minted.SYNOP2_SHIPPED)
@@ -285,10 +287,7 @@ def main() -> int:
     n1 = sum(
         1
         for ec in eg._classes.values()
-        if any(
-            n.op in (synops - synop2)
-            for n in ec.nodes
-        )
+        if any(n.op in (synops - synop2) for n in ec.nodes)
     )
     print(f"classes holding synop_*: {n1} · synop2_*: {n2}")
 
@@ -308,7 +307,7 @@ def main() -> int:
     print(f"vocab: {use_vocab}")
     print(
         f"mine beam={beam} max_expand={max_expand} max_ops={max_ops} "
-        f"in {time.time()-t0:.1f}s"
+        f"in {time.time() - t0:.1f}s"
     )
     for kk, v in stats.items():
         print(f"  {kk}: {v}")

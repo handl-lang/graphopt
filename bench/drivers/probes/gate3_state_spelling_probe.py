@@ -373,7 +373,9 @@ def main(argv: list[str] | None = None) -> int:
 
     # --- the fix: sharing-aware coordinated extraction ----------------
     print("\n== sharing-aware extraction (the principled fix) ==")
-    from bench.drivers.bridge.sharing_extract import extract_sharing_aware
+    from bench.drivers.bridge.sharing_extract import (
+        extract_sharing_aware,
+    )
 
     t2 = time.time()
     res = extract_sharing_aware(eg, root_eid, flops_cost)
