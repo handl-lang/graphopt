@@ -310,9 +310,9 @@ class _FNOBlock(nn.Module):
     """Fourier neural operator layer — spectral filter plus bypass.
 
     Li et al. 2021: ``irfft2(scale · rfft2(x)) + conv1x1(x)`` with the
-    top modes truncated.  The FFT ops are the zoo's honest
-    binding-gap probe — this workload is expected to land census-only
-    if the bridge lacks them.
+    top modes truncated.  The FFT ops made this workload the zoo's
+    binding-gap probe: it traced but could not be delivered until the
+    bridge bound ``fft_rfft2``/``fft_irfft2``/``real``.
     """
 
     def __init__(self, ch: int, modes: int) -> None:
@@ -542,7 +542,9 @@ class _DeltaRuleBlock(nn.Module):
         kk = self.k(x)  # (B, T, dk)
         vv = self.v(x)  # (B, T, dv)
         bb = torch.sigmoid(self.beta(x))  # (B, T, 1)
-        s = torch.zeros(b, self.dk, vv.shape[-1], dtype=x.dtype)
+        s = torch.zeros(
+            b, self.dk, vv.shape[-1], dtype=x.dtype, device=x.device
+        )
         for t in range(self.steps):
             k_t = kk[:, t]  # (B, dk)
             v_t = vv[:, t]  # (B, dv)
@@ -754,7 +756,7 @@ class _MambaSelectiveScan(nn.Module):
         )  # (B, T, d, n)
         bb = self.b(x)  # (B, T, n)
         cc = self.c(x)  # (B, T, n)
-        h = torch.zeros(b, self.d, self.n, dtype=x.dtype)
+        h = torch.zeros(b, self.d, self.n, dtype=x.dtype, device=x.device)
         outs = []
         for t in range(self.steps):
             h = dec[:, t] * h + x[:, t].unsqueeze(-1) * bb[
@@ -792,7 +794,9 @@ class _GatedLinearAttention(nn.Module):
         kk = self.k(x)
         vv = self.v(x)
         gg = torch.sigmoid(self.g(x))
-        s = torch.zeros(b, self.d, self.d, dtype=x.dtype)
+        s = torch.zeros(
+            b, self.d, self.d, dtype=x.dtype, device=x.device
+        )
         outs = []
         for t in range(self.steps):
             write = kk[:, t].unsqueeze(-1) * vv[:, t].unsqueeze(-2)
@@ -846,7 +850,9 @@ class _RWKVMixBlock(nn.Module):
         diag = (pos[:, None] == pos[None, :]).to(x.dtype)
         w = -F.softplus(self.decay)
         bias = rel.unsqueeze(-1) * w + diag.unsqueeze(-1) * self.first
-        tri = torch.tril(torch.ones(t, t, dtype=x.dtype))
+        tri = torch.tril(
+            torch.ones(t, t, dtype=x.dtype, device=x.device)
+        )
         att = torch.exp(bias.unsqueeze(0) + k.unsqueeze(1))
         att = att * tri.unsqueeze(0).unsqueeze(-1)  # (B, T, T, d)
         num = (att * v.unsqueeze(1)).sum(2)

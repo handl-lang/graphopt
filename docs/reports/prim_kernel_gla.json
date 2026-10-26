@@ -1,0 +1,61 @@
+{
+ "module": "GatedLinearAttention",
+ "size": "large",
+ "device": "cuda",
+ "dtype": "float32",
+ "kernels": [
+  "synop2_35bbd03301",
+  "synop2_d46808a970",
+  "synop3_04df5fd446",
+  "synop3_083e9c241f",
+  "synop3_0ca31bf1e5",
+  "synop3_0fa19d1ff8",
+  "synop3_1850a07696",
+  "synop3_207ef0ddb7"
+ ],
+ "declined": [],
+ "rows": [
+  {
+   "body": "spec-walk",
+   "ms": {
+    "spelled": 1.4554254998984106,
+    "noprim": 1.5723399999387766,
+    "synop": 2.2247664999213157
+   },
+   "marginal": 1.4149398349008122,
+   "e2e": 1.5286021167532144,
+   "executors": {
+    "spelled": "_GatedLinearAttention",
+    "tape": "IRModule",
+    "noprim": "IRModule",
+    "synop": "IRModule"
+   },
+   "verified": "pass",
+   "allclose": true,
+   "synops": [
+    "synop_4c657cb2c0"
+   ]
+  },
+  {
+   "body": "kernel",
+   "ms": {
+    "spelled": 1.310604000082094,
+    "noprim": 1.4236389999950916,
+    "synop": 1.9821270002466918
+   },
+   "marginal": 1.392296080855839,
+   "e2e": 1.5123767363158778,
+   "executors": {
+    "spelled": "_GatedLinearAttention",
+    "tape": "IRModule",
+    "noprim": "IRModule",
+    "synop": "IRModule"
+   },
+   "verified": "pass",
+   "allclose": true,
+   "synops": [
+    "synop_4c657cb2c0"
+   ]
+  }
+ ]
+}

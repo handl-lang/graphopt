@@ -104,44 +104,37 @@ isolated denotation (2.6×) and never as a step inside a delivered module.
 The `gen` domain's 2.87× is a different animal — there the claim replaces a
 whole chain with a hand-launched kernel, not a step inside a tape.
 
-GatedLinearAttention and MambaSelectiveScan still raise
-`FakeTensorDeviceMismatchError` while `torch.compile` traces a lowered
-arm (a CUDA tensor meets a CPU one under dynamo) — the same bug class one
-layer out, and the next blocker rather than a refutation.
+## The compile twins — unblocked (2026-10-26)
 
-## The gap that remains — compile twins
+`GatedLinearAttention` and `MambaSelectiveScan` used to raise
+`FakeTensorDeviceMismatchError` while `torch.compile` traced a lowered arm.
+The blocker was **not** the bridge: both workloads minted a CPU tensor inside
+`forward` (`torch.zeros(b, d, d, dtype=x.dtype)` with no `device=`), which is
+invisible on a CPU run and fatal the moment `torch.export`/dynamo supplies
+fake CUDA tensors. Three more workloads
+(`DeltaRuleBlock`, `RWKVMixBlock`, `GatedLinearAttention`) carried the same
+bug. All four now mint on `x.device`, and
+`tests/test_discovery_zoo.py::test_zoo_forward_mints_on_the_input_device`
+exports **all 68** workloads under a fake CUDA mode, so the class of bug
+cannot come back silently.
 
+Measured at `large`, **CUDA fp32**, 8 kernels bound, fp64-verified arms:
 
-The obvious next measurement is the same comparison one level up: a real
-module, `spelled` vs `noprim` vs `synop`, with the kernel body bound.
-`prim_kernel_module` is written for exactly that, and **it cannot run yet**:
+| module | body | spelled ms | noprim ms | synop ms | marginal | e2e | verified |
+|---|---|---|---|---|---|---|---|
+| `GatedLinearAttention` | spec-walk | 1.30 | 1.39 | 1.92 | 1.37 | 1.48 | pass |
+| `GatedLinearAttention` | kernel | 1.42 | 1.55 | 2.13 | 1.38 | 1.50 | pass |
+| `MambaSelectiveScan` | spec-walk | 1.49 | 1.53 | 2.10 | 1.37 | 1.41 | pass |
+| `MambaSelectiveScan` | kernel | 1.58 | 1.63 | 2.26 | 1.38 | 1.43 | pass |
 
-```
-RuntimeError: Expected all tensors to be on the same device,
-              but found at least two devices, cuda:0 and cpu!
-              (torch_bridge.Plan.run_xs → _run_tail → linear)
-```
+`equal` held on every arm — the delivered module is the same function, it is
+just slower. Marginal **1.37–1.38×** on both modules, with the kernel body
+worth ~1 %: the family verdict from `RealGatedLRU` (3.34 at `large`, 2.67 at
+`wide`) is not a quirk of one module — on three architecture families, with
+kernels actually bound, the fold still loses inside a module.
 
-`measure_module` now carries `device`/`dtype` and moves the feeds and the
-exported parameters — but `torch_bridge.Plan.run_xs` allocates its
-intermediates from a **CPU `like` tensor**, so the plan is pinned to CPU
-by construction. Kernels need CUDA; the delivery path refuses to leave the
-CPU.
-
-The diagnosis, narrowed by instrumenting every binding: with feeds,
-`_param_values`, `_param_map` and built modules all moved to CUDA, one
-tensor still arrives on CPU at a two-operand op — a parameter or baked
-weight **minted inside the plan** in a CPU context (`_randn_param`'s
-fallback and `_mint_const`'s weak-scalar mint both default to CPU by
-design). Aligning at the probe boundary cannot fix that; the mint has to
-become device-aware.
-
-So: **the shipped delivery path cannot host a generated kernel at all.**
-The fix is a `torch_bridge` change (a device-aware fallback/baked-weight
-mint inside the plan). I attempted it and **reverted it rather than ship
-it unverified** — it touches the fp64 verify path, and a half-tested
-device change there is worse than the documented gap. Until then the
-module-level number does not exist, while the op-level 2.6–2.7× does.
+Artifacts: `docs/reports/prim_kernel_gla.json`,
+`docs/reports/prim_kernel_mamba.json`.
 
 
 - op level, not module level: this times the denotation alone (one

@@ -111,6 +111,33 @@ def test_zoo_model_runs_fp64(w):
     assert torch.isfinite(out).all()
 
 
+@pytest.mark.parametrize("w", _ZOO, ids=[w.name for w in _ZOO])
+def test_zoo_forward_mints_on_the_input_device(w):
+    """No workload may mint a CPU tensor inside ``forward``.
+
+    ``torch.export`` — and dynamo, and every compile twin — runs the
+    module with fake tensors on the *target* device, so a bare
+    ``torch.zeros(...)``/``torch.ones(...)`` in ``forward`` mixes
+    ``cuda:0`` with ``cpu`` and raises ``FakeTensorDeviceMismatchError``.
+    That is exactly what blocked the `GatedLinearAttention` /
+    `MambaSelectiveScan` compile twins: the workloads, not the bridge.
+
+    Exporting under a fake CUDA mode reproduces the path without needing
+    the module to fit on a real device.
+    """
+    from torch._subclasses.fake_tensor import FakeTensorMode
+
+    torch.manual_seed(0)
+    model, x = w.build()
+    feed = x if isinstance(x, tuple) else (x,)
+    with FakeTensorMode(allow_non_fake_inputs=True) as mode:
+        # The zoo convention: feeds arrive at the probe dtype (fp64) and
+        # the module is cast to match — mirror it, on the fake device.
+        fake = model.eval().to(device="cuda", dtype=feed[0].dtype)
+        args = tuple(mode.from_tensor(t).to("cuda") for t in feed)
+        torch.export.export(fake, args)
+
+
 @pytest.mark.parametrize(
     "name", ["HighwayGate", "LoRAAdapter", "FiLMHead"]
 )
