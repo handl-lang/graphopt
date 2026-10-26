@@ -2731,8 +2731,44 @@ class IRModule(torch.nn.Module):
             self._plan_cache[term] = plan
         return None if plan is _UNPLANNED else plan
 
+    def _align_to(self, xs: tuple) -> None:
+        """Move baked tensors to the inputs' device/dtype, once per pair.
+
+        The exporter and the weight-chain fold can bake tensors in the
+        process default context (CPU).  A delivery on another device must
+        not inherit that — the first op mixing a real input with a baked
+        weight raises.  The CPU path never enters this branch, so the fp64
+        verify contract is untouched; the decision is cached per
+        (device, dtype).
+        """
+        like = _sibling_like(list(xs))
+        if like is None or like.dim() == 0 or like.device.type == "cpu":
+            return
+        key = (str(like.device), str(like.dtype))
+        if getattr(self, "_dev_key", None) == key:
+            return
+        for table in (self._param_map, self._param_values):
+            for k, t in list(table.items()):
+                if not (
+                    isinstance(t, torch.Tensor)
+                    and t.is_floating_point()
+                ):
+                    continue
+                if t.device == like.device and t.dtype == like.dtype:
+                    continue
+                moved = t.detach().to(
+                    device=like.device, dtype=like.dtype
+                )
+                table[k] = (
+                    torch.nn.Parameter(moved)
+                    if isinstance(t, torch.nn.Parameter)
+                    else moved
+                )
+        self._dev_key = key
+
     def forward(self, *xs: Any) -> Any:
         """Run the module: bind inputs and evaluate the root."""
+        self._align_to(xs)
         plan = self._root_plan
         if plan is not None:
             # The tape's positional Var fills compute exactly what the
