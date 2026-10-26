@@ -2378,7 +2378,7 @@ def zoo(d: int = 16, t: int = 8, b: int = 2) -> list[Workload]:
         # --- token mixers / spectral / graphs --------------------
         Workload(
             "MLPMixerBlock",
-            lambda: (_MLPMixerBlock(d, 8), _r(b, t, d)),
+            lambda: (_MLPMixerBlock(d, t), _r(b, t, d)),
             kind="zoo",
         ),
         Workload(
@@ -2388,7 +2388,7 @@ def zoo(d: int = 16, t: int = 8, b: int = 2) -> list[Workload]:
         ),
         Workload(
             "GCNLayer",
-            lambda: (_GCNLayer(d), (_r(b, 6, d), _rand(2, 6, 6))),
+            lambda: (_GCNLayer(d), (_r(b, 6, d), _rand(b, 6, 6))),
             kind="zoo",
         ),
         Workload(
@@ -2544,7 +2544,10 @@ def zoo(d: int = 16, t: int = 8, b: int = 2) -> list[Workload]:
         ),
         Workload(
             "BlockSparseAttention",
-            lambda: (_BlockSparseAttention(d, 4, 2, 2), _r(b, t, d)),
+            lambda: (
+                _BlockSparseAttention(d, max(t // 2, 1), 2, 2),
+                _r(b, t, d),
+            ),
             kind="zoo",
         ),
         # --- depthwise-conv blocks -----------------------------------
@@ -2608,7 +2611,7 @@ def zoo(d: int = 16, t: int = 8, b: int = 2) -> list[Workload]:
         ),
         Workload(
             "LearnedPosSlice",
-            lambda: (_LearnedPosSlice(d, 16), _r(b, t, d)),
+            lambda: (_LearnedPosSlice(d, max(t, 16)), _r(b, t, d)),
             kind="zoo",
         ),
         # --- second quant/kv shapes -----------------------------------
