@@ -4,14 +4,14 @@
 synthetic 6-op chain. Does the same machinery pay when it has to deliver a
 **real module**, at wide shapes, through the shipped path?
 
-**Answer: on 15 of 65 delivered modules, and for a different reason than the
-2.87×.** Measured over the **whole zoo** (68 workloads, 3 rounds each):
-`TernaryWeightLinear` **1.94×**, `RotaryPair` **1.52×**, `PartialRotary`
-**1.47×**, `GroupedQuantLinear` **1.43×**, `DeepEquilibrium` **1.30×**,
-`LoRAAdapter` **1.28×** — every one faster than eager in **all three rounds**.
-The mechanism is dispatch: a delivered `TimeCondConv` runs 1.24× eager by
-launching **22 kernels instead of 34**. It does not transfer to
-kernel-bound modules — 44 of 65 lose, median **0.972×** (31 of them by <10 %).
+**Answer: on 17 of 65 delivered modules, and for a different reason than the
+2.87×.** Measured over the **whole zoo** (68 workloads, 3 rounds each, six rows
+re-measured at 5): `TernaryWeightLinear` **1.94×**, `RotaryPair` **1.52×**,
+`PartialRotary` **1.47×**, `GroupedQuantLinear` **1.43×**, `DeepEquilibrium`
+**1.30×**, `LoRAAdapter` **1.28×** — every one faster than eager in **every
+round**. The mechanism is dispatch: a delivered `TimeCondConv` runs 1.24× eager
+by launching **22 kernels instead of 34**. It does not transfer to kernel-bound
+modules — 46 of 65 lose, median **0.969×** (33 of them by <10 %).
 `FNOBlock` is the outlier direction: **1.77× `torch.compile`**, tying eager.
 No win comes from a *minted* claim — the one workload whose search found
 claims (`GatedAttentionUnit`, 2) is 0.95× eager. Whole-chain supremacy does
@@ -78,13 +78,23 @@ returns costs one row instead of the table:
     --only '' --budget 150 --out docs/reports/zoo_chain_sweep.json
 ```
 
+The six rows the 3-round pass flagged as noisy were then re-measured at 5
+rounds on an idle box, and those rows replaced in the corpus above:
+
+```bash
+.venv/bin/python -m bench.drivers.probes.zoo_chain --isolate --rounds 5 \
+    --only 'PerChannelQuantMatmul,SoftcapLogitHead,WaveNetGate,DynamicTanhBlock,DecoupledMLA,CapsuleRouting' \
+    --budget 150 --out docs/reports/zoo_chain_sweep_round5.json
+```
+
 **65 of 68 delivered and verified** (`max_abs 0.0` on every row), **3 over
 budget** (`MambaSelectiveScan`, `GatedLinearAttention`, `RealGatedLRU` — all
 three do deliver in the `prim_kernel` probes at `large`, so this is a cost
-fact about the sweep shape, not an export failure). **15 beat eager in all
-three rounds**; 6 more have a median above 1 with a round below it; 44 lose.
+fact about the sweep shape, not an export failure). **17 beat eager in every
+round** (two of them after a 5-round re-measure); 2 have a median above
+1 with a round below it and stay out of the count; 46 lose.
 
-| workload | eager µs | gen µs | ratio (3 rounds) | median |
+| workload | eager µs | gen µs | ratio (rounds) | median |
 |---|---|---|---|---|
 | `TernaryWeightLinear` | 94 | 49 | 1.879 / 2.361 / 1.936 | **1.94×** |
 | `RotaryPair` | 406 | 267 | 1.845 / 1.485 / 1.520 | **1.52×** |
@@ -95,15 +105,19 @@ three rounds**; 6 more have a median above 1 with a round below it; 44 lose.
 | `NormedSoftcapHead` | 99 | 78 | 1.278 / 1.265 / 1.218 | **1.26×** |
 | `TimeCondConv` | 170 | 136 | 1.244 / 1.234 / 1.250 | **1.24×** |
 | `GatedConvUnit` | 78 | 64 | 1.049 / 1.212 / 1.223 | **1.21×** |
+| `PerChannelQuantMatmul` | 29 | 24 | 1.158 / 1.204 / 1.322 / 1.333 / 1.199 | **1.20×** |
 | `ManualGroupNorm` | 72 | 60 | 1.271 / 1.173 / 1.191 | **1.19×** |
 | `ChunkedRetention` | 308 | 270 | 1.143 / 1.090 / 1.395 | **1.14×** |
 | `HyenaLongConv` | 252 | 227 | 1.110 / 1.078 / 1.350 | **1.11×** |
 | `STEQuantLinear` | 128 | 121 | 3.659 / 1.060 / 1.053 | **1.06×** |
 | `RelPosTableAttention` | 314 | 300 | 1.028 / 1.344 / 1.043 | **1.04×** |
+| `WaveNetGate` | 83 | 81 | 1.019 / 1.028 / 1.039 / 1.078 / 1.015 | **1.03×** |
 | `SlidingWindowAttention` | 359 | 357 | 1.005 / 1.007 / 1.002 | **1.00×** |
 
 µs columns are the round whose ratio is the median, so the pair and the ratio
-are always from the same measurement.
+are always from the same measurement. The two 5-round rows are the ones the
+first pass flagged as noisy; they were re-measured on an idle box
+(`zoo_chain_sweep_round5.json`) and both are wins at every round.
 
 **What the winners have in common — measured, and weaker than the story.**
 `bench/drivers/probes/zoo_kcount.py` profiles each workload's **eager**
@@ -112,38 +126,64 @@ rather than told. Joined against the sweep's 65 delivered rows:
 
 | eager's device share of wall time | rows | wins | win rate |
 |---|---|---|---|
-| < 0.5 (mostly dispatch) | 17 | 7 | **41 %** |
-| 0.5 – 0.7 | 8 | 2 | 25 % |
+| < 0.5 (mostly dispatch) | 17 | 8 | **47 %** |
+| 0.5 – 0.7 | 8 | 3 | 38 % |
 | 0.7 – 0.9 | 10 | 1 | 10 % |
 | ≥ 0.9 (mostly device) | 30 | 5 | 17 % |
 
 So the *direction* holds — where eager spends more than half its wall time
-outside the kernels, 41 % of modules pay; where the kernels dominate, 10–17 %.
+outside the kernels, 47 % of modules pay; where the kernels dominate, 10–17 %.
 But the hypothesis is **not a predictor**: correlation of the ratio with
 `kernels/fwd` is **0.01**, with device share **−0.17**, with µs-per-kernel
 **−0.07**. Kernel *count* is useless as a signal (`GroupedQuantLinear` wins
 1.43× on 3 kernels; `TaylorLinearAttention` launches 11 and loses nothing).
-And the worst row sits in the bucket the hypothesis says should win:
-`RMSNormPerHead` has device share 0.30 and 5 kernels — eager 49 µs wall,
-14.7 µs device — and the delivered body takes **231 µs**, i.e. 0.208×. The
-delivered module's own cost, not eager's launch profile, is what decides the
-sign, which is what `genkernel.profitable` exists to referee and did not here.
+The delivered body's own cost, not eager's launch profile, decides the sign.
+`genkernel.profitable` is the thing that prices delivered bodies, and the
+dtype section below is the case where the sign comes from something it does
+not price at all — a *law* fold, applied unconditionally.
 
-**Six rows are noise, not wins.** `PerChannelQuantMatmul` [0.31 / 1.247 /
-1.397], `SoftcapLogitHead` [0.278 / 2.424 / 1.015], `WaveNetGate` [0.874 /
-1.160 / 1.186], `DynamicTanhBlock` [0.971 / 1.030 / 1.038], `DecoupledMLA`
-[1.105 / 1.017 / 0.952], `CapsuleRouting` [0.921 / 1.005 / 1.031] each have a
-round where one arm moved by tens of percent — the same contamination that
-produced the 0.42× `TimeCondConv` reading. They are listed as noisy and
-excluded from the count above. `STEQuantLinear` is the flattering version of
-the same artifact (one round read 3.66× while its other two read 1.06 and
-1.05); it stays in the table at its median, 1.06×, which is also its floor.
+**Six rows were noise; re-measuring resolved four.** `PerChannelQuantMatmul`
+[0.31 / 1.247 / 1.397] and `WaveNetGate` [0.874 / 1.160 / 1.186] each had a
+round with a wild arm; at 5 rounds on an idle box they read
+[1.158 – 1.333] and [1.015 – 1.078], so **both are wins** and both are in the
+table above. `DecoupledMLA` [1.105 / 1.017 / 0.952] and `SoftcapLogitHead`
+[0.278 / 2.424 / 1.015] went the other way — at 5 rounds they read
+[0.901 – 0.979] and [0.917 – 0.926] with a single 2.31× outlier, so **both are
+losses** and their earlier medians were the artifact. `CapsuleRouting`
+[1.146 / 1.014 / 1.64 / 1.027 / 0.891] and `DynamicTanhBlock` [0.952 – 1.091]
+are still unresolved and stay out of the count, which is why it says 17 and
+not 19. `STEQuantLinear` is the flattering version of the same artifact (one
+round read 3.66× while its other two read 1.06 and 1.05); it stays at its
+median, 1.06×, which is also its floor.
 
-**One row is a real regression worth its own look.** `RMSNormPerHead` is
-**0.208×** — eager 49 µs, delivered 231 µs, verified equal — on a module whose
-eager forward launches 5 kernels and spends 14.7 µs on device. Something in
-the delivered body costs ~180 µs that the referee did not see, and it is the
-largest loss in the corpus by a factor of three over the next one.
+**The worst row is a dtype artifact, measured.** `RMSNormPerHead` reads
+**0.208×** (eager 49 µs, delivered 231 µs, verified) — and the cause is
+not the fold, it is **fp64**. A law fold rewrites the spelled chain into
+`aten::rms_norm`, and PyTorch's fused RMSNorm is pathological in double
+precision at this shape: on its own, `rms_norm` over `(b,t,h,16)` costs
+**228.6 µs in fp64 against 32.8 µs for the spelled chain**, while in fp32 the
+same call costs **14.3 µs against 32.5 µs**. Running the module through the
+same arena path with dtype as the only variable, no minted kernel admitted in
+either arm (the referee declines all three in both):
+
+| dtype | eager µs | delivered µs | ratio | max_abs |
+|---|---|---|---|---|
+| fp32 | 39.5 | **28.6** | **1.38×** | 3.6e-07 |
+| fp64 | 58.7 | **233.9** | **0.25×** | 8.9e-16 |
+
+(`bench/drivers/probes/zoo_dtype.py --only RMSNormPerHead`,
+`docs/reports/zoo_dtype_rmsnorm.json`; a second run read 1.45× / 0.27×, so the
+direction is stable and the magnitude is within ~5 %.)
+
+So the module is a **1.38× win in fp32** and a 4× loss in fp64, from the same
+IR and the same fold, with no minted kernel admitted in either arm. The sweep
+runs fp64 because that is the intake convention — the dtype where Triton
+cannot bind either — so this row is the probe's dtype showing through, not a
+defect in what the fold ships. The delivered body names the cost outright
+(`bench/drivers/probes/zoo_dtype.py`, `docs/reports/zoo_dtype_rmsnorm.json`):
+one `RowwiseMomentsCUDAKernel<double>` at **205.8 µs**, against a
+`vectorized_layer_norm_kernel<float>` at **11.8 µs** in fp32 — a 17× difference
+between two backend kernels for the same fold.
 
 ## Why `TimeCondConv` is faster (measured, not asserted)
 
@@ -190,18 +230,22 @@ and keeps the spread; a single round is no longer publishable.
 ## What this does and does not close
 
 The 2.87× is real, but it is a **whole-chain kernel launched once** over a
-synthetic tape. Delivered into real modules, the same machinery pays on **15 of
-65** and loses on 44 (median 0.972×). Combined with `prim_kernel.md` §module
+synthetic tape. Delivered into real modules, the same machinery pays on **17 of
+65** and loses on 46 (median 0.969×). Combined with `prim_kernel.md` §module
 level (folds 3.17 → 3.34 at `large`, 3.23 → 2.67 at `wide`), the pattern across
 both delivery mechanisms is now precise:
 
 > A generated kernel pays **as an op** (2.6×), or as the **whole chain**
 > (2.87× on a synthetic tape), or where the delivered module launches **fewer
-> kernels than eager** (`TimeCondConv`, 22 vs 34; and 41 % of the modules
+> kernels than eager** (`TimeCondConv`, 22 vs 34; and 47 % of the modules
 > where eager leaves >50 % of wall time in dispatch). It does not pay as a
 > step inside a module that is already kernel-bound. The per-module sign is
-> **not** predictable from eager's profile — that is `genkernel.profitable`'s
-> job, and it currently gets it wrong at least once (`RMSNormPerHead`).
+> **not** predictable from eager's profile, so it has to be measured per
+> module — which is `genkernel.profitable`'s job, and it prices *claims*
+> only: every win in the table comes from an unconditional fold or from fewer
+> launches, and the largest single loss (`RMSNormPerHead`, 0.208×) is a fold
+> whose sign is set by the backend kernel at the intake dtype. The referee
+> declining all three claims there was right; nothing was pricing the fold.
 
 ## Limits, stated
 
@@ -211,12 +255,21 @@ both delivery mechanisms is now precise:
   delivered rows verify bit-equal (`max_abs 0.0`). Single GPU (RTX 2050) — the
   ratios are dispatch-sensitive, so absolute µs will move on other hardware
   and the *set* of winners may too.
-- **Six rows are not resolved.** `PerChannelQuantMatmul`, `SoftcapLogitHead`,
-  `WaveNetGate`, `DynamicTanhBlock`, `DecoupledMLA`, `CapsuleRouting` have a
-  round where one arm moved by tens of percent. Their medians are printed, but
-  they are excluded from the win count until re-measured on an idle box.
-- **fp64.** Triton cannot run fp64, so the gen kernels here are the fallback
-  bodies; the fp32/CUDA comparison is `prim_kernel.md`'s job, not this one's.
+- **Two rows are not resolved.** `CapsuleRouting` [1.146 / 1.014 / 1.64 /
+  1.027 / 0.891] and `DynamicTanhBlock` [0.952 – 1.091] still straddle 1 after
+  a 5-round re-measure, so they are excluded from the win count. The other
+  four noisy rows resolved: two were wins (`PerChannelQuantMatmul` 1.20×,
+  `WaveNetGate` 1.03×) and two were losses (`DecoupledMLA` 0.93×,
+  `SoftcapLogitHead` 0.92×).
+- **fp64, and that is a real constraint on the numbers.** Triton cannot run
+  fp64, so the gen kernels here are the fallback bodies; the fp32/CUDA
+  comparison is `prim_kernel.md`'s job, not this one's. The dtype is not
+  neutral for the *folds* either: `RMSNormPerHead` is 0.25× in fp64 and
+  **1.38× in fp32** from the same IR, because PyTorch's fused `rms_norm` is
+  slow in double at head-width 16. Whatever else is pathologically slow in
+  fp64 is invisible to this sweep — it can only make the corpus look worse
+  than its fp32 behaviour, so 17/65 is a floor for the fold-and-launch
+  mechanism, not an estimate of it.
 - **The claim-bearing workload loses.** `GatedAttentionUnit` is the only
   workload where the cost referee found a site worth replacing (2 claims), and
   the module still comes out 0.95× eager. Every win in the table comes from
@@ -229,16 +282,21 @@ both delivery mechanisms is now precise:
 
 ## Next
 
-1. **`RMSNormPerHead` at 0.208×** is the one row that is neither noise nor a
-   small loss. Profile the *delivered* body (the `zoo_kcount` counterpart one
-   level down): 5 eager kernels, 14.7 µs device, 49 µs wall against 231 µs
-   delivered means the delivered body is not launching 5 kernels' worth of
-   work. Until it is explained, the referee's silence on it is unexplained.
-2. **Make the referee per-module.** `genkernel.profitable` prices claims
-   site-by-site, but the sign of a module is set by the whole delivered body.
-   A delivery-time check that times the delivered module against eager once and
-   *declines* when it loses would have caught `RMSNormPerHead` and cost one
-   measurement per workload — the sweep shows that measurement exists.
-3. **Re-run the six noisy rows** on an idle box (`--only`, 5 rounds). Their
-   spread is evidence about the box, not about the code, and the win count is
-   currently conservative because they are excluded.
+1. **Run the sweep in fp32.** The corpus above is fp64 — the dtype where
+   Triton cannot bind *and* where at least one folded body is 4× slower than
+   the chain it replaces. `RMSNormPerHead` shows the two dtypes disagree by
+   5.5× in ratio on identical IR (0.25× → 1.38×), so the honest next number is
+   the same 68 workloads in fp32, where the delivered body is also the one
+   users ship. That is a `--dtype` flag on the driver plus a second
+   `zoo_chain_sweep_fp32.json`; until it exists, 17/65 is a floor.
+2. **Price the folds, not only the claims.** `genkernel.profitable` prices
+   minted claims site-by-site; every win in the table and the worst loss come
+   from *law* folds applied unconditionally, with no cost gate at all. A
+   delivery-time check that times the delivered module against eager once and
+   declines when it loses would have caught the fp64 `RMSNormPerHead` at one
+   measurement per workload — and would have caught it as a dtype, not a
+   regression.
+3. **Two rows still straddle 1** (`CapsuleRouting`, `DynamicTanhBlock`). Both
+   have one wild round in five; a 9-round run on an idle box, or the same
+   fp32 sweep in (1), should settle them. They cost 2 rows of the count, not
+   its direction.

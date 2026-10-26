@@ -1,0 +1,53 @@
+[
+ {
+  "case": "zoo:RMSNormPerHead",
+  "dtype": "fp32",
+  "delivered": true,
+  "verified": true,
+  "max_abs": 3.5762786865234375e-07,
+  "minted_kept": [],
+  "eager_us": 37.5,
+  "gen_us": 27.1,
+  "speedup": 1.382,
+  "gen_kernels": [
+   {
+    "kernel": "void at::native::(anonymous namespace)::vectorized_layer_norm_kernel<f",
+    "count": 1,
+    "device_us": 11.81
+   },
+   {
+    "kernel": "void at::native::elementwise_kernel<128, 2, at::native::gpu_kernel_imp",
+    "count": 1,
+    "device_us": 2.31
+   }
+  ]
+ },
+ {
+  "case": "zoo:RMSNormPerHead",
+  "dtype": "fp64",
+  "delivered": true,
+  "verified": true,
+  "max_abs": 8.881784197001252e-16,
+  "minted_kept": [],
+  "eager_us": 49.5,
+  "gen_us": 231.9,
+  "speedup": 0.214,
+  "gen_kernels": [
+   {
+    "kernel": "void at::native::(anonymous namespace)::RowwiseMomentsCUDAKernel<doubl",
+    "count": 1,
+    "device_us": 205.75
+   },
+   {
+    "kernel": "void at::native::(anonymous namespace)::LayerNormForwardCUDAKernel<dou",
+    "count": 1,
+    "device_us": 7.69
+   },
+   {
+    "kernel": "void at::native::elementwise_kernel<128, 2, at::native::gpu_kernel_imp",
+    "count": 1,
+    "device_us": 2.65
+   }
+  ]
+ }
+]

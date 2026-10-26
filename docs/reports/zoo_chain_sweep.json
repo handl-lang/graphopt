@@ -451,32 +451,46 @@
   "verified": true,
   "max_abs": 0,
   "cost": NaN,
-  "speedup": 1.005,
+  "speedup": 1.027,
   "device": "cuda",
   "runs": [
    {
-    "speedup": 0.921,
-    "eager_us": 211.5,
-    "compiled_us": 104.1,
-    "gen_us": 229.6
+    "speedup": 1.146,
+    "eager_us": 281.0,
+    "compiled_us": 110.5,
+    "gen_us": 245.1
    },
    {
-    "speedup": 1.005,
-    "eager_us": 227.0,
-    "compiled_us": 105.9,
-    "gen_us": 225.8
+    "speedup": 1.014,
+    "eager_us": 279.1,
+    "compiled_us": 114.3,
+    "gen_us": 275.3
    },
    {
-    "speedup": 1.031,
-    "eager_us": 234.1,
-    "compiled_us": 104.4,
-    "gen_us": 227.2
+    "speedup": 1.64,
+    "eager_us": 428.0,
+    "compiled_us": 110.6,
+    "gen_us": 260.9
+   },
+   {
+    "speedup": 1.027,
+    "eager_us": 258.9,
+    "compiled_us": 105.5,
+    "gen_us": 252.0
+   },
+   {
+    "speedup": 0.891,
+    "eager_us": 258.4,
+    "compiled_us": 101.5,
+    "gen_us": 289.9
    }
   ],
   "spread": [
-   0.921,
-   1.031
-  ]
+   0.891,
+   1.64
+  ],
+  "rounds": 5,
+  "note": "re-measured at 5 rounds, box idle (was 3-round noisy row)"
  },
  {
   "case": "zoo:ChunkedRetention",
@@ -592,32 +606,46 @@
   "verified": true,
   "max_abs": 0,
   "cost": NaN,
-  "speedup": 1.16,
+  "speedup": 1.028,
   "device": "cuda",
   "runs": [
    {
-    "speedup": 0.874,
-    "eager_us": 75.9,
-    "compiled_us": 129.8,
-    "gen_us": 86.9
+    "speedup": 1.019,
+    "eager_us": 79.8,
+    "compiled_us": 133.2,
+    "gen_us": 78.3
    },
    {
-    "speedup": 1.16,
-    "eager_us": 97.3,
-    "compiled_us": 127.1,
-    "gen_us": 83.8
+    "speedup": 1.028,
+    "eager_us": 83.1,
+    "compiled_us": 112.2,
+    "gen_us": 80.9
    },
    {
-    "speedup": 1.186,
-    "eager_us": 100.3,
-    "compiled_us": 125.1,
-    "gen_us": 84.5
+    "speedup": 1.039,
+    "eager_us": 86.7,
+    "compiled_us": 126.8,
+    "gen_us": 83.4
+   },
+   {
+    "speedup": 1.078,
+    "eager_us": 88.4,
+    "compiled_us": 118.3,
+    "gen_us": 82.0
+   },
+   {
+    "speedup": 1.015,
+    "eager_us": 85.7,
+    "compiled_us": 113.9,
+    "gen_us": 84.4
    }
   ],
   "spread": [
-   0.874,
-   1.186
-  ]
+   1.015,
+   1.078
+  ],
+  "rounds": 5,
+  "note": "re-measured at 5 rounds, box idle (was 3-round noisy row)"
  },
  {
   "case": "zoo:TimeCondConv",
@@ -981,32 +1009,46 @@
   "verified": true,
   "max_abs": 0,
   "cost": NaN,
-  "speedup": 1.247,
+  "speedup": 1.204,
   "device": "cuda",
   "runs": [
    {
-    "speedup": 0.31,
-    "eager_us": 27.2,
-    "compiled_us": 99.7,
-    "gen_us": 87.7
+    "speedup": 1.158,
+    "eager_us": 26.8,
+    "compiled_us": 197.0,
+    "gen_us": 23.2
    },
    {
-    "speedup": 1.247,
+    "speedup": 1.204,
+    "eager_us": 28.9,
+    "compiled_us": 84.4,
+    "gen_us": 24.0
+   },
+   {
+    "speedup": 1.322,
+    "eager_us": 30.1,
+    "compiled_us": 82.2,
+    "gen_us": 22.8
+   },
+   {
+    "speedup": 1.333,
+    "eager_us": 30.4,
+    "compiled_us": 81.7,
+    "gen_us": 22.8
+   },
+   {
+    "speedup": 1.199,
     "eager_us": 28.5,
-    "compiled_us": 85.7,
-    "gen_us": 22.9
-   },
-   {
-    "speedup": 1.397,
-    "eager_us": 35.4,
-    "compiled_us": 101.1,
-    "gen_us": 25.3
+    "compiled_us": 83.5,
+    "gen_us": 23.8
    }
   ],
   "spread": [
-   0.31,
-   1.397
-  ]
+   1.158,
+   1.333
+  ],
+  "rounds": 5,
+  "note": "re-measured at 5 rounds, box idle (was 3-round noisy row)"
  },
  {
   "case": "zoo:KVCacheAttention",
@@ -1119,32 +1161,46 @@
   "verified": true,
   "max_abs": 0,
   "cost": NaN,
-  "speedup": 1.015,
+  "speedup": 0.923,
   "device": "cuda",
   "runs": [
    {
-    "speedup": 0.278,
-    "eager_us": 54.0,
-    "compiled_us": 89.3,
-    "gen_us": 194.2
+    "speedup": 2.311,
+    "eager_us": 136.4,
+    "compiled_us": 80.0,
+    "gen_us": 59.0
    },
    {
-    "speedup": 2.424,
-    "eager_us": 150.8,
-    "compiled_us": 86.3,
-    "gen_us": 62.2
+    "speedup": 0.922,
+    "eager_us": 54.5,
+    "compiled_us": 83.2,
+    "gen_us": 59.1
    },
    {
-    "speedup": 1.015,
-    "eager_us": 63.9,
-    "compiled_us": 233.4,
-    "gen_us": 63.0
+    "speedup": 0.923,
+    "eager_us": 55.2,
+    "compiled_us": 83.0,
+    "gen_us": 59.8
+   },
+   {
+    "speedup": 0.917,
+    "eager_us": 54.9,
+    "compiled_us": 83.7,
+    "gen_us": 59.9
+   },
+   {
+    "speedup": 0.926,
+    "eager_us": 54.4,
+    "compiled_us": 80.6,
+    "gen_us": 58.7
    }
   ],
   "spread": [
-   0.278,
-   2.424
-  ]
+   0.917,
+   2.311
+  ],
+  "rounds": 5,
+  "note": "re-measured at 5 rounds, box idle (was 3-round noisy row)"
  },
  {
   "case": "zoo:RotaryPair",
@@ -1565,32 +1621,46 @@
   "verified": true,
   "max_abs": 0,
   "cost": NaN,
-  "speedup": 1.03,
+  "speedup": 1.019,
   "device": "cuda",
   "runs": [
    {
-    "speedup": 0.971,
-    "eager_us": 220.1,
-    "compiled_us": 308.3,
-    "gen_us": 226.6
+    "speedup": 0.952,
+    "eager_us": 221.6,
+    "compiled_us": 304.1,
+    "gen_us": 232.8
    },
    {
-    "speedup": 1.03,
-    "eager_us": 232.0,
-    "compiled_us": 315.9,
-    "gen_us": 225.2
+    "speedup": 1.091,
+    "eager_us": 241.6,
+    "compiled_us": 309.5,
+    "gen_us": 221.5
    },
    {
-    "speedup": 1.038,
-    "eager_us": 189.4,
-    "compiled_us": 255.4,
-    "gen_us": 182.5
+    "speedup": 0.996,
+    "eager_us": 221.5,
+    "compiled_us": 302.6,
+    "gen_us": 222.4
+   },
+   {
+    "speedup": 1.036,
+    "eager_us": 182.1,
+    "compiled_us": 236.8,
+    "gen_us": 175.7
+   },
+   {
+    "speedup": 1.019,
+    "eager_us": 178.2,
+    "compiled_us": 238.0,
+    "gen_us": 174.9
    }
   ],
   "spread": [
-   0.971,
-   1.038
-  ]
+   0.952,
+   1.091
+  ],
+  "rounds": 5,
+  "note": "re-measured at 5 rounds, box idle (was 3-round noisy row)"
  },
  {
   "case": "zoo:ALiBiSlopeAttention",
@@ -1845,34 +1915,48 @@
   "claims": [],
   "delivered": true,
   "verified": true,
-  "max_abs": 1.6653345369377348e-16,
+  "max_abs": 1.1102230246251565e-16,
   "cost": NaN,
-  "speedup": 1.017,
+  "speedup": 0.931,
   "device": "cuda",
   "runs": [
    {
-    "speedup": 1.105,
-    "eager_us": 617.8,
-    "compiled_us": 422.0,
-    "gen_us": 558.9
+    "speedup": 0.979,
+    "eager_us": 500.3,
+    "compiled_us": 409.6,
+    "gen_us": 510.8
    },
    {
-    "speedup": 1.017,
-    "eager_us": 548.1,
-    "compiled_us": 350.9,
-    "gen_us": 539.0
+    "speedup": 0.944,
+    "eager_us": 536.5,
+    "compiled_us": 394.4,
+    "gen_us": 568.2
    },
    {
-    "speedup": 0.952,
-    "eager_us": 508.8,
-    "compiled_us": 328.4,
-    "gen_us": 534.5
+    "speedup": 0.901,
+    "eager_us": 497.2,
+    "compiled_us": 330.3,
+    "gen_us": 551.7
+   },
+   {
+    "speedup": 0.931,
+    "eager_us": 499.1,
+    "compiled_us": 328.3,
+    "gen_us": 536.2
+   },
+   {
+    "speedup": 0.901,
+    "eager_us": 511.4,
+    "compiled_us": 344.3,
+    "gen_us": 567.5
    }
   ],
   "spread": [
-   0.952,
-   1.105
-  ]
+   0.901,
+   0.979
+  ],
+  "rounds": 5,
+  "note": "re-measured at 5 rounds, box idle (was 3-round noisy row)"
  },
  {
   "case": "zoo:PartialRotary",

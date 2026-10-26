@@ -92,19 +92,23 @@ at wide).
 
 **Result, measured 2026-10-26, on the whole corpus.** The chain-level question
 is answerable and the answer is narrower than the follow-up hoped: over **all
-68 zoo workloads** at `d64 t32 b8`, three rounds each, **65 deliver and verify
-bit-equal** (`max_abs 0.0`) and **15 are faster than eager in every round** —
-`TernaryWeightLinear` 1.94×, `RotaryPair` 1.52×, `PartialRotary` 1.47×,
-`GroupedQuantLinear` 1.43×, `DeepEquilibrium` 1.30×, `LoRAAdapter` 1.28×,
-`TimeCondConv` 1.24×, … — while 44 lose, median **0.972×** (31 by <10 %).
-`FNOBlock` is **1.77× `torch.compile`**. The mechanism is dispatch: the
-delivered form launches 22 kernels where eager launches 34, and the win rate
-is 41 % where eager leaves more than half its wall time in dispatch against
-10–17 % where the kernels already dominate (`zoo_kcount.py`). Kernel count
-itself does **not** predict the sign (r = 0.01) — the delivered body's own
-cost does, which is the referee's job and it misses at least once
-(`RMSNormPerHead`, 0.208×). Full tables, profiler evidence and the timing
-correction: `docs/reports/zoo_chain.md`, claim 9 in `EVIDENCE.md`.
+68 zoo workloads** at `d64 t32 b8`, three rounds each (six rows re-measured at
+5), **65 deliver and verify bit-equal** (`max_abs 0.0`) and **17 are faster
+than eager in every round** — `TernaryWeightLinear` 1.94×, `RotaryPair` 1.52×,
+`PartialRotary` 1.47×, `GroupedQuantLinear` 1.43×, `DeepEquilibrium` 1.30×,
+`LoRAAdapter` 1.28×, `TimeCondConv` 1.24×, … — while 46 lose, median **0.969×**
+(33 by <10 %). `FNOBlock` is **1.77× `torch.compile`**. The mechanism is
+dispatch: the delivered form launches 22 kernels where eager launches 34, and
+the win rate is 47 % where eager leaves more than half its wall time in
+dispatch against 10–17 % where the kernels already dominate
+(`zoo_kcount.py`). Kernel count itself does **not** predict the sign (r = 0.01)
+— the delivered body's own cost does, which is the referee's job, and the
+referee only prices *claims*: no win in the corpus comes from a minted kernel.
+The single largest loss, `RMSNormPerHead` at 0.208×, turned out to be the
+**intake dtype** rather than a defect — the same IR is 1.38× in fp32, because
+PyTorch's fused `rms_norm` is slow in double precision. Full tables, profiler
+evidence and the timing correction: `docs/reports/zoo_chain.md`, claim 9 in
+`EVIDENCE.md`.
 
 A note on the timing, because it cost a wrong verdict: an earlier revision of
 that report called `TimeCondConv` **unusable** (gen 130–431 µs across five
@@ -117,7 +121,7 @@ So the 2.87× stands for what it is — a whole-chain kernel over a synthetic
 tape — and the opening claim is bounded by measurement rather than assertion:
 a generated kernel pays **as an op** (2.6×), as the **whole chain** (2.87× on
 a synthetic tape), or where the delivered module **launches fewer kernels than
-eager** (15 of 65 zoo modules, 1.04–1.94×, win rate 41 % on launch-heavy rows
+eager** (17 of 65 zoo modules, 1.03–1.94×, win rate 47 % on launch-heavy rows
 vs 10–17 % on kernel-heavy ones), and not as a step inside a module that is
 already kernel-bound.
 
