@@ -1,0 +1,103 @@
+{
+  "schema": 1,
+  "suite": "referee",
+  "available": true,
+  "overlap": {
+    "substrate": {
+      "bank": "substrate/tensor",
+      "rules": 143,
+      "ops": 93
+    },
+    "kernel": {
+      "bank": "kernel/codegen",
+      "rules": 75,
+      "ops": 49
+    },
+    "shared": [
+      "abs",
+      "add",
+      "concat",
+      "div",
+      "exp",
+      "linear",
+      "matmul",
+      "mean",
+      "mul",
+      "neg",
+      "pow",
+      "reciprocal",
+      "rsqrt",
+      "sigmoid",
+      "silu",
+      "split",
+      "sqrt",
+      "square",
+      "sub",
+      "sum",
+      "transpose"
+    ],
+    "kernel_only": [
+      "contiguous",
+      "detach",
+      "detach_",
+      "exp2",
+      "gelu",
+      "kf_addmul",
+      "kf_addmul2",
+      "kf_addmul_tanh",
+      "kf_layernorm",
+      "kf_mm_bias",
+      "kf_mm_gelu",
+      "kf_mm_sb",
+      "kf_mm_scale",
+      "kf_mul3",
+      "kf_rmsnorm",
+      "kf_sdpa",
+      "kf_silu",
+      "kf_silu_sigmoid",
+      "kf_softmax",
+      "kf_softmax_mm",
+      "kf_softsign",
+      "kf_swiglu",
+      "log",
+      "log2",
+      "om_chunk_scan",
+      "om_decayed",
+      "relu",
+      "tanh"
+    ],
+    "substrate_only_count": 72,
+    "jaccard": 0.1736,
+    "untranslatable_fraction": 0.5714
+  },
+  "findings": [
+    {
+      "claim": "The two domains share one rule vocabulary, so a law minted in one can be judged by the other.",
+      "verdict": "negative",
+      "headline": "Jaccard 0.17 over 121 ops \u2014 the banks are largely disjoint vocabularies",
+      "metric": "vocabulary_jaccard",
+      "value": 0.17355371900826447
+    },
+    {
+      "claim": "A kernel law can be re-derived in the tensor bank.",
+      "verdict": "negative",
+      "headline": "28/49 kernel ops (57%) have no tensor spelling \u2014 those laws cannot cross without translation",
+      "metric": "untranslatable_fraction",
+      "value": 0.5714285714285714
+    },
+    {
+      "claim": "The derivability union the novelty sieve computes is a real floor, not a formality.",
+      "verdict": "win",
+      "headline": "3/3 shipped kernel laws are derivable from the 374-rule union \u2014 the floor demotes them to known",
+      "metric": "shared_ops",
+      "value": 21.0
+    },
+    {
+      "claim": "Crossing works through explicit denotation rows: a kernel law is provable in the union even though the tensor bank cannot spell its fused op.",
+      "verdict": "win",
+      "headline": "every derivable law has a prior-art witness (`pa_kf_*_expand`) \u2014 translation rows, not a shared vocabulary, are what make the union real",
+      "metric": "laws_with_witness",
+      "value": 3.0
+    }
+  ]
+}

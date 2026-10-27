@@ -1,0 +1,221 @@
+{
+  "schema": 1,
+  "suite": "vllm_compare",
+  "title": "mlopt vs vLLM and through it",
+  "summary": "Three legs: verified HF export, fixed-window torch decode, and vLLM serving the exported checkpoint \u2014 with token agreement against torch eager greedy.",
+  "env": {
+    "timestamp_utc": "2026-10-27T00:35:09+00:00",
+    "python": "3.13.9",
+    "torch": "2.14.0+cu130",
+    "torch_cuda": "13.0",
+    "device": "cuda",
+    "device_name": "NVIDIA GeForce RTX 2050",
+    "cpu_count": 16,
+    "git_sha": "400aa70",
+    "git_dirty": true,
+    "argv": [
+      "/home/luis/GitHub/handl-lang/graphopt/bench/suites/integration/vllm_compare.py",
+      "--device",
+      "cuda",
+      "--gpu-frac",
+      "0.6",
+      "--enforce-eager",
+      "--vllm-python",
+      "/home/luis/vllm-probe/bin/python",
+      "--out",
+      "/home/luis/GitHub/handl-lang/graphopt/bench/results/vllm_gate3",
+      "--out-json",
+      "/home/luis/GitHub/handl-lang/graphopt/docs/reports/p5_vllm.json"
+    ],
+    "notes": [
+      "optimize: 7.9s, verify rel=1.27e-06, 8/8 blocks",
+      "rope permute attention-score max|\u0394|=1.53e-05",
+      "hf[eager] -> /home/luis/GitHub/handl-lang/graphopt/bench/results/vllm_gate3/hf_stories15m/eager (57 tensors)",
+      "hf[mlopt] -> /home/luis/GitHub/handl-lang/graphopt/bench/results/vllm_gate3/hf_stories15m/mlopt (57 tensors)",
+      "transformers absent \u2014 logits-level HF verify skipped (weight round-trip + rope score check still apply)",
+      "tokenizer[eager]: FAILED \u2014 hub: ModuleNotFoundError: No module named 'transformers'; wordlevel: No module named 'tokenizers'",
+      "vllm[eager]: mode=subprocess /home/luis/vllm-probe/bin/python decode_tok/s=604.6 token_agree=1.00",
+      "tokenizer[mlopt]: FAILED \u2014 hub: ModuleNotFoundError: No module named 'transformers'; wordlevel: No module named 'tokenizers'",
+      "vllm[mlopt]: mode=subprocess /home/luis/vllm-probe/bin/python decode_tok/s=653.5 token_agree=1.00",
+      "Integration recipe (verified legs marked [*]):\n\n  1. [*] mlopt: opt, rep = Optimizer(backend=TorchBackend()).optimize(\n         model, idx, strategy=Compositional())  \u2014 fused_10/fused_11\n         executors grafted, verified vs eager.\n  2. [*] HF export: hf_state_dict(opt, cfg) splits fused rows back to\n         HF Llama layout + permutes q/k rows for rotate-half RoPE\n         (attention-score equivalence checked by\n         verify_rope_conversion); write_hf_dir emits config.json +\n         model.safetensors + manifest.\n  3.      Tokenizer: AutoTokenizer llama-tokenizer \u2192 save_pretrained,\n         or synthetic WordLevel (bench only \u2014 text is meaningless).\n  4.      Serve: LLM(model=hf_dir, dtype='float32', enforce_eager=True,\n         gpu_memory_utilization=0.6)  \u2014 needs CUDA (this box: RTX 2050\n         4 GB + torch cu wheels works; the repo .venv ships CPU torch).\n  5.      Generate: llm.generate(prompt_token_ids=..., SamplingParams(\n         temperature=0, max_tokens=N)).\n\nvLLM does NOT consume the optimized graph \u2014 it re-implements Llama and\napplies its own fusions (QKVParallelLinear is the same QKV merge\nmlopt finds).  mlopt's structural wins that survive as *weights*\n(folded chains \u2192 fewer GEMMs at runtime) map cleanly; executor-level\nwins (eval-plan tapes, batched carriers) stay torch-side.  The honest\ncomposition is 'mlopt-verified weights \u2192 HF dir \u2192 vllm serve', which\nthis script runs end-to-end when vllm is importable.\n"
+    ]
+  },
+  "provenance": {},
+  "units": {
+    "median_s": "seconds",
+    "iqr_s": "seconds"
+  },
+  "findings": [
+    {
+      "claim": "vLLM serves the mlopt-exported HF model token-for-token like torch eager greedy",
+      "verdict": "win",
+      "headline": "token agreement 1.000 vs torch eager",
+      "metric": "token agreement",
+      "value": 1.0,
+      "evidence": {}
+    },
+    {
+      "claim": "the optimized module exports to HF without changing the computation",
+      "verdict": "win",
+      "headline": "optimize verify rel=1.27e-06; RoPE attention-score max|\u0394|=1.53e-05",
+      "metric": "optimize verify rel",
+      "value": 1.2737282294181965e-06,
+      "evidence": {}
+    }
+  ],
+  "cells": [
+    {
+      "name": "decode B=1 ctx=64 gen=32",
+      "params": {
+        "B": 1,
+        "ctx": 64,
+        "gen": 32
+      },
+      "variants": [
+        {
+          "name": "eager",
+          "flops": null,
+          "note": "greedy decode"
+        },
+        {
+          "name": "mlopt",
+          "flops": null,
+          "note": "greedy decode"
+        },
+        {
+          "name": "inductor",
+          "flops": null,
+          "note": "greedy decode"
+        },
+        {
+          "name": "mlopt+inductor",
+          "flops": null,
+          "note": "greedy decode"
+        }
+      ],
+      "median_s": {
+        "eager": 0.08627558000034696,
+        "mlopt": 0.08697952199963765,
+        "inductor": 0.07653331299979982,
+        "mlopt+inductor": 0.08076579799990213
+      },
+      "iqr_s": {
+        "eager": 0.0,
+        "mlopt": 0.0,
+        "inductor": 0.0,
+        "mlopt+inductor": 0.0
+      },
+      "aux": {
+        "gen_tokens": 32,
+        "ctx": 64,
+        "batch": 1,
+        "eager_tok_per_s": 370.9,
+        "mlopt_tok_per_s": 367.9,
+        "inductor_tok_per_s": 418.1,
+        "mlopt+inductor_tok_per_s": 396.2,
+        "wall_clock": true,
+        "note": "vLLM offline LLM.generate",
+        "eager_mode": "subprocess /home/luis/vllm-probe/bin/python",
+        "eager_init_s": 13.92,
+        "eager_prefill_s": 0.0552,
+        "eager_gen_s": 0.1065,
+        "eager_gen_times": [
+          0.4654,
+          0.1246,
+          0.1065
+        ],
+        "eager_decode_tok_per_s": 604.6,
+        "eager_e2e_tok_per_s": 300.5,
+        "eager_tokens": [
+          [
+            29891,
+            29892,
+            304,
+            278,
+            767,
+            29889,
+            940,
+            471,
+            1407,
+            9796,
+            29889,
+            940,
+            6452,
+            287,
+            278,
+            767,
+            322,
+            1497,
+            29892,
+            376,
+            25271,
+            366,
+            29892,
+            8889,
+            488,
+            29892,
+            363,
+            19912,
+            592,
+            1284,
+            590,
+            3271
+          ]
+        ],
+        "eager_enforce_eager": true,
+        "eager_tokenizer": "hf-internal-testing/llama-tokenizer",
+        "eager_token_agreement_vs_torch_eager": 1.0,
+        "mlopt_mode": "subprocess /home/luis/vllm-probe/bin/python",
+        "mlopt_init_s": 6.64,
+        "mlopt_prefill_s": 0.0461,
+        "mlopt_gen_s": 0.0936,
+        "mlopt_gen_times": [
+          0.107,
+          0.0937,
+          0.0936
+        ],
+        "mlopt_decode_tok_per_s": 653.5,
+        "mlopt_e2e_tok_per_s": 342.0,
+        "mlopt_tokens": [
+          [
+            29891,
+            29892,
+            304,
+            278,
+            767,
+            29889,
+            940,
+            471,
+            1407,
+            9796,
+            29889,
+            940,
+            6452,
+            287,
+            278,
+            767,
+            322,
+            1497,
+            29892,
+            376,
+            25271,
+            366,
+            29892,
+            8889,
+            488,
+            29892,
+            363,
+            19912,
+            592,
+            1284,
+            590,
+            3271
+          ]
+        ],
+        "mlopt_enforce_eager": true,
+        "mlopt_tokenizer": "hf-internal-testing/llama-tokenizer",
+        "mlopt_token_agreement_vs_torch_eager": 1.0
+      }
+    }
+  ]
+}

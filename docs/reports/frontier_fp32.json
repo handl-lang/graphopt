@@ -1,0 +1,160 @@
+{
+  "schema": 1,
+  "suite": "frontier",
+  "inputs": {
+    "sweep": "/home/luis/GitHub/handl-lang/graphopt/docs/reports/zoo_chain_sweep.json",
+    "kcount": "/home/luis/GitHub/handl-lang/graphopt/docs/reports/zoo_kcount.json"
+  },
+  "regimes": [
+    {
+      "regime": "compute-bound",
+      "n": 2,
+      "dispatch_lo": 0.0,
+      "dispatch_hi": 0.05,
+      "median_dispatch_share": 0.0345,
+      "median_ceiling": 1.036,
+      "max_ceiling": 1.048,
+      "median_speedup": 0.9214,
+      "wins": 1,
+      "median_captured": null
+    },
+    {
+      "regime": "mixed",
+      "n": 1,
+      "dispatch_lo": 0.05,
+      "dispatch_hi": 0.15,
+      "median_dispatch_share": 0.056,
+      "median_ceiling": 1.059,
+      "max_ceiling": 1.059,
+      "median_speedup": 0.7103,
+      "wins": 0,
+      "median_captured": null
+    },
+    {
+      "regime": "launch-leaning",
+      "n": 1,
+      "dispatch_lo": 0.15,
+      "dispatch_hi": 0.3,
+      "median_dispatch_share": 0.221,
+      "median_ceiling": 1.284,
+      "max_ceiling": 1.284,
+      "median_speedup": 1.4378,
+      "wins": 1,
+      "median_captured": 1.543
+    },
+    {
+      "regime": "launch-bound",
+      "n": 1,
+      "dispatch_lo": 0.3,
+      "dispatch_hi": 1.0,
+      "median_dispatch_share": 0.633,
+      "median_ceiling": 2.725,
+      "max_ceiling": 2.725,
+      "median_speedup": 1.1007,
+      "wins": 1,
+      "median_captured": 0.0584
+    }
+  ],
+  "findings": [
+    {
+      "claim": "An equality-preserving rewrite cannot change a dense model's FLOPs, so its ceiling is the dispatch share, 1/(1-F). Where F is small the ceiling is ~1x.",
+      "verdict": "negative",
+      "headline": "compute-bound rows are capped at 1.04x \u2014 equality-preserving rewrites cannot reach them",
+      "metric": "median_ceiling_compute_bound",
+      "value": 1.036
+    },
+    {
+      "claim": "The delivered body captures the headroom the ceiling allows: (speedup-1)/(ceiling-1).",
+      "verdict": "win",
+      "headline": "median capture 0.80 over 2 rows \u2014 the delivered body takes most of the measured headroom",
+      "metric": "median_captured_fraction",
+      "value": 0.8007123267570838
+    },
+    {
+      "claim": "Dispatch share predicts the sign of the win. (It does not always \u2014 the delivered body's own cost sets it.)",
+      "verdict": "win",
+      "headline": "r(F, speedup) = +0.41 \u2014 dispatch share tracks the sign",
+      "metric": "pearson_dispatch_vs_speedup",
+      "value": 0.40806835611370085
+    },
+    {
+      "claim": "Every delivered row is verified equal to the spelled module \u2014 the frontier is measured on correct deliveries.",
+      "verdict": "win",
+      "headline": "5/5 rows verified equal",
+      "metric": "verified_fraction",
+      "value": 1.0
+    }
+  ],
+  "rows": [
+    {
+      "case": "zoo:RWKVMixBlock",
+      "regime": "compute-bound",
+      "eager_us": 473.0,
+      "delivered_us": 459.6,
+      "speedup": 1.0292,
+      "device_share": 0.977,
+      "dispatch_share": 0.023,
+      "ceiling": 1.0235,
+      "headroom_us": 10.879,
+      "captured": null,
+      "kernels": 21,
+      "verified": true
+    },
+    {
+      "case": "zoo:SharedSwiGLUMoE",
+      "regime": "compute-bound",
+      "eager_us": 234.4,
+      "delivered_us": 288.1,
+      "speedup": 0.8136,
+      "device_share": 0.954,
+      "dispatch_share": 0.046,
+      "ceiling": 1.0482,
+      "headroom_us": 10.782,
+      "captured": null,
+      "kernels": 17,
+      "verified": true
+    },
+    {
+      "case": "zoo:TopKRouterMoE",
+      "regime": "mixed",
+      "eager_us": 183.4,
+      "delivered_us": 258.2,
+      "speedup": 0.7103,
+      "device_share": 0.944,
+      "dispatch_share": 0.056,
+      "ceiling": 1.0593,
+      "headroom_us": 10.27,
+      "captured": null,
+      "kernels": 16,
+      "verified": true
+    },
+    {
+      "case": "zoo:DecoupledMLA",
+      "regime": "launch-leaning",
+      "eager_us": 391.5,
+      "delivered_us": 272.3,
+      "speedup": 1.4378,
+      "device_share": 0.779,
+      "dispatch_share": 0.221,
+      "ceiling": 1.2837,
+      "headroom_us": 86.521,
+      "captured": 1.543,
+      "kernels": 17,
+      "verified": true
+    },
+    {
+      "case": "zoo:ChunkedSSD",
+      "regime": "launch-bound",
+      "eager_us": 2438.1,
+      "delivered_us": 2215.0,
+      "speedup": 1.1007,
+      "device_share": 0.367,
+      "dispatch_share": 0.633,
+      "ceiling": 2.7248,
+      "headroom_us": 1543.317,
+      "captured": 0.0584,
+      "kernels": 16,
+      "verified": true
+    }
+  ]
+}

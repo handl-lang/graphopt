@@ -1,0 +1,9 @@
+{
+  "rounds": 20,
+  "linears": 24,
+  "torch_ms": 153.95,
+  "ours_ms": 160.03,
+  "delta_pct": 3.95,
+  "ours_wins": 7,
+  "identical_tokens": true
+}

@@ -402,6 +402,56 @@ SUITES: list[SuiteSpec] = [
         mechanisms=("serving", "checkpoint"),
         needs_cuda=True,
     ),
+    _s(
+        "frontier",
+        "integration",
+        "Dispatch ceiling vs delivered capture",
+        "Where is the theoretical headroom on a measured workload "
+        "(Amdahl on dispatch) and how much of it does the delivered "
+        "body capture?",
+        "NEGATIVE — compute-bound rows are capped near 1x by "
+        "construction; launch-bound rows carry 2x+ headroom that "
+        "delivery does not yet take.",
+        tier="model",
+        mechanisms=("carriers", "cuda-graph", "cost"),
+    ),
+    _s(
+        "delivery",
+        "integration",
+        "Same law, two deliveries",
+        "Do the same minted laws lose as a step inside a module and "
+        "win as isolated kernel bodies — i.e. is the sign set by the "
+        "delivery rather than the law?",
+        "WIN — the paired ops flip from loss to win; the delivery is "
+        "the variable, and the P1 gate on the losing zoo rows is worth "
+        "running.",
+        tier="model",
+        mechanisms=("laws", "carriers", "scan"),
+    ),
+    _s(
+        "referee",
+        "integration",
+        "One referee, two vocabularies",
+        "How much of the tensor and kernel rule vocabularies overlap — "
+        "can a law minted in one domain be judged by the other's bank?",
+        "NEGATIVE — the banks are largely disjoint, so a law cannot "
+        "cross without a translation row; the proof run over the "
+        "shared slice is the remaining gate.",
+        tier="micro",
+        mechanisms=("laws", "egraph", "morphism"),
+    ),
+    _s(
+        "vocabulary",
+        "integration",
+        "Originality is a vocabulary event",
+        "Across every committed discovery run, does composing rules "
+        "the bank already has ever admit a machine-original law, and "
+        "does allowing new operation names change that?",
+        "WIN — the fixed-bank arm admits none, the vocabulary arm "
+        "admits almost only originals; the mint mode is the variable.",
+        tier="micro",
+        mechanisms=("laws", "egraph", "policy"),
+    ),
     # -- discovery: named optimizations vs the registered floor --------
     _s(
         "discovery",

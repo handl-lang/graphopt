@@ -1,0 +1,24 @@
+{
+  "64": {
+    "vllm_cuda_ms": 111.65,
+    "ours_triton_ms": 113.66,
+    "sd_cuda_ms": 8.71,
+    "sd_ours_ms": 12.27,
+    "delta_pct": 1.8,
+    "ours_wins": 11,
+    "rounds": 30,
+    "identical_tokens": true,
+    "kernel_max_abs_err": 1.430511474609375e-06
+  },
+  "256": {
+    "vllm_cuda_ms": 118.3,
+    "ours_triton_ms": 118.06,
+    "sd_cuda_ms": 10.71,
+    "sd_ours_ms": 10.96,
+    "delta_pct": -0.21,
+    "ours_wins": 18,
+    "rounds": 30,
+    "identical_tokens": true,
+    "kernel_max_abs_err": 1.430511474609375e-06
+  }
+}

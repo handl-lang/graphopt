@@ -1,0 +1,178 @@
+{
+  "schema": 1,
+  "suite": "delivery",
+  "inputs": [
+    "/home/luis/GitHub/handl-lang/graphopt/docs/reports/pay_measured.json",
+    "/home/luis/GitHub/handl-lang/graphopt/docs/reports/prim_kernel.json",
+    "/home/luis/GitHub/handl-lang/graphopt/docs/reports/prim_kernel_fp64.json"
+  ],
+  "findings": [
+    {
+      "claim": "Delivered as one more step inside a module, the minted folds lose.",
+      "verdict": "negative",
+      "headline": "3/3 paired ops lose as a step (worst 2.66x slower)",
+      "metric": "step_losses",
+      "value": 3.0
+    },
+    {
+      "claim": "Delivered as an isolated kernel body, the same ops win.",
+      "verdict": "win",
+      "headline": "3/3 win as a kernel \u2014 median 2.72x over the binding",
+      "metric": "median_kernel_speedup",
+      "value": 2.7247956403269757
+    },
+    {
+      "claim": "The sign of the result is set by the delivery, not by the law: the same op flips from loss to win.",
+      "verdict": "win",
+      "headline": "3/3 paired ops flip \u2014 delivery is the variable",
+      "metric": "pair_flip_fraction",
+      "value": 1.0
+    }
+  ],
+  "rows": [
+    {
+      "op": "synop2_35bbd03301",
+      "step_worst_ratio": 2.6645,
+      "step_cells": 2,
+      "kernel_over_binding": 0.384,
+      "dtype": "fp64",
+      "step_speedup": 0.3753,
+      "kernel_speedup": 2.6042,
+      "loses_as_step": true,
+      "wins_as_kernel": true,
+      "pair_flip": true
+    },
+    {
+      "op": "synop2_d46808a970",
+      "step_worst_ratio": null,
+      "step_cells": 0,
+      "kernel_over_binding": 0.384,
+      "dtype": "fp64",
+      "step_speedup": null,
+      "kernel_speedup": 2.6042,
+      "loses_as_step": false,
+      "wins_as_kernel": true,
+      "pair_flip": false
+    },
+    {
+      "op": "synop3_04df5fd446",
+      "step_worst_ratio": null,
+      "step_cells": 0,
+      "kernel_over_binding": 0.367,
+      "dtype": "fp64",
+      "step_speedup": null,
+      "kernel_speedup": 2.7248,
+      "loses_as_step": false,
+      "wins_as_kernel": true,
+      "pair_flip": false
+    },
+    {
+      "op": "synop3_083e9c241f",
+      "step_worst_ratio": null,
+      "step_cells": 0,
+      "kernel_over_binding": 0.379,
+      "dtype": "fp64",
+      "step_speedup": null,
+      "kernel_speedup": 2.6385,
+      "loses_as_step": false,
+      "wins_as_kernel": true,
+      "pair_flip": false
+    },
+    {
+      "op": "synop3_0ca31bf1e5",
+      "step_worst_ratio": 2.6645,
+      "step_cells": 1,
+      "kernel_over_binding": 0.367,
+      "dtype": "fp64",
+      "step_speedup": 0.3753,
+      "kernel_speedup": 2.7248,
+      "loses_as_step": true,
+      "wins_as_kernel": true,
+      "pair_flip": true
+    },
+    {
+      "op": "synop3_0fa19d1ff8",
+      "step_worst_ratio": 2.6645,
+      "step_cells": 2,
+      "kernel_over_binding": 0.365,
+      "dtype": "fp64",
+      "step_speedup": 0.3753,
+      "kernel_speedup": 2.7397,
+      "loses_as_step": true,
+      "wins_as_kernel": true,
+      "pair_flip": true
+    },
+    {
+      "op": "synop3_21b9729f32",
+      "step_worst_ratio": 2.6645,
+      "step_cells": 2,
+      "kernel_over_binding": null,
+      "dtype": "-",
+      "step_speedup": 0.3753,
+      "kernel_speedup": null,
+      "loses_as_step": true,
+      "wins_as_kernel": false,
+      "pair_flip": false
+    },
+    {
+      "op": "synop3_24c5153e5e",
+      "step_worst_ratio": 2.6645,
+      "step_cells": 1,
+      "kernel_over_binding": null,
+      "dtype": "-",
+      "step_speedup": 0.3753,
+      "kernel_speedup": null,
+      "loses_as_step": true,
+      "wins_as_kernel": false,
+      "pair_flip": false
+    },
+    {
+      "op": "synop3_4cdc06b88f",
+      "step_worst_ratio": 2.6645,
+      "step_cells": 1,
+      "kernel_over_binding": null,
+      "dtype": "-",
+      "step_speedup": 0.3753,
+      "kernel_speedup": null,
+      "loses_as_step": true,
+      "wins_as_kernel": false,
+      "pair_flip": false
+    },
+    {
+      "op": "synop_4c657cb2c0",
+      "step_worst_ratio": 1.4888,
+      "step_cells": 4,
+      "kernel_over_binding": null,
+      "dtype": "-",
+      "step_speedup": 0.6717,
+      "kernel_speedup": null,
+      "loses_as_step": true,
+      "wins_as_kernel": false,
+      "pair_flip": false
+    },
+    {
+      "op": "synop_5e58f26875",
+      "step_worst_ratio": 2.6645,
+      "step_cells": 2,
+      "kernel_over_binding": null,
+      "dtype": "-",
+      "step_speedup": 0.3753,
+      "kernel_speedup": null,
+      "loses_as_step": true,
+      "wins_as_kernel": false,
+      "pair_flip": false
+    },
+    {
+      "op": "synop_bb8c54c201",
+      "step_worst_ratio": 2.6645,
+      "step_cells": 10,
+      "kernel_over_binding": null,
+      "dtype": "-",
+      "step_speedup": 0.3753,
+      "kernel_speedup": null,
+      "loses_as_step": true,
+      "wins_as_kernel": false,
+      "pair_flip": false
+    }
+  ]
+}

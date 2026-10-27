@@ -1,0 +1,42 @@
+[
+ {
+  "case": "zoo:RWKVMixBlock",
+  "kernels": 21,
+  "device_us": 1181.23,
+  "wall_us": 1209.31,
+  "device_share": 0.977,
+  "us_per_kernel": 56.25
+ },
+ {
+  "case": "zoo:TopKRouterMoE",
+  "kernels": 16,
+  "device_us": 232.8,
+  "wall_us": 246.62,
+  "device_share": 0.944,
+  "us_per_kernel": 14.55
+ },
+ {
+  "case": "zoo:ChunkedSSD",
+  "kernels": 16,
+  "device_us": 787.79,
+  "wall_us": 2145.53,
+  "device_share": 0.367,
+  "us_per_kernel": 49.24
+ },
+ {
+  "case": "zoo:DecoupledMLA",
+  "kernels": 17,
+  "device_us": 353.81,
+  "wall_us": 454.44,
+  "device_share": 0.779,
+  "us_per_kernel": 20.81
+ },
+ {
+  "case": "zoo:SharedSwiGLUMoE",
+  "kernels": 17,
+  "device_us": 290.53,
+  "wall_us": 304.49,
+  "device_share": 0.954,
+  "us_per_kernel": 17.09
+ }
+]

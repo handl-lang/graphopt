@@ -519,6 +519,38 @@ def _vllm_leg_payload(hf_dir: str, args) -> dict:
     }
 
 
+#: Sibling repos whose ``packages/*/src`` the delegated interpreter
+#: needs (the workspace installs them only in this venv).
+_SIBLING_REPOS: tuple[str, ...] = ("eqsat", "gamekit")
+
+
+def _child_env() -> dict:
+    """Env for the delegated vLLM subprocess.
+
+    The child is ``<vllm-python> <this file> --vllm-leg ...``, so
+    ``sys.path[0]`` is ``bench/suites/integration`` — not the repo root
+    the module's ``from bench import ...`` imports need.  The workspace
+    packages (``mlopt_core`` lives in the ``eqsat`` repo, ``gamekit`` in
+    its own) are installed only in *this* interpreter, so their
+    ``packages/*/src`` trees go on the child's ``PYTHONPATH`` too.
+    Skipping this surfaces as ``reason=ModuleNotFoundError: No module
+    named 'bench'`` (then ``'mlopt_core'``).
+    """
+    repo_root = Path(__file__).resolve().parents[3]
+    paths = [str(repo_root)]
+    roots = [repo_root, *(repo_root.parent / s for s in _SIBLING_REPOS)]
+    for root in roots:
+        for pkg in sorted((root / "packages").glob("*/src")):
+            if pkg.is_dir():
+                paths.append(str(pkg))
+    env = dict(os.environ)
+    prev = env.get("PYTHONPATH")
+    if prev:
+        paths.append(prev)
+    env["PYTHONPATH"] = os.pathsep.join(paths)
+    return env
+
+
 def _vllm_env_setup() -> None:
     """Env fixes for toolkit-less hosts; call BEFORE importing vllm.
 
@@ -597,7 +629,9 @@ def vllm_leg(hf_dir: Path, args, prompt_ids=None) -> dict:
         ) as pf:
             json.dump([list(map(int, p)) for p in prompt_ids], pf)
         cmd += ["--prompt-ids-file", pf.name]
-    proc = subprocess.run(cmd, capture_output=True, text=True)
+    proc = subprocess.run(
+        cmd, capture_output=True, text=True, env=_child_env()
+    )
     if proc.returncode != 0 or not Path(out_json).exists():
         return {
             "mode": "failed",

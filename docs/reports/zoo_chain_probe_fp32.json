@@ -1,0 +1,117 @@
+[
+ {
+  "case": "zoo:RWKVMixBlock",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 4.76837158203125e-07,
+  "cost": NaN,
+  "speedup": 1.029,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.029,
+    "eager_us": 473.0,
+    "compiled_us": 175.9,
+    "gen_us": 459.6
+   }
+  ],
+  "spread": [
+   1.029,
+   1.029
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:DecoupledMLA",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 2.384185791015625e-07,
+  "cost": NaN,
+  "speedup": 1.438,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.438,
+    "eager_us": 391.5,
+    "compiled_us": 211.6,
+    "gen_us": 272.3
+   }
+  ],
+  "spread": [
+   1.438,
+   1.438
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:SharedSwiGLUMoE",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.813,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.813,
+    "eager_us": 234.4,
+    "compiled_us": 195.9,
+    "gen_us": 288.1
+   }
+  ],
+  "spread": [
+   0.813,
+   0.813
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:TopKRouterMoE",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.71,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.71,
+    "eager_us": 183.4,
+    "compiled_us": 167.3,
+    "gen_us": 258.2
+   }
+  ],
+  "spread": [
+   0.71,
+   0.71
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:ChunkedSSD",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 1.101,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.101,
+    "eager_us": 2438.1,
+    "compiled_us": 637.2,
+    "gen_us": 2215.0
+   }
+  ],
+  "spread": [
+   1.101,
+   1.101
+  ],
+  "dtype": "fp32"
+ }
+]

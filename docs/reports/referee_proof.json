@@ -1,0 +1,79 @@
+{
+  "schema": 1,
+  "env": {
+    "timestamp_utc": "2026-10-27 00:02 UTC",
+    "git_sha": "d58b66c",
+    "git_dirty": false,
+    "torch": "2.14.0+cu130",
+    "device": "cuda",
+    "bank_size": 374
+  },
+  "candidates": [
+    {
+      "name": "kern_fuse_silu",
+      "family": "fusion",
+      "provenance": "human",
+      "verdict": "known",
+      "instance_src": "corpus:kernel_rms_swiglu",
+      "truth": "equal",
+      "cert": true,
+      "derivable": true,
+      "witness_rules": [
+        "pa_kf_silu_expand"
+      ],
+      "deriv_note": "fixed_point",
+      "siblings": [
+        "kern_fuse_silu"
+      ],
+      "beat": null,
+      "measure_note": "",
+      "lhs": "(mul (mul x, (rsqrt (add (mean (pow x, 2), dim=-1, keepdim=True), 1e-06))), (sigmoid (mul x, (rsqrt (add (mean (pow x, 2), dim=-1, keepdim=True), 1e-06)))))",
+      "rhs": "(kf_silu (mul x, (rsqrt (add (mean (pow x, 2), dim=-1, keepdim=True), 1e-06))), (mul x, (rsqrt (add (mean (pow x, 2), dim=-1, keepdim=True), 1e-06))))",
+      "cases": []
+    },
+    {
+      "name": "kern_fuse_softmax",
+      "family": "fusion",
+      "provenance": "human",
+      "verdict": "known",
+      "instance_src": "corpus:kernel_attn_residual",
+      "truth": "equal",
+      "cert": true,
+      "derivable": true,
+      "witness_rules": [
+        "pa_kf_softmax_expand"
+      ],
+      "deriv_note": "fixed_point",
+      "siblings": [
+        "kern_fuse_softmax"
+      ],
+      "beat": null,
+      "measure_note": "",
+      "lhs": "(div (exp (mul (matmul x, w), 0.25)), (sum (exp (mul (matmul x, w), 0.25)), dim=-1, keepdim=True))",
+      "rhs": "(kf_softmax (mul (matmul x, w), 0.25), dim=-1)",
+      "cases": []
+    },
+    {
+      "name": "kern_fuse_layernorm",
+      "family": "fusion",
+      "provenance": "human",
+      "verdict": "known",
+      "instance_src": "corpus:kernel_ln_gelu_res",
+      "truth": "equal",
+      "cert": true,
+      "derivable": true,
+      "witness_rules": [
+        "pa_kf_layernorm_expand"
+      ],
+      "deriv_note": "fixed_point",
+      "siblings": [
+        "kern_fuse_layernorm"
+      ],
+      "beat": null,
+      "measure_note": "",
+      "lhs": "(mul (sub x, (mean x, dim=-1, keepdim=True)), (rsqrt (add (mean (pow (sub x, (mean x, dim=-1, keepdim=True)), 2), dim=-1, keepdim=True), 1e-05)))",
+      "rhs": "(kf_layernorm x, dim=-1, eps=1e-05)",
+      "cases": []
+    }
+  ]
+}

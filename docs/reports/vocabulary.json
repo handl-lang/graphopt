@@ -1,0 +1,261 @@
+{
+  "schema": 1,
+  "suite": "vocabulary",
+  "arms": {
+    "fixed-bank": [
+      14,
+      39,
+      0
+    ],
+    "vocabulary": [
+      8,
+      262,
+      260
+    ]
+  },
+  "findings": [
+    {
+      "claim": "Composing rules the bank already has never yields a machine-original law.",
+      "verdict": "negative",
+      "headline": "0/39 machine-original across 14 fixed-bank runs (zoo, zoo-real, zoo-xmodule)",
+      "metric": "fixed_bank_original",
+      "value": 0.0
+    },
+    {
+      "claim": "Allowing the machine to name a new operation makes the admitted laws machine-original.",
+      "verdict": "win",
+      "headline": "260/262 machine-original across 8 vocabulary runs (zoo-prim)",
+      "metric": "vocabulary_original",
+      "value": 0.9923664122137404
+    },
+    {
+      "claim": "The difference is the vocabulary, not the corpus: both arms run over the same held-out zoo modules and the same referee.",
+      "verdict": "win",
+      "headline": "fixed-bank 0/39 vs vocabulary 260/262 original \u2014 the mint mode is the variable",
+      "metric": "originality_delta",
+      "value": 0.9923664122137404
+    }
+  ],
+  "runs": [
+    {
+      "ledger": "docs/reports/results_overnight_deep.json",
+      "corpus": "zoo-real",
+      "mint": "corpus-bind-compose-guarded",
+      "arm": "fixed-bank",
+      "admitted": 3,
+      "machine_original": 0,
+      "known_art": 3,
+      "original_fraction": 0.0
+    },
+    {
+      "ledger": "docs/reports/results_overnight_deep2.json",
+      "corpus": "zoo-real",
+      "mint": "corpus-bind-compose-strata",
+      "arm": "fixed-bank",
+      "admitted": 3,
+      "machine_original": 0,
+      "known_art": 3,
+      "original_fraction": 0.0
+    },
+    {
+      "ledger": "docs/reports/results_overnight_real_full.json",
+      "corpus": "zoo-real",
+      "mint": "corpus-bind-compose",
+      "arm": "fixed-bank",
+      "admitted": 0,
+      "machine_original": 0,
+      "known_art": 0,
+      "original_fraction": null
+    },
+    {
+      "ledger": "docs/reports/results_overnight_real_fusion.json",
+      "corpus": "zoo-real",
+      "mint": "corpus-bind",
+      "arm": "fixed-bank",
+      "admitted": 3,
+      "machine_original": 0,
+      "known_art": 3,
+      "original_fraction": 0.0
+    },
+    {
+      "ledger": "docs/reports/results_overnight_real_preview.json",
+      "corpus": "zoo-real",
+      "mint": "-",
+      "arm": "fixed-bank",
+      "admitted": 2,
+      "machine_original": 0,
+      "known_art": 2,
+      "original_fraction": 0.0
+    },
+    {
+      "ledger": "docs/reports/results_overnight_real_v2.json",
+      "corpus": "zoo-real",
+      "mint": "corpus-bind-compose-viable",
+      "arm": "fixed-bank",
+      "admitted": 0,
+      "machine_original": 0,
+      "known_art": 0,
+      "original_fraction": null
+    },
+    {
+      "ledger": "docs/reports/results_overnight_real_v3.json",
+      "corpus": "zoo-real",
+      "mint": "corpus-bind-compose-guarded",
+      "arm": "fixed-bank",
+      "admitted": 3,
+      "machine_original": 0,
+      "known_art": 3,
+      "original_fraction": 0.0
+    },
+    {
+      "ledger": "docs/reports/results_overnight_real_v4.json",
+      "corpus": "zoo-real",
+      "mint": "corpus-bind-compose-strata",
+      "arm": "fixed-bank",
+      "admitted": 6,
+      "machine_original": 0,
+      "known_art": 6,
+      "original_fraction": 0.0
+    },
+    {
+      "ledger": "docs/reports/results_overnight_real_v5.json",
+      "corpus": "zoo-real",
+      "mint": "corpus-bind-compose-strata",
+      "arm": "fixed-bank",
+      "admitted": 8,
+      "machine_original": 0,
+      "known_art": 8,
+      "original_fraction": 0.0
+    },
+    {
+      "ledger": "docs/reports/results_overnight_real_v6.json",
+      "corpus": "zoo-real",
+      "mint": "corpus-bind-compose-strata",
+      "arm": "fixed-bank",
+      "admitted": 8,
+      "machine_original": 0,
+      "known_art": 8,
+      "original_fraction": 0.0
+    },
+    {
+      "ledger": "docs/reports/results_overnight_xmodule.json",
+      "corpus": "zoo-xmodule",
+      "mint": "corpus-xbind",
+      "arm": "fixed-bank",
+      "admitted": 1,
+      "machine_original": 0,
+      "known_art": 1,
+      "original_fraction": 0.0
+    },
+    {
+      "ledger": "docs/reports/results_overnight_xmodule_v2.json",
+      "corpus": "zoo-xmodule",
+      "mint": "corpus-xbind",
+      "arm": "fixed-bank",
+      "admitted": 1,
+      "machine_original": 0,
+      "known_art": 1,
+      "original_fraction": 0.0
+    },
+    {
+      "ledger": "docs/results_overnight.json",
+      "corpus": "zoo",
+      "mint": "-",
+      "arm": "fixed-bank",
+      "admitted": 1,
+      "machine_original": 0,
+      "known_art": 1,
+      "original_fraction": 0.0
+    },
+    {
+      "ledger": "docs/results_overnight_real.json",
+      "corpus": "zoo-real",
+      "mint": "corpus-bind-compose-guarded",
+      "arm": "fixed-bank",
+      "admitted": 0,
+      "machine_original": 0,
+      "known_art": 0,
+      "original_fraction": null
+    },
+    {
+      "ledger": "docs/reports/results_overnight_prim.json",
+      "corpus": "zoo-prim",
+      "mint": "corpus-prim",
+      "arm": "vocabulary",
+      "admitted": 21,
+      "machine_original": 21,
+      "known_art": 0,
+      "original_fraction": 1.0
+    },
+    {
+      "ledger": "docs/reports/results_overnight_prim_bootstrap.json",
+      "corpus": "zoo-prim",
+      "mint": "corpus-prim",
+      "arm": "vocabulary",
+      "admitted": 48,
+      "machine_original": 48,
+      "known_art": 0,
+      "original_fraction": 1.0
+    },
+    {
+      "ledger": "docs/reports/results_overnight_prim_deep.json",
+      "corpus": "zoo-prim",
+      "mint": "corpus-prim",
+      "arm": "vocabulary",
+      "admitted": 48,
+      "machine_original": 48,
+      "known_art": 0,
+      "original_fraction": 1.0
+    },
+    {
+      "ledger": "docs/reports/results_overnight_prim_depth3.json",
+      "corpus": "zoo-prim",
+      "mint": "corpus-prim",
+      "arm": "vocabulary",
+      "admitted": 48,
+      "machine_original": 46,
+      "known_art": 2,
+      "original_fraction": 0.9583
+    },
+    {
+      "ledger": "docs/reports/results_overnight_prim_v2.json",
+      "corpus": "zoo-prim",
+      "mint": "corpus-prim",
+      "arm": "vocabulary",
+      "admitted": 21,
+      "machine_original": 21,
+      "known_art": 0,
+      "original_fraction": 1.0
+    },
+    {
+      "ledger": "docs/reports/results_overnight_prim_v3.json",
+      "corpus": "zoo-prim",
+      "mint": "corpus-prim",
+      "arm": "vocabulary",
+      "admitted": 21,
+      "machine_original": 21,
+      "known_art": 0,
+      "original_fraction": 1.0
+    },
+    {
+      "ledger": "docs/reports/results_overnight_prim_v4.json",
+      "corpus": "zoo-prim",
+      "mint": "corpus-prim",
+      "arm": "vocabulary",
+      "admitted": 21,
+      "machine_original": 21,
+      "known_art": 0,
+      "original_fraction": 1.0
+    },
+    {
+      "ledger": "docs/reports/results_overnight_prim_vocab.json",
+      "corpus": "zoo-prim",
+      "mint": "corpus-prim",
+      "arm": "vocabulary",
+      "admitted": 34,
+      "machine_original": 34,
+      "known_art": 0,
+      "original_fraction": 1.0
+    }
+  ]
+}

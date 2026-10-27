@@ -1,0 +1,36 @@
+{
+  "64:eager": {
+    "median_s": 0.1079,
+    "mean_s": 0.1083,
+    "stdev_s": 0.0087
+  },
+  "64:mlopt": {
+    "median_s": 0.1013,
+    "mean_s": 0.1041,
+    "stdev_s": 0.0096
+  },
+  "64:paired": {
+    "rounds": 12,
+    "median_diff_s": 0.00335,
+    "median_diff_pct": 3.31,
+    "a_wins": 4,
+    "identical_tokens": true
+  },
+  "256:eager": {
+    "median_s": 0.1014,
+    "mean_s": 0.1027,
+    "stdev_s": 0.0066
+  },
+  "256:mlopt": {
+    "median_s": 0.0963,
+    "mean_s": 0.1008,
+    "stdev_s": 0.0096
+  },
+  "256:paired": {
+    "rounds": 12,
+    "median_diff_s": 0.00242,
+    "median_diff_pct": 2.51,
+    "a_wins": 3,
+    "identical_tokens": true
+  }
+}

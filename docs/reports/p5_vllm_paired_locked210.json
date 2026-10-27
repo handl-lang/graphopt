@@ -1,0 +1,19 @@
+{
+  "64:eager": {
+    "median_s": 0.1114,
+    "mean_s": 0.1115,
+    "stdev_s": 0.0035
+  },
+  "64:mlopt": {
+    "median_s": 0.1147,
+    "mean_s": 0.1154,
+    "stdev_s": 0.0066
+  },
+  "64:paired": {
+    "rounds": 12,
+    "median_diff_s": -0.00392,
+    "median_diff_pct": -3.42,
+    "a_wins": 8,
+    "identical_tokens": true
+  }
+}
