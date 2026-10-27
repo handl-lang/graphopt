@@ -91,7 +91,7 @@ jobs:
           --config p/security-audit packages
 
       - name: pip-audit
-        run: .venv/bin/pip-audit
+        run: .venv/bin/python scripts/pip_audit.py
 
       - name: radon complexity ratchet
         run: .venv/bin/python scripts/radon_ratchet.py

@@ -73,9 +73,12 @@ repos:
         stages: [manual]
       - id: pip-audit
         name: pip-audit
-        # Dependency-vulnerability audit of the installed environment.
-        # Needs network access, so it is a manual-stage gate.
-        entry: .venv/bin/pip-audit
+        # Dependency-vulnerability audit of the *resolution*: the lock is
+        # exported and the un-auditable entries (editable workspace
+        # members, git deps, the `+cpu` torch label) are named as skips
+        # rather than failing the gate blindly.  Needs network access, so
+        # it is a manual-stage gate.
+        entry: .venv/bin/python scripts/pip_audit.py
         language: system
         pass_filenames: false
         always_run: true
