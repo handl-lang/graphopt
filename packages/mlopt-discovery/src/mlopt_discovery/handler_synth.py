@@ -1584,6 +1584,15 @@ def propose_bodies(
 # ---------------------------------------------------------------------------
 
 
+#: Torch's shape refusals: an entry that trips one of these binds a
+#: metavar at two shapes and so has no single draw.  Anything else
+#: propagates — the gate is deliberately narrow.
+SHAPE_REFUSALS: tuple[str, ...] = (
+    "must match the size of tensor",
+    "split_with_sizes expects split_sizes to sum exactly to",
+)
+
+
 class DomainShapeError(ValueError):
     """A domain entry whose bound shapes cannot be drawn together.
 
@@ -1626,6 +1635,12 @@ def _domain_list(domain: Any) -> list:
     return list(domain)
 
 
+def _shape_refusal(exc: RuntimeError) -> bool:
+    """Say whether torch refused the draw for a shape reason."""
+    msg = str(exc)
+    return any(m in msg for m in SHAPE_REFUSALS)
+
+
 def _drawable_ref(
     spec: Any, shapes: dict, env_seed: int, bindings: dict
 ) -> tuple | None:
@@ -1640,7 +1655,7 @@ def _drawable_ref(
     try:
         return env, _eval_spec(spec, env, bindings)
     except RuntimeError as exc:
-        if "must match the size of tensor" not in str(exc):
+        if not _shape_refusal(exc):
             raise
         return None
 

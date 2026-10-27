@@ -1088,3 +1088,17 @@ class TestDomainShapeGate:
         monkeypatch.setattr(hs, "_eval_spec", _eval)
         with pytest.raises(RuntimeError, match="boom"):
             hs._domain_draws("spec", [{"x": (2,)}], 0, {}, 0)
+
+    def test_a_split_size_mismatch_is_the_same_class(self, monkeypatch):
+        """`split` refuses the same blind metavar a broadcast does."""
+
+        def _eval(spec, env, bindings):
+            raise RuntimeError(
+                "split_with_sizes expects split_sizes to sum exactly "
+                "to 192 (input tensor's size at dimension 1), but got "
+                "split_sizes=[64, 64]"
+            )
+
+        monkeypatch.setattr(hs, "_eval_spec", _eval)
+        with pytest.raises(hs.DomainShapeError, match="no drawable"):
+            hs._domain_draws("spec", [{"x": (2,)}], 0, {}, 0)
