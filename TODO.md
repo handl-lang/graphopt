@@ -1,10 +1,51 @@
 # TODO
 
-## Active
+## Active — HIGH PRIORITY (the open questions, post-plan-0032)
 
-- [x] ADR 0003 (evaluation as an independent dimension) — **accepted,
-      in force**; all 12 stages of
-      `project/plans/0016-evaluation-dimension.md` landed.
+- [x] **Q3 — multi-step credit.**  **Measured (2026-10-21).**
+      `credit_chain` curriculum (`c59eaeb`,
+      `docs/results_credit_chain.md`): learned arms DO close
+      enabling chains unpreminted (neural → ceiling ~200 eps,
+      linear-greedy 100%, advantage 71% sampled); honest break only
+      at low chain density (k=16: linear-greedy collapses myopic,
+      advantage fails) — the binding constraint is candidate
+      density, not the credit mechanism.
+- [x] **Q2 — new algorithms (Strassen-class).**  **Measured —
+      NO-GO (2026-10-21).**  `bilinear` domain (`86115a7`+`9121617`,
+      `docs/results_strassen.md`): board provably expresses
+      Strassen (scripted → verified rank 7, 29 moves); playbook/
+      random/linear all stall at rank 8 — the ~15-move coordinated
+      valley is beyond one-step lookahead.  Follow-up: MCTS/
+      planner arm (in-flight) — does lookahead close the valley?
+- [x] **Q1 — unnamed structure on real corpora.**  **Arm executed
+      (2026-10-21).**  `overnight.py --corpus zoo-real --compose`
+      landed (`863825c`/`6eb949d`/`04201f2`/`1000ffd`): real-subterm
+      minting + bind-gate + emit-time RHS sanity (a real substrate
+      bug: bare-`Exception` catch conflated can't-eval with
+      eval-failed — fixed in eqsat `2d6e4eb`).  Full-corpus funnel:
+      53 modules, 87 viable mints, **0 machine-originals** — honest
+      zero; shallow single-step mints are all known-art.  **Re-opened
+      and re-answered (2026-10-25): the zero was a *vocabulary* wall,
+      not a search wall** — let the mint name new primitives and
+      **21/21** admitted folds are machine-original (then 48/48
+      deeper; 57 shipped ops, depths 1–3).  The lever was never
+      guarded composites.  Retro:
+      `project/retros/vocabulary-growth-2026-10-25.md`.
+- [x] **Q4 — scale.**  **Measured (2026-10-21).**  `scale_ladder`
+      (`b534bce`, `docs/reports/results_scale_ladder.md`): three
+      distinct walls — matcher time ~11k unrolled nodes (>445 s),
+      verify-forward RAM (17.2 GB fp64 attn at T=4096; the e-graph
+      itself sat in 0.2 s), fp64 overflow (RWKV exp at T≥1024).
+      Symbolic blocks are T-invariant in the e-graph — substrate
+      scales; the referee's real-env eval is the wall.
+- [x] **Q5 — self-modifying game.**  **Measured — NULL, sharpened
+      (2026-10-21).**  `transfer` probe (kernelopt `5994c71`):
+      priors are *spec*-bound, not domain-bound — 10/12 foreign
+      pairs can't enumerate a move; `META_SPEC` genuinely
+      transfers across meta/joint/torch/gen (shared vocabulary).
+      Kernel-side novelty sieve: in-flight.
+
+## Active
 
 - [ ] Meta-arena Q3 (`project/plans/0021-meta-arena.md`) — **measured,
       partially answered.**  Cold linear REINFORCE beats scripted on
@@ -16,23 +57,6 @@
       consolidation by the memoryless policy still open.  Retro:
       `project/retros/meta-arena-player.md`.  Next levers:
       curriculum boards, imitation warm-start, richer policy.
-
-- [ ] Joint forward/backward optimization — `training.backward()`
-      derives VJP programs; `joint_probe`/`--joint` puts fwd+grads
-      in one e-graph: `linear_fwd` 13→10 (the VJP re-uses the whole
-      forward term).  Silu/softmax flat — the fold laws hide the
-      shared subterm; coordinated extraction measured a wash under
-      count_cost (single-use sharing ≡ fusion).  Retro:
-      `project/retros/joint-training-graph.md`.  Next: real
-      training-corpus probes, combined fwd+bwd executor timing.
-
-- [ ] The game layer is generic: `catopt_discovery.engine`
-      (`Board` protocol + episode/train/eval drivers),
-      `players.LinearPolicy` (featurizer-injected learner),
-      `play` (domain registry + CLI).  Domains: `meta`, `joint`,
-      `search`, `torch` (real `nn.Module`s under the sink bound;
-      `--deliver` lowers the winning extraction to a verified
-      runnable module).  Retro: `project/retros/generic-game-layer.md`.
 
 - [ ] Generated kernels (`genkernel`) — **the novelty question,
       measured.**  Handler entries minted for elementwise subterms
@@ -51,36 +75,50 @@
 
 ## Deferred
 
-- [ ] `paper/` — a short paper-style write-up of the research claim:
-      categorical semantics exposes transforms conventional tensor-level
-      optimizers don't reach efficiently. Pull numbers from
-      `bench/suites/speedup/reassoc_scale.py` (head-to-head vs Inductor at scale) and
-      `bench/suites/search/search_efficiency.py` (alternatives-space vs e-graph size).
-      Audience: compilers/PL reviewers. Frame around the fair-comparison
-      pipeline (same backend, real checkpoints) — cite the retired
-      report's numbers, now migrated to `docs/results_curated.md` §7, for
-      the existing numbers and the falsified directions.
-      Unblocked (both benches landed); user wants it deferred.
-
 - [ ] `plan 0002` leftovers — Phase E recognizer consolidation
       (law-side e-class bindings vs lowerer-side extracted terms —
       substrates genuinely differ, revisit only if a shared kernel
       emerges); plan-dict typing stays dict-of-any.
 
-## Done
+## Tech debt to fix
 
-- [x] `bench/suites/speedup/reassoc_scale.py` — landed. Post-grad FX capture proves
-      Inductor keeps k left-assoc mms; CatOpt folds weights into one
-      param → 1 mm. 8.93× vs Inductor at k=8, 16.12× at k=16 (CPU).
-- [x] `bench/suites/speedup/real_linear_attn.py` — landed. RetNet/GLA/delta-rule
-      blocks: scan lift + value-chain fold verified fp64-exact;
-      retnet 2.8–4.8× vs eager at the closed-form floor. Honest CPU
-      negatives vs Inductor (pointwise fusion wins; launch-bound
-      devices invert — run --device cuda for the real story).
-- [x] `bench/suites/search/search_efficiency.py` — landed. Saturated e-graph encodes
-      all Catalan(k−1) bracketings (verified: 16,796 in 231 e-nodes at
-      k=11); bounded saturation ≥10^5.6 programs in ~0.5s at k=24.
+- [ ] **Vendored probe code** — copied third-party code in
+      `bench/drivers/probes/` (and `bench/limits/registry.py`
+      duplicated into kernelopt during the split). Replace with a
+      declared dep/submodule or delete if dead.
+- [ ] **Import-time domain registration** — domains seat themselves
+      via import side-effects (`mlopt_kernel.play` mutating
+      `DOMAINS`/registry on import). Replace with explicit
+      registration at call site.
+- [ ] **Pinned test counts** — tests asserting literal rule/law/bank
+      counts (`test_prior_art`, `test_laws_structure` totals,
+      `AGENTS.md` counts). Replace with derived counts or
+      invariant-based assertions so bank growth doesn't churn tests.
+- [ ] **radon baseline** — `bilinear_game.py` flagged on clean main;
+      regenerate `scripts/complexity_baseline.json` or justify.
+- [x] ~~**Kernel-prim domain-draw gate**~~ — done 2026-10-27
+      (`handler_synth.SHAPE_REFUSALS`): the draw raises two torch
+      refusals for one blind metavar (broadcast 64-vs-128 at dim 2, then
+      `split_with_sizes` to 192 vs [64, 64]). Both are named and the
+      entry is skipped, so the mint runs. A bounded window now returns
+      **2 candidates / 29 shapes mined / 0 unevaluable** in 2 s; the
+      27-min zero was this abort, not an empty vocabulary.
+- [ ] **synop* real delivery** — `docs/reports/prim_delivery.md`
+      measured: folds compress terms (6993→4353 ops on GLA-large)
+      but the spec-walk binding (`genkernel._eval_spec`) loses to
+      spelled eager wall-clock on every clean case; the cost-model
+      0.5–0.8× pay is not delivered. Real delivery needs a fused-body
+      codegen path for minted ops, not a spec interpreter.
+      **First step, measured 2026-10-27:** the mint does register its
+      ops (`mlopt_kernel.sink._table()` 84→86, `ksynop_9e3cb9a03a`,
+      `ksynop_efc263c3dd`), but the zoo sweep's delivery path is
+      `play.gen_probe → _gen_board(case)` and that board's bank comes
+      from `genkernel` — it never reads the sink table. Teach
+      `_gen_board` to merge the minted `ksynop_*` folds into its bank,
+      then re-sweep the 46 losing zoo rows (median 0.979×).
+- [ ] **ADR-0157 fragment-tower migration** — local plan in
+      `project/plans/0033-fragment-tower.md` + host ADR-0157; phases
+      0–5 (fragment dir → differential backend → denotations as
+      models → fragment-emitting mint → fragment-move play →
+      handl-native saturation).
 
-- Engineering: monorepo split (5 domain packages), 100% coverage
-  line+branch, ruff/pyright clean, 1,585 tests, review pass fixed 5
-  audit findings (incl. the omd_lower dense-fiber broadcast bug).
