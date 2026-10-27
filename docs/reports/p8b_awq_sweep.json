@@ -1,0 +1,59 @@
+{
+  "rows": [
+    {
+      "layer": "down_proj",
+      "in": 4864,
+      "out": 896,
+      "layers": 24,
+      "config": "bn=32 bk=256 w=4",
+      "torch_us": 197.4,
+      "ours_us": 87.1,
+      "vllm_us": 187.8,
+      "vs_torch": 2.266,
+      "vs_vllm": 2.155,
+      "max_abs_err": 2.1457672119140625e-06
+    },
+    {
+      "layer": "gate_proj",
+      "in": 896,
+      "out": 4864,
+      "layers": 48,
+      "config": "bn=64 bk=64 w=1",
+      "torch_us": 197.0,
+      "ours_us": 63.0,
+      "vllm_us": 53.6,
+      "vs_torch": 3.127,
+      "vs_vllm": 0.851,
+      "max_abs_err": 4.76837158203125e-07
+    },
+    {
+      "layer": "k_proj",
+      "in": 896,
+      "out": 128,
+      "layers": 48,
+      "config": "bn=16 bk=256 w=4",
+      "torch_us": 16.3,
+      "ours_us": 25.2,
+      "vllm_us": 38.5,
+      "vs_torch": 0.645,
+      "vs_vllm": 1.525,
+      "max_abs_err": 9.5367431640625e-07
+    },
+    {
+      "layer": "q_proj",
+      "in": 896,
+      "out": 896,
+      "layers": 48,
+      "config": "bn=32 bk=256 w=4",
+      "torch_us": 45.5,
+      "ours_us": 31.7,
+      "vllm_us": 38.3,
+      "vs_torch": 1.433,
+      "vs_vllm": 1.205,
+      "max_abs_err": 3.814697265625e-06
+    }
+  ],
+  "beat_torch": 120,
+  "beat_vllm": 120,
+  "total": 168
+}

@@ -130,6 +130,14 @@ reads packed int4 directly. One token, real Qwen2.5-0.5B-AWQ layers:
 First head-to-head win against a hand-written production kernel — decode
 only, one GPU, untuned. Report: [`p8_awq_fused.md`](p8_awq_fused.md).
 
+**P8b — the whole model, machine-picked configs.** 168 quantized linears,
+48 configs swept per shape by the machine itself. **120/168 beat `awq_gemm`
+and 120/168 beat plain matmul**: `down_proj` **2.16×** over vLLM,
+`q_proj` **1.21×**, `gate_proj` 3.13× over torch but 0.85× vs vLLM,
+`k_proj` a loss to torch (tiny shape — don't use the kernel there).
+Report: [`p8b_awq_sweep.md`](p8b_awq_sweep.md). The machine picked the
+*configs*, not the algorithm — that gap is the RL claim, still open.
+
 ## The gates
 
 | gate | status | what decides it |
