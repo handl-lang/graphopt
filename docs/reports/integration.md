@@ -115,6 +115,14 @@ driven by that op, toggled against the torch dequant path in one engine:
 within-arm sd — the 1500 MHz clock lock did not hold and the card
 throttled at 73 °C). Report: [`p6_vllm_w4.md`](p6_vllm_w4.md).
 
+**P7 — real AWQ weights.** On Qwen2.5-0.5B-Instruct-AWQ (real int4
+`qweight`/`qzeros`/`scales`, group 128) against the portable
+dequant-then-matmul path: **2.27–2.87× faster at decode, 1.05–1.52×
+batched**, exact to ~1e-7. The baseline is *not* vLLM's fused `awq_gemm`,
+which already avoids the float round-trip — so this is the win for every
+stack that materializes a float weight from a quantized checkpoint.
+Report: [`p7_awq_real.md`](p7_awq_real.md).
+
 ## The gates
 
 | gate | status | what decides it |
