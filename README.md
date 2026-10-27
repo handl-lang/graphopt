@@ -110,11 +110,30 @@ optimizing.
 
 *Honest limits, stated in the report:* `gate_proj` loses; the winning
 shape is only at **42 % of its memory roofline**, so ~2.4× is still on
-the table; and the **whole-model end-to-end speedup is not yet measured
-with the corrected kernel**. An earlier 3.3× claim was **retracted** —
-the split-K path accumulated with fp16 atomics and computed the wrong
-answer (`docs/reports/p13_retraction_splitk.md`). The protocol that
-caught it is now the standard: exactness gated inside the timing path.
+the table. An earlier 3.3× claim was **retracted** — the split-K path
+accumulated with fp16 atomics and computed the wrong answer
+(`docs/reports/p13_retraction_splitk.md`). The protocol that caught it is
+now the standard: exactness gated inside the timing path.
+
+**And it reaches the model.** Substituted into vLLM's AWQ path on three
+of four layer geometries, the kernel produces **token-identical** output
+and runs **29 % faster** (1164.6 ms → 824.1 ms, **25 of 25 paired
+rounds**, decode, one model, one 4 GB laptop GPU):
+
+| | |
+|---|---|
+| token agreement | **identical** |
+| per-layer vs `awq_gemm` | max\|Δ\| **0.0005**, cosine **1.0000** |
+| end-to-end | **−29.2 %** |
+
+Getting there required two corrections worth naming: AWQ packs eight int4
+values per int32 in the order `[0,4,1,5,2,6,3,7]`, not `0..7` — my
+reference used the same wrong order, so it validated itself while the
+kernel computed a different function; and vLLM repacks and pads weights
+at load (896 → 1152), so the checkpoint tensors must be snapshotted
+before that. **A self-written reference proves self-consistency, not
+correctness.** Full account: [`docs/reports/p18_e2e_29pct.md`](docs/reports/p18_e2e_29pct.md).
+
 
 
 **Open — now measured (the Q-series).**  Unnamed structure on real

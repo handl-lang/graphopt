@@ -1,0 +1,15 @@
+{
+  "identical_tokens": true,
+  "first_divergence": null,
+  "counts": {
+    "ours": 43152,
+    "stock": 89184,
+    "no_cfg": 44544,
+    "not_m1": 1392
+  },
+  "rounds": 25,
+  "stock_ms": 1164.64,
+  "ours_ms": 824.07,
+  "delta_pct": -29.24,
+  "ours_wins": 25
+}
