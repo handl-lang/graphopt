@@ -22,12 +22,15 @@ import time
 
 import torch
 
-from .kernel_v2 import gemv_v2
+from .kernel_split2 import gemv_split2
 
 USE_OURS = {"on": False}
+#: (in, out) -> (bn, bk, split, warps); from the cold search (p14).
+#: gate_proj is deliberately absent: it loses to awq_gemm 0.95x.
 ROUTE: dict[tuple[int, int], tuple[int, int, int, int]] = {
-    (4864, 896): (64, 128, 4, 2),  # bn, bk, split, warps
+    (4864, 896): (64, 64, 8, 2),
     (896, 896): (32, 128, 4, 2),
+    (896, 128): (32, 64, 4, 2),
 }
 
 
