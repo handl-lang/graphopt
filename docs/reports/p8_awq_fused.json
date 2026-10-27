@@ -1,0 +1,27 @@
+{
+  "ckpt": "Qwen2.5-0.5B-AWQ",
+  "rows": [
+    {
+      "layer": "self_attn.q_proj",
+      "out": 896,
+      "in": 896,
+      "torch_us": 45.8,
+      "ours_us": 40.9,
+      "vllm_us": 38.8,
+      "vs_torch": 1.12,
+      "vs_vllm": 0.948,
+      "max_abs_err": 1.430511474609375e-06
+    },
+    {
+      "layer": "mlp.down_proj",
+      "out": 896,
+      "in": 4864,
+      "torch_us": 198.1,
+      "ours_us": 149.7,
+      "vllm_us": 187.9,
+      "vs_torch": 1.323,
+      "vs_vllm": 1.255,
+      "max_abs_err": 1.6391277313232422e-06
+    }
+  ]
+}

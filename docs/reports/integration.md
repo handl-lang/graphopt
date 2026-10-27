@@ -123,6 +123,13 @@ which already avoids the float round-trip — so this is the win for every
 stack that materializes a float weight from a quantized checkpoint.
 Report: [`p7_awq_real.md`](p7_awq_real.md).
 
+**P8 — int4 unpacked in-kernel, raced against `awq_gemm`.** Our op now
+reads packed int4 directly. One token, real Qwen2.5-0.5B-AWQ layers:
+`down_proj` (896×4864) **149.7 µs vs vLLM's 187.9 µs → 1.25× faster**;
+`q_proj` (896×896) 40.9 vs 38.8 → **5% slower**. Exact to 1.6e-06.
+First head-to-head win against a hand-written production kernel — decode
+only, one GPU, untuned. Report: [`p8_awq_fused.md`](p8_awq_fused.md).
+
 ## The gates
 
 | gate | status | what decides it |
