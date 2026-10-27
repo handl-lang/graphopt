@@ -2809,7 +2809,11 @@ class IRModule(torch.nn.Module):
         key = (str(like.device), str(like.dtype))
         if getattr(self, "_dev_key", None) == key:
             return
-        for table in (self._param_map, self._param_values):
+        tables: list[dict[str, Any]] = [
+            self._param_map,
+            self._param_values,
+        ]
+        for table in tables:
             for k, t in list(table.items()):
                 if not (
                     isinstance(t, torch.Tensor)
