@@ -1626,6 +1626,25 @@ def _domain_list(domain: Any) -> list:
     return list(domain)
 
 
+def _drawable_ref(
+    spec: Any, shapes: dict, env_seed: int, bindings: dict
+) -> tuple | None:
+    """One draw: ``(env, ref)``, or ``None`` when the shapes collide.
+
+    A metavar can be bound at two shapes inside an entry (the
+    kernel-prim arm hit 64 vs 128 at dim 2); torch then refuses the
+    broadcast and the entry carries no evidence.  Any other runtime
+    failure is a real defect and propagates.
+    """
+    env = _sample_env(shapes, env_seed)
+    try:
+        return env, _eval_spec(spec, env, bindings)
+    except RuntimeError as exc:
+        if "must match the size of tensor" not in str(exc):
+            raise
+        return None
+
+
 def _domain_draws(
     spec: Any,
     domain: Any,
@@ -1636,33 +1655,24 @@ def _domain_draws(
     """Sample the domain once; return ``(envs, spelled refs)``.
 
     One draw per domain entry plus *adversarial* re-draws under an
-    offset seed — the paired comparison every candidate sees.  An entry
-    whose bound shapes do not broadcast is skipped and counted: it gives
-    no evidence, and letting it take the mint down would hide every
-    other entry with it.  Raises :class:`DomainShapeError` when nothing
-    drawable is left.
+    offset seed — the paired comparison every candidate sees.  Entries
+    whose shapes cannot broadcast are dropped: they give no evidence,
+    and letting one take the mint down would hide every other entry
+    with it.  Raises :class:`DomainShapeError` when nothing drawable is
+    left.
     """
-    envs: list = []
-    refs: list = []
-    skipped: list[str] = []
-    for i, shapes in enumerate(_domain_list(domain)):
-        for sweep in range(1 + adversarial):
-            env = _sample_env(shapes, seed + i + sweep * (1 << 20))
-            try:
-                ref = _eval_spec(spec, env, bindings)
-            except RuntimeError as exc:
-                if "must match the size of tensor" not in str(exc):
-                    raise
-                skipped.append(str(exc))
-                continue
-            envs.append(env)
-            refs.append(ref)
-    if not envs:
-        raise DomainShapeError(
-            "no drawable domain entry: "
-            + (skipped[0] if skipped else "empty domain")
+    draws = [
+        _drawable_ref(
+            spec, shapes, seed + i + s * (1 << 20), bindings
         )
-    return envs, refs
+        for i, shapes in enumerate(_domain_list(domain))
+        for s in range(1 + adversarial)
+    ]
+    kept = [d for d in draws if d is not None]
+    if not kept:
+        raise DomainShapeError("no drawable domain entry")
+    envs, refs = zip(*kept, strict=True)
+    return list(envs), list(refs)
 
 
 def _verify_envs(
