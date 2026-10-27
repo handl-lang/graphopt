@@ -138,6 +138,15 @@ and 120/168 beat plain matmul**: `down_proj` **2.16×** over vLLM,
 Report: [`p8b_awq_sweep.md`](p8b_awq_sweep.md). The machine picked the
 *configs*, not the algorithm — that gap is the RL claim, still open.
 
+**P8c — split-k, routing, end-to-end.** Split-k took `down_proj` to
+**3.32× over `awq_gemm`** (55.9 vs 186.0 µs); `gate_proj` stays 0.89×.
+A measured routing table sends `down`/`q`/`o` to us, `gate`/`up` to
+`awq_gemm`, `k`/`v` to plain matmul. **End-to-end on Qwen2.5-0.5B-AWQ:
+flat (+1.0%, wins 12/20, tokens identical)** — because the model runs
+fp16 and our kernel is fp32-in/fp32-out, so each call pays two dtype
+copies that the isolated benchmark never saw. Report:
+[`p8c_splitk_routing_e2e.md`](p8c_splitk_routing_e2e.md).
+
 ## The gates
 
 | gate | status | what decides it |

@@ -1,0 +1,22 @@
+{
+  "rounds": 20,
+  "stock_ms": 314.35,
+  "ours_ms": 317.63,
+  "delta_pct": 1.04,
+  "ours_wins": 12,
+  "identical_tokens": true,
+  "route": {
+    "4864:896": [
+      64,
+      64,
+      8,
+      1
+    ],
+    "896:896": [
+      32,
+      256,
+      1,
+      4
+    ]
+  }
+}

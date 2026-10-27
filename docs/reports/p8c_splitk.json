@@ -1,0 +1,32 @@
+[
+  {
+    "layer": "gate_proj",
+    "in": 896,
+    "out": 4864,
+    "config": "bn=128 bk=64 split=4 w=2",
+    "vllm_us": 53.5,
+    "ours_us": 60.0,
+    "vs_vllm": 0.892,
+    "max_abs_err": 4.172325134277344e-07
+  },
+  {
+    "layer": "k_proj",
+    "in": 896,
+    "out": 128,
+    "config": "bn=32 bk=128 split=8 w=2",
+    "vllm_us": 37.9,
+    "ours_us": 22.6,
+    "vs_vllm": 1.68,
+    "max_abs_err": 1.3113021850585938e-06
+  },
+  {
+    "layer": "down_proj",
+    "in": 4864,
+    "out": 896,
+    "config": "bn=64 bk=64 split=8 w=1",
+    "vllm_us": 186.0,
+    "ours_us": 55.9,
+    "vs_vllm": 3.325,
+    "max_abs_err": 1.8477439880371094e-06
+  }
+]
