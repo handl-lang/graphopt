@@ -1,3 +1,7 @@
+> **INVALID — see [p17_e2e_invalid.md](p17_e2e_invalid.md).** The in-model
+> substitution never read the weights the kernel was written for (vLLM pads
+> 896->1152 and Marlin repacks). Treat these numbers as void.
+
 # P6b — our quantized-linear op inside vLLM: integrated, not measurable
 
 **Integration: done. Speed: inconclusive on this box.**

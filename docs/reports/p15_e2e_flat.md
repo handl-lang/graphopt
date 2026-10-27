@@ -1,3 +1,7 @@
+> **INVALID — see [p17_e2e_invalid.md](p17_e2e_invalid.md).** The in-model
+> substitution never read the weights the kernel was written for (vLLM pads
+> 896->1152 and Marlin repacks). Treat these numbers as void.
+
 # P15 — end-to-end with the corrected kernel: flat, and now we know why
 
 The kernel is correct now (two-stage reduction, exact to 1e-3) and wins

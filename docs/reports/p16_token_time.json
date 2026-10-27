@@ -1,0 +1,99 @@
+{
+  "tokens": 160,
+  "total_device_us": 958241.6,
+  "buckets": [
+    {
+      "bucket": "gemm/quant (the part we optimize)",
+      "us": 494593.1,
+      "pct": 51.6
+    },
+    {
+      "bucket": "other",
+      "us": 414775.3,
+      "pct": 43.3
+    },
+    {
+      "bucket": "norm/act",
+      "us": 31073.9,
+      "pct": 3.2
+    },
+    {
+      "bucket": "memory/copies",
+      "us": 7664.5,
+      "pct": 0.8
+    },
+    {
+      "bucket": "attention",
+      "us": 7510.2,
+      "pct": 0.8
+    },
+    {
+      "bucket": "sampling/argmax",
+      "us": 2624.6,
+      "pct": 0.3
+    }
+  ],
+  "top_kernels": [
+    {
+      "name": "void gemv2T_kernel_val<int, int, __half, __half, __half, float, 128, 16, 4, 4, false, false, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<__half const>, cublasGemvTensorStridedBatched<__half const>, cublasGemvTensorStridedBatched<__half>, float> >(cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<__half const>, cublasGemvTensorStridedBatched<__half const>, cublasGemvTensorStridedBatched<__half>, float>, float, float)",
+      "us": 468687.6
+    },
+    {
+      "name": "void marlin::Marlin<1125899906910725l, 1125899906843648l, 1125899906910725l, 1125899906910725l, 256, 1, 8, 8, true, 4, 8, false>(int4 const*, int4 const*, int4*, int4*, int4 const*, float const*, int4 const*, float const*, int4 const*, int, int, int, int, int*, bool, bool, bool, int)",
+      "us": 390239.7
+    },
+    {
+      "name": "void flash::flash_fwd_splitkv_kernel<Flash_fwd_kernel_traits<64, 64, 128, 4, false, false, cutlass::half_t, Flash_kernel_traits<64, 64, 128, 4, cutlass::half_t> >, false, false, false, false, true, false, false, false>(flash::Flash_fwd_params)",
+      "us": 24439.8
+    },
+    {
+      "name": "std::enable_if<(((8)>(0)))&&vllm::_typeConvert<c10::Half>::exists, void>::type vllm::fused_add_rms_norm_kernel<c10::Half, 8, true>(c10::Half*, long, c10::Half*, c10::Half const*, float, int, int, long)",
+      "us": 19627.9
+    },
+    {
+      "name": "void marlin::Marlin<1125899906910725l, 1125899906843648l, 1125899906910725l, 1125899906910725l, 256, 1, 8, 8, false, 4, 8, false>(int4 const*, int4 const*, int4*, int4*, int4 const*, float const*, int4 const*, float const*, int4 const*, int, int, int, int, int*, bool, bool, bool, int)",
+      "us": 14201.3
+    },
+    {
+      "name": "void vllm::act_and_mul_kernel<c10::Half, __half2, &(c10::Half vllm::silu_kernel<c10::Half>(c10::Half const&, float)), &(__half2 vllm::packed_silu_kernel<__half2>(__half2 const&, float)), true, true, false, false>(c10::Half*, c10::Half const*, int, float, float, float)",
+      "us": 11124.9
+    },
+    {
+      "name": "void vllm::rotary_embedding_kernel<c10::Half, c10::Half, true>(long const*, c10::Half*, c10::Half*, c10::Half const*, int, long, long, long, int, int, int, long, bool)",
+      "us": 8011.8
+    },
+    {
+      "name": "void vllm::reshape_and_cache_flash_kernel<unsigned short, unsigned short, (vllm::Fp8KVCacheDataType)0>(unsigned short const*, unsigned short const*, unsigned short*, unsigned short*, long const*, long, long, long, long, long, int, int, int, float const*, float const*, int)",
+      "us": 7510.2
+    },
+    {
+      "name": "Memcpy DtoD (Device -> Device)",
+      "us": 3869.0
+    },
+    {
+      "name": "void flash::flash_fwd_splitkv_kernel<Flash_fwd_kernel_traits<64, 64, 256, 4, false, false, cutlass::half_t, Flash_kernel_traits<64, 64, 256, 4, cutlass::half_t> >, true, false, false, false, true, false, false, false>(flash::Flash_fwd_params)",
+      "us": 1465.8
+    },
+    {
+      "name": "_gumbel_sample_kernel",
+      "us": 980.6
+    },
+    {
+      "name": "void at::native::reduce_kernel<512, 1, at::native::ReduceOp<float, at::native::ArgMaxOps<float>, unsigned int, long, 4, 4> >(at::native::ReduceOp<float, at::native::ArgMaxOps<float>, unsigned int, long, 4, 4>)",
+      "us": 738.3
+    },
+    {
+      "name": "void at::native::index_elementwise_kernel<128, 4, at::native::gpu_index_kernel<at::native::index_kernel_impl<at::native::OpaqueType<2> >(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>)::{lambda(char*, char const*, long)#1}>(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>, at::native::index_kernel_impl<at::native::OpaqueType<2> >(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>)::{lambda(char*, char const*, long)#1} const&, bool)::{lambda(int)#1}>(long, at::native::gpu_index_kernel<at::native::index_kernel_impl<at::native::OpaqueType<2> >(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>)::{lambda(char*, char const*, long)#1}>(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>, at::native::index_kernel_impl<at::native::OpaqueType<2> >(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>)::{lambda(char*, char const*, long)#1} const&, bool)::{lambda(int)#1})",
+      "us": 668.7
+    },
+    {
+      "name": "void at::native::index_elementwise_kernel<128, 4, at::native::gpu_index_kernel<at::native::index_kernel_impl<at::native::OpaqueType<8> >(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>)::{lambda(char*, char const*, long)#1}>(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>, at::native::index_kernel_impl<at::native::OpaqueType<8> >(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>)::{lambda(char*, char const*, long)#1} const&, bool)::{lambda(int)#1}>(long, at::native::gpu_index_kernel<at::native::index_kernel_impl<at::native::OpaqueType<8> >(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>)::{lambda(char*, char const*, long)#1}>(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>, at::native::index_kernel_impl<at::native::OpaqueType<8> >(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>)::{lambda(char*, char const*, long)#1} const&, bool)::{lambda(int)#1})",
+      "us": 667.2
+    },
+    {
+      "name": "_gather_block_tables_kernel",
+      "us": 596.3
+    }
+  ],
+  "ceiling_if_3x_on_gemm": 34.4
+}

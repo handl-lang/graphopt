@@ -1,3 +1,7 @@
+> **INVALID — see [p17_e2e_invalid.md](p17_e2e_invalid.md).** The in-model
+> substitution never read the weights the kernel was written for (vLLM pads
+> 896->1152 and Marlin repacks). Treat these numbers as void.
+
 {
   "rounds": 20,
   "stock_ms": 314.31,

@@ -53,7 +53,7 @@ def install_patch() -> None:
         sc = layer.scales
         n, k = sc.shape[1], qw.shape[0]
         bn, bk, split, wp = cfg
-        out = gemv_v2(
+        out = gemv_split2(
             x.reshape(-1).to(torch.float16).contiguous(),
             qw,
             layer.qzeros,
