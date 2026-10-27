@@ -1,0 +1,644 @@
+{
+  "part_a": [
+    {
+      "layer": "down_proj",
+      "out": 896,
+      "in": 4864,
+      "arm": "ours",
+      "evict_passes": 0,
+      "median_us": 73.0,
+      "sd_us": 14.2,
+      "pct_of_roofline": 33.7
+    },
+    {
+      "layer": "down_proj",
+      "out": 896,
+      "in": 4864,
+      "arm": "vllm",
+      "evict_passes": 0,
+      "median_us": 208.6,
+      "sd_us": 11.7,
+      "pct_of_roofline": 11.8
+    },
+    {
+      "layer": "down_proj",
+      "out": 896,
+      "in": 4864,
+      "arm": "torch",
+      "evict_passes": 0,
+      "median_us": 113.6,
+      "sd_us": 2.1,
+      "pct_of_roofline": 21.6
+    },
+    {
+      "layer": "down_proj",
+      "out": 896,
+      "in": 4864,
+      "arm": "ours",
+      "evict_passes": 1,
+      "median_us": 81.1,
+      "sd_us": 10.6,
+      "pct_of_roofline": 30.3
+    },
+    {
+      "layer": "down_proj",
+      "out": 896,
+      "in": 4864,
+      "arm": "vllm",
+      "evict_passes": 1,
+      "median_us": 217.4,
+      "sd_us": 13.5,
+      "pct_of_roofline": 11.3
+    },
+    {
+      "layer": "down_proj",
+      "out": 896,
+      "in": 4864,
+      "arm": "torch",
+      "evict_passes": 1,
+      "median_us": 124.4,
+      "sd_us": 7.2,
+      "pct_of_roofline": 19.8
+    },
+    {
+      "layer": "down_proj",
+      "out": 896,
+      "in": 4864,
+      "arm": "ours",
+      "evict_passes": 4,
+      "median_us": 79.5,
+      "sd_us": 19.3,
+      "pct_of_roofline": 30.9
+    },
+    {
+      "layer": "down_proj",
+      "out": 896,
+      "in": 4864,
+      "arm": "vllm",
+      "evict_passes": 4,
+      "median_us": 179.6,
+      "sd_us": 12.4,
+      "pct_of_roofline": 13.7
+    },
+    {
+      "layer": "down_proj",
+      "out": 896,
+      "in": 4864,
+      "arm": "torch",
+      "evict_passes": 4,
+      "median_us": 125.3,
+      "sd_us": 12.1,
+      "pct_of_roofline": 19.6
+    },
+    {
+      "layer": "down_proj",
+      "out": 896,
+      "in": 4864,
+      "arm": "ours",
+      "evict_passes": 16,
+      "median_us": 130.2,
+      "sd_us": 48.5,
+      "pct_of_roofline": 18.9
+    },
+    {
+      "layer": "down_proj",
+      "out": 896,
+      "in": 4864,
+      "arm": "vllm",
+      "evict_passes": 16,
+      "median_us": 218.4,
+      "sd_us": 40.5,
+      "pct_of_roofline": 11.3
+    },
+    {
+      "layer": "down_proj",
+      "out": 896,
+      "in": 4864,
+      "arm": "torch",
+      "evict_passes": 16,
+      "median_us": 161.6,
+      "sd_us": 29.9,
+      "pct_of_roofline": 15.2
+    },
+    {
+      "layer": "q_proj",
+      "out": 896,
+      "in": 896,
+      "arm": "ours",
+      "evict_passes": 0,
+      "median_us": 34.2,
+      "sd_us": 7.0,
+      "pct_of_roofline": 13.3
+    },
+    {
+      "layer": "q_proj",
+      "out": 896,
+      "in": 896,
+      "arm": "vllm",
+      "evict_passes": 0,
+      "median_us": 38.8,
+      "sd_us": 4.6,
+      "pct_of_roofline": 11.7
+    },
+    {
+      "layer": "q_proj",
+      "out": 896,
+      "in": 896,
+      "arm": "torch",
+      "evict_passes": 0,
+      "median_us": 33.8,
+      "sd_us": 1.0,
+      "pct_of_roofline": 13.4
+    },
+    {
+      "layer": "q_proj",
+      "out": 896,
+      "in": 896,
+      "arm": "ours",
+      "evict_passes": 1,
+      "median_us": 41.2,
+      "sd_us": 17.2,
+      "pct_of_roofline": 11.0
+    },
+    {
+      "layer": "q_proj",
+      "out": 896,
+      "in": 896,
+      "arm": "vllm",
+      "evict_passes": 1,
+      "median_us": 50.1,
+      "sd_us": 11.2,
+      "pct_of_roofline": 9.1
+    },
+    {
+      "layer": "q_proj",
+      "out": 896,
+      "in": 896,
+      "arm": "torch",
+      "evict_passes": 1,
+      "median_us": 42.0,
+      "sd_us": 10.1,
+      "pct_of_roofline": 10.8
+    },
+    {
+      "layer": "q_proj",
+      "out": 896,
+      "in": 896,
+      "arm": "ours",
+      "evict_passes": 4,
+      "median_us": 69.4,
+      "sd_us": 114.7,
+      "pct_of_roofline": 6.6
+    },
+    {
+      "layer": "q_proj",
+      "out": 896,
+      "in": 896,
+      "arm": "vllm",
+      "evict_passes": 4,
+      "median_us": 67.9,
+      "sd_us": 61.1,
+      "pct_of_roofline": 6.7
+    },
+    {
+      "layer": "q_proj",
+      "out": 896,
+      "in": 896,
+      "arm": "torch",
+      "evict_passes": 4,
+      "median_us": 51.3,
+      "sd_us": 16.9,
+      "pct_of_roofline": 8.9
+    },
+    {
+      "layer": "q_proj",
+      "out": 896,
+      "in": 896,
+      "arm": "ours",
+      "evict_passes": 16,
+      "median_us": 111.0,
+      "sd_us": 32.7,
+      "pct_of_roofline": 4.1
+    },
+    {
+      "layer": "q_proj",
+      "out": 896,
+      "in": 896,
+      "arm": "vllm",
+      "evict_passes": 16,
+      "median_us": 108.6,
+      "sd_us": 133.5,
+      "pct_of_roofline": 4.2
+    },
+    {
+      "layer": "q_proj",
+      "out": 896,
+      "in": 896,
+      "arm": "torch",
+      "evict_passes": 16,
+      "median_us": 100.4,
+      "sd_us": 62.2,
+      "pct_of_roofline": 4.5
+    },
+    {
+      "layer": "gate_proj",
+      "out": 4864,
+      "in": 896,
+      "arm": "ours",
+      "evict_passes": 0,
+      "median_us": 58.6,
+      "sd_us": 11.9,
+      "pct_of_roofline": 41.9
+    },
+    {
+      "layer": "gate_proj",
+      "out": 4864,
+      "in": 896,
+      "arm": "vllm",
+      "evict_passes": 0,
+      "median_us": 54.0,
+      "sd_us": 8.1,
+      "pct_of_roofline": 45.5
+    },
+    {
+      "layer": "gate_proj",
+      "out": 4864,
+      "in": 896,
+      "arm": "torch",
+      "evict_passes": 0,
+      "median_us": 109.9,
+      "sd_us": 1.6,
+      "pct_of_roofline": 22.4
+    },
+    {
+      "layer": "gate_proj",
+      "out": 4864,
+      "in": 896,
+      "arm": "ours",
+      "evict_passes": 1,
+      "median_us": 66.8,
+      "sd_us": 28.7,
+      "pct_of_roofline": 36.8
+    },
+    {
+      "layer": "gate_proj",
+      "out": 4864,
+      "in": 896,
+      "arm": "vllm",
+      "evict_passes": 1,
+      "median_us": 60.5,
+      "sd_us": 12.0,
+      "pct_of_roofline": 40.7
+    },
+    {
+      "layer": "gate_proj",
+      "out": 4864,
+      "in": 896,
+      "arm": "torch",
+      "evict_passes": 1,
+      "median_us": 118.4,
+      "sd_us": 11.6,
+      "pct_of_roofline": 20.8
+    },
+    {
+      "layer": "gate_proj",
+      "out": 4864,
+      "in": 896,
+      "arm": "ours",
+      "evict_passes": 4,
+      "median_us": 92.6,
+      "sd_us": 29.3,
+      "pct_of_roofline": 26.5
+    },
+    {
+      "layer": "gate_proj",
+      "out": 4864,
+      "in": 896,
+      "arm": "vllm",
+      "evict_passes": 4,
+      "median_us": 74.1,
+      "sd_us": 35.9,
+      "pct_of_roofline": 33.2
+    },
+    {
+      "layer": "gate_proj",
+      "out": 4864,
+      "in": 896,
+      "arm": "torch",
+      "evict_passes": 4,
+      "median_us": 130.7,
+      "sd_us": 15.4,
+      "pct_of_roofline": 18.8
+    },
+    {
+      "layer": "gate_proj",
+      "out": 4864,
+      "in": 896,
+      "arm": "ours",
+      "evict_passes": 16,
+      "median_us": 133.2,
+      "sd_us": 25.1,
+      "pct_of_roofline": 18.5
+    },
+    {
+      "layer": "gate_proj",
+      "out": 4864,
+      "in": 896,
+      "arm": "vllm",
+      "evict_passes": 16,
+      "median_us": 106.1,
+      "sd_us": 29.6,
+      "pct_of_roofline": 23.2
+    },
+    {
+      "layer": "gate_proj",
+      "out": 4864,
+      "in": 896,
+      "arm": "torch",
+      "evict_passes": 16,
+      "median_us": 164.6,
+      "sd_us": 18.4,
+      "pct_of_roofline": 14.9
+    },
+    {
+      "layer": "k_proj",
+      "out": 128,
+      "in": 896,
+      "arm": "ours",
+      "evict_passes": 0,
+      "median_us": 26.6,
+      "sd_us": 9.6,
+      "pct_of_roofline": 2.5
+    },
+    {
+      "layer": "k_proj",
+      "out": 128,
+      "in": 896,
+      "arm": "vllm",
+      "evict_passes": 0,
+      "median_us": 38.5,
+      "sd_us": 8.6,
+      "pct_of_roofline": 1.7
+    },
+    {
+      "layer": "k_proj",
+      "out": 128,
+      "in": 896,
+      "arm": "torch",
+      "evict_passes": 0,
+      "median_us": 16.1,
+      "sd_us": 1.6,
+      "pct_of_roofline": 4.1
+    },
+    {
+      "layer": "k_proj",
+      "out": 128,
+      "in": 896,
+      "arm": "ours",
+      "evict_passes": 1,
+      "median_us": 46.3,
+      "sd_us": 46.5,
+      "pct_of_roofline": 1.4
+    },
+    {
+      "layer": "k_proj",
+      "out": 128,
+      "in": 896,
+      "arm": "vllm",
+      "evict_passes": 1,
+      "median_us": 63.6,
+      "sd_us": 34.4,
+      "pct_of_roofline": 1.0
+    },
+    {
+      "layer": "k_proj",
+      "out": 128,
+      "in": 896,
+      "arm": "torch",
+      "evict_passes": 1,
+      "median_us": 35.3,
+      "sd_us": 43.3,
+      "pct_of_roofline": 1.9
+    },
+    {
+      "layer": "k_proj",
+      "out": 128,
+      "in": 896,
+      "arm": "ours",
+      "evict_passes": 4,
+      "median_us": 49.7,
+      "sd_us": 21.7,
+      "pct_of_roofline": 1.3
+    },
+    {
+      "layer": "k_proj",
+      "out": 128,
+      "in": 896,
+      "arm": "vllm",
+      "evict_passes": 4,
+      "median_us": 62.0,
+      "sd_us": 13.7,
+      "pct_of_roofline": 1.1
+    },
+    {
+      "layer": "k_proj",
+      "out": 128,
+      "in": 896,
+      "arm": "torch",
+      "evict_passes": 4,
+      "median_us": 33.1,
+      "sd_us": 12.0,
+      "pct_of_roofline": 2.0
+    },
+    {
+      "layer": "k_proj",
+      "out": 128,
+      "in": 896,
+      "arm": "ours",
+      "evict_passes": 16,
+      "median_us": 92.6,
+      "sd_us": 27.6,
+      "pct_of_roofline": 0.7
+    },
+    {
+      "layer": "k_proj",
+      "out": 128,
+      "in": 896,
+      "arm": "vllm",
+      "evict_passes": 16,
+      "median_us": 86.3,
+      "sd_us": 19.6,
+      "pct_of_roofline": 0.8
+    },
+    {
+      "layer": "k_proj",
+      "out": 128,
+      "in": 896,
+      "arm": "torch",
+      "evict_passes": 16,
+      "median_us": 59.7,
+      "sd_us": 21.3,
+      "pct_of_roofline": 1.1
+    }
+  ],
+  "part_b": [
+    {
+      "layer": "down_proj",
+      "out": 896,
+      "in": 4864,
+      "ours_us": 118.9,
+      "vllm_us": 218.6,
+      "torch_us": 141.6,
+      "vs_vllm": 1.84,
+      "vs_torch": 1.19,
+      "wins_vs_both": true
+    },
+    {
+      "layer": "q_proj",
+      "out": 896,
+      "in": 896,
+      "ours_us": 119.3,
+      "vllm_us": 103.5,
+      "torch_us": 91.8,
+      "vs_vllm": 0.87,
+      "vs_torch": 0.77,
+      "wins_vs_both": false
+    },
+    {
+      "layer": "gate_proj",
+      "out": 4864,
+      "in": 896,
+      "ours_us": 102.0,
+      "vllm_us": 81.5,
+      "torch_us": 140.1,
+      "vs_vllm": 0.8,
+      "vs_torch": 1.37,
+      "wins_vs_both": false
+    },
+    {
+      "layer": "k_proj",
+      "out": 128,
+      "in": 896,
+      "ours_us": 41.2,
+      "vllm_us": 52.9,
+      "torch_us": 26.1,
+      "vs_vllm": 1.28,
+      "vs_torch": 0.63,
+      "wins_vs_both": false
+    }
+  ],
+  "env": [
+    {
+      "layer": "down_proj",
+      "evict": 0,
+      "sm_mhz": 1327,
+      "temp_c": 62,
+      "power_w": 12.83
+    },
+    {
+      "layer": "down_proj",
+      "evict": 1,
+      "sm_mhz": 1770,
+      "temp_c": 63,
+      "power_w": 14.53
+    },
+    {
+      "layer": "down_proj",
+      "evict": 4,
+      "sm_mhz": 1770,
+      "temp_c": 65,
+      "power_w": 23.2
+    },
+    {
+      "layer": "down_proj",
+      "evict": 16,
+      "sm_mhz": 1770,
+      "temp_c": 66,
+      "power_w": 32.41
+    },
+    {
+      "layer": "q_proj",
+      "evict": 0,
+      "sm_mhz": 1770,
+      "temp_c": 66,
+      "power_w": 32.16
+    },
+    {
+      "layer": "q_proj",
+      "evict": 1,
+      "sm_mhz": 1770,
+      "temp_c": 66,
+      "power_w": 31.73
+    },
+    {
+      "layer": "q_proj",
+      "evict": 4,
+      "sm_mhz": 1770,
+      "temp_c": 67,
+      "power_w": 31.65
+    },
+    {
+      "layer": "q_proj",
+      "evict": 16,
+      "sm_mhz": 1770,
+      "temp_c": 68,
+      "power_w": 32.87
+    },
+    {
+      "layer": "gate_proj",
+      "evict": 0,
+      "sm_mhz": 1770,
+      "temp_c": 68,
+      "power_w": 32.6
+    },
+    {
+      "layer": "gate_proj",
+      "evict": 1,
+      "sm_mhz": 1770,
+      "temp_c": 68,
+      "power_w": 32.37
+    },
+    {
+      "layer": "gate_proj",
+      "evict": 4,
+      "sm_mhz": 1770,
+      "temp_c": 68,
+      "power_w": 32.43
+    },
+    {
+      "layer": "gate_proj",
+      "evict": 16,
+      "sm_mhz": 1770,
+      "temp_c": 69,
+      "power_w": 33.23
+    },
+    {
+      "layer": "k_proj",
+      "evict": 0,
+      "sm_mhz": 1770,
+      "temp_c": 69,
+      "power_w": 33.0
+    },
+    {
+      "layer": "k_proj",
+      "evict": 1,
+      "sm_mhz": 1770,
+      "temp_c": 69,
+      "power_w": 32.4
+    },
+    {
+      "layer": "k_proj",
+      "evict": 4,
+      "sm_mhz": 1770,
+      "temp_c": 69,
+      "power_w": 32.23
+    },
+    {
+      "layer": "k_proj",
+      "evict": 16,
+      "sm_mhz": 1770,
+      "temp_c": 70,
+      "power_w": 33.35
+    }
+  ]
+}
