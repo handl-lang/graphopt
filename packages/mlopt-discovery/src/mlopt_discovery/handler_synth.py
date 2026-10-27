@@ -1662,9 +1662,7 @@ def _domain_draws(
     left.
     """
     draws = [
-        _drawable_ref(
-            spec, shapes, seed + i + s * (1 << 20), bindings
-        )
+        _drawable_ref(spec, shapes, seed + i + s * (1 << 20), bindings)
         for i, shapes in enumerate(_domain_list(domain))
         for s in range(1 + adversarial)
     ]
