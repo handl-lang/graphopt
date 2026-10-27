@@ -1,0 +1,50 @@
+[
+  {
+    "layer": "down_proj",
+    "out": 896,
+    "in": 4864,
+    "config": "bn=64 bk=128 split=4 w=2",
+    "roofline_us": 24.6,
+    "ours_us": 58.2,
+    "vllm_us": 196.9,
+    "pct_of_roofline": 42.3,
+    "vs_vllm": 3.38,
+    "max_abs_err": 4.738941192626953
+  },
+  {
+    "layer": "q_proj",
+    "out": 896,
+    "in": 896,
+    "config": "bn=32 bk=128 split=4 w=2",
+    "roofline_us": 4.5,
+    "ours_us": 28.7,
+    "vllm_us": 35.1,
+    "pct_of_roofline": 15.8,
+    "vs_vllm": 1.22,
+    "max_abs_err": 8.105782508850098
+  },
+  {
+    "layer": "k_proj",
+    "out": 128,
+    "in": 896,
+    "config": "bn=32 bk=256 split=4 w=4",
+    "roofline_us": 0.7,
+    "ours_us": 20.4,
+    "vllm_us": 35.3,
+    "pct_of_roofline": 3.3,
+    "vs_vllm": 1.73,
+    "max_abs_err": 11.921289443969727
+  },
+  {
+    "layer": "gate_proj",
+    "out": 4864,
+    "in": 896,
+    "config": "bn=64 bk=64 split=4 w=2",
+    "roofline_us": 24.6,
+    "ours_us": 55.7,
+    "vllm_us": 52.1,
+    "pct_of_roofline": 44.1,
+    "vs_vllm": 0.94,
+    "max_abs_err": 2.222557544708252
+  }
+]
