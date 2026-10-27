@@ -72,8 +72,8 @@ from __future__ import annotations
 from typing import Any
 
 from gamekit.players import RelFeats, register_part
-
 from mlopt_core.ir import Op
+
 from mlopt_discovery.meta_arena import Action
 from mlopt_discovery.open_game import _score as _cand_score
 
@@ -174,9 +174,11 @@ def _cand_rates(cand: Any) -> tuple[float, float, float]:
     if not tab:
         return 0.0, 0.0, 0.0
     pay, use, seen = tab.get("sig", {}).get(signature(cand), (0, 0, 0))
-    return (pay / seen if seen else 0.0), (
-        use / seen if seen else 0.0
-    ), float(seen)
+    return (
+        (pay / seen if seen else 0.0),
+        (use / seen if seen else 0.0),
+        float(seen),
+    )
 
 
 def _form_rate(cand: Any) -> float:
@@ -250,9 +252,7 @@ def _stop_cols(state: Any) -> dict[str, float]:
         "x:stop:cr_top": max((r[0] for r in rates), default=0.0),
         "x:stop:cr_pool": sum(r[0] for r in rates),
         "x:stop:cr_use": max((r[1] for r in rates), default=0.0),
-        "x:stop:cr_dead": sum(
-            r[2] > 0 and r[0] == 0.0 for r in rates
-        )
+        "x:stop:cr_dead": sum(r[2] > 0 and r[0] == 0.0 for r in rates)
         / k,
         "x:stop:cr_cov": sum(r[2] > 0 for r in rates) / k,
         "x:stop:cr_ftop": max(frates, default=0.0),
@@ -270,9 +270,7 @@ def _eval_cols(state: Any, action: Action) -> dict[str, float]:
     return {
         "x:vd:rate": rate,
         "x:vd:seen": seen,
-        "x:vd:live": float(
-            cand.label.split(":", 1)[0] in paying
-        ),
+        "x:vd:live": float(cand.label.split(":", 1)[0] in paying),
     }
 
 

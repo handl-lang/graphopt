@@ -38,10 +38,10 @@ pool):
   page's starting prior-score mass still pending — the value-drain
   progress counter (0.0 when the page's total is non-positive).
 * ``x:stop:prior_margin`` — the prior's *own* softmax margin:
-  ``max_pending`` eval-row logit − the stop-row logit under the
+  ``max_pending`` eval-row logit - the stop-row logit under the
   shipped weights.  The shared ``bias``/``st:*``/``h:*`` terms
   cancel, so this is
-  ``w[op:evaluate] + max_pending w·(a-block + x-block) − w[op:stop]``
+  ``w[op:evaluate] + max_pending w·(a-block + x-block) - w[op:stop]``
   — κ = 0 is exactly "stop when the prior's argmax would already
   pick stop"; κ > 0 is a hysteresis — quit unless the best eval
   beats stopping by a margin.
@@ -64,10 +64,10 @@ import math
 from statistics import fmean
 from typing import Any
 
-from gamekit.players import RelFeats, register_part, _dot
+from gamekit.players import RelFeats, _dot, register_part
 
-from mlopt_discovery.meta_arena import Action
 from mlopt_discovery import open_game as og
+from mlopt_discovery.meta_arena import Action
 
 __all__ = [
     "PRIOR_FEATURES",
@@ -90,7 +90,7 @@ _ZERO: dict[str, float] = {f: 0.0 for f in PRIOR_FEATURES}
 
 
 def _eval_block(state: Any, i: int) -> dict[str, float]:
-    """The prior-visible ``evaluate`` block for pending member *i*.
+    """Return the prior-visible ``evaluate`` block for pending member *i*.
 
     The candidate slice of the row the shipped prior scores:
     ``_cand_feats`` plus the pool-relative and interaction columns
@@ -138,7 +138,7 @@ def prior_feats(
         w_ev + _dot(w, _eval_block(state, i)) for i in state.pending
     ]
     top = max(logits)
-    denom = sum(math.exp(l - top) for l in logits) + math.exp(
+    denom = sum(math.exp(x - top) for x in logits) + math.exp(
         l_stop - top
     )
     return {
