@@ -4,103 +4,103 @@
     "out": 896,
     "in": 4864,
     "cold_us": {
-      "ours": 76.5,
-      "vllm": 179.9,
-      "torch": 123.7
+      "ours": 172.9,
+      "vllm": 208.0,
+      "torch": 146.9
     },
     "reuse_us": {
-      "ours": 47.0,
-      "vllm": 158.3,
-      "torch": 101.5
+      "ours": 117.3,
+      "vllm": 159.2,
+      "torch": 102.3
     },
     "cold_sd_us": {
-      "ours": 21.7,
-      "vllm": 28.3,
-      "torch": 22.3
+      "ours": 152.7,
+      "vllm": 100.7,
+      "torch": 84.7
     },
-    "winner_cold": "ours",
-    "winner_reuse": "ours",
+    "winner_cold": "torch",
+    "winner_reuse": "torch",
     "regimes_agree": true,
     "roofline_us": 24.6,
-    "our_pct_of_roofline_cold": 32.1,
-    "vllm_over_ours_cold": 2.35
+    "our_pct_of_roofline_cold": 14.2,
+    "vllm_over_ours_cold": 1.2
   },
   {
     "layer": "q_proj",
     "out": 896,
     "in": 896,
     "cold_us": {
-      "ours": 52.0,
-      "vllm": 58.4,
-      "torch": 51.6
+      "ours": 72.5,
+      "vllm": 61.1,
+      "torch": 53.4
     },
     "reuse_us": {
-      "ours": 19.9,
-      "vllm": 28.3,
-      "torch": 24.0
+      "ours": 20.7,
+      "vllm": 28.5,
+      "torch": 23.8
     },
     "cold_sd_us": {
-      "ours": 10.2,
-      "vllm": 7.2,
-      "torch": 6.8
+      "ours": 85.9,
+      "vllm": 55.6,
+      "torch": 36.1
     },
     "winner_cold": "torch",
     "winner_reuse": "ours",
     "regimes_agree": false,
     "roofline_us": 4.5,
-    "our_pct_of_roofline_cold": 8.7,
-    "vllm_over_ours_cold": 1.12
+    "our_pct_of_roofline_cold": 6.3,
+    "vllm_over_ours_cold": 0.84
   },
   {
     "layer": "gate_proj",
     "out": 4864,
     "in": 896,
     "cold_us": {
-      "ours": 79.7,
-      "vllm": 66.8,
-      "torch": 127.7
+      "ours": 81.0,
+      "vllm": 67.4,
+      "torch": 126.7
     },
     "reuse_us": {
-      "ours": 41.6,
+      "ours": 46.0,
       "vllm": 44.2,
-      "torch": 101.8
+      "torch": 101.5
     },
     "cold_sd_us": {
-      "ours": 15.5,
-      "vllm": 15.0,
-      "torch": 11.5
+      "ours": 18.2,
+      "vllm": 11.9,
+      "torch": 10.9
     },
     "winner_cold": "vllm",
-    "winner_reuse": "ours",
-    "regimes_agree": false,
+    "winner_reuse": "vllm",
+    "regimes_agree": true,
     "roofline_us": 24.6,
-    "our_pct_of_roofline_cold": 30.9,
-    "vllm_over_ours_cold": 0.84
+    "our_pct_of_roofline_cold": 30.3,
+    "vllm_over_ours_cold": 0.83
   },
   {
     "layer": "k_proj",
     "out": 128,
     "in": 896,
     "cold_us": {
-      "ours": 53.5,
-      "vllm": 61.2,
-      "torch": 34.1
+      "ours": 52.8,
+      "vllm": 56.3,
+      "torch": 32.3
     },
     "reuse_us": {
-      "ours": 18.1,
-      "vllm": 28.6,
-      "torch": 10.3
+      "ours": 18.2,
+      "vllm": 27.7,
+      "torch": 9.4
     },
     "cold_sd_us": {
-      "ours": 20.4,
-      "vllm": 15.7,
-      "torch": 16.1
+      "ours": 12.0,
+      "vllm": 9.9,
+      "torch": 7.9
     },
     "winner_cold": "torch",
     "winner_reuse": "torch",
     "regimes_agree": true,
     "roofline_us": 0.7,
-    "our_pct_of_roofline_cold": 1.2,
-    "vllm_over_ours_cold": 1.14
+    "our_pct_of_roofline_cold": 1.3,
+    "vllm_over_ours_cold": 1.07
   }
 ]

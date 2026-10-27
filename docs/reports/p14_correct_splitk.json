@@ -1,0 +1,110 @@
+[
+  {
+    "layer": "down_proj",
+    "out": 896,
+    "in": 4864,
+    "candidates": 48,
+    "best_config": "bn64_bk64_s8_w2",
+    "ours_us": 58.9,
+    "vllm_us": 174.1,
+    "torch_us": 120.2,
+    "vs_vllm": 2.96,
+    "vs_torch": 2.04,
+    "pct_of_roofline": 41.8,
+    "top3": [
+      {
+        "config": "bn64_bk64_s8_w2",
+        "us": 58.9
+      },
+      {
+        "config": "bn128_bk64_s8_w2",
+        "us": 62.9
+      },
+      {
+        "config": "bn32_bk128_s4_w2",
+        "us": 64.4
+      }
+    ]
+  },
+  {
+    "layer": "gate_proj",
+    "out": 4864,
+    "in": 896,
+    "candidates": 48,
+    "best_config": "bn64_bk64_s4_w2",
+    "ours_us": 60.6,
+    "vllm_us": 57.8,
+    "torch_us": 115.9,
+    "vs_vllm": 0.95,
+    "vs_torch": 1.91,
+    "pct_of_roofline": 40.6,
+    "top3": [
+      {
+        "config": "bn64_bk64_s4_w2",
+        "us": 60.6
+      },
+      {
+        "config": "bn128_bk64_s4_w2",
+        "us": 65.4
+      },
+      {
+        "config": "bn128_bk64_s8_w2",
+        "us": 66.5
+      }
+    ]
+  },
+  {
+    "layer": "q_proj",
+    "out": 896,
+    "in": 896,
+    "candidates": 48,
+    "best_config": "bn32_bk128_s4_w2",
+    "ours_us": 35.2,
+    "vllm_us": 47.7,
+    "torch_us": 41.1,
+    "vs_vllm": 1.35,
+    "vs_torch": 1.17,
+    "pct_of_roofline": 12.9,
+    "top3": [
+      {
+        "config": "bn32_bk128_s4_w2",
+        "us": 35.2
+      },
+      {
+        "config": "bn64_bk128_s4_w4",
+        "us": 35.7
+      },
+      {
+        "config": "bn32_bk64_s4_w2",
+        "us": 35.9
+      }
+    ]
+  },
+  {
+    "layer": "k_proj",
+    "out": 128,
+    "in": 896,
+    "candidates": 48,
+    "best_config": "bn32_bk64_s4_w2",
+    "ours_us": 38.5,
+    "vllm_us": 58.7,
+    "torch_us": 31.2,
+    "vs_vllm": 1.52,
+    "vs_torch": 0.81,
+    "pct_of_roofline": 1.7,
+    "top3": [
+      {
+        "config": "bn32_bk64_s4_w2",
+        "us": 38.5
+      },
+      {
+        "config": "bn64_bk128_s2_w4",
+        "us": 38.6
+      },
+      {
+        "config": "bn32_bk128_s2_w4",
+        "us": 39.2
+      }
+    ]
+  }
+]

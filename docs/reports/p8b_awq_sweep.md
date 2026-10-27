@@ -1,3 +1,7 @@
+> **WITHDRAWN — see [p13_retraction_splitk.md](p13_retraction_splitk.md).** The split-k path used here
+> accumulates incorrectly (max abs error 3.8-5.6 vs reference); every speedup
+> in this report is invalid. The regime analysis stands; the numbers do not.
+
 # P8b — the whole model, machine-picked configs
 
 All four distinct geometries in Qwen2.5-0.5B-AWQ (168 quantized linears).

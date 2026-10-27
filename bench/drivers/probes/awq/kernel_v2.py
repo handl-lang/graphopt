@@ -100,7 +100,13 @@ def _gemv_v2(
 
 
 def gemv_v2(x, qw, qz, sc, n, k, bn=128, bk=64, split=1, warps=4):
-    out = torch.empty((1, n), device="cuda", dtype=torch.float16)
+    # split>1 accumulates with atomics, so the buffer must start at zero:
+    # `torch.empty` here produced garbage-added results (max|Δ| ~ 4) and
+    # silently invalidated every split>1 timing.
+    if split > 1:
+        out = torch.zeros((1, n), device="cuda", dtype=torch.float16)
+    else:
+        out = torch.empty((1, n), device="cuda", dtype=torch.float16)
     _gemv_v2[(triton.cdiv(n, bn), split)](
         x,
         qw,

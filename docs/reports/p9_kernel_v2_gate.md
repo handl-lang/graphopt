@@ -1,3 +1,7 @@
+> **WITHDRAWN — see [p13_retraction_splitk.md](p13_retraction_splitk.md).** The split-k path used here
+> accumulates incorrectly (max abs error 3.8-5.6 vs reference); every speedup
+> in this report is invalid. The regime analysis stands; the numbers do not.
+
 # P9 — kernel v2: small shapes better, big shape unchanged (gate failed)
 
 The Phase 1 gate was `down_proj` < 35 µs (≥70 % of the 24.6 µs roofline).

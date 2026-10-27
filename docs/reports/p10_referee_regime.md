@@ -1,3 +1,7 @@
+> **WITHDRAWN — see [p13_retraction_splitk.md](p13_retraction_splitk.md).** The split-k path used here
+> accumulates incorrectly (max abs error 3.8-5.6 vs reference); every speedup
+> in this report is invalid. The regime analysis stands; the numbers do not.
+
 # P10 — the machine cannot yet pick the kernel, because the referee can't see
 
 Phase 3's gate was: *the machine rediscovers the hand-tuned kernel without

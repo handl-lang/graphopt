@@ -38,11 +38,14 @@ OUT = Path(
     "p12_routing_table.json"
 )
 BW_GBPS = 89.1
+#: split=1 only: split>1 accumulates incorrectly in this kernel (measured
+#: max|d| ~ 5 vs the reference), so every split>1 timing in p9-p12 is
+#: withdrawn. This config is the valid one.
 CONFIG = {
-    (4864, 896): (64, 128, 4, 2),
-    (896, 896): (32, 128, 4, 2),
-    (896, 4864): (64, 64, 4, 2),
-    (896, 128): (32, 256, 4, 4),
+    (4864, 896): (64, 128, 1, 2),
+    (896, 896): (32, 128, 1, 2),
+    (896, 4864): (64, 64, 1, 2),
+    (896, 128): (32, 256, 1, 4),
 }
 
 

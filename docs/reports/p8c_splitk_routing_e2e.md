@@ -1,3 +1,7 @@
+> **WITHDRAWN — see [p13_retraction_splitk.md](p13_retraction_splitk.md).** The split-k path used here
+> accumulates incorrectly (max abs error 3.8-5.6 vs reference); every speedup
+> in this report is invalid. The regime analysis stands; the numbers do not.
+
 # P8c — split-k, routing, and the end-to-end answer
 
 ## Split-k closed most of the gap
