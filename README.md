@@ -86,6 +86,37 @@ to quit* — the blocker is observability, not the reward's price.  Wins
 are structural and regime-bounded, inference-only, compile-time
 search.
 
+**Where the kernels pay — a measured margin (2026-10-27).**  Beyond
+rewrites, the same machinery now generates **4-bit quantized matmul
+kernels**, and they were raced against `awq_gemm` — vLLM's hand-written,
+production AWQ kernel — on the real layers of Qwen2.5-0.5B-Instruct-AWQ.
+Measured in the **deployment regime** (weights evicted from a 2 MB L2
+between calls, one call timed, order shuffled per round, every candidate
+correctness-gated *before* it is timed):
+
+| layer | ours | `awq_gemm` | vs vLLM |
+|---|---|---|---|
+| `down_proj` 896×4864 | **58.9 µs** | 174.1 | **2.96×** |
+| `k_proj` 128×896 | **38.5** | 58.7 | **1.52×** |
+| `q_proj` 896×896 | **35.2** | 47.7 | **1.35×** |
+| `gate_proj` 4864×896 | 60.6 | **57.8** | 0.95× |
+
+Three of four layer shapes beat a production hand-tuned kernel, with
+exact arithmetic (max error ~1e-3) — on a 4 GB laptop GPU, from a kernel
+that was never hand-tuned. The margin exists because that shape is
+**unattended**: hand-tuning has a high fixed cost, so it is only bought
+where the shape is popular. Automating it makes the long tail worth
+optimizing.
+
+*Honest limits, stated in the report:* `gate_proj` loses; the winning
+shape is only at **42 % of its memory roofline**, so ~2.4× is still on
+the table; and the **whole-model end-to-end speedup is not yet measured
+with the corrected kernel**. An earlier 3.3× claim was **retracted** —
+the split-K path accumulated with fp16 atomics and computed the wrong
+answer (`docs/reports/p13_retraction_splitk.md`). The protocol that
+caught it is now the standard: exactness gated inside the timing path.
+
+
 **Open — now measured (the Q-series).**  Unnamed structure on real
 corpora: the rewrite-only mint saturates at **known-art** — 53
 held-out zoo modules → 102 viable mints → **8 admitted, every one
