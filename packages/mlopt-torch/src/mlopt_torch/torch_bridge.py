@@ -1221,7 +1221,9 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
     # delivered.  ``s`` is the output shape and ``dim`` the transformed
     # axes — kept apart because torch rejects one for the other.
     "fft_rfft2": lambda x, *a, **kw: torch.fft.rfft2(x, **_fft_kw(kw)),
-    "fft_irfft2": lambda x, *a, **kw: torch.fft.irfft2(x, **_fft_kw(kw)),
+    "fft_irfft2": lambda x, *a, **kw: torch.fft.irfft2(
+        x, **_fft_kw(kw)
+    ),
     "fft_fft2": lambda x, *a, **kw: torch.fft.fft2(x, **_fft_kw(kw)),
     "fft_ifft2": lambda x, *a, **kw: torch.fft.ifft2(x, **_fft_kw(kw)),
     "fft_rfft": lambda x, *a, **kw: torch.fft.rfft(x, **_fft_kw(kw)),

@@ -756,7 +756,9 @@ class _MambaSelectiveScan(nn.Module):
         )  # (B, T, d, n)
         bb = self.b(x)  # (B, T, n)
         cc = self.c(x)  # (B, T, n)
-        h = torch.zeros(b, self.d, self.n, dtype=x.dtype, device=x.device)
+        h = torch.zeros(
+            b, self.d, self.n, dtype=x.dtype, device=x.device
+        )
         outs = []
         for t in range(self.steps):
             h = dec[:, t] * h + x[:, t].unsqueeze(-1) * bb[
