@@ -1156,7 +1156,7 @@ wheels = [
 [[package]]
 name = "gamekit"
 version = "0.1.0.dev0"
-source = { git = "ssh://git@github.com/handl-lang/gamekit.git?subdirectory=packages%2Fgamekit&branch=main#fd9137f1de643c528a458a31caa7048c55697ef9" }
+source = { git = "https://github.com/handl-lang/gamekit.git?subdirectory=packages%2Fgamekit&branch=main#d260eeeae86f8c74fbf68a01ecd3da5f72adfac3" }
 
 [[package]]
 name = "glom"
@@ -2191,15 +2191,15 @@ oracle = [
 requires-dist = [
     { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.9.4" },
     { name = "coverage", marker = "extra == 'dev'", specifier = ">=7.0" },
-    { name = "gamekit", git = "ssh://git@github.com/handl-lang/gamekit.git?subdirectory=packages%2Fgamekit&branch=main" },
+    { name = "gamekit", git = "https://github.com/handl-lang/gamekit.git?subdirectory=packages%2Fgamekit&branch=main" },
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.168.1" },
     { name = "import-linter", marker = "extra == 'dev'", specifier = ">=2.15" },
     { name = "mlopt-carriers", editable = "packages/mlopt-carriers" },
-    { name = "mlopt-core", git = "ssh://git@github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&branch=main" },
+    { name = "mlopt-core", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&branch=main" },
     { name = "mlopt-cuda", editable = "packages/mlopt-cuda" },
     { name = "mlopt-discovery", editable = "packages/mlopt-discovery" },
     { name = "mlopt-onnx", editable = "packages/mlopt-onnx" },
-    { name = "mlopt-orchestrator", git = "ssh://git@github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-orchestrator&branch=main" },
+    { name = "mlopt-orchestrator", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-orchestrator&branch=main" },
     { name = "mlopt-torch", editable = "packages/mlopt-torch" },
     { name = "mutmut", marker = "extra == 'dev'", specifier = ">=3.8.0" },
     { name = "numpy", specifier = ">=1.24" },
@@ -2264,8 +2264,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "mlopt-core", git = "ssh://git@github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&branch=main" },
-    { name = "mlopt-orchestrator", git = "ssh://git@github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-orchestrator&branch=main" },
+    { name = "mlopt-core", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&branch=main" },
+    { name = "mlopt-orchestrator", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-orchestrator&branch=main" },
     { name = "mlopt-torch", editable = "packages/mlopt-torch" },
     { name = "torch", specifier = ">=2.0" },
 ]
@@ -2273,7 +2273,7 @@ requires-dist = [
 [[package]]
 name = "mlopt-core"
 version = "0.1.0.dev0"
-source = { git = "ssh://git@github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&branch=main#1633ad1d10f4968eab3ed4ef1b7943753513c3ec" }
+source = { git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&branch=main#a183d9fed95b51e1442f16df0cee398ad6d71fc2" }
 
 [[package]]
 name = "mlopt-cuda"
@@ -2286,7 +2286,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "mlopt-core", git = "ssh://git@github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&branch=main" },
+    { name = "mlopt-core", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&branch=main" },
     { name = "torch", specifier = ">=2.0" },
 ]
 
@@ -2304,9 +2304,9 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "gamekit", git = "ssh://git@github.com/handl-lang/gamekit.git?subdirectory=packages%2Fgamekit&branch=main" },
-    { name = "mlopt-core", git = "ssh://git@github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&branch=main" },
-    { name = "mlopt-orchestrator", git = "ssh://git@github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-orchestrator&branch=main" },
+    { name = "gamekit", git = "https://github.com/handl-lang/gamekit.git?subdirectory=packages%2Fgamekit&branch=main" },
+    { name = "mlopt-core", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&branch=main" },
+    { name = "mlopt-orchestrator", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-orchestrator&branch=main" },
     { name = "mlopt-torch", editable = "packages/mlopt-torch" },
     { name = "torch", specifier = ">=2.0" },
 ]
@@ -2325,7 +2325,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "mlopt-core", git = "ssh://git@github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&branch=main" },
+    { name = "mlopt-core", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&branch=main" },
     { name = "numpy", specifier = ">=1.24" },
     { name = "onnx", specifier = ">=1.16" },
     { name = "onnxruntime", specifier = ">=1.17" },
@@ -2334,7 +2334,7 @@ requires-dist = [
 [[package]]
 name = "mlopt-orchestrator"
 version = "0.1.0.dev0"
-source = { git = "ssh://git@github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-orchestrator&branch=main#1633ad1d10f4968eab3ed4ef1b7943753513c3ec" }
+source = { git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-orchestrator&branch=main#a183d9fed95b51e1442f16df0cee398ad6d71fc2" }
 dependencies = [
     { name = "mlopt-core" },
 ]
@@ -2353,8 +2353,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "mlopt-core", git = "ssh://git@github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&branch=main" },
-    { name = "mlopt-orchestrator", git = "ssh://git@github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-orchestrator&branch=main" },
+    { name = "mlopt-core", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&branch=main" },
+    { name = "mlopt-orchestrator", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-orchestrator&branch=main" },
     { name = "numpy", specifier = ">=1.24" },
     { name = "torch", specifier = ">=2.0" },
 ]

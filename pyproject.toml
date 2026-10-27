@@ -125,9 +125,9 @@ exclude = [
 # pinned git+ssh deps on ``packages/`` subdirectories, the same recipe
 # kernelopt uses.  Bump the pin deliberately (branch for now; move to
 # a tag/rev once the upstream surface settles).
-mlopt-core = { git = "ssh://git@github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-core", branch = "main" }
-mlopt-orchestrator = { git = "ssh://git@github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-orchestrator", branch = "main" }
-gamekit = { git = "ssh://git@github.com/handl-lang/gamekit.git", subdirectory = "packages/gamekit", branch = "main" }
+mlopt-core = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-core", branch = "main" }
+mlopt-orchestrator = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-orchestrator", branch = "main" }
+gamekit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/gamekit", branch = "main" }
 mlopt-torch = { workspace = true }
 mlopt-carriers = { workspace = true }
 mlopt-cuda = { workspace = true }
