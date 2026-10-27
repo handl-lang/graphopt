@@ -1044,3 +1044,47 @@ class TestGatherFamily:
         )
         for seed in hs._gather_seeds(spec):
             assert hs.body_from_data(hs.body_to_data(seed)) == seed
+
+
+class TestDomainShapeGate:
+    """A domain entry whose shapes cannot broadcast yields no evidence.
+
+    The kernel-prim arm hit 64 vs 128 at dim 2: one metavar bound at
+    two shapes.  Evaluating the spelled body then raises out of torch,
+    which used to take the whole mint down.
+    """
+
+    COLLISION = (
+        "The size of tensor a (64) must match the size of tensor b "
+        "(128) at non-singleton dimension 2"
+    )
+
+    def test_skips_the_colliding_draw_and_keeps_the_rest(self, monkeypatch):
+        calls = {"n": 0}
+
+        def _eval(spec, env, bindings):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise RuntimeError(self.COLLISION)
+            return "ref"
+
+        monkeypatch.setattr(hs, "_eval_spec", _eval)
+        envs, refs = hs._domain_draws("spec", [{"x": (2,)}], 0, {}, 1)
+        assert len(envs) == 1
+        assert refs == ["ref"]
+
+    def test_names_an_entry_with_no_drawable_shape(self, monkeypatch):
+        def _eval(spec, env, bindings):
+            raise RuntimeError(self.COLLISION)
+
+        monkeypatch.setattr(hs, "_eval_spec", _eval)
+        with pytest.raises(hs.DomainShapeError, match="no drawable"):
+            hs._domain_draws("spec", [{"x": (2,)}], 0, {}, 0)
+
+    def test_other_runtime_errors_still_propagate(self, monkeypatch):
+        def _eval(spec, env, bindings):
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(hs, "_eval_spec", _eval)
+        with pytest.raises(RuntimeError, match="boom"):
+            hs._domain_draws("spec", [{"x": (2,)}], 0, {}, 0)

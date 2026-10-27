@@ -1584,6 +1584,15 @@ def propose_bodies(
 # ---------------------------------------------------------------------------
 
 
+class DomainShapeError(ValueError):
+    """A domain entry whose bound shapes cannot be drawn together.
+
+    One metavar can be bound at two shapes inside a single entry (the
+    kernel-prim arm hit 64 vs 128 at dim 2).  The spelled body then has
+    no single draw, so the entry carries no evidence for any candidate.
+    """
+
+
 class VerifyResult(NamedTuple):
     """The verify-or-refuse verdict for one candidate body.
 
@@ -1627,15 +1636,32 @@ def _domain_draws(
     """Sample the domain once; return ``(envs, spelled refs)``.
 
     One draw per domain entry plus *adversarial* re-draws under an
-    offset seed — the paired comparison every candidate sees.
+    offset seed — the paired comparison every candidate sees.  An entry
+    whose bound shapes do not broadcast is skipped and counted: it gives
+    no evidence, and letting it take the mint down would hide every
+    other entry with it.  Raises :class:`DomainShapeError` when nothing
+    drawable is left.
     """
     envs: list = []
     refs: list = []
+    skipped: list[str] = []
     for i, shapes in enumerate(_domain_list(domain)):
         for sweep in range(1 + adversarial):
             env = _sample_env(shapes, seed + i + sweep * (1 << 20))
+            try:
+                ref = _eval_spec(spec, env, bindings)
+            except RuntimeError as exc:
+                if "must match the size of tensor" not in str(exc):
+                    raise
+                skipped.append(str(exc))
+                continue
             envs.append(env)
-            refs.append(_eval_spec(spec, env, bindings))
+            refs.append(ref)
+    if not envs:
+        raise DomainShapeError(
+            "no drawable domain entry: "
+            + (skipped[0] if skipped else "empty domain")
+        )
     return envs, refs
 
 
@@ -1833,9 +1859,17 @@ def mint_handlers(
             row["verdict"] = "covered"
             report.append(row)
             continue
-        envs, refs = _domain_draws(
-            spec, dom, seed, bindings, adversarial
-        )
+        try:
+            envs, refs = _domain_draws(
+                spec, dom, seed, bindings, adversarial
+            )
+        except DomainShapeError as exc:
+            # the entry's own shapes cannot be drawn together — no body
+            # can verify against it, and the reason rides the report.
+            row["verdict"] = "no-draw"
+            row["note"] = str(exc)
+            report.append(row)
+            continue
         verdict, tried, best = None, 0, float("inf")
         for body in propose_bodies(
             spec, families=families, extra_families=extra_families
