@@ -55,3 +55,35 @@ we lacked: not "hand them weights", but "hand them an op".
 **Next:** register this as a vLLM `CustomOp` and swap it into a quantized
 linear layer of a real model — the same manoeuvre as the SwiGLU test, but
 this time the op is one where we measurably win.
+
+## Correction — the real layer shapes (and the fix)
+
+The 1.5–1.7× above is for **square** matrices at M=32. On the model's
+actual linears the first version **lost 2.4×** at M=1: a 32×32 tile wastes
+tensor-core rows, and cuBLAS's GEMV wins at decode. Two changes fixed it:
+
+1. **A GEMV path for M=1** (one program per output-row block, no tensor
+   cores), selected automatically.
+2. Tiles swept on the real geometry (N=288, K=2048).
+
+Standalone, best config, fp32-exact:
+
+| shape | torch dequant | ours | vs torch |
+|---|---|---|---|
+| N=288, K=2048, **M=1** (decode) | 91.0 µs | **46.9 µs** | **1.94×** |
+| N=288, K=2048, M=32 (batched) | 144.6 µs | 209.1 µs | 0.69× |
+
+Inside the live engine, summed over the **6 quantized `down`
+projections** with their real weights and locked clocks:
+
+| tokens | torch dequant | ours | vs torch |
+|---|---|---|---|
+| **1 (decode)** | 217.6 µs | **183.5 µs** | **1.19×** |
+| 32 (batched) | 299.4 µs | 496.7 µs | 0.60× |
+
+**1.19× on the decode path inside vLLM** — the regime that matters for
+serving — and a loss when batched. Only 6 of 24 linears could be
+group-128 quantized on this toy model (the rest have K=288, not a multiple
+of 128); a real GPTQ/AWQ checkpoint has K divisible by 128 throughout,
+which is where this becomes the whole model.
+
