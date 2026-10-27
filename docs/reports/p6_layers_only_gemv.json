@@ -1,0 +1,16 @@
+{
+  "1": {
+    "tokens": 1,
+    "linears": 6,
+    "ref_us": 217.6,
+    "ours_us": 183.5,
+    "vs_ref": 1.186
+  },
+  "32": {
+    "tokens": 32,
+    "linears": 6,
+    "ref_us": 299.4,
+    "ours_us": 496.7,
+    "vs_ref": 0.603
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "shape": [
+    288,
+    2048
+  ],
+  "rows": [
+    {
+      "m": "M=1",
+      "ref_us": 91.0,
+      "best_us": 46.9,
+      "config": "gemv bn=32 bk=64 w=4",
+      "vs_ref": 1.941,
+      "max_abs_err": 3.0517578125e-05
+    },
+    {
+      "m": "M=32",
+      "ref_us": 144.6,
+      "best_us": 209.1,
+      "config": "mm bm=16 bn=64 bk=32 w=4",
+      "vs_ref": 0.692,
+      "max_abs_err": 0.0002288818359375
+    }
+  ]
+}
