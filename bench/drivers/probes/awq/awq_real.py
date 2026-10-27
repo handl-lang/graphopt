@@ -14,13 +14,11 @@ from __future__ import annotations
 
 import json
 import statistics as stats
-import sys
 import time
 
+import grouped_quant_op as gq
 import torch
 from safetensors import safe_open
-
-import grouped_quant_op as gq  # noqa: E402
 
 CKPT = (
     "/home/luis/.cache/huggingface/hub/models--Qwen--Qwen2.5-0.5B-"
@@ -29,18 +27,24 @@ CKPT = (
 )
 
 
-def unpack_awq(qweight: torch.Tensor, qzeros: torch.Tensor,
-               scales: torch.Tensor, group: int = 128):
+def unpack_awq(
+    qweight: torch.Tensor,
+    qzeros: torch.Tensor,
+    scales: torch.Tensor,
+    group: int = 128,
+):
     """AWQ int4 -> (w_q float [out, in], scale [out, groups])."""
-    shifts = torch.arange(0, 32, 4, device=qweight.device, dtype=torch.int32)
+    shifts = torch.arange(
+        0, 32, 4, device=qweight.device, dtype=torch.int32
+    )
     q = (qweight.unsqueeze(-1) >> shifts) & 0xF
-    q = q.reshape(qweight.shape[0], -1).float()          # [in, out]
+    q = q.reshape(qweight.shape[0], -1).float()  # [in, out]
     z = (qzeros.unsqueeze(-1) >> shifts) & 0xF
-    z = z.reshape(qzeros.shape[0], -1).float()           # [in//g, out]
-    s = scales.float()                                   # [in//g, out]
-    z = z.repeat_interleave(group, dim=0)                # [in, out]
-    s = s.repeat_interleave(group, dim=0)                # [in, out]
-    w = (q - z) * s                                      # [in, out]
+    z = z.reshape(qzeros.shape[0], -1).float()  # [in//g, out]
+    s = scales.float()  # [in//g, out]
+    z = z.repeat_interleave(group, dim=0)  # [in, out]
+    s = s.repeat_interleave(group, dim=0)  # [in, out]
+    w = (q - z) * s  # [in, out]
     return w.t().contiguous(), scales.t().contiguous()
 
 
@@ -72,15 +76,17 @@ def main() -> int:
         ("model.layers.0.mlp.gate_proj", "gate_proj"),
     ]
     out = {"ckpt": "Qwen/Qwen2.5-0.5B-Instruct-AWQ", "rows": []}
-    print(f"{'layer':>10} {'out':>5} {'in':>5} {'M':>3} {'torch':>8} "
-          f"{'ours':>8} {'vs torch':>9} {'max|Δ|':>9}")
+    print(
+        f"{'layer':>10} {'out':>5} {'in':>5} {'M':>3} {'torch':>8} "
+        f"{'ours':>8} {'vs torch':>9} {'max|Δ|':>9}"
+    )
     with safe_open(CKPT, "pt") as f:
         for prefix, name in targets:
             try:
                 qw = f.get_tensor(f"{prefix}.qweight").cuda()
                 qz = f.get_tensor(f"{prefix}.qzeros").cuda()
                 sc = f.get_tensor(f"{prefix}.scales").cuda()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 continue
             wq, scale = unpack_awq(qw, qz, sc)
             n, k = wq.shape
@@ -88,23 +94,32 @@ def main() -> int:
             for m in (1, 32):
                 x = torch.randn(m, k, device="cuda")
                 ref = ref_op(x, wq, scale, b)
-                got = gq.grouped_quant_linear(x, wq, scale, b, ieee=True)
+                got = gq.grouped_quant_linear(
+                    x, wq, scale, b, ieee=True
+                )
                 err = float((ref - got).abs().max())
                 t_ref = timeit(lambda: ref_op(x, wq, scale, b))
                 t_ours = timeit(
-                    lambda: gq.grouped_quant_linear(x, wq, scale, b, ieee=True)
+                    lambda: gq.grouped_quant_linear(
+                        x, wq, scale, b, ieee=True
+                    )
                 )
                 out["rows"].append(
                     {
-                        "layer": name, "out": n, "in": k, "m": m,
+                        "layer": name,
+                        "out": n,
+                        "in": k,
+                        "m": m,
                         "torch_us": round(t_ref, 1),
                         "ours_us": round(t_ours, 1),
                         "vs_torch": round(t_ref / t_ours, 3),
                         "max_abs_err": err,
                     }
                 )
-                print(f"{name:>10} {n:>5} {k:>5} {m:>3} {t_ref:>8.1f} "
-                      f"{t_ours:>8.1f} {t_ref/t_ours:>8.2f}x {err:>9.1e}")
+                print(
+                    f"{name:>10} {n:>5} {k:>5} {m:>3} {t_ref:>8.1f} "
+                    f"{t_ours:>8.1f} {t_ref / t_ours:>8.2f}x {err:>9.1e}"
+                )
 
     path = (
         "/home/luis/GitHub/handl-lang/graphopt/docs/reports/"

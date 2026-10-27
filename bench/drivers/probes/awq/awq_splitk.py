@@ -9,14 +9,12 @@ output. Then sweep split x block config per shape.
 from __future__ import annotations
 
 import json
-import sys
 
 import torch
 import triton
 import triton.language as tl
+from awq_fused import timeit, unpack_ref
 from safetensors import safe_open
-
-from awq_fused import timeit, unpack_ref  # noqa: E402
 
 CKPT = (
     "/home/luis/.cache/huggingface/hub/models--Qwen--Qwen2.5-0.5B-"
@@ -27,10 +25,23 @@ CKPT = (
 
 @triton.jit
 def _gemv_splitk(
-    x_ptr, qw_ptr, qz_ptr, sc_ptr, out_ptr,
-    N, K, GS,
-    s_qwk, s_qwn, s_qzk, s_qzn, s_sck, s_scn,
-    BLOCK_N: tl.constexpr, BLOCK_K: tl.constexpr, SPLIT: tl.constexpr,
+    x_ptr,
+    qw_ptr,
+    qz_ptr,
+    sc_ptr,
+    out_ptr,
+    N,
+    K,
+    GS,
+    s_qwk,
+    s_qwn,
+    s_qzk,
+    s_qzn,
+    s_sck,
+    s_scn,
+    BLOCK_N: tl.constexpr,
+    BLOCK_K: tl.constexpr,
+    SPLIT: tl.constexpr,
 ):
     """One program does a K-slice; partials are atomically summed."""
     pid_n = tl.program_id(0)
@@ -53,20 +64,25 @@ def _gemv_splitk(
         x = tl.load(x_ptr + rk, mask=kmask, other=0.0)
         w_word = tl.load(
             qw_ptr + rk[:, None] * s_qwk + rn_p[None, :] * s_qwn,
-            mask=mask, other=0,
+            mask=mask,
+            other=0,
         )
         q = (w_word >> shift[None, :]) & 0xF
         z_word = tl.load(
             qz_ptr + g[:, None] * s_qzk + rn_p[None, :] * s_qzn,
-            mask=mask, other=0,
+            mask=mask,
+            other=0,
         )
         z = (z_word >> shift[None, :]) & 0xF
         s = tl.load(
             sc_ptr + g[:, None] * s_sck + rn[None, :] * s_scn,
-            mask=mask, other=0.0,
+            mask=mask,
+            other=0.0,
         ).to(tl.float32)
-        acc += tl.sum(((q.to(tl.float32) - z.to(tl.float32)) * s)
-                      * x[:, None], axis=0)
+        acc += tl.sum(
+            ((q.to(tl.float32) - z.to(tl.float32)) * s) * x[:, None],
+            axis=0,
+        )
 
     tl.atomic_add(out_ptr + rn, acc, mask=nmask)
 
@@ -74,11 +90,24 @@ def _gemv_splitk(
 def splitk(x, qw, qz, sc, n, k, bn, bk, split, warps):
     out = torch.zeros((1, n), device="cuda", dtype=torch.float32)
     _gemv_splitk[(triton.cdiv(n, bn), split)](
-        x, qw, qz, sc, out, n, k, 128,
-        qw.stride(0), qw.stride(1),
-        qz.stride(0), qz.stride(1),
-        sc.stride(0), sc.stride(1),
-        BLOCK_N=bn, BLOCK_K=bk, SPLIT=split, num_warps=warps,
+        x,
+        qw,
+        qz,
+        sc,
+        out,
+        n,
+        k,
+        128,
+        qw.stride(0),
+        qw.stride(1),
+        qz.stride(0),
+        qz.stride(1),
+        sc.stride(0),
+        sc.stride(1),
+        BLOCK_N=bn,
+        BLOCK_K=bk,
+        SPLIT=split,
+        num_warps=warps,
     )
     return out
 
@@ -112,22 +141,45 @@ def main() -> int:
                     for split in (1, 2, 4, 8):
                         for wp in (1, 2, 4, 8):
                             try:
-                                got = splitk(xf, qw, qz, sc, n, k, bn, bk,
-                                             split, wp)
+                                got = splitk(
+                                    xf,
+                                    qw,
+                                    qz,
+                                    sc,
+                                    n,
+                                    k,
+                                    bn,
+                                    bk,
+                                    split,
+                                    wp,
+                                )
                                 err = float((ref - got).abs().max())
                                 us = timeit(
-                                    lambda: splitk(xf, qw, qz, sc, n, k,
-                                                   bn, bk, split, wp),
-                                    reps=30, warm=6,
+                                    lambda: splitk(
+                                        xf,
+                                        qw,
+                                        qz,
+                                        sc,
+                                        n,
+                                        k,
+                                        bn,
+                                        bk,
+                                        split,
+                                        wp,
+                                    ),
+                                    reps=30,
+                                    warm=6,
                                 )
-                            except Exception:  # noqa: BLE001
+                            except Exception:
                                 continue
                             if best is None or us < best[0]:
                                 best = (us, bn, bk, split, wp, err)
             us, bn, bk, split, wp, err = best
             rows.append(
                 {
-                    "layer": name, "in": k, "out": n,
+                    "layer": name,
+                    "in": k,
+                    "out": n,
                     "config": f"bn={bn} bk={bk} split={split} w={wp}",
                     "vllm_us": round(t_vllm, 1),
                     "ours_us": round(us, 1),
@@ -135,9 +187,11 @@ def main() -> int:
                     "max_abs_err": err,
                 }
             )
-            print(f"{name:>10} {n:>5}x{k:<5} split={split} bn={bn} bk={bk} "
-                  f"w={wp}  ours {us:7.1f}  vllm {t_vllm:7.1f}  "
-                  f"-> {t_vllm/us:.2f}x")
+            print(
+                f"{name:>10} {n:>5}x{k:<5} split={split} bn={bn} bk={bk} "
+                f"w={wp}  ours {us:7.1f}  vllm {t_vllm:7.1f}  "
+                f"-> {t_vllm / us:.2f}x"
+            )
 
     path = (
         "/home/luis/GitHub/handl-lang/graphopt/docs/reports/"

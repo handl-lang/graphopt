@@ -14,12 +14,10 @@ from __future__ import annotations
 import argparse
 import json
 import statistics as stats
-import sys
 import time
 
+import grouped_quant_op as gq
 import torch
-
-import grouped_quant_op as gq  # noqa: E402
 
 QUANT: dict[int, tuple] = {}
 LAYERS: dict[int, object] = {}
@@ -44,11 +42,13 @@ def quant_for(layer):
 
 
 def install_patch() -> None:
-    from vllm.model_executor.layers.linear import UnquantizedLinearMethod
+    from vllm.model_executor.layers.linear import (
+        UnquantizedLinearMethod,
+    )
 
     orig = UnquantizedLinearMethod.apply
 
-    def apply(self, layer, x, bias=None):  # noqa: ANN001
+    def apply(self, layer, x, bias=None):
         q = quant_for(layer)
         if q is None:
             return orig(self, layer, x, bias)
@@ -61,9 +61,9 @@ def install_patch() -> None:
             else torch.zeros(wq.shape[0], device=x.device)
         )
         n, k = wq.shape
-        w = (wq.reshape(n, groups, k // groups) * scale.unsqueeze(-1)).reshape(
-            n, k
-        )
+        w = (
+            wq.reshape(n, groups, k // groups) * scale.unsqueeze(-1)
+        ).reshape(n, k)
         return (flat @ w.transpose(0, 1) + b).reshape(*shape[:-1], n)
 
     UnquantizedLinearMethod.apply = apply
@@ -104,7 +104,8 @@ def main() -> int:
         disable_log_stats=True,
     )
     llm.generate(
-        [[1, 2, 3, 4]], sampling_params=SamplingParams(max_tokens=2),
+        [[1, 2, 3, 4]],
+        sampling_params=SamplingParams(max_tokens=2),
         use_tqdm=False,
     )
     print(f"quantized linears discovered: {len(QUANT)}")
@@ -142,7 +143,7 @@ def main() -> int:
         }
         print(
             f"tokens={tokens:3d}  torch dequant {tot_ref:8.1f} µs   "
-            f"ours {tot_ours:8.1f} µs   -> {tot_ref/tot_ours:.2f}x"
+            f"ours {tot_ours:8.1f} µs   -> {tot_ref / tot_ours:.2f}x"
         )
 
     if args.out:

@@ -12,14 +12,13 @@ choice is not mine. Then three arms are compared at one token:
 from __future__ import annotations
 
 import json
-import sys
 from collections import Counter
 
 import torch
 import triton
 from safetensors import safe_open
 
-from .awq_fused import _awq_gemv, timeit, unpack_ref  # noqa: E402
+from .awq_fused import _awq_gemv, timeit, unpack_ref
 
 CKPT = (
     "/home/luis/.cache/huggingface/hub/models--Qwen--Qwen2.5-0.5B-"
@@ -38,11 +37,23 @@ GRID = [
 def run_cfg(x, qw, qz, sc, n, k, bn, bk, warps):
     out = torch.empty((1, n), device="cuda", dtype=torch.float32)
     _awq_gemv[(triton.cdiv(n, bn),)](
-        x, qw, qz, sc, out, n, k, 128,
-        qw.stride(0), qw.stride(1),
-        qz.stride(0), qz.stride(1),
-        sc.stride(0), sc.stride(1),
-        BLOCK_N=bn, BLOCK_K=bk, num_warps=warps,
+        x,
+        qw,
+        qz,
+        sc,
+        out,
+        n,
+        k,
+        128,
+        qw.stride(0),
+        qw.stride(1),
+        qz.stride(0),
+        qz.stride(1),
+        sc.stride(0),
+        sc.stride(1),
+        BLOCK_N=bn,
+        BLOCK_K=bk,
+        num_warps=warps,
     )
     return out
 
@@ -83,10 +94,13 @@ def main() -> int:
                     got = run_cfg(xf, qw, qz, sc, n, k, bn, bk, wp)
                     err = float((ref - got).abs().max())
                     us = timeit(
-                        lambda: run_cfg(xf, qw, qz, sc, n, k, bn, bk, wp),
-                        reps=40, warm=8,
+                        lambda: run_cfg(
+                            xf, qw, qz, sc, n, k, bn, bk, wp
+                        ),
+                        reps=40,
+                        warm=8,
                     )
-                except Exception:  # noqa: BLE001
+                except Exception:
                     continue
                 if best is None or us < best[0]:
                     best = (us, bn, bk, wp, err)
@@ -94,14 +108,19 @@ def main() -> int:
             t_torch = timeit(lambda: x @ w_ref.t(), reps=60, warm=10)
             x16 = x.half()
             t_vllm = timeit(
-                lambda: cops.awq_gemm(x16, qw, sc, qz, 1), reps=60, warm=10
+                lambda: cops.awq_gemm(x16, qw, sc, qz, 1),
+                reps=60,
+                warm=10,
             )
 
             us, bn, bk, wp, err = best
             layers = counts[(k, n)]
             rows.append(
                 {
-                    "layer": name, "in": k, "out": n, "layers": layers,
+                    "layer": name,
+                    "in": k,
+                    "out": n,
+                    "layers": layers,
                     "config": f"bn={bn} bk={bk} w={wp}",
                     "torch_us": round(t_torch, 1),
                     "ours_us": round(us, 1),
@@ -111,10 +130,12 @@ def main() -> int:
                     "max_abs_err": err,
                 }
             )
-            print(f"{name:>10} {n:>5}x{k:<5} x{layers:<3} best[{bn},{bk},{wp}] "
-                  f"torch {t_torch:7.1f}  ours {us:7.1f} "
-                  f"({t_torch/us:5.2f}x)  vllm {t_vllm:7.1f} "
-                  f"({t_vllm/us:5.2f}x)")
+            print(
+                f"{name:>10} {n:>5}x{k:<5} x{layers:<3} best[{bn},{bk},{wp}] "
+                f"torch {t_torch:7.1f}  ours {us:7.1f} "
+                f"({t_torch / us:5.2f}x)  vllm {t_vllm:7.1f} "
+                f"({t_vllm / us:5.2f}x)"
+            )
 
     wins_v = sum(r["layers"] for r in rows if r["vs_vllm"] >= 1.0)
     wins_t = sum(r["layers"] for r in rows if r["vs_torch"] >= 1.0)
@@ -128,8 +149,12 @@ def main() -> int:
     )
     open(path, "w").write(
         json.dumps(
-            {"rows": rows, "beat_torch": wins_t, "beat_vllm": wins_v,
-             "total": total},
+            {
+                "rows": rows,
+                "beat_torch": wins_t,
+                "beat_vllm": wins_v,
+                "total": total,
+            },
             indent=2,
         )
         + "\n"

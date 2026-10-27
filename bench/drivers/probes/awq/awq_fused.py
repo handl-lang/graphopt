@@ -15,14 +15,12 @@ from __future__ import annotations
 
 import json
 import statistics as stats
-import sys
 import time
 
 import torch
 import triton
 import triton.language as tl
 from safetensors import safe_open
-
 
 CKPT = (
     "/home/luis/.cache/huggingface/hub/models--Qwen--Qwen2.5-0.5B-"
@@ -33,10 +31,22 @@ CKPT = (
 
 @triton.jit
 def _awq_gemv(
-    x_ptr, qw_ptr, qz_ptr, sc_ptr, out_ptr,
-    N, K, GS,
-    s_qwk, s_qwn, s_qzk, s_qzn, s_sck, s_scn,
-    BLOCK_N: tl.constexpr, BLOCK_K: tl.constexpr,
+    x_ptr,
+    qw_ptr,
+    qz_ptr,
+    sc_ptr,
+    out_ptr,
+    N,
+    K,
+    GS,
+    s_qwk,
+    s_qwn,
+    s_qzk,
+    s_qzn,
+    s_sck,
+    s_scn,
+    BLOCK_N: tl.constexpr,
+    BLOCK_K: tl.constexpr,
 ):
     """y[n] = sum_k x[k] * (q[k,n] - z[k//g,n]) * s[k//g,n], int4 unpacked here."""
     pid = tl.program_id(0)
@@ -54,17 +64,20 @@ def _awq_gemv(
         x = tl.load(x_ptr + rk, mask=kmask, other=0.0)
         w_word = tl.load(
             qw_ptr + rk[:, None] * s_qwk + rn_p[None, :] * s_qwn,
-            mask=mask, other=0,
+            mask=mask,
+            other=0,
         )
         q = (w_word >> shift[None, :]) & 0xF
         z_word = tl.load(
             qz_ptr + g[:, None] * s_qzk + rn_p[None, :] * s_qzn,
-            mask=mask, other=0,
+            mask=mask,
+            other=0,
         )
         z = (z_word >> shift[None, :]) & 0xF
         s = tl.load(
             sc_ptr + g[:, None] * s_sck + rn[None, :] * s_scn,
-            mask=mask, other=0.0,
+            mask=mask,
+            other=0.0,
         ).to(tl.float32)
         w = (q.to(tl.float32) - z.to(tl.float32)) * s
         acc += tl.sum(w * x[:, None], axis=0)
@@ -77,12 +90,23 @@ def ours_gemv(x, qw, qz, sc, gs=128, block_n=32, block_k=64):
     n = sc.shape[1]
     out = torch.empty((1, n), device=x.device, dtype=torch.float32)
     _awq_gemv[(triton.cdiv(n, block_n),)](
-        x.reshape(-1).contiguous(), qw, qz, sc, out,
-        n, k, gs,
-        qw.stride(0), qw.stride(1),
-        qz.stride(0), qz.stride(1),
-        sc.stride(0), sc.stride(1),
-        BLOCK_N=block_n, BLOCK_K=block_k, num_warps=4,
+        x.reshape(-1).contiguous(),
+        qw,
+        qz,
+        sc,
+        out,
+        n,
+        k,
+        gs,
+        qw.stride(0),
+        qw.stride(1),
+        qz.stride(0),
+        qz.stride(1),
+        sc.stride(0),
+        sc.stride(1),
+        BLOCK_N=block_n,
+        BLOCK_K=block_k,
+        num_warps=4,
     )
     return out
 
@@ -121,7 +145,7 @@ def main() -> int:
             qz = f.get_tensor(f"{pre}.qzeros").cuda()
             sc = f.get_tensor(f"{pre}.scales").cuda()
             n, k = sc.shape[1], qw.shape[0]
-            w_ref = unpack_ref(qw, qz, sc)          # [out, in] float
+            w_ref = unpack_ref(qw, qz, sc)  # [out, in] float
 
             x32 = torch.randn(1, k, device="cuda")
             ref = x32 @ w_ref.t()
@@ -138,26 +162,32 @@ def main() -> int:
                 t_vllm = timeit(
                     lambda: cops.awq_gemm(x16, qw, sc, qz, 1)
                 )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 print(f"  awq_gemm unavailable: {type(exc).__name__}")
 
             row = {
-                "layer": layer, "out": n, "in": k,
+                "layer": layer,
+                "out": n,
+                "in": k,
                 "torch_us": round(t_torch, 1),
                 "ours_us": round(t_ours, 1),
                 "vllm_us": None if t_vllm is None else round(t_vllm, 1),
                 "vs_torch": round(t_torch / t_ours, 3),
                 "vs_vllm": (
-                    None if t_vllm is None else round(t_vllm / t_ours, 3)
+                    None
+                    if t_vllm is None
+                    else round(t_vllm / t_ours, 3)
                 ),
                 "max_abs_err": err,
             }
             out["rows"].append(row)
             v = "n/a" if t_vllm is None else f"{t_vllm:7.1f}"
-            vs = "n/a" if t_vllm is None else f"{t_vllm/t_ours:.2f}x"
-            print(f"{layer:>18} {n}x{k}  torch {t_torch:7.1f}  "
-                  f"ours {t_ours:7.1f} ({t_torch/t_ours:.2f}x)  "
-                  f"vllm {v} ({vs})  err {err:.1e}")
+            vs = "n/a" if t_vllm is None else f"{t_vllm / t_ours:.2f}x"
+            print(
+                f"{layer:>18} {n}x{k}  torch {t_torch:7.1f}  "
+                f"ours {t_ours:7.1f} ({t_torch / t_ours:.2f}x)  "
+                f"vllm {v} ({vs})  err {err:.1e}"
+            )
 
     path = (
         "/home/luis/GitHub/handl-lang/graphopt/docs/reports/"

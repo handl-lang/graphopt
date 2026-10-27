@@ -1,0 +1,58 @@
+[
+  {
+    "layer": "down_proj",
+    "out": 896,
+    "in": 4864,
+    "roofline_us": 24.6,
+    "chosen": "word_once bn=32 bk=64 split=1 w=2",
+    "chosen_us": 107.5,
+    "pct_of_roofline": 22.9,
+    "vs_vllm": 1.56,
+    "hand_picked": "word_once bn=64 bk=128 split=4 w=2",
+    "agrees_with_hand": false,
+    "candidates": 72,
+    "vllm_us": 167.4
+  },
+  {
+    "layer": "q_proj",
+    "out": 896,
+    "in": 896,
+    "roofline_us": 4.5,
+    "chosen": "word_once bn=256 bk=64 split=1 w=4",
+    "chosen_us": 28.1,
+    "pct_of_roofline": 16.2,
+    "vs_vllm": 1.22,
+    "hand_picked": "word_once bn=32 bk=128 split=4 w=2",
+    "agrees_with_hand": false,
+    "candidates": 72,
+    "vllm_us": 34.4
+  },
+  {
+    "layer": "gate_proj",
+    "out": 4864,
+    "in": 896,
+    "roofline_us": 24.6,
+    "chosen": "word_once bn=128 bk=64 split=1 w=8",
+    "chosen_us": 105.8,
+    "pct_of_roofline": 23.2,
+    "vs_vllm": 0.47,
+    "hand_picked": "word_once bn=64 bk=64 split=4 w=2",
+    "agrees_with_hand": false,
+    "candidates": 72,
+    "vllm_us": 49.9
+  },
+  {
+    "layer": "k_proj",
+    "out": 128,
+    "in": 896,
+    "roofline_us": 0.7,
+    "chosen": "word_once bn=128 bk=128 split=1 w=4",
+    "chosen_us": 15.8,
+    "pct_of_roofline": 4.2,
+    "vs_vllm": 2.13,
+    "hand_picked": "word_once bn=32 bk=256 split=4 w=4",
+    "agrees_with_hand": false,
+    "candidates": 54,
+    "vllm_us": 33.6
+  }
+]

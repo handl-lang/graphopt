@@ -42,7 +42,9 @@ def _swiglu_kernel(x_ptr, out_ptr, total, d, BLOCK: tl.constexpr):
 def our_swiglu(x: torch.Tensor) -> torch.Tensor:
     """Drop-in replacement for ``SiluAndMul``."""
     d = x.shape[-1] // 2
-    out = torch.empty(x.shape[:-1] + (d,), dtype=x.dtype, device=x.device)
+    out = torch.empty(
+        x.shape[:-1] + (d,), dtype=x.dtype, device=x.device
+    )
     total = out.numel()
     grid = (triton.cdiv(total, 1024),)
     _swiglu_kernel[grid](x, out, total, d, BLOCK=1024)
@@ -55,7 +57,7 @@ def install_patch() -> None:
 
     orig = SiluAndMul.forward_cuda
 
-    def forward_cuda(self, x):  # noqa: ANN001
+    def forward_cuda(self, x):
         if not USE_OURS["on"]:
             return orig(self, x)
         return our_swiglu(x)
@@ -125,7 +127,7 @@ def main() -> int:
 
         base_t, ours_t, toks = [], [], {}
         for i in range(args.rounds):
-            for on in ((False, True) if i % 2 == 0 else (True, False)):
+            for on in (False, True) if i % 2 == 0 else (True, False):
                 dt, tk = call(on)
                 (ours_t if on else base_t).append(dt)
                 toks.setdefault("ours" if on else "base", tk)
@@ -137,13 +139,19 @@ def main() -> int:
         USE_OURS["on"] = False
 
         print(f"\nctx={ctx}  {args.rounds} paired rounds, one engine")
-        print(f"  vLLM CUDA kernel : {med_b*1e3:7.1f} ms  "
-              f"sd {stats.stdev(base_t)*1e3:5.1f}  {args.gen/med_b:6.1f} tok/s")
-        print(f"  our Triton kernel: {med_o*1e3:7.1f} ms  "
-              f"sd {stats.stdev(ours_t)*1e3:5.1f}  {args.gen/med_o:6.1f} tok/s")
-        print(f"  paired: ours {100*(med_o-med_b)/med_b:+.1f}% · "
-              f"ours faster in {ours_wins}/{args.rounds} rounds · "
-              f"identical tokens: {toks['ours'] == toks['base']}")
+        print(
+            f"  vLLM CUDA kernel : {med_b * 1e3:7.1f} ms  "
+            f"sd {stats.stdev(base_t) * 1e3:5.1f}  {args.gen / med_b:6.1f} tok/s"
+        )
+        print(
+            f"  our Triton kernel: {med_o * 1e3:7.1f} ms  "
+            f"sd {stats.stdev(ours_t) * 1e3:5.1f}  {args.gen / med_o:6.1f} tok/s"
+        )
+        print(
+            f"  paired: ours {100 * (med_o - med_b) / med_b:+.1f}% · "
+            f"ours faster in {ours_wins}/{args.rounds} rounds · "
+            f"identical tokens: {toks['ours'] == toks['base']}"
+        )
 
         results[f"{ctx}"] = {
             "vllm_cuda_ms": round(med_b * 1e3, 2),

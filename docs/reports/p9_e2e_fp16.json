@@ -1,0 +1,8 @@
+{
+  "rounds": 20,
+  "stock_ms": 314.31,
+  "ours_ms": 307.69,
+  "delta_pct": -2.1,
+  "ours_wins": 9,
+  "identical_tokens": true
+}

@@ -17,13 +17,11 @@ from __future__ import annotations
 import argparse
 import json
 import statistics as stats
-import sys
 import time
 from pathlib import Path
 
+import grouped_quant_op as gq
 import torch
-
-import grouped_quant_op as gq  # noqa: E402
 
 USE_OURS = {"on": False}
 QUANT: dict[int, tuple] = {}
@@ -54,19 +52,21 @@ def quant_for(layer) -> tuple[torch.Tensor, torch.Tensor] | None:
 def reference(x, wq, scale, groups, bias):
     """Eager dequant path: build the float weight, then matmul."""
     n, k = wq.shape
-    w = (wq.reshape(n, groups, k // groups) * scale.unsqueeze(-1)).reshape(
-        n, k
-    )
+    w = (
+        wq.reshape(n, groups, k // groups) * scale.unsqueeze(-1)
+    ).reshape(n, k)
     return x @ w.transpose(0, 1) + bias
 
 
 def install_patch() -> None:
     """Route vLLM's unquantized linear through the chosen dequant path."""
-    from vllm.model_executor.layers.linear import UnquantizedLinearMethod
+    from vllm.model_executor.layers.linear import (
+        UnquantizedLinearMethod,
+    )
 
     orig = UnquantizedLinearMethod.apply
 
-    def apply(self, layer, x, bias=None):  # noqa: ANN001
+    def apply(self, layer, x, bias=None):
         q = quant_for(layer)
         if q is None:
             return orig(self, layer, x, bias)
@@ -104,8 +104,12 @@ def main() -> int:
 
     cfg = json.loads(Path(args.model, "config.json").read_text())
     torch.manual_seed(0)
-    ids = torch.randint(1, int(cfg["vocab_size"]), (1, args.ctx // 2)).tolist()
-    sp = SamplingParams(temperature=0.0, max_tokens=args.gen, ignore_eos=True)
+    ids = torch.randint(
+        1, int(cfg["vocab_size"]), (1, args.ctx // 2)
+    ).tolist()
+    sp = SamplingParams(
+        temperature=0.0, max_tokens=args.gen, ignore_eos=True
+    )
 
     llm = LLM(
         model=args.model,
@@ -132,7 +136,7 @@ def main() -> int:
 
     base, ours, toks = [], [], {}
     for i in range(args.rounds):
-        for on in ((False, True) if i % 2 == 0 else (True, False)):
+        for on in (False, True) if i % 2 == 0 else (True, False):
             dt, tk = call(on)
             (ours if on else base).append(dt)
             toks.setdefault("ours" if on else "base", tk)
@@ -140,14 +144,22 @@ def main() -> int:
 
     mb, mo = stats.median(base), stats.median(ours)
     wins = sum(1 for a, b in zip(ours, base, strict=True) if a < b)
-    print(f"\n{args.rounds} paired rounds · {len(QUANT)} linears quantized")
-    print(f"  torch dequant : {mb*1e3:7.1f} ms  sd {stats.stdev(base)*1e3:5.1f}"
-          f"  {args.gen/mb:6.1f} tok/s")
-    print(f"  our fused op  : {mo*1e3:7.1f} ms  sd {stats.stdev(ours)*1e3:5.1f}"
-          f"  {args.gen/mo:6.1f} tok/s")
-    print(f"  paired: ours {100*(mo-mb)/mb:+.1f}% · "
-          f"ours faster in {wins}/{args.rounds} · "
-          f"identical tokens: {toks['ours'] == toks['base']}")
+    print(
+        f"\n{args.rounds} paired rounds · {len(QUANT)} linears quantized"
+    )
+    print(
+        f"  torch dequant : {mb * 1e3:7.1f} ms  sd {stats.stdev(base) * 1e3:5.1f}"
+        f"  {args.gen / mb:6.1f} tok/s"
+    )
+    print(
+        f"  our fused op  : {mo * 1e3:7.1f} ms  sd {stats.stdev(ours) * 1e3:5.1f}"
+        f"  {args.gen / mo:6.1f} tok/s"
+    )
+    print(
+        f"  paired: ours {100 * (mo - mb) / mb:+.1f}% · "
+        f"ours faster in {wins}/{args.rounds} · "
+        f"identical tokens: {toks['ours'] == toks['base']}"
+    )
 
     if args.out:
         Path(args.out).write_text(

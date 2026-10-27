@@ -34,10 +34,23 @@ BW_GBPS = 89.1
 
 @triton.jit
 def _gemv_v2(
-    x_ptr, qw_ptr, qz_ptr, sc_ptr, out_ptr,
-    N, K, GS,
-    s_qwk, s_qwn, s_qzk, s_qzn, s_sck, s_scn,
-    BLOCK_N: tl.constexpr, BLOCK_K: tl.constexpr, SPLIT: tl.constexpr,
+    x_ptr,
+    qw_ptr,
+    qz_ptr,
+    sc_ptr,
+    out_ptr,
+    N,
+    K,
+    GS,
+    s_qwk,
+    s_qwn,
+    s_qzk,
+    s_qzn,
+    s_sck,
+    s_scn,
+    BLOCK_N: tl.constexpr,
+    BLOCK_K: tl.constexpr,
+    SPLIT: tl.constexpr,
 ):
     """One word, eight outputs: unpack words in registers."""
     pid_n = tl.program_id(0)
@@ -60,21 +73,24 @@ def _gemv_v2(
         wmask = kmask[:, None] & (rw < (N + 7) // 8)[None, :]
         words = tl.load(
             qw_ptr + rk[:, None] * s_qwk + rw[None, :] * s_qwn,
-            mask=wmask, other=0,
+            mask=wmask,
+            other=0,
         )
         q = ((words[:, :, None] >> shift[None, None, :]) & 0xF).reshape(
             BLOCK_K, BLOCK_N
         )
         zwords = tl.load(
             qz_ptr + g[:, None] * s_qzk + rw[None, :] * s_qzn,
-            mask=wmask, other=0,
+            mask=wmask,
+            other=0,
         )
-        z = ((zwords[:, :, None] >> shift[None, None, :]) & 0xF).reshape(
-            BLOCK_K, BLOCK_N
-        )
+        z = (
+            (zwords[:, :, None] >> shift[None, None, :]) & 0xF
+        ).reshape(BLOCK_K, BLOCK_N)
         s = tl.load(
             sc_ptr + g[:, None] * s_sck + rn[None, :] * s_scn,
-            mask=kmask[:, None] & nmask[None, :], other=0.0,
+            mask=kmask[:, None] & nmask[None, :],
+            other=0.0,
         ).to(tl.float32)
         w = (q.to(tl.float32) - z.to(tl.float32)) * s
         x = tl.load(x_ptr + rk, mask=kmask, other=0.0).to(tl.float32)
@@ -86,11 +102,24 @@ def _gemv_v2(
 def gemv_v2(x, qw, qz, sc, n, k, bn=128, bk=64, split=1, warps=4):
     out = torch.empty((1, n), device="cuda", dtype=torch.float16)
     _gemv_v2[(triton.cdiv(n, bn), split)](
-        x, qw, qz, sc, out, n, k, 128,
-        qw.stride(0), qw.stride(1),
-        qz.stride(0), qz.stride(1),
-        sc.stride(0), sc.stride(1),
-        BLOCK_N=bn, BLOCK_K=bk, SPLIT=split, num_warps=warps,
+        x,
+        qw,
+        qz,
+        sc,
+        out,
+        n,
+        k,
+        128,
+        qw.stride(0),
+        qw.stride(1),
+        qz.stride(0),
+        qz.stride(1),
+        sc.stride(0),
+        sc.stride(1),
+        BLOCK_N=bn,
+        BLOCK_K=bk,
+        SPLIT=split,
+        num_warps=warps,
     )
     return out
 
@@ -152,17 +181,38 @@ def main() -> int:
                     for split in (1, 2, 4):
                         for wp in (2, 4, 8):
                             try:
-                                got = gemv_v2(x, qw, qz, sc, n, k, bn, bk,
-                                              split, wp)
+                                got = gemv_v2(
+                                    x,
+                                    qw,
+                                    qz,
+                                    sc,
+                                    n,
+                                    k,
+                                    bn,
+                                    bk,
+                                    split,
+                                    wp,
+                                )
                                 err = float(
                                     (ref - got.float()).abs().max()
                                 )
                                 us = timeit(
-                                    lambda: gemv_v2(x, qw, qz, sc, n, k,
-                                                    bn, bk, split, wp),
-                                    reps=40, warm=8,
+                                    lambda: gemv_v2(
+                                        x,
+                                        qw,
+                                        qz,
+                                        sc,
+                                        n,
+                                        k,
+                                        bn,
+                                        bk,
+                                        split,
+                                        wp,
+                                    ),
+                                    reps=40,
+                                    warm=8,
                                 )
-                            except Exception:  # noqa: BLE001
+                            except Exception:
                                 continue
                             if best is None or us < best[0]:
                                 best = (us, bn, bk, split, wp, err)
@@ -172,7 +222,9 @@ def main() -> int:
             eff = 100 * roof / us
             rows.append(
                 {
-                    "layer": name, "out": n, "in": k,
+                    "layer": name,
+                    "out": n,
+                    "in": k,
                     "config": f"bn={bn} bk={bk} split={split} w={wp}",
                     "roofline_us": round(roof, 1),
                     "ours_us": round(us, 1),
@@ -182,9 +234,11 @@ def main() -> int:
                     "max_abs_err": err,
                 }
             )
-            print(f"{name:>10} {n:>5}x{k:<5} roof {roof:6.1f}  "
-                  f"ours {us:6.1f} ({eff:4.1f}% roof)  "
-                  f"vllm {t_vllm:6.1f}  -> {t_vllm/us:.2f}x")
+            print(
+                f"{name:>10} {n:>5}x{k:<5} roof {roof:6.1f}  "
+                f"ours {us:6.1f} ({eff:4.1f}% roof)  "
+                f"vllm {t_vllm:6.1f}  -> {t_vllm / us:.2f}x"
+            )
 
     path = (
         "/home/luis/GitHub/handl-lang/graphopt/docs/reports/"
@@ -197,4 +251,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

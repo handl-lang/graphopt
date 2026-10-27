@@ -20,16 +20,20 @@ import time
 from pathlib import Path
 
 import torch
-import vllm._custom_ops  # noqa: F401 — registers torch.ops._C.*
 import triton
 import triton.language as tl
+import vllm._custom_ops  # noqa: F401 — registers torch.ops._C.*
 
 
 @triton.jit
 def _noop(x_ptr, n, BLOCK: tl.constexpr):
     pid = tl.program_id(0)
     offs = pid * BLOCK + tl.arange(0, BLOCK)
-    tl.store(x_ptr + offs, tl.load(x_ptr + offs, mask=offs < n), mask=offs < n)
+    tl.store(
+        x_ptr + offs,
+        tl.load(x_ptr + offs, mask=offs < n),
+        mask=offs < n,
+    )
 
 
 def timeit(fn, reps: int = 200, warm: int = 20) -> float:
@@ -57,7 +61,9 @@ def main() -> int:
 
     op = torch.ops._C.silu_and_mul
     for m in (1, 8, 64, 256):
-        x = torch.randn(m, 2 * hidden, device="cuda", dtype=torch.float32)
+        x = torch.randn(
+            m, 2 * hidden, device="cuda", dtype=torch.float32
+        )
         dst = torch.empty(m, hidden, device="cuda", dtype=torch.float32)
         us = timeit(lambda: op(dst, x))
         out[f"silu_and_mul_m{m}_us"] = round(us, 2)
@@ -86,10 +92,10 @@ def main() -> int:
         "(less, minus its own cost)"
     )
 
-    Path("/home/luis/GitHub/handl-lang/graphopt/docs/reports/"
-         "p5_vllm_fusion_ceiling.json").write_text(
-        json.dumps(out, indent=2) + "\n"
-    )
+    Path(
+        "/home/luis/GitHub/handl-lang/graphopt/docs/reports/"
+        "p5_vllm_fusion_ceiling.json"
+    ).write_text(json.dumps(out, indent=2) + "\n")
     return 0
 
 
