@@ -13,13 +13,12 @@ Kernels have two vocabularies and only one belongs in the arrow calculus.
 | layer | what it says | where it lives |
 |---|---|---|
 | **semantics** | `qgemv(x, w_q, z, s) ≡ matmul(x, dequant(w_q, z, s))` | handl substrate: an arrow law, certifiable |
-| **schedule** | tiles, split-K, load width, register unpack, reduction | kernelopt: IR + op table + cost model |
+| **schedule** | tiles, split-K, load width, register unpack, reduction | a **grade** on the op, priced by the cost model |
 
-Arrows compose meaning well and schedules badly (shared memory and
-occupancy are not composition). Keeping them apart lets the certificate
-speak about *meaning* while the search varies *delivery* — the same
-"one calculus, many implementations" pattern the platform already uses
-for engines.
+Graded arrows, enriched hom-objects and comonads cover scheduling as a
+resource statement, so these two layers are the *same* calculus at
+different grades rather than two systems: the law fixes the meaning, the
+grade prices the delivery.
 
 ## What gets added
 
