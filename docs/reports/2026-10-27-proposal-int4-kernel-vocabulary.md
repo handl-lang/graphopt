@@ -93,15 +93,43 @@ kernel and binds it to the `qgemv` capability. The port/adapter split the
 `lib-*` repos already use applies unchanged: `lib-cuda` is the contract,
 `lib-cuda-*` are implementations.
 
-### 3. The schedule is **not** handl — and that is deliberate
+### 3. The schedule is a grade — not an excuse
 
-Tiles, split-K, load width and reduction strategy are not expressible as
-arrows, because they are about memory hierarchy, not composition. They
-stay in kernelopt's IR as a `KernelTemplate`. What crosses into handl is
-only the **op declaration and its law**; what stays outside is the
-implementation choice. The certificate therefore speaks about meaning,
-while the search varies delivery — the same "one calculus, many
-implementations" split the platform uses for lexers and executors.
+Earlier drafts of this proposal said "arrows cannot say tiling". That was
+wrong, and it is worth being precise about what the theory actually gives:
+
+- **Graded arrows** (already the platform's core) attach a resource row to
+  an arrow. A schedule is a resource statement: bytes read, launches,
+  occupancy class, residency. That is a grade, not a new concept.
+- **Enriched categories** put structure on the hom-object: cost as
+  enrichment is the standard "quantitative semantics" move, and it makes
+  "find the cheapest derivation" a well-formed question rather than a
+  benchmark.
+- **Comonads** model dataflow/scheduling structure (Uustalu–Vene), which is
+  what a tiled pipeline is.
+- **Operads** model hierarchical, parallel composition — the natural shape
+  of a tiled kernel decomposed into blocks.
+- **Traced monoidal structure** (the `loop` combinator already in the
+  kernel) covers the accumulation reduction.
+
+So expressibility is not the obstacle. Two honest obstacles remain:
+
+1. **The kernel body is opaque.** A `triton.jit` function is not a term;
+   only its *interface and cost* can be modelled in the calculus. The body
+   stays a backend binding (`lib-cuda-*`), and the law relates the op's
+   meaning to the spelled computation — not the text of the kernel.
+2. **Whether grade-encoding pays is empirical.** Encoding schedules as
+   grades buys priced search over derivations; encoding them as a plain
+   data template buys cheap instantiation. Which is better for finding
+   kernels is testable, and the cheap test is one axis: encode `split_k`
+   as a grade, run the search, and compare against the same space
+   enumerated as data.
+
+That is the design consequence: **the schedule is a grade vector on the
+op** — `(bytes, launches, occupancy)` — with the cost model as the
+enrichment, and the Triton body as an opaque backend. The search then
+minimises cost over derivations rather than over a hand-written grid,
+which is the thing the platform was built to do.
 
 ### What it expands
 
