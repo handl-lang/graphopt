@@ -89,8 +89,8 @@ data change, not an engine change, which is the property
 extension ABI (`libhnl_ext_*.so` + manifest), exactly like `lib-intl-c`,
 `lib-unicode-c` and the other native adapters. It exports the Triton
 kernel and binds it to the `qgemv` capability. The port/adapter split the
-`lib-*` repos already use applies unchanged: `lib-cuda` is the contract,
-`lib-cuda-*` are implementations.
+`lib-*` repos already use applies unchanged: `lib-triton` is the contract,
+`lib-triton-*` are implementations.
 
 ### 3. The schedule is a grade — not an excuse
 
@@ -115,7 +115,7 @@ So expressibility is not the obstacle. Two honest obstacles remain:
 
 1. **The kernel body is opaque.** A `triton.jit` function is not a term;
    only its *interface and cost* can be modelled in the calculus. The body
-   stays a backend binding (`lib-cuda-*`), and the law relates the op's
+   stays a backend binding (`lib-triton-*`), and the law relates the op's
    meaning to the spelled computation — not the text of the kernel.
 2. **Whether grade-encoding pays is empirical.** Encoding schedules as
    grades buys priced search over derivations; encoding them as a plain
