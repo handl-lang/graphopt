@@ -66,10 +66,10 @@ platform already has, and expands exactly one of them: the vocabulary.
 ### 1. The op surface is a **kit** (data, not code)
 
 A kit is authored YAML merged into a `Language` (`kit-prelude-lang`
-pattern). A new `kit-cuda` declares the operators and their grades:
+pattern). A new `kit-kernel-ir` (M2) declares the operators and their grades:
 
 ```yaml
-# kit-cuda/fragments/qgemv.yaml
+# kit-kernel-ir/ (M2)fragments/qgemv.yaml
 op: qgemv
 signature: (Vec, PackedI4, ZeroPoints, Scales) ~[(Op, Tensor)]~> Vec
 backend: cuda
@@ -85,7 +85,7 @@ data change, not an engine change, which is the property
 
 ### 2. The implementation is a **backend library** (`lib-*-c` pattern)
 
-`lib-cuda-qgemv` is a cdylib discovered by the host through the ADR-0149
+`lib-triton-qgemv` is a cdylib discovered by the host through the ADR-0149
 extension ABI (`libhnl_ext_*.so` + manifest), exactly like `lib-intl-c`,
 `lib-unicode-c` and the other native adapters. It exports the Triton
 kernel and binds it to the `qgemv` capability. The port/adapter split the
@@ -149,8 +149,8 @@ The vocabulary, in two directions, and both are the *point*:
 | layer | artifact | who owns it |
 |---|---|---|
 | meaning | `qgemv ≡ matmul∘dequant`, a law | handl (`kernelopt`/`eqsat` certificate) |
-| naming | `kit-cuda` YAML declaration | handl kit |
-| binding | `lib-cuda-qgemv` cdylib + manifest | host plugin ABI |
+| naming | `kit-kernel-ir` (M2) YAML declaration | handl kit |
+| binding | `lib-triton-qgemv` cdylib + manifest | host plugin ABI |
 | delivery | `KernelTemplate` → Triton source | kernelopt IR |
 
 If a later experiment cannot be expressed through these four, that is a

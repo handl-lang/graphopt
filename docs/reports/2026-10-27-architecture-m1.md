@@ -2,10 +2,10 @@
 
 ## Corrections from review (accepted)
 
-**1. `kit-cuda-lang` was the wrong noun.** A **kit** is a curated manifest
+**1. `lib-kernel-ir` was the wrong noun.** A **kit** is a curated manifest
 of handl libs; a **lib** is a package. So the vocabulary is
-**`lib-cuda-ir`** (a handl library: ops, grades, costs, denotations), and
-**`kit-cuda`** is the curated kit that includes it alongside the base
+**`lib-kernel-ir`** (a handl library: ops, grades, costs, denotations), and
+**`kit-kernel-ir` (M2)** is the curated kit that includes it alongside the base
 types. Two artefacts, two nouns, as every other kit/lib pair in the org.
 
 **2. `compile-triton` is Rust.** Every engine in the `compile-*` family is
@@ -23,9 +23,9 @@ grade row, and **an engine that interprets them**. So:
 
 | before (wrong) | after (right) |
 |---|---|
-| new `KernelIR` schema in `kit-cuda-lang` | **`Term` values** with kit-declared ops |
+| new `KernelIR` schema in `lib-kernel-ir` | **`Term` values** with kit-declared ops |
 | IR → Triton lowering in a bespoke module | **`compile-triton`** interprets `Term` |
-| denotations in the kit | denotations in **`lib-cuda-ir`** tests + laws |
+| denotations in the kit | denotations in **`lib-kernel-ir`** tests + laws |
 
 What this buys: the body is transparent **in the platform's own
 representation**, so the certificate, the sink, the sieve and the cost
@@ -37,7 +37,7 @@ desugaring, or a handler — never by a new combinator.
 
 ```
                  ┌─────────────────────────────────────────────┐
-                 │  lib-cuda-ir      (DATA: the IR vocabulary)  │
+                 │  lib-kernel-ir      (DATA: the IR vocabulary)  │
                  │  ops: tile_load unpack_i4 dequant dot split │
                  │        stage reduce store bias              │
                  │  each: signature · grade row · cost · law   │
@@ -56,7 +56,7 @@ desugaring, or a handler — never by a new combinator.
         └───────────────┬────────────┘   └──────────────────────────┘
                         │ source
         ┌───────────────▼────────────┐
-        │ lib-cuda / lib-cuda-qgemv  │   (M2 — needed to ship,
+        │ lib-cuda / lib-triton-qgemv  │   (M2 — needed to ship,
         │ runtime binding + manifest │    not to find)
         └────────────────────────────┘
 ```
@@ -69,20 +69,20 @@ chose what, or a win cannot be attributed.
 
 ```
 handl-lang/
-├── host/project/adrs/
+├── `kernelopt` (ADR)
 │   └── 01XX-kernel-ir-as-language.md      ← (1) ADR: IR is data, kernel stays closed
 │
-├── kit-cuda-lang/                          ← (2) NEW · the vocabulary (data)
+├── lib-kernel-ir/                          ← (2) NEW · the vocabulary (data)
 │   ├── fragments/
 │   │   ├── qgemv.yaml                     op · signature · grades · cost
-│   │   └── _ops.yaml                      the 8 core ops
+│   │   └── _ops.yaml                      the nine core ops
 │   ├── denotations/                       (3) torch reference per op
 │   │   ├── qgemv.py
 │   │   └── _shared.py
 │   └── tests/
 │       └── test_denotations.py            every op has a reference + a shape
 │
-├── kit-cuda/                               ← curated kit: includes lib-cuda-ir
+├── kit-kernel-ir/ (M2)                               ← curated kit: includes lib-kernel-ir
 │
 ├── compile-triton/                         ← (4) NEW · Rust engine (lowering)
 │   ├── src/
@@ -101,14 +101,14 @@ handl-lang/
 │   └── drivers/probes/awq/                incumbents: hand kernel, awq_gemm,
 │                                          the probes that produced P13–P18
 │
-└── lib-cuda/ , lib-cuda-qgemv/             ← M2 · runtime binding (deferred)
+└── lib-cuda/ , lib-triton-qgemv/             ← M2 · runtime binding (deferred)
 ```
 
 ## What each piece owns
 
 | layer | owns | does not own |
 |---|---|---|
-| `lib-cuda-ir` (+ `kit-cuda`) | op vocabulary, grades, costs, denotations | code generation, measurement |
+| `lib-kernel-ir` (+ `kit-kernel-ir` (M2)) | op vocabulary, grades, costs, denotations | code generation, measurement |
 | `compile-triton` | term → Triton, one op at a time | choosing which term |
 | `kernelopt` | enumeration, legality, certificates, the choice | the lowering, the referee |
 | `graphopt/bench` | the honest number | the search, the semantics |
@@ -116,7 +116,7 @@ handl-lang/
 
 ## M1 boundary
 
-**In:** ADR · `lib-cuda-ir` with 8 ops + denotations · `kit-cuda` manifest · `compile-triton` for `qgemv`
+**In:** ADR · `lib-kernel-ir` with nine ops + denotations · `kit-kernel-ir` (M2) manifest · `compile-triton` for `qgemv`
 with 4 `split_k` variants · equality gate vs `awq_gemm` · search driver
 emitting a best kernel and a routing row.
 

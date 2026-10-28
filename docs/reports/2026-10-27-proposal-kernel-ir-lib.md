@@ -18,7 +18,7 @@ the kernel grows.
 
 | artifact | kind | home | why there |
 |---|---|---|---|
-| **kernel IR ops** (`tile_load`, `unpack_i4`, `dot`, `split`, `stage`, `reduce`, `store`) declared with grades and costs | data (`Language`) | new **`kit-cuda-lang`** | a language is data — `kit-prelude-lang` pattern |
+| **kernel IR ops** (`tile_load`, `unpack_i4`, `dot`, `split`, `stage`, `reduce`, `store`) declared with grades and costs | data (`Language`) | new **`lib-kernel-ir`** | a language is data — `kit-prelude-lang` pattern |
 | **lowering IR → Triton** | engine | new **`compile-triton`** | the `compile-*` family already exists (`compile-js`, `compile-llvm`, `compile-dot`) |
 | **running a compiled kernel** | port + adapters | **`lib-cuda`** (contract) + **`lib-cuda-*`** (impls) | the `lib-X` / `lib-X-c` split the platform already uses |
 | **schedule terms, cost model, certificate, search** | domain | **`kernelopt`** | it already owns `Kernel_RULES`, the sink, the cost model and the sieve |
@@ -53,7 +53,7 @@ hopes is safe.
 
 | # | deliverable | gate |
 |---|---|---|
-| **M0** | IR declared in `kit-cuda-lang`; denotation + cost per op | every op has a torch reference and a byte count |
+| **M0** | IR declared in `lib-kernel-ir`; denotation + cost per op | every op has a torch reference and a byte count |
 | **M1** | `compile-triton` lowers the four `split_k` variants | all four denotations equal to the incumbent's (cosine ≥ 0.9999) |
 | **M2** | `kernelopt` searches the IR for `down_proj` | matches 2.96× or beats 42 % of roofline, structure not named by hand |
 | **M3** | add `tile_load` with M>1 | covers prefill and `gate_proj` |
