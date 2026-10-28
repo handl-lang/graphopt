@@ -1,6 +1,7 @@
 # Build list — what has to exist before the machine can find a kernel
 
 **Status:** proposed · dependency-ordered · M1 scope only
+**Refactor context:** lab-form per ADR-0159; ADR-0160 allocates the IR.
 **Definition of done:** the four `split_k` variants of `qgemv` are
 *generated from IR terms* (not written by hand), all agree with
 `awq_gemm` (cosine ≥ 0.9999), and at least one matches the hand-written
@@ -8,7 +9,7 @@ kernel's cold time on `down_proj` (58.9 µs).
 
 | # | build | why it is needed first | home | effort | gate |
 |---|---|---|---|---|---|
-| **1** | **ADR: the kernel IR is `Term` + kit-declared ops** | the kernel's six combinators stay closed; the IR enters as data, and the decision must be recorded where the IR lives | `kernelopt` | 1 h | ADR accepted |
+| **1** | **ADR-0160: the kernel IR is `Term` + kit-declared ops** | the kernel's six combinators stay closed; the IR enters as data, and the decision must be recorded where the IR lives | `opt-kernel` (today `kernelopt`) | 1 h | ADR accepted |
 | **2** | **`lib-kernel-ir`** — the vocabulary as a handl *lib*: nine ops, grades, costs, **and a torch denotation per op** | the vocabulary the search ranges over; denotations make "equal meaning" checkable instead of a slogan | new repo (public) | 1 d | every op has a signature, a grade row, a cost, a reference function |
 | **3** | **`compile-triton`** — Rust engine: `Term` → Triton, for **`qgemv` and `gate_proj`**, 4 `split_k` variants each | the lowering that makes terms runnable; two opposite geometries stop it overfitting one shape | new repo (`compile-*` family) | 2 d | 8 variants compile and run |
 | **4** | **Equality gate vs the incumbent** | the AWQ nibble-order bug survived because the reference shared the assumption; comparison must be against `awq_gemm`, never our own reimplementation | `graphopt/bench` | ½ day | cosine ≥ 0.9999 on every variant |
