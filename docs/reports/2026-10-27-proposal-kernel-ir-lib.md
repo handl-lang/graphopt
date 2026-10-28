@@ -20,7 +20,7 @@ the kernel grows.
 |---|---|---|---|
 | **kernel IR ops** (`tile_load`, `unpack_i4`, `dot`, `split`, `stage`, `reduce`, `store`) declared with grades and costs | data (`Language`) | new **`lib-kernel-ir`** | a language is data — `kit-prelude-lang` pattern |
 | **lowering IR → Triton** | engine | new **`compile-triton`** | the `compile-*` family already exists (`compile-js`, `compile-llvm`, `compile-dot`) |
-| **running a compiled kernel** | port + adapters | **`lib-cuda`** (contract) + **`lib-cuda-*`** (impls) | the `lib-X` / `lib-X-c` split the platform already uses |
+| **running a compiled kernel** | port + adapters | **`lib-triton`** (contract) + **`lib-triton-*`** (impls) | the `lib-X` / `lib-X-c` split the platform already uses |
 | **schedule terms, cost model, certificate, search** | domain | **`kernelopt`** | it already owns `Kernel_RULES`, the sink, the cost model and the sieve |
 | **deploy-regime referee, routing** | measurement | **`graphopt`** | `bench/benchkit/regime.py` lives there |
 
