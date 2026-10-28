@@ -12,7 +12,7 @@ types. Two artefacts, two nouns, as every other kit/lib pair in the org.
 Rust; emitting Triton is string generation over a term, so it belongs
 there too — deterministic, no Python runtime, part of the engine family.
 Executing the emitted source needs Python, but that is the runtime binding
-(`lib-cuda-*`) or an ext, never the compiler.
+(`lib-triton-qgemv`) or an ext, never the compiler.
 
 **3. There is no new schema. The IR *is* `Term`.** This is the correction
 that matters: handl already represents computation as data —
@@ -56,7 +56,7 @@ desugaring, or a handler — never by a new combinator.
         └───────────────┬────────────┘   └──────────────────────────┘
                         │ source
         ┌───────────────▼────────────┐
-        │ lib-cuda / lib-triton-qgemv  │   (M2 — needed to ship,
+        │ lib-triton-qgemv             │   (M2 — needed to ship,
         │ runtime binding + manifest │    not to find)
         └────────────────────────────┘
 ```
@@ -101,7 +101,7 @@ handl-lang/
 │   └── drivers/probes/awq/                incumbents: hand kernel, awq_gemm,
 │                                          the probes that produced P13–P18
 │
-└── lib-cuda/ , lib-triton-qgemv/             ← M2 · runtime binding (deferred)
+└── lib-triton-qgemv/                        ← M2 · runtime binding (deferred)
 ```
 
 ## What each piece owns
@@ -112,7 +112,7 @@ handl-lang/
 | `compile-triton` | term → Triton, one op at a time | choosing which term |
 | `kernelopt` | enumeration, legality, certificates, the choice | the lowering, the referee |
 | `graphopt/bench` | the honest number | the search, the semantics |
-| `lib-cuda-*` | running the winner in a host | finding it |
+| `lib-triton-qgemv` | running the winner in a host | finding it |
 
 ## M1 boundary
 
@@ -120,7 +120,7 @@ handl-lang/
 with 4 `split_k` variants · equality gate vs `awq_gemm` · search driver
 emitting a best kernel and a routing row.
 
-**Out:** `lib-cuda` binding, M>1 tiling, FP8/GPTQ, compile cache,
+**Out:** `lib-triton-qgemv` binding, M>1 tiling, FP8/GPTQ, compile cache,
 `compile-cuda`, cost-model *ranking* (bound only).
 
 **Gate:** all four variants cosine ≥ 0.9999 vs `awq_gemm`; at least one
