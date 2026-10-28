@@ -1,0 +1,3 @@
+# Pre-registry ADR number collisions, tolerated as-is (ADR-0129 §3).
+# Numbers are never renumbered or reused; only a *new* collision is an error.
+9   # 0009-domain-generality.md + 0009-kernel-calculus-and-layers.md

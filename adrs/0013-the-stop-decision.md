@@ -36,10 +36,29 @@ ranks pending candidates above chance out-of-distribution — or a stop
 delivery outside the shared softmax (the recurring corruption channel:
 five feature families all collapse AP the same way).
 
-## Transfer
+## Decision
 
-The lesson generalizes beyond stop: any gated decision in the game
-needs (a) features that see the decision-relevant quantity, (b) credit
-assigned per-step, (c) calibrated magnitudes, (d) a delivery channel
-isolated from ranking logits.  Rounds 1–8 are the measured map of
-which of those was actually the wall at each stage.
+Any gated decision in the game — stop included — satisfies four conditions
+before it can ship:
+
+1. Features that see the decision-relevant quantity.
+2. Credit assigned per-step, not per-episode.
+3. Calibrated magnitudes, held out.
+4. A delivery channel isolated from the ranking logits.
+
+The stop policy itself stays **open**: no arm clears both bake bars
+(reward ≥0.273 ∧ AP ≥0.210), so none is adopted.
+
+## Why
+
+Rounds 1–8 are the measured map of which of those four was the wall at each
+stage — fixing one exposes the next. Recording that here is what stops a
+ninth round from re-trying a channel that already failed.
+
+## Not doing
+
+- **Adopt the isotonic `useful-pool` arm** — best measured gate (0.2929 @ 12.8
+  evals, 26 real stops) but it does not clear both bars.
+- **Ship any shared-softmax stop head** — five feature families collapsed AP
+  the same way; the channel is the defect, not the features.
+
