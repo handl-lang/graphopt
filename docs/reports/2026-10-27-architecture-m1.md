@@ -1,10 +1,43 @@
 # Architecture & layout — M1 (for review)
 
-## Data flow
+## Corrections from review (accepted)
+
+**1. `kit-cuda-lang` was the wrong noun.** A **kit** is a curated manifest
+of handl libs; a **lib** is a package. So the vocabulary is
+**`lib-cuda-ir`** (a handl library: ops, grades, costs, denotations), and
+**`kit-cuda`** is the curated kit that includes it alongside the base
+types. Two artefacts, two nouns, as every other kit/lib pair in the org.
+
+**2. `compile-triton` is Rust.** Every engine in the `compile-*` family is
+Rust; emitting Triton is string generation over a term, so it belongs
+there too — deterministic, no Python runtime, part of the engine family.
+Executing the emitted source needs Python, but that is the runtime binding
+(`lib-cuda-*`) or an ext, never the compiler.
+
+**3. There is no new schema. The IR *is* `Term`.** This is the correction
+that matters: handl already represents computation as data —
+`Term::{Arr, Seq, Op, Handle, Loop, App}` with a dimension/grade slot. A
+schedule does not need a parallel IR format; it needs **ops the kit
+declares** (`tile_load`, `split`, `dot`, …), carried in `Term::Op` with a
+grade row, and **an engine that interprets them**. So:
+
+| before (wrong) | after (right) |
+|---|---|
+| new `KernelIR` schema in `kit-cuda-lang` | **`Term` values** with kit-declared ops |
+| IR → Triton lowering in a bespoke module | **`compile-triton`** interprets `Term` |
+| denotations in the kit | denotations in **`lib-cuda-ir`** tests + laws |
+
+What this buys: the body is transparent **in the platform's own
+representation**, so the certificate, the sink, the sieve and the cost
+model all apply unchanged — no second universe to keep in sync. Where a
+schedule cannot be expressed as `Term`, that is a finding about the
+calculus, and the platform's rule applies: it enters by data (an op), a
+desugaring, or a handler — never by a new combinator.
+
 
 ```
                  ┌─────────────────────────────────────────────┐
-                 │  kit-cuda-lang   (DATA: the IR vocabulary)  │
+                 │  lib-cuda-ir      (DATA: the IR vocabulary)  │
                  │  ops: tile_load unpack_i4 dequant dot split │
                  │        stage reduce store bias              │
                  │  each: signature · grade row · cost · law   │
@@ -49,7 +82,9 @@ handl-lang/
 │   └── tests/
 │       └── test_denotations.py            every op has a reference + a shape
 │
-├── compile-triton/                         ← (4) NEW · lowering (engine)
+├── kit-cuda/                               ← curated kit: includes lib-cuda-ir
+│
+├── compile-triton/                         ← (4) NEW · Rust engine (lowering)
 │   ├── src/
 │   │   ├── lower.py                       term → Triton source
 │   │   └── variants.py                    split_k ∈ {1,2,4,8}
@@ -73,7 +108,7 @@ handl-lang/
 
 | layer | owns | does not own |
 |---|---|---|
-| `kit-cuda-lang` | op vocabulary, grades, costs, denotations | code generation, measurement |
+| `lib-cuda-ir` (+ `kit-cuda`) | op vocabulary, grades, costs, denotations | code generation, measurement |
 | `compile-triton` | term → Triton, one op at a time | choosing which term |
 | `kernelopt` | enumeration, legality, certificates, the choice | the lowering, the referee |
 | `graphopt/bench` | the honest number | the search, the semantics |
@@ -81,7 +116,7 @@ handl-lang/
 
 ## M1 boundary
 
-**In:** ADR · kit with 8 ops + denotations · `compile-triton` for `qgemv`
+**In:** ADR · `lib-cuda-ir` with 8 ops + denotations · `kit-cuda` manifest · `compile-triton` for `qgemv`
 with 4 `split_k` variants · equality gate vs `awq_gemm` · search driver
 emitting a best kernel and a routing row.
 
