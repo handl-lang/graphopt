@@ -22,10 +22,13 @@ only on the rule of three.
 
 ## HIGH — M1: the machine finds the kernel, not me (five items, ~5 days)
 
+Lab-form per ADR-0159 (no ext wrapper yet); ADR-0160 allocates the IR.
+
 Target: `qgemv` **and** `gate_proj` generated from `Term`s, exact against
 `awq_gemm`, at least one within the hand kernel's 58.9 µs cold.
 
-- [ ] **ADR** in `kernelopt`: the kernel IR is `Term` + kit-declared ops
+- [ ] **ADR-0160** in `opt-kernel` (today `kernelopt`): the kernel IR is
+      `Term` + kit-declared ops
 - [ ] **`lib-kernel-ir`** (public): nine ops, grades, costs, one torch
       denotation per op — the vocabulary, and the equality reference
 - [ ] **`compile-triton`** (Rust, `compile-*` family): `Term` → Triton,

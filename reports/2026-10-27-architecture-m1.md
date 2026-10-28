@@ -1,5 +1,9 @@
 # Architecture & layout — M1 (for review)
 
+**Form:** lab (ADR-0159 not yet triggered). Repos, drivers and own
+harnesses; no `ext` wrapper, no FFI seam. **Naming:** `opt-graph` (today
+`graphopt`), `opt-kernel` (today `kernelopt`); the IR is ADR-0160.
+
 ## Corrections from review (accepted)
 
 **1. `lib-kernel-ir` was the wrong noun.** A **kit** is a curated manifest
@@ -44,7 +48,7 @@ desugaring, or a handler — never by a new combinator.
                  └───────────────────┬─────────────────────────┘
                                      │  IR terms (schedules as data)
                  ┌───────────────────▼─────────────────────────┐
-                 │  kernelopt   (SEARCH + CERTIFICATE)         │
+                 │  opt-kernel  (SEARCH + CERTIFICATE)         │
                  │  enumerate terms → legality → roofline floor│
                  │  → equality gate → deploy-referee timing    │
                  └──────┬───────────────────────────┬──────────┘
