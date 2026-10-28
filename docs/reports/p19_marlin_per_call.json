@@ -1,0 +1,82 @@
+{
+  "tokens": 160,
+  "kernels": [
+    {
+      "name": "void gemv2T_kernel_val",
+      "us_total": 468662.2,
+      "calls": 160,
+      "us_per_call": 2929.14
+    },
+    {
+      "name": "void marlin::Marlin",
+      "us_total": 390056.2,
+      "calls": 14880,
+      "us_per_call": 26.21
+    },
+    {
+      "name": "void flash::flash_fwd_splitkv_kernel",
+      "us_total": 24370.4,
+      "calls": 3720,
+      "us_per_call": 6.55
+    },
+    {
+      "name": "std::enable_if",
+      "us_total": 19475.7,
+      "calls": 7680,
+      "us_per_call": 2.54
+    },
+    {
+      "name": "void marlin::Marlin",
+      "us_total": 14179.3,
+      "calls": 480,
+      "us_per_call": 29.54
+    },
+    {
+      "name": "void vllm::act_and_mul_kernel",
+      "us_total": 11080.2,
+      "calls": 3840,
+      "us_per_call": 2.89
+    },
+    {
+      "name": "void vllm::rotary_embedding_kernel",
+      "us_total": 7996.8,
+      "calls": 3840,
+      "us_per_call": 2.08
+    },
+    {
+      "name": "void vllm::reshape_and_cache_flash_kernel",
+      "us_total": 7479.2,
+      "calls": 3840,
+      "us_per_call": 1.95
+    },
+    {
+      "name": "Memcpy DtoD (Device -> Device)",
+      "us_total": 3868.4,
+      "calls": 3720,
+      "us_per_call": 1.04
+    },
+    {
+      "name": "void flash::flash_fwd_splitkv_kernel",
+      "us_total": 1464.1,
+      "calls": 120,
+      "us_per_call": 12.2
+    },
+    {
+      "name": "_gumbel_sample_kernel",
+      "us_total": 969.4,
+      "calls": 160,
+      "us_per_call": 6.06
+    },
+    {
+      "name": "void at::native::reduce_kernel",
+      "us_total": 735.2,
+      "calls": 160,
+      "us_per_call": 4.6
+    }
+  ],
+  "marlin_us_per_call": [
+    26.21,
+    29.54
+  ],
+  "gemv2t_us_per_call": 2929.14
+}
