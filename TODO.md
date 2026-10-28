@@ -1,5 +1,59 @@
 # TODO
 
+## HIGH — ADR-0159: dissolve the optimizer domains into `ext` tools
+
+Adopted on three triggers, not a date (`host/project/adrs/0159-…`):
+
+- [ ] a caller that is **not the researcher** needs the capability
+- [ ] the domain's public surface **unchanged for four weeks**
+- [ ] the **referee is shared** (`bench/benchkit` usable by any domain)
+
+When all three hold: wrap, do not rewrite (Python core behind a
+port/adapter, thin ext command). Naming: `opt-*` family; a third member
+only on the rule of three.
+
+- [x] **Registry gap — fixed.** `host/scripts/gen-adr-index.py` built the
+      index only from the hand-maintained `docs-split.yaml`, so newly
+      written ADRs were invisible (0158 and 0159 both missing while
+      present and committed). It now unions the manifest with a directory
+      scan: 151 → 164 ADRs, both present. The docs hub's `adrs/handl.md`
+      picks them up on regeneration; `adrs/index.md` is org-scoped by
+      design and correctly excludes them.
+
+## HIGH — M1: the machine finds the kernel, not me (five items, ~5 days)
+
+Target: `qgemv` **and** `gate_proj` generated from `Term`s, exact against
+`awq_gemm`, at least one within the hand kernel's 58.9 µs cold.
+
+- [ ] **ADR** in `kernelopt`: the kernel IR is `Term` + kit-declared ops
+- [ ] **`lib-kernel-ir`** (public): nine ops, grades, costs, one torch
+      denotation per op — the vocabulary, and the equality reference
+- [ ] **`compile-triton`** (Rust, `compile-*` family): `Term` → Triton,
+      `qgemv` + `gate_proj` × `split_k ∈ {1,2,4,8}`
+- [ ] **Equality gate** vs `awq_gemm` in `graphopt/bench` — cosine ≥
+      0.9999 on every variant, inside the timing path
+- [ ] **Search driver** in `kernelopt`: enumerate `Term`s → gate → roofline
+      bound → deploy-referee measure → best kernel + routing row
+
+**Kill criterion:** if a fixed lowering cannot match hand-written Triton
+on `qgemv` and reach parity on `gate_proj`, generalising is wasted work —
+keep hand-writing kernels, use the search only for configs.
+
+**M1.5 before any breadth** (formats × shapes): compile cache + pruning by
+roofline bound. Breadth multiplies candidates and is otherwise
+rate-limited by `triton.jit`, not by ideas.
+
+## Done — 2026-10-27 (kernel margin, valid)
+
+- [x] int4 GEMV beats `awq_gemm` cold on 3 of 4 layer shapes —
+      **2.96× / 1.52× / 1.35×**, exact (`docs/reports/p14_correct_splitk.md`)
+- [x] substituted into vLLM: **token-identical, −29.2 %** end-to-end,
+      25/25 paired rounds (`docs/reports/p18_e2e_29pct.md`)
+- [x] deploy-regime referee as tested library (`bench/benchkit/regime.py`)
+- [x] three retractions published: fake 3.3× (fp16 atomics), fake −3.1 %
+      (too few rounds), fake −28.5 % (AWQ nibble order)
+
+
 ## Active — HIGH PRIORITY (the open questions, post-plan-0032)
 
 - [x] **Q3 — multi-step credit.**  **Measured (2026-10-21).**
