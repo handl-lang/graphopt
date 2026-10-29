@@ -1,0 +1,54 @@
+[
+  {
+    "operator": "qgemv/down_proj",
+    "term": "split8",
+    "us": 52.4,
+    "cosine": 0.9999999,
+    "speedup_vs_incumbent": 3.73,
+    "pct_of_roofline": 47.0,
+    "roofline_us": 24.59,
+    "rejected": [
+      {
+        "label": "split1",
+        "reason": "slower",
+        "detail": "148.7 us vs 52.4 us"
+      },
+      {
+        "label": "split2",
+        "reason": "slower",
+        "detail": "78.7 us vs 52.4 us"
+      },
+      {
+        "label": "split4",
+        "reason": "slower",
+        "detail": "53.9 us vs 52.4 us"
+      }
+    ]
+  },
+  {
+    "operator": "qgemv/gate_proj",
+    "term": "split4",
+    "us": 52.3,
+    "cosine": 0.9999999,
+    "speedup_vs_incumbent": 0.87,
+    "pct_of_roofline": 47.0,
+    "roofline_us": 24.59,
+    "rejected": [
+      {
+        "label": "split1",
+        "reason": "slower",
+        "detail": "66.9 us vs 52.3 us"
+      },
+      {
+        "label": "split2",
+        "reason": "slower",
+        "detail": "54.5 us vs 52.3 us"
+      },
+      {
+        "label": "split8",
+        "reason": "slower",
+        "detail": "55.9 us vs 52.3 us"
+      }
+    ]
+  }
+]

@@ -1,0 +1,434 @@
+[
+  {
+    "shape": "down_proj",
+    "depth": 1,
+    "split": 2,
+    "block_k": 128,
+    "us": 78.8,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 31.2
+  },
+  {
+    "shape": "down_proj",
+    "depth": 1,
+    "split": 2,
+    "block_k": 256,
+    "us": 89.9,
+    "cosine": 1.0,
+    "pct_of_roofline": 27.3
+  },
+  {
+    "shape": "down_proj",
+    "depth": 1,
+    "split": 4,
+    "block_k": 128,
+    "us": 54.1,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 45.4
+  },
+  {
+    "shape": "down_proj",
+    "depth": 1,
+    "split": 4,
+    "block_k": 256,
+    "us": 92.1,
+    "cosine": 1.0,
+    "pct_of_roofline": 26.7
+  },
+  {
+    "shape": "down_proj",
+    "depth": 1,
+    "split": 8,
+    "block_k": 128,
+    "us": 52.5,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 46.8
+  },
+  {
+    "shape": "down_proj",
+    "depth": 1,
+    "split": 8,
+    "block_k": 256,
+    "us": 100.0,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 24.6
+  },
+  {
+    "shape": "down_proj",
+    "depth": 2,
+    "split": 2,
+    "block_k": 128,
+    "us": 78.7,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 31.2
+  },
+  {
+    "shape": "down_proj",
+    "depth": 2,
+    "split": 2,
+    "block_k": 256,
+    "us": 90.0,
+    "cosine": 1.0,
+    "pct_of_roofline": 27.3
+  },
+  {
+    "shape": "down_proj",
+    "depth": 2,
+    "split": 4,
+    "block_k": 128,
+    "us": 54.1,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 45.4
+  },
+  {
+    "shape": "down_proj",
+    "depth": 2,
+    "split": 4,
+    "block_k": 256,
+    "us": 92.5,
+    "cosine": 1.0,
+    "pct_of_roofline": 26.6
+  },
+  {
+    "shape": "down_proj",
+    "depth": 2,
+    "split": 8,
+    "block_k": 128,
+    "us": 52.3,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 47.0
+  },
+  {
+    "shape": "down_proj",
+    "depth": 2,
+    "split": 8,
+    "block_k": 256,
+    "us": 99.8,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 24.6
+  },
+  {
+    "shape": "down_proj",
+    "depth": 3,
+    "split": 2,
+    "block_k": 128,
+    "us": 78.7,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 31.2
+  },
+  {
+    "shape": "down_proj",
+    "depth": 3,
+    "split": 2,
+    "block_k": 256,
+    "us": 89.9,
+    "cosine": 1.0,
+    "pct_of_roofline": 27.3
+  },
+  {
+    "shape": "down_proj",
+    "depth": 3,
+    "split": 4,
+    "block_k": 128,
+    "us": 54.0,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 45.6
+  },
+  {
+    "shape": "down_proj",
+    "depth": 3,
+    "split": 4,
+    "block_k": 256,
+    "us": 92.4,
+    "cosine": 1.0,
+    "pct_of_roofline": 26.6
+  },
+  {
+    "shape": "down_proj",
+    "depth": 3,
+    "split": 8,
+    "block_k": 128,
+    "us": 52.5,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 46.8
+  },
+  {
+    "shape": "down_proj",
+    "depth": 3,
+    "split": 8,
+    "block_k": 256,
+    "us": 99.9,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 24.6
+  },
+  {
+    "shape": "down_proj",
+    "depth": 4,
+    "split": 2,
+    "block_k": 128,
+    "us": 78.7,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 31.2
+  },
+  {
+    "shape": "down_proj",
+    "depth": 4,
+    "split": 2,
+    "block_k": 256,
+    "us": 89.3,
+    "cosine": 1.0,
+    "pct_of_roofline": 27.5
+  },
+  {
+    "shape": "down_proj",
+    "depth": 4,
+    "split": 4,
+    "block_k": 128,
+    "us": 54.2,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 45.3
+  },
+  {
+    "shape": "down_proj",
+    "depth": 4,
+    "split": 4,
+    "block_k": 256,
+    "us": 92.6,
+    "cosine": 1.0,
+    "pct_of_roofline": 26.5
+  },
+  {
+    "shape": "down_proj",
+    "depth": 4,
+    "split": 8,
+    "block_k": 128,
+    "us": 52.1,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 47.2
+  },
+  {
+    "shape": "down_proj",
+    "depth": 4,
+    "split": 8,
+    "block_k": 256,
+    "us": 99.2,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 24.8
+  },
+  {
+    "shape": "gate_proj",
+    "depth": 1,
+    "split": 2,
+    "block_k": 128,
+    "us": 54.4,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 45.2
+  },
+  {
+    "shape": "gate_proj",
+    "depth": 1,
+    "split": 2,
+    "block_k": 256,
+    "us": 108.1,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 22.7
+  },
+  {
+    "shape": "gate_proj",
+    "depth": 1,
+    "split": 4,
+    "block_k": 128,
+    "us": 52.4,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 46.9
+  },
+  {
+    "shape": "gate_proj",
+    "depth": 1,
+    "split": 4,
+    "block_k": 256,
+    "us": 108.9,
+    "cosine": 1.0,
+    "pct_of_roofline": 22.6
+  },
+  {
+    "shape": "gate_proj",
+    "depth": 1,
+    "split": 8,
+    "block_k": 128,
+    "us": 55.7,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 44.1
+  },
+  {
+    "shape": "gate_proj",
+    "depth": 1,
+    "split": 8,
+    "block_k": 256,
+    "us": 108.9,
+    "cosine": 1.0,
+    "pct_of_roofline": 22.6
+  },
+  {
+    "shape": "gate_proj",
+    "depth": 2,
+    "split": 2,
+    "block_k": 128,
+    "us": 54.1,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 45.4
+  },
+  {
+    "shape": "gate_proj",
+    "depth": 2,
+    "split": 2,
+    "block_k": 256,
+    "us": 108.1,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 22.7
+  },
+  {
+    "shape": "gate_proj",
+    "depth": 2,
+    "split": 4,
+    "block_k": 128,
+    "us": 52.3,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 47.0
+  },
+  {
+    "shape": "gate_proj",
+    "depth": 2,
+    "split": 4,
+    "block_k": 256,
+    "us": 108.4,
+    "cosine": 1.0,
+    "pct_of_roofline": 22.7
+  },
+  {
+    "shape": "gate_proj",
+    "depth": 2,
+    "split": 8,
+    "block_k": 128,
+    "us": 55.6,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 44.2
+  },
+  {
+    "shape": "gate_proj",
+    "depth": 2,
+    "split": 8,
+    "block_k": 256,
+    "us": 108.7,
+    "cosine": 1.0,
+    "pct_of_roofline": 22.6
+  },
+  {
+    "shape": "gate_proj",
+    "depth": 3,
+    "split": 2,
+    "block_k": 128,
+    "us": 54.5,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 45.1
+  },
+  {
+    "shape": "gate_proj",
+    "depth": 3,
+    "split": 2,
+    "block_k": 256,
+    "us": 108.0,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 22.8
+  },
+  {
+    "shape": "gate_proj",
+    "depth": 3,
+    "split": 4,
+    "block_k": 128,
+    "us": 52.1,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 47.2
+  },
+  {
+    "shape": "gate_proj",
+    "depth": 3,
+    "split": 4,
+    "block_k": 256,
+    "us": 108.6,
+    "cosine": 1.0,
+    "pct_of_roofline": 22.6
+  },
+  {
+    "shape": "gate_proj",
+    "depth": 3,
+    "split": 8,
+    "block_k": 128,
+    "us": 55.6,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 44.2
+  },
+  {
+    "shape": "gate_proj",
+    "depth": 3,
+    "split": 8,
+    "block_k": 256,
+    "us": 108.4,
+    "cosine": 1.0,
+    "pct_of_roofline": 22.7
+  },
+  {
+    "shape": "gate_proj",
+    "depth": 4,
+    "split": 2,
+    "block_k": 128,
+    "us": 54.5,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 45.1
+  },
+  {
+    "shape": "gate_proj",
+    "depth": 4,
+    "split": 2,
+    "block_k": 256,
+    "us": 108.3,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 22.7
+  },
+  {
+    "shape": "gate_proj",
+    "depth": 4,
+    "split": 4,
+    "block_k": 128,
+    "us": 52.2,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 47.1
+  },
+  {
+    "shape": "gate_proj",
+    "depth": 4,
+    "split": 4,
+    "block_k": 256,
+    "us": 108.4,
+    "cosine": 1.0,
+    "pct_of_roofline": 22.7
+  },
+  {
+    "shape": "gate_proj",
+    "depth": 4,
+    "split": 8,
+    "block_k": 128,
+    "us": 55.6,
+    "cosine": 0.9999999,
+    "pct_of_roofline": 44.2
+  },
+  {
+    "shape": "gate_proj",
+    "depth": 4,
+    "split": 8,
+    "block_k": 256,
+    "us": 108.7,
+    "cosine": 1.0,
+    "pct_of_roofline": 22.6
+  }
+]
