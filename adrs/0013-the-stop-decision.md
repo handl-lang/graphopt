@@ -2,12 +2,10 @@
 title: 'the stop decision: an eight-round characterization'
 type: adr
 date: 2026-10-27
-status: unrecorded
+updated: 2026-10-29
+status: proposed
 status_note: |-
-  measured, open. Series:
-
-  measured, open.  Series:
-  `results_stop_policy.md` (r1–2) → `results_stop_advantage.md` (r6,
+  measured, open. Series: `results_stop_policy.md` (r1–2) → `results_stop_advantage.md` (r6,
   self-posterior + actor-critic) → `results_stop_valuelabel.md` (r7,
   expected-yield labels) → `results_stop_calibrated.md` (r8,
   Platt/isotonic calibration) → `results_stop_isolated.md` (r9, the
