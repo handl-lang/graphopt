@@ -103,6 +103,14 @@ correctness-gated *before* it is timed):
 exact arithmetic. (Against the generic `awq_gemm` kernel the lead is
 2.96×, but vLLM repacks for Marlin, so `awq_gemm` is not what runs.)
 
+> ⚠️ **Partially superseded — see
+> [`docs/reports/p16a_reconciliation.md`](docs/reports/p16a_reconciliation.md).**
+> The exactness claim was circular (reference and kernel shared a packing
+> bug; repaired in P22 with a cosine gate vs `awq_gemm`). The Marlin arm
+> here was a hand-constructed call, not the live path, so the margin over
+> Marlin is **not established**; the repaired record reports **3.2× over
+> `awq_gemm`** on `down_proj` and parity-to-loss elsewhere.
+
 `down_proj` runs at **42 % of its memory roofline**, so another ~2.4× is
 still on the table, and the kernel was never hand-tuned — it is the
 first thing a structured search produced. The margin exists because
