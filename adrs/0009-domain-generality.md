@@ -8,8 +8,6 @@ status_note: proposed (claim articulated in deck; porting work untested)
 
 # ADR-0009 — The machinery is domain-general; tensor programs are the first domain
 
-**Status:** proposed (claim articulated in deck; porting work untested)
-
 ## Context
 
 The deck now claims the project is a general machine — rules as data on a

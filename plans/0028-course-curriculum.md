@@ -2,6 +2,31 @@
 title: Plan 0028 — the course as a curriculum (clarity, coverage, mastery)
 type: plan
 date: 2026-10-14
+status_note: |-
+  All three steps landed on `main` (`docs/tutorials/course/` only —
+  `toy/` at the time):
+
+  1. **Engine + shell** (`4cf9b8c`, salvaged from the OOM reboot):
+     `concepts.ts` (concept graph), `points.ts`, `mastery.ts`, `badges.ts`,
+     `review.ts` + shell chrome (XP/rank, mastery meter, badges, recap).
+  2. **Per-level template + forward-ref fixes** (`ace7270`, `c23fe72`,
+     `97ff8f4`): all 22 levels carry `why`/`terms`/`outcome`/`repo`/
+     `module` + multi-part checkpoints; **forward references 22 → 0**
+     (8 promoted to their teaching level, 14 incidental mentions
+     removed; `FORWARD_REF_CEILING = 0` test); glossary panel (60
+     concepts); prerequisite display; multi-part checkpoints feed points
+     and per-concept mastery.
+  3. **Coverage + modules + completion** (`27fc034`, `13979cf`): six new
+     levels (22 → 28) — `corpus`, `models`, `artifacts`, `cellstore`,
+     `game`, `gates`; six modules with reviews that recombine concepts
+     across ≥2 levels of their arc (tested); module completion gated on
+     the review; `Course.completion` reports XP + rank, levels/reviews
+     cleared, concepts mastered, badges, and the gaps the learner is
+     equipped to attack.  `STORAGE_KEY` → `v5`.
+
+  Measured: **forward refs 0** (28 levels, 80 concepts); tests
+  **174 → 215** (engine 143, app 72); `vp check` / `vp run -r test` /
+  `vp run -r build` all pass.
 ---
 
 # Plan 0028 — the course as a curriculum (clarity, coverage, mastery)
@@ -140,30 +165,3 @@ progressively"*, four structural gaps stand out:
    applied to the existing 22 levels.
 3. **D** (the six new levels) + module boundaries + reviews.
 4. Final: completion state + README/docs refresh.
-
-## Status (2026-10-14) — implemented
-
-All three steps landed on `main` (`docs/tutorials/course/` only —
-`toy/` at the time):
-
-1. **Engine + shell** (`4cf9b8c`, salvaged from the OOM reboot):
-   `concepts.ts` (concept graph), `points.ts`, `mastery.ts`, `badges.ts`,
-   `review.ts` + shell chrome (XP/rank, mastery meter, badges, recap).
-2. **Per-level template + forward-ref fixes** (`ace7270`, `c23fe72`,
-   `97ff8f4`): all 22 levels carry `why`/`terms`/`outcome`/`repo`/
-   `module` + multi-part checkpoints; **forward references 22 → 0**
-   (8 promoted to their teaching level, 14 incidental mentions
-   removed; `FORWARD_REF_CEILING = 0` test); glossary panel (60
-   concepts); prerequisite display; multi-part checkpoints feed points
-   and per-concept mastery.
-3. **Coverage + modules + completion** (`27fc034`, `13979cf`): six new
-   levels (22 → 28) — `corpus`, `models`, `artifacts`, `cellstore`,
-   `game`, `gates`; six modules with reviews that recombine concepts
-   across ≥2 levels of their arc (tested); module completion gated on
-   the review; `Course.completion` reports XP + rank, levels/reviews
-   cleared, concepts mastered, badges, and the gaps the learner is
-   equipped to attack.  `STORAGE_KEY` → `v5`.
-
-Measured: **forward refs 0** (28 levels, 80 concepts); tests
-**174 → 215** (engine 143, app 72); `vp check` / `vp run -r test` /
-`vp run -r build` all pass.

@@ -2,11 +2,11 @@
 title: Proposal — a kernel IR as data, and the libs it needs
 type: report
 date: 2026-10-27
+status_note: proposed · follows `2026-10-27-proposal-int4-kernel-vocabulary.md`
 ---
 
 # Proposal — a kernel IR as data, and the libs it needs
 
-**Status:** proposed · follows `2026-10-27-proposal-int4-kernel-vocabulary.md`
 **Question it answers:** if a kernel body should be transparent (a term,
 not an opaque `triton.jit` blob), where does that term live and what
 carries it?

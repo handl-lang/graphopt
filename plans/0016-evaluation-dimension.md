@@ -2,14 +2,14 @@
 title: Plan 0016 — evaluation as an independent dimension
 type: plan
 date: 2026-10-01
+status_note: |-
+  landed — stages 0–12, with the gaps named below.  Depends on
+  ADR 0003 (the four-dimension decision) and the seams it reuses (plan
+  0006 `Strategy`, 0007 backend ports, 0010 `Engine`).  Amends nothing;
+  it stages what ADR 0003 decides.
 ---
 
 # Plan 0016 — evaluation as an independent dimension
-
-Status: landed — stages 0–12, with the gaps named below.  Depends on
-ADR 0003 (the four-dimension decision) and the seams it reuses (plan
-0006 `Strategy`, 0007 backend ports, 0010 `Engine`).  Amends nothing;
-it stages what ADR 0003 decides.
 
 ## Landed so far
 

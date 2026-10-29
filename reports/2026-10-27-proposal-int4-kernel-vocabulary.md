@@ -2,11 +2,11 @@
 title: Proposal — a vocabulary for int4 kernels, so the machine can find them
 type: report
 date: 2026-10-27
+status_note: proposed
 ---
 
 # Proposal — a vocabulary for int4 kernels, so the machine can find them
 
-**Status:** proposed
 **Problem it solves:** today the int4 GEMV was *written by hand*; the
 machine only swept 48 configs of my design. To make "the machinery finds
 kernels" true, the design space has to be data, not code — and the

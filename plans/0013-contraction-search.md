@@ -2,12 +2,12 @@
 title: Plan 0013 — contraction-structure search (the generalization)
 type: plan
 date: 2026-10-14
+status_note: |-
+  draft.  The one-line version: stop rewriting op-trees;
+  search the *contraction structure* of the model's string diagram.
 ---
 
 # Plan 0013 — contraction-structure search (the generalization)
-
-Status: draft.  The one-line version: stop rewriting op-trees;
-search the *contraction structure* of the model's string diagram.
 
 ## The reframe
 

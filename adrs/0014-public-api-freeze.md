@@ -3,14 +3,15 @@ title: public API freeze (plan 0032 phase 1)
 type: adr
 date: 2026-10-27
 status: accepted
-status_note: accepted, phase-1 deliverable. `project/` is gitignored —
+status_note: |-
+  accepted, phase-1 deliverable. `project/` is gitignored —
+
+  accepted, phase-1 deliverable.  `project/` is gitignored —
+  the tracked manifest is `docs/public_api.md`; this note records the
+  decision.
 ---
 
 # ADR 0014 — public API freeze (plan 0032 phase 1)
-
-Status: accepted, phase-1 deliverable.  `project/` is gitignored —
-the tracked manifest is `docs/public_api.md`; this note records the
-decision.
 
 ## Decision
 

@@ -2,11 +2,10 @@
 title: Plan 0011 — The morphism engine (hierarchical block-level optimization)
 type: plan
 date: 2026-10-14
+status_note: draft — queued after 0010 lands.
 ---
 
 # Plan 0011 — The morphism engine (hierarchical block-level optimization)
-
-Status: draft — queued after 0010 lands.
 
 ## Goal
 

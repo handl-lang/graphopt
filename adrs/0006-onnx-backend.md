@@ -3,12 +3,50 @@ title: ONNX as a second backend, in two directions
 type: adr
 date: 2026-10-15
 status: accepted
-status_note: accepted — direction 1 (export) implemented; the
+status_note: |-
+  **Accepted (2026-10-15) — direction 1 shipped, and the boundary
+  held.**  `packages/catopt-onnx` implements `Sink` over 169 IR ops
+  (opset 18), verified through `onnxruntime` (219 tests; ~150
+  programs round-tripped).  Pipeline round-trip:
+  `Linear→ReLU→Linear→softmax` 1.49e-08 (fp32), 3× stacked `Linear`
+  **1.11e-16** (fp64, machine epsilon), a tuple-returning two-head
+  module < 1e-6 on both outputs.
+
+  **The falsification did not fire**: `git diff --name-only` against
+  the package list shows **zero** changes under `catopt-core` (or any
+  other package) — the claim *"a new backend implements `Sink`;
+  nothing in core changes"* held on the first non-torch backend.
+
+  **What the experiment actually found** (the valuable part):
+
+  - Two port surfaces are thinner than a second backend needs, both
+    worked around sink-side rather than by widening core: `Source`
+    carries **no element type** for inputs (`Var.typ` is shape-only,
+    so an index input is untypable without a dtype channel), and
+    `Capabilities.ops` is spelled `torch_bindings` (cosmetic — the
+    pipeline never reads it).
+  - `supported_ops` is a *name* set, but ONNX feasibility is
+    sometimes **attribute-dependent** (a `transpose` needs a static
+    rank); those refuse at lowering rather than at pricing time, so
+    extraction can in principle commit to a form the sink then
+    declines — no occurrence in the tests, but a real seam.
+  - Two attribute-spelling traps, exactly as predicted: ONNX
+    `HardSigmoid` defaults `alpha=0.2` where ATen is `1/6` (silent
+    20% slope error), and `Flatten` is always 2-D.
+  - fp64 is exact only where onnxruntime ships a double kernel
+    (measured gaps: `Tan`, `Asin`, `Acos`, `Atan`, `Sinh`, `Cosh`,
+    `Erf`, `Conv`, `InstanceNormalization`).
+  - Only `Monolithic` is exercised: `Compositional` needs a
+    `Composer`, `Autotuned` a `Meter` — both torch-shaped ports with
+    no ONNX equivalent.  **That is the datum for direction 2.**
+
+  **Open follow-ups:** a staged coverage climb for `catopt-onnx`
+  (not yet in `[tool.coverage.run] source`); direction 2
+  (`OnnxSource`) remains unbuilt.
 ---
 
 # ADR 0006 — ONNX as a second backend, in two directions
 
-boundary held.
 **Date**: 2026-10-15 (updated same day).
 **Depends on**: ADR 0003 (evaluation as an independent
 dimension), ADR 0005 (the open game).
@@ -125,48 +163,6 @@ model, never drop a node.
 - **What this is not.**  Not a rewrite, not a new IR, not a
   second semantics.  The IR stays the interchange form; ONNX is a
   pair of adapters behind ports that already exist.
-
-## Status of this ADR
-
-**Accepted (2026-10-15) — direction 1 shipped, and the boundary
-held.**  `packages/catopt-onnx` implements `Sink` over 169 IR ops
-(opset 18), verified through `onnxruntime` (219 tests; ~150
-programs round-tripped).  Pipeline round-trip:
-`Linear→ReLU→Linear→softmax` 1.49e-08 (fp32), 3× stacked `Linear`
-**1.11e-16** (fp64, machine epsilon), a tuple-returning two-head
-module < 1e-6 on both outputs.
-
-**The falsification did not fire**: `git diff --name-only` against
-the package list shows **zero** changes under `catopt-core` (or any
-other package) — the claim *"a new backend implements `Sink`;
-nothing in core changes"* held on the first non-torch backend.
-
-**What the experiment actually found** (the valuable part):
-
-- Two port surfaces are thinner than a second backend needs, both
-  worked around sink-side rather than by widening core: `Source`
-  carries **no element type** for inputs (`Var.typ` is shape-only,
-  so an index input is untypable without a dtype channel), and
-  `Capabilities.ops` is spelled `torch_bindings` (cosmetic — the
-  pipeline never reads it).
-- `supported_ops` is a *name* set, but ONNX feasibility is
-  sometimes **attribute-dependent** (a `transpose` needs a static
-  rank); those refuse at lowering rather than at pricing time, so
-  extraction can in principle commit to a form the sink then
-  declines — no occurrence in the tests, but a real seam.
-- Two attribute-spelling traps, exactly as predicted: ONNX
-  `HardSigmoid` defaults `alpha=0.2` where ATen is `1/6` (silent
-  20% slope error), and `Flatten` is always 2-D.
-- fp64 is exact only where onnxruntime ships a double kernel
-  (measured gaps: `Tan`, `Asin`, `Acos`, `Atan`, `Sinh`, `Cosh`,
-  `Erf`, `Conv`, `InstanceNormalization`).
-- Only `Monolithic` is exercised: `Compositional` needs a
-  `Composer`, `Autotuned` a `Meter` — both torch-shaped ports with
-  no ONNX equivalent.  **That is the datum for direction 2.**
-
-**Open follow-ups:** a staged coverage climb for `catopt-onnx`
-(not yet in `[tool.coverage.run] source`); direction 2
-(`OnnxSource`) remains unbuilt.
 
 ## Direction 2 — `OnnxSource` (implemented)
 

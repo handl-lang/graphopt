@@ -2,11 +2,10 @@
 title: 'Plan 0006 — Public API: the `search` / `lower` seam'
 type: plan
 date: 2026-10-14
+status_note: accepted
 ---
 
 # Plan 0006 — Public API: the `search` / `lower` seam
-
-Status: accepted
 
 Part of a three-plan program — each lands independently and green:
 

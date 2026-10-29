@@ -2,12 +2,13 @@
 title: The margin, and what it means
 type: report
 date: 2026-10-27
+status_note: conclusion of the P5–P8 experiment block
 ---
 
 # The margin, and what it means
 
 **Date:** 2026-10-27
-**Status:** conclusion of the P5–P8 experiment block
+
 **One line:** hand-tuning is expensive and therefore only bought for
 popular shapes; automating it collapses the cost per experiment, and the
 first measured margin over a hand-written production kernel came from

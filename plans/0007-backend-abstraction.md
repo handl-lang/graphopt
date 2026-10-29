@@ -2,11 +2,10 @@
 title: Plan 0007 — Backend abstraction
 type: plan
 date: 2026-10-14
+status_note: accepted
 ---
 
 # Plan 0007 — Backend abstraction
-
-Status: accepted
 
 Second of three — depends on **0006** (the API seam). Each lands
 independently and green.

@@ -2,11 +2,10 @@
 title: Retro — the `is`/`==` carrier-helper bug (weak intern table)
 type: retro
 date: 2026-10-14
+status_note: fixed (commit `83fbb80`); regression test added.
 ---
 
 # Retro — the `is`/`==` carrier-helper bug (weak intern table)
-
-**Status:** fixed (commit `83fbb80`); regression test added.
 
 ## Symptom
 

@@ -2,11 +2,10 @@
 title: Plan 0008 — Package split
 type: plan
 date: 2026-10-14
+status_note: accepted
 ---
 
 # Plan 0008 — Package split
-
-Status: accepted
 
 Third of three — depends on **0006** (API seam) and **0007** (backend
 abstraction). Each lands independently and green.

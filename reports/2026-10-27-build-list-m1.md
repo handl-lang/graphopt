@@ -2,11 +2,11 @@
 title: Build list — what has to exist before the machine can find a kernel
 type: report
 date: 2026-10-27
+status_note: proposed · dependency-ordered · M1 scope only
 ---
 
 # Build list — what has to exist before the machine can find a kernel
 
-**Status:** proposed · dependency-ordered · M1 scope only
 **Refactor context:** lab-form per ADR-0159; ADR-0160 allocates the IR.
 **Visibility (ADR-0150):** `lib-kernel-ir` public; `compile-triton`, `lib-triton`,
 `ext-opt-*` private until done.

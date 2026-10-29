@@ -2,11 +2,10 @@
 title: Plan 0015 — task-aware certificates
 type: plan
 date: 2026-10-14
+status_note: draft — after 0013 groundwork lands.
 ---
 
 # Plan 0015 — task-aware certificates
-
-Status: draft — after 0013 groundwork lands.
 
 ## Idea
 

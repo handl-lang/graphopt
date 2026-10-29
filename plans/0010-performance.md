@@ -2,11 +2,10 @@
 title: Plan 0010 — Search performance
 type: plan
 date: 2026-10-14
+status_note: accepted
 ---
 
 # Plan 0010 — Search performance
-
-Status: accepted
 
 Depends on **0006** (API seam), **0007** (backend abstraction),
 **0008** (package split), **0009** (composable rule sets).

@@ -2,20 +2,20 @@
 title: Plan 0019 — ops as data (the structural slice)
 type: plan
 date: 2026-10-14
+status_note: |-
+  prototype landed.  `mlopt_core.opdata` declares a *view /
+  relayout-class* op as data — name, arity, classification tags, attr
+  schema and a shape rule written in the **existing** shape-spec DSL —
+  and `declare_op` registers it into `mlopt_core.opmeta`, the attr
+  schema and `mlopt_core.typing`'s shape-rule registry, so a declared
+  op shapes, mints and matches through the same machinery a shipped op
+  does.  Kernel bodies, torch/aten spellings and cost entries stay
+  code, by design — this is the declaration seam for the structural
+  slice, not a general "define any op in JSON".  Retro:
+  `project/retros/ops-as-data.md`.
 ---
 
 # Plan 0019 — ops as data (the structural slice)
-
-Status: prototype landed.  `mlopt_core.opdata` declares a *view /
-relayout-class* op as data — name, arity, classification tags, attr
-schema and a shape rule written in the **existing** shape-spec DSL —
-and `declare_op` registers it into `mlopt_core.opmeta`, the attr
-schema and `mlopt_core.typing`'s shape-rule registry, so a declared
-op shapes, mints and matches through the same machinery a shipped op
-does.  Kernel bodies, torch/aten spellings and cost entries stay
-code, by design — this is the declaration seam for the structural
-slice, not a general "define any op in JSON".  Retro:
-`project/retros/ops-as-data.md`.
 
 ## Why
 

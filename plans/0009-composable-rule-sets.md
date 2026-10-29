@@ -2,11 +2,10 @@
 title: Plan 0009 — Composable rule sets
 type: plan
 date: 2026-10-14
+status_note: accepted
 ---
 
 # Plan 0009 — Composable rule sets
-
-Status: accepted
 
 Depends on **0006** (which puts `RuleSetLike` / `RuleLike` in
 `catopt_core.ports`). Feeds **0010** (the scheduler consumes rule

@@ -3,6 +3,10 @@ title: Abstraction as a legal move
 type: adr
 date: 2026-10
 status: proposed
+status_note: |-
+  Proposed — the design direction, not the implementation.  Plan 0017
+  sequences the work: derive-as-data first, the object record second,
+  the guide third, the adversarial admission path throughout.
 ---
 
 # ADR 0004 — Abstraction as a legal move
@@ -111,9 +115,3 @@ Concretely:
   12 documented unreachable-defensive lines and the `cond` gaps
   (`w:v_commutes_view`/`id:same_pairing` need the broadcast-grid
   predicates the DSL just gained) are the standing limitations.
-
-## Status of this ADR
-
-Proposed — the design direction, not the implementation.  Plan 0017
-sequences the work: derive-as-data first, the object record second,
-the guide third, the adversarial admission path throughout.

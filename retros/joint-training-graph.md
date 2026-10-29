@@ -89,7 +89,7 @@ boundary; folds and one-use shares are a wash.**  A cost model
 that prices launches/memory rather than op count could break the
 tie differently — `flops_cost` is the obvious next column.
 
-## Status / caveats
+## Caveats
 
 - Extraction correctness is pinned, not assumed: joint-extracted
   gradient terms evaluate numerically equal to `torch.autograd`

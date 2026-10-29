@@ -3,7 +3,18 @@ title: 'The open game: human-free discovery inside anchored anchors'
 type: adr
 date: 2026-10
 status: accepted
-status_note: accepted — phase-1 gate passed; the next surface is
+status_note: |-
+  **Accepted (2026-10-15)** — the phase-1 measurement (carrier vs
+  fused on a real export at large T) passed: 1.82–2.33× at T=512,
+  with extraction preferring the derived carrier.  The research bet
+  (proposer + constraint-synthesized guards) has its first
+  witnesses: the game minted a conditional law and the synthesizer
+  names its own gaps.  The open question has moved up a level —
+  **the form list and the mint target**, planned as 0024.
+
+  The architecture's fixed pieces are settled; what remains is the
+  admission rate of the synthesized surface at the form level,
+  which only evidence settles.
 ---
 
 # ADR 0005 — The open game: human-free discovery inside anchored anchors
@@ -207,17 +218,3 @@ publishable claim stands on.
   writing rewrites; not a new op list.  It is a game whose fixed
   pieces are silicon, the oracle, and the clock — the claim is
   *human-free optimization discovery within a declared algebra*.
-
-## Status of this ADR
-
-**Accepted (2026-10-15)** — the phase-1 measurement (carrier vs
-fused on a real export at large T) passed: 1.82–2.33× at T=512,
-with extraction preferring the derived carrier.  The research bet
-(proposer + constraint-synthesized guards) has its first
-witnesses: the game minted a conditional law and the synthesizer
-names its own gaps.  The open question has moved up a level —
-**the form list and the mint target**, planned as 0024.
-
-The architecture's fixed pieces are settled; what remains is the
-admission rate of the synthesized surface at the form level,
-which only evidence settles.

@@ -2,14 +2,14 @@
 title: Plan 0005 — Cost-model fidelity vs measured latency
 type: plan
 date: 2026-09-26
+status_note: |-
+  fix landed (main `9b3577d` + `d7924bf`) — executor-aware
+  pricing, lowering routing, and coordinated carrier selection
+  implemented and verified end-to-end (retnet T=128 selects + delivers
+  the batched scan: 2.87x vs eager, fp64-exact)
 ---
 
 # Plan 0005 — Cost-model fidelity vs measured latency
-
-Status: fix landed (main `9b3577d` + `d7924bf`) — executor-aware
-pricing, lowering routing, and coordinated carrier selection
-implemented and verified end-to-end (retnet T=128 selects + delivers
-the batched scan: 2.87x vs eager, fp64-exact)
 
 ## Landed (main 9b3577d)
 

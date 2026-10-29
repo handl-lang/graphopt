@@ -2,13 +2,13 @@
 title: 'Plan 0014 — Certified re-expression: from proofs to delivery'
 type: plan
 date: 2026-10-14
+status_note: |-
+  draft.  Depends on 0006/0007/0008/0009 (done), 0011
+  (morphism engine, landed), 0012 (bounded, landed), ADR 0002 (the
+  thesis).  Feeds 0013 (contraction search) as the discovery layer.
 ---
 
 # Plan 0014 — Certified re-expression: from proofs to delivery
-
-Status: draft.  Depends on 0006/0007/0008/0009 (done), 0011
-(morphism engine, landed), 0012 (bounded, landed), ADR 0002 (the
-thesis).  Feeds 0013 (contraction search) as the discovery layer.
 
 ## Goal
 

@@ -2,15 +2,15 @@
 title: Plan 0012 — Certified bounded-error rewrites (eps machinery)
 type: plan
 date: 2026-10-14
+status_note: |-
+  draft — justified by literature (xKV, CommonKV, CLA, CHAI,
+  ReLU-sparsity): real models carry structure *approximately* —
+  exact-factor gates decline them, approximate literature compresses
+  them without certificates.  CatOpt's differentiator: rewrites that
+  carry a proven error envelope.
 ---
 
 # Plan 0012 — Certified bounded-error rewrites (eps machinery)
-
-Status: draft — justified by literature (xKV, CommonKV, CLA, CHAI,
-ReLU-sparsity): real models carry structure *approximately* —
-exact-factor gates decline them, approximate literature compresses
-them without certificates.  CatOpt's differentiator: rewrites that
-carry a proven error envelope.
 
 ## Idea
 

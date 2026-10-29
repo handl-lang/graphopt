@@ -2,18 +2,18 @@
 title: Plan 0018 — de-hardcoding the op tables
 type: plan
 date: 2026-10-14
+status_note: |-
+  stages 0–4 landed — `mlopt_core.opmeta` is the single source
+  and the thirteen duplicated sets are projections of it; the carrier
+  subsets and the evaluation-dimension tables stay code by design (see
+  the boundary).  Retro: `project/retros/dehardcode.md`.  The
+  architecture's claim is "objects/laws/guards are data"; the op
+  *vocabulary* is still hand-maintained in a dozen places.  This plan
+  gives the op metadata one home and makes the duplicated lists derive
+  from it.
 ---
 
 # Plan 0018 — de-hardcoding the op tables
-
-Status: stages 0–4 landed — `mlopt_core.opmeta` is the single source
-and the thirteen duplicated sets are projections of it; the carrier
-subsets and the evaluation-dimension tables stay code by design (see
-the boundary).  Retro: `project/retros/dehardcode.md`.  The
-architecture's claim is "objects/laws/guards are data"; the op
-*vocabulary* is still hand-maintained in a dozen places.  This plan
-gives the op metadata one home and makes the duplicated lists derive
-from it.
 
 ## Thesis — de-hardcode means de-*duplicate*
 

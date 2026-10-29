@@ -2,14 +2,14 @@
 title: Plan 0017 — abstraction as a legal move
 type: plan
 date: 2026-10-14
+status_note: |-
+  starting.  Implements ADR 0004 — the unit of invention is a
+  constructed *object*, declared as serializable data and admitted by
+  the adversarial referee, never a minted rewrite the policy hands to
+  a trusted seam.
 ---
 
 # Plan 0017 — abstraction as a legal move
-
-Status: starting.  Implements ADR 0004 — the unit of invention is a
-constructed *object*, declared as serializable data and admitted by
-the adversarial referee, never a minted rewrite the policy hands to
-a trusted seam.
 
 ## Stages
 
