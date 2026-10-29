@@ -18,10 +18,16 @@ from bench.benchkit.equality import (
 )
 
 
-def _words(n_words: int = 8) -> torch.Tensor:
-    """Random int4 words, 8 nibbles each."""
+def _words(n_words: int = 64, seed: int = 7) -> torch.Tensor:
+    """Random int4 words, 8 nibbles each.
+
+    Seeded: `[0,4,1,5,2,6,3,7]` vs identity is a weak permutation, so an
+    unseeded draw gave cosine 0.82 on one run and 0.35 on the next — a
+    flaky assertion about the data rather than the gate.
+    """
+    g = torch.Generator().manual_seed(seed)
     return torch.randint(
-        0, 2**31 - 1, (n_words,), dtype=torch.int32
+        0, 2**31 - 1, (n_words,), generator=g, dtype=torch.int32
     )
 
 
@@ -64,7 +70,7 @@ def test_shared_wrong_nibble_order_fails() -> None:
     assert cosine_gate("self", candidate, incumbent=own_reference).passed
     # ...and caught by the external one.
     verdict = cosine_gate("candidate", candidate, incumbent=incumbent)
-    assert verdict.cosine < 0.8
+    assert verdict.cosine < GATE_TOLERANCE
     assert not verdict.passed
     with pytest.raises(AssertionError, match="incumbent"):
         require(verdict)
