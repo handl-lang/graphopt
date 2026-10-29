@@ -1,3 +1,11 @@
+---
+title: public API freeze (plan 0032 phase 1)
+type: adr
+date: 2026-10-27
+status: accepted
+status_note: accepted, phase-1 deliverable. `project/` is gitignored —
+---
+
 # ADR 0014 — public API freeze (plan 0032 phase 1)
 
 Status: accepted, phase-1 deliverable.  `project/` is gitignored —

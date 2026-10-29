@@ -1,3 +1,9 @@
+---
+title: 'Plan 0031 — measurement infrastructure: discovery benchmark, players-as-modules, baseline registry'
+type: plan
+date: 2026-10-20
+---
+
 # Plan 0031 — measurement infrastructure: discovery benchmark, players-as-modules, baseline registry
 
 Origin: Lotufo review (2026-10-19). Two questions exposed the gap the

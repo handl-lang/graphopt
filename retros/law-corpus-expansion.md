@@ -1,3 +1,9 @@
+---
+title: Corpus expansion — 8 new real architectures, 31 new op-tuples, no new law (yet)
+type: retro
+date: 2026-10-03
+---
+
 # Corpus expansion — 8 new real architectures, 31 new op-tuples, no new law (yet)
 
 `law-vocab-derived.md` §5 named the last human ingredient in the

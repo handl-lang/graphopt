@@ -1,3 +1,9 @@
+---
+title: 'Retro — the enumerate arm''s attr gap: instantiation reach, fixed'
+type: retro
+date: 2026-10-15
+---
+
 # Retro — the enumerate arm's attr gap: instantiation reach, fixed
 
 Date: 2026-10-15 (follow-up to `exposed-math.md`)

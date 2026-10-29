@@ -1,3 +1,9 @@
+---
+title: The evidence store — verdicts are a pure function, so cache them
+type: retro
+date: 2026-10-04
+---
+
 # The evidence store — verdicts are a pure function, so cache them
 
 `python -m catopt_discovery.pipeline` recomputed every verdict on every run (~2 min

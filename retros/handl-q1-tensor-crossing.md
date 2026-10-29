@@ -1,7 +1,12 @@
+---
+title: 'Retro — spike Q1: can a tensor cross the boundary?'
+type: retro
+date: 2026-10-14
+---
+
 # Retro — spike Q1: can a tensor cross the boundary?
 
-**Date**: 2026-10-14.  **Plan**: 0029, **Q1**.
-**Status**: **answered — Q1a (the value model) and Q1b (the
+**Plan**: 0029, **Q1**.
 host-function seam) are both measured.**  What is *not* done is a
 runnable demonstration; see "Q1b" for why that is now off the critical
 path.

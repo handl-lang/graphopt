@@ -1,3 +1,9 @@
+---
+title: Plan 0024 — the form-level proposer and vocabulary minting
+type: plan
+date: 2026-10-14
+---
+
 # Plan 0024 — the form-level proposer and vocabulary minting
 
 Depends on: ADR 0005 (the open game), plan 0023 (the carrier),

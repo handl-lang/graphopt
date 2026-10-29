@@ -1,3 +1,9 @@
+---
+title: Proposal — a vocabulary for int4 kernels, so the machine can find them
+type: report
+date: 2026-10-27
+---
+
 # Proposal — a vocabulary for int4 kernels, so the machine can find them
 
 **Status:** proposed

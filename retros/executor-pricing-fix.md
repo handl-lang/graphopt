@@ -1,3 +1,9 @@
+---
+title: Executor pricing fix — the measured-feedback channel reaches `_carrier_upgrade`
+type: retro
+date: 2026-10-04
+---
+
 # Executor pricing fix — the measured-feedback channel reaches `_carrier_upgrade`
 
 `measured-cost-model.md` localized the routing inversion precisely:

@@ -1,3 +1,9 @@
+---
+title: Learned contraction ordering — can a policy beat the cheap heuristics?
+type: retro
+date: 2026-10-03
+---
+
 # Learned contraction ordering — can a policy beat the cheap heuristics?
 
 Plan 0016 follow-up.  `contraction-scale.md` measured the player ladder

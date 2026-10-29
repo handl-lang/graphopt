@@ -1,3 +1,9 @@
+---
+title: The margin, and what it means
+type: report
+date: 2026-10-27
+---
+
 # The margin, and what it means
 
 **Date:** 2026-10-27

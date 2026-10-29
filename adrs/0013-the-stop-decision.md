@@ -1,3 +1,11 @@
+---
+title: 'the stop decision: an eight-round characterization'
+type: adr
+date: 2026-10-27
+status: unrecorded
+status_note: 'measured, open. Series:'
+---
+
 # ADR 0013 — the stop decision: an eight-round characterization
 
 Status: measured, open.  Series:

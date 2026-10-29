@@ -1,6 +1,12 @@
+---
+title: Retro — `conv_channel_scale` anchor landed; the fold mints by ITERATED composition
+type: retro
+date: 2026-10-19
+---
+
 # Retro — `conv_channel_scale` anchor landed; the fold mints by ITERATED composition
 
-**Date**: 2026-10-19.  **Follows**: `conv-bn-fold-synth.md` (named the
+**Follows**: `conv-bn-fold-synth.md` (named the
 missing `conv2d`-headed anchor, gate A).  **Commit**: `945733f`
 (`CONV_FOLD_RULES` in `mlopt_core.laws.tensor`, opt-in with
 `BATCH_NORM_RULES`).  **Probe**: `lab/probes/conv_bn_fold_synth_probe.py`

@@ -1,3 +1,9 @@
+---
+title: Retro — the meta-arena (plan 0021 scaffold + Q2 probe)
+type: retro
+date: 2026-10-14
+---
+
 # Retro — the meta-arena (plan 0021 scaffold + Q2 probe)
 
 Landed: `mlopt_discovery.meta_arena` — the mixed board from

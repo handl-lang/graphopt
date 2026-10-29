@@ -1,3 +1,9 @@
+---
+title: Plan 0016 — evaluation as an independent dimension
+type: plan
+date: 2026-10-01
+---
+
 # Plan 0016 — evaluation as an independent dimension
 
 Status: landed — stages 0–12, with the gaps named below.  Depends on

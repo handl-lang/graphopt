@@ -1,3 +1,9 @@
+---
+title: 'Retro — mlopt-discovery: 12% → 99% coverage in one climb'
+type: retro
+date: 2026-10-14
+---
+
 # Retro — mlopt-discovery: 12% → 99% coverage in one climb
 
 ## The arc

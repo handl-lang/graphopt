@@ -1,6 +1,12 @@
+---
+title: 'Retro — spike Q0: can catopt''s language be handl data?'
+type: retro
+date: 2026-10-14
+---
+
 # Retro — spike Q0: can catopt's language be handl data?
 
-**Date**: 2026-10-14.  **Plan**: 0029 (the handl ↔ catopt boundary
+**Plan**: 0029 (the handl ↔ catopt boundary
 spike), **Q0**.  **Verdict**: **PASS**, with two representational
 requirements (both fixed) and one named residue.
 

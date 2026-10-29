@@ -1,6 +1,13 @@
+---
+title: 'The open game: human-free discovery inside anchored anchors'
+type: adr
+date: 2026-10
+status: accepted
+status_note: accepted — phase-1 gate passed; the next surface is
+---
+
 # ADR 0005 — The open game: human-free discovery inside anchored anchors
 
-**Status**: accepted — phase-1 gate passed; the next surface is
 planned (plan 0024).
 **Date**: 2026-10 (updated 2026-10-15).
 **Depends on**: ADR 0002 (the thesis), ADR 0003 (the four

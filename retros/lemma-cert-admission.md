@@ -1,3 +1,9 @@
+---
+title: Lemma-cert admission — the stored lemma carries its proof
+type: retro
+date: 2026-10-14
+---
+
 # Lemma-cert admission — the stored lemma carries its proof
 
 `lemma-certificates.md` materialized each `Rewrite.derivation` as a

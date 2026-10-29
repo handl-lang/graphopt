@@ -1,3 +1,9 @@
+---
+title: Research lab notebook
+type: note
+date: 2026-10-27
+---
+
 # Research lab notebook
 
 *The honest record of how this was found.  Chronological and exploratory,

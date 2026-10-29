@@ -1,6 +1,11 @@
+---
+title: 'Retro: enumeration fairness — the (viewed × attr) diagonal'
+type: retro
+date: 2026-10-08
+---
+
 # Retro: enumeration fairness — the (viewed × attr) diagonal
 
-Date: 2026-10-08
 Context: `cap-policy.md`'s deep finding — the starved guards' first
 equal site sat at a **fixed enumeration index** (793 for
 `sdpa_fold_addmul` / `_adddiv`, 469 for `sdpa_fold_add`),

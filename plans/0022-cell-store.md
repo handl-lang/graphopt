@@ -1,3 +1,9 @@
+---
+title: 'Plan 0022 — the cell store: one record, fragment-merged'
+type: plan
+date: 2026-10-14
+---
+
 # Plan 0022 — the cell store: one record, fragment-merged
 
 ## Motivation

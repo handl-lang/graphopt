@@ -1,6 +1,12 @@
+---
+title: 'Retro — `BATCH_NORM_RULES` admission sweep: truth green, pay refuses'
+type: retro
+date: 2026-10-18
+---
+
 # Retro — `BATCH_NORM_RULES` admission sweep: truth green, pay refuses
 
-**Date**: 2026-10-18.  **Object**: the three eval-mode expansion laws
+**Object**: the three eval-mode expansion laws
 (`batch_norm_expand`, `batch_norm_expand_nobias`,
 `batch_norm_expand_plain`, `mlopt_core/laws/tensor.py`), held out of
 `DEFAULT` pending the guarded sweep — the same gauntlet the promoted

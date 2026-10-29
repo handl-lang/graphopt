@@ -1,3 +1,9 @@
+---
+title: '`handl` → `catopt`: what is reusable, what is analogous, what is a warning'
+type: retro
+date: 2026-10-03
+---
+
 # `handl` → `catopt`: what is reusable, what is analogous, what is a warning
 
 Read-only survey of `/home/luis/GitHub/handl-lang/host` (Rust, ~98 crates,

@@ -1,3 +1,9 @@
+---
+title: Proposer extensions — mixed views, pattern recognition, one new SHIP
+type: retro
+date: 2026-10-03
+---
+
 # Proposer extensions — mixed views, pattern recognition, one new SHIP
 
 `law-corpus-expansion.md` §6 named the two best next-law leads the

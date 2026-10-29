@@ -1,3 +1,9 @@
+---
+title: Retro — arena legal-move enumeration + the first construction depth probe
+type: retro
+date: 2026-10-14
+---
+
 # Retro — arena legal-move enumeration + the first construction depth probe
 
 Plan 0020 phase 2.  `legal_actions(state)` enumerates the live

@@ -1,3 +1,9 @@
+---
+title: The law-discovery pipeline — census → propose → verify → measure → rank
+type: retro
+date: 2026-10-03
+---
+
 # The law-discovery pipeline — census → propose → verify → measure → rank
 
 The loop that produced `select_mul` (`law-shape-aware.md`) was a

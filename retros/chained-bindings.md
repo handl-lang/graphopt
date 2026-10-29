@@ -1,3 +1,9 @@
+---
+title: 'Retro: chained view bindings — closing the `gqa_absorb_repeat`'
+type: retro
+date: 2026-10
+---
+
 # Retro: chained view bindings — closing the `gqa_absorb_repeat`
 # enumeration gap
 

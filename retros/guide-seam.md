@@ -1,3 +1,9 @@
+---
+title: The guide seam — a policy over the generator inventory
+type: retro
+date: 2026-10-14
+---
+
 # The guide seam — a policy over the generator inventory
 
 Plan 0017 stage 2.  ADR 0004 §3 assigns `mlopt_discovery.meta_game`

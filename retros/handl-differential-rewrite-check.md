@@ -1,6 +1,12 @@
+---
+title: Retro — the differential rewrite check (catopt's engine vs handl's)
+type: retro
+date: 2026-10-15
+---
+
 # Retro — the differential rewrite check (catopt's engine vs handl's)
 
-**Date**: 2026-10-15.  **Assets**: `lab/audit/handl_differential.py`,
+**Assets**: `lab/audit/handl_differential.py`,
 `tests/test_handl_peer.py`.  **Enabled by**: the peer (plan 0030 step 2),
 which is what lets catopt drive a *second* rewrite engine at all.
 

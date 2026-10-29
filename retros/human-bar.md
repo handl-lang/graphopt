@@ -1,6 +1,11 @@
+---
+title: 'Retro — the human bar: how much of the zoo yield is machine-admitted?'
+type: retro
+date: 2026-10-06
+---
+
 # Retro — the human bar: how much of the zoo yield is machine-admitted?
 
-Date: 2026-10-06
 Context: `project/retros/model-zoo-yield.md` measured the shipped
 library at **5/22** verified wins on the held-out model zoo, and
 `project/retros/promoted-laws.md` shipped 10 machine-admitted objects

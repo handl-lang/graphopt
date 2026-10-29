@@ -1,3 +1,9 @@
+---
+title: kit-term-bridge — mlopt terms emitted as `.hnl`, evaluated through CatoptKit
+type: retro
+date: 2026-10-20
+---
+
 # kit-term-bridge — mlopt terms emitted as `.hnl`, evaluated through CatoptKit
 
 **Date:** 2026-10-20 · **Surface:** `packages/mlopt-kit/src/bin/hnl-run.rs`

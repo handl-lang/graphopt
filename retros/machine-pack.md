@@ -1,6 +1,11 @@
+---
+title: 'Retro — the machine law pack: the store''s admitted objects ship'
+type: retro
+date: 2026-10-06
+---
+
 # Retro — the machine law pack: the store's admitted objects ship
 
-Date: 2026-10-06
 Context: `project/retros/human-bar.md` measured the yield sitting
 admitted-but-unshipped — `affd_step_lift` wins −4.07 % on AdaLNBlock
 where the whole human library scores 0, and a `full + store` arm won

@@ -1,3 +1,9 @@
+---
+title: Retro — `select_mul` was latently unsound (broadcast along the selected axis)
+type: retro
+date: 2026-10-14
+---
+
 # Retro — `select_mul` was latently unsound (broadcast along the selected axis)
 
 ## What happened

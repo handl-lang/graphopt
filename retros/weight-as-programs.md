@@ -1,3 +1,9 @@
+---
+title: Retrospective — weights-as-programs (falsified)
+type: retro
+date: 2026-09-25
+---
+
 # Retrospective — weights-as-programs (falsified)
 
 The hypothesis: trained weights hide compressible structure; treat

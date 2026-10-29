@@ -1,3 +1,9 @@
+---
+title: 'Retro: the guard residuals — the mm rank≥2 hole and the enumeration gaps'
+type: retro
+date: 2026-10
+---
+
 # Retro: the guard residuals — the mm rank≥2 hole and the enumeration gaps
 
 Date: 2026-10.  The follow-up sweep the earlier retros left open:

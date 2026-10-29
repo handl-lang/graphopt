@@ -1,3 +1,9 @@
+---
+title: 'Plan 0014 — Certified re-expression: from proofs to delivery'
+type: plan
+date: 2026-10-14
+---
+
 # Plan 0014 — Certified re-expression: from proofs to delivery
 
 Status: draft.  Depends on 0006/0007/0008/0009 (done), 0011

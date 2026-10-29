@@ -1,3 +1,9 @@
+---
+title: Corpus expansion round 2 — 9 models, 40 new op-tuples, 17 new ops, 0 shippable (but 2 candidates found their first real targets)
+type: retro
+date: 2026-10-04
+---
+
 # Corpus expansion round 2 — 9 models, 40 new op-tuples, 17 new ops, 0 shippable (but 2 candidates found their first real targets)
 
 `law-corpus-expansion.md` added eight architectures and proved the

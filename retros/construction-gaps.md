@@ -1,6 +1,11 @@
+---
+title: Retro — closing the human-bar gaps by construction
+type: retro
+date: 2026-10-07
+---
+
 # Retro — closing the human-bar gaps by construction
 
-Date: 2026-10-07
 Context: `project/retros/human-bar.md` ablated the zoo arms and named
 three machine-coverage gaps: no associativity/chain-composition object
 (the ~−20% `LoRAAdapter` win), no self-product fold (the `mul_square`

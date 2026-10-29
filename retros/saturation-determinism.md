@@ -1,6 +1,11 @@
+---
+title: Retro — the saturation, and the sharing-aware optimum, were not reproducible across processes
+type: retro
+date: 2026-10-15
+---
+
 # Retro — the saturation, and the sharing-aware optimum, were not reproducible across processes
 
-**Date**: 2026-10-15.
 **Commit**: `abf6114` (catopt `main`).
 **Decides**: the staged saturation and the sharing-aware extraction are
 now **order-independent** — the same inputs give identical enode counts

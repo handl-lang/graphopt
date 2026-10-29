@@ -1,3 +1,9 @@
+---
+title: This session's plan — one page
+type: report
+date: 2026-10-27
+---
+
 # This session's plan — one page
 
 **Goal:** make the machine find the kernel instead of me. Today I wrote it;

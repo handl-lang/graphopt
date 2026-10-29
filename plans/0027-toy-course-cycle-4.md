@@ -1,3 +1,9 @@
+---
+title: Plan 0027 — the toy course, cycle 4 (delivery · pricing · approximation · payoff)
+type: plan
+date: 2026-10-14
+---
+
 # Plan 0027 — the toy course, cycle 4 (delivery · pricing · approximation · payoff)
 
 Depends on: plan 0026 (cycle 3 — minting/substrate/ports/honesty),

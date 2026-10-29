@@ -1,10 +1,16 @@
+---
+title: one language, many interpretations (the VM *is* the language)
+type: adr
+date: 2026-10-14
+status: proposed
+status_note: proposed — **revised** (the first draft recommended porting the
+---
+
 # ADR 0010 — one language, many interpretations (the VM *is* the language)
 
-**Status**: proposed — **revised** (the first draft recommended porting the
 pattern into Python; the revision uses `handl` *as* the kernel).
 **A prerequisite**: ADR 0009's calculus stage does not proceed until this
 model is fixed.
-**Date**: 2026-10-14.
 **Depends on**: ADR 0002 (categorical re-expression), ADR 0003 (four
 dimensions), ADR 0004 (abstraction as move), ADR 0008 (combinator
 presentation), ADR 0009 (the ladder and the kernel question).

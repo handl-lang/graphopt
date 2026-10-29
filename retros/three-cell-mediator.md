@@ -1,3 +1,9 @@
+---
+title: '`silu_fold` shipped — the mediating 3-cell of the silu × swiglu critical pair'
+type: retro
+date: 2026-10-04
+---
+
 # `silu_fold` shipped — the mediating 3-cell of the silu × swiglu critical pair
 
 `law-coherence-catalogue.md` §4 measured the shipped library's only

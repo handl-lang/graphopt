@@ -1,3 +1,9 @@
+---
+title: Law rediscovery — can the library re-derive a law it dropped?
+type: retro
+date: 2026-10-03
+---
+
 # Law rediscovery — can the library re-derive a law it dropped?
 
 An operational, falsifiable test of the claim "the AI invents laws".

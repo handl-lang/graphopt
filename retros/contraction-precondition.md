@@ -1,3 +1,9 @@
+---
+title: Contraction ordering — is there headroom above the one-step greedy oracle?
+type: retro
+date: 2026-10-03
+---
+
 # Contraction ordering — is there headroom above the one-step greedy oracle?
 
 Plan 0016 stage 7 (ADR 0003).  A learned / RL search policy can only

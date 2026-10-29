@@ -1,3 +1,9 @@
+---
+title: Plan 0029 — the handl ↔ catopt boundary spike
+type: plan
+date: 2026-10-15
+---
+
 # Plan 0029 — the handl ↔ catopt boundary spike
 
 Depends on: **ADR 0010** (handl *is* the kernel — one language, many

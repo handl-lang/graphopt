@@ -1,7 +1,12 @@
+---
+title: The categorical re-expression thesis
+type: adr
+date: 2026-09
+status: accepted
+---
+
 # ADR 0002 — The categorical re-expression thesis
 
-**Status**: accepted.
-**Date**: 2026-09.
 **Amended by**: ADR 0003 — Rule 3 only.  RL remains a non-goal as a
 *mechanism of reach*; it is allowed as a replaceable *policy* over the
 structure (the four-dimension split).

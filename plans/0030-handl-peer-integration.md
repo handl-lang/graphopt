@@ -1,3 +1,9 @@
+---
+title: 'Plan 0030 — the handl peer: from "the bank loads" to "the kernel rewrites"'
+type: plan
+date: 2026-10-15
+---
+
 # Plan 0030 — the handl peer: from "the bank loads" to "the kernel rewrites"
 
 Depends on: **ADR 0010** (handl *is* the kernel — one language, many

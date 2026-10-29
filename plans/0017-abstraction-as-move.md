@@ -1,3 +1,9 @@
+---
+title: Plan 0017 — abstraction as a legal move
+type: plan
+date: 2026-10-14
+---
+
 # Plan 0017 — abstraction as a legal move
 
 Status: starting.  Implements ADR 0004 — the unit of invention is a

@@ -1,3 +1,9 @@
+---
+title: '`softmax_fold` shipped — the second machine-discovered law, first with a side condition'
+type: retro
+date: 2026-10-03
+---
+
 # `softmax_fold` shipped — the second machine-discovered law, first with a side condition
 
 `law-proposer-extensions.md` reported the pipeline's second SHIP

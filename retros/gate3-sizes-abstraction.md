@@ -1,6 +1,11 @@
+---
+title: 'Retro — gate 3: the block width is not the binding cause (a measured FAIL)'
+type: retro
+date: 2026-10-16
+---
+
 # Retro — gate 3: the block width is not the binding cause (a measured FAIL)
 
-**Date**: 2026-10-16.
 **Commit**: `514888c` (catopt `main`).
 **Decides**: ADR 0008 gate 3 → still **FAIL**; the first remaining cause
 the last retro named (*the two chunk widths / `sizes`*) is **measured**

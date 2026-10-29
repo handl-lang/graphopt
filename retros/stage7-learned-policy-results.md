@@ -1,3 +1,9 @@
+---
+title: 'Stage 7 — learned search policy: results and findings'
+type: retro
+date: 2026-10-01
+---
+
 # Stage 7 — learned search policy: results and findings
 
 Plan 0016 stage 7 (ADR 0003).  What was built, what was measured, and

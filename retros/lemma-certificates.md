@@ -1,3 +1,9 @@
+---
+title: Lemma certificates — `derivation` upgraded from provenance to proof
+type: retro
+date: 2026-10-14
+---
+
 # Lemma certificates — `derivation` upgraded from provenance to proof
 
 The axiom/lemma split (`axiom-lemma-split.md`) recorded each non-kernel

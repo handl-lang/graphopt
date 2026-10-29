@@ -1,6 +1,12 @@
+---
+title: 'Retro — derive-DSL root ops: closing the measured `sqrt`/`rsqrt` refusal'
+type: retro
+date: 2026-10-17
+---
+
 # Retro — derive-DSL root ops: closing the measured `sqrt`/`rsqrt` refusal
 
-**Date**: 2026-10-17.  **Scope**: `mlopt_core/laws/cond.py` (the
+**Scope**: `mlopt_core/laws/cond.py` (the
 `dspec` expression bank), `mlopt_discovery/dspec_synth.py` (the
 synthesizer's search bank), `lab/probes/weightspace_fold_probe.py`,
 `tests/test_cond_laws.py`, `tests/test_discovery_dspec_synth.py`.

@@ -1,6 +1,11 @@
+---
+title: Retro — marking the real minutes-scale tail `slow`
+type: retro
+date: 2026-10-15
+---
+
 # Retro — marking the real minutes-scale tail `slow`
 
-Date: 2026-10-15
 Context: `AGENTS.md` advertises `-m "not slow"` as the iteration
 loop, and justified it with a slice measurement (the
 `test_torch_integration` + `test_om_decayed_cross` slice:

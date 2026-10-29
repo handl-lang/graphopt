@@ -1,3 +1,9 @@
+---
+title: 'Retro — intake round 2: 166 real workloads, 0 shippable laws'
+type: retro
+date: 2026-10-14
+---
+
 # Retro — intake round 2: 166 real workloads, 0 shippable laws
 
 **Status:** landed (`python -m mlopt_discovery.intake`, `torch_bridge.py`,

@@ -1,3 +1,9 @@
+---
+title: 'Retro: the first machine-constructed object'
+type: retro
+date: 2026-10-14
+---
+
 # Retro: the first machine-constructed object
 
 **Plan 0017 / ADR 0004, stage 4** — "the unit of invention is a

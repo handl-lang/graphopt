@@ -1,3 +1,9 @@
+---
+title: Typed-pay gate — "pays" now requires the minted member to denote
+type: retro
+date: 2026-10-14
+---
+
 # Typed-pay gate — "pays" now requires the minted member to denote
 
 `view-index-oracle.md` resolved every candidate's *truth* but left a

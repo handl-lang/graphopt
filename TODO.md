@@ -1,3 +1,9 @@
+---
+title: TODO
+type: task
+date: 2026-09-26
+---
+
 # TODO
 
 ## HIGH — ADR-0159: dissolve the optimizer domains into `ext` tools

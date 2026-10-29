@@ -1,6 +1,12 @@
+---
+title: 'Retro — tensor-valued derives (ADR 0012): the `$leaf:` channel lands'
+type: retro
+date: 2026-10-18
+---
+
 # Retro — tensor-valued derives (ADR 0012): the `$leaf:` channel lands
 
-**Date**: 2026-10-18.  **ADR**: `project/adrs/0012-tensor-derives.md`.
+**ADR**: `project/adrs/0012-tensor-derives.md`.
 **Depends on**: `project/retros/weightspace-fold.md` (the measured
 gate-by-gate refusal — gate 4, the last *capability* blocker),
 `project/retros/derive-root-ops.md` (the residual after

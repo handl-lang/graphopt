@@ -1,3 +1,9 @@
+---
+title: Executor-aware pricing under real wall-clock — where the routing inversion actually lives
+type: retro
+date: 2026-10-04
+---
+
 # Executor-aware pricing under real wall-clock — where the routing inversion actually lives
 
 `law-wallclock-verification.md` found the pipeline's dispatch-count

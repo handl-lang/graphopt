@@ -1,3 +1,9 @@
+---
+title: Derive → data, finished — stage 0 of plan 0017
+type: retro
+date: 2026-10-14
+---
+
 # Derive → data, finished — stage 0 of plan 0017
 
 `derive-declarative.md` closed the *derive* gap for 14 laws; ADR 0004

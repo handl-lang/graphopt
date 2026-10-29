@@ -1,3 +1,9 @@
+---
+title: catopt-discovery — the law-discovery engine becomes a package
+type: retro
+date: 2026-10-14
+---
+
 # catopt-discovery — the law-discovery engine becomes a package
 
 The `tools/law_*.py` scripts had quietly become a real subsystem: a

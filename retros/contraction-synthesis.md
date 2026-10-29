@@ -1,3 +1,9 @@
+---
+title: Contraction synthesis — distilled oe-all + lockstep driver + guided restart beats the teacher at equal wall-clock
+type: retro
+date: 2026-10-04
+---
+
 # Contraction synthesis — distilled oe-all + lockstep driver + guided restart beats the teacher at equal wall-clock
 
 Three retros each carried half of a result:

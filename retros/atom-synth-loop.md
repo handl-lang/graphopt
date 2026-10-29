@@ -1,6 +1,12 @@
+---
+title: Retro — the composed atom-synthesis loop (`lab/mint/atom_synth_loop.py`)
+type: retro
+date: 2026-10-14
+---
+
 # Retro — the composed atom-synthesis loop (`lab/mint/atom_synth_loop.py`)
 
-**Date**: 2026-10-14.  **Branch**: `feat/atom-synth` (merged `695cd89`).
+**Branch**: `feat/atom-synth` (merged `695cd89`).
 **Depends on**: ADR 0007 (semantic-atom minting), `handler_synth`
 (layer 2), `lab/mint/atom_law_loop.py` (layer 3).
 

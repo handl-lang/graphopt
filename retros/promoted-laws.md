@@ -1,6 +1,11 @@
+---
+title: 'Retro: honest promotion — the admitted objects, audited for the library'
+type: retro
+date: 2026-10-05
+---
+
 # Retro: honest promotion — the admitted objects, audited for the library
 
-Date: 2026-10-05
 Context: follow-up to plan 0017 / the admission-gauntlet and auto-cond
 rounds.  The store now holds a dozen objects that cleared the
 gauntlet — reconstruct, full-data, measure, truth, novelty,

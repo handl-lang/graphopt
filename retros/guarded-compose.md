@@ -1,3 +1,9 @@
+---
+title: 'Retro: guarded composition — transporting premise guards'
+type: retro
+date: 2026-10-14
+---
+
 # Retro: guarded composition — transporting premise guards
 
 **Plan 0017 / ADR 0004** — `novel-depth.md` blocker #2 ("Guarded premises

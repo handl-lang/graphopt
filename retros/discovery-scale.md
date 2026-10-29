@@ -1,6 +1,11 @@
+---
+title: 'Retro — discovery at corpus scale: sweeping the exposed class'
+type: retro
+date: 2026-10-14
+---
+
 # Retro — discovery at corpus scale: sweeping the exposed class
 
-Date: 2026-10-14
 Context: `project/retros/exposed-math.md` screened 321 workloads for
 e-graph reachability — 140 score ≥95% FLOPs-weighted law coverage —
 and ran the three-arm discovery machinery on eight of them, minting

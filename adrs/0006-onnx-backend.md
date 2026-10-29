@@ -1,6 +1,13 @@
+---
+title: ONNX as a second backend, in two directions
+type: adr
+date: 2026-10-15
+status: accepted
+status_note: accepted — direction 1 (export) implemented; the
+---
+
 # ADR 0006 — ONNX as a second backend, in two directions
 
-**Status**: accepted — direction 1 (export) implemented; the
 boundary held.
 **Date**: 2026-10-15 (updated same day).
 **Depends on**: ADR 0003 (evaluation as an independent

@@ -1,3 +1,9 @@
+---
+title: Plan 0005 — Cost-model fidelity vs measured latency
+type: plan
+date: 2026-09-26
+---
+
 # Plan 0005 — Cost-model fidelity vs measured latency
 
 Status: fix landed (main `9b3577d` + `d7924bf`) — executor-aware

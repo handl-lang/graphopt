@@ -1,3 +1,9 @@
+---
+title: Law impact — do the 11 proposed laws actually pay on real models?
+type: retro
+date: 2026-10-03
+---
+
 # Law impact — do the 11 proposed laws actually pay on real models?
 
 The proposal retro (`law-proposal.md`) found 11 genuinely-new,

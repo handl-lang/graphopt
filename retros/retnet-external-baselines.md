@@ -1,3 +1,9 @@
+---
+title: 'Retro: RetNet carrier vs external baselines'
+type: retro
+date: 2026-10-14
+---
+
 # Retro: RetNet carrier vs external baselines
 
 Date: session of 2026-10-14.  Probe: `lab/probes/retnet_baseline_probe.py`

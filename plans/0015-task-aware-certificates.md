@@ -1,3 +1,9 @@
+---
+title: Plan 0015 — task-aware certificates
+type: plan
+date: 2026-10-14
+---
+
 # Plan 0015 — task-aware certificates
 
 Status: draft — after 0013 groundwork lands.

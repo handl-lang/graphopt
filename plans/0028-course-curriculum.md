@@ -1,3 +1,9 @@
+---
+title: Plan 0028 — the course as a curriculum (clarity, coverage, mastery)
+type: plan
+date: 2026-10-14
+---
+
 # Plan 0028 — the course as a curriculum (clarity, coverage, mastery)
 
 Depends on: plans 0026/0027 (the toy course's cycles 3–4), the real

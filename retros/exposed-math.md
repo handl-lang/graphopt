@@ -1,6 +1,11 @@
+---
+title: 'Retro — the exposure screen: which models have e-graph-reachable math?'
+type: retro
+date: 2026-10-15
+---
+
 # Retro — the exposure screen: which models have e-graph-reachable math?
 
-Date: 2026-10-15
 Context: two measured lessons set this up.  (1)
 `project/retros/birefnet-compile-parity.md` — BiRefNet delivered
 0.80× *vs compiled* because its attention is a fused

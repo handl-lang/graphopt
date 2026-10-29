@@ -1,3 +1,9 @@
+---
+title: Calibrated profiles as a public path — `delivered_cost_for` + `scripts/calibrate_profile.py`
+type: retro
+date: 2026-10-04
+---
+
 # Calibrated profiles as a public path — `delivered_cost_for` + `scripts/calibrate_profile.py`
 
 `executor-pricing-fix.md` wired the measured-feedback channel end to

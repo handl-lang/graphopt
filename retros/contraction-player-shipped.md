@@ -1,3 +1,9 @@
+---
+title: The distilled contraction player ships — oe-all weights are the bundled default
+type: retro
+date: 2026-10-04
+---
+
 # The distilled contraction player ships — oe-all weights are the bundled default
 
 `contraction-synthesis.md` proved the win and left the artifact as a

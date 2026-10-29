@@ -1,6 +1,11 @@
+---
+title: 'Retro — corpus round 3: the inert guards start firing'
+type: retro
+date: 2026-10-05
+---
+
 # Retro — corpus round 3: the inert guards start firing
 
-Date: 2026-10-05
 Context: `project/retros/auto-cond.md` — the auto-cond constructor
 minted **19** verified guards that fired **0 times** on the 276-term
 corpus.  The guards are correct; the corpus was too small to contain

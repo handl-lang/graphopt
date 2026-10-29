@@ -1,3 +1,9 @@
+---
+title: Trained learned guide under the corpus regime — a second honest negative
+type: retro
+date: 2026-10-14
+---
+
 # Trained learned guide under the corpus regime — a second honest negative
 
 Plan 0017 stage 4.  The stage-3 retro (`guide-corpus-arms.md`) put

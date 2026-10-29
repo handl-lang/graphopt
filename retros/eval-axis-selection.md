@@ -1,3 +1,9 @@
+---
+title: Evaluation-axis selection — does pluggable evaluation change the answer?
+type: retro
+date: 2026-10-03
+---
+
 # Evaluation-axis selection — does pluggable evaluation change the answer?
 
 Plan 0016 (ADR 0003, the EVALUATION dimension) wired four ports into

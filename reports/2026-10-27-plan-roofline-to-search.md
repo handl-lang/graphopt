@@ -1,3 +1,9 @@
+---
+title: Plan — from a hand-tuned kernel to a substrate-native search
+type: report
+date: 2026-10-27
+---
+
 # Plan — from a hand-tuned kernel to a substrate-native search
 
 **Date:** 2026-10-27

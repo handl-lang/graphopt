@@ -1,3 +1,9 @@
+---
+title: The law-order board — measured shallow for quality, real for schedule
+type: retro
+date: 2026-10-14
+---
+
 # The law-order board — measured shallow for quality, real for schedule
 
 Plan 0021 depth question 1.  The contraction player wins on the

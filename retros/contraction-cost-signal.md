@@ -1,3 +1,9 @@
+---
+title: Contraction ordering in the diagram space — can it even be priced?
+type: retro
+date: 2026-10-03
+---
+
 # Contraction ordering in the diagram space — can it even be priced?
 
 Plan 0016 follow-up.  The contraction-ordering precondition

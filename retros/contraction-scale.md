@@ -1,3 +1,9 @@
+---
+title: Contraction ordering at scale — does the search break?
+type: retro
+date: 2026-10-03
+---
+
 # Contraction ordering at scale — does the search break?
 
 Plan 0016 stage 7 (ADR 0003).  The contraction-ordering precondition

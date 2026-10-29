@@ -1,7 +1,12 @@
+---
+title: The object record — laws as the first declared objects
+type: retro
+date: 2026-10
+---
+
 # The object record — laws as the first declared objects
 
 **Plan 0017, stage 1** (implements ADR 0004 §1, "objects-as-data").
-Date: 2026-10.
 
 ## What landed
 

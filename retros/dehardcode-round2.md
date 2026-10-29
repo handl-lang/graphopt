@@ -1,3 +1,9 @@
+---
+title: Retro — de-hardcoding the discovery content tables (round 2)
+type: retro
+date: 2026-10-14
+---
+
 # Retro — de-hardcoding the discovery content tables (round 2)
 
 ## What the pass did

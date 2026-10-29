@@ -1,3 +1,9 @@
+---
+title: Distilling the strong teacher — the edge partially transfers, the wall-clock gap doesn't
+type: retro
+date: 2026-10-04
+---
+
 # Distilling the strong teacher — the edge partially transfers, the wall-clock gap doesn't
 
 `contraction-train-scale.md` closed the training-distribution lever

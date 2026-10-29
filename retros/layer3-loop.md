@@ -1,6 +1,11 @@
+---
+title: 'Retro: ADR-0007 layer 3 — atom laws from measured bindings'
+type: retro
+date: 2026-10-16
+---
+
 # Retro: ADR-0007 layer 3 — atom laws from measured bindings
 
-Date: 2026-10-16
 Branch: feat/runtime-loop
 Driver: `lab/mint/atom_law_loop.py` (new).  Artifact:
 `project/retros/layer3-loop.json`.

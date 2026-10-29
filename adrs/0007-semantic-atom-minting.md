@@ -1,7 +1,12 @@
+---
+title: 'Semantic atoms: how new *meaning* enters the object language'
+type: adr
+date: 2026-10-14
+status: proposed
+---
+
 # ADR 0007 — Semantic atoms: how new *meaning* enters the object language
 
-**Status**: proposed.
-**Date**: 2026-10-14.
 **Depends on**: ADR 0004 (abstraction as move — the `ConstructedObject`
 record and its admission gauntlet), ADR 0005 (the open game), ADR 0003
 (four independent dimensions).

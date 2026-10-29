@@ -1,6 +1,12 @@
+---
+title: Retro — `synthesize_rules(rounds=)` landed; `CONV_FOLD_RULES` sweep refuses at truth
+type: retro
+date: 2026-10-19
+---
+
 # Retro — `synthesize_rules(rounds=)` landed; `CONV_FOLD_RULES` sweep refuses at truth
 
-**Date**: 2026-10-19.  **Follows**: `conv-channel-scale-anchor.md`
+**Follows**: `conv-channel-scale-anchor.md`
 (named next step: a fixpoint knob — "depth was the refusal, not
 material") and `bn-admission-sweep.md` (the opt-in families' admission
 floor).  **Commits**: `18e82dd` (the API + fixpoint tests), `62dce40`

@@ -1,3 +1,9 @@
+---
+title: Learned contraction ordering — is the win real at EQUAL COMPUTE?
+type: retro
+date: 2026-10-03
+---
+
 # Learned contraction ordering — is the win real at EQUAL COMPUTE?
 
 Plan 0016 follow-up, second half.  `contraction-policy.md` measured the

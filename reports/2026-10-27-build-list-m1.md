@@ -1,3 +1,9 @@
+---
+title: Build list — what has to exist before the machine can find a kernel
+type: report
+date: 2026-10-27
+---
+
 # Build list — what has to exist before the machine can find a kernel
 
 **Status:** proposed · dependency-ordered · M1 scope only

@@ -1,3 +1,9 @@
+---
+title: Attr interning — strict identity, lenient matching (the Const fix, one level down)
+type: retro
+date: 2026-10-14
+---
+
 # Attr interning — strict identity, lenient matching (the Const fix, one level down)
 
 Verdict: **fixed strict.** `Op.make("clamp", x, min=0)` and

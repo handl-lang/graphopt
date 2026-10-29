@@ -1,3 +1,9 @@
+---
+title: View/index oracle — every "unproven" resolved, zero ships
+type: retro
+date: 2026-10-14
+---
+
 # View/index oracle — every "unproven" resolved, zero ships
 
 `intake-round-2.md` left 66 candidates, 33 firing, **0 shippable**,

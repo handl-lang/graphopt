@@ -1,3 +1,9 @@
+---
+title: 'Stage 7 — multi-family search policy: results'
+type: retro
+date: 2026-10-02
+---
+
 # Stage 7 — multi-family search policy: results
 
 Plan 0016 stage 7, the multi-family gap (ADR 0003).  The supervised

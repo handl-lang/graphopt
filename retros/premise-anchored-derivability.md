@@ -1,6 +1,12 @@
+---
+title: 'Retro — premise-anchored `derivable`: the composite''s minting proof counts'
+type: retro
+date: 2026-10-19
+---
+
 # Retro — premise-anchored `derivable`: the composite's minting proof counts
 
-**Date**: 2026-10-19.  **Follows**: `binding-env-cap.md` (its named
+**Follows**: `binding-env-cap.md` (its named
 policy question: "should `corpus.base_rules` carry a stored object's
 premise closure, so `derivable` reflects the premise-anchored proof?")
 and `lemma-cert-admission.md`.  **Commit**: this commit's parent —

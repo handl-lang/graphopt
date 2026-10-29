@@ -1,3 +1,9 @@
+---
+title: The matmul factor/distribute laws were unsound on mixed-rank bindings — fixed
+type: retro
+date: 2026-10-04
+---
+
 # The matmul factor/distribute laws were unsound on mixed-rank bindings — fixed
 
 `law-gap-targeted-gen.md` §3 reported the finding and deferred the fix

@@ -1,6 +1,11 @@
+---
+title: 'Retro: the admission gauntlet — a stored object earns "usable"'
+type: retro
+date: 2026-10-04
+---
+
 # Retro: the admission gauntlet — a stored object earns "usable"
 
-Date: 2026-10-04
 Context: plan 0017 / ADR 0004, stage 3 — "abstraction as a legal
 move".  Stages 0–2 made synthesized abstractions *legal objects*:
 `laws.serialize` round-trips `law`/`abstraction`/`bridge` records,

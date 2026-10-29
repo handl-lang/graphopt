@@ -1,6 +1,11 @@
+---
+title: 'Retro: the cond bank — widening the view-commute vocabulary'
+type: retro
+date: 2026-10-06
+---
+
 # Retro: the cond bank — widening the view-commute vocabulary
 
-Date: 2026-10-06
 Context: follow-up to `auto-cond.md`.  The auto-cond constructor
 (`object_synthesis.auto_cond_object`) measures a conditional
 candidate's bare domain, enumerates the cond DSL's vocabulary over the

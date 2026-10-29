@@ -1,3 +1,9 @@
+---
+title: Plan 0019 — ops as data (the structural slice)
+type: plan
+date: 2026-10-14
+---
+
 # Plan 0019 — ops as data (the structural slice)
 
 Status: prototype landed.  `mlopt_core.opdata` declares a *view /

@@ -1,7 +1,12 @@
+---
+title: 'which representation is canonical: the calculus for laws, the op-graph for execution'
+type: adr
+date: 2026-10-14
+status: proposed
+---
+
 # ADR 0011 — which representation is canonical: the calculus for laws, the op-graph for execution
 
-**Status**: proposed.
-**Date**: 2026-10-14.
 **Depends on**: ADR 0002 (categorical re-expression), ADR 0003 (four
 dimensions), ADR 0008 (combinator presentation — *and* its two-way-drift
 warning), ADR 0009 (the ladder; stage 3 names this decision), **ADR 0010

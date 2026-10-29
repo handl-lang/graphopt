@@ -1,3 +1,9 @@
+---
+title: Plan 0010 — Search performance
+type: plan
+date: 2026-10-14
+---
+
 # Plan 0010 — Search performance
 
 Status: accepted

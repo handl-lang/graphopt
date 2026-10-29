@@ -1,6 +1,12 @@
+---
+title: 'Retro — `_MAX_BINDING_ENVS`: the composite gauntlet terminates, honestly'
+type: retro
+date: 2026-10-19
+---
+
 # Retro — `_MAX_BINDING_ENVS`: the composite gauntlet terminates, honestly
 
-**Date**: 2026-10-19.  **Follows**: `enablement-floor.md` (its named
+**Follows**: `enablement-floor.md` (its named
 scaling gap: "`run_gauntlet`/`pl.measure` on guarded minted composites
 does not terminate within the box") and `fold-cost-single-source.md`.
 **Commit**: this commit (`oracle._MAX_BINDING_ENVS`, the probe's

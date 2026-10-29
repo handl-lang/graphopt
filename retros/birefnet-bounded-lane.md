@@ -1,3 +1,9 @@
+---
+title: BiRefNet bounded lane — the precision lane on a real pretrained vision model
+type: retro
+date: 2026-10-14
+---
+
 # BiRefNet bounded lane — the precision lane on a real pretrained vision model
 
 Question: does `search(..., error_budget=)` buy headroom on a real

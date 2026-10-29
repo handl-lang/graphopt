@@ -1,6 +1,11 @@
+---
+title: 'Retro: handler-interpreted atoms — ADR 0007 layer 2 lands'
+type: retro
+date: 2026-10-15
+---
+
 # Retro: handler-interpreted atoms — ADR 0007 layer 2 lands
 
-Date: 2026-10-15
 Context: ADR 0007 layer 2 ("handler-interpreted atoms — semantics
 by denotation").  `genkernel` mints handlers whose kernel evaluates
 the spec's own spelled body — the elementwise special case.  This

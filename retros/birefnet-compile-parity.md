@@ -1,3 +1,9 @@
+---
+title: BiRefNet compile-parity probe — verdict
+type: retro
+date: 2026-10-14
+---
+
 # BiRefNet compile-parity probe — verdict
 
 Question: the 34607e0 trial's delivered module timed 0.90× vs eager /

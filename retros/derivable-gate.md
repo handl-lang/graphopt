@@ -1,3 +1,9 @@
+---
+title: 'Retro: the derivable gate — a measured counterexample outranks a proof'
+type: retro
+date: 2026-10-14
+---
+
 # Retro: the derivable gate — a measured counterexample outranks a proof
 
 **Plan 0017 / ADR 0004** — the truth gate's derivability

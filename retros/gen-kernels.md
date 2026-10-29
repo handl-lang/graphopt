@@ -1,3 +1,9 @@
+---
+title: 'Retro — generated kernels: lowerings the search builds'
+type: retro
+date: 2026-10-14
+---
+
 # Retro — generated kernels: lowerings the search builds
 
 Plan 0022, phase 6.  The product question the night session could

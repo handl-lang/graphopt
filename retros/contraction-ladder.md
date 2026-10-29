@@ -1,3 +1,9 @@
+---
+title: Contraction-ordering ladder — does greedy lose, and what closes it?
+type: retro
+date: 2026-10-14
+---
+
 # Contraction-ordering ladder — does greedy lose, and what closes it?
 
 Plan 0016 stage 7 (ADR 0003, the EVALUATION dimension).  The

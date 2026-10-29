@@ -1,6 +1,12 @@
+---
+title: 'Retro — the `postnorm` family: `log_softmax`''s wrapped-reduction gap closed'
+type: retro
+date: 2026-10-17
+---
+
 # Retro — the `postnorm` family: `log_softmax`'s wrapped-reduction gap closed
 
-**Date**: 2026-10-17.  **Scope**:
+**Scope**:
 `mlopt_discovery/handler_synth.py`, `lab/audit/grammar_probe.py`,
 `tests/test_discovery_handler_synth.py`.
 

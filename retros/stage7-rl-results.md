@@ -1,3 +1,9 @@
+---
+title: 'Stage 7 — RL search policy: results'
+type: retro
+date: 2026-10-02
+---
+
 # Stage 7 — RL search policy: results
 
 Plan 0016 stage 7, the RL half (ADR 0003).  The supervised policy is

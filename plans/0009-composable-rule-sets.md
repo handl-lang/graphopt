@@ -1,3 +1,9 @@
+---
+title: Plan 0009 — Composable rule sets
+type: plan
+date: 2026-10-14
+---
+
 # Plan 0009 — Composable rule sets
 
 Status: accepted

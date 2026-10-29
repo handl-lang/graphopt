@@ -1,6 +1,11 @@
+---
+title: 'Retro: grammar gaps — closing the measured refusals, and the pay wall'
+type: retro
+date: 2026-10-14
+---
+
 # Retro: grammar gaps — closing the measured refusals, and the pay wall
 
-Date: 2026-10-14
 Context: the ADR-0007 layer-2 handler grammar
 (`mlopt_discovery.handler_synth`) mints a non-elementwise atom by
 proposing a descriptor from a structured template vocabulary and

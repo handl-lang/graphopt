@@ -1,7 +1,12 @@
+---
+title: Abstraction as a legal move
+type: adr
+date: 2026-10
+status: proposed
+---
+
 # ADR 0004 — Abstraction as a legal move
 
-**Status**: proposed.
-**Date**: 2026-10.
 **Depends on**: ADR 0002 (the thesis), ADR 0003 (the four dimensions).
 **Related**: plan 0017 (implementation).
 

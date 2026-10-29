@@ -1,6 +1,12 @@
+---
+title: 'Retro — `FOLD_OPS`: one compile-time fold alphabet; the premise-pay leg flips'
+type: retro
+date: 2026-10-19
+---
+
 # Retro — `FOLD_OPS`: one compile-time fold alphabet; the premise-pay leg flips
 
-**Date**: 2026-10-19.  **Follows**: `enablement-floor.md` — its named
+**Follows**: `enablement-floor.md` — its named
 open item: *"a cost model that credits compile-time weight folds would
 flip the measured pay leg — a cost-model gap, not a law-truth gap."*
 **Commits**: `ccfb9ba` (the change + tests), this commit (retro +

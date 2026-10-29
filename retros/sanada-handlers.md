@@ -1,3 +1,9 @@
+---
+title: Retro — Sanada's arrow handlers, mapped onto mlopt
+type: retro
+date: 2026-10-14
+---
+
 # Retro — Sanada's arrow handlers, mapped onto mlopt
 
 Two papers by Takahiro Sanada that HANDL's GMSAC kernel builds on

@@ -1,3 +1,9 @@
+---
+title: Contraction throughput v2 — vectorising the rollout, not the net
+type: retro
+date: 2026-10-04
+---
+
 # Contraction throughput v2 — vectorising the rollout, not the net
 
 `policy-guided-restart.md` decomposed the residual gap into

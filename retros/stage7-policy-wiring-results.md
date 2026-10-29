@@ -1,3 +1,9 @@
+---
+title: 'Stage 7 — wiring the learned policy into the pipeline: results'
+type: retro
+date: 2026-10-03
+---
+
 # Stage 7 — wiring the learned policy into the pipeline: results
 
 Plan 0016 stage 7's last mile.  The `Policy` seam was already consumed

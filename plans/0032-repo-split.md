@@ -1,3 +1,9 @@
+---
+title: 'Plan 0032 — repo split: current state → gamekit / eqsat / graphopt / kernelopt'
+type: plan
+date: 2026-10-27
+---
+
 # Plan 0032 — repo split: current state → gamekit / eqsat / graphopt / kernelopt
 
 Depends on: plan 0031 (landed), ADR 0013, notes/repo-split-plan.md +

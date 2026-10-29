@@ -1,3 +1,9 @@
+---
+title: Law coherence catalogue — the 3-cell layer, made explicit
+type: retro
+date: 2026-10-03
+---
+
 # Law coherence catalogue — the 3-cell layer, made explicit
 
 A rewrite law is a 2-cell `lhs ~[2]~> rhs`; a relation *between* two

@@ -1,3 +1,9 @@
+---
+title: Plan 0020 — the construction arena (a better game for a better player)
+type: plan
+date: 2026-10-14
+---
+
 # Plan 0020 — the construction arena (a better game for a better player)
 
 Status: drafted.

@@ -1,6 +1,13 @@
+---
+title: 'Weight-space structure hypothesis: falsified'
+type: adr
+date: 2025-09
+status: rejected
+status_note: decided (negative) — closed.
+---
+
 # ADR 0001 — Weight-space structure hypothesis: falsified
 
-**Status**: decided (negative) — closed.
 **Date**: 2025-09 (measured on stories15M + stories110M, llama2.c)
 
 ## Context

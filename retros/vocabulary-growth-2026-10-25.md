@@ -1,6 +1,11 @@
+---
+title: 'Retro: the vocabulary week — originality found, delivery dropped'
+type: retro
+date: 2026-10-25
+---
+
 # Retro: the vocabulary week — originality found, delivery dropped
 
-Date: 2026-10-25
 Window: 2026-10-19 18:12 (pitch tag `v0.1.0`) → 2026-10-25
 Context: six days after the audited positioning deck, the stack moved
 further than the deck can express. This retro is the delta in one

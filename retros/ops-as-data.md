@@ -1,3 +1,9 @@
+---
+title: Retro — ops as data (plan 0019)
+type: retro
+date: 2026-10-14
+---
+
 # Retro — ops as data (plan 0019)
 
 **What landed.** `mlopt_core.opdata` — the declaration seam for a

@@ -1,3 +1,9 @@
+---
+title: Retro — the meta-arena player (Q3, first answer)
+type: retro
+date: 2026-10-14
+---
+
 # Retro — the meta-arena player (Q3, first answer)
 
 Plan 0021's Q3: is the mixed board deep enough that a *learned*

@@ -1,3 +1,9 @@
+---
+title: Retro — the learned arena player
+type: retro
+date: 2026-10-14
+---
+
 # Retro — the learned arena player
 
 Plan 0020/0021's open question: can a *learned* player beat the

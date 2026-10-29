@@ -1,3 +1,9 @@
+---
+title: Plan 0007 — Backend abstraction
+type: plan
+date: 2026-10-14
+---
+
 # Plan 0007 — Backend abstraction
 
 Status: accepted

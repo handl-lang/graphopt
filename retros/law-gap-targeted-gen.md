@@ -1,3 +1,9 @@
+---
+title: Gap-targeted synthesis — the gaps are real, and they were hiding more than absence
+type: retro
+date: 2026-10-04
+---
+
 # Gap-targeted synthesis — the gaps are real, and they were hiding more than absence
 
 The workload-generation retro (`project/retros/law-workload-gen.md`)

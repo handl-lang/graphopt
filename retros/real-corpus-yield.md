@@ -1,6 +1,11 @@
+---
+title: 'Retro — real-corpus yield: `shippable = 0` on honest modules'
+type: retro
+date: 2026-10-05
+---
+
 # Retro — real-corpus yield: `shippable = 0` on honest modules
 
-Date: 2026-10-05
 Context: `project/retros/corpus-round-4.md` (`shippable: 0 -> 11`),
 `project/retros/shippable-audit.md` ("demonstrated usefulness is
 corpus-circular"), commit `e2a4051` (the `purpose_built` ledger,

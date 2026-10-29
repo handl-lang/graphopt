@@ -1,6 +1,12 @@
+---
+title: 'Retro — `JOINT_SHAPES`: the enumeration''s correlated corner, reached'
+type: retro
+date: 2026-10-19
+---
+
 # Retro — `JOINT_SHAPES`: the enumeration's correlated corner, reached
 
-**Date**: 2026-10-19.  **Follows**: `binding-env-cap.md` (its named
+**Follows**: `binding-env-cap.md` (its named
 residual — "the binding banks have no conv-weight-shaped inhabitants;
 the named fix remains a corner-reaching enumeration vocabulary") and
 `fixpoint-api-and-conv-sweep.md` (the 60-anchor starvation account).

@@ -1,8 +1,13 @@
+---
+title: 'Retro: the shipped-guard tightening — 7 guarded laws, one class'
+type: retro
+date: 2026-10
+---
+
 # Retro: the shipped-guard tightening — 7 guarded laws, one class
 
 **The derivable-gate audit's follow-up** — the 7 shipped guarded laws
 the audit measured unclean, plus the `gqa_absorb_repeat` sweep crash.
-Date: 2026-10.
 
 ## What the audit left on the table
 

@@ -1,3 +1,9 @@
+---
+title: Intake defect fixes — 3 verify-failed workloads now ingest, 17 → 20
+type: retro
+date: 2026-10-04
+---
+
 # Intake defect fixes — 3 verify-failed workloads now ingest, 17 → 20
 
 `workload-intake.md` closed with a list no previous round could produce:

@@ -1,3 +1,9 @@
+---
+title: Note — repo split plan (proposal only, not enacted)
+type: note
+date: 2026-10-27
+---
+
 # Note — repo split plan (proposal only, not enacted)
 
 2026-10-19.  Target layout once the Board protocol stabilizes.

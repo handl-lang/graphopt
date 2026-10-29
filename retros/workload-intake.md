@@ -1,3 +1,9 @@
+---
+title: Workload intake — 38 real programs through the export boundary, +84 op-tuples, 3 lowering defects, 0 shippable
+type: retro
+date: 2026-10-04
+---
+
 # Workload intake — 38 real programs through the export boundary, +84 op-tuples, 3 lowering defects, 0 shippable
 
 `law-workload-gen.md` closed generation-as-sampling and named the

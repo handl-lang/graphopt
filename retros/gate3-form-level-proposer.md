@@ -1,3 +1,9 @@
+---
+title: Gate 3 — the form-level proposer (the fifth move reaches `loop`)
+type: retro
+date: 2026-10-19
+---
+
 # Gate 3 — the form-level proposer (the fifth move reaches `loop`)
 
 `lab/bridge/form_propose.py`, exercised by

@@ -1,3 +1,9 @@
+---
+title: 'Retro — catopt-onnx: 75% → 100% coverage in one climb'
+type: retro
+date: 2026-10-14
+---
+
 # Retro — catopt-onnx: 75% → 100% coverage in one climb
 
 ## The arc

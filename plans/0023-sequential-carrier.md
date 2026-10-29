@@ -1,3 +1,9 @@
+---
+title: Plan 0023 — the sequential carrier (state-level fold)
+type: plan
+date: 2026-10-14
+---
+
 # Plan 0023 — the sequential carrier (state-level fold)
 
 Depends on 0005 (the open game, phase 1 — the measured win).

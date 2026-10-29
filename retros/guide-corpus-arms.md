@@ -1,3 +1,9 @@
+---
+title: Corpus arms on the board — scope rotation and the re-measured game
+type: retro
+date: 2026-10-14
+---
+
 # Corpus arms on the board — scope rotation and the re-measured game
 
 Plan 0017 stage 3.  The stage-2 retro (`guide-seam.md`) measured an

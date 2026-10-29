@@ -1,6 +1,11 @@
+---
+title: 'Retro — gate 3: the mixed state spelling is an extraction tie, and the fix is real but does not close the gate'
+type: retro
+date: 2026-10-16
+---
+
 # Retro — gate 3: the mixed state spelling is an extraction tie, and the fix is real but does not close the gate
 
-**Date**: 2026-10-16.
 **Commit**: `aa56e55` (mlopt `main`).
 **Decides**: ADR 0008 gate 3 → still **FAIL**; the third named cause
 (*extraction mixes two state spellings*) is **measured**, is a real

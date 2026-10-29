@@ -1,3 +1,9 @@
+---
+title: Law-proposal as a sequential game — a player over constructions
+type: retro
+date: 2026-10-03
+---
+
 # Law-proposal as a sequential game — a player over constructions
 
 The pipeline's law discovery today is **enumeration + filter**: the

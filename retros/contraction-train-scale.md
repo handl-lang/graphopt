@@ -1,3 +1,9 @@
+---
+title: Training the contraction player at scale — the n = 40 gap mostly closes
+type: retro
+date: 2026-10-03
+---
+
 # Training the contraction player at scale — the n = 40 gap mostly closes
 
 `contraction-policy-einsum.md` recorded the honest standing: the

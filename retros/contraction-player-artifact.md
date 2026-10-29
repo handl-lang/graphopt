@@ -1,3 +1,9 @@
+---
+title: The contraction player ships — bundled weights + a loader
+type: retro
+date: 2026-10-03
+---
+
 # The contraction player ships — bundled weights + a loader
 
 `contraction-train-scale.md` settled the training regime (the

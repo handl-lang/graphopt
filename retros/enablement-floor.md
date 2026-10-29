@@ -1,6 +1,12 @@
+---
+title: Retro — cached fixpoint + the enablement floor, measured
+type: retro
+date: 2026-10-19
+---
+
 # Retro — cached fixpoint + the enablement floor, measured
 
-**Date**: 2026-10-19.  **Follows**: `fixpoint-api-and-conv-sweep.md`
+**Follows**: `fixpoint-api-and-conv-sweep.md`
 (its two open items).  **Commits**: `02e05f9` (rulecache knobs +
 payload-internal parents), `ca42c16` (guard transport for stored
 composites), this commit (probe + retro + GOALS).

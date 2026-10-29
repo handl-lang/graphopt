@@ -1,3 +1,9 @@
+---
+title: PUCT + a learned value head — results
+type: retro
+date: 2026-10-03
+---
+
 # PUCT + a learned value head — results
 
 Plan 0016 follow-up.  `contraction-policy-throughput.md` removed the

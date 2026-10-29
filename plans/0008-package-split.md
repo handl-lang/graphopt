@@ -1,3 +1,9 @@
+---
+title: Plan 0008 — Package split
+type: plan
+date: 2026-10-14
+---
+
 # Plan 0008 — Package split
 
 Status: accepted

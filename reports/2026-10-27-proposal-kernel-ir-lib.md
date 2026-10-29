@@ -1,3 +1,9 @@
+---
+title: Proposal — a kernel IR as data, and the libs it needs
+type: report
+date: 2026-10-27
+---
+
 # Proposal — a kernel IR as data, and the libs it needs
 
 **Status:** proposed · follows `2026-10-27-proposal-int4-kernel-vocabulary.md`

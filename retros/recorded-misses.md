@@ -1,3 +1,9 @@
+---
+title: Recorded misses — per-item ledger
+type: retro
+date: 2026-10-04
+---
+
 # Recorded misses — per-item ledger
 
 This retro closes the three recorded misses — the

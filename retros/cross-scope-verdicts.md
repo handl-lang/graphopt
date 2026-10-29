@@ -1,3 +1,9 @@
+---
+title: Cross-scope verdicts — the attributable history view
+type: retro
+date: 2026-10-14
+---
+
 # Cross-scope verdicts — the attributable history view
 
 Plan 0017, the cross-scope stage.  The corpus-arms retro

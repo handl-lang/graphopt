@@ -1,3 +1,9 @@
+---
+title: Lemma store — laws as data, stored and re-admitted live
+type: retro
+date: 2026-10-04
+---
+
 # Lemma store — laws as data, stored and re-admitted live
 
 The condition-DSL retro (`condition-dsl.md`) closed the last data gap

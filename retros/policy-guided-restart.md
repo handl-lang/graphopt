@@ -1,3 +1,9 @@
+---
+title: Policy-guided restarts — becoming the baseline's algorithm buys parity, not a win
+type: retro
+date: 2026-10-04
+---
+
 # Policy-guided restarts — becoming the baseline's algorithm buys parity, not a win
 
 `contraction-train-scale.md` left the learned player at ~1.04× of

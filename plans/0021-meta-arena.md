@@ -1,3 +1,9 @@
+---
+title: Plan 0021 — the meta-arena (the fuller game)
+type: plan
+date: 2026-10-14
+---
+
 # Plan 0021 — the meta-arena (the fuller game)
 
 Status: drafted.  Builds on plan 0020 (the construction arena).

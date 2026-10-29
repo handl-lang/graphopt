@@ -1,3 +1,9 @@
+---
+title: Law coherence, depth 2 — chains, reach, and the mediator table
+type: retro
+date: 2026-10-04
+---
+
 # Law coherence, depth 2 — chains, reach, and the mediator table
 
 `law-coherence-catalogue.md` enumerated the pair layer (~44 co-firing

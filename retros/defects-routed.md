@@ -1,3 +1,9 @@
+---
+title: Routed defects — census attr-key hash + zero-stride conv shape rule
+type: retro
+date: 2026-10-14
+---
+
 # Routed defects — census attr-key hash + zero-stride conv shape rule
 
 Two crashes the re-measure agent surfaced during the guide corpus-arms

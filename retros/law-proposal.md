@@ -1,3 +1,9 @@
+---
+title: Candidate law proposal — the open half of "the AI invents laws"
+type: retro
+date: 2026-10-03
+---
+
 # Candidate law proposal — the open half of "the AI invents laws"
 
 The rediscovery retro (`law-rediscovery.md`) closed the *verify*

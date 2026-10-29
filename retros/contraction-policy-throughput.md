@@ -1,3 +1,9 @@
+---
+title: Learned contraction ordering — removing the feature-construction bottleneck
+type: retro
+date: 2026-10-03
+---
+
 # Learned contraction ordering — removing the feature-construction bottleneck
 
 Plan 0016 follow-up, fourth half.  `contraction-policy-compute.md`

@@ -1,3 +1,9 @@
+---
+title: The numeric oracle's broadcast hole, closed
+type: retro
+date: 2026-10-03
+---
+
 # The numeric oracle's broadcast hole, closed
 
 `law-meta-game.md` §3.2/§4 flagged a soundness hole in the law

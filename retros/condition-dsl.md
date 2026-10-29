@@ -1,3 +1,9 @@
+---
+title: Condition DSL — side conditions as data, the lemma-store seam
+type: retro
+date: 2026-10-04
+---
+
 # Condition DSL — side conditions as data, the lemma-store seam
 
 A rewrite law is a 2-cell: a term pair plus a side condition.  Every

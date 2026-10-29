@@ -1,6 +1,11 @@
+---
+title: 'Retro: the per-op value bank — rescuing the domain-gapped guards'
+type: retro
+date: 2026-10-07
+---
+
 # Retro: the per-op value bank — rescuing the domain-gapped guards
 
-Date: 2026-10-07
 Context: `cap-policy.md`'s remaining blind spot #1 — "the value bank
 is still finite".  The selective cap widened the *window*; it never
 widened the *values*.  A guarded rule whose `const-cmp` demands a

@@ -1,3 +1,9 @@
+---
+title: '`rms_norm_fold` shipped — the fourth machine-discovered law family, first with a *shape-derived* attr'
+type: retro
+date: 2026-10-04
+---
+
 # `rms_norm_fold` shipped — the fourth machine-discovered law family, first with a *shape-derived* attr
 
 `corpus-expansion-r2.md` §6 named the clearest recognizer lead: the

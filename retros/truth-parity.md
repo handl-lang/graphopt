@@ -1,3 +1,9 @@
+---
+title: 'Retro: truth parity — the store stops laundering a refuted derivation'
+type: retro
+date: 2026-10-14
+---
+
 # Retro: truth parity — the store stops laundering a refuted derivation
 
 **Plan 0017 / ADR 0004** — follow-up to `project/retros/derivable-gate.md`

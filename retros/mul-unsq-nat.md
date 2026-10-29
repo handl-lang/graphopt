@@ -1,6 +1,11 @@
+---
+title: 'Retro: admitting `census:mul_unsqueeze` — the guard question, resolved'
+type: retro
+date: 2026-10-14
+---
+
 # Retro: admitting `census:mul_unsqueeze` — the guard question, resolved
 
-Date: 2026-10-14
 Context: `exposed-math-discovery.json` recorded the exposure agent's
 best find — `mul(unsqueeze U d, unsqueeze V d) = unsqueeze(mul U V, d)`
 on `DeltaRuleBlock`: new, non-derivable, 4 typed fires, −12.27%

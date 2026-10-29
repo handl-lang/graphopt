@@ -1,6 +1,12 @@
+---
+title: 'Retro — `conv_bn_fold` ships: `DEFAULT` takes a machine-minted composite'
+type: retro
+date: 2026-10-19
+---
+
 # Retro — `conv_bn_fold` ships: `DEFAULT` takes a machine-minted composite
 
-**Date**: 2026-10-19.  **Follows**: `premise-anchored-derivability.md`
+**Follows**: `premise-anchored-derivability.md`
 (the anchored `derivable` leg), `binding-env-cap.md` (the terminating
 gauntlet), `fold-cost-single-source.md` (the pay leg), `0f5fc15` (the
 closure gate's bounded-footprint forgiveness) — the conv+BN composite's

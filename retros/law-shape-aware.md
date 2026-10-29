@@ -1,3 +1,9 @@
+---
+title: Shape-aware law proposal — propose against the shapes real models contain
+type: retro
+date: 2026-10-03
+---
+
 # Shape-aware law proposal — propose against the shapes real models contain
 
 The proposal retro (`law-proposal.md`) enumerated an *algebraic*

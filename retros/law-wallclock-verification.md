@@ -1,3 +1,9 @@
+---
+title: '`select_mul` / `softmax_fold` under real wall-clock — does the modeled dispatch-count claim survive?'
+type: retro
+date: 2026-10-03
+---
+
 # `select_mul` / `softmax_fold` under real wall-clock — does the modeled dispatch-count claim survive?
 
 Every prior "pays" claim for the two shipped machine-discovered laws

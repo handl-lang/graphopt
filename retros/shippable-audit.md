@@ -1,6 +1,11 @@
+---
+title: 'Retro: the shippable audit — 11 rules, both bars, no disagreement'
+type: retro
+date: 2026-10
+---
+
 # Retro: the shippable audit — 11 rules, both bars, no disagreement
 
-Date: 2026-10.
 Context: `project/retros/corpus-round-4.md` (the `shippable: 0 -> 11`
 claim), `project/retros/derivable-gate.md` (the truth-gate
 tightening) and `project/retros/admission-gauntlet.md` (the gauntlet

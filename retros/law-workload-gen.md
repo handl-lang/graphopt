@@ -1,3 +1,9 @@
+---
+title: Workload generation for the census — real novelty, zero new laws
+type: retro
+date: 2026-10-04
+---
+
 # Workload generation for the census — real novelty, zero new laws
 
 The corpus-expansion retro ended with the corpus as the bottleneck

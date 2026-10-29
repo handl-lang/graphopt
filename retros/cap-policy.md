@@ -1,6 +1,11 @@
+---
+title: 'Retro: the selective cap — rescuing a starved guarded region'
+type: retro
+date: 2026-10-06
+---
+
 # Retro: the selective cap — rescuing a starved guarded region
 
-Date: 2026-10-06
 Context: the attr-sweep retro's "remaining blind spot #1" —
 "the cap still starves deep regions".  The guarded-region sweep
 (`evidence._synth_sites` over `oracle._binding_envs`) enumerated a

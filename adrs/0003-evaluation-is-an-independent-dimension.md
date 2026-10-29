@@ -1,7 +1,12 @@
+---
+title: Evaluation is an independent dimension
+type: adr
+date: 2026-10
+status: accepted
+---
+
 # ADR 0003 — Evaluation is an independent dimension
 
-**Status**: accepted.
-**Date**: 2026-10.
 **Depends on**: ADR 0002 (the thesis).  **Amends**: ADR 0002 Rule 3.
 
 ## Context

@@ -1,11 +1,17 @@
+---
+title: the kernel calculus as a package, and the layer ladder
+type: adr
+date: 2026-10-14
+status: proposed
+status_note: proposed — **revised** (see *Revision*, which reorders the
+---
+
 # ADR 0009 — the kernel calculus as a package, and the layer ladder
 
-**Status**: proposed — **revised** (see *Revision*, which reorders the
 stages and fixes the naming rule).  **Gated on ADR 0010**: the
 interpretation model ("one language, many interpretations") is a
 prerequisite — there is no bespoke VM, and the `Machine` port below is
 superseded by 0010's `Calculus` + per-interpretation entry points.
-**Date**: 2026-10-14.
 **Depends on**: ADR 0002 (categorical re-expression), ADR 0003 (four
 dimensions — *and* its lesson that a port with no consumer is
 decoration), ADR 0004 (abstraction as move), ADR 0005 (the open game),

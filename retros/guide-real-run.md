@@ -1,3 +1,9 @@
+---
+title: The guide on the real corpus — rule vs policy, decided
+type: retro
+date: 2026-10-14
+---
+
 # The guide on the real corpus — rule vs policy, decided
 
 Plan 0017 stage 5.  Stages 3–4 put the corpus arms on the board and

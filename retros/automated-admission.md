@@ -1,3 +1,9 @@
+---
+title: Automated admission — the pipeline now emits the artifact, not just the verdict
+type: retro
+date: 2026-10-04
+---
+
 # Automated admission — the pipeline now emits the artifact, not just the verdict
 
 `law-proposer-extensions.md` ended the discovery loop at a ranked

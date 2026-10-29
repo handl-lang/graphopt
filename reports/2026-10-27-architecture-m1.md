@@ -1,3 +1,9 @@
+---
+title: Architecture & layout — M1 (for review)
+type: report
+date: 2026-10-27
+---
+
 # Architecture & layout — M1 (for review)
 
 **Form:** lab (ADR-0159 not yet triggered). Repos, drivers and own

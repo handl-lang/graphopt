@@ -1,6 +1,11 @@
+---
+title: 'Retro: auto-cond — the conditional → guarded → admitted path'
+type: retro
+date: 2026-10-05
+---
+
 # Retro: auto-cond — the conditional → guarded → admitted path
 
-Date: 2026-10-05
 Context: `guide-real-run.md` §7 — the arena shipped dozens of
 candidates, `usable: yes` stayed 0 for every guide, and the refusal
 census named the missing move: `truth` ×612 refusals are conditional

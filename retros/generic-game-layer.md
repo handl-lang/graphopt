@@ -1,3 +1,9 @@
+---
+title: Retro — the generic game layer (engine + players + play)
+type: retro
+date: 2026-10-14
+---
+
 # Retro — the generic game layer (engine + players + play)
 
 The codebase had grown three boards and two learned players with

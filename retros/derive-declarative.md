@@ -1,3 +1,9 @@
+---
+title: Derive DSL — `dspec`, closing the last non-data hook
+type: retro
+date: 2026-10-14
+---
+
 # Derive DSL — `dspec`, closing the last non-data hook
 
 `condition-dsl.md` made the *side condition* serializable; a law

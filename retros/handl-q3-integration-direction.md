@@ -1,6 +1,12 @@
+---
+title: 'Retro — spike Q3: which way does the integration point?'
+type: retro
+date: 2026-10-14
+---
+
 # Retro — spike Q3: which way does the integration point?
 
-**Date**: 2026-10-14.  **Plan**: 0029, **Q3**.
+**Plan**: 0029, **Q3**.
 **Verdict**: **(A) — catopt embeds handl as an optional peer**, on the
 measured facts below.  (B) is not excluded forever; it is recorded with
 the condition that would make it viable.

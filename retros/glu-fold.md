@@ -1,3 +1,9 @@
+---
+title: '`glu_fold` shipped — the manual-GLU fold, second `chunk`-spelled kernel fold'
+type: retro
+date: 2026-10-04
+---
+
 # `glu_fold` shipped — the manual-GLU fold, second `chunk`-spelled kernel fold
 
 `corpus-expansion-r2.md` §6 lead #2: the corpus had the kernel image

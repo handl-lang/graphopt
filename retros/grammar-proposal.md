@@ -1,3 +1,9 @@
+---
+title: Grammar proposal — can the machine propose the *grammar*?
+type: retro
+date: 2026-10-03
+---
+
 # Grammar proposal — can the machine propose the *grammar*?
 
 The law-proposal retro (`law-proposal.md`) closed the *enumerate* half

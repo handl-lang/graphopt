@@ -1,3 +1,9 @@
+---
+title: 'Retro — the joint board: forward + backward on one e-graph'
+type: retro
+date: 2026-10-14
+---
+
 # Retro — the joint board: forward + backward on one e-graph
 
 Plan 0021's meta-arena gave the board a `declare`/`handle` action

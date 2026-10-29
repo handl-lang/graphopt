@@ -1,3 +1,9 @@
+---
+title: 'Retro: novel depth — constructed objects past the catalog'
+type: retro
+date: 2026-10-14
+---
+
 # Retro: novel depth — constructed objects past the catalog
 
 **Plan 0017 / ADR 0004, stage 5** — the frontier after

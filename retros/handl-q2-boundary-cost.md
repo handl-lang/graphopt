@@ -1,6 +1,12 @@
+---
+title: 'Retro — spike Q2: what does the boundary cost?'
+type: retro
+date: 2026-10-14
+---
+
 # Retro — spike Q2: what does the boundary cost?
 
-**Date**: 2026-10-14.  **Plan**: 0029, **Q2**.
+**Plan**: 0029, **Q2**.
 **Verdict**: **not applicable as posed** — and the reason is a decision,
 not a dodge.  The measured cost of the v1 path is the fragment load,
 which is negligible.

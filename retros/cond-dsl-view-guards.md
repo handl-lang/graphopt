@@ -1,6 +1,11 @@
+---
+title: 'Retro: cond-DSL guards for the conditional view/index candidates'
+type: retro
+date: 2026-02-10
+---
+
 # Retro: cond-DSL guards for the conditional view/index candidates
 
-Date: 2026-02-10
 Context: follow-up to `view-index-oracle.md`.  The view/oracle pass
 found 35 candidates — 1 unconditionally true (`reshape_reshape`, no
 real firing site), 5 genuinely false, and 29 conditional.  This task

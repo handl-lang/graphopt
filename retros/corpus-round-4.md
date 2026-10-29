@@ -1,6 +1,11 @@
+---
+title: 'Retro — corpus round 4: the wrap spellings ship'
+type: retro
+date: 2026-10-05
+---
+
 # Retro — corpus round 4: the wrap spellings ship
 
-Date: 2026-10-05
 Context: `project/retros/corpus-round-3.md`.  Round 3 fired six of
 the auto-cond set's nine inert *left* view-identity guards and left
 `mul_slice_l_id` plus the `_w` "wrap" family standing: "the `_w`

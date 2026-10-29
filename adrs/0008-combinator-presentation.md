@@ -1,7 +1,12 @@
+---
+title: Combinator presentation of the IR (monoidal + trace)
+type: adr
+date: 2026-10-14
+status: proposed
+---
+
 # ADR 0008 — Combinator presentation of the IR (monoidal + trace)
 
-**Status**: proposed.
-**Date**: 2026-10-14.
 **Depends on**: ADR 0004 (abstraction as move — minted atoms become
 *definable* under this presentation), ADR 0005 (the open game),
 ADR 0007 (semantic-atom minting — the runtime-assembly loop runs over

@@ -1,3 +1,9 @@
+---
+title: Plan 0025 — finishing the minting stack and the substrate
+type: plan
+date: 2026-10-14
+---
+
 # Plan 0025 — finishing the minting stack and the substrate
 
 Depends on: ADR 0007 (semantic-atom minting — measured),

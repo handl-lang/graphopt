@@ -1,3 +1,9 @@
+---
+title: Stage 0 recon — four-dimension boundary audit
+type: retro
+date: 2026-10-01
+---
+
 # Stage 0 recon — four-dimension boundary audit
 
 Stage 0 of `project/plans/0016-evaluation-dimension.md`, under

@@ -1,6 +1,11 @@
+---
+title: 'Retro — gate 3: the `loop`-proposing rule (a measured FAIL)'
+type: retro
+date: 2026-10-16
+---
+
 # Retro — gate 3: the `loop`-proposing rule (a measured FAIL)
 
-**Date**: 2026-10-16.
 **Commit**: `b7ba9ff` (catopt `main`).
 **Decides**: ADR 0008 gate 3 → **FAIL**; ADR 0009 stage 4 is **not**
 justified on this evidence.

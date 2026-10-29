@@ -1,3 +1,9 @@
+---
+title: The AZ value head — measured against the exact optimum
+type: retro
+date: 2026-10-03
+---
+
 # The AZ value head — measured against the exact optimum
 
 Plan 0016 follow-up.  `contraction-az-results.md` found that PUCT + a

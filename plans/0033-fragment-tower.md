@@ -1,3 +1,9 @@
+---
+title: 'Plan 0033 — the fragment tower: mlopt vocabularies as `Language` data'
+type: plan
+date: 2026-10-27
+---
+
 # Plan 0033 — the fragment tower: mlopt vocabularies as `Language` data
 
 Origin: ADR-0157 (`handl-lang/host`). The discovery stack measured its

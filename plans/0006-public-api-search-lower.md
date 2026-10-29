@@ -1,3 +1,9 @@
+---
+title: 'Plan 0006 — Public API: the `search` / `lower` seam'
+type: plan
+date: 2026-10-14
+---
+
 # Plan 0006 — Public API: the `search` / `lower` seam
 
 Status: accepted

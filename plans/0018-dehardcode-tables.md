@@ -1,3 +1,9 @@
+---
+title: Plan 0018 — de-hardcoding the op tables
+type: plan
+date: 2026-10-14
+---
+
 # Plan 0018 — de-hardcoding the op tables
 
 Status: stages 0–4 landed — `mlopt_core.opmeta` is the single source

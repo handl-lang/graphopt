@@ -1,6 +1,12 @@
+---
+title: Retro — the `$leaf:` auto-compose seam + the `batch_norm` LHS law
+type: retro
+date: 2026-10-18
+---
+
 # Retro — the `$leaf:` auto-compose seam + the `batch_norm` LHS law
 
-**Date**: 2026-10-18.  **Closes**: the two named limits in
+**Closes**: the two named limits in
 `project/adrs/0012-tensor-derives.md` / `GOALS.md` §"Still open" —
 (a) `$leaf:` rules can't auto-compose in `meta.synthesize_rules`
 (the `@i:` placeholder machinery was attr-only), and (b) no law LHS

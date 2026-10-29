@@ -1,3 +1,9 @@
+---
+title: Learned contraction ordering vs opt_einsum — the field baseline
+type: retro
+date: 2026-10-03
+---
+
 # Learned contraction ordering vs opt_einsum — the field baseline
 
 Plan 0016 follow-up, third half.  `contraction-policy.md` and

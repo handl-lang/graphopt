@@ -1,3 +1,9 @@
+---
+title: Retro — de-hardcoding the op tables (plan 0018)
+type: retro
+date: 2026-10-14
+---
+
 # Retro — de-hardcoding the op tables (plan 0018)
 
 ## What the pass did

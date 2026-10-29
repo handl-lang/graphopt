@@ -1,3 +1,9 @@
+---
+title: mlopt-kit — the modular handl composition, proven end to end
+type: retro
+date: 2026-10-19
+---
+
 # mlopt-kit — the modular handl composition, proven end to end
 
 **Date:** 2026-10-19 · **Surface:** `packages/mlopt-kit/` (new Rust crate,

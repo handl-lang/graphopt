@@ -1,6 +1,11 @@
+---
+title: 'Retro — the held-out model zoo: what fires, what pays, what ships'
+type: retro
+date: 2026-10-06
+---
+
 # Retro — the held-out model zoo: what fires, what pays, what ships
 
-Date: 2026-10-06
 Context: `project/retros/real-corpus-yield.md` measured
 `shippable = 0` on the real half of the intake corpus and
 `project/retros/shippable-audit.md` showed every ship was

@@ -1,6 +1,11 @@
+---
+title: 'Retro: the attr sweep — enumerating metavars on non-view ops'
+type: retro
+date: 2026-10-05
+---
+
 # Retro: the attr sweep — enumerating metavars on non-view ops
 
-Date: 2026-10-05
 Context: plan 0017 / ADR 0004 — `novel-depth.md` blocker #1.  The
 guarded-region sweep (`evidence._synth_sites`, mirroring
 `oracle.synthesize`) enumerated leaf shapes and view-op attrs only:

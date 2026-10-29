@@ -1,3 +1,9 @@
+---
+title: GroupNorm schema + ConvNeXt — the export-boundary fix, 5 new op-tuples, still 0 shippable
+type: retro
+date: 2026-10-04
+---
+
 # GroupNorm schema + ConvNeXt — the export-boundary fix, 5 new op-tuples, still 0 shippable
 
 `law-corpus-expansion.md` §6 listed the smallest unblocked item first:

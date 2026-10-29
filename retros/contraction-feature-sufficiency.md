@@ -1,3 +1,9 @@
+---
+title: Feature sufficiency — the gap closes, and it doesn't matter
+type: retro
+date: 2026-10-04
+---
+
 # Feature sufficiency — the gap closes, and it doesn't matter
 
 `contraction-train-scale.md` §2 measured the last untested lever on the

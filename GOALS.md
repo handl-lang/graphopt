@@ -1,3 +1,9 @@
+---
+title: GOALS — the standing goal ledger
+type: goal
+date: 2026-10-15
+---
+
 # GOALS — the standing goal ledger
 
 **Why this file exists**: so the work is *auditable* rather than

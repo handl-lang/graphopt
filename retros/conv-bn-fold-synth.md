@@ -1,6 +1,12 @@
+---
+title: 'Retro — conv+BN weight fold: the synthesis attempt, measured'
+type: retro
+date: 2026-10-18
+---
+
 # Retro — conv+BN weight fold: the synthesis attempt, measured
 
-**Date**: 2026-10-18.  **Follows**: `leaf-compose-seam.md` ("What stays
+**Follows**: `leaf-compose-seam.md` ("What stays
 open": try `synthesize_rules`/`dspec_synth` on a real conv→batch_norm
 seed rather than hand-writing the fold).  **Probe**:
 `lab/probes/conv_bn_fold_synth_probe.py` — gate-by-gate, reproducible.

@@ -1,3 +1,9 @@
+---
+title: Coordination optimality — is the hand-written pairing heuristic optimal?
+type: retro
+date: 2026-10-03
+---
+
 # Coordination optimality — is the hand-written pairing heuristic optimal?
 
 The extraction *coordination* question, measured (ADR 0003, the

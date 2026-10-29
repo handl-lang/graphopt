@@ -1,3 +1,9 @@
+---
+title: Axiom/lemma split — the minimal kernel, annotated not deleted
+type: retro
+date: 2026-10-04
+---
+
 # Axiom/lemma split — the minimal kernel, annotated not deleted
 
 The coherence retros (`law-coherence-catalogue.md`,

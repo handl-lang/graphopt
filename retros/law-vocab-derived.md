@@ -1,3 +1,9 @@
+---
+title: The op vocabulary, derived by property — the last human table removed
+type: retro
+date: 2026-10-03
+---
+
 # The op vocabulary, derived by property — the last human table removed
 
 `law-pipeline.md` §7 named the remaining human ingredient in the law-
