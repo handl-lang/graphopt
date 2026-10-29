@@ -1,3 +1,10 @@
+> **State 2026-10-29 — M1 closed, gate PASSED.** Items 1-5 built; the four
+> `split_k` variants are generated from `Term`s by `compile-triton`
+> (Rust), 8/8 at cosine 1.000000 vs `awq_gemm`, every one within 1 % of
+> the hand kernel on both geometries. See `p23_m1_verdict.md`. What is
+> *not* shown: that terms beat hand-writing — 47 % of roofline against
+> Marlin's 86-90 %.
+
 # Build list — what has to exist before the machine can find a kernel
 
 **Status:** proposed · dependency-ordered · M1 scope only
