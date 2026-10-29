@@ -94,26 +94,29 @@ Measured in the **deployment regime** (weights evicted from a 2 MB L2
 between calls, one call timed, order shuffled per round, every candidate
 correctness-gated *before* it is timed):
 
-| layer | ours | `awq_gemm` | vs vLLM |
-|---|---|---|---|
-| `down_proj` 896×4864 | **58.9 µs** | 174.1 | **2.96×** |
-| `k_proj` 128×896 | **38.5** | 58.7 | **1.52×** |
-| `q_proj` 896×896 | **35.2** | 47.7 | **1.35×** |
-| `gate_proj` 4864×896 | 60.6 | **57.8** | 0.95× |
+| layer | ours | `awq_gemm` | **`marlin_gemm`** (what vLLM actually runs) | vs Marlin |
+|---|---|---|---|---|
+| `down_proj` 896×4864 | **58.9 µs** | 174.1 | 70.8 | **1.20×** |
+| `q_proj` 896×896 | **35.2** | 47.7 | 40.8 | **1.16×** |
 
-Three of four layer shapes beat a production hand-tuned kernel, with
-exact arithmetic (max error ~1e-3) — on a 4 GB laptop GPU, from a kernel
-that was never hand-tuned. The margin exists because that shape is
-**unattended**: hand-tuning has a high fixed cost, so it is only bought
-where the shape is popular. Automating it makes the long tail worth
-optimizing.
+**1.16–1.20× over the kernel vLLM actually serves with**, cold cache,
+exact arithmetic. (Against the generic `awq_gemm` kernel the lead is
+2.96×, but vLLM repacks for Marlin, so `awq_gemm` is not what runs.)
 
-*Honest limits, stated in the report:* `gate_proj` loses; the winning
-shape is only at **42 % of its memory roofline**, so ~2.4× is still on
-the table. An earlier 3.3× claim was **retracted** — the split-K path
-accumulated with fp16 atomics and computed the wrong answer
-(`docs/reports/p13_retraction_splitk.md`). The protocol that caught it is
-now the standard: exactness gated inside the timing path.
+`down_proj` runs at **42 % of its memory roofline**, so another ~2.4× is
+still on the table, and the kernel was never hand-tuned — it is the
+first thing a structured search produced. The margin exists because
+these shapes are **unattended**: hand-tuning has a high fixed cost, so
+it is only bought where the shape is popular. Automating it makes the
+long tail worth optimizing.
+
+*Two retractions travel with this table, because both were caught by the
+same discipline:* a 3.3× claim died when the split-K path turned out to
+accumulate incorrectly (fp16 atomics, `docs/reports/p13_retraction_splitk.md`),
+and the first end-to-end runs were comparing vLLM with itself because the
+patch never fired (`docs/reports/p16_vs_marlin.md`). Exactness is now
+gated inside the timing path, and every injection counts its own calls
+before it is believed.
 
 **And it reaches the model.** Substituted into vLLM's AWQ path on three
 of four layer geometries, the kernel produces **token-identical** output

@@ -181,13 +181,19 @@ def main() -> int:
             roof = roofline_us(n, k)
 
             # --- Marlin, packed exactly as vLLM packs it -----------------
-            wq = cops.awq_marlin_repack(qw, size_k=k, size_n=n, num_bits=4)
+            wq = cops.awq_marlin_repack(
+                qw, size_k=k, size_n=n, num_bits=4
+            )
             wz = awq_to_marlin_zero_points(
                 qz, size_k=int(qz.shape[0]), size_n=n, num_bits=4
             )
-            ws = marlin_permute_scales(sc, size_k=k, size_n=n, group_size=gs)
+            ws = marlin_permute_scales(
+                sc, size_k=k, size_n=n, group_size=gs
+            )
             workspace = get_marlin_workspace(x.device)
-            wtype = scalar_types.uint4  # AWQ carries zero points: no +8 bias
+            wtype = (
+                scalar_types.uint4
+            )  # AWQ carries zero points: no +8 bias
 
             def marlin() -> torch.Tensor:
                 return apply_gptq_marlin_linear(
@@ -203,7 +209,9 @@ def main() -> int:
 
             os.environ["VLLM_MARLIN_USE_ATOMIC_ADD"] = "0"
             out_plain = marlin()
-            err_plain = float((ref - out_plain.float()).abs().max()) / scale
+            err_plain = (
+                float((ref - out_plain.float()).abs().max()) / scale
+            )
             us_plain = timeit(marlin, reps=60, warm=15)
             b2b_plain = timeit_b2b(marlin)
 
@@ -216,7 +224,8 @@ def main() -> int:
             if eligible:
                 out_atomic = marlin()
                 err_atomic = (
-                    float((ref - out_atomic.float()).abs().max()) / scale
+                    float((ref - out_atomic.float()).abs().max())
+                    / scale
                 )
                 us_atomic = timeit(marlin, reps=60, warm=15)
                 b2b_atomic = timeit_b2b(marlin)
@@ -237,23 +246,53 @@ def main() -> int:
                     for warps in (2, 4):
                         try:
                             got = gemv_split2(
-                                xf, qw_std, qz_std, sc, n, k, bn, 128, split, warps
+                                xf,
+                                qw_std,
+                                qz_std,
+                                sc,
+                                n,
+                                k,
+                                bn,
+                                128,
+                                split,
+                                warps,
                             )
                         except Exception:
                             continue
-                        err = float((ref - got.float()).abs().max()) / scale
+                        err = (
+                            float((ref - got.float()).abs().max())
+                            / scale
+                        )
                         if err > 0.05:  # not this kernel's number
                             continue
                         us = rank_time(
                             lambda: gemv_split2(
-                                xf, qw_std, qz_std, sc, n, k, bn, 128, split, warps
+                                xf,
+                                qw_std,
+                                qz_std,
+                                sc,
+                                n,
+                                k,
+                                bn,
+                                128,
+                                split,
+                                warps,
                             )
                         )
                         if best is None or us < best[0]:
                             best = (us, bn, split, warps, err)
             cfg, err_ours = best[1:4], best[4]
             ours_fn = lambda: gemv_split2(  # noqa: E731
-                xf, qw_std, qz_std, sc, n, k, cfg[0], 128, cfg[1], cfg[2]
+                xf,
+                qw_std,
+                qz_std,
+                sc,
+                n,
+                k,
+                cfg[0],
+                128,
+                cfg[1],
+                cfg[2],
             )
             # Chosen on `rank_us` (graph), reported on all three clocks so the
             # columns stay comparable with Marlin's.
@@ -289,10 +328,14 @@ def main() -> int:
                     round(us_atomic, 1) if us_atomic else None
                 ),
                 "marlin_atomic_pct_roof": (
-                    round(100 * roof / us_atomic, 1) if us_atomic else None
+                    round(100 * roof / us_atomic, 1)
+                    if us_atomic
+                    else None
                 ),
                 "marlin_atomic_rel_err": (
-                    round(err_atomic, 4) if err_atomic is not None else None
+                    round(err_atomic, 4)
+                    if err_atomic is not None
+                    else None
                 ),
                 "awq_us": round(us_awq, 1),
                 "ours_us": round(us_ours, 1),
@@ -310,13 +353,19 @@ def main() -> int:
                 "ours_b2b_pct_roof": round(100 * roof / b2b_ours, 1),
                 "fp16_b2b_us": round(b2b_fp16, 1),
                 "ours_vs_marlin_b2b": round(b2b_plain / b2b_ours, 2),
-                "graph_marlin_us": round(g_marlin, 1) if g_marlin else None,
-                "graph_atomic_us": round(g_atomic, 1) if g_atomic else None,
+                "graph_marlin_us": round(g_marlin, 1)
+                if g_marlin
+                else None,
+                "graph_atomic_us": round(g_atomic, 1)
+                if g_atomic
+                else None,
                 "graph_awq_us": round(g_awq, 1) if g_awq else None,
                 "graph_ours_us": round(g_ours, 1) if g_ours else None,
                 "graph_fp16_us": round(g_fp16, 1) if g_fp16 else None,
                 "graph_marlin_pct_roof": (
-                    round(100 * roof / g_marlin, 1) if g_marlin else None
+                    round(100 * roof / g_marlin, 1)
+                    if g_marlin
+                    else None
                 ),
                 "graph_ours_pct_roof": (
                     round(100 * roof / g_ours, 1) if g_ours else None
@@ -328,7 +377,11 @@ def main() -> int:
                 "fp16_vs_marlin": round(us_plain / us_fp16, 2),
             }
             rows.append(row)
-            at = f"atomic {us_atomic:6.1f}" if us_atomic else "atomic      -"
+            at = (
+                f"atomic {us_atomic:6.1f}"
+                if us_atomic
+                else "atomic      -"
+            )
             print(
                 f"{label:>10} {n:>5}x{k:<5} roof {roof:6.2f} | "
                 f"marlin {us_plain:6.1f} ({row['marlin_pct_roof']:4.1f}%) "

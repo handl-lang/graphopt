@@ -1,0 +1,22 @@
+[
+  {
+    "layer": "down_proj",
+    "out": 896,
+    "in": 4864,
+    "marlin_us": 70.8,
+    "marlin_out_shape": [
+      1,
+      896
+    ]
+  },
+  {
+    "layer": "q_proj",
+    "out": 896,
+    "in": 896,
+    "marlin_us": 40.8,
+    "marlin_out_shape": [
+      1,
+      896
+    ]
+  }
+]
