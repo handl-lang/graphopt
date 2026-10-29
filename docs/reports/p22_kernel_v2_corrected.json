@@ -1,0 +1,58 @@
+[
+  {
+    "layer": "down_proj",
+    "out": 896,
+    "in": 4864,
+    "config": "bn=32 bk=256 split=1 w=4",
+    "roofline_us": 24.6,
+    "ours_graph_us": 74.6,
+    "ours_sync_us": 79.5,
+    "awq_graph_us": 153.6,
+    "pct_of_roofline": 32.9,
+    "vs_awq_graph": 2.06,
+    "cosine_vs_awq": 1.0,
+    "cosine_of_reference": 1.0
+  },
+  {
+    "layer": "q_proj",
+    "out": 896,
+    "in": 896,
+    "config": "bn=32 bk=256 split=1 w=4",
+    "roofline_us": 4.5,
+    "ours_graph_us": 11.6,
+    "ours_sync_us": 31.2,
+    "awq_graph_us": 24.0,
+    "pct_of_roofline": 39.1,
+    "vs_awq_graph": 2.07,
+    "cosine_vs_awq": 1.0,
+    "cosine_of_reference": 1.0
+  },
+  {
+    "layer": "k_proj",
+    "out": 128,
+    "in": 896,
+    "config": "bn=32 bk=256 split=1 w=4",
+    "roofline_us": 0.7,
+    "ours_graph_us": 7.9,
+    "ours_sync_us": 27.7,
+    "awq_graph_us": 23.8,
+    "pct_of_roofline": 8.4,
+    "vs_awq_graph": 2.99,
+    "cosine_vs_awq": 1.0,
+    "cosine_of_reference": 1.0
+  },
+  {
+    "layer": "gate_proj",
+    "out": 4864,
+    "in": 896,
+    "config": "bn=64 bk=64 split=1 w=2",
+    "roofline_us": 24.6,
+    "ours_graph_us": 42.0,
+    "ours_sync_us": 60.9,
+    "awq_graph_us": 38.3,
+    "pct_of_roofline": 58.6,
+    "vs_awq_graph": 0.91,
+    "cosine_vs_awq": 1.0,
+    "cosine_of_reference": 1.0
+  }
+]

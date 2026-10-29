@@ -1,0 +1,19 @@
+{
+  "rounds": 100,
+  "stock_ms": 498.66,
+  "ours_ms": 488.55,
+  "delta_pct": -2.03,
+  "ours_wins": 46,
+  "identical_tokens": true,
+  "patch_fired": {
+    "calls": 632928,
+    "routed": 306528,
+    "no_cfg": 316464,
+    "not_one_token": 9936,
+    "classes": [
+      "AutoAWQMarlinLinearMethod",
+      "AutoAWQLinearMethod"
+    ]
+  },
+  "stashed": 96
+}

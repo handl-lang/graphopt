@@ -1,3 +1,8 @@
+> **Exactness claim superseded — see [p22_record_repaired.md](p22_record_repaired.md).**  The reference used here shared the
+> kernel's AWQ nibble order, so "exact" meant "wrong in the same way"
+> (cosine 0.21 against `awq_gemm`). Re-derived with an external gate:
+> every variant at cosine 1.000000, `down_proj` 3.2-3.7x, `gate_up` 0.6x.
+
 > **WITHDRAWN — see [p13_retraction_splitk.md](p13_retraction_splitk.md).** The split-k path used here
 > accumulates incorrectly (max abs error 3.8-5.6 vs reference); every speedup
 > in this report is invalid. The regime analysis stands; the numbers do not.

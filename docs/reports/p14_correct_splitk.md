@@ -1,3 +1,8 @@
+> **Exactness claim superseded — see [p22_record_repaired.md](p22_record_repaired.md).**  The reference used here shared the
+> kernel's AWQ nibble order, so "exact" meant "wrong in the same way"
+> (cosine 0.21 against `awq_gemm`). Re-derived with an external gate:
+> every variant at cosine 1.000000, `down_proj` 3.2-3.7x, `gate_up` 0.6x.
+
 # P14 — the correct split kernel: 3 of 4 shapes beat `awq_gemm`
 
 After the P13 retraction, the split path was rebuilt as a **two-stage
