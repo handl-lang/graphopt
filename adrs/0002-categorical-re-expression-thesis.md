@@ -7,31 +7,8 @@ status: accepted
 
 # ADR 0002 — The categorical re-expression thesis
 
-**Amended by**: ADR 0003 — Rule 3 only.  RL remains a non-goal as a
-*mechanism of reach*; it is allowed as a replaceable *policy* over the
-structure (the four-dimension split).
-
-## Context
-
-The project's capabilities grew independently — carrier monoids,
-non-local lifts, the morphism engine, bounded-error rewrites, exact
-weight sharing — each justified on its own and each documented in a
-different place (README, the since-retired report and writeup, plans
-0009–0013). Two things now force a single anchor:
-
-1. ADR 0001 falsified weight-space structure, and the structure
-   census showed exploitable structure is **architectural** (GQA
-   replication, ties, MoE, adapters), not numerical.
-2. Plan 0013 proposes a generalization (contraction search) that
-   reads as a *third* competing generality mechanism alongside the
-   term-level law library (0009) and the morphism engine (0011).
-
-Without one stated thesis the docs drift: the pitch still leads
-with "compression with a receipt" while ADR 0001 closed weight
-compression, and exact/bounded modes read as two features rather
-than one object.
-
 ## Decision
+
 
 Adopt one thesis; make every capability answer to it.
 
@@ -98,94 +75,30 @@ Six rules follow and are binding:
    well; wins where work is reduced or Inductor cannot codegen.
    Honest declines, never a wrong answer.
 
-## Capability map
 
-| Capability | Structure | Reaches |
-|---|---|---|
-| Carriers `aff`/`om`/`trace` | monoid + homomorphism + trace | Blelloch scan, streaming softmax, resolvents |
-| Pairing / QKV merge | comonoid `Δ` + naturality | one GEMM + split views |
-| Weight-chain fold | contraction order | k-chain → 1 GEMM |
-| Morphism engine (0011) | block-level signature algebra | cross-layer windows, KV latent share |
-| Contraction search (0013) | hypergraph contraction order | discovered sharing |
-| Bounded / `error_budget` (0012) | enriched / lax morphism | certified approximation |
-| Tying / CSE | congruence in the free category | parameter dedup |
+## Why
 
-## Higher structure (the engine's justification)
+The project's capabilities grew independently — carrier monoids, non-local lifts, the morphism engine, bounded-error rewrites, exact weight sharing — each justified on its own and each documented in a different place (README, the since-retired report and writeup, plans 0009–0013). Two things now force a single anchor:
 
-The e-graph plus certificate machinery is a computational higher
-category: 1-cells are programs, 2-cells are rewrites (the merge log
-/ witnesses / certificate steps), 3-cells are coherence —
-`_close_congruence` unions enodes that became identical after child
-canonicalisation, i.e. asserts two construction paths are the same
-cell. Saturation is an ∞-tower that does not terminate, so plan
-0010's budgeted expansive rules are a *truncation*, and a truncation
-can never emit a false cell. This is the internal justification for
-both certificate composition (2-cells compose vertically and
-horizontally) and the budget mechanism — **not** a headline claim.
-
-## Alternatives considered
+## Not doing
 
 - **Reachability only.** Keep the writeup's framing (structure
-  generates + names) without a re-expression goal. Rejected: it
-  states why the reach exists but not what the project is for,
-  leaving the docs free to drift.
 - **Weight-space compression** (the original bet). Falsified by
-  ADR 0001 and Phase 5; retained only as the structural corner.
 - **Higher category as the public headline.** Rejected: it must do
-  work in the code (above) or it is decoration; kept as the
-  engine's internal justification.
 - **Three independent generality mechanisms** (0009/0011/0013).
-  Rejected: they are a hierarchy — each level's coverage bottleneck
-  is replaced by structure-driven search one level up.
 
 ## Consequences
 
 - README and plans 0009–0013 cite this ADR as the anchor (the retired
-  report and writeup did too); "compression with a receipt" is scoped
-  to **structural** compression.
 - 0009 → 0011 → 0013 is one arc (term laws → block laws → block
-  search), not three bets.
 - Bounded mode (0012) is restated as the enrichment's lax case,
-  unifying it with exact mode.
 - New features must name their structure; structure-less features
-  are rejected under this thesis.
 - Plan 0014 stages the conversion path this thesis implies.
 
-## Follow-ups (mandatory)
+## Enforcement
 
-This ADR is **not in force** until the following are done — the
-consistency it claims does not exist until every document cites it.
-Each item is a required post-condition of this decision, to be
-completed *after* this ADR is accepted.
+- Code and tests are named in the design doc.
 
-- [ ] `README.md` — cite ADR 0002 as the anchor; re-scope
-      "compression with a receipt" to **structural** compression
-      (not weight-space; see ADR 0001); link `docs/overview.md`
-      and `docs/mechanism.md`.
-- [ ] `docs/overview.md` (new) — the "project envisioned" summary:
-      what it is / how / the edge / what it exploits / what it
-      delivers / the unique thing (certified approximation) /
-      scope / direction.
-- [x] ~~`project/REPORT`~~ — retired and deleted; its thesis framing
-      and Phase 5 / §10.2 numbers migrated to `docs/results_curated.md` §7.
-- [x] ~~`project/RESEARCH_WRITEUP`~~ — retired and deleted; its unique
-      rows migrated to `docs/results_curated.md` §8.
-- [ ] `project/plans/0009-composable-rule-sets.md` — note its
-      hierarchy position (term-level laws).
-- [ ] `project/plans/0011-morphism-engine.md` — note its position
-      (block-level laws) and that 0013 replaces its hand-written
-      law list with search.
-- [ ] `project/plans/0012-bounded-error-rewrites.md` — restate as
-      the enrichment's lax case; exact and bounded are one object.
-- [ ] `project/plans/0013-contraction-search.md` — note it is the
-      discovery feeder in the 0009→0011→0013 arc; sequence it after
-      plan 0014's delivery stages.
-- [ ] `AGENTS.md` — add the anchor thesis and the "name your
-      structure" rule to Conventions.
-- [ ] `project/TODO.md` — link these follow-ups so they are not
-      lost.
-- [ ] `pitch/` — align the deck's claim with the structural scope.
+## Design
 
-**Enforcement:** a new feature or plan that does not name its
-categorical structure (Rule 1) is rejected under this thesis; a
-document that contradicts this ADR is a bug.
+The full record (context, tables, phases, trade-offs): [`design/0002-categorical-re-expression-thesis.md`](../design/0002-categorical-re-expression-thesis.md).

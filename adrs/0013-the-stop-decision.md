@@ -2,7 +2,6 @@
 title: 'the stop decision: an eight-round characterization'
 type: adr
 date: 2026-10-27
-updated: 2026-10-29
 status: proposed
 status_note: |-
   measured, open. Series: `results_stop_policy.md` (r1–2) → `results_stop_advantage.md` (r6,
@@ -11,6 +10,7 @@ status_note: |-
   Platt/isotonic calibration) → `results_stop_isolated.md` (r9, the
   delivery outside the softmax — `GatedPlayer` + the `forced_action`
   engine hook).
+updated: 2026-10-29
 ---
 
 # ADR 0013 — the stop decision: an eight-round characterization
