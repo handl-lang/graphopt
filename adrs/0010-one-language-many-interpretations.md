@@ -83,7 +83,7 @@ ADR 0009 asks whether the calculus needs a runtime VM, and its first draft impli
 
 ## Enforcement
 
-- Code and tests are named in the design doc.
+- `plugin-engine-transform-rewrite` — where this is true.
 
 ## Design
 
