@@ -27,3 +27,5 @@ lives there, never in the filename.
 
 Published documentation (explanations, tutorials, how-to, reference) is not
 here — it lives in the org `docs` repo.
+
+- `DECISIONS.md` — generated recall surface: one line per decision rule with its ADR link (ADR-0161 §8); never hand-edited.
