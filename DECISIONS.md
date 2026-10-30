@@ -70,21 +70,11 @@ this is the recall surface (ADR-0161 §8). Superseded records are excluded.
 
 ### the kernel calculus as a package, and the layer ladder
 
-- **The deeper inversion is catopt-carriers, not catopt-discovery.** — [ADR-0009](adrs/0009-kernel-calculus-and-layers.md)
-- **A peer kernel package hides a decision instead of making it.** — [ADR-0009](adrs/0009-kernel-calculus-and-layers.md)
-- **A package for one module is over-fragmentation.** A — [ADR-0009](adrs/0009-kernel-calculus-and-layers.md)
-- **Organizational resilience is weaker than verification — [ADR-0009](adrs/0009-kernel-calculus-and-layers.md)
-- Proposer — when the proposal layer's candidate shape is promoted (a — [ADR-0009](adrs/0009-kernel-calculus-and-layers.md)
-- Environment / Reward — when the game layer is extracted into — [ADR-0009](adrs/0009-kernel-calculus-and-layers.md)
-- Bound — with the bounded-member path, if it needs naming at all — [ADR-0009](adrs/0009-kernel-calculus-and-layers.md)
-- Calculus — not a port: a Language value (ADR 0010). Its tables' — [ADR-0009](adrs/0009-kernel-calculus-and-layers.md)
-- **Ports + conformance tests** — cheap, no behaviour change, no import — [ADR-0009](adrs/0009-kernel-calculus-and-layers.md)
-- **Fix the carrier inversion** — carrier *laws* to the semantic side, — [ADR-0009](adrs/0009-kernel-calculus-and-layers.md)
-- **Adopt the interpretation model** (ADR 0010) — one language, many — [ADR-0009](adrs/0009-kernel-calculus-and-layers.md)
-- **Promote the calculus** to a dimension-named package — **gated on — [ADR-0009](adrs/0009-kernel-calculus-and-layers.md)
-- **Extract catopt-game** — the RL layer out of the 50k-line package — [ADR-0009](adrs/0009-kernel-calculus-and-layers.md)
-- **Fold genkernel into a domain package** — no catopt-kernels — [ADR-0009](adrs/0009-kernel-calculus-and-layers.md)
-- Each stage updates the import-linter layer contract; **each new — [ADR-0009](adrs/0009-kernel-calculus-and-layers.md)
+- **The naming rule (the two axes).** exec- is the **role**, the domain name is the **package**; the domain name wins.… — [ADR-0009](adrs/0009-kernel-calculus-and-layers.md)
+- **Ports to add in core (see Revision 2 — most already exist).** Each lands **with a conformance test that the current… — [ADR-0009](adrs/0009-kernel-calculus-and-layers.md)
+- **Revision (2026-10-14) — what the first draft got wrong.** Writing the first draft made two weaknesses visible, and… — [ADR-0009](adrs/0009-kernel-calculus-and-layers.md)
+- **Revision 2 (2026-10-14) — most of the "ports to add" already exist.** Checking the list against the code before… — [ADR-0009](adrs/0009-kernel-calculus-and-layers.md)
+- **Staged plan (revised order).** 1. **Ports + conformance tests** — cheap, no behaviour change, no import churn. 2.… — [ADR-0009](adrs/0009-kernel-calculus-and-layers.md)
 
 ### one language, many interpretations (the VM *is* the language)
 
