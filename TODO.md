@@ -1,187 +1,52 @@
----
-title: TODO
-type: task
-date: 2026-09-26
----
+# TODO — graphopt
 
-# TODO
+## title: TODO type: task date: 2026-09-26
 
-## HIGH — ADR-0159: dissolve the optimizer domains into `ext` tools
+## HIGH — ADR-0159: dissolve the optimizer domains into ext tools
 
-Adopted on three triggers, not a date (`host/project/adrs/0159-…`):
+## Adopted on three triggers, not a date ( host/project/adrs/0159-… ):
 
-- [ ] a caller that is **not the researcher** needs the capability
-- [ ] the domain's public surface **unchanged for four weeks**
-- [ ] the **referee is shared** (`bench/benchkit` usable by any domain)
-
-When all three hold: wrap, do not rewrite (Python core behind a
-port/adapter, thin ext command). Naming: `opt-*` family; a third member
-only on the rule of three.
-
-- [x] **Registry gap — fixed.** `host/scripts/gen-adr-index.py` built the
-      index only from the hand-maintained `docs-split.yaml`, so newly
-      written ADRs were invisible (0158 and 0159 both missing while
-      present and committed). It now unions the manifest with a directory
-      scan: 151 → 164 ADRs, both present. The docs hub's `adrs/handl.md`
-      picks them up on regeneration; `adrs/index.md` is org-scoped by
-      design and correctly excludes them.
+- [ ] T-001 a caller that is not the researcher needs the capability
+- [ ] T-002 the domain's public surface unchanged for four weeks
+- [ ] T-003 the referee is shared ( bench/benchkit usable by any domain)
 
 ## HIGH — M1: the machine finds the kernel, not me (five items, ~5 days)
 
-Lab-form per ADR-0159 (no ext wrapper yet); ADR-0160 allocates the IR.
-
-Target: `qgemv` **and** `gate_proj` generated from `Term`s, exact against
-`awq_gemm`, at least one within the hand kernel's 58.9 µs cold.
-
-- [ ] **ADR-0160** in `opt-kernel` (today `kernelopt`): the kernel IR is
-      `Term` + kit-declared ops
-- [ ] **`lib-kernel-ir`** (public): nine ops, grades, costs, one torch
-      denotation per op — the vocabulary, and the equality reference
-- [ ] **`compile-triton`** (Rust, `compile-*` family): `Term` → Triton,
-      `qgemv` + `gate_proj` × `split_k ∈ {1,2,4,8}`
-- [ ] **Equality gate** vs `awq_gemm` in `graphopt/bench` — cosine ≥
-      0.9999 on every variant, inside the timing path
-- [ ] **Search driver** in `kernelopt`: enumerate `Term`s → gate → roofline
-      bound → deploy-referee measure → best kernel + routing row
-
-**Kill criterion:** if a fixed lowering cannot match hand-written Triton
-on `qgemv` and reach parity on `gate_proj`, generalising is wasted work —
-keep hand-writing kernels, use the search only for configs.
-
-**M1.5 before any breadth** (formats × shapes): compile cache + pruning by
-roofline bound. Breadth multiplies candidates and is otherwise
-rate-limited by `triton.jit`, not by ideas.
+- [ ] T-004 in opt-kernel (today kernelopt ): the kernel IR is Term + kit-declared ops
+- [ ] T-005 lib-kernel-ir (public): nine ops, grades, costs, one torch denotation per op — the vocabulary, and the equality reference
+- [ ] T-006 compile-triton (Rust, compile-\* family): Term → Triton, qgemv + gate\_proj × split\_k ∈ {1,2,4,8}
+- [ ] T-007 Equality gate vs awq\_gemm in graphopt/bench — cosine ≥ 0.9999 on every variant, inside the timing path
+- [ ] T-008 Search driver in kernelopt : enumerate Term s → gate → roofline bound → deploy-referee measure → best kernel + routing row
 
 ## Done — 2026-10-27 (kernel margin, valid)
 
-- [x] int4 GEMV beats `awq_gemm` cold on 3 of 4 layer shapes —
-      **2.96× / 1.52× / 1.35×**, exact (`docs/reports/p14_correct_splitk.md`)
-- [x] substituted into vLLM: **token-identical, −29.2 %** end-to-end,
-      25/25 paired rounds (`docs/reports/p18_e2e_29pct.md`)
-- [x] deploy-regime referee as tested library (`bench/benchkit/regime.py`)
-- [x] three retractions published: fake 3.3× (fp16 atomics), fake −3.1 %
-      (too few rounds), fake −28.5 % (AWQ nibble order)
-
-
 ## Active — HIGH PRIORITY (the open questions, post-plan-0032)
-
-- [x] **Q3 — multi-step credit.**  **Measured (2026-10-21).**
-      `credit_chain` curriculum (`c59eaeb`,
-      `docs/results_credit_chain.md`): learned arms DO close
-      enabling chains unpreminted (neural → ceiling ~200 eps,
-      linear-greedy 100%, advantage 71% sampled); honest break only
-      at low chain density (k=16: linear-greedy collapses myopic,
-      advantage fails) — the binding constraint is candidate
-      density, not the credit mechanism.
-- [x] **Q2 — new algorithms (Strassen-class).**  **Measured —
-      NO-GO (2026-10-21).**  `bilinear` domain (`86115a7`+`9121617`,
-      `docs/results_strassen.md`): board provably expresses
-      Strassen (scripted → verified rank 7, 29 moves); playbook/
-      random/linear all stall at rank 8 — the ~15-move coordinated
-      valley is beyond one-step lookahead.  Follow-up: MCTS/
-      planner arm (in-flight) — does lookahead close the valley?
-- [x] **Q1 — unnamed structure on real corpora.**  **Arm executed
-      (2026-10-21).**  `overnight.py --corpus zoo-real --compose`
-      landed (`863825c`/`6eb949d`/`04201f2`/`1000ffd`): real-subterm
-      minting + bind-gate + emit-time RHS sanity (a real substrate
-      bug: bare-`Exception` catch conflated can't-eval with
-      eval-failed — fixed in eqsat `2d6e4eb`).  Full-corpus funnel:
-      53 modules, 87 viable mints, **0 machine-originals** — honest
-      zero; shallow single-step mints are all known-art.  **Re-opened
-      and re-answered (2026-10-25): the zero was a *vocabulary* wall,
-      not a search wall** — let the mint name new primitives and
-      **21/21** admitted folds are machine-original (then 48/48
-      deeper; 57 shipped ops, depths 1–3).  The lever was never
-      guarded composites.  Retro:
-      `project/retros/vocabulary-growth-2026-10-25.md`.
-- [x] **Q4 — scale.**  **Measured (2026-10-21).**  `scale_ladder`
-      (`b534bce`, `docs/reports/results_scale_ladder.md`): three
-      distinct walls — matcher time ~11k unrolled nodes (>445 s),
-      verify-forward RAM (17.2 GB fp64 attn at T=4096; the e-graph
-      itself sat in 0.2 s), fp64 overflow (RWKV exp at T≥1024).
-      Symbolic blocks are T-invariant in the e-graph — substrate
-      scales; the referee's real-env eval is the wall.
-- [x] **Q5 — self-modifying game.**  **Measured — NULL, sharpened
-      (2026-10-21).**  `transfer` probe (kernelopt `5994c71`):
-      priors are *spec*-bound, not domain-bound — 10/12 foreign
-      pairs can't enumerate a move; `META_SPEC` genuinely
-      transfers across meta/joint/torch/gen (shared vocabulary).
-      Kernel-side novelty sieve: in-flight.
 
 ## Active
 
-- [ ] Meta-arena Q3 (`project/plans/0021-meta-arena.md`) — **measured,
-      partially answered.**  Cold linear REINFORCE beats scripted on
-      mean reward (−0.04 vs −0.10 at 2000 episodes) only via the
-      degenerate extract-early policy; the composed
-      declare→handle line was unreachable by sampling until the
-      `claim(tag)` option move fused it (claim→extract wins silu
-      2→1 on held-out boards, +0.52 payouts) — reachability fixed,
-      consolidation by the memoryless policy still open.  Retro:
-      `project/retros/meta-arena-player.md`.  Next levers:
-      curriculum boards, imitation warm-start, richer policy.
-
-- [ ] Generated kernels (`genkernel`) — **the novelty question,
-      measured.**  Handler entries minted for elementwise subterms
-      the shipped HANDLERS never named; `torch.compile`'d bindings;
-      gen sink supports+lowers them; `claim` binds them — the
-      board's vocabulary grows with lowerings it built.  The
-      concrete-soundness fix this forced (`_canon_concrete`,
-      `claim_tags`) is a real correction: skeleton-level coverage
-      could bind mismatched kernel semantics.  `play --domain gen
-      --probe`: `bigfuse` (6-op chain) → `claim(gen_0)` → verified
-      module at **2.87× vs eager** (6.1× at 256×1024); 2-op fusions
-      honestly lose (~0.86×, compiled-call overhead).  Retro:
-      `project/retros/gen-kernels.md`.  Next: size-guarded claim
-      offers, multi-claim composition, attr-bearing/reduction
-      bodies.
+- [ ] T-009 Meta-arena Q3 ( project/plans/0021-meta-arena.md ) — measured, partially answered. Cold linear REINFORCE beats scripted on mean reward (−0.04 vs −0.10 at 2000 episodes) only via the degenerate extract-early policy; the composed declare→handle line was unreachable by sampling until the claim(tag) option move fused it (claim→extract wins silu 2→1 on held-out boards, +0.52 payouts) — reachability fixed, consolidation by the memoryless policy still open. Retro: project/retros/meta-arena-player.md . Next levers: curriculum boards, imitation warm-start, richer policy.
+- [ ] T-010 Generated kernels ( genkernel ) — the novelty question, measured. Handler entries minted for elementwise subterms the shipped HANDLERS never named; torch.compile 'd bindings; gen sink supports+lowers them; claim binds them — the board's vocabulary grows with lowerings it built. The concrete-soundness fix this forced ( \_canon\_concrete , claim\_tags ) is a real correction: skeleton-level coverage could bind mismatched kernel semantics. play --domain gen --probe : bigfuse (6-op chain) → claim(gen\_0) → verified module at 2.87× vs eager (6.1× at 256×1024); 2-op fusions honestly lose (~0.86×, compiled-call overhead). Retro: project/retros/gen-kernels.md . Next: size-guarded claim offers, multi-claim composition, attr-bearing/reduction bodies.
 
 ## Deferred
 
-- [ ] `plan 0002` leftovers — Phase E recognizer consolidation
-      (law-side e-class bindings vs lowerer-side extracted terms —
-      substrates genuinely differ, revisit only if a shared kernel
-      emerges); plan-dict typing stays dict-of-any.
+- [ ] T-011 plan 0002 leftovers — Phase E recognizer consolidation (law-side e-class bindings vs lowerer-side extracted terms — substrates genuinely differ, revisit only if a shared kernel emerges); plan-dict typing stays dict-of-any.
 
 ## Tech debt to fix
 
-- [ ] **Vendored probe code** — copied third-party code in
-      `bench/drivers/probes/` (and `bench/limits/registry.py`
-      duplicated into kernelopt during the split). Replace with a
-      declared dep/submodule or delete if dead.
-- [ ] **Import-time domain registration** — domains seat themselves
-      via import side-effects (`mlopt_kernel.play` mutating
-      `DOMAINS`/registry on import). Replace with explicit
-      registration at call site.
-- [ ] **Pinned test counts** — tests asserting literal rule/law/bank
-      counts (`test_prior_art`, `test_laws_structure` totals,
-      `AGENTS.md` counts). Replace with derived counts or
-      invariant-based assertions so bank growth doesn't churn tests.
-- [ ] **radon baseline** — `bilinear_game.py` flagged on clean main;
-      regenerate `scripts/complexity_baseline.json` or justify.
-- [x] ~~**Kernel-prim domain-draw gate**~~ — done 2026-10-27
-      (`handler_synth.SHAPE_REFUSALS`): the draw raises two torch
-      refusals for one blind metavar (broadcast 64-vs-128 at dim 2, then
-      `split_with_sizes` to 192 vs [64, 64]). Both are named and the
-      entry is skipped, so the mint runs. A bounded window now returns
-      **2 candidates / 29 shapes mined / 0 unevaluable** in 2 s; the
-      27-min zero was this abort, not an empty vocabulary.
-- [ ] **synop* real delivery** — `docs/reports/prim_delivery.md`
-      measured: folds compress terms (6993→4353 ops on GLA-large)
-      but the spec-walk binding (`genkernel._eval_spec`) loses to
-      spelled eager wall-clock on every clean case; the cost-model
-      0.5–0.8× pay is not delivered. Real delivery needs a fused-body
-      codegen path for minted ops, not a spec interpreter.
-      **First step, measured 2026-10-27:** the mint does register its
-      ops (`mlopt_kernel.sink._table()` 84→86, `ksynop_9e3cb9a03a`,
-      `ksynop_efc263c3dd`), but the zoo sweep's delivery path is
-      `play.gen_probe → _gen_board(case)` and that board's bank comes
-      from `genkernel` — it never reads the sink table. Teach
-      `_gen_board` to merge the minted `ksynop_*` folds into its bank,
-      then re-sweep the 46 losing zoo rows (median 0.979×).
-- [ ] **ADR-0157 fragment-tower migration** — local plan in
-      `project/plans/0033-fragment-tower.md` + host ADR-0157; phases
-      0–5 (fragment dir → differential backend → denotations as
-      models → fragment-emitting mint → fragment-move play →
-      handl-native saturation).
+- [ ] T-012 Vendored probe code — copied third-party code in bench/drivers/probes/ (and bench/limits/registry.py duplicated into kernelopt during the split). Replace with a declared dep/submodule or delete if dead.
+- [ ] T-013 Import-time domain registration — domains seat themselves via import side-effects ( mlopt\_kernel.play mutating DOMAINS /registry on import). Replace with explicit registration at call site.
+- [ ] T-014 Pinned test counts — tests asserting literal rule/law/bank counts ( test\_prior\_art , test\_laws\_structure totals, AGENTS.md counts). Replace with derived counts or invariant-based assertions so bank growth doesn't churn tests.
+- [ ] T-015 radon baseline — bilinear\_game.py flagged on clean main; regenerate scripts/complexity\_baseline.json or justify.
+- [ ] T-016 synop real delivery \* — docs/reports/prim\_delivery.md measured: folds compress terms (6993→4353 ops on GLA-large) but the spec-walk binding ( genkernel.\_eval\_spec ) loses to spelled eager wall-clock on every clean case; the cost-model 0.5–0.8× pay is not delivered. Real delivery needs a fused-body codegen path for minted ops, not a spec interpreter. First step, measured 2026-10-27: the mint does register its ops ( mlopt\_kernel.sink.\_table() 84→86, ksynop\_9e3cb9a03a , ksynop\_efc263c3dd ), but the zoo sweep's delivery path is play.gen\_probe → \_gen\_board(case) and that board's bank comes from genkernel — it never reads the sink table. Teach \_gen\_board to merge the minted ksynop\_\* folds into its bank, then re-sweep the 46 losing zoo rows (median 0.979×).
+- [ ] T-017 fragment-tower migration — local plan in project/plans/0033-fragment-tower.md + host ADR-0157; phases 0–5 (fragment dir → differential backend → denotations as models → fragment-emitting mint → fragment-move play → handl-native saturation).
 
+## Recovered — session 1792950048869\_3wjyq (generated-kernel claims)
+
+- [ ] T-018 Instrument why \_triton\_kernel\_for never binds — 8/8 on the 4 claim-bearing workloads; log kernels attempted/rejected/why, both dtypes. If the Triton path silently never fires, the "generated kernel beats spelled" claim has no measurement.
+- [ ] T-019 Fold cost gate in profitable — two measured misses justify it: RMSNormPerHead fp64 0.21×, SigmoidAttention fp32 0.72×.
+- [ ] T-020 9-round re-measure of the 5 straddlers — CapsuleRouting fp64; WaveNetGate , HyenaLongConv , SkipInitNet , DilatedBlockAttention fp32.
+- [ ] T-021 Fold the fp32 sweep into the default driver path / CI table — so the quoted number can't drift back to the fp64 convention.
+
+## Recovered — session 1792996176495\_5kxw5 (AWQ kernel margin)
+
+- [ ] T-022 Push down\_proj from 42% toward 70% of the memory roofline — ~2.4× still on the table. (Redo-e2e landed as docs/reports/p18\_e2e\_29pct.md ; gate\_proj parity is already the M1 target above; "substrate-native" is M1 itself.)
