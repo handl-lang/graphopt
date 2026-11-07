@@ -116,3 +116,59 @@ Levers, in order of how well they match the tower's own thesis:
   `main`; nothing memorized).
 - The ε knob and reward-to-go are *learner* machinery, not board
   changes — the reward table is untouched.
+
+## Lever results — 2026-11-07 (T-009)
+
+All three levers landed in `meta_player` (`oracle_line` /
+`plan_oracles` / `imitate_oracle` / `curriculum_order`, CLI flags
+`--epochs --imitate-epochs --curriculum`), measured on the same
+protocol — `gen_cases(seed, n)` train, `gen_cases(seed+7919, 40)`
+eval, budget 24, T=1.2, eps=0.25:
+
+| arm | episodes | reward | cost | cert | decl-use | claims |
+|---|---:|---:|---:|---:|---:|---:|
+| scripted | — | −0.10 | 2.92 | 40 | 0 | 0 |
+| cold RL (this run) | 2000 | **+0.14** | 2.42 | 40 | 20/40 | 0 (macro moves) |
+| imitate 3ep + RL 5ep | 400×5 | **+0.17** | 2.25 | 40 | 20/40 | 20–23 literal `claim` |
+| curriculum + RL 5ep | 400×5 | +0.14 | 2.42 | 40 | 21/40 | 0 (macro) |
+
+Seed-1 replication of the imitation arm: +0.15, claims=21,
+decl-use 21/40 — the effect is not a seed artifact.
+
+**Consolidation: achieved — but read the mechanism honestly.**  The
+learned-greedy arm now plays the composed line on ~half the held-out
+boards (vs 3/40 structural wins in the retro).  Two routes get there:
+cold RL and curriculum converge on **`macro` offers** — the mined
+claim→extract compressions in `lawdata.MACROS`, which shipped
+*after* this retro (959671b, 2026-10-19) — while the imitation arm
+learns the primitive **`claim`** move itself (`op:claim` ≈ +5.9).
+Action-space structure closed the gap a second time: what the
+memoryless policy could not sequence, the offer set now spells for
+it.  The spelled declare→saturate→handle line remains unplayed.
+
+**The imitation warm-start is the kernelopt recipe and it works**:
+1950/1950 demonstrated moves cloned on seed 0 (1914/1914 seed 1);
+the oracle replays the per-case best of {extract,
+saturate→extract, claim→extract, claim→saturate→extract,
+all-claims→extract} — 250/400 train boards have a paying claim
+line, 150 decline.  It buys +0.03 mean reward over cold and, more
+to the point, routes through `claim` rather than the macro shortcut.
+
+**Curriculum: measured negative at this scale.**  Tier-sorting
+(paying claim-lines first, decline boards last) reproduces cold
+RL's eval table exactly — the gradient concentration the partial
+curriculum showed does not compound into better held-out play.
+
+**Bug found and fixed on the way**: `LinearPolicy._observe` only
+detects an episode boundary when the previous episode was observed
+past step 0 (`prev_steps > 0`).  An episode ending on its first
+move — exactly the extract-early line this board rewards — leaves
+`extract` masked into the next episode during training *and*
+drops ~23% of imitation demonstrations (1950→1500 shown/imitated
+in the ablation).  Eval arms are fresh `frozen` players so held-out
+numbers were never affected.  The boundary is not inferable inside
+`_observe` (a `steps==0` re-observe is identical for "new board"
+and "same state queried twice"), so `MetaLearnedPlayer.reset_episode`
+forces it and the drivers call it per episode.  **Upstream fix
+belongs in gamekit** — every `LearnedPlayer` domain has the same
+exposure; this repo carries the local workaround.

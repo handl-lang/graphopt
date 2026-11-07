@@ -150,12 +150,32 @@ of the cross-boundary-sharing claim.
 
 ## Open
 
-- The probe claims the first offer; multi-claim composition
-  (fuse several sites) is unmeasured.
+- ~~The probe claims the first offer; multi-claim composition
+  (fuse several sites) is unmeasured.~~ **Measured 2026-11-07
+  (T-010): composition already works.**  ``_probe_play`` claims
+  every offer; on disjoint sites (the new ``twosite`` gen case —
+  two fusion islands separated by matmuls) one extraction delivers
+  ``gen_0_k`` + ``gen_2_k`` in a single verified module
+  (max_abs 1.9e-06, 1.34x vs ``torch.compile``).  A claimed op can
+  even feed another claim's metavar — the inner fusion's e-class
+  member is what the outer kernel receives: chaining, not just
+  co-existence.  Nested sites still collapse to the outermost
+  single kernel, which is correct — one fused call beats two.
+  Pinned by ``test_twosite_multi_claim_composes``.
 - Elementwise-only by design — reductions/matmul bodies need a
   different codegen contract (attr binding, shape rules).
 - The 0.38× regime wants a size guard: only offer gen claims
   where the fused body plausibly pays (a ProgramFeatures lever).
+  **Measured 2026-11-07: neither cheap guard separates.**  Spec
+  op-count doesn't — the losing 2-op fusions and the paying
+  sub-claims inside bigfuse/chainfuse share sizes, and composed
+  2-op claims can pay where the singleton loses.  The measured
+  referee ``profitable`` is itself noisy at the margin: identical
+  2-op cases flip keep/drop across seeds at reps=10–20.  A guard
+  that drops *subsumed* claims would be wrong too — the inner
+  claim is the chaining mechanism (see above).  Honest status:
+  open; the cost model's ``novel_cost`` discount remains the only
+  offer-side pricing, and it can't see launch overhead.
 - Learned play on the gen board is untrained — arms are
   scripted-level only.
 
