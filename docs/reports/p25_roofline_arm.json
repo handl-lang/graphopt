@@ -1,0 +1,686 @@
+{
+  "record": "p25_roofline_arm",
+  "host": "RTX 2050 4GB, sm_86, torch 2.14.1+cu130, triton 3.8.0",
+  "operands": "synthetic standard-order AWQ (qw int32 [K,N/8], qz int32 [K/128,N/8], sc fp16 [K/128,N], x fp16 [K]); awq_gemm/vllm absent on this host",
+  "gate": "cosine >= 0.9999 vs torch dequant denotation (unpack_ref), checked inside the timing path",
+  "timing": "CUDA-graph, calls=10-20, replays=3-5, median (kernel_v2.timeit_graph protocol)",
+  "roofline_us": 24.59,
+  "bandwidth_gbps": 89.1,
+  "variant_rows_last_sweep": [
+    {
+      "shape": "down_proj",
+      "variant": "emitted",
+      "graph_us": 53.01,
+      "sync_us": 71.74,
+      "pct_of_roofline": 46.4,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "baseline",
+      "graph_us": 53.35,
+      "sync_us": 70.65,
+      "pct_of_roofline": 46.1,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "hoist",
+      "graph_us": 37.2,
+      "sync_us": 53.88,
+      "pct_of_roofline": 66.1,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "magic",
+      "graph_us": 31.57,
+      "sync_us": 48.57,
+      "pct_of_roofline": 77.9,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "magic_fold",
+      "cosine": 0.999363,
+      "rejected": true
+    },
+    {
+      "shape": "down_proj",
+      "variant": "magic_h16",
+      "graph_us": 35.5,
+      "sync_us": 52.35,
+      "pct_of_roofline": 69.3,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "magic_hint",
+      "graph_us": 31.78,
+      "sync_us": 48.67,
+      "pct_of_roofline": 77.4,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "i2f",
+      "graph_us": 33.42,
+      "sync_us": 50.66,
+      "pct_of_roofline": 73.6,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "fma",
+      "graph_us": 36.28,
+      "sync_us": 52.97,
+      "pct_of_roofline": 67.8,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "pair",
+      "graph_us": 42.15,
+      "sync_us": 59.05,
+      "pct_of_roofline": 58.3,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "dot",
+      "graph_us": 60.18,
+      "sync_us": 77.91,
+      "pct_of_roofline": 40.9,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "magic_w64",
+      "graph_us": 30.75,
+      "sync_us": 48.93,
+      "pct_of_roofline": 79.9,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "m_bn128bk64w4",
+      "graph_us": 30.96,
+      "sync_us": 47.75,
+      "pct_of_roofline": 79.4,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "m_bn128bk64w2",
+      "graph_us": 34.85,
+      "sync_us": 51.8,
+      "pct_of_roofline": 70.5,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "m_bn128bk32w4",
+      "graph_us": 39.63,
+      "sync_us": 56.63,
+      "pct_of_roofline": 62.0,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "m_bn64bk64w4",
+      "graph_us": 46.11,
+      "sync_us": 63.05,
+      "pct_of_roofline": 53.3,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "m_bn64bk64w2",
+      "graph_us": 30.99,
+      "sync_us": 47.99,
+      "pct_of_roofline": 79.3,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "m_bn64bk32w2",
+      "graph_us": 32.87,
+      "sync_us": 49.35,
+      "pct_of_roofline": 74.8,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "m_bn256bk64w4",
+      "graph_us": 37.07,
+      "sync_us": 54.4,
+      "pct_of_roofline": 66.3,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "m_bn128bk64w8",
+      "graph_us": 58.47,
+      "sync_us": 75.97,
+      "pct_of_roofline": 42.0,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "w64bn128bk64w4_s4",
+      "graph_us": 39.46,
+      "sync_us": 57.64,
+      "pct_of_roofline": 62.3,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "w64bn64bk64w2_s4",
+      "graph_us": 37.38,
+      "sync_us": 54.66,
+      "pct_of_roofline": 65.8,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "w64bn128bk128w4_s4",
+      "graph_us": 34.27,
+      "sync_us": 52.7,
+      "pct_of_roofline": 71.7,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "w64bn128bk64w4_s8",
+      "graph_us": 31.61,
+      "sync_us": 50.11,
+      "pct_of_roofline": 77.8,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "w64bn64bk64w2_s8",
+      "graph_us": 30.55,
+      "sync_us": 48.87,
+      "pct_of_roofline": 80.5,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "w64bn128bk128w4_s8",
+      "graph_us": 30.92,
+      "sync_us": 48.28,
+      "pct_of_roofline": 79.5,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "w64bn128bk64w4_s16",
+      "graph_us": 33.79,
+      "sync_us": 51.78,
+      "pct_of_roofline": 72.8,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "w64bn64bk64w2_s16",
+      "graph_us": 33.48,
+      "sync_us": 51.42,
+      "pct_of_roofline": 73.4,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "w64bn128bk128w4_s16",
+      "graph_us": 30.55,
+      "sync_us": 48.82,
+      "pct_of_roofline": 80.5,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "w64bn128bk128w4",
+      "graph_us": 30.95,
+      "sync_us": 48.16,
+      "pct_of_roofline": 79.4,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "w64bn64bk128w2",
+      "graph_us": 30.79,
+      "sync_us": 49.97,
+      "pct_of_roofline": 79.9,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "w64bn256bk64w4",
+      "graph_us": 35.02,
+      "sync_us": 52.52,
+      "pct_of_roofline": 70.2,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "w64bn128bk64w8",
+      "graph_us": 52.94,
+      "sync_us": 71.5,
+      "pct_of_roofline": 46.4,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "w64bn64bk64w4",
+      "graph_us": 43.66,
+      "sync_us": 137.63,
+      "pct_of_roofline": 56.3,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "w64i2f_bn128bk128w4",
+      "graph_us": 32.32,
+      "sync_us": 51.29,
+      "pct_of_roofline": 76.1,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "w64i2f_bn128bk64w4",
+      "graph_us": 32.56,
+      "sync_us": 51.38,
+      "pct_of_roofline": 75.5,
+      "cosine": 1.0
+    },
+    {
+      "shape": "down_proj",
+      "variant": "i2f_bn128bk64w4",
+      "graph_us": 32.94,
+      "sync_us": 50.38,
+      "pct_of_roofline": 74.6,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "emitted",
+      "graph_us": 53.28,
+      "sync_us": 69.92,
+      "pct_of_roofline": 46.1,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "baseline",
+      "graph_us": 51.88,
+      "sync_us": 69.71,
+      "pct_of_roofline": 47.4,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "hoist",
+      "graph_us": 38.23,
+      "sync_us": 56.55,
+      "pct_of_roofline": 64.3,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "magic",
+      "graph_us": 33.89,
+      "sync_us": 51.57,
+      "pct_of_roofline": 72.5,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "magic_fold",
+      "cosine": 0.999175,
+      "rejected": true
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "magic_h16",
+      "graph_us": 32.18,
+      "sync_us": 50.22,
+      "pct_of_roofline": 76.4,
+      "cosine": 0.999999
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "magic_hint",
+      "graph_us": 33.83,
+      "sync_us": 51.98,
+      "pct_of_roofline": 72.7,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "i2f",
+      "graph_us": 33.38,
+      "sync_us": 51.77,
+      "pct_of_roofline": 73.7,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "fma",
+      "graph_us": 36.72,
+      "sync_us": 55.27,
+      "pct_of_roofline": 67.0,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "pair",
+      "graph_us": 41.4,
+      "sync_us": 59.73,
+      "pct_of_roofline": 59.4,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "dot",
+      "graph_us": 66.39,
+      "sync_us": 85.56,
+      "pct_of_roofline": 37.0,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "magic_w64",
+      "graph_us": 31.95,
+      "sync_us": 51.33,
+      "pct_of_roofline": 77.0,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "m_bn128bk64w4",
+      "graph_us": 29.08,
+      "sync_us": 47.34,
+      "pct_of_roofline": 84.5,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "m_bn128bk64w2",
+      "graph_us": 30.62,
+      "sync_us": 49.44,
+      "pct_of_roofline": 80.3,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "m_bn128bk32w4",
+      "graph_us": 33.72,
+      "sync_us": 52.11,
+      "pct_of_roofline": 72.9,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "m_bn64bk64w4",
+      "graph_us": 44.85,
+      "sync_us": 62.25,
+      "pct_of_roofline": 54.8,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "m_bn64bk64w2",
+      "graph_us": 31.26,
+      "sync_us": 49.24,
+      "pct_of_roofline": 78.6,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "m_bn64bk32w2",
+      "graph_us": 33.45,
+      "sync_us": 50.84,
+      "pct_of_roofline": 73.5,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "m_bn256bk64w4",
+      "graph_us": 31.91,
+      "sync_us": 48.47,
+      "pct_of_roofline": 77.0,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "m_bn128bk64w8",
+      "graph_us": 50.69,
+      "sync_us": 68.73,
+      "pct_of_roofline": 48.5,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "w64bn128bk64w4_s4",
+      "graph_us": 29.86,
+      "sync_us": 49.25,
+      "pct_of_roofline": 82.3,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "w64bn64bk64w2_s4",
+      "graph_us": 29.93,
+      "sync_us": 48.59,
+      "pct_of_roofline": 82.1,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "w64bn128bk128w4_s4",
+      "graph_us": 29.53,
+      "sync_us": 48.23,
+      "pct_of_roofline": 83.3,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "w64bn128bk64w4_s8",
+      "graph_us": 28.71,
+      "sync_us": 48.1,
+      "pct_of_roofline": 85.6,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "w64bn64bk64w2_s8",
+      "graph_us": 29.49,
+      "sync_us": 48.13,
+      "pct_of_roofline": 83.4,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "w64bn128bk128w4_s8",
+      "graph_us": 30.17,
+      "sync_us": 48.89,
+      "pct_of_roofline": 81.5,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "w64bn128bk64w4_s16",
+      "graph_us": 29.63,
+      "sync_us": 49.47,
+      "pct_of_roofline": 83.0,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "w64bn64bk64w2_s16",
+      "graph_us": 30.82,
+      "sync_us": 51.45,
+      "pct_of_roofline": 79.8,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "w64bn128bk128w4_s16",
+      "graph_us": 31.1,
+      "sync_us": 50.57,
+      "pct_of_roofline": 79.1,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "w64bn128bk128w4",
+      "graph_us": 29.42,
+      "sync_us": 47.9,
+      "pct_of_roofline": 83.6,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "w64bn64bk128w2",
+      "graph_us": 31.85,
+      "sync_us": 50.07,
+      "pct_of_roofline": 77.2,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "w64bn256bk64w4",
+      "graph_us": 30.99,
+      "sync_us": 50.46,
+      "pct_of_roofline": 79.3,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "w64bn128bk64w8",
+      "graph_us": 49.77,
+      "sync_us": 100.29,
+      "pct_of_roofline": 49.4,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "w64bn64bk64w4",
+      "graph_us": 41.34,
+      "sync_us": 59.12,
+      "pct_of_roofline": 59.5,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "w64i2f_bn128bk128w4",
+      "graph_us": 30.51,
+      "sync_us": 48.49,
+      "pct_of_roofline": 80.6,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "w64i2f_bn128bk64w4",
+      "graph_us": 29.28,
+      "sync_us": 48.09,
+      "pct_of_roofline": 84.0,
+      "cosine": 1.0
+    },
+    {
+      "shape": "gate_proj",
+      "variant": "i2f_bn128bk64w4",
+      "graph_us": 29.39,
+      "sync_us": 46.39,
+      "pct_of_roofline": 83.7,
+      "cosine": 1.0
+    }
+  ],
+  "final_stability": {
+    "note": "median of 3 x (20-call graph x 5 replays), seed 0",
+    "down_proj": [
+      {
+        "variant": "w64",
+        "config": "s8 bn64 bk64 w2",
+        "us": 30.09,
+        "pct": 81.7
+      },
+      {
+        "variant": "w64",
+        "config": "s8 bn128 bk128 w4",
+        "us": 30.72,
+        "pct": 80.0
+      },
+      {
+        "variant": "magic",
+        "config": "s8 bn128 bk64 w4",
+        "us": 30.81,
+        "pct": 79.8
+      }
+    ],
+    "gate_proj": [
+      {
+        "variant": "w64",
+        "config": "s8 bn128 bk64 w4",
+        "us": 28.58,
+        "pct": 86.0
+      },
+      {
+        "variant": "magic",
+        "config": "s4 bn128 bk64 w4",
+        "us": 28.82,
+        "pct": 85.3
+      },
+      {
+        "variant": "w64",
+        "config": "s4 bn128 bk64 w4",
+        "us": 29.63,
+        "pct": 83.0
+      }
+    ]
+  },
+  "vendored_recheck": {
+    "note": "kernels emitted by the P25 compile-triton, vendored in lib-triton-qgemv, re-run from the package path",
+    "down_proj": {
+      "module": "qgemv_k4864_split8",
+      "config": "bn64 bk64 w2",
+      "us": 30.02,
+      "pct": 81.9,
+      "cosine": 1.0
+    },
+    "gate_proj": {
+      "module": "qgemv_k896_split8",
+      "config": "bn128 bk64 w4",
+      "us": 28.47,
+      "pct": 86.3,
+      "cosine": 1.0
+    }
+  },
+  "rejected": [
+    {
+      "variant": "magic_fold",
+      "why": "cosine 0.99936/0.99918 < 0.9999 \u2014 fp16 product rounding lands on the 1024-weighted term that is then differenced; the single-rounding FMA keeps the offset exact but explicit tl.fma is slower than letting ptxas contract (m-1024)*x"
+    },
+    {
+      "variant": "dot (tl.dot tensor cores)",
+      "why": "60-66 us \u2014 broadcast/layout cost exceeds the tensor-core gain at [16,BK]x[BK,BN]"
+    },
+    {
+      "variant": "pair (inline-asm mov.b32 -> 2xfp16)",
+      "why": "42 us \u2014 the register interleave costs more than the halved unpack saves"
+    },
+    {
+      "variant": "magic_h16 (fp16 tl.sum)",
+      "why": "slower (32-36 us) and cosine drops to 0.999999"
+    },
+    {
+      "variant": "i2f (plain int->fp16)",
+      "why": "competitive on gate (29.4 us) but loses to magic on down (32.9 vs 30.8)"
+    },
+    {
+      "variant": "magic_hint (max_contiguous)",
+      "why": "neutral \u2014 already vectorised"
+    }
+  ],
+  "verdict": "PASS \u2014 81.7-81.9% down_proj, 86.0-86.3% gate_proj (from 46-47%); landed in compile-triton codegen + vendored kernels"
+}
