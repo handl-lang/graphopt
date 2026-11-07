@@ -13,12 +13,17 @@ embedded in the prim records).
 The directory carries two file classes:
 
 * **canonical** — ``ops.yaml`` / ``laws.yaml`` / ``handlers.yaml`` /
-  ``schemas.yaml`` / ``prims.yaml`` / ``families.yaml``.  Each is a
+  ``schemas.yaml`` / ``prims.yaml`` / ``families.yaml`` /
+  ``models.yaml``.  Each is a
   JSON document (JSON is a YAML subset — handl's ``serde_yaml`` and
   Python's ``json`` both read it) pinned by a ``schema:`` version
   field.  These are *data*: op rows, ``law_to_data`` records,
-  handler entries, schema records, verbatim prim records and the
-  family tables.  :func:`scripts/emit_vocab_fragments.py` (the
+  handler entries, schema records, verbatim prim records, the
+  family tables, and the phase-2 Models (denotations + minted
+  handlers projected to ``.hnl`` over ``host-tensor`` —
+  :mod:`mlopt_discovery.modelproj`; ``models.yaml``'s ``verdicts``
+  map is the fp64 gate's provenance record, written by
+  ``scripts/verify_vocab_models.py``).  :func:`scripts/emit_vocab_fragments.py` (the
   ``emit_vocab_fragments`` entry point :func:`emit_all` backs)
   regenerates them from their current owners; the upsert API below
   (:func:`upsert_op` / :func:`upsert_law` / :func:`upsert_handler` /
@@ -39,7 +44,7 @@ The directory carries two file classes:
 Loading
 -------
 
-:func:`load_vocab` reads the six canonical files back into objects —
+:func:`load_vocab` reads the seven canonical files back into objects —
 ``laws``/``schemas`` as :class:`~mlopt_core.egraph.Rewrite` via
 ``law_from_data``, handlers as spec-decoded entries, prims verbatim,
 ops/families as data.  Records whose procedural ``check``/``derive``
@@ -91,6 +96,7 @@ __all__ = [
     "sync_projections",
     "upsert_handler",
     "upsert_law",
+    "upsert_model_verdicts",
     "upsert_op",
     "upsert_schema",
 ]
@@ -100,7 +106,10 @@ __all__ = [
 #: pin loudly (plan 0033 hard gates).
 SCHEMA_VERSION = "mlopt-vocab/1"
 
-#: The six canonical files, in emit order.
+#: The seven canonical files, in emit order.  ``models.yaml`` is the
+#: phase-2 addition (plan 0033): denotations and minted handlers
+#: projected to ``.hnl`` Models over ``host-tensor`` — see
+#: :mod:`mlopt_discovery.modelproj`.
 CANONICAL_FILES: tuple[str, ...] = (
     "ops.yaml",
     "laws.yaml",
@@ -108,6 +117,7 @@ CANONICAL_FILES: tuple[str, ...] = (
     "schemas.yaml",
     "prims.yaml",
     "families.yaml",
+    "models.yaml",
 )
 
 #: The handl-facing projection files — the seven ``language_from_dir``
@@ -262,7 +272,7 @@ def _write_canonical(directory: Path, name: str, doc: dict) -> None:
 
 
 def _canonical(directory: Path) -> dict[str, dict]:
-    """Read all six canonical files (schema-checked)."""
+    """Read all seven canonical files (schema-checked)."""
     return {
         name: _read_canonical(directory, name)
         for name in CANONICAL_FILES
@@ -324,6 +334,14 @@ class Vocab:
     minted_handlers: tuple[dict, ...] = ()
     prims: dict[str, Any] = field(default_factory=dict)
     families: dict[str, Any] = field(default_factory=dict)
+    #: ``models.yaml`` rows — denotation/handler Models projected to
+    #: ``.hnl`` over ``host-tensor`` (phase 2).
+    models: tuple[dict, ...] = ()
+    #: ``models.yaml``'s ``verdicts`` map — the fp64 gate's provenance
+    #: record (``handl-shipped`` / ``python-shipped`` per model id),
+    #: written by ``scripts/verify_vocab_models.py`` and preserved
+    #: across re-emission.
+    model_verdicts: dict[str, Any] = field(default_factory=dict)
     #: Law names whose procedural ``check``/``derive`` hooks re-bound
     #: from the live ``ALL_RULES`` bank (the record's
     #: ``missing_hooks`` was non-empty — pattern/cond/dspec still come
@@ -473,6 +491,8 @@ def _load_uncached(directory: Path) -> Vocab:
         minted_handlers=minted,
         prims=dict(docs["prims.yaml"].get("prims", {})),
         families=dict(docs["families.yaml"].get("families", {})),
+        models=tuple(docs["models.yaml"].get("models", ())),
+        model_verdicts=dict(docs["models.yaml"].get("verdicts", {})),
         hooked=tuple(hooked),
     )
 
@@ -790,6 +810,79 @@ def collect_prims() -> dict:
     return dict(minted.prim_records())
 
 
+def collect_models() -> dict:
+    """Emit the phase-2 Models — denotations + minted handlers as ``.hnl``.
+
+    One row per ``synop_*`` denotation (``kind: "denotation"`` — the
+    op's meaning is its definitional premise's RHS spec, projected by
+    :func:`modelproj.spec_to_hnl`) and per minted handler record
+    (``kind: "handler"`` — the ``handler_body`` descriptor projected
+    by :func:`modelproj.handler_body_to_hnl`).  Rows the
+    ``tensor.*`` surface cannot honour carry ``hnl: null`` +
+    ``unsupported`` naming the gap — the honest-skip record; the fp64
+    gate (:func:`modelproj.verify_model`, driven by
+    ``scripts/verify_vocab_models.py``) writes ``verdicts`` separately
+    and they survive re-emission.
+
+    The shipped ``lawdata.HANDLERS`` interpretation entries are
+    deliberately absent: their kernels are torch primitives
+    (``silu``/``square``/``swiglu``), not specs — there is no spelled
+    body to project, and re-spelling the pattern would denote the
+    pattern, not the kernel.
+    """
+    from mlopt_core.cells import spec_to_data
+    from mlopt_core.laws import minted
+
+    from mlopt_discovery import modelproj, shipped_primitives
+
+    rows: list[dict] = []
+    for name in sorted(minted.SYNOP_SHIPPED):
+        spec = shipped_primitives.spec(name)
+        mvars = modelproj.spec_mvars(spec)
+        try:
+            hnl = modelproj.spec_to_hnl(spec, mvars=mvars)
+            unsupported = None
+        except modelproj.ModelUnsupportedError as exc:
+            hnl, unsupported = None, str(exc)
+        rows.append(
+            {
+                "id": f"denotation:{name}",
+                "op": name,
+                "kind": "denotation",
+                "mvars": sorted(mvars),
+                "spec": spec_to_data(spec),
+                "hnl": hnl,
+                "unsupported": unsupported,
+            }
+        )
+    for name, rec in minted.prim_records().items():
+        handler = (rec.get("handler") or {}).get("record")
+        if not handler:
+            continue  # refused mints carry no body to project
+        body = handler.get("handler_body")
+        mvars = modelproj.body_mvars(body)
+        try:
+            hnl = modelproj.handler_body_to_hnl(body, mvars=mvars)
+            unsupported = None
+        except modelproj.ModelUnsupportedError as exc:
+            hnl, unsupported = None, str(exc)
+        rows.append(
+            {
+                "id": f"handler:{name}",
+                "op": name,
+                "kind": "handler",
+                "family": (rec.get("handler") or {}).get("family"),
+                "mvars": sorted(mvars),
+                # ``body`` stays in ``body_to_data`` form — the same
+                # encoding ``handler_from_record`` decodes.
+                "body": body,
+                "hnl": hnl,
+                "unsupported": unsupported,
+            }
+        )
+    return {"models": rows}
+
+
 def collect_families() -> dict:
     """Emit the handler-grammar family tables as data.
 
@@ -824,6 +917,7 @@ _COLLECTORS = {
     "schemas.yaml": collect_schemas,
     "prims.yaml": lambda: {"prims": collect_prims()},
     "families.yaml": lambda: {"families": collect_families()},
+    "models.yaml": collect_models,
 }
 
 
@@ -871,6 +965,15 @@ def _merge_doc(name: str, existing: dict, fresh: dict) -> dict:
             fresh.get("families", {})
         )
         return existing
+    if name == "models.yaml":
+        # Owner rows upsert by ``id``; the ``verdicts`` map is
+        # machine-written provenance (the fp64 gate's record) and is
+        # never touched by emission — stale verdicts are detectable
+        # because each carries the ``hnl`` text it measured.
+        rows = existing.setdefault("models", [])
+        for row in fresh.get("models", []):
+            _upsert(rows, "id", row)
+        return existing
     raise ValueError(f"no merge rule for {name}")  # pragma: no cover
 
 
@@ -903,7 +1006,7 @@ def emit_all(directory: str | Path) -> None:
 
 
 def _read_docs_or_drift(directory: Path) -> tuple[dict, list[str]]:
-    """Read the six canonical files; collect missing/malformed drift."""
+    """Read the seven canonical files; collect missing/malformed drift."""
     docs: dict[str, dict] = {}
     drifted: list[str] = []
     for name in CANONICAL_FILES:
@@ -953,6 +1056,8 @@ def _expect_owner_rows() -> dict[tuple[str, str], dict]:
     )
     for fam_key, fam_val in families.items():
         _expect("families.yaml", "families", fam_key, fam_val)
+    for row in _COLLECTORS["models.yaml"]().get("models", []):
+        _expect("models.yaml", "models", row["id"], row)
     return expected
 
 
@@ -974,6 +1079,7 @@ def _index_canonical(
         ("handlers.yaml", "minted"): "op",
         ("prims.yaml", "prims"): None,
         ("families.yaml", "families"): None,
+        ("models.yaml", "models"): "id",
     }
     actual: dict[tuple[str, str], dict] = {}
     for (file, section), _exp in expected.items():
@@ -1109,6 +1215,25 @@ def upsert_prim(directory: str | Path, name: str, record: dict) -> None:
         doc.setdefault("prims", {})[name] = record
 
     _rewrite_canonical(directory, "prims.yaml", mut)
+
+
+def upsert_model_verdicts(
+    directory: str | Path, verdicts: dict[str, dict]
+) -> None:
+    """Write fp64-gate verdicts into ``models.yaml``'s ``verdicts`` map.
+
+    *verdicts* maps model ``id`` → the :func:`modelproj.verify_model`
+    record.  This is the provenance write the plan's gate asks for —
+    ``handl-shipped`` only where every bound site held the shipped
+    fp64 floor; the map survives re-emission (owner rows upsert,
+    verdicts are never collector output).
+    """
+    directory = Path(directory)
+
+    def mut(doc: dict) -> None:
+        doc.setdefault("verdicts", {}).update(verdicts)
+
+    _rewrite_canonical(directory, "models.yaml", mut)
 
 
 def emit_prim(directory: str | Path, name: str, record: dict) -> None:
