@@ -7,7 +7,6 @@
 ## Adopted on three triggers, not a date ( host/project/adrs/0159-… ):
 
 - [ ] T-002 the domain's public surface unchanged for four weeks
-- [ ] T-003 the referee is shared ( bench/benchkit usable by any domain)
 
 ## HIGH — M1: the machine finds the kernel, not me (five items, ~5 days)
 
