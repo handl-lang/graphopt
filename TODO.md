@@ -6,7 +6,6 @@
 
 ## Adopted on three triggers, not a date ( host/project/adrs/0159-… ):
 
-- [ ] T-001 a caller that is not the researcher needs the capability
 - [ ] T-002 the domain's public surface unchanged for four weeks
 - [ ] T-003 the referee is shared ( bench/benchkit usable by any domain)
 
