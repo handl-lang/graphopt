@@ -227,11 +227,8 @@ class FragmentArena:
                     FragmentMove("saturate", "*"),
                     FragmentMove("extract", "*"),
                 ]
-        parity = (
-            self.arena.eg.parity_stats()
-            if hasattr(self.arena.eg, "parity_stats")
-            else {}
-        )
+        parity_fn = getattr(self.arena.eg, "parity_stats", None)
+        parity = parity_fn() if callable(parity_fn) else {}
         return FragmentState(
             moves=tuple(moves),
             catalog=dict(self._catalog),
@@ -367,8 +364,9 @@ class FragmentArena:
             rule, self.arena.root, search={eid}, enode_budget=remaining
         )
         eg.rebuild()
-        if hasattr(eg, "check_pending"):
-            eg.check_pending()
+        check_pending = getattr(eg, "check_pending", None)
+        if callable(check_pending):
+            check_pending()
         return {
             "applied": bool(changed),
             "note": f"{move.kind} {move.ref}@{move.site}: {'changed' if changed else 'no change'}",
