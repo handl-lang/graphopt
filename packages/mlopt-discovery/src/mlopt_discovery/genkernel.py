@@ -936,18 +936,39 @@ _TRITON_BINARY = {
 }
 
 
-def _triton_expr(spec: Any) -> str | None:
+#: Const-leaf rendering for the 1-D kernels (``_gk``/``_gk_s`` and
+#: both ``_gs`` scan kernels — all load ``[BLOCK]`` tiles and take
+#: ``out_ptr``/``BLOCK`` params).  A bare ``2.0`` literal is an fp32
+#: scalar in Triton: the semantic ops (``+``/``*``/``tl.maximum`` …)
+#: promote it to the tile dtype, but ``libdevice.*`` calls require
+#: both operands at the tile's dtype — ``libdevice.pow(f64_tile,
+#: 2.0)`` is a hard compile-time type clash (the T-024 audit's one
+#: ``raised`` consult, fp64 ``pow``).  ``tl.full`` typed by the
+#: output pointer's element type follows the launch dtype, so the
+#: same source compiles for fp32 and fp64.
+_TRITON_CONST_1D = (
+    "tl.full([BLOCK], {v}, dtype=out_ptr.dtype.element_ty)"
+)
+
+
+def _triton_expr(spec: Any, const: str | None = None) -> str | None:
     """Render a canonical spec as a Triton expression, or decline.
 
     The codegen map — each spec node becomes a ``tl``/libdevice
     expression over its metavar operands.  Constant leaves inline
-    as literals; attr dicts on ops this tier doesn't model make
-    the whole spec decline honestly (``None``).
+    as literals; *const* is an optional ``{v}``-format template for
+    how a leaf renders (the kernel emitters pass a dtype-typed
+    ``tl.full`` so ``libdevice`` calls see matching operand dtypes —
+    see :data:`_TRITON_CONST_1D`); ``None`` keeps the bare fp32
+    scalar.  Attr dicts on ops this tier doesn't model make the
+    whole spec decline honestly (``None``).
     """
-    return _triton_expr_h(spec, None)
+    return _triton_expr_h(spec, None, const)
 
 
-def _triton_expr_h(spec: Any, hoists: dict | None) -> str | None:
+def _triton_expr_h(
+    spec: Any, hoists: dict | None, const: str | None = None
+) -> str | None:
     """Render *spec*; unrenderable subterms hoist into *hoists*.
 
     When *hoists* is given, a node outside the elementwise grammar
@@ -956,22 +977,28 @@ def _triton_expr_h(spec: Any, hoists: dict | None) -> str | None:
     ``__c<i>`` computed operand instead of declining the whole
     spec: the binding evaluates the subterm on the host and passes
     it as another kernel argument.  ``None`` in *hoists* keeps the
-    old decline behaviour.
+    old decline behaviour.  *const* is forwarded to every leaf —
+    see :func:`_triton_expr`.
     """
     if isinstance(spec, str):
         return spec
     if not isinstance(spec, (tuple, list)):
-        return f"({float(spec)})"
-    return _triton_node_h(spec, hoists)
+        v = float(spec)
+        if const is not None:
+            return const.format(v=repr(v))
+        return f"({v})"
+    return _triton_node_h(spec, hoists, const)
 
 
-def _triton_node_h(spec: Any, hoists: dict | None) -> str | None:
+def _triton_node_h(
+    spec: Any, hoists: dict | None, const: str | None = None
+) -> str | None:
     """Render one op node — dispatch, or hoist the whole subterm."""
     kids = [e for e in spec[1:] if not isinstance(e, dict)]
     if len(spec[1:]) != len(kids):
         # attr-carrying op this tier doesn't model inline
         return _hoist(spec, hoists) if hoists is not None else None
-    args = [_triton_expr_h(k, hoists) for k in kids]
+    args = [_triton_expr_h(k, hoists, const) for k in kids]
     if any(a is None for a in args):
         return None
     out = _triton_dispatch(spec[0], args)
@@ -1101,7 +1128,7 @@ def triton_bindings(handlers: dict) -> dict:
     for h in handlers.values():
         spec = h["pattern"]
         metas = _spec_metas(spec)
-        body = _triton_expr(spec)
+        body = _triton_expr(spec, _TRITON_CONST_1D)
         if (
             body is None
             or not metas
@@ -1404,8 +1431,8 @@ def _leaf_exprs(
         return None
     steps = []
     for a_spec, b_spec in reversed(leaves):
-        ea = _triton_expr_h(a_spec, hoists)
-        eb = _triton_expr_h(b_spec, hoists)
+        ea = _triton_expr_h(a_spec, hoists, _TRITON_CONST_1D)
+        eb = _triton_expr_h(b_spec, hoists, _TRITON_CONST_1D)
         if ea is None or eb is None:
             return None
         steps.append((ea, eb))
@@ -2015,6 +2042,22 @@ def _rename_metas(spec: Any, prefix: str) -> Any:
     return spec  # Const leaf — the canonical form carries the value
 
 
+def _decayed_const(i: int) -> str:
+    """Const-leaf template for decayed operand role *i*.
+
+    The ``_gd`` kernel's operand tiles are 2-D: roles 0/1 (the
+    ``s``/``d`` mul pair) load ``(BM, BK)`` tiles and role 2 (``v``)
+    loads ``(BK, BN)`` — a const leaf must render a ``tl.full`` of
+    the matching shape so ``libdevice`` calls see matching operand
+    dtypes *and* shapes (the same fp32-literal clash as the 1-D
+    tier, one rank up).  ``BM``/``BN``/``BK`` are the kernel's
+    ``tl.constexpr`` params; ``out_ptr.dtype.element_ty`` follows
+    the launch dtype.
+    """
+    shape = "(BM, BK)" if i < 2 else "(BK, BN)"
+    return f"tl.full({shape}, {{v}}, dtype=out_ptr.dtype.element_ty)"
+
+
 def decayed_spec(spec: Any) -> dict | None:
     """Recognise a decayed-contraction spec the tier can lower.
 
@@ -2038,7 +2081,9 @@ def decayed_spec(spec: Any) -> dict | None:
         metas = _spec_metas(o)
         if any(not _decayed_meta_ok(m) for m in metas):
             return None
-        expr = _triton_expr(_rename_metas(o, f"a{i}_"))
+        expr = _triton_expr(
+            _rename_metas(o, f"a{i}_"), _decayed_const(i)
+        )
         if expr is None:
             return None
         for m in metas:

@@ -387,6 +387,48 @@ class TestTritonTier:
             b["gk_t"](x), x * torch.sigmoid(x), atol=1e-5, rtol=1e-5
         )
 
+    def test_triton_expr_const_leaf_template(self):
+        # Const leaves render as bare fp32 scalars by default, but
+        # the kernel emitters pass a dtype-typed ``tl.full`` — a
+        # scalar literal is a hard type clash inside ``libdevice.*``
+        # calls on fp64 tiles (T-025).
+        spec = ("pow", ("relu", "X1"), 2.0)
+        assert "(2.0)" in gk._triton_expr(spec)
+        e = gk._triton_expr(spec, gk._TRITON_CONST_1D)
+        assert e is not None
+        assert "libdevice.pow" in e
+        assert (
+            "tl.full([BLOCK], 2.0, dtype=out_ptr.dtype.element_ty)"
+            in e
+        )
+
+    def test_triton_bindings_fp64_const_pow(self):
+        # Regression for the T-024 audit's one ``raised`` consult:
+        # ``libdevice.pow(f64_tile, (2.0))`` — the fp32 literal —
+        # failed Triton compilation.  The const leaf must follow the
+        # launch dtype.
+        torch = pytest.importorskip("torch")
+        pytest.importorskip("triton")
+        if not torch.cuda.is_available():
+            pytest.skip("needs cuda for triton")
+        h = {
+            "g": {
+                "pattern": ("pow", ("relu", "X1"), 2.0),
+                "kernel": "gk_pow64",
+                "args": ("X1",),
+            }
+        }
+        b = gk.triton_bindings(h)
+        assert "gk_pow64" in b
+        for dt, tol in (
+            (torch.float64, dict(rtol=1e-12, atol=1e-12)),
+            (torch.float32, dict(rtol=1e-5, atol=1e-5)),
+        ):
+            x = torch.randn(5000, device="cuda", dtype=dt)
+            torch.testing.assert_close(
+                b["gk_pow64"](x), torch.relu(x) ** 2, **tol
+            )
+
     def test_triton_sink_supported(self):
         pytest.importorskip("torch")
         pytest.importorskip("triton")
@@ -979,7 +1021,9 @@ class TestScanSpec:
     def test_const_operand_inlines(self):
         info = gk.scan_spec(("applyd", ("aff_diag", 1.0, "B"), "H"))
         assert info["kind"] == "seq"
-        assert info["a"] == "(1.0)"
+        # const leaves render dtype-typed ``tl.full`` tiles so
+        # ``libdevice`` calls see matching operand dtypes (T-025)
+        assert info["a"] == gk._TRITON_CONST_1D.format(v="1.0")
         assert info["seq"] == ["B"]
 
     def test_declines_foreign_and_malformed_specs(self):
@@ -1844,7 +1888,12 @@ class TestDecayedSpec:
     def test_const_operand_inlines(self):
         info = gk.decayed_spec(("om_decayed", "S", 0.5, "V"))
         assert info["operands"][1]["metas"] == []
-        assert info["operands"][1]["expr"] == "(0.5)"
+        # const leaves render a ``tl.full`` tile shaped to the
+        # operand's kernel tile (``(BM, BK)`` for the d role) and
+        # typed by the launch dtype (T-025)
+        assert info["operands"][1]["expr"] == gk._decayed_const(
+            1
+        ).format(v="0.5")
         assert info["params"] == ["S", "V"]
 
     def test_declines_foreign_and_malformed_specs(self):
