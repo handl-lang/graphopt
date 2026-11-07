@@ -49,31 +49,40 @@ Usage::
 
 from __future__ import annotations
 
-import json
-import os
-import subprocess
 import sys
 from pathlib import Path
 
 from mlopt_core.egraph import EGraph
 from mlopt_core.ir import Op, Var
 from mlopt_core.laws import ALL_RULES
+from mlopt_discovery.handl_engine import (
+    HandlPeer,
+    HandlPeerUnavailable,
+    ast_result_term,
+    is_structural_rhs,
+    render_term,
+    term_to_ast,
+)
 
 _REPO = Path(__file__).resolve().parents[3]
-_BIN = Path(
-    os.environ.get(
-        "MLOPT_HANDL_PEER_BIN",
-        Path.home() / "GitHub/handl-lang/host/target/debug/rewrite",
-    )
-)
 _FRAGMENTS = (
     _REPO / "tests" / "fixtures" / "handl-spike" / "fragments-all"
 )
 
-try:  # the shipping surface — absent until maturin builds it
-    import mlopt_handl_peer as _ext
-except ImportError:  # pragma: no cover - depends on the local build
-    _ext = None
+#: The peer client — the phase-1 backend's surface (extension preferred,
+#: CLI fallback), built lazily so ``main`` can report unavailability.
+_peer: HandlPeer | None = None
+
+
+def _handl_peer() -> HandlPeer | None:
+    """The shared peer client, or ``None`` when no surface is built."""
+    global _peer
+    if _peer is None:
+        try:
+            _peer = HandlPeer(fragments=_FRAGMENTS)
+        except HandlPeerUnavailable:
+            return None
+    return _peer
 
 
 def _eliminates_root(rule: object) -> bool:
@@ -92,12 +101,7 @@ def _eliminates_root(rule: object) -> bool:
 
 def _is_structural(node: object) -> bool:
     """Report whether the pattern is ops/metavars only (no leaves)."""
-    if isinstance(node, str):
-        return True
-    parts = _parts(node)
-    if parts is None:
-        return False
-    return all(_is_structural(a) for a in parts[1])
+    return is_structural_rhs(node)
 
 
 def _parts(node: object) -> tuple | None:
@@ -121,69 +125,21 @@ def _instantiate(node: object, fresh: dict) -> object:
 
 def _render(node: object) -> dict:
     """Render a mlopt term as ``{kind, children}`` (handl's shape)."""
-    parts = _parts(node)
-    if parts is None:
-        kind = getattr(node, "name", repr(node))
-        return {"kind": str(kind), "children": []}
-    return {
-        "kind": parts[0],
-        "children": [_render(a) for a in parts[1]],
-    }
+    return render_term(node)
 
 
 def _handl_rewrite(rule_id: str, term: object) -> dict | None:
     """Rewrite *term* with handl through the peer; ``None`` on refusal.
 
-    Prefers the PyO3 extension (``mlopt_handl_peer``) and falls back to
-    the CLI binary — both are the same Rust library.
+    Uses the phase-1 backend's :class:`HandlPeer` — the PyO3 extension
+    (``mlopt_handl_peer``) preferred, the CLI binary as fallback; both
+    are the same Rust library.
     """
-    arena: list[dict] = []
-    root = _flatten(term, arena)
-    ast = json.dumps(
-        [
-            {"kind": n["kind"], "payload": {"children": n["children"]}}
-            for n in arena
-        ]
-    )
-    if _ext is not None:
-        try:
-            return json.loads(
-                _ext.apply_rule(str(_FRAGMENTS), ast, root, rule_id)
-            )
-        except ValueError:
-            return None
-    out = subprocess.run(
-        [str(_BIN), str(_FRAGMENTS), rule_id, str(root), ast],
-        capture_output=True,
-        text=True,
-        timeout=120,
-    )
-    if out.returncode != 0:
+    peer = _handl_peer()
+    if peer is None:
         return None
-    return json.loads(out.stdout)
-
-
-def _flatten(node: object, arena: list[dict]) -> int:
-    """Append *node* post-order; return its index."""
-    parts = _parts(node)
-    if parts is None:
-        arena.append(
-            {"kind": str(getattr(node, "name", node)), "children": []}
-        )
-        return len(arena) - 1
-    kids = [_flatten(a, arena) for a in parts[1]]
-    arena.append({"kind": parts[0], "children": kids})
-    return len(arena) - 1
-
-
-def _from_handl(arena: list[dict], index: int) -> dict:
-    node = arena[index]
-    return {
-        "kind": node["kind"],
-        "children": [
-            _from_handl(arena, i) for i in node["payload"]["children"]
-        ],
-    }
+    nodes, root = term_to_ast(term)
+    return peer.apply_rule(rule_id, nodes, root)
 
 
 def _outcome(rule: object) -> str:
@@ -215,7 +171,7 @@ def _outcome(rule: object) -> str:
     got = _handl_rewrite(f"transform.mlopt.{rule.name}", term)
     if got is None:
         return "declined"
-    actual = _from_handl(got["arena"], _root_index(got))
+    actual = ast_result_term(got)
     return "agree" if actual == expected else "disagree"
 
 
@@ -226,9 +182,10 @@ def main(argv: list[str] | None = None) -> int:
     if "--limit" in args:
         limit = int(args[args.index("--limit") + 1])
 
-    if _ext is None and not _BIN.exists():
+    if _handl_peer() is None:
         print(
-            f"peer not available (no mlopt_handl_peer, no binary: {_BIN})",
+            "peer not available (no mlopt_handl_peer extension, "
+            "no rewrite CLI — see HandlPeerUnavailable)",
             file=sys.stderr,
         )
         print(
@@ -281,11 +238,6 @@ def main(argv: list[str] | None = None) -> int:
     if disagreements:
         print("  disagreements:", ", ".join(disagreements[:10]))
     return 1 if disagree else 0
-
-
-def _root_index(result: dict) -> int:
-    """Index of the rewritten root in handl's arena (exported by the peer)."""
-    return int(result["root_index"])
 
 
 if __name__ == "__main__":

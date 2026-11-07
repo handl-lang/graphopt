@@ -38,7 +38,12 @@ primitives (:mod:`.shipped_primitives` — the ``zoo-prim`` mint's
 admitted ``synop_*`` ops: the torch denotation registry; the
 ``prim:synop_*`` fold laws ship in core ``DEFAULT``),
 and the domain registry + CLI (:mod:`.play` —
-``python -m mlopt_discovery.play --domain meta|joint|search|torch|gen``).
+``python -m mlopt_discovery.play --domain meta|joint|search|torch|gen``),
+the handl differential backend (:mod:`.handl_engine` — plan 0033
+phase 1: ``HandlEngine``, an ``EGraph`` that replays every recorded
+rule application through ``mlopt-handl-peer`` and refuses loudly on
+disagreement; ``resolve_engine("handl")`` is the ``engine="handl"``
+spelling for ``optimize.search``).
 Formerly the ``tools/law_*.py``
 scripts; every module keeps its CLI — invoke as
 ``python -m mlopt_discovery.<module>``.

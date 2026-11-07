@@ -568,7 +568,19 @@ def _projection_rows(directory: Path) -> dict[str, list]:
     )
 
     vocab = load_vocab(directory, fresh=True)
-    ast_rows = [_ast_shape_row(o) for o in vocab.ops]
+    # ``arity: None`` ops (variadic — ``linear``, ``batch_norm`` …)
+    # cannot declare a fixed child-role list, and handl's transform
+    # validator rejects ``KeepPath``/``KindAt`` indices into a
+    # zero-role shape.  The honest projection omits their
+    # ``AstShapeDef`` — the same posture the spike fixtures took
+    # (they declare no op shapes at all); the op itself still rides
+    # in ``ops.yaml`` and the ``mlopt.op`` extension of every row
+    # that *is* emitted.
+    ast_rows = [
+        _ast_shape_row(o)
+        for o in vocab.ops
+        if o.get("arity") is not None
+    ]
     ast_rows = list(_LEAF_SHAPES) + ast_rows
     transforms = [law_to_handl(r, r.name) for r in vocab.laws]
     _disambiguate_priorities(transforms)
@@ -579,7 +591,9 @@ def sync_projections(directory: str | Path) -> None:
     """Regenerate ``ast.yaml`` / ``transforms.yaml`` from canonical files.
 
     ``ast.yaml`` carries the bridge's leaf kinds plus one
-    ``AstShapeDef`` per op row; ``transforms.yaml`` carries one
+    ``AstShapeDef`` per op row whose arity is known (``arity: None``
+    variadic ops are omitted — see :func:`_projection_rows`);
+    ``transforms.yaml`` carries one
     ``TransformDef`` per law (``pipeline``'s fusion *schemas* stay
     mlopt-side — they are proposal recognizers, not admitted bank
     rules, and handl's engine must never fire them as rewrites).
