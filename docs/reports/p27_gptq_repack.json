@@ -1,0 +1,72 @@
+[
+  {
+    "operator": "gate_proj",
+    "k": 896,
+    "n": 4864,
+    "repack_ms": 30.7,
+    "cosine_vs_gptq_gemm": 0.9999995,
+    "ours_us": 44.5,
+    "gptq_gemm_us": 84.4,
+    "speedup": 1.9
+  },
+  {
+    "operator": "up_proj",
+    "k": 896,
+    "n": 4864,
+    "repack_ms": 1.8,
+    "cosine_vs_gptq_gemm": 0.9999996,
+    "ours_us": 44.3,
+    "gptq_gemm_us": 84.3,
+    "speedup": 1.9
+  },
+  {
+    "operator": "down_proj",
+    "k": 4864,
+    "n": 896,
+    "repack_ms": 1.81,
+    "cosine_vs_gptq_gemm": 0.999999,
+    "ours_us": 44.3,
+    "gptq_gemm_us": 84.6,
+    "speedup": 1.91
+  },
+  {
+    "operator": "q_proj",
+    "k": 896,
+    "n": 896,
+    "repack_ms": 0.37,
+    "cosine_vs_gptq_gemm": 0.9999992,
+    "ours_us": 12.2,
+    "gptq_gemm_us": 24.1,
+    "speedup": 1.97
+  },
+  {
+    "operator": "o_proj",
+    "k": 896,
+    "n": 896,
+    "repack_ms": 0.38,
+    "cosine_vs_gptq_gemm": 0.9999994,
+    "ours_us": 12.1,
+    "gptq_gemm_us": 24.2,
+    "speedup": 1.99
+  },
+  {
+    "operator": "k_proj",
+    "k": 896,
+    "n": 128,
+    "repack_ms": 0.09,
+    "cosine_vs_gptq_gemm": 0.999999,
+    "ours_us": 6.3,
+    "gptq_gemm_us": 14.4,
+    "speedup": 2.28
+  },
+  {
+    "operator": "v_proj",
+    "k": 896,
+    "n": 128,
+    "repack_ms": 0.09,
+    "cosine_vs_gptq_gemm": 0.9999992,
+    "ours_us": 6.6,
+    "gptq_gemm_us": 14.4,
+    "speedup": 2.18
+  }
+]

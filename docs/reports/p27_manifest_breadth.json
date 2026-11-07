@@ -1,0 +1,447 @@
+{
+  "ckpt": "/home/luis/.cache/huggingface/hub/models--Qwen--Qwen2.5-0.5B-Instruct-AWQ/snapshots/db09cd27ead7fee40cdee309693cf83601b9c899/model.safetensors",
+  "layer": 0,
+  "generated": "2026-11-07",
+  "shapes": {
+    "k896n128": {
+      "operators": [
+        "k_proj",
+        "v_proj"
+      ],
+      "winner": {
+        "k": 896,
+        "n": 128,
+        "split": 8,
+        "block_n": 64,
+        "block_k": 128,
+        "warps": 4,
+        "us": 5.2906667192776995,
+        "cosine": 0.9999999403953552,
+        "roofline_us": 0.67,
+        "speedup_vs_incumbent": 5.99,
+        "term": "split8 bn64 bk128 w4",
+        "all_splits": {
+          "1": {
+            "label": "split1",
+            "bn": 32,
+            "bk": 128,
+            "warps": 4,
+            "us": 15.257599949836731,
+            "cos": 0.9999999403953552
+          },
+          "2": {
+            "label": "split2",
+            "bn": 32,
+            "bk": 128,
+            "warps": 4,
+            "us": 9.898666540781656,
+            "cos": 0.9999999403953552
+          },
+          "4": {
+            "label": "split4",
+            "bn": 32,
+            "bk": 128,
+            "warps": 4,
+            "us": 6.24533345301946,
+            "cos": 0.9999999403953552
+          },
+          "8": {
+            "label": "split8",
+            "bn": 64,
+            "bk": 128,
+            "warps": 4,
+            "us": 5.2906667192776995,
+            "cos": 0.9999999403953552
+          }
+        }
+      },
+      "rejected": [
+        {
+          "label": "split1 bn32 bk128 w4",
+          "reason": "slower",
+          "detail": "15.3 us vs 5.3 us"
+        },
+        {
+          "label": "split2 bn32 bk128 w4",
+          "reason": "slower",
+          "detail": "9.9 us vs 5.3 us"
+        },
+        {
+          "label": "split4 bn32 bk128 w4",
+          "reason": "slower",
+          "detail": "6.2 us vs 5.3 us"
+        }
+      ],
+      "incumbent_us": 31.674667199452717
+    },
+    "k896n896": {
+      "operators": [
+        "o_proj",
+        "q_proj"
+      ],
+      "winner": {
+        "k": 896,
+        "n": 896,
+        "split": 8,
+        "block_n": 64,
+        "block_k": 64,
+        "warps": 2,
+        "us": 12.390399972597757,
+        "cosine": 0.9999999403953552,
+        "roofline_us": 4.55,
+        "speedup_vs_incumbent": 2.57,
+        "term": "split8 bn64 bk64 w2",
+        "all_splits": {
+          "1": {
+            "label": "split1",
+            "bn": 32,
+            "bk": 128,
+            "warps": 4,
+            "us": 21.32906715075175,
+            "cos": 0.9999999403953552
+          },
+          "2": {
+            "label": "split2",
+            "bn": 32,
+            "bk": 128,
+            "warps": 4,
+            "us": 16.21333360671997,
+            "cos": 0.9999999403953552
+          },
+          "4": {
+            "label": "split4",
+            "bn": 64,
+            "bk": 128,
+            "warps": 4,
+            "us": 13.346133629480997,
+            "cos": 0.9999999403953552
+          },
+          "8": {
+            "label": "split8",
+            "bn": 64,
+            "bk": 64,
+            "warps": 2,
+            "us": 12.390399972597757,
+            "cos": 0.9999999403953552
+          }
+        }
+      },
+      "rejected": [
+        {
+          "label": "split1 bn32 bk128 w4",
+          "reason": "slower",
+          "detail": "21.3 us vs 12.4 us"
+        },
+        {
+          "label": "split2 bn32 bk128 w4",
+          "reason": "slower",
+          "detail": "16.2 us vs 12.4 us"
+        },
+        {
+          "label": "split4 bn64 bk128 w4",
+          "reason": "slower",
+          "detail": "13.3 us vs 12.4 us"
+        }
+      ],
+      "incumbent_us": 31.805866956710815
+    },
+    "k896n4864": {
+      "operators": [
+        "gate_proj",
+        "up_proj"
+      ],
+      "winner": {
+        "k": 896,
+        "n": 4864,
+        "split": 4,
+        "block_n": 64,
+        "block_k": 64,
+        "warps": 2,
+        "us": 37.61493364969889,
+        "cosine": 1.0,
+        "roofline_us": 24.59,
+        "speedup_vs_incumbent": 1.21,
+        "term": "split4 bn64 bk64 w2",
+        "all_splits": {
+          "1": {
+            "label": "split1",
+            "bn": 64,
+            "bk": 64,
+            "warps": 2,
+            "us": 44.44160064061483,
+            "cos": 1.0
+          },
+          "2": {
+            "label": "split2",
+            "bn": 128,
+            "bk": 64,
+            "warps": 4,
+            "us": 43.41226816177368,
+            "cos": 1.0
+          },
+          "4": {
+            "label": "split4",
+            "bn": 64,
+            "bk": 64,
+            "warps": 2,
+            "us": 37.61493364969889,
+            "cos": 1.0
+          },
+          "8": {
+            "label": "split8",
+            "bn": 128,
+            "bk": 64,
+            "warps": 4,
+            "us": 39.970131715138756,
+            "cos": 1.0
+          }
+        }
+      },
+      "rejected": [
+        {
+          "label": "split1 bn64 bk64 w2",
+          "reason": "slower",
+          "detail": "44.4 us vs 37.6 us"
+        },
+        {
+          "label": "split2 bn128 bk64 w4",
+          "reason": "slower",
+          "detail": "43.4 us vs 37.6 us"
+        },
+        {
+          "label": "split8 bn128 bk64 w4",
+          "reason": "slower",
+          "detail": "40.0 us vs 37.6 us"
+        }
+      ],
+      "incumbent_us": 45.496535301208496
+    },
+    "k4864n896": {
+      "operators": [
+        "down_proj"
+      ],
+      "winner": {
+        "k": 4864,
+        "n": 896,
+        "split": 8,
+        "block_n": 64,
+        "block_k": 64,
+        "warps": 2,
+        "us": 34.67946847279867,
+        "cosine": 0.9999998807907104,
+        "roofline_us": 24.59,
+        "speedup_vs_incumbent": 4.89,
+        "term": "split8 bn64 bk64 w2",
+        "all_splits": {
+          "1": {
+            "label": "split1",
+            "bn": 32,
+            "bk": 128,
+            "warps": 4,
+            "us": 79.14880116780598,
+            "cos": 0.9999998807907104
+          },
+          "2": {
+            "label": "split2",
+            "bn": 32,
+            "bk": 128,
+            "warps": 4,
+            "us": 52.63359944025675,
+            "cos": 0.9999998807907104
+          },
+          "4": {
+            "label": "split4",
+            "bn": 64,
+            "bk": 128,
+            "warps": 4,
+            "us": 39.11679983139038,
+            "cos": 0.9999998807907104
+          },
+          "8": {
+            "label": "split8",
+            "bn": 64,
+            "bk": 64,
+            "warps": 2,
+            "us": 34.67946847279867,
+            "cos": 0.9999998807907104
+          }
+        }
+      },
+      "rejected": [
+        {
+          "label": "split1 bn32 bk128 w4",
+          "reason": "slower",
+          "detail": "79.1 us vs 34.7 us"
+        },
+        {
+          "label": "split2 bn32 bk128 w4",
+          "reason": "slower",
+          "detail": "52.6 us vs 34.7 us"
+        },
+        {
+          "label": "split4 bn64 bk128 w4",
+          "reason": "slower",
+          "detail": "39.1 us vs 34.7 us"
+        }
+      ],
+      "incumbent_us": 169.67679659525552
+    }
+  },
+  "operators": {
+    "k_proj": {
+      "operator": "k_proj",
+      "path": "model.layers.0.self_attn.k_proj",
+      "module": "qgemv_k896_split8",
+      "k": 896,
+      "n": 128,
+      "split": 8,
+      "block_n": 64,
+      "block_k": 128,
+      "warps": 4,
+      "us": 5.3,
+      "cosine": 0.9999999,
+      "pct_of_roofline": 12.7,
+      "speedup_vs_incumbent": 5.99,
+      "incumbent_us": 31.5,
+      "provenance": "db09cd27ead7fee40cdee309693cf83601b9c899 layer 0; shape group k896n128",
+      "verify_cosine": {
+        "layer23": 1.0
+      }
+    },
+    "v_proj": {
+      "operator": "v_proj",
+      "path": "model.layers.0.self_attn.v_proj",
+      "module": "qgemv_k896_split8",
+      "k": 896,
+      "n": 128,
+      "split": 8,
+      "block_n": 64,
+      "block_k": 128,
+      "warps": 4,
+      "us": 5.3,
+      "cosine": 0.9999999,
+      "pct_of_roofline": 12.7,
+      "speedup_vs_incumbent": 6.0,
+      "incumbent_us": 31.5,
+      "provenance": "db09cd27ead7fee40cdee309693cf83601b9c899 layer 0; shape group k896n128 (timed on own tensors)",
+      "verify_cosine": {
+        "layer23": 1.0
+      }
+    },
+    "o_proj": {
+      "operator": "o_proj",
+      "path": "model.layers.0.self_attn.o_proj",
+      "module": "qgemv_k896_split8",
+      "k": 896,
+      "n": 896,
+      "split": 8,
+      "block_n": 64,
+      "block_k": 64,
+      "warps": 2,
+      "us": 12.5,
+      "cosine": 0.9999999,
+      "pct_of_roofline": 36.5,
+      "speedup_vs_incumbent": 2.55,
+      "incumbent_us": 31.8,
+      "provenance": "db09cd27ead7fee40cdee309693cf83601b9c899 layer 0; shape group k896n896",
+      "verify_cosine": {
+        "layer23": 0.9999999
+      }
+    },
+    "q_proj": {
+      "operator": "q_proj",
+      "path": "model.layers.0.self_attn.q_proj",
+      "module": "qgemv_k896_split8",
+      "k": 896,
+      "n": 896,
+      "split": 8,
+      "block_n": 64,
+      "block_k": 64,
+      "warps": 2,
+      "us": 12.5,
+      "cosine": 1.0,
+      "pct_of_roofline": 36.3,
+      "speedup_vs_incumbent": 2.55,
+      "incumbent_us": 31.9,
+      "provenance": "db09cd27ead7fee40cdee309693cf83601b9c899 layer 0; shape group k896n896 (timed on own tensors)",
+      "verify_cosine": {
+        "layer23": 1.0
+      }
+    },
+    "gate_proj": {
+      "operator": "gate_proj",
+      "path": "model.layers.0.mlp.gate_proj",
+      "module": "qgemv_k896_split4",
+      "k": 896,
+      "n": 4864,
+      "split": 4,
+      "block_n": 64,
+      "block_k": 64,
+      "warps": 2,
+      "us": 38.1,
+      "cosine": 1.0,
+      "pct_of_roofline": 64.6,
+      "speedup_vs_incumbent": 1.1,
+      "incumbent_us": 41.9,
+      "provenance": "db09cd27ead7fee40cdee309693cf83601b9c899 layer 0; shape group k896n4864",
+      "verify_cosine": {
+        "layer23": 1.0
+      }
+    },
+    "up_proj": {
+      "operator": "up_proj",
+      "path": "model.layers.0.mlp.up_proj",
+      "module": "qgemv_k896_split4",
+      "k": 896,
+      "n": 4864,
+      "split": 4,
+      "block_n": 64,
+      "block_k": 64,
+      "warps": 2,
+      "us": 38.1,
+      "cosine": 1.0,
+      "pct_of_roofline": 64.5,
+      "speedup_vs_incumbent": 1.1,
+      "incumbent_us": 42.0,
+      "provenance": "db09cd27ead7fee40cdee309693cf83601b9c899 layer 0; shape group k896n4864 (timed on own tensors)",
+      "verify_cosine": {
+        "layer23": 1.0
+      }
+    },
+    "down_proj": {
+      "operator": "down_proj",
+      "path": "model.layers.0.mlp.down_proj",
+      "module": "qgemv_k4864_split8",
+      "k": 4864,
+      "n": 896,
+      "split": 8,
+      "block_n": 64,
+      "block_k": 64,
+      "warps": 2,
+      "us": 36.0,
+      "cosine": 0.9999999,
+      "pct_of_roofline": 68.3,
+      "speedup_vs_incumbent": 4.43,
+      "incumbent_us": 159.5,
+      "provenance": "db09cd27ead7fee40cdee309693cf83601b9c899 layer 0; shape group k4864n896",
+      "verify_cosine": {
+        "layer23": 0.9999999
+      }
+    }
+  },
+  "vendored": [
+    {
+      "module": "qgemv_k4864_split8",
+      "action": "exists"
+    },
+    {
+      "module": "qgemv_k896_split4",
+      "action": "vendored"
+    },
+    {
+      "module": "qgemv_k896_split8",
+      "action": "exists"
+    }
+  ],
+  "note": "manifest.py rendered from this report via gen_manifest._manifest_py after the run (the in-run render hit a KeyError on roofline_us; rows unaffected)"
+}
