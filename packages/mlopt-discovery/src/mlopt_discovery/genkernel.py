@@ -697,6 +697,26 @@ def profitable(
     _dyno_cfg: Any = torch._dynamo.config
     _dyno_cfg.recompile_limit = max(int(_dyno_cfg.recompile_limit), 256)
 
+    # measurement hygiene: drain in-flight inductor compile workers
+    # before timing.  A backlog from earlier compiles in the same
+    # process (the case build's own claim sweep, sink builds)
+    # inflates wall-clock disproportionately on the spelled arm —
+    # it issues N torch calls + a spec walk per invocation where the
+    # fused kernel issues one — flipping measured losers into false
+    # keeps (the T-016 residual: ``_fold_cost_gate`` kept 35 prim
+    # folds on a contaminated window, 0 after the drain; a delivered
+    # ``synop_2b8cfd1c90`` read 0.668x).  ``shutdown`` waits for
+    # pending work; the per-handler verify compiles below then run
+    # synchronously inside their own (untimed) warmup.
+    try:
+        from torch._inductor.async_compile import (
+            shutdown_compile_workers,
+        )
+
+        shutdown_compile_workers()
+    except Exception:
+        pass
+
     bindings = tb._IR_TO_TORCH
     keep: dict[str, dict] = {}
     # sorted order: callers pass frozenset-derived dicts whose
@@ -978,16 +998,102 @@ def _triton_dispatch(op: str, args: list) -> str | None:
     return None
 
 
+#: Kernel-local names a spec metavar must not reuse.  A meta named
+#: ``off``/``mask``/``out`` would shadow the index/mask/store locals
+#: (the value load would overwrite them before ``tl.store`` reads
+#: them) — a silent miscompile the verify leg would only catch after
+#: the fact.  Decline honestly at codegen instead.
+_TRITON_LOCALS = frozenset(
+    {
+        "off",
+        "mask",
+        "out",
+        "n",
+        "BLOCK",
+        "ometa_ptr",
+        "off64",
+        "__sz",
+        "__stb",
+        "__cd",
+    }
+)
+
+#: Strided-kernel broadcast-metadata cache — ``ometa`` tensors are
+#: keyed by ``(out_shape, per-operand (shape, strides, device))`` and
+#: shared across every generated kernel (the layout is handler-
+#: independent).  Bounded like ``_RMSNORM_PICK``: a long-lived sweep
+#: must not grow it without limit.
+_TRITON_OMETA: dict = {}
+_TRITON_OMETA_MAX = 256
+
+
+def _triton_ometa(xs: list, out_shape: tuple, device: Any) -> Any:
+    """Pack the strided kernel's broadcast metadata; cached per layout.
+
+    Layout: ``out_shape`` (K entries), the output's row-major strides
+    (K), then each operand's K *effective* strides — the operand's
+    real element stride on dims it spans, ``0`` on broadcast dims
+    (size-1 dims read every output element from one lane).  The
+    kernel reconstructs each element's source offset as
+    ``sum(coord_d * eff_stride_d)`` over the flat output index.
+    """
+    import torch
+
+    key = (
+        out_shape,
+        tuple(
+            (tuple(x.shape), tuple(x.stride()), str(x.device))
+            for x in xs
+        ),
+    )
+    om = _TRITON_OMETA.get(key)
+    if om is not None:
+        return om
+    k = len(out_shape)
+    ostr: list = []
+    acc = 1
+    for s in reversed(out_shape):
+        ostr.insert(0, acc)
+        acc *= s
+    buf = [int(s) for s in out_shape] + ostr
+    for x in xs:
+        pad = k - x.dim()
+        eff = [0] * k
+        for j in range(x.dim()):
+            if x.shape[j] != 1:
+                eff[j + pad] = x.stride(j)
+        buf.extend(eff)
+    om = torch.tensor(buf, dtype=torch.int64, device=device)
+    if len(_TRITON_OMETA) >= _TRITON_OMETA_MAX:
+        _TRITON_OMETA.clear()
+    _TRITON_OMETA[key] = om
+    return om
+
+
 def triton_bindings(handlers: dict) -> dict:
     """Generate a Triton kernel per handler — one nobody wrote.
 
     Unlike :func:`gen_bindings` (whose callable wraps
     ``torch.compile`` — the incumbent's own codegen), this tier
     emits real ``triton.jit`` source for the fused body and
-    compiles it directly.  Broadcasting is handled on the host
-    side: args are broadcast + flattened once, the kernel walks a
-    flat index space.  Specs whose ops the codegen doesn't model
+    compiles it directly.  Specs whose ops the codegen doesn't model
     are skipped — the handler keeps its torch path instead.
+
+    Two launch paths share one generated module:
+
+    * ``_gk`` — the flat kernel, for the common case where every
+      operand already has the broadcast output shape contiguous
+      (index ``off`` reads every operand directly);
+    * ``_gk_s`` — the strided kernel, for broadcast or non-
+      contiguous operands.  The old wrapper ``broadcast_tensors`` +
+      ``.contiguous()`` *materialized* a full-size copy per
+      broadcast operand — O(M·n) hidden traffic plus a copy launch
+      each, which is why the "fused" kernel lost to spelled eager
+      at exactly the broadcast-heavy sites the zoo folds (the T-016
+      residual: 0.48-0.85x at every size tested, vs ~2x once the
+      copies are gone).  ``_gk_s`` passes each operand's shape/
+      strides through ``ometa`` instead and computes source offsets
+      in-kernel — no host materialization.
     """
     import torch
 
@@ -996,12 +1102,40 @@ def triton_bindings(handlers: dict) -> dict:
         spec = h["pattern"]
         metas = _spec_metas(spec)
         body = _triton_expr(spec)
-        if body is None or not metas:
+        if (
+            body is None
+            or not metas
+            or any(m in _TRITON_LOCALS for m in metas)
+            or any(
+                m.startswith("__o") and m[3:].isdigit() for m in metas
+            )
+        ):
             continue
         ptrs = ", ".join(f"{m}_ptr" for m in metas)
         loads = "".join(
             f"    {m} = tl.load({m}_ptr + off, mask=mask, other=0.0)\n"
             for m in metas
+        )
+        nmetas = len(metas)
+        accs = "".join(
+            f"    __o{i} = tl.zeros([BLOCK], dtype=tl.int64)\n"
+            for i in range(nmetas)
+        )
+        dims = (
+            "    for d in tl.static_range(NDIM):\n"
+            "        __sz = tl.load(ometa_ptr + d)\n"
+            "        __stb = tl.load(ometa_ptr + NDIM + d)\n"
+            "        __cd = (off64 // __stb) % __sz\n"
+        )
+        dims += "".join(
+            f"        __o{i} += __cd * tl.load("
+            f"ometa_ptr + {2 + i} * NDIM + d)\n"
+            for i in range(nmetas)
+        )
+        sloads = "".join(
+            f"    {m} = tl.load({m}_ptr + __o{i}, mask=mask, "
+            f"other=0.0)\n"
+            for i, m in enumerate(metas)
         )
         src = (
             "import triton\n"
@@ -1014,6 +1148,17 @@ def triton_bindings(handlers: dict) -> dict:
             f"{loads}"
             f"    out = {body}\n"
             "    tl.store(out_ptr + off, out, mask=mask)\n"
+            "\n@triton.jit\n"
+            f"def _gk_s({ptrs}, out_ptr, n, ometa_ptr, "
+            "BLOCK: tl.constexpr, NDIM: tl.constexpr):\n"
+            "    off = tl.program_id(0) * BLOCK + tl.arange(0, BLOCK)\n"
+            "    mask = off < n\n"
+            "    off64 = off.to(tl.int64)\n"
+            f"{accs}"
+            f"{dims}"
+            f"{sloads}"
+            f"    out = {body}\n"
+            "    tl.store(out_ptr + off, out, mask=mask)\n"
         )
         # the artifact is a real module file — inspectable on disk,
         # not an exec'd string.  Loading through importlib keeps the
@@ -1021,24 +1166,49 @@ def triton_bindings(handlers: dict) -> dict:
         path = _kernel_cache() / f"_gk_{h['kernel']}.py"
         path.write_text(src)
         kern = _load_generated(path, "_gk")
-        if kern is None:
+        kern_s = _load_generated(path, "_gk_s")
+        if kern is None or kern_s is None:
             continue  # module load declined — keep the torch path
 
-        def fn(*args: Any, kern=kern, **_attrs: Any) -> Any:
-            xs = [
-                x.contiguous() for x in torch.broadcast_tensors(*args)
-            ]
-            shape = xs[0].shape
-            n = xs[0].numel()
-            out = torch.empty(n, dtype=xs[0].dtype, device=xs[0].device)
-            block = 1024
-            kern[((n + block - 1) // block,)](
-                *[x.reshape(-1) for x in xs],
-                out,
-                n,
-                BLOCK=block,
+        def fn(
+            *args: Any,
+            kern=kern,
+            kern_s=kern_s,
+            **_attrs: Any,
+        ) -> Any:
+            xs = list(args)
+            out_shape = torch.broadcast_shapes(*[x.shape for x in xs])
+            n = 1
+            for s in out_shape:
+                n *= s
+            out = torch.empty(
+                out_shape, dtype=xs[0].dtype, device=xs[0].device
             )
-            return out.reshape(shape)
+            if n == 0:
+                return out
+            block = 1024
+            grid = ((n + block - 1) // block,)
+            flat = out.reshape(-1)
+            if all(
+                x.is_contiguous() and x.shape == out_shape for x in xs
+            ):
+                kern[grid](
+                    *[x.reshape(-1) for x in xs],
+                    flat,
+                    n,
+                    BLOCK=block,
+                )
+            else:
+                om = _triton_ometa(xs, out_shape, xs[0].device)
+                kern_s[grid](
+                    *xs,
+                    flat,
+                    n,
+                    om,
+                    BLOCK=block,
+                    NDIM=len(out_shape),
+                )
+            return out
 
         out[h["kernel"]] = fn
     return out

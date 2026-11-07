@@ -445,9 +445,133 @@ class TestTritonTier:
         }
         assert gk.triton_bindings(h) == {}
 
+    def test_meta_named_like_kernel_local_declines(self):
+        # ``mask`` would shadow the kernel's mask local — the binding
+        # must decline at codegen rather than emit a miscompile.
+        h = {
+            "g": {
+                "pattern": ("mul", "mask", "X1"),
+                "kernel": "gk_col",
+                "args": ("mask", "X1"),
+            }
+        }
+        assert gk.triton_bindings(h) == {}
+        h["g"]["pattern"] = ("mul", "__o1", "X1")
+        h["g"]["args"] = ("__o1", "X1")
+        assert gk.triton_bindings(h) == {}
+
+    def test_triton_ometa_layout(self):
+        # CPU-only packing check: sizes, row-major out strides, then
+        # per-operand effective strides (0 on broadcast dims).
+        a = torch.zeros(8, 1, 1)
+        b = torch.zeros(8, 64, 64)
+        c = torch.zeros(8, 64, 1)
+        d = torch.zeros(8, 1, 64)
+        xs = [a, b, c, d]
+        om = gk._triton_ometa(xs, (8, 64, 64), a.device)
+        want = [
+            8,
+            64,
+            64,  # out sizes
+            4096,
+            64,
+            1,  # out row-major strides
+            1,
+            0,
+            0,  # a: (8,1,1) spans dim0 only
+            4096,
+            64,
+            1,  # b: full shape
+            64,
+            1,
+            0,  # c: (8,64,1) contiguous strides
+            64,
+            0,
+            1,  # d: (8,1,64) contiguous strides
+        ]
+        assert om.tolist() == want
+        # cached: same layout returns the identical tensor
+        assert gk._triton_ometa(xs, (8, 64, 64), a.device) is om
+
+    def test_triton_broadcast_and_strided_correct(self):
+        torch = pytest.importorskip("torch")
+        pytest.importorskip("triton")
+        if not torch.cuda.is_available():
+            pytest.skip("needs cuda for triton")
+        h = {
+            "g": {
+                "pattern": (
+                    "add",
+                    ("mul", "a", "b"),
+                    ("mul", "c", "d"),
+                ),
+                "kernel": "gk_bc",
+                "args": ("a", "b", "c", "d"),
+            }
+        }
+        fn = gk.triton_bindings(h)["gk_bc"]
+
+        def ref(*args):
+            xs = torch.broadcast_tensors(*args)
+            return xs[0] * xs[1] + xs[2] * xs[3]
+
+        dev = "cuda"
+        cases = [
+            # rank-1 / scalar broadcast — the zoo site shape
+            (
+                torch.randn(8, 1, 1, device=dev),
+                torch.randn(8, 64, 64, device=dev),
+                torch.randn(8, 64, 1, device=dev),
+                torch.randn(8, 1, 64, device=dev),
+            ),
+            # 0-dim operand
+            (
+                torch.randn((), device=dev),
+                torch.randn(4, 32, device=dev),
+                torch.randn(4, 32, device=dev),
+                torch.randn(4, 32, device=dev),
+            ),
+            # non-contiguous operand (transpose)
+            (
+                torch.randn(8, 64, device=dev),
+                torch.randn(64, 8, device=dev).t(),
+                torch.randn(8, 64, device=dev),
+                torch.randn(8, 64, device=dev),
+            ),
+            # expanded stride-0 operand
+            (
+                torch.randn(8, 64, 64, device=dev),
+                torch.randn(8, 1, 64, device=dev).expand(8, 64, 64),
+                torch.randn(8, 64, 64, device=dev),
+                torch.randn(8, 64, 64, device=dev),
+            ),
+        ]
+        for args in cases:
+            torch.testing.assert_close(
+                fn(*args), ref(*args), atol=1e-4, rtol=1e-4
+            )
+        # empty broadcast — early return, no launch
+        empty = tuple(torch.randn(0, device=dev) for _ in range(4))
+        assert fn(*empty).shape == (0,)
+
 
 class TestMeasuredReferee:
     """``profitable`` — mint only claims whose kernel beats spelled."""
+
+    def test_profitable_drains_compile_workers(self, monkeypatch):
+        # measurement hygiene: an in-flight inductor compile backlog
+        # inflates the spelled arm's Python-heavy call path and flips
+        # measured losers into false keeps — the referee must drain
+        # the worker pools before timing (T-016 residual).
+        torch = pytest.importorskip("torch")
+        import torch._inductor.async_compile as ac
+
+        calls = []
+        monkeypatch.setattr(
+            ac, "shutdown_compile_workers", lambda: calls.append(1)
+        )
+        gk.profitable({}, _v("x", 4), {"x": torch.randn(4)}, reps=2)
+        assert calls == [1]
 
     def test_paying_kernel_kept_losing_dropped(self):
         torch = pytest.importorskip("torch")
