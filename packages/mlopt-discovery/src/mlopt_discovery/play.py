@@ -81,6 +81,7 @@ from mlopt_core.laws import DEFAULT as DEFAULT_SEARCH_RULES
 from mlopt_core.search_env import SearchEnv
 
 from . import bilinear_game as bg
+from . import fragment_game as fg
 from . import lawdata, training
 from . import meta_arena as ma
 from . import meta_player as mp
@@ -1724,6 +1725,97 @@ SEARCH_SPEC = DomainSpec.build(
 )
 
 
+# ---------------------------------------------------------------------------
+#  Domain: fragment — vocab/ fragment-application moves (plan 0033 ph.4)
+# ---------------------------------------------------------------------------
+
+
+def _fragment_cases(seed: int, n: int) -> list:
+    """Small terms that exercise law/handler/saturate fragment moves."""
+    rng = random.Random(seed)
+    x = Var("x", TensorType((4, 4)))
+    y = Var("y", TensorType((4, 4)))
+    pool = [
+        Op.make("add", x, Const(0)),
+        Op.make("mul", x, Const(1)),
+        Op.make("neg", Op.make("neg", x)),
+        Op.make("mul", x, Op.make("sigmoid", x)),
+        Op.make("add", Op.make("mul", x, y), Op.make("mul", y, x)),
+        Op.make("div", x, Op.make("add", Op.make("abs", x), Const(1))),
+    ]
+    return [
+        (f"frag{i}", pool[rng.randrange(len(pool))]) for i in range(n)
+    ]
+
+
+def _fragment_board(case: Any) -> fg.FragmentArena:
+    """Board a fragment case over the canonical vocab directory."""
+    return fg.FragmentArena(case[1], vocab_dir=None, max_moves=256)
+
+
+def _frag_state(state: fg.FragmentState) -> dict[str, float]:
+    """Broadcast the fragment board's progress features."""
+    base = max(state.baseline_cost, 1e-9)
+    best = (
+        state.best_cost if state.best_cost == state.best_cost else base
+    )
+    return {
+        "st:best": max(0.0, min(1.0, 1.0 - best / base)),
+        "st:steps": state.steps / 8.0,
+        "st:moves": min(len(state.moves) / 64.0, 1.0),
+    }
+
+
+def _frag_act(action: Any, _row: dict[str, float]) -> dict[str, float]:
+    """One-hot the fragment move kind — the only action feature."""
+    kind = getattr(action, "kind", "?")
+    return {f"a:k:{kind}": 1.0}
+
+
+FRAGMENT_FEATURES: tuple = (
+    "bias",
+    "st:best",
+    "st:steps",
+    "st:moves",
+    "a:k:law",
+    "a:k:prim",
+    "a:k:schema",
+    "a:k:handler",
+    "a:k:saturate",
+    "a:k:extract",
+)
+
+FRAGMENT_SPEC = DomainSpec.build(
+    features=FRAGMENT_FEATURES,
+    legal=fg.fragment_legal,
+    parts=(
+        Bias(),
+        StateBroadcast(_frag_state),
+        ActionFeats(_frag_act),
+    ),
+)
+register_legal("fragment", fg.fragment_legal)
+
+
+def _fragment_scripted() -> Any:
+    """Saturate the fragment closure, then extract — the playbook."""
+    played: set[str] = set()
+
+    def go(state: fg.FragmentState) -> Any | None:
+        if state.done:
+            return None
+        for m in state.moves:
+            if m.kind == "saturate" and "sat" not in played:
+                played.add("sat")
+                return m
+        for m in state.moves:
+            if m.kind == "extract":
+                return m
+        return state.moves[0] if state.moves else None
+
+    return go
+
+
 def _random_policy(legal: Any) -> Any:
     """Return a uniform player over any domain's legal set."""
 
@@ -1790,6 +1882,12 @@ DOMAINS: dict[str, Domain] = {
         _search_board,
         SEARCH_SPEC,
         scripted=_scripted_search,
+    ),
+    "fragment": spec_domain(
+        _fragment_cases,
+        _fragment_board,
+        FRAGMENT_SPEC,
+        scripted=_fragment_scripted,
     ),
     "gen": spec_domain(
         _gen_cases,

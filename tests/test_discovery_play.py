@@ -179,6 +179,7 @@ class TestDomains:
             "meta",
             "joint",
             "search",
+            "fragment",
             "torch",
             "gen",
             "open",
