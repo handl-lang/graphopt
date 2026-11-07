@@ -152,6 +152,34 @@ class TestGenDomain:
                 return
         raise AssertionError("no gen claim landed")
 
+    def test_gen_board_merges_shipped_prims(self):
+        # T-016: the minted ``synop_*`` folds are feasible +
+        # deliverable on the gen board — ``_gen_board`` merges
+        # ``shipped_primitives.handler_entries()`` into the case's
+        # ``gen_handlers`` and widens ``supported`` to the op names,
+        # so ``gen_probe``'s ``hybrid_sink`` binds them to the
+        # fused-body codegen instead of losing them unlowerable.
+        pytest = __import__("pytest")
+        pytest.importorskip("torch")
+        from mlopt_discovery import shipped_primitives as sp
+
+        for s in range(4):
+            for c in play._gen_cases(s, 3):
+                board = play._gen_board(c)
+                ex = c[5]
+                assert set(ex["gen_handlers"]) >= sp.SYNOP_SHIPPED
+                assert set(board.supported) >= sp.SYNOP_SHIPPED
+                # the case record carries the merged table — the
+                # delivery sink sees the identical handlers
+                assert ex["sink"] is not None
+                # idempotent: a second board over the same case
+                # does not duplicate or reseat again
+                n_handlers = len(ex["gen_handlers"])
+                play._gen_board(c)
+                assert len(ex["gen_handlers"]) == n_handlers
+                return
+        raise AssertionError("no gen case built")
+
     def test_spec_ops_skips_attr_dicts(self):
         spec = ("add", "X1", {"dim": 1})
         assert gk._spec_ops(spec) == {"add"}

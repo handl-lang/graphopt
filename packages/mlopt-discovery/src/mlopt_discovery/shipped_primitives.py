@@ -129,6 +129,7 @@ __all__ = [
     "declare",
     "expand_name",
     "folds",
+    "handler_entries",
     "law_provenance",
     "premises",
     "prim_default",
@@ -274,6 +275,36 @@ def declare() -> None:
     the ops declared without the torch bindings.
     """
     minted.prim_folds()
+
+
+def handler_entries() -> dict[str, dict]:
+    """Return the shipped prims as gen-domain handler entries.
+
+    Each row is the ``lawdata.HANDLERS`` shape — ``{"pattern",
+    "kernel", "args"}`` — plus ``"attr_mvars"``, the fold call's
+    attr metavariables the sink's binding ``spec_bind``s back into
+    the denotation spec at eval time.  The kernel IS the shipped
+    op name: merged into a ``gen_handlers`` table, the genkernel
+    sinks bind the minted op itself to a fused-body codegen path
+    (``triton_bindings`` where the denotation is elementwise, the
+    ``torch.compile``d spelled body otherwise) — the delivery the
+    spec-walk :func:`register` binding does not provide.  Entries
+    whose spec carries attr metavars are sink-side only: a pattern
+    holding a metavar *name* where a real attr value belongs never
+    concrete-matches a program subterm, so the board offers no
+    ``claim`` for them — their members arrive through the shipped
+    ``prim:*`` folds in ``DEFAULT``.
+    """
+    out: dict[str, dict] = {}
+    for name in SYNOP_SHIPPED:
+        fold, expand = minted.prim_fold(name)
+        out[name] = {
+            "pattern": _spec_of(expand.rhs),
+            "kernel": name,
+            "args": tuple(fold.rhs.args),
+            "attr_mvars": tuple(fold.rhs.attrs),
+        }
+    return out
 
 
 def register() -> int:

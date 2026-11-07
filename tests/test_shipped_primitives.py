@@ -534,3 +534,65 @@ class TestDeployment:
         assert sp.synop_name("synop_x") == "synop_x"
         assert sp.expand_name("prim:synop_x") == "synop_x.expand"
         assert sp.expand_name("synop_x") == "synop_x.expand"
+
+
+class TestGenDelivery:
+    """The gen-domain delivery path — ``handler_entries`` rows merged
+    into a ``gen_handlers`` table bind each minted op to the
+    fused-body codegen (``genkernel.gen_bindings`` /
+    ``triton_bindings``), not the spec-walk ``register()`` binding.
+    """
+
+    def test_handler_entries_cover_every_shipped_op(self):
+        he = sp.handler_entries()
+        assert set(he) == set(sp.SYNOP_SHIPPED)
+        by_op = {f.rhs.op: f for f in sp.folds()}
+        for name, h in he.items():
+            fold = by_op[name]
+            assert h["kernel"] == name  # the op IS the kernel
+            assert h["args"] == tuple(fold.rhs.args)
+            assert h["attr_mvars"] == tuple(fold.rhs.attrs)
+            assert h["pattern"][0] == fold.premises[0].rhs.op
+
+    def test_gen_binding_matches_the_spec_walk(self):
+        """The fused-body callable evaluates the same denotation."""
+        import mlopt_torch.torch_bridge as tb
+        from mlopt_discovery import genkernel as gk
+
+        sp.register()
+        he = sp.handler_entries()
+        torch.manual_seed(0)
+        # attr-free: synop_889d740672 — six leaf metavars, pure pointwise
+        h = he["synop_889d740672"]
+        fused = gk.gen_bindings({"k": h}, compile_kernels=False)[
+            "synop_889d740672"
+        ]
+        args = [
+            torch.randn(4, 4, dtype=torch.float64) for _ in h["args"]
+        ]
+        ref = tb._IR_TO_TORCH["synop_889d740672"](*args)
+        torch.testing.assert_close(fused(*args), ref)
+        # attr-metavar: synop_976f9836d7 carries ``a101`` — the call's
+        # attrs spec_bind back into the spelled body's attr dicts
+        h = he["synop_976f9836d7"]
+        assert h["attr_mvars"] == ("a101",)
+        fused = gk.gen_bindings({"k": h}, compile_kernels=False)[
+            "synop_976f9836d7"
+        ]
+        args = [
+            torch.randn(4, 4, dtype=torch.float64) for _ in h["args"]
+        ]
+        ref = tb._IR_TO_TORCH["synop_976f9836d7"](*args, a101=1)
+        torch.testing.assert_close(fused(*args, a101=1), ref)
+
+    def test_triton_tier_takes_the_elementwise_prims(self):
+        """Attr-free elementwise prims get real Triton kernels;
+        attr-carrying specs decline to the compiled spelled body."""
+        from mlopt_discovery import genkernel as gk
+
+        he = sp.handler_entries()
+        got = gk.triton_bindings(
+            {n: he[n] for n in ("synop_889d740672", "synop_976f9836d7")}
+        )
+        assert "synop_889d740672" in got
+        assert "synop_976f9836d7" not in got

@@ -256,19 +256,30 @@ def gen_bindings(
     ``compile_kernels`` the callable is ``torch.compile``-compiled into a
     fused inductor graph: the delivered module genuinely runs one
     kernel where the source spelled several.
+
+    A handler may declare ``"attr_mvars"`` — attr metavariables its
+    pattern's attr dicts hold by *name* (the shipped ``synop*`` fold
+    calls carry the bound values as real op attrs).  At call time the
+    arriving kwargs are ``spec_bind``'d back into the spec before the
+    spelled body evaluates; entries without the key evaluate exactly
+    as before.
     """
     import mlopt_torch.torch_bridge as tb
     import torch
+
+    from mlopt_discovery.prim_mint import spec_bind
 
     bindings = tb._IR_TO_TORCH
     out: dict[str, Any] = {}
     for h in handlers.values():
         spec = h["pattern"]
+        amvars = tuple(h.get("attr_mvars", ()))
 
-        def fn(*args: Any, s=spec, **_attrs: Any) -> Any:
+        def fn(*args: Any, s=spec, mvars=amvars, **attrs: Any) -> Any:
             names = _spec_metas(s)
             env = dict(zip(names, args, strict=True))
-            return _eval_spec(s, env, bindings)
+            body = spec_bind(s, attrs, mvars) if mvars else s
+            return _eval_spec(body, env, bindings)
 
         out[h["kernel"]] = torch.compile(fn) if compile_kernels else fn
     return out

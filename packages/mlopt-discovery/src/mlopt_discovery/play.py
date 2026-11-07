@@ -736,7 +736,22 @@ def _gen_cases(seed: int, n: int) -> list:
 
 
 def _gen_board(case: Any) -> ma.MetaArena:
-    """Board a gen case under its generated handler table."""
+    """Board a gen case under its generated handler table.
+
+    The bank merges the shipped ``synop*`` primitives' denotations as
+    generated-kernel handler rows — one entry per minted op, kernel =
+    the op itself.  The ``prim:synop*`` folds already ride ``DEFAULT``
+    into saturation, but a folded ``synop_*`` member could never win
+    extraction while no sink could lower it: the merged table is what
+    makes the ops *feasible* (``supported``) and *deliverable* —
+    ``gen_probe``'s ``hybrid_sink`` reads the same ``ex["gen_handlers"]``
+    and binds each op to a fused-body codegen (``triton_bindings``
+    where the denotation is elementwise, the ``torch.compile``d spelled
+    body otherwise), not the spec-walk binding
+    ``shipped_primitives.register()`` seats.  The merge mutates the
+    case record so the delivery sink sees the identical table, and
+    reseats ``ex["sink"]`` on it for the gen domain's deliver arm.
+    """
     from mlopt_core.cells import Provenance
     from mlopt_core.cost.basic import count_cost
     from mlopt_core.laws import DEFAULT
@@ -744,12 +759,23 @@ def _gen_board(case: Any) -> ma.MetaArena:
     from mlopt_discovery import cellstore as cs
     from mlopt_discovery import genkernel as gk
     from mlopt_discovery import lawdata
+    from mlopt_discovery import shipped_primitives as sp
 
     ex = case[5]
 
     def novel(op: str) -> bool:
         return op.startswith(("claim_", "foldabs_", "gen_"))
 
+    prim = sp.handler_entries()
+    if not any(tag in ex["gen_handlers"] for tag in prim):
+        ex["gen_handlers"] = {**ex["gen_handlers"], **prim}
+        if "sink" in ex:
+            ex["sink"] = gk.gen_sink(
+                ex["gen_handlers"], compile_kernels=False
+            )
+    supported = frozenset(case[4]) | {
+        h["kernel"] for h in prim.values()
+    }
     store = cs.ambient_store(
         rules=DEFAULT, handlers=lawdata.HANDLERS
     ).merge(
@@ -761,7 +787,7 @@ def _gen_board(case: Any) -> ma.MetaArena:
     )
     return ma.MetaArena(
         case[1],
-        supported=case[4],
+        supported=supported,
         corpus=[case[1]],
         cost_fn=gk.novel_cost(count_cost, novel, 0.5),
         store=store,
@@ -837,6 +863,11 @@ def gen_probe(case: Any, *, budget: int = 12, reps: int = 200) -> dict:
     term = board.deliverable(best)
     from mlopt_core.ir import IR
 
+    from mlopt_discovery import shipped_primitives as sp
+    from mlopt_discovery.meta_arena import _ops_of
+
+    prim_ops = sorted(_ops_of(term) & set(sp.SYNOP_SHIPPED))
+
     ir = IR(
         root=term,
         inputs=list(ex["ir"].inputs),
@@ -862,6 +893,7 @@ def gen_probe(case: Any, *, budget: int = 12, reps: int = 200) -> dict:
             "claims": tags,
             "delivered": True,
             "verified": rep.passed,
+            "prim_ops": prim_ops,
             "max_abs": rep.max_abs,
             "cost": getattr(board.observe(), "cost", float("nan")),
             "baseline_us": t_base,
