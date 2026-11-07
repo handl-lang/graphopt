@@ -107,6 +107,8 @@ __all__ = [
     "ELEMENTWISE",
     "TIERS",
     "Tier",
+    "attr_site_env",
+    "concretize_at_site",
     "decayed_handlers",
     "decayed_spec",
     "decayed_triton_bindings",
@@ -285,17 +287,100 @@ def gen_bindings(
     return out
 
 
+#: Measured-dispatch cache for :func:`_rms_norm_measured` — keyed by
+#: ``(dtype, device, normalized_shape, has_weight, input shape)``.
+#: Bounded: a long-lived process sweeping many shapes must not grow
+#: it without limit; a full cache resets (re-measurement is cheap
+#: and rare).
+_RMSNORM_PICK: dict = {}
+_RMSNORM_CACHE_MAX = 64
+
+
+def _rmsnorm_spelled(x: Any, ns: tuple, eps: float, w: Any) -> Any:
+    """Spell the fold's LHS — ``x·rsqrt(mean(x²)+eps)·w``."""
+    import torch
+
+    dims = tuple(range(-len(ns), 0))
+    y = x * torch.rsqrt(x.pow(2).mean(dims, keepdim=True) + eps)
+    return y if w is None else y * w
+
+
+def _rms_norm_measured(
+    x: Any, w: Any = None, *a: Any, **kw: Any
+) -> Any:
+    """``rms_norm`` binding that picks its implementation by timing.
+
+    T-026 law-fold residual: ``rms_norm_fold``/``_nogain`` are bank
+    laws in ``DEFAULT`` — they fire in saturation and extraction
+    prices the ``rms_norm`` member at one op, a cost-model win the
+    measured referee never sees (it only gates handler *claims*).
+    On this box ``F.rms_norm``'s fp64 kernel is ~7x slower than the
+    spelled body at head-width shapes (222 us vs 30 us measured),
+    so the fold's delivered module lost 0.15-0.21x wall-clock while
+    verifying perfectly.  The op's *denotation* is dtype/shape
+    polymorphic; its *implementation* is not — this binding measures
+    both spellings once per ``(dtype, device, shape, weight)`` and
+    caches the winner, so the law fold keeps its cost win where the
+    fused kernel pays and silently delivers the spelled body where
+    it does not.  Same function either way — verify is unaffected.
+    """
+    import torch
+    import torch.nn.functional as F
+    from mlopt_torch.torch_bridge import attr_of
+
+    ns = tuple(attr_of(kw, "dim", "normalized_shape"))
+    eps = float(attr_of(kw, "eps", default=1e-6))
+    key = (
+        x.dtype,
+        str(x.device),
+        ns,
+        w is not None,
+        tuple(x.shape),
+    )
+    pick = _RMSNORM_PICK.get(key)
+    if pick is None:
+        fused = lambda: F.rms_norm(  # noqa: E731
+            x, ns, weight=w, eps=eps
+        )
+        spelled = lambda: _rmsnorm_spelled(x, ns, eps, w)  # noqa: E731
+        with torch.no_grad():
+            for _ in range(3):
+                fused()
+                spelled()
+            t_fused, t_spelled = _paired_time(fused, spelled, 20)
+        pick = t_fused <= t_spelled
+        if len(_RMSNORM_PICK) >= _RMSNORM_CACHE_MAX:
+            _RMSNORM_PICK.clear()
+        _RMSNORM_PICK[key] = pick
+    if pick:
+        return F.rms_norm(x, ns, weight=w, eps=eps)
+    return _rmsnorm_spelled(x, ns, eps, w)
+
+
+#: Ambient-op overrides the generated-kernel sinks install: ops
+#: whose shipped binding is measured per-site rather than fixed.
+_MEASURED_BINDINGS: dict = {"rms_norm": _rms_norm_measured}
+
+
+def _ambient_bindings() -> dict:
+    """Return the ambient torch table plus measured-dispatch overrides."""
+    import mlopt_torch.torch_bridge as tb
+
+    return dict(tb._IR_TO_TORCH) | _MEASURED_BINDINGS
+
+
 def gen_sink(handlers: dict, *, compile_kernels: bool = True) -> Any:
     """Build a ``TorchSink`` whose vocabulary includes the gen kernels.
 
     ``supported_ops`` reports the ambient table plus every gen name —
-    the feasibility bound the board prices against.
+    the feasibility bound the board prices against.  Ambient ops in
+    :data:`_MEASURED_BINDINGS` deliver through their measured
+    dispatch (see :func:`_rms_norm_measured`).
     """
-    import mlopt_torch.torch_bridge as tb
     from mlopt_core.ops import OpTable
     from mlopt_torch.adapters import TorchSink
 
-    bindings = dict(tb._IR_TO_TORCH) | gen_bindings(
+    bindings = _ambient_bindings() | gen_bindings(
         handlers, compile_kernels=compile_kernels
     )
     table = OpTable.core().register(torch_bindings=bindings)
@@ -357,6 +442,113 @@ def _handler_env(h: dict, term: Any) -> dict | None:
     return _site_env(h["pattern"], term)
 
 
+def _attr_match(
+    pattern: Any,
+    term: Any,
+    env: dict,
+    attrs: dict,
+    attr_mvars: tuple,
+) -> bool:
+    """``_concrete_match`` extended with attr-metavar binding.
+
+    Attr-dict values equal to an attr-mvar *name* bind the site's
+    real attr value into *attrs* (consistently — the same mvar must
+    bind equal values at every occurrence); every other attr value
+    must equal the term's literally, and the attr key sets must
+    agree — the same strictness ``_match_node`` applies, with the
+    metavar names treated as leaves.
+    """
+    from mlopt_core.ir import Const, Op
+
+    from mlopt_discovery.meta_arena import _bind_meta
+
+    if isinstance(pattern, str):
+        return _bind_meta(pattern, term, env)
+    if isinstance(pattern, (tuple, list)) and pattern:
+        if not isinstance(term, Op) or term.op != pattern[0]:
+            return False
+        kids = [e for e in pattern[1:] if not isinstance(e, dict)]
+        if len(kids) != len(term.args):
+            return False
+        pat_attrs = next(
+            (e for e in pattern[1:] if isinstance(e, dict)), {}
+        )
+        if set(term.attrs) != set(pat_attrs):
+            return False
+        for k, v in pat_attrs.items():
+            tv = term.attrs[k]
+            if isinstance(v, str) and v in attr_mvars:
+                bound = attrs.get(v)
+                if bound is None:
+                    attrs[v] = tv
+                elif bound != tv:
+                    return False
+            elif tv != v:
+                return False
+        return all(
+            _attr_match(p, t, env, attrs, attr_mvars)
+            for p, t in zip(kids, term.args, strict=True)
+        )
+    return isinstance(term, Const) and term.value == pattern
+
+
+def attr_site_env(h: dict, term: Any) -> tuple | None:
+    """Site an attr-metavar handler; return ``(leaf_env, attrs)``.
+
+    The 5 shipped prim specs whose denotation attr dicts hold
+    metavar *names* (``{'dim': 'a97'}``) never concrete-match a
+    program subterm — ``_concrete_match`` compares attrs literally.
+    This matcher binds those names from the site's real attrs, so
+    the fold-cost referee can measure them like any other spec.
+    Returns the first occurrence's ``(metavar→leaf env,
+    attr-mvar→value attrs)`` or ``None``.
+    """
+    from mlopt_core.ir import Op
+
+    amvars = tuple(h.get("attr_mvars", ()))
+    if not amvars:
+        return None
+
+    def walk(spec: Any, t: Any) -> tuple | None:
+        env: dict = {}
+        attrs: dict = {}
+        if _attr_match(spec, t, env, attrs, amvars):
+            return env, attrs
+        if isinstance(t, Op):
+            for a in t.args:
+                found = walk(spec, a)
+                if found is not None:
+                    return found
+        return None
+
+    return walk(h["pattern"], term)
+
+
+def concretize_at_site(h: dict, term: Any) -> dict | None:
+    """Return a site-concretized copy of an attr-metavar handler.
+
+    The copy's ``"pattern"`` has the bound attr values frozen in
+    (``spec_bind``) and ``"attr_mvars"`` emptied, so
+    ``_handler_env``/``profitable`` treat it like any concrete
+    spec.  Measurement-only: callers that *deliver* must keep the
+    original handler — the op is polymorphic over the attr values
+    and one site's freeze would mis-denote another's.
+    """
+    from mlopt_discovery.prim_mint import spec_bind
+
+    site = attr_site_env(h, term)
+    if site is None:
+        return None
+    _env, attrs = site
+    return {
+        **h,
+        "pattern": spec_bind(
+            h["pattern"], attrs, tuple(h.get("attr_mvars", ()))
+        ),
+        "attr_mvars": (),
+    }
+
+
 def _referee_kernel(
     kernel_for: Any, name: str, h: dict, vals: dict, kerneled: Any
 ) -> tuple:
@@ -370,6 +562,15 @@ def _referee_kernel(
     ``None`` results fall back to the ``torch.compile``d spelled
     body — the pointwise tier's own delivery path — under the
     original env.
+
+    The fallback is timed on the *delivery* device: the sinks this
+    referee grades lower onto CUDA whenever it exists, and a
+    ``torch.compile``d spec-walk that wins on CPU can lose there
+    (dynamo graph-breaks on the recursive eval leave per-call
+    guard overhead the eager spelled side never pays — the T-026
+    ``synop_4c5296b3ba`` residual: kept at 0.64x on CPU values,
+    delivered at 0.54x on CUDA).  When CUDA is available the
+    fallback env moves with it; a move failure keeps the host env.
     """
     import torch
 
@@ -379,6 +580,15 @@ def _referee_kernel(
             return k[0], k[1]
         if k is not None:
             return k, vals
+    if torch.cuda.is_available():
+        try:
+            cvals = {
+                m: (v.cuda() if torch.is_tensor(v) else v)
+                for m, v in vals.items()
+            }
+        except (AttributeError, RuntimeError, TypeError):
+            cvals = vals
+        return torch.compile(kerneled), cvals
     return torch.compile(kerneled), vals
 
 
@@ -441,7 +651,10 @@ def profitable(
 
     bindings = tb._IR_TO_TORCH
     keep: dict[str, dict] = {}
-    for name, h in handlers.items():
+    # sorted order: callers pass frozenset-derived dicts whose
+    # iteration order varies per process (hash seed) — which handler
+    # absorbs first-call warmup noise must not be a coin flip.
+    for name, h in sorted(handlers.items()):
         env = _handler_env(h, term)
         if env is None:
             continue
@@ -507,6 +720,55 @@ def _median_time(fn: Any, reps: int) -> float:
     return ts[len(ts) // 2]
 
 
+def _paired_time(a: Any, b: Any, reps: int) -> tuple:
+    """Median per-call seconds of ``a`` and ``b``, interleaved.
+
+    Two sequential ``_median_time`` windows drift: clocks ramp, the
+    scheduler moves, an unrelated process lands — and the ratio
+    inherits the whole excursion (the T-026 residual: the same
+    ``synop2_*`` site read 0.64x and ~2.2x across processes).  Here
+    both sides warm up together, then alternate inside one loop —
+    even rounds ``a``-then-``b``, odd rounds ``b``-then-``a`` — so a
+    slow drift cancels instead of landing wholly inside one arm.
+    """
+    import time
+
+    import torch
+
+    def _sync() -> None:
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+
+    for _ in range(8):
+        a()
+        b()
+    _sync()
+    ta: list[float] = []
+    tb: list[float] = []
+    for i in range(reps):
+        if i % 2 == 0:
+            t0 = time.perf_counter()
+            a()
+            _sync()
+            ta.append(time.perf_counter() - t0)
+            t0 = time.perf_counter()
+            b()
+            _sync()
+            tb.append(time.perf_counter() - t0)
+        else:
+            t0 = time.perf_counter()
+            b()
+            _sync()
+            tb.append(time.perf_counter() - t0)
+            t0 = time.perf_counter()
+            a()
+            _sync()
+            ta.append(time.perf_counter() - t0)
+    ta.sort()
+    tb.sort()
+    return ta[len(ta) // 2], tb[len(tb) // 2]
+
+
 def _kernel_pays(
     kernel: Any, spelled: Any, vals: dict, mvs: list, reps: int
 ) -> tuple | None:
@@ -533,9 +795,8 @@ def _kernel_pays(
             atol=1e-5,
         ):
             return None
-        t_spelled = _median_time(spelled, reps)
-        t_kernel = _median_time(
-            lambda: kernel(*[vals[m] for m in mvs]), reps
+        t_spelled, t_kernel = _paired_time(
+            spelled, lambda: kernel(*[vals[m] for m in mvs]), reps
         )
     except Exception:
         return None
@@ -743,11 +1004,10 @@ def triton_sink(handlers: dict) -> Any:
     unpriced-unlowerable via the ambient table, the same posture
     as ``gen_sink``.
     """
-    import mlopt_torch.torch_bridge as tb
     from mlopt_core.ops import OpTable
     from mlopt_torch.adapters import TorchSink
 
-    bindings = dict(tb._IR_TO_TORCH)
+    bindings = _ambient_bindings()
     bindings.update(triton_bindings(handlers))
     table = OpTable.core().register(torch_bindings=bindings)
     return TorchSink(ops=table)
@@ -794,7 +1054,6 @@ def hybrid_sink(handlers: dict, *, compile_kernels: bool = True) -> Any:
     function.  Unrolled compose-tree specs keep the fallback —
     their spelled eval IS the carrier semantics, just serial.
     """
-    import mlopt_torch.torch_bridge as tb
     from mlopt_core.ops import OpTable
     from mlopt_torch.adapters import TorchSink
 
@@ -803,7 +1062,7 @@ def hybrid_sink(handlers: dict, *, compile_kernels: bool = True) -> Any:
         for k, h in handlers.items()
         if not _seq_scan_spec(h["pattern"])
     }
-    bindings = dict(tb._IR_TO_TORCH)
+    bindings = _ambient_bindings()
     bindings.update(
         gen_bindings(plain, compile_kernels=compile_kernels)
     )
@@ -1405,11 +1664,10 @@ def scan_triton_sink(handlers: dict, *, axis: int | None = -2) -> Any:
     bound the board prices the carrier claims against — and a claim
     on an unrecognised spec stays unpriced-unlowerable.
     """
-    import mlopt_torch.torch_bridge as tb
     from mlopt_core.ops import OpTable
     from mlopt_torch.adapters import TorchSink
 
-    bindings = dict(tb._IR_TO_TORCH)
+    bindings = _ambient_bindings()
     bindings.update(scan_triton_bindings(handlers, axis=axis))
     table = OpTable.core().register(torch_bindings=bindings)
     return TorchSink(ops=table)
@@ -1988,11 +2246,10 @@ def decayed_triton_sink(handlers: dict) -> Any:
     the feasibility bound the board prices decayed claims against —
     and a claim on an unrecognised spec stays unpriced-unlowerable.
     """
-    import mlopt_torch.torch_bridge as tb
     from mlopt_core.ops import OpTable
     from mlopt_torch.adapters import TorchSink
 
-    bindings = dict(tb._IR_TO_TORCH)
+    bindings = _ambient_bindings()
     bindings.update(decayed_triton_bindings(handlers))
     table = OpTable.core().register(torch_bindings=bindings)
     return TorchSink(ops=table)

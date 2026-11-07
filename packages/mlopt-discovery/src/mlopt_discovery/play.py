@@ -791,10 +791,15 @@ def _fold_cost_gate(case: Any, handlers: dict) -> dict:
       delivered binding (``kernel_for`` = the ``hybrid_sink`` codegen
       path) against the spelled denotation on the case's real
       values — and only a measured win stays feasible;
-    * an entry the referee **cannot evaluate** — the attr-metavar
-      specs never concrete-match a program subterm — keeps its seat
-      too: the gate refuses a *measured* loss, it does not invent
-      one.
+    * an entry the referee **cannot evaluate** — no concrete
+      occurrence — keeps its seat: the gate refuses a *measured*
+      loss, it does not invent one.  The attr-metavar specs (5 of
+      57) DO get sited: ``genkernel.concretize_at_site`` binds the
+      attr metavars from the matched site's real attrs and the
+      referee times the frozen denotation — the same callable the
+      delivery path's ``spec_bind`` produces for that site.  The
+      *delivered* table keeps the polymorphic original; only the
+      measurement sees the freeze.
     """
     from mlopt_discovery import genkernel as gk
 
@@ -803,10 +808,16 @@ def _fold_cost_gate(case: Any, handlers: dict) -> dict:
     ungated: dict[str, dict] = {}
     measured: dict[str, dict] = {}
     for name, h in handlers.items():
-        if gk._handler_env(h, term) is None:
-            ungated[name] = h
-        else:
+        if gk._handler_env(h, term) is not None:
             measured[name] = h
+        elif h.get("attr_mvars"):
+            concrete = gk.concretize_at_site(h, term)
+            if concrete is None:
+                ungated[name] = h
+            else:
+                measured[name] = concrete
+        else:
+            ungated[name] = h
     if not measured:
         return ungated
     keep = gk.profitable(
@@ -816,7 +827,13 @@ def _fold_cost_gate(case: Any, handlers: dict) -> dict:
         reps=20,
         kernel_for=_triton_kernel_for,
     )
-    return {**ungated, **keep}
+    # ``keep`` holds the *concretized* copies — the delivered table
+    # must carry the polymorphic originals (one site's frozen attrs
+    # would mis-denote another site's call).
+    return {
+        **ungated,
+        **{name: handlers[name] for name in keep},
+    }
 
 
 def _gen_board(case: Any) -> ma.MetaArena:

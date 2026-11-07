@@ -1,0 +1,38 @@
+[
+ {
+  "case": "zoo:SigmoidAttention",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "prim_ops": [],
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.794,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.726,
+    "eager_us": 137.6,
+    "compiled_us": 141.5,
+    "gen_us": 189.5
+   },
+   {
+    "speedup": 0.794,
+    "eager_us": 161.2,
+    "compiled_us": 159.2,
+    "gen_us": 203.0
+   },
+   {
+    "speedup": 0.799,
+    "eager_us": 159.2,
+    "compiled_us": 156.3,
+    "gen_us": 199.1
+   }
+  ],
+  "spread": [
+   0.726,
+   0.799
+  ],
+  "dtype": "fp32"
+ }
+]

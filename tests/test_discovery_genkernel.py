@@ -206,6 +206,51 @@ class TestGenDomain:
         )
         assert set(play._fold_cost_gate(case, he)) == set(he)
 
+    def test_fold_cost_gate_sights_attr_metavars(self, monkeypatch):
+        # T-026: attr-metavar prim specs concrete-match never, but
+        # ``concretize_at_site`` binds the attr mvars from the real
+        # site — the referee measures a frozen copy while the
+        # delivered table keeps the polymorphic original.
+        torch = pytest.importorskip("torch")
+        x, y = _v("x", 4, 4), _v("y", 4, 1)
+        term = _p("mul", x, _p("unsqueeze", y, dim=-2))
+        case = (
+            "t",
+            term,
+            {},
+            "t",
+            frozenset(),
+            {"ir": None, "leaves": {}, "input": torch.rand(4, 4)},
+        )
+        h = {
+            "pattern": (
+                "mul",
+                "m",
+                ("unsqueeze", "n", {"dim": "a1"}),
+            ),
+            "kernel": "synop_t",
+            "args": ("m", "n"),
+            "attr_mvars": ("a1",),
+        }
+        monkeypatch.setattr(play, "_var_env", lambda *a: {})
+        seen = {}
+
+        def spy(hs, *a, **k):
+            seen.update(hs)
+            return {}
+
+        monkeypatch.setattr(gk, "profitable", spy)
+        assert play._fold_cost_gate(case, {"tag": h}) == {}
+        # the referee saw the concretized copy, not the original
+        assert seen["tag"]["attr_mvars"] == ()
+        assert seen["tag"]["pattern"][2][2] == {"dim": -2}
+        # a keeping referee restores the POLYMORPHIC original
+        monkeypatch.setattr(
+            gk, "profitable", lambda hs, *a, **k: dict(hs)
+        )
+        out = play._fold_cost_gate(case, {"tag": h})
+        assert out["tag"] is h
+
     def test_spec_ops_skips_attr_dicts(self):
         spec = ("add", "X1", {"dim": 1})
         assert gk._spec_ops(spec) == {"add"}
@@ -511,6 +556,29 @@ class TestMeasuredReferee:
             == {}
         )
 
+    def test_fallback_env_move_failure_keeps_host(self, monkeypatch):
+        """CUDA fallback: a failed ``.cuda()`` keeps the host env."""
+        torch = pytest.importorskip("torch")
+        if not torch.cuda.is_available():
+            pytest.skip("the fallback only engages with CUDA present")
+
+        def boom(*a, **k):
+            raise RuntimeError("no device")
+
+        monkeypatch.setattr(torch.Tensor, "cuda", boom)
+        x = _v("x", 16)
+        term = _p("mul", x, _p("relu", x))
+        hs = {
+            "g": {
+                "pattern": ("mul", "X1", ("relu", "X1")),
+                "kernel": "gk_host",
+                "args": ("X1",),
+            }
+        }
+        # must not propagate the move failure — the referee still
+        # times the compiled spelled body on the host env
+        gk.profitable(hs, term, {"x": torch.rand(16)}, reps=2)
+
     def test_kernel_raising_mid_timing_declines(self):
         """A kernel that verifies once then raises during timing
         declines — the timing loop is guarded too."""
@@ -547,6 +615,112 @@ class TestMeasuredReferee:
             )
             == {}
         )
+
+
+class TestAttrSiteEnv:
+    """Attr-metavar siting — the 5 prim specs ``_concrete_match`` misses."""
+
+    def _handler(self):
+        return {
+            "pattern": (
+                "mul",
+                "m",
+                ("unsqueeze", "n", {"dim": "a1"}),
+            ),
+            "kernel": "synop_x",
+            "args": ("m", "n"),
+            "attr_mvars": ("a1",),
+        }
+
+    def test_binds_attr_mvar_and_concretizes(self):
+        x, y = _v("x", 4, 4), _v("y", 4, 1)
+        term = _p("add", _p("mul", x, _p("unsqueeze", y, dim=-2)), x)
+        h = self._handler()
+        site = gk.attr_site_env(h, term)
+        assert site is not None
+        env, attrs = site
+        assert attrs == {"a1": -2}
+        assert env["m"] == x and env["n"] == y
+        # the frozen copy concrete-matches through the ordinary path
+        concrete = gk.concretize_at_site(h, term)
+        assert concrete is not None
+        assert concrete["attr_mvars"] == ()
+        assert gk._handler_env(concrete, term) == env
+        # the original stays polymorphic — delivery keeps it
+        assert h["attr_mvars"] == ("a1",)
+
+    def test_inconsistent_attr_binding_declines(self):
+        # one mvar, two sites with different dims — no consistent bind
+        h = {
+            "pattern": (
+                "add",
+                ("unsqueeze", "a", {"dim": "d"}),
+                ("unsqueeze", "b", {"dim": "d"}),
+            ),
+            "kernel": "synop_y",
+            "args": ("a", "b"),
+            "attr_mvars": ("d",),
+        }
+        x, y = _v("x", 4, 4), _v("y", 4, 4)
+        term = _p(
+            "add",
+            _p("unsqueeze", x, dim=-2),
+            _p("unsqueeze", y, dim=-1),
+        )
+        assert gk.attr_site_env(h, term) is None
+        assert gk.concretize_at_site(h, term) is None
+
+    def test_literal_attr_still_compares(self):
+        h = {
+            "pattern": ("unsqueeze", "a", {"dim": 0}),
+            "kernel": "synop_z",
+            "args": ("a",),
+            "attr_mvars": ("a1",),
+        }
+        x = _v("x", 4, 4)
+        assert gk.attr_site_env(h, _p("unsqueeze", x, dim=-2)) is None
+
+
+class TestPairedTime:
+    def test_interleaved_medians(self):
+        import time
+
+        def slow():
+            time.sleep(0.002)
+
+        def fast():
+            pass
+
+        ta, tb = gk._paired_time(slow, fast, 4)
+        assert ta > tb > 0
+
+
+class TestMeasuredDispatch:
+    """``_rms_norm_measured`` — the law-fold delivery gate (T-026)."""
+
+    def test_matches_fused_and_caches_pick(self):
+        torch = pytest.importorskip("torch")
+        import torch.nn.functional as F
+
+        gk._RMSNORM_PICK.clear()
+        try:
+            x = torch.randn(4, 8, dtype=torch.float32)
+            w = torch.randn(8)
+            got = gk._rms_norm_measured(x, w, dim=(8,), eps=1e-5)
+            want = F.rms_norm(x, (8,), weight=w, eps=1e-5)
+            torch.testing.assert_close(got, want)
+            assert gk._RMSNORM_PICK  # the pick was measured + cached
+            # weight-free spelling agrees too
+            got2 = gk._rms_norm_measured(x, None, dim=(8,), eps=1e-5)
+            torch.testing.assert_close(
+                got2, F.rms_norm(x, (8,), eps=1e-5)
+            )
+        finally:
+            gk._RMSNORM_PICK.clear()
+
+    def test_ambient_bindings_override_rms_norm(self):
+        b = gk._ambient_bindings()
+        assert b["rms_norm"] is gk._rms_norm_measured
 
 
 def _spelled_scan(a, b, h, axis=-2):
