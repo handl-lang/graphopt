@@ -59,9 +59,13 @@ __all__ = [
     "META_PART_TAGS",
     "META_SPEC",
     "MetaLearnedPlayer",
+    "curriculum_order",
     "evaluate",
     "featurize",
     "gen_cases",
+    "imitate_oracle",
+    "oracle_line",
+    "plan_oracles",
     "player_table",
     "train_player",
 ]
@@ -322,6 +326,25 @@ class MetaLearnedPlayer(LearnedPlayer):
 
     SPEC = META_SPEC
 
+    def reset_episode(self) -> None:
+        """Clear per-episode bookkeeping before a fresh board.
+
+        ``LinearPolicy._observe`` detects the episode boundary only
+        when the previous episode was observed past step 0
+        (``prev_steps > 0``).  An episode that ends on its first
+        move — the degenerate ``extract``-early line this board
+        rewards — leaves ``prev_steps == 0``, so the next board
+        inherits the stale played set and the terminal ``extract``
+        stays masked for a whole episode (training and imitation
+        only; eval arms are fresh ``frozen`` copies).  The boundary
+        cannot be inferred inside ``_observe`` — a ``steps == 0``
+        re-observation is identical whether the board advanced or
+        the same state was queried twice — so the drivers
+        (:func:`train_player`, :func:`imitate_oracle`) reset
+        explicitly.  Upstream fix belongs in ``gamekit``.
+        """
+        self._prev_steps = -1  # forces _observe's boundary branch
+
 
 def _key(action: ma.Action) -> tuple:
     """Stable dedup key — the played-move mask, replayable."""
@@ -429,7 +452,10 @@ def train_player(
     """Play one episode per case; REINFORCE on each trajectory total."""
     cf = cost_fn or count_cost
     totals: list[float] = []
+    reset = getattr(player, "reset_episode", None)
     for case in cases:
+        if reset is not None:
+            reset()
         traj = ma.run_episode(
             _board(case, cf, max_nodes), player, budget
         )
@@ -438,6 +464,174 @@ def train_player(
         )
         totals.append(traj.total)
     return totals
+
+
+# ---------------------------------------------------------------------------
+#  The oracle — the known-good line per board, found by simulation
+# ---------------------------------------------------------------------------
+#
+#  Imitation warm-start needs demonstrations, and the meta-arena's
+#  paying structure is *compositional*: no single move reveals
+#  whether ``claim → extract`` beats ``extract`` until the claim has
+#  fired and the extraction repriced.  The oracle is therefore a
+#  small candidate set played out on fresh boards — the same
+#  referee the players face, so a "demonstrated" line is one the
+#  board itself scored best among the known shapes:
+#
+#  * ``extract`` — the degenerate stop;
+#  * ``saturate(b) → extract`` per advertised budget arm;
+#  * ``claim(tag) → extract`` per occurring handler tag — the
+#    fused composed line;
+#  * ``claim(tag) → saturate → extract`` — claim plus a closure
+#    pass (the claim fires its minted rule once; saturate can
+#    still find cross-rule reach);
+#  * every claim tag in sequence, then extract (with and without a
+#    saturate) — the multi-claim composition.
+#
+#  Ties resolve to the earlier candidate — cheapest line first —
+#  so a claim that merely breaks even is not demonstrated as a win.
+
+
+def _candidate_lines(state: ma.MetaState) -> list[list[ma.Action]]:
+    """Enumerate the oracle's candidate lines for *state*."""
+    out: list[list[ma.Action]] = [[ma.Action.extract()]]
+    for b in lawdata.META_SATURATE_BUDGETS:
+        out.append([ma.Action.saturate(budget=b), ma.Action.extract()])
+    tags = list(state.claim_tags)
+    for tag in tags:
+        out.append([ma.Action.claim(tag), ma.Action.extract()])
+        out.append(
+            [
+                ma.Action.claim(tag),
+                ma.Action.saturate(),
+                ma.Action.extract(),
+            ]
+        )
+    if len(tags) > 1:
+        claims = [ma.Action.claim(t) for t in tags]
+        out.append([*claims, ma.Action.extract()])
+        out.append([*claims, ma.Action.saturate(), ma.Action.extract()])
+    return out
+
+
+def oracle_line(
+    case: list | tuple,
+    *,
+    cost_fn: Any = None,
+    max_nodes: int = 20_000,
+    budget: int = 24,
+) -> tuple[float, list[ma.Action]]:
+    """Return ``(reward, line)`` — the best candidate line simulated.
+
+    Each candidate replays through :class:`ma.ScriptedPlayer` on a
+    fresh board, so declined moves, spent enodes and the certified
+    payout all count exactly as a player's episode would score them.
+    """
+    cf = cost_fn or count_cost
+    st = _board(case, cf, max_nodes).observe()
+    best_reward = float("-inf")
+    best: list[ma.Action] = [ma.Action.extract()]
+    for line in _candidate_lines(st):
+        traj = ma.run_episode(
+            _board(case, cf, max_nodes),
+            ma.ScriptedPlayer(line),
+            budget,
+        )
+        if traj.total > best_reward:
+            best_reward = traj.total
+            best = list(line)
+    return best_reward, best
+
+
+def plan_oracles(
+    cases: Iterable,
+    *,
+    cost_fn: Any = None,
+    max_nodes: int = 20_000,
+    budget: int = 24,
+) -> list[tuple[float, list[ma.Action]]]:
+    """Plan the oracle line for every case — ``(reward, line)`` pairs."""
+    return [
+        oracle_line(
+            c, cost_fn=cost_fn, max_nodes=max_nodes, budget=budget
+        )
+        for c in cases
+    ]
+
+
+def _replay(line: list[ma.Action]) -> Any:
+    """Return a state-blind player that walks *line* in order."""
+    it = iter(line)
+
+    def go(_state: ma.MetaState) -> ma.Action | None:
+        return next(it, None)
+
+    return go
+
+
+def imitate_oracle(
+    player: MetaLearnedPlayer,
+    cases: list,
+    plans: list[tuple[float, list[ma.Action]]],
+    *,
+    cost_fn: Any = None,
+    max_nodes: int = 20_000,
+    budget: int = 24,
+) -> dict[str, int]:
+    """Warm-start *player* by replaying each case's oracle line.
+
+    One ``imitate_policy`` pass: the expert replays the simulated
+    best line on the live board while ``player.imitate`` takes a
+    cross-entropy step toward each demonstrated move — demonstrations
+    of *both* sides of the decision (claim where it pays, cheap
+    extract where it doesn't).  Returns the engine's
+    ``{shown, imitated}`` counts.
+    """
+    from gamekit import engine as eng
+
+    cf = cost_fn or count_cost
+    lines = [line for _reward, line in plans]
+    reset = getattr(player, "reset_episode", None)
+
+    def expert(i: int) -> Any:
+        # the factory runs at each episode's first decision — the
+        # one hook that sees the board boundary before any pick
+        if reset is not None:
+            reset()
+        return _replay(lines[i])
+
+    def board_of(case: Any) -> ma.MetaArena:
+        return _board(case, cf, max_nodes)
+
+    return eng.imitate_policy(
+        player, expert, list(cases), board_of, budget=budget
+    )
+
+
+def _plan_rank(plan: tuple[float, list[ma.Action]]) -> int:
+    """Curriculum tier of an oracle plan — easy composed lines first."""
+    ops = [a.op for a in plan[1]]
+    n_claims = sum(1 for o in ops if o == "claim")
+    if n_claims == 1 and "saturate" not in ops:
+        return 0  # claim → extract: the fused line, reachable early
+    if n_claims:
+        return 1  # multi-claim or claim+saturate: harder composition
+    return 2  # nothing pays — the decline side, last
+
+
+def curriculum_order(
+    pairs: list[tuple[Any, tuple[float, list[ma.Action]]]],
+) -> list[tuple[Any, tuple[float, list[ma.Action]]]]:
+    """Stable-sort ``(case, plan)`` pairs easy→hard by plan tier.
+
+    Tier 0 boards are exactly those where the compressed
+    ``claim → extract`` line is the oracle's pick — the composed
+    move is reachable before the stream spends episodes on boards
+    where nothing pays.  Ties keep generation order (the seeded
+    stream's own mixing).  Pairs stay aligned so the oracle plans
+    can be replayed against the reordered stream.
+    """
+    return sorted(pairs, key=lambda cp: _plan_rank(cp[1]))
 
 
 def evaluate(
@@ -466,6 +660,11 @@ def evaluate(
                     "cert": t.certificate_ok if t is not None else None,
                     "used_declared": (
                         t.used_declared if t is not None else ()
+                    ),
+                    "claims": sum(
+                        1
+                        for r in traj.reports
+                        if r.action.op == "claim"
                     ),
                 }
             )
@@ -506,6 +705,23 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--temperature", type=float, default=1.0)
     ap.add_argument("--lr", type=float, default=_LR)
     ap.add_argument("--epsilon", type=float, default=0.0)
+    ap.add_argument(
+        "--epochs",
+        type=int,
+        default=1,
+        help="REINFORCE passes over the train stream",
+    )
+    ap.add_argument(
+        "--imitate-epochs",
+        type=int,
+        default=0,
+        help="oracle-replay warm-start passes before REINFORCE",
+    )
+    ap.add_argument(
+        "--curriculum",
+        action="store_true",
+        help="order the train stream easy→hard by oracle plan",
+    )
     ap.add_argument("--json", type=str, default=None)
     args = ap.parse_args(argv)
     if sys.getrecursionlimit() < 40_000:
@@ -519,12 +735,38 @@ def main(argv: list[str] | None = None) -> int:
         lr=args.lr,
         epsilon=args.epsilon,
     )
-    totals = train_player(
-        player,
-        train,
-        budget=args.budget,
-        max_nodes=args.max_nodes,
-    )
+    imitation: dict[str, int] | None = None
+    plans: list | None = None
+    if args.imitate_epochs or args.curriculum:
+        plans = plan_oracles(
+            train, max_nodes=args.max_nodes, budget=args.budget
+        )
+    if args.curriculum and plans is not None:
+        stream = curriculum_order(list(zip(train, plans, strict=True)))
+        train = [c for c, _p in stream]
+        plans = [p for _c, p in stream]
+    if args.imitate_epochs and plans is not None:
+        imitation = {"shown": 0, "imitated": 0}
+        for _ in range(args.imitate_epochs):
+            r = imitate_oracle(
+                player,
+                train,
+                plans,
+                max_nodes=args.max_nodes,
+                budget=args.budget,
+            )
+            imitation["shown"] += r["shown"]
+            imitation["imitated"] += r["imitated"]
+    totals: list[float] = []
+    for _ in range(args.epochs):
+        totals.extend(
+            train_player(
+                player,
+                train,
+                budget=args.budget,
+                max_nodes=args.max_nodes,
+            )
+        )
     arms: dict[str, Callable[[int], Any]] = {
         "scripted": lambda i: ma.ScriptedPlayer(),
         "greedy": lambda i: ma.GreedyPlayer(),
@@ -543,6 +785,26 @@ def main(argv: list[str] | None = None) -> int:
         "== meta-arena player — learned vs baselines =="
     )
     print(player_table(table))  # stdout-compat
+    for name in ("learned", "learned-greedy"):
+        rows = table[name]
+        n = max(len(rows), 1)
+        claims = sum(r["claims"] for r in rows)
+        decl = sum(1 for r in rows if r["used_declared"])
+        print(  # stdout-compat
+            f"{name}: claims={claims} declared-use={decl}/{n}"
+        )
+    if imitation is not None:
+        print(  # stdout-compat
+            f"imitation: {imitation['imitated']}/"
+            f"{imitation['shown']} demonstrated moves cloned"
+        )
+    if plans is not None:
+        tiers = [_plan_rank(p) for p in plans]
+        print(  # stdout-compat
+            "oracle plans: "
+            f"claim-line={tiers.count(0)} "
+            f"hard={tiers.count(1)} decline={tiers.count(2)}"
+        )
     decade = max(len(totals) // 10, 1)
     means = [
         round(sum(totals[i : i + decade]) / decade, 2)
@@ -558,6 +820,7 @@ def main(argv: list[str] | None = None) -> int:
                     "table": table,
                     "train_totals": totals,
                     "weights": player.weights_dict(),
+                    "imitation": imitation,
                 },
                 f,
                 indent=1,

@@ -235,6 +235,75 @@ class TestImitate:
         assert res["shown"] == 4
         assert res["imitated"] == 4
 
+    def test_reset_episode_clears_stale_played_mask(self):
+        # an episode ending on its first observed step leaves
+        # ``prev_steps == 0`` — without an explicit reset the next
+        # board inherits the played set and ``extract`` stays masked
+        w = {n: 0.0 for n in lawdata.META_ARENA_FEATURES}
+        w["op:extract"] = 10.0
+        p = mp.MetaLearnedPlayer(0, weights=w, greedy=True, learn=False)
+        ma.run_episode(_silu_board(), p, 24)  # extract on move 1
+        st2 = _silu_board().observe()
+        assert p(st2).op != "extract"  # masked — the bug, pinned
+        p.reset_episode()
+        assert p(st2).op == "extract"
+
+    def test_train_player_resets_each_episode(self):
+        p = mp.MetaLearnedPlayer(0, weights={}, learn=False)
+        calls = []
+        orig = p.reset_episode
+        p.reset_episode = lambda: (calls.append(1), orig())
+        mp.train_player(p, mp.gen_cases(0, 3), budget=4)
+        assert len(calls) == 3
+
+
+class TestOracle:
+    def test_oracle_claims_paying_board(self):
+        case = [
+            c
+            for c in mp.gen_cases(0, 12)
+            if c[0].endswith(":silu")
+        ][0]
+        reward, line = mp.oracle_line(case, budget=8)
+        assert [a.op for a in line] == ["claim", "extract"]
+        assert reward > 0
+
+    def test_oracle_declines_control_board(self):
+        case = [
+            c
+            for c in mp.gen_cases(0, 12)
+            if c[0].endswith(":control")
+        ][0]
+        reward, line = mp.oracle_line(case, budget=8)
+        assert [a.op for a in line] == ["extract"]
+        assert reward < 0  # the step cost — nothing pays
+
+    def test_plan_oracles_and_curriculum_order(self):
+        cases = mp.gen_cases(0, 12)
+        plans = mp.plan_oracles(cases, budget=8)
+        assert len(plans) == len(cases)
+        ordered = mp.curriculum_order(list(zip(cases, plans)))
+        ranks = [mp._plan_rank(p) for _c, p in ordered]
+        assert ranks == sorted(ranks)
+        # the claim-line boards sort before the decline boards
+        first = ordered[0][1]
+        assert mp._plan_rank(first) == 0
+        # pairs stay aligned — plans travel with their cases
+        for c, p in ordered:
+            assert p in plans
+
+    def test_imitate_oracle_clones_demonstrations(self):
+        cases = mp.gen_cases(0, 8)
+        plans = mp.plan_oracles(cases, budget=8)
+        p = mp.MetaLearnedPlayer(0, weights={})
+        res = mp.imitate_oracle(p, cases, plans, budget=8)
+        assert res["shown"] > 0
+        assert res["imitated"] == res["shown"]
+        # the demonstrated claim move earns positive weight — full
+        # consolidation is an RL-scale property (the measured run),
+        # the unit pin is that the warm-start points the right way
+        assert p.weights_dict()["op:claim"] > 0.0
+
 
 class TestDriver:
     def test_gen_cases_kinds(self):
@@ -309,6 +378,32 @@ class TestDriver:
         )
         out = capsys.readouterr().out
         assert "learned-greedy" in out
+
+    def test_main_imitate_curriculum_flags(self, capsys, monkeypatch):
+        real = mp.gen_cases
+        monkeypatch.setattr(mp, "gen_cases", lambda s, n: real(0, 4))
+        assert (
+            mp.main(
+                [
+                    "--train-cases",
+                    "4",
+                    "--eval-cases",
+                    "2",
+                    "--budget",
+                    "6",
+                    "--epochs",
+                    "1",
+                    "--imitate-epochs",
+                    "1",
+                    "--curriculum",
+                ]
+            )
+            == 0
+        )
+        out = capsys.readouterr().out
+        assert "imitation:" in out
+        assert "oracle plans:" in out
+        assert "claims=" in out
 
     def test_main_json(self, capsys, monkeypatch, tmp_path):
         real = mp.gen_cases

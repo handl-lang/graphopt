@@ -494,6 +494,38 @@ class TestFusionSites:
                 return
         raise AssertionError("no chainfuse case generated")
 
+    def test_twosite_multi_claim_composes(self):
+        # T-010: two disjoint fusion sites (matmul-separated) compose
+        # in ONE extraction — the delivered module calls both minted
+        # kernels, and a claimed op can feed another claim's metavar.
+        pytest.importorskip("torch")
+        import re
+
+        for s in range(12):
+            for c in play._gen_cases(s, 12):
+                if "twosite" not in c[0]:
+                    continue
+                board = play._gen_board(c)
+                st = board.observe()
+                claims = [
+                    a for a in ma.legal_actions(st) if a.op == "claim"
+                ]
+                assert len(claims) >= 2  # both islands are claimable
+                for a in claims:
+                    board.step(a)
+                board.step(ma.Action.saturate())
+                board.step(ma.Action.extract())
+                best = board.eg.extract_best(
+                    board.root, board.feasible_cost
+                )
+                from mlopt_core.ir import op_repr
+
+                delivered = op_repr(board.deliverable(best))
+                kernels = set(re.findall(r"gen_\d+_k", delivered))
+                assert len(kernels) >= 2, delivered
+                return
+        raise AssertionError("no twosite case generated")
+
 
 class TestZooProbe:
     """``zoo_probe`` — the held-out corpus driver."""

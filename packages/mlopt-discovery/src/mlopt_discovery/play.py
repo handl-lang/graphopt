@@ -658,6 +658,29 @@ def _gen_cases(seed: int, n: int) -> list:
             y = x @ self.a @ self.b @ self.c
             return y * torch.relu(y)
 
+    class _TwoIslands(nn.Module):
+        """Two fusion sites separated by matmuls — the composition case.
+
+        No single elementwise-connex pattern covers both tails, so
+        one extraction needs *two* minted kernels: ``claim`` each
+        site and the delivered module calls both ``gen_*_k`` — and a
+        claimed op can feed another claim's metavar (the inner
+        fusion's e-class member is what the outer kernel receives).
+        """
+
+        def __init__(self, d: int = 128) -> None:
+            super().__init__()
+            self.w = nn.Parameter(torch.randn(d, d) / d**0.5)
+            self.v = nn.Parameter(torch.randn(d, d) / d**0.5)
+
+        def forward(self, x):
+            """Chain → fuse → chain → fuse, tails rejoined."""
+            h = x @ self.w
+            a = h * torch.relu(h)
+            y = a @ self.v
+            b = y * torch.tanh(y)
+            return b + a
+
     class _ChainFuse(nn.Module):
         """Fold-able mm chain + a 6-op pointwise tail needing gen.
 
@@ -696,6 +719,7 @@ def _gen_cases(seed: int, n: int) -> list:
         ("swiglu_mlp", _SwigluMLP, (16, 64)),
         ("chain_mlp", _ChainMLP, (16, 64)),
         ("chainfuse", _ChainFuse, (256, 512)),
+        ("twosite", _TwoIslands, (256, 128)),
         (
             "mlp",
             lambda d=64: nn.Sequential(
