@@ -12,7 +12,6 @@
 
 ## HIGH — M1: the machine finds the kernel, not me (five items, ~5 days)
 
-- [ ] T-007 Equality gate vs awq\_gemm in graphopt/bench — cosine ≥ 0.9999 on every variant, inside the timing path
 - [ ] T-008 Search driver in kernelopt : enumerate Term s → gate → roofline bound → deploy-referee measure → best kernel + routing row
 
 ## Done — 2026-10-27 (kernel margin, valid)
