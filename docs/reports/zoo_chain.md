@@ -287,13 +287,33 @@ Two things this settles, and one it does not:
 **Correction to an earlier framing in this report.** The fp64 rows were once
 described as "the dtype where Triton cannot bind". Triton itself is fine with
 fp64 — a `@triton.jit` kernel over `float64` loads, stores and arithmetic runs
-on this box — but nothing in either sweep rests on that either way: for every
-minted handler on the four claim-bearing workloads probed here, in **both**
-dtypes, `_triton_kernel_for` returned no binding, so the callable the referee
-timed was the **compiled spelled body** every time (8 of 8). So the "no gen
-kernel" part of the old framing was right by accident, and the reason was
-wrong: what fp64 changes is which spelled-body kernels PyTorch runs, and that
-is enough to move 9 of 65 signs.
+on this box — but nothing in either sweep rests on that either way. An
+instrumented audit of the referee's binding consults
+(`bench/drivers/probes/triton_binding_audit.py`,
+`triton_binding_audit*.json`, 2026-11-07) found the real mechanism: the
+`gen` tier registered `triton=None` in `genkernel.TIERS`, so the referee
+**never attempted a builder** for any pointwise claim — every `gen_*`
+consults (86 of 126 across the eleven claim-bearing workloads, both
+dtypes) declined on "no builder registered", even though the pointwise
+codegen `hybrid_sink` ships — `triton_bindings` — accepted 86 of 86 of
+those same specs. `scan_*`/`decayed_*` claims **did** bind all along
+(40 of 40). So the "no gen kernel" part of the old framing was right
+only for the pointwise tier and only in the referee: delivery was
+shipping a generated Triton kernel the referee never timed, and claims
+were being graded on the compiled spelled body it replaces. The fix is
+the one-line registration `Tier("gen", gen_handlers, triton_bindings)`:
+with it, 126 of 126 consults bind, and the admitted-claim set changes —
+10 consults now verify *and* beat spelled on the kernel delivery ships
+(e.g. `ChunkedRetention` `decayed_0` 1.31×/1.28× fp64/fp32,
+`RWKVMixBlock` `gen_0` 1.36× fp32), 83 bind-verify-but-are-slower, and
+33 bind-then-raise — 32 of them `applyd`-carrier scan claims whose
+minted spec embeds a host-pinned `zeros` op, so *both* the spelled
+carrier eval and the generated binding die on mixed-device `bmm`/shape
+checks under CUDA-bound metas (a `_scan_sites` harvest-fidelity issue,
+masked while the referee declines what fails); the last is an fp64
+`pow` literal type clash in the generated source. What fp64 changes is
+still which spelled-body kernels PyTorch
+runs — that is enough to move 9 of 65 signs.
 
 ## Why `TimeCondConv` is faster (measured, not asserted)
 
@@ -414,10 +434,20 @@ both delivery mechanisms is now precise:
    `GatedLinearAttention`, `RealGatedLRU` — over 150 s in both dtypes). Either
    a bigger budget or a `--max-autotune 0`-style compile setting; until then
    the corpus is 65 of 68 in both sweeps.
-4. **Find why the referee never times a Triton kernel here.** On the four
-   claim-bearing workloads, in both dtypes, `_triton_kernel_for` returned no
-   binding for every minted handler (8 of 8), so `profitable` has only ever
-   graded compiled-spelled bodies on this corpus. Either the tiers' `triton`
-   builders are declining these patterns or the codegen has no path for them;
-   the guards are now the only part of the claim story with no measurement
-   attached.
+4. ~~**Find why the referee never times a Triton kernel here.**~~ **Done
+   (2026-11-07).** The `gen` tier had `triton=None` in `genkernel.TIERS`
+   while `hybrid_sink` ships `triton_bindings` for the same specs — every
+   pointwise claim declined on "no builder registered", never attempted,
+   and the referee graded the compiled spelled body delivery replaces.
+   `Tier("gen", gen_handlers, triton_bindings)` closes it
+   (`triton_binding_audit*.json`; T-018). Two latent issues the audit
+   surfaced, both masked because the referee declines what fails: the
+   **scan-carrier claims are minted unevaluable on CUDA** — 32 consults
+   where the harvested `applyd` spec embeds a host-pinned `zeros` op, so
+   the spelled body *and* the generated binding raise on mixed-device
+   `bmm`/shape checks under CUDA-bound metas (a `_scan_sites`
+   harvest-fidelity issue: decline or re-base specs embedding
+   device-pinned const ops), and the fp64 `pow` codegen emits an fp32
+   literal against a `float64` tile (`libdevice.pow` CompilationError, 1
+   consult). Neither ships today — `profitable` drops them — but a scan
+   claim admitted by any other path would deliver a kernel that raises.

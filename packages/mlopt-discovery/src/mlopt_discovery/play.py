@@ -875,16 +875,59 @@ def gen_probe(case: Any, *, budget: int = 12, reps: int = 200) -> dict:
     return rows[0]
 
 
-def _first_binding(tag: str, h: dict) -> Any:
-    """Return the first generated kernel binding any tier accepts."""
+#: Referee audit log — one record per ``_triton_kernel_for`` consult.
+#: The ``kernel_for`` hook declines silently otherwise: a claim whose
+#: Triton arm never binds is graded on the compiled spelled body and
+#: nothing records why the generated kernel never ran (the "8 of 8 no
+#: binding" row in ``docs/reports/zoo_chain.md``).  Each record carries
+#: the claim tag, the kernel name, the bound-value dtype, the per-tier
+#: attempt table and the final outcome; bench audit drivers
+#: (``bench/drivers/probes/triton_binding_audit.py``) read it to answer
+#: "did the generated kernel ever bind, and if not, why".  Appended
+#: unconditionally — a claim sweep is tens of records, not a stream.
+TRITON_REFEREE_LOG: list[dict] = []
+
+
+def _binding_attempts(tag: str, h: dict) -> tuple[Any, list[dict]]:
+    """Return the first binding any tier accepts, and the attempt trail.
+
+    Returns ``(fn, attempts)``; each attempt is
+    ``{"tier", "outcome", "reason"}`` — ``bound`` /
+    ``declined`` / ``no_builder``.  A decline distinguishes a spec the
+    tier's recogniser rejects (outside its grammar) from one it
+    accepts whose generated module then fails to load — the same
+    silence ``triton_bindings`` and friends return ``{}`` for.
+    """
     from mlopt_discovery import genkernel as gk
 
+    attempts: list[dict] = []
     for tier in gk.TIERS:
-        if tier.triton is not None:
-            fn = tier.triton({tag: h}).get(h["kernel"])
-            if fn is not None:
-                return fn
-    return None
+        if tier.triton is None:
+            attempts.append(
+                {
+                    "tier": tier.name,
+                    "outcome": "no_builder",
+                    "reason": "tier.triton is None — the registry "
+                    "has no generated-kernel builder for this tier",
+                }
+            )
+            continue
+        fn = tier.triton({tag: h}).get(h["kernel"])
+        if fn is not None:
+            attempts.append({"tier": tier.name, "outcome": "bound"})
+            return fn, attempts
+        recognises = getattr(gk, f"{tier.name}_spec", None)
+        if (
+            recognises is not None
+            and recognises(h["pattern"]) is not None
+        ):
+            reason = "spec recognised; generated module failed to load"
+        else:
+            reason = "spec declined — outside the tier's grammar"
+        attempts.append(
+            {"tier": tier.name, "outcome": "declined", "reason": reason}
+        )
+    return None, attempts
 
 
 def _triton_kernel_for(tag: str, h: dict, vals: dict) -> Any:
@@ -894,23 +937,56 @@ def _triton_kernel_for(tag: str, h: dict, vals: dict) -> Any:
     binding builder — the callable the ``hybrid_sink`` delivery
     actually ships — on CUDA-bound values (the probe's device).
     Falls back to ``None`` (the compiled-spelled default) when
-    Triton/CUDA or every tier's codegen declines.
+    Triton/CUDA or every tier's codegen declines.  Every consult is
+    recorded in :data:`TRITON_REFEREE_LOG`.
     """
     import torch
 
     from mlopt_discovery import genkernel as gk
 
+    record: dict = {
+        "tag": tag,
+        "kernel": h.get("kernel"),
+        "pattern_head": (
+            h["pattern"][0]
+            if isinstance(h["pattern"], (tuple, list))
+            else h["pattern"]
+        ),
+        "dtype": next(
+            (
+                str(v.dtype).removeprefix("torch.")
+                for v in vals.values()
+                if torch.is_tensor(v)
+            ),
+            None,
+        ),
+    }
+    TRITON_REFEREE_LOG.append(record)
     if not (torch.cuda.is_available() and _has_triton()):
+        record["outcome"] = "unavailable"
+        record["reason"] = "no CUDA or no triton import"
         return None
     try:
-        fn = _first_binding(tag, h)
-        if fn is None:
-            return None
+        fn, attempts = _binding_attempts(tag, h)
+    except Exception as exc:  # a builder's own failure is a decline too
+        record["outcome"] = "declined"
+        record["reason"] = (
+            f"binding builder raised: {type(exc).__name__}: {exc}"
+        )
+        return None
+    record["attempts"] = attempts
+    if fn is None:
+        record["outcome"] = "declined"
+        return None
+    try:
         mvs = gk._spec_metas(h["pattern"])
         cvals = {m: vals[m].cuda() for m in mvs}
         ctuple = tuple(cvals[m] for m in mvs)
-    except (AttributeError, KeyError, RuntimeError, TypeError):
+    except (AttributeError, KeyError, RuntimeError, TypeError) as exc:
+        record["outcome"] = "env_bind_failed"
+        record["reason"] = f"{type(exc).__name__}: {exc}"
         return None
+    record["outcome"] = "bound"
 
     def kern(*a: Any) -> Any:
         return fn(*ctuple)

@@ -1992,7 +1992,13 @@ def decayed_triton_sink(handlers: dict) -> Any:
 #: tiers deliver through the compiled spelled body; the referee's
 #: ``kernel_for`` hook consults each non-``None`` binding builder.
 TIERS: tuple[Tier, ...] = (
-    Tier("gen", gen_handlers, None),
+    # the gen tier's delivery IS the pointwise Triton codegen —
+    # ``hybrid_sink`` binds ``triton_bindings`` over every spec it
+    # accepts ahead of the compiled spelled fallback, so the
+    # referee must grade that kernel, not the fallback it replaces.
+    # A ``None`` here once left the whole tier un-attempted: the
+    # referee timed compiled-spelled while delivery shipped Triton.
+    Tier("gen", gen_handlers, triton_bindings),
     Tier("scan", scan_handlers, scan_triton_bindings),
     Tier("decayed", decayed_handlers, decayed_triton_bindings),
 )

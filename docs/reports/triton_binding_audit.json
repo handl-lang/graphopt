@@ -1,0 +1,3270 @@
+[
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "GatedAttentionUnit",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_1",
+  "kernel": "gen_1_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "GatedAttentionUnit",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "decayed_0",
+  "kernel": "decayed_0_k",
+  "pattern_head": "matmul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "GatedAttentionUnit",
+  "swept_dtype": "fp64",
+  "kept_by_referee": true
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "GatedAttentionUnit",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_1",
+  "kernel": "gen_1_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "GatedAttentionUnit",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "decayed_0",
+  "kernel": "decayed_0_k",
+  "pattern_head": "matmul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "GatedAttentionUnit",
+  "swept_dtype": "fp32",
+  "kept_by_referee": true
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "ChunkedRetention",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_0",
+  "kernel": "scan_0_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "ChunkedRetention",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_1",
+  "kernel": "scan_1_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "ChunkedRetention",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "decayed_0",
+  "kernel": "decayed_0_k",
+  "pattern_head": "matmul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "ChunkedRetention",
+  "swept_dtype": "fp64",
+  "kept_by_referee": true
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "ChunkedRetention",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_0",
+  "kernel": "scan_0_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "ChunkedRetention",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_1",
+  "kernel": "scan_1_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "ChunkedRetention",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "decayed_0",
+  "kernel": "decayed_0_k",
+  "pattern_head": "matmul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "ChunkedRetention",
+  "swept_dtype": "fp32",
+  "kept_by_referee": true
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": true
+ },
+ {
+  "tag": "gen_1",
+  "kernel": "gen_1_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": true
+ },
+ {
+  "tag": "gen_2",
+  "kernel": "gen_2_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_3",
+  "kernel": "gen_3_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_0",
+  "kernel": "scan_0_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_1",
+  "kernel": "scan_1_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_2",
+  "kernel": "scan_2_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_3",
+  "kernel": "scan_3_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": true
+ },
+ {
+  "tag": "gen_1",
+  "kernel": "gen_1_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_2",
+  "kernel": "gen_2_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_3",
+  "kernel": "gen_3_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_0",
+  "kernel": "scan_0_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_1",
+  "kernel": "scan_1_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_2",
+  "kernel": "scan_2_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_3",
+  "kernel": "scan_3_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_1",
+  "kernel": "gen_1_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_2",
+  "kernel": "gen_2_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_3",
+  "kernel": "gen_3_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_4",
+  "kernel": "gen_4_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_5",
+  "kernel": "gen_5_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_6",
+  "kernel": "gen_6_k",
+  "pattern_head": "exp",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_7",
+  "kernel": "gen_7_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_8",
+  "kernel": "gen_8_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_9",
+  "kernel": "gen_9_k",
+  "pattern_head": "neg",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_10",
+  "kernel": "gen_10_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": true
+ },
+ {
+  "tag": "gen_11",
+  "kernel": "gen_11_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_12",
+  "kernel": "gen_12_k",
+  "pattern_head": "pow",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_0",
+  "kernel": "scan_0_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_1",
+  "kernel": "scan_1_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_1",
+  "kernel": "gen_1_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_2",
+  "kernel": "gen_2_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_3",
+  "kernel": "gen_3_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_4",
+  "kernel": "gen_4_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_5",
+  "kernel": "gen_5_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_6",
+  "kernel": "gen_6_k",
+  "pattern_head": "exp",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_7",
+  "kernel": "gen_7_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_8",
+  "kernel": "gen_8_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_9",
+  "kernel": "gen_9_k",
+  "pattern_head": "neg",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_10",
+  "kernel": "gen_10_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_11",
+  "kernel": "gen_11_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_12",
+  "kernel": "gen_12_k",
+  "pattern_head": "pow",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_0",
+  "kernel": "scan_0_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_1",
+  "kernel": "scan_1_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "GEGLUBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": true
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "GEGLUBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "ManualGroupNorm",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_1",
+  "kernel": "gen_1_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "ManualGroupNorm",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_2",
+  "kernel": "gen_2_k",
+  "pattern_head": "rsqrt",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "ManualGroupNorm",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_3",
+  "kernel": "gen_3_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "ManualGroupNorm",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_0",
+  "kernel": "scan_0_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "ManualGroupNorm",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "ManualGroupNorm",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_1",
+  "kernel": "gen_1_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "ManualGroupNorm",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_2",
+  "kernel": "gen_2_k",
+  "pattern_head": "rsqrt",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "ManualGroupNorm",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_3",
+  "kernel": "gen_3_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "ManualGroupNorm",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_0",
+  "kernel": "scan_0_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "ManualGroupNorm",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "InstanceNormBroadcast",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_1",
+  "kernel": "gen_1_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "InstanceNormBroadcast",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_2",
+  "kernel": "gen_2_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "InstanceNormBroadcast",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_3",
+  "kernel": "gen_3_k",
+  "pattern_head": "rsqrt",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "InstanceNormBroadcast",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_4",
+  "kernel": "gen_4_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "InstanceNormBroadcast",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_0",
+  "kernel": "scan_0_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "InstanceNormBroadcast",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "InstanceNormBroadcast",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_1",
+  "kernel": "gen_1_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "InstanceNormBroadcast",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_2",
+  "kernel": "gen_2_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "InstanceNormBroadcast",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_3",
+  "kernel": "gen_3_k",
+  "pattern_head": "rsqrt",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "InstanceNormBroadcast",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_4",
+  "kernel": "gen_4_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "InstanceNormBroadcast",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_0",
+  "kernel": "scan_0_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "InstanceNormBroadcast",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": true
+ },
+ {
+  "tag": "gen_1",
+  "kernel": "gen_1_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": true
+ },
+ {
+  "tag": "gen_2",
+  "kernel": "gen_2_k",
+  "pattern_head": "exp",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_3",
+  "kernel": "gen_3_k",
+  "pattern_head": "neg",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_4",
+  "kernel": "gen_4_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": true
+ },
+ {
+  "tag": "gen_5",
+  "kernel": "gen_5_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": true
+ },
+ {
+  "tag": "gen_6",
+  "kernel": "gen_6_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_7",
+  "kernel": "gen_7_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_8",
+  "kernel": "gen_8_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_9",
+  "kernel": "gen_9_k",
+  "pattern_head": "sub",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_0",
+  "kernel": "scan_0_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_1",
+  "kernel": "scan_1_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_2",
+  "kernel": "scan_2_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_3",
+  "kernel": "scan_3_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_4",
+  "kernel": "scan_4_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_5",
+  "kernel": "scan_5_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_6",
+  "kernel": "scan_6_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_7",
+  "kernel": "scan_7_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_1",
+  "kernel": "gen_1_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_2",
+  "kernel": "gen_2_k",
+  "pattern_head": "exp",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_3",
+  "kernel": "gen_3_k",
+  "pattern_head": "neg",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_4",
+  "kernel": "gen_4_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_5",
+  "kernel": "gen_5_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_6",
+  "kernel": "gen_6_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_7",
+  "kernel": "gen_7_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_8",
+  "kernel": "gen_8_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_9",
+  "kernel": "gen_9_k",
+  "pattern_head": "sub",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_0",
+  "kernel": "scan_0_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_1",
+  "kernel": "scan_1_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_2",
+  "kernel": "scan_2_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_3",
+  "kernel": "scan_3_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_4",
+  "kernel": "scan_4_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_5",
+  "kernel": "scan_5_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_6",
+  "kernel": "scan_6_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_7",
+  "kernel": "scan_7_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "sigmoid",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "SigmoidAttention",
+  "swept_dtype": "fp64",
+  "kept_by_referee": true
+ },
+ {
+  "tag": "gen_1",
+  "kernel": "gen_1_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "SigmoidAttention",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "sigmoid",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "SigmoidAttention",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_1",
+  "kernel": "gen_1_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "SigmoidAttention",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "div",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "TaylorLinearAttention",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "div",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "no_builder",
+    "reason": "tier.triton is None \u2014 the registry has no generated-kernel builder for this tier"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   }
+  ],
+  "outcome": "declined",
+  "pointwise_would_bind": true,
+  "workload": "TaylorLinearAttention",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ }
+]
