@@ -232,3 +232,66 @@ chainfuse final table (256x512, d=512):
 
 The Triton tier also beats the compile-bound delivery (95 → 86 µs)
 — no dynamo guard-check overhead per call.
+
+## Lever result — the offer-side cost guard lands (2026-11-07, T-010)
+
+**Lever 3 landed: claims no longer offer unpriced.**  `_zoo_case`
+already ran `genkernel.profitable` at intake; the synthetic
+`_gen_cases` stream minted every fusion site *unfiltered*, so
+`claim` offers included kernels that lose to their spelled body —
+and `novel_cost`'s 0.5 discount let a losing member win extraction
+on cost while losing wall-clock.
+
+`_claim_cost_gate` (play.py) applies the same measured-cost
+referee — `profitable(reps=20, kernel_for=_triton_kernel_for)` —
+once per case inside `_gen_board`, before the handler store is
+built: an unprofitable claim is never offered, never claimed,
+never delivered.  Scope is every minted tier whose spelled body is
+an honest denotation: `gen_*` pointwise, spelled `decayed_*`
+(`matmul(mul(s,d),v)` evaluates through ordinary bindings), and
+unrolled `scan_*` compose-trees.  Excluded by design: sequence-form
+scans (spelled eval is the map, not the fold) and `om_decayed`-
+headed specs (no `_IR_TO_TORCH` binding — unmeasurable stays
+unpriced rather than silently dropped).  `_zoo_case` marks its
+cases pre-gated so the board doesn't pay the referee twice.
+
+**Measured (paired, same case instances, reps=100, RTX 2050):**
+
+| case | ungated claims → speedup / vs compile | gated claims → speedup / vs compile |
+|---|---|---|
+| chain_mlp | `[gen_0]` → 0.69 / 1.68 | `[]` → **1.51 / 3.44** |
+| mulrelu, multanh, mulsoftplus, mulgelu | `[gen_0]` → 0.82–0.94 | `[]` → ~same (offers were noise; delivery already declined them) |
+| bigfuse | 6 claims → 3.68 / 0.81 | `gen_0,1,2` → 3.76 / 0.83 |
+| chainfuse | 8 claims → 3.59 / 2.75 | `gen_0,1,3`+shipped → win retained (fresh-process check; one contaminated sweep dropped all — see caveat) |
+| twosite | `[decayed_0, gen_0..2]` → 0.35 / 0.62 | `[]` → **1.05 / 1.72** |
+
+Two honest findings inside the measurement:
+
+- **The unpriced `decayed_0` offer was the twosite poison.**  A
+  carrier claim that concrete-matched a `matmul(mul(s,d),v)` site,
+  won extraction on the novelty discount, and delivered a kernel
+  that loses wall-clock.  Gating it (spelled decayed bodies ARE
+  measurable) took twosite from 0.62× to 1.72× vs compile — laws
+  alone beat both the claimed and unclaimed spellings.
+- **`profitable` noise is now offer-visible.**  The referee flips
+  keep/drop at the margin (documented above); the gate inherits
+  that — one interleaved sweep dropped chainfuse's whole claim set
+  (delivered 1.37× vs compile instead of 2.75×) while a fresh
+  process kept `gen_0,1,3` and the win.  Same referee, same
+  caveat, new blast radius: an offer set is now only as stable as
+  the measurement window.  A two-sample or margin-guarded referee
+  is the obvious hardening, unmeasured.
+
+Test posture: the composition pins (`test_chainfuse_claim_binds_
+gen_over_mm`, `test_twosite_multi_claim_composes`,
+`test_gen_probe_delivers`) bypass the gate — they measure
+claim→deliver machinery, not offer policy; the gate itself is
+pinned by `test_claim_cost_gate_filters_measurable_tiers`
+(monkeypatched referee, scope + idempotence).
+
+**Still open:** attr-bearing bodies (the `attr_mvars` machinery +
+`concretize_at_site` exist post-T-026; what blocks *gen-minted*
+attr specs is site-collector attr preservation — unmeasured) and
+the reduction-body question (scan/decayed tiers bind; seq-scan
+claims still offer unpriced by necessity — a carrier-aware spelled
+referee is the missing piece, not more timing).

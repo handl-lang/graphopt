@@ -172,3 +172,53 @@ and "same state queried twice"), so `MetaLearnedPlayer.reset_episode`
 forces it and the drivers call it per episode.  **Upstream fix
 belongs in gamekit** — every `LearnedPlayer` domain has the same
 exposure; this repo carries the local workaround.
+
+## Lever result — the bake ships (2026-11-07, T-009)
+
+**Lever 1 landed: the imitation arm's weights are now the shipped
+prior.**  Recipe (`meta_player.main --imitate-epochs 3 --epochs 5`,
+400 train cases, budget 24, T=1.2, eps=0.25): 1950/1950 demonstrated
+moves cloned, then 5 REINFORCE passes — train decade means flat at
+~+0.17 from the first decade (the imitation does the work; RL
+polishes).
+
+Head-to-head on the held-out stream, same protocol, frozen arms:
+
+| arm | offset 7919 (n=40, b=24) | offset 31337 (n=40, b=24) | test protocol (n=16, b=12) |
+|---|---:|---:|---:|
+| shipped macro prior | +0.13 / greedy +0.14 | +0.17 / +0.18 | +0.11 / +0.12 |
+| **imitation bake** | **+0.17 / +0.17** | **+0.22 / +0.23** | **+0.14 / +0.14** |
+| scripted | −0.10 | −0.10 | −0.10 |
+
+The bake wins every cell and — the point — routes through the
+primitive `claim` move (22 literal claims, `op:macro` weight −1.2:
+the policy *avoids* the macro shortcut) where the macro prior
+played `op:macro` (0 literal claims).  Declared-use ~20/40 both.
+
+**Where it lives:** `mlopt_discovery.meta_prior.META_ARENA_PLAYER_WEIGHTS`
+— a new graphopt-owned module beside `meta_player`, bound directly
+as `META_SPEC`'s weights.  `lawdata.META_ARENA_PLAYER_WEIGHTS`
+still resolves to the gamekit-shipped macro-move prior: the
+lawdata/gamekit split invariant (player weight tables are game-side
+content; no table in both halves — `test_lawdata.py`) rules out a
+lawdata shadow, and the bake's recipe (`imitate_oracle`/
+`plan_oracles`) is domain machinery the shared game layer cannot
+run anyway.  Two bakes of the same schema, distinct homes;
+`player_arena`'s `baked` objective table follows the new preset.
+`test_preset_is_baked` and the whole `test_discovery_meta_prior`
+held-out suite pass (the preset assertion now names
+`meta_prior`).
+
+**Housekeeping on the way:** gamekit's upstream `_observe` boundary
+fix (played-mask non-empty + `steps==0` ⇒ fresh board) landed in the
+pinned dep, which staled two tests that pinned the *buggy* masking
+(`test_declines_move_outside_legal_set`,
+`test_reset_episode_clears_stale_played_mask`) — both updated to the
+fixed semantics; `MetaLearnedPlayer.reset_episode` stays as the
+explicit boundary hook (docstring updated).
+
+**Still open:** levers 2–3 unmeasured — the 2nd-order feature /
+neural arm, and a curriculum over *claim availability* rather than
+board difficulty.  The spelled declare→saturate→handle line remains
+unplayed; consolidation is now real but rides `claim`, not the
+four-move spelling.
