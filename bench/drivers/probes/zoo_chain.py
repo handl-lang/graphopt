@@ -11,13 +11,16 @@ measured cost referee) -> `gen_sink` -> `play.gen_probe` (deliver, verify,
 time vs eager and `torch.compile`).  No special casing, so the row is the
 number a caller would get.
 
-**Dtype is a variable, and it moves the answer.**  ``--dtype fp64`` (the
-default, the intake convention every earlier table used) and ``--dtype fp32``
-(what a caller ships) disagree on 12 of 65 modules: 23 beat eager in every
-round in fp32, 17 in fp64.  The same IR folds the same way in both and a fold's
-sign is set by the backend kernel at that width — `RMSNormPerHead` is 1.5x in
-fp32 and 0.21x in fp64 on identical delivered structure
-(`bench/drivers/probes/zoo_dtype.py`).
+**Dtype is a variable, and it moves the answer.**  ``--dtype fp32``
+(the default — what a caller ships, so the quoted sweep number is the
+one delivery would see) and ``--dtype fp64`` (the historical intake
+convention every earlier table used) disagree on 12 of 65 modules: 23
+beat eager in every round in fp32, 17 in fp64.  The same IR folds the
+same way in both and a fold's sign is set by the backend kernel at that
+width — `RMSNormPerHead` is 1.5x in fp32 and 0.21x in fp64 on identical
+delivered structure (`bench/drivers/probes/zoo_dtype.py`).  The default
+is fp32 precisely so a re-run cannot silently drift back to quoting
+the fp64 convention (T-021).
 
 Wide shapes matter: the zoo's default is ``d16 t8 b2``, where the kernels
 are too small for the launcher to matter.  ``--d 64 --t 32 --b 8`` is the
@@ -41,9 +44,10 @@ Run::
     .venv/bin/python -m bench.drivers.probes.zoo_chain \\
         --only GatedAttentionUnit,MLPMixerBlock
 
-    # the sweep a caller would see (fp32), isolated, one round per row
+    # the sweep a caller would see (the fp32 default), isolated,
+    # one round per row
     .venv/bin/python -m bench.drivers.probes.zoo_chain \\
-        --only '' --isolate --dtype fp32 \\
+        --only '' --isolate \\
         --out docs/reports/zoo_chain_sweep_fp32.json
 """
 
@@ -100,7 +104,7 @@ def measure(
     reps: int,
     rounds: int = 3,
     budget: float = DEFAULT_BUDGET,
-    dtype: str = "fp64",
+    dtype: str = "fp32",
 ) -> list[dict]:
     """Run the shipped gen path over the named zoo workloads.
 
@@ -162,7 +166,7 @@ def measure(
 
 
 def _measure_one(
-    wl, *, reps: int, rounds: int, dtype: str = "fp64"
+    wl, *, reps: int, rounds: int, dtype: str = "fp32"
 ) -> dict:
     """Time one workload ``rounds`` times; the row is the median ratio."""
     case = _zoo_case(wl, dtype=dtype)
@@ -209,7 +213,7 @@ def _measure_isolated(
     reps: int,
     rounds: int,
     budget: float,
-    dtype: str = "fp64",
+    dtype: str = "fp32",
 ) -> list[dict]:
     """Measure each workload in its own process, killing it if it overruns.
 
@@ -317,10 +321,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", default="", help="optional JSON path")
     ap.add_argument(
         "--dtype",
-        default="fp64",
+        default="fp32",
         choices=("fp64", "fp32"),
-        help="intake dtype: fp64 is the convention, fp32 is what a caller "
-        "ships (they disagree on 12 of 65 modules)",
+        help="intake dtype: fp32 is the default — what a caller "
+        "ships, so the quoted number cannot drift back to the fp64 "
+        "convention (they disagree on 12 of 65 modules)",
     )
     ap.add_argument(
         "--isolate",

@@ -735,6 +735,66 @@ def _gen_cases(seed: int, n: int) -> list:
     return out
 
 
+def _var_env(ir: Any, leaves: dict, feed: Any) -> dict:
+    """Build the metavar→value env ``profitable`` times against.
+
+    Param leaves plus the input vars bound positionally to the
+    feed — a param-only env makes every site touching the feed
+    eval-fail and silently skip.
+    """
+    feeds = tuple(feed) if isinstance(feed, (tuple, list)) else (feed,)
+    var_env = dict(leaves)
+    var_env.update(
+        {v.name: t for v, t in zip(ir.inputs, feeds, strict=False)}
+    )
+    return var_env
+
+
+def _fold_cost_gate(case: Any, handlers: dict) -> dict:
+    """Judge shipped prim folds by measured delivery, not op-count.
+
+    T-019: the ``prim:synop*`` folds ride ``DEFAULT`` into saturation
+    unconditionally — no claim offer, no ``profitable`` consult — so
+    a folded member won extraction on the cost model while its
+    delivered body lost wall-clock (the p26 re-sweep: 7 prim rows,
+    median 0.943 → 0.744).  This is the same referee claims pass
+    through, applied to the fold entries before they join the
+    board's ``supported`` bound:
+
+    * an entry whose pattern has **no concrete site** in the term
+      cannot fire — it keeps its seat (it costs nothing);
+    * an entry **with a site** is timed by ``profitable`` — the
+      delivered binding (``kernel_for`` = the ``hybrid_sink`` codegen
+      path) against the spelled denotation on the case's real
+      values — and only a measured win stays feasible;
+    * an entry the referee **cannot evaluate** — the attr-metavar
+      specs never concrete-match a program subterm — keeps its seat
+      too: the gate refuses a *measured* loss, it does not invent
+      one.
+    """
+    from mlopt_discovery import genkernel as gk
+
+    term = case[1]
+    ex = case[5]
+    ungated: dict[str, dict] = {}
+    measured: dict[str, dict] = {}
+    for name, h in handlers.items():
+        if gk._handler_env(h, term) is None:
+            ungated[name] = h
+        else:
+            measured[name] = h
+    if not measured:
+        return ungated
+    keep = gk.profitable(
+        measured,
+        term,
+        _var_env(ex["ir"], ex["leaves"], ex["input"]),
+        reps=20,
+        kernel_for=_triton_kernel_for,
+    )
+    return {**ungated, **keep}
+
+
 def _gen_board(case: Any) -> ma.MetaArena:
     """Board a gen case under its generated handler table.
 
@@ -768,13 +828,25 @@ def _gen_board(case: Any) -> ma.MetaArena:
 
     prim = sp.handler_entries()
     if not any(tag in ex["gen_handlers"] for tag in prim):
-        ex["gen_handlers"] = {**ex["gen_handlers"], **prim}
+        # T-019 fold cost gate: the ``prim:*`` folds fire
+        # unconditionally through ``DEFAULT``, so the measured-cost
+        # referee ``profitable`` applies to claims must also judge
+        # the folds — a ``synop_*`` member stays feasible only when
+        # its *delivered* binding beats the spelled site it replaces
+        # on the case's real values (the 7 prim-delivering zoo rows
+        # measured 0.744x median ungated — extraction preferred
+        # members that lose wall-clock).
+        ex["gen_handlers"] = {
+            **ex["gen_handlers"],
+            **_fold_cost_gate(case, prim),
+        }
         if "sink" in ex:
             ex["sink"] = gk.gen_sink(
                 ex["gen_handlers"], compile_kernels=False
             )
+    kept = {k: v for k, v in prim.items() if k in ex["gen_handlers"]}
     supported = frozenset(case[4]) | {
-        h["kernel"] for h in prim.values()
+        h["kernel"] for h in kept.values()
     }
     store = cs.ambient_store(
         rules=DEFAULT, handlers=lawdata.HANDLERS
@@ -1088,11 +1160,7 @@ def _zoo_case(wl: Any, *, dtype: str = "fp64") -> Any:
     # kernel actually beats its spelled site on the real values;
     # the env must bind the input vars too — a param-only env makes
     # every site touching the feed eval-fail and silently skip.
-    feeds = tuple(feed) if isinstance(feed, (tuple, list)) else (feed,)
-    var_env = dict(leaves)
-    var_env.update(
-        {v.name: t for v, t in zip(ir.inputs, feeds, strict=False)}
-    )
+    var_env = _var_env(ir, leaves, feed)
     genh = gk.profitable(
         genh,
         ir.root,

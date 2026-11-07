@@ -1,0 +1,362 @@
+[
+ {
+  "case": "zoo:CapsuleRouting",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "prim_ops": [],
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 1.012,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.074,
+    "eager_us": 238.0,
+    "compiled_us": 108.3,
+    "gen_us": 221.5
+   },
+   {
+    "speedup": 1.023,
+    "eager_us": 238.3,
+    "compiled_us": 105.5,
+    "gen_us": 232.8
+   },
+   {
+    "speedup": 1.024,
+    "eager_us": 241.3,
+    "compiled_us": 104.8,
+    "gen_us": 235.7
+   },
+   {
+    "speedup": 0.814,
+    "eager_us": 235.3,
+    "compiled_us": 104.1,
+    "gen_us": 289.1
+   },
+   {
+    "speedup": 0.801,
+    "eager_us": 237.2,
+    "compiled_us": 104.5,
+    "gen_us": 296.3
+   },
+   {
+    "speedup": 0.971,
+    "eager_us": 247.3,
+    "compiled_us": 104.5,
+    "gen_us": 254.7
+   },
+   {
+    "speedup": 1.056,
+    "eager_us": 248.8,
+    "compiled_us": 106.0,
+    "gen_us": 235.7
+   },
+   {
+    "speedup": 0.993,
+    "eager_us": 232.4,
+    "compiled_us": 106.3,
+    "gen_us": 234.0
+   },
+   {
+    "speedup": 1.012,
+    "eager_us": 259.6,
+    "compiled_us": 107.5,
+    "gen_us": 256.6
+   }
+  ],
+  "spread": [
+   0.801,
+   1.074
+  ],
+  "dtype": "fp64"
+ },
+ {
+  "case": "zoo:WaveNetGate",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "prim_ops": [],
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 1.03,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.0,
+    "eager_us": 90.0,
+    "compiled_us": 130.1,
+    "gen_us": 90.0
+   },
+   {
+    "speedup": 1.149,
+    "eager_us": 92.8,
+    "compiled_us": 128.0,
+    "gen_us": 80.8
+   },
+   {
+    "speedup": 1.03,
+    "eager_us": 90.0,
+    "compiled_us": 120.7,
+    "gen_us": 87.4
+   },
+   {
+    "speedup": 1.128,
+    "eager_us": 95.6,
+    "compiled_us": 132.4,
+    "gen_us": 84.8
+   },
+   {
+    "speedup": 0.995,
+    "eager_us": 90.3,
+    "compiled_us": 124.6,
+    "gen_us": 90.7
+   },
+   {
+    "speedup": 1.086,
+    "eager_us": 95.0,
+    "compiled_us": 130.7,
+    "gen_us": 87.5
+   },
+   {
+    "speedup": 1.075,
+    "eager_us": 91.6,
+    "compiled_us": 127.8,
+    "gen_us": 85.2
+   },
+   {
+    "speedup": 1.009,
+    "eager_us": 94.9,
+    "compiled_us": 130.5,
+    "gen_us": 94.1
+   },
+   {
+    "speedup": 0.995,
+    "eager_us": 97.2,
+    "compiled_us": 133.6,
+    "gen_us": 97.6
+   }
+  ],
+  "spread": [
+   0.995,
+   1.149
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:HyenaLongConv",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "prim_ops": [],
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 1.012,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.024,
+    "eager_us": 170.5,
+    "compiled_us": 174.0,
+    "gen_us": 166.5
+   },
+   {
+    "speedup": 1.007,
+    "eager_us": 170.2,
+    "compiled_us": 182.2,
+    "gen_us": 169.0
+   },
+   {
+    "speedup": 0.998,
+    "eager_us": 168.7,
+    "compiled_us": 184.7,
+    "gen_us": 169.1
+   },
+   {
+    "speedup": 1.025,
+    "eager_us": 172.7,
+    "compiled_us": 186.0,
+    "gen_us": 168.5
+   },
+   {
+    "speedup": 1.012,
+    "eager_us": 163.9,
+    "compiled_us": 173.8,
+    "gen_us": 162.0
+   },
+   {
+    "speedup": 1.016,
+    "eager_us": 163.6,
+    "compiled_us": 178.4,
+    "gen_us": 161.0
+   },
+   {
+    "speedup": 0.985,
+    "eager_us": 163.8,
+    "compiled_us": 179.7,
+    "gen_us": 166.3
+   },
+   {
+    "speedup": 0.99,
+    "eager_us": 168.3,
+    "compiled_us": 179.8,
+    "gen_us": 170.0
+   },
+   {
+    "speedup": 1.038,
+    "eager_us": 169.8,
+    "compiled_us": 184.6,
+    "gen_us": 163.6
+   }
+  ],
+  "spread": [
+   0.985,
+   1.038
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:SkipInitNet",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "prim_ops": [],
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 1.115,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.116,
+    "eager_us": 107.1,
+    "compiled_us": 140.3,
+    "gen_us": 95.9
+   },
+   {
+    "speedup": 1.105,
+    "eager_us": 103.6,
+    "compiled_us": 142.1,
+    "gen_us": 93.7
+   },
+   {
+    "speedup": 1.128,
+    "eager_us": 106.8,
+    "compiled_us": 145.4,
+    "gen_us": 94.6
+   },
+   {
+    "speedup": 1.115,
+    "eager_us": 104.6,
+    "compiled_us": 143.0,
+    "gen_us": 93.8
+   },
+   {
+    "speedup": 1.12,
+    "eager_us": 105.0,
+    "compiled_us": 146.6,
+    "gen_us": 93.8
+   },
+   {
+    "speedup": 0.974,
+    "eager_us": 103.8,
+    "compiled_us": 150.1,
+    "gen_us": 106.6
+   },
+   {
+    "speedup": 1.097,
+    "eager_us": 104.8,
+    "compiled_us": 139.0,
+    "gen_us": 95.5
+   },
+   {
+    "speedup": 1.122,
+    "eager_us": 107.5,
+    "compiled_us": 142.7,
+    "gen_us": 95.8
+   },
+   {
+    "speedup": 1.088,
+    "eager_us": 103.6,
+    "compiled_us": 144.8,
+    "gen_us": 95.2
+   }
+  ],
+  "spread": [
+   0.974,
+   1.128
+  ],
+  "dtype": "fp32"
+ },
+ {
+  "case": "zoo:DilatedBlockAttention",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "prim_ops": [],
+  "max_abs": 1.7881393432617188e-07,
+  "cost": NaN,
+  "speedup": 1.098,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.197,
+    "eager_us": 267.5,
+    "compiled_us": 201.7,
+    "gen_us": 223.4
+   },
+   {
+    "speedup": 1.078,
+    "eager_us": 256.7,
+    "compiled_us": 204.4,
+    "gen_us": 238.1
+   },
+   {
+    "speedup": 1.108,
+    "eager_us": 263.7,
+    "compiled_us": 202.2,
+    "gen_us": 238.1
+   },
+   {
+    "speedup": 1.089,
+    "eager_us": 258.6,
+    "compiled_us": 198.0,
+    "gen_us": 237.4
+   },
+   {
+    "speedup": 1.173,
+    "eager_us": 269.7,
+    "compiled_us": 201.0,
+    "gen_us": 229.9
+   },
+   {
+    "speedup": 1.086,
+    "eager_us": 250.4,
+    "compiled_us": 199.6,
+    "gen_us": 230.5
+   },
+   {
+    "speedup": 1.131,
+    "eager_us": 259.6,
+    "compiled_us": 196.8,
+    "gen_us": 229.6
+   },
+   {
+    "speedup": 1.098,
+    "eager_us": 251.8,
+    "compiled_us": 191.5,
+    "gen_us": 229.3
+   },
+   {
+    "speedup": 1.091,
+    "eager_us": 255.9,
+    "compiled_us": 197.0,
+    "gen_us": 234.7
+   }
+  ],
+  "spread": [
+   1.078,
+   1.197
+  ],
+  "dtype": "fp32"
+ }
+]

@@ -180,6 +180,32 @@ class TestGenDomain:
                 return
         raise AssertionError("no gen case built")
 
+    def test_fold_cost_gate_partitions_by_site_and_referee(
+        self, monkeypatch
+    ):
+        # T-019: a prim fold is refused only on a *measured* loss —
+        # entries with no concrete site cannot fire and keep their
+        # seat; sited entries go through ``profitable`` and only its
+        # keeps survive into ``supported``.
+        from mlopt_discovery import shipped_primitives as sp
+
+        case = play._gen_cases(0, 1)[0]
+        he = sp.handler_entries()
+        # no-site path: a gen-case term matches no prim pattern, so
+        # every entry keeps its seat and the referee is never asked
+        out = play._fold_cost_gate(case, he)
+        assert set(out) == set(he)
+        # measured path: force every entry to look sited; a referee
+        # that keeps nothing must return nothing
+        monkeypatch.setattr(gk, "_handler_env", lambda h, t: {})
+        monkeypatch.setattr(gk, "profitable", lambda *a, **k: {})
+        assert play._fold_cost_gate(case, he) == {}
+        # and a referee that keeps everything restores the table
+        monkeypatch.setattr(
+            gk, "profitable", lambda hs, *a, **k: dict(hs)
+        )
+        assert set(play._fold_cost_gate(case, he)) == set(he)
+
     def test_spec_ops_skips_attr_dicts(self):
         spec = ("add", "X1", {"dim": 1})
         assert gk._spec_ops(spec) == {"add"}

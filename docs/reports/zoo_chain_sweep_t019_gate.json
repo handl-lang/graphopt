@@ -1,0 +1,262 @@
+[
+ {
+  "case": "zoo:GatedDeltaRule",
+  "claims": [
+   "gen_1",
+   "synop_5e58f26875"
+  ],
+  "delivered": true,
+  "verified": true,
+  "prim_ops": [
+   "synop_4c5296b3ba",
+   "synop_5e58f26875"
+  ],
+  "max_abs": 3.552713678800501e-15,
+  "cost": NaN,
+  "speedup": 0.542,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.524,
+    "eager_us": 451.6,
+    "compiled_us": 431.6,
+    "gen_us": 861.0
+   },
+   {
+    "speedup": 0.542,
+    "eager_us": 458.7,
+    "compiled_us": 441.2,
+    "gen_us": 846.2
+   },
+   {
+    "speedup": 0.557,
+    "eager_us": 520.5,
+    "compiled_us": 440.9,
+    "gen_us": 934.6
+   }
+  ],
+  "spread": [
+   0.524,
+   0.557
+  ],
+  "dtype": "fp64"
+ },
+ {
+  "case": "zoo:DecoupledMLA",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "prim_ops": [],
+  "max_abs": 1.1102230246251565e-16,
+  "cost": NaN,
+  "speedup": 0.98,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.982,
+    "eager_us": 497.8,
+    "compiled_us": 407.1,
+    "gen_us": 507.0
+   },
+   {
+    "speedup": 0.98,
+    "eager_us": 521.2,
+    "compiled_us": 409.5,
+    "gen_us": 531.9
+   },
+   {
+    "speedup": 0.93,
+    "eager_us": 520.6,
+    "compiled_us": 402.6,
+    "gen_us": 559.9
+   }
+  ],
+  "spread": [
+   0.93,
+   0.982
+  ],
+  "dtype": "fp64"
+ },
+ {
+  "case": "zoo:DilatedBlockAttention",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "prim_ops": [],
+  "max_abs": 4.440892098500626e-16,
+  "cost": NaN,
+  "speedup": 0.833,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.823,
+    "eager_us": 358.7,
+    "compiled_us": 414.1,
+    "gen_us": 436.1
+   },
+   {
+    "speedup": 0.833,
+    "eager_us": 358.4,
+    "compiled_us": 411.7,
+    "gen_us": 430.1
+   },
+   {
+    "speedup": 0.939,
+    "eager_us": 355.8,
+    "compiled_us": 410.1,
+    "gen_us": 379.1
+   }
+  ],
+  "spread": [
+   0.823,
+   0.939
+  ],
+  "dtype": "fp64"
+ },
+ {
+  "case": "zoo:GRUFusedGate",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "prim_ops": [],
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.77,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.77,
+    "eager_us": 118.0,
+    "compiled_us": 103.7,
+    "gen_us": 153.3
+   },
+   {
+    "speedup": 0.782,
+    "eager_us": 119.4,
+    "compiled_us": 112.9,
+    "gen_us": 152.8
+   },
+   {
+    "speedup": 0.755,
+    "eager_us": 119.1,
+    "compiled_us": 110.8,
+    "gen_us": 157.6
+   }
+  ],
+  "spread": [
+   0.755,
+   0.782
+  ],
+  "dtype": "fp64"
+ },
+ {
+  "case": "zoo:ChunkedSSD",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "prim_ops": [],
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.972,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.977,
+    "eager_us": 2493.6,
+    "compiled_us": 773.1,
+    "gen_us": 2551.4
+   },
+   {
+    "speedup": 0.972,
+    "eager_us": 2720.7,
+    "compiled_us": 778.9,
+    "gen_us": 2799.1
+   },
+   {
+    "speedup": 0.914,
+    "eager_us": 2565.3,
+    "compiled_us": 731.2,
+    "gen_us": 2807.4
+   }
+  ],
+  "spread": [
+   0.914,
+   0.977
+  ],
+  "dtype": "fp64"
+ },
+ {
+  "case": "zoo:RWKVMixBlock",
+  "claims": [
+   "gen_0"
+  ],
+  "delivered": true,
+  "verified": true,
+  "prim_ops": [],
+  "max_abs": 8.881784197001252e-16,
+  "cost": NaN,
+  "speedup": 1.114,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 1.114,
+    "eager_us": 1252.8,
+    "compiled_us": 1015.0,
+    "gen_us": 1124.9
+   },
+   {
+    "speedup": 1.136,
+    "eager_us": 1262.4,
+    "compiled_us": 1019.2,
+    "gen_us": 1111.7
+   },
+   {
+    "speedup": 0.967,
+    "eager_us": 1069.4,
+    "compiled_us": 787.7,
+    "gen_us": 1106.1
+   }
+  ],
+  "spread": [
+   0.967,
+   1.136
+  ],
+  "dtype": "fp64"
+ },
+ {
+  "case": "zoo:HighwayGate",
+  "claims": [],
+  "delivered": true,
+  "verified": true,
+  "prim_ops": [],
+  "max_abs": 0,
+  "cost": NaN,
+  "speedup": 0.94,
+  "device": "cuda",
+  "runs": [
+   {
+    "speedup": 0.926,
+    "eager_us": 99.0,
+    "compiled_us": 121.6,
+    "gen_us": 106.9
+   },
+   {
+    "speedup": 0.951,
+    "eager_us": 100.6,
+    "compiled_us": 126.8,
+    "gen_us": 105.8
+   },
+   {
+    "speedup": 0.94,
+    "eager_us": 100.2,
+    "compiled_us": 124.7,
+    "gen_us": 106.6
+   }
+  ],
+  "spread": [
+   0.926,
+   0.951
+  ],
+  "dtype": "fp64"
+ }
+]
