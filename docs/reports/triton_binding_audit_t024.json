@@ -1,0 +1,2864 @@
+[
+ {
+  "tag": "decayed_0",
+  "kernel": "decayed_0_k",
+  "pattern_head": "matmul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 39.7,
+   "kernel_us": 37.2,
+   "ratio": 1.066
+  },
+  "workload": "GatedAttentionUnit",
+  "swept_dtype": "fp64",
+  "kept_by_referee": true
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 48.1,
+   "kernel_us": 29.5,
+   "ratio": 1.629
+  },
+  "workload": "GatedAttentionUnit",
+  "swept_dtype": "fp64",
+  "kept_by_referee": true
+ },
+ {
+  "tag": "gen_1",
+  "kernel": "gen_1_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 22.1,
+   "kernel_us": 19.3,
+   "ratio": 1.147
+  },
+  "workload": "GatedAttentionUnit",
+  "swept_dtype": "fp64",
+  "kept_by_referee": true
+ },
+ {
+  "tag": "decayed_0",
+  "kernel": "decayed_0_k",
+  "pattern_head": "matmul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 31.2,
+   "kernel_us": 24.3,
+   "ratio": 1.282
+  },
+  "workload": "GatedAttentionUnit",
+  "swept_dtype": "fp32",
+  "kept_by_referee": true
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 15.8,
+   "kernel_us": 20.8,
+   "ratio": 0.76
+  },
+  "workload": "GatedAttentionUnit",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_1",
+  "kernel": "gen_1_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 22.9,
+   "kernel_us": 18.4,
+   "ratio": 1.241
+  },
+  "workload": "GatedAttentionUnit",
+  "swept_dtype": "fp32",
+  "kept_by_referee": true
+ },
+ {
+  "tag": "decayed_0",
+  "kernel": "decayed_0_k",
+  "pattern_head": "matmul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 41.0,
+   "kernel_us": 37.8,
+   "ratio": 1.084
+  },
+  "workload": "ChunkedRetention",
+  "swept_dtype": "fp64",
+  "kept_by_referee": true
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 17.0,
+   "kernel_us": 27.6,
+   "ratio": 0.616
+  },
+  "workload": "ChunkedRetention",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_0",
+  "kernel": "scan_0_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 306.0,
+   "kernel_us": 316.9,
+   "ratio": 0.966
+  },
+  "workload": "ChunkedRetention",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_1",
+  "kernel": "scan_1_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 343.9,
+   "kernel_us": 350.5,
+   "ratio": 0.981
+  },
+  "workload": "ChunkedRetention",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "decayed_0",
+  "kernel": "decayed_0_k",
+  "pattern_head": "matmul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "decayed",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 32.8,
+   "kernel_us": 25.6,
+   "ratio": 1.279
+  },
+  "workload": "ChunkedRetention",
+  "swept_dtype": "fp32",
+  "kept_by_referee": true
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 17.6,
+   "kernel_us": 27.6,
+   "ratio": 0.637
+  },
+  "workload": "ChunkedRetention",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_0",
+  "kernel": "scan_0_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 225.2,
+   "kernel_us": 279.0,
+   "ratio": 0.807
+  },
+  "workload": "ChunkedRetention",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_1",
+  "kernel": "scan_1_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 263.9,
+   "kernel_us": 321.9,
+   "ratio": 0.82
+  },
+  "workload": "ChunkedRetention",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 70.2,
+   "kernel_us": 146.2,
+   "ratio": 0.48
+  },
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_1",
+  "kernel": "gen_1_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 77.9,
+   "kernel_us": 150.5,
+   "ratio": 0.518
+  },
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_2",
+  "kernel": "gen_2_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 52.1,
+   "kernel_us": 109.4,
+   "ratio": 0.476
+  },
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_3",
+  "kernel": "gen_3_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 66.7,
+   "kernel_us": 151.2,
+   "ratio": 0.441
+  },
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_0",
+  "kernel": "scan_0_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 149.8,
+   "kernel_us": 199.2,
+   "ratio": 0.752
+  },
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_1",
+  "kernel": "scan_1_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 411.1,
+   "kernel_us": 493.4,
+   "ratio": 0.833
+  },
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_2",
+  "kernel": "scan_2_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 914.3,
+   "kernel_us": 1024.1,
+   "ratio": 0.893
+  },
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_3",
+  "kernel": "scan_3_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 1954.4,
+   "kernel_us": 2065.3,
+   "ratio": 0.946
+  },
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 217.9,
+   "kernel_us": 349.6,
+   "ratio": 0.623
+  },
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_1",
+  "kernel": "gen_1_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 167.9,
+   "kernel_us": 282.8,
+   "ratio": 0.594
+  },
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_2",
+  "kernel": "gen_2_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 116.8,
+   "kernel_us": 219.0,
+   "ratio": 0.533
+  },
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_3",
+  "kernel": "gen_3_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 66.4,
+   "kernel_us": 148.9,
+   "ratio": 0.446
+  },
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_0",
+  "kernel": "scan_0_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 115.2,
+   "kernel_us": 169.5,
+   "ratio": 0.68
+  },
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_1",
+  "kernel": "scan_1_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 310.1,
+   "kernel_us": 405.1,
+   "ratio": 0.765
+  },
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_2",
+  "kernel": "scan_2_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 718.4,
+   "kernel_us": 781.4,
+   "ratio": 0.919
+  },
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_3",
+  "kernel": "scan_3_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 1442.0,
+   "kernel_us": 1579.7,
+   "ratio": 0.913
+  },
+  "workload": "DeltaRuleBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 51.7,
+   "kernel_us": 45.7,
+   "ratio": 1.13
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": true
+ },
+ {
+  "tag": "gen_1",
+  "kernel": "gen_1_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 26.1,
+   "kernel_us": 31.6,
+   "ratio": 0.826
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_10",
+  "kernel": "gen_10_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 42.1,
+   "kernel_us": 51.6,
+   "ratio": 0.816
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_11",
+  "kernel": "gen_11_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 29.6,
+   "kernel_us": 40.9,
+   "ratio": 0.723
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_12",
+  "kernel": "gen_12_k",
+  "pattern_head": "pow",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": "raised: CompilationError: at 5:10:\ndef _gk(X1_ptr, out_ptr, n, BLOCK: tl.constexpr):\n    off = tl.program_id(0) * BLOCK + tl.arange(0, BLOCK)\n    mask = off < n\n    X1 = tl.load(X1_ptr + off, mask=mask, other=0.0)\n    out = libdevice.pow(tl.maximum(X1, 0.0), (2.0))\n          ^\n(triton.language.float64, triton.language.float32)",
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_2",
+  "kernel": "gen_2_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 22.6,
+   "kernel_us": 29.4,
+   "ratio": 0.768
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_3",
+  "kernel": "gen_3_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 21.5,
+   "kernel_us": 38.7,
+   "ratio": 0.557
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_4",
+  "kernel": "gen_4_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 516.6,
+   "kernel_us": 521.8,
+   "ratio": 0.99
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_5",
+  "kernel": "gen_5_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 417.5,
+   "kernel_us": 450.7,
+   "ratio": 0.926
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_6",
+  "kernel": "gen_6_k",
+  "pattern_head": "exp",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 318.9,
+   "kernel_us": 381.5,
+   "ratio": 0.836
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_7",
+  "kernel": "gen_7_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 43.1,
+   "kernel_us": 133.8,
+   "ratio": 0.322
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_8",
+  "kernel": "gen_8_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 23.0,
+   "kernel_us": 114.8,
+   "ratio": 0.201
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_9",
+  "kernel": "gen_9_k",
+  "pattern_head": "neg",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 15.7,
+   "kernel_us": 37.8,
+   "ratio": 0.415
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_0",
+  "kernel": "scan_0_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 139.0,
+   "kernel_us": 143.2,
+   "ratio": 0.97
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_1",
+  "kernel": "scan_1_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 7454.3,
+   "kernel_us": 6617.6,
+   "ratio": 1.126
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": true
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 112.1,
+   "kernel_us": 86.8,
+   "ratio": 1.291
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": true
+ },
+ {
+  "tag": "gen_1",
+  "kernel": "gen_1_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 64.4,
+   "kernel_us": 77.7,
+   "ratio": 0.829
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_10",
+  "kernel": "gen_10_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 115.9,
+   "kernel_us": 140.3,
+   "ratio": 0.826
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_11",
+  "kernel": "gen_11_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 82.5,
+   "kernel_us": 114.4,
+   "ratio": 0.722
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_12",
+  "kernel": "gen_12_k",
+  "pattern_head": "pow",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 53.6,
+   "kernel_us": 67.4,
+   "ratio": 0.795
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_2",
+  "kernel": "gen_2_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 51.4,
+   "kernel_us": 73.7,
+   "ratio": 0.698
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_3",
+  "kernel": "gen_3_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 67.0,
+   "kernel_us": 43.6,
+   "ratio": 1.537
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": true
+ },
+ {
+  "tag": "gen_4",
+  "kernel": "gen_4_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 187.6,
+   "kernel_us": 234.4,
+   "ratio": 0.8
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_5",
+  "kernel": "gen_5_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 150.4,
+   "kernel_us": 210.9,
+   "ratio": 0.713
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_6",
+  "kernel": "gen_6_k",
+  "pattern_head": "exp",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 101.5,
+   "kernel_us": 172.8,
+   "ratio": 0.588
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_7",
+  "kernel": "gen_7_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 110.2,
+   "kernel_us": 169.5,
+   "ratio": 0.65
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_8",
+  "kernel": "gen_8_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 74.9,
+   "kernel_us": 123.0,
+   "ratio": 0.609
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_9",
+  "kernel": "gen_9_k",
+  "pattern_head": "neg",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 50.0,
+   "kernel_us": 66.0,
+   "ratio": 0.758
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_0",
+  "kernel": "scan_0_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 80.3,
+   "kernel_us": 105.2,
+   "ratio": 0.764
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_1",
+  "kernel": "scan_1_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 3607.9,
+   "kernel_us": 3693.6,
+   "ratio": 0.977
+  },
+  "workload": "RWKVMixBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 48.9,
+   "kernel_us": 72.5,
+   "ratio": 0.675
+  },
+  "workload": "GEGLUBlock",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 47.4,
+   "kernel_us": 71.9,
+   "ratio": 0.658
+  },
+  "workload": "GEGLUBlock",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 15.4,
+   "kernel_us": 36.9,
+   "ratio": 0.419
+  },
+  "workload": "ManualGroupNorm",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_1",
+  "kernel": "gen_1_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 23.3,
+   "kernel_us": 34.2,
+   "ratio": 0.68
+  },
+  "workload": "ManualGroupNorm",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_2",
+  "kernel": "gen_2_k",
+  "pattern_head": "rsqrt",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 13.7,
+   "kernel_us": 19.5,
+   "ratio": 0.699
+  },
+  "workload": "ManualGroupNorm",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_3",
+  "kernel": "gen_3_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 18.4,
+   "kernel_us": 24.6,
+   "ratio": 0.749
+  },
+  "workload": "ManualGroupNorm",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_0",
+  "kernel": "scan_0_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 100.1,
+   "kernel_us": 131.9,
+   "ratio": 0.758
+  },
+  "workload": "ManualGroupNorm",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 15.3,
+   "kernel_us": 35.4,
+   "ratio": 0.433
+  },
+  "workload": "ManualGroupNorm",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_1",
+  "kernel": "gen_1_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 23.4,
+   "kernel_us": 33.4,
+   "ratio": 0.702
+  },
+  "workload": "ManualGroupNorm",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_2",
+  "kernel": "gen_2_k",
+  "pattern_head": "rsqrt",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 13.8,
+   "kernel_us": 17.7,
+   "ratio": 0.781
+  },
+  "workload": "ManualGroupNorm",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_3",
+  "kernel": "gen_3_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 18.0,
+   "kernel_us": 26.2,
+   "ratio": 0.689
+  },
+  "workload": "ManualGroupNorm",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_0",
+  "kernel": "scan_0_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 90.2,
+   "kernel_us": 127.6,
+   "ratio": 0.707
+  },
+  "workload": "ManualGroupNorm",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 34.0,
+   "kernel_us": 48.6,
+   "ratio": 0.7
+  },
+  "workload": "InstanceNormBroadcast",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_1",
+  "kernel": "gen_1_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 29.5,
+   "kernel_us": 42.0,
+   "ratio": 0.702
+  },
+  "workload": "InstanceNormBroadcast",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_2",
+  "kernel": "gen_2_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 24.4,
+   "kernel_us": 33.9,
+   "ratio": 0.72
+  },
+  "workload": "InstanceNormBroadcast",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_3",
+  "kernel": "gen_3_k",
+  "pattern_head": "rsqrt",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 13.4,
+   "kernel_us": 20.0,
+   "ratio": 0.672
+  },
+  "workload": "InstanceNormBroadcast",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_4",
+  "kernel": "gen_4_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 18.6,
+   "kernel_us": 25.9,
+   "ratio": 0.718
+  },
+  "workload": "InstanceNormBroadcast",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_0",
+  "kernel": "scan_0_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 94.4,
+   "kernel_us": 126.9,
+   "ratio": 0.744
+  },
+  "workload": "InstanceNormBroadcast",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 33.8,
+   "kernel_us": 47.3,
+   "ratio": 0.714
+  },
+  "workload": "InstanceNormBroadcast",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_1",
+  "kernel": "gen_1_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 29.3,
+   "kernel_us": 40.1,
+   "ratio": 0.731
+  },
+  "workload": "InstanceNormBroadcast",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_2",
+  "kernel": "gen_2_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 23.6,
+   "kernel_us": 32.3,
+   "ratio": 0.731
+  },
+  "workload": "InstanceNormBroadcast",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_3",
+  "kernel": "gen_3_k",
+  "pattern_head": "rsqrt",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 14.2,
+   "kernel_us": 16.6,
+   "ratio": 0.855
+  },
+  "workload": "InstanceNormBroadcast",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_4",
+  "kernel": "gen_4_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 18.0,
+   "kernel_us": 24.8,
+   "ratio": 0.725
+  },
+  "workload": "InstanceNormBroadcast",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_0",
+  "kernel": "scan_0_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 95.0,
+   "kernel_us": 128.3,
+   "ratio": 0.74
+  },
+  "workload": "InstanceNormBroadcast",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 289.5,
+   "kernel_us": 457.7,
+   "ratio": 0.633
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_1",
+  "kernel": "gen_1_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 232.5,
+   "kernel_us": 181.7,
+   "ratio": 1.28
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": true
+ },
+ {
+  "tag": "gen_2",
+  "kernel": "gen_2_k",
+  "pattern_head": "exp",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 19.7,
+   "kernel_us": 36.5,
+   "ratio": 0.539
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_3",
+  "kernel": "gen_3_k",
+  "pattern_head": "neg",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 14.7,
+   "kernel_us": 30.8,
+   "ratio": 0.476
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_4",
+  "kernel": "gen_4_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 215.0,
+   "kernel_us": 363.8,
+   "ratio": 0.591
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_5",
+  "kernel": "gen_5_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 166.3,
+   "kernel_us": 290.2,
+   "ratio": 0.573
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_6",
+  "kernel": "gen_6_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 149.6,
+   "kernel_us": 265.7,
+   "ratio": 0.563
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_7",
+  "kernel": "gen_7_k",
+  "pattern_head": "mul",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 101.3,
+   "kernel_us": 194.8,
+   "ratio": 0.52
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_8",
+  "kernel": "gen_8_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 83.3,
+   "kernel_us": 174.6,
+   "ratio": 0.477
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_9",
+  "kernel": "gen_9_k",
+  "pattern_head": "sub",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 52.2,
+   "kernel_us": 108.0,
+   "ratio": 0.483
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_0",
+  "kernel": "scan_0_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 551.2,
+   "kernel_us": 254.2,
+   "ratio": 2.169
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": true
+ },
+ {
+  "tag": "scan_1",
+  "kernel": "scan_1_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 316.9,
+   "kernel_us": 397.2,
+   "ratio": 0.798
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_2",
+  "kernel": "scan_2_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 652.4,
+   "kernel_us": 744.6,
+   "ratio": 0.876
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_3",
+  "kernel": "scan_3_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 525.6,
+   "kernel_us": 623.0,
+   "ratio": 0.844
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_4",
+  "kernel": "scan_4_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 1162.3,
+   "kernel_us": 1297.9,
+   "ratio": 0.896
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_5",
+  "kernel": "scan_5_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 1297.2,
+   "kernel_us": 1398.5,
+   "ratio": 0.928
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_6",
+  "kernel": "scan_6_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 2519.6,
+   "kernel_us": 2631.2,
+   "ratio": 0.958
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_7",
+  "kernel": "scan_7_k",
+  "pattern_head": "applyd",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 2416.7,
+   "kernel_us": 2553.3,
+   "ratio": 0.946
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 93.7,
+   "kernel_us": 158.5,
+   "ratio": 0.591
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_1",
+  "kernel": "gen_1_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 78.0,
+   "kernel_us": 129.3,
+   "ratio": 0.603
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_2",
+  "kernel": "gen_2_k",
+  "pattern_head": "exp",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 20.9,
+   "kernel_us": 18.7,
+   "ratio": 1.115
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": true
+ },
+ {
+  "tag": "gen_3",
+  "kernel": "gen_3_k",
+  "pattern_head": "neg",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 15.0,
+   "kernel_us": 18.1,
+   "ratio": 0.83
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_4",
+  "kernel": "gen_4_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 69.7,
+   "kernel_us": 117.5,
+   "ratio": 0.594
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_5",
+  "kernel": "gen_5_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 54.6,
+   "kernel_us": 93.8,
+   "ratio": 0.582
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_6",
+  "kernel": "gen_6_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 49.2,
+   "kernel_us": 87.5,
+   "ratio": 0.562
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_7",
+  "kernel": "gen_7_k",
+  "pattern_head": "mul",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 32.6,
+   "kernel_us": 62.0,
+   "ratio": 0.526
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_8",
+  "kernel": "gen_8_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 27.4,
+   "kernel_us": 55.7,
+   "ratio": 0.493
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_9",
+  "kernel": "gen_9_k",
+  "pattern_head": "sub",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 15.9,
+   "kernel_us": 31.1,
+   "ratio": 0.511
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_0",
+  "kernel": "scan_0_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 175.0,
+   "kernel_us": 237.5,
+   "ratio": 0.737
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_1",
+  "kernel": "scan_1_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 288.0,
+   "kernel_us": 370.6,
+   "ratio": 0.777
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_2",
+  "kernel": "scan_2_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 588.7,
+   "kernel_us": 673.7,
+   "ratio": 0.874
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_3",
+  "kernel": "scan_3_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 481.6,
+   "kernel_us": 580.9,
+   "ratio": 0.829
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_4",
+  "kernel": "scan_4_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 1060.9,
+   "kernel_us": 1193.3,
+   "ratio": 0.889
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_5",
+  "kernel": "scan_5_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 1171.7,
+   "kernel_us": 1256.1,
+   "ratio": 0.933
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_6",
+  "kernel": "scan_6_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 2338.7,
+   "kernel_us": 2420.9,
+   "ratio": 0.966
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "scan_7",
+  "kernel": "scan_7_k",
+  "pattern_head": "applyd",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "declined",
+    "reason": "spec declined \u2014 outside the tier's grammar"
+   },
+   {
+    "tier": "scan",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 2199.9,
+   "kernel_us": 2394.2,
+   "ratio": 0.919
+  },
+  "workload": "GatedDeltaRule",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "sigmoid",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 41.0,
+   "kernel_us": 100.8,
+   "ratio": 0.406
+  },
+  "workload": "SigmoidAttention",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_1",
+  "kernel": "gen_1_k",
+  "pattern_head": "add",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 57.5,
+   "kernel_us": 102.1,
+   "ratio": 0.563
+  },
+  "workload": "SigmoidAttention",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "sigmoid",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 23.4,
+   "kernel_us": 30.0,
+   "ratio": 0.781
+  },
+  "workload": "SigmoidAttention",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_1",
+  "kernel": "gen_1_k",
+  "pattern_head": "add",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 17.5,
+   "kernel_us": 29.4,
+   "ratio": 0.595
+  },
+  "workload": "SigmoidAttention",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "div",
+  "dtype": "float64",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 16.7,
+   "kernel_us": 19.1,
+   "ratio": 0.874
+  },
+  "workload": "TaylorLinearAttention",
+  "swept_dtype": "fp64",
+  "kept_by_referee": false
+ },
+ {
+  "tag": "gen_0",
+  "kernel": "gen_0_k",
+  "pattern_head": "div",
+  "dtype": "float32",
+  "attempts": [
+   {
+    "tier": "gen",
+    "outcome": "bound"
+   }
+  ],
+  "outcome": "bound",
+  "referee": {
+   "spelled_us": 16.9,
+   "kernel_us": 18.7,
+   "ratio": 0.906
+  },
+  "workload": "TaylorLinearAttention",
+  "swept_dtype": "fp32",
+  "kept_by_referee": false
+ }
+]

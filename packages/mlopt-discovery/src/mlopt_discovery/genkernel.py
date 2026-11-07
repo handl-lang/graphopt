@@ -233,18 +233,66 @@ def gen_handlers(terms: list, *, covered: set | None = None) -> dict:
     return out
 
 
+#: Creator ops whose result *device* the spec does not pin — the
+#: binding mints on the ambient default (CPU) unless told otherwise.
+#: Under a device-bound env (the referee's CUDA ``cvals``, a delivery
+#: on GPU) a literal ``zeros``/``ones``/… leaf would eval CPU while
+#: its siblings are CUDA and the first op mixing them raises
+#: mixed-device — the T-024 scan-tier audit residual.  These ops
+#: follow the computation's device instead: the same rule
+#: ``torch_bridge._randn_param``/``IRModule._align_to`` apply to
+#: baked tensors.  The spec's dtype attr still wins; only placement
+#: moves.
+_DEVICE_FOLLOWERS: frozenset = frozenset(
+    {"zeros", "ones", "empty", "randn", "rand", "full", "arange"}
+)
+
+
+def _spec_like(env: dict) -> Any:
+    """First non-scalar tensor in *env* — the device context.
+
+    Mirrors ``_const_like``/``_randn_param``: a 0-dim tensor is a
+    weak scalar, not a device context, so only ``dim() > 0`` tensors
+    qualify.  ``None`` when the env carries no tensor at all — the
+    ambient default is then the only honest placement.
+    """
+    import torch
+
+    for v in env.values():
+        if isinstance(v, torch.Tensor) and v.dim() > 0:
+            return v
+    return None
+
+
 def _eval_spec(spec: Any, env: dict, bindings: dict) -> Any:
     """Evaluate a canonical spec tuple under a metavar environment."""
+    return _eval_spec_dev(spec, env, bindings, _spec_like(env))
+
+
+def _eval_spec_dev(
+    spec: Any, env: dict, bindings: dict, like: Any
+) -> Any:
+    """Recursive worker for :func:`_eval_spec` carrying *like*."""
+    import torch
+
     if isinstance(spec, str):
         return env[spec]
     if isinstance(spec, (tuple, list)):
         attrs = next((e for e in spec[1:] if isinstance(e, dict)), {})
         args = [
-            _eval_spec(e, env, bindings)
+            _eval_spec_dev(e, env, bindings, like)
             for e in spec[1:]
             if not isinstance(e, dict)
         ]
-        return bindings[spec[0]](*args, **attrs)
+        out = bindings[spec[0]](*args, **attrs)
+        if (
+            like is not None
+            and spec[0] in _DEVICE_FOLLOWERS
+            and isinstance(out, torch.Tensor)
+            and out.device != like.device
+        ):
+            out = out.to(device=like.device)
+        return out
     return spec  # Const leaf — the canonical form carries the value
 
 
@@ -1236,9 +1284,13 @@ def scan_spec(spec: Any) -> dict | None:
     declare ``{"kind": "unrolled"}`` to pin the ambient single-step
     reading of a one-leaf ``aff_diag`` (the e-graph's folded
     carriers are that shape — ``a ⊙ h + x`` once, not a fold).
-    ``info["computed"]`` lists ``(name, subterm)`` pairs the
-    renderer hoisted — the binding evaluates them host-side and
-    passes them as extra kernel args after ``params``.
+    ``info["computed"]`` lists the ``(name, subterm)`` pairs the
+    renderer hoisted *and the step expressions reference* — dead
+    hoists (kids of a node that itself hoisted) and metavars
+    occurring only inside hoists never reach the kernel; the
+    binding evaluates the live subterms host-side and passes them
+    as extra kernel args.  ``info["kernel_args"]`` is the operand
+    order — referenced metavars, the state, then live hoists.
     """
     parts = _applyd_operands(spec)
     if parts is None:
@@ -1289,13 +1341,47 @@ def _scan_kind(leaves: list | None, attrs: dict | None) -> str | None:
     return kind if kind in ("seq", "unrolled") else None
 
 
+def _name_used(name: str, steps: list) -> bool:
+    """Check *name* survives into a rendered step expression.
+
+    Only names appearing as bare tokens in the final Triton
+    expressions reach the kernel — a metavar living wholly inside a
+    hoisted subterm is evaluated on the host as part of that
+    subterm, and a hoist registered for a kid of a node that itself
+    hoisted is dead.  Neither may join the kernel's flat index
+    space: their shapes belong to the host subterm, not the
+    broadcast the flat loads require.  The ``(?<![.")`` guard keeps
+    ``tl.exp``/``libdevice.tanh`` member names from counting.
+    """
+    import re
+
+    pat = re.compile(rf"(?<![.\w]){re.escape(name)}(?![\w])")
+    return any(pat.search(e) for ea, eb in steps for e in (ea, eb))
+
+
 def _unrolled_info(
     info: dict, steps: list, hoists: dict | None
 ) -> None:
     """Fill *info*'s unrolled-kind fields from the rendered steps."""
     info.update({"kind": "unrolled", "steps": steps})
-    if hoists:
-        info["computed"] = list(hoists.items())
+    # The kernel's flat operands are exactly the names its step
+    # expressions reference, plus the state: ``flat`` metavars in
+    # spec order, then ``h``, then the live hoists in registration
+    # order — the binding broadcasts and loads in this order.
+    used = {
+        n
+        for n in (*(hoists or {}), *info["seq"])
+        if _name_used(n, steps)
+    }
+    computed = [(n, s) for n, s in (hoists or {}).items() if n in used]
+    info["flat"] = [m for m in info["seq"] if m in used]
+    info["kernel_args"] = [
+        *info["flat"],
+        info["h"],
+        *(n for n, _ in computed),
+    ]
+    if computed:
+        info["computed"] = computed
 
 
 def _seq_triton_source(info: dict) -> str:
@@ -1331,11 +1417,15 @@ def _seq_triton_source(info: dict) -> str:
 
 
 def _unrolled_sig(info: dict) -> list:
-    """Build the kernel signature: caller params, then hoisted args."""
-    return [
-        *info["params"],
-        *(n for n, _ in info.get("computed", [])),
-    ]
+    """Build the kernel signature: the referenced flat operands.
+
+    ``kernel_args`` — the expr-referenced metavars, the state, and
+    the live hoists — is the operand list the step expressions
+    actually load; spec metavars buried inside hoists stay
+    positional binding args (the host subterm eval needs them) but
+    never reach the kernel.
+    """
+    return list(info["kernel_args"])
 
 
 def _flat_loads(names: Any) -> str:
@@ -1357,9 +1447,7 @@ def _unrolled_triton_source(info: dict) -> str:
     """
     sig = _unrolled_sig(info)
     params = ", ".join(f"{m}_ptr" for m in sig)
-    loads = _flat_loads(
-        (*info["seq"], *(n for n, _ in info.get("computed", [])))
-    )
+    loads = _flat_loads(sig)
     steps = "".join(
         f"    acc = ({ea}) * acc + ({eb})\n" for ea, eb in info["steps"]
     )
@@ -1507,11 +1595,13 @@ def _unrolled_binding(kern: Any, info: dict) -> Any:
     """Host wrapper for the unrolled carrier kernel.
 
     ``fn(*vals)`` binds the spec metavars positionally, broadcasts
-    every operand (and the state) to one flat index space, and
-    applies each leaf step in chronological order inside the kernel.
-    Hoisted operands — the spec subterms the elementwise renderer
-    declined — are evaluated on the host against the same env and
-    broadcast in with the rest.
+    the kernel-referenced operands (and the state) to one flat index
+    space, and applies each leaf step in chronological order inside
+    the kernel.  Hoisted operands — the spec subterms the
+    elementwise renderer declined — are evaluated on the host
+    against the same env and broadcast in with the rest; metavars
+    occurring only inside them stay binding args, not kernel
+    operands.
     """
     computed = info.get("computed", [])
 
@@ -1524,8 +1614,17 @@ def _unrolled_binding(kern: Any, info: dict) -> Any:
             _eval_spec(sub, vals, tb._IR_TO_TORCH)
             for _n, sub in computed
         ]
+        # Broadcast exactly the operands the kernel loads — the
+        # expr-referenced metavars, the state, and the live hoists
+        # (``kernel_args`` order).  Spec metavars buried inside
+        # hoists are bound for the host subterm eval but carry
+        # shapes foreign to the flat index space; broadcasting them
+        # in raised spurious shape errors on specs the kernel
+        # denotes fine.
         xs = torch.broadcast_tensors(
-            *(vals[m] for m in info["params"]), *extra
+            *(vals[m] for m in info["flat"]),
+            vals[info["h"]],
+            *extra,
         )
         if not xs[0].is_cuda:
             raise RuntimeError(

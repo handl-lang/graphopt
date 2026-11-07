@@ -268,6 +268,38 @@ class TestGenDomain:
         )
         torch.testing.assert_close(out, torch.ones(2) * 2.0)
 
+    def test_eval_spec_creator_follows_env_device(self):
+        """A ``zeros`` leaf mints where the computation runs (T-024).
+
+        Under a CPU env nothing moves; under a CUDA-bound env the
+        creator result follows so spelled/kernel evals never mix
+        devices.  The spec's dtype attr still wins.
+        """
+        import mlopt_torch.torch_bridge as tb
+
+        spec = (
+            "add",
+            ("zeros", {"shape": [2, 2], "dtype": "float64"}),
+            "X",
+        )
+        env = {"X": torch.ones(2, 2, dtype=torch.float64)}
+        out = gk._eval_spec(spec, env, dict(tb._IR_TO_TORCH))
+        assert out.device.type == "cpu"
+        torch.testing.assert_close(
+            out, torch.ones(2, 2, dtype=torch.float64)
+        )
+        if torch.cuda.is_available():
+            cenv = {
+                "X": torch.ones(
+                    2, 2, dtype=torch.float64, device="cuda"
+                )
+            }
+            cout = gk._eval_spec(spec, cenv, dict(tb._IR_TO_TORCH))
+            assert cout.device.type == "cuda"
+            torch.testing.assert_close(
+                cout.cpu(), torch.ones(2, 2, dtype=torch.float64)
+            )
+
 
 class TestProbe:
     def test_gen_probe_delivers(self, monkeypatch):
@@ -965,6 +997,45 @@ class TestScanSpec:
         assert info_mm["kind"] == "unrolled"
         assert [n for n, _ in info_mm["computed"]] == ["__c0"]
         assert info_mm["steps"] == [("A", "__c0")]
+
+    def test_unrolled_prunes_dead_hoists_and_buried_metavars(self):
+        """Only expr-referenced operands join the flat index space.
+
+        The kid ``split``s hoist first, then their ``matmul`` parent
+        hoists whole — the kids are dead ``__c`` entries.  ``Q``/``K``
+        live only inside the hoist: they stay positional binding
+        args (``params``) but never reach the kernel's broadcast.
+        """
+        info = gk.scan_spec(
+            (
+                "applyd",
+                (
+                    "aff_diag",
+                    (
+                        "matmul",
+                        (
+                            "split",
+                            "Q",
+                            {"dim": -2, "index": 1, "sizes": [2, 2]},
+                        ),
+                        (
+                            "split",
+                            "K",
+                            {"dim": -1, "index": 1, "sizes": [2, 2]},
+                        ),
+                    ),
+                    "B",
+                ),
+                "H",
+                {"kind": "unrolled"},
+            )
+        )
+        assert info["kind"] == "unrolled"
+        assert info["steps"] == [("__c2", "B")]
+        assert [n for n, _ in info["computed"]] == ["__c2"]
+        assert info["params"] == ["Q", "K", "B", "H"]
+        assert info["flat"] == ["B"]
+        assert info["kernel_args"] == ["B", "H", "__c2"]
 
 
 class TestScanSources:
