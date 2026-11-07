@@ -1,0 +1,51 @@
+# myco project config — every section optional.
+#
+# [[kinds]] — the item-kind table. The block below spells out the
+# compiled-in prelude exactly as it runs with no config; uncomment
+# a block to restate it, or append entries to declare new kinds
+# (a declared `prefix` makes `<PREFIX>-NNN` a real id).
+#
+# [[kinds]]
+# name = "task"
+# prefix = "T"
+# storage = "doc"              # doc-backed — lives in the task ledgers
+# done_state = "done"
+# zero_pad = 3
+#
+# [[kinds]]
+# name = "issue"
+# prefix = "I"
+# storage = "dir"              # issues/issue-NNNN-<slug>.md
+# dir = "issues"
+# file_prefix = "issue"
+# done_state = "done"
+# resolve_verb = true          # `issue resolve` walks open → done
+# zero_pad = 3
+#
+# [[kinds]]
+# name = "proposal"
+# prefix = "P"
+# storage = "dir"              # proposals/proposal-NNNN-<slug>.md
+# dir = "proposals"
+# file_prefix = "proposal"
+# done_state = "done"
+# zero_pad = 3
+#
+# [[kinds]]
+# name = "adr"
+# prefix = "ADR"
+# storage = "dir"              # adrs/NNNN-<slug>.md
+# dir = "adrs"
+# file_prefix = ""
+# done_state = "done"
+# supersede = true             # `supersedes:` frontmatter means something
+# zero_pad = 4
+#
+# [[kinds]]
+# name = "plan"
+# prefix = "PL"
+# storage = "dir"              # plans/pl-NNNN-<slug>.md
+# dir = "plans"
+# file_prefix = "pl"
+# done_state = "done"
+# zero_pad = 3
