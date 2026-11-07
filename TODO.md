@@ -12,7 +12,6 @@
 
 ## HIGH — M1: the machine finds the kernel, not me (five items, ~5 days)
 
-- [ ] T-004 in opt-kernel (today kernelopt ): the kernel IR is Term + kit-declared ops
 - [ ] T-005 lib-kernel-ir (public): nine ops, grades, costs, one torch denotation per op — the vocabulary, and the equality reference
 - [ ] T-006 compile-triton (Rust, compile-\* family): Term → Triton, qgemv + gate\_proj × split\_k ∈ {1,2,4,8}
 - [ ] T-007 Equality gate vs awq\_gemm in graphopt/bench — cosine ≥ 0.9999 on every variant, inside the timing path
