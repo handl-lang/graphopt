@@ -44,5 +44,3 @@
 - [ ] T-021 Fold the fp32 sweep into the default driver path / CI table — so the quoted number can't drift back to the fp64 convention.
 
 ## Recovered — session 1792996176495\_5kxw5 (AWQ kernel margin)
-
-- [ ] T-022 Push down\_proj from 42% toward 70% of the memory roofline — ~2.4× still on the table. (Redo-e2e landed as docs/reports/p18\_e2e\_29pct.md ; gate\_proj parity is already the M1 target above; "substrate-native" is M1 itself.)
