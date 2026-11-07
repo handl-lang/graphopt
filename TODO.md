@@ -4,6 +4,7 @@
 
 - [ ] T-024 Scan-carrier claims mint unevaluable on CUDA — applyd specs embed host-pinned zeros op; spelled eval AND generated binding raise mixed-device bmm/shape (32 referee consults, both dtypes). Harvest-fidelity fix in \_scan\_sites: decline or re-base specs embedding device-pinned const ops. Surfaced by triton\_binding\_audit (T-018); masked today because profitable declines them. · created:2026-11-07
 - [ ] T-025 fp64 pow codegen emits fp32 literal — triton\_bindings renders const leaves as (2.0) so libdevice.pow(f64 tile, f32 scalar) raises CompilationError (RWKVMixBlock gen\_12, fp64 only). Render dtype-correct literals or x\*x-style unfolds. Surfaced by triton\_binding\_audit (T-018). · pri:low · created:2026-11-07
+- [ ] T-026 Fold-gate residuals — attr-metavar prim specs (5/57) never concrete-match so \_fold\_cost\_gate cannot site them (GatedDeltaRule fp64 still delivers synop\_4c5296b3ba+synop\_5e58f26875 at 0.54x); site-level referee is noisy at the margin (synop2\_35bbd03301 measured 0.64x and 2.2x across processes) and cannot see module-level loss; law folds to ambient ops (rms\_norm, attention folds — RMSNormPerHead fp64 0.21x, SigmoidAttention fp32) never pass through profitable at all. Docs: docs/reports/p27\_fold\_cost\_gate.md · created:2026-11-07
 
 ## HIGH — ADR-0159: dissolve the optimizer domains into ext tools
 
