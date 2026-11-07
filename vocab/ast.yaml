@@ -1,0 +1,9082 @@
+- id: "ast.mlopt.const"
+  node_kind: "mlopt:const"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      value: {}
+  mlopt:
+    leaf: "const"
+- id: "ast.mlopt.var"
+  node_kind: "mlopt:var"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      name: {}
+  mlopt:
+    leaf: "var"
+- id: "ast.mlopt.data"
+  node_kind: "mlopt:data"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      repr: {}
+  mlopt:
+    leaf: "data"
+- id: "ast.mlopt.abs"
+  node_kind: "abs"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "abs"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "pointwise-unary"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.acos"
+  node_kind: "acos"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "acos"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.acosh"
+  node_kind: "acosh"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "acosh"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.adaptive_avg_pool2d"
+  node_kind: "adaptive_avg_pool2d"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "adaptive_avg_pool2d"
+      arity: null
+      tags: []
+      attrs:
+        - - 1
+          - "size"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.add"
+  node_kind: "add"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 2
+        maxItems: 2
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "add"
+      arity: 2
+      tags:
+        - "commutative"
+        - "fold-at-lowering"
+        - "pointwise-binary"
+      attrs: []
+      required: []
+      gen:
+        n_in: 2
+        n_out: 1
+        commutative: true
+        associative: true
+        identity: 0
+        law: "Addition forms a commutative monoid (SMC symmetry + associativity)."
+      denotation: "torch"
+- id: "ast.mlopt.addcdiv"
+  node_kind: "addcdiv"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "addcdiv"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "pointwise"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.addcmul"
+  node_kind: "addcmul"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "addcmul"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "pointwise"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.aff"
+  node_kind: "aff"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 2
+        maxItems: 2
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "aff"
+      arity: 2
+      tags:
+        - "cost-view"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.aff_diag"
+  node_kind: "aff_diag"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 2
+        maxItems: 2
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "aff_diag"
+      arity: 2
+      tags:
+        - "cost-view"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.alias"
+  node_kind: "alias"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "alias"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "relayout"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.all"
+  node_kind: "all"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "all"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs:
+        - - 1
+          - "dim"
+        - - 2
+          - "keepdim"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.amax"
+  node_kind: "amax"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "amax"
+      arity: 1
+      tags:
+        - "reduce-dim"
+      attrs:
+        - - 1
+          - "dim"
+        - - 2
+          - "keepdim"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.amin"
+  node_kind: "amin"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "amin"
+      arity: 1
+      tags:
+        - "reduce-dim"
+      attrs:
+        - - 1
+          - "dim"
+        - - 2
+          - "keepdim"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.any"
+  node_kind: "any"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "any"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs:
+        - - 1
+          - "dim"
+        - - 2
+          - "keepdim"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.arange"
+  node_kind: "arange"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "arange"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.argmax"
+  node_kind: "argmax"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "argmax"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "reduce-dim"
+      attrs:
+        - - 1
+          - "dim"
+        - - 2
+          - "keepdim"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.argmin"
+  node_kind: "argmin"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "argmin"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "reduce-dim"
+      attrs:
+        - - 1
+          - "dim"
+        - - 2
+          - "keepdim"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.argsort"
+  node_kind: "argsort"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "argsort"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs:
+        - - 1
+          - "dim"
+        - - 2
+          - "descending"
+      required:
+        - "dim"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.asin"
+  node_kind: "asin"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "asin"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.asinh"
+  node_kind: "asinh"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "asinh"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.atan"
+  node_kind: "atan"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "atan"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.atan2"
+  node_kind: "atan2"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "atan2"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "pointwise"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.atanh"
+  node_kind: "atanh"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "atanh"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.batch_norm"
+  node_kind: "batch_norm"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "batch_norm"
+      arity: null
+      tags: []
+      attrs:
+        - - 5
+          - "training"
+        - - 6
+          - "momentum"
+        - - 7
+          - "eps"
+        - - 8
+          - "cudnn_enabled"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.bfloat16"
+  node_kind: "bfloat16"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "bfloat16"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "relayout"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.bitwise_and"
+  node_kind: "bitwise_and"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "bitwise_and"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "pointwise"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.bitwise_or"
+  node_kind: "bitwise_or"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "bitwise_or"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "pointwise"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.bool"
+  node_kind: "bool"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "bool"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.broadcast"
+  node_kind: "broadcast"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "broadcast"
+      arity: 1
+      tags:
+        - "cost-view"
+      attrs: []
+      required: []
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Monoidal coherence: copy then f = f in parallel."
+      denotation: "torch"
+- id: "ast.mlopt.broadcast_to"
+  node_kind: "broadcast_to"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "broadcast_to"
+      arity: 1
+      tags:
+        - "relayout"
+        - "viewish"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.byte"
+  node_kind: "byte"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "byte"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.ceil"
+  node_kind: "ceil"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "ceil"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.celu"
+  node_kind: "celu"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "celu"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.char"
+  node_kind: "char"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "char"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.chunk"
+  node_kind: "chunk"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "chunk"
+      arity: 1
+      tags:
+        - "cost-view"
+        - "relayout"
+        - "viewish"
+      attrs:
+        - - 1
+          - "chunks"
+        - - 2
+          - "dim"
+        - - 3
+          - "index"
+      required:
+        - "chunks"
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Projection pi_i of a paired output; a zero-cost view like transpose/reshape."
+      denotation: "torch"
+- id: "ast.mlopt.clamp"
+  node_kind: "clamp"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "clamp"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "pointwise"
+      attrs:
+        - - 1
+          - "min"
+        - - 2
+          - "max"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.clamp_max"
+  node_kind: "clamp_max"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "clamp_max"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "pointwise"
+      attrs:
+        - - 1
+          - "max"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.clamp_min"
+  node_kind: "clamp_min"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "clamp_min"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "pointwise"
+      attrs:
+        - - 1
+          - "min"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.clone"
+  node_kind: "clone"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "clone"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "relayout"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.concat"
+  node_kind: "concat"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "concat"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs:
+        - - 1
+          - "dim"
+      required:
+        - "dim"
+      gen:
+        n_in: 2
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Pairing on objects: concat(W1, W2) builds the product map weight.  Wire juxtaposition \u2014 a data-movement op."
+      denotation: "torch"
+- id: "ast.mlopt.contiguous"
+  node_kind: "contiguous"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "contiguous"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "relayout"
+      attrs: []
+      required: []
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Memory-layout coercion; semantically the identity map."
+      denotation: "torch"
+- id: "ast.mlopt.conv1d"
+  node_kind: "conv1d"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "conv1d"
+      arity: null
+      tags: []
+      attrs:
+        - - 3
+          - "stride"
+        - - 4
+          - "padding"
+        - - 5
+          - "dilation"
+        - - 6
+          - "groups"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.conv2d"
+  node_kind: "conv2d"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "conv2d"
+      arity: null
+      tags: []
+      attrs:
+        - - 3
+          - "stride"
+        - - 4
+          - "padding"
+        - - 5
+          - "dilation"
+        - - 6
+          - "groups"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.copy"
+  node_kind: "copy"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "copy"
+      arity: null
+      tags:
+        - "write"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.cos"
+  node_kind: "cos"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "cos"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.cosh"
+  node_kind: "cosh"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "cosh"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.count_nonzero"
+  node_kind: "count_nonzero"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "count_nonzero"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "reduce-dim"
+      attrs:
+        - - 1
+          - "dim"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.cswap"
+  node_kind: "cswap"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "cswap"
+      arity: 0
+      tags:
+        - "cost-view"
+      attrs: []
+      required: []
+      gen:
+        n_in: 0
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Symmetry \u03c3 : [a;b] \u21a6 [b;a] \u2014 a permutation matrix."
+      denotation: "torch"
+- id: "ast.mlopt.cummax"
+  node_kind: "cummax"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "cummax"
+      arity: null
+      tags: []
+      attrs:
+        - - 1
+          - "dim"
+      required:
+        - "dim"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.cummin"
+  node_kind: "cummin"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "cummin"
+      arity: null
+      tags: []
+      attrs:
+        - - 1
+          - "dim"
+      required:
+        - "dim"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.cumprod"
+  node_kind: "cumprod"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "cumprod"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs:
+        - - 1
+          - "dim"
+      required:
+        - "dim"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.cumsum"
+  node_kind: "cumsum"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "cumsum"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs:
+        - - 1
+          - "dim"
+      required:
+        - "dim"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.deform_conv2d"
+  node_kind: "deform_conv2d"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "deform_conv2d"
+      arity: null
+      tags: []
+      attrs:
+        - - 5
+          - "stride_h"
+        - - 6
+          - "stride_w"
+        - - 7
+          - "pad_h"
+        - - 8
+          - "pad_w"
+        - - 9
+          - "dilation_h"
+        - - 10
+          - "dilation_w"
+        - - 11
+          - "groups"
+        - - 12
+          - "offset_groups"
+        - - 13
+          - "use_mask"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.detach"
+  node_kind: "detach"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "detach"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "relayout"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.detach_"
+  node_kind: "detach_"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "detach_"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "relayout"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.diag_sum"
+  node_kind: "diag_sum"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "diag_sum"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.digamma"
+  node_kind: "digamma"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "digamma"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.div"
+  node_kind: "div"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 2
+        maxItems: 2
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "div"
+      arity: 2
+      tags:
+        - "fold-at-lowering"
+        - "pointwise"
+        - "pointwise-binary"
+      attrs: []
+      required: []
+      gen:
+        n_in: 2
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Division: a / b = a * (1/b)  (multiplicative inverse)."
+      denotation: "torch"
+- id: "ast.mlopt.double"
+  node_kind: "double"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "double"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "relayout"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.dropout"
+  node_kind: "dropout"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "dropout"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs:
+        - - 1
+          - "p"
+        - - 2
+          - "train"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.einsum"
+  node_kind: "einsum"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "einsum"
+      arity: null
+      tags: []
+      attrs:
+        - - 0
+          - "equation"
+      required:
+        - "equation"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.elu"
+  node_kind: "elu"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "elu"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs:
+        - - 1
+          - "alpha"
+        - - 2
+          - "scale"
+        - - 3
+          - "input_scale"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.embedding"
+  node_kind: "embedding"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "embedding"
+      arity: null
+      tags:
+        - "table"
+      attrs: []
+      required: []
+      gen:
+        n_in: 2
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Row gather: embedding(W, idx) selects rows of the table; low-rank tables factor as gather-then-project."
+      denotation: "torch"
+- id: "ast.mlopt.eq"
+  node_kind: "eq"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "eq"
+      arity: null
+      tags:
+        - "commutative"
+        - "pointwise"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.erf"
+  node_kind: "erf"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "erf"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.erfc"
+  node_kind: "erfc"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "erfc"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.erfinv"
+  node_kind: "erfinv"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "erfinv"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.exp"
+  node_kind: "exp"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "exp"
+      arity: 1
+      tags:
+        - "activation"
+        - "fold-at-lowering"
+        - "pointwise-unary"
+      attrs: []
+      required: []
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Exponential."
+      denotation: "torch"
+- id: "ast.mlopt.exp2"
+  node_kind: "exp2"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "exp2"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.expand"
+  node_kind: "expand"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "expand"
+      arity: 1
+      tags:
+        - "generator-view"
+        - "relayout"
+        - "viewish"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.expand_as"
+  node_kind: "expand_as"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 2
+        maxItems: 2
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "expand_as"
+      arity: 2
+      tags:
+        - "relayout"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.expm1"
+  node_kind: "expm1"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "expm1"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.eye"
+  node_kind: "eye"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "eye"
+      arity: 0
+      tags:
+        - "cost-view"
+      attrs:
+        - - 0
+          - "dim"
+        - - 1
+          - "m"
+      required: []
+      gen:
+        n_in: 0
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Identity morphism id_n (a constant matrix)."
+      denotation: "torch"
+- id: "ast.mlopt.flatten"
+  node_kind: "flatten"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "flatten"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "relayout"
+        - "viewish"
+      attrs:
+        - - 1
+          - "start_dim"
+        - - 2
+          - "end_dim"
+      required:
+        - "start_dim"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.flip"
+  node_kind: "flip"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "flip"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "relayout"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.float"
+  node_kind: "float"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "float"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "relayout"
+      attrs: []
+      required: []
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Dtype coercion to working precision \u2014 the decode half of quantization-as-rewrite: mul(float(q), s)."
+      denotation: "torch"
+- id: "ast.mlopt.floor"
+  node_kind: "floor"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "floor"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.fmax"
+  node_kind: "fmax"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "fmax"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "pointwise"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.fmin"
+  node_kind: "fmin"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "fmin"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "pointwise"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.fmod"
+  node_kind: "fmod"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "fmod"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "pointwise"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.frac"
+  node_kind: "frac"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "frac"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.full"
+  node_kind: "full"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "full"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.full_like"
+  node_kind: "full_like"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "full_like"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.gammaln"
+  node_kind: "gammaln"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "gammaln"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.gather"
+  node_kind: "gather"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "gather"
+      arity: null
+      tags:
+        - "table"
+      attrs:
+        - - 1
+          - "dim"
+      required:
+        - "dim"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.ge"
+  node_kind: "ge"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "ge"
+      arity: null
+      tags:
+        - "pointwise"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.gelu"
+  node_kind: "gelu"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "gelu"
+      arity: 1
+      tags:
+        - "activation"
+        - "fold-at-lowering"
+        - "pointwise-unary"
+      attrs: []
+      required: []
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Gaussian Error Linear Unit."
+      denotation: "torch"
+- id: "ast.mlopt.getitem"
+  node_kind: "getitem"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "getitem"
+      arity: 1
+      tags:
+        - "relayout"
+        - "viewish"
+      attrs:
+        - - 1
+          - "index"
+      required:
+        - "index"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.glu"
+  node_kind: "glu"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "glu"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs:
+        - - 1
+          - "dim"
+      required:
+        - "dim"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.group_norm"
+  node_kind: "group_norm"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "group_norm"
+      arity: null
+      tags: []
+      attrs:
+        - - 1
+          - "num_groups"
+        - - 4
+          - "eps"
+        - - 5
+          - "cudnn_enabled"
+      required:
+        - "num_groups"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.gt"
+  node_kind: "gt"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "gt"
+      arity: null
+      tags:
+        - "pointwise"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.half"
+  node_kind: "half"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "half"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "relayout"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.hardsigmoid"
+  node_kind: "hardsigmoid"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "hardsigmoid"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.hardswish"
+  node_kind: "hardswish"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "hardswish"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.hardtanh"
+  node_kind: "hardtanh"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "hardtanh"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs:
+        - - 1
+          - "min"
+        - - 2
+          - "max"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.heaviside"
+  node_kind: "heaviside"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "heaviside"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "pointwise"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.i0"
+  node_kind: "i0"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "i0"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.index"
+  node_kind: "index"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "index"
+      arity: null
+      tags:
+        - "table"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.index_add"
+  node_kind: "index_add"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "index_add"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "write"
+      attrs:
+        - - 1
+          - "dim"
+      required:
+        - "dim"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.index_put"
+  node_kind: "index_put"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "index_put"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "write"
+      attrs:
+        - - 3
+          - "accumulate"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.index_select"
+  node_kind: "index_select"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "index_select"
+      arity: null
+      tags:
+        - "table"
+      attrs:
+        - - 1
+          - "dim"
+        - - 2
+          - "index"
+      required:
+        - "dim"
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Reindexing along one axis (a gather of rows/blocks): the generalised projection.  With a repeated-index map it realises slice-level sharing \u2014 the copy map Delta applied per row-block."
+      denotation: "torch"
+- id: "ast.mlopt.instance_norm"
+  node_kind: "instance_norm"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "instance_norm"
+      arity: null
+      tags: []
+      attrs:
+        - - 5
+          - "use_input_stats"
+        - - 6
+          - "momentum"
+        - - 7
+          - "eps"
+        - - 8
+          - "cudnn_enabled"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.int"
+  node_kind: "int"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "int"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.inv"
+  node_kind: "inv"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "inv"
+      arity: null
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Matrix inverse; appears only inside the closed form of a trace (the resolvent (I\u2212S)\u207b\u00b9)."
+      denotation: "torch"
+- id: "ast.mlopt.isclose"
+  node_kind: "isclose"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "isclose"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "pointwise"
+      attrs:
+        - - 2
+          - "rtol"
+        - - 3
+          - "atol"
+        - - 4
+          - "equal_nan"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.isfinite"
+  node_kind: "isfinite"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "isfinite"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.isinf"
+  node_kind: "isinf"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "isinf"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.isnan"
+  node_kind: "isnan"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "isnan"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.isneginf"
+  node_kind: "isneginf"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "isneginf"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.isposinf"
+  node_kind: "isposinf"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "isposinf"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.item"
+  node_kind: "item"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "item"
+      arity: null
+      tags:
+        - "table"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.kthvalue"
+  node_kind: "kthvalue"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "kthvalue"
+      arity: null
+      tags: []
+      attrs:
+        - - 1
+          - "k"
+        - - 2
+          - "dim"
+        - - 3
+          - "keepdim"
+      required:
+        - "k"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.layer_norm"
+  node_kind: "layer_norm"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "layer_norm"
+      arity: null
+      tags: []
+      attrs:
+        - - 1
+          - "dim"
+        - - 4
+          - "eps"
+        - - 5
+          - "cudnn_enabled"
+      required:
+        - "dim"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.le"
+  node_kind: "le"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "le"
+      arity: null
+      tags:
+        - "pointwise"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.leaf"
+  node_kind: "leaf"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "leaf"
+      arity: 0
+      tags:
+        - "cost-view"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "unbound"
+- id: "ast.mlopt.leaky_relu"
+  node_kind: "leaky_relu"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "leaky_relu"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.lerp"
+  node_kind: "lerp"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "lerp"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "pointwise"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.linalg_vector_norm"
+  node_kind: "linalg_vector_norm"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "linalg_vector_norm"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "reduce-dim"
+      attrs:
+        - - 1
+          - "ord"
+        - - 2
+          - "dim"
+        - - 3
+          - "keepdim"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.linear"
+  node_kind: "linear"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "linear"
+      arity: null
+      tags: []
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.log"
+  node_kind: "log"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "log"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "pointwise-unary"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.log10"
+  node_kind: "log10"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "log10"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.log1p"
+  node_kind: "log1p"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "log1p"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.log2"
+  node_kind: "log2"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "log2"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.log_softmax"
+  node_kind: "log_softmax"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "log_softmax"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs:
+        - - 1
+          - "dim"
+      required:
+        - "dim"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.logcumsumexp"
+  node_kind: "logcumsumexp"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "logcumsumexp"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs:
+        - - 1
+          - "dim"
+      required:
+        - "dim"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.logical_and"
+  node_kind: "logical_and"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "logical_and"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "pointwise"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.logical_not"
+  node_kind: "logical_not"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "logical_not"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.logical_or"
+  node_kind: "logical_or"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "logical_or"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "pointwise"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.logical_xor"
+  node_kind: "logical_xor"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "logical_xor"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "pointwise"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.long"
+  node_kind: "long"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "long"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.lstm.input"
+  node_kind: "lstm.input"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "lstm.input"
+      arity: null
+      tags: []
+      attrs:
+        - - 3
+          - "has_biases"
+        - - 4
+          - "num_layers"
+        - - 5
+          - "dropout"
+        - - 6
+          - "train"
+        - - 7
+          - "bidirectional"
+        - - 8
+          - "batch_first"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.lt"
+  node_kind: "lt"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "lt"
+      arity: null
+      tags:
+        - "pointwise"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.masked_fill"
+  node_kind: "masked_fill"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "masked_fill"
+      arity: null
+      tags:
+        - "pointwise"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.matmul"
+  node_kind: "matmul"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "matmul"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen:
+        n_in: 2
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Bilinear; distributes over elementwise add when weight is fixed."
+      denotation: "torch"
+- id: "ast.mlopt.max"
+  node_kind: "max"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "max"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "reduce-dim"
+      attrs:
+        - - 1
+          - "dim"
+        - - 2
+          - "keepdim"
+      required: []
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Maximum; sublinear (convexity)."
+      denotation: "torch"
+- id: "ast.mlopt.max_pool2d"
+  node_kind: "max_pool2d"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "max_pool2d"
+      arity: null
+      tags: []
+      attrs:
+        - - 1
+          - "kernel_size"
+        - - 2
+          - "stride"
+        - - 3
+          - "padding"
+        - - 4
+          - "dilation"
+        - - 5
+          - "ceil_mode"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.maximum"
+  node_kind: "maximum"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "maximum"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "pointwise"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.mean"
+  node_kind: "mean"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "mean"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "reduce-dim"
+      attrs: []
+      required: []
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Mean = sum / size (linearity of expectation)."
+      denotation: "torch"
+- id: "ast.mlopt.median"
+  node_kind: "median"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "median"
+      arity: 1
+      tags:
+        - "reduce-dim"
+      attrs:
+        - - 1
+          - "dim"
+        - - 2
+          - "keepdim"
+      required:
+        - "dim"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.min"
+  node_kind: "min"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "min"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "reduce-dim"
+      attrs:
+        - - 1
+          - "dim"
+        - - 2
+          - "keepdim"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.minimum"
+  node_kind: "minimum"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "minimum"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "pointwise"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.mish"
+  node_kind: "mish"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "mish"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.mode"
+  node_kind: "mode"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "mode"
+      arity: 1
+      tags:
+        - "reduce-dim"
+      attrs:
+        - - 1
+          - "dim"
+        - - 2
+          - "keepdim"
+      required:
+        - "dim"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.movedim"
+  node_kind: "movedim"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "movedim"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "relayout"
+        - "viewish"
+      attrs:
+        - - 1
+          - "source"
+        - - 2
+          - "destination"
+      required:
+        - "destination"
+        - "source"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.mul"
+  node_kind: "mul"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 2
+        maxItems: 2
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "mul"
+      arity: 2
+      tags:
+        - "commutative"
+        - "fold-at-lowering"
+        - "pointwise"
+        - "pointwise-binary"
+      attrs: []
+      required: []
+      gen:
+        n_in: 2
+        n_out: 1
+        commutative: true
+        associative: true
+        identity: 1
+        law: "Multiplication forms a commutative monoid (Hadamard product)."
+      denotation: "torch"
+- id: "ast.mlopt.nan_to_num"
+  node_kind: "nan_to_num"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "nan_to_num"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.nanmean"
+  node_kind: "nanmean"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "nanmean"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "reduce-dim"
+      attrs:
+        - - 1
+          - "dim"
+        - - 2
+          - "keepdim"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.nansum"
+  node_kind: "nansum"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "nansum"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "reduce-dim"
+      attrs:
+        - - 1
+          - "dim"
+        - - 2
+          - "keepdim"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.narrow"
+  node_kind: "narrow"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "narrow"
+      arity: 1
+      tags:
+        - "relayout"
+        - "viewish"
+      attrs:
+        - - 1
+          - "dim"
+        - - 2
+          - "start"
+        - - 3
+          - "length"
+      required:
+        - "dim"
+        - "length"
+        - "start"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.ne"
+  node_kind: "ne"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "ne"
+      arity: null
+      tags:
+        - "commutative"
+        - "pointwise"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.neg"
+  node_kind: "neg"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "neg"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "pointwise-unary"
+      attrs: []
+      required: []
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Additive inverse: neg(x) + x = 0  (group inverse)."
+      denotation: "torch"
+- id: "ast.mlopt.new_full"
+  node_kind: "new_full"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "new_full"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.new_ones"
+  node_kind: "new_ones"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "new_ones"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.new_zeros"
+  node_kind: "new_zeros"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "new_zeros"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.nonzero"
+  node_kind: "nonzero"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "nonzero"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "table"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.numel"
+  node_kind: "numel"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "numel"
+      arity: null
+      tags:
+        - "table"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.om"
+  node_kind: "om"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 3
+        maxItems: 3
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "om"
+      arity: 3
+      tags:
+        - "cost-view"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.one_hot"
+  node_kind: "one_hot"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "one_hot"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "table"
+      attrs:
+        - - 1
+          - "num_classes"
+      required:
+        - "num_classes"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.ones"
+  node_kind: "ones"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "ones"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.ones_like"
+  node_kind: "ones_like"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "ones_like"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.outer"
+  node_kind: "outer"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "outer"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.pack"
+  node_kind: "pack"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "pack"
+      arity: null
+      tags:
+        - "cost-view"
+      attrs: []
+      required: []
+      gen:
+        n_in: 0
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "n-ary pairing (the product's universal map): pack(t0, ..., tn) assembles the monoidal product of its operand wires into one tuple-valued output.  It is the multi-output root \u2014 a module returning several tensors exports as a single pack term, so the single-root search saturates every output without dropping any.  Arity is variadic (n_in documents the fixed-arity convention; pack takes >= 1 operand)."
+      denotation: "torch"
+- id: "ast.mlopt.pad"
+  node_kind: "pad"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "pad"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "relayout"
+      attrs:
+        - - 1
+          - "pad"
+        - - 2
+          - "mode"
+        - - 3
+          - "value"
+      required:
+        - "pad"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.permute"
+  node_kind: "permute"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "permute"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "relayout"
+        - "viewish"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.pixel_shuffle"
+  node_kind: "pixel_shuffle"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "pixel_shuffle"
+      arity: null
+      tags: []
+      attrs:
+        - - 1
+          - "upscale_factor"
+      required:
+        - "upscale_factor"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.pixel_unshuffle"
+  node_kind: "pixel_unshuffle"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "pixel_unshuffle"
+      arity: null
+      tags: []
+      attrs:
+        - - 1
+          - "downscale_factor"
+      required:
+        - "downscale_factor"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.pow"
+  node_kind: "pow"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "pow"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "pointwise"
+      attrs: []
+      required: []
+      gen:
+        n_in: 2
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Power: x**n, with square(x)=pow(x,2) and rsqrt as inverse sqrt."
+      denotation: "torch"
+- id: "ast.mlopt.prelu"
+  node_kind: "prelu"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "prelu"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.prod"
+  node_kind: "prod"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "prod"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "reduce-dim"
+      attrs:
+        - - 1
+          - "dim"
+        - - 2
+          - "keepdim"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.reciprocal"
+  node_kind: "reciprocal"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "reciprocal"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.relu"
+  node_kind: "relu"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "relu"
+      arity: 1
+      tags:
+        - "activation"
+        - "fold-at-lowering"
+        - "pointwise-unary"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.relu6"
+  node_kind: "relu6"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "relu6"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.remainder"
+  node_kind: "remainder"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "remainder"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "pointwise"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.repeat"
+  node_kind: "repeat"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "repeat"
+      arity: 1
+      tags:
+        - "relayout"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.reshape"
+  node_kind: "reshape"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "reshape"
+      arity: 1
+      tags:
+        - "cost-view"
+        - "fold-at-lowering"
+        - "generator-view"
+        - "relayout"
+        - "viewish"
+      attrs: []
+      required: []
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Relabeling of wires; composes associatively."
+      denotation: "torch"
+- id: "ast.mlopt.rms_norm"
+  node_kind: "rms_norm"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "rms_norm"
+      arity: null
+      tags: []
+      attrs:
+        - - 1
+          - "dim"
+        - - 3
+          - "eps"
+      required:
+        - "dim"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.roll"
+  node_kind: "roll"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "roll"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "relayout"
+      attrs:
+        - - 1
+          - "shifts"
+        - - 2
+          - "dims"
+      required:
+        - "shifts"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.round"
+  node_kind: "round"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "round"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.rsqrt"
+  node_kind: "rsqrt"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "rsqrt"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "pointwise-unary"
+      attrs: []
+      required: []
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "rsqrt(x)*sqrt(x)=1 (group inverse under mul)."
+      denotation: "torch"
+- id: "ast.mlopt.scatter"
+  node_kind: "scatter"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "scatter"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "write"
+      attrs:
+        - - 1
+          - "dim"
+      required:
+        - "dim"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.scatter_add"
+  node_kind: "scatter_add"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "scatter_add"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "write"
+      attrs:
+        - - 1
+          - "dim"
+      required:
+        - "dim"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.scatter_reduce"
+  node_kind: "scatter_reduce"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "scatter_reduce"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "write"
+      attrs:
+        - - 1
+          - "dim"
+        - - 4
+          - "reduce"
+      required:
+        - "dim"
+        - "reduce"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.sdpa"
+  node_kind: "sdpa"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "sdpa"
+      arity: null
+      tags:
+        - "activation"
+      attrs:
+        - - 3
+          - "attn_mask"
+        - - 4
+          - "dropout_p"
+        - - 5
+          - "is_causal"
+        - - 6
+          - "scale"
+        - - 7
+          - "enable_gqa"
+      required: []
+      gen:
+        n_in: 3
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Scaled dot-product attention; a fused nonlinear kernel whose three arguments are projections of the same source."
+      denotation: "torch"
+- id: "ast.mlopt.searchsorted"
+  node_kind: "searchsorted"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "searchsorted"
+      arity: null
+      tags:
+        - "table"
+      attrs:
+        - - 2
+          - "out_int32"
+        - - 3
+          - "right"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.select"
+  node_kind: "select"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "select"
+      arity: 1
+      tags:
+        - "generator-view"
+        - "relayout"
+        - "viewish"
+      attrs:
+        - - 1
+          - "dim"
+        - - 2
+          - "index"
+      required:
+        - "dim"
+        - "index"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.select_scatter"
+  node_kind: "select_scatter"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "select_scatter"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "write"
+      attrs:
+        - - 2
+          - "dim"
+        - - 3
+          - "index"
+      required:
+        - "dim"
+        - "index"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.short"
+  node_kind: "short"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "short"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.sigmoid"
+  node_kind: "sigmoid"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "sigmoid"
+      arity: 1
+      tags:
+        - "activation"
+        - "fold-at-lowering"
+        - "pointwise-unary"
+      attrs: []
+      required: []
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Logistic sigmoid; silu(x)=x*sigmoid(x)."
+      denotation: "torch"
+- id: "ast.mlopt.sign"
+  node_kind: "sign"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "sign"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.silu"
+  node_kind: "silu"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "silu"
+      arity: 1
+      tags:
+        - "activation"
+        - "fold-at-lowering"
+        - "pointwise-unary"
+      attrs: []
+      required: []
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "SiLU/Swish: silu(x) = x * sigmoid(x)."
+      denotation: "torch"
+- id: "ast.mlopt.sin"
+  node_kind: "sin"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "sin"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.sinc"
+  node_kind: "sinc"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "sinc"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.sinh"
+  node_kind: "sinh"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "sinh"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.slice"
+  node_kind: "slice"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "slice"
+      arity: 1
+      tags:
+        - "generator-view"
+        - "relayout"
+        - "viewish"
+      attrs:
+        - - 1
+          - "dim"
+        - - 2
+          - "start"
+        - - 3
+          - "end"
+        - - 4
+          - "step"
+      required:
+        - "dim"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.slice_scatter"
+  node_kind: "slice_scatter"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "slice_scatter"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "write"
+      attrs:
+        - - 2
+          - "dim"
+        - - 3
+          - "start"
+        - - 4
+          - "end"
+        - - 5
+          - "step"
+      required:
+        - "dim"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.softmax"
+  node_kind: "softmax"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "softmax"
+      arity: null
+      tags:
+        - "activation"
+        - "fold-at-lowering"
+      attrs:
+        - - 1
+          - "dim"
+      required:
+        - "dim"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.softplus"
+  node_kind: "softplus"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "softplus"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs:
+        - - 1
+          - "beta"
+        - - 2
+          - "threshold"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.softsign"
+  node_kind: "softsign"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "softsign"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.sort"
+  node_kind: "sort"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "sort"
+      arity: null
+      tags: []
+      attrs:
+        - - 1
+          - "dim"
+        - - 2
+          - "descending"
+      required:
+        - "dim"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.split"
+  node_kind: "split"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "split"
+      arity: 1
+      tags:
+        - "cost-view"
+        - "relayout"
+        - "viewish"
+      attrs:
+        - - 1
+          - "sizes"
+        - - 2
+          - "dim"
+        - - 3
+          - "index"
+      required:
+        - "sizes"
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Projection pi_i with explicit (possibly unequal) section sizes \u2014 the asymmetric counterpart of chunk, for pairing maps with different output dimensions (e.g. GQA fused QKV)."
+      denotation: "torch"
+- id: "ast.mlopt.sqrt"
+  node_kind: "sqrt"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "sqrt"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "pointwise-unary"
+      attrs: []
+      required: []
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Square root: sqrt(x)**2 = x."
+      denotation: "torch"
+- id: "ast.mlopt.square"
+  node_kind: "square"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "square"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "pointwise-unary"
+      attrs: []
+      required: []
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Self-composition: square(x) = mul(x, x)."
+      denotation: "torch"
+- id: "ast.mlopt.squeeze"
+  node_kind: "squeeze"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "squeeze"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "generator-view"
+        - "relayout"
+        - "viewish"
+      attrs:
+        - - 1
+          - "dim"
+      required:
+        - "dim"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.stack"
+  node_kind: "stack"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "stack"
+      arity: null
+      tags: []
+      attrs:
+        - - 1
+          - "dim"
+      required:
+        - "dim"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.std"
+  node_kind: "std"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "std"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "reduce-dim"
+      attrs:
+        - - 1
+          - "dim"
+        - - 2
+          - "correction"
+        - - 3
+          - "keepdim"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.std_mean"
+  node_kind: "std_mean"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "std_mean"
+      arity: 1
+      tags:
+        - "reduce-dim"
+      attrs:
+        - - 1
+          - "dim"
+        - - 2
+          - "correction"
+        - - 3
+          - "keepdim"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.sub"
+  node_kind: "sub"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 2
+        maxItems: 2
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "sub"
+      arity: 2
+      tags:
+        - "fold-at-lowering"
+        - "pointwise-binary"
+      attrs: []
+      required: []
+      gen:
+        n_in: 2
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Subtraction: a - b = a + neg(b)  (distributivity of negation)."
+      denotation: "torch"
+- id: "ast.mlopt.sum"
+  node_kind: "sum"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "sum"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "reduce-dim"
+      attrs: []
+      required: []
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Sum over axes; distributes over add (additivity of trace/sum)."
+      denotation: "torch"
+- id: "ast.mlopt.synop2_35bbd03301"
+  node_kind: "synop2_35bbd03301"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 13
+        maxItems: 13
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop2_35bbd03301"
+      arity: 13
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 13
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', 'v4'), (mul 'v5', 'v6'))), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop2_d46808a970"
+  node_kind: "synop2_d46808a970"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 13
+        maxItems: 13
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop2_d46808a970"
+      arity: 13
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 13
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', 'v4'), (mul 'v5', 'v6'))), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_04df5fd446"
+  node_kind: "synop3_04df5fd446"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+    - role: "arg15"
+    - role: "arg16"
+    - role: "arg17"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 18
+        maxItems: 18
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_04df5fd446"
+      arity: 18
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 18
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), 'v7')), (mul 'v8', 'v9'))), (mul 'v10', 'v11'))), (mul 'v12', 'v13'))), (mul 'v14', 'v15'))), (mul 'v16', 'v17'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_083e9c241f"
+  node_kind: "synop3_083e9c241f"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 14
+        maxItems: 14
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_083e9c241f"
+      arity: 14
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 14
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add 'v4', 'v5')), (mul 'v6', 'v7'))), (mul 'v8', 'v9'))), (mul 'v10', 'v11'))), (mul 'v12', 'v13'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_0ca31bf1e5"
+  node_kind: "synop3_0ca31bf1e5"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+    - role: "arg15"
+    - role: "arg16"
+    - role: "arg17"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 18
+        maxItems: 18
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_0ca31bf1e5"
+      arity: 18
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 18
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add 'v5', (mul 'v6', 'v7'))), (mul 'v8', 'v9'))), (mul 'v10', 'v11'))), (mul 'v12', 'v13'))), (mul 'v14', 'v15'))), (mul 'v16', 'v17'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_0fa19d1ff8"
+  node_kind: "synop3_0fa19d1ff8"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+    - role: "arg15"
+    - role: "arg16"
+    - role: "arg17"
+    - role: "arg18"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 19
+        maxItems: 19
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_0fa19d1ff8"
+      arity: 19
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 19
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))), (mul 'v15', 'v16'))), (mul 'v17', 'v18'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_1850a07696"
+  node_kind: "synop3_1850a07696"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 14
+        maxItems: 14
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_1850a07696"
+      arity: 14
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 14
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add 'v4', 'v5')), (mul 'v6', 'v7'))), (mul 'v8', 'v9'))), (mul 'v10', 'v11'))), (mul 'v12', 'v13'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_207ef0ddb7"
+  node_kind: "synop3_207ef0ddb7"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+    - role: "arg15"
+    - role: "arg16"
+    - role: "arg17"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 18
+        maxItems: 18
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_207ef0ddb7"
+      arity: 18
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 18
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), 'v7')), (mul 'v8', 'v9'))), (mul 'v10', 'v11'))), (mul 'v12', 'v13'))), (mul 'v14', 'v15'))), (mul 'v16', 'v17'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_21b9729f32"
+  node_kind: "synop3_21b9729f32"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+    - role: "arg15"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 16
+        maxItems: 16
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_21b9729f32"
+      arity: 16
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 16
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', 'v5'), (mul 'v6', 'v7'))), (mul 'v8', 'v9'))), (mul 'v10', 'v11'))), (mul 'v12', 'v13'))), (mul 'v14', 'v15'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_24c5153e5e"
+  node_kind: "synop3_24c5153e5e"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 15
+        maxItems: 15
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_24c5153e5e"
+      arity: 15
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 15
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add 'v4', (mul 'v5', 'v6'))), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_2fcad5e803"
+  node_kind: "synop3_2fcad5e803"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+    - role: "arg15"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 16
+        maxItems: 16
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_2fcad5e803"
+      arity: 16
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 16
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', 'v5'), (mul 'v6', 'v7'))), (mul 'v8', 'v9'))), (mul 'v10', 'v11'))), (mul 'v12', 'v13'))), (mul 'v14', 'v15'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_304457cd8d"
+  node_kind: "synop3_304457cd8d"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+    - role: "arg15"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 16
+        maxItems: 16
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_304457cd8d"
+      arity: 16
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 16
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', 'v5'), (mul 'v6', 'v7'))), (mul 'v8', 'v9'))), (mul 'v10', 'v11'))), (mul 'v12', 'v13'))), (mul 'v14', 'v15'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_39dbcda988"
+  node_kind: "synop3_39dbcda988"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 15
+        maxItems: 15
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_39dbcda988"
+      arity: 15
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 15
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add 'v4', (mul 'v5', 'v6'))), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_426efb3fb1"
+  node_kind: "synop3_426efb3fb1"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+    - role: "arg15"
+    - role: "arg16"
+    - role: "arg17"
+    - role: "arg18"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 19
+        maxItems: 19
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_426efb3fb1"
+      arity: 19
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 19
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))), (mul 'v15', 'v16'))), (mul 'v17', 'v18'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_42bb04032d"
+  node_kind: "synop3_42bb04032d"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+    - role: "arg15"
+    - role: "arg16"
+    - role: "arg17"
+    - role: "arg18"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 19
+        maxItems: 19
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_42bb04032d"
+      arity: 19
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 19
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))), (mul 'v15', 'v16'))), (mul 'v17', 'v18'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_42f015e162"
+  node_kind: "synop3_42f015e162"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+    - role: "arg15"
+    - role: "arg16"
+    - role: "arg17"
+    - role: "arg18"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 19
+        maxItems: 19
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_42f015e162"
+      arity: 19
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 19
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))), (mul 'v15', 'v16'))), (mul 'v17', 'v18'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_490109134e"
+  node_kind: "synop3_490109134e"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+    - role: "arg15"
+    - role: "arg16"
+    - role: "arg17"
+    - role: "arg18"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 19
+        maxItems: 19
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_490109134e"
+      arity: 19
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 19
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))), (mul 'v15', 'v16'))), (mul 'v17', 'v18'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_4a015e46ce"
+  node_kind: "synop3_4a015e46ce"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+    - role: "arg15"
+    - role: "arg16"
+    - role: "arg17"
+    - role: "arg18"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 19
+        maxItems: 19
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_4a015e46ce"
+      arity: 19
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 19
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))), (mul 'v15', 'v16'))), (mul 'v17', 'v18'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_4b31b4501a"
+  node_kind: "synop3_4b31b4501a"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+    - role: "arg15"
+    - role: "arg16"
+    - role: "arg17"
+    - role: "arg18"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 19
+        maxItems: 19
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_4b31b4501a"
+      arity: 19
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 19
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))), (mul 'v15', 'v16'))), (mul 'v17', 'v18'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_4cdc06b88f"
+  node_kind: "synop3_4cdc06b88f"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 14
+        maxItems: 14
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_4cdc06b88f"
+      arity: 14
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 14
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', 'v5'), (mul 'v6', 'v7'))), (mul 'v8', 'v9'))), (mul 'v10', 'v11'))), (mul 'v12', 'v13')))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_4cf8732640"
+  node_kind: "synop3_4cf8732640"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+    - role: "arg15"
+    - role: "arg16"
+    - role: "arg17"
+    - role: "arg18"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 19
+        maxItems: 19
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_4cf8732640"
+      arity: 19
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 19
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))), (mul 'v15', 'v16'))), (mul 'v17', 'v18'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_50a12a0158"
+  node_kind: "synop3_50a12a0158"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+    - role: "arg15"
+    - role: "arg16"
+    - role: "arg17"
+    - role: "arg18"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 19
+        maxItems: 19
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_50a12a0158"
+      arity: 19
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 19
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))), (mul 'v15', 'v16'))), (mul 'v17', 'v18'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_531bb1872b"
+  node_kind: "synop3_531bb1872b"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+    - role: "arg15"
+    - role: "arg16"
+    - role: "arg17"
+    - role: "arg18"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 19
+        maxItems: 19
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_531bb1872b"
+      arity: 19
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 19
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))), (mul 'v15', 'v16'))), (mul 'v17', 'v18'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_543ad6d861"
+  node_kind: "synop3_543ad6d861"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+    - role: "arg15"
+    - role: "arg16"
+    - role: "arg17"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 18
+        maxItems: 18
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_543ad6d861"
+      arity: 18
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 18
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), 'v9')), (mul 'v10', 'v11'))), (mul 'v12', 'v13'))), (mul 'v14', 'v15'))), (mul 'v16', 'v17'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_970223f613"
+  node_kind: "synop3_970223f613"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+    - role: "arg15"
+    - role: "arg16"
+    - role: "arg17"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 18
+        maxItems: 18
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_970223f613"
+      arity: 18
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 18
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), 'v9')), (mul 'v10', 'v11'))), (mul 'v12', 'v13'))), (mul 'v14', 'v15'))), (mul 'v16', 'v17'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_9b8631df70"
+  node_kind: "synop3_9b8631df70"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+    - role: "arg15"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 16
+        maxItems: 16
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_9b8631df70"
+      arity: 16
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 16
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', 'v5'), (mul 'v6', 'v7'))), (mul 'v8', 'v9'))), (mul 'v10', 'v11'))), (mul 'v12', 'v13'))), (mul 'v14', 'v15'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_acc3c38681"
+  node_kind: "synop3_acc3c38681"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+    - role: "arg15"
+    - role: "arg16"
+    - role: "arg17"
+    - role: "arg18"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 19
+        maxItems: 19
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_acc3c38681"
+      arity: 19
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 19
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))), (mul 'v15', 'v16'))), (mul 'v17', 'v18'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_c79a6fe687"
+  node_kind: "synop3_c79a6fe687"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+    - role: "arg15"
+    - role: "arg16"
+    - role: "arg17"
+    - role: "arg18"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 19
+        maxItems: 19
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_c79a6fe687"
+      arity: 19
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 19
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))), (mul 'v15', 'v16'))), (mul 'v17', 'v18'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_d5452c1c56"
+  node_kind: "synop3_d5452c1c56"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+    - role: "arg15"
+    - role: "arg16"
+    - role: "arg17"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 18
+        maxItems: 18
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_d5452c1c56"
+      arity: 18
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 18
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), 'v9')), (mul 'v10', 'v11'))), (mul 'v12', 'v13'))), (mul 'v14', 'v15'))), (mul 'v16', 'v17'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_d8a399f647"
+  node_kind: "synop3_d8a399f647"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+    - role: "arg15"
+    - role: "arg16"
+    - role: "arg17"
+    - role: "arg18"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 19
+        maxItems: 19
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_d8a399f647"
+      arity: 19
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 19
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))), (mul 'v15', 'v16'))), (mul 'v17', 'v18'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_e8abc00db0"
+  node_kind: "synop3_e8abc00db0"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+    - role: "arg15"
+    - role: "arg16"
+    - role: "arg17"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 18
+        maxItems: 18
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_e8abc00db0"
+      arity: 18
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 18
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), 'v9')), (mul 'v10', 'v11'))), (mul 'v12', 'v13'))), (mul 'v14', 'v15'))), (mul 'v16', 'v17'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_ed5918edde"
+  node_kind: "synop3_ed5918edde"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+    - role: "arg15"
+    - role: "arg16"
+    - role: "arg17"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 18
+        maxItems: 18
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_ed5918edde"
+      arity: 18
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 18
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add 'v5', (mul 'v6', 'v7'))), (mul 'v8', 'v9'))), (mul 'v10', 'v11'))), (mul 'v12', 'v13'))), (mul 'v14', 'v15'))), (mul 'v16', 'v17'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_efb0c0d7ce"
+  node_kind: "synop3_efb0c0d7ce"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+    - role: "arg15"
+    - role: "arg16"
+    - role: "arg17"
+    - role: "arg18"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 19
+        maxItems: 19
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_efb0c0d7ce"
+      arity: 19
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 19
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))), (mul 'v15', 'v16'))), (mul 'v17', 'v18'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_f28f7ffd1a"
+  node_kind: "synop3_f28f7ffd1a"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 15
+        maxItems: 15
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_f28f7ffd1a"
+      arity: 15
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 15
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', 'v5'), 'v6')), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_f9c72e0a8f"
+  node_kind: "synop3_f9c72e0a8f"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+    - role: "arg14"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 15
+        maxItems: 15
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_f9c72e0a8f"
+      arity: 15
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 15
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', 'v5'), 'v6')), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop3_fbbba382fc"
+  node_kind: "synop3_fbbba382fc"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+    - role: "arg11"
+    - role: "arg12"
+    - role: "arg13"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 14
+        maxItems: 14
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop3_fbbba382fc"
+      arity: 14
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 14
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', 'v5'), (mul 'v6', 'v7'))), (mul 'v8', 'v9'))), (mul 'v10', 'v11'))), (mul 'v12', 'v13')))"
+      denotation: "prim"
+- id: "ast.mlopt.synop_03889d8fe1"
+  node_kind: "synop_03889d8fe1"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 6
+        maxItems: 6
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop_03889d8fe1"
+      arity: 6
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 6
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add 'v2', 'v3')), 'v4')), 'v5')"
+      denotation: "prim"
+- id: "ast.mlopt.synop_2b8cfd1c90"
+  node_kind: "synop_2b8cfd1c90"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 6
+        maxItems: 6
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop_2b8cfd1c90"
+      arity: 6
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 6
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add 'v1', (mul 'v2', 'v3'))), (mul 'v4', 'v5'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop_39f76b66f8"
+  node_kind: "synop_39f76b66f8"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 7
+        maxItems: 7
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop_39f76b66f8"
+      arity: 7
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 7
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', 'v3'), 'v4')), 'v5')), 'v6')"
+      denotation: "prim"
+- id: "ast.mlopt.synop_4c5296b3ba"
+  node_kind: "synop_4c5296b3ba"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 6
+        maxItems: 6
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop_4c5296b3ba"
+      arity: 6
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 6
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', 'v2'), 'v3')), (mul 'v4', (unsqueeze 'v5', dim=a0)))"
+      denotation: "prim"
+- id: "ast.mlopt.synop_4c657cb2c0"
+  node_kind: "synop_4c657cb2c0"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 5
+        maxItems: 5
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop_4c657cb2c0"
+      arity: 5
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 5
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add 'v0', (mul (unsqueeze 'v1', dim=-1), (unsqueeze (select (linear 'v2', 'v3', 'v4'), dim=1, index=a1), dim=a0)))"
+      denotation: "prim"
+- id: "ast.mlopt.synop_4f8fefdd38"
+  node_kind: "synop_4f8fefdd38"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 7
+        maxItems: 7
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop_4f8fefdd38"
+      arity: 7
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 7
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add 'v2', 'v3')), 'v4')), (mul 'v5', 'v6'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop_5147826430"
+  node_kind: "synop_5147826430"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 7
+        maxItems: 7
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop_5147826430"
+      arity: 7
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 7
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add 'v2', 'v3')), (mul 'v4', 'v5'))), 'v6')"
+      denotation: "prim"
+- id: "ast.mlopt.synop_571fb768b0"
+  node_kind: "synop_571fb768b0"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 7
+        maxItems: 7
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop_571fb768b0"
+      arity: 7
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 7
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (mul 'v0', (add (mul 'v1', (add 'v2', (mul 'v3', 'v4'))), (mul 'v5', 'v6')))"
+      denotation: "prim"
+- id: "ast.mlopt.synop_5e58f26875"
+  node_kind: "synop_5e58f26875"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 7
+        maxItems: 7
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop_5e58f26875"
+      arity: 7
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 7
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', 'v2'), (mul 'v3', 'v4'))), (mul 'v5', 'v6'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop_629f9ef13b"
+  node_kind: "synop_629f9ef13b"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 7
+        maxItems: 7
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop_629f9ef13b"
+      arity: 7
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 7
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (mul 'v0', (add (mul 'v1', (add (mul 'v2', 'v3'), (mul 'v4', 'v5'))), 'v6'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop_62d36aefdb"
+  node_kind: "synop_62d36aefdb"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 7
+        maxItems: 7
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop_62d36aefdb"
+      arity: 7
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 7
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (mul 'v0', (add (mul 'v1', (add (mul 'v2', 'v3'), 'v4')), (mul 'v5', 'v6')))"
+      denotation: "prim"
+- id: "ast.mlopt.synop_6c709f774a"
+  node_kind: "synop_6c709f774a"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 6
+        maxItems: 6
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop_6c709f774a"
+      arity: 6
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 6
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', 'v2'), (mul 'v3', 'v4'))), 'v5')"
+      denotation: "prim"
+- id: "ast.mlopt.synop_889d740672"
+  node_kind: "synop_889d740672"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 6
+        maxItems: 6
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop_889d740672"
+      arity: 6
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 6
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (mul 'v0', (add (mul 'v1', (add 'v2', (mul 'v3', 'v4'))), 'v5'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop_93e57c595e"
+  node_kind: "synop_93e57c595e"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 6
+        maxItems: 6
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop_93e57c595e"
+      arity: 6
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 6
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (mul 'v0', (add (mul 'v1', (add (mul 'v2', 'v3'), 'v4')), 'v5'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop_976f9836d7"
+  node_kind: "synop_976f9836d7"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 6
+        maxItems: 6
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop_976f9836d7"
+      arity: 6
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 6
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add 'v1', (mul 'v2', 'v3'))), (mul 'v4', (unsqueeze 'v5', dim=a0)))"
+      denotation: "prim"
+- id: "ast.mlopt.synop_98a002d64b"
+  node_kind: "synop_98a002d64b"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 6
+        maxItems: 6
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop_98a002d64b"
+      arity: 6
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 6
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', 'v2'), (mul 'v3', (unsqueeze 'v4', dim=a0)))), 'v5')"
+      denotation: "prim"
+- id: "ast.mlopt.synop_b246dcb838"
+  node_kind: "synop_b246dcb838"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 6
+        maxItems: 6
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop_b246dcb838"
+      arity: 6
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 6
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (mul 'v0', (add (mul 'v1', (add 'v2', 'v3')), (mul 'v4', 'v5')))"
+      denotation: "prim"
+- id: "ast.mlopt.synop_bb8c54c201"
+  node_kind: "synop_bb8c54c201"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 4
+        maxItems: 4
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop_bb8c54c201"
+      arity: 4
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 4
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', 'v1'), (mul 'v2', 'v3'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop_d5b128282a"
+  node_kind: "synop_d5b128282a"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 7
+        maxItems: 7
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop_d5b128282a"
+      arity: 7
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 7
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add 'v2', (mul 'v3', 'v4'))), 'v5')), 'v6')"
+      denotation: "prim"
+- id: "ast.mlopt.synop_f08a53f9a0"
+  node_kind: "synop_f08a53f9a0"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 6
+        maxItems: 6
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop_f08a53f9a0"
+      arity: 6
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 6
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add 'v1', (mul 'v2', (unsqueeze 'v3', dim=a0)))), (mul 'v4', 'v5'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop_f3290a1163"
+  node_kind: "synop_f3290a1163"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 6
+        maxItems: 6
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop_f3290a1163"
+      arity: 6
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 6
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', 'v2'), 'v3')), (mul 'v4', 'v5'))"
+      denotation: "prim"
+- id: "ast.mlopt.take_along_dim"
+  node_kind: "take_along_dim"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "take_along_dim"
+      arity: null
+      tags:
+        - "table"
+      attrs:
+        - - 2
+          - "dim"
+      required:
+        - "dim"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.tanh"
+  node_kind: "tanh"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "tanh"
+      arity: 1
+      tags:
+        - "activation"
+        - "fold-at-lowering"
+        - "pointwise-unary"
+      attrs: []
+      required: []
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Hyperbolic tangent."
+      denotation: "torch"
+- id: "ast.mlopt.tensor_split"
+  node_kind: "tensor_split"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "tensor_split"
+      arity: 1
+      tags:
+        - "relayout"
+      attrs:
+        - - 1
+          - "sections"
+        - - 2
+          - "dim"
+      required:
+        - "sections"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.to"
+  node_kind: "to"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "to"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "relayout"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.topk"
+  node_kind: "topk"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "topk"
+      arity: null
+      tags: []
+      attrs:
+        - - 1
+          - "k"
+        - - 2
+          - "dim"
+        - - 3
+          - "largest"
+        - - 4
+          - "sorted"
+      required:
+        - "k"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.transpose"
+  node_kind: "transpose"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "transpose"
+      arity: 1
+      tags:
+        - "cost-view"
+        - "fold-at-lowering"
+        - "generator-view"
+        - "relayout"
+        - "viewish"
+      attrs:
+        - - 1
+          - "dim0"
+        - - 2
+          - "dim1"
+      required:
+        - "dim0"
+        - "dim1"
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Symmetry/isomorphism in the SMC."
+      denotation: "torch"
+- id: "ast.mlopt.tril"
+  node_kind: "tril"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "tril"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "relayout"
+      attrs:
+        - - 1
+          - "diagonal"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.triu"
+  node_kind: "triu"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "triu"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "relayout"
+      attrs:
+        - - 1
+          - "diagonal"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.trunc"
+  node_kind: "trunc"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "trunc"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.type_as"
+  node_kind: "type_as"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 2
+        maxItems: 2
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "type_as"
+      arity: 2
+      tags:
+        - "fold-at-lowering"
+        - "relayout"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.unbind"
+  node_kind: "unbind"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "unbind"
+      arity: 1
+      tags:
+        - "relayout"
+        - "viewish"
+      attrs:
+        - - 1
+          - "dim"
+      required:
+        - "dim"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.unflatten"
+  node_kind: "unflatten"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "unflatten"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "relayout"
+      attrs:
+        - - 1
+          - "dim"
+        - - 2
+          - "sizes"
+      required:
+        - "dim"
+        - "sizes"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.unfold"
+  node_kind: "unfold"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "unfold"
+      arity: null
+      tags: []
+      attrs:
+        - - 1
+          - "dim"
+        - - 2
+          - "size"
+        - - 3
+          - "step"
+      required:
+        - "dim"
+        - "size"
+        - "step"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.unsqueeze"
+  node_kind: "unsqueeze"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "unsqueeze"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "generator-view"
+        - "relayout"
+        - "viewish"
+      attrs:
+        - - 1
+          - "dim"
+      required:
+        - "dim"
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.upsample_bilinear2d"
+  node_kind: "upsample_bilinear2d"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "upsample_bilinear2d"
+      arity: null
+      tags: []
+      attrs:
+        - - 1
+          - "size"
+        - - 2
+          - "align_corners"
+        - - 3
+          - "scale"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.upsample_nearest2d"
+  node_kind: "upsample_nearest2d"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "upsample_nearest2d"
+      arity: null
+      tags: []
+      attrs:
+        - - 1
+          - "size"
+        - - 2
+          - "scale"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.var"
+  node_kind: "var"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "var"
+      arity: 1
+      tags:
+        - "fold-at-lowering"
+        - "reduce-dim"
+      attrs:
+        - - 1
+          - "dim"
+        - - 2
+          - "correction"
+        - - 3
+          - "keepdim"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.var_mean"
+  node_kind: "var_mean"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "var_mean"
+      arity: 1
+      tags:
+        - "reduce-dim"
+      attrs:
+        - - 1
+          - "dim"
+        - - 2
+          - "correction"
+        - - 3
+          - "keepdim"
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.view"
+  node_kind: "view"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "view"
+      arity: 1
+      tags:
+        - "relayout"
+        - "viewish"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "unbound"
+- id: "ast.mlopt.where"
+  node_kind: "where"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "where"
+      arity: null
+      tags:
+        - "pointwise"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.xlogy"
+  node_kind: "xlogy"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "xlogy"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+        - "pointwise"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.zeros"
+  node_kind: "zeros"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "zeros"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.zeros_like"
+  node_kind: "zeros_like"
+  children: []
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 0
+        maxItems: 0
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "zeros_like"
+      arity: null
+      tags:
+        - "fold-at-lowering"
+      attrs: []
+      required: []
+      gen: null
+      denotation: "torch"
+- id: "ast.mlopt.attnbias"
+  node_kind: "attnbias"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "attnbias"
+      arity: 1
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "sdpa's attn_mask in additive-bias form: a float mask passes through, a bool keep-mask becomes where(m, 0, -inf) \u2014 torch's own coercion, which the untyped (shape-only) term cannot spell.  Lets ONE sdpa-cat law serve both mask dtypes."
+      denotation: "torch"
+- id: "ast.mlopt.bdiag"
+  node_kind: "bdiag"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 2
+        maxItems: 2
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "bdiag"
+      arity: 2
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 2
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Monoidal product of linear maps: f \u2297 g is block-diagonal under concat wiring."
+      denotation: "torch"
+- id: "ast.mlopt.cmask"
+  node_kind: "cmask"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "cmask"
+      arity: 1
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Causal-mask generator: cmask(x)[...,t,j] = (j + off > t) \u2014 the strict upper triangle of x's score plane, shifted off keys; materialises what sdpa's is_causal flag hides."
+      denotation: "torch"
+- id: "ast.mlopt.decay"
+  node_kind: "decay"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "decay"
+      arity: 1
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Causal-decay generator: decay(g, t=T)[...,i,j] = g^(i-j) for i >= j, else 0 \u2014 the RetNet/GLA decay matrix as a value, so its block structure is equational rather than a spelled subgraph."
+      denotation: "torch"
+- id: "ast.mlopt.decay_vec"
+  node_kind: "decay_vec"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "decay_vec"
+      arity: 1
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "decay-vector generator: decay_vec(g, t=T, offset=o, sign=s)[...,k] = g^(s*k + o), k in [0,T) \u2014 g's dims leading batch dims.  The rank-1 factor of the causal decay's cross blocks (the RetNet xi/eta vectors); decay_vec(g, T) is decay(g,T)'s diagonal."
+      denotation: "torch"
+- id: "ast.mlopt.fill"
+  node_kind: "fill"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "fill"
+      arity: 1
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Constant map x \u21a6 c\u00b71 (full_like): the vehicle for derived scalar constants, which can only occupy attribute positions."
+      denotation: "torch"
+- id: "ast.mlopt.om_decayed"
+  node_kind: "om_decayed"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 3
+        maxItems: 3
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "om_decayed"
+      arity: 3
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 3
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Decayed-attention element: om_decayed(s, d, v) = (s \u2299 d) @ v \u2014 score matrix decay-weighted elementwise, then contracted by the values (the RetNet inner-chunk form).  A value-level op: the element IS the applied result."
+      denotation: "torch"
+- id: "ast.mlopt.parl"
+  node_kind: "parl"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 2
+        maxItems: 2
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "parl"
+      arity: 2
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 2
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Tensor product re-laid to keep both feedback wires first \u2014 the product the superposing axiom traces over."
+      denotation: "torch"
+- id: "ast.mlopt.trace"
+  node_kind: "trace"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "trace"
+      arity: 1
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "Tr^U(f): feedback of the first-usize output block into the first-usize input block; in FDVect the linear fixpoint P + Q(I\u2212S)\u207b\u00b9R."
+      denotation: "torch"

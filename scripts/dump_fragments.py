@@ -34,13 +34,13 @@ output conventionally goes to the sibling ``fragments-all/``).
 
 from __future__ import annotations
 
-import json
 import sys
 from pathlib import Path
 
 from mlopt_core.laws import ALL_RULES
 from mlopt_discovery.cellstore import ambient_store
 from mlopt_discovery.handl import store_to_handl
+from mlopt_discovery.vocabdir import emit_yaml_rows
 
 #: The repo root — the default output lives under the spike's committed
 #: fixture dir even though this tool moved to ``scripts/`` (the spike
@@ -62,83 +62,15 @@ _SHELL = (
 #: no leaf), so it exercises shapes and matching without touching values.
 _SLICE_LAW = "assoc_add"
 
-#: Enum variants handl spells as YAML tags.  A single-key mapping whose
-#: key is one of these is a variant, not a field.
-_TAGS = frozenset(
-    {
-        "Declarative",
-        "Replace",
-        "Native",
-        "Keep",
-        "KeepRole",
-        "KeepPath",
-        "KeepRest",
-        "Splice",
-        "Create",
-        "Apply",
-        "Fresh",
-        "KindAt",
-        "AnyChildKind",
-        "PayloadEq",
-        "ChildPayloadEq",
-        "ChildCount",
-        "And",
-        "Or",
-        "Not",
-    }
-)
-
-
-def _scalar(value: object) -> str:
-    """Render a scalar as YAML (JSON scalars are valid YAML)."""
-    return json.dumps(value)
-
-
-def _emit(node: object, indent: int) -> str:
-    """Render *node* as YAML, spelling enum variants as tags."""
-    pad = " " * indent
-    if isinstance(node, dict):
-        if len(node) == 1:
-            ((key, value),) = node.items()
-            if key in _TAGS:
-                inner = _emit(value, indent)
-                # a tag on a scalar/flow value reads better inline
-                if (
-                    isinstance(value, (str, int, float))
-                    or value is None
-                ):
-                    return f"{pad}!{key} {_scalar(value)}"
-                return f"{pad}!{key}\n{inner}"
-        if not node:
-            return f"{pad}{{}}"
-        out = []
-        for key, value in node.items():
-            rendered = _emit(value, indent + 2)
-            if isinstance(value, (str, int, float)) or value is None:
-                out.append(f"{pad}{key}: {_scalar(value)}")
-            elif isinstance(value, dict) and not value:
-                out.append(f"{pad}{key}: {{}}")
-            elif isinstance(value, list) and not value:
-                out.append(f"{pad}{key}: []")
-            else:
-                out.append(f"{pad}{key}:")
-                out.append(rendered)
-        return "\n".join(out)
-    if isinstance(node, list):
-        if not node:
-            return f"{pad}[]"
-        out = []
-        for item in node:
-            rendered = _emit(item, indent + 2)
-            stripped = rendered[indent + 2 :]
-            out.append(f"{pad}- {stripped}")
-        return "\n".join(out)
-    return f"{pad}{_scalar(node)}"
-
 
 def _dump(path: Path, rows: list) -> None:
-    """Write *rows* as one YAML sequence (the fragment file's shape)."""
-    path.write_text(_emit(rows, 0) + "\n")
+    """Write *rows* as one YAML sequence (the fragment file's shape).
+
+    Delegates to :func:`mlopt_discovery.vocabdir.emit_yaml_rows` — the
+    same tag-spelling emitter the ``vocab/`` projections use (plan
+    0033 phase 0: one emitter, not two).
+    """
+    emit_yaml_rows(path, rows)
 
 
 def main(argv: list[str] | None = None) -> int:

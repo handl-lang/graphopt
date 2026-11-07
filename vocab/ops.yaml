@@ -1,0 +1,4894 @@
+{
+  "schema": "mlopt-vocab/1",
+  "ops": [
+    {
+      "name": "abs",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise-unary"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "acos",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "acosh",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "adaptive_avg_pool2d",
+      "arity": null,
+      "tags": [],
+      "attrs": [
+        [
+          1,
+          "size"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "add",
+      "arity": 2,
+      "tags": [
+        "commutative",
+        "fold-at-lowering",
+        "pointwise-binary"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 2,
+        "n_out": 1,
+        "commutative": true,
+        "associative": true,
+        "identity": 0,
+        "law": "Addition forms a commutative monoid (SMC symmetry + associativity)."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "addcdiv",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "addcmul",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "aff",
+      "arity": 2,
+      "tags": [
+        "cost-view"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "aff_diag",
+      "arity": 2,
+      "tags": [
+        "cost-view"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "alias",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "relayout"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "all",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ],
+        [
+          2,
+          "keepdim"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "amax",
+      "arity": 1,
+      "tags": [
+        "reduce-dim"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ],
+        [
+          2,
+          "keepdim"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "amin",
+      "arity": 1,
+      "tags": [
+        "reduce-dim"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ],
+        [
+          2,
+          "keepdim"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "any",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ],
+        [
+          2,
+          "keepdim"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "arange",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "argmax",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "reduce-dim"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ],
+        [
+          2,
+          "keepdim"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "argmin",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "reduce-dim"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ],
+        [
+          2,
+          "keepdim"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "argsort",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ],
+        [
+          2,
+          "descending"
+        ]
+      ],
+      "required": [
+        "dim"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "asin",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "asinh",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "atan",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "atan2",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "atanh",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "batch_norm",
+      "arity": null,
+      "tags": [],
+      "attrs": [
+        [
+          5,
+          "training"
+        ],
+        [
+          6,
+          "momentum"
+        ],
+        [
+          7,
+          "eps"
+        ],
+        [
+          8,
+          "cudnn_enabled"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "bfloat16",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "relayout"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "bitwise_and",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "bitwise_or",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "bool",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "broadcast",
+      "arity": 1,
+      "tags": [
+        "cost-view"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Monoidal coherence: copy then f = f in parallel."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "broadcast_to",
+      "arity": 1,
+      "tags": [
+        "relayout",
+        "viewish"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "byte",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "ceil",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "celu",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "char",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "chunk",
+      "arity": 1,
+      "tags": [
+        "cost-view",
+        "relayout",
+        "viewish"
+      ],
+      "attrs": [
+        [
+          1,
+          "chunks"
+        ],
+        [
+          2,
+          "dim"
+        ],
+        [
+          3,
+          "index"
+        ]
+      ],
+      "required": [
+        "chunks"
+      ],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Projection pi_i of a paired output; a zero-cost view like transpose/reshape."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "clamp",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise"
+      ],
+      "attrs": [
+        [
+          1,
+          "min"
+        ],
+        [
+          2,
+          "max"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "clamp_max",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise"
+      ],
+      "attrs": [
+        [
+          1,
+          "max"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "clamp_min",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise"
+      ],
+      "attrs": [
+        [
+          1,
+          "min"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "clone",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "relayout"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "concat",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ]
+      ],
+      "required": [
+        "dim"
+      ],
+      "gen": {
+        "n_in": 2,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Pairing on objects: concat(W1, W2) builds the product map weight.  Wire juxtaposition \u2014 a data-movement op."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "contiguous",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "relayout"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Memory-layout coercion; semantically the identity map."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "conv1d",
+      "arity": null,
+      "tags": [],
+      "attrs": [
+        [
+          3,
+          "stride"
+        ],
+        [
+          4,
+          "padding"
+        ],
+        [
+          5,
+          "dilation"
+        ],
+        [
+          6,
+          "groups"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "conv2d",
+      "arity": null,
+      "tags": [],
+      "attrs": [
+        [
+          3,
+          "stride"
+        ],
+        [
+          4,
+          "padding"
+        ],
+        [
+          5,
+          "dilation"
+        ],
+        [
+          6,
+          "groups"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "copy",
+      "arity": null,
+      "tags": [
+        "write"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "cos",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "cosh",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "count_nonzero",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "reduce-dim"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "cswap",
+      "arity": 0,
+      "tags": [
+        "cost-view"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 0,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Symmetry \u03c3 : [a;b] \u21a6 [b;a] \u2014 a permutation matrix."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "cummax",
+      "arity": null,
+      "tags": [],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ]
+      ],
+      "required": [
+        "dim"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "cummin",
+      "arity": null,
+      "tags": [],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ]
+      ],
+      "required": [
+        "dim"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "cumprod",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ]
+      ],
+      "required": [
+        "dim"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "cumsum",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ]
+      ],
+      "required": [
+        "dim"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "deform_conv2d",
+      "arity": null,
+      "tags": [],
+      "attrs": [
+        [
+          5,
+          "stride_h"
+        ],
+        [
+          6,
+          "stride_w"
+        ],
+        [
+          7,
+          "pad_h"
+        ],
+        [
+          8,
+          "pad_w"
+        ],
+        [
+          9,
+          "dilation_h"
+        ],
+        [
+          10,
+          "dilation_w"
+        ],
+        [
+          11,
+          "groups"
+        ],
+        [
+          12,
+          "offset_groups"
+        ],
+        [
+          13,
+          "use_mask"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "detach",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "relayout"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "detach_",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "relayout"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "diag_sum",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "digamma",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "div",
+      "arity": 2,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise",
+        "pointwise-binary"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 2,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Division: a / b = a * (1/b)  (multiplicative inverse)."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "double",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "relayout"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "dropout",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [
+        [
+          1,
+          "p"
+        ],
+        [
+          2,
+          "train"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "einsum",
+      "arity": null,
+      "tags": [],
+      "attrs": [
+        [
+          0,
+          "equation"
+        ]
+      ],
+      "required": [
+        "equation"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "elu",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [
+        [
+          1,
+          "alpha"
+        ],
+        [
+          2,
+          "scale"
+        ],
+        [
+          3,
+          "input_scale"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "embedding",
+      "arity": null,
+      "tags": [
+        "table"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 2,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Row gather: embedding(W, idx) selects rows of the table; low-rank tables factor as gather-then-project."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "eq",
+      "arity": null,
+      "tags": [
+        "commutative",
+        "pointwise"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "erf",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "erfc",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "erfinv",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "exp",
+      "arity": 1,
+      "tags": [
+        "activation",
+        "fold-at-lowering",
+        "pointwise-unary"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Exponential."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "exp2",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "expand",
+      "arity": 1,
+      "tags": [
+        "generator-view",
+        "relayout",
+        "viewish"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "expand_as",
+      "arity": 2,
+      "tags": [
+        "relayout"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "expm1",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "eye",
+      "arity": 0,
+      "tags": [
+        "cost-view"
+      ],
+      "attrs": [
+        [
+          0,
+          "dim"
+        ],
+        [
+          1,
+          "m"
+        ]
+      ],
+      "required": [],
+      "gen": {
+        "n_in": 0,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Identity morphism id_n (a constant matrix)."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "flatten",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "relayout",
+        "viewish"
+      ],
+      "attrs": [
+        [
+          1,
+          "start_dim"
+        ],
+        [
+          2,
+          "end_dim"
+        ]
+      ],
+      "required": [
+        "start_dim"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "flip",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "relayout"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "float",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "relayout"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Dtype coercion to working precision \u2014 the decode half of quantization-as-rewrite: mul(float(q), s)."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "floor",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "fmax",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "fmin",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "fmod",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "frac",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "full",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "full_like",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "gammaln",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "gather",
+      "arity": null,
+      "tags": [
+        "table"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ]
+      ],
+      "required": [
+        "dim"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "ge",
+      "arity": null,
+      "tags": [
+        "pointwise"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "gelu",
+      "arity": 1,
+      "tags": [
+        "activation",
+        "fold-at-lowering",
+        "pointwise-unary"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Gaussian Error Linear Unit."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "getitem",
+      "arity": 1,
+      "tags": [
+        "relayout",
+        "viewish"
+      ],
+      "attrs": [
+        [
+          1,
+          "index"
+        ]
+      ],
+      "required": [
+        "index"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "glu",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ]
+      ],
+      "required": [
+        "dim"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "group_norm",
+      "arity": null,
+      "tags": [],
+      "attrs": [
+        [
+          1,
+          "num_groups"
+        ],
+        [
+          4,
+          "eps"
+        ],
+        [
+          5,
+          "cudnn_enabled"
+        ]
+      ],
+      "required": [
+        "num_groups"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "gt",
+      "arity": null,
+      "tags": [
+        "pointwise"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "half",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "relayout"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "hardsigmoid",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "hardswish",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "hardtanh",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [
+        [
+          1,
+          "min"
+        ],
+        [
+          2,
+          "max"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "heaviside",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "i0",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "index",
+      "arity": null,
+      "tags": [
+        "table"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "index_add",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "write"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ]
+      ],
+      "required": [
+        "dim"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "index_put",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "write"
+      ],
+      "attrs": [
+        [
+          3,
+          "accumulate"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "index_select",
+      "arity": null,
+      "tags": [
+        "table"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ],
+        [
+          2,
+          "index"
+        ]
+      ],
+      "required": [
+        "dim"
+      ],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Reindexing along one axis (a gather of rows/blocks): the generalised projection.  With a repeated-index map it realises slice-level sharing \u2014 the copy map Delta applied per row-block."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "instance_norm",
+      "arity": null,
+      "tags": [],
+      "attrs": [
+        [
+          5,
+          "use_input_stats"
+        ],
+        [
+          6,
+          "momentum"
+        ],
+        [
+          7,
+          "eps"
+        ],
+        [
+          8,
+          "cudnn_enabled"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "int",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "inv",
+      "arity": null,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Matrix inverse; appears only inside the closed form of a trace (the resolvent (I\u2212S)\u207b\u00b9)."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "isclose",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise"
+      ],
+      "attrs": [
+        [
+          2,
+          "rtol"
+        ],
+        [
+          3,
+          "atol"
+        ],
+        [
+          4,
+          "equal_nan"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "isfinite",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "isinf",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "isnan",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "isneginf",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "isposinf",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "item",
+      "arity": null,
+      "tags": [
+        "table"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "kthvalue",
+      "arity": null,
+      "tags": [],
+      "attrs": [
+        [
+          1,
+          "k"
+        ],
+        [
+          2,
+          "dim"
+        ],
+        [
+          3,
+          "keepdim"
+        ]
+      ],
+      "required": [
+        "k"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "layer_norm",
+      "arity": null,
+      "tags": [],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ],
+        [
+          4,
+          "eps"
+        ],
+        [
+          5,
+          "cudnn_enabled"
+        ]
+      ],
+      "required": [
+        "dim"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "le",
+      "arity": null,
+      "tags": [
+        "pointwise"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "leaf",
+      "arity": 0,
+      "tags": [
+        "cost-view"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "unbound"
+    },
+    {
+      "name": "leaky_relu",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "lerp",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "linalg_vector_norm",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "reduce-dim"
+      ],
+      "attrs": [
+        [
+          1,
+          "ord"
+        ],
+        [
+          2,
+          "dim"
+        ],
+        [
+          3,
+          "keepdim"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "linear",
+      "arity": null,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "log",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise-unary"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "log10",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "log1p",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "log2",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "log_softmax",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ]
+      ],
+      "required": [
+        "dim"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "logcumsumexp",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ]
+      ],
+      "required": [
+        "dim"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "logical_and",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "logical_not",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "logical_or",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "logical_xor",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "long",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "lstm.input",
+      "arity": null,
+      "tags": [],
+      "attrs": [
+        [
+          3,
+          "has_biases"
+        ],
+        [
+          4,
+          "num_layers"
+        ],
+        [
+          5,
+          "dropout"
+        ],
+        [
+          6,
+          "train"
+        ],
+        [
+          7,
+          "bidirectional"
+        ],
+        [
+          8,
+          "batch_first"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "lt",
+      "arity": null,
+      "tags": [
+        "pointwise"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "masked_fill",
+      "arity": null,
+      "tags": [
+        "pointwise"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "matmul",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 2,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Bilinear; distributes over elementwise add when weight is fixed."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "max",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "reduce-dim"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ],
+        [
+          2,
+          "keepdim"
+        ]
+      ],
+      "required": [],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Maximum; sublinear (convexity)."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "max_pool2d",
+      "arity": null,
+      "tags": [],
+      "attrs": [
+        [
+          1,
+          "kernel_size"
+        ],
+        [
+          2,
+          "stride"
+        ],
+        [
+          3,
+          "padding"
+        ],
+        [
+          4,
+          "dilation"
+        ],
+        [
+          5,
+          "ceil_mode"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "maximum",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "mean",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "reduce-dim"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Mean = sum / size (linearity of expectation)."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "median",
+      "arity": 1,
+      "tags": [
+        "reduce-dim"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ],
+        [
+          2,
+          "keepdim"
+        ]
+      ],
+      "required": [
+        "dim"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "min",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "reduce-dim"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ],
+        [
+          2,
+          "keepdim"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "minimum",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "mish",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "mode",
+      "arity": 1,
+      "tags": [
+        "reduce-dim"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ],
+        [
+          2,
+          "keepdim"
+        ]
+      ],
+      "required": [
+        "dim"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "movedim",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "relayout",
+        "viewish"
+      ],
+      "attrs": [
+        [
+          1,
+          "source"
+        ],
+        [
+          2,
+          "destination"
+        ]
+      ],
+      "required": [
+        "destination",
+        "source"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "mul",
+      "arity": 2,
+      "tags": [
+        "commutative",
+        "fold-at-lowering",
+        "pointwise",
+        "pointwise-binary"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 2,
+        "n_out": 1,
+        "commutative": true,
+        "associative": true,
+        "identity": 1,
+        "law": "Multiplication forms a commutative monoid (Hadamard product)."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "nan_to_num",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "nanmean",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "reduce-dim"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ],
+        [
+          2,
+          "keepdim"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "nansum",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "reduce-dim"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ],
+        [
+          2,
+          "keepdim"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "narrow",
+      "arity": 1,
+      "tags": [
+        "relayout",
+        "viewish"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ],
+        [
+          2,
+          "start"
+        ],
+        [
+          3,
+          "length"
+        ]
+      ],
+      "required": [
+        "dim",
+        "length",
+        "start"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "ne",
+      "arity": null,
+      "tags": [
+        "commutative",
+        "pointwise"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "neg",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise-unary"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Additive inverse: neg(x) + x = 0  (group inverse)."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "new_full",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "new_ones",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "new_zeros",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "nonzero",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "table"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "numel",
+      "arity": null,
+      "tags": [
+        "table"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "om",
+      "arity": 3,
+      "tags": [
+        "cost-view"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "one_hot",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "table"
+      ],
+      "attrs": [
+        [
+          1,
+          "num_classes"
+        ]
+      ],
+      "required": [
+        "num_classes"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "ones",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "ones_like",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "outer",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "pack",
+      "arity": null,
+      "tags": [
+        "cost-view"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 0,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "n-ary pairing (the product's universal map): pack(t0, ..., tn) assembles the monoidal product of its operand wires into one tuple-valued output.  It is the multi-output root \u2014 a module returning several tensors exports as a single pack term, so the single-root search saturates every output without dropping any.  Arity is variadic (n_in documents the fixed-arity convention; pack takes >= 1 operand)."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "pad",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "relayout"
+      ],
+      "attrs": [
+        [
+          1,
+          "pad"
+        ],
+        [
+          2,
+          "mode"
+        ],
+        [
+          3,
+          "value"
+        ]
+      ],
+      "required": [
+        "pad"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "permute",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "relayout",
+        "viewish"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "pixel_shuffle",
+      "arity": null,
+      "tags": [],
+      "attrs": [
+        [
+          1,
+          "upscale_factor"
+        ]
+      ],
+      "required": [
+        "upscale_factor"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "pixel_unshuffle",
+      "arity": null,
+      "tags": [],
+      "attrs": [
+        [
+          1,
+          "downscale_factor"
+        ]
+      ],
+      "required": [
+        "downscale_factor"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "pow",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 2,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Power: x**n, with square(x)=pow(x,2) and rsqrt as inverse sqrt."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "prelu",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "prod",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "reduce-dim"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ],
+        [
+          2,
+          "keepdim"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "reciprocal",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "relu",
+      "arity": 1,
+      "tags": [
+        "activation",
+        "fold-at-lowering",
+        "pointwise-unary"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "relu6",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "remainder",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "repeat",
+      "arity": 1,
+      "tags": [
+        "relayout"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "reshape",
+      "arity": 1,
+      "tags": [
+        "cost-view",
+        "fold-at-lowering",
+        "generator-view",
+        "relayout",
+        "viewish"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Relabeling of wires; composes associatively."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "rms_norm",
+      "arity": null,
+      "tags": [],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ],
+        [
+          3,
+          "eps"
+        ]
+      ],
+      "required": [
+        "dim"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "roll",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "relayout"
+      ],
+      "attrs": [
+        [
+          1,
+          "shifts"
+        ],
+        [
+          2,
+          "dims"
+        ]
+      ],
+      "required": [
+        "shifts"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "round",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "rsqrt",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise-unary"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "rsqrt(x)*sqrt(x)=1 (group inverse under mul)."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "scatter",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "write"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ]
+      ],
+      "required": [
+        "dim"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "scatter_add",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "write"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ]
+      ],
+      "required": [
+        "dim"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "scatter_reduce",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "write"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ],
+        [
+          4,
+          "reduce"
+        ]
+      ],
+      "required": [
+        "dim",
+        "reduce"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "sdpa",
+      "arity": null,
+      "tags": [
+        "activation"
+      ],
+      "attrs": [
+        [
+          3,
+          "attn_mask"
+        ],
+        [
+          4,
+          "dropout_p"
+        ],
+        [
+          5,
+          "is_causal"
+        ],
+        [
+          6,
+          "scale"
+        ],
+        [
+          7,
+          "enable_gqa"
+        ]
+      ],
+      "required": [],
+      "gen": {
+        "n_in": 3,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Scaled dot-product attention; a fused nonlinear kernel whose three arguments are projections of the same source."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "searchsorted",
+      "arity": null,
+      "tags": [
+        "table"
+      ],
+      "attrs": [
+        [
+          2,
+          "out_int32"
+        ],
+        [
+          3,
+          "right"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "select",
+      "arity": 1,
+      "tags": [
+        "generator-view",
+        "relayout",
+        "viewish"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ],
+        [
+          2,
+          "index"
+        ]
+      ],
+      "required": [
+        "dim",
+        "index"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "select_scatter",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "write"
+      ],
+      "attrs": [
+        [
+          2,
+          "dim"
+        ],
+        [
+          3,
+          "index"
+        ]
+      ],
+      "required": [
+        "dim",
+        "index"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "short",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "sigmoid",
+      "arity": 1,
+      "tags": [
+        "activation",
+        "fold-at-lowering",
+        "pointwise-unary"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Logistic sigmoid; silu(x)=x*sigmoid(x)."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "sign",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "silu",
+      "arity": 1,
+      "tags": [
+        "activation",
+        "fold-at-lowering",
+        "pointwise-unary"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "SiLU/Swish: silu(x) = x * sigmoid(x)."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "sin",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "sinc",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "sinh",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "slice",
+      "arity": 1,
+      "tags": [
+        "generator-view",
+        "relayout",
+        "viewish"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ],
+        [
+          2,
+          "start"
+        ],
+        [
+          3,
+          "end"
+        ],
+        [
+          4,
+          "step"
+        ]
+      ],
+      "required": [
+        "dim"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "slice_scatter",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "write"
+      ],
+      "attrs": [
+        [
+          2,
+          "dim"
+        ],
+        [
+          3,
+          "start"
+        ],
+        [
+          4,
+          "end"
+        ],
+        [
+          5,
+          "step"
+        ]
+      ],
+      "required": [
+        "dim"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "softmax",
+      "arity": null,
+      "tags": [
+        "activation",
+        "fold-at-lowering"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ]
+      ],
+      "required": [
+        "dim"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "softplus",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [
+        [
+          1,
+          "beta"
+        ],
+        [
+          2,
+          "threshold"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "softsign",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "sort",
+      "arity": null,
+      "tags": [],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ],
+        [
+          2,
+          "descending"
+        ]
+      ],
+      "required": [
+        "dim"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "split",
+      "arity": 1,
+      "tags": [
+        "cost-view",
+        "relayout",
+        "viewish"
+      ],
+      "attrs": [
+        [
+          1,
+          "sizes"
+        ],
+        [
+          2,
+          "dim"
+        ],
+        [
+          3,
+          "index"
+        ]
+      ],
+      "required": [
+        "sizes"
+      ],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Projection pi_i with explicit (possibly unequal) section sizes \u2014 the asymmetric counterpart of chunk, for pairing maps with different output dimensions (e.g. GQA fused QKV)."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "sqrt",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise-unary"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Square root: sqrt(x)**2 = x."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "square",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise-unary"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Self-composition: square(x) = mul(x, x)."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "squeeze",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "generator-view",
+        "relayout",
+        "viewish"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ]
+      ],
+      "required": [
+        "dim"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "stack",
+      "arity": null,
+      "tags": [],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ]
+      ],
+      "required": [
+        "dim"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "std",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "reduce-dim"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ],
+        [
+          2,
+          "correction"
+        ],
+        [
+          3,
+          "keepdim"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "std_mean",
+      "arity": 1,
+      "tags": [
+        "reduce-dim"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ],
+        [
+          2,
+          "correction"
+        ],
+        [
+          3,
+          "keepdim"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "sub",
+      "arity": 2,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise-binary"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 2,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Subtraction: a - b = a + neg(b)  (distributivity of negation)."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "sum",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "reduce-dim"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Sum over axes; distributes over add (additivity of trace/sum)."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "synop2_35bbd03301",
+      "arity": 13,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 13,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', 'v4'), (mul 'v5', 'v6'))), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop2_d46808a970",
+      "arity": 13,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 13,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', 'v4'), (mul 'v5', 'v6'))), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_04df5fd446",
+      "arity": 18,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 18,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), 'v7')), (mul 'v8', 'v9'))), (mul 'v10', 'v11'))), (mul 'v12', 'v13'))), (mul 'v14', 'v15'))), (mul 'v16', 'v17'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_083e9c241f",
+      "arity": 14,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 14,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add 'v4', 'v5')), (mul 'v6', 'v7'))), (mul 'v8', 'v9'))), (mul 'v10', 'v11'))), (mul 'v12', 'v13'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_0ca31bf1e5",
+      "arity": 18,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 18,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add 'v5', (mul 'v6', 'v7'))), (mul 'v8', 'v9'))), (mul 'v10', 'v11'))), (mul 'v12', 'v13'))), (mul 'v14', 'v15'))), (mul 'v16', 'v17'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_0fa19d1ff8",
+      "arity": 19,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 19,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))), (mul 'v15', 'v16'))), (mul 'v17', 'v18'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_1850a07696",
+      "arity": 14,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 14,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add 'v4', 'v5')), (mul 'v6', 'v7'))), (mul 'v8', 'v9'))), (mul 'v10', 'v11'))), (mul 'v12', 'v13'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_207ef0ddb7",
+      "arity": 18,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 18,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), 'v7')), (mul 'v8', 'v9'))), (mul 'v10', 'v11'))), (mul 'v12', 'v13'))), (mul 'v14', 'v15'))), (mul 'v16', 'v17'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_21b9729f32",
+      "arity": 16,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 16,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', 'v5'), (mul 'v6', 'v7'))), (mul 'v8', 'v9'))), (mul 'v10', 'v11'))), (mul 'v12', 'v13'))), (mul 'v14', 'v15'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_24c5153e5e",
+      "arity": 15,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 15,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add 'v4', (mul 'v5', 'v6'))), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_2fcad5e803",
+      "arity": 16,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 16,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', 'v5'), (mul 'v6', 'v7'))), (mul 'v8', 'v9'))), (mul 'v10', 'v11'))), (mul 'v12', 'v13'))), (mul 'v14', 'v15'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_304457cd8d",
+      "arity": 16,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 16,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', 'v5'), (mul 'v6', 'v7'))), (mul 'v8', 'v9'))), (mul 'v10', 'v11'))), (mul 'v12', 'v13'))), (mul 'v14', 'v15'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_39dbcda988",
+      "arity": 15,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 15,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add 'v4', (mul 'v5', 'v6'))), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_426efb3fb1",
+      "arity": 19,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 19,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))), (mul 'v15', 'v16'))), (mul 'v17', 'v18'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_42bb04032d",
+      "arity": 19,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 19,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))), (mul 'v15', 'v16'))), (mul 'v17', 'v18'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_42f015e162",
+      "arity": 19,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 19,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))), (mul 'v15', 'v16'))), (mul 'v17', 'v18'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_490109134e",
+      "arity": 19,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 19,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))), (mul 'v15', 'v16'))), (mul 'v17', 'v18'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_4a015e46ce",
+      "arity": 19,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 19,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))), (mul 'v15', 'v16'))), (mul 'v17', 'v18'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_4b31b4501a",
+      "arity": 19,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 19,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))), (mul 'v15', 'v16'))), (mul 'v17', 'v18'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_4cdc06b88f",
+      "arity": 14,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 14,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', 'v5'), (mul 'v6', 'v7'))), (mul 'v8', 'v9'))), (mul 'v10', 'v11'))), (mul 'v12', 'v13')))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_4cf8732640",
+      "arity": 19,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 19,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))), (mul 'v15', 'v16'))), (mul 'v17', 'v18'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_50a12a0158",
+      "arity": 19,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 19,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))), (mul 'v15', 'v16'))), (mul 'v17', 'v18'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_531bb1872b",
+      "arity": 19,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 19,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))), (mul 'v15', 'v16'))), (mul 'v17', 'v18'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_543ad6d861",
+      "arity": 18,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 18,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), 'v9')), (mul 'v10', 'v11'))), (mul 'v12', 'v13'))), (mul 'v14', 'v15'))), (mul 'v16', 'v17'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_970223f613",
+      "arity": 18,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 18,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), 'v9')), (mul 'v10', 'v11'))), (mul 'v12', 'v13'))), (mul 'v14', 'v15'))), (mul 'v16', 'v17'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_9b8631df70",
+      "arity": 16,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 16,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', 'v5'), (mul 'v6', 'v7'))), (mul 'v8', 'v9'))), (mul 'v10', 'v11'))), (mul 'v12', 'v13'))), (mul 'v14', 'v15'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_acc3c38681",
+      "arity": 19,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 19,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))), (mul 'v15', 'v16'))), (mul 'v17', 'v18'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_c79a6fe687",
+      "arity": 19,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 19,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))), (mul 'v15', 'v16'))), (mul 'v17', 'v18'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_d5452c1c56",
+      "arity": 18,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 18,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), 'v9')), (mul 'v10', 'v11'))), (mul 'v12', 'v13'))), (mul 'v14', 'v15'))), (mul 'v16', 'v17'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_d8a399f647",
+      "arity": 19,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 19,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))), (mul 'v15', 'v16'))), (mul 'v17', 'v18'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_e8abc00db0",
+      "arity": 18,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 18,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), 'v9')), (mul 'v10', 'v11'))), (mul 'v12', 'v13'))), (mul 'v14', 'v15'))), (mul 'v16', 'v17'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_ed5918edde",
+      "arity": 18,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 18,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add 'v5', (mul 'v6', 'v7'))), (mul 'v8', 'v9'))), (mul 'v10', 'v11'))), (mul 'v12', 'v13'))), (mul 'v14', 'v15'))), (mul 'v16', 'v17'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_efb0c0d7ce",
+      "arity": 19,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 19,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', (add (mul 'v5', 'v6'), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))), (mul 'v15', 'v16'))), (mul 'v17', 'v18'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_f28f7ffd1a",
+      "arity": 15,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 15,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', 'v5'), 'v6')), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_f9c72e0a8f",
+      "arity": 15,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 15,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', 'v5'), 'v6')), (mul 'v7', 'v8'))), (mul 'v9', 'v10'))), (mul 'v11', 'v12'))), (mul 'v13', 'v14'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop3_fbbba382fc",
+      "arity": 14,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 14,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (mul 'v0', (add (mul 'v1', (add (mul 'v2', (add (mul 'v3', (add (mul 'v4', 'v5'), (mul 'v6', 'v7'))), (mul 'v8', 'v9'))), (mul 'v10', 'v11'))), (mul 'v12', 'v13')))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop_03889d8fe1",
+      "arity": 6,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 6,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add 'v2', 'v3')), 'v4')), 'v5')"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop_2b8cfd1c90",
+      "arity": 6,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 6,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add 'v1', (mul 'v2', 'v3'))), (mul 'v4', 'v5'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop_39f76b66f8",
+      "arity": 7,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 7,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add (mul 'v2', 'v3'), 'v4')), 'v5')), 'v6')"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop_4c5296b3ba",
+      "arity": 6,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 6,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', 'v2'), 'v3')), (mul 'v4', (unsqueeze 'v5', dim=a0)))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop_4c657cb2c0",
+      "arity": 5,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 5,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add 'v0', (mul (unsqueeze 'v1', dim=-1), (unsqueeze (select (linear 'v2', 'v3', 'v4'), dim=1, index=a1), dim=a0)))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop_4f8fefdd38",
+      "arity": 7,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 7,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add 'v2', 'v3')), 'v4')), (mul 'v5', 'v6'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop_5147826430",
+      "arity": 7,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 7,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add 'v2', 'v3')), (mul 'v4', 'v5'))), 'v6')"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop_571fb768b0",
+      "arity": 7,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 7,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (mul 'v0', (add (mul 'v1', (add 'v2', (mul 'v3', 'v4'))), (mul 'v5', 'v6')))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop_5e58f26875",
+      "arity": 7,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 7,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', 'v2'), (mul 'v3', 'v4'))), (mul 'v5', 'v6'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop_629f9ef13b",
+      "arity": 7,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 7,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (mul 'v0', (add (mul 'v1', (add (mul 'v2', 'v3'), (mul 'v4', 'v5'))), 'v6'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop_62d36aefdb",
+      "arity": 7,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 7,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (mul 'v0', (add (mul 'v1', (add (mul 'v2', 'v3'), 'v4')), (mul 'v5', 'v6')))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop_6c709f774a",
+      "arity": 6,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 6,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', 'v2'), (mul 'v3', 'v4'))), 'v5')"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop_889d740672",
+      "arity": 6,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 6,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (mul 'v0', (add (mul 'v1', (add 'v2', (mul 'v3', 'v4'))), 'v5'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop_93e57c595e",
+      "arity": 6,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 6,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (mul 'v0', (add (mul 'v1', (add (mul 'v2', 'v3'), 'v4')), 'v5'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop_976f9836d7",
+      "arity": 6,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 6,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add 'v1', (mul 'v2', 'v3'))), (mul 'v4', (unsqueeze 'v5', dim=a0)))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop_98a002d64b",
+      "arity": 6,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 6,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', 'v2'), (mul 'v3', (unsqueeze 'v4', dim=a0)))), 'v5')"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop_b246dcb838",
+      "arity": 6,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 6,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (mul 'v0', (add (mul 'v1', (add 'v2', 'v3')), (mul 'v4', 'v5')))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop_bb8c54c201",
+      "arity": 4,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 4,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', 'v1'), (mul 'v2', 'v3'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop_d5b128282a",
+      "arity": 7,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 7,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add 'v2', (mul 'v3', 'v4'))), 'v5')), 'v6')"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop_f08a53f9a0",
+      "arity": 6,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 6,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add 'v1', (mul 'v2', (unsqueeze 'v3', dim=a0)))), (mul 'v4', 'v5'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop_f3290a1163",
+      "arity": 6,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 6,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', 'v2'), 'v3')), (mul 'v4', 'v5'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "take_along_dim",
+      "arity": null,
+      "tags": [
+        "table"
+      ],
+      "attrs": [
+        [
+          2,
+          "dim"
+        ]
+      ],
+      "required": [
+        "dim"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "tanh",
+      "arity": 1,
+      "tags": [
+        "activation",
+        "fold-at-lowering",
+        "pointwise-unary"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Hyperbolic tangent."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "tensor_split",
+      "arity": 1,
+      "tags": [
+        "relayout"
+      ],
+      "attrs": [
+        [
+          1,
+          "sections"
+        ],
+        [
+          2,
+          "dim"
+        ]
+      ],
+      "required": [
+        "sections"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "to",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "relayout"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "topk",
+      "arity": null,
+      "tags": [],
+      "attrs": [
+        [
+          1,
+          "k"
+        ],
+        [
+          2,
+          "dim"
+        ],
+        [
+          3,
+          "largest"
+        ],
+        [
+          4,
+          "sorted"
+        ]
+      ],
+      "required": [
+        "k"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "transpose",
+      "arity": 1,
+      "tags": [
+        "cost-view",
+        "fold-at-lowering",
+        "generator-view",
+        "relayout",
+        "viewish"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim0"
+        ],
+        [
+          2,
+          "dim1"
+        ]
+      ],
+      "required": [
+        "dim0",
+        "dim1"
+      ],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Symmetry/isomorphism in the SMC."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "tril",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "relayout"
+      ],
+      "attrs": [
+        [
+          1,
+          "diagonal"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "triu",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "relayout"
+      ],
+      "attrs": [
+        [
+          1,
+          "diagonal"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "trunc",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "type_as",
+      "arity": 2,
+      "tags": [
+        "fold-at-lowering",
+        "relayout"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "unbind",
+      "arity": 1,
+      "tags": [
+        "relayout",
+        "viewish"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ]
+      ],
+      "required": [
+        "dim"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "unflatten",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "relayout"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ],
+        [
+          2,
+          "sizes"
+        ]
+      ],
+      "required": [
+        "dim",
+        "sizes"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "unfold",
+      "arity": null,
+      "tags": [],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ],
+        [
+          2,
+          "size"
+        ],
+        [
+          3,
+          "step"
+        ]
+      ],
+      "required": [
+        "dim",
+        "size",
+        "step"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "unsqueeze",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "generator-view",
+        "relayout",
+        "viewish"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ]
+      ],
+      "required": [
+        "dim"
+      ],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "upsample_bilinear2d",
+      "arity": null,
+      "tags": [],
+      "attrs": [
+        [
+          1,
+          "size"
+        ],
+        [
+          2,
+          "align_corners"
+        ],
+        [
+          3,
+          "scale"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "upsample_nearest2d",
+      "arity": null,
+      "tags": [],
+      "attrs": [
+        [
+          1,
+          "size"
+        ],
+        [
+          2,
+          "scale"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "var",
+      "arity": 1,
+      "tags": [
+        "fold-at-lowering",
+        "reduce-dim"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ],
+        [
+          2,
+          "correction"
+        ],
+        [
+          3,
+          "keepdim"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "var_mean",
+      "arity": 1,
+      "tags": [
+        "reduce-dim"
+      ],
+      "attrs": [
+        [
+          1,
+          "dim"
+        ],
+        [
+          2,
+          "correction"
+        ],
+        [
+          3,
+          "keepdim"
+        ]
+      ],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "view",
+      "arity": 1,
+      "tags": [
+        "relayout",
+        "viewish"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "unbound"
+    },
+    {
+      "name": "where",
+      "arity": null,
+      "tags": [
+        "pointwise"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "xlogy",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering",
+        "pointwise"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "zeros",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "zeros_like",
+      "arity": null,
+      "tags": [
+        "fold-at-lowering"
+      ],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
+    },
+    {
+      "name": "attnbias",
+      "arity": 1,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "sdpa's attn_mask in additive-bias form: a float mask passes through, a bool keep-mask becomes where(m, 0, -inf) \u2014 torch's own coercion, which the untyped (shape-only) term cannot spell.  Lets ONE sdpa-cat law serve both mask dtypes."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "bdiag",
+      "arity": 2,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 2,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Monoidal product of linear maps: f \u2297 g is block-diagonal under concat wiring."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "cmask",
+      "arity": 1,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Causal-mask generator: cmask(x)[...,t,j] = (j + off > t) \u2014 the strict upper triangle of x's score plane, shifted off keys; materialises what sdpa's is_causal flag hides."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "decay",
+      "arity": 1,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Causal-decay generator: decay(g, t=T)[...,i,j] = g^(i-j) for i >= j, else 0 \u2014 the RetNet/GLA decay matrix as a value, so its block structure is equational rather than a spelled subgraph."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "decay_vec",
+      "arity": 1,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "decay-vector generator: decay_vec(g, t=T, offset=o, sign=s)[...,k] = g^(s*k + o), k in [0,T) \u2014 g's dims leading batch dims.  The rank-1 factor of the causal decay's cross blocks (the RetNet xi/eta vectors); decay_vec(g, T) is decay(g,T)'s diagonal."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "fill",
+      "arity": 1,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Constant map x \u21a6 c\u00b71 (full_like): the vehicle for derived scalar constants, which can only occupy attribute positions."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "om_decayed",
+      "arity": 3,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 3,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Decayed-attention element: om_decayed(s, d, v) = (s \u2299 d) @ v \u2014 score matrix decay-weighted elementwise, then contracted by the values (the RetNet inner-chunk form).  A value-level op: the element IS the applied result."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "parl",
+      "arity": 2,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 2,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Tensor product re-laid to keep both feedback wires first \u2014 the product the superposing axiom traces over."
+      },
+      "denotation": "torch"
+    },
+    {
+      "name": "trace",
+      "arity": 1,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "Tr^U(f): feedback of the first-usize output block into the first-usize input block; in FDVect the linear fixpoint P + Q(I\u2212S)\u207b\u00b9R."
+      },
+      "denotation": "torch"
+    }
+  ]
+}

@@ -1,0 +1,1215 @@
+{
+  "schema": "mlopt-vocab/1",
+  "schemas": [
+    {
+      "version": 2,
+      "kind": "law",
+      "name": "fold:addmm_linear",
+      "law": "",
+      "lhs": {
+        "op": "add",
+        "args": [
+          {
+            "op": "matmul",
+            "args": [
+              {
+                "mvar": "A"
+              },
+              {
+                "op": "transpose",
+                "args": [
+                  {
+                    "mvar": "B"
+                  }
+                ],
+                "attrs": {
+                  "dim0": "T0",
+                  "dim1": "T1"
+                }
+              }
+            ],
+            "attrs": {}
+          },
+          {
+            "mvar": "C"
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "linear",
+        "args": [
+          {
+            "mvar": "A"
+          },
+          {
+            "mvar": "B"
+          },
+          {
+            "mvar": "C"
+          }
+        ],
+        "attrs": {}
+      },
+      "cond": [
+        "axes-last2",
+        "B",
+        "T0",
+        "T1"
+      ],
+      "dspec": null,
+      "tags": [],
+      "derivation": [],
+      "cert": null,
+      "error_bound": null,
+      "bound_norm": "spectral",
+      "serializable": true,
+      "missing_hooks": []
+    },
+    {
+      "version": 2,
+      "kind": "law",
+      "name": "fold:instance_norm",
+      "law": "",
+      "lhs": {
+        "op": "add",
+        "args": [
+          {
+            "op": "mul",
+            "args": [
+              {
+                "op": "mul",
+                "args": [
+                  {
+                    "op": "sub",
+                    "args": [
+                      {
+                        "mvar": "U"
+                      },
+                      {
+                        "op": "unsqueeze",
+                        "args": [
+                          {
+                            "op": "unsqueeze",
+                            "args": [
+                              {
+                                "op": "mean",
+                                "args": [
+                                  {
+                                    "mvar": "U"
+                                  }
+                                ],
+                                "attrs": {
+                                  "dim": "MD"
+                                }
+                              }
+                            ],
+                            "attrs": {
+                              "dim": "K1"
+                            }
+                          }
+                        ],
+                        "attrs": {
+                          "dim": "K2"
+                        }
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "op": "rsqrt",
+                    "args": [
+                      {
+                        "op": "add",
+                        "args": [
+                          {
+                            "op": "unsqueeze",
+                            "args": [
+                              {
+                                "op": "unsqueeze",
+                                "args": [
+                                  {
+                                    "op": "mean",
+                                    "args": [
+                                      {
+                                        "op": "mul",
+                                        "args": [
+                                          {
+                                            "op": "sub",
+                                            "args": [
+                                              {
+                                                "mvar": "U"
+                                              },
+                                              {
+                                                "op": "unsqueeze",
+                                                "args": [
+                                                  {
+                                                    "op": "unsqueeze",
+                                                    "args": [
+                                                      {
+                                                        "op": "mean",
+                                                        "args": [
+                                                          {
+                                                            "mvar": "U"
+                                                          }
+                                                        ],
+                                                        "attrs": {
+                                                          "dim": "MD"
+                                                        }
+                                                      }
+                                                    ],
+                                                    "attrs": {
+                                                      "dim": "K1"
+                                                    }
+                                                  }
+                                                ],
+                                                "attrs": {
+                                                  "dim": "K2"
+                                                }
+                                              }
+                                            ],
+                                            "attrs": {}
+                                          },
+                                          {
+                                            "op": "sub",
+                                            "args": [
+                                              {
+                                                "mvar": "U"
+                                              },
+                                              {
+                                                "op": "unsqueeze",
+                                                "args": [
+                                                  {
+                                                    "op": "unsqueeze",
+                                                    "args": [
+                                                      {
+                                                        "op": "mean",
+                                                        "args": [
+                                                          {
+                                                            "mvar": "U"
+                                                          }
+                                                        ],
+                                                        "attrs": {
+                                                          "dim": "MD"
+                                                        }
+                                                      }
+                                                    ],
+                                                    "attrs": {
+                                                      "dim": "K1"
+                                                    }
+                                                  }
+                                                ],
+                                                "attrs": {
+                                                  "dim": "K2"
+                                                }
+                                              }
+                                            ],
+                                            "attrs": {}
+                                          }
+                                        ],
+                                        "attrs": {}
+                                      }
+                                    ],
+                                    "attrs": {
+                                      "dim": "MD"
+                                    }
+                                  }
+                                ],
+                                "attrs": {
+                                  "dim": "K1"
+                                }
+                              }
+                            ],
+                            "attrs": {
+                              "dim": "K2"
+                            }
+                          },
+                          {
+                            "mvar": "EPS"
+                          }
+                        ],
+                        "attrs": {}
+                      }
+                    ],
+                    "attrs": {}
+                  }
+                ],
+                "attrs": {}
+              },
+              {
+                "op": "reshape",
+                "args": [
+                  {
+                    "mvar": "W"
+                  }
+                ],
+                "attrs": {
+                  "shape": "WS"
+                }
+              }
+            ],
+            "attrs": {}
+          },
+          {
+            "op": "reshape",
+            "args": [
+              {
+                "mvar": "B"
+              }
+            ],
+            "attrs": {
+              "shape": "BS"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "instance_norm",
+        "args": [
+          {
+            "mvar": "U"
+          },
+          {
+            "mvar": "W"
+          },
+          {
+            "mvar": "B"
+          }
+        ],
+        "attrs": {
+          "eps": "EP"
+        }
+      },
+      "cond": [
+        "and",
+        [
+          "const-num",
+          "EPS"
+        ],
+        [
+          "attr-len",
+          "WS",
+          "==",
+          4
+        ],
+        [
+          "attr-len",
+          "BS",
+          "==",
+          4
+        ]
+      ],
+      "dspec": {
+        "EP": [
+          "float",
+          [
+            "const",
+            "EPS"
+          ]
+        ]
+      },
+      "tags": [],
+      "derivation": [],
+      "cert": null,
+      "error_bound": null,
+      "bound_norm": "spectral",
+      "serializable": true,
+      "missing_hooks": []
+    },
+    {
+      "version": 2,
+      "kind": "law",
+      "name": "fold:group_norm",
+      "law": "",
+      "lhs": {
+        "op": "add",
+        "args": [
+          {
+            "op": "mul",
+            "args": [
+              {
+                "op": "reshape",
+                "args": [
+                  {
+                    "op": "mul",
+                    "args": [
+                      {
+                        "op": "sub",
+                        "args": [
+                          {
+                            "op": "reshape",
+                            "args": [
+                              {
+                                "mvar": "U"
+                              }
+                            ],
+                            "attrs": {
+                              "shape": "US"
+                            }
+                          },
+                          {
+                            "op": "mean",
+                            "args": [
+                              {
+                                "op": "reshape",
+                                "args": [
+                                  {
+                                    "mvar": "U"
+                                  }
+                                ],
+                                "attrs": {
+                                  "shape": "US"
+                                }
+                              }
+                            ],
+                            "attrs": {
+                              "dim": "MD",
+                              "keepdim": "MK"
+                            }
+                          }
+                        ],
+                        "attrs": {}
+                      },
+                      {
+                        "op": "rsqrt",
+                        "args": [
+                          {
+                            "op": "add",
+                            "args": [
+                              {
+                                "op": "mean",
+                                "args": [
+                                  {
+                                    "op": "mul",
+                                    "args": [
+                                      {
+                                        "op": "sub",
+                                        "args": [
+                                          {
+                                            "op": "reshape",
+                                            "args": [
+                                              {
+                                                "mvar": "U"
+                                              }
+                                            ],
+                                            "attrs": {
+                                              "shape": "US"
+                                            }
+                                          },
+                                          {
+                                            "op": "mean",
+                                            "args": [
+                                              {
+                                                "op": "reshape",
+                                                "args": [
+                                                  {
+                                                    "mvar": "U"
+                                                  }
+                                                ],
+                                                "attrs": {
+                                                  "shape": "US"
+                                                }
+                                              }
+                                            ],
+                                            "attrs": {
+                                              "dim": "MD",
+                                              "keepdim": "MK"
+                                            }
+                                          }
+                                        ],
+                                        "attrs": {}
+                                      },
+                                      {
+                                        "op": "sub",
+                                        "args": [
+                                          {
+                                            "op": "reshape",
+                                            "args": [
+                                              {
+                                                "mvar": "U"
+                                              }
+                                            ],
+                                            "attrs": {
+                                              "shape": "US"
+                                            }
+                                          },
+                                          {
+                                            "op": "mean",
+                                            "args": [
+                                              {
+                                                "op": "reshape",
+                                                "args": [
+                                                  {
+                                                    "mvar": "U"
+                                                  }
+                                                ],
+                                                "attrs": {
+                                                  "shape": "US"
+                                                }
+                                              }
+                                            ],
+                                            "attrs": {
+                                              "dim": "MD",
+                                              "keepdim": "MK"
+                                            }
+                                          }
+                                        ],
+                                        "attrs": {}
+                                      }
+                                    ],
+                                    "attrs": {}
+                                  }
+                                ],
+                                "attrs": {
+                                  "dim": "MD",
+                                  "keepdim": "MK"
+                                }
+                              },
+                              {
+                                "mvar": "EPS"
+                              }
+                            ],
+                            "attrs": {}
+                          }
+                        ],
+                        "attrs": {}
+                      }
+                    ],
+                    "attrs": {}
+                  }
+                ],
+                "attrs": {
+                  "shape": "RS"
+                }
+              },
+              {
+                "op": "reshape",
+                "args": [
+                  {
+                    "mvar": "W"
+                  }
+                ],
+                "attrs": {
+                  "shape": "WS"
+                }
+              }
+            ],
+            "attrs": {}
+          },
+          {
+            "op": "reshape",
+            "args": [
+              {
+                "mvar": "B"
+              }
+            ],
+            "attrs": {
+              "shape": "BS"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "group_norm",
+        "args": [
+          {
+            "mvar": "U"
+          },
+          {
+            "mvar": "W"
+          },
+          {
+            "mvar": "B"
+          }
+        ],
+        "attrs": {
+          "num_groups": "G",
+          "eps": "EP"
+        }
+      },
+      "cond": [
+        "and",
+        [
+          "const-num",
+          "EPS"
+        ],
+        [
+          "attr-is",
+          "MK",
+          true
+        ],
+        [
+          "attr-eq",
+          "MD",
+          [
+            -1
+          ]
+        ],
+        [
+          "attr-len",
+          "US",
+          "==",
+          3
+        ],
+        [
+          "attr-len",
+          "WS",
+          "==",
+          4
+        ],
+        [
+          "attr-len",
+          "BS",
+          "==",
+          4
+        ]
+      ],
+      "dspec": {
+        "EP": [
+          "float",
+          [
+            "const",
+            "EPS"
+          ]
+        ],
+        "G": [
+          "nth",
+          [
+            "attr",
+            "US"
+          ],
+          1
+        ]
+      },
+      "tags": [],
+      "derivation": [],
+      "cert": null,
+      "error_bound": null,
+      "bound_norm": "spectral",
+      "serializable": true,
+      "missing_hooks": []
+    },
+    {
+      "version": 2,
+      "kind": "law",
+      "name": "fold:silu_comm",
+      "law": "",
+      "lhs": {
+        "op": "mul",
+        "args": [
+          {
+            "op": "sigmoid",
+            "args": [
+              {
+                "mvar": "u"
+              }
+            ],
+            "attrs": {}
+          },
+          {
+            "mvar": "u"
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "silu",
+        "args": [
+          {
+            "mvar": "u"
+          }
+        ],
+        "attrs": {}
+      },
+      "cond": null,
+      "dspec": null,
+      "tags": [],
+      "derivation": [],
+      "cert": null,
+      "error_bound": null,
+      "bound_norm": "spectral",
+      "serializable": true,
+      "missing_hooks": []
+    },
+    {
+      "version": 2,
+      "kind": "law",
+      "name": "fold:rms_div",
+      "law": "",
+      "lhs": {
+        "op": "div",
+        "args": [
+          {
+            "mvar": "u"
+          },
+          {
+            "op": "sqrt",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "mean",
+                    "args": [
+                      {
+                        "op": "pow",
+                        "args": [
+                          {
+                            "mvar": "u"
+                          },
+                          {
+                            "mvar": "P"
+                          }
+                        ],
+                        "attrs": {}
+                      }
+                    ],
+                    "attrs": {
+                      "dim": "MD",
+                      "keepdim": "MK"
+                    }
+                  },
+                  {
+                    "mvar": "EPS"
+                  }
+                ],
+                "attrs": {}
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "rms_norm",
+        "args": [
+          {
+            "mvar": "u"
+          }
+        ],
+        "attrs": {
+          "dim": "ND",
+          "eps": "EP"
+        }
+      },
+      "cond": [
+        "and",
+        [
+          "attr-is",
+          "MK",
+          true
+        ],
+        [
+          "const-num",
+          "EPS"
+        ],
+        [
+          "const-cmp",
+          "P",
+          "==",
+          2
+        ],
+        [
+          "shaped",
+          [
+            "tail-block",
+            "u",
+            "MD"
+          ]
+        ]
+      ],
+      "dspec": {
+        "EP": [
+          "float",
+          [
+            "const",
+            "EPS"
+          ]
+        ],
+        "ND": [
+          "shape",
+          [
+            "tail-block",
+            "u",
+            "MD"
+          ]
+        ]
+      },
+      "tags": [],
+      "derivation": [],
+      "cert": null,
+      "error_bound": null,
+      "bound_norm": "spectral",
+      "serializable": true,
+      "missing_hooks": []
+    }
+  ],
+  "premises": {
+    "fold:instance_norm": [
+      {
+        "version": 2,
+        "kind": "law",
+        "name": "instance_norm_expand",
+        "law": "instance_norm(u, w, b, eps) IS (u\u2212\u03bc)\u00b7rsqrt(\u03c3\u00b2+\u03b5)\u00b7w+b \u2014 per-(n,c) statistics broadcast by unsqueeze, \u03c3\u00b2=E[(u\u2212\u03bc)\u00b2], the affine spelled reshape-broadcast (oneDNN's ``_MklFusedInstanceNorm`` denotation \u2014 the manual InstanceNormBroadcast chain the fused kernel computes).",
+        "lhs": {
+          "op": "instance_norm",
+          "args": [
+            {
+              "mvar": "U"
+            },
+            {
+              "mvar": "W"
+            },
+            {
+              "mvar": "B"
+            }
+          ],
+          "attrs": {
+            "eps": "EP"
+          }
+        },
+        "rhs": {
+          "op": "add",
+          "args": [
+            {
+              "op": "mul",
+              "args": [
+                {
+                  "op": "mul",
+                  "args": [
+                    {
+                      "op": "sub",
+                      "args": [
+                        {
+                          "mvar": "U"
+                        },
+                        {
+                          "op": "unsqueeze",
+                          "args": [
+                            {
+                              "op": "unsqueeze",
+                              "args": [
+                                {
+                                  "op": "mean",
+                                  "args": [
+                                    {
+                                      "mvar": "U"
+                                    }
+                                  ],
+                                  "attrs": {
+                                    "dim": "MD"
+                                  }
+                                }
+                              ],
+                              "attrs": {
+                                "dim": "K1"
+                              }
+                            }
+                          ],
+                          "attrs": {
+                            "dim": "K2"
+                          }
+                        }
+                      ],
+                      "attrs": {}
+                    },
+                    {
+                      "op": "rsqrt",
+                      "args": [
+                        {
+                          "op": "add",
+                          "args": [
+                            {
+                              "op": "unsqueeze",
+                              "args": [
+                                {
+                                  "op": "unsqueeze",
+                                  "args": [
+                                    {
+                                      "op": "mean",
+                                      "args": [
+                                        {
+                                          "op": "mul",
+                                          "args": [
+                                            {
+                                              "op": "sub",
+                                              "args": [
+                                                {
+                                                  "mvar": "U"
+                                                },
+                                                {
+                                                  "op": "unsqueeze",
+                                                  "args": [
+                                                    {
+                                                      "op": "unsqueeze",
+                                                      "args": [
+                                                        {
+                                                          "op": "mean",
+                                                          "args": [
+                                                            {
+                                                              "mvar": "U"
+                                                            }
+                                                          ],
+                                                          "attrs": {
+                                                            "dim": "MD"
+                                                          }
+                                                        }
+                                                      ],
+                                                      "attrs": {
+                                                        "dim": "K1"
+                                                      }
+                                                    }
+                                                  ],
+                                                  "attrs": {
+                                                    "dim": "K2"
+                                                  }
+                                                }
+                                              ],
+                                              "attrs": {}
+                                            },
+                                            {
+                                              "op": "sub",
+                                              "args": [
+                                                {
+                                                  "mvar": "U"
+                                                },
+                                                {
+                                                  "op": "unsqueeze",
+                                                  "args": [
+                                                    {
+                                                      "op": "unsqueeze",
+                                                      "args": [
+                                                        {
+                                                          "op": "mean",
+                                                          "args": [
+                                                            {
+                                                              "mvar": "U"
+                                                            }
+                                                          ],
+                                                          "attrs": {
+                                                            "dim": "MD"
+                                                          }
+                                                        }
+                                                      ],
+                                                      "attrs": {
+                                                        "dim": "K1"
+                                                      }
+                                                    }
+                                                  ],
+                                                  "attrs": {
+                                                    "dim": "K2"
+                                                  }
+                                                }
+                                              ],
+                                              "attrs": {}
+                                            }
+                                          ],
+                                          "attrs": {}
+                                        }
+                                      ],
+                                      "attrs": {
+                                        "dim": "MD"
+                                      }
+                                    }
+                                  ],
+                                  "attrs": {
+                                    "dim": "K1"
+                                  }
+                                }
+                              ],
+                              "attrs": {
+                                "dim": "K2"
+                              }
+                            },
+                            {
+                              "mvar": "EPS"
+                            }
+                          ],
+                          "attrs": {}
+                        }
+                      ],
+                      "attrs": {}
+                    }
+                  ],
+                  "attrs": {}
+                },
+                {
+                  "op": "reshape",
+                  "args": [
+                    {
+                      "mvar": "W"
+                    }
+                  ],
+                  "attrs": {
+                    "shape": "WS"
+                  }
+                }
+              ],
+              "attrs": {}
+            },
+            {
+              "op": "reshape",
+              "args": [
+                {
+                  "mvar": "B"
+                }
+              ],
+              "attrs": {
+                "shape": "BS"
+              }
+            }
+          ],
+          "attrs": {}
+        },
+        "cond": null,
+        "dspec": null,
+        "tags": [
+          "fusion",
+          "prior_art"
+        ],
+        "derivation": [],
+        "cert": null,
+        "error_bound": null,
+        "bound_norm": "spectral",
+        "serializable": false,
+        "missing_hooks": [
+          "check",
+          "derive"
+        ]
+      }
+    ],
+    "fold:group_norm": [
+      {
+        "version": 2,
+        "kind": "law",
+        "name": "group_norm_expand",
+        "law": "group_norm(u, w, b, G, eps) IS the reshape-to-(n,G,\u00b7) manual chain \u2014 u'=reshape(u,(n,G,\u00b7)), normalize the trailing axis, reshape back, affine \u2014 Inductor's group_norm decomposition (the ManualGroupNorm spelling the fused kernel denotes; a channel block indivisible by G vetoes the derive).",
+        "lhs": {
+          "op": "group_norm",
+          "args": [
+            {
+              "mvar": "U"
+            },
+            {
+              "mvar": "W"
+            },
+            {
+              "mvar": "B"
+            }
+          ],
+          "attrs": {
+            "num_groups": "G",
+            "eps": "EP"
+          }
+        },
+        "rhs": {
+          "op": "add",
+          "args": [
+            {
+              "op": "mul",
+              "args": [
+                {
+                  "op": "reshape",
+                  "args": [
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "op": "sub",
+                          "args": [
+                            {
+                              "op": "reshape",
+                              "args": [
+                                {
+                                  "mvar": "U"
+                                }
+                              ],
+                              "attrs": {
+                                "shape": "US"
+                              }
+                            },
+                            {
+                              "op": "mean",
+                              "args": [
+                                {
+                                  "op": "reshape",
+                                  "args": [
+                                    {
+                                      "mvar": "U"
+                                    }
+                                  ],
+                                  "attrs": {
+                                    "shape": "US"
+                                  }
+                                }
+                              ],
+                              "attrs": {
+                                "dim": "MD",
+                                "keepdim": "MK"
+                              }
+                            }
+                          ],
+                          "attrs": {}
+                        },
+                        {
+                          "op": "rsqrt",
+                          "args": [
+                            {
+                              "op": "add",
+                              "args": [
+                                {
+                                  "op": "mean",
+                                  "args": [
+                                    {
+                                      "op": "mul",
+                                      "args": [
+                                        {
+                                          "op": "sub",
+                                          "args": [
+                                            {
+                                              "op": "reshape",
+                                              "args": [
+                                                {
+                                                  "mvar": "U"
+                                                }
+                                              ],
+                                              "attrs": {
+                                                "shape": "US"
+                                              }
+                                            },
+                                            {
+                                              "op": "mean",
+                                              "args": [
+                                                {
+                                                  "op": "reshape",
+                                                  "args": [
+                                                    {
+                                                      "mvar": "U"
+                                                    }
+                                                  ],
+                                                  "attrs": {
+                                                    "shape": "US"
+                                                  }
+                                                }
+                                              ],
+                                              "attrs": {
+                                                "dim": "MD",
+                                                "keepdim": "MK"
+                                              }
+                                            }
+                                          ],
+                                          "attrs": {}
+                                        },
+                                        {
+                                          "op": "sub",
+                                          "args": [
+                                            {
+                                              "op": "reshape",
+                                              "args": [
+                                                {
+                                                  "mvar": "U"
+                                                }
+                                              ],
+                                              "attrs": {
+                                                "shape": "US"
+                                              }
+                                            },
+                                            {
+                                              "op": "mean",
+                                              "args": [
+                                                {
+                                                  "op": "reshape",
+                                                  "args": [
+                                                    {
+                                                      "mvar": "U"
+                                                    }
+                                                  ],
+                                                  "attrs": {
+                                                    "shape": "US"
+                                                  }
+                                                }
+                                              ],
+                                              "attrs": {
+                                                "dim": "MD",
+                                                "keepdim": "MK"
+                                              }
+                                            }
+                                          ],
+                                          "attrs": {}
+                                        }
+                                      ],
+                                      "attrs": {}
+                                    }
+                                  ],
+                                  "attrs": {
+                                    "dim": "MD",
+                                    "keepdim": "MK"
+                                  }
+                                },
+                                {
+                                  "mvar": "EPS"
+                                }
+                              ],
+                              "attrs": {}
+                            }
+                          ],
+                          "attrs": {}
+                        }
+                      ],
+                      "attrs": {}
+                    }
+                  ],
+                  "attrs": {
+                    "shape": "RS"
+                  }
+                },
+                {
+                  "op": "reshape",
+                  "args": [
+                    {
+                      "mvar": "W"
+                    }
+                  ],
+                  "attrs": {
+                    "shape": "WS"
+                  }
+                }
+              ],
+              "attrs": {}
+            },
+            {
+              "op": "reshape",
+              "args": [
+                {
+                  "mvar": "B"
+                }
+              ],
+              "attrs": {
+                "shape": "BS"
+              }
+            }
+          ],
+          "attrs": {}
+        },
+        "cond": null,
+        "dspec": null,
+        "tags": [
+          "fusion",
+          "prior_art"
+        ],
+        "derivation": [],
+        "cert": null,
+        "error_bound": null,
+        "bound_norm": "spectral",
+        "serializable": false,
+        "missing_hooks": [
+          "check",
+          "derive"
+        ]
+      }
+    ]
+  }
+}

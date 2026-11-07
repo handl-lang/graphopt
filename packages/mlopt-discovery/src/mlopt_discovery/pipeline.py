@@ -623,7 +623,7 @@ def _pattern_recognition(census_op: dict) -> list[Proposal]:
 # oracles.
 
 
-def _fusion_laws() -> list[Rewrite]:
+def _fusion_laws(vocab: Any = None) -> list[Rewrite]:
     """Return the shipped fold/fuse laws — the fusion-class schemas.
 
     The schema bank is the law bank: every shipped ``*_fold*`` (silu,
@@ -632,15 +632,17 @@ def _fusion_laws() -> list[Rewrite]:
     whose names carry neither suffix (``qkv_fuse_asym``,
     ``gqa_absorb_repeat``).  Reading ``ALL_RULES`` — not a parallel
     name list — keeps the schema table honest: a shipped fold is a
-    schema by construction.
+    schema by construction.  When *vocab* (a
+    :class:`~mlopt_discovery.vocabdir.Vocab`) is given the bank is
+    the fragment directory's ``laws.yaml`` projection instead —
+    plan 0033 phase 0's single-source-of-truth seat; the predicate is
+    :func:`~mlopt_discovery.vocabdir.is_fusion_law_name`, shared so
+    both banks agree on membership.
     """
-    return [
-        r
-        for r in ALL_RULES
-        if r.name.endswith(("_fold", "_fuse"))
-        or "_fold_" in r.name
-        or r.name in ("qkv_fuse_asym", "gqa_absorb_repeat")
-    ]
+    from mlopt_discovery.vocabdir import is_fusion_law_name
+
+    rules = vocab.laws if vocab is not None else ALL_RULES
+    return [r for r in rules if is_fusion_law_name(r.name)]
 
 
 def _inorm_spelling() -> tuple[Any, Any]:
@@ -865,7 +867,9 @@ _FUSION_SCHEMAS: tuple[Rewrite, ...] = (
 )
 
 
-def _schema_proposal(rule: Rewrite) -> Proposal:
+def _schema_proposal(
+    rule: Rewrite, premises: Any = _FUSION_PREMISES
+) -> Proposal:
     """Mint one fusion-schema candidate from a binding rule.
 
     ``rule`` is the schema — a shipped fold/fuse law or a
@@ -873,7 +877,9 @@ def _schema_proposal(rule: Rewrite) -> Proposal:
     through verbatim (the minted rule serializes like the shipped
     one); a *procedural* check/derive (``conv_bn_fold``'s transported
     hooks) passes through too — the ledger's ``missing_hooks`` then
-    reports them honestly.
+    reports them honestly.  *premises* is the declared premise-closure
+    map — ``_FUSION_PREMISES`` by default; the vocab-dir path passes
+    the directory's ``schemas.yaml`` projection instead.
     """
     from mlopt_core.laws.serialize import _proc_check, _proc_derive
 
@@ -887,11 +893,25 @@ def _schema_proposal(rule: Rewrite) -> Proposal:
         dspec=rule.dspec,
         check=rule.check if _proc_check(rule) else None,
         derive=rule.derive if _proc_derive(rule) else None,
-        premises=_FUSION_PREMISES.get(rule.name, ()),
+        premises=premises.get(rule.name, ()),
     )
 
 
-def _fusion_schemas(terms: list[Any]) -> list[Proposal]:
+def _fusion_tables(vocab: Any) -> tuple[list[Rewrite], dict]:
+    """Return the active (schema rules, premise closures) pair.
+
+    The historical in-code tables when *vocab* is ``None``; the
+    fragment directory's ``schemas.yaml`` + fold/fuse ``laws.yaml``
+    projection otherwise — plan 0033 phase 0.
+    """
+    if vocab is None:
+        return [*_fusion_laws(), *_FUSION_SCHEMAS], _FUSION_PREMISES
+    return [*_fusion_laws(vocab), *vocab.schemas], vocab.fusion_premises
+
+
+def _fusion_schemas(
+    terms: list[Any], vocab: Any = None
+) -> list[Proposal]:
     """Mint fusion-class candidates bound to real subterms.
 
     Every shipped fold/fuse law plus the ``_FUSION_SCHEMAS`` classes
@@ -901,13 +921,17 @@ def _fusion_schemas(terms: list[Any]) -> list[Proposal]:
     ``_instance_from_match`` path the oracles use) — so the pool
     carries no fold-class claim whose real region is dead by its own
     guard, and the recorded ``instance`` is the module's own spelling.
+    When *vocab* is given the schema table and premise closures come
+    from the fragment directory (``schemas.yaml``) and the fold/fuse
+    laws from its ``laws.yaml`` — plan 0033 phase 0.
     """
     subs = [
         s for t in terms for s in _iter_subterms(t) if isinstance(s, Op)
     ]
+    rules, premises = _fusion_tables(vocab)
     out: list[Proposal] = []
-    for rule in [*_fusion_laws(), *_FUSION_SCHEMAS]:
-        p = _schema_proposal(rule)
+    for rule in rules:
+        p = _schema_proposal(rule, premises=premises)
         inst = _instance_from_match(p, subs)
         if inst is None:
             continue
@@ -938,12 +962,40 @@ def _binding_filter(
     return [p for p in proposals if _binds_any(p.lhs, subterms)]
 
 
+def _resolve_vocab_dir(vocab_dir: Any) -> Any:
+    """Resolve ``propose``'s ``vocab_dir`` to a loaded ``Vocab`` or None.
+
+    ``None`` auto-resolves :func:`mlopt_discovery.vocabdir.default_vocab_dir`
+    — the repo ``vocab/`` fragment directory when present (plan 0033
+    phase 0: the directory is the discovery vocabulary's source of
+    truth, the Python tables its projection); ``False`` forces the
+    historical in-code tables; a path loads that directory explicitly.
+    """
+    if vocab_dir is False:
+        return None
+    from mlopt_discovery import vocabdir
+
+    if vocab_dir is None:
+        directory = vocabdir.default_vocab_dir()
+    else:
+        directory = Path(vocab_dir)
+        if not (directory / "ops.yaml").is_file():
+            raise FileNotFoundError(
+                f"vocab_dir {directory}: no ops.yaml — not a "
+                "fragment vocabulary directory"
+            )
+    if directory is None:
+        return None
+    return vocabdir.load_vocab(directory)
+
+
 def propose(
     census_op: dict,
     terms: list[Any],
     vocab: str = "derived",
     *,
     require_bind: bool = False,
+    vocab_dir: Any = None,
 ) -> list[Proposal]:
     """Collect, unify and de-duplicate every proposer's candidates.
 
@@ -973,14 +1025,23 @@ def propose(
     still refused.  The default ``False`` keeps the historical pool
     for the grammar-driven callers, whose oracle domain is
     synthesized rather than the census corpus.
+
+    ``vocab_dir`` selects the fusion-schema bank's source: the
+    fragment directory (``vocab/`` — ``schemas.yaml`` plus the
+    fold/fuse subset of ``laws.yaml``, with ``missing_hooks`` laws
+    re-binding their procedural hooks by name) by default when the
+    directory is present, the in-code ``_FUSION_SCHEMAS`` /
+    ``ALL_RULES`` tables when it is not or when ``False`` is passed
+    — see :func:`_resolve_vocab_dir`.
     """
     pointwise, views = _vocab_sets(vocab)
+    frag = _resolve_vocab_dir(vocab_dir)
     by_key: dict = {}
     pool = [
         *_census_naturality(census_op, terms, pointwise, views),
         *_census_mixed_naturality(census_op, terms, pointwise, views),
         *_pattern_recognition(census_op),
-        *_fusion_schemas(terms),
+        *_fusion_schemas(terms, frag),
         *_shape_aware(),
         *_grammar(),
     ]

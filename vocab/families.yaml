@@ -1,0 +1,95 @@
+{
+  "schema": "mlopt-vocab/1",
+  "families": {
+    "names": [
+      "ew",
+      "gather",
+      "contract",
+      "fold",
+      "fold_emit",
+      "fold_zip",
+      "reduce",
+      "norm",
+      "postnorm"
+    ],
+    "grammar_version": "handler-grammar-v4",
+    "fold_axes": [
+      -2,
+      -1
+    ],
+    "fold_carries": [
+      0.0,
+      1.0
+    ],
+    "reduce_ops": [
+      "sum",
+      "mean",
+      "prod",
+      "amax",
+      "amin"
+    ],
+    "reduce_axes": [
+      -1,
+      -2
+    ],
+    "norm_ops": [
+      "div",
+      "sub"
+    ],
+    "post_unary": [
+      "log"
+    ],
+    "broadcast_ops": [
+      "squeeze",
+      "unsqueeze"
+    ],
+    "elementwise_ops": [
+      "abs",
+      "add",
+      "cos",
+      "div",
+      "exp",
+      "gelu",
+      "identity",
+      "log",
+      "mish",
+      "mul",
+      "neg",
+      "pow",
+      "reciprocal",
+      "relu",
+      "rsqrt",
+      "sigmoid",
+      "silu",
+      "sin",
+      "softplus",
+      "softsign",
+      "softsign_gate",
+      "sqrt",
+      "square",
+      "sub",
+      "tanh"
+    ],
+    "leaf_forms": {
+      "at": {
+        "kind": "read",
+        "from": "select",
+        "binds": "select",
+        "attrs": [
+          "dim",
+          "index"
+        ]
+      },
+      "aff": {
+        "kind": "map",
+        "from": "linear",
+        "binds": "linear"
+      }
+    },
+    "orders": [
+      "read_then_map",
+      "map_then_read"
+    ],
+    "budget": 256
+  }
+}
