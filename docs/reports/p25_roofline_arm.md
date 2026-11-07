@@ -87,3 +87,18 @@ Numbers: `docs/reports/p25_roofline_arm.json`. Driver:
 The P25 lowerer build lives at `/tmp/ct-p25/target/release/compile-triton`
 (the crate cannot build in-tree — the workspace `.cargo` patch table;
 build from a copy outside `handl-lang/`).
+
+## Addendum 2026-11-07 — verified vs the real incumbent
+
+`vllm` + the Qwen2.5-0.5B-Instruct-AWQ checkpoint installed; the
+vendored kernels ran against `awq_gemm` on real layer-0 tensors
+(sync timing, ~50 reps median):
+
+| operator | cosine | awq_gemm µs | ours µs | × vs incumbent |
+|---|---|---|---|---|
+| down_proj | 0.9999997 | 206.3 | 49.6 | **4.16×** |
+| gate_proj | 0.9999998 | 57.6 | 47.4 | **1.21×** |
+
+The P24 `gate_proj` 0.87× deficit flips to a win; the synthetic-vs-
+denote caveat is closed.  (µs here are plain sync timing — the
+CUDA-graph rows above are the lower numbers for the same kernels.)
