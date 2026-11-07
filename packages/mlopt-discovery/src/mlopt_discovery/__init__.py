@@ -43,7 +43,12 @@ the handl differential backend (:mod:`.handl_engine` — plan 0033
 phase 1: ``HandlEngine``, an ``EGraph`` that replays every recorded
 rule application through ``mlopt-handl-peer`` and refuses loudly on
 disagreement; ``resolve_engine("handl")`` is the ``engine="handl"``
-spelling for ``optimize.search``).
+spelling for ``optimize.search``),
+and the handl-native saturation seat (:mod:`.handl_egraph` — plan
+0033 phase 5: the ``vocab/`` declarative rewrite bank encoded to the
+``egraph-run`` spec so ``handl-egraph``'s ``EGraph::run`` saturates
+natively; opt-in ``saturate()``, the perf-parity gate is measured
+open — see ``docs/reports/fragment_tower_phase5.md``).
 Formerly the ``tools/law_*.py``
 scripts; every module keeps its CLI — invoke as
 ``python -m mlopt_discovery.<module>``.
