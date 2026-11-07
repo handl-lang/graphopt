@@ -29,7 +29,6 @@
 
 ## Tech debt to fix
 
-- [ ] T-013 Import-time domain registration — domains seat themselves via import side-effects ( mlopt\_kernel.play mutating DOMAINS /registry on import). Replace with explicit registration at call site.
 - [ ] T-014 Pinned test counts — tests asserting literal rule/law/bank counts ( test\_prior\_art , test\_laws\_structure totals, AGENTS.md counts). Replace with derived counts or invariant-based assertions so bank growth doesn't churn tests.
 - [ ] T-015 radon baseline — bilinear\_game.py flagged on clean main; regenerate scripts/complexity\_baseline.json or justify.
 - [ ] T-017 fragment-tower migration — local plan in project/plans/0033-fragment-tower.md + host ADR-0157; phases 0–5 (fragment dir → differential backend → denotations as models → fragment-emitting mint → fragment-move play → handl-native saturation).
