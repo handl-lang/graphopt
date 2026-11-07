@@ -2,8 +2,6 @@
 
 ## title: TODO type: task date: 2026-09-26
 
-- [ ] T-023 M2: lib-triton-qgemv + kit-kernel-ir scaffolded locally (not pushed) — binding runs both vendored kernels on CUDA; host\_run gate needs a checkpoint-bearing host · created:2026-11-07
-
 ## HIGH — ADR-0159: dissolve the optimizer domains into ext tools
 
 ## Adopted on three triggers, not a date ( host/project/adrs/0159-… ):
