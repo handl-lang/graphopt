@@ -2,8 +2,6 @@
 
 ## title: TODO type: task date: 2026-09-26
 
-- [ ] T-025 fp64 pow codegen emits fp32 literal — triton\_bindings renders const leaves as (2.0) so libdevice.pow(f64 tile, f32 scalar) raises CompilationError (RWKVMixBlock gen\_12, fp64 only). Render dtype-correct literals or x\*x-style unfolds. Surfaced by triton\_binding\_audit (T-018). · pri:low · created:2026-11-07
-
 ## HIGH — ADR-0159: dissolve the optimizer domains into ext tools
 
 ## Adopted on three triggers, not a date ( host/project/adrs/0159-… ):
