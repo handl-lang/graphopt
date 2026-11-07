@@ -39,7 +39,7 @@ arms (B=2, d=16, H=1, T in {512, 1024, 2048}):
 Usage::
 
     # scratch deps (not in the lockfile — benchmark-only):
-    .venv/bin/pip install --no-deps torchscale fla-core einops fairscale
+    .venv/bin/pip install --no-deps torchscale fla-core einops fairscale timm
     .venv/bin/python bench/drivers/probes/retnet_baseline_probe.py
     .venv/bin/python bench/drivers/probes/retnet_baseline_probe.py --t 2048
 """
@@ -111,47 +111,35 @@ def _paper_eqn(x: torch.Tensor, model: _ChunkedRetention, c: int):
 def _torchscale_arm(x: torch.Tensor, model: _ChunkedRetention, c: int):
     """Official torchscale chunk_recurrent_forward, decay patched.
 
-    ``inner_mask`` is built verbatim from ``RetNetRelPos.forward``'s
-    chunkwise branch (``torchscale/architecture/retnet.py``) — inlined
-    because importing that module pulls ``timm``.  The mask math is
-    the official code's; decay patched to our gamma.
+    The ``inner_mask`` comes from the library itself —
+    ``RetNetRelPos``'s chunkwise branch (``torchscale/architecture/
+    retnet.py``), which is why the scratch install now lists ``timm``
+    (``droppath`` imports it; that import chain is exactly what an
+    earlier revision inlined around).  Rotary/gating/norm are
+    bypassed; the decay buffer is patched to our gamma.
     """
+    from torchscale.architecture.retnet import RetNetRelPos
     from torchscale.component.multiscale_retention import (
         MultiScaleRetention,
     )
 
     b, t, d = x.shape
     dev, dt = x.device, x.dtype
-    decay_vec = torch.tensor([math.log(GAMMA)], dtype=dt, device=dev)
 
-    block_index = torch.arange(c, device=dev).to(dt)
-    mask = torch.tril(torch.ones(c, c, dtype=dt, device=dev))
-    mask = torch.masked_fill(
-        block_index[:, None] - block_index[None, :],
-        ~mask.bool(),
-        float("inf"),
+    # Single-head stand-in for RetNetRelPos: only the decay buffer
+    # feeds the chunkwise mask (angle/sin/cos are discarded), so a
+    # 1-head/dim-2 args row suffices; decay is patched to our gamma.
+    rel_pos = RetNetRelPos(
+        types.SimpleNamespace(
+            decoder_embed_dim=2,
+            decoder_retention_heads=1,
+            recurrent_chunk_size=c,
+        )
+    ).to(device=dev, dtype=dt)
+    rel_pos.decay = torch.tensor(
+        [math.log(GAMMA)], dtype=dt, device=dev
     )
-    mask = torch.exp(mask * decay_vec[:, None, None])
-    mask = torch.nan_to_num(mask)
-    value_inner_decay = mask[:, -1] / mask[:, -1].sum(
-        dim=-1, keepdim=True
-    )
-    value_inner_decay = value_inner_decay.unsqueeze(-1)
-    scale = mask.sum(dim=-1, keepdim=True).sqrt()
-    inner_mask_ = mask / scale
-    cross_decay = torch.exp(decay_vec * c)[:, None, None]
-    query_inner_decay = torch.exp(
-        decay_vec[:, None] * (block_index + 1)
-    )
-    query_inner_decay = query_inner_decay[:, :, None] / (
-        scale / mask[:, -1].sum(dim=-1)[:, None, None]
-    )
-    inner_mask = (
-        inner_mask_,
-        cross_decay,
-        query_inner_decay,
-        value_inner_decay,
-    )
+    inner_mask = rel_pos(c, chunkwise_recurrent=True)[1]
 
     fake = types.SimpleNamespace(num_heads=1, key_dim=d, head_dim=d)
     q = model.q(x).view(b, t, 1, d) / math.sqrt(t)

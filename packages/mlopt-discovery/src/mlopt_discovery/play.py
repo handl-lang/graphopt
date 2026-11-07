@@ -1813,6 +1813,10 @@ DOMAINS: dict[str, Domain] = {
     ),
 }
 
+# The bilinear board's player seats — explicit at the composition
+# root (this module), not an ``import bilinear_game`` side-effect.
+bg.register_players()
+
 
 def _arms(domain: Domain, player: LinearPolicy, seed: int) -> dict:
     """Build the arm set for one domain: baselines + learned pair."""

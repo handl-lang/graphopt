@@ -37,9 +37,10 @@ CLI; `--player <name>` runs a registered player eval-only, and
 that ship a deliver hook — torch does)).  The `kernel` domain
 moved out with the kernelopt split (plan 0032 phase 4): it lives
 in the private `handl-lang/kernelopt` repo, which seats it into
-`DOMAINS` + the player registry at `mlopt_kernel.play` import —
-the plugin seam is `play.spec_domain` +
-`gamekit.players.registry.register_player`.
+`DOMAINS` + the player registry via `mlopt_kernel.play.register()`
+— called by `main()` and by programmatic consumers at their entry
+point (importing the module mutates nothing) — the plugin seam is
+`play.spec_domain` + `gamekit.players.registry.register_player`.
 The optional
 `mlopt-native` package — the PyO3/Rust search engine, excluded from
 the uv workspace and built with maturin — is opt-in via `engine=`.

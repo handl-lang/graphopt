@@ -91,6 +91,7 @@ __all__ = [
     "featurize",
     "gen_cases",
     "legal_actions",
+    "register_players",
     "residual_of",
     "strassen_line",
     "term_tensor",
@@ -811,56 +812,60 @@ _RECORD = (
     "(docs/results_strassen.md) — the expressibility witness"
 )
 
+
 #: External seats on the shipped roster — ``bilinear`` is not an
-#: ``EPISODE_BOARDS`` member, so the domain registers its players
-#: here (the plan-0032 plugin seam), exactly like kernelopt's
-#: ``kernel`` does from ``mlopt_kernel.play``.
-register_player(
-    PlayerSpec(
-        name="random",
-        kind="chance",
-        boards=("bilinear",),
-        record="uniform over the Brent-equation move set",
+#: ``EPISODE_BOARDS`` member, so the domain seats its players through
+#: :func:`register_players` (the plan-0032 plugin seam), called by
+#: ``mlopt_discovery.play`` at its own import — the composition root,
+#: not this module's import side-effect.
+def register_players() -> None:
+    """Seat the bilinear board's players — call, don't import."""
+    register_player(
+        PlayerSpec(
+            name="random",
+            kind="chance",
+            boards=("bilinear",),
+            record="uniform over the Brent-equation move set",
+        )
     )
-)
-register_player(
-    PlayerSpec(
-        name="linear",
-        kind="linear",
-        boards=("bilinear",),
-        schema="BILINEAR_SPEC (no shipped prior — cold start)",
-        record="bilinear: cold linear arm (docs/results_strassen.md)",
+    register_player(
+        PlayerSpec(
+            name="linear",
+            kind="linear",
+            boards=("bilinear",),
+            schema="BILINEAR_SPEC (no shipped prior — cold start)",
+            record="bilinear: cold linear arm (docs/results_strassen.md)",
+        )
     )
-)
-register_player(
-    PlayerSpec(
-        name="linear-greedy",
-        kind="linear",
-        boards=("bilinear",),
-        schema="BILINEAR_SPEC — argmax decode",
-        record="bilinear: cold linear, greedy (docs/results_strassen.md)",
-        variant={"greedy": True},
+    register_player(
+        PlayerSpec(
+            name="linear-greedy",
+            kind="linear",
+            boards=("bilinear",),
+            schema="BILINEAR_SPEC — argmax decode",
+            record="bilinear: cold linear, greedy (docs/results_strassen.md)",
+            variant={"greedy": True},
+        )
     )
-)
-register_player(
-    PlayerSpec(
-        name="linear-cold",
-        kind="linear",
-        boards=("bilinear",),
-        schema="BILINEAR_SPEC — weights={}",
-        record="bilinear: the untrained control",
-        variant={"cold": True},
+    register_player(
+        PlayerSpec(
+            name="linear-cold",
+            kind="linear",
+            boards=("bilinear",),
+            schema="BILINEAR_SPEC — weights={}",
+            record="bilinear: the untrained control",
+            variant={"cold": True},
+        )
     )
-)
-register_player(
-    PlayerSpec(
-        name="playbook",
-        kind="scripted",
-        boards=("bilinear",),
-        record="bilinear: greedy repair — cheapest-descent patching",
-    ),
-    make=_playbook_make,
-)
+    register_player(
+        PlayerSpec(
+            name="playbook",
+            kind="scripted",
+            boards=("bilinear",),
+            record="bilinear: greedy repair — cheapest-descent patching",
+        ),
+        make=_playbook_make,
+    )
 
 
 # ---------------------------------------------------------------------------

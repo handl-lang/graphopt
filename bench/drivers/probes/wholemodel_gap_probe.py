@@ -72,6 +72,8 @@ from mlopt_core.laws.tensor import (
     MUL_DIV_SWAP,
     SPLIT_SCALAR_RULES,
 )
+from mlopt_discovery.play import _time_module
+from mlopt_discovery.zoo import _ChunkedRetention
 from mlopt_orchestrator.optimize import Optimizer, _lower_extracted
 from mlopt_torch.adapters import TorchSink, TorchSource
 from mlopt_torch.backend import TorchBackend
@@ -91,54 +93,11 @@ _BRIDGES = [
 
 
 # ---------------------------------------------------------------------------
-#  Vendored fixtures — mlopt_discovery is mid-refactor this session
-#  (lawdata/game -> gamekit/gamedata, staged); the two pieces this probe
-#  needs are copied verbatim so it stays runnable while the tree moves.
+#  Fixtures — imported, not vendored: ``_ChunkedRetention`` is
+#  ``mlopt_discovery.zoo``'s and ``_time_module`` is
+#  ``mlopt_discovery.play``'s harness (the mid-refactor copy this
+#  section used to carry is gone — the tree moved, the imports stayed).
 # ---------------------------------------------------------------------------
-
-
-class _ChunkedRetention(nn.Module):
-    """Verbatim copy of ``mlopt_discovery.zoo._ChunkedRetention``."""
-
-    def __init__(self, d: int) -> None:
-        super().__init__()
-        self.q = nn.Linear(d, d)
-        self.k = nn.Linear(d, d)
-        self.v = nn.Linear(d, d)
-        self.gamma = 0.9
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        t = x.shape[-2]
-        pos = torch.arange(t, dtype=x.dtype, device=x.device)
-        decay = torch.tril(
-            torch.pow(
-                torch.tensor(
-                    self.gamma, dtype=x.dtype, device=x.device
-                ),
-                (pos.unsqueeze(1) - pos.unsqueeze(0)).clamp_min(0),
-            )
-        )
-        s = self.q(x) @ self.k(x).transpose(-1, -2) / (t**0.5)
-        return (s * decay) @ self.v(x)
-
-
-def _time_module(model, x, reps: int) -> float:
-    """Median per-call latency (us) — ``mlopt_discovery.play``'s harness."""
-    args = x if isinstance(x, (tuple, list)) else (x,)
-    dev = args[0].device
-    for _ in range(10):
-        model(*args)
-    if dev.type == "cuda":
-        torch.cuda.synchronize()
-    ts = []
-    for _ in range(reps):
-        t0 = time.perf_counter()
-        model(*args)
-        if dev.type == "cuda":
-            torch.cuda.synchronize()
-        ts.append((time.perf_counter() - t0) * 1e6)
-    ts.sort()
-    return ts[len(ts) // 2]
 
 
 def _saturate(
