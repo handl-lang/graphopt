@@ -1,8 +1,11 @@
 """The baked meta-arena prior — shipped, and measured on held-out cases.
 
-``lawdata.META_ARENA_PLAYER_WEIGHTS`` is the trained preset
+``meta_prior.META_ARENA_PLAYER_WEIGHTS`` is the trained preset
 :class:`mlopt_discovery.meta_player.MetaLearnedPlayer` now defaults
-to.  This module measures that the bake is *earned*: on the held-out
+to (the T-009 imitation+RL bake — it supersedes the gamekit-shipped
+macro-move prior still reachable as
+``lawdata.META_ARENA_PLAYER_WEIGHTS``).  This module measures that
+the bake is *earned*: on the held-out
 case stream (``gen_cases(7919, n)``, disjoint from the
 ``gen_cases(0, n)`` training stream) the trained prior beats the cold
 start (``weights={}``), the random arm, the cold-greedy arm, and the
@@ -25,6 +28,7 @@ import torch
 from mlopt_discovery import lawdata
 from mlopt_discovery import meta_arena as ma
 from mlopt_discovery import meta_player as mp
+from mlopt_discovery import meta_prior
 
 #: Held-out case count and horizon (the driver's defaults).
 EVAL_CASES = 16
@@ -80,12 +84,19 @@ class TestPreset:
 
     def test_preset_is_baked(self):
         """``MetaLearnedPlayer`` defaults to the trained preset."""
-        assert lawdata.META_ARENA_PLAYER_WEIGHTS
+        assert meta_prior.META_ARENA_PLAYER_WEIGHTS
         player = mp.MetaLearnedPlayer(0)
         live = {
             k: v for k, v in player.weights_dict().items() if v != 0.0
         }
-        assert live == lawdata.META_ARENA_PLAYER_WEIGHTS
+        assert live == meta_prior.META_ARENA_PLAYER_WEIGHTS
+        # the gamekit-shipped macro prior stays reachable under its
+        # own name — a different bake of the same schema
+        assert lawdata.META_ARENA_PLAYER_WEIGHTS
+        assert (
+            lawdata.META_ARENA_PLAYER_WEIGHTS
+            is not meta_prior.META_ARENA_PLAYER_WEIGHTS
+        )
 
     def test_cold_start_reachable(self):
         """``weights={}`` is the uniform cold start, still reachable."""

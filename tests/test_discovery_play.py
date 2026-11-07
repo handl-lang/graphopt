@@ -467,10 +467,13 @@ class TestFusionSites:
             == []
         )
 
-    def test_chainfuse_claim_binds_gen_over_mm(self):
+    def test_chainfuse_claim_binds_gen_over_mm(self, monkeypatch):
         # the headline: claim(gen) on a metavar-boundary site —
-        # delivered term is gen_*_k(folded mm)
+        # delivered term is gen_*_k(folded mm).  The offer gate is
+        # bypassed for the same reason as the twosite pin above —
+        # this measures claim→deliver machinery, not offer policy.
         pytest.importorskip("torch")
+        monkeypatch.setattr(play, "_claim_cost_gate", lambda case: None)
         for s in range(12):
             for c in play._gen_cases(s, 8):
                 if "chainfuse" not in c[0]:
@@ -495,13 +498,19 @@ class TestFusionSites:
                 return
         raise AssertionError("no chainfuse case generated")
 
-    def test_twosite_multi_claim_composes(self):
+    def test_twosite_multi_claim_composes(self, monkeypatch):
         # T-010: two disjoint fusion sites (matmul-separated) compose
         # in ONE extraction — the delivered module calls both minted
         # kernels, and a claimed op can feed another claim's metavar.
+        # The offer gate is bypassed here on purpose: this pins the
+        # *composition machinery* (claims → saturate → extract →
+        # deliver), which is offer-policy-independent — the measured
+        # ``_claim_cost_gate`` may legitimately decline a marginal
+        # island claim, and ``test_claim_cost_gate`` pins that side.
         pytest.importorskip("torch")
         import re
 
+        monkeypatch.setattr(play, "_claim_cost_gate", lambda case: None)
         for s in range(12):
             for c in play._gen_cases(s, 12):
                 if "twosite" not in c[0]:

@@ -194,8 +194,14 @@ class TestImitate:
         st = arena.observe()
         move = ma.Action.saturate()
         assert p.imitate(st, move) is True
-        # the played mask now holds it — same offer declines
-        assert p.imitate(st, move) is False
+        # mid-episode the played mask still holds — a repeat offer
+        # of an already-played move declines.  (A step-0 re-observe
+        # with a non-empty mask now reads as a fresh board upstream,
+        # so the decline is pinned past the boundary.)
+        arena.step(move)
+        st1 = arena.observe()
+        assert p.imitate(st1, ma.Action.extract()) is True
+        assert p.imitate(st1, move) is False
 
     def test_frozen_does_not_learn(self):
         p = mp.MetaLearnedPlayer(0, weights={}, learn=False)
@@ -237,14 +243,18 @@ class TestImitate:
 
     def test_reset_episode_clears_stale_played_mask(self):
         # an episode ending on its first observed step leaves
-        # ``prev_steps == 0`` — without an explicit reset the next
-        # board inherits the played set and ``extract`` stays masked
+        # ``prev_steps == 0`` — gamekit's ``_observe`` now detects
+        # that boundary itself (a ``steps == 0`` re-observe with a
+        # non-empty played mask is a fresh board), so the next
+        # board's ``extract`` is NOT masked even without the local
+        # ``reset_episode`` workaround, which stays as belt-and-
+        # braces for older pins.
         w = {n: 0.0 for n in lawdata.META_ARENA_FEATURES}
         w["op:extract"] = 10.0
         p = mp.MetaLearnedPlayer(0, weights=w, greedy=True, learn=False)
         ma.run_episode(_silu_board(), p, 24)  # extract on move 1
         st2 = _silu_board().observe()
-        assert p(st2).op != "extract"  # masked — the bug, pinned
+        assert p(st2).op == "extract"  # auto-cleared upstream
         p.reset_episode()
         assert p(st2).op == "extract"
 

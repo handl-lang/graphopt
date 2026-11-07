@@ -52,7 +52,7 @@ from mlopt_core.cost.basic import count_cost
 from mlopt_core.ir import Const, Op, TensorType, Var
 from mlopt_core.laws import DEFAULT
 
-from . import lawdata
+from . import lawdata, meta_prior
 from . import meta_arena as ma
 
 __all__ = [
@@ -300,7 +300,7 @@ META_SPEC = DomainSpec.build(
     features=lawdata.META_ARENA_FEATURES,
     legal=ma.legal_actions,
     parts=META_PARTS,
-    weights=lawdata.META_ARENA_PLAYER_WEIGHTS,
+    weights=meta_prior.META_ARENA_PLAYER_WEIGHTS,
     lr=_LR,
 )
 
@@ -319,8 +319,10 @@ class MetaLearnedPlayer(LearnedPlayer):
     A :class:`~mlopt_discovery.players.LearnedPlayer` over
     ``meta_arena.legal_actions`` scored by :data:`META_SPEC`'s
     featurizer; *weights* defaults to the shipped trained prior
-    :data:`lawdata.META_ARENA_PLAYER_WEIGHTS` (pass ``weights={}``
-    for the uniform cold start).  ``learn=False`` freezes the policy
+    :data:`mlopt_discovery.meta_prior.META_ARENA_PLAYER_WEIGHTS`
+    (the imitation+RL bake — pass ``weights={}`` for the uniform
+    cold start, or ``lawdata.META_ARENA_PLAYER_WEIGHTS`` for the
+    older macro-move prior).  ``learn=False`` freezes the policy
     for eval; ``frozen`` returns a non-learning copy.
     """
 
@@ -341,7 +343,11 @@ class MetaLearnedPlayer(LearnedPlayer):
         re-observation is identical whether the board advanced or
         the same state was queried twice — so the drivers
         (:func:`train_player`, :func:`imitate_oracle`) reset
-        explicitly.  Upstream fix belongs in ``gamekit``.
+        explicitly.  The upstream fix has since landed in gamekit
+        (``_observe`` treats a ``steps == 0`` re-observe with a
+        non-empty played mask as a fresh board); this explicit reset
+        stays as belt-and-braces for older pins and remains the
+        honest boundary hook for callers.
         """
         self._prev_steps = -1  # forces _observe's boundary branch
 

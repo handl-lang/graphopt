@@ -837,6 +837,85 @@ def _fold_cost_gate(case: Any, handlers: dict) -> dict:
     }
 
 
+def _claim_cost_gate(case: Any) -> None:
+    """Drop minted ``gen_*`` claims that don't pay — the offer guard.
+
+    ``_zoo_case`` already filters minted handlers through
+    ``genkernel.profitable`` at intake; the synthetic ``_gen_cases``
+    stream minted every fusion site *unpriced*, so ``claim`` offers
+    included kernels that lose to their spelled body — the 0.38x /
+    0.86x regimes the genkernel retro measured.  This applies the
+    same measured-cost referee to the pointwise ``gen_*`` tier once
+    per case, mutating ``ex["gen_handlers"]`` before the board's
+    handler store is built: an unprofitable claim is never offered,
+    so extraction cannot pick it and ``claim_tags`` never names it.
+
+    Scope is every minted tier whose spelled body is an honest
+    denotation of the claim:
+
+    * ``gen_*`` pointwise fusions — the spelled spec-walk IS the
+      unfused body;
+    * ``decayed_*`` — the spelled ``matmul(mul(s, d), v)`` evaluates
+      through the ordinary bindings, so kernel-vs-spelled is the
+      same comparison the delivery ships (this is the offer that
+      lost 0.47x on twosite before the gate existed).  ``om_decayed``-
+      headed specs are excluded: that op lives in
+      ``_MEASURED_BINDINGS``, not ``_IR_TO_TORCH``, so the referee's
+      spelled side cannot evaluate them — unmeasurable stays
+      unpriced rather than silently dropped;
+    * ``scan_*`` *unrolled* compose-tree specs — their spelled eval
+      IS the carrier semantics (``hybrid_sink``'s own rule).  The
+      *sequence*-form scan specs are excluded: their spelled eval is
+      the map application, not the fold the minted op declares, so
+      ``profitable`` would grade the wrong denotation and their
+      offers stay unpriced (documented);
+    * the shipped ``prim:*`` folds already pass
+      :func:`_fold_cost_gate` on the same board build.
+
+    ``_zoo_case`` sets ``ex["_gen_claims_gated"]`` — its intake
+    ``profitable`` sweep already judged every minted tier, so the
+    board does not pay the referee twice.
+    """
+    from mlopt_discovery import genkernel as gk
+
+    ex = case[5]
+    if ex.get("_gen_claims_gated"):
+        return
+    ex["_gen_claims_gated"] = True
+
+    def measurable(tag: str, h: dict) -> bool:
+        if tag.startswith(("gen_", "decayed_")):
+            return "om_decayed" not in gk._spec_ops(h.get("pattern"))
+        return tag.startswith("scan_") and not gk._seq_scan_spec(
+            h.get("pattern")
+        )
+
+    minted = {
+        k: v for k, v in ex["gen_handlers"].items() if measurable(k, v)
+    }
+    if not minted:
+        return
+    keep = gk.profitable(
+        minted,
+        case[1],
+        _var_env(ex["ir"], ex["leaves"], ex["input"]),
+        reps=20,
+        kernel_for=_triton_kernel_for,
+    )
+    dropped = set(minted) - set(keep)
+    if not dropped:
+        return
+    ex["gen_handlers"] = {
+        k: v for k, v in ex["gen_handlers"].items() if k not in dropped
+    }
+    # reseat the delivery sink on the filtered table — the same
+    # consistency the prim fold gate maintains
+    if ex.get("sink") is not None:
+        ex["sink"] = gk.gen_sink(
+            ex["gen_handlers"], compile_kernels=False
+        )
+
+
 def _gen_board(case: Any) -> ma.MetaArena:
     """Board a gen case under its generated handler table.
 
@@ -864,6 +943,7 @@ def _gen_board(case: Any) -> ma.MetaArena:
     from mlopt_discovery import shipped_primitives as sp
 
     ex = case[5]
+    _claim_cost_gate(case)
 
     def novel(op: str) -> bool:
         return op.startswith(("claim_", "foldabs_", "gen_"))
@@ -1225,6 +1305,9 @@ def _zoo_case(wl: Any, *, dtype: str = "fp64") -> Any:
             "sink": sink,
             "handlers": dict(lawdata.HANDLERS) | genh,
             "gen_handlers": genh,
+            # intake already ran ``profitable`` over every minted
+            # tier — ``_gen_board``'s offer gate must not re-pay it
+            "_gen_claims_gated": True,
         },
     )
 

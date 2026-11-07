@@ -58,7 +58,7 @@ from gamekit.players import (
     spec_from_record,
 )
 
-from . import lawdata
+from . import lawdata, meta_prior
 from . import meta_player as mp
 from . import open_game as og
 from . import proposal as lp
@@ -364,7 +364,7 @@ OBJECTIVES: dict[str, Objective] = {
         parent=_meta_parent,
         tables={
             "cold": None,
-            "baked": lawdata.META_ARENA_PLAYER_WEIGHTS,
+            "baked": meta_prior.META_ARENA_PLAYER_WEIGHTS,
         },
         weight_names=(
             "bias",

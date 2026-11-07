@@ -251,6 +251,90 @@ class TestGenDomain:
         out = play._fold_cost_gate(case, {"tag": h})
         assert out["tag"] is h
 
+    def test_claim_cost_gate_filters_measurable_tiers(
+        self, monkeypatch
+    ):
+        # T-010 offer guard: ``_claim_cost_gate`` runs the measured
+        # ``profitable`` referee once per case over every minted
+        # claim whose spelled body is an honest denotation —
+        # ``gen_*``, spelled ``decayed_*``, and unrolled ``scan_*`` —
+        # and drops the losers before the board's handler store is
+        # built.  Sequence-form scans (spelled eval is the map, not
+        # the fold) and ``om_decayed``-headed specs (no ``_IR_TO_TORCH``
+        # binding for the spelled side) stay unpriced by design.
+        torch = pytest.importorskip("torch")
+        x = _v("x", 4, 4)
+        term = _p("mul", x, _p("relu", x))
+        case = (
+            "t",
+            term,
+            {},
+            "t",
+            frozenset(),
+            {
+                "ir": None,
+                "leaves": {},
+                "input": torch.rand(4, 4),
+                "gen_handlers": {
+                    "gen_0": {"pattern": ("mul", "X1", ("relu", "X1")),
+                              "kernel": "gen_0_k", "args": ("X1",)},
+                    "gen_1": {"pattern": ("add", "X1", "X1"),
+                              "kernel": "gen_1_k", "args": ("X1",)},
+                    "decayed_0": {
+                        "pattern": ("matmul", ("mul", "S", "D"), "V"),
+                        "kernel": "decayed_0_k",
+                        "args": ("S", "D", "V"),
+                    },
+                    "decayed_1": {
+                        "pattern": ("om_decayed", "S", "D", "V"),
+                        "kernel": "decayed_1_k",
+                        "args": ("S", "D", "V"),
+                    },
+                    "scan_0": {"pattern": ("applyd", "X1", "X2"),
+                               "kernel": "scan_0_k", "args": ("X1", "X2")},
+                    "prim:synop_x": {
+                        "pattern": ("mul", "X1", "X1"),
+                        "kernel": "synop_x",
+                        "args": ("X1",),
+                    },
+                },
+                "sink": None,
+            },
+        )
+        monkeypatch.setattr(play, "_var_env", lambda *a: {})
+        # scan_0 reads as the sequence form — its spelled eval is the
+        # map application, so the gate must not measure it
+        monkeypatch.setattr(gk, "_seq_scan_spec", lambda s: True)
+        seen = {}
+
+        def spy(hs, *a, **k):
+            seen.update(hs)
+            return {"gen_0": hs["gen_0"],
+                    "decayed_0": hs["decayed_0"]}  # keep two
+
+        monkeypatch.setattr(gk, "profitable", spy)
+        play._claim_cost_gate(case)
+        # the referee saw gen_*, spelled decayed_*, and would-be
+        # unrolled scan_* — never the seq scan, the om_decayed spec,
+        # or the shipped prim fold
+        assert set(seen) == {"gen_0", "gen_1", "decayed_0"}
+        assert set(case[5]["gen_handlers"]) == {
+            "gen_0",
+            "decayed_0",
+            "decayed_1",
+            "scan_0",
+            "prim:synop_x",
+        }
+        # idempotent: a second call does not re-consult the referee
+        monkeypatch.setattr(
+            gk,
+            "profitable",
+            lambda *a, **k: (_ for _ in ()).throw(
+                AssertionError("re-gated")
+            ),
+        )
+        play._claim_cost_gate(case)
+
     def test_spec_ops_skips_attr_dicts(self):
         spec = ("add", "X1", {"dim": 1})
         assert gk._spec_ops(spec) == {"add"}
@@ -311,6 +395,10 @@ class TestProbe:
             "gen_sink",
             lambda h, **kw: real(h, compile_kernels=False),
         )
+        # bypass the offer gate — this pins probe→deliver machinery on
+        # a fusion case; the measured gate legitimately declines
+        # mulrelu's marginal 2-op claim (see ``_claim_cost_gate``)
+        monkeypatch.setattr(play, "_claim_cost_gate", lambda case: None)
         for s in range(8):
             for c in play._gen_cases(s, 4):
                 if "mulrelu" in c[0]:

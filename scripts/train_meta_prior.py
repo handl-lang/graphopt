@@ -4,8 +4,10 @@ The sibling of ``scripts/train_open_prior.py`` for the meta board:
 trains a *cold* :class:`mlopt_discovery.meta_player.MetaLearnedPlayer`
 over a fixed case stream and prints the trained weight table as the
 Python literal that bakes into
-:data:`mlopt_discovery.lawdata.META_ARENA_PLAYER_WEIGHTS` (the
-``MetaLearnedPlayer`` default).
+:data:`mlopt_discovery.meta_prior.META_ARENA_PLAYER_WEIGHTS` (the
+``MetaLearnedPlayer`` default — the imitation+RL recipe is
+``meta_player.main --imitate-epochs``; this cold-RL script is the
+earlier bake path).
 
 The split is the registry's: train on ``meta_player.gen_cases(seed,
 n)``, evaluate on the disjoint ``gen_cases(seed + 7919, n)`` the
@@ -133,7 +135,7 @@ def _held_out(
 
 
 def _literal(table: dict[str, float]) -> str:
-    """Render the snapshot as the ``lawdata`` assignment literal."""
+    """Render the snapshot as the ``meta_prior`` assignment literal."""
     head = "META_ARENA_PLAYER_WEIGHTS: dict[str, float] = {"
     rows = "".join(
         f'\n    "{name}": {value!r},' for name, value in table.items()
