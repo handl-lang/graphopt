@@ -27,8 +27,6 @@
 
 ## Deferred
 
-- [ ] T-011 plan 0002 leftovers — Phase E recognizer consolidation (law-side e-class bindings vs lowerer-side extracted terms — substrates genuinely differ, revisit only if a shared kernel emerges); plan-dict typing stays dict-of-any.
-
 ## Tech debt to fix
 
 - [ ] T-012 Vendored probe code — copied third-party code in bench/drivers/probes/ (and bench/limits/registry.py duplicated into kernelopt during the split). Replace with a declared dep/submodule or delete if dead.
@@ -36,7 +34,7 @@
 - [ ] T-014 Pinned test counts — tests asserting literal rule/law/bank counts ( test\_prior\_art , test\_laws\_structure totals, AGENTS.md counts). Replace with derived counts or invariant-based assertions so bank growth doesn't churn tests.
 - [ ] T-015 radon baseline — bilinear\_game.py flagged on clean main; regenerate scripts/complexity\_baseline.json or justify.
 - [ ] T-017 fragment-tower migration — local plan in project/plans/0033-fragment-tower.md + host ADR-0157; phases 0–5 (fragment dir → differential backend → denotations as models → fragment-emitting mint → fragment-move play → handl-native saturation).
-- [ ] T-016 synop real delivery \* — docs/reports/prim\_delivery.md measured: folds compress terms (6993→4353 ops on GLA-large) but the spec-walk binding ( genkernel.\_eval\_spec ) loses to spelled eager wall-clock on every clean case; the cost-model 0.5–0.8× pay is not delivered. Real delivery needs a fused-body codegen path for minted ops, not a spec interpreter. First step, measured 2026-10-27: the mint does register its ops ( mlopt\_kernel.sink.\_table() 84→86, ksynop\_9e3cb9a03a , ksynop\_efc263c3dd ), but the zoo sweep's delivery path is play.gen\_probe → \_gen\_board(case) and that board's bank comes from genkernel — it never reads the sink table. Teach \_gen\_board to merge the minted ksynop\_\* folds into its bank, then re-sweep the 46 losing zoo rows (median 0.979×). · status:in-progress
+- [ ] T-016 synop real delivery \* — docs/reports/prim\_delivery.md measured: folds compress terms (6993→4353 ops on GLA-large) but the spec-walk binding ( genkernel.\_eval\_spec ) loses to spelled eager wall-clock on every clean case; the cost-model 0.5–0.8× pay is not delivered. Real delivery needs a fused-body codegen path for minted ops, not a spec interpreter. First step, measured 2026-10-27: the mint does register its ops ( mlopt\_kernel.sink.\_table() 84→86, ksynop\_9e3cb9a03a , ksynop\_efc263c3dd ), but the zoo sweep's delivery path is play.gen\_probe → \_gen\_board(case) and that board's bank comes from genkernel — it never reads the sink table. Teach \_gen\_board to merge the minted ksynop\_\* folds into its bank, then re-sweep the 46 losing zoo rows (median 0.979×). · status:in-progress · note:2026-11-07 update — fused Triton path landed (p26) + strided-load fix (p29 §3) — broadcast materialization removed; honest boundary measured: elementwise prim folds pay iff output ≳0.5M elems fp64, all zoo sites are 256–32k → gate refuses them; attr-metavar prims still lose via compiled spec-walk (needs unrolled codegen). Also fixed referee contamination: profitable now drains inductor compile workers before timing. OPEN: fp32 loser re-sweep; attr-metavar codegen path.
 
 ## Recovered — session 1792950048869\_3wjyq (generated-kernel claims)
 
