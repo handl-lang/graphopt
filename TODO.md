@@ -2,6 +2,8 @@
 
 ## title: TODO type: task date: 2026-09-26
 
+- [ ] T-024 Scan-carrier claims mint unevaluable on CUDA — applyd specs embed host-pinned zeros op; spelled eval AND generated binding raise mixed-device bmm/shape (32 referee consults, both dtypes). Harvest-fidelity fix in \_scan\_sites: decline or re-base specs embedding device-pinned const ops. Surfaced by triton\_binding\_audit (T-018); masked today because profitable declines them. · created:2026-11-07
+
 ## HIGH — ADR-0159: dissolve the optimizer domains into ext tools
 
 ## Adopted on three triggers, not a date ( host/project/adrs/0159-… ):
