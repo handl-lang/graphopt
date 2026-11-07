@@ -39,7 +39,6 @@
 
 ## Recovered — session 1792950048869\_3wjyq (generated-kernel claims)
 
-- [ ] T-018 Instrument why \_triton\_kernel\_for never binds — 8/8 on the 4 claim-bearing workloads; log kernels attempted/rejected/why, both dtypes. If the Triton path silently never fires, the "generated kernel beats spelled" claim has no measurement.
 - [ ] T-019 Fold cost gate in profitable — two measured misses justify it: RMSNormPerHead fp64 0.21×, SigmoidAttention fp32 0.72×.
 - [ ] T-020 9-round re-measure of the 5 straddlers — CapsuleRouting fp64; WaveNetGate , HyenaLongConv , SkipInitNet , DilatedBlockAttention fp32.
 - [ ] T-021 Fold the fp32 sweep into the default driver path / CI table — so the quoted number can't drift back to the fp64 convention.
