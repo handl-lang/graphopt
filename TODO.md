@@ -12,8 +12,6 @@
 
 ## HIGH — M1: the machine finds the kernel, not me (five items, ~5 days)
 
-- [ ] T-008 Search driver in kernelopt : enumerate Term s → gate → roofline bound → deploy-referee measure → best kernel + routing row
-
 ## Done — 2026-10-27 (kernel margin, valid)
 
 ## Active — HIGH PRIORITY (the open questions, post-plan-0032)
