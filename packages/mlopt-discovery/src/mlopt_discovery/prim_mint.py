@@ -77,13 +77,19 @@ __all__ = [
     "expand_synops",
     "freeze_spec",
     "make_denotation",
+    "merge_shipped",
+    "minted_prim_record",
     "modules_bound",
     "op_subterms",
     "pat_ops",
     "pat_spec",
     "prim_domain",
+    "prim_fold_of",
     "prim_pool",
     "register_denotation",
+    "seat_shipped",
+    "shipped_from_records",
+    "shipped_from_vocab",
     "spec_bind",
     "sub_alphas",
     "synop_depth",
@@ -168,6 +174,205 @@ def core_shipped() -> ShippedPrims:
             fold_for=minted.prim_fold,
         )
     return _CORE_SHIPPED
+
+
+def prim_fold_of(name: str, rec: dict) -> tuple[Rewrite, Rewrite]:
+    """Build ``(fold, expand)`` for one prim *record* — any source.
+
+    The record-generic twin of ``mlopt_core.laws.minted.prim_fold``:
+    ``minted`` materializes the core-embedded records; this rebuilds
+    the same pair from a ``prims.yaml``-shaped record dict — the
+    shape ``vocabdir.emit_prim`` writes and ``vocab.prims`` loads.
+    The fold restores through ``object_from_data`` and gets the
+    shipped integration fields (``FUSION`` tag, fold law text,
+    premise attached); a record embedding ``"expand"`` uses it
+    verbatim (depth-2+: the premise RHS is the *expanded* manual
+    denotation, checked against the fold's own call), a depth-1
+    record's premise is synthesized as ``call -> fold.lhs``.  The
+    op's ``op_def`` declaration registers with the fold — the same
+    side effect ``minted.prim_fold`` has.  Results are memoized per
+    ``(name, record identity)`` — records are treated as immutable.
+    """
+    key = (name, id(rec))
+    hit = _FOLD_OF_MEMO.get(key)
+    if hit is not None:
+        return hit
+    from mlopt_core.laws import minted, tags
+    from mlopt_core.laws.serialize import object_from_data
+
+    fold = object_from_data(rec["fold"])
+    if "expand" in rec:
+        ex = object_from_data(rec["expand"])
+        if ex.lhs != fold.rhs:
+            raise ValueError(
+                f"prim record {name!r} embeds an expand premise "
+                f"whose LHS is not the fold's own call — a "
+                f"mismatched axiom would anchor nothing"
+            )
+        denotation = ex.rhs
+    else:
+        denotation = fold.lhs
+    expand = Rewrite(
+        minted.expand_name(name),
+        fold.rhs,
+        denotation,
+        law=minted._PRIM_EXPAND_LAW.format(synop=name),
+        tags=frozenset({tags.SIMPLIFICATION}),
+    )
+    out = Rewrite(
+        name=fold.name,
+        lhs=fold.lhs,
+        rhs=fold.rhs,
+        law=minted._PRIM_FOLD_LAW.format(synop=name),
+        tags=frozenset({tags.FUSION}),
+        error_bound=fold.error_bound,
+        bound_norm=fold.bound_norm,
+        derivation=fold.derivation,
+        cond=fold.cond,
+        dspec=fold.dspec,
+    )
+    object.__setattr__(out, "premises", (expand,))
+    op_def(
+        name,
+        len(fold.rhs.args),
+        1,
+        law=(
+            "synthesized primitive — denotation is the mined manual "
+            f"subgraph {rec.get('alpha', '')}"
+        ),
+    )
+    _FOLD_OF_MEMO[key] = (out, expand)
+    return _FOLD_OF_MEMO[key]
+
+
+_FOLD_OF_MEMO: dict = {}
+
+
+def shipped_from_records(records: dict) -> ShippedPrims:
+    """Build a :class:`ShippedPrims` table from ``{name: record}``.
+
+    The record-generic ``core_shipped``: *records* is the
+    ``prims.yaml`` shape — ``mlopt_core.laws.minted.prim_records()``
+    or a fragment directory's ``vocab.prims`` (which carries the
+    shipped records verbatim plus whatever the mint emitted since).
+    Folds/premises rebuild through :func:`prim_fold_of`.
+    """
+    table: dict[str, tuple] = {}
+    folds: list = []
+    for name in sorted(records):
+        fold, expand = prim_fold_of(name, records[name])
+        table[name] = (fold, expand)
+        folds.append(fold)
+    return ShippedPrims(
+        names=frozenset(records),
+        folds=tuple(folds),
+        fold_for=table.__getitem__,
+    )
+
+
+def shipped_from_vocab(vocab: Any) -> ShippedPrims:
+    """Build the shipped-primitive table a ``Vocab`` carries.
+
+    ``vocab.prims`` is the directory's prim-record map — the shipped
+    ``synop*`` set plus every prim the mint has emitted into the
+    directory since (plan 0033 phase 3: emitted vocab re-enters the
+    next mint's search space by construction).
+    """
+    return shipped_from_records(dict(vocab.prims))
+
+
+def merge_shipped(*tables: ShippedPrims) -> ShippedPrims:
+    """Union ``ShippedPrims`` tables — later tables win name clashes.
+
+    The vocab bootstrap's ambient table: the core-shipped set plus
+    whatever the fragment directory carries that core does not (a
+    same-named record is identical by construction — content-hash
+    names — so the merge order only decides which object serves).
+    """
+    names: set = set()
+    folds: dict = {}
+    fold_for: dict = {}
+    for t in tables:
+        names |= set(t.names)
+        for f in t.folds:
+            folds.setdefault(f.name, f)
+        for n in t.names:
+            fold_for[n] = t.fold_for(n)
+    return ShippedPrims(
+        names=frozenset(names),
+        folds=tuple(folds.values()),
+        fold_for=fold_for.__getitem__,
+    )
+
+
+def seat_shipped(
+    shipped: ShippedPrims,
+    bindings: dict,
+    *,
+    names: Any = None,
+) -> int:
+    """Seat shipped synop denotations onto *bindings*; return count.
+
+    The generic bootstrap seater for tables ``register_shipped``
+    does not know — a vocab-loaded table's extra prims.  Only names
+    missing from *bindings* register (a domain's own seater keeps
+    precedence); *names* optionally restricts the seated subset
+    (``None`` seats everything missing).  Each registration is
+    :func:`register_denotation` over the fold's call/denotation
+    patterns — the same mechanism the mint uses at emit time.
+    """
+    seated = 0
+    for name in shipped.names:
+        if names is not None and name not in names:
+            continue
+        if name in bindings:
+            continue
+        fold, expand = shipped.fold_for(name)
+        register_denotation(name, fold.rhs, expand.rhs, bindings)
+        seated += 1
+    return seated
+
+
+def minted_prim_record(name: str, rule: Rewrite, prim: dict) -> dict:
+    """Build the ``prims.yaml`` record for one pooled mint.
+
+    *rule* is the candidate's fold ``Rewrite`` (``prim:<name>`` with
+    its ``.expand`` premise attached); *prim* is the pool's per-shape
+    record (``meta[i]["prim"]`` — ``synop``/``alpha``/``depth``/
+    ``mods``/``sites``/``equal_sites``/``handler`` plus the depth-N
+    ``alpha_fold``/``embeds_shipped``/``embeds`` fields).  The result
+    is the shipped-record shape ``vocabdir.emit_prim`` /
+    ``collect_prims`` carry: ``fold``/``expand`` as ``law_to_data``
+    records, the mint's measurements verbatim.
+    """
+    from mlopt_core.laws.serialize import law_to_data
+
+    rec: dict[str, Any] = {
+        "alpha": prim["alpha"],
+        "mods": list(prim["mods"]),
+        "sites": prim["sites"],
+        "equal_sites": prim["equal_sites"],
+        "handler": prim["handler"],
+        "fold": law_to_data(rule),
+    }
+    for key in (
+        "depth",
+        "ops",
+        "opset",
+        "alpha_fold",
+        "embeds_shipped",
+        "embeds",
+    ):
+        if key in prim:
+            rec[key] = prim[key]
+    premises = getattr(rule, "premises", ()) or ()
+    # depth-1 mints omit ``expand`` — the premise is derivable as
+    # ``call -> fold.lhs`` (the shipped records' own convention);
+    # deeper tiers embed it verbatim because the premise RHS is the
+    # *expanded* manual denotation, not the synop-carrying LHS.
+    if prim.get("depth", 1) > 1 and premises:
+        rec["expand"] = law_to_data(premises[0])
+    return rec
 
 
 def synop_depth(op: str) -> int:
@@ -506,6 +711,289 @@ def prim_domain(sites: list, cap: int) -> list:
 # ---------------------------------------------------------------------------
 
 
+def _vocab_fragments(
+    vocab_dir: Any, shipped: ShippedPrims, denoted: frozenset
+) -> tuple:
+    """Load a fragment directory into the pool's mint inputs.
+
+    Phase 3 (plan 0033): the directory's ``prims.yaml`` joins the
+    shipped table (:func:`merge_shipped` + :func:`shipped_from_vocab`
+    — a prim the mint emitted last round is a mintable atom this
+    round), its ``prim:*`` folds and record alphas join the *denoted*
+    gate (an already-vocab'd shape is named, not re-minted), and its
+    ``families.minted_families`` rows decode into ``extra_families``
+    for the handler grammar.  Returns ``(shipped, denoted,
+    extra_names, extra_families)`` — *extra_names* is the subset the
+    domain's own seater cannot know (the bootstrap seats just those).
+    """
+    from mlopt_discovery import vocabdir as _vd
+
+    frag = _vd.load_vocab(vocab_dir, fresh=True)
+    vocab_table = shipped_from_vocab(frag)
+    extra_names = frozenset(set(vocab_table.names) - set(shipped.names))
+    shipped = merge_shipped(shipped, vocab_table)
+    extra_families = _vd.vocab_extra_families(frag)
+    prim_folds = [r for r in frag.laws if r.name.startswith("prim:")]
+    # The gate compares the *expanded manual* alpha (``xnorm``);
+    # a depth-N record's fold LHS is the synop-carrying skeleton,
+    # so the record's own ``alpha`` field — the mined spelling —
+    # is the honest denoted key, with the fold LHSes alongside.
+    prim_alphas = {
+        rec["alpha"] for rec in frag.prims.values() if rec.get("alpha")
+    }
+    if prim_folds or prim_alphas:
+        denoted = (
+            denoted
+            | denoted_alphas(prim_folds)
+            | frozenset(prim_alphas)
+        )
+    return shipped, denoted, extra_names, extra_families
+
+
+def _family_retry(
+    name: str,
+    item: dict,
+    rep: dict,
+    handlers: dict,
+    *,
+    budget: int,
+    base_extra_families: tuple,
+    family_rows: list,
+    stats: dict,
+    hb: dict,
+) -> tuple:
+    """Run the refused-spec meta-loop: mint a family, retry the body.
+
+    ``family_synth.mint_families`` enumerates the descriptor space
+    over the spec's movable ops and fp64-verifies on the same
+    bound-site domain; survivors inject as ``extra_families`` for a
+    second ``mint_handlers`` pass.  Returns ``(rep, handlers,
+    fam_names, fam_retry)`` — *fam_retry* is the retry's own report
+    row (or the ``no-family`` wall record).
+    """
+    from mlopt_discovery import family_synth as _fs
+    from mlopt_discovery.handler_synth import mint_handlers
+
+    fams, frep = _fs.mint_families([item], bindings=hb)
+    fam_names = [f["name"] for f in fams]
+    if not fams:
+        stats["families_refused"] += 1
+        return (
+            rep,
+            handlers,
+            fam_names,
+            {
+                "verdict": "no-family",
+                "searched": frep["searched"],
+                "budget": frep["budget"],
+            },
+        )
+    stats["families_minted"] += 1
+    seen_fam = {f["name"] for f in base_extra_families}
+    retry_fams = list(base_extra_families) + [
+        f for f in fams if f["name"] not in seen_fam
+    ]
+    for f in fams:
+        family_rows.append({**_fs.family_record(f), "covers": [name]})
+    _h2, rep2 = mint_handlers(
+        [item],
+        budget=budget,
+        extra_families=tuple(retry_fams),
+        bindings=hb,
+    )
+    fam_retry = rep2[0]
+    if fam_retry["verdict"] == "minted":
+        return fam_retry, _h2, fam_names, fam_retry
+    return rep, handlers, fam_names, fam_retry
+
+
+def _refused_handler_row(
+    name: str,
+    item: dict,
+    rep: dict,
+    *,
+    fam_names: list,
+    fam_retry: dict | None,
+) -> dict:
+    """Build the prim record's ``handler`` row for a refused shape.
+
+    Carries the frozen spec + measured bound-site domain the refusal
+    ran against — the row reproduces offline — plus the meta-loop's
+    own accounting (``family_minted`` / ``retry`` /
+    ``family_refused``).
+    """
+    hrow = {
+        "verdict": "refused",
+        "tried": rep.get("tried"),
+        "note": rep.get("note"),
+        # inf means every tried candidate raised or shape-mismatched
+        # — serialized as a string so the report JSON stays strict.
+        "best_err": (
+            rep.get("best_err")
+            if rep.get("best_err") != float("inf")
+            else "inf"
+        ),
+        "spec": rep.get("spec"),
+        "domain": item["domain"],
+    }
+    if fam_names:
+        # descriptors minted but no injected body verified — the
+        # family exists, the body wall stands; the retry's own
+        # refusal rides along.
+        retry = fam_retry or {}
+        hrow["family_minted"] = ",".join(fam_names)
+        hrow["retry"] = {
+            "verdict": retry.get("verdict"),
+            "tried": retry.get("tried"),
+            "note": retry.get("note"),
+        }
+    elif fam_retry is not None:
+        hrow["family_refused"] = (
+            "no family verified within "
+            f"budget={fam_retry['budget']} "
+            f"(searched {fam_retry['searched']})"
+        )
+    return hrow
+
+
+def _refusal_ledger_row(name: str, item: dict, hrow: dict) -> dict:
+    """Build the ``families.yaml`` refused-spec row for one shape.
+
+    Refused-spec analysis (plan 0033 phase 3): the refusal is itself
+    vocabulary data — the ledger row carries the frozen spec +
+    measured domain so a later mint or audit can replay the wall.
+    """
+    return {
+        "key": name,
+        "op": name,
+        "spec": item["spec"],
+        "domain": item["domain"],
+        "verdict": "refused",
+        "tried": hrow.get("tried"),
+        "best_err": hrow.get("best_err"),
+        "note": hrow.get("note"),
+        "family_minted": hrow.get("family_minted"),
+        "family_refused": hrow.get("family_refused"),
+        "retry": hrow.get("retry"),
+    }
+
+
+def _pool_handler_row(
+    name: str,
+    item: dict,
+    *,
+    budget: int,
+    family_mint: bool,
+    base_extra_families: tuple,
+    family_rows: list,
+    refusal_rows: list,
+    stats: dict,
+    hb: dict,
+) -> dict:
+    """Run the handler-grammar stage for one gated shape.
+
+    ``mint_handlers`` on the measured ``(spec, domain)`` pair; a
+    refusal under *family_mint* feeds ``family_synth.mint_families``
+    and retries with the survivors injected — the meta-loop.  The
+    returned row is the prim record's ``handler`` field; minted
+    family descriptors append to *family_rows* and a surviving
+    refusal appends its replayable ledger row to *refusal_rows*
+    (consumed only when ``vocab_dir`` emission is on).
+    """
+    from mlopt_discovery.handler_synth import (
+        handler_record,
+        mint_handlers,
+    )
+
+    _handlers, report = mint_handlers(
+        [item],
+        budget=budget,
+        extra_families=base_extra_families or None,
+        bindings=hb,
+    )
+    rep = report[0]
+    fam_names: list[str] = []
+    fam_retry: dict | None = None
+    if rep["verdict"] == "refused" and family_mint:
+        rep, _handlers, fam_names, fam_retry = _family_retry(
+            name,
+            item,
+            rep,
+            _handlers,
+            budget=budget,
+            base_extra_families=base_extra_families,
+            family_rows=family_rows,
+            stats=stats,
+            hb=hb,
+        )
+    if rep["verdict"] == "minted":
+        stats["minted"] += 1
+        tag = rep["tag"]
+        hrow = {
+            "verdict": "minted",
+            "family": rep["family"],
+            "tried": rep["tried"],
+            "max_err": rep["max_err"],
+            "record": handler_record(tag, _handlers[tag]),
+        }
+        if fam_names:
+            # the meta-loop carried this shape: the minted descriptor
+            # that won the retry (a shipped body winning instead is
+            # recorded, not credited).
+            hrow["family_minted"] = (
+                rep["family"].split(":", 1)[1]
+                if rep["family"].startswith("family:")
+                else ",".join(fam_names)
+            )
+        return hrow
+    stats["refused"] += 1
+    hrow = _refused_handler_row(
+        name, item, rep, fam_names=fam_names, fam_retry=fam_retry
+    )
+    refusal_rows.append(_refusal_ledger_row(name, item, hrow))
+    return hrow
+
+
+def _emit_pool_fragments(
+    vocab_dir: Any,
+    cands: list,
+    meta: dict,
+    *,
+    family_rows: list,
+    refusal_rows: list,
+    stats: dict,
+) -> None:
+    """Write the pool's fragments back to *vocab_dir* (phase 3).
+
+    Every pooled mint emits op row + fold law + handler + prim
+    record + denotation/handler Models + ``fold:<name>`` schema via
+    one batched :func:`vocabdir.emit_prims`; the minted-family
+    descriptors and refused-spec ledger rows land in
+    ``families.yaml`` through :func:`vocabdir.emit_family_rows`.
+    """
+    from mlopt_discovery import vocabdir as _vd
+
+    emit_items = [
+        (
+            meta[i]["prim"]["synop"],
+            minted_prim_record(
+                meta[i]["prim"]["synop"],
+                cand.as_rule(),
+                meta[i]["prim"],
+            ),
+        )
+        for i, cand in enumerate(cands)
+    ]
+    _vd.emit_prims(vocab_dir, emit_items)
+    if family_rows or refusal_rows:
+        _vd.emit_family_rows(
+            vocab_dir, families=family_rows, refusals=refusal_rows
+        )
+    stats["vocab_emitted"] = len(emit_items)
+    stats["vocab_families"] = len(family_rows)
+    stats["vocab_refusals"] = len(refusal_rows)
+
+
 def prim_pool(
     roots: dict,
     k: int,
@@ -530,6 +1018,8 @@ def prim_pool(
     family_mint: bool = True,
     depth: int = PRIM_DEPTH,
     vocab: bool = True,
+    vocab_dir: Any = None,
+    emit_vocabulary: bool = True,
 ) -> tuple:
     """Return the primitive-mint pool: ``(candidates, meta, stats)``.
 
@@ -622,20 +1112,44 @@ def prim_pool(
     ``families_minted`` / ``families_refused`` count the stage in
     the pool funnel.
 
+    ``vocab_dir`` is the phase-3 fragment loop (plan 0033): when set,
+    the directory's ``prims.yaml`` joins the shipped table
+    (:func:`merge_shipped` + :func:`shipped_from_vocab` — a prim the
+    mint emitted last round is a mintable atom this round), its
+    ``prim:*`` folds join the *denoted* gate (an already-vocab'd
+    shape is named, not re-minted), and its ``families.minted_families``
+    rows seed ``extra_families`` for the handler grammar.  With
+    *emit_vocabulary* (default) every pooled mint then writes its
+    fragments back — op + fold law + handler + prim record +
+    denotation/handler Models + ``fold:`` schema — through
+    ``vocabdir.emit_prims``, plus the minted-family descriptors and
+    refused-spec ledger rows into ``families.yaml``.  ``vocab_dir=None``
+    is the pre-phase-3 behaviour: measure only, write nothing.
+
     Post-mint, ``nested`` records the loop-closure measurement:
     every pooled shape whose own proper subterm alpha-matches
     another minted synop's denotation — the cheap read on whether
     mining over a synop-aware corpus would compose.
     """
-    from mlopt_discovery import family_synth as _fs
-    from mlopt_discovery.handler_synth import (
-        handler_record,
-        mint_handlers,
-    )
     from mlopt_discovery.pipeline import Proposal
 
     hb = bindings if handler_bindings is None else handler_bindings
     shipped = core_shipped() if shipped is None else shipped
+    # Phase 3 (plan 0033): the fragment directory is vocabulary data —
+    # its prims join the shipped table, its ``prim:*`` folds join the
+    # denoted gate, its minted families seed the handler grammar, and
+    # the pool's output emits back as fragments.
+    vocab_extra_names: frozenset = frozenset()
+    base_extra_families: tuple = ()
+    family_rows: list = []
+    refusal_rows: list = []
+    if vocab_dir is not None:
+        (
+            shipped,
+            denoted,
+            vocab_extra_names,
+            base_extra_families,
+        ) = _vocab_fragments(vocab_dir, shipped, denoted)
     subs_by_mod = op_subterms(roots)
     all_subs = [s for subs in subs_by_mod.values() for s in subs]
     eg = EGraph()
@@ -649,6 +1163,11 @@ def prim_pool(
             # gate's eval and every sink reading the table see the
             # composed spelling end-to-end.
             register_shipped()
+        if vocab_extra_names:
+            # the directory's own prims — ``register_shipped`` only
+            # knows the domain's shipped table; seat just the extras
+            # it cannot (missing names only, domain seater wins).
+            seat_shipped(shipped, bindings, names=vocab_extra_names)
         eg.rebuild()
         # A deeper tier's fold LHS is a skeleton over ``synop(N-1)_*``
         # enodes — it can only match once the tier below seated — so
@@ -826,103 +1345,25 @@ def prim_pool(
             stats["gate_failed"] += 1
             continue
         domain = prim_domain(sites, domain_cap)
-        hrow: dict[str, Any] = {"verdict": "skipped-no-domain"}
         if not domain:
             stats["no_domain"] += 1
+            hrow: dict[str, Any] = {"verdict": "skipped-no-domain"}
         else:
             item = {
                 "spec": freeze_spec(spec, sites[0][0], cand.attr_mvars),
                 "domain": domain,
             }
-            _handlers, report = mint_handlers(
-                [item], budget=budget, bindings=hb
+            hrow = _pool_handler_row(
+                name,
+                item,
+                budget=budget,
+                family_mint=family_mint,
+                base_extra_families=base_extra_families,
+                family_rows=family_rows,
+                refusal_rows=refusal_rows,
+                stats=stats,
+                hb=hb,
             )
-            rep = report[0]
-            fam_names: list[str] = []
-            fam_retry: dict | None = None
-            if rep["verdict"] == "refused" and family_mint:
-                # the meta-loop: the refused spec class mints its
-                # own family — mint_families enumerates the
-                # descriptor space over the spec's movable ops and
-                # fp64-verifies on the same bound-site domain, then
-                # the body mint retries with the survivors injected
-                # as extra_families.
-                fams, frep = _fs.mint_families([item], bindings=hb)
-                fam_names = [f["name"] for f in fams]
-                if fams:
-                    stats["families_minted"] += 1
-                    _h2, rep2 = mint_handlers(
-                        [item],
-                        budget=budget,
-                        extra_families=tuple(fams),
-                        bindings=hb,
-                    )
-                    fam_retry = rep2[0]
-                    if fam_retry["verdict"] == "minted":
-                        rep, _handlers = fam_retry, _h2
-                else:
-                    stats["families_refused"] += 1
-                    fam_retry = {
-                        "verdict": "no-family",
-                        "searched": frep["searched"],
-                        "budget": frep["budget"],
-                    }
-            if rep["verdict"] == "minted":
-                stats["minted"] += 1
-                tag = rep["tag"]
-                hrow = {
-                    "verdict": "minted",
-                    "family": rep["family"],
-                    "tried": rep["tried"],
-                    "max_err": rep["max_err"],
-                    "record": handler_record(tag, _handlers[tag]),
-                }
-                if fam_names:
-                    # the meta-loop carried this shape: the minted
-                    # descriptor that won the retry (a shipped body
-                    # winning instead is recorded, not credited).
-                    hrow["family_minted"] = (
-                        rep["family"].split(":", 1)[1]
-                        if rep["family"].startswith("family:")
-                        else ",".join(fam_names)
-                    )
-            else:
-                stats["refused"] += 1
-                hrow = {
-                    "verdict": "refused",
-                    "tried": rep.get("tried"),
-                    "note": rep.get("note"),
-                    # inf means every tried candidate raised or
-                    # shape-mismatched — serialized as a string so
-                    # the report JSON stays strict.
-                    "best_err": (
-                        rep.get("best_err")
-                        if rep.get("best_err") != float("inf")
-                        else "inf"
-                    ),
-                    # the frozen body + bound-site domain the
-                    # refusal measured against — the row reproduces
-                    # offline.
-                    "spec": rep.get("spec"),
-                    "domain": domain,
-                }
-                if fam_names:
-                    # descriptors minted but no injected body
-                    # verified — the family exists, the body wall
-                    # stands; the retry's own refusal rides along.
-                    retry = fam_retry or {}
-                    hrow["family_minted"] = ",".join(fam_names)
-                    hrow["retry"] = {
-                        "verdict": retry.get("verdict"),
-                        "tried": retry.get("tried"),
-                        "note": retry.get("note"),
-                    }
-                elif fam_retry is not None:
-                    hrow["family_refused"] = (
-                        "no family verified within "
-                        f"budget={fam_retry['budget']} "
-                        f"(searched {fam_retry['searched']})"
-                    )
         # the definitional premise: the cert leg's anchored axiom
         # set unions it when the bare bank cannot derive the fold —
         # the fusion-schema mint's own channel for a denotation the
@@ -1037,4 +1478,13 @@ def prim_pool(
             stats["nested"].append(
                 {"outer": p["synop"], "inner": embeds}
             )
+    if vocab_dir is not None and emit_vocabulary and cands:
+        _emit_pool_fragments(
+            vocab_dir,
+            cands,
+            meta,
+            family_rows=family_rows,
+            refusal_rows=refusal_rows,
+            stats=stats,
+        )
     return cands, meta, stats

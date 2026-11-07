@@ -15,6 +15,8 @@ those in ``test_overnight.TestCorpusZooPrim``).
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 torch = pytest.importorskip("torch")
@@ -293,3 +295,176 @@ class TestPoolHooks:
         assert calls == ["reg"]
         assert stats["bootstrap"] is True
         assert stats["synop_passes"] >= 1
+
+
+class TestRecordTables:
+    """Phase-3 record/table helpers — vocab fragments as shipped data."""
+
+    def test_shipped_from_records_matches_core(self):
+        """``prims.yaml``-shaped records rebuild the core table."""
+        from mlopt_core.laws import minted
+
+        table = pm.shipped_from_records(minted.prim_records())
+        assert table.names == minted.SYNOP_SHIPPED
+        # every premise RHS is the FULL manual denotation — no
+        # synop survives the unfold, at any tier.
+        for name in table.names:
+            fold, expand = table.fold_for(name)
+            assert fold.rhs.op == name
+            assert not any(
+                o.startswith("synop")
+                for o in pm.pat_ops(expand.rhs)
+            )
+
+    def test_merge_shipped_unions_and_prefers_later(self):
+        """``merge_shipped`` unions names; later tables win clashes."""
+        from mlopt_core.laws import minted
+
+        core = pm.core_shipped()
+        vocab = pm.shipped_from_records(minted.prim_records())
+        merged = pm.merge_shipped(core, vocab)
+        assert merged.names == core.names | vocab.names
+
+    def test_seat_shipped_fills_only_missing(self):
+        """The generic seater respects a domain's own bindings."""
+        from mlopt_core.laws import minted
+
+        table = pm.shipped_from_records(minted.prim_records())
+        name = sorted(table.names)[0]
+        bindings = {name: "domain-owned", "mul": torch.mul}
+        seated = pm.seat_shipped(table, bindings)
+        assert seated == len(table.names) - 1
+        assert bindings[name] == "domain-owned"
+        others = [n for n in table.names if n != name]
+        assert all(bindings[n] is not None for n in others)
+
+    def test_prim_fold_of_matches_minted_for_shipped(self):
+        """The record-generic fold twin agrees with ``minted.prim_fold``."""
+        from mlopt_core.laws import minted
+
+        name = sorted(
+            minted.SYNOP_SHIPPED - minted.SYNOP2_SHIPPED
+        )[0]
+        fold, expand = pm.prim_fold_of(
+            name, minted.prim_records()[name]
+        )
+        mfold, mexpand = minted.prim_fold(name)
+        assert fold.lhs == mfold.lhs and fold.rhs == mfold.rhs
+        assert expand.lhs == mexpand.lhs and expand.rhs == mexpand.rhs
+
+    def test_minted_prim_record_carries_expand_only_when_deep(self):
+        """Depth-1 records omit ``expand``; deeper tiers embed it."""
+        pat = Op.make("mul", "a", Op.make("sigmoid", "b"))
+        call = Op.make("ksynop_x", "a", "b")
+        expand = Rewrite("ksynop_x.expand", call, pat)
+        rule = Rewrite("prim:ksynop_x", pat, call)
+        object.__setattr__(rule, "premises", (expand,))
+        prim = {
+            "alpha": "(mul a (sigmoid b))",
+            "depth": 1,
+            "mods": ["m1"],
+            "sites": 2,
+            "equal_sites": 2,
+            "handler": {"verdict": "refused"},
+        }
+        rec = pm.minted_prim_record("ksynop_x", rule, prim)
+        assert "expand" not in rec
+        assert rec["fold"]["name"] == "prim:ksynop_x"
+        deep = dict(prim, depth=2)
+        rec2 = pm.minted_prim_record("ksynop2_x", rule, deep)
+        assert rec2["expand"]["name"] == "ksynop_x.expand"
+
+
+class TestVocabDirLoop:
+    """Plan 0033 phase 3 — mint → emit → reload → remint.
+
+    The fragment directory is the loop's memory: round 1 mints a
+    depth-1 primitive into a scratch ``vocab/`` copy; round 2 loads
+    that directory, seats the emitted prim's fold, and mints a
+    ``ksynop2_*`` — a primitive composed over the vocabulary the
+    first round wrote.  Stub hooks keep the funnel honest (the
+    eval gate is measured, the handler grammar refuses on stub
+    bindings — which itself exercises the refused-spec emission).
+    """
+
+    def _vocab_copy(self, tmp_path):
+        import shutil
+
+        dst = tmp_path / "vocab"
+        shutil.copytree(
+            Path(__file__).resolve().parents[1] / "vocab", dst
+        )
+        return dst
+
+    @staticmethod
+    def _zx_zy_zw():
+        return {
+            "zx": lambda *a, **k: None,
+            "zy": lambda *a, **k: None,
+            "zw": lambda *a, **k: None,
+        }
+
+    def _pool(self, roots, vocab_dir, **kw):
+        args = {
+            "bindings": self._zx_zy_zw(),
+            "eval_pair": lambda a, b: "equal",
+            "denoted": frozenset(),
+            "prefix": "ksynop",
+            "family_mint": False,
+            "budget": 32,
+            "vocab_dir": vocab_dir,
+        }
+        args.update(kw)
+        return pm.prim_pool(roots, 2, **args)
+
+    def test_emit_then_remint_mints_depth2(self, tmp_path):
+        """Round 1 emits fragments; round 2 composes over them."""
+        from mlopt_discovery import vocabdir
+
+        vdir = self._vocab_copy(tmp_path)
+        # round 1 — a depth-1 mint over a shape the bank never named.
+        r1 = {
+            "m1": Op.make("zx", _v("x"), Op.make("zy", _v("y"))),
+            "m2": Op.make("zx", _v("p"), Op.make("zy", _v("q"))),
+        }
+        _c1, meta1, s1 = self._pool(r1, vdir)
+        d1 = [m["prim"]["synop"] for m in meta1.values()]
+        assert d1 and all(n.startswith("ksynop_") for n in d1)
+        assert s1["vocab_emitted"] == len(d1)
+        # the fragments landed: prim record, fold law, schema, op row.
+        v = vocabdir.load_vocab(vdir, fresh=True)
+        for n in d1:
+            assert n in v.prims
+            assert f"prim:{n}" in v.laws_by_name()
+            assert f"fold:{n}" in {r.name for r in v.schemas}
+        # the refused handler spec is vocabulary too.
+        assert v.families.get("refused_specs")
+        assert vocabdir.check_vocab(vdir) == []
+
+        # round 2 — the emitted prim is a mintable atom: a larger
+        # shared shape seats its fold and mints a depth-2 primitive.
+        inner = lambda a, b: Op.make(  # noqa: E731
+            "zx", a, Op.make("zy", b)
+        )
+        r2 = {
+            "m1": Op.make("zw", inner(_v("x"), _v("y")), _v("w")),
+            "m2": Op.make("zw", inner(_v("p"), _v("q")), _v("u")),
+        }
+        _c2, meta2, s2 = self._pool(
+            r2, vdir, bootstrap=True, depth=3
+        )
+        d2 = [
+            m["prim"]
+            for m in meta2.values()
+            if m["prim"]["depth"] == 2
+        ]
+        assert d2, "no depth-2 mint over the emitted vocabulary"
+        assert any(p["synop"].startswith("ksynop2_") for p in d2)
+        # the already-vocab'd depth-1 shape was named, not re-minted.
+        assert s2["denoted"] >= 1
+        # and the second round emitted its own fragments too.
+        assert s2["vocab_emitted"] >= 1
+        v2 = vocabdir.load_vocab(vdir, fresh=True)
+        for p in d2:
+            assert p["synop"] in v2.prims
+        assert vocabdir.check_vocab(vdir) == []

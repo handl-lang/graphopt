@@ -86,6 +86,17 @@ DEFINITIONAL = "definitional"
 #: site itself at admit time).
 _SITE_CAP = 512
 
+#: Names minted by :func:`mint_atom` this process — the census hook
+#: ``vocabdir.collect_ops`` reads so a live atom never counts as an
+#: owner op row (``_OP_REGISTRY`` is process-global; the name-shape
+#: filter alone cannot recognize every caller-chosen atom name).
+_MINTED_NAMES: set[str] = set()
+
+
+def minted_names() -> frozenset[str]:
+    """Return the atom names :func:`mint_atom` registered so far."""
+    return frozenset(_MINTED_NAMES)
+
 
 # ---------------------------------------------------------------------------
 #  Candidates — the mined patterns
@@ -720,6 +731,7 @@ def mint_atom(cand: AtomCandidate, *, name: str) -> MintedAtom:
         law=f"definitional atom for {op_repr(cand.pattern)} "
         f"(ADR 0007 layer 1 — macro, unfolds through `expand`)",
     )
+    _MINTED_NAMES.add(name)
     call_attrs: dict[str, Any] = {a: a for a in cand.attr_mvars}
     call = Op.make(name, *cand.leaf_mvars, **call_attrs)
     intro = Rewrite(

@@ -1180,6 +1180,8 @@ class TestCorpusZooPrim:
             "family_mint": True,
             "depth": on._PRIM_DEPTH,
             "vocab": True,
+            "vocab_dir": None,
+            "emit_vocabulary": True,
         }
         for e in _cells(cells, "episode"):
             assert e["record"]["case"]["prim"]["max_ops"] == 4
@@ -1190,6 +1192,59 @@ class TestCorpusZooPrim:
         assert all(
             int(ops) <= 4 for ops in payload["prim"]["depth_dist"]
         )
+
+    def test_prim_vocab_dir_flags_require_zoo_prim(self, tmp_path):
+        """``--prim-vocab-dir`` / ``--prim-vocab-emit`` are zoo-prim
+        only — on another corpus they error before any run."""
+        for extra in (
+            ["--prim-vocab-dir", str(tmp_path)],
+            ["--prim-vocab-emit"],
+            ["--no-prim-vocab-emit"],
+        ):
+            with pytest.raises(SystemExit):
+                on.main(
+                    _argv(
+                        tmp_path, "--dry", "--corpus", "grammar", *extra
+                    )
+                )
+
+    def test_prim_vocab_dir_is_protocol_pinned(self, tmp_path):
+        """``--prim-vocab-dir`` lands in ``protocol["prim"]`` — a
+        resume under a different vocabulary restarts loudly — and
+        the pool's mints emit their fragments back to the dir."""
+        import shutil
+        from pathlib import Path
+
+        from mlopt_discovery import vocabdir
+
+        vdir = tmp_path / "vocab"
+        shutil.copytree(
+            Path(__file__).resolve().parents[1] / "vocab", vdir
+        )
+        before = set(vocabdir.load_vocab(vdir, fresh=True).prims)
+        assert (
+            on.main(
+                _argv(
+                    tmp_path,
+                    "--dry",
+                    "--corpus",
+                    "zoo-prim",
+                    "--prim-vocab-dir",
+                    str(vdir),
+                )
+            )
+            == 0
+        )
+        man, _cells = _records(tmp_path / "ck.jsonl")
+        assert man["protocol"]["prim"]["vocab_dir"] == str(vdir)
+        assert man["protocol"]["prim"]["emit_vocabulary"] is True
+        after = vocabdir.load_vocab(vdir, fresh=True)
+        new_prims = set(after.prims) - before
+        assert new_prims, "the pool emitted no prim fragments"
+        for n in new_prims:
+            assert f"prim:{n}" in after.laws_by_name()
+            assert f"fold:{n}" in {r.name for r in after.schemas}
+        assert vocabdir.check_vocab(vdir) == []
 
 
 class TestCorpusZooPrimBootstrap:

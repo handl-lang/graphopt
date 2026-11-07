@@ -186,6 +186,14 @@ def _run_arm(
             min_uses=args.min_uses,
             max_ops=args.max_ops,
         )
+        if args.vocab_dir and atoms:
+            # plan 0033 phase 3: mined atoms are vocabulary data —
+            # each lands as a ``fold:<atom>`` schema row with its
+            # ``expand`` premise, the ``intro`` law, and the op row.
+            from mlopt_discovery import vocabdir
+
+            for atom in atoms:
+                vocabdir.emit_atom(args.vocab_dir, atom)
         fires = admit_atoms(eg, root, atoms)
         sides = ("rhs", "lhs") if args.lhs_folds else ("rhs",)
         compressed = [a.intro for a in atoms] + fold_ruleset(
@@ -267,6 +275,12 @@ def main(argv: list[str] | None = None) -> int:
         "--lhs-folds",
         action="store_true",
         help="also fold rule LHSs (compressed-input variants)",
+    )
+    ap.add_argument(
+        "--vocab-dir",
+        default=None,
+        help="emit each minted defn_* atom into this vocabulary "
+        "directory as schema fragments (plan 0033 phase 3)",
     )
     ap.add_argument(
         "--arms",

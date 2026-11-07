@@ -70,6 +70,8 @@ from __future__ import annotations
 
 import json
 import os
+import re
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
@@ -88,17 +90,25 @@ __all__ = [
     "check_vocab",
     "default_vocab_dir",
     "emit_all",
+    "emit_atom",
+    "emit_family_rows",
     "emit_prim",
+    "emit_prims",
     "emit_yaml_rows",
     "invalidate_vocab",
     "is_fusion_law_name",
     "load_vocab",
     "sync_projections",
+    "upsert_family",
     "upsert_handler",
     "upsert_law",
+    "upsert_model",
     "upsert_model_verdicts",
     "upsert_op",
+    "upsert_refusal",
     "upsert_schema",
+    "upsert_schema_premise",
+    "vocab_extra_families",
 ]
 
 #: The fragment-schema pin every canonical file carries.  A bump is a
@@ -119,6 +129,12 @@ CANONICAL_FILES: tuple[str, ...] = (
     "families.yaml",
     "models.yaml",
 )
+
+#: Runtime-minted op names — ``prim_mint``'s ``{prefix}_{sha256[:10]}``
+#: (``{prefix}{d}_`` for deeper tiers) and ``antiunify.mint_atoms``'
+#: ``{prefix}_{i}``.  ``collect_ops`` treats matching ``_OP_REGISTRY``
+#: entries as machine-added, never owner rows (see its docstring).
+_MINTED_OP_NAME = re.compile(r"^.+_(?:[0-9a-f]{10}|\d+)$")
 
 #: The handl-facing projection files — the seven ``language_from_dir``
 #: requires (empty ``[]`` stubs: mlopt's syntax is the IR, not text)
@@ -684,9 +700,19 @@ def collect_ops() -> list[dict]:
 
     One row per op name: arity/tags/attr-schema/required from
     ``opmeta``, the categorical ``GenDef`` fields when the op is a
-    registered generator (minted ``synop_*`` ops live here — they
-    declare through ``mlopt_core.ir.op_def``, not ``opmeta``), and a
-    ``denotation`` ref naming what evaluates the op.
+    *shipped* registered generator (the minted ``synop_*`` ops —
+    they declare through ``mlopt_core.ir.op_def`` and ship in
+    ``mlopt_core.laws.minted.SYNOP_SHIPPED``), and a ``denotation``
+    ref naming what evaluates the op.
+
+    Runtime-registered generators — a live mint's fresh ``synop_*``
+    or ``defn_*`` op, a test's ``ksynop_*`` — are deliberately NOT
+    owner rows: ``_OP_REGISTRY`` is process-global, so counting them
+    would make ``check_vocab`` drift on every directory the moment
+    any mint ran in the process.  They enter ``ops.yaml`` only as
+    machine-added fragments through :func:`emit_prim` /
+    :func:`upsert_op` — the same posture ``prims.yaml``'s non-shipped
+    records take.
     """
     from mlopt_core import opmeta
     from mlopt_core.ir import _OP_REGISTRY
@@ -712,7 +738,32 @@ def collect_ops() -> list[dict]:
 
     prim_ops = set(minted.SYNOP_SHIPPED)
 
-    gens = _OP_REGISTRY
+    # Runtime-registered generators — a live mint's fresh ``synop_*``
+    # (``{prefix}_{sha256[:10]}``) or definitional atom (``{prefix}_{i}``)
+    # — are NOT owner rows: ``_OP_REGISTRY`` is process-global, so
+    # counting them would make ``check_vocab`` drift on every
+    # directory the moment any mint ran in the process.  They enter
+    # ``ops.yaml`` only as machine-added fragments through
+    # :func:`emit_prim` / :func:`emit_atom` / :func:`upsert_op`.
+    # Carrier/hand ops (``attnbias``, ``trace``, …) keep their rows —
+    # no shipped op name ends ``_<hex10>`` or ``_<digits>`` outside
+    # the minted shapes (``synop_5147826430`` is shipped, so the
+    # ``prim_ops`` check runs first).  ``antiunify.mint_atom`` names
+    # are caller-chosen (``defn_0``, a probe's ``test_at0``) — the
+    # mint records them in ``antiunify._MINTED_NAMES`` so the census
+    # recognizes atoms the name-shape filter cannot.
+    try:
+        from mlopt_discovery.antiunify import minted_names
+
+        atom_ops = set(minted_names())
+    except Exception:  # pragma: no cover — same package, always present
+        atom_ops = set()
+    gens = {
+        n: g
+        for n, g in _OP_REGISTRY.items()
+        if n in prim_ops
+        or (n not in atom_ops and not _MINTED_OP_NAME.match(n))
+    }
     return [
         _op_row(
             name,
@@ -830,57 +881,75 @@ def collect_models() -> dict:
     body to project, and re-spelling the pattern would denote the
     pattern, not the kernel.
     """
-    from mlopt_core.cells import spec_to_data
     from mlopt_core.laws import minted
 
-    from mlopt_discovery import modelproj, shipped_primitives
+    from mlopt_discovery import shipped_primitives
 
     rows: list[dict] = []
     for name in sorted(minted.SYNOP_SHIPPED):
         spec = shipped_primitives.spec(name)
-        mvars = modelproj.spec_mvars(spec)
-        try:
-            hnl = modelproj.spec_to_hnl(spec, mvars=mvars)
-            unsupported = None
-        except modelproj.ModelUnsupportedError as exc:
-            hnl, unsupported = None, str(exc)
-        rows.append(
-            {
-                "id": f"denotation:{name}",
-                "op": name,
-                "kind": "denotation",
-                "mvars": sorted(mvars),
-                "spec": spec_to_data(spec),
-                "hnl": hnl,
-                "unsupported": unsupported,
-            }
-        )
+        rows.append(_denotation_model_row(name, spec))
     for name, rec in minted.prim_records().items():
         handler = (rec.get("handler") or {}).get("record")
         if not handler:
             continue  # refused mints carry no body to project
-        body = handler.get("handler_body")
-        mvars = modelproj.body_mvars(body)
-        try:
-            hnl = modelproj.handler_body_to_hnl(body, mvars=mvars)
-            unsupported = None
-        except modelproj.ModelUnsupportedError as exc:
-            hnl, unsupported = None, str(exc)
-        rows.append(
-            {
-                "id": f"handler:{name}",
-                "op": name,
-                "kind": "handler",
-                "family": (rec.get("handler") or {}).get("family"),
-                "mvars": sorted(mvars),
-                # ``body`` stays in ``body_to_data`` form — the same
-                # encoding ``handler_from_record`` decodes.
-                "body": body,
-                "hnl": hnl,
-                "unsupported": unsupported,
-            }
-        )
+        rows.append(_handler_model_row(name, rec))
     return {"models": rows}
+
+
+def _denotation_model_row(name: str, spec: Any) -> dict:
+    """Build one ``denotation:`` model row for *name*'s spec.
+
+    Shared by :func:`collect_models` (shipped prims) and
+    :func:`emit_prim` (mint-emitted prims) so an emitted row is
+    byte-identical to what the collector would produce were the op
+    ever admitted — no drift when it ships.
+    """
+    from mlopt_core.cells import spec_to_data
+
+    from mlopt_discovery import modelproj
+
+    mvars = modelproj.spec_mvars(spec)
+    try:
+        hnl = modelproj.spec_to_hnl(spec, mvars=mvars)
+        unsupported = None
+    except modelproj.ModelUnsupportedError as exc:
+        hnl, unsupported = None, str(exc)
+    return {
+        "id": f"denotation:{name}",
+        "op": name,
+        "kind": "denotation",
+        "mvars": sorted(mvars),
+        "spec": spec_to_data(spec),
+        "hnl": hnl,
+        "unsupported": unsupported,
+    }
+
+
+def _handler_model_row(name: str, rec: dict) -> dict:
+    """Build one ``handler:`` model row from a prim record's handler."""
+    from mlopt_discovery import modelproj
+
+    handler = ((rec.get("handler") or {}).get("record")) or {}
+    body = handler.get("handler_body")
+    mvars = modelproj.body_mvars(body)
+    try:
+        hnl = modelproj.handler_body_to_hnl(body, mvars=mvars)
+        unsupported = None
+    except modelproj.ModelUnsupportedError as exc:
+        hnl, unsupported = None, str(exc)
+    return {
+        "id": f"handler:{name}",
+        "op": name,
+        "kind": "handler",
+        "family": (rec.get("handler") or {}).get("family"),
+        "mvars": sorted(mvars),
+        # ``body`` stays in ``body_to_data`` form — the same
+        # encoding ``handler_from_record`` decodes.
+        "body": body,
+        "hnl": hnl,
+        "unsupported": unsupported,
+    }
 
 
 def collect_families() -> dict:
@@ -1143,11 +1212,16 @@ def check_vocab(directory: str | Path) -> list[str]:
     ) + _projection_drift(directory)
 
 
-def _rewrite_canonical(directory: Path, name: str, mutate) -> None:
-    """Read → mutate → write one canonical file, then resync."""
+def _update_canonical(directory: Path, name: str, mutate) -> None:
+    """Read → mutate → write one canonical file (no projection sync)."""
     doc = _read_canonical(directory, name)
     mutate(doc)
     _write_canonical(directory, name, doc)
+
+
+def _rewrite_canonical(directory: Path, name: str, mutate) -> None:
+    """Read → mutate → write one canonical file, then resync."""
+    _update_canonical(directory, name, mutate)
     sync_projections(directory)
 
 
@@ -1236,42 +1310,440 @@ def upsert_model_verdicts(
     _rewrite_canonical(directory, "models.yaml", mut)
 
 
+def upsert_model(directory: str | Path, row: dict) -> None:
+    """Insert/replace a ``models.yaml`` row (key ``id``).
+
+    The mint-side half of the model table: :func:`emit_prim` writes
+    ``denotation:``/``handler:`` rows through the batched path, and
+    callers adding a Model by hand use this — owner rows still
+    upsert on re-emission, machine rows survive.
+    """
+    directory = Path(directory)
+
+    def mut(doc: dict) -> None:
+        _upsert(_section(doc, "models"), "id", row)
+
+    _rewrite_canonical(directory, "models.yaml", mut)
+
+
+def upsert_schema_premise(
+    directory: str | Path, name: str, records: list
+) -> None:
+    """Set ``schemas.yaml``'s premise closure for schema *name*.
+
+    The ``premises`` map is the cert leg's anchored-axiom channel —
+    ``pipeline._schema_proposal`` attaches ``premises[name]`` to the
+    minted claim.  *records* are ``law_to_data`` records (the same
+    shape ``collect_schemas`` emits for ``_FUSION_PREMISES``).
+    """
+    directory = Path(directory)
+
+    def mut(doc: dict) -> None:
+        doc.setdefault("premises", {})[name] = list(records)
+
+    _rewrite_canonical(directory, "schemas.yaml", mut)
+
+
+def upsert_family(directory: str | Path, descriptor: dict) -> None:
+    """Upsert a minted handler-family descriptor into ``families.yaml``.
+
+    *descriptor* is a ``family_synth.mint_families`` survivor —
+    ``{name, gate, leaves, broadcast, requires, orders, provenance}``
+    — stored under ``families.minted_families`` (a machine-added
+    section the collectors do not own, so it survives re-emission).
+    Re-upserting the same ``name`` unions the ``covers`` op list and
+    keeps the latest descriptor + provenance.
+    """
+    directory = Path(directory)
+    name = descriptor["name"]
+
+    def mut(doc: dict) -> None:
+        rows = doc.setdefault("families", {}).setdefault(
+            "minted_families", []
+        )
+        covers = set(descriptor.get("covers") or ())
+        for i, row in enumerate(rows):
+            if row.get("name") == name:
+                merged = dict(descriptor)
+                merged["covers"] = sorted(
+                    covers | set(row.get("covers") or ())
+                )
+                rows[i] = merged
+                return
+        rows.append({**descriptor, "covers": sorted(covers)})
+
+    _rewrite_canonical(directory, "families.yaml", mut)
+
+
+def upsert_refusal(directory: str | Path, row: dict) -> None:
+    """Upsert a refused-spec ledger row into ``families.yaml``.
+
+    Phase 3's refused-spec analysis: a shape the handler grammar
+    refused still emits its measured wall as data — *row* carries
+    ``key`` (dedup), ``spec`` (``spec_to_data`` form), ``verdict``,
+    ``tried``/``best_err``/``note`` and optionally ``op``/``domain``/
+    ``family_minted``.  Stored under ``families.refused_specs`` —
+    machine-added, survives re-emission.
+    """
+    directory = Path(directory)
+
+    def mut(doc: dict) -> None:
+        rows = doc.setdefault("families", {}).setdefault(
+            "refused_specs", []
+        )
+        _upsert(rows, "key", row)
+
+    _rewrite_canonical(directory, "families.yaml", mut)
+
+
+def vocab_extra_families(vocab: Vocab) -> tuple[dict, ...]:
+    """Return the directory's minted family descriptors as data.
+
+    The consume half of the refused-spec loop closure: rows
+    ``upsert_family`` wrote come back as the ``extra_families``
+    argument ``handler_synth.mint_handlers`` /
+    ``family_synth.mint_families`` already accept — a family minted
+    for one refused spec is grammar vocabulary for the next.
+    ``covers`` bookkeeping stays behind; the row decodes through
+    ``handler_synth.body_from_data`` so tuple-shaped leaf rules and
+    orders come back exactly as ``mint_families`` returned them —
+    ``extra_families`` consumers see live descriptors, not YAML.
+    """
+    from mlopt_discovery.handler_synth import body_from_data
+
+    out = []
+    for row in vocab.families.get("minted_families") or ():
+        desc = body_from_data(
+            {k: v for k, v in row.items() if k != "covers"}
+        )
+        out.append(desc)
+    return tuple(out)
+
+
+def emit_family_rows(
+    directory: str | Path,
+    *,
+    families: Iterable[dict] = (),
+    refusals: Iterable[dict] = (),
+) -> None:
+    """Batch-write family descriptors and refused-spec rows, syncing once.
+
+    The pool-level counterpart of :func:`upsert_family` /
+    :func:`upsert_refusal`: ``prim_mint.prim_pool`` collects every
+    minted descriptor and refusal across the pool, then lands them
+    in a single ``families.yaml`` rewrite + projection sync instead
+    of paying one sync per row.
+    """
+    directory = Path(directory)
+    fams = list(families)
+    refs = list(refusals)
+    if not fams and not refs:
+        return
+
+    def mut(doc: dict) -> None:
+        fams_doc = doc.setdefault("families", {})
+        if fams:
+            rows = fams_doc.setdefault("minted_families", [])
+            for desc in fams:
+                name = desc["name"]
+                covers = set(desc.get("covers") or ())
+                for i, row in enumerate(rows):
+                    if row.get("name") == name:
+                        merged = dict(desc)
+                        merged["covers"] = sorted(
+                            covers | set(row.get("covers") or ())
+                        )
+                        rows[i] = merged
+                        break
+                else:
+                    rows.append({**desc, "covers": sorted(covers)})
+        if refs:
+            rows = fams_doc.setdefault("refused_specs", [])
+            for row in refs:
+                _upsert(rows, "key", row)
+
+    _rewrite_canonical(directory, "families.yaml", mut)
+
+
+# ---------------------------------------------------------------------------
+#  Record → fragment rows — the emit_prim internals (phase 3)
+# ---------------------------------------------------------------------------
+
+
+def _emit_op_row(name: str, record: dict) -> dict:
+    """Build the ``ops.yaml`` row a minted prim owns.
+
+    Collector-consistent where it counts: arity/tags/attrs/gen read
+    the live ``opmeta``/``_OP_REGISTRY`` (a runtime-minted op IS
+    ``op_def``'d, so its ``GenDef`` fields land exactly as a shipped
+    synop's would), while ``denotation`` pins ``"prim"`` — the
+    record's meaning is the spelled subgraph regardless of which
+    executor table currently binds it.  Were the op ever admitted to
+    ``SYNOP_SHIPPED`` the collector emits the identical row, so the
+    fragment never drifts on promotion.
+    """
+    from mlopt_core import opmeta
+    from mlopt_core.ir import _OP_REGISTRY
+
+    row = _op_row(
+        name,
+        opmeta.REGISTRY.get(name),
+        _OP_REGISTRY.get(name),
+        "prim",
+    )
+    if row["arity"] is None:
+        # Unregistered record (a synthetic/test mint): fall back to
+        # the fold call's positional arity, the pre-phase-3 rule.
+        fold = record.get("fold") or {}
+        rhs = fold.get("rhs") or {}
+        row["arity"] = (
+            len(rhs.get("args", ())) if isinstance(rhs, dict) else 0
+        )
+    return row
+
+
+def _record_denotation_spec(record: dict) -> Any:
+    """Return the prim record's denotation as a genkernel spec.
+
+    The definitional premise's RHS is the denotation spelling —
+    ``record["expand"]`` for depth-2+ mints (the skeleton re-expanded
+    to manual ops), the fold LHS for depth-1 — rendered by
+    ``prim_mint.pat_spec`` with metavar names kept, the same spec
+    ``shipped_primitives.spec`` produces for shipped ops.
+    """
+    from mlopt_core.laws.serialize import object_from_data
+
+    from mlopt_discovery.prim_mint import pat_spec
+
+    fold = object_from_data(record["fold"])
+    if "expand" in record:
+        return pat_spec(object_from_data(record["expand"]).rhs)
+    return pat_spec(fold.lhs)
+
+
+def _prim_expand_record(name: str, record: dict) -> dict:
+    """Return the record's ``.expand`` premise as a law record.
+
+    Depth-2+ records embed it verbatim; a depth-1 record's premise
+    is derivable — ``call -> fold.lhs`` — and is rebuilt through
+    :func:`mlopt_discovery.prim_mint.prim_fold_of`, the same
+    materializer ``minted.prim_fold`` mirrors for shipped records.
+    """
+    if "expand" in record:
+        return record["expand"]
+    from mlopt_core.laws.serialize import law_to_data
+
+    from mlopt_discovery.prim_mint import prim_fold_of
+
+    return law_to_data(prim_fold_of(name, record)[1])
+
+
+def _prim_schema_record(name: str, record: dict) -> dict:
+    """Build the ``fold:<name>`` schema row for a minted prim.
+
+    The fold claim spelled as a fusion-schema recognizer — the
+    corpus-derived ``fold:*``-class replacement the plan's phase 3
+    asks mined shapes to become.  The record is the fold's own
+    ``law_to_data`` fields renamed into the schema namespace, so
+    ``pipeline._fusion_schemas`` proposes it through the same
+    ``_instance_from_match`` path every shipped schema takes; the
+    ``.expand`` premise rides ``schemas.yaml``'s ``premises`` map
+    under the schema name.
+    """
+    schema = dict(record["fold"])
+    schema["name"] = f"fold:{name}"
+    schema["law"] = (
+        f"{name} as a fold-class schema — the mined shape's "
+        "corpus-derived recognizer (plan 0033 phase 3)"
+    )
+    return schema
+
+
+def _emit_prim_rows(directory: Path, name: str, record: dict) -> None:
+    """Write every fragment row one minted prim owns (no sync).
+
+    Phase 3's full emission — the mint's output becomes canonical
+    vocabulary, not just a sink-table entry:
+
+    * ``ops.yaml`` — the op row (:func:`_emit_op_row`);
+    * ``laws.yaml`` — the ``prim:<name>`` fold record (the claim
+      itself, visible to ``load_vocab`` consumers and the handl
+      projections — the ``.expand`` premise deliberately stays OUT
+      of the law bank: expanding a synop inside saturation
+      re-adds the unfolded spelling the fold collapses);
+    * ``handlers.yaml`` — the minted handler record, when the mint
+      verified one;
+    * ``prims.yaml`` — the verbatim mint record;
+    * ``models.yaml`` — the ``denotation:`` row (always) and the
+      ``handler:`` row (when a body verified), built by the same
+      helpers :func:`collect_models` uses so promotion never drifts;
+    * ``schemas.yaml`` — the ``fold:<name>`` recognizer row plus its
+      ``.expand`` premise closure.
+    """
+    fold = record.get("fold")
+    expand_rec = None
+    if fold:
+        # Materialize the fold first: ``prim_fold_of`` registers the
+        # op's ``op_def`` (so ``_emit_op_row`` sees its ``GenDef``)
+        # and validates the embedded ``.expand`` premise's LHS
+        # against the fold's own call — a mismatched record fails
+        # here, before any fragment lands.
+        from mlopt_discovery.prim_mint import prim_fold_of
+
+        prim_fold_of(name, record)
+        expand_rec = _prim_expand_record(name, record)
+    _update_canonical(
+        directory,
+        "ops.yaml",
+        lambda doc: _upsert(
+            _section(doc, "ops"), "name", _emit_op_row(name, record)
+        ),
+    )
+    if fold:
+        _update_canonical(
+            directory,
+            "laws.yaml",
+            lambda doc: _upsert(_section(doc, "laws"), "name", fold),
+        )
+    handler = (record.get("handler") or {}).get("record")
+    if handler:
+        # Collector-consistent shape (``collect_handlers``'s
+        # ``minted`` rows): op/family/max_err/record, no ``source``.
+        hentry = record.get("handler") or {}
+        _update_canonical(
+            directory,
+            "handlers.yaml",
+            lambda doc: _upsert(
+                _section(doc, "minted"),
+                "op",
+                {
+                    "op": name,
+                    "family": hentry.get("family"),
+                    "max_err": hentry.get("max_err"),
+                    "record": handler,
+                },
+            ),
+        )
+    _update_canonical(
+        directory,
+        "prims.yaml",
+        lambda doc: doc.setdefault("prims", {}).__setitem__(
+            name, record
+        ),
+    )
+    if fold:
+        _update_canonical(
+            directory,
+            "models.yaml",
+            lambda doc: _upsert(
+                _section(doc, "models"),
+                "id",
+                _denotation_model_row(
+                    name, _record_denotation_spec(record)
+                ),
+            ),
+        )
+        if handler:
+            _update_canonical(
+                directory,
+                "models.yaml",
+                lambda doc: _upsert(
+                    _section(doc, "models"),
+                    "id",
+                    _handler_model_row(name, record),
+                ),
+            )
+        schema_name = f"fold:{name}"
+        _update_canonical(
+            directory,
+            "schemas.yaml",
+            lambda doc: (
+                _upsert(
+                    _section(doc, "schemas"),
+                    "name",
+                    _prim_schema_record(name, record),
+                ),
+                doc.setdefault("premises", {}).__setitem__(
+                    schema_name,
+                    [expand_rec],
+                ),
+            ),
+        )
+
+
 def emit_prim(directory: str | Path, name: str, record: dict) -> None:
     """Land a minted primitive as fragments — workstream 0b's seam.
 
-    One call writes the three rows a minted prim owns: the op row in
-    ``ops.yaml`` (arity off the fold call's RHS arg count,
-    ``denotation: "prim"``), the minted handler record in
-    ``handlers.yaml``'s ``minted`` section when the record carries
-    one, and the verbatim mint record in ``prims.yaml``.  This is the
-    fragment-emission path the phase-3 mint arms will call — emitted
-    vocab re-enters the next mint's search space by construction.
+    Phase 3 extends the phase-0 seam: one call now writes the op row,
+    the ``prim:`` fold law, the minted handler record, the verbatim
+    prim record, the ``denotation:``/``handler:`` model rows and the
+    ``fold:`` schema + premise — then resyncs the projections once.
+    See :func:`_emit_prim_rows` for the per-file contract.
+    """
+    emit_prims(directory, [(name, record)])
+
+
+def emit_prims(
+    directory: str | Path, items: Iterable[tuple[str, dict]]
+) -> None:
+    """Emit a batch of minted primitives, syncing projections once.
+
+    The pool-level emit :func:`prim_mint.prim_pool` calls when
+    ``vocab_dir`` is set — N prims cost one ``sync_projections``
+    instead of N.
     """
     directory = Path(directory)
-    fold = record.get("fold") or {}
-    rhs = fold.get("rhs") or {}
-    arity = len(rhs.get("args", ())) if isinstance(rhs, dict) else 0
-    upsert_op(
+    for name, record in items:
+        _emit_prim_rows(directory, name, record)
+    sync_projections(directory)
+
+
+def emit_atom(directory: str | Path, atom: Any) -> None:
+    """Land an anti-unified definitional atom as schema fragments.
+
+    Plan 0033 phase 3's anti-unification arm: a
+    :class:`~mlopt_discovery.antiunify.MintedAtom` — a mined
+    ``AtomCandidate`` admitted as ``{prefix}_{i}`` — writes the
+    ``fold:<atom>`` schema recognizer row (its ``intro`` claim:
+    ``expansion -> atom(leaf_mvars)``) with the ``expand`` premise
+    in ``schemas.yaml``'s closure, the ``intro`` law record in
+    ``laws.yaml`` (visible to ``load_vocab`` and the handl
+    projections), and the op row in ``ops.yaml``.  Duck-typed on
+    ``.name``/``.intro``/``.expand`` so any atom-shaped record
+    works.
+    """
+    from mlopt_core.laws.serialize import law_to_data
+
+    directory = Path(directory)
+    name = atom.name
+    intro_rec = law_to_data(atom.intro)
+    _update_canonical(
         directory,
-        {
-            "name": name,
-            "arity": arity,
-            "tags": [],
-            "attrs": [],
-            "required": [],
-            "gen": None,
-            "denotation": "prim",
-        },
+        "ops.yaml",
+        lambda doc: _upsert(
+            _section(doc, "ops"),
+            "name",
+            _emit_op_row(name, {"fold": intro_rec}),
+        ),
     )
-    handler = (record.get("handler") or {}).get("record")
-    if handler:
-        upsert_handler(
-            directory,
-            {
-                "op": name,
-                "source": "minted",
-                "family": (record.get("handler") or {}).get("family"),
-                "record": handler,
-            },
-        )
-    upsert_prim(directory, name, record)
+    _update_canonical(
+        directory,
+        "laws.yaml",
+        lambda doc: _upsert(_section(doc, "laws"), "name", intro_rec),
+    )
+    schema = dict(intro_rec)
+    schema["name"] = f"fold:{name}"
+    schema["law"] = (
+        f"{name} as a fold-class schema — an anti-unified definitional "
+        "atom's corpus-derived recognizer (plan 0033 phase 3)"
+    )
+    schema_name = f"fold:{name}"
+
+    def mut(doc: dict) -> None:
+        _upsert(_section(doc, "schemas"), "name", schema)
+        doc.setdefault("premises", {})[schema_name] = [
+            law_to_data(atom.expand)
+        ]
+
+    _update_canonical(directory, "schemas.yaml", mut)
+    sync_projections(directory)

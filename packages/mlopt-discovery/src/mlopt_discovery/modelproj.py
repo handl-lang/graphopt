@@ -163,6 +163,11 @@ _BINARY_OPS = frozenset({"add", "sub", "mul", "div", "matmul"})
 _ATTR_OPS: dict[str, tuple[str, ...]] = {
     "reshape": ("shape",),
     "transpose": ("dim0", "dim1"),
+    # ``tensor.unsqueeze(t, dim)`` — host-tensor phase-3 addition
+    # (plan 0033): the size-1-axis insert the five ``unsqueeze``
+    # denotations needed; negative dims wrap ``d % (rank+1)`` on
+    # both sides.
+    "unsqueeze": ("dim",),
 }
 
 

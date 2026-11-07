@@ -1475,6 +1475,8 @@ def _prim_knobs(prim: dict | None = None) -> dict:
         "family_mint": True,
         "depth": _PRIM_DEPTH,
         "vocab": True,
+        "vocab_dir": None,
+        "emit_vocabulary": True,
     }
     if prim:
         out.update({k: v for k, v in prim.items() if v is not None})
@@ -1521,6 +1523,8 @@ def _prim_pool(
     family_mint: bool = True,
     depth: int = _PRIM_DEPTH,
     vocab: bool = True,
+    vocab_dir: Any = None,
+    emit_vocabulary: bool = True,
 ) -> tuple:
     """The graphopt prim-mint pool — the torch-domain hook wiring.
 
@@ -1566,6 +1570,8 @@ def _prim_pool(
         family_mint=family_mint,
         depth=depth,
         vocab=vocab,
+        vocab_dir=vocab_dir,
+        emit_vocabulary=emit_vocabulary,
     )
 
 
@@ -2630,6 +2636,32 @@ def main(argv: list[str] | None = None) -> int:
         "cap.  Protocol-pinned like the rest of the prim window",
     )
     ap.add_argument(
+        "--prim-vocab-dir",
+        type=Path,
+        default=None,
+        metavar="DIR",
+        help="zoo-prim only: the fragment-tower loop (plan 0033 "
+        "phase 3) — a vocab/ directory whose prims.yaml joins the "
+        "shipped table (minted prims become mintable atoms), whose "
+        "prim:* folds join the denoted gate, and whose "
+        "families.minted_families seed the handler grammar; the "
+        "pool's mints then emit their fragments back — op + fold "
+        "law + handler + prim record + Models + fold: schema, plus "
+        "family/refusal rows — so the next run's mint composes over "
+        "this one's output.  Protocol-pinned like the rest of the "
+        "prim window",
+    )
+    ap.add_argument(
+        "--prim-vocab-emit",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="zoo-prim only: with --prim-vocab-dir, write the pool's "
+        "fragments back to the directory (default on; "
+        "--no-prim-vocab-emit consumes the vocabulary without "
+        "emitting — a read-only probe).  Protocol-pinned like the "
+        "rest of the prim window",
+    )
+    ap.add_argument(
         "--scan",
         type=int,
         default=DEFAULTS["scan"],
@@ -2687,6 +2719,8 @@ def main(argv: list[str] | None = None) -> int:
         or args.prim_bootstrap
         or args.prim_family_mint is not None
         or args.prim_vocab is not None
+        or args.prim_vocab_dir is not None
+        or args.prim_vocab_emit is not None
     ):
         ap.error("--prim-* knobs require --corpus zoo-prim")
     # resolve the mining window: explicit flag > --prim-deep preset >
@@ -2699,6 +2733,10 @@ def main(argv: list[str] | None = None) -> int:
         window["family_mint"] = args.prim_family_mint
     if args.prim_vocab is not None:
         window["vocab"] = args.prim_vocab
+    if args.prim_vocab_dir is not None:
+        window["vocab_dir"] = str(args.prim_vocab_dir)
+    if args.prim_vocab_emit is not None:
+        window["emit_vocabulary"] = args.prim_vocab_emit
     window.update(
         {
             k: v

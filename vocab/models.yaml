@@ -6536,8 +6536,8 @@
         ],
         "attrs": {}
       },
-      "hnl": null,
-      "unsupported": "op 'unsqueeze' is not on the tensor.* model surface"
+      "hnl": "tensor.add(tensor.mul(v223, tensor.add(tensor.mul(v345, v346), v268)), tensor.mul(v215, tensor.unsqueeze(v355, \"a97\")))",
+      "unsupported": null
     },
     {
       "id": "denotation:synop_4c657cb2c0",
@@ -6609,7 +6609,7 @@
         "attrs": {}
       },
       "hnl": null,
-      "unsupported": "op 'unsqueeze' is not on the tensor.* model surface"
+      "unsupported": "op 'select' is not on the tensor.* model surface"
     },
     {
       "id": "denotation:synop_4f8fefdd38",
@@ -7306,8 +7306,8 @@
         ],
         "attrs": {}
       },
-      "hnl": null,
-      "unsupported": "op 'unsqueeze' is not on the tensor.* model surface"
+      "hnl": "tensor.add(tensor.mul(v223, tensor.add(v267, tensor.mul(v347, v348))), tensor.mul(v215, tensor.unsqueeze(v370, \"a101\")))",
+      "unsupported": null
     },
     {
       "id": "denotation:synop_98a002d64b",
@@ -7377,8 +7377,8 @@
         ],
         "attrs": {}
       },
-      "hnl": null,
-      "unsupported": "op 'unsqueeze' is not on the tensor.* model surface"
+      "hnl": "tensor.add(tensor.mul(v201, tensor.add(tensor.mul(v472, v473), tensor.mul(v480, tensor.unsqueeze(v500, \"a128\")))), v14)",
+      "unsupported": null
     },
     {
       "id": "denotation:synop_b246dcb838",
@@ -7627,8 +7627,8 @@
         ],
         "attrs": {}
       },
-      "hnl": null,
-      "unsupported": "op 'unsqueeze' is not on the tensor.* model surface"
+      "hnl": "tensor.add(tensor.mul(v223, tensor.add(v267, tensor.mul(v347, tensor.unsqueeze(v381, \"a103\")))), tensor.mul(v215, v216))",
+      "unsupported": null
     },
     {
       "id": "denotation:synop_f3290a1163",
@@ -12242,8 +12242,8 @@
       "max_err": Infinity,
       "max_rel": Infinity,
       "sites": 0,
-      "detail": "unexpressible: op 'unsqueeze' is not on the tensor.* model surface",
-      "hnl": null
+      "detail": "no recorded bound-site domain",
+      "hnl": "tensor.add(tensor.mul(v223, tensor.add(tensor.mul(v345, v346), v268)), tensor.mul(v215, tensor.unsqueeze(v355, \"a97\")))"
     },
     "denotation:synop_4c657cb2c0": {
       "op": "synop_4c657cb2c0",
@@ -12253,7 +12253,7 @@
       "max_err": Infinity,
       "max_rel": Infinity,
       "sites": 0,
-      "detail": "unexpressible: op 'unsqueeze' is not on the tensor.* model surface",
+      "detail": "unexpressible: op 'select' is not on the tensor.* model surface",
       "hnl": null
     },
     "denotation:synop_4f8fefdd38": {
@@ -12363,8 +12363,8 @@
       "max_err": Infinity,
       "max_rel": Infinity,
       "sites": 0,
-      "detail": "unexpressible: op 'unsqueeze' is not on the tensor.* model surface",
-      "hnl": null
+      "detail": "no recorded bound-site domain",
+      "hnl": "tensor.add(tensor.mul(v223, tensor.add(v267, tensor.mul(v347, v348))), tensor.mul(v215, tensor.unsqueeze(v370, \"a101\")))"
     },
     "denotation:synop_98a002d64b": {
       "op": "synop_98a002d64b",
@@ -12374,8 +12374,8 @@
       "max_err": Infinity,
       "max_rel": Infinity,
       "sites": 0,
-      "detail": "unexpressible: op 'unsqueeze' is not on the tensor.* model surface",
-      "hnl": null
+      "detail": "no recorded bound-site domain",
+      "hnl": "tensor.add(tensor.mul(v201, tensor.add(tensor.mul(v472, v473), tensor.mul(v480, tensor.unsqueeze(v500, \"a128\")))), v14)"
     },
     "denotation:synop_b246dcb838": {
       "op": "synop_b246dcb838",
@@ -12418,8 +12418,8 @@
       "max_err": Infinity,
       "max_rel": Infinity,
       "sites": 0,
-      "detail": "unexpressible: op 'unsqueeze' is not on the tensor.* model surface",
-      "hnl": null
+      "detail": "no recorded bound-site domain",
+      "hnl": "tensor.add(tensor.mul(v223, tensor.add(v267, tensor.mul(v347, tensor.unsqueeze(v381, \"a103\")))), tensor.mul(v215, v216))"
     },
     "denotation:synop_f3290a1163": {
       "op": "synop_f3290a1163",

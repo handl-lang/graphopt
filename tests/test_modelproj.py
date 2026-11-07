@@ -88,10 +88,12 @@ def test_spec_to_hnl_sanitizes_metavar_names() -> None:
 
 
 def test_spec_to_hnl_refuses_unknown_ops_by_name() -> None:
+    # ``unsqueeze`` joined the surface in phase 3 (host-tensor
+    # ``tensor.unsqueeze``); ``select`` remains off it.
     with pytest.raises(
-        modelproj.ModelUnsupportedError, match="unsqueeze"
+        modelproj.ModelUnsupportedError, match="select"
     ):
-        modelproj.spec_to_hnl(("unsqueeze", "x", {"dim": 0}))
+        modelproj.spec_to_hnl(("select", "x", {"dim": 0, "index": 0}))
     with pytest.raises(
         modelproj.ModelUnsupportedError, match="frobnicate"
     ):
@@ -442,9 +444,12 @@ def test_load_vocab_exposes_models() -> None:
     kinds = {r["kind"] for r in v.models}
     assert kinds == {"denotation", "handler"}
     expressible = [r for r in v.models if r.get("hnl")]
-    assert len(expressible) == 104
+    # phase 3: ``tensor.unsqueeze`` joined the host surface, so the
+    # four unsqueeze-blocked denotations now project; only the
+    # ``select``-carrying denotation stays unexpressible.
+    assert len(expressible) == 108
     unsupported = [r for r in v.models if r.get("unsupported")]
-    assert len(unsupported) == 5
+    assert len(unsupported) == 1
     assert all(r["hnl"] is None for r in unsupported)
     # every expressible model names its op and mvars
     for r in expressible:

@@ -163,7 +163,7 @@ def test_emit_prim_lands_op_handler_and_record(
     vocab_copy: Path,
 ) -> None:
     """0b: one ``emit_prim`` writes the op row, handler row, record."""
-    name = "synop_test00001"
+    name = "synop_0123456789"
     vocabdir.emit_prim(vocab_copy, name, _fake_prim_record(name))
 
     v = vocabdir.load_vocab(vocab_copy, fresh=True)
@@ -184,7 +184,7 @@ def test_emit_preserves_machine_added_fragments(
     the next ``emit_all`` (owner refresh) upserts owner rows but
     cannot wipe rows the owners do not know.
     """
-    name = "synop_test00001"
+    name = "synop_0123456789"
     vocabdir.emit_prim(vocab_copy, name, _fake_prim_record(name))
 
     vocabdir.emit_all(vocab_copy)
@@ -192,6 +192,135 @@ def test_emit_preserves_machine_added_fragments(
     assert name in v.op_names()
     assert name in v.prims
     assert any(h["op"] == name for h in v.minted_handlers)
+
+
+def test_emit_prim_writes_full_fragment_set(
+    vocab_copy: Path,
+) -> None:
+    """Phase 3: ``emit_prim`` lands every fragment the mint owns.
+
+    One call writes the op row, the ``prim:`` fold law, the minted
+    handler row, the verbatim prim record, the ``denotation:`` /
+    ``handler:`` model rows and the ``fold:`` schema + its
+    ``.expand`` premise closure — then the directory still passes
+    its own drift gate (machine rows are not owner rows).
+    """
+    name = "synop_0123456789"
+    vocabdir.emit_prim(vocab_copy, name, _fake_prim_record(name))
+
+    v = vocabdir.load_vocab(vocab_copy, fresh=True)
+    assert name in v.op_names()
+    assert name in v.prims
+    assert f"prim:{name}" in v.laws_by_name()
+    schema = f"fold:{name}"
+    assert schema in {r.name for r in v.schemas}
+    assert schema in v.fusion_premises
+    model_ids = {m["id"] for m in v.models}
+    assert f"denotation:{name}" in model_ids
+    assert f"handler:{name}" in model_ids
+    assert any(h["op"] == name for h in v.minted_handlers)
+    assert vocabdir.check_vocab(vocab_copy) == []
+
+    # an owner refresh cannot wipe the machine-added set.
+    vocabdir.emit_all(vocab_copy)
+    v2 = vocabdir.load_vocab(vocab_copy, fresh=True)
+    assert name in v2.prims
+    assert f"prim:{name}" in v2.laws_by_name()
+    assert schema in {r.name for r in v2.schemas}
+    assert schema in v2.fusion_premises
+    assert {m["id"] for m in v2.models} >= model_ids
+
+
+def test_emit_atom_writes_schema_fragments(
+    vocab_copy: Path,
+) -> None:
+    """Phase 3 anti-unification arm: ``emit_atom`` lands schema rows.
+
+    A mined ``AtomCandidate`` admitted through ``mint_atoms``
+    becomes a ``fold:<atom>`` recognizer + ``.expand`` premise in
+    ``schemas.yaml``, its ``intro`` law in ``laws.yaml`` and its op
+    row in ``ops.yaml``.
+    """
+    from mlopt_core.egraph import EGraph
+    from mlopt_discovery.antiunify import mint_atoms
+
+    eg = EGraph()
+    x, w, a = (
+        Var(n, TensorType((4, 4))) for n in ("x", "w", "a")
+    )
+    terms = [
+        Op.make("add", Op.make("mul", x, w), a),
+        Op.make("add", Op.make("mul", a, w), x),
+        Op.make("add", Op.make("mul", x, x), w),
+    ]
+    eg.add_term(Op.make("pack", *terms))
+    (atom,) = mint_atoms(eg, count=1, prefix="vocabtest")
+
+    vocabdir.emit_atom(vocab_copy, atom)
+
+    v = vocabdir.load_vocab(vocab_copy, fresh=True)
+    assert atom.name in v.op_names()
+    assert f"{atom.name}.intro" in v.laws_by_name()
+    schema = f"fold:{atom.name}"
+    assert schema in {r.name for r in v.schemas}
+    # the premise closure carries the unfold direction.
+    premises = v.fusion_premises[schema]
+    assert [p.name for p in premises] == [f"{atom.name}.expand"]
+    assert vocabdir.check_vocab(vocab_copy) == []
+
+
+def test_emit_family_rows_roundtrip(vocab_copy: Path) -> None:
+    """Minted families + refused specs persist and decode back.
+
+    ``emit_family_rows`` writes the ``families.minted_families`` /
+    ``families.refused_specs`` machine sections in one sync;
+    ``vocab_extra_families`` returns the descriptors in the live
+    ``extra_families`` shape (tuples restored, ``covers`` dropped).
+    """
+    desc = {
+        "name": "fam:probe",
+        "gate": {"kind": "reduce"},
+        "leaves": {"read": {"kind": "read", "attrs": ["axis"]}},
+        "broadcast": ["neg"],
+        "requires": [],
+        "orders": ["read_then_map", "map_then_read"],
+        "covers": ["synop_probe"],
+        "provenance": {"budget": 4},
+    }
+    refusal = {
+        "key": "synop_refused01",
+        "op": "synop_refused01",
+        "spec": {"spec": ("add", "a", "b"), "args": []},
+        "domain": [{"a": [2, 4]}],
+        "verdict": "refused",
+        "tried": 3,
+        "best_err": "inf",
+        "note": "no body verified",
+    }
+    vocabdir.emit_family_rows(
+        vocab_copy, families=[desc], refusals=[refusal]
+    )
+
+    v = vocabdir.load_vocab(vocab_copy, fresh=True)
+    fams = v.families["minted_families"]
+    assert [f["name"] for f in fams] == ["fam:probe"]
+    assert fams[0]["covers"] == ["synop_probe"]
+    refs = v.families["refused_specs"]
+    assert [r["key"] for r in refs] == ["synop_refused01"]
+
+    extra = vocabdir.vocab_extra_families(v)
+    assert len(extra) == 1
+    assert extra[0]["name"] == "fam:probe"
+    assert "covers" not in extra[0]
+    # tuples restored — the live-descriptor shape mint_handlers eats.
+    assert isinstance(extra[0]["orders"], tuple)
+
+    # owner refresh keeps the machine sections.
+    vocabdir.emit_all(vocab_copy)
+    v2 = vocabdir.load_vocab(vocab_copy, fresh=True)
+    assert v2.families["minted_families"] == fams
+    assert v2.families["refused_specs"] == refs
+    assert vocabdir.check_vocab(vocab_copy) == []
 
 
 def test_upsert_law_and_handler(vocab_copy: Path) -> None:
