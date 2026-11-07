@@ -228,6 +228,10 @@ below; `python -m bench catalog --check` fails if it drifts (and
 | suite | tier | question | expected |
 |---|---|---|---|
 | `vllm_compare` _(cuda)_ | model | Can vLLM serve a mlopt-optimized model token-for-token? | WIN — token-for-token agreement; the wins are complementary, not competing. |
+| `frontier` | model | Where is the theoretical headroom on a measured workload (Amdahl on dispatch) and how much of it does the delivered body capture? | NEGATIVE — compute-bound rows are capped near 1x by construction; launch-bound rows carry 2x+ headroom that delivery does not yet take. |
+| `delivery` | model | Do the same minted laws lose as a step inside a module and win as isolated kernel bodies — i.e. is the sign set by the delivery rather than the law? | WIN — the paired ops flip from loss to win; the delivery is the variable, and the P1 gate on the losing zoo rows is worth running. |
+| `referee` | micro | How much of the tensor and kernel rule vocabularies overlap — can a law minted in one domain be judged by the other's bank? | NEGATIVE — the banks are largely disjoint, so a law cannot cross without a translation row; the proof run over the shared slice is the remaining gate. |
+| `vocabulary` | micro | Across every committed discovery run, does composing rules the bank already has ever admit a machine-original law, and does allowing new operation names change that? | WIN — the fixed-bank arm admits none, the vocabulary arm admits almost only originals; the mint mode is the variable. |
 
 ### discovery
 
@@ -240,17 +244,17 @@ below; `python -m bench catalog --check` fails if it drifts (and
 
 | mechanism | suites |
 |---|---|
-| laws | `law_bench`, `laws_effect`, `discovery`, `limits` |
-| egraph | `search_efficiency`, `contraction_ladder`, `reassoc_scale`, `discovery`, `limits` |
-| cost | `cost_fidelity`, `eval_axis`, `contraction_ladder` |
-| policy | `policy_value` |
+| laws | `law_bench`, `laws_effect`, `delivery`, `referee`, `vocabulary`, `discovery`, `limits` |
+| egraph | `search_efficiency`, `contraction_ladder`, `reassoc_scale`, `referee`, `vocabulary`, `discovery`, `limits` |
+| cost | `cost_fidelity`, `eval_axis`, `contraction_ladder`, `frontier` |
+| policy | `policy_value`, `vocabulary` |
 | pairing | `reassoc_scale`, `real_win_hunt`, `killer_demo`, `model_bench`, `e2e_model`, `e2e_models2`, `e2e_llm`, `stories15m_bench`, `bench_e2e` |
 | autotune | `real_win_hunt`, `killer_demo`, `model_bench` |
-| morphism | `morphism_coverage`, `morphism_e2e` |
-| scan | `real_linear_attn` |
-| carriers | `real_linear_attn`, `decode_scan_bench`, `bench_omd2`, `discovery`, `limits` |
+| morphism | `morphism_coverage`, `morphism_e2e`, `referee` |
+| scan | `real_linear_attn`, `delivery` |
+| carriers | `real_linear_attn`, `decode_scan_bench`, `bench_omd2`, `frontier`, `delivery`, `discovery`, `limits` |
 | decode | `decode_scan_bench`, `decode_bench` |
-| cuda-graph | `decode_scan_bench` |
+| cuda-graph | `decode_scan_bench`, `frontier` |
 | omd | `bench_omd2` |
 | bounded | `bound_amplification`, `bounded_e2e`, `structured_models` |
 | weights | `structure_census`, `bound_amplification` |

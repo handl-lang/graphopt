@@ -409,7 +409,13 @@ def cmd_dashboard(cfg: DashboardConfig) -> int:
     """Build the cross-suite HTML index from report JSON."""
     from bench.benchkit.render.dashboard import build_dashboard
 
-    index = build_dashboard(cfg.results, cfg.out, cfg.title)
+    index = build_dashboard(
+        cfg.results,
+        cfg.out,
+        cfg.title,
+        intent_of=lambda suite: registry.get(suite).intent,
+        intent_order=(*registry.INTENTS, "other"),
+    )
     _console().print(f"  [dim]→[/dim] {index}")
     return 0
 
@@ -420,7 +426,13 @@ def cmd_results(cfg: ResultsConfig) -> int:
 
     out = Path(cfg.out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(render_results_doc(cfg.baselines))
+    out.write_text(
+        render_results_doc(
+            cfg.baselines,
+            spec_lookup=registry.get,
+            docs_dir=Path(__file__).resolve().parents[1] / "docs",
+        )
+    )
     _console().print(f"  [dim]→[/dim] {out}")
     return 0
 
@@ -507,7 +519,7 @@ def cmd_gate(cfg: GateConfig) -> int:
             "[yellow]latest run was --quick (not comparable):[/yellow] "
             + ", ".join(quick)
         )
-    for gap in expectation_gaps(cfg.baselines):
+    for gap in expectation_gaps(cfg.baselines, registry.get):
         _console().print(f"[yellow]expectation gap:[/yellow] {gap}")
     if checked == 0:
         _console().print(

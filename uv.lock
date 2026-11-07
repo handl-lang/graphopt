@@ -96,6 +96,16 @@ wheels = [
 ]
 
 [[package]]
+name = "benchkit"
+version = "0.1.0.dev0"
+source = { git = "https://github.com/handl-lang/gamekit.git?subdirectory=packages%2Fbenchkit&branch=main#046e1d0832fbc7cac3265009c9b74b74026ada3d" }
+dependencies = [
+    { name = "jinja2" },
+    { name = "mlopt-core" },
+    { name = "torch" },
+]
+
+[[package]]
 name = "black"
 version = "26.5.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1156,7 +1166,7 @@ wheels = [
 [[package]]
 name = "gamekit"
 version = "0.1.0.dev0"
-source = { git = "https://github.com/handl-lang/gamekit.git?subdirectory=packages%2Fgamekit&branch=main#d260eeeae86f8c74fbf68a01ecd3da5f72adfac3" }
+source = { git = "https://github.com/handl-lang/gamekit.git?subdirectory=packages%2Fgamekit&branch=main#046e1d0832fbc7cac3265009c9b74b74026ada3d" }
 
 [[package]]
 name = "glom"
@@ -2117,6 +2127,7 @@ name = "mlopt"
 version = "0.1.0.dev0"
 source = { editable = "." }
 dependencies = [
+    { name = "benchkit" },
     { name = "gamekit" },
     { name = "mlopt-carriers" },
     { name = "mlopt-core" },
@@ -2190,6 +2201,7 @@ oracle = [
 [package.metadata]
 requires-dist = [
     { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.9.4" },
+    { name = "benchkit", git = "https://github.com/handl-lang/gamekit.git?subdirectory=packages%2Fbenchkit&branch=main" },
     { name = "coverage", marker = "extra == 'dev'", specifier = ">=7.0" },
     { name = "gamekit", git = "https://github.com/handl-lang/gamekit.git?subdirectory=packages%2Fgamekit&branch=main" },
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.168.1" },

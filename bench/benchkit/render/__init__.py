@@ -1,35 +1,34 @@
-"""Report renderers — one canonical ``Report``, several surfaces."""
+"""``bench.benchkit.render`` — alias for ``benchkit.render`` + catalog.
+
+The renderers themselves live in the ``benchkit`` package; this
+subpackage aliases their modules so ``bench.benchkit.render.<mod>``
+imports keep working, and adds the one graphopt-specific renderer:
+``catalog`` — the suite catalog generated from ``bench.registry``.
+"""
 
 from __future__ import annotations
 
-__all__ = [
-    "render_markdown",
-    "render_page",
-    "render_plots",
-    "render_quarto",
-    "render_slidev",
-]
+import importlib
+import sys
 
+import benchkit.render as _render
+from benchkit.render import *  # noqa: F401,F403
+from benchkit.render import __all__ as _all
 
-def __getattr__(name: str):
-    if name == "render_markdown":
-        from bench.benchkit.render.markdown import render_markdown
+_SUBMODULES = (
+    "dashboard",
+    "html",
+    "markdown",
+    "plots",
+    "quarto",
+    "results",
+    "slidev",
+)
 
-        return render_markdown
-    if name == "render_page":
-        from bench.benchkit.render.html import render_page
+_pkg = sys.modules[__name__]
+for _name in _SUBMODULES:
+    _mod = importlib.import_module(f"benchkit.render.{_name}")
+    sys.modules[f"{__name__}.{_name}"] = _mod
+    setattr(_pkg, _name, _mod)
 
-        return render_page
-    if name == "render_plots":
-        from bench.benchkit.render.plots import render_plots
-
-        return render_plots
-    if name == "render_quarto":
-        from bench.benchkit.render.quarto import render_quarto
-
-        return render_quarto
-    if name == "render_slidev":
-        from bench.benchkit.render.slidev import render_slidev
-
-        return render_slidev
-    raise AttributeError(name)
+__all__ = list(_all) + ["catalog"]

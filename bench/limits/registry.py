@@ -31,11 +31,16 @@ from __future__ import annotations
 import importlib
 import importlib.util
 from collections.abc import Callable
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-if TYPE_CHECKING:
-    from bench.discovery.cases import DiscoveryCase
+# The adapter contract types are shared — ``benchkit.baselines`` is the
+# canonical home (kernelopt consumes the same three names); this module
+# keeps the name→spec roster machinery on top.
+from benchkit.baselines import (
+    BaselineCtx,
+    BaselineSpec,
+    SkipBaseline,
+)
 
 __all__ = [
     "BaselineCtx",
@@ -48,49 +53,6 @@ __all__ = [
     "spec",
     "specs",
 ]
-
-
-class SkipBaseline(Exception):
-    """A baseline declining a case — the row records *why*."""
-
-
-@dataclass(frozen=True)
-class BaselineSpec:
-    """One baseline's registration — its seat on the roster.
-
-    *cases* is the honest capability statement: the discovery-corpus
-    case names the ``build`` accepts (``()`` = every case).
-    *requires* names modules that must import for the arm to exist
-    (``fla`` for the Triton kernels — a scratch dep, absent from the
-    lockfile); *needs_cuda* gates CUDA-only kernels; *symbolic* says
-    the arm has a dag_cost-pricable form (``False`` = measured-only,
-    the fast lane reports it but cannot price it).  *record* is the
-    one-line measured record the folder docstring argues at length.
-    """
-
-    name: str
-    kind: str  # "eager" | "compile" | "order" | "kernel" | "impl" | "carrier"
-    title: str = ""
-    cases: tuple[str, ...] = ()
-    requires: tuple[str, ...] = ()
-    needs_cuda: bool = False
-    symbolic: bool = True
-    note: str = ""
-    record: str = ""
-
-
-@dataclass
-class BaselineCtx:
-    """Everything a ``build`` may read — the case, its fixture, the run."""
-
-    case: DiscoveryCase
-    model: Any  # the spelled "before" module
-    feed: Any  # tensor or positional-args tuple
-    sr: Any  # the search() result (extracted term inside)
-    sink: Any  # TorchSink — verify + lower ports
-    source: Any  # TorchSource — the IR exporter
-    device: str = "cpu"
-    lane: str = "fast"
 
 
 #: Module key → the folder's module path.  The folder itself declares

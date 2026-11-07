@@ -209,6 +209,7 @@ def test_catalog_readme_in_sync() -> None:
 
 def test_results_doc_in_sync() -> None:
     """docs/results.md must match the pinned baselines."""
+    from bench import registry
     from bench.benchkit.render.results import render_results_doc
 
     doc = REPO / "docs/results.md"
@@ -216,7 +217,9 @@ def test_results_doc_in_sync() -> None:
         "docs/results.md missing — run `python -m bench results`"
     )
     assert doc.read_text() == render_results_doc(
-        REPO / "bench/baselines"
+        REPO / "bench/baselines",
+        spec_lookup=registry.get,
+        docs_dir=REPO / "docs",
     ), "docs/results.md drifted — run `python -m bench results`"
 
 

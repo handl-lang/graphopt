@@ -67,6 +67,11 @@ game floors were re-measured in their own repos (56% / 98%).
 `lab/` lives there now, beside the harnessed benchmark package
 (`python -m bench`; `bench/suites/`, `bench/discovery`,
 `bench/players`, `bench/limits` — see `bench/README.md`).  The
+benchmark *harness* itself was promoted to `handl-lang/gamekit`
+`packages/benchkit` (plan 0032 — any domain can pin it): `bench/benchkit`
+is now a compatibility alias over the `benchkit` package, keeping
+only the graphopt-specific `render.catalog` (the registry-driven
+docs catalog).  New harness work lands in gamekit, not here.  The
 ex-`lab/` drivers live under `bench/drivers/` and run standalone —
 `.venv/bin/python bench/drivers/<sub>/<mod>.py` — and write result documents,
 not `baselines/` rows:

@@ -17,6 +17,7 @@ dependencies = [
     "mlopt-discovery",
     "mlopt-onnx",
     "gamekit",
+    "benchkit",
     "torch>=2.0",
     "numpy>=1.24",
 ]
@@ -128,6 +129,7 @@ exclude = [
 mlopt-core = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-core", branch = "main" }
 mlopt-orchestrator = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-orchestrator", branch = "main" }
 gamekit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/gamekit", branch = "main" }
+benchkit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/benchkit", branch = "main" }
 mlopt-torch = { workspace = true }
 mlopt-carriers = { workspace = true }
 mlopt-cuda = { workspace = true }

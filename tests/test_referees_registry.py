@@ -478,6 +478,7 @@ def test_table_record_and_compare(tmp_path):
 
 def test_pinned_tables_skip_expectation_gaps(tmp_path):
     """Table baselines don't trip the registry expectation check."""
+    from bench import registry
     from bench.benchkit.compare import expectation_gaps
     from bench.benchkit.table import (
         table_record,
@@ -495,4 +496,4 @@ def test_pinned_tables_skip_expectation_gaps(tmp_path):
         ),
         tmp_path,
     )
-    assert expectation_gaps(tmp_path) == []
+    assert expectation_gaps(tmp_path, registry.get) == []
