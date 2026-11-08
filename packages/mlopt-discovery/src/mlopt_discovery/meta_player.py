@@ -514,12 +514,42 @@ def gen_cases(seed: int, n: int) -> list:
     nothing pays and the best play is a cheap extract.  Case tuples
     follow ``meta_probe``'s arity — ``(name, term, rules, decls,
     supported)``.
+
+    The corpus-side coverage arm (T-009) adds the handler tags and
+    site multiplicities the five base kinds never produced:
+
+    * ``square`` — ``mul(t, t)`` sites under ``nosq``
+      (``sans`` minus ``mul_square``): the third shipped handler's
+      concrete pattern occurs, so ``claim(square)`` is *offered* —
+      but the fold is op-count neutral (``mul(X,X)`` and
+      ``square(X)`` both price as one op over the shared ``X``), so
+      the oracle declines.  The corpus's first claimable-but-
+      unprofitable boards: every base-kind claim tag pays, so the
+      policy never had to price a claim it must refuse.
+    * ``square_mix`` / ``tri`` — a paying silu (and swiglu) site
+      *alongside* a square site: ``claim(square)`` stays offered
+      and must lose to the paying tag — per-tag selectivity the
+      base corpus never exercised.
+    * ``dual`` / ``dual_swiglu`` — two disjoint silu-family sites
+      (``add(silu(x), swiglu(y,z))`` and the two-swiglu variant):
+      one ``claim``/``saturate`` reaches both, so the oracle's argmax
+      moves off the ``claim_*_extract`` compressions onto the
+      spelled ``declare→saturate→handle→extract`` macro — the first
+      corpus boards whose winning offer is a four-step seq.
     """
     rng = random.Random(seed)
     x = Var("x", TensorType((4, 4)))
     y = Var("y", TensorType((4, 4)))
+    z = Var("z", TensorType((4, 4)))
+    w = Var("w", TensorType((4, 4)))
+    v = Var("v", TensorType((4, 4)))
     sans = DEFAULT - DEFAULT.named("silu_fold", "softsign_fold")
+    nosq = sans - DEFAULT.named("mul_square")
     silu_spelled = Op.make("mul", x, Op.make("sigmoid", x))
+    swiglu_sup = ma._supported_or(None, silu_spelled, sans) | {"swiglu"}
+    silu_of = lambda a: Op.make("mul", a, Op.make("sigmoid", a))  # noqa: E731
+    swiglu_of = lambda a, b: Op.make("mul", silu_of(a), b)  # noqa: E731
+    square_of = lambda a: Op.make("mul", a, a)  # noqa: E731
     builders = [
         ("silu", lambda: (silu_spelled, sans, None)),
         (
@@ -535,7 +565,7 @@ def gen_cases(seed: int, n: int) -> list:
             lambda: (
                 Op.make("mul", silu_spelled, y),
                 sans,
-                ma._supported_or(None, silu_spelled, sans) | {"swiglu"},
+                swiglu_sup,
             ),
         ),
         (
@@ -558,6 +588,57 @@ def gen_cases(seed: int, n: int) -> list:
                 ),
                 DEFAULT,
                 None,
+            ),
+        ),
+        # --- T-009 corpus coverage: the missing handler tags -------
+        (
+            "square",
+            lambda: (
+                square_of(Op.make("tanh", x))
+                if rng.random() < 0.5
+                else Op.make(
+                    "add",
+                    square_of(Op.make("add", x, y)),
+                    z,
+                ),
+                nosq,
+                None,
+            ),
+        ),
+        (
+            "square_mix",
+            lambda: (
+                Op.make("add", silu_spelled, square_of(y)),
+                nosq,
+                swiglu_sup,
+            ),
+        ),
+        (
+            "dual",
+            lambda: (
+                Op.make("add", silu_spelled, swiglu_of(y, z)),
+                sans,
+                swiglu_sup,
+            ),
+        ),
+        (
+            "dual_swiglu",
+            lambda: (
+                Op.make("add", swiglu_of(y, z), swiglu_of(w, v)),
+                sans,
+                swiglu_sup,
+            ),
+        ),
+        (
+            "tri",
+            lambda: (
+                Op.make(
+                    "add",
+                    Op.make("add", silu_spelled, swiglu_of(y, z)),
+                    square_of(w),
+                ),
+                nosq,
+                swiglu_sup,
             ),
         ),
     ]
