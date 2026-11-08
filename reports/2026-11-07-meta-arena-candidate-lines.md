@@ -1,5 +1,11 @@
 # T-009 lever 4 — candidate-side oracle lines (2026-11-07)
 
+> **Corpus caveat (added later):** the held-out numbers below were
+> measured on the *five-kind* `gen_cases` stream.  `gen_cases` later
+> grew to 10 kinds (see `2026-11-07-meta-arena-corpus-coverage.md`),
+> so the same offsets now deal different boards — the figures are a
+> historical record, not comparable to post-extension bakes.
+
 Measurement report for the myco ledger's last open T-009 lever:
 whether the meta-arena oracle's *candidate set* (not the policy)
 bounds held-out reward.  Full write-up in

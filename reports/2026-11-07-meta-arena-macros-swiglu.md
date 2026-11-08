@@ -1,5 +1,11 @@
 # T-009 — MACROS move-space extension: `claim_swiglu_extract`
 
+> **Corpus caveat (added later):** the held-out numbers below were
+> measured on the *five-kind* `gen_cases` stream.  `gen_cases` later
+> grew to 10 kinds (see `2026-11-07-meta-arena-corpus-coverage.md`),
+> so the same offsets now deal different boards — the figures are a
+> historical record, not comparable to post-extension bakes.
+
 Date: 2026-11-07.  Follows
 `2026-11-07-meta-arena-candidate-lines.md`, whose verdict named the
 residual: the oracle argmax on swiglu boards was still the *spelled*

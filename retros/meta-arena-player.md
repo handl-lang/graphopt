@@ -446,3 +446,45 @@ the paying lines are macros).
 
 `meta_prior` re-baked from the seed-0 run.  Report:
 `project/reports/2026-11-07-meta-arena-corpus-coverage.md`.
+
+## Lever result — macro move-shape legs + handler-bucket fix (2026-11-08, T-009)
+
+Two levers from the corpus-coverage residual, both in
+`meta_player` (domain-side; lawdata/gamekit untouched):
+
+- **Lever A — spelled-vs-claim legs.** `_macro_feats` emits
+  `x:macro:spelled`/`saturating`/`nclaims`, `reach_sites`/
+  `reach_claimable` (spelled∧saturating × board broadcasts), and
+  role-qualified handler buckets `x:mc:*`/`x:mh:*`.  New
+  `META_FEATURES` schema = lawdata rows + `a:h:4..7` + legs;
+  `META_SPEC`/`META_SPEC_V2` build on it.
+- **Lever B — `silu`/`square` collision.** `_META_HANDLER_BUCKETS
+  = 8` overrides the handler width in `_bucket`: silu→7,
+  square→3, swiglu→0 — all shipped tags distinct.  The `a:h:*`
+  index remap forced a re-bake regardless of Lever A's payoff.
+
+Same bake recipe, 10-kind corpus, learned-greedy held-out:
+
+| arm | offset 7919 | offset 31337 |
+|---|---:|---:|
+| previous bake | +0.32 / +0.30 | +0.33 / +0.29 |
+| **this bake (A+B), seed 0** | **+0.33 / +0.30** | **+0.33 / +0.31** |
+| replication, seed 23418 | +0.34 / +0.29 | +0.33 / +0.31 |
+
+**Lever A: honest negative** — deltas +0.01/+0.00 and +0.00/+0.02,
+within noise; the ~0.03 dual/tri residual did not close.  Weights
+did learn the legs (spelled −0.85, reach_sites +2.23, x:mc:7 +1.00)
+but held-out reward is flat — lever closed; the schema now names
+the distinction, conversion likely needs more multi-site mass or a
+nonlinear policy.  **Lever B: shipped as correctness** — latent
+collision removed; unmeasurable today (square declines everywhere)
+but the next paying square board would have been invisible.
+`meta_prior` re-baked (53 nonzero rows) — required by the bucket
+remap, performance-neutral.
+
+Note: `test_candidate_lines_multi_claim_variants` fails under the
+`-k "meta"` cross-file selection on clean HEAD too — pre-existing
+ordering pollution, not this change (passes in isolation and in
+the focused file run).
+
+Report: `project/reports/2026-11-08-meta-arena-macro-legs.md`.
