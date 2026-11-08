@@ -974,6 +974,24 @@ def _kernel_cache() -> Any:
     return d
 
 
+def _load_generated_module(path: Any) -> Any:
+    """Import a generated ``.py`` kernel module; ``None`` to decline.
+
+    Same contract as :func:`_load_generated` but returns the module
+    itself — the v2 reduction kernels ship several ``@triton.jit``
+    functions per artifact (``_gr``/``_gc`` or the softmax family),
+    not a single entry point.
+    """
+    import importlib.util
+
+    spec_ = importlib.util.spec_from_file_location(path.stem, path)
+    if spec_ is None or spec_.loader is None:
+        return None
+    mod = importlib.util.module_from_spec(spec_)
+    spec_.loader.exec_module(mod)
+    return mod
+
+
 def _load_generated(path: Any, name: str) -> Any:
     """Import a generated ``.py`` kernel module; ``None`` to decline.
 
@@ -983,14 +1001,8 @@ def _load_generated(path: Any, name: str) -> Any:
     import machinery declined the file; the caller keeps whatever
     fallback path it had.
     """
-    import importlib.util
-
-    spec_ = importlib.util.spec_from_file_location(path.stem, path)
-    if spec_ is None or spec_.loader is None:
-        return None
-    mod = importlib.util.module_from_spec(spec_)
-    spec_.loader.exec_module(mod)
-    return getattr(mod, name)
+    mod = _load_generated_module(path)
+    return getattr(mod, name) if mod is not None else None
 
 
 _TRITON_UNARY = {
@@ -1090,6 +1102,21 @@ def _triton_node_h(
     if len(spec[1:]) != len(kids):
         # attr-carrying op this tier doesn't model inline
         return _hoist(spec, hoists) if hoists is not None else None
+    # ``pow(x, 2)`` lowers to ``libdevice.pow`` — a ~150µs fp64
+    # penalty measured on the reduction probe (RMSNormPerHead) where
+    # the spelled ``torch.pow`` costs ~20µs.  ``x * x`` is the same
+    # value bit-for-bit on IEEE floats and what ``square`` already
+    # spells; only the literal-2 exponent takes the shortcut.
+    if (
+        spec[0] == "pow"
+        and len(kids) == 2
+        and isinstance(kids[1], (int, float))
+        and not isinstance(kids[1], bool)
+        and kids[1] == 2
+    ):
+        a = _triton_expr_h(kids[0], hoists, const)
+        if a is not None:
+            return f"(({a}) * ({a}))"
     args = [_triton_expr_h(k, hoists, const) for k in kids]
     if any(a is None for a in args):
         return None
@@ -2742,19 +2769,27 @@ _REDUCTION_TRITON_OPS: frozenset = frozenset(
 )
 
 #: Kernel-local names a reduction-spec metavar must not reuse — the
-#: generated source binds ``row``/``acc``/``cols``/``__r*``/``__co*``/
-#: ``__o*`` locals, so a colliding meta would silently shadow them.
+#: generated source binds ``rows``/``pid*``/``cols``/``acc``/``mx``/
+#: ``ss``/``__r*``/``__c*``/``__o*`` locals, so a colliding meta would
+#: silently shadow them.
 _REDUCTION_LOCALS: frozenset = _TRITON_LOCALS | frozenset(
     {
         "row",
+        "rows",
+        "pid0",
+        "pid1",
         "ci",
         "c0",
+        "s",
         "cols",
         "cols64",
+        "cmask",
         "mask",
         "base",
         "mx",
+        "mxv",
         "ss",
+        "ssv",
         "acc",
         "out",
         "v",
@@ -2829,7 +2864,12 @@ def reduction_triton_spec(spec: Any) -> dict | None:
     metas = _spec_metas(spec)
     if not metas or any(not _red_meta_ok(m) for m in metas):
         return None
-    const = "tl.full([BLOCK_R], {v}, dtype=out_ptr.dtype.element_ty)"
+    # scalar const leaves: the v2 kernels evaluate the body on
+    # ``[BM, BR]`` tiles, and a ``()``-shaped ``tl.full`` broadcasts
+    # to any tile rank while keeping the ``libdevice`` operand dtype
+    # the ``[BLOCK]``-shaped template provided (see
+    # ``_TRITON_CONST_1D``).
+    const = "tl.full((), {v}, dtype=out_ptr.dtype.element_ty)"
     body = _triton_expr(child, const)
     if body is None:
         return None
@@ -2844,198 +2884,318 @@ def reduction_triton_spec(spec: Any) -> dict | None:
     }
 
 
-def _red_prelude(nslots: int) -> str:
-    """Emit the per-program row-offset prelude.
+def _red_col_offsets(nslots: int) -> str:
+    """Emit per-slot column offsets ``__co{i}`` ([BR] int64 vectors).
 
-    ``row`` enumerates the outer (non-reduced) index space; each
-    stride-table slot's contribution is the sum over outer dims of
-    ``coord_d * eff_stride_d`` — scalars, computed once per program.
-    Slots past the operand count are the softmax store-offset slot.
+    ``NRED`` is a launch-time ``tl.constexpr``, so the single-red-dim
+    case constant-folds: the column coordinate *is* ``cols64`` and the
+    slot's contribution is one stride multiply — the v1 generic path
+    paid an int64 ``//``/``%`` reconstruction per red dim per chunk.
+    Multi-dim reduces keep the stride-table decode (the column index
+    enumerates the red dims row-major, exactly like v1).
     """
-    out = "".join(f"    __r{i} = 0\n" for i in range(nslots))
+    out = "    if NRED == 1:\n"
+    for i in range(nslots):
+        out += (
+            f"        __co{i} = cols64 * tl.load(ometa_ptr + "
+            f"{2 + i} * NDIM + NOUT)\n"
+        )
+    out += "    else:\n"
+    for i in range(nslots):
+        out += f"        __co{i} = tl.zeros([BR], dtype=tl.int64)\n"
     out += (
-        "    for d in tl.static_range(NOUT):\n"
-        "        __sz = tl.load(ometa_ptr + d)\n"
-        "        __ost = tl.load(ometa_ptr + NDIM + d)\n"
-        "        __cd = (row // __ost) % __sz\n"
+        "        for j in tl.static_range(NRED):\n"
+        "            __csz = tl.load(ometa_ptr + NOUT + j)\n"
+        "            __cst = tl.load(ometa_ptr + NDIM + NOUT + j)\n"
+        "            __cco = (cols64 // __cst) % __csz\n"
     )
     out += "".join(
-        f"        __r{i} += __cd * tl.load("
-        f"ometa_ptr + {2 + i} * NDIM + d)\n"
+        f"            __co{i} += __cco * tl.load(ometa_ptr + "
+        f"{2 + i} * NDIM + NOUT + j)\n"
         for i in range(nslots)
     )
     return out
 
 
-def _red_chunk(metas: list, nslots: int) -> str:
-    """Emit one reduce-axis chunk: offsets, masked body loads.
+def _red_prologue(nslots: int) -> str:
+    """Emit the tiled prologue every v2 kernel shares.
 
-    The column-space strides live at ``ometa_ptr + NDIM + NOUT + j``
-    (permuted dim ``NOUT + j``); each slot's element offset is its
-    scalar row offset plus the per-column contribution.  Loads
-    convert to the output dtype — the host's promote-types result —
-    so mixed-dtype sites compile like the spelled broadcast does.
-    Slot ``len(metas)`` (softmax only) is the store-offset slot —
-    computed, never loaded.
+    ``rows`` enumerates outer-index blocks of ``BM`` and ``cols`` the
+    program's reduce-axis chunk (``pid1 * BR``); ``__ro{i}`` /
+    ``__co{i}`` are the per-slot row/column offset vectors and
+    ``__o{i}`` their broadcast sum — the ``[BM, BR]`` element
+    offsets.  The row decode runs once per *block* of rows (the v1
+    kernel decoded one scalar row per program over a serial chunk
+    loop), and the column decode runs once per chunk — neither is
+    per-element.
     """
-    lines = [
-        "        cols = c0 + tl.arange(0, BLOCK_R)",
-        "        cols64 = cols.to(tl.int64)",
-        "        mask = cols < R",
-    ]
-    lines += [
-        f"        __co{i} = tl.zeros([BLOCK_R], dtype=tl.int64)"
-        for i in range(nslots)
-    ]
-    lines += [
-        "        for j in tl.static_range(NRED):",
-        "            __csz = tl.load(ometa_ptr + NOUT + j)",
-        "            __cst = tl.load(ometa_ptr + NDIM + NOUT + j)",
-        "            __cco = (cols64 // __cst) % __csz",
-    ]
-    lines += [
-        f"            __co{i} += __cco * tl.load("
-        f"ometa_ptr + {2 + i} * NDIM + NOUT + j)"
-        for i in range(nslots)
-    ]
-    for i in range(nslots):
-        lines.append(f"        __o{i} = __r{i} + __co{i}")
-    for i, m in enumerate(metas):
-        lines.append(
-            f"        {m} = tl.load({m}_ptr + __o{i}, mask=mask,"
-            " other=0.0).to(out_ptr.dtype.element_ty)"
-        )
-    return "\n".join(lines) + "\n"
-
-
-def _red_loop(metas: list, nslots: int, tail: str) -> str:
-    """Emit ``for ci in range(NC)`` chunk loop with *tail* per chunk."""
-    return (
-        f"    for ci in range(NC):\n"
-        f"        c0 = ci * BLOCK_R\n{_red_chunk(metas, nslots)}{tail}"
+    out = (
+        "    pid0 = tl.program_id(0)\n"
+        "    pid1 = tl.program_id(1)\n"
+        "    rows = (pid0 * BM + tl.arange(0, BM)).to(tl.int64)\n"
+        "    rows32 = pid0 * BM + tl.arange(0, BM)\n"
     )
+    # int32 decode: ``rows // __ost % __sz`` is a software division
+    # sequence — int64 costs ~2x int32 and this runs per outer dim
+    # per row-block-element.  The binding guarantees every shape dim,
+    # index-space stride and operand stride fits int32 (total element
+    # count and strides < 2**31), so int32 decode is exact.
+    out += "".join(
+        f"    __ro{i} = tl.zeros([BM], dtype=tl.int32)\n"
+        for i in range(nslots)
+    )
+    out += (
+        "    for d in tl.static_range(NOUT):\n"
+        "        __sz = tl.load(ometa_ptr + d).to(tl.int32)\n"
+        "        __ost = tl.load(ometa_ptr + NDIM + d).to(tl.int32)\n"
+        "        __cd = (rows32 // __ost) % __sz\n"
+    )
+    out += "".join(
+        f"        __ro{i} += __cd * tl.load("
+        f"ometa_ptr + {2 + i} * NDIM + d).to(tl.int32)\n"
+        for i in range(nslots)
+    )
+    out += (
+        "    c0 = pid1 * BR\n"
+        "    cols = c0 + tl.arange(0, BR)\n"
+        "    cols64 = cols.to(tl.int64)\n"
+        "    cmask = cols < R\n"
+    )
+    out += _red_col_offsets(nslots)
+    out += "".join(
+        f"    __o{i} = __ro{i}[:, None].to(tl.int64) + __co{i}[None, :]\n"
+        for i in range(nslots)
+    )
+    out += "    mask = (rows < M)[:, None] & cmask[None, :]\n"
+    return out
+
+
+def _red_loads(metas: list) -> str:
+    """Emit the masked operand loads for a ``[BM, BR]`` tile.
+
+    Loads convert to the output dtype — the host's promote-types
+    result — so mixed-dtype sites compile like the spelled broadcast
+    does (the v1 contract, unchanged).
+    """
+    return "".join(
+        f"    {m} = tl.load({m}_ptr + __o{i}, mask=mask, other=0.0)"
+        f".to(out_ptr.dtype.element_ty)\n"
+        for i, m in enumerate(metas)
+    )
+
+
+def _red_kernel_head() -> str:
+    """Emit the import/``@triton.jit`` preamble shared by all kernels."""
+    return (
+        "import triton\n"
+        "import triton.language as tl\n"
+        "import triton.language.extra.libdevice as libdevice\n\n\n"
+    )
+
+
+#: Constexpr tail shared by every tile kernel — ``BM``/``BR`` are the
+#: row/column tile extents, ``NRED`` the reduce-dim count.
+_RED_CARGS = (
+    " NDIM: tl.constexpr, NOUT: tl.constexpr, NRED: tl.constexpr,"
+    " BM: tl.constexpr, BR: tl.constexpr"
+)
+
+
+def _red_reduce_source(info: dict) -> str:
+    """Emit ``_gr`` (tile reduce) + ``_gc`` (partial combine).
+
+    ``_gr`` is a ``(row-blocks, chunks)`` grid: each program reduces
+    one ``[BM, BR]`` tile — ``BM`` outer rows by one ``BR`` column
+    chunk — and either stores the final per-row result (``DIRECT``,
+    the ``NC == 1`` case) or a per-chunk partial at
+    ``rows * NC + pid1``.  ``_gc`` folds the ``NC`` partials per row
+    (a ``mean`` divides by ``RF`` here, once).  Occupancy comes from
+    tiling *both* axes: the v1 kernel ran one program per outer index
+    with a serial chunk loop, so small outer counts left the SMs
+    idle and tiny reduce axes paid full per-program cost per row.
+    """
+    metas = info["metas"]
+    op = info["op"]
+    body = info["body"]
+    nops = len(metas)
+    ptrs = ", ".join(f"{m}_ptr" for m in metas)
+    dt = "out_ptr.dtype.element_ty"
+    if op in ("sum", "mean"):
+        init = f"tl.zeros([BM], dtype={dt})"
+        initc = f"tl.zeros([BMC], dtype={dt})"
+        ident = "0.0"
+        identc = "0.0"
+        accum = "acc += tl.sum(vv, axis=1)"
+        comb = "acc += v"
+        final = "acc" if op == "sum" else "acc / RF"
+    elif op == "amax":
+        init = f'tl.full([BM], -float("inf"), dtype={dt})'
+        initc = f'tl.full([BMC], -float("inf"), dtype={dt})'
+        ident = '-float("inf")'
+        identc = '-float("inf")'
+        accum = "acc = tl.maximum(acc, tl.max(vv, axis=1))"
+        comb = "acc = tl.maximum(acc, v)"
+        final = "acc"
+    else:  # amin
+        init = f'tl.full([BM], float("inf"), dtype={dt})'
+        initc = f'tl.full([BMC], float("inf"), dtype={dt})'
+        ident = 'float("inf")'
+        identc = 'float("inf")'
+        accum = "acc = tl.minimum(acc, tl.min(vv, axis=1))"
+        comb = "acc = tl.minimum(acc, v)"
+        final = "acc"
+    src = _red_kernel_head()
+    src += (
+        "@triton.jit\n"
+        f"def _gr({ptrs}, out_ptr, ometa_ptr, M, R, NC, RF,{_RED_CARGS}"
+        ", DIRECT: tl.constexpr):\n"
+        + _red_prologue(nops)
+        + f"    acc = {init}\n"
+        + _red_loads(metas)
+        + f"    v = ({body})\n"
+        + f"    vv = tl.where(mask, v, {ident})\n"
+        + f"    {accum}\n"
+        + "    if DIRECT:\n"
+        + f"        tl.store(out_ptr + rows, {final}, mask=rows < M)\n"
+        + "    else:\n"
+        + "        tl.store(out_ptr + rows * NC + pid1, acc,"
+        + " mask=rows < M)\n\n"
+    )
+    src += (
+        "@triton.jit\n"
+        "def _gc(out_ptr, p_ptr, M, NC, RF, BMC: tl.constexpr):\n"
+        "    rows = (tl.program_id(0) * BMC + tl.arange(0, BMC))"
+        ".to(tl.int64)\n"
+        + f"    acc = {initc}\n"
+        + "    for s in range(NC):\n"
+        + "        v = tl.load(p_ptr + rows * NC + s, mask=rows < M,"
+        + f" other={identc})\n"
+        + f"        {comb}\n"
+        + f"    tl.store(out_ptr + rows, {final}, mask=rows < M)\n"
+    )
+    return src
+
+
+def _red_softmax_source(info: dict) -> str:
+    """Emit the softmax kernel family.
+
+    ``NC == 1`` (the whole reduce axis fits one ``BR`` chunk — the
+    common case): ``_grms`` computes each row's max *and* sum-exp in
+    a single pass over one loaded tile, ``_grn`` stores the
+    normalised values — two launches, each fully tiled over rows and
+    columns.  ``NC > 1``: ``_grm``/``_gcm`` (partial row max +
+    combine), ``_grs``/``_gcs`` (partial sum-exp against the combined
+    max + combine), ``_grn`` — the split-K form of the same three
+    reductions, five launches.
+    """
+    metas = info["metas"]
+    body = info["body"]
+    nops = len(metas)
+    ptrs = ", ".join(f"{m}_ptr" for m in metas)
+    dt = "out_ptr.dtype.element_ty"
+    src = _red_kernel_head()
+    # fused stats pass — one tile covers the whole row (NC == 1)
+    src += (
+        "@triton.jit\n"
+        f"def _grms({ptrs}, out_ptr, ss_ptr, ometa_ptr, M, R,{_RED_CARGS}"
+        "):\n"
+        + _red_prologue(nops)
+        + _red_loads(metas)
+        + f"    v = ({body})\n"
+        + '    vv = tl.where(mask, v, -float("inf"))\n'
+        + "    mx = tl.max(vv, axis=1)\n"
+        + "    e = tl.exp(vv - mx[:, None])\n"
+        + "    ss = tl.sum(e, axis=1)\n"
+        + "    tl.store(out_ptr + rows, mx, mask=rows < M)\n"
+        + "    tl.store(ss_ptr + rows, ss, mask=rows < M)\n\n"
+    )
+    # normalised store — grid spans every column chunk
+    src += (
+        "@triton.jit\n"
+        f"def _grn({ptrs}, out_ptr, mx_ptr, ss_ptr, ometa_ptr, M, R,"
+        f"{_RED_CARGS}):\n"
+        + _red_prologue(nops + 1)
+        + _red_loads(metas)
+        + f"    v = ({body})\n"
+        + '    vv = tl.where(mask, v, -float("inf"))\n'
+        + "    mxv = tl.load(mx_ptr + rows, mask=rows < M,"
+        + " other=0.0)[:, None]\n"
+        + "    ssv = tl.load(ss_ptr + rows, mask=rows < M,"
+        + " other=0.0)[:, None]\n"
+        + "    e = tl.exp(vv - mxv) / ssv\n"
+        + f"    tl.store(out_ptr + __o{nops}, e, mask=mask)\n\n"
+    )
+    # split-K stats: partial max per chunk …
+    src += (
+        "@triton.jit\n"
+        f"def _grm({ptrs}, out_ptr, ometa_ptr, M, R, NC,{_RED_CARGS}"
+        "):\n"
+        + _red_prologue(nops)
+        + f'    acc = tl.full([BM], -float("inf"), dtype={dt})\n'
+        + _red_loads(metas)
+        + f"    v = ({body})\n"
+        + '    vv = tl.where(mask, v, -float("inf"))\n'
+        + "    acc = tl.maximum(acc, tl.max(vv, axis=1))\n"
+        + "    tl.store(out_ptr + rows * NC + pid1, acc,"
+        + " mask=rows < M)\n\n"
+    )
+    src += (
+        "@triton.jit\n"
+        "def _gcm(out_ptr, p_ptr, M, NC, BMC: tl.constexpr):\n"
+        "    rows = (tl.program_id(0) * BMC + tl.arange(0, BMC))"
+        ".to(tl.int64)\n"
+        f'    acc = tl.full([BMC], -float("inf"), dtype={dt})\n'
+        + "    for s in range(NC):\n"
+        + "        v = tl.load(p_ptr + rows * NC + s, mask=rows < M,"
+        + ' other=-float("inf"))\n'
+        + "        acc = tl.maximum(acc, v)\n"
+        + "    tl.store(out_ptr + rows, acc, mask=rows < M)\n\n"
+    )
+    # … combine to the row max, then partial sum-exp per chunk …
+    src += (
+        "@triton.jit\n"
+        f"def _grs({ptrs}, out_ptr, mx_ptr, ometa_ptr, M, R, NC,"
+        f"{_RED_CARGS}):\n"
+        + _red_prologue(nops)
+        + "    mxv = tl.load(mx_ptr + rows, mask=rows < M,"
+        + " other=0.0)[:, None]\n"
+        + f"    acc = tl.zeros([BM], dtype={dt})\n"
+        + _red_loads(metas)
+        + f"    v = ({body})\n"
+        + '    vv = tl.where(mask, v, -float("inf"))\n'
+        + "    e = tl.exp(vv - mxv)\n"
+        + "    acc += tl.sum(e, axis=1)\n"
+        + "    tl.store(out_ptr + rows * NC + pid1, acc,"
+        + " mask=rows < M)\n\n"
+    )
+    src += (
+        "@triton.jit\n"
+        "def _gcs(out_ptr, p_ptr, M, NC, BMC: tl.constexpr):\n"
+        "    rows = (tl.program_id(0) * BMC + tl.arange(0, BMC))"
+        ".to(tl.int64)\n"
+        f"    acc = tl.zeros([BMC], dtype={dt})\n"
+        + "    for s in range(NC):\n"
+        + "        v = tl.load(p_ptr + rows * NC + s, mask=rows < M,"
+        + " other=0.0)\n"
+        + "        acc += v\n"
+        + "    tl.store(out_ptr + rows, acc, mask=rows < M)\n"
+    )
+    return src
 
 
 def _reduction_triton_source(info: dict) -> str:
     """Emit the generated reduction kernel module for a spec.
 
-    One program per outer index; the reduce axis is walked in
-    ``BLOCK_R`` chunks inside the program — no cross-program
-    partials, one launch for the whole body.  ``sum``/``mean``
-    accumulate ``tl.sum``, ``amax``/``amin`` ``tl.maximum``/
-    ``tl.minimum``; ``softmax`` runs three passes (row max, row
-    sum-exp, normalised store) recomputing the body each pass.
+    v2: a ``(row-block, column-chunk)`` tiled grid with cross-program
+    partials — see :func:`_red_reduce_source` /
+    :func:`_red_softmax_source`.  Arbitrary reduce dims still ride
+    the ``_red_permutation``/``ometa`` stride machinery; only the
+    emitted kernel changed, not the spec grammar or the binding's
+    honest spelled fallback.
     """
-    metas = info["metas"]
-    op = info["op"]
-    body = info["body"]
-    # stride-table slots: the operand metas, plus — for softmax,
-    # whose output is input-shaped — the store-offset slot the
-    # normalised pass writes through.
-    nslots = len(metas) + (1 if op == "softmax" else 0)
-    ptrs = ", ".join(f"{m}_ptr" for m in metas)
-    sig = (
-        f"def _gr({ptrs}, out_ptr, ometa_ptr, M, R, NC, RF,"
-        " NDIM: tl.constexpr, NOUT: tl.constexpr,"
-        " NRED: tl.constexpr, BLOCK_R: tl.constexpr):\n"
-    )
-    head = (
-        "import triton\n"
-        "import triton.language as tl\n"
-        "import triton.language.extra.libdevice as libdevice\n"
-        "\n\n@triton.jit\n"
-        + sig
-        + "    row = tl.program_id(0).to(tl.int64)\n"
-        + _red_prelude(nslots)
-    )
-    if op == "softmax":
-        src = _red_softmax_body(metas, nslots, body, head)
-    else:
-        src = _red_reduce_body(op, metas, nslots, body, head)
-    # ``M``/``NC`` are consumed by the grid/loop; ``RF`` only by mean.
-    return src
-
-
-def _red_reduce_body(
-    op: str, metas: list, nslots: int, body: str, head: str
-) -> str:
-    """Emit the single-pass reduce kernel tail for *op*."""
-    dt = "out_ptr.dtype.element_ty"
-    if op in ("sum", "mean"):
-        init = f"tl.zeros((), dtype={dt})"
-        ident = "0.0"
-        accum = "acc += tl.sum(v, axis=0)"
-        final = "acc" if op == "sum" else "acc / RF"
-    elif op == "amax":
-        init = f'tl.full((), -float("inf"), dtype={dt})'
-        ident = '-float("inf")'
-        accum = "acc = tl.maximum(acc, tl.max(v, axis=0))"
-        final = "acc"
-    else:  # amin
-        init = f'tl.full((), float("inf"), dtype={dt})'
-        ident = 'float("inf")'
-        accum = "acc = tl.minimum(acc, tl.min(v, axis=0))"
-        final = "acc"
-    tail = (
-        f"        v = ({body})\n"
-        f"        v = tl.where(mask, v, {ident})\n"
-        f"        {accum}\n"
-    )
-    return (
-        head
-        + f"    acc = {init}\n"
-        + _red_loop(metas, nslots, tail)
-        + f"    out = {final}\n"
-        + "    tl.store(out_ptr + row, out)\n"
-    )
-
-
-def _red_softmax_body(
-    metas: list, nslots: int, body: str, head: str
-) -> str:
-    """Emit the three-pass softmax kernel tail.
-
-    Pass 1 folds the row max, pass 2 the sum of ``exp(v - max)``,
-    pass 3 the normalised store at the slot-``len(metas)`` offset —
-    the permuted flat index into the input-shaped output, computed
-    by the same stride machinery as the operand loads (the reduce
-    set need not be trailing, so ``row * R + col`` is not generally
-    the store index).
-    """
-    dt = "out_ptr.dtype.element_ty"
-    chunk = _red_chunk(metas, nslots)
-    pass1 = (
-        "        v = (" + body + ")\n"
-        '        vv = tl.where(mask, v, -float("inf"))\n'
-        "        mx = tl.maximum(mx, tl.max(vv, axis=0))\n"
-    )
-    pass2 = (
-        "        v = (" + body + ")\n"
-        '        vv = tl.where(mask, v, -float("inf"))\n'
-        "        ss += tl.sum(tl.exp(vv - mx), axis=0)\n"
-    )
-    store_slot = len(metas)
-    pass3 = (
-        "        v = (" + body + ")\n"
-        '        vv = tl.where(mask, v, -float("inf"))\n'
-        "        e = tl.exp(vv - mx) / ss\n"
-        f"        tl.store(out_ptr + __o{store_slot}, e, mask=mask)\n"
-    )
-    loop = "    for ci in range(NC):\n        c0 = ci * BLOCK_R\n"
-    return (
-        head
-        + f'    mx = tl.full((), -float("inf"), dtype={dt})\n'
-        + loop
-        + chunk
-        + pass1
-        + f"    ss = tl.zeros((), dtype={dt})\n"
-        + loop
-        + chunk
-        + pass2
-        + loop
-        + chunk
-        + pass3
-    )
+    if info["op"] == "softmax":
+        return _red_softmax_source(info)
+    return _red_reduce_source(info)
 
 
 def _red_dims(info: dict, rank: int) -> tuple | None:
@@ -3085,6 +3245,14 @@ def _red_dtype(tensors: list) -> Any:
     return dt
 
 
+#: Reduction ometa cache — same posture as ``_TRITON_OMETA``: the
+#: buffer is a pure function of the broadcast layout, and rebuilding
+#: it per call costs a pageable H2D copy (~14µs measured) that small
+#: reductions cannot afford.  Bounded like the pointwise cache.
+_RED_OMETA: dict = {}
+_RED_OMETA_MAX = 256
+
+
 def _red_ometa(
     tensors: list,
     shape: tuple,
@@ -3102,10 +3270,22 @@ def _red_ometa(
     ``p < nout``, red dims after), then one K-stride slot per
     operand (effective element strides, 0 on absent/broadcast dims)
     and — *store* — a final slot of the output's row-major strides
-    for the softmax store offset.
+    for the softmax store offset.  Cached per layout — see
+    ``_RED_OMETA``.
     """
     import torch
 
+    key = (
+        shape,
+        perm,
+        nout,
+        store,
+        str(device),
+        tuple((tuple(t.shape), tuple(t.stride())) for t in tensors),
+    )
+    om = _RED_OMETA.get(key)
+    if om is not None:
+        return om
     k = len(shape)
     pshape = tuple(shape[d] for d in perm)
     # original-order row-major strides — the store slot's strides
@@ -3141,7 +3321,11 @@ def _red_ometa(
                 buf.append(t.stride(j))
     if store:
         buf.extend(ss[g] for g in perm)
-    return torch.tensor(buf, dtype=torch.int64, device=device)
+    om = torch.tensor(buf, dtype=torch.int64, device=device)
+    if len(_RED_OMETA) >= _RED_OMETA_MAX:
+        _RED_OMETA.clear()
+    _RED_OMETA[key] = om
+    return om
 
 
 def _red_out_shape(info: dict, shape: tuple, red: tuple) -> tuple:
@@ -3174,20 +3358,65 @@ def _red_next_pow2(n: int, cap: int) -> int:
     return p
 
 
-def _reduction_binding(kern: Any, info: dict, spec: Any) -> Any:
-    """Host wrapper for a generated reduction kernel.
+def _red_tile_dims(m_rows: int, r_cols: int) -> tuple:
+    """Pick ``(BR, NC, BM)`` for the tiled reduction kernels.
+
+    ``BR`` is the column tile — the smallest power of two covering
+    the reduce axis, capped at 256 (``NC == 1`` selects the fused
+    direct/stats paths; larger axes chunk into ``NC`` partials).
+    ``BM`` is the row tile — a power of two sized so ``ceil(M/BM)``
+    lands near ~512 row-blocks while ``BM * BR`` stays ≤ ~2048
+    elements per program (register pressure, not occupancy, is the
+    binding constraint at these tile sizes — measured on the p32
+    probe shapes).
+    """
+    BR = _red_next_pow2(min(r_cols, 256), 256)
+    NC = (r_cols + BR - 1) // BR
+    cap = min(64, max(1, 2048 // BR))
+    # a program's tile should fill its threads: BM * BR >= ~256
+    # elems (a [1, 64] tile idles half of a 4-warp CTA — measured
+    # 2x slower than BM >= 2 on the probe shapes)
+    lo = 1
+    while lo * BR < 256 and lo < cap:
+        lo *= 2
+    want = max(1, (m_rows + 255) // 256)
+    BM = 1
+    while min(cap, want) >= BM * 2:
+        BM *= 2
+    BM = max(BM, min(lo, cap))
+    # never tile more rows than exist (masked lanes are free but
+    # pointless — and a mostly-masked tile wastes the fill the `lo`
+    # rule was buying)
+    return BR, NC, min(BM, _red_next_pow2(m_rows, 64))
+
+
+def _reduction_binding(mod: Any, info: dict, spec: Any) -> Any:
+    """Host wrapper for a generated reduction kernel module.
 
     ``fn(*vals)`` binds the spec metavars positionally, checks the
     call-time subset — CUDA floating tensors, a ``dim`` attr that
-    normalises against the broadcast rank — and launches one
-    kernel.  Anything outside the subset
-    evaluates the spelled body instead: the binding's denotation is
-    the spec verbatim, the Triton arm is the implementation where
-    it applies (the ``_rms_norm_measured`` posture).
+    normalises against the broadcast rank — and launches the kernel
+    family the module ships (one ``_gr``+``_gc`` pair for the
+    pointwise-head ops, ``_grms``/``_grn`` or the split-K softmax
+    chain).  Anything outside the subset — or a chunk count whose
+    partial buffer would be unreasonable — evaluates the spelled
+    body instead: the binding's denotation is the spec verbatim, the
+    Triton arm is the implementation where it applies (the
+    ``_rms_norm_measured`` posture).
     """
     params = info["params"]
     metas = info["metas"]
     op = info["op"]
+    if op == "softmax":
+        k_grms = mod._grms
+        k_grn = mod._grn
+        k_grm = mod._grm
+        k_gcm = mod._gcm
+        k_grs = mod._grs
+        k_gcs = mod._gcs
+    else:
+        k_gr = mod._gr
+        k_gc = mod._gc
 
     def fn(*args: Any, **_attrs: Any) -> Any:
         import torch
@@ -3229,26 +3458,97 @@ def _reduction_binding(kern: Any, info: dict, spec: Any) -> Any:
         device = xs[0].device
         if m_rows == 0 or r_cols == 0:
             return torch.empty(out_shape, dtype=dt, device=device)
+        # the kernels decode row coordinates in int32 — the largest
+        # element offset any operand can address must fit (a tensor
+        # can legally carry strides past its own numel via
+        # ``as_strided``; those sites keep the spelled arm)
+        if m_rows * r_cols >= (1 << 31) or any(
+            sum(
+                abs((d - 1) * s)
+                for d, s in zip(t.shape, t.stride(), strict=True)
+            )
+            >= (1 << 31)
+            for t in xs
+        ):
+            return _red_spelled(spec, vals)
+        br, nc, bm = _red_tile_dims(m_rows, r_cols)
+        # the partial buffer is m_rows * nc elements — beyond this
+        # the honest spelled eval is the better arm anyway
+        if nc > 256 or m_rows * nc > (1 << 22):
+            return _red_spelled(spec, vals)
         om = _red_ometa(
             xs, shape, perm, nout, device, store=op == "softmax"
         )
-        numel = m_rows if op != "softmax" else m_rows * r_cols
-        out = torch.empty(numel, dtype=dt, device=device)
-        block = _red_next_pow2(min(r_cols, 1024), 1024)
-        nc = (r_cols + block - 1) // block
-        kern[(m_rows,)](
-            *xs,
-            out,
-            om,
-            m_rows,
-            r_cols,
-            nc,
-            float(r_cols),
-            NDIM=rank,
-            NOUT=nout,
-            NRED=len(red),
-            BLOCK_R=block,
-        )
+        rowblocks = (m_rows + bm - 1) // bm
+        cargs = {
+            "NDIM": rank,
+            "NOUT": nout,
+            "NRED": len(red),
+            "BM": bm,
+            "BR": br,
+        }
+        if op == "softmax":
+            mx = torch.empty(m_rows, dtype=dt, device=device)
+            ss = torch.empty(m_rows, dtype=dt, device=device)
+            if nc == 1:
+                # one tile covers the whole row — fused stats pass
+                k_grms[(rowblocks, 1)](
+                    *xs, mx, ss, om, m_rows, r_cols, **cargs
+                )
+            else:
+                pmax = torch.empty(
+                    (m_rows, nc), dtype=dt, device=device
+                )
+                psum = torch.empty(
+                    (m_rows, nc), dtype=dt, device=device
+                )
+                k_grm[(rowblocks, nc)](
+                    *xs, pmax, om, m_rows, r_cols, nc, **cargs
+                )
+                k_gcm[((m_rows + 127) // 128,)](
+                    mx, pmax, m_rows, nc, BMC=128
+                )
+                k_grs[(rowblocks, nc)](
+                    *xs, psum, mx, om, m_rows, r_cols, nc, **cargs
+                )
+                k_gcs[((m_rows + 127) // 128,)](
+                    ss, psum, m_rows, nc, BMC=128
+                )
+            out = torch.empty(m_rows * r_cols, dtype=dt, device=device)
+            k_grn[(rowblocks, nc)](
+                *xs, out, mx, ss, om, m_rows, r_cols, **cargs
+            )
+            return out.view(out_shape)
+        if nc == 1:
+            out = torch.empty(m_rows, dtype=dt, device=device)
+            k_gr[(rowblocks, 1)](
+                *xs,
+                out,
+                om,
+                m_rows,
+                r_cols,
+                nc,
+                float(r_cols),
+                **cargs,
+                DIRECT=True,
+            )
+        else:
+            part = torch.empty((m_rows, nc), dtype=dt, device=device)
+            k_gr[(rowblocks, nc)](
+                *xs,
+                part,
+                om,
+                m_rows,
+                r_cols,
+                nc,
+                float(r_cols),
+                **cargs,
+                DIRECT=False,
+            )
+            out = torch.empty(m_rows, dtype=dt, device=device)
+            k_gc[((m_rows + 127) // 128,)](
+                out, part, m_rows, nc, float(r_cols), BMC=128
+            )
         return out.view(out_shape)
 
     return fn
@@ -3274,10 +3574,17 @@ def reduction_triton_bindings(handlers: dict) -> dict:
         src = _reduction_triton_source(info)
         path = _kernel_cache() / f"_gr_{h['kernel']}.py"
         path.write_text(src)
-        kern = _load_generated(path, "_gr")
-        if kern is None:
+        mod = _load_generated_module(path)
+        if mod is None:
             continue  # module load declined — keep the torch path
-        out[h["kernel"]] = _reduction_binding(kern, info, h["pattern"])
+        need = (
+            ("_grms", "_grn", "_grm", "_gcm", "_grs", "_gcs")
+            if info["op"] == "softmax"
+            else ("_gr", "_gc")
+        )
+        if any(getattr(mod, n, None) is None for n in need):
+            continue
+        out[h["kernel"]] = _reduction_binding(mod, info, h["pattern"])
     return out
 
 

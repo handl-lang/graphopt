@@ -514,19 +514,26 @@ class TestTritonTier:
         # the kernel emitters pass a dtype-typed ``tl.full`` — a
         # scalar literal is a hard type clash inside ``libdevice.*``
         # calls on fp64 tiles (T-025).
-        spec = ("pow", ("relu", "X1"), 2.0)
-        assert "(2.0)" in gk._triton_expr(spec)
+        spec = ("pow", ("relu", "X1"), 3.0)
+        assert "(3.0)" in gk._triton_expr(spec)
         e = gk._triton_expr(spec, gk._TRITON_CONST_1D)
         assert e is not None
         assert "libdevice.pow" in e
         assert (
-            "tl.full([BLOCK], 2.0, dtype=out_ptr.dtype.element_ty)"
+            "tl.full([BLOCK], 3.0, dtype=out_ptr.dtype.element_ty)"
             in e
         )
+        # literal exponent 2 takes the ``x * x`` shortcut instead —
+        # ``libdevice.pow`` costs ~150µs fp64 where a multiply is
+        # free, and the product is the same IEEE value
+        sq = gk._triton_expr(("pow", ("relu", "X1"), 2.0))
+        assert sq is not None
+        assert "libdevice.pow" not in sq
+        assert sq.count("tl.maximum(X1, 0.0)") == 2
 
     def test_triton_bindings_fp64_const_pow(self):
         # Regression for the T-024 audit's one ``raised`` consult:
-        # ``libdevice.pow(f64_tile, (2.0))`` — the fp32 literal —
+        # ``libdevice.pow(f64_tile, (3.0))`` — the fp32 literal —
         # failed Triton compilation.  The const leaf must follow the
         # launch dtype.
         torch = pytest.importorskip("torch")
@@ -535,7 +542,7 @@ class TestTritonTier:
             pytest.skip("needs cuda for triton")
         h = {
             "g": {
-                "pattern": ("pow", ("relu", "X1"), 2.0),
+                "pattern": ("pow", ("relu", "X1"), 3.0),
                 "kernel": "gk_pow64",
                 "args": ("X1",),
             }
@@ -548,7 +555,7 @@ class TestTritonTier:
         ):
             x = torch.randn(5000, device="cuda", dtype=dt)
             torch.testing.assert_close(
-                b["gk_pow64"](x), torch.relu(x) ** 2, **tol
+                b["gk_pow64"](x), torch.relu(x) ** 3, **tol
             )
 
     def test_triton_sink_supported(self):
