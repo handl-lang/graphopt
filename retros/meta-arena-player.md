@@ -357,3 +357,51 @@ work.  Spelled multi-declare lines and fire-restricted variants
 were checked and are strictly dominated (they tie the spelled
 line's payout at 4-step cost; `claim`/macro compress the same
 rewrite cheaper).
+
+## Lever 5 — MACROS move-space extension (2026-11-07, landed)
+
+The candidate-lines lever's residual was provably the *move space*:
+`lawdata.MACROS` shipped no `claim_swiglu_extract`, so the oracle's
+best swiglu line stayed spelled `claim(swiglu) → extract` (+0.566)
+and could be neither demonstrated nor played as a macro.  A probe
+replayed 18 candidate compressions (all claim/saturate orderings,
+budgets, all-claims compositions) through `macro_moves.offered`'s
+viability filter against the oracle argmax on both held-out
+streams:
+
+- `claim(swiglu)→extract` as one macro: **+0.617 vs +0.566 — wins
+  all 15 swiglu boards** (+0.051 each, the same one-step-charge +
+  waived-enode mechanism `claim_silu_extract` earns).
+- `saturate→extract` / `saturate(256)→extract` macros: exact ties
+  with `extract` on every decline board — not shipped (zero gain,
+  viable-everywhere offer noise).
+- All-claims and claim±saturate compositions: never beat the plain
+  fused macro — the swiglu kernel subsumes the inner silu fold.
+
+`macro_miner` re-run over the train stream ranks the gram **#1**
+(count 17, certified 1.00, mean_terminal 0.6167, score 10.4833 —
+above the silu gram's 8.77 under current machinery, since shipped
+macros are now themselves offers in the mined trajectories).  The
+row ships as `claim_swiglu_extract` at rank 2 beside
+`claim_silu_extract`.
+
+**Measured — same bake recipe** (imitate 3 / RL 5, 400 train, 40
+held-out, budget 24, T=1.2, eps=0.25, warm-start from shipped
+prior):
+
+| arm | offset 7919 | offset 31337 |
+|---|---:|---:|
+| pre-extension bake | +0.19 / +0.18 | +0.25 / +0.23 |
+| **MACROS extension** | **+0.20 / +0.18** | **+0.27 / +0.23** |
+
+Positive at both offsets; imitation 1200/1200 cloned per seed.
+Every paying oracle plan is now a single macro step — the oracle's
+move space on this corpus is fully compressed.  `op:macro` flipped
+−1.2 → +2.2 while `op:claim` holds +2.1: the policy keeps both
+routes and picks per board.  `meta_prior` re-baked from the seed-0
+run (verified +0.198 learned-greedy on the held-out stream at
+budget 24).  `test_imitate_oracle_clones_demonstrations`'s pin
+moved from `op:claim` to `op:macro` — no spelled claim is
+demonstrated anymore on that corpus.
+
+Report: `project/reports/2026-11-07-meta-arena-macros-swiglu.md`.
