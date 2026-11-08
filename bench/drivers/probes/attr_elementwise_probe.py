@@ -7,17 +7,16 @@ re-census shows the corpus DOES carry attr-bearing elementwise ops:
 ``max`` attrs in 11 workloads (CosineAttention, GCNLayer,
 AffineCoupling, CapsuleRouting, ChunkedRetention, RWKVMixBlock,
 STEQuantLinear, RelPosTableAttention, SinkWindowAttention,
-TaylorLinearAttention, TernaryWeightLinear).  They are excluded only
-because the alphabet is a deliberate narrow claim — ``clamp`` is not
-in ``ELEMENTWISE``.
+TaylorLinearAttention, TernaryWeightLinear).  They were excluded
+only because the alphabet was a deliberate narrow claim — the
+widening this probe first measured in-process has since shipped.
 
-This driver measures what the *fixed* attr machinery does with them:
-it widens ``genkernel.ELEMENTWISE`` **in-process** by the three clamp
-ops the corpus actually spells (no shipped file is touched —
-``elementwise_spec``/``_fusion_sites``/``_fusion_pattern`` all read
-the module global at call time), then runs the unmodified intake
-path: ``play._zoo_case`` mints ``gen_*`` specs whose canonical form
-carries attr dicts, ``profitable`` prices them through spelled eval
+This driver measures what the *fixed* attr machinery does with them.
+It was first run with ``genkernel.ELEMENTWISE`` **widened in-process**
+by the three clamp ops; the widening has since shipped — the probe
+now runs the unmodified intake path: ``play._zoo_case`` mints
+``gen_*`` specs whose canonical form carries attr dicts,
+``profitable`` prices them through spelled eval
 (``_eval_spec`` → ``_IR_TO_TORCH``'s attr-aware clamp bindings), the
 cost gate drops losers, and ``play.gen_probe`` delivers kept claims
 through ``hybrid_sink`` — where ``_triton_node_h`` declines the attr
@@ -43,8 +42,8 @@ from mlopt_discovery import play
 from mlopt_discovery import zoo as zoo_mod
 
 #: The attr-bearing elementwise ops the zoo corpus actually spells.
-#: Widened in-process only — this measures the machinery, it does not
-#: ship a vocabulary change.
+#: Shipped in ``genkernel.ELEMENTWISE`` (the in-process widening this
+#: probe first measured has landed); kept here as the census record.
 CLAMP_OPS = frozenset({"clamp", "clamp_min", "clamp_max"})
 
 
@@ -218,10 +217,16 @@ def main(argv: list[str] | None = None) -> int:
             file=__import__("sys").stderr,
         )
         return 1
-    # In-process vocabulary widening — the measurement question is
-    # "does the fixed attr machinery carry real corpus attr bodies",
-    # not "should clamp join the shipped alphabet" (a separate call).
-    gk.ELEMENTWISE = gk.ELEMENTWISE | CLAMP_OPS
+    # The clamp widening is shipped — assert the alphabet carries it
+    # so a future narrowing fails loudly here instead of silently
+    # re-measuring the old exclusion.
+    missing = CLAMP_OPS - gk.ELEMENTWISE
+    if missing:
+        print(
+            f"attr_elementwise_probe: ELEMENTWISE lost {sorted(missing)}",
+            file=__import__("sys").stderr,
+        )
+        return 1
     workloads = (
         {w.strip() for w in args.workloads.split(",") if w.strip()}
         if args.workloads

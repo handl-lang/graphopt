@@ -46,6 +46,9 @@
     "elementwise_ops": [
       "abs",
       "add",
+      "clamp",
+      "clamp_max",
+      "clamp_min",
       "cos",
       "div",
       "exp",

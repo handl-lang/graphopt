@@ -163,8 +163,13 @@ __all__ = [
 
 #: Ops whose torch bindings are pointwise (shape-preserving) — the
 #: bodies a generated kernel may fuse.  Restricted to the plain
-#: unary/binary elementwise vocabulary: no reductions, no reshapes,
-#: no matmul — the honest narrow claim.
+#: unary/binary elementwise vocabulary plus the attr-bearing clamps:
+#: no reductions, no reshapes, no matmul — the honest narrow claim.
+#: The clamps carry their bounds as attr dicts (``{"min": …,
+#: "max": …}``), which every consumer already threads: ``_spec_ops``
+#: skips dicts, ``_fusion_pattern`` appends ``t.attrs``, and the
+#: Triton tiers decline attr-carrying nodes so those bodies deliver
+#: through the compiled-spelled arm.
 ELEMENTWISE: frozenset = frozenset(
     {
         "add",
@@ -192,6 +197,9 @@ ELEMENTWISE: frozenset = frozenset(
         "reciprocal",
         "softsign",
         "softsign_gate",
+        "clamp",
+        "clamp_min",
+        "clamp_max",
     }
 )
 
