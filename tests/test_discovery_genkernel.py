@@ -842,6 +842,91 @@ class TestMeasuredReferee:
             == {}
         )
 
+    def _borderline_fixture(self):
+        torch = pytest.importorskip("torch")
+        x = _v("x", 16)
+        term = _p("mul", x, _p("relu", x))
+        hs = {
+            "g": {
+                "pattern": ("mul", "X1", ("relu", "X1")),
+                "kernel": "gk_b",
+                "args": ("X1",),
+            }
+        }
+        kf = lambda n, h, v: (lambda *a: a[0])  # noqa: E731
+        return hs, term, {"x": torch.rand(16)}, kf
+
+    def test_borderline_ratio_decided_by_window_majority(
+        self, monkeypatch
+    ):
+        """A ratio inside ``_REFEREE_BORDERLINE`` is re-timed and the
+        keep/drop decision is the majority of the windows' votes —
+        a single noisy window must not move the keep set (the
+        flip-rate residual: ChunkedSSD ``scan_2`` read 0.93x once
+        against a ~1.05x typical)."""
+        hs, term, env, kf = self._borderline_fixture()
+        # first window reads a marginal loss; the two confirmations
+        # read wins — majority keeps
+        monkeypatch.setattr(
+            gk, "_kernel_pays", lambda *a, **k: (1.0, 1.05)
+        )
+        scripted = iter([(1.0, 0.9), (1.0, 0.95)])
+        calls = []
+
+        def fake_paired(a, b, reps):
+            calls.append(1)
+            return next(scripted)
+
+        monkeypatch.setattr(gk, "_paired_time", fake_paired)
+        gk.PROFITABLE_LOG.clear()
+        keep = gk.profitable(hs, term, env, reps=2, kernel_for=kf)
+        assert "g" in keep
+        assert len(calls) == 2
+        rows = [r for r in gk.PROFITABLE_LOG if r[0] == "g"]
+        assert [r[3] for r in rows] == [0, 1, 2]
+        assert [r[4] for r in rows] == [False, True, True]
+
+    def test_borderline_ratio_losing_majority_drops(
+        self, monkeypatch
+    ):
+        """Same band, losing majority — the guard must not turn
+        borderline noise into keeps either."""
+        hs, term, env, kf = self._borderline_fixture()
+        monkeypatch.setattr(
+            gk, "_kernel_pays", lambda *a, **k: (1.0, 1.05)
+        )
+        scripted = iter([(1.0, 0.9), (1.0, 1.1)])
+        monkeypatch.setattr(
+            gk, "_paired_time", lambda a, b, reps: next(scripted)
+        )
+        gk.PROFITABLE_LOG.clear()
+        keep = gk.profitable(hs, term, env, reps=2, kernel_for=kf)
+        assert keep == {}
+        rows = [r for r in gk.PROFITABLE_LOG if r[0] == "g"]
+        assert [r[4] for r in rows] == [False, True, False]
+
+    def test_clear_ratio_skips_confirmation_windows(
+        self, monkeypatch
+    ):
+        """Outside the band the sweep keeps its single-window cost —
+        the guard only pays where the noise lives."""
+        hs, term, env, kf = self._borderline_fixture()
+        monkeypatch.setattr(
+            gk, "_kernel_pays", lambda *a, **k: (1.0, 3.0)
+        )
+        calls = []
+        monkeypatch.setattr(
+            gk,
+            "_paired_time",
+            lambda a, b, reps: calls.append(1) or (1.0, 3.0),
+        )
+        gk.PROFITABLE_LOG.clear()
+        keep = gk.profitable(hs, term, env, reps=2, kernel_for=kf)
+        assert keep == {}
+        assert calls == []
+        rows = [r for r in gk.PROFITABLE_LOG if r[0] == "g"]
+        assert len(rows) == 1 and rows[0][3] == 0
+
     def test_fallback_env_move_failure_keeps_host(self, monkeypatch):
         """CUDA fallback: a failed ``.cuda()`` keeps the host env."""
         torch = pytest.importorskip("torch")

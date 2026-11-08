@@ -657,6 +657,31 @@ def _referee_out(kernel: Any, vals: dict, mvs: list) -> Any:
     return _host(kernel(*[vals[m] for m in mvs]))
 
 
+#: Per-handler referee timing log — appended by :func:`profitable`
+#: with ``(name, t_spelled, t_kernel, window, keep_vote)`` per timing
+#: sample.  A handler measured once contributes one row; a borderline
+#: handler (see ``_REFEREE_BORDERLINE``) contributes one row per
+#: confirmation window, consecutive in the log, and its keep/drop
+#: decision is the majority of those rows' votes.  Measurement
+#: surface only (the ``TRITON_REFEREE_LOG`` precedent in ``play``):
+#: the flip-rate probe reads it to correlate keep/drop outcomes with
+#: the measured ratios.
+PROFITABLE_LOG: list = []
+
+#: Borderline band around the keep threshold, as a ratio multiplier.
+#: The referee's interleaved A/B windows still swing ±10-15% on this
+#: host (the T-026 residual: identical-binary reruns flip keep-sets —
+#: ChunkedSSD ``scan_2`` read 0.93x once against a ~1.05x typical, a
+#: chainfuse ``gen_1`` read 1.03x against ~0.9x).  A measured ratio
+#: inside ``margin / _REFEREE_BORDERLINE .. margin *
+#: _REFEREE_BORDERLINE`` cannot be trusted from one window, so the
+#: handler is re-timed (up to two extra windows, stopped early on
+#: agreement) and decided by majority.  Handlers outside the band
+#: keep the single-sample cost; the sweep's worst case is ~3x on the
+#: borderline subset only, typically far less.
+_REFEREE_BORDERLINE = 1.25
+
+
 def profitable(
     handlers: dict,
     term: Any,
@@ -757,7 +782,40 @@ def profitable(
         if timings is None:
             continue
         t_spelled, t_kernel = timings
-        if t_kernel <= t_spelled * margin:
+
+        def kcall(
+            kernel: Any = kernel, vals: dict = vals, mvs: list = mvs
+        ) -> Any:
+            return kernel(*[vals[m] for m in mvs])
+
+        samples = [(t_spelled, t_kernel)]
+        # borderline guard: a ratio inside the noise band gets up to
+        # two confirmation windows — the second only when the first
+        # disagrees — and the keep/drop decision is the majority.
+        # ``_paired_time`` re-warms both arms, so each sample is an
+        # independent interleaved window, not a continuation of the
+        # first.
+        ratio = t_kernel / t_spelled if t_spelled > 0 else float("inf")
+        if (
+            margin / _REFEREE_BORDERLINE
+            <= ratio
+            <= margin * _REFEREE_BORDERLINE
+        ):
+            samples.append(_paired_time(spelled, kcall, reps))
+            # a third window only breaks a first/second disagreement;
+            # two agreeing windows decide on their own
+            if (samples[0][1] <= samples[0][0] * margin) != (
+                samples[1][1] <= samples[1][0] * margin
+            ):
+                samples.append(_paired_time(spelled, kcall, reps))
+        for window, (ts_i, tk_i) in enumerate(samples):
+            PROFITABLE_LOG.append(
+                (name, ts_i, tk_i, window, tk_i <= ts_i * margin)
+            )
+        votes = sum(
+            1 for ts_i, tk_i in samples if tk_i <= ts_i * margin
+        )
+        if votes * 2 > len(samples):
             keep[name] = h
     return keep
 
