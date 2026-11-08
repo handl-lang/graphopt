@@ -405,3 +405,44 @@ moved from `op:claim` to `op:macro` — no spelled claim is
 demonstrated anymore on that corpus.
 
 Report: `project/reports/2026-11-07-meta-arena-macros-swiglu.md`.
+
+## Lever result — corpus-side coverage (2026-11-07, T-009)
+
+The named residual — "handler tags/specs the `gen_cases` corpus
+never produces (e.g. `square`)" — diffed and closed.  Census:
+`lawdata.HANDLERS` ships three tags; pre-change `gen_cases`
+produced boards offering only `silu`/`swiglu`, every claimable
+board paid, every paying board was one 2-step macro.
+
+`gen_cases` gained five kinds (10 builders): `square` (`mul(t,t)`
+under `nosq = sans − {mul_square}` — `claim(square)` offered,
+op-count-neutral, oracle declines: the corpus's first
+claimable-but-unprofitable boards), `square_mix`/`tri` (paying
+silu/swiglu site beside a square site — per-tag selectivity), and
+`dual`/`dual_swiglu` (two disjoint silu-family sites — the first
+boards whose oracle argmax is the *spelled*
+`declare_saturate_handle_silu_extract` macro, +0.450 vs the
+claim compressions' +0.283, because the unbounded `saturate`
+reaches both sites where one `claim` fire does not).
+`macro_moves.offered` needed no new rows — every new argmax is
+already a shipped offer.
+
+Same bake recipe, extended corpus, oracle ceiling +0.35:
+
+| arm | offset 7919 | offset 31337 |
+|---|---:|---:|
+| old weights on extended corpus (control) | +0.292 | +0.301 |
+| **new bake** | **+0.32 / +0.30** | **+0.33 / +0.29** |
+
+Per-kind: `square` declines exactly (−0.05), `dual_swiglu` matches
+oracle (+0.521), `square_mix` loses only the terminal-step
+compression.  Residual gap ~0.03 sits on `dual`/`tri` — macro-choice
+blindness: the spelled 4-step macro and the `claim_*_extract`
+compressions differ only in `x:macro:len`/`score`/handler-bucket
+legs and the winner is anti-correlated with the miner's score.
+Caveat recorded: `silu`/`square` collide in handler bucket 3, so
+literal `claim` rows can't distinguish the tags (harmless today —
+the paying lines are macros).
+
+`meta_prior` re-baked from the seed-0 run.  Report:
+`project/reports/2026-11-07-meta-arena-corpus-coverage.md`.
