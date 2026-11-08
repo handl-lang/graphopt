@@ -290,3 +290,70 @@ side*, not policy side: oracle lines beyond the current
 {extract, saturate→extract, claim→extract, claim→saturate→extract,
 multi-claim} set — e.g. spelled multi-declare lines, or claims
 over-handler compositions the mint doesn't yet offer.
+
+## Lever 4 — candidate-side oracle lines (2026-11-07, T-009 remainder)
+
+The last open lever: the oracle's candidate set itself.  `_candidate_lines`
+(`meta_player.py`) grew in two directions, both restricted to moves the
+arena's own `legal_actions` enumerates so every oracle pick stays
+imitable (`imitate` matches on the legal-set action key):
+
+* **Offered macros** — `macro_moves.offered(state)`'s viable
+  `lawdata.MACROS` compressions replayed as single refereed steps
+  (`[macro]` when the seq ends terminal, else `macro → extract`).
+  A macro charges one `step` and one budget tick for the whole seq,
+  so the spelled `claim → extract` collects 0.05 less than the
+  `claim_silu_extract` macro covering the same rewrite — and a
+  terminal macro never pays the enode term at all.  This was the one
+  candidate class the oracle had never tried despite being *the*
+  legal compressed spelling of its own best lines.
+* **Ordering/budget variants** — `claim → saturate(b) → extract`
+  per bounded arm, `saturate → claim → extract` (closure-first,
+  both arms), bounded saturates after all-claims, saturate-first
+  multi-claim, and the reversed claim order.  Enumerated for
+  completeness; measured below as never argmax.
+
+`_plan_rank` and `evaluate`'s claims/spelled counters now flatten
+macro seqs (`_line_ops`), so a `macro[claim,extract]` plan still
+reads as the tier-0 fused line and macro plays count their inner
+claims.
+
+**Measured — bake recipe** (`--imitate-epochs 3 --epochs 5`, 400
+train / 40 held-out, budget 24, T=1.2, eps=0.25; warm-starts from
+the shipped `meta_prior` bake, same as any re-run of the recipe):
+
+| arm | offset 7919 | offset 31337 |
+|---|---:|---:|
+| prior bake (recorded) | +0.17 / +0.17 | +0.22 / +0.23 |
+| **control re-bake, old candidates, same prior** | +0.17 / +0.17 | +0.23 / +0.23 |
+| **new candidates** | **+0.19 / +0.18** | **+0.25 / +0.23** |
+
+Control runs isolate the candidate effect from the warm start:
+re-baking the old candidate set from the shipped prior reproduces
+the recorded table (the prior is a fixed point of its own recipe),
+so the delta is the candidates'.  ~+0.02 mean at both offsets —
+exactly the mechanism's size: `claim_silu_extract` is viable and
+argmax on the silu/silu_nested boards (~25–30% of the stream),
++0.05 each.  `op:macro` weight moved −1.2 → **+2.7**; imitation
+clones 1446/1446 (seed 0) and 1413/1413 (seed 23418) demonstrated
+moves — every macro demo matched a live legal offer.  Oracle plan
+tiers unchanged: 250 claim-line / 150 decline / 0 spelled-pick;
+the new ordering variants never win argmax (verified per-board:
+`claim→saturate→extract` and friends all pay −0.05 vs plain
+`claim→extract` — the extra step buys no further reach).
+
+**Verdict: MOVED, modestly — and the residual is now provably the
+move space, not the oracle.**  The oracle argmax itself rose only
+where a *shipped* macro covers the winning line; on swiglu boards
+the argmax is still spelled `claim(swiglu) → extract` (+0.566)
+because `lawdata.MACROS` ships no `claim_swiglu_extract` (or
+all-claims / saturate compressions) — a synthesized macro would
+pay ~+0.05 more there (one step charge plus the claim's enode
+term, which a terminal macro never pays) but is not in the legal set, so it can be
+neither demonstrated nor played.  Closing that last gap is a
+`lawdata.MACROS` table extension (new mined rows → new offers for
+every player), i.e. arena move-space work, not oracle-candidate
+work.  Spelled multi-declare lines and fire-restricted variants
+were checked and are strictly dominated (they tie the spelled
+line's payout at 4-step cost; `claim`/macro compress the same
+rewrite cheaper).
