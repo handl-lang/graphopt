@@ -18,8 +18,9 @@ The spec grammar is genkernel's: ``(op, *args[, attrs])`` nodes,
 ``str`` metavar leaves, numeric ``Const`` leaves, and handler bodies
 as ``["ew", spec]`` (or another family tag) descriptors.  Only the
 ops the ``tensor.*`` surface honours convert — today the elementwise
-four, ``matmul``, and the shape-manipulation three with their attr
-spellings; anything else raises :class:`ModelUnsupportedError`
+four, ``matmul``/``linear``, and the shape-manipulation ops with
+their attr spellings; anything else raises
+:class:`ModelUnsupportedError`
 naming the op, and the row records ``unsupported`` instead of an
 ``hnl``.
 """
@@ -168,7 +169,20 @@ _ATTR_OPS: dict[str, tuple[str, ...]] = {
     # denotations needed; negative dims wrap ``d % (rank+1)`` on
     # both sides.
     "unsqueeze": ("dim",),
+    # ``tensor.select(t, dim, index)`` — host-tensor phase-5
+    # addition (T-017 follow-up): drop axis ``dim`` at ``index``
+    # (torch select: rank -1, negative dim/index wrap).  Attr
+    # metavariables (``"aNNN"`` strings) render as string literals,
+    # the same convention ``unsqueeze``'s ``dim`` attr uses — the
+    # bound-site domain, not the projection, is what gates verdicts.
+    "select": ("dim", "index"),
 }
+
+#: Fixed-arity ops whose ``tensor.*`` spelling is the same name and
+#: argument count but not covered by ``_BINARY_OPS`` —
+#: ``tensor.linear(x, w, b)`` for ``("linear", x, w, b)`` (the
+#: host-tensor ``F.linear`` spelling: ``x @ wᵀ + b``).
+_FIXED_OPS: dict[str, int] = {"linear": 3}
 
 
 def model_names(mvars: Any) -> dict[str, str]:
@@ -220,6 +234,19 @@ def _spec_call_to_hnl(node: Any, names: Mapping[str, str]) -> str:
         inner = ", ".join(_emit_spec(a, names) for a in args)
         dim = _lit(attrs.get("dim"))
         return f"tensor.concat([{inner}], {dim})"
+    if op in _FIXED_OPS:
+        want = _FIXED_OPS[op]
+        if attrs:
+            raise ModelUnsupportedError(
+                f"{op}: attrs {sorted(attrs)} have no slot on the "
+                "tensor surface"
+            )
+        if len(args) != want:
+            raise ModelUnsupportedError(
+                f"{op}: arity {len(args)} has no surface signature"
+            )
+        inner = ", ".join(_emit_spec(a, names) for a in args)
+        return f"tensor.{op}({inner})"
     if op in _ATTR_OPS:
         return _attr_op_to_hnl(op, args, attrs, names)
     raise ModelUnsupportedError(

@@ -6608,8 +6608,8 @@
         ],
         "attrs": {}
       },
-      "hnl": null,
-      "unsupported": "op 'select' is not on the tensor.* model surface"
+      "hnl": "tensor.add(v13, tensor.mul(tensor.unsqueeze(v419, -1), tensor.unsqueeze(tensor.select(tensor.linear(v633, v634, v635), 1, \"a155\"), \"a75\")))",
+      "unsupported": null
     },
     {
       "id": "denotation:synop_4f8fefdd38",
@@ -12253,8 +12253,8 @@
       "max_err": Infinity,
       "max_rel": Infinity,
       "sites": 0,
-      "detail": "unexpressible: op 'select' is not on the tensor.* model surface",
-      "hnl": null
+      "detail": "no recorded bound-site domain",
+      "hnl": "tensor.add(v13, tensor.mul(tensor.unsqueeze(v419, -1), tensor.unsqueeze(tensor.select(tensor.linear(v633, v634, v635), 1, \"a155\"), \"a75\")))"
     },
     "denotation:synop_4f8fefdd38": {
       "op": "synop_4f8fefdd38",
