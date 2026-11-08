@@ -57,6 +57,7 @@ from . import lawdata, meta_prior
 from . import meta_arena as ma
 
 __all__ = [
+    "META_FEATURES",
     "META_PART_TAGS",
     "META_SPEC",
     "META_SPEC_V2",
@@ -83,6 +84,26 @@ _LR = 0.1
 #: The pre-consolidation name, kept as an alias for callers/tests.
 _Hist = PlayHist
 
+#: Handler-identity bucket width for the meta schema — widened
+#: from ``lawdata.META_ARENA_HASH_BUCKETS["handler"]`` (4) because
+#: the shipped ``silu``/``square`` handler tags collide there
+#: (both land in bucket 3): literal ``claim``/``handle`` rows and
+#: the macro ``a:h:*`` legs could not tell them apart — a latent
+#: blindness (square always declines today, so nothing paid the
+#: difference, but a paying square claim would have been invisible
+#: to the policy).  Width 8 separates all three shipped tags
+#: (silu→7, square→3, swiglu→0) and leaves headroom for minted
+#: handler tags.  ``_bucket`` reads this override for the
+#: ``"handler"`` kind; the schema rows ``a:h:4..7``, ``x:mc:*``,
+#: ``x:mh:*`` and V2's ``x:seqh:*:4..7`` are generated off it, so
+#: the featurizer and the schema can never desync.
+_META_HANDLER_BUCKETS = 8
+
+_META_BUCKET_WIDTHS: dict[str, int] = {
+    **lawdata.META_ARENA_HASH_BUCKETS,
+    "handler": _META_HANDLER_BUCKETS,
+}
+
 
 # ---------------------------------------------------------------------------
 #  Featurization — (MetaState, Action) -> feature row over the schema
@@ -90,8 +111,13 @@ _Hist = PlayHist
 
 
 def _bucket(name: Any, kind: str) -> int:
-    """Stable-hash *name* into ``META_ARENA_HASH_BUCKETS[kind]``."""
-    width = lawdata.META_ARENA_HASH_BUCKETS[kind]
+    """Stable-hash *name* into the kind's bucket width.
+
+    Widths come from :data:`_META_BUCKET_WIDTHS` — the lawdata table
+    with the ``"handler"`` kind widened (see
+    :data:`_META_HANDLER_BUCKETS` for why).
+    """
+    width = _META_BUCKET_WIDTHS[kind]
     h = hashlib.sha256(str(name).encode("utf-8")).digest()
     return int.from_bytes(h[:4]) % width
 
@@ -222,7 +248,23 @@ def _macro_feats(
       ("viability is legality, not payoff");
     * ``x:claimable:claim`` / ``x:handleable:claim`` — the context
       terms a spelled claim gets, emitted when the seq *contains* a
-      claim, so the macro row inherits the board-fit pricing.
+      claim, so the macro row inherits the board-fit pricing;
+    * the move-shape legs (``x:macro:spelled`` / ``saturating`` /
+      ``nclaims`` / ``reach_*``) and the role-qualified handler
+      buckets ``x:mc:*`` / ``x:mh:*`` — the spelled-vs-claim
+      distinction the stat columns cannot carry.  On ``dual``/``tri``
+      boards the oracle's argmax is the spelled
+      ``declare→saturate→handle→extract`` macro while the
+      ``claim_*_extract`` compressions differ only in
+      ``x:macro:len``/``score`` and the merged ``a:h:*`` legs —
+      winner anti-correlated with miner score, ~0.03 held-out
+      residual.  ``spelled``/``saturating`` name the seq's
+      structure; ``reach_*`` prices it against the board's site and
+      claimable broadcasts (zero on non-spelled offers, so the
+      product stays candidate-varying — the property every useful
+      ``x:*`` term needs); ``x:mc:*``/``x:mh:*`` split the handler
+      identity by *role* — a claim-leg bind and a handle-leg bind
+      are different moves that ``a:h:*`` merges.
 
     ``op:macro`` itself comes free through :class:`OpOneHot` once the
     schema names it.  ``a:macro`` is deliberately absent — it would
@@ -245,21 +287,82 @@ def _macro_feats(
             )
             out["x:macro:score"] = float(getattr(m, "score", 0.0)) / 8.0
     has_claim = False
+    ops: list[str] = []
+    claim_tags: list[str] = []
+    handle_tags: list[str] = []
     for sub in seq:
         op, params = (
             (str(sub["op"]), dict(sub.get("params") or {}))
             if isinstance(sub, dict)
             else (str(sub.op), dict(getattr(sub, "params", {})))
         )
+        ops.append(op)
         if op in ("claim", "handle"):
             tag = params.get("handler")
             if tag is not None:
                 out[f"a:h:{_bucket(tag, 'handler')}"] = 1.0
+                if op == "claim":
+                    claim_tags.append(str(tag))
+                else:
+                    handle_tags.append(str(tag))
             has_claim = has_claim or op == "claim"
+    spelled = "declare" in ops
+    saturating = "saturate" in ops
+    reach = 1.0 if spelled and saturating else 0.0
+    out["x:macro:spelled"] = 1.0 if spelled else 0.0
+    out["x:macro:saturating"] = 1.0 if saturating else 0.0
+    out["x:macro:nclaims"] = ops.count("claim") / 4.0
+    out["x:macro:reach_sites"] = reach * row.get("st:sites", 0.0)
+    out["x:macro:reach_claimable"] = reach * row.get(
+        "st:claimable", 0.0
+    )
+    for tag in claim_tags:
+        out[f"x:mc:{_bucket(tag, 'handler')}"] = 1.0
+    for tag in handle_tags:
+        out[f"x:mh:{_bucket(tag, 'handler')}"] = 1.0
     if has_claim:
         out["x:claimable:claim"] = row.get("st:claimable", 0.0)
         out["x:handleable:claim"] = row.get("st:handleable", 0.0)
     return out
+
+
+#: The shipped meta feature schema — ``lawdata.META_ARENA_FEATURES``
+#: plus two extensions the lawdata table cannot express on its own:
+#:
+#: * ``a:h:4..7`` — the widened handler buckets
+#:   (:data:`_META_HANDLER_BUCKETS`; lawdata's schema stops at its
+#:   own width-4 ``a:h:0..3`` rows, which stay — the bucket
+#:   *indices* are what changed, not the names);
+#: * the macro move-shape legs — ``x:macro:spelled`` /
+#:   ``saturating`` / ``nclaims`` / ``reach_sites`` /
+#:   ``reach_claimable`` and the role-qualified handler buckets
+#:   ``x:mc:*`` / ``x:mh:*`` (:func:`_macro_feats` emits them; the
+#:   ``dual``/``tri`` spelled-vs-claim blindness they price is
+#:   documented in that function's docstring).
+#:
+#: The extension lives here rather than in ``lawdata``/gamekit
+#: because the *semantics* are domain machinery: gamekit's
+#: ``gamedata.features`` owns the base schema both repos share,
+#: while these legs name ``meta_player``'s own featurizer parts —
+#: the same seam ``META_ARENA_FEATURES_V2`` already uses for its
+#: ``x:seq*`` block.
+META_FEATURES: tuple[str, ...] = (
+    *lawdata.META_ARENA_FEATURES,
+    *(
+        f"a:h:{b}"
+        for b in range(
+            lawdata.META_ARENA_HASH_BUCKETS["handler"],
+            _META_HANDLER_BUCKETS,
+        )
+    ),
+    "x:macro:spelled",
+    "x:macro:saturating",
+    "x:macro:nclaims",
+    "x:macro:reach_sites",
+    "x:macro:reach_claimable",
+    *(f"x:mc:{b}" for b in range(_META_HANDLER_BUCKETS)),
+    *(f"x:mh:{b}" for b in range(_META_HANDLER_BUCKETS)),
+)
 
 
 #: The meta featurizer's composable parts, in row order: the intercept,
@@ -271,7 +374,7 @@ META_PARTS: tuple = (
     Bias(),
     StateBroadcast(_state_feats),
     PlayRates(("fire", "saturate", "declare", "handle", "claim")),
-    OpOneHot(frozenset(lawdata.META_ARENA_FEATURES)),
+    OpOneHot(frozenset(META_FEATURES)),
     ActionFeats(_act_feats),
     ActionFeats(_macro_feats),
 )
@@ -296,7 +399,7 @@ register_part(
 )
 register_part(
     "meta:onehot",
-    lambda: OpOneHot(frozenset(lawdata.META_ARENA_FEATURES)),
+    lambda: OpOneHot(frozenset(META_FEATURES)),
 )
 register_part("meta:action", lambda: ActionFeats(_act_feats))
 register_part("meta:macro", lambda: ActionFeats(_macro_feats))
@@ -304,7 +407,7 @@ register_legal("meta", ma.legal_actions)
 
 #: The meta-arena player spec — schema, parts, enumerator, prior.
 META_SPEC = DomainSpec.build(
-    features=lawdata.META_ARENA_FEATURES,
+    features=META_FEATURES,
     legal=ma.legal_actions,
     parts=META_PARTS,
     weights=meta_prior.META_ARENA_PLAYER_WEIGHTS,
@@ -346,13 +449,16 @@ _META_OPS_V2: tuple[str, ...] = (
 _PREV_OPS_V2: tuple[str, ...] = ("start", *_META_OPS_V2)
 
 #: The V2 schema — the shipped rows plus the second-order block.
+#: Built on :data:`META_FEATURES` (the widened handler buckets
+#: included) so ``x:seqh:*`` spans the same ``_bucket`` width the
+#: featurizer emits.
 META_ARENA_FEATURES_V2: tuple[str, ...] = (
-    *lawdata.META_ARENA_FEATURES,
+    *META_FEATURES,
     *(f"x:seq:{p}>{c}" for p in _PREV_OPS_V2 for c in _META_OPS_V2),
     *(
         f"x:seqh:{p}:{b}"
         for p in _PREV_OPS_V2
-        for b in range(lawdata.META_ARENA_HASH_BUCKETS["handler"])
+        for b in range(_META_HANDLER_BUCKETS)
     ),
 )
 

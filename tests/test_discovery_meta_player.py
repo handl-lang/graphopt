@@ -37,7 +37,7 @@ class TestFeaturize:
         st = _silu_board().observe()
         for a in ma.legal_actions(st):
             feats = mp.featurize(st, a)
-            assert set(feats) <= set(lawdata.META_ARENA_FEATURES)
+            assert set(feats) <= set(mp.META_FEATURES)
             assert feats["bias"] == 1.0
             assert feats[f"op:{a.op}"] == 1.0
 
@@ -249,7 +249,7 @@ class TestImitate:
         # board's ``extract`` is NOT masked even without the local
         # ``reset_episode`` workaround, which stays as belt-and-
         # braces for older pins.
-        w = {n: 0.0 for n in lawdata.META_ARENA_FEATURES}
+        w = {n: 0.0 for n in mp.META_FEATURES}
         w["op:extract"] = 10.0
         p = mp.MetaLearnedPlayer(0, weights=w, greedy=True, learn=False)
         ma.run_episode(_silu_board(), p, 24)  # extract on move 1
@@ -345,7 +345,7 @@ class TestDriver:
     def test_winning_line_reachable(self):
         # the hand-set policy proves the schema expresses the line:
         # declare+saturate+handle+extract beats scripted on a silu site
-        w = {n: 0.0 for n in lawdata.META_ARENA_FEATURES}
+        w = {n: 0.0 for n in mp.META_FEATURES}
         w.update(
             {
                 "op:declare": 2.0,
@@ -468,7 +468,7 @@ class TestInternals:
     def test_foreign_action_gets_no_schema_keys(self):
         st = _silu_board().observe()
         feats = mp.featurize(st, ma.Action("bogus", {}))
-        assert set(feats) <= set(lawdata.META_ARENA_FEATURES)
+        assert set(feats) <= set(mp.META_FEATURES)
         assert not any(k.startswith("op:") for k in feats)
 
     def test_main_bumps_recursion_limit(self, capsys, monkeypatch):

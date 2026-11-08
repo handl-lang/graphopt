@@ -495,6 +495,8 @@ is brittle at n=40 for every arm (RL 4.15×).  Not wired into
 
 Regenerate with `scripts/train_open_prior.py` / `scripts/train_meta_prior.py`.
 
+> Corpus caveat: the meta-arena row predates the `gen_cases` five→ten-kind extension — current held-out is +0.33 learned-greedy on the extended stream (`project/reports/2026-11-08-meta-arena-macro-legs.md`).
+
 Macro-action minting over `Trajectory` sequences (2026-10-19):
 [`docs/results_macro_moves.md`](results_macro_moves.md)
 (`scripts/macro_miner.py`) — mined `claim→extract` /
