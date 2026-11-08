@@ -450,3 +450,42 @@ a claim cannot keep a compiled-spelled win while shipping the slower
 kernel.  Out-of-grammar specs keep the compiled-spelled arm
 unchanged.  Raw sweeps: `docs/reports/red_triton_probe_{64,zoo,
 64_fp32}.json`.
+
+## Reduction Triton v2 — the structural fixes land, the win is narrow (2026-11-08, T-010)
+
+p32's "why" named three structural deficits; v2 attacked all three in
+the emitter only (grammar, binding interface, referee path unchanged)
+— full record `docs/reports/p33_reduction_triton_v2.md`, raw sweeps
+`docs/reports/red_triton_probe_v2_{64,64_fp32,zoo}.json`.
+
+**Machinery:** reduce ops emit `_gr`+`_gc` — a `(row-blocks,
+chunks)` 2-D grid where each program reduces one `[BM, BR]` tile and
+writes a per-chunk partial (`DIRECT` stores final when `NC == 1`);
+`_gc` folds partials per row.  Softmax: `NC == 1` gets a fused
+`_grms` (row max + sum-exp in one pass over one tile) + `_grn`
+normalise — two blocked launches; `NC > 1` splits into
+`_grm`/`_gcm`/`_grs`/`_gcs`/`_grn`.  Addressing decodes coordinates
+in int32 with an int32-range spelled fallback; `_red_ometa` buffers
+are layout-cached (the ~14 µs H2D rebuild was itself a small-case
+loss); literal `pow(x,2)` lowers to `x*x`.
+
+**Measured — the keeps return:** fp64 64×64×8 went 0/30 kept
+(median 2.52×, worst 28.8×) → **2/30 kept** (RWKVMixBlock red_0/red_1
+at 0.60×/0.71× vs spelled; median 1.83×, worst 2.83×).  `gen_probe`
+on the delivery: **1.074× vs eager, 0.983× vs whole-model
+`torch.compile`** — the first reduction-kernel delivery that does
+not lose to the incumbent (p31's compiled-spelled arm was
+1.206×/0.892×).  fp32 64×64×8: 1/30 kept (red_1 at ~0.38×; red_0
+fails the same fp32 verify tolerance as v1) but `gen_probe` prices
+the module at 0.825× eager / **0.175× compiled** — Inductor's fp32
+whole-module fusion is unbeatable per-claim, recorded honestly.
+Zoo sizes 16×8×2: 0/30 kept, median 2.07× — small reductions still
+can't amortise launch+tile overhead.
+
+**Verdict:** v2 proves the p32 diagnosis was right and fixable —
+occupancy tiling + split-K partials + int32 addressing + blocked
+softmax moved the worst case 10× and produced the tier's first
+keeps.  The win is narrow (large fused reduce bodies at fp64);
+small reductions remain launch-bound and no per-claim kernel
+matches whole-module Inductor fusion.  The arm stays seated — the
+referee prices each claim honestly and the paying corner is real.
