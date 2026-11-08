@@ -621,16 +621,35 @@ def train_player(
 #
 #  * ``extract`` — the degenerate stop;
 #  * ``saturate(b) → extract`` per advertised budget arm;
+#  * the *offered* macro compressions — ``macro_moves.offered``'s
+#    viable ``lawdata.MACROS`` lines replayed as single refereed
+#    steps (``[macro]`` when the seq ends terminal, else
+#    ``macro → extract``).  A macro is the arena's own compression
+#    of a spelled line — one ``step`` charge and one budget tick for
+#    the whole seq — so the spelled ``claim → extract`` collects
+#    0.05 less than the ``claim_silu_extract`` macro covering the
+#    same rewrite.  Only *offered* macros are candidates: they
+#    are the ones ``legal_actions`` actually enumerates, so an
+#    oracle pick stays imitable (``imitate`` matches on the legal
+#    set's action key);
 #  * ``claim(tag) → extract`` per occurring handler tag — the
 #    fused composed line;
 #  * ``claim(tag) → saturate → extract`` — claim plus a closure
 #    pass (the claim fires its minted rule once; saturate can
-#    still find cross-rule reach);
-#  * every claim tag in sequence, then extract (with and without a
-#    saturate) — the multi-claim composition.
+#    still find cross-rule reach) — unbounded and per budget arm;
+#  * ``saturate → claim(tag) → extract`` — the closure-first
+#    ordering, both saturate arms;
+#  * every claim tag in sequence, then extract — with and without
+#    a saturate (unbounded and bounded), saturate-first, and the
+#    reversed claim order — the multi-claim compositions.
 #
 #  Ties resolve to the earlier candidate — cheapest line first —
 #  so a claim that merely breaks even is not demonstrated as a win.
+#  The ordering/budget variants are enumerated for completeness:
+#  on the generated corpus they never beat the plain
+#  ``claim → extract`` (the extra step costs 0.05 and the closure
+#  finds no further reach), which is exactly the saturation
+#  measurement this set exists to make.
 
 
 def spelled_candidates(
@@ -670,17 +689,40 @@ def spelled_candidates(
     return out
 
 
-def _candidate_lines(
-    state: ma.MetaState,
-    handlers: dict | None = None,
-    *,
-    spelled: bool = False,
+def _macro_line(action: ma.Action) -> list[ma.Action]:
+    """Return the oracle candidate replaying one offered macro.
+
+    A seq already ending in ``extract`` is terminal on its own —
+    the candidate is the single macro step; anything shorter gets
+    the terminal move appended so the line always reaches the
+    referee's payout.
+    """
+    seq = action.params.get("seq") or ()
+    last = seq[-1] if seq else {}
+    last_op = (
+        str(last.get("op"))
+        if isinstance(last, dict)
+        else str(getattr(last, "op", ""))
+    )
+    return (
+        [action]
+        if last_op == "extract"
+        else [action, ma.Action.extract()]
+    )
+
+
+def _claim_candidates(
+    tags: list[str], bounded: list
 ) -> list[list[ma.Action]]:
-    """Enumerate the oracle's candidate lines for *state*."""
-    out: list[list[ma.Action]] = [[ma.Action.extract()]]
-    for b in lawdata.META_SATURATE_BUDGETS:
-        out.append([ma.Action.saturate(budget=b), ma.Action.extract()])
-    tags = list(state.claim_tags)
+    """Enumerate the claim-side lines — per-tag and multi-claim.
+
+    Per tag: ``claim → extract``, claim-plus-closure in both
+    directions (``claim → saturate`` and ``saturate → claim``) over
+    the unbounded arm and each bounded one.  Multi-tag boards add
+    the all-claims compositions — plain, saturated (both
+    directions, bounded arms) and the reversed claim order.
+    """
+    out: list[list[ma.Action]] = []
     for tag in tags:
         out.append([ma.Action.claim(tag), ma.Action.extract()])
         out.append(
@@ -690,10 +732,65 @@ def _candidate_lines(
                 ma.Action.extract(),
             ]
         )
+        for b in bounded:
+            out.append(
+                [
+                    ma.Action.claim(tag),
+                    ma.Action.saturate(budget=b),
+                    ma.Action.extract(),
+                ]
+            )
+            out.append(
+                [
+                    ma.Action.saturate(budget=b),
+                    ma.Action.claim(tag),
+                    ma.Action.extract(),
+                ]
+            )
+        out.append(
+            [
+                ma.Action.saturate(),
+                ma.Action.claim(tag),
+                ma.Action.extract(),
+            ]
+        )
     if len(tags) > 1:
         claims = [ma.Action.claim(t) for t in tags]
         out.append([*claims, ma.Action.extract()])
         out.append([*claims, ma.Action.saturate(), ma.Action.extract()])
+        out.append([ma.Action.saturate(), *claims, ma.Action.extract()])
+        for b in bounded:
+            out.append(
+                [
+                    *claims,
+                    ma.Action.saturate(budget=b),
+                    ma.Action.extract(),
+                ]
+            )
+        out.append([*reversed(claims), ma.Action.extract()])
+    return out
+
+
+def _candidate_lines(
+    state: ma.MetaState,
+    handlers: dict | None = None,
+    *,
+    spelled: bool = False,
+) -> list[list[ma.Action]]:
+    """Enumerate the oracle's candidate lines for *state*."""
+    from mlopt_discovery import macro_moves
+
+    out: list[list[ma.Action]] = [[ma.Action.extract()]]
+    for b in lawdata.META_SATURATE_BUDGETS:
+        out.append([ma.Action.saturate(budget=b), ma.Action.extract()])
+    # the offered macro compressions — the legal set's own one-step
+    # spellings of the lines below (see the oracle comment above)
+    for m in macro_moves.offered(state):
+        out.append(_macro_line(m))
+    out += _claim_candidates(
+        list(state.claim_tags),
+        [b for b in lawdata.META_SATURATE_BUDGETS if b is not None],
+    )
     if spelled:
         out += spelled_candidates(state, handlers)
     return out
@@ -841,9 +938,25 @@ def imitate_oracle(
     )
 
 
+def _line_ops(line: Iterable[ma.Action]) -> list[str]:
+    """Flatten a plan's op sequence — macro seqs read as their steps."""
+    ops: list[str] = []
+    for a in line:
+        if a.op == "macro":
+            for sub in a.params.get("seq") or ():
+                ops.append(
+                    str(sub.get("op"))
+                    if isinstance(sub, dict)
+                    else str(getattr(sub, "op", ""))
+                )
+        else:
+            ops.append(a.op)
+    return ops
+
+
 def _plan_rank(plan: tuple[float, list[ma.Action]]) -> int:
     """Curriculum tier of an oracle plan — easy composed lines first."""
-    ops = [a.op for a in plan[1]]
+    ops = _line_ops(plan[1])
     n_claims = sum(1 for o in ops if o == "claim")
     if n_claims == 1 and "saturate" not in ops:
         return 0  # claim → extract: the fused line, reachable early
@@ -916,6 +1029,13 @@ def availability_order(
     return [cp for _k, cp in keyed]
 
 
+def _op_count(reports: Iterable, op: str) -> int:
+    """Count *op* across reports — macro seqs read as their steps."""
+    return sum(
+        1 for r in reports for o in _line_ops([r.action]) if o == op
+    )
+
+
 def evaluate(
     arms: dict[str, Callable[[int], Any]],
     cases: list,
@@ -943,15 +1063,10 @@ def evaluate(
                     "used_declared": (
                         t.used_declared if t is not None else ()
                     ),
-                    "claims": sum(
-                        1
-                        for r in traj.reports
-                        if r.action.op == "claim"
-                    ),
+                    "claims": _op_count(traj.reports, "claim"),
                     "spelled": sum(
-                        1
-                        for r in traj.reports
-                        if r.action.op in ("declare", "handle")
+                        _op_count(traj.reports, o)
+                        for o in ("declare", "handle")
                     ),
                 }
             )
@@ -1154,8 +1269,7 @@ def main(argv: list[str] | None = None) -> int:
         n_spelled = sum(
             1
             for _r, line in plans
-            if any(a.op == "declare" for a in line)
-            and any(a.op == "handle" for a in line)
+            if "declare" in (ops := _line_ops(line)) and "handle" in ops
         )
         print(  # stdout-compat
             "oracle plans: "

@@ -275,7 +275,9 @@ class TestOracle:
             if c[0].endswith(":silu")
         ][0]
         reward, line = mp.oracle_line(case, budget=8)
-        assert [a.op for a in line] == ["claim", "extract"]
+        # the offered macro compresses claim→extract into one
+        # refereed step — strictly cheaper, so it wins the argmax
+        assert [a.op for a in line] == ["macro"]
         assert reward > 0
 
     def test_oracle_declines_control_board(self):
@@ -534,12 +536,68 @@ class TestSpelledLines:
         assert control_plan is None
 
     def test_oracle_spelled_never_beats_claim(self):
-        # the spelled line is dominated wherever claim exists — the
-        # oracle argmax must keep picking the fused move
-        reward, line = mp.oracle_line(
+        # the spelled line is dominated wherever claim exists — and
+        # the offered macro compresses the claim line into one step,
+        # so the oracle argmax picks the macro, not the primitives
+        _reward, line = mp.oracle_line(
             self._silu_case(), budget=8, spelled=True
         )
-        assert [a.op for a in line] == ["claim", "extract"]
+        assert [a.op for a in line] == ["macro"]
+        assert mp._line_ops(line) == ["claim", "extract"]
+
+    def test_candidate_lines_cover_new_shapes(self):
+        # the extended oracle set: offered macros plus the
+        # ordering/budget variants — all composed of moves the
+        # legal enumerator itself offers
+        st = mp._board(self._silu_case(), count_cost, 20_000).observe()
+        lines = mp._candidate_lines(st)
+        ops = [tuple(a.op for a in line) for line in lines]
+        assert ("macro",) in ops
+        assert ("claim", "extract") in ops
+        assert ("claim", "saturate", "extract") in ops
+        assert ("saturate", "claim", "extract") in ops
+        # a bounded-saturate claim line is present (budget=256 arm)
+        assert any(
+            a.op == "saturate" and a.params.get("budget") == 256
+            for line in lines
+            for a in line
+        )
+
+    def test_candidate_lines_multi_claim_variants(self):
+        case = next(
+            c for c in mp.gen_cases(0, 30) if c[0].endswith(":swiglu")
+        )
+        st = mp._board(case, count_cost, 20_000).observe()
+        lines = mp._candidate_lines(st)
+        flats = [mp._line_ops(line) for line in lines]
+        assert ["claim", "claim", "extract"] in flats
+        assert ["claim", "claim", "saturate", "extract"] in flats
+        assert ["saturate", "claim", "claim", "extract"] in flats
+        # the reversed claim order is enumerated too
+        assert flats.count(["claim", "claim", "extract"]) == 2
+
+    def test_macro_line_terminal_and_partial(self):
+        term = ma.Action(
+            "macro",
+            {"seq": [{"op": "claim", "params": {"handler": "silu"}},
+                     {"op": "extract", "params": {}}]},
+        )
+        assert mp._macro_line(term) == [term]
+        part = ma.Action(
+            "macro", {"seq": [{"op": "saturate", "params": {}}]}
+        )
+        line = mp._macro_line(part)
+        assert line == [part, ma.Action.extract()]
+        # Action-typed (non-dict) seq entries read the same way
+        mixed = ma.Action(
+            "macro",
+            {"seq": (ma.Action.claim("silu"), ma.Action.extract())},
+        )
+        assert mp._macro_line(mixed) == [mixed]
+        # an empty seq is not terminal — extract is appended
+        empty = ma.Action("macro", {})
+        assert mp._macro_line(empty) == [empty, ma.Action.extract()]
+        assert mp._line_ops([mixed]) == ["claim", "extract"]
 
     def test_case_availability_and_order(self):
         cases = mp.gen_cases(0, 12)
