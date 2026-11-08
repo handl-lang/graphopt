@@ -949,3 +949,45 @@ class TestExtrasArms:
         )
         out = capsys.readouterr().out
         assert "scan[(4, 4)]:" in out and "decay[(2, 2)]:" in out
+
+
+class TestReductionSites:
+    """The reduction tier's site collector + claim wiring."""
+
+    def test_reduction_sites_finds_fusable_bodies(self):
+        pytest.importorskip("torch")
+        x = _v("x", 4, 8)
+        body = Op.make("mul", x, Op.make("relu", x))
+        term = Op.make("add", Op.make("mean", body, dim=(-1,), keepdim=True), x)
+        sites = play._reduction_sites(term)
+        assert (
+            "mean",
+            ("mul", "X1", ("relu", "X1")),
+            {"dim": (-1,), "keepdim": True},
+        ) in sites
+
+    def test_reduction_sites_ignores_bare_and_nested(self):
+        pytest.importorskip("torch")
+        x = _v("x", 4, 8)
+        bare = Op.make("sum", x, dim=(0,))
+        nested = Op.make(
+            "sum", Op.make("mean", x, dim=(1,)), dim=(0,)
+        )
+        assert play._reduction_sites(Op.make("add", bare, nested)) == []
+
+    def test_mint_tiers_includes_reduction(self):
+        import mlopt_discovery.genkernel as gk
+
+        assert "reduction" in play.TIER_SITES
+        assert play.TIER_SITES["reduction"] is play._reduction_sites
+        assert any(t.name == "reduction" for t in gk.TIERS)
+
+    def test_red_claims_are_measurable(self):
+        h = {
+            "pattern": (
+                "mean",
+                ("mul", "X1", "X2"),
+                {"dim": (0,)},
+            )
+        }
+        assert play._claim_measurable("red_0", h)

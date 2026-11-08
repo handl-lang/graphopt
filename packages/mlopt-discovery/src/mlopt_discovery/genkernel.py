@@ -95,6 +95,24 @@ THE DECAYED TIER
     torch path — whose spelled eval IS the element's reference
     semantics (the ambient ``om_decayed`` binding evaluates
     ``(s·d)@v`` verbatim), so the fallback stays honest.
+
+THE REDUCTION TIER
+    The fourth codegen tier claims *reduction-bodied* fusions —
+    ``mean(mul(x, relu(x)), dim=-1)``, ``sum(mul(s, d))``,
+    ``softmax(gelu(x))`` — where the pointwise tier's boundary rule
+    stops one level short: its elementwise walk abstracts every
+    non-elementwise child to a metavar, so a claim over a reduction
+    could never be minted at all.  :func:`reduction_spec` accepts a
+    spec whose head is a reduce-dim op (:func:`reduce_heads` — the
+    ``opmeta.REDUCE_DIM_OPS`` vocabulary plus ``softmax``) with an
+    all-elementwise body of >=2 ops; :func:`reduction_handlers`
+    mints ``red_<i>`` entries and ``Tier("reduction", …, None)``
+    seats them.  There is no reduction Triton codegen: delivery is
+    the ordinary ``gen_bindings`` spelled eval (``torch.compile``d
+    where the sink compiles), which IS the denotation — the
+    minted op's meaning is the spelled body verbatim, so the
+    compiled-spelled fallback is honest rather than a degraded
+    path, and ``profitable`` prices exactly what ships.
 """
 
 from __future__ import annotations
@@ -118,6 +136,9 @@ __all__ = [
     "gen_handlers",
     "gen_sink",
     "novel_cost",
+    "reduce_heads",
+    "reduction_handlers",
+    "reduction_spec",
     "scan_handlers",
     "scan_spec",
     "scan_triton_bindings",
@@ -1339,7 +1360,7 @@ class Tier(NamedTuple):
 def hybrid_sink(handlers: dict, *, compile_kernels: bool = True) -> Any:
     """Build a sink preferring Triton codegen, compile fallback.
 
-    All three codegen tiers are consulted.  Triton-accepted
+    Every codegen tier is consulted.  Triton-accepted
     elementwise specs bind to the generated ``.py`` kernel — a
     kernel no incumbent compiler produces — ``applyd``-carrier
     specs the scan codegen accepts bind to their generated fold
@@ -2602,6 +2623,94 @@ def decayed_handlers(
     return out
 
 
+#: ``mlopt_core.opmeta.REDUCE_DIM_OPS`` plus ``softmax`` — the
+#: reduction-bodied heads the reduction tier may claim.  Lazily
+#: resolved: the opmeta table is the single source for the
+#: reduce-dim vocabulary, and ``softmax`` is the one reduction
+#: spelled as an ACTIVATION there (its torch binding reduces over
+#: ``dim`` exactly like the others).
+_REDUCE_HEADS: frozenset | None = None
+
+
+def reduce_heads() -> frozenset:
+    """Return the reduction op heads the reduction tier recognises."""
+    global _REDUCE_HEADS
+    if _REDUCE_HEADS is None:
+        from mlopt_core.opmeta import REDUCE_DIM_OPS
+
+        _REDUCE_HEADS = REDUCE_DIM_OPS | {"softmax"}
+    return _REDUCE_HEADS
+
+
+def reduction_spec(spec: Any) -> bool:
+    """Check a spec is a reduction-bodied claim the tier may mint.
+
+    The grammar is deliberately narrow — the *pointwise* tier's own
+    boundary rule one level up: the head is a reduction op
+    (:func:`reduce_heads`), every OTHER op in the spec is elementwise
+    (the fused pre-reduction body), and there are at least two ops
+    (a bare ``sum(X)`` claims nothing the ambient op does not already
+    spell).  Nested reductions, reshapes, contractions and view ops
+    inside the body decline — the spelled binding evaluates them
+    honestly but the claim would fuse nothing.
+    """
+    if not (
+        isinstance(spec, (tuple, list))
+        and spec
+        and isinstance(spec[0], str)
+        and spec[0] in reduce_heads()
+    ):
+        return False
+    ops = _spec_ops(spec)
+    if len(ops) < 2:
+        return False
+    return ops - {spec[0]} <= ELEMENTWISE
+
+
+def reduction_handlers(
+    terms: list, *, covered: set | None = None
+) -> dict:
+    """Mint handler entries for reduction-bodied fusion specs.
+
+    The reduction-tier analogue of :func:`gen_handlers`:
+    ``red_<i>`` entries ``{pattern, kernel, args}`` for each spec
+    :func:`reduction_spec` accepts — ``("mean", ("mul", "X1",
+    ("relu", "X1")), {"dim": (-1,), "keepdim": True})`` and kin.
+    The minted ``red_<i>_k`` op's declared meaning is the spelled
+    body verbatim — the same function the ambient reduction binding
+    computes — so minting needs no new semantics check, and the
+    delivery path is the ordinary ``gen_bindings`` spelled eval
+    (``torch.compile``d where the sink compiles): there is no
+    reduction Triton codegen, so ``Tier("reduction", …, None)``
+    delivers through the compiled spelled body and the referee
+    prices exactly that.
+    """
+    from mlopt_discovery.meta_arena import _spec_of
+
+    skip = covered if covered is not None else set()
+    out: dict[str, dict] = {}
+    for term in terms:
+        pattern = (
+            term
+            if isinstance(term, (tuple, list))
+            else _spec_of(term, {})
+        )
+        if not reduction_spec(pattern):
+            continue
+        # ``_canon_taken``, not ``canon in skip``: attr-carrying specs
+        # canon to dicts — unhashable — and ``in`` raises where
+        # equality does not (the ``_canon_taken`` contract).
+        if _canon_taken(pattern, out, skip):
+            continue
+        tag = f"red_{len(out)}"
+        out[tag] = {
+            "pattern": pattern,
+            "kernel": f"{tag}_k",
+            "args": tuple(_spec_metas(pattern)),
+        }
+    return out
+
+
 def decayed_triton_sink(handlers: dict) -> Any:
     """Build a ``TorchSink`` binding minted decayed ops to Triton.
 
@@ -2633,4 +2742,9 @@ TIERS: tuple[Tier, ...] = (
     Tier("gen", gen_handlers, triton_bindings),
     Tier("scan", scan_handlers, scan_triton_bindings),
     Tier("decayed", decayed_handlers, decayed_triton_bindings),
+    # the reduction tier has no Triton codegen — its delivery IS the
+    # compiled spelled body (``gen_bindings`` covers every handler),
+    # so ``None`` is the honest declaration and the referee prices
+    # the same callable delivery ships.
+    Tier("reduction", reduction_handlers, None),
 )

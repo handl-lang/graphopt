@@ -422,6 +422,54 @@ def _fusion_sites(term: Any) -> list:
     return out
 
 
+def _reduction_pattern(t: Any, names: dict) -> Any:
+    """Spell a reduction-headed subterm as a fusion spec.
+
+    The head and its attr dict stay concrete (``dim``/``keepdim``
+    are part of the site's meaning — a claim binds that spelling,
+    not every reduction of the same op); each arg is spelled by the
+    pointwise tier's own boundary rule, so non-elementwise children
+    abstract to metavars and the elementwise body stays spelled —
+    ``mean(mul(x, relu(x)))`` → ``("mean", ("mul", "X1",
+    ("relu", "X1")), {…})``.  :func:`genkernel.reduction_spec` is
+    the accept gate.
+    """
+    kids = [_fusion_pattern(a, names) for a in t.args]
+    if t.attrs:
+        kids.append(dict(t.attrs))
+    return (t.op, *kids)
+
+
+def _reduction_sites(term: Any) -> list:
+    """Reduction-bodied subterms of *term*, spec'd for the tier.
+
+    The reduction tier's site collector — the mirror of
+    ``_fusion_sites`` one level up: every ``Op`` whose head is a
+    reduce-dim op (``genkernel.reduce_heads``) mints a candidate
+    spec; :func:`genkernel.reduction_spec` keeps only the
+    elementwise-fusable bodies (>=2 ops, non-head ops all
+    elementwise).  Sites are raw-IR subterms, so minted entries
+    carry no ``leaf_env`` — ``_handler_env`` rebinds them by
+    concrete match like every other tier.
+    """
+    from mlopt_discovery import genkernel as gk
+
+    heads = gk.reduce_heads()
+    out: list = []
+
+    def walk(t: Any) -> None:
+        if isinstance(t, Op) and t.op in heads:
+            spec = _reduction_pattern(t, {})
+            if gk.reduction_spec(spec):
+                out.append(spec)
+        if isinstance(t, Op):
+            for a in t.args:
+                walk(a)
+
+    walk(term)
+    return out
+
+
 def _decayed_sites(term: Any) -> list:
     """``matmul(mul(s,d),v)``/``om_decayed`` subterms, spec'd.
 
@@ -563,6 +611,7 @@ TIER_SITES: dict[str, Any] = {
     "gen": _fusion_sites,
     "decayed": _decayed_sites,
     "scan": _scan_sites,
+    "reduction": _reduction_sites,
 }
 
 
@@ -849,10 +898,14 @@ def _claim_measurable(tag: str, h: dict) -> bool:
     semantics; *sequence*-form scans are excluded — their spelled
     eval is the map application, not the fold the minted op
     declares, so ``profitable`` would grade the wrong denotation.
+    ``red_*`` bodies evaluate through the ordinary bindings —
+    the spelled spec IS the denotation (the reduction tier has no
+    separate codegen; delivery is the compiled spelled body), so
+    they are measurable like ``gen_*``/``decayed_*``.
     """
     from mlopt_discovery import genkernel as gk
 
-    if tag.startswith(("gen_", "decayed_")):
+    if tag.startswith(("gen_", "decayed_", "red_")):
         return "om_decayed" not in gk._spec_ops(h.get("pattern"))
     return tag.startswith("scan_") and not gk._seq_scan_spec(
         h.get("pattern")
@@ -897,6 +950,10 @@ def _claim_cost_gate(case: Any) -> None:
       op unbound rather than silently map it), and the gen board
       does not seat it — so the offer is removed, not merely left
       unpriced (``_zoo_case`` applies the same drop at intake);
+    * ``red_*`` reduction-bodied fusions — the spelled
+      ``mean``/``sum``/``softmax``-headed body evaluates through the
+      ordinary bindings and IS the denotation (the tier ships the
+      compiled spelled body, no separate codegen);
     * the shipped ``prim:*`` folds already pass
       :func:`_fold_cost_gate` on the same board build.
 

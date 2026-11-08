@@ -2597,3 +2597,74 @@ class TestDecayProbe:
         )
         assert rc == 0
         assert "decay[" in capsys.readouterr().out
+
+
+class TestReductionTier:
+    """The reduction tier — ``reduction_spec``/``reduction_handlers``."""
+
+    def test_reduce_heads_covers_dim_ops_and_softmax(self):
+        heads = gk.reduce_heads()
+        for op in ("sum", "mean", "max", "argmax", "softmax"):
+            assert op in heads
+        assert "matmul" not in heads and "mul" not in heads
+
+    def test_accepts_elementwise_body_under_reduce_head(self):
+        spec = (
+            "mean",
+            ("mul", "X1", ("relu", "X1")),
+            {"dim": (-1,), "keepdim": True},
+        )
+        assert gk.reduction_spec(spec)
+
+    def test_declines_bare_reduction_and_nested_reduce(self):
+        assert not gk.reduction_spec(("sum", "X1", {"dim": (0,)}))
+        assert not gk.reduction_spec(
+            ("sum", ("mean", "X1", {"dim": (0,)}), {"dim": (1,)})
+        )
+
+    def test_declines_non_reduce_head_and_non_elementwise_body(self):
+        assert not gk.reduction_spec(("mul", "X1", "X2"))
+        assert not gk.reduction_spec(
+            ("sum", ("matmul", "X1", "X2"), {"dim": (0,)})
+        )
+        assert not gk.reduction_spec("X1")
+        assert not gk.reduction_spec(())
+
+    def test_handlers_mint_red_entries(self):
+        x = _v("x", 4, 8)
+        body = _p("mul", x, _p("relu", x))
+        term = _p("mean", body, dim=(-1,), keepdim=True)
+        hs = gk.reduction_handlers([term])
+        assert "red_0" in hs
+        assert hs["red_0"]["kernel"] == "red_0_k"
+        assert hs["red_0"]["pattern"] == (
+            "mean",
+            ("mul", "X1", ("relu", "X1")),
+            {"dim": (-1,), "keepdim": True},
+        )
+        assert hs["red_0"]["args"] == ("X1",)
+
+    def test_handlers_skip_bare_reduction_dupes_and_covered(self):
+        x, y = _v("x", 4), _v("y", 4)
+        assert gk.reduction_handlers(
+            [_p("sum", x, dim=(0,))]
+        ) == {}
+        a = _p("mean", _p("mul", x, y), dim=(0,))
+        b = _p("mean", _p("mul", x, _p("relu", y)), dim=(0,))
+        # distinct bodies — both mint
+        assert len(gk.reduction_handlers([a, b])) == 2
+        # attr dicts make canon unhashable — ``covered`` is iterated,
+        # not hashed, so a list is the honest shape here
+        covered = [
+            _canon_concrete(
+                ("mean", ("mul", "X1", "X2"), {"dim": (0,)})
+            )
+        ]
+        # ``dim=(0,)`` vs ``dim=(0,)`` — same canon; covered skips it
+        c = _p("mean", _p("mul", x, y), dim=(0,))
+        assert gk.reduction_handlers([c], covered=covered) == {}
+
+    def test_tier_registered_with_compiled_delivery(self):
+        tier = next(t for t in gk.TIERS if t.name == "reduction")
+        assert tier.triton is None
+        assert tier.handlers is gk.reduction_handlers

@@ -1,0 +1,565 @@
+[
+ {
+  "case": "AdditiveAttention",
+  "reduce_ops": {
+   "sum": 1,
+   "softmax": 1
+  },
+  "red_specs": 1,
+  "red_handlers": 1,
+  "kept": [],
+  "seconds": 4.1,
+  "log": [
+   {
+    "tag": "red_0",
+    "t_spelled": 2.9e-05,
+    "t_kernel": 6.4e-05,
+    "ratio": 2.184,
+    "keep": false
+   }
+  ]
+ },
+ {
+  "case": "TalkingHeadsAttention",
+  "reduce_ops": {
+   "softmax": 1
+  },
+  "red_specs": 0,
+  "red_handlers": 0
+ },
+ {
+  "case": "CosineAttention",
+  "reduce_ops": {
+   "softmax": 1,
+   "linalg_vector_norm": 2
+  },
+  "red_specs": 1,
+  "red_handlers": 1,
+  "kept": [],
+  "seconds": 2.0,
+  "log": [
+   {
+    "tag": "red_0",
+    "t_spelled": 2.9e-05,
+    "t_kernel": 8.1e-05,
+    "ratio": 2.743,
+    "keep": false
+   }
+  ]
+ },
+ {
+  "case": "GCNLayer",
+  "reduce_ops": {
+   "sum": 4
+  },
+  "red_specs": 0,
+  "red_handlers": 0
+ },
+ {
+  "case": "SoftSlotMoE",
+  "reduce_ops": {
+   "softmax": 2
+  },
+  "red_specs": 0,
+  "red_handlers": 0
+ },
+ {
+  "case": "ExpertChoiceMoE",
+  "reduce_ops": {
+   "softmax": 3
+  },
+  "red_specs": 0,
+  "red_handlers": 0
+ },
+ {
+  "case": "CapsuleRouting",
+  "reduce_ops": {
+   "sum": 39,
+   "softmax": 20
+  },
+  "red_specs": 43,
+  "red_handlers": 4,
+  "kept": [],
+  "seconds": 10.6,
+  "log": [
+   {
+    "tag": "red_0",
+    "t_spelled": 3.2e-05,
+    "t_kernel": 7.6e-05,
+    "ratio": 2.416,
+    "keep": false
+   },
+   {
+    "tag": "red_1",
+    "t_spelled": 2.5e-05,
+    "t_kernel": 6.7e-05,
+    "ratio": 2.664,
+    "keep": false
+   },
+   {
+    "tag": "red_2",
+    "t_spelled": 3.1e-05,
+    "t_kernel": 7.5e-05,
+    "ratio": 2.428,
+    "keep": false
+   },
+   {
+    "tag": "red_3",
+    "t_spelled": 2.7e-05,
+    "t_kernel": 6.8e-05,
+    "ratio": 2.477,
+    "keep": false
+   }
+  ]
+ },
+ {
+  "case": "MoSHead",
+  "reduce_ops": {
+   "sum": 1,
+   "softmax": 2
+  },
+  "red_specs": 2,
+  "red_handlers": 2,
+  "kept": [],
+  "seconds": 2.8,
+  "log": [
+   {
+    "tag": "red_0",
+    "t_spelled": 2.9e-05,
+    "t_kernel": 6.9e-05,
+    "ratio": 2.371,
+    "keep": false
+   },
+   {
+    "tag": "red_1",
+    "t_spelled": 3.3e-05,
+    "t_kernel": 8.5e-05,
+    "ratio": 2.602,
+    "keep": false
+   }
+  ]
+ },
+ {
+  "case": "CovarianceHead",
+  "reduce_ops": {
+   "mean": 2
+  },
+  "red_specs": 0,
+  "red_handlers": 0
+ },
+ {
+  "case": "RWKVMixBlock",
+  "reduce_ops": {
+   "sum": 14
+  },
+  "red_specs": 14,
+  "red_handlers": 2,
+  "kept": [],
+  "seconds": 4.3,
+  "log": [
+   {
+    "tag": "red_0",
+    "t_spelled": 5.7e-05,
+    "t_kernel": 8e-05,
+    "ratio": 1.418,
+    "keep": false
+   },
+   {
+    "tag": "red_1",
+    "t_spelled": 4.7e-05,
+    "t_kernel": 8.1e-05,
+    "ratio": 1.702,
+    "keep": false
+   }
+  ]
+ },
+ {
+  "case": "TopKRouterMoE",
+  "reduce_ops": {
+   "softmax": 4,
+   "amax": 2,
+   "sum": 1,
+   "mean": 2
+  },
+  "red_specs": 1,
+  "red_handlers": 1,
+  "kept": [],
+  "seconds": 0.8,
+  "log": [
+   {
+    "tag": "red_0",
+    "t_spelled": 2.9e-05,
+    "t_kernel": 7.4e-05,
+    "ratio": 2.546,
+    "keep": false
+   }
+  ]
+ },
+ {
+  "case": "DeepSeekSigMoE",
+  "reduce_ops": {
+   "amax": 1
+  },
+  "red_specs": 0,
+  "red_handlers": 0
+ },
+ {
+  "case": "KVCacheAttention",
+  "reduce_ops": {
+   "softmax": 1
+  },
+  "red_specs": 1,
+  "red_handlers": 1,
+  "kept": [],
+  "seconds": 2.9,
+  "log": [
+   {
+    "tag": "red_0",
+    "t_spelled": 3e-05,
+    "t_kernel": 7.2e-05,
+    "ratio": 2.37,
+    "keep": false
+   }
+  ]
+ },
+ {
+  "case": "SlidingWindowAttention",
+  "reduce_ops": {
+   "softmax": 1
+  },
+  "red_specs": 1,
+  "red_handlers": 1,
+  "kept": [],
+  "seconds": 2.6,
+  "log": [
+   {
+    "tag": "red_0",
+    "t_spelled": 6.3e-05,
+    "t_kernel": 8.7e-05,
+    "ratio": 1.374,
+    "keep": false
+   }
+  ]
+ },
+ {
+  "case": "DilatedBlockAttention",
+  "reduce_ops": {
+   "softmax": 2
+  },
+  "red_specs": 2,
+  "red_handlers": 1,
+  "kept": [],
+  "seconds": 2.3,
+  "log": [
+   {
+    "tag": "red_0",
+    "t_spelled": 2.9e-05,
+    "t_kernel": 7.7e-05,
+    "ratio": 2.69,
+    "keep": false
+   }
+  ]
+ },
+ {
+  "case": "BlockSparseAttention",
+  "reduce_ops": {
+   "softmax": 1,
+   "amax": 4
+  },
+  "red_specs": 3,
+  "red_handlers": 2,
+  "kept": [],
+  "seconds": 3.1,
+  "log": [
+   {
+    "tag": "red_0",
+    "t_spelled": 5.7e-05,
+    "t_kernel": 7.8e-05,
+    "ratio": 1.373,
+    "keep": false
+   },
+   {
+    "tag": "red_1",
+    "t_spelled": 3.6e-05,
+    "t_kernel": 9.4e-05,
+    "ratio": 2.604,
+    "keep": false
+   }
+  ]
+ },
+ {
+  "case": "SqueezeExcite",
+  "reduce_ops": {
+   "mean": 1
+  },
+  "red_specs": 0,
+  "red_handlers": 0
+ },
+ {
+  "case": "MBConvSEBlock",
+  "reduce_ops": {
+   "mean": 1
+  },
+  "red_specs": 1,
+  "red_handlers": 1,
+  "kept": [],
+  "seconds": 1.7,
+  "log": [
+   {
+    "tag": "red_0",
+    "t_spelled": 3.3e-05,
+    "t_kernel": 7.5e-05,
+    "ratio": 2.317,
+    "keep": false
+   }
+  ]
+ },
+ {
+  "case": "ManualGroupNorm",
+  "reduce_ops": {
+   "mean": 4
+  },
+  "red_specs": 1,
+  "red_handlers": 1,
+  "kept": [],
+  "seconds": 2.0,
+  "log": [
+   {
+    "tag": "red_0",
+    "t_spelled": 3.6e-05,
+    "t_kernel": 5.1e-05,
+    "ratio": 1.43,
+    "keep": false
+   }
+  ]
+ },
+ {
+  "case": "InstanceNormBroadcast",
+  "reduce_ops": {
+   "mean": 4
+  },
+  "red_specs": 1,
+  "red_handlers": 1,
+  "kept": [],
+  "seconds": 2.8,
+  "log": [
+   {
+    "tag": "red_0",
+    "t_spelled": 4.2e-05,
+    "t_kernel": 5.9e-05,
+    "ratio": 1.415,
+    "keep": false
+   }
+  ]
+ },
+ {
+  "case": "RMSNormPerHead",
+  "reduce_ops": {
+   "mean": 1
+  },
+  "red_specs": 1,
+  "red_handlers": 1,
+  "kept": [],
+  "seconds": 2.5,
+  "log": [
+   {
+    "tag": "red_0",
+    "t_spelled": 3.7e-05,
+    "t_kernel": 7.7e-05,
+    "ratio": 2.097,
+    "keep": false
+   }
+  ]
+ },
+ {
+  "case": "ALiBiSlopeAttention",
+  "reduce_ops": {
+   "softmax": 1
+  },
+  "red_specs": 1,
+  "red_handlers": 1,
+  "kept": [],
+  "seconds": 3.2,
+  "log": [
+   {
+    "tag": "red_0",
+    "t_spelled": 3.5e-05,
+    "t_kernel": 7.3e-05,
+    "ratio": 2.067,
+    "keep": false
+   }
+  ]
+ },
+ {
+  "case": "RelPosTableAttention",
+  "reduce_ops": {
+   "softmax": 1
+  },
+  "red_specs": 1,
+  "red_handlers": 1,
+  "kept": [],
+  "seconds": 2.2,
+  "log": [
+   {
+    "tag": "red_0",
+    "t_spelled": 3.5e-05,
+    "t_kernel": 7.9e-05,
+    "ratio": 2.253,
+    "keep": false
+   }
+  ]
+ },
+ {
+  "case": "PagedKVAttention",
+  "reduce_ops": {
+   "softmax": 1
+  },
+  "red_specs": 1,
+  "red_handlers": 1,
+  "kept": [],
+  "seconds": 2.3,
+  "log": [
+   {
+    "tag": "red_0",
+    "t_spelled": 4.3e-05,
+    "t_kernel": 9.9e-05,
+    "ratio": 2.322,
+    "keep": false
+   }
+  ]
+ },
+ {
+  "case": "DecoupledMLA",
+  "reduce_ops": {
+   "softmax": 1
+  },
+  "red_specs": 1,
+  "red_handlers": 1,
+  "kept": [],
+  "seconds": 1.9,
+  "log": [
+   {
+    "tag": "red_0",
+    "t_spelled": 2.9e-05,
+    "t_kernel": 7.9e-05,
+    "ratio": 2.716,
+    "keep": false
+   }
+  ]
+ },
+ {
+  "case": "PartialRotary",
+  "reduce_ops": {
+   "softmax": 1
+  },
+  "red_specs": 1,
+  "red_handlers": 1,
+  "kept": [],
+  "seconds": 2.3,
+  "log": [
+   {
+    "tag": "red_0",
+    "t_spelled": 3.1e-05,
+    "t_kernel": 8.7e-05,
+    "ratio": 2.759,
+    "keep": false
+   }
+  ]
+ },
+ {
+  "case": "DiffAttention",
+  "reduce_ops": {
+   "softmax": 2
+  },
+  "red_specs": 2,
+  "red_handlers": 1,
+  "kept": [],
+  "seconds": 1.9,
+  "log": []
+ },
+ {
+  "case": "AttnLogitSoftcap",
+  "reduce_ops": {
+   "softmax": 1
+  },
+  "red_specs": 1,
+  "red_handlers": 1,
+  "kept": [],
+  "seconds": 3.1,
+  "log": [
+   {
+    "tag": "red_0",
+    "t_spelled": 4.9e-05,
+    "t_kernel": 8.3e-05,
+    "ratio": 1.707,
+    "keep": false
+   }
+  ]
+ },
+ {
+  "case": "SinkWindowAttention",
+  "reduce_ops": {
+   "softmax": 1
+  },
+  "red_specs": 1,
+  "red_handlers": 1,
+  "kept": [],
+  "seconds": 2.7,
+  "log": [
+   {
+    "tag": "red_0",
+    "t_spelled": 6.3e-05,
+    "t_kernel": 9.7e-05,
+    "ratio": 1.546,
+    "keep": false
+   }
+  ]
+ },
+ {
+  "case": "SharedSwiGLUMoE",
+  "reduce_ops": {
+   "softmax": 2,
+   "amax": 1
+  },
+  "red_specs": 0,
+  "red_handlers": 0
+ },
+ {
+  "case": "NormedSoftcapHead",
+  "reduce_ops": {
+   "mean": 1
+  },
+  "red_specs": 1,
+  "red_handlers": 1,
+  "kept": [],
+  "seconds": 1.6,
+  "log": [
+   {
+    "tag": "red_0",
+    "t_spelled": 2.5e-05,
+    "t_kernel": 5e-05,
+    "ratio": 2.024,
+    "keep": false
+   }
+  ]
+ },
+ {
+  "case": "TernaryWeightLinear",
+  "reduce_ops": {
+   "mean": 2
+  },
+  "red_specs": 2,
+  "red_handlers": 1,
+  "kept": [],
+  "seconds": 2.5,
+  "log": [
+   {
+    "tag": "red_0",
+    "t_spelled": 3.3e-05,
+    "t_kernel": 8.3e-05,
+    "ratio": 2.545,
+    "keep": false
+   }
+  ]
+ }
+]
