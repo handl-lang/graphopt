@@ -489,3 +489,46 @@ keeps.  The win is narrow (large fused reduce bodies at fp64);
 small reductions remain launch-bound and no per-claim kernel
 matches whole-module Inductor fusion.  The arm stays seated — the
 referee prices each claim honestly and the paying corner is real.
+
+## T-010 remainder levers, round 2 — fp32 at scale + attr bodies (2026-11-08)
+
+Full record `docs/reports/t010_fp32_attr_levers.md`; raw sweeps
+`red_triton_probe_v2_fp32_128_all.json` and
+`attr_elementwise_probe_{fp64,fp32_128,fp64_128b8}.json`.
+
+**fp32 reduction gap — the corner is real but softmax-shaped.**
+Full-zoo fp32 128×128×16 sweep: 30 bound, **3 kept** (vs 1/30 at
+64×64×8): RWKVMixBlock red_1 0.535×, ALiBiSlopeAttention red_0
+0.779×, SinkWindowAttention red_0 ~0.90× kernel-over-spelled.
+`gen_probe`: **ALiBiSlopeAttention delivers verified at 1.828× vs
+eager / 1.255× vs whole-model `torch.compile`** — the first fp32
+reduction delivery beating the incumbent (the keep is a fused
+attention-logit `softmax(add(mul(X1,s),X2))` body).  SinkWindow
+keeps but prices 0.899× compiled; RWKVMixBlock red_1 keeps on
+kernel timing yet the module fails fp32 verify (accumulation-order
+tolerance, same as v1's red_0) — hollow keep, recorded.  Kernel
+read: no cheap fp32 lever — loads are ometa gathers (no
+contiguity for `max_contiguous`), BLOCK already shape-tuned,
+dtype-agnostic via `out_ptr.dtype.element_ty`.  Boundary: fp32
+wins = large fused softmax bodies ≥128-class; sum/mean bodies keep
+but lose to Inductor or fail verify; 64×64×8 and zoo sizes
+unchanged.
+
+**Attr-bearing bodies — alphabet-blocked, not occurrence-blocked.**
+Census re-run refined the zero: within `ELEMENTWISE` still zero,
+but the zoo IR carries **28 attr-bearing `clamp`/`clamp_min`/
+`clamp_max` sites across 11 workloads** — excluded only by the
+narrow alphabet.  New driver `attr_elementwise_probe.py` widens
+`ELEMENTWISE` in-process (shipped files untouched) and runs the
+unmodified intake→referee→delivery path: **22 attr-bearing `gen_*`
+claims mint and price correctly** (spelled eval fine, Triton
+declines attrs → compiled-spelled delivery, as recorded).  Kept:
+fp64 zoo 0/22; fp32 128×128×16 **1/22 — SinkWindowAttention gen_0
+delivered verified (2.4e-7) at 1.253× eager / 1.056× compiled**
+(module also carries red_0 — combined attribution); fp64
+128×128×8 same claim kept, verified 4.4e-16, but 0.85× compiled.
+Same paying corner as reductions: large fp32 fused bodies.
+Shipping `clamp*` in `ELEMENTWISE` is a product call — the
+frozenset is shared with `handler_synth`/`family_synth` law
+minting and `vocabdir`, so widening it changes the discovery
+grammar, not just gen claims.
