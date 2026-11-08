@@ -1241,7 +1241,12 @@ def _binding_attempts(tag: str, h: dict) -> tuple[Any, list[dict]]:
         if fn is not None:
             attempts.append({"tier": tier.name, "outcome": "bound"})
             return fn, attempts
-        recognises = getattr(gk, f"{tier.name}_spec", None)
+        # the tier's *codegen* recogniser first (``<tier>_triton_spec``
+        # — e.g. ``reduction_triton_spec`` gates the subset the Triton
+        # piece lowers, narrower than the mint grammar ``reduction_spec``)
+        recognises = getattr(gk, f"{tier.name}_triton_spec", None)
+        if recognises is None:
+            recognises = getattr(gk, f"{tier.name}_spec", None)
         if (
             recognises is not None
             and recognises(h["pattern"]) is not None

@@ -1,0 +1,1382 @@
+[
+ {
+  "workload": "AdditiveAttention",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": [
+   {
+    "tag": "red_0",
+    "kernel": "red_0_k",
+    "pattern_head": "sum",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 26.348,
+      "t_kernel_us": 177.083,
+      "ratio_kernel_over_spelled": 6.7209,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   }
+  ]
+ },
+ {
+  "workload": "TalkingHeadsAttention",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": []
+ },
+ {
+  "workload": "CosineAttention",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": [
+   {
+    "tag": "red_0",
+    "kernel": "red_0_k",
+    "pattern_head": "softmax",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 68.439,
+      "t_kernel_us": 263.305,
+      "ratio_kernel_over_spelled": 3.8473,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   }
+  ]
+ },
+ {
+  "workload": "GCNLayer",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": []
+ },
+ {
+  "workload": "SoftSlotMoE",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": []
+ },
+ {
+  "workload": "ExpertChoiceMoE",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": []
+ },
+ {
+  "workload": "CapsuleRouting",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": [
+   {
+    "tag": "red_0",
+    "kernel": "red_0_k",
+    "pattern_head": "sum",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 75.908,
+      "t_kernel_us": 163.641,
+      "ratio_kernel_over_spelled": 2.1558,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   },
+   {
+    "tag": "red_1",
+    "kernel": "red_1_k",
+    "pattern_head": "softmax",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 20.841,
+      "t_kernel_us": 71.821,
+      "ratio_kernel_over_spelled": 3.4461,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   },
+   {
+    "tag": "red_2",
+    "kernel": "red_2_k",
+    "pattern_head": "sum",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 24.086,
+      "t_kernel_us": 175.285,
+      "ratio_kernel_over_spelled": 7.2775,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   },
+   {
+    "tag": "red_3",
+    "kernel": "red_3_k",
+    "pattern_head": "sum",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 23.04,
+      "t_kernel_us": 56.356,
+      "ratio_kernel_over_spelled": 2.446,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   }
+  ]
+ },
+ {
+  "workload": "MoSHead",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": [
+   {
+    "tag": "red_0",
+    "kernel": "red_0_k",
+    "pattern_head": "sum",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 23.787,
+      "t_kernel_us": 58.428,
+      "ratio_kernel_over_spelled": 2.4563,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   },
+   {
+    "tag": "red_1",
+    "kernel": "red_1_k",
+    "pattern_head": "softmax",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 21.286,
+      "t_kernel_us": 59.483,
+      "ratio_kernel_over_spelled": 2.7945,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   }
+  ]
+ },
+ {
+  "workload": "CovarianceHead",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": []
+ },
+ {
+  "workload": "RWKVMixBlock",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": [
+   {
+    "tag": "red_0",
+    "kernel": "red_0_k",
+    "pattern_head": "sum",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [],
+    "kept_by_referee": false
+   },
+   {
+    "tag": "red_1",
+    "kernel": "red_1_k",
+    "pattern_head": "sum",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 677.002,
+      "t_kernel_us": 1828.367,
+      "ratio_kernel_over_spelled": 2.7007,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   }
+  ]
+ },
+ {
+  "workload": "TopKRouterMoE",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": [
+   {
+    "tag": "red_0",
+    "kernel": "red_0_k",
+    "pattern_head": "sum",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 21.118,
+      "t_kernel_us": 51.626,
+      "ratio_kernel_over_spelled": 2.4446,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   }
+  ]
+ },
+ {
+  "workload": "DeepSeekSigMoE",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": []
+ },
+ {
+  "workload": "KVCacheAttention",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": [
+   {
+    "tag": "red_0",
+    "kernel": "red_0_k",
+    "pattern_head": "softmax",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 22.688,
+      "t_kernel_us": 54.907,
+      "ratio_kernel_over_spelled": 2.4201,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   }
+  ]
+ },
+ {
+  "workload": "SlidingWindowAttention",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": [
+   {
+    "tag": "red_0",
+    "kernel": "red_0_k",
+    "pattern_head": "softmax",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 45.685,
+      "t_kernel_us": 69.114,
+      "ratio_kernel_over_spelled": 1.5128,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   }
+  ]
+ },
+ {
+  "workload": "DilatedBlockAttention",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": [
+   {
+    "tag": "red_0",
+    "kernel": "red_0_k",
+    "pattern_head": "softmax",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 22.333,
+      "t_kernel_us": 62.843,
+      "ratio_kernel_over_spelled": 2.8139,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   }
+  ]
+ },
+ {
+  "workload": "BlockSparseAttention",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": [
+   {
+    "tag": "red_0",
+    "kernel": "red_0_k",
+    "pattern_head": "softmax",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 48.659,
+      "t_kernel_us": 812.07,
+      "ratio_kernel_over_spelled": 16.689,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   },
+   {
+    "tag": "red_1",
+    "kernel": "red_1_k",
+    "pattern_head": "amax",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 29.464,
+      "t_kernel_us": 725.154,
+      "ratio_kernel_over_spelled": 24.6115,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   }
+  ]
+ },
+ {
+  "workload": "SqueezeExcite",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": []
+ },
+ {
+  "workload": "MBConvSEBlock",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": [
+   {
+    "tag": "red_0",
+    "kernel": "red_0_k",
+    "pattern_head": "mean",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 23.889,
+      "t_kernel_us": 58.799,
+      "ratio_kernel_over_spelled": 2.4613,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   }
+  ]
+ },
+ {
+  "workload": "ManualGroupNorm",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": [
+   {
+    "tag": "red_0",
+    "kernel": "red_0_k",
+    "pattern_head": "mean",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 35.781,
+      "t_kernel_us": 73.03,
+      "ratio_kernel_over_spelled": 2.041,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   }
+  ]
+ },
+ {
+  "workload": "InstanceNormBroadcast",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": [
+   {
+    "tag": "red_0",
+    "kernel": "red_0_k",
+    "pattern_head": "mean",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 35.066,
+      "t_kernel_us": 67.633,
+      "ratio_kernel_over_spelled": 1.9287,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   }
+  ]
+ },
+ {
+  "workload": "RMSNormPerHead",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": [
+   {
+    "tag": "red_0",
+    "kernel": "red_0_k",
+    "pattern_head": "mean",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 25.531,
+      "t_kernel_us": 183.112,
+      "ratio_kernel_over_spelled": 7.1721,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   }
+  ]
+ },
+ {
+  "workload": "ALiBiSlopeAttention",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": [
+   {
+    "tag": "red_0",
+    "kernel": "red_0_k",
+    "pattern_head": "softmax",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 35.868,
+      "t_kernel_us": 193.764,
+      "ratio_kernel_over_spelled": 5.4021,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   }
+  ]
+ },
+ {
+  "workload": "RelPosTableAttention",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": [
+   {
+    "tag": "red_0",
+    "kernel": "red_0_k",
+    "pattern_head": "softmax",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 30.091,
+      "t_kernel_us": 77.593,
+      "ratio_kernel_over_spelled": 2.5786,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   }
+  ]
+ },
+ {
+  "workload": "PagedKVAttention",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": [
+   {
+    "tag": "red_0",
+    "kernel": "red_0_k",
+    "pattern_head": "softmax",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 29.372,
+      "t_kernel_us": 61.104,
+      "ratio_kernel_over_spelled": 2.0803,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   }
+  ]
+ },
+ {
+  "workload": "DecoupledMLA",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": [
+   {
+    "tag": "red_0",
+    "kernel": "red_0_k",
+    "pattern_head": "softmax",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 49.62,
+      "t_kernel_us": 250.588,
+      "ratio_kernel_over_spelled": 5.0501,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   }
+  ]
+ },
+ {
+  "workload": "PartialRotary",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": [
+   {
+    "tag": "red_0",
+    "kernel": "red_0_k",
+    "pattern_head": "softmax",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 23.823,
+      "t_kernel_us": 70.002,
+      "ratio_kernel_over_spelled": 2.9384,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   }
+  ]
+ },
+ {
+  "workload": "DiffAttention",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": [
+   {
+    "tag": "red_0",
+    "kernel": "red_0_k",
+    "pattern_head": "softmax",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 43.947,
+      "t_kernel_us": 234.705,
+      "ratio_kernel_over_spelled": 5.3406,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   }
+  ]
+ },
+ {
+  "workload": "AttnLogitSoftcap",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": [
+   {
+    "tag": "red_0",
+    "kernel": "red_0_k",
+    "pattern_head": "softmax",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 42.578,
+      "t_kernel_us": 72.634,
+      "ratio_kernel_over_spelled": 1.7059,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   }
+  ]
+ },
+ {
+  "workload": "SinkWindowAttention",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": [
+   {
+    "tag": "red_0",
+    "kernel": "red_0_k",
+    "pattern_head": "softmax",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 50.941,
+      "t_kernel_us": 82.165,
+      "ratio_kernel_over_spelled": 1.6129,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   }
+  ]
+ },
+ {
+  "workload": "SharedSwiGLUMoE",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": []
+ },
+ {
+  "workload": "NormedSoftcapHead",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": [
+   {
+    "tag": "red_0",
+    "kernel": "red_0_k",
+    "pattern_head": "mean",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 21.208,
+      "t_kernel_us": 54.802,
+      "ratio_kernel_over_spelled": 2.584,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   }
+  ]
+ },
+ {
+  "workload": "TernaryWeightLinear",
+  "dtype": "fp32",
+  "red_specs_minted": 0,
+  "red_kept": [],
+  "consults": [
+   {
+    "tag": "red_0",
+    "kernel": "red_0_k",
+    "pattern_head": "mean",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 29.643,
+      "t_kernel_us": 102.452,
+      "ratio_kernel_over_spelled": 3.4562,
+      "keep_vote": false
+     }
+    ],
+    "kept_by_referee": false
+   }
+  ]
+ }
+]

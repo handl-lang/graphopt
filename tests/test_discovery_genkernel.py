@@ -2664,7 +2664,114 @@ class TestReductionTier:
         c = _p("mean", _p("mul", x, y), dim=(0,))
         assert gk.reduction_handlers([c], covered=covered) == {}
 
-    def test_tier_registered_with_compiled_delivery(self):
+    def test_tier_registered_with_triton_delivery(self):
         tier = next(t for t in gk.TIERS if t.name == "reduction")
-        assert tier.triton is None
+        assert tier.triton is gk.reduction_triton_bindings
         assert tier.handlers is gk.reduction_handlers
+
+
+class TestReductionTriton:
+    """The reduction Triton piece — ``reduction_triton_*``."""
+
+    def test_spec_accepts_trailing_reduce_subset(self):
+        spec = (
+            "mean",
+            ("mul", "X1", ("relu", "X1")),
+            {"dim": (-1,), "keepdim": True},
+        )
+        info = gk.reduction_triton_spec(spec)
+        assert info is not None
+        assert info["op"] == "mean" and info["metas"] == ["X1"]
+        assert "tl.maximum" in info["body"]  # relu lowered
+
+    def test_spec_declines_outside_grammar(self):
+        # non-triton head
+        assert gk.reduction_triton_spec(
+            ("std", ("mul", "X1", "X1"), {"dim": (0,)})
+        ) is None
+        # max returns (values, indices) — not a plain tensor
+        assert gk.reduction_triton_spec(
+            ("max", ("mul", "X1", "X1"), {"dim": (0,)})
+        ) is None
+        # non-elementwise body
+        assert gk.reduction_triton_spec(
+            ("sum", ("matmul", "X1", "X2"), {"dim": (0,)})
+        ) is None
+        # bare reduction (no body op)
+        assert gk.reduction_triton_spec(("sum", "X1", {"dim": (0,)})) is None
+        # foreign attr key
+        assert gk.reduction_triton_spec(
+            ("sum", ("mul", "X1", "X2"), {"dim": (0,), "foo": 1})
+        ) is None
+        # metavar colliding with kernel locals
+        assert gk.reduction_triton_spec(
+            ("sum", ("mul", "acc", "X1"), {"dim": (0,)})
+        ) is None
+
+    def test_bindings_correct_cuda(self):
+        torch = pytest.importorskip("torch")
+        pytest.importorskip("triton")
+        if not torch.cuda.is_available():
+            pytest.skip("needs cuda for triton")
+        import mlopt_torch.torch_bridge as tb
+
+        spec = ("sum", ("mul", "X1", "X2"), {"dim": (2,)})
+        fn = gk.reduction_triton_bindings(
+            {"h": {"pattern": spec, "kernel": "rk", "args": ("X1", "X2")}}
+        )["rk"]
+        x1 = torch.randn(4, 8, 8, device="cuda", dtype=torch.float64)
+        x2 = torch.randn(8, device="cuda", dtype=torch.float64)
+        got = fn(x1, x2)
+        ref = gk._eval_spec(
+            spec, {"X1": x1, "X2": x2}, tb._IR_TO_TORCH
+        )
+        torch.testing.assert_close(got, ref, atol=1e-9, rtol=1e-9)
+
+    def test_softmax_and_fallbacks(self):
+        torch = pytest.importorskip("torch")
+        pytest.importorskip("triton")
+        if not torch.cuda.is_available():
+            pytest.skip("needs cuda for triton")
+        import mlopt_torch.torch_bridge as tb
+
+        spec = (
+            "softmax",
+            ("add", ("mul", "X1", 0.125), "X2"),
+            {"dim": -1},
+        )
+        fn = gk.reduction_triton_bindings(
+            {"h": {"pattern": spec, "kernel": "rs", "args": ("X1", "X2")}}
+        )["rs"]
+        x1 = torch.randn(2, 4, 16, device="cuda")
+        x2 = torch.randn(16, device="cuda")
+        got = fn(x1, x2)
+        ref = gk._eval_spec(
+            spec, {"X1": x1, "X2": x2}, tb._IR_TO_TORCH
+        )
+        torch.testing.assert_close(got, ref, atol=1e-5, rtol=1e-5)
+        # CPU operands take the spelled fallback — same denotation
+        c1 = x1.cpu()
+        c2 = x2.cpu()
+        got_cpu = fn(c1, c2)
+        ref_cpu = gk._eval_spec(
+            spec, {"X1": c1, "X2": c2}, tb._IR_TO_TORCH
+        )
+        torch.testing.assert_close(got_cpu, ref_cpu)
+        # non-trailing reduce dim also falls back, still correct
+        spec_nt = ("sum", ("mul", "X1", "X2"), {"dim": (1,)})
+        fn_nt = gk.reduction_triton_bindings(
+            {
+                "h": {
+                    "pattern": spec_nt,
+                    "kernel": "rn",
+                    "args": ("X1", "X2"),
+                }
+            }
+        )["rn"]
+        a = torch.randn(4, 8, 8, device="cuda", dtype=torch.float64)
+        b = torch.randn(8, device="cuda", dtype=torch.float64)
+        got_nt = fn_nt(a, b)
+        ref_nt = gk._eval_spec(
+            spec_nt, {"X1": a, "X2": b}, tb._IR_TO_TORCH
+        )
+        torch.testing.assert_close(got_nt, ref_nt)

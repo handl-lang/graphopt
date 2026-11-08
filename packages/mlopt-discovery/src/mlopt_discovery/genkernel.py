@@ -106,13 +106,27 @@ THE REDUCTION TIER
     spec whose head is a reduce-dim op (:func:`reduce_heads` — the
     ``opmeta.REDUCE_DIM_OPS`` vocabulary plus ``softmax``) with an
     all-elementwise body of >=2 ops; :func:`reduction_handlers`
-    mints ``red_<i>`` entries and ``Tier("reduction", …, None)``
-    seats them.  There is no reduction Triton codegen: delivery is
-    the ordinary ``gen_bindings`` spelled eval (``torch.compile``d
-    where the sink compiles), which IS the denotation — the
-    minted op's meaning is the spelled body verbatim, so the
-    compiled-spelled fallback is honest rather than a degraded
-    path, and ``profitable`` prices exactly what ships.
+    mints ``red_<i>`` entries and ``Tier("reduction", …,
+    reduction_triton_bindings)`` seats them.
+
+    THE REDUCTION TRITON PIECE
+        :func:`reduction_triton_spec`/``reduction_triton_bindings``
+        lower the recognisable subset — ``sum``/``mean``/``amax``/
+        ``amin``/``softmax`` over an arbitrary set of reduce dims
+        (the index space permutes outer-then-reduced, so the reduce
+        set need not be trailing), elementwise body, floating
+        operands — into ONE generated
+        Triton kernel: one program per outer index, the reduce axis
+        chunked inside the program (``softmax`` runs the textbook
+        max → sum-exp → normalise three-pass form in the same
+        launch).  Broadcast and arbitrary strides ride an ``ometa``
+        int64 table like the pointwise strided kernel; shapes
+        outside the subset — non-trailing reduce dims, non-float
+        operands, dims that cannot normalise against the broadcast
+        rank — fall back to the spelled eval *inside* the binding,
+        so delivery stays the denotation and the referee prices the
+        Triton arm wherever it binds (and the compiled-spelled arm
+        where it does not).
 """
 
 from __future__ import annotations
@@ -139,6 +153,8 @@ __all__ = [
     "reduce_heads",
     "reduction_handlers",
     "reduction_spec",
+    "reduction_triton_bindings",
+    "reduction_triton_spec",
     "scan_handlers",
     "scan_spec",
     "scan_triton_bindings",
@@ -1390,6 +1406,7 @@ def hybrid_sink(handlers: dict, *, compile_kernels: bool = True) -> Any:
     bindings.update(triton_bindings(plain))
     bindings.update(scan_triton_bindings(handlers))
     bindings.update(decayed_triton_bindings(handlers))
+    bindings.update(reduction_triton_bindings(handlers))
     table = OpTable.core().register(torch_bindings=bindings)
     return TorchSink(ops=table)
 
@@ -2678,12 +2695,12 @@ def reduction_handlers(
     ("relu", "X1")), {"dim": (-1,), "keepdim": True})`` and kin.
     The minted ``red_<i>_k`` op's declared meaning is the spelled
     body verbatim — the same function the ambient reduction binding
-    computes — so minting needs no new semantics check, and the
-    delivery path is the ordinary ``gen_bindings`` spelled eval
-    (``torch.compile``d where the sink compiles): there is no
-    reduction Triton codegen, so ``Tier("reduction", …, None)``
-    delivers through the compiled spelled body and the referee
-    prices exactly that.
+    computes — so minting needs no new semantics check.  Delivery
+    is the tier's Triton piece where :func:`reduction_triton_spec`
+    recognises the spec (the ``_gr`` kernel over the elementwise
+    body) and the compiled spelled body elsewhere; the binding
+    itself falls back to spelled eval on shapes outside the
+    call-time subset, so the referee prices exactly what ships.
     """
     from mlopt_discovery.meta_arena import _spec_of
 
@@ -2708,6 +2725,559 @@ def reduction_handlers(
             "kernel": f"{tag}_k",
             "args": tuple(_spec_metas(pattern)),
         }
+    return out
+
+
+# ---------------------------------------------------------------------------
+#  The reduction Triton piece — generated kernels for reduce-dim bodies
+# ---------------------------------------------------------------------------
+
+#: Reduce heads whose Triton lowering returns a plain tensor — the
+#: honest subset of :func:`reduce_heads`.  ``max``/``min`` return
+#: (values, indices) pairs, ``std``/``var``/``prod``/``median``/… need
+#: semantics this kernel does not spell; they keep the compiled
+#: spelled delivery.
+_REDUCTION_TRITON_OPS: frozenset = frozenset(
+    {"sum", "mean", "amax", "amin", "softmax"}
+)
+
+#: Kernel-local names a reduction-spec metavar must not reuse — the
+#: generated source binds ``row``/``acc``/``cols``/``__r*``/``__co*``/
+#: ``__o*`` locals, so a colliding meta would silently shadow them.
+_REDUCTION_LOCALS: frozenset = _TRITON_LOCALS | frozenset(
+    {
+        "row",
+        "ci",
+        "c0",
+        "cols",
+        "cols64",
+        "mask",
+        "base",
+        "mx",
+        "ss",
+        "acc",
+        "out",
+        "v",
+        "vv",
+        "e",
+        "d",
+        "j",
+    }
+)
+
+
+def _red_meta_ok(name: Any) -> bool:
+    """Check *name* is safe as a generated reduction-kernel variable."""
+    return (
+        isinstance(name, str)
+        and name.isidentifier()
+        and not keyword.iskeyword(name)
+        and not name.endswith("_ptr")
+        and not name.startswith("__")
+        and name not in _REDUCTION_LOCALS
+    )
+
+
+def _red_permutation(rank: int, red: tuple) -> tuple:
+    """Permute ``range(rank)`` to ``[non-red dims] + [red dims]``.
+
+    The kernel's index space is outer-then-reduced; *perm* maps each
+    permuted position to the broadcast dim it enumerates, so the
+    reduce set need not be trailing — ``sum(dim=2)`` of a rank-4
+    tensor permutes ``(0, 1, 3, 2)``.
+    """
+    rset = set(red)
+    return tuple(d for d in range(rank) if d not in rset) + tuple(
+        d for d in range(rank) if d in rset
+    )
+
+
+def reduction_triton_spec(spec: Any) -> dict | None:
+    """Recognise a reduction spec the Triton piece can lower.
+
+    The grammar is :func:`reduction_spec`'s, narrowed to what one
+    generated kernel spells: head in :data:`_REDUCTION_TRITON_OPS`,
+    exactly one elementwise body child (no hoisted subterms — every
+    non-elementwise leaf stays a bound tensor operand), attr dict
+    keys ⊆ ``{dim, axis, keepdim}``.  The *shape* subset — CUDA
+    floating operands, a ``dim`` attr that normalises against the
+    broadcast rank — is call-time knowledge the binding checks per
+    call and falls back to spelled eval on; this recogniser only
+    gates the spec grammar.  ``None`` declines.
+    """
+    if not (
+        isinstance(spec, (tuple, list))
+        and spec
+        and isinstance(spec[0], str)
+        and spec[0] in _REDUCTION_TRITON_OPS
+    ):
+        return None
+    kids = [e for e in spec[1:] if not isinstance(e, dict)]
+    attrs = [e for e in spec[1:] if isinstance(e, dict)]
+    if len(kids) != 1 or len(attrs) > 1:
+        return None
+    attr = attrs[0] if attrs else {}
+    if not set(attr) <= {"dim", "axis", "keepdim"}:
+        return None
+    child = kids[0]
+    if not (
+        isinstance(child, (tuple, list))
+        and child
+        and _spec_ops(child) <= ELEMENTWISE
+    ):
+        return None
+    metas = _spec_metas(spec)
+    if not metas or any(not _red_meta_ok(m) for m in metas):
+        return None
+    const = "tl.full([BLOCK_R], {v}, dtype=out_ptr.dtype.element_ty)"
+    body = _triton_expr(child, const)
+    if body is None:
+        return None
+    dim = attr.get("dim", attr.get("axis"))
+    return {
+        "op": spec[0],
+        "body": body,
+        "metas": metas,
+        "params": metas,
+        "dim": dim,
+        "keepdim": bool(attr.get("keepdim", False)),
+    }
+
+
+def _red_prelude(nslots: int) -> str:
+    """Emit the per-program row-offset prelude.
+
+    ``row`` enumerates the outer (non-reduced) index space; each
+    stride-table slot's contribution is the sum over outer dims of
+    ``coord_d * eff_stride_d`` — scalars, computed once per program.
+    Slots past the operand count are the softmax store-offset slot.
+    """
+    out = "".join(f"    __r{i} = 0\n" for i in range(nslots))
+    out += (
+        "    for d in tl.static_range(NOUT):\n"
+        "        __sz = tl.load(ometa_ptr + d)\n"
+        "        __ost = tl.load(ometa_ptr + NDIM + d)\n"
+        "        __cd = (row // __ost) % __sz\n"
+    )
+    out += "".join(
+        f"        __r{i} += __cd * tl.load("
+        f"ometa_ptr + {2 + i} * NDIM + d)\n"
+        for i in range(nslots)
+    )
+    return out
+
+
+def _red_chunk(metas: list, nslots: int) -> str:
+    """Emit one reduce-axis chunk: offsets, masked body loads.
+
+    The column-space strides live at ``ometa_ptr + NDIM + NOUT + j``
+    (permuted dim ``NOUT + j``); each slot's element offset is its
+    scalar row offset plus the per-column contribution.  Loads
+    convert to the output dtype — the host's promote-types result —
+    so mixed-dtype sites compile like the spelled broadcast does.
+    Slot ``len(metas)`` (softmax only) is the store-offset slot —
+    computed, never loaded.
+    """
+    lines = [
+        "        cols = c0 + tl.arange(0, BLOCK_R)",
+        "        cols64 = cols.to(tl.int64)",
+        "        mask = cols < R",
+    ]
+    lines += [
+        f"        __co{i} = tl.zeros([BLOCK_R], dtype=tl.int64)"
+        for i in range(nslots)
+    ]
+    lines += [
+        "        for j in tl.static_range(NRED):",
+        "            __csz = tl.load(ometa_ptr + NOUT + j)",
+        "            __cst = tl.load(ometa_ptr + NDIM + NOUT + j)",
+        "            __cco = (cols64 // __cst) % __csz",
+    ]
+    lines += [
+        f"            __co{i} += __cco * tl.load("
+        f"ometa_ptr + {2 + i} * NDIM + NOUT + j)"
+        for i in range(nslots)
+    ]
+    for i in range(nslots):
+        lines.append(f"        __o{i} = __r{i} + __co{i}")
+    for i, m in enumerate(metas):
+        lines.append(
+            f"        {m} = tl.load({m}_ptr + __o{i}, mask=mask,"
+            " other=0.0).to(out_ptr.dtype.element_ty)"
+        )
+    return "\n".join(lines) + "\n"
+
+
+def _red_loop(metas: list, nslots: int, tail: str) -> str:
+    """Emit ``for ci in range(NC)`` chunk loop with *tail* per chunk."""
+    return (
+        f"    for ci in range(NC):\n"
+        f"        c0 = ci * BLOCK_R\n{_red_chunk(metas, nslots)}{tail}"
+    )
+
+
+def _reduction_triton_source(info: dict) -> str:
+    """Emit the generated reduction kernel module for a spec.
+
+    One program per outer index; the reduce axis is walked in
+    ``BLOCK_R`` chunks inside the program — no cross-program
+    partials, one launch for the whole body.  ``sum``/``mean``
+    accumulate ``tl.sum``, ``amax``/``amin`` ``tl.maximum``/
+    ``tl.minimum``; ``softmax`` runs three passes (row max, row
+    sum-exp, normalised store) recomputing the body each pass.
+    """
+    metas = info["metas"]
+    op = info["op"]
+    body = info["body"]
+    # stride-table slots: the operand metas, plus — for softmax,
+    # whose output is input-shaped — the store-offset slot the
+    # normalised pass writes through.
+    nslots = len(metas) + (1 if op == "softmax" else 0)
+    ptrs = ", ".join(f"{m}_ptr" for m in metas)
+    sig = (
+        f"def _gr({ptrs}, out_ptr, ometa_ptr, M, R, NC, RF,"
+        " NDIM: tl.constexpr, NOUT: tl.constexpr,"
+        " NRED: tl.constexpr, BLOCK_R: tl.constexpr):\n"
+    )
+    head = (
+        "import triton\n"
+        "import triton.language as tl\n"
+        "import triton.language.extra.libdevice as libdevice\n"
+        "\n\n@triton.jit\n"
+        + sig
+        + "    row = tl.program_id(0).to(tl.int64)\n"
+        + _red_prelude(nslots)
+    )
+    if op == "softmax":
+        src = _red_softmax_body(metas, nslots, body, head)
+    else:
+        src = _red_reduce_body(op, metas, nslots, body, head)
+    # ``M``/``NC`` are consumed by the grid/loop; ``RF`` only by mean.
+    return src
+
+
+def _red_reduce_body(
+    op: str, metas: list, nslots: int, body: str, head: str
+) -> str:
+    """Emit the single-pass reduce kernel tail for *op*."""
+    dt = "out_ptr.dtype.element_ty"
+    if op in ("sum", "mean"):
+        init = f"tl.zeros((), dtype={dt})"
+        ident = "0.0"
+        accum = "acc += tl.sum(v, axis=0)"
+        final = "acc" if op == "sum" else "acc / RF"
+    elif op == "amax":
+        init = f'tl.full((), -float("inf"), dtype={dt})'
+        ident = '-float("inf")'
+        accum = "acc = tl.maximum(acc, tl.max(v, axis=0))"
+        final = "acc"
+    else:  # amin
+        init = f'tl.full((), float("inf"), dtype={dt})'
+        ident = 'float("inf")'
+        accum = "acc = tl.minimum(acc, tl.min(v, axis=0))"
+        final = "acc"
+    tail = (
+        f"        v = ({body})\n"
+        f"        v = tl.where(mask, v, {ident})\n"
+        f"        {accum}\n"
+    )
+    return (
+        head
+        + f"    acc = {init}\n"
+        + _red_loop(metas, nslots, tail)
+        + f"    out = {final}\n"
+        + "    tl.store(out_ptr + row, out)\n"
+    )
+
+
+def _red_softmax_body(
+    metas: list, nslots: int, body: str, head: str
+) -> str:
+    """Emit the three-pass softmax kernel tail.
+
+    Pass 1 folds the row max, pass 2 the sum of ``exp(v - max)``,
+    pass 3 the normalised store at the slot-``len(metas)`` offset —
+    the permuted flat index into the input-shaped output, computed
+    by the same stride machinery as the operand loads (the reduce
+    set need not be trailing, so ``row * R + col`` is not generally
+    the store index).
+    """
+    dt = "out_ptr.dtype.element_ty"
+    chunk = _red_chunk(metas, nslots)
+    pass1 = (
+        "        v = (" + body + ")\n"
+        '        vv = tl.where(mask, v, -float("inf"))\n'
+        "        mx = tl.maximum(mx, tl.max(vv, axis=0))\n"
+    )
+    pass2 = (
+        "        v = (" + body + ")\n"
+        '        vv = tl.where(mask, v, -float("inf"))\n'
+        "        ss += tl.sum(tl.exp(vv - mx), axis=0)\n"
+    )
+    store_slot = len(metas)
+    pass3 = (
+        "        v = (" + body + ")\n"
+        '        vv = tl.where(mask, v, -float("inf"))\n'
+        "        e = tl.exp(vv - mx) / ss\n"
+        f"        tl.store(out_ptr + __o{store_slot}, e, mask=mask)\n"
+    )
+    loop = "    for ci in range(NC):\n        c0 = ci * BLOCK_R\n"
+    return (
+        head
+        + f'    mx = tl.full((), -float("inf"), dtype={dt})\n'
+        + loop
+        + chunk
+        + pass1
+        + f"    ss = tl.zeros((), dtype={dt})\n"
+        + loop
+        + chunk
+        + pass2
+        + loop
+        + chunk
+        + pass3
+    )
+
+
+def _red_dims(info: dict, rank: int) -> tuple | None:
+    """Normalise the spec's ``dim`` attr against broadcast *rank*.
+
+    Returns the sorted reduce-dim tuple, or ``None`` when the attr
+    cannot denote a reduction of this rank (out-of-range or
+    duplicate dims — the spelled eval raises on those, so the
+    binding defers to it).  ``None`` *dim* means the spelled
+    dim-less form: a full reduce for the reduce ops, last-axis for
+    ``softmax`` (its binding default).
+    """
+    dim = info["dim"]
+    if dim is None:
+        seq = (-1,) if info["op"] == "softmax" else None
+    elif type(dim) is int:
+        seq = (dim,)
+    elif isinstance(dim, (tuple, list)):
+        if not all(type(d) is int for d in dim):
+            return None
+        seq = tuple(dim)
+    else:
+        return None
+    if seq is None:
+        return tuple(range(rank)) if rank else None
+    if not seq or rank == 0:
+        return None
+    out = []
+    for d in seq:
+        if d < 0:
+            d += rank
+        if not 0 <= d < rank:
+            return None
+        out.append(d)
+    if len(set(out)) != len(out):
+        return None
+    return tuple(sorted(out))
+
+
+def _red_dtype(tensors: list) -> Any:
+    """Promoted dtype over the bound operand tensors."""
+    import torch
+
+    dt = tensors[0].dtype
+    for t in tensors[1:]:
+        dt = torch.promote_types(dt, t.dtype)
+    return dt
+
+
+def _red_ometa(
+    tensors: list,
+    shape: tuple,
+    perm: tuple,
+    nout: int,
+    device: Any,
+    store: bool = False,
+) -> Any:
+    """Pack the reduction kernel's stride/broadcast metadata.
+
+    Everything is in *perm* order — ``[non-red dims] + [red dims]``,
+    so the reduce set need not be trailing.  Layout: permuted
+    ``shape`` sizes (K), permuted per-dim *index* strides (``prod``
+    over later dims of the same index space — outer dims for
+    ``p < nout``, red dims after), then one K-stride slot per
+    operand (effective element strides, 0 on absent/broadcast dims)
+    and — *store* — a final slot of the output's row-major strides
+    for the softmax store offset.
+    """
+    import torch
+
+    k = len(shape)
+    pshape = tuple(shape[d] for d in perm)
+    # original-order row-major strides — the store slot's strides
+    ss: list = []
+    acc = 1
+    for s in reversed(shape):
+        ss.insert(0, acc)
+        acc *= s
+    # permuted-order index strides: within each index space
+    pss: list = []
+    acc = 1
+    for s in reversed(pshape):
+        pss.insert(0, acc)
+        acc *= s
+    buf = list(pshape)
+    for p in range(k):
+        if p < nout:
+            q = 1
+            for e in range(p + 1, nout):
+                q *= pshape[e]
+            buf.append(q)
+        else:
+            # every permuted dim after a red dim is red, so the
+            # row-major stride IS the column-space stride
+            buf.append(pss[p])
+    for t in tensors:
+        kt = t.dim()
+        for g in perm:
+            j = g - (k - kt)
+            if j < 0 or t.shape[j] == 1:
+                buf.append(0)
+            else:
+                buf.append(t.stride(j))
+    if store:
+        buf.extend(ss[g] for g in perm)
+    return torch.tensor(buf, dtype=torch.int64, device=device)
+
+
+def _red_out_shape(info: dict, shape: tuple, red: tuple) -> tuple:
+    """Return the spelled output shape for the call's broadcast.
+
+    Non-trailing reduce dims remove/keepdim *in place* — the flat
+    ``row`` index still enumerates the surviving dims in original
+    order, so ``view`` lands correctly either way.
+    """
+    if info["op"] == "softmax":
+        return tuple(shape)
+    rset = set(red)
+    if info["keepdim"]:
+        return tuple(1 if d in rset else s for d, s in enumerate(shape))
+    return tuple(s for d, s in enumerate(shape) if d not in rset)
+
+
+def _red_spelled(spec: Any, vals: dict) -> Any:
+    """Evaluate the spelled body — the binding's honest fallback."""
+    import mlopt_torch.torch_bridge as tb
+
+    return _eval_spec(spec, vals, tb._IR_TO_TORCH)
+
+
+def _red_next_pow2(n: int, cap: int) -> int:
+    """Smallest power of two ≥ *n*, capped at *cap*."""
+    p = 1
+    while p < n and p < cap:
+        p *= 2
+    return p
+
+
+def _reduction_binding(kern: Any, info: dict, spec: Any) -> Any:
+    """Host wrapper for a generated reduction kernel.
+
+    ``fn(*vals)`` binds the spec metavars positionally, checks the
+    call-time subset — CUDA floating tensors, a ``dim`` attr that
+    normalises against the broadcast rank — and launches one
+    kernel.  Anything outside the subset
+    evaluates the spelled body instead: the binding's denotation is
+    the spec verbatim, the Triton arm is the implementation where
+    it applies (the ``_rms_norm_measured`` posture).
+    """
+    params = info["params"]
+    metas = info["metas"]
+    op = info["op"]
+
+    def fn(*args: Any, **_attrs: Any) -> Any:
+        import torch
+
+        vals = dict(zip(params, args, strict=True))
+        xs = [vals[m] for m in metas]
+        if not all(
+            torch.is_tensor(t)
+            and t.is_cuda
+            and t.dtype.is_floating_point
+            for t in xs
+        ):
+            return _red_spelled(spec, vals)
+        try:
+            shape = torch.broadcast_shapes(
+                *[tuple(t.shape) for t in xs]
+            )
+        except RuntimeError:
+            return _red_spelled(spec, vals)
+        rank = len(shape)
+        red = _red_dims(info, rank)
+        if not red:
+            return _red_spelled(spec, vals)
+        nout = rank - len(red)
+        perm = _red_permutation(rank, red)
+        # outer index space = non-red dims in original order —
+        # ``perm[:nout]`` IS that order, so M/R come from pshape
+        pshape = tuple(shape[d] for d in perm)
+        m_rows = 1
+        for s in pshape[:nout]:
+            m_rows *= s
+        r_cols = 1
+        for s in pshape[nout:]:
+            r_cols *= s
+        dt = _red_dtype(xs)
+        if dt not in (torch.float32, torch.float64):
+            return _red_spelled(spec, vals)
+        out_shape = _red_out_shape(info, shape, red)
+        device = xs[0].device
+        if m_rows == 0 or r_cols == 0:
+            return torch.empty(out_shape, dtype=dt, device=device)
+        om = _red_ometa(
+            xs, shape, perm, nout, device, store=op == "softmax"
+        )
+        numel = m_rows if op != "softmax" else m_rows * r_cols
+        out = torch.empty(numel, dtype=dt, device=device)
+        block = _red_next_pow2(min(r_cols, 1024), 1024)
+        nc = (r_cols + block - 1) // block
+        kern[(m_rows,)](
+            *xs,
+            out,
+            om,
+            m_rows,
+            r_cols,
+            nc,
+            float(r_cols),
+            NDIM=rank,
+            NOUT=nout,
+            NRED=len(red),
+            BLOCK_R=block,
+        )
+        return out.view(out_shape)
+
+    return fn
+
+
+def reduction_triton_bindings(handlers: dict) -> dict:
+    """Generate a Triton kernel per reduction-bodied handler.
+
+    The reduction tier's codegen: each handler whose *pattern*
+    :func:`reduction_triton_spec` recognises gets a binding whose
+    callable runs a generated fused reduce kernel — one launch for
+    the elementwise body plus the reduction, real ``triton.jit``
+    source on disk under the kernel cache.  Specs outside the
+    grammar are skipped (the handler keeps its ``gen_bindings``
+    compiled-spelled path); shapes outside the call-time subset
+    fall back to spelled eval inside the binding.
+    """
+    out: dict[str, Any] = {}
+    for h in handlers.values():
+        info = reduction_triton_spec(h["pattern"])
+        if info is None:
+            continue
+        src = _reduction_triton_source(info)
+        path = _kernel_cache() / f"_gr_{h['kernel']}.py"
+        path.write_text(src)
+        kern = _load_generated(path, "_gr")
+        if kern is None:
+            continue  # module load declined — keep the torch path
+        out[h["kernel"]] = _reduction_binding(kern, info, h["pattern"])
     return out
 
 
@@ -2742,9 +3312,11 @@ TIERS: tuple[Tier, ...] = (
     Tier("gen", gen_handlers, triton_bindings),
     Tier("scan", scan_handlers, scan_triton_bindings),
     Tier("decayed", decayed_handlers, decayed_triton_bindings),
-    # the reduction tier has no Triton codegen — its delivery IS the
-    # compiled spelled body (``gen_bindings`` covers every handler),
-    # so ``None`` is the honest declaration and the referee prices
-    # the same callable delivery ships.
-    Tier("reduction", reduction_handlers, None),
+    # the reduction tier's delivery is its Triton piece where the
+    # spec is expressible (a reduce-dim head over an elementwise
+    # body) and the compiled spelled body elsewhere — the binding
+    # itself falls back to spelled eval on shapes outside the
+    # subset, so ``reduction_triton_bindings`` is the honest
+    # declaration either way.
+    Tier("reduction", reduction_handlers, reduction_triton_bindings),
 )
