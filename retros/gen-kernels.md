@@ -361,3 +361,42 @@ seq-form scans are **dropped** at both `_zoo_case` intake and
 `_claim_cost_gate` (unpriced AND undeliverable through
 `gen_sink`; `hybrid_sink` remains their only honest delivery).
 Test updated to pin the drop.
+
+## The reduction tier lands (2026-11-07, T-010)
+
+The "next step is a reduction TIER" lever is implemented and
+measured — `docs/reports/p31_reduction_tier.md` is the full record.
+
+**Census first:** the zoo is NOT occurrence-blocked — 161
+reduction-headed sites across 32 of 68 workloads (sum 60, softmax
+50, mean 18, plus cumsum/topk/amax/norm outside the tier's
+vocabulary).  What IS narrow is the *fusable* subset: the tier only
+claims a reduction whose spelled body carries ≥1 elementwise op —
+22 workloads mint specs, ~30 distinct `red_*` handlers after canon
+dedup.
+
+**Machinery:** `genkernel.reduce_heads()`
+(`opmeta.REDUCE_DIM_OPS ∪ {softmax}`), `reduction_spec`
+(head concrete + attrs, ≥2 ops, non-head ops all elementwise),
+`reduction_handlers` minting `red_<i>`,
+`Tier("reduction", …, None)` — no reduction Triton codegen, so
+delivery IS the compiled spelled body and `profitable` prices
+exactly what ships.  `play._reduction_sites` collects
+(head + attr dict concrete, args via `_fusion_pattern`'s boundary
+rule), `TIER_SITES["reduction"]` registers it, and
+`_claim_measurable` admits `red_` — spelled eval through
+`_IR_TO_TORCH` is the honest denotation.
+
+**Measured:** at default zoo sizes (16×8×2) the referee keeps
+**0/30** — compiled-spelled loses 1.4–2.8× to eager spelled in the
+tiny-shape dynamo-overhead regime, and the gate drops every one.
+At 64×64×8, RWKVMixBlock's two claims keep (0.56×/0.73×) and
+`gen_probe` delivers a verified module at **1.206× vs eager,
+0.892× vs whole-model torch.compile** — the incumbent already
+fuses these bodies, so the ceiling is beating eager, not Inductor.
+
+**Verdict:** real but narrow.  The tier closes the collector gap
+the audit named; its payoff is compiled-spelled fusion vs eager at
+paying shapes.  Beating `torch.compile` needs a reduction Triton
+codegen (`tl.*`-axis kernel over the spelled body) — a codegen
+project, not a tier.
