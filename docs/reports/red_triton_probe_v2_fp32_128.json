@@ -1,0 +1,97 @@
+[
+ {
+  "workload": "RWKVMixBlock",
+  "dtype": "fp32",
+  "red_specs_minted": 2,
+  "red_kept": [
+   "red_1"
+  ],
+  "consults": [
+   {
+    "tag": "red_0",
+    "kernel": "red_0_k",
+    "pattern_head": "sum",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [],
+    "kept_by_referee": false
+   },
+   {
+    "tag": "red_1",
+    "kernel": "red_1_k",
+    "pattern_head": "sum",
+    "outcome": "bound",
+    "attempts": [
+     {
+      "tier": "gen",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "scan",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "decayed",
+      "outcome": "declined",
+      "reason": "spec declined \u2014 outside the tier's grammar"
+     },
+     {
+      "tier": "reduction",
+      "outcome": "bound"
+     }
+    ],
+    "reason": null,
+    "samples": [
+     {
+      "window": 0,
+      "t_spelled_us": 5248.153,
+      "t_kernel_us": 1850.523,
+      "ratio_kernel_over_spelled": 0.3526,
+      "keep_vote": true
+     }
+    ],
+    "kept_by_referee": true
+   }
+  ],
+  "gen_probe": {
+   "case": "zoo:RWKVMixBlock",
+   "claims": [
+    "red_1"
+   ],
+   "delivered": true,
+   "verified": false,
+   "prim_ops": [],
+   "max_abs": NaN,
+   "cost": NaN,
+   "baseline_us": 8466.248998956871,
+   "compiled_us": 570.6700012524379,
+   "gen_us": 9583.015998941846,
+   "speedup": 0.883,
+   "vs_compiled": 0.06,
+   "device": "cuda"
+  }
+ }
+]
