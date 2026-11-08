@@ -295,3 +295,69 @@ attr specs is site-collector attr preservation — unmeasured) and
 the reduction-body question (scan/decayed tiers bind; seq-scan
 claims still offer unpriced by necessity — a carrier-aware spelled
 referee is the missing piece, not more timing).
+
+## T-010 remainder levers (2026-11-07)
+
+Three levers attempted; one real bug found and fixed, two honest
+blocks documented.
+
+**Attr-bearing bodies — machinery fixed, corpus has no sites.**
+Attr-carrying specs canon to *unhashable* dicts, and
+`gen_handlers`/`decayed_handlers` deduped with `canon in skip` —
+`TypeError: unhashable type: 'dict'` on the first attr-bearing
+site (the scan tier already used the equality-based
+`_canon_taken`).  Both handlers now dedup through `_canon_taken`;
+attr specs mint (`gen_0`/`gen_1` on a synthetic
+`mul(softplus(β=2,τ=5), sigmoid)` board), and `gen_bindings`
+evaluates them verbatim — a real-tensor probe matched the spelled
+torch computation at **max diff 0.0**.  The remaining codegen gap
+is Triton-only: `_triton_node_h` declines attr-carrying nodes, so
+an attr body delivers through the `torch.compile`d spelled
+fallback, never a fused pointwise kernel — concretizing attrs
+before codegen is the unbuilt step.  **Census: zero.**  Across
+all 68 zoo workloads the IR contains *no* attr-carrying
+elementwise op at all (TorchSource emits attr-free elementwise
+nodes; the 87 attr dicts the scan tier mints are the `applyd`
+node's own `kind`/`axis` carrier attrs, a different slot).
+Attr bodies are tractable end-to-end except Triton, and
+occurrence-blocked in the current corpus — nothing to measure.
+
+**Reduction bodies — no tier collects them; census confirms.**
+No site collector produces a spec whose body *is* a reduction:
+`gen` is elementwise-only (`elementwise_spec` rejects
+`sum`/`mean`/`max`/…), `decayed` is the `matmul(mul(s,d),v)`
+contraction spelling, `scan` is the carrier fold.  Zoo census:
+4 `decayed_*` minted total (GatedAttentionUnit, GCNLayer,
+ChunkedRetention, ChunkedSSD), 5 minted specs contain a
+reduction op *inside* an unrolled scan map body — none is a
+reduction-bodied claim.  The single "kept decayed" row from the
+earlier sweep did not reproduce on board inspection (no
+`decayed_*` claim tag, handlers absent) — referee noise at the
+margin, not a win.  Reduction claims stay blocked at the
+*collector* layer: minting one needs a new tier whose spelled
+denotation (a `sum`/`mean`/`max` tree) the bindings already
+evaluate, plus a kernel — the honest next step is a reduction
+tier, not a pricing fix.
+
+**Seq-scan pricing — blocked, and a latent soundness gap closed.**
+A carrier-aware spelled referee is *not* implementable with what
+exists: the ambient `applyd` binding is one map application
+(`f[0]*h + f[1]`, `mlopt_torch/torch_bridge.py:1963`), the minted
+seq op declares a fold over the step axis, and `_IR_TO_TORCH`
+contains no fold/scan construct to spell it with — unrolling
+into an `affd_compose` tree would need T state-shaped operands,
+an IR rewrite, not a binding.  In practice the question is moot
+today: `_scan_sites` pins `kind="unrolled"` on every minted spec
+(zoo census: seq=0, unrolled=87), so no collector ever produces
+the seq form.  **But the audit found the gates were inconsistent
+with that fact:** `_zoo_case` ran `profitable` over *every*
+minted tier — seq scans would have been timed fold-kernel vs
+map-spelled (wrong denotation) — and `_claim_cost_gate` left
+seq scans *offered unpriced* while the seated `gen_sink`'s
+`gen_bindings` would bind them to exactly the wrong (map)
+denotation — a silent semantic bug had one ever been minted.
+Fixed: `_claim_measurable` is now the shared predicate, and
+seq-form scans are **dropped** at both `_zoo_case` intake and
+`_claim_cost_gate` (unpriced AND undeliverable through
+`gen_sink`; `hybrid_sink` remains their only honest delivery).
+Test updated to pin the drop.

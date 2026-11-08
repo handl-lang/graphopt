@@ -222,3 +222,71 @@ neural arm, and a curriculum over *claim availability* rather than
 board difficulty.  The spelled declare→saturate→handle line remains
 unplayed; consolidation is now real but rides `claim`, not the
 four-move spelling.
+
+## Levers 2–3 measured (2026-11-07, T-009 remainder)
+
+Both remaining levers landed as *measured* arms and both come back
+honest: the policy is not the bottleneck — the oracle's own
+candidate set is.
+
+**Lever 3 — claim-availability curriculum: measured negative.**
+`meta_player` grew `case_availability` (live `claimable` count +
+`unhandled` count off a fresh observe — a *state* property, not
+the oracle's verdict) and `availability_order`, exposed as
+`--availability`.  On the bake recipe (400 train / 40 held-out,
+budget 24, imitate 3 + RL 5, T=1.2, eps=0.25) the decade means
+alternate ~0.36 / ~0.01 — the ordering really did change — and the
+held-out table is *identical* to baseline and to every other arm:
+learned-greedy +0.17, 20 literal claims, declared-use 20/40.
+Availability ordering cannot help a policy that already imitates
+the oracle perfectly on every board where a claim exists.
+
+**The spelled line is reachable, priced, and dominated.**
+`spelled_candidates` enumerates the primitive
+`declare → saturate → handle → extract` lines (one per
+occurring-spec × covering-handler pair, pre-filtered through
+`meta_arena._handle`'s own legality test), `plan_spelled` scores
+them, and `--oracle-spelled` / `--spelled-demo-epochs` wire them
+into the oracle argmax and the imitation stream.  Verified
+end-to-end: the spelled line *pays* (~+0.30 total on the silu
+board) — but `claim → extract` pays ~+0.40 for the same rewrite,
+so across all 400 training boards the oracle argmax picks the
+spelled line **0 times** (`spelled-pick=0`; 250 claim-line, 150
+decline).  The fused move is strictly better wherever it exists;
+the spelled line is a demonstration curriculum for the
+primitives, not a strategy.  Replaying it through imitation
+(`--spelled-demo-epochs`) changes nothing held-out — same table.
+
+**Lever 2 — richer policy: measured negative at the ceiling.**
+`META_SPEC_V2` adds the second-order block the task asked for:
+`MetaHist.last_op` carries the previous move into the featurizer
+and `_prev_move_feats` emits `x:seq:<prev>><cand>` (last-move ×
+candidate-kind — the composed line's edges: `declare>handle`,
+`claim>extract`) plus `x:seqh:<prev>:<bucket>` (last-move ×
+handler-identity on catalog-binding moves).  Broadcast
+`x:prev:*`-style rows would cancel in the softmax, so only
+candidate-varying products are emitted; `--prev-features` binds
+the arm.  Same bake recipe, seed 0: the held-out table is
+*identical* to V1 — learned-greedy +0.17, claims 20–22,
+declared-use 20/40, imitation 1950/1950.  This was the expected
+null: the earlier audit already put learned-greedy at the oracle
+ceiling (eval mean +0.172 vs learned-greedy gap ≈ −0.0001, no case
+below oracle).  There is no residual gap for a richer function
+class to close — the remaining difference lives in lines the
+oracle itself never picks.
+
+**Neural arm: not re-run, prior says no.**  `gamekit.players.neural`
+exists, but its measured record is the open domain (AP 0.041 vs
+heuristic 0.045, trained linear prior 0.133) — it has never beaten
+the linear arm anywhere, and the meta arena's bottleneck is shown
+above to be upstream of policy capacity.
+
+**Disposition.**  T-009's policy question is answered: imitation
+bake + first-order features already sit at the oracle ceiling for
+the current candidate set; second-order features, availability
+curriculum, and spelled-line demonstrations are all implemented,
+measured, and flat.  What remains genuinely open is *candidate
+side*, not policy side: oracle lines beyond the current
+{extract, saturate→extract, claim→extract, claim→saturate→extract,
+multi-claim} set — e.g. spelled multi-declare lines, or claims
+over-handler compositions the mint doesn't yet offer.
