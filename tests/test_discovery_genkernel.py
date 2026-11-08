@@ -48,6 +48,33 @@ class TestMinting:
             == {}
         )
 
+    def test_attr_carrying_spec_mints(self):
+        # attr dicts canon to *unhashable* dicts — the covered/dedup
+        # check must compare by equality (``_canon_taken``), not
+        # ``in``; this spec crashed ``gen_handlers`` before the fix
+        spec = (
+            "mul",
+            ("softplus", "X1", {"beta": 2.0, "threshold": 5.0}),
+            ("sigmoid", "X1"),
+        )
+        h = gk.gen_handlers([spec])
+        assert "gen_0" in h
+        assert h["gen_0"]["pattern"] == spec
+        # a covered entry carrying the same attrs still skips —
+        # ``covered`` is iterated, so a list of canon forms works
+        # where a set could not hold the unhashable canon
+        covered = [_canon_concrete(spec)]
+        assert gk.gen_handlers([spec], covered=covered) == {}
+        # and the spelled binding evaluates the attrs verbatim
+        x = _v("x", 4, 4)
+        term = _p(
+            "mul",
+            _p("softplus", x, beta=2.0, threshold=5.0),
+            _p("sigmoid", x),
+        )
+        h2 = gk.gen_handlers([term])
+        assert h2 and "beta" in str(h2["gen_0"]["pattern"])
+
     def test_non_elementwise_skipped(self):
         x, y = _v("x", 4, 4), _v("y", 4, 4)
         assert gk.gen_handlers([_p("matmul", x, y)]) == {}
@@ -259,9 +286,12 @@ class TestGenDomain:
         # claim whose spelled body is an honest denotation —
         # ``gen_*``, spelled ``decayed_*``, and unrolled ``scan_*`` —
         # and drops the losers before the board's handler store is
-        # built.  Sequence-form scans (spelled eval is the map, not
-        # the fold) and ``om_decayed``-headed specs (no ``_IR_TO_TORCH``
-        # binding for the spelled side) stay unpriced by design.
+        # built.  Sequence-form scans drop outright: their spelled
+        # eval is the map, not the fold, so ``profitable`` would
+        # grade the wrong denotation AND the seated ``gen_sink``
+        # would silently deliver that wrong denotation;
+        # ``om_decayed``-headed specs (no ``_IR_TO_TORCH`` binding
+        # for the spelled side) stay unpriced by design.
         torch = pytest.importorskip("torch")
         x = _v("x", 4, 4)
         term = _p("mul", x, _p("relu", x))
@@ -303,8 +333,13 @@ class TestGenDomain:
         )
         monkeypatch.setattr(play, "_var_env", lambda *a: {})
         # scan_0 reads as the sequence form — its spelled eval is the
-        # map application, so the gate must not measure it
-        monkeypatch.setattr(gk, "_seq_scan_spec", lambda s: True)
+        # map application, so the gate must neither measure it nor
+        # leave it offered (the seated gen_sink would mis-denote it)
+        monkeypatch.setattr(
+            gk,
+            "_seq_scan_spec",
+            lambda s: isinstance(s, tuple) and s[0] == "applyd",
+        )
         seen = {}
 
         def spy(hs, *a, **k):
@@ -315,14 +350,13 @@ class TestGenDomain:
         monkeypatch.setattr(gk, "profitable", spy)
         play._claim_cost_gate(case)
         # the referee saw gen_*, spelled decayed_*, and would-be
-        # unrolled scan_* — never the seq scan, the om_decayed spec,
-        # or the shipped prim fold
+        # unrolled scan_* — never the seq scan (dropped unpriced),
+        # the om_decayed spec, or the shipped prim fold
         assert set(seen) == {"gen_0", "gen_1", "decayed_0"}
         assert set(case[5]["gen_handlers"]) == {
             "gen_0",
             "decayed_0",
             "decayed_1",
-            "scan_0",
             "prim:synop_x",
         }
         # idempotent: a second call does not re-consult the referee

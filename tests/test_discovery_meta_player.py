@@ -482,4 +482,224 @@ class TestInternals:
             ["--train-cases", "1", "--eval-cases", "1", "--budget", "4"]
         ) == 0
         assert bumped == [40_000]
+
+
+class TestSpelledLines:
+    """The primitive declare→saturate→handle→extract candidates."""
+
+    def _silu_case(self):
+        return next(
+            c for c in mp.gen_cases(0, 12) if c[0].endswith(":silu")
+        )
+
+    def _control_case(self):
+        return next(
+            c
+            for c in mp.gen_cases(0, 12)
+            if c[0].endswith(":control")
+        )
+
+    def test_spelled_candidates_on_silu(self):
+        st = mp._board(self._silu_case(), count_cost, 20_000).observe()
+        cands = mp.spelled_candidates(st)
+        assert cands
+        ops = [[a.op for a in line] for line in cands]
+        assert ops == [
+            ["declare", "saturate", "handle", "extract"]
+        ] * len(cands)
+        # the handle leg names the fold the declare minted
+        assert all(
+            line[2].params["object"].startswith("foldabs_")
+            for line in cands
+        )
+
+    def test_spelled_candidates_empty_on_control(self):
+        st = mp._board(self._control_case(), count_cost, 20_000).observe()
+        assert mp.spelled_candidates(st) == []
+
+    def test_plan_spelled_scores_and_declines(self):
+        plans = mp.plan_spelled(
+            [self._silu_case(), self._control_case()], budget=8
+        )
+        silu_plan, control_plan = plans
+        assert silu_plan is not None
+        reward, line = silu_plan
+        assert [a.op for a in line] == [
+            "declare",
+            "saturate",
+            "handle",
+            "extract",
+        ]
+        assert reward > 0
+        assert control_plan is None
+
+    def test_oracle_spelled_never_beats_claim(self):
+        # the spelled line is dominated wherever claim exists — the
+        # oracle argmax must keep picking the fused move
+        reward, line = mp.oracle_line(
+            self._silu_case(), budget=8, spelled=True
+        )
+        assert [a.op for a in line] == ["claim", "extract"]
+
+    def test_case_availability_and_order(self):
+        cases = mp.gen_cases(0, 12)
+        pairs = [
+            (c, mp.oracle_line(c, budget=8)) for c in cases
+        ]
+        avail = [mp.case_availability(c, max_nodes=20_000) for c in cases]
+        # every generated board's claimable count matches its kind
+        assert all(a[0] >= 0 and a[1] >= 0 for a in avail)
+        ordered = mp.availability_order(pairs, max_nodes=20_000)
+        keys = [
+            mp.case_availability(c, max_nodes=20_000) for c, _p in ordered
+        ]
+        assert keys == sorted(keys, reverse=True)
+        # pairs stay aligned — the same (case, plan) objects return
+        assert len(ordered) == len(pairs)
+        assert {id(cp) for cp in ordered} == {id(cp) for cp in pairs}
+
+
+class TestPrevFeatures:
+    """The V2 second-order arm — last move × board catalog."""
+
+    def test_meta_hist_records_last_op(self):
+        h = mp.MetaHist()
+        h.record("declare")
+        h.record("claim")
+        assert h.last_op == "claim"
+        assert h.rate("declare") == 0.5
+        fresh = mp.MetaLearnedPlayer(0).fresh_hist()
+        assert isinstance(fresh, mp.MetaHist)
+
+    def test_seq_handler_tags(self):
+        assert mp._seq_handler_tags(ma.Action.claim("silu")) == ["silu"]
+        assert mp._seq_handler_tags(ma.Action.handle("o", "square")) == [
+            "square"
+        ]
+        assert mp._seq_handler_tags(ma.Action.extract()) == []
+        macro = ma.Action(
+            "macro",
+            {
+                "seq": [
+                    {"op": "claim", "params": {"handler": "silu"}},
+                    {"op": "extract", "params": {}},
+                ]
+            },
+        )
+        assert mp._seq_handler_tags(macro) == ["silu"]
+
+    def test_prev_move_feats_pairs(self):
+        st = _silu_board().observe()
+        h = mp.MetaHist()
+        h.record("declare")
+        row = mp.META_SPEC_V2.featurize(st, ma.Action.extract(), h)
+        assert row["x:seq:declare>extract"] == 1.0
+        assert "x:seq:declare>claim" not in row
+        # a claim candidate also emits the handler-bucket term
+        crow = mp.META_SPEC_V2.featurize(
+            st, ma.Action.claim("silu"), h
+        )
+        assert crow["x:seq:declare>claim"] == 1.0
+        assert any(k.startswith("x:seqh:declare:") for k in crow)
+        # episode start reads as the ``start`` pseudo-predecessor
+        srow = mp.META_SPEC_V2.featurize(
+            st, ma.Action.extract(), mp.MetaHist()
+        )
+        assert srow["x:seq:start>extract"] == 1.0
+
+    def test_v2_schema_covers_emissions(self):
+        st = _silu_board().observe()
+        h = mp.MetaHist()
+        h.record("saturate")
+        for a in ma.legal_actions(st):
+            feats = mp.META_SPEC_V2.featurize(st, a, h)
+            assert set(feats) <= set(mp.META_ARENA_FEATURES_V2)
+            assert f"x:seq:saturate>{a.op}" in feats
+
+    def test_v2_player_trains_and_freezes(self):
+        cases = mp.gen_cases(0, 4)
+        p = mp.MetaLearnedPlayer(
+            0, spec=mp.META_SPEC_V2, weights={}, temperature=1.0
+        )
+        totals = mp.train_player(p, cases, budget=8)
+        assert len(totals) == 4
+        frozen = p.frozen(0, greedy=True)
+        arena = mp._board(cases[0], count_cost, 20_000)
+        traj = ma.run_episode(arena, frozen, 8)
+        assert traj.total is not None
+        # the second-order weights are live schema members
+        assert "x:seq:start>extract" in p.weights_dict()
+
+    def test_main_prev_features_flag(self, capsys, monkeypatch):
+        real = mp.gen_cases
+        monkeypatch.setattr(mp, "gen_cases", lambda s, n: real(0, 2))
+        assert (
+            mp.main(
+                [
+                    "--train-cases",
+                    "2",
+                    "--eval-cases",
+                    "2",
+                    "--budget",
+                    "6",
+                    "--prev-features",
+                ]
+            )
+            == 0
+        )
+
+
+class TestAvailabilityFlags:
+    """The claim-availability curriculum and spelled demo CLI arms."""
+
+    def test_main_availability_and_oracle_spelled(self, capsys, monkeypatch):
+        real = mp.gen_cases
+        monkeypatch.setattr(mp, "gen_cases", lambda s, n: real(0, 4))
+        assert (
+            mp.main(
+                [
+                    "--train-cases",
+                    "4",
+                    "--eval-cases",
+                    "2",
+                    "--budget",
+                    "6",
+                    "--epochs",
+                    "1",
+                    "--imitate-epochs",
+                    "1",
+                    "--availability",
+                    "--oracle-spelled",
+                    "--spelled-demo-epochs",
+                    "1",
+                ]
+            )
+            == 0
+        )
+        out = capsys.readouterr().out
+        assert "spelled-pick=" in out
+        assert "spelled-moves=" in out
+
+    def test_main_spelled_demo_without_imitate(self, capsys, monkeypatch):
+        real = mp.gen_cases
+        monkeypatch.setattr(mp, "gen_cases", lambda s, n: real(0, 4))
+        assert (
+            mp.main(
+                [
+                    "--train-cases",
+                    "4",
+                    "--eval-cases",
+                    "2",
+                    "--budget",
+                    "6",
+                    "--epochs",
+                    "1",
+                    "--spelled-demo-epochs",
+                    "1",
+                ]
+            )
+            == 0
+        )
+        out = capsys.readouterr().out
+        assert "imitation:" in out
         capsys.readouterr()

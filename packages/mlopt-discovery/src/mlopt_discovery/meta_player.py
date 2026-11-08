@@ -34,6 +34,7 @@ import hashlib
 import random
 import sys
 from collections.abc import Callable, Iterable
+from dataclasses import dataclass
 from typing import Any
 
 from gamekit.players import (
@@ -58,7 +59,11 @@ from . import meta_arena as ma
 __all__ = [
     "META_PART_TAGS",
     "META_SPEC",
+    "META_SPEC_V2",
+    "MetaHist",
     "MetaLearnedPlayer",
+    "availability_order",
+    "case_availability",
     "curriculum_order",
     "evaluate",
     "featurize",
@@ -66,7 +71,9 @@ __all__ = [
     "imitate_oracle",
     "oracle_line",
     "plan_oracles",
+    "plan_spelled",
     "player_table",
+    "spelled_candidates",
     "train_player",
 ]
 
@@ -309,6 +316,124 @@ featurize = META_SPEC.featurize
 
 
 # ---------------------------------------------------------------------------
+#  V2 — the 2nd-order feature arm (last move x board catalog)
+# ---------------------------------------------------------------------------
+#
+#  The shipped schema is first-order: ``op:*`` names the candidate,
+#  ``st:*``/``x:*`` price it against the board — but nothing says
+#  *what just happened*.  The composed line's credit assignment is
+#  exactly a second-order question: ``handle`` pays only *after* a
+#  ``declare`` armed it, ``extract`` pays only *after* the payout
+#  move landed.  :class:`MetaHist` carries the last played op into
+#  the featurizer and the ``x:seq:*``/``x:seqh:*`` block emits the
+#  pair terms — last-move x candidate-kind, and last-move x
+#  handler-identity-bucket on the catalog-binding moves.  Broadcast
+#  ``x:prev:*`` rows would cancel in the softmax, so only
+#  candidate-varying products are emitted.
+
+#: Move kinds the ``x:seq`` pair vocabulary spans — the schema's
+#: ``op:*`` one-hot set plus ``macro`` and the ``start`` pseudo-op
+#: (the episode's first decision has no predecessor).
+_META_OPS_V2: tuple[str, ...] = (
+    "fire",
+    "saturate",
+    "declare",
+    "handle",
+    "claim",
+    "extract",
+    "macro",
+)
+_PREV_OPS_V2: tuple[str, ...] = ("start", *_META_OPS_V2)
+
+#: The V2 schema — the shipped rows plus the second-order block.
+META_ARENA_FEATURES_V2: tuple[str, ...] = (
+    *lawdata.META_ARENA_FEATURES,
+    *(f"x:seq:{p}>{c}" for p in _PREV_OPS_V2 for c in _META_OPS_V2),
+    *(
+        f"x:seqh:{p}:{b}"
+        for p in _PREV_OPS_V2
+        for b in range(lawdata.META_ARENA_HASH_BUCKETS["handler"])
+    ),
+)
+
+
+@dataclass
+class MetaHist(PlayHist):
+    """``PlayHist`` plus the last played move kind.
+
+    ``record`` is the player's post-play hook — it sees only the op
+    name (``LinearPolicy._record``), which is exactly the
+    predecessor signal the ``x:seq`` block needs.  ``None`` before
+    the episode's first play reads as ``"start"`` in the featurizer.
+    """
+
+    last_op: str | None = None
+
+    def record(self, op: str) -> None:
+        """Tally the play and remember its kind as the predecessor."""
+        self.last_op = op
+        super().record(op)
+
+
+def _seq_handler_tags(action: ma.Action) -> list[str]:
+    """Collect the handler tags a candidate binds."""
+    if action.op in ("claim", "handle"):
+        tag = action.params.get("handler")
+        return [tag] if tag is not None else []
+    if action.op == "macro":
+        tags: list[str] = []
+        for sub in action.params.get("seq") or ():
+            if isinstance(sub, dict):
+                op, params = (
+                    str(sub.get("op")),
+                    dict(sub.get("params") or {}),
+                )
+            else:
+                op = str(getattr(sub, "op", ""))
+                params = dict(getattr(sub, "params", {}) or {})
+            if op in ("claim", "handle") and params.get("handler"):
+                tags.append(params["handler"])
+        return tags
+    return []
+
+
+def _prev_move_feats(
+    _state: ma.MetaState, action: ma.Action, hist: Any, _row: dict
+) -> dict[str, float]:
+    """Emit the ``x:seq:*``/``x:seqh:*`` second-order block.
+
+    ``x:seq:<prev>><cand>`` — last-move x candidate-kind (the pair
+    term: ``declare>handle``, ``claim>extract`` are the composed
+    line's edges); ``x:seqh:<prev>:<bucket>`` — last-move x
+    handler-identity on the catalog-binding moves, so "after a
+    declare, prefer *this* handler's handle" is expressible.  Both
+    vary across the candidate set, so neither cancels in the
+    softmax — the property every useful ``x:*`` term needs.
+    """
+    prev = getattr(hist, "last_op", None) or "start"
+    out: dict[str, float] = {f"x:seq:{prev}>{action.op}": 1.0}
+    for tag in _seq_handler_tags(action):
+        out[f"x:seqh:{prev}:{_bucket(tag, 'handler')}"] = 1.0
+    return out
+
+
+#: V2 parts — the shipped row plus the predecessor block last (it
+#: reads no ``st:*`` keys, so part order only fixes row ordering).
+META_PARTS_V2: tuple = (*META_PARTS, _prev_move_feats)
+
+#: The V2 spec — same enumerator/prior/lr, extended schema.  A
+#: measurement arm, not a shipped preset: ``META_SPEC`` and its
+#: ``meta_prior`` bake stay untouched.
+META_SPEC_V2 = DomainSpec.build(
+    features=META_ARENA_FEATURES_V2,
+    legal=ma.legal_actions,
+    parts=META_PARTS_V2,
+    weights=meta_prior.META_ARENA_PLAYER_WEIGHTS,
+    lr=_LR,
+)
+
+
+# ---------------------------------------------------------------------------
 #  The player
 # ---------------------------------------------------------------------------
 
@@ -350,6 +475,16 @@ class MetaLearnedPlayer(LearnedPlayer):
         honest boundary hook for callers.
         """
         self._prev_steps = -1  # forces _observe's boundary branch
+
+    def fresh_hist(self) -> MetaHist:
+        """Return the predecessor-carrying history (V2's channel).
+
+        A :class:`MetaHist` is a :class:`PlayHist` plus ``last_op`` —
+        the shipped spec's ``PlayRates`` parts read it unchanged, and
+        the V2 ``x:seq`` block reads the predecessor.  Returning it
+        unconditionally keeps one hist shape across specs.
+        """
+        return MetaHist()
 
 
 def _key(action: ma.Action) -> tuple:
@@ -498,7 +633,49 @@ def train_player(
 #  so a claim that merely breaks even is not demonstrated as a win.
 
 
-def _candidate_lines(state: ma.MetaState) -> list[list[ma.Action]]:
+def spelled_candidates(
+    state: ma.MetaState, handlers: dict | None = None
+) -> list[list[ma.Action]]:
+    """Enumerate the *spelled* composed lines — declare→saturate→handle→extract.
+
+    ``claim`` fuses this line into one refereed move; the spelled
+    form is the primitive-move spelling it compresses.  One
+    candidate per ``(occurring spec, covering handler)`` pair: the
+    ``declare`` is the enumerator's own ``_fresh_fold`` (the same
+    action ``_base_legal`` offers), the ``handle`` binds the fold
+    to the handler whose concrete pattern equals the spec's —
+    ``meta_arena._handle``'s own legality test, pre-filtered so a
+    skeleton-collision can't fill the candidate set with declines.
+    Where ``claim`` exists the spelled line is strictly dominated
+    (one extra step of cost for the same payout); it is a
+    *demonstration* candidate — imitation can replay it to teach
+    the primitives the fused move hides — not an oracle contender.
+    """
+    table = lawdata.HANDLERS if handlers is None else handlers
+    out: list[list[ma.Action]] = []
+    for i in state.sites:
+        spec = state.specs[i]
+        canon = ma._canon_concrete(spec)
+        for tag, h in table.items():
+            if ma._canon_concrete(h["pattern"]) != canon:
+                continue
+            out.append(
+                [
+                    ma._fresh_fold(i, spec),
+                    ma.Action.saturate(),
+                    ma.Action.handle(f"foldabs_{i}", tag),
+                    ma.Action.extract(),
+                ]
+            )
+    return out
+
+
+def _candidate_lines(
+    state: ma.MetaState,
+    handlers: dict | None = None,
+    *,
+    spelled: bool = False,
+) -> list[list[ma.Action]]:
     """Enumerate the oracle's candidate lines for *state*."""
     out: list[list[ma.Action]] = [[ma.Action.extract()]]
     for b in lawdata.META_SATURATE_BUDGETS:
@@ -517,6 +694,8 @@ def _candidate_lines(state: ma.MetaState) -> list[list[ma.Action]]:
         claims = [ma.Action.claim(t) for t in tags]
         out.append([*claims, ma.Action.extract()])
         out.append([*claims, ma.Action.saturate(), ma.Action.extract()])
+    if spelled:
+        out += spelled_candidates(state, handlers)
     return out
 
 
@@ -526,18 +705,24 @@ def oracle_line(
     cost_fn: Any = None,
     max_nodes: int = 20_000,
     budget: int = 24,
+    handlers: dict | None = None,
+    spelled: bool = False,
 ) -> tuple[float, list[ma.Action]]:
     """Return ``(reward, line)`` — the best candidate line simulated.
 
     Each candidate replays through :class:`ma.ScriptedPlayer` on a
     fresh board, so declined moves, spent enodes and the certified
     payout all count exactly as a player's episode would score them.
+    *spelled* admits the primitive declare→saturate→handle→extract
+    candidates (:func:`spelled_candidates`) into the argmax — they
+    are dominated wherever ``claim`` exists, so this arm measures
+    whether the spelled spelling ever wins on its own.
     """
     cf = cost_fn or count_cost
     st = _board(case, cf, max_nodes).observe()
     best_reward = float("-inf")
     best: list[ma.Action] = [ma.Action.extract()]
-    for line in _candidate_lines(st):
+    for line in _candidate_lines(st, handlers, spelled=spelled):
         traj = ma.run_episode(
             _board(case, cf, max_nodes),
             ma.ScriptedPlayer(line),
@@ -555,14 +740,56 @@ def plan_oracles(
     cost_fn: Any = None,
     max_nodes: int = 20_000,
     budget: int = 24,
+    spelled: bool = False,
 ) -> list[tuple[float, list[ma.Action]]]:
     """Plan the oracle line for every case — ``(reward, line)`` pairs."""
     return [
         oracle_line(
-            c, cost_fn=cost_fn, max_nodes=max_nodes, budget=budget
+            c,
+            cost_fn=cost_fn,
+            max_nodes=max_nodes,
+            budget=budget,
+            spelled=spelled,
         )
         for c in cases
     ]
+
+
+def plan_spelled(
+    cases: Iterable,
+    *,
+    cost_fn: Any = None,
+    max_nodes: int = 20_000,
+    budget: int = 24,
+) -> list[tuple[float, list[ma.Action]] | None]:
+    """Plan the best *spelled* line per case — ``None`` where absent.
+
+    The demonstration source for the primitive-move curriculum:
+    each entry is the best declare→saturate→handle→extract line the
+    board scores (or ``None`` on boards with no coverable occurring
+    spec), independent of whether ``claim`` would beat it.
+    """
+    cf = cost_fn or count_cost
+    out: list[tuple[float, list[ma.Action]] | None] = []
+    for case in cases:
+        st = _board(case, cf, max_nodes).observe()
+        cands = spelled_candidates(st)
+        if not cands:
+            out.append(None)
+            continue
+        best_reward = float("-inf")
+        best: list[ma.Action] = []
+        for line in cands:
+            traj = ma.run_episode(
+                _board(case, cf, max_nodes),
+                ma.ScriptedPlayer(line),
+                budget,
+            )
+            if traj.total > best_reward:
+                best_reward = traj.total
+                best = list(line)
+        out.append((best_reward, best))
+    return out
 
 
 def _replay(line: list[ma.Action]) -> Any:
@@ -640,6 +867,55 @@ def curriculum_order(
     return sorted(pairs, key=lambda cp: _plan_rank(cp[1]))
 
 
+def case_availability(
+    case: list | tuple,
+    *,
+    cost_fn: Any = None,
+    max_nodes: int = 20_000,
+) -> tuple[int, int]:
+    """Return ``(claimable, spelled)`` — the board's line availability.
+
+    *claimable* is ``MetaState.claimable`` — handler tags whose
+    concrete pattern occurs (the ``claim`` precondition); *spelled*
+    counts the primitive declare→saturate→handle→extract candidates
+    :func:`spelled_candidates` finds — the spelled line's own
+    precondition (an occurring spec a handler concretely covers).
+    Both are *state* properties, not oracle outcomes: a board can
+    offer the line and still not pay, which is exactly the
+    distinction a claim-availability curriculum exploits.
+    """
+    st = _board(case, cost_fn or count_cost, max_nodes).observe()
+    return st.claimable, len(spelled_candidates(st))
+
+
+def availability_order(
+    pairs: list[tuple[Any, tuple[float, list[ma.Action]]]],
+    *,
+    cost_fn: Any = None,
+    max_nodes: int = 20_000,
+) -> list[tuple[Any, tuple[float, list[ma.Action]]]]:
+    """Stable-sort ``(case, plan)`` pairs by claim availability.
+
+    Richest-first: boards offering the most composed lines (``claim``
+    tags plus spelled-line candidates, lexicographic) lead the
+    stream, decline boards trail — the claim-availability
+    counterpart of :func:`curriculum_order`'s plan-tier sort.  The
+    ordering reads board *state*, never the oracle's verdict, so it
+    cannot leak which boards pay.
+    """
+    keyed = [
+        (
+            case_availability(
+                cp[0], cost_fn=cost_fn, max_nodes=max_nodes
+            ),
+            cp,
+        )
+        for cp in pairs
+    ]
+    keyed.sort(key=lambda kv: kv[0], reverse=True)
+    return [cp for _k, cp in keyed]
+
+
 def evaluate(
     arms: dict[str, Callable[[int], Any]],
     cases: list,
@@ -671,6 +947,11 @@ def evaluate(
                         1
                         for r in traj.reports
                         if r.action.op == "claim"
+                    ),
+                    "spelled": sum(
+                        1
+                        for r in traj.reports
+                        if r.action.op in ("declare", "handle")
                     ),
                 }
             )
@@ -728,6 +1009,31 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="order the train stream easy→hard by oracle plan",
     )
+    ap.add_argument(
+        "--availability",
+        action="store_true",
+        help="order the train stream by claim availability "
+        "(state property, not oracle verdict)",
+    )
+    ap.add_argument(
+        "--oracle-spelled",
+        action="store_true",
+        help="admit spelled declare→saturate→handle→extract lines "
+        "into the oracle's argmax",
+    )
+    ap.add_argument(
+        "--spelled-demo-epochs",
+        type=int,
+        default=0,
+        help="imitate-epoch count replaying spelled lines before "
+        "the oracle demonstrations",
+    )
+    ap.add_argument(
+        "--prev-features",
+        action="store_true",
+        help="bind META_SPEC_V2 — the last-move x catalog "
+        "second-order feature arm",
+    )
     ap.add_argument("--json", type=str, default=None)
     args = ap.parse_args(argv)
     if sys.getrecursionlimit() < 40_000:
@@ -737,20 +1043,57 @@ def main(argv: list[str] | None = None) -> int:
     ev = gen_cases(args.seed + 7919, args.eval_cases)
     player = MetaLearnedPlayer(
         seed=args.seed,
+        spec=META_SPEC_V2 if args.prev_features else None,
         temperature=args.temperature,
         lr=args.lr,
         epsilon=args.epsilon,
     )
     imitation: dict[str, int] | None = None
     plans: list | None = None
-    if args.imitate_epochs or args.curriculum:
+    if (
+        args.imitate_epochs
+        or args.curriculum
+        or args.availability
+        or args.spelled_demo_epochs
+    ):
         plans = plan_oracles(
-            train, max_nodes=args.max_nodes, budget=args.budget
+            train,
+            max_nodes=args.max_nodes,
+            budget=args.budget,
+            spelled=args.oracle_spelled,
         )
     if args.curriculum and plans is not None:
         stream = curriculum_order(list(zip(train, plans, strict=True)))
         train = [c for c, _p in stream]
         plans = [p for _c, p in stream]
+    if args.availability and plans is not None:
+        stream = availability_order(
+            list(zip(train, plans, strict=True)),
+            max_nodes=args.max_nodes,
+        )
+        train = [c for c, _p in stream]
+        plans = [p for _c, p in stream]
+    spelled_plans = None
+    if args.spelled_demo_epochs and plans is not None:
+        spelled_plans = plan_spelled(
+            train, max_nodes=args.max_nodes, budget=args.budget
+        )
+    if spelled_plans is not None and plans is not None:
+        imitation = imitation or {"shown": 0, "imitated": 0}
+        demo = [
+            sp if sp is not None else p
+            for sp, p in zip(spelled_plans, plans, strict=True)
+        ]
+        for _ in range(args.spelled_demo_epochs):
+            r = imitate_oracle(
+                player,
+                train,
+                demo,
+                max_nodes=args.max_nodes,
+                budget=args.budget,
+            )
+            imitation["shown"] += r["shown"]
+            imitation["imitated"] += r["imitated"]
     if args.imitate_epochs and plans is not None:
         imitation = {"shown": 0, "imitated": 0}
         for _ in range(args.imitate_epochs):
@@ -795,9 +1138,11 @@ def main(argv: list[str] | None = None) -> int:
         rows = table[name]
         n = max(len(rows), 1)
         claims = sum(r["claims"] for r in rows)
+        spelled = sum(r["spelled"] for r in rows)
         decl = sum(1 for r in rows if r["used_declared"])
         print(  # stdout-compat
-            f"{name}: claims={claims} declared-use={decl}/{n}"
+            f"{name}: claims={claims} spelled-moves={spelled} "
+            f"declared-use={decl}/{n}"
         )
     if imitation is not None:
         print(  # stdout-compat
@@ -806,10 +1151,17 @@ def main(argv: list[str] | None = None) -> int:
         )
     if plans is not None:
         tiers = [_plan_rank(p) for p in plans]
+        n_spelled = sum(
+            1
+            for _r, line in plans
+            if any(a.op == "declare" for a in line)
+            and any(a.op == "handle" for a in line)
+        )
         print(  # stdout-compat
             "oracle plans: "
             f"claim-line={tiers.count(0)} "
-            f"hard={tiers.count(1)} decline={tiers.count(2)}"
+            f"hard={tiers.count(1)} decline={tiers.count(2)} "
+            f"spelled-pick={n_spelled}"
         )
     decade = max(len(totals) // 10, 1)
     means = [

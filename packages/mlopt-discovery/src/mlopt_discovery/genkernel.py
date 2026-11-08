@@ -204,10 +204,7 @@ def gen_handlers(terms: list, *, covered: set | None = None) -> dict:
     are skipped: the generated vocabulary adds names only where
     the ambient table has none.
     """
-    from mlopt_discovery.meta_arena import (
-        _canon_concrete,
-        _spec_of,
-    )
+    from mlopt_discovery.meta_arena import _spec_of
 
     skip = covered if covered is not None else set()
     out: dict[str, dict] = {}
@@ -217,12 +214,12 @@ def gen_handlers(terms: list, *, covered: set | None = None) -> dict:
             if isinstance(term, (tuple, list))
             else _spec_of(term, {})
         )
-        canon = _canon_concrete(pattern)
-        if canon in skip or not elementwise_spec(pattern):
+        # ``_canon_taken``, not ``canon in skip``: attr-carrying specs
+        # canon to dicts — unhashable — and ``in`` raises where
+        # equality does not (the ``_canon_taken`` contract).
+        if not elementwise_spec(pattern):
             continue
-        if any(
-            _canon_concrete(h["pattern"]) == canon for h in out.values()
-        ):
+        if _canon_taken(pattern, out, skip):
             continue
         tag = f"gen_{len(out)}"
         out[tag] = {
@@ -2581,10 +2578,7 @@ def decayed_handlers(
     ``om_decayed`` executor spells — so minting needs no new
     semantics check beyond the op's own well-typedness gate.
     """
-    from mlopt_discovery.meta_arena import (
-        _canon_concrete,
-        _spec_of,
-    )
+    from mlopt_discovery.meta_arena import _spec_of
 
     skip = covered if covered is not None else set()
     out: dict[str, dict] = {}
@@ -2596,10 +2590,8 @@ def decayed_handlers(
         )
         if decayed_spec(pattern) is None:
             continue
-        canon = _canon_concrete(pattern)
-        if canon in skip or any(
-            _canon_concrete(h["pattern"]) == canon for h in out.values()
-        ):
+        # equality, not ``in`` — attr dicts make canon unhashable
+        if _canon_taken(pattern, out, skip):
             continue
         tag = f"decayed_{len(out)}"
         out[tag] = {
