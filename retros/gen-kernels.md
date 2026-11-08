@@ -400,3 +400,53 @@ the audit named; its payoff is compiled-spelled fusion vs eager at
 paying shapes.  Beating `torch.compile` needs a reduction Triton
 codegen (`tl.*`-axis kernel over the spelled body) — a codegen
 project, not a tier.
+
+## The reduction Triton piece lands — and loses honestly (2026-11-07, T-010)
+
+The "codegen project, not a tier" follow-up is built and measured —
+`docs/reports/p32_reduction_triton.md` is the full record.
+
+**Machinery:** `reduction_triton_spec` recognises the honest subset
+(`sum`/`mean`/`amax`/`amin`/`softmax` head, one elementwise body,
+`{dim, axis, keepdim}` attrs); `reduction_triton_bindings` emits one
+`_gr` Triton kernel per handler — one program per outer index,
+`BLOCK_R`-chunked reduce axis in-program, `softmax` as the
+max → sum-exp → normalise three-pass in a single launch.  Reduce
+dims need not be trailing: the index space permutes
+outer-then-reduced and broadcast/strided operands ride an `ometa`
+int64 table (softmax stores through an extra stride slot).  Out-of-
+subset calls fall back to spelled eval *inside* the binding.
+`Tier("reduction", …, reduction_triton_bindings)` seats it;
+`play._binding_attempts` prefers `<tier>_triton_spec` for decline
+reasons so the audit log distinguishes grammar declines from load
+failures.
+
+**Correctness:** full subset matrix verified vs spelled — arbitrary
+and scattered reduce dims, keepdim, broadcast operands, non-contiguous
+inputs, fp32/fp64, chunked axes; CPU/int dtypes fall back exactly.
+
+**Measured — the lever closes:** 30/30 in-grammar consults bound a
+real kernel at both zoo sizes and both dtypes, and the referee
+dropped **all of them**: median ~2.5× (fp64) / ~2.7× (fp32)
+*t_kernel/t_spelled* — the Triton arm loses even to eager spelled
+eval, so the deficit is the kernel, not launch overhead.  Worst:
+BlockSparseAttention softmax ~28×, RMSNormPerHead mean ~21×,
+BlockSparseAttention amax ~24×; best: RWKVMixBlock sum ~1.9×.  One
+fp32 consult additionally failed verify-before-time (accumulation
+order on a ~1e29 body vs `allclose` tolerance — honest drop).
+
+**Why:** serial per-program reduce (no cross-block partials →
+occupancy = outer-row count), generic int64 stride-table addressing
+paid per element, and softmax recomputing the body three times.
+Inductor does the same fusion with tiled reductions and
+layout-specialised kernels — beating it needs autotuning, not a
+bigger grammar.
+
+**Side effect, honestly noted:** seating the builder re-prices the
+p31 keeps — RWKVMixBlock's two compiled-spelled keeps (0.56×/0.73×
+vs eager → 1.206×/0.892× delivered) sit inside the Triton grammar,
+read ~1.9× on the Triton arm, and drop.  That is correct accounting:
+a claim cannot keep a compiled-spelled win while shipping the slower
+kernel.  Out-of-grammar specs keep the compiled-spelled arm
+unchanged.  Raw sweeps: `docs/reports/red_triton_probe_{64,zoo,
+64_fp32}.json`.
