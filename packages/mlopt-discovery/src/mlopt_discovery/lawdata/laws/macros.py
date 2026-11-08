@@ -4,7 +4,11 @@ Like the learned-prior tables in
 :mod:`mlopt_discovery.lawdata.game.weights`, this is *content*:
 the 8-macro set ``scripts/macro_miner.py`` mints off the train
 stream (``meta_player.gen_cases(0, 24)`` — 206 trajectories, mined
-n-grams ranked by ``count x mean terminal reward``), serialized as
+n-grams ranked by ``count x mean terminal reward``) plus the
+``claim_swiglu_extract`` extension row (the second fused
+``claim → extract`` gram the same mining pass surfaces once the
+shipped macros are themselves offers — count 17, score 10.48, the
+miner's rank-1 gram under the current machinery), serialized as
 plain records and replayed by :mod:`mlopt_discovery.macro_moves`
 through the refereed ``"macro"`` handler.  ``meta_arena.legal_actions``
 offers the viable entries to every player — a macro mints no
@@ -37,6 +41,17 @@ MACROS: tuple[dict, ...] = (
         "certified": 1.0,
         "mean_terminal": 0.2952,
         "score": 4.1333,
+    },
+    {  # claim(swiglu)→extract — the fused line on swiglu boards
+        "name": "claim_swiglu_extract",
+        "seq": (
+            {"op": "claim", "params": {"handler": "swiglu"}},
+            {"op": "extract", "params": {}},
+        ),
+        "count": 17,
+        "certified": 1.0,
+        "mean_terminal": 0.6167,
+        "score": 10.4833,
     },
     {  # declare(silu-spec)→saturate — mints + fires the fold
         "name": "declare_saturate",

@@ -311,10 +311,13 @@ class TestOracle:
         res = mp.imitate_oracle(p, cases, plans, budget=8)
         assert res["shown"] > 0
         assert res["imitated"] == res["shown"]
-        # the demonstrated claim move earns positive weight — full
+        # the demonstrated composed move earns positive weight — the
+        # oracle's paying lines are now the offered macro compressions
+        # (claim_silu_extract / claim_swiglu_extract), so the warm-start
+        # points at op:macro, not the spelled claim it fuses.  Full
         # consolidation is an RL-scale property (the measured run),
         # the unit pin is that the warm-start points the right way
-        assert p.weights_dict()["op:claim"] > 0.0
+        assert p.weights_dict()["op:macro"] > 0.0
 
 
 class TestDriver:
