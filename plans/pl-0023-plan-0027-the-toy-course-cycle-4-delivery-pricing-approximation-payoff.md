@@ -1,17 +1,17 @@
 +++
 id = "PL-023"
-title = "Plan 0027 — the toy course, cycle 4 (delivery · pricing · approximation · payoff)"
+title = "Plan 0027 — the toy course, cycle 4 (delivery, pricing, approximation, payoff)"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---
-title: Plan 0027 — the toy course, cycle 4 (delivery · pricing · approximation · payoff)
+title: Plan 0027 — the toy course, cycle 4 (delivery, pricing, approximation, payoff)
 type: plan
 date: 2026-10-14
 ---
 
-# Plan 0027 — the toy course, cycle 4 (delivery · pricing · approximation · payoff)
+# Plan 0027 — the toy course, cycle 4 (delivery, pricing, approximation, payoff)
 
 Depends on: plan 0026 (cycle 3 — minting/substrate/ports/honesty),
 plan 0012 (bounded-error rewrites), plan 0010 (performance), the

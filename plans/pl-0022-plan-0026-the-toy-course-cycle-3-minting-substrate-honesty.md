@@ -1,17 +1,17 @@
 +++
 id = "PL-022"
-title = "Plan 0026 — the toy course, cycle 3 (minting · substrate · honesty)"
+title = "Plan 0026 — the toy course, cycle 3 (minting, substrate, honesty)"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---
-title: Plan 0026 — the toy course, cycle 3 (minting · substrate · honesty)
+title: Plan 0026 — the toy course, cycle 3 (minting, substrate, honesty)
 type: plan
 date: 2026-10-14
 ---
 
-# Plan 0026 — the toy course, cycle 3 (minting · substrate · honesty)
+# Plan 0026 — the toy course, cycle 3 (minting, substrate, honesty)
 
 Depends on: ADR 0007 (semantic-atom minting), ADR 0008 (combinator
 presentation), ADR 0006 (ONNX backend), ADR 0003 (four dimensions);
