@@ -2,7 +2,7 @@
 id = "ADR-0001"
 title = "ADR 0001 — Weight-space structure hypothesis: falsified"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

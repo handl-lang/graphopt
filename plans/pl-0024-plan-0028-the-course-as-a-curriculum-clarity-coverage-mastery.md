@@ -2,7 +2,7 @@
 id = "PL-024"
 title = "Plan 0028 — the course as a curriculum (clarity, coverage, mastery)"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

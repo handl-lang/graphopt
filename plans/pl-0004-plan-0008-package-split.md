@@ -2,7 +2,7 @@
 id = "PL-004"
 title = "Plan 0008 — Package split"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

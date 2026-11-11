@@ -2,7 +2,7 @@
 id = "PL-014"
 title = "Plan 0018 — de-hardcoding the op tables"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

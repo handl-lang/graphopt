@@ -2,7 +2,7 @@
 id = "PL-019"
 title = "Plan 0023 — the sequential carrier (state-level fold)"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

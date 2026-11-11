@@ -2,7 +2,7 @@
 id = "ADR-0004"
 title = "ADR 0004 — Abstraction as a legal move"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

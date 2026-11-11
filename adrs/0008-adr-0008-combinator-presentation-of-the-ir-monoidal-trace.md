@@ -2,7 +2,7 @@
 id = "ADR-0008"
 title = "ADR 0008 — Combinator presentation of the IR (monoidal + trace)"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

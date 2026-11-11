@@ -2,7 +2,7 @@
 id = "PL-008"
 title = "Plan 0012 — Certified bounded-error rewrites (eps machinery)"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

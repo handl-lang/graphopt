@@ -2,7 +2,7 @@
 id = "ADR-0009"
 title = "ADR-0009 — The machinery is domain-general; tensor programs are the first domain"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

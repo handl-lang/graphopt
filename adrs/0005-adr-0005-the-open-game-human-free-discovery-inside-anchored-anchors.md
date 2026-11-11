@@ -2,7 +2,7 @@
 id = "ADR-0005"
 title = "ADR 0005 — The open game: human-free discovery inside anchored anchors"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

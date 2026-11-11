@@ -2,7 +2,7 @@
 id = "PL-016"
 title = "Plan 0020 — the construction arena (a better game for a better player)"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

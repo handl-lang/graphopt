@@ -2,7 +2,7 @@
 id = "PL-025"
 title = "Plan 0029 — the handl ↔ catopt boundary spike"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

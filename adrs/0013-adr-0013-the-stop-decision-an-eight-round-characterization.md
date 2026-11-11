@@ -2,7 +2,7 @@
 id = "ADR-0013"
 title = "ADR 0013 — the stop decision: an eight-round characterization"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

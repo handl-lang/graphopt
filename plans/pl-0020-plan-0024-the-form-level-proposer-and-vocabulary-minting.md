@@ -2,7 +2,7 @@
 id = "PL-020"
 title = "Plan 0024 — the form-level proposer and vocabulary minting"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

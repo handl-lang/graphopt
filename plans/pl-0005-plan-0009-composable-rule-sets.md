@@ -2,7 +2,7 @@
 id = "PL-005"
 title = "Plan 0009 — Composable rule sets"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

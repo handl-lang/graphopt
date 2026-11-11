@@ -2,7 +2,7 @@
 id = "PL-018"
 title = "Plan 0022 — the cell store: one record, fragment-merged"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

@@ -2,7 +2,7 @@
 id = "ADR-0012"
 title = "ADR 0009 — the kernel calculus as a package, and the layer ladder"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

@@ -2,7 +2,7 @@
 id = "PL-017"
 title = "Plan 0021 — the meta-arena (the fuller game)"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

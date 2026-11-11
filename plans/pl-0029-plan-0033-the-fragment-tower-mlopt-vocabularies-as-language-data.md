@@ -2,7 +2,7 @@
 id = "PL-029"
 title = "Plan 0033 — the fragment tower: mlopt vocabularies as `Language` data"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

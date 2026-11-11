@@ -2,7 +2,7 @@
 id = "ADR-0011"
 title = "ADR 0011 — which representation is canonical: the calculus for laws, the op-graph for execution"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

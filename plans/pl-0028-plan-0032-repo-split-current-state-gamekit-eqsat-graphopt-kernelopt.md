@@ -2,7 +2,7 @@
 id = "PL-028"
 title = "Plan 0032 — repo split: current state → gamekit / eqsat / graphopt / kernelopt"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

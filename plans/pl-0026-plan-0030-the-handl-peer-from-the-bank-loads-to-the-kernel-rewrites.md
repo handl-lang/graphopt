@@ -2,7 +2,7 @@
 id = "PL-026"
 title = 'Plan 0030 — the handl peer: from "the bank loads" to "the kernel rewrites"'
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

@@ -2,7 +2,7 @@
 id = "ADR-0003"
 title = "ADR 0003 — Evaluation is an independent dimension"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

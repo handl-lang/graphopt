@@ -2,7 +2,7 @@
 id = "PL-002"
 title = "Plan 0006 — Public API: the `search` / `lower` seam"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

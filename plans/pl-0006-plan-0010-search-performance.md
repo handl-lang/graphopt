@@ -2,7 +2,7 @@
 id = "PL-006"
 title = "Plan 0010 — Search performance"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

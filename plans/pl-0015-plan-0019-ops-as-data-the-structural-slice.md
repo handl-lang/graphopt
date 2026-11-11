@@ -2,7 +2,7 @@
 id = "PL-015"
 title = "Plan 0019 — ops as data (the structural slice)"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

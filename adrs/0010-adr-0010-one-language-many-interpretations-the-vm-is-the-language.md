@@ -2,7 +2,7 @@
 id = "ADR-0010"
 title = "ADR 0010 — one language, many interpretations (the VM *is* the language)"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

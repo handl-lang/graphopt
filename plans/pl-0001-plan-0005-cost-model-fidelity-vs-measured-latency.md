@@ -2,7 +2,7 @@
 id = "PL-001"
 title = "Plan 0005 — Cost-model fidelity vs measured latency"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

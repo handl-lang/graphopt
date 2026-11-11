@@ -2,7 +2,7 @@
 id = "ADR-0006"
 title = "ADR 0006 — ONNX as a second backend, in two directions"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

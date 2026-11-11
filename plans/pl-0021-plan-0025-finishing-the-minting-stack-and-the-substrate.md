@@ -2,7 +2,7 @@
 id = "PL-021"
 title = "Plan 0025 — finishing the minting stack and the substrate"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

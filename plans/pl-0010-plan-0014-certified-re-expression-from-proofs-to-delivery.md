@@ -2,7 +2,7 @@
 id = "PL-010"
 title = "Plan 0014 — Certified re-expression: from proofs to delivery"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

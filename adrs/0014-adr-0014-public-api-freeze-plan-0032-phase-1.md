@@ -2,7 +2,7 @@
 id = "ADR-0014"
 title = "ADR 0014 — public API freeze (plan 0032 phase 1)"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

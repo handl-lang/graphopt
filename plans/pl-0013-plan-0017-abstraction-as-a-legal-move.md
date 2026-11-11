@@ -2,7 +2,7 @@
 id = "PL-013"
 title = "Plan 0017 — abstraction as a legal move"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

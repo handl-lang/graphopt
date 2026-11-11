@@ -2,7 +2,7 @@
 id = "ADR-0002"
 title = "ADR 0002 — The categorical re-expression thesis"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

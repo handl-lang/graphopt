@@ -2,7 +2,7 @@
 id = "PL-009"
 title = "Plan 0013 — contraction-structure search (the generalization)"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

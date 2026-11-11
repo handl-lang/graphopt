@@ -2,7 +2,7 @@
 id = "PL-003"
 title = "Plan 0007 — Backend abstraction"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

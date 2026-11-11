@@ -2,7 +2,7 @@
 id = "PL-007"
 title = "Plan 0011 — The morphism engine (hierarchical block-level optimization)"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

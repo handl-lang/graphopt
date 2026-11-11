@@ -2,7 +2,7 @@
 id = "PL-011"
 title = "Plan 0015 — task-aware certificates"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

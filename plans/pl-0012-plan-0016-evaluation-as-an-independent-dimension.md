@@ -2,7 +2,7 @@
 id = "PL-012"
 title = "Plan 0016 — evaluation as an independent dimension"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

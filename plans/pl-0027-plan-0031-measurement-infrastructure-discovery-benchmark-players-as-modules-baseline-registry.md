@@ -2,7 +2,7 @@
 id = "PL-027"
 title = "Plan 0031 — measurement infrastructure: discovery benchmark, players-as-modules, baseline registry"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---

@@ -2,7 +2,7 @@
 id = "ADR-0007"
 title = "ADR 0007 — Semantic atoms: how new *meaning* enters the object language"
 status = "open"
-priority = "medium"
+priority = "med"
 +++
 
 ---
