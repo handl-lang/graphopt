@@ -532,3 +532,50 @@ Shipping `clamp*` in `ELEMENTWISE` is a product call — the
 frozenset is shared with `handler_synth`/`family_synth` law
 minting and `vocabdir`, so widening it changes the discovery
 grammar, not just gen claims.
+
+## Seq-scan claims revived — the spelled fold denotation lands (2026-11-12)
+
+The T-010 audit disabled sequence-form (`kind="seq"`) scan claims
+at both cost gates: no correct spelled fold denotation existed —
+ambient `applyd` is one map application, `_IR_TO_TORCH` has no
+fold op, and `gen_sink` would have silently delivered map
+semantics for a claim whose minted op declares the fold.  The
+retro recorded "not implementable with what exists" because it
+only considered spec-tuple spellings; the denotation does not
+need to be a spec — it is a property of the minted op, so it
+lives as a plain-torch callable.
+
+**Landed:** `genkernel.seq_scan_denotation(spec, axis=…)` spells
+the recurrence `h_{t+1} = a_t ⊙ h_t + b_t` directly — broadcast
+the sequence operands, resolve the step axis via `_seq_axis`,
+walk it evaluating the `aff_diag` operand sub-specs per step
+through the ordinary bindings.  `handler_denotation(h)` resolves
+it per handler at the same axis chain `scan_triton_bindings`
+uses; `gen_bindings` binds seq kernel names to it (so `gen_sink`
+delivers the fold on any device — the silent map delivery is
+gone); `hybrid_sink`'s declined-codegen fallback is now the same
+denotation, never unbound-or-map; `profitable` gained
+`denotation_for` — the spelled arm IS the fold, and with no bound
+codegen the claim declines outright (delivery ≡ denotation, no
+faster arm exists).  `_claim_measurable` admits `scan_*` in both
+forms; `_claim_cost_gate`/`_zoo_case` pass the hook through.
+Latent bug fixed en route: `_scan_kind` accepted
+`{"kind":"seq"}` on multi-leaf compose trees where `_scan_info`
+kept only `steps[0]` — now declines.
+
+**Measured:** synthetic seq claim, fp64 CUDA — Triton fold vs
+spelled fold: 0.294× at (2,32,16), 0.091× at (8,128,64), both
+KEPT by the referee; `kernel_for=None` declines correctly.
+Denotation verified vs the `_spelled_scan` oracle at 1e-12 across
+layouts, sub-spec operands, broadcast operands, explicit/derived
+axis — CPU-only, no Triton needed.
+
+**Payoff: honest none.**  `_scan_sites` still pins
+`kind="unrolled"` (zoo census seq=0/unrolled=87), so no collector
+mints a seq claim for the revived path to price — `scan_handlers`
+on raw `applyd(aff_diag,h)` terms is the only producer and
+nothing feeds it one today.  The tier is now correctly priced
+rather than silently wrong: the day a collector mints a seq
+spec, it is measured against the fold it declares.
+
+Full record `docs/reports/p34_seq_scan_denotation.md`.
