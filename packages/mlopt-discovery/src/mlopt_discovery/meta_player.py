@@ -607,7 +607,13 @@ def _key(action: ma.Action) -> tuple:
 # ---------------------------------------------------------------------------
 
 
-def gen_cases(seed: int, n: int, *, coverage: bool = True) -> list:
+def gen_cases(
+    seed: int,
+    n: int,
+    *,
+    coverage: bool = True,
+    kinds: Iterable[str] | None = None,
+) -> list:
     """Seeded case variants — the mixed board's paying structures.
 
     Kinds: ``silu`` sites under a ruleset with ``silu_fold``
@@ -651,6 +657,11 @@ def gen_cases(seed: int, n: int, *, coverage: bool = True) -> list:
     ``mixed_gap`` vocabulary holes the ten hand kinds never
     produced.  ``coverage=False`` reproduces the ten-kind stream
     exactly — the pre-extension corpus, kept as the A/B control.
+
+    ``kinds`` (domain-spec seam, Stage 2) restricts the draw to the
+    named builder kinds — base kinds (``silu``/``control``/…) and
+    coverage kinds (``law_*``/``ew_gap``/…) share the one namespace.
+    Unknown names raise rather than silently drawing nothing.
     """
     rng = random.Random(seed)
     x = Var("x", TensorType((4, 4)))
@@ -762,6 +773,18 @@ def gen_cases(seed: int, n: int, *, coverage: bool = True) -> list:
             (kind, (lambda b: lambda: b(rng))(build))
             for kind, build in corpus_cov.coverage_builders()
         ]
+    if kinds is not None:
+        known = {kind for kind, _ in builders}
+        unknown = sorted(set(kinds) - known)
+        if unknown:
+            raise ValueError(
+                f"gen_cases: unknown kinds {unknown!r} "
+                f"(known: {sorted(known)!r})"
+            )
+        allowed = set(kinds)
+        builders = [b for b in builders if b[0] in allowed]
+        if not builders:
+            raise ValueError("gen_cases: kinds filter left no builders")
     out = []
     for i in range(n):
         kind, build = builders[rng.randrange(len(builders))]

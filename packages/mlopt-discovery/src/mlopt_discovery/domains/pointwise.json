@@ -1,0 +1,31 @@
+{
+  "name": "pointwise",
+  "board": "meta-arena",
+  "description": "Pointwise+reduction vocabulary domain: elementwise fusion ops, reduction heads and the kernel spellings — no views, contractions, carriers or scan laws.  The domains-as-data demo spec (Stage 2 first cut).",
+  "corpus": {"coverage": true},
+  "vocab": {
+    "ops": [
+      "abs", "add", "amax", "amin", "argmax", "argmin", "clamp",
+      "clamp_max", "clamp_min", "cos", "count_nonzero", "div", "exp",
+      "gelu", "glu", "identity", "linalg_vector_norm", "log", "log_softmax",
+      "max", "mean", "median", "min", "mode", "mul", "nanmean", "nansum",
+      "neg", "pow", "prod", "reciprocal", "relu", "rms_norm", "rsqrt",
+      "sigmoid", "silu", "sin", "softmax", "softplus", "softsign",
+      "softsign_gate", "sqrt", "square", "std", "std_mean", "sub",
+      "sum", "swiglu", "tanh", "var", "var_mean"
+    ],
+    "handler_tags": ["silu", "square"],
+    "rules": "default"
+  },
+  "shapes": {
+    "note": "recorded only in v1 — meta-arena terms are symbolic; gen_cases spells fixed (4, 4) vars"
+  },
+  "hardware": {
+    "device": "cpu",
+    "dtype": "fp32",
+    "target": "sm_86",
+    "note": "recorded only in v1 — no tensor is materialized on the meta-arena board"
+  },
+  "player": "meta",
+  "incumbent": {"kind": "scripted"}
+}

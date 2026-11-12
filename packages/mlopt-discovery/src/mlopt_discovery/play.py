@@ -2194,7 +2194,26 @@ def main(argv: list[str] | None = None) -> int:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    ap.add_argument("--domain", choices=sorted(DOMAINS), default="meta")
+    ap.add_argument(
+        "--domain",
+        default="meta",
+        help=(
+            "a registered domain name — built-ins plus any seated "
+            "via --domain-spec or a downstream register() plugin "
+            "(kernelopt's 'kernel')"
+        ),
+    )
+    ap.add_argument(
+        "--domain-spec",
+        action="append",
+        default=[],
+        metavar="PATH|NAME",
+        help=(
+            "load a domain-spec file (JSON path or packaged "
+            "domains/<name>.json) and register its domain before "
+            "play — repeatable (mlopt_discovery.domain_spec)"
+        ),
+    )
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--train-cases", type=int, default=40)
     ap.add_argument("--eval-cases", type=int, default=10)
@@ -2265,6 +2284,20 @@ def main(argv: list[str] | None = None) -> int:
     if sys.getrecursionlimit() < 40_000:
         sys.setrecursionlimit(40_000)
 
+    for spec_arg in args.domain_spec:
+        from . import domain_spec
+
+        # ``domains=DOMAINS``: under ``python -m mlopt_discovery.play``
+        # this module *is* ``__main__`` — a different object than the
+        # ``mlopt_discovery.play`` domain_spec would import, so the
+        # registry must be passed explicitly.
+        domain_spec.register_file(spec_arg, domains=DOMAINS)
+    if args.domain not in DOMAINS:
+        print(  # stdout-compat
+            f"unknown domain {args.domain!r} — known: "
+            f"{sorted(DOMAINS)!r}"
+        )
+        return 2
     d = DOMAINS[args.domain]
     train = d.cases(args.seed, args.train_cases)
     ev = d.cases(args.seed + 7919, args.eval_cases)

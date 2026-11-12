@@ -51,12 +51,12 @@ class TestVocabulary:
         assert ("chunk", "chunks") in vocab["attrs"]
         assert set(vocab["handlers"]) == {"silu", "square", "swiglu"}
         # DEFAULT + the 22 scan-tier laws
-        assert len(vocab["rules"]) == 153
+        assert len(vocab["rules"]) == 154
 
     def test_scan_rules(self):
         rs = cc.scan_rules()
         assert isinstance(rs, RuleSet)
-        assert len(rs) == 153
+        assert len(rs) == 154
         assert cc.scan_rules() is rs  # cached
 
     def test_rule_ops_and_spec_ops(self):
@@ -101,7 +101,7 @@ class TestPatternOccurs:
 class TestRulesetNames:
     def test_none_is_default(self):
         names = cc._ruleset_names(None)
-        assert "silu_fold" in names and len(names) == 131
+        assert "silu_fold" in names and len(names) == 132
 
     def test_ruleset_and_list(self):
         sans = DEFAULT - DEFAULT.named("silu_fold")
@@ -124,7 +124,7 @@ class TestCoverageGaps:
             "swiglu",
         ]
         assert rep["rules"]["armed"] == []
-        assert len(rep["rules"]["unarmed"]) == 153
+        assert len(rep["rules"]["unarmed"]) == 154
 
     def test_spelled_silu_arms_fold_and_handler(self):
         site = Op.make("mul", _X, Op.make("sigmoid", _X))
