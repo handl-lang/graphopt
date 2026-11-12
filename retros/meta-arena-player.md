@@ -533,3 +533,34 @@ templates; `coverage_gaps` re-reports them every run.  Law
 auto-admission untouched — separate lever.
 
 Report: `docs/reports/2026-11-12-meta-arena-corpus-coverage-gen.md`.
+
+## Lever result — law auto-admission (2026-11-12, Stage-1 lever 2)
+
+The loop lever 1's remainder named: a gauntlet-cleared,
+machine-original prim mint now promotes into the shipped law bank
+with no human hand-port.  Substrate half (eqsat `mlopt-core`):
+`laws/store.py` gained `AUTO_TIER = 4`; `laws/minted.py` gained
+`admit_prim_record(name, record, db)` — validates the prim record
+shape, refuses name shadowing (identical = idempotent, different =
+raise), writes the store tier, and materializes the
+`(fold, expand)` pair live; `laws/provenance.py` marks the tier
+`AUTO_ADMITTED` ⊂ `MACHINE_SHIPPED`/`MACHINE_LAWS` and reports
+`pay_status "unmeasured"` honestly.  Domain half: `prim_mint.
+admit_prim` + `overnight.py --auto-admit N` — a promote pass gated
+on the ledger's own evidence (`admitted` + pay stage green +
+`machine-original` classify), one `("admit", name)` checkpoint
+cell per attempt, protocol-pinned.
+
+Demonstrated on `prim:synop_6ed0a07c7d` — oracle/sweep
+`12eq/0ne/0rerr`, cert anchored via `synop_6ed0a07c7d.expand`, pay
+`fires=30 changed=6 paid=6 verify_fail=0 cases=72` at
+`count/exec 0.775x flops 0.918x launch 0.917x` — persisted into
+`minted.db` tier 4; fresh-process checks: materializes,
+`missing_hooks == ()`, provenance `machine`, `AUTO_ADMITTED`.
+Bank effect at next import: `ALL_RULES`/`DEFAULT` 143 → 144 (the
+AUTO_TIER is provenance, not quarantine — persisted records join
+`prim_folds → MINTED_RULES` exactly like the hand-promoted tiers).
+Exactly one admission shipped; the other 47 machine-original finds
+stay ledger-only.  Composites with `missing_hooks` remain
+human-audited.  Full writeup: `project/retros/law-auto-admission.md`;
+measurement: `docs/reports/results_overnight_prim_auto_admit.md`.
