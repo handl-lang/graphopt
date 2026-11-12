@@ -488,3 +488,48 @@ ordering pollution, not this change (passes in isolation and in
 the focused file run).
 
 Report: `project/reports/2026-11-08-meta-arena-macro-legs.md`.
+
+## Lever result — coverage-driven corpus generation (2026-11-12, T-009 / Stage-1 lever 1)
+
+The corpus half of self-driving Stage 1: `gen_cases` extensions
+were hand-authored twice; this lever makes them mechanical.
+`mlopt_discovery.corpus_cov` enumerates the expressible space
+(`ELEMENTWISE` + clamps, `reduce_heads`, law-side ops incl. the
+`apply`/`aff` scan carriers, `opmeta` view/pointwise classes,
+`ATTR_SCHEMA` pairs, `HANDLERS` tags, 153-name rule vocab),
+`coverage_gaps` diffs it against a live stream (ops/attrs over all
+subterms; handler covered = concrete pattern occurs; rule armed =
+LHS matches a subterm **of a board whose ruleset carries it**), and
+16 gap-targeting kinds emit real probe-tuples appended to
+`gen_cases` by default (`coverage=False` keeps the ten-kind A/B
+control).  CLI: `python -m mlopt_discovery.corpus_cov`.
+
+Measured on 400-case streams: base corpus = **7 ops, 0 attrs,
+1/153 rules armed**; extended = **57 ops, 46 attrs, 38/153 armed**
+(`aff_*`, `double_neg`, `id_*`, `pow_to_rsqrt`, `select_mul`,
+`softmax_fold`, `split_scalar_add_*`, `transpose_noop`,
+`weight_factor_*`, `mul_unsq_*`, `silu_expand`, `glu_fold`, …).
+All 16 kinds verified through `MetaArena`'s real observe/legal/
+referee path — paying, claimable, and honest-decline boards, never
+padding.  Found and fixed a real bug en route: three builders
+shared a `_SWIGLU_SUP` bound missing their own ops → `+inf`
+pricing, 310/400 oracle declines; `_sup(term, rules)` now prices
+each board from its own term.
+
+Held-out (recipe unchanged, budget 24, T=1.2, eps=0.25): on the
+extended stream both re-bakes beat the shipped prior +0.02..+0.03
+on both offsets and both eval arms — **earned, replicated**;
+seed-23418 ships (better base-stream retention, −0.01..−0.02 vs
+seed-0's −0.02..−0.05).  Absolute extended numbers are lower than
+the base stream's +0.30/+0.33 because the mix now includes many
+decline boards — not a policy regression (base stream reproduces
++0.30/+0.33 for old weights).  Watch-item: `op:saturate`/`a:
+unbounded` logits grew large — real but corpus-shift-specific.
+
+Honest remainder: 107 ops / 45 attrs / 115 rules still uncovered —
+dominated by `synop*` minted names and new classes (`conv2d`,
+`sdpa`, comparisons, `masked_fill`) that need new builder
+templates; `coverage_gaps` re-reports them every run.  Law
+auto-admission untouched — separate lever.
+
+Report: `docs/reports/2026-11-12-meta-arena-corpus-coverage-gen.md`.
