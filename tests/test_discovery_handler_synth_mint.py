@@ -11,13 +11,17 @@ import json
 import pytest
 import torch
 
+import mlopt_torch.torch_bridge as tb
 from mlopt_core.ir import IR, Op, TensorType, Var
 from mlopt_discovery import handler_synth as hs
+from mlopt_discovery.lawdata import HANDLERS
+from mlopt_discovery.meta_arena import _canon_concrete
+
+BINDINGS = tb._IR_TO_TORCH
 
 
 def _env(shapes: dict, seed: int = 0) -> dict:
     return hs._sample_env(shapes, seed)
-
 
 
 class TestMint:
@@ -303,9 +307,14 @@ class TestMint:
         handlers, report = hs.mint_handlers(
             [spec], domain=[{"X": (4, 5)}]
         )
-        rec = hs.handler_record(report[0]["tag"], handlers[report[0]["tag"]])
+        rec = hs.handler_record(
+            report[0]["tag"], handlers[report[0]["tag"]]
+        )
         rebuilt = hs.handler_from_record(rec)
-        assert rebuilt["handler_body"] == handlers[report[0]["tag"]]["handler_body"]
+        assert (
+            rebuilt["handler_body"]
+            == handlers[report[0]["tag"]]["handler_body"]
+        )
 
     def test_refusal_outside_grammar(self):
         """A meta-less non-elementwise spec proposes nothing.
@@ -496,15 +505,28 @@ class TestGatherMint:
         """``synop_5f1bba5798`` — the SSM select-gate × projection."""
         spec = (
             "mul",
-            ("unsqueeze", ("select", "v430", {"dim": 1, "index": 0}), {"dim": -1}),
             (
                 "unsqueeze",
-                ("select", ("linear", "v463", "v464", "v465"), {"dim": 1, "index": 0}),
+                ("select", "v430", {"dim": 1, "index": 0}),
+                {"dim": -1},
+            ),
+            (
+                "unsqueeze",
+                (
+                    "select",
+                    ("linear", "v463", "v464", "v465"),
+                    {"dim": 1, "index": 0},
+                ),
                 {"dim": -1},
             ),
         )
         domain = [
-            {"v430": (2, 4, 1), "v463": (2, 4, 16), "v464": (16, 16), "v465": (16,)}
+            {
+                "v430": (2, 4, 1),
+                "v463": (2, 4, 16),
+                "v464": (16, 16),
+                "v465": (16,),
+            }
         ]
         handlers, report = hs.mint_handlers([spec], domain=domain)
         assert report[0]["verdict"] == "minted"
@@ -512,14 +534,19 @@ class TestGatherMint:
         assert report[0]["tried"] == 1
         assert report[0]["max_err"] < 1e-9
         # the fused order won: read the slice, then project it
-        assert hs._gather_view(spec, True) == handlers[report[0]["tag"]]["handler_body"][1]
+        assert (
+            hs._gather_view(spec, True)
+            == handlers[report[0]["tag"]]["handler_body"][1]
+        )
         # and the delivered binding runs the gather body
         h = handlers[report[0]["tag"]]
         env = _env(domain[0])
         out = hs.minted_bindings(handlers)[h["kernel"]](
             env["v430"], env["v463"], env["v464"], env["v465"]
         )
-        want = env["v430"].select(1, 0).unsqueeze(-1) * torch.nn.functional.linear(
+        want = env["v430"].select(1, 0).unsqueeze(
+            -1
+        ) * torch.nn.functional.linear(
             env["v463"], env["v464"], env["v465"]
         ).select(1, 0).unsqueeze(-1)
         torch.testing.assert_close(out, want)
@@ -534,13 +561,23 @@ class TestGatherMint:
                 ("unsqueeze", "v419", {"dim": -1}),
                 (
                     "unsqueeze",
-                    ("select", ("linear", "v633", "v634", "v635"), {"dim": 1, "index": 7}),
+                    (
+                        "select",
+                        ("linear", "v633", "v634", "v635"),
+                        {"dim": 1, "index": 7},
+                    ),
                     {"dim": 1},
                 ),
             ),
         )
         domain = [
-            {"v13": (2, 16, 4), "v419": (2, 16), "v633": (2, 8, 16), "v634": (4, 16), "v635": (4,)}
+            {
+                "v13": (2, 16, 4),
+                "v419": (2, 16),
+                "v633": (2, 8, 16),
+                "v634": (4, 16),
+                "v635": (4,),
+            }
         ]
         _handlers, report = hs.mint_handlers([spec], domain=domain)
         assert report[0]["verdict"] == "minted"
@@ -554,12 +591,21 @@ class TestGatherMint:
             ("unsqueeze", "v319", {"dim": -1}),
             (
                 "unsqueeze",
-                ("select", ("linear", "v605", "v606", "v607"), {"dim": 1, "index": 0}),
+                (
+                    "select",
+                    ("linear", "v605", "v606", "v607"),
+                    {"dim": 1, "index": 0},
+                ),
                 {"dim": -1},
             ),
         )
         domain = [
-            {"v319": (2, 1), "v605": (2, 4, 16), "v606": (16, 16), "v607": (16,)}
+            {
+                "v319": (2, 1),
+                "v605": (2, 4, 16),
+                "v606": (16, 16),
+                "v607": (16,),
+            }
         ]
         _handlers, report = hs.mint_handlers([spec], domain=domain)
         assert report[0]["verdict"] == "minted"
@@ -570,8 +616,16 @@ class TestGatherMint:
         """``synop_336e34145b`` — select × select, no affine."""
         spec = (
             "mul",
-            ("unsqueeze", ("select", "v430", {"dim": 1, "index": 0}), {"dim": -1}),
-            ("unsqueeze", ("select", "v458", {"dim": 1, "index": 0}), {"dim": -1}),
+            (
+                "unsqueeze",
+                ("select", "v430", {"dim": 1, "index": 0}),
+                {"dim": -1},
+            ),
+            (
+                "unsqueeze",
+                ("select", "v458", {"dim": 1, "index": 0}),
+                {"dim": -1},
+            ),
         )
         domain = [{"v430": (2, 4, 1), "v458": (2, 4, 16)}]
         handlers, report = hs.mint_handlers([spec], domain=domain)
@@ -584,14 +638,24 @@ class TestGatherMint:
         """A minted gather body is JSON-able provenance data."""
         spec = (
             "mul",
-            ("unsqueeze", ("select", "G", {"dim": 1, "index": 0}), {"dim": -1}),
-            ("unsqueeze", ("select", "H", {"dim": 1, "index": 0}), {"dim": -1}),
+            (
+                "unsqueeze",
+                ("select", "G", {"dim": 1, "index": 0}),
+                {"dim": -1},
+            ),
+            (
+                "unsqueeze",
+                ("select", "H", {"dim": 1, "index": 0}),
+                {"dim": -1},
+            ),
         )
         handlers, report = hs.mint_handlers(
             [spec], domain=[{"G": (2, 4, 1), "H": (2, 4, 16)}]
         )
         tag = report[0]["tag"]
-        rec = json.loads(json.dumps(hs.handler_record(tag, handlers[tag])))
+        rec = json.loads(
+            json.dumps(hs.handler_record(tag, handlers[tag]))
+        )
         assert rec["handler_body"][0] == "gather"
         rebuilt = hs.handler_from_record(rec)
         assert rebuilt["handler_body"] == handlers[tag]["handler_body"]
