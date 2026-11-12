@@ -5098,3 +5098,43 @@
         identity: null
         law: "Tr^U(f): feedback of the first-usize output block into the first-usize input block; in FDVect the linear fixpoint P + Q(I\u2212S)\u207b\u00b9R."
       denotation: "torch"
+- id: "ast.mlopt.synop_6ed0a07c7d"
+  node_kind: "synop_6ed0a07c7d"
+  children:
+    - role: "arg0"
+    - role: "arg1"
+    - role: "arg2"
+    - role: "arg3"
+    - role: "arg4"
+    - role: "arg5"
+    - role: "arg6"
+    - role: "arg7"
+    - role: "arg8"
+    - role: "arg9"
+    - role: "arg10"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 11
+        maxItems: 11
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop_6ed0a07c7d"
+      arity: 11
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 11
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add 'v2', (mul 'v3', 'v4'))), (mul 'v5', (unsqueeze 'v6', dim=a0)))), (mul 'v7', (unsqueeze (select (linear 'v8', 'v9', 'v10'), dim=1, index=a1), dim=a0)))"
+      denotation: "prim"

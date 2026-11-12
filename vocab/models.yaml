@@ -11802,6 +11802,219 @@
       ],
       "hnl": "tensor.mul(v10, tensor.add(tensor.mul(v323, tensor.add(tensor.mul(v324, tensor.add(tensor.mul(v325, tensor.add(tensor.mul(v326, v327), tensor.mul(v328, v329))), tensor.mul(v330, v331))), tensor.mul(v332, v333))), tensor.mul(v334, v335)))",
       "unsupported": null
+    },
+    {
+      "id": "denotation:synop_6ed0a07c7d",
+      "op": "synop_6ed0a07c7d",
+      "kind": "denotation",
+      "mvars": [
+        "v1132",
+        "v1256",
+        "v1257",
+        "v1258",
+        "v215",
+        "v223",
+        "v345",
+        "v358",
+        "v375",
+        "v404",
+        "v405"
+      ],
+      "spec": {
+        "spec": "add",
+        "args": [
+          {
+            "spec": "mul",
+            "args": [
+              {
+                "mvar": "v223"
+              },
+              {
+                "spec": "add",
+                "args": [
+                  {
+                    "spec": "mul",
+                    "args": [
+                      {
+                        "mvar": "v345"
+                      },
+                      {
+                        "spec": "add",
+                        "args": [
+                          {
+                            "mvar": "v375"
+                          },
+                          {
+                            "spec": "mul",
+                            "args": [
+                              {
+                                "mvar": "v404"
+                              },
+                              {
+                                "mvar": "v405"
+                              }
+                            ],
+                            "attrs": {}
+                          }
+                        ],
+                        "attrs": {}
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "spec": "mul",
+                    "args": [
+                      {
+                        "mvar": "v358"
+                      },
+                      {
+                        "spec": "unsqueeze",
+                        "args": [
+                          {
+                            "mvar": "v1132"
+                          }
+                        ],
+                        "attrs": {
+                          "dim": "a123"
+                        }
+                      }
+                    ],
+                    "attrs": {}
+                  }
+                ],
+                "attrs": {}
+              }
+            ],
+            "attrs": {}
+          },
+          {
+            "spec": "mul",
+            "args": [
+              {
+                "mvar": "v215"
+              },
+              {
+                "spec": "unsqueeze",
+                "args": [
+                  {
+                    "spec": "select",
+                    "args": [
+                      {
+                        "spec": "linear",
+                        "args": [
+                          {
+                            "mvar": "v1256"
+                          },
+                          {
+                            "mvar": "v1257"
+                          },
+                          {
+                            "mvar": "v1258"
+                          }
+                        ],
+                        "attrs": {}
+                      }
+                    ],
+                    "attrs": {
+                      "dim": 1,
+                      "index": "a320"
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim": "a123"
+                }
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {}
+      },
+      "hnl": "tensor.add(tensor.mul(v223, tensor.add(tensor.mul(v345, tensor.add(v375, tensor.mul(v404, v405))), tensor.mul(v358, tensor.unsqueeze(v1132, a123)))), tensor.mul(v215, tensor.unsqueeze(tensor.select(tensor.linear(v1256, v1257, v1258), 1, a320), a123)))",
+      "unsupported": null
+    },
+    {
+      "id": "handler:synop_6ed0a07c7d",
+      "op": "synop_6ed0a07c7d",
+      "kind": "handler",
+      "family": "gather",
+      "mvars": [
+        "v1132",
+        "v1256",
+        "v1257",
+        "v1258",
+        "v215",
+        "v223",
+        "v345",
+        "v358",
+        "v375",
+        "v404",
+        "v405"
+      ],
+      "body": [
+        "gather",
+        [
+          "add",
+          [
+            "mul",
+            "v223",
+            [
+              "add",
+              [
+                "mul",
+                "v345",
+                [
+                  "add",
+                  "v375",
+                  [
+                    "mul",
+                    "v404",
+                    "v405"
+                  ]
+                ]
+              ],
+              [
+                "mul",
+                "v358",
+                [
+                  "unsqueeze",
+                  "v1132",
+                  {
+                    "dim": 1
+                  }
+                ]
+              ]
+            ]
+          ],
+          [
+            "mul",
+            "v215",
+            [
+              "unsqueeze",
+              [
+                "aff",
+                [
+                  "at",
+                  "v1256",
+                  {
+                    "dim": 1,
+                    "index": 7
+                  }
+                ],
+                "v1257",
+                "v1258"
+              ],
+              {
+                "dim": 1
+              }
+            ]
+          ]
+        ]
+      ],
+      "hnl": null,
+      "unsupported": "handler family 'gather' has no tensor.* model"
     }
   ],
   "verdicts": {

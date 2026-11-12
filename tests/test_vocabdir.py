@@ -60,7 +60,7 @@ def test_load_vocab_round_trips_the_banks() -> None:
     assert len(v.laws) == len(ALL_RULES)
     assert {r.name for r in v.laws} == {r.name for r in ALL_RULES}
     assert len(v.schemas) == 5
-    assert len(v.prims) == 57
+    assert len(v.prims) == 58
     assert len(v.ops) == len(vocabdir.collect_ops())
     # conv_bn_fold's procedural hooks cannot serialize — the loader
     # re-binds them by name and *says so*.
@@ -77,8 +77,8 @@ def test_handlers_cover_shipped_prim_and_minted() -> None:
     for tag in ("silu", "square", "swiglu"):
         assert tag in table
         assert table[tag]["kernel"] == tag
-    assert len(v.prim_handlers) == 57
-    assert len(v.minted_handlers) == 52
+    assert len(v.prim_handlers) == 58
+    assert len(v.minted_handlers) == 53
     assert all(h["op"].startswith("synop") for h in v.prim_handlers)
 
 

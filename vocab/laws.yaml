@@ -15486,6 +15486,177 @@
       "bound_norm": "spectral",
       "serializable": true,
       "missing_hooks": []
+    },
+    {
+      "version": 2,
+      "kind": "law",
+      "name": "prim:synop_6ed0a07c7d",
+      "law": "machine-minted primitive fold \u2014 the manual subgraph collapses to the synop_6ed0a07c7d primitive (zoo-prim mint; admitted by the full gauntlet, machine-original; denotation definitional \u2014 the op's torch binding IS the spelled subgraph)",
+      "lhs": {
+        "op": "add",
+        "args": [
+          {
+            "op": "mul",
+            "args": [
+              {
+                "mvar": "v223"
+              },
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "mul",
+                    "args": [
+                      {
+                        "mvar": "v345"
+                      },
+                      {
+                        "op": "add",
+                        "args": [
+                          {
+                            "mvar": "v375"
+                          },
+                          {
+                            "op": "mul",
+                            "args": [
+                              {
+                                "mvar": "v404"
+                              },
+                              {
+                                "mvar": "v405"
+                              }
+                            ],
+                            "attrs": {}
+                          }
+                        ],
+                        "attrs": {}
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "op": "mul",
+                    "args": [
+                      {
+                        "mvar": "v358"
+                      },
+                      {
+                        "op": "unsqueeze",
+                        "args": [
+                          {
+                            "mvar": "v1132"
+                          }
+                        ],
+                        "attrs": {
+                          "dim": "a123"
+                        }
+                      }
+                    ],
+                    "attrs": {}
+                  }
+                ],
+                "attrs": {}
+              }
+            ],
+            "attrs": {}
+          },
+          {
+            "op": "mul",
+            "args": [
+              {
+                "mvar": "v215"
+              },
+              {
+                "op": "unsqueeze",
+                "args": [
+                  {
+                    "op": "select",
+                    "args": [
+                      {
+                        "op": "linear",
+                        "args": [
+                          {
+                            "mvar": "v1256"
+                          },
+                          {
+                            "mvar": "v1257"
+                          },
+                          {
+                            "mvar": "v1258"
+                          }
+                        ],
+                        "attrs": {}
+                      }
+                    ],
+                    "attrs": {
+                      "dim": 1,
+                      "index": "a320"
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim": "a123"
+                }
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "synop_6ed0a07c7d",
+        "args": [
+          {
+            "mvar": "v223"
+          },
+          {
+            "mvar": "v345"
+          },
+          {
+            "mvar": "v375"
+          },
+          {
+            "mvar": "v404"
+          },
+          {
+            "mvar": "v405"
+          },
+          {
+            "mvar": "v358"
+          },
+          {
+            "mvar": "v1132"
+          },
+          {
+            "mvar": "v215"
+          },
+          {
+            "mvar": "v1256"
+          },
+          {
+            "mvar": "v1257"
+          },
+          {
+            "mvar": "v1258"
+          }
+        ],
+        "attrs": {
+          "a123": "a123",
+          "a320": "a320"
+        }
+      },
+      "cond": null,
+      "dspec": null,
+      "tags": [
+        "fusion"
+      ],
+      "derivation": [],
+      "cert": null,
+      "error_bound": null,
+      "bound_norm": "spectral",
+      "serializable": true,
+      "missing_hooks": []
     }
   ]
 }
