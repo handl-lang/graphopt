@@ -19,9 +19,15 @@ For each model row:
 
 The bound-site domain is the mint's recorded ``provenance.domain``
 (``{mvar: shape}`` entries — the shapes the handler was verified
-under); rows without one (the five handler-refused prims) and rows
-the ``tensor.*`` surface cannot express are verdicted
-``python-shipped`` with the reason recorded — never silently skipped.
+under); the five handler-refused prims recorded none at mint time,
+so their measured domain + representative-site attr freeze
+backfill from ``mlopt_discovery.model_domains.DOMAIN_PROVENANCE``
+(the ``--prim-vocab`` rerun's own records — see that module's
+docstring).  Specs whose attr dicts hold metavariable names bind
+them through ``attr_bindings`` before the gate runs; rows with no
+domain source and rows the ``tensor.*`` surface cannot express are
+verdicted ``python-shipped`` with the reason recorded — never
+silently skipped.
 
 ``eval_hnl`` is ``bench.drivers.kit.term_hnl.KitRunner`` — the
 compiled ``hnl-run`` binary (``cargo build -p mlopt-kit --bin
@@ -57,16 +63,37 @@ from mlopt_discovery import (  # noqa: E402
 )
 
 
-def _domains() -> dict[str, list]:
-    """Map ``synop_*`` op → its minted handler's ``provenance.domain``."""
-    out: dict[str, list] = {}
+def _domains() -> dict[str, dict]:
+    """Map ``synop_*`` op → ``{"domain", "attr_bindings"}``.
+
+    The domain is the mint's recorded ``provenance.domain``
+    (``{mvar: shape}`` entries — the shapes the handler was verified
+    under); ``attr_bindings`` carries the representative-site attr
+    freeze for specs whose attr dicts hold metavariable names
+    (``modelproj.spec_attr_mvars``).  The five handler-refused prims
+    recorded no ``provenance.domain`` at mint time — their measured
+    domain + attr freeze backfill from
+    ``mlopt_discovery.model_domains.DOMAIN_PROVENANCE`` (the v4
+    ``--prim-vocab`` rerun's own records).
+    """
+    from mlopt_discovery import model_domains
+
+    out: dict[str, dict] = {}
     for name, rec in minted.prim_records().items():
         prov = ((rec.get("handler") or {}).get("record") or {}).get(
             "provenance"
         ) or {}
         domain = prov.get("domain")
         if domain:
-            out[name] = domain
+            out[name] = {"domain": domain, "attr_bindings": {}}
+    for name, rec in model_domains.DOMAIN_PROVENANCE.items():
+        out.setdefault(
+            name,
+            {
+                "domain": rec["domain"],
+                "attr_bindings": rec.get("attr_bindings") or {},
+            },
+        )
     return out
 
 
@@ -118,7 +145,9 @@ def collect_verdicts(
         mid = row["id"]
         op = row["op"]
         hnl = row.get("hnl")
-        domain = domains.get(op)
+        prov = domains.get(op)
+        domain = prov["domain"] if prov else None
+        attr_bindings = prov["attr_bindings"] if prov else None
         if hnl is None:
             v = _python_shipped(
                 row, f"unexpressible: {row.get('unsupported')}"
@@ -142,6 +171,7 @@ def collect_verdicts(
                     domain=domain,
                     mvars=row["mvars"],
                     eval_hnl=eval_hnl,
+                    attr_bindings=attr_bindings,
                     seed=seed,
                     adversarial=adversarial,
                     rtol=handler_synth._VERIFY_RTOL,

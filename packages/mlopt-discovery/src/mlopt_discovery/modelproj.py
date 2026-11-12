@@ -40,6 +40,7 @@ __all__ = [
     "hnl_program",
     "max_rel",
     "model_names",
+    "spec_attr_mvars",
     "spec_mvars",
     "spec_to_hnl",
     "tensor_feed",
@@ -150,6 +151,36 @@ def body_mvars(body: Any) -> set[str]:
     return set()
 
 
+def _spec_attr_mvars(spec: Any, acc: set[str]) -> set[str]:
+    """Collect the attr-metavariable names of a spec.
+
+    Attr metavariables are *string* values inside a call's trailing
+    attr dict — the ``pat_spec`` convention keeps them by name (the
+    minted call's own attrs carry the bound values back in at eval
+    time, ``prim_mint.spec_bind``).  Numeric/bool/list attr values
+    are literals and do not collect; strings nested inside a list
+    attr (a ``shape`` entry) are data, not metavars.
+    """
+    if _is_call(spec):
+        for e in spec[1:]:
+            if isinstance(e, dict):
+                for v in e.values():
+                    if isinstance(v, str):
+                        acc.add(v)
+            else:
+                _spec_attr_mvars(e, acc)
+        return acc
+    if isinstance(spec, (tuple, list)):
+        for e in spec:
+            _spec_attr_mvars(e, acc)
+    return acc
+
+
+def spec_attr_mvars(spec: Any) -> set[str]:
+    """Return every attr-metavariable name a spec binds, as a set."""
+    return _spec_attr_mvars(spec, set())
+
+
 # ---------------------------------------------------------------------------
 #  The op table — spec op → tensor.* call, as data
 # ---------------------------------------------------------------------------
@@ -210,7 +241,20 @@ def _split_attrs(rest: tuple) -> tuple[tuple, dict]:
     return tuple(rest), {}
 
 
-def _spec_call_to_hnl(node: Any, names: Mapping[str, str]) -> str:
+def _attr_slot(
+    v: Any, names: Mapping[str, str], amvars: frozenset
+) -> str:
+    """Render one attr-op slot: attr metavar → name, else literal."""
+    if isinstance(v, str) and v in amvars:
+        return names[v]
+    return _lit(v)
+
+
+def _spec_call_to_hnl(
+    node: Any,
+    names: Mapping[str, str],
+    amvars: frozenset = frozenset(),
+) -> str:
     """Emit one spec call as a ``tensor.*`` expression."""
     op = node[0]
     args, attrs = _split_attrs(tuple(node[1:]))
@@ -224,15 +268,15 @@ def _spec_call_to_hnl(node: Any, names: Mapping[str, str]) -> str:
             raise ModelUnsupportedError(
                 f"{op}: arity {len(args)} has no surface signature"
             )
-        return f"tensor.{op}({_emit_spec(args[0], names)}, {_emit_spec(args[1], names)})"
+        return f"tensor.{op}({_emit_spec(args[0], names, amvars)}, {_emit_spec(args[1], names, amvars)})"
     if op == "concat":
         if set(attrs) - {"dim"}:
             raise ModelUnsupportedError(
                 f"concat: attrs {sorted(attrs)} have no slot on the "
                 "tensor surface"
             )
-        inner = ", ".join(_emit_spec(a, names) for a in args)
-        dim = _lit(attrs.get("dim"))
+        inner = ", ".join(_emit_spec(a, names, amvars) for a in args)
+        dim = _attr_slot(attrs.get("dim"), names, amvars)
         return f"tensor.concat([{inner}], {dim})"
     if op in _FIXED_OPS:
         want = _FIXED_OPS[op]
@@ -245,10 +289,10 @@ def _spec_call_to_hnl(node: Any, names: Mapping[str, str]) -> str:
             raise ModelUnsupportedError(
                 f"{op}: arity {len(args)} has no surface signature"
             )
-        inner = ", ".join(_emit_spec(a, names) for a in args)
+        inner = ", ".join(_emit_spec(a, names, amvars) for a in args)
         return f"tensor.{op}({inner})"
     if op in _ATTR_OPS:
-        return _attr_op_to_hnl(op, args, attrs, names)
+        return _attr_op_to_hnl(op, args, attrs, names, amvars)
     raise ModelUnsupportedError(
         f"op {op!r} is not on the tensor.* model surface"
     )
@@ -259,6 +303,7 @@ def _attr_op_to_hnl(
     args: tuple,
     attrs: dict,
     names: Mapping[str, str],
+    amvars: frozenset = frozenset(),
 ) -> str:
     """Emit a shape-manipulation op whose attrs fill positional slots."""
     want = _ATTR_OPS[op]
@@ -271,14 +316,18 @@ def _attr_op_to_hnl(
         raise ModelUnsupportedError(
             f"{op}: arity {len(args)} has no surface signature"
         )
-    slots = ", ".join(_lit(attrs[k]) for k in want)
-    return f"tensor.{op}({_emit_spec(args[0], names)}, {slots})"
+    slots = ", ".join(_attr_slot(attrs[k], names, amvars) for k in want)
+    return f"tensor.{op}({_emit_spec(args[0], names, amvars)}, {slots})"
 
 
-def _emit_spec(spec: Any, names: Mapping[str, str]) -> str:
+def _emit_spec(
+    spec: Any,
+    names: Mapping[str, str],
+    amvars: frozenset = frozenset(),
+) -> str:
     """Render one spec node as a ``.hnl`` expression."""
     if _is_call(spec):
-        return _spec_call_to_hnl(spec, names)
+        return _spec_call_to_hnl(spec, names, amvars)
     if isinstance(spec, str):
         if spec not in names:
             raise ModelUnsupportedError(
@@ -299,17 +348,31 @@ def _emit_spec(spec: Any, names: Mapping[str, str]) -> str:
     raise ModelUnsupportedError(f"unemittable spec leaf: {spec!r}")
 
 
-def spec_to_hnl(spec: Any, *, mvars: Any = None) -> str:
+def spec_to_hnl(
+    spec: Any, *, mvars: Any = None, attr_mvars: Any = None
+) -> str:
     """Render a genkernel spec as a ``.hnl`` expression over ``tensor.*``.
 
     *mvars* optionally pins the metavar→name map (see
     :func:`model_names`); when omitted it is derived from the spec.
-    Raises :class:`ModelUnsupportedError` naming the first op or
-    value the surface cannot honour — the caller records the row
-    ``unsupported`` rather than shipping a wrong model.
+    *attr_mvars* optionally pins the attr-metavariable set — attr
+    dict values that are metavariable *names* render as ``.hnl``
+    bindings (bound by :func:`hnl_program`'s *attr_bindings*), not
+    string literals; when omitted the set is derived from the spec
+    (:func:`spec_attr_mvars` — every string attr value is a metavar
+    name under the ``pat_spec`` convention).  Raises
+    :class:`ModelUnsupportedError` naming the first op or value the
+    surface cannot honour — the caller records the row ``unsupported``
+    rather than shipping a wrong model.
     """
-    names = _name_map(spec_mvars(spec) if mvars is None else mvars)
-    return _emit_spec(spec, names)
+    amvars = (
+        frozenset(spec_attr_mvars(spec))
+        if attr_mvars is None
+        else frozenset(attr_mvars)
+    )
+    leaf = spec_mvars(spec) if mvars is None else set(mvars)
+    names = _name_map(set(leaf) | set(amvars))
+    return _emit_spec(spec, names, amvars)
 
 
 def handler_body_to_hnl(body: Any, *, mvars: Any = None) -> str:
@@ -357,7 +420,12 @@ def tensor_feed(t: Any) -> dict:
 
 
 def hnl_program(
-    hnl: str, feed: Mapping[str, Any], *, mvars: Any
+    hnl: str,
+    feed: Mapping[str, Any],
+    *,
+    mvars: Any,
+    attr_mvars: Any = (),
+    attr_bindings: Mapping[str, Any] | None = None,
 ) -> str:
     """Bind *feed* and evaluate the model expression *hnl*.
 
@@ -366,9 +434,22 @@ def hnl_program(
     names to ``{"shape", "data"}`` dicts (or torch tensors, via
     :func:`tensor_feed`); every feed key binds in sorted order as
     ``name :: tensor.reshape(tensor.from_list([data]), [shape])``.
+    *attr_mvars*/*attr_bindings* bind the spec's attr metavariables —
+    each ``attr_bindings[name]`` literal binds first as
+    ``name :: <lit>`` so attr positions in *hnl* read a real value,
+    the same role the minted call's own attrs play in
+    ``prim_mint.spec_bind``.  An attr metavar without a binding
+    raises — a model whose attrs are unbound is not a program.
     """
-    names = _name_map(mvars)
+    amvars = tuple(attr_mvars)
+    names = _name_map(set(mvars) | set(amvars))
     lines = ["do {"]
+    for a in sorted(amvars):
+        if attr_bindings is None or a not in attr_bindings:
+            raise ModelUnsupportedError(
+                f"attr metavar {a!r} has no .hnl binding"
+            )
+        lines.append(f"  {names[a]} :: {_lit(attr_bindings[a])}")
     for m in sorted(feed):
         f = feed[m]
         if isinstance(f, Mapping) and "hnl" in f:
@@ -443,6 +524,7 @@ def verify_model(
     mvars: Any,
     eval_hnl: Callable[[str], Any],
     bindings: dict | None = None,
+    attr_bindings: Mapping[str, Any] | None = None,
     seed: int = 0,
     adversarial: int = 1,
     rtol: float = 1e-9,
@@ -460,6 +542,16 @@ def verify_model(
     *eval_hnl* maps a ``.hnl`` program source to the decoded JSON
     boundary value (``KitRunner.run`` in the driver; a stub in
     tests).
+
+    Specs whose attr dicts hold attr-metavariable *names*
+    (:func:`spec_attr_mvars` — e.g. ``{"dim": "a97"}``) need
+    *attr_bindings* — the measured ``{name: value}`` pairs the
+    representative bound site froze (``prim_mint.freeze_spec``'s
+    ``sites[0]`` convention).  The reference spec binds them through
+    ``prim_mint.spec_bind`` before drawing, and the ``.hnl`` program
+    binds them as literal prelude lines — an attr metavar with no
+    recorded binding refuses honestly rather than evaluating a
+    string where torch wants an int.
 
     The verdict is ``handl-shipped`` only when every draw decodes to
     a same-shaped tensor that ``torch.allclose``s the reference at
@@ -484,6 +576,20 @@ def verify_model(
         "max_rel": float("inf"),
         "sites": 0,
     }
+    amvars = spec_attr_mvars(ref_spec)
+    if amvars:
+        ab = dict(attr_bindings) if attr_bindings is not None else {}
+        missing = sorted(a for a in amvars if a not in ab)
+        if missing:
+            verdict["detail"] = (
+                f"unbound attr metavars: {missing} — no recorded "
+                "attr binding for this model's domain"
+            )
+            return verdict
+        from mlopt_discovery.prim_mint import spec_bind
+
+        ref_spec = spec_bind(ref_spec, ab, tuple(amvars))
+        verdict["attr_bindings"] = {a: ab[a] for a in sorted(amvars)}
     try:
         envs, refs = handler_synth._domain_draws(
             ref_spec, domain, seed, bindings, adversarial
@@ -496,7 +602,13 @@ def verify_model(
     n = 0
     for env, ref in zip(envs, refs, strict=True):
         feed = {m: tensor_feed(t) for m, t in env.items()}
-        src = hnl_program(hnl, feed, mvars=mvars)
+        src = hnl_program(
+            hnl,
+            feed,
+            mvars=mvars,
+            attr_mvars=amvars,
+            attr_bindings=attr_bindings,
+        )
         try:
             got = decode_tensor_result(eval_hnl(src))
         except Exception as exc:

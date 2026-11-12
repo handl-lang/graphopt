@@ -6536,7 +6536,7 @@
         ],
         "attrs": {}
       },
-      "hnl": "tensor.add(tensor.mul(v223, tensor.add(tensor.mul(v345, v346), v268)), tensor.mul(v215, tensor.unsqueeze(v355, \"a97\")))",
+      "hnl": "tensor.add(tensor.mul(v223, tensor.add(tensor.mul(v345, v346), v268)), tensor.mul(v215, tensor.unsqueeze(v355, a97)))",
       "unsupported": null
     },
     {
@@ -6608,7 +6608,7 @@
         ],
         "attrs": {}
       },
-      "hnl": "tensor.add(v13, tensor.mul(tensor.unsqueeze(v419, -1), tensor.unsqueeze(tensor.select(tensor.linear(v633, v634, v635), 1, \"a155\"), \"a75\")))",
+      "hnl": "tensor.add(v13, tensor.mul(tensor.unsqueeze(v419, -1), tensor.unsqueeze(tensor.select(tensor.linear(v633, v634, v635), 1, a155), a75)))",
       "unsupported": null
     },
     {
@@ -7306,7 +7306,7 @@
         ],
         "attrs": {}
       },
-      "hnl": "tensor.add(tensor.mul(v223, tensor.add(v267, tensor.mul(v347, v348))), tensor.mul(v215, tensor.unsqueeze(v370, \"a101\")))",
+      "hnl": "tensor.add(tensor.mul(v223, tensor.add(v267, tensor.mul(v347, v348))), tensor.mul(v215, tensor.unsqueeze(v370, a101)))",
       "unsupported": null
     },
     {
@@ -7377,7 +7377,7 @@
         ],
         "attrs": {}
       },
-      "hnl": "tensor.add(tensor.mul(v201, tensor.add(tensor.mul(v472, v473), tensor.mul(v480, tensor.unsqueeze(v500, \"a128\")))), v14)",
+      "hnl": "tensor.add(tensor.mul(v201, tensor.add(tensor.mul(v472, v473), tensor.mul(v480, tensor.unsqueeze(v500, a128)))), v14)",
       "unsupported": null
     },
     {
@@ -7627,7 +7627,7 @@
         ],
         "attrs": {}
       },
-      "hnl": "tensor.add(tensor.mul(v223, tensor.add(v267, tensor.mul(v347, tensor.unsqueeze(v381, \"a103\")))), tensor.mul(v215, v216))",
+      "hnl": "tensor.add(tensor.mul(v223, tensor.add(v267, tensor.mul(v347, tensor.unsqueeze(v381, a103)))), tensor.mul(v215, v216))",
       "unsupported": null
     },
     {
@@ -12236,25 +12236,32 @@
     },
     "denotation:synop_4c5296b3ba": {
       "op": "synop_4c5296b3ba",
-      "status": "python-shipped",
+      "status": "handl-shipped",
       "rtol": 1e-09,
       "atol": 1e-12,
-      "max_err": Infinity,
-      "max_rel": Infinity,
-      "sites": 0,
-      "detail": "no recorded bound-site domain",
-      "hnl": "tensor.add(tensor.mul(v223, tensor.add(tensor.mul(v345, v346), v268)), tensor.mul(v215, tensor.unsqueeze(v355, \"a97\")))"
+      "max_err": 0.0,
+      "max_rel": 0.0,
+      "sites": 8,
+      "attr_bindings": {
+        "a97": 1
+      },
+      "detail": "",
+      "hnl": "tensor.add(tensor.mul(v223, tensor.add(tensor.mul(v345, v346), v268)), tensor.mul(v215, tensor.unsqueeze(v355, a97)))"
     },
     "denotation:synop_4c657cb2c0": {
       "op": "synop_4c657cb2c0",
-      "status": "python-shipped",
+      "status": "handl-shipped",
       "rtol": 1e-09,
       "atol": 1e-12,
-      "max_err": Infinity,
-      "max_rel": Infinity,
-      "sites": 0,
-      "detail": "no recorded bound-site domain",
-      "hnl": "tensor.add(v13, tensor.mul(tensor.unsqueeze(v419, -1), tensor.unsqueeze(tensor.select(tensor.linear(v633, v634, v635), 1, \"a155\"), \"a75\")))"
+      "max_err": 7.105427357601002e-15,
+      "max_rel": 3.204824339362765e-13,
+      "sites": 8,
+      "attr_bindings": {
+        "a155": 7,
+        "a75": 1
+      },
+      "detail": "",
+      "hnl": "tensor.add(v13, tensor.mul(tensor.unsqueeze(v419, -1), tensor.unsqueeze(tensor.select(tensor.linear(v633, v634, v635), 1, a155), a75)))"
     },
     "denotation:synop_4f8fefdd38": {
       "op": "synop_4f8fefdd38",
@@ -12357,25 +12364,31 @@
     },
     "denotation:synop_976f9836d7": {
       "op": "synop_976f9836d7",
-      "status": "python-shipped",
+      "status": "handl-shipped",
       "rtol": 1e-09,
       "atol": 1e-12,
-      "max_err": Infinity,
-      "max_rel": Infinity,
-      "sites": 0,
-      "detail": "no recorded bound-site domain",
-      "hnl": "tensor.add(tensor.mul(v223, tensor.add(v267, tensor.mul(v347, v348))), tensor.mul(v215, tensor.unsqueeze(v370, \"a101\")))"
+      "max_err": 0.0,
+      "max_rel": 0.0,
+      "sites": 8,
+      "attr_bindings": {
+        "a101": 1
+      },
+      "detail": "",
+      "hnl": "tensor.add(tensor.mul(v223, tensor.add(v267, tensor.mul(v347, v348))), tensor.mul(v215, tensor.unsqueeze(v370, a101)))"
     },
     "denotation:synop_98a002d64b": {
       "op": "synop_98a002d64b",
-      "status": "python-shipped",
+      "status": "handl-shipped",
       "rtol": 1e-09,
       "atol": 1e-12,
-      "max_err": Infinity,
-      "max_rel": Infinity,
-      "sites": 0,
-      "detail": "no recorded bound-site domain",
-      "hnl": "tensor.add(tensor.mul(v201, tensor.add(tensor.mul(v472, v473), tensor.mul(v480, tensor.unsqueeze(v500, \"a128\")))), v14)"
+      "max_err": 0.0,
+      "max_rel": 0.0,
+      "sites": 8,
+      "attr_bindings": {
+        "a128": 1
+      },
+      "detail": "",
+      "hnl": "tensor.add(tensor.mul(v201, tensor.add(tensor.mul(v472, v473), tensor.mul(v480, tensor.unsqueeze(v500, a128)))), v14)"
     },
     "denotation:synop_b246dcb838": {
       "op": "synop_b246dcb838",
@@ -12412,14 +12425,17 @@
     },
     "denotation:synop_f08a53f9a0": {
       "op": "synop_f08a53f9a0",
-      "status": "python-shipped",
+      "status": "handl-shipped",
       "rtol": 1e-09,
       "atol": 1e-12,
-      "max_err": Infinity,
-      "max_rel": Infinity,
-      "sites": 0,
-      "detail": "no recorded bound-site domain",
-      "hnl": "tensor.add(tensor.mul(v223, tensor.add(v267, tensor.mul(v347, tensor.unsqueeze(v381, \"a103\")))), tensor.mul(v215, v216))"
+      "max_err": 0.0,
+      "max_rel": 0.0,
+      "sites": 8,
+      "attr_bindings": {
+        "a103": 1
+      },
+      "detail": "",
+      "hnl": "tensor.add(tensor.mul(v223, tensor.add(v267, tensor.mul(v347, tensor.unsqueeze(v381, a103)))), tensor.mul(v215, v216))"
     },
     "denotation:synop_f3290a1163": {
       "op": "synop_f3290a1163",

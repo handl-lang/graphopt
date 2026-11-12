@@ -328,6 +328,117 @@ def test_verify_model_verdict_shape() -> None:
     }
 
 
+def test_spec_attr_mvars_collects_string_attr_values() -> None:
+    """Attr metavars are string attr-dict values — nothing else."""
+    spec = (
+        "add",
+        ("unsqueeze", "x", {"dim": "a1"}),
+        ("select", "y", {"dim": 1, "index": "a2"}),
+        ("reshape", "z", {"shape": [2, "not_a_mvar"]}),
+    )
+    assert modelproj.spec_attr_mvars(spec) == {"a1", "a2"}
+    # numeric/bool/list attr values are literals, not metavars
+    assert modelproj.spec_attr_mvars(
+        ("unsqueeze", "x", {"dim": -1})
+    ) == set()
+
+
+def test_spec_to_hnl_attr_metavar_renders_binding_name() -> None:
+    """A string attr value renders as a ``.hnl`` name, not a literal."""
+    hnl = modelproj.spec_to_hnl(
+        ("unsqueeze", "x", {"dim": "a97"}), mvars={"x"}
+    )
+    assert hnl == "tensor.unsqueeze(x, a97)"
+    # literal attrs still render literally beside them
+    hnl = modelproj.spec_to_hnl(
+        ("select", "x", {"dim": 1, "index": "a155"}), mvars={"x"}
+    )
+    assert hnl == "tensor.select(x, 1, a155)"
+
+
+def test_hnl_program_binds_attr_literals() -> None:
+    src = modelproj.hnl_program(
+        "tensor.unsqueeze(x, a1)",
+        {"x": {"shape": [2], "data": [1.0, 2.0]}},
+        mvars={"x"},
+        attr_mvars={"a1"},
+        attr_bindings={"a1": -1},
+    )
+    assert "  a1 :: -1" in src
+    assert src.index("a1 ::") < src.index("tensor.unsqueeze")
+    with pytest.raises(
+        modelproj.ModelUnsupportedError, match="no .hnl binding"
+    ):
+        modelproj.hnl_program(
+            "tensor.unsqueeze(x, a1)",
+            {"x": {"shape": [2], "data": [1.0, 2.0]}},
+            mvars={"x"},
+            attr_mvars={"a1"},
+        )
+
+
+def test_verify_model_attr_metavar_binds_both_sides() -> None:
+    """Attr metavars bind the torch ref AND the ``.hnl`` program."""
+    import mlopt_torch.torch_bridge as tb
+    from mlopt_discovery import handler_synth
+    from mlopt_discovery.prim_mint import spec_bind
+
+    ref_spec = ("unsqueeze", "x", {"dim": "a1"})
+    bound = spec_bind(ref_spec, {"a1": 0}, ("a1",))
+    domain = [{"x": [2, 2]}]
+    _envs, refs = handler_synth._domain_draws(
+        bound, domain, 0, tb._IR_TO_TORCH, 0
+    )
+    queue = [
+        {
+            "__tensor__": {
+                "shape": [int(d) for d in ref.shape],
+                "data": [
+                    float(v) for v in ref.reshape(-1).tolist()
+                ],
+            }
+        }
+        for ref in refs
+    ]
+    seen: list[str] = []
+
+    def eval_hnl(src: str):
+        seen.append(src)
+        return queue.pop(0)
+
+    v = modelproj.verify_model(
+        name="t",
+        hnl="tensor.unsqueeze(x, a1)",
+        ref_spec=ref_spec,
+        domain=domain,
+        mvars=["x"],
+        eval_hnl=eval_hnl,
+        attr_bindings={"a1": 0},
+        adversarial=0,
+        bindings=tb._IR_TO_TORCH,
+    )
+    assert v["status"] == "handl-shipped"
+    assert v["attr_bindings"] == {"a1": 0}
+    assert seen and all("a1 :: 0" in s for s in seen)
+    assert queue == []
+
+
+def test_verify_model_unbound_attr_metavar_refuses() -> None:
+    """An attr metavar with no recorded binding refuses honestly."""
+    v = modelproj.verify_model(
+        name="t",
+        hnl="tensor.unsqueeze(x, a1)",
+        ref_spec=("unsqueeze", "x", {"dim": "a1"}),
+        domain=[{"x": [2, 2]}],
+        mvars=["x"],
+        eval_hnl=lambda s: {},
+        adversarial=0,
+    )
+    assert v["status"] == "python-shipped"
+    assert "unbound attr metavars" in v["detail"]
+    assert "a1" in v["detail"]
+
+
 # ---------------------------------------------------------------------------
 #  vocabdir integration — models.yaml is canonical
 # ---------------------------------------------------------------------------
