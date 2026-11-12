@@ -71,6 +71,7 @@ __all__ = [
     "PRIM_MIN_OPS",
     "PRIM_SITES",
     "ShippedPrims",
+    "admit_prim",
     "bare_call",
     "core_shipped",
     "denoted_alphas",
@@ -168,8 +169,16 @@ def core_shipped() -> ShippedPrims:
     """
     global _CORE_SHIPPED
     if _CORE_SHIPPED is None:
+        # ``synop_shipped`` is the live set (persisted AUTO_TIER
+        # admissions join it); the pinned mlopt-core predating it
+        # falls back to the static SYNOP_SHIPPED snapshot.
+        _shipped_names = getattr(minted, "synop_shipped", None)
         _CORE_SHIPPED = ShippedPrims(
-            names=minted.SYNOP_SHIPPED,
+            names=(
+                _shipped_names()
+                if _shipped_names is not None
+                else minted.SYNOP_SHIPPED
+            ),
             folds=tuple(minted.prim_folds()),
             fold_for=minted.prim_fold,
         )
@@ -331,6 +340,46 @@ def seat_shipped(
         register_denotation(name, fold.rhs, expand.rhs, bindings)
         seated += 1
     return seated
+
+
+def admit_prim(
+    prim: dict,
+    rule: Rewrite,
+    *,
+    db: Any = None,
+) -> tuple[Rewrite, Rewrite]:
+    """Admit a gauntlet-cleared prim mint into the core minted store.
+
+    *prim* is the pool's per-shape record (``meta[i]["prim"]`` —
+    ``synop``/``alpha``/``mods``/``sites``/``equal_sites``/
+    ``handler`` plus the depth-N fields); *rule* is the candidate's
+    live fold ``Rewrite`` (``prim:<synop>`` with its ``.expand``
+    premise attached — ``Candidate.as_rule()``).  The record is
+    built by :func:`minted_prim_record` and handed to
+    :func:`mlopt_core.laws.minted.admit_prim_record`, which writes
+    the store's ``AUTO_TIER`` and materializes the shipped
+    ``(fold, expand)`` pair.
+
+    The caller owns the gate: this function does NOT re-verify —
+    pass only a mint the admission gauntlet cleared (every
+    ``bench.referees`` stage green, ``machine-original`` novelty).
+    *db* defaults to the shipped ``minted.db``; a scratch path
+    exercises the same write without touching the artifact.
+    Returns the materialized ``(fold, expand)`` pair.
+    """
+    from mlopt_core.laws import minted
+
+    name = prim["synop"]
+    record = minted_prim_record(name, rule, prim)
+    # the pinned mlopt-core predates auto-admission until the eqsat
+    # change lands — fail loudly, never silently skip the write.
+    admit = getattr(minted, "admit_prim_record", None)
+    if admit is None:
+        raise RuntimeError(
+            "mlopt_core.laws.minted.admit_prim_record is missing — "
+            "the pinned mlopt-core predates AUTO_TIER admission"
+        )
+    return admit(name, record, db=db)
 
 
 def minted_prim_record(name: str, rule: Rewrite, prim: dict) -> dict:

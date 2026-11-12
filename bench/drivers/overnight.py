@@ -245,6 +245,7 @@ from mlopt_core.laws.serialize import (
     alpha_key,
     law_from_data,
     law_to_data,
+    missing_hooks,
 )
 from mlopt_discovery import open_game as og
 from mlopt_discovery import prim_mint as _pm
@@ -271,6 +272,7 @@ DEFAULTS: dict[str, Any] = {
     "scan": 2048,
     "compose": 0,
     "xbind": 2,
+    "auto_admit": 0,
 }
 
 #: ``--dry`` — seconds-scale smoke: two episodes, a tiny pool, a
@@ -1822,6 +1824,83 @@ def _classify(rule: Any, bank: list, ctxs: list | None = None) -> dict:
     return rec
 
 
+def _promote_prim(rec: dict, case: dict, evals: list, corpus: str) -> dict:
+    """Build the ``("admit", name)`` cell — one auto-admission attempt.
+
+    The caller owns the gate: this runs only for a mint whose
+    ``("candidate", name)`` cell is ``admitted`` (every
+    ``bench.referees`` stage green — the pay leg is the paying-site
+    evidence) AND whose ``("classify", name)`` verdict is
+    ``machine-original``.  The live ``Rewrite`` is recovered from the
+    deterministic pool rebuild — ``law_from_data`` cannot carry a
+    depth-N record's premises, so a depth-1 record is the only honest
+    fallback (its expand derives from the fold alone).  *rec["prim"]*
+    is the ledger's per-op record; the live ``meta[i]["prim"]`` wins
+    when the rebuild lands.
+    """
+    from mlopt_discovery import prim_mint as _pm
+
+    name = rec["name"]
+    cell: dict[str, Any] = {
+        "name": name,
+        "admitted": False,
+        "reason": "",
+        "synop": "",
+        "fold": "",
+        "expand": "",
+        "missing_hooks": [],
+        "measured": {},
+        "pay": {},
+    }
+    prim = rec.get("prim") or {}
+    cell["synop"] = str(prim.get("synop", ""))
+    rule = None
+    try:
+        ev = next((e for e in evals if e["name"] == name), None)
+        if ev is not None:
+            arena = _arena_for(case, corpus)
+            pool = getattr(arena, "pool", [])
+            i = ev["i"]
+            if i < len(pool) and pool[i].as_rule().name == name:
+                rule = pool[i].as_rule()
+                m = (getattr(arena, "meta", {}) or {}).get(i) or {}
+                if m.get("prim"):
+                    prim = m["prim"]
+    except Exception:
+        rule = None
+    if rule is None:
+        rule = law_from_data(rec["law"])
+    if int(prim.get("depth", 1)) > 1 and not getattr(
+        rule, "premises", ()
+    ):
+        cell["reason"] = (
+            "depth-N record needs the live rule's premises — the "
+            "pool rebuild did not land"
+        )
+        return cell
+    try:
+        fold, expand = _pm.admit_prim(prim, rule)
+    except Exception as e:
+        cell["reason"] = f"{type(e).__name__}: {e}"
+        return cell
+    cell.update(
+        admitted=True,
+        fold=fold.name,
+        expand=expand.name,
+        missing_hooks=list(missing_hooks(expand)),
+        # the gauntlet's own measurements — the paying-site evidence
+        # travels into the admit cell so the ledger records WHAT
+        # paid, not just that the gate passed.
+        measured=dict(rec.get("measured") or {}),
+        pay={
+            s["name"]: s.get("detail")
+            for s in rec.get("stages", [])
+            if s["name"] == "pay"
+        },
+    )
+    return cell
+
+
 # ---------------------------------------------------------------------------
 #  the loop
 # ---------------------------------------------------------------------------
@@ -1840,6 +1919,7 @@ def run(
     compose: int = 0,
     xbind: int = 2,
     prim: dict | None = None,
+    auto_admit: int = 0,
     ckpt: Any,
     ctx: Any = None,
     arm_factory: Any = None,
@@ -1867,6 +1947,10 @@ def run(
     ``min_ops``/``max_ops``/``cap``/``beam``/``max_expand`` plus
     ``bootstrap``/``family_mint``; the ``--prim-*`` flags /
     ``--prim-deep`` preset), ignored on other corpora.
+    ``auto_admit`` caps how many gauntlet-cleared, machine-original
+    prim mints promote into the shipped minted store per run (0 =
+    off; the ``("admit", name)`` cells make it resumable — see
+    :func:`_promote_prim`).
     """
     import torch
 
@@ -2076,6 +2160,82 @@ def run(
                     "provenance": rec["provenance"],
                 }
             )
+    # -- promote: gauntlet-cleared prim mints -> the shipped store --
+    # ``auto_admit`` caps promotions per run.  The gate is the
+    # ledger's own evidence — ``admitted`` (every referee stage
+    # green; the pay leg IS the paying-site check) plus a
+    # ``machine-original`` classify.  Every attempt lands an
+    # ``("admit", name)`` cell so a resume replays the verdict
+    # rather than re-writing the store.
+    auto_admitted: list[dict] = []
+    if auto_admit:
+        if corpus != "zoo-prim":
+            log(
+                "    auto-admit: only --corpus zoo-prim mints prim "
+                "records — ignored"
+            )
+        else:
+            done = 0
+            for rec in cands:
+                if done >= auto_admit:
+                    break
+                if not rec["admitted"] or not rec.get("prim"):
+                    continue
+                if rec.get("family") != _PRIM_FAMILY:
+                    continue
+                cres = ckpt.get(("classify", rec["name"])) or {}
+                if cres.get("verdict") != "machine-original":
+                    continue
+                # the paying-site check — the pay leg must be green,
+                # not merely present: ``admitted`` already implies it,
+                # but the cell records the evidence explicitly.
+                if not any(
+                    s["name"] == "pay" and s["passed"]
+                    for s in rec.get("stages", [])
+                ):
+                    continue
+                ep = rec.get("episode")
+                evals = (
+                    ckpt.get(("episode", ep))["evals"]
+                    if isinstance(ep, int) and 0 <= ep < len(cases)
+                    else []
+                )
+                akey = ("admit", rec["name"])
+                if ckpt.done(akey):
+                    prev = ckpt.get(akey)
+                    if prev.get("admitted"):
+                        auto_admitted.append(prev)
+                        done += 1
+                    continue
+                cell = (
+                    _promote_prim(rec, cases[ep], evals, corpus)
+                    if evals
+                    else {
+                        "name": rec["name"],
+                        "admitted": False,
+                        "reason": "episode record missing",
+                        "synop": "",
+                        "fold": "",
+                        "expand": "",
+                        "missing_hooks": [],
+                        "measured": {},
+                        "pay": {},
+                    }
+                )
+                ckpt.record(akey, cell)
+                if cell["admitted"]:
+                    done += 1
+                    auto_admitted.append(cell)
+                    log(
+                        f"    admit {rec['name']:<28} -> "
+                        f"{cell['fold']} ({cell['expand']})"
+                    )
+                else:
+                    log(
+                        f"    admit {rec['name']:<28} refused: "
+                        f"{cell['reason'][:60]}"
+                    )
+
     arena = Counter(
         ev["verdict"]
         for i in range(len(cases))
@@ -2103,6 +2263,7 @@ def run(
         "leg_refusals": dict(leg_deaths),
         "novelty": dict(novelty),
         "finds": finds,
+        "auto_admitted": auto_admitted,
         "candidates": [
             {
                 "name": r["name"],
@@ -2402,6 +2563,23 @@ def render_markdown(summary: dict, *, env: dict | None = None) -> str:
             "**None.** Every admitted law was already a theorem of "
             "the shipped bank — or nothing survived the gauntlet."
         )
+    if summary.get("auto_admitted"):
+        lines += ["", "## Auto-admitted into the shipped store", ""]
+        lines.append(
+            "Gauntlet-cleared, machine-original prim mints promoted "
+            "to ``mlopt_core.laws.minted`` ``AUTO_TIER`` "
+            "(``admit_prim_record``) — machine-authored provenance "
+            "(``AUTO_ADMITTED``).  Persisted records join the "
+            "shipped prim family at the next import exactly like "
+            "the hand-promoted tiers: ``prim_folds`` → "
+            "``MINTED_RULES`` → ``DEFAULT``/``ALL_RULES``."
+        )
+        for a in summary["auto_admitted"]:
+            lines.append(
+                f"- `{a['name']}` → `{a.get('fold', '—')}` "
+                f"(expand `{a.get('expand', '—')}`) — "
+                f"missing_hooks={a.get('missing_hooks') or '()'}"
+            )
     lines += [
         "",
         "## Candidates",
@@ -2670,6 +2848,16 @@ def main(argv: list[str] | None = None) -> int:
         "the mint reads the module's term, not the stream",
     )
     ap.add_argument(
+        "--auto-admit",
+        type=int,
+        default=DEFAULTS["auto_admit"],
+        metavar="N",
+        help="zoo-prim: promote up to N gauntlet-cleared, "
+        "machine-original prim mints into the shipped minted "
+        "store's AUTO_TIER (mlopt_core.laws.minted."
+        "admit_prim_record) — 0 disables",
+    )
+    ap.add_argument(
         "--dry",
         action="store_true",
         help="seconds-scale smoke: 2 episodes, page 6, budget 4",
@@ -2828,6 +3016,13 @@ def main(argv: list[str] | None = None) -> int:
         # minted before the family existed must restart loudly rather
         # than replay a pool the new arm would now grow.
         "fusion": args.corpus in ("zoo-real", "zoo-xmodule"),
+        # the promotion arm is part of the run's contract — a ledger
+        # minted without ``--auto-admit`` must not silently replay
+        # under it (and vice versa): the ``("admit", name)`` cells
+        # make the pass resumable, but the cap is protocol-pinned.
+        "auto_admit": (
+            args.auto_admit if args.corpus == "zoo-prim" else 0
+        ),
     }
     if not args.resume and args.ckpt.exists():
         args.ckpt.unlink()
@@ -2861,6 +3056,9 @@ def main(argv: list[str] | None = None) -> int:
             else 0
         ),
         prim=prim if args.corpus == "zoo-prim" else None,
+        auto_admit=(
+            args.auto_admit if args.corpus == "zoo-prim" else 0
+        ),
         ckpt=ckpt,
     )
 
