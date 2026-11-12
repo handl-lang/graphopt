@@ -71,7 +71,14 @@ THE SCAN TIER
     declared semantics — the ambient
     ``applyd(aff_diag(a, b), h)`` is one map application
     (``a⊙h+b``), not a fold — so mint it only where the fold
-    reading is what the site means.
+    reading is what the site means.  The spelled fold denotation
+    itself is registered: :func:`seq_scan_denotation` spells the
+    recurrence in plain torch (per-step operand evals folded along
+    the step axis), :func:`handler_denotation` resolves it per
+    handler, ``gen_bindings`` delivers it wherever the Triton
+    kernel does not bind, and ``profitable``'s ``denotation_for``
+    hook grades claims against it — the map application is never
+    again a silent stand-in for the fold.
 
 THE DECAYED TIER
     The third codegen tier fuses the decayed-attention element —
@@ -149,6 +156,7 @@ __all__ = [
     "gen_bindings",
     "gen_handlers",
     "gen_sink",
+    "handler_denotation",
     "novel_cost",
     "reduce_heads",
     "reduction_handlers",
@@ -159,6 +167,7 @@ __all__ = [
     "scan_spec",
     "scan_triton_bindings",
     "scan_triton_sink",
+    "seq_scan_denotation",
 ]
 
 #: Ops whose torch bindings are pointwise (shape-preserving) — the
@@ -366,6 +375,16 @@ def gen_bindings(
     for h in handlers.values():
         spec = h["pattern"]
         amvars = tuple(h.get("attr_mvars", ()))
+        den = handler_denotation(h)
+        if den is not None:
+            # seq-scan claim: the spelled spec eval is the ambient
+            # map application, not the fold the minted op declares —
+            # bind the registered fold denotation instead.  It stays
+            # UNcompiled even under ``compile_kernels``: a T-step
+            # python loop gains nothing from dynamo, and the Triton
+            # tier is the fast delivery path where it binds.
+            out[h["kernel"]] = den
+            continue
 
         def fn(*args: Any, s=spec, mvars=amvars, **attrs: Any) -> Any:
             names = _spec_metas(s)
@@ -682,6 +701,27 @@ def _referee_kernel(
     return torch.compile(kerneled), vals
 
 
+def _denotation_kernel(
+    kernel_for: Any, name: str, h: dict, vals: dict
+) -> tuple:
+    """``kernel_for`` consult for denotation-backed claims.
+
+    Same ``(fn, env)`` protocol as :func:`_referee_kernel` but NO
+    spelled-eval fallback: a claim whose spelled arm is a registered
+    denotation (the seq fold) delivers *that denotation* whenever no
+    codegen tier binds, so ``None`` here means kernel ≡ spelled —
+    the caller declines rather than timing a race it cannot win.
+    """
+    if kernel_for is None:
+        return None, vals
+    k = kernel_for(name, h, vals)
+    if isinstance(k, tuple):
+        return k[0], k[1]
+    if k is not None:
+        return k, vals
+    return None, vals
+
+
 def _host(x: Any) -> Any:
     """Move a tensor result host-side for same-device compares."""
     import torch
@@ -732,6 +772,7 @@ def profitable(
     reps: int = 40,
     margin: float = 1.0,
     kernel_for: Any = None,
+    denotation_for: Any = None,
 ) -> dict:
     """Keep only handlers whose compiled kernel beats the spelled site.
 
@@ -749,6 +790,19 @@ def profitable(
     the ``torch.compile``d spelled body (the pointwise path's own
     delivery).  The referee times and verifies *that* callable, so
     a tier is credited only what it would actually ship.
+
+    *denotation_for* overrides the SPELLED arm for claims whose
+    spec tuple does not denote the minted op's semantics:
+    ``denotation_for(name, h, vals)`` returns a positional callable
+    ``fn(*metavar_vals)`` implementing the declared denotation —
+    today only the ``seq``-form scan fold
+    (:func:`handler_denotation`/``seq_scan_denotation`), whose
+    ``("applyd", …)`` spec evals as one map application.  When it
+    returns a callable, the referee times ``kernel_for``'s result
+    against THAT fold and — critically — has NO spelled-eval
+    fallback: if no codegen tier binds, delivery IS the denotation
+    itself, so the claim is declined outright rather than timed
+    fold-vs-map or fold-vs-fold.
 
     Handlers minted from saturated-graph sites carry ``"leaf_env"``
     — the metavar→subterm map recorded at harvest; the referee
@@ -809,12 +863,32 @@ def profitable(
             )
 
         mvs = _spec_metas(h["pattern"])
-        kernel, vals = _referee_kernel(
-            kernel_for, name, h, vals, kerneled
+        den = (
+            denotation_for(name, h, vals)
+            if denotation_for is not None
+            else None
         )
+        if den is not None:
+            kernel, vals = _denotation_kernel(kernel_for, name, h, vals)
+            if kernel is None:
+                # no codegen bound: delivery IS the denotation —
+                # there is no faster arm to time, so the claim
+                # cannot pay (fold-vs-fold would read ~1.0 anyway)
+                continue
+        else:
+            kernel, vals = _referee_kernel(
+                kernel_for, name, h, vals, kerneled
+            )
 
-        def spelled(s=h["pattern"], v=vals) -> Any:
-            return _eval_spec(s, v, bindings)
+        if den is not None:
+
+            def spelled(v=vals, p=den, ms=mvs) -> Any:
+                return p(*[v[m] for m in ms])
+
+        else:
+
+            def spelled(s=h["pattern"], v=vals) -> Any:
+                return _eval_spec(s, v, bindings)
 
         # the verify-before-time gate (and the timing itself) live in
         # the helper; a kernel that raises on its bound values — a
@@ -1418,13 +1492,14 @@ def hybrid_sink(handlers: dict, *, compile_kernels: bool = True) -> Any:
     kernel, and ``om_decayed``/spelled ``matmul(mul(s,d),v)`` specs
     bind to the generated fused-contraction kernel.
     Specs the codegen declines fall back to the
-    ``torch.compile``-wrapped body — EXCEPT sequence-form scan
-    specs: their spelled body evaluates as one map application
-    (``a⊙h+b``), not the fold the minted op declares, so a seq spec
-    the scan codegen cannot lower stays unbound (unpriced-
-    unlowerable) rather than silently delivering a different
-    function.  Unrolled compose-tree specs keep the fallback —
-    their spelled eval IS the carrier semantics, just serial.
+    ``torch.compile``-wrapped body — including sequence-form scan
+    specs, whose fallback is the registered fold denotation
+    (:func:`seq_scan_denotation` via :func:`gen_bindings`): the
+    same function the minted op declares, evaluated serially —
+    slow but never the ambient map application ``_eval_spec``
+    would silently deliver.  Unrolled compose-tree specs keep the
+    ordinary spelled fallback — their spelled eval IS the carrier
+    semantics, just serial.
     """
     from mlopt_core.ops import OpTable
     from mlopt_torch.adapters import TorchSink
@@ -1435,8 +1510,12 @@ def hybrid_sink(handlers: dict, *, compile_kernels: bool = True) -> Any:
         if not _seq_scan_spec(h["pattern"])
     }
     bindings = _ambient_bindings()
+    # ``handlers``, not ``plain``: ``gen_bindings`` now binds seq
+    # scans to their fold denotation — the spelled-eval map
+    # application is never an option — and ``scan_triton_bindings``
+    # below overrides it wherever the generated kernel binds.
     bindings.update(
-        gen_bindings(plain, compile_kernels=compile_kernels)
+        gen_bindings(handlers, compile_kernels=compile_kernels)
     )
     bindings.update(triton_bindings(plain))
     bindings.update(scan_triton_bindings(handlers))
@@ -1657,12 +1736,22 @@ def _scan_info(
 
 
 def _scan_kind(leaves: list | None, attrs: dict | None) -> str | None:
-    """Resolve the spec's carrier kind — attr pin, then arity."""
+    """Resolve the spec's carrier kind — attr pin, then arity.
+
+    ``kind="seq"`` is only meaningful for a ONE-leaf ``aff_diag`` —
+    the sequence form folds a single per-step map over the step
+    axis.  Pinning ``seq`` on a multi-leaf ``affd_compose`` tree
+    would silently keep only ``steps[0]`` in ``_scan_info`` (the
+    other leaves never reach the kernel), so it declines here
+    rather than denote a different recurrence.
+    """
     if leaves is None:
         return None
     kind = (attrs or {}).get("kind")
     if kind is None:
         return "seq" if len(leaves) == 1 else "unrolled"
+    if kind == "seq" and len(leaves) != 1:
+        return None
     return kind if kind in ("seq", "unrolled") else None
 
 
@@ -1707,6 +1796,99 @@ def _unrolled_info(
     ]
     if computed:
         info["computed"] = computed
+
+
+def seq_scan_denotation(spec: Any, *, axis: int | None = None) -> Any:
+    """Return the spelled fold denotation of a ``seq``-form scan spec.
+
+    The minted ``scan_*_k`` op's declared semantics is the fold
+    ``h_{t+1} = a_t ⊙ h_t + b_t`` walked along the step axis — NOT
+    the ambient ``applyd`` map application (``a ⊙ h + b``, once)
+    that ``_eval_spec``/``_IR_TO_TORCH`` produces for the same spec
+    tuple.  The spec tuple denotes the map; the fold is a property
+    of the minted op, so the denotation cannot live in the spec —
+    it lives here as a plain-torch callable, spelled once and
+    shared by every consumer that must grade or deliver the claim:
+
+    * ``profitable``'s ``denotation_for`` hook times the generated
+      kernel against THIS fold, never the map;
+    * ``gen_bindings`` binds the kernel name to it, so ``gen_sink``
+      (and ``hybrid_sink``'s declined-codegen fallback) delivers
+      the declared semantics on any device — slow but correct —
+      instead of silently delivering the map.
+
+    The callable takes the spec metavars positionally (the
+    handler's ``args`` order, ``info["params"]``) and returns the
+    final state.  It broadcasts the sequence operands exactly like
+    :func:`_seq_args`, resolves the step axis through
+    :func:`_seq_axis` (explicit *axis* — ``None`` derives it from
+    the state shape per call), then walks the axis evaluating the
+    ``aff_diag`` operand sub-specs per step through the ordinary
+    bindings and folding ``acc = a_t * acc + b_t`` — the same
+    recurrence, in the same order, the Triton kernel runs.
+
+    Returns ``None`` unless *spec* is a recognised ``kind="seq"``
+    scan spec.  Call-time shape violations (no step axis, an ``h``
+    that cannot broadcast to the state shape) raise — the same
+    contract the Triton binding keeps.
+    """
+    info = scan_spec(spec)
+    if info is None or info["kind"] != "seq":
+        return None
+    parts = _applyd_operands(spec)
+    if parts is None:
+        return None
+    leaves = _affd_leaves(parts[0])
+    if leaves is None or len(leaves) != 1:
+        return None
+    a_spec, b_spec = leaves[0]
+    seq_metas = list(info["seq"])
+    h_meta = info["h"]
+    params = list(info["params"])
+    ax = axis if axis is not None else info.get("axis")
+    bindings = _ambient_bindings()
+
+    def fn(*args: Any, **_attrs: Any) -> Any:
+        import torch
+
+        vals = dict(zip(params, args, strict=True))
+        xs = torch.broadcast_tensors(*(vals[m] for m in seq_metas))
+        full = xs[0].shape
+        if not full:
+            raise ValueError("scan operands carry no step axis")
+        step_ax = _seq_axis(full, vals[h_meta].shape, ax)
+        t_len = full[step_ax]
+        state = full[:step_ax] + full[step_ax + 1 :]
+        moved = [x.movedim(step_ax, 0) for x in xs]
+        acc = torch.broadcast_to(vals[h_meta], state)
+        for t in range(t_len):
+            env = {
+                m: mv[t] for m, mv in zip(seq_metas, moved, strict=True)
+            }
+            a_t = _eval_spec(a_spec, env, bindings)
+            b_t = _eval_spec(b_spec, env, bindings)
+            acc = a_t * acc + b_t
+        return acc
+
+    return fn
+
+
+def handler_denotation(h: dict) -> Any:
+    """Positional spelled denotation for handlers that need one.
+
+    A ``kind="seq"`` scan spec returns the fold callable
+    :func:`seq_scan_denotation` builds at the handler's resolved
+    axis (``h["axis"]`` → spec attr → the ``-2`` default — the same
+    resolution :func:`scan_triton_bindings` applies, so the
+    referee's spelled arm and the delivered kernel agree on the
+    step axis).  Every other handler returns ``None``: its spelled
+    spec eval already IS the denotation and needs no override.
+    """
+    info = scan_spec(h.get("pattern"))
+    if info is None or info["kind"] != "seq":
+        return None
+    ax = h.get("axis", info.get("axis", -2))
+    return seq_scan_denotation(h["pattern"], axis=ax)
 
 
 def _seq_triton_source(info: dict) -> str:

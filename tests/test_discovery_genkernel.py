@@ -284,12 +284,11 @@ class TestGenDomain:
         # T-010 offer guard: ``_claim_cost_gate`` runs the measured
         # ``profitable`` referee once per case over every minted
         # claim whose spelled body is an honest denotation —
-        # ``gen_*``, spelled ``decayed_*``, and unrolled ``scan_*`` —
-        # and drops the losers before the board's handler store is
-        # built.  Sequence-form scans drop outright: their spelled
-        # eval is the map, not the fold, so ``profitable`` would
-        # grade the wrong denotation AND the seated ``gen_sink``
-        # would silently deliver that wrong denotation;
+        # ``gen_*``, spelled ``decayed_*``, and ``scan_*`` in BOTH
+        # forms (unrolled compose-trees spell the carrier
+        # semantics; sequence-form scans carry the registered fold
+        # denotation ``genkernel.seq_scan_denotation``) — and drops
+        # the losers before the board's handler store is built.
         # ``om_decayed``-headed specs (no ``_IR_TO_TORCH`` binding
         # for the spelled side) stay unpriced by design.
         torch = pytest.importorskip("torch")
@@ -320,8 +319,17 @@ class TestGenDomain:
                         "kernel": "decayed_1_k",
                         "args": ("S", "D", "V"),
                     },
-                    "scan_0": {"pattern": ("applyd", "X1", "X2"),
-                               "kernel": "scan_0_k", "args": ("X1", "X2")},
+                    # a sequence-form scan: measurable through the
+                    # registered fold denotation, not dropped
+                    "scan_0": {
+                        "pattern": (
+                            "applyd",
+                            ("aff_diag", "A", "B"),
+                            "H",
+                        ),
+                        "kernel": "scan_0_k",
+                        "args": ("A", "B", "H"),
+                    },
                     "prim:synop_x": {
                         "pattern": ("mul", "X1", "X1"),
                         "kernel": "synop_x",
@@ -332,31 +340,41 @@ class TestGenDomain:
             },
         )
         monkeypatch.setattr(play, "_var_env", lambda *a: {})
-        # scan_0 reads as the sequence form — its spelled eval is the
-        # map application, so the gate must neither measure it nor
-        # leave it offered (the seated gen_sink would mis-denote it)
-        monkeypatch.setattr(
-            gk,
-            "_seq_scan_spec",
-            lambda s: isinstance(s, tuple) and s[0] == "applyd",
-        )
         seen = {}
+        den_seen = {}
 
         def spy(hs, *a, **k):
             seen.update(hs)
+            den_for = k.get("denotation_for")
+            den_seen["scan"] = (
+                den_for("scan_0", hs["scan_0"], {})
+                if den_for is not None
+                else "missing"
+            )
+            den_seen["gen"] = (
+                den_for("gen_0", hs["gen_0"], {})
+                if den_for is not None
+                else "missing"
+            )
             return {"gen_0": hs["gen_0"],
-                    "decayed_0": hs["decayed_0"]}  # keep two
+                    "decayed_0": hs["decayed_0"],
+                    "scan_0": hs["scan_0"]}  # keep three
 
         monkeypatch.setattr(gk, "profitable", spy)
         play._claim_cost_gate(case)
-        # the referee saw gen_*, spelled decayed_*, and would-be
-        # unrolled scan_* — never the seq scan (dropped unpriced),
-        # the om_decayed spec, or the shipped prim fold
-        assert set(seen) == {"gen_0", "gen_1", "decayed_0"}
+        # the referee saw gen_*, spelled decayed_*, AND the seq scan
+        # (measurable via the fold denotation) — never the
+        # om_decayed spec or the shipped prim fold
+        assert set(seen) == {"gen_0", "gen_1", "decayed_0", "scan_0"}
+        # the denotation hook resolves the fold for the seq claim
+        # and declines the ordinary pointwise one
+        assert callable(den_seen["scan"])
+        assert den_seen["gen"] is None
         assert set(case[5]["gen_handlers"]) == {
             "gen_0",
             "decayed_0",
             "decayed_1",
+            "scan_0",
             "prim:synop_x",
         }
         # idempotent: a second call does not re-consult the referee
@@ -1868,6 +1886,206 @@ class TestScanHandlers:
         assert gk.scan_handlers([t1], covered=covered) == {}
 
 
+class TestSeqScanDenotation:
+    """``seq_scan_denotation`` — the spelled fold, device-free."""
+
+    def test_denotation_matches_spelled_fold(self):
+        torch = pytest.importorskip("torch")
+        spec = ("applyd", ("aff_diag", "A", "B"), "H")
+        fn = gk.seq_scan_denotation(spec)
+        assert fn is not None
+        B, T, d = 2, 16, 8
+        a = (torch.rand(B, T, d) * 0.5 + 0.4).double()
+        b = torch.randn(B, T, d).double()
+        h = torch.randn(B, d).double()
+        torch.testing.assert_close(
+            fn(a, b, h), _spelled_scan(a, b, h), atol=1e-12, rtol=1e-12
+        )
+        # (T, d) layout — the -2 default resolves axis 0
+        a1 = (torch.rand(T, d) * 0.5 + 0.4).double()
+        b1 = torch.randn(T, d).double()
+        h1 = torch.randn(d).double()
+        torch.testing.assert_close(
+            fn(a1, b1, h1),
+            _spelled_scan(a1, b1, h1, axis=0),
+            atol=1e-12,
+            rtol=1e-12,
+        )
+
+    def test_denotation_evals_subspec_operands(self):
+        torch = pytest.importorskip("torch")
+        spec = (
+            "applyd",
+            ("aff_diag", ("sigmoid", "G"), ("mul", "B", "X")),
+            "H",
+        )
+        fn = gk.seq_scan_denotation(spec)
+        B, T, d = 2, 12, 6
+        G = torch.randn(B, T, d).double()
+        Bm = torch.randn(B, T, d).double()
+        X = (torch.rand(B, T, d) + 0.5).double()
+        h = torch.randn(B, d)
+        got = fn(G, Bm, X, h)
+        aa, bb = torch.broadcast_tensors(
+            torch.sigmoid(G), Bm * X
+        )
+        aa, bb = aa.movedim(1, 0), bb.movedim(1, 0)
+        want = h
+        for t in range(T):
+            want = aa[t] * want + bb[t]
+        torch.testing.assert_close(got, want, atol=1e-12, rtol=1e-12)
+
+    def test_denotation_broadcasts_shared_operands(self):
+        torch = pytest.importorskip("torch")
+        spec = ("applyd", ("aff_diag", "A", "B"), "H")
+        fn = gk.seq_scan_denotation(spec)
+        T, d = 10, 8
+        # a shared (d,) decay broadcasts over the step axis
+        ash = (torch.rand(d) * 0.5 + 0.4).double()
+        bb = torch.randn(T, d).double()
+        h = torch.randn(d).double()
+        torch.testing.assert_close(
+            fn(ash, bb, h),
+            _spelled_scan(ash, bb, h, axis=0),
+            atol=1e-12,
+            rtol=1e-12,
+        )
+
+    def test_denotation_axis_explicit_and_derived(self):
+        torch = pytest.importorskip("torch")
+        spec = ("applyd", ("aff_diag", "A", "B"), "H")
+        T, d = 9, 5
+        a = (torch.rand(T, d) * 0.5 + 0.4).double()
+        b = torch.randn(T, d).double()
+        h = torch.randn(d).double()
+        want = _spelled_scan(a, b, h, axis=0)
+        torch.testing.assert_close(
+            gk.seq_scan_denotation(spec, axis=0)(a, b, h),
+            want,
+            atol=1e-12,
+            rtol=1e-12,
+        )
+        torch.testing.assert_close(
+            gk.seq_scan_denotation(spec, axis=None)(a, b, h),
+            want,
+            atol=1e-12,
+            rtol=1e-12,
+        )
+
+    def test_denotation_declines_non_seq(self):
+        # unrolled compose trees and non-scan specs get no fold
+        assert (
+            gk.seq_scan_denotation(
+                (
+                    "applyd",
+                    ("affd_compose", ("aff_diag", "A", "B"), ("aff_diag", "C", "D")),
+                    "H",
+                )
+            )
+            is None
+        )
+        assert gk.seq_scan_denotation(("mul", "X1", "X2")) is None
+        # a compose tree PINNED kind="seq" is not a scan spec at all
+        # — the arity guard declines rather than silently keep one leaf
+        assert (
+            gk.scan_spec(
+                (
+                    "applyd",
+                    (
+                        "affd_compose",
+                        ("aff_diag", "A", "B"),
+                        ("aff_diag", "C", "D"),
+                    ),
+                    "H",
+                    {"kind": "seq"},
+                )
+            )
+            is None
+        )
+
+    def test_handler_denotation_resolves_axis(self):
+        spec = ("applyd", ("aff_diag", "A", "B"), "H")
+        h = {"pattern": spec, "kernel": "k", "args": ("A", "B", "H")}
+        assert gk.handler_denotation(h) is not None
+        # spec attr axis wins over the handler default chain only
+        # when the handler carries none — mirror scan_triton_bindings
+        h_ax = dict(h, axis=0)
+        assert gk.handler_denotation(h_ax) is not None
+        assert gk.handler_denotation({"pattern": ("mul", "X", "Y")}) is None
+
+    def test_gen_bindings_binds_the_fold_on_cpu(self):
+        torch = pytest.importorskip("torch")
+        hs = {
+            "s": {
+                "pattern": ("applyd", ("aff_diag", "A", "B"), "H"),
+                "kernel": "sc_den",
+                "args": ("A", "B", "H"),
+                "axis": -2,
+            }
+        }
+        bindings = gk.gen_bindings(hs, compile_kernels=False)
+        T, d = 12, 7
+        a = (torch.rand(2, T, d) * 0.5 + 0.4).double()
+        b = torch.randn(2, T, d).double()
+        h = torch.randn(2, d).double()
+        torch.testing.assert_close(
+            bindings["sc_den"](a, b, h),
+            _spelled_scan(a, b, h),
+            atol=1e-12,
+            rtol=1e-12,
+        )
+        # and the spelled-eval map application is NOT what ships
+        assert bindings["sc_den"](a, b, h).shape == h.shape
+
+    def test_profitable_denotation_needs_a_kernel(self):
+        # a seq claim whose codegen binds nothing cannot pay —
+        # delivery IS the denotation, so the referee declines
+        # rather than timing fold-vs-fold (or worse, fold-vs-map)
+        torch = pytest.importorskip("torch")
+        a, b, h = _v("a", 4, 8), _v("b", 4, 8), _v("h", 8)
+        hs = {
+            "scan_0": {
+                "pattern": ("applyd", ("aff_diag", "A", "B"), "H"),
+                "kernel": "scan_0_k",
+                "args": ("A", "B", "H"),
+                "leaf_env": {"A": a, "B": b, "H": h},
+            }
+        }
+        var_env = {
+            "a": (torch.rand(4, 8) * 0.5 + 0.4).double(),
+            "b": torch.randn(4, 8).double(),
+            "h": torch.randn(8).double(),
+        }
+        term = _p("applyd", _p("aff_diag", a, b), h)
+        keep = gk.profitable(
+            hs,
+            term,
+            var_env,
+            reps=2,
+            kernel_for=lambda *a, **k: None,
+            denotation_for=play._claim_denotation_for,
+        )
+        assert keep == {}
+        # a bound kernel is verified against the FOLD and kept at a
+        # huge margin — the spelled arm is the denotation, not the
+        # ambient map (which would verify-fail outright)
+        def kernel(*args):
+            return gk.seq_scan_denotation(
+                ("applyd", ("aff_diag", "A", "B"), "H")
+            )(*args)
+
+        keep2 = gk.profitable(
+            hs,
+            term,
+            var_env,
+            reps=2,
+            margin=1e9,
+            kernel_for=lambda n, hh, v: (kernel, v),
+            denotation_for=play._claim_denotation_for,
+        )
+        assert keep2 == hs
+
+
 class TestScanSink:
     """``scan_triton_sink`` — the generated op is supported + lowerable."""
 
@@ -1950,13 +2168,18 @@ class TestHybridSinkScan:
         )
         assert got.shape == hv.shape
 
-    def test_seq_spec_never_falls_back_to_spelled(self, monkeypatch):
-        pytest.importorskip("torch")
+    def test_seq_spec_falls_back_to_the_fold_denotation(
+        self, monkeypatch
+    ):
+        torch = pytest.importorskip("torch")
         pytest.importorskip("triton")
         import importlib.util
 
-        # module load declines → the seq spec must stay unbound: the
-        # spelled eval (a⊙h+b) is a DIFFERENT function, not a fallback
+        # module load declines → the seq spec binds the registered
+        # fold denotation (``seq_scan_denotation`` via
+        # ``gen_bindings``): the SAME function the minted op
+        # declares, evaluated serially — never the ambient map
+        # application ``_eval_spec`` would silently deliver
         monkeypatch.setattr(
             importlib.util,
             "spec_from_file_location",
@@ -1970,7 +2193,35 @@ class TestHybridSinkScan:
             }
         }
         sink = gk.hybrid_sink(hs, compile_kernels=False)
-        assert "sc_no_fb" not in sink.supported_ops
+        assert "sc_no_fb" in sink.supported_ops
+        from mlopt_core.ir import IR
+
+        a = _v("a", 16, 8)
+        b_ = _v("b", 16, 8)
+        h = _v("h", 8)
+        ir = IR(
+            root=_p("sc_no_fb", a, b_, h),
+            inputs=[a, b_, h],
+            input_names={"a", "b", "h"},
+            params={},
+        )
+        mod = sink.lower(ir, params={})
+        dt = torch.float64
+        av = torch.rand(16, 8) * 0.5 + 0.4
+        bv = torch.randn(16, 8)
+        hv = torch.randn(8)
+        got = mod(av.to(dt), bv.to(dt), hv.to(dt))
+        # the FOLD — a map-application fallback would return a
+        # (T,d)-shaped a⊙h+b instead of the (d,) final state
+        torch.testing.assert_close(
+            got,
+            _spelled_scan(
+                av.to(dt), bv.to(dt), hv.to(dt), axis=0
+            ),
+            atol=1e-12,
+            rtol=1e-12,
+        )
+        assert got.shape == hv.shape
 
     def test_unrolled_spec_keeps_the_serial_fallback(self, monkeypatch):
         pytest.importorskip("torch")

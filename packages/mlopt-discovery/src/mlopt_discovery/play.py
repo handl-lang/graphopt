@@ -893,23 +893,25 @@ def _claim_measurable(tag: str, h: dict) -> bool:
     pointwise and ``decayed_*`` bodies evaluate through the
     ordinary bindings (except ``om_decayed``-headed specs, whose
     spelled side lives in ``_MEASURED_BINDINGS``, not
-    ``_IR_TO_TORCH`` — unmeasurable stays unpriced); ``scan_*``
-    *unrolled* compose-tree specs' spelled eval IS the carrier
-    semantics; *sequence*-form scans are excluded — their spelled
-    eval is the map application, not the fold the minted op
-    declares, so ``profitable`` would grade the wrong denotation.
-    ``red_*`` bodies evaluate through the ordinary bindings —
-    the spelled spec IS the denotation (the reduction tier has no
-    separate codegen; delivery is the compiled spelled body), so
-    they are measurable like ``gen_*``/``decayed_*``.
+    ``_IR_TO_TORCH`` — unmeasurable stays unpriced); ``red_*``
+    bodies evaluate through the ordinary bindings — the spelled
+    spec IS the denotation (the reduction tier has no separate
+    codegen; delivery is the compiled spelled body), so they are
+    measurable like ``gen_*``/``decayed_*``.  ``scan_*`` claims
+    are measurable in BOTH forms: *unrolled* compose-tree specs'
+    spelled eval IS the carrier semantics, and *sequence*-form
+    scans carry a registered spelled fold denotation
+    (``genkernel.handler_denotation`` /
+    ``seq_scan_denotation``) that ``profitable``'s
+    ``denotation_for`` hook and ``gen_bindings`` both use — the
+    ambient map application is never the referee's or the
+    sink's stand-in for the fold.
     """
     from mlopt_discovery import genkernel as gk
 
     if tag.startswith(("gen_", "decayed_", "red_")):
         return "om_decayed" not in gk._spec_ops(h.get("pattern"))
-    return tag.startswith("scan_") and not gk._seq_scan_spec(
-        h.get("pattern")
-    )
+    return tag.startswith("scan_")
 
 
 def _claim_cost_gate(case: Any) -> None:
@@ -938,18 +940,18 @@ def _claim_cost_gate(case: Any) -> None:
       ``_MEASURED_BINDINGS``, not ``_IR_TO_TORCH``, so the referee's
       spelled side cannot evaluate them — unmeasurable stays
       unpriced rather than silently dropped;
-    * ``scan_*`` *unrolled* compose-tree specs — their spelled eval
-      IS the carrier semantics (``hybrid_sink``'s own rule).  The
-      *sequence*-form scan specs are dropped outright: their spelled
-      eval is the map application, not the fold the minted op
-      declares, so ``profitable`` would grade the wrong denotation —
-      AND the sink this board seats (``gen_sink`` via
-      ``gen_bindings``) would bind them to exactly that wrong
-      denotation.  ``hybrid_sink`` is the only honest delivery for
-      seq scans (it binds the generated fold kernel, or leaves the
-      op unbound rather than silently map it), and the gen board
-      does not seat it — so the offer is removed, not merely left
-      unpriced (``_zoo_case`` applies the same drop at intake);
+    * ``scan_*`` — BOTH forms are measurable now.  *Unrolled*
+      compose-tree specs' spelled eval IS the carrier semantics
+      (``hybrid_sink``'s own rule).  *Sequence*-form scans carry a
+      registered spelled fold denotation —
+      ``genkernel.seq_scan_denotation`` spells the recurrence in
+      plain torch and ``gen_bindings`` delivers it wherever the
+      Triton kernel does not bind — so ``profitable``'s
+      ``denotation_for`` hook times the generated fold kernel
+      against the fold itself, never the ambient map application
+      the ``("applyd", …)`` spec tuple evals to.  A seq claim
+      with no bound codegen declines outright (delivery IS the
+      denotation — there is no faster arm to beat);
     * ``red_*`` reduction-bodied fusions — the spelled
       ``mean``/``sum``/``softmax``-headed body evaluates through the
       ordinary bindings and IS the denotation (the tier ships the
@@ -973,26 +975,7 @@ def _claim_cost_gate(case: Any) -> None:
         for k, v in ex["gen_handlers"].items()
         if _claim_measurable(k, v)
     }
-    # seq-form scans drop whether or not anything else is priced —
-    # unpriced AND undeliverable through the seated ``gen_sink``
-    # (see the scope note above)
-    seq_dropped = {
-        k
-        for k, v in ex["gen_handlers"].items()
-        if gk._seq_scan_spec(v.get("pattern"))
-    }
     if not minted:
-        if not seq_dropped:
-            return
-        ex["gen_handlers"] = {
-            k: v
-            for k, v in ex["gen_handlers"].items()
-            if k not in seq_dropped
-        }
-        if ex.get("sink") is not None:
-            ex["sink"] = gk.gen_sink(
-                ex["gen_handlers"], compile_kernels=False
-            )
         return
     keep = gk.profitable(
         minted,
@@ -1000,8 +983,9 @@ def _claim_cost_gate(case: Any) -> None:
         _var_env(ex["ir"], ex["leaves"], ex["input"]),
         reps=20,
         kernel_for=_triton_kernel_for,
+        denotation_for=_claim_denotation_for,
     )
-    dropped = (set(minted) - set(keep)) | seq_dropped
+    dropped = set(minted) - set(keep)
     if not dropped:
         return
     ex["gen_handlers"] = {
@@ -1324,6 +1308,22 @@ def _triton_kernel_for(tag: str, h: dict, vals: dict) -> Any:
     return kern, cvals
 
 
+def _claim_denotation_for(tag: str, h: dict, vals: dict) -> Any:
+    """``profitable``'s ``denotation_for``: the seq fold, or ``None``.
+
+    Returns the positional spelled-fold callable
+    ``genkernel.handler_denotation`` registers for ``kind="seq"``
+    scan specs — the denotation the minted op declares — so the
+    referee times the generated fold kernel against the fold
+    itself, never the ambient ``applyd`` map application the spec
+    tuple evals to.  ``None`` for every other claim: their spelled
+    spec eval already IS the denotation.
+    """
+    from mlopt_discovery import genkernel as gk
+
+    return gk.handler_denotation(h)
+
+
 def _probe_delivery(
     sink: Any,
     ir: Any,
@@ -1387,24 +1387,21 @@ def _zoo_case(wl: Any, *, dtype: str = "fp64") -> Any:
     # the env must bind the input vars too — a param-only env makes
     # every site touching the feed eval-fail and silently skip.
     # Only *measurable* claims are priced (``_claim_measurable`` —
-    # the same predicate ``_claim_cost_gate`` applies): a
-    # sequence-form scan's spelled eval is the map application, not
-    # the fold it declares, so timing it would grade the wrong
-    # denotation.  Seq scans are therefore *dropped* here rather
-    # than kept unpriced: this intake sink is ``gen_sink``, whose
-    # spelled binding would silently deliver the map semantics —
-    # ``hybrid_sink`` is the only honest delivery for them and the
-    # zoo case does not seat it.  Other unmeasurable claims
-    # (``om_decayed``-headed decayed specs) keep their seat unpriced,
-    # exactly as the board-build gate leaves them — an undeliverable
-    # binding fails loudly there, never silently.
+    # the same predicate ``_claim_cost_gate`` applies).  Sequence-
+    # form scans ARE measurable: ``denotation_for`` hands the
+    # referee the registered fold denotation
+    # (``genkernel.handler_denotation``) as the spelled arm, so the
+    # kernel is graded fold-vs-fold — and ``gen_sink`` below binds
+    # the same denotation wherever the Triton kernel does not, so
+    # delivery can never silently ship the ambient map
+    # application.  Other unmeasurable claims (``om_decayed``-
+    # headed decayed specs) keep their seat unpriced, exactly as
+    # the board-build gate leaves them — an undeliverable binding
+    # fails loudly there, never silently.
     var_env = _var_env(ir, leaves, feed)
     priced = {k: v for k, v in genh.items() if _claim_measurable(k, v)}
     unpriced = {
-        k: v
-        for k, v in genh.items()
-        if not _claim_measurable(k, v)
-        and not gk._seq_scan_spec(v.get("pattern"))
+        k: v for k, v in genh.items() if not _claim_measurable(k, v)
     }
     genh = {
         **unpriced,
@@ -1414,6 +1411,7 @@ def _zoo_case(wl: Any, *, dtype: str = "fp64") -> Any:
             var_env,
             reps=20,
             kernel_for=_triton_kernel_for,
+            denotation_for=_claim_denotation_for,
         ),
     }
     sink = gk.gen_sink(genh, compile_kernels=False)
