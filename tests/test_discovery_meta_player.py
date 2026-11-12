@@ -271,7 +271,7 @@ class TestOracle:
     def test_oracle_claims_paying_board(self):
         case = [
             c
-            for c in mp.gen_cases(0, 12)
+            for c in mp.gen_cases(0, 12, coverage=False)
             if c[0].endswith(":silu")
         ][0]
         reward, line = mp.oracle_line(case, budget=8)
@@ -283,7 +283,7 @@ class TestOracle:
     def test_oracle_declines_control_board(self):
         case = [
             c
-            for c in mp.gen_cases(0, 12)
+            for c in mp.gen_cases(0, 12, coverage=False)
             if c[0].endswith(":control")
         ][0]
         reward, line = mp.oracle_line(case, budget=8)
@@ -305,7 +305,7 @@ class TestOracle:
             assert p in plans
 
     def test_imitate_oracle_clones_demonstrations(self):
-        cases = mp.gen_cases(0, 8)
+        cases = mp.gen_cases(0, 8, coverage=False)
         plans = mp.plan_oracles(cases, budget=8)
         p = mp.MetaLearnedPlayer(0, weights={})
         res = mp.imitate_oracle(p, cases, plans, budget=8)
@@ -322,10 +322,17 @@ class TestOracle:
 
 class TestDriver:
     def test_gen_cases_kinds(self):
-        cases = mp.gen_cases(0, 20)
+        cases = mp.gen_cases(0, 20, coverage=False)
         kinds = {c[0].split(":", 1)[1] for c in cases}
         assert len(cases) == 20
         assert {"silu", "control"} <= kinds
+        # the coverage arm appends the gap-targeting kinds
+        from mlopt_discovery import corpus_cov as _cc
+
+        full = mp.gen_cases(0, 200)
+        full_kinds = {c[0].split(":", 1)[1] for c in full}
+        cov_kinds = {k for k, _b in _cc.coverage_builders()}
+        assert full_kinds & cov_kinds
 
     def test_train_and_evaluate(self):
         cases = mp.gen_cases(1, 4)
@@ -358,7 +365,7 @@ class TestDriver:
         )
         case = [
             c
-            for c in mp.gen_cases(7919, 10)
+            for c in mp.gen_cases(7919, 10, coverage=False)
             if "silu" == c[0].split(":")[1]
         ][0]
         scripted = ma.MetaArena(case[1], case[2], cost_fn=count_cost)
@@ -494,13 +501,15 @@ class TestSpelledLines:
 
     def _silu_case(self):
         return next(
-            c for c in mp.gen_cases(0, 12) if c[0].endswith(":silu")
+            c
+            for c in mp.gen_cases(0, 12, coverage=False)
+            if c[0].endswith(":silu")
         )
 
     def _control_case(self):
         return next(
             c
-            for c in mp.gen_cases(0, 12)
+            for c in mp.gen_cases(0, 12, coverage=False)
             if c[0].endswith(":control")
         )
 
@@ -568,7 +577,9 @@ class TestSpelledLines:
 
     def test_candidate_lines_multi_claim_variants(self):
         case = next(
-            c for c in mp.gen_cases(0, 30) if c[0].endswith(":swiglu")
+            c
+            for c in mp.gen_cases(0, 30, coverage=False)
+            if c[0].endswith(":swiglu")
         )
         st = mp._board(case, count_cost, 20_000).observe()
         lines = mp._candidate_lines(st)

@@ -53,7 +53,7 @@ from mlopt_core.cost.basic import count_cost
 from mlopt_core.ir import Const, Op, TensorType, Var
 from mlopt_core.laws import DEFAULT
 
-from . import lawdata, meta_prior
+from . import corpus_cov, lawdata, meta_prior
 from . import meta_arena as ma
 
 __all__ = [
@@ -607,7 +607,7 @@ def _key(action: ma.Action) -> tuple:
 # ---------------------------------------------------------------------------
 
 
-def gen_cases(seed: int, n: int) -> list:
+def gen_cases(seed: int, n: int, *, coverage: bool = True) -> list:
     """Seeded case variants — the mixed board's paying structures.
 
     Kinds: ``silu`` sites under a ruleset with ``silu_fold``
@@ -642,6 +642,15 @@ def gen_cases(seed: int, n: int) -> list:
       moves off the ``claim_*_extract`` compressions onto the
       spelled ``declare→saturate→handle→extract`` macro — the first
       corpus boards whose winning offer is a four-step seq.
+
+    The coverage arm (``corpus_cov``, Stage-1 lever 1) appends the
+    gap-targeting kinds when *coverage* is true (the default):
+    ``law_*`` spelled forms arming the shipped apply-laws,
+    ``scan`` carriers under the scan-extended ruleset, and the
+    ``ew_gap``/``reduce_gap``/``view_gap``/``kernel_ops``/
+    ``mixed_gap`` vocabulary holes the ten hand kinds never
+    produced.  ``coverage=False`` reproduces the ten-kind stream
+    exactly — the pre-extension corpus, kept as the A/B control.
     """
     rng = random.Random(seed)
     x = Var("x", TensorType((4, 4)))
@@ -748,6 +757,11 @@ def gen_cases(seed: int, n: int) -> list:
             ),
         ),
     ]
+    if coverage:
+        builders += [
+            (kind, (lambda b: lambda: b(rng))(build))
+            for kind, build in corpus_cov.coverage_builders()
+        ]
     out = []
     for i in range(n):
         kind, build = builders[rng.randrange(len(builders))]
