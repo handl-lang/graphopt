@@ -388,6 +388,52 @@ class TestEdges:
         assert rc == 0
         assert "deliver[" in capsys.readouterr().out
 
+    def test_deliver_runner_arm_cpu_declines(self):
+        # the CudaGraphRunner arm is additive: a CPU deliverable
+        # declines honestly and keeps the eager module
+        pytest.importorskip("torch")
+        cases = play._torch_cases(0, 2)
+        res = play.deliver(
+            "torch", cases[0], ma.ScriptedPlayer(), budget=6
+        )
+        assert res["delivered"] and res["verified"]
+        assert res["runner"] == "cuda_graph"
+        assert res["plan_tape"] is True
+        assert res["cuda_graph"] is False
+        assert res["runner_note"] == "inputs not CUDA tensors"
+        assert "graph_us" not in res
+
+    @pytest.mark.requires_cuda
+    def test_deliver_runner_arm_cuda_captures(self):
+        # the T-034 case end to end: a verified zoo extraction on
+        # CUDA delivers the graph-replay module with honest
+        # eager-vs-graph timings and a zero output delta
+        torch = pytest.importorskip("torch")
+        pytest.importorskip("mlopt_cuda")
+        from mlopt_discovery import zoo
+
+        wl = next(
+            w
+            for w in zoo.zoo(64, 32, 8)
+            if w.name == "GatedDeltaRule"
+        )
+        case = play._zoo_case(wl, dtype="fp32")
+        ex = case[5]
+        ex["model"] = ex["model"].to("cuda")
+        feed = ex["input"]
+        ex["input"] = (
+            feed.to("cuda")
+            if torch.is_tensor(feed)
+            else tuple(t.to("cuda") for t in feed)
+        )
+        res = play.deliver("gen", case, ma.ScriptedPlayer(), budget=12)
+        assert res["delivered"] and res["verified"]
+        assert res["cuda_graph"] is True, res.get("runner_note")
+        assert res["plan_tape"] is True
+        assert res["graph_max_abs"] == 0.0
+        assert res["graph_us"] < res["deliver_us"]
+        assert res["graph_speedup"] > 1.0
+
     def test_scripted_search_drains_at_all_played(self):
         # every rule played while the board lives → the playbook
         # stops, no dead moves (unreachable under the horizon
@@ -888,6 +934,92 @@ class TestSeqScanSites:
         assert set(h["leaf_env"]) == set(h["args"])
         assert gk.handler_denotation(h) is not None
 
+    def test_scan_handler_carries_chain_route(self):
+        # the site record's chain root must reach the handler entry —
+        # it is the deliver-time route's LHS (the ``applyd`` claim
+        # pattern never occurs in raw IR, so delivery rewrites the
+        # extracted chain's e-class to the kernel call instead)
+        pytest.importorskip("torch")
+        from mlopt_discovery import genkernel as gk
+
+        term = self._recurrence()
+        hs = gk.scan_handlers(play._seq_scan_sites(term))
+        assert len(hs) == 1
+        h = next(iter(hs.values()))
+        assert h["chain"] is term
+
+    def test_deliverable_routes_chain_to_scan_kernel(self):
+        # end-to-end at term level: the board's ``deliverable``
+        # rewrites the extracted recurrence chain to ``scan_<i>_k``
+        # — the op every scan-aware sink binds — while a board
+        # without the route delivers the spelled chain unchanged.
+        pytest.importorskip("torch")
+        from mlopt_core.ir import op_repr
+        from mlopt_discovery import genkernel as gk
+
+        term = self._recurrence()
+        hs = gk.scan_handlers(play._seq_scan_sites(term))
+        board = ma.MetaArena(term, handlers=hs)
+        out = op_repr(board.deliverable(term))
+        assert "scan_0_k" in out
+        assert "applyd" not in out
+        # no route data → the spelled chain delivers verbatim
+        plain = ma.MetaArena(term)
+        assert op_repr(plain.deliverable(term)) == op_repr(term)
+
+    def test_route_matches_eclass_member_not_chain_object(self):
+        # saturation rewrites inside the chain freely: the extracted
+        # representative is usually a DIFFERENT member of the chain's
+        # e-class (a folded variant, or a declared fold op holding
+        # the whole class).  The route must fire on the class, not
+        # the collector's ``chain`` object.
+        pytest.importorskip("torch")
+        from mlopt_core.egraph import EGraph, Rewrite
+        from mlopt_core.ir import op_repr
+        from mlopt_discovery import genkernel as gk
+
+        term = self._recurrence()
+        hs = gk.scan_handlers(play._seq_scan_sites(term))
+        h = next(iter(hs.values()))
+        from mlopt_core.cost import count_cost
+
+        eg = EGraph()
+        root = eg.add_term(term)
+        # a stand-in member of the chain's class under a different
+        # op name — the e-graph merges it; extraction picks it on
+        # cost (one op beats the whole chain).  The route must still
+        # recognise the class.
+        proxy = Op.make("scan_proxy", next(iter(h["leaf_env"].values())))
+        eg.apply_rule(
+            Rewrite(
+                name="test_proxy",
+                lhs=h["chain"],
+                rhs=proxy,
+                law="test",
+            ),
+            root,
+        )
+        best = eg.extract_best(root, count_cost)
+        assert best == proxy
+        routed = ma._route_scan_chains(best, hs, eg)
+        assert "scan_0_k" in op_repr(routed)
+
+    def test_route_declines_incomplete_binding(self):
+        # a handler whose leaf_env cannot instantiate every arg
+        # keeps the spelled chain — never a partial kernel call
+        pytest.importorskip("torch")
+        from mlopt_core.ir import op_repr
+        from mlopt_discovery import genkernel as gk
+
+        term = self._recurrence()
+        hs = gk.scan_handlers(play._seq_scan_sites(term))
+        h = dict(next(iter(hs.values())))
+        # present but binds only one metavar — the kernel call cannot
+        # be instantiated, so the spelled chain must deliver
+        h["leaf_env"] = dict(list(h["leaf_env"].items())[:1])
+        board = ma.MetaArena(term, handlers={"scan_0": h})
+        assert op_repr(board.deliverable(term)) == op_repr(term)
+
     def test_seq_sites_decline_wrong_index_order(self):
         # selects walking the axis backwards are not the fold's
         # step order — the site must decline, not relabel
@@ -1073,6 +1205,190 @@ class TestSeqScanSites:
                 Op.make("mul", x, h),
                 Op.make("select", y, dim=1, index=t),
             )
+        assert play._seq_scan_sites(h) == []
+
+    def _proj_recurrence(self, t_len: int = 3):
+        """In-step projections + loop-invariant leaves.
+
+        ``h_t = a·h + sigmoid(x_t@W)·(x_t@V)`` — the bare-``Param`` grammar
+        gap: ``x_t @ W`` is a ``matmul`` over a per-step ``select``
+        and ``a`` is a whole-tensor ``Param``.  The collector pulls
+        the select through the projection (the operand binds the
+        hoisted ``x @ W`` sequence) and mints ``a`` as a ``"const"``
+        meta bound whole — neither reaches the step skeleton.
+        """
+        from mlopt_core.ir import Op, Param, TensorType, Var
+
+        def v(n, *s):
+            return Var(n, TensorType(s))
+
+        def p(n, *s):
+            return Param(n, TensorType(s))
+
+        leaves = {
+            "X": v("X", t_len, 2, 4),
+            "W": p("W", 4, 4),
+            "V": p("V", 4, 4),
+            "A": p("A", 4),
+        }
+        X, W, V, A = leaves["X"], leaves["W"], leaves["V"], leaves["A"]
+        h = v("H0", 2, 4)
+        for t in range(t_len):
+            xt = Op.make("select", X, dim=0, index=t)
+            u = Op.make(
+                "mul",
+                Op.make("sigmoid", Op.make("matmul", xt, W)),
+                Op.make("matmul", xt, V),
+            )
+            h = Op.make("add", Op.make("mul", A, h), u)
+        return h, leaves
+
+    def test_seq_sites_lift_in_step_projections(self):
+        # ``matmul(select(x,0,t), W)`` commutes with the slice on a
+        # non-contracted axis — the operand binds ``matmul(x, W)``,
+        # the projected sequence, and the bare ``Param`` decay mints
+        # a ``"const"`` meta the fold reads whole every step.
+        pytest.importorskip("torch")
+        from mlopt_core.ir import Op
+        from mlopt_discovery import genkernel as gk
+
+        term, leaves = self._proj_recurrence()
+        sites = play._seq_scan_sites(term)
+        assert len(sites) == 1
+        s = sites[0]
+        spec = s["spec"]
+        assert spec[0] == "applyd"
+        assert spec[3]["kind"] == "seq"
+        assert spec[3]["const"] == ("P1",)
+        # the lifted operands bind the PROJECTED sequences — the
+        # per-step ``x_t @ W`` spelling became the hoisted ``(x@W)_t``
+        X, W, V = leaves["X"], leaves["W"], leaves["V"]
+        assert s["leaf_env"]["Q1"] == Op.make("matmul", X, W)
+        assert s["leaf_env"]["Q2"] == Op.make("matmul", X, V)
+        assert s["leaf_env"]["P1"] == leaves["A"]
+        info = gk.scan_spec(spec)
+        assert info is not None and info["kind"] == "seq"
+        assert info["seq"] == ["Q1", "Q2"]
+        assert info["const"] == ["P1"]
+        assert set(s["leaf_env"]) == set(gk._spec_metas(spec))
+
+    def test_seq_site_projected_fold_equals_chain(self):
+        # the minted fold must denote the unrolled chain whose steps
+        # spell in-step projections — hoisting is only sound if the
+        # per-step values agree bit-for-bit
+        torch = pytest.importorskip("torch")
+        import mlopt_torch.torch_bridge as tb
+
+        from mlopt_discovery import genkernel as gk
+
+        term, _leaves = self._proj_recurrence()
+        sites = play._seq_scan_sites(term)
+        assert len(sites) == 1
+        s = sites[0]
+        torch.manual_seed(0)
+        var_env = {
+            "X": torch.randn(3, 2, 4, dtype=torch.float64),
+            "W": torch.randn(4, 4, dtype=torch.float64),
+            "V": torch.randn(4, 4, dtype=torch.float64),
+            "A": torch.randn(4, dtype=torch.float64),
+            "H0": torch.randn(2, 4, dtype=torch.float64),
+        }
+        bindings = tb._IR_TO_TORCH
+        vals = {
+            m: gk._bound_val(t, var_env, bindings)
+            for m, t in s["leaf_env"].items()
+        }
+        h = {
+            "pattern": s["spec"],
+            "args": tuple(gk._spec_metas(s["spec"])),
+            "axis": s["axis"],
+        }
+        got = gk.handler_denotation(h)(
+            *[vals[m] for m in h["args"]]
+        )
+        want = tb.eval_term(
+            term,
+            var_env=var_env,
+            param_env=var_env,
+            bindings=bindings,
+            strict=True,
+        )
+        torch.testing.assert_close(got, want)
+
+    def test_seq_sites_lift_linear_projection(self):
+        # ``linear(select(x,0,t), W, b)`` lifts the same way —
+        # ``F.linear`` contracts only the last axis of ``x``
+        pytest.importorskip("torch")
+        from mlopt_core.ir import Op, Param, TensorType, Var
+        from mlopt_discovery import genkernel as gk
+
+        def v(n, *s):
+            return Var(n, TensorType(s))
+
+        def p(n, *s):
+            return Param(n, TensorType(s))
+
+        X = v("X", 3, 2, 4)
+        W, Bs, A = p("W", 5, 4), p("Bs", 5), p("A", 5)
+        h = v("H0", 2, 5)
+        for t in range(3):
+            xt = Op.make("select", X, dim=0, index=t)
+            u = Op.make("linear", xt, W, Bs)
+            h = Op.make("add", Op.make("mul", A, h), u)
+        sites = play._seq_scan_sites(h)
+        assert len(sites) == 1
+        s = sites[0]
+        assert s["leaf_env"]["Q1"] == Op.make("linear", X, W, Bs)
+        info = gk.scan_spec(s["spec"])
+        assert info is not None and info["kind"] == "seq"
+
+    def test_seq_sites_decline_projected_contract_dim(self):
+        # a ``select`` on the CONTRACTED axis does not commute with
+        # the matmul — the lift declines, the spec keeps a per-step
+        # ``matmul`` the elementwise kernel cannot render, and
+        # ``scan_spec`` declines honestly at handler mint
+        pytest.importorskip("torch")
+        from mlopt_core.ir import Op, Param, TensorType, Var
+        from mlopt_discovery import genkernel as gk
+
+        def v(n, *s):
+            return Var(n, TensorType(s))
+
+        def p(n, *s):
+            return Param(n, TensorType(s))
+
+        X = v("X", 3, 3, 3)
+        W, A = p("W", 3, 3), p("A", 3)
+        h = v("H0", 2, 3)
+        for t in range(3):
+            xt = Op.make("select", X, dim=2, index=t)
+            u = Op.make("matmul", xt, W)
+            h = Op.make("add", Op.make("mul", A, h), u)
+        sites = play._seq_scan_sites(h)
+        assert sites  # the spine still deindexes — the spec exists
+        assert all(gk.scan_spec(s["spec"]) is None for s in sites)
+        assert gk.scan_handlers(sites) == {}
+
+    def test_seq_sites_decline_const_not_broadcasting(self):
+        # a loop-invariant leaf that cannot broadcast into the
+        # state shape is not a per-step operand the fold can read —
+        # decline the whole site rather than emit a spec that
+        # raises on call
+        pytest.importorskip("torch")
+        from mlopt_core.ir import Op, Param, TensorType, Var
+
+        def v(n, *s):
+            return Var(n, TensorType(s))
+
+        def p(n, *s):
+            return Param(n, TensorType(s))
+
+        X = v("X", 3, 2, 4)
+        BIG = p("BIG", 3, 2, 4)  # step-axis extent — not a const
+        h = v("H0", 2, 4)
+        for t in range(3):
+            xt = Op.make("select", X, dim=0, index=t)
+            h = Op.make("add", Op.make("mul", BIG, h), xt)
         assert play._seq_scan_sites(h) == []
 
 

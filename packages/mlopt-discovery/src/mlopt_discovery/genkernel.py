@@ -1177,13 +1177,82 @@ def _triton_expr_h(
     return _triton_node_h(spec, hoists, const)
 
 
+#: Attr-bearing elementwise ops the Triton renderer models inline —
+#: the clamp family.  Their bounds ride the spec's attr dict
+#: (``{"min": …, "max": …}``; either side may be absent or ``None``,
+#: matching ``torch.clamp``'s partial-bound spelling).  Every other
+#: attr-carrying op still hoists (a host-computed ``__c`` operand)
+#: or declines, exactly as before.
+_TRITON_ATTR_OPS = frozenset({"clamp", "clamp_min", "clamp_max"})
+
+
+def _triton_clamp(
+    op: str,
+    attrs: dict,
+    kid: Any,
+    hoists: dict | None,
+    const: str | None,
+) -> str | None:
+    """Render a clamp-family node; ``None`` leaves hoist/decline.
+
+    Each present bound renders through the caller's *const* template
+    — the same dtype-typed ``tl.full`` a const leaf gets, so the
+    ``tl.maximum``/``tl.minimum`` semantic ops see the launch dtype
+    on fp64 tiles and broadcast to whatever tile rank the tier
+    emits.  A bound that is absent/``None`` applies no clamp on that
+    side; a bound that is not a real number declines the inline
+    render (the hoist path still evaluates it on the host).
+    """
+    want = {
+        "clamp": ("min", "max"),
+        "clamp_min": ("min",),
+        "clamp_max": ("max",),
+    }[op]
+    a = _triton_expr_h(kid, hoists, const)
+    if a is None:
+        return None
+    expr = a
+    applied = 0
+    for key in want:
+        v = attrs.get(key)
+        if v is None:
+            continue
+        if isinstance(v, bool) or not isinstance(v, (int, float)):
+            return None
+        lit = (
+            const.format(v=repr(float(v)))
+            if const is not None
+            else f"({float(v)})"
+        )
+        fn = "tl.maximum" if key == "min" else "tl.minimum"
+        expr = f"{fn}({expr}, {lit})"
+        applied += 1
+    # a clamp with no applicable bound is not the spelled op —
+    # decline rather than silently deliver the identity.
+    return expr if applied else None
+
+
 def _triton_node_h(
     spec: Any, hoists: dict | None, const: str | None = None
 ) -> str | None:
     """Render one op node — dispatch, or hoist the whole subterm."""
     kids = [e for e in spec[1:] if not isinstance(e, dict)]
     if len(spec[1:]) != len(kids):
-        # attr-carrying op this tier doesn't model inline
+        # attr-carrying node — the clamp grammar renders its bounds
+        # inline; anything else hoists (a host-computed operand) or
+        # declines, exactly as before.
+        attrs = [e for e in spec[1:] if isinstance(e, dict)]
+        if (
+            spec[0] in _TRITON_ATTR_OPS
+            and len(kids) == 1
+            and len(attrs) == 1
+            and set(attrs[0]) <= {"min", "max"}
+        ):
+            out = _triton_clamp(
+                spec[0], attrs[0], kids[0], hoists, const
+            )
+            if out is not None:
+                return out
         return _hoist(spec, hoists) if hoists is not None else None
     # ``pow(x, 2)`` lowers to ``libdevice.pow`` — a ~150µs fp64
     # penalty measured on the reduction probe (RMSNormPerHead) where
@@ -1723,11 +1792,24 @@ def _scan_info(
 ) -> dict:
     """Assemble the ``scan_spec`` descriptor for a rendered carrier."""
     metas, steps = rendered
+    # ``kind="seq"`` specs may declare ``"const"`` — loop-invariant
+    # metavar names (``Param``/``Var`` leaves the collector bound
+    # whole) that participate in the step exprs WITHOUT a step axis:
+    # they are binding args like any meta but broadcast into the
+    # state space rather than slicing along the step axis.
+    consts = (
+        frozenset((attrs or {}).get("const", ()))
+        if kind == "seq"
+        else frozenset()
+    )
+    seq = [m for m in metas if m not in consts]
     info: dict[str, Any] = {
         "h": h_spec,
-        "seq": metas,
+        "seq": seq,
         "params": [*metas, h_spec],
     }
+    if consts:
+        info["const"] = [m for m in metas if m in consts]
     if kind == "seq":
         (ea, eb) = steps[0]
         info.update({"kind": "seq", "a": ea, "b": eb})
@@ -1864,10 +1946,15 @@ def seq_scan_denotation(spec: Any, *, axis: int | None = None) -> Any:
         state = full[:step_ax] + full[step_ax + 1 :]
         moved = [x.movedim(step_ax, 0) for x in xs]
         acc = torch.broadcast_to(vals[h_meta], state)
+        consts = info.get("const", ())
         for t in range(t_len):
             env = {
                 m: mv[t] for m, mv in zip(seq_metas, moved, strict=True)
             }
+            # loop-invariant operands bind whole — they carry no
+            # step axis, so the same value serves every step
+            for c in consts:
+                env[c] = vals[c]
             a_t = _eval_spec(a_spec, env, bindings)
             b_t = _eval_spec(b_spec, env, bindings)
             acc = a_t * acc + b_t
@@ -2134,12 +2221,21 @@ def _seq_triton_source(info: dict) -> str:
     One program per ``BLOCK`` columns of the flattened state space;
     each walks the step axis serially — ``acc = a_t * acc + b_t``.
     Row offsets are computed in int64 so ``T * N`` may exceed int32.
+    ``"const"`` operands — loop-invariant metas with no step axis —
+    ride as extra pointer args after the sequence operands and load
+    once, flat over the state space, before the step loop.
     """
-    params = ", ".join(f"{m}_ptr" for m in info["params"])
+    ptrs = [f"{m}_ptr" for m in info["seq"]]
+    ptrs += [f"{m}_ptr" for m in info.get("const", ())]
+    params = ", ".join([*ptrs, "h_ptr"])
     loads = "".join(
         f"        {m} = tl.load({m}_ptr + row + off,"
         " mask=mask, other=0.0)\n"
         for m in info["seq"]
+    )
+    cloads = "".join(
+        f"    {m} = tl.load({m}_ptr + off, mask=mask, other=0.0)\n"
+        for m in info.get("const", ())
     )
     return (
         "import triton\n"
@@ -2150,8 +2246,9 @@ def _seq_triton_source(info: dict) -> str:
         "    off = tl.program_id(0).to(tl.int64) * BLOCK"
         " + tl.arange(0, BLOCK)\n"
         "    mask = off < N\n"
-        f"    acc = tl.load({info['h']}_ptr + off,"
+        f"    acc = tl.load(h_ptr + off,"
         " mask=mask, other=0.0)\n"
+        f"{cloads}"
         "    for t in range(T):\n"
         "        row = t.to(tl.int64) * N\n"
         f"{loads}"
@@ -2304,7 +2401,16 @@ def _seq_args(vals: dict, info: dict, axis: int | None) -> tuple:
         .contiguous()
         .view(-1)
     )
-    return rows, h_flat, state, t_len, h_flat.numel(), dt
+    # ``"const"`` operands carry no step axis: each broadcasts into
+    # the state space once and flattens alongside ``h`` — the kernel
+    # loads them before the step loop, never per row.
+    cflat = {
+        m: torch.broadcast_to(vals[m].to(dt), state)
+        .contiguous()
+        .view(-1)
+        for m in info.get("const", ())
+    }
+    return rows, cflat, h_flat, state, t_len, h_flat.numel(), dt
 
 
 def _seq_binding(kern: Any, info: dict, axis: int | None) -> Any:
@@ -2320,10 +2426,13 @@ def _seq_binding(kern: Any, info: dict, axis: int | None) -> Any:
         import torch
 
         vals = dict(zip(info["params"], args, strict=True))
-        rows, h_flat, state, t_len, n, dt = _seq_args(vals, info, axis)
+        rows, cflat, h_flat, state, t_len, n, dt = _seq_args(
+            vals, info, axis
+        )
         out = torch.empty(n, dtype=dt, device=h_flat.device)
         kern[((n + _SCAN_BLOCK - 1) // _SCAN_BLOCK,)](
             *(rows[m] for m in info["seq"]),
+            *(cflat[m] for m in info.get("const", ())),
             h_flat,
             out,
             t_len,
@@ -2851,6 +2960,12 @@ def _site_parts(item: Any) -> tuple:
     """
     if isinstance(item, dict):
         extra = {"leaf_env": item.get("leaf_env")}
+        if "chain" in item:
+            # seq/seqm sites carry the unrolled chain root the fold
+            # denotes — merged verbatim so delivery can rewrite the
+            # extracted chain to the kernel call (the claim path's
+            # ``applyd`` pattern never occurs in raw IR).
+            extra["chain"] = item["chain"]
         if "axis" in item:
             # a site that resolved its own step axis (the seq
             # collector's shape-checked dim) overrides the builder's

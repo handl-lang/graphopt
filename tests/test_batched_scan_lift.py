@@ -1101,11 +1101,12 @@ class _SeqChunkMod(nn.Module):
     the loop so the recurrence is a pure ``select``-fold.
 
     ``_BatchedChunkMod`` keeps ``x @ w``/``x @ wr`` and the decay
-    *inside* the step — the seq grammar cannot abstract that
-    (``_seq_deindex`` declines bare ``Param`` leaves), which is why
-    the carrier lift owned that spelling.  Hoisting the per-step
-    operands into ``(C, B, d)`` sequence tensors is the zoo/seqm
-    shape ``play._seq_scan_sites`` claims.
+    *inside* the step — the seq collector now owns that spelling
+    too: ``_seq_projection_lift`` pulls the ``select`` through the
+    ``matmul`` (the operand binds the hoisted ``x @ w`` sequence)
+    and the bare ``Param`` decay mints a ``"const"`` meta.  This
+    module remains the hand-hoisted spelling — both mint ``kind=
+    "seq"`` sites; see ``test_batched_chunk_seq_site_fold_matches``.
     """
 
     def __init__(self, d: int, B: int, C: int) -> None:
@@ -1154,9 +1155,10 @@ class TestEndToEnd:
         under the ``len(levels) < 2`` gate and the delivered
         ``BatchedScanModule`` is a transparent ``IRModule``.
         ``lowering == "generic"`` is the honest contract — the
-        level-batched path genuinely no longer applies here (the seq
-        tier can't claim it either: ``_seq_deindex`` declines the bare
-        ``Param`` leaves inside the per-step projections).  What must
+        level-batched path genuinely no longer applies here (the
+        saturated carrier, not the seq tier, owns the extracted
+        spelling — see ``test_batched_chunk_seq_site_fold_matches``
+        for the raw-IR seq claim).  What must
         still hold: the term stays scan-shaped, the plan declines,
         and the delivered module is correct.
         """
@@ -1246,3 +1248,49 @@ class TestEndToEnd:
         with torch.no_grad():
             want = m(x, h)
         assert (got - want).abs().max().item() == 0.0
+
+    def test_batched_chunk_seq_site_fold_matches(self):
+        """The in-step-projection spelling mints a seq site too.
+
+        ``_BatchedChunkMod`` keeps ``x @ w``/``x @ wr`` and the decay
+        *inside* the loop — the spelling the seq grammar used to
+        decline (bare ``Param`` leaves, per-step ``matmul``).  The
+        collector now lifts it: ``_seq_projection_lift`` pulls each
+        ``select`` through its ``matmul`` so the operands bind the
+        hoisted ``(C, B, d)`` projected sequences, and the decay
+        ``sigmoid(log_decay)`` deindexes to a ``"const"`` meta bound
+        whole.  The spelled ``handler_denotation`` fold must
+        reproduce the module — the batched-matmul hoist vs per-step
+        matmul rounding shows up at fp64 epsilon, so the check is a
+        tight tolerance, not bit-identity.
+        """
+        B, d, C = 4, 16, 8
+        torch.manual_seed(0)
+        m = _BatchedChunkMod(d, C).eval().double()
+        x = torch.randn(C, B, d, dtype=torch.float64)
+        h = torch.randn(B, d, dtype=torch.float64)
+        ir, leaves = TorchBackend().source.to_ir(m, (x, h))
+
+        sites = play._seq_scan_sites(ir.root)
+        assert sites, "seq collector declined the in-step projections"
+        s = sites[0]
+        info = gk.scan_spec(s["spec"])
+        assert info is not None and info["kind"] == "seq"
+        assert info.get("const"), "decay leaf must mint a const meta"
+
+        var_env = play._var_env(ir, leaves, (x, h))
+        vals = {
+            meta: gk._bound_val(t, var_env, tb._IR_TO_TORCH)
+            for meta, t in s["leaf_env"].items()
+        }
+        handler = {
+            "pattern": s["spec"],
+            "args": tuple(gk._spec_metas(s["spec"])),
+            "axis": s["axis"],
+        }
+        got = gk.handler_denotation(handler)(
+            *[vals[meta] for meta in handler["args"]]
+        )
+        with torch.no_grad():
+            want = m(x, h)
+        assert (got - want).abs().max().item() < 1e-13

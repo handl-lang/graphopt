@@ -76,7 +76,7 @@ from gamekit.players import (
     register_part,
 )
 from mlopt_core.cost.basic import count_cost
-from mlopt_core.ir import Const, Op, TensorType, Var
+from mlopt_core.ir import Const, Op, Param, TensorType, Var
 from mlopt_core.laws import DEFAULT as DEFAULT_SEARCH_RULES
 from mlopt_core.search_env import SearchEnv
 
@@ -387,6 +387,143 @@ def _torch_board(case: Any) -> ma.MetaArena:
     )
 
 
+def _is_plan_tape(module: Any) -> bool:
+    """Return True when *module* evaluates through a plan tape.
+
+    The two shapes ``CudaGraphRunner`` knows how to capture: an
+    ``IRModule`` whose root flattened to an ``_EvalPlan`` (the
+    ``_root_plan`` slot tape — the ~350 µs host-dispatch loss of
+    ``docs/reports/t034_module_costing.md``), or a batched executor
+    exposing ``capture_cuda_graph``.
+    """
+    if hasattr(module, "capture_cuda_graph"):
+        return True
+    try:
+        from mlopt_torch.torch_bridge import IRModule
+    except ImportError:  # pragma: no cover — torch-free env
+        return False
+    return isinstance(module, IRModule) and (
+        getattr(module, "_root_plan", None) is not None
+    )
+
+
+def _max_abs_delta(
+    a: Any, b: Any
+) -> float:  # pragma: no cover — CUDA-only caller
+    """Max |a - b| over tensors or (nested) tuples of them; NaN else."""
+    import torch
+
+    if isinstance(a, torch.Tensor) and isinstance(b, torch.Tensor):
+        if a.shape != b.shape:
+            return float("nan")
+        return float((a - b).abs().max().item())
+    if (
+        isinstance(a, (tuple, list))
+        and isinstance(b, (tuple, list))
+        and len(a) == len(b)
+    ):
+        vals = [
+            v
+            for v in (
+                _max_abs_delta(x, y) for x, y in zip(a, b, strict=True)
+            )
+            if v == v
+        ]
+        return max(vals) if vals else float("nan")
+    return float("nan")
+
+
+def _deliver_runner_arm(
+    module: Any, ex: dict, *, reps: int = 50
+) -> dict:
+    """Attempt the ``CudaGraphRunner`` arm on the delivered module.
+
+    ``docs/reports/t034_module_costing.md`` measured the assembled
+    module's loss as ~350 µs of tape-interpreter host dispatch per
+    call; the shipped ``CudaGraphRunner`` replays the *same*
+    verified forward as one CUDA graph.  This arm runs it on the
+    deliver path: capture is attempted only when every example input
+    is already a CUDA tensor (the case's device is the deliver
+    contract — a CPU case is never silently promoted), only after
+    ``verify`` passed, and every failure degrades to the eager
+    module plus a ``runner_note`` — capture never fails a deliver.
+
+    Additive keys: ``runner``/``cuda_graph`` record the attempt,
+    ``plan_tape`` whether the module is the dispatch-bound shape,
+    ``deliver_us``/``graph_us`` the honest eager-vs-replay medians
+    (the replay's per-call static-input copies are *inside* the
+    timed ``wrapped(*xs)`` — ``_GraphReplayModule.forward`` does
+    ``buf.copy_(t)`` then ``graph.replay()``, so the copy cost is
+    measured, not hidden), ``graph_max_abs`` the replay-vs-eager
+    output delta, and ``module`` is overridden with the replay
+    wrapper only when capture *and* the numeric check succeeded.
+    """
+    import torch
+
+    out: dict[str, Any] = {"runner": "cuda_graph"}
+    xin = ex.get("input")
+    xs = (
+        tuple(xin)
+        if isinstance(xin, (tuple, list))
+        else (() if xin is None else (xin,))
+    )
+    out["plan_tape"] = _is_plan_tape(module)
+    if not (
+        xs
+        and all(isinstance(t, torch.Tensor) and t.is_cuda for t in xs)
+    ):
+        out["cuda_graph"] = False
+        out["runner_note"] = "inputs not CUDA tensors"
+        return out
+    try:  # pragma: no cover — CUDA-only body
+        from mlopt_cuda import CudaGraphRunner
+    except ImportError:  # pragma: no cover — optional dep absent
+        out["cuda_graph"] = False
+        out["runner_note"] = "mlopt-cuda not installed"
+        return out
+    stats: dict[str, Any] = {}
+    try:  # pragma: no cover — CUDA-only body
+        wrapped = CudaGraphRunner().apply(module, xin, stats)
+    except Exception as exc:  # pragma: no cover — CUDA-only
+        out["cuda_graph"] = False
+        out["runner_note"] = f"apply raised {type(exc).__name__}: {exc}"
+        return out
+    if not stats.get("cuda_graph"):  # pragma: no cover — CUDA-only
+        failure = stats.get("cuda_graph_failure")
+        out["cuda_graph"] = False
+        out["runner_note"] = (
+            f"capture declined ({failure})"
+            if failure is not None
+            else "capture declined"
+        )
+        return out
+    try:  # pragma: no cover — CUDA-only body
+        t_eager = _time_module(module, xin, reps)
+        t_graph = _time_module(wrapped, xin, reps)
+        with torch.no_grad():
+            out_eager = module(*xs)
+            out_graph = wrapped(*xs)
+    except Exception as exc:  # pragma: no cover — CUDA-only
+        out["cuda_graph"] = False
+        out["runner_note"] = (
+            f"post-capture check failed: {type(exc).__name__}: {exc}"
+        )
+        return out
+    out.update(  # pragma: no cover — CUDA-only body
+        {
+            "cuda_graph": True,
+            "deliver_us": round(t_eager, 1),
+            "graph_us": round(t_graph, 1),
+            "graph_speedup": (
+                round(t_eager / t_graph, 3) if t_graph else None
+            ),
+            "graph_max_abs": _max_abs_delta(out_eager, out_graph),
+            "module": wrapped,
+        }
+    )
+    return out  # pragma: no cover — CUDA-only success path
+
+
 def _torch_deliver(board: ma.MetaArena, case: Any, traj: Any) -> dict:
     """Lower the winning extraction and verify it against the model.
 
@@ -394,6 +531,9 @@ def _torch_deliver(board: ma.MetaArena, case: Any, traj: Any) -> dict:
     unhandled abbreviations to spelled form; ``TorchSink.lower``
     rebuilds the module from it; ``verify`` runs both on the case's
     example input.  The game score becomes a delivered artifact.
+    On a verified CUDA deliverable the ``CudaGraphRunner`` arm
+    (:func:`_deliver_runner_arm`) additionally attempts graph
+    capture — additive keys only, eager module on any decline.
     """
     from mlopt_core.ir import IR
     from mlopt_torch.adapters import TorchSink
@@ -413,7 +553,7 @@ def _torch_deliver(board: ma.MetaArena, case: Any, traj: Any) -> dict:
     module = sink.lower(ir, params=ex["leaves"])
     rep = sink.verify(ex["model"], module, (ex["input"],))
     t = traj.terminal
-    return {
+    out = {
         "delivered": True,
         "module": module,
         "verified": rep.passed,
@@ -422,6 +562,9 @@ def _torch_deliver(board: ma.MetaArena, case: Any, traj: Any) -> dict:
         "cert": getattr(t, "certificate_ok", None),
         "reward": traj.total,
     }
+    if rep.passed:
+        out.update(_deliver_runner_arm(module, ex))
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -856,12 +999,211 @@ def _seq_view_lift(t: Any):
     return child, d0, idx
 
 
+def _seq_meta(
+    names: dict,
+    operands: dict,
+    events: list,
+    child: Any,
+    dim: int,
+    idx: int,
+) -> str:
+    """Mint/reuse the sequence-operand metavar for ``(child, dim)``."""
+    key = (child, dim)
+    meta = names.get(key)
+    if meta is None:
+        meta = f"Q{len(names) + 1}"
+        names[key] = meta
+        operands[meta] = (child, dim)
+    events.append((meta, idx))
+    return meta
+
+
+def _seq_const_meta(consts: dict, t: Any) -> str:
+    """Mint/reuse the loop-invariant metavar for leaf *t*.
+
+    *consts* maps the leaf term to its ``"P"``-prefixed meta — equal
+    leaves (``Param``/``Var`` are value-equality dataclasses) share
+    one meta, so a weight used at every step binds once.
+    """
+    meta = consts.get(t)
+    if meta is None:
+        meta = f"P{len(consts) + 1}"
+        consts[t] = meta
+    return meta
+
+
+def _seq_select_free(t: Any) -> bool:
+    """Whether *t* contains no ``select`` node anywhere.
+
+    Iterative over the interned DAG — the lifted projection operand
+    is evaluated ONCE by ``leaf_env``, so a ``select`` surviving
+    inside it would freeze one step's slice into every step.  Fixed
+    -index selects are technically loop-invariant, but rejecting
+    them keeps the lift's contract simple: the operand child must
+    be a pure sequence tensor.
+    """
+    stack = [t]
+    seen: set = set()
+    while stack:
+        n = stack.pop()
+        if not isinstance(n, Op) or id(n) in seen:
+            continue
+        seen.add(id(n))
+        if n.op == "select":
+            return False
+        stack.extend(n.args)
+    return True
+
+
+def _seq_step_select(t: Any):
+    """``(child, dim, index)`` when *t* is a bare per-step ``select``."""
+    if (
+        isinstance(t, Op)
+        and t.op == "select"
+        and len(t.args) == 1
+        and type(t.attrs.get("dim")) is int
+        and type(t.attrs.get("index")) is int
+    ):
+        return t.args[0], t.attrs["dim"], t.attrs["index"]
+    return None
+
+
+def _seq_projection_lift(t: Any):
+    """Pull a per-step ``select`` out through a projection op.
+
+    ``matmul``/``linear`` over a ``select``ed sequence commutes with
+    the slice whenever the selected axis is not contracted:
+    ``matmul(select(x, d, i), w)`` on a non-``k`` axis *d* equals
+    ``select(matmul(x, w), d', i)`` — the projection hoists onto the
+    WHOLE sequence tensor and the fold slices the projected rows,
+    exactly the spelling a hand-hoisted recurrence already uses.
+    Returns ``(lifted_term, out_dim, index)`` — feed through the
+    ordinary operand path — or ``None`` to decline.
+
+    Accepted shapes (verified against ``shape_of``, torch matmul /
+    ``F.linear`` semantics):
+
+    * ``matmul(a, b)`` with the select a DIRECT left arg: *b* must
+      have rank ≤ 2 (no batch dims to misalign) and the select dim
+      must not be the contracted last axis of *a*; batch and ``m``
+      dims keep their position in the output, so ``out_dim = d0``.
+    * ``matmul(a, b)`` with the select a DIRECT right arg: *b* must
+      be a rank-2 ``(k, n)`` matrix and the select must hit the
+      free ``n`` axis; the output's last axis is ``n``.
+    * ``linear(x, w[, b])`` with the select a DIRECT first arg:
+      ``F.linear`` contracts only the last axis of *x*, so any
+      leading dim lifts with ``out_dim = d0``.
+
+    The lifted term must be ``select``-free — a surviving ``select``
+    would freeze one step's slice into the once-evaluated operand
+    (see :func:`_seq_select_free`).  Selects nested deeper inside an
+    argument, selects in BOTH matmul args, and every other op keep
+    the generic decline.
+    """
+    from mlopt_core.typing import INVALID, shape_of
+
+    if not (isinstance(t, Op) and not t.attrs):
+        return None
+    if t.op == "matmul" and len(t.args) == 2:
+        a, b = t.args
+        sa = _seq_step_select(a)
+        sb = _seq_step_select(b)
+        if (sa is None) == (sb is None):
+            return None  # zero or two direct selects — decline
+        if sa is not None:
+            c, d, idx = sa
+            other, pos = b, 0
+        else:
+            c, d, idx = sb
+            other, pos = a, 1
+        sh = shape_of(c)
+        so = shape_of(other)
+        if (
+            sh is INVALID
+            or so is INVALID
+            or not isinstance(sh, tuple)
+            or not isinstance(so, tuple)
+        ):
+            return None
+        ra, rb = len(sh), len(so)
+        d0 = d if d >= 0 else d + ra
+        if not 0 <= d0 < ra:
+            return None
+        if pos == 0:
+            # left operand: last axis is the contracted ``k``; every
+            # other axis keeps its position in the (…, m, n) output
+            # provided *b* brings no batch dims of its own.
+            if rb > 2 or d0 == ra - 1:
+                return None
+            out_dim = d0
+        else:
+            # right operand: only a rank-2 ``(k, n)`` right tensor
+            # has a free axis — ``n``, its last dim — and it lands
+            # last in the output.  ``ra`` is the SELECT CHILD's rank
+            # (the lifted right operand), ``rb`` the left arg's.
+            if ra != 2 or d0 != ra - 1:
+                return None
+            out_dim = (rb if rb >= 2 else 1) - 1
+        lifted = (
+            Op.make("matmul", c, other)
+            if pos == 0
+            else Op.make("matmul", other, c)
+        )
+    elif t.op == "linear" and len(t.args) in (2, 3):
+        s = _seq_step_select(t.args[0])
+        if s is None:
+            return None
+        c, d, idx = s
+        sh = shape_of(c)
+        if sh is INVALID or not isinstance(sh, tuple):
+            return None
+        ra = len(sh)
+        d0 = d if d >= 0 else d + ra
+        if not 0 <= d0 < ra - 1:
+            return None  # the contracted in-features axis
+        out_dim = d0
+        lifted = Op.make("linear", c, *t.args[1:])
+    else:
+        return None
+    if not _seq_select_free(lifted):
+        return None
+    sh2 = shape_of(lifted)
+    if (
+        sh2 is INVALID
+        or not isinstance(sh2, tuple)
+        or not 0 <= out_dim < len(sh2)
+    ):
+        return None
+    return lifted, out_dim, idx
+
+
+def _seq_bcast(sh1: tuple, sh2: tuple):
+    """Right-aligned broadcast of two shapes; ``None`` on conflict."""
+    if len(sh1) < len(sh2):
+        sh1 = (1,) * (len(sh2) - len(sh1)) + sh1
+    elif len(sh2) < len(sh1):
+        sh2 = (1,) * (len(sh1) - len(sh2)) + sh2
+    out = []
+    for x, y in zip(sh1, sh2, strict=True):
+        if x == y:
+            out.append(x)
+        elif x == 1:
+            out.append(y)
+        elif y == 1:
+            out.append(x)
+        else:
+            return None
+    return tuple(out)
+
+
 def _seq_deindex(
     t: Any,
     names: dict,
     operands: dict,
     events: list,
     state: Any = None,
+    consts: dict | None = None,
+    pullout: bool = False,
 ):
     """Spec of *t* with per-step ``select``s abstracted to metas.
 
@@ -871,13 +1213,20 @@ def _seq_deindex(
     the caller can verify the index walks the step axis in step
     order.  ``rsub(x, s)`` normalises to ``sub(s, x)`` — the
     elementwise spelling the scan renderer knows.  Any other bare
-    leaf (a whole-tensor reference the fold cannot slice honestly)
-    or non-scalar ``Const`` declines the whole term with ``None``.
+    leaf or non-scalar ``Const`` declines the whole term with
+    ``None`` — EXCEPT ``Param``/``Var`` leaves when *consts* is
+    given: they are loop-invariant, so they mint ``"P"`` metas
+    bound whole (recorded in *consts*, never in *operands*/*events*
+    — the fold reads the same value every step).
 
     ``unsqueeze``/``squeeze`` chains wrapping a ``select`` are
     lifted onto the child first (:func:`_seq_view_lift`) — the
     metavar then binds the *viewed* sequence and no view op reaches
-    the step-expr skeleton.
+    the step-expr skeleton.  With *pullout*, a ``select`` sitting
+    DIRECTLY inside ``matmul``/``linear`` is pulled through the
+    projection (:func:`_seq_projection_lift`) so the operand binds
+    the projected sequence — the per-step ``x_t @ W`` spelling
+    becomes the hoisted ``(x @ W)_t`` the fold can slice.
 
     *state* (matrix-state form only): the exact subterm the fold's
     accumulator denotes at this step — an occurrence of it inside
@@ -899,14 +1248,9 @@ def _seq_deindex(
             lifted = _seq_view_lift(t)
             if lifted is not None:
                 child, dim, idx = lifted
-                key = (child, dim)
-                meta = names.get(key)
-                if meta is None:
-                    meta = f"Q{len(names) + 1}"
-                    names[key] = meta
-                    operands[meta] = (child, dim)
-                events.append((meta, idx))
-                return meta
+                return _seq_meta(
+                    names, operands, events, child, dim, idx
+                )
         if (
             t.op == "select"
             and len(t.args) == 1
@@ -918,27 +1262,47 @@ def _seq_deindex(
                 t.attrs["dim"],
                 t.attrs["index"],
             )
-            key = (child, dim)
-            meta = names.get(key)
-            if meta is None:
-                meta = f"Q{len(names) + 1}"
-                names[key] = meta
-                operands[meta] = (child, dim)
-            events.append((meta, idx))
-            return meta
+            return _seq_meta(names, operands, events, child, dim, idx)
         if t.op == "rsub" and len(t.args) == 2 and not t.attrs:
             b = _seq_deindex(
-                t.args[1], names, operands, events, state=state
+                t.args[1],
+                names,
+                operands,
+                events,
+                state=state,
+                consts=consts,
+                pullout=pullout,
             )
             a = _seq_deindex(
-                t.args[0], names, operands, events, state=state
+                t.args[0],
+                names,
+                operands,
+                events,
+                state=state,
+                consts=consts,
+                pullout=pullout,
             )
             if a is None or b is None:
                 return None
             return ("sub", b, a)
+        if pullout:
+            proj = _seq_projection_lift(t)
+            if proj is not None:
+                child, dim, idx = proj
+                return _seq_meta(
+                    names, operands, events, child, dim, idx
+                )
         parts = []
         for a_ in t.args:
-            p = _seq_deindex(a_, names, operands, events, state=state)
+            p = _seq_deindex(
+                a_,
+                names,
+                operands,
+                events,
+                state=state,
+                consts=consts,
+                pullout=pullout,
+            )
             if p is None:
                 return None
             parts.append(p)
@@ -948,6 +1312,10 @@ def _seq_deindex(
         return tuple(spec)
     if isinstance(t, Const):
         return None if isinstance(t.value, str) else t.value
+    if consts is not None and isinstance(t, (Param, Var)):
+        # loop-invariant leaf — a weight or input the fold reads
+        # whole at every step; recorded in *consts*, not *operands*
+        return _seq_const_meta(consts, t)
     return None
 
 
@@ -968,13 +1336,18 @@ def _seq_site(steps: tuple, base: Any):
 
     names: dict = {}
     operands: dict = {}
+    consts: dict = {}
     a0 = b0 = None
     events: list = []
     for k, (at, bt, _st) in enumerate(steps):
         ea: list = []
         eb: list = []
-        sa = _seq_deindex(at, names, operands, ea)
-        sb = _seq_deindex(bt, names, operands, eb)
+        sa = _seq_deindex(
+            at, names, operands, ea, consts=consts, pullout=True
+        )
+        sb = _seq_deindex(
+            bt, names, operands, eb, consts=consts, pullout=True
+        )
         if sa is None or sb is None:
             return None
         if k == 0:
@@ -991,6 +1364,7 @@ def _seq_site(steps: tuple, base: Any):
     t_len = len(steps)
     rank = None
     eff = dim
+    state_sh: tuple | None = None
     for _m, (child, _d) in operands.items():
         sh = shape_of(child)
         if sh is INVALID or not isinstance(sh, tuple):
@@ -1004,18 +1378,43 @@ def _seq_site(steps: tuple, base: Any):
             or sh[eff] != t_len
         ):
             return None
+        parts = sh[:eff] + sh[eff + 1 :]
+        state_sh = (
+            parts if state_sh is None else _seq_bcast(state_sh, parts)
+        )
+        if state_sh is None:
+            return None
+    if state_sh is None:
+        return None  # operands is non-empty — unreachable, narrows ty
     for k, evs in enumerate(events):
         for _m, idx in evs:
             if idx != k:
                 return None
+    # Loop-invariant leaves minted as ``"P"`` metas must broadcast
+    # into the fold's state shape — the same contract the per-step
+    # ``_eval_spec``/kernel broadcast applies at run time.  A const
+    # that cannot is not a per-step operand the fold can read
+    # honestly; decline rather than emit a spec that raises on call.
+    for t_const, _m in consts.items():
+        csh = shape_of(t_const)
+        if (
+            csh is INVALID
+            or not isinstance(csh, tuple)
+            or _seq_bcast(csh, state_sh) != state_sh
+        ):
+            return None
     h_meta = "H"
+    attrs: dict = {"kind": "seq", "axis": eff}
+    if consts:
+        attrs["const"] = tuple(consts.values())
     spec = (
         "applyd",
         ("aff_diag", a0, b0),
         h_meta,
-        {"kind": "seq", "axis": eff},
+        attrs,
     )
     leaf_env = {m: c for m, (c, _d) in operands.items()}
+    leaf_env.update({m: t for t, m in consts.items()})
     leaf_env[h_meta] = base
     return spec, leaf_env, eff
 
@@ -1074,7 +1473,16 @@ def _seq_scan_sites(term: Any) -> list:
         spec, leaf_env, axis = site
         if not any(spec == s["spec"] for s in out):
             out.append(
-                {"spec": spec, "leaf_env": leaf_env, "axis": axis}
+                {
+                    "spec": spec,
+                    "leaf_env": leaf_env,
+                    "axis": axis,
+                    # the unrolled chain this fold denotes — the
+                    # deliver-time route's LHS (the intake IR has no
+                    # ``applyd`` node for a claim to match, so the
+                    # rewrite fires on the extracted term instead).
+                    "chain": root,
+                }
             )
         for _m, _i, s in steps:
             emitted_states.add(id(s))
@@ -1217,6 +1625,9 @@ def _seqm_scan_sites(term: Any) -> list:
                     "leaf_env": leaf_env,
                     "axis": next(iter(axes.values())),
                     "axes": axes,
+                    # see ``_seq_scan_sites``: the chain root is the
+                    # deliver-time route's LHS.
+                    "chain": root,
                 }
             )
         for _m, _i, s in steps:

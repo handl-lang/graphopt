@@ -505,6 +505,65 @@ class TestTritonTier:
         assert gk._triton_expr(("pow", "X1", "X2")) is not None
         assert gk._triton_expr(("mul", "X1", 2.0)) is not None
 
+    def test_triton_expr_clamp_attr_grammar(self):
+        # The clamp family renders its attr-dict bounds inline —
+        # ``tl.maximum`` for ``min``, ``tl.minimum`` for ``max`` —
+        # through the caller's const template so fp64 tiles see the
+        # launch dtype (the T-010 attr-grammar increment).
+        e = gk._triton_expr(("clamp_min", "X1", {"min": 1e-6}))
+        assert e == "tl.maximum(X1, (1e-06))"
+        e = gk._triton_expr(("clamp", "X1", {"min": -3.0, "max": 3.0}))
+        assert e == "tl.minimum(tl.maximum(X1, (-3.0)), (3.0))"
+        # partial bounds apply only the present side
+        e = gk._triton_expr(("clamp", "X1", {"max": 4.6}))
+        assert e == "tl.minimum(X1, (4.6))"
+        # the const template types the bound like a const leaf
+        e = gk._triton_expr(
+            ("clamp_min", "X1", {"min": 0}), gk._TRITON_CONST_1D
+        )
+        assert "tl.full([BLOCK], 0.0" in e
+        # no applicable bound / non-numeric bound / foreign attrs
+        # decline honestly (the hoist path may still take them)
+        assert (
+            gk._triton_expr(("clamp", "X1", {"min": None, "max": None}))
+            is None
+        )
+        assert gk._triton_expr(("clamp_min", "X1", {"min": "x"})) is None
+        assert (
+            gk._triton_expr(("clamp", "X1", {"min": 0.0, "eps": 1.0}))
+            is None
+        )
+        # non-clamp attr ops still decline at this tier
+        assert gk._triton_expr(("sum", "X1", {"dim": 1})) is None
+
+    def test_triton_bindings_clamp_correct(self):
+        torch = pytest.importorskip("torch")
+        pytest.importorskip("triton")
+        if not torch.cuda.is_available():
+            pytest.skip("needs cuda for triton")
+        for dt in (torch.float32, torch.float64):
+            h = {
+                "g": {
+                    "pattern": (
+                        "mul",
+                        "X1",
+                        ("clamp_min", ("add", "X1", "X2"), {"min": -0.5}),
+                    ),
+                    "kernel": "gk_c",
+                    "args": ("X1", "X2"),
+                }
+            }
+            b = gk.triton_bindings(h)
+            assert "gk_c" in b
+            x = torch.randn(1000, device="cuda", dtype=dt)
+            y = torch.randn(1000, device="cuda", dtype=dt)
+            torch.testing.assert_close(
+                b["gk_c"](x, y),
+                x * torch.clamp_min(x + y, -0.5),
+                atol=1e-6,
+                rtol=1e-6,
+            )
+
     def test_triton_expr_softsign_gate_binary(self):
         e = gk._triton_expr(("softsign_gate", "X1", "X2"))
         assert e is not None and "tl.abs" in e and "X2" in e

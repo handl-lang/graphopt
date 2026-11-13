@@ -1080,6 +1080,103 @@ def _extract(arena: MetaArena, action: Action) -> _Outcome:
 # ---------------------------------------------------------------------------
 
 
+def _route_scan_chains(term: Any, handlers: dict, eg: Any) -> Any:
+    """Rewrite minted scan sites to their kernel calls at delivery.
+
+    ``seq``/``seqm`` scan handlers minted from raw recurrence chains
+    carry ``"chain"`` — the unrolled subterm the collector proved
+    folds to the handler's spec (identical deindexed skeletons step
+    to step, select index == chronological position) — plus
+    ``"leaf_env"`` binding every spec metavar to its sequence/state
+    term.  The ``claim`` path can never fire for these: its minted
+    rule's LHS is the ``applyd`` carrier pattern and the intake IR
+    has no ``applyd`` node (``_concrete_occurs`` declines), so the
+    priced kernel had no route to the delivered term.  Delivery
+    applies the verified fold directly instead: the e-class the
+    chain lives in — whatever member extraction picked, folded or
+    spelled — is replaced by the handler's kernel op applied to the
+    recorded operands — ``scan_<i>_k``, which every scan-aware sink
+    binds (the registered fold denotation, or the generated
+    Triton/seqm kernel where codegen accepts — the same callable
+    ``profitable`` timed).
+
+    Matching is by *e-class*, not term identity: saturation rewrites
+    inside the chain freely, so the extracted representative is
+    usually NOT the collector's ``chain`` object — but it is a
+    member of the same class, and every member denotes the chain's
+    value (the e-graph only merges verified rewrites).  The fold
+    the collector proved therefore denotes the extracted member
+    too.  A subterm outside the graph, or one whose class cannot be
+    resolved, falls back to a structural ``==`` — hash-consing makes
+    that the same-object test in practice.
+
+    This is a *rewrite*, not a claim: the e-graph, the certificate
+    and the cost model are untouched — extraction still prices the
+    spelled chain, and the route only fires on handlers that
+    survived the measured-cost referee (they are the board's
+    handler table).  A site whose class never reached the
+    extraction simply does not match and delivers spelled — the
+    honest fallback, never a wrong kernel.
+    """
+    routes: list = []
+    for h in handlers.values():
+        chain = h.get("chain")
+        env = h.get("leaf_env")
+        if chain is None or not env:
+            continue
+        try:
+            repl = Op.make(h["kernel"], *(env[m] for m in h["args"]))
+        except (KeyError, TypeError):
+            continue  # incomplete binding — keep the spelled chain
+        target = eg._class_of_term(chain) if eg is not None else None
+        routes.append((chain, repl, target))
+    if not routes or not isinstance(term, Op):
+        return term
+    memo: dict = {}
+    cls_memo: dict = {}
+
+    def go(t: Any) -> Any:
+        if not isinstance(t, Op):
+            return t
+        hit = memo.get(t)
+        if hit is not None:
+            return hit
+        out = t
+        for chain, repl, target in routes:
+            # The extracted representative is usually NOT the
+            # collector's ``chain`` object — saturation folds inside
+            # it, and a declared fold op can hold the whole class —
+            # so the e-class compare runs for EVERY node, not just
+            # same-op ones.  ``is``/``==`` stay behind the op
+            # pre-filter: hash-consing makes them the identity test.
+            matched = False
+            if t.op == chain.op and (
+                t is chain or (target is None and t == chain)
+            ):
+                matched = True
+            elif target is not None:
+                c = eg._class_of_term(t, cls_memo)
+                matched = c is not None and c == target
+            if matched:
+                # the replacement's own args still walk — a sequence
+                # operand can itself hide a second recurrence chain.
+                rargs = tuple(go(a) for a in repl.args)
+                out = (
+                    Op.make(repl.op, *rargs, **dict(repl.attrs))
+                    if rargs != repl.args
+                    else repl
+                )
+                break
+        if out is t and t.args:
+            new_args = tuple(go(a) for a in t.args)
+            if new_args != t.args:
+                out = Op.make(t.op, *new_args, **dict(t.attrs))
+        memo[t] = out
+        return out
+
+    return go(term)
+
+
 @dataclass(frozen=True)
 class MetaState:
     """The read-only board view a player decides on.
@@ -1379,10 +1476,24 @@ class MetaArena:
         ``feasible_cost`` prices it — the win the player earned is
         what the sink receives; a declared-but-unhandled op expands
         to its spelled body (definitions), so no fresh name ever
-        reaches the lowering table.
+        reaches the lowering table.  Minted scan handlers whose
+        site was a raw recurrence chain then get their delivery
+        route (:func:`_route_scan_chains`) — the chain the
+        extraction kept is rewritten to the kernel call the
+        referee already priced.
         """
+        # Route on the *extracted* term, before definition/kernel
+        # resolution: every subterm of an extraction is an e-graph
+        # member, so the chain's e-class is resolvable here — after
+        # ``_deliverable`` expands spelled bodies the same lookup
+        # would miss them.
+        routed = _route_scan_chains(term, self.handlers, self.eg)
+        return self._deliverable(routed)
+
+    def _deliverable(self, term: Any) -> Any:
+        """Recursive worker for :meth:`deliverable`."""
         if isinstance(term, Op):
-            args = tuple(self.deliverable(a) for a in term.args)
+            args = tuple(self._deliverable(a) for a in term.args)
             if term.op in self.interpretations:
                 kernel, pos = self.interpretations[term.op]
                 return Op.make(
