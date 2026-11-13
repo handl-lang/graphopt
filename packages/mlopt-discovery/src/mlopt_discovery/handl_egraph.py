@@ -93,12 +93,17 @@ __all__ = [
 _REPO = Path(__file__).resolve().parents[4]
 
 #: The ``egraph-run`` binary — env override first (``MLOPT_EGRAPH_RUN``,
-#: ``CATOPT_EGRAPH_RUN`` the pre-rename spelling), then the two target
-#: dirs a ``cargo build`` lands in on this host.  Same candidates as
+#: ``CATOPT_EGRAPH_RUN`` the pre-rename spelling), then the target
+#: dirs a ``cargo build`` lands in on this host.  Release precedes
+#: debug: the debug binary is ~4x slower on saturation, which made
+#: the recorded "Rust is slower" figure a build-mode artifact
+#: (docs/reports/rust_saturation_gap.md).  Same candidates as
 #: ``bench/drivers/audit/egraph_differential.py::_bin`` — keep in
 #: lockstep.
 _BIN_CANDIDATES = [
+    _REPO / "target" / "release" / "egraph-run",
     _REPO / "target" / "debug" / "egraph-run",
+    Path.home() / ".cargo" / "shared-target" / "release" / "egraph-run",
     Path.home() / ".cargo" / "shared-target" / "debug" / "egraph-run",
 ]
 

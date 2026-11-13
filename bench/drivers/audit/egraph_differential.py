@@ -80,11 +80,15 @@ from mlopt_core.laws import ALL_RULES
 
 _REPO = Path(__file__).resolve().parents[3]
 
-#: The `egraph-run` binary — env override first, then the two target
+#: The `egraph-run` binary — env override first, then the target
 #: dirs a `cargo build` lands in on this host (the repo's `.cargo`
 #: layout vs the user-global `target-dir` in ~/.cargo/config.toml).
+#: Release precedes debug — the debug binary is ~4x slower on
+#: saturation (docs/reports/rust_saturation_gap.md).
 _BIN_CANDIDATES = [
+    _REPO / "target" / "release" / "egraph-run",
     _REPO / "target" / "debug" / "egraph-run",
+    Path.home() / ".cargo" / "shared-target" / "release" / "egraph-run",
     Path.home() / ".cargo" / "shared-target" / "debug" / "egraph-run",
 ]
 
