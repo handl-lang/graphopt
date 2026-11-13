@@ -53,11 +53,12 @@ loop *and* the three conditions that make it pay.
 
 ## Where the paper must be humble
 
-- 127 is ledger *names* (13 promoted + 57 folds + 57 premises), not 127
-  independent theorems.
+- 129 is ledger *names* (13 promoted + 58 folds + 58 premises — the last
+  fold admitted through `AUTO_TIER` auto-admission), not 129 independent
+  theorems.
 - The kernel result is at op scale and at chain scale; **not** at module
   scale. Say all three numbers.
-- 48 shipped folds are unmeasured — vocabulary, not pay claims.
+- 49 shipped folds are unmeasured — vocabulary, not pay claims.
 - Whole models run at parity; the 7–11× gap to hand-fused kernels is
   codegen, not semantics.
 - One device, one policy class, five seeds; the growth deltas are within

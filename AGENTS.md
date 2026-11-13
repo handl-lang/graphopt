@@ -31,7 +31,7 @@ ex-`lawdata.game` half).  The old paths
 (`mlopt_discovery.engine`/`scoring`/`advantage`/`players`/
 `lawdata.game`) are re-exporting shims; `play` (the
 domain registry +
-`python -m mlopt_discovery.play --domain meta|joint|search|torch|gen|open|player`
+`python -m mlopt_discovery.play --domain meta|joint|torch|search|fragment|gen|open|player|bilinear`
 CLI; `--player <name>` runs a registered player eval-only, and
 `--deliver` lowers+verifies the winning extraction on domains
 that ship a deliver hook — torch does)).  The `kernel` domain
@@ -116,7 +116,7 @@ not `baselines/` rows:
   anti-unified over the WHOLE corpus: `op_tuple_census` op-patterns
   and `antiunify.mine_candidates` deep shapes recurring across
   ≥`--xbind` distinct modules, every claim K-bind gated to binding
-  ≥K real modules → `docs/results_overnight_xmodule.md`).
+  ≥K real modules → `docs/reports/results_overnight_xmodule.md`).
   A flat-file driver (no `<sub>/`),
   standalone only — deliberately no `bench.suites` adapter
   (`bench/drivers/` is not a package; see the doc's suite-status
@@ -185,9 +185,18 @@ depend on graduates to `mlopt_discovery` (the 99% ratchet applies to
 the package union).
 
 **Machine-admitted laws are in `DEFAULT`.**  `search(..., rules=DEFAULT)`
-ships **13 machine-admitted laws** alongside the hand-written kernel
-(`mlopt_core.laws.provenance.MACHINE_SHIPPED` — the promoted set;
-`project/retros/promoted-laws.md`).  The newest is `add_unsq_pad_r` —
+ships **71 machine-authored laws** alongside the hand-written kernel —
+the 13 hand-promoted laws plus the 58 minted `prim:synop_*`/`synopN_*`
+folds (21 depth-1 + 2 depth-2 `synop2_*` + 34 depth-3 `synop3_*` + 1
+auto-admitted) — with `mlopt_core.laws.provenance.MACHINE_SHIPPED` the
+provenance ledger (**129 rows** once each fold's `.expand` definitional
+premise is counted; `project/retros/promoted-laws.md`).  Admission is
+no longer only a hand edit of `provenance.py`: `admit_prim_record`
+writes the minted store's `AUTO_TIER`, and those names join
+`MACHINE_SHIPPED` through `AUTO_ADMITTED` at import (the first
+auto-admission is `prim:synop_6ed0a07c7d` —
+`docs/reports/2026-11-12-law-auto-admission.md`).  The newest
+hand-promoted law is `add_unsq_pad_r` —
 the first promotion whose paying site is a strictly-real intake
 workload (`RelativePositionBias`), admitted through the auto-cond →
 gauntlet retry (`docs/results_realcorpus.md`).  Before it,
@@ -250,7 +259,7 @@ runs everything.
   pipeline).  Module-level on boundary-purpose files only:
   `test_e2e_pipeline`, `test_onnx_{sink,source,liftmap,opmap}`,
   `test_om_decayed_kway_deliver`, `test_runners`, `test_autotune`,
-  `test_torch_integration`, `test_handl_peer` (**547 tests**).
+  `test_torch_integration`, `test_handl_peer` (**698 tests**).
   Torch-*eager* adapter
   tests are *not* e2e — they exercise the boundary shim, not the engine
   behind it.  Mixed files are deliberately left unmarked for now.
@@ -266,10 +275,10 @@ runs everything.
     tests/test_law_provenance.py tests/test_decode_geom.py -q
 
 # core lane: unit/integration only — no external engines, no soaks
-.venv/bin/python -m pytest -m "not e2e and not slow"     # 5,257 tests
+.venv/bin/python -m pytest -m "not e2e and not slow"     # 6,009 tests
 
 # dev lane: everything except the minutes-scale
-.venv/bin/python -m pytest -m "not slow"                 # 5,803 tests
+.venv/bin/python -m pytest -m "not slow"                 # 6,706 tests
 
 # gate: everything, once, under coverage
 scripts/gates.sh
@@ -287,7 +296,7 @@ scripts/gates.sh
 .venv/bin/python scripts/radon_ratchet.py   # complexity ratchet
 
 # The suite, once, under coverage (both floors below).
-uv run pytest                 # 5,834 tests; does NOT finish in 30 min on
+uv run pytest                 # 6,737 tests; does NOT finish in 30 min on
                               # either serial or `-n 2` (see the table
                               # below).  Iterate with `-m "not slow"`.
                               # Single-process: see the warning below.
@@ -357,8 +366,10 @@ clean under both, and `scripts/gates.sh` checks exactly those.
 > cheap (0.6 s / <2 s), as are the other `max_nodes=60_000` tests in the
 > file (`test_real_export_spellings_fold_and_verify` 2.8 s,
 > `test_bridges_fire_in_default_pipeline` 0.9 s).  The suite was
-> **6,372 tests** at that measurement; it now collects **5,834**
-> (the substrate files moved to `eqsat` at the phase-4 split).  The old
+> **6,372 tests** at that measurement; it now collects **6,737**
+> (the substrate files moved to `eqsat` at the phase-4 split; the
+> domain-side suite has since grown back past the pre-split count).
+> The old
 > "~7.5 min" and "~28 min" figures are both stale.
 >
 > **The slice comparison is the only *completed* measurement.**  On the
@@ -482,9 +493,10 @@ error.  The gate applies to shipped code only — `tests/**` and
 ## Runtime contracts (typeguard)
 
 `typeguard` (dev dep) enforces annotations at runtime.
-`scripts/runtime_types.sh` instruments all four packages
-(`--typeguard-packages=mlopt_core,mlopt_torch,mlopt_carriers,mlopt_orchestrator`)
-and runs the curated (1372 tests) — a manual-stage gate that CI also
+`scripts/runtime_types.sh` instruments only the domain packages —
+`--typeguard-packages=mlopt_torch,mlopt_carriers` (the substrate's own
+instrumentation moved to `eqsat` with it) — and runs the curated
+51-file list (1,096 tests) — a manual-stage gate that CI also
 runs (~11 min).  It caught several real annotation bugs, all fixed:
 `laws/tensor._head` was annotated `str` but takes an `Op`;
 `typing._infer_op_shape` passed a `tuple` to zero-arg shape rules typed
@@ -632,7 +644,7 @@ leaves are literals, and `str` attr values are attr metavariables bound
 under `"$attr:"` keys.  Prefer `cond=...` — a declarative side
 condition in `mlopt_core.laws.cond` (pure data: `("and", ("rank-eq",
 "a", "b"), ("rank-ge", "a", 2))`, serializable via `cond_to_data`/
-`cond_from_data`; 58 of 86 laws use it) — over `check(bound) -> bool`,
+`cond_from_data`; 58 of 144 laws use it) — over `check(bound) -> bool`,
 the escape hatch for conditions the DSL can't express: `bound` maps
 each metavar to a resolved member term (use `laws.base._shape_of` for
 shape guards — the matcher cannot see types).
@@ -641,8 +653,8 @@ shape guards — the matcher cannot see types).
 declarative DSL in `mlopt_core.laws.cond` (a `{NAME: expr}` map of
 shape/attr expressions, serializable via `derive_to_data`/
 `derive_from_data` and folded into `rule.derive` at construction);
-19 of 86 laws use it, leaving **85 of 86 laws fully
-data-serializable** — the 86th, `conv_bn_fold`, is a shipped
+19 of 144 laws use it, leaving **143 of 144 laws fully
+data-serializable** — the remaining one, `conv_bn_fold`, is a shipped
 machine-minted composite whose hooks are rebuilt deterministically
 from its stored data guard spec (the partition is pinned in
 `tests/test_law_serialize.py`; see
@@ -651,7 +663,8 @@ witness
 (proof edge + rule provenance) — no extra bookkeeping needed.  Register
 the rule in a group list at the bottom of its module
 (`SIMPLIFICATION_RULES`, `CATEGORICAL_RULES`, `SDPA_FOLD_RULES`,
-`SCAN_LAWS`, `SCAN_DIAG_LAWS`; `ALL_RULES`/`all_rules()` is the union).
+`SCAN_LAWS`, `SCAN_DIAG_LAWS`, `LAYOUT_RULES`; `ALL_RULES`/`all_rules()`
+is the union).
 Rules also carry tags from `mlopt_core.laws.tags` (pass
 `R(..., tags=...)`); `EXPANSIVE` marks the closure-generating rules the
 pipeline budgets (`rules.tagged(EXPANSIVE)`).  Each rule's kernel kind

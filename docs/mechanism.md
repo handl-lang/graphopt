@@ -22,7 +22,7 @@ inside one equivalence class (steps 5–6 below); **construction**
 writes new cells (`mlopt_discovery.object_synthesis` + `evidence`,
 played as episodes on `mlopt_discovery.arena` / `meta_arena` boards,
 exposed as an RL environment by `mlopt_discovery.play` — one CLI,
-five domains, `--deliver`/`--probe`/`--zoo`).  In the `gen` domain the
+nine domains, `--deliver`/`--probe`/`--zoo`).  In the `gen` domain the
 board mints a handler for any unnamed elementwise subterm
 (`genkernel`), `claim` declares the handler's own pattern mid-search,
 and `deliver` lowers to a verified module calling generated
@@ -123,7 +123,7 @@ Two more consequences worth stating plainly:
   them).  Few axioms generate many consequences; the reach is their
   closure.  The split is *measured on the shipped library*, not
   asserted: `rule.kind` marks each member `axiom` / `lemma` /
-  `redundant` (55 / 14 / 2 over `ALL_RULES`), and `rule.derivation`
+  `redundant` (120 / 22 / 2 over `ALL_RULES`), and `rule.derivation`
   records the premise(s) proving each non-axiom.
 - **Choosing the interpretation is the discovery act.**  The same
   graph reads as plain composition, a comonoid (pairing), a
@@ -144,10 +144,11 @@ depth 2 — stratification, reach under removal, and the mediator
 table ("the coherence of `A × B` requires `C`").  The measured
 structure: the derived layer of `ALL_RULES` is *flat* — zero laws
 derivable from the primitives alone, every derivation a
-self-supporting cycle (ten inverse pairs plus the 4-member matmul
-class) plus one emergent law (`silu_mul_form`); the effective
-basis is 32 independent primitives (27 derivable), marked on the rules
-by `--emit-basis`.  Two honest findings: **derivable ≠
+self-supporting cycle (eleven inverse pairs plus the 4-member matmul
+class) plus one emergent law (`silu_mul_form`); under `--emit-basis`
+the effective basis is 108 — 96 independent primitives plus one
+designated seed per derivability cycle (27 derivable, 21
+no-instance).  Two honest findings: **derivable ≠
 disposable** — removing a derivable law costs real bounded reach
 (the twin proves the *equality*; only this direction's LHS fires
 on those spellings — `linear_to_matmul_t` is provable yet the most
@@ -176,7 +177,11 @@ candidates and the shipped matmul-family hole; the sqlite evidence
 store (`--evidence-db` / `mlopt_discovery.evidence`) caches verdicts
 keyed by corpus × rules × code revision (~19× on a warm run) so
 "what did we measure, and did it change?" is a query, not a
-re-run.
+re-run.  Admission itself has since widened: `admit_prim_record`
+can seat a gauntlet-cleared prim directly into the minted store's
+`AUTO_TIER`, and those names join `MACHINE_SHIPPED` through
+`AUTO_ADMITTED` at import (first case: `prim:synop_6ed0a07c7d` —
+`docs/reports/2026-11-12-law-auto-admission.md`).
 
 **Minting — the object language grows (ADR 0007).**  The loop above
 admits *laws over a fixed vocabulary*; the minting stack makes the
@@ -292,10 +297,12 @@ round-trip, which is testable.
 law *executes* through handl's rewrite engine — one rewrite, producing
 exactly the term mlopt's own `EGraph.apply_rule` produces for the same
 input (handl's `mlopt_law_fires_through_the_rewrite_engine`).  The whole
-bank loads too: **83 laws** in `lang.transforms`, with the three minted
-leaf kinds (`mlopt:const` / `mlopt:var` / `mlopt:data`) declared.  So
-the relationship is not "mlopt emits data handl can read" — handl runs
-mlopt's laws.
+bank loads too: the vocab projection carries all **144** `ALL_RULES`
+laws in `transforms.yaml`, the vocab models verify **109/109
+`handl-shipped`** through the fp64 gate, and the three minted
+leaf kinds (`mlopt:const` / `mlopt:var` / `mlopt:data`) are declared.
+So the relationship is not "mlopt emits data handl can read" — handl
+runs mlopt's laws.
 
 **What this is not (yet).**  Two of the spike's "not yet"s have since
 closed.  The peer *is* built: `packages/mlopt-handl-peer` — plan 0030 step 2 in

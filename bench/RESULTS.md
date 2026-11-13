@@ -22,7 +22,8 @@ The eval-mode weight fold `batch_norm(conv2d(x, W, b), γ, β, μ, σ²)
 `s = γ·rsqrt(σ²+ε)` — minted by `meta.synthesize_rules` over
 `BATCH_NORM_RULES` + `CONV_FOLD_RULES`, admitted through the gauntlet,
 and shipped **verbatim** in `DEFAULT` (`mlopt_core.laws.minted`;
-`MACHINE_SHIPPED` = 12 laws).
+`MACHINE_SHIPPED` now counts **129 ledger rows** — 13 promoted laws,
+58 minted folds, 58 `.expand` premises).
 
 ### The decision, costed through the runtime itself
 
@@ -59,7 +60,7 @@ baseline's prelude:
 | `conv_bn_fold` vs `conv_bn` | +7 to +10 % | **+33 %** | the un-amortized regime — fold math per call is a net *loss* |
 
 The scaffold's independent run (`handl-lang/graphopt`
-`experiments/`, `conv-bn-fold --repeat 100`, in-process kit, its own
+`packages/mlopt-experiments/`, `conv-bn-fold --repeat 100`, in-process kit, its own
 6×4×3×3-on-8×8 dyadic fixture) lands the same two regimes and confirms
 `hnl-run` exercises the identical path — the scaffold composes the
 renamed `hnl-engine-*` crates directly (the same engine component set
@@ -106,12 +107,12 @@ to the torch-fp64 answer at **6.7e-16**.
 - Reproduce the five-arm decomposition (the table above):
   `.venv/bin/python bench/drivers/probes/conv_fold_wall_regimes_probe.py`
   (~5 min — five programs × 31 subprocess evals, debug build).
-- Reproduce the scaffold arm (the in-tree `experiments/` crate):
-  `cargo run --release --manifest-path experiments/Cargo.toml
+- Reproduce the scaffold arm (the `packages/mlopt-experiments/` crate):
+  `cargo run --release --manifest-path packages/mlopt-experiments/Cargo.toml
   --bin conv-bn-fold -- --repeat 100`
   (resolves this repo's `hnl/conv_bn.hnl` through its own ladder;
-  `experiments/` is `exclude`d from the root workspace, so cargo
-  goes through `--manifest-path`).
+  `packages/mlopt-experiments/` is a standalone cargo crate outside the
+  root workspace, so cargo goes through `--manifest-path`).
 - Retro: `project/retros/kit-term-bridge.md`.
 
 ### The admission account, end to end
@@ -163,15 +164,15 @@ the fold, value-equal on dyadic fixtures.  The bridge test suite is
 # the admission arc on the real seed
 .venv/bin/python bench/drivers/probes/conv_fold_premise_pay_probe.py      # ~13 s
 
-# the scaffold's three arms (the in-tree experiments/ crate)
-cargo run --release --manifest-path experiments/Cargo.toml \
+# the scaffold's three arms (the packages/mlopt-experiments/ crate)
+cargo run --release --manifest-path packages/mlopt-experiments/Cargo.toml \
     --bin conv-bn-fold -- --repeat 100
 
 # the Rust consumer
 cargo test -p mlopt-kit                                        # 31 tests
 
 # the dev lane (everything except the minutes-scale marked `slow`)
-.venv/bin/python -m pytest -m "not slow"                        # 6,485 tests
+.venv/bin/python -m pytest -m "not slow"                        # 6,706 tests
 ```
 
 Wall-clock numbers move with the box, the build profile, and the

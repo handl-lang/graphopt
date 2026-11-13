@@ -11,6 +11,8 @@ python -m bench run-all --quick             # every harnessed suite
 python -m bench dashboard                   # cross-suite HTML index
 python -m bench report bench/results/reassoc_scale.json  # re-render
 python -m bench compare reassoc_scale       # vs the pinned baseline
+python -m bench results                     # pinned baselines → docs/results.md
+python -m bench gate                        # fail on baseline regression
 ```
 
 Run any suite directly with its own typed flags:
@@ -28,16 +30,22 @@ CLI) and shortens the timing window.
 ```
 bench/
   __main__.py  cli.py  registry.py     # entry point, subcommands, catalog
-  benchkit/                            # the harness
-    model.py      # Variant, Case, Cell, Finding, Verdict
-    runner.py     # torch Timer medians + IQR (the only clock)
-    report.py     # Report: cells + findings + provenance + renderers
-    stats.py      # formatting + polars flattening
-    env.py        # provenance (torch/python/git/device)
-    ledger.py     # append-only run ledger + baselines
-    compare.py    # regression + expectation comparison
-    render/       # markdown · html · plots · quarto · slidev · dashboard · catalog
-    templates/    # jinja2 sources for the HTML surfaces
+  benchkit/                            # compat alias — the harness itself
+                                       #   lives in handl-lang/gamekit
+                                       #   packages/benchkit (plan 0032);
+                                       #   only render.catalog stays here.
+                                       #   The real modules: model.py
+                                       #   (Variant, Case, Cell, Finding,
+                                       #   Verdict) · runner.py (torch
+                                       #   Timer medians + IQR — the only
+                                       #   clock) · report.py (Report:
+                                       #   cells + findings + provenance
+                                       #   + renderers) · stats.py ·
+                                       #   env.py · ledger.py ·
+                                       #   compare.py · render/ (markdown
+                                       #   · html · plots · quarto ·
+                                       #   slidev · dashboard) ·
+                                       #   templates/
   suites/{correctness,search,cost,evaluation,structure,speedup,e2e,bounded,integration,discovery}/
   common/                              # llama2c.py loader, fetch.py
   discovery/                           # named-optimization corpus + scorecard CLI
@@ -60,7 +68,8 @@ bench/
     kit/                               # the mlopt-term → .hnl emit/eval bridge
     train/                             # measurement-only policy trainers
     policy/                            # the controlled-protocol policy drivers
-                                       #   (results in docs/results_*.md)
+                                       #   (results in docs/results_*.md /
+                                       #   docs/reports/)
     overnight.py                       # the overnight discovery loop —
                                        #   episodes → mint → verify_law
                                        #   gauntlet admission → prior-art
@@ -142,11 +151,12 @@ Downloads `stories15M.bin` / `stories110M.bin` into
 4. Regenerate the catalog: `python -m bench catalog --write`.
 
 Gates: `uv run pytest` (the harness has `tests/test_benchkit.py`),
-`.venv/bin/ruff check packages tools bench`, and
-`.venv/bin/ruff format --check packages tools bench`.  `bench/` is
-linted and formatted but **not** type-checked (`[tool.ty.src] include`
-is `packages` only) and sits outside the 100% coverage floor — it is
-measurement code, not a shipped API.
+and the shipped-source ruff scope — `.venv/bin/ruff check packages
+scripts examples` / `ruff format --check packages scripts examples`
+(`bench/` carries the same documented pre-existing drift class as
+`tests/`; it is **not** type-checked — `[tool.ty.src] include` is
+`packages` only — and sits outside the 100% coverage floor: it is
+measurement code, not a shipped API).
 
 ## Suite catalog
 

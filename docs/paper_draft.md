@@ -2,7 +2,9 @@
 
 *Draft.  Every number in this paper is sourced to the retro, baseline or
 artifact that produced it; where a claim is a rediscovery rather than a
-discovery it is labelled as such.*
+discovery it is labelled as such.  Naming: "Catopt" is the
+product/paper name — the repo is `handl-lang/graphopt` and the code keeps
+its `mlopt_*` package names.*
 
 ## Abstract
 
@@ -33,7 +35,7 @@ invokes it, and its instance is underivable from `known_bank()` (the shipped
 rules plus the prior-art preset) minus alpha-siblings.  The sieve
 (`bench/drivers/screen/novelty_sieve.py`, results in
 `docs/results_novelty_sieve.md`) ran 24 candidates over the then-242-rule bank
-(`known_bank()` now counts 265 — the shipped `prim:synop*` folds seated since):
+(`known_bank()` now counts 300 — the shipped `prim:synop*` folds seated since):
 the review queue is **empty** — the two earlier review items
 (`mul_unsq_nat`, `softsign_fold`) demoted to derivable once their
 catalogued duals were registered as prior art — six derivable,
@@ -177,8 +179,9 @@ over the shipped library; `coherence2` measures depth 2 — stratification,
 reach under removal, and the mediator table.  The measured structure is
 honest: the derived layer of `ALL_RULES` is *flat* — zero laws derivable from
 the primitives alone, every derivation a self-supporting cycle plus one
-emergent law (`silu_mul_form`); the effective basis is 32 independent
-primitives (27 derivable).  Two findings worth stating: **derivable ≠
+emergent law (`silu_mul_form`); under `--emit-basis` the effective basis is
+108 — 96 independent primitives plus one designated seed per derivability
+cycle (27 derivable, 21 no-instance).  Two findings worth stating: **derivable ≠
 disposable** (removing a derivable law costs real bounded reach —
 `linear_to_matmul_t` is provable yet the most load-bearing derivable law
 under removal), and **divergence is found and mediated** (`silu_fold`
@@ -823,7 +826,7 @@ venue paper needs the scale validation and the executor work named in §6.
 | Claim | Measurement | Artifact |
 |---|---|---|
 | **Novelty.** A corpus-minted law ships in the default rule set | `mul_unsq_nat`, `MACHINE_SHIPPED`, −12.27 % on DeltaRuleBlock, +18 enodes | `project/retros/mul-unsq-nat.md`; `mlopt_core.laws.provenance.MACHINE_SHIPPED` |
-| machine-admitted laws ship beside the hand-written kernel | `MACHINE_SHIPPED` (127 rows — 13 laws + 57 minted `prim:synop*` folds + 57 `.expand` premises; 70 seated in `DEFAULT`) | `docs/api.md`; `project/retros/promoted-laws.md`; `docs/reports/primitives_finds.md` |
+| machine-admitted laws ship beside the hand-written kernel | `MACHINE_SHIPPED` (129 rows — 13 laws + 58 minted `prim:synop*` folds + 58 `.expand` premises, the last fold admitted through the `AUTO_TIER` auto-admission path; 71 seated in `DEFAULT`) | `docs/api.md`; `project/retros/promoted-laws.md`; `docs/reports/primitives_finds.md`; `docs/reports/2026-11-12-law-auto-admission.md` |
 | A handler for a previously hand-written executor is machine-minted | `om_decayed` element at 8.9e-16 fp64 | `project/retros/handler-proposals.md`; ADR 0007 |
 | An atom's law set is synthesized and certified | 25 certified / 4 rejected / 0 refused | `project/retros/layer3-loop.md` |
 | Fresh paying structure is sparse | 60-model sweep: 0 paying new laws beyond `mul_unsq_nat`; ~1.5 % | `project/retros/discovery-scale.md` |

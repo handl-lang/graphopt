@@ -30,9 +30,10 @@ construction, no codegen), **agnostic exits** (`Sink` → torch/ONNX/`.hnl`).
 
 - **`conv_bn_fold`** — the conv+BN weight fold every framework
   hand-codes, *composed by the machine*, certified, shipped — one of
-  **127 machine-admitted rules** on the `MACHINE_SHIPPED` ledger (the
-  13 promoted laws, the 57 minted `prim:synop_*`/`synopN_*` folds now
-  seated in `DEFAULT`, and their 57 `.expand` definitional premises).
+  **129 machine-admitted ledger rows** on `MACHINE_SHIPPED` (the
+  13 promoted laws, the 58 minted `prim:synop_*`/`synopN_*` folds now
+  seated in `DEFAULT` — including the first `AUTO_TIER` auto-admission —
+  and their 58 `.expand` definitional premises).
   Bitwise-equal
   through an independent runtime (the handl tree-walk engine) at ≈−5 %
   per-call wall in the deployed regime — a kernel-scale fp64 result,
@@ -67,7 +68,7 @@ cert ✓ + beats a registered baseline + underivable from
 `known_bank()` (which now includes the prior-art preset) — *not*
 "novel to humanity", which stays an open-world lit-review.  The sieve
 ran 24 candidates over the then-242-rule bank — `known_bank()` now
-counts **265**, the shipped `prim:synop*` folds seated since — and
+counts **300**, the shipped `prim:synop*` folds seated since — and
 the 31-case scorecard is
 31/31 found+cert: **review queue empty** — the two prior review items
 (`mul_unsq_nat`, `softsign_fold`) demoted to derivable once their
@@ -81,7 +82,7 @@ banks — none makes the minted bank itself an object of play.
 modules the yield is 0 so far — finds lean on purpose-built workloads;
 the machine bank alone wins 3/22 vs human 4/22 (the union wins 6/22 —
 complementary, not dominant; that bar measured the 22-model corpus —
-the held-out zoo has since grown to 53 workloads); the learned arms cannot yet learn *when
+the held-out zoo has since grown to 68 workloads); the learned arms cannot yet learn *when
 to quit* — the blocker is observability, not the reward's price.  Wins
 are structural and regime-bounded, inference-only, compile-time
 search.
@@ -236,7 +237,7 @@ uv sync                                                  # the dev environment
 cargo test -p mlopt-kit                                 # the Rust consumer, 31 tests
 
 # the day-to-day gate
-.venv/bin/python -m pytest -m "not slow"                 # dev lane, 6,485 tests
+.venv/bin/python -m pytest -m "not slow"                 # dev lane, 6,706 tests
 scripts/gates.sh                                         # static gates + suite
 ```
 

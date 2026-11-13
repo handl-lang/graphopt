@@ -1,5 +1,8 @@
 # mlopt — landing page
 
+*Naming: the repo is `handl-lang/graphopt`, the engine/packages keep
+their `mlopt_*` names, and the product/paper name is **Catopt**.*
+
 **Catopt is a sound mathematical discovery and optimization engine,
 where search is a game that can be learned.**
 
@@ -80,7 +83,7 @@ Soundness is enforced **per artifact**, not once:
 Optimization is a game over the space of *valid* moves: the state is
 the current program's features, the action is a legal rewrite, the
 reward is the cost improvement.  The learned prior ships trained —
-ranking AP **0.133 vs 0.045** for the heuristic on held-out pages, and
+ranking AP **0.210 vs 0.045** for the heuristic on held-out pages, and
 it finds ~2× more useful laws per episode.
 
 ---
@@ -89,7 +92,7 @@ it finds ~2× more useful laws per episode.
 
 | what | number |
 |---|---|
-| held-out zoo (18 architectures) | **11 delivered modules beat `torch.compile`**, best 2.18× |
+| whole zoo — 68 workloads, 65 delivered | **23 beat eager in every round (fp32)**, best **3.05×** (`TernaryWeightLinear`); 17 in fp64; `FNOBlock` **1.77× `torch.compile`** — [`docs/reports/zoo_chain.md`](reports/zoo_chain.md) |
 | deep weight chains, k=16 | **14.92× vs `torch.compile`**, exact |
 | spelled RetNet export, T=2048 | **6.2–7.4× vs `torch.compile`**, **7.2× less peak activation memory**, verified 9.8e-9 |
 | a law nobody wrote, now shipping | `mul_unsq_nat`, **−12.27%** on its source workload |
@@ -111,7 +114,7 @@ it finds ~2× more useful laws per episode.
 ## Try it
 
 ```bash
-git clone https://github.com/luisfuturist/mlopt && cd mlopt
+git clone https://github.com/handl-lang/graphopt && cd graphopt
 uv sync
 python examples/quickstart.py                    # ~15s, no GPU needed
 cd docs/tutorials/course && vp install && vp -C apps/learn dev  # the 28-level course
@@ -135,6 +138,10 @@ out = opt(x)      # verified-equal to model(x)
 | **[`project/research_lab_notebook.md`](../project/research_lab_notebook.md)** | the lab notebook — questions, dead ends, process lessons |
 | **[`docs/results.md`](results.md)** | every measurement, generated from pinned baselines |
 | **[`project/adrs/`](../project/adrs/)** | the decision records, each with its falsification path |
+
+*`project/` links resolve on the `project` branch, not on `main` —
+project docs (ADRs, retros, plans) ship there and are published under
+`/graphopt/project/` (see `README.md` §Documentation).*
 
 ## The honest pitch
 
