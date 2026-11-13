@@ -1119,9 +1119,28 @@ def _route_scan_chains(term: Any, handlers: dict, eg: Any) -> Any:
     honest fallback, never a wrong kernel.
     """
     routes: list = []
+    trajs: list = []
     for h in handlers.values():
         chain = h.get("chain")
         env = h.get("leaf_env")
+        states = h.get("states")
+        if states and env:
+            # seqs trajectory site: the collector proved the chain's
+            # prefix states are consumed per-step, so delivery emits
+            # the ``(T, ·)`` trajectory once and rewrites EVERY state
+            # e-class to ``select(traj, t)`` — the read-out consumers
+            # (``einsum``/``stack`` &c.) keep their spelled form and
+            # read identical values.  No ``"chain"`` route: the bare
+            # kernel call returns the trajectory, not the final
+            # state a root replacement would need.
+            try:
+                traj = Op.make(
+                    h["kernel"], *(env[m] for m in h["args"])
+                )
+            except (KeyError, TypeError):
+                continue  # incomplete binding — keep spelled
+            trajs.append((h, traj, states))
+            continue
         if chain is None or not env:
             continue
         try:
@@ -1130,7 +1149,28 @@ def _route_scan_chains(term: Any, handlers: dict, eg: Any) -> Any:
             continue  # incomplete binding — keep the spelled chain
         target = eg._class_of_term(chain) if eg is not None else None
         routes.append((chain, repl, target))
-    if not routes or not isinstance(term, Op):
+    # e-class -> (traj op, step index, select axis) for every
+    # recorded prefix state.  A class claimed by two different
+    # (op, index) pairs is ambiguous — the state stays spelled,
+    # which is always correct: ``select(traj, t)`` denotes ``S_t``
+    # exactly, so any SUBSET of the rewrites preserves semantics.
+    traj_map: dict = {}
+    if trajs and eg is not None:
+        for h, traj, states in trajs:
+            ax = h.get("axis")
+            if type(ax) is not int:
+                continue
+            for st, idx in states:
+                target = eg._class_of_term(st)
+                if target is None:
+                    continue
+                prev = traj_map.get(target)
+                if prev is not None and (
+                    prev[1] != idx or prev[0] is not traj
+                ):
+                    continue
+                traj_map[target] = (traj, idx, ax)
+    if (not routes and not traj_map) or not isinstance(term, Op):
         return term
     memo: dict = {}
     cls_memo: dict = {}
@@ -1142,6 +1182,19 @@ def _route_scan_chains(term: Any, handlers: dict, eg: Any) -> Any:
         if hit is not None:
             return hit
         out = t
+        cls_cache: list = []
+
+        def cls() -> Any:
+            # the node's e-class, resolved once and shared by the
+            # chain routes and the trajectory-state map
+            if not cls_cache:
+                cls_cache.append(
+                    eg._class_of_term(t, cls_memo)
+                    if eg is not None
+                    else None
+                )
+            return cls_cache[0]
+
         for chain, repl, target in routes:
             # The extracted representative is usually NOT the
             # collector's ``chain`` object — saturation folds inside
@@ -1155,7 +1208,7 @@ def _route_scan_chains(term: Any, handlers: dict, eg: Any) -> Any:
             ):
                 matched = True
             elif target is not None:
-                c = eg._class_of_term(t, cls_memo)
+                c = cls()
                 matched = c is not None and c == target
             if matched:
                 # the replacement's own args still walk — a sequence
@@ -1167,6 +1220,24 @@ def _route_scan_chains(term: Any, handlers: dict, eg: Any) -> Any:
                     else repl
                 )
                 break
+        if out is t:
+            c = cls()
+            thit = traj_map.get(c) if c is not None else None
+            if thit is not None:
+                # a recorded prefix state: rewrite to a ``select``
+                # off the emitted trajectory — ``traj[t]`` IS
+                # ``S_t``, so every consumer (read-out einsums
+                # included) keeps its spelled semantics.  The traj
+                # op's own args still walk — an operand subtree can
+                # hide another routed chain.
+                traj_op, idx, ax = thit
+                rargs = tuple(go(a) for a in traj_op.args)
+                top = (
+                    Op.make(traj_op.op, *rargs, **dict(traj_op.attrs))
+                    if rargs != traj_op.args
+                    else traj_op
+                )
+                out = Op.make("select", top, dim=ax, index=idx)
         if out is t and t.args:
             new_args = tuple(go(a) for a in t.args)
             if new_args != t.args:

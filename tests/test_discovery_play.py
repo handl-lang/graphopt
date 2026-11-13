@@ -2457,3 +2457,238 @@ class TestCumsumSites:
         assert info is not None and info["kind"] == "seqs"
         assert info["scan_mode"] == "cumsum"
         assert gk.handler_denotation(h) is not None
+
+
+class TestSeqsTrajectorySites:
+    """The trajectory collector — chains whose states are read out.
+
+    ``_seq_scan_sites`` upgrades a ``kind="seq"`` mint to
+    ``kind="seqs"`` when a NON-FINAL prefix state has a consumer
+    outside the chain's own subtree (the GLA/Mamba shape:
+    ``einsum(S_t, q_t)`` per step under a ``stack``).  The site
+    record drops ``"chain"`` (the bare kernel returns the whole
+    trajectory, not the final state) and carries ``"states"`` — the
+    ``(node, step_index)`` map the deliver-time route rewrites to
+    ``select(traj, t)``.
+    """
+
+    def _traj_recurrence(self, t_len: int = 3):
+        """GLG-shaped chain + per-step einsum read-outs + stack."""
+        G, K, V = (
+            _v("G", 2, t_len, 4),
+            _v("K", 2, t_len, 4),
+            _v("V", 2, t_len, 4),
+        )
+        Q = _v("Q", 2, t_len, 4)
+        h = _v("H0", 2, 4, 4)
+        outs = []
+        for t in range(t_len):
+            a_t = Op.make(
+                "unsqueeze", Op.make("select", G, dim=1, index=t), dim=-1
+            )
+            k_t = Op.make(
+                "unsqueeze", Op.make("select", K, dim=1, index=t), dim=-1
+            )
+            v_t = Op.make(
+                "unsqueeze",
+                Op.make("select", V, dim=1, index=t),
+                dim=-2,
+            )
+            h = Op.make(
+                "add",
+                Op.make("mul", a_t, h),
+                Op.make("mul", k_t, v_t),
+            )
+            outs.append(
+                Op.make(
+                    "einsum",
+                    h,
+                    Op.make("select", Q, dim=1, index=t),
+                    equation="bdv,bd->bv",
+                )
+            )
+        return Op.make("stack", *outs, dim=1)
+
+    def test_traj_sites_mints_seqs_spec(self):
+        pytest.importorskip("torch")
+        from mlopt_discovery import genkernel as gk
+
+        sites = play._seq_scan_sites(self._traj_recurrence())
+        assert len(sites) == 1
+        s = sites[0]
+        spec = s["spec"]
+        assert spec[1][0] == "aff_diag"
+        assert spec[3]["kind"] == "seqs"
+        assert spec[3]["axis"] == 1
+        # no chain route — the kernel returns the trajectory, and
+        # ``states`` is the route's LHS set in step order
+        assert "chain" not in s
+        assert [i for _n, i in s["states"]] == [0, 1, 2]
+        info = gk.scan_spec(spec)
+        assert info is not None and info["kind"] == "seqs"
+        assert info["scan_mode"] == "fold"
+
+    def test_traj_handler_denotation_is_trajectory(self):
+        # the minted op denotes EVERY prefix state — the referee's
+        # spelled arm must return (T, ·), not the final state
+        torch = pytest.importorskip("torch")
+        from mlopt_discovery import genkernel as gk
+
+        term = self._traj_recurrence()
+        sites = play._seq_scan_sites(term)
+        hs = gk.scan_handlers(sites)
+        assert len(hs) == 1
+        h = next(iter(hs.values()))
+        assert "states" in h
+        den = gk.handler_denotation(h)
+        assert den is not None
+        var_env = {
+            "G": torch.randn(2, 3, 4),
+            "K": torch.randn(2, 3, 4),
+            "V": torch.randn(2, 3, 4),
+            "Q": torch.randn(2, 3, 4),
+            "H0": torch.randn(2, 4, 4),
+        }
+        import mlopt_torch.torch_bridge as tb
+
+        bindings = tb._IR_TO_TORCH
+        vals = {
+            m: gk._bound_val(t, var_env, bindings)
+            for m, t in h["leaf_env"].items()
+        }
+        got = den(*[vals[m] for m in h["args"]])
+        # spelled trajectory: the chain states stacked along axis 1
+        states = []
+        hh = var_env["H0"]
+        for t in range(3):
+            a_t = var_env["G"][:, t].unsqueeze(-1)
+            write = (
+                var_env["K"][:, t].unsqueeze(-1)
+                * var_env["V"][:, t].unsqueeze(-2)
+            )
+            hh = a_t * hh + write
+            states.append(hh)
+        want = torch.stack(states, dim=1)
+        torch.testing.assert_close(got, want)
+
+    def test_traj_route_rewrites_states_to_selects(self):
+        # deliverable: every state e-class becomes
+        # ``select(scan_0_k(...), dim=1, index=t)``; the einsum
+        # read-outs and the stack keep their spelled form, and the
+        # whole add-chain is gone.
+        pytest.importorskip("torch")
+        from mlopt_core.ir import op_repr
+        from mlopt_discovery import genkernel as gk
+
+        term = self._traj_recurrence()
+        hs = gk.scan_handlers(play._seq_scan_sites(term))
+        board = ma.MetaArena(term, handlers=hs)
+        out = op_repr(board.deliverable(term))
+        assert out.count("scan_0_k") == 3
+        assert "(add" not in out
+        assert out.count("einsum") == 3
+        assert "stack" in out
+
+    def test_traj_route_preserves_values(self):
+        # the routed term evaluates to the module's own output —
+        # select(traj, t) IS S_t, so every consumer reads the same
+        # tensor the spelled chain produced.
+        torch = pytest.importorskip("torch")
+        import mlopt_torch.torch_bridge as tb
+        from mlopt_discovery import genkernel as gk
+
+        term = self._traj_recurrence()
+        hs = gk.scan_handlers(play._seq_scan_sites(term))
+        board = ma.MetaArena(term, handlers=hs)
+        routed = board.deliverable(term)
+        bindings = dict(tb._IR_TO_TORCH) | gk.gen_bindings(
+            hs, compile_kernels=False
+        )
+        var_env = {
+            "G": torch.randn(2, 3, 4),
+            "K": torch.randn(2, 3, 4),
+            "V": torch.randn(2, 3, 4),
+            "Q": torch.randn(2, 3, 4),
+            "H0": torch.randn(2, 4, 4),
+        }
+        kw = dict(
+            var_env=var_env,
+            param_env=var_env,
+            bindings=bindings,
+            strict=True,
+        )
+        got = tb.eval_term(routed, **kw)
+        want = tb.eval_term(term, **kw)
+        torch.testing.assert_close(got, want)
+
+    def test_root_only_consumption_stays_seq(self):
+        # an external consumer of the FINAL state alone does not
+        # need the trajectory — the seq fold still covers it
+        pytest.importorskip("torch")
+        # rebuild just the chain (no read-outs) and consume its root
+        G, K, V = (
+            _v("G", 2, 3, 4),
+            _v("K", 2, 3, 4),
+            _v("V", 2, 3, 4),
+        )
+        W = _v("W", 2, 4, 4)
+        h = _v("H0", 2, 4, 4)
+        for t in range(3):
+            a_t = Op.make(
+                "unsqueeze", Op.make("select", G, dim=1, index=t), dim=-1
+            )
+            k_t = Op.make(
+                "unsqueeze", Op.make("select", K, dim=1, index=t), dim=-1
+            )
+            v_t = Op.make(
+                "unsqueeze",
+                Op.make("select", V, dim=1, index=t),
+                dim=-2,
+            )
+            h = Op.make(
+                "add",
+                Op.make("mul", a_t, h),
+                Op.make("mul", k_t, v_t),
+            )
+        term = Op.make("matmul", h, W)
+        sites = play._seq_scan_sites(term)
+        assert len(sites) == 1
+        s = sites[0]
+        assert s["spec"][3]["kind"] == "seq"
+        assert "chain" in s and "states" not in s
+
+    def test_traj_route_eclass_member(self):
+        # like the chain route: a state e-class resolves through
+        # whatever member extraction kept, not the collector's node
+        pytest.importorskip("torch")
+        from mlopt_core.egraph import EGraph, Rewrite
+        from mlopt_core.ir import op_repr
+        from mlopt_discovery import genkernel as gk
+
+        term = self._traj_recurrence()
+        hs = gk.scan_handlers(play._seq_scan_sites(term))
+        h = next(iter(hs.values()))
+        states = h["states"]
+        # proxy member for the LAST state (the chain root's class)
+        root_state, _last_idx = states[-1]
+        eg = EGraph()
+        root = eg.add_term(term)
+        proxy = Op.make(
+            "traj_proxy", next(iter(h["leaf_env"].values()))
+        )
+        eg.apply_rule(
+            Rewrite(
+                name="test_proxy",
+                lhs=root_state,
+                rhs=proxy,
+                law="test",
+            ),
+            root,
+        )
+        from mlopt_core.cost import count_cost
+
+        best = eg.extract_best(root, count_cost)
+        routed = ma._route_scan_chains(best, hs, eg)
+        out = op_repr(routed)
+        assert "traj_proxy" not in out
+        assert "scan_0_k" in out

@@ -1880,6 +1880,96 @@ def _seq_site(steps: tuple, base: Any):
     return spec, leaf_env, eff
 
 
+def _op_parents(term: Any) -> dict:
+    """Map ``id(child) -> [parent ops]`` over the whole term DAG."""
+    parents: dict = {}
+    seen: set = set()
+    stack = [term]
+    while stack:
+        n = stack.pop()
+        if not isinstance(n, Op) or id(n) in seen:
+            continue
+        seen.add(id(n))
+        for a in n.args:
+            parents.setdefault(id(a), []).append(n)
+            stack.append(a)
+    return parents
+
+
+def _op_descendants(root: Any) -> set:
+    """``id`` set of every ``Op`` reachable from *root* (inclusive)."""
+    out: set = set()
+    stack = [root]
+    while stack:
+        n = stack.pop()
+        if not isinstance(n, Op) or id(n) in out:
+            continue
+        out.add(id(n))
+        stack.extend(n.args)
+    return out
+
+
+def _seq_traj_states(
+    term: Any, root: Any, steps: tuple
+) -> tuple | None:
+    """Trajectory state map for a chain whose steps are read out.
+
+    Returns ``((state_node, step_index), ...)`` — every prefix
+    state ``S_t`` of the *steps*-long chain in chronological order —
+    when at least one NON-FINAL state has a consumer outside the
+    chain's own spelled subtree (the per-step read-out shape:
+    ``einsum(S_t, q_t)`` feeding a ``stack`` — the GLA/Mamba
+    modules).  ``None`` when the chain is only consumed at its
+    root: the ``seq`` final-state fold already covers that reading,
+    and minting ``seqs`` would pay a ``(T, ·)`` trajectory write
+    for a ``(·,)`` answer.
+
+    "External" is decided structurally, not by op name: a parent of
+    a state node that is not a descendant of *root* cannot be part
+    of the recurrence itself — every interior consumer (the next
+    step's ``mul`` factor) sits inside *root*'s subtree.  The check
+    is deliberately consumer-agnostic: ``select(traj, t)`` denotes
+    ``S_t`` whatever reads it, so the collector needs no read-out
+    grammar — only the proof that a trajectory is *required*.  The
+    route (:func:`meta_arena._route_scan_chains`) rewrites each
+    recorded state e-class to that ``select``.
+    """
+    t_len = len(steps)
+    # ``steps[k][2]`` is the state INPUT of step ``k`` — ``S_{k-1}``
+    # in chain coordinates — so ``steps[k][2]`` for ``k >= 1`` is
+    # ``S_{k-1}`` and *root* is ``S_{t_len-1}``.
+    states = tuple(
+        [(steps[k][2], k - 1) for k in range(1, t_len)]
+        + [(root, t_len - 1)]
+    )
+    # every node's parents in the module term — the external-
+    # consumer census the trajectory decision reads; and the
+    # chain's own subtree: interior consumers (the next step's
+    # ``mul``) are descendants of *root*, anything else reading a
+    # state node is a read-out the final-state fold cannot serve
+    parents = _op_parents(term)
+    internal = _op_descendants(root)
+    for node, _idx in states[:-1]:
+        for p in parents.get(id(node), ()):
+            if id(p) not in internal:
+                return states
+    return None
+
+
+def _seqs_chain_spec(spec: tuple) -> tuple:
+    """Return *spec* re-kinded ``seq`` → ``seqs`` (same carrier).
+
+    The aff_diag leaf and operand skeleton are identical — only the
+    minted op's declared semantics changes: every prefix state
+    (``out_t = acc_t``) instead of the final state, which is what
+    the read-out consumers actually read.
+    """
+    attrs = (
+        spec[3] if len(spec) > 3 and isinstance(spec[3], dict) else {}
+    )
+    return ("applyd", spec[1], spec[2], {**attrs, "kind": "seqs"})
+
+
 def _seq_scan_sites(term: Any) -> list:
     """Seq-form scan specs minted from raw recurrence chains.
 
@@ -1932,16 +2022,25 @@ def _seq_scan_sites(term: Any) -> list:
         if site is None:
             continue  # next tied reading of the same root
         spec, leaf_env, axis = site
+        traj = _seq_traj_states(term, root, steps)
         rec = {
             "spec": spec,
             "leaf_env": leaf_env,
             "axis": axis,
+        }
+        if traj is None:
             # the unrolled chain this fold denotes — the
             # deliver-time route's LHS (the intake IR has no
             # ``applyd`` node for a claim to match, so the
             # rewrite fires on the extracted term instead).
-            "chain": root,
-        }
+            rec["chain"] = root
+        else:
+            # per-step read-outs consume intermediate states — the
+            # trajectory (``seqs``) fold is the honest carrier, and
+            # ``states`` is the route's LHS set: every recorded
+            # state e-class rewrites to ``select(traj, t)``.
+            rec["spec"] = _seqs_chain_spec(spec)
+            rec["states"] = traj
         # dedup on the whole record — spec AND leaf_env AND chain —
         # not the spec tuple alone: the fold's denotation binds the
         # ``leaf_env`` operands, so two same-shaped chains over

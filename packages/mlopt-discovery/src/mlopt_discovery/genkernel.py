@@ -3461,6 +3461,12 @@ def _site_parts(item: Any) -> tuple:
             # shared broadcast frame exists) — the map reaches the
             # binding and denotation through the handler entry.
             extra["axes"] = item["axes"]
+        if "states" in item:
+            # seqs trajectory sites carry the chain's prefix-state
+            # nodes + step indices — the deliver-time route's LHS
+            # set: each state e-class rewrites to a ``select`` off
+            # the emitted trajectory tensor.
+            extra["states"] = item["states"]
         return item["spec"], extra
     return item, {}
 
