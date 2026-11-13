@@ -579,3 +579,30 @@ rather than silently wrong: the day a collector mints a seq
 spec, it is measured against the fold it declares.
 
 Full record `docs/reports/p34_seq_scan_denotation.md`.
+
+## Seq-scan collector landed — first real seq claim pays (2026-11-12)
+
+p34's honest boundary ("no collector mints a seq spec") is
+closed.  `_seq_scan_sites` (play.py) walks RAW IR recurrence
+chains — the exported `add(mul(a_t, h), b_t)` unrolling — and
+mints `{"spec", "leaf_env", "axis"}` records `scan_handlers`
+turns into ordinary `scan_<i>` handlers.  Per-step `select`s
+abstract to sequence operands bound to their whole child tensors;
+`_seq_site` emits only when deindexed skeletons agree step-for-
+step, `shape_of` proves equal ranks + step extent == step count
+at one dim, and select indices walk the axis in order — the fold
+denotes the chain by construction (verified 0.0 max-diff vs the
+unrolled term on real values).  `genkernel._site_parts` now
+merges a site-resolved `"axis"` into the handler entry.
+
+Census (zoo 16x8x2 fp64, spot-checked 32x8x4 / 16x16x2): 2
+candidate spines zoo-wide — RealGatedLRU mints, GatedLinearAttention
+declines at `scan_spec` (`unsqueeze` skeleton); Mamba/GatedDelta/
+DeltaRule chains break at <=1 step; RWKV/ChunkedSSD/ChunkedRetention
+have no diagonal select-chains.  Measured on the real intake ->
+referee path, fp64 CUDA: `scan_16` (RealGatedLRU, axis=1) KEPT —
+Triton fold 102.9us vs spelled fold 352.2us, ratio ~0.29x.
+Payoff: one real site, real win; the boundary is step-expr grammar
+(unsqueeze) and non-diagonal recurrence forms, not the collector.
+
+Full record `docs/reports/p35_seq_scan_collector.md`.
