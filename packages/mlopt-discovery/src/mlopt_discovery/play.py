@@ -1809,7 +1809,7 @@ def gen_probe(case: Any, *, budget: int = 12, reps: int = 200) -> dict:
         params=dict(ex["ir"].params),
     )
     try:
-        rep, t_gen = _probe_delivery(
+        rep, t_gen, module = _probe_delivery(
             sink, ir, ex, base_model, xin, device, reps
         )
     except Exception as exc:
@@ -1821,24 +1821,87 @@ def gen_probe(case: Any, *, budget: int = 12, reps: int = 200) -> dict:
             "baseline_us": t_base,
             "compiled_us": t_comp,
         }
-    rows.append(
-        {
-            "case": case[0],
-            "claims": tags,
-            "delivered": True,
-            "verified": rep.passed,
-            "prim_ops": prim_ops,
-            "max_abs": rep.max_abs,
-            "cost": getattr(board.observe(), "cost", float("nan")),
-            "baseline_us": t_base,
-            "compiled_us": t_comp,
-            "gen_us": t_gen,
-            "speedup": round(t_base / t_gen, 3) if t_gen else None,
-            "vs_compiled": round(t_comp / t_gen, 3) if t_gen else None,
-            "device": device,
-        }
-    )
+    row = {
+        "case": case[0],
+        "claims": tags,
+        "delivered": True,
+        "verified": rep.passed,
+        "prim_ops": prim_ops,
+        "max_abs": rep.max_abs,
+        "cost": getattr(board.observe(), "cost", float("nan")),
+        "baseline_us": t_base,
+        "compiled_us": t_comp,
+        "gen_us": t_gen,
+        "speedup": round(t_base / t_gen, 3) if t_gen else None,
+        "vs_compiled": round(t_comp / t_gen, 3) if t_gen else None,
+        "device": device,
+    }
+    # T-030/T-031 probe arm: the raw ``gen_us`` above is the per-leaf
+    # lowering's wall — on launch-bound zoo rows that is ~75% dispatch
+    # the rewrite bank cannot reach (the frontier ceiling counts it,
+    # the delivered body doesn't take it).  The shipped
+    # ``CudaGraphRunner`` is the delivery-side answer: capture the
+    # *same* verified module into a CUDA graph and time the replay.
+    # Additive keys only — ``gen_us``/``speedup`` stay the lowering
+    # number; ``gen_graph_us`` is the runner-wrapped arm.  Optional
+    # dep (``mlopt-cuda`` is not in this package's requirements) and
+    # CUDA-only, so every failure path degrades to no keys.
+    graph = _probe_graph_arm(module, xin, t_base, t_comp, reps)
+    row.update(graph)
+    rows.append(row)
     return rows[0]
+
+
+def _probe_graph_arm(
+    module: Any,
+    xin: Any,
+    t_base: float,
+    t_comp: float,
+    reps: int,
+) -> dict:
+    """Time the delivered module under ``CudaGraphRunner``; {} on decline.
+
+    Returns ``{}`` unless the runner actually captured (``stats
+    ["cuda_graph"]``) — an honest decline records nothing rather than
+    a ``gen_graph_us`` that is just the eager path re-timed.  When it
+    binds, the row also carries the replay-vs-eager verify delta so a
+    capture that changed numerics could not pass silently.
+    """
+    import torch
+
+    try:
+        from mlopt_cuda import CudaGraphRunner
+    except ImportError:  # pragma: no cover — optional dep absent
+        return {}
+    args = xin if isinstance(xin, (tuple, list)) else (xin,)
+    if not (args and torch.is_tensor(args[0]) and args[0].is_cuda):
+        return {}
+    stats: dict = {}
+    try:  # pragma: no cover — CUDA-only body
+        wrapped = CudaGraphRunner().apply(module, xin, stats)
+        if not stats.get("cuda_graph"):
+            return {}
+        t_graph = _time_module(wrapped, xin, reps)
+        with torch.no_grad():
+            out_eager = module(*args)
+            out_graph = wrapped(*args)
+        graph_max_abs = (
+            (out_eager - out_graph).abs().max().item()
+            if torch.is_tensor(out_eager)
+            else float("nan")
+        )
+    except Exception:  # pragma: no cover — CUDA-only
+        return {}
+    return {
+        "gen_graph_us": round(t_graph, 1),
+        "graph_speedup": round(t_base / t_graph, 3)
+        if t_graph
+        else None,
+        "graph_vs_compiled": (
+            round(t_comp / t_graph, 3) if t_graph else None
+        ),
+        "graph_max_abs": graph_max_abs,
+    }
 
 
 #: Referee audit log — one record per ``_triton_kernel_for`` consult.
@@ -1990,14 +2053,14 @@ def _probe_delivery(
     device: str,
     reps: int,
 ) -> Any:
-    """Lower → verify → time the delivered module; returns (rep, µs)."""
+    """Lower → verify → time the delivered module; returns (rep, µs, mod)."""
     module = sink.lower(ir, params=ex["leaves"]).to(device)
     rep = sink.verify(
         base_model,
         module,
         xin if isinstance(xin, (tuple, list)) else (xin,),
     )
-    return rep, _time_module(module, xin, reps)
+    return rep, _time_module(module, xin, reps), module
 
 
 def _as_dtype(obj: Any, td: Any) -> Any:
