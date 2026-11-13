@@ -1,6 +1,7 @@
 # The measured pay leg — the prim family does not pay
 
-**Date:** 2026-10-25 · **Script:** `bench/referees/pay_wall.py` (new) ·
+**Date:** 2026-10-25, re-run 2026-11-13 (pinned-executor arm) ·
+**Script:** `bench/referees/pay_wall.py` ·
 **Store:** `mlopt_core.laws.store` measurements (optional `--store`) ·
 **Seed:** 0 · **Machine:** i5-12500H / RTX 2050, shared box (load 5–7)
 
@@ -9,10 +10,16 @@
     --json docs/reports/pay_measured.json
 ```
 
-> **Verdict: measured, and it loses.** Of 14 module×size cells, **7 lose,
-> 1 ties, 6 are confounded** (the two arms route to different executors)
-> and **none delivers honestly**. Every fold op that fires on this
-> corpus — 9 of the 57 shipped — loses its own marginal, worst 2.66×.
+> **Verdict: measured, and it loses — with no confounded cells.** Of
+> 14 module×size cells, **13 lose, 1 ties, 0 confounded** and **none
+> delivers**. Every fold op that fires on this corpus — 9 shipped
+> folds — loses its own marginal, worst 2.93×.  The 2026-10-25 run
+> left 6 cells `confounded` (the two delivered arms routed to different
+> executors); the 2026-11-13 re-run adds a pinned-executor arm
+> (`noprim_ir`) that holds the executor fixed, and every one of those
+> cells resolves to **loses** — the earlier GatedDeltaRule "delivers"
+> was entirely the `BatchedScanModule` routing artifact
+> (`docs/reports/t029_executor_confound.md`).
 > `docs/reports/prim_delivery.md` said this from the probe; this is the
 > **gate** that makes it admissible evidence.
 
@@ -23,35 +30,51 @@ The gauntlet's `pay` leg prices a claim in the extraction cost model: a
 model is right about the *term* and wrong about the *executor* —
 `shipped_primitives.register()` seats a Python spec-walk, so the runtime
 trades N−1 tape dispatches for a recursive interpreter over N nodes.
-`pay_wall` times the delivered module instead. Verdict band:
-`marginal ≤ 0.95` delivers, `≥ 1.05` loses, else ties; a cell whose two
-arms route to different executors is **confounded** and cannot count as
-pay either way.
+`pay_wall` times the delivered module instead. Arms (eager, fp64,
+median of 100 interleaved samples): `spelled` (the zoo `nn.Module`),
+`tape` (export + `IRModule`, no search), `noprim` (shipped rules minus
+the `prim:synop*` folds, delivered), `noprim_ir` (the *same* fold-free
+term forced through `sink.lower` — the generic `IRModule` path —
+bypassing carrier executor routing), and `synop` (shipped rules +
+`register()`, delivered).
+
+Three ratios: `marginal = synop/noprim` (as delivered — includes any
+executor routing delta); `pay = synop/noprim_ir` (the fold's own
+effect with the executor pinned — the verdict basis); `e2e =
+synop/spelled` (what a caller receives). Verdict band on `pay`:
+≤0.95 delivers / ≥1.05 loses / else ties. A cell is `confounded` only
+when the delivered arms route to different executors AND no valid
+pinned comparison exists — it then counts as pay evidence neither
+way. `small` is the mint's own probe site (`zoo()` defaults: d=16,
+t=8, b=2); `large` is `zoo(d=64, t=32, b=8)`.
 
 ## The cells — eager, fp64, median of 100 interleaved samples
 
-| module | size | spelled | noprim | synop | marginal | e2e | verdict |
-|---|---|---|---|---|---|---|---|
-| GatedDeltaRule | small | 0.09 | 0.36 | 0.13 | 0.35 | 1.41 | confounded |
-| GatedDeltaRule | large | 0.27 | 1.56 | 0.31 | 0.20 | 1.13 | confounded |
-| GatedLinearAttention | small | 0.15 | 0.19 | 0.28 | **1.49** | 1.85 | loses |
-| GatedLinearAttention | large | 2.04 | 6.11 | 6.06 | 0.99 | **2.97** | ties |
-| MambaSelectiveScan | small | 0.15 | 0.19 | 0.28 | **1.48** | 1.84 | loses |
-| MambaSelectiveScan | large | 1.19 | 1.72 | 1.98 | **1.15** | 1.66 | loses |
-| RealGatedLRU | small | 0.13 | 0.12 | 0.23 | **1.98** | 1.70 | loses |
-| RealGatedLRU | large | 2.38 | 1.99 | 5.29 | **2.66** | 2.22 | loses |
-| HighwayGate | small | 0.02 | 0.02 | 0.02 | 1.16 | 1.27 | confounded |
-| HighwayGate | large | 0.02 | 0.02 | 0.03 | 1.14 | 1.24 | confounded |
-| RotaryPair | small | 0.08 | 0.06 | 0.07 | **1.21** | 0.90 | loses |
-| RotaryPair | large | 0.23 | 0.20 | 0.21 | **1.06** | 0.91 | loses |
-| GRUFusedGate | small | 0.03 | 0.05 | 0.05 | 1.07 | 1.80 | confounded |
-| GRUFusedGate | large | 0.04 | 0.05 | 0.06 | 1.07 | 1.59 | confounded |
+| module | size | spelled | noprim | noprim_ir | synop | marginal | pay | e2e | verdict |
+|---|---|---|---|---|---|---|---|---|---|
+| GatedDeltaRule | small | 0.10 | 0.42 | 0.12 | 0.15 | 0.37 | **1.23** | 1.49 | loses |
+| GatedDeltaRule | large | 0.26 | 0.92 | 0.28 | 0.30 | 0.33 | **1.08** | 1.15 | loses |
+| GatedLinearAttention | small | 0.15 | 0.18 | 0.18 | 0.28 | 1.53 | **1.52** | 1.91 | loses |
+| GatedLinearAttention | large | 2.31 | 7.91 | 7.77 | 8.12 | 1.03 | 1.04 | 3.51 | ties |
+| MambaSelectiveScan | small | 0.18 | 0.22 | 0.22 | 0.33 | 1.55 | **1.54** | 1.89 | loses |
+| MambaSelectiveScan | large | 2.62 | 3.17 | 3.10 | 4.08 | 1.29 | **1.31** | 1.56 | loses |
+| RealGatedLRU | small | 0.15 | 0.13 | 0.13 | 0.27 | 2.09 | **2.07** | 1.81 | loses |
+| RealGatedLRU | large | 0.77 | 0.71 | 0.71 | 2.09 | 2.95 | **2.93** | 2.71 | loses |
+| HighwayGate | small | 0.02 | 0.02 | 0.02 | 0.02 | 1.22 | **1.33** | 1.37 | loses |
+| HighwayGate | large | 0.02 | 0.02 | 0.02 | 0.03 | 1.20 | **1.30** | 1.34 | loses |
+| RotaryPair | small | 0.08 | 0.05 | 0.05 | 0.07 | 1.24 | **1.24** | 0.91 | loses |
+| RotaryPair | large | 0.24 | 0.20 | 0.20 | 0.22 | 1.09 | **1.11** | 0.91 | loses |
+| GRUFusedGate | small | 0.03 | 0.05 | 0.05 | 0.05 | 1.10 | **1.14** | 1.85 | loses |
+| GRUFusedGate | large | 0.04 | 0.05 | 0.05 | 0.06 | 1.10 | **1.13** | 1.63 | loses |
 
-`marginal = synop / noprim` (the fold's own effect, same executor);
-`e2e = synop / spelled` (what a caller receives). A `confounded` cell is
-one where `synop` and `noprim` route to different executors — the old
-probe's one "delivers" cell (GatedDeltaRule) is exactly this artifact,
-not a dispatch win.
+`marginal = synop / noprim` (as delivered — includes any executor
+routing delta); `pay = synop / noprim_ir` (the fold's own effect with
+the executor pinned to `IRModule` — the verdict basis);
+`e2e = synop / spelled` (what a caller receives). On the six cells
+where `noprim` delivered to `BatchedScanModule` (GatedDeltaRule,
+HighwayGate, GRUFusedGate × both sizes) `marginal` and `pay` diverge
+sharply — e.g. GatedDeltaRule small reads 0.37 delivered but 1.23
+pinned: the "win" was the carrier executor, not the fold.
 
 ## Per fold
 
@@ -59,26 +82,27 @@ Nine distinct shipped ops fire on this corpus; all nine lose.
 
 | fold op | worst | mean | verdict |
 |---|---|---|---|
-| `synop_4c657cb2c0` | 1.49 | 1.28 | loses |
-| `synop_bb8c54c201` | 2.66 | 1.73 | loses |
-| `synop_5e58f26875` | 2.66 | 2.32 | loses |
-| `synop2_35bbd03301` | 2.66 | 2.32 | loses |
-| `synop3_0ca31bf1e5` | 2.66 | 2.66 | loses |
-| `synop3_0fa19d1ff8` | 2.66 | 2.32 | loses |
-| `synop3_21b9729f32` | 2.66 | 2.32 | loses |
-| `synop3_24c5153e5e` | 2.66 | 2.66 | loses |
-| `synop3_4cdc06b88f` | 2.66 | 2.66 | loses |
+| `synop_4c657cb2c0` | 1.54 | 1.35 | loses |
+| `synop_bb8c54c201` | 2.93 | 1.46 | loses |
+| `synop_5e58f26875` | 2.93 | 2.50 | loses |
+| `synop2_35bbd03301` | 2.93 | 2.50 | loses |
+| `synop3_0ca31bf1e5` | 2.93 | 2.93 | loses |
+| `synop3_0fa19d1ff8` | 2.93 | 2.50 | loses |
+| `synop3_21b9729f32` | 2.93 | 2.50 | loses |
+| `synop3_24c5153e5e` | 2.93 | 2.93 | loses |
+| `synop3_4cdc06b88f` | 2.93 | 2.93 | loses |
 
 ## What this settles, and what it does not
 
 - **Settled:** the shipped family's *pay* claim is false on measured
   wall clock. The cost-model number (0.5–0.8×) is not delivered, and no
-  cell delivers honestly under the same-executor rule.
+  cell delivers under the pinned-executor rule — including the six
+  cells the 2026-10-25 run could only mark `confounded`.
 - **Settled:** the family's *originality* claim is untouched. These ops
   are still machine-original by construction
   (`docs/reports/primitives_finds.md`); they are a vocabulary result,
   not a speed result.
-- **Not settled:** the remaining **48 shipped folds are unmeasured** —
+- **Not settled:** the remaining **49 shipped folds are unmeasured** —
   they do not fire on this corpus. Unmeasured is not evidence; a fold
   that never fires is a vocabulary entry with a price tag, not a pay
   claim.
@@ -134,8 +158,8 @@ sqlite3 /tmp/minted.db "select name, arm, round(value,2) from measurements limit
 
 Each fold gets one row per module it binds:
 `measurements(name=synop_…, metric='pay_wall', arm='RealGatedLRU@large',
-value=2.73)`.  Re-measuring updates in place; nothing about the record
-changes.  The store write path is `mlopt_core.laws.store.record_measurements`
+value=2.93)` — the stored `value` is the pinned-executor `pay` ratio,
+never a confounded marginal.  The store write path is `mlopt_core.laws.store.record_measurements`
 (eqsat `1633ad1`), so graphopt needs its `mlopt-core` pin refreshed
 (`uv lock --upgrade-package mlopt-core`) before `--store` runs without a
 `PYTHONPATH` override.

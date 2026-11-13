@@ -55,16 +55,37 @@ def test_measure_small_module_delivers_a_verified_synop_module():
     assert any(row.prim_fires.values())
     assert row.verified == {"noprim": "pass", "synop": "pass"}
     # both lowered arms routed to *some* executor (which one is
-    # extraction-dependent — the fold can change carrier routing)
-    assert set(row.executors) == {"spelled", "tape", "noprim", "synop"}
+    # extraction-dependent — the fold can change carrier routing);
+    # ``noprim_ir`` is the pinned-executor twin of ``noprim``
+    assert set(row.executors) == {
+        "spelled",
+        "tape",
+        "noprim",
+        "synop",
+        "noprim_ir",
+    }
     assert all(row.executors.values())
+    # the pinned twin always lands on the generic lowering
+    assert row.executors["noprim_ir"] == row.executors["tape"]
     # the folded term is strictly smaller than the spelled tape term
     assert row.n_ops_synop < row.n_ops_tape
     # every arm reproduces the spelled module's output
-    assert set(row.allclose) == {"spelled", "tape", "noprim", "synop"}
+    assert set(row.allclose) == {
+        "spelled",
+        "tape",
+        "noprim",
+        "synop",
+        "noprim_ir",
+    }
     assert all(row.allclose.values())
     # every arm timed
-    assert set(row.times) == {"spelled", "tape", "noprim", "synop"}
+    assert set(row.times) == {
+        "spelled",
+        "tape",
+        "noprim",
+        "synop",
+        "noprim_ir",
+    }
     for entry in row.times.values():
         assert entry["median"] > 0
         assert entry["samples"] == 10

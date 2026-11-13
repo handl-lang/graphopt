@@ -11,13 +11,23 @@ does not get to say "paying".
 What it measures, per module and size, reusing the delivery probe's own
 four-arm protocol (``bench/drivers/probes/prim_delivery_probe.py``):
 
-* ``marginal = synop_ms / noprim_ms`` — the fold family's own effect
-  inside the same executor (the pay number);
+* ``marginal = synop_ms / noprim_ms`` — the fold family's effect as
+  delivered (the routing-inclusive number);
+* ``pay = synop_ms / noprim_ir_ms`` — the fold family's marginal with
+  the executor pinned: ``noprim_ir`` is the fold-free term forced
+  onto the generic ``IRModule`` lowering, so this ratio compares the
+  fold on ONE executor even when carrier routing would have sent the
+  delivered ``noprim`` arm to ``BatchedScanModule``.  ``pay`` is the
+  verdict basis and the stored measurement; ``marginal`` stays in the
+  row as the as-delivered figure;
 * ``e2e = synop_ms / spelled_ms`` — what a caller of the pipeline
   receives.
 
-Verdict band, per module: ``marginal <= 0.95`` delivers, ``>= 1.05``
-loses, else ties.  A fold's verdict aggregates the modules whose
+Verdict band, per module: ``pay <= 0.95`` delivers, ``>= 1.05``
+loses, else ties.  A cell whose two *delivered* arms route to
+different executors AND has no valid pinned comparison is
+``confounded`` — it measures the executor, not the fold, and counts
+as pay evidence neither way.  A fold's verdict aggregates the modules whose
 extraction carries that op by the *worst* module — a family that loses
 anywhere has not paid.
 
@@ -93,15 +103,39 @@ def measure(
 
     synop = med("synop")
     noprim = med("noprim")
+    noprim_ir = med("noprim_ir")
     spelled = med("spelled")
     marginal = (synop / noprim) if synop and noprim else None
     e2e = (synop / spelled) if synop and spelled else None
+    # Pinned-executor marginal: ``noprim_ir`` is the fold-free term
+    # forced onto the generic IRModule lowering, so ``synop/noprim_ir``
+    # holds the executor fixed and isolates the fold's own effect.  It
+    # is only a same-executor comparison when the delivered synop arm
+    # itself runs on that executor (``executors`` records the class
+    # name of every arm, including the pinned twin).
+    marginal_pinned = (
+        (synop / noprim_ir) if synop and noprim_ir else None
+    )
     executors = dict(row.executors)
     # A marginal is only the fold's own effect when both arms run on the
     # same executor; the probe flags routing differences, and a cell that
     # routes differently measures the executor, not the fold.
     confounded = executors.get("synop") != executors.get("noprim")
-    cell_verdict = "confounded" if confounded else verdict(marginal)
+    pinned_ok = marginal_pinned is not None and executors.get(
+        "synop"
+    ) == executors.get("noprim_ir")
+    # ``pay`` is the number the verdict (and any stored measurement)
+    # rests on: the pinned-executor marginal when it is a genuine
+    # same-executor comparison, else the as-delivered marginal, else
+    # None for a confounded cell with no pinned arm.
+    pay = marginal_pinned if pinned_ok else marginal
+    cell_verdict = (
+        verdict(pay)
+        if pay is not None and (pinned_ok or not confounded)
+        else "confounded"
+    )
+    if pay is None and not confounded:
+        cell_verdict = "unmeasured"
     return {
         "module": module,
         "size": size,
@@ -109,9 +143,13 @@ def measure(
             "spelled": spelled,
             "tape": med("tape"),
             "noprim": noprim,
+            "noprim_ir": noprim_ir,
             "synop": synop,
         },
         "marginal": marginal,
+        "marginal_pinned": marginal_pinned,
+        "pay": pay,
+        "executor_confounded": confounded,
         "e2e": e2e,
         "verdict": cell_verdict,
         "synops": list(row.synops),
@@ -145,15 +183,15 @@ def run(
                     "module": row["module"],
                     "size": row["size"],
                     "marginal": row["marginal"],
+                    "marginal_pinned": row["marginal_pinned"],
+                    "pay": row["pay"],
                     "verdict": row["verdict"],
                 }
             )
     folds = {}
     for op, hits in sorted(per_op.items()):
         clean = [h for h in hits if h["verdict"] != "confounded"]
-        measured = [
-            h["marginal"] for h in clean if h["marginal"] is not None
-        ]
+        measured = [h["pay"] for h in clean if h["pay"] is not None]
         worst = max(measured) if measured else None
         folds[op] = {
             "modules": hits,
@@ -228,15 +266,17 @@ def summary(result: dict[str, Any]) -> str:
         f"modules {result['modules']} sizes {result['sizes']}",
         f"cells: {counts}",
         "",
-        "| module | size | spelled | noprim | synop | marginal | e2e | verdict |",
-        "|---|---|---|---|---|---|---|---|",
+        "| module | size | spelled | noprim | noprim_ir | synop | marginal | pay | e2e | verdict |",
+        "|---|---|---|---|---|---|---|---|---|---|",
     ]
     for row in result["rows"]:
         ms = row["ms"]
         lines.append(
             f"| {row['module']} | {row['size']} | {_fmt(ms['spelled'])} | "
-            f"{_fmt(ms['noprim'])} | {_fmt(ms['synop'])} | "
-            f"{_fmt(row['marginal'])} | {_fmt(row['e2e'])} | {row['verdict']} |"
+            f"{_fmt(ms['noprim'])} | {_fmt(ms.get('noprim_ir'))} | "
+            f"{_fmt(ms['synop'])} | "
+            f"{_fmt(row['marginal'])} | {_fmt(row.get('pay'))} | "
+            f"{_fmt(row['e2e'])} | {row['verdict']} |"
         )
     if result["folds"]:
         lines += [
@@ -257,14 +297,16 @@ def _store_rows(result: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for op, agg in result["folds"].items():
         for hit in agg["modules"]:
-            if hit["marginal"] is None:
+            # ``pay`` is the verdict-basis marginal (pinned-executor
+            # when available); confounded hits carry no pay number.
+            if hit.get("pay") is None or hit["verdict"] == "confounded":
                 continue
             rows.append(
                 {
                     "name": op,
                     "metric": "pay_wall",
                     "arm": f"{hit['module']}@{hit['size']}",
-                    "value": hit["marginal"],
+                    "value": hit["pay"],
                     "unit": "ratio",
                 }
             )

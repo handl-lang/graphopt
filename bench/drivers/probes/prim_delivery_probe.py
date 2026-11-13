@@ -35,10 +35,16 @@ the raw-vs-lowered delta alone:
   ``prim:synop*`` fold, then search + lower.  Same machinery, same
   non-prim rewrites; ``synop/noprim`` is the fold family's marginal
   inside the executor — the number that answers "does the fold pay".
+* ``noprim_ir`` — the *same* noprim term forced through
+  ``sink.lower`` (the generic ``IRModule`` path), bypassing carrier
+  executor routing.  ``synop/noprim_ir`` holds the executor fixed, so
+  it isolates the fold's own effect when the delivered ``noprim`` arm
+  routes to ``BatchedScanModule`` while ``synop`` stays on
+  ``IRModule`` — the executor-confound the raw marginal cannot see.
 * ``synop`` — shipped ``default_rules()`` + ``sp.register()``, then
   search + lower(verify=True): the delivered module.
 
-All four then get ``torch.compile`` twins (``*_compiled``) — testing
+All arms then get ``torch.compile`` twins (``*_compiled``) — testing
 whether Inductor already recovers whatever the folds claim to win: if
 ``synop_compiled`` converges to ``spelled_compiled`` the dispatch
 story is compile's, not the fold's.
@@ -72,7 +78,7 @@ os.environ.setdefault("TORCHINDUCTOR_COMPILE_THREADS", "4")
 
 import mlopt_carriers  # noqa: F401 — carrier bindings in the ambient table
 import torch
-from mlopt_core.ir import Op
+from mlopt_core.ir import IR, Op
 from mlopt_core.laws import minted
 from mlopt_core.laws.ruleset import RuleSet
 from mlopt_orchestrator.optimize import (
@@ -337,6 +343,7 @@ def measure_module(
     row.n_ops_tape = sum(_ops_of(ir.root).values())
 
     # -- arm 2: shipped DEFAULT minus the prim folds ---------------------
+    sink = TorchSink()
     res_np = search(
         spelled,
         feeds,
@@ -344,11 +351,29 @@ def measure_module(
         rules=_noprim_rules(),
         max_iterations=_MAX_ITERS,
     )
-    lr_np = lower(res_np, feeds, sink=TorchSink(), verify=True)
+    lr_np = lower(res_np, feeds, sink=sink, verify=True)
     lr_np.module = _align(lr_np.module, device, dtype)
     row.n_ops_noprim = sum(_ops_of(res_np.term).values())
     row.verified["noprim"] = (
         "pass" if (lr_np.verified and lr_np.verified.passed) else "FAIL"
+    )
+
+    # Pinned-executor twin of the noprim arm: the SAME extracted term
+    # forced through ``sink.lower`` — the generic IRModule path —
+    # bypassing ``_lower_extracted``'s carrier routing.  When the
+    # delivered noprim module routes to a carrier executor
+    # (``BatchedScanModule``) while the synop arm stays on
+    # ``IRModule``, the raw ``synop/noprim`` marginal compares two
+    # different executors; ``synop/noprim_ir`` holds the executor
+    # fixed and isolates the fold's own effect.
+    np_ir = IR(
+        root=res_np.term,
+        inputs=res_np.ir.inputs,
+        input_names=res_np.ir.input_names,
+        params=res_np.ir.params,
+    )
+    noprim_ir = _align(
+        sink.lower(np_ir, dict(res_np.param_values)), device, dtype
     )
 
     # -- arm 3: shipped DEFAULT — the delivered module -------------------
@@ -360,7 +385,7 @@ def measure_module(
         max_iterations=_MAX_ITERS,
     )
     row.search_s = time.perf_counter() - t0
-    lr_syn = lower(res_syn, feeds, sink=TorchSink(), verify=True)
+    lr_syn = lower(res_syn, feeds, sink=sink, verify=True)
     lr_syn.module = _align(lr_syn.module, device, dtype)
     ops = _ops_of(res_syn.term)
     row.n_ops_synop = sum(ops.values())
@@ -383,6 +408,11 @@ def measure_module(
         "tape": tape,
         "noprim": lr_np.module,
         "synop": lr_syn.module,
+        # Pinned-executor arm: the noprim term on the generic
+        # IRModule lowering.  Timed (and compiled) like the others;
+        # ``executors["noprim_ir"]`` records that it is NOT the
+        # delivered noprim routing.
+        "noprim_ir": noprim_ir,
     }
     row.executors = {k: type(m).__name__ for k, m in mods.items()}
     if row.executors["synop"] != row.executors["noprim"]:

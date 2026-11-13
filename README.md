@@ -46,8 +46,8 @@ construction, no codegen), **agnostic exits** (`Sink` → torch/ONNX/`.hnl`).
   rejected, a fabricated speedup caught — and a real lowering bug no
   test covered.
 - **Pay is now measured, not priced.** The shipped `synop*` folds lose on
-  a delivered module (14 cells: 7 lose, 1 tie, 6 confounded, **0 wins**;
-  `docs/reports/pay_measured.md`), 48 more are unmeasured
+  a delivered module (14 cells: 13 lose, 1 tie, **0 wins** — executor
+  pinned; `docs/reports/pay_measured.md`), 49 more are unmeasured
   (`pay_status()` in the ledger), and **the same folds run 2.6× faster
   once their body is a generated Triton kernel** — in fp32 *and* fp64
   (`docs/reports/prim_kernel.md`). The rule was never slow; the
