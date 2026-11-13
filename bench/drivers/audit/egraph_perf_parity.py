@@ -275,13 +275,20 @@ def main(argv: list[str] | None = None) -> int:
             lift_fail.append((wl.name, err or "no term"))
             continue
 
-        # Rust side first (bounded), then Python.
+        # Rust side first (bounded), then Python.  ``report="stats"``:
+        # the light report — the Python timer covers ``EGraph.run``
+        # alone, so the canonical-report section (WL labels, member
+        # renderings, extraction — measured at up to ~50 s on the
+        # heaviest modules, dwarfing saturation itself) is the
+        # *differential* surface, not the timed region.  Full-report
+        # cost stays visible via EGRAPH_RUN_TIMING=1 on the binary.
         spec = he.build_spec(
             f"zoo:{wl.name}",
             [term],
             rules,
             options=OPTIONS,
             costs=COSTS,
+            report="stats",
         )
         try:
             rs_rep, rs_secs, rs_rss, rs_err = _rust_run_timed(

@@ -260,6 +260,7 @@ def build_spec(
     options: dict | None = None,
     costs: dict | None = None,
     check_terms: list[Any] | None = None,
+    report: str | None = None,
 ) -> dict:
     """Encode a saturation run as the ``egraph-run`` JSON spec.
 
@@ -270,8 +271,12 @@ def build_spec(
     pairs, ``options`` the run knobs (``max_iterations`` /
     ``max_nodes`` / ``patience`` / ``stop`` / ``rule_budgets``),
     ``costs`` the per-op additive price table, and ``check_terms``
-    post-run membership probes.  Field-for-field the same spec
-    ``bench/drivers/audit/egraph_differential.py::spec_for`` emits.
+    post-run membership probes.  ``report`` selects the report detail:
+    ``"full"`` (default — the canonical differential report) or
+    ``"stats"`` (the run's stats payload only — the region the
+    perf-parity gate actually times on the Python side).  Field-for-
+    field the same spec ``bench/drivers/audit/egraph_differential.py::
+    spec_for`` emits.
     """
     spec: dict[str, Any] = {
         "name": name,
@@ -290,6 +295,8 @@ def build_spec(
     }
     if check_terms:
         spec["check_terms"] = [spec_term(t) for t in check_terms]
+    if report is not None:
+        spec["report"] = report
     return spec
 
 

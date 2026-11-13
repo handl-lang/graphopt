@@ -60,6 +60,14 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::rc::Rc;
+use std::time::Instant;
+
+fn tick(label: &str, t: &mut Instant) {
+    if std::env::var_os("EGRAPH_RUN_TIMING").is_some() {
+        eprintln!("[timing] {label}: {:?}", t.elapsed());
+        *t = Instant::now();
+    }
+}
 
 use handl_discovery::{term_from_data, term_to_data};
 use handl_egraph::{
@@ -300,6 +308,7 @@ fn stop_str(s: StopReason) -> &'static str {
 /// `SpecError` on a malformed spec (decode failure, missing fields,
 /// out-of-range root, bad option types) — the caller renders it.
 pub fn run_spec(spec: &Value) -> Result<Value, SpecError> {
+    let mut tt = Instant::now();
     let name = spec.get("name").and_then(Value::as_str).unwrap_or("spec");
     let terms = spec
         .get("terms")
@@ -318,6 +327,7 @@ pub fn run_spec(spec: &Value) -> Result<Value, SpecError> {
             .map_err(|e| SpecError(format!("add_term: {e:?}")))?;
         roots.push(eid);
     }
+    tick("decode_terms+add_term", &mut tt);
     let root_idx = spec
         .get("root")
         .and_then(Value::as_u64)
@@ -345,6 +355,7 @@ pub fn run_spec(spec: &Value) -> Result<Value, SpecError> {
             rules.push(Rewrite::new(rname, lhs, rhs));
         }
     }
+    tick("decode_rules", &mut tt);
 
     let options = spec.get("options").cloned().unwrap_or(Value::Null);
     let opt_u64 = |key: &str, default: usize| -> Result<usize, SpecError> {
@@ -406,9 +417,42 @@ pub fn run_spec(spec: &Value) -> Result<Value, SpecError> {
     let stats: SaturationStats = g
         .run(&rules, root, &mut opts)
         .map_err(|e| SpecError(format!("run: {e:?}")))?;
+    tick("saturate", &mut tt);
+
+    // ``"report": "stats"`` — the light report: the run's stats payload
+    // only. The canonical section below (cone walk, WL class labels,
+    // member renderings, extraction, membership probes) is the
+    // *differential* surface — it exists so two engines' reports can
+    // be compared field by field — and its cost is not part of the
+    // saturation the perf-parity gate times on the Python side
+    // (``EGraph.run`` alone). Default ``"full"`` is unchanged.
+    let report_mode = spec.get("report").and_then(Value::as_str).unwrap_or("full");
+    match report_mode {
+        "full" => {}
+        "stats" => {
+            let mut suspended = stats.budget_suspended.clone();
+            suspended.sort();
+            return Ok(json!({
+                "name": name,
+                "ok": true,
+                "report": "stats",
+                "stop": stop_str(stats.stop),
+                "iterations": stats.iterations,
+                "n_enodes": stats.n_enodes,
+                "n_classes": stats.n_classes,
+                "n_proof_edges": stats.n_proof_edges,
+                "truncation_level": stats.truncation_level,
+                "rule_budgets": stats.rule_budgets,
+                "budget_suspended": suspended,
+                "improved": stats.improved,
+            }));
+        }
+        other => return bad(format!("unknown report mode {other:?}")),
+    }
 
     // -- the canonical report -----------------------------------------
     let canon = cone_ids(&g, &roots);
+    tick("cone_ids", &mut tt);
     let mut members: BTreeMap<ClassId, Vec<ENode>> = BTreeMap::new();
     for &c in &canon {
         if let Some(ec) = g.class(c) {
@@ -416,6 +460,7 @@ pub fn run_spec(spec: &Value) -> Result<Value, SpecError> {
         }
     }
     let labels = wl_labels(&g, &members);
+    tick("wl_labels", &mut tt);
 
     let mut classes: Vec<Value> = Vec::with_capacity(canon.len());
     for &c in &canon {
@@ -436,12 +481,14 @@ pub fn run_spec(spec: &Value) -> Result<Value, SpecError> {
         }));
     }
     classes.sort_by(|a, b| a["sig"].as_str().cmp(&b["sig"].as_str()));
+    tick("classes_render", &mut tt);
     let mut signatures: Vec<String> = canon.iter().map(|c| labels[c].clone()).collect();
     signatures.sort();
     let root_sig = labels[&g.find(root)].clone();
 
     let best = g.extract_best(root, &mut cost_fn, None, None);
     let best_cost = best.as_ref().map(|t| cost_of(t, &costs));
+    tick("extract_best", &mut tt);
 
     let mut checks: Vec<Value> = Vec::new();
     if let Some(ct) = spec.get("check_terms").and_then(Value::as_array) {
