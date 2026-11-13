@@ -103,3 +103,45 @@ def test_load_rows_drops_cases_the_profiler_never_saw(tmp_path):
     assert [r.case for r in rows] == ["zoo:A"]
     assert rows[0].speedup == pytest.approx(2.0)
     assert rows[0].verified is True
+
+
+def test_load_rows_medians_the_graph_arm_per_round(tmp_path):
+    """T-037: ``gen_graph_us`` is a per-round median like the rest.
+
+    Sweeps predating the arm — and rounds where capture declined —
+    carry no ``gen_graph_us``; the row reports ``None`` rather than a
+    ratio against a missing denominator.
+    """
+    sweep = tmp_path / "sweep.json"
+    kcount = tmp_path / "kcount.json"
+    sweep.write_text(
+        """[
+          {"case": "zoo:A", "verified": true,
+           "runs": [{"eager_us": 100.0, "gen_us": 50.0,
+                     "compiled_us": 40.0, "gen_graph_us": 30.0},
+                    {"eager_us": 120.0, "gen_us": 60.0,
+                     "compiled_us": 44.0, "gen_graph_us": 40.0}]},
+          {"case": "zoo:B", "verified": true,
+           "runs": [{"eager_us": 100.0, "gen_us": 90.0,
+                     "compiled_us": 80.0}]}
+        ]"""
+    )
+    kcount.write_text(
+        """[{"case": "zoo:A", "kernels": 3, "device_share": 0.5},
+            {"case": "zoo:B", "kernels": 3, "device_share": 0.5}]"""
+    )
+    rows = {r.case: r for r in load_rows(sweep, kcount)}
+    a = rows["zoo:A"]
+    # medians: eager (100+120)/2, delivered (50+60)/2, graph (30+40)/2
+    assert a.graph_us == pytest.approx(35.0)
+    assert a.graph_speedup == pytest.approx(110.0 / 35.0)
+    assert a.graph_vs_compile == pytest.approx(42.0 / 35.0)
+    assert a.beats_graph_compile is True
+    d = a.to_dict()
+    assert d["delivered_graph_us"] == pytest.approx(35.0)
+    # no graph data → absent columns, not zeroes
+    b = rows["zoo:B"]
+    assert b.graph_us is None
+    assert b.graph_speedup is None
+    assert b.graph_vs_compile is None
+    assert b.to_dict()["delivered_graph_us"] is None

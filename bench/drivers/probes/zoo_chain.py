@@ -186,6 +186,15 @@ def _measure_one(
             "eager_us": round(r["baseline_us"], 1),
             "compiled_us": round(r["compiled_us"], 1),
             "gen_us": round(r["gen_us"], 1),
+            # T-037: the CUDA-graph arm is per-round too — a row-level
+            # ``gen_graph_us`` copied from ``ok[0]`` would pair one
+            # round's graph timing with another round's eager/compile
+            # medians.  ``None`` when the arm declined that round.
+            "gen_graph_us": (
+                round(float(r["gen_graph_us"]), 1)
+                if r.get("gen_graph_us")
+                else None
+            ),
         }
         for r in ok
     ]
@@ -201,6 +210,37 @@ def _measure_one(
     row["dtype"] = dtype
     row["verified"] = all(r.get("verified") for r in ok)
     row["max_abs"] = max(r.get("max_abs") or 0 for r in ok)
+    # Row-level graph arm: medians over the rounds that captured —
+    # same median convention as ``speedup``.  ``graph_max_abs`` stays
+    # a worst-case (max), matching ``max_abs``.
+    graph_us = [r["gen_graph_us"] for r in ok if r.get("gen_graph_us")]
+    if graph_us:
+        row["gen_graph_us"] = round(statistics.median(graph_us), 1)
+        gspeed = [
+            float(r["graph_speedup"])
+            for r in ok
+            if r.get("graph_speedup")
+        ]
+        gvc = [
+            float(r["graph_vs_compiled"])
+            for r in ok
+            if r.get("graph_vs_compiled")
+        ]
+        if gspeed:
+            row["graph_speedup"] = round(statistics.median(gspeed), 3)
+        if gvc:
+            row["graph_vs_compiled"] = round(statistics.median(gvc), 3)
+        row["graph_max_abs"] = max(
+            r.get("graph_max_abs") or 0.0 for r in ok
+        )
+    else:
+        for k in (
+            "gen_graph_us",
+            "graph_speedup",
+            "graph_vs_compiled",
+            "graph_max_abs",
+        ):
+            row.pop(k, None)
     return row
 
 

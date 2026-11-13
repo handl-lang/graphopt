@@ -59,12 +59,12 @@
       "median_dispatch_share": 0.552,
       "median_ceiling": 2.232,
       "max_ceiling": 5.952,
-      "median_speedup": 1.0062,
+      "median_speedup": 1.005,
       "wins": 12,
       "beat_compile": 13,
       "with_compile": 25,
       "median_vs_compile": 1.1144,
-      "median_captured": 0.0055
+      "median_captured": 0.0025
     }
   ],
   "findings": [
@@ -78,16 +78,16 @@
     {
       "claim": "The delivered body captures the headroom the ceiling allows: (speedup-1)/(ceiling-1).",
       "verdict": "negative",
-      "headline": "median capture -0.03 over 35 rows with material headroom \u2014 delivery loses more than the algebra gains; the binding constraint is the delivered body, not the ceiling",
+      "headline": "median capture -0.02 over 35 rows with material headroom \u2014 delivery loses more than the algebra gains; the binding constraint is the delivered body, not the ceiling",
       "metric": "median_captured_fraction",
-      "value": -0.03198193926750457
+      "value": -0.02304639804639807
     },
     {
       "claim": "Dispatch share predicts the sign of the win. (It does not always \u2014 the delivered body's own cost sets it.)",
       "verdict": "inconclusive",
-      "headline": "r(F, speedup) = +0.08 \u2014 dispatch share does not predict the sign alone",
+      "headline": "r(F, speedup) = +0.07 \u2014 dispatch share does not predict the sign alone",
       "metric": "pearson_dispatch_vs_speedup",
-      "value": 0.07976050064043434
+      "value": 0.06938402634712174
     },
     {
       "claim": "The wins survive `torch.compile` \u2014 the free competitor every PyTorch user already has \u2014 not just eager.",
@@ -120,7 +120,11 @@
       "verified": true,
       "compiled_us": 796.1,
       "vs_compile": 0.7631,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:TalkingHeadsAttention",
@@ -137,7 +141,11 @@
       "verified": true,
       "compiled_us": 363.9,
       "vs_compile": 0.7626,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:MLPMixerBlock",
@@ -154,7 +162,11 @@
       "verified": true,
       "compiled_us": 361.4,
       "vs_compile": 0.8768,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:LearnedPosSlice",
@@ -171,7 +183,11 @@
       "verified": true,
       "compiled_us": 125.5,
       "vs_compile": 0.7225,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:GEGLUBlock",
@@ -188,7 +204,11 @@
       "verified": true,
       "compiled_us": 221.6,
       "vs_compile": 0.8238,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:SquaredReluFFN",
@@ -205,7 +225,11 @@
       "verified": true,
       "compiled_us": 276.2,
       "vs_compile": 1.0921,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:AdditiveAttention",
@@ -222,7 +246,11 @@
       "verified": true,
       "compiled_us": 314.1,
       "vs_compile": 1.1826,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:AttnLogitSoftcap",
@@ -239,7 +267,11 @@
       "verified": true,
       "compiled_us": 373.1,
       "vs_compile": 1.3287,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:GatedAttentionUnit",
@@ -256,7 +288,11 @@
       "verified": true,
       "compiled_us": 309.9,
       "vs_compile": 1.0772,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:AdaLNBlock",
@@ -273,7 +309,11 @@
       "verified": true,
       "compiled_us": 260.1,
       "vs_compile": 0.94,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:RWKVMixBlock",
@@ -290,7 +330,11 @@
       "verified": true,
       "compiled_us": 785.6,
       "vs_compile": 0.6952,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:SkipInitNet",
@@ -307,7 +351,11 @@
       "verified": true,
       "compiled_us": 336.0,
       "vs_compile": 1.1328,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:SigmoidAttention",
@@ -324,7 +372,11 @@
       "verified": true,
       "compiled_us": 337.1,
       "vs_compile": 1.0753,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:DynamicTanhBlock",
@@ -341,7 +393,11 @@
       "verified": true,
       "compiled_us": 302.6,
       "vs_compile": 1.3661,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:FiLMHead",
@@ -358,7 +414,11 @@
       "verified": true,
       "compiled_us": 104.7,
       "vs_compile": 0.7161,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:SoftSlotMoE",
@@ -375,7 +435,11 @@
       "verified": true,
       "compiled_us": 168.4,
       "vs_compile": 0.837,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:SlidingWindowAttention",
@@ -392,7 +456,11 @@
       "verified": true,
       "compiled_us": 370.6,
       "vs_compile": 1.1086,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:DeepEquilibrium",
@@ -409,7 +477,11 @@
       "verified": true,
       "compiled_us": 117.4,
       "vs_compile": 0.5455,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:CosineAttention",
@@ -426,7 +498,11 @@
       "verified": true,
       "compiled_us": 365.1,
       "vs_compile": 1.0264,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:RelPosTableAttention",
@@ -443,7 +519,11 @@
       "verified": true,
       "compiled_us": 386.6,
       "vs_compile": 1.287,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:ALiBiSlopeAttention",
@@ -460,7 +540,11 @@
       "verified": true,
       "compiled_us": 394.9,
       "vs_compile": 0.6806,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:BlockSparseAttention",
@@ -477,7 +561,11 @@
       "verified": true,
       "compiled_us": 365.8,
       "vs_compile": 0.9989,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:SinkWindowAttention",
@@ -494,7 +582,11 @@
       "verified": true,
       "compiled_us": 403.4,
       "vs_compile": 1.0555,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:DilatedBlockAttention",
@@ -511,7 +603,11 @@
       "verified": true,
       "compiled_us": 400.9,
       "vs_compile": 1.1819,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:LoRAAdapter",
@@ -528,7 +624,11 @@
       "verified": true,
       "compiled_us": 109.5,
       "vs_compile": 1.5166,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:DiffAttention",
@@ -545,7 +645,11 @@
       "verified": true,
       "compiled_us": 361.4,
       "vs_compile": 0.9768,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:DeepSeekSigMoE",
@@ -562,7 +666,11 @@
       "verified": true,
       "compiled_us": 334.3,
       "vs_compile": 0.9724,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:SplineKAN",
@@ -579,7 +687,11 @@
       "verified": true,
       "compiled_us": 140.6,
       "vs_compile": 0.9053,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:HyenaLongConv",
@@ -596,7 +708,11 @@
       "verified": true,
       "compiled_us": 249.1,
       "vs_compile": 1.0998,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:HighwayGate",
@@ -613,7 +729,11 @@
       "verified": true,
       "compiled_us": 123.8,
       "vs_compile": 1.0927,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:MoSHead",
@@ -630,7 +750,11 @@
       "verified": true,
       "compiled_us": 122.7,
       "vs_compile": 0.9631,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:ChunkedRetention",
@@ -647,7 +771,11 @@
       "verified": true,
       "compiled_us": 316.8,
       "vs_compile": 1.1742,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:SharedSwiGLUMoE",
@@ -664,7 +792,11 @@
       "verified": true,
       "compiled_us": 356.4,
       "vs_compile": 0.8861,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:AffineCoupling",
@@ -681,7 +813,11 @@
       "verified": true,
       "compiled_us": 107.1,
       "vs_compile": 1.0929,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:SoftcapLogitHead",
@@ -698,7 +834,11 @@
       "verified": true,
       "compiled_us": 83.0,
       "vs_compile": 1.4044,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:PagedKVAttention",
@@ -715,7 +855,11 @@
       "verified": true,
       "compiled_us": 177.1,
       "vs_compile": 0.796,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:GCNLayer",
@@ -732,7 +876,11 @@
       "verified": true,
       "compiled_us": 143.8,
       "vs_compile": 0.9836,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:TopKRouterMoE",
@@ -749,7 +897,11 @@
       "verified": true,
       "compiled_us": 282.6,
       "vs_compile": 0.902,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:ExpertChoiceMoE",
@@ -766,24 +918,32 @@
       "verified": true,
       "compiled_us": 154.0,
       "vs_compile": 0.8541,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:DecoupledMLA",
       "regime": "launch-leaning",
-      "eager_us": 500.3,
-      "delivered_us": 551.7,
-      "speedup": 0.9068,
+      "eager_us": 473.0,
+      "delivered_us": 476.65,
+      "speedup": 0.9923,
       "device_share": 0.72,
       "dispatch_share": 0.28,
       "ceiling": 1.3889,
-      "headroom_us": 140.084,
-      "captured": -0.2396,
+      "headroom_us": 132.44,
+      "captured": -0.0197,
       "kernels": 17,
       "verified": true,
-      "compiled_us": 344.3,
-      "vs_compile": 0.6241,
-      "beats_compile": false
+      "compiled_us": 383.3,
+      "vs_compile": 0.8042,
+      "beats_compile": false,
+      "delivered_graph_us": 371.35,
+      "graph_speedup": 1.2737,
+      "graph_vs_compile": 1.0322,
+      "beats_graph_compile": true
     },
     {
       "case": "zoo:GRUFusedGate",
@@ -800,7 +960,11 @@
       "verified": true,
       "compiled_us": 122.9,
       "vs_compile": 0.7196,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:ConvNeXtStage",
@@ -817,7 +981,11 @@
       "verified": true,
       "compiled_us": 128.5,
       "vs_compile": 1.1909,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:PartialRotary",
@@ -834,7 +1002,11 @@
       "verified": true,
       "compiled_us": 362.9,
       "vs_compile": 0.8732,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:KVCacheAttention",
@@ -851,7 +1023,11 @@
       "verified": true,
       "compiled_us": 188.6,
       "vs_compile": 0.7452,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:TernaryWeightLinear",
@@ -868,7 +1044,11 @@
       "verified": true,
       "compiled_us": 109.6,
       "vs_compile": 2.2459,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:WaveNetGate",
@@ -885,7 +1065,11 @@
       "verified": true,
       "compiled_us": 118.3,
       "vs_compile": 1.4427,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:CovarianceHead",
@@ -902,7 +1086,11 @@
       "verified": true,
       "compiled_us": 44.8,
       "vs_compile": 1.1144,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:AdaGNConv",
@@ -919,7 +1107,11 @@
       "verified": true,
       "compiled_us": 134.0,
       "vs_compile": 0.8557,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:CapsuleRouting",
@@ -936,24 +1128,32 @@
       "verified": true,
       "compiled_us": 110.5,
       "vs_compile": 0.4235,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:DeltaRuleBlock",
       "regime": "launch-bound",
-      "eager_us": 309.5,
-      "delivered_us": 307.6,
-      "speedup": 1.0062,
+      "eager_us": 292.05,
+      "delivered_us": 300.0,
+      "speedup": 0.9735,
       "device_share": 0.472,
       "dispatch_share": 0.528,
       "ceiling": 2.1186,
-      "headroom_us": 163.416,
-      "captured": 0.0055,
+      "headroom_us": 154.202,
+      "captured": -0.0237,
       "kernels": 9,
       "verified": true,
-      "compiled_us": 234.1,
-      "vs_compile": 0.7611,
-      "beats_compile": false
+      "compiled_us": 207.2,
+      "vs_compile": 0.6907,
+      "beats_compile": false,
+      "delivered_graph_us": 143.6,
+      "graph_speedup": 2.0338,
+      "graph_vs_compile": 1.4429,
+      "beats_graph_compile": true
     },
     {
       "case": "zoo:RotaryPair",
@@ -970,7 +1170,11 @@
       "verified": true,
       "compiled_us": 315.3,
       "vs_compile": 1.1796,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:MBConvSEBlock",
@@ -987,7 +1191,11 @@
       "verified": true,
       "compiled_us": 179.1,
       "vs_compile": 1.2259,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:NormedSoftcapHead",
@@ -1004,7 +1212,11 @@
       "verified": true,
       "compiled_us": 109.8,
       "vs_compile": 1.4077,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:TimeCondConv",
@@ -1021,7 +1233,11 @@
       "verified": true,
       "compiled_us": 117.0,
       "vs_compile": 0.8003,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:STEQuantLinear",
@@ -1038,24 +1254,32 @@
       "verified": true,
       "compiled_us": 101.1,
       "vs_compile": 0.8383,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:GatedDeltaRule",
       "regime": "launch-bound",
-      "eager_us": 431.0,
-      "delivered_us": 453.2,
-      "speedup": 0.951,
+      "eager_us": 402.55,
+      "delivered_us": 572.8,
+      "speedup": 0.7028,
       "device_share": 0.395,
       "dispatch_share": 0.605,
       "ceiling": 2.5316,
-      "headroom_us": 260.755,
-      "captured": -0.032,
+      "headroom_us": 243.543,
+      "captured": -0.1941,
       "kernels": 12,
       "verified": true,
-      "compiled_us": 433.1,
-      "vs_compile": 0.9556,
-      "beats_compile": false
+      "compiled_us": 428.8,
+      "vs_compile": 0.7486,
+      "beats_compile": false,
+      "delivered_graph_us": 206.65,
+      "graph_speedup": 1.948,
+      "graph_vs_compile": 2.075,
+      "beats_graph_compile": true
     },
     {
       "case": "zoo:GatedConvUnit",
@@ -1072,24 +1296,32 @@
       "verified": true,
       "compiled_us": 130.5,
       "vs_compile": 2.0201,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:ChunkedSSD",
       "regime": "launch-bound",
-      "eager_us": 2618.2,
-      "delivered_us": 2989.8,
-      "speedup": 0.8757,
+      "eager_us": 2190.15,
+      "delivered_us": 2179.3,
+      "speedup": 1.005,
       "device_share": 0.331,
       "dispatch_share": 0.669,
       "ceiling": 3.0211,
-      "headroom_us": 1751.576,
-      "captured": -0.0615,
+      "headroom_us": 1465.21,
+      "captured": 0.0025,
       "kernels": 16,
       "verified": true,
-      "compiled_us": 855.1,
-      "vs_compile": 0.286,
-      "beats_compile": false
+      "compiled_us": 649.55,
+      "vs_compile": 0.2981,
+      "beats_compile": false,
+      "delivered_graph_us": 706.95,
+      "graph_speedup": 3.098,
+      "graph_vs_compile": 0.9188,
+      "beats_graph_compile": false
     },
     {
       "case": "zoo:RMSNormPerHead",
@@ -1106,7 +1338,11 @@
       "verified": true,
       "compiled_us": 76.7,
       "vs_compile": 0.3322,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:InstanceNormBroadcast",
@@ -1123,7 +1359,11 @@
       "verified": true,
       "compiled_us": 70.8,
       "vs_compile": 0.8784,
-      "beats_compile": false
+      "beats_compile": false,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:SqueezeExcite",
@@ -1140,7 +1380,11 @@
       "verified": true,
       "compiled_us": 128.0,
       "vs_compile": 1.7729,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:GroupedQuantLinear",
@@ -1157,7 +1401,11 @@
       "verified": true,
       "compiled_us": 80.9,
       "vs_compile": 3.5639,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:PerChannelQuantMatmul",
@@ -1174,7 +1422,11 @@
       "verified": true,
       "compiled_us": 83.5,
       "vs_compile": 3.5991,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:ManualGroupNorm",
@@ -1191,7 +1443,11 @@
       "verified": true,
       "compiled_us": 74.3,
       "vs_compile": 1.2281,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     },
     {
       "case": "zoo:FNOBlock",
@@ -1208,7 +1464,11 @@
       "verified": true,
       "compiled_us": 241.3,
       "vs_compile": 1.8239,
-      "beats_compile": true
+      "beats_compile": true,
+      "delivered_graph_us": null,
+      "graph_speedup": null,
+      "graph_vs_compile": null,
+      "beats_graph_compile": null
     }
   ]
 }

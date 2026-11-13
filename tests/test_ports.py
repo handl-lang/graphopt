@@ -57,11 +57,26 @@ def _neg_ir() -> IR:
 
 
 def _scan_ir() -> IR:
-    a, b, h = _v("A", 3, 3), _v("b", 3), _v("h", 3)
-    f = Op.make(
-        "aff_compose", Op.make("aff", a, b), Op.make("aff", a, b)
+    # Three distinct leaves → two compose levels: the plan gate
+    # declines spines of fewer than two levels (T-037 — a lone
+    # compose has nothing to batch).
+    a1, a2, a3, b, h = (
+        _v("A1", 3, 3),
+        _v("A2", 3, 3),
+        _v("A3", 3, 3),
+        _v("b", 3),
+        _v("h", 3),
     )
-    return _ir(Op.make("apply", f, h), [a, b, h])
+    f = Op.make(
+        "aff_compose",
+        Op.make("aff", a1, b),
+        Op.make(
+            "aff_compose",
+            Op.make("aff", a2, b),
+            Op.make("aff", a3, b),
+        ),
+    )
+    return _ir(Op.make("apply", f, h), [a1, a2, a3, b, h])
 
 
 def _om_ir() -> IR:
@@ -97,8 +112,11 @@ def test_batched_scan_module_is_batched_executor():
     assert isinstance(mod, BatchedExecutor)
     assert mod.is_batched
     eye, b, h = torch.eye(3), torch.ones(3), torch.zeros(3)
-    # apply(aff∘aff, h) = A·(A·h + b) + b.
-    assert torch.allclose(mod(eye, b, h), eye @ (eye @ h + b) + b)
+    # apply(l1∘(l2∘l3), h) = A1·(A2·(A3·h + b) + b) + b.
+    assert torch.allclose(
+        mod(eye, eye, eye, b, h),
+        eye @ (eye @ (eye @ h + b) + b) + b,
+    )
 
 
 def test_batched_scan_module_lone_leaf_is_not_batched():

@@ -850,9 +850,13 @@ class TestLeafShapeConsistency:
         assert build_scan_plan(t) is None
 
     def test_broadcastable_diag_leaves_accepted(self):
+        # Three leaves → two compose levels: the plan gate requires
+        # a real batched spine (a lone compose level is declined —
+        # see ``test_lone_leaf_declines``).
         t = self._applyd(
             Op.make("aff_diag", _P("a", 4), _P("b", 3, 4)),
             Op.make("aff_diag", _P("a2", 3, 4), _P("b2", 4)),
+            Op.make("aff_diag", _P("a3", 4), _P("b3", 4)),
         )
         plan = build_scan_plan(t)
         assert plan is not None and plan["diagonal"]
@@ -918,25 +922,25 @@ class TestLeafShapeConsistency:
 
     def test_mixed_leaf_carrier_ops_decline(self):
         """aff vs aff_diag mixed leaves can't share one schedule."""
-        t = Op.make(
-            "applyd",
-            Op.make(
-                "affd_compose",
-                Op.make("aff_diag", _P("a", 4), _P("b", 4)),
-                Op.make("aff_diag", _P("a2", 4), _P("b2", 4)),
-            ),
-            _v("h", 4),
+        # Three leaves → two compose levels, so the level gate passes
+        # and the carrier-mix check is what declines.
+        t = self._applyd(
+            Op.make("aff_diag", _P("a", 4), _P("b", 4)),
+            Op.make("aff_diag", _P("a2", 4), _P("b2", 4)),
+            Op.make("aff_diag", _P("a3", 4), _P("b3", 4)),
         )
         assert build_scan_plan(t) is not None
-        # diagonal root over dense leaves — diag b (d,) vs a (d,d):
-        # broadcast (d,d) is concrete → accepted, executor just
-        # multiplies — but the h side check still applies
+        # dense leaf under a diagonal compose — the domains don't mix
         t2 = Op.make(
             "apply",
             Op.make(
                 "aff_compose",
                 Op.make("aff", _P("A", 4, 4), _P("b", 4)),
-                Op.make("aff_diag", _P("a", 4), _P("b2", 4)),
+                Op.make(
+                    "aff_compose",
+                    Op.make("aff_diag", _P("a", 4), _P("b2", 4)),
+                    Op.make("aff_diag", _P("a2", 4), _P("b3", 4)),
+                ),
             ),
             _v("h", 4),
         )
@@ -949,7 +953,9 @@ class TestLeafShapeConsistency:
         application: the level executor would add plan/gather/stack
         machinery for zero batched levels.  ``None`` keeps such roots
         on the serial fallback — and keeps ``_delivered_cost`` from
-        crediting a batched win that cannot exist.
+        crediting a batched win that cannot exist.  The same holds one
+        level up: two leaves compose ONCE, so the batched schedule has
+        nothing to amortise either (T-037).
         """
         t = Op.make(
             "applyd",
@@ -962,13 +968,24 @@ class TestLeafShapeConsistency:
             _v("h", 4),
         )
         assert build_scan_plan(t2) is None
-        # Two leaves → one real compose level → still plans.
+        # Two leaves → ONE compose level → also declined: a single
+        # batched level is strictly more machinery than the generic
+        # evaluator's one compose binding (measured 3.4x slower on the
+        # fold-free GatedDeltaRule term — T-037), and it forfeits the
+        # single-tape DAG dedup across leaf payloads.
         t3 = self._applyd(
             Op.make("aff_diag", _P("a", 4), _P("b", 4)),
             Op.make("aff_diag", _P("a2", 4), _P("b2", 4)),
         )
-        plan = build_scan_plan(t3)
-        assert plan is not None and len(plan["levels"]) == 1
+        assert build_scan_plan(t3) is None
+        # Three leaves → two real compose levels → plans.
+        t4 = self._applyd(
+            Op.make("aff_diag", _P("a", 4), _P("b", 4)),
+            Op.make("aff_diag", _P("a2", 4), _P("b2", 4)),
+            Op.make("aff_diag", _P("a3", 4), _P("b3", 4)),
+        )
+        plan = build_scan_plan(t4)
+        assert plan is not None and len(plan["levels"]) == 2
 
 
 class TestChainBase:

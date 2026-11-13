@@ -564,40 +564,39 @@
  },
  {
   "case": "zoo:DeltaRuleBlock",
-  "claims": [
-   "gen_0",
-   "gen_2"
-  ],
+  "claims": [],
   "delivered": true,
   "verified": true,
+  "prim_ops": [],
   "max_abs": 0,
   "cost": NaN,
-  "speedup": 0.97,
+  "speedup": 0.974,
   "device": "cuda",
+  "gen_graph_us": 143.6,
+  "graph_speedup": 2.034,
+  "graph_vs_compiled": 1.443,
+  "graph_max_abs": 0.0,
   "runs": [
    {
-    "speedup": 0.944,
-    "eager_us": 287.9,
-    "compiled_us": 230.2,
-    "gen_us": 305.0
+    "speedup": 0.96,
+    "eager_us": 285.9,
+    "compiled_us": 184.3,
+    "gen_us": 297.7,
+    "gen_graph_us": 143.7
    },
    {
-    "speedup": 0.97,
-    "eager_us": 309.5,
-    "compiled_us": 234.1,
-    "gen_us": 318.9
-   },
-   {
-    "speedup": 1.046,
-    "eager_us": 321.8,
-    "compiled_us": 234.7,
-    "gen_us": 307.6
+    "speedup": 0.987,
+    "eager_us": 298.2,
+    "compiled_us": 230.1,
+    "gen_us": 302.3,
+    "gen_graph_us": 143.5
    }
   ],
   "spread": [
-   0.944,
-   1.046
-  ]
+   0.96,
+   0.987
+  ],
+  "dtype": "fp64"
  },
  {
   "case": "zoo:WaveNetGate",
@@ -1835,75 +1834,79 @@
  {
   "case": "zoo:GatedDeltaRule",
   "claims": [
-   "gen_0",
-   "gen_1",
-   "gen_4",
-   "gen_5"
+   "synop_889d740672",
+   "synop_d5b128282a"
   ],
   "delivered": true,
   "verified": true,
-  "max_abs": 0,
+  "prim_ops": [
+   "synop_d5b128282a"
+  ],
+  "max_abs": 4.440892098500626e-16,
   "cost": NaN,
-  "speedup": 0.958,
+  "speedup": 0.702,
   "device": "cuda",
+  "gen_graph_us": 206.7,
+  "graph_speedup": 1.948,
+  "graph_vs_compiled": 2.075,
+  "graph_max_abs": 0.0,
   "runs": [
    {
-    "speedup": 0.987,
-    "eager_us": 479.3,
-    "compiled_us": 440.7,
-    "gen_us": 485.8
+    "speedup": 0.701,
+    "eager_us": 405.9,
+    "compiled_us": 428.2,
+    "gen_us": 578.8,
+    "gen_graph_us": 207.0
    },
    {
-    "speedup": 0.951,
-    "eager_us": 431.0,
-    "compiled_us": 343.2,
-    "gen_us": 453.2
-   },
-   {
-    "speedup": 0.958,
-    "eager_us": 430.2,
-    "compiled_us": 433.1,
-    "gen_us": 449.3
+    "speedup": 0.704,
+    "eager_us": 399.2,
+    "compiled_us": 429.4,
+    "gen_us": 566.8,
+    "gen_graph_us": 206.3
    }
   ],
   "spread": [
-   0.951,
-   0.987
-  ]
+   0.701,
+   0.704
+  ],
+  "dtype": "fp64"
  },
  {
   "case": "zoo:ChunkedSSD",
   "claims": [],
   "delivered": true,
   "verified": true,
+  "prim_ops": [],
   "max_abs": 0,
   "cost": NaN,
-  "speedup": 0.956,
+  "speedup": 1.006,
   "device": "cuda",
+  "gen_graph_us": 707.0,
+  "graph_speedup": 3.098,
+  "graph_vs_compiled": 0.919,
+  "graph_max_abs": 0.0,
   "runs": [
    {
-    "speedup": 0.956,
-    "eager_us": 2435.2,
-    "compiled_us": 756.2,
-    "gen_us": 2548.1
+    "speedup": 0.994,
+    "eager_us": 2213.7,
+    "compiled_us": 637.9,
+    "gen_us": 2228.0,
+    "gen_graph_us": 707.7
    },
    {
-    "speedup": 1.36,
-    "eager_us": 4771.0,
-    "compiled_us": 4513.9,
-    "gen_us": 3507.2
-   },
-   {
-    "speedup": 0.876,
-    "eager_us": 2618.2,
-    "compiled_us": 855.1,
-    "gen_us": 2989.8
+    "speedup": 1.017,
+    "eager_us": 2166.6,
+    "compiled_us": 661.2,
+    "gen_us": 2130.6,
+    "gen_graph_us": 706.2
    }
   ],
   "spread": [
-   0.876,
-   1.36
-  ]
+   0.994,
+   1.017
+  ],
+  "dtype": "fp64"
  },
  {
   "case": "zoo:RealGatedLRU",
@@ -1915,48 +1918,36 @@
   "claims": [],
   "delivered": true,
   "verified": true,
+  "prim_ops": [],
   "max_abs": 1.1102230246251565e-16,
   "cost": NaN,
-  "speedup": 0.931,
+  "speedup": 0.992,
   "device": "cuda",
+  "gen_graph_us": 371.4,
+  "graph_speedup": 1.275,
+  "graph_vs_compiled": 1.032,
+  "graph_max_abs": 0.0,
   "runs": [
    {
-    "speedup": 0.979,
-    "eager_us": 500.3,
-    "compiled_us": 409.6,
-    "gen_us": 510.8
+    "speedup": 0.982,
+    "eager_us": 474.3,
+    "compiled_us": 400.4,
+    "gen_us": 482.9,
+    "gen_graph_us": 385.5
    },
    {
-    "speedup": 0.944,
-    "eager_us": 536.5,
-    "compiled_us": 394.4,
-    "gen_us": 568.2
-   },
-   {
-    "speedup": 0.901,
-    "eager_us": 497.2,
-    "compiled_us": 330.3,
-    "gen_us": 551.7
-   },
-   {
-    "speedup": 0.931,
-    "eager_us": 499.1,
-    "compiled_us": 328.3,
-    "gen_us": 536.2
-   },
-   {
-    "speedup": 0.901,
-    "eager_us": 511.4,
-    "compiled_us": 344.3,
-    "gen_us": 567.5
+    "speedup": 1.003,
+    "eager_us": 471.7,
+    "compiled_us": 366.2,
+    "gen_us": 470.4,
+    "gen_graph_us": 357.2
    }
   ],
   "spread": [
-   0.901,
-   0.979
+   0.982,
+   1.003
   ],
-  "rounds": 5,
-  "note": "re-measured at 5 rounds, box idle (was 3-round noisy row)"
+  "dtype": "fp64"
  },
  {
   "case": "zoo:PartialRotary",

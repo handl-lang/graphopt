@@ -385,19 +385,27 @@ def build_scan_plan(root: Any) -> dict | None:
         lambda t: t.op == leaf_op,
         key=id,
     )
-    if not levels or not _leaf_shapes_consistent(leaves):
-        # Two distinct declines in one gate:
-        # * ``not levels`` — no compose spine: the spine is a single
-        #   bare leaf, so a "batched" schedule would be one leaf
-        #   materialisation plus the plan/env/gather machinery and
-        #   zero batched levels — strictly more dispatched work than
-        #   the generic evaluator's direct ``f0⊙h + f1``.  Declining
-        #   keeps such terms on the serial fallback in delivery AND
-        #   keeps ``_delivered_cost`` from crediting a batched win
-        #   that cannot exist — the zoo_adaln_affd regression, where
-        #   the carrier upgrade moved extraction to a unit-lift
-        #   member only because the batched model priced its
-        #   single-leaf plan below the generic route.
+    if len(levels) < 2 or not _leaf_shapes_consistent(leaves):
+        # Declines in one gate, same rationale at growing depth:
+        # * fewer than two levels — the compose spine is a single
+        #   bare leaf (zero levels) or exactly one ``*_compose`` node
+        #   (one level, two leaves).  A "batched" schedule then
+        #   materialises the leaf stack, pays the plan/env/gather
+        #   machinery, and runs ONE level of index_selects/cats where
+        #   the generic evaluator spends a single compose binding —
+        #   strictly more dispatched work in every regime, and it also
+        #   forfeits the single-tape DAG dedup: each leaf's ``(A, b)``
+        #   payload is evaluated as a separate ``run_env`` root, so
+        #   subgraphs shared ACROSS leaves are recomputed (measured:
+        #   the fold-free GatedDeltaRule term — 2 leaves, 1 level, 67
+        #   unique payload ops incl. a nested ``applyd`` — ran 3.4x
+        #   slower than ``IRModule`` on the same term, T-029/T-037).
+        #   Declining keeps such terms on the serial fallback in
+        #   delivery AND keeps ``_delivered_cost`` from crediting a
+        #   batched win that cannot exist — the zoo_adaln_affd
+        #   regression, where the carrier upgrade moved extraction to
+        #   a unit-lift member only because the batched model priced
+        #   its single-leaf plan below the generic route.
         # * inconsistent leaf shapes — no uniform leaf family to
         #   stack (``_leaf_shapes_consistent``).
         return None
