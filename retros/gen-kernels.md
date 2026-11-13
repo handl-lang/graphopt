@@ -606,3 +606,58 @@ Payoff: one real site, real win; the boundary is step-expr grammar
 (unsqueeze) and non-diagonal recurrence forms, not the collector.
 
 Full record `docs/reports/p35_seq_scan_collector.md`.
+
+## Seq-matrix scans land — the delta-rule family mints, verifies, pays (2026-11-13)
+
+p36's recorded boundary ("genuinely non-diagonal and chunked
+recurrences remain out of scope") gets its first honest widening:
+`kind="seqm"`, the matrix-state fold `acc = a_t*acc + b_t(acc)`
+whose `b` reads the accumulator back through ONE
+`squeeze(matmul(K, acc))` projection — the DeltaRuleBlock /
+GatedDeltaRule spelling `S += beta*k (x) (v - [alpha*] k^T S)`.
+
+Collector side (`play.py`): `_seq_step_cands` gains `(None, c0,
+c1)` add-readings (the state is a DIRECT add operand — no `mul`
+factor exists to see it); `_seq_deindex` gains a `state` argument
+abstracting the step's own state factor to `"H"`; `_seqm_site` /
+`_seqm_scan_sites` mint `applyd(aff_diag(a,b), H, {kind:"seqm"})`
+records carrying a PER-OPERAND `axes` map (no shared broadcast
+frame exists across `k in R^dk`, `v in R^dv`, `acc in R^(dk,dv)`).
+Real bug the new tests caught: the state check must be `==`, not
+`is` — Op.make hash-conses ops but Var/Param leaves are plain
+frozen dataclasses, so a sibling recurrence's equal-but-distinct
+`Var("H0")` interns the same matmul node while the spine's state
+factor stays the other object; `is` declined order-dependently.
+
+Delivery side (`genkernel.py`): `_seqm_spec` recognises exactly
+the rank-1-feedback `b` skeleton `C (x) (V - [S*] K^T H)` —
+everything else declines (H outside that slot, H in `a`,
+non-elementwise subs — the same `_triton_expr_h` renderer gates
+spec and kernel).  `seqm_denotation` is the plain-torch spelled
+fold over per-operand axes; `handler_denotation` dispatches on
+kind and REQUIRES the axes map.  `scan_triton_bindings` routes to
+`_seqm_binding`: per-call signature -> per-signature `_gsm`
+triton.jit kernel (hashed `.py` in the kernel cache, loaded module
+memoised in `_SEQM_LOADED` — the first cut re-imported per call,
+~3ms overhead, fixed pre-pricing).  Kernel: program per
+(batch, dv-block) owns a (dk,dv) tile, serial t loop, masked
+tl.sum matvec for K^T acc, broadcast rank-1 write; dk<=64.
+
+Soundness before pricing: fold==chain max abs diff 0.0 on both
+zoo workloads and the synthetic chains (fp64); Triton vs fold
+5.0e-16 / 2.2e-16; gen_probe delivered+verified on both.
+
+Measured, real path fp64 CUDA 16x8x2: DeltaRuleBlock scan_4 KEPT
+~0.45x, GatedDeltaRule scan_8 KEPT ~0.50x vs spelled fold — the
+only two seqm sites zoo-wide, exactly the census's delta-rule
+pair.  Synthetic sweep: kernel ~flat in T vs the T-step python
+fold — 0.50x at T=4 down to 0.036-0.14x at T>=16.
+
+Boundary (honest): ONE skeleton only — general matrix A_t*h has
+no elementwise b-form and declines; dk<=64 tile cap; state must
+be (B,dk,dv); ChunkedSSD/ChunkedRetention/TaylorLinearAttention
+stay out (chunked/cumsum algebra, not unrolled folds);
+RWKVMixBlock's spines decline at deindex.  Mamba's real matrix
+recurrence is still covered only via its diagonal sub-chain.
+
+Full record `docs/reports/p37_seqm_matrix_scan.md`.
