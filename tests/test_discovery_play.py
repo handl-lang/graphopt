@@ -787,8 +787,147 @@ class TestScanSites:
         import mlopt_discovery.genkernel as gk
 
         assert "scan" in play.TIER_SITES
-        assert play.TIER_SITES["scan"] is play._scan_sites
+        assert play.TIER_SITES["scan"] is play._all_scan_sites
         assert any(t.name == "scan" for t in gk.TIERS)
+
+
+class TestSeqScanSites:
+    """The seq-form collector — raw ``add(mul(·,·),·)`` chains."""
+
+    def _recurrence(self, t_len: int = 3, *, reversed_idx: bool = False):
+        """An unrolled ``h_t = a_t * h + b_t`` chain over selects."""
+        from mlopt_core.ir import Op, TensorType, Var
+
+        def v(n, *s):
+            return Var(n, TensorType(s))
+
+        A, B, U = (
+            v("A", 2, t_len, 4),
+            v("B", 2, t_len, 4),
+            v("U", 2, t_len, 4),
+        )
+        h = v("H0", 2, 4)
+
+        def sel(x, t):
+            idx = t_len - 1 - t if reversed_idx else t
+            return Op.make("select", x, dim=1, index=idx)
+
+        for t in range(t_len):
+            b_t = Op.make("mul", sel(B, t), sel(U, t))
+            h = Op.make(
+                "add", Op.make("mul", sel(A, t), h), b_t
+            )
+        return h
+
+    def test_seq_sites_mints_fold_spec(self):
+        pytest.importorskip("torch")
+        from mlopt_discovery import genkernel as gk
+
+        sites = play._seq_scan_sites(self._recurrence())
+        assert len(sites) == 1
+        s = sites[0]
+        spec = s["spec"]
+        assert spec[0] == "applyd"
+        assert spec[1][0] == "aff_diag"
+        assert spec[2] == "H"
+        assert spec[3]["kind"] == "seq"
+        assert spec[3]["axis"] == 1
+        info = gk.scan_spec(spec)
+        assert info is not None and info["kind"] == "seq"
+        assert set(s["leaf_env"]) == set(gk._spec_metas(spec))
+        assert s["axis"] == 1
+
+    def test_seq_site_fold_equals_chain(self):
+        # the minted fold must denote the unrolled chain's value —
+        # the whole point of the collector's index/shape checks
+        torch = pytest.importorskip("torch")
+        import mlopt_torch.torch_bridge as tb
+
+        from mlopt_discovery import genkernel as gk
+
+        term = self._recurrence()
+        sites = play._seq_scan_sites(term)
+        assert len(sites) == 1
+        s = sites[0]
+        var_env = {
+            "A": torch.randn(2, 3, 4),
+            "B": torch.randn(2, 3, 4),
+            "U": torch.randn(2, 3, 4),
+            "H0": torch.randn(2, 4),
+        }
+        bindings = tb._IR_TO_TORCH
+        vals = {
+            m: gk._bound_val(t, var_env, bindings)
+            for m, t in s["leaf_env"].items()
+        }
+        h = {
+            "pattern": s["spec"],
+            "args": tuple(gk._spec_metas(s["spec"])),
+            "axis": s["axis"],
+        }
+        got = gk.handler_denotation(h)(
+            *[vals[m] for m in h["args"]]
+        )
+        want = tb.eval_term(
+            term,
+            var_env=var_env,
+            param_env=var_env,
+            bindings=bindings,
+            strict=True,
+        )
+        torch.testing.assert_close(got, want)
+
+    def test_seq_handlers_carry_axis_and_leaf_env(self):
+        pytest.importorskip("torch")
+        from mlopt_discovery import genkernel as gk
+
+        hs = gk.scan_handlers(play._seq_scan_sites(self._recurrence()))
+        assert len(hs) == 1
+        h = next(iter(hs.values()))
+        assert h["axis"] == 1
+        assert set(h["leaf_env"]) == set(h["args"])
+        assert gk.handler_denotation(h) is not None
+
+    def test_seq_sites_decline_wrong_index_order(self):
+        # selects walking the axis backwards are not the fold's
+        # step order — the site must decline, not relabel
+        pytest.importorskip("torch")
+        assert play._seq_scan_sites(
+            self._recurrence(reversed_idx=True)
+        ) == []
+
+    def test_seq_sites_decline_non_chain(self):
+        pytest.importorskip("torch")
+        from mlopt_core.ir import Op, TensorType, Var
+
+        # a single-step carrier-shaped term is not a recurrence
+        a = Var("a", TensorType((4,)))
+        x = Var("x", TensorType((4,)))
+        h = Var("h", TensorType((4,)))
+        term = Op.make(
+            "applyd", Op.make("aff_diag", a, x), h
+        )
+        assert play._seq_scan_sites(term) == []
+
+    def test_seq_sites_decline_state_shaped_mul(self):
+        # ``mul(state_expr, x) + y`` chains whose "map" factor is a
+        # whole-tensor reference (no per-step select) cannot mint a
+        # sequence operand — decline rather than guess
+        pytest.importorskip("torch")
+        from mlopt_core.ir import Op, TensorType, Var
+
+        def v(n, *s):
+            return Var(n, TensorType(s))
+
+        x, y = v("x", 2, 3, 4), v("y", 2, 4)
+        h = v("h0", 2, 4)
+        for t in range(3):
+            h = Op.make(
+                "add",
+                Op.make("mul", x, h),
+                Op.make("select", y, dim=1, index=t),
+            )
+        assert play._seq_scan_sites(h) == []
 
 
 class TestDecayedMint:

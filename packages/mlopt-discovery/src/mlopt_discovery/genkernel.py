@@ -2209,7 +2209,13 @@ def _site_parts(item: Any) -> tuple:
     the recorded metavar binding reaches the referee.
     """
     if isinstance(item, dict):
-        return item["spec"], {"leaf_env": item.get("leaf_env")}
+        extra = {"leaf_env": item.get("leaf_env")}
+        if "axis" in item:
+            # a site that resolved its own step axis (the seq
+            # collector's shape-checked dim) overrides the builder's
+            # default — merged after ``"axis": axis`` in the entry.
+            extra["axis"] = item["axis"]
+        return item["spec"], extra
     return item, {}
 
 

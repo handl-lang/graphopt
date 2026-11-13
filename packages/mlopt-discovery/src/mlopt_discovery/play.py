@@ -603,14 +603,279 @@ def _carrier_member(eg: Any, node: Any, carrier_ops: tuple) -> Any:
     return Op.make(node.op, *args, **dict(node.attrs))
 
 
+# ---------------------------------------------------------------------------
+#  Seq-form scan sites — raw recurrence chains, not saturated carriers
+# ---------------------------------------------------------------------------
+
+#: Cap on tied spine readings kept per node and seq sites emitted per
+#: term — ambiguity is rare; the caps bound the collector's work on
+#: pathological terms without dropping the common case.
+_SEQ_SPINE_CAP = 4
+_SEQ_SITE_CAP = 16
+
+
+def _seq_step_cands(t: Any) -> tuple:
+    """``(map, state, inp)`` readings of one ``add(mul(·,·),·)`` step.
+
+    The diagonal recurrence ``h' = a ⊙ h + x`` arrives unrolled as
+    ``add(mul(a, h), x)`` — either add operand may hold the product
+    and either mul factor may be the state, so a node yields up to
+    four candidate decompositions.  The spine walk keeps only the
+    longest readings; :func:`_seq_site` arbitrates the rest.  The
+    ``a * h`` spelling (map first, state second) is tried first so
+    the common torch order wins ties deterministically.
+    """
+    if not (
+        isinstance(t, Op)
+        and t.op == "add"
+        and len(t.args) == 2
+        and not t.attrs
+    ):
+        return ()
+    c0, c1 = t.args
+    out = []
+    for prod, inn in ((c0, c1), (c1, c0)):
+        if (
+            isinstance(prod, Op)
+            and prod.op == "mul"
+            and len(prod.args) == 2
+            and not prod.attrs
+        ):
+            f0, f1 = prod.args
+            out.append((f0, f1, inn))
+            out.append((f1, f0, inn))
+    return tuple(out)
+
+
+def _seq_spines(t: Any, memo: dict) -> list:
+    """Decomposition alternatives of *t*, longest first.
+
+    Each entry is ``(steps, base)`` — *steps* a tuple of
+    ``(map, inp, state)`` triples in CHRONOLOGICAL order (the
+    outermost ``add`` is the last step, so the walk prepends inward)
+    and *base* the initial-state term the fold starts from.  A node
+    with no step reading is its own base; tied longest readings are
+    all kept (up to :data:`_SEQ_SPINE_CAP`) so the seq-ification
+    pass can arbitrate readings the spine length cannot.
+    """
+    key = id(t)
+    if key in memo:
+        return memo[key]
+    cands = _seq_step_cands(t)
+    results = []
+    for m, s, inn in cands:
+        for sub_steps, sub_base in _seq_spines(s, memo):
+            results.append(((*sub_steps, (m, inn, s)), sub_base))
+    if results:
+        top = max(len(r[0]) for r in results)
+        memo[key] = [r for r in results if len(r[0]) == top][
+            :_SEQ_SPINE_CAP
+        ]
+    else:
+        memo[key] = [((), t)]
+    return memo[key]
+
+
+def _seq_deindex(t: Any, names: dict, operands: dict, events: list):
+    """Spec of *t* with per-step ``select``s abstracted to metas.
+
+    Every ``select(child, dim=D, index=i)`` node becomes a sequence
+    operand metavar bound to *child* — recorded in *operands* as
+    ``meta -> (child, dim)`` and in *events* as ``(meta, index)`` so
+    the caller can verify the index walks the step axis in step
+    order.  ``rsub(x, s)`` normalises to ``sub(s, x)`` — the
+    elementwise spelling the scan renderer knows.  Any other bare
+    leaf (a whole-tensor reference the fold cannot slice honestly)
+    or non-scalar ``Const`` declines the whole term with ``None``.
+    """
+    if isinstance(t, Op):
+        if (
+            t.op == "select"
+            and len(t.args) == 1
+            and type(t.attrs.get("dim")) is int
+            and type(t.attrs.get("index")) is int
+        ):
+            child, dim, idx = (
+                t.args[0],
+                t.attrs["dim"],
+                t.attrs["index"],
+            )
+            key = (child, dim)
+            meta = names.get(key)
+            if meta is None:
+                meta = f"Q{len(names) + 1}"
+                names[key] = meta
+                operands[meta] = (child, dim)
+            events.append((meta, idx))
+            return meta
+        if t.op == "rsub" and len(t.args) == 2 and not t.attrs:
+            b = _seq_deindex(t.args[1], names, operands, events)
+            a = _seq_deindex(t.args[0], names, operands, events)
+            if a is None or b is None:
+                return None
+            return ("sub", b, a)
+        parts = []
+        for a_ in t.args:
+            p = _seq_deindex(a_, names, operands, events)
+            if p is None:
+                return None
+            parts.append(p)
+        spec = [t.op, *parts]
+        if t.attrs:
+            spec.append(dict(t.attrs))
+        return tuple(spec)
+    if isinstance(t, Const):
+        return None if isinstance(t.value, str) else t.value
+    return None
+
+
+def _seq_site(steps: tuple, base: Any):
+    """Seq-form spec record for one spine, or ``None``.
+
+    The fold ``acc = a_t * acc + b_t`` reproduces the unrolled chain
+    exactly when every step's ``a``/``b`` deindex to the SAME spec
+    skeleton — per-step ``select``s becoming sequence operands —
+    and each select's index equals its chronological position along
+    a single shared step axis whose extent is the step count.  The
+    shape check via ``shape_of`` is what makes the axis claim
+    sound: equal-rank operands with the step extent at one dim mean
+    the fold's broadcast slice reads exactly the term the original
+    ``select`` read.  Anything unverifiable declines honestly.
+    """
+    from mlopt_core.typing import INVALID, shape_of
+
+    names: dict = {}
+    operands: dict = {}
+    a0 = b0 = None
+    events: list = []
+    for k, (at, bt, _st) in enumerate(steps):
+        ea: list = []
+        eb: list = []
+        sa = _seq_deindex(at, names, operands, ea)
+        sb = _seq_deindex(bt, names, operands, eb)
+        if sa is None or sb is None:
+            return None
+        if k == 0:
+            a0, b0 = sa, sb
+        elif sa != a0 or sb != b0:
+            return None
+        events.append(ea + eb)
+    if not operands:
+        return None
+    dims = {d for _c, d in operands.values()}
+    if len(dims) != 1:
+        return None
+    dim = dims.pop()
+    t_len = len(steps)
+    rank = None
+    eff = dim
+    for _m, (child, _d) in operands.items():
+        sh = shape_of(child)
+        if sh is INVALID or not isinstance(sh, tuple):
+            return None
+        if rank is None:
+            rank = len(sh)
+            eff = dim if dim >= 0 else dim + rank
+        if (
+            len(sh) != rank
+            or not -rank <= dim < rank
+            or sh[eff] != t_len
+        ):
+            return None
+    for k, evs in enumerate(events):
+        for _m, idx in evs:
+            if idx != k:
+                return None
+    h_meta = "H"
+    spec = (
+        "applyd",
+        ("aff_diag", a0, b0),
+        h_meta,
+        {"kind": "seq", "axis": eff},
+    )
+    leaf_env = {m: c for m, (c, _d) in operands.items()}
+    leaf_env[h_meta] = base
+    return spec, leaf_env, eff
+
+
+def _seq_scan_sites(term: Any) -> list:
+    """Seq-form scan specs minted from raw recurrence chains.
+
+    The unrolled collectors above only see what saturation already
+    built; the *sequence* form — ``applyd(aff_diag(a, b), h)`` whose
+    operands carry a step axis and whose declared op is the fold
+    ``acc = a_t * acc + b_t`` — has a different, earlier source: the
+    exported recurrence itself.  Models spell ``h_t = a_t ⊙ h_{t-1}
+    + b_t`` as an unrolled ``add(mul(·, ·), ·)`` chain over per-step
+    ``select(x, dim, t)`` slices; this collector walks those chains,
+    abstracts the selects into sequence operands and mints the seq
+    spec whose fold IS the chain — sound by construction, since the
+    spec is only emitted when the deindexed skeletons agree step for
+    step and the select indices walk the axis in order.
+
+    Sites are ``{"spec", "leaf_env", "axis"}`` records: ``leaf_env``
+    binds each operand metavar to its full sequence tensor (the
+    ``select`` child) and ``H`` to the initial-state term, and
+    ``axis`` is the resolved step axis — merged into the handler
+    entry so ``handler_denotation`` and the Triton binding agree on
+    it.  Chains that are strict prefixes of a longer emitted chain
+    are skipped (the maximal chain covers them); ambiguous or
+    unverifiable readings decline rather than guess.
+    """
+    if sys.getrecursionlimit() < 40_000:
+        sys.setrecursionlimit(40_000)
+
+    memo: dict = {}
+    cands: list = []
+    seen_nodes: set = set()
+
+    def visit(t: Any) -> None:
+        if not isinstance(t, Op) or id(t) in seen_nodes:
+            return
+        seen_nodes.add(id(t))
+        for steps, base in _seq_spines(t, memo):
+            if len(steps) >= 2:
+                cands.append((t, steps, base))
+        for a in t.args:
+            visit(a)
+
+    visit(term)
+    out: list = []
+    emitted_roots: set = set()
+    emitted_states: set = set()
+    for root, steps, base in cands:
+        if id(root) in emitted_roots or id(root) in emitted_states:
+            continue
+        site = _seq_site(steps, base)
+        if site is None:
+            continue  # next tied reading of the same root
+        spec, leaf_env, axis = site
+        if not any(spec == s["spec"] for s in out):
+            out.append(
+                {"spec": spec, "leaf_env": leaf_env, "axis": axis}
+            )
+        for _m, _i, s in steps:
+            emitted_states.add(id(s))
+        emitted_roots.add(id(root))
+        if len(out) >= _SEQ_SITE_CAP:
+            break
+    return out
+
+
+def _all_scan_sites(term: Any) -> list:
+    """Both scan site forms: saturated carriers + raw recurrences."""
+    return [*_scan_sites(term), *_seq_scan_sites(term)]
+
+
 #: Site collectors, keyed by codegen-tier name — the term-traversal
 #: knowledge that pairs with ``genkernel.TIERS``.  A tier without a
-#: collector mints nothing here; the ``scan`` collector is the only
-#: one whose sites live in the saturated graph, not raw IR.
+#: collector mints nothing here; the ``scan`` collector joins the
+#: saturated-graph carriers with the raw recurrence chains that mint
+#: the sequence form.
 TIER_SITES: dict[str, Any] = {
     "gen": _fusion_sites,
     "decayed": _decayed_sites,
-    "scan": _scan_sites,
+    "scan": _all_scan_sites,
     "reduction": _reduction_sites,
 }
 
