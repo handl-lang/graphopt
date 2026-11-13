@@ -1141,6 +1141,31 @@ def _route_scan_chains(term: Any, handlers: dict, eg: Any) -> Any:
                 continue  # incomplete binding — keep spelled
             trajs.append((h, traj, states))
             continue
+        ro = h.get("readout")
+        if ro is not None and env:
+            # seqt fused read-out site: the collector proved every
+            # prefix state's einsum read-out feeds one ``stack``, so
+            # delivery emits ONE kernel call denoting
+            # ``stack(einsum(S_t, w_t))`` and rewrites the stack
+            # e-class to it — the recurrence, the T einsums and the
+            # stack all leave the delivered term.  The read-out
+            # operand terms ride as extra positional args after the
+            # spec metas (``_handler_mvs`` order).
+            try:
+                repl = Op.make(
+                    h["kernel"],
+                    *(env[m] for m in h["args"]),
+                    *(env[op["meta"]] for op in ro["ops"]),
+                )
+            except (KeyError, TypeError):
+                continue  # incomplete binding — keep spelled
+            target = (
+                eg._class_of_term(ro["stack"])
+                if eg is not None
+                else None
+            )
+            routes.append((ro["stack"], repl, target))
+            continue
         if chain is None or not env:
             continue
         try:

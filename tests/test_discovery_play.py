@@ -2509,13 +2509,28 @@ class TestSeqsTrajectorySites:
             )
         return Op.make("stack", *outs, dim=1)
 
+    @staticmethod
+    def _seqs_sites(term):
+        """Only the trajectory fallback site — seqt co-mints on this
+        fixture, and these tests pin the seqs route itself."""
+        return [
+            s
+            for s in play._seq_scan_sites(term)
+            if s["spec"][3]["kind"] == "seqs"
+        ]
+
     def test_traj_sites_mints_seqs_spec(self):
         pytest.importorskip("torch")
         from mlopt_discovery import genkernel as gk
 
-        sites = play._seq_scan_sites(self._traj_recurrence())
-        assert len(sites) == 1
-        s = sites[0]
+        term = self._traj_recurrence()
+        sites = play._seq_scan_sites(term)
+        # the fused read-out tier co-mints when the read-out is a
+        # recognized einsum-over-select pattern; the seqs fallback
+        # stays offered either way
+        kinds = {s["spec"][3]["kind"] for s in sites}
+        assert kinds == {"seqs", "seqt"}
+        s = next(s for s in sites if s["spec"][3]["kind"] == "seqs")
         spec = s["spec"]
         assert spec[1][0] == "aff_diag"
         assert spec[3]["kind"] == "seqs"
@@ -2535,7 +2550,7 @@ class TestSeqsTrajectorySites:
         from mlopt_discovery import genkernel as gk
 
         term = self._traj_recurrence()
-        sites = play._seq_scan_sites(term)
+        sites = self._seqs_sites(term)
         hs = gk.scan_handlers(sites)
         assert len(hs) == 1
         h = next(iter(hs.values()))
@@ -2581,7 +2596,7 @@ class TestSeqsTrajectorySites:
         from mlopt_discovery import genkernel as gk
 
         term = self._traj_recurrence()
-        hs = gk.scan_handlers(play._seq_scan_sites(term))
+        hs = gk.scan_handlers(self._seqs_sites(term))
         board = ma.MetaArena(term, handlers=hs)
         out = op_repr(board.deliverable(term))
         assert out.count("scan_0_k") == 3
@@ -2666,7 +2681,7 @@ class TestSeqsTrajectorySites:
         from mlopt_discovery import genkernel as gk
 
         term = self._traj_recurrence()
-        hs = gk.scan_handlers(play._seq_scan_sites(term))
+        hs = gk.scan_handlers(self._seqs_sites(term))
         h = next(iter(hs.values()))
         states = h["states"]
         # proxy member for the LAST state (the chain root's class)
@@ -2692,3 +2707,265 @@ class TestSeqsTrajectorySites:
         out = op_repr(routed)
         assert "traj_proxy" not in out
         assert "scan_0_k" in out
+
+
+class TestSeqtReadoutSites:
+    """The fused read-out collector — ``seqt`` beside ``seqs``.
+
+    ``_seqt_readout`` upgrades a trajectory site when EVERY prefix
+    state's external consumer is the same two-operand ``einsum``
+    over a per-step ``select`` of one read-out operand, and those
+    einsums feed ONE ``stack`` in step order — the GLA/Mamba/
+    HeadedSelectiveScan shape.  The minted ``seqt`` op denotes
+    ``stack(einsum(S_t, w_t))``: fold + contraction + stack in one
+    kernel, writing only the read-outs.  Anything outside that
+    grammar declines and the ``seqs`` trajectory offer stands
+    alone.
+    """
+
+    def _traj_recurrence(self, t_len: int = 3, equation="bdv,bd->bv"):
+        """GLG-shaped chain + per-step einsum read-outs + stack."""
+        G, K, V = (
+            _v("G", 2, t_len, 4),
+            _v("K", 2, t_len, 4),
+            _v("V", 2, t_len, 4),
+        )
+        Q = _v("Q", 2, t_len, 4)
+        h = _v("H0", 2, 4, 4)
+        outs = []
+        for t in range(t_len):
+            a_t = Op.make(
+                "unsqueeze", Op.make("select", G, dim=1, index=t), dim=-1
+            )
+            k_t = Op.make(
+                "unsqueeze", Op.make("select", K, dim=1, index=t), dim=-1
+            )
+            v_t = Op.make(
+                "unsqueeze",
+                Op.make("select", V, dim=1, index=t),
+                dim=-2,
+            )
+            h = Op.make(
+                "add",
+                Op.make("mul", a_t, h),
+                Op.make("mul", k_t, v_t),
+            )
+            outs.append(
+                Op.make(
+                    "einsum",
+                    h,
+                    Op.make("select", Q, dim=1, index=t),
+                    equation=equation,
+                )
+            )
+        return Op.make("stack", *outs, dim=1)
+
+    @staticmethod
+    def _seqt_sites(term):
+        return [
+            s
+            for s in play._seq_scan_sites(term)
+            if s["spec"][3]["kind"] == "seqt"
+        ]
+
+    def test_seqt_site_mints_readout_record(self):
+        pytest.importorskip("torch")
+        sites = self._seqt_sites(self._traj_recurrence())
+        assert len(sites) == 1
+        s = sites[0]
+        ro = s["readout"]
+        assert ro["equation"] == "bdv,bd->bv"
+        assert ro["state_pos"] == 0
+        assert ro["ops"] == [{"meta": "W1", "axis": 1}]
+        assert ro["stack_dim"] == 1
+        # the whole read-out sequence tensor binds the fresh meta
+        assert "W1" in s["leaf_env"]
+        assert "chain" not in s and "states" not in s
+
+    def test_seqt_handler_args_and_denotation(self):
+        torch = pytest.importorskip("torch")
+        from mlopt_discovery import genkernel as gk
+
+        term = self._traj_recurrence()
+        hs = gk.scan_handlers(self._seqt_sites(term))
+        assert len(hs) == 1
+        h = next(iter(hs.values()))
+        assert h["args"] == ("Q1", "Q2", "Q3", "H")
+        # read-out operand metas ride after the spec metas
+        assert gk._handler_mvs(h) == ["Q1", "Q2", "Q3", "H", "W1"]
+        den = gk.handler_denotation(h)
+        assert den is not None
+        var_env = {
+            "G": torch.randn(2, 3, 4),
+            "K": torch.randn(2, 3, 4),
+            "V": torch.randn(2, 3, 4),
+            "Q": torch.randn(2, 3, 4),
+            "H0": torch.randn(2, 4, 4),
+        }
+        import mlopt_torch.torch_bridge as tb
+
+        vals = {
+            m: gk._bound_val(t, var_env, tb._IR_TO_TORCH)
+            for m, t in h["leaf_env"].items()
+        }
+        got = den(*[vals[m] for m in gk._handler_mvs(h)])
+        # spelled: per-step state, einsum read-out, stack at dim 1
+        states = []
+        hh = var_env["H0"]
+        for t in range(3):
+            a_t = var_env["G"][:, t].unsqueeze(-1)
+            write = (
+                var_env["K"][:, t].unsqueeze(-1)
+                * var_env["V"][:, t].unsqueeze(-2)
+            )
+            hh = a_t * hh + write
+            states.append(hh)
+        want = torch.stack(
+            [
+                torch.einsum("bdv,bd->bv", s, var_env["Q"][:, t])
+                for t, s in enumerate(states)
+            ],
+            dim=1,
+        )
+        torch.testing.assert_close(got, want)
+
+    def test_seqt_route_delivers_one_op(self):
+        # the fused route replaces the stack e-class: ONE kernel
+        # call denotes fold+einsums+stack — no einsum, no stack,
+        # no add-chain survives in the delivered term
+        pytest.importorskip("torch")
+        from mlopt_core.ir import op_repr
+        from mlopt_discovery import genkernel as gk
+
+        term = self._traj_recurrence()
+        hs = gk.scan_handlers(play._seq_scan_sites(term))
+        board = ma.MetaArena(term, handlers=hs)
+        out = op_repr(board.deliverable(term))
+        assert out.count("_k ") == 1 or out.count("_k(") == 1
+        assert "einsum" not in out
+        assert "stack" not in out
+        assert "(add" not in out
+
+    def test_seqt_route_preserves_values(self):
+        # delivered module evaluates to the spelled module's output
+        torch = pytest.importorskip("torch")
+        import mlopt_torch.torch_bridge as tb
+        from mlopt_discovery import genkernel as gk
+
+        term = self._traj_recurrence()
+        hs = gk.scan_handlers(play._seq_scan_sites(term))
+        board = ma.MetaArena(term, handlers=hs)
+        routed = board.deliverable(term)
+        bindings = dict(tb._IR_TO_TORCH) | gk.gen_bindings(
+            hs, compile_kernels=False
+        )
+        var_env = {
+            "G": torch.randn(2, 3, 4),
+            "K": torch.randn(2, 3, 4),
+            "V": torch.randn(2, 3, 4),
+            "Q": torch.randn(2, 3, 4),
+            "H0": torch.randn(2, 4, 4),
+        }
+        kw = dict(
+            var_env=var_env,
+            param_env=var_env,
+            bindings=bindings,
+            strict=True,
+        )
+        got = tb.eval_term(routed, **kw)
+        want = tb.eval_term(term, **kw)
+        torch.testing.assert_close(got, want)
+
+    def test_seqt_declines_non_einsum_readout(self):
+        # read-outs that are not the two-operand einsum-over-select
+        # pattern keep the seqs offer only — no seqt mint
+        pytest.importorskip("torch")
+        # two labels summed away — outside the grammar
+        term = self._traj_recurrence(equation="bdv,dv->b")
+        kinds = {
+            s["spec"][3]["kind"] for s in play._seq_scan_sites(term)
+        }
+        assert kinds == {"seqs"}
+
+    def test_seqt_declines_stack_of_raw_states(self):
+        # states consumed directly by a stack (no einsum) — the
+        # trajectory is required but there is no contraction to fuse
+        pytest.importorskip("torch")
+        G, K, V = (
+            _v("G", 2, 3, 4),
+            _v("K", 2, 3, 4),
+            _v("V", 2, 3, 4),
+        )
+        h = _v("H0", 2, 4, 4)
+        states = []
+        for t in range(3):
+            a_t = Op.make(
+                "unsqueeze", Op.make("select", G, dim=1, index=t), dim=-1
+            )
+            k_t = Op.make(
+                "unsqueeze", Op.make("select", K, dim=1, index=t), dim=-1
+            )
+            v_t = Op.make(
+                "unsqueeze",
+                Op.make("select", V, dim=1, index=t),
+                dim=-2,
+            )
+            h = Op.make(
+                "add",
+                Op.make("mul", a_t, h),
+                Op.make("mul", k_t, v_t),
+            )
+            states.append(h)
+        term = Op.make("stack", *states, dim=1)
+        kinds = {
+            s["spec"][3]["kind"] for s in play._seq_scan_sites(term)
+        }
+        assert kinds == {"seqs"}
+
+    def test_seqt_declines_state_with_two_consumers(self):
+        # a prefix state read by BOTH the einsum and another op —
+        # the fused op cannot serve two readers honestly
+        pytest.importorskip("torch")
+        G, K, V = (
+            _v("G", 2, 3, 4),
+            _v("K", 2, 3, 4),
+            _v("V", 2, 3, 4),
+        )
+        Q = _v("Q", 2, 3, 4)
+        W = _v("W", 2, 4, 4)
+        h = _v("H0", 2, 4, 4)
+        outs = []
+        extras = []
+        for t in range(3):
+            a_t = Op.make(
+                "unsqueeze", Op.make("select", G, dim=1, index=t), dim=-1
+            )
+            k_t = Op.make(
+                "unsqueeze", Op.make("select", K, dim=1, index=t), dim=-1
+            )
+            v_t = Op.make(
+                "unsqueeze",
+                Op.make("select", V, dim=1, index=t),
+                dim=-2,
+            )
+            h = Op.make(
+                "add",
+                Op.make("mul", a_t, h),
+                Op.make("mul", k_t, v_t),
+            )
+            outs.append(
+                Op.make(
+                    "einsum",
+                    h,
+                    Op.make("select", Q, dim=1, index=t),
+                    equation="bdv,bd->bv",
+                )
+            )
+            extras.append(Op.make("matmul", h, W))
+        term = Op.make(
+            "add", Op.make("stack", *outs, dim=1), Op.make("stack", *extras, dim=1)
+        )
+        kinds = {
+            s["spec"][3]["kind"] for s in play._seq_scan_sites(term)
+        }
+        assert kinds == {"seqs"}

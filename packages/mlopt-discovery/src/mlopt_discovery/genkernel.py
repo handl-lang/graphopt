@@ -170,6 +170,7 @@ __all__ = [
     "seq_scan_denotation",
     "seqm_denotation",
     "seqs_denotation",
+    "seqt_denotation",
 ]
 
 #: Ops whose torch bindings are pointwise (shape-preserving) — the
@@ -766,6 +767,22 @@ PROFITABLE_LOG: list = []
 _REFEREE_BORDERLINE = 1.25
 
 
+def _handler_mvs(h: dict) -> list:
+    """Ordered metavar names a handler's callables take positionally.
+
+    The spec metavars (``_spec_metas(pattern)`` — the ``params``
+    order every scan denotation/binding shares) plus any read-out
+    operand metas a ``kind="seqt"`` record binds: the fused
+    read-out's per-step contraction operand is a real kernel arg,
+    not a fold operand, so it rides after the params in both the
+    Triton binding and the spelled denotation.
+    """
+    mvs = list(_spec_metas(h["pattern"]))
+    for op in (h.get("readout") or {}).get("ops", ()):
+        mvs.append(op["meta"])
+    return mvs
+
+
 def profitable(
     handlers: dict,
     term: Any,
@@ -864,7 +881,7 @@ def profitable(
                 bindings,
             )
 
-        mvs = _spec_metas(h["pattern"])
+        mvs = _handler_mvs(h)
         den = (
             denotation_for(name, h, vals)
             if denotation_for is not None
@@ -1533,7 +1550,7 @@ def triton_sink(handlers: dict) -> Any:
 def _seq_scan_spec(spec: Any) -> bool:
     """Check *spec* is a scan spec in a sequence (fold) form."""
     info = scan_spec(spec)
-    return info is not None and info["kind"] in ("seq", "seqs")
+    return info is not None and info["kind"] in ("seq", "seqs", "seqt")
 
 
 class Tier(NamedTuple):
@@ -1811,7 +1828,7 @@ def _scan_info(
     # step axis.
     consts = (
         frozenset((attrs or {}).get("const", ()))
-        if kind in ("seq", "seqs")
+        if kind in ("seq", "seqs", "seqt")
         else frozenset()
     )
     seq = [m for m in metas if m not in consts]
@@ -1822,10 +1839,10 @@ def _scan_info(
     }
     if consts:
         info["const"] = [m for m in metas if m in consts]
-    if kind in ("seq", "seqs"):
+    if kind in ("seq", "seqs", "seqt"):
         (ea, eb) = steps[0]
         info.update({"kind": kind, "a": ea, "b": eb})
-        if kind == "seqs" and leaves:
+        if kind in ("seqs", "seqt") and leaves:
             # the emitted scan's closed-form mode — ``cumsum`` /
             # ``cumprod`` spell the whole prefix tensor, so the
             # denotation and the Triton piece can use the real scan
@@ -1872,9 +1889,9 @@ def _scan_kind(leaves: list | None, attrs: dict | None) -> str | None:
     kind = (attrs or {}).get("kind")
     if kind is None:
         return "seq" if len(leaves) == 1 else "unrolled"
-    if kind in ("seq", "seqs") and len(leaves) != 1:
+    if kind in ("seq", "seqs", "seqt") and len(leaves) != 1:
         return None
-    return kind if kind in ("seq", "seqs", "unrolled") else None
+    return kind if kind in ("seq", "seqs", "seqt", "unrolled") else None
 
 
 def _name_used(name: str, steps: list) -> bool:
@@ -2347,6 +2364,10 @@ def handler_denotation(h: dict) -> Any:
         return seq_scan_denotation(h["pattern"], axis=ax)
     if info["kind"] == "seqs":
         return seqs_denotation(h["pattern"], axis=ax)
+    if info["kind"] == "seqt":
+        return seqt_denotation(
+            h["pattern"], readout=h.get("readout"), axis=ax
+        )
     return None
 
 
@@ -2920,6 +2941,438 @@ def _seqs_fold_binding(kern: Any, info: dict, axis: int | None) -> Any:
     return fn
 
 
+# ---------------------------------------------------------------------------
+#  seqt codegen — the fused trajectory + read-out scan
+# ---------------------------------------------------------------------------
+#
+# ``kind="seqt"`` is the ``seqs`` trajectory fold with the per-step
+# read-out contraction FUSED into the same kernel: where ``seqs``
+# writes the whole ``(T, ·, state)`` trajectory for T spelled
+# ``einsum`` consumers to read back, ``seqt`` writes only the
+# read-outs — ``o_t[o] = Σ_c acc_t[o, c] · w_t[p(o), c]`` — one
+# launch for fold + contraction + stack.  The site record's
+# ``"readout"`` carries the einsum equation, which operand position
+# holds the state, the read-out operand's step axis, and the
+# ``stack`` node + dim the minted op denotes — the collector
+# (:func:`play._seqt_readout`) only emits the kind when EVERY
+# prefix state feeds exactly one matching two-operand einsum whose
+# outputs stack in step order.
+#
+# Kernel layout: state axes split into OUTER (the labels the
+# equation's output keeps — batch/head dims) and CONTRACT (the one
+# summed label).  One program owns a ``BLOCK_O``-wide slab of the
+# flattened outer space times the WHOLE contract axis, so the
+# per-step contraction is a local ``tl.sum`` — the same
+# program-decomposition trick ``_gsm`` uses for ``Kᵀ·acc``.  The
+# read-out operand must carry the contract axis LAST and a PREFIX
+# of the outer axes (its remaining outer labels broadcast); its
+# flat index is ``p(o)·C + c`` with ``p(o) = o // suffix``.
+
+#: Contract-axis extent cap for the seqt kernel — the accumulator
+#: tile is ``_SEQT_BLOCK_O x BLOCK_C`` registers per program.
+_SEQT_MAX_C = 64
+_SEQT_BLOCK_O = 64
+
+
+def _seqt_parse_equation(equation: Any, n_ops: int):
+    """Parse an einsum equation into ``(subs, out)`` or ``None``.
+
+    Only the explicit ``lhs->out`` form with plain unique-letter
+    subscripts is accepted — no ``...`` ellipsis, no implicit-mode
+    equations, no repeated labels inside one operand (diagonal
+    reads are outside this tier's grammar).
+    """
+    if not isinstance(equation, str) or "..." in equation:
+        return None
+    lhs, sep, out = equation.partition("->")
+    if not sep:
+        return None
+    subs = lhs.split(",")
+    if len(subs) != n_ops or not out:
+        return None
+    for s in (*subs, out):
+        if not s or not s.isascii() or not s.isalpha():
+            return None
+        if len(set(s)) != len(s):
+            return None
+    return subs, out
+
+
+def _seqt_layout(subs: Any, out: Any, state_pos: int):
+    """Classify a two-operand einsum as a fused scan read-out.
+
+    Returns ``{"contract", "outer", "w_k", "kept", "s_sub", "w_sub"}``
+    or ``None``.  The recognised shape::
+
+        out[kept…] = Σ_c state[kept…, c] · w[kept-prefix…, c]
+
+    * the state operand's subscripts split into the labels the
+      output keeps (``kept`` — the OUTER axes, in state-axis order)
+      and exactly ONE summed label shared with the read-out operand
+      (``contract`` — the axis the fold's state contracts over);
+    * the output subscripts are exactly the kept labels in
+      state-axis order (no permutation, no extra labels);
+    * the read-out operand's subscripts are a PREFIX of the kept
+      labels followed by the contract label LAST — so its per-step
+      slice broadcasts over the suffix outer axes the program slab
+      owns.
+
+    Anything else — multi-operand equations, several summed labels,
+    permuted outputs, non-prefix read-out operands — declines: the
+    collector then keeps the ``seqs`` trajectory offer instead.
+    """
+    if len(subs) != 2 or state_pos not in (0, 1):
+        return None
+    s_sub, w_sub = subs[state_pos], subs[1 - state_pos]
+    contract = [x for x in s_sub if x in w_sub and x not in out]
+    if len(contract) != 1:
+        return None
+    c = contract[0]
+    kept = [x for x in s_sub if x in out]
+    if "".join(kept) != out or set(s_sub) != set(kept) | {c}:
+        return None
+    w_outer = [x for x in w_sub if x != c]
+    if (
+        not w_sub
+        or w_sub[-1] != c
+        or any(x not in kept for x in w_outer)
+        or w_outer != kept[: len(w_outer)]
+    ):
+        return None
+    return {
+        "contract": s_sub.index(c),
+        "outer": [i for i, x in enumerate(s_sub) if x != c],
+        "w_k": len(w_outer),
+        "kept": kept,
+        "s_sub": s_sub,
+        "w_sub": w_sub,
+    }
+
+
+def _seqt_static(readout: Any):
+    """Parse + classify a ``"readout"`` record once per binding.
+
+    Returns the static descriptor the denotation and the Triton
+    binding share — equation, state-operand position, the
+    :func:`_seqt_layout` classification, the read-out operand's step
+    axis, the stack dim, and the state subscripts' rank — or
+    ``None`` when the record is absent or outside the grammar (the
+    callables then raise at call time, the honest-decline contract).
+    """
+    if not isinstance(readout, dict):
+        return None
+    spos = readout.get("state_pos")
+    sd = readout.get("stack_dim")
+    ops = readout.get("ops")
+    if (
+        type(spos) is not int
+        or type(sd) is not int
+        or not isinstance(ops, list)
+        or len(ops) != 1
+    ):
+        return None
+    op = ops[0]
+    if not isinstance(op, dict) or type(op.get("axis")) is not int:
+        return None
+    parsed = _seqt_parse_equation(readout.get("equation"), 2)
+    if parsed is None:
+        return None
+    lay = _seqt_layout(parsed[0], parsed[1], spos)
+    if lay is None:
+        return None
+    return {
+        "equation": readout["equation"],
+        "state_pos": spos,
+        "layout": lay,
+        "w_axis": op["axis"],
+        "stack_dim": sd,
+        "s_rank": len(parsed[0][spos]),
+    }
+
+
+def seqt_denotation(
+    spec: Any, *, readout: Any = None, axis: int | None = None
+) -> Any:
+    """Spelled denotation of a ``kind="seqt"`` fused read-out spec.
+
+    The minted ``scan_<i>_k`` op denotes ``stack(einsum(S_t, w_t))``
+    — the trajectory fold whose per-step states contract with the
+    read-out operand and stack along the recorded dim — NOT the
+    ``(T, ·, state)`` trajectory ``seqs`` emits and NOT the ambient
+    ``applyd`` map application.  The callable walks the same
+    ``acc = a_t * acc + b_t`` recurrence as
+    :func:`seqs_denotation`'s fold arm, then per step evaluates the
+    recorded einsum with ``acc`` in the state operand's position and
+    the bound read-out tensor sliced at its own step axis, and
+    ``torch.stack``s the results at ``stack_dim`` — the same
+    composite the spelled module runs, independently checkable
+    against it.
+
+    Args are the spec metavars positionally (``info["params"]``)
+    followed by the read-out operand tensors in ``readout["ops"]``
+    order — the same positional contract the Triton binding and
+    the delivery route keep.  An absent/ineligible ``readout``
+    record raises at call time rather than denoting a guess.
+    """
+    import torch
+
+    info = scan_spec(spec)
+    if info is None or info["kind"] != "seqt":
+        return None
+    parts = _applyd_operands(spec)
+    if parts is None:
+        return None
+    leaves = _affd_leaves(parts[0])
+    if leaves is None or len(leaves) != 1:
+        return None
+    a_spec, b_spec = leaves[0]
+    seq_metas = list(info["seq"])
+    h_meta = info["h"]
+    params = list(info["params"])
+    ax = axis if axis is not None else info.get("axis")
+    bindings = _ambient_bindings()
+    st = _seqt_static(readout)
+
+    def fn(*args: Any, **_attrs: Any) -> Any:
+        vals = dict(zip(params, args[: len(params)], strict=True))
+        ro_vals = args[len(params) :]
+        if st is None or len(ro_vals) != 1:
+            raise ValueError("seqt read-out spec is incomplete")
+        xs = torch.broadcast_tensors(*(vals[m] for m in seq_metas))
+        full = xs[0].shape
+        if not full:
+            raise ValueError("scan operands carry no step axis")
+        step_ax = _seq_axis(full, vals[h_meta].shape, ax)
+        t_len = full[step_ax]
+        state = full[:step_ax] + full[step_ax + 1 :]
+        if len(state) != st["s_rank"]:
+            raise ValueError(
+                "seqt state rank disagrees with the read-out"
+            )
+        moved = [x.movedim(step_ax, 0) for x in xs]
+        acc = torch.broadcast_to(vals[h_meta], state)
+        consts = info.get("const", ())
+        w = ro_vals[0]
+        wax = st["w_axis"] % w.dim()
+        eq = st["equation"]
+        spos = st["state_pos"]
+        outs = []
+        for t in range(t_len):
+            env = {
+                m: mv[t] for m, mv in zip(seq_metas, moved, strict=True)
+            }
+            for c in consts:
+                env[c] = vals[c]
+            a_t = _eval_spec(a_spec, env, bindings)
+            b_t = _eval_spec(b_spec, env, bindings)
+            acc = a_t * acc + b_t
+            wt = w.select(wax, t)
+            eargs = [acc if i == spos else wt for i in range(2)]
+            outs.append(torch.einsum(eq, *eargs))
+        return torch.stack(outs, dim=st["stack_dim"])
+
+    return fn
+
+
+def _seqt_triton_source(info: dict) -> str:
+    """Emit the fused trajectory+read-out kernel module for a ``seqt``.
+
+    One program per ``BLOCK_O`` outer-state elements owns the whole
+    contract axis; the step loop folds ``acc = a_t·acc + b_t`` on its
+    ``(BLOCK_O, BLOCK_C)`` slab exactly like the ``seqs`` fold, then
+    contracts the slab against the step's read-out operand —
+    ``o_t[o] = Σ_c acc[o,c]·w_t[p(o),c]`` — and stores ONLY the
+    ``(T, O)`` read-out matrix (the host reshapes/moves it into the
+    stack's layout).  Every sequence operand arrives contiguous
+    ``(T, O, C)``, so all operand loads share one offset expression;
+    ``"const"`` operands ride as ``(O, C)`` slabs loaded once.
+    """
+    ptrs = [f"{m}_ptr" for m in info["seq"]]
+    ptrs += [f"{m}_ptr" for m in info.get("const", ())]
+    params = ", ".join([*ptrs, "h_ptr", "w_ptr"])
+    loads = "".join(
+        f"        {m} = tl.load({m}_ptr + row + oc,\n"
+        "            mask=m2, other=0.0)\n"
+        for m in info["seq"]
+    )
+    cloads = "".join(
+        f"    {m} = tl.load({m}_ptr + oc, mask=m2, other=0.0)\n"
+        for m in info.get("const", ())
+    )
+    return (
+        "import triton\n"
+        "import triton.language as tl\n"
+        "import triton.language.extra.libdevice as libdevice\n"
+        "\n\n@triton.jit\n"
+        f"def _gst({params}, out_ptr, T, O, C, P, Suf,"
+        " BLOCK_O: tl.constexpr, BLOCK_C: tl.constexpr):\n"
+        "    ob = tl.program_id(0)\n"
+        "    o = ob.to(tl.int64) * BLOCK_O"
+        " + tl.arange(0, BLOCK_O)\n"
+        "    c = tl.arange(0, BLOCK_C)\n"
+        "    om = o < O\n"
+        "    m2 = om[:, None] & (c < C)[None, :]\n"
+        "    oc = o[:, None] * C + c[None, :]\n"
+        "    acc = tl.load(h_ptr + oc, mask=m2, other=0.0)\n"
+        f"{cloads}"
+        "    for t in range(T):\n"
+        "        row = t.to(tl.int64) * O * C\n"
+        f"{loads}"
+        f"        acc = ({info['a']}) * acc + ({info['b']})\n"
+        "        p = o // Suf\n"
+        "        w = tl.load(w_ptr + t.to(tl.int64) * P * C"
+        " + p[:, None] * C + c[None, :], mask=m2, other=0.0)\n"
+        "        ot = tl.sum(acc * w, axis=1)\n"
+        "        tl.store(out_ptr + t.to(tl.int64) * O + o,"
+        " ot, mask=om)\n"
+    )
+
+
+#: Loaded seqt kernel modules keyed by cache path — the binding
+#: resolves its layout per call but the ``.py`` artifact (and its
+#: ``triton.jit`` compile) is loaded once per spec.
+_SEQT_LOADED: dict = {}
+
+
+def _seqt_kernel_for(info: dict, name: str):
+    """Emit + load the seqt kernel module for a spec.
+
+    Same cache contract as :func:`_seqm_kernel_for`: the source is
+    spec-shaped (operand metas + rendered step exprs), so the module
+    is cached by source hash under the kernel cache.
+    """
+    import hashlib
+
+    src = _seqt_triton_source(info)
+    digest = hashlib.sha256(src.encode()).hexdigest()[:16]
+    path = _kernel_cache() / f"_gst_{name}_{digest}.py"
+    kern = _SEQT_LOADED.get(path)
+    if kern is None:
+        if not path.exists():
+            path.write_text(src)
+        kern = _load_generated(path, "_gst")
+        _SEQT_LOADED[path] = kern
+    return kern
+
+
+def _seqt_binding(
+    name: str, info: dict, axis: int | None, readout: Any
+) -> Any:
+    """Host wrapper for the fused trajectory+read-out kernel.
+
+    ``fn(*args)`` binds the spec metavars positionally (``params``
+    order), then the read-out operand tensors in ``readout["ops"]``
+    order — the same positional contract :func:`seqt_denotation`
+    and the delivery route keep.  Sequence operands normalise to
+    ``(T, O, C)`` slabs (step axis front, state axes permuted
+    outer-then-contract, flattened), the read-out operand to
+    ``(T, P, C)``, and the kernel writes the ``(T, O)`` read-out
+    matrix the host reshapes into the stack's layout.  Shape
+    ineligibility — a contract axis past ``_SEQT_MAX_C``, a
+    read-out operand whose rest is not ``(outer-prefix…, C)``, a
+    state rank disagreeing with the equation — raises, the same
+    honest-decline contract the other scan bindings keep.
+    """
+    st = _seqt_static(readout)
+
+    def fn(*args: Any, **_attrs: Any) -> Any:
+        import torch
+
+        vals = dict(
+            zip(
+                info["params"], args[: len(info["params"])], strict=True
+            )
+        )
+        ro_vals = args[len(info["params"]) :]
+        if st is None or len(ro_vals) != 1:
+            raise ValueError("seqt read-out spec is incomplete")
+        lay = st["layout"]
+        xs = torch.broadcast_tensors(*(vals[m] for m in info["seq"]))
+        full = xs[0].shape
+        if not full:
+            raise ValueError("scan operands carry no step axis")
+        if not xs[0].is_cuda:
+            raise RuntimeError(
+                "generated seqt kernels need CUDA tensors"
+            )
+        ax = _seq_axis(full, vals[info["h"]].shape, axis)
+        t_len = full[ax]
+        state = full[:ax] + full[ax + 1 :]
+        if len(state) != st["s_rank"]:
+            raise ValueError(
+                "seqt state rank disagrees with the read-out"
+            )
+        perm = (*lay["outer"], lay["contract"])
+        outer_shape = tuple(state[i] for i in lay["outer"])
+        c_ext = state[lay["contract"]]
+        o_ext = math.prod(outer_shape)
+        if c_ext < 1 or c_ext > _SEQT_MAX_C or o_ext < 1:
+            raise ValueError(f"seqt layout ineligible: state={state}")
+        dt = _scan_dtype(vals, info["params"])
+        w = ro_vals[0]
+        if torch.is_tensor(w):
+            dt = torch.promote_types(dt, w.dtype)
+        slabs = {}
+        for m, x in zip(info["seq"], xs, strict=True):
+            xm = x.movedim(ax, 0)
+            xp = xm.permute(0, *[i + 1 for i in perm])
+            slabs[m] = xp.to(dt).contiguous().view(t_len, o_ext, c_ext)
+        cflat = {
+            m: torch.broadcast_to(vals[m].to(dt), state)
+            .permute(*perm)
+            .contiguous()
+            .view(o_ext, c_ext)
+            for m in info.get("const", ())
+        }
+        h_sl = (
+            torch.broadcast_to(vals[info["h"]].to(dt), state)
+            .permute(*perm)
+            .contiguous()
+            .view(o_ext, c_ext)
+        )
+        # the read-out operand: step axis front, rest must be the
+        # outer-prefix dims then the contract axis — (T, P, C)
+        wax = st["w_axis"] % w.dim()
+        wt = w.movedim(wax, 0)
+        w_rest = tuple(wt.shape[1:])
+        want = (
+            *(state[i] for i in lay["outer"][: lay["w_k"]]),
+            c_ext,
+        )
+        if w_rest != want or wt.shape[0] != t_len:
+            raise ValueError(
+                f"seqt read-out operand rest {w_rest} != {want}"
+            )
+        p_ext = math.prod(w_rest[:-1]) if w_rest[:-1] else 1
+        suf = o_ext // p_ext
+        wt = wt.to(dt).contiguous().view(t_len, p_ext, c_ext)
+        kern = _seqt_kernel_for(info, name)
+        if kern is None:
+            raise RuntimeError("seqt kernel module failed to load")
+        out = torch.empty(t_len, o_ext, dtype=dt, device=h_sl.device)
+        bc = 1 << (c_ext - 1).bit_length()
+        kern[((o_ext + _SEQT_BLOCK_O - 1) // _SEQT_BLOCK_O,)](
+            *(slabs[m] for m in info["seq"]),
+            *(cflat[m] for m in info.get("const", ())),
+            h_sl,
+            wt,
+            out,
+            t_len,
+            o_ext,
+            c_ext,
+            p_ext,
+            suf,
+            BLOCK_O=_SEQT_BLOCK_O,
+            BLOCK_C=bc,
+        )
+        r = len(outer_shape)
+        return out.view(t_len, *outer_shape).movedim(
+            0, st["stack_dim"] % (r + 1)
+        )
+
+    return fn
+
+
 def _unrolled_binding(kern: Any, info: dict) -> Any:
     """Host wrapper for the unrolled carrier kernel.
 
@@ -3399,6 +3852,14 @@ def scan_triton_bindings(
                 h["kernel"], info, h.get("axes")
             )
             continue
+        if info["kind"] == "seqt":
+            # the fused trajectory+read-out fold: the (O, C) layout
+            # resolves per call like seqm — the binding JITs the
+            # ``_gst`` kernel and raises on ineligible shapes.
+            out[h["kernel"]] = _seqt_binding(
+                h["kernel"], info, ax, h.get("readout")
+            )
+            continue
         src = _scan_triton_source(info)
         path = _kernel_cache() / f"_gs_{h['kernel']}.py"
         path.write_text(src)
@@ -3467,6 +3928,12 @@ def _site_parts(item: Any) -> tuple:
             # set: each state e-class rewrites to a ``select`` off
             # the emitted trajectory tensor.
             extra["states"] = item["states"]
+        if "readout" in item:
+            # seqt fused read-out sites carry the einsum/stack
+            # record — the deliver-time route's LHS is the stack
+            # e-class, replaced by the one kernel call denoting
+            # ``stack(einsum(S_t, w_t))``.
+            extra["readout"] = item["readout"]
         return item["spec"], extra
     return item, {}
 

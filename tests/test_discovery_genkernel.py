@@ -3726,3 +3726,229 @@ class TestSeqsBindings:
         h = torch.zeros((), dtype=torch.float64)
         with pytest.raises(RuntimeError, match="CUDA"):
             b["ss_g"](x, h)
+
+
+# ---------------------------------------------------------------------------
+#  seqt — the fused trajectory + read-out scan
+# ---------------------------------------------------------------------------
+
+#: GLA-shaped seqt spec: ``h_t = q1_t ⊙ h + (q2_t ⊙ q3_t)`` over a
+#: step axis, read out per step by ``einsum("bdv,bd->bv")`` and
+#: stacked — state (B, D, V), contract axis D.
+_SEQT_SPEC = (
+    "applyd",
+    ("aff_diag", "X1", ("mul", "X2", "X3")),
+    "H",
+    {"kind": "seqt", "axis": 1},
+)
+_SEQT_READOUT = {
+    "equation": "bdv,bd->bv",
+    "state_pos": 0,
+    "ops": [{"meta": "W1", "axis": 1}],
+    "stack": _p("stack", _v("o", 2, 3, 5), dim=1),
+    "stack_dim": 1,
+}
+
+
+def _seqt_handler(**over):
+    h = {
+        "pattern": _SEQT_SPEC,
+        "kernel": "st_t",
+        "args": ("X1", "X2", "X3", "H"),
+        "axis": 1,
+        "readout": _SEQT_READOUT,
+    }
+    h.update(over)
+    return {"s": h}
+
+
+def _seqt_vals(B=2, T=5, D=4, V=5, dtype=torch.float64):
+    g = torch.Generator().manual_seed(0)
+    def r(*s):
+        return torch.randn(*s, generator=g, dtype=dtype)
+    return {
+        "X1": r(B, T, D, 1) * 0.4 + 0.4,   # decay, broadcasts over V
+        "X2": r(B, T, D, 1),
+        "X3": r(B, T, 1, V),
+        "H": r(B, D, V),
+        "W1": r(B, T, D),
+    }
+
+
+def _seqt_spelled(vals):
+    """Spelled recurrence + per-step einsum + stack — the oracle."""
+    B, T = vals["X1"].shape[0], vals["X1"].shape[1]
+    acc = vals["H"]
+    outs = []
+    for t in range(T):
+        acc = (
+            vals["X1"][:, t] * acc
+            + vals["X2"][:, t] * vals["X3"][:, t]
+        )
+        outs.append(
+            torch.einsum("bdv,bd->bv", acc, vals["W1"][:, t])
+        )
+    return torch.stack(outs, dim=1)
+
+
+class TestSeqtSpec:
+    """``scan_spec`` — the fused read-out kind."""
+
+    def test_seqt_kind_recognised(self):
+        info = gk.scan_spec(_SEQT_SPEC)
+        assert info["kind"] == "seqt"
+        assert info["scan_mode"] == "fold"
+        assert info["axis"] == 1
+        assert info["params"] == ["X1", "X2", "X3", "H"]
+
+
+class TestSeqtEquationLayout:
+    """``_seqt_parse_equation`` / ``_seqt_layout`` — the grammar."""
+
+    def test_parse_explicit_two_operand(self):
+        assert gk._seqt_parse_equation("bdv,bd->bv", 2) == (
+            ["bdv", "bd"],
+            "bv",
+        )
+
+    @pytest.mark.parametrize(
+        "eq",
+        [
+            "bdv,bd",                 # implicit mode
+            "...bdv,...bd->...bv",    # ellipsis
+            "bdv,bd,be->bv",          # wrong operand count
+            "bdv,bd->",               # empty output
+            "bdv,bd->bvv",            # repeated output label
+            "bdv,bdd->bv",            # repeated operand label
+            "bdv,bd->b1",             # non-alpha label
+            "",
+            None,
+            3,
+        ],
+    )
+    def test_parse_declines(self, eq):
+        assert gk._seqt_parse_equation(eq, 2) is None
+
+    def test_layout_gla_shape(self):
+        lay = gk._seqt_layout(["bdv", "bd"], "bv", 0)
+        assert lay is not None
+        assert lay["contract"] == 1      # state axis 'd'
+        assert lay["outer"] == [0, 2]    # 'b', 'v'
+        assert lay["w_k"] == 1           # read-out carries 'b' only
+        assert lay["kept"] == ["b", "v"]
+
+    def test_layout_state_pos_one(self):
+        # the state may sit in operand position 1 — the equation
+        # subscripts permute with it
+        lay = gk._seqt_layout(["bd", "bdv"], "bv", 1)
+        assert lay is not None
+        assert lay["contract"] == 1
+        assert lay["outer"] == [0, 2]
+
+    @pytest.mark.parametrize(
+        "subs,out",
+        [
+            (["bdv", "bd"], "vb"),      # permuted output
+            (["bdv", "bd"], "bdv"),     # output keeps the contract
+            (["bdv", "bdv"], "bv"),     # two summed labels
+            (["bd", "bd"], "bd"),       # nothing summed (inner product→scalar-ish)
+            (["bdv", "db"], "bv"),      # read-out not kept-prefix + c-last
+            (["bdv", "be"], "bv"),      # read-out label foreign to state
+        ],
+    )
+    def test_layout_declines(self, subs, out):
+        assert gk._seqt_layout(subs, out, 0) is None
+
+
+class TestSeqtDenotation:
+    """``seqt_denotation`` — fold + contraction + stack, spelled."""
+
+    def test_denotation_matches_spelled(self):
+        torch = pytest.importorskip("torch")
+        vals = _seqt_vals()
+        fn = gk.handler_denotation(_seqt_handler()["s"])
+        assert fn is not None
+        got = fn(*(vals[m] for m in ("X1", "X2", "X3", "H")), vals["W1"])
+        want = _seqt_spelled(vals)
+        assert got.shape == want.shape == (2, 5, 5)
+        torch.testing.assert_close(got, want)
+
+    def test_denotation_via_handler_entry(self):
+        # the same callable ``handler_denotation`` dispatches —
+        # positional params then the read-out operand
+        torch = pytest.importorskip("torch")
+        vals = _seqt_vals(B=1, T=3, D=2, V=3)
+        hs = _seqt_handler()
+        fn = gk.handler_denotation(hs["s"])
+        mvs = gk._handler_mvs(hs["s"])
+        assert mvs == ["X1", "X2", "X3", "H", "W1"]
+        got = fn(*(vals[m] for m in mvs))
+        torch.testing.assert_close(got, _seqt_spelled(vals))
+
+    def test_denotation_declines_other_kinds(self):
+        assert (
+            gk.seqt_denotation(
+                ("applyd", ("aff_diag", "A", "B"), "H"),
+                readout=_SEQT_READOUT,
+            )
+            is None
+        )
+        assert gk.seqt_denotation(("mul", "X1", "X2")) is None
+
+    def test_denotation_incomplete_readout_raises(self):
+        torch = pytest.importorskip("torch")
+        vals = _seqt_vals(B=1, T=2, D=2, V=2)
+        fn = gk.seqt_denotation(_SEQT_SPEC, readout=None, axis=1)
+        assert fn is not None
+        with pytest.raises(ValueError, match="read-out"):
+            fn(*(vals[m] for m in ("X1", "X2", "X3", "H")))
+
+
+class TestSeqtBindings:
+    """Generated fused read-out kernels — fp64 vs the denotation."""
+
+    def _b(self):
+        return gk.scan_triton_bindings(_seqt_handler())
+
+    def test_binding_cpu_declines(self):
+        # the Triton binding is built eagerly but raises CUDA-only
+        # at call time — CPU tensors decline honestly
+        torch = pytest.importorskip("torch")
+        b = self._b()
+        vals = _seqt_vals(B=1, T=3, D=4, V=4)
+        with pytest.raises(RuntimeError, match="CUDA"):
+            b["st_t"](
+                *(vals[m] for m in ("X1", "X2", "X3", "H")),
+                vals["W1"],
+            )
+
+    def test_binding_matches_denotation(self):
+        torch = _cuda()
+        vals = _seqt_vals(B=2, T=7, D=4, V=5)
+        vals = {
+            k: v.cuda().to(torch.float64) for k, v in vals.items()
+        }
+        b = self._b()
+        args = [vals[m] for m in ("X1", "X2", "X3", "H")] + [
+            vals["W1"]
+        ]
+        got = b["st_t"](*args)
+        den = gk.handler_denotation(_seqt_handler()["s"])
+        want = den(*[v.cpu() for v in args])
+        torch.testing.assert_close(
+            got.cpu(), want, atol=1e-9, rtol=1e-9
+        )
+        assert got.shape == (2, 7, 5)
+
+    def test_binding_contract_cap_declines(self):
+        torch = _cuda()
+        b = self._b()
+        vals = _seqt_vals(B=1, T=3, D=gk._SEQT_MAX_C + 1, V=2)
+        vals = {
+            k: v.cuda().to(torch.float64) for k, v in vals.items()
+        }
+        with pytest.raises(ValueError, match="ineligible"):
+            b["st_t"](
+                *(vals[m] for m in ("X1", "X2", "X3", "H")),
+                vals["W1"],
+            )

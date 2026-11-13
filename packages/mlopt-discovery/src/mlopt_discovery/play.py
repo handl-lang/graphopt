@@ -1970,6 +1970,136 @@ def _seqs_chain_spec(spec: tuple) -> tuple:
     return ("applyd", spec[1], spec[2], {**attrs, "kind": "seqs"})
 
 
+def _seqt_chain_spec(spec: tuple) -> tuple:
+    """Return *spec* re-kinded ``seq`` → ``seqt`` (same carrier).
+
+    Same fold skeleton as ``seqs``; the minted op additionally
+    denotes the per-step read-out contraction + stack recorded in
+    the site's ``"readout"`` — see :func:`_seqt_readout`.
+    """
+    attrs = (
+        spec[3] if len(spec) > 3 and isinstance(spec[3], dict) else {}
+    )
+    return ("applyd", spec[1], spec[2], {**attrs, "kind": "seqt"})
+
+
+def _seqt_readout(term: Any, root: Any, states: tuple):
+    """Fused read-out record for a trajectory site, or ``None``.
+
+    The ``seqs`` tier records THAT prefix states are consumed; this
+    collects the contraction structure the ``seqt`` kernel needs —
+    and only what is structurally present in the IR.  The recognised
+    shape (the GLA/Mamba/HeadedSelectiveScan spelling)::
+
+        for t:  o_t = einsum(eq, S_t, select(w, dim, t))
+        out    = stack(o_0 … o_{T-1}, dim=D)
+
+    Every recorded state node must have EXACTLY ONE consumer outside
+    the chain's own subtree — a two-operand ``einsum`` whose state
+    argument IS that node — and every step's einsum must share the
+    equation, the state operand position, and a ``select`` read-out
+    operand over the SAME child at the SAME dim with ``index ==``
+    the state's step index.  Those einsums must in turn feed ONE
+    ``stack`` whose args are the einsums in step order.  The
+    equation itself is classified by
+    ``genkernel._seqt_layout`` (one summed state axis, output =
+    kept labels in state order, read-out operand = kept-prefix +
+    contract-last); anything outside declines to ``None`` and the
+    caller keeps the ``seqs`` trajectory offer.
+
+    Returns ``(readout, w_env)`` — the record merged into the site
+    (``equation``/``state_pos``/``ops``/``stack``/``stack_dim``) and
+    the ``{"W1": child}`` leaf-env extension binding the read-out
+    operand's whole sequence tensor.
+    """
+    from mlopt_discovery import genkernel as gk
+
+    parents = _op_parents(term)
+    internal = _op_descendants(root)
+    parsed = []
+    for node, idx in states:
+        ext = [
+            p
+            for p in parents.get(id(node), ())
+            if id(p) not in internal
+        ]
+        if len(ext) != 1:
+            return None
+        e = ext[0]
+        if not (
+            isinstance(e, Op)
+            and e.op == "einsum"
+            and len(e.args) == 2
+            and set(e.attrs) == {"equation"}
+        ):
+            return None
+        ps = gk._seqt_parse_equation(e.attrs.get("equation"), 2)
+        if ps is None:
+            return None
+        hits = [i for i, a in enumerate(e.args) if a == node]
+        if len(hits) != 1:
+            return None
+        spos = hits[0]
+        w = e.args[1 - spos]
+        if not (
+            isinstance(w, Op)
+            and w.op == "select"
+            and len(w.args) == 1
+            and set(w.attrs) <= {"dim", "index"}
+            and type(w.attrs.get("dim")) is int
+            and type(w.attrs.get("index")) is int
+            and w.attrs["index"] == idx
+        ):
+            return None
+        parsed.append((e, spos, ps, w.args[0], w.attrs["dim"]))
+    first = parsed[0]
+    subs, out = first[2]
+    if gk._seqt_layout(subs, out, first[1]) is None:
+        return None
+    for e, spos, _ps, child, dim in parsed[1:]:
+        if (
+            spos != first[1]
+            or e.attrs["equation"] != parsed[0][0].attrs["equation"]
+            or child != first[3]
+            or dim != first[4]
+        ):
+            return None
+    # the einsums must feed exactly one stack, in step order
+    stack = None
+    for e, _spos, _ps, _child, _dim in parsed:
+        eps = parents.get(id(e), ())
+        if not eps:
+            return None
+        for p in eps:
+            if not (
+                isinstance(p, Op)
+                and p.op == "stack"
+                and set(p.attrs) <= {"dim"}
+                and type(p.attrs.get("dim")) is int
+            ):
+                return None
+            if stack is None:
+                stack = p
+            elif p != stack:
+                return None
+    assert stack is not None
+    t_len = len(states)
+    if len(stack.args) != t_len:
+        return None
+    for idx, (e, *_rest) in enumerate(parsed):
+        if stack.args[idx] != e:
+            return None
+    _e, spos, ps, child, dim = first
+    readout = {
+        "equation": _e.attrs["equation"],
+        "state_pos": spos,
+        "ops": [{"meta": "W1", "axis": dim}],
+        "stack": stack,
+        "stack_dim": stack.attrs["dim"],
+    }
+    return readout, {"W1": child}
+
+
 def _seq_scan_sites(term: Any) -> list:
     """Seq-form scan specs minted from raw recurrence chains.
 
@@ -2041,6 +2171,24 @@ def _seq_scan_sites(term: Any) -> list:
             # state e-class rewrites to ``select(traj, t)``.
             rec["spec"] = _seqs_chain_spec(spec)
             rec["states"] = traj
+            # the fused ``seqt`` offer rides BESIDE the seqs one:
+            # when every state's consumer is the same two-operand
+            # einsum feeding one stack, a second site mints the
+            # fold+read-out kernel — the referee prices both and
+            # delivery prefers whichever verifies cheaper (the seqs
+            # route stays the fallback where the seqt binding
+            # declines).
+            selt = _seqt_readout(term, root, traj)
+            if selt is not None:
+                ro, wenv = selt
+                rec2 = {
+                    "spec": _seqt_chain_spec(spec),
+                    "leaf_env": {**leaf_env, **wenv},
+                    "axis": axis,
+                    "readout": ro,
+                }
+                if rec2 not in out:
+                    out.append(rec2)
         # dedup on the whole record — spec AND leaf_env AND chain —
         # not the spec tuple alone: the fold's denotation binds the
         # ``leaf_env`` operands, so two same-shaped chains over
@@ -3061,7 +3209,7 @@ def _triton_kernel_for(tag: str, h: dict, vals: dict) -> Any:
         record["outcome"] = "declined"
         return None
     try:
-        mvs = gk._spec_metas(h["pattern"])
+        mvs = gk._handler_mvs(h)
         cvals = {m: vals[m].cuda() for m in mvs}
         ctuple = tuple(cvals[m] for m in mvs)
     except (AttributeError, KeyError, RuntimeError, TypeError) as exc:
