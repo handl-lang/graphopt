@@ -16,12 +16,12 @@ Every shipped `play` domain is spec-able — `board` names which one:
 
 | `board` | `corpus.*` selects | `vocab.*` binds | delivers? |
 |---|---|---|---|
-| `meta-arena` | `kinds`, `coverage` | `ops`, `attrs`, `handler_tags`, `rules` | no (symbolic) |
-| `torch` | `modules`, `coverage` (+ top-level `shapes`/`hardware`) | `ops`, `attrs`, `rules`, `handler_tags` | `auto`/`torch` |
-| `gen` | `builders` | `ops`, `attrs`, `rules`, `handler_tags` | `auto`/`torch` |
-| `joint` | `kinds` | `ops`, `attrs`, `rules`, `handler_tags` | no |
-| `search` | `kinds`, `horizon`, `patience` | `ops`, `attrs`, `rules` | no |
-| `fragment` | `kinds`, `max_moves` | `ops`, `attrs`, `rules`, `handler_tags` | no |
+| `meta-arena` | `kinds`, `coverage` | `ops`, `attrs`, `attr_values`, `handler_tags`, `rules` | no (symbolic) |
+| `torch` | `modules`, `coverage` (+ top-level `shapes`/`hardware`) | `ops`, `attrs`, `attr_values`, `rules`, `handler_tags` | `auto`/`torch` |
+| `gen` | `builders` | `ops`, `attrs`, `attr_values`, `rules`, `handler_tags` | `auto`/`torch` |
+| `joint` | `kinds` | `ops`, `attrs`, `attr_values`, `rules`, `handler_tags` | no |
+| `search` | `kinds`, `horizon`, `patience` | `ops`, `attrs`, `attr_values`, `rules` | no |
+| `fragment` | `kinds`, `max_moves` | `ops`, `attrs`, `attr_values`, `rules`, `handler_tags` | no |
 | `open` | `ops`, `page`, `start`, `step` | — (refused) | no |
 | `player` | `objective`, `max_evals` | — (refused) | no |
 | `bilinear` | `scramble` | — (refused) | no |
@@ -53,6 +53,14 @@ the `--domain` name), `board`, `corpus`, `vocab`, `player`,
 `incumbent`, `deliver`, `shapes`,
 `hardware`, `description`. Notable seams:
 
+- `vocab.attr_values` — attribute-*value* bounds on top of the
+  `attrs` name whitelist: `{"op": {"attr": <scalar-or-list>}}`.
+  Every `Op` node of a listed op must carry each listed attr with
+  a value `==` one of the allowed scalars — an absent attr or a
+  non-scalar (tuple/list) value fails the case. Unlisted ops and
+  attrs stay unconstrained. Applied by the same per-case
+  post-filter; on `meta-arena` a builder kind whose footprint
+  sample shows a violating site is dropped up front.
 - `vocab.rules` — `"all"` (default), `"default"`, `"scan"`, an
   explicit name list, or `{"base": ..., "minus": [names]}` (the
   subtraction profile). On `search`/`joint`/`fragment` it filters
@@ -70,10 +78,10 @@ the `--domain` name), `board`, `corpus`, `vocab`, `player`,
 - `shapes`/`hardware` — consumed on `torch` (module width/batch,
   device/dtype); recorded-only on the symbolic boards.
 
-Four specs ship packaged under
+Five specs ship packaged under
 `mlopt_discovery/domains/` — `pointwise` (meta-arena vocabulary
-demo), `torch-silu`, `gen-fusion`, `search-folds` — and a bare name
-resolves to them.
+demo), `attr-bounded` (the `vocab.attr_values` demo), `torch-silu`,
+`gen-fusion`, `search-folds` — and a bare name resolves to them.
 
 ## 3. Preview, register, play
 

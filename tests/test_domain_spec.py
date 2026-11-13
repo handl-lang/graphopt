@@ -772,7 +772,134 @@ class TestCodeBoards:
             ds.bake_prior(spec, cases=1)
 
     def test_packaged_specs_load(self):
-        for name in ("gen-fusion", "search-folds"):
+        for name in ("gen-fusion", "search-folds", "attr-bounded"):
             spec = ds.load_spec(name)
             assert spec.name == name
             assert ds.spec_summary(spec)["board"] == spec.board
+
+
+class TestAttrValues:
+    """``vocab.attr_values`` — attribute-VALUE constraints (T-028)."""
+
+    def _av(self, **over):
+        data = {
+            "name": "t-av",
+            "vocab": {"attr_values": {"unsqueeze": {"dim": [0, 1]}}},
+        }
+        data.update(over)
+        return ds.load_spec(data)
+
+    def test_parse_normalizes(self):
+        spec = self._av()
+        assert spec.attr_values == {"unsqueeze": {"dim": (0, 1)}}
+        spec = ds.load_spec(
+            {"name": "x", "vocab": {"attr_values": {"clamp": {"min": 0.0}}}}
+        )
+        assert spec.attr_values == {"clamp": {"min": (0.0,)}}
+
+    @pytest.mark.parametrize(
+        "bad",
+        [
+            {"unsqueeze": 3},
+            {"unsqueeze": {"dim": [{"nested": 1}]}},
+            {"unsqueeze": {"dim": [[0, 1]]}},
+            {"unsqueeze": {3: 0}},
+            ["unsqueeze"],
+        ],
+    )
+    def test_validation(self, bad):
+        with pytest.raises(ValueError, match="attr_values"):
+            ds.load_spec({"name": "x", "vocab": {"attr_values": bad}})
+
+    def test_refused_on_nonterm_boards(self):
+        for board in ("open", "player", "bilinear"):
+            with pytest.raises(ValueError, match="vocab"):
+                ds.load_spec(
+                    {
+                        "name": "x",
+                        "board": board,
+                        "vocab": {"attr_values": {"add": {"dim": 0}}},
+                    }
+                )
+
+    def test_predicate_unit(self):
+        from mlopt_core.ir import Op
+
+        spec = self._av()
+        av = spec.attr_values
+        good = Op.make("unsqueeze", Op.make("add", 1, 2), dim=1)
+        bad_dim = Op.make("unsqueeze", Op.make("add", 1, 2), dim=2)
+        missing = Op.make("unsqueeze", Op.make("add", 1, 2))
+        other = Op.make("add", 1, 2)  # unlisted op — unconstrained
+        assert ds._attr_values_ok(good, av)
+        assert not ds._attr_values_ok(bad_dim, av)
+        assert not ds._attr_values_ok(missing, av)
+        assert ds._attr_values_ok(other, av)
+        # nested: a violating site anywhere fails the term
+        nested = Op.make("mul", good, bad_dim)
+        assert not ds._attr_values_ok(nested, av)
+
+    def test_missing_attr_fails(self):
+        # a listed attr absent on the node is a violation — "only
+        # clamp(min=0) sites" does not admit attr-less clamps
+        from mlopt_core.ir import Op
+
+        spec = ds.load_spec(
+            {
+                "name": "x",
+                "vocab": {"attr_values": {"clamp_min": {"min": 0.0}}},
+            }
+        )
+        bare = Op.make("clamp_min", Op.make("add", 1, 2))
+        spelled = Op.make("clamp_min", Op.make("add", 1, 2), min=0.0)
+        assert not ds._attr_values_ok(bare, spec.attr_values)
+        assert ds._attr_values_ok(spelled, spec.attr_values)
+
+    def test_eligibility_drops_violating_kinds(self):
+        spec = self._av()
+        kinds = ds._eligible_kinds(spec)
+        # the dim-2 view kind's footprint sample shows violations
+        assert "law_unsq" not in kinds
+        assert kinds  # honest: other kinds still draw
+
+    def test_cases_invariant(self):
+        spec = self._av(corpus={"kinds": ["silu", "square"]})
+        kinds = ds._eligible_kinds(spec)
+        cases = ds._make_cases(spec, kinds)(0, 8)
+        assert cases
+        for _n, term, *_ in cases:
+            assert ds._attr_values_ok(term, spec.attr_values)
+
+    def test_vacuous_constraint_keeps_kinds(self):
+        spec = ds.load_spec(
+            {
+                "name": "x",
+                "corpus": {"kinds": ["silu"]},
+                "vocab": {"attr_values": {"no_such_op": {"a": 1}}},
+            }
+        )
+        # constraining an op the silu kind never spells is vacuous —
+        # kinds survive; the per-case filter still guards
+        assert ds._eligible_kinds(spec) == ["silu"]
+
+    def test_packaged_attr_bounded(self):
+        spec = ds.load_spec("attr-bounded")
+        assert spec.attr_values is not None
+        assert spec.attr_values["clamp"] == {
+            "min": (0.0,),
+            "max": (1.0,),
+        }
+        kinds = ds._eligible_kinds(spec)
+        assert kinds
+        cases = ds._make_cases(spec, kinds)(0, 10)
+        assert len(cases) == 10
+        for _n, term, *_ in cases:
+            assert ds._attr_values_ok(term, spec.attr_values)
+            ops, _attrs = ds._term_ops_attrs(term)
+            assert ops <= spec.vocab_ops
+
+    def test_summary_reports_attr_values(self):
+        spec = ds.load_spec("attr-bounded")
+        av = ds.spec_summary(spec)["vocab"]["attr_values"]
+        assert av["unsqueeze"] == {"dim": [0, 1]}
+        assert av["clamp"]["min"] == [0.0]

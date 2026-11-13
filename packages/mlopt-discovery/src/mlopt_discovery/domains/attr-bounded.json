@@ -1,0 +1,26 @@
+{
+  "name": "attr-bounded",
+  "board": "meta-arena",
+  "description": "Pointwise+reduction vocabulary with attribute-VALUE bounds (vocab.attr_values, T-028): reduction heads must spell an edge dim (softmax/log_softmax/sum dim=-1, amax dim in {-1, 1} — the dim=0 spelling fails), view unsqueezes stay on dims 0/1, and clamp sites must carry the nonnegative min=0.0/max=1.0 spelling — the symmetric ±1.0 clamp the corpus also emits fails the per-case post-filter.  Demo for the attr-values gap: name whitelists could not express this.",
+  "corpus": {"coverage": true},
+  "vocab": {
+    "ops": [
+      "abs", "add", "amax", "clamp", "clamp_min", "clamp_max", "div",
+      "exp", "gelu", "glu", "log", "log_softmax", "max", "mean",
+      "min", "mul", "neg", "pow", "relu", "rsqrt", "sigmoid",
+      "silu", "softmax", "sqrt", "square", "sub", "sum",
+      "unsqueeze", "tanh"
+    ],
+    "attr_values": {
+      "softmax": {"dim": -1},
+      "log_softmax": {"dim": -1},
+      "sum": {"dim": -1},
+      "amax": {"dim": [-1, 1]},
+      "unsqueeze": {"dim": [0, 1]},
+      "clamp": {"min": 0.0, "max": 1.0}
+    },
+    "rules": "default"
+  },
+  "player": "meta",
+  "incumbent": {"kind": "scripted"}
+}

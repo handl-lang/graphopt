@@ -63,6 +63,14 @@ Second-cut scope (honest):
   whose rare draws escape the footprint is dropped, not padded).
   On torch the lifted ``ir.root`` is an ordinary op-term, so the
   same post-filter applies per case.
+* ``vocab.attr_values`` — value constraints on top of the attr
+  whitelist: ``{"op": {"attr": <scalar-or-list>}}`` keeps only
+  ``Op`` nodes whose named attrs exist and equal an allowed value
+  (unlisted ops/attrs stay unconstrained; a listed attr that is
+  absent or carries a non-scalar value fails the case).  Applied
+  per case in the same post-filter — on meta-arena it also drops
+  any builder kind whose 240-case footprint sample shows a
+  violating site.
 * ``vocab.handler_tags`` — a subset of ``lawdata.HANDLERS`` seated
   on the board (``MetaArena(handlers=…)``); unlisted tags are
   never claimed.
@@ -161,6 +169,8 @@ class DomainSpecFile:
     corpus_coverage: bool = True
     vocab_ops: frozenset[str] | None = None
     vocab_attrs: frozenset[str] | None = None  # "op.attr" spellings
+    # {op: {attr: (allowed values...)}} — None = unconstrained
+    attr_values: dict | None = None
     handler_tags: tuple[str, ...] | None = None
     rules_profile: Any = (
         "all"  # profile | ("minus", base, names)|tuple[name,...]
@@ -226,6 +236,51 @@ def _parse_rules(value: Any) -> Any:
     )
 
 
+_ATTR_MISSING = object()
+
+
+def _parse_attr_values(value: Any, *, where: str) -> dict:
+    """Resolve ``vocab.attr_values`` to ``{op: {attr: (allowed,)}}``.
+
+    The spec spelling is ``{"op": {"attr": <scalar-or-list>}}`` —
+    a scalar is one allowed value, a list is the allowed set.
+    Allowed values must be JSON scalars (str/int/float/bool/null);
+    anything nested deeper is a load error, not a silent no-match.
+    """
+    if not isinstance(value, dict):
+        raise ValueError(
+            f"{where}: expected an object {{op: {{attr: value|[values]}}}}, "
+            f"got {value!r}"
+        )
+    out: dict[str, dict[str, tuple]] = {}
+    for op, attrs in value.items():
+        if not isinstance(op, str) or not isinstance(attrs, dict):
+            raise ValueError(
+                f"{where}: each op key must map to an object of "
+                f"attr constraints, got {op!r}: {attrs!r}"
+            )
+        table: dict[str, tuple] = {}
+        for attr, allowed in attrs.items():
+            if not isinstance(attr, str):
+                raise ValueError(
+                    f"{where}: attr names must be strings, got {attr!r}"
+                )
+            if isinstance(allowed, (list, tuple)):
+                vals = tuple(allowed)
+            else:
+                vals = (allowed,)
+            for v in vals:
+                if isinstance(v, (dict, list, tuple)):
+                    raise ValueError(
+                        f"{where}: {op}.{attr} allowed values must be "
+                        f"scalars (a list spells the allowed *set*, "
+                        f"not a tuple value), got {v!r}"
+                    )
+            table[attr] = vals
+        out[op] = table
+    return out
+
+
 # ---------------------------------------------------------------------------
 #  Per-board field schemas — what a spec may name on each board
 # ---------------------------------------------------------------------------
@@ -261,12 +316,22 @@ _CORPUS_PARAMS: dict[str, frozenset] = {
 }
 
 _VOCAB_KEYS: dict[str, frozenset] = {
-    "meta-arena": frozenset({"ops", "attrs", "rules", "handler_tags"}),
-    "torch": frozenset({"ops", "attrs", "rules", "handler_tags"}),
-    "gen": frozenset({"ops", "attrs", "rules", "handler_tags"}),
-    "joint": frozenset({"ops", "attrs", "rules", "handler_tags"}),
-    "search": frozenset({"ops", "attrs", "rules"}),
-    "fragment": frozenset({"ops", "attrs", "rules", "handler_tags"}),
+    "meta-arena": frozenset(
+        {"ops", "attrs", "attr_values", "rules", "handler_tags"}
+    ),
+    "torch": frozenset(
+        {"ops", "attrs", "attr_values", "rules", "handler_tags"}
+    ),
+    "gen": frozenset(
+        {"ops", "attrs", "attr_values", "rules", "handler_tags"}
+    ),
+    "joint": frozenset(
+        {"ops", "attrs", "attr_values", "rules", "handler_tags"}
+    ),
+    "search": frozenset({"ops", "attrs", "attr_values", "rules"}),
+    "fragment": frozenset(
+        {"ops", "attrs", "attr_values", "rules", "handler_tags"}
+    ),
     "open": frozenset(),
     "player": frozenset(),
     "bilinear": frozenset(),
@@ -425,6 +490,7 @@ def _spec_from_dict(data: dict) -> DomainSpecFile:
         )
     ops = vocab.get("ops")
     attrs = vocab.get("attrs")
+    attr_values = vocab.get("attr_values")
     handler_tags = vocab.get("handler_tags")
     rules_profile = _parse_rules(vocab.get("rules"))
     corpus = data.get("corpus")
@@ -656,6 +722,13 @@ def _spec_from_dict(data: dict) -> DomainSpecFile:
             if attrs is not None
             else None
         ),
+        attr_values=(
+            _parse_attr_values(
+                attr_values, where=f"{name}.vocab.attr_values"
+            )
+            if attr_values is not None
+            else None
+        ),
         handler_tags=tags,
         rules_profile=rules_profile,
         player=player,
@@ -730,6 +803,33 @@ def _rule_allowlist(profile: Any) -> set | None:
     return set(profile)
 
 
+def _attr_values_ok(term: Any, attr_values: dict) -> bool:
+    """Check every ``Op`` node against ``{op: {attr: (allowed,)}}``.
+
+    For each op named in *attr_values*, every listed attr must be
+    present on the node and equal one of its allowed values
+    (``==`` membership — JSON scalars only, so tuple/list-valued
+    attrs can never satisfy a listed constraint).  Unlisted ops and
+    unlisted attrs are unconstrained.
+    """
+    stack = [term]
+    seen: set[int] = set()
+    while stack:
+        t = stack.pop()
+        if id(t) in seen:
+            continue
+        seen.add(id(t))
+        if isinstance(t, Op):
+            cons = attr_values.get(t.op)
+            if cons is not None:
+                for attr, allowed in cons.items():
+                    v = t.attrs.get(attr, _ATTR_MISSING)
+                    if v is _ATTR_MISSING or v not in allowed:
+                        return False
+            stack.extend(t.args)
+    return True
+
+
 def _case_ok(
     case: Any, spec: DomainSpecFile, allowed_rules: set | None
 ) -> bool:
@@ -738,7 +838,11 @@ def _case_ok(
         names = _ruleset_names(case[2] if len(case) > 2 else None)
         if not names <= allowed_rules:
             return False
-    if spec.vocab_ops is None and spec.vocab_attrs is None:
+    if (
+        spec.vocab_ops is None
+        and spec.vocab_attrs is None
+        and spec.attr_values is None
+    ):
         return True
     ops, attrs = _term_ops_attrs(case[1])
     if spec.vocab_ops is not None and not ops <= spec.vocab_ops:
@@ -747,7 +851,9 @@ def _case_ok(
         spelled = {f"{o}.{a}" for o, a in attrs}
         if not spelled <= spec.vocab_attrs:
             return False
-    return True
+    return spec.attr_values is None or _attr_values_ok(
+        case[1], spec.attr_values
+    )
 
 
 def _kind_of(case: Any) -> str:
@@ -769,13 +875,23 @@ def _eligible_kinds(spec: DomainSpecFile) -> list[str]:
         0, _SAMPLE_CASES, coverage=spec.corpus_coverage
     )
     footprints: dict[str, tuple[set, set]] = {}
+    violating: set[str] = set()
     for case in sample:
         kind = _kind_of(case)
         ops, attrs = _term_ops_attrs(case[1])
         prev_o, prev_a = footprints.get(kind, (set(), set()))
         footprints[kind] = (prev_o | ops, prev_a | attrs)
+        # value constraints can't union into a footprint — a kind
+        # with *any* sampled violating site is ineligible, the same
+        # drop-on-escape rule the name whitelists apply
+        if spec.attr_values is not None and not _attr_values_ok(
+            case[1], spec.attr_values
+        ):
+            violating.add(kind)
     out = []
     for kind, (ops, attrs) in sorted(footprints.items()):
+        if kind in violating:
+            continue
         if (
             spec.corpus_kinds is not None
             and kind not in spec.corpus_kinds
@@ -1598,6 +1714,14 @@ def spec_summary(spec: DomainSpecFile) -> dict:
             "attrs": (
                 len(spec.vocab_attrs)
                 if spec.vocab_attrs is not None
+                else None
+            ),
+            "attr_values": (
+                {
+                    op: {a: list(v) for a, v in cons.items()}
+                    for op, cons in spec.attr_values.items()
+                }
+                if spec.attr_values is not None
                 else None
             ),
             "handler_tags": (
