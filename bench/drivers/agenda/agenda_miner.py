@@ -15,9 +15,13 @@ re-runnable, no torch):
 
 * ``ledger_pay_decline`` — overnight-ledger candidates that passed
   oracle but were declined at ``pay`` *after changing the graph*
-  (``changed>0, paid=0``), ranked by how close the measured ``exec``
+  (``changed>0, paid=0, verify_fail=0`` — correctness declines are
+  split out), ranked by how close the measured ``exec``
   ratio sits to the keep bar.  These are laws the gauntlet almost
   admitted — the headroom is pricing/codegen, not search.
+* ``ledger_verify_decline`` — candidates that changed the graph but
+  failed verification (``verify_fail>0``).  Correctness declines —
+  the lever is guard/denotation repair, not pricing.
 * ``ledger_oracle_gap`` — candidate *families* whose stream dies
   almost entirely at ``oracle`` with no equal site measured.  The
   mint is producing claims the corpus cannot evaluate — corpus/env
@@ -304,13 +308,21 @@ def _sig_ledgers(reports_dir: Path) -> list[dict]:
         and r["pay"]["changed"] > 0
         and not r["admitted"]
     ]
-    declines.sort(
+    # verify_fail>0 rows are correctness declines, not pricing
+    # near-misses — they get their own signal below.
+    price_declines = [
+        r for r in declines if r["pay"]["verify_fail"] == 0
+    ]
+    verify_declines = [
+        r for r in declines if r["pay"]["verify_fail"] > 0
+    ]
+    price_declines.sort(
         key=lambda r: (
             -r["pay"]["changed"],
             abs((r["pay"]["ratios"].get("exec") or 9.9) - 1.0),
         )
     )
-    for r in declines[:8]:
+    for r in price_declines[:8]:
         pay = r["pay"]
         exec_r = pay["ratios"].get("exec")
         # closeness: exec in [0.7, 1.3] is a near miss; further out
@@ -350,6 +362,42 @@ def _sig_ledgers(reports_dir: Path) -> list[dict]:
                 ),
                 headroom=headroom,
                 confidence="medium" if close else "low",
+            )
+        )
+
+    # -- verify declines: changed the graph but failed verification ---
+    verify_declines.sort(key=lambda r: -r["pay"]["verify_fail"])
+    for r in verify_declines[:4]:
+        pay = r["pay"]
+        exec_r = pay["ratios"].get("exec")
+        ev = {
+            "sources": sorted({r["source"]}),
+            "metrics": {
+                "fires": pay["fires"],
+                "changed": pay["changed"],
+                "paid": pay["paid"],
+                "verify_fail": pay["verify_fail"],
+                "exec_ratio": exec_r,
+                "cases": pay["cases"],
+                "corpus": r["corpus"],
+                "arena": r["arena"],
+            },
+        }
+        out.append(
+            _proposal(
+                "ledger_verify_decline",
+                f"Verify-declined law: {r['name']} "
+                f"(changed={pay['changed']}, vfail={pay['verify_fail']})",
+                target={"domain": "discovery", "op": r["name"]},
+                evidence=ev,
+                lever=(
+                    "Correctness decline, not pricing: the rewrite "
+                    "fires and changes the graph but fails "
+                    "verification on real cases — strengthen the "
+                    "law's guard/denotation before re-pricing."
+                ),
+                headroom=0.4,
+                confidence="high",
             )
         )
 
