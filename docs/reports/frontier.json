@@ -53,18 +53,18 @@
     },
     {
       "regime": "launch-bound",
-      "n": 25,
+      "n": 27,
       "dispatch_lo": 0.3,
       "dispatch_hi": 1.0,
-      "median_dispatch_share": 0.552,
-      "median_ceiling": 2.232,
+      "median_dispatch_share": 0.57,
+      "median_ceiling": 2.326,
       "max_ceiling": 5.952,
-      "median_speedup": 1.005,
-      "wins": 12,
-      "beat_compile": 13,
-      "with_compile": 25,
+      "median_speedup": 1.0451,
+      "wins": 14,
+      "beat_compile": 14,
+      "with_compile": 27,
       "median_vs_compile": 1.1144,
-      "median_captured": 0.0025
+      "median_captured": 0.0553
     }
   ],
   "findings": [
@@ -78,28 +78,28 @@
     {
       "claim": "The delivered body captures the headroom the ceiling allows: (speedup-1)/(ceiling-1).",
       "verdict": "negative",
-      "headline": "median capture -0.02 over 35 rows with material headroom \u2014 delivery loses more than the algebra gains; the binding constraint is the delivered body, not the ceiling",
+      "headline": "median capture -0.02 over 37 rows with material headroom \u2014 delivery loses more than the algebra gains; the binding constraint is the delivered body, not the ceiling",
       "metric": "median_captured_fraction",
-      "value": -0.02304639804639807
+      "value": -0.019690998186749784
     },
     {
       "claim": "Dispatch share predicts the sign of the win. (It does not always \u2014 the delivered body's own cost sets it.)",
       "verdict": "inconclusive",
-      "headline": "r(F, speedup) = +0.07 \u2014 dispatch share does not predict the sign alone",
+      "headline": "r(F, speedup) = +0.03 \u2014 dispatch share does not predict the sign alone",
       "metric": "pearson_dispatch_vs_speedup",
-      "value": 0.06938402634712174
+      "value": 0.026007489185465756
     },
     {
       "claim": "The wins survive `torch.compile` \u2014 the free competitor every PyTorch user already has \u2014 not just eager.",
       "verdict": "win",
-      "headline": "13/25 launch-bound rows beat torch.compile (median 1.11x); compute-bound 13/28 at 0.99x",
+      "headline": "14/27 launch-bound rows beat torch.compile (median 1.11x); compute-bound 13/28 at 0.99x",
       "metric": "beat_compile_fraction_launch_bound",
-      "value": 0.52
+      "value": 0.5185185185185185
     },
     {
       "claim": "Every delivered row is verified equal to the spelled module \u2014 the frontier is measured on correct deliveries.",
       "verdict": "win",
-      "headline": "65/65 rows verified equal",
+      "headline": "67/67 rows verified equal",
       "metric": "verified_fraction",
       "value": 1.0
     }
@@ -1137,22 +1137,22 @@
     {
       "case": "zoo:DeltaRuleBlock",
       "regime": "launch-bound",
-      "eager_us": 292.05,
-      "delivered_us": 300.0,
-      "speedup": 0.9735,
+      "eager_us": 440.85,
+      "delivered_us": 272.85,
+      "speedup": 1.6157,
       "device_share": 0.472,
       "dispatch_share": 0.528,
       "ceiling": 2.1186,
-      "headroom_us": 154.202,
-      "captured": -0.0237,
+      "headroom_us": 232.769,
+      "captured": 0.5504,
       "kernels": 9,
       "verified": true,
-      "compiled_us": 207.2,
-      "vs_compile": 0.6907,
+      "compiled_us": 239.8,
+      "vs_compile": 0.8789,
       "beats_compile": false,
-      "delivered_graph_us": 143.6,
-      "graph_speedup": 2.0338,
-      "graph_vs_compile": 1.4429,
+      "delivered_graph_us": 114.35,
+      "graph_speedup": 3.8553,
+      "graph_vs_compile": 2.0971,
       "beats_graph_compile": true
     },
     {
@@ -1240,6 +1240,27 @@
       "beats_graph_compile": null
     },
     {
+      "case": "zoo:GatedLinearAttention",
+      "regime": "launch-bound",
+      "eager_us": 2044.95,
+      "delivered_us": 7140.4,
+      "speedup": 0.2864,
+      "device_share": 0.415,
+      "dispatch_share": 0.585,
+      "ceiling": 2.4096,
+      "headroom_us": 1196.296,
+      "captured": -0.5062,
+      "kernels": 7,
+      "verified": true,
+      "compiled_us": 1253.85,
+      "vs_compile": 0.1756,
+      "beats_compile": false,
+      "delivered_graph_us": 3762.75,
+      "graph_speedup": 0.5435,
+      "graph_vs_compile": 0.3332,
+      "beats_graph_compile": false
+    },
+    {
       "case": "zoo:STEQuantLinear",
       "regime": "launch-bound",
       "eager_us": 133.6,
@@ -1263,22 +1284,22 @@
     {
       "case": "zoo:GatedDeltaRule",
       "regime": "launch-bound",
-      "eager_us": 402.55,
-      "delivered_us": 572.8,
-      "speedup": 0.7028,
+      "eager_us": 401.3,
+      "delivered_us": 327.9,
+      "speedup": 1.2238,
       "device_share": 0.395,
       "dispatch_share": 0.605,
       "ceiling": 2.5316,
-      "headroom_us": 243.543,
-      "captured": -0.1941,
+      "headroom_us": 242.786,
+      "captured": 0.1461,
       "kernels": 12,
       "verified": true,
-      "compiled_us": 428.8,
-      "vs_compile": 0.7486,
-      "beats_compile": false,
-      "delivered_graph_us": 206.65,
-      "graph_speedup": 1.948,
-      "graph_vs_compile": 2.075,
+      "compiled_us": 432.0,
+      "vs_compile": 1.3175,
+      "beats_compile": true,
+      "delivered_graph_us": 135.85,
+      "graph_speedup": 2.954,
+      "graph_vs_compile": 3.18,
       "beats_graph_compile": true
     },
     {
@@ -1406,6 +1427,27 @@
       "graph_speedup": null,
       "graph_vs_compile": null,
       "beats_graph_compile": null
+    },
+    {
+      "case": "zoo:MambaSelectiveScan",
+      "regime": "launch-bound",
+      "eager_us": 1883.25,
+      "delivered_us": 3873.55,
+      "speedup": 0.4862,
+      "device_share": 0.231,
+      "dispatch_share": 0.769,
+      "ceiling": 4.329,
+      "headroom_us": 1448.219,
+      "captured": -0.1543,
+      "kernels": 10,
+      "verified": true,
+      "compiled_us": 506.8,
+      "vs_compile": 0.1308,
+      "beats_compile": false,
+      "delivered_graph_us": 1086.45,
+      "graph_speedup": 1.7334,
+      "graph_vs_compile": 0.4665,
+      "beats_graph_compile": false
     },
     {
       "case": "zoo:PerChannelQuantMatmul",

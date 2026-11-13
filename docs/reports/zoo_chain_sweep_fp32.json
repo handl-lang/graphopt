@@ -583,37 +583,39 @@
  },
  {
   "case": "zoo:DeltaRuleBlock",
-  "claims": [],
+  "claims": [
+   "gen_2"
+  ],
   "delivered": true,
   "verified": true,
   "prim_ops": [],
-  "max_abs": 0,
+  "max_abs": 9.5367431640625e-06,
   "cost": NaN,
-  "speedup": 0.994,
+  "speedup": 1.385,
   "device": "cuda",
-  "gen_graph_us": 68.9,
-  "graph_speedup": 4.367,
-  "graph_vs_compiled": 2.753,
+  "gen_graph_us": 36.9,
+  "graph_speedup": 8.771,
+  "graph_vs_compiled": 5.247,
   "graph_max_abs": 0.0,
   "runs": [
    {
-    "speedup": 0.867,
-    "eager_us": 276.6,
-    "compiled_us": 190.7,
-    "gen_us": 319.1,
-    "gen_graph_us": 68.7
+    "speedup": 1.452,
+    "eager_us": 335.7,
+    "compiled_us": 202.3,
+    "gen_us": 231.2,
+    "gen_graph_us": 36.2
    },
    {
-    "speedup": 1.12,
-    "eager_us": 325.5,
-    "compiled_us": 188.6,
-    "gen_us": 290.5,
-    "gen_graph_us": 69.1
+    "speedup": 1.318,
+    "eager_us": 311.3,
+    "compiled_us": 184.6,
+    "gen_us": 236.2,
+    "gen_graph_us": 37.6
    }
   ],
   "spread": [
-   0.867,
-   1.12
+   1.318,
+   1.452
   ],
   "dtype": "fp32"
  },
@@ -839,15 +841,130 @@
  },
  {
   "case": "zoo:MambaSelectiveScan",
-  "delivered": false,
-  "dtype": "fp32",
-  "note": "over budget: killed after 150s"
+  "claims": [
+   "gen_10",
+   "gen_11",
+   "gen_12",
+   "gen_13",
+   "gen_14",
+   "gen_16",
+   "gen_7",
+   "gen_9",
+   "synop2_35bbd03301",
+   "synop2_d46808a970",
+   "synop3_04df5fd446",
+   "synop3_083e9c241f",
+   "synop3_0ca31bf1e5",
+   "synop3_0fa19d1ff8",
+   "synop3_1850a07696",
+   "synop3_207ef0ddb7",
+   "synop3_21b9729f32",
+   "synop3_24c5153e5e",
+   "synop3_2fcad5e803",
+   "synop3_304457cd8d",
+   "synop3_39dbcda988",
+   "synop3_426efb3fb1",
+   "synop3_42bb04032d",
+   "synop3_42f015e162",
+   "synop3_490109134e",
+   "synop3_4a015e46ce",
+   "synop3_4b31b4501a",
+   "synop3_4cdc06b88f",
+   "synop3_4cf8732640",
+   "synop3_50a12a0158",
+   "synop3_531bb1872b",
+   "synop3_543ad6d861",
+   "synop3_970223f613",
+   "synop3_9b8631df70",
+   "synop3_acc3c38681",
+   "synop3_c79a6fe687",
+   "synop3_d5452c1c56",
+   "synop3_d8a399f647",
+   "synop3_e8abc00db0",
+   "synop3_ed5918edde",
+   "synop3_efb0c0d7ce",
+   "synop3_f28f7ffd1a",
+   "synop3_f9c72e0a8f",
+   "synop3_fbbba382fc",
+   "synop_629f9ef13b",
+   "synop_62d36aefdb"
+  ],
+  "delivered": true,
+  "verified": true,
+  "prim_ops": [
+   "synop_629f9ef13b"
+  ],
+  "max_abs": 7.152557373046875e-07,
+  "cost": NaN,
+  "speedup": 0.469,
+  "device": "cuda",
+  "gen_graph_us": 1055.0,
+  "graph_speedup": 1.842,
+  "graph_vs_compiled": 0.571,
+  "graph_max_abs": 0.0,
+  "runs": [
+   {
+    "speedup": 0.455,
+    "eager_us": 1853.9,
+    "compiled_us": 632.2,
+    "gen_us": 4072.1,
+    "gen_graph_us": 1052.6
+   },
+   {
+    "speedup": 0.482,
+    "eager_us": 2033.9,
+    "compiled_us": 571.4,
+    "gen_us": 4224.1,
+    "gen_graph_us": 1057.5
+   }
+  ],
+  "spread": [
+   0.455,
+   0.482
+  ],
+  "dtype": "fp32"
  },
  {
   "case": "zoo:GatedLinearAttention",
-  "delivered": false,
-  "dtype": "fp32",
-  "note": "over budget: killed after 150s"
+  "claims": [
+   "gen_6",
+   "gen_9",
+   "synop3_fbbba382fc"
+  ],
+  "delivered": true,
+  "verified": true,
+  "prim_ops": [
+   "synop3_fbbba382fc"
+  ],
+  "max_abs": 1.0728836059570312e-06,
+  "cost": NaN,
+  "speedup": 0.638,
+  "device": "cuda",
+  "gen_graph_us": 5821.3,
+  "graph_speedup": 0.681,
+  "graph_vs_compiled": 0.107,
+  "graph_max_abs": 0.0,
+  "runs": [
+   {
+    "speedup": 0.809,
+    "eager_us": 5021.3,
+    "compiled_us": 497.2,
+    "gen_us": 6208.1,
+    "gen_graph_us": 5819.3
+   },
+   {
+    "speedup": 0.467,
+    "eager_us": 2912.7,
+    "compiled_us": 749.3,
+    "gen_us": 6231.1,
+    "gen_graph_us": 5823.3
+   }
+  ],
+  "spread": [
+   0.467,
+   0.809
+  ],
+  "dtype": "fp32"
  },
  {
   "case": "zoo:RWKVMixBlock",
@@ -1879,41 +1996,39 @@
  {
   "case": "zoo:GatedDeltaRule",
   "claims": [
-   "synop_629f9ef13b",
-   "synop_f3290a1163"
+   "gen_6",
+   "synop_62d36aefdb"
   ],
   "delivered": true,
   "verified": true,
-  "prim_ops": [
-   "synop_f3290a1163"
-  ],
-  "max_abs": 2.384185791015625e-07,
+  "prim_ops": [],
+  "max_abs": 9.5367431640625e-07,
   "cost": NaN,
-  "speedup": 0.642,
+  "speedup": 1.425,
   "device": "cuda",
-  "gen_graph_us": 122.3,
-  "graph_speedup": 3.285,
-  "graph_vs_compiled": 1.434,
+  "gen_graph_us": 46.5,
+  "graph_speedup": 9.153,
+  "graph_vs_compiled": 3.692,
   "graph_max_abs": 0.0,
   "runs": [
    {
-    "speedup": 0.611,
-    "eager_us": 403.9,
-    "compiled_us": 177.3,
-    "gen_us": 661.3,
-    "gen_graph_us": 123.2
+    "speedup": 1.512,
+    "eager_us": 460.1,
+    "compiled_us": 169.9,
+    "gen_us": 304.4,
+    "gen_graph_us": 46.1
    },
    {
-    "speedup": 0.673,
-    "eager_us": 399.9,
-    "compiled_us": 173.6,
-    "gen_us": 594.6,
-    "gen_graph_us": 121.5
+    "speedup": 1.338,
+    "eager_us": 391.1,
+    "compiled_us": 173.7,
+    "gen_us": 292.3,
+    "gen_graph_us": 47.0
    }
   ],
   "spread": [
-   0.611,
-   0.673
+   1.338,
+   1.512
   ],
   "dtype": "fp32"
  },
@@ -1960,7 +2075,7 @@
   "case": "zoo:RealGatedLRU",
   "delivered": false,
   "dtype": "fp32",
-  "note": "over budget: killed after 150s"
+  "note": "over budget: killed after 400s"
  },
  {
   "case": "zoo:DecoupledMLA",

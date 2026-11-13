@@ -4,7 +4,7 @@
 
 **Capture.** `captured = (speedup-1)/(ceiling-1)`: the fraction of that headroom the delivered body actually takes. Negative means delivery costs more than the algebra saves.
 
-- rows: 65 · verified: 65/65 · win tolerance: ≥1.02x
+- rows: 67 · verified: 67/67 · win tolerance: ≥1.02x
 
 ## Findings
 
@@ -14,19 +14,19 @@ compute-bound rows are capped at 1.03x — equality-preserving rewrites cannot r
 
 ### NEGATIVE — The delivered body captures the headroom the ceiling allows: (speedup-1)/(ceiling-1).
 
-median capture -0.02 over 35 rows with material headroom — delivery loses more than the algebra gains; the binding constraint is the delivered body, not the ceiling
+median capture -0.02 over 37 rows with material headroom — delivery loses more than the algebra gains; the binding constraint is the delivered body, not the ceiling
 
 ### INCONCLUSIVE — Dispatch share predicts the sign of the win. (It does not always — the delivered body's own cost sets it.)
 
-r(F, speedup) = +0.07 — dispatch share does not predict the sign alone
+r(F, speedup) = +0.03 — dispatch share does not predict the sign alone
 
 ### WIN — The wins survive `torch.compile` — the free competitor every PyTorch user already has — not just eager.
 
-13/25 launch-bound rows beat torch.compile (median 1.11x); compute-bound 13/28 at 0.99x
+14/27 launch-bound rows beat torch.compile (median 1.11x); compute-bound 13/28 at 0.99x
 
 ### WIN — Every delivered row is verified equal to the spelled module — the frontier is measured on correct deliveries.
 
-65/65 rows verified equal
+67/67 rows verified equal
 
 ## By regime
 
@@ -35,7 +35,7 @@ r(F, speedup) = +0.07 — dispatch share does not predict the sign alone
 | compute-bound | 0.00-0.05 | 28 | 0.028 | 1.03x | 1.05x | 0.983x | 8/28 | 13/28 | — |
 | mixed | 0.05-0.15 | 5 | 0.106 | 1.12x | 1.17x | 0.877x | 2/5 | 3/5 | -0.74 |
 | launch-leaning | 0.15-0.30 | 7 | 0.220 | 1.28x | 1.39x | 0.907x | 0/7 | 2/7 | -0.29 |
-| launch-bound | 0.30-1.00 | 25 | 0.552 | 2.23x | 5.95x | 1.005x | 12/25 | 13/25 | +0.00 |
+| launch-bound | 0.30-1.00 | 27 | 0.570 | 2.33x | 5.95x | 1.045x | 14/27 | 14/27 | +0.06 |
 
 ## Rows
 
@@ -90,19 +90,21 @@ r(F, speedup) = +0.07 — dispatch share does not predict the sign alone
 | `zoo:CovarianceHead` | 0.472 | 1.89x | 0.828x | -0.19 | 4 | 33.3 | 40.2 | — | — |
 | `zoo:AdaGNConv` | 0.472 | 1.89x | 0.928x | -0.08 | 9 | 145.4 | 156.6 | — | — |
 | `zoo:CapsuleRouting` | 0.504 | 2.02x | 1.070x | +0.07 | 13 | 279.1 | 260.9 | — | — |
-| `zoo:DeltaRuleBlock` | 0.528 | 2.12x | 0.973x | -0.02 | 9 | 292.0 | 300.0 | 143.6 | 2.034x |
+| `zoo:DeltaRuleBlock` | 0.528 | 2.12x | 1.616x | +0.55 | 9 | 440.9 | 272.9 | 114.3 | 3.855x |
 | `zoo:RotaryPair` | 0.534 | 2.15x | 1.571x | +0.50 | 12 | 419.8 | 267.3 | — | — |
 | `zoo:MBConvSEBlock` | 0.552 | 2.23x | 0.938x | -0.05 | 10 | 137.0 | 146.1 | — | — |
 | `zoo:NormedSoftcapHead` | 0.552 | 2.23x | 1.265x | +0.22 | 9 | 98.7 | 78.0 | — | — |
 | `zoo:TimeCondConv` | 0.570 | 2.33x | 1.250x | +0.19 | 18 | 182.7 | 146.2 | — | — |
+| `zoo:GatedLinearAttention` | 0.585 | 2.41x | 0.286x | -0.51 | 7 | 2044.9 | 7140.4 | 3762.8 | 0.543x |
 | `zoo:STEQuantLinear` | 0.589 | 2.43x | 1.108x | +0.08 | 6 | 133.6 | 120.6 | — | — |
-| `zoo:GatedDeltaRule` | 0.605 | 2.53x | 0.703x | -0.19 | 12 | 402.5 | 572.8 | 206.7 | 1.948x |
+| `zoo:GatedDeltaRule` | 0.605 | 2.53x | 1.224x | +0.15 | 12 | 401.3 | 327.9 | 135.8 | 2.954x |
 | `zoo:GatedConvUnit` | 0.649 | 2.85x | 1.211x | +0.11 | 5 | 78.2 | 64.6 | — | — |
 | `zoo:ChunkedSSD` | 0.669 | 3.02x | 1.005x | +0.00 | 16 | 2190.1 | 2179.3 | 707.0 | 3.098x |
 | `zoo:RMSNormPerHead` | 0.700 | 3.33x | 0.207x | -0.34 | 5 | 47.9 | 230.9 | — | — |
 | `zoo:InstanceNormBroadcast` | 0.743 | 3.89x | 0.963x | -0.01 | 6 | 77.6 | 80.6 | — | — |
 | `zoo:SqueezeExcite` | 0.757 | 4.12x | 0.947x | -0.02 | 5 | 68.4 | 72.2 | — | — |
 | `zoo:GroupedQuantLinear` | 0.757 | 4.12x | 1.414x | +0.13 | 3 | 32.1 | 22.7 | — | — |
+| `zoo:MambaSelectiveScan` | 0.769 | 4.33x | 0.486x | -0.15 | 10 | 1883.2 | 3873.6 | 1086.5 | 1.733x |
 | `zoo:PerChannelQuantMatmul` | 0.773 | 4.41x | 1.246x | +0.07 | 3 | 28.9 | 23.2 | — | — |
 | `zoo:ManualGroupNorm` | 0.776 | 4.46x | 1.192x | +0.06 | 6 | 72.1 | 60.5 | — | — |
 | `zoo:FNOBlock` | 0.832 | 5.95x | 0.886x | -0.02 | 11 | 117.2 | 132.3 | — | — |
