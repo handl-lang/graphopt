@@ -39,11 +39,12 @@ from mlopt_core.ir import Const, Op, generator
 from mlopt_core.laws import DEFAULT, tags
 from mlopt_discovery import shipped_primitives as sp
 
-_N_PRIM = 57  # 21 depth-1 + 2 depth-2 + 34 depth-3 admitted folds
-# (the depth-1 pool minted 24; 3 declined)
+_N_PRIM = 58  # 21 depth-1 + 2 depth-2 + 34 depth-3 admitted folds
+# (the depth-1 pool minted 24; 3 declined) + 1 AUTO_TIER admission
+# (synop_6ed0a07c7d — overnight --auto-admit, paid 6/72 cases)
 
 #: One bound module per prim family — GatedLinearAttention binds all
-#: 57 admitted folds (the reports' ``mods`` lists); it exports once
+#: 58 admitted folds (the reports' ``mods`` lists); it exports once
 #: per session here and every per-fold pin runs against its term.
 _GLA = "GatedLinearAttention"
 
