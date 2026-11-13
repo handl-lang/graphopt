@@ -79,6 +79,9 @@ from mlopt_core.cost.basic import count_cost
 from mlopt_core.ir import Const, Op, Param, TensorType, Var
 from mlopt_core.laws import DEFAULT as DEFAULT_SEARCH_RULES
 from mlopt_core.search_env import SearchEnv
+from mlopt_core.typing import (
+    register_shape_rule as _register_shape_rule,
+)
 
 from . import bilinear_game as bg
 from . import fragment_game as fg
@@ -1177,6 +1180,421 @@ def _seq_projection_lift(t: Any):
     return lifted, out_dim, idx
 
 
+def _seq_shape_first(_op: Any, shapes: list) -> Any:
+    """Shape rule for ops that return their first operand's shape."""
+    return shapes[0] if shapes else None
+
+
+# ``shape_of`` rules the seq commute-lift relies on.  These ops
+# provably preserve their input's shape, but the substrate's rule
+# table (``mlopt_core.typing``, owned by the eqsat repo) does not
+# list them yet — ``register_shape_rule`` is the documented
+# extension point and the rule is semantically exact, not a patch:
+# ``layer_norm``/``rms_norm``/``clone`` always return ``x.shape``.
+for _norm_op in ("layer_norm", "rms_norm", "clone"):
+    _register_shape_rule(_norm_op, _seq_shape_first)
+del _norm_op
+
+
+def _seq_axis_idx(d: Any, rank: int):
+    """Normalise an int axis into ``[0, rank)``; ``None`` out of range."""
+    if type(d) is not int:
+        return None
+    d0 = d if d >= 0 else d + rank
+    return d0 if 0 <= d0 < rank else None
+
+
+def _seq_commute_lift(t: Any):
+    """Pull a per-step ``select`` out through an axis-safe op.
+
+    The projection lift (:func:`_seq_projection_lift`) covers
+    ``matmul``/``linear``; this is the same hoist for every other op
+    whose denotation commutes with the step-axis slice —
+    ``op(select(x, d, i), …) == select(op(x, …), D, i)`` — so the
+    operand binds the WHOLE-tensor ``op(x, …)`` evaluated once and
+    the fold slices it per step.  Each case below states the law it
+    relies on; anything not listed, any select that is not a DIRECT
+    argument, and any ``argN`` positional attr spelling (which would
+    alias the dims being remapped) keeps the generic decline.
+
+    * ``transpose``/``permute`` — pure axis permutations: the select
+      axis is re-based through the permutation and re-inserted last.
+    * ``softmax``/``log_softmax`` — normalise along ONE axis; they
+      commute iff that axis is not the step axis.
+    * ``layer_norm``/``rms_norm`` — normalise over the LAST
+      ``len(normalized_shape)`` axes; they commute iff the step axis
+      sits strictly before that trailing block (and the block's
+      sizes match the child's trailing dims).
+    * ``sum``/``mean``/``amax``/``amin`` — reductions commute iff no
+      reduced axis is the step axis; ``keepdim`` decides whether
+      the output axis shifts.
+    * ``slice``/``narrow``/``chunk``/``split`` — range restrictions
+      along one axis commute iff that axis is not the step axis.
+    * ``unbind`` — removes one axis; commutes iff it is not the step
+      axis (the output axis count drops by one).
+    * ``concat`` — EVERY argument must be a bare ``select`` on the
+      SAME child axis with the SAME index (the multi-arg analogue of
+      the both-args boundary); the lifted concat joins the children
+      along the remapped concat axis.
+    * ``to``/``clone``/``contiguous``/``alias``/``dropout``/
+      ``broadcast``/``float``/``type_as`` — axis-preserving
+      passthroughs; they commute unconditionally.
+
+    Returns ``(lifted_term, out_dim, index)`` — feed through the
+    ordinary operand path — or ``None`` to decline.  The lifted term
+    must be ``select``-free (:func:`_seq_select_free`) and type via
+    ``shape_of`` exactly like the projection lift's output.
+    """
+    from mlopt_core.typing import INVALID, shape_of
+
+    if not isinstance(t, Op) or not t.args:
+        return None
+    if t.op == "concat":
+        return _seq_concat_lift(t)
+    s = _seq_step_select(t.args[0])
+    if s is None:
+        return None
+    c, d, idx = s
+    sh = shape_of(c)
+    if sh is INVALID or not isinstance(sh, tuple) or not sh:
+        return None
+    r = len(sh)
+    d0 = _seq_axis_idx(d, r)
+    if d0 is None:
+        return None
+    rs = r - 1  # rank of the per-step (post-select) tensor
+
+    def up(j: int) -> int:
+        """Sliced-tensor axis -> child-tensor axis (skips ``d0``)."""
+        return j if j < d0 else j + 1
+
+    ctx = _SeqLiftCtx(t, c, d0, idx, rs, r, sh, up)
+    if t.op in _SEQ_PASSTHROUGH_OPS:
+        # axis-preserving passthroughs need no dim bookkeeping
+        return _seq_lift_finish(
+            (Op.make(t.op, c, *t.args[1:], **t.attrs), ctx.d0), ctx
+        )
+    # Every remaining case remaps an axis attr — positional ``argN``
+    # spellings would alias those dims in child coordinates, so they
+    # decline rather than lift under the wrong axis.
+    if _seq_argn_attrs(t.attrs):
+        return None
+    fn = _SEQ_AXIS_LIFTS.get(t.op)
+    if fn is None:
+        return None
+    return _seq_lift_finish(fn(ctx), ctx)
+
+
+@dataclass(frozen=True)
+class _SeqLiftCtx:
+    """Shared context for the commute-lift op handlers.
+
+    ``c`` is the select's child (the whole sequence tensor), ``d0``
+    its normalised step axis, ``idx`` the step index, ``rs``/``r``
+    the sliced/child ranks, ``sh`` the child's ``shape_of`` and
+    ``up`` the sliced-axis -> child-axis map (skips ``d0``).
+    """
+
+    t: Any
+    c: Any
+    d0: int
+    idx: int
+    rs: int
+    r: int
+    sh: tuple
+    up: Any
+
+
+def _seq_argn_attrs(attrs: dict) -> bool:
+    """Whether *attrs* carries a positional ``argN`` spelling."""
+    return any(
+        isinstance(k, str) and k.startswith("arg") and k[3:].isdigit()
+        for k in attrs
+    )
+
+
+def _seq_lift_finish(res: Any, ctx: _SeqLiftCtx):
+    """Shared tail: build ``(lifted, out_dim, idx)`` or decline.
+
+    *res* is the op handler's ``(lifted_term, out_dim)`` pair (or
+    ``None``).  The lifted term must be ``select``-free — a surviving
+    ``select`` would freeze one step's slice into the once-evaluated
+    operand — and ``shape_of`` must type it with ``out_dim`` in
+    range, the same contract the projection lift keeps.
+    """
+    from mlopt_core.typing import INVALID, shape_of
+
+    if res is None:
+        return None
+    lifted, out_dim = res
+    if not _seq_select_free(lifted):
+        return None
+    sh2 = shape_of(lifted)
+    if (
+        sh2 is INVALID
+        or not isinstance(sh2, tuple)
+        or not 0 <= out_dim < len(sh2)
+    ):
+        return None
+    return lifted, out_dim, ctx.idx
+
+
+def _seq_lift_attrs(
+    ctx: _SeqLiftCtx, drop: tuple, **set_attrs: Any
+) -> dict:
+    """Copy *ctx.t*'s attrs minus *drop*, plus *set_attrs*."""
+    out = {k: v for k, v in ctx.t.attrs.items() if k not in drop}
+    out.update(set_attrs)
+    return out
+
+
+def _seq_lift_transpose(ctx: _SeqLiftCtx):
+    """``transpose`` — swap two axes; the select axis keeps position."""
+    a = _seq_axis_idx(ctx.t.attrs.get("dim0", -2), ctx.rs)
+    b = _seq_axis_idx(ctx.t.attrs.get("dim1", -1), ctx.rs)
+    if a is None or b is None:
+        return None
+    lifted = Op.make(
+        "transpose",
+        ctx.c,
+        **_seq_lift_attrs(
+            ctx, ("dim0", "dim1"), dim0=ctx.up(a), dim1=ctx.up(b)
+        ),
+    )
+    return lifted, ctx.d0
+
+
+def _seq_lift_permute(ctx: _SeqLiftCtx):
+    """``permute`` — rebuild the permutation with the step axis last."""
+    dims = ctx.t.attrs.get("dim", ctx.t.attrs.get("dims"))
+    if not (
+        isinstance(dims, (tuple, list))
+        and len(dims) == ctx.rs
+        and all(type(v) is int for v in dims)
+    ):
+        return None
+    ps = [_seq_axis_idx(v, ctx.rs) for v in dims]
+    if any(v is None for v in ps) or sorted(ps) != list(range(ctx.rs)):
+        return None
+    lifted = Op.make(
+        "permute",
+        ctx.c,
+        **_seq_lift_attrs(
+            ctx,
+            ("dim", "dims"),
+            dim=(*tuple(ctx.up(v) for v in ps), ctx.d0),
+        ),
+    )
+    return lifted, ctx.r - 1
+
+
+def _seq_lift_softmax(ctx: _SeqLiftCtx):
+    """``softmax``/``log_softmax`` — mixes only along ``dim``."""
+    k = _seq_axis_idx(ctx.t.attrs.get("dim", -1), ctx.rs)
+    if k is None:
+        return None
+    kc = ctx.up(k)
+    if kc == ctx.d0:
+        return None
+    lifted = Op.make(
+        ctx.t.op, ctx.c, **_seq_lift_attrs(ctx, (), dim=kc)
+    )
+    return lifted, ctx.d0
+
+
+def _seq_lift_norm(ctx: _SeqLiftCtx):
+    """``layer_norm``/``rms_norm`` — normalise the trailing block."""
+    ns = ctx.t.attrs.get("dim")
+    if not (
+        isinstance(ns, tuple) and ns and all(type(v) is int for v in ns)
+    ):
+        return None
+    ln = len(ns)
+    if ln > ctx.rs or ctx.d0 >= ctx.r - ln:
+        return None
+    if tuple(ns) != tuple(ctx.sh[ctx.r - ln :]):
+        return None
+    lifted = Op.make(ctx.t.op, ctx.c, *ctx.t.args[1:], **ctx.t.attrs)
+    return lifted, ctx.d0
+
+
+def _seq_reduce_dims(ctx: _SeqLiftCtx) -> list | None:
+    """Normalised reduced-axis list in sliced coords, or ``None``."""
+    dim = ctx.t.attrs.get("dim")
+    dims = dim if isinstance(dim, (tuple, list)) else (dim,)
+    if not dims or any(type(v) is not int for v in dims):
+        return None
+    rd = []
+    for v in dims:
+        j = _seq_axis_idx(v, ctx.rs)
+        if j is None or j in rd:
+            return None
+        rd.append(j)
+    return rd
+
+
+def _seq_lift_reduce(ctx: _SeqLiftCtx):
+    """``sum``/``mean``/``amax``/``amin`` — reduce non-step axes."""
+    rd = _seq_reduce_dims(ctx)
+    if rd is None:
+        return None
+    rc = {ctx.up(j) for j in rd}
+    if ctx.d0 in rc:
+        return None
+    lifted = Op.make(
+        ctx.t.op,
+        ctx.c,
+        **_seq_lift_attrs(ctx, (), dim=tuple(ctx.up(j) for j in rd)),
+    )
+    if ctx.t.attrs.get("keepdim", False):
+        return lifted, ctx.d0
+    return lifted, ctx.d0 - sum(1 for x in rc if x < ctx.d0)
+
+
+def _seq_lift_range(ctx: _SeqLiftCtx):
+    """``slice``/``narrow``/``chunk``/``split`` — range one axis."""
+    kd = ctx.t.attrs.get("dim", 0 if ctx.t.op == "slice" else -1)
+    k = _seq_axis_idx(kd, ctx.rs)
+    if k is None:
+        return None
+    kc = ctx.up(k)
+    if kc == ctx.d0:
+        return None
+    lifted = Op.make(
+        ctx.t.op, ctx.c, **_seq_lift_attrs(ctx, (), dim=kc)
+    )
+    return lifted, ctx.d0
+
+
+def _seq_lift_unbind(ctx: _SeqLiftCtx):
+    """``unbind`` — removes one non-step axis; positions shift."""
+    k = _seq_axis_idx(ctx.t.attrs.get("dim", 0), ctx.rs)
+    if k is None:
+        return None
+    kc = ctx.up(k)
+    if kc == ctx.d0:
+        return None
+    lifted = Op.make(
+        ctx.t.op, ctx.c, **_seq_lift_attrs(ctx, (), dim=kc)
+    )
+    return lifted, ctx.d0 if ctx.d0 < kc else ctx.d0 - 1
+
+
+#: Op -> commute-lift handler for the axis-remapping families.
+_SEQ_AXIS_LIFTS = {
+    "transpose": _seq_lift_transpose,
+    "permute": _seq_lift_permute,
+    "softmax": _seq_lift_softmax,
+    "log_softmax": _seq_lift_softmax,
+    "layer_norm": _seq_lift_norm,
+    "rms_norm": _seq_lift_norm,
+    "sum": _seq_lift_reduce,
+    "mean": _seq_lift_reduce,
+    "amax": _seq_lift_reduce,
+    "amin": _seq_lift_reduce,
+    "slice": _seq_lift_range,
+    "narrow": _seq_lift_range,
+    "chunk": _seq_lift_range,
+    "split": _seq_lift_range,
+    "unbind": _seq_lift_unbind,
+}
+
+
+#: Ops that preserve every axis position exactly — the commute lift
+#: needs no dim bookkeeping for them.
+_SEQ_PASSTHROUGH_OPS = frozenset(
+    {
+        "to",
+        "clone",
+        "contiguous",
+        "alias",
+        "dropout",
+        "broadcast",
+        "float",
+        "type_as",
+    }
+)
+
+
+def _seq_concat_lift(t: Any):
+    """Lift ``concat`` when EVERY arg is a per-step ``select``.
+
+    ``concat([select(x,d,i), …], dim=c)`` with all selects on the
+    same child axis ``d`` (never the joined axis) and the same index
+    ``i`` equals ``select(concat([x,…], dim=c'), d, i)`` — the
+    children are joined along the remapped concat axis and the fold
+    slices the joined sequence.  Mixed select axes, mixed indices,
+    a select ON the joined axis, or any non-select argument all
+    decline: a single outer ``select`` cannot reproduce them.
+    """
+    from mlopt_core.typing import INVALID, shape_of
+
+    if len(t.args) < 2 or any(
+        isinstance(k, str) and k.startswith("arg") and k[3:].isdigit()
+        for k in t.attrs
+    ):
+        return None
+    sels = [_seq_step_select(a) for a in t.args]
+    if any(s is None for s in sels):
+        return None
+    children = []
+    d0s = []
+    idxs = []
+    shapes = []
+    r = None
+    for cc, dd, ii in sels:
+        sh = shape_of(cc)
+        if sh is INVALID or not isinstance(sh, tuple) or not sh:
+            return None
+        rr = len(sh)
+        if r is None:
+            r = rr
+        elif rr != r:
+            return None
+        d0 = _seq_axis_idx(dd, rr)
+        if d0 is None:
+            return None
+        children.append(cc)
+        d0s.append(d0)
+        idxs.append(ii)
+        shapes.append(sh)
+    if r is None or len(set(d0s)) != 1 or len(set(idxs)) != 1:
+        return None
+    d0 = d0s[0]
+    idx = idxs[0]
+    # concat dim is spelled in the rank-(r-1) argument/output coords
+    cd_raw = t.attrs.get("dim", -1)
+    cd = _seq_axis_idx(cd_raw, r - 1)
+    if cd is None:
+        return None
+    # joined axis in child coords — identical for every arg since
+    # all selects sit on the same child axis ``d0``
+    jc = cd if cd < d0 else cd + 1
+    # the lifted concat must itself be well-formed: every non-joined
+    # child axis (including the shared step axis) must agree
+    for k in range(r):
+        if k == jc:
+            continue
+        if len({sh[k] for sh in shapes}) != 1:
+            return None
+    lifted = Op.make(
+        "concat",
+        *children,
+        dim=jc,
+        **{k2: v for k2, v in t.attrs.items() if k2 != "dim"},
+    )
+    if not _seq_select_free(lifted):
+        return None
+    sh2 = shape_of(lifted)
+    if (
+        sh2 is INVALID
+        or not isinstance(sh2, tuple)
+        or not 0 <= d0 < len(sh2)
+    ):
+        return None
+    return lifted, d0, idx
+
+
 def _seq_bcast(sh1: tuple, sh2: tuple):
     """Right-aligned broadcast of two shapes; ``None`` on conflict."""
     if len(sh1) < len(sh2):
@@ -1224,9 +1642,10 @@ def _seq_deindex(
     metavar then binds the *viewed* sequence and no view op reaches
     the step-expr skeleton.  With *pullout*, a ``select`` sitting
     DIRECTLY inside ``matmul``/``linear`` is pulled through the
-    projection (:func:`_seq_projection_lift`) so the operand binds
-    the projected sequence — the per-step ``x_t @ W`` spelling
-    becomes the hoisted ``(x @ W)_t`` the fold can slice.
+    projection (:func:`_seq_projection_lift`) and one inside any
+    other axis-safe op through the commutation lift
+    (:func:`_seq_commute_lift`) — the operand binds the hoisted
+    whole-tensor op result, never a per-step slice.
 
     *state* (matrix-state form only): the exact subterm the fold's
     accumulator denotes at this step — an occurrence of it inside
@@ -1287,6 +1706,8 @@ def _seq_deindex(
             return ("sub", b, a)
         if pullout:
             proj = _seq_projection_lift(t)
+            if proj is None:
+                proj = _seq_commute_lift(t)
             if proj is not None:
                 child, dim, idx = proj
                 return _seq_meta(

@@ -1391,6 +1391,397 @@ class TestSeqScanSites:
             h = Op.make("add", Op.make("mul", BIG, h), xt)
         assert play._seq_scan_sites(h) == []
 
+    # -- the commute lift: non-elementwise step ops ------------------
+    #
+    # ``_seq_commute_lift`` generalises the projection pullout to
+    # every op whose denotation commutes with the step-axis slice —
+    # the operand binds the WHOLE-tensor ``op(x, …)`` and the fold
+    # slices it per step.  Each case below pins one law; the
+    # fold-equals-chain checks are the soundness proof.
+
+    @staticmethod
+    def _commute_check(term, env):
+        """Mint the site and grade the fold against the chain."""
+        torch = pytest.importorskip("torch")
+        import mlopt_torch.torch_bridge as tb
+
+        from mlopt_discovery import genkernel as gk
+
+        sites = play._seq_scan_sites(term)
+        assert len(sites) == 1
+        s = sites[0]
+        info = gk.scan_spec(s["spec"])
+        assert info is not None and info["kind"] == "seq"
+        bindings = tb._IR_TO_TORCH
+        vals = {
+            m: gk._bound_val(t_, env, bindings)
+            for m, t_ in s["leaf_env"].items()
+        }
+        h = {
+            "pattern": s["spec"],
+            "args": tuple(gk._spec_metas(s["spec"])),
+            "axis": s["axis"],
+        }
+        got = gk.handler_denotation(h)(
+            *[vals[m] for m in h["args"]]
+        )
+        want = tb.eval_term(
+            term,
+            var_env=env,
+            param_env=env,
+            bindings=bindings,
+            strict=True,
+        )
+        torch.testing.assert_close(got, want)
+        return s
+
+    def _norm_recurrence(self, step_op, *, x_shape=(2, 3, 4)):
+        """``h_t = a_t·h + f(x_t)`` with ``x_t = select(X, 1, t)``."""
+        from mlopt_core.ir import Op, TensorType, Var
+
+        def v(n, *s):
+            return Var(n, TensorType(s))
+
+        X = v("X", *x_shape)
+        A = v("A", 2, 3, 4)
+        h = v("H0", 2, 4)
+        for t in range(3):
+            xt = Op.make("select", X, dim=1, index=t)
+            bt = step_op(xt)
+            at = Op.make("select", A, dim=1, index=t)
+            h = Op.make("add", Op.make("mul", at, h), bt)
+        return h, X, A
+
+    def test_seq_sites_lift_softmax(self):
+        # softmax mixes only along its ``dim`` — never the (already
+        # sliced-away) step axis — so it commutes; the operand binds
+        # ``softmax(X, dim=2)`` whole.
+        torch = pytest.importorskip("torch")
+        from mlopt_core.ir import Op
+
+        term, X, _A = self._norm_recurrence(
+            lambda xt: Op.make("softmax", xt, dim=-1)
+        )
+        s = self._commute_check(
+            term,
+            {
+                "X": torch.randn(2, 3, 4, dtype=torch.float64),
+                "A": torch.randn(2, 3, 4, dtype=torch.float64),
+                "H0": torch.randn(2, 4, dtype=torch.float64),
+            },
+        )
+        assert Op.make("softmax", X, dim=2) in s["leaf_env"].values()
+
+    def test_seq_sites_lift_layer_norm(self):
+        # layer_norm normalises the trailing ``(4,)`` block; the step
+        # axis (dim 1 of 3) sits before it — commutes.  The affine
+        # params ride inside the lifted whole-tensor term.
+        torch = pytest.importorskip("torch")
+        from mlopt_core.ir import Op, Param, TensorType
+
+        def p(n, *s):
+            return Param(n, TensorType(s))
+
+        W, B = p("W", 4), p("B", 4)
+        term, X, _A = self._norm_recurrence(
+            lambda xt: Op.make(
+                "layer_norm",
+                xt,
+                W,
+                B,
+                dim=(4,),
+                eps=1e-5,
+                cudnn_enabled=False,
+            )
+        )
+        s = self._commute_check(
+            term,
+            {
+                "X": torch.randn(2, 3, 4, dtype=torch.float64),
+                "A": torch.randn(2, 3, 4, dtype=torch.float64),
+                "W": torch.randn(4, dtype=torch.float64),
+                "B": torch.randn(4, dtype=torch.float64),
+                "H0": torch.randn(2, 4, dtype=torch.float64),
+            },
+        )
+        lifted = Op.make(
+            "layer_norm",
+            X,
+            W,
+            B,
+            dim=(4,),
+            eps=1e-5,
+            cudnn_enabled=False,
+        )
+        assert lifted in s["leaf_env"].values()
+
+    def test_seq_sites_lift_transpose_permutes(self):
+        # axis permutations commute with re-based dims — transpose
+        # keeps the select axis in place, permute re-inserts it last.
+        torch = pytest.importorskip("torch")
+        from mlopt_core.ir import Op, TensorType, Var
+
+        def v(n, *s):
+            return Var(n, TensorType(s))
+
+        # transpose: X (2,T,4,5) sel dim1 -> (2,4,5); swap axes 1,2
+        # -> (2,5,4); lifted transpose(X, dim0=2, dim1=3).
+        X = v("X", 2, 3, 4, 5)
+        A = v("A", 2, 3, 5, 4)
+        h = v("H0", 2, 5, 4)
+        for t in range(3):
+            xt = Op.make("select", X, dim=1, index=t)
+            bt = Op.make("transpose", xt, dim0=1, dim1=2)
+            at = Op.make("select", A, dim=1, index=t)
+            h = Op.make("add", Op.make("mul", at, h), bt)
+        s = self._commute_check(
+            h,
+            {
+                "X": torch.randn(2, 3, 4, 5, dtype=torch.float64),
+                "A": torch.randn(2, 3, 5, 4, dtype=torch.float64),
+                "H0": torch.randn(2, 5, 4, dtype=torch.float64),
+            },
+        )
+        assert Op.make(
+            "transpose", X, dim0=2, dim1=3
+        ) in s["leaf_env"].values()
+
+        # permute: same X; sliced permute (2,4,5) dim=(2,0,1) ->
+        # (5,2,4); the step axis must sit at operand dim 3, so A's
+        # sequence axis is its LAST dim.
+        X2 = v("X2", 2, 3, 4, 5)
+        A2 = v("A2", 5, 2, 4, 3)
+        h2 = v("H0b", 5, 2, 4)
+        for t in range(3):
+            xt = Op.make("select", X2, dim=1, index=t)
+            bt = Op.make("permute", xt, dim=(2, 0, 1))
+            at = Op.make("select", A2, dim=3, index=t)
+            h2 = Op.make("add", Op.make("mul", at, h2), bt)
+        s2 = self._commute_check(
+            h2,
+            {
+                "X2": torch.randn(2, 3, 4, 5, dtype=torch.float64),
+                "A2": torch.randn(5, 2, 4, 3, dtype=torch.float64),
+                "H0b": torch.randn(5, 2, 4, dtype=torch.float64),
+            },
+        )
+        assert Op.make(
+            "permute", X2, dim=(3, 0, 2, 1)
+        ) in s2["leaf_env"].values()
+
+    def test_seq_sites_lift_reduction_and_ranges(self):
+        # sum(keepdim), chunk and unbind all commute when their axis
+        # is not the step axis — verified fold-equals-chain each.
+        pytest.importorskip("torch")
+        import torch
+        from mlopt_core.ir import Op, TensorType, Var
+
+        def v(n, *s):
+            return Var(n, TensorType(s))
+
+        def rec(x_shape, a_shape, h_shape, sdim, adim, mkbt):
+            X = v("X", *x_shape)
+            A = v("A", *a_shape)
+            h = v("H0", *h_shape)
+            for t in range(3):
+                xt = Op.make("select", X, dim=sdim, index=t)
+                bt = mkbt(xt)
+                at = Op.make("select", A, dim=adim, index=t)
+                h = Op.make("add", Op.make("mul", at, h), bt)
+            return h, X
+
+        def env(*shapes):
+            return {
+                "X": torch.randn(*shapes[0], dtype=torch.float64),
+                "A": torch.randn(*shapes[1], dtype=torch.float64),
+                "H0": torch.randn(*shapes[2], dtype=torch.float64),
+            }
+
+        # sum keepdim over the last axis: (2,T,4) sel dim1 ->
+        # (2,4); sum dim=(1,) keepdim -> (2,1); lifted dim=2.
+        term, X = rec(
+            (2, 3, 4), (2, 3, 1), (2, 1), 1, 1,
+            lambda xt: Op.make("sum", xt, dim=(1,), keepdim=True),
+        )
+        s = self._commute_check(term, env((2, 3, 4), (2, 3, 1), (2, 1)))
+        assert Op.make(
+            "sum", X, dim=(2,), keepdim=True
+        ) in s["leaf_env"].values()
+
+        # chunk along a non-step axis.
+        term, X = rec(
+            (2, 3, 4, 6), (2, 3, 4, 3), (2, 4, 3), 1, 1,
+            lambda xt: Op.make(
+                "chunk", xt, chunks=2, dim=2, index=0
+            ),
+        )
+        s = self._commute_check(
+            term, env((2, 3, 4, 6), (2, 3, 4, 3), (2, 4, 3))
+        )
+        assert Op.make(
+            "chunk", X, chunks=2, dim=3, index=0
+        ) in s["leaf_env"].values()
+
+        # unbind removes a non-step axis — the output axis count
+        # drops by one and positions shift.
+        term, X = rec(
+            (2, 3, 4, 6), (2, 3, 4), (2, 4), 1, 1,
+            lambda xt: Op.make("unbind", xt, dim=2, index=1),
+        )
+        s = self._commute_check(
+            term, env((2, 3, 4, 6), (2, 3, 4), (2, 4))
+        )
+        assert Op.make(
+            "unbind", X, dim=3, index=1
+        ) in s["leaf_env"].values()
+
+        # slice restricts a non-step axis.
+        term, X = rec(
+            (2, 3, 4, 6), (2, 3, 4, 2), (2, 4, 2), 1, 1,
+            lambda xt: Op.make(
+                "slice", xt, dim=2, start=1, end=5, step=2
+            ),
+        )
+        self._commute_check(
+            term, env((2, 3, 4, 6), (2, 3, 4, 2), (2, 4, 2))
+        )
+
+    def test_seq_sites_lift_concat_all_selects(self):
+        # concat lifts only when EVERY arg is a per-step select on
+        # the same child axis with the same index — the lifted
+        # operand binds ``concat(X, Y, dim=0)`` whole.
+        pytest.importorskip("torch")
+        import torch
+        from mlopt_core.ir import Op, Param, TensorType, Var
+
+        def v(n, *s):
+            return Var(n, TensorType(s))
+
+        def p(n, *s):
+            return Param(n, TensorType(s))
+
+        X, Y = v("X", 2, 3, 4), v("Y", 2, 3, 4)
+        A = p("A", 4, 4)
+        h = v("H0", 4, 4)
+        for t in range(3):
+            xt = Op.make("select", X, dim=1, index=t)
+            yt = Op.make("select", Y, dim=1, index=t)
+            bt = Op.make("concat", xt, yt, dim=0)
+            h = Op.make("add", Op.make("mul", A, h), bt)
+        s = self._commute_check(
+            h,
+            {
+                "X": torch.randn(2, 3, 4, dtype=torch.float64),
+                "Y": torch.randn(2, 3, 4, dtype=torch.float64),
+                "A": torch.randn(4, 4, dtype=torch.float64),
+                "H0": torch.randn(4, 4, dtype=torch.float64),
+            },
+        )
+        assert s["leaf_env"]["Q1"] == Op.make("concat", X, Y, dim=0)
+
+    def test_seq_sites_lift_passthrough(self):
+        # axis-preserving casts/views commute unconditionally.
+        torch = pytest.importorskip("torch")
+        from mlopt_core.ir import Op
+
+        term, X, _A = self._norm_recurrence(
+            lambda xt: Op.make("clone", xt)
+        )
+        s = self._commute_check(
+            term,
+            {
+                "X": torch.randn(2, 3, 4, dtype=torch.float64),
+                "A": torch.randn(2, 3, 4, dtype=torch.float64),
+                "H0": torch.randn(2, 4, dtype=torch.float64),
+            },
+        )
+        assert Op.make("clone", X) in s["leaf_env"].values()
+
+    def test_seq_commute_lift_declines_unsafe(self):
+        # the law's negative half: each unsafe shape declines at the
+        # lift (``None``) or at ``scan_spec`` — never a wrong site.
+        pytest.importorskip("torch")
+        from mlopt_core.ir import Op, TensorType, Var
+        from mlopt_discovery import genkernel as gk
+
+        def v(n, *s):
+            return Var(n, TensorType(s))
+
+        X = v("X", 2, 3, 4)
+        sel = Op.make("select", X, dim=2, index=0)
+        # layer_norm whose normalized block would include the step
+        # axis: d0=2 >= r-ln=1 — decline
+        assert (
+            play._seq_commute_lift(
+                Op.make(
+                    "layer_norm",
+                    sel,
+                    dim=(3, 4),
+                    eps=1e-5,
+                    cudnn_enabled=False,
+                )
+            )
+            is None
+        )
+        # reshape is not an axis-safe op — decline
+        assert (
+            play._seq_commute_lift(
+                Op.make("reshape", sel, shape=(2, 6))
+            )
+            is None
+        )
+        # a select NOT in arg0 position is not the direct-arg case
+        assert (
+            play._seq_commute_lift(
+                Op.make("softmax", Op.make("neg", sel), dim=-1)
+            )
+            is None
+        )
+        # argN positional spellings would alias remapped dims
+        assert (
+            play._seq_commute_lift(
+                Op.make("transpose", sel, arg1=0, arg2=1)
+            )
+            is None
+        )
+
+    def test_seq_sites_decline_unliftable_step_ops(self):
+        # ops outside the commute grammar stay in the skeleton and
+        # ``scan_spec`` declines honestly at handler mint.
+        pytest.importorskip("torch")
+        from mlopt_core.ir import Op, TensorType, Var
+        from mlopt_discovery import genkernel as gk
+
+        def v(n, *s):
+            return Var(n, TensorType(s))
+
+        # reduce-all sum has no dim to exempt — render decline
+        X, A = v("X", 2, 3, 4), v("A", 2, 3, 4)
+        h = v("H0", 2, 4)
+        for t in range(3):
+            xt = Op.make("select", X, dim=1, index=t)
+            bt = Op.make("sum", xt)
+            at = Op.make("select", A, dim=1, index=t)
+            h = Op.make("add", Op.make("mul", at, h), bt)
+        sites = play._seq_scan_sites(h)
+        assert sites
+        assert all(gk.scan_spec(s["spec"]) is None for s in sites)
+        assert gk.scan_handlers(sites) == {}
+
+        # concat with a non-select argument cannot lift — the
+        # skeleton keeps ``concat`` and declines at render
+        Y = v("Y", 2, 4)
+        h = v("H0b", 4, 4)
+        for t in range(3):
+            xt = Op.make("select", X, dim=1, index=t)
+            bt = Op.make("concat", xt, Y, dim=0)
+            at = Op.make("select", A, dim=1, index=t)
+            h = Op.make("add", Op.make("mul", at, h), bt)
+        sites = play._seq_scan_sites(h)
+        assert sites
+        assert all(gk.scan_spec(s["spec"]) is None for s in sites)
+        assert gk.scan_handlers(sites) == {}
+
 
 class TestSeqmSites:
     """The seqm collector — matrix-state delta-rule chains.
