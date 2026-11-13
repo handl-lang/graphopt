@@ -27,6 +27,20 @@ the newest in each series for the current verdict.
 | `p36_seq_view_lift.md` | `unsqueeze`/`squeeze` step exprs mint honest seq scans — GatedLinearAttention + MambaSelectiveScan pay; `deliver` spec field |
 | `p37_seqm_matrix_scan.md` | `seqm`: matrix-state scans with state feedback — the delta-rule family (DeltaRuleBlock, GatedDeltaRule) mints, verifies, pays |
 
+## Scan-tier delivery and corpus rounds (2026-11)
+
+| report | what it established |
+|---|---|
+| `applyd_route.md` | `chain→applyd` e-class route: seq/seqm claims bind real Triton kernels end-to-end |
+| `seq_deindex_params.md` / `seq_deindex_boundaries2.md` | `_seq_deindex` const-meta + projection-lift fixes; generalized commute/projection lift across ~15 op families |
+| `unrolled_route.md` / `resweep_scan_route.md` | unrolled-scan routing shipped; frontier re-swept — graph arm beats `torch.compile` 7/8 rows |
+| `module_loss_gla_mamba.md` | GLA/Mamba module losses are structural (per-step outputs need a trajectory kernel), not routing |
+| `t010_increment2.md` | T-010 census: 0 paying sites; stride-1 reduction path measured neutral-to-slower, reverted |
+| `egraph_divergence.md` | Rust e-graph `FxHashMap` hash-order vs Python id-order divergence — fixed upstream (`egraph` `c48f75e`), parity now 0 divergences |
+| `t029_executor_confound.md` … `t035_036_pay_declined.md` | agenda round: executor-confounded pay measurements fixed (`noprim_ir` arm); ChunkedSSD headroom = dispatch; pay declines vs verify declines split in the miner |
+| `cumsum_carrier.md` | `kind="seqs"` emitted-scan tier for `cumsum`/`cumprod` — verifies bit-exact, honestly declines to pay vs `torch.cumsum` |
+| `seq_dedup_fix.md` | site-record dedup fix: same-spec opposite-direction chains (`_BidirectionalScan`) now mint both sites |
+
 ## Fragment tower (plan 0033 / ADR-0157)
 
 `fragment_tower_phase0.md` … `phase5.md` (+ `phase2_verdicts.md`):

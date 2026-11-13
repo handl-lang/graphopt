@@ -169,6 +169,7 @@ __all__ = [
     "scan_triton_sink",
     "seq_scan_denotation",
     "seqm_denotation",
+    "seqs_denotation",
 ]
 
 #: Ops whose torch bindings are pointwise (shape-preserving) — the
@@ -1530,9 +1531,9 @@ def triton_sink(handlers: dict) -> Any:
 
 
 def _seq_scan_spec(spec: Any) -> bool:
-    """Check *spec* is a scan spec in the sequence (fold) form."""
+    """Check *spec* is a scan spec in a sequence (fold) form."""
     info = scan_spec(spec)
-    return info is not None and info["kind"] == "seq"
+    return info is not None and info["kind"] in ("seq", "seqs")
 
 
 class Tier(NamedTuple):
@@ -1746,6 +1747,13 @@ def scan_spec(spec: Any) -> dict | None:
       h)`` — the sequence form.  ``"seq"`` lists the operand metavars
       (each a per-step tensor on the step axis), ``"a"``/``"b"`` the
       rendered per-step expressions, ``"h"`` the state metavar.
+    * ``{"kind": "seqs", ...}`` — the EMITTED sequence form: the
+      same one-leaf ``aff_diag`` fold, but the minted op denotes
+      every prefix state (``out_t = acc_t``), the semantics
+      ``cumsum``/``cumprod`` return.  ``info["scan_mode"]``
+      classifies the leaf — ``"cumsum"``/``"cumprod"`` reach the
+      ``tl`` scan primitives, anything else the serial emitted
+      fold.
     * ``{"kind": "unrolled", ...}`` for ``("applyd",
       <affd_compose tree>, h)`` — ``"steps"`` the rendered ``(a, b)``
       pairs in chronological order.
@@ -1780,7 +1788,9 @@ def scan_spec(spec: Any) -> dict | None:
     rendered = _leaf_exprs(leaves, h_spec, hoists)
     if rendered is None:
         return None
-    return _scan_info(kind, rendered, h_spec, attrs, hoists)
+    return _scan_info(
+        kind, rendered, h_spec, attrs, hoists, leaves=leaves
+    )
 
 
 def _scan_info(
@@ -1789,17 +1799,19 @@ def _scan_info(
     h_spec: Any,
     attrs: dict | None,
     hoists: dict | None,
+    leaves: Any = None,
 ) -> dict:
     """Assemble the ``scan_spec`` descriptor for a rendered carrier."""
     metas, steps = rendered
-    # ``kind="seq"`` specs may declare ``"const"`` — loop-invariant
-    # metavar names (``Param``/``Var`` leaves the collector bound
-    # whole) that participate in the step exprs WITHOUT a step axis:
-    # they are binding args like any meta but broadcast into the
-    # state space rather than slicing along the step axis.
+    # ``kind="seq"``/``"seqs"`` specs may declare ``"const"`` —
+    # loop-invariant metavar names (``Param``/``Var`` leaves the
+    # collector bound whole) that participate in the step exprs
+    # WITHOUT a step axis: they are binding args like any meta but
+    # broadcast into the state space rather than slicing along the
+    # step axis.
     consts = (
         frozenset((attrs or {}).get("const", ()))
-        if kind == "seq"
+        if kind in ("seq", "seqs")
         else frozenset()
     )
     seq = [m for m in metas if m not in consts]
@@ -1810,14 +1822,39 @@ def _scan_info(
     }
     if consts:
         info["const"] = [m for m in metas if m in consts]
-    if kind == "seq":
+    if kind in ("seq", "seqs"):
         (ea, eb) = steps[0]
-        info.update({"kind": "seq", "a": ea, "b": eb})
+        info.update({"kind": kind, "a": ea, "b": eb})
+        if kind == "seqs" and leaves:
+            # the emitted scan's closed-form mode — ``cumsum`` /
+            # ``cumprod`` spell the whole prefix tensor, so the
+            # denotation and the Triton piece can use the real scan
+            # primitive instead of the serial fold.  Detected from
+            # the RAW leaf specs (the rendered exprs have already
+            # lost the constant/meta distinction's meaning).
+            info["scan_mode"] = _seqs_mode(leaves[0])
     else:
         _unrolled_info(info, steps, hoists)
     if attrs is not None and "axis" in attrs:
         info["axis"] = attrs["axis"]
     return info
+
+
+def _seqs_mode(leaf: Any) -> str:
+    """Classify a ``seqs`` leaf ``(a_spec, b_spec)`` for codegen.
+
+    ``"cumsum"`` — ``a ≡ 1``, ``b`` the bare sequence meta (the
+    prefix-sum recurrence ``acc + x_t``); ``"cumprod"`` — ``a``
+    the bare meta, ``b ≡ 0`` (``x_t * acc``); anything else is the
+    generic emitted fold (``"fold"``) — still an honest inclusive
+    scan, just without a closed-form primitive.
+    """
+    a_spec, b_spec = leaf
+    if a_spec == 1 and isinstance(b_spec, str):
+        return "cumsum"
+    if b_spec == 0 and isinstance(a_spec, str):
+        return "cumprod"
+    return "fold"
 
 
 def _scan_kind(leaves: list | None, attrs: dict | None) -> str | None:
@@ -1835,9 +1872,9 @@ def _scan_kind(leaves: list | None, attrs: dict | None) -> str | None:
     kind = (attrs or {}).get("kind")
     if kind is None:
         return "seq" if len(leaves) == 1 else "unrolled"
-    if kind == "seq" and len(leaves) != 1:
+    if kind in ("seq", "seqs") and len(leaves) != 1:
         return None
-    return kind if kind in ("seq", "unrolled") else None
+    return kind if kind in ("seq", "seqs", "unrolled") else None
 
 
 def _name_used(name: str, steps: list) -> bool:
@@ -1959,6 +1996,102 @@ def seq_scan_denotation(spec: Any, *, axis: int | None = None) -> Any:
             b_t = _eval_spec(b_spec, env, bindings)
             acc = a_t * acc + b_t
         return acc
+
+    return fn
+
+
+def seqs_denotation(spec: Any, *, axis: int | None = None) -> Any:
+    """Spelled denotation of a ``kind="seqs"`` emitted-scan spec.
+
+    The emitted-scan analogue of :func:`seq_scan_denotation`: the
+    same ``acc = a_t * acc + b_t`` recurrence, but the minted op
+    denotes EVERY prefix state — ``out_t = acc_t`` stacked back
+    along the step axis — because the spelled carrier (``cumsum``,
+    ``cumprod``, an emitted selective scan) returns the whole
+    prefix tensor, not the final state the ``seq`` fold keeps.
+
+    Two spellings, picked by the spec's leaf shape
+    (:func:`_seqs_mode`):
+
+    * ``"cumsum"``/``"cumprod"`` — the recurrence IS the ambient
+      ``torch.cumsum``/``torch.cumprod`` op, so the denotation
+      calls it directly.  This is not a shortcut past honesty: the
+      referee's spelled arm must be the *incumbent* the delivery
+      replaces — timing the generated kernel against a python-loop
+      fold would grade it against a body nobody ships, and the
+      ``torch.*`` call IS the same function (up to summation
+      order, inside the verify tolerance).
+    * ``"fold"`` — any other one-leaf ``aff_diag``: the generic
+      emitted fold, ``outs.append(acc)`` per step then
+      ``torch.stack`` moved back to the step axis — the same
+      order the Triton piece runs.
+
+    Returns ``None`` unless *spec* is a recognised ``kind="seqs"``
+    scan spec.  Call-time shape violations raise, matching the
+    ``seq`` contract.
+    """
+    import torch
+
+    info = scan_spec(spec)
+    if info is None or info["kind"] != "seqs":
+        return None
+    parts = _applyd_operands(spec)
+    if parts is None:
+        return None
+    leaves = _affd_leaves(parts[0])
+    if leaves is None or len(leaves) != 1:
+        return None
+    a_spec, b_spec = leaves[0]
+    seq_metas = list(info["seq"])
+    h_meta = info["h"]
+    params = list(info["params"])
+    ax = axis if axis is not None else info.get("axis")
+    bindings = _ambient_bindings()
+    mode = info.get("scan_mode", "fold")
+
+    if (
+        mode in ("cumsum", "cumprod")
+        and len(seq_metas) == 1
+        and not info.get("const")
+    ):
+        m = seq_metas[0]
+        op = torch.cumsum if mode == "cumsum" else torch.cumprod
+
+        def fn(*args: Any, **_attrs: Any) -> Any:
+            vals = dict(zip(params, args, strict=True))
+            x = vals[m]
+            step_ax = _seq_axis(x.shape, vals[h_meta].shape, ax)
+            return op(x, dim=step_ax)
+
+        return fn
+
+    def fn(*args: Any, **_attrs: Any) -> Any:
+        vals = dict(zip(params, args, strict=True))
+        xs = torch.broadcast_tensors(*(vals[m] for m in seq_metas))
+        full = xs[0].shape
+        if not full:
+            raise ValueError("scan operands carry no step axis")
+        step_ax = _seq_axis(full, vals[h_meta].shape, ax)
+        t_len = full[step_ax]
+        state = full[:step_ax] + full[step_ax + 1 :]
+        moved = [x.movedim(step_ax, 0) for x in xs]
+        acc = torch.broadcast_to(vals[h_meta], state)
+        consts = info.get("const", ())
+        outs = []
+        for t in range(t_len):
+            env = {
+                m: mv[t] for m, mv in zip(seq_metas, moved, strict=True)
+            }
+            for c in consts:
+                env[c] = vals[c]
+            a_t = _eval_spec(a_spec, env, bindings)
+            b_t = _eval_spec(b_spec, env, bindings)
+            acc = a_t * acc + b_t
+            outs.append(acc)
+        # ``(T, *state)`` moved so the emitted axis lands where the
+        # operand's step axis sat — the same ``full`` the inputs
+        # broadcast to, which is exactly the carrier's output shape.
+        return torch.stack(outs, dim=0).movedim(0, step_ax)
 
     return fn
 
@@ -2209,10 +2342,12 @@ def handler_denotation(h: dict) -> Any:
         return seqm_denotation(
             h["pattern"], axis=h.get("axis"), axes=h.get("axes")
         )
-    if info["kind"] != "seq":
-        return None
     ax = h.get("axis", info.get("axis", -2))
-    return seq_scan_denotation(h["pattern"], axis=ax)
+    if info["kind"] == "seq":
+        return seq_scan_denotation(h["pattern"], axis=ax)
+    if info["kind"] == "seqs":
+        return seqs_denotation(h["pattern"], axis=ax)
+    return None
 
 
 def _seq_triton_source(info: dict) -> str:
@@ -2318,6 +2453,8 @@ def _scan_triton_source(info: dict) -> str:
     """
     if info["kind"] == "seq":
         return _seq_triton_source(info)
+    if info["kind"] == "seqs":
+        return _seqs_triton_source(info)
     return _unrolled_triton_source(info)
 
 
@@ -2440,6 +2577,345 @@ def _seq_binding(kern: Any, info: dict, axis: int | None) -> Any:
             BLOCK=_SCAN_BLOCK,
         )
         return out.view(state)
+
+    return fn
+
+
+# ---------------------------------------------------------------------------
+#  seqs codegen — the emitted scan (every prefix state, not the last)
+# ---------------------------------------------------------------------------
+#
+# ``kind="seqs"`` is the ``seq`` fold with the OUTPUT axis restored:
+# ``out_t = acc_t`` for every ``t``, stacked back along the step
+# axis — the semantics ``cumsum``/``cumprod`` (and any emitted
+# selective scan) actually return.  Two kernel shapes:
+#
+# * ``scan_mode`` ``"cumsum"``/``"cumprod"`` — the closed-form
+#   primitives: ``tl.cumsum``/``tl.cumprod`` along the step axis —
+#   a real parallel scan (Blelloch-style inside the tile), NOT the
+#   serial step loop.  Two launch layouts, picked per call:
+#   ``_gs`` reads the operand STRIDED — viewed as ``(P, T, K)`` with
+#   ``K`` the contiguous trailing block and ``P`` a rank-≤1 prefix —
+#   so no transpose copy is paid; ``_gsc`` takes the dense ``(T, N)``
+#   rows for shapes the strided view cannot express.  Honest bound:
+#   ``T <= _SEQS_MAX_T`` (the tile's ``BT`` extent) — a longer
+#   sequence raises, and the referee/denotation fallback decides.
+# * ``"fold"`` — the generic emitted recurrence: the ``seq`` kernel
+#   with a store inside the step loop (inclusive scan), any ``T``.
+
+#: Column-block width and step-extent cap for the parallel ``seqs``
+#: kernel — ``BT`` is ``next_pow2(T)`` per call, so the tile is at
+#: most ``_SEQS_MAX_T x _SEQS_BN`` elements.
+_SEQS_BN = 256
+_SEQS_MAX_T = 256
+
+
+def _seqs_triton_source(info: dict) -> str:
+    """Emit the generated emitted-scan kernel module for a ``seqs`` spec.
+
+    Dispatches on ``info["scan_mode"]``: the closed-form modes emit
+    the ``tl.cumsum``/``tl.cumprod`` tile kernels (``_gs`` strided,
+    ``_gsc`` dense), everything else the serial emitted fold.
+    """
+    mode = info.get("scan_mode", "fold")
+    if mode in ("cumsum", "cumprod"):
+        return _seqs_scan_source(info, mode)
+    return _seqs_fold_source(info)
+
+
+def _seqs_scan_source(info: dict, mode: str) -> str:
+    """Emit the parallel-scan kernels for the closed-form modes.
+
+    ``_gs`` is the STRIDED kernel: the operand is viewed as
+    ``(P, T, K)`` — ``P`` a rank-≤1 prefix (grid axis 0), ``T`` the
+    step axis, ``K`` the contiguous trailing block (grid axis 1 over
+    ``BN``-wide column blocks) — so the scan reads the tensor in
+    place, no transpose copy.  ``s_t``/``s_p`` are the step/prefix
+    element strides; the output is a fresh contiguous ``(P, T, K)``
+    the host reshapes to the operand's shape.  ``_gsc`` is the dense
+    fallback: ``(T, N)`` rows for shapes the strided view cannot
+    express.  Padding rows past ``T`` carry the scan's identity
+    (``0.0`` cumsum / ``1.0`` cumprod — trailing identity rows never
+    reach a stored prefix).  Single-sequence-operand specs only —
+    enforced by :func:`_seqs_binding`.
+    """
+    prim = "tl.cumsum" if mode == "cumsum" else "tl.cumprod"
+    pad = "0.0" if mode == "cumsum" else "1.0"
+    return (
+        "import triton\n"
+        "import triton.language as tl\n"
+        "import triton.language.extra.libdevice as libdevice\n"
+        "\n\n@triton.jit\n"
+        "def _gs(x_ptr, out_ptr, T, K, P, s_t, s_p,"
+        " BT: tl.constexpr, BN: tl.constexpr):\n"
+        "    p = tl.program_id(0)\n"
+        "    kb = tl.program_id(1)\n"
+        "    offs_t = tl.arange(0, BT)\n"
+        "    offs_k = kb * BN + tl.arange(0, BN)\n"
+        "    t_mask = offs_t < T\n"
+        "    k_mask = offs_k < K\n"
+        "    tile = tl.load(\n"
+        "        x_ptr + p.to(tl.int64) * s_p"
+        " + offs_t[:, None].to(tl.int64) * s_t\n"
+        "        + offs_k[None, :].to(tl.int64),\n"
+        f"        mask=t_mask[:, None] & k_mask[None, :], other={pad})\n"
+        f"    tile = {prim}(tile, 0)\n"
+        "    tl.store(\n"
+        "        out_ptr + p.to(tl.int64) * (T.to(tl.int64) * K)\n"
+        "        + offs_t[:, None].to(tl.int64) * K\n"
+        "        + offs_k[None, :].to(tl.int64),\n"
+        "        tile,\n"
+        "        mask=t_mask[:, None] & k_mask[None, :])\n"
+        "\n\n@triton.jit\n"
+        "def _gsc(x_ptr, out_ptr, T, N, BT: tl.constexpr,"
+        " BN: tl.constexpr):\n"
+        "    pid = tl.program_id(0)\n"
+        "    offs_t = tl.arange(0, BT)\n"
+        "    offs_n = pid * BN + tl.arange(0, BN)\n"
+        "    t_mask = offs_t < T\n"
+        "    n_mask = offs_n < N\n"
+        "    tile = tl.load(\n"
+        "        x_ptr + offs_t[:, None] * N + offs_n[None, :],\n"
+        f"        mask=t_mask[:, None] & n_mask[None, :], other={pad})\n"
+        f"    tile = {prim}(tile, 0)\n"
+        "    tl.store(\n"
+        "        out_ptr + offs_t[:, None] * N + offs_n[None, :],\n"
+        "        tile,\n"
+        "        mask=t_mask[:, None] & n_mask[None, :])\n"
+    )
+
+
+def _seqs_fold_source(info: dict) -> str:
+    """Emit the serial emitted-fold kernel for a generic ``seqs`` spec.
+
+    The ``seq`` kernel's step loop with the accumulator stored after
+    EVERY update — ``out[t] = acc_t`` — so the ``(T, N)`` output is
+    the inclusive prefix tensor the carrier denotes.  ``"const"``
+    operands ride exactly as in :func:`_seq_triton_source`.
+    """
+    ptrs = [f"{m}_ptr" for m in info["seq"]]
+    ptrs += [f"{m}_ptr" for m in info.get("const", ())]
+    params = ", ".join([*ptrs, "h_ptr"])
+    loads = "".join(
+        f"        {m} = tl.load({m}_ptr + row + off,"
+        " mask=mask, other=0.0)\n"
+        for m in info["seq"]
+    )
+    cloads = "".join(
+        f"    {m} = tl.load({m}_ptr + off, mask=mask, other=0.0)\n"
+        for m in info.get("const", ())
+    )
+    return (
+        "import triton\n"
+        "import triton.language as tl\n"
+        "import triton.language.extra.libdevice as libdevice\n"
+        "\n\n@triton.jit\n"
+        f"def _gs({params}, out_ptr, T, N, BLOCK: tl.constexpr):\n"
+        "    off = tl.program_id(0).to(tl.int64) * BLOCK"
+        " + tl.arange(0, BLOCK)\n"
+        "    mask = off < N\n"
+        f"    acc = tl.load(h_ptr + off,"
+        " mask=mask, other=0.0)\n"
+        f"{cloads}"
+        "    for t in range(T):\n"
+        "        row = t.to(tl.int64) * N\n"
+        f"{loads}"
+        f"        acc = ({info['a']}) * acc + ({info['b']})\n"
+        "        tl.store(out_ptr + row + off, acc, mask=mask)\n"
+    )
+
+
+def _seqs_strided_view(x: Any, ax: int):
+    """``(P, T, K, s_t, s_p)`` view of *x* for the strided kernel.
+
+    The operand must read as ``(P, T, K)`` in place: ``T`` the step
+    axis, ``K`` the contiguous trailing block (every dim after the
+    step axis C-contiguous, step stride == ``K``), and ``P`` a
+    rank-≤1 prefix — dims *before* the step axis collapse to one
+    program axis only when there is at most one of them (a
+    multi-dim prefix has no single stride and declines).  Returns
+    ``None`` when the view does not exist — the caller falls back
+    to the dense ``(T, N)`` kernel, which pays a transpose copy but
+    denotes the same scan.
+    """
+    shape = tuple(x.shape)
+    r = len(shape)
+    s = ax % r
+    if s > 1:
+        return None
+    k_ext = 1
+    for d in shape[s + 1 :]:
+        k_ext *= d
+    # trailing dims must be C-contiguous and the step stride the
+    # block extent — the ``(P, T, K)`` flat read is then exact.
+    for i in range(s + 1, r):
+        want = 1
+        for d in shape[i + 1 :]:
+            want *= d
+        if x.stride(i) != want:
+            return None
+    if x.stride(s) != k_ext:
+        return None
+    if s == 0:
+        return 1, shape[0], k_ext, k_ext, 0
+    return shape[0], shape[1], k_ext, k_ext, x.stride(0)
+
+
+def _seqs_dense_args(vals: dict, info: dict, axis: int | None) -> tuple:
+    """Normalise a closed-form ``seqs`` call to dense ``(T, N)`` rows.
+
+    Single sequence operand (the mode contract): movedim the step
+    axis to the front, flatten the state space to ``N`` — the same
+    ``(T, N)`` layout every scan kernel consumes.
+    """
+    m = info["seq"][0]
+    x = vals[m]
+    ax = _seq_axis(x.shape, vals[info["h"]].shape, axis)
+    xt = x.movedim(ax, 0)
+    state = xt.shape[1:]
+    dt = _scan_dtype(vals, info["params"])
+    rows = xt.to(dt).contiguous().view(xt.shape[0], -1)
+    return rows, state, rows.shape[0], rows.shape[1], dt, ax
+
+
+def _seqs_binding(mod: Any, info: dict, axis: int | None) -> Any:
+    """Host wrapper for an emitted-scan kernel module — mode dispatch.
+
+    ``fn(*vals)`` binds the spec metavars positionally, runs the
+    closed-form tile kernel for ``cumsum``/``cumprod`` specs and the
+    serial emitted fold otherwise; both return the prefix tensor in
+    the operand's own shape (step axis restored).  *mod* is the
+    generated module — ``_gs`` everywhere, plus ``_gsc`` on the
+    closed-form modes.
+    """
+    mode = info.get("scan_mode", "fold")
+    if mode in ("cumsum", "cumprod"):
+        if len(info["seq"]) != 1 or info.get("const"):
+            raise ValueError(
+                "closed-form seqs scan needs exactly one operand"
+            )
+        return _seqs_scan_binding(mod, info, axis)
+    return _seqs_fold_binding(mod._gs, info, axis)
+
+
+def _seqs_scan_binding(mod: Any, info: dict, axis: int | None) -> Any:
+    """Host wrapper for the ``tl.cumsum``/``tl.cumprod`` tile kernels.
+
+    Per call: the strided ``(P, T, K)`` view when the operand's
+    strides allow it (no transpose paid), else the dense ``(T, N)``
+    rows.  Both kernels denote the same inclusive scan; the output
+    is always a fresh contiguous tensor in the operand's shape.
+    """
+
+    def fn(*args: Any, **_attrs: Any) -> Any:
+        import torch
+
+        vals = dict(zip(info["params"], args, strict=True))
+        m = info["seq"][0]
+        x = vals[m]
+        ax = _seq_axis(x.shape, vals[info["h"]].shape, axis)
+        dt = _scan_dtype(vals, info["params"])
+        if dt != x.dtype:
+            raise ValueError(
+                f"seqs scan dtype {dt} != operand dtype {x.dtype}"
+            )
+        t_len = x.shape[ax]
+        if t_len > _SEQS_MAX_T:
+            raise ValueError(
+                f"seqs scan step extent {t_len} > {_SEQS_MAX_T}"
+            )
+        if not x.is_cuda:
+            raise RuntimeError(
+                "generated seqs kernels need CUDA tensors"
+            )
+        bt = 1 << (t_len - 1).bit_length()
+        view = _seqs_strided_view(x, ax)
+        if view is not None:
+            p_ext, _t, k_ext, s_t, s_p = view
+            out = torch.empty(
+                p_ext, t_len, k_ext, dtype=dt, device=x.device
+            )
+            mod._gs[(p_ext, (k_ext + _SEQS_BN - 1) // _SEQS_BN)](
+                x,
+                out,
+                t_len,
+                k_ext,
+                p_ext,
+                s_t,
+                s_p,
+                BT=bt,
+                BN=_SEQS_BN,
+            )
+            return out.reshape(x.shape)
+        rows, state, t_len, n, _dt, ax = _seqs_dense_args(
+            vals, info, axis
+        )
+        out = torch.empty(t_len, n, dtype=dt, device=rows.device)
+        mod._gsc[((n + _SEQS_BN - 1) // _SEQS_BN,)](
+            rows,
+            out,
+            t_len,
+            n,
+            BT=bt,
+            BN=_SEQS_BN,
+        )
+        return out.view((t_len, *state)).movedim(0, ax)
+
+    return fn
+
+
+def _seqs_fold_binding(kern: Any, info: dict, axis: int | None) -> Any:
+    """Host wrapper for the serial emitted-fold kernel.
+
+    Same operand normalisation as :func:`_seq_args` — the ``(T, N)``
+    rows, the broadcast state space, the flattened carry — then a
+    ``(T, N)`` output viewed back to ``(T, *state)`` and moved so
+    the emitted axis lands where the step axis sat.
+    """
+
+    def fn(*args: Any, **_attrs: Any) -> Any:
+        import torch
+
+        vals = dict(zip(info["params"], args, strict=True))
+        xs = torch.broadcast_tensors(*(vals[m] for m in info["seq"]))
+        full = xs[0].shape
+        if not full:
+            raise ValueError("scan operands carry no step axis")
+        ax = _seq_axis(full, vals[info["h"]].shape, axis)
+        t_len = full[ax]
+        state = full[:ax] + full[ax + 1 :]
+        dt = _scan_dtype(vals, info["params"])
+        rows = {
+            m: x.to(dt).movedim(ax, 0).contiguous().view(t_len, -1)
+            for m, x in zip(info["seq"], xs, strict=True)
+        }
+        h_flat = (
+            torch.broadcast_to(vals[info["h"]].to(dt), state)
+            .contiguous()
+            .view(-1)
+        )
+        cflat = {
+            m: torch.broadcast_to(vals[m].to(dt), state)
+            .contiguous()
+            .view(-1)
+            for m in info.get("const", ())
+        }
+        if not rows[info["seq"][0]].is_cuda:
+            raise RuntimeError(
+                "generated seqs kernels need CUDA tensors"
+            )
+        n = h_flat.numel()
+        out = torch.empty(t_len, n, dtype=dt, device=h_flat.device)
+        kern[((n + _SCAN_BLOCK - 1) // _SCAN_BLOCK,)](
+            *(rows[m] for m in info["seq"]),
+            *(cflat[m] for m in info.get("const", ())),
+            h_flat,
+            out,
+            t_len,
+            n,
+            BLOCK=_SCAN_BLOCK,
+        )
+        return out.view((t_len, *state)).movedim(0, ax)
 
     return fn
 
@@ -2926,6 +3402,15 @@ def scan_triton_bindings(
         src = _scan_triton_source(info)
         path = _kernel_cache() / f"_gs_{h['kernel']}.py"
         path.write_text(src)
+        if info["kind"] == "seqs":
+            # the emitted scan ships a MODULE — ``_gs`` plus the
+            # dense ``_gsc`` fallback on closed-form modes — so the
+            # binding gets the module, not a single entry point.
+            mod = _load_generated_module(path)
+            if mod is None:
+                continue
+            out[h["kernel"]] = _seqs_binding(mod, info, ax)
+            continue
         kern = _load_generated(path, "_gs")
         if kern is None:
             continue  # module load declined — keep the torch path
@@ -3002,10 +3487,18 @@ def scan_handlers(
     handler belongs on sites whose ``a``/``b`` operands genuinely
     carry a step axis — the binding raises on operands that do not.
     """
-    from mlopt_discovery.meta_arena import _spec_of
+    from mlopt_discovery.meta_arena import _canon_concrete, _spec_of
 
     skip = covered if covered is not None else set()
     out: dict[str, dict] = {}
+    # (canon, site-record) pairs already minted — the canon alone is
+    # NOT the dedup key for site records: two sites can share one
+    # spec skeleton while ``leaf_env`` binds different operands and
+    # ``chain`` routes a different recurrence — distinct folds that
+    # must mint distinct ``scan_<i>`` kernels.  Plain spec/term
+    # items carry ``extra == {}`` and dedup on canon exactly as
+    # before.
+    seen: list = []
     for term in terms:
         term, extra = _site_parts(term)
         pattern = (
@@ -3015,9 +3508,13 @@ def scan_handlers(
         )
         if scan_spec(pattern) is None:
             continue
+        canon = _canon_concrete(pattern)
         # equality, not membership — canon specs carry attr dicts
-        if _canon_taken(pattern, out, skip):
+        if any(canon == c for c in skip) or any(
+            c == canon and e == extra for c, e in seen
+        ):
             continue
+        seen.append((canon, extra))
         tag = f"scan_{len(out)}"
         out[tag] = {
             "pattern": pattern,

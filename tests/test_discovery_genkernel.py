@@ -1953,6 +1953,43 @@ class TestScanHandlers:
         }
         assert gk.scan_handlers([t1], covered=covered) == {}
 
+    def test_same_spec_different_site_records_mint_both(self):
+        # two site records sharing one spec skeleton but binding
+        # different leaf_env operands / routing different chains are
+        # distinct folds — canon dedup must not collapse them
+        # (the _BidirectionalScan forward+flip backward case)
+        a, b, h = _v("a", 8, 4), _v("b", 8, 4), _v("h", 4)
+        a2, b2, h2 = _v("a2", 8, 4), _v("b2", 8, 4), _v("h2", 4)
+        spec = (
+            "applyd",
+            ("aff_diag", "Q1", "Q2"),
+            "H",
+            {"kind": "seq", "axis": 1},
+        )
+        chain1 = _p("add", _p("mul", a, h), b)
+        chain2 = _p("add", _p("mul", a2, h2), b2)
+        sites = [
+            {
+                "spec": spec,
+                "leaf_env": {"Q1": a, "Q2": b, "H": h},
+                "axis": 1,
+                "chain": chain1,
+            },
+            {
+                "spec": spec,
+                "leaf_env": {"Q1": a2, "Q2": b2, "H": h2},
+                "axis": 1,
+                "chain": chain2,
+            },
+        ]
+        hs = gk.scan_handlers(sites)
+        assert len(hs) == 2
+        assert hs["scan_0"]["chain"] is chain1
+        assert hs["scan_1"]["chain"] is chain2
+        # identical records still dedup — same fold, same route
+        hs2 = gk.scan_handlers([*sites, dict(sites[0])])
+        assert len(hs2) == 2
+
 
 class TestSeqScanDenotation:
     """``seq_scan_denotation`` — the spelled fold, device-free."""
@@ -3454,3 +3491,238 @@ class TestReductionTriton:
             spec_nt, {"X1": a, "X2": b}, tb._IR_TO_TORCH
         )
         torch.testing.assert_close(got_nt, ref_nt)
+
+
+_SEQ_CUMSPEC = (
+    "applyd",
+    ("aff_diag", 1, "X1"),
+    "H",
+    {"kind": "seqs", "axis": 1},
+)
+_SEQ_CUMPSPEC = (
+    "applyd",
+    ("aff_diag", "X1", 0),
+    "H",
+    {"kind": "seqs", "axis": 1},
+)
+
+
+class TestSeqsSpec:
+    """``scan_spec`` — the emitted-scan (``kind="seqs"``) recogniser."""
+
+    def test_cumsum_mode_recognised(self):
+        info = gk.scan_spec(_SEQ_CUMSPEC)
+        assert info["kind"] == "seqs"
+        assert info["scan_mode"] == "cumsum"
+        assert info["seq"] == ["X1"]
+        assert info["params"] == ["X1", "H"]
+        assert info["axis"] == 1
+
+    def test_cumprod_mode_recognised(self):
+        info = gk.scan_spec(_SEQ_CUMPSPEC)
+        assert info["kind"] == "seqs"
+        assert info["scan_mode"] == "cumprod"
+
+    def test_generic_leaf_is_fold_mode(self):
+        spec = (
+            "applyd",
+            ("aff_diag", ("mul", "X1", 2.0), "X1"),
+            "H",
+            {"kind": "seqs", "axis": 1},
+        )
+        info = gk.scan_spec(spec)
+        assert info["kind"] == "seqs"
+        assert info["scan_mode"] == "fold"
+
+    def test_seqs_requires_one_leaf(self):
+        spec = (
+            "applyd",
+            ("affd_compose", ("aff_diag", 1, "X1"), ("aff_diag", 1, "X2")),
+            "H",
+            {"kind": "seqs", "axis": 1},
+        )
+        assert gk.scan_spec(spec) is None
+
+
+class TestSeqsDenotation:
+    """``seqs_denotation`` — every prefix state, not the last."""
+
+    def _x(self, B=2, T=6, D=4):
+        torch = pytest.importorskip("torch")
+        g = torch.Generator().manual_seed(0)
+        return torch.randn(B, T, D, generator=g, dtype=torch.float64)
+
+    def test_cumsum_denotation_is_torch_cumsum(self):
+        torch = pytest.importorskip("torch")
+        x = self._x()
+        h = torch.zeros((), dtype=torch.float64)
+        fn = gk.seqs_denotation(_SEQ_CUMSPEC, axis=1)
+        assert fn is not None
+        out = fn(x, h)
+        assert out.shape == x.shape
+        torch.testing.assert_close(out, torch.cumsum(x, dim=1))
+
+    def test_cumprod_denotation_is_torch_cumprod(self):
+        torch = pytest.importorskip("torch")
+        x = self._x().abs() + 0.5
+        h = torch.ones((), dtype=torch.float64)
+        fn = gk.seqs_denotation(_SEQ_CUMPSPEC, axis=1)
+        out = fn(x, h)
+        torch.testing.assert_close(out, torch.cumprod(x, dim=1))
+
+    def test_fold_mode_denotation_emits_all_prefixes(self):
+        torch = pytest.importorskip("torch")
+        x = self._x(B=2, T=5, D=3)
+        spec = (
+            "applyd",
+            ("aff_diag", ("mul", "X1", 2.0), "X1"),
+            "H",
+            {"kind": "seqs", "axis": 1},
+        )
+        fn = gk.seqs_denotation(spec, axis=1)
+        h = torch.zeros((), dtype=torch.float64)
+        out = fn(x, h)
+        acc = torch.zeros(2, 3, dtype=torch.float64)
+        outs = []
+        for t in range(5):
+            acc = (2.0 * x[:, t]) * acc + x[:, t]
+            outs.append(acc)
+        torch.testing.assert_close(out, torch.stack(outs, dim=1))
+
+    def test_handler_denotation_dispatches_seqs(self):
+        torch = pytest.importorskip("torch")
+        x = self._x(B=1, T=4, D=3)
+        h = torch.zeros((), dtype=torch.float64)
+        hd = {
+            "pattern": _SEQ_CUMSPEC,
+            "kernel": "k",
+            "args": ("X1", "H"),
+            "axis": 1,
+        }
+        fn = gk.handler_denotation(hd)
+        assert fn is not None
+        torch.testing.assert_close(fn(x, h), torch.cumsum(x, dim=1))
+
+    def test_seqs_denotation_declines_other_kinds(self):
+        assert (
+            gk.seqs_denotation(("applyd", ("aff_diag", "A", "B"), "H"))
+            is None
+        )
+        assert gk.seqs_denotation(("mul", "X1", "X2")) is None
+
+
+class TestSeqsBindings:
+    """Generated emitted-scan kernels — fp64-verified vs the scan."""
+
+    def _handler(self, spec=_SEQ_CUMSPEC, kernel="ss_t", axis=1):
+        return {
+            "s": {
+                "pattern": spec,
+                "kernel": kernel,
+                "args": ("X1", "H"),
+                "axis": axis,
+            }
+        }
+
+    def _x(self, *shape):
+        torch = _cuda()
+        g = torch.Generator(device="cuda").manual_seed(0)
+        return torch.randn(
+            *shape, generator=g, dtype=torch.float64, device="cuda"
+        )
+
+    def test_cumsum_strided_kernel_matches(self):
+        # (B, T, d, d) contiguous, step axis 1 — the strided
+        # ``(P, T, K)`` launch, no transpose copy
+        torch = _cuda()
+        b = gk.scan_triton_bindings(self._handler(kernel="ss_a"))
+        x = self._x(2, 12, 8, 8)
+        h = torch.zeros((), dtype=torch.float64, device="cuda")
+        got = b["ss_a"](x, h)
+        torch.testing.assert_close(
+            got, torch.cumsum(x, dim=1), atol=1e-12, rtol=1e-12
+        )
+
+    def test_cumsum_axis0_kernel_matches(self):
+        torch = _cuda()
+        spec = (
+            "applyd",
+            ("aff_diag", 1, "X1"),
+            "H",
+            {"kind": "seqs", "axis": 0},
+        )
+        b = gk.scan_triton_bindings(self._handler(spec, "ss_b", 0))
+        x = self._x(10, 3, 8)
+        h = torch.zeros((), dtype=torch.float64, device="cuda")
+        got = b["ss_b"](x, h)
+        torch.testing.assert_close(
+            got, torch.cumsum(x, dim=0), atol=1e-12, rtol=1e-12
+        )
+
+    def test_cumsum_dense_fallback_matches(self):
+        # a non-contiguous operand the strided view cannot express
+        # takes the dense ``(T, N)`` kernel — same denotation
+        torch = _cuda()
+        b = gk.scan_triton_bindings(self._handler(kernel="ss_c"))
+        base = torch.randn(
+            2, 8, 12,
+            generator=torch.Generator(device="cuda").manual_seed(1),
+            dtype=torch.float64, device="cuda",
+        )
+        x = base.permute(0, 2, 1)  # (2,12,8) non-contiguous
+        h = torch.zeros((), dtype=torch.float64, device="cuda")
+        got = b["ss_c"](x, h)
+        torch.testing.assert_close(
+            got, torch.cumsum(x, dim=1), atol=1e-12, rtol=1e-12
+        )
+
+    def test_cumprod_kernel_matches(self):
+        torch = _cuda()
+        b = gk.scan_triton_bindings(
+            self._handler(_SEQ_CUMPSPEC, "ss_d")
+        )
+        x = self._x(2, 10, 8).abs() + 0.5
+        h = torch.ones((), dtype=torch.float64, device="cuda")
+        got = b["ss_d"](x, h)
+        torch.testing.assert_close(
+            got, torch.cumprod(x, dim=1), atol=1e-9, rtol=1e-9
+        )
+
+    def test_fold_mode_kernel_emits_prefixes(self):
+        torch = _cuda()
+        spec = (
+            "applyd",
+            ("aff_diag", ("mul", "X1", 2.0), "X1"),
+            "H",
+            {"kind": "seqs", "axis": 1},
+        )
+        b = gk.scan_triton_bindings(self._handler(spec, "ss_e"))
+        x = self._x(2, 7, 6)
+        h = torch.zeros((), dtype=torch.float64, device="cuda")
+        got = b["ss_e"](x, h)
+        acc = torch.zeros(2, 6, dtype=torch.float64, device="cuda")
+        outs = []
+        for t in range(7):
+            acc = (2.0 * x[:, t]) * acc + x[:, t]
+            outs.append(acc)
+        torch.testing.assert_close(
+            got, torch.stack(outs, dim=1), atol=1e-10, rtol=1e-10
+        )
+
+    def test_step_extent_cap_declines(self):
+        # T beyond the tile cap raises honestly — the referee drops
+        # the claim rather than shipping a wrong kernel
+        torch = _cuda()
+        b = gk.scan_triton_bindings(self._handler(kernel="ss_f"))
+        x = self._x(1, gk._SEQS_MAX_T + 1, 4)
+        h = torch.zeros((), dtype=torch.float64, device="cuda")
+        with pytest.raises(ValueError, match="step extent"):
+            b["ss_f"](x, h)
+
+    def test_cpu_operand_declines(self):
+        torch = _cuda()
+        b = gk.scan_triton_bindings(self._handler(kernel="ss_g"))
+        x = torch.randn(2, 6, 4, dtype=torch.float64)
+        h = torch.zeros((), dtype=torch.float64)
+        with pytest.raises(RuntimeError, match="CUDA"):
+            b["ss_g"](x, h)

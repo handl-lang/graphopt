@@ -1002,6 +1002,115 @@ class TestSeqScanSites:
         plain = ma.MetaArena(term)
         assert op_repr(plain.deliverable(term)) == op_repr(term)
 
+    def _two_chains(self, t_len: int = 3):
+        """Two same-shaped recurrences over disjoint operands, summed.
+
+        The ``_BidirectionalScan`` shape at toy scale: identical
+        ``add(mul(sel(a),·), mul(sel(b),sel(u)))`` skeletons whose
+        selects read DIFFERENT sequence vars — same spec tuple,
+        different ``leaf_env``.  Returns ``(term, (chain_f, chain_b))``
+        so tests can check each site routes its own chain.
+        """
+
+        def chain(tag: str):
+            A, B, U = (
+                _v(f"A{tag}", 2, t_len, 4),
+                _v(f"B{tag}", 2, t_len, 4),
+                _v(f"U{tag}", 2, t_len, 4),
+            )
+            h = _v(f"H0{tag}", 2, 4)
+            for t in range(t_len):
+                b_t = Op.make(
+                    "mul",
+                    Op.make("select", B, dim=1, index=t),
+                    Op.make("select", U, dim=1, index=t),
+                )
+                h = Op.make(
+                    "add",
+                    Op.make(
+                        "mul",
+                        Op.make("select", A, dim=1, index=t),
+                        h,
+                    ),
+                    b_t,
+                )
+            return h
+
+        cf, cb = chain("f"), chain("b")
+        return Op.make("add", cf, cb), (cf, cb)
+
+    def test_seq_sites_mints_each_same_spec_chain(self):
+        # two chains with identical spec tuples but different
+        # leaf_env operands are two distinct folds — the collector
+        # must mint BOTH (the _BidirectionalScan coverage bug)
+        pytest.importorskip("torch")
+
+        term, (cf, cb) = self._two_chains()
+        sites = play._seq_scan_sites(term)
+        assert len(sites) == 2
+        assert sites[0]["spec"] == sites[1]["spec"]
+        assert sites[0]["leaf_env"] != sites[1]["leaf_env"]
+        assert {s["chain"] for s in sites} == {cf, cb}
+
+    def test_two_chain_folds_each_equal_their_chain(self):
+        # each minted fold's denotation must reproduce ITS OWN
+        # unrolled chain, bit for bit — the leaf_env binding is what
+        # keeps the two same-spec folds honest
+        torch = pytest.importorskip("torch")
+        import mlopt_torch.torch_bridge as tb
+
+        from mlopt_discovery import genkernel as gk
+
+        term, _chains = self._two_chains()
+        sites = play._seq_scan_sites(term)
+        assert len(sites) == 2
+        var_env = {
+            n: torch.randn(2, 3, 4)
+            for n in ("Af", "Bf", "Uf", "Ab", "Bb", "Ub")
+        }
+        var_env.update(
+            {"H0f": torch.randn(2, 4), "H0b": torch.randn(2, 4)}
+        )
+        bindings = tb._IR_TO_TORCH
+        for s in sites:
+            vals = {
+                m: gk._bound_val(t, var_env, bindings)
+                for m, t in s["leaf_env"].items()
+            }
+            h = {
+                "pattern": s["spec"],
+                "args": tuple(gk._spec_metas(s["spec"])),
+                "axis": s["axis"],
+            }
+            got = gk.handler_denotation(h)(
+                *[vals[m] for m in h["args"]]
+            )
+            want = tb.eval_term(
+                s["chain"],
+                var_env=var_env,
+                param_env=var_env,
+                bindings=bindings,
+                strict=True,
+            )
+            torch.testing.assert_close(got, want)
+
+    def test_two_chain_handlers_route_both(self):
+        # scan_handlers must not canon-dedup the second site either:
+        # scan_0 and scan_1 carry the same spec but different
+        # leaf_env/chain records, and delivery rewrites BOTH chains
+        pytest.importorskip("torch")
+        from mlopt_core.ir import op_repr
+        from mlopt_discovery import genkernel as gk
+
+        term, (cf, cb) = self._two_chains()
+        hs = gk.scan_handlers(play._seq_scan_sites(term))
+        assert len(hs) == 2
+        assert {h["chain"] for h in hs.values()} == {cf, cb}
+        board = ma.MetaArena(term, handlers=hs)
+        out = op_repr(board.deliverable(term))
+        assert "scan_0_k" in out
+        assert "scan_1_k" in out
+
     def test_route_matches_eclass_member_not_chain_object(self):
         # saturation rewrites inside the chain freely: the extracted
         # representative is usually a DIFFERENT member of the chain's
@@ -2259,3 +2368,92 @@ class TestReductionSites:
             )
         }
         assert play._claim_measurable("red_0", h)
+
+
+class TestCumsumSites:
+    """The emitted-scan collector — ``cumsum``/``cumprod`` ops.
+
+    A ``cumsum`` node is ONE op — no ``add(mul(·,·),·)`` spine — so
+    the seq/seqm collectors cannot see it, yet the prefix sum IS the
+    ``a ≡ 1`` recurrence emitted at every step.  These tests pin the
+    ``kind="seqs"`` mint, the neutral-element carry binding, and the
+    honest declines.
+    """
+
+    def _term(self, op: str = "cumsum", dim: int = 1):
+        from mlopt_core.ir import Op
+
+        x = _v("x", 2, 5, 3)
+        return Op.make(
+            op,
+            Op.make("mul", x, Op.make("add", x, 1.0)),
+            dim=dim,
+        )
+
+    def test_cumsum_sites_mints_emitted_scan_spec(self):
+        pytest.importorskip("torch")
+        sites = play._cumsum_sites(self._term())
+        assert len(sites) == 1
+        s = sites[0]
+        spec = s["spec"]
+        assert spec[0] == "applyd"
+        assert spec[1] == ("aff_diag", 1, "X1")
+        assert spec[2] == "H"
+        assert spec[3] == {"kind": "seqs", "axis": 1}
+        # the carry is the additive neutral element, bound as a
+        # Const leaf — not a guessed parameter
+        from mlopt_core.ir import Const
+
+        assert s["leaf_env"]["H"] == Const(0.0)
+        assert s["chain"].op == "cumsum"
+        assert s["axis"] == 1
+
+    def test_cumprod_sites_mints_unit_carry(self):
+        pytest.importorskip("torch")
+        sites = play._cumsum_sites(self._term(op="cumprod"))
+        assert len(sites) == 1
+        assert sites[0]["spec"][1] == ("aff_diag", "X1", 0)
+        from mlopt_core.ir import Const
+
+        assert sites[0]["leaf_env"]["H"] == Const(1.0)
+
+    def test_negative_dim_normalises(self):
+        pytest.importorskip("torch")
+        sites = play._cumsum_sites(self._term(dim=-2))
+        assert sites[0]["spec"][3]["axis"] == 1
+        assert sites[0]["axis"] == 1
+
+    def test_declines_bad_attrs_and_arity(self):
+        pytest.importorskip("torch")
+        from mlopt_core.ir import Op
+
+        x = _v("x", 2, 5, 3)
+        # extra attr — not the cumsum spelling the collector knows
+        assert play._cumsum_sites(
+            Op.make("cumsum", x, dim=1, extra=2)
+        ) == []
+        # missing dim — the step axis is not declared
+        assert play._cumsum_sites(Op.make("cumsum", x)) == []
+        # non-int dim
+        assert play._cumsum_sites(Op.make("cumsum", x, dim="1")) == []
+        # two args is not a cumsum
+        assert (
+            play._cumsum_sites(Op.make("cumsum", x, x, dim=1)) == []
+        )
+
+    def test_all_scan_sites_includes_cumsum(self):
+        pytest.importorskip("torch")
+        sites = play._all_scan_sites(self._term())
+        assert any(s["spec"][3].get("kind") == "seqs" for s in sites)
+
+    def test_minted_handler_is_a_recognised_seqs_spec(self):
+        pytest.importorskip("torch")
+        from mlopt_discovery import genkernel as gk
+
+        hs = gk.scan_handlers(play._cumsum_sites(self._term()))
+        assert len(hs) == 1
+        h = next(iter(hs.values()))
+        info = gk.scan_spec(h["pattern"])
+        assert info is not None and info["kind"] == "seqs"
+        assert info["scan_mode"] == "cumsum"
+        assert gk.handler_denotation(h) is not None

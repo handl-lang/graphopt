@@ -797,12 +797,17 @@ def _scan_sites(term: Any) -> list:
             state = f"X{len(names) + 1}"
             leaf_env[state] = member.args[1]
             spec = ("applyd", f_spec, state, {"kind": "unrolled"})
-            if any(spec == s["spec"] for s in out):
-                continue
             rec: dict = {"spec": spec, "leaf_env": leaf_env}
             chain = raw_by_class.get(eg.find(cls.id))
             if chain is not None:
                 rec["chain"] = chain
+            # dedup on the WHOLE record, not the spec tuple alone:
+            # two carrier members can share one spec skeleton while
+            # ``leaf_env`` binds different operands — distinct folds
+            # the referee must measure and distinct chains the
+            # delivery route must rewrite.
+            if rec in out:
+                continue
             out.append(rec)
     return out
 
@@ -1927,19 +1932,24 @@ def _seq_scan_sites(term: Any) -> list:
         if site is None:
             continue  # next tied reading of the same root
         spec, leaf_env, axis = site
-        if not any(spec == s["spec"] for s in out):
-            out.append(
-                {
-                    "spec": spec,
-                    "leaf_env": leaf_env,
-                    "axis": axis,
-                    # the unrolled chain this fold denotes — the
-                    # deliver-time route's LHS (the intake IR has no
-                    # ``applyd`` node for a claim to match, so the
-                    # rewrite fires on the extracted term instead).
-                    "chain": root,
-                }
-            )
+        rec = {
+            "spec": spec,
+            "leaf_env": leaf_env,
+            "axis": axis,
+            # the unrolled chain this fold denotes — the
+            # deliver-time route's LHS (the intake IR has no
+            # ``applyd`` node for a claim to match, so the
+            # rewrite fires on the extracted term instead).
+            "chain": root,
+        }
+        # dedup on the whole record — spec AND leaf_env AND chain —
+        # not the spec tuple alone: the fold's denotation binds the
+        # ``leaf_env`` operands, so two same-shaped chains over
+        # different sequences (e.g. a bidirectional scan's forward
+        # and flipped backward recurrences) are two distinct folds
+        # that must each mint a site.
+        if rec not in out:
+            out.append(rec)
         for _m, _i, s in steps:
             emitted_states.add(id(s))
         emitted_roots.add(id(root))
@@ -2074,18 +2084,21 @@ def _seqm_scan_sites(term: Any) -> list:
         if site is None:
             continue
         spec, leaf_env, axes = site
-        if not any(spec == s["spec"] for s in out):
-            out.append(
-                {
-                    "spec": spec,
-                    "leaf_env": leaf_env,
-                    "axis": next(iter(axes.values())),
-                    "axes": axes,
-                    # see ``_seq_scan_sites``: the chain root is the
-                    # deliver-time route's LHS.
-                    "chain": root,
-                }
-            )
+        rec = {
+            "spec": spec,
+            "leaf_env": leaf_env,
+            "axis": next(iter(axes.values())),
+            "axes": axes,
+            # see ``_seq_scan_sites``: the chain root is the
+            # deliver-time route's LHS.
+            "chain": root,
+        }
+        # whole-record dedup, same contract as ``_seq_scan_sites``:
+        # the spec tuple does not see ``leaf_env``, so same-shaped
+        # chains over different operands would collapse into one
+        # site and the second fold would never be offered.
+        if rec not in out:
+            out.append(rec)
         for _m, _i, s in steps:
             emitted_states.add(id(s))
         emitted_roots.add(id(root))
@@ -2094,12 +2107,81 @@ def _seqm_scan_sites(term: Any) -> list:
     return out
 
 
+def _cumsum_sites(term: Any) -> list:
+    """Emitted-scan specs minted from ``cumsum``/``cumprod`` ops.
+
+    The select-chain collectors read recurrences spelled as unrolled
+    ``add(mul(·, ·), ·)`` chains; a ``cumsum`` op is ONE node — no
+    spine, no site — even though the prefix sum IS the same
+    recurrence with ``a ≡ 1`` emitted at every step.  This collector
+    reads the op directly and mints the ``kind="seqs"`` spec whose
+    fold denotes every prefix state (``out_t = acc_t``), the form
+    ``genkernel.seqs_denotation``/the ``seqs`` Triton piece implement.
+
+    ``cumsum(x, dim)`` spells ``acc_t = 1·acc_{t-1} + x_t`` from a
+    zero carry; ``cumprod`` spells ``acc_t = x_t·acc_{t-1} + 0`` from
+    a unit carry — the carry is a ``Const`` leaf in ``leaf_env``
+    (the scan's neutral element, not a guessed parameter).  The
+    ``"H"`` metavar binds it; ``"X1"`` binds the scanned child and
+    ``axis`` the normalised step dim (``shape_of``-checked, the same
+    honesty contract the seq collectors keep).  ``chain`` is the
+    ``cumsum``/``cumprod`` node itself — delivery rewrites it to the
+    minted kernel call exactly as the unrolled chains are routed.
+    """
+    from mlopt_core.ir import Const, Op
+    from mlopt_core.typing import INVALID, shape_of
+
+    out: list = []
+    seen: set = set()
+
+    def visit(t: Any) -> None:
+        if not isinstance(t, Op) or id(t) in seen:
+            return
+        seen.add(id(t))
+        for a in t.args:
+            visit(a)
+        if (
+            t.op not in ("cumsum", "cumprod")
+            or len(t.args) != 1
+            or set(t.attrs) - {"dim"}
+            or type(t.attrs.get("dim")) is not int
+        ):
+            return
+        child = t.args[0]
+        sh = shape_of(child)
+        if sh is INVALID or not isinstance(sh, tuple) or not sh:
+            return
+        eff = t.attrs["dim"] % len(sh)
+        if t.op == "cumsum":
+            a_spec, b_spec, carry = 1, "X1", 0.0
+        else:
+            a_spec, b_spec, carry = "X1", 0, 1.0
+        spec = (
+            "applyd",
+            ("aff_diag", a_spec, b_spec),
+            "H",
+            {"kind": "seqs", "axis": eff},
+        )
+        out.append(
+            {
+                "spec": spec,
+                "leaf_env": {"X1": child, "H": Const(carry)},
+                "axis": eff,
+                "chain": t,
+            }
+        )
+
+    visit(term)
+    return out[:_SEQ_SITE_CAP]
+
+
 def _all_scan_sites(term: Any) -> list:
     """All scan site forms: carriers + raw recurrences, both folds."""
     return [
         *_scan_sites(term),
         *_seq_scan_sites(term),
         *_seqm_scan_sites(term),
+        *_cumsum_sites(term),
     ]
 
 
