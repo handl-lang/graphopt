@@ -78,7 +78,7 @@ the delivery verdicts.
 | `prim_delivery.md` / `prim_kernel.md` / `prim_kernel_{fp64,gla,mamba}.json` | do shipped `synop*` folds pay on real wall time — cost-model win, measured loss; a real kernel flips it (~2.6×) |
 | `primitives_finds.md` / `prim_handlers.md` | what the machine minted (21 admitted folds, machine-original) + the fused-body handler hunt |
 | `family_synth.md` / `fusion_schema_mint.md` | minting family *descriptors* (not just bodies) + widening the zoo-real candidate families |
-| `referee{,_proof}.{md,json}` | do the tensor and kernel rule banks share one vocabulary — they do |
+| `referee{,_proof}.{md,json}` | do the tensor and kernel rule banks share one vocabulary — largely disjoint (Jaccard 0.17); crossing works via explicit denotation rows, not a shared vocabulary |
 | `vocabulary.md` | originality is a vocabulary event: fixed-bank 0 % machine-original vs vocabulary arm 99 % |
 | `play_mint_admit.json` | per-candidate admit ledger from a play-mint run |
-| `agenda.{md,jsonl}` | Stage-3: the agenda miner — 8 signal classes → 23 ranked research proposals (`--myco` ingest) |
+| `agenda.{md,jsonl}` | Stage-3: the agenda miner — 9 signal classes → 23 ranked research proposals (`--myco` ingest) |

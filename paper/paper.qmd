@@ -458,7 +458,7 @@ minted guards).
   alpha-siblings.
   The sieve (`bench/drivers/screen/novelty_sieve.py`, results in
   `docs/results_novelty_sieve.md`) ran 24 candidates over the
-  then-242-rule bank (`known_bank()` now counts 265 — the shipped
+  then-242-rule bank (`known_bank()` now counts 300 — the shipped
   `prim:synop*` folds seated since): the review queue is **empty** — the two earlier review items
   (`mul_unsq_nat`, `softsign_fold`) demoted to derivable once their
   catalogued duals (`mul_unsq_rev`, `softsign_expand`) were registered
