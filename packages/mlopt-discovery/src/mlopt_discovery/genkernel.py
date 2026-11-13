@@ -168,6 +168,7 @@ __all__ = [
     "scan_triton_bindings",
     "scan_triton_sink",
     "seq_scan_denotation",
+    "seqm_denotation",
 ]
 
 #: Ops whose torch bindings are pointwise (shape-preserving) — the
@@ -1700,6 +1701,8 @@ def scan_spec(spec: Any) -> dict | None:
     if parts is None:
         return None
     f_spec, h_spec, attrs = parts
+    if attrs is not None and attrs.get("kind") == "seqm":
+        return _seqm_spec(spec)
     leaves = _affd_leaves(f_spec)
     kind = _scan_kind(leaves, attrs)
     if kind is None or leaves is None:
@@ -1873,6 +1876,231 @@ def seq_scan_denotation(spec: Any, *, axis: int | None = None) -> Any:
     return fn
 
 
+# ---------------------------------------------------------------------------
+#  The seqm tier — matrix-state scans with state feedback in ``b``
+# ---------------------------------------------------------------------------
+#
+# The diagonal ``seq`` fold is ``acc = a_t * acc + b_t`` with
+# state-free operands.  The delta-rule family spells a *matrix*
+# state whose update reads the accumulator back:
+#
+#   s' = a_t·s + C_t ⊗ (V_t - S_t·(K_tᵀ s))        (gated)
+#   s' = s     + C_t ⊗ (V_t -      K_tᵀ s)        (plain)
+#
+# spelled elementwise as ``add(mul(a_t, s), write)`` — or
+# ``add(s, write)`` for the unit map — with the previous state
+# ``s`` occurring inside ``write`` through ONE ``matmul(K, s)``.
+# ``play._seqm_site`` mints these as ``("applyd", ("aff_diag", a,
+# b), "H", {"kind": "seqm"})`` specs where ``b`` contains the ``"H"``
+# metavar at exactly that matmul; this section recognises the
+# rank-1-feedback skeleton, spells the torch fold denotation, and
+# emits a tiled Triton kernel (``acc`` a ``(dk, dv)`` tile per
+# program, the ``Kᵀ·acc`` read a masked ``tl.sum`` matvec).
+
+
+def _seqm_sub_ok(sub: Any, h_meta: str) -> bool:
+    """Check a step sub-spec is state-free and elementwise-renderable.
+
+    Every metavar it carries is a sequence operand; ``h_meta``
+    (the accumulator) may only occur inside the recognised
+    ``matmul(K, H)`` read — anywhere else the fold is not the
+    rank-1-feedback form this tier denotes.  The render check keeps
+    the kernel's expr language and the spelled eval in lockstep:
+    a sub-spec the Triton elementwise renderer cannot express
+    declines here rather than failing inside the binding.
+    """
+    if h_meta in _spec_metas(sub):
+        return False
+    return _triton_expr_h(sub, None, _TRITON_CONST_1D) is not None
+
+
+def _seqm_spec_node(spec: Any, op: str, n: int) -> bool:
+    """Check *spec* is a bare ``op`` node of *n* spec elements."""
+    return (
+        isinstance(spec, (tuple, list))
+        and len(spec) == n
+        and spec[0] == op
+        and not any(isinstance(e, dict) for e in spec[1:])
+    )
+
+
+def _seqm_spec_attrs(spec: Any, dims: tuple) -> bool:
+    """Check *spec*'s trailing attr dict pins ``dim`` into *dims*."""
+    if not (
+        isinstance(spec, (tuple, list))
+        and len(spec) == 3
+        and isinstance(spec[2], dict)
+        and set(spec[2]) == {"dim"}
+    ):
+        return False
+    return spec[2]["dim"] in dims
+
+
+def _seqm_parse_p(p: Any, h_meta: str):
+    """Parse the projected-read factor of a seqm ``b`` spec.
+
+    Returns ``(s_spec, k_meta)`` — the optional scalar gate ``S``
+    and the key operand ``K`` of ``matmul(K, H)`` — or ``None``.
+    Accepted shapes::
+
+        squeeze(matmul(K, H), dim in {1, -2})
+        mul(S, <the above>)   (either operand order)
+
+    ``S`` may itself be any elementwise spec; deeper nesting is
+    refused by the single-``mul`` unwrap below.
+    """
+    if _seqm_spec_attrs(p, (1, -2)) and _seqm_spec_node(
+        p[1], "matmul", 3
+    ):
+        m = p[1]
+        if m[2] == h_meta and isinstance(m[1], str) and m[1] != h_meta:
+            return None, m[1]
+        return None
+    if _seqm_spec_node(p, "mul", 3):
+        for s0, p0 in ((p[1], p[2]), (p[2], p[1])):
+            r = _seqm_parse_p(p0, h_meta)
+            if r is not None:
+                return s0, r[1]
+    return None
+
+
+def _seqm_parse_b(b: Any, h_meta: str):
+    """Parse a seqm ``b`` spec into ``(c, v, s, k)`` or ``None``.
+
+    The recognised skeleton is the rank-1-feedback write::
+
+        mul(C, unsqueeze(sub(V, P), dim in {-2, 1}))
+
+    with ``C`` the column factor, ``V`` the row residual target and
+    ``P`` the projected read from :func:`_seqm_parse_p`.  Either
+    ``mul`` operand order is accepted; anything else declines.
+    """
+    if not _seqm_spec_node(b, "mul", 3):
+        return None
+    for c, u in ((b[1], b[2]), (b[2], b[1])):
+        if not _seqm_spec_attrs(u, (-2, 1)):
+            continue
+        r = u[1]
+        if not _seqm_spec_node(r, "sub", 3):
+            continue
+        parsed = _seqm_parse_p(r[2], h_meta)
+        if parsed is None:
+            continue
+        return c, r[1], parsed[0], parsed[1]
+    return None
+
+
+def _seqm_spec(spec: Any) -> dict | None:
+    """Recognise a ``kind="seqm"`` scan spec; descriptor or ``None``.
+
+    The descriptor carries what the flat ``seq`` info cannot: the
+    parsed rank-1-feedback operands ``"c"``/``"v"``/``"s"``/``"k"``
+    (the column factor, the row residual, the optional scalar gate
+    and the matvec key), the full ``"a"``/``"b"`` step specs for the
+    spelled denotation, and ``"params"`` — the spec metavars in
+    ``_spec_metas`` order, which interleaves ``"H"`` exactly where
+    the ``b`` spec first mentions it (the positional binding
+    signature is the same order by construction).
+    """
+    parts = _applyd_operands(spec)
+    if parts is None:
+        return None
+    f_spec, h_spec, attrs = parts
+    if not (
+        isinstance(f_spec, (tuple, list))
+        and len(f_spec) == 3
+        and f_spec[0] == "aff_diag"
+        and not any(isinstance(e, dict) for e in f_spec[1:])
+    ):
+        return None
+    parsed = _seqm_parse_b(f_spec[2], h_spec)
+    if parsed is None:
+        return None
+    c_spec, v_spec, s_spec, k_meta = parsed
+    a_spec = f_spec[1]
+    for sub in (a_spec, c_spec, v_spec, s_spec):
+        if sub is not None and not _seqm_sub_ok(sub, h_spec):
+            return None
+    params = list(_spec_metas(spec))
+    seq = [m for m in params if m != h_spec]
+    if k_meta not in seq:
+        return None
+    return {
+        "kind": "seqm",
+        "params": params,
+        "seq": seq,
+        "h": h_spec,
+        "a": a_spec,
+        "b": f_spec[2],
+        "c": c_spec,
+        "v": v_spec,
+        "s": s_spec,
+        "k": k_meta,
+        "axis": (attrs or {}).get("axis"),
+    }
+
+
+def seqm_denotation(
+    spec: Any, *, axis: int | None = None, axes: Any = None
+) -> Any:
+    """Spelled fold denotation of a ``kind="seqm"`` scan spec.
+
+    ``acc = a_t * acc + b_t(acc)`` walked along each operand's OWN
+    step axis — there is no shared broadcast frame, so *axes* maps
+    every sequence metavar to its normalised step dim (the
+    ``"axes"`` map the site collector records on the handler).
+    Per step the operand specs evaluate through the ordinary
+    bindings against ``{metas: per-step slices, "H": acc}`` —
+    ``matmul(K, acc)`` included — exactly the recurrence the
+    unrolled chain spells, in the same order the Triton kernel
+    runs.  ``axis`` is accepted for signature parity with
+    :func:`seq_scan_denotation`; the per-operand map supersedes it.
+    """
+    info = _seqm_spec(spec)
+    if info is None:
+        return None
+    params = list(info["params"])
+    seq = list(info["seq"])
+    h_meta = info["h"]
+    a_spec = info["a"]
+    b_spec = info["b"]
+    bindings = _ambient_bindings()
+
+    def fn(*args: Any, **_attrs: Any) -> Any:
+        vals = dict(zip(params, args, strict=True))
+        if axes is None:
+            raise ValueError(
+                "seqm fold needs the handler's per-operand axes"
+            )
+        moved: dict = {}
+        t_len = None
+        for m in seq:
+            x = vals[m]
+            axm = axes[m] % x.dim()
+            xs = x.movedim(axm, 0)
+            if t_len is None:
+                t_len = xs.shape[0]
+            elif xs.shape[0] != t_len:
+                raise ValueError(
+                    "seqm operands disagree on the step count"
+                )
+            moved[m] = xs
+        # ``seq`` is non-empty by construction (the key operand is
+        # always a sequence metavar) — the assert narrows for ty.
+        assert t_len is not None
+        acc = vals[h_meta]
+        for t in range(t_len):
+            env = {m: moved[m][t] for m in seq}
+            env[h_meta] = acc
+            a_t = (
+                1 if a_spec == 1 else _eval_spec(a_spec, env, bindings)
+            )
+            acc = a_t * acc + _eval_spec(b_spec, env, bindings)
+        return acc
+
+    return fn
+
+
 def handler_denotation(h: dict) -> Any:
     """Positional spelled denotation for handlers that need one.
 
@@ -1881,11 +2109,20 @@ def handler_denotation(h: dict) -> Any:
     axis (``h["axis"]`` → spec attr → the ``-2`` default — the same
     resolution :func:`scan_triton_bindings` applies, so the
     referee's spelled arm and the delivered kernel agree on the
-    step axis).  Every other handler returns ``None``: its spelled
-    spec eval already IS the denotation and needs no override.
+    step axis).  A ``kind="seqm"`` spec returns
+    :func:`seqm_denotation` at the handler's ``"axes"`` map — the
+    per-operand step axes only the site record carries.  Every
+    other handler returns ``None``: its spelled spec eval already
+    IS the denotation and needs no override.
     """
     info = scan_spec(h.get("pattern"))
-    if info is None or info["kind"] != "seq":
+    if info is None:
+        return None
+    if info["kind"] == "seqm":
+        return seqm_denotation(
+            h["pattern"], axis=h.get("axis"), axes=h.get("axes")
+        )
+    if info["kind"] != "seq":
         return None
     ax = h.get("axis", info.get("axis", -2))
     return seq_scan_denotation(h["pattern"], axis=ax)
@@ -2150,6 +2387,402 @@ def _unrolled_binding(kern: Any, info: dict) -> Any:
     return fn
 
 
+# ---------------------------------------------------------------------------
+#  seqm codegen — the tiled matrix-state scan kernel
+# ---------------------------------------------------------------------------
+#
+# One program owns a ``(BLOCK_DK, BLOCK_DV)`` tile of the ``(dk, dv)``
+# state for one batch row and one dv column block; the step loop is
+# serial in ``t`` exactly like the flat ``seq`` kernel, but the
+# ``b`` step is the rank-1-feedback write::
+#
+#   read_j = V_j - S * sum_i K_i * acc_ij      (the K^T acc matvec)
+#   acc    = a * acc + C * read^T
+#
+# Every elementwise operand is loaded per step under its own
+# broadcast role — ``frame`` operands normalise to the ``(DK, DV)``
+# tile, ``row`` operands stay ``(BV,)`` vectors (or scalars), and
+# the matvec key ``K`` loads as a ``(DK,)`` vector.  The role is
+# fixed by WHERE the metavar sits in the parsed ``b`` skeleton, the
+# load shape by the operand's own post-view rest shape; both are
+# validated against ``dk``/``dv`` at call time and an ineligible
+# shape raises (the referee declines the claim, delivery keeps the
+# spelled fold).
+
+#: ``dk`` extent cap for the seqm kernel — the accumulator tile is
+#: ``BLOCK_DK x BLOCK_DV`` registers per program; 64 rows is the
+#: honest ceiling before occupancy collapses.  ``dv`` tiles freely
+#: over the program grid.
+_SEQM_MAX_DK = 64
+_SEQM_BV = 64
+
+
+def _seqm_pad2(rest: tuple) -> tuple:
+    """Left-pad a post-view rest shape to rank 2; decline rank > 2."""
+    if len(rest) > 2:
+        raise ValueError(f"seqm operand rest rank {len(rest)} > 2")
+    r = list(rest)
+    while len(r) < 2:
+        r.insert(0, 1)
+    return tuple(r)
+
+
+def _seqm_metas(sub: Any) -> list:
+    """Ordered distinct metavars of a seqm sub-spec (``None`` → [])."""
+    if sub is None or sub == 1:
+        return []
+    return [m for m in _spec_metas(sub) if isinstance(m, str)]
+
+
+def _seqm_rename(spec: Any, ren: dict) -> Any:
+    """Return *spec* with metavar leaves renamed through *ren*."""
+    if isinstance(spec, str):
+        return ren.get(spec, spec)
+    if isinstance(spec, (tuple, list)):
+        return tuple(_seqm_rename(e, ren) for e in spec)
+    return spec
+
+
+def _seqm_role(rest2: tuple, dk: int, dv: int, kind: str) -> str:
+    """Classify a padded rest shape into its kernel load tag.
+
+    Tags: ``fscalar``/``fcol``/``frow``/``full`` for ``"frame"``
+    operands (normalised to the ``(DK, DV)`` tile), ``rscalar``/
+    ``rrow`` for ``"row"`` operands (kept ``(BV,)`` or scalar), and
+    ``ccol`` for the ``"col"`` matvec key (``(DK,)``).  *kind* is
+    the operand's skeleton role; the checks mirror torch's
+    right-aligned broadcasting on the batch-stripped rest, so a
+    shape the kernel accepts is one the spelled eval broadcasts
+    identically.
+    """
+    r0, r1 = rest2
+    if kind == "col":
+        if rest2 != (1, dk):
+            raise ValueError(f"seqm key rest {rest2} != (1, {dk})")
+        return "ccol"
+    if kind == "row":
+        if r0 != 1 or r1 not in (1, dv):
+            raise ValueError(f"seqm row rest {rest2} not in (1, dv)")
+        return "rscalar" if r1 == 1 else "rrow"
+    # frame
+    if r0 not in (1, dk) or r1 not in (1, dv):
+        raise ValueError(f"seqm frame rest {rest2} not in (dk, dv)")
+    if r0 == 1 and r1 == 1:
+        return "fscalar"
+    if r0 == dk and r1 == 1:
+        return "fcol"
+    if r0 == 1 and r1 == dv:
+        return "frow"
+    return "full"
+
+
+def _seqm_signature(info: dict, xs: list, dk: int, dv: int) -> dict:
+    """Build the kernel signature for bound operand tensors.
+
+    *xs* are the ``(T, B, *rest)`` contiguous operand tensors in
+    ``info["seq"]`` order.  Returns the load list, rendered step
+    exprs and block sizes; raises ``ValueError`` on any operand
+    whose rest shape cannot play its skeleton role — an honest
+    decline the referee turns into a dropped claim.
+    """
+    seq = list(info["seq"])
+    rests = {
+        m: _seqm_pad2(tuple(xs[i].shape[2:])) for i, m in enumerate(seq)
+    }
+
+    frame_ms: list = []
+    for sub in (info["a"], info["c"]):
+        for m in _seqm_metas(sub):
+            if m not in frame_ms:
+                frame_ms.append(m)
+    row_ms: list = []
+    for sub in (info["v"], info["s"]):
+        for m in _seqm_metas(sub):
+            if m not in row_ms:
+                row_ms.append(m)
+    k_meta = info["k"]
+
+    # a metavar may sit in several skeleton positions — each gets
+    # its own load and var (``m`` frame, ``m_r`` row, ``m_k`` key)
+    loads: list = []
+    frame_ren: dict = {}
+    row_ren: dict = {}
+    for m in frame_ms:
+        frame_ren[m] = m
+        loads.append(
+            (
+                m,
+                seq.index(m),
+                "frame",
+                _seqm_role(rests[m], dk, dv, "frame"),
+            )
+        )
+    for m in row_ms:
+        row_ren[m] = f"{m}_r"
+        loads.append(
+            (
+                f"{m}_r",
+                seq.index(m),
+                "row",
+                _seqm_role(rests[m], dk, dv, "row"),
+            )
+        )
+    k_var = f"{k_meta}_k"
+    loads.append(
+        (
+            k_var,
+            seq.index(k_meta),
+            "col",
+            _seqm_role(rests[k_meta], dk, dv, "col"),
+        )
+    )
+
+    a_ren = dict(frame_ren)
+    a_expr = (
+        "1.0"
+        if info["a"] == 1
+        else _triton_expr_h(_seqm_rename(info["a"], a_ren), None, None)
+    )
+    c_expr = _triton_expr_h(
+        _seqm_rename(info["c"], a_ren), None, _TRITON_CONST_1D
+    )
+    v_expr = _triton_expr_h(
+        _seqm_rename(info["v"], row_ren), None, _TRITON_CONST_1D
+    )
+    s_expr = (
+        None
+        if info["s"] is None
+        else _triton_expr_h(
+            _seqm_rename(info["s"], row_ren), None, _TRITON_CONST_1D
+        )
+    )
+    if (
+        a_expr is None
+        or c_expr is None
+        or v_expr is None
+        or (info["s"] is not None and s_expr is None)
+    ):
+        raise ValueError("seqm step expr failed to render")
+    return {
+        "loads": loads,
+        "a": a_expr,
+        "c": c_expr,
+        "v": v_expr,
+        "s": s_expr,
+        "k": k_var,
+    }
+
+
+def _seqm_load_line(
+    metas: list, load: tuple, indent: str = "        "
+) -> str:
+    """Emit one per-step operand load inside the ``t`` loop.
+
+    *load* is ``(var, seq_index, kind, tag)``; the base offset is
+    ``(t * B + b) * N<idx>`` over the ``(T, B, *rest)`` contiguous
+    operand — ``N<idx>`` its rest numel, passed as a kernel arg.
+    Frame tags normalise the loaded block to ``(BLOCK_DK,
+    BLOCK_DV)``; row/key tags keep their native ``(BV,)``/``(DK,)``
+    shape.
+    """
+    var, midx, _kind, tag = load
+    ptr = f"{metas[midx]}_ptr"
+    off = f"((t.to(tl.int64) * B + b) * N{midx})"
+    if tag == "fscalar":
+        return (
+            f"{indent}{var} = tl.broadcast_to("
+            f"tl.reshape(tl.load({ptr} + {off} + one), (1, 1)),"
+            " (BLOCK_DK, BLOCK_DV))\n"
+        )
+    if tag == "fcol":
+        return (
+            f"{indent}{var} = tl.broadcast_to("
+            f"tl.reshape(tl.load({ptr} + {off} + i,"
+            " mask=i < dk, other=0.0), (BLOCK_DK, 1)),"
+            " (BLOCK_DK, BLOCK_DV))\n"
+        )
+    if tag == "frow":
+        return (
+            f"{indent}{var} = tl.broadcast_to("
+            f"tl.reshape(tl.load({ptr} + {off} + jg,"
+            " mask=jg < dv, other=0.0), (1, BLOCK_DV)),"
+            " (BLOCK_DK, BLOCK_DV))\n"
+        )
+    if tag == "full":
+        return (
+            f"{indent}{var} = tl.load({ptr} + {off}"
+            " + im * dv + jm, mask=hmask, other=0.0)\n"
+        )
+    if tag == "rscalar":
+        return f"{indent}{var} = tl.load({ptr} + {off} + one)\n"
+    if tag == "rrow":
+        return (
+            f"{indent}{var} = tl.load({ptr} + {off} + jg,"
+            " mask=jg < dv, other=0.0)\n"
+        )
+    # ccol — the matvec key, a (DK,) vector
+    return (
+        f"{indent}{var} = tl.load({ptr} + {off} + i,"
+        " mask=i < dk, other=0.0)\n"
+    )
+
+
+def _seqm_triton_source(info: dict, sig: dict, n_seq: int) -> str:
+    """Emit the seqm kernel module for a resolved signature.
+
+    Signature: the ``info["seq"]`` operand pointers in order, then
+    ``h_ptr``/``out_ptr``/``T``/``B``/``dk``/``dv``/``N0``…``Nk``
+    (per-operand rest numels) and the ``BLOCK_DK``/``BLOCK_DV``
+    constexprs.  One program per ``(batch, dv-block)`` owns the
+    ``(dk, dv)`` state tile; the ``t`` loop is serial —
+    ``read = V - S·(Kᵀ acc)`` via a masked ``tl.sum`` matvec, then
+    ``acc = a·acc + C·readᵀ`` — the delta-rule fold.
+    """
+    metas = list(info["seq"])
+    params = ", ".join(f"{m}_ptr" for m in metas)
+    ns = ", ".join(f"N{i}" for i in range(n_seq))
+    loads = "".join(
+        _seqm_load_line(metas, load) for load in sig["loads"]
+    )
+    proj = (
+        f"        proj = tl.sum("
+        f"tl.reshape({sig['k']}, (BLOCK_DK, 1)) * acc, axis=0)\n"
+    )
+    if sig["s"] is None:
+        read = f"        r = ({sig['v']}) - proj\n"
+    else:
+        read = f"        r = ({sig['v']}) - ({sig['s']}) * proj\n"
+    read_bc = (
+        "        rbc = tl.broadcast_to("
+        "tl.reshape(r, (1, BLOCK_DV)), (BLOCK_DK, BLOCK_DV))\n"
+    )
+    update = f"        acc = ({sig['a']}) * acc + ({sig['c']}) * rbc\n"
+    return (
+        "import triton\n"
+        "import triton.language as tl\n"
+        "import triton.language.extra.libdevice as libdevice\n"
+        "\n\n@triton.jit\n"
+        f"def _gsm({params}, h_ptr, out_ptr, T, B, dk, dv, {ns},"
+        " BLOCK_DK: tl.constexpr, BLOCK_DV: tl.constexpr):\n"
+        "    b = tl.program_id(0)\n"
+        "    jb = tl.program_id(1)\n"
+        "    i = tl.arange(0, BLOCK_DK)\n"
+        "    j = tl.arange(0, BLOCK_DV)\n"
+        "    jg = jb.to(tl.int64) * BLOCK_DV + j\n"
+        "    im = tl.reshape(i, (BLOCK_DK, 1))\n"
+        "    jm = tl.reshape(jg, (1, BLOCK_DV))\n"
+        "    one = tl.arange(0, 1)\n"
+        "    hmask = (im < dk) & (jm < dv)\n"
+        "    hoff = (b.to(tl.int64) * dk + im) * dv + jm\n"
+        "    acc = tl.load(h_ptr + hoff, mask=hmask, other=0.0)\n"
+        "    for t in range(T):\n"
+        f"{loads}"
+        f"{proj}"
+        f"{read}"
+        f"{read_bc}"
+        f"{update}"
+        "    tl.store(out_ptr + hoff, acc, mask=hmask)\n"
+    )
+
+
+#: Loaded seqm kernel modules keyed by cache path — the binding
+#: resolves its signature per call, but the ``.py`` artifact (and
+#: its ``triton.jit`` compile) is loaded once per signature.
+_SEQM_LOADED: dict = {}
+
+
+def _seqm_kernel_for(info: dict, sig: dict, name: str, n_seq: int):
+    """Emit + load the seqm kernel for a resolved signature.
+
+    The module is cached by source hash under the kernel cache —
+    each distinct operand-shape signature gets its own ``.py``
+    artifact, inspectable on disk like every generated tier — and
+    the loaded ``triton.jit`` callable is memoised per path so the
+    per-call signature resolution never re-imports the module.
+    """
+    import hashlib
+
+    src = _seqm_triton_source(info, sig, n_seq)
+    digest = hashlib.sha256(src.encode()).hexdigest()[:16]
+    path = _kernel_cache() / f"_gsm_{name}_{digest}.py"
+    kern = _SEQM_LOADED.get(path)
+    if kern is None:
+        if not path.exists():
+            path.write_text(src)
+        kern = _load_generated(path, "_gsm")
+        _SEQM_LOADED[path] = kern
+    return kern
+
+
+def _seqm_binding(name: str, info: dict, axes: Any) -> Any:
+    """Host wrapper for the matrix-state scan kernel.
+
+    ``fn(*vals)`` binds the spec metavars positionally, moves each
+    operand's own step axis (``axes`` — the site record's
+    per-operand map) to the front, validates the ``(T, B, *rest)``
+    layout against the ``(B, dk, dv)`` state, resolves the load
+    signature, and launches the fold.  Shape ineligibility raises —
+    the same honest-decline contract the flat seq binding keeps.
+    """
+
+    def fn(*args: Any, **_attrs: Any) -> Any:
+        import torch
+
+        vals = dict(zip(info["params"], args, strict=True))
+        moved = []
+        for m in info["seq"]:
+            x = vals[m]
+            if axes is None or m not in axes:
+                raise ValueError(f"seqm operand {m} lacks a step axis")
+            moved.append(x.movedim(axes[m] % x.dim(), 0))
+        t_len = moved[0].shape[0]
+        b_dim = moved[0].shape[1]
+        for x in moved:
+            if x.shape[0] != t_len or x.shape[1] != b_dim:
+                raise ValueError("seqm operands disagree on (T, B)")
+        hh = vals[info["h"]]
+        if hh.dim() != 3 or hh.shape[0] != b_dim:
+            raise ValueError(
+                "seqm state must be (B, dk, dv) matching the operands"
+            )
+        dk, dv = int(hh.shape[1]), int(hh.shape[2])
+        if dk < 1 or dk > _SEQM_MAX_DK:
+            raise ValueError(
+                f"seqm dk={dk} outside [1, {_SEQM_MAX_DK}]"
+            )
+        dt = _scan_dtype(vals, info["params"])
+        xs = [x.to(dt).contiguous() for x in moved]
+        hh = hh.to(dt).contiguous()
+        if not (hh.is_cuda and xs[0].is_cuda):
+            raise RuntimeError(
+                "generated seqm kernels need CUDA tensors"
+            )
+        sig = _seqm_signature(info, xs, dk, dv)
+        n_seq = len(info["seq"])
+        kern = _seqm_kernel_for(info, sig, name, n_seq)
+        if kern is None:
+            raise RuntimeError("seqm kernel module failed to load")
+        out = torch.empty_like(hh)
+        bv = min(_SEQM_BV, 1 << (dv - 1).bit_length())
+        bd = 1 << (dk - 1).bit_length()
+        nrs = [int(x[0].numel() // b_dim) for x in xs]
+        kern[(b_dim, (dv + bv - 1) // bv)](
+            *xs,
+            hh,
+            out,
+            t_len,
+            b_dim,
+            dk,
+            dv,
+            *nrs,
+            BLOCK_DK=bd,
+            BLOCK_DV=bv,
+        )
+        return out
+
+    return fn
+
+
 def scan_triton_bindings(
     handlers: dict, *, axis: int | None = -2
 ) -> dict:
@@ -2173,6 +2806,14 @@ def scan_triton_bindings(
         if info is None:
             continue
         ax = h.get("axis", info.get("axis", axis))
+        if info["kind"] == "seqm":
+            # the matrix-state fold: no flat ``_gs`` module exists —
+            # the binding JITs a per-signature ``_gsm`` kernel at
+            # call time from the handler's recorded ``axes`` map.
+            out[h["kernel"]] = _seqm_binding(
+                h["kernel"], info, h.get("axes")
+            )
+            continue
         src = _scan_triton_source(info)
         path = _kernel_cache() / f"_gs_{h['kernel']}.py"
         path.write_text(src)
@@ -2215,6 +2856,11 @@ def _site_parts(item: Any) -> tuple:
             # collector's shape-checked dim) overrides the builder's
             # default — merged after ``"axis": axis`` in the entry.
             extra["axis"] = item["axis"]
+        if "axes" in item:
+            # seq-matrix sites resolve a step axis PER OPERAND (no
+            # shared broadcast frame exists) — the map reaches the
+            # binding and denotation through the handler entry.
+            extra["axes"] = item["axes"]
         return item["spec"], extra
     return item, {}
 

@@ -1076,6 +1076,247 @@ class TestSeqScanSites:
         assert play._seq_scan_sites(h) == []
 
 
+class TestSeqmSites:
+    """The seqm collector — matrix-state delta-rule chains.
+
+    ``h' = h + beta_t·k_t ⊗ (v_t - k_tᵀ h)`` puts the accumulator
+    inside the step's ``b`` term (the ``kᵀh`` matvec read), a shape
+    the diagonal ``seq`` grammar cannot express: the state is a
+    direct ``add`` operand and the write is rank-1.  These tests pin
+    the mint, the fold-equals-chain soundness, and the honest
+    declines.
+    """
+
+    def _delta_recurrence(self, t_len: int = 3, *, gated: bool = False):
+        """Unrolled ``S += beta·k ⊗ (v - [alpha·] kᵀS)`` chain.
+
+        Shapes: ``beta (b,T,1,1)``, ``k (b,T,dk)``, ``v (b,T,dv)``,
+        ``alpha (b,T,1)`` when gated, state ``(b,dk,dv)`` — the
+        DeltaRuleBlock / GatedDeltaRule spellings.
+        """
+        from mlopt_core.ir import Op, TensorType, Var
+
+        def v(n, *s):
+            return Var(n, TensorType(s))
+
+        b_, dk, dv = 2, 3, 4
+        BETA = v("BETA", b_, t_len, 1, 1)
+        K = v("K", b_, t_len, dk)
+        V = v("V", b_, t_len, dv)
+        ALPHA = v("ALPHA", b_, t_len, 1) if gated else None
+        h = v("H0", b_, dk, dv)
+        for t in range(t_len):
+            k_t = Op.make("select", K, dim=1, index=t)
+            kcol = Op.make("unsqueeze", k_t, dim=-1)  # (b,dk,1)
+            krow = Op.make("unsqueeze", k_t, dim=-2)  # (b,1,dk)
+            proj = Op.make(
+                "squeeze",
+                Op.make("matmul", krow, h),
+                dim=1,
+            )  # (b,dv)
+            if gated:
+                a_t = Op.make(
+                    "select", ALPHA, dim=1, index=t
+                )  # (b,1)
+                proj = Op.make("mul", a_t, proj)
+            resid = Op.make(
+                "sub", Op.make("select", V, dim=1, index=t), proj
+            )
+            rrow = Op.make("unsqueeze", resid, dim=-2)  # (b,1,dv)
+            beta_t = Op.make("select", BETA, dim=1, index=t)
+            write = Op.make(
+                "mul",
+                Op.make("mul", beta_t, kcol),
+                rrow,
+            )
+            h = Op.make("add", h, write)
+        return h
+
+    def _env(self, gated: bool = False):
+        torch = pytest.importorskip("torch")
+        t_len = 3
+        env = {
+            "BETA": torch.randn(2, t_len, 1, 1).double(),
+            "K": torch.randn(2, t_len, 3).double(),
+            "V": torch.randn(2, t_len, 4).double(),
+            "H0": torch.randn(2, 3, 4).double(),
+        }
+        if gated:
+            env["ALPHA"] = (
+                torch.rand(2, t_len, 1).double() * 0.5 + 0.5
+            )
+        return env
+
+    def test_seqm_sites_mints_matrix_fold_spec(self):
+        pytest.importorskip("torch")
+        from mlopt_discovery import genkernel as gk
+
+        sites = play._seqm_scan_sites(self._delta_recurrence())
+        assert len(sites) == 1
+        s = sites[0]
+        spec = s["spec"]
+        assert spec[0] == "applyd"
+        assert spec[1][0] == "aff_diag"
+        assert spec[1][1] == 1  # the unit map — state is a direct add
+        assert spec[2] == "H"
+        assert spec[3]["kind"] == "seqm"
+        assert spec[3]["axis"] == 1
+        info = gk.scan_spec(spec)
+        assert info is not None and info["kind"] == "seqm"
+        assert info["k"] in info["seq"]
+        assert "H" not in info["seq"]
+        assert set(s["leaf_env"]) == set(gk._spec_metas(spec))
+        assert s["axes"] == {m: 1 for m in info["seq"]}
+        # the diagonal collector must NOT claim this chain — its
+        # grammar has no state-inside-b form
+        assert play._seq_scan_sites(self._delta_recurrence()) == []
+
+    def test_seqm_site_fold_equals_chain(self):
+        # the minted fold must denote the unrolled delta-rule chain
+        # exactly — soundness before any pricing
+        torch = pytest.importorskip("torch")
+        import mlopt_torch.torch_bridge as tb
+
+        from mlopt_discovery import genkernel as gk
+
+        term = self._delta_recurrence()
+        sites = play._seqm_scan_sites(term)
+        assert len(sites) == 1
+        s = sites[0]
+        var_env = self._env()
+        bindings = tb._IR_TO_TORCH
+        vals = {
+            m: gk._bound_val(t, var_env, bindings)
+            for m, t in s["leaf_env"].items()
+        }
+        h = {
+            "pattern": s["spec"],
+            "args": tuple(gk._spec_metas(s["spec"])),
+            "axis": s["axis"],
+            "axes": s["axes"],
+        }
+        got = gk.handler_denotation(h)(
+            *[vals[m] for m in h["args"]]
+        )
+        want = tb.eval_term(
+            term,
+            var_env=var_env,
+            param_env=var_env,
+            bindings=bindings,
+            strict=True,
+        )
+        torch.testing.assert_close(got, want)
+
+    def test_seqm_site_gated_fold_equals_chain(self):
+        # the gated spelling carries a scalar ``a_t`` map AND the
+        # in-residual ``alpha`` gate — both must survive the fold
+        torch = pytest.importorskip("torch")
+        import mlopt_torch.torch_bridge as tb
+
+        from mlopt_discovery import genkernel as gk
+
+        term = self._delta_recurrence(gated=True)
+        sites = play._seqm_scan_sites(term)
+        assert len(sites) == 1
+        s = sites[0]
+        var_env = self._env(gated=True)
+        bindings = tb._IR_TO_TORCH
+        vals = {
+            m: gk._bound_val(t, var_env, bindings)
+            for m, t in s["leaf_env"].items()
+        }
+        h = {
+            "pattern": s["spec"],
+            "args": tuple(gk._spec_metas(s["spec"])),
+            "axis": s["axis"],
+            "axes": s["axes"],
+        }
+        got = gk.handler_denotation(h)(
+            *[vals[m] for m in h["args"]]
+        )
+        want = tb.eval_term(
+            term,
+            var_env=var_env,
+            param_env=var_env,
+            bindings=bindings,
+            strict=True,
+        )
+        torch.testing.assert_close(got, want)
+
+    def test_seqm_handlers_carry_axes(self):
+        pytest.importorskip("torch")
+        from mlopt_discovery import genkernel as gk
+
+        hs = gk.scan_handlers(play._seqm_scan_sites(self._delta_recurrence()))
+        assert len(hs) == 1
+        h = next(iter(hs.values()))
+        assert set(h["axes"]) == set(h["args"]) - {"H"}
+        assert gk.handler_denotation(h) is not None
+        assert gk.scan_spec(h["pattern"])["kind"] == "seqm"
+
+    def test_seqm_sites_decline_state_free_write(self):
+        # ``h' = h + k⊗v`` (no ``kᵀh`` read) is a rank-1 WRITE but
+        # not state feedback — the seqm tier requires ``H`` inside
+        # ``b``; this shape belongs to no fold tier
+        pytest.importorskip("torch")
+        from mlopt_core.ir import Op, TensorType, Var
+
+        def v(n, *s):
+            return Var(n, TensorType(s))
+
+        K, V = v("K", 2, 3, 3), v("V", 2, 3, 4)
+        h = v("H0", 2, 3, 4)
+        for t in range(3):
+            k_t = Op.make("select", K, dim=1, index=t)
+            v_t = Op.make("select", V, dim=1, index=t)
+            write = Op.make(
+                "mul",
+                Op.make("unsqueeze", k_t, dim=-1),
+                Op.make("unsqueeze", v_t, dim=-2),
+            )
+            h = Op.make("add", h, write)
+        assert play._seqm_scan_sites(h) == []
+
+    def test_seqm_sites_decline_wrong_index_order(self):
+        # selects walking the step axis backwards are not the fold's
+        # step order — decline, don't relabel
+        pytest.importorskip("torch")
+        from mlopt_core.ir import Op, TensorType, Var
+
+        def v(n, *s):
+            return Var(n, TensorType(s))
+
+        b_, dk, dv, t_len = 2, 3, 4, 3
+        BETA = v("BETA", b_, t_len, 1, 1)
+        K = v("K", b_, t_len, dk)
+        V = v("V", b_, t_len, dv)
+        h = v("H0", b_, dk, dv)
+        for t in range(t_len):
+            idx = t_len - 1 - t
+            k_t = Op.make("select", K, dim=1, index=idx)
+            krow = Op.make("unsqueeze", k_t, dim=-2)
+            proj = Op.make(
+                "squeeze", Op.make("matmul", krow, h), dim=1
+            )
+            resid = Op.make(
+                "sub", Op.make("select", V, dim=1, index=idx), proj
+            )
+            write = Op.make(
+                "mul",
+                Op.make("select", BETA, dim=1, index=idx),
+                Op.make("unsqueeze", resid, dim=-2),
+            )
+            # multiply the column factor in explicitly so the write
+            # stays rank-1 — k itself is the (b,dk,1) factor here
+            write = Op.make(
+                "mul",
+                Op.make("unsqueeze", k_t, dim=-1),
+                write,
+            )
+            h = Op.make("add", h, write)
+        assert play._seqm_scan_sites(h) == []
+
+
 class TestDecayedMint:
     """The decayed-tier mint path — sites, referee, zoo wiring."""
 

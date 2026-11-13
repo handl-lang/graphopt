@@ -2086,6 +2086,359 @@ class TestSeqScanDenotation:
         assert keep2 == hs
 
 
+# The DeltaRuleBlock spelling: ``S += beta·k ⊗ (v - kᵀS)`` — the
+# rank-1-feedback ``b`` the seqm tier denotes.
+_SEQM_SPEC = (
+    "applyd",
+    (
+        "aff_diag",
+        1,
+        (
+            "mul",
+            ("mul", "C1", "C2"),
+            (
+                "unsqueeze",
+                (
+                    "sub",
+                    "V",
+                    (
+                        "squeeze",
+                        ("matmul", "K", "H"),
+                        {"dim": 1},
+                    ),
+                ),
+                {"dim": -2},
+            ),
+        ),
+    ),
+    "H",
+    {"kind": "seqm", "axis": 1},
+)
+
+
+class TestSeqmSpec:
+    """``scan_spec`` on ``kind="seqm"`` — the matrix-state recognizer."""
+
+    def test_seqm_form_recognised(self):
+        info = gk.scan_spec(_SEQM_SPEC)
+        assert info is not None and info["kind"] == "seqm"
+        assert info["k"] == "K"
+        assert info["h"] == "H"
+        assert set(info["seq"]) == {"C1", "C2", "V", "K"}
+        assert info["params"] == ["C1", "C2", "V", "K", "H"]
+
+    def test_seqm_gated_form_recognised(self):
+        # ``a_t`` map + in-residual scalar gate — the GatedDeltaRule
+        # spelling ``S ← a·S + C⊗(V - s·KᵀS)``
+        spec = (
+            "applyd",
+            (
+                "aff_diag",
+                "A",
+                (
+                    "mul",
+                    "C",
+                    (
+                        "unsqueeze",
+                        (
+                            "sub",
+                            "V",
+                            ("mul", "S", ("squeeze", ("matmul", "K", "H"), {"dim": 1})),
+                        ),
+                        {"dim": -2},
+                    ),
+                ),
+            ),
+            "H",
+            {"kind": "seqm", "axis": 1},
+        )
+        info = gk.scan_spec(spec)
+        assert info is not None and info["kind"] == "seqm"
+        assert info["s"] == "S"
+        assert info["a"] == "A"
+
+    def test_seqm_declines_state_free_b(self):
+        # ``kind="seqm"`` pinned on a state-free ``b`` is not the
+        # rank-1-feedback form — decline rather than re-interpret
+        spec = (
+            "applyd",
+            ("aff_diag", 1, ("mul", "A", "B")),
+            "H",
+            {"kind": "seqm", "axis": 1},
+        )
+        assert gk.scan_spec(spec) is None
+
+    def test_seqm_declines_state_in_a(self):
+        # the map factor must be accumulator-free
+        spec = (
+            "applyd",
+            (
+                "aff_diag",
+                ("mul", "H", "A"),
+                (
+                    "mul",
+                    "C",
+                    (
+                        "unsqueeze",
+                        (
+                            "sub",
+                            "V",
+                            ("squeeze", ("matmul", "K", "H"), {"dim": 1}),
+                        ),
+                        {"dim": -2},
+                    ),
+                ),
+            ),
+            "H",
+            {"kind": "seqm", "axis": 1},
+        )
+        assert gk.scan_spec(spec) is None
+
+    def test_seqm_declines_non_feedback_b_skeleton(self):
+        # ``H`` inside ``b`` but NOT under the recognised
+        # ``C⊗(V - [s·]KᵀH)`` skeleton — e.g. a plain matvec write
+        spec = (
+            "applyd",
+            ("aff_diag", 1, ("mul", "C", ("matmul", "K", "H"))),
+            "H",
+            {"kind": "seqm", "axis": 1},
+        )
+        assert gk.scan_spec(spec) is None
+
+
+class TestSeqmDenotation:
+    """``seqm_denotation`` — the spelled matrix-state fold."""
+
+    def _args(self, B=2, T=5, dk=3, dv=4):
+        torch = pytest.importorskip("torch")
+        dt = torch.float64
+        g = torch.Generator().manual_seed(0)
+
+        def r(*s):
+            return torch.randn(*s, generator=g, dtype=dt)
+
+        return (
+            (torch.rand(B, T, 1, 1, generator=g, dtype=dt) * 0.4 + 0.6),
+            (torch.rand(B, T, dk, 1, generator=g, dtype=dt) * 0.4 + 0.6),
+            r(B, T, dv),
+            (torch.rand(B, T, 1, dk, generator=g, dtype=dt) * 0.4 + 0.6),
+            r(B, dk, dv),
+        )
+
+    def _spelled(self, c1, c2, v, k, h, B, T, dk, dv):
+        torch = pytest.importorskip("torch")
+        acc = h
+        for t in range(T):
+            ct = c1[:, t] * c2[:, t]  # (B,dk,1)
+            kt = k[:, t]  # (B,1,dk)
+            proj = torch.matmul(kt, acc).squeeze(1)  # (B,dv)
+            r = v[:, t] - proj
+            acc = acc + ct * r.unsqueeze(-2)
+        return acc
+
+    def test_seqm_denotation_matches_spelled_fold(self):
+        torch = pytest.importorskip("torch")
+        args = self._args()
+        B, T, dk, dv = 2, 5, 3, 4
+        axes = {"C1": 1, "C2": 1, "V": 1, "K": 1}
+        fn = gk.seqm_denotation(_SEQM_SPEC, axes=axes)
+        assert fn is not None
+        torch.testing.assert_close(
+            fn(*args), self._spelled(*args, B, T, dk, dv)
+        )
+
+    def test_seqm_denotation_requires_axes(self):
+        args = self._args(B=1, T=2, dk=2, dv=2)
+        fn = gk.seqm_denotation(_SEQM_SPEC)
+        assert fn is not None
+        with pytest.raises(ValueError, match="axes"):
+            fn(*args)
+
+    def test_seqm_denotation_declines_non_seqm(self):
+        assert (
+            gk.seqm_denotation(("applyd", ("aff_diag", "A", "B"), "H"))
+            is None
+        )
+        assert gk.seqm_denotation(("mul", "X1", "X2")) is None
+
+    def test_handler_denotation_dispatches_seqm(self):
+        args = self._args(B=1, T=2, dk=2, dv=2)
+        h = {
+            "pattern": _SEQM_SPEC,
+            "kernel": "k",
+            "args": ("C1", "C2", "V", "K", "H"),
+            "axes": {"C1": 1, "C2": 1, "V": 1, "K": 1},
+        }
+        fn = gk.handler_denotation(h)
+        assert fn is not None
+        torch = pytest.importorskip("torch")
+        torch.testing.assert_close(
+            fn(*args), self._spelled(*args, 1, 2, 2, 2)
+        )
+        # a seqm handler without the axes map cannot denote — the
+        # denotation raises rather than guessing a shared axis
+        bad = dict(h)
+        bad.pop("axes")
+        with pytest.raises(ValueError, match="axes"):
+            gk.handler_denotation(bad)(*args)
+
+
+class TestSeqmBindings:
+    """Generated seqm kernels — fp64-verified vs the fold."""
+
+    def _handler(self, kernel="sm_t"):
+        return {
+            "s": {
+                "pattern": _SEQM_SPEC,
+                "kernel": kernel,
+                "args": ("C1", "C2", "V", "K", "H"),
+                "axis": 1,
+                "axes": {"C1": 1, "C2": 1, "V": 1, "K": 1},
+            }
+        }
+
+    def _args(self, B=2, T=6, dk=8, dv=8):
+        torch = _cuda()
+        dt = torch.float64
+        g = torch.Generator(device="cuda").manual_seed(0)
+
+        def r(*s):
+            return torch.randn(*s, generator=g, dtype=dt, device="cuda")
+
+        return (
+            (torch.rand(B, T, 1, 1, generator=g, dtype=dt, device="cuda") * 0.4 + 0.6),
+            (torch.rand(B, T, dk, 1, generator=g, dtype=dt, device="cuda") * 0.4 + 0.6),
+            r(B, T, dv),
+            (torch.rand(B, T, 1, dk, generator=g, dtype=dt, device="cuda") * 0.4 + 0.6),
+            r(B, dk, dv),
+        )
+
+    def _spelled(self, c1, c2, v, k, h, T, dk, dv):
+        torch = pytest.importorskip("torch")
+        acc = h
+        for t in range(T):
+            ct = c1[:, t] * c2[:, t]
+            proj = torch.matmul(k[:, t], acc).squeeze(1)
+            r = v[:, t] - proj
+            acc = acc + ct * r.unsqueeze(-2)
+        return acc
+
+    def test_seqm_binding_fp64_matches_fold(self):
+        torch = _cuda()
+        b = gk.scan_triton_bindings(self._handler())
+        args = self._args()
+        B, T, dk, dv = 2, 6, 8, 8
+        got = b["sm_t"](*args)
+        torch.testing.assert_close(
+            got,
+            self._spelled(*args, T, dk, dv),
+            atol=1e-12,
+            rtol=1e-12,
+        )
+        assert got.shape == (B, dk, dv)
+
+    def test_seqm_binding_gated_matches_fold(self):
+        # the gated spec: a_t map + in-residual scalar gate
+        torch = _cuda()
+        spec = (
+            "applyd",
+            (
+                "aff_diag",
+                "A",
+                (
+                    "mul",
+                    "C",
+                    (
+                        "unsqueeze",
+                        (
+                            "sub",
+                            "V",
+                            ("mul", "S", ("squeeze", ("matmul", "K", "H"), {"dim": 1})),
+                        ),
+                        {"dim": -2},
+                    ),
+                ),
+            ),
+            "H",
+            {"kind": "seqm", "axis": 1},
+        )
+        hs = {
+            "s": {
+                "pattern": spec,
+                "kernel": "sm_g",
+                "args": ("A", "C", "V", "S", "K", "H"),
+                "axis": 1,
+                "axes": {"A": 1, "C": 1, "V": 1, "S": 1, "K": 1},
+            }
+        }
+        b = gk.scan_triton_bindings(hs)
+        B, T, dk, dv = 2, 6, 8, 8
+        dt = torch.float64
+        g = torch.Generator(device="cuda").manual_seed(1)
+
+        def r(*s):
+            return torch.randn(*s, generator=g, dtype=dt, device="cuda")
+
+        a = (torch.rand(B, T, dk, 1, generator=g, dtype=dt, device="cuda") * 0.4 + 0.6)
+        c = (torch.rand(B, T, 1, 1, generator=g, dtype=dt, device="cuda") * 0.4 + 0.6)
+        v = r(B, T, dv)
+        s = torch.rand(B, T, 1, generator=g, dtype=dt, device="cuda") * 0.5 + 0.5
+        k = (torch.rand(B, T, 1, dk, generator=g, dtype=dt, device="cuda") * 0.4 + 0.6)
+        h = r(B, dk, dv)
+        acc = h
+        for t in range(T):
+            ct = c[:, t]
+            proj = torch.matmul(k[:, t], acc).squeeze(1)
+            rr = v[:, t] - s[:, t] * proj
+            acc = a[:, t] * acc + ct * rr.unsqueeze(-2)
+        torch.testing.assert_close(
+            b["sm_g"](a, c, v, s, k, h), acc, atol=1e-12, rtol=1e-12
+        )
+
+    def test_seqm_binding_declines_ineligible_shapes(self):
+        torch = _cuda()
+        b = gk.scan_triton_bindings(self._handler())
+        # dk beyond the tile cap declines honestly
+        args = self._args(dk=72, dv=8)
+        with pytest.raises(ValueError, match="dk"):
+            b["sm_t"](*args)
+
+    def test_seqm_binding_needs_cuda(self):
+        pytest.importorskip("torch")
+        pytest.importorskip("triton")
+        if torch.cuda.is_available():
+            pytest.skip("cpu-only check")
+        hs = self._handler()
+        b = gk.scan_triton_bindings(hs)
+        args = TestSeqmDenotation()._args(B=1, T=2, dk=2, dv=2)
+        with pytest.raises(RuntimeError, match="CUDA"):
+            b["sm_t"](*args)
+
+    def test_seqm_kernel_file_landed_on_disk(self):
+        torch = _cuda()
+        b = gk.scan_triton_bindings(self._handler())
+        b["sm_t"](*self._args(B=1, T=2, dk=4, dv=4))
+        files = list(gk._kernel_cache().glob("_gsm_sm_t_*.py"))
+        assert files and "triton.jit" in files[0].read_text()
+
+    def test_unrecognised_seqm_gets_no_binding(self):
+        pytest.importorskip("torch")
+        pytest.importorskip("triton")
+        hs = {
+            "s": {
+                "pattern": (
+                    "applyd",
+                    ("aff_diag", 1, ("mul", "A", "B")),
+                    "H",
+                    {"kind": "seqm", "axis": 1},
+                ),
+                "kernel": "sm_no",
+                "args": ("A", "B", "H"),
+            }
+        }
+        assert gk.scan_triton_bindings(hs) == {}
+
+
 class TestScanSink:
     """``scan_triton_sink`` — the generated op is supported + lowerable."""
 

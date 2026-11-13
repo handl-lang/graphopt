@@ -710,6 +710,14 @@ def _seq_step_cands(t: Any) -> tuple:
             f0, f1 = prod.args
             out.append((f0, f1, inn))
             out.append((f1, f0, inn))
+    # Matrix-state form: ``h' = h + f(h)`` — the delta-rule spelling
+    # ``s = s + beta·k⊗(v - kᵀs)`` puts the state as a DIRECT add
+    # operand, never a ``mul`` factor, so the product readings above
+    # cannot see it.  ``None`` marks the implicit unit map; the
+    # seq-matrix collector (:func:`_seqm_site`) is the only consumer
+    # that accepts it — :func:`_seq_site` declines ``None`` maps.
+    out.append((None, c0, c1))
+    out.append((None, c1, c0))
     return tuple(out)
 
 
@@ -848,7 +856,13 @@ def _seq_view_lift(t: Any):
     return child, d0, idx
 
 
-def _seq_deindex(t: Any, names: dict, operands: dict, events: list):
+def _seq_deindex(
+    t: Any,
+    names: dict,
+    operands: dict,
+    events: list,
+    state: Any = None,
+):
     """Spec of *t* with per-step ``select``s abstracted to metas.
 
     Every ``select(child, dim=D, index=i)`` node becomes a sequence
@@ -864,7 +878,22 @@ def _seq_deindex(t: Any, names: dict, operands: dict, events: list):
     lifted onto the child first (:func:`_seq_view_lift`) — the
     metavar then binds the *viewed* sequence and no view op reaches
     the step-expr skeleton.
+
+    *state* (matrix-state form only): the exact subterm the fold's
+    accumulator denotes at this step — an occurrence of it inside
+    the step expression abstracts to the ``"H"`` metavar instead of
+    recursing into the previous chain link.  The check is *equality*,
+    not identity: ``Op.make`` hash-conses ops, but ``Var``/``Param``
+    leaves are plain frozen dataclasses — a second, structurally
+    equal ``Var("H0", …)`` minted by a sibling recurrence interns the
+    SAME ``matmul`` node while the spine's state factor stays the
+    other object, so ``t is state`` silently misses (measured: a
+    gated recurrence built first made the plain one's site decline).
+    Structural equality is also the *sound* reading — an equal term
+    denotes the same value the accumulator holds at this step.
     """
+    if state is not None and t == state:
+        return "H"
     if isinstance(t, Op):
         if t.op in ("unsqueeze", "squeeze") and len(t.args) == 1:
             lifted = _seq_view_lift(t)
@@ -898,14 +927,18 @@ def _seq_deindex(t: Any, names: dict, operands: dict, events: list):
             events.append((meta, idx))
             return meta
         if t.op == "rsub" and len(t.args) == 2 and not t.attrs:
-            b = _seq_deindex(t.args[1], names, operands, events)
-            a = _seq_deindex(t.args[0], names, operands, events)
+            b = _seq_deindex(
+                t.args[1], names, operands, events, state=state
+            )
+            a = _seq_deindex(
+                t.args[0], names, operands, events, state=state
+            )
             if a is None or b is None:
                 return None
             return ("sub", b, a)
         parts = []
         for a_ in t.args:
-            p = _seq_deindex(a_, names, operands, events)
+            p = _seq_deindex(a_, names, operands, events, state=state)
             if p is None:
                 return None
             parts.append(p)
@@ -1051,9 +1084,156 @@ def _seq_scan_sites(term: Any) -> list:
     return out
 
 
+def _spec_has_meta(spec: Any, meta: str) -> bool:
+    """Whether *meta* occurs as a leaf of spec *spec*."""
+    if spec == meta:
+        return True
+    if isinstance(spec, (tuple, list)):
+        return any(
+            _spec_has_meta(e, meta)
+            for e in spec[1:]
+            if not isinstance(e, dict)
+        )
+    return False
+
+
+def _seqm_site(steps: tuple, base: Any):
+    """Seq-matrix spec record for one spine, or ``None``.
+
+    The matrix-state analogue of :func:`_seq_site`: the fold is
+    ``acc = a_t * acc + b_t(acc)`` where the state term may occur
+    inside *b_t* — the delta-rule read ``kᵀ·acc`` — abstracted to
+    the ``"H"`` metavar by :func:`_seq_deindex`'s *state* argument.
+    Steps spelled ``h' = h + f(h)`` carry ``at is None`` (the
+    implicit unit map); ``a_t`` must never depend on the
+    accumulator, and *b_t* must — a state-free ``b`` is the plain
+    seq form's job (or nothing's).
+
+    The operand checks differ from :func:`_seq_site` in ONE way:
+    there is no common broadcast frame.  Matrix-state operands live
+    in different spaces (``k ∈ R^dk``, ``v ∈ R^dv``, ``acc ∈
+    R^(dk,dv)``) that only meet inside the step expr, so instead of
+    equal-rank/single-frame ``shape_of`` checks each operand is
+    verified on its own: its select dim is in range and its extent
+    there is the step count.  The per-operand axis is recorded in
+    ``axes`` — the binding and denotation slice each operand at ITS
+    own normalized dim, exactly what the original ``select`` read.
+    Everything else — identical skeletons step to step, index ==
+    chronological position — is the same soundness argument.
+    """
+    from mlopt_core.typing import INVALID, shape_of
+
+    names: dict = {}
+    operands: dict = {}
+    axes: dict = {}
+    a0 = b0 = None
+    events: list = []
+    for k, (at, bt, st) in enumerate(steps):
+        ea: list = []
+        eb: list = []
+        sa = (
+            1
+            if at is None
+            else _seq_deindex(at, names, operands, ea, state=st)
+        )
+        sb = _seq_deindex(bt, names, operands, eb, state=st)
+        if sa is None or sb is None:
+            return None
+        if _spec_has_meta(sa, "H"):
+            return None  # a_t must be accumulator-free
+        if k == 0:
+            a0, b0 = sa, sb
+        elif sa != a0 or sb != b0:
+            return None
+        events.append(ea + eb)
+    if not operands or not _spec_has_meta(b0, "H"):
+        return None
+    t_len = len(steps)
+    for m, (child, d) in operands.items():
+        sh = shape_of(child)
+        if sh is INVALID or not isinstance(sh, tuple) or not sh:
+            return None
+        eff = d if d >= 0 else d + len(sh)
+        if not 0 <= eff < len(sh) or sh[eff] != t_len:
+            return None
+        axes[m] = eff
+    for k, evs in enumerate(events):
+        for _m, idx in evs:
+            if idx != k:
+                return None
+    a_spec = a0 if a0 is not None else 1
+    spec = (
+        "applyd",
+        ("aff_diag", a_spec, b0),
+        "H",
+        {"kind": "seqm", "axis": next(iter(axes.values()))},
+    )
+    leaf_env = {m: c for m, (c, _d) in operands.items()}
+    leaf_env["H"] = base
+    return spec, leaf_env, axes
+
+
+def _seqm_scan_sites(term: Any) -> list:
+    """Seq-matrix specs minted from state-feedback recurrence chains.
+
+    Same traversal and caps as :func:`_seq_scan_sites`; the site
+    record additionally carries ``axes`` — each operand metavar's
+    normalised step axis — which :func:`_seqm_site` resolved per
+    operand (there is no shared frame to derive it from).  Records
+    are ``{"spec", "leaf_env", "axis", "axes"}``.
+    """
+    if sys.getrecursionlimit() < 40_000:
+        sys.setrecursionlimit(40_000)
+
+    memo: dict = {}
+    cands: list = []
+    seen_nodes: set = set()
+
+    def visit(t: Any) -> None:
+        if not isinstance(t, Op) or id(t) in seen_nodes:
+            return
+        seen_nodes.add(id(t))
+        for steps, base in _seq_spines(t, memo):
+            if len(steps) >= 2:
+                cands.append((t, steps, base))
+        for a in t.args:
+            visit(a)
+
+    visit(term)
+    out: list = []
+    emitted_roots: set = set()
+    emitted_states: set = set()
+    for root, steps, base in cands:
+        if id(root) in emitted_roots or id(root) in emitted_states:
+            continue
+        site = _seqm_site(steps, base)
+        if site is None:
+            continue
+        spec, leaf_env, axes = site
+        if not any(spec == s["spec"] for s in out):
+            out.append(
+                {
+                    "spec": spec,
+                    "leaf_env": leaf_env,
+                    "axis": next(iter(axes.values())),
+                    "axes": axes,
+                }
+            )
+        for _m, _i, s in steps:
+            emitted_states.add(id(s))
+        emitted_roots.add(id(root))
+        if len(out) >= _SEQ_SITE_CAP:
+            break
+    return out
+
+
 def _all_scan_sites(term: Any) -> list:
-    """Both scan site forms: saturated carriers + raw recurrences."""
-    return [*_scan_sites(term), *_seq_scan_sites(term)]
+    """All scan site forms: carriers + raw recurrences, both folds."""
+    return [
+        *_scan_sites(term),
+        *_seq_scan_sites(term),
+        *_seqm_scan_sites(term),
+    ]
 
 
 #: Site collectors, keyed by codegen-tier name — the term-traversal
