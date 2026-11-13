@@ -35,7 +35,13 @@ propose → numeric oracle → derivability check → typed-pay gate
    four false twins, and found a real lowering bug no test covered.
 5. **Certificate + provenance.** The survivor ships in `DEFAULT` with
    `MACHINE_SHIPPED` provenance — replayable at import, auditable via
-   `law_provenance(rule)`.
+   `law_provenance(rule)`. For the strict prim shape (a `prim:<name>`
+   fold over an embedded `.expand` premise) the last step can run
+   without a human: `admit_prim_record` persists the
+   gauntlet-cleared record into the store's `AUTO_TIER` and it joins
+   `DEFAULT` at next import under `AUTO_ADMITTED` provenance —
+   `AUTO_ADMITTED ⊂ MACHINE_SHIPPED`, so the audit surface is the
+   same.
 
 ## The worked example — `mul_unsq_nat`
 

@@ -56,7 +56,7 @@ the episode early, as does `state.done`.
 
 ```python
 # mlopt_discovery/play.py — one row in DOMAINS
-DOMAINS["mine"] = _spec_domain(
+DOMAINS["mine"] = spec_domain(
     my_cases,          # (seed, n) -> [case, ...]
     my_board_of,       # case -> Board
     MY_SPEC,           # a DomainSpec — fills legal/featurizer/features
@@ -72,7 +72,7 @@ Or set the fields directly — `Domain` is data:
 | `cases` | `(seed, n) -> [case, ...]` — the train/eval split generator |
 | `board_of` | `case -> Board` — the factory the drivers call per episode |
 | `legal` | `state -> tuple[action, ...]` — the move enumerator |
-| `featurizer` / `features` | `(state, action, hist) -> dict` and the learned arm's schema — a `DomainSpec` bound via `_spec_domain` fills all three and records itself on `spec` |
+| `featurizer` / `features` | `(state, action, hist) -> dict` and the learned arm's schema — a `DomainSpec` bound via `spec_domain` fills all three and records itself on `spec` |
 | `scripted` | `() -> player` — the hand-written baseline (optional) |
 | `deliver` | `(board, case, traj) -> artifact` — only if the board produces a runnable artifact (the `torch` domain ships one) |
 
@@ -88,6 +88,11 @@ Or set the fields directly — `Domain` is data:
 `--player` evaluates a [registered player](./register-a-player)
 eval-only, paired against `random`; `--deliver` lowers and verifies the
 winning extraction on domains that ship a `deliver` hook.
+
+If the domain only needs a *data* description — a vocabulary subset, a
+corpus selection, a ruleset profile — you can skip the Python entirely:
+a JSON spec seats the same `Domain` through
+[`--domain-spec`](./define-a-domain).
 
 ## 5. Compare arms and train
 
@@ -106,4 +111,5 @@ totals = train_policy(player, cases, board_of, budget=24)
 
 - [The game](../explanation/the-game) — boards, players, and the referee seam.
 - [Register a player](./register-a-player) — the arm side of the same table.
+- [Define a domain](./define-a-domain) — seat a playable domain from a JSON spec, no code.
 - [The frozen API reference](../reference/frozen-api) — `Board`, `Report`, `run_episode`, `Domain`, `DOMAINS` are frozen names.

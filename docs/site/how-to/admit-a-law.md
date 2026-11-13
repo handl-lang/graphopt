@@ -3,7 +3,8 @@
 <!-- provenance: graphopt:mlopt_discovery/{pipeline,verifier,emit}.py + eqsat:packages/mlopt-core/src/mlopt_core/laws/provenance.py@bac1a61 -->
 
 Move a candidate equality through [the gauntlet](../explanation/the-gauntlet)
-into `DEFAULT` with `MACHINE_SHIPPED` provenance. The discovery pipeline
+into `DEFAULT` — with `MACHINE_SHIPPED` provenance, by hand or through
+the store's auto-admission tier. The discovery pipeline
 proposes and ranks candidates; admission is what you do with a SHIP
 verdict.
 
@@ -84,13 +85,41 @@ before it lands.
    extraction behavior for every caller — `scripts/gates.sh`, not a
    slice.
 
+### The auto-admission path (`AUTO_TIER`)
+
+For the strict prim shape — a `prim:<name>` fold whose RHS is a bare
+`<name>(args)` call over an embedded `.expand` premise — the hand
+step is optional. `admit_prim_record(name, record)`
+(`mlopt_core.laws.minted`, reached from the discovery side as
+`mlopt_discovery.prim_mint.admit_prim`) persists a gauntlet-cleared
+record into the store's `AUTO_TIER`; it joins `PRIM_FOLDS` /
+`MINTED_RULES` / `DEFAULT` at the next import and reports
+`"machine"` provenance via `AUTO_ADMITTED ⊂ MACHINE_SHIPPED`. It
+deliberately does **not** re-run the gauntlet — verification stays
+the discovery side's gate — and it refuses shadowing: an identical
+payload is idempotent, a different one raises. The overnight driver
+drives it end-to-end:
+
+```sh
+.venv/bin/python bench/drivers/overnight.py \
+    --corpus zoo-prim --prim-deep --auto-admit 1
+```
+
+Only `admitted` + `machine-original` + green-pay candidates promote,
+capped by `--auto-admit N`. Composites with transported guards or
+non-empty `missing_hooks` still take the manual path above — the
+`conv_bn_fold` precedent. Evidence:
+[`docs/reports/2026-11-12-law-auto-admission.md`](../../reports/2026-11-12-law-auto-admission.md).
+
 ## Outcome
 
 `search(..., rules=DEFAULT)` picks the law up for every caller, and the
 shipped bank's claim holds: every machine-admitted law replayed its
 certificate and paid on a measured fixture before it shipped. The
-promotion table and per-law evidence live upstream in
-[`project/retros/promoted-laws.md`](https://github.com/handl-lang/graphopt/blob/main/project/retros/promoted-laws.md).
+promotion table and per-law evidence live in the repo's
+`project/retros/promoted-laws.md` (local-only — `project/` is not
+tracked on `main`) and the dated run reports under
+[`docs/reports/`](../../reports/).
 
 ## See also
 

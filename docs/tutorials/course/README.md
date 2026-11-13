@@ -188,15 +188,17 @@ of measured stage outcomes; the negatives (level 23) are a gallery of
 measured refusals.
 
 The **measured numbers in the prose callouts** come from the real Python
-system (`project/retros/`): the **59 machine-admitted rules** the library
-ships on the `MACHINE_SHIPPED` ledger — 36 seated in `DEFAULT` (13
-laws + 23 minted `prim:synop*` folds), plus the folds' 23 `.expand`
-premises (`mlopt_core.laws.provenance.MACHINE_SHIPPED`; the first minted
+system (`project/retros/`): the **129-row** `MACHINE_SHIPPED` ledger —
+**71 machine-admitted rules** seated in `DEFAULT` (the promoted laws
+plus the minted `prim:synop*`/`synop2_*`/`synop3_*` folds, one of them
+via the store's `AUTO_TIER` auto-admission), with the folds'
+`.expand` definitional premises counted as ledger rows
+(`mlopt_core.laws.provenance.MACHINE_SHIPPED`; the first minted
 from a corpus op-tuple is `mul_unsq_nat` −12.3 % on its source workload,
 with four further laws machine-_assisted_ but
 hand-integrated: `select_mul`, `softmax_fold`, `glu_fold`,
 `rms_norm_fold`), the false-but-cost-lowering
-candidate the oracle rejected, the **86-rule** basis catalogue (62 axioms
+candidate the oracle rejected, the **144-rule** basis catalogue (120 axioms
 / 22 lemmas / 2 redundant) whose one divergence `silu_fold` closed, the
 exposure screen's bimodality (**81 of 321** workloads at exactly 0 %,
 **140 at ≥95 %**) and its ~1.5 % corpus discovery yield, the fused

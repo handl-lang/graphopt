@@ -23,7 +23,8 @@ One contract, every domain. Three drivers ride on it:
 
 A new domain is data + a small adapter: a `case -> Board` factory and
 a featurizer. The domain registry (`mlopt_discovery.play.DOMAINS`)
-holds the boards — `meta`/`joint`/`search`/`torch`/`gen`/`open`/`player` —
+holds the boards — `meta`/`joint`/`search`/`torch`/`gen`/`open`/
+`player`/`fragment`/`bilinear` —
 played through one CLI (the registry is open: downstream domain repos
 seat their own boards into `DOMAINS` through `play.spec_domain` at
 import):

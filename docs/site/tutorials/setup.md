@@ -54,7 +54,7 @@ saturate, extract, lower, verify — on CPU with no GPU required.
 | the game layer | `gamekit` | [`gamekit`](https://github.com/handl-lang/gamekit) | `Board` protocol, players, scoring, calibration |
 | torch adapters | `mlopt_torch` | graphopt | `TorchSource`/`TorchSink`/`TorchBackend`, runners |
 | discovery | `mlopt_discovery` | graphopt | census → propose → verify → measure → rank → emit |
-| benchmarks | `bench` | graphopt | harnessed suites + the discovery scorecard |
+| benchmarks | `bench` | graphopt | harnessed suites + the discovery scorecard — the harness itself is `benchkit` in [`gamekit`](https://github.com/handl-lang/gamekit) (`bench/benchkit` is the compat alias) |
 
 ## Next
 
