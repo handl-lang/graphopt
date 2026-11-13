@@ -54,7 +54,7 @@ class TestLoad:
         "data,match",
         [
             ({"name": "Bad Name"}, "name"),
-            ({"name": "x", "board": "gen"}, "board"),
+            ({"name": "x", "board": "bogus"}, "board"),
             ({"name": "x", "player": "nope"}, "player"),
             ({"name": "x", "incumbent": {"kind": "warp"}}, "incumbent"),
             (
@@ -577,3 +577,202 @@ class TestBakePrior:
         spec = ds.load_spec({"name": "x"})
         with pytest.raises(ValueError, match="init"):
             ds.bake_prior(spec, cases=1, init="bogus")
+
+
+class TestCodeBoards:
+    """Stage-3: the code-shaped boards as spec-able data."""
+
+    def test_boards_registered(self):
+        ds.load_spec({"name": "x"})  # seats the lazy registries
+        for b in (
+            "gen", "joint", "search", "fragment",
+            "open", "player", "bilinear",
+        ):
+            assert b in ds.BOARDS and b in ds._EXTRA_CASES
+
+    def test_board_defaults(self):
+        cases = {
+            "search": ("search", "search"),
+            "fragment": ("fragment", "fragment"),
+            "joint": ("meta", "scripted"),
+            "open": ("open", "none"),
+            "player": ("player", "player"),
+            "bilinear": ("bilinear", "bilinear"),
+            "gen": ("meta", "scripted"),
+        }
+        for board, (player, inc) in cases.items():
+            spec = ds.load_spec({"name": f"d-{board}", "board": board})
+            assert spec.player == player
+            assert spec.incumbent == inc
+
+    def test_cross_board_player_refused(self):
+        with pytest.raises(ValueError, match="player spec"):
+            ds.load_spec({"name": "x", "board": "search", "player": "meta"})
+        with pytest.raises(ValueError, match="incumbent"):
+            ds.load_spec(
+                {"name": "x", "board": "search", "incumbent": "scripted"}
+            )
+
+    def test_vocab_refused_on_nonterm_boards(self):
+        for board in ("open", "player", "bilinear"):
+            with pytest.raises(ValueError, match="vocab"):
+                ds.load_spec(
+                    {"name": "x", "board": board, "vocab": {"ops": ["add"]}}
+                )
+
+    def test_corpus_key_refusals(self):
+        with pytest.raises(ValueError, match="corpus.ops"):
+            ds.load_spec({"name": "x", "board": "search", "corpus": {"ops": ["add"]}})
+        with pytest.raises(ValueError, match="corpus.kinds"):
+            ds.load_spec({"name": "x", "board": "open", "corpus": {"kinds": ["a"]}})
+        with pytest.raises(ValueError, match="corpus.modules"):
+            ds.load_spec({"name": "x", "board": "gen", "corpus": {"modules": ["mlp"]}})
+        with pytest.raises(ValueError, match="corpus.page"):
+            ds.load_spec({"name": "x", "board": "search", "corpus": {"page": 4}})
+
+    def test_search_cases_and_rules(self):
+        spec = ds.load_spec(
+            {
+                "name": "s",
+                "board": "search",
+                "corpus": {"kinds": ["silu", "addid"], "horizon": 6},
+                "vocab": {"rules": ["silu_fold", "id_add"]},
+            }
+        )
+        dom = ds.build_domain(spec)
+        cases = dom.cases(0, 4)
+        assert len(cases) == 4
+        assert {c[0].split(":")[-1] for c in cases} <= {"silu", "addid"}
+        board = dom.board_of(cases[0])
+        assert {r.name for r in board.env.rules} == {"silu_fold", "id_add"}
+        # an unknown pool name refuses on the first draw
+        bad = ds.build_domain(
+            ds.load_spec(
+                {
+                    "name": "s2",
+                    "board": "search",
+                    "corpus": {"kinds": ["bogus"]},
+                }
+            )
+        )
+        with pytest.raises(ValueError, match="pool"):
+            bad.cases(0, 1)
+
+    def test_search_empty_ruleset_refused(self):
+        # a scan-only rule name parses (the scan universe knows it)
+        # but seats nothing on the search board's DEFAULT ruleset
+        spec = ds.load_spec(
+            {"name": "s3", "board": "search", "vocab": {"rules": ["aff_lift"]}}
+        )
+        with pytest.raises(ValueError, match="leaves no rules"):
+            ds.build_domain(spec)
+        # a name outside the scan universe refuses when the
+        # allowlist resolves (board build)
+        with pytest.raises(ValueError, match="unknown rule names"):
+            ds.build_domain(
+                ds.load_spec(
+                    {
+                        "name": "s4",
+                        "board": "search",
+                        "vocab": {"rules": ["prim:nope"]},
+                    }
+                )
+            )
+
+    def test_fragment_board(self):
+        spec = ds.load_spec(
+            {
+                "name": "f",
+                "board": "fragment",
+                "corpus": {"kinds": ["mulsig"], "max_moves": 32},
+                "vocab": {"handler_tags": ["silu"]},
+            }
+        )
+        dom = ds.build_domain(spec)
+        cases = dom.cases(0, 3)
+        assert all("mulsig" in c[0] for c in cases)
+        board = dom.board_of(cases[0])
+        assert set(board.handlers) == {"silu"}
+
+    def test_joint_kinds_and_board(self):
+        spec = ds.load_spec(
+            {"name": "j", "board": "joint", "corpus": {"kinds": ["0", "2"]}}
+        )
+        dom = ds.build_domain(spec)
+        cases = dom.cases(0, 6)
+        assert cases
+        assert {c[0].split(":")[-1] for c in cases} <= {"0", "2"}
+        assert (
+            type(dom.board_of(cases[0])).__name__ == "MetaArena"
+        )
+
+    def test_open_player_bilinear_cases(self):
+        o = ds.build_domain(
+            ds.load_spec(
+                {
+                    "name": "o",
+                    "board": "open",
+                    "corpus": {"ops": ["add", "mul"], "page": 8, "start": 1},
+                }
+            )
+        )
+        ocs = o.cases(0, 2)
+        assert ocs[0]["page"] == 8 and ocs[0]["ops"] == ("add", "mul")
+        assert type(o.board_of(ocs[0])).__name__ == "OpenArena"
+        p = ds.build_domain(
+            ds.load_spec(
+                {"name": "p", "board": "player", "corpus": {"objective": "open", "max_evals": 4}}
+            )
+        )
+        pcs = p.cases(0, 1)
+        assert pcs[0]["max_evals"] == 4 and pcs[0]["objective"] == "open"
+        assert type(p.board_of(pcs[0])).__name__ == "PlayerArena"
+        b = ds.build_domain(
+            ds.load_spec({"name": "b", "board": "bilinear", "corpus": {"scramble": 4}})
+        )
+        bcs = b.cases(0, 2)
+        assert bcs[0][0] == "bilinear0:naive"
+        assert type(b.board_of(bcs[0])).__name__ == "BilinearBoard"
+
+    def test_gen_spec(self):
+        pytest.importorskip("torch")
+        spec = ds.load_spec("gen-fusion")
+        assert spec.board == "gen" and spec.corpus_builders
+        dom = ds.build_domain(spec)
+        assert dom.deliver is not None  # "auto" → _torch_deliver
+        cases = dom.cases(0, 2)
+        assert len(cases) == 2
+        assert {c[0].split(":")[-1] for c in cases} <= set(
+            spec.corpus_builders
+        )
+
+    def test_gen_unknown_builder_refused_at_build(self):
+        pytest.importorskip("torch")
+        spec = ds.load_spec(
+            {"name": "g", "board": "gen", "corpus": {"builders": ["nope"]}}
+        )
+        with pytest.raises(ValueError, match="corpus.builders"):
+            ds.build_domain(spec)
+
+    def test_gen_rules_profile_admission(self):
+        pytest.importorskip("torch")
+        spec = ds.load_spec(
+            {
+                "name": "g2",
+                "board": "gen",
+                "vocab": {"rules": ["silu_fold"]},
+            }
+        )
+        with pytest.raises(ValueError, match="DEFAULT"):
+            ds._EXTRA_CASES["gen"](spec)
+
+    def test_bake_prior_refused_off_oracle_boards(self):
+        spec = ds.load_spec({"name": "s", "board": "search"})
+        with pytest.raises(ValueError, match="bake_prior"):
+            ds.bake_prior(spec, cases=1)
+
+    def test_packaged_specs_load(self):
+        for name in ("gen-fusion", "search-folds"):
+            spec = ds.load_spec(name)
+            assert spec.name == name
+            assert ds.spec_summary(spec)["board"] == spec.board

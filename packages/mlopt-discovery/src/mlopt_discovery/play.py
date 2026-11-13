@@ -1096,13 +1096,23 @@ def _flat_ops(spec: Any):
                 yield from _flat_ops(e)
 
 
-def _gen_cases(seed: int, n: int) -> list:
+def _gen_cases(
+    seed: int,
+    n: int,
+    *,
+    builders: Any = None,
+    ambient_handlers: Any = None,
+) -> list:
     """Torch modules over fusion-spelling and stock-model builders.
 
     The fusion builders spell pointwise patterns the ambient
     handler table has no fused op for — the candidates ``claim``
     can only reach through a *generated* kernel.  Stock pieces
     (mlp/attn chains) give the board real shape.
+
+    *builders* (domain-spec seam) selects builder names from the
+    table below; *ambient_handlers* substitutes the shipped
+    ``lawdata.HANDLERS`` table the cases seat (``None`` keeps it).
     """
     import torch
     import torch.nn as nn
@@ -1211,10 +1221,13 @@ def _gen_cases(seed: int, n: int) -> list:
 
     rng = random.Random(seed)
     src = TorchSource()
-    covered = {
-        _canon_concrete(h["pattern"]) for h in lawdata.HANDLERS.values()
-    }
-    builders = [
+    ambient = (
+        lawdata.HANDLERS
+        if ambient_handlers is None
+        else ambient_handlers
+    )
+    covered = {_canon_concrete(h["pattern"]) for h in ambient.values()}
+    table = [
         ("mulrelu", lambda: _Fuse("mulrelu"), (256, 512)),
         ("mulgelu", lambda: _Fuse("mulgelu"), (256, 512)),
         ("mulsoftplus", lambda: _Fuse("mulsoftplus"), (256, 512)),
@@ -1232,16 +1245,26 @@ def _gen_cases(seed: int, n: int) -> list:
             (8, 64),
         ),
     ]
+    if builders is not None:
+        known = {b[0] for b in table}
+        unknown = sorted(set(builders) - known)
+        if unknown:
+            raise ValueError(
+                f"corpus.builders: unknown gen builder {unknown!r} "
+                f"(known: {sorted(known)!r})"
+            )
+        wanted = set(builders)
+        table = [b for b in table if b[0] in wanted]
     out = []
     for i in range(n):
-        name, build, shape = builders[rng.randrange(len(builders))]
+        name, build, shape = table[rng.randrange(len(table))]
         model = build().eval()
         gen = torch.Generator().manual_seed(seed * 997 + i)
         x = torch.randn(*shape, generator=gen)
         ir, leaves = src.to_ir(model, x)
         genh = _mint_tiers(ir.root, covered)
         sink = gk.gen_sink(genh, compile_kernels=False)
-        handlers = dict(lawdata.HANDLERS) | genh
+        handlers = dict(ambient) | genh
         out.append(
             (
                 f"gen{i}:{name}",
@@ -1257,6 +1280,7 @@ def _gen_cases(seed: int, n: int) -> list:
                     "sink": sink,
                     "handlers": handlers,
                     "gen_handlers": genh,
+                    "ambient_handlers": ambient,
                 },
             )
         )
@@ -1507,9 +1531,8 @@ def _gen_board(case: Any) -> ma.MetaArena:
     supported = frozenset(case[4]) | {
         h["kernel"] for h in kept.values()
     }
-    store = cs.ambient_store(
-        rules=DEFAULT, handlers=lawdata.HANDLERS
-    ).merge(
+    ambient = ex.get("ambient_handlers", lawdata.HANDLERS)
+    store = cs.ambient_store(rules=DEFAULT, handlers=ambient).merge(
         cs.handlers_fragment(
             "gen",
             ex["gen_handlers"],
@@ -2295,34 +2318,90 @@ class SearchBoard:
         )
 
 
-def _search_cases(seed: int, n: int) -> list:
+#: The search case pool — named so a domain spec's ``corpus.kinds``
+#: can select paying-fold boards as data.  Built lazily: the Vars
+#: are shared leaves, spelled once.
+_SEARCH_POOL: tuple | None = None
+
+
+def _search_pool() -> tuple:
+    """Return the named search-case pool (built once)."""
+    global _SEARCH_POOL
+    if _SEARCH_POOL is None:
+        x = Var("x", TensorType((4, 4)))
+        y = Var("y", TensorType((4, 4)))
+        _SEARCH_POOL = (
+            ("silu", Op.make("mul", x, Op.make("sigmoid", x))),
+            (
+                "mixed",
+                Op.make(
+                    "add",
+                    Op.make("mul", x, y),
+                    Op.make("matmul", x, y),
+                ),
+            ),
+            ("square", Op.make("mul", x, x)),
+            (
+                "divabs",
+                Op.make(
+                    "div",
+                    x,
+                    Op.make("add", Op.make("abs", x), Const(1)),
+                ),
+            ),
+            ("addid", Op.make("add", x, Const(0))),
+            ("mulid", Op.make("mul", x, Const(1))),
+            ("negneg", Op.make("neg", Op.make("neg", x))),
+        )
+    return _SEARCH_POOL
+
+
+def _search_cases(seed: int, n: int, *, kinds: Any = None) -> list:
     """Rule-fire boards — half the pool carries a paying fold.
 
     ``add(x,0)`` / ``mul(x,1)`` / ``neg(neg(x))`` collapse under
     the identity laws (cost→0); the silu spelling folds to the
     fused op; the rest are honest flat boards — the corpus the
-    stoppable-vs-search signal lives on.
+    stoppable-vs-search signal lives on.  *kinds* (domain-spec
+    seam) selects pool names; ``None`` keeps the full pool.
     """
     rng = random.Random(seed)
-    x = Var("x", TensorType((4, 4)))
-    y = Var("y", TensorType((4, 4)))
-    pool = [
-        Op.make("mul", x, Op.make("sigmoid", x)),
-        Op.make("add", Op.make("mul", x, y), Op.make("matmul", x, y)),
-        Op.make("mul", x, x),
-        Op.make("div", x, Op.make("add", Op.make("abs", x), Const(1))),
-        Op.make("add", x, Const(0)),
-        Op.make("mul", x, Const(1)),
-        Op.make("neg", Op.make("neg", x)),
-    ]
-    return [
-        (f"search{i}", pool[rng.randrange(len(pool))]) for i in range(n)
-    ]
+    pool = list(_search_pool())
+    if kinds is not None:
+        known = {name for name, _ in pool}
+        unknown = sorted(set(kinds) - known)
+        if unknown:
+            raise ValueError(
+                f"corpus.kinds: unknown search pool {unknown!r} "
+                f"(known: {sorted(known)!r})"
+            )
+        wanted = set(kinds)
+        pool = [p for p in pool if p[0] in wanted]
+    out = []
+    for i in range(n):
+        name, term = pool[rng.randrange(len(pool))]
+        out.append((f"search{i}:{name}", term))
+    return out
 
 
-def _search_board(case: Any) -> SearchBoard:
-    """Board a search case under the rule-fire game."""
-    return SearchBoard(case[1], DEFAULT_SEARCH_RULES)
+def _search_board(
+    case: Any,
+    rules: Any = None,
+    *,
+    horizon: int = 12,
+    patience: int | None = None,
+) -> SearchBoard:
+    """Board a search case under the rule-fire game.
+
+    *rules*/*horizon*/*patience* are the domain-spec seams — a spec
+    seats a ruleset profile and episode bounds as data.
+    """
+    return SearchBoard(
+        case[1],
+        DEFAULT_SEARCH_RULES if rules is None else rules,
+        horizon=horizon,
+        patience=patience,
+    )
 
 
 def _ops_walk(term: Any):
@@ -2391,27 +2470,88 @@ SEARCH_SPEC = DomainSpec.build(
 # ---------------------------------------------------------------------------
 
 
-def _fragment_cases(seed: int, n: int) -> list:
-    """Small terms that exercise law/handler/saturate fragment moves."""
+#: The fragment case pool — named so a domain spec's
+#: ``corpus.kinds`` can select term shapes as data.  Built lazily
+#: for the same shared-leaf reason as ``_search_pool``.
+_FRAGMENT_POOL: tuple | None = None
+
+
+def _fragment_pool() -> tuple:
+    """Return the named fragment-case pool (built once)."""
+    global _FRAGMENT_POOL
+    if _FRAGMENT_POOL is None:
+        x = Var("x", TensorType((4, 4)))
+        y = Var("y", TensorType((4, 4)))
+        _FRAGMENT_POOL = (
+            ("addid", Op.make("add", x, Const(0))),
+            ("mulid", Op.make("mul", x, Const(1))),
+            ("negneg", Op.make("neg", Op.make("neg", x))),
+            ("mulsig", Op.make("mul", x, Op.make("sigmoid", x))),
+            (
+                "addmul",
+                Op.make(
+                    "add",
+                    Op.make("mul", x, y),
+                    Op.make("mul", y, x),
+                ),
+            ),
+            (
+                "divabs",
+                Op.make(
+                    "div",
+                    x,
+                    Op.make("add", Op.make("abs", x), Const(1)),
+                ),
+            ),
+        )
+    return _FRAGMENT_POOL
+
+
+def _fragment_cases(seed: int, n: int, *, kinds: Any = None) -> list:
+    """Small terms that exercise law/handler/saturate fragment moves.
+
+    *kinds* (domain-spec seam) selects pool names; ``None`` keeps
+    the full pool.
+    """
     rng = random.Random(seed)
-    x = Var("x", TensorType((4, 4)))
-    y = Var("y", TensorType((4, 4)))
-    pool = [
-        Op.make("add", x, Const(0)),
-        Op.make("mul", x, Const(1)),
-        Op.make("neg", Op.make("neg", x)),
-        Op.make("mul", x, Op.make("sigmoid", x)),
-        Op.make("add", Op.make("mul", x, y), Op.make("mul", y, x)),
-        Op.make("div", x, Op.make("add", Op.make("abs", x), Const(1))),
-    ]
-    return [
-        (f"frag{i}", pool[rng.randrange(len(pool))]) for i in range(n)
-    ]
+    pool = list(_fragment_pool())
+    if kinds is not None:
+        known = {name for name, _ in pool}
+        unknown = sorted(set(kinds) - known)
+        if unknown:
+            raise ValueError(
+                f"corpus.kinds: unknown fragment pool {unknown!r} "
+                f"(known: {sorted(known)!r})"
+            )
+        wanted = set(kinds)
+        pool = [p for p in pool if p[0] in wanted]
+    out = []
+    for i in range(n):
+        name, term = pool[rng.randrange(len(pool))]
+        out.append((f"frag{i}:{name}", term))
+    return out
 
 
-def _fragment_board(case: Any) -> fg.FragmentArena:
-    """Board a fragment case over the canonical vocab directory."""
-    return fg.FragmentArena(case[1], vocab_dir=None, max_moves=256)
+def _fragment_board(
+    case: Any,
+    *,
+    rules: Any = None,
+    handlers: Any = None,
+    max_moves: int = 256,
+) -> fg.FragmentArena:
+    """Board a fragment case over the canonical vocab directory.
+
+    *rules*/*handlers*/*max_moves* are the domain-spec seams — a
+    spec seats a rewrite-name subset, a handler-tag subset and the
+    move budget as data.
+    """
+    return fg.FragmentArena(
+        case[1],
+        vocab_dir=None,
+        rules=rules,
+        handlers=handlers,
+        max_moves=max_moves,
+    )
 
 
 def _frag_state(state: fg.FragmentState) -> dict[str, float]:

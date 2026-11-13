@@ -1,0 +1,9 @@
+{
+  "name": "gen-fusion",
+  "board": "gen",
+  "description": "Genkernel-claims domain as data: the fusion-spelling builders (mulrelu/mulgelu/mulsoftplus/multanh/bigfuse) plus the stock swiglu/chain pieces, played under per-case minted gen_* handlers with the torch deliver hook live.  corpus.builders selects the module zoo; vocab.handler_tags would subset the ambient table (unset = full HANDLERS).  Third-cut demo: the last code-shaped board a spec can now name.",
+  "corpus": {"builders": ["mulrelu", "mulgelu", "swiglu_mlp", "chain_mlp"]},
+  "player": "meta",
+  "incumbent": {"kind": "scripted"},
+  "deliver": "auto"
+}

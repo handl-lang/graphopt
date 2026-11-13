@@ -1,0 +1,10 @@
+{
+  "name": "search-folds",
+  "board": "search",
+  "description": "SearchEnv rule-fire domain as data: the paying-fold half of the case pool (silu spelling, identity collapses, the div/abs board) under a three-rule allowlist — the spec names corpus.kinds, vocab.rules and the episode bounds; the search player spec + scripted playbook are the board defaults.",
+  "corpus": {"kinds": ["silu", "addid", "mulid", "negneg"], "horizon": 10},
+  "vocab": {"rules": ["silu_fold", "id_add", "id_mul", "double_neg"]},
+  "player": "search",
+  "incumbent": {"kind": "search"},
+  "deliver": "none"
+}

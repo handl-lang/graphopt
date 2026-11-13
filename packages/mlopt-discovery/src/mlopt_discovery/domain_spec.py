@@ -11,13 +11,35 @@ factory, player spec and scripted arm — into ``play.DOMAINS``.
 
 Second-cut scope (honest):
 
-* ``board`` — ``"meta-arena"`` (the symbolic probe-tuple corpus on
+* ``board`` — every shipped ``play`` domain is spec-able:
+  ``"meta-arena"`` (the symbolic probe-tuple corpus on
   :class:`~mlopt_discovery.meta_arena.MetaArena` under
-  ``count_cost``) and ``"torch"`` (real ``nn.Module``s lifted
+  ``count_cost``), ``"torch"`` (real ``nn.Module``s lifted
   through ``TorchSource`` and played under the sink's
-  ``supported_ops`` bound, with the ``--deliver`` lowering hook).
-  The ``gen`` board's per-case kernel minting stays code — a spec
-  cannot yet name it.
+  ``supported_ops`` bound, with the ``--deliver`` lowering hook),
+  ``"gen"`` (the same lifted modules plus per-case *minted*
+  genkernel handlers — ``corpus.builders`` selects the fusion
+  builders, ``vocab.handler_tags`` subsets the ambient table),
+  ``"joint"`` (forward+gradient programs on the meta-arena board),
+  ``"search"`` (the ``SearchEnv`` rule-fire adapter —
+  ``vocab.rules`` seats a rule-name subset, ``corpus.kinds`` the
+  named case pool, ``corpus.horizon``/``patience`` the bounds),
+  ``"fragment"`` (the ``vocab/`` fragment-application board —
+  ``vocab.rules`` filters rewrite names, ``vocab.handler_tags``
+  subsets the fragment handler table, ``corpus.max_moves`` the
+  budget), ``"open"`` (the enumerated-candidate oracle game —
+  ``corpus.ops``/``page``/``start``/``step`` are its only knobs),
+  ``"player"`` (the spec-record rewrite meta-game —
+  ``corpus.objective``/``max_evals``) and ``"bilinear"`` (the
+  ``<2,2,2>`` decomposition board — ``corpus.scramble``).
+  ``player``/``incumbent`` default per board and are validated
+  against it — a spec cannot seat the meta-arena player spec on
+  the search board.  Boards whose cases are not op-terms
+  (``open``/``player``/``bilinear``) refuse ``vocab.*`` outright;
+  boards that still genuinely need code (a new case generator, a
+  new player vocabulary, a nested-objective scorer) are the
+  plugin seam documented in the Stage-3 report — the registries
+  below are the extension points.
 * ``corpus.modules`` (torch board) — selects builders by name from
   ``play._torch_modules``'s zoo; ``corpus.kinds`` stays the
   meta-arena builder-kind seam.
@@ -132,6 +154,10 @@ class DomainSpecFile:
     board: str = "meta-arena"
     corpus_kinds: tuple[str, ...] | None = None
     corpus_modules: tuple[str, ...] | None = None
+    corpus_builders: tuple[str, ...] | None = None
+    corpus_ops: tuple[str, ...] | None = None
+    corpus_objective: str | None = None
+    corpus_params: dict = field(default_factory=dict)
     corpus_coverage: bool = True
     vocab_ops: frozenset[str] | None = None
     vocab_attrs: frozenset[str] | None = None  # "op.attr" spellings
@@ -200,6 +226,151 @@ def _parse_rules(value: Any) -> Any:
     )
 
 
+# ---------------------------------------------------------------------------
+#  Per-board field schemas — what a spec may name on each board
+# ---------------------------------------------------------------------------
+#
+#  ``corpus`` keys each board consumes (anything else is a load
+#  error — a spec that names a knob the board cannot read would
+#  silently drift from what it claims).  ``vocab`` keys likewise.
+#  ``_BOARD_DEFAULTS`` seats the player spec + incumbent playbook
+#  a spec gets when it does not name them; ``_BOARD_INCUMBENTS``
+#  bounds which playbook kinds may be seated explicitly (a
+#  meta-arena ``ScriptedPlayer`` cannot read a ``SearchState``).
+
+_CORPUS_KEYS: dict[str, frozenset] = {
+    "meta-arena": frozenset({"kinds", "coverage"}),
+    "torch": frozenset({"modules", "coverage"}),
+    "gen": frozenset({"builders"}),
+    "joint": frozenset({"kinds"}),
+    "search": frozenset({"kinds", "horizon", "patience"}),
+    "fragment": frozenset({"kinds", "max_moves"}),
+    "open": frozenset({"ops", "page", "start", "step"}),
+    "player": frozenset({"objective", "max_evals"}),
+    "bilinear": frozenset({"scramble"}),
+}
+
+#: Integer ``corpus`` params per board (the rest are name lists or
+#: the ``coverage`` flag parsed separately).
+_CORPUS_PARAMS: dict[str, frozenset] = {
+    "search": frozenset({"horizon", "patience"}),
+    "fragment": frozenset({"max_moves"}),
+    "open": frozenset({"page", "start", "step"}),
+    "player": frozenset({"max_evals"}),
+    "bilinear": frozenset({"scramble"}),
+}
+
+_VOCAB_KEYS: dict[str, frozenset] = {
+    "meta-arena": frozenset({"ops", "attrs", "rules", "handler_tags"}),
+    "torch": frozenset({"ops", "attrs", "rules", "handler_tags"}),
+    "gen": frozenset({"ops", "attrs", "rules", "handler_tags"}),
+    "joint": frozenset({"ops", "attrs", "rules", "handler_tags"}),
+    "search": frozenset({"ops", "attrs", "rules"}),
+    "fragment": frozenset({"ops", "attrs", "rules", "handler_tags"}),
+    "open": frozenset(),
+    "player": frozenset(),
+    "bilinear": frozenset(),
+}
+
+_BOARD_DEFAULTS: dict[str, dict] = {
+    "meta-arena": {"player": "meta", "incumbent": "scripted"},
+    "torch": {"player": "meta", "incumbent": "scripted"},
+    "gen": {"player": "meta", "incumbent": "scripted"},
+    "joint": {"player": "meta", "incumbent": "scripted"},
+    "search": {"player": "search", "incumbent": "search"},
+    "fragment": {"player": "fragment", "incumbent": "fragment"},
+    "open": {"player": "open", "incumbent": "none"},
+    "player": {"player": "player", "incumbent": "player"},
+    "bilinear": {"player": "bilinear", "incumbent": "bilinear"},
+}
+
+_BOARD_INCUMBENTS: dict[str, frozenset] = {
+    "meta-arena": frozenset({"scripted", "greedy", "none"}),
+    "torch": frozenset({"scripted", "greedy", "none"}),
+    "gen": frozenset({"scripted", "greedy", "none"}),
+    "joint": frozenset({"scripted", "greedy", "none"}),
+    "search": frozenset({"search", "none"}),
+    "fragment": frozenset({"fragment", "none"}),
+    "open": frozenset({"none"}),
+    "player": frozenset({"player", "none"}),
+    "bilinear": frozenset({"bilinear", "none"}),
+}
+
+#: Boards whose cases carry an example input + the gen sink — the
+#: ``deliver: "torch"`` lowering verifies against them (``gen``
+#: cases keep the same ``ex`` record the torch cases do).
+_TORCH_DELIVER_BOARDS: frozenset = frozenset({"torch", "gen"})
+
+#: Boards ``bake_prior`` can imitate on — its oracle planner reads
+#: meta-arena boards only (the others' states are not
+#: ``MetaArena``-shaped).
+_ORACLE_BOARDS: frozenset = frozenset(
+    {"meta-arena", "torch", "gen", "joint"}
+)
+
+_REGISTRIES_READY = False
+_EXTRA_CASES: dict[str, Any] = {}
+_FRAGMENT_VOCAB: Any = None
+
+
+def _ensure_registries() -> None:
+    """Seat the ``play``-backed board/player/incumbent entries once.
+
+    The play-module imports stay lazy so ``import
+    mlopt_discovery.domain_spec`` keeps its light footprint; the
+    first spec parse pays for them.  The registries are the plugin
+    seam: a downstream board repo seats its own factories into
+    ``BOARDS``/``_EXTRA_CASES``/``PLAYERS``/``INCUMBENTS`` before
+    calling :func:`register_file` — the same shape kernelopt's
+    ``mlopt_kernel.play.register()`` uses for ``play.DOMAINS``.
+    """
+    global _REGISTRIES_READY
+    if _REGISTRIES_READY:
+        return
+    _REGISTRIES_READY = True
+    from . import play as _p
+
+    BOARDS.update(
+        {
+            "gen": _make_gen_board,
+            "joint": _make_joint_board,
+            "search": _make_search_board,
+            "fragment": _make_fragment_board,
+            "open": _make_open_board,
+            "player": _make_player_board,
+            "bilinear": _make_bilinear_board,
+        }
+    )
+    PLAYERS.update(
+        {
+            "search": _p.SEARCH_SPEC,
+            "fragment": _p.FRAGMENT_SPEC,
+            "open": _p.og.OPEN_SPEC,
+            "player": _p.pa.PLAYER_SPEC,
+            "bilinear": _p.bg.BILINEAR_SPEC,
+        }
+    )
+    INCUMBENTS.update(
+        {
+            "search": _p._scripted_search,
+            "fragment": _p._fragment_scripted,
+            "player": _p.pa.GreedyEditor,
+            "bilinear": _p.bg.strassen_line,
+        }
+    )
+    _EXTRA_CASES.update(
+        {
+            "gen": _make_gen_cases,
+            "joint": _make_joint_cases,
+            "search": _make_search_cases,
+            "fragment": _make_fragment_cases,
+            "open": _make_open_cases,
+            "player": _make_player_cases,
+            "bilinear": _make_bilinear_cases,
+        }
+    )
+
+
 def load_spec(source: str | Path | dict) -> DomainSpecFile:
     """Parse a spec from a JSON path, packaged name, or mapping.
 
@@ -224,6 +395,7 @@ def load_spec(source: str | Path | dict) -> DomainSpecFile:
 
 
 def _spec_from_dict(data: dict) -> DomainSpecFile:
+    _ensure_registries()
     name = data.get("name")
     if not isinstance(name, str) or not _NAME_RE.match(name):
         raise ValueError(
@@ -242,6 +414,15 @@ def _spec_from_dict(data: dict) -> DomainSpecFile:
             f"domain spec {name!r}: vocab must be an object"
         )
     vocab = vocab or {}
+    unknown_vocab = sorted(set(vocab) - _VOCAB_KEYS[board])
+    if unknown_vocab:
+        raise ValueError(
+            f"domain spec {name!r}: board {board!r} has no "
+            f"vocab.{unknown_vocab[0]} seam — its cases are not "
+            f"op-terms the whitelist/post-filter can bind "
+            f"(vocab keys for {board!r}: "
+            f"{sorted(_VOCAB_KEYS[board]) or 'none'})"
+        )
     ops = vocab.get("ops")
     attrs = vocab.get("attrs")
     handler_tags = vocab.get("handler_tags")
@@ -252,44 +433,147 @@ def _spec_from_dict(data: dict) -> DomainSpecFile:
             f"domain spec {name!r}: corpus must be an object"
         )
     corpus = corpus or {}
+    unknown_corpus = sorted(set(corpus) - _CORPUS_KEYS[board])
+    if unknown_corpus:
+        raise ValueError(
+            f"domain spec {name!r}: board {board!r} has no "
+            f"corpus.{unknown_corpus[0]} seam (corpus keys for "
+            f"{board!r}: {sorted(_CORPUS_KEYS[board])})"
+        )
     kinds = corpus.get("kinds")
     modules = corpus.get("modules")
-    if kinds is not None and board != "meta-arena":
-        raise ValueError(
-            f"domain spec {name!r}: corpus.kinds selects "
-            f"meta_player builder kinds — only board 'meta-arena' "
-            f"has them (board is {board!r})"
+    builders = corpus.get("builders")
+    corpus_ops = corpus.get("ops")
+    objective = corpus.get("objective")
+    if corpus_ops is not None:
+        corpus_ops = _as_str_list(
+            corpus_ops, where=f"{name}.corpus.ops"
         )
+    if objective is not None and not isinstance(objective, str):
+        raise ValueError(
+            f"domain spec {name!r}: corpus.objective must be a "
+            f"string, got {objective!r}"
+        )
+    params = {
+        k: v
+        for k, v in corpus.items()
+        if k
+        not in {
+            "kinds",
+            "modules",
+            "builders",
+            "ops",
+            "objective",
+            "coverage",
+        }
+    }
+    bad_params = sorted(
+        set(params) - _CORPUS_PARAMS.get(board, frozenset())
+    )
+    if bad_params:
+        raise ValueError(
+            f"domain spec {name!r}: board {board!r} has no "
+            f"corpus.{bad_params[0]} param (int params for "
+            f"{board!r}: {sorted(_CORPUS_PARAMS.get(board, ())) or 'none'})"
+        )
+    for k, v in params.items():
+        if not isinstance(v, int) or isinstance(v, bool):
+            raise ValueError(
+                f"domain spec {name!r}: corpus.{k} must be an "
+                f"int, got {v!r}"
+            )
     if modules is not None and board != "torch":
         raise ValueError(
             f"domain spec {name!r}: corpus.modules selects torch "
             f"module-zoo builders — only board 'torch' has them "
             f"(board is {board!r})"
         )
-    player_field = data.get("player", "meta")
+    if builders is not None and board != "gen":
+        raise ValueError(
+            f"domain spec {name!r}: corpus.builders selects gen "
+            f"fusion builders — only board 'gen' has them "
+            f"(board is {board!r})"
+        )
+    if corpus_ops is not None and board != "open":
+        raise ValueError(
+            f"domain spec {name!r}: corpus.ops selects the open "
+            f"board's candidate op vocabulary — only board 'open' "
+            f"has it (board is {board!r}; vocab.ops is the term "
+            "whitelist — a different field)"
+        )
+    if corpus_ops is not None:
+        from mlopt_core.opmeta import REGISTRY as _OP_REGISTRY
+
+        unknown_ops = sorted(set(corpus_ops) - set(_OP_REGISTRY))
+        if unknown_ops:
+            raise ValueError(
+                f"domain spec {name!r}: corpus.ops names unknown "
+                f"ops {unknown_ops!r} (opmeta registry is the "
+                "vocabulary)"
+            )
+    if objective is not None and board != "player":
+        raise ValueError(
+            f"domain spec {name!r}: corpus.objective selects the "
+            f"player board's nested objective — only board 'player' "
+            f"has it (board is {board!r})"
+        )
+    if objective is not None:
+        from . import play as _play
+
+        if objective not in _play.pa.OBJECTIVES:
+            raise ValueError(
+                f"domain spec {name!r}: corpus.objective {objective!r} "
+                f"unknown (known: {sorted(_play.pa.OBJECTIVES)!r})"
+            )
+    player_field = data.get("player")
     player_prior: Any = None
     if isinstance(player_field, dict):
-        player = player_field.get("kind", "meta")
+        player = (
+            player_field.get("kind") or _BOARD_DEFAULTS[board]["player"]
+        )
         player_prior = player_field.get("prior")
     else:
-        player = player_field
+        player = (
+            player_field
+            if player_field is not None
+            else _BOARD_DEFAULTS[board]["player"]
+        )
     if player not in PLAYERS:
         raise ValueError(
             f"domain spec {name!r}: player {player!r} unsupported "
             f"(v1 ships {sorted(PLAYERS)!r})"
         )
+    if player != _BOARD_DEFAULTS[board]["player"]:
+        raise ValueError(
+            f"domain spec {name!r}: board {board!r} plays the "
+            f"{_BOARD_DEFAULTS[board]['player']!r} player spec — "
+            f"its legal-move/state shapes are bound to the board "
+            f"(got player {player!r})"
+        )
     if player_prior == "default":
         player_prior = None
-    incumbent = data.get("incumbent") or {}
-    inc_kind = (
-        incumbent.get("kind", "scripted")
-        if isinstance(incumbent, dict)
-        else incumbent
-    )
+    incumbent = data.get("incumbent")
+    if incumbent is None or incumbent == {}:
+        inc_kind = _BOARD_DEFAULTS[board]["incumbent"]
+    else:
+        if isinstance(incumbent, dict):
+            inc_kind = (
+                incumbent.get("kind")
+                or _BOARD_DEFAULTS[board]["incumbent"]
+            )
+        else:
+            inc_kind = incumbent
     if inc_kind not in INCUMBENTS:
         raise ValueError(
             f"domain spec {name!r}: incumbent {inc_kind!r} "
             f"unsupported (v1 ships {sorted(INCUMBENTS)!r})"
+        )
+    if inc_kind not in _BOARD_INCUMBENTS[board]:
+        raise ValueError(
+            f"domain spec {name!r}: board {board!r} cannot seat "
+            f"incumbent {inc_kind!r} — its playbook reads a "
+            f"different state shape (allowed: "
+            f"{sorted(_BOARD_INCUMBENTS[board])})"
         )
     deliver = data.get("deliver", "auto")
     if deliver is True:
@@ -301,12 +585,13 @@ def _spec_from_dict(data: dict) -> DomainSpecFile:
             f"domain spec {name!r}: deliver {deliver!r} unsupported "
             f"(expected one of {sorted(DELIVERS)!r}, or a bool)"
         )
-    if deliver == "torch" and board != "torch":
+    if deliver == "torch" and board not in _TORCH_DELIVER_BOARDS:
         raise ValueError(
             f"domain spec {name!r}: deliver 'torch' lowers+verifies "
-            f"against the case's example input — only board 'torch' "
-            f"cases carry one (board is {board!r}; meta-arena terms "
-            "are symbolic, delivery is meaningless there)"
+            f"against the case's example input — only boards "
+            f"{sorted(_TORCH_DELIVER_BOARDS)!r} carry one (board is "
+            f"{board!r}; meta-arena-family terms are symbolic, "
+            "delivery is meaningless there)"
         )
     shapes = data.get("shapes")
     hardware = data.get("hardware")
@@ -326,11 +611,12 @@ def _spec_from_dict(data: dict) -> DomainSpecFile:
         else None
     )
     if tags is not None:
-        unknown = sorted(set(tags) - set(lawdata.HANDLERS))
+        known = _handler_tag_names(board)
+        unknown = sorted(set(tags) - set(known))
         if unknown:
             raise ValueError(
                 f"domain spec {name!r}: unknown handler_tags {unknown!r} "
-                f"(known: {sorted(lawdata.HANDLERS)!r})"
+                f"for board {board!r} (known: {sorted(known)!r})"
             )
     return DomainSpecFile(
         name=name,
@@ -345,6 +631,20 @@ def _spec_from_dict(data: dict) -> DomainSpecFile:
             if modules is not None
             else None
         ),
+        corpus_builders=(
+            _as_str_list(builders, where=f"{name}.corpus.builders")
+            if builders is not None
+            else None
+        ),
+        corpus_ops=(
+            _as_str_list(corpus_ops, where=f"{name}.corpus.ops")
+            if corpus_ops is not None
+            else None
+        ),
+        corpus_objective=(
+            str(objective) if objective is not None else None
+        ),
+        corpus_params=dict(params),
         corpus_coverage=bool(corpus.get("coverage", True)),
         vocab_ops=(
             frozenset(_as_str_list(ops, where=f"{name}.vocab.ops"))
@@ -675,6 +975,331 @@ def _make_torch_board(spec: DomainSpecFile) -> Any:
 
 
 # ---------------------------------------------------------------------------
+#  The code-shaped boards — gen / joint / search / fragment / open /
+#  player / bilinear.  Each wires the shipped ``play`` generator and
+#  board factory; the spec's corpus/vocab fields are the only data
+#  knobs (see ``_CORPUS_KEYS``/``_VOCAB_KEYS``).
+# ---------------------------------------------------------------------------
+
+
+def _fragment_vocab() -> Any:
+    """Return the loaded ``vocab/`` directory (cached)."""
+    global _FRAGMENT_VOCAB
+    if _FRAGMENT_VOCAB is None:
+        from . import vocabdir
+
+        directory = vocabdir.default_vocab_dir()
+        if directory is None:
+            raise ValueError(
+                "no vocab directory — the fragment board needs "
+                "vocab/ or MLOPT_VOCAB_DIR"
+            )
+        _FRAGMENT_VOCAB = vocabdir.load_vocab(directory)
+    return _FRAGMENT_VOCAB
+
+
+def _handler_tag_names(board: str) -> Any:
+    """Return the handler-tag universe *board* validates against.
+
+    Most boards seat subsets of ``lawdata.HANDLERS``; the fragment
+    board's table is the ``vocab/`` directory's own
+    ``handler_table()`` — a different (larger) namespace.
+    """
+    if board == "fragment":
+        return _fragment_vocab().handler_table()
+    return lawdata.HANDLERS
+
+
+def _fragment_handler_subset(spec: DomainSpecFile) -> dict | None:
+    """Resolve ``vocab.handler_tags`` against the fragment table."""
+    if spec.handler_tags is None:
+        return None
+    table = _fragment_vocab().handler_table()
+    keep = set(spec.handler_tags)
+    return {tag: table[tag] for tag in keep if tag in table}
+
+
+def _default_rules_filtered(
+    spec: DomainSpecFile, ruleset: Any, *, board: str
+) -> Any:
+    """Return *ruleset* filtered to the spec's rules allowlist.
+
+    ``None`` (profile ``"all"``) seats the board's own default —
+    the factory applies it.  An allowlist that survives no rule
+    name refuses at build: an empty ruleset is a spec bug, not a
+    domain.
+    """
+    allowed = _rule_allowlist(spec.rules_profile)
+    if allowed is None:
+        return None
+    rules = tuple(r for r in ruleset if r.name in allowed)
+    if not rules:
+        raise ValueError(
+            f"domain spec {spec.name!r}: vocab.rules leaves no "
+            f"rules for board {board!r}"
+        )
+    return rules
+
+
+def _collect(
+    out: list,
+    chunk: Any,
+    spec: DomainSpecFile,
+    n: int,
+) -> None:
+    """Append vocab-passing cases, renamed ``spec<i>:<kind>``."""
+    for c in chunk:
+        if len(out) >= n:
+            return
+        if _case_ok(c, spec, None):
+            out.append((f"spec{len(out)}:{_kind_of(c)}", *c[1:]))
+
+
+def _make_gen_cases(spec: DomainSpecFile) -> Any:
+    """Gen-kernel case stream — ``corpus.builders`` + ambient subset."""
+    from . import play as _play
+
+    builders = spec.corpus_builders
+    ambient = _handler_subset(spec)
+    # eager check: ``_gen_cases`` validates builder names before its
+    # draw loop — an ``n=0`` probe refuses unknown names at build,
+    # not on the first episode (it does import torch once here).
+    _play._gen_cases(0, 0, builders=builders, ambient_handlers=ambient)
+    allowed = _rule_allowlist(spec.rules_profile)
+    if allowed is not None:
+        # the gen board always seats DEFAULT + the minted store —
+        # a profile must admit every DEFAULT name (same contract
+        # as the torch board's rules=None cases)
+        default_names = {r.name for r in DEFAULT}
+        if not default_names <= allowed:
+            raise ValueError(
+                f"domain spec {spec.name!r}: board 'gen' seats the "
+                "DEFAULT ruleset plus minted handlers — vocab.rules "
+                "admits none of its names"
+            )
+
+    def cases(seed: int, n: int) -> list:
+        out: list = []
+        for rnd in range(_MAX_ROUNDS):
+            if len(out) >= n:
+                break
+            chunk = _play._gen_cases(
+                seed + rnd * 100_003,
+                max(n, 24),
+                builders=builders,
+                ambient_handlers=ambient,
+            )
+            _collect(out, chunk, spec, n)
+        return out
+
+    return cases
+
+
+def _make_gen_board(spec: DomainSpecFile) -> Any:
+    """Gen case → MetaArena under its minted handler store.
+
+    The ambient-handler subset rides inside each case's ``ex``
+    record (``_gen_cases`` seats it); ``_gen_board`` reads it —
+    nothing spec-side remains to bind here.
+    """
+    from . import play as _play
+
+    return _play._gen_board
+
+
+def _make_joint_cases(spec: DomainSpecFile) -> Any:
+    """Joint-program stream — ``corpus.kinds`` picks archetypes."""
+    from . import play as _play
+
+    kinds = spec.corpus_kinds
+    if kinds is not None:
+        unknown = sorted(set(kinds) - {"0", "1", "2", "3"})
+        if unknown:
+            raise ValueError(
+                f"domain spec {spec.name!r}: corpus.kinds {unknown!r} "
+                "match no joint archetype (known: '0'..'3')"
+            )
+
+    def cases(seed: int, n: int) -> list:
+        out: list = []
+        for rnd in range(_MAX_ROUNDS):
+            if len(out) >= n:
+                break
+            chunk = _play._joint_cases(seed + rnd * 100_003, max(n, 24))
+            for c in chunk:
+                if kinds is not None and _kind_of(c) not in kinds:
+                    continue
+                _collect(out, [c], spec, n)
+        return out
+
+    return cases
+
+
+def _make_joint_board(spec: DomainSpecFile) -> Any:
+    """Joint term → MetaArena under the profiled rules + subset."""
+    handlers = _handler_subset(spec)
+    rules = _default_rules_filtered(spec, DEFAULT, board="joint")
+
+    def board_of(case: Any) -> ma.MetaArena:
+        return ma.MetaArena(
+            case[1],
+            rules,
+            cost_fn=count_cost,
+            handlers=handlers,
+            max_nodes=20_000,
+        )
+
+    return board_of
+
+
+def _make_search_cases(spec: DomainSpecFile) -> Any:
+    """SearchEnv case stream — ``corpus.kinds`` picks pool names."""
+    from . import play as _play
+
+    kinds = spec.corpus_kinds
+
+    def cases(seed: int, n: int) -> list:
+        out: list = []
+        for rnd in range(_MAX_ROUNDS):
+            if len(out) >= n:
+                break
+            chunk = _play._search_cases(
+                seed + rnd * 100_003, max(n, 24), kinds=kinds
+            )
+            _collect(out, chunk, spec, n)
+        return out
+
+    return cases
+
+
+def _make_search_board(spec: DomainSpecFile) -> Any:
+    """Search case → SearchBoard under the profiled ruleset."""
+    from . import play as _play
+
+    rules = _default_rules_filtered(spec, DEFAULT, board="search")
+    params = spec.corpus_params
+
+    def board_of(case: Any) -> Any:
+        return _play._search_board(
+            case,
+            rules,
+            horizon=params.get("horizon", 12),
+            patience=params.get("patience"),
+        )
+
+    return board_of
+
+
+def _make_fragment_cases(spec: DomainSpecFile) -> Any:
+    """Fragment-move case stream — ``corpus.kinds`` picks pool names."""
+    from . import play as _play
+
+    kinds = spec.corpus_kinds
+
+    def cases(seed: int, n: int) -> list:
+        out: list = []
+        for rnd in range(_MAX_ROUNDS):
+            if len(out) >= n:
+                break
+            chunk = _play._fragment_cases(
+                seed + rnd * 100_003, max(n, 24), kinds=kinds
+            )
+            _collect(out, chunk, spec, n)
+        return out
+
+    return cases
+
+
+def _make_fragment_board(spec: DomainSpecFile) -> Any:
+    """Fragment case → FragmentArena under profiled vocab subsets."""
+    from . import play as _play
+
+    vocab = _fragment_vocab()
+    laws, prims, schemas = _play.fg._rewrite_kinds(vocab)
+    rewrites = {**laws, **prims, **schemas}
+    rules = _default_rules_filtered(
+        spec, rewrites.values(), board="fragment"
+    )
+    handlers = _fragment_handler_subset(spec)
+    max_moves = spec.corpus_params.get("max_moves", 256)
+
+    def board_of(case: Any) -> Any:
+        return _play._fragment_board(
+            case, rules=rules, handlers=handlers, max_moves=max_moves
+        )
+
+    return board_of
+
+
+def _make_open_cases(spec: DomainSpecFile) -> Any:
+    """Open-game page stream — ``corpus.ops``/``page``/``start``/``step``."""
+    from . import open_game as og
+
+    ops = spec.corpus_ops
+    params = spec.corpus_params
+
+    def cases(seed: int, n: int) -> list:
+        return og.gen_cases(
+            seed,
+            n,
+            ops=ops,
+            page=params.get("page", 48),
+            start=params.get("start", 0),
+            step=params.get("step", 1),
+        )
+
+    return cases
+
+
+def _make_open_board(spec: DomainSpecFile) -> Any:
+    """Open case dict → OpenArena (the case *is* the board spec)."""
+    from . import open_game as og
+
+    return og.OpenArena
+
+
+def _make_player_cases(spec: DomainSpecFile) -> Any:
+    """Player-arena case stream — ``corpus.objective``/``max_evals``."""
+    from . import player_arena as pa
+
+    objective = spec.corpus_objective or "open"
+    kwargs: dict[str, Any] = {"objective": objective}
+    if "max_evals" in spec.corpus_params:
+        kwargs["max_evals"] = spec.corpus_params["max_evals"]
+
+    def cases(seed: int, n: int) -> list:
+        return pa.gen_cases(seed, n, **kwargs)
+
+    return cases
+
+
+def _make_player_board(spec: DomainSpecFile) -> Any:
+    """Player case dict → PlayerArena."""
+    from . import player_arena as pa
+
+    return pa.PlayerArena
+
+
+def _make_bilinear_cases(spec: DomainSpecFile) -> Any:
+    """Bilinear case stream — ``corpus.scramble`` sizes the draw."""
+    from . import bilinear_game as bg
+
+    scramble = spec.corpus_params.get("scramble", 8)
+
+    def cases(seed: int, n: int) -> list:
+        return bg.gen_cases(seed, n, scramble=scramble)
+
+    return cases
+
+
+def _make_bilinear_board(spec: DomainSpecFile) -> Any:
+    """Bilinear case → BilinearBoard."""
+    from . import bilinear_game as bg
+
+    return bg.BilinearBoard
+
+
+# ---------------------------------------------------------------------------
 #  Player priors — spec-matched weight tables
 # ---------------------------------------------------------------------------
 
@@ -780,6 +1405,13 @@ def bake_prior(
         domain: Any = spec
     else:
         spec_obj = spec
+        if spec_obj.board not in _ORACLE_BOARDS:
+            raise ValueError(
+                f"bake_prior: board {spec_obj.board!r} states are "
+                "not MetaArena-shaped — the oracle planner cannot "
+                f"imitate on it (oracle boards: "
+                f"{sorted(_ORACLE_BOARDS)!r})"
+            )
         domain = build_domain(spec)
     case_list = list(domain.cases(seed, cases))
     plans = mp.plan_oracles(
@@ -844,13 +1476,14 @@ def _deliver_for(spec: DomainSpecFile) -> Any:
     ``spec.deliver`` gates first: ``"none"`` always seats nothing,
     ``"torch"`` seats ``play._torch_deliver`` (load validation
     already pinned the board), ``"auto"`` defers to the board —
-    torch delivers, meta-arena does not (symbolic terms have no
-    lowering or verify target).
+    torch delivers, the gen board delivers through its gen sink,
+    meta-arena-family symbolic boards do not (no lowering or
+    verify target).
     """
     if spec.deliver == "none":
         return None
     if spec.deliver == "torch" or (
-        spec.deliver == "auto" and spec.board == "torch"
+        spec.deliver == "auto" and spec.board in _TORCH_DELIVER_BOARDS
     ):
         from . import play as _play
 
@@ -869,6 +1502,7 @@ def build_domain(spec: DomainSpecFile) -> Any:
     imports ``play`` so this module stays importable without the
     registry's full player-table cost.
     """
+    _ensure_registries()
     from . import play
 
     if spec.board == "meta-arena":
@@ -876,6 +1510,8 @@ def build_domain(spec: DomainSpecFile) -> Any:
         cases_fn = _make_cases(spec, kinds)
     elif spec.board == "torch":
         cases_fn = _make_torch_cases(spec)
+    elif spec.board in _EXTRA_CASES:
+        cases_fn = _EXTRA_CASES[spec.board](spec)
     else:  # pragma: no cover - BOARDS validation gates this
         raise ValueError(f"unsupported board {spec.board!r}")
     scripted = INCUMBENTS[spec.incumbent]
@@ -930,6 +1566,18 @@ def spec_summary(spec: DomainSpecFile) -> dict:
             if spec.corpus_modules is not None
             else None
         ),
+        "builders": (
+            list(spec.corpus_builders)
+            if spec.corpus_builders is not None
+            else None
+        ),
+        "ops": (
+            list(spec.corpus_ops)
+            if spec.corpus_ops is not None
+            else None
+        ),
+        "objective": spec.corpus_objective,
+        "params": spec.corpus_params or None,
     }
     if spec.board == "meta-arena":
         corpus["kinds_eligible"] = _eligible_kinds(spec)
@@ -993,12 +1641,15 @@ def main(argv: list[str] | None = None) -> int:
         cases_fn = _make_cases(
             spec, summary["corpus"]["kinds_eligible"]
         )
-    else:
+    elif spec.board == "torch":
         cases_fn = _make_torch_cases(spec)
+    else:
+        cases_fn = _EXTRA_CASES[spec.board](spec)
     cases = cases_fn(0, args.cases)
     print(f"cases: {len(cases)}")  # stdout-compat
-    for name, *_ in cases[: args.cases]:
-        print(f"  {name}")  # stdout-compat
+    for c in cases[: args.cases]:
+        label = c.get("name") if isinstance(c, dict) else c[0]
+        print(f"  {label}")  # stdout-compat
     return 0
 
 
