@@ -512,6 +512,27 @@ class TestTorchBoard:
         assert cases[0][5]["input"].shape == (2, 8)
         assert "float64" in str(cases[0][5]["input"].dtype)
 
+    def test_deliver_field(self):
+        pytest.importorskip("torch")
+        # "none" seats no hook even on the torch board
+        spec = self._tspec(deliver="none")
+        assert ds.build_domain(spec).deliver is None
+        # the named hook and "auto" both seat _torch_deliver
+        for spelling in ("torch", "auto", True):
+            spec = self._tspec(deliver=spelling)
+            assert spec.deliver == ("auto" if spelling is True else spelling)
+            assert ds.build_domain(spec).deliver is not None
+        # meta-arena: auto is hookless (symbolic — meaningless),
+        # the torch hook is refused at load
+        spec = ds.load_spec({"name": "m", "deliver": False})
+        assert ds.build_domain(spec).deliver is None
+        with pytest.raises(ValueError, match="deliver 'torch'"):
+            ds.load_spec({"name": "m2", "deliver": "torch"})
+        with pytest.raises(ValueError, match="deliver 'bogus'"):
+            ds.load_spec({"name": "m3", "deliver": "bogus"})
+        # the census reports the field
+        assert ds.spec_summary(self._tspec(deliver="none"))["deliver"] == "none"
+
     def test_deliver_smoke(self):
         pytest.importorskip("torch")
         from gamekit import engine

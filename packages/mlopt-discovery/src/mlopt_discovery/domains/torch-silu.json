@@ -7,5 +7,6 @@
   "hardware": {"device": "cpu", "dtype": "float32"},
   "vocab": {"rules": "default"},
   "player": "meta",
-  "incumbent": {"kind": "scripted"}
+  "incumbent": {"kind": "scripted"},
+  "deliver": "torch"
 }

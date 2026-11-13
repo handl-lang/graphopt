@@ -909,6 +909,152 @@ class TestSeqScanSites:
         )
         assert play._seq_scan_sites(term) == []
 
+    def _gla_recurrence(self, t_len: int = 3):
+        """GLA-shaped chain: ``g_t⊙h + k_t v_tᵀ`` over unsqueezed selects.
+
+        The matrix-state gated update — per-step ``unsqueeze`` views
+        on ``(b,T,d)`` slices against a ``(b,d,d)`` state.  The view
+        lift must grow the operand broadcast to include the state
+        dims or the fold cannot denote the chain.
+        """
+        from mlopt_core.ir import Op, TensorType, Var
+
+        def v(n, *s):
+            return Var(n, TensorType(s))
+
+        G, K, V = (
+            v("G", 2, t_len, 4),
+            v("K", 2, t_len, 4),
+            v("V", 2, t_len, 4),
+        )
+        h = v("H0", 2, 4, 4)
+        for t in range(t_len):
+            a_t = Op.make(
+                "unsqueeze", Op.make("select", G, dim=1, index=t), dim=-1
+            )
+            k_t = Op.make(
+                "unsqueeze", Op.make("select", K, dim=1, index=t), dim=-1
+            )
+            v_t = Op.make(
+                "unsqueeze",
+                Op.make("select", V, dim=1, index=t),
+                dim=-2,
+            )
+            h = Op.make(
+                "add",
+                Op.make("mul", a_t, h),
+                Op.make("mul", k_t, v_t),
+            )
+        return h
+
+    def test_seq_sites_lift_unsqueeze_views(self):
+        # view-wrapped selects lift onto the sequence child: the
+        # spec skeleton carries NO view op and scan_spec accepts
+        pytest.importorskip("torch")
+        from mlopt_discovery import genkernel as gk
+
+        sites = play._seq_scan_sites(self._gla_recurrence())
+        assert len(sites) == 1
+        s = sites[0]
+        spec = s["spec"]
+        assert "unsqueeze" not in repr(spec)
+        assert spec[1] == ("aff_diag", "Q1", ("mul", "Q2", "Q3"))
+        info = gk.scan_spec(spec)
+        assert info is not None and info["kind"] == "seq"
+        # the lifted operands broadcast to the (b,T,d,d) frame —
+        # state space (b,d,d) is what the (b,d,d) H binds
+        torch = pytest.importorskip("torch")
+        import mlopt_torch.torch_bridge as tb
+
+        bindings = tb._IR_TO_TORCH
+        env = {
+            "G": torch.randn(2, 3, 4),
+            "K": torch.randn(2, 3, 4),
+            "V": torch.randn(2, 3, 4),
+            "H0": torch.randn(2, 4, 4),
+        }
+        vals = {
+            m: gk._bound_val(t, env, bindings)
+            for m, t in s["leaf_env"].items()
+        }
+        shapes = {m: tuple(v.shape) for m, v in vals.items()}
+        assert shapes["Q1"] == (2, 3, 4, 1)
+        assert shapes["Q3"] == (2, 3, 1, 4)
+        assert shapes["H"] == (2, 4, 4)
+
+    def test_seq_sites_lifted_fold_equals_chain(self):
+        # the lifted fold must still denote the unrolled chain
+        # exactly — the view commute is only sound if it is
+        torch = pytest.importorskip("torch")
+        import mlopt_torch.torch_bridge as tb
+
+        from mlopt_discovery import genkernel as gk
+
+        term = self._gla_recurrence()
+        sites = play._seq_scan_sites(term)
+        assert len(sites) == 1
+        s = sites[0]
+        var_env = {
+            "G": torch.randn(2, 3, 4),
+            "K": torch.randn(2, 3, 4),
+            "V": torch.randn(2, 3, 4),
+            "H0": torch.randn(2, 4, 4),
+        }
+        bindings = tb._IR_TO_TORCH
+        vals = {
+            m: gk._bound_val(t, var_env, bindings)
+            for m, t in s["leaf_env"].items()
+        }
+        h = {
+            "pattern": s["spec"],
+            "args": tuple(gk._spec_metas(s["spec"])),
+            "axis": s["axis"],
+        }
+        got = gk.handler_denotation(h)(
+            *[vals[m] for m in h["args"]]
+        )
+        want = tb.eval_term(
+            term,
+            var_env=var_env,
+            param_env=var_env,
+            bindings=bindings,
+            strict=True,
+        )
+        torch.testing.assert_close(got, want)
+
+    def test_seq_sites_decline_view_over_expr(self):
+        # a view wrapping a COMPOUND step expr (not a bare select)
+        # cannot lift — the skeleton keeps the view node and
+        # scan_spec declines honestly at handler mint
+        pytest.importorskip("torch")
+        from mlopt_core.ir import Op, TensorType, Var
+        from mlopt_discovery import genkernel as gk
+
+        def v(n, *s):
+            return Var(n, TensorType(s))
+
+        A, B = v("A", 2, 3, 4), v("B", 2, 3, 4)
+        h = v("H0", 2, 4)
+        for t in range(3):
+            inner = Op.make(
+                "mul",
+                Op.make("select", A, dim=1, index=t),
+                Op.make("select", B, dim=1, index=t),
+            )
+            a_t = Op.make("unsqueeze", inner, dim=-1)
+            h = Op.make(
+                "add",
+                Op.make("mul", a_t, h),
+                Op.make("select", B, dim=1, index=t),
+            )
+        sites = play._seq_scan_sites(h)
+        # the collector may still emit the spine; the handler mint
+        # is where the view skeleton must decline
+        assert all(
+            gk.scan_spec(s["spec"]) is None for s in sites
+        ) or sites == []
+        assert gk.scan_handlers(sites) == {}
+
     def test_seq_sites_decline_state_shaped_mul(self):
         # ``mul(state_expr, x) + y`` chains whose "map" factor is a
         # whole-tensor reference (no per-step select) cannot mint a

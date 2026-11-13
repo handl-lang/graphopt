@@ -742,6 +742,112 @@ def _seq_spines(t: Any, memo: dict) -> list:
     return memo[key]
 
 
+def _seq_view_lift(t: Any):
+    """Lift a view-op chain over a ``select`` onto the select's child.
+
+    ``unsqueeze``/``squeeze`` directly wrapping a per-step ``select``
+    (possibly nested) commute onto the sequence tensor: the view is
+    re-expressed on the WHOLE child with its ``dim`` re-based into
+    child coordinates, and the select's dim shifted to match.  The
+    result is ``(viewed_child, select_dim, index)`` — feed it through
+    the ordinary operand path so the metavar binds the viewed
+    sequence (the step axis's position in *viewed-child* coords).
+
+    Why lift instead of rendering the view in the step expr: the
+    seq fold's state space is the operand broadcast minus the step
+    axis.  A view INSIDE the step expr (``unsqueeze`` of a ``(b,d)``
+    slice against a ``(b,d,d)`` state) has no flat-space meaning —
+    but the same view lifted onto the sequence child grows the
+    operand's own shape so the broadcast *includes* the state dims,
+    and every downstream consumer (``shape_of`` checks,
+    ``seq_scan_denotation``, the Triton kernel's materialised rows)
+    is unchanged.  ``unsqueeze(gg,-1)`` on a ``(b,T,d)`` operand
+    becomes ``unsqueeze(gg,3)`` selected at dim 1 — the fold then
+    reads ``(b,d,d)`` step slices, exactly the recurrence's state.
+
+    Returns ``None`` — the caller falls back to the generic spec
+    path, which keeps the view node in the skeleton and lets
+    ``scan_spec`` decline honestly — when the chain does not end at
+    a ``select``, a ``dim`` attr is missing/non-int, ``shape_of``
+    cannot type a child, or a normalised dim falls out of range.
+    Other view ops (``reshape``/``view``/``expand``/``permute``)
+    and dim-less ``squeeze`` stay outside the grammar.
+    """
+    from mlopt_core.typing import INVALID, shape_of
+
+    views: list = []
+    node = t
+    while (
+        isinstance(node, Op)
+        and node.op in ("unsqueeze", "squeeze")
+        and len(node.args) == 1
+        and set(node.attrs) <= {"dim"}
+        and type(node.attrs.get("dim")) is int
+    ):
+        views.append(node)
+        node = node.args[0]
+    if (
+        not views
+        or not isinstance(node, Op)
+        or node.op != "select"
+        or len(node.args) != 1
+        or type(node.attrs.get("dim")) is not int
+        or type(node.attrs.get("index")) is not int
+    ):
+        return None
+    child = node.args[0]
+    idx = node.attrs["index"]
+    sh = shape_of(child)
+    if sh is INVALID or not isinstance(sh, tuple):
+        return None
+    rank = len(sh)
+    d = node.attrs["dim"]
+    d0 = d if d >= 0 else d + rank
+    if not 0 <= d0 < rank:
+        return None
+    # Fold the views inside-out (``views`` is outermost-first).  At
+    # each step the invariant is ``select(child, d0, idx)`` == the
+    # tensor the remaining inner views produce; *d0* is the step
+    # axis in current-child coords, *rank-1* the sliced rank the
+    # view's ``dim`` normalises against.
+    for v in reversed(views):
+        vd = v.attrs["dim"]
+        sh = shape_of(child)
+        if sh is INVALID or not isinstance(sh, tuple):
+            return None
+        r = len(sh) - 1  # rank of the post-select tensor
+        if v.op == "unsqueeze":
+            # insertion position in sliced coords, 0..r
+            p = vd if vd >= 0 else vd + r + 1
+            if not 0 <= p <= r:
+                return None
+            # child-coord insertion: before the step axis when the
+            # slice position precedes it, else after — either side
+            # of the boundary yields the same result axis order, and
+            # this choice keeps the step axis index stable (``dims``
+            # stays a singleton across operands).
+            q = p if p < d0 else p + 1
+            child = Op.make("unsqueeze", child, dim=q)
+            if q <= d0:
+                d0 += 1
+        else:  # squeeze — removes the sliced axis at position k
+            k = vd if vd >= 0 else vd + r
+            if not 0 <= k < r:
+                return None
+            j = k if k < d0 else k + 1  # the same axis in child coords
+            child = Op.make("squeeze", child, dim=j)
+            if j < d0:
+                d0 -= 1
+    sh = shape_of(child)
+    if (
+        sh is INVALID
+        or not isinstance(sh, tuple)
+        or not 0 <= d0 < len(sh)
+    ):
+        return None
+    return child, d0, idx
+
+
 def _seq_deindex(t: Any, names: dict, operands: dict, events: list):
     """Spec of *t* with per-step ``select``s abstracted to metas.
 
@@ -753,8 +859,25 @@ def _seq_deindex(t: Any, names: dict, operands: dict, events: list):
     elementwise spelling the scan renderer knows.  Any other bare
     leaf (a whole-tensor reference the fold cannot slice honestly)
     or non-scalar ``Const`` declines the whole term with ``None``.
+
+    ``unsqueeze``/``squeeze`` chains wrapping a ``select`` are
+    lifted onto the child first (:func:`_seq_view_lift`) — the
+    metavar then binds the *viewed* sequence and no view op reaches
+    the step-expr skeleton.
     """
     if isinstance(t, Op):
+        if t.op in ("unsqueeze", "squeeze") and len(t.args) == 1:
+            lifted = _seq_view_lift(t)
+            if lifted is not None:
+                child, dim, idx = lifted
+                key = (child, dim)
+                meta = names.get(key)
+                if meta is None:
+                    meta = f"Q{len(names) + 1}"
+                    names[key] = meta
+                    operands[meta] = (child, dim)
+                events.append((meta, idx))
+                return meta
         if (
             t.op == "select"
             and len(t.args) == 1

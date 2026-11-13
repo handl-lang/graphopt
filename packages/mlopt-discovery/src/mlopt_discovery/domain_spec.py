@@ -50,6 +50,17 @@ Second-cut scope (honest):
 * ``incumbent`` — the scripted/baseline recipe: ``"scripted"``
   (``MetaArena.ScriptedPlayer`` — saturate→extract), ``"greedy"``
   (``GreedyPlayer`` — cheapest-immediate), ``"none"``.
+* ``deliver`` — the optional delivery hook ``play --deliver``
+  runs: ``"auto"`` (default — the board's own hook: ``torch``
+  lowers+verifies the winning extraction through
+  ``play._torch_deliver``), ``"none"`` (explicitly hookless), or
+  ``"torch"`` (require the torch lowering — rejected at load on
+  boards whose cases carry no example input).  ``true``/``false``
+  spell ``"auto"``/``"none"``.  On ``meta-arena`` delivery is
+  meaningless by construction — the cases are symbolic probe
+  terms with no tensors, leaves or example input to lower and
+  verify against — so ``"auto"`` resolves to no hook there and
+  ``"torch"`` is refused.
 
 Spec files are JSON (stdlib — no new dependency).  Packaged specs
 live in ``mlopt_discovery/domains/*.json`` and resolve by bare
@@ -84,6 +95,7 @@ from . import meta_player as mp
 
 __all__ = [
     "BOARDS",
+    "DELIVERS",
     "INCUMBENTS",
     "PLAYERS",
     "SPECS",
@@ -132,6 +144,7 @@ class DomainSpecFile:
         None  # None | "none" | prior ref (name/path/dict)
     )
     incumbent: str = "scripted"
+    deliver: str = "auto"  # "auto" | "none" | "torch"
     shapes: dict = field(default_factory=dict)
     hardware: dict = field(default_factory=dict)
     description: str = ""
@@ -278,6 +291,23 @@ def _spec_from_dict(data: dict) -> DomainSpecFile:
             f"domain spec {name!r}: incumbent {inc_kind!r} "
             f"unsupported (v1 ships {sorted(INCUMBENTS)!r})"
         )
+    deliver = data.get("deliver", "auto")
+    if deliver is True:
+        deliver = "auto"
+    elif deliver is False:
+        deliver = "none"
+    if deliver not in DELIVERS:
+        raise ValueError(
+            f"domain spec {name!r}: deliver {deliver!r} unsupported "
+            f"(expected one of {sorted(DELIVERS)!r}, or a bool)"
+        )
+    if deliver == "torch" and board != "torch":
+        raise ValueError(
+            f"domain spec {name!r}: deliver 'torch' lowers+verifies "
+            f"against the case's example input — only board 'torch' "
+            f"cases carry one (board is {board!r}; meta-arena terms "
+            "are symbolic, delivery is meaningless there)"
+        )
     shapes = data.get("shapes")
     hardware = data.get("hardware")
     if shapes is not None and not isinstance(shapes, dict):
@@ -331,6 +361,7 @@ def _spec_from_dict(data: dict) -> DomainSpecFile:
         player=player,
         player_prior=player_prior,
         incumbent=inc_kind,
+        deliver=deliver,
         shapes=dict(shapes),
         hardware=dict(hardware),
         description=str(data.get("description", "")),
@@ -800,11 +831,27 @@ INCUMBENTS: dict[str, Any] = {
     "greedy": ma.GreedyPlayer,
     "none": None,
 }
+#: ``deliver`` spellings a spec may name — ``"auto"`` defers to the
+#: board's own hook (see :func:`_deliver_for`), ``"none"`` seats no
+#: hook even where the board has one, ``"torch"`` requires the
+#: torch lowering (load-validated to board ``"torch"``).
+DELIVERS: dict[str, Any] = {"auto": None, "none": None, "torch": None}
 
 
 def _deliver_for(spec: DomainSpecFile) -> Any:
-    """Return the spec board's deliver hook (``None`` when absent)."""
-    if spec.board == "torch":
+    """Return the spec board's deliver hook (``None`` when absent).
+
+    ``spec.deliver`` gates first: ``"none"`` always seats nothing,
+    ``"torch"`` seats ``play._torch_deliver`` (load validation
+    already pinned the board), ``"auto"`` defers to the board —
+    torch delivers, meta-arena does not (symbolic terms have no
+    lowering or verify target).
+    """
+    if spec.deliver == "none":
+        return None
+    if spec.deliver == "torch" or (
+        spec.deliver == "auto" and spec.board == "torch"
+    ):
         from . import play as _play
 
         return _play._torch_deliver
@@ -892,6 +939,7 @@ def spec_summary(spec: DomainSpecFile) -> dict:
         "player": spec.player,
         "player_prior": spec.player_prior,
         "incumbent": spec.incumbent,
+        "deliver": spec.deliver,
         "corpus": corpus,
         "vocab": {
             "ops": (
