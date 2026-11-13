@@ -31,19 +31,19 @@ import mlopt_carriers.trace_lift as TL
 import pytest
 import torch
 import torch.nn as nn
-from mlopt_core.egraph import EGraph
-from mlopt_core.ir import IR, Op, Param, TensorType, Var
-
 from mlopt_carriers.scan_lower import (
     build_scan_plan,
     is_scan_apply_term,
     to_batched_scan_module,
 )
-from mlopt_torch.torch_bridge import ir_to_torch_module
+from mlopt_core.egraph import EGraph
+from mlopt_core.ir import IR, Op, Param, TensorType, Var
+from mlopt_discovery import genkernel as gk
+from mlopt_discovery import play
 from mlopt_orchestrator import Optimizer
-
-
+from mlopt_torch import torch_bridge as tb
 from mlopt_torch.backend import TorchBackend
+from mlopt_torch.torch_bridge import ir_to_torch_module
 
 
 @pytest.fixture(autouse=True)
@@ -183,8 +183,6 @@ def _applyd_members(eg, root):
 # ---------------------------------------------------------------------------
 #  typing._matmul_shape — the dense-family contract helper
 # ---------------------------------------------------------------------------
-
-
 
 
 # ---------------------------------------------------------------------------
@@ -964,7 +962,8 @@ class TestLeafShapeConsistency:
         )
         assert build_scan_plan(t) is None
         t2 = Op.make(
-            "apply", Op.make("aff", _P("A", 4, 4), _P("b", 4)),
+            "apply",
+            Op.make("aff", _P("A", 4, 4), _P("b", 4)),
             _v("h", 4),
         )
         assert build_scan_plan(t2) is None
@@ -1097,6 +1096,36 @@ class _BatchedChunkMod(nn.Module):
         return h
 
 
+class _SeqChunkMod(nn.Module):
+    """Chunked decode, seq-tier spelling: projections hoisted out of
+    the loop so the recurrence is a pure ``select``-fold.
+
+    ``_BatchedChunkMod`` keeps ``x @ w``/``x @ wr`` and the decay
+    *inside* the step — the seq grammar cannot abstract that
+    (``_seq_deindex`` declines bare ``Param`` leaves), which is why
+    the carrier lift owned that spelling.  Hoisting the per-step
+    operands into ``(C, B, d)`` sequence tensors is the zoo/seqm
+    shape ``play._seq_scan_sites`` claims.
+    """
+
+    def __init__(self, d: int, B: int, C: int) -> None:
+        super().__init__()
+        g = torch.Generator().manual_seed(0)
+        self.B, self.d, self.C = B, d, C
+        self.log_decay = nn.Parameter(
+            torch.randn(C, B, d, generator=g) * 0.1 - 2.0
+        )
+        self.w = nn.Parameter(torch.randn(d, d, generator=g) * d**-0.5)
+        self.wr = nn.Parameter(torch.randn(d, d, generator=g) * d**-0.5)
+
+    def forward(self, x: torch.Tensor, h: torch.Tensor) -> torch.Tensor:
+        a = torch.sigmoid(self.log_decay)
+        u = torch.sigmoid(x @ self.wr) * (x @ self.w)
+        for t in range(self.C):
+            h = a[t] * h + u[t]
+        return h
+
+
 class TestEndToEnd:
     def test_flat_chunk_lowers_batched(self):
         """optimize_model on the decode_flat_b8-shaped cell."""
@@ -1104,7 +1133,9 @@ class TestEndToEnd:
         m = _FlatChunkMod(d, B, C).eval()
         x = torch.randn(C, B, d)
         h = torch.randn(B, d)
-        opt, stats = Optimizer(backend=TorchBackend()).optimize(m, (x, h), max_iterations=32, verify=False, verbose=False)
+        opt, stats = Optimizer(backend=TorchBackend()).optimize(
+            m, (x, h), max_iterations=32, verify=False, verbose=False
+        )
 
         assert stats["lowering"] == "batched"
         assert getattr(opt, "is_batched", False)
@@ -1113,30 +1144,60 @@ class TestEndToEnd:
         rel = (got - want).abs().max() / want.abs().max()
         assert rel.item() < 1e-6
 
-    def test_batched_chunk_lowers_batched(self):
-        """optimize_model on the (T,B,d)-state chunked decode."""
+    def test_batched_chunk_lowers_generic_single_leaf(self):
+        """optimize_model on the (T,B,d)-state chunked decode.
+
+        Re-based (T-037 follow-up): saturation now extracts a
+        *single-leaf* ``applyd`` spine for this spelling — the
+        ``decay_state_lift`` factoring nests the remaining scan inside
+        one ``aff_diag`` ``b`` payload, so ``build_scan_plan`` declines
+        under the ``len(levels) < 2`` gate and the delivered
+        ``BatchedScanModule`` is a transparent ``IRModule``.
+        ``lowering == "generic"`` is the honest contract — the
+        level-batched path genuinely no longer applies here (the seq
+        tier can't claim it either: ``_seq_deindex`` declines the bare
+        ``Param`` leaves inside the per-step projections).  What must
+        still hold: the term stays scan-shaped, the plan declines,
+        and the delivered module is correct.
+        """
         B, d, C = 4, 16, 8
         m = _BatchedChunkMod(d, C).eval()
         x = torch.randn(C, B, d)
         h = torch.randn(B, d)
-        opt, stats = Optimizer(backend=TorchBackend()).optimize(m, (x, h), max_iterations=32, verify=False, verbose=False)
+        opt, stats = Optimizer(backend=TorchBackend()).optimize(
+            m, (x, h), max_iterations=32, verify=False, verbose=False
+        )
 
-        assert stats["lowering"] == "batched"
-        assert getattr(opt, "is_batched", False)
+        assert stats["lowering"] == "generic"
+        assert not getattr(opt, "is_batched", False)
+        root = opt.eval_mod._root
+        assert is_scan_apply_term(root)
+        assert build_scan_plan(root) is None
         with torch.no_grad():
             got, want = opt(x, h), m(x, h)
         rel = (got - want).abs().max() / want.abs().max()
         assert rel.item() < 1e-6
 
     def test_batched_chunk_fp64_decode(self):
-        """fp64 whole-decode equivalence — the decode gate standard."""
+        """fp64 whole-decode equivalence — the decode gate standard.
+
+        Same re-base as above: the (T,B,d) chunked decode delivers
+        through the generic path now; the fp64 chunked-decode
+        equivalence it pinned is unchanged and still asserted.
+        """
         B, d, C, N = 8, 16, 8, 32
         m = _BatchedChunkMod(d, C).double().eval()
         x = torch.randn(N, B, d, dtype=torch.float64)
         h = torch.randn(B, d, dtype=torch.float64)
-        opt, stats = Optimizer(backend=TorchBackend()).optimize(m, (x[:C], h), max_iterations=32, verify=False, verbose=False)
+        opt, stats = Optimizer(backend=TorchBackend()).optimize(
+            m,
+            (x[:C], h),
+            max_iterations=32,
+            verify=False,
+            verbose=False,
+        )
 
-        assert stats["lowering"] == "batched"
+        assert stats["lowering"] == "generic"
         with torch.no_grad():
             href, hgot = h, h
             for t0 in range(0, N, C):
@@ -1144,3 +1205,44 @@ class TestEndToEnd:
                 hgot = opt(x[t0 : t0 + C], hgot)
         rel = (hgot - href).abs().max() / href.abs().max()
         assert rel.item() < 1e-13
+
+    def test_seq_tier_claims_chunked_decode(self):
+        """The seq collector owns the hoisted chunked-decode spelling.
+
+        ``_SeqChunkMod`` spells the same recurrence with per-step
+        operands hoisted into ``(C, B, d)`` sequence tensors — the
+        shape ``play._seq_scan_sites`` mints a ``kind="seq"`` spec
+        for.  The spelled fold (``genkernel.handler_denotation`` —
+        the same denotation the Triton binding and ``gen_sink``
+        delivery share) must reproduce the module bit-for-bit in
+        fp64: the "chunked decode scans" intent, re-based onto the
+        tier that now claims it.
+        """
+        B, d, C = 4, 16, 8
+        m = _SeqChunkMod(d, B, C).eval()
+        x = torch.randn(C, B, d)
+        h = torch.randn(B, d)
+        ir, leaves = TorchBackend().source.to_ir(m, (x, h))
+
+        sites = play._seq_scan_sites(ir.root)
+        assert sites, "seq collector declined the chunked decode"
+        s = sites[0]
+        info = gk.scan_spec(s["spec"])
+        assert info is not None and info["kind"] == "seq"
+
+        var_env = play._var_env(ir, leaves, (x, h))
+        vals = {
+            meta: gk._bound_val(t, var_env, tb._IR_TO_TORCH)
+            for meta, t in s["leaf_env"].items()
+        }
+        handler = {
+            "pattern": s["spec"],
+            "args": tuple(gk._spec_metas(s["spec"])),
+            "axis": s["axis"],
+        }
+        got = gk.handler_denotation(handler)(
+            *[vals[meta] for meta in handler["args"]]
+        )
+        with torch.no_grad():
+            want = m(x, h)
+        assert (got - want).abs().max().item() == 0.0

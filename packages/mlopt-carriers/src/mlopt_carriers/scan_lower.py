@@ -336,14 +336,62 @@ def _leaf_b_gather(leaves: list[Op]):
     return (base0, dim0, [p[2] for p in parts])
 
 
+def _subterm_ops(term: Any) -> set:
+    """Return the ``Op`` nodes of *term*'s DAG, deduped by identity."""
+    ops: set = set()
+    stack = [term]
+    while stack:
+        t = stack.pop()
+        if not isinstance(t, Op) or id(t) in ops:
+            continue
+        ops.add(id(t))
+        stack.extend(t.args)
+    return ops
+
+
+def _payload_dedup_forfeit(
+    roots: list[Any],
+) -> tuple[int, int]:
+    """Estimate per-forward recompute the batched schedule pays.
+
+    ``BatchedScanModule`` evaluates each distinct eval root (a leaf's
+    ``(A, b)`` arg, the gather base, ``h``) through ``evf`` →
+    ``_eval_fast`` — one slot-tape per root; the shared memo hits only
+    on *identical* roots.  ``IRModule`` runs the whole term on ONE
+    tape, so an ``Op`` subterm appearing under k distinct roots is
+    evaluated k times on the batched path but once generically.
+
+    Returns ``(forfeit, n_roots)``: the number of repeated Op
+    evaluations per forward, and the number of distinct eval roots
+    (each carries its own tape-fill overhead the single-tape
+    evaluator pays once).  Heuristic, plan-time only — op counts,
+    not FLOPs.
+    """
+    seen: set = set()
+    root_ops: list[set] = []
+    for t in roots:
+        if not isinstance(t, Op) or id(t) in seen:
+            continue
+        seen.add(id(t))
+        root_ops.append(_subterm_ops(t))
+    counts: dict[int, int] = {}
+    for ops in root_ops:
+        for k in ops:
+            counts[k] = counts.get(k, 0) + 1
+    forfeit = sum(c - 1 for c in counts.values())
+    return forfeit, len(root_ops)
+
+
 def build_scan_plan(root: Any) -> dict | None:
     """Analyse ``apply(aff-tree, h)`` into a level-batched schedule.
 
     Returns ``None`` when the term is not a scan application, when
-    the leaf shapes are non-uniform, or when the spine carries no
+    the leaf shapes are non-uniform, when the spine carries no
     ``aff_compose``/``affd_compose`` levels — a single bare leaf has
     no batched work to schedule, so routing it to the level executor
-    would only add plan and gather machinery.  Otherwise a dict:
+    would only add plan and gather machinery — or when the payload
+    dedup the batched schedule forfeits (``_payload_dedup_forfeit``)
+    exceeds the compose nodes it batches.  Otherwise a dict:
 
     * ``"leaves"`` — the ``aff`` nodes, in first-encounter order.
     * ``"levels"`` — ``levels[k]`` lists the ``aff_compose`` nodes whose
@@ -410,13 +458,6 @@ def build_scan_plan(root: Any) -> dict | None:
         #   stack (``_leaf_shapes_consistent``).
         return None
 
-    # Slot assignment: leaves occupy 0..n-1, then each level appends its
-    # outputs in order — so a level's operand slots are all < its own.
-    slot: dict[int, int] = {id(lf): i for i, lf in enumerate(leaves)}
-    level_gather = slot_gathers(
-        levels, lambda t: t.args, slot, len(leaves), key=id
-    )
-
     a0 = leaves[0].args[0]
     leaf_a_shared = all(
         leaf.args[0] is a0
@@ -427,6 +468,46 @@ def build_scan_plan(root: Any) -> dict | None:
         )
         for leaf in leaves
     )
+    b_gather = _leaf_b_gather(leaves)
+
+    # Payload-cost gate (T-037 residual): the batched schedule
+    # evaluates each leaf's ``(A, b)`` args — plus the gather base
+    # and ``h`` — as SEPARATE tape roots, so subgraphs shared ACROSS
+    # payloads are recomputed once per root while ``IRModule``'s
+    # single tape computes them once.  The batch only pays when the
+    # compose nodes it replaces outnumber that forfeited dedup:
+    # decline when ``forfeit > n_compose`` (each forfeited op is a
+    # re-dispatched eval; each compose node is one binding the level
+    # gathers amortise).  The fast paths are honoured — a shared ``a``
+    # evaluates once and a ``leaf_b_gather`` collapses the ``b``
+    # payloads to one ``index_select``, so neither contributes roots.
+    # Heuristic and device-blind: it can only err toward the generic
+    # fallback (parity), and the level machinery itself is roughly
+    # launch-neutral on CPU — the measured regressions this targets
+    # (1.4-1.9x slower on CPU fp64 with gate payloads) all came from
+    # forfeited dedup, not the gathers.
+    n_compose = sum(len(lv) for lv in levels)
+    roots: list[Any] = []
+    if leaf_a_shared:
+        roots.append(leaves[0].args[0])
+    else:
+        roots.extend(leaf.args[0] for leaf in leaves)
+    if b_gather is not None:
+        roots.append(b_gather[0])
+    else:
+        roots.extend(leaf.args[1] for leaf in leaves)
+    roots.append(h_term)
+    forfeit, _n_roots = _payload_dedup_forfeit(roots)
+    if forfeit > n_compose:
+        return None
+
+    # Slot assignment: leaves occupy 0..n-1, then each level appends its
+    # outputs in order — so a level's operand slots are all < its own.
+    slot: dict[int, int] = {id(lf): i for i, lf in enumerate(leaves)}
+    level_gather = slot_gathers(
+        levels, lambda t: t.args, slot, len(leaves), key=id
+    )
+
     b0s = shape_of(leaves[0].args[1])
     column_state = bool(
         not diag
@@ -439,7 +520,7 @@ def build_scan_plan(root: Any) -> dict | None:
         "levels": levels,
         "level_gather": level_gather,
         "root_slot": slot[id(f_term)],
-        "leaf_b_gather": _leaf_b_gather(leaves),
+        "leaf_b_gather": b_gather,
         "leaf_a_shared": leaf_a_shared,
         "diagonal": diag,
         "post": post,

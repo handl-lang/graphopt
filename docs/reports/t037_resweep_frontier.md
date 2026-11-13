@@ -205,6 +205,68 @@ spine size) is the principled next step if CPU-eager delivery of
 scan terms matters; on CUDA the current gate is sufficient for the
 observed regressions.
 
+## Follow-up — payload-cost plan gate + the two stale e2e tests (2026-11-14)
+
+Both residuals from §2 are now closed.
+
+### Task A — payload-cost gate in `build_scan_plan`
+
+The `len(levels) < 2` gate fixed the degenerate spine but left the
+measured residual: ≥2-level plans whose leaf `(A, b)` payloads share
+subgraphs still forfeit `IRModule`'s single-tape DAG dedup — each
+leaf arg is evaluated as a *separate* `_eval_fast` tape root (the
+shared `memo` hits only on identical roots), so an `Op` subterm under
+k distinct payload roots is evaluated k times batched vs once
+generically (1.4–1.9× slower on CPU fp64 with gate payloads).
+
+`build_scan_plan` (`scan_lower.py`) now runs a second decline after
+the level/shape gates: `_payload_dedup_forfeit` counts, per forward,
+the Op evaluations the batched schedule repeats across distinct eval
+roots (leaf `a`/`b` args — honouring the `leaf_a_shared` and
+`leaf_b_gather` fast paths, which collapse those roots — plus `h`).
+The plan declines when `forfeit > n_compose`: each forfeited op is a
+re-dispatched eval, each compose node is one binding the level
+gathers amortise.  Deliberately simple and honest — an op-count
+heuristic, device-blind, erring only toward the generic fallback
+(parity).  Verified: trivial-leaf spines still plan; a synthetic
+4-leaf spine whose payloads share a 4-op subgraph (28 forfeited vs
+3 composes) declines; the full scan-lower test slice is unchanged.
+
+### Task B — the two `TestEndToEnd` failures re-based
+
+`test_batched_chunk_{lowers_batched,fp64_decode}` pinned
+`lowering == "batched"` for `_BatchedChunkMod`.  On HEAD the module
+extracts a **single-leaf** `applyd` spine (verified: `level_schedule`
+→ 1 `aff_diag` leaf, 0 levels — the `decay_state_lift` factoring nests
+the remaining scan inside one `b` payload carrying ~50 ops), so the
+level gate declines and delivery is `generic`.  The batched path
+genuinely no longer applies to this spelling — and neither does the
+seq tier: `_seq_scan_sites`/`_seqm_scan_sites` return 0 sites on the
+exported IR because `_seq_deindex` declines the bare `Param` leaves
+inside the per-step projections (`x @ w`, `x @ wr`) and the
+loop-invariant decay.
+
+Resolution (ported, not retired):
+
+- `test_batched_chunk_lowers_generic_single_leaf` (renamed) asserts
+  the honest contract — `lowering == "generic"`, `is_batched` False,
+  `is_scan_apply_term(root)` True with `build_scan_plan(root) is
+  None` — plus the unchanged correctness check.
+- `test_batched_chunk_fp64_decode` keeps the fp64 whole-decode
+  equivalence (the actual regression guard) under `generic`.
+- New `test_seq_tier_claims_chunked_decode` + `_SeqChunkMod` fixture:
+  the same recurrence spelled the seq-claimable way (projections
+  hoisted into `(C, B, d)` sequence tensors, per-step decay).  The
+  exported IR mints exactly one `kind="seq"` site and the spelled
+  `handler_denotation` fold reproduces the module **bit-exact**
+  (max diff 0.0, fp64) — the "chunked decode scans" intent now lives
+  at the tier that owns it.
+
+Note for future work: `_seq_deindex`'s bare-`Param` decline means
+recurrences with projections *inside* the step (this module's
+spelling) are unreachable by the seq tiers — a grammar gap, not a
+bug; the carrier lift is their current owner.
+
 ## Files touched
 
 - `packages/mlopt-carriers/src/mlopt_carriers/scan_lower.py` —
@@ -223,6 +285,10 @@ observed regressions.
   4 rows each replaced with the T-037 re-measurement.
 - `docs/reports/frontier.json`, `frontier.md`, `frontier_fp32.json`,
   `frontier_fp32.md` — regenerated.
+- Follow-up: `scan_lower.py` (`_subterm_ops` /
+  `_payload_dedup_forfeit` + the `forfeit > n_compose` decline),
+  `tests/test_batched_scan_lift.py` (2 tests re-based, `_SeqChunkMod`
+  + `test_seq_tier_claims_chunked_decode` added).
 
 ## Verification
 
