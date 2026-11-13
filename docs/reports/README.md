@@ -65,7 +65,11 @@ novelty classify (`machine-original` / `known-art` / `vacuous`).
 fp32/fp64 rounds), `zoo_kcount*`, `zoo_dtype_rmsnorm`,
 `red_triton_probe*`/`red_tier_probe`, `scale_ladder` (attention-block
 terms T=512→4096), `bank_growth_*` — raw measurement sweeps behind
-the delivery verdicts.
+the delivery verdicts.  `zoo_corpus_expansion.md` — the workload-shape
+gap census and the fourth expansion (registry now 73): conv+scan
+hybrid, headed scan, cumsum carrier, bidirectional scan, latent-KV
+decode; measured collector boundaries (cumsum invisibility,
+spec-identity dedup) and the one non-claim payer (LatentKVDecode).
 
 ## Synthesis and analysis
 

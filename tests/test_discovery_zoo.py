@@ -216,6 +216,14 @@ _EXPANSION_FAMILIES = [
     "NormedSoftcapHead",
     "SquaredReluFFN",
     "TernaryWeightLinear",
+    # --- fourth expansion — scan-shape gaps ---------------------
+    # conv+scan+gate hybrid, headed scan, cumsum carrier,
+    # bidirectional select-chains, latent-KV decode
+    "MambaConvScan",
+    "HeadedSelectiveScan",
+    "CumsumLinearAttention",
+    "BidirectionalScan",
+    "LatentKVDecode",
 ]
 
 

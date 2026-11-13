@@ -58,6 +58,15 @@ truth region — the selection criterion was *family coverage*:
   Taylor-feature linear attention, ternary-weight dequant, and
   sink+window masking — the substrate where originals could
   live precisely because no prior-art bank covers them.
+* the fourth expansion — the *scan-shape* gaps a corpus_cov-style
+  census of workload shapes (not meta-arena ops) found missing:
+  the conv+scan+gate Mamba block hybrid, a multi-head selective
+  scan (the head axis inside the recurrence's broadcast frame),
+  linear attention spelled as a ``cumsum`` prefix carrier (the
+  seq collector's honest negative control), a bidirectional
+  forward+flipped recurrence pair, and the MLA latent-KV decode
+  step — the (latent x cache) combination ``_DecoupledMLA``'s
+  prefill spelling never carried.
 
 The registry reuses :class:`mlopt_discovery.intake.Workload` so
 :func:`mlopt_discovery.intake.ingest` consumes it unchanged — the
@@ -2316,6 +2325,279 @@ class _SinkWindowAttention(nn.Module):
 
 
 # ---------------------------------------------------------------------------
+#  Fourth expansion — the scan-shape gaps the 68-workload census missed
+# ---------------------------------------------------------------------------
+
+
+class _MambaConvScan(nn.Module):
+    """Mamba block — causal depthwise conv in front of the S6 scan.
+
+    Gu & Dao 2024 (the production Mamba block): the input projection
+    splits into an SSM branch and a gate branch; the SSM branch passes
+    through a short causal *depthwise* ``conv1d`` + SiLU before the
+    ``dt``/``B``/``C`` projections feed the same diagonal selective
+    scan ``_MambaSelectiveScan`` spells, and the read-outs multiply
+    the gated branch ``silu(z)`` before the output projection.  The
+    zoo's scan workloads isolate the recurrence; this is the
+    conv+scan+gate hybrid — dispatch-bound conv work the seq fold
+    cannot touch, plus a pointwise ``mul`` over every per-step
+    read-out.
+    """
+
+    def __init__(self, d: int, n: int, steps: int, k: int = 4) -> None:
+        """Build the in/out projections, the causal conv and the scan."""
+        super().__init__()
+        self.d = d
+        self.n = n
+        self.steps = steps
+        self.k = k
+        self.in_proj = nn.Linear(d, 2 * d)
+        # depthwise causal conv: pad k-1 left via over-padding, crop
+        self.conv = nn.Conv1d(d, d, k, padding=k - 1, groups=d)
+        self.dt = nn.Linear(d, d)
+        self.b = nn.Linear(d, n)
+        self.c = nn.Linear(d, n)
+        self.a_log = nn.Parameter(torch.randn(d, n) * 0.1)
+        self.out_proj = nn.Linear(d, d)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Conv-filter, scan, gate, project; return every read-out."""
+        b, t, _d = x.shape
+        x_in, z = self.in_proj(x).chunk(2, dim=-1)
+        xp = self.conv(x_in.transpose(1, 2))[..., :t].transpose(1, 2)
+        xp = F.silu(xp)  # (B, T, d)
+        dt = F.softplus(self.dt(xp))  # (B, T, d)
+        dec = torch.exp(
+            -dt.unsqueeze(-1) * torch.exp(self.a_log)
+        )  # (B, T, d, n)
+        bb = self.b(xp)  # (B, T, n)
+        cc = self.c(xp)  # (B, T, n)
+        h = torch.zeros(
+            b, self.d, self.n, dtype=x.dtype, device=x.device
+        )
+        outs = []
+        for i in range(self.steps):
+            h = dec[:, i] * h + xp[:, i].unsqueeze(-1) * bb[
+                :, i
+            ].unsqueeze(1)
+            outs.append(torch.einsum("bdn,bn->bd", h, cc[:, i]))
+        y = torch.stack(outs, dim=1) * F.silu(z)
+        return self.out_proj(y)
+
+
+class _HeadedSelectiveScan(nn.Module):
+    """Multi-head selective scan — per-head diagonal states.
+
+    The headed spelling of ``_MambaSelectiveScan``: projections emit
+    ``(b, t, h, dh)`` / ``(b, t, h, n)`` laid out head-major, and the
+    unrolled update carries a state ``(b, h, dh, n)`` — the head axis
+    sits between batch and feature dims, so the seq fold's broadcast
+    frame must span a rank the single-head spelling never reaches.
+    Returns every step's read-out (the all-states gap shape the
+    GLA/Mamba module-loss retro measured).
+    """
+
+    def __init__(self, d: int, heads: int, n: int, steps: int) -> None:
+        """Build the head-major projections and the decay table."""
+        super().__init__()
+        self.d = d
+        self.h = heads
+        self.n = n
+        self.steps = steps
+        self.dh = d // heads
+        self.x = nn.Linear(d, heads * self.dh)
+        self.dt = nn.Linear(d, heads * self.dh)
+        self.b = nn.Linear(d, heads * n)
+        self.c = nn.Linear(d, heads * n)
+        # (1, H, 1, dh, n) — broadcasts into the (B, H, T, dh, n)
+        # decay tensor the unrolled update reads per step.
+        self.a_log = nn.Parameter(
+            torch.randn(1, heads, 1, self.dh, n) * 0.1
+        )
+        self.out = nn.Linear(d, d)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Unroll the headed scan; return every step's read-out."""
+        b, t, _d = x.shape
+        h, n = self.h, self.n
+        xx = (
+            self.x(x).reshape(b, t, h, self.dh).transpose(1, 2)
+        )  # (B, H, T, dh)
+        dt = F.softplus(
+            self.dt(x).reshape(b, t, h, self.dh).transpose(1, 2)
+        )  # (B, H, T, dh)
+        dec = torch.exp(
+            -dt.unsqueeze(-1) * torch.exp(self.a_log)
+        )  # (B, H, T, dh, n)
+        bb = (
+            self.b(x).reshape(b, t, h, n).transpose(1, 2)
+        )  # (B, H, T, n)
+        cc = (
+            self.c(x).reshape(b, t, h, n).transpose(1, 2)
+        )  # (B, H, T, n)
+        state = torch.zeros(
+            b, h, self.dh, n, dtype=x.dtype, device=x.device
+        )
+        outs = []
+        for i in range(self.steps):
+            state = dec[:, :, i] * state + xx[:, :, i].unsqueeze(
+                -1
+            ) * bb[:, :, i].unsqueeze(2)
+            outs.append(
+                torch.einsum("bhdn,bhn->bhd", state, cc[:, :, i])
+            )
+        y = torch.stack(outs, dim=2)  # (B, H, T, dh)
+        return self.out(y.transpose(1, 2).reshape(b, t, self.d))
+
+
+class _CumsumLinearAttention(nn.Module):
+    """Linear attention in cumsum form — the prefix-scan carrier.
+
+    Katharopoulos et al. 2020 rewritten as a running sufficient
+    statistic: ``S_t = Σ_{i≤t} k_i ⊗ v_i`` accumulated by ``cumsum``
+    over the time axis instead of an unrolled recurrence, read as
+    ``o_t = q_tᵀ S_t``.  No ``add(mul(·, ·), ·)`` select-chain exists
+    anywhere in the term — the scan tier's raw-IR collector cannot
+    see a ``cumsum`` op, so this is the honest negative control for
+    the seq mint: whatever fires here is the pointwise/reduction
+    tiers reading the cumsum body, never a fold of the scan.
+    """
+
+    def __init__(self, d: int) -> None:
+        """Build the q/k/v projections and the output map."""
+        super().__init__()
+        self.q = nn.Linear(d, d)
+        self.k = nn.Linear(d, d)
+        self.v = nn.Linear(d, d)
+        self.out = nn.Linear(d, d)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Accumulate rank-1 writes by cumsum; read each prefix."""
+        qq = self.q(x)  # (B, T, d)
+        kk = self.k(x)  # (B, T, d)
+        vv = self.v(x)  # (B, T, d)
+        kv = kk.unsqueeze(-1) * vv.unsqueeze(-2)  # (B, T, d, d)
+        s = kv.cumsum(1)  # (B, T, d, d) — the running state
+        o = torch.einsum("btd,btdk->btk", qq, s)
+        return self.out(o)
+
+
+class _BidirectionalScan(nn.Module):
+    """Bidirectional diagonal scan — forward + reversed recurrence.
+
+    The backward-pass spelling of a bidirectional SSM: the same
+    ``h = a_t ⊙ h + x_t`` update run forward over ``x`` and backward
+    over ``flip(x)``, with per-direction decay maps, the two
+    per-step state stacks summed.  Two ``add(mul(·, ·), ·)``
+    select-chains sit in one term — the reversed chain's selects
+    walk a *flipped* operand, so each direction is individually a
+    consistent seq reading; whether the collector mints one site,
+    two, or declines at the flip boundary is the measurement.
+    """
+
+    def __init__(self, d: int, steps: int) -> None:
+        """Build the per-direction decay maps, input and output."""
+        super().__init__()
+        self.steps = steps
+        self.dec_f = nn.Linear(d, d)
+        self.dec_b = nn.Linear(d, d)
+        self.out = nn.Linear(d, d)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Unroll both directions; return the summed read-outs."""
+        b, _t, d = x.shape
+        xf = torch.flip(x, dims=[1])
+        af = torch.sigmoid(self.dec_f(x))  # (B, T, d)
+        ab = torch.sigmoid(self.dec_b(xf))  # (B, T, d)
+        hf = torch.zeros(b, d, dtype=x.dtype, device=x.device)
+        hb = torch.zeros(b, d, dtype=x.dtype, device=x.device)
+        of: list = []
+        ob: list = []
+        for i in range(self.steps):
+            hf = af[:, i] * hf + x[:, i]
+            hb = ab[:, i] * hb + xf[:, i]
+            of.append(hf)
+            ob.append(hb)
+        y = torch.stack(of, dim=1) + torch.stack(ob, dim=1)
+        return self.out(y)
+
+
+class _LatentKVDecode(nn.Module):
+    """MLA decode step — latent-compressed KV cache, one query.
+
+    DeepSeek-V2/V3's incremental decode spelled out: the KV cache
+    stores the *latent* ``c = W_dkv x`` (rank ``rank``) plus the
+    uncompressed decoupled rope keys, and each step up-projects the
+    cache through ``W_uk``/``W_uv`` for the heads while the query
+    token goes ``W_dq → W_uq`` (+ the shared ``W_qr`` rope slice).
+    The zoo's ``_DecoupledMLA`` is the prefill spelling over the
+    whole sequence; this is the cache-shaped one — ``T_q = 1``,
+    attention over a stored latent, manual softmax — the
+    (latent x decode) combination the registry never carried.
+    """
+
+    def __init__(self, d: int, heads: int, rank: int, rpe: int) -> None:
+        """Build the latent down/up maps, rope key and output."""
+        super().__init__()
+        self.heads = heads
+        self.rpe = rpe
+        self.dn = d // heads - rpe
+        self.dq = nn.Linear(d, rank)
+        self.uq = nn.Linear(rank, heads * self.dn)
+        self.qr = nn.Linear(rank, heads * rpe)
+        self.uk = nn.Linear(rank, heads * self.dn)
+        self.uv = nn.Linear(rank, d)
+        self.out = nn.Linear(d, d)
+
+    @staticmethod
+    def _rope(
+        z: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor
+    ) -> torch.Tensor:
+        """Rotate-half *z* ``(…, r)`` by the ``(…, r/2)`` tables."""
+        z1, z2 = z.chunk(2, dim=-1)
+        c = cos.unsqueeze(-2)  # (…, 1, r/2)
+        s = sin.unsqueeze(-2)
+        return torch.cat([z1 * c - z2 * s, z1 * s + z2 * c], dim=-1)
+
+    def forward(
+        self,
+        x: torch.Tensor,
+        cache: torch.Tensor,
+        kr: torch.Tensor,
+    ) -> torch.Tensor:
+        """Attend one query token against the latent KV cache."""
+        b, _tq, d = x.shape
+        h, r = self.heads, self.rpe
+        t = cache.shape[1]
+        # rope tables: cache positions 0..t-1, the query at position t
+        inv = torch.pow(
+            torch.tensor(10000.0, dtype=x.dtype, device=x.device),
+            -torch.arange(0, r, 2, dtype=x.dtype, device=x.device) / r,
+        )
+        pos = torch.arange(t + 1, dtype=x.dtype, device=x.device)
+        ang = pos.unsqueeze(-1) * inv  # (t+1, r/2)
+        cos, sin = ang.cos(), ang.sin()
+        # query: latent down → compressed + rope slices
+        qc = self.dq(x)  # (B, 1, rank)
+        qn = self.uq(qc).reshape(b, 1, h, self.dn)
+        qp = self._rope(
+            self.qr(qc).reshape(b, 1, h, r), cos[t:], sin[t:]
+        )
+        q = torch.cat([qn, qp], dim=-1).transpose(1, 2)  # (B,h,1,dh)
+        # keys/values: up-project the stored latent; rope keys raw
+        c = cache  # (B, T, rank)
+        kn = self.uk(c).reshape(b, t, h, self.dn)
+        kq = self._rope(
+            kr.reshape(b, t, 1, r).expand(b, t, h, r), cos[:t], sin[:t]
+        )
+        k = torch.cat([kn, kq], dim=-1).transpose(1, 2)  # (B,h,T,dh)
+        v = self.uv(c).reshape(b, t, h, d // h).transpose(1, 2)
+        s = q @ k.transpose(-1, -2) / ((d // h) ** 0.5)
+        o = torch.softmax(s, dim=-1) @ v  # (B,h,1,dh)
+        return self.out(o.transpose(1, 2).reshape(b, 1, d))
+
+
+# ---------------------------------------------------------------------------
 #  The registry — same Workload thunks as intake, disjoint names
 # ---------------------------------------------------------------------------
 
@@ -2715,6 +2997,37 @@ def zoo(d: int = 16, t: int = 8, b: int = 2) -> list[Workload]:
             lambda: (_TernaryWeightLinear(d), _r(4, d)),
             kind="zoo",
         ),
+        # --- fourth expansion: the scan-shape gaps ------------------
+        # conv+scan+gate hybrid, headed scan, cumsum carrier,
+        # bidirectional select-chains, latent-KV decode
+        Workload(
+            "MambaConvScan",
+            lambda: (_MambaConvScan(d, 4, t), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "HeadedSelectiveScan",
+            lambda: (_HeadedSelectiveScan(d, 4, 4, t), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "CumsumLinearAttention",
+            lambda: (_CumsumLinearAttention(d), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "BidirectionalScan",
+            lambda: (_BidirectionalScan(d, t), _r(b, t, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "LatentKVDecode",
+            lambda: (
+                _LatentKVDecode(d, 4, 8, 2),
+                (_r(b, 1, d), _r(b, t, 8), _r(b, t, 2)),
+            ),
+            kind="zoo",
+        ),
     ]
 
 
@@ -3103,6 +3416,35 @@ def zoo_variants(d: int = 16, t: int = 8, b: int = 2) -> list[Workload]:
         Workload(
             "TernaryWeightLinearV2",
             lambda: (_TernaryWeightLinear(d2), _r(4, d2)),
+            kind="zoo",
+        ),
+        # --- fourth expansion mirror: scan-shape gaps ---------------
+        Workload(
+            "MambaConvScanV2",
+            lambda: (_MambaConvScan(d2, 3, 6, 6), _r(b, 6, d2)),
+            kind="zoo",
+        ),
+        Workload(
+            "HeadedSelectiveScanV2",
+            lambda: (_HeadedSelectiveScan(d, 2, 6, 6), _r(b, 6, d)),
+            kind="zoo",
+        ),
+        Workload(
+            "CumsumLinearAttentionV2",
+            lambda: (_CumsumLinearAttention(d2), _r(b, 6, d2)),
+            kind="zoo",
+        ),
+        Workload(
+            "BidirectionalScanV2",
+            lambda: (_BidirectionalScan(d2, 6), _r(b, 6, d2)),
+            kind="zoo",
+        ),
+        Workload(
+            "LatentKVDecodeV2",
+            lambda: (
+                _LatentKVDecode(d2, 4, 6, 4),
+                (_r(b, 1, d2), _r(b, 6, 6), _r(b, 6, 4)),
+            ),
             kind="zoo",
         ),
     ]
