@@ -161,6 +161,15 @@ class TestGenDomain:
             for c in play._gen_cases(s, 4):
                 if not c[5]["gen_handlers"]:
                     continue
+                # scan-tier handlers are excluded: their
+                # deliver-time ``chain`` routes are a separate
+                # referee-gated mechanism and would mask the
+                # gen-claim delivery this test pins.
+                c[5]["gen_handlers"] = {
+                    k: v
+                    for k, v in c[5]["gen_handlers"].items()
+                    if not k.startswith("scan_")
+                }
                 board = play._gen_board(c)
                 st = board.observe()
                 claims = [

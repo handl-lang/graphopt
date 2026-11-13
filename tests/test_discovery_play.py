@@ -524,6 +524,18 @@ class TestFusionSites:
             for c in play._gen_cases(s, 8):
                 if "chainfuse" not in c[0]:
                     continue
+                # scan-tier handlers are excluded: their
+                # deliver-time ``chain`` routes
+                # (``meta_arena._route_scan_chains``) are a separate
+                # referee-gated mechanism — with the offer gate
+                # bypassed they would legitimately rewrite the
+                # extracted term to ``scan_*_k`` and mask the
+                # gen-claim binding this test pins.
+                c[5]["gen_handlers"] = {
+                    k: v
+                    for k, v in c[5]["gen_handlers"].items()
+                    if not k.startswith("scan_")
+                }
                 board = play._gen_board(c)
                 st = board.observe()
                 claims = [
@@ -561,6 +573,13 @@ class TestFusionSites:
             for c in play._gen_cases(s, 12):
                 if "twosite" not in c[0]:
                     continue
+                # see ``test_chainfuse_claim_binds_gen_over_mm`` —
+                # scan-tier chain routes are out of scope here.
+                c[5]["gen_handlers"] = {
+                    k: v
+                    for k, v in c[5]["gen_handlers"].items()
+                    if not k.startswith("scan_")
+                }
                 board = play._gen_board(c)
                 st = board.observe()
                 claims = [
@@ -827,6 +846,22 @@ class TestScanSites:
             "mul", Var("a", TensorType((4,))), Var("b", TensorType((4,)))
         )
         assert play._scan_sites(term) == []
+
+    def test_scan_sites_record_chain_route(self):
+        # unrolled sites carry ``"chain"`` — the outermost raw-IR
+        # subterm sharing the applyd member's e-class — so delivery
+        # can rewrite the extracted member to the minted kernel,
+        # the same route seq/seqm sites already use.
+        pytest.importorskip("torch")
+        term = self._folded_term()
+        sites = play._scan_sites(term)
+        assert sites
+        for s in sites:
+            # the chain is a raw-IR subterm — here the whole term,
+            # whose e-class is the one saturation folded the carrier
+            # into.  A class with no raw member simply records no
+            # ``"chain"`` key (the honest no-route case).
+            assert s["chain"] is term
 
     def test_mint_tiers_includes_scan(self):
         """The registry walk reaches the scan tier's collector."""

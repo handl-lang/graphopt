@@ -726,12 +726,25 @@ def _scan_sites(term: Any) -> list:
     The member the spec came from exists only inside this
     throwaway graph, so no raw-IR match can ever rebind it; the
     record carries the binding the referee needs.
+
+    Sites also carry ``"chain"`` when the applyd member's e-class
+    contains a raw-IR subterm of *term* — the outermost one, found
+    by mapping every subterm through ``_class_of_term``.  That
+    spelled subterm is the deliver-time route's LHS, the same role
+    ``"chain"`` plays for the seq/seqm collectors: saturation
+    proved it equal to the carrier member, so delivery may rewrite
+    the extracted class member to the minted kernel call.  A class
+    with no raw member (a carrier synthesized wholesale) records
+    no route and delivers spelled, as before.
     """
     from mlopt_carriers.om import OM_CHUNKIFY, OM_LAWS
     from mlopt_core.egraph import EGraph
     from mlopt_core.laws.tensor import SPLIT_SCALAR_RULES
 
     from mlopt_discovery.meta_arena import _spec_of
+
+    if sys.getrecursionlimit() < 40_000:
+        sys.setrecursionlimit(40_000)
 
     eg = EGraph()
     root = eg.add_term(term)
@@ -745,6 +758,24 @@ def _scan_sites(term: Any) -> list:
             "om_decayed_chunkify_keys": 20,
         },
     )
+    # e-class -> outermost raw-IR subterm realising it.  The walk is
+    # pre-order, so the first subterm seen per class is the largest
+    # spelled member — the route's maximal LHS.
+    raw_by_class: dict = {}
+    cls_memo: dict = {}
+    seen_raw: set = set()
+
+    def _mark(t: Any) -> None:
+        if not isinstance(t, Op) or id(t) in seen_raw:
+            return
+        seen_raw.add(id(t))
+        cid = eg._class_of_term(t, cls_memo)
+        if cid is not None and cid not in raw_by_class:
+            raw_by_class[cid] = t
+        for a in t.args:
+            _mark(a)
+
+    _mark(term)
     out: list = []
     carrier_ops = ("aff_diag", "affd_compose")
     for cls in eg._classes.values():
@@ -768,7 +799,11 @@ def _scan_sites(term: Any) -> list:
             spec = ("applyd", f_spec, state, {"kind": "unrolled"})
             if any(spec == s["spec"] for s in out):
                 continue
-            out.append({"spec": spec, "leaf_env": leaf_env})
+            rec: dict = {"spec": spec, "leaf_env": leaf_env}
+            chain = raw_by_class.get(eg.find(cls.id))
+            if chain is not None:
+                rec["chain"] = chain
+            out.append(rec)
     return out
 
 
