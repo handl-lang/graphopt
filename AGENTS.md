@@ -121,6 +121,12 @@ not `baselines/` rows:
   standalone only — deliberately no `bench.suites` adapter
   (`bench/drivers/` is not a package; see the doc's suite-status
   note).
+- `bench/drivers/agenda/` — `agenda_miner.py`, the Stage-3 first
+  cut: scans the measurement surfaces (overnight ledgers, frontier/
+  sweep/pay_measured report JSONs, a live `corpus_cov` census) and
+  emits ranked research proposals — `docs/reports/agenda.jsonl` +
+  `agenda.md` with `myco todo add` ingest commands (`--myco`
+  ingests).  Proposals only; nothing auto-executes.
 
 Some probes need scratch deps installed `--no-deps` outside the
 lockfile: `birefnet_bounded_probe.py` wants
