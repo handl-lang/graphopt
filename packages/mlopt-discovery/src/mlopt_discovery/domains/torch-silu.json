@@ -1,0 +1,11 @@
+{
+  "name": "torch-silu",
+  "board": "torch",
+  "description": "Torch-backed domains-as-data demo: real nn.Modules (spelled SiLU + stock MLPs) lifted through TorchSource, played under the sink's supported_ops bound with the deliver hook live.  Shapes/hardware are consumed — widths/batch size the draw, device/dtype place the tensors.",
+  "corpus": {"modules": ["spelled_silu", "mlp"]},
+  "shapes": {"widths": [8, 16], "batch": 4},
+  "hardware": {"device": "cpu", "dtype": "float32"},
+  "vocab": {"rules": "default"},
+  "player": "meta",
+  "incumbent": {"kind": "scripted"}
+}

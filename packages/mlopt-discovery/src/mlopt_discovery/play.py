@@ -242,19 +242,15 @@ def _joint_board(case: Any) -> ma.MetaArena:
 # ---------------------------------------------------------------------------
 
 
-def _torch_cases(seed: int, n: int) -> list:
-    """Small real ``nn.Module``s lifted to IR — the product board.
+def _torch_modules() -> dict:
+    """Return the torch domain's module zoo (``name -> d -> nn.Module``).
 
-    Each case is a torch module exported through
-    ``mlopt_torch.adapters.TorchSource`` and played under the real
-    sink's ``supported_ops`` bound — kernel claims price at sink
-    costs, not ambient vocabulary.  Modules that fail to export are
-    skipped honestly.  Torch is imported lazily — the registry
-    itself stays torch-free.
+    Data, not code-paths: domain specs select builders by name
+    (``corpus.modules``) instead of naming Python.  Torch imports
+    lazily — the registry itself stays torch-free.
     """
     import torch
     import torch.nn as nn
-    from mlopt_torch.adapters import TorchSink, TorchSource
 
     class _SpelledSiLU(nn.Module):
         """x·sigmoid(x) spelled out — the claim move's live site."""
@@ -263,38 +259,108 @@ def _torch_cases(seed: int, n: int) -> list:
             """Spell ``x·sigmoid(x)`` — no fused op named."""
             return x * torch.sigmoid(x)
 
-    rng = random.Random(seed)
+    return {
+        "spelled_silu": lambda d: _SpelledSiLU(),
+        "mlp": lambda d: nn.Sequential(
+            nn.Linear(d, d), nn.SiLU(), nn.Linear(d, d)
+        ),
+        "relu_lin": lambda d: nn.Sequential(nn.Linear(d, d), nn.ReLU()),
+        "lin": lambda d: nn.Linear(d, d),
+        "softsign_mlp": lambda d: nn.Sequential(
+            nn.Linear(d, d), nn.Softsign()
+        ),
+    }
+
+
+def _torch_dtype(name: Any) -> Any:
+    """Resolve a spec ``hardware.dtype`` spelling to a torch dtype."""
+    import torch
+
+    table = {
+        "float32": torch.float32,
+        "float64": torch.float64,
+        "float16": torch.float16,
+        "bfloat16": torch.bfloat16,
+    }
+    if name is None:
+        return None
+    if name not in table:
+        raise ValueError(
+            f"hardware.dtype: expected one of {sorted(table)!r}, "
+            f"got {name!r}"
+        )
+    return table[name]
+
+
+def _torch_cases(
+    seed: int,
+    n: int,
+    *,
+    modules: Any = None,
+    widths: Any = None,
+    batch: int = 4,
+    device: Any = None,
+    dtype: Any = None,
+) -> list:
+    """Small real ``nn.Module``s lifted to IR — the product board.
+
+    Each case is a torch module exported through
+    ``mlopt_torch.adapters.TorchSource`` and played under the real
+    sink's ``supported_ops`` bound — kernel claims price at sink
+    costs, not ambient vocabulary.  Modules that fail to export are
+    skipped honestly.  Torch is imported lazily — the registry
+    itself stays torch-free.
+
+    *modules*/*widths*/*batch*/*device*/*dtype* are the domain-spec
+    seams: a spec names zoo builders and shape/hardware bounds as
+    data; the built-in ``torch`` domain passes none and gets the
+    historical stream.
+    """
+    import torch
+    from mlopt_torch.adapters import TorchSink, TorchSource
+
+    zoo = _torch_modules()
+    names = list(zoo) if modules is None else list(modules)
+    for name in names:
+        if name not in zoo:
+            raise ValueError(
+                f"corpus.modules: unknown torch builder {name!r} "
+                f"(known: {sorted(zoo)!r})"
+            )
+    widths = [4, 8, 16] if widths is None else list(widths)
+    if not widths or any(
+        not isinstance(w, int) or w <= 0 for w in widths
+    ):
+        raise ValueError(
+            f"shapes.widths: expected positive ints, got {widths!r}"
+        )
+    dt = _torch_dtype(dtype)
     supported = TorchSink().supported_ops
     src = TorchSource()
-    builders = [
-        ("spelled_silu", lambda d: _SpelledSiLU()),
-        (
-            "mlp",
-            lambda d: nn.Sequential(
-                nn.Linear(d, d), nn.SiLU(), nn.Linear(d, d)
-            ),
-        ),
-        (
-            "relu_lin",
-            lambda d: nn.Sequential(nn.Linear(d, d), nn.ReLU()),
-        ),
-        ("lin", lambda d: nn.Linear(d, d)),
-        (
-            "softsign_mlp",
-            lambda d: nn.Sequential(nn.Linear(d, d), nn.Softsign()),
-        ),
-    ]
+    rng = random.Random(seed)
     out = []
     for i in range(n):
-        d = 4 * rng.choice((1, 2, 4))
-        kind, mk = builders[rng.randrange(len(builders))]
+        # draw order matches the historical stream: width, then builder
+        d = widths[rng.randrange(len(widths))]
+        name = names[rng.randrange(len(names))]
         torch.manual_seed(seed * 10_007 + i)
-        model = mk(d).eval()
-        example = torch.randn(4, d)
+        model = zoo[name](d).eval()
+        if device is not None and dt is not None:
+            model = model.to(device=device, dtype=dt)
+        elif device is not None:
+            model = model.to(device)
+        elif dt is not None:
+            model = model.to(dtype=dt)
+        example = torch.randn(
+            batch,
+            d,
+            device=device,
+            dtype=dt,
+        )
         ir, leaves = src.to_ir(model, example)
         out.append(
             (
-                f"torch{i}:{kind}",
+                f"torch{i}:{name}",
                 ir.root,
                 None,
                 (),

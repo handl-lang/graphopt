@@ -1028,6 +1028,7 @@ def oracle_line(
     budget: int = 24,
     handlers: dict | None = None,
     spelled: bool = False,
+    board_of: Any = None,
 ) -> tuple[float, list[ma.Action]]:
     """Return ``(reward, line)`` — the best candidate line simulated.
 
@@ -1038,14 +1039,20 @@ def oracle_line(
     candidates (:func:`spelled_candidates`) into the argmax — they
     are dominated wherever ``claim`` exists, so this arm measures
     whether the spelled spelling ever wins on its own.
+
+    *board_of* overrides the case→board factory (default
+    :func:`_board`) — domain-spec boards seat handler subsets the
+    ambient factory cannot express, and the oracle must simulate
+    the board the player actually faces.
     """
     cf = cost_fn or count_cost
-    st = _board(case, cf, max_nodes).observe()
+    mk = board_of or (lambda c: _board(c, cf, max_nodes))
+    st = mk(case).observe()
     best_reward = float("-inf")
     best: list[ma.Action] = [ma.Action.extract()]
     for line in _candidate_lines(st, handlers, spelled=spelled):
         traj = ma.run_episode(
-            _board(case, cf, max_nodes),
+            mk(case),
             ma.ScriptedPlayer(line),
             budget,
         )
@@ -1062,8 +1069,16 @@ def plan_oracles(
     max_nodes: int = 20_000,
     budget: int = 24,
     spelled: bool = False,
+    handlers: dict | None = None,
+    board_of: Any = None,
 ) -> list[tuple[float, list[ma.Action]]]:
-    """Plan the oracle line for every case — ``(reward, line)`` pairs."""
+    """Plan the oracle line for every case — ``(reward, line)`` pairs.
+
+    *handlers*/*board_of* forward to :func:`oracle_line` — the
+    spec-domain bake seats its own handler subset and board
+    factory so demonstrations only name moves the spec board
+    actually offers.
+    """
     return [
         oracle_line(
             c,
@@ -1071,6 +1086,8 @@ def plan_oracles(
             max_nodes=max_nodes,
             budget=budget,
             spelled=spelled,
+            handlers=handlers,
+            board_of=board_of,
         )
         for c in cases
     ]
@@ -1131,6 +1148,7 @@ def imitate_oracle(
     cost_fn: Any = None,
     max_nodes: int = 20_000,
     budget: int = 24,
+    board_of: Any = None,
 ) -> dict[str, int]:
     """Warm-start *player* by replaying each case's oracle line.
 
@@ -1140,12 +1158,17 @@ def imitate_oracle(
     of *both* sides of the decision (claim where it pays, cheap
     extract where it doesn't).  Returns the engine's
     ``{shown, imitated}`` counts.
+
+    *board_of* overrides the case→board factory (default
+    :func:`_board`) — spec-domain bakes pass the domain's own
+    factory so the replayed line is legal on the seated board.
     """
     from gamekit import engine as eng
 
     cf = cost_fn or count_cost
     lines = [line for _reward, line in plans]
     reset = getattr(player, "reset_episode", None)
+    board_of = board_of or (lambda c: _board(c, cf, max_nodes))
 
     def expert(i: int) -> Any:
         # the factory runs at each episode's first decision — the
@@ -1153,9 +1176,6 @@ def imitate_oracle(
         if reset is not None:
             reset()
         return _replay(lines[i])
-
-    def board_of(case: Any) -> ma.MetaArena:
-        return _board(case, cf, max_nodes)
 
     return eng.imitate_policy(
         player, expert, list(cases), board_of, budget=budget

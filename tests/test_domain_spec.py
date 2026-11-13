@@ -54,7 +54,7 @@ class TestLoad:
         "data,match",
         [
             ({"name": "Bad Name"}, "name"),
-            ({"name": "x", "board": "torch"}, "board"),
+            ({"name": "x", "board": "gen"}, "board"),
             ({"name": "x", "player": "nope"}, "player"),
             ({"name": "x", "incumbent": {"kind": "warp"}}, "incumbent"),
             (
@@ -215,7 +215,7 @@ class TestSummaryAndCLI:
         assert summary["name"] == "pointwise"
         assert "silu" in summary["corpus"]["kinds_eligible"]
         assert summary["vocab"]["ops"] == 51
-        assert summary["recorded_only"]["hardware"]["device"] == "cpu"
+        assert summary["hardware"]["device"] == "cpu"
 
     def test_main(self, capsys):
         rc = ds.main(["--spec", "pointwise", "--cases", "4"])
@@ -223,3 +223,336 @@ class TestSummaryAndCLI:
         out = capsys.readouterr().out
         assert '"name": "pointwise"' in out
         assert "cases: 4" in out
+
+    def test_main_torch_board(self, capsys):
+        pytest.importorskip("torch")
+        rc = ds.main(["--spec", "torch-silu", "--cases", "3"])
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert '"board": "torch"' in out
+        assert "cases: 3" in out
+
+
+class TestPlayerPrior:
+    def test_prior_none_parses(self):
+        spec = ds.load_spec(
+            {"name": "x", "player": {"kind": "meta", "prior": "none"}}
+        )
+        assert spec.player == "meta"
+        assert spec.player_prior == "none"
+
+    def test_prior_default_normalizes(self):
+        spec = ds.load_spec(
+            {"name": "x", "player": {"kind": "meta", "prior": "default"}}
+        )
+        assert spec.player_prior is None
+
+    def test_prior_inline_object(self):
+        spec = ds.load_spec(
+            {
+                "name": "x",
+                "player": {"kind": "meta", "prior": {"op:extract": 1.5}},
+            }
+        )
+        assert spec.player_prior == {"op:extract": 1.5}
+
+    def test_prior_bad_kind(self):
+        with pytest.raises(ValueError, match="player"):
+            ds.load_spec({"name": "x", "player": {"kind": "nope"}})
+
+    def test_load_prior_none(self):
+        assert ds.load_prior("none") == {}
+
+    def test_load_prior_packaged(self):
+        w = ds.load_prior("pointwise")
+        assert w and all(isinstance(v, float) for v in w.values())
+        assert "op:extract" in w
+
+    def test_load_prior_path_and_inline(self, tmp_path):
+        p = tmp_path / "w.json"
+        p.write_text(json.dumps({"bias": 0.25}))
+        assert ds.load_prior(str(p)) == {"bias": 0.25}
+        assert ds.load_prior({"bias": 1}) == {"bias": 1.0}
+
+    def test_load_prior_errors(self, tmp_path):
+        with pytest.raises(ValueError, match="not found"):
+            ds.load_prior("no-such-prior-xyz")
+        bad = tmp_path / "bad.json"
+        bad.write_text(json.dumps([1, 2]))
+        with pytest.raises(ValueError, match="object"):
+            ds.load_prior(str(bad))
+        bad2 = tmp_path / "bad2.json"
+        bad2.write_text(json.dumps({"a": "x"}))
+        with pytest.raises(ValueError, match="number"):
+            ds.load_prior(str(bad2))
+        with pytest.raises(ValueError, match="expected"):
+            ds.load_prior(3)
+
+    def test_resolve_player_prior_none(self):
+        spec = ds.load_spec(
+            {"name": "x", "player": {"kind": "meta", "prior": "none"}}
+        )
+        dom = ds.build_domain(spec)
+        assert dom.spec.weights == {}
+
+    def test_resolve_player_packaged_prior(self):
+        spec = ds.load_spec(
+            {"name": "x", "player": {"kind": "meta", "prior": "pointwise"}}
+        )
+        dom = ds.build_domain(spec)
+        assert dom.spec.weights is not None
+        assert dom.spec.weights.get("op:extract") == pytest.approx(
+            ds.load_prior("pointwise")["op:extract"]
+        )
+
+    def test_default_prior_is_meta_spec(self):
+        spec = ds.load_spec({"name": "x"})
+        dom = ds.build_domain(spec)
+        assert dom.spec is mp.META_SPEC
+
+
+class TestRulesMinus:
+    def test_minus_profile_parses(self):
+        from mlopt_core.laws import DEFAULT
+
+        spec = ds.load_spec(
+            {
+                "name": "x",
+                "vocab": {
+                    "rules": {"base": "default", "minus": ["select_mul"]}
+                },
+            }
+        )
+        assert spec.rules_profile[0] == "minus"
+        allowed = ds._rule_allowlist(spec.rules_profile)
+        assert "select_mul" not in allowed
+        assert len(allowed) == len({r.name for r in DEFAULT}) - 1
+
+    def test_minus_all_base(self):
+        spec = ds.load_spec(
+            {
+                "name": "x",
+                "vocab": {"rules": {"base": "all", "minus": ["select_mul"]}},
+            }
+        )
+        allowed = ds._rule_allowlist(spec.rules_profile)
+        assert allowed is not None and "select_mul" not in allowed
+
+    def test_minus_bad_shape(self):
+        with pytest.raises(ValueError, match="minus"):
+            ds.load_spec(
+                {"name": "x", "vocab": {"rules": {"base": "all", "minus": 3}}}
+            )
+
+    def test_minus_end_to_end(self):
+        # subtract a scan-only law: DEFAULT-ruleset cases still pass,
+        # scan-extended cases carrying it are filtered out
+        from mlopt_discovery import corpus_cov
+        from mlopt_core.laws import DEFAULT
+
+        dflt = {r.name for r in DEFAULT}
+        victim = next(
+            r.name
+            for r in corpus_cov.scan_rules()
+            if r.name not in dflt
+        )
+        spec = ds.load_spec(
+            {
+                "name": "x",
+                "vocab": {"rules": {"base": "all", "minus": [victim]}},
+                "corpus": {"kinds": ["silu"]},
+            }
+        )
+        kinds = ds._eligible_kinds(spec)
+        cases = ds._make_cases(spec, kinds)(0, 6)
+        assert cases
+        for _n, _t, rules, *_ in cases:
+            names = {r.name for r in rules} if rules is not None else set()
+            assert victim not in names
+
+
+class TestTorchBoard:
+    def _tspec(self, **over):
+        data = {
+            "name": "t-torch",
+            "board": "torch",
+            "corpus": {"modules": ["lin"]},
+            "shapes": {"widths": [8], "batch": 4},
+        }
+        data.update(over)
+        return ds.load_spec(data)
+
+    def test_packaged(self):
+        pytest.importorskip("torch")
+        spec = ds.load_spec("torch-silu")
+        assert spec.board == "torch"
+        assert spec.corpus_modules == ("spelled_silu", "mlp")
+        dom = ds.build_domain(spec)
+        cases = dom.cases(0, 4)
+        assert len(cases) == 4
+        assert dom.deliver is not None
+
+    def test_cases_and_board(self):
+        pytest.importorskip("torch")
+        spec = self._tspec()
+        dom = ds.build_domain(spec)
+        cases = dom.cases(0, 3)
+        assert all(c[0].startswith("torch") for c in cases)
+        assert all(":lin" in c[0] for c in cases)
+        board = dom.board_of(cases[0])
+        assert isinstance(board.supported, frozenset)
+
+    def test_vocab_ops_filter(self):
+        pytest.importorskip("torch")
+        # 'linear' is not a lifted IR op name — pick a real exclusion
+        spec = ds.load_spec(
+            {
+                "name": "t-torch",
+                "board": "torch",
+                "corpus": {"modules": ["lin", "mlp"]},
+                "shapes": {"widths": [8]},
+                "vocab": {"ops": ["definitely_not_an_op"]},
+            }
+        )
+        cases_fn = ds._make_torch_cases(spec)
+        assert cases_fn(0, 4) == []
+
+    def test_rules_profiles_rejected(self):
+        pytest.importorskip("torch")
+        # an empty explicit allowlist admits none of DEFAULT's names
+        spec = self._tspec(vocab={"rules": []})
+        with pytest.raises(ValueError, match="DEFAULT"):
+            ds._make_torch_cases(spec)
+
+    def test_shapes_hardware_validation(self):
+        pytest.importorskip("torch")
+        spec = ds.load_spec(
+            {
+                "name": "t-torch",
+                "board": "torch",
+                "shapes": {"widths": [0]},
+            }
+        )
+        with pytest.raises(ValueError, match="widths"):
+            ds._make_torch_cases(spec)
+        spec = ds.load_spec(
+            {
+                "name": "t-torch",
+                "board": "torch",
+                "shapes": {"batch": -1},
+            }
+        )
+        with pytest.raises(ValueError, match="batch"):
+            ds._make_torch_cases(spec)
+        spec = ds.load_spec(
+            {
+                "name": "t-torch",
+                "board": "torch",
+                "hardware": {"device": 3},
+            }
+        )
+        with pytest.raises(ValueError, match="device"):
+            ds._make_torch_cases(spec)
+
+    def test_dtype_consumed(self):
+        pytest.importorskip("torch")
+        spec = ds.load_spec(
+            {
+                "name": "t-torch",
+                "board": "torch",
+                "corpus": {"modules": ["lin"]},
+                "shapes": {"widths": [8]},
+                "hardware": {"dtype": "float64"},
+            }
+        )
+        cases = ds._make_torch_cases(spec)(0, 1)
+        assert cases[0][5]["input"].dtype.__str__().endswith("float64")
+
+    def test_kinds_rejected_on_torch(self):
+        with pytest.raises(ValueError, match="corpus.kinds"):
+            ds.load_spec(
+                {
+                    "name": "x",
+                    "board": "torch",
+                    "corpus": {"kinds": ["silu"]},
+                }
+            )
+
+    def test_modules_rejected_on_meta_arena(self):
+        with pytest.raises(ValueError, match="corpus.modules"):
+            ds.load_spec(
+                {
+                    "name": "x",
+                    "corpus": {"modules": ["lin"]},
+                }
+            )
+
+    def test_unknown_module(self):
+        pytest.importorskip("torch")
+        spec = ds.load_spec(
+            {
+                "name": "t-torch",
+                "board": "torch",
+                "corpus": {"modules": ["bogus"]},
+            }
+        )
+        with pytest.raises(ValueError, match="unknown torch builder"):
+            ds._make_torch_cases(spec)(0, 1)
+
+    def test_torch_cases_param_edges(self):
+        pytest.importorskip("torch")
+        with pytest.raises(ValueError, match="widths"):
+            play._torch_cases(0, 1, widths=[0])
+        with pytest.raises(ValueError, match="dtype"):
+            play._torch_cases(0, 1, dtype="int4")
+        cases = play._torch_cases(
+            0, 2, modules=["lin"], widths=[8], batch=2,
+            device="cpu", dtype="float64",
+        )
+        assert cases[0][5]["input"].shape == (2, 8)
+        assert "float64" in str(cases[0][5]["input"].dtype)
+
+    def test_deliver_smoke(self):
+        pytest.importorskip("torch")
+        from gamekit import engine
+
+        from mlopt_discovery import meta_arena as ma
+
+        spec = self._tspec()
+        dom = ds.build_domain(spec)
+        case = dom.cases(0, 6)
+        silu = next((c for c in case if "spelled_silu" in c[0]), None)
+        target = silu if silu is not None else case[0]
+        traj = engine.run_episode(
+            dom.board_of(target), ma.ScriptedPlayer(), budget=8
+        )
+        res = dom.deliver(dom.board_of(target), target, traj)
+        assert res["delivered"] and res["verified"]
+
+
+class TestBakePrior:
+    def test_tiny_bake(self):
+        spec = ds.load_spec("pointwise")
+        w = ds.bake_prior(
+            spec,
+            cases=4,
+            seed=0,
+            budget=8,
+            imitate_epochs=1,
+            rl_epochs=1,
+        )
+        assert isinstance(w, dict) and w
+        assert "op:extract" in w
+        assert all(isinstance(v, float) for v in w.values())
+
+    def test_bake_cold_init(self):
+        spec = ds.load_spec({"name": "x", "corpus": {"kinds": ["silu"]}})
+        w = ds.bake_prior(
+            spec, cases=2, seed=0, budget=6, imitate_epochs=1, init="cold"
+        )
+        assert isinstance(w, dict)
+
+    def test_bad_init(self):
+        spec = ds.load_spec({"name": "x"})
+        with pytest.raises(ValueError, match="init"):
+            ds.bake_prior(spec, cases=1, init="bogus")
