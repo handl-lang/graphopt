@@ -2,6 +2,15 @@
 
 ## title: TODO type: task date: 2026-09-26
 
+- [ ] T-029 agenda r1 s0.8286: 6/14 pay\_measured rows are executor-confounded — the marginal measures routing, not the fold · created:2026-11-13
+- [ ] T-030 agenda r2 s0.6: Uncaptured headroom on zoo:ChunkedSSD: 1543.317us ceiling, captured=0.0584, vs\_compile=None · created:2026-11-13
+- [ ] T-031 agenda r3 s0.6: Uncaptured headroom on zoo:ChunkedSSD: 1751.576us ceiling, captured=-0.0615, vs\_compile=0.286 · created:2026-11-13
+- [ ] T-032 agenda r4 s0.6: Uncaptured headroom on zoo:DecoupledMLA: 140.084us ceiling, captured=-0.2396, vs\_compile=0.6241 · created:2026-11-13
+- [ ] T-033 agenda r5 s0.6: Uncaptured headroom on zoo:DeltaRuleBlock: 163.416us ceiling, captured=0.0055, vs\_compile=0.7611 · created:2026-11-13
+- [ ] T-034 agenda r6 s0.6: Uncaptured headroom on zoo:GatedDeltaRule: 260.755us ceiling, captured=-0.032, vs\_compile=0.9556 · created:2026-11-13
+- [ ] T-035 agenda r7 s0.6: Pay-declined law near the bar: grammar:sub\_add\_factor (changed=4, exec=1.0x) · created:2026-11-13
+- [ ] T-036 agenda r8 s0.6: Pay-declined law near the bar: syn\_mixed:mul\_reshape\_r\_id\_\_mixed:pow\_reshape\_l\_w\_10@RMSNormPerHead (changed=5, exec=0.914x) · created:2026-11-13
+
 ## HIGH — ADR-0159: dissolve the optimizer domains into ext tools
 
 ## Adopted on three triggers, not a date ( host/project/adrs/0159-… ):
