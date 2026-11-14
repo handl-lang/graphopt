@@ -7,11 +7,12 @@ with an exact ``to_dict`` round-trip, and ``verify_equiv`` /
 implementations with one bit-identical computation.
 """
 
+import pytest
 import torch
 import torch.nn as nn
-
+from mlopt_orchestrator import Compositional, Optimizer
+from mlopt_torch.backend import TorchBackend
 from mlopt_torch.models import ParallelLinear
-
 from mlopt_torch.report import (
     BlockReport,
     CompositionalReport,
@@ -20,9 +21,6 @@ from mlopt_torch.report import (
     verify_equiv,
     verify_module,
 )
-from mlopt_orchestrator import Compositional, Optimizer
-
-from mlopt_torch.backend import TorchBackend
 
 
 def _small_mlp(seed=0):
@@ -380,3 +378,61 @@ def test_verify_module_parks_parkable_modules_between_forwards():
     vr = verify_module(Plain().eval(), Plain().eval(), x)
     assert vr.passed
     assert events == ["fwd", "fwd"]
+
+
+# ---------------------------------------------------------------------------
+#  verify_equiv — dtype-resolution rtol floor (bf16/fp16)
+# ---------------------------------------------------------------------------
+
+
+def test_verify_equiv_bf16_reassociation_noise_passes():
+    """bf16 pairs differing at reassociation level (~4·eps) pass the
+    dtype floor even though ``rtol=1e-4`` is unresolvable in bf16 —
+    the whisper-turbo case (``docs/reports/verify_bf16_mem.md``)."""
+    ref = torch.randn(64, 64, dtype=torch.bfloat16)
+    # ~2.5% relative drift — legitimate reassociation noise for bf16,
+    # far above the historical 1e-4 rtol but below the bf16 floor.
+    out = (ref.double() * 1.025).bfloat16()
+    vr = verify_equiv(ref, out, rtol=1e-4)
+    assert vr.max_rel > 1e-4  # the historical gate WOULD have failed
+    assert vr.passed
+    assert vr.rtol == pytest.approx(
+        8.0 * torch.finfo(torch.bfloat16).eps
+    )
+
+
+def test_verify_equiv_bf16_real_semantic_error_still_fails():
+    """The floor removes rounding noise, not signal: a wrong reduction
+    (sum vs mean) is an O(1) relative error and must still fail."""
+    x = torch.randn(32, 32, dtype=torch.bfloat16)
+    ref = x.sum(dim=0)
+    out = x.mean(dim=0)  # the wrong reduction — ~32x off
+    vr = verify_equiv(ref, out, rtol=1e-4)
+    assert not vr.passed
+    assert vr.max_rel > 0.5
+
+    # and a sign flip — the crudest possible wrong kernel
+    vr = verify_equiv(ref, -ref, rtol=1e-4)
+    assert not vr.passed
+
+
+def test_verify_equiv_fp32_floor_does_not_engage():
+    """fp32/fp64 keep bit-identical historical semantics: a sub-1e-6
+    relative diff still fails an rtol=1e-9 gate — no dtype floor."""
+    ref = torch.ones(8, dtype=torch.float32)
+    out = ref + 5e-7
+    vr = verify_equiv(ref, out, rtol=1e-9)
+    assert not vr.passed
+    assert vr.rtol == 1e-9
+    # sanity: the same pair passes the default gate as before
+    assert verify_equiv(ref, out, rtol=1e-4).passed
+
+
+def test_verify_equiv_explicit_looser_rtol_still_honored():
+    """An explicit rtol LOOSER than the dtype floor wins — the floor
+    is a minimum, not an override."""
+    ref = torch.ones(8, dtype=torch.bfloat16)
+    out = ref * 1.5  # 50% error
+    vr = verify_equiv(ref, out, rtol=1.0)
+    assert vr.passed
+    assert vr.rtol == 1.0

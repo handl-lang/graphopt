@@ -1525,3 +1525,92 @@ def test_verify_module_lowmem_never_holds_both_weight_sets():
     with torch.no_grad():
         out = opt(xv)
     assert out.shape == (1, n) and out.device.type == "cuda"
+
+
+# ---------------------------------------------------------------------------
+#  IRModule param-storage sharing + _parameters consistency
+# ---------------------------------------------------------------------------
+
+
+def _mul_mod(wt):
+    W = Param("W", TensorType((4, 4)))
+    x = Var("x", TensorType((4, 4)))
+    return _lower_root(Op.make("mul", x, W), {"W": wt})
+
+
+def test_build_params_shares_storage_with_param_values():
+    """``_build_params`` detaches (shares storage) rather than clones:
+    the verify pair's two lowers over ONE ``param_values`` dict cost a
+    single host copy of the weight set
+    (``docs/reports/verify_bf16_mem.md``)."""
+    wt = torch.randn(4, 4)
+    m1 = _mul_mod(wt)
+    m2 = _mul_mod(wt)
+    assert m1._param_map["W"].data_ptr() == wt.data_ptr()
+    assert m2._param_map["W"].data_ptr() == wt.data_ptr()
+    # the two modules' registered params share ONE storage
+    assert m1._parameters["W"].data_ptr() == m2._parameters["W"].data_ptr()
+    # values are correct and the module still evaluates
+    xv = torch.randn(4, 4)
+    with torch.no_grad():
+        assert torch.equal(m1(xv), xv * wt)
+
+
+def test_module_to_resyncs_live_param_tables():
+    """``.to()``/``.float()`` must move the LIVE tables, not just the
+    registered ``_parameters`` — after the resync the ``__init__``
+    triple-alias holds and ``_dev_key`` resets."""
+    wt = torch.randn(4, 4)
+    mod = _mul_mod(wt)
+    mod.to(torch.float64)
+    assert mod._parameters["W"].dtype == torch.float64
+    assert mod._param_map["W"].dtype == torch.float64
+    assert mod._param_values["W"].dtype == torch.float64
+    assert mod._param_map["W"] is mod._parameters["W"]
+    assert mod._param_values["W"] is mod._param_map["W"]
+    assert mod._dev_key is None
+    xv = torch.randn(4, 4, dtype=torch.float64)
+    with torch.no_grad():
+        assert torch.equal(mod(xv), xv * wt.double())
+
+
+def test_module_to_moves_unregistered_param_values_extras():
+    """``_param_values`` extras that never registered (not in
+    ``_parameters``) are moved by ``_apply`` too — deduped by object
+    identity like ``_align_to``."""
+    W = Param("W", TensorType((4, 4)))
+    x = Var("x", TensorType((4, 4)))
+    shared = torch.randn(4, 4)
+    pv = {"W": torch.randn(4, 4), "extra_a": shared, "extra_b": shared}
+    ir = IR(
+        root=Op.make("mul", x, W),
+        inputs=[x],
+        input_names={"x"},
+        params={"W": W},
+    )
+    mod = ir_to_torch_module(ir, param_values=pv)
+    assert "extra_a" not in mod._parameters
+    mod.to(torch.float64)
+    assert mod._param_values["extra_a"].dtype == torch.float64
+    assert mod._param_values["extra_a"] is mod._param_values["extra_b"]
+
+
+def test_load_state_dict_updates_live_param_tables():
+    """``load_state_dict`` writes ``_parameters``; the live tables
+    ``forward`` reads must follow — simulated post-``_align_to``
+    divergence (live table holds a different tensor object)."""
+    wt = torch.randn(4, 4)
+    mod = _mul_mod(wt)
+    xv = torch.randn(4, 4)
+    # force the divergence _align_to creates on non-CPU devices:
+    # the live table points at a DIFFERENT tensor than _parameters
+    stale = torch.zeros(4, 4)
+    mod._param_map["W"] = torch.nn.Parameter(stale, requires_grad=False)
+    new_w = torch.randn(4, 4)
+    sd = mod.state_dict()
+    sd["W"] = new_w
+    mod.load_state_dict(sd)
+    with torch.no_grad():
+        assert torch.equal(mod(xv), xv * new_w)
+    # the registered param got the new values too (state_dict agrees)
+    assert torch.equal(mod.state_dict()["W"], new_w)

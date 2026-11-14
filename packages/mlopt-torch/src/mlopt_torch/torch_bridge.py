@@ -3279,8 +3279,13 @@ class IRModule(torch.nn.Module):
         The categorical IR to lower.
     param_values : dict[str, torch.Tensor] | None
         Optional mapping from IR param names (e.g. 'p_w1') to actual
-        tensor values (e.g. a clone of the original model's W1).
-        If not provided, random parameters are generated.
+        tensor values (e.g. the original model's W1).  Registered
+        params SHARE STORAGE with these tensors (``detach``, not
+        ``clone`` — eval is read-only and the verify pair lowers the
+        same dict twice, so sharing collapses ~3 host copies of the
+        weight set to 1; see ``docs/reports/verify_bf16_mem.md``).
+        Callers needing an isolated copy clone the values before
+        lowering.  If not provided, random parameters are generated.
     ops : OpTable | None
         The op table to lower through (plan 0001 phase 2c).  ``None``
         (default) resolves to ``OpTable.full()`` — the ambient table
@@ -3321,12 +3326,15 @@ class IRModule(torch.nn.Module):
         # object, so no second copy of the weight set is pinned for
         # the module's lifetime (the ~3x weight-set blowup in the
         # whisper OOM — SearchResult leaves + this dict + the
-        # Parameters; ``_build_params`` already cloned each value, so
-        # the original tensors are released here).  The key stays
-        # present because ``_align_to`` mirrors both tables and
-        # callers may inspect the dict; ``_align_to`` dedups by object
-        # identity so an aliased entry follows its Parameter's move
-        # instead of materialising a second device copy.  Unregistered
+        # Parameters).  The registered Parameters SHARE STORAGE with
+        # the caller's ``param_values`` tensors (``_build_params``
+        # detaches, never clones — see its comment), so the verify
+        # pair's two lowers over one dict cost ONE host copy total.
+        # The key stays present because ``_align_to`` mirrors both
+        # tables and callers may inspect the dict; ``_align_to``
+        # dedups by object identity so an aliased entry follows its
+        # Parameter's move instead of materialising a second device
+        # copy.  Unregistered
         # names (unshaped Params, caller extras) keep their tensors.
         # The caller's dict is never mutated — this rebinds.
         self._param_values = {
@@ -3496,8 +3504,15 @@ class IRModule(torch.nn.Module):
             if name in self._param_values:
                 # Use the original model's parameter value.  Integer
                 # tensors are registered without grad — Parameters
-                # require a floating/complex dtype.
-                v = self._param_values[name].clone()
+                # require a floating/complex dtype.  ``detach`` shares
+                # STORAGE with the caller's tensor rather than cloning
+                # (docs/reports/verify_bf16_mem.md): ``lower`` materialises
+                # the verify reference and the delivery from the SAME
+                # ``param_values`` dict, eval is read-only, and sharing
+                # collapses ~3 host copies of the weight set to 1.  The
+                # aliasing contract is documented on the class — callers
+                # needing isolation clone before lowering.
+                v = self._param_values[name].detach()
                 p = torch.nn.Parameter(
                     v,
                     requires_grad=v.is_floating_point()
@@ -3623,14 +3638,16 @@ class IRModule(torch.nn.Module):
         The CPU replacement prefers ``self._parameters[k]`` — the
         registered attribute ``_build_params`` installed before any
         ``_align_to`` lift.  ``_align_to`` rewrites only the two live
-        tables, never ``_parameters``, so the registered entry is
-        already a host-resident clone of the same weights: rebinding
-        to it releases the device copy WITHOUT allocating a second
-        host copy (the park trades VRAM for RAM — a fresh ``.to("cpu")``
-        per tensor would briefly hold both).  Registered entries are
-        keyed by the same param name the tables use.  A live tensor
-        with no CPU registered counterpart (a caller-supplied extra
-        that arrived on-device) falls back to a real ``.to("cpu")``.
+        tables, never ``_parameters``, so the registered entry stays
+        the canonical host-resident tensor — it SHARES STORAGE with
+        the caller's ``param_values`` (``_build_params`` detaches,
+        never clones): rebinding to it releases the device copy
+        WITHOUT allocating a second host copy (the park trades VRAM
+        for RAM — a fresh ``.to("cpu")`` per tensor would briefly
+        hold both).  Registered entries are keyed by the same param
+        name the tables use.  A live tensor with no CPU registered
+        counterpart (a caller-supplied extra that arrived on-device)
+        falls back to a real ``.to("cpu")``.
         """
         registered = self._parameters
         moved_for: dict[int, tuple[Any, Any]] = {}
@@ -3664,6 +3681,110 @@ class IRModule(torch.nn.Module):
                 moved_for[id(t)] = (t, moved)
                 table[k] = moved
         self._dev_key = None
+
+    def _apply(self, fn: Callable, recurse: bool = True) -> IRModule:
+        """``Module.to``/``cuda``/``float``/``half`` — plus table resync.
+
+        ``Module._apply`` rebinds every ``_parameters`` entry to a NEW
+        tensor object, but ``forward`` reads the LIVE tables
+        (``_param_map`` / ``_param_values``) — and after an
+        ``_align_to`` lift those are deliberately different objects
+        than the registered params (``_parameters`` stays the
+        canonical host copy ``state_dict`` reports and ``_park_params``
+        rebinds to).  A bare ``super()._apply`` would move the
+        registration while eval kept using pre-move weights — e.g.
+        ``.cpu()`` after a CUDA forward left CUDA tensors under CPU
+        inputs and the next forward died on a device mismatch (the
+        ``_dev_key`` cache would even suppress the re-align that
+        could have healed it).
+
+        Resync: registered names rebind to the moved ``_parameters``
+        entries (restoring the ``__init__`` triple-alias
+        ``_param_map[k] is _param_values[k] is _parameters[k]``);
+        unregistered ``_param_values`` extras — which ``_apply``
+        never sees — are moved by ``fn`` directly, deduped by object
+        identity like ``_align_to``.  ``_dev_key`` resets so the next
+        forward re-derives device/dtype alignment exactly as a fresh
+        module would.
+        """
+        super()._apply(fn, recurse)
+        param_map = getattr(self, "_param_map", None)
+        if param_map is None:  # pragma: no cover — _apply is post-init
+            return self
+        registered = self._parameters
+        for name in param_map:
+            reg = registered.get(name)
+            if reg is not None:
+                param_map[name] = reg
+        moved_for: dict[int, Any] = {}
+        for k, t in list(self._param_values.items()):
+            reg = registered.get(k)
+            if reg is not None:
+                self._param_values[k] = reg
+                continue
+            if not isinstance(t, torch.Tensor):
+                continue
+            prev = moved_for.get(id(t))
+            if prev is not None:
+                self._param_values[k] = prev
+                continue
+            with torch.no_grad():
+                moved = fn(t)
+            if isinstance(t, torch.nn.Parameter) and not isinstance(
+                moved, torch.nn.Parameter
+            ):
+                moved = torch.nn.Parameter(
+                    moved, requires_grad=t.requires_grad
+                )
+            moved_for[id(t)] = moved
+            self._param_values[k] = moved
+        self._dev_key = None
+        return self
+
+    def load_state_dict(
+        self,
+        state_dict: Mapping[str, Any],
+        strict: bool = True,
+        assign: bool = False,
+    ) -> Any:
+        """Load weights, then propagate them into the LIVE tables.
+
+        ``Module.load_state_dict`` writes ``_parameters`` only; after
+        an ``_align_to`` lift the tables ``forward`` reads are
+        different objects, so without this the module would keep
+        evaluating the pre-load weights while ``state_dict()``
+        reported the new ones.  For every registered name present in
+        ``state_dict``, the live tensor gets ``copy_`` from the
+        (already updated) registered param — ``copy_`` casts, so the
+        aligned view keeps its device/dtype.  ``_param_values``
+        aliases the same objects for registered names and follows;
+        unregistered extras are not in ``state_dict`` and stay
+        untouched.  ``_dev_key`` is value-independent (device/dtype
+        only) and needs no reset.
+        """
+        result = super().load_state_dict(
+            state_dict, strict=strict, assign=assign
+        )
+        param_map = getattr(self, "_param_map", None)
+        if param_map is None:  # pragma: no cover — post-init only
+            return result
+        registered = self._parameters
+        done: set[int] = set()
+        with torch.no_grad():
+            for table in (param_map, self._param_values):
+                for name, live in table.items():
+                    if name not in state_dict or not isinstance(
+                        live, torch.Tensor
+                    ):
+                        continue
+                    if id(live) in done:
+                        continue
+                    done.add(id(live))
+                    src = registered.get(name)
+                    if src is None or live is src:
+                        continue
+                    live.copy_(src)
+        return result
 
     def forward(self, *xs: Any) -> Any:
         """Run the module: bind inputs and evaluate the root."""

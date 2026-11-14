@@ -34,6 +34,56 @@ __all__ = [
 #: bit-for-bit semantics, not a tunable.
 _REL_FLOOR = 1e-8
 
+#: Headroom of the dtype-resolution rtol floor, in units of the
+#: dtype's machine epsilon (``torch.finfo(dtype).eps``).
+#:
+#: ``verify_equiv``'s ``max_rel`` metric cannot resolve differences
+#: below the compute dtype's own rounding: two evaluations of the
+#: SAME program in bf16 already drift by reassociation at ~4 eps —
+#: measured ``max_rel ≈ 0.031`` on whisper-turbo bf16 (bf16 eps is
+#: 0.0078; see ``docs/reports/verify_bf16_mem.md``).  Demanding the
+#: historical ``rtol=1e-4`` of a bf16 pair asks for ~13x more
+#: precision than the dtype carries, so every honest bf16 delivery
+#: fails on rounding noise, not semantics.  The floor is therefore
+#: ``_RTOL_DTYPE_FACTOR * eps`` — a reassociation-drift budget, not a
+#: semantic loosening: a wrong kernel produces O(0.1-1+) relative
+#: errors, far above the bf16 floor (~6e-2), while sub-precision
+#: noise is indistinguishable from a correct rewrite *in that dtype*.
+#: The factor is a heuristic anchored on the measured whisper drift
+#: (~4 eps) with ~2x headroom; it is deliberately NOT applied to
+#: fp32/fp64 — their eps*factor sits below every shipped rtol and the
+#: fp64 verify convention must stay bit-identical.
+_RTOL_DTYPE_FACTOR = 8.0
+
+_FP32_EPS = torch.finfo(torch.float32).eps
+
+
+def _dtype_rtol_floor(*outputs: Any) -> float:
+    """Return the dtype-resolution floor for ``verify_equiv``'s rtol.
+
+    Returns ``_RTOL_DTYPE_FACTOR * eps`` for the coarsest floating
+    output dtype whose precision is below fp32's (fp16, bf16, the
+    fp8 family — dtypes whose machine epsilon exceeds
+    ``_FP32_EPS``), else ``0.0``.  Non-floating and non-torch dtypes
+    contribute nothing: integer outputs compare exactly and foreign
+    array types keep the historical semantics.  The effective
+    tolerance is ``max(rtol, floor)`` — an explicit *looser* rtol is
+    honored, and an explicit *tighter* one cannot be satisfied by a
+    dtype that cannot represent it anyway.
+    """
+    floor = 0.0
+    for out in outputs:
+        dtype = getattr(out, "dtype", None)
+        if not isinstance(dtype, torch.dtype):
+            continue
+        try:
+            eps = torch.finfo(dtype).eps
+        except (TypeError, ValueError):
+            continue
+        if eps > _FP32_EPS:
+            floor = max(floor, _RTOL_DTYPE_FACTOR * eps)
+    return floor
+
 
 # ---------------------------------------------------------------------------
 #  Uniform verify gate
@@ -54,6 +104,11 @@ class VerifyReport:
     max_rel: float  # max_abs / (max|ref| + _REL_FLOOR)
     passed: bool
     per_output: tuple[float, ...] | None = None
+    #: The effective rtol the gate applied — ``max(rtol,
+    #: _dtype_rtol_floor(...))``; for a multi-output aggregate the
+    #: loosest per-output value, ``None`` on the fail-closed
+    #: arity-mismatch report.
+    rtol: float | None = None
 
 
 def rel_diff(a: torch.Tensor, b: torch.Tensor) -> float:
@@ -122,6 +177,10 @@ def _verify_outputs(
         max_rel=max(r.max_rel for r in reports),
         passed=all(r.passed for r in reports),
         per_output=tuple(r.max_abs for r in reports),
+        rtol=max(
+            (r.rtol for r in reports if r.rtol is not None),
+            default=None,
+        ),
     )
 
 
@@ -131,13 +190,22 @@ def _verify_pair(
     rtol: float,
     atol: float | None,
 ) -> VerifyReport:
-    """Compare two single-output results — the historical metric."""
+    """Compare two single-output results — the historical metric.
+
+    The effective rtol is ``max(rtol, _dtype_rtol_floor(ref, out))``:
+    sub-fp32 dtypes cannot resolve the historical ``1e-4`` and get a
+    precision-derived floor instead (see ``_RTOL_DTYPE_FACTOR``);
+    fp32/fp64 pairs are bit-identical to before.
+    """
     max_abs = (ref_out - out).abs().max().item()
     max_rel = max_abs / (ref_out.abs().max().item() + _REL_FLOOR)
-    passed = bool(max_rel < rtol) and (
+    rtol_eff = max(rtol, _dtype_rtol_floor(ref_out, out))
+    passed = bool(max_rel < rtol_eff) and (
         atol is None or bool(max_abs <= atol)
     )
-    return VerifyReport(max_abs=max_abs, max_rel=max_rel, passed=passed)
+    return VerifyReport(
+        max_abs=max_abs, max_rel=max_rel, passed=passed, rtol=rtol_eff
+    )
 
 
 def verify_equiv(
@@ -153,8 +221,13 @@ def verify_equiv(
     site used):
 
     * ``max_rel = max|ref - out| / (max|ref| + 1e-8)``
-    * ``passed = max_rel < rtol`` and, when ``atol`` is given,
-      additionally ``max_abs <= atol``.
+    * ``passed = max_rel < rtol_eff`` and, when ``atol`` is given,
+      additionally ``max_abs <= atol`` — where ``rtol_eff`` is
+      ``max(rtol, _dtype_rtol_floor(ref, out))``: sub-fp32 dtypes
+      (fp16/bf16/fp8) get a machine-epsilon-derived floor because
+      they cannot resolve the historical ``1e-4``; fp32/fp64
+      comparisons are bit-identical to before.  The applied value is
+      recorded on the report's ``rtol`` field.
 
     A tuple/list ``ref_out`` is a multi-output result: every output is
     compared (see :func:`_verify_outputs`) — a module returning
@@ -195,6 +268,12 @@ def verify_module(
     device residency between them differs, so the check's strength
     is identical.  Modules without the hook keep the historical
     both-resident behaviour.
+
+    The comparison itself goes through :func:`verify_equiv`, whose
+    ``rtol`` gets the dtype-resolution floor (``_dtype_rtol_floor``)
+    — sub-fp32 outputs (bf16/fp16/fp8) verify against
+    ``max(rtol, 8*eps)`` because the dtype cannot resolve the
+    historical ``1e-4``; fp32/fp64 are unchanged.
     """
     args = inputs if isinstance(inputs, tuple) else (inputs,)
     ref_mod.eval()
