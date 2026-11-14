@@ -27,6 +27,7 @@ from mlopt_core.ops import (
     register_ambient_bindings,
     register_core_bindings,
 )
+from mlopt_core.typing import register_shape_rule
 
 _ATEN_TO_IR: dict[str, str] = {
     "add": "add",
@@ -53,6 +54,18 @@ _ATEN_TO_IR: dict[str, str] = {
     "transpose": "transpose",
     # aten.t() is transpose(-2, -1) — the transpose binding's default.
     "t": "transpose",
+    # aten.mT is the ≥2-D last-two-axes transpose — the transpose
+    # binding's (-2, -1) default — and aten.swapaxes(x, d0, d1) is a
+    # named-axes transpose: both carry the transpose schema's
+    # (dim0, dim1) positions.
+    "mT": "transpose",
+    "swapaxes": "transpose",
+    # aten.moveaxis(source, destination) has movedim's positional
+    # layout — same op, different aten spelling (host-tensor ports
+    # aten::moveaxis).
+    "moveaxis": "movedim",
+    # aten.ger IS aten.outer — the port list marks outer its alias.
+    "ger": "outer",
     "reshape": "reshape",
     "view": "reshape",
     # aten.amax/.amin are values-only reductions; aten.max/.min are
@@ -140,6 +153,43 @@ _IR_TO_TORCH_EXTRA: dict[str, str] = {
     "upsample_bilinear2d.vec": "upsample_bilinear2d",
 }
 
+#: Domain-local positional-attr schema for ops ``mlopt_core.attrs``
+#: does not cover yet — the substrate table is eqsat-owned, so the
+#: host-tensor port surface's scalar tails canonicalise here instead
+#: of mutating the shared contract.  Merged UNDER ``ATTR_SCHEMA`` at
+#: the export boundary (a substrate entry always wins); ``Op.make``
+#: validation is unaffected — these ops simply have no schema, so
+#: ``argN`` spellings stay legal for hand-minted terms and the
+#: bindings read both spellings.
+_LOCAL_ATTR_SCHEMA: dict[str, dict[int, str]] = {
+    # Threshold/offset tails are op ATTRIBUTES (a rewrite binds
+    # them), not tensor operands — the ``_SCALAR_OPERAND_OPS``
+    # carve-out does not apply.
+    "softshrink": {1: "lambd"},
+    "hardshrink": {1: "lambd"},
+    "logit": {1: "eps"},
+    # Reduction/pooling/select tails.
+    "logsumexp": {1: "dim", 2: "keepdim"},
+    "avg_pool2d": {
+        1: "kernel_size",
+        2: "stride",
+        3: "padding",
+        4: "ceil_mode",
+        5: "count_include_pad",
+        6: "divisor_override",
+    },
+    "rot90": {1: "k", 2: "dims"},
+    # torch.diag(x, diagonal) / torch.diagonal(x, offset, dim1, dim2).
+    "diag": {1: "diagonal"},
+    "diagonal": {1: "offset", 2: "dim1", 3: "dim2"},
+    # Zero-operand creator: (start, end, steps) are all attrs.
+    "linspace": {0: "start", 1: "end", 2: "steps"},
+    # cdist(x1, x2, p, compute_mode) — p is a scalar attr; the str
+    # compute_mode never survives the boundary's str-arg skip (it is
+    # a kernel-selection hint, not semantics).
+    "cdist": {2: "p", 3: "compute_mode"},
+}
+
 #: Positional-argument → named-attribute mapping lives in
 #: ``mlopt_core.attrs.ATTR_SCHEMA`` (plan 0001 phase 1b): for every
 #: schema'd op, non-node args at declared positions land under the
@@ -200,6 +250,9 @@ _SCALAR_OPERAND_OPS: set[str] = {
     "le",
     "gt",
     "ge",
+    # floor_divide's scalar divisor is a real operand like fmod's —
+    # ``x // 2`` keeps the 2 as a Const a rewrite can bind.
+    "floor_divide",
 }
 
 
@@ -571,7 +624,10 @@ def export_to_ir(
                 continue
             args = []
             attrs: dict[str, Any] = {}
-            positional_attrs = ATTR_SCHEMA.get(ir_op, {})
+            positional_attrs = {
+                **_LOCAL_ATTR_SCHEMA.get(ir_op, {}),
+                **ATTR_SCHEMA.get(ir_op, {}),
+            }
             for i, arg_node in enumerate(node.args):
                 if (
                     i in positional_attrs
@@ -1034,6 +1090,54 @@ def _adaptive_avg_pool2d_torch(x: Any, *a: Any, **kw: Any) -> Any:
     if isinstance(size, list):
         size = tuple(size)
     return torch.nn.functional.adaptive_avg_pool2d(x, size)
+
+
+def _avg_pool2d_torch(x: Any, *a: Any, **kw: Any) -> Any:
+    """``aten.avg_pool2d[.default]`` → F.avg_pool2d.
+
+    The host-tensor port ``tensor.avg_pool2d`` claims
+    ``aten::avg_pool2d`` provenance, so the torch kernel IS the
+    denotation.  ``kernel_size``/``stride``/``padding`` arrive under
+    ``_LOCAL_ATTR_SCHEMA`` names (``[H, W]`` lists at export); the
+    bool tail and ``divisor_override`` follow the same convention.
+    """
+    return torch.nn.functional.avg_pool2d(
+        x,
+        kernel_size=(a[0] if a else attr_of(kw, "kernel_size", "arg1")),
+        stride=(a[1] if len(a) > 1 else attr_of(kw, "stride", "arg2")),
+        padding=(
+            a[2]
+            if len(a) > 2
+            else attr_of(kw, "padding", "arg3", default=0)
+        ),
+        ceil_mode=bool(
+            a[3]
+            if len(a) > 3
+            else attr_of(kw, "ceil_mode", "arg4", default=False)
+        ),
+        count_include_pad=bool(
+            a[4]
+            if len(a) > 4
+            else attr_of(kw, "count_include_pad", "arg5", default=True)
+        ),
+        divisor_override=(
+            a[5]
+            if len(a) > 5
+            else attr_of(kw, "divisor_override", "arg6", default=None)
+        ),
+    )
+
+
+def _rot90_torch(t: Any, *a: Any, **kw: Any) -> Any:
+    """``aten.rot90[.default]`` → torch.rot90 — ``dims`` is a tuple."""
+    dims = attr_of(kw, "dims", "arg2", default=(0, 1))
+    if isinstance(dims, int) and not isinstance(dims, bool):
+        dims = (dims,)
+    return torch.rot90(
+        t,
+        k=int(attr_of(kw, "k", "arg1", default=1)),
+        dims=tuple(dims),
+    )
 
 
 def _upsample_nearest2d_torch(x: Any, *a: Any, **kw: Any) -> Any:
@@ -1918,6 +2022,54 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
         t, dim=int(attr_of(kw, "dim", default=-1))
     ),
     "prelu": lambda t, w, *a, **kw: torch.nn.functional.prelu(t, w),
+    # --- host-tensor port surface --------------------------------------
+    # The ops below are the corpus-observed slice of host-tensor's
+    # generated ATen ports (host-tensor ``tools/aten_port_list.txt``):
+    # the denotation IS the ATen kernel host-tensor implements, so
+    # these lift as first-class terms — rewrites see inside them —
+    # instead of ``opaque`` passthrough leaves.  Scalar tails arrive
+    # under ``_LOCAL_ATTR_SCHEMA`` names (``argN`` spellings accepted
+    # for hand-minted terms, which carry no substrate schema).
+    "selu": torch.nn.functional.selu,
+    "softshrink": lambda t, *a, **kw: torch.nn.functional.softshrink(
+        t, lambd=float(attr_of(kw, "lambd", "arg1", default=0.5))
+    ),
+    "hardshrink": lambda t, *a, **kw: torch.nn.functional.hardshrink(
+        t, lambd=float(attr_of(kw, "lambd", "arg1", default=0.5))
+    ),
+    "logit": lambda t, *a, **kw: torch.logit(
+        t, eps=attr_of(kw, "eps", "arg1", default=None)
+    ),
+    "floor_divide": torch.floor_divide,
+    "logsumexp": lambda t, *a, **kw: torch.logsumexp(
+        t,
+        dim=attr_of(kw, "dim", "arg1", default=-1),
+        keepdim=bool(attr_of(kw, "keepdim", "arg2", default=False)),
+    ),
+    "avg_pool2d": _avg_pool2d_torch,
+    "rot90": _rot90_torch,
+    "diag": lambda t, *a, **kw: torch.diag(
+        t, diagonal=int(attr_of(kw, "diagonal", "arg1", default=0))
+    ),
+    "diagonal": lambda t, *a, **kw: torch.diagonal(
+        t,
+        offset=int(attr_of(kw, "offset", "arg1", default=0)),
+        dim1=int(attr_of(kw, "dim1", "arg2", default=0)),
+        dim2=int(attr_of(kw, "dim2", "arg3", default=1)),
+    ),
+    # Zero-operand creator — (start, end, steps, dtype) are all attrs.
+    "linspace": lambda *a, **kw: torch.linspace(
+        attr_of(kw, "start", "arg0", default=0.0),
+        attr_of(kw, "end", "arg1", default=1.0),
+        int(attr_of(kw, "steps", "arg2", default=100)),
+        dtype=_creator_dtype(kw),
+    ),
+    # Corpus-observed (intake ``Cdist``): batchwise p-norm distances.
+    "cdist": lambda x1, x2, *a, **kw: torch.cdist(
+        x1,
+        x2,
+        p=float(attr_of(kw, "p", "arg2", default=2.0)),
+    ),
     # Scalar-operand spellings eval to 0-dim tensors; torch's
     # tensor-tensor promotion reproduces the aten weak-type result
     # (ints stay ints thanks to the int-preserving Const).
@@ -2192,6 +2344,187 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
     # contains one.
     "opaque": _opaque_torch,
 }
+
+
+# ---------------------------------------------------------------------------
+#  Shape rules for the host-tensor port ops
+# ---------------------------------------------------------------------------
+# ``mlopt_core.typing``'s default case returns the first operand's
+# shape — right for the elementwise ports (``selu``/``softshrink``/
+# ``hardshrink``/``logit``/``floor_divide``/``rot90`` need nothing) but
+# WRONG for the shape-changing ones.  These rules keep cost/typing
+# honest; anything not cheaply computable reports ``None`` (unknown)
+# rather than a wrong shape.  Registered through the substrate's
+# public ``register_shape_rule`` sink — the same direction carriers
+# and ``play.py`` already use.
+
+
+def _shape_attr_int(v: Any) -> int | None:
+    """Best-effort int for a shape-rule attr (``None``/junk → ``None``)."""
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def _shape_pair(v: Any) -> tuple[int, int] | None:
+    """``kernel_size``-style attr → ``(h, w)`` — int broadcasts."""
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, int):
+        return (v, v)
+    if isinstance(v, (list, tuple)) and len(v) == 2:
+        a, b = (_shape_attr_int(v[0]), _shape_attr_int(v[1]))
+        if a is not None and b is not None:
+            return (a, b)
+    return None
+
+
+def _logsumexp_shape(op: Op, shapes: list) -> Any:
+    """``logsumexp(x, dim, keepdim)`` — the reduction shape rule."""
+    base = shapes[0] if shapes else None
+    if base is None or isinstance(base, str):
+        return base
+    dim = attr_of(op, "dim", "axis", "arg1")
+    if dim is None:
+        return None
+    dims = dim if isinstance(dim, (list, tuple)) else (dim,)
+    try:
+        norm = {int(d) % len(base) for d in dims}
+    except (TypeError, ValueError, ZeroDivisionError):
+        return None
+    if bool(attr_of(op, "keepdim", "arg2", default=False)):
+        return tuple(1 if i in norm else d for i, d in enumerate(base))
+    return tuple(d for i, d in enumerate(base) if i not in norm)
+
+
+def _avg_pool2d_shape(op: Op, shapes: list) -> Any:
+    """``avg_pool2d`` — floor/ceil pooling-window arithmetic on H, W."""
+    x = shapes[0] if shapes else None
+    if x is None or isinstance(x, str):
+        return x
+    if not isinstance(x, tuple) or len(x) < 2:
+        return None
+    k = _shape_pair(attr_of(op, "kernel_size", "arg1"))
+    if k is None:
+        return None
+    s = _shape_pair(attr_of(op, "stride", "arg2")) or k
+    p = _shape_pair(attr_of(op, "padding", "arg3")) or (0, 0)
+    ceil_mode = bool(attr_of(op, "ceil_mode", "arg4", default=False))
+    out = list(x)
+    for i, (extent, ki, si, pi) in enumerate(
+        zip((x[-2], x[-1]), k, s, p, strict=True)
+    ):
+        if extent is None:
+            out[-2 + i] = None
+            continue
+        num = extent + 2 * pi - ki
+        q = -(-num // si) if ceil_mode else num // si
+        out[-2 + i] = q + 1
+    return tuple(out)
+
+
+def _diag_shape(op: Op, shapes: list) -> Any:
+    """``torch.diag`` — 1-D ``(n,)`` → ``(n, n)``; ≥2-D → ``(min,)``.
+
+    Only the ``diagonal == 0`` spellings are cheaply exact; an offset
+    diagonal reports unknown rather than a wrong length.
+    """
+    x = shapes[0] if shapes else None
+    if x is None or isinstance(x, str):
+        return x
+    if not isinstance(x, tuple):
+        return None
+    if _shape_attr_int(attr_of(op, "diagonal", "arg1", default=0)) != 0:
+        return None
+    if len(x) == 1:
+        return (x[0], x[0]) if x[0] is not None else None
+    # torch.diag is 1-D/2-D only — a higher-rank operand is ill-typed
+    # at eval, so report unknown rather than invent a shape.
+    if len(x) == 2 and x[-2] is not None and x[-1] is not None:
+        return (min(x[-2], x[-1]),)
+    return None
+
+
+def _diagonal_shape(op: Op, shapes: list) -> Any:
+    """``torch.diagonal`` — the extracted diagonal is 1-D.
+
+    Exact for ``offset == 0`` on the (possibly attr-named) two dims:
+    ``min(len(dim1), len(dim2))``.  Offsets and weird dims report
+    unknown.
+    """
+    x = shapes[0] if shapes else None
+    if x is None or isinstance(x, str):
+        return x
+    if not isinstance(x, tuple) or len(x) < 2:
+        return None
+    if _shape_attr_int(attr_of(op, "offset", "arg1", default=0)) != 0:
+        return None
+    d1 = _shape_attr_int(attr_of(op, "dim1", "arg2", default=0))
+    d2 = _shape_attr_int(attr_of(op, "dim2", "arg3", default=1))
+    if d1 is None or d2 is None:
+        return None
+    try:
+        i1, i2 = d1 % len(x), d2 % len(x)
+    except ZeroDivisionError:
+        return None
+    if x[i1] is None or x[i2] is None:
+        return None
+    # torch.diagonal keeps the non-plane dims in order and appends
+    # the diagonal length LAST.
+    return (
+        *(d for i, d in enumerate(x) if i not in (i1, i2)),
+        min(x[i1], x[i2]),
+    )
+
+
+def _linspace_shape(op: Op, shapes: list) -> Any:
+    """``linspace(start, end, steps)`` — a ``(steps,)`` vector."""
+    steps = _shape_attr_int(attr_of(op, "steps", "arg2"))
+    return (steps,) if steps is not None else None
+
+
+def _cdist_shape(op: Op, shapes: list) -> Any:
+    """``cdist(x1, x2)`` — ``(..., n, d) × (..., m, d) → (..., n, m)``.
+
+    The batch dims broadcast; only the equal/empty cases are cheaply
+    exact — anything else reports unknown.
+    """
+    if len(shapes) < 2:
+        return None
+    a, b = shapes[0], shapes[1]
+    if (
+        a is None
+        or b is None
+        or isinstance(a, str)
+        or isinstance(b, str)
+        or not isinstance(a, tuple)
+        or not isinstance(b, tuple)
+        or len(a) < 2
+        or len(b) < 2
+    ):
+        return a if a is None or isinstance(a, str) else None
+    ba, bb = a[:-2], b[:-2]
+    if ba == bb:
+        batch = ba
+    elif not ba:
+        batch = bb
+    elif not bb:
+        batch = ba
+    else:
+        return None
+    return (*batch, a[-2], b[-2])
+
+
+for _shape_op, _shape_fn in {
+    "logsumexp": _logsumexp_shape,
+    "avg_pool2d": _avg_pool2d_shape,
+    "diag": _diag_shape,
+    "diagonal": _diagonal_shape,
+    "linspace": _linspace_shape,
+    "cdist": _cdist_shape,
+}.items():
+    register_shape_rule(_shape_op, _shape_fn)
 
 
 class _AmbientTorchBindings(dict):

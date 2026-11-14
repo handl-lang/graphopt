@@ -1367,3 +1367,180 @@ def test_opaque_ops_optimize_around_and_verify():
     with torch.no_grad():
         diff = (m(x) - opt(x)).abs().max().item()
     assert diff < 1e-4
+
+
+# ---------------------------------------------------------------------------
+#  Host-tensor port surface — corpus-observed ops lift first-class
+# ---------------------------------------------------------------------------
+
+
+def test_canon_host_tensor_aliases():
+    """The ATen spellings host-tensor ports map onto bound generators."""
+    assert _canon_aten_name("mT.default") == "transpose"
+    assert _canon_aten_name("swapaxes.default") == "transpose"
+    assert _canon_aten_name("moveaxis.int") == "movedim"
+    assert _canon_aten_name("moveaxis.intlist") == "movedim"
+    assert _canon_aten_name("ger.default") == "outer"
+
+
+def _ops_in(term, out: set) -> set:
+    if isinstance(term, Op):
+        out.add(term.op)
+        for a in term.args:
+            _ops_in(a, out)
+    return out
+
+
+def test_host_tensor_port_ops_lift_first_class():
+    """The corpus-observed host-tensor ports lift as named terms.
+
+    Every op host-tensor now implements that the intake corpus
+    actually exports (``nn.SELU``/``nn.Softshrink``/``nn.AvgPool2d``
+    plus the high-value elementwise/reduction spellings) must land as
+    a first-class IR op — not an ``opaque`` passthrough leaf — and
+    lower back value-exact.
+    """
+    import torch.nn.functional as F
+
+    class Ports(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.p = torch.nn.Parameter(
+                torch.randn(3, 4, dtype=torch.float64)
+            )
+
+        def forward(self, x):
+            a = F.selu(x)
+            b = F.softshrink(x, lambd=0.7)
+            c = F.hardshrink(x, lambd=0.2)
+            d = torch.logit(torch.sigmoid(x), eps=1e-4)
+            e = x // 2
+            f = torch.logsumexp(x, dim=-1, keepdim=True)
+            g = F.avg_pool2d(x.squeeze(0), 2)
+            h = torch.rot90(x, 1, (0, 2))
+            i = torch.diag(self.p)
+            j = x.mT
+            k = torch.swapaxes(x, 0, 1)
+            l = x.moveaxis(0, -1)
+            n = torch.linspace(0, 1, 5, dtype=x.dtype)
+            return (
+                a.sum()
+                + b.sum()
+                + c.sum()
+                + d.sum()
+                + e.sum()
+                + f.sum()
+                + g.sum()
+                + h.sum()
+                + i.sum()
+                + j.sum()
+                + k.sum()
+                + l.sum()
+                + n.sum()
+            )
+
+    torch.manual_seed(0)
+    m = Ports().eval()
+    x = torch.randn(1, 3, 4, 6, dtype=torch.float64)
+    ir, source = export_to_ir(m, (x,))
+    ops: set = set()
+    for r in ir.roots:
+        _ops_in(r, ops)
+    # No opaque leaves — every port op is a named term.
+    assert "opaque" not in ops
+    for expected in (
+        "selu",
+        "softshrink",
+        "hardshrink",
+        "logit",
+        "floor_divide",
+        "logsumexp",
+        "avg_pool2d",
+        "rot90",
+        "diag",
+        "transpose",  # mT + swapaxes
+        "movedim",  # moveaxis
+        "linspace",
+    ):
+        assert expected in ops, expected
+    lowered = ir_to_torch_module(ir, param_values=source)
+    lowered.eval()
+    with torch.no_grad():
+        diff = (m(x) - lowered(x)).abs().max().item()
+    assert diff == 0.0
+
+
+def test_host_tensor_port_scalar_attrs_canonical():
+    """``_LOCAL_ATTR_SCHEMA`` lands the scalar tails under names."""
+    import torch.nn.functional as F
+
+    class Attrs(torch.nn.Module):
+        def forward(self, x):
+            return (
+                F.softshrink(x, lambd=0.7).sum()
+                + torch.logsumexp(x, dim=-1, keepdim=True).sum()
+                + F.avg_pool2d(x, 2).sum()
+            )
+
+    torch.manual_seed(0)
+    m = Attrs().eval()
+    x = torch.randn(1, 3, 4, 6, dtype=torch.float64)
+    ir, _ = export_to_ir(m, (x,))
+    found: dict[str, Op] = {}
+
+    def collect(t):
+        if isinstance(t, Op):
+            found.setdefault(t.op, t)
+            for a in t.args:
+                collect(a)
+
+    for r in ir.roots:
+        collect(r)
+    assert found["softshrink"].attrs["lambd"] == 0.7
+    assert found["logsumexp"].attrs["dim"] == (-1,)
+    assert found["logsumexp"].attrs["keepdim"] is True
+    assert found["avg_pool2d"].attrs["kernel_size"] == (2, 2)
+
+
+def test_host_tensor_port_search_deliver_verify():
+    """lift → search → deliver → verify on newly-bound ops.
+
+    A module mixing bound ops (``linear``/``silu`` — law-reachable)
+    with the new ports (``selu``/``logsumexp``/``floor_divide`` —
+    opaque to rewrites but first-class terms) saturates the e-graph,
+    extracts, lowers, and reproduces the original exactly.
+    """
+    import torch.nn.functional as F
+
+    class Mixed(torch.nn.Module):
+        def __init__(self, d=8):
+            super().__init__()
+            self.fc1 = torch.nn.Linear(d, d)
+            self.fc2 = torch.nn.Linear(d, d)
+
+        def forward(self, x):
+            h = F.silu(self.fc1(x))
+            h = F.selu(h) + torch.logsumexp(h, dim=-1, keepdim=True)
+            h = h // 2 + self.fc2(h)
+            return h
+
+    torch.manual_seed(0)
+    m = Mixed().eval()
+    x = torch.randn(4, 8)
+    ir, source = export_to_ir(m, (x,))
+    ops: set = set()
+    for r in ir.roots:
+        _ops_in(r, ops)
+    assert {"selu", "logsumexp", "floor_divide"} <= ops
+    eg = EGraph()
+    eid = eg.add_term(ir.root)
+    eg.run(CATEGORICAL_RULES, eid, max_iterations=4, max_nodes=4000)
+    best = eg.extract_best(eid, flops_cost)
+    lowered = ir_to_torch_module(
+        IR(root=best, inputs=ir.inputs, params=ir.params),
+        param_values=source,
+    )
+    lowered.eval()
+    with torch.no_grad():
+        diff = (m(x) - lowered(x)).abs().max().item()
+    assert diff < 1e-9
