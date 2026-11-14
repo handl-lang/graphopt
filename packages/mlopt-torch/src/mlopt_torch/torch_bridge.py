@@ -188,6 +188,23 @@ _LOCAL_ATTR_SCHEMA: dict[str, dict[int, str]] = {
     # compute_mode never survives the boundary's str-arg skip (it is
     # a kernel-selection hint, not semantics).
     "cdist": {2: "p", 3: "compute_mode"},
+    # Scalar config tails that are ATTRIBUTES, not operands — the
+    # isclose precedent (substrate ``ATTR_SCHEMA``): the binding reads
+    # canonical + ``argN``, and a rewrite binds the named attr.
+    # nan_to_num's positional spellings are all present-or-absent
+    # scalars; posinf/neginf legitimately stay ``None`` (dropped at
+    # export) so only nan's default is load-bearing.
+    "nan_to_num": {1: "nan", 2: "posinf", 3: "neginf"},
+    # F.celu's alpha tail — a scalar operand-position arg that is a
+    # config attr semantically (like softshrink's lambd).
+    "celu": {1: "alpha"},
+    # aten.embedding(weight, indices, padding_idx, scale_grad_by_freq,
+    # sparse, per_sample_weights, include_last_offset, …) — position 2
+    # is padding_idx.  It is gradient-masking metadata (forward values
+    # are the weight row either way) but it IS semantic term data —
+    # recorded canonically so the binding replays it faithfully; the
+    # rest of the tail is backward/storage hints and stays ``argN``.
+    "embedding": {2: "padding_idx"},
 }
 
 #: Positional-argument → named-attribute mapping lives in
@@ -250,6 +267,15 @@ _SCALAR_OPERAND_OPS: set[str] = {
     "le",
     "gt",
     "ge",
+    # where(cond, x, y) — y (and x, for the ScalarSelf overload) is a
+    # real operand: the decoder mask's ``where(le, x, -inf)`` must not
+    # strand -inf in an ``arg2`` attr the 3-positional binding cannot
+    # read.  Same for ``x & 3``/``x | 3`` — the scalar other is an
+    # operand, not an attr (the 0-dim Const mint keeps weak-scalar
+    # dtype semantics: int32 & Const(3) stays int32).
+    "where",
+    "bitwise_and",
+    "bitwise_or",
     # floor_divide's scalar divisor is a real operand like fmod's —
     # ``x // 2`` keeps the 2 as a Const a rewrite can bind.
     "floor_divide",
@@ -997,6 +1023,30 @@ def _arange_torch(*a: Any, **kw: Any) -> Any:
     return torch.arange(*vals, dtype=_creator_dtype(kw))
 
 
+def _where_torch(c: Any, *a: Any, **kw: Any) -> Any:
+    """``where(cond, x, y)`` — self/other may be attr-carried.
+
+    aten.where's operand positions (1=self, 2=other) each arrive
+    either as a child operand — in order, after the cond — or as an
+    ``argN`` attr: scalar spellings minted before ``where`` joined
+    ``_SCALAR_OPERAND_OPS`` (``where(c, x, arg2=-inf)`` — the decoder
+    mask) or hand-minted terms.  ``arg1``/``arg2`` claim their
+    position; the remaining children fill the unclaimed slots in
+    order, so ``where(c, arg1=-1, y)`` (ScalarSelf) and
+    ``where(c, x, arg2=-inf)`` (ScalarOther) both rebuild exactly.
+    """
+    slots = [attr_of(kw, "arg1"), attr_of(kw, "arg2")]
+    it = iter(a)
+    filled = [s if s is not None else next(it, None) for s in slots]
+    x, y = filled
+    if x is None or y is None:
+        raise TypeError(
+            "where requires self/other operands — children or "
+            "arg1/arg2 attrs, got neither"
+        )
+    return torch.where(c, x, y)
+
+
 def _batch_norm_torch(x: Any, *a: Any, **kw: Any) -> Any:
     """``aten.batch_norm`` → F.batch_norm's operand order.
 
@@ -1516,16 +1566,36 @@ def _opaque_torch(*args: Any, **kw: Any) -> Any:
 #: ``_IR_TO_TORCH`` below is the ambient view over this table.
 _CORE_TORCH_BINDINGS: dict[str, Any] = {
     "matmul": torch.matmul,
-    "add": torch.add,
+    # torch.add/sub carry an ``alpha`` scale kwarg — dropping it
+    # silently evaluates alpha=1 (``add(x, y, alpha=2)`` exports the
+    # attr; the bare-torch binding used to lose it).  ``alpha`` is
+    # passed ONLY when recorded: aten rejects a float alpha on
+    # integral inputs even at the default 1.0.
+    "add": lambda x, y, *a, **kw: (
+        torch.add(x, y)
+        if attr_of(kw, "alpha") is None
+        else torch.add(x, y, alpha=float(attr_of(kw, "alpha")))
+    ),
     "mul": torch.mul,
     # aten.div.Tensor_mode carries rounding_mode as a kwarg — x/y
     # without it silently drops a "floor" div down to trunc.
     "div": lambda x, y, *a, **kw: torch.div(
         x, y, rounding_mode=kw.get("rounding_mode")
     ),
-    "sub": torch.sub,
+    "sub": lambda x, y, *a, **kw: (
+        torch.sub(x, y)
+        if attr_of(kw, "alpha") is None
+        else torch.sub(x, y, alpha=float(attr_of(kw, "alpha")))
+    ),
     # aten.rsub(self, other) = other - self — the ``1 - x`` spelling.
-    "rsub": lambda x, s, *a, **kw: torch.sub(s, x),
+    # ``alpha`` scales other before the subtract, same as sub's (and
+    # likewise only passed when recorded — integral inputs reject a
+    # float alpha even at the default).
+    "rsub": lambda x, s, *a, **kw: (
+        torch.sub(s, x)
+        if attr_of(kw, "alpha") is None
+        else torch.sub(s, x, alpha=float(attr_of(kw, "alpha")))
+    ),
     "neg": torch.neg,
     "silu": torch.nn.functional.silu,
     "relu": torch.nn.functional.relu,
@@ -1536,7 +1606,13 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
     "relu_": torch.nn.functional.relu,
     "sigmoid": torch.sigmoid,
     "tanh": torch.tanh,
-    "gelu": torch.nn.functional.gelu,
+    # aten.gelu's ``approximate`` ('none'/'tanh') is a kwargs-channel
+    # attr — the bare F.gelu used to drop it and silently evaluate the
+    # exact kernel for a tanh-approx export.
+    "gelu": lambda x, *a, **kw: torch.nn.functional.gelu(
+        x,
+        approximate=attr_of(kw, "approximate", "arg1", default="none"),
+    ),
     "exp": torch.exp,
     "pow": torch.pow,
     "square": torch.square,
@@ -1752,9 +1828,15 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
         int(attr_of(kw, "dim", default=0)),
         int(attr_of(kw, "index", default=0)),
     ),
-    # embedding(W, idx) — row gather.
+    # embedding(W, idx) — row gather.  ``padding_idx`` is
+    # gradient-masking metadata (forward-equal either way) but is
+    # replayed so the eval matches the exported call exactly; the
+    # remaining scalar tail (scale_grad_by_freq/sparse/…) stays
+    # ``argN`` — backward/storage hints with no eval effect.
     "embedding": lambda w, idx, *a, **kw: torch.nn.functional.embedding(
-        idx, w
+        idx,
+        w,
+        padding_idx=attr_of(kw, "padding_idx", "arg2", default=None),
     ),
     # gather along one axis.  The index is normally an attr (a tuple of
     # ints produced by share_duplicate_param_slices); a second tensor
@@ -1996,7 +2078,7 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
         t,
         float(a[0])
         if a
-        else float(attr_of(kw, "negative_slope", default=0.01)),
+        else float(attr_of(kw, "negative_slope", "arg1", default=0.01)),
     ),
     "elu": lambda t, *a, **kw: (
         attr_of(kw, "scale", default=1.0)
@@ -2005,7 +2087,11 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
             alpha=attr_of(kw, "alpha", default=1.0),
         )
     ),
-    "celu": lambda t, *a, **kw: torch.nn.functional.celu(t),
+    # F.celu's alpha tail — canonical ``alpha`` attr (``_LOCAL_ATTR_
+    # SCHEMA`` position 1), ``arg1`` for hand-minted terms.
+    "celu": lambda t, *a, **kw: torch.nn.functional.celu(
+        t, alpha=float(attr_of(kw, "alpha", "arg1", default=1.0))
+    ),
     "softplus": lambda t, *a, **kw: torch.nn.functional.softplus(
         t,
         beta=attr_of(kw, "beta", default=1),
@@ -2085,9 +2171,9 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
     "isclose": lambda a, b, *args, **kw: torch.isclose(
         a,
         b,
-        rtol=kw.get("rtol", 1e-5),
-        atol=kw.get("atol", 1e-8),
-        equal_nan=kw.get("equal_nan", False),
+        rtol=float(attr_of(kw, "rtol", "arg2", default=1e-5)),
+        atol=float(attr_of(kw, "atol", "arg3", default=1e-8)),
+        equal_nan=bool(attr_of(kw, "equal_nan", "arg4", default=False)),
     ),
     "lerp": lambda t, e, w, *a, **kw: torch.lerp(t, e, w),
     "addcmul": lambda t, t1, t2, *a, **kw: torch.addcmul(
@@ -2105,8 +2191,15 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
     "logical_and": lambda x, y, *a, **kw: torch.logical_and(x, y),
     "logical_or": lambda x, y, *a, **kw: torch.logical_or(x, y),
     "logical_xor": lambda x, y, *a, **kw: torch.logical_xor(x, y),
-    "bitwise_and": lambda x, y, *a, **kw: torch.bitwise_and(x, y),
-    "bitwise_or": lambda x, y, *a, **kw: torch.bitwise_or(x, y),
+    # ``x & 3``/``x | 3`` — the scalar other is a Const operand on
+    # export (``_SCALAR_OPERAND_OPS``); the ``arg1`` fallback covers
+    # terms minted before that entry or by hand.
+    "bitwise_and": lambda x, *a, **kw: torch.bitwise_and(
+        x, a[0] if a else attr_of(kw, "arg1", default=None)
+    ),
+    "bitwise_or": lambda x, *a, **kw: torch.bitwise_or(
+        x, a[0] if a else attr_of(kw, "arg1", default=None)
+    ),
     "log_softmax": lambda x, *a, **kw: torch.nn.functional.log_softmax(
         x, dim=int(attr_of(kw, "dim", default=-1))
     ),
@@ -2114,9 +2207,11 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
     "sign": torch.sign,
     "floor": torch.floor,
     "ceil": torch.ceil,
-    # aten.round.decimals carries decimals as a kwarg.
+    # aten.round.decimals carries decimals as a kwarg (the positional
+    # spelling is rejected by torch itself); ``arg1`` covers
+    # hand-minted terms.
     "round": lambda t, *a, **kw: torch.round(
-        t, decimals=kw.get("decimals", 0)
+        t, decimals=int(attr_of(kw, "decimals", "arg1", default=0))
     ),
     "frac": torch.frac,
     "trunc": torch.trunc,
@@ -2134,11 +2229,15 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
     "i0": torch.i0,
     "sinc": torch.sinc,
     "reciprocal": torch.reciprocal,
+    # nan/posinf/neginf are semantic attrs — positional exports land
+    # under ``_LOCAL_ATTR_SCHEMA`` names (``argN`` accepted for
+    # hand-minted terms).  The old binding read only the kwarg names
+    # and silently evaluated the defaults for a positional export.
     "nan_to_num": lambda t, *a, **kw: torch.nan_to_num(
         t,
-        nan=float(kw.get("nan", 0.0)),
-        posinf=kw.get("posinf"),
-        neginf=kw.get("neginf"),
+        nan=float(attr_of(kw, "nan", "arg1", default=0.0)),
+        posinf=attr_of(kw, "posinf", "arg2"),
+        neginf=attr_of(kw, "neginf", "arg3"),
     ),
     "isnan": torch.isnan,
     "isinf": torch.isinf,
@@ -2200,7 +2299,12 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
         out_int32=bool(attr_of(kw, "out_int32", default=False)),
         right=bool(attr_of(kw, "right", default=False)),
     ),
-    "nonzero": lambda t, *a, **kw: torch.nonzero(t),
+    # ``as_tuple`` is kw-only at the Python surface; honoured for
+    # hand-minted terms (torch.export's as_tuple=True spelling is
+    # ``aten.nonzero_numpy`` + getitems — a different op entirely).
+    "nonzero": lambda t, *a, **kw: torch.nonzero(
+        t, as_tuple=bool(attr_of(kw, "as_tuple", default=False))
+    ),
     "outer": torch.outer,
     "einsum": lambda *ts, **kw: torch.einsum(
         attr_of(kw, "equation", default=""), *ts
@@ -2307,7 +2411,10 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
     "gt": lambda x, y, *a, **kw: x > y,
     "ge": lambda x, y, *a, **kw: x >= y,
     "logical_not": lambda x, *a, **kw: torch.logical_not(x),
-    "where": lambda c, x, y, *a, **kw: torch.where(c, x, y),
+    # where(cond, x, y) — x/y may ride ``arg1``/``arg2`` attrs on
+    # terms minted before the ``_SCALAR_OPERAND_OPS`` entry (or
+    # hand-minted); ``_where_torch`` rebuilds either spelling.
+    "where": _where_torch,
     # Affine-map monoid (scan domain).  An aff is a pair (A, b)
     # denoting h ↦ A@h + b; compose/apply pass pairs around — only
     # ``apply`` returns a tensor.
@@ -3487,6 +3594,76 @@ class IRModule(torch.nn.Module):
                 moved_for[id(t)] = (t, new)
                 table[k] = new
         self._dev_key = key
+
+    def _park_params(self) -> None:
+        """Move the live weight tables to CPU — the low-memory verify park.
+
+        ``lower(verify=True)`` materialises a reference lowering next
+        to the delivered module; on a memory-bound device two full
+        weight sets do not fit (the whisper-turbo 4 GB OOM — see
+        ``docs/reports/verify_lowmem.md``).
+        :func:`mlopt_torch.report.verify_module` calls this on each
+        side that offers it: the module's *live* tensors — the
+        ``_param_map`` / ``_param_values`` tables ``_align_to``
+        rewrites on first eval, NOT the stale registered
+        ``_parameters`` entries, which are the pre-align CPU clones —
+        drop to CPU around the other side's forward, so the verify
+        pair never holds both weight sets on the compute device at
+        once.  ``_dev_key`` resets so the next forward re-aligns
+        exactly as a fresh module would: the park is invisible to
+        callers beyond transient device residency, and the check
+        itself is unchanged — same forwards, same comparison.
+
+        The ``moved_for`` dedup mirrors ``_align_to``: ``_param_values``
+        aliases registered names to their ``_param_map`` Parameter, so
+        the same tensor appears under two keys and must rebind to ONE
+        CPU tensor; the kept ``(old, new)`` tuples pin the old objects
+        so their ids cannot be recycled mid-loop.
+
+        The CPU replacement prefers ``self._parameters[k]`` — the
+        registered attribute ``_build_params`` installed before any
+        ``_align_to`` lift.  ``_align_to`` rewrites only the two live
+        tables, never ``_parameters``, so the registered entry is
+        already a host-resident clone of the same weights: rebinding
+        to it releases the device copy WITHOUT allocating a second
+        host copy (the park trades VRAM for RAM — a fresh ``.to("cpu")``
+        per tensor would briefly hold both).  Registered entries are
+        keyed by the same param name the tables use.  A live tensor
+        with no CPU registered counterpart (a caller-supplied extra
+        that arrived on-device) falls back to a real ``.to("cpu")``.
+        """
+        registered = self._parameters
+        moved_for: dict[int, tuple[Any, Any]] = {}
+        tables: list[dict[str, Any]] = [
+            self._param_map,
+            self._param_values,
+        ]
+        for table in tables:
+            for k, t in list(table.items()):
+                if not isinstance(t, torch.Tensor):
+                    continue
+                prev = moved_for.get(id(t))
+                if prev is not None:
+                    table[k] = prev[1]
+                    continue
+                if t.device.type == "cpu":
+                    moved_for[id(t)] = (t, t)
+                    continue
+                reg = registered.get(k)
+                if (
+                    isinstance(reg, torch.Tensor)
+                    and reg.device.type == "cpu"
+                ):
+                    moved = reg
+                else:
+                    moved = t.detach().to(device="cpu")
+                    if isinstance(t, torch.nn.Parameter):
+                        moved = torch.nn.Parameter(
+                            moved, requires_grad=t.requires_grad
+                        )
+                moved_for[id(t)] = (t, moved)
+                table[k] = moved
+        self._dev_key = None
 
     def forward(self, *xs: Any) -> Any:
         """Run the module: bind inputs and evaluate the root."""

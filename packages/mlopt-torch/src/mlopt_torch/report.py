@@ -182,17 +182,37 @@ def verify_module(
     A multi-output module (one returning a tuple) is verified on
     EVERY output: the report's scalars are the worst case and
     ``per_output`` lists each output's ``max|Δ|``.
+
+    Low-memory verify: a module exposing ``_park_params`` (the
+    :class:`~mlopt_torch.torch_bridge.IRModule` hook) releases its
+    live weights to CPU around the OTHER side's forward, so the pair
+    never holds two full weight sets on the compute device at once —
+    the whisper-turbo 4 GB ``lower(verify=True)`` OOM.  Both sides
+    park before the first forward (a delivered module may already be
+    device-resident), the reference re-parks before the optimized
+    forward, and each parked module re-aligns on its next forward.
+    The forwards, input clones and comparison are unchanged — only
+    device residency between them differs, so the check's strength
+    is identical.  Modules without the hook keep the historical
+    both-resident behaviour.
     """
     args = inputs if isinstance(inputs, tuple) else (inputs,)
     ref_mod.eval()
     opt_mod.eval()
+    ref_park = getattr(ref_mod, "_park_params", None)
+    opt_park = getattr(opt_mod, "_park_params", None)
     with torch.no_grad():
+        for park in (ref_park, opt_park):
+            if park is not None:
+                park()
         ref = ref_mod(
             *[
                 a.clone() if isinstance(a, torch.Tensor) else a
                 for a in args
             ]
         )
+        if ref_park is not None:
+            ref_park()
         out = opt_mod(
             *[
                 a.clone() if isinstance(a, torch.Tensor) else a

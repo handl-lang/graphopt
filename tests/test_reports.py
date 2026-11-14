@@ -334,3 +334,49 @@ def test_verify_module_nested_output_pytree():
     vr = verify_module(Nested().eval(), NestedFlat().eval(), x)
     assert vr.passed, vr
     assert vr.per_output == (0.0, 0.0, 0.0)
+
+
+def test_verify_module_parks_parkable_modules_between_forwards():
+    """``verify_module``'s low-memory path: every module exposing
+    ``_park_params`` parks before the first forward, the reference
+    re-parks before the optimized forward, and the comparison is
+    unchanged.  Modules without the hook are never touched."""
+    events: list[str] = []
+
+    class Spy(nn.Module):
+        def __init__(self, name: str, bias: float) -> None:
+            super().__init__()
+            self._name = name
+            self._bias = bias
+
+        def _park_params(self) -> None:
+            events.append(f"park:{self._name}")
+
+        def forward(self, x: torch.Tensor) -> torch.Tensor:
+            events.append(f"fwd:{self._name}")
+            return x + self._bias
+
+    ref = Spy("ref", 0.0).eval()
+    opt = Spy("opt", 0.0).eval()
+    x = torch.randn(2, dtype=torch.float64)
+    vr = verify_module(ref, opt, x)
+    assert vr.passed
+    assert events == [
+        "park:ref",
+        "park:opt",
+        "fwd:ref",
+        "park:ref",
+        "fwd:opt",
+    ]
+
+    # a non-parkable pair keeps the historical both-resident order
+    events.clear()
+
+    class Plain(nn.Module):
+        def forward(self, x: torch.Tensor) -> torch.Tensor:
+            events.append("fwd")
+            return x
+
+    vr = verify_module(Plain().eval(), Plain().eval(), x)
+    assert vr.passed
+    assert events == ["fwd", "fwd"]
