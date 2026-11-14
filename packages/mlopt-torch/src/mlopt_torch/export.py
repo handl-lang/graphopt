@@ -91,6 +91,7 @@ from pathlib import Path
 from typing import Any
 
 import torch
+from mlopt_dtypes import DTYPES
 
 __all__ = [
     "ARTIFACT_SCHEMA",
@@ -153,20 +154,13 @@ _SUFFIX = {
     "state_dict": ".pth",
 }
 
-# torch dtype → safetensors dtype tag.  Only dense strided layouts.
+# torch dtype → safetensors dtype tag, derived from the shared
+# ``mlopt_dtypes`` registry (only dense strided layouts — the
+# registry's ``st`` column is exactly the safetensors vocabulary).
 _TORCH_TO_ST: dict[torch.dtype, str] = {
-    torch.bool: "BOOL",
-    torch.uint8: "U8",
-    torch.int8: "I8",
-    torch.int16: "I16",
-    torch.int32: "I32",
-    torch.int64: "I64",
-    torch.float16: "F16",
-    torch.bfloat16: "BF16",
-    torch.float32: "F32",
-    torch.float64: "F64",
-    torch.float8_e4m3fn: "F8_E4M3",
-    torch.float8_e5m2: "F8_E5M2",
+    getattr(torch, rec.torch): rec.st
+    for rec in DTYPES.values()
+    if rec.torch is not None and rec.st is not None
 }
 _ST_TO_TORCH: dict[str, torch.dtype] = {
     v: k for k, v in _TORCH_TO_ST.items()

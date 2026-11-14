@@ -9,6 +9,7 @@ description = "ONNX backend for mlopt (ADR 0006): mlopt IR <-> ONNX graph — On
 requires-python = ">=3.11"
 dependencies = [
     "mlopt-core",
+    "mlopt-dtypes",
     "onnx>=1.16",
     "onnxruntime>=1.17",
     "numpy>=1.24",

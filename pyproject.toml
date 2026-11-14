@@ -16,6 +16,7 @@ dependencies = [
     "mlopt-cuda",
     "mlopt-discovery",
     "mlopt-onnx",
+    "mlopt-dtypes",
     "gamekit",
     "benchkit",
     "torch>=2.0",
@@ -135,6 +136,7 @@ mlopt-carriers = { workspace = true }
 mlopt-cuda = { workspace = true }
 mlopt-discovery = { workspace = true }
 mlopt-onnx = { workspace = true }
+mlopt-dtypes = { workspace = true }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -169,6 +171,7 @@ root_packages = [
     "mlopt_cuda",
     "mlopt_discovery",
     "mlopt_onnx",
+    "mlopt_dtypes",
 ]
 include_external_packages = true
 
@@ -190,6 +193,9 @@ layers = [
     "mlopt_cuda",
     "mlopt_torch : mlopt_carriers",
     "mlopt_onnx",
+    # The dtype registry is a leaf every backend reads — it sits below
+    # the whole stack and nothing may depend back on it.
+    "mlopt_dtypes",
 ]
 
 [tool.ruff]

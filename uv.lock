@@ -22,6 +22,7 @@ members = [
     "mlopt-carriers",
     "mlopt-cuda",
     "mlopt-discovery",
+    "mlopt-dtypes",
     "mlopt-onnx",
     "mlopt-torch",
 ]
@@ -2133,6 +2134,7 @@ dependencies = [
     { name = "mlopt-core" },
     { name = "mlopt-cuda" },
     { name = "mlopt-discovery" },
+    { name = "mlopt-dtypes" },
     { name = "mlopt-onnx" },
     { name = "mlopt-orchestrator" },
     { name = "mlopt-torch" },
@@ -2210,6 +2212,7 @@ requires-dist = [
     { name = "mlopt-core", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&tag=v0.1.0" },
     { name = "mlopt-cuda", editable = "packages/mlopt-cuda" },
     { name = "mlopt-discovery", editable = "packages/mlopt-discovery" },
+    { name = "mlopt-dtypes", editable = "packages/mlopt-dtypes" },
     { name = "mlopt-onnx", editable = "packages/mlopt-onnx" },
     { name = "mlopt-orchestrator", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-orchestrator&tag=v0.1.0" },
     { name = "mlopt-torch", editable = "packages/mlopt-torch" },
@@ -2326,11 +2329,17 @@ requires-dist = [
 ]
 
 [[package]]
+name = "mlopt-dtypes"
+version = "0.1.0.dev0"
+source = { editable = "packages/mlopt-dtypes" }
+
+[[package]]
 name = "mlopt-onnx"
 version = "0.1.0.dev0"
 source = { editable = "packages/mlopt-onnx" }
 dependencies = [
     { name = "mlopt-core" },
+    { name = "mlopt-dtypes" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "onnx" },
@@ -2340,6 +2349,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "mlopt-core", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&tag=v0.1.0" },
+    { name = "mlopt-dtypes", editable = "packages/mlopt-dtypes" },
     { name = "numpy", specifier = ">=1.24" },
     { name = "onnx", specifier = ">=1.16" },
     { name = "onnxruntime", specifier = ">=1.17" },
@@ -2359,6 +2369,7 @@ version = "0.1.0.dev0"
 source = { editable = "packages/mlopt-torch" }
 dependencies = [
     { name = "mlopt-core" },
+    { name = "mlopt-dtypes" },
     { name = "mlopt-orchestrator" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
@@ -2368,6 +2379,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "mlopt-core", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&tag=v0.1.0" },
+    { name = "mlopt-dtypes", editable = "packages/mlopt-dtypes" },
     { name = "mlopt-orchestrator", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-orchestrator&tag=v0.1.0" },
     { name = "numpy", specifier = ">=1.24" },
     { name = "torch", specifier = ">=2.0" },

@@ -55,6 +55,7 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
+from mlopt_dtypes import DTYPES
 from onnx import TensorProto
 
 __all__ = [
@@ -68,17 +69,13 @@ __all__ = [
 
 #: Every dtype name the sink understands, keyed by the name the IR
 #: records (``to(dtype="float64")``) and the names a caller may use
-#: for ``input_dtypes``.
+#: for ``input_dtypes``.  Derived from the shared ``mlopt_dtypes``
+#: registry — the ``numpy`` column is exactly this vocabulary (names
+#: NumPy cannot represent, like bfloat16, drop out).
 DTYPE_NAMES: dict[str, np.dtype] = {
-    "float64": np.dtype(np.float64),
-    "float32": np.dtype(np.float32),
-    "float16": np.dtype(np.float16),
-    "int64": np.dtype(np.int64),
-    "int32": np.dtype(np.int32),
-    "int16": np.dtype(np.int16),
-    "int8": np.dtype(np.int8),
-    "uint8": np.dtype(np.uint8),
-    "bool": np.dtype(np.bool_),
+    name: np.dtype(rec.numpy)
+    for name, rec in DTYPES.items()
+    if rec.numpy is not None
 }
 
 #: The floating working dtypes a sink may be built in, by name.
@@ -87,17 +84,13 @@ WORKING_DTYPES: dict[str, np.dtype] = {
     "float64": DTYPE_NAMES["float64"],
 }
 
-#: NumPy dtype -> ONNX tensor element type.
+#: NumPy dtype -> ONNX tensor element type (the registry's ``numpy``
+#: and ``onnx`` columns joined; a dtype ONNX has no element type for
+#: — bfloat16, the float8 family — is absent, so the lookup refuses).
 _NUMPY_TO_ONNX: dict[str, int] = {
-    "float64": TensorProto.DOUBLE,
-    "float32": TensorProto.FLOAT,
-    "float16": TensorProto.FLOAT16,
-    "int64": TensorProto.INT64,
-    "int32": TensorProto.INT32,
-    "int16": TensorProto.INT16,
-    "int8": TensorProto.INT8,
-    "uint8": TensorProto.UINT8,
-    "bool": TensorProto.BOOL,
+    rec.numpy: getattr(TensorProto, rec.onnx)
+    for rec in DTYPES.values()
+    if rec.numpy is not None and rec.onnx is not None
 }
 
 #: ONNX tensor element type -> the name the IR records (the inverse
@@ -110,17 +103,12 @@ ONNX_TYPE_NAMES: dict[int, str] = {
 }
 
 #: onnxruntime's input type string -> NumPy dtype (the inverse of
-#: :data:`_NUMPY_TO_ONNX` for the types the sink can declare).
+#: :data:`_NUMPY_TO_ONNX` for the types the sink can declare — the
+#: registry's ``ort`` column).
 _ORT_TO_NUMPY: dict[str, str] = {
-    "tensor(double)": "float64",
-    "tensor(float)": "float32",
-    "tensor(float16)": "float16",
-    "tensor(int64)": "int64",
-    "tensor(int32)": "int32",
-    "tensor(int16)": "int16",
-    "tensor(int8)": "int8",
-    "tensor(uint8)": "uint8",
-    "tensor(bool)": "bool",
+    rec.ort: rec.numpy
+    for rec in DTYPES.values()
+    if rec.ort is not None and rec.numpy is not None
 }
 
 

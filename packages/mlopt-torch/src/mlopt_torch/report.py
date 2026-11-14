@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import torch
+from mlopt_dtypes import get as _dtype_info
 
 __all__ = [
     "BlockReport",
@@ -83,8 +84,16 @@ def _dtype_rtol_floor(*outputs: Any) -> float:
         dtype = getattr(out, "dtype", None)
         if not isinstance(dtype, torch.dtype):
             continue
+        # The shared registry carries eps for the named dtypes;
+        # ``torch.finfo`` stays the fallback for spellings it does
+        # not register (and raises for exact types, as before).
+        info = _dtype_info(dtype)
         try:
-            eps = torch.finfo(dtype).eps
+            eps = (
+                info.eps
+                if info is not None and info.eps is not None
+                else torch.finfo(dtype).eps
+            )
         except (TypeError, ValueError):
             continue
         if eps > _FP32_EPS:

@@ -29,6 +29,8 @@ from mlopt_core.ops import (
     register_core_bindings,
 )
 from mlopt_core.typing import register_shape_rule
+from mlopt_dtypes import canonical_name
+from mlopt_dtypes import get as _dtype_info
 from torch.nn.attention import SDPBackend, sdpa_kernel
 
 from mlopt_torch.aten_classify import (
@@ -388,7 +390,7 @@ def _fill_src(node: Any, dst_fx: Any, env: dict[str, Any]) -> Any:
     """
     val = dst_fx.meta["val"]
     shape = tuple(int(d) for d in val.shape)
-    dtype = str(val.dtype).split(".")[-1]
+    dtype = canonical_name(val.dtype)
     # The minted fill value must land where the destination lives —
     # a CPU ``zeros`` scattered into a CUDA view dies on the device
     # mismatch (same wall-C class as the dropped ``device=`` kwarg).
@@ -874,7 +876,7 @@ def export_to_ir(
                     # ScalarType; record the short name just like the
                     # dtype kwarg channel below — a dropped cast mints
                     # a wrong-dtype term (one_hot's long->float).
-                    attrs["dtype"] = str(arg_node).split(".")[-1]
+                    attrs["dtype"] = canonical_name(arg_node)
                 else:
                     key = (
                         arg_node.name
@@ -951,7 +953,7 @@ def export_to_ir(
                     # to an fp32 tensor.  Record the short name
                     # ("float64"): torch.dtype objects do not survive
                     # term serialization.
-                    attrs[k] = str(v).split(".")[-1]
+                    attrs[k] = canonical_name(v)
                 elif isinstance(v, torch.device):
                     # ``device=`` is semantics too — creator/``to``
                     # placement (Kokoro wall C: ``torch.rand(...,
@@ -1758,7 +1760,7 @@ def _opaque_encode(
         # itself is not.
         return ("dev", str(a))
     if isinstance(a, torch.dtype):
-        return ("dt", str(a).split(".")[-1])
+        return ("dt", canonical_name(a))
     if isinstance(a, Mapping):
         return (
             "map",
@@ -3247,7 +3249,13 @@ def _creator_dtype(kw: dict) -> Any:
         return None
     if isinstance(d, torch.dtype):
         return d
-    return getattr(torch, str(d).split(".")[-1])
+    name = canonical_name(d)
+    # The registry names the dtype vocabulary; names it does not
+    # carry (complex, quantized, …) still resolve through getattr —
+    # the bridge accepts any torch.dtype spelling, registered or not.
+    info = _dtype_info(name)
+    attr = info.torch if info is not None and info.torch else name
+    return getattr(torch, attr)
 
 
 def _dim_args(args: tuple, kwargs: dict) -> tuple:
