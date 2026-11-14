@@ -556,15 +556,19 @@ def test_models_yaml_is_canonical_and_fresh() -> None:
 
 def test_load_vocab_exposes_models() -> None:
     v = vocabdir.load_vocab(_VOCAB)
-    assert len(v.models) == 109
+    assert len(v.models) == 111
     kinds = {r["kind"] for r in v.models}
     assert kinds == {"denotation", "handler"}
     expressible = [r for r in v.models if r.get("hnl")]
     # phases 3+5: ``tensor.unsqueeze``/``tensor.select``/``tensor.linear``
-    # joined the host surface — every one of the 109 models projects.
-    assert len(expressible) == 109
+    # joined the host surface — every model projects except the one
+    # gather-family handler body (``handler:synop_6ed0a07c7d``) the
+    # ``tensor.*`` surface cannot spell.
+    assert len(expressible) == 110
     unsupported = [r for r in v.models if r.get("unsupported")]
-    assert len(unsupported) == 0
+    assert [r["id"] for r in unsupported] == [
+        "handler:synop_6ed0a07c7d"
+    ]
     # every expressible model names its op and mvars
     for r in expressible:
         assert r["op"].startswith("synop")
@@ -572,12 +576,12 @@ def test_load_vocab_exposes_models() -> None:
 
 
 def test_collect_models_matches_shipped_prims() -> None:
-    """57 denotation rows + 52 handler rows = 109."""
+    """58 denotation rows + 53 handler rows = 111."""
     doc = vocabdir._COLLECTORS["models.yaml"]()
     rows = doc["models"]
-    assert len(rows) == 109
-    assert sum(1 for r in rows if r["kind"] == "denotation") == 57
-    assert sum(1 for r in rows if r["kind"] == "handler") == 52
+    assert len(rows) == 111
+    assert sum(1 for r in rows if r["kind"] == "denotation") == 58
+    assert sum(1 for r in rows if r["kind"] == "handler") == 53
 
 
 def test_emit_all_tmpdir_models_and_verdict_roundtrip(
@@ -586,7 +590,7 @@ def test_emit_all_tmpdir_models_and_verdict_roundtrip(
     """Emit to a scratch dir; verdicts upsert and survive re-emit."""
     vocabdir.emit_all(tmp_path)
     v = vocabdir.load_vocab(tmp_path)
-    assert len(v.models) == 109
+    assert len(v.models) == 111
     assert v.model_verdicts == {}
 
     vocabdir.upsert_model_verdicts(
