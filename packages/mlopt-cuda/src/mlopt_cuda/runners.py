@@ -29,6 +29,24 @@ and delivery continues — but the reason is no longer swallowed
 :func:`mlopt_core.failures.classify` and recorded under
 ``stats["cuda_graph_failure"]``, so an OOM capture is distinguishable
 from a kernel fault or a missing device.
+
+Phase B (``docs/reports/production_readiness.md``) adds two honest
+slices here:
+
+* ``CudaGraphRunner(multi_device=True)`` wraps generic deliverables
+  in :class:`_DeviceGraphModule` — a per-device capture cache keyed
+  by ``(device_index, shape/dtype signature)``.  One graph per device,
+  never shared; a signature or parameter-identity mismatch falls back
+  to the wrapped module's eager forward.  Capture is lazy (first
+  matching call), so ``stats["cuda_graph"]`` means *armed*, with
+  ``stats["cuda_graph_per_device"]`` marking the mode.  Batched
+  executors keep their own single-device ``capture_cuda_graph`` —
+  the flag does not reach them.
+* ``apply`` runs :class:`mlopt_torch.device.DevicePolicy`'s
+  :meth:`~mlopt_torch.device.DevicePolicy.check_module` first: DDP /
+  FSDP / TP-wrapped modules and modules binding collective ops raise
+  :class:`~mlopt_torch.device.UnsupportedDistributedError` — an
+  explicit refusal, never a silently wrong single-rank replay.
 """
 
 from __future__ import annotations
@@ -37,6 +55,11 @@ from typing import Any, Self, cast
 
 import torch
 from mlopt_core.failures import FailureClass, classify
+from mlopt_torch.device import (
+    DevicePolicy,
+    device_graph_key,
+    storage_fingerprint,
+)
 
 __all__ = ["CudaGraphRunner"]
 
@@ -134,6 +157,105 @@ class _GraphReplayModule(torch.nn.Module):
         return self.inner(*xs)
 
 
+class _DeviceGraphModule(torch.nn.Module):
+    """Per-device CUDA-graph cache over one wrapped module (Phase B).
+
+    ``_GraphReplayModule`` bakes ONE device: its static buffers and the
+    captured kernels live on the capture device, and its ``_matches``
+    already refuses foreign-device calls — but it has no way to serve
+    a *second* device.  This wrapper keys captures by
+    ``(device_index, shape/dtype signature)`` from
+    :func:`mlopt_torch.device.device_graph_key`: each device+signature
+    pair gets its own :class:`_GraphReplayModule`, captured lazily on
+    first use inside ``torch.cuda.device(idx)``.  A graph is NEVER
+    shared across devices.
+
+    Safety: a captured graph holds raw pointers to the storages live
+    at capture time — it does not keep them alive, and a module that
+    moves or rebinds its parameters (``Module.to`` swaps ``.data``;
+    ``IRModule._align_to`` materialises fresh tensors on a device
+    switch) would leave the graph replaying freed storage.
+    :func:`mlopt_torch.device.storage_fingerprint` snapshots the
+    untyped storages — holding them keeps the captured memory alive
+    AND detects every real move, since neither ``.to()`` nor
+    ``_align_to`` preserves storage identity.  Before every replay the
+    fingerprint is recomputed; any mismatch drops the entry and falls
+    back to eager (which realigns the parameters — the next call
+    recaptures against the new storage).
+
+    Honest limits: capture is per (device, signature) and lazy, so
+    ``stats`` cannot know at ``apply`` time whether it will succeed —
+    a capture failure is recorded per key in ``capture_failures`` and
+    that key serves eager forever after.  Modules whose parameters
+    migrate between devices pay eager realignment plus a fresh
+    capture per switch; per-rank replay and sharded parameters are
+    out of scope (see ``docs/reports/device_policy.md``).
+    """
+
+    def __init__(self, inner: torch.nn.Module, warmup: int = 3) -> None:
+        super().__init__()
+        self.inner = inner
+        self._warmup = warmup
+        self._graphs: dict[tuple, _GraphReplayModule] = {}
+        self._snapshots: dict[tuple, tuple] = {}
+        self._eager_keys: set[tuple] = set()
+        self.capture_failures: dict[tuple, FailureClass] = {}
+
+    def _fingerprint(self) -> tuple:
+        """Storage-identity snapshot of the inner module's tensors."""
+        return storage_fingerprint(self.inner)
+
+    def _params_match(self, snap: tuple) -> bool:
+        """Return True when the storages ARE the captured ones."""
+        cur = self._fingerprint()
+        return len(cur) == len(snap) and all(
+            a is b for a, b in zip(cur, snap, strict=True)
+        )
+
+    def _capture(
+        self, key: tuple, xs: tuple
+    ) -> _GraphReplayModule | None:
+        """Record ``inner(*xs)`` on ``key``'s device; ``None`` on failure."""
+        idx = key[0]
+        try:
+            with torch.cuda.device(idx):  # pragma: no cover — CUDA-only
+                cap = _GraphReplayModule.capture(
+                    self.inner, xs, warmup=self._warmup
+                )
+        except Exception as exc:  # pragma: no cover — CUDA-only
+            self.capture_failures[key] = _capture_failure_class(exc)
+            self._eager_keys.add(key)
+            return None
+        self._graphs[key] = cap
+        self._snapshots[key] = self._fingerprint()
+        return cap
+
+    def forward(self, *xs: Any) -> Any:
+        """Replay the per-device graph, or run eager honestly."""
+        key = device_graph_key(xs)
+        if key is None:
+            # Non-CUDA / mixed-device / non-tensor inputs: the same
+            # refusal the single-capture path applies — eager only.
+            return self.inner(*xs)
+        entry = self._graphs.get(key)
+        if entry is not None and not self._params_match(
+            self._snapshots[key]
+        ):
+            # Parameters were rebound since capture (a device/dtype
+            # realignment) — the graph's pointers are stale.  Drop it
+            # and recapture below against the current storage.
+            del self._graphs[key]
+            del self._snapshots[key]
+            entry = None
+        if key in self._eager_keys:
+            return self.inner(*xs)
+        if entry is None:
+            entry = self._capture(key, xs)
+            if entry is None:
+                return self.inner(*xs)
+        return entry(*xs)
+
+
 def _capture_executor(
     module: torch.nn.Module,
     xs: tuple[Any, ...],
@@ -208,9 +330,20 @@ class CudaGraphRunner:
     module is already a dynamo wrapper (which also fuses launches),
     so capture is skipped entirely — ``stats["cuda_graph"]`` stays
     unset, matching the historical flag behaviour.
+
+    ``multi_device=True`` (Phase B) routes the generic path through
+    :class:`_DeviceGraphModule` — a lazy per-(device, signature)
+    capture cache — instead of the single eager capture.  Executor
+    modules keep their own ``capture_cuda_graph`` either way.
+    Distributed wrappers are refused in both modes.
     """
 
     name = "cuda_graph"
+
+    def __init__(self, *, multi_device: bool = False) -> None:
+        """``multi_device``: per-device capture cache (Phase B)."""
+        self.multi_device = multi_device
+        self._policy = DevicePolicy()
 
     def apply(
         self,
@@ -219,6 +352,11 @@ class CudaGraphRunner:
         stats: dict[str, Any],
     ) -> torch.nn.Module:
         """Capture *module* into a CUDA graph when the input is CUDA."""
+        # Explicit refusal (Phase B): DDP/FSDP/TP wrappers and modules
+        # binding collective ops raise rather than deliver a
+        # silently wrong single-rank replay — checked before every
+        # early-out so no delivery path slips past it.
+        self._policy.check_module(module)
         if stats.get("compiled"):
             return module
         stats["cuda_graph"] = False
@@ -231,5 +369,12 @@ class CudaGraphRunner:
             out = _capture_executor(module, xs, stats)
             if out is not None:
                 return out
+            if self.multi_device:
+                # Lazy per-device cache: capture happens on first
+                # matching call, so ``cuda_graph`` here means *armed*;
+                # ``cuda_graph_per_device`` marks the mode.
+                stats["cuda_graph"] = True
+                stats["cuda_graph_per_device"] = True
+                return _DeviceGraphModule(module)
             return _capture_generic(module, xs, stats)
         return module

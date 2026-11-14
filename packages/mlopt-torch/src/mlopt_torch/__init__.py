@@ -46,6 +46,14 @@ _DELEGATED = {
     "load_profile": "mlopt_torch.calibrate",
     "ContractionPolicy": "mlopt_torch.contraction_policy",
     "load_contraction_policy": "mlopt_torch.contraction_policy",
+    "DevicePolicy": "mlopt_torch.device",
+    "DeviceReport": "mlopt_torch.device",
+    "DevicePlacementError": "mlopt_torch.device",
+    "UnsupportedDistributedError": "mlopt_torch.device",
+    "device_graph_key": "mlopt_torch.device",
+    "cuda_device_indices": "mlopt_torch.device",
+    "distributed_wrapper_name": "mlopt_torch.device",
+    "is_collective_op": "mlopt_torch.device",
 }
 
 

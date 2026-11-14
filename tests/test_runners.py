@@ -22,9 +22,11 @@ from mlopt_cuda import CudaGraphRunner
 from mlopt_cuda.runners import (
     _capture_executor,
     _capture_failure_class,
+    _DeviceGraphModule,
     _GraphReplayModule,
 )
 from mlopt_core.failures import FailureClass
+from mlopt_torch.device import UnsupportedDistributedError
 from mlopt_torch.runners import TorchCompileRunner
 
 from mlopt_torch.adapters import TorchSink
@@ -357,6 +359,202 @@ def test_capture_failure_class_classifies():
     assert (
         _capture_failure_class(TimeoutError()) is FailureClass.TIMEOUT
     )
+
+
+# ------------------------------------------------------------------
+#  Phase B — explicit distributed refusal + per-device graph cache
+# ------------------------------------------------------------------
+
+
+def test_cuda_graph_runner_refuses_distributed_wrapper():
+    """A module exposing a process-group handle raises — an explicit
+    refusal, not a silently wrong single-rank replay.  Fires even on
+    CPU input: the check precedes every early-out."""
+
+    class FakeWrapped(nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.process_group = object()
+
+        def forward(self, x):
+            return x
+
+    with pytest.raises(UnsupportedDistributedError):
+        CudaGraphRunner().apply(FakeWrapped(), torch.randn(2, 4), {})
+    with pytest.raises(UnsupportedDistributedError):
+        CudaGraphRunner(multi_device=True).apply(
+            FakeWrapped(), torch.randn(2, 4), {}
+        )
+
+
+def test_cuda_graph_runner_refuses_collective_bindings():
+    mod = nn.Linear(4, 4)
+    mod._torch_bindings = {"all_reduce": lambda x: x}  # type: ignore[attr-defined]
+    with pytest.raises(UnsupportedDistributedError, match="all_reduce"):
+        CudaGraphRunner().apply(mod, torch.randn(2, 4), {})
+
+
+def test_cuda_graph_runner_multi_device_cpu_input_noop():
+    """multi_device on a CPU deliverable degrades exactly like the
+    single-capture path — no wrapper, stats False."""
+    mod = _Capturable()
+    stats: dict = {}
+    out = CudaGraphRunner(multi_device=True).apply(
+        mod, torch.randn(2, 4), stats
+    )
+    assert out is mod
+    assert stats["cuda_graph"] is False
+    assert "cuda_graph_per_device" not in stats
+    assert not mod.captured
+
+
+def test_device_graph_module_cpu_input_eager():
+    """Non-CUDA inputs take the eager path — the wrapper never tries
+    to capture without a cuda key."""
+    w = _DeviceGraphModule(nn.Linear(4, 4))
+    x = torch.randn(2, 4)
+    with torch.no_grad():
+        assert torch.allclose(w(x), w.inner(x))
+    assert w._graphs == {}
+    assert w.capture_failures == {}
+
+
+def test_device_graph_module_fingerprint_guards():
+    """The storage fingerprint is stable until a real parameter move,
+    and catches ``_param_map``-style rebinding that leaves the
+    registered Parameters untouched."""
+    w = _DeviceGraphModule(nn.Linear(4, 4))
+    snap = w._fingerprint()
+    assert w._params_match(snap)
+    w.inner.to(torch.float64)
+    assert not w._params_match(snap)
+    w2 = _DeviceGraphModule(nn.Linear(4, 4))
+    snap2 = w2._fingerprint()
+    w2.inner._param_map = {"w": w2.inner.weight}  # type: ignore[attr-defined]
+    snap2 = w2._fingerprint()
+    w2.inner._param_map["w"] = torch.nn.Parameter(  # type: ignore[attr-defined]
+        torch.randn(4, 4)
+    )
+    assert not w2._params_match(snap2)
+
+
+@pytest.mark.requires_cuda
+def test_cuda_graph_runner_multi_device_arms_lazy_cache():
+    """multi_device wraps the deliverable in _DeviceGraphModule and
+    marks stats — capture itself is lazy (first matching call)."""
+    mod = nn.Linear(4, 4).cuda().eval()
+    stats: dict = {}
+    out = CudaGraphRunner(multi_device=True).apply(
+        mod, torch.randn(2, 4, device="cuda"), stats
+    )
+    assert isinstance(out, _DeviceGraphModule)
+    assert stats["cuda_graph"] is True
+    assert stats["cuda_graph_per_device"] is True
+    # nothing captured yet — lazy
+    assert out._graphs == {}
+
+
+@pytest.mark.requires_cuda
+def test_cuda_graph_runner_multi_device_replays_and_keys():
+    """End-to-end on cuda: first call captures per (device, signature),
+    a second signature captures its own graph — never shared — and a
+    shape mismatch falls back to eager inside the entry."""
+    from mlopt_core.ir import IR, Op, Param, TensorType, Var
+    from mlopt_torch.torch_bridge import ir_to_torch_module
+
+    torch.manual_seed(0)
+    x = Var("x", TensorType((4, 8)))
+    w = Param(name="p_w", typ=TensorType((8, 8)))
+    ir = IR(
+        root=Op.make("matmul", x, w),
+        inputs=[x],
+        input_names=["x"],
+        params={"p_w": TensorType((8, 8))},
+    )
+    mod = ir_to_torch_module(
+        ir, {"p_w": torch.randn(8, 8, device="cuda")}
+    ).eval()
+    stats: dict = {}
+    wrapped = CudaGraphRunner(multi_device=True).apply(
+        mod, torch.randn(4, 8, device="cuda"), stats
+    )
+    assert isinstance(wrapped, _DeviceGraphModule)
+    with torch.no_grad():
+        x1 = torch.randn(4, 8, device="cuda")
+        assert torch.allclose(wrapped(x1), mod(x1))
+        assert len(wrapped._graphs) == 1  # one (device, signature) entry
+        # a different signature gets its OWN graph, not a shared one
+        x2 = torch.randn(2, 8, device="cuda")
+        assert torch.allclose(wrapped(x2), mod(x2))
+        assert len(wrapped._graphs) == 2
+        # same signature again replays the first graph
+        x3 = torch.randn(4, 8, device="cuda")
+        assert torch.allclose(wrapped(x3), mod(x3))
+        assert len(wrapped._graphs) == 2
+    assert wrapped.capture_failures == {}
+
+
+@pytest.mark.requires_cuda
+def test_device_graph_module_drops_stale_graph_on_param_move():
+    """Rebinding a param (the ``_align_to`` move shape) invalidates the
+    captured graph — the wrapper drops it and recaptures against the
+    new storage instead of replaying freed pointers."""
+    from mlopt_core.ir import IR, Op, Param, TensorType, Var
+    from mlopt_torch.torch_bridge import ir_to_torch_module
+
+    torch.manual_seed(0)
+    x = Var("x", TensorType((4, 8)))
+    w = Param(name="p_w", typ=TensorType((8, 8)))
+    ir = IR(
+        root=Op.make("matmul", x, w),
+        inputs=[x],
+        input_names=["x"],
+        params={"p_w": TensorType((8, 8))},
+    )
+    mod = ir_to_torch_module(
+        ir, {"p_w": torch.randn(8, 8, device="cuda")}
+    ).eval()
+    wrapped = _DeviceGraphModule(mod)
+    xin = torch.randn(4, 8, device="cuda")
+    with torch.no_grad():
+        wrapped(xin)
+    assert len(wrapped._graphs) == 1
+    key = next(iter(wrapped._graphs))
+    old_snap = wrapped._snapshots[key]
+    # Simulate a parameter rebind the way _align_to does: a fresh
+    # tensor in _param_map (the runtime table the fingerprint reads).
+    mod._param_map["p_w"] = torch.nn.Parameter(
+        torch.randn(8, 8, device="cuda")
+    )
+    assert not wrapped._params_match(old_snap)
+    x2 = torch.randn(4, 8, device="cuda")
+    with torch.no_grad():
+        out = wrapped(x2)
+        assert torch.allclose(out, mod(x2))
+    # stale entry dropped, fresh graph captured against new storage
+    assert len(wrapped._graphs) == 1
+    assert wrapped._snapshots[key] is not old_snap
+
+
+@pytest.mark.requires_cuda
+def test_device_graph_module_capture_failure_is_eager_forever():
+    """A module whose forward raises during capture records the
+    classified failure, caches the key as eager, and keeps serving
+    (raising) eagerly — no capture storm."""
+
+    class Boom(nn.Module):
+        def forward(self, x):
+            raise RuntimeError("capture broke")
+
+    wrapped = _DeviceGraphModule(Boom())
+    x = torch.randn(2, 4, device="cuda")
+    with pytest.raises(RuntimeError):
+        wrapped(x)
+    assert len(wrapped.capture_failures) == 1
+    assert len(wrapped._eager_keys) == 1
+    with pytest.raises(RuntimeError):
+        wrapped(x)  # eager path, still raising — no recapture attempt
+    assert len(wrapped._graphs) == 0
 
 
 # ------------------------------------------------------------------

@@ -102,6 +102,7 @@ dependencies = [
 [[package]]
 name = "handl-egraph"
 version = "0.1.0"
+source = "git+https://github.com/handl-lang/egraph?branch=main#c48f75efbfc284113da0c2d2190743dd03219bbd"
 dependencies = [
  "handl-language",
  "handl-value",
@@ -717,10 +718,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
 
 [[patch.unused]]
-name = "handl-plugin-lib-lang-compile"
-version = "0.1.0"
-
-[[patch.unused]]
 name = "handl-kit-core"
 version = "0.1.0"
 
@@ -765,11 +762,11 @@ name = "handl-lib-combinators"
 version = "0.1.0"
 
 [[patch.unused]]
-name = "handl-lib-prim-handl"
+name = "handl-plugin-lib-kv-hashmap"
 version = "0.1.0"
 
 [[patch.unused]]
-name = "handl-plugin-lib-kv-hashmap"
+name = "handl-lib-prim-handl"
 version = "0.1.0"
 
 [[patch.unused]]
@@ -1001,10 +998,6 @@ name = "handl-kit-stdlib"
 version = "0.1.0"
 
 [[patch.unused]]
-name = "handl-lib-perlin"
-version = "0.1.0"
-
-[[patch.unused]]
 name = "hnl-engine-typecheck-nbe"
 version = "0.1.0"
 
@@ -1021,6 +1014,10 @@ name = "handl-lib-ffi"
 version = "0.1.0"
 
 [[patch.unused]]
+name = "handl-lib-perlin"
+version = "0.1.0"
+
+[[patch.unused]]
 name = "handl-lib-hello"
 version = "0.1.0"
 
@@ -1034,4 +1031,8 @@ version = "0.1.0"
 
 [[patch.unused]]
 name = "handl-kit-data-prelude"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "handl-plugin-lib-lang-compile"
 version = "0.1.0"

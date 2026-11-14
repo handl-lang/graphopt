@@ -4,7 +4,11 @@ The autotuned strategy's wall-clock timing, moved verbatim from
 ``mlopt_orchestrator.autotune`` (plan 0007): ``warmup`` untimed calls
 then ``n_calls`` timed forwards, median + IQR of wall seconds.
 CUDA inputs end every timed call in ``torch.cuda.synchronize`` so the
-measured time includes the GPU tail.
+measured time includes the GPU tail.  The sync is scoped per device
+(Phase B): :func:`mlopt_torch.device.cuda_device_indices` collects the
+distinct CUDA device indices the inputs touch and each is synchronised
+individually — the same wait the global call gave, without blocking
+on GPUs this measurement never used.
 
 The warmup/call-count semantics and the median/IQR reduction are
 :mod:`mlopt_core.timing`'s one contract — the meter only owns the
@@ -27,6 +31,8 @@ import torch
 from mlopt_core.failures import FailureClass, classify
 from mlopt_core.ports import TimingResult
 from mlopt_core.timing import iqr, median, warmup_calls
+
+from mlopt_torch.device import cuda_device_indices
 
 __all__ = ["TorchMeter"]
 
@@ -87,7 +93,19 @@ class TorchMeter:
         args = _input_args(inputs)
         is_cuda = _input_is_cuda(inputs)
         device = _input_device(inputs)
+        # Per-device sync set (Phase B): the devices the inputs
+        # actually occupy, not the global device.  ``torch.cuda.
+        # synchronize(idx)`` waits only that device's queue — honest
+        # on multi-GPU hosts where a global sync would also stall on
+        # unrelated work.
+        sync_devices = cuda_device_indices(inputs) if is_cuda else ()
         n_warm, calls = warmup_calls(warmup, n_calls)
+
+        def sync() -> None:
+            for d in sync_devices:
+                torch.cuda.synchronize(
+                    d
+                )  # pragma: no cover — CUDA-only
 
         def call() -> None:
             with torch.no_grad():
@@ -98,7 +116,7 @@ class TorchMeter:
             for _ in range(n_warm):
                 call()
             if is_cuda:
-                torch.cuda.synchronize()  # pragma: no cover — CUDA-only
+                sync()
             deadline = (
                 time.perf_counter() + timeout_s
                 if timeout_s is not None
@@ -108,7 +126,7 @@ class TorchMeter:
                 t0 = time.perf_counter()
                 call()
                 if is_cuda:
-                    torch.cuda.synchronize()  # pragma: no cover
+                    sync()
                 times.append(time.perf_counter() - t0)
                 if (
                     deadline is not None

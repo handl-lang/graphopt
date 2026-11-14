@@ -9,6 +9,10 @@ description = "CUDA-graph delivery mechanism for mlopt — the CUDA-coupled runn
 requires-python = ">=3.11"
 dependencies = [
     "mlopt-core",
+    # Phase B: the runner consumes mlopt_torch.device (DevicePolicy,
+    # device_graph_key) — the import-linter `dependency layers`
+    # contract already places mlopt_cuda above mlopt_torch.
+    "mlopt-torch",
     "torch>=2.0",
 ]
 
