@@ -1730,9 +1730,20 @@ class TestCorpusZooPrimDepth3:
         )
         assert minted.SYNOP2_SHIPPED and minted.SYNOP3_SHIPPED
         # strict tier ordering: each deeper tier's expanded denotation
-        # out-prices the tier below's.
+        # out-prices the tier below's — over the hand-promoted tiers.
+        # Auto-admitted records join SYNOP_SHIPPED through the gauntlet,
+        # not through tier curation: synop_6ed0a07c7d is depth-1 but its
+        # mined denotation (12 ops) ties the smallest depth-2 spelling,
+        # so the strict separation pin excludes AUTO_ADMITTED names.
+        from mlopt_core.laws.provenance import AUTO_ADMITTED
+
+        auto = {
+            n.removeprefix("prim:").removesuffix(".expand")
+            for n in AUTO_ADMITTED
+        }
+        d1_hand = d1 - auto
         assert min(vocab[n] for n in minted.SYNOP2_SHIPPED) > max(
-            vocab[n] for n in d1
+            vocab[n] for n in d1_hand
         )
         assert min(vocab[n] for n in minted.SYNOP3_SHIPPED) > max(
             vocab[n] for n in minted.SYNOP2_SHIPPED

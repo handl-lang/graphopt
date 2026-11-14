@@ -36,6 +36,8 @@ from mlopt_carriers.scan_lower import (
     is_scan_apply_term,
     to_batched_scan_module,
 )
+from mlopt_core import ir as _ir
+from mlopt_core import typing as _typing
 from mlopt_core.egraph import EGraph
 from mlopt_core.ir import IR, Op, Param, TensorType, Var
 from mlopt_discovery import genkernel as gk
@@ -45,13 +47,41 @@ from mlopt_torch import torch_bridge as tb
 from mlopt_torch.backend import TorchBackend
 from mlopt_torch.torch_bridge import ir_to_torch_module
 
+# Ambient registries the overnight/prim-mint tests mutate process-wide:
+# minting registers ``synop_*``/``ksynop_*`` ops (``ir._OP_REGISTRY``),
+# shape rules (``typing._SHAPE_RULES``) and — the load-bearing one —
+# torch bindings (``torch_bridge._IR_TO_TORCH``).  The bindings grow
+# ``OpTable.full().torch_bindings`` == ``supported_ops``, so a minted
+# op's fold becomes *extractable* where a fresh process would price it
+# ``+inf``: post-mint, ``Optimizer.optimize`` extracts a synop-folded
+# term instead of the scan spine and lowering reports ``generic``
+# ``IRModule`` rather than ``BatchedScanModule``.  Snapshot at import
+# (collection precedes every test body) and restore per test so these
+# end-to-end assertions see fresh-process registry state.
+_AMBIENT_SNAPSHOTS = {
+    "bindings": dict(tb._IR_TO_TORCH),
+    "op_registry": dict(_ir._OP_REGISTRY),
+    "shape_rules": dict(_typing._SHAPE_RULES),
+}
+
+
+def _restore_ambient() -> None:
+    tb._IR_TO_TORCH.clear()
+    tb._IR_TO_TORCH.update(_AMBIENT_SNAPSHOTS["bindings"])
+    _ir._OP_REGISTRY.clear()
+    _ir._OP_REGISTRY.update(_AMBIENT_SNAPSHOTS["op_registry"])
+    _typing._SHAPE_RULES.clear()
+    _typing._SHAPE_RULES.update(_AMBIENT_SNAPSHOTS["shape_rules"])
+
 
 @pytest.fixture(autouse=True)
 def _fp64():
     prev = torch.get_default_dtype()
     torch.set_default_dtype(torch.float64)
+    _restore_ambient()
     yield
     torch.set_default_dtype(prev)
+    _restore_ambient()
 
 
 def _P(name, *shape):

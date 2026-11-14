@@ -231,9 +231,15 @@ def _assert_matmul_children_tensor(term):
 
 
 def test_factor_left_shape_class_is_new_and_useful():
+    # The add-spelling factor-left class is still enumerated and still
+    # "new"/true, but the shipped prim folds already collapse
+    # add(mul,mul) to the factored cost — saturated base == candidate
+    # (16 -> 16), so it no longer pays.  The sub-spelling class is
+    # the uncovered factoring form (48 -> 32) and keeps the
+    # new+true+useful coverage.
     target = lp._key(
-        _spec("add", ("mul", "A", "B"), ("mul", "A", "C")),
-        _spec("mul", "A", ("add", "B", "C")),
+        _spec("sub", ("mul", "A", "B"), ("mul", "A", "C")),
+        _spec("mul", "A", ("sub", "B", "C")),
     )
     hits = [c for c in _cands() if lp._key(c.lhs, c.rhs) == target]
     assert len(hits) == 1

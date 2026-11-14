@@ -195,9 +195,13 @@ def test_sat_cost_and_rule_budgets():
 
 def test_cost_delta_factoring_pays():
     x, y, z = (_v(n, _D, _D) for n in "xyz")
-    lhs = _p("add", _p("mul", x, y), _p("mul", x, z))
+    # The add-spelling factor (add(mul,mul) -> mul(x,add)) no longer
+    # pays: shipped prim folds already collapse that LHS to the
+    # factored cost, so the saturated base equals the candidate cost
+    # (16 -> 16).  The sub-spelling is still uncovered — 48 -> 32.
+    lhs = _p("sub", _p("mul", x, y), _p("mul", x, z))
     cand = pp.Candidate(
-        "t", "factor", lhs, _p("mul", x, _p("add", y, z))
+        "t", "factor", lhs, _p("mul", x, _p("sub", y, z))
     )
     base, with_rule = pp._cost_delta(cand, [lhs], flops_cost)
     assert with_rule < base < float("inf")
@@ -361,11 +365,16 @@ def test_schema_candidates_mix_true_false_dup():
 
 def test_evaluate_outcomes_truth_relation_useful():
     by = {c.label: c for c in pp.schema_candidates()}
+    # mul_factor is the canonical factoring schema but no longer
+    # pays: the shipped prim:synop_bb8c54c201 fold already collapses
+    # add(mul,mul) to the factored form, so the saturated base cost
+    # (16) equals the candidate cost.  neg_factor still pays
+    # (48 -> 32) and keeps the useful=True coverage.
     outs = pp.evaluate(
-        [by["mul_factor"], by["FALSE_square_add"], by["sub_to_add_dup"]]
+        [by["neg_factor"], by["FALSE_square_add"], by["sub_to_add_dup"]]
     )
     o = {x.candidate.label: x for x in outs}
-    fac = o["mul_factor"]
+    fac = o["neg_factor"]
     assert fac.num_true is True
     assert fac.relation == "new"
     assert fac.useful is True
@@ -385,8 +394,11 @@ def test_yield_table_aggregates():
     assert row["proposed"] == 4
     assert row["num_true"] == 4
     assert row["new"] == 4
-    assert row["useful"] == 3
-    assert row["useful_new"] == 3
+    # mul_factor / mul_factor_right are fold-covered by the shipped
+    # prim bank (saturated base == candidate cost); only
+    # mul_distribute and neg_factor still pay.
+    assert row["useful"] == 2
+    assert row["useful_new"] == 2
 
 
 # ---------------------------------------------------------------------------
@@ -603,11 +615,14 @@ def test_rank_pool_learned_heuristic_random():
     x, y = _v("x", _D, _D), _v("y", _D, _D)
     seeds = [cands[0].lhs, _p("sub", x, _p("neg", y))]
     r = pp.rank_pool(cands, idx, seeds=seeds)
-    assert r["pool"] == 4 and r["useful"] == 3
-    assert r["random_ap"] == pytest.approx(0.75)
-    # cost(lhs) - cost(rhs) ranks the single non-useful candidate
-    # (the expanding distribute) last → perfect AP.
-    assert r["heuristic_ap"] == pytest.approx(1.0)
+    # Only mul_distribute and neg_factor still pay — mul_factor and
+    # mul_factor_right are fold-covered (saturated base == cand).
+    assert r["pool"] == 4 and r["useful"] == 2
+    assert r["random_ap"] == pytest.approx(0.5)
+    # The heuristic no longer ranks perfectly: the useful
+    # mul_distribute scores negative (its RHS is the larger dag),
+    # so heuristic_ap is 5/12 rather than 1.0.
+    assert r["heuristic_ap"] == pytest.approx(5 / 12)
     assert 0.0 <= r["learned_ap"] <= 1.0
 
 
@@ -630,7 +645,7 @@ def test_rank_pool_no_positive_is_undefined():
     x, y = _v("x", _D, _D), _v("y", _D, _D)
     seeds = [cands[0].lhs, _p("sub", x, _p("neg", y))]
     r = pp._rank_on(cands, outs, seeds)
-    assert r["pool"] == 4 and r["useful"] == 3
+    assert r["pool"] == 4 and r["useful"] == 2
 
 
 def test_pool_features_and_heuristic_score():
@@ -715,8 +730,11 @@ def test_instantiate_rhs_of_match():
 
 def test_cost_delta_on_matched_term():
     x, y, z = (_v(n, _D, _D) for n in "xyz")
-    fl = _sch()["factor_left"]
-    sub = _p("add", _p("mul", x, y), _p("mul", x, z))
+    # factor_left's add(mul,mul) spelling is fold-covered by the
+    # shipped prim bank (base saturates to the candidate cost), so
+    # the paying fixture is the sub-spelling factor_sub_left.
+    fl = _sch()["factor_sub_left"]
+    sub = _p("sub", _p("mul", x, y), _p("mul", x, z))
     base, cand = sp._cost_delta(fl, [sub], flops_cost)
     assert cand < base < float("inf")
     # The factored form is genuinely cheaper under dag_cost.
@@ -796,14 +814,17 @@ def test_sink_is_cached():
 
 def test_reach_rows_for_firing_schemas():
     x, y, z = (_v(n, _D, _D) for n in "xyz")
-    sch = _sch()["factor_left"]
-    term = _p("add", _p("mul", x, y), _p("mul", x, z))
+    # factor_sub_left, not factor_left: the add-spelling factor is
+    # fold-covered, so adding its rule leaves the saturated extract
+    # unchanged (changed=False, add_cost == base_cost).
+    sch = _sch()["factor_sub_left"]
+    term = _p("sub", _p("mul", x, y), _p("mul", x, z))
     case = _case("fact", term)
     o = sp.SchemaOutcome(schema=sch, model_fires=1)
     rows = sp._reach([o], [case], flops_cost)
     assert len(rows) == 1
     row = rows[0]
-    assert row["schema"] == "factor_left" and row["model"] == "fact"
+    assert row["schema"] == "factor_sub_left" and row["model"] == "fact"
     assert row["fires"] >= 1 and row["changed"] is True
     assert row["add_cost"] < row["base_cost"]
     # A schema that never fires on a model contributes no row —

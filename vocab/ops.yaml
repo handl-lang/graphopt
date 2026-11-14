@@ -4905,6 +4905,15 @@
         "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add 'v2', (mul 'v3', 'v4'))), (mul 'v5', (unsqueeze 'v6', dim=a0)))), (mul 'v7', (unsqueeze (select (linear 'v8', 'v9', 'v10'), dim=1, index=a1), dim=a0)))"
       },
       "denotation": "prim"
+    },
+    {
+      "name": "weight_norm",
+      "arity": null,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": null,
+      "denotation": "torch"
     }
   ]
 }

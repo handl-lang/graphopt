@@ -579,29 +579,44 @@ def test_main_with_layout_flag(monkeypatch, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_probe_right_factor_linear_enumerated():
-    """The documented boundary: ``right_factor_linear`` merges under
-    the layout universe but ``certificate()`` emits stubs — the
-    ``all_proofs`` enumerator surfaces the real 4-step derivation."""
+def test_probe_right_factor_linear_linear():
+    """``right_factor_linear`` now replays linearly.
+
+    The law bank grew a positional path (``linear_to_matmul_t`` →
+    ``right_distribute_matmul`` → ``linear_from_matmul_t``), so
+    ``certificate()`` returns a replayable 4-step derivation where it
+    previously emitted only e-graph-dependent stubs (the old
+    ``enumerated`` boundary).  The ``all_proofs`` fallback still
+    exists for laws whose connect heuristic cannot replay — see
+    ``test_run_cert_saturation_only_under_tight_fuel``.
+    """
     from mlopt_core.laws import ALL_RULES_WITH_LAYOUT
 
     row, cert = llc.probe(
         "right_factor_linear", list(ALL_RULES_WITH_LAYOUT)
     )
-    assert row.verdict == "enumerated"
+    assert row.verdict == "linear"
     assert cert is not None and cert.n_steps >= 2
     assert set(row.rules_used) <= {
         "linear_to_matmul_t",
         "linear_from_matmul_t",
-        "right_factor_matmul",
+        "right_distribute_matmul",
     }
 
 
 def test_run_cert_saturation_only_under_tight_fuel(monkeypatch):
     """Merged but no linear derivation within fuel — the honest
-    ``saturation-only`` verdict."""
+    ``saturation-only`` verdict.
+
+    ``right_factor_linear`` replays linearly under the grown bank,
+    so ``_replayable_cert`` is patched to ``None`` — simulating the
+    stub-only certificate world this branch exists for — while the
+    tight ``all_proofs`` budgets do the real work of failing
+    enumeration.
+    """
     from mlopt_core.laws import ALL_RULES_WITH_LAYOUT
 
+    monkeypatch.setattr(llc, "_replayable_cert", lambda *a: None)
     monkeypatch.setattr(llc, "_PROOF_STEPS", 1)
     monkeypatch.setattr(llc, "_PROOF_FUEL", 200)
     row, cert = llc.probe(
@@ -609,7 +624,9 @@ def test_run_cert_saturation_only_under_tight_fuel(monkeypatch):
     )
     assert row.verdict == "saturation-only"
     assert cert is None
-    assert row.note  # the e-graph-dependent stub note survives
+    # The stub note is empty: the real certificate() replayed
+    # linearly, so no e-graph-dependent steps exist to report.
+    assert row.note == ""
 
 
 def test_probe_no_instance():
@@ -697,11 +714,29 @@ def test_generic_instance_default_attr_and_working_derive():
 
 
 def test_lemma_cert_main_probe_note(monkeypatch, capsys):
-    """A probe whose cert is e-graph-dependent prints the stub note."""
+    """A probe whose cert is e-graph-dependent prints the stub note.
+
+    No shipped law emits e-graph-dependent stubs anymore —
+    ``right_factor_linear`` replays linearly under the grown bank —
+    so the row is stubbed directly: this pins ``main``'s
+    note-printing branch, while the verdict ladder itself is covered
+    by ``test_run_cert_saturation_only_under_tight_fuel``.
+    """
     monkeypatch.setattr(llc, "materialize_all", lambda uni: ([], {}))
-    monkeypatch.setattr(llc, "_PROOF_STEPS", 1)
-    monkeypatch.setattr(llc, "_PROOF_FUEL", 200)
-    rc = llc.main(["--with-layout", "--probe", "right_factor_linear"])
+    stub = llc.LemmaCertRow(
+        name="t_stub",
+        kind="law",
+        verdict="saturation-only",
+        direction="",
+        n_steps=0,
+        rules_used=(),
+        premise_cover=True,
+        n_enodes=0,
+        note="merge witnessed only inside the e-graph",
+        derivation=(),
+    )
+    monkeypatch.setattr(llc, "probe", lambda *a, **k: (stub, None))
+    rc = llc.main(["--with-layout", "--probe", "t_stub"])
     assert rc == 0
     out = capsys.readouterr().out
     assert "verdict=saturation-only" in out

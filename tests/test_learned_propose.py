@@ -494,7 +494,15 @@ class TestProposeLearned:
 
     def test_default_seed_bank_is_machine_shipped(self):
         bank = lp._seed_bank(None)
-        assert {r.name for r in bank} == set(MACHINE_SHIPPED)
+        names = {r.name for r in bank}
+        shipped = set(MACHINE_SHIPPED)
+        all_names = {r.name for r in ALL_RULES}
+        # MACHINE_SHIPPED also ledgers the synop*.expand definitional
+        # premises — axioms the folds carry as rule.premises, never
+        # standalone ALL_RULES entries (provenance.py) — so the
+        # bank-bound machine-shipped set is shipped ∩ ALL_RULES.
+        assert names == shipped & all_names
+        assert all(n.endswith(".expand") for n in shipped - names)
 
     def test_explicit_vocab_and_bank(self):
         t = _term()
