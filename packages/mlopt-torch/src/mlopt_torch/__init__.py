@@ -54,6 +54,18 @@ _DELEGATED = {
     "cuda_device_indices": "mlopt_torch.device",
     "distributed_wrapper_name": "mlopt_torch.device",
     "is_collective_op": "mlopt_torch.device",
+    "ShardedAwareDevicePolicy": "mlopt_torch.device_placement",
+    "ShardedParamError": "mlopt_torch.device_placement",
+    "check_sharded_params": "mlopt_torch.device_placement",
+    "sharded_params_in": "mlopt_torch.device_placement",
+    "is_sharded_param": "mlopt_torch.device_placement",
+    "is_dtensor": "mlopt_torch.device_placement",
+    "DeviceSlot": "mlopt_torch.device_placement",
+    "PlacementPlan": "mlopt_torch.device_placement",
+    "plan_placement": "mlopt_torch.device_placement",
+    "group_by_device": "mlopt_torch.device_placement",
+    "DeviceCheckedSource": "mlopt_torch.device_placement",
+    "DevicePolicyRunner": "mlopt_torch.device_placement",
 }
 
 

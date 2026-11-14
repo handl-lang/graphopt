@@ -382,8 +382,8 @@ class TestSignaturePins:
         ), "optimize must keep forwarding pipeline kwargs (**kw)"
 
     def test_torch_backend_factory_shape(self):
-        """``TorchBackend()`` assembles the port value — all five port
-        slots keyword-only."""
+        """``TorchBackend()`` assembles the port value — the port
+        slots plus ``device_policy`` are all keyword-only."""
         from mlopt_torch import TorchBackend
 
         params = inspect.signature(TorchBackend).parameters
@@ -393,6 +393,7 @@ class TestSignaturePins:
             "sink",
             "composer",
             "meter",
+            "device_policy",
         }
         assert all(
             p.kind is inspect.Parameter.KEYWORD_ONLY
@@ -444,7 +445,13 @@ class TestSignaturePins:
         from mlopt_orchestrator import ChainedRunner, IdentityRunner
         from mlopt_torch import TorchCompileRunner
 
-        assert not inspect.signature(CudaGraphRunner).parameters
+        cuda_params = inspect.signature(CudaGraphRunner).parameters
+        assert list(cuda_params) == ["multi_device"]
+        assert (
+            cuda_params["multi_device"].kind
+            is inspect.Parameter.KEYWORD_ONLY
+        )
+        assert cuda_params["multi_device"].default is False
         assert not inspect.signature(IdentityRunner).parameters
         chained = inspect.signature(ChainedRunner).parameters
         assert list(chained) == ["runners"]

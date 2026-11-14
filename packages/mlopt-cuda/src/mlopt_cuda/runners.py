@@ -42,11 +42,13 @@ slices here:
   ``stats["cuda_graph_per_device"]`` marking the mode.  Batched
   executors keep their own single-device ``capture_cuda_graph`` —
   the flag does not reach them.
-* ``apply`` runs :class:`mlopt_torch.device.DevicePolicy`'s
+* ``apply`` runs :class:`mlopt_torch.device_placement.ShardedAwareDevicePolicy`'s
   :meth:`~mlopt_torch.device.DevicePolicy.check_module` first: DDP /
-  FSDP / TP-wrapped modules and modules binding collective ops raise
-  :class:`~mlopt_torch.device.UnsupportedDistributedError` — an
-  explicit refusal, never a silently wrong single-rank replay.
+  FSDP / TP-wrapped modules, DTensor/``FlatParameter`` shard leaves,
+  and modules binding collective ops raise
+  :class:`~mlopt_torch.device.UnsupportedDistributedError` (shard
+  leaves raise the ``ShardedParamError`` subclass) — an explicit
+  refusal, never a silently wrong single-rank replay.
 """
 
 from __future__ import annotations
@@ -56,9 +58,11 @@ from typing import Any, Self, cast
 import torch
 from mlopt_core.failures import FailureClass, classify
 from mlopt_torch.device import (
-    DevicePolicy,
     device_graph_key,
     storage_fingerprint,
+)
+from mlopt_torch.device_placement import (
+    ShardedAwareDevicePolicy as DevicePolicy,
 )
 
 __all__ = ["CudaGraphRunner"]

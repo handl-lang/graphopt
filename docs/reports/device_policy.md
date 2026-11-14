@@ -154,4 +154,7 @@ device` still reports the first tensor's device (informational).
   target but does not move tensors; wiring `resolve` into
   `Optimizer.optimize`/`TorchBackend` (e.g. auto-`.to()` the example
   inputs or refuse early) is a pipeline-integration decision left to
-  the orchestrator owners.
+  the orchestrator owners. **Update:** the wiring landed — see
+  `docs/reports/phase_b_device_policy.md` (`Backend.device_policy` /
+  `search`/`lower` kwargs in eqsat, `TorchBackend(device_policy=...)`
+  + `DeviceCheckedSource`/`DevicePolicyRunner` here).

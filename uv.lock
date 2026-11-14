@@ -2293,12 +2293,14 @@ version = "0.1.0.dev0"
 source = { editable = "packages/mlopt-cuda" }
 dependencies = [
     { name = "mlopt-core" },
+    { name = "mlopt-torch" },
     { name = "torch" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "mlopt-core", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&tag=v0.1.0" },
+    { name = "mlopt-torch", editable = "packages/mlopt-torch" },
     { name = "torch", specifier = ">=2.0" },
 ]
 
