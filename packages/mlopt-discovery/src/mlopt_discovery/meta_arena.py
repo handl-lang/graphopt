@@ -310,18 +310,37 @@ def _spec_of(term: Any, names: dict) -> Any:
     ``Op`` → ``(op, *child_specs[, attrs])``; ``Const`` → its value;
     other leaves → ``X1``, ``X2``, … by first-occurrence order —
     one *names* map per call, so each spec is canonicalized.
+
+    Iterative post-order: children are pushed reversed so leaves are
+    still numbered left-to-right exactly as the recursive render did,
+    and a shared ``Op`` subterm's spec is occurrence-invariant (its
+    leaves were named at first encounter), so ``id``-dedup reuses
+    the tuple — deep model terms can no longer exhaust the recursion
+    limit on this path.
     """
-    if isinstance(term, Op):
-        parts = [_spec_of(a, names) for a in term.args]
-        if term.attrs:
-            parts.append(dict(term.attrs))
-        return (term.op, *parts)
-    if isinstance(term, Const):
-        return term.value
-    key = repr(term)
-    if key not in names:
-        names[key] = f"X{len(names) + 1}"
-    return names[key]
+    key_of: dict[int, Any] = {}
+    stack: list[tuple[Any, bool]] = [(term, False)]
+    while stack:
+        t, expanded = stack.pop()
+        if expanded:
+            parts = [key_of[id(a)] for a in t.args]
+            if t.attrs:
+                parts.append(dict(t.attrs))
+            key_of[id(t)] = (t.op, *parts)
+            continue
+        if isinstance(t, Op):
+            if id(t) in key_of:
+                continue
+            stack.append((t, True))
+            stack.extend((a, False) for a in reversed(t.args))
+        elif isinstance(t, Const):
+            key_of[id(t)] = t.value
+        else:
+            key = repr(t)
+            if key not in names:
+                names[key] = f"X{len(names) + 1}"
+            key_of[id(t)] = names[key]
+    return key_of[id(term)]
 
 
 def _canon_spec(spec: Any, names: dict | None = None) -> Any:
@@ -337,18 +356,39 @@ def _canon_spec(spec: Any, names: dict | None = None) -> Any:
     """
     if names is None:
         names = {}
-    if isinstance(spec, str):
-        if spec not in names:
-            names[spec] = f"X{len(names) + 1}"
-        return names[spec]
-    if isinstance(spec, (tuple, list)):
-        return tuple(
-            _canon_spec(e, names)
-            if not isinstance(e, dict)
-            else dict(e)
-            for e in spec
-        )
-    return spec
+    # Iterative post-order over the spec tree; children pushed
+    # reversed so metavariables are numbered in the same
+    # left-to-right order the recursive render produced.  ``dict``
+    # elements are shallow-copied, never recursed — matching the
+    # original.
+    result: dict[int, Any] = {}
+    stack: list[tuple[Any, bool]] = [(spec, False)]
+    while stack:
+        s, expanded = stack.pop()
+        if expanded:
+            result[id(s)] = tuple(
+                dict(e) if isinstance(e, dict) else result[id(e)]
+                for e in s
+            )
+            continue
+        if isinstance(s, (tuple, list)):
+            if id(s) in result:
+                continue
+            stack.append((s, True))
+            stack.extend(
+                (e, False)
+                for e in reversed(s)
+                if not isinstance(e, dict)
+            )
+        elif isinstance(s, str):
+            if s not in names:
+                names[s] = f"X{len(names) + 1}"
+            result[id(s)] = names[s]
+        elif isinstance(s, dict):
+            result[id(s)] = s
+        else:
+            result[id(s)] = s
+    return result[id(spec)]
 
 
 def _canon_concrete(spec: Any, names: dict | None = None) -> Any:
@@ -363,21 +403,39 @@ def _canon_concrete(spec: Any, names: dict | None = None) -> Any:
     """
     if names is None:
         names = {}
-    if isinstance(spec, (tuple, list)) and spec:
-        return (
-            spec[0],
-            *(
-                dict(e)
-                if isinstance(e, dict)
-                else _canon_concrete(e, names)
-                for e in spec[1:]
-            ),
-        )
-    if isinstance(spec, str):
-        if spec not in names:
-            names[spec] = f"X{len(names) + 1}"
-        return names[spec]
-    return spec
+    # Iterative post-order; the head element ``spec[0]`` is kept raw
+    # and only ``spec[1:]`` is walked — matching the recursive
+    # render, including the empty tuple/list fall-through that
+    # returns the node unchanged.
+    result: dict[int, Any] = {}
+    stack: list[tuple[Any, bool]] = [(spec, False)]
+    while stack:
+        s, expanded = stack.pop()
+        if expanded:
+            result[id(s)] = (
+                s[0],
+                *(
+                    dict(e) if isinstance(e, dict) else result[id(e)]
+                    for e in s[1:]
+                ),
+            )
+            continue
+        if isinstance(s, (tuple, list)) and s:
+            if id(s) in result:
+                continue
+            stack.append((s, True))
+            stack.extend(
+                (e, False)
+                for e in reversed(s[1:])
+                if not isinstance(e, dict)
+            )
+        elif isinstance(s, str):
+            if s not in names:
+                names[s] = f"X{len(names) + 1}"
+            result[id(s)] = names[s]
+        else:
+            result[id(s)] = s
+    return result[id(spec)]
 
 
 def _bind_meta(pattern: str, term: Any, env: dict) -> bool:
@@ -487,9 +545,14 @@ def _composite_specs(
     seen: dict[str, Any] = {}
     visited: set[int] = set()
 
-    def visit(t: Any) -> None:
+    # Iterative preorder — identical visit order to the recursive
+    # DFS, id-deduped, without per-level frames on deep terms.
+    # ``reversed`` keeps corpus order under ``pop()``.
+    stack = list(reversed(list(corpus)))
+    while stack:
+        t = stack.pop()
         if id(t) in visited:
-            return
+            continue
         visited.add(id(t))
         if isinstance(t, Op):
             if (
@@ -499,34 +562,41 @@ def _composite_specs(
                 spec = _spec_of(t, {})
                 if _spec_size(spec) >= 2:
                     seen.setdefault(repr(spec), spec)
-            for a in t.args:
-                visit(a)
-
-    for term in corpus:
-        visit(term)
+            stack.extend(reversed(t.args))
     return tuple(seen[k] for k in sorted(seen)[:cap])
 
 
 def _ops_of(term: Any, out: set | None = None) -> set:
-    """Every op name appearing in *term*."""
+    """Every op name appearing in *term*.
+
+    Iterative — term depth mirrors model-IR depth; the result is a
+    set so revisits are harmless.
+    """
     if out is None:
         out = set()
-    if isinstance(term, Op):
-        out.add(term.op)
-        for a in term.args:
-            _ops_of(a, out)
+    stack = [term]
+    while stack:
+        t = stack.pop()
+        if isinstance(t, Op):
+            out.add(t.op)
+            stack.extend(t.args)
     return out
 
 
 def _term_metavars(term: Any, out: set | None = None) -> set:
-    """Collect the leaf metavariables (``str`` leaves) of a pattern."""
+    """Collect the leaf metavariables (``str`` leaves) of a pattern.
+
+    Iterative — same set result, no per-level frames.
+    """
     if out is None:
         out = set()
-    if isinstance(term, str):
-        out.add(term)
-    elif isinstance(term, Op):
-        for a in term.args:
-            _term_metavars(a, out)
+    stack = [term]
+    while stack:
+        t = stack.pop()
+        if isinstance(t, str):
+            out.add(t)
+        elif isinstance(t, Op):
+            stack.extend(t.args)
     return out
 
 
@@ -1720,19 +1790,20 @@ class MetaArena:
         visited: set[int] = set()
         cap = self._spec_node_cap
 
-        def _walk(t: Any) -> None:
+        # Iterative preorder — identical visit order to the
+        # recursive DFS, id-deduped, without per-level frames.
+        stack = [self.term]
+        while stack:
+            t = stack.pop()
             if id(t) in visited:
-                return
+                continue
             visited.add(id(t))
             if isinstance(t, Op):
                 if cap is None or op_expansion(t, cap) <= cap:
                     s = _canon_spec(_spec_of(t, {}))
                     if not any(s == p for p in out):
                         out.append(s)
-                for a in t.args:
-                    _walk(a)
-
-        _walk(self.term)
+                stack.extend(reversed(t.args))
         return out
 
     def _concrete_occurs(self, pattern: Any) -> bool:
@@ -1747,16 +1818,20 @@ class MetaArena:
         occurrence — visiting it once keeps the check DAG-linear on
         sharing-heavy terms.
         """
-
-        def _walk(t: Any, seen: set) -> bool:
+        # Iterative — the recursive version was both depth- and
+        # (without dedup) expansion-bound; ``seen`` keeps it
+        # DAG-linear exactly as before, and a shared node's match
+        # verdict is path-invariant.
+        seen: set[int] = set()
+        stack = [self.term]
+        while stack:
+            t = stack.pop()
             if _concrete_match(pattern, t, {}):
                 return True
             if isinstance(t, Op) and id(t) not in seen:
                 seen.add(id(t))
-                return any(_walk(a, seen) for a in t.args)
-            return False
-
-        return _walk(self.term, set())
+                stack.extend(t.args)
+        return False
 
     def _sites(self) -> tuple:
         """Return indices of mined specs occurring in the program."""

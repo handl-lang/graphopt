@@ -229,34 +229,80 @@ def shape_key(term: Any, memo: dict | None = None) -> Any:
     numbered placeholder.  The numbering is by *object identity*, so a
     leaf that appears twice in one term stays the *same* number — the
     census sees the sharing a factoring law needs.
+
+    Iterative post-order with ``id``-dedup on ``Op`` nodes: a shared
+    subterm's key is occurrence-invariant (its leaves were numbered
+    at first encounter and never renumber), so computing it once and
+    reusing the tuple yields the identical key the tree render
+    produced — while a deep model term can no longer exhaust the
+    recursion limit (``model_corpus`` admits ~20k-deep mutants).
     """
     memo = {} if memo is None else memo
-    if isinstance(term, Op):
-        return (
-            term.op,
-            _attr_key(term.attrs),
-            tuple(shape_key(a, memo) for a in term.args),
-        )
-    if isinstance(term, Const):
-        return ("const", term.value)
-    return ("leaf", memo.setdefault(id(term), len(memo)))
+    key_of: dict[int, Any] = {}
+    # (node, expanded) post-order; children pushed reversed so args
+    # evaluate left-to-right — the leaf-numbering order the recursive
+    # render produced.
+    stack: list[tuple[Any, bool]] = [(term, False)]
+    while stack:
+        t, expanded = stack.pop()
+        if expanded:
+            key_of[id(t)] = (
+                t.op,
+                _attr_key(t.attrs),
+                tuple(key_of[id(a)] for a in t.args),
+            )
+            continue
+        if isinstance(t, Op):
+            if id(t) in key_of:
+                continue
+            stack.append((t, True))
+            stack.extend((a, False) for a in reversed(t.args))
+        elif isinstance(t, Const):
+            key_of[id(t)] = ("const", t.value)
+        else:
+            key_of[id(t)] = ("leaf", memo.setdefault(id(t), len(memo)))
+    return key_of[id(term)]
 
 
 def shape_repr(key: Any) -> str:
-    """Render a shape key as ``op(child, child)`` notation."""
+    """Render a shape key as ``op(child, child)`` notation.
+
+    Iterative post-order: shape keys mirror term depth, so the
+    recursive render shared the model term's recursion-depth
+    exposure.  ``id``-dedup is safe — the render is a pure function
+    of the key, and ``shape_key`` returns the same tuple object for
+    a shared subterm.
+    """
     if not isinstance(key, tuple):
         return repr(key)
-    head = key[0]
-    if head == "leaf":
-        return _letter(key[1])
-    if head == "const":
-        return repr(key[1])
-    _op, attrs, kids = key
-    inner = ", ".join(shape_repr(k) for k in kids)
-    if attrs:
-        a = ",".join(f"{k}={v}" for k, v in attrs)
-        return f"{_op}[{a}]({inner})"
-    return f"{_op}({inner})"
+    repr_of: dict[int, str] = {}
+    stack: list[tuple[Any, bool]] = [(key, False)]
+    while stack:
+        k, expanded = stack.pop()
+        if not isinstance(k, tuple):
+            repr_of[id(k)] = repr(k)
+            continue
+        head = k[0]
+        if head == "leaf":
+            repr_of[id(k)] = _letter(k[1])
+            continue
+        if head == "const":
+            repr_of[id(k)] = repr(k[1])
+            continue
+        if id(k) in repr_of:
+            continue
+        if expanded:
+            _op, attrs, kids = k
+            inner = ", ".join(repr_of[id(c)] for c in kids)
+            if attrs:
+                a = ",".join(f"{kk}={v}" for kk, v in attrs)
+                repr_of[id(k)] = f"{_op}[{a}]({inner})"
+            else:
+                repr_of[id(k)] = f"{_op}({inner})"
+            continue
+        stack.append((k, True))
+        stack.extend((c, False) for c in reversed(k[2]))
+    return repr_of[id(key)]
 
 
 def _letter(i: int) -> str:
@@ -265,15 +311,21 @@ def _letter(i: int) -> str:
 
 
 def _leaf_ids(key: Any, out: list | None = None) -> list:
-    """Return the placeholder indices of every leaf in a shape key."""
+    """Return the placeholder indices of every leaf in a shape key.
+
+    Iterative — key depth mirrors term depth.  Callers only test
+    set-equality of the ids, so visit order is irrelevant.
+    """
     out = [] if out is None else out
-    if not isinstance(key, tuple):
-        return out
-    if key[0] == "leaf":
-        out.append(key[1])
-    elif key[0] not in ("const",) and len(key) == 3:
-        for k in key[2]:
-            _leaf_ids(k, out)
+    stack = [key]
+    while stack:
+        k = stack.pop()
+        if not isinstance(k, tuple):
+            continue
+        if k[0] == "leaf":
+            out.append(k[1])
+        elif k[0] not in ("const",) and len(k) == 3:
+            stack.extend(k[2])
     return out
 
 

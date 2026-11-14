@@ -193,16 +193,25 @@ def _pattern_occurs(pattern: Any, term: Any) -> bool:
     The same concrete-occurrence test ``meta_arena._claim_tags``
     applies (metavar leaves bind consistently, op heads and attrs
     literally).
-    """
 
-    def walk(t: Any) -> bool:
+    Iterative ``id``-deduped walk: the answer is a boolean OR over
+    per-node match results, and a shared node's match is
+    path-invariant, so dedup cannot change it — while the recursive
+    version was both recursion-depth- and tree-expansion-bound on a
+    shared-DAG term.
+    """
+    seen: set[int] = set()
+    stack = [term]
+    while stack:
+        t = stack.pop()
+        if id(t) in seen:
+            continue
+        seen.add(id(t))
         if ma._concrete_match(pattern, t, {}):
             return True
         if isinstance(t, Op):
-            return any(walk(a) for a in t.args)
-        return False
-
-    return walk(term)
+            stack.extend(t.args)
+    return False
 
 
 def _ruleset_names(rules: Any) -> set:

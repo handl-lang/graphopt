@@ -526,28 +526,43 @@ def _nodes_with_paths(term: Any) -> list:
     """
     out: list = []
     seen: set[int] = set()
-
-    def walk(t: Any, path: tuple) -> None:
+    # Iterative preorder — identical (path, node) order to the
+    # recursive DFS, without the per-level frame cost on deep terms.
+    stack: list[tuple[Any, tuple]] = [(term, ())]
+    while stack:
+        t, path = stack.pop()
         if isinstance(t, Op):
             if id(t) in seen:
-                return
+                continue
             seen.add(id(t))
             out.append((path, t))
-            for i, a in enumerate(t.args):
-                walk(a, (*path, i))
-
-    walk(term, ())
+            stack.extend(
+                (a, (*path, i))
+                for i, a in reversed(list(enumerate(t.args)))
+            )
     return out
 
 
 def _replace(term: Any, path: tuple, new: Any) -> Any:
-    """Return *term* with the node at *path* substituted by *new*."""
+    """Return *term* with the node at *path* substituted by *new*.
+
+    Iterative bottom-up rebuild: the recursion only ever descended
+    one spine, so collecting the spine then folding ``Op.make``
+    upward produces the identical term without per-level frames.
+    """
     if not path:
         return new
-    i = path[0]
-    args = list(term.args)
-    args[i] = _replace(term.args[i], path[1:], new)
-    return Op.make(term.op, *args, **dict(term.attrs))
+    spine = [term]
+    for i in path:
+        spine.append(spine[-1].args[i])
+    acc = new
+    for node, i in zip(
+        reversed(spine[:-1]), reversed(path), strict=True
+    ):
+        args = list(node.args)
+        args[i] = acc
+        acc = Op.make(node.op, *args, **dict(node.attrs))
+    return acc
 
 
 def _parent_slot(term: Any, path: tuple) -> tuple:
@@ -633,17 +648,21 @@ def _lift_leaf(term: Any, st: CorpusStats, rng: random.Random) -> Any:
     """
     paths: list = []
     seen: set[int] = set()
-
-    def walk(t: Any, path: tuple) -> None:
+    # Iterative preorder — the same (path, leaf) order the recursive
+    # DFS produced, so ``rng.shuffle`` sees an identical list.
+    stack: list[tuple[Any, tuple]] = [(term, ())]
+    while stack:
+        t, path = stack.pop()
         if isinstance(t, Op):
-            if id(t) not in seen:
-                seen.add(id(t))
-                for i, a in enumerate(t.args):
-                    walk(a, (*path, i))
+            if id(t) in seen:
+                continue
+            seen.add(id(t))
+            stack.extend(
+                (a, (*path, i))
+                for i, a in reversed(list(enumerate(t.args)))
+            )
         elif isinstance(t, (Var, Param)):
             paths.append((path, t))
-
-    walk(term, ())
     rng.shuffle(paths)
     for path, leaf in paths:
         sh = _concrete_shape(leaf, st.shape_memo)
@@ -953,10 +972,32 @@ def _gen_table(gen: list[TermCase], stats: GenStats) -> str:
 
 
 def _depth(t: Any) -> int:
-    """Return the op-depth of *t* (leaves are 0)."""
+    """Return the op-depth of *t* (leaves are 0).
+
+    Iterative post-order with ``id``-dedup: depth is
+    occurrence-invariant on a shared DAG, so each distinct ``Op`` is
+    measured once — deep model terms cannot exhaust the recursion
+    limit here.
+    """
     if not isinstance(t, Op):
         return 0
-    return 1 + max((_depth(a) for a in t.args), default=0)
+    depth_of: dict[int, int] = {}
+    stack: list[tuple[Any, bool]] = [(t, False)]
+    while stack:
+        n, expanded = stack.pop()
+        if not isinstance(n, Op):
+            depth_of[id(n)] = 0
+            continue
+        if expanded:
+            depth_of[id(n)] = 1 + max(
+                (depth_of[id(a)] for a in n.args), default=0
+            )
+            continue
+        if id(n) in depth_of:
+            continue
+        stack.append((n, True))
+        stack.extend((a, False) for a in n.args)
+    return depth_of[id(t)]
 
 
 def _reject_table(stats: GenStats) -> str:

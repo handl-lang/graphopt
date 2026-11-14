@@ -260,13 +260,26 @@ def _eval_backend() -> Any:
 
 
 def _leaves(term: Any, out: set | None = None) -> set:
-    """Return every non-``Const`` leaf of *term*."""
+    """Return every non-``Const`` leaf of *term*.
+
+    Iterative ``id``-deduped walk: the result is a set, so revisiting
+    a shared subterm could only re-add leaves already present — the
+    dedup keeps the walk DAG-linear (the recursive version was both
+    recursion-depth- and tree-expansion-bound on shared-DAG terms)
+    without changing the answer.
+    """
     out = set() if out is None else out
-    if isinstance(term, Op):
-        for a in term.args:
-            _leaves(a, out)
-    elif isinstance(term, (Var, Param)):
-        out.add(term)
+    seen: set[int] = set()
+    stack = [term]
+    while stack:
+        t = stack.pop()
+        if id(t) in seen:
+            continue
+        seen.add(id(t))
+        if isinstance(t, Op):
+            stack.extend(t.args)
+        elif isinstance(t, (Var, Param)):
+            out.add(t)
     return out
 
 

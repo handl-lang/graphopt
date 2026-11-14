@@ -68,7 +68,9 @@ from __future__ import annotations
 import argparse
 import json
 import random
-from collections.abc import Callable
+import sys
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -103,6 +105,37 @@ _AUTO_SPEC_NODE_CAP = 512  # mined-spec op-expansion bound
 _AUTO_KEY_CAP = 20_000  # mutant shape-key/validity expansion bound
 _AUTO_MAX_CLAIMS = 16  # referee handler bound per board
 _AUTO_CLAIM_BUDGET = 2.0  # seconds per priced claim (paired window)
+
+#: Recursion headroom for deep model terms.  The hot renderers on
+#: this path are iterative now (``census.shape_key``,
+#: ``meta_arena._spec_of``/``_canon_*``, the ``play`` site
+#: collectors), but several remain recursive by necessity or by
+#: ownership — ``play._seq_deindex``/``_seq_spines``,
+#: ``mlopt_core.typing._shape_of``, the torch eval/lower/verify
+#: boundary — each consuming a few frames per IR level.  The caps
+#: admit ~``_AUTO_KEY_CAP``-deep mutants, so the guard sits well
+#: above ``depth * frames-per-level`` while the ``finally`` restore
+#: keeps the raised limit scoped to the probe call (the
+#: ``workload_gen._MAX_NODES`` monkey-patch-restore pattern).
+_RECURSION_LIMIT = 200_000
+
+
+@contextmanager
+def _recursion_guard() -> Iterator[None]:
+    """Raise ``sys.setrecursionlimit`` for the duration of a probe.
+
+    Deep shared-DAG terms (``_AUTO_KEY_CAP`` admits ~20k-depth
+    mutants) overflow the default 1000-frame limit in the recursive
+    walkers that remain — a ``RecursionError``, not an honest
+    decline.  The previous limit is always restored in ``finally``.
+    """
+    prev = sys.getrecursionlimit()
+    if prev < _RECURSION_LIMIT:
+        sys.setrecursionlimit(_RECURSION_LIMIT)
+    try:
+        yield
+    finally:
+        sys.setrecursionlimit(prev)
 
 
 # ---------------------------------------------------------------------------
@@ -245,31 +278,38 @@ def coverage_report(
         shape_repr,
     )
 
-    base_ct = _as_corpus(corpus)
-    base_op, _ = op_tuple_census(base_ct)
-    base_sh, _, base_skipped = _bounded_shape_counts(
-        base_ct, shape_key_cap
-    )
-    mine = [CorpusTerm("model", model_tc.name, model_tc.term)]
-    my_op, _ = op_tuple_census(mine)
-    my_sh, _, my_skipped = _bounded_shape_counts(mine, shape_key_cap)
-    novel_tuples = sorted(k for k in my_op if k not in base_op)
-    novel_shapes = sorted(k for k in my_sh if k not in base_sh)
-    return {
-        "n_model_terms": 1,
-        "model_op_tuples": len(my_op),
-        "model_shapes": len(my_sh),
-        "corpus_terms": len(corpus),
-        "shape_key_cap": shape_key_cap,
-        "n_shape_subterms_skipped": my_skipped + base_skipped,
-        "novel_op_tuples": [
-            {"op": k[0], "children": list(k[1]), "count": my_op[k]}
-            for k in novel_tuples
-        ],
-        "n_novel_op_tuples": len(novel_tuples),
-        "novel_shapes": [shape_repr(k) for k in novel_shapes],
-        "n_novel_shapes": len(novel_shapes),
-    }
+    with _recursion_guard():
+        base_ct = _as_corpus(corpus)
+        base_op, _ = op_tuple_census(base_ct)
+        base_sh, _, base_skipped = _bounded_shape_counts(
+            base_ct, shape_key_cap
+        )
+        mine = [CorpusTerm("model", model_tc.name, model_tc.term)]
+        my_op, _ = op_tuple_census(mine)
+        my_sh, _, my_skipped = _bounded_shape_counts(
+            mine, shape_key_cap
+        )
+        novel_tuples = sorted(k for k in my_op if k not in base_op)
+        novel_shapes = sorted(k for k in my_sh if k not in base_sh)
+        return {
+            "n_model_terms": 1,
+            "model_op_tuples": len(my_op),
+            "model_shapes": len(my_sh),
+            "corpus_terms": len(corpus),
+            "shape_key_cap": shape_key_cap,
+            "n_shape_subterms_skipped": my_skipped + base_skipped,
+            "novel_op_tuples": [
+                {
+                    "op": k[0],
+                    "children": list(k[1]),
+                    "count": my_op[k],
+                }
+                for k in novel_tuples
+            ],
+            "n_novel_op_tuples": len(novel_tuples),
+            "novel_shapes": [shape_repr(k) for k in novel_shapes],
+            "n_novel_shapes": len(novel_shapes),
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -316,9 +356,13 @@ def generate_mutants(
     supported = (
         TorchSink().supported_ops if supported is None else supported
     )
-    st = wg.corpus_stats(
-        [*_as_corpus(corpus), model_tc], key_cap=key_cap
-    )
+    # corpus_stats types every corpus+model subterm through
+    # ``_shape_of`` (recursive, eqsat-owned) — deep model terms need
+    # the guard here too, before the generation loop's own scope.
+    with _recursion_guard():
+        st = wg.corpus_stats(
+            [*_as_corpus(corpus), model_tc], key_cap=key_cap
+        )
     rng = random.Random(seed)
     seen: set = set()
     out: list[TermCase] = []
@@ -328,43 +372,44 @@ def generate_mutants(
     if max_nodes is not None:
         wg._MAX_NODES = max_nodes
     try:
-        for _ in range(max_attempts):
-            if len(out) >= n:
-                break
-            stats["attempted"] += 1
-            cand = wg.mutant_term(model_tc, st, rng)
-            if cand is None:
-                stats["rejected"]["mint"] = (
-                    stats["rejected"].get("mint", 0) + 1
+        with _recursion_guard():
+            for _ in range(max_attempts):
+                if len(out) >= n:
+                    break
+                stats["attempted"] += 1
+                cand = wg.mutant_term(model_tc, st, rng)
+                if cand is None:
+                    stats["rejected"]["mint"] = (
+                        stats["rejected"].get("mint", 0) + 1
+                    )
+                    continue
+                if (
+                    key_cap is not None
+                    and term_expansion(cand, key_cap) > key_cap
+                ):
+                    stats["rejected"]["expansion"] = (
+                        stats["rejected"].get("expansion", 0) + 1
+                    )
+                    continue
+                env = wg.valid_term(
+                    cand, st, seen, supported, key_cap=key_cap
                 )
-                continue
-            if (
-                key_cap is not None
-                and term_expansion(cand, key_cap) > key_cap
-            ):
-                stats["rejected"]["expansion"] = (
-                    stats["rejected"].get("expansion", 0) + 1
+                if env is None:
+                    stats["rejected"]["gate"] = (
+                        stats["rejected"].get("gate", 0) + 1
+                    )
+                    continue
+                c = wg.term_to_case(
+                    cand, f"gen-model:{len(out)}", "gen-model", env
                 )
-                continue
-            env = wg.valid_term(
-                cand, st, seen, supported, key_cap=key_cap
-            )
-            if env is None:
-                stats["rejected"]["gate"] = (
-                    stats["rejected"].get("gate", 0) + 1
-                )
-                continue
-            c = wg.term_to_case(
-                cand, f"gen-model:{len(out)}", "gen-model", env
-            )
-            if c is None:
-                stats["rejected"]["case"] = (
-                    stats["rejected"].get("case", 0) + 1
-                )
-                continue
-            seen.add(shape_key(cand))
-            out.append(c)
-            stats["accepted"] += 1
+                if c is None:
+                    stats["rejected"]["case"] = (
+                        stats["rejected"].get("case", 0) + 1
+                    )
+                    continue
+                seen.add(shape_key(cand))
+                out.append(c)
+                stats["accepted"] += 1
     finally:
         wg._MAX_NODES = prev_cap
     return out, stats
@@ -408,17 +453,18 @@ def _case_tail(
     """
     from mlopt_discovery import play
 
-    return play._case_tail(
-        ir,
-        leaves,
-        feed,
-        model,
-        label,
-        label,
-        gen_reps=gen_reps,
-        referee=referee,
-        spec_node_cap=spec_node_cap,
-    )
+    with _recursion_guard():
+        return play._case_tail(
+            ir,
+            leaves,
+            feed,
+            model,
+            label,
+            label,
+            gen_reps=gen_reps,
+            referee=referee,
+            spec_node_cap=spec_node_cap,
+        )
 
 
 def model_board(
@@ -558,7 +604,7 @@ def _probe_knobs(
     }
 
 
-def model_corpus(
+def _model_corpus(
     name: str,
     model: Any,
     feed: Any,
@@ -714,6 +760,53 @@ def model_corpus(
         "rows": rows,
         "verdicts": verdicts,
     }
+
+
+def model_corpus(
+    name: str,
+    model: Any,
+    feed: Any,
+    *,
+    n_mutants: int = 8,
+    seed: int = 0,
+    corpus: list | None = None,
+    dtype: str = "fp64",
+    reps: int = 50,
+    gen_reps: int = 20,
+    probe: bool = True,
+    mutant_headroom: int = 60,
+    spec_node_cap: int | None = None,
+    key_cap: int | None = None,
+    max_claims: int | None = None,
+    claim_time_budget: float | None = None,
+) -> dict:
+    """Run the per-model corpus pipeline; return the report.
+
+    Public entry point — every knob and behaviour is
+    :func:`_model_corpus`'s (see its docstring); the wrapper exists
+    to scope :func:`_recursion_guard` around the whole pipeline so
+    deep model terms cannot exhaust the recursion limit in the
+    recursive walkers that remain (``_seq_deindex``/``_seq_spines``,
+    ``mlopt_core.typing._shape_of``, the torch eval/lower boundary).
+    """
+    with _recursion_guard():
+        return _model_corpus(
+            name,
+            model,
+            feed,
+            n_mutants=n_mutants,
+            seed=seed,
+            corpus=corpus,
+            dtype=dtype,
+            reps=reps,
+            gen_reps=gen_reps,
+            probe=probe,
+            mutant_headroom=mutant_headroom,
+            spec_node_cap=spec_node_cap,
+            key_cap=key_cap,
+            max_claims=max_claims,
+            claim_time_budget=claim_time_budget,
+        )
 
 
 def _model_dtype(model: Any) -> str:

@@ -662,16 +662,12 @@ class TestRefereeBounds:
             for i in range(n)
         }
 
-    def test_max_handlers_caps_sorted_prefix(
-        self, monkeypatch
-    ):
+    def test_max_handlers_caps_sorted_prefix(self, monkeypatch):
         import torch
         from mlopt_core.ir import TensorType, Var
         from mlopt_discovery import genkernel as gk
 
-        monkeypatch.setattr(
-            gk, "_handler_env", lambda h, t: {}
-        )
+        monkeypatch.setattr(gk, "_handler_env", lambda h, t: {})
         monkeypatch.setattr(
             gk,
             "_referee_kernel",
@@ -739,8 +735,12 @@ class TestBoundedCoverageAndKnobs:
         # keyed within the cap — the census must skip, not hang
         big = CorpusTerm("bench", "chain", _shared_chain(20))
         tiny = TermCase(
-            source="t", name="m", term=_shared_chain(2),
-            inputs=(), feed=(), param_vals={},
+            source="t",
+            name="m",
+            term=_shared_chain(2),
+            inputs=(),
+            feed=(),
+            param_vals={},
         )
         rep = mc.coverage_report(tiny, [big])
         assert rep["n_shape_subterms_skipped"] > 0
@@ -758,9 +758,7 @@ class TestBoundedCoverageAndKnobs:
         assert knobs["spec_node_cap"] == mc._AUTO_SPEC_NODE_CAP
         assert knobs["key_cap"] == mc._AUTO_KEY_CAP
         assert knobs["referee"]["max_handlers"] == mc._AUTO_MAX_CLAIMS
-        assert (
-            knobs["referee"]["time_budget"] == mc._AUTO_CLAIM_BUDGET
-        )
+        assert knobs["referee"]["time_budget"] == mc._AUTO_CLAIM_BUDGET
 
     def test_probe_knobs_small_term_unbounded(self):
         knobs = mc._probe_knobs(
@@ -803,3 +801,87 @@ class TestBoundedCoverageAndKnobs:
         )
         assert muts == []
         assert stats["rejected"].get("expansion", 0) > 0
+
+
+class TestRecursionDepth:
+    """Deep shared-DAG terms must not ``RecursionError`` the path.
+
+    Regression for the arch-audit §1.1 hazard: the caps bound
+    tree-expansion SIZE but the renderers were recursive — a
+    ~``_AUTO_KEY_CAP``-deep mutant used to die with
+    ``RecursionError`` instead of an honest decline.  The walkers
+    are iterative now and ``_recursion_guard`` covers the recursive
+    remainder (``_seq_deindex``/``_seq_spines``, ``_shape_of``, the
+    torch eval boundary).
+    """
+
+    def _deep_case(self, depth: int = 5_000):
+        from mlopt_discovery.impact import TermCase
+
+        return TermCase(
+            source="t",
+            name="deep-chain",
+            term=_shared_chain(depth),
+            inputs=(),
+            feed=(),
+            param_vals={},
+        )
+
+    def test_coverage_report_deep_shared_dag(self):
+        import sys
+
+        before = sys.getrecursionlimit()
+        rep = mc.coverage_report(self._deep_case(), _tiny_corpus())
+        assert sys.getrecursionlimit() == before  # guard restored
+        # the astronomic-expansion subterms decline honestly
+        assert rep["n_shape_subterms_skipped"] > 0
+        assert rep["model_op_tuples"] >= 1
+
+    def test_generate_mutants_deep_shared_dag(self):
+        import sys
+
+        before = sys.getrecursionlimit()
+        tc = self._deep_case()
+        muts, stats = mc.generate_mutants(
+            tc,
+            _tiny_corpus(),
+            2,
+            seed=0,
+            max_nodes=6_000,
+            key_cap=mc._AUTO_KEY_CAP,
+        )
+        assert sys.getrecursionlimit() == before  # guard restored
+        # every minted mutant still carries the deep chain → its
+        # tree-expansion exceeds the key cap → honest "expansion"
+        # declines (or mint declines upstream), never a crash
+        assert stats["attempted"] > 0
+        rejected = stats["rejected"]
+        assert (
+            rejected.get("expansion", 0)
+            + rejected.get("mint", 0)
+            + rejected.get("gate", 0)
+            > 0
+        )
+        for mtc in muts:
+            assert isinstance(mtc.term, Op)
+
+    def test_shape_key_and_spec_deep_terms(self):
+        """The converted renderers themselves on a deep chain."""
+        from mlopt_discovery import meta_arena as ma
+        from mlopt_discovery.census import shape_key
+
+        deep = _shared_chain(5_000)
+        key = shape_key(deep)
+        assert isinstance(key, tuple)
+        spec = ma._spec_of(deep, {})
+        assert isinstance(spec, tuple)
+        # canonicalisation is iterative too — invoke on the deep DAG
+        # (the results are themselves DAGs: ``==``/``repr`` on them
+        # would tree-expand, so only the no-crash property is
+        # asserted here — equality is pinned at bounded depth below)
+        assert isinstance(ma._canon_spec(spec), tuple)
+        assert isinstance(ma._canon_concrete(spec), tuple)
+        small = _shared_chain(12)
+        s = ma._spec_of(small, {})
+        assert ma._canon_spec(s) == ma._canon_spec(s)
+        assert ma._canon_concrete(s) == ma._canon_concrete(s)

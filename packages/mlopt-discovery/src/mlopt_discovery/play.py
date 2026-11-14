@@ -616,35 +616,75 @@ def _fusion_pattern_sz(
     OBJECT is shared — only its tree-size is counted per
     occurrence); ``names`` keeps metavar naming consistent across
     the whole site, exactly as before.
+
+    Iterative post-order: the spelled-tree *size* accounting is
+    unchanged (still per-occurrence, still capped), but each
+    distinct node is visited once — ``id``-dedup — so a deep or
+    shared-DAG term cannot exhaust the recursion limit.  Children
+    are pushed reversed so leaves are still named left-to-right in
+    the recursive render's order, and the per-arg size accumulation
+    at expansion runs in arg order, preserving the exact cap
+    early-exit points.
     """
     from mlopt_core.ir import Const
 
     from mlopt_discovery import genkernel as gk
 
-    if isinstance(t, Op) and t.op in gk.ELEMENTWISE:
-        hit = memo.get(id(t))
-        if hit is not None:
-            return hit
-        kids: list = []
-        size = 1
-        for a in t.args:
-            k, ks = _fusion_pattern_sz(a, names, memo, cap)
-            if k is None:
-                return None, (cap + 1 if cap is not None else ks)
-            kids.append(k)
-            size += ks
-            if cap is not None and size > cap:
-                return None, cap + 1
-        if t.attrs:
-            kids.append(dict(t.attrs))
-            size += 1
-        pat = (t.op, *kids)
-        out = (pat, size if cap is None else min(size, cap + 1))
-        memo[id(t)] = out
-        return out
-    if isinstance(t, Const):
-        return t.value, 1
-    return _leaf_name(t, names), 1
+    def _leaf(n: Any) -> tuple:
+        if isinstance(n, Const):
+            return n.value, 1
+        return _leaf_name(n, names), 1
+
+    if not (isinstance(t, Op) and t.op in gk.ELEMENTWISE):
+        return _leaf(t)
+
+    result: dict[int, tuple] = {}
+    done: set[int] = set()
+    stack: list[tuple[Any, bool]] = [(t, False)]
+    while stack:
+        n, expanded = stack.pop()
+        if expanded:
+            hit = memo.get(id(n))
+            if hit is not None:
+                result[id(n)] = hit
+                continue
+            kids: list = []
+            size = 1
+            failed = False
+            ks = 0
+            for a in n.args:
+                k, ks = result[id(a)]
+                if k is None:
+                    failed = True
+                    break
+                kids.append(k)
+                size += ks
+                if cap is not None and size > cap:
+                    failed = True
+                    break
+            if failed:
+                result[id(n)] = (
+                    None,
+                    cap + 1 if cap is not None else ks,
+                )
+                continue
+            if n.attrs:
+                kids.append(dict(n.attrs))
+                size += 1
+            pat = (n.op, *kids)
+            out = (pat, size if cap is None else min(size, cap + 1))
+            memo[id(n)] = out
+            result[id(n)] = out
+            continue
+        if id(n) in done:
+            continue
+        done.add(id(n))
+        if isinstance(n, Op) and n.op in gk.ELEMENTWISE:
+            stack.append((n, True))
+            stack.extend((a, False) for a in reversed(n.args))
+        else:
+            result[id(n)] = _leaf(n)
+    return result[id(t)]
 
 
 def _fusion_pattern(t: Any, names: dict) -> Any:
@@ -677,15 +717,18 @@ def _fusion_sites(term: Any, *, spec_cap: int | None = None) -> list:
 
     out: list = []
     seen: set[int] = set()
-
-    def walk(t: Any) -> None:
-        # id-dedup: a shared subterm yields the same spec at every
-        # occurrence — visiting it once keeps the collector
-        # DAG-linear instead of tree-exponential, and the minted
-        # handler table is identical either way (the tier mints
-        # dedup on canon pattern).
+    # Iterative preorder — the same visit order the recursive DFS
+    # produced (site order feeds the minted handler table), without
+    # per-level frames on deep terms.  id-dedup: a shared subterm
+    # yields the same spec at every occurrence — visiting it once
+    # keeps the collector DAG-linear instead of tree-exponential,
+    # and the minted handler table is identical either way (the
+    # tier mints dedup on canon pattern).
+    stack = [term]
+    while stack:
+        t = stack.pop()
         if id(t) in seen:
-            return
+            continue
         seen.add(id(t))
         if isinstance(t, Op) and t.op in gk.ELEMENTWISE:
             pat, size = _fusion_pattern_sz(t, {}, {}, spec_cap)
@@ -696,10 +739,7 @@ def _fusion_sites(term: Any, *, spec_cap: int | None = None) -> list:
                 if len(ops) >= 2:
                     out.append(pat)
         if isinstance(t, Op):
-            for a in t.args:
-                walk(a)
-
-    walk(term)
+            stack.extend(reversed(t.args))
     return out
 
 
@@ -758,10 +798,13 @@ def _reduction_sites(term: Any, *, spec_cap: int | None = None) -> list:
     heads = gk.reduce_heads()
     out: list = []
     seen: set[int] = set()
-
-    def walk(t: Any) -> None:
+    # Iterative preorder — identical site order to the recursive
+    # DFS, id-deduped for DAG-linear traversal (see _fusion_sites).
+    stack = [term]
+    while stack:
+        t = stack.pop()
         if id(t) in seen:
-            return
+            continue
         seen.add(id(t))
         if isinstance(t, Op) and t.op in heads:
             spec, size = _reduction_pattern(t, {}, cap=spec_cap)
@@ -772,10 +815,7 @@ def _reduction_sites(term: Any, *, spec_cap: int | None = None) -> list:
             ):
                 out.append(spec)
         if isinstance(t, Op):
-            for a in t.args:
-                walk(a)
-
-    walk(term)
+            stack.extend(reversed(t.args))
     return out
 
 
@@ -790,10 +830,13 @@ def _decayed_sites(term: Any) -> list:
     """
     out: list = []
     seen: set[int] = set()
-
-    def walk(t: Any) -> None:
+    # Iterative preorder — identical site order to the recursive
+    # DFS, id-deduped for DAG-linear traversal (see _fusion_sites).
+    stack = [term]
+    while stack:
+        t = stack.pop()
         if id(t) in seen:
-            return
+            continue
         seen.add(id(t))
         if isinstance(t, Op):
             if t.op == "om_decayed":
@@ -804,10 +847,7 @@ def _decayed_sites(term: Any) -> list:
                 and t.args[0].op == "mul"
             ):
                 out.append(("matmul", ("mul", "S", "D"), "V"))
-            for a in t.args:
-                walk(a)
-
-    walk(term)
+            stack.extend(reversed(t.args))
     return out
 
 
@@ -866,17 +906,20 @@ def _scan_sites(term: Any) -> list:
     cls_memo: dict = {}
     seen_raw: set = set()
 
-    def _mark(t: Any) -> None:
+    # Iterative preorder — the same first-seen-per-class order the
+    # recursive DFS produced (``raw_by_class`` keeps the FIRST
+    # subterm per class, so visit order is semantic), without
+    # per-level frames on deep terms.
+    stack = [term]
+    while stack:
+        t = stack.pop()
         if not isinstance(t, Op) or id(t) in seen_raw:
-            return
+            continue
         seen_raw.add(id(t))
         cid = eg._class_of_term(t, cls_memo)
         if cid is not None and cid not in raw_by_class:
             raw_by_class[cid] = t
-        for a in t.args:
-            _mark(a)
-
-    _mark(term)
+        stack.extend(reversed(t.args))
     out: list = []
     carrier_ops = ("aff_diag", "affd_compose")
     for cls in eg._classes.values():
@@ -923,15 +966,21 @@ def _spec_leaf_env(term: Any, names: dict) -> dict:
     scalar leaf like a ``pow`` exponent).
     """
     env: dict = {}
-
-    def walk(t: Any) -> None:
+    # Iterative id-deduped walk: the env maps each metavar name to
+    # its leaf — revisiting a shared leaf rewrites the same key with
+    # the same value, so dedup cannot change the result and keeps
+    # the walk DAG-linear on deep/shared terms.
+    seen: set[int] = set()
+    stack = [term]
+    while stack:
+        t = stack.pop()
+        if id(t) in seen:
+            continue
+        seen.add(id(t))
         if isinstance(t, Op):
-            for a in t.args:
-                walk(a)
+            stack.extend(t.args)
         elif not isinstance(t, Const):
             env[names[repr(t)]] = t
-
-    walk(term)
     return env
 
 
@@ -2381,17 +2430,20 @@ def _seq_scan_sites(
     cands: list = []
     seen_nodes: set = set()
 
-    def visit(t: Any) -> None:
+    # Iterative preorder — the same visit order the recursive DFS
+    # produced (``cands`` order feeds site emission), id-deduped,
+    # without per-level frames on deep terms.
+    stack = [term]
+    while stack:
+        t = stack.pop()
         if not isinstance(t, Op) or id(t) in seen_nodes:
-            return
+            continue
         seen_nodes.add(id(t))
         for steps, base in _seq_spines(t, memo):
             if len(steps) >= 2:
                 cands.append((t, steps, base))
-        for a in t.args:
-            visit(a)
+        stack.extend(reversed(t.args))
 
-    visit(term)
     out: list = []
     emitted_roots: set = set()
     emitted_states: set = set()
@@ -2463,15 +2515,18 @@ def _seq_scan_sites(
 
 
 def _spec_has_meta(spec: Any, meta: str) -> bool:
-    """Whether *meta* occurs as a leaf of spec *spec*."""
-    if spec == meta:
-        return True
-    if isinstance(spec, (tuple, list)):
-        return any(
-            _spec_has_meta(e, meta)
-            for e in spec[1:]
-            if not isinstance(e, dict)
-        )
+    """Whether *meta* occurs as a leaf of spec *spec*.
+
+    Iterative walk — spec trees mirror term depth, so the recursive
+    version shared the model term's recursion-depth exposure.
+    """
+    stack = [spec]
+    while stack:
+        s = stack.pop()
+        if s == meta:
+            return True
+        if isinstance(s, (tuple, list)):
+            stack.extend(e for e in s[1:] if not isinstance(e, dict))
     return False
 
 
@@ -2597,17 +2652,19 @@ def _seqm_scan_sites(
     cands: list = []
     seen_nodes: set = set()
 
-    def visit(t: Any) -> None:
+    # Iterative preorder — identical visit order to the recursive
+    # DFS (see ``_seq_scan_sites``), id-deduped.
+    stack = [term]
+    while stack:
+        t = stack.pop()
         if not isinstance(t, Op) or id(t) in seen_nodes:
-            return
+            continue
         seen_nodes.add(id(t))
         for steps, base in _seq_spines(t, memo):
             if len(steps) >= 2:
                 cands.append((t, steps, base))
-        for a in t.args:
-            visit(a)
+        stack.extend(reversed(t.args))
 
-    visit(term)
     out: list = []
     emitted_roots: set = set()
     emitted_states: set = set()
@@ -2684,19 +2741,32 @@ def _cumsum_sites(
     out: list = []
     seen: set = set()
 
-    def visit(t: Any) -> None:
-        if not isinstance(t, Op) or id(t) in seen:
-            return
-        seen.add(id(t))
-        for a in t.args:
-            visit(a)
+    # Iterative post-order — the recursive visit processed children
+    # before the node itself, so sites append in post-order; the
+    # (node, expanded) stack preserves that order exactly, id-
+    # deduped, without per-level frames on deep terms.
+    stack: list[tuple[Any, bool]] = [(term, False)]
+    while stack:
+        t, expanded = stack.pop()
+        if not isinstance(t, Op):
+            continue
+        if expanded:
+            if id(t) in seen:
+                continue
+            seen.add(id(t))
+        else:
+            if id(t) in seen:
+                continue
+            stack.append((t, True))
+            stack.extend((a, False) for a in reversed(t.args))
+            continue
         if (
             t.op not in ("cumsum", "cumprod")
             or len(t.args) != 1
             or set(t.attrs) - {"dim"}
             or type(t.attrs.get("dim")) is not int
         ):
-            return
+            continue
         child = t.args[0]
         if (
             spec_cap is not None
@@ -2706,10 +2776,10 @@ def _cumsum_sites(
                 stats["cumsum_sites_over_cap"] = (
                     stats.get("cumsum_sites_over_cap", 0) + 1
                 )
-            return
+            continue
         sh = shape_of(child)
         if sh is INVALID or not isinstance(sh, tuple) or not sh:
-            return
+            continue
         eff = t.attrs["dim"] % len(sh)
         if t.op == "cumsum":
             a_spec, b_spec, carry = 1, "X1", 0.0
@@ -2730,7 +2800,6 @@ def _cumsum_sites(
             }
         )
 
-    visit(term)
     return out[:_SEQ_SITE_CAP]
 
 
@@ -2804,12 +2873,19 @@ def _mint_tiers(
 
 
 def _flat_ops(spec: Any):
-    """Yield op names inside a fusion pattern tuple."""
-    if isinstance(spec, (tuple, list)) and spec:
-        yield spec[0]
-        for e in spec[1:]:
-            if not isinstance(e, dict):
-                yield from _flat_ops(e)
+    """Yield op names inside a fusion pattern tuple.
+
+    Iterative — spec trees mirror term depth; same yield order as
+    the recursive render (head first, then children left-to-right).
+    """
+    stack = [spec]
+    while stack:
+        s = stack.pop()
+        if isinstance(s, (tuple, list)) and s:
+            yield s[0]
+            stack.extend(
+                e for e in reversed(s[1:]) if not isinstance(e, dict)
+            )
 
 
 def _gen_cases(
