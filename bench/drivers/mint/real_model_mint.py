@@ -1046,6 +1046,61 @@ def _resume_pool(
     return candidates, rules_to_judge, admitted, stats
 
 
+def _seat_prim_denotations(rules: list) -> int:
+    """Seat minted ``synop*`` torch denotations for judge-time eval.
+
+    ``prim_pool`` binds each minted op on the ambient
+    ``_IR_TO_TORCH`` table as a *mint-time side effect*; a ``--resume``
+    process never re-runs the mint, so the rules rebuilt from their
+    ``law`` records arrive with ``synop*`` RHS ops unbound and the
+    oracle ``rerr``'d every env (realcorpus_mint_r2 — all 24 prim
+    folds refused ``rhs_err`` on every measured env).  The denotation
+    is recoverable from the rule alone: ``expand_synops(rule.lhs)``
+    re-expands the shipped ``synop*`` nodes a depth-N fold's skeleton
+    spells through to the manual ``xpat`` the mint bound (depth-1
+    skeletons are already manual), and
+    ``prim_mint.register_denotation`` seats the same binding the mint
+    installed.  Fresh runs re-seat byte-identical bindings — the
+    ``name in _IR_TO_TORCH`` check skips them.  Returns the count of
+    newly-seated ops.
+    """
+    import mlopt_torch.torch_bridge as tb
+    from mlopt_core.ir import Op, op_def
+    from mlopt_discovery import prim_mint as pm
+    from mlopt_discovery import shipped_primitives as sp
+
+    # Shipped synops first: a depth-N fold's LHS skeleton spells
+    # through them (the oracle evals instantiated LHS terms too), and
+    # ``sp.register`` is idempotent.
+    sp.register()
+    shipped = pm.core_shipped()
+    seated = 0
+    for _rid, rule in rules:
+        rhs = getattr(rule, "rhs", None)
+        name = getattr(rhs, "op", None)
+        if (
+            not isinstance(rhs, Op)
+            or name is None
+            or pm.synop_depth(name) == 0
+            or name in tb._IR_TO_TORCH
+        ):
+            continue
+        denotation = pm.expand_synops(rule.lhs, shipped)
+        pm.register_denotation(name, rhs, denotation, tb._IR_TO_TORCH)
+        op_def(
+            name,
+            len(rhs.args),
+            1,
+            law=(
+                "synthesized primitive — denotation re-seated at "
+                "judge time (the resume path); the minted manual "
+                "subgraph"
+            ),
+        )
+        seated += 1
+    return seated
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument(
@@ -1584,6 +1639,26 @@ def main(argv: list[str] | None = None) -> int:
         "probe": [n for n in env],
         "referee": args.referee,
     }
+
+    # -- seat minted prim denotations ----------------------------------
+    # ``prim_pool`` binds each minted ``synop*`` op on the ambient
+    # ``_IR_TO_TORCH`` table as a mint-time side effect; a ``--resume``
+    # process never re-runs the mint, so the rebuilt rules' ``synop*``
+    # RHS ops arrive unbound and the oracle ``rerr``'d every env (r2 —
+    # all 24 prim folds).  Re-seat from the rules themselves before
+    # any gauntlet eval; idempotent on fresh runs.
+    n_prim_seated = _seat_prim_denotations(
+        [
+            *rules_to_judge,
+            *[(rid, rule) for rid, rule, _adm in resumed_admitted],
+        ]
+    )
+    if n_prim_seated:
+        report["prim_denotations_seated"] = n_prim_seated
+        print(
+            f"[mint] seated {n_prim_seated} prim synop denotation(s)",
+            flush=True,
+        )
 
     # -- admit -----------------------------------------------------------
     import bench.drivers.overnight as ov
