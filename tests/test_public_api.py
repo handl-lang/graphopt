@@ -446,7 +446,11 @@ class TestSignaturePins:
         from mlopt_torch import TorchCompileRunner
 
         cuda_params = inspect.signature(CudaGraphRunner).parameters
-        assert list(cuda_params) == ["multi_device", "alias_inputs"]
+        assert list(cuda_params) == [
+            "multi_device",
+            "alias_inputs",
+            "mutable_inputs",
+        ]
         assert (
             cuda_params["multi_device"].kind
             is inspect.Parameter.KEYWORD_ONLY
@@ -457,6 +461,11 @@ class TestSignaturePins:
             is inspect.Parameter.KEYWORD_ONLY
         )
         assert cuda_params["alias_inputs"].default is None
+        assert (
+            cuda_params["mutable_inputs"].kind
+            is inspect.Parameter.KEYWORD_ONLY
+        )
+        assert cuda_params["mutable_inputs"].default is None
         assert not inspect.signature(IdentityRunner).parameters
         chained = inspect.signature(ChainedRunner).parameters
         assert list(chained) == ["runners"]

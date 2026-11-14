@@ -722,6 +722,40 @@ def test_cuda_graph_alias_mutated_input_auto_demoted():
 
 
 @pytest.mark.requires_cuda
+def test_cuda_graph_alias_mutable_input_keeps_write_back():
+    """``mutable_inputs`` exempts a position from the version-counter
+    demotion: the caller-owned write-back case (in-graph K/V-cache
+    update).  The aliased slot stays bound AND replay writes the
+    caller's live buffer — the recorded mutation IS the contract."""
+    torch.manual_seed(0)
+    mod = _AddInPlace().eval()
+    x0 = torch.randn(4, device="cuda")
+    w0 = torch.randn(4, device="cuda")
+    wrapped = CudaGraphRunner(
+        alias_inputs=True, mutable_inputs={0}
+    ).apply(mod, (x0, w0), {})
+    # pos 0 mutated-but-declared-mutable: stays aliased; pos 1
+    # read-only: aliased as before.
+    assert wrapped._alias == (True, True)
+    assert wrapped._graph_ins[0] is x0
+    # the capture's record call already wrote w0 into x0 once —
+    # replay must write AGAIN into the same caller-owned storage.
+    before = x0.clone()
+    with torch.no_grad():
+        got = wrapped(x0, w0)
+    assert got is wrapped._graph_out
+    # x0 now holds before + w0 — the in-place write-back landed on
+    # the caller's live buffer, and the replay output IS that buffer.
+    assert torch.allclose(x0, before + w0)
+    assert torch.allclose(got, before + w0)
+    # a non-mutable mutated position still demotes (guard unchanged)
+    wrapped2 = CudaGraphRunner(alias_inputs=True).apply(
+        mod, (x0.clone(), w0.clone()), {}
+    )
+    assert wrapped2._alias == (False, True)
+
+
+@pytest.mark.requires_cuda
 def test_cuda_graph_alias_mismatch_whole_call_eager():
     """One aliased position mismatching sinks the WHOLE call to
     eager — there is no per-position partial replay."""

@@ -66,9 +66,15 @@ mismatched tensor falls back to the wrapped module's eager forward
 (never a stale read, never a write into a captured tensor).  Inputs
 the recorded graph mutates in place are detected via the tensor
 version counter during capture and demoted to the copy path
-automatically.  ``multi_device=True`` composes: the lazy per-device
-capture binds whichever tensors the FIRST matching call passes —
-for a decode loop that is exactly the persistent buffers.
+automatically — UNLESS the position is also named by
+``mutable_inputs`` (same spec shapes), the explicit opt-in for
+caller-owned write-back buffers: the in-graph KV-cache update of
+``docs/reports/fusion_floor_probe.md`` §6.1(a), where the recorded
+``index_copy_`` slot write IS the semantics and demoting it would
+silently break the caller's cache.  ``multi_device=True`` composes:
+the lazy per-device capture binds whichever tensors the FIRST
+matching call passes — for a decode loop that is exactly the
+persistent buffers.
 """
 
 from __future__ import annotations
@@ -204,6 +210,7 @@ class _GraphReplayModule(torch.nn.Module):
         xs: tuple[torch.Tensor, ...],
         warmup: int = 3,
         alias: AliasPredicate | None = None,
+        mutable: AliasPredicate | None = None,
     ) -> Self:
         """Record ``module(*xs)`` into a CUDA graph; return the wrapper.
 
@@ -224,7 +231,10 @@ class _GraphReplayModule(torch.nn.Module):
           position whose tensor ``_version`` bumps during recording —
           i.e. the graph writes that input in place — is demoted to
           the copy path and the graph re-recorded (bounded: each
-          pass demotes at least one position);
+          pass demotes at least one position) — UNLESS the position
+          is named by ``mutable``: the caller-owned write-back case
+          (in-graph K/V-cache update), where the recorded mutation
+          IS the contract and demotion would silently break it;
         * replay re-verifies the storage binding per aliased
           position (:func:`_alias_bound`) and falls back to the
           wrapped module's eager forward on any mismatch.
@@ -261,8 +271,16 @@ class _GraphReplayModule(torch.nn.Module):
             # input's storage in place — replay would write into the
             # caller's live buffer.  Demote to the copy path and
             # re-record; each pass shrinks the alias set, so this
-            # terminates after at most ``n`` re-records.
-            bad = [i for i, v in vers.items() if xs[i]._version != v]
+            # terminates after at most ``n`` re-records.  Positions
+            # named by ``mutable`` are exempt: the caller declared
+            # them write-back buffers (the in-graph KV-cache update),
+            # so the recorded mutation is the intended semantics.
+            bad = [
+                i
+                for i, v in vers.items()
+                if xs[i]._version != v
+                and not (mutable is not None and mutable(i, xs[i]))
+            ]
             if not bad:
                 break
             for i in bad:
@@ -368,7 +386,9 @@ class _DeviceGraphModule(torch.nn.Module):
     lazy capture: the FIRST call matching a key binds the flagged
     positions' storages, and later calls must pass the same binding
     (``_alias_bound``) or that entry serves eager — see
-    ``docs/reports/alias_aware_capture.md``.
+    ``docs/reports/alias_aware_capture.md``.  ``mutable`` forwards
+    ``mutable_inputs`` the same way — write-back positions exempt
+    from the version-counter demotion (the in-graph K/V-cache update).
     """
 
     def __init__(
@@ -376,11 +396,13 @@ class _DeviceGraphModule(torch.nn.Module):
         inner: torch.nn.Module,
         warmup: int = 3,
         alias: AliasPredicate | None = None,
+        mutable: AliasPredicate | None = None,
     ) -> None:
         super().__init__()
         self.inner = inner
         self._warmup = warmup
         self._alias = alias
+        self._mutable = mutable
         self._graphs: dict[tuple, _GraphReplayModule] = {}
         self._snapshots: dict[tuple, tuple] = {}
         self._eager_keys: set[tuple] = set()
@@ -409,6 +431,7 @@ class _DeviceGraphModule(torch.nn.Module):
                     xs,
                     warmup=self._warmup,
                     alias=self._alias,
+                    mutable=self._mutable,
                 )
         except Exception as exc:  # pragma: no cover — CUDA-only
             self.capture_failures[key] = _capture_failure_class(exc)
@@ -477,6 +500,7 @@ def _capture_generic(
     xs: tuple[Any, ...],
     stats: dict[str, Any],
     alias: AliasPredicate | None = None,
+    mutable: AliasPredicate | None = None,
 ) -> torch.nn.Module:
     """Capture a generic module's forward into a CUDA-graph replay.
 
@@ -494,7 +518,9 @@ def _capture_generic(
     ):
         return module
     try:  # pragma: no cover — CUDA-only body
-        wrapped = _GraphReplayModule.capture(module, xs, alias=alias)
+        wrapped = _GraphReplayModule.capture(
+            module, xs, alias=alias, mutable=mutable
+        )
     except Exception as exc:  # pragma: no cover — CUDA-only
         stats["cuda_graph_failure"] = _capture_failure_class(exc)
         return module
@@ -542,10 +568,14 @@ class CudaGraphRunner:
     falls back to the wrapped module's eager forward — correct but
     uncaptured, so alias only positions the caller actually reuses
     (persistent KV-cache-style buffers).  Inputs the recorded graph
-    mutates in place are auto-demoted to the copy path.  ``None``
-    (default) is the historical copy-everything behaviour.  The flag
-    reaches only the generic path — batched executors keep their own
-    ``capture_cuda_graph``.
+    mutates in place are auto-demoted to the copy path — unless the
+    position is also named by ``mutable_inputs`` (same spec shapes),
+    the explicit opt-in for caller-owned write-back buffers such as
+    an in-graph K/V-cache ``index_copy_`` update
+    (``docs/reports/fusion_floor_probe.md`` §6.1(a)).  ``None``
+    (default) is the historical copy-everything behaviour.  Both
+    flags reach only the generic path — batched executors keep their
+    own ``capture_cuda_graph``.
     """
 
     name = "cuda_graph"
@@ -558,14 +588,22 @@ class CudaGraphRunner:
         | Iterable[int]
         | AliasPredicate
         | None = None,
+        mutable_inputs: bool
+        | Iterable[int]
+        | AliasPredicate
+        | None = None,
     ) -> None:
         """``multi_device``: per-device capture cache (Phase B).
 
         ``alias_inputs``: opt-in alias-aware capture spec — see the
         class docstring and ``docs/reports/alias_aware_capture.md``.
+        ``mutable_inputs``: opt-in write-back spec — positions the
+        recorded graph may mutate in place without demotion (must be
+        a subset of the alias-eligible positions to take effect).
         """
         self.multi_device = multi_device
         self._alias_pred = _normalize_alias_inputs(alias_inputs)
+        self._mutable_pred = _normalize_alias_inputs(mutable_inputs)
         self._policy = DevicePolicy()
 
     def apply(
@@ -605,9 +643,15 @@ class CudaGraphRunner:
                 if self._alias_pred is not None:
                     stats["cuda_graph_alias"] = True
                 return _DeviceGraphModule(
-                    module, alias=self._alias_pred
+                    module,
+                    alias=self._alias_pred,
+                    mutable=self._mutable_pred,
                 )
             return _capture_generic(
-                module, xs, stats, alias=self._alias_pred
+                module,
+                xs,
+                stats,
+                alias=self._alias_pred,
+                mutable=self._mutable_pred,
             )
         return module
