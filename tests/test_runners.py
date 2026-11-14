@@ -269,7 +269,14 @@ def test_cuda_graph_runner_captures_generic_irmodule():
     with torch.no_grad():
         assert torch.allclose(out(xin), mod(xin))
         x2 = torch.randn(4, 8, device="cuda")
-        assert torch.allclose(out(x2), mod(x2))
+        x2_ref = x2.clone()
+        got = out(x2).clone()  # _graph_out is overwritten per replay
+        # replay must refresh the static buffers FROM the call args —
+        # a backwards copy leaves the graph frozen on capture inputs
+        # AND silently overwrites the caller's tensors.
+        assert torch.equal(x2, x2_ref)
+        assert torch.allclose(got, mod(x2))
+        assert not torch.allclose(got, out(xin).clone())
         # shape is baked at capture — a mismatched call falls back
         # to the wrapped module's eager forward.
         x3 = torch.randn(2, 8, device="cuda")

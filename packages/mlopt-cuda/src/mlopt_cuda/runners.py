@@ -154,7 +154,7 @@ class _GraphReplayModule(torch.nn.Module):
     def forward(self, *xs: Any) -> Any:
         """Replay the captured graph, or fall back to eager on mismatch."""
         if self._matches(xs):
-            for buf, t in zip(xs, self._graph_ins, strict=True):
+            for buf, t in zip(self._graph_ins, xs, strict=True):
                 buf.copy_(t, non_blocking=True)
             self._graph.replay()
             return self._graph_out
