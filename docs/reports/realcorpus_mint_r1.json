@@ -1,0 +1,5561 @@
+{
+  "schema": 1,
+  "git_note": "uncommitted driver \u2014 bench/drivers/mint/",
+  "args": {
+    "models": "whisper,t5",
+    "xbind": 2,
+    "page": 24,
+    "xcap": 64,
+    "max_candidates": 48,
+    "referee": "full",
+    "real_cap": 2500,
+    "site_cap": 1500,
+    "max_real": 6000,
+    "family_wall": 120.0,
+    "xmodule_wall": 600.0,
+    "fire_wall": 90.0,
+    "pay_arm": true,
+    "pay_wall": 300.0,
+    "pay_cap": 4,
+    "no_cross": false,
+    "prim": true,
+    "prim_wall": 900.0,
+    "prim_cap": 24,
+    "prim_family_mint": false,
+    "out": "docs/reports/realcorpus_mint_r1.json",
+    "dry": false
+  },
+  "modules": {
+    "whisper:encoder": {
+      "export_s": 0.5,
+      "feeds": [
+        [
+          1,
+          80,
+          3000
+        ]
+      ]
+    },
+    "whisper:decoder": {
+      "export_s": 1.0,
+      "feeds": [
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          1500,
+          512
+        ]
+      ]
+    },
+    "t5:encoder": {
+      "export_s": 0.6,
+      "feeds": [
+        [
+          1,
+          128
+        ],
+        [
+          1,
+          128
+        ]
+      ]
+    },
+    "t5:decoder": {
+      "export_s": 1.0,
+      "feeds": [
+        [
+          1,
+          128
+        ],
+        [
+          1,
+          128
+        ],
+        [
+          1,
+          128,
+          512
+        ]
+      ]
+    }
+  },
+  "mint": {
+    "whisper:encoder": {
+      "module": "whisper:encoder",
+      "families": {
+        "census_naturality": {
+          "n": 0,
+          "s": 0.0
+        },
+        "census_mixed": {
+          "n": 0,
+          "s": 0.0
+        },
+        "pattern_recognition": {
+          "n": 0,
+          "s": 0.0
+        },
+        "fusion_schemas": {
+          "n": 0,
+          "s": 0.0
+        },
+        "shape_aware": {
+          "n": 21,
+          "s": 0.0
+        },
+        "grammar": {
+          "n": 23,
+          "s": 0.0
+        }
+      },
+      "op_tuples": 32,
+      "census_s": 0.0,
+      "bind_s": 0.0,
+      "proposals": 35,
+      "bound": 1,
+      "wall_s": 1.9
+    },
+    "whisper:decoder": {
+      "module": "whisper:decoder",
+      "families": {
+        "census_naturality": {
+          "n": 0,
+          "s": 0.0
+        },
+        "census_mixed": {
+          "n": 0,
+          "s": 0.0
+        },
+        "pattern_recognition": {
+          "n": 0,
+          "s": 0.0
+        },
+        "fusion_schemas": {
+          "n": 0,
+          "s": 0.01
+        },
+        "shape_aware": {
+          "n": 21,
+          "s": 0.0
+        },
+        "grammar": {
+          "n": 23,
+          "s": 0.0
+        }
+      },
+      "op_tuples": 46,
+      "census_s": 0.0,
+      "bind_s": 0.0,
+      "proposals": 35,
+      "bound": 1,
+      "wall_s": 1.6
+    },
+    "t5:encoder": {
+      "module": "t5:encoder",
+      "families": {
+        "census_naturality": {
+          "n": 0,
+          "s": 0.0
+        },
+        "census_mixed": {
+          "n": 6,
+          "s": 0.0
+        },
+        "pattern_recognition": {
+          "n": 0,
+          "s": 0.0
+        },
+        "fusion_schemas": {
+          "n": 1,
+          "s": 0.0
+        },
+        "shape_aware": {
+          "n": 21,
+          "s": 0.0
+        },
+        "grammar": {
+          "n": 23,
+          "s": 0.0
+        }
+      },
+      "op_tuples": 69,
+      "census_s": 0.0,
+      "bind_s": 0.0,
+      "proposals": 42,
+      "bound": 9,
+      "wall_s": 1.6
+    },
+    "t5:decoder": {
+      "module": "t5:decoder",
+      "families": {
+        "census_naturality": {
+          "n": 0,
+          "s": 0.0
+        },
+        "census_mixed": {
+          "n": 6,
+          "s": 0.0
+        },
+        "pattern_recognition": {
+          "n": 0,
+          "s": 0.0
+        },
+        "fusion_schemas": {
+          "n": 1,
+          "s": 0.01
+        },
+        "shape_aware": {
+          "n": 21,
+          "s": 0.0
+        },
+        "grammar": {
+          "n": 23,
+          "s": 0.0
+        }
+      },
+      "op_tuples": 74,
+      "census_s": 0.0,
+      "bind_s": 0.0,
+      "proposals": 42,
+      "bound": 9,
+      "wall_s": 1.8
+    },
+    "_xmodule": {
+      "k": 2,
+      "wall": 600.0,
+      "cross_tuples": 78,
+      "census_proposals": 42,
+      "antiunify_patterns": 420,
+      "xanti": 57,
+      "xanti_dropped": 2,
+      "bind_s": 0.0,
+      "proposals": 99,
+      "pool": 64,
+      "bind_hist": {
+        "0": 33,
+        "2": 57,
+        "3": 6,
+        "4": 1
+      },
+      "total_s": 138.1,
+      "wall_s": 138.1
+    },
+    "_prim": {
+      "error": "wall exceeded"
+    }
+  },
+  "candidates": [
+    {
+      "id": "rmint:000",
+      "orig_name": "reshape_transpose",
+      "family": "layout",
+      "sources": [
+        "shape-aware"
+      ],
+      "mods": [
+        "t5:decoder",
+        "t5:encoder",
+        "whisper:decoder",
+        "whisper:encoder"
+      ],
+      "lhs": {
+        "op": "transpose",
+        "args": [
+          {
+            "op": "reshape",
+            "args": [
+              {
+                "mvar": "A"
+              }
+            ],
+            "attrs": {
+              "shape": "S"
+            }
+          }
+        ],
+        "attrs": {
+          "dim0": "D",
+          "dim1": "I"
+        }
+      },
+      "rhs": {
+        "op": "reshape",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "mvar": "A"
+              }
+            ],
+            "attrs": {
+              "dim0": "D",
+              "dim1": "I"
+            }
+          }
+        ],
+        "attrs": {
+          "shape": "S"
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/33ne/0rerr (51 acc, 0 dec, 51 envs) | synth: 61eq/100ne/0rerr (161 acc, 0 dec, 161 envs)",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/33ne/0rerr (51 acc, 0 dec, 51 envs) | synth: 61eq/100ne/0rerr (161 acc, 0 dec, 161 envs)"
+          }
+        ],
+        "measured": {},
+        "wall_s": 57.9
+      }
+    },
+    {
+      "id": "rmint:001",
+      "orig_name": "mixed:add_unsqueeze_r_w",
+      "family": "census-mixed-view",
+      "sources": [
+        "census-mixed-view"
+      ],
+      "mods": [
+        "t5:decoder",
+        "t5:encoder"
+      ],
+      "lhs": {
+        "op": "add",
+        "args": [
+          {
+            "mvar": "V"
+          },
+          {
+            "op": "unsqueeze",
+            "args": [
+              {
+                "mvar": "U"
+              }
+            ],
+            "attrs": {
+              "dim": "A_dim"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "unsqueeze",
+        "args": [
+          {
+            "op": "add",
+            "args": [
+              {
+                "mvar": "U"
+              },
+              {
+                "mvar": "V"
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {
+          "dim": "A_dim"
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 100eq/78ne/39rerr (360 acc, 0 dec, 360 envs)",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 100eq/78ne/39rerr (360 acc, 0 dec, 360 envs)"
+          }
+        ],
+        "measured": {},
+        "wall_s": 0.6
+      }
+    },
+    {
+      "id": "rmint:002",
+      "orig_name": "mixed:add_unsqueeze_r_id",
+      "family": "census-mixed-view",
+      "sources": [
+        "census-mixed-view"
+      ],
+      "mods": [
+        "t5:decoder",
+        "t5:encoder"
+      ],
+      "lhs": {
+        "op": "add",
+        "args": [
+          {
+            "mvar": "V"
+          },
+          {
+            "op": "unsqueeze",
+            "args": [
+              {
+                "mvar": "U"
+              }
+            ],
+            "attrs": {
+              "dim": "A_dim"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "add",
+        "args": [
+          {
+            "mvar": "U"
+          },
+          {
+            "mvar": "V"
+          }
+        ],
+        "attrs": {}
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 23eq/155ne/39rerr (360 acc, 0 dec, 360 envs)",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 23eq/155ne/39rerr (360 acc, 0 dec, 360 envs)"
+          }
+        ],
+        "measured": {},
+        "wall_s": 0.6
+      }
+    },
+    {
+      "id": "rmint:003",
+      "orig_name": "mixed:sub_unsqueeze_l_w",
+      "family": "census-mixed-view",
+      "sources": [
+        "census-mixed-view"
+      ],
+      "mods": [
+        "t5:decoder",
+        "t5:encoder"
+      ],
+      "lhs": {
+        "op": "sub",
+        "args": [
+          {
+            "op": "unsqueeze",
+            "args": [
+              {
+                "mvar": "U"
+              }
+            ],
+            "attrs": {
+              "dim": "A_dim"
+            }
+          },
+          {
+            "mvar": "V"
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "unsqueeze",
+        "args": [
+          {
+            "op": "sub",
+            "args": [
+              {
+                "mvar": "U"
+              },
+              {
+                "mvar": "V"
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {
+          "dim": "A_dim"
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/1ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 100eq/78ne/39rerr (360 acc, 0 dec, 360 envs)",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/1ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 100eq/78ne/39rerr (360 acc, 0 dec, 360 envs)"
+          }
+        ],
+        "measured": {},
+        "wall_s": 0.0
+      }
+    },
+    {
+      "id": "rmint:004",
+      "orig_name": "mixed:sub_unsqueeze_l_id",
+      "family": "census-mixed-view",
+      "sources": [
+        "census-mixed-view"
+      ],
+      "mods": [
+        "t5:decoder",
+        "t5:encoder"
+      ],
+      "lhs": {
+        "op": "sub",
+        "args": [
+          {
+            "op": "unsqueeze",
+            "args": [
+              {
+                "mvar": "U"
+              }
+            ],
+            "attrs": {
+              "dim": "A_dim"
+            }
+          },
+          {
+            "mvar": "V"
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "sub",
+        "args": [
+          {
+            "mvar": "U"
+          },
+          {
+            "mvar": "V"
+          }
+        ],
+        "attrs": {}
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 1eq/0ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 23eq/155ne/39rerr (360 acc, 0 dec, 360 envs)",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 1eq/0ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 23eq/155ne/39rerr (360 acc, 0 dec, 360 envs)"
+          }
+        ],
+        "measured": {},
+        "wall_s": 0.0
+      }
+    },
+    {
+      "id": "rmint:005",
+      "orig_name": "mixed:add_unsqueeze_l_w",
+      "family": "census-mixed-view",
+      "sources": [
+        "census-mixed-view"
+      ],
+      "mods": [
+        "t5:decoder",
+        "t5:encoder"
+      ],
+      "lhs": {
+        "op": "add",
+        "args": [
+          {
+            "op": "unsqueeze",
+            "args": [
+              {
+                "mvar": "U"
+              }
+            ],
+            "attrs": {
+              "dim": "A_dim"
+            }
+          },
+          {
+            "mvar": "V"
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "unsqueeze",
+        "args": [
+          {
+            "op": "add",
+            "args": [
+              {
+                "mvar": "U"
+              },
+              {
+                "mvar": "V"
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {
+          "dim": "A_dim"
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 1eq/0ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 100eq/78ne/39rerr (360 acc, 0 dec, 360 envs)",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 1eq/0ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 100eq/78ne/39rerr (360 acc, 0 dec, 360 envs)"
+          }
+        ],
+        "measured": {},
+        "wall_s": 0.0
+      }
+    },
+    {
+      "id": "rmint:006",
+      "orig_name": "mixed:add_unsqueeze_l_id",
+      "family": "census-mixed-view",
+      "sources": [
+        "census-mixed-view"
+      ],
+      "mods": [
+        "t5:decoder",
+        "t5:encoder"
+      ],
+      "lhs": {
+        "op": "add",
+        "args": [
+          {
+            "op": "unsqueeze",
+            "args": [
+              {
+                "mvar": "U"
+              }
+            ],
+            "attrs": {
+              "dim": "A_dim"
+            }
+          },
+          {
+            "mvar": "V"
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "add",
+        "args": [
+          {
+            "mvar": "U"
+          },
+          {
+            "mvar": "V"
+          }
+        ],
+        "attrs": {}
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/1ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 23eq/155ne/39rerr (360 acc, 0 dec, 360 envs)",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/1ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 23eq/155ne/39rerr (360 acc, 0 dec, 360 envs)"
+          }
+        ],
+        "measured": {},
+        "wall_s": 0.0
+      }
+    },
+    {
+      "id": "rmint:007",
+      "orig_name": "fold:rms_norm_fold_nogain",
+      "family": "fusion-schema",
+      "sources": [
+        "fusion-schema",
+        "rms_norm_fold_nogain"
+      ],
+      "mods": [
+        "t5:decoder",
+        "t5:encoder"
+      ],
+      "lhs": {
+        "op": "mul",
+        "args": [
+          {
+            "mvar": "u"
+          },
+          {
+            "op": "rsqrt",
+            "args": [
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "mean",
+                    "args": [
+                      {
+                        "op": "pow",
+                        "args": [
+                          {
+                            "mvar": "u"
+                          },
+                          {
+                            "mvar": "P"
+                          }
+                        ],
+                        "attrs": {}
+                      }
+                    ],
+                    "attrs": {
+                      "dim": "MD",
+                      "keepdim": "MK"
+                    }
+                  },
+                  {
+                    "mvar": "EPS"
+                  }
+                ],
+                "attrs": {}
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "rms_norm",
+        "args": [
+          {
+            "mvar": "u"
+          }
+        ],
+        "attrs": {
+          "dim": "ND",
+          "eps": "EP"
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (4 acc, 2 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 360 dec, 360 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (4 acc, 2 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 360 dec, 360 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 1.2
+      }
+    },
+    {
+      "id": "rmint:008",
+      "orig_name": "grammar:sub_to_add_dup",
+      "family": "algebraic-grammar",
+      "sources": [
+        "algebraic-grammar"
+      ],
+      "mods": [
+        "t5:decoder",
+        "t5:encoder"
+      ],
+      "lhs": {
+        "op": "sub",
+        "args": [
+          {
+            "mvar": "M0"
+          },
+          {
+            "mvar": "M1"
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "add",
+        "args": [
+          {
+            "mvar": "M0"
+          },
+          {
+            "op": "neg",
+            "args": [
+              {
+                "mvar": "M1"
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {}
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "pay: fires=6 changed=0 paid=0 verify_fail=0 cases=8",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": true,
+            "detail": "real: 1eq/0ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 135eq/0ne/0rerr (225 acc, 0 dec, 225 envs)"
+          },
+          {
+            "name": "pay",
+            "passed": false,
+            "detail": "fires=6 changed=0 paid=0 verify_fail=0 cases=8"
+          }
+        ],
+        "measured": {},
+        "wall_s": 0.1
+      }
+    },
+    {
+      "id": "rmint:009",
+      "orig_name": "xanti:matmul_transpose_transpose_wl",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:24"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "mvar": "v576"
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "op": "contiguous",
+                        "args": [
+                          {
+                            "mvar": "v607"
+                          }
+                        ],
+                        "attrs": {}
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "mvar": "v583"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "transpose",
+        "args": [
+          {
+            "op": "matmul",
+            "args": [
+              {
+                "mvar": "v576"
+              },
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "op": "contiguous",
+                        "args": [
+                          {
+                            "mvar": "v607"
+                          }
+                        ],
+                        "attrs": {}
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "mvar": "v583"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {
+          "dim0": 1,
+          "dim1": 2
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 2.7
+      }
+    },
+    {
+      "id": "rmint:010",
+      "orig_name": "xanti:matmul_transpose_transpose_wr",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:24"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "mvar": "v576"
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "op": "contiguous",
+                        "args": [
+                          {
+                            "mvar": "v607"
+                          }
+                        ],
+                        "attrs": {}
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "mvar": "v583"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "transpose",
+        "args": [
+          {
+            "op": "matmul",
+            "args": [
+              {
+                "mvar": "v576"
+              },
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "op": "contiguous",
+                        "args": [
+                          {
+                            "mvar": "v607"
+                          }
+                        ],
+                        "attrs": {}
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "mvar": "v583"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {
+          "dim0": "a31",
+          "dim1": "a32"
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 2.7
+      }
+    },
+    {
+      "id": "rmint:011",
+      "orig_name": "xanti:matmul_transpose_transpose_id",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:24"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "mvar": "v576"
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "op": "contiguous",
+                        "args": [
+                          {
+                            "mvar": "v607"
+                          }
+                        ],
+                        "attrs": {}
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "mvar": "v583"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "mvar": "v576"
+          },
+          {
+            "op": "concat",
+            "args": [
+              {
+                "op": "detach_",
+                "args": [
+                  {
+                    "op": "contiguous",
+                    "args": [
+                      {
+                        "mvar": "v607"
+                      }
+                    ],
+                    "attrs": {}
+                  }
+                ],
+                "attrs": {}
+              },
+              {
+                "mvar": "v583"
+              }
+            ],
+            "attrs": {
+              "dim": -2
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 2.8
+      }
+    },
+    {
+      "id": "rmint:012",
+      "orig_name": "xanti:matmul_transpose_transpose_wl",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:24"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "reshape",
+                "args": [
+                  {
+                    "mvar": "v585"
+                  }
+                ],
+                "attrs": {
+                  "shape": "a33"
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "mvar": "v597"
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "mvar": "v587"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "transpose",
+        "args": [
+          {
+            "op": "matmul",
+            "args": [
+              {
+                "op": "reshape",
+                "args": [
+                  {
+                    "mvar": "v585"
+                  }
+                ],
+                "attrs": {
+                  "shape": "a33"
+                }
+              },
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "mvar": "v597"
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "mvar": "v587"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {
+          "dim0": 1,
+          "dim1": 2
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 2.6
+      }
+    },
+    {
+      "id": "rmint:013",
+      "orig_name": "xanti:matmul_transpose_transpose_wr",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:24"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "reshape",
+                "args": [
+                  {
+                    "mvar": "v585"
+                  }
+                ],
+                "attrs": {
+                  "shape": "a33"
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "mvar": "v597"
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "mvar": "v587"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "transpose",
+        "args": [
+          {
+            "op": "matmul",
+            "args": [
+              {
+                "op": "reshape",
+                "args": [
+                  {
+                    "mvar": "v585"
+                  }
+                ],
+                "attrs": {
+                  "shape": "a33"
+                }
+              },
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "mvar": "v597"
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "mvar": "v587"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {
+          "dim0": "a31",
+          "dim1": "a32"
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 2.6
+      }
+    },
+    {
+      "id": "rmint:014",
+      "orig_name": "xanti:matmul_transpose_transpose_id",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:24"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "reshape",
+                "args": [
+                  {
+                    "mvar": "v585"
+                  }
+                ],
+                "attrs": {
+                  "shape": "a33"
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "mvar": "v597"
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "mvar": "v587"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "reshape",
+            "args": [
+              {
+                "mvar": "v585"
+              }
+            ],
+            "attrs": {
+              "shape": "a33"
+            }
+          },
+          {
+            "op": "concat",
+            "args": [
+              {
+                "op": "detach_",
+                "args": [
+                  {
+                    "mvar": "v597"
+                  }
+                ],
+                "attrs": {}
+              },
+              {
+                "mvar": "v587"
+              }
+            ],
+            "attrs": {
+              "dim": -2
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 2.6
+      }
+    },
+    {
+      "id": "rmint:015",
+      "orig_name": "xanti:matmul_x_transpose_w",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:24"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "mvar": "v23"
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "op": "contiguous",
+                        "args": [
+                          {
+                            "mvar": "v812"
+                          }
+                        ],
+                        "attrs": {}
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "mvar": "v578"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "transpose",
+        "args": [
+          {
+            "op": "matmul",
+            "args": [
+              {
+                "mvar": "v23"
+              },
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "op": "contiguous",
+                        "args": [
+                          {
+                            "mvar": "v812"
+                          }
+                        ],
+                        "attrs": {}
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "mvar": "v578"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {
+          "dim0": "a31",
+          "dim1": "a32"
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 2.6
+      }
+    },
+    {
+      "id": "rmint:016",
+      "orig_name": "xanti:matmul_x_transpose_id",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:24"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "mvar": "v23"
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "op": "contiguous",
+                        "args": [
+                          {
+                            "mvar": "v812"
+                          }
+                        ],
+                        "attrs": {}
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "mvar": "v578"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "mvar": "v23"
+          },
+          {
+            "op": "concat",
+            "args": [
+              {
+                "op": "detach_",
+                "args": [
+                  {
+                    "op": "contiguous",
+                    "args": [
+                      {
+                        "mvar": "v812"
+                      }
+                    ],
+                    "attrs": {}
+                  }
+                ],
+                "attrs": {}
+              },
+              {
+                "mvar": "v578"
+              }
+            ],
+            "attrs": {
+              "dim": -2
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 2.6
+      }
+    },
+    {
+      "id": "rmint:017",
+      "orig_name": "xanti:matmul_transpose_transpose_wl",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:24"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "mvar": "v576"
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "mvar": "v601"
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "mvar": "v583"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "transpose",
+        "args": [
+          {
+            "op": "matmul",
+            "args": [
+              {
+                "mvar": "v576"
+              },
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "mvar": "v601"
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "mvar": "v583"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {
+          "dim0": 1,
+          "dim1": 2
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 2.6
+      }
+    },
+    {
+      "id": "rmint:018",
+      "orig_name": "xanti:matmul_transpose_transpose_wr",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:24"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "mvar": "v576"
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "mvar": "v601"
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "mvar": "v583"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "transpose",
+        "args": [
+          {
+            "op": "matmul",
+            "args": [
+              {
+                "mvar": "v576"
+              },
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "mvar": "v601"
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "mvar": "v583"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {
+          "dim0": "a31",
+          "dim1": "a32"
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 2.7
+      }
+    },
+    {
+      "id": "rmint:019",
+      "orig_name": "xanti:matmul_transpose_transpose_id",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:24"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "mvar": "v576"
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "mvar": "v601"
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "mvar": "v583"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "mvar": "v576"
+          },
+          {
+            "op": "concat",
+            "args": [
+              {
+                "op": "detach_",
+                "args": [
+                  {
+                    "mvar": "v601"
+                  }
+                ],
+                "attrs": {}
+              },
+              {
+                "mvar": "v583"
+              }
+            ],
+            "attrs": {
+              "dim": -2
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 2.9
+      }
+    },
+    {
+      "id": "rmint:020",
+      "orig_name": "xanti:matmul_transpose_transpose_wl",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:24"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "reshape",
+                "args": [
+                  {
+                    "mvar": "v585"
+                  }
+                ],
+                "attrs": {
+                  "shape": "a33"
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "mvar": "v586"
+                  },
+                  {
+                    "mvar": "v587"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "transpose",
+        "args": [
+          {
+            "op": "matmul",
+            "args": [
+              {
+                "op": "reshape",
+                "args": [
+                  {
+                    "mvar": "v585"
+                  }
+                ],
+                "attrs": {
+                  "shape": "a33"
+                }
+              },
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "mvar": "v586"
+                  },
+                  {
+                    "mvar": "v587"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {
+          "dim0": 1,
+          "dim1": 2
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 2.8
+      }
+    },
+    {
+      "id": "rmint:021",
+      "orig_name": "xanti:matmul_transpose_transpose_wr",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:24"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "reshape",
+                "args": [
+                  {
+                    "mvar": "v585"
+                  }
+                ],
+                "attrs": {
+                  "shape": "a33"
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "mvar": "v586"
+                  },
+                  {
+                    "mvar": "v587"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "transpose",
+        "args": [
+          {
+            "op": "matmul",
+            "args": [
+              {
+                "op": "reshape",
+                "args": [
+                  {
+                    "mvar": "v585"
+                  }
+                ],
+                "attrs": {
+                  "shape": "a33"
+                }
+              },
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "mvar": "v586"
+                  },
+                  {
+                    "mvar": "v587"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {
+          "dim0": "a31",
+          "dim1": "a32"
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 2.8
+      }
+    },
+    {
+      "id": "rmint:022",
+      "orig_name": "xanti:matmul_transpose_transpose_id",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:24"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "reshape",
+                "args": [
+                  {
+                    "mvar": "v585"
+                  }
+                ],
+                "attrs": {
+                  "shape": "a33"
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "mvar": "v586"
+                  },
+                  {
+                    "mvar": "v587"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "reshape",
+            "args": [
+              {
+                "mvar": "v585"
+              }
+            ],
+            "attrs": {
+              "shape": "a33"
+            }
+          },
+          {
+            "op": "concat",
+            "args": [
+              {
+                "mvar": "v586"
+              },
+              {
+                "mvar": "v587"
+              }
+            ],
+            "attrs": {
+              "dim": -2
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 2.8
+      }
+    },
+    {
+      "id": "rmint:023",
+      "orig_name": "xanti:matmul_transpose_transpose_wl",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:3",
+        "inst:30"
+      ],
+      "mods": [
+        "t5:decoder",
+        "t5:encoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "reshape",
+                "args": [
+                  {
+                    "mvar": "v585"
+                  }
+                ],
+                "attrs": {
+                  "shape": "a33"
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "mvar": "v573"
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "transpose",
+        "args": [
+          {
+            "op": "matmul",
+            "args": [
+              {
+                "op": "reshape",
+                "args": [
+                  {
+                    "mvar": "v585"
+                  }
+                ],
+                "attrs": {
+                  "shape": "a33"
+                }
+              },
+              {
+                "mvar": "v573"
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {
+          "dim0": 1,
+          "dim1": 2
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (7 acc, 0 dec, 7 envs) | synth: 2eq/1ne/8rerr (360 acc, 0 dec, 360 envs)",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (7 acc, 0 dec, 7 envs) | synth: 2eq/1ne/8rerr (360 acc, 0 dec, 360 envs)"
+          }
+        ],
+        "measured": {},
+        "wall_s": 3.2
+      }
+    },
+    {
+      "id": "rmint:024",
+      "orig_name": "xanti:matmul_transpose_transpose_wr",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:3",
+        "inst:30"
+      ],
+      "mods": [
+        "t5:decoder",
+        "t5:encoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "reshape",
+                "args": [
+                  {
+                    "mvar": "v585"
+                  }
+                ],
+                "attrs": {
+                  "shape": "a33"
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "mvar": "v573"
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "transpose",
+        "args": [
+          {
+            "op": "matmul",
+            "args": [
+              {
+                "op": "reshape",
+                "args": [
+                  {
+                    "mvar": "v585"
+                  }
+                ],
+                "attrs": {
+                  "shape": "a33"
+                }
+              },
+              {
+                "mvar": "v573"
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {
+          "dim0": "a31",
+          "dim1": "a32"
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (7 acc, 0 dec, 7 envs) | synth: 0eq/3ne/8rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (7 acc, 0 dec, 7 envs) | synth: 0eq/3ne/8rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 3.1
+      }
+    },
+    {
+      "id": "rmint:025",
+      "orig_name": "xanti:matmul_transpose_transpose_id",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:3",
+        "inst:30"
+      ],
+      "mods": [
+        "t5:decoder",
+        "t5:encoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "reshape",
+                "args": [
+                  {
+                    "mvar": "v585"
+                  }
+                ],
+                "attrs": {
+                  "shape": "a33"
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "mvar": "v573"
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "reshape",
+            "args": [
+              {
+                "mvar": "v585"
+              }
+            ],
+            "attrs": {
+              "shape": "a33"
+            }
+          },
+          {
+            "mvar": "v573"
+          }
+        ],
+        "attrs": {}
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (7 acc, 0 dec, 7 envs) | synth: 0eq/3ne/8rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (7 acc, 0 dec, 7 envs) | synth: 0eq/3ne/8rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 3.1
+      }
+    },
+    {
+      "id": "rmint:026",
+      "orig_name": "xanti:matmul_x_transpose_w",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:18"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "mvar": "v23"
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "mvar": "v577"
+                  },
+                  {
+                    "op": "transpose",
+                    "args": [
+                      {
+                        "op": "reshape",
+                        "args": [
+                          {
+                            "op": "linear",
+                            "args": [
+                              {
+                                "mvar": "v881"
+                              },
+                              {
+                                "mvar": "v882"
+                              }
+                            ],
+                            "attrs": {}
+                          }
+                        ],
+                        "attrs": {
+                          "shape": "a50"
+                        }
+                      }
+                    ],
+                    "attrs": {
+                      "dim0": 1,
+                      "dim1": 2
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "transpose",
+        "args": [
+          {
+            "op": "matmul",
+            "args": [
+              {
+                "mvar": "v23"
+              },
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "mvar": "v577"
+                  },
+                  {
+                    "op": "transpose",
+                    "args": [
+                      {
+                        "op": "reshape",
+                        "args": [
+                          {
+                            "op": "linear",
+                            "args": [
+                              {
+                                "mvar": "v881"
+                              },
+                              {
+                                "mvar": "v882"
+                              }
+                            ],
+                            "attrs": {}
+                          }
+                        ],
+                        "attrs": {
+                          "shape": "a50"
+                        }
+                      }
+                    ],
+                    "attrs": {
+                      "dim0": 1,
+                      "dim1": 2
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {
+          "dim0": "a31",
+          "dim1": "a32"
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 1.7
+      }
+    },
+    {
+      "id": "rmint:027",
+      "orig_name": "xanti:matmul_x_transpose_id",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:18"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "mvar": "v23"
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "mvar": "v577"
+                  },
+                  {
+                    "op": "transpose",
+                    "args": [
+                      {
+                        "op": "reshape",
+                        "args": [
+                          {
+                            "op": "linear",
+                            "args": [
+                              {
+                                "mvar": "v881"
+                              },
+                              {
+                                "mvar": "v882"
+                              }
+                            ],
+                            "attrs": {}
+                          }
+                        ],
+                        "attrs": {
+                          "shape": "a50"
+                        }
+                      }
+                    ],
+                    "attrs": {
+                      "dim0": 1,
+                      "dim1": 2
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "mvar": "v23"
+          },
+          {
+            "op": "concat",
+            "args": [
+              {
+                "mvar": "v577"
+              },
+              {
+                "op": "transpose",
+                "args": [
+                  {
+                    "op": "reshape",
+                    "args": [
+                      {
+                        "op": "linear",
+                        "args": [
+                          {
+                            "mvar": "v881"
+                          },
+                          {
+                            "mvar": "v882"
+                          }
+                        ],
+                        "attrs": {}
+                      }
+                    ],
+                    "attrs": {
+                      "shape": "a50"
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim0": 1,
+                  "dim1": 2
+                }
+              }
+            ],
+            "attrs": {
+              "dim": -2
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 1.7
+      }
+    },
+    {
+      "id": "rmint:028",
+      "orig_name": "xanti:matmul_x_transpose_w",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:18"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "mvar": "v23"
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "mvar": "v806"
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "op": "transpose",
+                    "args": [
+                      {
+                        "op": "reshape",
+                        "args": [
+                          {
+                            "mvar": "v818"
+                          }
+                        ],
+                        "attrs": {
+                          "shape": "a45"
+                        }
+                      }
+                    ],
+                    "attrs": {
+                      "dim0": 1,
+                      "dim1": 2
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "transpose",
+        "args": [
+          {
+            "op": "matmul",
+            "args": [
+              {
+                "mvar": "v23"
+              },
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "mvar": "v806"
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "op": "transpose",
+                    "args": [
+                      {
+                        "op": "reshape",
+                        "args": [
+                          {
+                            "mvar": "v818"
+                          }
+                        ],
+                        "attrs": {
+                          "shape": "a45"
+                        }
+                      }
+                    ],
+                    "attrs": {
+                      "dim0": 1,
+                      "dim1": 2
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {
+          "dim0": "a31",
+          "dim1": "a32"
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 1.7
+      }
+    },
+    {
+      "id": "rmint:029",
+      "orig_name": "xanti:matmul_x_transpose_id",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:18"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "mvar": "v23"
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "mvar": "v806"
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "op": "transpose",
+                    "args": [
+                      {
+                        "op": "reshape",
+                        "args": [
+                          {
+                            "mvar": "v818"
+                          }
+                        ],
+                        "attrs": {
+                          "shape": "a45"
+                        }
+                      }
+                    ],
+                    "attrs": {
+                      "dim0": 1,
+                      "dim1": 2
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "mvar": "v23"
+          },
+          {
+            "op": "concat",
+            "args": [
+              {
+                "op": "detach_",
+                "args": [
+                  {
+                    "mvar": "v806"
+                  }
+                ],
+                "attrs": {}
+              },
+              {
+                "op": "transpose",
+                "args": [
+                  {
+                    "op": "reshape",
+                    "args": [
+                      {
+                        "mvar": "v818"
+                      }
+                    ],
+                    "attrs": {
+                      "shape": "a45"
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim0": 1,
+                  "dim1": 2
+                }
+              }
+            ],
+            "attrs": {
+              "dim": -2
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 1.7
+      }
+    },
+    {
+      "id": "rmint:030",
+      "orig_name": "xanti:matmul_x_transpose_w",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:18"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "mvar": "v23"
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "op": "contiguous",
+                        "args": [
+                          {
+                            "mvar": "v812"
+                          }
+                        ],
+                        "attrs": {}
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "op": "transpose",
+                    "args": [
+                      {
+                        "mvar": "v815"
+                      }
+                    ],
+                    "attrs": {
+                      "dim0": 1,
+                      "dim1": 2
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "transpose",
+        "args": [
+          {
+            "op": "matmul",
+            "args": [
+              {
+                "mvar": "v23"
+              },
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "op": "contiguous",
+                        "args": [
+                          {
+                            "mvar": "v812"
+                          }
+                        ],
+                        "attrs": {}
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "op": "transpose",
+                    "args": [
+                      {
+                        "mvar": "v815"
+                      }
+                    ],
+                    "attrs": {
+                      "dim0": 1,
+                      "dim1": 2
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {
+          "dim0": "a31",
+          "dim1": "a32"
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 1.7
+      }
+    },
+    {
+      "id": "rmint:031",
+      "orig_name": "xanti:matmul_x_transpose_id",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:18"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "mvar": "v23"
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "op": "contiguous",
+                        "args": [
+                          {
+                            "mvar": "v812"
+                          }
+                        ],
+                        "attrs": {}
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "op": "transpose",
+                    "args": [
+                      {
+                        "mvar": "v815"
+                      }
+                    ],
+                    "attrs": {
+                      "dim0": 1,
+                      "dim1": 2
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "mvar": "v23"
+          },
+          {
+            "op": "concat",
+            "args": [
+              {
+                "op": "detach_",
+                "args": [
+                  {
+                    "op": "contiguous",
+                    "args": [
+                      {
+                        "mvar": "v812"
+                      }
+                    ],
+                    "attrs": {}
+                  }
+                ],
+                "attrs": {}
+              },
+              {
+                "op": "transpose",
+                "args": [
+                  {
+                    "mvar": "v815"
+                  }
+                ],
+                "attrs": {
+                  "dim0": 1,
+                  "dim1": 2
+                }
+              }
+            ],
+            "attrs": {
+              "dim": -2
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 1.7
+      }
+    },
+    {
+      "id": "rmint:032",
+      "orig_name": "xanti:matmul_transpose_transpose_wl",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:18"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "mvar": "v576"
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "mvar": "v582"
+                  },
+                  {
+                    "op": "transpose",
+                    "args": [
+                      {
+                        "op": "reshape",
+                        "args": [
+                          {
+                            "mvar": "v615"
+                          }
+                        ],
+                        "attrs": {
+                          "shape": "a37"
+                        }
+                      }
+                    ],
+                    "attrs": {
+                      "dim0": 1,
+                      "dim1": 2
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "transpose",
+        "args": [
+          {
+            "op": "matmul",
+            "args": [
+              {
+                "mvar": "v576"
+              },
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "mvar": "v582"
+                  },
+                  {
+                    "op": "transpose",
+                    "args": [
+                      {
+                        "op": "reshape",
+                        "args": [
+                          {
+                            "mvar": "v615"
+                          }
+                        ],
+                        "attrs": {
+                          "shape": "a37"
+                        }
+                      }
+                    ],
+                    "attrs": {
+                      "dim0": 1,
+                      "dim1": 2
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {
+          "dim0": 1,
+          "dim1": 2
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 1.7
+      }
+    },
+    {
+      "id": "rmint:033",
+      "orig_name": "xanti:matmul_transpose_transpose_wr",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:18"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "mvar": "v576"
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "mvar": "v582"
+                  },
+                  {
+                    "op": "transpose",
+                    "args": [
+                      {
+                        "op": "reshape",
+                        "args": [
+                          {
+                            "mvar": "v615"
+                          }
+                        ],
+                        "attrs": {
+                          "shape": "a37"
+                        }
+                      }
+                    ],
+                    "attrs": {
+                      "dim0": 1,
+                      "dim1": 2
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "transpose",
+        "args": [
+          {
+            "op": "matmul",
+            "args": [
+              {
+                "mvar": "v576"
+              },
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "mvar": "v582"
+                  },
+                  {
+                    "op": "transpose",
+                    "args": [
+                      {
+                        "op": "reshape",
+                        "args": [
+                          {
+                            "mvar": "v615"
+                          }
+                        ],
+                        "attrs": {
+                          "shape": "a37"
+                        }
+                      }
+                    ],
+                    "attrs": {
+                      "dim0": 1,
+                      "dim1": 2
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {
+          "dim0": "a31",
+          "dim1": "a32"
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 1.7
+      }
+    },
+    {
+      "id": "rmint:034",
+      "orig_name": "xanti:matmul_transpose_transpose_id",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:18"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "mvar": "v576"
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "mvar": "v582"
+                  },
+                  {
+                    "op": "transpose",
+                    "args": [
+                      {
+                        "op": "reshape",
+                        "args": [
+                          {
+                            "mvar": "v615"
+                          }
+                        ],
+                        "attrs": {
+                          "shape": "a37"
+                        }
+                      }
+                    ],
+                    "attrs": {
+                      "dim0": 1,
+                      "dim1": 2
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "mvar": "v576"
+          },
+          {
+            "op": "concat",
+            "args": [
+              {
+                "mvar": "v582"
+              },
+              {
+                "op": "transpose",
+                "args": [
+                  {
+                    "op": "reshape",
+                    "args": [
+                      {
+                        "mvar": "v615"
+                      }
+                    ],
+                    "attrs": {
+                      "shape": "a37"
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim0": 1,
+                  "dim1": 2
+                }
+              }
+            ],
+            "attrs": {
+              "dim": -2
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 1.7
+      }
+    },
+    {
+      "id": "rmint:035",
+      "orig_name": "xanti:matmul_transpose_transpose_wl",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:18"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "mvar": "v576"
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "mvar": "v601"
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "op": "transpose",
+                    "args": [
+                      {
+                        "mvar": "v606"
+                      }
+                    ],
+                    "attrs": {
+                      "dim0": 1,
+                      "dim1": 2
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "transpose",
+        "args": [
+          {
+            "op": "matmul",
+            "args": [
+              {
+                "mvar": "v576"
+              },
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "mvar": "v601"
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "op": "transpose",
+                    "args": [
+                      {
+                        "mvar": "v606"
+                      }
+                    ],
+                    "attrs": {
+                      "dim0": 1,
+                      "dim1": 2
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {
+          "dim0": 1,
+          "dim1": 2
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 1.7
+      }
+    },
+    {
+      "id": "rmint:036",
+      "orig_name": "xanti:matmul_transpose_transpose_wr",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:18"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "mvar": "v576"
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "mvar": "v601"
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "op": "transpose",
+                    "args": [
+                      {
+                        "mvar": "v606"
+                      }
+                    ],
+                    "attrs": {
+                      "dim0": 1,
+                      "dim1": 2
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "transpose",
+        "args": [
+          {
+            "op": "matmul",
+            "args": [
+              {
+                "mvar": "v576"
+              },
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "mvar": "v601"
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "op": "transpose",
+                    "args": [
+                      {
+                        "mvar": "v606"
+                      }
+                    ],
+                    "attrs": {
+                      "dim0": 1,
+                      "dim1": 2
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {
+          "dim0": "a31",
+          "dim1": "a32"
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 1.7
+      }
+    },
+    {
+      "id": "rmint:037",
+      "orig_name": "xanti:matmul_transpose_transpose_id",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:18"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "mvar": "v576"
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "mvar": "v601"
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "op": "transpose",
+                    "args": [
+                      {
+                        "mvar": "v606"
+                      }
+                    ],
+                    "attrs": {
+                      "dim0": 1,
+                      "dim1": 2
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "mvar": "v576"
+          },
+          {
+            "op": "concat",
+            "args": [
+              {
+                "op": "detach_",
+                "args": [
+                  {
+                    "mvar": "v601"
+                  }
+                ],
+                "attrs": {}
+              },
+              {
+                "op": "transpose",
+                "args": [
+                  {
+                    "mvar": "v606"
+                  }
+                ],
+                "attrs": {
+                  "dim0": 1,
+                  "dim1": 2
+                }
+              }
+            ],
+            "attrs": {
+              "dim": -2
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 1.7
+      }
+    },
+    {
+      "id": "rmint:038",
+      "orig_name": "xanti:matmul_transpose_transpose_wl",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:18"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "reshape",
+                "args": [
+                  {
+                    "mvar": "v585"
+                  }
+                ],
+                "attrs": {
+                  "shape": "a33"
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "mvar": "v586"
+                  },
+                  {
+                    "op": "transpose",
+                    "args": [
+                      {
+                        "mvar": "v599"
+                      }
+                    ],
+                    "attrs": {
+                      "dim0": 1,
+                      "dim1": 2
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "transpose",
+        "args": [
+          {
+            "op": "matmul",
+            "args": [
+              {
+                "op": "reshape",
+                "args": [
+                  {
+                    "mvar": "v585"
+                  }
+                ],
+                "attrs": {
+                  "shape": "a33"
+                }
+              },
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "mvar": "v586"
+                  },
+                  {
+                    "op": "transpose",
+                    "args": [
+                      {
+                        "mvar": "v599"
+                      }
+                    ],
+                    "attrs": {
+                      "dim0": 1,
+                      "dim1": 2
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {
+          "dim0": 1,
+          "dim1": 2
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 1.7
+      }
+    },
+    {
+      "id": "rmint:039",
+      "orig_name": "xanti:matmul_transpose_transpose_wr",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:18"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "reshape",
+                "args": [
+                  {
+                    "mvar": "v585"
+                  }
+                ],
+                "attrs": {
+                  "shape": "a33"
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "mvar": "v586"
+                  },
+                  {
+                    "op": "transpose",
+                    "args": [
+                      {
+                        "mvar": "v599"
+                      }
+                    ],
+                    "attrs": {
+                      "dim0": 1,
+                      "dim1": 2
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "transpose",
+        "args": [
+          {
+            "op": "matmul",
+            "args": [
+              {
+                "op": "reshape",
+                "args": [
+                  {
+                    "mvar": "v585"
+                  }
+                ],
+                "attrs": {
+                  "shape": "a33"
+                }
+              },
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "mvar": "v586"
+                  },
+                  {
+                    "op": "transpose",
+                    "args": [
+                      {
+                        "mvar": "v599"
+                      }
+                    ],
+                    "attrs": {
+                      "dim0": 1,
+                      "dim1": 2
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {
+          "dim0": "a31",
+          "dim1": "a32"
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 1.7
+      }
+    },
+    {
+      "id": "rmint:040",
+      "orig_name": "xanti:matmul_transpose_transpose_id",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:18"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "reshape",
+                "args": [
+                  {
+                    "mvar": "v585"
+                  }
+                ],
+                "attrs": {
+                  "shape": "a33"
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "mvar": "v586"
+                  },
+                  {
+                    "op": "transpose",
+                    "args": [
+                      {
+                        "mvar": "v599"
+                      }
+                    ],
+                    "attrs": {
+                      "dim0": 1,
+                      "dim1": 2
+                    }
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "reshape",
+            "args": [
+              {
+                "mvar": "v585"
+              }
+            ],
+            "attrs": {
+              "shape": "a33"
+            }
+          },
+          {
+            "op": "concat",
+            "args": [
+              {
+                "mvar": "v586"
+              },
+              {
+                "op": "transpose",
+                "args": [
+                  {
+                    "mvar": "v599"
+                  }
+                ],
+                "attrs": {
+                  "dim0": 1,
+                  "dim1": 2
+                }
+              }
+            ],
+            "attrs": {
+              "dim": -2
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (4 acc, 0 dec, 4 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 1.7
+      }
+    },
+    {
+      "id": "rmint:041",
+      "orig_name": "xanti:matmul_transpose_transpose_wl",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:18"
+      ],
+      "mods": [
+        "t5:decoder",
+        "t5:encoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "reshape",
+                "args": [
+                  {
+                    "op": "linear",
+                    "args": [
+                      {
+                        "op": "mul",
+                        "args": [
+                          {
+                            "mvar": "v611"
+                          },
+                          {
+                            "mvar": "v612"
+                          }
+                        ],
+                        "attrs": {}
+                      },
+                      {
+                        "mvar": "v590"
+                      }
+                    ],
+                    "attrs": {}
+                  }
+                ],
+                "attrs": {
+                  "shape": "a33"
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "mvar": "v573"
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "transpose",
+        "args": [
+          {
+            "op": "matmul",
+            "args": [
+              {
+                "op": "reshape",
+                "args": [
+                  {
+                    "op": "linear",
+                    "args": [
+                      {
+                        "op": "mul",
+                        "args": [
+                          {
+                            "mvar": "v611"
+                          },
+                          {
+                            "mvar": "v612"
+                          }
+                        ],
+                        "attrs": {}
+                      },
+                      {
+                        "mvar": "v590"
+                      }
+                    ],
+                    "attrs": {}
+                  }
+                ],
+                "attrs": {
+                  "shape": "a33"
+                }
+              },
+              {
+                "mvar": "v573"
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {
+          "dim0": 1,
+          "dim1": 2
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (3 acc, 0 dec, 3 envs) | synth: 0eq/0ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (3 acc, 0 dec, 3 envs) | synth: 0eq/0ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 1.0
+      }
+    },
+    {
+      "id": "rmint:042",
+      "orig_name": "xanti:matmul_transpose_transpose_wr",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:18"
+      ],
+      "mods": [
+        "t5:decoder",
+        "t5:encoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "reshape",
+                "args": [
+                  {
+                    "op": "linear",
+                    "args": [
+                      {
+                        "op": "mul",
+                        "args": [
+                          {
+                            "mvar": "v611"
+                          },
+                          {
+                            "mvar": "v612"
+                          }
+                        ],
+                        "attrs": {}
+                      },
+                      {
+                        "mvar": "v590"
+                      }
+                    ],
+                    "attrs": {}
+                  }
+                ],
+                "attrs": {
+                  "shape": "a33"
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "mvar": "v573"
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "transpose",
+        "args": [
+          {
+            "op": "matmul",
+            "args": [
+              {
+                "op": "reshape",
+                "args": [
+                  {
+                    "op": "linear",
+                    "args": [
+                      {
+                        "op": "mul",
+                        "args": [
+                          {
+                            "mvar": "v611"
+                          },
+                          {
+                            "mvar": "v612"
+                          }
+                        ],
+                        "attrs": {}
+                      },
+                      {
+                        "mvar": "v590"
+                      }
+                    ],
+                    "attrs": {}
+                  }
+                ],
+                "attrs": {
+                  "shape": "a33"
+                }
+              },
+              {
+                "mvar": "v573"
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {
+          "dim0": "a31",
+          "dim1": "a32"
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (3 acc, 0 dec, 3 envs) | synth: 0eq/0ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (3 acc, 0 dec, 3 envs) | synth: 0eq/0ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 1.0
+      }
+    },
+    {
+      "id": "rmint:043",
+      "orig_name": "xanti:matmul_transpose_transpose_id",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:18"
+      ],
+      "mods": [
+        "t5:decoder",
+        "t5:encoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "reshape",
+                "args": [
+                  {
+                    "op": "linear",
+                    "args": [
+                      {
+                        "op": "mul",
+                        "args": [
+                          {
+                            "mvar": "v611"
+                          },
+                          {
+                            "mvar": "v612"
+                          }
+                        ],
+                        "attrs": {}
+                      },
+                      {
+                        "mvar": "v590"
+                      }
+                    ],
+                    "attrs": {}
+                  }
+                ],
+                "attrs": {
+                  "shape": "a33"
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "mvar": "v573"
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "reshape",
+            "args": [
+              {
+                "op": "linear",
+                "args": [
+                  {
+                    "op": "mul",
+                    "args": [
+                      {
+                        "mvar": "v611"
+                      },
+                      {
+                        "mvar": "v612"
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "mvar": "v590"
+                  }
+                ],
+                "attrs": {}
+              }
+            ],
+            "attrs": {
+              "shape": "a33"
+            }
+          },
+          {
+            "mvar": "v573"
+          }
+        ],
+        "attrs": {}
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (3 acc, 0 dec, 3 envs) | synth: 0eq/0ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (3 acc, 0 dec, 3 envs) | synth: 0eq/0ne/0rerr (360 acc, 0 dec, 360 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 1.0
+      }
+    },
+    {
+      "id": "rmint:044",
+      "orig_name": "xanti:matmul_x_transpose_w",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:24"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "mvar": "v23"
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "mvar": "v806"
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "mvar": "v578"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "transpose",
+        "args": [
+          {
+            "op": "matmul",
+            "args": [
+              {
+                "mvar": "v23"
+              },
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "mvar": "v806"
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "mvar": "v578"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {
+          "dim0": "a31",
+          "dim1": "a32"
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 2.7
+      }
+    },
+    {
+      "id": "rmint:045",
+      "orig_name": "xanti:matmul_x_transpose_id",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:24"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "mvar": "v23"
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "op": "detach_",
+                    "args": [
+                      {
+                        "mvar": "v806"
+                      }
+                    ],
+                    "attrs": {}
+                  },
+                  {
+                    "mvar": "v578"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "mvar": "v23"
+          },
+          {
+            "op": "concat",
+            "args": [
+              {
+                "op": "detach_",
+                "args": [
+                  {
+                    "mvar": "v806"
+                  }
+                ],
+                "attrs": {}
+              },
+              {
+                "mvar": "v578"
+              }
+            ],
+            "attrs": {
+              "dim": -2
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 2.7
+      }
+    },
+    {
+      "id": "rmint:046",
+      "orig_name": "xanti:matmul_transpose_transpose_wl",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:24"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "mvar": "v576"
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "mvar": "v582"
+                  },
+                  {
+                    "mvar": "v583"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "transpose",
+        "args": [
+          {
+            "op": "matmul",
+            "args": [
+              {
+                "mvar": "v576"
+              },
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "mvar": "v582"
+                  },
+                  {
+                    "mvar": "v583"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {
+          "dim0": 1,
+          "dim1": 2
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 2.6
+      }
+    },
+    {
+      "id": "rmint:047",
+      "orig_name": "xanti:matmul_transpose_transpose_wr",
+      "family": "xanti-view",
+      "sources": [
+        "antiunify",
+        "mods:2",
+        "inst:24"
+      ],
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "lhs": {
+        "op": "matmul",
+        "args": [
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "mvar": "v576"
+              }
+            ],
+            "attrs": {
+              "dim0": 1,
+              "dim1": 2
+            }
+          },
+          {
+            "op": "transpose",
+            "args": [
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "mvar": "v582"
+                  },
+                  {
+                    "mvar": "v583"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {
+              "dim0": "a31",
+              "dim1": "a32"
+            }
+          }
+        ],
+        "attrs": {}
+      },
+      "rhs": {
+        "op": "transpose",
+        "args": [
+          {
+            "op": "matmul",
+            "args": [
+              {
+                "mvar": "v576"
+              },
+              {
+                "op": "concat",
+                "args": [
+                  {
+                    "mvar": "v582"
+                  },
+                  {
+                    "mvar": "v583"
+                  }
+                ],
+                "attrs": {
+                  "dim": -2
+                }
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {
+          "dim0": "a31",
+          "dim1": "a32"
+        }
+      },
+      "admit": {
+        "admitted": false,
+        "reason": "oracle: real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured",
+        "skipped": "",
+        "stages": [
+          {
+            "name": "oracle",
+            "passed": false,
+            "detail": "real: 0eq/0ne/0rerr (6 acc, 0 dec, 6 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) \u2014 no equal site measured"
+          }
+        ],
+        "measured": {},
+        "wall_s": 2.7
+      }
+    }
+  ],
+  "admitted": [],
+  "pay": [],
+  "errors": [
+    "prim: wall"
+  ],
+  "domain": {
+    "cap": 2500,
+    "subterms": {
+      "whisper:encoder": {
+        "kept": 90,
+        "skipped": 118
+      },
+      "whisper:decoder": {
+        "kept": 216,
+        "skipped": 197
+      },
+      "t5:encoder": {
+        "kept": 108,
+        "skipped": 206
+      },
+      "t5:decoder": {
+        "kept": 228,
+        "skipped": 343
+      }
+    }
+  },
+  "n_minted_total": 64,
+  "referee_ctx": {
+    "real_terms": 614,
+    "real_terms_skipped": 864,
+    "probe": [
+      "whisper:encoder",
+      "whisper:decoder",
+      "t5:encoder",
+      "t5:decoder"
+    ],
+    "referee": "full"
+  },
+  "fire": [],
+  "wall_s": 1198.8
+}
