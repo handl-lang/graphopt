@@ -89,6 +89,7 @@ from mlopt_torch.torch_bindings import (
     _SCALAR_OPERAND_OPS_OVERRIDES,
     _SDPA_MATH_KV_LEN_MIN,
     _SDPA_MATH_Q_LEN_MAX,
+    AmbientRegistrySnapshot,
     _adaptive_avg_pool2d_torch,
     _AmbientTorchBindings,
     _arange_torch,
@@ -134,6 +135,9 @@ from mlopt_torch.torch_bindings import (
     _upsample_bilinear2d_torch,
     _upsample_nearest2d_torch,
     _where_torch,
+    ambient_registry_scope,
+    ambient_registry_snapshot,
+    restore_ambient_registry,
 )
 from mlopt_torch.torch_eval import (
     _COMPLEX_DTYPES,
@@ -196,6 +200,7 @@ __all__ = [
     "_SDPA_MATH_KV_LEN_MIN",
     "_SDPA_MATH_Q_LEN_MAX",
     "_UNPLANNED",
+    "AmbientRegistrySnapshot",
     "Any",
     "Callable",
     "Const",
@@ -278,6 +283,8 @@ __all__ = [
     "_upsample_nearest2d_torch",
     "_view_chain",
     "_where_torch",
+    "ambient_registry_scope",
+    "ambient_registry_snapshot",
     "attr_of",
     "canonical_name",
     "carrier_torch_bindings",
@@ -292,6 +299,7 @@ __all__ = [
     "register_ambient_bindings",
     "register_core_bindings",
     "register_shape_rule",
+    "restore_ambient_registry",
     "sdpa_kernel",
     "torch",
 ]

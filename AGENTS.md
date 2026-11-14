@@ -611,6 +611,17 @@ on `mlopt_cuda`; import `CudaGraphRunner` from `mlopt_cuda`.
   (auto-skipped when CUDA is absent).  Tests that exercise the CPU
   no-op path of `capture_cuda_graph` force `torch.cuda.is_available()`
   off via `monkeypatch`, so they pass on a CUDA host too.
+- Mint/discovery tests mutate process-global ambient registries
+  (`torch_bridge._IR_TO_TORCH`, `mlopt_core.ir._OP_REGISTRY`,
+  `mlopt_core.typing._SHAPE_RULES`) — a minted `synop_*` binding makes
+  its fold *extractable*, so post-mint `Optimizer.optimize` picks
+  different terms and e2e assertions flake.  A test file that needs
+  fresh-process registry state opts in with
+  `tb.ambient_registry_snapshot()` at module import +
+  `tb.restore_ambient_registry(snap)` per test (see
+  `tests/test_batched_scan_lift.py`), or wraps a probe in
+  `tb.ambient_registry_scope()`.  `mlopt_core.opmeta` declarations are
+  covered separately by `register_op_meta` / `reset_declared`.
 - Ratchets, not rewrites: the ruff `D` ignore list, the radon baseline
   and the typeguard file list are "pin the current state, never
   regress" gates.  Tighten them as code improves; never widen them to
