@@ -841,7 +841,7 @@ def test_attn_sdpa_declines_softmax_wrong_dim():
 
 
 def test_attn_sdpa_declines_nonconst_scale():
-    term = _attn_term(scale="mul", scale_leaf=_v("s", ()))
+    term = _attn_term(scale="mul", scale_leaf=_v("s"))
     eg, root = _run(term, rules=ATTN_SDPA_LAWS)
     assert not _sdpa_in_class(eg, root)
 
@@ -953,7 +953,7 @@ def test_check_spelled_sdpa_scaled_guards():
     assert _check_spelled_sdpa_scaled({**base, "S": Const(0.5)})
     assert _check_spelled_sdpa_scaled({**base, "S": Const(2)})
     # non-Const / non-numeric / bool scale declines
-    assert not _check_spelled_sdpa_scaled({**base, "S": _v("s", ())})
+    assert not _check_spelled_sdpa_scaled({**base, "S": _v("s")})
     assert not _check_spelled_sdpa_scaled({**base, "S": None})
     assert not _check_spelled_sdpa_scaled({**base, "S": Const(True)})
     # base check still applies

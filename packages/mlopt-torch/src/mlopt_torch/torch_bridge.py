@@ -28,6 +28,7 @@ from mlopt_core.ops import (
     register_core_bindings,
 )
 from mlopt_core.typing import register_shape_rule
+from torch.nn.attention import SDPBackend, sdpa_kernel
 
 _ATEN_TO_IR: dict[str, str] = {
     "add": "add",
@@ -1904,6 +1905,80 @@ def _clamp_torch(t: Any, *a: Any, **kw: Any) -> Any:
     return torch.clamp(t, min=lo, max=hi)
 
 
+# ---------------------------------------------------------------------------
+#  sdpa backend policy
+# ---------------------------------------------------------------------------
+# ``F.scaled_dot_product_attention`` lets PyTorch pick the first enabled
+# backend it supports.  With fp32 + ``attn_mask`` the flash and cuDNN
+# backends are unavailable, so EVERY attention lands on the mem-efficient
+# fmha cutlass kernel — which microbenchmarks ~2.4-4.7x SLOWER than the
+# math backend at decode shapes (short query axis, long key axis: the
+# fmha tile setup amortises over the query length it doesn't have).
+# Measured on the whisper decode step: ~0.8 ms/tok recovered by pinning
+# math at the cross-attention shape (kv=1500, q_len=1) — see
+# ``docs/reports/decode_step_fusion.md`` §4 and
+# ``docs/reports/sdpa_backend_fix.md``.  Eager HF attention and
+# torch.compile's Triton online-softmax both beat the default pick here.
+#
+# The pin is deliberately NARROW — long-context prefill keeps the
+# default pick, where mem-efficient genuinely wins (math materialises
+# the L×S score matrix, O(L·S) memory):
+_SDPA_MATH_Q_LEN_MAX = 8
+_SDPA_MATH_KV_LEN_MIN = 256
+
+
+def _sdpa_math_backend(q: Any, k: Any) -> Any:
+    """Backend pin for the ``sdpa`` binding, or ``None`` for default.
+
+    Returns ``SDPBackend.MATH`` only for the measured pathological
+    regime — reduced-precision-excluded fp32/fp64, decode-like short
+    query length (``q.size(-2) <= _SDPA_MATH_Q_LEN_MAX``) over a long
+    key axis (``k.size(-2) >= _SDPA_MATH_KV_LEN_MIN``).  fp16/bf16 keep
+    the default pick (flash/efficient are the right choice there), and
+    prefill-shaped calls (large ``q_len``) keep it too.
+    """
+    if q.dtype not in (torch.float32, torch.float64):
+        return None
+    if q.size(-2) > _SDPA_MATH_Q_LEN_MAX:
+        return None
+    if k.size(-2) < _SDPA_MATH_KV_LEN_MIN:
+        return None
+    return SDPBackend.MATH
+
+
+def _sdpa_torch(q: Any, k: Any, v: Any, *a: Any, **kw: Any) -> Any:
+    """``sdpa`` binding: F.sdpa with the decode-shape math-backend pin."""
+    kwargs = {"attn_mask": a[0]} if a else {}
+    kwargs.update(
+        {
+            (
+                "attn_mask"
+                if kk == "arg3"
+                else "dropout_p"
+                if kk == "arg4"
+                else "is_causal"
+                if kk == "arg5"
+                else "scale"
+                if kk == "arg6"
+                else "enable_gqa"
+                if kk == "arg7"
+                else kk
+            ): vv
+            for kk, vv in kw.items()
+            if vv is not None
+        }
+    )
+    backend = _sdpa_math_backend(q, k)
+    if backend is None:
+        return torch.nn.functional.scaled_dot_product_attention(
+            q, k, v, **kwargs
+        )
+    with sdpa_kernel([backend]):
+        return torch.nn.functional.scaled_dot_product_attention(
+            q, k, v, **kwargs
+        )
+
+
 #: Core torch lowering bindings — the base ``OpTable``'s table (plan
 #: 0001 phase 2c).  Carrier ops (``trace``/``omd_*``/``cmask``...)
 #: are deliberately ABSENT: they live in each carrier
@@ -2027,31 +2102,10 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
         tuple(kw["shape"]) if "shape" in kw else (-1,)
     ),
     "contiguous": lambda x, *a, **kw: x.contiguous(),
-    "sdpa": lambda q, k, v, *a, **kw: (
-        torch.nn.functional.scaled_dot_product_attention(
-            q,
-            k,
-            v,
-            **({"attn_mask": a[0]} if a else {}),
-            **{
-                (
-                    "attn_mask"
-                    if kk == "arg3"
-                    else "dropout_p"
-                    if kk == "arg4"
-                    else "is_causal"
-                    if kk == "arg5"
-                    else "scale"
-                    if kk == "arg6"
-                    else "enable_gqa"
-                    if kk == "arg7"
-                    else kk
-                ): vv
-                for kk, vv in kw.items()
-                if vv is not None
-            },
-        )
-    ),
+    # sdpa — F.scaled_dot_product_attention with the decode-shape
+    # math-backend pin (``_sdpa_torch``; the argN→kwarg remap is
+    # unchanged from the original inline lambda).
+    "sdpa": _sdpa_torch,
     "broadcast": lambda x, *a, **kw: x,
     "linear": lambda x, w, *a, **kw: torch.nn.functional.linear(
         x, w, (a[0] if a else kw.get("bias"))
