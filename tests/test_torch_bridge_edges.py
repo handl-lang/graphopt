@@ -655,6 +655,62 @@ def test_param_requires_grad_by_dtype():
     assert mod2._param_map["W"].requires_grad is True
 
 
+@pytest.mark.requires_cuda
+def test_align_to_moves_integer_index_leaves():
+    """``_align_to`` must move non-float baked tensors to the input
+    device — dtype preserved.  Regression for the whisper decoder:
+    a lifted positional-embedding ``arange`` (int64, CPU) fed
+    ``F.embedding`` against a CUDA weight and died with
+    ``Expected all tensors to be on the same device``.  Scalar
+    ``Const`` minting stays CPU-safe (``_mint_const``), so only the
+    param tables move."""
+    if not torch.cuda.is_available():
+        pytest.skip("requires CUDA")
+    w = Param("w", TensorType((5, 4)))
+    idx = Param("idx", TensorType((3,)))
+    x = Var("x", TensorType((3, 4)))
+    root = Op.make("add", Op.make("embedding", w, idx), x)
+    ir = IR(
+        root=root,
+        inputs=[x],
+        input_names={"x"},
+        params={"w": w, "idx": idx},
+    )
+    wc = torch.randn(5, 4).cuda()
+    ic = torch.arange(3)  # CPU int64 — the lifted-constant case
+    mod = ir_to_torch_module(
+        ir, param_values={"w": wc, "idx": ic}
+    )
+    assert mod._param_map["idx"].device.type == "cpu"
+
+    xv = torch.randn(3, 4).cuda()
+    with torch.no_grad():
+        out = mod(xv)
+        expected = F.embedding(ic.cuda(), wc) + xv
+    assert out.device.type == "cuda"
+    assert torch.equal(out, expected)
+
+    # The index leaf moved device-only: int64 kept, no grad.
+    p = mod._param_map["idx"]
+    assert p.device.type == "cuda" and p.dtype == torch.int64
+    assert p.requires_grad is False
+    assert mod._param_values["idx"].device.type == "cuda"
+    assert mod._param_values["idx"].dtype == torch.int64
+
+    # Tensor-valued Consts follow the same rule: device moves, dtype
+    # is preserved for non-floats (an int index must not be cast).
+    from mlopt_torch.torch_bridge import _mint_const
+
+    ci = _mint_const(torch.arange(4), xv)
+    assert ci.device.type == "cuda" and ci.dtype == torch.int64
+    cf = _mint_const(torch.randn(2), xv)
+    assert cf.device.type == "cuda" and cf.dtype == xv.dtype
+    # Scalar Consts still mint on CPU — the weak-scalar/CUDA-graph
+    # contract is unchanged.
+    cs = _mint_const(2.0, xv)
+    assert cs.device.type == "cpu" and cs.dtype == xv.dtype
+
+
 # ---------------------------------------------------------------------------
 #  ambient bindings table / _dim_args
 # ---------------------------------------------------------------------------

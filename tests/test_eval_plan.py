@@ -432,6 +432,102 @@ def test_ev_factory_memo_roundtrip():
 
 
 # ---------------------------------------------------------------------------
+#  Liveness: intermediates released at last use
+# ---------------------------------------------------------------------------
+
+
+def test_plan_releases_intermediates_at_last_use():
+    """Slot tensors die when their last consumer runs — the tape's
+    ``vals`` list must not pin every intermediate until the root
+    returns (the whisper-small OOM)."""
+    import gc
+    import weakref
+
+    x = _v("x", 4)
+    inner = Op.make("neg", x)  # shared: consumed by neg(inner) AND add
+    root = Op.make("add", Op.make("neg", inner), inner)
+    mod = _mod(root, inputs=[x])
+    xv = torch.randn(4)
+    seen: list = []
+    orig = _IR_TO_TORCH["neg"]
+
+    def spy(t, *a, **kw):
+        out = orig(t, *a, **kw)
+        seen.append(weakref.ref(out))
+        return out
+
+    _IR_TO_TORCH["neg"] = spy
+    try:
+        out = mod(xv)
+    finally:
+        _IR_TO_TORCH["neg"] = orig
+    # two neg calls (inner computed once despite two consumers) —
+    # both outputs are intermediates released by the final add step;
+    # only the add result survives.
+    assert len(seen) == 2
+    gc.collect()
+    assert all(r() is None for r in seen)
+    assert torch.equal(out, torch.zeros(4))
+
+
+def test_plan_shared_subterm_computed_once_and_survives_to_last_use():
+    """A DAG-shared subterm runs its op exactly once and its output
+    stays live until the LAST of its consumers — releasing early
+    would feed a consumer ``None``."""
+    x = _v("x", 4)
+    shared = Op.make("exp", x)  # used by both add branches
+    root = Op.make("mul", Op.make("add", shared, Const(1.0)), shared)
+    mod = _mod(root, inputs=[x])
+    calls = []
+    orig = _IR_TO_TORCH["exp"]
+
+    def spy(t, *a, **kw):
+        calls.append(1)
+        return orig(t, *a, **kw)
+
+    _IR_TO_TORCH["exp"] = spy
+    try:
+        xv = torch.randn(4)
+        want = (xv.exp() + 1.0) * xv.exp()
+        for _ in range(2):
+            assert torch.equal(mod(xv), want)
+    finally:
+        _IR_TO_TORCH["exp"] = orig
+    assert len(calls) == 2  # once per forward, not once per use
+
+
+def test_plan_release_respects_duplicate_args():
+    """``add(m, m)`` counts the shared arg twice — it releases only
+    after BOTH uses in the same step are consumed."""
+    x = _v("x", 4)
+    m = Op.make("mul", x, x)
+    root = Op.make("add", m, m)
+    mod = _mod(root, inputs=[x])
+    xv = torch.randn(4)
+    assert torch.equal(mod(xv), xv * xv + xv * xv)
+    assert mod._root_plan.releases[-1]  # final step releases slots
+
+
+def test_param_values_registered_names_alias_parameters():
+    """``_param_values`` keeps registered names as ALIASES of the
+    ``_param_map`` Parameters — same object, so no second copy of the
+    weight set is pinned — while unregistered extras keep their
+    tensors.  The caller's dict is never mutated."""
+    x = _v("x", 2)
+    pv = {"W": torch.ones(2)}
+    mod = _mod(Op.make("add", x, _p("W", 2)), inputs=[x], pv=pv)
+    assert mod._param_values["W"] is mod._param_map["W"]
+    # caller's dict still intact (the rebind never mutates it)
+    assert "W" in pv
+    assert torch.equal(mod(torch.zeros(2)), torch.ones(2))
+    # unregistered extras keep their own tensors
+    pv2 = {"W": torch.ones(2), "extra": torch.zeros(3)}
+    mod2 = _mod(Op.make("add", x, _p("W", 2)), inputs=[x], pv=pv2)
+    assert mod2._param_values["extra"] is pv2["extra"]
+    assert mod2._param_values["W"] is mod2._param_map["W"]
+
+
+# ---------------------------------------------------------------------------
 #  End-to-end equivalence with the recursive evaluator
 # ---------------------------------------------------------------------------
 

@@ -476,6 +476,68 @@ def test_share_duplicate_param_slices_guards():
     assert off["dedup_param"] in source
 
 
+def test_share_duplicate_param_slices_bf16():
+    """bf16 weights dedup through the raw-bytes signature — numpy
+    cannot hold BFloat16, so ``_raw_bytes`` widens through ``.float()``
+    (exact: every bf16 value is fp32-representable).  Regression for
+    the whisper-turbo blocker: ``.numpy()`` raised ``TypeError`` and
+    killed ``opt.search`` before saturation."""
+    import torch
+
+    from mlopt_core.egraph import EGraph
+    from mlopt_core.ir import IR
+    from mlopt_core.laws import share_duplicate_param_slices
+    from mlopt_torch.torch_bridge import ir_to_torch_module
+
+    torch.manual_seed(0)
+    h, d, i = 4, 3, 5
+    o = h * d
+    a = torch.randn(d, i, dtype=torch.bfloat16)
+    b = torch.randn(d, i, dtype=torch.bfloat16)
+    c = torch.randn(d, i, dtype=torch.bfloat16)
+    W = torch.cat([a, b, a, c], dim=0)  # heads 0 and 2 tied
+    source = {"W": W}
+
+    eg = EGraph()
+    w_eid = eg.add_term(_p("W", o, i))
+    offers = share_duplicate_param_slices(eg, source)
+
+    assert len(offers) == 1
+    off = offers[0]
+    assert off["unique"] == 3 and off["index_map"] == (0, 1, 0, 2)
+    assert off["stored_after"] == 3 * d * i < off["stored_before"]
+    dedup = source[off["dedup_param"]]
+    assert dedup.dtype == torch.bfloat16
+    assert torch.equal(dedup[0], a) and torch.equal(dedup[2], c)
+
+    # The offered member lowers and evaluates bitwise-equal in bf16.
+    member = _forced_member_term(eg, w_eid, "reshape")
+    ir = IR(root=member, inputs=[], input_names=set(), params={})
+    mod = ir_to_torch_module(ir, param_values=source)
+    out = mod(torch.zeros(1))
+    assert out.dtype == torch.bfloat16
+    assert torch.equal(out, W)
+
+
+def test_share_duplicate_param_slices_fp16():
+    """fp16 rides the same path — numpy holds float16 natively, so the
+    signature never touches the widening fallback."""
+    import torch
+
+    from mlopt_core.egraph import EGraph
+    from mlopt_core.laws import share_duplicate_param_slices
+
+    torch.manual_seed(0)
+    half = torch.randn(2, 4, dtype=torch.float16)
+    W = torch.cat([half, half], dim=0)  # (4,4): two equal halves
+    source = {"W": W}
+    eg = EGraph()
+    eg.add_term(_p("W", 4, 4))
+    offers = share_duplicate_param_slices(eg, source)
+    assert len(offers) == 1
+    assert offers[0]["index_map"] == (0, 0)
+
+
 # --- from eqsat tests/test_perf_oracles.py ----------------------------
 
 

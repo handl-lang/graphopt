@@ -2744,6 +2744,19 @@ class _EvalPlan:
       ``_IR_TO_TORCH[op] = fn`` overrides keep reaching already-built
       modules, and a deleted binding still raises the strict
       ``ValueError`` at eval.
+    * **Releases** — ``releases[k]`` lists the arg slots whose LAST
+      consumer is step ``k`` (use-count over the tape, topological
+      order makes the last consumer deterministic).  After step ``k``
+      runs, those ``vals`` entries are dropped: intermediates die at
+      last use instead of pinning every slot tensor until the root
+      returns — the difference between peak memory scaling with the
+      DAG's *live set* and with its *size* (the whisper-small fp32
+      encoder OOM in ``docs/reports/whisper_experiment.md``).  DAG
+      sharing is handled structurally: a shared subterm's slot has
+      use-count > 1 and survives until its final consumer.  Under
+      ``enable_grad`` autograd's saved-tensor refs keep whatever
+      backward needs regardless — the release only drops the tape's
+      own reference.
 
     Plans are immutable once built and shared via the module's
     ``_plan_cache`` — safe under concurrent forwards (two racers
@@ -2755,6 +2768,7 @@ class _EvalPlan:
         "n_slots",
         "op_names",
         "param_fills",
+        "releases",
         "root_slot",
         "steps",
         "var_fills",
@@ -2769,6 +2783,7 @@ class _EvalPlan:
         steps: tuple,
         op_names: tuple,
         root_slot: int,
+        releases: tuple,
     ) -> None:
         self.n_slots = n_slots
         self.var_fills = var_fills
@@ -2777,6 +2792,7 @@ class _EvalPlan:
         self.steps = steps
         self.op_names = op_names
         self.root_slot = root_slot
+        self.releases = releases
 
     @staticmethod
     def build(term: Any, input_pos: dict[str, int]) -> _EvalPlan | None:
@@ -2837,6 +2853,21 @@ class _EvalPlan:
                 n += 1
             else:
                 return None
+        # Liveness: count each slot's consumers across the tape, then
+        # walk steps in order — a slot's count hits zero exactly at its
+        # LAST consumer (the tape is topological), so ``releases[k]``
+        # is the set of arg slots safe to drop after step ``k`` runs.
+        # The root never appears as an arg, so it is never released.
+        uses = [0] * n
+        for _o, _fi, a, _kw in steps:
+            for i in a:
+                uses[i] += 1
+        rel: list[list[int]] = [[] for _ in steps]
+        for k, (_o, _fi, a, _kw) in enumerate(steps):
+            for i in a:
+                uses[i] -= 1
+                if uses[i] == 0:
+                    rel[k].append(i)
         return _EvalPlan(
             n_slots=n,
             var_fills=tuple(var_fills),
@@ -2845,6 +2876,7 @@ class _EvalPlan:
             steps=tuple(steps),
             op_names=tuple(op_names),
             root_slot=slot_of[term],
+            releases=tuple(tuple(r) for r in rel),
         )
 
     def run_xs(self, xs: tuple, pmap_get: Any, bget: Any) -> Any:
@@ -2894,7 +2926,8 @@ class _EvalPlan:
             if f is None:
                 raise ValueError(f"No torch binding for op '{nm}'")
             fns.append(f)
-        for o, fi, a, kw in self.steps:
+        releases = self.releases
+        for k, (o, fi, a, kw) in enumerate(self.steps):
             f = fns[fi]
             if kw is None:
                 na = len(a)
@@ -2918,6 +2951,12 @@ class _EvalPlan:
                     v[o] = f(v[a[0]], v[a[1]], v[a[2]], **kw)
                 else:
                     v[o] = f(*[v[i] for i in a], **kw)
+            # Liveness: drop arg slots whose last consumer just ran.
+            # The output is already stored under ``o`` before any arg
+            # is released, so an aliasing binding (out IS an arg
+            # tensor) keeps the storage alive through ``v[o]``.
+            for i in releases[k]:
+                v[i] = None
         return v[self.root_slot]
 
 
@@ -2964,11 +3003,16 @@ def _mint_const(value: Any, like: Any) -> torch.Tensor:
     rejects.
     """
     if isinstance(value, torch.Tensor):
-        # A tensor-valued Const is a real operand (a baked weight), not a
-        # weak scalar: it follows the computation's device and dtype.
-        if like is not None and value.is_floating_point():
+        # A tensor-valued Const is a real operand (a baked weight or
+        # index tensor), not a weak scalar: it follows the
+        # computation's device — and a floating/complex one's dtype.
+        # Non-float dtypes keep theirs: an integer index cast to the
+        # float dtype would corrupt the gather it feeds.
+        if like is None:
+            return value
+        if value.is_floating_point() or value.is_complex():
             return value.to(device=like.device, dtype=like.dtype)
-        return value
+        return value.to(device=like.device)
     if isinstance(value, float) and like is not None:
         return torch.tensor(value, dtype=like.dtype)
     return torch.tensor(value)
@@ -3165,6 +3209,23 @@ class IRModule(torch.nn.Module):
         self._uses_memo: dict = {}
         self._root = self._fold_weight_chains(ir.root)
         self._build_params()
+        # ``_param_values`` entries that registered as Parameters are
+        # now aliases of the ``_param_map`` Parameter — the SAME
+        # object, so no second copy of the weight set is pinned for
+        # the module's lifetime (the ~3x weight-set blowup in the
+        # whisper OOM — SearchResult leaves + this dict + the
+        # Parameters; ``_build_params`` already cloned each value, so
+        # the original tensors are released here).  The key stays
+        # present because ``_align_to`` mirrors both tables and
+        # callers may inspect the dict; ``_align_to`` dedups by object
+        # identity so an aliased entry follows its Parameter's move
+        # instead of materialising a second device copy.  Unregistered
+        # names (unshaped Params, caller extras) keep their tensors.
+        # The caller's dict is never mutated — this rebinds.
+        self._param_values = {
+            k: self._param_map.get(k, v)
+            for k, v in self._param_values.items()
+        }
         # Plan-tape eval (plan 0003): last-wins name→position table so
         # the forward runner resolves Vars straight from ``xs`` without
         # building the env dict.  ``_plan_cache`` memoises per-term
@@ -3365,6 +3426,14 @@ class IRModule(torch.nn.Module):
         weight raises.  The CPU path never enters this branch, so the fp64
         verify contract is untouched; the decision is cached per
         (device, dtype).
+
+        Non-floating leaves move too — device only, dtype preserved.
+        Lifted integer tensors (a positional-embedding ``arange``,
+        token-id buffers) are real operands: ``F.embedding``/gather
+        require the index on the weight's device, so a CPU index
+        against a CUDA weight raises at first eval.  Scalar ``Const``
+        minting is unaffected — ``_mint_const`` materialises those at
+        eval time, not through these tables.
         """
         like = _sibling_like(list(xs))
         if like is None or like.dim() == 0 or like.device.type == "cpu":
@@ -3376,23 +3445,47 @@ class IRModule(torch.nn.Module):
             self._param_map,
             self._param_values,
         ]
+        # ``_param_values`` aliases registered names to their
+        # ``_param_map`` Parameter (same object — see ``__init__``), so
+        # the same tensor can appear under two keys.  ``moved_for``
+        # maps id(old tensor) → (old, replacement): the tuple keeps
+        # the old object alive so its id cannot be recycled mid-loop,
+        # and an aliased entry rebinds to the SAME moved tensor
+        # instead of paying a second device copy.
+        moved_for: dict[int, tuple[Any, Any]] = {}
         for table in tables:
             for k, t in list(table.items()):
-                if not (
-                    isinstance(t, torch.Tensor)
-                    and t.is_floating_point()
-                ):
+                if not isinstance(t, torch.Tensor):
                     continue
-                if t.device == like.device and t.dtype == like.dtype:
+                prev = moved_for.get(id(t))
+                if prev is not None:
+                    table[k] = prev[1]
                     continue
-                moved = t.detach().to(
-                    device=like.device, dtype=like.dtype
-                )
-                table[k] = (
-                    torch.nn.Parameter(moved)
+                if t.is_floating_point() or t.is_complex():
+                    if (
+                        t.device == like.device
+                        and t.dtype == like.dtype
+                    ):
+                        continue
+                    moved = t.detach().to(
+                        device=like.device, dtype=like.dtype
+                    )
+                else:
+                    # Integer/bool leaves: dtype is semantic (index
+                    # tensors must not be cast to the float dtype) —
+                    # only the device must match.
+                    if t.device == like.device:
+                        continue
+                    moved = t.detach().to(device=like.device)
+                new = (
+                    torch.nn.Parameter(
+                        moved, requires_grad=t.requires_grad
+                    )
                     if isinstance(t, torch.nn.Parameter)
                     else moved
                 )
+                moved_for[id(t)] = (t, new)
+                table[k] = new
         self._dev_key = key
 
     def forward(self, *xs: Any) -> Any:
