@@ -217,10 +217,14 @@ def test_compositional_fallback_keeps_original_block():
             self.f = nn.Linear(d, d)
 
         def forward(self, x):
-            # fft_fft exports but has no torch lowering —
-            # the lowered candidate can't be verified → fallback.
-            y = torch.fft.fft(self.f(x))
-            return y.real + self.f(x) * 0
+            # Data-dependent control flow: torch.export itself
+            # refuses (GuardOnDataDependentSymNode) — the block can't
+            # even lift, so the lowered candidate can't be verified
+            # → fallback.  (Unbound *ops* no longer land here: they
+            # lift as ``opaque`` passthrough leaves.)
+            if x.abs().sum() > 0:
+                return self.f(x) * 2
+            return self.f(x) + 1
 
     class M(nn.Module):
         def __init__(self):

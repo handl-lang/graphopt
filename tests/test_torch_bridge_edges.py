@@ -33,6 +33,7 @@ Defensive branches believed unreachable by construction are listed in
 ``test_defensive_branch_inventory``.
 """
 
+import json
 from types import SimpleNamespace
 
 import pytest
@@ -46,6 +47,8 @@ from mlopt_core.ir import (
     TensorType,
     Var,
     op_repr,
+    term_from_data,
+    term_to_data,
 )
 from mlopt_core.ops import OpTable
 from mlopt_torch.torch_bridge import (
@@ -56,6 +59,10 @@ from mlopt_torch.torch_bridge import (
     _graph_outputs,
     _handle_copy_,
     _infer_shape,
+    _opaque_encode,
+    _opaque_qual,
+    _opaque_torch,
+    _resolve_opaque_callable,
     export_to_ir,
     ir_to_torch_module,
 )
@@ -940,3 +947,230 @@ class TestMultiOutputExport:
         x = torch.randn(2, dtype=torch.float64)
         with pytest.raises(ValueError, match="do not resolve"):
             export_to_ir(Mixed().eval().double(), x)
+
+
+# ---------------------------------------------------------------------------
+#  Opaque leaves — unbound aten/custom ops lift as passthrough terms
+# ---------------------------------------------------------------------------
+
+
+class TestOpaqueLeaves:
+    """An op with no ``_IR_TO_TORCH`` binding mints an ``opaque`` term
+    that replays the original torch callable at eval — the lift is
+    total over the aten/custom-op surface."""
+
+    class _Bicubic(torch.nn.Module):
+        """``upsample_bicubic2d`` has no core binding — opaque."""
+
+        def forward(self, x):
+            return F.interpolate(
+                x,
+                scale_factor=2.0,
+                mode="bicubic",
+                align_corners=False,
+            )
+
+    def test_unbound_aten_op_lifts_as_opaque(self):
+        m = self._Bicubic().eval()
+        x = torch.randn(1, 3, 4, 4)
+        ir, source = export_to_ir(m, x)
+        ops = _find(ir.root, "opaque")
+        assert len(ops) == 1
+        op = ops[0]
+        # The qualname is the aten overload identity; the tensor input
+        # is the sole operand and the scalars/list ride the sig spec.
+        assert op.attrs["aten"] == "aten::upsample_bicubic2d.vec"
+        assert len(op.args) == 1
+        arg_specs, kw_specs = op.attrs["sig"]
+        assert arg_specs[0] == ("t", 0)
+        assert ("l", None) in arg_specs
+        assert ("l", False) in arg_specs
+        assert kw_specs == ()
+        lowered = ir_to_torch_module(ir, param_values=source)
+        with torch.no_grad():
+            assert torch.allclose(lowered(x), m(x), atol=1e-6)
+
+    def test_custom_library_op_lifts_as_opaque(self):
+        """A ``torch.library`` custom op exports as a ``call_function``
+        on a non-aten namespace — it lifts and replays verbatim."""
+
+        @torch.library.custom_op(
+            "opaque_test::scale_shift", mutates_args=()
+        )
+        def _ss(x: torch.Tensor, s: float, t: float) -> torch.Tensor:
+            return x * s + t
+
+        @_ss.register_fake
+        def _(x, s, t):
+            return torch.empty_like(x)
+
+        class M(torch.nn.Module):
+            def forward(self, x):
+                return F.softmax(_ss(x, 2.0, 1.0), dim=-1)
+
+        m = M().eval()
+        x = torch.randn(4, 8)
+        ir, _ = export_to_ir(m, x)
+        op = _find(ir.root, "opaque")[0]
+        assert op.attrs["aten"] == "opaque_test::scale_shift"
+        lowered = ir_to_torch_module(ir)
+        with torch.no_grad():
+            assert torch.allclose(lowered(x), m(x))
+
+    def test_opaque_term_json_roundtrip(self):
+        """``aten``/``sig`` attrs stay JSON-safe — the lemma-store seam
+        serialises an opaque term losslessly."""
+        m = self._Bicubic().eval()
+        x = torch.randn(1, 3, 4, 4)
+        ir, _ = export_to_ir(m, x)
+        data = term_to_data(ir.root)
+        json.dumps(data)
+        assert term_from_data(data) == ir.root
+
+    def test_opaque_is_a_supported_op(self):
+        """``"opaque"`` is a core binding — inside every OpTable's
+        ``supported_ops``, so extraction never +infs its terms."""
+        assert "opaque" in OpTable.core().torch_bindings
+        assert "opaque" in OpTable.full().torch_bindings
+
+    def test_opaque_binding_replays_a_hand_minted_term(self):
+        """The binding is table-driven: a hand-minted ``opaque`` term
+        lowers with no export involved."""
+        x = Var("x", TensorType((4, 4)))
+        term = Op.make(
+            "opaque",
+            x,
+            aten="aten::mul.Tensor",
+            sig=((("t", 0), ("l", 3.0)), ()),
+        )
+        mod = _lower_root(term)
+        xv = torch.randn(4, 4)
+        with torch.no_grad():
+            assert torch.allclose(mod(xv), xv * 3.0)
+
+    def test_opaque_qual_rejects_an_unresolvable_target(self):
+        """A target that resolves to nothing refuses the lift at
+        export — never a term that cannot deliver."""
+
+        class Weird:
+            def __str__(self):
+                return "<not a callable path>"
+
+        with pytest.raises(ValueError, match="cannot resolve"):
+            _opaque_qual(Weird())
+
+    def test_opaque_encode_refuses_unencodable_args(self):
+        """Raw tensors / unresolved FX names fail loudly at mint —
+        an arg that cannot cross the IR boundary would deliver wrong
+        results silently."""
+        env: dict = {}
+        operands: list = []
+        with pytest.raises(ValueError, match="unencodable"):
+            _opaque_encode(torch.randn(2), env, operands)
+        with pytest.raises(ValueError, match="has no IR term"):
+            _opaque_encode(SimpleNamespace(name="ghost"), env, operands)
+
+    def test_opaque_encode_accepts_dtype_and_mapping(self):
+        """``dtype`` and mapping literals encode as JSON-safe specs —
+        the containers an unbound op's kwargs actually carry."""
+        env: dict = {}
+        operands: list = []
+        assert _opaque_encode(torch.float32, env, operands) == (
+            "dt",
+            "float32",
+        )
+        assert _opaque_encode({"mode": "x", "n": 2}, env, operands) == (
+            "map",
+            (("mode", ("l", "x")), ("n", ("l", 2))),
+        )
+        assert operands == []
+
+    def test_opaque_qual_walks_resolvable_candidates(self):
+        """``_opaque_qual`` tries each candidate in order — a ``name()``
+        without ``::``, a ``::``-qualified ``str``, then
+        ``module:qualname`` — first resolvable wins."""
+
+        class FakeTarget:
+            def __init__(self):
+                # Instance attrs — a class-body ``__qualname__`` is a
+                # ``type`` descriptor invisible to instance lookup.
+                self.__module__ = "math"
+                self.__qualname__ = "sqrt"
+
+            def name(self):
+                return "plain.name"  # no "::" — skipped as a candidate
+
+            def __str__(self):
+                return "aten::add.Tensor"
+
+        assert _opaque_qual(FakeTarget()) == "aten::add.Tensor"
+
+    def test_opaque_qual_collects_resolution_errors(self):
+        """A candidate that resolves to nothing is collected, not
+        fatal — a later candidate still wins."""
+
+        class BadThenGood:
+            def __init__(self):
+                self.__module__ = "math"
+                self.__qualname__ = "sqrt"
+
+            def __str__(self):
+                return "aten::no_such_opaque_op"
+
+        assert _opaque_qual(BadThenGood()) == "math:sqrt"
+
+    def test_resolve_opaque_callable_dotted_torch_path(self):
+        """A bare dotted qualname walks ``torch`` attributes."""
+        assert (
+            _resolve_opaque_callable("nn.functional.softmax")
+            is F.softmax
+        )
+
+    def test_opaque_torch_replays_every_spec_kind(self, monkeypatch):
+        """``sig`` specs rebuild lists/tuples/maps/dtypes and ``("t",
+        i)`` slots consume operands in mint order."""
+        seen: dict = {}
+
+        def probe(*a, **k):
+            seen["args"] = a
+            seen["kwargs"] = k
+            return a[0]
+
+        monkeypatch.setattr(
+            "mlopt_torch.torch_bridge._resolve_opaque_callable",
+            lambda qual: probe,
+        )
+        t1, t2 = torch.randn(2), torch.randn(3)
+        out = _opaque_torch(
+            t1,
+            t2,
+            aten="aten::whatever",
+            sig=(
+                (
+                    ("t", 0),
+                    ("t", 1),
+                    ("lst", (("l", 1), ("l", 2))),
+                    ("tpl", (("l", 3),)),
+                    ("map", (("k", ("l", 4)),)),
+                    ("dt", "float32"),
+                ),
+                (("mode", ("l", "x")),),
+            ),
+        )
+        assert out is t1
+        a = seen["args"]
+        assert a[0] is t1 and a[1] is t2
+        assert a[2] == [1, 2]
+        assert a[3] == (3,)
+        assert a[4] == {"k": 4}
+        assert a[5] is torch.float32
+        assert seen["kwargs"] == {"mode": "x"}
+
+    def test_opaque_torch_rejects_an_unknown_spec_kind(self):
+        """An unencodable spec kind fails loudly at replay."""
+        with pytest.raises(TypeError, match="unencodable"):
+            _opaque_torch(
+                torch.randn(2),
+                aten="aten::whatever",
+                sig=((("bogus", ()),), ()),
+            )

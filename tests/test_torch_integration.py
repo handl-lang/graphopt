@@ -1319,3 +1319,51 @@ def test_eval_term_does_not_leak_env():
     # env's dict is dead -> the closure's ref to `data` must be too;
     # a surviving self-cycle would keep it alive here (no gc.collect).
     assert ref() is None
+
+
+def test_opaque_ops_optimize_around_and_verify():
+    """Total lift: a module mixing covered ops (conv2d, matmul,
+    softmax) with ops outside the binding vocabulary — a bicubic
+    upsample (``aten.upsample_bicubic2d.vec``) and a
+    ``torch.library`` custom op — lifts every node, optimizes around
+    the ``opaque`` leaves, and verifies numerically."""
+    import torch.nn as nn
+    import torch.nn.functional as F
+
+    @torch.library.custom_op("opaque_it::wiggle", mutates_args=())
+    def _wiggle(x: torch.Tensor, freq: float) -> torch.Tensor:
+        return x + 0.1 * torch.sin(freq * x)
+
+    @_wiggle.register_fake
+    def _(x, freq):
+        return torch.empty_like(x)
+
+    class Mixed(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.c = nn.Conv2d(3, 4, 3, padding=1, bias=False)
+            self.fc = nn.Linear(4 * 8 * 8, 8, bias=False)
+
+        def forward(self, x):
+            h = self.c(x)
+            # opaque: bicubic upsample (4x4 -> 8x8)
+            h = F.interpolate(
+                h,
+                scale_factor=2.0,
+                mode="bicubic",
+                align_corners=False,
+            )
+            h = h.flatten(1)
+            h = _wiggle(h, 3.0)  # opaque: custom op
+            h = F.softmax(h @ self.fc.weight.t(), dim=-1)
+            return h.sum(-1)
+
+    torch.manual_seed(0)
+    m = Mixed().eval()
+    x = torch.randn(2, 3, 4, 4)
+    opt, _stats = Optimizer(backend=TorchBackend()).optimize(
+        m, x, verbose=False
+    )
+    with torch.no_grad():
+        diff = (m(x) - opt(x)).abs().max().item()
+    assert diff < 1e-4

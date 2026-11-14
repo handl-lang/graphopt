@@ -9,8 +9,9 @@ names (W1, W2, ...) and retrieve their shapes.
 from __future__ import annotations
 
 import contextlib
+import functools
 import importlib
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import Any, cast
 
 import torch
@@ -559,6 +560,14 @@ def export_to_ir(
                 # the ``copy`` op — either way consumers of the dst
                 # node see the post-write value.
                 _handle_copy_(node, env)
+                continue
+            if ir_op not in _IR_TO_TORCH:
+                # Opaque leaf: an aten/custom op outside the lowering
+                # vocabulary still lifts.  The term replays the
+                # original torch callable verbatim at eval — laws and
+                # collectors cannot rewrite inside it, but the model
+                # optimizes around it and delivery still works.
+                env[node.name] = _opaque_term(node, env)
                 continue
             args = []
             attrs: dict[str, Any] = {}
@@ -1179,6 +1188,220 @@ def _fft_kw(kw: dict) -> dict:
     if norm is not None:
         out["norm"] = str(norm)
     return out
+
+
+# ---------------------------------------------------------------------------
+#  Opaque leaves — unbound aten/custom ops lift as passthrough terms
+# ---------------------------------------------------------------------------
+#
+# An op with no entry in ``_IR_TO_TORCH`` used to mint an ``Op`` that
+# died at eval with "No torch binding".  Instead it now mints an
+# ``opaque`` term: the op's args/kwargs are replayed verbatim through a
+# positional ``sig`` spec and the ``aten`` qualname, and the ``opaque``
+# binding resolves the qualname back to the torch callable at eval —
+# semantics IS the torch op itself.  Laws, collectors and shape rules
+# see only the ``opaque`` generator (no rewrite reaches inside), the
+# cost model prices it like any unknown op, and ``supported_ops``
+# carries ``"opaque"`` because it is a core binding — so extraction
+# keeps the leaf and delivery replays the real kernel.
+#
+# ``sig`` is a ``(arg_specs, kwarg_specs)`` pair of JSON-safe spec
+# tuples.  Each spec is ``("t", i)`` — the i-th operand term — or a
+# literal ``("l", v)`` / ``("dt", name)`` / ``("lst"|"tpl"|"map", ...)
+# container.  Operands are the node's tensor-producing FX args in
+# encounter order, so the binding's ``next(operand_iter)`` walk and
+# the exporter's append order agree exactly.
+
+
+def _is_dotted_name(s: str) -> bool:
+    """Return ``True`` for ``a.b.c`` identifier paths (no ``<...>``)."""
+    return (
+        "." in s
+        and not s.startswith("<")
+        and all(p.isidentifier() for p in s.split("."))
+    )
+
+
+@functools.cache
+def _resolve_opaque_callable(qual: str) -> Callable[..., Any]:
+    """Resolve an opaque ``aten`` qualname to its torch callable.
+
+    ``ns::op[.overload]`` walks ``torch.ops`` (aten ops AND
+    ``torch.library`` custom ops live there); ``mod:qualname`` imports
+    the module and walks attributes (plain Python callables);
+    a bare dotted path walks ``torch`` attributes.
+    """
+    if "::" in qual:
+        ns, _, rest = qual.partition("::")
+        obj: Any = torch.ops
+        for part in (*ns.split("."), *rest.split(".")):
+            obj = getattr(obj, part)
+        return obj
+    if ":" in qual:
+        mod_name, _, qn = qual.partition(":")
+        obj: Any = importlib.import_module(mod_name)
+        for part in qn.split("."):
+            obj = getattr(obj, part)
+        return obj
+    obj: Any = torch
+    for part in qual.split("."):
+        obj = getattr(obj, part)
+    return obj
+
+
+def _opaque_qual(target: Any) -> str:
+    """First *resolvable* qualname for an opaque FX ``node.target``.
+
+    Candidates, in order: the target's own ``.name()`` (``OpOverload``
+    → ``"aten::mul.Tensor"`` / ``"myns::op"``), its ``str`` when it is
+    already ``::``-qualified, the dotted ``str`` re-read as a
+    ``torch.ops`` path (``"zz.f"`` → ``"zz::f"``), the Python
+    ``__module__:__qualname__`` path, and the bare dotted ``str`` as a
+    ``torch.*`` attribute walk.  Resolution is verified NOW — an
+    unresolvable target refuses the lift loudly instead of minting a
+    term that can never deliver.
+    """
+    candidates: list[str] = []
+    name = getattr(target, "name", None)
+    if callable(name):
+        with contextlib.suppress(Exception):
+            s = name()
+            if isinstance(s, str) and "::" in s:
+                candidates.append(s)
+    s = str(target)
+    if "::" in s:
+        candidates.append(s)
+    elif _is_dotted_name(s):
+        head, _, tail = s.partition(".")
+        candidates.append(f"{head}::{tail}")
+    mod = getattr(target, "__module__", None)
+    qn = getattr(target, "__qualname__", None)
+    if (
+        isinstance(mod, str)
+        and mod
+        and mod != "builtins"
+        and isinstance(qn, str)
+        and qn
+    ):
+        candidates.append(f"{mod}:{qn}")
+    if _is_dotted_name(s):
+        candidates.append(s)
+    errors: list[str] = []
+    for qual in candidates:
+        try:
+            _resolve_opaque_callable(qual)
+        except Exception as e:  # collect, report below
+            errors.append(f"{qual!r}: {e}")
+        else:
+            return qual
+    raise ValueError(
+        "export_to_ir: cannot resolve a torch callable for opaque "
+        f"target {target!r} — tried {errors or ['<no candidates>']}"
+    )
+
+
+def _opaque_encode(
+    a: Any, env: dict[str, Any], operands: list
+) -> tuple:
+    """Encode one FX arg as a JSON-safe spec; append operands in order.
+
+    FX nodes become ``("t", i)`` operand slots; scalars/dtypes stay
+    literals; lists/tuples/mappings recurse.  Anything else (raw
+    tensors, ``SymInt``s, devices, memory formats) refuses the lift —
+    an arg that cannot cross the IR boundary would deliver wrong
+    results silently, so it fails loudly here instead.
+    """
+    name = getattr(a, "name", None)
+    if isinstance(name, str):
+        # An FX node — ``Tensor.name`` exists too (None for unnamed
+        # tensors), so the isinstance guard, not hasattr, selects.
+        term = env.get(name)
+        if term is None:
+            raise ValueError(
+                "export_to_ir: opaque op argument "
+                f"{name!r} has no IR term — it was produced by a "
+                "node kind the lifter does not model (call_module / "
+                "call_method / an unresolved output); refusing rather "
+                "than dropping the operand"
+            )
+        operands.append(term)
+        return ("t", len(operands) - 1)
+    if a is None or isinstance(a, (bool, int, float, str)):
+        return ("l", a)
+    if isinstance(a, torch.dtype):
+        return ("dt", str(a).split(".")[-1])
+    if isinstance(a, Mapping):
+        return (
+            "map",
+            tuple(
+                (k, _opaque_encode(v, env, operands))
+                for k, v in a.items()
+            ),
+        )
+    if isinstance(a, (list, tuple)):
+        kind = "tpl" if isinstance(a, tuple) else "lst"
+        return (
+            kind,
+            tuple(_opaque_encode(x, env, operands) for x in a),
+        )
+    raise ValueError(
+        "export_to_ir: opaque op has an unencodable argument "
+        f"{a!r} ({type(a).__name__}) — only FX nodes, scalars, dtypes "
+        "and list/tuple/mapping literals can cross the IR boundary"
+    )
+
+
+def _opaque_term(node: Any, env: dict[str, Any]) -> Op:
+    """Mint the ``opaque`` term for an unbound ``call_function`` node."""
+    operands: list = []
+    arg_specs = tuple(
+        _opaque_encode(a, env, operands) for a in node.args
+    )
+    kw_specs = tuple(
+        (k, _opaque_encode(v, env, operands))
+        for k, v in node.kwargs.items()
+    )
+    qual = _opaque_qual(node.target)
+    return Op.make(
+        "opaque",
+        *operands,
+        aten=qual,
+        sig=(arg_specs, kw_specs),
+    )
+
+
+def _opaque_torch(*args: Any, **kw: Any) -> Any:
+    """``opaque`` binding — replay the original torch callable.
+
+    ``aten`` is the qualname resolved by :func:`_resolve_opaque_callable`;
+    ``sig`` replays ``node.args``/``node.kwargs`` positionally —
+    ``("t", i)`` slots consume evaluated operands in mint order.
+    """
+    qual = kw["aten"]
+    arg_specs, kw_specs = kw["sig"]
+    operands = iter(args)
+
+    def build(s: Any) -> Any:
+        kind = s[0]
+        if kind == "t":
+            return next(operands)
+        if kind == "l":
+            return s[1]
+        if kind == "lst":
+            return [build(x) for x in s[1]]
+        if kind == "tpl":
+            return tuple(build(x) for x in s[1])
+        if kind == "map":
+            return {k: build(v) for k, v in s[1]}
+        if kind == "dt":
+            return _creator_dtype({"dtype": s[1]})
+        raise TypeError(
+            f"opaque op {qual!r}: unencodable argument spec {s!r}"
+        )
+
+    call_args = [build(s) for s in arg_specs]
+    call_kwargs = {k: build(v) for k, v in kw_specs}
+    return _resolve_opaque_callable(qual)(*call_args, **call_kwargs)
 
 
 #: Core torch lowering bindings — the base ``OpTable``'s table (plan
@@ -1961,6 +2184,13 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
         f[0] * g[1] + f[1],
     ),
     "applyd": lambda f, h, *a, **kw: f[0] * h + f[1],
+    # opaque — the unbound-op passthrough leaf (see the section
+    # above): replays the original torch callable named by the
+    # ``aten`` qualname through the ``sig`` arg spec.  Being a core
+    # binding keeps ``"opaque"`` inside every OpTable's
+    # ``supported_ops``, so extraction never +infs a term that
+    # contains one.
+    "opaque": _opaque_torch,
 }
 
 
