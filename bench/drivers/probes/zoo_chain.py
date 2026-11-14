@@ -65,6 +65,7 @@ import tempfile
 from contextlib import contextmanager
 from pathlib import Path
 
+from mlopt_discovery import play as play_mod
 from mlopt_discovery import zoo as zoo_mod
 from mlopt_discovery.play import _zoo_case, gen_probe
 
@@ -105,6 +106,7 @@ def measure(
     rounds: int = 3,
     budget: float = DEFAULT_BUDGET,
     dtype: str = "fp32",
+    pay_gate: bool = False,
 ) -> list[dict]:
     """Run the shipped gen path over the named zoo workloads.
 
@@ -128,6 +130,26 @@ def measure(
     for wl in zoo_mod.zoo(d, t, b):
         if want and wl.name not in want:
             continue
+        if pay_gate:
+            # cheap pre-search verdict: export + op census only —
+            # skips the mint/profitable/board/deliver spend entirely
+            # for the elementwise-bound signature.  ``None`` (export
+            # failure) falls through to the normal path, which
+            # reports the failure honestly.
+            verdict = play_mod.zoo_pay_verdict(wl, dtype=dtype)
+            if verdict is not None and verdict["class"] == "skip":
+                rows.append(
+                    {
+                        "case": f"zoo:{wl.name}",
+                        "delivered": False,
+                        "dtype": dtype,
+                        "note": "pay-gate skip: "
+                        + "; ".join(verdict["reasons"]),
+                        "pay_gate": verdict,
+                    }
+                )
+                print(f"zoo[{wl.name}]: pay-gate skip", flush=True)
+                continue
         try:
             with _budget(budget):
                 row = _measure_one(
@@ -254,6 +276,7 @@ def _measure_isolated(
     rounds: int,
     budget: float,
     dtype: str = "fp32",
+    pay_gate: bool = False,
 ) -> list[dict]:
     """Measure each workload in its own process, killing it if it overruns.
 
@@ -296,6 +319,8 @@ def _measure_isolated(
             "--out",
             out,
         ]
+        if pay_gate:
+            cmd.append("--pay-gate")
         proc = subprocess.Popen(
             cmd,
             stdout=subprocess.DEVNULL,
@@ -372,6 +397,15 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="measure each workload in its own process so a hung compile costs one row, not the table",
     )
+    ap.add_argument(
+        "--pay-gate",
+        action="store_true",
+        help=(
+            "skip workloads the pay predictor (mlopt_discovery."
+            "pay_gate) classes as elementwise-bound before the "
+            "mint/referee/search spend — scheduling only, default off"
+        ),
+    )
     args = ap.parse_args(argv)
 
     only = tuple(x for x in args.only.split(",") if x)
@@ -390,6 +424,7 @@ def main(argv: list[str] | None = None) -> int:
             rounds=args.rounds,
             budget=args.budget,
             dtype=args.dtype,
+            pay_gate=args.pay_gate,
         )
     else:
         rows = measure(
@@ -401,6 +436,7 @@ def main(argv: list[str] | None = None) -> int:
             rounds=args.rounds,
             budget=args.budget,
             dtype=args.dtype,
+            pay_gate=args.pay_gate,
         )
     won = [
         r

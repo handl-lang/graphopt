@@ -2940,7 +2940,13 @@ def _probe_play(board: Any) -> Any:
     return board.eg.extract_best(board.root, board.feasible_cost)
 
 
-def gen_probe(case: Any, *, budget: int = 12, reps: int = 200) -> dict:
+def gen_probe(
+    case: Any,
+    *,
+    budget: int = 12,
+    reps: int = 200,
+    pay_gate: bool = False,
+) -> dict:
     """Measure the novelty claim: baseline vs generated-kernel module.
 
     For every claim the board offers: play it, extract, deliver
@@ -2950,7 +2956,33 @@ def gen_probe(case: Any, *, budget: int = 12, reps: int = 200) -> dict:
     product question: did the search produce a *runnable module
     that is faster* than the spelled source, not just a new
     spelling.
+
+    ``pay_gate=True`` runs :func:`mlopt_discovery.pay_gate.predict`
+    on the case's root term *before* ``_gen_board`` pays the claim
+    cost gate + board episode: a ``"skip"`` verdict returns a
+    declined row immediately — scheduling only, the measured path
+    for every other verdict is byte-identical.
     """
+    if pay_gate:
+        from mlopt_discovery import pay_gate as pg
+
+        verdict = pg.predict(case[1])
+        if not verdict.measure:
+            return {
+                "case": case[0],
+                "delivered": False,
+                "claims": [],
+                "note": "pay-gate skip: " + "; ".join(verdict.reasons),
+                "pay_gate": {
+                    "class": verdict.cls,
+                    "reasons": list(verdict.reasons),
+                },
+            }
+    return _gen_probe_impl(case, budget=budget, reps=reps)
+
+
+def _gen_probe_impl(case: Any, *, budget: int, reps: int) -> dict:
+    """Run the measured claim → deliver → time path (``gen_probe`` body)."""
     import torch
 
     from mlopt_discovery import genkernel as gk
@@ -3274,6 +3306,48 @@ def _as_dtype(obj: Any, td: Any) -> Any:
     return obj
 
 
+def _zoo_export(wl: Any, *, dtype: str = "fp64") -> Any:
+    """Build + export a zoo workload — the cheap half of ``_zoo_case``.
+
+    Returns ``(model, feed, ir, leaves)``.  No mint, no referee —
+    this is exactly the work a pay-gate verdict needs before the
+    expensive intake sweep runs.
+    """
+    import torch
+    from mlopt_torch.adapters import TorchSource
+
+    td = {"fp32": torch.float32, "fp64": torch.float64}[dtype]
+    model, feed = wl.build()
+    model = model.to(td)  # the intake convention is fp64 feeds
+    feed = _as_dtype(feed, td)
+    ir, leaves = TorchSource().to_ir(model, feed)
+    return model, feed, ir, leaves
+
+
+def zoo_pay_verdict(wl: Any, *, dtype: str = "fp32") -> dict | None:
+    """Cheap pre-search pay verdict for a zoo workload.
+
+    Exports the module to IR (``_zoo_export`` — build + ``to_ir``,
+    no mint, no ``profitable`` sweep) and runs
+    :func:`mlopt_discovery.pay_gate.predict` on the root term.
+    Returns ``{"class", "reasons", "features"}`` or ``None`` when the
+    export itself fails — a workload that cannot be exported has no
+    verdict and the caller should proceed exactly as today.
+    """
+    from mlopt_discovery import pay_gate as pg
+
+    try:
+        _model, _feed, ir, _leaves = _zoo_export(wl, dtype=dtype)
+    except Exception:
+        return None
+    v = pg.predict(ir.root)
+    return {
+        "class": v.cls,
+        "reasons": list(v.reasons),
+        "features": dict(v.features),
+    }
+
+
 def _zoo_case(wl: Any, *, dtype: str = "fp64") -> Any:
     """Build a held-out zoo workload as a gen-domain case tuple.
 
@@ -3283,17 +3357,10 @@ def _zoo_case(wl: Any, *, dtype: str = "fp64") -> Any:
     the backend kernel's, not the IR's.  The IR is the same either way;
     only the leaves, the feeds and the refinery's measurements move.
     """
-    import torch
-    from mlopt_torch.adapters import TorchSource
-
     from mlopt_discovery import genkernel as gk
     from mlopt_discovery.meta_arena import _canon_concrete
 
-    td = {"fp32": torch.float32, "fp64": torch.float64}[dtype]
-    model, feed = wl.build()
-    model = model.to(td)  # the intake convention is fp64 feeds
-    feed = _as_dtype(feed, td)
-    ir, leaves = TorchSource().to_ir(model, feed)
+    model, feed, ir, leaves = _zoo_export(wl, dtype=dtype)
     covered = {
         _canon_concrete(h["pattern"]) for h in lawdata.HANDLERS.values()
     }
@@ -3354,12 +3421,25 @@ def _zoo_case(wl: Any, *, dtype: str = "fp64") -> Any:
 
 def _zoo_rows(args: Any) -> None:
     """Print the zoo probe rows — the ``--zoo`` CLI arm."""
-    for row in zoo_probe(d=args.zoo_d, t=args.zoo_t, b=args.zoo_b):
+    for row in _zoo_probe_for_args(args):
         print(f"zoo[{row['case']}]: {row}")  # stdout-compat
 
 
+def _zoo_probe_for_args(args: Any) -> Any:
+    """``zoo_probe`` bound to the CLI args (``--pay-gate`` opt-in)."""
+    kwargs: dict = {}
+    if getattr(args, "pay_gate", False):
+        kwargs["pay_gate"] = True
+    return zoo_probe(d=args.zoo_d, t=args.zoo_t, b=args.zoo_b, **kwargs)
+
+
 def zoo_probe(
-    *, reps: int = 100, d: int = 16, t: int = 8, b: int = 2
+    *,
+    reps: int = 100,
+    d: int = 16,
+    t: int = 8,
+    b: int = 2,
+    pay_gate: bool = False,
 ) -> list[dict]:
     """``gen_probe`` over the held-out model zoo — the real corpus.
 
@@ -3368,26 +3448,65 @@ def zoo_probe(
     verify → time table vs eager *and* ``torch.compile``.  ``d``/``t``
     /``b`` scale the workloads — generated kernels pay at larger
     shapes.
+
+    ``pay_gate=True`` routes each workload through
+    :func:`zoo_pay_verdict` *before* ``_zoo_case`` spends the mint +
+    ``profitable`` intake sweep: a ``"skip"`` verdict (the
+    elementwise-bound signature — measured to tie the spelled body)
+    records a skipped row and never pays for search or measurement.
+    ``"pay"``/``"unknown"`` proceed exactly as today — the gate only
+    ever removes budget, it never changes what a measured workload
+    does.
     """
+    if pay_gate:
+        return _zoo_probe_gated(d=d, t=t, b=b, reps=reps)
+    return _zoo_probe_impl(d=d, t=t, b=b, reps=reps)
+
+
+def _zoo_probe_impl(*, reps: int, d: int, t: int, b: int) -> list[dict]:
+    """Run the ungated per-workload loop (``zoo_probe``'s original body)."""
+    from mlopt_discovery import zoo as _zoo
+
+    return [
+        _zoo_probe_workload(wl, reps=reps) for wl in _zoo.zoo(d, t, b)
+    ]
+
+
+def _zoo_probe_gated(
+    *, reps: int, d: int, t: int, b: int
+) -> list[dict]:
+    """``zoo_probe`` with the pay gate: skip before the intake sweep."""
     from mlopt_discovery import zoo as _zoo
 
     rows: list[dict] = []
     for wl in _zoo.zoo(d, t, b):
-        try:
-            case = _zoo_case(wl)
-        except Exception as exc:
+        verdict = zoo_pay_verdict(wl)
+        if verdict is not None and verdict["class"] == "skip":
             rows.append(
                 {
                     "case": f"zoo:{wl.name}",
                     "delivered": False,
-                    "note": (
-                        f"export declined: {type(exc).__name__}: {exc}"
-                    ),
+                    "note": "pay-gate skip: "
+                    + "; ".join(verdict["reasons"]),
+                    "pay_gate": verdict,
                 }
             )
             continue
-        rows.append(gen_probe(case, reps=reps))
+        rows.append(_zoo_probe_workload(wl, reps=reps))
     return rows
+
+
+def _zoo_probe_workload(wl: Any, *, reps: int) -> dict:
+    """One workload's ``_zoo_case`` + ``gen_probe`` row, or the decline."""
+    try:
+        case = _zoo_case(wl)
+    except Exception as exc:
+        return {
+            "case": f"zoo:{wl.name}",
+            "delivered": False,
+            "note": f"export declined: {type(exc).__name__}: {exc}",
+        }
+    return gen_probe(case, reps=reps)
 
 
 def _time_module(model: Any, x: Any, reps: int) -> float:
@@ -4200,7 +4319,8 @@ def _extras(args: Any, d: Any, ev: list, fallback: Any) -> None:
         for case in ev:
             if DOMAINS[args.domain] is DOMAINS["gen"]:
                 print(  # stdout-compat
-                    f"probe[{case[0]}]: {gen_probe(case)}"
+                    f"probe[{case[0]}]: "
+                    f"{gen_probe(case, pay_gate=getattr(args, 'pay_gate', False))}"
                 )
     if args.zoo:
         _zoo_rows(args)
@@ -4285,6 +4405,16 @@ def main(argv: list[str] | None = None) -> int:
         type=int,
         default=2,
         help="zoo batch size (default 2 — the honest small probe)",
+    )
+    ap.add_argument(
+        "--pay-gate",
+        action="store_true",
+        help=(
+            "route --probe/--zoo workloads through the pay predictor "
+            "(mlopt_discovery.pay_gate) and skip the elementwise-bound "
+            "signature before mint/referee/search spend — scheduling "
+            "only, default off"
+        ),
     )
     ap.add_argument(
         "--scan-probe",
