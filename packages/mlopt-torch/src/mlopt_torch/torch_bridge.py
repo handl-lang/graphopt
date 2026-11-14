@@ -73,6 +73,16 @@ _ATEN_TO_IR: dict[str, str] = {
     # are different ops and must not collapse into one name.
     "amax": "amax",
     "amin": "amin",
+    # aten.min/.max 'other' overload is the ELEMENTWISE two-operand
+    # spelling (``torch.min(a, b)`` → ``OpOverload.__name__``
+    # 'min.other') — 'default'/'dim' are the reductions.  Without this
+    # rename the elementwise form mints op 'min'/'max', whose binding
+    # is the whole-tensor/dim reduction and silently DROPS the second
+    # operand (t5 wall #2: T5's relative_position_bucket collapsed to
+    # INT64_MIN → embedding gather OOB).  The IR names are the
+    # substrate's pointwise ``minimum``/``maximum``.
+    "min.other": "minimum",
+    "max.other": "maximum",
     "matmul.default": "matmul",
     "contiguous": "contiguous",
     "clone": "contiguous",
@@ -296,6 +306,13 @@ def _strip_backend_suffix(name: str) -> str:
 
 def _canon_aten_name(name: str) -> str:
     """Map a raw ATen name to a mlopt generator, handling overloads."""
+    # Namespace-qualified spellings ('aten.min.other', 'aten::min.other')
+    # canonicalise like their bare ``__name__`` twins ('min.other') —
+    # the overload suffix is load-bearing (see ``_ATEN_TO_IR``).
+    for prefix in ("aten::", "aten."):
+        if name.startswith(prefix):
+            name = name[len(prefix) :]
+            break
     if name in _ATEN_TO_IR:
         return _ATEN_TO_IR[name]
     stripped = _strip_backend_suffix(name)
@@ -322,7 +339,10 @@ def _aten_name(target: Any) -> str:
         return _canon_aten_name(target)
     s = str(target)
     if "aten::" in s:
-        name = s.split("aten::")[1].split(".")[0]
+        # Keep the overload-qualified tail ('min.other', 'add.Tensor')
+        # — ``_canon_aten_name`` resolves it; truncating at the first
+        # dot would collapse 'aten::min.other' onto the reduction 'min'.
+        name = s.split("aten::", 1)[1]
         return _canon_aten_name(name)
     return _canon_aten_name(s)
 
@@ -650,6 +670,13 @@ def export_to_ir(
                 continue
             args = []
             attrs: dict[str, Any] = {}
+            # aten.clamp.Tensor(self, min?, max?) drops a ``None``
+            # bound out of the arg list entirely — the surviving
+            # tensor args' aten positions (1=min, 2=max) must be
+            # recorded or ``clamp(a, max=b)`` silently mints the same
+            # term as ``clamp(a, min=b)`` (same silent-wrong-answer
+            # class as the aten.min 'other' wall).
+            clamp_argpos: list[int] = []
             positional_attrs = {
                 **_LOCAL_ATTR_SCHEMA.get(ir_op, {}),
                 **ATTR_SCHEMA.get(ir_op, {}),
@@ -776,6 +803,10 @@ def export_to_ir(
                     )
                     if key in env:
                         args.append(env[key])
+                        if ir_op == "clamp" and i > 0:
+                            # Position 0 is ``self`` — only the bound
+                            # slots (1=min, 2=max) are ambiguous.
+                            clamp_argpos.append(i)
             for (
                 k,
                 v,
@@ -814,6 +845,10 @@ def export_to_ir(
             # QKV in-proj split is a dim-0 split of a (3E, E) weight.
             if ir_op in ("split", "chunk") and "dim" not in attrs:
                 attrs["dim"] = 0
+            if ir_op == "clamp" and clamp_argpos:
+                # See the declaration above the arg loop: tensor bounds
+                # keep their aten slot (1=min, 2=max) as ``argpos``.
+                attrs["argpos"] = tuple(clamp_argpos)
             if (
                 ir_op == "getitem"
                 and args
@@ -1558,6 +1593,92 @@ def _opaque_torch(*args: Any, **kw: Any) -> Any:
     return _resolve_opaque_callable(qual)(*call_args, **call_kwargs)
 
 
+def _extreme_torch(
+    elem_fn: Callable[[Any, Any], Any],
+    name: str,
+    x: Any,
+    a: tuple,
+    kw: dict,
+) -> Any:
+    """Bind ``min``/``max``: elementwise on a second operand, else reduce.
+
+    The exporter renames the aten ``other`` overload to
+    ``minimum``/``maximum``, so a *positional* second operand reaching
+    this binding can only come from a hand-minted term — and the only
+    honest reading of ``min(x, y)`` is the elementwise form (the
+    reduction's ``dim``/``keepdim`` are attrs, never operands).
+    Routing it to ``torch.minimum``/``torch.maximum`` binds correctly;
+    the previous unconditional ``torch.min(x)`` silently dropped the
+    operand — the t5-small silent-wrong-answer wall.  Extra positionals
+    beyond the second operand fail loudly rather than being dropped.
+    """
+    if a:
+        if len(a) != 1 or kw:
+            raise ValueError(
+                f"op '{name}' got {len(a)} positional operand(s) plus "
+                f"attrs {sorted(kw)} — the elementwise two-operand "
+                f"spelling is '"
+                + ("minimum" if name == "min" else "maximum")
+                + "'"
+            )
+        return elem_fn(x, a[0])
+    if attr_of(kw, "dim", "axis", default=None) is None:
+        return (torch.min if name == "min" else torch.max)(x)
+    return (torch.min if name == "min" else torch.max)(
+        x,
+        dim=_dim_args(a, kw)[0],
+        keepdim=bool(attr_of(kw, "keepdim", default=False)),
+    )
+
+
+def _clamp_torch(t: Any, *a: Any, **kw: Any) -> Any:
+    """Bind ``clamp`` — tensor bounds keep their aten slot via ``argpos``.
+
+    ``aten.clamp.Tensor(self, min?, max?)`` elides a ``None`` bound, so
+    the surviving tensor args lose their slot identity in the flat arg
+    list: without the exporter's ``argpos`` record, ``clamp(a, max=b)``
+    minted the same term as ``clamp(a, min=b)`` and silently applied
+    the wrong bound (the same silent-wrong-answer class as the
+    ``aten.min`` ``other`` wall).  ``argpos`` maps each positional arg
+    back to its aten position (1=min, 2=max); scalar bounds still
+    arrive under the canonical ``min``/``max`` attrs.
+    """
+    argpos = kw.pop("argpos", None)
+    lo = attr_of(kw, "min", default=None)
+    hi = attr_of(kw, "max", default=None)
+    if argpos is None:
+        # Hand-minted/legacy spelling: positional args fill min then
+        # max (attrs win, as before); anything past two operands is
+        # meaningless and fails loudly rather than dropping silently.
+        if len(a) > 2:
+            raise ValueError(
+                f"op 'clamp' got {len(a)} positional operands — "
+                "at most two (min, max)"
+            )
+        if a:
+            if lo is None:
+                lo = a[0]
+            if len(a) > 1 and hi is None:
+                hi = a[1]
+        return torch.clamp(t, min=lo, max=hi)
+    if len(a) != len(argpos):
+        raise ValueError(
+            f"op 'clamp': {len(a)} tensor bound(s) but argpos "
+            f"{tuple(argpos)} — the term is malformed"
+        )
+    for pos, v in zip(argpos, a, strict=True):
+        if pos == 1:
+            lo = v
+        elif pos == 2:
+            hi = v
+        else:
+            raise ValueError(
+                f"op 'clamp': tensor bound at unexpected aten "
+                f"position {pos} (expected 1=min or 2=max)"
+            )
+    return torch.clamp(t, min=lo, max=hi)
+
+
 #: Core torch lowering bindings — the base ``OpTable``'s table (plan
 #: 0001 phase 2c).  Carrier ops (``trace``/``omd_*``/``cmask``...)
 #: are deliberately ABSENT: they live in each carrier
@@ -1643,23 +1764,16 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
     "amin": lambda x, *a, **kw: x.amin(*_dim_args(a, kw)),
     # aten.max/.min — the (values, indices) pair when a dim is given,
     # the scalar value for the whole-tensor spelling.  getitem picks.
-    "max": lambda x, *a, **kw: (
-        torch.max(x)
-        if attr_of(kw, "dim", "axis", default=None) is None
-        else torch.max(
-            x,
-            dim=_dim_args(a, kw)[0],
-            keepdim=bool(attr_of(kw, "keepdim", default=False)),
-        )
+    # The ELEMENTWISE two-operand spelling (aten 'other' overload)
+    # exports as ``minimum``/``maximum`` — see ``_ATEN_TO_IR``.  The
+    # arity guard below is the binding-layer half of that fix: a
+    # hand-minted ``min(x, y)`` term must bind elementwise or fail
+    # loudly, never silently drop ``y`` through the reduction.
+    "max": lambda x, *a, **kw: _extreme_torch(
+        torch.maximum, "max", x, a, kw
     ),
-    "min": lambda x, *a, **kw: (
-        torch.min(x)
-        if attr_of(kw, "dim", "axis", default=None) is None
-        else torch.min(
-            x,
-            dim=_dim_args(a, kw)[0],
-            keepdim=bool(attr_of(kw, "keepdim", default=False)),
-        )
+    "min": lambda x, *a, **kw: _extreme_torch(
+        torch.minimum, "min", x, a, kw
     ),
     "var_mean": lambda x, *a, **kw: torch.var_mean(
         x,
@@ -2058,11 +2172,7 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
     ),
     "diag_sum": lambda t, *a, **kw: torch.trace(t),
     # --- elementwise ----------------------------------------------------
-    "clamp": lambda t, *a, **kw: torch.clamp(
-        t,
-        min=attr_of(kw, "min", default=a[0] if a else None),
-        max=attr_of(kw, "max", default=a[1] if len(a) > 1 else None),
-    ),
+    "clamp": _clamp_torch,
     "clamp_min": lambda t, *a, **kw: torch.clamp_min(
         t, attr_of(kw, "min", default=a[0] if a else 0)
     ),
@@ -3135,6 +3245,60 @@ def _sibling_like(args: list) -> Any:
     return None
 
 
+def _device_like(args: list) -> Any:
+    """Device reference for ``_align_to`` — dtype-agnostic.
+
+    The first NON-CPU tensor input wins: integer/bool operands (token
+    ids, index tensors, masks) pin the delivery device exactly like
+    float activations do, and an all-int feed must still trigger the
+    align (t5 wall #1).  Falls back to the first tensor input when
+    every input is CPU — the caller's ``device.type == "cpu"`` early
+    return then applies as before.
+    """
+    first = None
+    for a in args:
+        if not isinstance(a, torch.Tensor):
+            continue
+        if first is None:
+            first = a
+        if a.device.type != "cpu":
+            return a
+    return first
+
+
+_COMPLEX_DTYPES = frozenset(
+    d
+    for d in (
+        getattr(torch, "complex32", None),
+        torch.complex64,
+        torch.complex128,
+    )
+    if d is not None
+)
+
+
+def _cast_to_delivery(x: Any, dtype: torch.dtype) -> Any:
+    """Cast one forward input to the module's delivery dtype.
+
+    Real-floating tensors cast (``.to`` — a no-op view when the dtype
+    already matches); integer/bool operands and non-tensors pass
+    through untouched — an int64 index must never become float.  A
+    complex input casts only onto a complex delivery dtype: dropping
+    the imaginary part silently would be a wrong answer, so a
+    complex→real mismatch passes through and lets torch's promotion
+    (or its loud dtype error) decide.
+    """
+    if (
+        not isinstance(x, torch.Tensor)
+        or x.dtype == dtype
+        or not (x.is_floating_point() or x.is_complex())
+    ):
+        return x
+    if x.is_complex() and dtype not in _COMPLEX_DTYPES:
+        return x
+    return x.to(dtype=dtype)
+
+
 def eval_term(
     term: Any,
     *,
@@ -3539,8 +3703,8 @@ class IRModule(torch.nn.Module):
             self._plan_cache[term] = plan
         return None if plan is _UNPLANNED else plan
 
-    def _align_to(self, xs: tuple) -> None:
-        """Move baked tensors to the inputs' device/dtype, once per pair.
+    def _align_to(self, xs: tuple) -> torch.dtype | None:
+        """Move baked tensors to the delivery device/dtype, once.
 
         The exporter and the weight-chain fold can bake tensors in the
         process default context (CPU).  A delivery on another device must
@@ -3549,66 +3713,116 @@ class IRModule(torch.nn.Module):
         verify contract is untouched; the decision is cached per
         (device, dtype).
 
-        Non-floating leaves move too — device only, dtype preserved.
-        Lifted integer tensors (a positional-embedding ``arange``,
-        token-id buffers) are real operands: ``F.embedding``/gather
-        require the index on the weight's device, so a CPU index
-        against a CUDA weight raises at first eval.  Scalar ``Const``
-        minting is unaffected — ``_mint_const`` materialises those at
-        eval time, not through these tables.
+        Device reference: the first NON-CPU tensor input of ANY dtype —
+        integer index tensors need the weight's device just as float
+        activations do (``F.embedding`` requires index and weight on one
+        device), and an all-int feed (T5's ``input_ids`` pipeline) must
+        still trigger the align — the t5 wall #1 silent no-op.  With no
+        tensor input at all the first parameter's device is the target,
+        so CPU-baked ``fused_*`` tensors still reach CUDA params.
+
+        Dtype reference: the MODULE's dtype — the majority floating
+        dtype across the registered params — NOT the first float
+        input's.  The old rule cast every weight to the caller's input
+        dtype, so an fp32 mask silently flipped a bf16 delivery to fp32
+        (t5 wall #3).  Weights keep the module dtype; ``forward`` casts
+        float INPUTS to it instead.  Non-floating leaves move device
+        only, dtype preserved (an int64 index must never become float).
+        Scalar ``Const`` minting is unaffected — ``_mint_const``
+        materialises those at eval time.
+
+        Returns the delivery dtype (for ``forward``'s input cast) or
+        ``None`` when no alignment applies (CPU / no tensors).
         """
+        like = _device_like(list(xs))
+        if like is None:
+            # No tensor input: align baked tensors to the params' own
+            # device (first tensor in the live tables).
+            for table in (self._param_map, self._param_values):
+                for t in table.values():
+                    if isinstance(t, torch.Tensor):
+                        like = t
+                        break
+                if like is not None:
+                    break
+        if like is None or like.device.type == "cpu":
+            return None
+        dtype_like = self._delivery_dtype(xs)
+        key = (str(like.device), str(dtype_like))
+        if getattr(self, "_dev_key", None) != key:
+            tables: list[dict[str, Any]] = [
+                self._param_map,
+                self._param_values,
+            ]
+            # ``_param_values`` aliases registered names to their
+            # ``_param_map`` Parameter (same object — see ``__init__``),
+            # so the same tensor can appear under two keys.  ``moved_for``
+            # maps id(old tensor) → (old, replacement): the tuple keeps
+            # the old object alive so its id cannot be recycled mid-loop,
+            # and an aliased entry rebinds to the SAME moved tensor
+            # instead of paying a second device copy.
+            moved_for: dict[int, tuple[Any, Any]] = {}
+            for table in tables:
+                for k, t in list(table.items()):
+                    if not isinstance(t, torch.Tensor):
+                        continue
+                    prev = moved_for.get(id(t))
+                    if prev is not None:
+                        table[k] = prev[1]
+                        continue
+                    if t.is_floating_point() or t.is_complex():
+                        target_dtype = (
+                            dtype_like
+                            if dtype_like is not None
+                            else t.dtype
+                        )
+                        if (
+                            t.device == like.device
+                            and t.dtype == target_dtype
+                        ):
+                            continue
+                        moved = t.detach().to(
+                            device=like.device, dtype=target_dtype
+                        )
+                    else:
+                        # Integer/bool leaves: dtype is semantic (index
+                        # tensors must not be cast to the float dtype) —
+                        # only the device must match.
+                        if t.device == like.device:
+                            continue
+                        moved = t.detach().to(device=like.device)
+                    new = (
+                        torch.nn.Parameter(
+                            moved, requires_grad=t.requires_grad
+                        )
+                        if isinstance(t, torch.nn.Parameter)
+                        else moved
+                    )
+                    moved_for[id(t)] = (t, new)
+                    table[k] = new
+            self._dev_key = key
+        return dtype_like
+
+    def _delivery_dtype(self, xs: tuple) -> torch.dtype | None:
+        """Return the dtype this delivery computes in — the module's.
+
+        Majority floating dtype across the registered params (first-seen
+        wins ties) so a stray differently-dtyped weight cannot claim the
+        module; falls back to the first float INPUT's dtype only when the
+        module has no floating param at all (a param-free float graph),
+        and ``None`` when nothing floats — int-only deliveries then move
+        device-only.
+        """
+        counts: dict[torch.dtype, int] = {}
+        for t in self._param_map.values():
+            if isinstance(t, torch.Tensor) and (
+                t.is_floating_point() or t.is_complex()
+            ):
+                counts[t.dtype] = counts.get(t.dtype, 0) + 1
+        if counts:
+            return max(counts, key=counts.__getitem__)
         like = _sibling_like(list(xs))
-        if like is None or like.dim() == 0 or like.device.type == "cpu":
-            return
-        key = (str(like.device), str(like.dtype))
-        if getattr(self, "_dev_key", None) == key:
-            return
-        tables: list[dict[str, Any]] = [
-            self._param_map,
-            self._param_values,
-        ]
-        # ``_param_values`` aliases registered names to their
-        # ``_param_map`` Parameter (same object — see ``__init__``), so
-        # the same tensor can appear under two keys.  ``moved_for``
-        # maps id(old tensor) → (old, replacement): the tuple keeps
-        # the old object alive so its id cannot be recycled mid-loop,
-        # and an aliased entry rebinds to the SAME moved tensor
-        # instead of paying a second device copy.
-        moved_for: dict[int, tuple[Any, Any]] = {}
-        for table in tables:
-            for k, t in list(table.items()):
-                if not isinstance(t, torch.Tensor):
-                    continue
-                prev = moved_for.get(id(t))
-                if prev is not None:
-                    table[k] = prev[1]
-                    continue
-                if t.is_floating_point() or t.is_complex():
-                    if (
-                        t.device == like.device
-                        and t.dtype == like.dtype
-                    ):
-                        continue
-                    moved = t.detach().to(
-                        device=like.device, dtype=like.dtype
-                    )
-                else:
-                    # Integer/bool leaves: dtype is semantic (index
-                    # tensors must not be cast to the float dtype) —
-                    # only the device must match.
-                    if t.device == like.device:
-                        continue
-                    moved = t.detach().to(device=like.device)
-                new = (
-                    torch.nn.Parameter(
-                        moved, requires_grad=t.requires_grad
-                    )
-                    if isinstance(t, torch.nn.Parameter)
-                    else moved
-                )
-                moved_for[id(t)] = (t, new)
-                table[k] = new
-        self._dev_key = key
+        return like.dtype if like is not None else None
 
     def _park_params(self) -> None:
         """Move the live weight tables to CPU — the low-memory verify park.
@@ -3788,7 +4002,14 @@ class IRModule(torch.nn.Module):
 
     def forward(self, *xs: Any) -> Any:
         """Run the module: bind inputs and evaluate the root."""
-        self._align_to(xs)
+        cast_to = self._align_to(xs)
+        if cast_to is not None:
+            # Inputs cast TO the module's dtype — never the reverse
+            # (t5 wall #3: an fp32 mask used to flip every bf16 weight
+            # to fp32).  Only real-floating inputs cast; integer/bool
+            # operands keep their dtype (indices!), and a complex input
+            # is never silently stripped to a real dtype.
+            xs = tuple(_cast_to_delivery(x, cast_to) for x in xs)
         plan = self._root_plan
         if plan is not None:
             # The tape's positional Var fills compute exactly what the

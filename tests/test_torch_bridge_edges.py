@@ -1614,3 +1614,216 @@ def test_load_state_dict_updates_live_param_tables():
         assert torch.equal(mod(xv), xv * new_w)
     # the registered param got the new values too (state_dict agrees)
     assert torch.equal(mod.state_dict()["W"], new_w)
+
+
+# ---------------------------------------------------------------------------
+#  t5 walls — elementwise min/max, int-only align, module-dtype delivery
+# ---------------------------------------------------------------------------
+
+
+def test_min_max_other_overload_exports_elementwise():
+    """``torch.min(a, b)``/``torch.max(a, b)`` are the aten ``other``
+    overload — elementwise, NOT the reduction.  Regression for the t5
+    silent wrong answer: they used to mint op ``min``/``max`` whose
+    binding is the whole-tensor reduction and dropped the second
+    operand (T5's relative_position_bucket → INT64_MIN → OOB gather).
+    The export must mint ``minimum``/``maximum`` and verify bit-exact."""
+
+    class M(torch.nn.Module):
+        def forward(self, a, b):
+            return torch.min(a, b) * 2 + torch.max(a, b)
+
+    m = M().eval()
+    a = torch.randn(3, 4)
+    b = torch.randn(3, 4) * 0.5
+    ir, src = export_to_ir(m, (a, b))
+    assert _find(ir.root, "minimum"), "elementwise min must mint 'minimum'"
+    assert _find(ir.root, "maximum"), "elementwise max must mint 'maximum'"
+    assert not _find(ir.root, "min") and not _find(ir.root, "max")
+    mod = ir_to_torch_module(ir, param_values=src)
+    with torch.no_grad():
+        assert torch.equal(mod(a, b), m(a, b))
+
+
+def test_min_max_reduction_spellings_still_bind():
+    """The reduction spellings (whole-tensor and ``dim``) keep minting
+    ``min``/``max`` and still evaluate correctly."""
+
+    class R(torch.nn.Module):
+        def forward(self, a):
+            return (
+                torch.min(a)
+                + torch.max(a)
+                + torch.min(a, dim=0).values.sum()
+                + torch.max(a, dim=-1, keepdim=True).values.sum()
+            )
+
+    r = R().eval()
+    a = torch.randn(3, 4)
+    ir, src = export_to_ir(r, (a,))
+    assert _find(ir.root, "min") and _find(ir.root, "max")
+    mod = ir_to_torch_module(ir, param_values=src)
+    with torch.no_grad():
+        assert torch.allclose(mod(a), r(a))
+
+
+def test_canon_aten_name_min_max_other():
+    """Overload-qualified spellings canonicalise to the elementwise
+    ops — bare, ``aten.`` and ``aten::`` prefixes alike — while the
+    reduction overloads keep the reduction names."""
+    assert _canon_aten_name("min.other") == "minimum"
+    assert _canon_aten_name("max.other") == "maximum"
+    assert _canon_aten_name("aten.min.other") == "minimum"
+    assert _canon_aten_name("aten::max.other") == "maximum"
+    assert _canon_aten_name("min.default") == "min"
+    assert _canon_aten_name("min.dim") == "min"
+    assert _canon_aten_name("max.dim") == "max"
+    assert _aten_name("aten::min.other") == "minimum"
+
+
+def test_handminted_min_max_two_operands_bind_elementwise():
+    """A hand-minted ``min(x, y)``/``max(x, y)`` term (no exporter in
+    the loop) must bind elementwise — the binding-layer half of the
+    fix — and malformed spellings fail loudly instead of dropping an
+    operand."""
+    x = Var("x", TensorType((2, 3)))
+    y = Var("y", TensorType((2, 3)))
+    z = Var("z", TensorType((2, 3)))
+    mod = _lower_root(Op.make("add", Op.make("min", x, y), Op.make("max", x, y)), inputs=[x, y])
+    xv = torch.randn(2, 3)
+    yv = torch.randn(2, 3)
+    with torch.no_grad():
+        assert torch.equal(mod(xv, yv), torch.minimum(xv, yv) + torch.maximum(xv, yv))
+    # Three operands: nothing honest to bind — fail loudly.
+    bad = _lower_root(Op.make("min", x, y, z), inputs=[x, y, z])
+    with pytest.raises(ValueError, match="elementwise"):
+        bad(xv, yv, torch.randn(2, 3))
+    # Elementwise spelling plus reduction attrs is contradictory.
+    bad2 = _lower_root(Op.make("min", x, y, dim=0), inputs=[x, y])
+    with pytest.raises(ValueError, match="elementwise"):
+        bad2(xv, yv)
+
+
+@pytest.mark.requires_cuda
+def test_align_to_int_only_feed_moves_baked_tensors():
+    """Regression for t5 wall #1: an all-integer feed must still
+    trigger ``_align_to`` — int64 indices need the weight's device.
+    Before the fix ``_sibling_like`` keyed off the first FLOAT input,
+    found none, and silently skipped alignment: CPU-baked tensors
+    collided with CUDA params at first eval."""
+    if not torch.cuda.is_available():
+        pytest.skip("requires CUDA")
+
+    class M(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.w = torch.nn.Parameter(torch.randn(10, 4))
+            self.register_buffer("pos", torch.arange(10, dtype=torch.int64))
+
+        def forward(self, idx):
+            e = F.embedding(idx, self.w)
+            return e + self.w[self.pos[: idx.shape[0]]]
+
+    m = M().eval()
+    idx = torch.randint(0, 10, (3,))
+    ir, src = export_to_ir(m, (idx,))
+    # CUDA float param, CPU int buffer — the lifted-constant case.
+    pv = {
+        k: (v.cuda() if v.is_floating_point() else v)
+        for k, v in src.items()
+    }
+    mod = ir_to_torch_module(ir, param_values=pv)
+    idxc = idx.cuda()
+    with torch.no_grad():
+        out = mod(idxc)
+        ref = m(idx).cuda()
+    assert out.device.type == "cuda"
+    assert torch.equal(out, ref)
+    # The int64 index leaf moved device-only — dtype preserved.
+    int_params = [
+        t for t in mod._param_map.values() if t.dtype == torch.int64
+    ]
+    assert int_params and all(t.device.type == "cuda" for t in int_params)
+
+
+@pytest.mark.requires_cuda
+def test_align_to_keeps_module_dtype_not_input_dtype():
+    """Regression for t5 wall #3: weight dtype follows the MODULE, not
+    the first float input.  A bf16 module fed an fp32 'mask' input on
+    CUDA must keep bf16 params and cast the input — previously every
+    weight silently upcast to fp32 (a 'bf16' delivery at fp32 speed)."""
+    if not torch.cuda.is_available():
+        pytest.skip("requires CUDA")
+
+    class M(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.w = torch.nn.Parameter(torch.randn(8, 8))
+            self.b = torch.nn.Parameter(torch.randn(8))
+
+        def forward(self, x, mask):
+            return F.linear(x, self.w, self.b) * mask.unsqueeze(-1)
+
+    m = M().eval().to(torch.bfloat16)
+    x = torch.randn(4, 8, dtype=torch.bfloat16)
+    mask = torch.randn(4, 1)  # fp32 — the stray-dtype footgun
+    ir, src = export_to_ir(m, (x, mask.to(torch.bfloat16)))
+    pv = {k: v.cuda() for k, v in src.items()}
+    mod = ir_to_torch_module(ir, param_values=pv)
+    with torch.no_grad():
+        out = mod(x.cuda(), mask.cuda())
+    assert out.dtype == torch.bfloat16
+    assert all(
+        t.dtype == torch.bfloat16 for t in mod._param_map.values()
+    )
+    ref = m(x, mask.to(torch.bfloat16))
+    assert torch.allclose(out.float().cpu(), ref.float(), atol=1e-2)
+
+
+def test_delivery_dtype_and_cast_helpers():
+    """``_delivery_dtype`` is the module's majority float dtype;
+    ``_cast_to_delivery`` casts real floats only — ints keep their
+    dtype and complex never drops its imaginary part."""
+    from mlopt_torch.torch_bridge import _cast_to_delivery
+
+    W = Param("W", TensorType((4, 4)))
+    W2 = Param("W2", TensorType((4, 4)))
+    W3 = Param("W3", TensorType((4, 4)))
+    x = Var("x", TensorType((4, 4)))
+    # bf16 module: two bf16 params + one fp32 outlier -> bf16 wins.
+    pv = {
+        "W": torch.randn(4, 4, dtype=torch.bfloat16),
+        "W2": torch.randn(4, 4, dtype=torch.bfloat16),
+        "W3": torch.randn(4, 4, dtype=torch.float32),
+    }
+    ir = IR(
+        root=Op.make(
+            "add",
+            Op.make("mul", x, W),
+            Op.make("add", Op.make("mul", x, W2), Op.make("mul", x, W3)),
+        ),
+        inputs=[x],
+        input_names={"x"},
+        params={"W": W, "W2": W2, "W3": W3},
+    )
+    mod = ir_to_torch_module(ir, param_values=pv)
+    assert mod._delivery_dtype((torch.randn(4, 4),)) == torch.bfloat16
+    # No float params -> the first float input's dtype is the fallback.
+    mod2 = _lower_root(Op.make("neg", x), {})
+    assert (
+        mod2._delivery_dtype((torch.randn(2, dtype=torch.float64),))
+        == torch.float64
+    )
+    # int-only feed, no float params -> None (device-only align).
+    assert mod2._delivery_dtype((torch.ones(2, dtype=torch.int64),)) is None
+    # Cast rules.
+    f32 = torch.randn(2)
+    assert _cast_to_delivery(f32, torch.bfloat16).dtype == torch.bfloat16
+    i64 = torch.ones(2, dtype=torch.int64)
+    assert _cast_to_delivery(i64, torch.bfloat16) is i64
+    c = torch.randn(2, dtype=torch.complex64)
+    assert _cast_to_delivery(c, torch.float32) is c  # imag never dropped
+    assert (
+        _cast_to_delivery(c, torch.complex128).dtype == torch.complex128
+    )
+    assert _cast_to_delivery("not-a-tensor", torch.float32) == "not-a-tensor"
