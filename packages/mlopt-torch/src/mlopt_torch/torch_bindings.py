@@ -26,7 +26,7 @@ from typing import Any, cast
 import torch
 from mlopt_core.attrs import attr_of, is_positional_attr
 from mlopt_core.ir import Op
-from mlopt_core.opmeta import REGISTRY
+from mlopt_core.opmeta import REGISTRY, OpMeta, register_op_meta
 from mlopt_core.ops import (
     carrier_torch_bindings,
     register_ambient_bindings,
@@ -45,6 +45,17 @@ from mlopt_torch.aten_classify import (
 )
 from mlopt_torch.aten_classify import (
     SCALAR_OPERAND_OPS as _GEN_SCALAR_OPERAND_OPS,
+)
+
+#: ``aten::_weight_norm`` — the ``parametrizations.weight_norm``
+#: reparameterisation leaf (Kokoro's ISTFTNet decoder carries ~70 of
+#: them — see ``docs/reports/weight_norm_fold.md``).  Declared through
+#: the substrate's additive seam: the name is adapter vocabulary
+#: (``mlopt_core`` never names it), and the registry entry keeps
+#: ``validate_aten_map`` honest — every ``_ATEN_TO_IR`` value must be
+#: a registered op.
+register_op_meta(
+    OpMeta(name="weight_norm", arity=None, tags=frozenset())
 )
 
 #: Hand-curated override layer over the schema-derived classification
@@ -155,6 +166,9 @@ _ATEN_TO_IR_OVERRIDES: dict[str, str] = {
     # the logical-or semantics the spelling means).
     "__or__": "bitwise_or",
     "__and__": "bitwise_and",
+    # aten._weight_norm(v, g, dim=0) — torch.export elides ``dim`` at
+    # its default, so the two-operand spelling is the common case.
+    "_weight_norm": "weight_norm",
 }
 
 #: ATen overload-specific names (e.g. 'mul.Tensor') that do not survive
@@ -241,6 +255,10 @@ _LOCAL_ATTR_SCHEMA_OVERRIDES: dict[str, dict[int, str]] = {
     # recorded canonically so the binding replays it faithfully; the
     # rest of the tail is backward/storage hints and stays ``argN``.
     "embedding": {2: "padding_idx"},
+    # aten._weight_norm(v, g, dim=0) — position 2 is the norm axis.
+    # Elided at the default, so ``dim`` is absent on the common
+    # spelling and the binding defaults it to 0.
+    "weight_norm": {2: "dim"},
 }
 
 #: Positional-argument → named-attribute mapping lives in
@@ -987,6 +1005,27 @@ def _sdpa_torch(q: Any, k: Any, v: Any, *a: Any, **kw: Any) -> Any:
         return torch.nn.functional.scaled_dot_product_attention(
             q, k, v, **kwargs
         )
+
+
+def _weight_norm_torch(
+    v: Any, g: Any = None, *a: Any, **kw: Any
+) -> Any:
+    """``aten._weight_norm`` → ``torch._weight_norm``.
+
+    ``dim`` arrives as the canonical ``dim`` attr (schema position 2 —
+    see ``_LOCAL_ATTR_SCHEMA_OVERRIDES``), the legacy ``arg2`` spelling
+    on hand-minted terms, or a trailing positional; absent entirely at
+    the aten default ``dim=0``.  ``g`` is a required Tensor operand —
+    the aten schema is ``(Tensor v, Tensor g, int dim=0)`` and
+    ``torch._weight_norm`` rejects ``None`` loudly, which is the
+    honest failure for a malformed term.
+    """
+    dim = attr_of(kw, "dim", "arg2", default=None)
+    if dim is None and a:
+        dim = a[0]
+    if dim is None:
+        dim = 0
+    return torch._weight_norm(v, g, int(_scalar_value(dim)))
 
 
 # ---------------------------------------------------------------------------
@@ -1902,6 +1941,10 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
     # ``supported_ops``, so extraction never +infs a term that
     # contains one.
     "opaque": _opaque_torch,
+    # aten._weight_norm — the parametrizations.weight_norm leaf.
+    # Param-only instances fold to a fused Param at IRModule build
+    # (``_fold_weight_chains``); data-dependent ones evaluate here.
+    "weight_norm": _weight_norm_torch,
 }
 # ---------------------------------------------------------------------------
 #  Shape rules for the host-tensor port ops
@@ -2082,6 +2125,13 @@ for _shape_op, _shape_fn in {
     "cdist": _cdist_shape,
 }.items():
     register_shape_rule(_shape_op, _shape_fn)
+
+
+# ``weight_norm(v, g, dim)`` returns v's shape exactly — the magnitude
+# rescale never changes the tensor's extent.
+register_shape_rule(
+    "weight_norm", lambda _op, shapes: shapes[0] if shapes else None
+)
 
 
 class _AmbientTorchBindings(dict):

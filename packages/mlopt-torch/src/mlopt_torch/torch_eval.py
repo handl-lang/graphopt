@@ -25,6 +25,19 @@ from mlopt_core.ops import OpTable
 #: resolves instead of reading as failure.
 _MISS: Any = object()
 
+#: Adapter-declared ops that join ``FOLD_OPS`` at lowering: parameter-
+#: only subtrees of these evaluate ONCE at ``IRModule`` construction
+#: and materialise as a fused ``Param``.  ``weight_norm`` is the
+#: ``parametrizations.weight_norm`` reparameterisation — pure in its
+#: (v, g) params, recomputed per-forward by the aten kernel (~5% of
+#: Kokoro's decoder eager time across ~70 sites —
+#: ``docs/reports/weight_norm_fold.md``).  It cannot join
+#: ``mlopt_core.opmeta.FOLD_OPS`` — that frozenset is a snapshot taken
+#: before adapter declarations exist — so the lowerer unions it here.
+#: Data-dependent instances (a ``Var`` anywhere in the subtree) never
+#: reach this fold: ``_uses_input`` gates it exactly like ``FOLD_OPS``.
+_EXTRA_FOLD_OPS: frozenset[str] = frozenset({"weight_norm"})
+
 
 def _randn_param(
     term: Param, like: torch.Tensor | None = None
@@ -707,7 +720,7 @@ class IRModule(torch.nn.Module):
                         )
                         self._fold_memo[orig_key] = result
                         return result
-                elif term.op in FOLD_OPS:
+                elif term.op in FOLD_OPS or term.op in _EXTRA_FOLD_OPS:
                     # The widening semantic set — every single-tensor
                     # op folds identically (views, reductions, gathers
                     # and creators all evaluate to a fused Param).

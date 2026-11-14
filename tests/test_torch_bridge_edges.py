@@ -540,6 +540,103 @@ def test_fold_non_tensor_result_keeps_term():
     assert "W" in mod._param_map
 
 
+def test_weight_norm_param_only_folds_to_fused_param():
+    """``weight_norm(v, g)`` over stored params folds once at lowering —
+    the runtime graph reads a single materialised weight, bit-identical
+    to ``torch._weight_norm``."""
+    V = Param("V", TensorType((4, 3)))
+    G = Param("G", TensorType((4,)))
+    x = Var("x", TensorType((4, 4)))
+    root = Op.make("matmul", x, Op.make("weight_norm", V, G))
+    vt, gt = torch.randn(4, 3), torch.randn(4)
+    mod = _lower_root(root, {"V": vt, "G": gt})
+    fused = [n for n, _ in mod.named_parameters() if "fused" in n]
+    assert len(fused) == 1
+    expected = torch._weight_norm(vt, gt, 0)
+    assert torch.equal(mod._param_map[fused[0]], expected)
+    # v/g were consumed by the fold — only the fused weight registers.
+    assert "V" not in mod._param_map
+    assert "G" not in mod._param_map
+    xv = torch.randn(4, 4)
+    with torch.no_grad():
+        assert torch.equal(mod(xv), xv @ expected)
+
+
+def test_weight_norm_dim_attr_folds():
+    """A non-default ``dim`` rides the canonical attr into the fold —
+    the fused param is ``torch._weight_norm(v, g, dim)``, not dim=0."""
+    V = Param("V", TensorType((4, 3)))
+    G = Param("G", TensorType((3,)))
+    x = Var("x", TensorType((4, 4)))
+    root = Op.make("matmul", x, Op.make("weight_norm", V, G, dim=1))
+    vt, gt = torch.randn(4, 3), torch.randn(3)
+    mod = _lower_root(root, {"V": vt, "G": gt})
+    fused = [n for n, _ in mod.named_parameters() if "fused" in n]
+    assert len(fused) == 1
+    assert torch.equal(
+        mod._param_map[fused[0]], torch._weight_norm(vt, gt, 1)
+    )
+
+
+def test_weight_norm_data_dependent_stays_runtime():
+    """``weight_norm`` over an input-dependent operand does NOT fold —
+    the binding evaluates it per forward, exactly like spelled torch."""
+    V = Param("V", TensorType((4, 3)))
+    G = Param("G", TensorType((4,)))
+    x = Var("x", TensorType((4, 3)))
+    # weight_norm(x, g) depends on the input — must stay a live op;
+    # the sibling weight_norm(v, g) is param-only and still folds.
+    root = Op.make(
+        "add",
+        Op.make("weight_norm", x, G),
+        Op.make("weight_norm", V, G),
+    )
+    vt, gt = torch.randn(4, 3), torch.randn(4)
+    mod = _lower_root(root, {"V": vt, "G": gt})
+    fused = [n for n, _ in mod.named_parameters() if "fused" in n]
+    assert len(fused) == 1  # only the param-only sibling folded
+    assert (
+        sum(1 for o in _find(mod._root, "weight_norm")) == 1
+    )  # the data-dependent one survives
+    xv = torch.randn(4, 3)
+    with torch.no_grad():
+        expected = torch._weight_norm(xv, gt, 0) + torch._weight_norm(
+            vt, gt, 0
+        )
+        assert torch.equal(mod(xv), expected)
+
+
+def test_export_weight_norm_mints_bound_op_not_opaque():
+    """``parametrizations.weight_norm`` exports as the bound
+    ``weight_norm`` op — never the ``opaque`` passthrough — and the
+    lowered module is bit-identical to the source."""
+    from torch.nn.utils.parametrizations import weight_norm
+
+    class M(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.conv = weight_norm(torch.nn.Conv1d(4, 8, 3, padding=1))
+            self.fc = weight_norm(torch.nn.Linear(8, 5), dim=1)
+
+        def forward(self, x):
+            return self.fc(self.conv(x).mean(-1))
+
+    m = M().eval()
+    x = torch.randn(2, 4, 16)
+    ir, src = export_to_ir(m, x)
+    wn = _find(ir.root, "weight_norm")
+    assert len(wn) == 2
+    assert not _find(ir.root, "opaque")
+    dims = sorted(t.attrs.get("dim", 0) for t in wn)
+    assert dims == [0, 1]
+    mod = ir_to_torch_module(ir, src)
+    with torch.no_grad():
+        assert torch.equal(mod(x), m(x))
+    # Both sites folded: the delivered module carries fused weights,
+    # not the v/g reparameterisation pair.
+    assert [n for n, _ in mod.named_parameters() if "fused" in n]
+
+
 def test_fold_nested_matmul_chains_fully():
     """matmul(P, matmul(Q, R)) folds bottom-up: the inner product is
     registered before the outer is considered — one final param."""
