@@ -1794,8 +1794,9 @@ def test_minted_index_put_without_layout():
 
 
 def test_handle_copy_early_returns():
-    """``_handle_copy_`` no-ops on missing args, missing env entries,
-    and a missing viewed base."""
+    """``_handle_copy_`` rejects loudly (audit B3) on missing args,
+    missing env entries, and a missing viewed base — a write that
+    cannot be threaded is an export rejection, not a silent no-op."""
     from mlopt_torch.torch_bridge import _handle_copy_
 
     class _N:
@@ -1805,28 +1806,32 @@ def test_handle_copy_early_returns():
             self.target = target
 
     env = {}
-    _handle_copy_(_N("c", args=()), env)  # len < 2
+    with pytest.raises(ValueError, match="no operands"):
+        _handle_copy_(_N("c", args=()), env)  # len < 2
     assert env == {}
 
     dst = _N("d", target="x")
     src = _N("s", target="x")
     env = {}
-    _handle_copy_(_N("c", args=(dst, src)), env)
-    assert env == {}  # src/dst not in env -> skip
+    with pytest.raises(ValueError, match="minted no IR term"):
+        _handle_copy_(_N("c", args=(dst, src)), env)
+    assert env == {}  # dst never minted -> reject before touching env
 
-    # A slice dst whose BASE is absent from env -> skip.
+    # A slice dst whose BASE is absent from env -> reject.
     base = _N("b")
     view = _N("v", args=(base, 0, 1, 2), target="slice")
     node = _N("c", args=(view, src))
     env = {"v": Var("v", TensorType((2, 4))), "s": Const(1.0)}
-    _handle_copy_(node, env)
+    with pytest.raises(ValueError, match="view chain rooted"):
+        _handle_copy_(node, env)
     assert env == {"v": env["v"], "s": env["s"]}
 
     # Same for a select view missing its base.
     sview = _N("sv", args=(base, 0, 1), target="select")
     node2 = _N("c2", args=(sview, src))
     env = {"sv": Var("sv", TensorType((4,))), "s": Const(1.0)}
-    _handle_copy_(node2, env)
+    with pytest.raises(ValueError, match="view chain rooted"):
+        _handle_copy_(node2, env)
     assert env == {"sv": env["sv"], "s": env["s"]}
 
 

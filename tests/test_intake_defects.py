@@ -382,11 +382,11 @@ def test_eye_honours_exported_dtype():
     assert mod().dtype == torch.float64
 
 
-def test_copy_family_slice_write_unminted_base_declines():
+def test_copy_family_slice_write_unminted_base_rejects():
     """A ``fill_``/``copy_``-family write into a ``slice`` view whose
-    BASE was never minted is declined (``env`` unchanged), not
-    silently dropped — the write can't be threaded to a base that
-    isn't there."""
+    BASE was never minted is a loud export rejection (audit B3) —
+    the write can't be threaded to a base that isn't there, and a
+    silent decline would drop the mutation."""
     from types import SimpleNamespace as NS
 
     from mlopt_torch.torch_bridge import _handle_copy_
@@ -399,13 +399,14 @@ def test_copy_family_slice_write_unminted_base_declines():
     )
     env = {"d": Op.make("zeros", shape=(4,), dtype="float64")}
     node = NS(target="fill_.Scalar", args=(dst_fx, 0.0))
-    _handle_copy_(node, env)
+    with pytest.raises(ValueError, match="minted no IR term"):
+        _handle_copy_(node, env)
     assert env["d"] == Op.make("zeros", shape=(4,), dtype="float64")
 
 
-def test_copy_family_unminted_src_declines():
-    """A ``copy_`` whose *source* was never minted is declined —
-    the write can't be threaded, and the env is left untouched."""
+def test_copy_family_unminted_src_rejects():
+    """A ``copy_`` whose *source* was never minted rejects loudly —
+    the write can't be threaded, and env is left untouched."""
     from types import SimpleNamespace as NS
 
     from mlopt_torch.torch_bridge import _handle_copy_
@@ -413,7 +414,8 @@ def test_copy_family_unminted_src_declines():
     dst_fx = NS(name="d", target="placeholder")
     env = {"d": Op.make("zeros", shape=(4,), dtype="float64")}
     node = NS(target="copy_", args=(dst_fx, NS(name="unminted_src")))
-    _handle_copy_(node, env)
+    with pytest.raises(ValueError, match="copies"):
+        _handle_copy_(node, env)
     assert env["d"] == Op.make("zeros", shape=(4,), dtype="float64")
 
 

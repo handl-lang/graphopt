@@ -484,13 +484,29 @@ def _handle_copy_(node: Any, env: dict[str, Any]) -> None:
     actually observe instead of orphaning on an intermediate view.
     Each view node's binding is then rebuilt from the rebound root so
     later reads of the chain see the write.
+
+    Every unresolvable step is a LOUD export rejection, matching
+    ``masked_fill_``'s deliberate ``KeyError``: a write whose target
+    (or a view-chain base) minted no IR term cannot be threaded, and
+    silently returning would drop the mutation — downstream readers
+    would compute the pre-write value with no signal.
     """
+    write = _aten_name(getattr(node, "target", ""))
     if not node.args:
-        return
+        raise ValueError(
+            f"export_to_ir: {write!r} node {getattr(node, 'name', '?')!r} has no "
+            "operands — a mutation with no destination cannot be "
+            "threaded into env"
+        )
     dst_fx = node.args[0]
-    dst = env.get(dst_fx.name)
+    dst = env.get(getattr(dst_fx, "name", None))
     if dst is None:
-        return
+        raise ValueError(
+            f"export_to_ir: {write!r} node {getattr(node, 'name', '?')!r} writes to "
+            f"{getattr(dst_fx, 'name', dst_fx)!r} which minted no IR "
+            "term — refusing rather than silently dropping the "
+            "mutation"
+        )
     target = _aten_name(node.target)
     if target.startswith(("fill_", "zero_")):
         src = _fill_src(node, dst_fx, env)
@@ -505,9 +521,15 @@ def _handle_copy_(node: Any, env: dict[str, Any]) -> None:
         v = env[v_fx.name] if hasattr(v_fx, "name") else Const(v_fx)
         src = Op.make("masked_fill", dst, mask, v)
     else:
-        src = env.get(node.args[1].name)
+        src_fx = node.args[1] if len(node.args) > 1 else None
+        src = env.get(getattr(src_fx, "name", None))
         if src is None:
-            return
+            raise ValueError(
+                f"export_to_ir: {write!r} node {getattr(node, 'name', '?')!r} copies "
+                f"from {getattr(src_fx, 'name', src_fx)!r} which "
+                "minted no IR term — refusing rather than silently "
+                "dropping the mutation"
+            )
     root_fx, steps = _view_chain(dst_fx)
     if not steps:
         # Whole-tensor write (or an unrecognised view): dst's readers
@@ -517,14 +539,25 @@ def _handle_copy_(node: Any, env: dict[str, Any]) -> None:
         return
     root = env.get(getattr(root_fx, "name", None))
     if root is None:
-        return
+        raise ValueError(
+            f"export_to_ir: {write!r} node {getattr(node, 'name', '?')!r} writes "
+            f"through a view chain rooted at "
+            f"{getattr(root_fx, 'name', root_fx)!r} which minted no "
+            "IR term — refusing rather than silently dropping the "
+            "mutation"
+        )
     # Fold the scatters innermost-outward; each reads its base's
     # current binding so successive writes compose.
     val = src
     for _view_fx, base_fx, kind, idx in steps:
         base = env.get(getattr(base_fx, "name", None))
         if base is None:
-            return
+            raise ValueError(
+                f"export_to_ir: {write!r} node {getattr(node, 'name', '?')!r} writes "
+                f"through view {getattr(base_fx, 'name', base_fx)!r} "
+                "which minted no IR term — refusing rather than "
+                "silently dropping the mutation"
+            )
         val = _scatter_view(kind, base, val, idx)
     env[root_fx.name] = val
     # Rebuild each view from the rebound root (root -> outward).
@@ -834,17 +867,57 @@ def export_to_ir(
                             # Position 0 is ``self`` — only the bound
                             # slots (1=min, 2=max) are ambiguous.
                             clamp_argpos.append(i)
-            for (
-                k,
-                v,
-            ) in (
-                node.kwargs.items()
-            ):  # pragma: no cover — export normalises kwargs
-                if k == "dim" and isinstance(v, (list, tuple)):
-                    attrs[k] = tuple(v)
+            for k, v in node.kwargs.items():
+                kw_name = getattr(v, "name", None)
+                if isinstance(kw_name, str):
+                    # FX-node kwarg — a tensor operand passed by
+                    # keyword (e.g. ``attn_mask=m``).  torch.export
+                    # normalises declared-schema kwargs into
+                    # positional args, but an op whose schema keeps a
+                    # keyword operand (or a custom/extension op)
+                    # lands here; dropping it mints a term that
+                    # computes WITHOUT the operand — the silent-wrong
+                    # class ``_opaque_encode`` already refuses.
+                    # Resolve through env and append as an operand;
+                    # an unminted producer raises like masked_fill_.
+                    if kw_name not in env:
+                        raise ValueError(
+                            f"export_to_ir: kwarg {k!r} of "
+                            f"{op_name!r} references unminted node "
+                            f"{kw_name!r} — refusing rather than "
+                            "dropping the operand"
+                        )
+                    args.append(env[kw_name])
+                elif v is None:
+                    # An explicit-None kwarg is the absent-operand
+                    # spelling — same rule as the positional ``None``
+                    # drops above: recording it would poison
+                    # e-matching's exact attr-set comparison.
+                    continue
                 elif isinstance(v, (int, float, bool)):
                     attrs[k] = v
-                elif isinstance(v, list):
+                elif isinstance(v, (torch.layout, torch.memory_format)):
+                    # torch.layout / torch.memory_format are not
+                    # JSON-safe — record the short name like dtype
+                    # ("strided" / "channels_last").  They are
+                    # dispatch/memory-format details, not tensor
+                    # semantics.
+                    attrs[k] = str(v).split(".")[-1]
+                elif isinstance(v, (list, tuple)):
+                    if any(hasattr(e, "name") for e in v):
+                        raise ValueError(
+                            f"export_to_ir: kwarg {k!r} of "
+                            f"{op_name!r} is a container carrying "
+                            "FX nodes — the bound-op attr channel "
+                            "cannot encode tensor operands nested "
+                            "in a tuple/list; refusing rather than "
+                            "dropping them"
+                        )
+                    # Tuple-valued kwargs are semantics too:
+                    # ``pad=(1,1)``, ``stride=(2,2)``, ``size=(8,8)``
+                    # — attrs are the only channel that reaches the
+                    # binding (``isinstance(v, list)`` alone used to
+                    # drop every tuple silently).
                     attrs[k] = tuple(v)
                 elif isinstance(v, str):
                     # String-valued flags are semantics: gelu's
@@ -868,6 +941,15 @@ def export_to_ir(
                     # record the canonical string ("cuda:0"); the
                     # creator/``to`` bindings parse it back.
                     attrs[k] = str(v)
+                else:
+                    raise ValueError(
+                        f"export_to_ir: unencodable kwarg {k}={v!r} "
+                        f"({type(v).__name__}) on {op_name!r} — only "
+                        "FX nodes, scalars, str, list/tuple "
+                        "literals and torch dtype/device/layout/"
+                        "memory_format values can cross the IR "
+                        "boundary; refusing rather than dropping it"
+                    )
             # Canonical attr spellings are guaranteed below by
             # ``Op.make`` (ATTR_SCHEMA): positional attrs were named at
             # emission above; any ``argN`` still present for a schema'd
@@ -881,6 +963,22 @@ def export_to_ir(
             # QKV in-proj split is a dim-0 split of a (3E, E) weight.
             if ir_op in ("split", "chunk") and "dim" not in attrs:
                 attrs["dim"] = 0
+            # aten positions 3,4 of batch_norm are running_mean/
+            # running_var.  A ``track_running_stats=False`` module
+            # exports them as ``None`` — dropped by the operand loop
+            # above — leaving the affine pair ``(w, b)`` in the
+            # operand list where ``_batch_norm_torch``'s arity
+            # heuristic would misread it as ``(rm, rv)`` (len-2 is
+            # ambiguous: ``(w, b)`` vs ``(rm, rv)``).  Record the
+            # absence so eval never has to guess; stats-present terms
+            # are unchanged (no new attr — e-matching's exact
+            # attr-set comparison stays intact for them).
+            if ir_op == "batch_norm" and not (
+                len(node.args) > 4
+                and hasattr(node.args[3], "name")
+                and hasattr(node.args[4], "name")
+            ):
+                attrs["running_stats"] = False
             if ir_op == "clamp" and clamp_argpos:
                 # See the declaration above the arg loop: tensor bounds
                 # keep their aten slot (1=min, 2=max) as ``argpos``.
@@ -906,6 +1004,27 @@ def export_to_ir(
             else:
                 ir_node = Op.make(ir_op, **attrs)
             env[node.name] = ir_node
+
+        elif node.op == "output":
+            # The graph's return node — resolved post-loop by
+            # ``_graph_root``/``_graph_outputs``; nothing to mint here.
+            continue
+        else:
+            # ``call_module``/``call_method`` (or any future FX kind)
+            # would produce no env entry — every downstream operand
+            # referencing it would silently drop (the same silent-
+            # wrong class as the kwargs drops above).  torch.export
+            # flattens submodule calls into ``call_function`` on
+            # common models, but an unmodelled kind is refused loudly
+            # rather than skipped.
+            raise ValueError(
+                "export_to_ir: unhandled FX node kind "
+                f"{node.op!r} (node {getattr(node, 'name', '?')!r}, "
+                f"target {getattr(node, 'target', None)!r}) — the "
+                "lifter models placeholder/get_attr/call_function/"
+                "output only; refusing rather than silently "
+                "dropping its value"
+            )
 
     # Find the graph's output(s) and build the search root — a single
     # output IS the root; several are paired by ``pack`` (the product
@@ -1138,6 +1257,14 @@ def _where_torch(c: Any, *a: Any, **kw: Any) -> Any:
             "where requires self/other operands — children or "
             "arg1/arg2 attrs, got neither"
         )
+    _sentinel = object()
+    if next(it, _sentinel) is not _sentinel:
+        # A third child beyond the two operand slots has no aten
+        # meaning — dropping it silently would compute where/2.
+        raise TypeError(
+            "where takes exactly two value operands (self/other) — "
+            f"got surplus children {a}"
+        )
     return torch.where(c, x, y)
 
 
@@ -1149,11 +1276,33 @@ def _batch_norm_torch(x: Any, *a: Any, **kw: Any) -> Any:
     weight/bias are dropped at export, so the affine pair is
     whatever sits between x and the running stats (a lone mid
     operand reads as weight).
+
+    ``track_running_stats=False`` exports ``running_mean``/
+    ``running_var`` as ``None`` — dropped at export, leaving only
+    the affine operands.  Export tags that spelling
+    ``running_stats=False`` because len-2 is genuinely ambiguous
+    (``(w, b)`` vs ``(rm, rv)``) and arity alone cannot decide;
+    without the tag (a hand-minted term) the legacy last-two
+    heuristic applies.
     """
-    rm, rv = a[-2], a[-1]
-    mid = a[:-2]
-    w = mid[0] if len(mid) >= 1 else None
-    b = mid[1] if len(mid) >= 2 else None
+    if attr_of(kw, "running_stats", default=None) is False:
+        # No running stats exist — every operand is affine.  Fewer
+        # than three means at most the (w, b) pair survived.
+        if len(a) > 2:
+            raise TypeError(
+                "batch_norm with running_stats=False carries at "
+                f"most the affine pair (w, b) — got {len(a)} "
+                "operands; the running-stats slots were exported "
+                "as None and cannot reappear"
+            )
+        rm = rv = None
+        w = a[0] if len(a) >= 1 else None
+        b = a[1] if len(a) >= 2 else None
+    else:
+        rm, rv = a[-2], a[-1]
+        mid = a[:-2]
+        w = mid[0] if len(mid) >= 1 else None
+        b = mid[1] if len(mid) >= 2 else None
     return torch.nn.functional.batch_norm(
         x,
         rm,
@@ -2995,6 +3144,12 @@ def _dim_args(args: tuple, kwargs: dict) -> tuple:
     if args:
         return tuple(args)
     dim = attr_of(kwargs, "dim", "axis")
+    if torch.is_tensor(dim) and dim.dim() == 0:
+        # A hand-minted Const-evaluated dim arrives as a 0-dim
+        # tensor — unwrap to the Python scalar the aten call
+        # expects (a non-scalar tensor stays and fails loudly
+        # downstream, as before).
+        dim = dim.item()
     if isinstance(dim, (list, tuple)):
         dim = tuple(int(d) for d in dim)
     keep = kwargs.get("keepdim", False)

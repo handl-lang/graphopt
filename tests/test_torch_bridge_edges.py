@@ -779,10 +779,11 @@ def test_graph_outputs_scans_past_a_trailing_non_output_node():
     assert unresolved == 0
 
 
-def test_handle_copy_declines_on_an_unminted_intermediate_view():
+def test_handle_copy_rejects_on_an_unminted_intermediate_view():
     """A write whose view chain's middle step never minted a binding
-    aborts — the scatter fold reads each step's base, and a missing
-    one returns without touching the root's binding."""
+    is a loud export rejection (audit B3) — the scatter fold reads
+    each step's base, and a missing one cannot be threaded, so the
+    mutation is refused rather than silently dropped."""
     x = Var("x", TensorType((4, 4)))
     y = SimpleNamespace(name="y", target=None)
     v1 = SimpleNamespace(name="v1", target="slice", args=(y, 1, 0, 3))
@@ -791,9 +792,9 @@ def test_handle_copy_declines_on_an_unminted_intermediate_view():
         name="w", target="copy_", args=(v2, SimpleNamespace(name="s"))
     )
     env = {"y": x, "v2": x, "s": x}  # "v1" deliberately unminted
-    _handle_copy_(node, env)
-    # The write was declined: the root kept its pre-write binding and
-    # the node itself minted nothing.
+    with pytest.raises(ValueError, match="minted no IR term"):
+        _handle_copy_(node, env)
+    # The rejection left every binding untouched.
     assert env["y"] is x
     assert env["v2"] is x
     assert "w" not in env
