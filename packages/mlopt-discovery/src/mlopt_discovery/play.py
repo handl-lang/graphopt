@@ -1037,7 +1037,68 @@ def _seq_spines(t: Any, memo: dict) -> list:
     return memo[key]
 
 
-def _seq_view_lift(t: Any):
+class _SeqSpecOverflow(Exception):
+    """A seq-site verification exceeded its spelled-size bound.
+
+    Internal control flow only — the collectors catch it per
+    candidate and count the site as an honest over-cap skip; it is
+    never part of a public contract.
+    """
+
+
+def _seq_expansion(t: Any, cap: int) -> int:
+    """Tree-expansion of *t* with early exit at ``cap + 1``.
+
+    Same recurrence as ``census.term_expansion`` — every occurrence
+    counts, so a shared-DAG child's true expansion is astronomic —
+    but the walk aborts the moment any node's partial sum exceeds
+    *cap*: ancestors can only add more, so the root's expansion is
+    already known to exceed the bound and the exact value is never
+    needed (callers only compare against *cap*).  ``shape_of``
+    itself walks this same tree expansion, so this is also the cheap
+    oracle for "would that shape check hang".
+    """
+    memo: dict[int, int] = {}
+    stack: list = [(t, False)]
+    while stack:
+        n, expanded = stack.pop()
+        if not isinstance(n, Op):
+            memo[id(n)] = 1
+            continue
+        if id(n) in memo:
+            continue
+        if not expanded:
+            stack.append((n, True))
+            for a in n.args:
+                if id(a) not in memo:
+                    stack.append((a, False))
+            continue
+        total = 1
+        for a in n.args:
+            total += memo[id(a)]
+            if total > cap:
+                return cap + 1
+        memo[id(n)] = total
+    return memo[id(t)]
+
+
+def _seq_shape(t: Any, cap: int | None):
+    """``shape_of(t)`` guarded by the seq work bound.
+
+    ``shape_of`` walks the term's *tree* expansion — unbounded on a
+    shared DAG — so under *cap* a child whose :func:`_seq_expansion`
+    exceeds it reports ``INVALID`` exactly like a failed shape
+    inference: the lift or site simply does not fire.  ``None`` cap
+    keeps the historical unguarded call.
+    """
+    from mlopt_core.typing import INVALID, shape_of
+
+    if cap is not None and _seq_expansion(t, cap) > cap:
+        return INVALID
+    return shape_of(t)
+
+
+def _seq_view_lift(t: Any, cap: int | None = None):
     """Lift a view-op chain over a ``select`` onto the select's child.
 
     ``unsqueeze``/``squeeze`` directly wrapping a per-step ``select``
@@ -1066,9 +1127,12 @@ def _seq_view_lift(t: Any):
     a ``select``, a ``dim`` attr is missing/non-int, ``shape_of``
     cannot type a child, or a normalised dim falls out of range.
     Other view ops (``reshape``/``view``/``expand``/``permute``)
-    and dim-less ``squeeze`` stay outside the grammar.
+    and dim-less ``squeeze`` stay outside the grammar.  *cap* is the
+    seq work bound — ``shape_of`` checks run through
+    :func:`_seq_shape`, which declines lifts whose operand expansion
+    exceeds it.
     """
-    from mlopt_core.typing import INVALID, shape_of
+    from mlopt_core.typing import INVALID
 
     views: list = []
     node = t
@@ -1092,7 +1156,7 @@ def _seq_view_lift(t: Any):
         return None
     child = node.args[0]
     idx = node.attrs["index"]
-    sh = shape_of(child)
+    sh = _seq_shape(child, cap)
     if sh is INVALID or not isinstance(sh, tuple):
         return None
     rank = len(sh)
@@ -1107,7 +1171,7 @@ def _seq_view_lift(t: Any):
     # view's ``dim`` normalises against.
     for v in reversed(views):
         vd = v.attrs["dim"]
-        sh = shape_of(child)
+        sh = _seq_shape(child, cap)
         if sh is INVALID or not isinstance(sh, tuple):
             return None
         r = len(sh) - 1  # rank of the post-select tensor
@@ -1133,7 +1197,7 @@ def _seq_view_lift(t: Any):
             child = Op.make("squeeze", child, dim=j)
             if j < d0:
                 d0 -= 1
-    sh = shape_of(child)
+    sh = _seq_shape(child, cap)
     if (
         sh is INVALID
         or not isinstance(sh, tuple)
@@ -1212,7 +1276,7 @@ def _seq_step_select(t: Any):
     return None
 
 
-def _seq_projection_lift(t: Any):
+def _seq_projection_lift(t: Any, cap: int | None = None):
     """Pull a per-step ``select`` out through a projection op.
 
     ``matmul``/``linear`` over a ``select``ed sequence commutes with
@@ -1242,9 +1306,10 @@ def _seq_projection_lift(t: Any):
     would freeze one step's slice into the once-evaluated operand
     (see :func:`_seq_select_free`).  Selects nested deeper inside an
     argument, selects in BOTH matmul args, and every other op keep
-    the generic decline.
+    the generic decline.  *cap* is the seq work bound (see
+    :func:`_seq_shape`).
     """
-    from mlopt_core.typing import INVALID, shape_of
+    from mlopt_core.typing import INVALID
 
     if not (isinstance(t, Op) and not t.attrs):
         return None
@@ -1260,8 +1325,8 @@ def _seq_projection_lift(t: Any):
         else:
             c, d, idx = sb
             other, pos = a, 1
-        sh = shape_of(c)
-        so = shape_of(other)
+        sh = _seq_shape(c, cap)
+        so = _seq_shape(other, cap)
         if (
             sh is INVALID
             or so is INVALID
@@ -1298,7 +1363,7 @@ def _seq_projection_lift(t: Any):
         if s is None:
             return None
         c, d, idx = s
-        sh = shape_of(c)
+        sh = _seq_shape(c, cap)
         if sh is INVALID or not isinstance(sh, tuple):
             return None
         ra = len(sh)
@@ -1309,9 +1374,11 @@ def _seq_projection_lift(t: Any):
         lifted = Op.make("linear", c, *t.args[1:])
     else:
         return None
+    if cap is not None and _seq_expansion(lifted, cap) > cap:
+        return None
     if not _seq_select_free(lifted):
         return None
-    sh2 = shape_of(lifted)
+    sh2 = _seq_shape(lifted, cap)
     if (
         sh2 is INVALID
         or not isinstance(sh2, tuple)
@@ -1345,7 +1412,7 @@ def _seq_axis_idx(d: Any, rank: int):
     return d0 if 0 <= d0 < rank else None
 
 
-def _seq_commute_lift(t: Any):
+def _seq_commute_lift(t: Any, cap: int | None = None):
     """Pull a per-step ``select`` out through an axis-safe op.
 
     The projection lift (:func:`_seq_projection_lift`) covers
@@ -1384,19 +1451,20 @@ def _seq_commute_lift(t: Any):
     Returns ``(lifted_term, out_dim, index)`` — feed through the
     ordinary operand path — or ``None`` to decline.  The lifted term
     must be ``select``-free (:func:`_seq_select_free`) and type via
-    ``shape_of`` exactly like the projection lift's output.
+    ``shape_of`` exactly like the projection lift's output.  *cap* is
+    the seq work bound (see :func:`_seq_shape`).
     """
-    from mlopt_core.typing import INVALID, shape_of
+    from mlopt_core.typing import INVALID
 
     if not isinstance(t, Op) or not t.args:
         return None
     if t.op == "concat":
-        return _seq_concat_lift(t)
+        return _seq_concat_lift(t, cap)
     s = _seq_step_select(t.args[0])
     if s is None:
         return None
     c, d, idx = s
-    sh = shape_of(c)
+    sh = _seq_shape(c, cap)
     if sh is INVALID or not isinstance(sh, tuple) or not sh:
         return None
     r = len(sh)
@@ -1413,7 +1481,9 @@ def _seq_commute_lift(t: Any):
     if t.op in _SEQ_PASSTHROUGH_OPS:
         # axis-preserving passthroughs need no dim bookkeeping
         return _seq_lift_finish(
-            (Op.make(t.op, c, *t.args[1:], **t.attrs), ctx.d0), ctx
+            (Op.make(t.op, c, *t.args[1:], **t.attrs), ctx.d0),
+            ctx,
+            cap,
         )
     # Every remaining case remaps an axis attr — positional ``argN``
     # spellings would alias those dims in child coordinates, so they
@@ -1423,7 +1493,7 @@ def _seq_commute_lift(t: Any):
     fn = _SEQ_AXIS_LIFTS.get(t.op)
     if fn is None:
         return None
-    return _seq_lift_finish(fn(ctx), ctx)
+    return _seq_lift_finish(fn(ctx), ctx, cap)
 
 
 @dataclass(frozen=True)
@@ -1454,23 +1524,28 @@ def _seq_argn_attrs(attrs: dict) -> bool:
     )
 
 
-def _seq_lift_finish(res: Any, ctx: _SeqLiftCtx):
+def _seq_lift_finish(
+    res: Any, ctx: _SeqLiftCtx, cap: int | None = None
+):
     """Shared tail: build ``(lifted, out_dim, idx)`` or decline.
 
     *res* is the op handler's ``(lifted_term, out_dim)`` pair (or
     ``None``).  The lifted term must be ``select``-free — a surviving
     ``select`` would freeze one step's slice into the once-evaluated
     operand — and ``shape_of`` must type it with ``out_dim`` in
-    range, the same contract the projection lift keeps.
+    range, the same contract the projection lift keeps.  *cap* is
+    the seq work bound (see :func:`_seq_shape`).
     """
-    from mlopt_core.typing import INVALID, shape_of
+    from mlopt_core.typing import INVALID
 
     if res is None:
         return None
     lifted, out_dim = res
+    if cap is not None and _seq_expansion(lifted, cap) > cap:
+        return None
     if not _seq_select_free(lifted):
         return None
-    sh2 = shape_of(lifted)
+    sh2 = _seq_shape(lifted, cap)
     if (
         sh2 is INVALID
         or not isinstance(sh2, tuple)
@@ -1657,7 +1732,7 @@ _SEQ_PASSTHROUGH_OPS = frozenset(
 )
 
 
-def _seq_concat_lift(t: Any):
+def _seq_concat_lift(t: Any, cap: int | None = None):
     """Lift ``concat`` when EVERY arg is a per-step ``select``.
 
     ``concat([select(x,d,i), …], dim=c)`` with all selects on the
@@ -1667,8 +1742,9 @@ def _seq_concat_lift(t: Any):
     slices the joined sequence.  Mixed select axes, mixed indices,
     a select ON the joined axis, or any non-select argument all
     decline: a single outer ``select`` cannot reproduce them.
+    *cap* is the seq work bound (see :func:`_seq_shape`).
     """
-    from mlopt_core.typing import INVALID, shape_of
+    from mlopt_core.typing import INVALID
 
     if len(t.args) < 2 or any(
         isinstance(k, str) and k.startswith("arg") and k[3:].isdigit()
@@ -1684,7 +1760,7 @@ def _seq_concat_lift(t: Any):
     shapes = []
     r = None
     for cc, dd, ii in sels:
-        sh = shape_of(cc)
+        sh = _seq_shape(cc, cap)
         if sh is INVALID or not isinstance(sh, tuple) or not sh:
             return None
         rr = len(sh)
@@ -1724,9 +1800,11 @@ def _seq_concat_lift(t: Any):
         dim=jc,
         **{k2: v for k2, v in t.attrs.items() if k2 != "dim"},
     )
+    if cap is not None and _seq_expansion(lifted, cap) > cap:
+        return None
     if not _seq_select_free(lifted):
         return None
-    sh2 = shape_of(lifted)
+    sh2 = _seq_shape(lifted, cap)
     if (
         sh2 is INVALID
         or not isinstance(sh2, tuple)
@@ -1763,6 +1841,8 @@ def _seq_deindex(
     state: Any = None,
     consts: dict | None = None,
     pullout: bool = False,
+    spec_cap: int | None = None,
+    _budget: list | None = None,
 ):
     """Spec of *t* with per-step ``select``s abstracted to metas.
 
@@ -1800,12 +1880,28 @@ def _seq_deindex(
     gated recurrence built first made the plain one's site decline).
     Structural equality is also the *sound* reading — an equal term
     denotes the same value the accumulator holds at this step.
+
+    *spec_cap*/*_budget* are the seq work bound: the walk spells the
+    term as a TREE (no memo — a shared subterm is spelled once per
+    occurrence, exactly like the spec it builds), so on a shared-DAG
+    operand the visit count IS the spelled size and grows
+    exponentially in the distinct-node count.  ``_budget`` is the
+    caller's remaining-visit counter (``[spec_cap]`` per top-level
+    call); exhausting it raises :class:`_SeqSpecOverflow`, which the
+    site verifiers turn into an honest over-cap decline.  *spec_cap*
+    additionally bounds every ``shape_of`` check the pullout lifts
+    run (see :func:`_seq_shape`).  Both default to the historical
+    unbounded zoo behaviour.
     """
+    if _budget is not None:
+        _budget[0] -= 1
+        if _budget[0] < 0:
+            raise _SeqSpecOverflow
     if state is not None and t == state:
         return "H"
     if isinstance(t, Op):
         if t.op in ("unsqueeze", "squeeze") and len(t.args) == 1:
-            lifted = _seq_view_lift(t)
+            lifted = _seq_view_lift(t, spec_cap)
             if lifted is not None:
                 child, dim, idx = lifted
                 return _seq_meta(
@@ -1832,6 +1928,8 @@ def _seq_deindex(
                 state=state,
                 consts=consts,
                 pullout=pullout,
+                spec_cap=spec_cap,
+                _budget=_budget,
             )
             a = _seq_deindex(
                 t.args[0],
@@ -1841,14 +1939,16 @@ def _seq_deindex(
                 state=state,
                 consts=consts,
                 pullout=pullout,
+                spec_cap=spec_cap,
+                _budget=_budget,
             )
             if a is None or b is None:
                 return None
             return ("sub", b, a)
         if pullout:
-            proj = _seq_projection_lift(t)
+            proj = _seq_projection_lift(t, spec_cap)
             if proj is None:
-                proj = _seq_commute_lift(t)
+                proj = _seq_commute_lift(t, spec_cap)
             if proj is not None:
                 child, dim, idx = proj
                 return _seq_meta(
@@ -1864,6 +1964,8 @@ def _seq_deindex(
                 state=state,
                 consts=consts,
                 pullout=pullout,
+                spec_cap=spec_cap,
+                _budget=_budget,
             )
             if p is None:
                 return None
@@ -1881,7 +1983,7 @@ def _seq_deindex(
     return None
 
 
-def _seq_site(steps: tuple, base: Any):
+def _seq_site(steps: tuple, base: Any, spec_cap: int | None = None):
     """Seq-form spec record for one spine, or ``None``.
 
     The fold ``acc = a_t * acc + b_t`` reproduces the unrolled chain
@@ -1893,6 +1995,14 @@ def _seq_site(steps: tuple, base: Any):
     sound: equal-rank operands with the step extent at one dim mean
     the fold's broadcast slice reads exactly the term the original
     ``select`` read.  Anything unverifiable declines honestly.
+
+    *spec_cap* bounds the spelled size of each deindexed step
+    skeleton (``_seq_deindex``'s visit budget) and every ``shape_of``
+    operand check below (via :func:`_seq_expansion`): a step operand
+    whose tree-expansion exceeds it raises :class:`_SeqSpecOverflow`
+    — the collector counts the site as an honest over-cap skip
+    rather than spelling a spec no claim could carry anyway.
+    ``None`` keeps the historical unbounded behaviour.
     """
     from mlopt_core.typing import INVALID, shape_of
 
@@ -1904,11 +2014,27 @@ def _seq_site(steps: tuple, base: Any):
     for k, (at, bt, _st) in enumerate(steps):
         ea: list = []
         eb: list = []
+        budget = None if spec_cap is None else [spec_cap]
         sa = _seq_deindex(
-            at, names, operands, ea, consts=consts, pullout=True
+            at,
+            names,
+            operands,
+            ea,
+            consts=consts,
+            pullout=True,
+            spec_cap=spec_cap,
+            _budget=budget,
         )
+        budget = None if spec_cap is None else [spec_cap]
         sb = _seq_deindex(
-            bt, names, operands, eb, consts=consts, pullout=True
+            bt,
+            names,
+            operands,
+            eb,
+            consts=consts,
+            pullout=True,
+            spec_cap=spec_cap,
+            _budget=budget,
         )
         if sa is None or sb is None:
             return None
@@ -1928,6 +2054,11 @@ def _seq_site(steps: tuple, base: Any):
     eff = dim
     state_sh: tuple | None = None
     for _m, (child, _d) in operands.items():
+        if (
+            spec_cap is not None
+            and _seq_expansion(child, spec_cap) > spec_cap
+        ):
+            raise _SeqSpecOverflow
         sh = shape_of(child)
         if sh is INVALID or not isinstance(sh, tuple):
             return None
@@ -1958,6 +2089,11 @@ def _seq_site(steps: tuple, base: Any):
     # that cannot is not a per-step operand the fold can read
     # honestly; decline rather than emit a spec that raises on call.
     for t_const, _m in consts.items():
+        if (
+            spec_cap is not None
+            and _seq_expansion(t_const, spec_cap) > spec_cap
+        ):
+            raise _SeqSpecOverflow
         csh = shape_of(t_const)
         if (
             csh is INVALID
@@ -2201,7 +2337,12 @@ def _seqt_readout(term: Any, root: Any, states: tuple):
     return readout, {"W1": child}
 
 
-def _seq_scan_sites(term: Any) -> list:
+def _seq_scan_sites(
+    term: Any,
+    *,
+    spec_cap: int | None = None,
+    stats: dict | None = None,
+) -> list:
     """Seq-form scan specs minted from raw recurrence chains.
 
     The unrolled collectors above only see what saturation already
@@ -2224,6 +2365,14 @@ def _seq_scan_sites(term: Any) -> list:
     it.  Chains that are strict prefixes of a longer emitted chain
     are skipped (the maximal chain covers them); ambiguous or
     unverifiable readings decline rather than guess.
+
+    *spec_cap* bounds each candidate's deindexed step skeletons and
+    operand shape checks (see :func:`_seq_site`) — on shared-DAG
+    model terms the unbounded spelling is exponential in the
+    distinct-node count and OOMs host RAM (t5_r1 wall 4).  Candidates
+    the bound declines are counted in *stats* under
+    ``"seq_sites_over_cap"`` — never silently dropped.
+    ``None`` keeps the historical unbounded behaviour.
     """
     if sys.getrecursionlimit() < 40_000:
         sys.setrecursionlimit(40_000)
@@ -2249,7 +2398,14 @@ def _seq_scan_sites(term: Any) -> list:
     for root, steps, base in cands:
         if id(root) in emitted_roots or id(root) in emitted_states:
             continue
-        site = _seq_site(steps, base)
+        try:
+            site = _seq_site(steps, base, spec_cap=spec_cap)
+        except _SeqSpecOverflow:
+            if stats is not None:
+                stats["seq_sites_over_cap"] = (
+                    stats.get("seq_sites_over_cap", 0) + 1
+                )
+            continue  # next tied reading of the same root
         if site is None:
             continue  # next tied reading of the same root
         spec, leaf_env, axis = site
@@ -2319,7 +2475,7 @@ def _spec_has_meta(spec: Any, meta: str) -> bool:
     return False
 
 
-def _seqm_site(steps: tuple, base: Any):
+def _seqm_site(steps: tuple, base: Any, spec_cap: int | None = None):
     """Seq-matrix spec record for one spine, or ``None``.
 
     The matrix-state analogue of :func:`_seq_site`: the fold is
@@ -2342,6 +2498,7 @@ def _seqm_site(steps: tuple, base: Any):
     own normalized dim, exactly what the original ``select`` read.
     Everything else — identical skeletons step to step, index ==
     chronological position — is the same soundness argument.
+    *spec_cap* is the seq work bound, exactly as in :func:`_seq_site`.
     """
     from mlopt_core.typing import INVALID, shape_of
 
@@ -2353,12 +2510,30 @@ def _seqm_site(steps: tuple, base: Any):
     for k, (at, bt, st) in enumerate(steps):
         ea: list = []
         eb: list = []
+        budget = None if spec_cap is None else [spec_cap]
         sa = (
             1
             if at is None
-            else _seq_deindex(at, names, operands, ea, state=st)
+            else _seq_deindex(
+                at,
+                names,
+                operands,
+                ea,
+                state=st,
+                spec_cap=spec_cap,
+                _budget=budget,
+            )
         )
-        sb = _seq_deindex(bt, names, operands, eb, state=st)
+        budget = None if spec_cap is None else [spec_cap]
+        sb = _seq_deindex(
+            bt,
+            names,
+            operands,
+            eb,
+            state=st,
+            spec_cap=spec_cap,
+            _budget=budget,
+        )
         if sa is None or sb is None:
             return None
         if _spec_has_meta(sa, "H"):
@@ -2372,6 +2547,11 @@ def _seqm_site(steps: tuple, base: Any):
         return None
     t_len = len(steps)
     for m, (child, d) in operands.items():
+        if (
+            spec_cap is not None
+            and _seq_expansion(child, spec_cap) > spec_cap
+        ):
+            raise _SeqSpecOverflow
         sh = shape_of(child)
         if sh is INVALID or not isinstance(sh, tuple) or not sh:
             return None
@@ -2395,14 +2575,20 @@ def _seqm_site(steps: tuple, base: Any):
     return spec, leaf_env, axes
 
 
-def _seqm_scan_sites(term: Any) -> list:
+def _seqm_scan_sites(
+    term: Any,
+    *,
+    spec_cap: int | None = None,
+    stats: dict | None = None,
+) -> list:
     """Seq-matrix specs minted from state-feedback recurrence chains.
 
     Same traversal and caps as :func:`_seq_scan_sites`; the site
     record additionally carries ``axes`` — each operand metavar's
     normalised step axis — which :func:`_seqm_site` resolved per
     operand (there is no shared frame to derive it from).  Records
-    are ``{"spec", "leaf_env", "axis", "axes"}``.
+    are ``{"spec", "leaf_env", "axis", "axes"}``.  Over-cap declines
+    are counted in *stats* under ``"seqm_sites_over_cap"``.
     """
     if sys.getrecursionlimit() < 40_000:
         sys.setrecursionlimit(40_000)
@@ -2428,7 +2614,14 @@ def _seqm_scan_sites(term: Any) -> list:
     for root, steps, base in cands:
         if id(root) in emitted_roots or id(root) in emitted_states:
             continue
-        site = _seqm_site(steps, base)
+        try:
+            site = _seqm_site(steps, base, spec_cap=spec_cap)
+        except _SeqSpecOverflow:
+            if stats is not None:
+                stats["seqm_sites_over_cap"] = (
+                    stats.get("seqm_sites_over_cap", 0) + 1
+                )
+            continue
         if site is None:
             continue
         spec, leaf_env, axes = site
@@ -2455,7 +2648,12 @@ def _seqm_scan_sites(term: Any) -> list:
     return out
 
 
-def _cumsum_sites(term: Any) -> list:
+def _cumsum_sites(
+    term: Any,
+    *,
+    spec_cap: int | None = None,
+    stats: dict | None = None,
+) -> list:
     """Emitted-scan specs minted from ``cumsum``/``cumprod`` ops.
 
     The select-chain collectors read recurrences spelled as unrolled
@@ -2475,6 +2673,10 @@ def _cumsum_sites(term: Any) -> list:
     honesty contract the seq collectors keep).  ``chain`` is the
     ``cumsum``/``cumprod`` node itself — delivery rewrites it to the
     minted kernel call exactly as the unrolled chains are routed.
+
+    *spec_cap* bounds the ``shape_of`` child check (see
+    :func:`_seq_expansion`); children over it are skipped and counted
+    in *stats* under ``"cumsum_sites_over_cap"``.
     """
     from mlopt_core.ir import Const, Op
     from mlopt_core.typing import INVALID, shape_of
@@ -2496,6 +2698,15 @@ def _cumsum_sites(term: Any) -> list:
         ):
             return
         child = t.args[0]
+        if (
+            spec_cap is not None
+            and _seq_expansion(child, spec_cap) > spec_cap
+        ):
+            if stats is not None:
+                stats["cumsum_sites_over_cap"] = (
+                    stats.get("cumsum_sites_over_cap", 0) + 1
+                )
+            return
         sh = shape_of(child)
         if sh is INVALID or not isinstance(sh, tuple) or not sh:
             return
@@ -2523,13 +2734,23 @@ def _cumsum_sites(term: Any) -> list:
     return out[:_SEQ_SITE_CAP]
 
 
-def _all_scan_sites(term: Any) -> list:
-    """All scan site forms: carriers + raw recurrences, both folds."""
+def _all_scan_sites(
+    term: Any,
+    *,
+    spec_cap: int | None = None,
+    stats: dict | None = None,
+) -> list:
+    """All scan site forms: carriers + raw recurrences, both folds.
+
+    *spec_cap*/*stats* bound and count the seq/seqm/cumsum
+    collectors' spelled-size work (the carrier collector's bounded
+    saturation needs neither) — see :func:`_seq_scan_sites`.
+    """
     return [
         *_scan_sites(term),
-        *_seq_scan_sites(term),
-        *_seqm_scan_sites(term),
-        *_cumsum_sites(term),
+        *_seq_scan_sites(term, spec_cap=spec_cap, stats=stats),
+        *_seqm_scan_sites(term, spec_cap=spec_cap, stats=stats),
+        *_cumsum_sites(term, spec_cap=spec_cap, stats=stats),
     ]
 
 
@@ -2547,7 +2768,11 @@ TIER_SITES: dict[str, Any] = {
 
 
 def _mint_tiers(
-    root: Any, covered: set, *, spec_cap: int | None = None
+    root: Any,
+    covered: set,
+    *,
+    spec_cap: int | None = None,
+    stats: dict | None = None,
 ) -> dict:
     """Mint handler entries across every codegen tier.
 
@@ -2556,7 +2781,10 @@ def _mint_tiers(
     the ``{tag: {pattern, kernel, args}}`` table — a tier without
     a collector contributes nothing.  *spec_cap* bounds the spelled
     tree-size of minted site patterns (``gen``/``reduction``
-    collectors); ``None`` keeps the zoo's unbounded spelling.
+    collectors) and the seq-form scan collectors' deindexed
+    skeletons/shape checks; ``None`` keeps the zoo's unbounded
+    spelling.  *stats`` collects the scan collectors' honest
+    over-cap skip counts (``*_sites_over_cap`` keys).
     """
     from mlopt_discovery import genkernel as gk
 
@@ -2567,6 +2795,8 @@ def _mint_tiers(
             continue
         if tier.name in ("gen", "reduction"):
             sites = sites_fn(root, spec_cap=spec_cap)
+        elif tier.name == "scan":
+            sites = sites_fn(root, spec_cap=spec_cap, stats=stats)
         else:
             sites = sites_fn(root)
         out.update(tier.handlers(sites, covered=covered))
@@ -3512,7 +3742,8 @@ def _case_tail(
     Returns the ``(name, term, decls, tag, supported, ex)`` tuple
     ``gen_probe`` reads — ``ex["_gen_claims_gated"]`` marks that
     ``profitable`` already ran so ``_gen_board``'s offer gate does
-    not re-pay it.
+    not re-pay it, and ``ex["site_stats"]`` carries the scan
+    collectors' over-cap skip counts.
     """
     from mlopt_discovery import genkernel as gk
     from mlopt_discovery.meta_arena import _canon_concrete
@@ -3521,7 +3752,13 @@ def _case_tail(
     covered = {
         _canon_concrete(h["pattern"]) for h in lawdata.HANDLERS.values()
     }
-    genh = _mint_tiers(ir.root, covered, spec_cap=spec_node_cap)
+    # ``site_stats`` records the scan collectors' honest over-cap
+    # skip counts (``seq_sites_over_cap`` etc.) — sites the
+    # *spec_node_cap* bound declined rather than spelled.
+    site_stats: dict = {}
+    genh = _mint_tiers(
+        ir.root, covered, spec_cap=spec_node_cap, stats=site_stats
+    )
     # the measured-cost referee: mint only claims whose generated
     # kernel actually beats its spelled site on the real values;
     # the env must bind the input vars too — a param-only env makes
@@ -3574,6 +3811,7 @@ def _case_tail(
             "_gen_claims_gated": True,
             "_referee": referee,
             "_spec_node_cap": spec_node_cap,
+            "site_stats": site_stats,
             "claims_priced": len(priced),
             "claims_kept": len(priced_keep),
         },

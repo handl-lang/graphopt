@@ -697,9 +697,14 @@ def model_corpus(
     verdicts = {v: 0 for v in ("pay", "decline", "verify-fail")}
     for r in rows:
         verdicts[_verdict(r)] = verdicts.get(_verdict(r), 0) + 1
+    # per-board honest skip record: scan-tier sites the spec_node_cap
+    # bound declined (``seq_sites_over_cap`` etc.) — parallel to
+    # ``boards`` (model row first, then accepted mutants).
+    site_stats = [dict(b[5].get("site_stats") or {}) for b in boards]
     return {
         "name": name,
         "coverage": cov,
+        "site_stats": site_stats,
         "mutants": {
             "requested": n_mutants,
             "accepted": len(mutants),
@@ -962,6 +967,12 @@ def main(argv: list[str] | None = None) -> int:
         f"({m['attempted']} attempts; rejects {m['rejected']})"
     )
     print(f"   verdicts: {rep['verdicts']}")  # stdout-compat
+    skips: dict = {}
+    for s in rep.get("site_stats") or []:
+        for k, v in (s or {}).items():
+            skips[k] = skips.get(k, 0) + v
+    if skips:
+        print(f"   site skips over spec_cap: {skips}")  # stdout-compat
     for r in rep["rows"]:
         print(  # stdout-compat
             f"     {r.get('case')}: delivered={r.get('delivered')} "

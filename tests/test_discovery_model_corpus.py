@@ -527,6 +527,132 @@ class TestSiteCollectorsBounded:
         assert env is not None and "X1" in env and "X2" in env
 
 
+class TestSeqScanBounded:
+    """``_seq_scan_sites`` & friends honour ``spec_cap`` on shared DAGs.
+
+    Regression for t5_r1 wall 4: ``_seq_deindex`` spells step
+    operands as *trees* — a self-sharing subterm expands
+    exponentially — so an uncapped collector OOM'd host RAM on
+    model-scale terms.  The cap must bound the spelled skeletons
+    AND every ``shape_of`` operand check, and declines must be
+    counted, never silent.
+    """
+
+    def _big_recurrence(self, t_len: int = 3, depth: int = 20):
+        """Unrolled ``h_t = a_t*h + b_t`` chain whose ``b_t`` embeds
+        a self-sharing ``depth``-chain — expansion ~``2**depth``
+        from ~``depth`` distinct nodes."""
+        from mlopt_core.ir import TensorType, Var
+
+        def v(n, *s):
+            return Var(n, TensorType(s))
+
+        A = v("A", 2, t_len, 4)
+        B = v("B", 2, t_len, 4)
+        U = v("U", 2, t_len, 4)
+        h = v("H0", 2, 4)
+        big = _shared_chain(depth, "mul")
+        for t in range(t_len):
+            b_t = Op.make(
+                "add",
+                Op.make(
+                    "mul",
+                    Op.make("select", B, dim=1, index=t),
+                    Op.make("select", U, dim=1, index=t),
+                ),
+                big,
+            )
+            h = Op.make(
+                "add",
+                Op.make(
+                    "mul",
+                    Op.make("select", A, dim=1, index=t),
+                    h,
+                ),
+                b_t,
+            )
+        return h
+
+    def test_seq_expansion_helper(self):
+        from mlopt_discovery import play
+        from mlopt_discovery.census import term_expansion
+
+        small = _shared_chain(4)
+        assert play._seq_expansion(small, 1000) == term_expansion(small)
+        big = _shared_chain(30)
+        # early exit: never the astronomic exact value
+        assert play._seq_expansion(big, 1000) == 1001
+        assert play._seq_expansion(small, 10) == 10 + 1
+
+    def test_seq_scan_sites_bounded_and_counted(self):
+        from mlopt_discovery import play
+
+        term = self._big_recurrence()
+        stats: dict = {}
+        t0 = time.perf_counter()
+        sites = play._seq_scan_sites(term, spec_cap=64, stats=stats)
+        elapsed = time.perf_counter() - t0
+        # the unbounded spelling would visit ~2**20 nodes per step —
+        # the cap must finish in milliseconds, not OOM
+        assert elapsed < 5.0
+        assert sites == []
+        assert stats.get("seq_sites_over_cap", 0) > 0
+
+    def test_all_scan_sites_and_mint_tiers_bounded(self):
+        from mlopt_discovery import lawdata, play
+        from mlopt_discovery.meta_arena import _canon_concrete
+
+        term = self._big_recurrence()
+        stats: dict = {}
+        t0 = time.perf_counter()
+        sites = play._all_scan_sites(term, spec_cap=64, stats=stats)
+        elapsed = time.perf_counter() - t0
+        assert elapsed < 10.0  # includes the bounded carrier saturation
+        assert isinstance(sites, list)
+        assert stats.get("seq_sites_over_cap", 0) > 0
+        # the registry walk reaches the same bound and reports it
+        covered = {
+            _canon_concrete(h["pattern"])
+            for h in lawdata.HANDLERS.values()
+        }
+        stats2: dict = {}
+        genh = play._mint_tiers(
+            term, covered, spec_cap=64, stats=stats2
+        )
+        assert isinstance(genh, dict)
+        assert stats2.get("seq_sites_over_cap", 0) > 0
+
+    def test_seq_scan_sites_small_term_parity(self):
+        """The cap does not bind zoo-scale recurrences."""
+        from mlopt_core.ir import TensorType, Var
+        from mlopt_discovery import play
+
+        def v(n, *s):
+            return Var(n, TensorType(s))
+
+        A, B, U = (
+            v("A", 2, 3, 4),
+            v("B", 2, 3, 4),
+            v("U", 2, 3, 4),
+        )
+        h = v("H0", 2, 4)
+        for t in range(3):
+            b_t = Op.make(
+                "mul",
+                Op.make("select", B, dim=1, index=t),
+                Op.make("select", U, dim=1, index=t),
+            )
+            h = Op.make(
+                "add",
+                Op.make("mul", Op.make("select", A, dim=1, index=t), h),
+                b_t,
+            )
+        unbounded = play._seq_scan_sites(h)
+        capped = play._seq_scan_sites(h, spec_cap=512, stats={})
+        assert len(unbounded) == 1
+        assert capped == unbounded
+
+
 class TestRefereeBounds:
     """``profitable``'s ``max_handlers``/``time_budget`` contract."""
 
