@@ -18,6 +18,8 @@ rows use.  The tests pin:
 """
 
 import math
+import time
+from typing import Any
 
 import pytest
 import torch
@@ -415,3 +417,263 @@ class TestCliHelpers:
         assert t.shape == (2, 4) and t.dtype == torch.float64
         pair = mc._input_from_spec("2,4;3,5")
         assert isinstance(pair, tuple) and len(pair) == 2
+
+
+# ---------------------------------------------------------------------------
+#  Generalized probe — shared-DAG terms and bounded referee/spec paths
+# ---------------------------------------------------------------------------
+
+
+def _shared_chain(depth: int, op: str = "add") -> Op:
+    """``op(t, t)`` self-sharing chain — expansion ``2**(d+1) - 1``.
+
+    Hash-consed ``Op.make`` keeps one object per level referenced
+    twice — the residual-stream shape real model IRs carry.
+    """
+    from mlopt_core.ir import TensorType, Var
+
+    t: Any = Var("x", TensorType((2, 2)))
+    for _ in range(depth):
+        t = Op.make(op, t, t)
+    return t
+
+
+class TestExpansionBounds:
+    """``census.term_expansion``/``op_expansion`` on shared DAGs."""
+
+    def test_exact_values(self):
+        from mlopt_discovery.census import op_expansion, term_expansion
+
+        t = _shared_chain(4)
+        # E(t) = 1 + 2E(child) over a leaf of 1 → 2^(d+1) - 1
+        assert term_expansion(t) == 2**5 - 1
+        assert op_expansion(t) == 2**4 - 1
+
+    def test_cap_early_exit(self):
+        from mlopt_discovery.census import term_expansion
+
+        t = _shared_chain(30)  # ~2^31 — uncomputable as a render
+        v = term_expansion(t, 1000)
+        assert v > 1000  # capped sentinel, never the astronomic value
+        small = _shared_chain(3)
+        assert term_expansion(small, 1000) == term_expansion(small)
+
+
+class TestSiteCollectorsBounded:
+    """Site/spec walks stay DAG-linear and honour the spelled cap."""
+
+    def test_fusion_sites_spec_cap_skips_oversized(self):
+        from mlopt_core.ir import TensorType, Var
+        from mlopt_discovery import play
+
+        # relu over a self-sharing add chain: every site's spelled
+        # pattern tree-expands past any reasonable cap — the capped
+        # collector must decline fast, not render 2**15 nodes
+        term = Op.make("relu", _shared_chain(14, "add"))
+        t0 = time.perf_counter()
+        sites = play._fusion_sites(term, spec_cap=512)
+        elapsed = time.perf_counter() - t0
+        assert elapsed < 5.0
+        assert isinstance(sites, list)
+        # small sites still mint — the cap binds size, not existence
+        small = Op.make(
+            "mul",
+            Var("x", TensorType((4, 4))),
+            Op.make("relu", Var("x", TensorType((4, 4)))),
+        )
+        # (two distinct Var objects → distinct metavars; just assert
+        # the collector runs and specs are tuples)
+        for s in play._fusion_sites(small, spec_cap=512):
+            assert isinstance(s, tuple)
+
+    def test_fusion_sites_small_term_parity(self):
+        from mlopt_core.ir import TensorType, Var
+        from mlopt_discovery import play
+
+        x = Var("x", TensorType((4, 4)))
+        p = Var("p", TensorType((4, 4)))
+        y = Op.make("matmul", x, p)
+        term = Op.make("mul", y, Op.make("relu", y))
+        assert play._fusion_sites(term) == [
+            ("mul", "X1", ("relu", "X1"))
+        ]
+        # the cap does not bind a zoo-scale site
+        assert play._fusion_sites(term, spec_cap=512) == [
+            ("mul", "X1", ("relu", "X1"))
+        ]
+
+    def test_site_env_dedupes_shared_nodes(self, monkeypatch):
+        from mlopt_discovery import genkernel as gk
+        from mlopt_discovery import meta_arena as ma
+
+        calls = {"n": 0}
+        orig = ma._concrete_match
+
+        def counting(*a, **k):
+            calls["n"] += 1
+            return orig(*a, **k)
+
+        monkeypatch.setattr(ma, "_concrete_match", counting)
+        term = _shared_chain(12)
+        # a spec that matches nothing forces the full walk: 14
+        # distinct nodes tried once each — the tree walk would try
+        # ~2**13 occurrences
+        env = gk._site_env(("div", "X1", "X2"), term)
+        assert env is None
+        assert calls["n"] <= 20
+        # and a real spec still binds on the shared head
+        calls["n"] = 0
+        env = gk._site_env(("add", "X1", "X2"), term)
+        assert env is not None and "X1" in env and "X2" in env
+
+
+class TestRefereeBounds:
+    """``profitable``'s ``max_handlers``/``time_budget`` contract."""
+
+    def _handlers(self, n: int) -> dict:
+        return {
+            f"h{i:02d}": {"pattern": ("add", "X1", "X2")}
+            for i in range(n)
+        }
+
+    def test_max_handlers_caps_sorted_prefix(
+        self, monkeypatch
+    ):
+        import torch
+        from mlopt_core.ir import TensorType, Var
+        from mlopt_discovery import genkernel as gk
+
+        monkeypatch.setattr(
+            gk, "_handler_env", lambda h, t: {}
+        )
+        monkeypatch.setattr(
+            gk,
+            "_referee_kernel",
+            lambda kf, name, h, vals, kerneled: (
+                (lambda: torch.ones(2)),
+                vals,
+            ),
+        )
+        monkeypatch.setattr(
+            gk,
+            "_kernel_pays",
+            lambda *a, **k: (1.0, 0.5, a[4]),
+        )
+        x = Var("x", TensorType((2, 2)))
+        term = Op.make("add", x, x)
+        handlers = self._handlers(10)
+        # names sort h00..h09 — the cap takes the deterministic
+        # prefix, not an arbitrary subset
+        keep = gk.profitable(
+            handlers,
+            term,
+            {},
+            reps=2,
+            kernel_for=lambda n, h, v: None,
+            max_handlers=4,
+        )
+        assert len(keep) == 4
+        assert sorted(keep) == ["h00", "h01", "h02", "h03"]
+
+    def test_time_budget_clamps_reps(self, monkeypatch):
+        import torch
+        from mlopt_discovery import genkernel as gk
+
+        reps_seen: list[int] = []
+
+        def fake_paired(a, b, reps):
+            reps_seen.append(reps)
+            return (1.0, 0.5)
+
+        monkeypatch.setattr(gk, "_paired_time", fake_paired)
+        t = torch.ones(2)
+        # a ~free call pair → the budget floor (3) binds, not `reps`
+        gk._kernel_pays(
+            lambda: t,
+            lambda: t,
+            {},
+            [],
+            100,
+            time_budget=1e-9,
+        )
+        assert reps_seen == [3]
+        # no budget → the caller's reps pass through untouched
+        gk._kernel_pays(lambda: t, lambda: t, {}, [], 7)
+        assert reps_seen == [3, 7]
+
+
+class TestBoundedCoverageAndKnobs:
+    """Coverage census and probe-knob resolution on large terms."""
+
+    def test_coverage_skips_unkeyable_shapes(self):
+        from mlopt_discovery.census import CorpusTerm
+        from mlopt_discovery.impact import TermCase
+
+        # a shared-DAG corpus term whose subterm shapes cannot be
+        # keyed within the cap — the census must skip, not hang
+        big = CorpusTerm("bench", "chain", _shared_chain(20))
+        tiny = TermCase(
+            source="t", name="m", term=_shared_chain(2),
+            inputs=(), feed=(), param_vals={},
+        )
+        rep = mc.coverage_report(tiny, [big])
+        assert rep["n_shape_subterms_skipped"] > 0
+        assert rep["shape_key_cap"] == mc._SHAPE_KEY_CAP
+
+    def test_probe_knobs_auto_engage_on_large_term(self):
+        knobs = mc._probe_knobs(
+            _shared_chain(20),
+            spec_node_cap=None,
+            key_cap=None,
+            max_claims=None,
+            claim_time_budget=None,
+        )
+        assert knobs["large_term"] is True
+        assert knobs["spec_node_cap"] == mc._AUTO_SPEC_NODE_CAP
+        assert knobs["key_cap"] == mc._AUTO_KEY_CAP
+        assert knobs["referee"]["max_handlers"] == mc._AUTO_MAX_CLAIMS
+        assert (
+            knobs["referee"]["time_budget"] == mc._AUTO_CLAIM_BUDGET
+        )
+
+    def test_probe_knobs_small_term_unbounded(self):
+        knobs = mc._probe_knobs(
+            _shared_chain(3),
+            spec_node_cap=None,
+            key_cap=None,
+            max_claims=None,
+            claim_time_budget=None,
+        )
+        assert knobs["large_term"] is False
+        assert knobs["spec_node_cap"] is None
+        assert knobs["key_cap"] is None
+        assert knobs["referee"] == {
+            "max_handlers": None,
+            "time_budget": None,
+        }
+
+    def test_probe_knobs_explicit_wins(self):
+        knobs = mc._probe_knobs(
+            _shared_chain(20),
+            spec_node_cap=64,
+            key_cap=100,
+            max_claims=2,
+            claim_time_budget=0.5,
+        )
+        assert knobs["spec_node_cap"] == 64
+        assert knobs["key_cap"] == 100
+        assert knobs["referee"]["max_handlers"] == 2
+        assert knobs["referee"]["time_budget"] == 0.5
+
+    def test_generate_mutants_key_cap_rejects(self, model_case):
+        _, _, tc = model_case
+        muts, stats = mc.generate_mutants(
+            tc,
+            _tiny_corpus(),
+            2,
+            seed=1,
+            max_nodes=160,
+            key_cap=1,  # nothing can be keyed — all expansion rejects
+        )
+        assert muts == []
+        assert stats["rejected"].get("expansion", 0) > 0

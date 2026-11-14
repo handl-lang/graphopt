@@ -468,15 +468,37 @@ def _spec_size(spec: Any) -> int:
     return 0
 
 
-def _composite_specs(corpus: Iterable, cap: int) -> tuple:
-    """Distinct ≥2-op subterm specs over *corpus*, canonicalized."""
+def _composite_specs(
+    corpus: Iterable, cap: int, *, node_cap: int | None = None
+) -> tuple:
+    """Distinct ≥2-op subterm specs over *corpus*, canonicalized.
+
+    *node_cap* bounds the op-expansion a subterm may spell: a spec is
+    a tree render of its subterm, so a sharing-heavy DAG subterm
+    (residual-stream models) expands exponentially and cannot be
+    spec'd in feasible time — or usedfully: a claim pattern that
+    large binds nothing a fusion kernel could fuse.  Subterms over
+    the cap are skipped, exactly like ``_program_specs`` skips them
+    for the occurrence check.  The walk itself is ``id``-deduped:
+    a shared subterm yields the same spec at every occurrence.
+    """
+    from mlopt_discovery.census import op_expansion
+
     seen: dict[str, Any] = {}
+    visited: set[int] = set()
 
     def visit(t: Any) -> None:
+        if id(t) in visited:
+            return
+        visited.add(id(t))
         if isinstance(t, Op):
-            spec = _spec_of(t, {})
-            if _spec_size(spec) >= 2:
-                seen.setdefault(repr(spec), spec)
+            if (
+                node_cap is None
+                or op_expansion(t, node_cap) <= node_cap
+            ):
+                spec = _spec_of(t, {})
+                if _spec_size(spec) >= 2:
+                    seen.setdefault(repr(spec), spec)
             for a in t.args:
                 visit(a)
 
@@ -725,13 +747,6 @@ def _feasible_cost(
     """
     bound = backend_cost(cost_fn, supported)
 
-    def expand(t: Any) -> Any:
-        """Expand *t*'s unsupported-and-defined ops (one bound)."""
-        if not isinstance(t, Op):
-            return t
-        args = tuple(expand(a) for a in t.args)
-        return _bound_node(t, args, supported, defs, interp)
-
     def priced(term: Any, memo: dict | None = None) -> float:
         """Price *term* under the supported-op bound.
 
@@ -741,7 +756,29 @@ def _feasible_cost(
         ``extract_best`` / ``dag_cost`` never degenerates to ``nan``
         (an ``inf - inf`` over an infeasible child would compare
         false against everything — including feasible siblings).
+
+        The expansion walk is memoised per call: *term* is a DAG
+        (hash-consed sharing — a residual stream references its
+        input twice), so the naive recursion re-expands shared
+        subterms exponentially — the meta-arena hang on
+        model-scale IRs.  ``defs``/``supported``/``interp`` are
+        read live but constant within one pricing, so a per-call
+        memo is exact.
         """
+        ememo: dict[int, Any] = {}
+
+        def expand(t: Any) -> Any:
+            """Expand *t*'s unsupported-and-defined ops (one bound)."""
+            hit = ememo.get(id(t))
+            if hit is not None:
+                return hit
+            if not isinstance(t, Op):
+                return t
+            args = tuple(expand(a) for a in t.args)
+            out = _bound_node(t, args, supported, defs, interp)
+            ememo[id(t)] = out
+            return out
+
         v = bound(expand(term), memo)
         return v if math.isfinite(v) else _INVALID_COST
 
@@ -1372,6 +1409,7 @@ class MetaArena:
         weights: dict | None = None,
         handlers: dict | None = None,
         store: Any = None,
+        spec_node_cap: int | None = None,
     ) -> None:
         """Bind the program, the library, the bound, and the budget.
 
@@ -1418,7 +1456,15 @@ class MetaArena:
         )
         self.steps = 0
         self.done = False
-        self._specs = _composite_specs(self.corpus, max_specs)
+        # op-expansion bound for spec rendering (``_composite_specs``
+        # inventory and ``_program_specs`` occurrence walk): ``None``
+        # is the historical unbounded behaviour; a cap skips subterms
+        # whose tree-rendered spec would be exponential — they can
+        # never equal a mined spec anyway.
+        self._spec_node_cap = spec_node_cap
+        self._specs = _composite_specs(
+            self.corpus, max_specs, node_cap=spec_node_cap
+        )
 
     def resolve_ref(self, ref: Any) -> Any:
         """Resolve a rule reference against the *live* ruleset.
@@ -1553,16 +1599,31 @@ class MetaArena:
         leaves *supported* declared ops alone so their kernel price
         counts — this walk expands *all* of them, so the column
         also shows what a ``sub`` claim is worth in spelled ops.
+
+        Memoised per node: on a sharing-heavy term (a model IR is a
+        DAG, not a tree) the naive recursion re-expands shared
+        subterms exponentially.
         """
+        return self._unfold_memo(term, {})
+
+    def _unfold_memo(self, term: Any, memo: dict) -> Any:
+        """Recursive worker for :meth:`unfold`, DAG-memoised."""
+        hit = memo.get(id(term))
+        if hit is not None:
+            return hit
         if isinstance(term, Op):
-            args = tuple(self.unfold(a) for a in term.args)
+            args = tuple(self._unfold_memo(a, memo) for a in term.args)
             if term.op in self.definitions:
                 mvs, spelled = self.definitions[term.op]
-                return _term_instantiate(
+                out = _term_instantiate(
                     spelled, dict(zip(mvs, args, strict=True))
                 )
-            return Op.make(term.op, *args, **dict(term.attrs))
-        return term
+            else:
+                out = Op.make(term.op, *args, **dict(term.attrs))
+        else:
+            out = term
+        memo[id(term)] = out
+        return out
 
     def deliverable(self, term: Any) -> Any:
         """Resolve the extraction to a *lowering-ready* term.
@@ -1584,24 +1645,31 @@ class MetaArena:
         # ``_deliverable`` expands spelled bodies the same lookup
         # would miss them.
         routed = _route_scan_chains(term, self.handlers, self.eg)
-        return self._deliverable(routed)
+        return self._deliverable(routed, {})
 
-    def _deliverable(self, term: Any) -> Any:
-        """Recursive worker for :meth:`deliverable`."""
+    def _deliverable(self, term: Any, memo: dict) -> Any:
+        """Recursive worker for :meth:`deliverable`, DAG-memoised."""
+        hit = memo.get(id(term))
+        if hit is not None:
+            return hit
         if isinstance(term, Op):
-            args = tuple(self._deliverable(a) for a in term.args)
+            args = tuple(self._deliverable(a, memo) for a in term.args)
             if term.op in self.interpretations:
                 kernel, pos = self.interpretations[term.op]
-                return Op.make(
+                out = Op.make(
                     kernel, *(args[i] for i in pos), **dict(term.attrs)
                 )
-            if term.op in self.definitions:
+            elif term.op in self.definitions:
                 mvs, spelled = self.definitions[term.op]
-                return _term_instantiate(
+                out = _term_instantiate(
                     spelled, dict(zip(mvs, args, strict=True))
                 )
-            return Op.make(term.op, *args, **dict(term.attrs))
-        return term
+            else:
+                out = Op.make(term.op, *args, **dict(term.attrs))
+        else:
+            out = term
+        memo[id(term)] = out
+        return out
 
     def observe(self) -> MetaState:
         """Build the read-only snapshot — live ruleset and board size."""
@@ -1640,15 +1708,27 @@ class MetaArena:
         A mined spec *occurs* iff its canon form equals some
         subterm's — the occurrence test ``declare``/``claim`` moves
         actually need (a covered spec absent from the program can
-        mint a rule, but the rule never fires).
+        mint a rule, but the rule never fires).  The walk is
+        ``id``-deduped and bounded by ``_spec_node_cap`` exactly like
+        ``_composite_specs``: a subterm whose op-expansion exceeds
+        the cap spells a spec larger than any mined entry, so it can
+        never occur — skipping it loses no site.
         """
+        from mlopt_discovery.census import op_expansion
+
         out: list = []
+        visited: set[int] = set()
+        cap = self._spec_node_cap
 
         def _walk(t: Any) -> None:
+            if id(t) in visited:
+                return
+            visited.add(id(t))
             if isinstance(t, Op):
-                s = _canon_spec(_spec_of(t, {}))
-                if not any(s == p for p in out):
-                    out.append(s)
+                if cap is None or op_expansion(t, cap) <= cap:
+                    s = _canon_spec(_spec_of(t, {}))
+                    if not any(s == p for p in out):
+                        out.append(s)
                 for a in t.args:
                     _walk(a)
 
@@ -1661,17 +1741,22 @@ class MetaArena:
         The claim/handle soundness test: a mined spec's *skeleton*
         occurring is not enough — the pattern's op tree itself must
         match a real subterm or the minted rule never fires (and a
-        bound interpretation would read the wrong ops).
+        bound interpretation would read the wrong ops).  The walk is
+        ``id``-deduped: ``_concrete_match`` gets a fresh env per
+        node, so a shared subterm's verdict is identical at every
+        occurrence — visiting it once keeps the check DAG-linear on
+        sharing-heavy terms.
         """
 
-        def _walk(t: Any) -> bool:
+        def _walk(t: Any, seen: set) -> bool:
             if _concrete_match(pattern, t, {}):
                 return True
-            if isinstance(t, Op):
-                return any(_walk(a) for a in t.args)
+            if isinstance(t, Op) and id(t) not in seen:
+                seen.add(id(t))
+                return any(_walk(a, seen) for a in t.args)
             return False
 
-        return _walk(self.term)
+        return _walk(self.term, set())
 
     def _sites(self) -> tuple:
         """Return indices of mined specs occurring in the program."""

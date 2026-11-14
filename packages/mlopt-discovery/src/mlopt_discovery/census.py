@@ -118,6 +118,83 @@ def _iter_subterms(term: Any) -> list[Any]:
     return out
 
 
+def _postorder(term: Any) -> list[Any]:
+    """Every distinct node in *term*'s DAG, children before parents.
+
+    ``id``-deduped — terms are hash-consed, so structural sharing is
+    object sharing.  Explicit stack: deep terms would otherwise hit
+    the recursion limit.
+    """
+    expanded: set[int] = set()
+    order: list[Any] = []
+    stack: list[tuple[Any, bool]] = [(term, False)]
+    while stack:
+        t, done = stack.pop()
+        if done:
+            order.append(t)
+            continue
+        if id(t) in expanded:
+            continue
+        expanded.add(id(t))
+        stack.append((t, True))
+        if isinstance(t, Op):
+            stack.extend((a, False) for a in t.args)
+    return order
+
+
+def _expansion(term: Any, count_leaves: bool, cap: int | None) -> int:
+    """Tree-expansion size of *term*, memoised per distinct node.
+
+    ``E(t) = self + sum(E(a))`` over ``Op`` args — the recurrence a
+    tree render (``shape_key``/``_spec_of``/the site collectors)
+    implicitly computes, so sharing multiplies exactly like the
+    render would, in O(distinct nodes).  ``count_leaves`` decides
+    whether non-``Op`` leaves add 1 (``term_expansion``) or 0
+    (``op_expansion``).  *cap* early-exits a node's partial sum.
+    """
+    leaf = 1 if count_leaves else 0
+    memo: dict[int, int] = {}
+    for t in _postorder(term):
+        if not isinstance(t, Op):
+            memo[id(t)] = leaf
+            continue
+        total = 1
+        for a in t.args:
+            total += memo[id(a)]
+            if cap is not None and total > cap:
+                break
+        memo[id(t)] = total
+    return memo[id(term)]
+
+
+def term_expansion(term: Any, cap: int | None = None) -> int:
+    """Return the *tree-expansion* size of *term*, DAG-aware.
+
+    ``shape_key``/``_spec_of``/the site collectors all render a term
+    as a tree: a subterm referenced by two parents is spelled once
+    per use, so a sharing-heavy DAG (a residual stream — every block
+    output feeds the next block AND the skip) expands exponentially
+    even though its distinct-node count is small.  This counts that
+    expansion exactly — every ``Op`` and leaf occurrence counts 1 —
+    in O(distinct nodes).  *cap*, when given, early-exits at
+    ``cap + 1`` — callers comparing against a budget never need the
+    exact astronomic value.
+    """
+    return _expansion(term, True, cap)
+
+
+def op_expansion(term: Any, cap: int | None = None) -> int:
+    """Return the ``Op``-only tree-expansion size of *term*.
+
+    Same recurrence as :func:`term_expansion` but non-``Op`` leaves
+    count 0 — the count equals the number of op nodes a spec
+    rendering (``meta_arena._spec_of``/``play._fusion_pattern``)
+    spells, which is the size a claim/spec bound should compare
+    against.
+    """
+    return _expansion(term, False, cap)
+
+
 def _op_of(term: Any) -> str:
     """Return the op name of *term*, or a leaf/const marker."""
     if isinstance(term, Op):

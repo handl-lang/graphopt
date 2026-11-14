@@ -995,7 +995,7 @@ class TestMeasuredReferee:
         # first window reads a marginal loss; the two confirmations
         # read wins — majority keeps
         monkeypatch.setattr(
-            gk, "_kernel_pays", lambda *a, **k: (1.0, 1.05)
+            gk, "_kernel_pays", lambda *a, **k: (1.0, 1.05, a[4])
         )
         scripted = iter([(1.0, 0.9), (1.0, 0.95)])
         calls = []
@@ -1020,7 +1020,7 @@ class TestMeasuredReferee:
         borderline noise into keeps either."""
         hs, term, env, kf = self._borderline_fixture()
         monkeypatch.setattr(
-            gk, "_kernel_pays", lambda *a, **k: (1.0, 1.05)
+            gk, "_kernel_pays", lambda *a, **k: (1.0, 1.05, a[4])
         )
         scripted = iter([(1.0, 0.9), (1.0, 1.1)])
         monkeypatch.setattr(
@@ -1039,7 +1039,7 @@ class TestMeasuredReferee:
         the guard only pays where the noise lives."""
         hs, term, env, kf = self._borderline_fixture()
         monkeypatch.setattr(
-            gk, "_kernel_pays", lambda *a, **k: (1.0, 3.0)
+            gk, "_kernel_pays", lambda *a, **k: (1.0, 3.0, a[4])
         )
         calls = []
         monkeypatch.setattr(

@@ -583,6 +583,70 @@ def _torch_deliver(board: ma.MetaArena, case: Any, traj: Any) -> dict:
 #  a kernel nobody wrote.
 
 
+def _leaf_name(t: Any, names: dict) -> str:
+    """Name a pattern leaf by structural identity.
+
+    Key leaves by the hash-consed node itself, not ``repr``: a
+    non-elementwise ``Op`` child's repr tree-expands the whole
+    shared DAG — exponential on residual-stream models (the
+    whisper-encoder hang).  Interned terms make object identity
+    the structural-equality test ``repr`` approximated.
+    """
+    key = t if isinstance(t, Op) else repr(t)
+    if key not in names:
+        names[key] = f"X{len(names) + 1}"
+    return names[key]
+
+
+def _fusion_pattern_sz(
+    t: Any, names: dict, memo: dict, cap: int | None
+) -> tuple:
+    """Spell *t*'s fusion pattern; return ``(pattern, tree_size)``.
+
+    ``tree_size`` counts the pattern AS A TREE — a shared
+    elementwise subterm is spelled once per occurrence, so the
+    count follows the same recurrence ``census.term_expansion``
+    measures (clamped to ``cap + 1`` when *cap* is given).  That is
+    the honest bound: the spec tuples the tiers consume ARE trees —
+    there is no sharing to exploit downstream, so a site whose
+    spelled pattern exceeds the cap cannot be claimed usefully.
+    ``(None, cap + 1)`` reports overflow; callers skip the site.
+
+    ``memo`` dedups construction per distinct node (the pattern
+    OBJECT is shared — only its tree-size is counted per
+    occurrence); ``names`` keeps metavar naming consistent across
+    the whole site, exactly as before.
+    """
+    from mlopt_core.ir import Const
+
+    from mlopt_discovery import genkernel as gk
+
+    if isinstance(t, Op) and t.op in gk.ELEMENTWISE:
+        hit = memo.get(id(t))
+        if hit is not None:
+            return hit
+        kids: list = []
+        size = 1
+        for a in t.args:
+            k, ks = _fusion_pattern_sz(a, names, memo, cap)
+            if k is None:
+                return None, (cap + 1 if cap is not None else ks)
+            kids.append(k)
+            size += ks
+            if cap is not None and size > cap:
+                return None, cap + 1
+        if t.attrs:
+            kids.append(dict(t.attrs))
+            size += 1
+        pat = (t.op, *kids)
+        out = (pat, size if cap is None else min(size, cap + 1))
+        memo[id(t)] = out
+        return out
+    if isinstance(t, Const):
+        return t.value, 1
+    return _leaf_name(t, names), 1
+
+
 def _fusion_pattern(t: Any, names: dict) -> Any:
     """Return the elementwise-closure pattern at *t*, leaves abstracted.
 
@@ -592,40 +656,45 @@ def _fusion_pattern(t: Any, names: dict) -> Any:
     ``mul(y, relu(y))`` over ``y = mm(…)`` yields
     ``("mul", "X1", ("relu", "X1"))`` — ``X1`` binds the whole
     folded matmul, and the generated kernel computes it once.
+    Unbounded spelling — callers on model-scale terms go through
+    :func:`_fusion_pattern_sz` with a cap instead.
     """
-    from mlopt_core.ir import Const
-
-    from mlopt_discovery import genkernel as gk
-
-    if isinstance(t, Op) and t.op in gk.ELEMENTWISE:
-        kids = [_fusion_pattern(a, names) for a in t.args]
-        if t.attrs:
-            kids.append(dict(t.attrs))
-        return (t.op, *kids)
-    if isinstance(t, Const):
-        return t.value
-    key = repr(t)
-    if key not in names:
-        names[key] = f"X{len(names) + 1}"
-    return names[key]
+    pat, _size = _fusion_pattern_sz(t, names, {}, None)
+    return pat
 
 
-def _fusion_sites(term: Any) -> list:
+def _fusion_sites(term: Any, *, spec_cap: int | None = None) -> list:
     """Elementwise-connex subterms of size ≥2, leaves abstracted.
 
     Each entry is a *pattern tuple* (metavar leaves for the
     non-elementwise boundary), the shape ``gen_handlers`` consumes.
+    *spec_cap* bounds the pattern's spelled tree-size — sites over
+    it are skipped (a claim pattern that large binds nothing a
+    fusion kernel could fuse, and cannot even be spelled in
+    feasible time on a shared DAG).
     """
     from mlopt_discovery import genkernel as gk
 
     out: list = []
+    seen: set[int] = set()
 
     def walk(t: Any) -> None:
+        # id-dedup: a shared subterm yields the same spec at every
+        # occurrence — visiting it once keeps the collector
+        # DAG-linear instead of tree-exponential, and the minted
+        # handler table is identical either way (the tier mints
+        # dedup on canon pattern).
+        if id(t) in seen:
+            return
+        seen.add(id(t))
         if isinstance(t, Op) and t.op in gk.ELEMENTWISE:
-            spec = _fusion_pattern(t, {})
-            ops = {e for e in _flat_ops(spec)}
-            if len(ops) >= 2:
-                out.append(spec)
+            pat, size = _fusion_pattern_sz(t, {}, {}, spec_cap)
+            if pat is not None and (
+                spec_cap is None or size <= spec_cap
+            ):
+                ops = {e for e in _flat_ops(pat)}
+                if len(ops) >= 2:
+                    out.append(pat)
         if isinstance(t, Op):
             for a in t.args:
                 walk(a)
@@ -634,7 +703,12 @@ def _fusion_sites(term: Any) -> list:
     return out
 
 
-def _reduction_pattern(t: Any, names: dict) -> Any:
+def _reduction_pattern(
+    t: Any,
+    names: dict,
+    memo: dict | None = None,
+    cap: int | None = None,
+) -> tuple:
     """Spell a reduction-headed subterm as a fusion spec.
 
     The head and its attr dict stay concrete (``dim``/``keepdim``
@@ -644,15 +718,29 @@ def _reduction_pattern(t: Any, names: dict) -> Any:
     abstract to metavars and the elementwise body stays spelled —
     ``mean(mul(x, relu(x)))`` → ``("mean", ("mul", "X1",
     ("relu", "X1")), {…})``.  :func:`genkernel.reduction_spec` is
-    the accept gate.
+    the accept gate.  Returns ``(spec, tree_size)``; ``(None,
+    cap + 1)`` on cap overflow — same spelled-tree accounting as
+    :func:`_fusion_pattern_sz`.
     """
-    kids = [_fusion_pattern(a, names) for a in t.args]
+    memo = {} if memo is None else memo
+    kids: list = []
+    size = 1
+    for a in t.args:
+        k, ks = _fusion_pattern_sz(a, names, memo, cap)
+        if k is None:
+            return None, (cap + 1 if cap is not None else ks)
+        kids.append(k)
+        size += ks
+        if cap is not None and size > cap:
+            return None, cap + 1
     if t.attrs:
         kids.append(dict(t.attrs))
-    return (t.op, *kids)
+        size += 1
+    spec = (t.op, *kids)
+    return spec, (size if cap is None else min(size, cap + 1))
 
 
-def _reduction_sites(term: Any) -> list:
+def _reduction_sites(term: Any, *, spec_cap: int | None = None) -> list:
     """Reduction-bodied subterms of *term*, spec'd for the tier.
 
     The reduction tier's site collector — the mirror of
@@ -662,17 +750,26 @@ def _reduction_sites(term: Any) -> list:
     elementwise-fusable bodies (>=2 ops, non-head ops all
     elementwise).  Sites are raw-IR subterms, so minted entries
     carry no ``leaf_env`` — ``_handler_env`` rebinds them by
-    concrete match like every other tier.
+    concrete match like every other tier.  *spec_cap* bounds the
+    spelled pattern tree-size exactly as in ``_fusion_sites``.
     """
     from mlopt_discovery import genkernel as gk
 
     heads = gk.reduce_heads()
     out: list = []
+    seen: set[int] = set()
 
     def walk(t: Any) -> None:
+        if id(t) in seen:
+            return
+        seen.add(id(t))
         if isinstance(t, Op) and t.op in heads:
-            spec = _reduction_pattern(t, {})
-            if gk.reduction_spec(spec):
+            spec, size = _reduction_pattern(t, {}, cap=spec_cap)
+            if (
+                spec is not None
+                and (spec_cap is None or size <= spec_cap)
+                and gk.reduction_spec(spec)
+            ):
                 out.append(spec)
         if isinstance(t, Op):
             for a in t.args:
@@ -692,8 +789,12 @@ def _decayed_sites(term: Any) -> list:
     the kernel then receives the evaluated operand tensors.
     """
     out: list = []
+    seen: set[int] = set()
 
     def walk(t: Any) -> None:
+        if id(t) in seen:
+            return
+        seen.add(id(t))
         if isinstance(t, Op):
             if t.op == "om_decayed":
                 out.append(("om_decayed", "S", "D", "V"))
@@ -2445,21 +2546,30 @@ TIER_SITES: dict[str, Any] = {
 }
 
 
-def _mint_tiers(root: Any, covered: set) -> dict:
+def _mint_tiers(
+    root: Any, covered: set, *, spec_cap: int | None = None
+) -> dict:
     """Mint handler entries across every codegen tier.
 
     The registry walk replacing per-tier call sites: each tier's
     site collector gathers specs, its ``handlers`` builder mints
     the ``{tag: {pattern, kernel, args}}`` table — a tier without
-    a collector contributes nothing.
+    a collector contributes nothing.  *spec_cap* bounds the spelled
+    tree-size of minted site patterns (``gen``/``reduction``
+    collectors); ``None`` keeps the zoo's unbounded spelling.
     """
     from mlopt_discovery import genkernel as gk
 
     out: dict = {}
     for tier in gk.TIERS:
         sites_fn = TIER_SITES.get(tier.name)
-        if sites_fn is not None:
-            out.update(tier.handlers(sites_fn(root), covered=covered))
+        if sites_fn is None:
+            continue
+        if tier.name in ("gen", "reduction"):
+            sites = sites_fn(root, spec_cap=spec_cap)
+        else:
+            sites = sites_fn(root)
+        out.update(tier.handlers(sites, covered=covered))
     return out
 
 
@@ -2724,12 +2834,15 @@ def _fold_cost_gate(case: Any, handlers: dict) -> dict:
             ungated[name] = h
     if not measured:
         return ungated
+    ref = ex.get("_referee") or {}
     keep = gk.profitable(
         measured,
         term,
         _var_env(ex["ir"], ex["leaves"], ex["input"]),
-        reps=20,
+        reps=ref.get("reps") or 20,
         kernel_for=_triton_kernel_for,
+        max_handlers=ref.get("max_handlers"),
+        time_budget=ref.get("time_budget"),
     )
     # ``keep`` holds the *concretized* copies — the delivered table
     # must carry the polymorphic originals (one site's frozen attrs
@@ -2831,13 +2944,16 @@ def _claim_cost_gate(case: Any) -> None:
     }
     if not minted:
         return
+    ref = ex.get("_referee") or {}
     keep = gk.profitable(
         minted,
         case[1],
         _var_env(ex["ir"], ex["leaves"], ex["input"]),
-        reps=20,
+        reps=ref.get("reps") or 20,
         kernel_for=_triton_kernel_for,
         denotation_for=_claim_denotation_for,
+        max_handlers=ref.get("max_handlers"),
+        time_budget=ref.get("time_budget"),
     )
     dropped = set(minted) - set(keep)
     if not dropped:
@@ -2921,6 +3037,7 @@ def _gen_board(case: Any) -> ma.MetaArena:
         corpus=[case[1]],
         cost_fn=gk.novel_cost(count_cost, novel, 0.5),
         store=store,
+        spec_node_cap=ex.get("_spec_node_cap"),
     )
 
 
@@ -3357,6 +3474,8 @@ def _case_tail(
     tag: str,
     *,
     gen_reps: int = 20,
+    referee: dict | None = None,
+    spec_node_cap: int | None = None,
 ) -> tuple:
     """Run the shared gen-domain intake tail on an already-lifted term.
 
@@ -3370,6 +3489,26 @@ def _case_tail(
     ``f"zoo:{wl.name}"``/``wl.name``); ``gen_reps`` is the referee's
     timing reps (the zoo keeps the historical ``20``).
 
+    *referee* optionally bounds the measured-cost sweep for
+    model-scale terms (``model_corpus`` sets it when the term's
+    tree-expansion is large): ``{"max_handlers": int|None,
+    "time_budget": float|None, "reps": int|None}`` — ``max_handlers``
+    caps how many minted claims ``profitable`` prices (sorted,
+    deterministic), ``time_budget`` shrinks each claim's timing
+    window to fit a wall-clock allowance, ``reps`` overrides the
+    per-call-site default (``gen_reps`` here, ``20`` in the board
+    gates).  Unpriced claims are *dropped*, never offered
+    unmeasured.  The dict is also seated on ``ex["_referee"]`` so
+    ``_gen_board``'s fold/claim gates apply the same bounds instead
+    of re-paying an uncapped sweep.
+
+    *spec_node_cap* bounds the board's mined-spec inventory
+    (``MetaArena._composite_specs``/``_program_specs``): subterms
+    whose op-expansion exceeds it cannot spell a spec a claim could
+    use, so they are skipped — the honest bound for terms whose
+    tree-expansion is exponential (a shared-DAG model).  ``None``
+    keeps the zoo's unbounded behaviour.
+
     Returns the ``(name, term, decls, tag, supported, ex)`` tuple
     ``gen_probe`` reads — ``ex["_gen_claims_gated"]`` marks that
     ``profitable`` already ran so ``_gen_board``'s offer gate does
@@ -3378,10 +3517,11 @@ def _case_tail(
     from mlopt_discovery import genkernel as gk
     from mlopt_discovery.meta_arena import _canon_concrete
 
+    referee = dict(referee or {})
     covered = {
         _canon_concrete(h["pattern"]) for h in lawdata.HANDLERS.values()
     }
-    genh = _mint_tiers(ir.root, covered)
+    genh = _mint_tiers(ir.root, covered, spec_cap=spec_node_cap)
     # the measured-cost referee: mint only claims whose generated
     # kernel actually beats its spelled site on the real values;
     # the env must bind the input vars too — a param-only env makes
@@ -3403,17 +3543,17 @@ def _case_tail(
     unpriced = {
         k: v for k, v in genh.items() if not _claim_measurable(k, v)
     }
-    genh = {
-        **unpriced,
-        **gk.profitable(
-            priced,
-            ir.root,
-            var_env,
-            reps=gen_reps,
-            kernel_for=_triton_kernel_for,
-            denotation_for=_claim_denotation_for,
-        ),
-    }
+    priced_keep = gk.profitable(
+        priced,
+        ir.root,
+        var_env,
+        reps=referee.get("reps") or gen_reps,
+        kernel_for=_triton_kernel_for,
+        denotation_for=_claim_denotation_for,
+        max_handlers=referee.get("max_handlers"),
+        time_budget=referee.get("time_budget"),
+    )
+    genh = {**unpriced, **priced_keep}
     sink = gk.gen_sink(genh, compile_kernels=False)
     return (
         case,
@@ -3432,6 +3572,10 @@ def _case_tail(
             # intake already ran ``profitable`` over every minted
             # tier — ``_gen_board``'s offer gate must not re-pay it
             "_gen_claims_gated": True,
+            "_referee": referee,
+            "_spec_node_cap": spec_node_cap,
+            "claims_priced": len(priced),
+            "claims_kept": len(priced_keep),
         },
     )
 

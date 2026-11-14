@@ -508,9 +508,31 @@ def _site_env(spec: Any, term: Any) -> dict | None:
     env: dict = {}
     if _concrete_match(spec, term, env):
         return env
+    seen: set[int] = set()
+
+    def walk(t: Any) -> dict | None:
+        # id-dedup: the match verdict for a node is env-independent
+        # (each attempt binds fresh), so a shared subterm need only
+        # be tried once — keeps the search DAG-linear on model IRs.
+        # Pre-order (node, then children) preserves the original
+        # first-occurrence semantics; leaves match too (a bare
+        # metavar spec binds them).
+        if id(t) in seen:
+            return None
+        seen.add(id(t))
+        sub: dict = {}
+        if _concrete_match(spec, t, sub):
+            return sub
+        if isinstance(t, Op):
+            for a in t.args:
+                found = walk(a)
+                if found is not None:
+                    return found
+        return None
+
     if isinstance(term, Op):
         for a in term.args:
-            found = _site_env(spec, a)
+            found = walk(a)
             if found is not None:
                 return found
     return None
@@ -534,6 +556,11 @@ def _bound_val(leaf: Any, var_env: dict, bindings: dict) -> Any:
             param_env=var_env,
             bindings=bindings,
             strict=True,
+            # a bound metavar can be a whole shared-DAG chunk of a
+            # model term — without the memo the eval tree-expands
+            # it exponentially.  Fresh dict per leaf: the dedup
+            # scope is this one evaluation.
+            memo_env={},
         )
     return leaf
 
@@ -792,6 +819,8 @@ def profitable(
     margin: float = 1.0,
     kernel_for: Any = None,
     denotation_for: Any = None,
+    max_handlers: int | None = None,
+    time_budget: float | None = None,
 ) -> dict:
     """Keep only handlers whose compiled kernel beats the spelled site.
 
@@ -822,6 +851,17 @@ def profitable(
     fallback: if no codegen tier binds, delivery IS the denotation
     itself, so the claim is declined outright rather than timed
     fold-vs-map or fold-vs-fold.
+
+    *max_handlers* bounds the sweep for model-scale terms: only the
+    first *max_handlers* entries of the sorted handler table are
+    priced — the rest are dropped (a claim the referee never
+    measured is never offered; capping is a probe-size bound, not
+    a relaxation of the measurement).  *time_budget* (seconds,
+    per claim) shrinks each claim's ``_paired_time`` window: after
+    the verify warmup the referee estimates one call's cost and
+    picks ``reps`` to fit the allowance (floor 3, ceiling *reps*).
+    Borderline re-windows each pay the same budget again, so a
+    claim's worst case is ~3x *time_budget*.
 
     Handlers minted from saturated-graph sites carry ``"leaf_env"``
     — the metavar→subterm map recorded at harvest; the referee
@@ -861,8 +901,12 @@ def profitable(
     keep: dict[str, dict] = {}
     # sorted order: callers pass frozenset-derived dicts whose
     # iteration order varies per process (hash seed) — which handler
-    # absorbs first-call warmup noise must not be a coin flip.
-    for name, h in sorted(handlers.items()):
+    # absorbs first-call warmup noise must not be a coin flip.  The
+    # ``max_handlers`` cap takes the same deterministic prefix.
+    items = sorted(handlers.items())
+    if max_handlers is not None:
+        items = items[: max(0, int(max_handlers))]
+    for name, h in items:
         env = _handler_env(h, term)
         if env is None:
             continue
@@ -913,10 +957,12 @@ def profitable(
         # the helper; a kernel that raises on its bound values — a
         # site the codegen accepted but cannot lower — declines there
         # rather than aborting the whole sweep.
-        timings = _kernel_pays(kernel, spelled, vals, mvs, reps)
+        timings = _kernel_pays(
+            kernel, spelled, vals, mvs, reps, time_budget=time_budget
+        )
         if timings is None:
             continue
-        t_spelled, t_kernel = timings
+        t_spelled, t_kernel, reps_eff = timings
 
         def kcall(
             kernel: Any = kernel, vals: dict = vals, mvs: list = mvs
@@ -936,13 +982,16 @@ def profitable(
             <= ratio
             <= margin * _REFEREE_BORDERLINE
         ):
-            samples.append(_paired_time(spelled, kcall, reps))
+            # confirmation windows pay the SAME budget-derived rep
+            # count — an unbounded re-window would let a borderline
+            # claim spend ~3x the caller's allowance
+            samples.append(_paired_time(spelled, kcall, reps_eff))
             # a third window only breaks a first/second disagreement;
             # two agreeing windows decide on their own
             if (samples[0][1] <= samples[0][0] * margin) != (
                 samples[1][1] <= samples[1][0] * margin
             ):
-                samples.append(_paired_time(spelled, kcall, reps))
+                samples.append(_paired_time(spelled, kcall, reps_eff))
         for window, (ts_i, tk_i) in enumerate(samples):
             PROFITABLE_LOG.append(
                 (name, ts_i, tk_i, window, tk_i <= ts_i * margin)
@@ -1031,7 +1080,13 @@ def _paired_time(a: Any, b: Any, reps: int) -> tuple:
 
 
 def _kernel_pays(
-    kernel: Any, spelled: Any, vals: dict, mvs: list, reps: int
+    kernel: Any,
+    spelled: Any,
+    vals: dict,
+    mvs: list,
+    reps: int,
+    *,
+    time_budget: float | None = None,
 ) -> tuple | None:
     """Time *kernel* against its spelled body; ``None`` declines.
 
@@ -1044,7 +1099,19 @@ def _kernel_pays(
     declines here exactly as a binding-builder decline does: the
     measured-cost filter must not abort the whole sweep on one
     unloweable site.
+
+    *time_budget* (seconds) shrinks the paired window to fit a
+    wall-clock allowance: one timed call per arm estimates the
+    per-rep cost and ``reps`` is clamped into ``[3, reps]`` — floor
+    3 keeps the median meaningful, ceiling preserves the caller's
+    statistical request.  Both arms are already warm here (the
+    verify ran each once), so the estimate is one extra call each.
+    Returns ``(t_spelled, t_kernel, reps_eff)`` — the caller reuses
+    ``reps_eff`` for borderline confirmation windows so they honour
+    the same budget.
     """
+    import time
+
     import torch
 
     try:
@@ -1056,12 +1123,25 @@ def _kernel_pays(
             atol=1e-5,
         ):
             return None
+        reps_eff = reps
+        if time_budget is not None:
+            kcall = lambda: kernel(*[vals[m] for m in mvs])  # noqa: E731
+            t0 = time.perf_counter()
+            spelled()
+            t_s = time.perf_counter() - t0
+            t0 = time.perf_counter()
+            kcall()
+            t_k = time.perf_counter() - t0
+            est = max(t_s + t_k, 1e-9)
+            reps_eff = max(3, min(int(reps), int(time_budget / est)))
         t_spelled, t_kernel = _paired_time(
-            spelled, lambda: kernel(*[vals[m] for m in mvs]), reps
+            spelled,
+            lambda: kernel(*[vals[m] for m in mvs]),
+            reps_eff,
         )
     except Exception:
         return None
-    return t_spelled, t_kernel
+    return t_spelled, t_kernel, reps_eff
 
 
 def _kernel_cache() -> Any:

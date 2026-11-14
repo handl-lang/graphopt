@@ -169,9 +169,16 @@ def _marker(t: Any) -> str:
     return "leaf"
 
 
-def _concrete_shape(t: Any) -> tuple | None:
-    """Return *t*'s shape when it is a concrete all-int tuple."""
-    s = _shape_of(t)
+def _concrete_shape(t: Any, memo: dict | None = None) -> tuple | None:
+    """Return *t*'s shape when it is a concrete all-int tuple.
+
+    *memo* is ``_shape_of``'s id-keyed cache — on a shared-DAG term
+    (model IR) each call without it re-infers the whole sub-DAG, so
+    ``corpus_stats`` threads one memo through every probe: each
+    distinct node is typed once, making the census DAG-linear
+    instead of quadratic.
+    """
+    s = _shape_of(t, memo)
     if (
         isinstance(s, tuple)
         and s
@@ -218,17 +225,33 @@ class CorpusStats:
     # teaches the census nothing).
     root_keys: set = field(default_factory=set)
     sub_keys: set = field(default_factory=set)
+    #: shared ``_shape_of`` memo — see ``_concrete_shape``
+    shape_memo: dict = field(default_factory=dict)
 
 
-def corpus_stats(cases: list[TermCase]) -> CorpusStats:
-    """Mine every table the generators read, from *cases*' terms."""
+def corpus_stats(
+    cases: list[TermCase], *, key_cap: int | None = None
+) -> CorpusStats:
+    """Mine every table the generators read, from *cases*' terms.
+
+    *key_cap* bounds the shape-key novelty sets for model-scale
+    terms: ``shape_key`` tree-renders its argument, so a subterm
+    whose expansion exceeds the cap cannot be keyed in feasible
+    time — it is skipped from ``root_keys``/``sub_keys``/``pool_by_
+    shape`` (an unkeyable donor is also an unusable graft: it would
+    blow the mutant's own expansion past the same bound).
+    ``None`` keeps the historical unbounded behaviour.
+    """
+    from mlopt_discovery.census import term_expansion
+
     st = CorpusStats()
     for c in cases:
         t = c.term
         if isinstance(t, Op):
             key = (t.op, tuple(_marker(a) for a in t.args))
             st.root_tuples[key] += 1
-        st.root_keys.add(shape_key(t))
+        if key_cap is None or term_expansion(t, key_cap) <= key_cap:
+            st.root_keys.add(shape_key(t))
         for s in _iter_subterms(t):
             if not isinstance(s, Op):
                 continue
@@ -240,9 +263,12 @@ def corpus_stats(cases: list[TermCase]) -> CorpusStats:
                 key = _attr_key(s.attrs)
                 st.attr_dicts.setdefault(s.op, Counter())[key] += 1
                 st.attr_exemplars.setdefault(key, dict(s.attrs))
-            st.sub_keys.add(shape_key(s))
-            sh = _concrete_shape(s)
-            if sh is not None:
+            if key_cap is None or term_expansion(s, key_cap) <= key_cap:
+                st.sub_keys.add(shape_key(s))
+            sh = _concrete_shape(s, st.shape_memo)
+            if sh is not None and (
+                key_cap is None or term_expansion(s, key_cap) <= key_cap
+            ):
                 st.pool_by_shape.setdefault(sh, []).append(s)
             for i, a in enumerate(s.args):
                 m = _marker(a)
@@ -268,13 +294,24 @@ def corpus_stats(cases: list[TermCase]) -> CorpusStats:
 
 
 def _leaves(term: Any, out: set | None = None) -> set:
-    """Return every non-``Const`` leaf of *term*."""
+    """Return every non-``Const`` leaf of *term*.
+
+    ``id``-deduped walk: the result is a set, so revisiting a shared
+    subterm can only re-add leaves already present — the dedup keeps
+    the walk DAG-linear on model IRs without changing the answer.
+    """
     out = set() if out is None else out
-    if isinstance(term, Op):
-        for a in term.args:
-            _leaves(a, out)
-    elif isinstance(term, (Var, Param)):
-        out.add(term)
+    seen: set[int] = set()
+    stack = [term]
+    while stack:
+        t = stack.pop()
+        if id(t) in seen:
+            continue
+        seen.add(id(t))
+        if isinstance(t, Op):
+            stack.extend(t.args)
+        elif isinstance(t, (Var, Param)):
+            out.add(t)
     return out
 
 
@@ -343,6 +380,8 @@ def valid_term(
     st: CorpusStats,
     seen: set,
     supported: frozenset,
+    *,
+    key_cap: int | None = None,
 ) -> dict | None:
     """Gate *term*; return its eval env on success, else ``None``.
 
@@ -352,11 +391,22 @@ def valid_term(
     ill-typed and leaf shapes are concrete + name-consistent;
     (iv) it *evaluates* under the torch concrete-eval oracle; (v) it
     is not a corpus root, corpus subterm, or prior emission.
+
+    *key_cap* adds a probe-size bound checked before the novelty
+    key: a term whose tree-expansion exceeds it cannot be
+    ``shape_key``'d (or eval'd) in feasible time — it declines as
+    unmeasurable rather than hanging the gate.  ``None`` keeps the
+    historical behaviour.
     """
     if not isinstance(term, Op):
         return None
     if len(_iter_subterms(term)) > _MAX_NODES:
         return None
+    if key_cap is not None:
+        from mlopt_discovery.census import term_expansion
+
+        if term_expansion(term, key_cap) > key_cap:
+            return None
     if any(
         s.op not in supported
         for s in _iter_subterms(term)
@@ -465,11 +515,23 @@ class _Resampler:
 
 
 def _nodes_with_paths(term: Any) -> list:
-    """Return ``(path, node)`` for every ``Op`` occurrence in *term*."""
+    """Return ``(path, node)`` for every distinct ``Op`` in *term*.
+
+    ``id``-deduped, first path wins: on a sharing-heavy DAG (a model
+    IR) the naive per-occurrence walk enumerates tree paths —
+    exponential.  Each distinct node keeps one mutation slot (the
+    first path reaching it); ``_replace`` still substitutes only
+    that path's occurrence — the shared node's other parents keep
+    the old object, exactly as a single-occurrence mutation would.
+    """
     out: list = []
+    seen: set[int] = set()
 
     def walk(t: Any, path: tuple) -> None:
         if isinstance(t, Op):
+            if id(t) in seen:
+                return
+            seen.add(id(t))
             out.append((path, t))
             for i, a in enumerate(t.args):
                 walk(a, (*path, i))
@@ -552,7 +614,7 @@ def _graft(
     op need not be attested at the slot — that freedom is exactly
     where new op-tuples come from.
     """
-    sh = _concrete_shape(node)
+    sh = _concrete_shape(node, st.shape_memo)
     if sh is None:
         return None
     donors = [d for d in st.pool_by_shape.get(sh, []) if d != node]
@@ -570,18 +632,21 @@ def _lift_leaf(term: Any, st: CorpusStats, rng: random.Random) -> Any:
     op-tuples.
     """
     paths: list = []
+    seen: set[int] = set()
 
     def walk(t: Any, path: tuple) -> None:
         if isinstance(t, Op):
-            for i, a in enumerate(t.args):
-                walk(a, (*path, i))
+            if id(t) not in seen:
+                seen.add(id(t))
+                for i, a in enumerate(t.args):
+                    walk(a, (*path, i))
         elif isinstance(t, (Var, Param)):
             paths.append((path, t))
 
     walk(term, ())
     rng.shuffle(paths)
     for path, leaf in paths:
-        sh = _concrete_shape(leaf)
+        sh = _concrete_shape(leaf, st.shape_memo)
         if sh is None:
             continue
         donors = st.pool_by_shape.get(sh, [])
