@@ -81,6 +81,7 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -121,9 +122,18 @@ _CONFIDENCE_W = {"high": 1.0, "medium": 0.6, "low": 0.3}
 
 
 def _slug(text: str, n: int = 48) -> str:
-    """Filesystem/myco-safe slug — lowercase, ``-``-joined."""
+    """Filesystem/myco-safe slug — lowercase, ``-``-joined.
+
+    Truncated slugs get a short content hash appended: two titles
+    differing only past char ``n`` (e.g. the ``..._w_6@``/``_w_10@``
+    law names) must not mint the same proposal id — the ingest dedup
+    keys on it.
+    """
     s = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
-    return s[:n].strip("-") or "x"
+    out = s[:n].strip("-") or "x"
+    if len(s) > n:
+        out += "-" + hashlib.sha1(text.encode()).hexdigest()[:6]
+    return out
 
 
 def _proposal(
