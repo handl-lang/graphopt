@@ -275,10 +275,10 @@ runs everything.
     tests/test_law_provenance.py tests/test_decode_geom.py -q
 
 # core lane: unit/integration only — no external engines, no soaks
-.venv/bin/python -m pytest -m "not e2e and not slow"     # 6,009 tests
+.venv/bin/python -m pytest -m "not e2e and not slow"     # 6,139 tests
 
 # dev lane: everything except the minutes-scale
-.venv/bin/python -m pytest -m "not slow"                 # 6,706 tests
+.venv/bin/python -m pytest -m "not slow"                 # 6,836 tests
 
 # gate: everything, once, under coverage
 scripts/gates.sh
@@ -296,7 +296,7 @@ scripts/gates.sh
 .venv/bin/python scripts/radon_ratchet.py   # complexity ratchet
 
 # The suite, once, under coverage (both floors below).
-uv run pytest                 # 6,737 tests; does NOT finish in 30 min on
+uv run pytest                 # 6,867 tests; does NOT finish in 30 min on
                               # either serial or `-n 2` (see the table
                               # below).  Iterate with `-m "not slow"`.
                               # Single-process: see the warning below.
@@ -366,7 +366,7 @@ clean under both, and `scripts/gates.sh` checks exactly those.
 > cheap (0.6 s / <2 s), as are the other `max_nodes=60_000` tests in the
 > file (`test_real_export_spellings_fold_and_verify` 2.8 s,
 > `test_bridges_fire_in_default_pipeline` 0.9 s).  The suite was
-> **6,372 tests** at that measurement; it now collects **6,737**
+> **6,372 tests** at that measurement; it now collects **6,867**
 > (the substrate files moved to `eqsat` at the phase-4 split; the
 > domain-side suite has since grown back past the pre-split count).
 > The old

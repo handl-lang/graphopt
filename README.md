@@ -50,7 +50,9 @@ construction, no codegen), **agnostic exits** (`Sink` → torch/ONNX/`.hnl`).
   pinned; `docs/reports/pay_measured.md`), 49 more are unmeasured
   (`pay_status()` in the ledger), and **the same folds run 2.6× faster
   once their body is a generated Triton kernel** — in fp32 *and* fp64
-  (`docs/reports/prim_kernel.md`). The rule was never slow; the
+  (`docs/reports/prim_kernel.md`; the 6 executor-confounded cells
+  resolved to loses under the pinned-executor re-run —
+  `docs/reports/t029_executor_confound.md`). The rule was never slow; the
   interpreter was.
 
 **Learned play.**  A trained linear prior ranks law candidates at
@@ -82,7 +84,7 @@ banks — none makes the minted bank itself an object of play.
 modules the yield is 0 so far — finds lean on purpose-built workloads;
 the machine bank alone wins 3/22 vs human 4/22 (the union wins 6/22 —
 complementary, not dominant; that bar measured the 22-model corpus —
-the held-out zoo has since grown to 68 workloads); the learned arms cannot yet learn *when
+the held-out zoo has since grown to 73 workloads); the learned arms cannot yet learn *when
 to quit* — the blocker is observability, not the reward's price.  Wins
 are structural and regime-bounded, inference-only, compile-time
 search.

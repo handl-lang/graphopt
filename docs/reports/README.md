@@ -36,10 +36,17 @@ the newest in each series for the current verdict.
 | `unrolled_route.md` / `resweep_scan_route.md` | unrolled-scan routing shipped; frontier re-swept — graph arm beats `torch.compile` 7/8 rows |
 | `module_loss_gla_mamba.md` | GLA/Mamba module losses are structural (per-step outputs need a trajectory kernel), not routing |
 | `t010_increment2.md` | T-010 census: 0 paying sites; stride-1 reduction path measured neutral-to-slower, reverted |
+| `t010_codegen_increment.md` | T-010 increment: the clamp attr grammar reaches the Triton renderer — the 28 corpus clamp sites become generatable kernels |
 | `egraph_divergence.md` | Rust e-graph `FxHashMap` hash-order vs Python id-order divergence — fixed upstream (`egraph` `c48f75e`), parity now 0 divergences |
+| `rust_saturation_gap.md` | Rust-vs-Python e-graph saturation re-measured (release build): Rust ~4× faster aggregate, RealGatedLRU 12.6 s vs a 120 s debug timeout; the two stats divergences it flagged are the ones `egraph_divergence.md` resolved |
 | `t029_executor_confound.md` … `t035_036_pay_declined.md` | agenda round: executor-confounded pay measurements fixed (`noprim_ir` arm); ChunkedSSD headroom = dispatch; pay declines vs verify declines split in the miner |
 | `cumsum_carrier.md` | `kind="seqs"` emitted-scan tier for `cumsum`/`cumprod` — verifies bit-exact, honestly declines to pay vs `torch.cumsum` |
 | `seq_dedup_fix.md` | site-record dedup fix: same-spec opposite-direction chains (`_BidirectionalScan`) now mint both sites |
+| `trajectory_scan.md` / `trajectory_scan_impl.md` | trajectory tier: recurrence chains whose per-step states are read out (the GLA/Mamba shape `module_loss_gla_mamba.md` blamed on routing) mint `kind="seqs"` trajectory kernels + spelled `select(traj, t)` read-outs |
+| `seqt_readout.md` | `seqt` fused read-out tier — the per-step contraction folds into the scan kernel; GLA 2.06×/2.39×, Mamba 6.29×/2.25×, HeadedSelectiveScan 5.38×/2.11× (fp64/fp32); BidirectionalScan honestly stays `seqs` |
+| `seqs_pay_sweep.md` | the `seqs` cumsum carrier's measured boundary curve — no stable paying regime vs `torch.cumsum`, `T > 256` tile-capped: covered-but-not-paying |
+| `deliver_runner_arm.md` | the `--deliver` hooks (`torch`/`gen`) run a `CudaGraphRunner` arm after a passed verify — CUDA-tensor inputs only, opt-in-by-availability with fallback |
+| `t028_spec_attrs.md`, `t032_rescope.md`, `t034_module_costing.md`, `t032_034_frontier_delivery.md`, `t037_resweep_frontier.md` | agenda continuation: `vocab.attr_values` landed; DecoupledMLA headroom re-scoped to the attention half; GatedDeltaRule's module loss is payload compute, not routing; frontier "uncaptured" rows stale → re-measured, graph arm first-class, `BatchedScanModule` executor confound fixed via the payload-dedup plan gate |
 
 ## Fragment tower (plan 0033 / ADR-0157)
 
@@ -64,7 +71,7 @@ are the raw sweep sidecars.
 
 ## Overnight discovery ledgers
 
-`results_overnight_{deep,deep2,real_preview,real_v2…v6,real_full,
+`results_overnight_{deep,deep2,real_preview,real_fusion,real_v2…v6,real_full,
 xmodule,xmodule_v2,prim,prim_v2…v4,prim_deep,prim_depth3,prim_vocab,
 prim_bootstrap,prim_auto_admit}.{md,json}` — the resumable
 JSONL-backed runs of `bench/drivers/overnight.py` over the `grammar`,
@@ -75,8 +82,8 @@ novelty classify (`machine-original` / `known-art` / `vacuous`).
 
 ## Zoo sweeps and probes
 
-`zoo_chain*.{md,json}` (chain-level pay across the 68-workload zoo,
-fp32/fp64 rounds), `zoo_kcount*`, `zoo_dtype_rmsnorm`,
+`zoo_chain*.{md,json}` (chain-level pay across the then-68-workload
+zoo — 73 after `zoo_corpus_expansion.md` — fp32/fp64 rounds), `zoo_kcount*`, `zoo_dtype_rmsnorm`,
 `red_triton_probe*`/`red_tier_probe`, `scale_ladder` (attention-block
 terms T=512→4096), `bank_growth_*` — raw measurement sweeps behind
 the delivery verdicts.  `zoo_corpus_expansion.md` — the workload-shape

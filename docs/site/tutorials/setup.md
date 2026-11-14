@@ -39,7 +39,7 @@ The `--group bench` flag adds the benchmark CLI's deps (`tyro`,
 ```sh
 .venv/bin/python examples/quickstart.py        # end-to-end pipeline on a toy module (~15 s, CPU)
 .venv/bin/python -m bench list                 # catalog the benchmark suites
-.venv/bin/python -m pytest -m "not slow" -q    # the dev lane (~6,400 tests)
+.venv/bin/python -m pytest -m "not slow" -q    # the dev lane (~6,800 tests)
 ```
 
 `quickstart.py` exercises the whole pipeline — lift a model to the IR,

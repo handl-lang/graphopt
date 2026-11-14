@@ -4,7 +4,7 @@ subtitle: "Draft — proposed, not accepted"
 author:
   - name: "mlopt project"
     affiliation: "handl-lang / graphopt"
-date: "2026-10-21"
+date: "2026-11-15"
 abstract: |
   Compilers choose better implementations only from transformations a
   human already wrote.  We describe a pipeline in which the rewrite
@@ -125,10 +125,11 @@ calculus defines [@kernel2026] and the eqsat paper operationalises
 are **data rows** (a pattern pair plus a `cond`/`check`/`derive`
 guard spec), serializable, storable, composable — and what this paper
 mutates is the bank: `mlopt_core.laws.ALL_RULES` mixes human-authored
-axioms with 59 machine-admitted objects
+axioms with 129 machine-admitted objects
 (`mlopt_core.laws.provenance.MACHINE_SHIPPED` — 13 promoted laws, the
-23 minted `prim:synop_*`/`synop2_*` folds seated in `DEFAULT`, and
-their 23 `.expand` definitional premises).
+58 minted `prim:synop*` folds seated in `DEFAULT` — 21 depth-1
+`synop_*`, 2 `synop2_*`, 34 `synop3_*`, and 1 auto-admitted — and
+their 58 `.expand` definitional premises).
 
 ## The handl substrate and mlopt-kit
 
@@ -285,9 +286,9 @@ lowered modules.
 
 **Ship.**  The composite is promoted *verbatim*: its stored records
 embed in `mlopt_core.laws.minted`, its guard re-materializes at
-import, `MACHINE_SHIPPED` grows to 12 (59 today — `add_unsq_pad_r`,
-then the primitive arm's 23 folds and 23 `.expand` premises
-followed).  Re-running the gauntlet
+import, `MACHINE_SHIPPED` grows to 12 (129 today — `add_unsq_pad_r`,
+then the primitive arm's 58 minted `synop*` folds and their 58
+`.expand` premises followed).  Re-running the gauntlet
 post-ship refuses at novelty with `relation=duplicate` — the
 documented signature of "already admitted."
 
@@ -334,7 +335,14 @@ One substrate bug surfaced en route and is fixed: emit-time RHS
 sanity conflated *cannot-evaluate* with *evaluated-and-false* through
 a bare exception catch, so non-denoting composites were being minted
 as candidates (eqsat `2d6e4eb`).  The mint now emits only viable
-objects — the 102-mint funnel above is the post-fix count.
+objects — the 102-mint funnel above is the post-fix count.  A second
+bug crossed the language boundary: the Rust e-graph port scanned
+candidate classes in `FxHashMap` order where the Python spec scans
+insertion order — the saturated *partition* was always identical,
+but merge/app counts (and `rule_budgets` suspension) are
+order-sensitive, so the fix sorts the candidate ids and the parity
+driver now reports **0 stats divergences** across all 73 zoo
+modules (`docs/reports/egraph_divergence.md`).
 
 **The pair that teaches.**  Q2 fails where Q3 succeeds, and the
 difference is not the machinery — the same board protocol, players,
@@ -345,6 +353,58 @@ naive → Strassen path is a ~15-move coordinated sequence through
 invalid-space intermediates with no positive prefix.  **Search depth
 and chain density — not expressibility, not the referee — are the
 frontier.**
+
+# Delivery: the scan tiers {#sec-delivery}
+
+The `deliver` hooks lower a winning extraction to a verified module,
+and the recurrence families — the SSM/linear-attention shapes the
+primitive arm recovered as shared structure (@sec-frontier) — are
+where the delivery side has paid.  The tiers below are a measured
+ladder: every row verified `allclose` against the spelled module and
+priced by the same measured-cost referee that gates every claim
+(`bench/drivers/probes/zoo_chain.py`).
+
+- **`seq`/`seqm` chain route** — unrolled `add(mul(a,h),x)` and
+  state-feedback chains rewrite at delivery time to a generated
+  `scan_<i>_k` Triton kernel.  On the re-swept frontier rows the
+  CUDA-graph arm of the same verified module beats `torch.compile`
+  on 7 of 8 rows (`docs/reports/t037_resweep_frontier.md`), and the
+  route itself moved GatedDeltaRule's delivered body 628→298 µs
+  (fp32) and DeltaRuleBlock's fp64 row from 0.97× to 1.61× vs eager
+  (`docs/reports/resweep_scan_route.md`; route shipped in
+  `docs/reports/unrolled_route.md`, `applyd_route.md`).
+- **`seqs` trajectory tier** — chains whose intermediate states are
+  consumed per-step emit the whole `(T,·)` trajectory once and route
+  each state read to `select(traj,t)`, replacing the delivered
+  losses the spelled read-outs caused
+  (`docs/reports/module_loss_gla_mamba.md` →
+  `docs/reports/trajectory_scan_impl.md`).  Module-level vs eager
+  (fp64, `zoo(64,32,8)`): GatedLinearAttention 1.65×,
+  MambaSelectiveScan 1.61×, HeadedSelectiveScan 1.59×,
+  BidirectionalScan 2.58×; fp32 RealGatedLRU 4.03×.
+- **`seqt` fused read-out** — where the per-step read-out is
+  provably the two-operand einsum-over-`select` pattern, the
+  contraction folds into the same kernel and only the `(T,·,out)`
+  matrix is written: GLA 2.06×, Mamba 6.29×, Headed 5.38× (fp64;
+  2.39/2.25/2.11× fp32).  BidirectionalScan and RealGatedLRU do not
+  match the pattern and honestly stay `seqs`
+  (`docs/reports/seqt_readout.md`).
+- **`seqs` emitted scan** — `cumsum`/`cumprod` carriers mint the
+  same tier and verify bit-exact, but the measured-cost referee
+  declines them at every probed shape: parity near `T≈32–64` with a
+  large contract axis, 2–4× losses past it, and a hard `T≤256` tile
+  cap — a measured boundary curve, not an assumption
+  (`docs/reports/cumsum_carrier.md`, `docs/reports/seqs_pay_sweep.md`).
+
+The census that built these tiers also exposed and fixed a real
+collector bug: same-spec opposite-direction chains deduplicated to
+one site because spec identity ignored `leaf_env` —
+`_BidirectionalScan` now mints both directions
+(`docs/reports/seq_dedup_fix.md`).  And the zoo registry itself grew
+68 → 73 workloads (`docs/reports/zoo_corpus_expansion.md`); the
+newest, `LatentKVDecode`, pays 1.23× at the paying shape through the
+saturate→extract path with zero minted claims — a dispatch-bound
+win, honestly attributed.
 
 # Related work {#sec-related}
 
