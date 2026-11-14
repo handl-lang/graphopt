@@ -23,6 +23,7 @@ Usage::
 from __future__ import annotations
 
 import gc
+import os
 import sys
 import time
 
@@ -81,8 +82,18 @@ def _patch_min_max() -> None:
     torch._t5_probe_minmax_patched = True  # ty: ignore[attr-defined]
 
 
+# Post-fix re-run switch (docs/reports/postfix_rerun.md):
+# ``T5_PROBE_BARE=1`` skips BOTH r1 workarounds — ``_patch_min_max``
+# (wall 2, fixed upstream in torch_bridge) and the float
+# ``attention_mask`` (wall 1/3, fixed by ``_align_to``'s
+# non-float-input device keying + module-dtype delivery).  The mask
+# reverts to int64, the dtype T5 actually ships.
+_BARE = bool(os.environ.get("T5_PROBE_BARE"))
+
+
 def load(dtype: str = "fp32"):
-    _patch_min_max()
+    if not _BARE:
+        _patch_min_max()
     m: nn.Module = T5ForConditionalGeneration.from_pretrained(
         MODEL_ID,
         torch_dtype=DTYPES[dtype],
@@ -108,7 +119,15 @@ def _feeds(dtype: str):
     # Mask dtype follows the model dtype so ``_align_to``'s
     # input-dtype keying keeps bf16 weights bf16 (an fp32 mask would
     # silently upcast every delivered weight — see t5_r1.md).
-    mask = torch.ones(1, SEQ, device="cuda", dtype=DTYPES[dtype])
+    # ``T5_PROBE_BARE=1`` restores the int64 mask (walls 1+3 fixed
+    # upstream — int-only feeds now align, delivery dtype is the
+    # module's, not the input's).
+    mask = torch.ones(
+        1,
+        SEQ,
+        device="cuda",
+        dtype=torch.long if _BARE else DTYPES[dtype],
+    )
     with torch.no_grad():
         ehs = m.encoder(
             input_ids=ids, attention_mask=mask
@@ -214,7 +233,9 @@ def corpus_encoder():
     m = load("fp32")
     g = torch.Generator(device="cuda").manual_seed(0)
     ids = torch.randint(0, VOCAB, (1, SEQ), device="cuda", generator=g)
-    mask = torch.ones(1, SEQ, device="cuda", dtype=torch.float32)
+    mask = torch.ones(
+        1, SEQ, device="cuda", dtype=torch.long if _BARE else torch.float32
+    )
     return _EncWrap(m.encoder), (ids, mask)
 
 
@@ -224,7 +245,9 @@ def corpus_decoder():
     m = load("fp32")
     g = torch.Generator(device="cuda").manual_seed(0)
     ids = torch.randint(0, VOCAB, (1, SEQ), device="cuda", generator=g)
-    mask = torch.ones(1, SEQ, device="cuda", dtype=torch.float32)
+    mask = torch.ones(
+        1, SEQ, device="cuda", dtype=torch.long if _BARE else torch.float32
+    )
     with torch.no_grad():
         ehs = m.encoder(
             input_ids=ids, attention_mask=mask
