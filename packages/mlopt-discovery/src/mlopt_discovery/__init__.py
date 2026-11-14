@@ -53,6 +53,15 @@ Formerly the ``tools/law_*.py``
 scripts; every module keeps its CLI — invoke as
 ``python -m mlopt_discovery.<module>``.
 
+**Plan 0034 phase 1:** the domain-free mining core moved to the
+``discoverykit`` repo (``handl-lang/discoverykit`` — mining
+proposers, the meta-arena game core, verify/evidence, ``lawdata``,
+``play.registry``).  Every moved ``mlopt_discovery.<mod>`` path is a
+``sys.modules`` shim onto the ``discoverykit`` module, so all
+existing imports — including ``python -m mlopt_discovery.<mod>`` —
+keep working unchanged; the domain-bound half (``census``,
+``vocab``, the torch play arms, ``intake``, the zoo) stays here.
+
 .. data:: REPO_ROOT
 
    Absolute path of the repository root, derived from this editable

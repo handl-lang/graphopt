@@ -15,6 +15,7 @@ dependencies = [
     "mlopt-orchestrator",
     "mlopt-cuda",
     "mlopt-discovery",
+    "discoverykit",
     "mlopt-onnx",
     "mlopt-dtypes",
     "gamekit",
@@ -131,6 +132,10 @@ mlopt-core = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "
 mlopt-orchestrator = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-orchestrator", tag = "v0.1.0" }
 gamekit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/gamekit", tag = "v0.1.0" }
 benchkit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/benchkit", tag = "v0.1.0" }
+# discoverykit (plan 0034 phase 1): the domain-free mining core
+# extracted from mlopt-discovery — local path dep while the repo is
+# pre-remote; Phase 2 flips this to the git+tag pin.
+discoverykit = { path = "../discoverykit/packages/discoverykit", editable = true }
 mlopt-torch = { workspace = true }
 mlopt-carriers = { workspace = true }
 mlopt-cuda = { workspace = true }
