@@ -80,6 +80,8 @@ from mlopt_torch.adapters import TorchSink, TorchSource
 
 from mlopt_discovery.impact import TermCase, _ir_of
 
+from .bounds import ProbeBounds, SkipStats
+
 __all__ = [
     "corpus_probe",
     "coverage_report",
@@ -98,11 +100,16 @@ _DEV = torch.device("cpu")
 #  ``shape_key``/``_spec_of``/the site collectors all tree-render a
 #  term, so a shared-DAG model IR (residual streams) expands
 #  exponentially in its *distinct* node count.  These caps bound the
-#  three places that render cost lives, in tree-expansion nodes:
-_SHAPE_KEY_CAP = 10_000  # coverage census: per-subterm shape key
+#  render-cost sites, each in its own metric — see
+#  ``mlopt_discovery.bounds`` for the metric definitions:
+_SHAPE_KEY_CAP = 10_000  # coverage census: per-subterm tree-expansion
 _LARGE_TERM_EXPANSION = 100_000  # above this the term is "model-scale"
-_AUTO_SPEC_NODE_CAP = 512  # mined-spec op-expansion bound
-_AUTO_KEY_CAP = 20_000  # mutant shape-key/validity expansion bound
+# spec bound — applied to BOTH spec metrics (``spec_tree_cap`` for
+# the site collectors' spelled tree-size, ``spec_op_cap`` for the
+# MetaArena inventory's op-expansion); each side measures its own
+# unit, which is the dual-metric fix (arch audit §1.2)
+_AUTO_SPEC_NODE_CAP = 512
+_AUTO_KEY_CAP = 20_000  # mutant shape-key/validity tree-expansion
 _AUTO_MAX_CLAIMS = 16  # referee handler bound per board
 _AUTO_CLAIM_BUDGET = 2.0  # seconds per priced claim (paired window)
 
@@ -259,7 +266,7 @@ def coverage_report(
     model_tc: TermCase,
     corpus: list,
     *,
-    shape_key_cap: int = _SHAPE_KEY_CAP,
+    shape_key_cap: int | None = None,
 ) -> dict:
     """Diff *model_tc*'s census keys against *corpus*.
 
@@ -267,7 +274,8 @@ def coverage_report(
     shapes the corpus never contained — the "this model is novel
     here" measurement, on the census's own keys so it composes with
     ``workload_gen.census_delta``.  The shape half is bounded by
-    *shape_key_cap* (tree-expansion nodes per subterm): oversized
+    *shape_key_cap* — the ``ProbeBounds.shape_key_cap`` tree-expansion
+    bound per subterm (``None`` → ``_SHAPE_KEY_CAP``): oversized
     subterms are skipped on BOTH sides — a shape nobody could key
     cannot be reported novel — and the skip count is reported
     honestly.
@@ -278,6 +286,9 @@ def coverage_report(
         shape_repr,
     )
 
+    shape_key_cap = (
+        _SHAPE_KEY_CAP if shape_key_cap is None else shape_key_cap
+    )
     with _recursion_guard():
         base_ct = _as_corpus(corpus)
         base_op, _ = op_tuple_census(base_ct)
@@ -427,6 +438,31 @@ def generate_mutants(
 #  referee and sink cannot drift.
 
 
+def _coerce_bounds(
+    bounds: ProbeBounds | None,
+    referee: dict | None,
+    spec_node_cap: int | None,
+) -> ProbeBounds:
+    """Resolve the legacy ``(referee, spec_node_cap)`` kwargs to bounds.
+
+    The legacy ``spec_node_cap`` fed BOTH spec metrics — the site
+    collectors' spelled tree-size AND the ``MetaArena`` inventory's
+    op-expansion — so the fallback sets ``spec_tree_cap`` and
+    ``spec_op_cap`` to it; each side then measures its own unit
+    (``mlopt_discovery.bounds``).  An explicit *bounds* always wins.
+    """
+    if bounds is not None:
+        return bounds
+    ref = dict(referee or {})
+    return ProbeBounds(
+        spec_tree_cap=spec_node_cap,
+        spec_op_cap=spec_node_cap,
+        max_handlers=ref.get("max_handlers"),
+        time_budget=ref.get("time_budget"),
+        reps=ref.get("reps"),
+    )
+
+
 def _case_tail(
     ir: IR,
     leaves: dict,
@@ -435,6 +471,7 @@ def _case_tail(
     label: str,
     *,
     gen_reps: int = 20,
+    bounds: ProbeBounds | None = None,
     referee: dict | None = None,
     spec_node_cap: int | None = None,
 ) -> tuple:
@@ -444,15 +481,18 @@ def _case_tail(
     supported, ex)`` — indices ``gen_probe`` reads are identical:
     ``case[1]`` the IR root, ``case[4]`` the supported bound,
     ``case[5]`` the ``ex`` record carrying ``model``/``input``/
-    ``ir``/``leaves``/``gen_handlers``/``sink``.  *label* fills both
-    label slots (the zoo passes distinct ``case``/``tag`` names).
+    ``ir``/``leaves``/``gen_handlers``/``sink``/``bounds``.  *label*
+    fills both label slots (the zoo passes distinct ``case``/``tag``
+    names).
 
-    *referee* / *spec_node_cap* are the model-scale bounds — see
-    ``play._case_tail``; ``None`` keeps the historical zoo
-    behaviour.
+    *bounds* is the :class:`ProbeBounds` — see ``play._case_tail``.
+    The legacy *referee*/*spec_node_cap* kwargs still resolve (see
+    :func:`_coerce_bounds`); ``None`` everywhere keeps the
+    historical zoo behaviour.
     """
     from mlopt_discovery import play
 
+    bounds = _coerce_bounds(bounds, referee, spec_node_cap)
     with _recursion_guard():
         return play._case_tail(
             ir,
@@ -462,8 +502,7 @@ def _case_tail(
             label,
             label,
             gen_reps=gen_reps,
-            referee=referee,
-            spec_node_cap=spec_node_cap,
+            bounds=bounds,
         )
 
 
@@ -474,6 +513,7 @@ def model_board(
     *,
     dtype: str = "fp64",
     gen_reps: int = 20,
+    bounds: ProbeBounds | None = None,
     referee: dict | None = None,
     spec_node_cap: int | None = None,
 ) -> tuple[tuple, TermCase, dict]:
@@ -493,6 +533,7 @@ def model_board(
         model,
         f"model:{name}",
         gen_reps=gen_reps,
+        bounds=bounds,
         referee=referee,
         spec_node_cap=spec_node_cap,
     )
@@ -504,6 +545,7 @@ def mutant_board(
     *,
     label: str,
     gen_reps: int = 20,
+    bounds: ProbeBounds | None = None,
     referee: dict | None = None,
     spec_node_cap: int | None = None,
 ) -> tuple | None:
@@ -529,6 +571,7 @@ def mutant_board(
         model,
         label,
         gen_reps=gen_reps,
+        bounds=bounds,
         referee=referee,
         spec_node_cap=spec_node_cap,
     )
@@ -558,6 +601,7 @@ def _probe_knobs(
     key_cap: int | None,
     max_claims: int | None,
     claim_time_budget: float | None,
+    bounds: ProbeBounds | None = None,
 ) -> dict:
     """Resolve the model-scale probe bounds for *term*.
 
@@ -567,40 +611,56 @@ def _probe_knobs(
     candidate; key every subterm's shape) all multiply by the
     render cost, so the auto defaults engage — an explicit argument
     always wins, and ``None``-valued knobs on a *small* term keep
-    the historical unbounded behaviour exactly.  Returns the
-    ``(referee, spec_node_cap, key_cap)`` triple plus the measured
-    expansion for the report.
+    the historical unbounded behaviour exactly.
+
+    Returns a dict with the measured ``term_expansion`` /
+    ``large_term``, the resolved :class:`ProbeBounds` under
+    ``"bounds"``, and the legacy ``(referee, spec_node_cap, key_cap)``
+    spellings for existing consumers.  ``spec_node_cap`` sets BOTH
+    spec metrics — ``spec_tree_cap`` (the site collectors' spelled
+    tree-size) and ``spec_op_cap`` (the ``MetaArena`` inventory's
+    op-expansion) — each measured in its own unit; pass *bounds*
+    directly for asymmetric caps.
     """
     from mlopt_discovery.census import term_expansion
 
     exp = term_expansion(term, _LARGE_TERM_EXPANSION)
     large = exp > _LARGE_TERM_EXPANSION
-    referee = {
-        "max_handlers": (
-            max_claims
-            if max_claims is not None
-            else (_AUTO_MAX_CLAIMS if large else None)
-        ),
-        "time_budget": (
-            claim_time_budget
-            if claim_time_budget is not None
-            else (_AUTO_CLAIM_BUDGET if large else None)
-        ),
-    }
-    return {
-        "term_expansion": exp,
-        "large_term": large,
-        "referee": referee,
-        "spec_node_cap": (
+    if bounds is None:
+        spec = (
             spec_node_cap
             if spec_node_cap is not None
             else (_AUTO_SPEC_NODE_CAP if large else None)
-        ),
-        "key_cap": (
-            key_cap
-            if key_cap is not None
-            else (_AUTO_KEY_CAP if large else None)
-        ),
+        )
+        bounds = ProbeBounds(
+            spec_tree_cap=spec,
+            spec_op_cap=spec,
+            key_cap=(
+                key_cap
+                if key_cap is not None
+                else (_AUTO_KEY_CAP if large else None)
+            ),
+            max_handlers=(
+                max_claims
+                if max_claims is not None
+                else (_AUTO_MAX_CLAIMS if large else None)
+            ),
+            time_budget=(
+                claim_time_budget
+                if claim_time_budget is not None
+                else (_AUTO_CLAIM_BUDGET if large else None)
+            ),
+        )
+    return {
+        "term_expansion": exp,
+        "large_term": large,
+        "bounds": bounds,
+        "referee": {
+            "max_handlers": bounds.max_handlers,
+            "time_budget": bounds.time_budget,
+        },
+        "spec_node_cap": bounds.spec_op_cap,
+        "key_cap": bounds.key_cap,
     }
 
 
@@ -621,6 +681,7 @@ def _model_corpus(
     key_cap: int | None = None,
     max_claims: int | None = None,
     claim_time_budget: float | None = None,
+    bounds: ProbeBounds | None = None,
 ) -> dict:
     """Run the per-model corpus pipeline; return the report.
 
@@ -632,17 +693,21 @@ def _model_corpus(
     model's own size (``model_nodes + headroom``, floored at
     ``workload_gen._MAX_NODES``) — see :func:`generate_mutants`.
 
-    The last four knobs bound the probe for model-scale terms (see
-    :func:`_probe_knobs`): ``spec_node_cap`` caps a mined spec's
-    op-expansion, ``key_cap`` caps a mutant's tree-expansion for the
-    novelty keys/validity gate, ``max_claims`` caps how many minted
-    handlers the measured-cost referee prices per board, and
-    ``claim_time_budget`` (seconds) shrinks each claim's paired
-    timing window.  On a term whose expansion exceeds
-    ``_LARGE_TERM_EXPANSION`` the ``_AUTO_*`` defaults engage when
-    the argument is ``None``; claims the bounds skip are declined —
-    never reported profitable without measurement.  On small terms
-    all four default to the historical unbounded zoo behaviour.
+    The last five knobs bound the probe for model-scale terms (see
+    :func:`_probe_knobs`): the resolved :class:`ProbeBounds` carries
+    ``spec_tree_cap``/``spec_op_cap`` (the two spec metrics —
+    spelled tree-size for the site collectors, op-expansion for the
+    ``MetaArena`` inventory; the legacy ``spec_node_cap`` argument
+    sets both), ``key_cap`` (a mutant's tree-expansion for the
+    novelty keys/validity gate), ``max_handlers`` (how many minted
+    handlers the measured-cost referee prices per board), and
+    ``time_budget`` (seconds per claim's paired timing window).
+    On a term whose expansion exceeds ``_LARGE_TERM_EXPANSION`` the
+    ``_AUTO_*`` defaults engage when the argument is ``None``;
+    claims the bounds skip are declined — never reported profitable
+    without measurement.  On small terms all knobs default to the
+    historical unbounded zoo behaviour.  Pass *bounds* directly for
+    asymmetric caps (e.g. ``spec_tree_cap`` ≠ ``spec_op_cap``).
     """
     corpus = default_corpus() if corpus is None else list(corpus)
     # Phase 1 — export only, so the probe knobs resolve on the real
@@ -655,10 +720,10 @@ def _model_corpus(
         key_cap=key_cap,
         max_claims=max_claims,
         claim_time_budget=claim_time_budget,
+        bounds=bounds,
     )
-    referee = knobs["referee"]
-    spec_cap = knobs["spec_node_cap"]
-    kcap = knobs["key_cap"]
+    bounds = knobs["bounds"]
+    kcap = bounds.key_cap
     # Phase 2 — board intake under the resolved bounds.
     case0 = _case_tail(
         ir,
@@ -667,17 +732,22 @@ def _model_corpus(
         model,
         f"model:{name}",
         gen_reps=gen_reps,
-        referee=referee,
-        spec_node_cap=spec_cap,
+        bounds=bounds,
     )
-    cov = coverage_report(tc, corpus)
+    cov = coverage_report(
+        tc, corpus, shape_key_cap=bounds.shape_key_cap
+    )
     cov["probe_knobs"] = {
         "term_expansion": knobs["term_expansion"],
         "large_term": knobs["large_term"],
-        "spec_node_cap": spec_cap,
+        # metric-explicit names — ``spec_node_cap`` is the legacy
+        # spelling of the op-expansion cap (MetaArena inventory)
+        "bounds": bounds.as_dict(),
+        "spec_node_cap": bounds.spec_op_cap,
+        "spec_tree_cap": bounds.spec_tree_cap,
         "key_cap": kcap,
-        "max_claims": referee.get("max_handlers"),
-        "claim_time_budget": referee.get("time_budget"),
+        "max_claims": bounds.max_handlers,
+        "claim_time_budget": bounds.time_budget,
     }
     from mlopt_discovery import workload_gen as _wg
     from mlopt_discovery.impact import _iter_subterms
@@ -706,8 +776,7 @@ def _model_corpus(
             mtc,
             label=f"gen:{name}:{i}",
             gen_reps=gen_reps,
-            referee=referee,
-            spec_node_cap=spec_cap,
+            bounds=bounds,
         )
         if b is None:
             board_notes.append(
@@ -743,14 +812,22 @@ def _model_corpus(
     verdicts = {v: 0 for v in ("pay", "decline", "verify-fail")}
     for r in rows:
         verdicts[_verdict(r)] = verdicts.get(_verdict(r), 0) + 1
-    # per-board honest skip record: scan-tier sites the spec_node_cap
-    # bound declined (``seq_sites_over_cap`` etc.) — parallel to
-    # ``boards`` (model row first, then accepted mutants).
-    site_stats = [dict(b[5].get("site_stats") or {}) for b in boards]
+    # per-board honest skip record: EVERY bounded collector's
+    # over-cap declines (``fusion_sites_over_cap``,
+    # ``seq_sites_over_cap`` …) — parallel to ``boards`` (model row
+    # first, then accepted mutants); ``skip_stats`` aggregates them.
+    site_stats = [
+        SkipStats(b[5].get("site_stats") or {}) for b in boards
+    ]
+    skip_totals = SkipStats()
+    for s in site_stats:
+        skip_totals.merge(s)
     return {
         "name": name,
         "coverage": cov,
-        "site_stats": site_stats,
+        "site_stats": [dict(s) for s in site_stats],
+        "skip_stats": dict(skip_totals),
+        "bounds": bounds.as_dict(),
         "mutants": {
             "requested": n_mutants,
             "accepted": len(mutants),
@@ -779,6 +856,7 @@ def model_corpus(
     key_cap: int | None = None,
     max_claims: int | None = None,
     claim_time_budget: float | None = None,
+    bounds: ProbeBounds | None = None,
 ) -> dict:
     """Run the per-model corpus pipeline; return the report.
 
@@ -806,6 +884,7 @@ def model_corpus(
             key_cap=key_cap,
             max_claims=max_claims,
             claim_time_budget=claim_time_budget,
+            bounds=bounds,
         )
 
 
@@ -984,8 +1063,9 @@ def main(argv: list[str] | None = None) -> int:
         "--spec-node-cap",
         type=int,
         default=None,
-        help="cap a mined spec's op-expansion (auto: 512 on "
-        "model-scale terms)",
+        help="cap mined-spec size — spelled tree-size for the site "
+        "collectors, op-expansion for the MetaArena inventory "
+        "(auto: 512 on model-scale terms)",
     )
     parser.add_argument(
         "--key-cap",
@@ -1048,6 +1128,8 @@ def main(argv: list[str] | None = None) -> int:
         f"max_claims={knobs.get('max_claims')} "
         f"claim_budget={knobs.get('claim_time_budget')} "
         f"spec_cap={knobs.get('spec_node_cap')} "
+        f"spec_tree_cap="
+        f"{(knobs.get('bounds') or {}).get('spec_tree_cap')} "
         f"key_cap={knobs.get('key_cap')}"
     )
     for t in cov["novel_op_tuples"][:20]:
@@ -1060,12 +1142,11 @@ def main(argv: list[str] | None = None) -> int:
         f"({m['attempted']} attempts; rejects {m['rejected']})"
     )
     print(f"   verdicts: {rep['verdicts']}")  # stdout-compat
-    skips: dict = {}
-    for s in rep.get("site_stats") or []:
-        for k, v in (s or {}).items():
-            skips[k] = skips.get(k, 0) + v
+    skips: dict = dict(rep.get("skip_stats") or {})
     if skips:
-        print(f"   site skips over spec_cap: {skips}")  # stdout-compat
+        print(
+            f"   site skips over spec_tree_cap: {skips}"
+        )  # stdout-compat
     for r in rep["rows"]:
         print(  # stdout-compat
             f"     {r.get('case')}: delivered={r.get('delivered')} "

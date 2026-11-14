@@ -234,7 +234,9 @@ def corpus_stats(
 ) -> CorpusStats:
     """Mine every table the generators read, from *cases*' terms.
 
-    *key_cap* bounds the shape-key novelty sets for model-scale
+    *key_cap* is the ``ProbeBounds.key_cap`` — the
+    ``census.term_expansion`` tree-expansion bound for the
+    shape-key novelty sets on model-scale
     terms: ``shape_key`` tree-renders its argument, so a subterm
     whose expansion exceeds the cap cannot be keyed in feasible
     time — it is skipped from ``root_keys``/``sub_keys``/``pool_by_
@@ -392,11 +394,11 @@ def valid_term(
     (iv) it *evaluates* under the torch concrete-eval oracle; (v) it
     is not a corpus root, corpus subterm, or prior emission.
 
-    *key_cap* adds a probe-size bound checked before the novelty
-    key: a term whose tree-expansion exceeds it cannot be
-    ``shape_key``'d (or eval'd) in feasible time — it declines as
-    unmeasurable rather than hanging the gate.  ``None`` keeps the
-    historical behaviour.
+    *key_cap* is the ``ProbeBounds.key_cap`` — a probe-size bound
+    checked before the novelty key: a term whose tree-expansion
+    exceeds it cannot be ``shape_key``'d (or eval'd) in feasible
+    time — it declines as unmeasurable rather than hanging the gate.
+    ``None`` keeps the historical behaviour.
     """
     if not isinstance(term, Op):
         return None

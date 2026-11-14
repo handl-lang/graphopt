@@ -1490,6 +1490,14 @@ class MetaArena:
         alongside it is a ``ValueError`` — one spelling per
         vocabulary.  The store stays on the board as the merge base
         :meth:`cellstore` folds constructed cells into.
+
+        *spec_node_cap* is the ``ProbeBounds.spec_op_cap`` — an
+        OP-EXPANSION bound (``census.op_expansion``, Op nodes only)
+        on the mined-spec inventory, deliberately distinct from the
+        site collectors' ``spec_tree_cap`` (spelled tree-size incl.
+        leaves/attrs): ``_spec_of`` renders every op concrete and
+        abstracts leaves to metavar names, so the op count is this
+        inventory's honest bound.
         """
         if store is not None:
             if rules is not None or handlers is not None:
@@ -1530,8 +1538,10 @@ class MetaArena:
         # inventory and ``_program_specs`` occurrence walk): ``None``
         # is the historical unbounded behaviour; a cap skips subterms
         # whose tree-rendered spec would be exponential — they can
-        # never equal a mined spec anyway.
-        self._spec_node_cap = spec_node_cap
+        # never equal a mined spec anyway.  This is the
+        # ``ProbeBounds.spec_op_cap`` metric — NOT the collectors'
+        # ``spec_tree_cap`` spelled tree-size.
+        self._spec_op_cap = spec_node_cap
         self._specs = _composite_specs(
             self.corpus, max_specs, node_cap=spec_node_cap
         )
@@ -1779,7 +1789,7 @@ class MetaArena:
         subterm's — the occurrence test ``declare``/``claim`` moves
         actually need (a covered spec absent from the program can
         mint a rule, but the rule never fires).  The walk is
-        ``id``-deduped and bounded by ``_spec_node_cap`` exactly like
+        ``id``-deduped and bounded by ``_spec_op_cap`` exactly like
         ``_composite_specs``: a subterm whose op-expansion exceeds
         the cap spells a spec larger than any mined entry, so it can
         never occur — skipping it loses no site.
@@ -1788,7 +1798,7 @@ class MetaArena:
 
         out: list = []
         visited: set[int] = set()
-        cap = self._spec_node_cap
+        cap = self._spec_op_cap
 
         # Iterative preorder — identical visit order to the
         # recursive DFS, id-deduped, without per-level frames.

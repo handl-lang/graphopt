@@ -90,6 +90,7 @@ from . import meta_arena as ma
 from . import meta_player as mp
 from . import open_game as og
 from . import player_arena as pa
+from .bounds import ProbeBounds, SkipStats
 from .meta_player import _bucket
 
 __all__ = [
@@ -703,15 +704,23 @@ def _fusion_pattern(t: Any, names: dict) -> Any:
     return pat
 
 
-def _fusion_sites(term: Any, *, spec_cap: int | None = None) -> list:
+def _fusion_sites(
+    term: Any,
+    *,
+    spec_cap: int | None = None,
+    stats: dict | None = None,
+) -> list:
     """Elementwise-connex subterms of size ≥2, leaves abstracted.
 
     Each entry is a *pattern tuple* (metavar leaves for the
     non-elementwise boundary), the shape ``gen_handlers`` consumes.
-    *spec_cap* bounds the pattern's spelled tree-size — sites over
-    it are skipped (a claim pattern that large binds nothing a
-    fusion kernel could fuse, and cannot even be spelled in
-    feasible time on a shared DAG).
+    *spec_cap* is the ``ProbeBounds.spec_tree_cap`` — the pattern's
+    SPELLED TREE-SIZE (op nodes + metavar/const leaves + one per
+    attrs dict, the ``_fusion_pattern_sz`` accounting): sites over
+    it are skipped and counted in *stats* under
+    ``"fusion_sites_over_cap"`` — a claim pattern that large binds
+    nothing a fusion kernel could fuse, and cannot even be spelled
+    in feasible time on a shared DAG.
     """
     from mlopt_discovery import genkernel as gk
 
@@ -732,7 +741,15 @@ def _fusion_sites(term: Any, *, spec_cap: int | None = None) -> list:
         seen.add(id(t))
         if isinstance(t, Op) and t.op in gk.ELEMENTWISE:
             pat, size = _fusion_pattern_sz(t, {}, {}, spec_cap)
-            if pat is not None and (
+            if pat is None and spec_cap is not None:
+                # cap overflow — the spelled pattern exceeded the
+                # tree-size bound; an honest counted decline, never
+                # a silent drop (arch audit §1.4).
+                if stats is not None:
+                    stats["fusion_sites_over_cap"] = (
+                        stats.get("fusion_sites_over_cap", 0) + 1
+                    )
+            elif pat is not None and (
                 spec_cap is None or size <= spec_cap
             ):
                 ops = {e for e in _flat_ops(pat)}
@@ -780,7 +797,12 @@ def _reduction_pattern(
     return spec, (size if cap is None else min(size, cap + 1))
 
 
-def _reduction_sites(term: Any, *, spec_cap: int | None = None) -> list:
+def _reduction_sites(
+    term: Any,
+    *,
+    spec_cap: int | None = None,
+    stats: dict | None = None,
+) -> list:
     """Reduction-bodied subterms of *term*, spec'd for the tier.
 
     The reduction tier's site collector — the mirror of
@@ -790,8 +812,10 @@ def _reduction_sites(term: Any, *, spec_cap: int | None = None) -> list:
     elementwise-fusable bodies (>=2 ops, non-head ops all
     elementwise).  Sites are raw-IR subterms, so minted entries
     carry no ``leaf_env`` — ``_handler_env`` rebinds them by
-    concrete match like every other tier.  *spec_cap* bounds the
-    spelled pattern tree-size exactly as in ``_fusion_sites``.
+    concrete match like every other tier.  *spec_cap* is the
+    ``ProbeBounds.spec_tree_cap`` — the spelled pattern tree-size,
+    exactly as in ``_fusion_sites``; over-cap sites are counted in
+    *stats* under ``"reduction_sites_over_cap"``.
     """
     from mlopt_discovery import genkernel as gk
 
@@ -808,7 +832,12 @@ def _reduction_sites(term: Any, *, spec_cap: int | None = None) -> list:
         seen.add(id(t))
         if isinstance(t, Op) and t.op in heads:
             spec, size = _reduction_pattern(t, {}, cap=spec_cap)
-            if (
+            if spec is None and spec_cap is not None:
+                if stats is not None:
+                    stats["reduction_sites_over_cap"] = (
+                        stats.get("reduction_sites_over_cap", 0) + 1
+                    )
+            elif (
                 spec is not None
                 and (spec_cap is None or size <= spec_cap)
                 and gk.reduction_spec(spec)
@@ -2842,32 +2871,38 @@ def _mint_tiers(
     *,
     spec_cap: int | None = None,
     stats: dict | None = None,
+    bounds: ProbeBounds | None = None,
 ) -> dict:
     """Mint handler entries across every codegen tier.
 
     The registry walk replacing per-tier call sites: each tier's
     site collector gathers specs, its ``handlers`` builder mints
     the ``{tag: {pattern, kernel, args}}`` table — a tier without
-    a collector contributes nothing.  *spec_cap* bounds the spelled
-    tree-size of minted site patterns (``gen``/``reduction``
-    collectors) and the seq-form scan collectors' deindexed
-    skeletons/shape checks; ``None`` keeps the zoo's unbounded
-    spelling.  *stats`` collects the scan collectors' honest
-    over-cap skip counts (``*_sites_over_cap`` keys).
+    a collector contributes nothing.  *spec_cap* is the
+    ``ProbeBounds.spec_tree_cap`` — the SPELLED TREE-SIZE bound on
+    minted site patterns (``gen``/``reduction`` collectors) and the
+    seq-form scan collectors' deindexed skeletons/shape checks;
+    ``None`` keeps the zoo's unbounded spelling.  *bounds*, when
+    given, supplies *spec_cap*'s default (an explicit *spec_cap*
+    always wins).  *stats* is the :class:`SkipStats`-compatible
+    tally EVERY bounded collector reports its honest over-cap
+    declines into (``*_sites_over_cap`` keys — the scan tiers
+    counted these before; ``gen``/``reduction`` join them now, the
+    arch-audit §1.4 asymmetry fix).
     """
     from mlopt_discovery import genkernel as gk
 
+    if bounds is not None and spec_cap is None:
+        spec_cap = bounds.spec_tree_cap
     out: dict = {}
     for tier in gk.TIERS:
         sites_fn = TIER_SITES.get(tier.name)
         if sites_fn is None:
             continue
-        if tier.name in ("gen", "reduction"):
-            sites = sites_fn(root, spec_cap=spec_cap)
-        elif tier.name == "scan":
-            sites = sites_fn(root, spec_cap=spec_cap, stats=stats)
-        else:
+        if tier.name == "decayed":
             sites = sites_fn(root)
+        else:
+            sites = sites_fn(root, spec_cap=spec_cap, stats=stats)
         out.update(tier.handlers(sites, covered=covered))
     return out
 
@@ -3140,15 +3175,14 @@ def _fold_cost_gate(case: Any, handlers: dict) -> dict:
             ungated[name] = h
     if not measured:
         return ungated
-    ref = ex.get("_referee") or {}
+    bounds = _ex_bounds(ex)
     keep = gk.profitable(
         measured,
         term,
         _var_env(ex["ir"], ex["leaves"], ex["input"]),
-        reps=ref.get("reps") or 20,
+        reps=bounds.reps or 20,
         kernel_for=_triton_kernel_for,
-        max_handlers=ref.get("max_handlers"),
-        time_budget=ref.get("time_budget"),
+        bounds=bounds,
     )
     # ``keep`` holds the *concretized* copies — the delivered table
     # must carry the polymorphic originals (one site's frozen attrs
@@ -3250,16 +3284,15 @@ def _claim_cost_gate(case: Any) -> None:
     }
     if not minted:
         return
-    ref = ex.get("_referee") or {}
+    bounds = _ex_bounds(ex)
     keep = gk.profitable(
         minted,
         case[1],
         _var_env(ex["ir"], ex["leaves"], ex["input"]),
-        reps=ref.get("reps") or 20,
+        reps=bounds.reps or 20,
         kernel_for=_triton_kernel_for,
         denotation_for=_claim_denotation_for,
-        max_handlers=ref.get("max_handlers"),
-        time_budget=ref.get("time_budget"),
+        bounds=bounds,
     )
     dropped = set(minted) - set(keep)
     if not dropped:
@@ -3343,7 +3376,10 @@ def _gen_board(case: Any) -> ma.MetaArena:
         corpus=[case[1]],
         cost_fn=gk.novel_cost(count_cost, novel, 0.5),
         store=store,
-        spec_node_cap=ex.get("_spec_node_cap"),
+        # ``spec_op_cap`` is the OP-EXPANSION metric the inventory
+        # measures (``census.op_expansion``) — distinct from the
+        # collectors' ``spec_tree_cap`` spelled tree-size
+        spec_node_cap=_ex_bounds(ex).spec_op_cap,
     )
 
 
@@ -3771,6 +3807,22 @@ def zoo_pay_verdict(wl: Any, *, dtype: str = "fp32") -> dict | None:
     }
 
 
+def _ex_bounds(ex: dict) -> ProbeBounds:
+    """Return the case's probe bounds — the typed record or legacy keys.
+
+    ``ex["bounds"]`` (a :class:`ProbeBounds`) is the current
+    spelling; cases built before it existed carry
+    ``ex["_referee"]``/``ex["_spec_node_cap"]`` and are reconstructed
+    by :meth:`ProbeBounds.from_legacy_ex` — the legacy single cap
+    fed BOTH spec metrics, so the fallback does the same (each side
+    then measures its own unit).
+    """
+    b = ex.get("bounds")
+    if isinstance(b, ProbeBounds):
+        return b
+    return ProbeBounds.from_legacy_ex(ex)
+
+
 def _case_tail(
     ir: Any,
     leaves: dict,
@@ -3780,8 +3832,7 @@ def _case_tail(
     tag: str,
     *,
     gen_reps: int = 20,
-    referee: dict | None = None,
-    spec_node_cap: int | None = None,
+    bounds: ProbeBounds | None = None,
 ) -> tuple:
     """Run the shared gen-domain intake tail on an already-lifted term.
 
@@ -3795,45 +3846,45 @@ def _case_tail(
     ``f"zoo:{wl.name}"``/``wl.name``); ``gen_reps`` is the referee's
     timing reps (the zoo keeps the historical ``20``).
 
-    *referee* optionally bounds the measured-cost sweep for
-    model-scale terms (``model_corpus`` sets it when the term's
-    tree-expansion is large): ``{"max_handlers": int|None,
-    "time_budget": float|None, "reps": int|None}`` — ``max_handlers``
-    caps how many minted claims ``profitable`` prices (sorted,
-    deterministic), ``time_budget`` shrinks each claim's timing
-    window to fit a wall-clock allowance, ``reps`` overrides the
+    *bounds* is the :class:`ProbeBounds` for model-scale terms
+    (``model_corpus`` resolves it once per term via
+    ``_probe_knobs``): ``spec_tree_cap`` bounds the minted site
+    patterns' spelled tree-size, ``spec_op_cap`` the ``MetaArena``
+    spec inventory's op-expansion, ``key_cap`` the novelty keys,
+    and ``max_handlers``/``time_budget``/``reps`` the measured-cost
+    referee sweep — ``max_handlers`` caps how many minted claims
+    ``profitable`` prices (sorted, deterministic), ``time_budget``
+    shrinks each claim's timing window, ``reps`` overrides the
     per-call-site default (``gen_reps`` here, ``20`` in the board
     gates).  Unpriced claims are *dropped*, never offered
-    unmeasured.  The dict is also seated on ``ex["_referee"]`` so
-    ``_gen_board``'s fold/claim gates apply the same bounds instead
-    of re-paying an uncapped sweep.
+    unmeasured.  The bounds are seated on ``ex["bounds"]`` (the
+    legacy ``ex["_referee"]``/``ex["_spec_node_cap"]`` spellings are
+    kept for older consumers) so ``_gen_board``'s fold/claim gates
+    apply the same bounds instead of re-paying an uncapped sweep.
 
-    *spec_node_cap* bounds the board's mined-spec inventory
-    (``MetaArena._composite_specs``/``_program_specs``): subterms
-    whose op-expansion exceeds it cannot spell a spec a claim could
-    use, so they are skipped — the honest bound for terms whose
-    tree-expansion is exponential (a shared-DAG model).  ``None``
-    keeps the zoo's unbounded behaviour.
+    ``None`` keeps the historical unbounded zoo behaviour.
 
     Returns the ``(name, term, decls, tag, supported, ex)`` tuple
     ``gen_probe`` reads — ``ex["_gen_claims_gated"]`` marks that
     ``profitable`` already ran so ``_gen_board``'s offer gate does
-    not re-pay it, and ``ex["site_stats"]`` carries the scan
-    collectors' over-cap skip counts.
+    not re-pay it, and ``ex["site_stats"]`` (a
+    :class:`~mlopt_discovery.bounds.SkipStats`) carries EVERY
+    bounded collector's over-cap skip counts.
     """
     from mlopt_discovery import genkernel as gk
     from mlopt_discovery.meta_arena import _canon_concrete
 
-    referee = dict(referee or {})
+    bounds = bounds if bounds is not None else ProbeBounds()
     covered = {
         _canon_concrete(h["pattern"]) for h in lawdata.HANDLERS.values()
     }
-    # ``site_stats`` records the scan collectors' honest over-cap
-    # skip counts (``seq_sites_over_cap`` etc.) — sites the
-    # *spec_node_cap* bound declined rather than spelled.
-    site_stats: dict = {}
+    # ``site_stats`` records every bounded collector's honest
+    # over-cap skip counts (``fusion_sites_over_cap``,
+    # ``seq_sites_over_cap`` etc.) — sites the ``spec_tree_cap``
+    # bound declined rather than spelled.
+    site_stats: SkipStats = SkipStats()
     genh = _mint_tiers(
-        ir.root, covered, spec_cap=spec_node_cap, stats=site_stats
+        ir.root, covered, bounds=bounds, stats=site_stats
     )
     # the measured-cost referee: mint only claims whose generated
     # kernel actually beats its spelled site on the real values;
@@ -3860,11 +3911,10 @@ def _case_tail(
         priced,
         ir.root,
         var_env,
-        reps=referee.get("reps") or gen_reps,
+        reps=bounds.reps or gen_reps,
         kernel_for=_triton_kernel_for,
         denotation_for=_claim_denotation_for,
-        max_handlers=referee.get("max_handlers"),
-        time_budget=referee.get("time_budget"),
+        bounds=bounds,
     )
     genh = {**unpriced, **priced_keep}
     sink = gk.gen_sink(genh, compile_kernels=False)
@@ -3885,8 +3935,14 @@ def _case_tail(
             # intake already ran ``profitable`` over every minted
             # tier — ``_gen_board``'s offer gate must not re-pay it
             "_gen_claims_gated": True,
-            "_referee": referee,
-            "_spec_node_cap": spec_node_cap,
+            # the typed bounds record — ``_ex_bounds`` prefers it;
+            # the legacy spellings stay for older consumers
+            "bounds": bounds,
+            "_referee": bounds.referee_dict(),
+            # legacy key name: this value is the OP-EXPANSION cap
+            # (``ProbeBounds.spec_op_cap``) the MetaArena inventory
+            # measures — NOT the collectors' tree-size cap
+            "_spec_node_cap": bounds.spec_op_cap,
             "site_stats": site_stats,
             "claims_priced": len(priced),
             "claims_kept": len(priced_keep),

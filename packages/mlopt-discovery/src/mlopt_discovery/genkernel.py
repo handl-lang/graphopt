@@ -815,12 +815,13 @@ def profitable(
     term: Any,
     var_env: dict,
     *,
-    reps: int = 40,
+    reps: int | None = None,
     margin: float = 1.0,
     kernel_for: Any = None,
     denotation_for: Any = None,
     max_handlers: int | None = None,
     time_budget: float | None = None,
+    bounds: Any = None,
 ) -> dict:
     """Keep only handlers whose compiled kernel beats the spelled site.
 
@@ -863,11 +864,28 @@ def profitable(
     Borderline re-windows each pay the same budget again, so a
     claim's worst case is ~3x *time_budget*.
 
+    *bounds* is the typed :class:`~mlopt_discovery.bounds.ProbeBounds`
+    record (``model_corpus`` resolves one per term): it supplies
+    ``max_handlers``/``time_budget``/``reps`` defaults — an explicit
+    keyword always wins, and ``reps=None`` resolves to
+    ``bounds.reps`` then the historical ``40``.
+
     Handlers minted from saturated-graph sites carry ``"leaf_env"``
     — the metavar→subterm map recorded at harvest; the referee
     evaluates it directly (:func:`_handler_env`), since the
     occurrence lives only in the collector's throwaway e-graph.
     """
+    if bounds is not None:
+        # ProbeBounds supplies the referee defaults; explicit
+        # kwargs always win (None means "not passed").
+        if max_handlers is None:
+            max_handlers = bounds.max_handlers
+        if time_budget is None:
+            time_budget = bounds.time_budget
+        if reps is None:
+            reps = bounds.reps
+    if reps is None:
+        reps = 40
     import mlopt_torch.torch_bridge as tb
     import torch
 

@@ -170,6 +170,12 @@ def _expansion(term: Any, count_leaves: bool, cap: int | None) -> int:
 def term_expansion(term: Any, cap: int | None = None) -> int:
     """Return the *tree-expansion* size of *term*, DAG-aware.
 
+    This is the ``ProbeBounds.spec_tree_cap`` / ``key_cap`` /
+    ``shape_key_cap`` metric (see ``mlopt_discovery.bounds``): every
+    ``Op`` and leaf occurrence counts 1 — ops + metavar/const leaves,
+    matching what a spec/pattern render spells (the site collectors
+    add one per attrs dict on top).
+
     ``shape_key``/``_spec_of``/the site collectors all render a term
     as a tree: a subterm referenced by two parents is spelled once
     per use, so a sharing-heavy DAG (a residual stream — every block
@@ -186,11 +192,12 @@ def term_expansion(term: Any, cap: int | None = None) -> int:
 def op_expansion(term: Any, cap: int | None = None) -> int:
     """Return the ``Op``-only tree-expansion size of *term*.
 
-    Same recurrence as :func:`term_expansion` but non-``Op`` leaves
-    count 0 — the count equals the number of op nodes a spec
-    rendering (``meta_arena._spec_of``/``play._fusion_pattern``)
-    spells, which is the size a claim/spec bound should compare
-    against.
+    This is the ``ProbeBounds.spec_op_cap`` metric (see
+    ``mlopt_discovery.bounds``): same recurrence as
+    :func:`term_expansion` but non-``Op`` leaves count 0 — the count
+    equals the number of op nodes a spec rendering
+    (``meta_arena._spec_of``/``play._fusion_pattern``) spells, which
+    is the size a claim/spec bound should compare against.
     """
     return _expansion(term, False, cap)
 
