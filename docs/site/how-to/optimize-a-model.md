@@ -70,12 +70,40 @@ mod = opt.lower(res, x, verify=True)  # re-lower without re-saturating
 ## 5. Ship the artifact — no mlopt at inference
 
 ```python
-from mlopt_torch.export import export_optimized
+from mlopt_torch.export import export_optimized, load_optimized
 
-export_optimized(model, opt_mod, "out/model", fmt="module")
-# .pt2 ExportedProgram — roundtrips standalone; also "safetensors",
-# "state_dict", "torchscript"
+manifest = export_optimized(model, opt_mod, "out/model", fmt="module")
+mod = load_optimized("out/model.pt2")   # runnable nn.Module, torch only
 ```
+
+**`.pt2` is *the* runnable artifact.** `fmt="module"` (the default)
+traces the optimized computation with `torch.export` and writes an
+`ExportedProgram` — fused kernels and all — that `torch.export.load`
+rebuilds with nothing but torch installed. Pass `example_input` (and
+`dynamic_shapes=` / `example_kwargs=` when the shapes or signature
+demand it); `verify=True` round-trips the artifact before returning.
+
+Every export also writes `<artifact>.manifest.json` carrying the
+contract fields: `artifact_schema` (`"mlopt-artifact/1"`),
+`mlopt_version`, `artifact_kind` (`"runnable"` vs `"weights"`),
+`format`, `torch_version`, the grafted-`mlopt_modules` map, and the
+GGUF/weights caveats in `notes`.
+
+The other formats are **weights-only, by design** — parameters with
+the *optimized* (fused/derived) `state_dict` names, never the
+computation:
+
+| `fmt` | artifact | `load_optimized` returns |
+|---|---|---|
+| `"module"`/`"pt2"` | `.pt2` ExportedProgram | runnable `nn.Module` |
+| `"torchscript"` | `.pt`/`.ts` | runnable `nn.Module` (narrower than .pt2) |
+| `"safetensors"` | `.safetensors` + manifest | `dict[str, Tensor]` — needs a matching optimized-layout module to run |
+| `"state_dict"` | `.pth` | `dict[str, Tensor]` — same caveat |
+
+GGUF/Ollama/LM Studio are **not** export targets: llama.cpp
+reimplements standard architectures from HF-layout weights, and the
+optimized fused names don't map — convert the *original* model with
+`convert_hf_to_gguf.py` instead (the manifest's `notes` say the same).
 
 ## 6. Reach for the optional knobs only when you need them
 

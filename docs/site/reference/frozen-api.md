@@ -1,5 +1,5 @@
 ::: warning Vendored — do not edit here
-Synced from `graphopt:docs/public_api.md` @ `9849982` — the
+Synced from `graphopt:docs/public_api.md` @ `e87b170` — the
 phase-1 frozen manifest (`API_VERSION = "0.1.0"`). Edit upstream and
 re-vendor. The `research-mlopt` → `graphopt` rename and the phase-4
 `eqsat`/`gamekit` carve-outs have landed — each row tags the repo it
@@ -78,6 +78,30 @@ paths are re-exporting shims (see `TestGamekitCompatShims` in
 |---|---|---|
 | Law verification | `mlopt_discovery.verifier` | **`verify_law(lhs, rhs, rules, *, max_iterations=30, max_nodes=30_000, rule_budgets=None) -> LawResult`**, `LawResult` (`derivable`, `direction`, `witness_rules`, `replayable`, `cert`) — the admission side the phase-2 referees consume; saturation is bounded by default (`rule_budgets=None` applies the EXPANSIVE/non-library per-rule caps — `verifier._EXPANSIVE_BUDGET`) and a bound can only *refuse*, never accept |
 | Domain registry | `mlopt_discovery.play` | `DOMAINS`, `Domain` (`cases`/`board_of`/`legal`/`featurizer`/`features`/`scripted`/`deliver`/`spec`), `play(domain, case, player, *, budget)`, `spec_domain(cases, board_of, spec, *, scripted, deliver) -> Domain` — the `Domain` *shape* is the contract; the `DOMAINS` *contents* are domain data, and downstream repos seat their own (kernelopt's `mlopt_kernel.play` registers `kernel` at import — plan 0032 phase 4) |
+
+## Torch delivery contracts (→ `graphopt`)
+
+The Phase-A freeze (production-readiness audit): the *narrow*
+user-facing set a downstream consumer binds — optimize → export →
+load, plus the `runner=` constructors — is frozen.  Everything else
+in `mlopt_torch` (`IRModule`, the executor table, `adapters`,
+`autotune.TORCH_BUILDERS`, `calibrate`, `contraction_policy`, the
+model zoo) stays **public, unfrozen**: reachable, not promised.
+Freezing internals would calcify the machinery the discovery loop is
+still changing; freezing this set pins the artifact boundary the
+`.pt2`-runs-without-mlopt claim stands on.
+
+| Contract | Canonical location | Frozen surface |
+|---|---|---|
+| Backend assembly | `mlopt_torch` (lazy) / `mlopt_torch.backend` | **`TorchBackend(*, ops=None, source=None, sink=None, composer=None, meter=None) -> Backend`** — the port-value factory every example calls |
+| Artifact export | `mlopt_torch.export` | **`export_optimized(model, optimized_model, path, *, fmt="module", example_input=None, example_kwargs=None, dynamic_shapes=None, verify=True, stats=None) -> dict`**, `save_optimized` (call-site alias), **`load_optimized(path)`**, `save_optimized_weights(optimized_module, path)`, `ExportError`, `ARTIFACT_SCHEMA` (`"mlopt-artifact/1"`) |
+| Artifact kinds | manifest fields | `artifact_kind`: `"runnable"` (`pt2`/`torchscript` — the artifact IS the optimized computation) vs `"weights"` (`safetensors`/`state_dict` — parameters only, optimized-layout `state_dict` names, never runnable standalone).  `weights_only`/`runnable_standalone` stay as the boolean twins; `load_optimized` refuses an unrecognised `artifact_schema` |
+| Delivery runners | `mlopt_torch.runners`, `mlopt_cuda`, `mlopt_orchestrator` | `TorchCompileRunner(**compile_kwargs)`, `CudaGraphRunner()`, `IdentityRunner()`, `ChainedRunner(runners)` — the `runner=` values; the `Runner` *protocol* (`apply(module, example_input, stats)`) is the substrate contract above |
+| Pipeline entry | `mlopt_orchestrator.Optimizer` | `Optimizer.optimize(model, x, *, strategy=None, **kw) -> LowerResult` — unpacks `(module, stats)`; `**kw` forwards the `search`/`lower` knobs (`rules`, `runner`, `criteria`, `engine`, …) and is part of the contract |
+
+`Optimizer`, the strategies, and `search`/`lower` were already frozen
+above; this table adds the *torch-side* seats and the signature pins
+(`tests/test_public_api.py::TestSignaturePins`).
 
 ## The scoring spec — the referee seam
 

@@ -17,15 +17,19 @@ import types
 import pytest
 import torch
 import torch.nn as nn
-from mlopt_torch.export import ExportError, _diff, _read_safetensors, export_optimized, load_optimized, save_optimized
-
-
+from mlopt_orchestrator import Compositional, Optimizer
+from mlopt_torch.backend import TorchBackend
+from mlopt_torch.export import (
+    ARTIFACT_SCHEMA,
+    ExportError,
+    _diff,
+    _read_safetensors,
+    export_optimized,
+    load_optimized,
+    save_optimized,
+)
 
 from tests.test_compositional import MiniGPT
-from mlopt_orchestrator import Compositional, Optimizer
-
-
-from mlopt_torch.backend import TorchBackend
 
 
 @pytest.fixture
@@ -38,6 +42,31 @@ def optimized_stack():
 
     assert stats["n_optimized"] == 2  # IRModules grafted
     return model, opt, x
+
+
+@pytest.fixture
+def tiny_optimized():
+    """A monolithic-optimized 2-layer MLP (function-scoped: each
+    matrix cell re-optimizes, so ``.to(dtype)`` can't leak)."""
+    torch.manual_seed(0)
+    mod = nn.Sequential(nn.Linear(8, 8), nn.ReLU(), nn.Linear(8, 8))
+    mod = mod.eval()
+    x = torch.randn(2, 8)
+    opt, _ = Optimizer(backend=TorchBackend()).optimize(
+        mod, x, verify=False, verbose=False
+    )
+    return mod, opt
+
+
+def _clean_interpreter(code: str) -> None:
+    """Run ``code`` in a fresh interpreter; assert it exits 0."""
+    proc = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        timeout=300,
+    )
+    assert proc.returncode == 0, proc.stderr
 
 
 def _manifest_file(artifact):
@@ -60,6 +89,9 @@ def test_export_module_pt2_roundtrip(optimized_stack, tmp_path):
     )
 
     assert manifest["format"] == "pt2"
+    assert manifest["artifact_schema"] == ARTIFACT_SCHEMA
+    assert manifest["artifact_kind"] == "runnable"
+    assert manifest["mlopt_version"]
     assert manifest["runnable_standalone"] is True
     assert manifest["weights_only"] is False
     assert manifest["verify"]["kind"] == "forward"
@@ -115,6 +147,101 @@ def test_pt2_artifact_runs_in_clean_interpreter(
         timeout=300,
     )
     assert proc.returncode == 0, proc.stderr
+
+
+@pytest.mark.parametrize("dtype", [torch.float32, torch.float64])
+@pytest.mark.parametrize("dynamic", [False, True])
+def test_pt2_clean_interpreter_matrix(
+    tiny_optimized, tmp_path, dtype, dynamic
+):
+    """The .pt2 contract matrix, each cell in a mlopt-free
+    interpreter: CPU fp32 AND fp64, static AND dynamic batch shape —
+    an optimized artifact that loads and runs with nothing but torch.
+    """
+    _, opt = tiny_optimized
+    opt = opt.to(dtype).eval()
+    x = torch.randn(2, 8, dtype=dtype)
+    out = tmp_path / f"opt_{dtype}_{dynamic}.pt2"
+    kwargs = {}
+    if dynamic:
+        # IRModule.forward is ``*xs`` — the varargs tuple is one
+        # pytree node, so the dim spec nests one level deeper than a
+        # plain ``forward(self, x)`` module's.
+        kwargs["dynamic_shapes"] = (
+            ({0: torch.export.Dim("batch")},),
+        )
+    manifest = export_optimized(
+        None, opt, out, example_input=x, **kwargs
+    )
+    assert manifest["artifact_kind"] == "runnable"
+
+    # Dynamic cells run a batch size different from the example's
+    # (proving the dim); static cells re-run the example's shape.
+    run_batch = 5 if dynamic else 2
+    code = (
+        "import sys, torch; "
+        f"m = torch.export.load({str(out)!r}).module(); "
+        f"x = torch.randn({run_batch}, 8, dtype=torch.{dtype}); "
+        f"y = m(x); "
+        f"assert y.shape == ({run_batch}, 8); "
+        "assert y.dtype == x.dtype; "
+        "assert not any(m.startswith('mlopt') for m in sys.modules)"
+    )
+    _clean_interpreter(code)
+
+
+def test_pt2_clean_interpreter_kwargs(tmp_path):
+    """Keyword-forward artifacts run standalone with kwargs too."""
+
+    class Scaled(nn.Module):
+        def forward(self, x, scale=1.0):
+            return x * scale
+
+    mod = Scaled().eval()
+    x = torch.randn(4)
+    out = tmp_path / "kw.pt2"
+    export_optimized(
+        None,
+        mod,
+        out,
+        example_input=x,
+        example_kwargs={"scale": 3.0},
+    )
+    code = (
+        "import torch; "
+        f"m = torch.export.load({str(out)!r}).module(); "
+        "x = torch.randn(4); "
+        "torch.testing.assert_close(m(x, scale=3.0), x * 3.0)"
+    )
+    _clean_interpreter(code)
+
+
+def test_load_optimized_rejects_unknown_schema(tmp_path):
+    """A manifest naming an unrecognised artifact_schema is refused —
+    the field exists precisely so future schemas can't be misread."""
+    p = tmp_path / "w.pth"
+    torch.save(nn.Linear(2, 2).state_dict(), p)
+    _manifest_file(p).write_text(
+        json.dumps(
+            {
+                "artifact_schema": "mlopt-artifact/99",
+                "format": "state_dict",
+            }
+        )
+    )
+    with pytest.raises(ExportError, match="artifact_schema"):
+        load_optimized(p)
+
+
+def test_load_optimized_legacy_manifest_without_schema(tmp_path):
+    """Manifests predating ``artifact_schema`` still load — they only
+    ever named the four ``format`` values."""
+    mod = nn.Linear(4, 4).eval()
+    p = tmp_path / "legacy.pth"
+    torch.save(mod.state_dict(), p)
+    _manifest_file(p).write_text(json.dumps({"format": "state_dict"}))
+    sd = load_optimized(p)
+    assert torch.equal(sd["weight"], mod.weight)
 
 
 def test_export_module_needs_example_input(optimized_stack, tmp_path):
@@ -281,6 +408,8 @@ def test_safetensors_roundtrip(optimized_stack, tmp_path):
     manifest = export_optimized(model, opt, out, fmt="safetensors")
 
     assert manifest["format"] == "safetensors"
+    assert manifest["artifact_schema"] == ARTIFACT_SCHEMA
+    assert manifest["artifact_kind"] == "weights"
     assert manifest["weights_only"] is True
     assert manifest["runnable_standalone"] is False
     assert manifest["verify"]["kind"] == "state_dict"
@@ -293,6 +422,9 @@ def test_safetensors_roundtrip(optimized_stack, tmp_path):
     header = json.loads(data[8 : 8 + n])
     embedded = json.loads(header["__metadata__"]["mlopt_manifest"])
     assert embedded["format"] == "safetensors"
+    # The weights-only contract travels inside the file too.
+    assert embedded["artifact_kind"] == "weights"
+    assert embedded["artifact_schema"] == ARTIFACT_SCHEMA
 
     # And the tensor bytes decode back to the optimized state_dict.
     reloaded = load_optimized(out)
@@ -382,6 +514,7 @@ def test_state_dict_roundtrip(optimized_stack, tmp_path):
     manifest = export_optimized(model, opt, out, fmt="state_dict")
 
     assert manifest["format"] == "state_dict"
+    assert manifest["artifact_kind"] == "weights"
     assert manifest["verify"]["exact"] is True
     reloaded = torch.load(out, weights_only=True)
     assert set(reloaded) == set(opt.state_dict())

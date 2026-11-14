@@ -34,6 +34,19 @@ The `--group bench` flag adds the benchmark CLI's deps (`tyro`,
 `rich`, …); the `dev` group is always on by default.
 :::
 
+::: warning No published wheels — yet
+Every distribution is `0.1.0dev` and **nothing is on PyPI or any
+package index**. The supported install is exactly what step 1 does:
+clone the repo and `uv sync`, which resolves the `eqsat`/`gamekit`
+substrate pins as git+ssh deps on their `packages/` subdirectories.
+`uv build` *does* produce a per-package wheel locally (verified for
+`mlopt-torch` — setuptools backend, pure-Python, bundles the
+`artifacts/*.pt` policy weights), but a wheel install still needs
+`mlopt-core`/`mlopt-orchestrator`/`gamekit` from their own repos —
+there is no self-contained install yet. Treat "pip install mlopt"
+as unsupported; pin a git rev instead.
+:::
+
 ## 2. Smoke-test it
 
 ```sh

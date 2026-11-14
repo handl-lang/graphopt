@@ -57,18 +57,43 @@ GGUF / Ollama / LM Studio
 
 Every export writes ``<artifact>.manifest.json`` next to the
 artifact and returns the manifest dict.
+
+Artifact contract (``artifact_schema``)
+    Every manifest carries ``artifact_schema`` — currently
+    ``"mlopt-artifact/1"`` — plus ``mlopt_version`` (the exporting
+    ``mlopt-torch`` distribution version) and ``artifact_kind``:
+
+    * ``"runnable"`` — ``pt2`` / ``torchscript``: the artifact IS the
+      optimized computation; ``load_optimized`` returns a callable
+      ``nn.Module`` needing nothing but torch.
+    * ``"weights"`` — ``safetensors`` / ``state_dict``: the artifact
+      is PARAMETERS ONLY — the optimized module's ``state_dict``
+      (fused/derived names), never the computation.  ``load_optimized``
+      returns a ``dict[str, Tensor]``; running it requires rebuilding
+      a module with the matching optimized layout (the mlopt executor
+      classes or a hand-built equivalent).  These files are
+      **weights-only, unmistakably**: ``weights_only``/``artifact_kind``
+      say so in the manifest, the sidecar, and the embedded safetensors
+      metadata.
+
+    ``load_optimized`` refuses a manifest whose ``artifact_schema``
+    it does not recognise (manifests predating the field are accepted —
+    they only ever named the four ``format`` values above).
 """
 
 from __future__ import annotations
 
 import json
 import struct
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _pkg_version
 from pathlib import Path
 from typing import Any
 
 import torch
 
 __all__ = [
+    "ARTIFACT_SCHEMA",
     "ExportError",
     "export_optimized",
     "load_optimized",
@@ -79,6 +104,32 @@ __all__ = [
 
 class ExportError(RuntimeError):
     """Export to a mlopt-free artifact failed."""
+
+
+#: Manifest schema tag — bump when the manifest's field semantics
+#: change in a way ``load_optimized`` must branch on.  ``"1"`` is the
+#: first versioned schema; manifests written before it carry no
+#: ``artifact_schema`` key and are read as schema-1 (they only ever
+#: named the four ``format`` values).
+ARTIFACT_SCHEMA = "mlopt-artifact/1"
+
+#: ``artifact_kind`` values: ``"runnable"`` artifacts carry the
+#: computation (load → callable module); ``"weights"`` artifacts carry
+#: parameters only (load → ``dict[str, Tensor]``).
+_ARTIFACT_KIND = {
+    "pt2": "runnable",
+    "torchscript": "runnable",
+    "safetensors": "weights",
+    "state_dict": "weights",
+}
+
+
+def _mlopt_version() -> str:
+    """Return the exporting distribution's version (``"unknown"`` if absent)."""
+    try:
+        return _pkg_version("mlopt-torch")
+    except PackageNotFoundError:
+        return "unknown"
 
 
 _FORMAT_ALIASES = {
@@ -662,7 +713,10 @@ def export_optimized(
     sd = optimized_model.state_dict()
     mlopt_mods = _mlopt_modules(model, optimized_model, sd)
     manifest: dict[str, Any] = {
+        "artifact_schema": ARTIFACT_SCHEMA,
         "mlopt_export": 1,
+        "mlopt_version": _mlopt_version(),
+        "artifact_kind": _ARTIFACT_KIND[fmt_c],
         "format": fmt_c,
         "artifact": str(p),
         "manifest_file": str(_manifest_path(p)),
@@ -730,7 +784,14 @@ def load_optimized(path: str | Path) -> Any:
     p = Path(path)
     mpath = _manifest_path(p)
     if mpath.exists():
-        fmt = json.loads(mpath.read_text()).get("format")
+        manifest = json.loads(mpath.read_text())
+        schema = manifest.get("artifact_schema")
+        if schema is not None and schema != ARTIFACT_SCHEMA:
+            raise ExportError(
+                f"manifest for {p} names unknown artifact_schema "
+                f"{schema!r} (this loader knows {ARTIFACT_SCHEMA!r})"
+            )
+        fmt = manifest.get("format")
         if fmt == "pt2":
             return torch.export.load(str(p)).module()
         if fmt == "safetensors":

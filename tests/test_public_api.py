@@ -6,10 +6,12 @@ the mechanical pin.  Every frozen name must resolve at its canonical
 path, hold its ``__all__`` seat, and keep its published signature —
 a drift in any of them is a contract break, not a refactor.
 
-Kept deliberately torch-free: the whole module runs in the fast
-lane, and the game-kernel modules it checks must stay
-substrate-free (the matching import-linter contract lives in
-``pyproject.toml``).
+Kept deliberately torch-free at *collection* time: the substrate and
+game rows resolve without torch, and the torch-surface pins import
+their modules lazily inside the test bodies (the first torch import
+costs a few seconds once, inside the test run — never at collection).
+The game-kernel modules it checks must stay substrate-free (the
+matching import-linter contract lives in ``pyproject.toml``).
 """
 
 from __future__ import annotations
@@ -204,9 +206,71 @@ _PUBLIC_SURFACE: dict[str, tuple[str, ...]] = {
         "play",
         "spec_domain",
     ),
+    # The torch delivery surface — the narrow user-facing set frozen
+    # by the Phase-A decision (docs/public_api.md § Torch delivery):
+    # optimize → export → load, plus the runner constructors a
+    # ``runner=`` kwarg binds.  Everything else in ``mlopt_torch``
+    # (IRModule, executors, adapters, autotune builders, calibrate,
+    # the model zoo) stays public-but-unfrozen.
+    "mlopt_torch": ("TorchBackend", "TorchCompileRunner"),
+    "mlopt_torch.backend": ("TorchBackend",),
+    "mlopt_torch.export": (
+        "ARTIFACT_SCHEMA",
+        "ExportError",
+        "export_optimized",
+        "load_optimized",
+        "save_optimized",
+        "save_optimized_weights",
+    ),
+    "mlopt_torch.runners": ("TorchCompileRunner",),
+    "mlopt_cuda": ("CudaGraphRunner",),
 }
 
 
+
+
+# ---------------------------------------------------------------------------
+#  The mechanical pin — every frozen name resolves at its canonical path
+# ---------------------------------------------------------------------------
+
+
+class TestFrozenSurface:
+    """The whole table — the domain-seat half of the pin that lives in
+    ``eqsat:tests/test_ported_public_api.py`` for the substrate rows.
+    """
+
+    @pytest.mark.parametrize("mod_name", sorted(_PUBLIC_SURFACE))
+    def test_module_imports(self, mod_name):
+        mod = importlib.import_module(mod_name)
+        assert mod is not None
+
+    @pytest.mark.parametrize(
+        "mod_name,name",
+        [
+            (m, n)
+            for m, names in _PUBLIC_SURFACE.items()
+            for n in names
+        ],
+    )
+    def test_frozen_name_resolves(self, mod_name, name):
+        mod = importlib.import_module(mod_name)
+        assert hasattr(mod, name), (
+            f"CONTRACT BREAK: {mod_name}.{name} — a frozen public name "
+            "no longer resolves (docs/public_api.md)"
+        )
+
+    @pytest.mark.parametrize("mod_name", sorted(_PUBLIC_SURFACE))
+    def test_frozen_names_hold_all_seats(self, mod_name):
+        """Where a module declares ``__all__``, frozen names sit in it."""
+        mod = importlib.import_module(mod_name)
+        declared = getattr(mod, "__all__", None)
+        if declared is None:
+            pytest.skip(f"{mod_name} declares no __all__")
+        missing = set(_PUBLIC_SURFACE[mod_name]) - set(declared)
+        assert not missing, (
+            f"CONTRACT BREAK: {mod_name} frozen names missing from "
+            f"__all__: {sorted(missing)}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -300,6 +364,96 @@ class TestSignaturePins:
         assert list(inspect.signature(law_provenance).parameters) == [
             "rule"
         ]
+
+    # -- the torch delivery surface (Phase-A freeze) -----------------
+
+    def test_optimizer_optimize_shape(self):
+        """``Optimizer.optimize(model, x, *, strategy=None, **kw)`` —
+        the entry point every delivery example binds."""
+        from mlopt_orchestrator import Optimizer
+
+        params = inspect.signature(Optimizer.optimize).parameters
+        assert list(params)[:3] == ["self", "model", "x"]
+        assert params["strategy"].kind is inspect.Parameter.KEYWORD_ONLY
+        assert params["strategy"].default is None
+        assert any(
+            p.kind is inspect.Parameter.VAR_KEYWORD
+            for p in params.values()
+        ), "optimize must keep forwarding pipeline kwargs (**kw)"
+
+    def test_torch_backend_factory_shape(self):
+        """``TorchBackend()`` assembles the port value — all five port
+        slots keyword-only."""
+        from mlopt_torch import TorchBackend
+
+        params = inspect.signature(TorchBackend).parameters
+        assert set(params) == {
+            "ops",
+            "source",
+            "sink",
+            "composer",
+            "meter",
+        }
+        assert all(
+            p.kind is inspect.Parameter.KEYWORD_ONLY
+            for p in params.values()
+        )
+        assert all(p.default is None for p in params.values())
+
+    def test_export_optimized_shape(self):
+        from mlopt_torch.export import export_optimized
+
+        params = inspect.signature(export_optimized).parameters
+        assert list(params)[:3] == [
+            "model",
+            "optimized_model",
+            "path",
+        ]
+        for kw in (
+            "fmt",
+            "example_input",
+            "example_kwargs",
+            "dynamic_shapes",
+            "verify",
+            "stats",
+        ):
+            assert params[kw].kind is inspect.Parameter.KEYWORD_ONLY, (
+                f"export_optimized lost keyword-only {kw!r}"
+            )
+        assert params["fmt"].default == "module"
+        assert params["verify"].default is True
+
+    def test_load_optimized_shape(self):
+        from mlopt_torch.export import load_optimized
+
+        assert list(inspect.signature(load_optimized).parameters) == [
+            "path"
+        ]
+
+    def test_save_optimized_weights_shape(self):
+        from mlopt_torch.export import save_optimized_weights
+
+        assert list(
+            inspect.signature(save_optimized_weights).parameters
+        ) == ["optimized_module", "path"]
+
+    def test_runner_constructor_shapes(self):
+        """The ``runner=`` values: zero-arg captures, kwargs compile,
+        an iterable chain — the three call shapes docs promise."""
+        from mlopt_cuda import CudaGraphRunner
+        from mlopt_orchestrator import ChainedRunner, IdentityRunner
+        from mlopt_torch import TorchCompileRunner
+
+        assert not inspect.signature(CudaGraphRunner).parameters
+        assert not inspect.signature(IdentityRunner).parameters
+        chained = inspect.signature(ChainedRunner).parameters
+        assert list(chained) == ["runners"]
+        compile_params = inspect.signature(TorchCompileRunner).parameters
+        assert list(compile_params) == ["compile_kwargs"]
+        assert (
+            compile_params["compile_kwargs"].kind
+            is inspect.Parameter.VAR_KEYWORD
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -564,10 +718,10 @@ class TestGamekitCompatShims:
     def test_lawdata_game_alias(self):
         """``mlopt_discovery.lawdata.game`` aliases ``gamekit.gamedata``."""
         import gamekit.gamedata
-        import mlopt_discovery.lawdata as data
         import gamekit.gamedata as game
         import gamekit.gamedata.features as features
         import gamekit.gamedata.weights as weights
+        import mlopt_discovery.lawdata as data
 
         assert game is gamekit.gamedata
         assert data.game is gamekit.gamedata
