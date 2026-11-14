@@ -377,10 +377,27 @@ class _FullWrap(nn.Module):
         return audio
 
 
-def _harvest(which: str, dtype: str):
+def _harvest(which: str, dtype: str, packed: bool = False):
     """Build (wrapped module, inputs, eager-output) for ``which``."""
-    disable_complex = which == "decoder"
+    # r2 fix: the arms were swapped in r1 — ``decoder`` is the complex
+    # TorchSTFT variant (disable_complex=False), ``decoder-nc`` the
+    # CustomSTFT conv-iSTFT one.  r1's delivered-0.89x "decoder" numbers
+    # were actually CustomSTFT; its "decoder-nc" unary-mul wall was the
+    # complex graph (``phase * 1j`` lives in TorchSTFT.inverse).
+    disable_complex = which == "decoder-nc"
     m = load(dtype, disable_complex=disable_complex)
+    if packed:
+        # tts_walls_fixed.md option 1: wrap the three pack→lstm→pad
+        # sites as torch.library.custom_op leaves so PackedSequence
+        # never crosses the export boundary (see tts_kokoro_packed.py).
+        import tts_kokoro_packed
+
+        ops = tts_kokoro_packed.install(m)
+        print(
+            f"[{which}/{dtype}] packed-lstm ops installed: "
+            f"{sorted(ops)}",
+            flush=True,
+        )
     ids = _input_ids()
     ref_s = _voice(ids.shape[1] - 1)
     cap = _synth_once(m, ids, ref_s)
@@ -518,9 +535,14 @@ def opt(which: str, iters: int = 3) -> None:
     from mlopt_orchestrator.optimize import Optimizer
     from mlopt_torch.backend import TorchBackend
 
+    packed = which.endswith("-p")
+    if packed:
+        which = which[: -len("-p")]
     dtype = sys.argv[3] if len(sys.argv) > 3 else "fp32"
     max_enodes = int(sys.argv[4]) if len(sys.argv) > 4 else 100_000
-    m, wrap, inp, ref, ref_u1, ref_u2, cap = _harvest(which, dtype)
+    m, wrap, inp, ref, ref_u1, ref_u2, cap = _harvest(
+        which, dtype, packed=packed
+    )
     print(
         f"[{which}/{dtype}] inputs: "
         + ", ".join(
