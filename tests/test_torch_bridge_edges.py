@@ -1230,3 +1230,298 @@ class TestOpaqueLeaves:
                 aten="aten::whatever",
                 sig=((("bogus", ()),), ()),
             )
+
+
+# ---------------------------------------------------------------------------
+#  argN / scalar-operand attr-carriage — the decoder ``where`` blocker
+# ---------------------------------------------------------------------------
+#
+# torch.export spells a scalar in an operand position as a positional
+# arg; ops outside ``ATTR_SCHEMA`` used to strand it as an ``argN``
+# attr the fixed-positional binding could not read
+# (``where(c, x, arg2=-inf)`` → ``TypeError: <lambda>() missing 'y'`` —
+# docs/reports/decoder_search_scaling.md "second blocker").  The fix
+# is two-sided: ``_SCALAR_OPERAND_OPS`` mints the scalar as a ``Const``
+# operand on export, and the bindings still rebuild ``argN``-carried
+# spellings for terms minted before the entry or by hand.
+
+
+def test_where_scalar_other_mints_const_operand():
+    """``where(cond, x, -inf)`` exports the scalar as a Const child —
+    three operands, no ``arg2`` attr — and lowers to the eager value."""
+
+    class M(torch.nn.Module):
+        def forward(self, x):
+            cond = torch.ones(x.shape[0], x.shape[1], dtype=torch.bool)
+            return torch.where(cond, x, -float("inf"))
+
+    ir, source = export_to_ir(M().eval(), (torch.randn(2, 3),))
+    w = _find(ir.root, "where")[0]
+    assert len(w.args) == 3
+    assert isinstance(w.args[2], Const)
+    assert not any(k.startswith("arg") for k in w.attrs)
+    lowered = ir_to_torch_module(ir, param_values=source)
+    x = torch.randn(2, 3)
+    with torch.no_grad():
+        assert torch.equal(lowered(x), M()(x))
+
+
+def test_where_scalar_self_preserves_position():
+    """``where(cond, -1.0, x)`` (ScalarSelf) keeps operand ORDER —
+    the Const lands in the self slot, not appended."""
+
+    class M(torch.nn.Module):
+        def forward(self, x):
+            cond = torch.ones(x.shape[0], x.shape[1], dtype=torch.bool)
+            return torch.where(cond, -1.0, x)
+
+    ir, source = export_to_ir(M().eval(), (torch.randn(2, 3),))
+    w = _find(ir.root, "where")[0]
+    assert len(w.args) == 3
+    assert isinstance(w.args[1], Const)
+    lowered = ir_to_torch_module(ir, param_values=source)
+    x = torch.randn(2, 3)
+    with torch.no_grad():
+        assert torch.equal(lowered(x), M()(x))
+
+
+def test_where_argn_attr_spellings_eval():
+    """Hand-minted ``argN``-carried where terms rebuild exactly —
+    ``arg2`` is the other-operand, ``arg1`` the self-operand."""
+    c = Var("c", TensorType((2, 2)))
+    x = Var("x", TensorType((2, 2)))
+    env = {
+        "c": torch.tensor([[True, False], [False, True]]),
+        "x": torch.ones(2, 2),
+    }
+    from mlopt_torch.torch_bridge import _IR_TO_TORCH, eval_term
+
+    t = Op.make("where", c, x, arg2=float("-inf"))
+    assert torch.equal(
+        eval_term(t, var_env=env, bindings=_IR_TO_TORCH, strict=True),
+        torch.tensor([[1.0, -torch.inf], [-torch.inf, 1.0]]),
+    )
+    t = Op.make("where", c, x, arg1=-1.0)
+    assert torch.equal(
+        eval_term(t, var_env=env, bindings=_IR_TO_TORCH, strict=True),
+        torch.tensor([[-1.0, 1.0], [1.0, -1.0]]),
+    )
+    # A malformed term (no self/other anywhere) fails loudly, not as
+    # torch's overload-mismatch TypeError.
+    t = Op.make("where", c)
+    with pytest.raises(TypeError, match="self/other operands"):
+        eval_term(t, var_env=env, bindings=_IR_TO_TORCH, strict=True)
+
+
+def test_bitwise_scalar_other_mints_const_operand():
+    """``x & 3``/``x | 3`` mint the scalar as a Const operand (weak
+    int semantics preserved) and lower to the eager value."""
+
+    class M(torch.nn.Module):
+        def forward(self, x):
+            return (x & 3) | 1
+
+    x = torch.arange(4, dtype=torch.int32).reshape(2, 2)
+    ir, source = export_to_ir(M().eval(), (x,))
+    ands = _find(ir.root, "bitwise_and")
+    assert ands and all(isinstance(a.args[1], Const) for a in ands)
+    lowered = ir_to_torch_module(ir, param_values=source)
+    with torch.no_grad():
+        assert torch.equal(lowered(x), M()(x))
+        assert lowered(x).dtype == torch.int32
+
+
+def test_bitwise_arg1_attr_eval():
+    """A hand-minted ``arg1``-carried bitwise term still evals."""
+    x = Var("x", TensorType((2,)))
+    t = Op.make("bitwise_and", x, arg1=3)
+    from mlopt_torch.torch_bridge import _IR_TO_TORCH, eval_term
+
+    got = eval_term(
+        t,
+        var_env={"x": torch.tensor([1, 2], dtype=torch.int32)},
+        bindings=_IR_TO_TORCH,
+        strict=True,
+    )
+    assert torch.equal(got, torch.tensor([1, 2], dtype=torch.int32))
+
+
+def test_scalar_tail_attrs_roundtrip():
+    """Sibling sweep — scalar config tails that used to drop silently
+    now eval to the eager value: ``nan_to_num`` positional scalars,
+    ``celu`` alpha, ``embedding`` padding_idx, ``add``/``sub``/``rsub``
+    alpha, ``gelu`` approximate."""
+
+    cases = [
+        (
+            lambda a: torch.nan_to_num(a, 0.0, 1.0, -1.0),
+            (torch.tensor([float("nan"), 2.0]),),
+        ),
+        (lambda a: F.celu(a, 0.5), (torch.randn(3),)),
+        (
+            lambda a: torch.add(a, a, alpha=2.0),
+            (torch.randn(3),),
+        ),
+        (
+            lambda a: torch.sub(a, a, alpha=2.0),
+            (torch.randn(3),),
+        ),
+        (
+            lambda a: torch.rsub(a, a, alpha=2.0),
+            (torch.randn(3),),
+        ),
+        (
+            lambda a: F.gelu(a, approximate="tanh"),
+            (torch.randn(3),),
+        ),
+        (lambda a: torch.round(a, decimals=2), (torch.randn(3),)),
+        (lambda a: F.leaky_relu(a, 0.1), (torch.randn(3),)),
+    ]
+    for fn, args in cases:
+        m = torch.nn.Module()
+        m.forward = fn
+        ir, source = export_to_ir(m.eval(), args)
+        lowered = ir_to_torch_module(ir, param_values=source)
+        with torch.no_grad():
+            got = lowered(*args)
+        assert torch.allclose(got, fn(*args), equal_nan=True), fn
+
+
+def test_embedding_padding_idx_roundtrip():
+    """``F.embedding(..., padding_idx=2)`` lands under the canonical
+    ``padding_idx`` attr and replays through the binding."""
+
+    class M(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.w = torch.nn.Parameter(torch.randn(5, 4))
+
+        def forward(self, idx):
+            return F.embedding(idx, self.w, padding_idx=2)
+
+    m = M().eval()
+    ir, source = export_to_ir(m, (torch.tensor([1, 2, 3]),))
+    emb = _find(ir.root, "embedding")[0]
+    assert emb.attrs.get("padding_idx") == 2
+    lowered = ir_to_torch_module(ir, param_values=source)
+    idx = torch.tensor([1, 2, 3])
+    with torch.no_grad():
+        assert torch.equal(lowered(idx), m(idx))
+
+
+# ---------------------------------------------------------------------------
+#  IRModule._park_params — the low-memory verify park
+# ---------------------------------------------------------------------------
+
+
+def test_park_params_cpu_residency_and_realign():
+    """``_park_params`` drops the live weight tables to CPU, keeps the
+    ``_param_values`` → ``_param_map`` aliasing invariant, resets the
+    align cache, and the next forward still evaluates correctly."""
+    W = Param("W", TensorType((4, 4)))
+    x = Var("x", TensorType((4, 4)))
+    mod = _lower_root(Op.make("matmul", x, W), {"W": torch.randn(4, 4)})
+    xv = torch.randn(4, 4)
+    with torch.no_grad():
+        expected = mod(xv)
+
+    mod._park_params()
+    assert mod._dev_key is None
+    for k, t in mod._param_map.items():
+        assert t.device.type == "cpu"
+        # the alias contract from __init__ survives the park: both
+        # tables rebind to ONE tensor, never two copies
+        assert mod._param_values[k] is t
+
+    with torch.no_grad():
+        assert torch.equal(mod(xv), expected)
+
+
+def test_park_params_moves_gpu_tables_to_cpu():
+    """On CUDA the park must move the LIVE tables (``_param_map`` /
+    ``_param_values`` — what ``_align_to`` rewrote), not just the
+    stale registered ``_parameters`` clones, and a later forward must
+    re-align back to the input device."""
+    if not torch.cuda.is_available():
+        pytest.skip("requires CUDA")
+    W = Param("W", TensorType((8, 8)))
+    x = Var("x", TensorType((8, 8)))
+    wt = torch.randn(8, 8)
+    mod = _lower_root(Op.make("matmul", x, W), {"W": wt})
+    xv = torch.randn(8, 8, device="cuda")
+    with torch.no_grad():
+        expected = mod(xv)
+    live = mod._param_map["W"]
+    assert live.device.type == "cuda"
+
+    mod._park_params()
+    assert mod._param_map["W"].device.type == "cpu"
+    assert mod._param_values["W"].device.type == "cpu"
+    assert mod._param_values["W"] is mod._param_map["W"]
+    assert mod._dev_key is None
+
+    with torch.no_grad():
+        again = mod(xv)
+    assert again.device.type == "cuda"
+    assert torch.equal(again, expected)
+    assert mod._param_map["W"].device.type == "cuda"
+
+
+@pytest.mark.requires_cuda
+def test_verify_module_lowmem_never_holds_both_weight_sets():
+    """Regression for the whisper-turbo 4 GB ``lower(verify=True)``
+    OOM (``docs/reports/verify_lowmem.md``): the verify pair must not
+    co-reside on the device.
+
+    Each side's live weights are sized at ~28 % of free device memory.
+    Two resident sets would peak at ~0.56x free — measurable without
+    relying on an actual OOM — while the parked verify peaks at roughly
+    one weight set plus activations.  The size is kept small because
+    the park trades VRAM for host RAM: three CPU copies of the weights
+    (caller original + two module clones) must fit alongside the
+    interpreter.  Skips on GPUs too large for the sizing to be
+    meaningful (>8 GiB).
+    """
+    from mlopt_torch.report import verify_module
+
+    _free, total = torch.cuda.mem_get_info()
+    if total > 8 * 2**30:
+        pytest.skip("sizing assumes a <=8 GiB device")
+    n_bytes = int(_free * 0.28)
+    n = max(8, int((n_bytes / 4) ** 0.5))
+    W = Param("W", TensorType((n, n)))
+    x = Var("x", TensorType((1, n)))
+    root = Op.make("matmul", x, W)
+    wt = torch.randn(n, n)  # CPU — _align_to lifts it per forward
+    ir = IR(
+        root=root,
+        inputs=[x],
+        input_names={"x"},
+        params={"W": W},
+    )
+    pv = {"W": wt}
+    ref = ir_to_torch_module(ir, param_values=pv)
+    opt = ir_to_torch_module(ir, param_values=pv)
+    # the caller-side original is dead weight now — the modules hold
+    # their own clones; release it before the VRAM measurement
+    del wt, pv
+    xv = torch.randn(1, n, device="cuda")
+
+    torch.cuda.empty_cache()
+    torch.cuda.reset_peak_memory_stats()
+    free_b, _ = torch.cuda.mem_get_info()
+    vr = verify_module(ref, opt, xv, rtol=1e-4)
+    assert vr.passed
+    peak = torch.cuda.max_memory_allocated()
+    # one weight set + activations (~0.3x free); two resident sets
+    # would peak at ~0.56x free
+    assert peak < int(free_b * 0.48), (
+        f"verify peak {peak} vs free {free_b} — weight sets co-resided"
+    )
+    # the delivered module is untouched: a later forward still runs
+    # on the compute device (ref stays parked — re-forwarding it here
+    # would co-reside both weight sets again, the very condition
+    # under test)
+    with torch.no_grad():
+        out = opt(xv)
+    assert out.shape == (1, n) and out.device.type == "cuda"
