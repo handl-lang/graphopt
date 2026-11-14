@@ -30,6 +30,20 @@ The laws are defined *inside this tool* — they are NOT added to
 test of whether law-finding is worth anything: a firing table of
 zeros is a decisive answer, not a bug.
 
+Torch seam (plan 0034): this module imports **without** torch —
+the bench/model corpus builders, the synthetic-feed generator and
+the lowering/verify probe bind ``torch``/``mlopt_torch`` lazily at
+*call* time, and the entry points take injected backends:
+:func:`model_cases` accepts a ``source`` (anything with
+``to_ir(model, x)`` — the default is a lazily-bound
+``TorchSource``) and :func:`run_impact` accepts a ``sink`` (anything
+with ``supported_ops``/``verify`` — the default is a lazily-bound
+``TorchSink``).  Calling a torch-touching path without torch raises
+``ImportError`` honestly at call time; the pure machinery —
+``TermCase``, ``new_laws``, ``_probe``'s e-graph/cost core,
+``_iter_subterms``, ``_relaxed_census``, ``_saturate`` — is
+torch-free.
+
 Run::
 
     .venv/bin/python -m mlopt_discovery.impact
@@ -43,9 +57,8 @@ import json
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
-import torch
 from mlopt_core.cost import backend_cost, dag_cost, executor_cost_for
 from mlopt_core.egraph import (
     EGraph,
@@ -62,10 +75,12 @@ from mlopt_core.laws import ALL_RULES
 from mlopt_core.laws import tags as _tags
 from mlopt_core.laws.base import R
 from mlopt_orchestrator.optimize import _lower_extracted
-from mlopt_torch.adapters import TorchSink, TorchSource
 
 from mlopt_discovery import REPO_ROOT, lawdata
 from mlopt_discovery.proposal import _leaves, _spec_term
+
+if TYPE_CHECKING:
+    from mlopt_torch.adapters import TorchSink
 
 # ``bench`` is a repo-root package, not an installed distribution —
 # the lazy ``from bench.suites...`` imports below need the root on
@@ -83,8 +98,6 @@ __all__ = [
     "run_impact",
     "synthetic_cases",
 ]
-
-_DEV = torch.device("cpu")
 
 #: Saturation budget for a firing / cost-delta probe.
 _FIRING_ITERS = 4
@@ -189,6 +202,8 @@ def _bench_cases() -> tuple[list[TermCase], list[str]]:
     probe the new laws against.  A builder that raises is reported in
     the second list rather than crashing the corpus.
     """
+    import torch  # lazy: the bench builders mint fp64 feeds
+
     from bench.suites.correctness.law_bench import LAW_CASES
 
     out: list[TermCase] = []
@@ -196,7 +211,7 @@ def _bench_cases() -> tuple[list[TermCase], list[str]]:
     for name, build in sorted(LAW_CASES.items()):
         try:
             torch.manual_seed(1000)
-            term, env, inputs = build(_BENCH_SIZE, _DEV)
+            term, env, inputs = build(_BENCH_SIZE, torch.device("cpu"))
         except Exception as e:  # honest per-case failure
             errors.append(f"{name}: {type(e).__name__}: {e}")
             continue
@@ -216,26 +231,28 @@ def _bench_cases() -> tuple[list[TermCase], list[str]]:
     return out, errors
 
 
-class _LSTMSeq(torch.nn.Module):
-    """``nn.LSTM`` reading the triple's output element.
-
-    The ``lstm.input`` corpus-expansion-r2 gap, now bound.
-    """
-
-    def __init__(self, in_f: int, hid: int) -> None:
-        super().__init__()
-        self.lstm = torch.nn.LSTM(in_f, hid)
-
-    def forward(self, x):
-        y, _ = self.lstm(x)
-        return y
-
-
 def _model_cases() -> list[tuple[str, Any, Any]]:
     """Return ``(name, model, example_input)`` for the real graphs."""
+    import torch  # lazy: the corpus is torch modules + fp64 feeds
     from mlopt_torch import models as M
     from mlopt_torch.models import hybrid as H
     from mlopt_torch.models import ssm as S
+
+    class _LSTMSeq(torch.nn.Module):
+        """``nn.LSTM`` reading the triple's output element.
+
+        The ``lstm.input`` corpus-expansion-r2 gap, now bound.
+        Defined here so the class's ``torch.nn.Module`` base never
+        binds at module import.
+        """
+
+        def __init__(self, in_f: int, hid: int) -> None:
+            super().__init__()
+            self.lstm = torch.nn.LSTM(in_f, hid)
+
+        def forward(self, x):
+            y, _ = self.lstm(x)
+            return y
 
     d = 16
     t = torch.randn(4, d, dtype=torch.float64)
@@ -414,13 +431,31 @@ def _model_cases() -> list[tuple[str, Any, Any]]:
     ]
 
 
-def model_cases() -> tuple[list[TermCase], list[str]]:
+def _torch_source() -> Any:
+    """Return the torch model exporter (bound lazily)."""
+    from mlopt_torch.adapters import TorchSource
+
+    return TorchSource()
+
+
+def _torch_sink() -> Any:
+    """Return the torch lowering/verify sink (bound lazily)."""
+    from mlopt_torch.adapters import TorchSink
+
+    return TorchSink()
+
+
+def model_cases(source: Any = None) -> tuple[list[TermCase], list[str]]:
     """Export every real model to IR; return ``(cases, export_errors)``.
 
     A model that fails to export is reported honestly in the second
-    list rather than crashing the run.
+    list rather than crashing the run.  *source* is the injected
+    exporter — anything with ``to_ir(model, x)``; the default is a
+    lazily-bound :class:`mlopt_torch.adapters.TorchSource`, so a
+    torch-free domain can drive the same corpus machinery with its
+    own source.
     """
-    src = TorchSource()
+    src = source if source is not None else _torch_source()
     cases: list[TermCase] = []
     errors: list[str] = []
     for name, model, x in _model_cases():
@@ -458,6 +493,8 @@ def synthetic_cases() -> list[TermCase]:
 
 def _synthetic_case(row: tuple) -> TermCase:
     """Resolve one ``SYNTHETIC_CASES`` row to a :class:`TermCase`."""
+    import torch  # lazy: feeds are fp64 tensors
+
     name, spec, var_names = row
     term = _spec_term(spec)
     by_name = {leaf.name: leaf for leaf in _leaves(term)}
@@ -827,10 +864,15 @@ def _reach_table(rows: list[dict]) -> str:
 # ---------------------------------------------------------------------------
 
 
-def run_impact() -> dict:
-    """Run all three measurements; return the machine-readable result."""
+def run_impact(*, sink: Any = None) -> dict:
+    """Run all three measurements; return the machine-readable result.
+
+    *sink* is the injected lowering/verify backend — anything with
+    ``supported_ops`` and ``verify(before, after, feed, rtol=...)``;
+    the default is a lazily-bound ``TorchSink``.
+    """
     laws = new_laws()
-    sink = TorchSink()
+    sink = sink if sink is not None else _torch_sink()
     cost_fn = _cost_fn(sink)
 
     bench, bench_err = _bench_cases()

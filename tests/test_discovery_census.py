@@ -216,3 +216,35 @@ def test_main_prints_report_and_dumps_json(tmp_path, capsys):
     assert "law_shape_census" in text
     assert "op-tuple census" in text
     assert "sharing census" in text
+
+
+# ---------------------------------------------------------------------------
+#  Torch seam — import-freedom (plan 0034)
+# ---------------------------------------------------------------------------
+
+
+def test_impact_census_modules_import_without_torch():
+    """``impact``/``census`` import torch-free.
+
+    Runs in a subprocess: ``sys.modules[name] = None`` makes the import
+    system raise ``ImportError`` for ``torch`` and ``mlopt_torch``, so a
+    clean run proves neither module binds them at import time (torch
+    binds lazily inside the corpus builders / probe paths; the census
+    functions take caller-supplied ``CorpusTerm`` lists).
+    """
+    import subprocess
+    import sys
+
+    code = (
+        "import sys\n"
+        "sys.modules['torch'] = None\n"
+        "sys.modules['mlopt_torch'] = None\n"
+        "import mlopt_discovery.impact\n"
+        "import mlopt_discovery.census\n"
+    )
+    subprocess.run(
+        [sys.executable, "-c", code],
+        check=True,
+        capture_output=True,
+        text=True,
+    )

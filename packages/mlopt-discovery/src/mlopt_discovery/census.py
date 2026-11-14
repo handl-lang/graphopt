@@ -25,6 +25,14 @@ The census is the deliverable that outlives the experiment: it is
 what a shape-aware proposer must read, and it is the honest statement
 of what the corpus contains.
 
+Torch seam (plan 0034): this module imports **without** torch — the
+census machinery (:func:`shape_key`, the three census passes, the
+renderers) is pure ``mlopt_core.ir`` term walking.  The corpus
+builders it reuses live in :mod:`mlopt_discovery.impact`, which binds
+torch lazily too, so :func:`corpus` / :func:`run_census` / ``main``
+raise ``ImportError`` honestly at call time on a torch-free domain;
+the census functions themselves accept any ``CorpusTerm`` list.
+
 Run::
 
     .venv/bin/python -m mlopt_discovery.census
