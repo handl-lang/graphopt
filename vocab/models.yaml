@@ -13232,6 +13232,28 @@
       "sites": 8,
       "detail": "",
       "hnl": "tensor.add(tensor.mul(v223, tensor.add(tensor.mul(v345, v346), v268)), tensor.mul(v215, v216))"
+    },
+    "denotation:synop_6ed0a07c7d": {
+      "op": "synop_6ed0a07c7d",
+      "status": "python-shipped",
+      "rtol": 1e-09,
+      "atol": 1e-12,
+      "max_err": Infinity,
+      "max_rel": Infinity,
+      "sites": 0,
+      "detail": "unbound attr metavars: ['a123', 'a320'] \u2014 no recorded attr binding for this model's domain",
+      "hnl": "tensor.add(tensor.mul(v223, tensor.add(tensor.mul(v345, tensor.add(v375, tensor.mul(v404, v405))), tensor.mul(v358, tensor.unsqueeze(v1132, a123)))), tensor.mul(v215, tensor.unsqueeze(tensor.select(tensor.linear(v1256, v1257, v1258), 1, a320), a123)))"
+    },
+    "handler:synop_6ed0a07c7d": {
+      "op": "synop_6ed0a07c7d",
+      "status": "python-shipped",
+      "rtol": 1e-09,
+      "atol": 1e-12,
+      "max_err": Infinity,
+      "max_rel": Infinity,
+      "sites": 0,
+      "detail": "unexpressible: handler family 'gather' has no tensor.* model",
+      "hnl": null
     }
   }
 }
