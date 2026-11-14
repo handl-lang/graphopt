@@ -792,6 +792,99 @@ def test_attn_sdpa_fp64_exact():
     assert torch.allclose(out, ref, atol=1e-10, rtol=1e-10)
 
 
+def test_attn_sdpa_mul_drop_fp64_exact():
+    """The mask-free mul-drop row — the whisper-encoder spelling that
+    fired on turbo — is bitwise-exact at fp64 too: the fold is
+    semantically exact, so any delivered-vs-reference gap at bf16 is
+    kernel precision, not a rewrite bug (see
+    ``docs/reports/whisper_encoder_bench.md``)."""
+    term = _attn_term(scale="mul", mask=False, drop=True)
+    eg, root = _run(term, rules=ATTN_SDPA_LAWS)
+    t = _extract_op(eg, root, lambda n_: n_.op == "sdpa")
+    assert t is not None
+    q, k, v = (
+        _v("q", 2, 4, 3, 8),
+        _v("k", 2, 4, 5, 8),
+        _v("v", 2, 4, 5, 8),
+    )
+    mod = _module(t, [q, k, v])
+    tq = torch.randn(2, 4, 3, 8, dtype=torch.float64)
+    tk = torch.randn(2, 4, 5, 8, dtype=torch.float64)
+    tv = torch.randn(2, 4, 5, 8, dtype=torch.float64)
+    with torch.no_grad():
+        out = mod(tq, tk, tv)
+        ref = (
+            torch.softmax(
+                torch.matmul(tq, tk.transpose(2, 3)) * 0.5, dim=-1
+            )
+            @ tv
+        )
+    assert torch.allclose(out, ref, atol=1e-10, rtol=1e-10)
+
+
+def test_attn_sdpa_bf16_numeric_boundary():
+    """bf16 pin for the whisper-encoder divergence.
+
+    ``F.scaled_dot_product_attention`` keeps the softmax and the
+    probs@V accumulation in fp32 internally (every backend, MATH
+    included), while the spelled IR path rounds the attention
+    probabilities to bf16 before the V matmul.  The fold is exact in
+    exact arithmetic (fp64 test above) — the bf16 gap is per-layer
+    kernel precision that compounds with depth (32-layer turbo
+    encoder: rel 0.42, caught by ``lower(verify=True)``'s dtype floor
+    when it runs).  This pins the boundary honestly: the single-layer
+    gap stays small (bounded kernel noise — an O(1) semantic bug like
+    a wrong ``scale`` would not), and ``verify_equiv`` applies the
+    sub-fp32 ``8*eps`` rtol floor that makes the gate dtype-aware.
+    """
+    from mlopt_torch.report import verify_equiv
+
+    # whisper-turbo-ish self-attention spelling: pre-scaled q, the
+    # post-matmul *1.0 Const, eval-dropout wrapper, no mask.
+    q = _v("q", 2, 4, 256, 32)
+    k = _v("k", 2, 4, 256, 32)
+    v = _v("v", 2, 4, 256, 32)
+    scores = Op.make(
+        "mul",
+        Op.make("matmul", q, Op.make("transpose", k, dim0=2, dim1=3)),
+        Const(1.0),
+    )
+    sm = Op.make(
+        "dropout",
+        Op.make("softmax", scores, dim=-1),
+        p=0.0,
+        train=False,
+    )
+    term = Op.make("matmul", sm, v)
+    eg, root = _run(term, rules=ATTN_SDPA_LAWS)
+    t = _extract_op(eg, root, lambda n_: n_.op == "sdpa")
+    assert t is not None
+    mod = _module(t, [q, k, v])
+    torch.manual_seed(0)
+    tq = torch.randn(2, 4, 256, 32, dtype=torch.bfloat16)
+    tk = torch.randn(2, 4, 256, 32, dtype=torch.bfloat16)
+    tv = torch.randn(2, 4, 256, 32, dtype=torch.bfloat16)
+    with torch.no_grad():
+        out = mod(tq, tk, tv)
+        ref = (
+            torch.softmax(
+                torch.matmul(tq, tk.transpose(2, 3)) * 1.0, dim=-1
+            )
+            @ tv
+        )
+    d = (out.float() - ref.float()).abs()
+    rel = (d.max() / ref.float().abs().max().clamp_min(1e-30)).item()
+    # Bounded kernel noise, not a semantic bug: an O(1) error (e.g. a
+    # scale mishap) fails this; the observed bf16 single-layer gap is
+    # ~1e-2 and compounds over depth — verify is the depth arbiter.
+    assert rel < 0.25
+    rep = verify_equiv(ref, out, rtol=1e-4)
+    # The sub-fp32 floor engages: bf16 cannot resolve 1e-4, so the
+    # effective rtol is 8*eps(bf16) — the value the turbo encoder's
+    # 0.42 rel blew past.
+    assert rep.rtol == max(1e-4, 8.0 * torch.finfo(torch.bfloat16).eps)
+
+
 def test_attn_sdpa_empty_cache_concat_fires():
     """The (0,)-placeholder KV concat does not veto the fold."""
     empty = _p("c_empty", 0)  # torch.tensor([]) lazy-init leaf
