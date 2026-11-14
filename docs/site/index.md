@@ -13,6 +13,8 @@ self-modifying game under a certifying referee.
   search → certificate.
 - [Evaluation: the fourth dimension](./explanation/evaluation) —
   describe, rank, measure — never decide equivalence.
+- [What you can optimize](./explanation/what-you-can-optimize) — the
+  lift → verify → deliver pipeline and its measured scope.
 
 ## Cross-cutting concepts
 

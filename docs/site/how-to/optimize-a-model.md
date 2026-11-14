@@ -93,6 +93,9 @@ timing, is the claim.
 
 ## See also
 
+- [What you can optimize](../explanation/what-you-can-optimize) — the
+  pipeline's measured scope: which model classes pay and where the
+  honest boundaries are.
 - [The frozen API reference](../reference/frozen-api) — the contract surface these calls sit on.
 - [`docs/api.md`](https://github.com/handl-lang/graphopt/blob/main/docs/api.md) — the upstream working walkthrough.
 - [The three costs](../explanation/three-costs) — how the engine prices a form.
