@@ -1,5 +1,13 @@
 # Catopt: discovery, verified transformation, and learned search over computation graphs
 
+> **Status: historical working draft.**  `paper/paper.qmd` is the
+> current paper — it carries the scan-tier delivery results (seq/seqm/
+> seqs/seqt), the 73-workload zoo, and corrected bank counts.  Figures
+> below that cite the 53 held-out modules / 68-workload zoo / 242-rule
+> bank are **dated measurements of those runs**, kept for provenance;
+> they are not current registry sizes.  Read `paper.qmd` for current
+> numbers.
+
 *Draft.  Every number in this paper is sourced to the retro, baseline or
 artifact that produced it; where a claim is a rediscovery rather than a
 discovery it is labelled as such.  Naming: "Catopt" is the
