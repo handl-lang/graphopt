@@ -1,0 +1,182 @@
+{
+  "schema": 1,
+  "arm": "prim",
+  "args": {
+    "cap": 16,
+    "budget": 512,
+    "site_cap": 4,
+    "beam": 32,
+    "max_expand": 2000,
+    "min_ops": 2,
+    "max_ops": 6,
+    "depth": 3,
+    "k": 2,
+    "models": [
+      "t5:decoder",
+      "whisper:decoder"
+    ]
+  },
+  "eval_guard": {
+    "calls": 576,
+    "env_skipped": 0,
+    "purges": 288
+  },
+  "wall_s": 1331.9,
+  "prim": {
+    "k": 2,
+    "prefix": "synop",
+    "min_ops": 2,
+    "max_ops": 6,
+    "cap": 16,
+    "beam": 32,
+    "max_expand": 2000,
+    "mined_total": 503,
+    "mined": 503,
+    "kbound": 145,
+    "denoted": 1,
+    "unevaluable": 0,
+    "gate_failed": 134,
+    "no_domain": 0,
+    "minted": 0,
+    "refused": 10,
+    "pool": 10,
+    "scan_capped": false,
+    "bootstrap": false,
+    "prim_depth": 3,
+    "over_depth": 0,
+    "family_mint": false,
+    "families_minted": 0,
+    "families_refused": 0,
+    "synop_folds": 0,
+    "synop_fires": 0,
+    "synop_passes": 0,
+    "vocab": true,
+    "depth2": 0,
+    "tier_capped": 0
+  },
+  "prim_depth_counts": {
+    "1": 10
+  },
+  "candidates": [
+    {
+      "i": 0,
+      "synop": "synop_4a9fecddb2",
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "sites": 4,
+      "equal_sites": 3,
+      "handler": "refused",
+      "depth": 1
+    },
+    {
+      "i": 1,
+      "synop": "synop_a1daea17c4",
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "sites": 4,
+      "equal_sites": 4,
+      "handler": "refused",
+      "depth": 1
+    },
+    {
+      "i": 2,
+      "synop": "synop_f0576b5150",
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "sites": 4,
+      "equal_sites": 2,
+      "handler": "refused",
+      "depth": 1
+    },
+    {
+      "i": 3,
+      "synop": "synop_a6ea5afbb9",
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "sites": 4,
+      "equal_sites": 4,
+      "handler": "refused",
+      "depth": 1
+    },
+    {
+      "i": 4,
+      "synop": "synop_89c75f30a1",
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "sites": 4,
+      "equal_sites": 3,
+      "handler": "refused",
+      "depth": 1
+    },
+    {
+      "i": 5,
+      "synop": "synop_0b304215b3",
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "sites": 4,
+      "equal_sites": 4,
+      "handler": "refused",
+      "depth": 1
+    },
+    {
+      "i": 6,
+      "synop": "synop_6c9fe85efa",
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "sites": 4,
+      "equal_sites": 4,
+      "handler": "refused",
+      "depth": 1
+    },
+    {
+      "i": 7,
+      "synop": "synop_eb15202f10",
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "sites": 4,
+      "equal_sites": 4,
+      "handler": "refused",
+      "depth": 1
+    },
+    {
+      "i": 8,
+      "synop": "synop_2f6d74c1a0",
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "sites": 4,
+      "equal_sites": 4,
+      "handler": "refused",
+      "depth": 1
+    },
+    {
+      "i": 9,
+      "synop": "synop_b11e132a5d",
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "sites": 4,
+      "equal_sites": 4,
+      "handler": "refused",
+      "depth": 1
+    }
+  ]
+}

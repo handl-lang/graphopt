@@ -195,6 +195,114 @@ def _match(
 from mlopt_core.egraph.terms import _term_eq  # noqa: E402
 from mlopt_core.ir import Op  # noqa: E402
 
+# ---------------------------------------------------------------------------
+#  DAG-safety patches (r2) — real-model terms are DAG-shared: several
+#  package walkers recurse the *tree* expansion (exponential) or the
+#  torch host allocator retains ~200 MB/eval.  The patches below are
+#  installed by the driver at runtime — package sources are untouched —
+#  and are either result-identical (memoization) or the same bounded-
+#  match divergence this driver already uses:
+#
+#  * ``proposal._leaves`` — iterative, ``id()``-memoized.  Returns the
+#    identical leaf set; the shipped recursion re-walks shared subtrees
+#    once per parent (measured: the prim arm's emit gate calls this via
+#    ``oracle._env_for`` on instantiated real terms).
+#  * ``meta_eval._eval_term`` — ``id()``-memoized torch eval.  Same
+#    values: bindings are pure functions of their args, and shared Op
+#    objects denote the same value.  Without it a bound-site eval
+#    recomputes shared subgraphs exponentially.
+#  * ``prim_mint._term_match`` — this driver's bounded ``_match`` (the
+#    ``repr(term)`` blowup needs a concrete pattern leaf; mined prim
+#    shapes have metavar leaves only, so the divergence is inert here —
+#    it is the same guard the candidate arms already run under).
+# ---------------------------------------------------------------------------
+
+
+def _install_dag_patches() -> dict:
+    """Install the r2 DAG-safety patches; return a description row."""
+    import mlopt_discovery.prim_mint as pm
+    import mlopt_discovery.proposal as lp
+    import mlopt_torch.meta_eval as me
+    from mlopt_core.ir import Const, Param, Var
+
+    def _leaves(term: Any, out: set | None = None) -> set:
+        out = set() if out is None else out
+        stack = [term]
+        seen: set[int] = set()
+        while stack:
+            t = stack.pop()
+            if id(t) in seen:
+                continue
+            seen.add(id(t))
+            if isinstance(t, Op):
+                stack.extend(t.args)
+            elif isinstance(t, (Var, Param)):
+                out.add(t)
+        return out
+
+    def _eval_term(term: Any, env: dict) -> Any:
+        from mlopt_torch.torch_bridge import (
+            _IR_TO_TORCH,
+            _const_like,
+            _mint_const,
+        )
+
+        memo: dict[int, Any] = {}
+
+        def go(t: Any) -> Any:
+            if isinstance(t, Const):
+                return _mint_const(
+                    t.value, _const_like(None, env, None)
+                )
+            if isinstance(t, (Var, Param)):
+                return env[t]
+            if isinstance(t, Op):
+                k = id(t)
+                if k in memo:
+                    return memo[k]
+                fn = _IR_TO_TORCH.get(t.op)
+                if fn is None:
+                    raise KeyError(t.op)
+                v = fn(*[go(a) for a in t.args], **dict(t.attrs))
+                memo[k] = v
+                return v
+            raise TypeError(t)
+
+        return go(term)
+
+    lp._leaves = _leaves
+    me._eval_term = _eval_term
+    pm._term_match = _match
+    return {
+        "proposal._leaves": "id-memoized iterative (same leaf set)",
+        "meta_eval._eval_term": "id-memoized (same values)",
+        "prim_mint._term_match": "bounded _match (driver divergence)",
+    }
+
+
+def _eval_env_bytes(*terms: Any) -> int:
+    """Rough fp64 env footprint of *terms*' leaves, in bytes.
+
+    ``oracle._env_for`` allocates one fp64 randn per ``Var``/``Param``
+    leaf sized by ``leaf.typ.shape`` — this sums the same numel
+    *without* allocating, so the prim emit gate can skip instances
+    whose env alone would not fit (recorded, never silent).
+    """
+    import mlopt_discovery.proposal as lp
+
+    total = 0
+    for t in terms:
+        for leaf in lp._leaves(t):
+            typ = getattr(leaf, "typ", None)
+            shape = tuple(typ.shape) if typ is not None else ()
+            n = 1
+            for d in shape:
+                if not isinstance(d, int):
+                    return -1  # undecidable — let the oracle decide
+                n *= d
+            total += n
+    return total * 8
+
 
 class _Domain:
     """Per-module subterm domains with expansion caps + match memo."""
@@ -815,6 +923,129 @@ def _pay_arm(
 # ---------------------------------------------------------------------------
 
 
+def _build_candidates(
+    items: list[dict], max_candidates: int
+) -> tuple[list[dict], list[tuple[str, Any]], int]:
+    """Alpha-dedup minted *items* into judgeable ``(rid, Rewrite)`` pairs.
+
+    Every candidate record carries the full ``law_to_data`` record
+    under ``"law"`` plus a stable ``"key"`` (``repr`` of the
+    ``alpha_key`` pair) so ``--resume`` can rebuild rules and match
+    verdicts without re-mining.
+    """
+    from mlopt_core.laws.serialize import alpha_key, law_to_data
+
+    by_key: dict = {}
+    order: list = []
+    for it in items:
+        p = it["p"]
+        key = alpha_key(p.lhs, p.rhs)
+        if key in by_key:
+            cur = by_key[key]
+            cur["mods"] |= it["mods"]
+            cur["sources"] = list(
+                dict.fromkeys(cur["sources"] + it["sources"])
+            )
+            if cur["prim"] is None:
+                cur["prim"] = it["prim"]
+            continue
+        by_key[key] = it
+        order.append(key)
+
+    candidates: list[dict] = []
+    rules_to_judge: list[tuple[str, Any]] = []
+    for i, key in enumerate(order[:max_candidates]):
+        it = by_key[key]
+        p = it["p"]
+        rid = f"rmint:{i:03d}"
+        rule = p.as_rule()
+        object.__setattr__(rule, "name", rid)
+        ldata = law_to_data(rule)
+        rec = {
+            "id": rid,
+            "key": repr(key),
+            "orig_name": (
+                getattr(p, "name", None)
+                or getattr(p, "label", None)
+                or rule.name
+            ),
+            "family": it["family"],
+            "sources": it["sources"],
+            "mods": sorted(it["mods"]),
+            "lhs": ldata["lhs"],
+            "rhs": ldata["rhs"],
+            "law": ldata,
+        }
+        if it["prim"] is not None:
+            rec["prim"] = it["prim"]
+        candidates.append(rec)
+        rules_to_judge.append((rid, rule))
+    return candidates, rules_to_judge, len(order)
+
+
+def _resume_pool(
+    path: str,
+) -> tuple[list[dict], list, list, dict]:
+    """Rebuild the judge queue from a prior report's law records.
+
+    Candidates already carrying an ``"admit"`` verdict keep it;
+    admitted ones return as ``(rid, rule, admit_rec)`` triples so
+    classify/fire/pay still run on the rebuilt rule.  Unjudged
+    candidates whose law record cannot be faithfully rebuilt
+    (``missing_hooks`` non-empty — ``check``/``derive`` closures are
+    code, not data) are marked ``resume_skip`` honestly rather than
+    re-judged under a different rule.
+    """
+    from mlopt_core.laws.serialize import law_from_data
+
+    prior = json.loads(Path(path).read_text())
+    candidates = list(prior.get("candidates", []))
+    rules_to_judge: list = []
+    admitted: list = []
+    n_skip = 0
+    for cand in candidates:
+        rid = cand.get("id", "")
+        adm = cand.get("admit")
+        law = cand.get("law")
+        rule = None
+        if isinstance(law, dict):
+            try:
+                rule = law_from_data(law)
+            except Exception:
+                rule = None
+        faithful = rule is not None and not (law or {}).get(
+            "missing_hooks"
+        )
+        if adm is None:
+            if faithful:
+                rules_to_judge.append((rid, rule))
+            else:
+                n_skip += 1
+                cand["admit"] = {
+                    "admitted": False,
+                    "reason": (
+                        "resume: law record not faithfully "
+                        "rebuildable (missing hooks)"
+                    ),
+                    "skipped": "resume",
+                    "stages": [],
+                    "measured": {},
+                    "wall_s": 0.0,
+                    "resume_skip": True,
+                }
+        elif adm.get("admitted") and faithful:
+            admitted.append((rid, rule, adm))
+    stats = {
+        "resumed_from": path,
+        "mint": prior.get("mint", {}),
+        "n_minted_total": prior.get("n_minted_total", len(candidates)),
+        "resume_unjudged_skipped": n_skip,
+        "resume_prior_admitted": len(admitted),
+        "resume_to_judge": len(rules_to_judge),
+    }
+    return candidates, rules_to_judge, admitted, stats
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument(
@@ -897,7 +1128,75 @@ def main(argv: list[str] | None = None) -> int:
         help="enable the refused-spec meta-loop (family_synth) — "
         "off for r1 to bound the mint",
     )
+    ap.add_argument(
+        "--prim-models",
+        default="",
+        help="comma list restricting the prim arm's roots "
+        "(e.g. 'whisper:decoder,t5:decoder'); empty = all modules",
+    )
+    ap.add_argument(
+        "--prim-site-cap",
+        type=int,
+        default=16,
+        help="bound-site cap handed to _prim_pool",
+    )
+    ap.add_argument(
+        "--prim-budget",
+        type=int,
+        default=2048,
+        help="handler-synthesis budget handed to _prim_pool",
+    )
+    ap.add_argument(
+        "--prim-beam",
+        type=int,
+        default=32,
+        help="mine_candidates beam handed to _prim_pool",
+    )
+    ap.add_argument(
+        "--prim-max-expand",
+        type=int,
+        default=2000,
+        help="mine_candidates pop cap handed to _prim_pool",
+    )
+    ap.add_argument("--prim-min-ops", type=int, default=2)
+    ap.add_argument("--prim-max-ops", type=int, default=6)
+    ap.add_argument(
+        "--prim-depth",
+        type=int,
+        default=3,
+        help="composition-depth cap handed to _prim_pool",
+    )
+    ap.add_argument(
+        "--prim-eval-env-mb",
+        type=float,
+        default=1536.0,
+        help="skip a prim emit-gate eval whose leaf env would exceed "
+        "this many MiB fp64 (recorded as eval-skipped, outcome "
+        "'env-err' — an honest under-approximation, not a silent drop)",
+    )
+    ap.add_argument(
+        "--eval-purge",
+        type=int,
+        default=8,
+        help="purge the torch host cache + gc every N eval_instance "
+        "calls run-wide (the CPU allocator retains ~200MB/eval on "
+        "real-model instances — measured r2 probe)",
+    )
+    ap.add_argument(
+        "--prim-eval-purge",
+        type=int,
+        default=0,
+        help="DEPRECATED alias kept for CLI compat — the purge is "
+        "run-wide via --eval-purge",
+    )
     ap.add_argument("--out", default=str(DEFAULT_OUT))
+    ap.add_argument(
+        "--resume",
+        default="",
+        help="prior report JSON — skip minting entirely, rebuild "
+        "judgeable rules from the stored law records and continue "
+        "at the admit stage (verdicts already in the file are kept)",
+    )
     ap.add_argument("--dry", action="store_true")
     args = ap.parse_args(argv)
     if args.dry:
@@ -921,6 +1220,18 @@ def main(argv: list[str] | None = None) -> int:
         "pay": [],
         "errors": [],
     }
+
+    # r2: the host runs earlyoom — SIGTERM kills the biggest process.
+    # Flush whatever evidence exists instead of dying silently.
+    def _sigterm(_signum, _frame):
+        try:
+            report["wall_s"] = round(time.time() - t_start, 1)
+            report["killed"] = "SIGTERM (earlyoom)"
+            _write(report, args.out)
+        finally:
+            raise SystemExit(143)
+
+    signal.signal(signal.SIGTERM, _sigterm)
 
     # -- export -------------------------------------------------------
     which = [s.strip() for s in args.models.split(",") if s.strip()]
@@ -964,18 +1275,73 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     # -- domains ------------------------------------------------------
-    domain = _Domain(roots, cap=args.real_cap)
-    report["domain"] = {
-        "cap": args.real_cap,
-        "subterms": {
-            n: {"kept": len(v), "skipped": domain.skipped[n]}
-            for n, v in domain.subs.items()
-        },
+    # _Domain retains every capped subterm of every module — GBs on
+    # real-model DAGs — and only the mint stages read it, so --resume
+    # (which skips minting) skips the build entirely.
+    domain = (
+        _Domain(roots, cap=args.real_cap) if not args.resume else None
+    )
+    report["domain"] = (
+        {
+            "cap": args.real_cap,
+            "subterms": {
+                n: {"kept": len(v), "skipped": domain.skipped[n]}
+                for n, v in domain.subs.items()
+            },
+        }
+        if domain is not None
+        else {"skipped": "resume — mint not re-run"}
+    )
+
+    # r2: DAG-safety patches — result-identical memoization plus the
+    # bounded matcher inside prim_mint (see _install_dag_patches).
+    report["dag_patches"] = _install_dag_patches()
+
+    # r2: global eval guard — the memoized ``_eval_term`` makes bound-
+    # site evals *complete* (r1's unpatched evals mostly died fast on
+    # missing bindings), and every completed eval leaves its
+    # intermediates in the torch host cache: ~200 MB/eval measured.
+    # Count calls and purge the host cache + gc every --eval-purge
+    # calls for the WHOLE run (semantics-free).  ``env_cap`` is zero
+    # except inside the prim arm, where --prim-eval-env-mb additionally
+    # skips instances whose leaf env alone would exceed the cap
+    # (recorded ``env-err`` — honest under-approximation).
+    import mlopt_discovery.oracle as _oracle
+
+    eval_guard: dict = {
+        "calls": 0,
+        "env_skipped": 0,
+        "purges": 0,
+        "env_cap": 0,
     }
+    _orig_eval_instance = _oracle.eval_instance
+    _eval_purge_n = args.eval_purge
+
+    def _guarded_eval_instance(a: Any, b: Any):
+        eval_guard["calls"] += 1
+        n = eval_guard["calls"]
+        if _eval_purge_n > 0 and n % _eval_purge_n == 0:
+            import gc
+
+            import torch as _t
+
+            _t._C._host_emptyCache()
+            gc.collect()
+            eval_guard["purges"] += 1
+        cap = eval_guard["env_cap"]
+        if cap > 0:
+            nb = _eval_env_bytes(a, b)
+            if nb > cap:
+                eval_guard["env_skipped"] += 1
+                return ("env-err", f"prim eval env {nb}B > cap {cap}B")
+        return _orig_eval_instance(a, b)
+
+    _oracle.eval_instance = _guarded_eval_instance
+    report["eval_guard"] = eval_guard
 
     # -- mint: per-module ----------------------------------------------
     per_mod: list = []
-    for name, root in roots.items():
+    for name, root in roots.items() if not args.resume else ():
         t0 = time.time()
         try:
             with _alarm(args.family_wall * 8 + 60):
@@ -1003,7 +1369,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # -- mint: cross-module --------------------------------------------
     cross_kept: list = []
-    if not args.no_cross and len(roots) >= 2:
+    if not args.resume and not args.no_cross and len(roots) >= 2:
         t0 = time.time()
         try:
             with _alarm(args.xmodule_wall):
@@ -1029,6 +1395,8 @@ def main(argv: list[str] | None = None) -> int:
                 "error": f"{type(e).__name__}: {e}"
             }
             report["errors"].append(f"xmodule: {e!r}")
+        # checkpoint — cross-mint evidence survives a later kill
+        _write(report, args.out)
 
     # -- mint: primitives (zoo-prim arm) --------------------------------
     # ``overnight._prim_pool`` mines recurring manual shapes no bank
@@ -1039,29 +1407,55 @@ def main(argv: list[str] | None = None) -> int:
     # concrete pattern leaf — mined shapes have none), and the whole
     # call sits under the wall alarm.
     prim_kept: list = []  # (cand, mods:set, prim_meta:dict|None)
-    if args.prim and len(roots) >= 2:
+    prim_roots = roots
+    if not args.resume and args.prim and len(roots) >= 2:
         t0 = time.time()
         try:
             import bench.drivers.overnight as ov
 
-            with _alarm(args.prim_wall):
-                pcands, pmeta, pstats = ov._prim_pool(
-                    roots,
-                    args.xbind,
-                    cap=args.prim_cap,
-                    budget=2048,
-                    site_cap=16,
-                    min_ops=2,
-                    max_ops=6,
-                    beam=32,
-                    max_expand=2000,
-                    bootstrap=False,
-                    family_mint=args.prim_family_mint,
-                    depth=3,
-                    vocab=True,
-                    vocab_dir=None,
-                    emit_vocabulary=False,
-                )
+            # r2: scope the prim arm's roots (--prim-models) and raise
+            # the eval env cap for its emit gate only — the run-wide
+            # eval guard (installed above) counts calls and purges the
+            # torch host cache; ``env_cap`` additionally skips prim
+            # instances whose leaf env alone would exceed
+            # --prim-eval-env-mb (recorded ``env_skipped`` in
+            # ``report["eval_guard"]`` / outcome ``env-err`` — the gate
+            # refuses honestly).
+            if args.prim_models.strip():
+                want = {
+                    s.strip()
+                    for s in args.prim_models.split(",")
+                    if s.strip()
+                }
+                prim_roots = {
+                    n: r for n, r in roots.items() if n in want
+                }
+            eval_guard["env_cap"] = int(
+                args.prim_eval_env_mb * (1 << 20)
+            )
+            try:
+                with _alarm(args.prim_wall):
+                    pcands, pmeta, pstats = ov._prim_pool(
+                        prim_roots,
+                        args.xbind,
+                        cap=args.prim_cap,
+                        budget=args.prim_budget,
+                        site_cap=args.prim_site_cap,
+                        min_ops=args.prim_min_ops,
+                        max_ops=args.prim_max_ops,
+                        beam=args.prim_beam,
+                        max_expand=args.prim_max_expand,
+                        bootstrap=False,
+                        family_mint=args.prim_family_mint,
+                        depth=args.prim_depth,
+                        vocab=True,
+                        vocab_dir=None,
+                        emit_vocabulary=False,
+                    )
+            finally:
+                eval_guard["env_cap"] = 0
+            pstats["eval_guard"] = dict(eval_guard)
+            pstats["prim_models"] = sorted(prim_roots)
             for i, cand in enumerate(pcands):
                 prim_kept.append(
                     (cand, domain.binds(cand.lhs), pmeta.get(i))
@@ -1075,17 +1469,23 @@ def main(argv: list[str] | None = None) -> int:
                 flush=True,
             )
         except _Wall:
-            report["mint"]["_prim"] = {"error": "wall exceeded"}
+            report["mint"]["_prim"] = {
+                "error": "wall exceeded",
+                "eval_guard": dict(eval_guard),
+                "prim_models": sorted(prim_roots),
+            }
             report["errors"].append("prim: wall")
         except Exception as e:
             report["mint"]["_prim"] = {
-                "error": f"{type(e).__name__}: {e}"
+                "error": f"{type(e).__name__}: {e}",
+                "eval_guard": dict(eval_guard),
+                "prim_models": sorted(prim_roots),
             }
             report["errors"].append(f"prim: {e!r}")
+        # checkpoint — prim-mint evidence survives a later kill
+        _write(report, args.out)
 
     # -- unify + dedup --------------------------------------------------
-    from mlopt_core.laws.serialize import alpha_key, law_to_data
-
     # items: {"p": Proposal|Candidate, "mods": set, "sources": list,
     #         "family": str, "prim": meta|None}
     items: list[dict] = []
@@ -1122,52 +1522,42 @@ def main(argv: list[str] | None = None) -> int:
             }
         )
 
-    by_key: dict = {}
-    order: list = []
-    for it in items:
-        p = it["p"]
-        key = alpha_key(p.lhs, p.rhs)
-        if key in by_key:
-            cur = by_key[key]
-            cur["mods"] |= it["mods"]
-            cur["sources"] = list(
-                dict.fromkeys(cur["sources"] + it["sources"])
+    resumed_admitted: list = []
+    if args.resume:
+        (
+            candidates,
+            rules_to_judge,
+            resumed_admitted,
+            rstats,
+        ) = _resume_pool(args.resume)
+        report["mint"].update(rstats.pop("mint", {}))
+        report["n_minted_total"] = rstats.get(
+            "n_minted_total", len(candidates)
+        )
+        if rstats.get("resume_unjudged_skipped"):
+            report["errors"].append(
+                f"resume: {rstats['resume_unjudged_skipped']} "
+                "candidates not re-judged (law records missing "
+                "hooks)"
             )
-            if cur["prim"] is None:
-                cur["prim"] = it["prim"]
-            continue
-        by_key[key] = it
-        order.append(key)
-
-    candidates: list[dict] = []
-    rules_to_judge: list[tuple[str, Any]] = []
-    for i, key in enumerate(order[: args.max_candidates]):
-        it = by_key[key]
-        p = it["p"]
-        rid = f"rmint:{i:03d}"
-        rule = p.as_rule()
-        object.__setattr__(rule, "name", rid)
-        rec = {
-            "id": rid,
-            "orig_name": (
-                getattr(p, "name", None)
-                or getattr(p, "label", None)
-                or rule.name
-            ),
-            "family": it["family"],
-            "sources": it["sources"],
-            "mods": sorted(it["mods"]),
-            "lhs": law_to_data(rule)["lhs"],
-            "rhs": law_to_data(rule)["rhs"],
-        }
-        if it["prim"] is not None:
-            rec["prim"] = it["prim"]
-        candidates.append(rec)
-        rules_to_judge.append((rid, rule))
+        report["resume"] = rstats
+        print(
+            f"[resume] {rstats.get('resume_to_judge', 0)} to judge, "
+            f"{rstats.get('resume_prior_admitted', 0)} prior "
+            f"admitted, {rstats.get('resume_unjudged_skipped', 0)} "
+            "skipped",
+            flush=True,
+        )
+    else:
+        (
+            candidates,
+            rules_to_judge,
+            n_total,
+        ) = _build_candidates(items, args.max_candidates)
+        report["n_minted_total"] = n_total
     report["candidates"] = candidates
-    report["n_minted_total"] = len(order)
     print(
-        f"[mint] {len(order)} unique candidates "
+        f"[mint] {report['n_minted_total']} unique candidates "
         f"({len(candidates)} to judge)",
         flush=True,
     )
@@ -1199,7 +1589,7 @@ def main(argv: list[str] | None = None) -> int:
     import bench.drivers.overnight as ov
 
     bank = None
-    admitted_rules: list[tuple[str, Any, dict]] = []
+    admitted_rules: list[tuple[str, Any, dict]] = list(resumed_admitted)
     for rid, rule in rules_to_judge:
         t0 = time.time()
         try:
@@ -1238,6 +1628,16 @@ def main(argv: list[str] | None = None) -> int:
             f"admitted={rec['admitted']} ({rec.get('reason', '')[:60]})",
             flush=True,
         )
+        # checkpoint per candidate — a kill loses at most one verdict;
+        # purge host cache + gc between candidates (ClaimEvidence
+        # builds real/synth regions outside eval_instance's counter)
+        _write(report, args.out)
+        import gc as _gc
+
+        import torch as _tt
+
+        _tt._C._host_emptyCache()
+        _gc.collect()
         if rec["admitted"]:
             admitted_rules.append((rid, rule, rec))
     # checkpoint — admission verdicts durable before classify/fire/pay
