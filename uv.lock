@@ -2285,7 +2285,7 @@ requires-dist = [
 [[package]]
 name = "mlopt-core"
 version = "0.1.0.dev0"
-source = { git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&tag=v0.1.0#d7e9a5794a4c2d115e476ddff5d6a5c21b64c5c7" }
+source = { git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&tag=v0.1.0#be651f5e8c83fee0228ee17eb8992837b74aa5e1" }
 
 [[package]]
 name = "mlopt-cuda"
@@ -2346,7 +2346,7 @@ requires-dist = [
 [[package]]
 name = "mlopt-orchestrator"
 version = "0.1.0.dev0"
-source = { git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-orchestrator&tag=v0.1.0#d7e9a5794a4c2d115e476ddff5d6a5c21b64c5c7" }
+source = { git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-orchestrator&tag=v0.1.0#be651f5e8c83fee0228ee17eb8992837b74aa5e1" }
 dependencies = [
     { name = "mlopt-core" },
 ]
