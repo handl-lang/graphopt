@@ -398,7 +398,25 @@ def export_to_ir(
                 param = Param(name=node.name, typ=TensorType(shape))
                 env[node.name] = param
                 params[node.name] = param
-                source_tensors[node.name] = tensor.clone()
+                # ``detach`` SHARES storage with the model's parameter
+                # (``exported.state_dict`` entries ARE the module's own
+                # ``nn.Parameter`` objects — verified: every state-dict
+                # tensor aliases model storage).  ``clone`` doubled the
+                # resident weight set for the whole search+lower
+                # window: on a 4 GB card the turbo whisper encoder
+                # pinned ~2.4 GiB (clone + still-referenced originals)
+                # and ``lower(verify=True)`` OOM'd.  Sharing keeps ONE
+                # copy — ``param_values`` holds the storage alive after
+                # the caller drops the model, which is exactly what the
+                # lowering needs.  Trade-off vs the old clone: the
+                # values are a live view — an in-place mutation of the
+                # source model's params after export is visible here
+                # (verify stays self-consistent: the reference lowering
+                # reads the same dict).  ``torch_eval`` already detaches
+                # (never clones) for the same reason; a plain detached
+                # tensor also avoids registering the user's
+                # ``nn.Parameter`` objects inside ``IRModule``.
+                source_tensors[node.name] = tensor.detach()
             else:
                 # It's a model input (user-provided tensor).  Prefer the
                 # exported node's own metadata shape — correct for
