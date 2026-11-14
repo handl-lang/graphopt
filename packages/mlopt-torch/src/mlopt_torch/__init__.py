@@ -66,6 +66,8 @@ _DELEGATED = {
     "group_by_device": "mlopt_torch.device_placement",
     "DeviceCheckedSource": "mlopt_torch.device_placement",
     "DevicePolicyRunner": "mlopt_torch.device_placement",
+    "RegionFuseConfig": "mlopt_torch.region_fuse",
+    "RegionFusionRunner": "mlopt_torch.runners",
 }
 
 

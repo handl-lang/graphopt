@@ -33,6 +33,7 @@ from mlopt_orchestrator.runners import (
 __all__ = [
     "ChainedRunner",
     "IdentityRunner",
+    "RegionFusionRunner",
     "Runner",
     "TorchCompileRunner",
     "runner_candidate",
@@ -73,3 +74,60 @@ class TorchCompileRunner:
         except Exception:
             stats["compiled"] = False
             return module
+
+
+class RegionFusionRunner:
+    """Fuse census-eligible elementwise regions into compiled kernels.
+
+    The delivery-side half of ``docs/reports/kokoro_region_fuse.md``:
+    :func:`mlopt_torch.region_fuse.fuse_module` rewrites the delivered
+    ``IRModule``'s root — each eligible single-exit elementwise region
+    becomes one ``fused_region`` op dispatched to a per-shape
+    ``torch.compile``-compiled unrolled body — with per-region screening on
+    real tensors and a whole-module fused-vs-unfused gate on
+    ``example_input``.  Verify is untouched: ``lower(verify=True)``
+    still compares the delivered module against a fresh UNFUSED
+    lowering of the certified IR at the caller's ``rtol`` — set
+    ``RegionFuseConfig.output_rtol`` ≤ that ``rtol`` (the measured
+    fused-vs-unfused ``max_rel`` lands in ``stats["region_fuse"]``
+    either way).
+
+    Opt-in by construction: pass ``runner=RegionFusionRunner()`` (or
+    a :class:`ChainedRunner` with it ahead of ``TorchCompileRunner``
+    for a whole-module compile on top).  Non-:class:`IRModule`
+    deliveries (carrier executors) decline honestly — the census
+    needs the term, which only the generic lowering exposes.
+    ``delivers_compiled`` is deliberately NOT set: fusion compiles
+    region bodies, not the module spine, so carrier pricing keeps
+    its uncompiled-delivery assumption.
+    """
+
+    name = "region_fuse"
+
+    def __init__(
+        self,
+        config: Any = None,
+        **overrides: Any,
+    ) -> None:
+        """Store the :class:`RegionFuseConfig` (plus field overrides)."""
+        import dataclasses
+
+        from mlopt_torch.region_fuse import RegionFuseConfig
+
+        cfg = config if config is not None else RegionFuseConfig()
+        if overrides:
+            cfg = dataclasses.replace(cfg, **overrides)
+        self.config = cfg
+
+    def apply(
+        self,
+        module: Any,
+        example_input: Any,
+        stats: dict[str, Any],
+    ) -> Any:
+        """Fuse *module* in place; record the ledger into *stats*."""
+        from mlopt_torch.region_fuse import fuse_module
+
+        rep = fuse_module(module, example_input, config=self.config)
+        stats["region_fuse"] = rep
+        return module
