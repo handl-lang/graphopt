@@ -1523,8 +1523,12 @@ def test_export_arange_stays_int64():
     ir, ref, out = _export_and_run(M(), _t(2, 4, 4))
     torch.testing.assert_close(out, ref)
     rng = [o for o in _iter_ops(ir.root) if o.op == "arange"]
+    # ``device`` is recorded as its canonical string (wall-C fix) —
+    # the int-preservation claim is about the scalar BOUNDS.
     assert rng and all(
-        isinstance(v, int) for v in rng[0].attrs.values()
+        isinstance(v, int)
+        for k, v in rng[0].attrs.items()
+        if k != "device"
     )
 
 

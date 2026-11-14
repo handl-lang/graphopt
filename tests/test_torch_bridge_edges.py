@@ -1827,3 +1827,146 @@ def test_delivery_dtype_and_cast_helpers():
         _cast_to_delivery(c, torch.complex128).dtype == torch.complex128
     )
     assert _cast_to_delivery("not-a-tensor", torch.float32) == "not-a-tensor"
+
+
+# ---------------------------------------------------------------------------
+#  device= kwargs + complex scalar operands (Kokoro walls C / decoder-nc)
+# ---------------------------------------------------------------------------
+
+
+def _find_all(term, op_name, out=None):
+    out = [] if out is None else out
+    if isinstance(term, Op):
+        if term.op == op_name:
+            out.append(term)
+        for a in term.args:
+            _find_all(a, op_name, out)
+    return out
+
+
+def test_export_complex_scalar_operand_is_a_const():
+    """``x * 1j`` exports the complex literal as a real operand.
+
+    Regression for the Kokoro decoder-nc defect: ``phase * 1j`` inside
+    ``exp(sin(phase) * 1j)`` used to drop the ``1j`` positional
+    silently, minting a UNARY ``mul`` that died ``missing 1 required
+    positional argument: other`` at first eval (present at
+    ``max_iterations=0`` — an export defect, not a rewrite).
+    """
+
+    class M(torch.nn.Module):
+        def forward(self, x):
+            return torch.exp(torch.sin(x) * 1j)
+
+    m = M().eval()
+    ir, _ = export_to_ir(m, (torch.randn(4),))
+    muls = _find_all(ir.root, "mul")
+    assert muls, "expected the sin*1j mul in the exported term"
+    # Every mul carries BOTH operands — the complex scalar is a Const.
+    assert all(len(t.args) == 2 for t in muls)
+    complex_consts = [
+        a
+        for t in muls
+        for a in t.args
+        if isinstance(a, Const) and isinstance(a.value, complex)
+    ]
+    assert complex_consts and complex_consts[0].value == 1j
+    # And the term round-trips through serialization (Const leaf).
+    assert term_from_data(term_to_data(ir.root)) is not None
+
+    mod = ir_to_torch_module(ir, param_values={})
+    x = torch.randn(4, dtype=torch.float64)
+    with torch.no_grad():
+        out = mod(x)
+        ref = m(x)
+    assert out.dtype == ref.dtype == torch.complex128
+    assert torch.equal(out, ref)
+
+
+def test_export_device_kwarg_recorded_cpu():
+    """``device=`` kwargs land as canonical string attrs on creators
+    and ``to`` — and the CPU path is unchanged."""
+
+    class M(torch.nn.Module):
+        def forward(self, x):
+            z = torch.zeros(2, device=x.device)
+            r = torch.rand(2, device=x.device)
+            zl = torch.zeros_like(x)
+            nz = x.new_zeros(2)
+            t = x.to(torch.float64)
+            return z.sum() + r.sum() + zl.sum() + nz.sum() + t.sum()
+
+    m = M().eval()
+    ir, _ = export_to_ir(m, (torch.randn(2),))
+    for op in ("zeros", "rand"):
+        terms = _find_all(ir.root, op)
+        assert terms and all(t.attrs.get("device") == "cpu" for t in terms)
+    # *_like / new_* inherit the reference's device — no attr needed.
+    mod = ir_to_torch_module(ir, param_values={})
+    x = torch.randn(2)
+    torch.manual_seed(0)
+    out = mod(x)
+    torch.manual_seed(0)
+    ref = m(x)
+    assert torch.allclose(out, ref)
+
+
+def test_to_device_cast_positional_and_kwarg():
+    """``x.to(y)`` / ``x.to(device=...)`` record device on the ``to``
+    term; the binding applies it."""
+
+    class M(torch.nn.Module):
+        def forward(self, x, y):
+            a = x.to(y)  # positional device + dtype (to.device)
+            b = x.to(device="cpu", dtype=torch.float64)
+            return a.sum() + b.sum()
+
+    m = M().eval()
+    x = torch.randn(2, 2)
+    y = torch.randn(2, 2, dtype=torch.float64)
+    ir, _ = export_to_ir(m, (x, y))
+    tos = _find_all(ir.root, "to")
+    assert tos
+    assert any(t.attrs.get("device") == "cpu" for t in tos)
+    assert any(t.attrs.get("dtype") == "float64" for t in tos)
+    mod = ir_to_torch_module(ir, param_values={})
+    with torch.no_grad():
+        out = mod(x, y)
+        ref = m(x, y)
+    assert torch.allclose(out, ref)
+
+
+@pytest.mark.requires_cuda
+def test_device_kwargs_mint_on_input_device():
+    """Kokoro wall C end-to-end: creators/``to`` honour the recorded
+    device, so a CUDA module verifies and runs on GPU instead of
+    dying ``Expected all tensors to be on the same device``."""
+    if not torch.cuda.is_available():
+        pytest.skip("requires CUDA")
+
+    class M(torch.nn.Module):
+        def forward(self, x):
+            z = torch.zeros(x.shape[0], device=x.device)
+            r = torch.rand(x.shape[0], device=x.device)
+            zl = torch.zeros_like(x)
+            nz = x.new_zeros(x.shape[0])
+            t = x.to(torch.float64)
+            return z.sum() + r.sum() + zl.sum() + nz.sum() + t.sum()
+
+    m = M().eval().cuda()
+    xc = torch.randn(4).cuda()
+    ir, _ = export_to_ir(m, (xc,))
+    # The recorded device is the concrete cuda index, not "cpu".
+    zs = _find_all(ir.root, "zeros")
+    assert zs and all(
+        str(t.attrs.get("device", "")).startswith("cuda") for t in zs
+    )
+    mod = ir_to_torch_module(ir, param_values={})
+    torch.manual_seed(0)
+    with torch.no_grad():
+        out = mod(xc)
+    assert out.device.type == "cuda"
+    torch.manual_seed(0)
+    with torch.no_grad():
+        ref = m(xc)
+    assert torch.allclose(out.cpu(), ref.cpu())

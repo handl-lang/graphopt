@@ -369,9 +369,21 @@ def _fill_src(node: Any, dst_fx: Any, env: dict[str, Any]) -> Any:
     val = dst_fx.meta["val"]
     shape = tuple(int(d) for d in val.shape)
     dtype = str(val.dtype).split(".")[-1]
+    # The minted fill value must land where the destination lives —
+    # a CPU ``zeros`` scattered into a CUDA view dies on the device
+    # mismatch (same wall-C class as the dropped ``device=`` kwarg).
+    # ``meta["val"]`` is a FakeTensor in real exports (always carries
+    # ``.device``); the getattr keeps hand-built meta honest.
+    dev = getattr(val, "device", None)
+    device = str(dev) if dev is not None else None
     src_fx = node.args[1] if len(node.args) > 1 else None
     if _aten_name(node.target).startswith("zero_"):
-        return Op.make("zeros", shape=shape, dtype=dtype)
+        return Op.make(
+            "zeros",
+            shape=shape,
+            dtype=dtype,
+            **({"device": device} if device else {}),
+        )
     if hasattr(src_fx, "name"):
         # KeyError on an unminted source is an honest rejection.
         return Op.make("broadcast_to", env[src_fx.name], shape=shape)
@@ -380,6 +392,7 @@ def _fill_src(node: Any, dst_fx: Any, env: dict[str, Any]) -> Any:
         Const(cast("int | float", src_fx)),
         shape=shape,
         dtype=dtype,
+        **({"device": device} if device else {}),
     )
 
 
@@ -699,24 +712,38 @@ def export_to_ir(
                     )
                     continue
                 if isinstance(
-                    arg_node, (int, float)
+                    arg_node, (int, float, complex)
                 ) and not isinstance(arg_node, bool):
                     # Scalar operands of arithmetic ops are real operands
                     # (e.g. pow(x, 2)); for reductions the scalar is a
-                    # dim/arg attribute (e.g. x.mean(-1)).
+                    # dim/arg attribute (e.g. x.mean(-1)).  ``complex``
+                    # rides the same channel — ``phase * 1j`` (the
+                    # Kokoro decoder-nc ``exp(sin(phase) * 1j)`` polar
+                    # spelling) exports the literal as a positional;
+                    # dropping it minted a UNARY ``mul`` that died
+                    # ``missing 1 required positional argument``.
                     if ir_op in _SCALAR_OPERAND_OPS:
                         # Keep ints as ints — coercing to float
                         # makes e.g. ``x % 2`` promote to float at
                         # eval (aten ``*.Scalar`` is weak-typed).
+                        # Complex stays complex for the same reason:
+                        # ``float(1j)`` would raise, and the Const
+                        # must keep the imaginary part.
                         args.append(
                             Const(
-                                arg_node
-                                if isinstance(arg_node, int)
+                                cast("int | float", arg_node)
+                                if isinstance(arg_node, (int, complex))
                                 else float(arg_node)
                             )
                         )
                     else:
                         attrs[f"arg{i}"] = arg_node
+                elif isinstance(arg_node, torch.device):
+                    # ``to.device`` carries the device POSITIONALLY
+                    # (``x.to(y)`` exports ``to.device(x, device, dtype)``)
+                    # — record the canonical string like the dtype
+                    # channel; a raw torch.device is not JSON-safe.
+                    attrs["device"] = str(arg_node)
                 elif isinstance(arg_node, str):  # pragma: no cover —
                     # schema'd str positionals (pad.mode, conv padding,
                     # einsum.equation) are named upstream; an unschemed
@@ -832,6 +859,15 @@ def export_to_ir(
                     # ("float64"): torch.dtype objects do not survive
                     # term serialization.
                     attrs[k] = str(v).split(".")[-1]
+                elif isinstance(v, torch.device):
+                    # ``device=`` is semantics too — creator/``to``
+                    # placement (Kokoro wall C: ``torch.rand(...,
+                    # device=f0.device)`` minted CPU and died
+                    # ``Expected all tensors to be on the same
+                    # device``).  torch.device is not JSON-safe, so
+                    # record the canonical string ("cuda:0"); the
+                    # creator/``to`` bindings parse it back.
+                    attrs[k] = str(v)
             # Canonical attr spellings are guaranteed below by
             # ``Op.make`` (ATTR_SCHEMA): positional attrs were named at
             # emission above; any ``argN`` still present for a schema'd
@@ -985,6 +1021,27 @@ def _pack_torch(*ts: Any) -> tuple:
     return tuple(ts)
 
 
+def _to_torch(x: Any, *a: Any, **kw: Any) -> Any:
+    """``to`` — apply the recorded dtype AND device casts.
+
+    ``aten.to.dtype``/``.dtype_layout``/``.device`` all canonicalise
+    to ``to``; the boundary records ``dtype`` (short name) and
+    ``device`` (canonical string) as attrs.  Either may be absent —
+    ``x.to(y)`` exports both positionally.  With neither, the term
+    is the identity cast the no-attr spelling always was.
+    """
+    dtype = _creator_dtype(kw)
+    device = _creator_device(kw)
+    if dtype is None and device is None:
+        return x
+    cast_kw: dict[str, Any] = {}
+    if dtype is not None:
+        cast_kw["dtype"] = dtype
+    if device is not None:
+        cast_kw["device"] = device
+    return x.to(**cast_kw)
+
+
 def _scatter_torch(t: Any, idx: Any, v: Any = None, **kw: Any) -> Any:
     """``scatter`` covers both aten spellings.
 
@@ -1055,7 +1112,9 @@ def _arange_torch(*a: Any, **kw: Any) -> Any:
                 key=lambda k: int(k[3:]),
             )
         ]
-    return torch.arange(*vals, dtype=_creator_dtype(kw))
+    return torch.arange(
+        *vals, dtype=_creator_dtype(kw), device=_creator_device(kw)
+    )
 
 
 def _where_torch(c: Any, *a: Any, **kw: Any) -> Any:
@@ -1494,11 +1553,12 @@ def _opaque_encode(
 ) -> tuple:
     """Encode one FX arg as a JSON-safe spec; append operands in order.
 
-    FX nodes become ``("t", i)`` operand slots; scalars/dtypes stay
-    literals; lists/tuples/mappings recurse.  Anything else (raw
-    tensors, ``SymInt``s, devices, memory formats) refuses the lift —
-    an arg that cannot cross the IR boundary would deliver wrong
-    results silently, so it fails loudly here instead.
+    FX nodes become ``("t", i)`` operand slots; scalars/dtypes/devices
+    stay literals (``("cx", re, im)`` / ``("dev", str)`` keep the
+    JSON-safe boundary); lists/tuples/mappings recurse.  Anything else
+    (raw tensors, ``SymInt``s, memory formats) refuses the lift — an
+    arg that cannot cross the IR boundary would deliver wrong results
+    silently, so it fails loudly here instead.
     """
     name = getattr(a, "name", None)
     if isinstance(name, str):
@@ -1517,6 +1577,17 @@ def _opaque_encode(
         return ("t", len(operands) - 1)
     if a is None or isinstance(a, (bool, int, float, str)):
         return ("l", a)
+    if isinstance(a, complex):
+        # ``("cx", re, im)`` — a complex literal is not JSON-safe raw
+        # (``1j`` appears in polar spellings like ``phase * 1j`` on
+        # unbound ops too); the pair round-trips through attr_to_data.
+        return ("cx", a.real, a.imag)
+    if isinstance(a, torch.device):
+        # ``("dev", "cuda:0")`` — device placement is semantics for
+        # the unbound creators (``rand_like``/``randint``/``tensor``
+        # family); the canonical string is JSON-safe, torch.device
+        # itself is not.
+        return ("dev", str(a))
     if isinstance(a, torch.dtype):
         return ("dt", str(a).split(".")[-1])
     if isinstance(a, Mapping):
@@ -1535,8 +1606,9 @@ def _opaque_encode(
         )
     raise ValueError(
         "export_to_ir: opaque op has an unencodable argument "
-        f"{a!r} ({type(a).__name__}) — only FX nodes, scalars, dtypes "
-        "and list/tuple/mapping literals can cross the IR boundary"
+        f"{a!r} ({type(a).__name__}) — only FX nodes, scalars, complex/"
+        "device/dtype literals and list/tuple/mapping containers can "
+        "cross the IR boundary"
     )
 
 
@@ -1576,6 +1648,10 @@ def _opaque_torch(*args: Any, **kw: Any) -> Any:
             return next(operands)
         if kind == "l":
             return s[1]
+        if kind == "cx":
+            return complex(s[1], s[2])
+        if kind == "dev":
+            return torch.device(s[1])
         if kind == "lst":
             return [build(x) for x in s[1]]
         if kind == "tpl":
@@ -1903,14 +1979,12 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
     "dropout": lambda x, *a, **kw: x,
     # ``to`` — dtype/device casts.  A cast the boundary recorded must
     # apply: ``one_hot(...)``'s long→float ``to(dtype)`` feeds a matmul
-    # that raises on dtype mismatch when the cast is dropped.  With no
-    # recorded dtype the cast is still identity at the precision we
-    # verify — the exported graph runs fp64 end to end.
-    "to": lambda x, *a, **kw: (
-        x.to(dtype=_creator_dtype(kw))
-        if _creator_dtype(kw) is not None
-        else x
-    ),
+    # that raises on dtype mismatch when the cast is dropped, and a
+    # recorded ``device`` (``x.to(y)`` / ``x.to(device=...)`` exports)
+    # must move the tensor or downstream device-mismatched ops die.
+    # With neither recorded the cast is still identity at the
+    # precision we verify — the exported graph runs fp64 end to end.
+    "to": _to_torch,
     "clone": lambda x, *a, **kw: x.clone(),
     "getitem": lambda t, **kw: t[attr_of(kw, "index", default=0)],
     "unbind": lambda t, *a, **kw: torch.unbind(
@@ -2259,6 +2333,7 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
         attr_of(kw, "end", "arg1", default=1.0),
         int(attr_of(kw, "steps", "arg2", default=100)),
         dtype=_creator_dtype(kw),
+        device=_creator_device(kw),
     ),
     # Corpus-observed (intake ``Cdist``): batchwise p-norm distances.
     "cdist": lambda x1, x2, *a, **kw: torch.cdist(
@@ -2446,55 +2521,66 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
     "zeros": lambda *a, **kw: torch.zeros(
         tuple(attr_of(kw, "shape", "dim", default=a[0] if a else ())),
         dtype=_creator_dtype(kw),
+        device=_creator_device(kw),
     ),
     "ones": lambda *a, **kw: torch.ones(
         tuple(attr_of(kw, "shape", "dim", default=a[0] if a else ())),
         dtype=_creator_dtype(kw),
+        device=_creator_device(kw),
     ),
     "empty": lambda *a, **kw: torch.empty(
         tuple(attr_of(kw, "shape", "dim", default=a[0] if a else ())),
         dtype=_creator_dtype(kw),
+        device=_creator_device(kw),
     ),
     "randn": lambda *a, **kw: torch.randn(
         tuple(attr_of(kw, "shape", "dim", default=a[0] if a else ())),
         dtype=_creator_dtype(kw),
+        device=_creator_device(kw),
     ),
     "rand": lambda *a, **kw: torch.rand(
         tuple(attr_of(kw, "shape", "dim", default=a[0] if a else ())),
         dtype=_creator_dtype(kw),
+        device=_creator_device(kw),
     ),
     "full": lambda *a, **kw: torch.full(
         tuple(attr_of(kw, "shape", "dim", default=())),
         _scalar_value(a[0]) if a else kw.get("fill_value", 0),
         dtype=_creator_dtype(kw),
+        device=_creator_device(kw),
     ),
     "zeros_like": lambda t, *a, **kw: torch.zeros_like(
-        t, dtype=_creator_dtype(kw)
+        t, dtype=_creator_dtype(kw), device=_creator_device(kw)
     ),
     "ones_like": lambda t, *a, **kw: torch.ones_like(
-        t, dtype=_creator_dtype(kw)
+        t, dtype=_creator_dtype(kw), device=_creator_device(kw)
     ),
     "full_like": lambda t, *a, **kw: torch.full_like(
         t,
         _scalar_value(a[0]) if a else kw.get("fill_value", 0),
         dtype=_creator_dtype(kw),
+        device=_creator_device(kw),
     ),
     "new_zeros": lambda t, *a, **kw: t.new_zeros(
         tuple(attr_of(kw, "shape", "dim", default=a[0] if a else ())),
         dtype=_creator_dtype(kw),
+        device=_creator_device(kw),
     ),
     "new_ones": lambda t, *a, **kw: t.new_ones(
         tuple(attr_of(kw, "shape", "dim", default=a[0] if a else ())),
         dtype=_creator_dtype(kw),
+        device=_creator_device(kw),
     ),
     "new_empty": lambda t, *a, **kw: t.new_empty(
         tuple(attr_of(kw, "shape", "dim", default=a[0] if a else ())),
         dtype=_creator_dtype(kw),
+        device=_creator_device(kw),
     ),
     "new_full": lambda t, *a, **kw: t.new_full(
         tuple(attr_of(kw, "shape", "dim", default=a[0] if a else ())),
         _scalar_value(a[-1]) if a else kw.get("fill_value", 0),
         dtype=_creator_dtype(kw),
+        device=_creator_device(kw),
     ),
     "int": lambda t, *a, **kw: t.int(),
     "long": lambda t, *a, **kw: t.long(),
@@ -2508,9 +2594,14 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
     "detach": lambda t, *a, **kw: t.detach(),
     "detach_": lambda t, *a, **kw: t.detach(),
     "_assert_tensor_metadata": lambda t, *a, **kw: t,
-    "copy": lambda t, s, *a, **kw: torch.broadcast_to(
-        s, t.shape
-    ).clone(),
+    # ``copy_`` semantics: the written value lives on the DESTINATION's
+    # device at the DESTINATION's dtype (``y.copy_(x)`` casts x) — a
+    # bare broadcast_to keeps the source's placement.
+    "copy": lambda t, s, *a, **kw: (
+        torch.broadcast_to(s, t.shape)
+        .to(device=t.device, dtype=t.dtype)
+        .clone()
+    ),
     "item": lambda t, *a, **kw: t.item(),
     "numel": lambda t, *a, **kw: t.numel(),
     "masked_fill": lambda x, m, v, *a, **kw: x.masked_fill(m, v),
@@ -2858,6 +2949,23 @@ def _split_sizes(sizes: Any, kw: dict):
     if isinstance(sz, (list, tuple)) and sz:
         return list(sz)
     return int(sz if isinstance(sz, int) else 1)
+
+
+def _creator_device(kw: dict) -> Any:
+    """Resolve a ``device`` attr to a ``torch.device`` — or ``None``.
+
+    Exported terms record the device's canonical string ("cuda:0" —
+    see ``export_to_ir``); a minted term may carry the
+    ``torch.device`` object itself.  ``None`` leaves torch's default:
+    CPU for the bare creators, the reference operand's device for
+    ``*_like``/``new_*``/``to`` (torch's own inheritance).
+    """
+    d = attr_of(kw, "device")
+    if d is None:
+        return None
+    if isinstance(d, torch.device):
+        return d
+    return torch.device(str(d))
 
 
 def _creator_dtype(kw: dict) -> Any:
