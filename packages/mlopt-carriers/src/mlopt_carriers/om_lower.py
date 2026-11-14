@@ -78,6 +78,13 @@ __all__ = [
 # ---------------------------------------------------------------------------
 
 
+#: Content-keyed shape memo — see ``xcarrier._SHAPE_MEMO`` /
+#: ``trace._SHAPE_MEMO``: extracted terms are shared-DAG interned
+#: objects and an unmemoised ``typing._shape_of`` walk is exponential
+#: on them (``docs/reports/decoder_search_scaling.md``).
+_SHAPE_MEMO: dict = {}
+
+
 def _is_om_tree(term: Any, memo: dict | None = None) -> bool:
     """Return True if ``term`` is a pure om carrier tree.
 
@@ -174,7 +181,7 @@ def _slice_index(term: Any):
             n = a.get("chunks")
             if not isinstance(n, int):
                 return None
-            base_shape = _shape_of(term.args[0])
+            base_shape = _shape_of(term.args[0], _SHAPE_MEMO)
             if _concrete(base_shape):
                 D = base_shape[dim % len(base_shape)]
                 if D % n == 0:
@@ -201,7 +208,7 @@ def _sliced_gather(parts: list) -> tuple | None:
     if not parts or any(p is None for p in parts):
         return None
     base0, kind0, dim0, _, n0, part0 = parts[0]
-    bshape = _shape_of(base0)
+    bshape = _shape_of(base0, _SHAPE_MEMO)
     if not _concrete(bshape):
         return None
     rank = len(bshape)
@@ -253,7 +260,7 @@ def _qk_parts(term: Any):
     d1 = tr.attrs.get("dim1")
     if not (isinstance(d0, int) and isinstance(d1, int)):
         return None
-    ks = _shape_of(tr.args[0])
+    ks = _shape_of(tr.args[0], _SHAPE_MEMO)
     if _concrete(ks):
         r = len(ks)
         if r < 2 or {d0 % r, d1 % r} != {r - 2, r - 1}:
@@ -302,7 +309,7 @@ def _analyze_elem_group(members: list[Op]) -> dict:
         if kg is not None and kg[1] == "chunk":
             # slices along the KEY axis (dim -2 of k) ⇒ concat of the
             # k_i rebuilds K on -2 ⇒ s_i are column chunks of q @ K.T.
-            bshape = _shape_of(kg[0])
+            bshape = _shape_of(kg[0], _SHAPE_MEMO)
             if (
                 _concrete(bshape)
                 and kg[2] % len(bshape) == len(bshape) - 2
@@ -311,7 +318,7 @@ def _analyze_elem_group(members: list[Op]) -> dict:
                 grp["k_base"] = kg[0]
                 grp["k_gather"] = kg
                 return grp
-        k_shapes = [_shape_of(t) for t in k_terms]
+        k_shapes = [_shape_of(t, _SHAPE_MEMO) for t in k_terms]
         if _concrete(k_shapes[0]) and all(
             s == k_shapes[0] for s in k_shapes
         ):
@@ -390,8 +397,8 @@ def build_om_plan(root: Any) -> dict | None:
     by_key: dict[Any, dict] = {}
     for leaf in leaves:
         if leaf.op == "om_elem":
-            ss = _shape_of(leaf.args[0])
-            vs = _shape_of(leaf.args[1])
+            ss = _shape_of(leaf.args[0], _SHAPE_MEMO)
+            vs = _shape_of(leaf.args[1], _SHAPE_MEMO)
             key = (
                 ("elem", ss, vs)
                 if (_concrete(ss) and _concrete(vs))

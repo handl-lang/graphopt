@@ -203,6 +203,15 @@ class _Plan:
 #: Sentinel for "not yet resolved" in a per-scan shape memo.
 _UNSET = object()
 
+#: Content-keyed shape memo for the ``_shape_of`` fallback inside
+#: ``_shape_of_class`` — see ``xcarrier._SHAPE_MEMO`` /
+#: ``trace._SHAPE_MEMO``: ``any_term`` resolutions are shared-DAG
+#: interned objects and an unmemoised ``typing._shape_of`` walk is
+#: exponential on them (``docs/reports/decoder_search_scaling.md``).
+#: The per-class ``memo`` above dedupes across plans; this dedupes
+#: *within* each class's term walk.
+_SHAPE_MEMO: dict = {}
+
 
 def _shape_of_class(eg: EGraph, eid: int, memo: dict):
     """``_shape_of(any_term(eid))``, memoised on the canonical id.
@@ -217,7 +226,7 @@ def _shape_of_class(eg: EGraph, eid: int, memo: dict):
     s = memo.get(c, _UNSET)
     if s is _UNSET:
         t = eg.any_term(c)
-        s = _shape_of(t)
+        s = _shape_of(t, _SHAPE_MEMO)
         memo[c] = s
     return s
 

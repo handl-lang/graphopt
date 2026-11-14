@@ -92,6 +92,12 @@ _LEAF_OP = {"aff_diag": "diag", "aff": "dense"}
 #: Ops allowed as leaves of the deferred carrier tree.
 _OMD_LEAF_OPS = ("omd_elem", "omd")
 
+#: Content-keyed shape memo — see ``xcarrier._SHAPE_MEMO`` /
+#: ``trace._SHAPE_MEMO``: extracted terms are shared-DAG interned
+#: objects and an unmemoised ``typing._shape_of`` walk is exponential
+#: on them (``docs/reports/decoder_search_scaling.md``).
+_SHAPE_MEMO: dict = {}
+
 
 def _stack_dim(attrs: dict) -> int:
     d = attrs.get("dim", 0)
@@ -197,12 +203,18 @@ def _leaf_sig(leaf: Any, domain: str):
     if not isinstance(leaf, Op) or len(leaf.args) != 2:
         return None
     if leaf.op == "aff_diag":
-        a, b = _shape_of(leaf.args[0]), _shape_of(leaf.args[1])
+        a, b = (
+            _shape_of(leaf.args[0], _SHAPE_MEMO),
+            _shape_of(leaf.args[1], _SHAPE_MEMO),
+        )
         if _concrete(a) and a == b:
             return ("diag", a)
         return False
     if leaf.op == "aff":
-        A, b = _shape_of(leaf.args[0]), _shape_of(leaf.args[1])
+        A, b = (
+            _shape_of(leaf.args[0], _SHAPE_MEMO),
+            _shape_of(leaf.args[1], _SHAPE_MEMO),
+        )
         if (
             _concrete(A)
             and len(A) >= 2

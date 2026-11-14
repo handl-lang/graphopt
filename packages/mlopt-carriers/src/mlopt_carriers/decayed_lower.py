@@ -76,6 +76,13 @@ __all__ = [
 # ---------------------------------------------------------------------------
 
 
+#: Content-keyed shape memo — see ``xcarrier._SHAPE_MEMO`` /
+#: ``trace._SHAPE_MEMO``: extracted terms are shared-DAG interned
+#: objects and an unmemoised ``typing._shape_of`` walk is exponential
+#: on them (``docs/reports/decoder_search_scaling.md``).
+_SHAPE_MEMO: dict = {}
+
+
 def _flat_same(t: Any, op: str, dim: int | None = None) -> list:
     """Flatten a same-op tree (``concat`` on *dim*, or ``add``)."""
     if (
@@ -307,12 +314,16 @@ def _cross_tables(arms: list[dict]) -> tuple:
 
 def _uniform_shapes(arms: list[dict], inners: list, q_terms: list):
     """Validate uniform concrete shapes; return the chunk shape."""
-    chunk = _uniform([_shape_of(a["intra"][2]) for a in arms])
-    score = _uniform([_shape_of(a["intra"][0]) for a in arms])
+    chunk = _uniform(
+        [_shape_of(a["intra"][2], _SHAPE_MEMO) for a in arms]
+    )
+    score = _uniform(
+        [_shape_of(a["intra"][0], _SHAPE_MEMO) for a in arms]
+    )
     if chunk is None or score is None or len(chunk) < 2:
         return None
     if any(
-        _uniform([_shape_of(t) for t in ts]) is None
+        _uniform([_shape_of(t, _SHAPE_MEMO) for t in ts]) is None
         for ts in (q_terms, inners)
         if ts
     ):

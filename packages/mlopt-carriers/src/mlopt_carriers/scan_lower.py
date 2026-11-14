@@ -109,6 +109,13 @@ _VIEW_OPS = frozenset(
 )
 
 
+#: Content-keyed shape memo — see ``xcarrier._SHAPE_MEMO`` /
+#: ``trace._SHAPE_MEMO``: extracted terms are shared-DAG interned
+#: objects and an unmemoised ``typing._shape_of`` walk is exponential
+#: on them (``docs/reports/decoder_search_scaling.md``).
+_SHAPE_MEMO: dict = {}
+
+
 def _strip_output_views(root: Any) -> tuple[Any, list]:
     """Peel trailing ``_VIEW_OPS`` off a would-be scan root.
 
@@ -243,8 +250,8 @@ def _leaf_shapes_consistent(leaves: list[Op]) -> bool:
     """
     if not leaves:
         return False
-    a0 = cast("tuple", shape_of(leaves[0].args[0]))
-    b0 = cast("tuple", shape_of(leaves[0].args[1]))
+    a0 = cast("tuple", shape_of(leaves[0].args[0], _SHAPE_MEMO))
+    b0 = cast("tuple", shape_of(leaves[0].args[1], _SHAPE_MEMO))
     if leaves[0].op == "aff_diag":
         if not (_concrete_tuple(a0) and _concrete_tuple(b0)):
             return False
@@ -252,8 +259,8 @@ def _leaf_shapes_consistent(leaves: list[Op]) -> bool:
         if eff is INVALID:
             return False
         for leaf in leaves[1:]:
-            a = shape_of(leaf.args[0])
-            b = shape_of(leaf.args[1])
+            a = shape_of(leaf.args[0], _SHAPE_MEMO)
+            b = shape_of(leaf.args[1], _SHAPE_MEMO)
             if not (_concrete_tuple(a) and _concrete_tuple(b)):
                 return False
             eff = broadcast(eff, a)
@@ -280,7 +287,10 @@ def _leaf_shapes_consistent(leaves: list[Op]) -> bool:
     if not ok:
         return False
     for leaf in leaves[1:]:
-        if shape_of(leaf.args[0]) != a0 or shape_of(leaf.args[1]) != b0:
+        if (
+            shape_of(leaf.args[0], _SHAPE_MEMO) != a0
+            or shape_of(leaf.args[1], _SHAPE_MEMO) != b0
+        ):
             return False
     return True
 
@@ -508,7 +518,7 @@ def build_scan_plan(root: Any) -> dict | None:
         levels, lambda t: t.args, slot, len(leaves), key=id
     )
 
-    b0s = shape_of(leaves[0].args[1])
+    b0s = shape_of(leaves[0].args[1], _SHAPE_MEMO)
     column_state = bool(
         not diag
         and isinstance(b0s, tuple)
