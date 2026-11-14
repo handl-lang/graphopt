@@ -565,6 +565,235 @@ def test_device_graph_module_capture_failure_is_eager_forever():
 
 
 # ------------------------------------------------------------------
+#  Alias-aware CUDA-graph capture (docs/reports/alias_aware_capture.md)
+# ------------------------------------------------------------------
+
+
+class _Mul(nn.Module):
+    """``out = x * w`` — ``w`` is a caller-owned buffer input."""
+
+    def forward(self, x: torch.Tensor, w: torch.Tensor) -> torch.Tensor:
+        return x * w
+
+
+class _AddInPlace(nn.Module):
+    """``out = x.add_(w)`` — mutates ``x`` in place, reads ``w``."""
+
+    def forward(self, x: torch.Tensor, w: torch.Tensor) -> torch.Tensor:
+        return x.add_(w)
+
+
+def test_normalize_alias_inputs_forms():
+    from mlopt_cuda.runners import _normalize_alias_inputs
+
+    assert _normalize_alias_inputs(None) is None
+    assert _normalize_alias_inputs(False) is None
+    assert _normalize_alias_inputs(True)(3, None) is True  # type: ignore[arg-type]
+    pred = _normalize_alias_inputs({1, 3})
+    assert pred is not None
+    assert [pred(i, None) for i in range(4)] == [  # type: ignore[arg-type]
+        False,
+        True,
+        False,
+        True,
+    ]
+    sentinel = lambda i, t: i == 0  # noqa: E731
+    assert _normalize_alias_inputs(sentinel) is sentinel
+    with pytest.raises(TypeError):
+        _normalize_alias_inputs({"a"})  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        _normalize_alias_inputs(3)  # type: ignore[arg-type]
+
+
+@pytest.mark.requires_cuda
+def test_cuda_graph_alias_binds_live_storage():
+    """An aliased input is bound BY REFERENCE: in-place mutation of
+    the caller's buffer between calls is exactly what replay must
+    see — the graph reads live storage, not capture-time values."""
+    torch.manual_seed(0)
+    mod = _Mul().eval()
+    x0 = torch.randn(4, device="cuda")
+    w0 = torch.randn(4, device="cuda")
+    stats: dict = {}
+    wrapped = CudaGraphRunner(alias_inputs={1}).apply(
+        mod, (x0, w0), stats
+    )
+    assert stats["cuda_graph"] is True
+    assert stats["cuda_graph_alias"] is True
+    assert wrapped._alias == (False, True)
+    # the aliased slot holds the caller's tensor, not a clone
+    assert wrapped._graph_ins[1] is w0
+    assert wrapped._graph_ins[0] is not x0  # copy position: static buf
+    # mutate the bound buffer — replay must observe the NEW contents
+    w0.mul_(3.0)
+    x1 = torch.randn(4, device="cuda")
+    with torch.no_grad():
+        got = wrapped(x1, w0)
+    assert got is wrapped._graph_out  # served by replay, not eager
+    assert torch.allclose(got, x1 * w0)
+    # and NOT the capture-time product — proves the live read
+    assert not torch.allclose(got, x1 * (w0 / 3.0))
+
+
+@pytest.mark.requires_cuda
+def test_cuda_graph_alias_identity_guard_falls_back_eager():
+    """A same-shape/same-value tensor on DIFFERENT storage must not
+    replay — there is no static buffer to copy into, so the call
+    falls back to the wrapped module's eager forward (correct, just
+    uncaptured).  The bound tensor is never written."""
+    torch.manual_seed(0)
+    mod = _Mul().eval()
+    x0 = torch.randn(4, device="cuda")
+    w0 = torch.randn(4, device="cuda")
+    wrapped = CudaGraphRunner(alias_inputs={1}).apply(
+        mod, (x0, w0), {}
+    )
+    w0_snapshot = w0.clone()
+    x1 = torch.randn(4, device="cuda")
+    w_clone = w0.clone()  # same values, different storage
+    with torch.no_grad():
+        got = wrapped(x1, w_clone)
+    # eager path: a fresh tensor, not the static replay output
+    assert got is not wrapped._graph_out
+    assert torch.allclose(got, x1 * w_clone)
+    # the bound capture-time tensor was not corrupted
+    assert torch.equal(w0, w0_snapshot)
+    # a detach()/view re-wrap of the SAME storage still replays
+    with torch.no_grad():
+        got2 = wrapped(x1, w0.detach())
+    assert got2 is wrapped._graph_out
+    assert torch.allclose(got2, x1 * w0)
+
+
+@pytest.mark.requires_cuda
+def test_cuda_graph_alias_rejects_stride_mismatch():
+    """Same storage + offset + shape but different stride addresses
+    different elements — the binding check must reject it."""
+    torch.manual_seed(0)
+    mod = _Mul().eval()
+    base = torch.randn(4, 4, device="cuda").t()  # non-contiguous view
+    w_cap = base[:, 0]  # stride 1, offset 0
+    w_alt = base[0, :]  # stride 4, offset 0 — same storage/shape
+    assert w_cap.untyped_storage().data_ptr() == (
+        w_alt.untyped_storage().data_ptr()
+    )
+    assert w_cap.storage_offset() == w_alt.storage_offset() == 0
+    assert w_cap.shape == w_alt.shape
+    assert w_cap.stride() != w_alt.stride()
+    x0 = torch.randn(4, device="cuda")
+    wrapped = CudaGraphRunner(alias_inputs={1}).apply(
+        mod, (x0, w_cap), {}
+    )
+    x1 = torch.randn(4, device="cuda")
+    with torch.no_grad():
+        got = wrapped(x1, w_alt)
+    assert got is not wrapped._graph_out  # eager fallback
+    assert torch.allclose(got, x1 * w_alt)
+
+
+@pytest.mark.requires_cuda
+def test_cuda_graph_alias_mutated_input_auto_demoted():
+    """A graph that writes an aliased input in place would corrupt
+    the caller's live buffer on every replay — the capture-side
+    version-counter guard must demote that position to the copy
+    path.  Read-only aliased positions stay bound."""
+    torch.manual_seed(0)
+    mod = _AddInPlace().eval()
+    x0 = torch.randn(4, device="cuda")
+    w0 = torch.randn(4, device="cuda")
+    x0_snapshot = x0.clone()
+    wrapped = CudaGraphRunner(alias_inputs=True).apply(
+        mod, (x0, w0), {}
+    )
+    # pos 0 (mutated by the graph) demoted; pos 1 (read-only) aliased
+    assert wrapped._alias == (False, True)
+    assert wrapped._graph_ins[0] is not x0
+    assert wrapped._graph_ins[1] is w0
+    # capture itself must not have corrupted the caller's x0
+    assert torch.equal(x0, x0_snapshot)
+    x1 = torch.randn(4, device="cuda")
+    x1_snapshot = x1.clone()
+    with torch.no_grad():
+        got = wrapped(x1, w0)
+    assert got is wrapped._graph_out
+    assert torch.allclose(got, x1_snapshot + w0)
+    # the copy path protected the caller's x1 from the in-place add
+    assert torch.equal(x1, x1_snapshot)
+
+
+@pytest.mark.requires_cuda
+def test_cuda_graph_alias_mismatch_whole_call_eager():
+    """One aliased position mismatching sinks the WHOLE call to
+    eager — there is no per-position partial replay."""
+    torch.manual_seed(0)
+    mod = _Mul().eval()
+    x0 = torch.randn(4, device="cuda")
+    w0 = torch.randn(4, device="cuda")
+    wrapped = CudaGraphRunner(alias_inputs=True).apply(
+        mod, (x0, w0), {}
+    )
+    assert wrapped._alias == (True, True)
+    x1 = torch.randn(4, device="cuda")
+    w_fresh = torch.randn(4, device="cuda")
+    with torch.no_grad():
+        got = wrapped(x1, w_fresh)
+    assert got is not wrapped._graph_out
+    assert torch.allclose(got, x1 * w_fresh)
+
+
+@pytest.mark.requires_cuda
+def test_cuda_graph_alias_multi_device_binds_first_call():
+    """multi_device + alias: the lazy per-device capture binds the
+    FIRST call's tensors — the decode-loop case, where that first
+    call already carries the persistent buffers."""
+    torch.manual_seed(0)
+    mod = _Mul().eval()
+    stats: dict = {}
+    wrapped = CudaGraphRunner(
+        multi_device=True, alias_inputs={1}
+    ).apply(mod, (torch.randn(4, device="cuda"), torch.randn(4, device="cuda")), stats)
+    assert stats["cuda_graph"] is True
+    assert stats["cuda_graph_per_device"] is True
+    assert stats["cuda_graph_alias"] is True
+    # first real call captures, binding ITS tensors
+    x1 = torch.randn(4, device="cuda")
+    w1 = torch.randn(4, device="cuda")
+    with torch.no_grad():
+        wrapped(x1, w1)  # first call: lazy capture binds w1
+    key = next(iter(wrapped._graphs))
+    entry = wrapped._graphs[key]
+    assert entry._alias == (False, True)
+    assert entry._graph_ins[1] is w1
+    # same objects → replay; fresh w → eager but correct
+    w1.mul_(2.0)
+    with torch.no_grad():
+        got2 = wrapped(x1, w1)
+        assert got2 is entry._graph_out
+        assert torch.allclose(got2, x1 * w1)
+        w_fresh = torch.randn(4, device="cuda")
+        got3 = wrapped(x1, w_fresh)
+        assert torch.allclose(got3, x1 * w_fresh)
+
+
+@pytest.mark.requires_cuda
+def test_cuda_graph_no_alias_unchanged_default():
+    """Default runner: every input gets a static buffer — ``_alias``
+    all-False, ``cuda_graph_alias`` stat absent."""
+    torch.manual_seed(0)
+    mod = _Mul().eval()
+    stats: dict = {}
+    wrapped = CudaGraphRunner().apply(
+        mod,
+        (torch.randn(4, device="cuda"), torch.randn(4, device="cuda")),
+        stats,
+    )
+    assert stats["cuda_graph"] is True
+    assert "cuda_graph_alias" not in stats
+    assert wrapped._alias == (False, False)
+    assert all(b is not None for b in wrapped._graph_ins)
+
+
+# ------------------------------------------------------------------
 #  ChainedRunner — left-to-right composition
 # ------------------------------------------------------------------
 

@@ -256,6 +256,55 @@ def main() -> None:
                 flush=True,
             )
 
+    # ---- shipped alias-aware capture (mlopt_cuda alias_inputs) ----
+    # Same contract as _ZeroCopyGraphCapture but through the runner:
+    # positions >= 2 (the 24 past tensors) bind by reference; hs/mask
+    # (0,1) stay on the copy path.  ``inputs`` objects are stable
+    # across these calls, so every replay takes the alias path.
+    try:
+        low3 = optz.lower(
+            res,
+            inputs,
+            verify=False,
+            runner=CudaGraphRunner(
+                alias_inputs=lambda i, _t: i >= 2
+            ),
+        )
+        amod = low3.module
+        print(
+            f"[graph] alias armed={low3.stats.get('cuda_graph')} "
+            f"alias={low3.stats.get('cuda_graph_alias')} "
+            f"flags={getattr(amod, '_alias', None)}",
+            flush=True,
+        )
+        if low3.stats.get("cuda_graph"):
+            a_ms = timeit(lambda: amod(*inputs))
+            print(
+                f"[step] delivered+alias-graph {a_ms:.2f} ms",
+                flush=True,
+            )
+            with torch.no_grad():
+                ref_out = mod(*inputs)
+                amod(*inputs)
+                torch.cuda.synchronize()
+                ao = amod._graph_out
+                if isinstance(ao, tuple):
+                    d = max(
+                        (a.float() - b.float()).abs().max().item()
+                        for a, b in zip(ao, ref_out, strict=False)
+                    )
+                else:
+                    d = (ao.float() - ref_out.float()).abs().max().item()
+                print(
+                    f"[graph] alias replay vs delivered max|diff|={d:.2e}",
+                    flush=True,
+                )
+    except Exception as e:
+        print(
+            f"[graph] alias FAILED {type(e).__name__}: {e}",
+            flush=True,
+        )
+
     # ---- zero-copy graph: capture directly on persistent buffers ----
     # In run_delivered_loop the 24 past tensors are the SAME buffer
     # objects every step (skb/svb/ck/cv); only hs and mask change.
@@ -353,6 +402,68 @@ def main() -> None:
             f"[graph] zero-copy LOOP FAILED {type(e).__name__}: {e}",
             flush=True,
         )
+
+    # ---- shipped alias-aware graph inside the REAL greedy loop ----
+    # multi_device capture is lazy: the FIRST loop call carries the
+    # loop's own persistent buffers (skb/svb/ck/cv), so positions
+    # >= 2 bind exactly those storages — the shipped equivalent of
+    # _ZeroCopyGraphCapture above.
+    try:
+        dmod = CudaGraphRunner(
+            multi_device=True,
+            alias_inputs=lambda i, _t: i >= 2,
+        ).apply(mod, inputs, {})
+        step_ms_a, gids_a = probe.run_delivered_loop(
+            dmod, m, ehs, ntok, L,
+            list(ref["past"]["ck"]), list(ref["past"]["cv"]),
+        )
+        agree = sum(
+            1
+            for a, b in zip(gids_a, ref["gen_ids"], strict=False)
+            if a == b
+        )
+        warm = sum(step_ms_a[1:])
+        print(
+            f"[loop] shipped-alias-graph {ntok} tok: warm {warm:.1f} ms "
+            f"({warm / (ntok - 1):.2f} ms/tok) last8 {sum(step_ms_a[-8:]) / 8:.2f} "
+            f"ids-match {agree}/{ntok}",
+            flush=True,
+        )
+        print(
+            "[loop] shipped-alias per-step:",
+            " ".join(f"{v:.1f}" for v in step_ms_a),
+            flush=True,
+        )
+    except Exception as e:
+        print(
+            f"[graph] shipped-alias LOOP FAILED {type(e).__name__}: {e}",
+            flush=True,
+        )
+
+    # ---- copy-everything graph in the same loop (honest delta) ----
+    if low2.stats.get("cuda_graph"):
+        try:
+            step_ms_c, gids_c = probe.run_delivered_loop(
+                gmod, m, ehs, ntok, L,
+                list(ref["past"]["ck"]), list(ref["past"]["cv"]),
+            )
+            agree = sum(
+                1
+                for a, b in zip(gids_c, ref["gen_ids"], strict=False)
+                if a == b
+            )
+            warm = sum(step_ms_c[1:])
+            print(
+                f"[loop] shipped-copy-graph {ntok} tok: warm {warm:.1f} ms "
+                f"({warm / (ntok - 1):.2f} ms/tok) last8 {sum(step_ms_c[-8:]) / 8:.2f} "
+                f"ids-match {agree}/{ntok}",
+                flush=True,
+            )
+        except Exception as e:
+            print(
+                f"[graph] shipped-copy LOOP FAILED {type(e).__name__}: {e}",
+                flush=True,
+            )
 
     del m
     import gc as _gc
