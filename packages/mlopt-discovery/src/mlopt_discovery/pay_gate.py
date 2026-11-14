@@ -176,20 +176,9 @@ class PayVerdict:
 
 def _subterms(term: Any) -> list[Any]:
     """Return every distinct subterm (deduped by identity)."""
-    from mlopt_core.ir import Op
+    from mlopt_core.traversal import subterms as _term_subterms
 
-    seen: set[int] = set()
-    out: list[Any] = []
-    stack = [term]
-    while stack:
-        t = stack.pop()
-        if id(t) in seen:
-            continue
-        seen.add(id(t))
-        out.append(t)
-        if isinstance(t, Op):
-            stack.extend(t.args)
-    return out
+    return list(_term_subterms(term))
 
 
 def _is_conv(op: str) -> bool:

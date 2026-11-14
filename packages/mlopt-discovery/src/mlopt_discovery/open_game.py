@@ -65,6 +65,7 @@ from gamekit.players import (
     register_rank,
 )
 from mlopt_core.ir import Op, Var
+from mlopt_core.traversal import expand as _term_expand
 
 from mlopt_discovery import lawdata
 from mlopt_discovery import proposal as lp
@@ -192,18 +193,21 @@ OPEN_GAME_FEATURES: tuple[str, ...] = (
 
 
 def _term_depth(t: Any) -> int:
-    if isinstance(t, Op):
-        return 1 + max((_term_depth(a) for a in t.args), default=0)
-    return 0
+    return max(
+        (len(p) + 1 for p, n in _term_expand(t) if isinstance(n, Op)),
+        default=0,
+    )
 
 
 def _walk(t: Any, metas: set) -> int:
     """Count op nodes and collect metavar names in *t*."""
-    if isinstance(t, Op):
-        return 1 + sum(_walk(a, metas) for a in t.args)
-    if isinstance(t, Var):
-        metas.add(t.name)
-    return 0
+    n_ops = 0
+    for _p, n in _term_expand(t):
+        if isinstance(n, Op):
+            n_ops += 1
+        elif isinstance(n, Var):
+            metas.add(n.name)
+    return n_ops
 
 
 #: Memoized heuristic score — the pool-relative parts re-read it once

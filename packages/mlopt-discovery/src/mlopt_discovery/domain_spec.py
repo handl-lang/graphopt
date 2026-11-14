@@ -116,8 +116,8 @@ from pathlib import Path
 from typing import Any
 
 from mlopt_core.cost.basic import count_cost
-from mlopt_core.ir import Op
 from mlopt_core.laws import DEFAULT
+from mlopt_core.traversal import ops as _term_ops
 
 from . import corpus_cov, lawdata
 from . import meta_arena as ma
@@ -751,17 +751,9 @@ def _term_ops_attrs(term: Any) -> tuple[set, set]:
     """Collect ``(ops, attrs)`` over every ``Op`` subterm."""
     ops: set = set()
     attrs: set = set()
-    stack = [term]
-    seen: set[int] = set()
-    while stack:
-        t = stack.pop()
-        if id(t) in seen:
-            continue
-        seen.add(id(t))
-        if isinstance(t, Op):
-            ops.add(t.op)
-            attrs.update((t.op, k) for k in t.attrs)
-            stack.extend(t.args)
+    for n in _term_ops(term):
+        ops.add(n.op)
+        attrs.update((n.op, k) for k in n.attrs)
     return ops, attrs
 
 
@@ -812,21 +804,13 @@ def _attr_values_ok(term: Any, attr_values: dict) -> bool:
     attrs can never satisfy a listed constraint).  Unlisted ops and
     unlisted attrs are unconstrained.
     """
-    stack = [term]
-    seen: set[int] = set()
-    while stack:
-        t = stack.pop()
-        if id(t) in seen:
-            continue
-        seen.add(id(t))
-        if isinstance(t, Op):
-            cons = attr_values.get(t.op)
-            if cons is not None:
-                for attr, allowed in cons.items():
-                    v = t.attrs.get(attr, _ATTR_MISSING)
-                    if v is _ATTR_MISSING or v not in allowed:
-                        return False
-            stack.extend(t.args)
+    for t in _term_ops(term):
+        cons = attr_values.get(t.op)
+        if cons is not None:
+            for attr, allowed in cons.items():
+                v = t.attrs.get(attr, _ATTR_MISSING)
+                if v is _ATTR_MISSING or v not in allowed:
+                    return False
     return True
 
 

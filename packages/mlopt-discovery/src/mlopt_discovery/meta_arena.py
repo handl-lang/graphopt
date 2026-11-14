@@ -117,6 +117,9 @@ from mlopt_core.egraph import (
 from mlopt_core.egraph.terms import _term_instantiate
 from mlopt_core.ir import Const, Op, op_repr
 from mlopt_core.laws import DEFAULT
+from mlopt_core.traversal import leaves as _term_leaves
+from mlopt_core.traversal import ops as _term_ops
+from mlopt_core.traversal import subterms as _term_subterms
 
 from mlopt_discovery import lawdata
 from mlopt_discovery import object_synthesis as obs
@@ -543,60 +546,44 @@ def _composite_specs(
     from mlopt_discovery.census import op_expansion
 
     seen: dict[str, Any] = {}
-    visited: set[int] = set()
 
-    # Iterative preorder — identical visit order to the recursive
-    # DFS, id-deduped, without per-level frames on deep terms.
-    # ``reversed`` keeps corpus order under ``pop()``.
-    stack = list(reversed(list(corpus)))
-    while stack:
-        t = stack.pop()
-        if id(t) in visited:
-            continue
-        visited.add(id(t))
-        if isinstance(t, Op):
+    # ``traversal.ops`` is the same pre-order, DAG-deduped walk — a
+    # shared subterm yields the same spec at every occurrence, so
+    # visiting each distinct node once is identical (the corpus-wide
+    # ``visited`` set only saved cross-term re-walks; ``seen``
+    # dedups the emitted specs either way, and the result is
+    # key-sorted).
+    for t in corpus:
+        for n in _term_ops(t):
             if (
                 node_cap is None
-                or op_expansion(t, node_cap) <= node_cap
+                or op_expansion(n, node_cap) <= node_cap
             ):
-                spec = _spec_of(t, {})
+                spec = _spec_of(n, {})
                 if _spec_size(spec) >= 2:
                     seen.setdefault(repr(spec), spec)
-            stack.extend(reversed(t.args))
     return tuple(seen[k] for k in sorted(seen)[:cap])
 
 
 def _ops_of(term: Any, out: set | None = None) -> set:
     """Every op name appearing in *term*.
 
-    Iterative — term depth mirrors model-IR depth; the result is a
-    set so revisits are harmless.
+    ``traversal.ops`` is the DAG-deduped walk — the result is a set,
+    so revisits were always harmless.
     """
-    if out is None:
-        out = set()
-    stack = [term]
-    while stack:
-        t = stack.pop()
-        if isinstance(t, Op):
-            out.add(t.op)
-            stack.extend(t.args)
+    out = set() if out is None else out
+    out.update(n.op for n in _term_ops(term))
     return out
 
 
 def _term_metavars(term: Any, out: set | None = None) -> set:
     """Collect the leaf metavariables (``str`` leaves) of a pattern.
 
-    Iterative — same set result, no per-level frames.
+    ``traversal.leaves`` is the same DAG-deduped walk — the result is
+    a set.
     """
-    if out is None:
-        out = set()
-    stack = [term]
-    while stack:
-        t = stack.pop()
-        if isinstance(t, str):
-            out.add(t)
-        elif isinstance(t, Op):
-            stack.extend(t.args)
+    out = set() if out is None else out
+    out.update(s for s in _term_leaves(term) if isinstance(s, str))
     return out
 
 
@@ -1828,20 +1815,15 @@ class MetaArena:
         occurrence — visiting it once keeps the check DAG-linear on
         sharing-heavy terms.
         """
-        # Iterative — the recursive version was both depth- and
-        # (without dedup) expansion-bound; ``seen`` keeps it
-        # DAG-linear exactly as before, and a shared node's match
-        # verdict is path-invariant.
-        seen: set[int] = set()
-        stack = [self.term]
-        while stack:
-            t = stack.pop()
-            if _concrete_match(pattern, t, {}):
-                return True
-            if isinstance(t, Op) and id(t) not in seen:
-                seen.add(id(t))
-                stack.extend(t.args)
-        return False
+        # ``traversal.subterms`` is the DAG-deduped walk:
+        # ``_concrete_match`` gets a fresh env per node, so a shared
+        # subterm's verdict is identical at every occurrence —
+        # visiting it once keeps the check DAG-linear on
+        # sharing-heavy terms.
+        return any(
+            _concrete_match(pattern, t, {})
+            for t in _term_subterms(self.term)
+        )
 
     def _sites(self) -> tuple:
         """Return indices of mined specs occurring in the program."""

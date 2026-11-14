@@ -58,6 +58,7 @@ from mlopt_core.egraph import EGraph
 from mlopt_core.egraph.terms import _term_match
 from mlopt_core.ir import Const, Op, Param, TensorType, Var
 from mlopt_core.meta import instantiate_pattern, pattern_metavars
+from mlopt_core.traversal import expand as _term_expand
 
 # Sibling tools own the corpus/probe machinery; reuse them, never
 # duplicate.
@@ -184,37 +185,52 @@ def _hook_src(fn: Any) -> str:
 def _mv_counts(pat: Any, counts: dict[str, int] | None = None) -> dict:
     """Count occurrences of each metavariable (leaf and attr) in *pat*."""
     counts = {} if counts is None else counts
-    if isinstance(pat, str):
-        counts[pat] = counts.get(pat, 0) + 1
-    elif isinstance(pat, Op):
-        for a in pat.args:
-            _mv_counts(a, counts)
-        for v in pat.attrs.values():
-            if isinstance(v, str):
-                counts["$attr:" + v] = counts.get("$attr:" + v, 0) + 1
+    for _p, n in _term_expand(pat):
+        if isinstance(n, str):
+            counts[n] = counts.get(n, 0) + 1
+        elif isinstance(n, Op):
+            for v in n.attrs.values():
+                if isinstance(v, str):
+                    counts["$attr:" + v] = (
+                        counts.get("$attr:" + v, 0) + 1
+                    )
     return counts
 
 
 def _mv_positions(pat: Any, mv: str) -> list[tuple]:
-    """Return child-index paths where *mv* occurs in *pat*."""
+    """Return child-index paths where *mv* occurs in *pat*.
+
+    ``traversal.expand`` is the same per-occurrence pre-order walk;
+    an attr-metavariable hit is emitted at its *op's* path after the
+    op's subtree — the recursive walk checked attrs on the way back
+    up, so pending hits flush when the walk leaves the node's
+    subtree (deepest unfinished node first, matching the recursion's
+    return order).
+    """
     out: list[tuple] = []
     attr_mv = mv.removeprefix("$attr:")
+    want_attr = mv.startswith("$attr:")
+    pending: list[tuple[tuple, list[tuple]]] = []
 
-    def walk(t: Any, path: tuple) -> None:
-        if isinstance(t, Op):
-            for i, a in enumerate(t.args):
-                walk(a, (*path, i))
-            for v in t.attrs.values():
-                if (
-                    mv.startswith("$attr:")
-                    and v == attr_mv
-                    and isinstance(v, str)
-                ):
-                    out.append(path)
-        elif t == mv:
+    def _flush_until(path: tuple) -> None:
+        while pending and path[: len(pending[-1][0])] != pending[-1][0]:
+            _p, hits = pending.pop()
+            out.extend(hits)
+
+    for path, n in _term_expand(pat):
+        _flush_until(path)
+        if isinstance(n, Op):
+            hits = [
+                path
+                for v in n.attrs.values()
+                if want_attr and isinstance(v, str) and v == attr_mv
+            ]
+            pending.append((path, hits))
+        elif n == mv:
             out.append(path)
-
-    walk(pat, ())
+    while pending:
+        _p, hits = pending.pop()
+        out.extend(hits)
     return out
 
 

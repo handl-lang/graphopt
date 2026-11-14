@@ -161,6 +161,8 @@ from mlopt_core.egraph import Rewrite
 from mlopt_core.egraph.terms import _term_instantiate, _term_match
 from mlopt_core.ir import Const, Op, op_repr
 from mlopt_core.laws import ALL_RULES
+from mlopt_core.traversal import expand as _term_expand
+from mlopt_core.traversal import ops as _term_ops
 from torch import nn
 from torch.distributions import Categorical
 
@@ -356,12 +358,8 @@ def _mint(slot: _Slot) -> Any:
 def _attr_mv_names(pat: Any, out: set | None = None) -> set:
     """Return the attr-metavariable names used in a minted pattern."""
     out = set() if out is None else out
-    if isinstance(pat, Op):
-        for v in pat.attrs.values():
-            if isinstance(v, str):
-                out.add(v)
-        for a in pat.args:
-            _attr_mv_names(a, out)
+    for n in _term_ops(pat):
+        out.update(v for v in n.attrs.values() if isinstance(v, str))
     return out
 
 
@@ -489,10 +487,10 @@ def _share_scan(terms: list[Any]) -> dict[tuple, int]:
         )
 
     def _descs(s: Op, out: list, p: tuple) -> None:
-        for i, a in enumerate(s.args):
-            out.append(((*p, i), a))
-            if isinstance(a, Op):
-                _descs(a, out, (*p, i))
+        # ``expand`` is the same per-occurrence pre-order walk — every
+        # non-root ``(path, node)`` position, exactly the edges the
+        # recursion appended.
+        out.extend(((*p, *p_), a) for p_, a in _term_expand(s) if p_)
 
     for t in terms:
         for s in _iter_subterms(t):

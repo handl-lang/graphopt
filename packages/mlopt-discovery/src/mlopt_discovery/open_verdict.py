@@ -73,6 +73,7 @@ from typing import Any
 
 from gamekit.players import RelFeats, register_part
 from mlopt_core.ir import Op
+from mlopt_core.traversal import expand as _term_expand
 
 from mlopt_discovery.meta_arena import Action
 from mlopt_discovery.open_game import _score as _cand_score
@@ -114,10 +115,7 @@ _EVAL_ZERO: dict[str, float] = {
 
 def _ops_preorder(t: Any, out: list) -> list:
     """Collect the op names of *t* in preorder — the op spine."""
-    if isinstance(t, Op):
-        out.append(t.op)
-        for a in t.args:
-            _ops_preorder(a, out)
+    out.extend(n.op for _p, n in _term_expand(t) if isinstance(n, Op))
     return out
 
 

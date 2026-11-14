@@ -23,6 +23,7 @@ from collections.abc import Iterable
 from typing import Any
 
 from mlopt_core.ir import Const, Op, Param, Var, op_repr
+from mlopt_core.traversal import expand as _term_expand
 from mlopt_core.typing import _shape_of
 
 from . import lawdata
@@ -44,11 +45,11 @@ def leaves_of(term: Any, out: dict | None = None) -> dict:
     """Collect the term's ``Var``/``Param`` leaves, name → leaf."""
     if out is None:
         out = {}
-    if isinstance(term, (Var, Param)):
-        out.setdefault(term.name, term)
-    elif isinstance(term, Op):
-        for a in term.args:
-            leaves_of(a, out)
+    # ``expand`` is the same per-occurrence pre-order walk — the
+    # first occurrence of each name wins, exactly like the recursion.
+    for _p, n in _term_expand(term):
+        if isinstance(n, (Var, Param)):
+            out.setdefault(n.name, n)
     return out
 
 

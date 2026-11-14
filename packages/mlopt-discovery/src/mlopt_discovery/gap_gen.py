@@ -81,6 +81,8 @@ from typing import Any
 import torch
 from mlopt_core.egraph.terms import _term_instantiate, _term_match
 from mlopt_core.ir import Op, Param, TensorType, Var, op_repr
+from mlopt_core.traversal import expand as _term_expand
+from mlopt_core.traversal import subterms as _term_subterms
 from mlopt_core.typing import INVALID, _shape_of
 from mlopt_torch.adapters import TorchSink
 
@@ -133,12 +135,11 @@ _BASE_SHAPES = lawdata.BASE_SHAPES
 def _metavars(pattern: Any, out: list | None = None) -> list[str]:
     """Return the pattern's leaf metavariables, first-seen order."""
     out = [] if out is None else out
-    if isinstance(pattern, str):
-        if pattern not in out:
-            out.append(pattern)
-    elif isinstance(pattern, Op):
-        for a in pattern.args:
-            _metavars(a, out)
+    out.extend(
+        s
+        for s in _term_subterms(pattern)
+        if isinstance(s, str) and s not in out
+    )
     return out
 
 
@@ -470,13 +471,11 @@ def synthesize(
 
 def _leaf_paths(term: Any, path: tuple = ()) -> list:
     """Return ``(path, leaf)`` for every ``Var``/``Param`` in *term*."""
-    out: list = []
-    if isinstance(term, Op):
-        for i, a in enumerate(term.args):
-            out.extend(_leaf_paths(a, (*path, i)))
-    elif isinstance(term, (Var, Param)):
-        out.append((path, term))
-    return out
+    return [
+        ((*path, *p), n)
+        for p, n in _term_expand(term)
+        if isinstance(n, (Var, Param))
+    ]
 
 
 def _concrete(term: Any) -> tuple | None:

@@ -55,6 +55,8 @@ from mlopt_core.meta import (
     match_pattern,
     pattern_metavars,
 )
+from mlopt_core.traversal import expand as _term_expand
+from mlopt_core.traversal import subterms as _term_subterms
 
 from mlopt_discovery.object_synthesis import ConstructedObject
 
@@ -149,10 +151,13 @@ class _Cand:
 
 
 def _n_ops(pat: Any) -> int:
-    """Count :class:`Op` nodes in a pattern term."""
-    if not isinstance(pat, Op):
-        return 0
-    return 1 + sum(_n_ops(a) for a in pat.args)
+    """Count :class:`Op` nodes in a pattern term.
+
+    Occurrence count — the tree spelling, shared subterms counted at
+    every use site (``traversal.expand`` is the same per-occurrence
+    walk, iterative).
+    """
+    return sum(1 for _p, n in _term_expand(pat) if isinstance(n, Op))
 
 
 def _eff_ops(pat: Any, vocab: Mapping[str, int] | None) -> int:
@@ -165,41 +170,28 @@ def _eff_ops(pat: Any, vocab: Mapping[str, int] | None) -> int:
     before the vocabulary compressed it.  ``vocab=None`` prices every
     op at 1 — the spelled count :func:`_n_ops` returns.
     """
-    if not isinstance(pat, Op):
-        return 0
-    w = vocab.get(pat.op, 1) if vocab else 1
-    return w + sum(_eff_ops(a, vocab) for a in pat.args)
+    return sum(
+        (vocab.get(n.op, 1) if vocab else 1)
+        for _p, n in _term_expand(pat)
+        if isinstance(n, Op)
+    )
 
 
 def _leaf_mvars(pat: Any) -> tuple[str, ...]:
     """Leaf metavariable names in DFS first-occurrence order."""
-    out: list[str] = []
-
-    def go(t: Any) -> None:
-        if isinstance(t, str):
-            if t not in out:
-                out.append(t)
-        elif isinstance(t, Op):
-            for a in t.args:
-                go(a)
-
-    go(pat)
-    return tuple(out)
+    # ``subterms`` is the same pre-order, content-deduped walk — a
+    # repeated metavar leaf yields once, at first occurrence.
+    return tuple(s for s in _term_subterms(pat) if isinstance(s, str))
 
 
 def _attr_mvars_of(pat: Any) -> tuple[str, ...]:
     """Attr metavariable names (string attr values) in DFS order."""
     out: list[str] = []
-
-    def go(t: Any) -> None:
-        if isinstance(t, Op):
-            for v in t.attrs.values():
+    for _p, n in _term_expand(pat):
+        if isinstance(n, Op):
+            for v in n.attrs.values():
                 if isinstance(v, str) and v not in out:
                     out.append(v)
-            for a in t.args:
-                go(a)
-
-    go(pat)
     return tuple(out)
 
 
@@ -230,11 +222,11 @@ def _alpha_norm(pat: Any) -> str:
 
 def _metavar_count(pat: Any, name: str) -> int:
     """Occurrences of leaf metavariable *name* in *pat*."""
-    if isinstance(pat, str):
-        return int(pat == name)
-    if isinstance(pat, Op):
-        return sum(_metavar_count(a, name) for a in pat.args)
-    return 0
+    return sum(
+        1
+        for _p, n in _term_expand(pat)
+        if isinstance(n, str) and n == name
+    )
 
 
 # ---------------------------------------------------------------------------

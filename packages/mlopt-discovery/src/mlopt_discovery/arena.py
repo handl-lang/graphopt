@@ -124,6 +124,8 @@ from typing import Any, overload
 from mlopt_core.egraph import Rewrite
 from mlopt_core.ir import Const, Op, op_repr, op_repr_dag
 from mlopt_core.meta import _positions, match_pattern
+from mlopt_core.traversal import expand as _term_expand
+from mlopt_core.traversal import ops as _term_ops
 
 from mlopt_discovery import evidence as ev
 from mlopt_discovery import lawdata
@@ -844,18 +846,17 @@ def _census_of(cases: Iterable[TermCase]) -> dict:
 def _ops_of(term: Any, out: set | None = None) -> set:
     """Return the op names inside *term*."""
     out = set() if out is None else out
-    if isinstance(term, Op):
-        out.add(term.op)
-        for a in term.args:
-            _ops_of(a, out)
+    out.update(n.op for n in _term_ops(term))
     return out
 
 
 def _n_nodes(term: Any) -> int:
-    """Return the op-node count of *term*."""
-    if isinstance(term, Op):
-        return 1 + sum(_n_nodes(a) for a in term.args)
-    return 0
+    """Return the op-node count of *term*.
+
+    Occurrence count — the tree spelling (``traversal.expand`` is the
+    same per-occurrence walk, iterative).
+    """
+    return sum(1 for _p, n in _term_expand(term) if isinstance(n, Op))
 
 
 def _case_view(case: TermCase) -> CaseView:

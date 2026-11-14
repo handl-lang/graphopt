@@ -55,7 +55,6 @@ from typing import Any, TypeGuard, cast
 
 import torch
 from mlopt_core.ir import IR, Op
-from mlopt_core.typing import _shape_of
 from mlopt_torch.executors import (
     BatchedExecutorBase,
     level_schedule,
@@ -68,6 +67,7 @@ from mlopt_torch.torch_bridge import _IR_TO_TORCH, IRModule
 # resolve lazily through carrier_torch_bindings() (each module's
 # TORCH_BINDINGS export).
 import mlopt_carriers.xcarrier  # noqa: F401
+from mlopt_carriers._shape import shape_of as _shape_of
 from mlopt_carriers.om_fused import fused_omd_levels, fused_omdm_levels
 from mlopt_carriers.scan_fused import occurrence_slots
 
@@ -91,12 +91,6 @@ _COMPOSE_OP = {"affd_compose": "diag", "aff_compose": "dense"}
 _LEAF_OP = {"aff_diag": "diag", "aff": "dense"}
 #: Ops allowed as leaves of the deferred carrier tree.
 _OMD_LEAF_OPS = ("omd_elem", "omd")
-
-#: Content-keyed shape memo — see ``xcarrier._SHAPE_MEMO`` /
-#: ``trace._SHAPE_MEMO``: extracted terms are shared-DAG interned
-#: objects and an unmemoised ``typing._shape_of`` walk is exponential
-#: on them (``docs/reports/decoder_search_scaling.md``).
-_SHAPE_MEMO: dict = {}
 
 
 def _stack_dim(attrs: dict) -> int:
@@ -204,16 +198,16 @@ def _leaf_sig(leaf: Any, domain: str):
         return None
     if leaf.op == "aff_diag":
         a, b = (
-            _shape_of(leaf.args[0], _SHAPE_MEMO),
-            _shape_of(leaf.args[1], _SHAPE_MEMO),
+            _shape_of(leaf.args[0]),
+            _shape_of(leaf.args[1]),
         )
         if _concrete(a) and a == b:
             return ("diag", a)
         return False
     if leaf.op == "aff":
         A, b = (
-            _shape_of(leaf.args[0], _SHAPE_MEMO),
-            _shape_of(leaf.args[1], _SHAPE_MEMO),
+            _shape_of(leaf.args[0]),
+            _shape_of(leaf.args[1]),
         )
         if (
             _concrete(A)

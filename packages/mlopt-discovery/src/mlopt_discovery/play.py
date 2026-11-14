@@ -79,6 +79,8 @@ from mlopt_core.cost.basic import count_cost
 from mlopt_core.ir import Const, Op, Param, TensorType, Var
 from mlopt_core.laws import DEFAULT as DEFAULT_SEARCH_RULES
 from mlopt_core.search_env import SearchEnv
+from mlopt_core.traversal import expand as _term_expand
+from mlopt_core.traversal import ops as _term_ops
 from mlopt_core.typing import (
     register_shape_rule as _register_shape_rule,
 )
@@ -725,38 +727,24 @@ def _fusion_sites(
     from mlopt_discovery import genkernel as gk
 
     out: list = []
-    seen: set[int] = set()
-    # Iterative preorder — the same visit order the recursive DFS
-    # produced (site order feeds the minted handler table), without
-    # per-level frames on deep terms.  id-dedup: a shared subterm
-    # yields the same spec at every occurrence — visiting it once
-    # keeps the collector DAG-linear instead of tree-exponential,
-    # and the minted handler table is identical either way (the
-    # tier mints dedup on canon pattern).
-    stack = [term]
-    while stack:
-        t = stack.pop()
-        if id(t) in seen:
+    # ``traversal.ops`` is the same pre-order, DAG-deduped visit —
+    # site order feeds the minted handler table.
+    for t in _term_ops(term):
+        if t.op not in gk.ELEMENTWISE:
             continue
-        seen.add(id(t))
-        if isinstance(t, Op) and t.op in gk.ELEMENTWISE:
-            pat, size = _fusion_pattern_sz(t, {}, {}, spec_cap)
-            if pat is None and spec_cap is not None:
-                # cap overflow — the spelled pattern exceeded the
-                # tree-size bound; an honest counted decline, never
-                # a silent drop (arch audit §1.4).
-                if stats is not None:
-                    stats["fusion_sites_over_cap"] = (
-                        stats.get("fusion_sites_over_cap", 0) + 1
-                    )
-            elif pat is not None and (
-                spec_cap is None or size <= spec_cap
-            ):
-                ops = {e for e in _flat_ops(pat)}
-                if len(ops) >= 2:
-                    out.append(pat)
-        if isinstance(t, Op):
-            stack.extend(reversed(t.args))
+        pat, size = _fusion_pattern_sz(t, {}, {}, spec_cap)
+        if pat is None and spec_cap is not None:
+            # cap overflow — the spelled pattern exceeded the
+            # tree-size bound; an honest counted decline, never
+            # a silent drop (arch audit §1.4).
+            if stats is not None:
+                stats["fusion_sites_over_cap"] = (
+                    stats.get("fusion_sites_over_cap", 0) + 1
+                )
+        elif pat is not None and (spec_cap is None or size <= spec_cap):
+            ops = {e for e in _flat_ops(pat)}
+            if len(ops) >= 2:
+                out.append(pat)
     return out
 
 
@@ -821,16 +809,10 @@ def _reduction_sites(
 
     heads = gk.reduce_heads()
     out: list = []
-    seen: set[int] = set()
-    # Iterative preorder — identical site order to the recursive
-    # DFS, id-deduped for DAG-linear traversal (see _fusion_sites).
-    stack = [term]
-    while stack:
-        t = stack.pop()
-        if id(t) in seen:
-            continue
-        seen.add(id(t))
-        if isinstance(t, Op) and t.op in heads:
+    # ``traversal.ops`` — identical site order to the recursive DFS,
+    # DAG-deduped (see _fusion_sites).
+    for t in _term_ops(term):
+        if t.op in heads:
             spec, size = _reduction_pattern(t, {}, cap=spec_cap)
             if spec is None and spec_cap is not None:
                 if stats is not None:
@@ -843,8 +825,6 @@ def _reduction_sites(
                 and gk.reduction_spec(spec)
             ):
                 out.append(spec)
-        if isinstance(t, Op):
-            stack.extend(reversed(t.args))
     return out
 
 
@@ -858,25 +838,17 @@ def _decayed_sites(term: Any) -> list:
     the kernel then receives the evaluated operand tensors.
     """
     out: list = []
-    seen: set[int] = set()
-    # Iterative preorder — identical site order to the recursive
-    # DFS, id-deduped for DAG-linear traversal (see _fusion_sites).
-    stack = [term]
-    while stack:
-        t = stack.pop()
-        if id(t) in seen:
-            continue
-        seen.add(id(t))
-        if isinstance(t, Op):
-            if t.op == "om_decayed":
-                out.append(("om_decayed", "S", "D", "V"))
-            elif (
-                t.op == "matmul"
-                and isinstance(t.args[0], Op)
-                and t.args[0].op == "mul"
-            ):
-                out.append(("matmul", ("mul", "S", "D"), "V"))
-            stack.extend(reversed(t.args))
+    # ``traversal.ops`` — identical site order to the recursive DFS,
+    # DAG-deduped (see _fusion_sites).
+    for t in _term_ops(term):
+        if t.op == "om_decayed":
+            out.append(("om_decayed", "S", "D", "V"))
+        elif (
+            t.op == "matmul"
+            and isinstance(t.args[0], Op)
+            and t.args[0].op == "mul"
+        ):
+            out.append(("matmul", ("mul", "S", "D"), "V"))
     return out
 
 
@@ -1328,17 +1300,7 @@ def _seq_select_free(t: Any) -> bool:
     them keeps the lift's contract simple: the operand child must
     be a pure sequence tensor.
     """
-    stack = [t]
-    seen: set = set()
-    while stack:
-        n = stack.pop()
-        if not isinstance(n, Op) or id(n) in seen:
-            continue
-        seen.add(id(n))
-        if n.op == "select":
-            return False
-        stack.extend(n.args)
-    return True
+    return not any(n.op == "select" for n in _term_ops(t))
 
 
 def _seq_step_select(t: Any):
@@ -2198,30 +2160,15 @@ def _seq_site(steps: tuple, base: Any, spec_cap: int | None = None):
 def _op_parents(term: Any) -> dict:
     """Map ``id(child) -> [parent ops]`` over the whole term DAG."""
     parents: dict = {}
-    seen: set = set()
-    stack = [term]
-    while stack:
-        n = stack.pop()
-        if not isinstance(n, Op) or id(n) in seen:
-            continue
-        seen.add(id(n))
+    for n in _term_ops(term):
         for a in n.args:
             parents.setdefault(id(a), []).append(n)
-            stack.append(a)
     return parents
 
 
 def _op_descendants(root: Any) -> set:
     """``id`` set of every ``Op`` reachable from *root* (inclusive)."""
-    out: set = set()
-    stack = [root]
-    while stack:
-        n = stack.pop()
-        if not isinstance(n, Op) or id(n) in out:
-            continue
-        out.add(id(n))
-        stack.extend(n.args)
-    return out
+    return {id(n) for n in _term_ops(root)}
 
 
 def _seq_traj_states(
@@ -2457,21 +2404,14 @@ def _seq_scan_sites(
 
     memo: dict = {}
     cands: list = []
-    seen_nodes: set = set()
 
-    # Iterative preorder — the same visit order the recursive DFS
-    # produced (``cands`` order feeds site emission), id-deduped,
+    # ``traversal.ops`` — the same visit order the recursive DFS
+    # produced (``cands`` order feeds site emission), DAG-deduped,
     # without per-level frames on deep terms.
-    stack = [term]
-    while stack:
-        t = stack.pop()
-        if not isinstance(t, Op) or id(t) in seen_nodes:
-            continue
-        seen_nodes.add(id(t))
+    for t in _term_ops(term):
         for steps, base in _seq_spines(t, memo):
             if len(steps) >= 2:
                 cands.append((t, steps, base))
-        stack.extend(reversed(t.args))
 
     out: list = []
     emitted_roots: set = set()
@@ -2679,20 +2619,13 @@ def _seqm_scan_sites(
 
     memo: dict = {}
     cands: list = []
-    seen_nodes: set = set()
 
-    # Iterative preorder — identical visit order to the recursive
-    # DFS (see ``_seq_scan_sites``), id-deduped.
-    stack = [term]
-    while stack:
-        t = stack.pop()
-        if not isinstance(t, Op) or id(t) in seen_nodes:
-            continue
-        seen_nodes.add(id(t))
+    # ``traversal.ops`` — identical visit order to the recursive
+    # DFS (see ``_seq_scan_sites``), DAG-deduped.
+    for t in _term_ops(term):
         for steps, base in _seq_spines(t, memo):
             if len(steps) >= 2:
                 cands.append((t, steps, base))
-        stack.extend(reversed(t.args))
 
     out: list = []
     emitted_roots: set = set()
@@ -4510,10 +4443,9 @@ def _search_board(
 
 def _ops_walk(term: Any):
     """Yield every Op node reachable in *term* (args-first)."""
-    if isinstance(term, Op):
-        yield term
-        for a in term.args:
-            yield from _ops_walk(a)
+    for _p, n in _term_expand(term):
+        if isinstance(n, Op):
+            yield n
 
 
 def _search_legal(state: _SearchState) -> tuple:

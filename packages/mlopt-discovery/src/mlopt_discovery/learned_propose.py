@@ -76,6 +76,8 @@ from mlopt_core.laws import ALL_RULES
 from mlopt_core.laws.provenance import MACHINE_SHIPPED
 from mlopt_core.laws.serialize import term_from_data
 from mlopt_core.opmeta import REGISTRY
+from mlopt_core.traversal import expand as _term_expand
+from mlopt_core.traversal import leaves as _term_leaves
 
 from mlopt_discovery import proposal as lp
 from mlopt_discovery.pipeline import Proposal
@@ -141,9 +143,10 @@ def term_stats(term: Any) -> dict[str, float]:
     max_arity = 0
     depth = 0
 
-    def walk(t: Any, d: int) -> None:
-        nonlocal nodes, leaves, attr_mvars, consts, max_arity, depth
-        depth = max(depth, d)
+    # ``expand`` is the same per-occurrence pre-order walk — every
+    # shared-subterm use site counts, exactly like the recursion.
+    for path, t in _term_expand(term):
+        depth = max(depth, len(path) + 1)
         if isinstance(t, Op):
             nodes += 1
             ops.add(t.op)
@@ -151,8 +154,6 @@ def term_stats(term: Any) -> dict[str, float]:
             for v in t.attrs.values():
                 if isinstance(v, str):
                     attr_mvars += 1
-            for a in t.args:
-                walk(a, d + 1)
         elif isinstance(t, Const):
             consts += 1
             leaves += 1
@@ -161,8 +162,6 @@ def term_stats(term: Any) -> dict[str, float]:
             leaves += 1
         else:  # Var / Param — a concrete leaf
             leaves += 1
-
-    walk(term, 1)
     return {
         "nodes": float(nodes),
         "depth": float(depth),
@@ -178,19 +177,14 @@ def term_stats(term: Any) -> dict[str, float]:
 
 def _op_hist(term: Any, into: dict[str, float]) -> None:
     """Accumulate ``op:<name>`` counts over *term* into *into*."""
-    if isinstance(term, Op):
-        into[f"op:{term.op}"] = into.get(f"op:{term.op}", 0.0) + 1.0
-        for a in term.args:
-            _op_hist(a, into)
+    for _p, n in _term_expand(term):
+        if isinstance(n, Op):
+            into[f"op:{n.op}"] = into.get(f"op:{n.op}", 0.0) + 1.0
 
 
 def _mvar_set(term: Any, into: set[str]) -> set[str]:
     """Collect the metavariable (bare-str leaf) names of *term*."""
-    if isinstance(term, Op):
-        for a in term.args:
-            _mvar_set(a, into)
-    elif isinstance(term, str):
-        into.add(term)
+    into.update(s for s in _term_leaves(term) if isinstance(s, str))
     return into
 
 
@@ -553,10 +547,11 @@ def _op_sites(
     term: Any, path: tuple = ()
 ) -> Iterator[tuple[tuple, Op]]:
     """Yield ``(path, Op)`` for every op node of *term*, pre-order."""
-    if isinstance(term, Op):
-        yield path, term
-        for i, a in enumerate(term.args):
-            yield from _op_sites(a, (*path, i))
+    return (
+        ((*path, *p), n)
+        for p, n in _term_expand(term)
+        if isinstance(n, Op)
+    )
 
 
 def _rebuild(term: Any, path: tuple, new: Any) -> Any:
@@ -573,11 +568,11 @@ def _leaf_paths(
     term: Any, path: tuple = ()
 ) -> Iterator[tuple[tuple, Any]]:
     """Yield ``(path, leaf)`` for every non-Op leaf of *term*."""
-    if isinstance(term, Op):
-        for i, a in enumerate(term.args):
-            yield from _leaf_paths(a, (*path, i))
-    else:
-        yield path, term
+    return (
+        ((*path, *p), n)
+        for p, n in _term_expand(term)
+        if not isinstance(n, Op)
+    )
 
 
 def _try_op(

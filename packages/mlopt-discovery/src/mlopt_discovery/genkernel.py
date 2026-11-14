@@ -501,7 +501,7 @@ def gen_sink(handlers: dict, *, compile_kernels: bool = True) -> Any:
 
 def _site_env(spec: Any, term: Any) -> dict | None:
     """Return the metavar bindings of the first concrete occurrence."""
-    from mlopt_core.ir import Op
+    from mlopt_core.traversal import expand as _term_expand
 
     from mlopt_discovery.meta_arena import _concrete_match
 
@@ -510,31 +510,19 @@ def _site_env(spec: Any, term: Any) -> dict | None:
         return env
     seen: set[int] = set()
 
-    def walk(t: Any) -> dict | None:
-        # id-dedup: the match verdict for a node is env-independent
-        # (each attempt binds fresh), so a shared subterm need only
-        # be tried once — keeps the search DAG-linear on model IRs.
-        # Pre-order (node, then children) preserves the original
-        # first-occurrence semantics; leaves match too (a bare
-        # metavar spec binds them).
-        if id(t) in seen:
-            return None
+    # ``expand`` is the same pre-order walk with ``id``-dedup kept
+    # explicit: the match verdict for a node is env-independent
+    # (each attempt binds fresh), so a shared subterm need only be
+    # tried once — keeps the search DAG-linear on model IRs, and
+    # leaves match too (a bare metavar spec binds them).  The root
+    # was already checked above.
+    for path, t in _term_expand(term):
+        if not path or id(t) in seen:
+            continue
         seen.add(id(t))
         sub: dict = {}
         if _concrete_match(spec, t, sub):
             return sub
-        if isinstance(t, Op):
-            for a in t.args:
-                found = walk(a)
-                if found is not None:
-                    return found
-        return None
-
-    if isinstance(term, Op):
-        for a in term.args:
-            found = walk(a)
-            if found is not None:
-                return found
     return None
 
 
@@ -642,25 +630,21 @@ def attr_site_env(h: dict, term: Any) -> tuple | None:
     Returns the first occurrence's ``(metavar→leaf env,
     attr-mvar→value attrs)`` or ``None``.
     """
-    from mlopt_core.ir import Op
-
     amvars = tuple(h.get("attr_mvars", ()))
     if not amvars:
         return None
 
-    def walk(spec: Any, t: Any) -> tuple | None:
+    # ``expand`` is the same per-occurrence pre-order walk the
+    # recursion spelled — first match wins, and the iterative walk
+    # drops the tree-expansion blowup on shared-DAG terms.
+    from mlopt_core.traversal import expand as _term_expand
+
+    for _p, t in _term_expand(term):
         env: dict = {}
         attrs: dict = {}
-        if _attr_match(spec, t, env, attrs, amvars):
+        if _attr_match(h["pattern"], t, env, attrs, amvars):
             return env, attrs
-        if isinstance(t, Op):
-            for a in t.args:
-                found = walk(spec, a)
-                if found is not None:
-                    return found
-        return None
-
-    return walk(h["pattern"], term)
+    return None
 
 
 def concretize_at_site(h: dict, term: Any) -> dict | None:

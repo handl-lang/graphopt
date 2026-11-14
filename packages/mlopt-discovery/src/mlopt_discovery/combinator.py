@@ -61,6 +61,8 @@ from dataclasses import dataclass
 from typing import Any
 
 from mlopt_core.ir import Const, Op, Param, Var
+from mlopt_core.traversal import postorder as _dag_postorder
+from mlopt_core.traversal import subterms as _term_subterms
 
 __all__ = [
     "BASIS",
@@ -299,22 +301,10 @@ def _arr(node: Op) -> Arr:
 
 def _postorder(root: Any) -> list[Op]:
     """Deduped postorder of the op nodes in ``root``'s DAG."""
-    order: list[Op] = []
-    expanded: set = set()
-    work: list[tuple[Any, bool]] = [(root, False)]
-    while work:
-        t, done = work.pop()
-        if not isinstance(t, Op):
-            continue
-        if done:
-            order.append(t)
-            continue
-        if t in expanded:
-            continue
-        expanded.add(t)
-        work.append((t, True))
-        work.extend((a, False) for a in t.args)
-    return order
+    # ``traversal.postorder`` is the same content-deduped,
+    # children-before-parents, right-to-left-children walk — filter
+    # to ``Op`` nodes for the op spine.
+    return [n for n in _dag_postorder(root) if isinstance(n, Op)]
 
 
 def dag_to_comb(root: Any) -> Any:
@@ -528,16 +518,7 @@ def morph_stats(m: Any, st: CombStats | None = None) -> CombStats:
 
 def dag_size(root: Any) -> int:
     """Count distinct subterms of a DAG (ops + leaves)."""
-    seen: set = set()
-    stack = [root]
-    while stack:
-        t = stack.pop()
-        if t in seen:
-            continue
-        seen.add(t)
-        if isinstance(t, Op):
-            stack.extend(t.args)
-    return len(seen)
+    return sum(1 for _ in _term_subterms(root))
 
 
 # ---------------------------------------------------------------------------

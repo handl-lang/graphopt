@@ -69,6 +69,8 @@ from mlopt_core.opmeta import (
     POINTWISE_OPS,
     VIEWISH_OPS,
 )
+from mlopt_core.traversal import ops as _term_ops
+from mlopt_core.traversal import subterms as _term_subterms
 
 from . import lawdata
 from . import meta_arena as ma
@@ -101,17 +103,9 @@ def scan_rules() -> Any:
 
 def _rule_ops(rule: Any) -> set:
     """Collect the op names on both sides of a law."""
-    out: set = set()
-
-    def walk(t: Any) -> None:
-        if isinstance(t, Op):
-            out.add(t.op)
-            for a in t.args:
-                walk(a)
-
-    walk(rule.lhs)
-    walk(rule.rhs)
-    return out
+    return {n.op for n in _term_ops(rule.lhs)} | {
+        n.op for n in _term_ops(rule.rhs)
+    }
 
 
 def _spec_ops(spec: Any) -> set:
@@ -194,24 +188,15 @@ def _pattern_occurs(pattern: Any, term: Any) -> bool:
     applies (metavar leaves bind consistently, op heads and attrs
     literally).
 
-    Iterative ``id``-deduped walk: the answer is a boolean OR over
-    per-node match results, and a shared node's match is
+    Iterative ``traversal.subterms`` walk: the answer is a boolean OR
+    over per-node match results, and a shared node's match is
     path-invariant, so dedup cannot change it — while the recursive
     version was both recursion-depth- and tree-expansion-bound on a
     shared-DAG term.
     """
-    seen: set[int] = set()
-    stack = [term]
-    while stack:
-        t = stack.pop()
-        if id(t) in seen:
-            continue
-        seen.add(id(t))
-        if ma._concrete_match(pattern, t, {}):
-            return True
-        if isinstance(t, Op):
-            stack.extend(t.args)
-    return False
+    return any(
+        ma._concrete_match(pattern, t, {}) for t in _term_subterms(term)
+    )
 
 
 def _ruleset_names(rules: Any) -> set:

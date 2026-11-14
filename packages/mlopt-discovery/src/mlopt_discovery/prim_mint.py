@@ -50,6 +50,8 @@ from mlopt_core.egraph.terms import _term_match
 from mlopt_core.ir import Const, Op, op_def
 from mlopt_core.laws import minted
 from mlopt_core.meta import instantiate_pattern
+from mlopt_core.traversal import expand as _term_expand
+from mlopt_core.traversal import ops as _term_ops
 
 from mlopt_discovery.antiunify import (
     _alpha_norm,
@@ -511,15 +513,13 @@ def sub_alphas(pat: Any) -> set:
     mint-over-minted phase would exploit (measured, not wired).
     """
     out: set[str] = set()
-
-    def go(t: Any) -> None:
-        for a in t.args:
-            if isinstance(a, Op):
-                out.add(_alpha_norm(a))
-                go(a)
-
-    if isinstance(pat, Op):
-        go(pat)
+    # every proper (non-root) Op position — the same set the
+    # recursion collected, ``expand`` being the per-occurrence walk.
+    out.update(
+        _alpha_norm(n)
+        for p, n in _term_expand(pat)
+        if p and isinstance(n, Op)
+    )
     return out
 
 
@@ -624,9 +624,7 @@ def pat_spec(pat: Any) -> Any:
 
 def pat_ops(pat: Any) -> set:
     """Op names inside a pattern."""
-    if not isinstance(pat, Op):
-        return set()
-    return {pat.op} | set().union(*(pat_ops(a) for a in pat.args))
+    return {n.op for n in _term_ops(pat)}
 
 
 def spec_bind(spec: Any, attrs: dict, attr_mvars: tuple) -> Any:

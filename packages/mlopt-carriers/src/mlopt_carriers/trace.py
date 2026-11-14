@@ -107,6 +107,8 @@ from mlopt_core.laws import RuleSet
 from mlopt_core.laws import tags as _tags
 from mlopt_core.laws.cond import as_derive
 
+from mlopt_carriers._shape import shape_of as _shape_of
+
 
 def R(name: str, lhs, rhs, **kw) -> Rewrite:
     """Module-local law constructor — trace laws carry the ``CARRIER`` tag."""
@@ -181,19 +183,6 @@ op_def(
 # ---------------------------------------------------------------------------
 #  Small shared helpers
 # ---------------------------------------------------------------------------
-
-
-#: Content-keyed shape memo — see ``xcarrier._SHAPE_MEMO``: bound
-#: terms are shared-DAG ``_min_term`` resolutions and an unmemoised
-#: ``typing._shape_of`` walk is exponential on them.
-_SHAPE_MEMO: dict = {}
-
-
-def _shape_of(t: Any):
-    """Best-effort shape of a bound term (delegates to cost model)."""
-    from mlopt_core.typing import _shape_of as _so
-
-    return _so(t, _SHAPE_MEMO)
 
 
 def _usize_total(u: Any) -> int:

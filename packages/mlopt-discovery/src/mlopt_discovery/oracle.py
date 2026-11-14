@@ -66,11 +66,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import torch
 from mlopt_core.attrs import ATTR_SCHEMA, is_positional_attr
 from mlopt_core.egraph.terms import _term_instantiate, _term_match
 from mlopt_core.ir import Const, Op, Param, TensorType, Var, op_repr
 from mlopt_core.opmeta import REDUCE_DIM_OPS, VIEWISH_OPS
+from mlopt_core.traversal import expand as _term_expand
+from mlopt_core.traversal import subterms as _term_subterms
 
 # Sibling tools own the corpus, the eval backend and the comparator;
 # reuse them, never duplicate.  The enumeration *banks* (shape banks,
@@ -219,6 +220,8 @@ class ViewVerdict:
 
 def _env_for(*terms: Any) -> dict | None:
     """Build the fp64 env for *terms*' leaves; ``None`` on unknown dims."""
+    import torch
+
     leaves = set()
     for t in terms:
         leaves |= lp._leaves(t)
@@ -269,27 +272,22 @@ def eval_instance(lhs: Any, rhs: Any) -> tuple[str, str]:
 def _leaf_metavars(pat: Any, out: list | None = None) -> list[str]:
     """Ordered unique metavariable strings at leaf positions."""
     out = [] if out is None else out
-    if isinstance(pat, str):
-        if pat not in out:
-            out.append(pat)
-    elif isinstance(pat, Op):
-        for a in pat.args:
-            _leaf_metavars(a, out)
+    out.extend(
+        s
+        for s in _term_subterms(pat)
+        if isinstance(s, str) and s not in out
+    )
     return out
 
 
 def _parents(pat: Any) -> dict[str, set[str]]:
     """Map each metavar to the ops of its parent nodes."""
     out: dict[str, set[str]] = {}
-
-    def walk(t: Any) -> None:
+    for _p, t in _term_expand(pat):
         if isinstance(t, Op):
             for a in t.args:
                 if isinstance(a, str):
                     out.setdefault(a, set()).add(t.op)
-                walk(a)
-
-    walk(pat)
     return out
 
 
@@ -1786,6 +1784,8 @@ def _bind_desc(term: Any) -> str:
 
 
 def _as_tensor(v: Any) -> Any:
+    import torch
+
     return v if isinstance(v, torch.Tensor) else None
 
 
@@ -1800,6 +1800,8 @@ def _view_call(node: Op, arg: Any) -> Any:
 
 
 def _bcast_to(t: Any, shape: tuple) -> Any:
+    import torch
+
     try:
         return torch.broadcast_to(t, shape)
     except Exception:
@@ -1808,6 +1810,8 @@ def _bcast_to(t: Any, shape: tuple) -> Any:
 
 def _feats_id(u: Any, g_u: Any, v: Any) -> dict[str, bool]:
     """``f(g(u),v) == f(u,v)`` pairing/out-shape features."""
+    import torch
+
     feats: dict[str, bool] = {}
     if not all(isinstance(t, torch.Tensor) for t in (u, g_u, v)):
         return feats
@@ -1832,6 +1836,8 @@ def _feats_w(node_i: Op, u: Any, v: Any, g_out: Any) -> dict[str, bool]:
     *unviewed* grid and compares with the broadcast to the *viewed*
     grid — the naturality precondition, checked on tensors.
     """
+    import torch
+
     feats: dict[str, bool] = {}
     if not all(isinstance(t, torch.Tensor) for t in (u, v, g_out)):
         return feats
@@ -1882,6 +1888,8 @@ def _features(
       *viewed* grid — the naturality precondition, checked
       mechanically on tensors.
     """
+    import torch
+
     feats: dict[str, Any] = {}
     parents = _parents(lhs_pat)
     mvs = sorted(set(_leaf_metavars(lhs_pat)))
@@ -2126,6 +2134,8 @@ def verify_view_candidate(
       over a tuple operand);
     * ``unproven`` — nothing evaluated at all.
     """
+    import torch
+
     torch.manual_seed(20240513)
     real = sweep_real(
         name, lhs_pat, rhs_pat, matches, check=check, derive=derive

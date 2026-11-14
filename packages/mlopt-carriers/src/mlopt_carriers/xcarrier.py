@@ -148,6 +148,8 @@ from mlopt_core.laws import RuleSet
 from mlopt_core.laws import tags as _tags
 from mlopt_core.typing import register_value_shape
 
+from mlopt_carriers._shape import shape_of as _shape_of
+
 
 def R(name: str, lhs, rhs, **kw) -> Rewrite:
     """Module-local law constructor — seam laws carry the ``CARRIER`` tag."""
@@ -162,27 +164,6 @@ __all__ = [
     "gather_applyd_stack",
     "omd_tree_lift",
 ]
-
-
-#: Content-keyed shape memo shared by every ``_shape_of`` fallback in
-#: this module.  ``_xshape`` re-dispatches ``typing._shape_of`` on
-#: surrogate terms at EVERY Op node of a bound term; bound terms are
-#: ``EGraph._min_term`` resolutions — interned Op objects whose object
-#: graph is a heavily-shared DAG (a whisper decoder block unfolds to
-#: ~6·10^8 tree paths over ~600 distinct nodes).  Without a memo each
-#: fallback re-walks that DAG as a tree — exponential per substitution,
-#: the measured >20 min decoder-search wall (see
-#: ``docs/reports/decoder_search_scaling.md``).  Terms are interned,
-#: so the memo is sound — the same precedent as
-#: ``mlopt_core.laws.base._SHAPE_MEMO``.
-_SHAPE_MEMO: dict = {}
-
-
-def _shape_of(t: Any):
-    """Best-effort shape of a bound term (delegates to cost model)."""
-    from mlopt_core.typing import _shape_of as _so
-
-    return _so(t, _SHAPE_MEMO)
 
 
 def _broadcast_ok(a, b) -> bool:
