@@ -436,3 +436,109 @@ def test_verify_equiv_explicit_looser_rtol_still_honored():
     vr = verify_equiv(ref, out, rtol=1.0)
     assert vr.passed
     assert vr.rtol == 1.0
+
+
+# ---------------------------------------------------------------------------
+#  verify_module — RNG-aware verify (Kokoro wall A)
+# ---------------------------------------------------------------------------
+
+
+class _Stochastic(nn.Module):
+    """In-graph RNG — Kokoro's ``SineGen`` class of module."""
+
+    def forward(self, x):
+        return x + torch.rand_like(x) + 0.1 * torch.randn_like(x)
+
+
+class _StochasticBad(nn.Module):
+    """Same RNG draws, different semantics — a real wrong kernel."""
+
+    def forward(self, x):
+        return x * torch.rand_like(x) + 0.1 * torch.randn_like(x)
+
+
+def test_verify_module_stochastic_auto_seeded_passes():
+    """A stochastic pair that is semantically identical verifies:
+    the unseeded run would differ ~O(1), so the RNG-state diff must
+    trigger the aligned-seed re-run — and the comparison stays exact
+    (``max_abs == 0``, not a statistical tolerance)."""
+    torch.manual_seed(1234)  # arbitrary ambient state
+    x = torch.randn(8, dtype=torch.float64)
+    vr = verify_module(_Stochastic().eval(), _Stochastic().eval(), x)
+    assert vr.passed
+    assert vr.max_abs == 0.0
+    assert vr.seeded == 0  # _AUTO_VERIFY_SEED
+
+
+def test_verify_module_stochastic_semantic_error_still_fails():
+    """Seeding aligns the stream — it does not weaken the gate: a
+    stochastic module with a real semantic error still fails."""
+    x = torch.randn(8, dtype=torch.float64)
+    vr = verify_module(_Stochastic().eval(), _StochasticBad().eval(), x)
+    assert not vr.passed
+    assert vr.max_rel > 0.1
+    assert vr.seeded == 0  # the seeded path ran and still failed
+
+
+def test_verify_module_explicit_seed():
+    """``seed=`` forces the aligned run unconditionally and is
+    recorded on the report — including for deterministic modules."""
+    x = torch.randn(8, dtype=torch.float64)
+    vr = verify_module(
+        _Stochastic().eval(),
+        _Stochastic().eval(),
+        x,
+        seed=1234,
+    )
+    assert vr.passed and vr.max_abs == 0.0
+    assert vr.seeded == 1234
+
+    m = _small_mlp()
+    y = torch.randn(2, 16, dtype=torch.float64)
+    vr = verify_module(m, m, y, seed=7)
+    assert vr.passed and vr.seeded == 7
+
+
+def test_verify_module_deterministic_unaffected():
+    """No RNG consumption -> no seeded re-run, no ``seeded`` field,
+    and the ambient RNG stream is untouched."""
+    m1 = _small_mlp()
+    x = torch.randn(2, 16, dtype=torch.float64)
+    state_before = torch.random.get_rng_state().clone()
+    vr = verify_module(m1, m1, x)
+    assert vr.passed
+    assert vr.seeded is None
+    assert torch.equal(torch.random.get_rng_state(), state_before)
+
+
+def test_verify_module_rng_neutral_for_stochastic():
+    """Verify restores the caller's RNG state even when the pair
+    consumed randomness — the detection run and the re-seed must not
+    leak into the ambient stream."""
+    torch.manual_seed(7)
+    x = torch.randn(8, dtype=torch.float64)
+    state_before = torch.random.get_rng_state().clone()
+    vr = verify_module(_Stochastic().eval(), _Stochastic().eval(), x)
+    assert vr.passed
+    assert torch.equal(torch.random.get_rng_state(), state_before)
+
+
+def test_verify_module_stochastic_mismatched_consumption_fails():
+    """The seeded check certifies 'same stream -> same output': a
+    rewrite that drops a stochastic draw consumes the stream
+    differently and fails honestly."""
+
+    class _StochasticTwoDraws(nn.Module):
+        def forward(self, x):
+            return (
+                x
+                + torch.rand_like(x)
+                + torch.rand_like(x)
+                + 0.1 * torch.randn_like(x)
+            )
+
+    x = torch.randn(8, dtype=torch.float64)
+    vr = verify_module(
+        _StochasticTwoDraws().eval(), _Stochastic().eval(), x
+    )
+    assert not vr.passed

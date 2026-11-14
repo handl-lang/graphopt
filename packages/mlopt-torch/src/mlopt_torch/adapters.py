@@ -131,12 +131,18 @@ class TorchSink:
         *,
         rtol: float = 1e-4,
         atol: float | None = None,
+        seed: int | None = None,
     ) -> VerifyReport:
         """Run ``ref`` and ``opt`` on ``inputs`` under ``no_grad``.
 
         Compares the results — delegates to ``report.verify_module``.
+        ``seed`` aligns both sides' RNG streams for stochastic
+        modules (``report.verify_module`` also auto-detects RNG
+        consumption when ``seed`` is ``None``).
         """
-        return verify_module(ref, opt, inputs, rtol=rtol, atol=atol)
+        return verify_module(
+            ref, opt, inputs, rtol=rtol, atol=atol, seed=seed
+        )
 
 
 def _always_true(_: Any) -> bool:

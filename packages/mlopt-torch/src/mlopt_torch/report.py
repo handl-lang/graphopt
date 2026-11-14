@@ -57,6 +57,13 @@ _RTOL_DTYPE_FACTOR = 8.0
 
 _FP32_EPS = torch.finfo(torch.float32).eps
 
+#: The seed ``verify_module`` aligns both sides to when it detects
+#: stochastic RNG consumption and the caller passed no explicit
+#: ``seed``.  Any fixed value works — the check is *equality under an
+#: aligned stream*, not the stream's quality — and a constant keeps
+#: the auto path reproducible run to run.
+_AUTO_VERIFY_SEED = 0
+
 
 def _dtype_rtol_floor(*outputs: Any) -> float:
     """Return the dtype-resolution floor for ``verify_equiv``'s rtol.
@@ -109,6 +116,12 @@ class VerifyReport:
     #: loosest per-output value, ``None`` on the fail-closed
     #: arity-mismatch report.
     rtol: float | None = None
+    #: The RNG seed the module-level comparison ran under — set by
+    #: ``verify_module`` when seeded eval engaged (an explicit
+    #: ``seed=`` or the auto-detected stochastic path); ``None`` for
+    #: unseeded comparisons and for ``verify_equiv`` on
+    #: already-computed outputs.
+    seeded: int | None = None
 
 
 def rel_diff(a: torch.Tensor, b: torch.Tensor) -> float:
@@ -238,12 +251,121 @@ def verify_equiv(
     return _verify_pair(ref_out, out, rtol, atol)
 
 
+# ---------------------------------------------------------------------------
+#  RNG alignment — stochastic modules under verify_module
+# ---------------------------------------------------------------------------
+#
+# Models with in-graph stochastic ops (``torch.rand`` /
+# ``randn_like`` in Kokoro's ``SineGen`` — see
+# ``docs/reports/tts_kokoro_r1.md`` wall A) produce run-to-run diffs
+# far above any rtol, so an *unseeded* output-parity check cannot
+# distinguish "stochastic op" from "wrong kernel".  The principled
+# fix is NOT a statistical tolerance — it is to give both sides the
+# SAME random stream: reseed identically before each side's forward
+# and the comparison stays an exact equality check.  This mirrors the
+# dtype-rtol floor's philosophy (``verify_bf16_mem.md``): the gate's
+# *form* is unchanged; only its *resolution* is adapted to what the
+# comparison can actually resolve.
+#
+# Detection is deliberately at the RNG-state level, not the op-name
+# level: a census of bound ops would miss stochasticity hiding inside
+# ``opaque`` passthrough leaves (Kokoro's ``randn_like`` IS one) and
+# inside arbitrary user modules.  Instead ``verify_module`` snapshots
+# the CPU + CUDA generator states around the unseeded pair; if either
+# forward consumed RNG, the pair is re-run once under an aligned seed
+# (``seed=`` explicit, else ``_AUTO_VERIFY_SEED``).  Deterministic
+# modules see zero extra forwards and bit-identical behaviour — the
+# snapshot/restore is a no-op when nothing was drawn.
+#
+# Honest limits (documented in ``docs/reports/rng_aware_verify.md``):
+# * only the *global* CPU and CUDA generators are aligned —
+#   ``torch.Generator`` objects passed explicitly, numpy RNG, and
+#   non-CUDA accelerator RNG (MPS/XPU) are out of scope;
+# * the seeded re-run certifies "same RNG stream -> same output",
+#   i.e. the two sides must consume the stream *identically*
+#   (op-for-op, in order) — a rewrite that legitimately reorders or
+#   drops a stochastic draw fails, which is the honest answer since
+#   that IS an observable semantic difference;
+# * ``verify_equiv`` on already-computed outputs cannot reseed —
+#   callers holding tensors must align RNG themselves.
+
+
+def _rng_snapshot() -> dict[str, Any]:
+    """Snapshot the global CPU and CUDA RNG states.
+
+    ``torch.random.get_rng_state`` covers the CPU generator;
+    ``torch.cuda.get_rng_state_all`` covers every visible CUDA
+    device (the per-device generators ``torch.manual_seed`` seeds).
+    """
+    snap: dict[str, Any] = {"cpu": torch.random.get_rng_state()}
+    if torch.cuda.is_available():
+        snap["cuda"] = torch.cuda.get_rng_state_all()
+    return snap
+
+
+def _rng_states_equal(a: dict[str, Any], b: dict[str, Any]) -> bool:
+    """Return whether two :func:`_rng_snapshot` results are identical."""
+    if not torch.equal(a["cpu"], b["cpu"]):
+        return False
+    ca: list[torch.Tensor] | None = a.get("cuda")
+    cb: list[torch.Tensor] | None = b.get("cuda")
+    if (ca is None) != (cb is None):
+        return False
+    if ca is None or cb is None:
+        return True
+    return len(ca) == len(cb) and all(
+        torch.equal(x, y) for x, y in zip(ca, cb, strict=True)
+    )
+
+
+def _rng_restore(snap: dict[str, Any]) -> None:
+    """Restore a :func:`_rng_snapshot` — verify stays RNG-neutral."""
+    torch.random.set_rng_state(snap["cpu"])
+    cuda = snap.get("cuda")
+    if cuda is not None:
+        torch.cuda.set_rng_state_all(cuda)
+
+
+def _forward_verify_pair(
+    ref_mod: torch.nn.Module,
+    opt_mod: torch.nn.Module,
+    args: tuple,
+    ref_park: Any,
+    opt_park: Any,
+    seed: int | None,
+) -> tuple[Any, Any]:
+    """Run the verify pair once — the historical park/forward order.
+
+    Caller holds ``torch.no_grad``.  ``seed`` reseeds the global RNG
+    immediately before EACH side's forward so both draw from the same
+    stream position; ``None`` leaves the ambient stream alone (the
+    unseeded detection run).
+    """
+    for park in (ref_park, opt_park):
+        if park is not None:
+            park()
+    if seed is not None:
+        torch.manual_seed(seed)
+    ref = ref_mod(
+        *[a.clone() if isinstance(a, torch.Tensor) else a for a in args]
+    )
+    if ref_park is not None:
+        ref_park()
+    if seed is not None:
+        torch.manual_seed(seed)
+    out = opt_mod(
+        *[a.clone() if isinstance(a, torch.Tensor) else a for a in args]
+    )
+    return ref, out
+
+
 def verify_module(
     ref_mod: torch.nn.Module,
     opt_mod: torch.nn.Module,
     inputs: torch.Tensor | tuple,
     rtol: float = 1e-4,
     atol: float | None = None,
+    seed: int | None = None,
 ) -> VerifyReport:
     """Run ``ref_mod`` and ``opt_mod`` on ``inputs`` and compare.
 
@@ -269,6 +391,21 @@ def verify_module(
     is identical.  Modules without the hook keep the historical
     both-resident behaviour.
 
+    RNG-aware verify (Kokoro wall A — in-graph ``torch.rand`` /
+    ``randn_like`` defeat an unseeded parity check): ``verify_module``
+    snapshots the CPU+CUDA RNG states around the pair.  If either
+    forward consumed randomness and ``seed`` was not given, the pair
+    is re-run ONCE with both sides reseeded to ``_AUTO_VERIFY_SEED``
+    immediately before each forward — an *exact* comparison under an
+    aligned stream, never a statistical tolerance.  ``seed=<int>``
+    forces that aligned-seed run unconditionally (and is recorded on
+    the report's ``seeded`` field either way).  Deterministic modules
+    are untouched: no extra forwards, same outputs, and the caller's
+    RNG state is restored afterwards so verify never perturbs the
+    ambient stream.  See ``docs/reports/rng_aware_verify.md`` for the
+    policy and its limits (explicit ``torch.Generator`` objects,
+    numpy RNG and non-CUDA accelerators are out of scope).
+
     The comparison itself goes through :func:`verify_equiv`, whose
     ``rtol`` gets the dtype-resolution floor (``_dtype_rtol_floor``)
     — sub-fp32 outputs (bf16/fp16/fp8) verify against
@@ -280,25 +417,32 @@ def verify_module(
     opt_mod.eval()
     ref_park = getattr(ref_mod, "_park_params", None)
     opt_park = getattr(opt_mod, "_park_params", None)
-    with torch.no_grad():
-        for park in (ref_park, opt_park):
-            if park is not None:
-                park()
-        ref = ref_mod(
-            *[
-                a.clone() if isinstance(a, torch.Tensor) else a
-                for a in args
-            ]
-        )
-        if ref_park is not None:
-            ref_park()
-        out = opt_mod(
-            *[
-                a.clone() if isinstance(a, torch.Tensor) else a
-                for a in args
-            ]
-        )
-    return verify_equiv(ref, out, rtol=rtol, atol=atol)
+    snap0 = _rng_snapshot()
+    seeded = seed
+    try:
+        with torch.no_grad():
+            ref, out = _forward_verify_pair(
+                ref_mod, opt_mod, args, ref_park, opt_park, seed
+            )
+            snap1 = _rng_snapshot()
+        # RNG-state diff detects stochastic consumption on EITHER
+        # side — bound creator ops and opaque passthrough leaves
+        # alike — with no op census to keep in sync.
+        if seed is None and not _rng_states_equal(snap0, snap1):
+            seeded = _AUTO_VERIFY_SEED
+            with torch.no_grad():
+                ref, out = _forward_verify_pair(
+                    ref_mod, opt_mod, args, ref_park, opt_park, seeded
+                )
+    finally:
+        # Verify is RNG-neutral: the unseeded detection run and the
+        # aligned re-seed must not leak into the caller's stream.
+        # For deterministic modules this restores an unchanged state.
+        _rng_restore(snap0)
+    report = verify_equiv(ref, out, rtol=rtol, atol=atol)
+    if seeded is not None:
+        report = dataclasses.replace(report, seeded=seeded)
+    return report
 
 
 # ---------------------------------------------------------------------------
