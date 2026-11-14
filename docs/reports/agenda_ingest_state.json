@@ -1,0 +1,35 @@
+{
+  "ingested": {
+    "agenda-frontier_delivery_gap-uncaptured-headroom-on-zoo-chunkedssd-1543-317us": {
+      "item": "{'id': 'T-039', 'title': 'agenda frontier_delivery_gap-uncaptured-headroom-on-zoo-chunkedssd-1543-317us: Uncaptured headroom on zoo:ChunkedSSD: 1543.317us ceiling, captured=0.0584, vs_compile=None', 'status': 'open', 'priority': 'high', 'labels': ['agenda'], 'created': '2026-11-14'}",
+      "kind": "todo",
+      "rank": 2,
+      "ts": "2026-11-14T14:19:00+00:00"
+    },
+    "agenda-frontier_delivery_gap-uncaptured-headroom-on-zoo-chunkedssd-1751-576us": {
+      "item": "{'id': 'T-040', 'title': 'agenda frontier_delivery_gap-uncaptured-headroom-on-zoo-chunkedssd-1751-576us: Uncaptured headroom on zoo:ChunkedSSD: 1751.576us ceiling, captured=-0.0615, vs_compile=0.286', 'status': 'open', 'priority': 'high', 'labels': ['agenda'], 'created': '2026-11-14'}",
+      "kind": "todo",
+      "rank": 3,
+      "ts": "2026-11-14T14:19:02+00:00"
+    },
+    "agenda-frontier_delivery_gap-uncaptured-headroom-on-zoo-decoupledmla-140-084u": {
+      "item": "{'id': 'T-041', 'title': 'agenda frontier_delivery_gap-uncaptured-headroom-on-zoo-decoupledmla-140-084u: Uncaptured headroom on zoo:DecoupledMLA: 140.084us ceiling, captured=-0.2396, vs_compile=0.6241', 'status': 'open', 'priority': 'high', 'labels': ['agenda'], 'created': '2026-11-14'}",
+      "kind": "todo",
+      "rank": 4,
+      "ts": "2026-11-14T14:19:03+00:00"
+    },
+    "agenda-frontier_delivery_gap-uncaptured-headroom-on-zoo-deltaruleblock-163-41": {
+      "item": "{'id': 'T-042', 'title': 'agenda frontier_delivery_gap-uncaptured-headroom-on-zoo-deltaruleblock-163-41: Uncaptured headroom on zoo:DeltaRuleBlock: 163.416us ceiling, captured=0.0055, vs_compile=0.7611', 'status': 'open', 'priority': 'high', 'labels': ['agenda'], 'created': '2026-11-14'}",
+      "kind": "todo",
+      "rank": 5,
+      "ts": "2026-11-14T14:19:05+00:00"
+    },
+    "agenda-paymeasured_confound-6-14-pay-measured-rows-are-executor-confounded-t": {
+      "item": "{'id': 'T-038', 'title': 'agenda paymeasured_confound-6-14-pay-measured-rows-are-executor-confounded-t: 6/14 pay_measured rows are executor-confounded \u2014 the marginal measures routing, not the fold', 'status': 'open', 'priority': 'high', 'labels': ['agenda'], 'created': '2026-11-14'}",
+      "kind": "todo",
+      "rank": 1,
+      "ts": "2026-11-14T14:18:58+00:00"
+    }
+  },
+  "last_run": "2026-11-14T14:19:05+00:00"
+}
