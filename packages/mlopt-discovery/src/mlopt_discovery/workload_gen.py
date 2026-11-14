@@ -134,7 +134,9 @@ _DEV = torch.device("cpu")
 _MAX_DEPTH = 10
 
 #: Node budget for a generated term — keeps probes/saturations cheap.
-_MAX_NODES = 80
+#: Annotated ``int`` (not a bare literal) so ``model_corpus`` can
+#: scope a larger probe-size override for real-model mutants.
+_MAX_NODES: int = 80
 
 #: Point mutations applied per mutant.
 _MAX_MUTATIONS = 3
