@@ -141,7 +141,7 @@ mlopt-carriers = { workspace = true }
 mlopt-cuda = { workspace = true }
 mlopt-discovery = { workspace = true }
 mlopt-onnx = { workspace = true }
-mlopt-dtypes = { workspace = true }
+mlopt-dtypes = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-dtypes", tag = "v0.1.0" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
