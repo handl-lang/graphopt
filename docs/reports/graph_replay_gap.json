@@ -1,0 +1,134 @@
+[
+ {
+  "case": "retnet_T1024_K8",
+  "arms": [
+   {
+    "arm": "carrier64+graph(run)",
+    "checks": [
+     {
+      "variant": 0,
+      "graph_vs_eager": 0.0,
+      "eager_vs_base": 1.6653345369377348e-16
+     },
+     {
+      "variant": 1,
+      "graph_vs_eager": 0.0,
+      "eager_vs_base": 1.1102230246251565e-16
+     },
+     {
+      "variant": 2,
+      "graph_vs_eager": 0.0,
+      "eager_vs_base": 3.3306690738754696e-16
+     },
+     {
+      "variant": 3,
+      "graph_vs_eager": 0.0,
+      "eager_vs_base": 1.1102230246251565e-16
+     }
+    ],
+    "max_abs_graph_vs_eager": 0.0
+   },
+   {
+    "arm": "carrier32+graph(run)",
+    "checks": [
+     {
+      "variant": 0,
+      "graph_vs_eager": 0.0,
+      "eager_vs_base": 1.1920928955078125e-07
+     },
+     {
+      "variant": 1,
+      "graph_vs_eager": 0.0,
+      "eager_vs_base": 5.960464477539063e-08
+     },
+     {
+      "variant": 2,
+      "graph_vs_eager": 0.0,
+      "eager_vs_base": 5.960464477539063e-08
+     },
+     {
+      "variant": 3,
+      "graph_vs_eager": 0.0,
+      "eager_vs_base": 5.960464477539063e-08
+     }
+    ],
+    "max_abs_graph_vs_eager": 0.0
+   }
+  ],
+  "carrier64": {
+   "cuda_graph": true,
+   "failure": null
+  },
+  "carrier32": {
+   "cuda_graph": true,
+   "failure": null
+  },
+  "sat_secs": 10.477176127998973,
+  "root_op": "concat"
+ },
+ {
+  "case": "chainfuse_mlp",
+  "arms": [
+   {
+    "arm": "generic64+graph(run)",
+    "checks": [
+     {
+      "variant": 0,
+      "graph_vs_eager": 0.0,
+      "eager_vs_base": 9.237055564881302e-14
+     },
+     {
+      "variant": 1,
+      "graph_vs_eager": 0.0,
+      "eager_vs_base": 8.260059303211165e-14
+     },
+     {
+      "variant": 2,
+      "graph_vs_eager": 0.0,
+      "eager_vs_base": 5.3290705182007514e-14
+     },
+     {
+      "variant": 3,
+      "graph_vs_eager": 0.0,
+      "eager_vs_base": 6.039613253960852e-14
+     }
+    ],
+    "max_abs_graph_vs_eager": 0.0
+   },
+   {
+    "arm": "delivered64+graph(run)",
+    "checks": [
+     {
+      "variant": 0,
+      "graph_vs_eager": 0.0,
+      "eager_vs_base": 1.709743457922741e-14
+     },
+     {
+      "variant": 1,
+      "graph_vs_eager": 0.0,
+      "eager_vs_base": 6.927791673660977e-14
+     },
+     {
+      "variant": 2,
+      "graph_vs_eager": 0.0,
+      "eager_vs_base": 7.105427357601002e-14
+     },
+     {
+      "variant": 3,
+      "graph_vs_eager": 0.0,
+      "eager_vs_base": 8.348877145181177e-14
+     }
+    ],
+    "max_abs_graph_vs_eager": 0.0
+   }
+  ],
+  "generic64": {
+   "cuda_graph": true,
+   "failure": null
+  },
+  "delivered64": {
+   "cuda_graph": true,
+   "failure": null
+  }
+ }
+]
