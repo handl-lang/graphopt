@@ -84,8 +84,8 @@ reps, gen_reps, probe, mutant_headroom)`:
    `_zoo_case`); `mutant_board` seats `TorchSink().lower(ir,
    param_vals)` — the spelled `IRModule`, which *is* the denotation
    the delivered kernel is verified against.  Both funnel through
-   `_case_tail`, which mirrors `play._zoo_case`'s intake tail call-
-   for-call: `_mint_tiers` → `_claim_measurable` split →
+   `play._case_tail` — the intake tail extracted from `_zoo_case`
+   (see below): `_mint_tiers` → `_claim_measurable` split →
    `gk.profitable(reps=gen_reps, kernel_for=_triton_kernel_for,
    denotation_for=_claim_denotation_for)` → `gk.gen_sink` → the
    `(name, term, {"gen": n}, tag, supported, ex)` tuple with
@@ -96,22 +96,18 @@ reps, gen_reps, probe, mutant_headroom)`:
    verified ∧ speedup > 1) / `decline` / `verify-fail`.  Probe
    exceptions become honest `delivered: False` rows.
 
-### The `_case_tail` mirror — hook for the pay-file owner
+### The `_case_tail` extraction — landed
 
-`_case_tail` duplicates ~50 lines of `play._zoo_case`'s tail
+`_case_tail` duplicated ~50 lines of `play._zoo_case`'s tail
 because `_zoo_case` is keyed on a `Workload.build()` thunk — a
-generated IR term cannot enter it.  The clean fix is a
-`play`-side extraction:
-
-```python
-def _case_tail(ir, leaves, feed, model, label, *, gen_reps=20): ...
-```
-
-which `_zoo_case` and `model_corpus.mutant_board` both call.  That
-edit belongs to whoever owns `play.py`; until it lands the mirror
-calls the *same* functions (`_mint_tiers`, `_claim_measurable`,
-`profitable`, `gen_sink`) so behaviour cannot drift silently — but
-it should be unified when the file is next touched.
+generated IR term cannot enter it.  The extraction has now landed:
+`play._case_tail(ir, leaves, feed, model, case, tag, *,
+gen_reps=20)` holds the shared tail (`_mint_tiers` →
+`_claim_measurable` split → `gk.profitable` → `gk.gen_sink` → the
+case tuple), `_zoo_case` calls it with
+`(f"zoo:{wl.name}", wl.name)`, and `model_corpus._case_tail` is a
+thin wrapper passing the label for both slots.  The mirror is gone —
+one tail, one behaviour.
 
 ## Measured result — synthetic novel model
 
@@ -158,13 +154,17 @@ compositions:
   doesn't cover; `rows`/`verdicts` say what the generated kernels
   would do *on this model's shapes*.
 
-* **Orchestrator hook (one line, eqsat repo):** an optional
-  `corpus_probe: Callable[[str, Module, Any], dict] | None = None`
-  parameter on `Optimizer.optimize`, invoked after export with
-  `(name, model, example_inputs)` and its report merged into
-  `stats["corpus_probe"]`.  `mlopt_discovery.model_corpus.model_corpus`
-  is the drop-in callable.  Not implemented here — eqsat is a
-  separate pinned repo; this is the documented seam.
+* **Orchestrator hook (landed, eqsat):** `search()` /
+  `Optimizer.optimize` accept `corpus_probe: (name, model, x) ->
+  report`, invoked once right after export; the report merges into
+  `stats["corpus_probe"]` (and flows through `lower` into the
+  delivery stats).  `Compositional` scopes it to the whole model —
+  once, never per block; `Autotuned` forwards it through its inner
+  `optimize` call.  `mlopt_discovery.model_corpus.corpus_probe()` is
+  the drop-in adapter (binds the knobs, matches the intake dtype to
+  the model's own so the probe's `model.to(td)` is a no-op on the
+  caller's module); a bare `model_corpus` also satisfies the
+  signature.  Details: `docs/reports/model_corpus_wiring.md`.
 
 ## Boundaries — what cannot be auto-generated
 

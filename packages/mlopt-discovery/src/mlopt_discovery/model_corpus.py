@@ -34,13 +34,16 @@ closes that gap for an arbitrary ``(model, feed)`` pair:
 
 Honesty boundaries (what this does *not* do):
 
-* **No ``opt.optimize`` hook.**  ``mlopt_orchestrator`` is the
-  substrate repo — it never imports ``mlopt_discovery`` (the
-  hexagonal boundary), so ``Optimizer.optimize(model, x)`` cannot
-  call this module.  The wiring is a caller-side composition:
-  ``model_corpus(name, model, x)`` beside ``opt.optimize``, or a
-  one-line ``corpus_probe=`` callback added to ``Optimizer`` in
-  eqsat (documented in ``docs/reports/per_model_corpus.md``).
+* **The ``optimize`` seam is caller-injected.**  ``mlopt_orchestrator``
+  (the eqsat substrate repo) never imports ``mlopt_discovery`` — the
+  hexagonal boundary — so ``Optimizer.optimize``/``search`` take an
+  optional ``corpus_probe=`` callable invoked once after export as
+  ``probe(name, model, x)``; its report lands in
+  ``stats["corpus_probe"]`` and the default (``None``) path is
+  unchanged.  :func:`corpus_probe` below is the drop-in adapter —
+  ``opt.optimize(model, x, corpus_probe=mc.corpus_probe(
+  n_mutants=8, reps=50))``.  A plain ``model_corpus`` also satisfies
+  the ``(name, model, feed)`` signature directly.
 * **Static shapes only.**  The export boundary needs concrete
   example inputs; dynamic shapes (``None`` dims, data-dependent
   structure, ``torch.compile``-only constructs) reject at
@@ -65,6 +68,7 @@ from __future__ import annotations
 import argparse
 import json
 import random
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -75,6 +79,7 @@ from mlopt_torch.adapters import TorchSink, TorchSource
 from mlopt_discovery.impact import TermCase, _ir_of
 
 __all__ = [
+    "corpus_probe",
     "coverage_report",
     "export_ir",
     "generate_mutants",
@@ -277,19 +282,15 @@ def generate_mutants(
 
 
 # ---------------------------------------------------------------------------
-#  Board intake — mirror play._zoo_case's tail for arbitrary terms
+#  Board intake — play._case_tail, the shared ``_zoo_case`` tail
 # ---------------------------------------------------------------------------
 #
-#  ``play._zoo_case`` is the zoo's intake: export → ``_mint_tiers``
-#  over the term's real sites → ``_claim_measurable`` split →
+#  ``play._case_tail`` (extracted from ``_zoo_case``) is the intake
+#  tail on an already-lifted term: ``_mint_tiers`` over the term's
+#  real sites → ``_claim_measurable`` split →
 #  ``genkernel.profitable`` measured-cost referee → ``gen_sink``.
-#  Its body is keyed on a ``Workload.build()`` thunk, so a generated
-#  IR term cannot enter it.  The tail below is the same sequence of
-#  calls on the same functions — kept deliberately small so a
-#  ``play``-side ``_case_tail(ir, leaves, feed, model, name)`` hook
-#  can replace it without touching the collectors (the pay/referee
-#  files another lane owns).  Until that hook exists this mirror is
-#  the honest duplication: same mint, same referee, same sink.
+#  ``_zoo_case`` and this module's boards both call it, so the mint,
+#  referee and sink cannot drift.
 
 
 def _case_tail(
@@ -301,59 +302,19 @@ def _case_tail(
     *,
     gen_reps: int = 20,
 ) -> tuple:
-    """Run the ``_zoo_case`` intake tail on an already-lifted term.
+    """Run ``play._case_tail`` on an already-lifted term.
 
     Returns the gen-domain case tuple ``(name, term, decls, tag,
     supported, ex)`` — indices ``gen_probe`` reads are identical:
     ``case[1]`` the IR root, ``case[4]`` the supported bound,
     ``case[5]`` the ``ex`` record carrying ``model``/``input``/
-    ``ir``/``leaves``/``gen_handlers``/``sink``.
+    ``ir``/``leaves``/``gen_handlers``/``sink``.  *label* fills both
+    label slots (the zoo passes distinct ``case``/``tag`` names).
     """
-    from mlopt_discovery import genkernel as gk
-    from mlopt_discovery import lawdata, play
-    from mlopt_discovery.meta_arena import _canon_concrete
+    from mlopt_discovery import play
 
-    covered = {
-        _canon_concrete(h["pattern"]) for h in lawdata.HANDLERS.values()
-    }
-    genh = play._mint_tiers(ir.root, covered)
-    var_env = play._var_env(ir, leaves, feed)
-    priced = {
-        k: v for k, v in genh.items() if play._claim_measurable(k, v)
-    }
-    unpriced = {
-        k: v
-        for k, v in genh.items()
-        if not play._claim_measurable(k, v)
-    }
-    genh = {
-        **unpriced,
-        **gk.profitable(
-            priced,
-            ir.root,
-            var_env,
-            reps=gen_reps,
-            kernel_for=play._triton_kernel_for,
-            denotation_for=play._claim_denotation_for,
-        ),
-    }
-    sink = gk.gen_sink(genh, compile_kernels=False)
-    return (
-        label,
-        ir.root,
-        {"gen": len(genh)},
-        label,
-        sink.supported_ops,
-        {
-            "ir": ir,
-            "leaves": leaves,
-            "model": model,
-            "input": feed,
-            "sink": sink,
-            "handlers": dict(lawdata.HANDLERS) | genh,
-            "gen_handlers": genh,
-            "_gen_claims_gated": True,
-        },
+    return play._case_tail(
+        ir, leaves, feed, model, label, label, gen_reps=gen_reps
     )
 
 
@@ -516,6 +477,66 @@ def model_corpus(
         "rows": rows,
         "verdicts": verdicts,
     }
+
+
+def _model_dtype(model: Any) -> str:
+    """Match the intake dtype to *model*'s floating-point parameters.
+
+    ``"fp32"`` for an fp32 module, ``"fp64"`` otherwise — the probe's
+    ``export_ir`` casts the module in place, so matching the caller's
+    dtype keeps the ``corpus_probe=`` hook from silently re-dtyping
+    the model ``lower``'s verify then runs against the original
+    ``x``.  Non-tensor/parameterless models fall back to ``"fp64"``
+    (the intake convention).
+    """
+    try:
+        for p in model.parameters():
+            if torch.is_tensor(p) and p.is_floating_point():
+                return "fp32" if p.dtype == torch.float32 else "fp64"
+    except Exception:
+        pass
+    return "fp64"
+
+
+def corpus_probe(
+    *,
+    dtype: str | None = None,
+    **kw: Any,
+) -> Callable[[str, Any, Any], dict]:
+    """Return a ``corpus_probe=`` callable for ``Optimizer.optimize``.
+
+    The eqsat orchestrator stays backend-neutral — it cannot import
+    this module — so the seam is an injected ``(name, model, x) ->
+    report`` callable invoked once after export; the report lands in
+    ``stats["corpus_probe"]``.  This factory binds :func:`model_corpus`'s
+    knobs (``n_mutants``, ``seed``, ``corpus``, ``reps``, ``gen_reps``,
+    ``probe``, ``mutant_headroom``) into that signature::
+
+        opt = Optimizer(backend=TorchBackend())
+        mod, stats = opt.optimize(
+            model, x,
+            corpus_probe=mc.corpus_probe(n_mutants=8, reps=50),
+        )
+        rep = stats["corpus_probe"]   # the model_corpus report
+
+    ``dtype`` defaults to :func:`_model_dtype` — the model's own
+    floating-point dtype — so the intake cast is a no-op on the
+    caller's module; pass ``"fp64"`` explicitly for the zoo-table
+    convention (which DOES re-dtype an fp32 model — the caller owns
+    that side effect, exactly as a direct ``model_corpus`` call does).
+    ``model_corpus`` itself is also a valid ``corpus_probe=`` value
+    (its ``(name, model, feed)`` signature matches) when the defaults
+    suit.
+    """
+
+    def call(name: str, model: Any, feed: Any) -> dict:
+        options = dict(kw)
+        options["dtype"] = (
+            dtype if dtype is not None else _model_dtype(model)
+        )
+        return model_corpus(name, model, feed, **options)
+
+    return call
 
 
 # ---------------------------------------------------------------------------

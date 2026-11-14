@@ -249,6 +249,151 @@ class TestModelCorpus:
         assert rep["verdicts"][mc._verdict(row)] == 1
 
 
+class _TinyResidual(nn.Module):
+    """A small fp32 module — fast through ``optimize``'s saturation."""
+
+    def __init__(self, d: int = 8) -> None:
+        super().__init__()
+        self.lin = nn.Linear(d, d)
+
+    def forward(self, x):
+        return torch.relu(self.lin(x)) + x
+
+
+def _probe_supported() -> bool:
+    """True once the pinned eqsat ``search`` carries ``corpus_probe``.
+
+    graphopt consumes eqsat as a pinned git dep — the hook lands in
+    ``Optimizer.optimize``/``search`` upstream first, so these tests
+    skip (honestly) until the pin carries it.
+    """
+    import inspect
+
+    from mlopt_orchestrator import optimize as _opt_mod
+
+    return (
+        "corpus_probe" in inspect.signature(_opt_mod.search).parameters
+    )
+
+
+class TestOptimizeWiring:
+    """The ``corpus_probe=`` seam — per-model coverage during optimize."""
+
+    def test_probe_runs_and_report_lands_in_stats(self):
+        if not _probe_supported():
+            pytest.skip("eqsat pin predates the corpus_probe hook")
+        from mlopt_orchestrator import Optimizer
+        from mlopt_torch.backend import TorchBackend
+
+        torch.manual_seed(0)
+        model = _TinyResidual().eval()
+        x = torch.randn(2, 8)
+        seen = []
+
+        def probe(name, m, feed):
+            seen.append((name, m is model, feed is x))
+            return {"marker": "probe-ran"}
+
+        _mod, stats = Optimizer(backend=TorchBackend()).optimize(
+            model,
+            x,
+            corpus_probe=probe,
+            max_iterations=2,
+            verify=False,
+        )
+        assert seen == [("_TinyResidual", True, True)]
+        assert stats["corpus_probe"] == {"marker": "probe-ran"}
+
+    def test_default_path_records_no_probe(self):
+        """``corpus_probe`` unset → the historical stats, unchanged."""
+        from mlopt_orchestrator import Optimizer
+        from mlopt_torch.backend import TorchBackend
+
+        torch.manual_seed(0)
+        model = _TinyResidual().eval()
+        x = torch.randn(2, 8)
+        _mod, stats = Optimizer(backend=TorchBackend()).optimize(
+            model, x, max_iterations=2, verify=False
+        )
+        assert "corpus_probe" not in stats
+
+    def test_corpus_probe_adapter_end_to_end(self):
+        """``mc.corpus_probe(...)`` as the hook: real census+board
+        intake inside ``optimize``, report under ``stats``."""
+        if not _probe_supported():
+            pytest.skip("eqsat pin predates the corpus_probe hook")
+        from mlopt_orchestrator import Optimizer
+        from mlopt_torch.backend import TorchBackend
+
+        torch.manual_seed(0)
+        model = _TinyResidual().eval()
+        x = torch.randn(2, 8)
+        probe = mc.corpus_probe(
+            n_mutants=0,
+            seed=0,
+            corpus=_tiny_corpus(),
+            gen_reps=2,
+            probe=False,
+        )
+        _mod, stats = Optimizer(backend=TorchBackend()).optimize(
+            model,
+            x,
+            corpus_probe=probe,
+            max_iterations=2,
+            verify=True,
+        )
+        rep = stats["corpus_probe"]
+        assert rep["name"] == "_TinyResidual"
+        assert "coverage" in rep and "mutants" in rep
+        # the adapter matched the model's fp32 dtype — no re-dtype
+        assert all(p.dtype == torch.float32 for p in model.parameters())
+
+    def test_model_corpus_is_a_valid_probe_directly(self):
+        """The bare ``(name, model, feed)`` signature also fits —
+        defaults apply (documented, not exercised end-to-end here)."""
+        import inspect
+
+        sig = inspect.signature(mc.model_corpus)
+        params = list(sig.parameters)
+        assert params[:3] == ["name", "model", "feed"]
+
+    def test_corpus_probe_factory_binds_kwargs_and_dtype(
+        self, monkeypatch
+    ):
+        """The adapter's ``(name, model, feed)`` closure — knob
+        binding and dtype matching, without needing the eqsat pin."""
+        seen = {}
+
+        def fake_model_corpus(name, model, feed, **kw):
+            seen.update(kw)
+            seen["call"] = (name, model, feed)
+            return {"ok": True}
+
+        monkeypatch.setattr(mc, "model_corpus", fake_model_corpus)
+        model = _TinyResidual().eval()  # fp32
+        x = torch.randn(2, 8)
+        probe = mc.corpus_probe(n_mutants=3, reps=7, probe=False)
+        rep = probe("m", model, x)
+        assert rep == {"ok": True}
+        assert seen["call"] == ("m", model, x)
+        assert seen["n_mutants"] == 3 and seen["reps"] == 7
+        assert seen["probe"] is False
+        # dtype auto-matched to the model — the no-re-dtype guarantee
+        assert seen["dtype"] == "fp32"
+        # an explicit dtype wins over the auto-match
+        mc.corpus_probe(dtype="fp64")("m", model, x)
+        assert seen["dtype"] == "fp64"
+
+    def test_model_dtype_helper(self):
+        assert mc._model_dtype(_TinyResidual()) == "fp32"
+        assert (
+            mc._model_dtype(_TinyResidual().to(torch.float64)) == "fp64"
+        )
+        # parameterless / non-module objects fall back to the
+        # intake convention
+        assert mc._model_dtype(object()) == "fp64"
+
+
 class TestCliHelpers:
     def test_resolve_zoo_workload(self):
         pytest.importorskip("torch")

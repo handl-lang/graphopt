@@ -3348,19 +3348,36 @@ def zoo_pay_verdict(wl: Any, *, dtype: str = "fp32") -> dict | None:
     }
 
 
-def _zoo_case(wl: Any, *, dtype: str = "fp64") -> Any:
-    """Build a held-out zoo workload as a gen-domain case tuple.
+def _case_tail(
+    ir: Any,
+    leaves: dict,
+    feed: Any,
+    model: Any,
+    case: str,
+    tag: str,
+    *,
+    gen_reps: int = 20,
+) -> tuple:
+    """Run the shared gen-domain intake tail on an already-lifted term.
 
-    ``dtype`` is the **intake** dtype.  ``fp64`` is the convention every
-    earlier table was measured at; ``fp32`` is what a caller ships, and
-    the two disagree on 12 of 65 zoo modules — a folded body's sign is
-    the backend kernel's, not the IR's.  The IR is the same either way;
-    only the leaves, the feeds and the refinery's measurements move.
+    ``_zoo_case``'s tail, factored out so a non-zoo term (a generated
+    mutant's IR — ``model_corpus.mutant_board``) enters the *same*
+    sequence of calls: ``_mint_tiers`` over the term's real sites →
+    the ``_claim_measurable`` split → ``genkernel.profitable``'s
+    measured-cost referee → ``gen_sink``.  ``case``/``tag`` are the
+    two label slots the tuple carries (``case[0]`` the board name,
+    ``case[3]`` the workload tag — the zoo passes
+    ``f"zoo:{wl.name}"``/``wl.name``); ``gen_reps`` is the referee's
+    timing reps (the zoo keeps the historical ``20``).
+
+    Returns the ``(name, term, decls, tag, supported, ex)`` tuple
+    ``gen_probe`` reads — ``ex["_gen_claims_gated"]`` marks that
+    ``profitable`` already ran so ``_gen_board``'s offer gate does
+    not re-pay it.
     """
     from mlopt_discovery import genkernel as gk
     from mlopt_discovery.meta_arena import _canon_concrete
 
-    model, feed, ir, leaves = _zoo_export(wl, dtype=dtype)
     covered = {
         _canon_concrete(h["pattern"]) for h in lawdata.HANDLERS.values()
     }
@@ -3392,17 +3409,17 @@ def _zoo_case(wl: Any, *, dtype: str = "fp64") -> Any:
             priced,
             ir.root,
             var_env,
-            reps=20,
+            reps=gen_reps,
             kernel_for=_triton_kernel_for,
             denotation_for=_claim_denotation_for,
         ),
     }
     sink = gk.gen_sink(genh, compile_kernels=False)
     return (
-        f"zoo:{wl.name}",
+        case,
         ir.root,
         {"gen": len(genh)},
-        wl.name,
+        tag,
         sink.supported_ops,
         {
             "ir": ir,
@@ -3416,6 +3433,21 @@ def _zoo_case(wl: Any, *, dtype: str = "fp64") -> Any:
             # tier — ``_gen_board``'s offer gate must not re-pay it
             "_gen_claims_gated": True,
         },
+    )
+
+
+def _zoo_case(wl: Any, *, dtype: str = "fp64") -> Any:
+    """Build a held-out zoo workload as a gen-domain case tuple.
+
+    ``dtype`` is the **intake** dtype.  ``fp64`` is the convention every
+    earlier table was measured at; ``fp32`` is what a caller ships, and
+    the two disagree on 12 of 65 zoo modules — a folded body's sign is
+    the backend kernel's, not the IR's.  The IR is the same either way;
+    only the leaves, the feeds and the refinery's measurements move.
+    """
+    model, feed, ir, leaves = _zoo_export(wl, dtype=dtype)
+    return _case_tail(
+        ir, leaves, feed, model, f"zoo:{wl.name}", wl.name
     )
 
 
