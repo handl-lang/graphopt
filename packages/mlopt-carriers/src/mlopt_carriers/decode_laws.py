@@ -89,6 +89,7 @@ def R(name: str, lhs, rhs, **kw) -> Rewrite:
 
 
 __all__ = [
+    "ATTN_SDPA_LAWS",
     "DECODE_LAWS",
     "INDEX_SELECT_DEDUP",
     "INDEX_SELECT_ID",
@@ -498,14 +499,276 @@ INDEX_SELECT_ID = R(
 )
 
 
+# ---------------------------------------------------------------------------
+#  5. Spelled attention -> sdpa — the decode/decomposition coverage gap
+#
+#  ``mlopt_core.laws.tensor``'s ``sdpa_fold_*`` family already folds the
+#  canonical spelled attention ``matmul(softmax(q kᵀ [·s] [+m]), v)`` —
+#  but three export-faithful wrinkles leave decode IR unfolded:
+#
+#  * **eval-mode ``dropout`` wrapper** — ``eager_attention_forward``
+#    spells ``dropout(softmax(·), p=0, train=False)``; the core
+#    ``sdpa_fold_*_drop`` variants exist only inside the add/masked_fill
+#    family, so the mask-free spelling (cross-attention with
+#    ``encoder_attention_mask=None``) has no fold.  The wrapper minted
+#    here carries ``train=False`` *literally*: eval dropout is the
+#    identity for any ``p``, so the fold stays exact.
+#  * **identity relayouts inside the score transpose check** — the
+#    bound ``K`` is a ``concat`` over the KV cache whose first operand
+#    is the cache's lazy-init placeholder ``torch.tensor([])``, shape
+#    ``(0,)``.  ``torch.cat`` skips numel-0 operands at runtime, but
+#    ``_shape_of``'s concat rule sums every operand's cat axis and
+#    reports ``(0,)`` — rank 1 — so ``axes-last2`` declines.  The
+#    ``_eff_shape`` resolver below drops *provably*-empty operands
+#    (any zero dim) before delegating: exactly torch's semantics for
+#    every well-typed cat, and a decline (``None``) whenever the
+#    emptiness is unprovable.
+#  * **scale spellings** — the ``mul`` row covers ``scores · s`` (the
+#    torch/eager spelling, ``s`` already Const); the scale-free row
+#    covers ``softmax(qkᵀ [+m])`` with ``scale=1.0``.
+#
+#  These are the decode-slice twins of the core folds: same RHS
+#  (``sdpa`` with the additive mask operand and ``scale`` attr), same
+#  exactness — the checks below re-implement the core preconditions
+#  (K-transpose on the last two axes, softmax on the last axis, Const
+#  numeric scale) against ``_eff_shape`` rather than ``_shape_of``.
+# ---------------------------------------------------------------------------
+
+
+def _numel_zero(shape: Any) -> bool:
+    """Provable numel-0: a tuple shape with a literal ``0`` dim."""
+    return isinstance(shape, tuple) and any(d == 0 for d in shape)
+
+
+def _eff_term(t: Any, memo: dict | None = None) -> Any:
+    """``t`` with provably-empty ``concat`` operands dropped.
+
+    ``torch.cat`` skips numel-0 operands at runtime (the decode cache's
+    ``torch.tensor([])`` lazy-init leaf, shape ``(0,)``, is the observed
+    case), but ``_shape_of``'s concat rule sums *every* operand's cat
+    axis and reports ``(0,)`` — rank 1 — so every shape-gated law
+    declines.  Rebuild each ``concat`` over its provably-live operands
+    (any zero dim = provably empty; ``None``/non-tuple shapes stay live,
+    so unprovable cases decline exactly where the plain resolver
+    would); a single live operand IS the cat's value.  The rebuild is
+    bottom-up over the whole term — a ``concat`` nested under
+    ``transpose``/``reshape`` poisons the parent's shape the same way,
+    so children are normalised before their parent's emptiness is
+    judged.  The result is shape-equivalent to ``t`` for every
+    well-typed cat — used only inside checks, never minted into the
+    e-graph.  ``memo`` keys on the interned term (content hash) so a
+    shared DAG walks once.
+    """
+    if memo is None:
+        memo = {}
+    if not isinstance(t, Op):
+        return t
+    hit = memo.get(t)
+    if hit is not None:
+        return hit
+    kids = tuple(_eff_term(a, memo) for a in t.args)
+    changed = any(k is not a for k, a in zip(kids, t.args, strict=True))
+    if t.op == "concat":
+        shapes = [_dshape(k) for k in kids]
+        live = [
+            k
+            for k, s in zip(kids, shapes, strict=True)
+            if not _numel_zero(s)
+        ]
+        attrs = dict(t.attrs)
+        if len(live) == len(kids):
+            out = (
+                t
+                if not changed
+                else Op.make("concat", *kids, validate=False, **attrs)
+            )
+        elif not live:
+            out = t  # every operand provably empty — degenerate
+        elif len(live) == 1:
+            out = live[0]
+        else:
+            out = Op.make("concat", *live, validate=False, **attrs)
+    elif changed:
+        out = Op.make(t.op, *kids, validate=False, **dict(t.attrs))
+    else:
+        out = t
+    memo[t] = out
+    return out
+
+
+def _eff_shape(t: Any):
+    """``_dshape`` over :func:`_eff_term` — the cat-empty-aware shape."""
+    return _dshape(_eff_term(t))
+
+
+def _norm_axes(td1: Any, td2: Any, rank: int) -> set | None:
+    """Normalize a transpose axis pair against ``rank``."""
+    if not (
+        isinstance(rank, int)
+        and not isinstance(rank, bool)
+        and rank >= 2
+        and isinstance(td1, int)
+        and not isinstance(td1, bool)
+        and isinstance(td2, int)
+        and not isinstance(td2, bool)
+    ):
+        return None
+    return {td1 % rank, td2 % rank}
+
+
+def _check_spelled_sdpa(bound: dict) -> bool:
+    """Spelled-attention fold preconditions (the sdpa_fold conds).
+
+    * ``K``'s bound transpose swaps the last two axes of its *effective*
+      shape (``_eff_shape`` — the empty-cache concat reads rank-4, not
+      the ``(0,)`` the plain resolver reports);
+    * the softmax ``dim`` attr is the last axis of ``Q``'s rank (the
+      scores share ``Q``'s rank through the batched matmul);
+    * ``S`` (mul rows only — enforced by the caller's extra clause) is
+      a numeric ``Const`` leaf.
+    """
+    ks = _eff_shape(bound.get("K"))
+    if not (isinstance(ks, tuple) and ks):
+        return False
+    pair = _norm_axes(
+        bound.get("$attr:TD1"), bound.get("$attr:TD2"), len(ks)
+    )
+    if pair != {len(ks) - 2, len(ks) - 1}:
+        return False
+    qs = _eff_shape(bound.get("Q"))
+    sd = bound.get("$attr:SD")
+    if not (isinstance(qs, tuple) and qs):
+        return False
+    return (
+        isinstance(sd, int)
+        and not isinstance(sd, bool)
+        and sd % len(qs) == (-1) % len(qs)
+    )
+
+
+def _check_spelled_sdpa_scaled(bound: dict) -> bool:
+    """``_check_spelled_sdpa`` + the ``S`` scale is a numeric Const."""
+    s = bound.get("S")
+    v = getattr(s, "value", None)
+    if not isinstance(v, (int, float)) or isinstance(v, bool):
+        return False
+    return _check_spelled_sdpa(bound)
+
+
+#: The shared LHS fragments.  ``_SCORES`` is the ``q kᵀ`` matmul with
+#: the transpose's axis pair bound; ``_SM`` wraps it in the softmax
+#: (``dim`` bound) under the optional eval-dropout spelling.
+def _spelled_sm(inner: Any, drop: bool) -> Op:
+    sm = Op.make("softmax", inner, dim="SD")
+    if drop:
+        # ``train=False`` literal: eval dropout is the identity for
+        # every ``p`` — the fold stays exact where a ``train`` metavar
+        # (the core ``sdpa_fold_*_drop`` rows) would not.
+        sm = Op.make("dropout", sm, p="DP", train=False)
+    return sm
+
+
+_SCORES = Op.make(
+    "matmul", "Q", Op.make("transpose", "K", dim0="TD1", dim1="TD2")
+)
+
+
+def _attn_sdpa_rules() -> list[Rewrite]:
+    """Build the spelled-attention -> ``sdpa`` family (8 rows).
+
+    {masked, mask-free} × {mul-scale, scale-free} × {bare, eval-dropout}.
+    """
+    from mlopt_core.laws.tensor import (
+        _DSPEC_SCALE_MUL,
+        _DSPEC_SCALE_ONE,
+    )
+
+    out: list[Rewrite] = []
+    # (scores_inner, mask_operand|None, scale_dspec|None, tag)
+    rows = (
+        (
+            Op.make("mul", _SCORES, "S"),
+            "M",
+            _DSPEC_SCALE_MUL,
+            "mask_mul",
+        ),
+        (_SCORES, "M", _DSPEC_SCALE_ONE, "mask"),
+        (
+            Op.make("mul", _SCORES, "S"),
+            None,
+            _DSPEC_SCALE_MUL,
+            "mul",
+        ),
+        (_SCORES, None, _DSPEC_SCALE_ONE, ""),
+    )
+    for scores, mask, dspec, tag in rows:
+        # scale rows bind "S" -> numeric-Const check; scale-free rows
+        # take the base check alone.
+        check = (
+            _check_spelled_sdpa_scaled
+            if "S" in _pattern_vars(scores)
+            else _check_spelled_sdpa
+        )
+        for drop in (False, True):
+            dtag = "_drop" if drop else ""
+            sm = _spelled_sm(
+                Op.make("add", scores, mask)
+                if mask is not None
+                else scores,
+                drop,
+            )
+            rhs_args = (
+                ("Q", "K", "V", "M")
+                if mask is not None
+                else ("Q", "K", "V")
+            )
+            name = f"attn_sdpa_{tag}" if tag else "attn_sdpa"
+            out.append(
+                R(
+                    f"{name}{dtag}",
+                    Op.make("matmul", sm, "V"),
+                    Op.make("sdpa", *rhs_args, scale="SC"),
+                    law="spelled softmax(q kᵀ [·s] [+m]) v is "
+                    "sdpa(q, k, v, m?, scale=s) — the decode-slice "
+                    "fold tolerant of eval-dropout wrappers and "
+                    "empty-cache concat shapes.",
+                    check=check,
+                    dspec=dspec,
+                    tags=(_tags.CARRIER, _tags.DECODE),
+                )
+            )
+    return out
+
+
+def _pattern_vars(pat: Any) -> set:
+    """Collect the string metavariables occurring in a pattern term."""
+    out: set = set()
+
+    def walk(t: Any) -> None:
+        if isinstance(t, str):
+            out.add(t)
+        elif isinstance(t, Op):
+            for a in t.args:
+                walk(a)
+
+    walk(pat)
+    return out
+
+
+#: The spelled-attention folds — see the section comment above.
+ATTN_SDPA_LAWS: list[Rewrite] = _attn_sdpa_rules()
+
+
 #: The whole decode slice — buffer-append bridging, gather dedup,
-#: repeat-as-gather, and the identity-gather cleanup.
+#: repeat-as-gather, the identity-gather cleanup, and the
+#: spelled-attention folds.
 DECODE_LAWS: list[Rewrite] = [
     *KV_APPEND_SCATTER_LAWS,
     *SCATTER_TO_CAT_LAWS,
     INDEX_SELECT_DEDUP,
     REPEAT_AS_GATHER,
     INDEX_SELECT_ID,
+    *ATTN_SDPA_LAWS,
 ]
 
 #: The same set as a composable :class:`~mlopt_core.laws.RuleSet`.

@@ -637,3 +637,357 @@ def test_op_table_scope_limits():
         assert present in names
     for absent in ("unique", "repeat_interleave", "index_copy"):
         assert absent not in names
+
+
+# ---------------------------------------------------------------------------
+#  5. attn_sdpa_* — spelled attention -> sdpa (decode coverage)
+# ---------------------------------------------------------------------------
+
+from mlopt_carriers.decode_laws import (  # noqa: E402
+    ATTN_SDPA_LAWS,
+    _attn_sdpa_rules,
+    _check_spelled_sdpa,
+    _check_spelled_sdpa_scaled,
+    _eff_shape,
+    _norm_axes,
+    _numel_zero,
+    _pattern_vars,
+    _spelled_sm,
+)
+from mlopt_core.ir import Const  # noqa: E402
+
+
+def _attn_term(
+    *,
+    scale="mul",
+    mask=False,
+    drop=False,
+    k=None,
+    transpose=(2, 3),
+    softmax_dim=-1,
+    scale_leaf=None,
+):
+    """Build ``matmul([dropout](softmax([add](scores))), v)``.
+
+    Defaults mirror the whisper eager decode spelling: ``q kᵀ`` with
+    the transpose on the last two axes, optional ``·s`` Const scale,
+    optional additive mask, ``dim=-1`` softmax, eval dropout wrapper.
+    """
+    q = _v("q", 2, 4, 3, 8)
+    k = k if k is not None else _v("k", 2, 4, 5, 8)
+    v = _v("v", 2, 4, 5, 8)
+    scores = Op.make(
+        "matmul",
+        q,
+        Op.make("transpose", k, dim0=transpose[0], dim1=transpose[1]),
+    )
+    if scale == "mul":
+        scores = Op.make(
+            "mul", scores, scale_leaf if scale_leaf is not None else Const(0.5)
+        )
+    elif scale == "div":
+        scores = Op.make(
+            "div", scores, scale_leaf if scale_leaf is not None else Const(2.0)
+        )
+    if mask:
+        scores = Op.make("add", scores, _v("m", 2, 1, 3, 5))
+    sm = Op.make("softmax", scores, dim=softmax_dim)
+    if drop:
+        sm = Op.make("dropout", sm, p=0.0, train=False)
+    return Op.make("matmul", sm, v)
+
+
+def _sdpa_in_class(eg, root):
+    return "sdpa" in _class_ops(eg, root)
+
+
+def test_attn_sdpa_family_size_and_names():
+    """8 rows: {mask,mul,plain}×{bare,drop} — the decode spelling set."""
+    names = [r.name for r in ATTN_SDPA_LAWS]
+    assert names == [
+        "attn_sdpa_mask_mul",
+        "attn_sdpa_mask_mul_drop",
+        "attn_sdpa_mask",
+        "attn_sdpa_mask_drop",
+        "attn_sdpa_mul",
+        "attn_sdpa_mul_drop",
+        "attn_sdpa",
+        "attn_sdpa_drop",
+    ]
+    assert len(_attn_sdpa_rules()) == 8
+    assert all(r.name in {x.name for x in DECODE_LAWS} for r in ATTN_SDPA_LAWS)
+
+
+def test_attn_sdpa_mask_mul_drop_fires():
+    """The whisper self-attention spelling folds to masked sdpa."""
+    term = _attn_term(scale="mul", mask=True, drop=True)
+    eg, root = _run(term, rules=ATTN_SDPA_LAWS)
+    assert _sdpa_in_class(eg, root)
+
+
+def test_attn_sdpa_mul_drop_fires():
+    """The whisper cross-attention spelling (no mask) folds."""
+    term = _attn_term(scale="mul", mask=False, drop=True)
+    eg, root = _run(term, rules=ATTN_SDPA_LAWS)
+    assert _sdpa_in_class(eg, root)
+
+
+def test_attn_sdpa_all_rows_fire():
+    """Every family row fires on its own spelling."""
+    cases = {
+        "attn_sdpa_mask_mul": dict(scale="mul", mask=True),
+        "attn_sdpa_mask_mul_drop": dict(scale="mul", mask=True, drop=True),
+        "attn_sdpa_mask": dict(scale=None, mask=True),
+        "attn_sdpa_mask_drop": dict(scale=None, mask=True, drop=True),
+        "attn_sdpa_mul": dict(scale="mul"),
+        "attn_sdpa_mul_drop": dict(scale="mul", drop=True),
+        "attn_sdpa": dict(scale=None),
+        "attn_sdpa_drop": dict(scale=None, drop=True),
+    }
+    for name, kw in cases.items():
+        term = _attn_term(**kw)
+        rule = next(r for r in ATTN_SDPA_LAWS if r.name == name)
+        eg, root = _run(term, rules=[rule])
+        assert _sdpa_in_class(eg, root), name
+
+
+def test_attn_sdpa_scale_lands_in_attr():
+    """The mul-scale row mints ``scale=<s>`` on the sdpa member."""
+    term = _attn_term(scale="mul", mask=False, drop=True)
+    eg, root = _run(term, rules=ATTN_SDPA_LAWS)
+    canon = eg.find(root)
+    sdpa_nodes = [
+        n for n in eg.get_class(canon).nodes if n.op == "sdpa"
+    ]
+    # the root class itself may not hold sdpa (it's deeper); scan all
+    found = []
+    for cid in range(eg.n_classes):
+        for n in eg.get_class(cid).nodes:
+            if n.op == "sdpa":
+                found.append(n)
+    assert found
+    attrs = dict(found[0].attrs)
+    assert attrs.get("scale") == 0.5
+
+
+def test_attn_sdpa_fp64_exact():
+    """Extracted sdpa member is bitwise-equal to the spelled form."""
+    term = _attn_term(scale="mul", mask=True, drop=True)
+    eg, root = _run(term, rules=ATTN_SDPA_LAWS)
+    t = _extract_op(eg, root, lambda n_: n_.op == "sdpa")
+    assert t is not None
+    # inputs in LHS order of first occurrence: q,k,v,m
+    q, k, v = _v("q", 2, 4, 3, 8), _v("k", 2, 4, 5, 8), _v("v", 2, 4, 5, 8)
+    m = _v("m", 2, 1, 3, 5)
+    mod = _module(t, [q, k, v, m])
+    tq = torch.randn(2, 4, 3, 8, dtype=torch.float64)
+    tk = torch.randn(2, 4, 5, 8, dtype=torch.float64)
+    tv = torch.randn(2, 4, 5, 8, dtype=torch.float64)
+    tm = torch.randn(2, 1, 3, 5, dtype=torch.float64)
+    with torch.no_grad():
+        out = mod(tq, tk, tv, tm)
+        ref = torch.softmax(
+            torch.matmul(tq, tk.transpose(2, 3)) * 0.5 + tm, dim=-1
+        ) @ tv
+    assert torch.allclose(out, ref, atol=1e-10, rtol=1e-10)
+
+
+def test_attn_sdpa_empty_cache_concat_fires():
+    """The (0,)-placeholder KV concat does not veto the fold."""
+    empty = _p("c_empty", 0)  # torch.tensor([]) lazy-init leaf
+    live = Op.make(
+        "transpose",
+        Op.make("reshape", _v("kk", 2, 5, 32), shape=(2, 5, 4, 8)),
+        dim0=2,
+        dim1=3,
+    )
+    k = Op.make("concat", empty, live, dim=-2)
+    term = _attn_term(scale="mul", mask=False, drop=True, k=k)
+    eg, root = _run(term, rules=ATTN_SDPA_LAWS)
+    assert _sdpa_in_class(eg, root)
+
+
+def test_attn_sdpa_declines_train_dropout():
+    """``train=True`` dropout is NOT the identity — no fold."""
+    term = _attn_term(scale="mul", mask=False, drop=True)
+    # rebuild with train=True: pattern attr is a literal False
+    q = _v("q", 2, 4, 3, 8)
+    k = _v("k", 2, 4, 5, 8)
+    v = _v("v", 2, 4, 5, 8)
+    scores = Op.make("mul", Op.make(
+        "matmul", q, Op.make("transpose", k, dim0=2, dim1=3)
+    ), Const(0.5))
+    sm = Op.make(
+        "dropout",
+        Op.make("softmax", scores, dim=-1),
+        p=0.5,
+        train=True,
+    )
+    term = Op.make("matmul", sm, v)
+    eg, root = _run(term, rules=ATTN_SDPA_LAWS)
+    assert not _sdpa_in_class(eg, root)
+
+
+def test_attn_sdpa_declines_non_last_two_transpose():
+    term = _attn_term(scale="mul", transpose=(0, 1))
+    eg, root = _run(term, rules=ATTN_SDPA_LAWS)
+    assert not _sdpa_in_class(eg, root)
+
+
+def test_attn_sdpa_declines_softmax_wrong_dim():
+    term = _attn_term(scale="mul", softmax_dim=-2)
+    eg, root = _run(term, rules=ATTN_SDPA_LAWS)
+    assert not _sdpa_in_class(eg, root)
+
+
+def test_attn_sdpa_declines_nonconst_scale():
+    term = _attn_term(scale="mul", scale_leaf=_v("s", ()))
+    eg, root = _run(term, rules=ATTN_SDPA_LAWS)
+    assert not _sdpa_in_class(eg, root)
+
+
+def test_attn_sdpa_declines_div_scale():
+    """The div spelling is not in this family (mul/plain rows only)."""
+    term = _attn_term(scale="div")
+    eg, root = _run(term, rules=ATTN_SDPA_LAWS)
+    assert not _sdpa_in_class(eg, root)
+
+
+# ---------------------------------------------------------------------------
+#  check/shape-helper unit coverage
+# ---------------------------------------------------------------------------
+
+
+def _bound(**kw):
+    return kw
+
+
+def test_numel_zero():
+    assert _numel_zero((0,))
+    assert _numel_zero((2, 0, 4))
+    assert not _numel_zero((2, 3))
+    assert not _numel_zero(())
+    assert not _numel_zero(None)
+    assert not _numel_zero("x")
+    assert not _numel_zero([0])  # list is not a shape tuple
+
+
+def test_norm_axes():
+    assert _norm_axes(2, 3, 4) == {2, 3}
+    assert _norm_axes(-2, -1, 4) == {2, 3}
+    assert _norm_axes(0, 1, 4) == {0, 1}
+    assert _norm_axes(2, 3, 1) is None
+    assert _norm_axes(2, 3, 0) is None
+    assert _norm_axes("a", 3, 4) is None
+    assert _norm_axes(2, None, 4) is None
+    assert _norm_axes(2.0, 3, 4) is None
+    assert _norm_axes(True, 3, 4) is None
+    assert _norm_axes(2, False, 4) is None
+    assert _norm_axes(2, 3, True) is None
+
+
+def test_eff_shape_passthrough_and_concat():
+    v = _v("x", 2, 3)
+    assert _eff_shape(v) == (2, 3)
+    # all-live concat delegates to _xshape
+    a = _v("a", 2, 3)
+    b = _v("b", 2, 4)
+    cat = Op.make("concat", a, b, dim=1)
+    assert _eff_shape(cat) == (2, 7)
+    # single live operand: the (0,) placeholder drops out
+    e = _p("e", 0)
+    cat2 = Op.make("concat", e, Op.make("reshape", _v("r", 6), shape=(2, 3)), dim=-2)
+    assert _eff_shape(cat2) == (2, 3)
+    # multiple live operands rebuild and sum along the cat axis
+    cat3 = Op.make(
+        "concat", e, a, b, dim=1
+    )
+    assert _eff_shape(cat3) == (2, 7)
+    # every operand provably empty -> the degenerate (0,) shape,
+    # which every rank-gated check declines downstream
+    e2 = _p("e2", 0, 3)
+    cat4 = Op.make("concat", e, e2, dim=0)
+    assert _eff_shape(cat4) == (0,)
+    # nested concat inside an operand
+    inner = Op.make("concat", e, a, dim=1)
+    outer = Op.make("concat", inner, b, dim=1)
+    assert _eff_shape(outer) == (2, 7)
+
+
+def test_check_spelled_sdpa_guards():
+    q = _v("q", 2, 4, 3, 8)
+    k = _v("k", 2, 4, 5, 8)
+    good = {
+        "Q": q,
+        "K": k,
+        "$attr:TD1": 2,
+        "$attr:TD2": 3,
+        "$attr:SD": -1,
+    }
+    assert _check_spelled_sdpa(good)
+    # K shape missing/degenerate
+    assert not _check_spelled_sdpa({**good, "K": _v("k2")})
+    assert not _check_spelled_sdpa({**good, "K": None})
+    # transpose pair not last-two
+    assert not _check_spelled_sdpa({**good, "$attr:TD1": 0, "$attr:TD2": 1})
+    # rank < 2
+    assert not _check_spelled_sdpa(
+        {**good, "K": _v("k3", 4), "$attr:TD1": 0, "$attr:TD2": 0}
+    )
+    # softmax dim not last axis / unbound
+    assert not _check_spelled_sdpa({**good, "$attr:SD": -2})
+    assert not _check_spelled_sdpa({**good, "$attr:SD": "D"})
+    assert not _check_spelled_sdpa({**good, "$attr:SD": True})
+    assert not _check_spelled_sdpa({**good, "Q": _v("q2")})
+    assert not _check_spelled_sdpa({**good, "Q": None})
+
+
+def test_check_spelled_sdpa_scaled_guards():
+    base = {
+        "Q": _v("q", 2, 4, 3, 8),
+        "K": _v("k", 2, 4, 5, 8),
+        "$attr:TD1": 2,
+        "$attr:TD2": 3,
+        "$attr:SD": -1,
+    }
+    assert _check_spelled_sdpa_scaled({**base, "S": Const(0.5)})
+    assert _check_spelled_sdpa_scaled({**base, "S": Const(2)})
+    # non-Const / non-numeric / bool scale declines
+    assert not _check_spelled_sdpa_scaled({**base, "S": _v("s", ())})
+    assert not _check_spelled_sdpa_scaled({**base, "S": None})
+    assert not _check_spelled_sdpa_scaled({**base, "S": Const(True)})
+    # base check still applies
+    assert not _check_spelled_sdpa_scaled(
+        {**base, "S": Const(0.5), "$attr:TD1": 0, "$attr:TD2": 1}
+    )
+
+
+def test_spelled_sm_and_pattern_vars():
+    inner = Op.make("softmax", "x", dim="SD")
+    bare = _spelled_sm(inner, drop=False)
+    assert bare.op == "softmax"
+    wrapped = _spelled_sm(inner, drop=True)
+    assert wrapped.op == "dropout"
+    assert wrapped.attrs["train"] is False
+    assert wrapped.attrs["p"] == "DP"
+    pat = Op.make(
+        "matmul",
+        Op.make("mul", Op.make("matmul", "Q", "K"), "S"),
+        "V",
+    )
+    assert _pattern_vars(pat) == {"Q", "K", "S", "V"}
+    assert _pattern_vars("leaf") == {"leaf"}
+    assert _pattern_vars(3) == set()
+
+
+def test_eff_shape_memo_and_nested_rebuild():
+    """Shared subterms hit the memo; non-concat parents rebuild."""
+    a, b = _v("a", 2), _v("b", 2)
+    shared = Op.make("add", a, b)
+    # `shared` appears twice — the second visit is a memo hit
+    assert _eff_shape(Op.make("mul", shared, shared)) == (2,)
+    # concat-with-empty nested under transpose: parent rebuilds
+    e = _p("e", 0)
+    cat = Op.make("concat", e, _v("x", 2, 3), dim=0)
+    tr = Op.make("transpose", cat, dim0=0, dim1=1)
+    assert _eff_shape(tr) == (3, 2)
