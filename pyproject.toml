@@ -123,13 +123,13 @@ exclude = [
 [tool.uv.sources]
 # Extracted packages (plan 0032 phase 4): the substrate lives in
 # handl-lang/eqsat, the game layer in handl-lang/gamekit — consumed as
-# pinned git+ssh deps on ``packages/`` subdirectories, the same recipe
-# kernelopt uses.  Bump the pin deliberately (branch for now; move to
-# a tag/rev once the upstream surface settles).
-mlopt-core = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-core", branch = "main" }
-mlopt-orchestrator = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-orchestrator", branch = "main" }
-gamekit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/gamekit", branch = "main" }
-benchkit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/benchkit", branch = "main" }
+# pinned git deps on ``packages/`` subdirectories at the ``v0.1.0``
+# tag (git-URL-at-tag distribution; see
+# docs/reports/git_url_distribution.md).  Bump the tag on releases.
+mlopt-core = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-core", tag = "v0.1.0" }
+mlopt-orchestrator = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-orchestrator", tag = "v0.1.0" }
+gamekit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/gamekit", tag = "v0.1.0" }
+benchkit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/benchkit", tag = "v0.1.0" }
 mlopt-torch = { workspace = true }
 mlopt-carriers = { workspace = true }
 mlopt-cuda = { workspace = true }

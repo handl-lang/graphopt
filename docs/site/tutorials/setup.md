@@ -21,10 +21,10 @@ interpreter every command in this track uses. `uv sync` pulls the
 substrate and game-kernel packages in as pinned git deps on the
 `eqsat`/`gamekit` repos — the import names are unchanged.
 
-::: warning git+ssh pins
-The pins fetch over `ssh://git@github.com/…` — `uv sync` needs GitHub
-SSH credentials (a key in your agent). If you authenticate over HTTPS
-instead, rewrite the scheme once:
+::: warning git+https pins
+The pins fetch over `https://github.com/…` — no credentials needed for
+the public repos. For `git+ssh` remotes or private mirrors, rewrite
+the scheme once:
 
 ```sh
 git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
@@ -36,15 +36,23 @@ The `--group bench` flag adds the benchmark CLI's deps (`tyro`,
 
 ::: warning No published wheels — yet
 Every distribution is `0.1.0dev` and **nothing is on PyPI or any
-package index**. The supported install is exactly what step 1 does:
-clone the repo and `uv sync`, which resolves the `eqsat`/`gamekit`
-substrate pins as git+ssh deps on their `packages/` subdirectories.
+package index**. Distribution is **git-URL at a tag**: each repo
+ships annotated semver tags (`v0.1.0` on `eqsat`, `gamekit`,
+`graphopt`, …), and consumers pin `tag = "vX.Y.Z"` in
+`[tool.uv.sources]` or install directly with e.g.
+`mlopt-core @ git+https://github.com/handl-lang/eqsat@v0.1.0`
+(subdirectory packages need a `[tool.uv.sources]` entry with
+`subdirectory = "packages/<pkg>"` — see
+[`docs/reports/git_url_distribution.md`](../../reports/git_url_distribution.md)).
+For this repo the supported install is exactly what step 1 does:
+clone and `uv sync`, which resolves the `eqsat`/`gamekit` substrate
+pins as git deps on their `packages/` subdirectories.
 `uv build` *does* produce a per-package wheel locally (verified for
 `mlopt-torch` — setuptools backend, pure-Python, bundles the
 `artifacts/*.pt` policy weights), but a wheel install still needs
 `mlopt-core`/`mlopt-orchestrator`/`gamekit` from their own repos —
 there is no self-contained install yet. Treat "pip install mlopt"
-as unsupported; pin a git rev instead.
+as unsupported; pin a git tag instead.
 :::
 
 ## 2. Smoke-test it
