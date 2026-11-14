@@ -74,17 +74,16 @@ from itertools import product
 from pathlib import Path
 from typing import Any
 
-import torch
 from mlopt_core.ir import Op, TensorType, Var
 from mlopt_core.laws.cond import _DOPS, _Decline
 from mlopt_core.typing import _shape_of
 
 from mlopt_discovery import dspec_synth as _dsp
-from mlopt_discovery.census import _iter_subterms
 
 # ``law_impact`` / ``law_shape_census`` own the corpus; reuse them so
 # the vocabulary is derived over exactly the graphs the pipeline reads.
-from mlopt_discovery.impact import _bench_cases, model_cases
+# Both bind lazily — ``census``/``impact`` pull torch at module level,
+# and this module stays import-clean without it (plan 0034/0035 seam).
 from mlopt_discovery.proposal import _allclose
 
 __all__ = [
@@ -121,6 +120,8 @@ def _rand(shape: tuple) -> Any:
     Positive values keep ``pow`` / ``rsqrt`` / ``log`` from producing
     ``nan`` (which would make a genuine pointwise op look false).
     """
+    import torch
+
     return torch.rand(tuple(shape), dtype=torch.float64) + 0.5
 
 
@@ -176,6 +177,8 @@ def corpus_ops(terms: list) -> tuple[dict, dict]:
     deduped by node identity (a shared node counts once).  ``arity[op]``
     is the operand count.
     """
+    from mlopt_discovery.census import _iter_subterms
+
     occ: dict[str, list] = {}
     arity: dict[str, int] = {}
     for t in terms:
@@ -200,6 +203,8 @@ def _value_preserving(x: Any, y: Any) -> bool:
     A view (permutation / subset / broadcast) only re-arranges the
     input's values; a computing op produces values not in the input.
     """
+    import torch
+
     xs = set(torch.unique(x).tolist())
     ys = set(torch.unique(y).tolist())
     return ys.issubset(xs)
@@ -211,6 +216,8 @@ def _is_view(op: str, arity: int, occ: dict) -> bool | None:
     A view is arity-1, value-preserving on every evaluable occurrence,
     and shape-changing on at least one.
     """
+    import torch
+
     if arity != 1:
         return False
     good = 0
@@ -265,6 +272,8 @@ def _battery(shape: tuple) -> list[tuple]:
 
 def _op_output(op: str, attrs: dict, shapes: list) -> Any:
     """Return the output tensor of ``op(*args, **attrs)``, or ``None``."""
+    import torch
+
     vs = [_leaf(s, f"x{i}") for i, s in enumerate(shapes)]
     env = {v: _rand(s) for v, s in zip(vs, shapes, strict=True)}
     y = _eval(Op.make(op, *vs, **attrs), env)
@@ -341,6 +350,8 @@ def _is_pointwise(op: str, arity: int, occ: dict) -> bool | None:
 
 def _is_reduction(op: str, arity: int, occ: dict) -> bool | None:
     """Return whether *op* combines elements (fewer, non-preserved)."""
+    import torch
+
     rep = _rep_occurrence(op, occ)
     if rep is None:
         return None
@@ -408,6 +419,8 @@ class Vocabulary:
 
 def classify(terms: list) -> Vocabulary:
     """Classify every op occurring in *terms* by property."""
+    import torch
+
     torch.manual_seed(0)
     occ, arity = corpus_ops(terms)
     classes: list[OpClass] = []
@@ -432,6 +445,8 @@ def classify(terms: list) -> Vocabulary:
 
 def derive_vocabulary() -> Vocabulary:
     """Derive the vocabulary over the full corpus (the pipeline seam)."""
+    from mlopt_discovery.impact import _bench_cases, model_cases
+
     bench, _be = _bench_cases()
     models, _me = model_cases()
     terms = [c.term for c in [*bench, *models]]

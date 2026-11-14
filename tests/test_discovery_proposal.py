@@ -13,6 +13,8 @@ on real (here: synthetic) term cases.
 """
 
 import json
+import subprocess
+import sys
 
 import pytest
 import torch
@@ -891,3 +893,62 @@ def test_render_tables_and_verdict(tmp_path, capsys):
     payload = json.loads(path.read_text())
     assert payload["outcomes"][0]["schema"] == "factor_left"
     assert payload["outcomes"][0]["useful"] is True
+
+
+# ---------------------------------------------------------------------------
+#  Torch seam — import-freedom + injected oracles (plan 0034/0035)
+# ---------------------------------------------------------------------------
+
+
+def test_proposal_modules_import_without_torch():
+    """``proposal``/``proposal_core``/``oracle``/``vocab`` import torch-free.
+
+    Runs in a subprocess: ``sys.modules[name] = None`` makes the import
+    system raise ``ImportError`` for ``torch`` and ``mlopt_torch``, so a
+    clean run proves none of the four modules binds them at import
+    time (torch binds lazily at call time; ``evaluate`` and
+    ``propose_guarded`` take an injected ``numeric`` oracle instead).
+    """
+    code = (
+        "import sys\n"
+        "sys.modules['torch'] = None\n"
+        "sys.modules['mlopt_torch'] = None\n"
+        "import mlopt_discovery.oracle\n"
+        "import mlopt_discovery.proposal\n"
+        "import mlopt_discovery.proposal_core\n"
+        "import mlopt_discovery.vocab\n"
+    )
+    subprocess.run(
+        [sys.executable, "-c", code],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+
+def test_proposal_shim_reexports_core():
+    """``proposal`` is a compat shim: names resolve to ``proposal_core``."""
+    from mlopt_discovery import proposal_core as pc
+
+    assert pp.Candidate is pc.Candidate
+    assert pp.Outcome is pc.Outcome
+    assert pp.evaluate is pc.evaluate
+    assert pp._numeric_true is pc._numeric_true
+    assert pp._leaves is pc._leaves
+    assert pp._spec_term is pc._spec_term
+    # The live backend singleton reaches through the shim's __getattr__.
+    assert pp._EVAL is pc._EVAL
+
+
+def test_evaluate_numeric_injection():
+    """``evaluate(numeric=...)`` replaces the torch fp64 oracle."""
+    seen: list = []
+
+    def oracle(lhs, rhs):
+        seen.append((lhs, rhs))
+        return True
+
+    cands = pp.schema_candidates()[:2]
+    outs = pp.evaluate(cands, numeric=oracle)
+    assert len(seen) == 2
+    assert all(o.num_true is True for o in outs)
