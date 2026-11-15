@@ -416,6 +416,25 @@ def _oracle(claim: Any, ctx: RefereeCtx, evd: ClaimEvidence) -> Any:
 # ---------------------------------------------------------------------------
 
 
+#: Note prefix marking a verify failure as *infrastructure*, not
+#: evidence: the module cannot execute through the sink at all
+#: (``mlopt_torch.torch_bindings.FunctorchReplayError`` — inlined
+#: ``torch.vmap``/functorch plumbing has no eager replay).  The pay
+#: leg still refuses on it (``vfail`` counts it) but names the count
+#: separately so a ``verify_fail`` row is never mistaken for a
+#: lowered-terms-differ verdict.
+_UNVERIFIABLE = "unverifiable: "
+
+
+def _is_unverifiable(exc: BaseException) -> bool:
+    """Return True when *exc* is a sink-cannot-execute-module error."""
+    try:
+        from mlopt_torch.torch_bindings import FunctorchReplayError
+    except Exception:
+        return False
+    return isinstance(exc, FunctorchReplayError)
+
+
 def _probe_case(
     case: Any, claim: Any, ctx: RefereeCtx
 ) -> tuple[int, Any, bool | None, str]:
@@ -458,7 +477,16 @@ def _probe_case(
         )
         vr = sink.verify(before, after, case.feed, rtol=_RTOL)
     except Exception as e:
-        return fires, best, False, f"{type(e).__name__}: {e}"
+        note = f"{type(e).__name__}: {e}"
+        if _is_unverifiable(e):
+            # the module itself cannot execute through this sink
+            # (e.g. inlined torch.vmap/functorch plumbing) — an
+            # infrastructure verdict, named so it is never read as
+            # evidence against the claim.  It still counts as a
+            # verify failure: a case that cannot be verified does
+            # not pay.
+            note = f"{_UNVERIFIABLE}{note}"
+        return fires, best, False, note
     return (
         fires,
         best,
@@ -492,16 +520,18 @@ def _pay(claim: Any, ctx: RefereeCtx, evd: ClaimEvidence) -> Any:
         return ComponentVerdict(
             "pay", False, "no probe cases — nothing to fire on"
         )
-    fires = changed = paid = vfail = 0
+    fires = changed = paid = vfail = vunver = 0
     ratios: dict[str, list[float]] = {a: [] for a in axis_fns}
     for case in cases:
-        f, best, verified, _note = _probe_case(case, claim, ctx)
+        f, best, verified, note = _probe_case(case, claim, ctx)
         fires += f
         if best is None or best == case.term:
             continue
         changed += 1
         if verified is False:
             vfail += 1
+            if note.startswith(_UNVERIFIABLE):
+                vunver += 1
         if dag_cost(best, cost_fn) < dag_cost(case.term, cost_fn):
             paid += 1
         for axis, fn in axis_fns.items():
@@ -516,6 +546,12 @@ def _pay(claim: Any, ctx: RefereeCtx, evd: ClaimEvidence) -> Any:
         f"fires={fires} changed={changed} paid={paid} "
         f"verify_fail={vfail} cases={len(cases)}"
     )
+    if vunver:
+        detail += (
+            f" verify_unverifiable={vunver} "
+            "(module cannot execute through the sink — "
+            "inlined functorch/vmap, not a term disagreement)"
+        )
     if evd.measured:
         detail += " | " + " ".join(
             f"{a}={v:.3f}x" for a, v in sorted(evd.measured.items())

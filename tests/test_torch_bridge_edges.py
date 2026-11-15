@@ -1329,6 +1329,45 @@ class TestOpaqueLeaves:
                 sig=((("bogus", ()),), ()),
             )
 
+    def test_opaque_torch_refuses_functorch_plumbing(self):
+        """Inlined ``torch.vmap``/functorch predispatch calls cannot
+        replay eagerly — the binding refuses up front with the named
+        ``FunctorchReplayError`` instead of minting orphaned
+        ``BatchedTensor``s that crash the next pointwise op
+        (``tensor escaped from inside a function being vmapped``).
+
+        realcorpus_mint_r3 F1: ``torch.export`` traces *through*
+        ``torch.vmap`` (dynamo inlines the transform), so the
+        whisper decoder's ``masking_utils._vmap_for_bhqkv`` mask
+        construction exports as ``torch._functorch.predispatch``
+        opaque leaves — self-vs-self verification died on them.
+        """
+        from mlopt_torch.torch_bindings import FunctorchReplayError
+
+        for qual in (
+            "torch._functorch.predispatch:_add_batch_dim",
+            "torch._functorch.predispatch:_remove_batch_dim",
+            "torch._functorch.predispatch:_vmap_increment_nesting",
+            "torch.func.vmap:wrap",
+        ):
+            with pytest.raises(FunctorchReplayError, match="unverifiable"):
+                _opaque_torch(
+                    torch.randn(2),
+                    aten=qual,
+                    sig=((), ()),
+                )
+
+    def test_opaque_torch_non_functorch_qual_unaffected(self):
+        """The refusal is scoped to functorch plumbing — an ordinary
+        unresolvable qual still reaches the resolver's own error."""
+        with pytest.raises(Exception) as ei:
+            _opaque_torch(
+                torch.randn(2),
+                aten="aten::no_such_opaque_op",
+                sig=((), ()),
+            )
+        assert type(ei.value).__name__ != "FunctorchReplayError"
+
 
 # ---------------------------------------------------------------------------
 #  argN / scalar-operand attr-carriage — the decoder ``where`` blocker

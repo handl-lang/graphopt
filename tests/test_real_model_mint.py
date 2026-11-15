@@ -11,6 +11,8 @@ rules themselves; these tests pin the resume-path gap closed.
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 torch = pytest.importorskip("torch")
@@ -120,3 +122,193 @@ class TestSeatPrimDenotations:
             )
         )
         assert rmm._seat_prim_denotations([("t:1", rule)]) == 0
+
+
+class TestResumePremises:
+    """realcorpus_mint_r3 F2 — ``rule.premises`` must survive resume.
+
+    ``law_to_data`` cannot carry ``rule.premises`` (a ``Rewrite``
+    attribute, not a codec field): the cert leg's only anchor for a
+    minted fold is its ``synop_*.expand`` definitional premise, so a
+    resume that rebuilds the bare 2-cell judges the claim
+    *unanchored* — ``rmint:084``'s ``not derivable (fixed_point)``
+    was exactly this artifact.  ``overnight.serialize_rule`` /
+    ``rule_from_record`` are the premise-faithful codec;
+    ``rmm._resume_rule`` additionally re-derives the definitional
+    depth-1 expand for ledgers written before ``premise_laws``.
+    """
+
+    @staticmethod
+    def _fold(name: str = "synop_r3prem01") -> Rewrite:
+        """A depth-1 prim fold carrying its ``.expand`` premise."""
+        fold = Rewrite(
+            f"prim:{name}",
+            Op.make("mul", "a", "b"),
+            Op.make(name, "a", "b"),
+        )
+        expand = Rewrite(
+            f"{name}.expand",
+            Op.make(name, "a", "b"),
+            Op.make("mul", "a", "b"),
+            law=f"{name} unfolds to its mined denotation",
+        )
+        object.__setattr__(fold, "premises", (expand,))
+        return fold
+
+    @staticmethod
+    def _prim_cand(rule: Rewrite, *, depth: int = 1) -> dict:
+        """An rmm-shaped resume candidate for *rule*'s fold."""
+        return {
+            "id": "rmint:000",
+            "law": law_to_data(rule),
+            "prim": {
+                "prim": {
+                    "synop": rule.rhs.op,
+                    "depth": depth,
+                }
+            },
+        }
+
+    def test_serialize_rule_carries_premise_laws(self):
+        """The record keeps the audit name list AND full premise
+        records — recursively serializable."""
+        import bench.drivers.overnight as ov
+
+        rec = ov.serialize_rule(self._fold())
+        assert rec["premises"] == ["synop_r3prem01.expand"]
+        assert len(rec["premise_laws"]) == 1
+        assert rec["premise_laws"][0]["name"] == (
+            "synop_r3prem01.expand"
+        )
+
+    def test_rule_from_record_restores_premises(self):
+        """``premise_laws`` rebuilds the exact premise ``Rewrite``."""
+        import bench.drivers.overnight as ov
+
+        fold = self._fold()
+        back = ov.rule_from_record(ov.serialize_rule(fold))
+        assert [p.name for p in back.premises] == [
+            "synop_r3prem01.expand"
+        ]
+        prem = back.premises[0]
+        assert prem.lhs == back.rhs
+        assert prem.rhs == back.lhs
+
+    def test_rule_from_record_rule_without_premises(self):
+        """A premise-free rule round-trips with no premise keys."""
+        import bench.drivers.overnight as ov
+
+        rule = Rewrite(
+            "plain:add_to_mul",
+            Op.make("add", "a", "b"),
+            Op.make("mul", "a", "b"),
+        )
+        rec = ov.serialize_rule(rule)
+        assert "premises" not in rec
+        assert "premise_laws" not in rec
+        back = ov.rule_from_record(rec)
+        assert not getattr(back, "premises", ())
+
+    def test_rule_from_record_legacy_names_only_depth1(self):
+        """An overnight-style record (``"premises"`` names, no
+        ``premise_laws``) re-derives the definitional depth-1 expand
+        exactly — ``synop_call -> fold.lhs``."""
+        import bench.drivers.overnight as ov
+
+        fold = self._fold()
+        rec = law_to_data(fold)
+        rec["premises"] = ["synop_r3prem01.expand"]
+        back = ov.rule_from_record(rec)
+        assert [p.name for p in back.premises] == [
+            "synop_r3prem01.expand"
+        ]
+        prem = back.premises[0]
+        assert prem.lhs == back.rhs
+        assert prem.rhs == back.lhs
+
+    def test_rule_from_record_rejects_unrecoverable_premise(self):
+        """A name-only premise that is not the definitional depth-1
+        expand raises — an unanchored claim must not be judged as if
+        anchored."""
+        import bench.drivers.overnight as ov
+
+        fold = self._fold()
+        rec = law_to_data(fold)
+        rec["premises"] = ["some_other.law"]
+        with pytest.raises(ValueError, match="unanchored"):
+            ov.rule_from_record(rec)
+
+    def test_resume_rule_restores_prim_expand(self):
+        """The r3 record shape — no premise keys at all — still
+        rebuilds the fold WITH its ``.expand`` premise via the prim
+        meta's definitional recovery."""
+        rule = self._fold()
+        cand = self._prim_cand(rule)
+        # strip premise keys — the r3 ledger shape
+        cand["law"] = law_to_data(rule)
+        back = rmm._resume_rule(cand)
+        assert back is not None
+        assert [p.name for p in back.premises] == [
+            "synop_r3prem01.expand"
+        ]
+
+    def test_resume_rule_premise_laws_record(self):
+        """A new-shape record (``premise_laws`` present) restores
+        premises without needing the prim-meta fallback."""
+        import bench.drivers.overnight as ov
+
+        rule = self._fold()
+        cand = self._prim_cand(rule)
+        cand["law"] = ov.serialize_rule(rule)
+        back = rmm._resume_rule(cand)
+        assert back is not None
+        assert [p.name for p in back.premises] == [
+            "synop_r3prem01.expand"
+        ]
+
+    def test_resume_rule_prim_without_meta_recovers_via_rhs(self):
+        """A ``prim-fold`` record missing its ``prim`` meta still
+        anchors — the fold's own ``synop*`` RHS names the expand."""
+        rule = self._fold()
+        cand = {
+            "id": "rmint:000",
+            "law": law_to_data(rule),
+            "family": "prim-fold",
+        }
+        back = rmm._resume_rule(cand)
+        assert back is not None
+        assert [p.name for p in back.premises] == [
+            "synop_r3prem01.expand"
+        ]
+
+    def test_resume_rule_depth2_without_premises_unfaithful(self):
+        """A depth-N fold's premise RHS is the expanded denotation
+        the record never stored — no silent bare-law rebuild."""
+        name = "synop2_r3prem02"
+        fold = Rewrite(
+            f"prim:{name}",
+            Op.make("mul", "a", "b"),
+            Op.make(name, "a", "b"),
+        )
+        cand = self._prim_cand(fold, depth=2)
+        cand["law"] = law_to_data(fold)
+        assert rmm._resume_rule(cand) is None
+
+    def test_resume_pool_marks_unfaithful_candidate(self, tmp_path):
+        """``_resume_pool`` queues faithful rules and marks the
+        unfaithful ones ``resume_skip`` — never a bare-law judge."""
+        name = "synop2_r3prem03"
+        fold = Rewrite(
+            f"prim:{name}",
+            Op.make("mul", "a", "b"),
+            Op.make(name, "a", "b"),
+        )
+        cand = self._prim_cand(fold, depth=2)
+        cand["law"] = law_to_data(fold)
+        path = tmp_path / "prior.json"
+        path.write_text(json.dumps({"candidates": [cand], "mint": {}}))
+        _cands, to_judge, _adm, stats = rmm._resume_pool(str(path))
+        assert to_judge == []
+        assert stats["resume_unjudged_skipped"] == 1
+        assert _cands[0]["admit"]["resume_skip"] is True
+        assert "premise" in _cands[0]["admit"]["reason"]

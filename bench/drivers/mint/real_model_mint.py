@@ -928,12 +928,17 @@ def _build_candidates(
 ) -> tuple[list[dict], list[tuple[str, Any]], int]:
     """Alpha-dedup minted *items* into judgeable ``(rid, Rewrite)`` pairs.
 
-    Every candidate record carries the full ``law_to_data`` record
-    under ``"law"`` plus a stable ``"key"`` (``repr`` of the
-    ``alpha_key`` pair) so ``--resume`` can rebuild rules and match
-    verdicts without re-mining.
+    Every candidate record carries the full premise-faithful law
+    record under ``"law"`` (:func:`bench.drivers.overnight.
+    serialize_rule` — ``law_to_data`` plus ``"premises"`` /
+    ``"premise_laws"``, so ``rule.premises`` — the cert leg's only
+    anchor for a minted fold — survives ``--resume``) plus a stable
+    ``"key"`` (``repr`` of the ``alpha_key`` pair) so ``--resume``
+    can rebuild rules and match verdicts without re-mining.
     """
-    from mlopt_core.laws.serialize import alpha_key, law_to_data
+    from mlopt_core.laws.serialize import alpha_key
+
+    import bench.drivers.overnight as _ov
 
     by_key: dict = {}
     order: list = []
@@ -960,7 +965,7 @@ def _build_candidates(
         rid = f"rmint:{i:03d}"
         rule = p.as_rule()
         object.__setattr__(rule, "name", rid)
-        ldata = law_to_data(rule)
+        ldata = _ov.serialize_rule(rule)
         rec = {
             "id": rid,
             "key": repr(key),
@@ -983,6 +988,74 @@ def _build_candidates(
     return candidates, rules_to_judge, len(order)
 
 
+def _resume_rule(cand: dict):
+    """Rebuild the judged ``Rewrite`` for one resume candidate.
+
+    Returns the rule with ``premises`` attached when the record
+    carries them (``premise_laws``, or the name-only depth-1 synop
+    expand ``overnight.rule_from_record`` re-derives), or ``None``
+    when the record cannot be rebuilt without silently dropping the
+    premise closure — the caller marks the candidate ``resume_skip``
+    honestly rather than judging a bare pattern as if anchored
+    (realcorpus_mint_r3 F2).
+
+    Prim-fold candidates minted before ``premise_laws`` store no
+    premise data at all; their ``synop*.expand`` premise is
+    definitional — ``synop_call -> fold.lhs`` — so it is
+    re-synthesized exactly for depth-1 folds (the same convention
+    ``prim_mint.prim_fold_of``/``minted.prim_fold`` use).  A depth-N
+    fold's premise RHS is the *expanded* denotation the record never
+    stored → ``None``.
+    """
+    from mlopt_discovery import prim_mint as pm
+
+    import bench.drivers.overnight as ov
+
+    law = cand.get("law")
+    if not isinstance(law, dict):
+        return None
+    try:
+        rule = ov.rule_from_record(law)
+    except Exception:
+        # A premise record the codec cannot re-attach — falling back
+        # to ``law_from_data`` would silently drop ``premises`` and
+        # judge the claim unanchored, which is exactly the bug this
+        # path exists to fix.
+        return None
+    if (law or {}).get("missing_hooks"):
+        # ``check``/``derive`` closures are code, not data — the
+        # record can never rebuild them faithfully.
+        return None
+    if getattr(rule, "premises", None):
+        return rule
+    is_prim = cand.get("family") == "prim-fold"
+    prim = cand.get("prim") or {}
+    meta = prim.get("prim", prim) if isinstance(prim, dict) else {}
+    synop = meta.get("synop") if isinstance(meta, dict) else None
+    rhs_op = getattr(getattr(rule, "rhs", None), "op", None)
+    if not synop:
+        # The fold's own RHS names the synop even when the meta
+        # record is absent — but a prim fold we cannot anchor is
+        # unfaithful, never a bare-law judge.
+        if is_prim and rhs_op and pm.synop_depth(rhs_op) >= 1:
+            synop = rhs_op
+        elif is_prim:
+            return None
+        else:
+            return rule
+    if rhs_op != synop or pm.synop_depth(rhs_op) != 1:
+        return None
+    depth = int(meta.get("depth") or 1)
+    if depth != 1:
+        return None
+    object.__setattr__(
+        rule,
+        "premises",
+        (ov._synth_expand_premise(rule, synop),),
+    )
+    return rule
+
+
 def _resume_pool(
     path: str,
 ) -> tuple[list[dict], list, list, dict]:
@@ -993,11 +1066,10 @@ def _resume_pool(
     classify/fire/pay still run on the rebuilt rule.  Unjudged
     candidates whose law record cannot be faithfully rebuilt
     (``missing_hooks`` non-empty — ``check``/``derive`` closures are
-    code, not data) are marked ``resume_skip`` honestly rather than
+    code, not data — or a premise closure the record cannot
+    re-attach) are marked ``resume_skip`` honestly rather than
     re-judged under a different rule.
     """
-    from mlopt_core.laws.serialize import law_from_data
-
     prior = json.loads(Path(path).read_text())
     candidates = list(prior.get("candidates", []))
     rules_to_judge: list = []
@@ -1006,16 +1078,8 @@ def _resume_pool(
     for cand in candidates:
         rid = cand.get("id", "")
         adm = cand.get("admit")
-        law = cand.get("law")
-        rule = None
-        if isinstance(law, dict):
-            try:
-                rule = law_from_data(law)
-            except Exception:
-                rule = None
-        faithful = rule is not None and not (law or {}).get(
-            "missing_hooks"
-        )
+        rule = _resume_rule(cand)
+        faithful = rule is not None
         if adm is None:
             if faithful:
                 rules_to_judge.append((rid, rule))
@@ -1025,7 +1089,8 @@ def _resume_pool(
                     "admitted": False,
                     "reason": (
                         "resume: law record not faithfully "
-                        "rebuildable (missing hooks)"
+                        "rebuildable (missing hooks or premise "
+                        "closure)"
                     ),
                     "skipped": "resume",
                     "stages": [],

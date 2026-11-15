@@ -1707,6 +1707,123 @@ def _eval_records(traj: Any) -> list[dict]:
     return out
 
 
+# ---------------------------------------------------------------------------
+#  law records with premises — the resume-faithful codec
+# ---------------------------------------------------------------------------
+#
+# ``rule.premises`` is a ``Rewrite`` attribute ``law_to_data`` cannot
+# carry: it is the cert leg's only anchor for a minted fold (the
+# ``synop_*.expand`` definitional premise).  ``--resume`` rebuilds
+# rules from the ledger's ``law`` records, so a record that stores
+# only the 2-cell judges the claim *unanchored* — realcorpus_mint_r3
+# F2: ``rmint:084``'s ``not derivable (fixed_point)`` was exactly this
+# artifact.  :func:`serialize_rule` extends the record with
+# ``"premise_laws"`` (each premise's own record, recursively) while
+# keeping the audit ``"premises"`` name list; :func:`rule_from_record`
+# is the reader.  ``law_from_data`` ignores both keys, so older
+# readers are unaffected.
+
+
+def serialize_rule(rule: Any) -> dict[str, Any]:
+    """``law_to_data`` plus the premise closure resume must re-attach.
+
+    ``"premises"`` stays the audit name list (the shape ledgers
+    already carry); ``"premise_laws"`` holds each premise's own
+    ``serialize_rule`` record so :func:`rule_from_record` rebuilds
+    the exact ``Rewrite`` objects — recursively, so a premise's own
+    closure round-trips too.
+    """
+    law = law_to_data(rule)
+    premises = getattr(rule, "premises", None)
+    if premises:
+        law["premises"] = [r.name for r in premises]
+        law["premise_laws"] = [serialize_rule(r) for r in premises]
+    return law
+
+
+def _synth_expand_premise(rule: Any, synop: str) -> Any:
+    """Re-synthesize a depth-1 ``synop_*.expand`` premise.
+
+    The prim pool mints the definitional premise as
+    ``Rewrite(f"{synop}.expand", call, xpat)`` — for a depth-1 fold
+    ``call`` IS ``rule.rhs`` and ``xpat`` IS ``rule.lhs``, so the
+    premise is a pure function of the fold record: re-deriving it is
+    exact, not an approximation (the same convention
+    ``prim_fold_of``/``minted.prim_fold`` use for depth-1 records,
+    which omit ``"expand"`` because it derives from the fold alone).
+    """
+    from mlopt_core.egraph import Rewrite
+
+    return Rewrite(
+        f"{synop}.expand",
+        rule.rhs,
+        rule.lhs,
+        law=(
+            f"{synop} unfolds to its mined denotation — the "
+            "definitional premise the cert leg anchors on"
+        ),
+    )
+
+
+def rule_from_record(data: dict[str, Any]) -> Any:
+    """Rebuild the ``Rewrite`` :func:`serialize_rule` wrote.
+
+    ``law_from_data`` restores the 2-cell; this re-attaches
+    ``rule.premises`` from ``"premise_laws"`` — exact records, with a
+    name cross-check against the audit ``"premises"`` list when both
+    are present.  Backward compat for ledgers written before
+    ``"premise_laws"``:
+
+    * no premise keys — the rule declared none, nothing to attach;
+    * ``"premises"`` names only — a depth-1 ``synop_*.expand`` entry
+      matching ``rule.rhs.op`` is re-synthesized via
+      :func:`_synth_expand_premise`; anything else (a deeper tier
+      whose premise RHS is the *expanded* denotation the record never
+      stored, or a non-synop premise) raises ``ValueError`` — an
+      unanchored claim must not be judged as if anchored.
+    """
+    rule = law_from_data(data)
+    premise_laws = data.get("premise_laws")
+    names = data.get("premises")
+    if premise_laws is not None:
+        premises = []
+        for pdata in premise_laws:
+            if pdata.get("missing_hooks") or []:
+                raise ValueError(
+                    f"premise {pdata.get('name')!r} carries "
+                    "procedural hooks the record cannot rebuild"
+                )
+            premises.append(rule_from_record(pdata))
+        premises = tuple(premises)
+        if names is not None and [p.name for p in premises] != list(
+            names
+        ):
+            raise ValueError(
+                "premise_laws/premises name mismatch — corrupt record"
+            )
+        object.__setattr__(rule, "premises", premises)
+        return rule
+    if names:
+        rhs_op = getattr(rule.rhs, "op", None)
+        recovered = []
+        for pname in names:
+            if (
+                isinstance(pname, str)
+                and pname == f"{rhs_op}.expand"
+                and rhs_op is not None
+                and _pm.synop_depth(rhs_op) == 1
+            ):
+                recovered.append(_synth_expand_premise(rule, rhs_op))
+            else:
+                raise ValueError(
+                    f"premise {pname!r} is name-only in this record "
+                    "and is not a depth-1 synop expand derivable "
+                    "from the fold — refusing to judge unanchored"
+                )
+        object.__setattr__(rule, "premises", tuple(recovered))
+    return rule
+
+
 def _admit(rule: Any, referee: str, ctx: Any) -> dict:
     """Run the referee gauntlet; return the candidate-cell payload.
 
@@ -1722,19 +1839,16 @@ def _admit(rule: Any, referee: str, ctx: Any) -> dict:
 
     from bench import referees
 
-    law = law_to_data(rule)
+    law = serialize_rule(rule)
     guard = _guard_transport_spec(rule)
     if guard is not None:
         law["guard"] = guard
-    premises = getattr(rule, "premises", None)
-    if premises:
-        # the cert leg's premise-anchored axiom names — the same
-        # honesty posture as ``law["guard"]``: record what the
-        # closure adds so an audit sees the anchor.  The premise
-        # objects themselves re-attach on the deterministic re-mint
-        # (``Proposal.premises`` → ``as_rule``), like the composite
-        # hooks the pool rebuild restores.
-        law["premises"] = [r.name for r in premises]
+    # ``law["premises"]`` / ``law["premise_laws"]`` — the cert leg's
+    # premise-anchored axiom names plus the full premise records —
+    # are written by :func:`serialize_rule`; the premise objects
+    # themselves re-attach on resume through
+    # :func:`rule_from_record` (and on a fresh mint through
+    # ``Proposal.premises`` → ``as_rule``).
 
     rec: dict[str, Any] = {
         "name": rule.name,
@@ -1824,7 +1938,9 @@ def _classify(rule: Any, bank: list, ctxs: list | None = None) -> dict:
     return rec
 
 
-def _promote_prim(rec: dict, case: dict, evals: list, corpus: str) -> dict:
+def _promote_prim(
+    rec: dict, case: dict, evals: list, corpus: str
+) -> dict:
     """Build the ``("admit", name)`` cell — one auto-admission attempt.
 
     The caller owns the gate: this runs only for a mint whose
@@ -1869,7 +1985,16 @@ def _promote_prim(rec: dict, case: dict, evals: list, corpus: str) -> dict:
     except Exception:
         rule = None
     if rule is None:
-        rule = law_from_data(rec["law"])
+        try:
+            rule = rule_from_record(rec["law"])
+        except Exception:
+            rule = None
+    if rule is None:
+        cell["reason"] = (
+            "resume: law record not faithfully rebuildable "
+            "(premise closure)"
+        )
+        return cell
     if int(prim.get("depth", 1)) > 1 and not getattr(
         rule, "premises", ()
     ):
@@ -2098,8 +2223,16 @@ def run(
                     if corpus == "zoo"
                     else _real_case_ctxs(zenv or {})
                 )
-            rule = law_from_data(crec["law"])
-            if (crec["law"] or {}).get("guard"):
+            rule = None
+            try:
+                rule = rule_from_record(crec["law"])
+            except Exception:
+                # premise closure the record cannot re-attach —
+                # fall through to the deterministic pool rebuild,
+                # then to an honest skip rather than a bare-law
+                # classify.
+                rule = None
+            if rule is None or (crec["law"] or {}).get("guard"):
                 # A composite's transported check/derive are code the
                 # record cannot carry — ``missing_hooks`` says so.
                 # The pool rebuilds deterministically, so the live
@@ -2115,6 +2248,23 @@ def run(
                     and pool[ev["i"]].as_rule().name == crec["name"]
                 ):
                     rule = pool[ev["i"]].as_rule()
+            if rule is None:
+                ckpt.record(
+                    ckey,
+                    {
+                        "verdict": "resume-unfaithful",
+                        "via": (
+                            "law record's premise closure cannot be "
+                            "rebuilt and the pool rebuild did not "
+                            "land"
+                        ),
+                        "siblings": [],
+                        "derivable": None,
+                        "witness_rules": [],
+                        "instance_src": "",
+                    },
+                )
+                continue
             cres = _classify(rule, bank, ctxs=zctxs)
             ckpt.record(ckey, cres)
             log(

@@ -810,6 +810,41 @@ def _fft_kw(kw: dict) -> dict:
 # ---------------------------------------------------------------------------
 #  opaque / extreme / clamp binding helpers
 # ---------------------------------------------------------------------------
+class FunctorchReplayError(RuntimeError):
+    """An ``opaque`` term named inlined functorch/vmap plumbing.
+
+    ``torch.export`` traces *through* ``torch.vmap`` (dynamo inlines
+    the transform — ``torch._dynamo.trace_rules`` marks the
+    ``torch._functorch.predispatch`` calls
+    ``TorchInGraphFunctionVariable``), so a graph that ran a vmapped
+    region lifts to IR carrying ``_add_batch_dim`` /
+    ``_remove_batch_dim`` / ``_vmap_*_nesting`` opaque leaves around
+    ordinary payload ops.  Replaying those predispatch calls eagerly
+    mints ``BatchedTensor``s no active vmap level owns — the next
+    pointwise op dies in ``gen_vmap_plumbing`` ("tensor escaped from
+    inside a function being vmapped"), e.g. the whisper decoder's
+    HF ``masking_utils._vmap_for_bhqkv`` causal-mask construction
+    (``docs/reports/realcorpus_mint_r3.md`` F1).  The plumbing can
+    never execute outside a vmap, so the binding refuses up front
+    with a named error instead of surfacing the cryptic downstream
+    crash — callers (the referee pay leg) record the case as
+    *unverifiable*, never as a verify disagreement.
+    """
+
+
+#: Qualname module prefixes whose eager replay cannot be faithful —
+#: functorch transforms are trace-time machinery, not kernels.
+_FUNCTORCH_QUAL_MODULES = ("torch._functorch", "torch._C._functorch")
+
+
+def _is_functorch_qual(qual: str) -> bool:
+    """Return True when *qual* names functorch/vmap plumbing."""
+    module = qual.split(":", 1)[0].split("::", 1)[0]
+    return module.startswith(_FUNCTORCH_QUAL_MODULES) or (
+        module == "torch.func" or module.startswith("torch.func.")
+    )
+
+
 def _opaque_torch(*args: Any, **kw: Any) -> Any:
     """``opaque`` binding — replay the original torch callable.
 
@@ -818,6 +853,13 @@ def _opaque_torch(*args: Any, **kw: Any) -> Any:
     ``("t", i)`` slots consume evaluated operands in mint order.
     """
     qual = kw["aten"]
+    if _is_functorch_qual(qual):
+        raise FunctorchReplayError(
+            f"opaque op {qual!r}: inlined functorch/vmap plumbing "
+            "cannot replay eagerly — the export traced through "
+            "torch.vmap and the IR carries its predispatch calls; "
+            "the module is unverifiable through this sink"
+        )
     arg_specs, kw_specs = kw["sig"]
     operands = iter(args)
 

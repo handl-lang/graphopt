@@ -342,6 +342,104 @@ def test_instances_skip_non_denoting_sites():
         assert not lvo.eval_instance(lhs_i, rhs_i)[0].endswith("-err")
 
 
+def test_pay_names_sink_unverifiable_cases(monkeypatch):
+    """A module the sink cannot execute is named, not folded into a
+    generic ``verify_fail`` — and still refuses to pay.
+
+    realcorpus_mint_r3 F1: the whisper decoder's exported IR carries
+    inlined ``torch.vmap``/functorch predispatch ``opaque`` leaves;
+    replaying them eagerly raises
+    ``mlopt_torch.torch_bindings.FunctorchReplayError``.  That is an
+    infrastructure verdict — the module cannot execute through this
+    sink at all — distinct from a lowered-terms-differ
+    disagreement.  The pay leg must still count it as a verify
+    failure (a case that cannot be verified does not pay) while the
+    detail names the unverifiable count so a ``verify_fail`` row is
+    never read as evidence against the claim.
+    """
+    from types import SimpleNamespace
+
+    from bench.referees import components as _c
+
+    claim = Rewrite(
+        "unverifiable-case",
+        _p("add", "a", "b"),
+        _p("add", "a", "b"),
+    )
+    case_term = _p("add", _p("mul", "a", "b"), "c")
+    best_term = _p("mul", "a", "b")
+    ctx = _ctx(
+        probe=(SimpleNamespace(term=case_term),),
+        axis_fns={},
+        cost_fn=lambda _t: 1.0,
+    )
+
+    class _Evd:
+        def __init__(self):
+            self.measured = {}
+
+        def instances(self, cap):
+            return []
+
+    monkeypatch.setattr(
+        _c,
+        "_probe_case",
+        lambda case, claim, ctx: (
+            1,
+            best_term,
+            False,
+            "unverifiable: FunctorchReplayError: inlined "
+            "functorch/vmap plumbing cannot replay eagerly",
+        ),
+    )
+    verdict = _c._pay(claim, ctx, _Evd())
+    assert verdict.passed is False
+    assert "verify_fail=1" in verdict.detail
+    assert "verify_unverifiable=1" in verdict.detail
+
+
+def test_pay_plain_verify_fail_is_not_marked_unverifiable(monkeypatch):
+    """An ordinary verify failure keeps the bare ``verify_fail``
+    count — the unverifiable marker is scoped to the named sink
+    refusal."""
+    from types import SimpleNamespace
+
+    from bench.referees import components as _c
+
+    claim = Rewrite(
+        "plain-fail",
+        _p("add", "a", "b"),
+        _p("add", "a", "b"),
+    )
+    ctx = _ctx(
+        probe=(SimpleNamespace(term=_p("add", "a", "b")),),
+        axis_fns={},
+        cost_fn=lambda _t: 1.0,
+    )
+
+    class _Evd:
+        def __init__(self):
+            self.measured = {}
+
+        def instances(self, cap):
+            return []
+
+    monkeypatch.setattr(
+        _c,
+        "_probe_case",
+        lambda case, claim, ctx: (
+            1,
+            _p("mul", "a", "b"),
+            False,
+            "RuntimeError: lowered terms differ",
+        ),
+    )
+    verdict = _c._pay(claim, ctx, _Evd())
+    assert verdict.passed is False
+    assert "verify_fail=1" in verdict.detail
+    assert "verify_unverifiable" not in verdict.detail
+
+
 # ---------------------------------------------------------------------------
 #  matrix — coverage audit + a seconds-scale smoke
 # ---------------------------------------------------------------------------
