@@ -1,0 +1,1509 @@
+{
+ "meta": {
+  "_note": "r3 counterfactual re-judge \u2014 prim-fold rules rebuilt via prim_mint.prim_fold_of (premises attached, fresh-mint semantics) because --resume law_from_data drops rule.premises. A_real_ctx = the shipped referee ctx (probe incl. whisper:decoder). B_no_whisper_decoder = counterfactual probe minus whisper:decoder (its TorchSink.verify raises a functorch vmap RuntimeError even module-vs-itself \u2014 verified separately). Produced by /tmp/r3_rejudge.py (scratch, not committed).",
+  "ctx_A": "real r3 ctx \u2014 honest fresh-run verdicts",
+  "ctx_B": "counterfactual \u2014 isolates the whisper:decoder verify defect"
+ },
+ "A_real_ctx": {
+  "rmint:065": {
+   "admitted": false,
+   "reason": "pay: fires=34 changed=6 paid=6 verify_fail=1 cases=8 | count=0.653x exec=0.570x flops=0.321x launch=0.321x params=1.000x",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 12eq/0ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/0ne/0rerr (360 acc, 0 dec, 360 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": false,
+     "detail": "fires=34 changed=6 paid=6 verify_fail=1 cases=8 | count=0.653x exec=0.570x flops=0.321x launch=0.321x params=1.000x"
+    }
+   ],
+   "measured": {
+    "launch": 0.3206865389091595,
+    "flops": 0.3206816327614001,
+    "count": 0.652571534450356,
+    "exec": 0.5703280998288579,
+    "params": 1.0
+   },
+   "wall_s": 3.9
+  },
+  "rmint:066": {
+   "admitted": false,
+   "reason": "pay: fires=40 changed=6 paid=2 verify_fail=1 cases=8 | count=1.000x exec=0.829x flops=0.992x launch=0.992x params=1.000x",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 12eq/0ne/0rerr (18 acc, 0 dec, 18 envs) | synth: 0eq/0ne/0rerr (105 acc, 0 dec, 105 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": false,
+     "detail": "fires=40 changed=6 paid=2 verify_fail=1 cases=8 | count=1.000x exec=0.829x flops=0.992x launch=0.992x params=1.000x"
+    }
+   ],
+   "measured": {
+    "launch": 0.9915455093791103,
+    "flops": 0.9915463168788308,
+    "count": 1.0,
+    "exec": 0.8293162734163885,
+    "params": 1.0
+   },
+   "wall_s": 5.1
+  },
+  "rmint:067": {
+   "admitted": false,
+   "reason": "pay: fires=34 changed=6 paid=6 verify_fail=1 cases=8 | count=0.653x exec=0.570x flops=0.321x launch=0.321x params=1.000x",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 12eq/0ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/0ne/0rerr (360 acc, 0 dec, 360 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": false,
+     "detail": "fires=34 changed=6 paid=6 verify_fail=1 cases=8 | count=0.653x exec=0.570x flops=0.321x launch=0.321x params=1.000x"
+    }
+   ],
+   "measured": {
+    "launch": 0.3206842386447586,
+    "flops": 0.3206816327614001,
+    "count": 0.652571534450356,
+    "exec": 0.5703257852329149,
+    "params": 1.0
+   },
+   "wall_s": 3.1
+  },
+  "rmint:068": {
+   "admitted": false,
+   "reason": "pay: fires=40 changed=6 paid=2 verify_fail=1 cases=8 | count=1.000x exec=0.829x flops=0.992x launch=0.992x params=1.000x",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 12eq/0ne/0rerr (18 acc, 0 dec, 18 envs) | synth: 0eq/0ne/0rerr (105 acc, 0 dec, 105 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": false,
+     "detail": "fires=40 changed=6 paid=2 verify_fail=1 cases=8 | count=1.000x exec=0.829x flops=0.992x launch=0.992x params=1.000x"
+    }
+   ],
+   "measured": {
+    "launch": 0.9915455093791103,
+    "flops": 0.9915463168788308,
+    "count": 1.0,
+    "exec": 0.8293125800007765,
+    "params": 1.0
+   },
+   "wall_s": 4.8
+  },
+  "rmint:069": {
+   "admitted": false,
+   "reason": "pay: fires=40 changed=6 paid=2 verify_fail=1 cases=8 | count=1.000x exec=0.903x flops=0.996x launch=0.996x params=1.000x",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 12eq/0ne/0rerr (18 acc, 0 dec, 18 envs) | synth: 0eq/0ne/0rerr (105 acc, 0 dec, 105 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": false,
+     "detail": "fires=40 changed=6 paid=2 verify_fail=1 cases=8 | count=1.000x exec=0.903x flops=0.996x launch=0.996x params=1.000x"
+    }
+   ],
+   "measured": {
+    "launch": 0.9957479001777682,
+    "flops": 0.9957412729897369,
+    "count": 1.0,
+    "exec": 0.9030918079055575,
+    "params": 1.0
+   },
+   "wall_s": 4.8
+  },
+  "rmint:070": {
+   "admitted": false,
+   "reason": "pay: fires=52 changed=6 paid=5 verify_fail=1 cases=8 | count=0.556x exec=0.545x flops=1.000x launch=0.892x params=1.000x",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 24eq/0ne/0rerr (30 acc, 0 dec, 30 envs) | synth: 13eq/0ne/0rerr (225 acc, 0 dec, 225 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": false,
+     "detail": "fires=52 changed=6 paid=5 verify_fail=1 cases=8 | count=0.556x exec=0.545x flops=1.000x launch=0.892x params=1.000x"
+    }
+   ],
+   "measured": {
+    "launch": 0.8915079065940003,
+    "flops": 0.9995621245906977,
+    "count": 0.5555555555555555,
+    "exec": 0.5449988928538897,
+    "params": 1.0
+   },
+   "wall_s": 3.7
+  },
+  "rmint:071": {
+   "admitted": false,
+   "reason": "pay: fires=79 changed=8 paid=8 verify_fail=1 cases=8 | count=1.000x exec=0.670x flops=0.554x launch=0.554x params=1.000x",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 21eq/0ne/0rerr (33 acc, 0 dec, 33 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": false,
+     "detail": "fires=79 changed=8 paid=8 verify_fail=1 cases=8 | count=1.000x exec=0.670x flops=0.554x launch=0.554x params=1.000x"
+    }
+   ],
+   "measured": {
+    "launch": 0.554117464058391,
+    "flops": 0.554116257239103,
+    "count": 1.0,
+    "exec": 0.669893365540257,
+    "params": 1.0
+   },
+   "wall_s": 32.3
+  },
+  "rmint:072": {
+   "admitted": false,
+   "reason": "pay: fires=34 changed=6 paid=6 verify_fail=1 cases=8 | count=0.653x exec=0.570x flops=0.321x launch=0.321x params=1.000x",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 12eq/0ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/0ne/0rerr (360 acc, 0 dec, 360 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": false,
+     "detail": "fires=34 changed=6 paid=6 verify_fail=1 cases=8 | count=0.653x exec=0.570x flops=0.321x launch=0.321x params=1.000x"
+    }
+   ],
+   "measured": {
+    "launch": 0.32068423864475853,
+    "flops": 0.3206816327614001,
+    "count": 0.652571534450356,
+    "exec": 0.5703251126654247,
+    "params": 1.0
+   },
+   "wall_s": 4.3
+  },
+  "rmint:073": {
+   "admitted": false,
+   "reason": "pay: fires=22 changed=6 paid=6 verify_fail=1 cases=8 | count=0.658x exec=0.550x flops=0.325x launch=0.325x params=1.000x",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 6eq/0ne/0rerr (9 acc, 0 dec, 9 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": false,
+     "detail": "fires=22 changed=6 paid=6 verify_fail=1 cases=8 | count=0.658x exec=0.550x flops=0.325x launch=0.325x params=1.000x"
+    }
+   ],
+   "measured": {
+    "launch": 0.3248838661187366,
+    "flops": 0.32488189938965917,
+    "count": 0.6576735752666826,
+    "exec": 0.550444802126079,
+    "params": 1.0
+   },
+   "wall_s": 2.4
+  },
+  "rmint:074": {
+   "admitted": false,
+   "reason": "pay: fires=22 changed=6 paid=2 verify_fail=1 cases=8 | count=1.000x exec=0.785x flops=0.994x launch=0.994x params=1.000x",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 6eq/0ne/0rerr (9 acc, 0 dec, 9 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": false,
+     "detail": "fires=22 changed=6 paid=2 verify_fail=1 cases=8 | count=1.000x exec=0.785x flops=0.994x launch=0.994x params=1.000x"
+    }
+   ],
+   "measured": {
+    "launch": 0.9936989495299541,
+    "flops": 0.9936997286086523,
+    "count": 1.0,
+    "exec": 0.7849608596431881,
+    "params": 1.0
+   },
+   "wall_s": 2.5
+  },
+  "rmint:075": {
+   "admitted": true,
+   "reason": "cleared",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 33eq/0ne/0rerr (51 acc, 0 dec, 51 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": true,
+     "detail": "fires=121 changed=1 paid=1 verify_fail=0 cases=8 | count=1.054x exec=0.947x flops=0.947x launch=0.947x params=1.000x"
+    },
+    {
+     "name": "sweep",
+     "passed": true,
+     "detail": "synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | real: 33eq/0ne/0rerr (51 acc, 0 dec, 51 envs)"
+    },
+    {
+     "name": "cert",
+     "passed": true,
+     "detail": "rhs->lhs 1 steps (synop_f0576b5150.expand) \u2014 premise-anchored: synop_f0576b5150.expand"
+    }
+   ],
+   "measured": {
+    "launch": 0.9471133135688665,
+    "flops": 0.9471140687682912,
+    "count": 1.0535714285714286,
+    "exec": 0.9471193990872191,
+    "params": 1.0
+   },
+   "wall_s": 19.9
+  },
+  "rmint:076": {
+   "admitted": false,
+   "reason": "pay: fires=40 changed=6 paid=2 verify_fail=1 cases=8 | count=1.000x exec=0.829x flops=0.992x launch=0.992x params=1.000x",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 12eq/0ne/0rerr (18 acc, 0 dec, 18 envs) | synth: 0eq/0ne/0rerr (105 acc, 0 dec, 105 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": false,
+     "detail": "fires=40 changed=6 paid=2 verify_fail=1 cases=8 | count=1.000x exec=0.829x flops=0.992x launch=0.992x params=1.000x"
+    }
+   ],
+   "measured": {
+    "launch": 0.9915450397608083,
+    "flops": 0.9915463168788308,
+    "count": 1.0,
+    "exec": 0.8293121180280155,
+    "params": 1.0
+   },
+   "wall_s": 13.4
+  },
+  "rmint:077": {
+   "admitted": false,
+   "reason": "pay: fires=40 changed=6 paid=2 verify_fail=1 cases=8 | count=1.000x exec=0.903x flops=0.996x launch=0.996x params=1.000x",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 12eq/0ne/0rerr (18 acc, 0 dec, 18 envs) | synth: 0eq/0ne/0rerr (105 acc, 0 dec, 105 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": false,
+     "detail": "fires=40 changed=6 paid=2 verify_fail=1 cases=8 | count=1.000x exec=0.903x flops=0.996x launch=0.996x params=1.000x"
+    }
+   ],
+   "measured": {
+    "launch": 0.9957479001777682,
+    "flops": 0.9957412729897369,
+    "count": 1.0,
+    "exec": 0.9030906503021002,
+    "params": 1.0
+   },
+   "wall_s": 11.8
+  },
+  "rmint:078": {
+   "admitted": false,
+   "reason": "pay: fires=28 changed=6 paid=2 verify_fail=1 cases=8 | count=1.000x exec=0.937x flops=0.998x launch=0.998x params=1.000x",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 12eq/0ne/0rerr (15 acc, 0 dec, 15 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": false,
+     "detail": "fires=28 changed=6 paid=2 verify_fail=1 cases=8 | count=1.000x exec=0.937x flops=0.998x launch=0.998x params=1.000x"
+    }
+   ],
+   "measured": {
+    "launch": 0.9977319416118422,
+    "flops": 0.9977356668295165,
+    "count": 1.0,
+    "exec": 0.9369099150238144,
+    "params": 1.0
+   },
+   "wall_s": 2.5
+  },
+  "rmint:079": {
+   "admitted": false,
+   "reason": "pay: fires=22 changed=6 paid=6 verify_fail=1 cases=8 | count=0.658x exec=0.550x flops=0.325x launch=0.325x params=1.000x",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 6eq/0ne/0rerr (9 acc, 0 dec, 9 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": false,
+     "detail": "fires=22 changed=6 paid=6 verify_fail=1 cases=8 | count=0.658x exec=0.550x flops=0.325x launch=0.325x params=1.000x"
+    }
+   ],
+   "measured": {
+    "launch": 0.324878096372203,
+    "flops": 0.32488189938965917,
+    "count": 0.6576735752666826,
+    "exec": 0.5504503397007189,
+    "params": 1.0
+   },
+   "wall_s": 2.9
+  },
+  "rmint:080": {
+   "admitted": false,
+   "reason": "pay: fires=22 changed=6 paid=2 verify_fail=1 cases=8 | count=1.000x exec=0.785x flops=0.994x launch=0.994x params=1.000x",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 6eq/0ne/0rerr (9 acc, 0 dec, 9 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": false,
+     "detail": "fires=22 changed=6 paid=2 verify_fail=1 cases=8 | count=1.000x exec=0.785x flops=0.994x launch=0.994x params=1.000x"
+    }
+   ],
+   "measured": {
+    "launch": 0.993698479911707,
+    "flops": 0.9936997286086523,
+    "count": 1.0,
+    "exec": 0.7849610921338336,
+    "params": 1.0
+   },
+   "wall_s": 2.8
+  },
+  "rmint:081": {
+   "admitted": false,
+   "reason": "pay: fires=22 changed=6 paid=2 verify_fail=1 cases=8 | count=1.000x exec=0.850x flops=0.996x launch=0.996x params=1.000x",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 6eq/0ne/0rerr (9 acc, 0 dec, 9 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": false,
+     "detail": "fires=22 changed=6 paid=2 verify_fail=1 cases=8 | count=1.000x exec=0.850x flops=0.996x launch=0.996x params=1.000x"
+    }
+   ],
+   "measured": {
+    "launch": 0.9958044165820509,
+    "flops": 0.995799628445626,
+    "count": 1.0,
+    "exec": 0.8496511435569807,
+    "params": 1.0
+   },
+   "wall_s": 2.8
+  },
+  "rmint:082": {
+   "admitted": false,
+   "reason": "pay: fires=22 changed=6 paid=2 verify_fail=1 cases=8 | count=1.000x exec=0.785x flops=0.994x launch=0.994x params=1.000x",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 6eq/0ne/0rerr (9 acc, 0 dec, 9 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": false,
+     "detail": "fires=22 changed=6 paid=2 verify_fail=1 cases=8 | count=1.000x exec=0.785x flops=0.994x launch=0.994x params=1.000x"
+    }
+   ],
+   "measured": {
+    "launch": 0.993698479911707,
+    "flops": 0.9936997286086523,
+    "count": 1.0,
+    "exec": 0.7849631697280923,
+    "params": 1.0
+   },
+   "wall_s": 2.7
+  },
+  "rmint:083": {
+   "admitted": false,
+   "reason": "pay: fires=22 changed=6 paid=2 verify_fail=1 cases=8 | count=1.000x exec=0.850x flops=0.996x launch=0.996x params=1.000x",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 6eq/0ne/0rerr (9 acc, 0 dec, 9 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": false,
+     "detail": "fires=22 changed=6 paid=2 verify_fail=1 cases=8 | count=1.000x exec=0.850x flops=0.996x launch=0.996x params=1.000x"
+    }
+   ],
+   "measured": {
+    "launch": 0.9958021101253723,
+    "flops": 0.995799628445626,
+    "count": 1.0,
+    "exec": 0.8496580598835117,
+    "params": 1.0
+   },
+   "wall_s": 3.1
+  },
+  "rmint:084": {
+   "admitted": true,
+   "reason": "cleared",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 49eq/0ne/0rerr (49 acc, 0 dec, 49 envs) | synth: 15eq/0ne/0rerr (15 acc, 0 dec, 15 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": true,
+     "detail": "fires=53 changed=3 paid=3 verify_fail=0 cases=8 | count=0.500x exec=0.500x flops=1.000x launch=0.722x"
+    },
+    {
+     "name": "sweep",
+     "passed": true,
+     "detail": "synth: 49eq/0ne/0rerr (49 acc, 0 dec, 49 envs) | real: 49eq/0ne/0rerr (49 acc, 0 dec, 49 envs)"
+    },
+    {
+     "name": "cert",
+     "passed": true,
+     "detail": "rhs->lhs 1 steps (synop_0b304215b3.expand) \u2014 premise-anchored: synop_0b304215b3.expand"
+    }
+   ],
+   "measured": {
+    "launch": 0.7222222222222222,
+    "flops": 1.0,
+    "count": 0.5,
+    "exec": 0.5
+   },
+   "wall_s": 5.1
+  },
+  "rmint:085": {
+   "admitted": false,
+   "reason": "pay: fires=52 changed=6 paid=5 verify_fail=1 cases=8 | count=0.667x exec=0.656x flops=1.000x launch=0.937x params=1.000x",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 24eq/0ne/0rerr (30 acc, 0 dec, 30 envs) | synth: 13eq/0ne/0rerr (225 acc, 0 dec, 225 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": false,
+     "detail": "fires=52 changed=6 paid=5 verify_fail=1 cases=8 | count=0.667x exec=0.656x flops=1.000x launch=0.937x params=1.000x"
+    }
+   ],
+   "measured": {
+    "launch": 0.9374750113846345,
+    "flops": 0.9995621245906977,
+    "count": 0.6666666666666666,
+    "exec": 0.6561053839681505,
+    "params": 1.0
+   },
+   "wall_s": 15.4
+  },
+  "rmint:086": {
+   "admitted": false,
+   "reason": "pay: fires=76 changed=8 paid=8 verify_fail=1 cases=8 | count=1.000x exec=0.660x flops=0.566x launch=0.629x params=1.000x",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 21eq/0ne/0rerr (33 acc, 0 dec, 33 envs) | synth: 15eq/0ne/0rerr (360 acc, 0 dec, 360 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": false,
+     "detail": "fires=76 changed=8 paid=8 verify_fail=1 cases=8 | count=1.000x exec=0.660x flops=0.566x launch=0.629x params=1.000x"
+    }
+   ],
+   "measured": {
+    "launch": 0.6285528309188058,
+    "flops": 0.5660562078500024,
+    "count": 1.0,
+    "exec": 0.660427992561754,
+    "params": 1.0
+   },
+   "wall_s": 24.7
+  },
+  "rmint:087": {
+   "admitted": false,
+   "reason": "pay: fires=28 changed=6 paid=2 verify_fail=1 cases=8 | count=1.000x exec=0.937x flops=0.998x launch=0.998x params=1.000x",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 12eq/0ne/0rerr (15 acc, 0 dec, 15 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": false,
+     "detail": "fires=28 changed=6 paid=2 verify_fail=1 cases=8 | count=1.000x exec=0.937x flops=0.998x launch=0.998x params=1.000x"
+    }
+   ],
+   "measured": {
+    "launch": 0.9977319416118147,
+    "flops": 0.9977356668295165,
+    "count": 1.0,
+    "exec": 0.9369106042223101,
+    "params": 1.0
+   },
+   "wall_s": 2.5
+  },
+  "rmint:088": {
+   "admitted": false,
+   "reason": "pay: fires=40 changed=6 paid=2 verify_fail=1 cases=8 | count=1.000x exec=0.903x flops=0.996x launch=0.996x params=1.000x",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 12eq/0ne/0rerr (18 acc, 0 dec, 18 envs) | synth: 0eq/0ne/0rerr (105 acc, 0 dec, 105 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": false,
+     "detail": "fires=40 changed=6 paid=2 verify_fail=1 cases=8 | count=1.000x exec=0.903x flops=0.996x launch=0.996x params=1.000x"
+    }
+   ],
+   "measured": {
+    "launch": 0.9957479001777406,
+    "flops": 0.9957412729897369,
+    "count": 1.0,
+    "exec": 0.9030922654668995,
+    "params": 1.0
+   },
+   "wall_s": 11.8
+  },
+  "rmint:001": {
+   "admitted": false,
+   "reason": "pay: fires=8 changed=3 paid=3 verify_fail=1 cases=6 | count=0.406x exec=0.422x flops=0.569x launch=0.557x params=1.000x",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 0eq/0ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 2eq/0ne/0rerr (6 acc, 354 dec, 360 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": false,
+     "detail": "fires=8 changed=3 paid=3 verify_fail=1 cases=6 | count=0.406x exec=0.422x flops=0.569x launch=0.557x params=1.000x"
+    }
+   ],
+   "measured": {
+    "launch": 0.5573192161963932,
+    "flops": 0.5694444377075816,
+    "count": 0.4055339386078685,
+    "exec": 0.4217203250288681,
+    "params": 1.0
+   },
+   "wall_s": 2.6
+  },
+  "rmint:007": {
+   "admitted": false,
+   "reason": "pay: fires=6 changed=0 paid=0 verify_fail=0 cases=8",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 1eq/0ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 135eq/0ne/0rerr (225 acc, 0 dec, 225 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": false,
+     "detail": "fires=6 changed=0 paid=0 verify_fail=0 cases=8"
+    }
+   ],
+   "measured": {},
+   "wall_s": 7.2
+  }
+ },
+ "B_no_whisper_decoder": {
+  "rmint:065": {
+   "admitted": true,
+   "reason": "cleared",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 12eq/0ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/0ne/0rerr (360 acc, 0 dec, 360 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": true,
+     "detail": "fires=28 changed=5 paid=5 verify_fail=0 cases=7 | count=0.588x exec=0.487x flops=0.185x launch=0.185x params=1.000x"
+    },
+    {
+     "name": "sweep",
+     "passed": true,
+     "detail": "synth: 0eq/0ne/0rerr (2000 acc, 0 dec, 2000 envs) | real: 12eq/0ne/0rerr (16 acc, 0 dec, 16 envs)"
+    },
+    {
+     "name": "cert",
+     "passed": true,
+     "detail": "rhs->lhs 1 steps (synop_3bcb897016.expand) \u2014 premise-anchored: synop_3bcb897016.expand"
+    }
+   ],
+   "measured": {
+    "launch": 0.18489020222017344,
+    "flops": 0.18488431471834116,
+    "count": 0.5877551020408164,
+    "exec": 0.48749570874986325,
+    "params": 1.0
+   },
+   "wall_s": 88.7
+  },
+  "rmint:066": {
+   "admitted": true,
+   "reason": "cleared",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 12eq/0ne/0rerr (18 acc, 0 dec, 18 envs) | synth: 0eq/0ne/0rerr (105 acc, 0 dec, 105 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": true,
+     "detail": "fires=28 changed=5 paid=1 verify_fail=0 cases=7 | count=1.000x exec=0.798x flops=0.990x launch=0.990x params=1.000x"
+    },
+    {
+     "name": "sweep",
+     "passed": true,
+     "detail": "synth: 0eq/0ne/0rerr (2000 acc, 0 dec, 2000 envs) | real: 12eq/0ne/0rerr (18 acc, 0 dec, 18 envs)"
+    },
+    {
+     "name": "cert",
+     "passed": true,
+     "detail": "rhs->lhs 1 steps (synop_faaf6cd82f.expand) \u2014 premise-anchored: synop_faaf6cd82f.expand"
+    }
+   ],
+   "measured": {
+    "launch": 0.9899200612234512,
+    "flops": 0.9899210302248864,
+    "count": 1.0,
+    "exec": 0.798285544719801,
+    "params": 1.0
+   },
+   "wall_s": 76.5
+  },
+  "rmint:067": {
+   "admitted": true,
+   "reason": "cleared",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 12eq/0ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/0ne/0rerr (360 acc, 0 dec, 360 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": true,
+     "detail": "fires=28 changed=5 paid=5 verify_fail=0 cases=7 | count=0.588x exec=0.487x flops=0.185x launch=0.185x params=1.000x"
+    },
+    {
+     "name": "sweep",
+     "passed": true,
+     "detail": "synth: 0eq/0ne/0rerr (2000 acc, 0 dec, 2000 envs) | real: 12eq/0ne/0rerr (16 acc, 0 dec, 16 envs)"
+    },
+    {
+     "name": "cert",
+     "passed": true,
+     "detail": "rhs->lhs 1 steps (synop_dc485f13c4.expand) \u2014 premise-anchored: synop_dc485f13c4.expand"
+    }
+   ],
+   "measured": {
+    "launch": 0.18488744190289239,
+    "flops": 0.18488431471834116,
+    "count": 0.5877551020408164,
+    "exec": 0.4874929312347317,
+    "params": 1.0
+   },
+   "wall_s": 99.7
+  },
+  "rmint:068": {
+   "admitted": true,
+   "reason": "cleared",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 12eq/0ne/0rerr (18 acc, 0 dec, 18 envs) | synth: 0eq/0ne/0rerr (105 acc, 0 dec, 105 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": true,
+     "detail": "fires=28 changed=5 paid=1 verify_fail=0 cases=7 | count=1.000x exec=0.798x flops=0.990x launch=0.990x params=1.000x"
+    },
+    {
+     "name": "sweep",
+     "passed": true,
+     "detail": "synth: 0eq/0ne/0rerr (2000 acc, 0 dec, 2000 envs) | real: 12eq/0ne/0rerr (18 acc, 0 dec, 18 envs)"
+    },
+    {
+     "name": "cert",
+     "passed": true,
+     "detail": "rhs->lhs 1 steps (synop_2795fd93bc.expand) \u2014 premise-anchored: synop_2795fd93bc.expand"
+    }
+   ],
+   "measured": {
+    "launch": 0.9899200612234512,
+    "flops": 0.9899210302248864,
+    "count": 1.0,
+    "exec": 0.7982811126210665,
+    "params": 1.0
+   },
+   "wall_s": 130.0
+  },
+  "rmint:069": {
+   "admitted": true,
+   "reason": "cleared",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 12eq/0ne/0rerr (18 acc, 0 dec, 18 envs) | synth: 0eq/0ne/0rerr (105 acc, 0 dec, 105 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": true,
+     "detail": "fires=28 changed=5 paid=1 verify_fail=0 cases=7 | count=1.000x exec=0.885x flops=0.995x launch=0.995x params=1.000x"
+    },
+    {
+     "name": "sweep",
+     "passed": true,
+     "detail": "synth: 60eq/0ne/0rerr (2000 acc, 0 dec, 2000 envs) | real: 12eq/0ne/0rerr (18 acc, 0 dec, 18 envs)"
+    },
+    {
+     "name": "cert",
+     "passed": true,
+     "detail": "rhs->lhs 1 steps (synop_71402ee7da.expand) \u2014 premise-anchored: synop_71402ee7da.expand"
+    }
+   ],
+   "measured": {
+    "launch": 0.9949629301818407,
+    "flops": 0.9949549775579738,
+    "count": 1.0,
+    "exec": 0.885269283140454,
+    "params": 1.0
+   },
+   "wall_s": 128.0
+  },
+  "rmint:070": {
+   "admitted": true,
+   "reason": "cleared",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 24eq/0ne/0rerr (30 acc, 0 dec, 30 envs) | synth: 13eq/0ne/0rerr (225 acc, 0 dec, 225 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": true,
+     "detail": "fires=28 changed=5 paid=4 verify_fail=0 cases=7 | count=0.467x exec=0.467x flops=1.000x launch=0.870x params=1.000x"
+    },
+    {
+     "name": "sweep",
+     "passed": true,
+     "detail": "synth: 77eq/0ne/0rerr (2000 acc, 0 dec, 2000 envs) | real: 24eq/0ne/0rerr (30 acc, 0 dec, 30 envs)"
+    },
+    {
+     "name": "cert",
+     "passed": true,
+     "detail": "rhs->lhs 1 steps (synop_4a9fecddb2.expand) \u2014 premise-anchored: synop_4a9fecddb2.expand"
+    }
+   ],
+   "measured": {
+    "launch": 0.8703327167966591,
+    "flops": 0.9999977784068509,
+    "count": 0.4666666666666666,
+    "exec": 0.46667276728349344,
+    "params": 1.0
+   },
+   "wall_s": 89.5
+  },
+  "rmint:071": {
+   "admitted": true,
+   "reason": "cleared",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 21eq/0ne/0rerr (33 acc, 0 dec, 33 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": true,
+     "detail": "fires=67 changed=7 paid=7 verify_fail=0 cases=7 | count=1.000x exec=0.640x flops=0.561x launch=0.561x params=1.000x"
+    },
+    {
+     "name": "sweep",
+     "passed": true,
+     "detail": "synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | real: 21eq/0ne/0rerr (33 acc, 0 dec, 33 envs)"
+    },
+    {
+     "name": "cert",
+     "passed": true,
+     "detail": "rhs->lhs 1 steps (synop_a1daea17c4.expand) \u2014 premise-anchored: synop_a1daea17c4.expand"
+    }
+   ],
+   "measured": {
+    "launch": 0.5614941695999,
+    "flops": 0.5614927923006067,
+    "count": 1.0,
+    "exec": 0.6400629421269801,
+    "params": 1.0
+   },
+   "wall_s": 12.2
+  },
+  "rmint:072": {
+   "admitted": true,
+   "reason": "cleared",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 12eq/0ne/0rerr (16 acc, 0 dec, 16 envs) | synth: 0eq/0ne/0rerr (360 acc, 0 dec, 360 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": true,
+     "detail": "fires=28 changed=5 paid=5 verify_fail=0 cases=7 | count=0.588x exec=0.487x flops=0.185x launch=0.185x params=1.000x"
+    },
+    {
+     "name": "sweep",
+     "passed": true,
+     "detail": "synth: 0eq/0ne/0rerr (2000 acc, 0 dec, 2000 envs) | real: 12eq/0ne/0rerr (16 acc, 0 dec, 16 envs)"
+    },
+    {
+     "name": "cert",
+     "passed": true,
+     "detail": "rhs->lhs 1 steps (synop_a92c7b0bcd.expand) \u2014 premise-anchored: synop_a92c7b0bcd.expand"
+    }
+   ],
+   "measured": {
+    "launch": 0.18488744190289236,
+    "flops": 0.18488431471834116,
+    "count": 0.5877551020408164,
+    "exec": 0.4874921241537435,
+    "params": 1.0
+   },
+   "wall_s": 89.8
+  },
+  "rmint:073": {
+   "admitted": true,
+   "reason": "cleared",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 6eq/0ne/0rerr (9 acc, 0 dec, 9 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": true,
+     "detail": "fires=16 changed=5 paid=5 verify_fail=0 cases=7 | count=0.594x exec=0.464x flops=0.190x launch=0.190x params=1.000x"
+    },
+    {
+     "name": "sweep",
+     "passed": true,
+     "detail": "synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | real: 6eq/0ne/0rerr (9 acc, 0 dec, 9 envs)"
+    },
+    {
+     "name": "cert",
+     "passed": true,
+     "detail": "rhs->lhs 1 steps (synop_281bbb0136.expand) \u2014 premise-anchored: synop_281bbb0136.expand"
+    }
+   ],
+   "measured": {
+    "launch": 0.18992699487166603,
+    "flops": 0.189924634672252,
+    "count": 0.5938775510204082,
+    "exec": 0.46440920298970345,
+    "params": 1.0
+   },
+   "wall_s": 3.3
+  },
+  "rmint:074": {
+   "admitted": true,
+   "reason": "cleared",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 6eq/0ne/0rerr (9 acc, 0 dec, 9 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": true,
+     "detail": "fires=16 changed=5 paid=1 verify_fail=0 cases=7 | count=1.000x exec=0.744x flops=0.992x launch=0.992x params=1.000x"
+    },
+    {
+     "name": "sweep",
+     "passed": true,
+     "detail": "synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | real: 6eq/0ne/0rerr (9 acc, 0 dec, 9 envs)"
+    },
+    {
+     "name": "cert",
+     "passed": true,
+     "detail": "rhs->lhs 1 steps (synop_c0cb90aa1a.expand) \u2014 premise-anchored: synop_c0cb90aa1a.expand"
+    }
+   ],
+   "measured": {
+    "launch": 0.9924388687837087,
+    "flops": 0.9924398036781501,
+    "count": 1.0,
+    "exec": 0.7442774775615706,
+    "params": 1.0
+   },
+   "wall_s": 3.2
+  },
+  "rmint:075": {
+   "admitted": true,
+   "reason": "cleared",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 33eq/0ne/0rerr (51 acc, 0 dec, 51 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": true,
+     "detail": "fires=85 changed=1 paid=1 verify_fail=0 cases=7 | count=1.054x exec=0.947x flops=0.947x launch=0.947x params=1.000x"
+    },
+    {
+     "name": "sweep",
+     "passed": true,
+     "detail": "synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | real: 33eq/0ne/0rerr (51 acc, 0 dec, 51 envs)"
+    },
+    {
+     "name": "cert",
+     "passed": true,
+     "detail": "rhs->lhs 1 steps (synop_f0576b5150.expand) \u2014 premise-anchored: synop_f0576b5150.expand"
+    }
+   ],
+   "measured": {
+    "launch": 0.9471133135688665,
+    "flops": 0.9471140687682912,
+    "count": 1.0535714285714286,
+    "exec": 0.9471193990872191,
+    "params": 1.0
+   },
+   "wall_s": 20.1
+  },
+  "rmint:076": {
+   "admitted": true,
+   "reason": "cleared",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 12eq/0ne/0rerr (18 acc, 0 dec, 18 envs) | synth: 0eq/0ne/0rerr (105 acc, 0 dec, 105 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": true,
+     "detail": "fires=28 changed=5 paid=1 verify_fail=0 cases=7 | count=1.000x exec=0.798x flops=0.990x launch=0.990x params=1.000x"
+    },
+    {
+     "name": "sweep",
+     "passed": true,
+     "detail": "synth: 0eq/0ne/0rerr (2000 acc, 0 dec, 2000 envs) | real: 12eq/0ne/0rerr (18 acc, 0 dec, 18 envs)"
+    },
+    {
+     "name": "cert",
+     "passed": true,
+     "detail": "rhs->lhs 1 steps (synop_b066fa9d14.expand) \u2014 premise-anchored: synop_b066fa9d14.expand"
+    }
+   ],
+   "measured": {
+    "launch": 0.9899194976814888,
+    "flops": 0.9899210302248864,
+    "count": 1.0,
+    "exec": 0.7982805582537533,
+    "params": 1.0
+   },
+   "wall_s": 87.2
+  },
+  "rmint:077": {
+   "admitted": true,
+   "reason": "cleared",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 12eq/0ne/0rerr (18 acc, 0 dec, 18 envs) | synth: 0eq/0ne/0rerr (105 acc, 0 dec, 105 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": true,
+     "detail": "fires=28 changed=5 paid=1 verify_fail=0 cases=7 | count=1.000x exec=0.885x flops=0.995x launch=0.995x params=1.000x"
+    },
+    {
+     "name": "sweep",
+     "passed": true,
+     "detail": "synth: 60eq/0ne/0rerr (2000 acc, 0 dec, 2000 envs) | real: 12eq/0ne/0rerr (18 acc, 0 dec, 18 envs)"
+    },
+    {
+     "name": "cert",
+     "passed": true,
+     "detail": "rhs->lhs 1 steps (synop_def2ed878c.expand) \u2014 premise-anchored: synop_def2ed878c.expand"
+    }
+   ],
+   "measured": {
+    "launch": 0.9949629301818407,
+    "flops": 0.9949549775579738,
+    "count": 1.0,
+    "exec": 0.8852678940163052,
+    "params": 1.0
+   },
+   "wall_s": 74.7
+  },
+  "rmint:078": {
+   "admitted": true,
+   "reason": "cleared",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 12eq/0ne/0rerr (15 acc, 0 dec, 15 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": true,
+     "detail": "fires=16 changed=5 paid=1 verify_fail=0 cases=7 | count=1.000x exec=0.932x flops=0.997x launch=0.997x params=1.000x"
+    },
+    {
+     "name": "sweep",
+     "passed": true,
+     "detail": "synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | real: 12eq/0ne/0rerr (15 acc, 0 dec, 15 envs)"
+    },
+    {
+     "name": "cert",
+     "passed": true,
+     "detail": "rhs->lhs 1 steps (synop_a6ea5afbb9.expand) \u2014 premise-anchored: synop_a6ea5afbb9.expand"
+    }
+   ],
+   "measured": {
+    "launch": 0.9974770252785167,
+    "flops": 0.9974814955451011,
+    "count": 1.0,
+    "exec": 0.9323634830725837,
+    "params": 1.0
+   },
+   "wall_s": 2.8
+  },
+  "rmint:079": {
+   "admitted": true,
+   "reason": "cleared",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 6eq/0ne/0rerr (9 acc, 0 dec, 9 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": true,
+     "detail": "fires=16 changed=5 paid=5 verify_fail=0 cases=7 | count=0.594x exec=0.464x flops=0.190x launch=0.190x params=1.000x"
+    },
+    {
+     "name": "sweep",
+     "passed": true,
+     "detail": "synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | real: 6eq/0ne/0rerr (9 acc, 0 dec, 9 envs)"
+    },
+    {
+     "name": "cert",
+     "passed": true,
+     "detail": "rhs->lhs 1 steps (synop_49ced15277.expand) \u2014 premise-anchored: synop_49ced15277.expand"
+    }
+   ],
+   "measured": {
+    "launch": 0.1899200711758257,
+    "flops": 0.189924634672252,
+    "count": 0.5938775510204082,
+    "exec": 0.4644158480792714,
+    "params": 1.0
+   },
+   "wall_s": 3.3
+  },
+  "rmint:080": {
+   "admitted": true,
+   "reason": "cleared",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 6eq/0ne/0rerr (9 acc, 0 dec, 9 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": true,
+     "detail": "fires=16 changed=5 paid=1 verify_fail=0 cases=7 | count=1.000x exec=0.744x flops=0.992x launch=0.992x params=1.000x"
+    },
+    {
+     "name": "sweep",
+     "passed": true,
+     "detail": "synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | real: 6eq/0ne/0rerr (9 acc, 0 dec, 9 envs)"
+    },
+    {
+     "name": "cert",
+     "passed": true,
+     "detail": "rhs->lhs 1 steps (synop_8f5a029e51.expand) \u2014 premise-anchored: synop_8f5a029e51.expand"
+    }
+   ],
+   "measured": {
+    "launch": 0.9924383052418122,
+    "flops": 0.9924398036781501,
+    "count": 1.0,
+    "exec": 0.7442777565503451,
+    "params": 1.0
+   },
+   "wall_s": 3.1
+  },
+  "rmint:081": {
+   "admitted": true,
+   "reason": "cleared",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 6eq/0ne/0rerr (9 acc, 0 dec, 9 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": true,
+     "detail": "fires=16 changed=5 paid=1 verify_fail=0 cases=7 | count=1.000x exec=0.821x flops=0.995x launch=0.995x params=1.000x"
+    },
+    {
+     "name": "sweep",
+     "passed": true,
+     "detail": "synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | real: 6eq/0ne/0rerr (9 acc, 0 dec, 9 envs)"
+    },
+    {
+     "name": "cert",
+     "passed": true,
+     "detail": "rhs->lhs 1 steps (synop_23412f7189.expand) \u2014 premise-anchored: synop_23412f7189.expand"
+    }
+   ],
+   "measured": {
+    "launch": 0.9949654292462251,
+    "flops": 0.9949596834825185,
+    "count": 1.0,
+    "exec": 0.8211323667749468,
+    "params": 1.0
+   },
+   "wall_s": 3.1
+  },
+  "rmint:082": {
+   "admitted": true,
+   "reason": "cleared",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 6eq/0ne/0rerr (9 acc, 0 dec, 9 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": true,
+     "detail": "fires=16 changed=5 paid=1 verify_fail=0 cases=7 | count=1.000x exec=0.744x flops=0.992x launch=0.992x params=1.000x"
+    },
+    {
+     "name": "sweep",
+     "passed": true,
+     "detail": "synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | real: 6eq/0ne/0rerr (9 acc, 0 dec, 9 envs)"
+    },
+    {
+     "name": "cert",
+     "passed": true,
+     "detail": "rhs->lhs 1 steps (synop_85b25692a9.expand) \u2014 premise-anchored: synop_85b25692a9.expand"
+    }
+   ],
+   "measured": {
+    "launch": 0.9924383052418122,
+    "flops": 0.9924398036781501,
+    "count": 1.0,
+    "exec": 0.7442802496634556,
+    "params": 1.0
+   },
+   "wall_s": 3.2
+  },
+  "rmint:083": {
+   "admitted": true,
+   "reason": "cleared",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 6eq/0ne/0rerr (9 acc, 0 dec, 9 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": true,
+     "detail": "fires=16 changed=5 paid=1 verify_fail=0 cases=7 | count=1.000x exec=0.821x flops=0.995x launch=0.995x params=1.000x"
+    },
+    {
+     "name": "sweep",
+     "passed": true,
+     "detail": "synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | real: 6eq/0ne/0rerr (9 acc, 0 dec, 9 envs)"
+    },
+    {
+     "name": "cert",
+     "passed": true,
+     "detail": "rhs->lhs 1 steps (synop_c772f6c7d3.expand) \u2014 premise-anchored: synop_c772f6c7d3.expand"
+    }
+   ],
+   "measured": {
+    "launch": 0.9949626614982107,
+    "flops": 0.9949596834825185,
+    "count": 1.0,
+    "exec": 0.8211406663667841,
+    "params": 1.0
+   },
+   "wall_s": 3.1
+  },
+  "rmint:084": {
+   "admitted": true,
+   "reason": "cleared",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 49eq/0ne/0rerr (49 acc, 0 dec, 49 envs) | synth: 15eq/0ne/0rerr (15 acc, 0 dec, 15 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": true,
+     "detail": "fires=28 changed=3 paid=3 verify_fail=0 cases=7 | count=0.500x exec=0.500x flops=1.000x launch=0.722x"
+    },
+    {
+     "name": "sweep",
+     "passed": true,
+     "detail": "synth: 49eq/0ne/0rerr (49 acc, 0 dec, 49 envs) | real: 49eq/0ne/0rerr (49 acc, 0 dec, 49 envs)"
+    },
+    {
+     "name": "cert",
+     "passed": true,
+     "detail": "rhs->lhs 1 steps (synop_0b304215b3.expand) \u2014 premise-anchored: synop_0b304215b3.expand"
+    }
+   ],
+   "measured": {
+    "launch": 0.7222222222222222,
+    "flops": 1.0,
+    "count": 0.5,
+    "exec": 0.5
+   },
+   "wall_s": 4.3
+  },
+  "rmint:085": {
+   "admitted": true,
+   "reason": "cleared",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 24eq/0ne/0rerr (30 acc, 0 dec, 30 envs) | synth: 13eq/0ne/0rerr (225 acc, 0 dec, 225 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": true,
+     "detail": "fires=28 changed=5 paid=4 verify_fail=0 cases=7 | count=0.600x exec=0.600x flops=1.000x launch=0.925x params=1.000x"
+    },
+    {
+     "name": "sweep",
+     "passed": true,
+     "detail": "synth: 77eq/0ne/0rerr (2000 acc, 0 dec, 2000 envs) | real: 24eq/0ne/0rerr (30 acc, 0 dec, 30 envs)"
+    },
+    {
+     "name": "cert",
+     "passed": true,
+     "detail": "rhs->lhs 1 steps (synop_89c75f30a1.expand) \u2014 premise-anchored: synop_89c75f30a1.expand"
+    }
+   ],
+   "measured": {
+    "launch": 0.9254932425454202,
+    "flops": 0.9999977784068509,
+    "count": 0.6,
+    "exec": 0.6000005566206064,
+    "params": 1.0
+   },
+   "wall_s": 81.7
+  },
+  "rmint:086": {
+   "admitted": true,
+   "reason": "cleared",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 21eq/0ne/0rerr (33 acc, 0 dec, 33 envs) | synth: 15eq/0ne/0rerr (360 acc, 0 dec, 360 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": true,
+     "detail": "fires=64 changed=7 paid=7 verify_fail=0 cases=7 | count=1.000x exec=0.628x flops=0.575x launch=0.647x params=1.000x"
+    },
+    {
+     "name": "sweep",
+     "passed": true,
+     "detail": "synth: 48eq/0ne/0rerr (2000 acc, 0 dec, 2000 envs) | real: 21eq/0ne/0rerr (33 acc, 0 dec, 33 envs)"
+    },
+    {
+     "name": "cert",
+     "passed": true,
+     "detail": "rhs->lhs 1 steps (synop_6c9fe85efa.expand) \u2014 premise-anchored: synop_6c9fe85efa.expand"
+    }
+   ],
+   "measured": {
+    "launch": 0.6465638489011257,
+    "flops": 0.5751391387452623,
+    "count": 1.0,
+    "exec": 0.628140442318441,
+    "params": 1.0
+   },
+   "wall_s": 96.2
+  },
+  "rmint:087": {
+   "admitted": true,
+   "reason": "cleared",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 12eq/0ne/0rerr (15 acc, 0 dec, 15 envs) | synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": true,
+     "detail": "fires=16 changed=5 paid=1 verify_fail=0 cases=7 | count=1.000x exec=0.932x flops=0.997x launch=0.997x params=1.000x"
+    },
+    {
+     "name": "sweep",
+     "passed": true,
+     "detail": "synth: 0eq/0ne/0rerr (0 acc, 0 dec, 0 envs) | real: 12eq/0ne/0rerr (15 acc, 0 dec, 15 envs)"
+    },
+    {
+     "name": "cert",
+     "passed": true,
+     "detail": "rhs->lhs 1 steps (synop_eb15202f10.expand) \u2014 premise-anchored: synop_eb15202f10.expand"
+    }
+   ],
+   "measured": {
+    "launch": 0.9974770252784836,
+    "flops": 0.9974814955451011,
+    "count": 1.0,
+    "exec": 0.9323643101107786,
+    "params": 1.0
+   },
+   "wall_s": 2.6
+  },
+  "rmint:088": {
+   "admitted": true,
+   "reason": "cleared",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 12eq/0ne/0rerr (18 acc, 0 dec, 18 envs) | synth: 0eq/0ne/0rerr (105 acc, 0 dec, 105 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": true,
+     "detail": "fires=28 changed=5 paid=1 verify_fail=0 cases=7 | count=1.000x exec=0.885x flops=0.995x launch=0.995x params=1.000x"
+    },
+    {
+     "name": "sweep",
+     "passed": true,
+     "detail": "synth: 60eq/0ne/0rerr (2000 acc, 0 dec, 2000 envs) | real: 12eq/0ne/0rerr (18 acc, 0 dec, 18 envs)"
+    },
+    {
+     "name": "cert",
+     "passed": true,
+     "detail": "rhs->lhs 1 steps (synop_bb58c0828d.expand) \u2014 premise-anchored: synop_bb58c0828d.expand"
+    }
+   ],
+   "measured": {
+    "launch": 0.9949629301818076,
+    "flops": 0.9949549775579738,
+    "count": 1.0,
+    "exec": 0.8852698322140643,
+    "params": 1.0
+   },
+   "wall_s": 83.4
+  },
+  "rmint:001": {
+   "admitted": false,
+   "reason": "sweep: synth: 16eq/0ne/1rerr (36 acc, 1964 dec, 2000 envs) | real: 0eq/0ne/0rerr (2 acc, 0 dec, 2 envs)",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 0eq/0ne/0rerr (2 acc, 0 dec, 2 envs) | synth: 2eq/0ne/0rerr (6 acc, 354 dec, 360 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": true,
+     "detail": "fires=2 changed=2 paid=2 verify_fail=0 cases=5 | count=0.167x exec=0.154x flops=0.354x launch=0.336x"
+    },
+    {
+     "name": "sweep",
+     "passed": false,
+     "detail": "synth: 16eq/0ne/1rerr (36 acc, 1964 dec, 2000 envs) | real: 0eq/0ne/0rerr (2 acc, 0 dec, 2 envs)"
+    }
+   ],
+   "measured": {
+    "launch": 0.335978835978836,
+    "flops": 0.35416666666666663,
+    "count": 0.16666666666666666,
+    "exec": 0.15385121268675145
+   },
+   "wall_s": 3.8
+  },
+  "rmint:007": {
+   "admitted": false,
+   "reason": "pay: fires=6 changed=0 paid=0 verify_fail=0 cases=7",
+   "stages": [
+    {
+     "name": "oracle",
+     "passed": true,
+     "detail": "real: 1eq/0ne/0rerr (1 acc, 0 dec, 1 envs) | synth: 135eq/0ne/0rerr (225 acc, 0 dec, 225 envs)"
+    },
+    {
+     "name": "pay",
+     "passed": false,
+     "detail": "fires=6 changed=0 paid=0 verify_fail=0 cases=7"
+    }
+   ],
+   "measured": {},
+   "wall_s": 7.6
+  }
+ }
+}
