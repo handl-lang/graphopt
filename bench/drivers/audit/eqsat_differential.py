@@ -70,7 +70,14 @@ from typing import Any
 
 import numpy as np
 from mlopt_core.egraph import EGraph
-from mlopt_core.ir import Const, Op, Param, Var, attr_to_data
+from mlopt_core.ir import (
+    Const,
+    Op,
+    Param,
+    TensorType,
+    Var,
+    attr_to_data,
+)
 from mlopt_core.laws import ALL_RULES
 from mlopt_core.laws.cond import cond_to_data, derive_to_data
 from mlopt_core.laws.priorart import PRIOR_ART_RULES
@@ -290,15 +297,42 @@ def _correspondence(rule: Any, rec: dict | None) -> tuple[str, str]:
 # ---------------------------------------------------------------------------
 
 _VAR_PREFIX = "__var__:"
+_PARAM_PREFIX = "__var__:param:"
+
+#: The typed-leaf wire convention — identical to
+#: ``mlopt_orchestrator.eqsat._LEAF_PREFIX``: a ``Const`` string
+#: ``__mlopt_leaf__:{"k":…,"n":…,"s":…}`` carrying the leaf's
+#: ``TensorType`` shape (``s: null`` = wholly unknown).  engine-eqsat's
+#: ``shape::mlopt_leaf_info`` decodes it, which is what keeps the
+#: shape-reading conds honest on differential cases — the b9fe227
+#: phantom-scalar fix.  Leaves whose ``typ`` is not a ``TensorType``
+#: (the harness's ``Var(name, "f64")`` shorthand) keep the legacy
+#: ``__var__:`` spelling and read as scalars on the Rust side, exactly
+#: as before.
+_LEAF_PREFIX = "__mlopt_leaf__:"
+
+
+def _leaf_wire(t: Any) -> str | None:
+    """``__mlopt_leaf__`` payload for a typed ``Var``/``Param``, else None."""
+    shape = getattr(getattr(t, "typ", None), "shape", None)
+    if shape is None and not hasattr(getattr(t, "typ", None), "shape"):
+        return None
+    kind = "var" if isinstance(t, Var) else "param"
+    s = None if shape is None else [_wire_attr(d) for d in shape]
+    return _LEAF_PREFIX + json.dumps(
+        {"k": kind, "n": t.name, "s": s}, separators=(",", ":")
+    )
 
 
 def _kterm(t: Any) -> dict:
     """mlopt term -> ``hnl_engine::Term`` serde JSON.
 
-    ``Var`` leaves ride as string-valued ``Const`` records under a
-    reserved prefix (the kernel has no variable leaf); attrs ride the
-    ADR-0173 ``attrs`` field — the channel that lands as the bridge's
-    ``__attrs__`` attr, which is what ``pat``'s ``attrs`` spec reads.
+    ``Var``/``Param`` leaves ride as ``__mlopt_leaf__`` consts when
+    they carry a ``TensorType`` (name *and* declared shape reach the
+    Rust shape inference); untyped leaves keep the ``__var__:``
+    string convention; attrs ride the ADR-0173 ``attrs`` field — the
+    channel that lands as the bridge's ``__attrs__`` attr, which is
+    what ``pat``'s ``attrs`` spec reads.
     """
     if isinstance(t, Op):
         node: dict[str, Any] = {
@@ -312,10 +346,12 @@ def _kterm(t: Any) -> dict:
                 k: _wire_attr(v) for k, v in t.attrs.items()
             }
         return {"Op": node}
-    if isinstance(t, Var):
-        return {"Const": {"value": _VAR_PREFIX + t.name}}
-    if isinstance(t, Param):
-        return {"Const": {"value": _VAR_PREFIX + "param:" + t.name}}
+    if isinstance(t, (Var, Param)):
+        payload = _leaf_wire(t)
+        if payload is not None:
+            return {"Const": {"value": payload}}
+        prefix = _VAR_PREFIX if isinstance(t, Var) else _PARAM_PREFIX
+        return {"Const": {"value": prefix + t.name}}
     if isinstance(t, Const):
         return {"Const": {"value": _wire_attr(t.value)}}
     raise TypeError(f"not a wireable leaf: {t!r}")
@@ -349,6 +385,8 @@ def _pyterm(j: Any) -> Any:
         )
     if "Const" in j:
         v = j["Const"]["value"]
+        if isinstance(v, str) and v.startswith(_LEAF_PREFIX):
+            return _leaf_from_payload(v)
         if isinstance(v, str) and v.startswith(_VAR_PREFIX):
             name = v[len(_VAR_PREFIX) :]
             if name.startswith("param:"):
@@ -358,6 +396,25 @@ def _pyterm(j: Any) -> Any:
             return Var(name, "f64")
         return Const(v)
     raise ValueError(f"undecodable term record: {j!r}")
+
+
+def _leaf_from_payload(value: str) -> Any:
+    """Decode a ``__mlopt_leaf__`` const back to ``Var``/``Param``.
+
+    Mirrors ``mlopt_orchestrator.eqsat._leaf_from_payload``: ``s`` is
+    the declared ``TensorType`` shape (``null`` = wholly unknown —
+    *not* a scalar).
+    """
+    from mlopt_core.ir import TensorType
+
+    rec = json.loads(value[len(_LEAF_PREFIX) :])
+    s = rec.get("s")
+    shape = None if s is None else tuple(s)
+    if rec.get("k") == "var":
+        return Var(rec["n"], TensorType(shape))
+    if rec.get("k") == "param":
+        return Param(rec["n"], TensorType(shape))
+    raise ValueError(f"bad eqsat leaf record {value!r}")
 
 
 # ---------------------------------------------------------------------------
@@ -445,7 +502,13 @@ def _instantiate(
     """
     if isinstance(pat, str):
         if pat not in bind:
-            bind[pat] = Var(f"v_{pat}", "f64")
+            # A typed leaf, not the ``"f64"`` placeholder: shape-reading
+            # conds call ``_shape_of`` -> ``typ.shape``, which a bare
+            # string crashes on, and the ``__mlopt_leaf__`` wire payload
+            # carries this same (2, 2) to the Rust shape inference —
+            # both engines then judge the guard against identical
+            # declared shapes.
+            bind[pat] = Var(f"v_{pat}", TensorType((2, 2)))
         return bind[pat]
     if isinstance(pat, Op):
         attrs: dict[str, Any] = {}
@@ -555,7 +618,7 @@ def _expected_rhs(
                 return bind[pat]
             if pat in dspec_vals:
                 return Const(dspec_vals[pat])
-            return Var(f"v_{pat}", "f64")
+            return Var(f"v_{pat}", TensorType((2, 2)))
         if isinstance(pat, Op):
             attrs: dict[str, Any] = {}
             for k, v in pat.attrs.items():
@@ -704,10 +767,35 @@ def _eval(t: Any, env: dict[str, np.ndarray]) -> Any:
         return np.clip(a[0], 0.0, 6.0)
     if op == "linear":
         # F.linear(x[..., in], W[out, in]) = x @ Wᵀ — the weight's
-        # last two axes swap (mlopt_torch.torch_bindings).
-        return a[0] @ np.swapaxes(a[1], -1, -2)
+        # last two axes swap (mlopt_torch.torch_bindings); an optional
+        # third arg is the bias, broadcast-added like torch.
+        out = a[0] @ np.swapaxes(a[1], -1, -2)
+        if len(a) > 2:
+            out = out + a[2]
+        return out
     if op == "matmul":
         return a[0] @ a[1]
+    if op == "unsqueeze":
+        return np.expand_dims(
+            a[0], int(at.get("dim", -1)) % (np.ndim(a[0]) + 1)
+        )
+    if op == "select":
+        # torch.select drops the indexed axis (np.take does the same
+        # for a scalar index).
+        return np.take(
+            a[0],
+            int(at.get("index", 0)),
+            axis=int(at.get("dim", 0)) % np.ndim(a[0]),
+        )
+    if op == "glu":
+        # F.glu: first half ⊙ sigmoid(second half) along ``dim``.
+        d = int(at.get("dim", -1)) % np.ndim(a[0])
+        first, second = np.array_split(a[0], 2, axis=d)
+        return first * (1.0 / (1.0 + np.exp(-second)))
+    if op == "softmax":
+        d = int(at.get("dim", -1)) % np.ndim(a[0])
+        e = np.exp(a[0] - a[0].max(axis=d, keepdims=True))
+        return e / e.sum(axis=d, keepdims=True)
     if op == "transpose":
         return np.swapaxes(a[0], at.get("dim0", 0), at.get("dim1", 1))
     if op == "reshape":
@@ -758,16 +846,29 @@ def _env_for(
     if not isinstance(terms, (list, tuple)):
         terms = [terms]
 
+    def leaf_shape(t: Any, key: str) -> tuple:
+        """Env extent for a leaf: explicit ``shapes`` override, then the
+        leaf's declared ``TensorType`` shape (all-concrete dims only),
+        then the (2, 2) default."""
+        if key in shapes:
+            return shapes[key]
+        s = getattr(getattr(t, "typ", None), "shape", None)
+        if isinstance(s, (tuple, list)) and all(
+            isinstance(d, int) and not isinstance(d, bool) for d in s
+        ):
+            return tuple(s)
+        return (2, 2)
+
     def walk(t: Any) -> None:
         if isinstance(t, Var):
             env.setdefault(
                 t.name,
-                rng.uniform(0.5, 1.5, size=shapes.get(t.name, (2, 2))),
+                rng.uniform(0.5, 1.5, size=leaf_shape(t, t.name)),
             )
         elif isinstance(t, Param):
             env.setdefault(
                 "param:" + t.name,
-                rng.uniform(0.5, 1.5, size=shapes.get(t.name, (2, 2))),
+                rng.uniform(0.5, 1.5, size=leaf_shape(t, t.name)),
             )
         elif isinstance(t, Op):
             for a_ in t.args:
